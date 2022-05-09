@@ -3,7 +3,6 @@ package postgres
 import (
 	"errors"
 	C "factors/config"
-	Const "factors/constants"
 	"factors/model/model"
 	U "factors/util"
 	"fmt"
@@ -261,7 +260,7 @@ func (pg *Postgres) buildObjectAndPropertiesForFacebook(projectID uint64, object
 func (pg *Postgres) GetFacebookFilterValues(projectID uint64, requestFilterObject string,
 	requestFilterProperty string, reqID string) ([]interface{}, int) {
 
-	_, isPresent := Const.SmartPropertyReservedNames[requestFilterProperty]
+	_, isPresent := model.SmartPropertyReservedNames[requestFilterProperty]
 	if !isPresent {
 		filterValues, errCode := pg.getSmartPropertyFilterValues(projectID, requestFilterObject, requestFilterProperty, "facebook", reqID)
 		if errCode != http.StatusFound {
@@ -568,7 +567,7 @@ func getSQLAndParamsFromFacebookReportsWithSmartProperty(query *model.ChannelQue
 
 	// Group By and select keys
 	for _, groupBy := range query.GroupBy {
-		_, isPresent := Const.SmartPropertyReservedNames[groupBy.Property]
+		_, isPresent := model.SmartPropertyReservedNames[groupBy.Property]
 		isSmartProperty := !isPresent
 		if isSmartProperty {
 			if groupBy.Object == model.AdwordsCampaign {
@@ -826,7 +825,7 @@ func getFacebookFiltersWhereStatementWithSmartProperty(filters []model.ChannelFi
 		} else {
 			filterValue = filter.Value
 		}
-		_, isPresent := Const.SmartPropertyReservedNames[filter.Property]
+		_, isPresent := model.SmartPropertyReservedNames[filter.Property]
 		if isPresent {
 			currentFilterStatement = fmt.Sprintf("%s %s '%s' ", objectToValueInFacebookFiltersMapping[filter.Object+":"+filter.Property], filterOperator, filterValue)
 			if index == 0 {

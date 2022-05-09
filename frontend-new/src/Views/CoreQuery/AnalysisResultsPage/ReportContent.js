@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useContext } from 'react';
-import ReportTitle from './ReportTitle';
+import { Spin } from 'antd';
+
 import {
   QUERY_TYPE_EVENT,
   QUERY_TYPE_FUNNEL,
@@ -11,18 +12,20 @@ import {
   QUERY_TYPE_WEB,
   CHART_TYPE_BARCHART,
   ReverseProfileMapper,
-} from '../../../utils/constants';
-import { Spin } from 'antd';
+} from 'Utils/constants';
+import { toLetters } from 'Utils/dataFormatter';
+import { getChartTypeMenuItems } from 'Utils/chart.helpers';
+import { Text, SVG } from 'Components/factorsComponents';
+
+import ReportTitle from './ReportTitle';
 import FunnelsResultPage from '../FunnelsResultPage';
 import CalendarRow from './CalendarRow';
 import AttributionsResult from '../AttributionsResult';
 import CampaignAnalytics from '../CampaignAnalytics';
-import { getChartTypeMenuItems, toLetters } from '../../../utils/dataFormatter';
 import CampaignMetricsDropdown from './CampaignMetricsDropdown';
 import EventsAnalytics from '../EventsAnalytics';
 import WebsiteAnalyticsTable from '../../Dashboard/WebsiteAnalytics/WebsiteAnalyticsTable';
 import { CoreQueryContext } from '../../../contexts/CoreQueryContext';
-import { Text, SVG } from '../../../components/factorsComponents';
 import KPIAnalysis from '../KPIAnalysis';
 import ProfilesResultPage from '../ProfilesResultPage';
 import { getChartType } from './analysisResultsPage.helpers';

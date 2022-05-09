@@ -41,7 +41,6 @@ import (
 	"factors/metrics"
 	U "factors/util"
 
-	"factors/interfaces/maileriface"
 	"factors/services/error_collector"
 	serviceEtcd "factors/services/etcd"
 	"factors/services/mailer"
@@ -259,7 +258,7 @@ type Services struct {
 	DuplicateQueueClient *machinery.Server
 	patternServersLock   sync.RWMutex
 	patternServers       map[string]string
-	Mailer               maileriface.Mailer
+	Mailer               mailer.Mailer
 	ErrorCollector       *error_collector.Collector
 	DeviceDetector       *D.DeviceDetector
 	SentryHook           *logrus_sentry.SentryHook

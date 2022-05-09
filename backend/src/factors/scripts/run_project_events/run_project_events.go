@@ -12,7 +12,6 @@ import (
 	U "factors/util"
 	"flag"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"reflect"
@@ -20,6 +19,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	T "factors/task"
 
 	"github.com/go-playground/validator/v10"
 	log "github.com/sirupsen/logrus"
@@ -62,6 +63,7 @@ func main() {
 	awsSecretAccessKey := flag.String("aws_secret", "dummy", "")
 	factorsEmailSender := flag.String("email_sender", "support-dev@factors.ai", "")
 	emailString := flag.String("emails", "", "comma separeted list of emails to which report to be sent")
+	localDiskTmpDirFlag := flag.String("local_disk_tmp_dir", "/usr/local/var/factors/local_disk/tmp", "--local_disk_tmp_dir=/usr/local/var/factors/local_disk/tmp pass directory")
 	flag.Parse()
 	config := &C.Configuration{
 		Env:         *envFlag,
@@ -87,6 +89,7 @@ func main() {
 			panic(err)
 		}
 	}
+	diskManager := serviceDisk.New(*localDiskTmpDirFlag)
 	projectIdsList := getProjectIdsList(*projectIdFlag)
 	fromTime, err := time.Parse(U.DATETIME_FORMAT_YYYYMMDD, *fromDate)
 	if err != nil {
@@ -104,22 +107,23 @@ func main() {
 
 	for _, project_id := range projectIdsList {
 
-		fileDir, fileName := (cloudManager).GetModelEventsFilePathAndName(uint64(project_id), fromTime.Unix(), *modelType)
-		reader, err := (cloudManager).Get(fileDir, fileName)
+		efCloudPath, efCloudName := (cloudManager).GetModelEventsFilePathAndName(uint64(project_id), fromTime.Unix(), *modelType)
+		efTmpPath, efTmpName := diskManager.GetModelEventsFilePathAndName(uint64(project_id), fromTime.Unix(), *modelType)
+		log.WithFields(log.Fields{"eventFileCloudPath": efCloudPath,
+			"eventFileCloudName": efCloudName}).Info("Downloading events file from cloud.")
+		eReader, err := (cloudManager).Get(efCloudPath, efCloudName)
 		if err != nil {
-			log.Fatal("Failed to get data from file path. error = ", err)
+			log.WithFields(log.Fields{"err": err, "eventFilePath": efCloudPath,
+				"eventFileName": efCloudName}).Error("Failed downloading events file from cloud.")
 		}
-		dataFile, _ := createFile(fileName)
-		//downloading file
-		if _, err := io.Copy(dataFile, reader); err != nil {
-			log.Fatal("Failed to download data at io.Copy. error = ", err)
+		err = diskManager.Create(efTmpPath, efTmpName, eReader)
+		if err != nil {
+			log.WithFields(log.Fields{"err": err, "eventFilePath": efCloudPath,
+				"eventFileName": efCloudName}).Error("Failed creating events file in local.")
 		}
-		_ = closeFile(dataFile)
-		log.Info("data download sucessful...")
-
-		file, _ := openFile(fileName)
-		scanner := bufio.NewScanner(file)
-		scanner.Split(bufio.ScanLines)
+		tmpEventsFilePath := efTmpPath + efTmpName
+		log.Info("Successfuly downloaded events file from cloud.", tmpEventsFilePath, efTmpPath, efTmpName)
+		scanner, err := T.OpenEventFileAndGetScanner(tmpEventsFilePath)
 		//initizalizing validator and validationMap
 		validate := validator.New()
 		initialize()
@@ -128,15 +132,12 @@ func main() {
 		var dates = make([]string, 0, 10)
 		//Scanning the file row by row
 		for scanner.Scan() {
-			row := []byte(scanner.Text())
+			row := scanner.Text()
 			var data P.CounterEventFormat
-			json.Unmarshal(row, &data)
-			time := time.Unix(data.EventTimestamp, 0)
-			weekday := time.Weekday().String()[0:3]
-			dateKey := time.AddDate(0, 0, 0).Format(U.DATETIME_FORMAT_YYYYMMDD)
-			if dateKey > toDate {
-				continue
-			}
+			json.Unmarshal([]byte(row), &data)
+			eventTimestamp := time.Unix(data.EventTimestamp, 0)
+			weekday := eventTimestamp.Weekday().String()[0:3]
+			dateKey := eventTimestamp.AddDate(0, 0, 0).Format(U.DATETIME_FORMAT_YYYYMMDD)
 			mapKey := fmt.Sprintf("Date:%s, Day:%s ", dateKey, weekday)
 			if daterange[mapKey] == nil {
 				daterange[mapKey] = make(map[string]bool)
@@ -146,9 +147,7 @@ func main() {
 				dates = append(dates, mapKey)
 			}
 			eventName := data.EventName
-			if strings.HasPrefix(eventName, U.EVENT_NAME_SESSION) {
-				eventName = U.EVENT_NAME_SESSION
-			}
+
 			if validations[eventName] == nil {
 				eventName = NO_EVENT
 			} else {
@@ -158,8 +157,9 @@ func main() {
 			//validating data
 			r := reflect.ValueOf(data)
 			for key, value := range validations[eventName] {
-				if reportMap[key] == nil {
-					reportMap[key] = make(map[string]bool)
+				mapKey := fmt.Sprintf("%s-%s", eventName, key)
+				if reportMap[mapKey] == nil {
+					reportMap[mapKey] = make(map[string]bool)
 				}
 				var f reflect.Value
 				if value.property == "" {
@@ -171,7 +171,7 @@ func main() {
 					continue
 				}
 				if (!f.IsValid() && value.required) || (f.IsValid() && validate.Var(f.Interface(), value.validate) != nil) {
-					reportMap[key][data.UserId] = true
+					reportMap[mapKey][data.UserId] = true
 				}
 			}
 		}
@@ -184,11 +184,11 @@ func main() {
 		//uploading reports to cloud
 		report, _ := openFile(ReportName)
 		detailed_report, _ := openFile(DetailedReportName)
-		err = (cloudManager).Create(fileDir, ReportName, report)
+		err = (cloudManager).Create(efCloudPath, ReportName, report)
 		if err != nil {
 			log.Fatal("Failed to upload report in cloud. error = ", err)
 		}
-		err = (cloudManager).Create(fileDir, DetailedReportName, detailed_report)
+		err = (cloudManager).Create(efCloudPath, DetailedReportName, detailed_report)
 		if err != nil {
 			log.Fatal("Failed to upload detailed_report in cloud. error = ", err)
 		}

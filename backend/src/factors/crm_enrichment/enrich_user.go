@@ -17,6 +17,10 @@ import (
 func getEnrichedProperties(sourceAlias, typeAlias string, properties *map[string]interface{}) *map[string]interface{} {
 	enProperties := make(map[string]interface{})
 	for key, value := range *properties {
+		if value == "" || value == nil {
+			value = ""
+		}
+
 		enKey := model.GetCRMEnrichPropertyKeyByType(sourceAlias, typeAlias, key)
 		enProperties[enKey] = value
 	}
@@ -56,7 +60,7 @@ func enrichAllCRMUser(project *model.Project, config *CRMSourceConfig, crmUsers 
 
 func GetCRMEventNameByAction(source, objectType string, action model.CRMAction) string {
 	// for backward compatiblity with "$sf_" event name
-	if source == model.CRM_SOURCE_NAME_SALESFORCE &&
+	if source == U.CRM_SOURCE_NAME_SALESFORCE &&
 		(objectType == model.SalesforceDocumentTypeNameLead || objectType == model.SalesforceDocumentTypeNameContact) {
 		source = "sf"
 	}

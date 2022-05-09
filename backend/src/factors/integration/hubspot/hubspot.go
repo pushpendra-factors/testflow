@@ -109,7 +109,7 @@ func GetURLParameterAsMap(pageUrl string) map[string]interface{} {
 
 	urlParameters := make(map[string]interface{})
 	for key, value := range queries {
-		if _, exists := urlParameters[key]; !exists && strings.HasPrefix(key, "utm_") {
+		if _, exists := urlParameters[key]; !exists {
 			for _, v := range value {
 				urlParameters[key] = v
 			}
@@ -140,13 +140,6 @@ func extractingFormSubmissionDetails(projectId uint64, contact Contact, properti
 				}
 			} else if keyArr[idx] == "page-url" {
 				val := contact.FormSubmissions[userFormNo][keyArr[idx]]
-				if _, exists := form[userFormNo][keyArr[idx]]; !exists {
-					urlParameters := GetURLParameterAsMap(util.GetPropertyValueAsString(val))
-					for k, v := range urlParameters {
-						form[userFormNo][k] = v
-					}
-				}
-
 				form[userFormNo][keyArr[idx]] = val
 			} else {
 				if _, exists := form[userFormNo][keyArr[idx]]; !exists {
@@ -235,12 +228,14 @@ func syncContactFormSubmissions(project *model.Project, userId string, document 
 		}
 
 		for key, val := range form[idx] {
-			if !strings.HasPrefix(key, "utm_") {
-				enkey := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameFormSubmission, key)
-				encodeProperties[enkey] = val
-			} else {
-				encodeProperties[key] = val
+			if key == "page-url" {
+				urlParameters := GetURLParameterAsMap(util.GetPropertyValueAsString(val))
+				for k, v := range urlParameters {
+					encodeProperties[k] = v
+				}
 			}
+			enkey := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameFormSubmission, key)
+			encodeProperties[enkey] = val
 		}
 
 		payload := &SDK.TrackPayload{
@@ -1511,7 +1506,7 @@ func syncCompany(projectID uint64, document *model.HubspotDocument) int {
 
 func getHubspotMappedDataTypeValue(projectID uint64, eventName, enKey string, value interface{}) (interface{}, error) {
 	if value == nil || value == "" {
-		return nil, nil
+		return "", nil
 	}
 
 	if !C.IsEnabledPropertyDetailFromDB() || !C.IsEnabledPropertyDetailByProjectID(projectID) {
@@ -2007,8 +2002,11 @@ var keyArrEngagementMeeting = []string{"id", "timestamp", "type", "source", "act
 var keyArrMetaMeeting = []string{"startTime", "endTime", "title", "meetingOutcome"}
 var keyArrEngagementCall = []string{"id", "timestamp", "type", "source", "activityType"}
 var keyArrMetaCall = []string{"durationMilliseconds", "disposition", "status", "title"}
+var keyArrEngagementEmail = []string{"id", "createdAt", "lastUpdated", "type", "teamId", "ownerId", "active", "timestamp", "source"}
+var keyArrMetaEmail = []string{"from", "to", "subject", "sentVia"}
 
 func extractionOfPropertiesWithOutEmailOrContact(engagement Engagements, engagementType string) map[string]interface{} {
+	logCtx := log.WithField("engagement_type", engagementType).WithField("engagement", engagement)
 	properties := make(map[string]interface{})
 	var engagementArray []string
 	var metaDataArray []string
@@ -2018,8 +2016,10 @@ func extractionOfPropertiesWithOutEmailOrContact(engagement Engagements, engagem
 	} else if engagementType == "CALL" {
 		engagementArray = keyArrEngagementCall
 		metaDataArray = keyArrMetaCall
+	} else if engagementType == "INCOMING_EMAIL" || engagementType == "EMAIL" {
+		engagementArray = keyArrEngagementEmail
+		metaDataArray = keyArrMetaEmail
 	}
-
 	for _, key := range engagementArray {
 		if key == "timestamp" {
 			vfloat, _ := util.GetPropertyValueAsFloat64(engagement.Engagement[key])
@@ -2030,24 +2030,124 @@ func extractionOfPropertiesWithOutEmailOrContact(engagement Engagements, engagem
 			properties[key] = engagement.Engagement[key]
 		}
 	}
-
 	for _, key := range metaDataArray {
 		if key == "startTime" || key == "endTime" {
 			properties[key] = (int64)((engagement.Metadata[key]).(float64) / 1000)
+		} else if key == "to" {
+			toInterface := engagement.Metadata[key]
+			interfaceArray, isConvert := toInterface.([]interface{})
+			if !isConvert {
+				logCtx.Error("cannot convert interface to interface array")
+				continue
+			}
+
+			if len(interfaceArray) == 0 {
+				logCtx.Error("length of interface array is zero")
+				continue
+			}
+
+			toMap, isConvert := interfaceArray[0].(map[string]interface{})
+			if !isConvert {
+				logCtx.Error("cannot convert interface to map")
+				continue
+			}
+			properties[key] = toMap["email"]
+		} else if key == "from" {
+			toInterface := engagement.Metadata[key]
+			fromMap, isConvert := toInterface.(map[string]interface{})
+			if !isConvert {
+				logCtx.Error("cannot convert interface to fromMap")
+				continue
+			}
+			properties[key] = fromMap["email"]
 		} else {
 			properties[key] = engagement.Metadata[key]
 		}
 	}
-
 	return properties
 }
 
+func getEngagementContactIds(engagementTypeStr string, engagement Engagements) ([]string, int) {
+	logCtx := log.WithField("engagement_type_str", engagementTypeStr).WithField("engagement", engagement)
+	contactIds := make([]string, 0, 0)
+	if engagementTypeStr == "CALL" || engagementTypeStr == "MEETING" {
+		contactIdArr := engagement.Associations["contactIds"]
+		for i := range contactIdArr {
+			contactId, err := U.GetPropertyValueAsFloat64(contactIdArr[i])
+			if err != nil {
+				logCtx.WithError(err).Error("cannot convert interface to float64")
+				return contactIds, http.StatusInternalServerError
+			}
+			contactIds = append(contactIds,
+				strconv.FormatInt((int64)(contactId), 10))
+		}
+	} else if engagementTypeStr == "INCOMING_EMAIL" || engagementTypeStr == "EMAIL" {
+		var contactId float64
+		var err error
+		var contact interface{}
+		if engagementTypeStr == "INCOMING_EMAIL" {
+			contactIdInterface := engagement.Metadata["from"]
+
+			fromMap, isConvert := contactIdInterface.(map[string]interface{})
+			if !isConvert {
+				logCtx.Error("cannot convert interface to fromMap")
+				return contactIds, http.StatusInternalServerError
+			}
+			contact = fromMap["contactId"]
+			if fmt.Sprintf("%v", contact) == "" {
+				logCtx.Error("there is no contact Id in fromKey")
+				return contactIds, http.StatusInternalServerError
+			}
+
+		} else {
+			contactIdInterface := engagement.Metadata["to"]
+			interfaceArray, isConvert := contactIdInterface.([]interface{})
+			if !isConvert {
+				logCtx.Error("cannot convert interface to interface array")
+				return contactIds, http.StatusInternalServerError
+			}
+
+			if len(interfaceArray) == 0 {
+				logCtx.Error("length of interface array is zero")
+				return contactIds, http.StatusInternalServerError
+			}
+
+			toMap, isConvert := interfaceArray[0].(map[string]interface{})
+			if !isConvert {
+				logCtx.Error("cannot convert interface to map")
+				return contactIds, http.StatusInternalServerError
+			}
+
+			if len(toMap) == 0 {
+				logCtx.Error("length of array is zero")
+				return contactIds, http.StatusInternalServerError
+			}
+			contact = toMap["contactId"]
+			if fmt.Sprintf("%v", contact) == "" {
+				logCtx.Error("there is no contact Id in from toKey")
+				return contactIds, http.StatusInternalServerError
+			}
+		}
+
+		contactId, err = U.GetPropertyValueAsFloat64(contact)
+		if err != nil {
+			logCtx.WithError(err).Error("cannot convert interface to float64")
+			return contactIds, http.StatusInternalServerError
+		}
+		contactIds = append(contactIds,
+			strconv.FormatInt((int64)(contactId), 10))
+	}
+
+	return contactIds, http.StatusOK
+}
+
 func syncEngagements(projectID uint64, document *model.HubspotDocument) int {
+	logCtx := log.WithField("project_id", projectID).WithField("document_id", document.ID)
 	if document.Type != model.HubspotDocumentTypeEngagement {
+		logCtx.Error("It is not a type of engagement")
 		return http.StatusInternalServerError
 	}
 
-	logCtx := log.WithField("project_id", projectID).WithField("document_id", document.ID)
 	var engagement Engagements
 	err := json.Unmarshal((document.Value).RawMessage, &engagement)
 	if err != nil {
@@ -2061,35 +2161,43 @@ func syncEngagements(projectID uint64, document *model.HubspotDocument) int {
 		return http.StatusInternalServerError
 	}
 
-	if fmt.Sprintf("%v", engagementType) != "CALL" && fmt.Sprintf("%v", engagementType) != "MEETING" {
+	engagementTypeStr := fmt.Sprintf("%v", engagementType)
+
+	if engagementTypeStr != "CALL" && engagementTypeStr != "MEETING" && engagementTypeStr != "INCOMING_EMAIL" && engagementTypeStr != "EMAIL" {
+		logCtx.Error("Invalid engagement type")
 		return http.StatusInternalServerError
 	}
 
-	contactIds := make([]string, 0, 0)
-	contactIdArr := engagement.Associations["contactIds"]
-	for i := range contactIdArr {
-		contactId, err := U.GetPropertyValueAsFloat64(contactIdArr[i])
-		if err != nil {
-			logCtx.WithError(err).Error("cannot convert interface to float64")
+	if (engagementTypeStr == "INCOMING_EMAIL" || engagementTypeStr == "EMAIL") && document.Action == model.HubspotDocumentActionUpdated {
+		errCode := store.GetStore().UpdateHubspotDocumentAsSynced(projectID, document.ID, model.HubspotDocumentTypeEngagement, "", document.Timestamp, document.Action, "", "")
+		if errCode != http.StatusAccepted {
+			logCtx.Error("Failed to update hubspot engagement document as synced.")
 			return http.StatusInternalServerError
 		}
-		contactIds = append(contactIds,
-			strconv.FormatInt((int64)(contactId), 10))
+		return http.StatusOK
 	}
 
-	properties := extractionOfPropertiesWithOutEmailOrContact(engagement, fmt.Sprintf("%v", engagementType))
-
+	contactIds, error := getEngagementContactIds(engagementTypeStr, engagement)
+	if error != http.StatusOK {
+		logCtx.Error("failed to get the contact id")
+		return error
+	}
+	properties := extractionOfPropertiesWithOutEmailOrContact(engagement, engagementTypeStr)
 	contactEngagementProperties := make(map[string]map[string]interface{})
-	contactDocuments, status := store.GetStore().GetHubspotDocumentByTypeAndActions(projectID, contactIds, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated, model.HubspotDocumentActionUpdated})
-	if status != http.StatusFound {
-		logCtx.Error(
-			"Failed to get hubspot documents by type and action on sync contact, action delete.")
-		return http.StatusInternalServerError
+
+	var contactDocuments []model.HubspotDocument
+	var status int
+	if len(contactIds) > 0 {
+		contactDocuments, status = store.GetStore().GetHubspotDocumentByTypeAndActions(projectID, contactIds, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated, model.HubspotDocumentActionUpdated})
+		if status != http.StatusFound {
+			logCtx.Error(
+				"Failed to get hubspot documents by type and action on sync engagement.")
+			return http.StatusInternalServerError
+		}
 	}
 
 	for i := range contactIds {
 		latestContactDocument := make(map[string]*model.HubspotDocument)
-
 		var time int64 = -1
 		for j := range contactDocuments {
 			if contactIds[i] == contactDocuments[j].ID && contactDocuments[j].Timestamp <= document.Timestamp &&
@@ -2110,13 +2218,11 @@ func syncEngagements(projectID uint64, document *model.HubspotDocument) int {
 			logCtx.WithError(err).Error("can't get contact properties")
 			return http.StatusInternalServerError
 		}
-
 		key, value := getCustomerUserIDFromProperties(projectID, *enProperties)
 		enkey := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameEngagement, key)
 		if _, exists := propertiesWithEmailOrContact[enkey]; !exists {
 			propertiesWithEmailOrContact[enkey] = value
 		}
-
 		for key, value := range properties {
 			enkey := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameEngagement, key)
 			propertiesWithEmailOrContact[enkey] = value
@@ -2130,8 +2236,7 @@ func syncEngagements(projectID uint64, document *model.HubspotDocument) int {
 		return http.StatusInternalServerError
 	}
 
-	eventName := getEventNameByDocumentTypeAndAction(fmt.Sprintf("%v", engagementType), document.Action)
-
+	eventName := getEventNameByDocumentTypeAndAction(engagementTypeStr, document.Action)
 	for i := range contactIds {
 		var userId string
 		for j := range contactDocuments {
@@ -2143,7 +2248,6 @@ func syncEngagements(projectID uint64, document *model.HubspotDocument) int {
 		if _, exist := contactEngagementProperties[contactIds[i]]; !exist || userId == "" {
 			continue
 		}
-
 		payload := &SDK.TrackPayload{
 			ProjectId:       projectID,
 			Name:            eventName,
@@ -2162,11 +2266,14 @@ func syncEngagements(projectID uint64, document *model.HubspotDocument) int {
 		logCtx.Error("Failed to update hubspot engagement document as synced.")
 		return http.StatusInternalServerError
 	}
-
 	return http.StatusOK
 }
 
 func getEventNameByDocumentTypeAndAction(Type string, action int) string {
+	if Type == "INCOMING_EMAIL" || Type == "EMAIL" {
+		return U.EVENT_NAME_HUBSPOT_ENGAGEMENT_EMAIL
+	}
+
 	if model.HubspotDocumentActionCreated == action {
 		if Type == "MEETING" {
 			return U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_CREATED

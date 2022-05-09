@@ -3,7 +3,6 @@ package memsql
 import (
 	"errors"
 	C "factors/config"
-	Const "factors/constants"
 	"factors/model/model"
 	U "factors/util"
 	"fmt"
@@ -402,7 +401,7 @@ func (store *MemSQL) GetFacebookFilterValues(projectID uint64, requestFilterObje
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
-	_, isPresent := Const.SmartPropertyReservedNames[requestFilterProperty]
+	_, isPresent := model.SmartPropertyReservedNames[requestFilterProperty]
 	if !isPresent {
 		filterValues, errCode := store.getSmartPropertyFilterValues(projectID, requestFilterObject, requestFilterProperty, "facebook", reqID)
 		if errCode != http.StatusFound {
@@ -794,7 +793,7 @@ func getSQLAndParamsFromFacebookReportsWithSmartProperty(query *model.ChannelQue
 
 	// Group By and select keys
 	for _, groupBy := range query.GroupBy {
-		_, isPresent := Const.SmartPropertyReservedNames[groupBy.Property]
+		_, isPresent := model.SmartPropertyReservedNames[groupBy.Property]
 		isSmartProperty := !isPresent
 		if isSmartProperty {
 			if groupBy.Object == model.AdwordsCampaign {
@@ -1084,7 +1083,7 @@ func getFacebookFiltersWhereStatementWithSmartProperty(filters []model.ChannelFi
 		} else {
 			filterValue = filter.Value
 		}
-		_, isPresent := Const.SmartPropertyReservedNames[filter.Property]
+		_, isPresent := model.SmartPropertyReservedNames[filter.Property]
 		if isPresent {
 			currentFilterStatement = fmt.Sprintf("%s %s '%s' ", objectToValueInFacebookFiltersMapping[filter.Object+":"+filter.Property], filterOperator, filterValue)
 			if index == 0 {

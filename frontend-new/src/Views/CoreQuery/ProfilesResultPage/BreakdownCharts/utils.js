@@ -2,7 +2,6 @@ import React from 'react';
 import {
   getClickableTitleSorter,
   SortResults,
-  getBreakdownDisplayTitle,
   generateColors,
 } from '../../../../utils/dataFormatter';
 import { Number as NumFormat } from '../../../../components/factorsComponents';
@@ -14,6 +13,7 @@ import {
   getBreakdownDataMapperWithUniqueValues,
   renderHorizontalBarChart,
 } from '../../EventsAnalytics/SingleEventMultipleBreakdown/utils';
+import { getBreakdownDisplayName } from '../../EventsAnalytics/eventsAnalytics.helpers';
 import tableStyles from '../../../../components/DataTable/index.module.scss';
 import { parseForDateTimeLabel } from '../../EventsAnalytics/SingleEventSingleBreakdown/utils';
 import { DISPLAY_PROP } from '../../../../utils/constants';
@@ -106,12 +106,11 @@ export const formatData = (data, breakdown, queries, currentEventIndex) => {
       const breakdownVals = {};
       breakdownIndices.forEach((b, bIdx) => {
         if (b > -1) {
-          breakdownVals[
-            `${breakdown[bIdx].property} - ${bIdx}`
-          ] = parseForDateTimeLabel(
-            grns[bIdx],
-            DISPLAY_PROP[elem[b]] ? DISPLAY_PROP[elem[b]] : elem[b]
-          );
+          breakdownVals[`${breakdown[bIdx].property} - ${bIdx}`] =
+            parseForDateTimeLabel(
+              grns[bIdx],
+              DISPLAY_PROP[elem[b]] ? DISPLAY_PROP[elem[b]] : elem[b]
+            );
         }
       });
       const color = generateColors(1);
@@ -128,6 +127,10 @@ export const formatData = (data, breakdown, queries, currentEventIndex) => {
     console.log(err);
     return [];
   }
+};
+
+export const getProfileQueryDisplayName = ({ query, groupAnalysis }) => {
+  return _.get(ReverseProfileMapper, `${query}.${groupAnalysis}`, query);
 };
 
 export const getTableColumns = (
@@ -161,11 +164,14 @@ export const getTableColumns = (
     };
   });
 
+  const queryDisplayName = getProfileQueryDisplayName({
+    query: queries[currentEventIndex],
+    groupAnalysis,
+  });
+
   const eventCol = {
     title: getClickableTitleSorter(
-      ReverseProfileMapper[queries[currentEventIndex]]
-        ? ReverseProfileMapper[queries[currentEventIndex]][groupAnalysis]
-        : queries[currentEventIndex],
+      queryDisplayName,
       { key: 'value', type: 'numerical', subtype: null },
       currentSorter,
       handleSorting,
@@ -301,11 +307,11 @@ export const getHorizontalBarChartColumns = (
   cardSize = 1
 ) => {
   const result = breakdown.map((e, index) => {
-    const displayTitle = getBreakdownDisplayTitle(
-      e,
+    const displayTitle = getBreakdownDisplayName({
+      breakdown: e,
       userPropNames,
-      eventPropNames
-    );
+      eventPropNames,
+    });
 
     return {
       title: <NonClickableTableHeader title={displayTitle} />,

@@ -26,11 +26,11 @@ const error_Duplicate_event_customerEventID = "pq: duplicate key value violates 
 const eventsLimitForProperites = 50000
 const OneDayInSeconds int64 = 24 * 60 * 60
 
-func (store *Postgres) GetHubspotFormEvents(projectID uint64, userId string, timestamps[] interface{}) ([]model.Event, int) {
+func (store *Postgres) GetHubspotFormEvents(projectID uint64, userId string, timestamps []interface{}) ([]model.Event, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"user_id":    userId,
-		"timestamps":  timestamps,
+		"timestamps": timestamps,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if projectID < 1 || userId == "" {
@@ -42,7 +42,7 @@ func (store *Postgres) GetHubspotFormEvents(projectID uint64, userId string, tim
 		log.WithField("timestamps", timestamps).Error("GetHubspotFormEvents Failed. no available timestamp.")
 		return nil, http.StatusBadRequest
 	}
-	
+
 	db := C.GetServices().Db
 
 	eventName, status := store.GetEventName(U.EVENT_NAME_HUBSPOT_CONTACT_FORM_SUBMISSION, projectID)
@@ -1091,7 +1091,6 @@ func (pg *Postgres) addSessionForUser(projectId uint64, userId string, userEvent
 			sessionEventUserProperties := map[string]interface{}{
 				U.UP_PAGE_COUNT:       sessionPageCount,
 				U.UP_TOTAL_SPENT_TIME: sessionPageSpentTime,
-				U.UP_SESSION_COUNT:    sessionEvent.Count,
 			}
 			newSessionEventUserPropertiesJsonb, err := U.AddToPostgresJsonb(
 				sessionEvent.UserProperties, sessionEventUserProperties, true)

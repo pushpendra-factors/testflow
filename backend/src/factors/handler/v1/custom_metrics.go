@@ -96,11 +96,11 @@ func GetCustomMetrics(c *gin.Context) (interface{}, int, string, string, bool) {
 }
 
 func getPropertiesFunctionBasedOnObjectType(objectType string) func(uint64, string) []map[string]string {
-	if strings.Contains(objectType, model.CRM_SOURCE_NAME_HUBSPOT) {
+	if strings.Contains(objectType, U.CRM_SOURCE_NAME_HUBSPOT) {
 		return store.GetStore().GetPropertiesForHubspot
-	} else if strings.Contains(objectType, model.CRM_SOURCE_NAME_SALESFORCE) {
+	} else if strings.Contains(objectType, U.CRM_SOURCE_NAME_SALESFORCE) {
 		return store.GetStore().GetPropertiesForSalesforce
-	} else if strings.Contains(objectType, model.CRM_SOURCE_NAME_MARKETO) {
+	} else if strings.Contains(objectType, U.CRM_SOURCE_NAME_MARKETO) {
 		return store.GetStore().GetPropertiesForMarketo
 	}
 	return nil

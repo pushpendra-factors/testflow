@@ -1952,7 +1952,8 @@ func FillUserAgentUserProperties(userProperties *U.PropertiesMap, userAgentStr s
 		return nil
 	}
 
-	browserName, browserVersion := userAgent.Browser()
+	browserName, browserVersion := U.GetBrowser(userAgent)
+
 	(*userProperties)[U.UP_BROWSER] = browserName
 	(*userProperties)[U.UP_BROWSER_VERSION] = browserVersion
 	(*userProperties)[U.UP_BROWSER_WITH_VERSION] = fmt.Sprintf("%s-%s",

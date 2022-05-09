@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"errors"
 	C "factors/config"
-	Const "factors/constants"
 	"factors/model/model"
 	U "factors/util"
 	"fmt"
@@ -1218,7 +1217,7 @@ func getSQLAndParamsForAdwordsWithSmartPropertyV2(query *model.ChannelQueryV1, p
 	dimensions := fields{}
 
 	for _, groupBy := range query.GroupBy {
-		_, isPresent := Const.SmartPropertyReservedNames[groupBy.Property]
+		_, isPresent := model.SmartPropertyReservedNames[groupBy.Property]
 		isSmartProperty := !isPresent
 		if isSmartProperty {
 			if groupBy.Object == model.AdwordsCampaign {
@@ -1619,7 +1618,7 @@ func getFilterPropertiesForAdwordsReportsAndSmartProperty(filters []model.Channe
 func getNotNullFilterStatementForSmartPropertyGroupBys(groupBys []model.ChannelGroupBy) string {
 	resultStatement := ""
 	for _, groupBy := range groupBys {
-		_, isPresent := Const.SmartPropertyReservedNames[groupBy.Property]
+		_, isPresent := model.SmartPropertyReservedNames[groupBy.Property]
 		isSmartProperty := !isPresent
 		if isSmartProperty {
 			if groupBy.Object == model.AdwordsCampaign {

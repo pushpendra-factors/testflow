@@ -17,6 +17,7 @@ import {
   renderHorizontalBarChart,
   getBreakdownDataMapperWithUniqueValues,
 } from '../../EventsAnalytics/SingleEventMultipleBreakdown/utils';
+import { getBreakdownDisplayName } from '../../EventsAnalytics/eventsAnalytics.helpers';
 import tableStyles from '../../../../components/DataTable/index.module.scss';
 import { DISPLAY_PROP } from '../../../../utils/constants';
 import NonClickableTableHeader from '../../../../components/NonClickableTableHeader';
@@ -112,14 +113,18 @@ export const getTableColumns = (
   kpis,
   currentSorter,
   handleSorting,
-  eventNames,
   userPropNames,
   eventPropNames
 ) => {
   const breakdownColumns = breakdown.map((e, index) => {
+    const displayTitle = getBreakdownDisplayName({
+      breakdown: e,
+      userPropNames,
+      eventPropNames,
+    });
     return {
       title: getClickableTitleSorter(
-        e.property,
+        displayTitle,
         { key: `${e.property} - ${index}`, type: e.prop_type, subtype: e.grn },
         currentSorter,
         handleSorting
@@ -171,13 +176,11 @@ export const getHorizontalBarChartColumns = (
 ) => {
   console.log('kpi with breakdown getHorizontalBarChartColumns');
   const result = breakdown.map((e, index) => {
-    // const displayTitle = getBreakdownDisplayTitle(
-    //   e,
-    //   userPropNames,
-    //   eventPropNames
-    // );
-
-    const displayTitle = e.property;
+    const displayTitle = getBreakdownDisplayName({
+      breakdown: e,
+      userPropNames,
+      eventPropNames,
+    });
 
     return {
       title: <NonClickableTableHeader title={displayTitle} />,
@@ -412,9 +415,14 @@ export const getDateBasedColumns = (
   };
 
   const breakdownColumns = breakdown.map((e, index) => {
+    const displayTitle = getBreakdownDisplayName({
+      breakdown: e,
+      userPropNames,
+      eventPropNames,
+    });
     return {
       title: getClickableTitleSorter(
-        e.property,
+        displayTitle,
         { key: `${e.property} - ${index}`, type: e.prop_type, subtype: e.grn },
         currentSorter,
         handleSorting

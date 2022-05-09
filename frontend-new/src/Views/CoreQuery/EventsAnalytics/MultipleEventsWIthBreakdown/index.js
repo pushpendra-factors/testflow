@@ -6,6 +6,27 @@ import React, {
   useContext,
   useImperativeHandle,
 } from 'react';
+import { useSelector } from 'react-redux';
+
+import BarChart from 'Components/BarChart';
+import LineChart from 'Components/HCLineChart';
+import StackedAreaChart from 'Components/StackedAreaChart';
+import StackedBarChart from 'Components/StackedBarChart';
+import PivotTable from 'Components/PivotTable';
+
+import {
+  generateColors,
+  getNewSorterState,
+} from 'Utils/dataFormatter';
+import {
+  DASHBOARD_MODAL,
+  CHART_TYPE_BARCHART,
+  CHART_TYPE_STACKED_AREA,
+  CHART_TYPE_STACKED_BAR,
+  CHART_TYPE_PIVOT_CHART,
+  QUERY_TYPE_EVENT,
+} from 'Utils/constants';
+
 import {
   formatData,
   formatDataInStackedAreaFormat,
@@ -13,22 +34,8 @@ import {
   getVisibleData,
   getVisibleSeriesData,
 } from './utils';
-import BarChart from '../../../../components/BarChart';
 import MultipleEventsWithBreakdownTable from './MultipleEventsWithBreakdownTable';
-import LineChart from '../../../../components/HCLineChart';
-import {
-  generateColors,
-  getNewSorterState,
-} from '../../../../utils/dataFormatter';
-import {
-  DASHBOARD_MODAL,
-  CHART_TYPE_BARCHART,
-  CHART_TYPE_STACKED_AREA,
-  CHART_TYPE_STACKED_BAR,
-} from '../../../../utils/constants';
-import StackedAreaChart from '../../../../components/StackedAreaChart';
-import StackedBarChart from '../../../../components/StackedBarChart';
-import { useSelector } from 'react-redux';
+
 import { CoreQueryContext } from '../../../../contexts/CoreQueryContext';
 
 const MultipleEventsWithBreakdown = forwardRef(
@@ -170,6 +177,17 @@ const MultipleEventsWithBreakdown = forwardRef(
             categories={categories}
             data={visibleSeriesData}
             showAllLegends={true}
+          />
+        </div>
+      );
+    } else if (chartType === CHART_TYPE_PIVOT_CHART) {
+      chart = (
+        <div className='w-full'>
+          <PivotTable
+            data={aggregateData}
+            breakdown={breakdown}
+            metrics={queries}
+            queryType={QUERY_TYPE_EVENT}
           />
         </div>
       );

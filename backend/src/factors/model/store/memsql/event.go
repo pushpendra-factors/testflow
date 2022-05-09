@@ -1466,10 +1466,11 @@ func (store *MemSQL) addSessionForUser(projectId uint64, userId string, userEven
 				}
 			}
 
+			sessionPropertiesMap[U.EP_SESSION_COUNT] = sessionEvent.Count
+
 			sessionEventUserProperties := map[string]interface{}{
 				U.UP_PAGE_COUNT:       sessionPageCount,
 				U.UP_TOTAL_SPENT_TIME: sessionPageSpentTime,
-				U.UP_SESSION_COUNT:    sessionEvent.Count,
 			}
 			newSessionEventUserPropertiesJsonb, err := U.AddToPostgresJsonb(
 				sessionEvent.UserProperties, sessionEventUserProperties, true)
@@ -1511,7 +1512,6 @@ func (store *MemSQL) addSessionForUser(projectId uint64, userId string, userEven
 					UserID:                userId,
 					SessionEventTimestamp: sessionEvent.Timestamp,
 
-					SessionCount:         sessionEvent.Count,
 					SessionPageCount:     onlyThisSessionPageCount,
 					SessionPageSpentTime: onlyThisSessionPageSpentTime,
 

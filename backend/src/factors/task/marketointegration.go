@@ -153,7 +153,7 @@ func insertCRMActivity(projectId uint64, line []string, docType string, columnNa
 	intDocument := model.CRMActivity{
 		ProjectID:          projectId,
 		ExternalActivityID: model.GetMarketoDocumentProgramId(docType, line, columnNamesFromMetadata),
-		Source:             model.CRM_SOURCE_MARKETO,
+		Source:             U.CRM_SOURCE_MARKETO,
 		Name:               "program_membership_created",
 		Type:               model.GetMarketoDocumentDocumentType(docType),
 		ActorType:          model.GetMarketoActorType(docType),
@@ -180,7 +180,7 @@ func insertCRMUser(projectId uint64, line []string, docType string, columnNamesF
 	intDocument1 := model.CRMUser{
 		ID:         model.GetMarketoUserId(docType, line, columnNamesFromMetadata),
 		ProjectID:  projectId,
-		Source:     model.CRM_SOURCE_MARKETO,
+		Source:     U.CRM_SOURCE_MARKETO,
 		Type:       model.GetMarketoDocumentDocumentType(docType),
 		Timestamp:  timestamps[0],
 		Properties: values,
@@ -192,7 +192,7 @@ func insertCRMUser(projectId uint64, line []string, docType string, columnNamesF
 		intDocument2 := model.CRMUser{
 			ID:         model.GetMarketoUserId(docType, line, columnNamesFromMetadata),
 			ProjectID:  projectId,
-			Source:     model.CRM_SOURCE_MARKETO,
+			Source:     U.CRM_SOURCE_MARKETO,
 			Type:       model.GetMarketoDocumentDocumentType(docType),
 			Timestamp:  timestamps[1],
 			Properties: values,
@@ -205,7 +205,7 @@ func insertCRMUser(projectId uint64, line []string, docType string, columnNamesF
 		intDocument3 := model.CRMUser{
 			ID:         model.GetMarketoUserId(docType, line, columnNamesFromMetadata),
 			ProjectID:  projectId,
-			Source:     model.CRM_SOURCE_MARKETO,
+			Source:     U.CRM_SOURCE_MARKETO,
 			Type:       model.GetMarketoDocumentDocumentType(docType),
 			Timestamp:  timestamps[2],
 			Properties: values,

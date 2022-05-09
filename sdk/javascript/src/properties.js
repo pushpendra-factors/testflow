@@ -34,6 +34,10 @@ const SOURCE = "source";
 // Events
 const EV_FORM_SUBMITTED = PREFIX + 'form_submitted';
 
+
+// Input related
+const DISABLED_INPUT_TYPES = ['password', 'hidden'];
+
 const isBotUserAgent = function(nAgt) {
     let lcaseAgt = nAgt.toLowerCase();
     // ref: https://stackoverflow.com/a/15047834, https://webmasters.stackexchange.com/a/64805
@@ -300,6 +304,9 @@ function getPropertiesFromAllNonFormInputs() {
     
     var nonFormInputs = [];
     for (var i=0; i<inputs.length; i++) {
+        //exldude disabled types
+        if(DISABLED_INPUT_TYPES.indexOf(inputs[i].type) >= 0) continue;
+
         if (!FormCapture.isPartOfForm(inputs[i])) {
             nonFormInputs.push(inputs[i]);
 
@@ -324,7 +331,7 @@ function getPropertiesFromInputs(inputs) {
     if (!inputs) return properties;    
     for (var i=0; i<inputs.length; i++) {
         // exclude password from any processing.
-        if (inputs[i].type == 'password') continue;
+        if(DISABLED_INPUT_TYPES.indexOf(inputs[i].type) >= 0) continue;
         if (!inputs[i].value) continue;
         
         var value = inputs[i].value.trim();

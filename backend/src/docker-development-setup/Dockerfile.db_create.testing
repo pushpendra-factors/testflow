@@ -3,14 +3,12 @@ FROM golang:1.14-alpine AS builder
 ENV GOPATH /go
 WORKDIR /go/src/factors
 ADD /factors .
-RUN go build -o /go/src/factors/backend/bin/builddb scripts/run_db_create/run_db_create.go
 ADD factors/migrations/db/memsql/1_create_schema.sql /go/src/factors/backend/src/factors/migrations/db/memsql/1_create_schema.sql
 ADD docker-development-setup/memsql_ingest.sql /go/src/factors/backend/src/docker-development-setup/memsql_ingest.sql
 
 # Create stripped down version without go and source code
 FROM alpine:3.7
 RUN apk update && apk add ca-certificates && apk add curl && apk add mysql mysql-client && rm -rf /var/cache/apk/*
-COPY --from=builder /go/src/factors/backend/bin/builddb /go/src/factors/backend/bin/builddb
 COPY --from=builder /go/src/factors/backend/src/factors/migrations/db/memsql/1_create_schema.sql /go/src/factors/backend/src/factors/migrations/db/memsql/1_create_schema.sql
 COPY --from=builder /go/src/factors/backend/src/docker-development-setup/memsql_ingest.sql /go/src/factors/backend/src/docker-development-setup/memsql_ingest.sql
-CMD ["sh","-c", "if [ $PRI_DS == memsql ]; then while true; do mysql -h memsql --port 3306 -u root --password=${ROOT_PASSWORD} > conn_test.sql; if [ \"$?\" -eq 0 ]; then mysql -h memsql --port 3306 -u root --password=${ROOT_PASSWORD} < /go/src/factors/backend/src/factors/migrations/db/memsql/1_create_schema.sql; mysql -h memsql --port 3306 -u root --password=${ROOT_PASSWORD} factors < /go/src/factors/backend/src/docker-development-setup/memsql_ingest.sql; break; fi; echo 'Unable to run command on memsql'; sleep 2; done; else while true; do curl -f ${DB_HOST}:5432; if [ 52 -eq $? ]; then /go/src/factors/backend/bin/builddb --db_host=${DB_HOST} --dev_setup; break; fi; sleep 2; done; fi"]
+CMD ["sh","-c", "if [ $PRI_DS == memsql ]; then while true; do mysql -h memsql --port 3306 -u root --password=${ROOT_PASSWORD} > conn_test.sql; if [ \"$?\" -eq 0 ]; then mysql -h memsql --port 3306 -u root --password=${ROOT_PASSWORD} < /go/src/factors/backend/src/factors/migrations/db/memsql/1_create_schema.sql; mysql -h memsql --port 3306 -u root --password=${ROOT_PASSWORD} factors < /go/src/factors/backend/src/docker-development-setup/memsql_ingest.sql; break; fi; echo 'Unable to run command on memsql'; sleep 2; done; fi"]

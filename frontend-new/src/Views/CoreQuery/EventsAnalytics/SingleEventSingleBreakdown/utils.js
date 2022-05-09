@@ -4,7 +4,6 @@ import { labelsObj } from '../../utils';
 import {
   getClickableTitleSorter,
   SortResults,
-  getBreakdownDisplayTitle,
   addQforQuarter,
 } from '../../../../utils/dataFormatter';
 import { Number as NumFormat } from '../../../../components/factorsComponents';
@@ -13,15 +12,17 @@ import {
   MAX_ALLOWED_VISIBLE_PROPERTIES,
 } from '../../../../utils/constants';
 import { renderHorizontalBarChart } from '../SingleEventMultipleBreakdown/utils';
+import { getBreakdownDisplayName } from '../eventsAnalytics.helpers';
 import tableStyles from '../../../../components/DataTable/index.module.scss';
 import { DISPLAY_PROP } from '../../../../utils/constants';
 import NonClickableTableHeader from '../../../../components/NonClickableTableHeader';
+import { EVENT_COUNT_KEY } from '../eventsAnalytics.constants';
 
 export const defaultSortProp = () => {
   return [
     {
       order: 'descend',
-      key: 'Event Count',
+      key: EVENT_COUNT_KEY,
       type: 'numerical',
       subtype: null,
     },
@@ -81,13 +82,13 @@ export const getTableColumns = (
   const countColumn = {
     title: getClickableTitleSorter(
       `${title}: ${labelsObj[page]}`,
-      { key: 'Event Count', type: 'numerical', subtype: null },
+      { key: EVENT_COUNT_KEY, type: 'numerical', subtype: null },
       currentSorter,
       handleSorting,
       'right'
     ),
     className: 'text-right',
-    dataIndex: 'Event Count',
+    dataIndex: EVENT_COUNT_KEY,
     render: (d) => {
       return <NumFormat number={d} />;
     },
@@ -157,7 +158,7 @@ export const formatData = (data) => {
       label: displayLabel,
       value: elem[3],
       [breakdowns[0].pr]: displayLabel,
-      'Event Count': elem[3], //used for sorting, value key will be removed soon
+      [EVENT_COUNT_KEY]: elem[3], //used for sorting, value key will be removed soon
       index,
     };
   });
@@ -176,13 +177,13 @@ export const getDateBasedColumns = (
   const OverallColumn = {
     title: getClickableTitleSorter(
       'Overall',
-      { key: `Event Count`, type: 'numerical', subtype: null },
+      { key: EVENT_COUNT_KEY, type: 'numerical', subtype: null },
       currentSorter,
       handleSorting,
       'right'
     ),
     className: 'text-right',
-    dataIndex: `Event Count`,
+    dataIndex: EVENT_COUNT_KEY,
     width: 150,
   };
   const breakdownColumns = breakdown.map((e) => {
@@ -354,11 +355,11 @@ export const getHorizontalBarChartColumns = (
   eventPropNames
 ) => {
   const result = breakdown.map((e) => {
-    const displayTitle = getBreakdownDisplayTitle(
-      e,
+    const displayTitle = getBreakdownDisplayName({
+      breakdown: e,
       userPropNames,
-      eventPropNames
-    );
+      eventPropNames,
+    });
 
     return {
       title: <NonClickableTableHeader title={displayTitle} />,

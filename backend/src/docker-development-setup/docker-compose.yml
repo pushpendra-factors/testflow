@@ -1,20 +1,6 @@
 version: '3'
 
 services:
-        postgres:
-            build:
-                context: ../
-                dockerfile: docker-development-setup/Dockerfile.postgres.testing
-                args:
-                    -  POSTGRES_VERSION=12.2-alpine
-            environment:
-                 - POSTGRES_USER=autometa
-                 - POSTGRES_PASSWORD=@ut0me7a
-                 - POSTGRES_DB=autometa
-            image: testing/postgres:1.0
-            restart: always
-            ports:
-                - '5432:5432'
         memsql:
             build:
                 context: .
@@ -51,12 +37,10 @@ services:
                 context: ../
                 dockerfile: docker-development-setup/Dockerfile.db_create.testing
             environment:
-                - DB_HOST=postgres
-                - PRI_DS=$PRIMARY_DATASTORE
+                - PRI_DS=memsql
                 - ROOT_PASSWORD=$ROOT_PASSWORD
             image: testing/builddb:1.0
             depends_on:
-                - postgres
                 - memsql
         api:
             build:
@@ -64,12 +48,11 @@ services:
                 dockerfile: Dockerfile.appserver
             environment:
                 -  GOPATH=/go/src/factors
-                -  DB_HOST=postgres
                 -  REDIS_HOST=redis
                 -  ETCD=etcd:2379
                 -  PS=patternserver
-                -  PRI_DS=$PRIMARY_DATASTORE
-            entrypoint: [ "sh","-c","/go/bin/app --db_host=postgres --redis_host_ps=redis --dup_queue_redis_host=redis --queue_redis_host=redis --etcd=etcd:2379 --api_domain=$API_DOMAIN --env=development --memsql_host=memsql --primary_datastore=${PRIMARY_DATASTORE}"]
+                -  PRI_DS=memsql
+            entrypoint: [ "sh","-c","/go/bin/app --redis_host_ps=redis --dup_queue_redis_host=redis --queue_redis_host=redis --etcd=etcd:2379 --api_domain=$API_DOMAIN --env=development --memsql_host=memsql --primary_datastore=memsql"]
             image: testing/api:1.0
             restart: always
             ports:
@@ -78,7 +61,6 @@ services:
                 - ../../../geolocation_data:/usr/local/var/factors/geolocation_data
                 - ../../../devicedetector_data:/usr/local/var/factors/devicedetector_data
             depends_on:
-                - postgres
                 - memsql
                 - etcd
                 - redis
@@ -88,11 +70,9 @@ services:
                 dockerfile: docker-development-setup/Dockerfile.sdkserver.testing
             environment:
                 -  GOPATH=/go/src/factors
-                -  DB_HOST=postgres
                 -  REDIS_HOST=redis
                 -  MEMSQL_HOST=memsql
-                -  PRI_DS=$PRIMARY_DATASTORE
-            entrypoint: [ "sh","-c","/go/bin/sdkserver --env=development --memsql_host=memsql --primary_datastore=${PRIMARY_DATASTORE}"]
+            entrypoint: [ "sh","-c","/go/bin/sdkserver --env=development --memsql_host=memsql --primary_datastore=memsql"]
             image: testing/sdk:1.0
             ports:
                 - "8085:8085"
@@ -101,7 +81,6 @@ services:
                 - ../../../geolocation_data:/usr/local/var/factors/geolocation_data
                 - ../../../devicedetector_data:/usr/local/var/factors/devicedetector_data
             depends_on:
-                - postgres
                 - memsql
                 - redis
         patternserver:
@@ -111,31 +90,28 @@ services:
             environment:
                 -   GOPATH=/go/src/factors
                 -   ETCD=etcd:2379
-                -   DB_HOST=postgres
-                -   PRI_DS=$PRIMARY_DATASTORE
                 -   MEMSQL_HOST=memsql
             image: testing/pattern-server:1.0
             ports:
                 - "8100:8100"
             depends_on:
-                - postgres
                 - memsql
                 - etcd
                 - redis
-        frontend:
-            build: 
-                context: ../../../frontend-new
-                dockerfile: Dockerfile.frontend.testing
-            image: testing/frontend:1.0
-            ports: 
-                - "3000:3000"
+        # Frontend docker is not building. Run manually.
+        #frontend:
+        #    build: 
+        #        context: ../../../frontend-new
+        #        dockerfile: Dockerfile.frontend.testing
+        #    image: testing/frontend:1.0
+        #    ports: 
+        #        - "3000:3000"
         datagen:
             build:
                 context: ../../../misc/data_simulator/src/
                 dockerfile: Dockerfile.data_gen.testing
             environment:
                 - CONFIG=acme_com
-                - DB_HOST=postgres
                 - AUTH_TOKEN=78ycpg9dsgok7o4dbk58jtl2rgt0tg0o
                 - SDK_HOST=sdkserver
                 - ENV=docker
@@ -149,9 +125,8 @@ services:
                 dockerfile: docker-development-setup/Dockerfile.session.testing
             environment:
                 - REDIS_HOST=redis
-                - DB_HOST=postgres
                 - MEMSQL_HOST=memsql
-                - PRI_DS=$PRIMARY_DATASTORE
+                - PRI_DS=memsql
             image: testing/session:1.0
         rollupcache:
             build:
@@ -159,18 +134,17 @@ services:
                 dockerfile: docker-development-setup/Dockerfile.rollup_cache.testing
             environment:
                 - REDIS_HOST=redis
-                - DB_HOST=postgres
                 - MEMSQL_HOST=memsql
-                - PRI_DS=$PRIMARY_DATASTORE
+                - PRI_DS=memsql
             image: testing/rollupcache:1.0
-        documentdatagen:
-            build:
-                context: ../
-                dockerfile: docker-development-setup/Dockerfile.documentdatagen.testing
-            environment:
-                - DB_HOST=postgres
-                - MEMSQL_HOST=memsql
-                - PRI_DS=$PRIMARY_DATASTORE
-            image: testing/documentdatagen:1.0
-            depends_on:
-                - sdkserver
+        # Needs to be fixed.
+        #documentdatagen:
+        #    build:
+        #        context: ../
+        #        dockerfile: docker-development-setup/Dockerfile.documentdatagen.testing
+        #    environment:
+        #        - MEMSQL_HOST=memsql
+        #        - PRI_DS=memsql
+        #    image: testing/documentdatagen:1.0
+        #    depends_on:
+        #        - sdkserver

@@ -13,7 +13,7 @@ import (
 )
 
 // isExistCRMUserByID check for existing user by external user id, source, object type
-func isExistCRMUserByID(projectID uint64, source model.CRMSource, userType int, id string) (int, error) {
+func isExistCRMUserByID(projectID uint64, source U.CRMSource, userType int, id string) (int, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"source":     source,
@@ -129,7 +129,7 @@ func (pg *Postgres) CreateCRMUser(crmUser *model.CRMUser) (int, error) {
 	return http.StatusCreated, nil
 }
 
-func (pg *Postgres) GetCRMUserByTypeAndAction(projectID uint64, source model.CRMSource, id string, userType int, action model.CRMAction) (*model.CRMUser, int) {
+func (pg *Postgres) GetCRMUserByTypeAndAction(projectID uint64, source U.CRMSource, id string, userType int, action model.CRMAction) (*model.CRMUser, int) {
 
 	logFields := log.Fields{
 		"project_id": projectID,
@@ -169,7 +169,7 @@ func (pg *Postgres) GetCRMUserByTypeAndAction(projectID uint64, source model.CRM
 	return &crmUser, http.StatusFound
 }
 
-func (pg *Postgres) UpdateCRMUserAsSynced(projectID uint64, source model.CRMSource, crmUser *model.CRMUser, userID, syncID string) (*model.CRMUser, int) {
+func (pg *Postgres) UpdateCRMUserAsSynced(projectID uint64, source U.CRMSource, crmUser *model.CRMUser, userID, syncID string) (*model.CRMUser, int) {
 
 	logFields := log.Fields{
 		"project_id": projectID,
@@ -211,7 +211,7 @@ func (pg *Postgres) UpdateCRMUserAsSynced(projectID uint64, source model.CRMSour
 	return crmUser, http.StatusAccepted
 }
 
-func (pg *Postgres) GetCRMUsersInOrderForSync(projectID uint64, source model.CRMSource) ([]model.CRMUser, int) {
+func (pg *Postgres) GetCRMUsersInOrderForSync(projectID uint64, source U.CRMSource) ([]model.CRMUser, int) {
 
 	logFields := log.Fields{
 		"project_id": projectID,

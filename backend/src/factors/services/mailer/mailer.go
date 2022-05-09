@@ -4,6 +4,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+type Mailer interface {
+	SendMail(to, from, subject, html, text string) error
+}
+
 type Client struct {
 }
 
