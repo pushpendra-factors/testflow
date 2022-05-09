@@ -159,8 +159,8 @@ const (
 )
 
 var MarketoDocumentTypeAlias = map[string]int{
-	MARKETO_TYPE_NAME_PROGRAM_MEMBERSHIP: 1,
-	MARKETO_TYPE_NAME_LEAD:               2,
+	// MARKETO_TYPE_NAME_PROGRAM_MEMBERSHIP: 1,
+	MARKETO_TYPE_NAME_LEAD: 2,
 }
 
 var MarketoActorTypeMapping = map[string]string{

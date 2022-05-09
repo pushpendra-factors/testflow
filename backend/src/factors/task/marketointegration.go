@@ -48,6 +48,24 @@ func MarketoIntegration(projectId uint64, configs map[string]interface{}) (map[s
 		propertySuccess := 0
 		propertyFailures := 0
 		offset := 0
+		metadataQuery, exists := model.GetMarketoDocumentMetadataQuery(docType, configs["BigqueryProjectId"].(string), mapping.SchemaID, model.MarketoDataObjectColumnsQuery[docType])
+		var metadataQueryResult [][]string
+		columnNamesFromMetadata := make([]string, 0)
+		columnNamesFromMetadataDateTime := make(map[string]bool)
+		columnNamesFromMetadataNumerical := make(map[string]bool)
+		if exists {
+			err = BQ.ExecuteQuery(&ctx, client, metadataQuery, &metadataQueryResult)
+			if err != nil {
+				resultStatus["failure-"+docType] = "Error while executing metadata query" + err.Error()
+				status = false
+				log.WithError(err).Error("Error while executing query")
+			}
+			columnNamesFromMetadata, columnNamesFromMetadataDateTime, columnNamesFromMetadataNumerical = extractMetadataColumns(metadataQueryResult)
+			propertySuccess, propertyFailures = InsertPropertyDataTypes(columnNamesFromMetadataDateTime, columnNamesFromMetadataNumerical, docType, projectId)
+
+		} else {
+			propertySuccess, propertyFailures = InsertPropertyDataTypes(model.MarketoDataObjectColumnsDatetimeType[docType], model.MarketoDataObjectColumnsNumericalType[docType], docType, projectId)
+		}
 		for {
 			var query string
 			if docType == model.MARKETO_TYPE_NAME_LEAD {
@@ -68,27 +86,6 @@ func MarketoIntegration(projectId uint64, configs map[string]interface{}) (map[s
 				resultStatus["failure-"+docType] = "Error while executing query" + err.Error()
 				status = false
 				log.WithError(err).Error("Error while executing query")
-			}
-			metadataQuery, exists := model.GetMarketoDocumentMetadataQuery(docType, configs["BigqueryProjectId"].(string), mapping.SchemaID, model.MarketoDataObjectColumnsQuery[docType])
-			var metadataQueryResult [][]string
-			columnNamesFromMetadata := make([]string, 0)
-			columnNamesFromMetadataDateTime := make(map[string]bool)
-			columnNamesFromMetadataNumerical := make(map[string]bool)
-			if exists {
-				err = BQ.ExecuteQuery(&ctx, client, metadataQuery, &metadataQueryResult)
-				if err != nil {
-					resultStatus["failure-"+docType] = "Error while executing metadata query" + err.Error()
-					status = false
-					log.WithError(err).Error("Error while executing query")
-				}
-				columnNamesFromMetadata, columnNamesFromMetadataDateTime, columnNamesFromMetadataNumerical = extractMetadataColumns(metadataQueryResult)
-				if offset == 0 {
-					propertySuccess, propertyFailures = InsertPropertyDataTypes(columnNamesFromMetadataDateTime, columnNamesFromMetadataNumerical, docType, projectId)
-				}
-			} else {
-				if offset == 0 {
-					propertySuccess, propertyFailures = InsertPropertyDataTypes(model.MarketoDataObjectColumnsDatetimeType[docType], model.MarketoDataObjectColumnsNumericalType[docType], docType, projectId)
-				}
 			}
 			success, failures := InsertIntegrationDocument(projectId, docType, queryResult, columnNamesFromMetadata, columnNamesFromMetadataDateTime, columnNamesFromMetadataNumerical)
 			totalFailures = totalFailures + failures
@@ -114,7 +111,7 @@ func InsertPropertyDataTypes(columnNamesFromMetadataDateTime map[string]bool, co
 	for columnName, _ := range columnNamesFromMetadataDateTime {
 		_, err := store.GetStore().CreateCRMProperties(&model.CRMProperty{
 			ProjectID:        projectId,
-			Source:           model.CRM_SOURCE_MARKETO,
+			Source:           U.CRM_SOURCE_MARKETO,
 			Type:             model.MarketoDocumentTypeAlias[docType],
 			Name:             columnName,
 			ExternalDataType: "timestamp",
@@ -130,7 +127,7 @@ func InsertPropertyDataTypes(columnNamesFromMetadataDateTime map[string]bool, co
 	for columnName, _ := range columnNamesFromMetadataNumerical {
 		_, err := store.GetStore().CreateCRMProperties(&model.CRMProperty{
 			ProjectID:        projectId,
-			Source:           model.CRM_SOURCE_MARKETO,
+			Source:           U.CRM_SOURCE_MARKETO,
 			Type:             model.MarketoDocumentTypeAlias[docType],
 			Name:             columnName,
 			ExternalDataType: "float64",
