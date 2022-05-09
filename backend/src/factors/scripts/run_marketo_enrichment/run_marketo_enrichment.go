@@ -135,7 +135,7 @@ func main() {
 		model.MarketoDocumentTypeAlias[model.MARKETO_TYPE_NAME_PROGRAM_MEMBERSHIP]: true,
 	}
 
-	sourceConfig, err := enrichment.NewCRMEnrichmentConfig(model.CRM_SOURCE_NAME_MARKETO, sourceObjectTypeAndAlias, userTypes, nil, activityTypes)
+	sourceConfig, err := enrichment.NewCRMEnrichmentConfig(U.CRM_SOURCE_NAME_MARKETO, sourceObjectTypeAndAlias, userTypes, nil, activityTypes)
 	if err != nil {
 		log.WithError(err).Error("Failed to create new crm enrichment config.")
 		anyFailure = true
