@@ -374,6 +374,118 @@ func TestAnalyticsFunnelGroupUserQuery(t *testing.T) {
 	})
 }
 
+func TestAnalyticsUniqueUsersQueryWithGroupEvent(t *testing.T) {
+	// Initialize routes and dependent data.
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+	uri := "/sdk/event/track"
+
+	t.Run("UniqueUsersQueryWithCRMGroupEventsAndSDKWebEvents", func(t *testing.T) {
+		project, err := SetupProjectReturnDAO()
+		assert.Nil(t, err)
+
+		// Create random eventNames
+		eventNames := make([]string, 0)
+		for i := 0; i < 2; i++ {
+			eventNames = append(eventNames, U.RandomLowerAphaNumString(8))
+		}
+		eventTimestamp := U.UnixTimeBeforeDuration(24 * 10 * time.Hour) // 10 days before.
+
+		// Create normal users
+		createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
+			Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.NotEmpty(t, createdUserID)
+		createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
+			Source: model.GetRequestSourcePointer(model.UserSourceWeb), CustomerUserId: "usersx@example.com"})
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.NotEmpty(t, createdUserID1)
+
+		// Create group with groupName = "$hubspot_company"
+		groupName := model.GROUP_NAME_HUBSPOT_COMPANY
+		timestamp := time.Now().AddDate(0, 0, 0).Unix() * 1000
+		_, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_HUBSPOT_COMPANY, model.AllowedGroupNames)
+		assert.Equal(t, http.StatusCreated, status)
+
+		// Create group user with random groupID
+		groupID := U.RandomLowerAphaNumString(5)
+		groupUserID, status := store.GetStore().CreateGroupUser(&model.User{
+			ProjectId: project.ID, JoinTimestamp: timestamp, Source: model.GetRequestSourcePointer(model.UserSourceHubspot),
+		}, groupName, groupID)
+		assert.Equal(t, http.StatusCreated, status)
+
+		// Register a group event using groupUserID
+		groupEventName := U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED
+		payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s", "timestamp": %d}`,
+			groupEventName, groupUserID, eventTimestamp)
+		w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+		assert.Equal(t, http.StatusOK, w.Code)
+		response := DecodeJSONResponseToMap(w.Body)
+		assert.NotNil(t, response["event_id"])
+
+		// Register user event using normal createdUsers.
+		occurrenceByIndex := []int{0, 1}
+		createdUsers := []string{createdUserID, createdUserID1}
+		for index, eventIndex := range occurrenceByIndex {
+			payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s", "timestamp": %d}`,
+				eventNames[eventIndex], createdUsers[eventIndex], eventTimestamp+int64(index+1))
+			w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+			assert.Equal(t, http.StatusOK, w.Code)
+			response := DecodeJSONResponseToMap(w.Body)
+			assert.NotNil(t, response["event_id"])
+		}
+
+		// Associate normal users to group
+		_, status = store.GetStore().UpdateUserGroup(project.ID, createdUserID, groupName, groupID, groupUserID)
+		assert.Equal(t, http.StatusAccepted, status)
+		_, status = store.GetStore().UpdateUserGroup(project.ID, createdUserID1, groupName, groupID, groupUserID)
+		assert.Equal(t, http.StatusAccepted, status)
+
+		// Non-group user with same customer_user_id
+		createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
+			Source: model.GetRequestSourcePointer(model.UserSourceWeb), CustomerUserId: "usersx@example.com"})
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.NotEmpty(t, createdUserID2)
+
+		payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s", "timestamp": %d}`,
+			eventNames[1], createdUserID2, eventTimestamp+10)
+		w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+		assert.Equal(t, http.StatusOK, w.Code)
+		response = DecodeJSONResponseToMap(w.Body)
+		assert.NotNil(t, response["event_id"])
+
+		// Unique users who performed all given events.
+		query := model.Query{
+			From: eventTimestamp,
+			To:   eventTimestamp + 100,
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
+					Name:       groupEventName,
+					Properties: []model.QueryProperty{},
+				},
+				model.QueryEventWithProperties{
+					Name:       eventNames[1],
+					Properties: []model.QueryProperty{},
+				},
+			},
+			Class:           model.QueryClassEvents,
+			Type:            model.QueryTypeUniqueUsers,
+			EventsCondition: model.EventCondAllGivenEvent,
+		}
+
+		result, errCode, _ := store.GetStore().Analyze(project.ID, query)
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.NotNil(t, result)
+		assert.Equal(t, model.AliasAggr, result.Headers[0])
+		// Result explanation: Out of 3 users.
+		// 2 users were part of a group and the group has performed an event.
+		// 1 non-group user has performed another event.
+		// One of the group user and the non-group user have same customer_user_id and
+		// hence qualify as 1 user performed all both the events.
+		assert.Equal(t, float64(1), result.Rows[0][0].(float64))
+	})
+}
+
 func TestAnalyticsFunnelWithUserIdentification(t *testing.T) {
 	// Test Funnel of 2 events done by 2 different factors users,
 	// who has done 1 event each, but identified as 1 customer user.
