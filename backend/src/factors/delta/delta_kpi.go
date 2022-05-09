@@ -67,9 +67,6 @@ func CreateKpiInsights(diskManager *serviceDisk.DiskDriver, cloudManager *filest
 			kpiProperties = &M.KPIPropertiesForFormSubmissions
 		} else if query.DisplayCategory == M.PageViewsDisplayCategory {
 			kpiProperties = &M.KPIPropertiesForPageViews
-		} else if query.DisplayCategory == M.AllChannelsDisplayCategory {
-			tmpProps := M.GetKPIConfigsForAllChannels()["properties"].([]map[string]string)
-			kpiProperties = &tmpProps
 		} else {
 			log.Errorf("no kpi Insights for category: %s", query.DisplayCategory)
 			continue
@@ -162,8 +159,6 @@ func GetMetricsEvaluated(category string, metricNames []string, queryEvent strin
 		GetMetrics = GetFormSubmitMetrics
 	} else if category == M.PageViewsDisplayCategory {
 		GetMetrics = GetPageViewMetrics
-	} else if category == M.AllChannelsDisplayCategory {
-		GetMetrics = GetChannelMetrics
 	} else {
 		err := fmt.Errorf("no kpi Insights for category: %s", category)
 		log.WithError(err).Error("not computing insights for this category")
