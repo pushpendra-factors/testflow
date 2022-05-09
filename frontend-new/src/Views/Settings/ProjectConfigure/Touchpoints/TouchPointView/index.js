@@ -360,6 +360,22 @@ const TouchpointView = ({ activeProject, tchType = '2', eventProperties, userPro
         return false;
     }
 
+    const propOption = (item) => {
+        return (<Tooltip title={item} placement={'right'}>
+            <div style={{ width: "210px" }}>
+                <div
+                    style={{
+                        maxWidth: "200px",
+                        overflow: "hidden",
+                        whiteSpace: "nowrap",
+                        textOverflow: "ellipsis"
+                    }}
+                >
+                    {item}
+                </div>
+            </div> </Tooltip>);
+    }
+
     const renderEventPropertyCampOptions = (dropDownType) => {
         const eventToCall = tchType === '2' ? 
             '$hubspot_contact_updated' : timestampRef === 'campaign_member_created_date'? '$sf_campaign_member_created' :  '$sf_campaign_member_updated';
@@ -368,32 +384,29 @@ const TouchpointView = ({ activeProject, tchType = '2', eventProperties, userPro
             eventProperties[eventToCall]?.forEach((prop) => {
                 if(prop[1]?.startsWith('$hubspot') && isSearchProps(dropDownType, prop)){
                     propertiesMp.push(
-                    <Tooltip title={prop[0]}>
-                    <Option key={prop[1]} value={prop[1]}> {prop[0]} </Option>
-                    </Tooltip>);
+                    <Option key={prop[1]} value={prop[1]}> {propOption(prop[0])}  </Option>
+                    );
                 }
             });
             userProperties.forEach((prop) => {
                 if(prop[1]?.startsWith('$hubspot') && isSearchProps(dropDownType, prop)){
-                    propertiesMp.push( <Tooltip title={prop[0]}>
-                        <Option key={prop[1]} value={prop[1]}> {prop[0]} </Option>
-                        </Tooltip>);
+                    propertiesMp.push( 
+                        <Option key={prop[1]} value={prop[1]}> {propOption(prop[0])} </Option>
+                        );
                 }
             });
         } else if(tchType === '3') {
             eventProperties[eventToCall]?.forEach((prop) => {
                 if(prop[1]?.startsWith('$salesforce') && isSearchProps(dropDownType, prop)){
-                    propertiesMp.push( <Tooltip title={prop[0]}>
-                        <Option key={prop[1]} value={prop[1]}> {prop[0]} </Option>
-                        </Tooltip>);
+                    propertiesMp.push(
+                        <Option key={prop[1]} value={prop[1]}> {propOption(prop[0])}  </Option>);
                 }
             });
             userProperties.forEach((prop) => {
                 if(prop[1]?.startsWith('$salesforce') && isSearchProps(dropDownType, prop))
                 {
-                    propertiesMp.push( <Tooltip title={prop[0]}>
-                        <Option key={prop[1]} value={prop[1]}> {prop[0]} </Option>
-                        </Tooltip>);
+                    propertiesMp.push( 
+                        <Option key={prop[1]} value={prop[1]}> {propOption(prop[0])}  </Option>);
                 }
             });
         }
@@ -443,7 +456,7 @@ const TouchpointView = ({ activeProject, tchType = '2', eventProperties, userPro
                         onSearch={(val) => setSearch('source', val)}
                         className={'fa-select w-full'} size={'large'} 
                         value={propertyMap['$source']['va']} onSelect={setPropSource} 
-                        defaultValue={``} style={{minWidth: '200px'}}>
+                        defaultValue={``} style={{minWidth: '200px' , maxWidth: '210px'}}>
                             {searchSour['source'] ?  null:
                                 <Option value={``}>Select Source Property </Option>
                             }
@@ -462,7 +475,7 @@ const TouchpointView = ({ activeProject, tchType = '2', eventProperties, userPro
                     <Select 
                     showSearch
                     onSearch={(val) => setSearch('campaign', val)}
-                    className={'fa-select w-full'} style={{minWidth: '200px'}}
+                    className={'fa-select w-full'} style={{minWidth: '200px' , maxWidth: '210px'}}
                     size={'large'} value={propertyMap['$campaign']['va']} onSelect={setPropCampaign} defaultValue={``}>
                         {searchSour['campaign'] ?  null:
                                 <Option value={``}>Select Campaign Property </Option>
@@ -482,7 +495,7 @@ const TouchpointView = ({ activeProject, tchType = '2', eventProperties, userPro
                     <Select 
                         showSearch
                         onSearch={(val) => setSearch('channel', val)}
-                        className={'fa-select w-full'} style={{minWidth: '200px'}}
+                        className={'fa-select w-full'} style={{minWidth: '200px', maxWidth: '210px'}}
                         size={'large'} value={propertyMap['$channel']['va']} onSelect={setPropChannel} defaultValue={``}>
                             {searchSour['channel'] ?  null:
                                     <Option value={``}>Select Channel Property </Option>
