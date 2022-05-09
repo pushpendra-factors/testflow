@@ -697,8 +697,11 @@ func (store *MemSQL) sanitizedLastSyncInfos(adwordsLastSyncInfos []model.Adwords
 
 		customerAccountIDs := strings.Split(adwordsSettings[i].CustomerAccountId, ",")
 		for j := range customerAccountIDs {
-			_, isExists := projectToCustomerAccToManagerAccMap[adwordsSettings[i].ProjectId][customerAccountIDs[j]]
-			if !isExists {
+			_, isProjectExists := projectToCustomerAccToManagerAccMap[adwordsSettings[i].ProjectId]
+			if !isProjectExists {
+				projectToCustomerAccToManagerAccMap[adwordsSettings[i].ProjectId] = make(map[string]string)
+			}
+			if _, customerAccountExists := projectToCustomerAccToManagerAccMap[adwordsSettings[i].ProjectId][customerAccountIDs[j]]; !customerAccountExists {
 				projectToCustomerAccToManagerAccMap[adwordsSettings[i].ProjectId][customerAccountIDs[j]] = ""
 			}
 		}
