@@ -842,6 +842,7 @@ CREATE ROWSTORE TABLE IF NOT EXISTS fivetran_mappings(
     integration text NOT NULL,
     connector_id text NOT NULL,
     schema_id text NOT NULL,
+    accounts text NOT NULL,
     status boolean,
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
@@ -849,6 +850,8 @@ CREATE ROWSTORE TABLE IF NOT EXISTS fivetran_mappings(
     SHARD KEY (project_id),
     PRIMARY KEY (project_id, id)
 );
+
+
 
 CREATE TABLE IF NOT EXISTS integration_documents (
     document_id text,
