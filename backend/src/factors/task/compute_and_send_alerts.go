@@ -47,7 +47,13 @@ func ComputeAndSendAlerts(projectID uint64, configs map[string]interface{}) (map
 	var alertConfiguration model.AlertConfiguration
 	var kpiQuery model.KPIQuery
 	var dateRange dateRanges
-
+	status := make(map[string]interface{})
+	endTimestampUnix := configs["endTimestamp"].(int64)
+	if endTimestampUnix == 0 || endTimestampUnix > U.TimeNowUnix() {
+		status["error"] = "invalid end timestamp"
+		return status, false
+	}
+	endTimestamp := time.Unix(endTimestampUnix, 0)
 	for _, alert := range allAlerts {
 
 		err := U.DecodePostgresJsonbToStructType(alert.AlertDescription, &alertDescription)
@@ -69,7 +75,7 @@ func ComputeAndSendAlerts(projectID uint64, configs map[string]interface{}) (map
 			continue
 		}
 		timezoneString := U.TimeZoneString(kpiQuery.Timezone)
-		dateRange, err = getDateRange(timezoneString, alertDescription.DateRange, alertDescription.ComparedTo)
+		dateRange, err = getDateRange(timezoneString, alertDescription.DateRange, alertDescription.ComparedTo, endTimestamp)
 		if err != nil {
 			log.Errorf("failed to getDateRange, error: %v for project_id: %v,alert_name: %s,", err, projectID, alert.AlertName)
 			continue
@@ -156,18 +162,18 @@ func executeAlertsKPIQuery(projectID uint64, alertType int, date_range dateRange
 	return statusCode, actualValue, comparedValue, nil
 }
 
-func getDateRange(timezone U.TimeZoneString, dateRange string, prevDateRange string) (dateRanges, error) {
+func getDateRange(timezone U.TimeZoneString, dateRange string, prevDateRange string, endTimeStamp time.Time) (dateRanges, error) {
 
 	if dateRange == model.LAST_MONTH || dateRange == model.LAST_QUARTER {
 		return dateRanges{}, errors.New("invalid date range")
 	}
 	var from, to, prev_from, prev_to time.Time
 	var err error
-	// remove this after cache support
-	currentTime := U.TimeNowIn(timezone)
+	endTimeStamp = U.ConvertTimeIn(endTimeStamp, timezone)
 	switch dateRange {
 	case model.LAST_WEEK:
-		from = currentTime.AddDate(0, 0, -6)
+		// end time stamp from config
+		from = endTimeStamp.AddDate(0, 0, -6)
 		from = now.New(from).BeginningOfWeek()
 		to = now.New(from).EndOfWeek()
 		if prevDateRange == model.PREVIOUS_PERIOD {
@@ -180,7 +186,7 @@ func getDateRange(timezone U.TimeZoneString, dateRange string, prevDateRange str
 			prev_to = now.New(prev_from).EndOfWeek()
 		}
 	case model.LAST_MONTH:
-		from = currentTime.AddDate(0, 0, 1)
+		from = endTimeStamp.AddDate(0, 0, 1)
 		from = now.New(from).BeginningOfMonth().AddDate(0, 0, -1)
 		from = now.New(from).BeginningOfMonth()
 		to = now.New(from).EndOfMonth()
@@ -194,7 +200,7 @@ func getDateRange(timezone U.TimeZoneString, dateRange string, prevDateRange str
 			prev_to = now.New(prev_from).EndOfMonth()
 		}
 	case model.LAST_QUARTER:
-		from = currentTime.AddDate(0, 0, 1)
+		from = endTimeStamp.AddDate(0, 0, 1)
 		from = now.New(from).BeginningOfMonth().AddDate(0, 0, -1)
 		from = now.New(from).BeginningOfQuarter()
 		to = now.New(from).EndOfQuarter()
