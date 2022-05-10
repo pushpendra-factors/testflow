@@ -399,6 +399,7 @@ CREATE TABLE IF NOT EXISTS project_settings (
     int_segment boolean NOT NULL DEFAULT FALSE,
     int_adwords_enabled_agent_uuid text,
     int_adwords_customer_account_id text,
+    int_adwords_client_manager_map json,
     int_hubspot boolean NOT NULL DEFAULT FALSE,
     int_hubspot_api_key text,
     int_hubspot_sync_info json,

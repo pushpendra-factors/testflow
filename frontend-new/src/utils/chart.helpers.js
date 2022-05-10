@@ -16,7 +16,11 @@ import {
 } from './constants';
 
 export const isPivotSupported = ({ queryType }) => {
-  return queryType === QUERY_TYPE_KPI;
+  return (
+    queryType === QUERY_TYPE_KPI ||
+    queryType === QUERY_TYPE_EVENT ||
+    queryType === QUERY_TYPE_PROFILE
+  );
 };
 
 export const getChartTypeMenuItems = (queryType, breakdownLength, events) => {

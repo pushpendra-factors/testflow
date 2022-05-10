@@ -54,6 +54,7 @@ const GoogleIntegration = ({
   const [accountId, setAccountId] = useState(null);
   const [showManageBtn, setShowManageBtn] = useState(true);
   const [showURLModal, setShowURLModal] = useState(false);
+  const [managerIDArr, SetManagerIDArr] = useState({});
 
   const onDisconnect = () => {
     setLoading(true);
@@ -74,7 +75,7 @@ const GoogleIntegration = ({
         setShowModal(false);
         setShowURLModal(false);
         setLoading(false);
-        console.log('change password failed-->', err);
+        console.log('Google integration error-->', err);
       });
   };
 
@@ -168,13 +169,21 @@ const GoogleIntegration = ({
       });
   };
 
+  const onManagerIDSelect = (Id,e) => {
+    let validatedManagerID = e.target.value.replace(/-/g, "");
+    SetManagerIDArr({
+      ...managerIDArr,
+      [Id]: validatedManagerID
+    })
+    
+  } 
   const onAccountSelect = (e) => {
     let selectedAdwordsAcc = [...selectedAdwordsAccounts];
     if (e.target.checked) {
       selectedAdwordsAcc.push(e.target.value);
     } else {
       let index = selectedAdwordsAcc.indexOf(e.target.value);
-      if (index > -1) selectedAdwordsAcc.splice(index, 1);
+      if (index > -1) selectedAdwordsAcc.splice(index, 1); 
     }
     setSelectedAdwordsAccounts(selectedAdwordsAcc);
   };
@@ -194,17 +203,24 @@ const GoogleIntegration = ({
     let selectedAdwordsAcc = selectedAdwordsAccounts.join(', ');
 
     //Factors INTEGRATION tracking
-    factorsai.track('INTEGRATION',{'name': 'adwords','activeProjectID': activeProject.id});
+    factorsai.track('INTEGRATION',{'name': 'adwords','activeProjectID': activeProject.id}); 
 
-    udpateProjectSettings(activeProject.id, {
+    let mappedAccounts = selectedAdwordsAccounts.reduce((a, v) => ({ ...a, [v]: managerIDArr[v] ? managerIDArr[v] : ''}), {})
+    
+    let accountsData = {
       int_adwords_customer_account_id: selectedAdwordsAcc,
-    }).then(() => {
+      int_adwords_client_manager_map: mappedAccounts
+    }; 
+
+    
+    udpateProjectSettings(activeProject.id, accountsData).then(() => {
       setAddNewAccount(false);
       setSelectedAdwordsAccounts([]);
       message.success('Adwords Accounts updated!');
       setShowManageBtn(true);
-      setCustomerAccountsLoaded(false);
+      setCustomerAccountsLoaded(false); 
     });
+
   };
 
   const renderAccountsList = () => {
@@ -213,23 +229,25 @@ const GoogleIntegration = ({
     if (!customerAccounts) return;
 
     for (let i = 0; i < customerAccounts.length; i++) {
-      let account = customerAccounts[i];
+      let account = customerAccounts[i]; 
 
       accountRows.push(
-        <tr>
+        <tr style={{'border-bottom': '1px solid #eee'}}>
           <td style={{ border: 'none', paddingTop: '5px' }}>
             <Checkbox value={account.customer_id} onChange={onAccountSelect} />
           </td>
           <td style={{ border: 'none', paddingTop: '5px' }}>
             {account.customer_id}
           </td>
-          <td style={{ border: 'none', paddingTop: '5px' }}>{account.name}</td>
+          <td style={{ border: 'none', paddingTop: '5px' }}>{account.name ? account.name : '-'}</td>
+          <td style={{ border: 'none', paddingTop: '5px', paddingBottom: '5px' }}>
+            <Input size={'small'} style={{'width': '180px'}} onChange={e=>onManagerIDSelect(account.customer_id,e)} />
+          </td>
         </tr>
       );
     }
     for (let i = 0; i < manualAccounts.length; i++) {
       let account = manualAccounts[i];
-
       accountRows.push(
         <tr>
           <td style={{ border: 'none', paddingTop: '5px' }}>
@@ -238,7 +256,10 @@ const GoogleIntegration = ({
           <td style={{ border: 'none', paddingTop: '5px' }}>
             {account.customer_id}
           </td>
-          <td style={{ border: 'none', paddingTop: '5px' }}>{account.name}</td>
+          <td style={{ border: 'none', paddingTop: '5px' }}>{account.name ? account.name : '-'}</td>
+          <td style={{ border: 'none', paddingTop: '5px' }}>
+              <Input size={'small'} style={{'width': '180px'}} onChange={e=>onManagerIDSelect(account.customer_id,e)} />
+          </td>
         </tr>
       );
     }
@@ -292,6 +313,16 @@ const GoogleIntegration = ({
                     Customer Name
                   </Text>
                 </td>
+                <td style={{ border: 'none', padding: '5px' }}>
+                  <Text
+                    type={'title'}
+                    level={7}
+                    color={'grey'}
+                    extraClass={'m-0'}
+                  >
+                    Manager Id (if applicable)
+                  </Text>
+                </td>
               </tr>
             </thead>
             <tbody>{accountRows}</tbody>
@@ -339,7 +370,7 @@ const GoogleIntegration = ({
           message.error('Error while fetch Customer Accounts.');
         });
     }
-  };
+  }; 
   return (
     <>
       <ErrorBoundary
@@ -372,16 +403,26 @@ const GoogleIntegration = ({
                   color={'grey'}
                   extraClass={'m-0 mt-2'}
                 >
-                  Adwords sync account details
+                  Adwords sync account details:
                 </Text>
-                <Input
+
+                  {currentProjectSettings?.int_adwords_customer_account_id?.split(',').map((id)=>{
+                return <Text
+                  type={'title'}
+                  level={7} 
+                  extraClass={'m-0 mt-1'}
+                >
+                 {`${id} ${currentProjectSettings?.int_adwords_client_manager_map ? currentProjectSettings?.int_adwords_client_manager_map[id] ? '('+currentProjectSettings?.int_adwords_client_manager_map[id]+')' : '' : '' }`} 
+                </Text>
+                  })}
+                {/* <Input
                   size='large'
                   disabled={true}
                   value={
                     currentProjectSettings?.int_adwords_customer_account_id
                   }
                   style={{ width: '400px' }}
-                />
+                /> */}
               </div>
             </>
           )}
@@ -445,6 +486,7 @@ const GoogleIntegration = ({
           transitionName=''
           maskTransitionName=''
           closable={false}
+          size={'large'}
         >
           <Row>
             <Col span={24}>

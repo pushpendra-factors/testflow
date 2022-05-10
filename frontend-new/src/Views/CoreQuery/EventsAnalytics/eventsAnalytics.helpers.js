@@ -17,3 +17,7 @@ export const getBreakdownDisplayName = ({
   }
   return displayTitle;
 };
+
+export const getEventDisplayName = ({ eventNames, event }) => {
+  return _.get(eventNames, event, event);
+};

@@ -10,7 +10,7 @@ import { EVENT_COUNT_KEY } from '../../Views/CoreQuery/EventsAnalytics/eventsAna
 import {
   getBreakdownDisplayName,
   getEventDisplayName,
-} from '../../Views/CoreQuery/EventsAnalytics/SingleEventMultipleBreakdown/utils';
+} from '../../Views/CoreQuery/EventsAnalytics/eventsAnalytics.helpers';
 import { getProfileQueryDisplayName } from '../../Views/CoreQuery/ProfilesResultPage/BreakdownCharts/utils';
 
 export const getMetricLabel = ({ metric, queryType, eventNames }) => {

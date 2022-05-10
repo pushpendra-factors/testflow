@@ -37,11 +37,11 @@ class AppConfig(Config):
 
     @classmethod
     def get_factors_login_redirect_url(cls):
-        return cls.app_host_url + "/#/login"
+        return cls.app_host_url + "/login"
 
     @classmethod
     def get_factors_admin_gsc_redirect_url(cls, status=None):
-        url = cls.app_host_url + "/settings/#integrations"
+        url = cls.app_host_url + "/settings/integration"
         if status is not None:
             url = url + "?status=" + status
         return url

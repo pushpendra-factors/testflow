@@ -18,7 +18,7 @@ import tableStyles from '../../../../components/DataTable/index.module.scss';
 import { DISPLAY_PROP } from '../../../../utils/constants';
 import NonClickableTableHeader from '../../../../components/NonClickableTableHeader';
 import { EVENT_COUNT_KEY } from '../eventsAnalytics.constants';
-import { getBreakdownDisplayName } from '../eventsAnalytics.helpers';
+import { getBreakdownDisplayName, getEventDisplayName } from '../eventsAnalytics.helpers';
 
 export const defaultSortProp = () => {
   return [
@@ -94,10 +94,6 @@ export const getBreakDownGranularities = (breakDownSlice, breakdowns) => {
     brks.splice(brkIndex, 1);
   });
   return grns;
-};
-
-export const getEventDisplayName = ({ eventNames, event }) => {
-  return _.get(eventNames, event, event);
 };
 
 export const getTableColumns = (
