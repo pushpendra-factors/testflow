@@ -55,7 +55,6 @@ func GetGroupPropertiesHandler(c *gin.Context) {
 
 	logCtx := log.WithField("projectId", projectId)
 
-	isDisplayNameEnabled := c.Query("is_display_name_enabled")
 	encodedGroupName := c.Params.ByName("group_name")
 	if encodedGroupName == "" {
 		logCtx.WithField("group_name", encodedGroupName).Error("null group_name")
