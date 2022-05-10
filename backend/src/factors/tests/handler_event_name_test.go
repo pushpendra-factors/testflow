@@ -263,11 +263,9 @@ func TestGetEventNameByGroupHandler(t *testing.T) {
 		assert.Equal(t, http.StatusOK, w.Code)
 		jsonResponse, _ := ioutil.ReadAll(w.Body)
 		json.Unmarshal(jsonResponse, &eventNames)
-		json.Unmarshal(jsonResponse, &eventNames)
-		assert.Nil(t, eventNames.EventNames)
-		fmt.Println(eventNames.EventNames)
-		assert.Contains(t, eventNames.EventNames[U.STANDARD_GROUP_DISPLAY_NAMES[model.GROUP_NAME_HUBSPOT_DEAL]], "$hubspot_deal_created", "$hubspot_deal_updated")
 		assert.NotNil(t, eventNames.EventNames)
+		assert.Contains(t, eventNames.EventNames[U.STANDARD_GROUP_DISPLAY_NAMES[model.GROUP_NAME_HUBSPOT_DEAL]], "$hubspot_deal_created", "$hubspot_deal_updated")
+		assert.True(t, len(eventNames.DisplayNames) > 0)
 	})
 }
 
@@ -296,10 +294,10 @@ func TestGetEventNameByUserHandler(t *testing.T) {
 		assert.Equal(t, http.StatusOK, w.Code)
 		jsonResponse, _ := ioutil.ReadAll(w.Body)
 		json.Unmarshal(jsonResponse, &eventNames)
-		assert.Nil(t, eventNames.EventNames)
-		fmt.Println(eventNames.EventNames)
+		assert.NotNil(t, eventNames.EventNames)
 		assert.Contains(t, eventNames.EventNames[U.STANDARD_GROUP_DISPLAY_NAMES[model.GROUP_NAME_HUBSPOT_COMPANY]], "$hubspot_company_created", "$hubspot_company_updated")
 		assert.Contains(t, eventNames.EventNames[U.STANDARD_GROUP_DISPLAY_NAMES[model.GROUP_NAME_SALESFORCE_ACCOUNT]], "$salesforce_account_created", "$salesforce_account_updated")
+		assert.True(t, len(eventNames.EventNames) > 0)
 	})
 
 }

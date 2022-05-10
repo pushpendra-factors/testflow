@@ -79,7 +79,7 @@ function App({ isAgentLoggedIn, agent_details, active_project, enableBingAdsInte
         localStorage.setItem('Linkedin_code', code);
         localStorage.setItem('Linkedin_state', state);
       }
-      window.location.replace("/settings/#integrations");
+      window.location.replace("/settings/integration");
     }
 
     if (window.location.href.indexOf("?bingadsint=") > -1) {
@@ -90,7 +90,7 @@ function App({ isAgentLoggedIn, agent_details, active_project, enableBingAdsInte
         let projectname = searchParams.get('projectname');
         enableBingAdsIntegration(projectID).then(() => {
           sendSlackNotification(email, projectname);
-          window.location.replace("/settings/#integrations");
+          window.location.replace("/settings/integration");
         }).catch((err) => {
           console.log('bing ads enable error', err)
         })
@@ -105,7 +105,7 @@ function App({ isAgentLoggedIn, agent_details, active_project, enableBingAdsInte
         let projectname = searchParams.get('projectname');
         enableMarketoIntegration(projectID).then(() => {
           sendSlackNotification(email, projectname);
-          window.location.replace("/settings/#integrations");
+          window.location.replace("/settings/integration");
         }).catch((err) => {
           console.log('Marketo enable error', err)
         })

@@ -10,24 +10,45 @@ import (
 	serviceDisk "factors/services/disk"
 	U "factors/util"
 	"fmt"
+	"io/ioutil"
 	"strconv"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
 )
 
-func CreateKpiInsights(diskManager *serviceDisk.DiskDriver, cloudManager *filestore.FileManager, periodCodesWithWeekNMinus1 []Period, projectId uint64, queryId uint64, queryGroup M.KPIQueryGroup, insightGranularity string) error {
+func CreateKpiInsights(diskManager *serviceDisk.DiskDriver, cloudManager *filestore.FileManager, periodCodesWithWeekNMinus1 []Period, projectId uint64, queryId uint64, queryGroup M.KPIQueryGroup, insightGranularity string, skipWpi, skipWpi2 bool) error {
 	// readEvents := true
 	var err error
 	var newInsightsList = make([]*WithinPeriodInsightsKpi, 0)
 	var oldInsightsList = make([]*WithinPeriodInsightsKpi, 0)
 
-	// if file exists for week 1, get metrics from that
-	// if not or error, read events file
-
-	// dateString := U.GetDateOnlyFromTimestampZ(weekStartTimestamps[0])
-	// dir, name := (*cloudManager).GetKPIFilePathAndName(projectId, dateString, queryId)
-	// readEvents := false
+	skipW1 := false
+	skipW2 := false
+	{
+		dateString := U.GetDateOnlyFromTimestampZ(periodCodesWithWeekNMinus1[0].From)
+		path, name := (*cloudManager).GetInsightsWpiFilePathAndName(projectId, dateString, queryId, 100)
+		if reader, err := (*cloudManager).Get(path, name); err == nil {
+			data, err := ioutil.ReadAll(reader)
+			if err == nil && skipWpi {
+				err := json.Unmarshal(data, &oldInsightsList)
+				if err == nil {
+					skipW1 = true
+				}
+			}
+		}
+		dateString = U.GetDateOnlyFromTimestampZ(periodCodesWithWeekNMinus1[1].From)
+		path, name = (*cloudManager).GetInsightsWpiFilePathAndName(projectId, dateString, queryId, 100)
+		if reader, err := (*cloudManager).Get(path, name); err == nil {
+			data, err := ioutil.ReadAll(reader)
+			if err == nil && skipWpi2 {
+				err := json.Unmarshal(data, &newInsightsList)
+				if err == nil {
+					skipW2 = true
+				}
+			}
+		}
+	}
 
 	for i, query := range queryGroup.Queries {
 		//every query occurs twice so
@@ -46,9 +67,6 @@ func CreateKpiInsights(diskManager *serviceDisk.DiskDriver, cloudManager *filest
 			kpiProperties = &M.KPIPropertiesForFormSubmissions
 		} else if query.DisplayCategory == M.PageViewsDisplayCategory {
 			kpiProperties = &M.KPIPropertiesForPageViews
-		} else if query.DisplayCategory == M.AllChannelsDisplayCategory {
-			tmpProps := M.GetKPIConfigsForAllChannels()["properties"].([]map[string]string)
-			kpiProperties = &tmpProps
 		} else {
 			log.Errorf("no kpi Insights for category: %s", query.DisplayCategory)
 			continue
@@ -70,28 +88,36 @@ func CreateKpiInsights(diskManager *serviceDisk.DiskDriver, cloudManager *filest
 		}
 
 		//get week 2 metrics by reading file
-		if wpi, err := GetMetricsEvaluated(query.DisplayCategory, query.Metrics, query.PageUrl, propFilter, propsToEval, projectId, periodCodesWithWeekNMinus1[1], cloudManager, diskManager, insightGranularity); err != nil {
-			return err
-		} else {
-			newInsightsList = append(newInsightsList, wpi)
+		if !skipW2 {
+			if wpi, err := GetMetricsEvaluated(query.DisplayCategory, query.Metrics, query.PageUrl, propFilter, propsToEval, projectId, periodCodesWithWeekNMinus1[1], cloudManager, diskManager, insightGranularity); err != nil {
+				return err
+			} else {
+				newInsightsList = append(newInsightsList, wpi)
+			}
 		}
 
 		//get week 1 metrics by reading file
-		if wpi, err := GetMetricsEvaluated(query.DisplayCategory, query.Metrics, query.PageUrl, propFilter, propsToEval, projectId, periodCodesWithWeekNMinus1[0], cloudManager, diskManager, insightGranularity); err != nil {
-			return err
-		} else {
-			oldInsightsList = append(oldInsightsList, wpi)
+		if !skipW1 {
+			if wpi, err := GetMetricsEvaluated(query.DisplayCategory, query.Metrics, query.PageUrl, propFilter, propsToEval, projectId, periodCodesWithWeekNMinus1[0], cloudManager, diskManager, insightGranularity); err != nil {
+				return err
+			} else {
+				oldInsightsList = append(oldInsightsList, wpi)
+			}
 		}
 	}
-	wpiBytes, _ := json.Marshal(newInsightsList)
-	err = WriteWpiPath(projectId, Period(periodCodesWithWeekNMinus1[1]), queryId, 100, bytes.NewReader(wpiBytes), *cloudManager)
-	if err != nil {
-		log.WithError(err).Error("write WPI error - ", err)
+	if !skipW2 {
+		wpiBytes, _ := json.Marshal(newInsightsList)
+		err = WriteWpiPath(projectId, Period(periodCodesWithWeekNMinus1[1]), queryId, 100, bytes.NewReader(wpiBytes), *cloudManager)
+		if err != nil {
+			log.WithError(err).Error("write WPI error - ", err)
+		}
 	}
-	wpiBytes, _ = json.Marshal(oldInsightsList)
-	err = WriteWpiPath(projectId, Period(periodCodesWithWeekNMinus1[0]), queryId, 100, bytes.NewReader(wpiBytes), *cloudManager)
-	if err != nil {
-		log.WithError(err).Error("write WPI error - ", err)
+	if !skipW1 {
+		wpiBytes, _ := json.Marshal(oldInsightsList)
+		err = WriteWpiPath(projectId, Period(periodCodesWithWeekNMinus1[0]), queryId, 100, bytes.NewReader(wpiBytes), *cloudManager)
+		if err != nil {
+			log.WithError(err).Error("write WPI error - ", err)
+		}
 	}
 
 	//get insights between the weeks
@@ -123,6 +149,7 @@ func GetMetricsEvaluated(category string, metricNames []string, queryEvent strin
 	var scanner *bufio.Scanner
 	var err error
 	if scanner, err = GetEventFileScanner(projectId, periodCode, cloudManager, diskManager, insightGranularity, true); err != nil {
+		log.WithError(err).Error("failed getting event file scanner")
 		return nil, err
 	}
 	var GetMetrics func(metricNames []string, queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (map[string]*MetricInfo, error)
@@ -132,8 +159,6 @@ func GetMetricsEvaluated(category string, metricNames []string, queryEvent strin
 		GetMetrics = GetFormSubmitMetrics
 	} else if category == M.PageViewsDisplayCategory {
 		GetMetrics = GetPageViewMetrics
-	} else if category == M.AllChannelsDisplayCategory {
-		GetMetrics = GetChannelMetrics
 	} else {
 		err := fmt.Errorf("no kpi Insights for category: %s", category)
 		log.WithError(err).Error("not computing insights for this category")

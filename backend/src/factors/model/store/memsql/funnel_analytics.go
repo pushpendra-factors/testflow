@@ -67,7 +67,7 @@ func (store *MemSQL) RunFunnelQuery(projectId uint64, query model.Query) (*model
 		logCtx.WithFields(log.Fields{"result": result, "err": err}).Info("SenseHQDebugLog1")
 	}
 
-	if len(query.GroupByProperties) > 0 {
+	if len(query.GroupByProperties) > 0 && len(result.Rows) > 0 {
 		// $no_group comes as the last record for MemSQL query. Put back as first.
 		noGroupRow := result.Rows[len(result.Rows)-1]
 		result.Rows = append([][]interface{}{noGroupRow}, result.Rows[0:len(result.Rows)-1]...)
