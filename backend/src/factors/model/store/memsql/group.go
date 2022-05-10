@@ -205,6 +205,7 @@ func (store *MemSQL) GetPropertyValuesByGroupProperty(projectID uint64, groupNam
 		"last_N_days":   lastNDays,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
 
 	if projectID == 0 {
 		return []string{}, errors.New("invalid project on GetPropertyValuesByGroupProperty")
@@ -224,7 +225,9 @@ func (store *MemSQL) GetPropertyValuesByGroupProperty(projectID uint64, groupNam
 		value, err := model.GetPropertyValuesByGroupPropertyFromCache(projectID,
 			groupName, propertyName, currentDateOnlyFormat)
 		if err != nil {
-			return []string{}, err
+			logCtx.WithField("current_date", currentDateOnlyFormat).WithError(err).
+				Error("Failed to get group property values from cache for the given date.")
+			continue
 		}
 		values = append(values, value)
 	}
