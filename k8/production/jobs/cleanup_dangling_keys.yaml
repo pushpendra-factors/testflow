@@ -2,7 +2,7 @@ apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
   labels:
-    nodePool: persistent-pool-standard
+    nodePool: shared-persistent-pool
   name: cleanup-dangling-keys-job
 spec:
   schedule: "1 2 3 4 5" #On Trigger
@@ -15,10 +15,10 @@ spec:
         metadata:
           labels:
             layer: jobs
-            nodePool: persistent-pool-standard
+            nodePool: shared-persistent-pool
         spec:
           nodeSelector:
-            cloud.google.com/gke-nodepool: persistent-pool-standard
+            cloud.google.com/gke-nodepool: shared-persistent-pool
           containers:
           - name: cleanup-dangling-keys-job
             image: us.gcr.io/factors-production/cleanup-dangling-keys-job:v0.1
