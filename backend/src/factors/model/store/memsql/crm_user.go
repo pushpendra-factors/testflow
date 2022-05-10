@@ -211,25 +211,27 @@ func (store *MemSQL) UpdateCRMUserAsSynced(projectID uint64, source U.CRMSource,
 	return crmUser, http.StatusAccepted
 }
 
-func (store *MemSQL) GetCRMUsersInOrderForSync(projectID uint64, source U.CRMSource) ([]model.CRMUser, int) {
+func (store *MemSQL) GetCRMUsersInOrderForSync(projectID uint64, source U.CRMSource, startTimestamp, endTimestamp int64) ([]model.CRMUser, int) {
 
 	logFields := log.Fields{
-		"project_id": projectID,
-		"source":     source,
+		"project_id":     projectID,
+		"source":         source,
+		"start_timestam": startTimestamp,
+		"end_timestamp":  endTimestamp,
 	}
 
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	logCtx := log.WithFields(logFields)
-	if projectID == 0 || source == 0 {
+	if projectID == 0 || source == 0 || startTimestamp == 0 || endTimestamp == 0 {
 		logCtx.Error("Invalid parameters")
 		return nil, http.StatusBadRequest
 	}
 
 	var crmUsers []model.CRMUser
 	db := C.GetServices().Db
-	err := db.Model(&model.CRMUser{}).Where("project_id = ? AND source = ? AND synced = false ",
-		projectID, source).Order("timestamp, created_at").Find(&crmUsers).Error
+	err := db.Model(&model.CRMUser{}).Where("project_id = ? AND source = ? AND synced = false AND timestamp BETWEEN ? AND ?",
+		projectID, source, startTimestamp, endTimestamp).Order("timestamp, created_at").Find(&crmUsers).Error
 	if err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			return nil, http.StatusNotFound
@@ -244,4 +246,41 @@ func (store *MemSQL) GetCRMUsersInOrderForSync(projectID uint64, source U.CRMSou
 	}
 
 	return crmUsers, http.StatusFound
+}
+
+func (store *MemSQL) GetCRMUsersMinimumTimestampForSync(projectID uint64, source U.CRMSource) (int64, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"source":     source,
+	}
+
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+	if projectID == 0 || source == 0 {
+		logCtx.Error("Invalid parameters")
+		return 0, http.StatusBadRequest
+	}
+
+	var minTimestamp struct {
+		Timestamp int64
+	}
+
+	db := C.GetServices().Db
+	err := db.Model(&model.CRMUser{}).Where("project_id = ? AND source = ? AND synced = false ",
+		projectID, source).Select("min(timestamp) as timestamp").Scan(&minTimestamp).Error
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return 0, http.StatusNotFound
+		}
+
+		logCtx.WithError(err).Error("Failed to get crm user min timestamp for sync.")
+		return 0, http.StatusInternalServerError
+	}
+
+	if minTimestamp.Timestamp == 0 {
+		return 0, http.StatusNotFound
+	}
+
+	return minTimestamp.Timestamp, http.StatusFound
 }

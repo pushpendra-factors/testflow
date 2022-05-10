@@ -230,7 +230,7 @@ func TestCRMMarketoEnrichment(t *testing.T) {
 
 	sourceConfig, err := enrichment.NewCRMEnrichmentConfig(U.CRM_SOURCE_NAME_MARKETO, sourceObjectTypeAndAlias, userTypes, nil, activityTypes)
 	assert.Nil(t, err)
-	enrichStatus := enrichment.Enrich(project.ID, sourceConfig)
+	enrichStatus := enrichment.Enrich(project.ID, sourceConfig, 2, 0)
 
 	for i := range enrichStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
@@ -315,7 +315,7 @@ func TestCRMMarketoEnrichment(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, status)
 	assert.Equal(t, user2.Action, model.CRMActionUpdated)
 
-	enrichStatus = enrichment.Enrich(project.ID, sourceConfig)
+	enrichStatus = enrichment.Enrich(project.ID, sourceConfig, 2, 0)
 
 	for i := range enrichStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
@@ -365,7 +365,7 @@ func TestCRMMarketoEnrichment(t *testing.T) {
 	status, err = store.GetStore().CreateCRMUser(user2)
 	assert.Nil(t, err)
 	assert.Equal(t, http.StatusConflict, status)
-	enrichStatus = enrichment.Enrich(project.ID, sourceConfig)
+	enrichStatus = enrichment.Enrich(project.ID, sourceConfig, 2, 0)
 
 	for i := range enrichStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
@@ -402,7 +402,7 @@ func TestCRMMarketoEnrichment(t *testing.T) {
 	}
 	status, err = store.GetStore().CreateCRMUser(user2)
 	assert.Nil(t, err)
-	enrichStatus = enrichment.Enrich(project.ID, sourceConfig)
+	enrichStatus = enrichment.Enrich(project.ID, sourceConfig, 2, 0)
 	for i := range enrichStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
 	}
@@ -451,7 +451,7 @@ func TestCRMEmptyPropertiesUpdated(t *testing.T) {
 	sourceConfig, err := enrichment.NewCRMEnrichmentConfig(U.CRM_SOURCE_NAME_MARKETO, sourceObjectTypeAndAlias, userTypes, nil, nil)
 	assert.Nil(t, err)
 
-	enrichStatus := enrichment.Enrich(project.ID, sourceConfig)
+	enrichStatus := enrichment.Enrich(project.ID, sourceConfig, 2, 0)
 	for i := range enrichStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
 	}
@@ -496,7 +496,7 @@ func TestCRMEmptyPropertiesUpdated(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, status)
 	assert.Equal(t, crmUser.Action, model.CRMActionUpdated)
 
-	enrichStatus = enrichment.Enrich(project.ID, sourceConfig)
+	enrichStatus = enrichment.Enrich(project.ID, sourceConfig, 2, 0)
 	for i := range enrichStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
 	}
@@ -608,7 +608,7 @@ func TestCRMPropertiesSync(t *testing.T) {
 
 	sourceConfig, err := enrichment.NewCRMEnrichmentConfig(U.CRM_SOURCE_NAME_MARKETO, typeAlias, userTypeMap, nil, activityTypeMap)
 	assert.Nil(t, err)
-	enrichStatus := enrichment.Enrich(project.ID, sourceConfig)
+	enrichStatus := enrichment.Enrich(project.ID, sourceConfig, 2, 0)
 	for i := range enrichStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
 	}

@@ -54,6 +54,8 @@ func main() {
 	enablePropertyTypeFromDB := flag.Bool("enable_property_type_from_db", false, "Enable property type check from db.")
 	whitelistedProjectIDPropertyTypeFromDB := flag.String("whitelisted_project_ids_property_type_check_from_db", "", "Allowed project id for property type check from db.")
 	blacklistedProjectIDPropertyTypeFromDB := flag.String("blacklisted_project_ids_property_type_check_from_db", "", "Blocked project id for property type check from db.")
+	numDocRoutines := flag.Int("num_unique_doc_routines", 1, "Number of unique document go routines per project")
+	minSyncTimestamp := flag.Int64("min_sync_timestamp", 0, "Min timstamp from where to process records")
 
 	flag.Parse()
 	if *env != "development" && *env != "staging" && *env != "production" {
@@ -171,7 +173,7 @@ func main() {
 			}
 		}
 
-		status := enrichment.Enrich(projectID, sourceConfig)
+		status := enrichment.Enrich(projectID, sourceConfig, *numDocRoutines, *minSyncTimestamp)
 		enrichStatus[projectID] = status
 		for _, tableStatus := range status {
 			if tableStatus.Status == U.CRM_SYNC_STATUS_FAILURES {
