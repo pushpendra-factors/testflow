@@ -25,6 +25,9 @@ parser.add_option("--batch_insert_doc_types", dest="batch_insert_doc_types",
     help="Enable batch insert for document types", default="")
 parser.add_option("--enable_deleted_contacts", dest="enable_deleted_contacts", help="Enable deleted contacts flag", default=False, action="store_true")
 parser.add_option("--enable_deleted_projectIDs", dest="enable_deleted_projectIDs", help="Enable deleted projectIDs", default="")
+parser.add_option("--enable_company_contact_association_v2_by_project_id",
+    dest="enable_company_contact_association_v2_by_project_id",help="Enable company contact association v2 for project",
+    default="")
 parser.add_option("--project_ids", dest="project_ids", help="Allowed project_ids", default="")
 
 
@@ -198,13 +201,13 @@ def get_all_properties_by_doc_type(project_id,doc_type, api_key):
         properties.append(contact_property["name"])
     return properties, r.ok
 
-def get_with_fallback_retry(project_id, get_url):
+def get_with_fallback_retry(project_id, get_url, request = requests.get, json=None):
     retries = 0
     start_time  = time.time()
     try:
         while True:
             try:
-                r = requests.get(url=get_url, headers = {}, timeout=REQUEST_TIMEOUT)
+                r = request(url=get_url, headers = {}, json=json, timeout=REQUEST_TIMEOUT)
                 if r.status_code != 429:
                     if not r.ok:
                         if r.status_code== 414 or r.status_codes == 404:
@@ -469,6 +472,124 @@ def sync_contacts(project_id, api_key,last_sync_timestamp, sync_all=False):
         log.warning("Downloaded and created %d contacts. total %d.", len(docs), count)
     return contact_api_calls, max_timestamp
 
+def add_paginated_associations(project_id, to_object_ids, next_page_url, api_key):
+    while True:
+        url = next_page_url+"&"+"hapikey="+api_key
+        log.warning("Downloading paginated associations for project_id %d url %s", project_id,next_page_url)
+        r  = get_with_fallback_retry(project_id, url)
+        if not r.ok:
+            raise Exception("failed to get next page on paginated associations "+str(r.text))
+        data = json.loads(r.text)
+        results = data["results"]
+        for association in results:
+            to_object_ids.append(association["id"])
+        total_associated_ids = len(results)
+        if "paging" in data and "next" in data["paging"]:
+            pagination = data["paging"]["next"]
+            if "link" in pagination and pagination["link"] != "":
+                next_page_url = pagination["link"]
+                continue
+        break
+
+    if len(to_object_ids)==0:
+        log.warning("Received empty result on paginated associations.")
+    return to_object_ids, total_associated_ids
+
+def validate_association_errors(association_response):
+    if "errors" not in association_response:
+        return True
+    for error in association_response["errors"]:
+        # ignore error if no contact is associated to company
+        if error["subCategory"] != "crm.associations.NO_ASSOCIATIONS_FOUND":
+            raise Exception("Unknown error occured in association erros "+str(error))
+    return True
+
+def fill_contacts_for_companies(project_id,api_key, docs):
+    if use_company_contact_association_v2_by_project_id(project_id):
+        return fill_contacts_for_companies_v2(project_id,api_key, docs )
+    return fill_contacts_for_companies_v1(project_id, api_key, docs )
+
+
+def fill_contacts_for_companies_v2(project_id, api_key, companies):
+    companies_ids = []
+    for company in companies:
+        companies_ids.append(company["companyId"])
+    
+    associations, api_calls = get_associations(project_id, api_key, "company", companies_ids, "contact")
+    for i in range(len(companies)):
+        company_id = str(companies[i]["companyId"])
+        if company_id in associations:
+            contact_ids = []
+            for id in associations[company_id]:
+                contact_ids.append(int(id)) ## store as integer
+            companies[i]["contactIds"] = contact_ids
+    return companies, api_calls
+
+def get_associations(project_id, api_key, from_object_name, from_object_ids, to_object_name):
+    url = "https://api.hubapi.com/crm/v3/associations/"+from_object_name+"/"+to_object_name+"/batch/read"
+    get_url = url +"?"+"hapikey="+api_key
+    ids_payload = []
+    for id in from_object_ids:
+        ids_payload.append({"id":id})
+    payload = {"inputs":ids_payload}
+    api_count = 0
+    log.warning("Downloading %s %s using association for project_id %d url %s", from_object_name, to_object_name, project_id, url)
+    r = get_with_fallback_retry(project_id, get_url, requests.post, json=payload)
+    if not r.ok:
+        log.warning("Failed to get %s %s id using associations for project_id %d %s",from_object_name, to_object_name, project_id, str(r.text))
+        raise Exception("Failed to get "+from_object_name+" "+to_object_name+" using association")
+
+    # Response structure
+    # {
+    #    "status":
+    #    "result":[
+    #        { 
+    #           "from":{
+    #                     "id":from_id
+    #                  },
+    #            "to":[
+    #                   {
+    #                      "id":to_id
+    #                   }
+    #                 ],
+    #            "paging": {
+    #                   "next": {
+    #                       "after": "",
+    #                       "link": ""
+    #                   }
+    #             }
+    #        }
+    #    ],
+    #    "numErrors":
+    #    "errors":[{"subCategory":""}]
+    # }
+
+    api_count+=1
+    data = json.loads(r.text)
+    validate_association_errors(data)
+    results = data["results"]
+    associations = {} ##{from_object_id:[]to_object_id}
+
+    total_associated_ids = 0
+    for association in results:
+        from_object_id = association["from"]["id"]
+        to_object_ids = []
+        for to_object in association["to"]:
+            to_object_ids.append(to_object["id"])
+            total_associated_ids+=1
+        
+        if "paging" in association and "next" in association["paging"]:
+            pagination = association["paging"]["next"]
+            if "link" in pagination and pagination["link"]!= "":
+                to_object_ids, paginated_associated_ids = add_paginated_associations(project_id, 
+                    to_object_ids, pagination["link"], api_key)
+                total_associated_ids += paginated_associated_ids
+                api_count+=1
+        associations[from_object_id] = to_object_ids
+    log.warning("Downloaded %s %s using association total %d",from_object_name, to_object_name, total_associated_ids)
+
+    return associations, api_count
+
 def get_deleted_contacts(project_id, api_key):
     url = "https://api.hubapi.com/crm/v3/objects/contacts/?"
     parameter_dict = {'archived': "true", 'hapikey': api_key,"limit":100}
@@ -498,6 +619,7 @@ def get_deleted_contacts(project_id, api_key):
                 raise Exception('Found empty link value to fetch deleted contacts')
             final_url = next_link + "&" + "hapikey=" + api_key
     return count_api_calls
+
 
 ## https://community.hubspot.com/t5/APIs-Integrations/Deals-Endpoint-Returning-414/m-p/320468/highlight/true#M30810
 def get_deals_with_properties(project_id,get_url):
@@ -616,7 +738,7 @@ def get_company_contacts(project_id, api_key, company_id):
     return response.get("contacts")
 
 # Fills contacts for each company on docs.
-def fill_contacts_for_companies(project_id, api_key, docs):
+def fill_contacts_for_companies_v1(project_id, api_key, docs):
     company_contacts_api_calls = 0
     for doc in docs:
         company_id = doc.get("companyId")
@@ -691,7 +813,8 @@ def sync_companies(project_id, api_key,last_sync_timestamp, sync_all=False):
             parameter_dict['offset']= response_dict['offset']
             max_timestamp = get_batch_documents_max_timestamp(project_id, docs, "companies", max_timestamp)
             # fills contact ids for each comapany under 'contactIds'.
-            _, companies_contacts_api_calls = fill_contacts_for_companies(project_id, api_key, docs)
+            _, api_calls = fill_contacts_for_companies(project_id, api_key, docs)
+            companies_contacts_api_calls += api_calls
             create_all_documents(project_id, 'company', docs)
             count = count + len(docs)
             log.warning("Downloaded and created %d companies. total %d.", len(docs), count)
@@ -822,6 +945,14 @@ def allow_delete_api_by_project_id(project_id):
     if not options.enable_deleted_contacts:
         return False
     all_projects, allowed_projects = get_allowed_list_with_all_element_support(options.enable_deleted_projectIDs)
+    if all_projects:
+        return True
+    return str(project_id) in allowed_projects
+
+def use_company_contact_association_v2_by_project_id(project_id):
+    if not options.enable_company_contact_association_v2_by_project_id:
+        return False
+    all_projects, allowed_projects = get_allowed_list_with_all_element_support(options.enable_company_contact_association_v2_by_project_id)
     if all_projects:
         return True
     return str(project_id) in allowed_projects
