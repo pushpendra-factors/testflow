@@ -1,11 +1,18 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Button, Col, Row, Spin } from 'antd';
+import {
+  Button, Col, Row, Spin
+} from 'antd';
 import { useSelector, useDispatch, connect } from 'react-redux';
 import {
   fetchActiveDashboardUnits,
   DeleteUnitFromDashboard,
+  deleteDashboard
 } from '../../reducers/dashboard/services';
-import { ACTIVE_DASHBOARD_CHANGE, WIDGET_DELETED } from '../../reducers/types';
+import {
+  ACTIVE_DASHBOARD_CHANGE,
+  WIDGET_DELETED,
+  DASHBOARD_DELETED
+} from '../../reducers/types';
 import SortableCards from './SortableCards';
 import DashboardSubMenu from './DashboardSubMenu';
 import ExpandableView from './ExpandableView';
@@ -16,17 +23,17 @@ import {
   SVG,
   FaErrorComp,
   FaErrorLog,
-  Text,
+  Text
 } from '../../components/factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary';
 import FaSelect from 'Components/FaSelect';
 import GroupSelect2 from '../../components/QueryComposer/GroupSelect2';
-import { deleteDashboard } from '../../reducers/dashboard/services';
-import { DASHBOARD_DELETED } from '../../reducers/types';
 import factorsai from 'factorsai';
 import { fetchDemoProject, getHubspotContact } from 'Reducers/global';
 import NewProject from '../Settings/SetupAssist/Modals/NewProject';
 import { meetLink } from '../../utils/hubspot';
+import { setItemToLocalStorage } from '../../utils/localStorage.helpers';
+import { DASHBOARD_KEYS } from '../../constants/localStorage.constants';
 
 function ProjectDropdown({
   setaddDashboardModal,
@@ -37,13 +44,13 @@ function ProjectDropdown({
   setRefreshClicked,
   isPinned = false,
   fetchDemoProject,
-  getHubspotContact,
+  getHubspotContact
 }) {
   const [moreOptions, setMoreOptions] = useState(false);
   const [widgetModal, setwidgetModal] = useState(false);
   const [deleteWidgetModal, showDeleteWidgetModal] = useState(false);
   const [deleteApiCalled, setDeleteApiCalled] = useState(false);
-  const [widgetModalLoading, setwidgetModalLoading] = useState(false);
+  const [widgetModalLoading, setWidgetModalLoading] = useState(false);
   const { active_project } = useSelector((state) => state.global);
   const { dashboards, activeDashboard, activeDashboardUnits } = useSelector(
     (state) => state.dashboard
@@ -53,10 +60,10 @@ function ProjectDropdown({
   const [selectVisible, setSelectVisible] = useState(false);
   const [showDashboardName, setDashboardName] = useState('');
   const [showDashboardDesc, setDashboardDesc] = useState('');
-  const [deleteDashboardModal, showdeleteDashboardModal] = useState(false);
+  const [deleteDashboardModal, showDeleteDashboardModal] = useState(false);
   const [dashboardDeleteApi, setDashboardDeleteApi] = useState(false);
-  const [demoProjectId, setdemoProjectId] = useState(null);
-  const [ownerID, setownerID] = useState();
+  const [demoProjectId, setDemoProjectId] = useState(null);
+  const [ownerID, setOwnerID] = useState();
   const [showProjectModal, setShowProjectModal] = useState(false);
 
   const dispatch = useDispatch();
@@ -64,7 +71,7 @@ function ProjectDropdown({
   useEffect(() => {
     fetchDemoProject()
       .then((res) => {
-        setdemoProjectId(res.data[0]);
+        setDemoProjectId(res.data[0]);
       })
       .catch((err) => {
         console.log(err.data.error);
@@ -72,10 +79,10 @@ function ProjectDropdown({
   }, [active_project, demoProjectId]);
 
   useEffect(() => {
-    let email = currentAgent.email;
+    const email = currentAgent.email;
     getHubspotContact(email)
       .then((res) => {
-        setownerID(res.data.hubspot_owner_id);
+        setOwnerID(res.data.hubspot_owner_id);
       })
       .catch((err) => {
         console.log(err.data.error);
@@ -87,14 +94,17 @@ function ProjectDropdown({
       if (parseInt(val) === activeDashboard?.id) {
         return false;
       }
-      const active_dashboard = dashboards.data.find(
+      const selectedDashboard = dashboards.data.find(
         (d) => d.id === parseInt(val)
       );
       dispatch({
         type: ACTIVE_DASHBOARD_CHANGE,
-        payload: active_dashboard,
+        payload: selectedDashboard
       });
-      // localStorage.setItem('active-dashboard-id',JSON.stringify(active_dashboard));
+      setItemToLocalStorage(
+        DASHBOARD_KEYS.ACTIVE_DASHBOARD_ID,
+        selectedDashboard.id
+      );
     },
     [dashboards, dispatch, activeDashboard?.id]
   );
@@ -106,11 +116,10 @@ function ProjectDropdown({
 
   useEffect(() => {
     if (activeDashboard) {
-      //Factors VIEW_DASHBOARD tracking
       factorsai.track('VIEW_DASHBOARD', {
         dashboard_name: activeDashboard?.name,
         dashboard_type: activeDashboard?.type,
-        dashboard_id: activeDashboard?.id,
+        dashboard_id: activeDashboard?.id
       });
     }
   }, [activeDashboard]);
@@ -138,12 +147,12 @@ function ProjectDropdown({
   }, [fetchUnits]);
 
   const handleToggleWidgetModal = (val) => {
-    setwidgetModalLoading(true);
+    setWidgetModalLoading(true);
     setwidgetModal(val);
     // for canvas to load properly before rendering the charts
     setTimeout(() => {
       window.scrollTo(0, 0);
-      setwidgetModalLoading(false);
+      setWidgetModalLoading(false);
     }, 1000);
   };
 
@@ -153,7 +162,7 @@ function ProjectDropdown({
       await deleteDashboard(active_project.id, activeDashboard?.id);
       setDashboardDeleteApi(false);
       dispatch({ type: DASHBOARD_DELETED, payload: activeDashboard });
-      showdeleteDashboardModal(false);
+      showDeleteDashboardModal(false);
       setDashboardName(dashboards.data[0]?.name);
       setDashboardDesc(dashboards.data[0]?.description);
       changeActiveDashboard(dashboards.data[0]?.id);
@@ -182,7 +191,7 @@ function ProjectDropdown({
     deleteWidgetModal.dashboard_id,
     deleteWidgetModal.id,
     active_project.id,
-    dispatch,
+    dispatch
   ]);
 
   const toggleDashboardSelect = () => {
@@ -195,16 +204,16 @@ function ProjectDropdown({
         {selectVisible ? (
           <GroupSelect2
             groupedProperties={generateDBList()}
-            placeholder='Search Dashboard'
-            iconColor='#3E516C'
+            placeholder="Search Dashboard"
+            iconColor="#3E516C"
             optionClick={handleOptChange}
             onClickOutside={() => setSelectVisible(false)}
             additionalActions={
               <Button
-                type='text'
-                size='large'
-                className={`w-full`}
-                icon={<SVG name='plus' />}
+                type="text"
+                size="large"
+                className={'w-full'}
+                icon={<SVG name="plus" />}
                 onClick={() => {
                   setaddDashboardModal(true);
                   setSelectVisible(false);
@@ -223,7 +232,7 @@ function ProjectDropdown({
     if (opt[1] === 'edit') {
       handleEditClick(activeDashboard);
     } else if (opt[1] === 'trash') {
-      showdeleteDashboardModal(true);
+      showDeleteDashboardModal(true);
     }
     setMoreOptions(false);
   };
@@ -231,15 +240,15 @@ function ProjectDropdown({
   const additionalActions = () => {
     return (
       <div className={'fa--query_block--actions-cols flex'}>
-        <div className={`relative`}>
+        <div className={'relative'}>
           <Button
-            type='text'
+            type="text"
             size={'large'}
             onClick={() => setMoreOptions(true)}
-            className={`ml-1`}
-            style={{padding: '4px 6px'}}
+            className={'ml-1'}
+            style={{ padding: '4px 6px' }}
           >
-            <SVG name='more' size={24}/>
+            <SVG name="more" size={24} />
           </Button>
 
           {moreOptions ? (
@@ -248,7 +257,7 @@ function ProjectDropdown({
               options={[
                 ['Edit Dashboard', 'edit'],
                 // ['Pin Dashboard', 'pin'],
-                ['Delete Dashboard', 'trash'],
+                ['Delete Dashboard', 'trash']
               ]}
               optionClick={(val) => setAdditionalactions(val)}
               onClickOutside={() => setMoreOptions(false)}
@@ -265,7 +274,7 @@ function ProjectDropdown({
   const generateDBList = () => {
     const dashboardList = [
       { label: 'Pinned Dashboards', icon: 'pin', values: [] },
-      { label: 'All Dashboards', icon: 'dashboard', values: [] },
+      { label: 'All Dashboards', icon: 'dashboard', values: [] }
     ];
 
     for (let i = 0; i < dashboards.data.length; i++) {
@@ -273,34 +282,35 @@ function ProjectDropdown({
         dashboardList[0].values.push([
           dashboards.data[i].name,
           dashboards.data[i].description,
-          dashboards.data[i].id,
+          dashboards.data[i].id
         ]);
         dashboardList[1].values.push([
           dashboards.data[i].name,
           dashboards.data[i].description,
-          dashboards.data[i].id,
+          dashboards.data[i].id
         ]);
-      } else
+      } else {
         dashboardList[1].values.push([
           dashboards.data[i].name,
           dashboards.data[i].description,
-          dashboards.data[i].id,
+          dashboards.data[i].id
         ]);
+      }
     }
     return dashboardList;
   };
 
   if (dashboards.loading || activeDashboardUnits.loading) {
     return (
-      <div className='flex justify-center items-center w-full h-64'>
-        <Spin size='large' />
+      <div className="flex justify-center items-center w-full h-64">
+        <Spin size="large" />
       </div>
     );
   }
 
   if (dashboards.error || activeDashboardUnits.error) {
     return (
-      <div className='flex justify-center items-center w-full h-64'>
+      <div className="flex justify-center items-center w-full h-64">
         <NoDataChart />
       </div>
     );
@@ -321,64 +331,95 @@ function ProjectDropdown({
           }
           onError={FaErrorLog}
         >
-          {active_project.id === demoProjectId ?
+          {active_project.id === demoProjectId ? (
             <div className={'rounded-lg border-2 h-20 mb-3 mx-10'}>
               <Row justify={'space-between'} className={'m-0 p-3'}>
-                <Col span={projects.length == 1 ? 12 : 18}>
-                  <img src='assets/icons/welcome.svg' style={{ float: 'left', marginRight: '20px' }} />
-                  <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0'}>
+                <Col span={projects.length === 1 ? 12 : 18}>
+                  <img
+                    src="assets/icons/welcome.svg"
+                    style={{ float: 'left', marginRight: '20px' }}
+                  />
+                  <Text
+                    type={'title'}
+                    level={6}
+                    weight={'bold'}
+                    extraClass={'m-0'}
+                  >
                     Welcome! You just entered a Factors demo project
                   </Text>
-                  {projects.length == 1 ?
+                  {projects.length === 1 ? (
                     <Text type={'title'} level={7} extraClass={'m-0'}>
-                      These reports have been built with a sample dataset. Use this to start exploring!
+                      These reports have been built with a sample dataset. Use
+                      this to start exploring!
                     </Text>
-                    :
+                  ) : (
                     <Text type={'title'} level={7} extraClass={'m-0'}>
-                      To jump back into your Factors project, click on your account card on the bottom left of the screen.
+                      To jump back into your Factors project, click on your
+                      account card on the bottom left of the screen.
                     </Text>
-                  }
+                  )}
                 </Col>
                 <Col className={'mr-2 mt-2'}>
-                  <a href={meetLink(ownerID)} target='_blank' ><Button type={'default'} style={{ background: 'white', border: '1px solid #E7E9ED', height: '40px' }} className={'m-0 mr-2'} >Get a Personalized Demo</Button></a>
-                  {projects.length == 1 ?
-                    <Button type={'default'} style={{ background: 'white', border: '1px solid #E7E9ED', height: '40px' }} className={'m-0 mr-2'} onClick={() => setShowProjectModal(true)}>Set up my own Factors project</Button>
-                    : null}
+                  <a href={meetLink(ownerID)} target="_blank" rel="noreferrer">
+                    <Button
+                      type={'default'}
+                      style={{
+                        background: 'white',
+                        border: '1px solid #E7E9ED',
+                        height: '40px'
+                      }}
+                      className={'m-0 mr-2'}
+                    >
+                      Get a Personalized Demo
+                    </Button>
+                  </a>
+                  {projects.length === 1 ? (
+                    <Button
+                      type={'default'}
+                      style={{
+                        background: 'white',
+                        border: '1px solid #E7E9ED',
+                        height: '40px'
+                      }}
+                      className={'m-0 mr-2'}
+                      onClick={() => setShowProjectModal(true)}
+                    >
+                      Set up my own Factors project
+                    </Button>
+                  ) : null}
                 </Col>
               </Row>
             </div>
-            : null}
-          <div className={`flex items-start justify-between mx-10 my-2`}>
+          ) : null}
+          <div className={'flex items-start justify-between mx-10 my-2'}>
             <div className={'flex flex-col items-start'}>
               <Button
                 className={`${styles.dropdownbtn}`}
-                type='text'
+                type="text"
                 size={'large'}
                 onClick={toggleDashboardSelect}
               >
                 {showDashboardName}
-                <SVG name='caretDown' size={20} />
+                <SVG name="caretDown" size={20} />
               </Button>
               {setDashboard()}
               <Text level={7} type={'title'} weight={'medium'} color={'grey'}>
                 {showDashboardDesc}
               </Text>
             </div>
-            <div className='flex items-center'>
+            <div className="flex items-center">
               <Button
-                type='primary'
+                type="primary"
                 size={'large'}
                 onClick={() => setaddDashboardModal(true)}
-                icon={<SVG name='plus' size={16} color={'white'} />}
+                icon={<SVG name="plus" size={16} color={'white'} />}
               >
                 New Dashboard
               </Button>
               {additionalActions()}
             </div>
           </div>
-          <div
-            className={'ml-10 mr-4 my-6 flex-1'}
-          >
+          <div className={'ml-10 mr-4 my-6 flex-1'}>
             <DashboardSubMenu
               durationObj={durationObj}
               handleDurationChange={handleDurationChange}
@@ -387,14 +428,14 @@ function ProjectDropdown({
               refreshClicked={refreshClicked}
               setRefreshClicked={setRefreshClicked}
             />
-    <SortableCards
-      durationObj={durationObj}
-      setwidgetModal={handleToggleWidgetModal}
-      showDeleteWidgetModal={showDeleteWidgetModal}
-      refreshClicked={refreshClicked}
-      setRefreshClicked={setRefreshClicked}
-    />
-          </div >
+            <SortableCards
+              durationObj={durationObj}
+              setwidgetModal={handleToggleWidgetModal}
+              showDeleteWidgetModal={showDeleteWidgetModal}
+              refreshClicked={refreshClicked}
+              setRefreshClicked={setRefreshClicked}
+            />
+          </div>
 
           <ExpandableView
             widgetModalLoading={widgetModalLoading}
@@ -404,31 +445,31 @@ function ProjectDropdown({
           />
 
           <ConfirmationModal
-            visible={deleteWidgetModal ? true : false}
-            confirmationText='Are you sure you want to delete this widget?'
+            visible={!!deleteWidgetModal}
+            confirmationText="Are you sure you want to delete this widget?"
             onOk={confirmDeleteWidget}
             onCancel={showDeleteWidgetModal.bind(this, false)}
-            title='Delete Widget'
-            okText='Confirm'
-            cancelText='Cancel'
+            title="Delete Widget"
+            okText="Confirm"
+            cancelText="Cancel"
             confirmLoading={deleteApiCalled}
           />
           <ConfirmationModal
             visible={deleteDashboardModal}
-            confirmationText='Are you sure you want to delete this Dashboard?'
+            confirmationText="Are you sure you want to delete this Dashboard?"
             onOk={confirmDeleteDashboard}
-            onCancel={showdeleteDashboardModal.bind(this, false)}
+            onCancel={showDeleteDashboardModal.bind(this, false)}
             title={`Delete Dashboard - ${activeDashboard?.name}`}
-            okText='Confirm'
-            cancelText='Cancel'
+            okText="Confirm"
+            cancelText="Cancel"
             confirmLoading={dashboardDeleteApi}
           />
-    {/* create project modal */ }
-    <NewProject
-      visible={showProjectModal}
-      handleCancel={() => setShowProjectModal(false)}
-    />
-        </ErrorBoundary >
+          {/* create project modal */}
+          <NewProject
+            visible={showProjectModal}
+            handleCancel={() => setShowProjectModal(false)}
+          />
+        </ErrorBoundary>
       </>
     );
   }

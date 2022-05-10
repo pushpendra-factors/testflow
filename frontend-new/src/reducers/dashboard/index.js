@@ -1,3 +1,5 @@
+import _ from 'lodash';
+
 import {
   DASHBOARDS_LOADED,
   DASHBOARDS_LOADING,
@@ -13,87 +15,73 @@ import {
   WIDGET_DELETED,
   DASHBOARD_UPDATED,
   SET_ACTIVE_PROJECT,
-  DASHBOARD_LAST_REFRESHED,
+  DASHBOARD_LAST_REFRESHED
 } from '../types';
-import { getRearrangedData } from './utils';
 
-const defaultState = {
-  dashboards: {
-    loading: false,
-    error: false,
-    data: [],
-  },
-  activeDashboard: {},
-  activeDashboardUnits: {
-    loading: false,
-    error: false,
-    data: [],
-  },
-};
+import { getRearrangedData, getUpdateStateOnDashboardsLoaded } from './utils';
+import { defaultState } from './constants';
 
 export default function (state = defaultState, action) {
   switch (action.type) {
     case DASHBOARDS_LOADING:
       return {
         ...defaultState,
-        dashboards: { ...defaultState.dashboards, loading: true },
+        dashboards: { ...defaultState.dashboards, loading: true }
       };
     case DASHBOARDS_LOADING_FAILED:
       return {
         ...defaultState,
-        dashboards: { ...defaultState.dashboards, error: true },
+        dashboards: { ...defaultState.dashboards, error: true }
       };
     case DASHBOARDS_LOADED:
-      return {
-        ...defaultState,
-        dashboards: { ...defaultState.dashboards, data: action.payload },
-        activeDashboard: action.payload[0],
-      };
+      return getUpdateStateOnDashboardsLoaded({
+        payload: action.payload
+      });
     case DASHBOARD_UNITS_LOADING:
       return {
         ...state,
         activeDashboardUnits: {
           ...defaultState.activeDashboardUnits,
-          loading: true,
-        },
+          loading: true
+        }
       };
     case DASHBOARD_UNITS_LOADING_FAILED:
       return {
         ...state,
         activeDashboardUnits: {
           ...defaultState.activeDashboardUnits,
-          error: true,
-        },
+          error: true
+        }
       };
     case DASHBOARD_UNITS_LOADED:
       return {
         ...state,
         activeDashboardUnits: {
           ...defaultState.activeDashboardUnits,
-          data: getRearrangedData(action.payload, state.activeDashboard),
-        },
+          data: getRearrangedData(action.payload, state.activeDashboard)
+        }
       };
     case ACTIVE_DASHBOARD_CHANGE:
       return {
         ...state,
         activeDashboard: action.payload,
-        activeDashboardUnits: { ...defaultState.activeDashboardUnits },
+        activeDashboardUnits: { ...defaultState.activeDashboardUnits }
       };
     case DASHBOARD_LAST_REFRESHED:
       return {
         ...state,
         activeDashboard: {
           ...state.activeDashboard,
-          refreshed_at: action.payload,
-        },
+          refreshed_at: action.payload
+        }
       };
     case DASHBOARD_CREATED:
       return {
         ...state,
         dashboards: {
           ...state.dashboards,
-          data: [...state.dashboards.data, action.payload],
-        },
+          data: [...state.dashboards.data, action.payload]
+        }
       };
     case DASHBOARD_DELETED: {
       const newDashboardList = state.dashboards.data.filter(
@@ -104,7 +92,7 @@ export default function (state = defaultState, action) {
         ...state,
         activeDashboardUnits: { ...defaultState.activeDashboardUnits },
         dashboards: { ...defaultState.dashboards, data: newDashboardList },
-        activeDashboard: newActiveDashboard,
+        activeDashboard: newActiveDashboard
       };
     }
     case WIDGET_DELETED: {
@@ -117,12 +105,12 @@ export default function (state = defaultState, action) {
           ...state.activeDashboardUnits,
           data: state.activeDashboardUnits.data.filter(
             (elem) => elem.id !== action.payload
-          ),
+          )
         },
         activeDashboard: {
           ...state.activeDashboard,
-          units_position: updatedUnitsPosition,
-        },
+          units_position: updatedUnitsPosition
+        }
       };
     }
     case UNITS_ORDER_CHANGED: {
@@ -133,34 +121,34 @@ export default function (state = defaultState, action) {
         ...state,
         activeDashboardUnits: {
           ...state.activeDashboardUnits,
-          data: [...action.payload],
+          data: [...action.payload]
         },
         activeDashboard: {
           ...state.activeDashboard,
-          units_position: action.units_position,
+          units_position: action.units_position
         },
         dashboards: {
           ...state.dashboards,
           data: [
             ...state.dashboards.data.slice(0, activeDashboardIdx),
             { ...state.activeDashboard, units_position: action.units_position },
-            ...state.dashboards.data.slice(activeDashboardIdx + 1),
-          ],
-        },
+            ...state.dashboards.data.slice(activeDashboardIdx + 1)
+          ]
+        }
       };
     }
     case DASHBOARD_UNMOUNTED:
       return {
         ...state,
-        activeDashboardUnits: { ...defaultState.activeDashboardUnits },
+        activeDashboardUnits: { ...defaultState.activeDashboardUnits }
       };
-    case DASHBOARD_UPDATED:
+    case DASHBOARD_UPDATED: {
       const dashboardIndex = state.dashboards.data.findIndex(
         (dashboard) => dashboard.id === action.payload.id
       );
       const editedDashboard = {
         ...state.dashboards.data[dashboardIndex],
-        ...action.payload,
+        ...action.payload
       };
       return {
         ...state,
@@ -170,13 +158,14 @@ export default function (state = defaultState, action) {
           data: [
             ...state.dashboards.data.slice(0, dashboardIndex),
             editedDashboard,
-            ...state.dashboards.data.slice(dashboardIndex + 1),
-          ],
-        },
+            ...state.dashboards.data.slice(dashboardIndex + 1)
+          ]
+        }
       };
+    }
     case SET_ACTIVE_PROJECT:
       return {
-        ...defaultState,
+        ...defaultState
       };
     default:
       return state;

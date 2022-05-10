@@ -1,11 +1,11 @@
-import { get, getHostUrl, post, del, put } from '../../utils/request';
+import { getHostUrl, post, del } from '../../utils/request';
 import {
   DASHBOARDS_LOADED,
   DASHBOARD_UNITS_LOADING_FAILED,
   DASHBOARDS_LOADING,
   DASHBOARDS_LOADING_FAILED,
   DASHBOARD_UNITS_LOADING,
-  DASHBOARD_UNITS_LOADED,
+  DASHBOARD_UNITS_LOADED
 } from '../types';
 
 const host = getHostUrl();
@@ -14,8 +14,8 @@ export const fetchDashboards = (projectId) => {
   return async function (dispatch) {
     try {
       dispatch({ type: DASHBOARDS_LOADING });
-      const url = host + 'projects/' + projectId + '/dashboards';
-      const res = await get(null, url);
+      const url = 'projects/' + projectId + '/dashboards';
+      const res = await post(null, host, { url, method: 'GET' });
       dispatch({ type: DASHBOARDS_LOADED, payload: res.data });
     } catch (err) {
       console.log(err);
@@ -30,13 +30,12 @@ export const saveQueryToDashboard = (
   reqBody
 ) => {
   const url =
-    host +
     'projects/' +
     projectId +
     '/v1/dashboards/multi/' +
     selectedDashboardIds +
     '/units';
-  return post(null, url, reqBody);
+  return post(null, host, { url, requestBody: reqBody, method: 'POST' });
 };
 
 export const fetchActiveDashboardUnits = (projectId, activeDashboardId) => {
@@ -44,13 +43,8 @@ export const fetchActiveDashboardUnits = (projectId, activeDashboardId) => {
     try {
       dispatch({ type: DASHBOARD_UNITS_LOADING });
       const url =
-        host +
-        'projects/' +
-        projectId +
-        '/dashboards/' +
-        activeDashboardId +
-        '/units';
-      const res = await get(null, url);
+        'projects/' + projectId + '/dashboards/' + activeDashboardId + '/units';
+      const res = await post(null, host, { url, method: 'GET' });
       dispatch({ type: DASHBOARD_UNITS_LOADED, payload: res.data });
     } catch (err) {
       console.log(err);
@@ -85,18 +79,12 @@ export const deleteDashboard = (projectId, dashboardId) => {
 };
 
 export const updateDashboard = (projectId, dashboardId, body) => {
-  const url = host + 'projects/' + projectId + '/dashboards/' + dashboardId;
-  return put(null, url, body);
+  const url = 'projects/' + projectId + '/dashboards/' + dashboardId;
+  return post(null, host, { url, method: 'PUT', requestBody: body });
 };
 
 export const DeleteUnitFromDashboard = (projectId, dashboardId, unitId) => {
   const url =
-    host +
-    'projects/' +
-    projectId +
-    '/dashboards/' +
-    dashboardId +
-    '/units/' +
-    unitId;
-  return del(null, url);
+    'projects/' + projectId + '/dashboards/' + dashboardId + '/units/' + unitId;
+  return post(null, host, { url, method: 'DELETE' });
 };
