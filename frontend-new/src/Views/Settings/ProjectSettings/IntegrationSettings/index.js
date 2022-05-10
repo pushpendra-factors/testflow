@@ -26,6 +26,7 @@ import { ErrorBoundary } from 'react-error-boundary';
 import RevealIntegration from './Reveal';
 import BingIntegration from './Bing';
 import MarketoIntegration from './Marketo';
+import SlackIntegration from './Slack';
 
 const IntegrationProviderData = [
   {
@@ -38,6 +39,12 @@ const IntegrationProviderData = [
     name: 'Marketo',
     desc: 'Marketo is a leader in marketing automation. Using our Marketo source, we will ingest your Program, Campaign, Person and List records into Factors',
     icon: 'Marketo',
+    kbLink: false,
+  },
+  {
+    name: 'Slack',
+    desc: 'Slack is a leader in marketing automation. Using our slack source, we will ingest your Program, Campaign, Person and List records into Factors.',
+    icon: 'Slack',
     kbLink: false,
   },
   {
@@ -144,6 +151,10 @@ const IntegrationCard = ({ item, index }) => {
       case 'Marketo':
         return (
           <MarketoIntegration kbLink={item.kbLink} setIsStatus={setIsStatus} />
+        );
+      case 'Slack':
+        return (
+          <SlackIntegration kbLink={item.kbLink} setIsStatus={setIsStatus} />
         );
       case 'Clearbit Reveal':
         return (

@@ -35,6 +35,7 @@ function Dashboard({
   let integration = useSelector((state) => state.global.currentProjectSettings);
   const activeProject = useSelector((state) => state.global.active_project);
   const { bingAds, marketo } = useSelector((state) => state.global);
+  const currentAgent = useSelector((state) => state.agent.agent_details);
   const dispatch = useDispatch();
   const history = useHistory();
 
@@ -65,7 +66,7 @@ function Dashboard({
     integration?.int_clear_bit ||
     sdkCheck ||
     bingAds?.accounts ||
-    marketo?.status;
+    marketo?.status || currentAgent?.is_slack_integrated;
 
   const handleEditClick = useCallback((dashboard) => {
     setaddDashboardModal(true);

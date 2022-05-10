@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { connect, useSelector, useDispatch } from "react-redux";
 import {
-    Row, Col, Select, Menu, Dropdown, Button, Form, Table, Input, message, Collapse, notification, Tooltip, Space, Checkbox
+    Row, Col, Select, Menu, Dropdown, Button, Form, Table, Input, message, Collapse, notification, Tooltip, Space, Checkbox, Modal
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
 import { MoreOutlined, PlusOutlined } from '@ant-design/icons';
@@ -10,6 +10,12 @@ import GroupSelect2 from '../../../../components/KPIComposer/GroupSelect2';
 import FaSelect from 'Components/FaSelect';
 import { createAlerts, fetchAlerts, deleteAlerts } from 'Reducers/global';
 import ConfirmationModal from '../../../../components/ConfirmationModal';
+import QueryBlock from './QueryBlock';
+import { deleteGroupByForEvent } from '../../../../reducers/coreQuery/middleware';
+import { getEventsWithPropertiesKPI, getStateFromFilters } from './utils';
+import { fetchSlackChannels } from '../../../../reducers/global';
+import { fetchAgentInfo } from 'Reducers/agentActions';
+import SelectChannels from './SelectChannels';
 
 const { Option } = Select;
 
@@ -20,6 +26,10 @@ const Alerts = ({
     fetchAlerts,
     deleteAlerts,
     savedAlerts,
+    agent_details,
+    slack,
+    fetchSlackChannels,
+    fetchAgentInfo,
 }) => {
 
     const [showForm, setShowForm] = useState(false);
@@ -29,21 +39,42 @@ const Alerts = ({
     const [loading, setLoading] = useState(false);
     const [viewMode, SetViewMode] = useState(false);
     const [viewAlertDetails, setAlertDetails] = useState(false);
-    const [isDDVisible, setDDVisible] = useState(false);
-    const [operSelectOpen, setOperSelectOpen] = useState(false);
     const [operatorState, setOperatorState] = useState(null);
     const [Value, setValue] = useState(null);
-    const [ValueOpen, setValueOpen] = useState(false);
     const [emailEnabled, setEmailEnabled] = useState(false);
     const [slackEnabled, setSlackEnabled] = useState(false);
-    const [queries, setQueries] = useState({});
     const [showCompareField, setShowCompareField] = useState(false);
     const [alertType, setAlertType] = useState(1);
+    const [viewFilter, setViewFilter] = useState([]);
+    const [channelOpts, setChannelOpts] = useState([]);
+    const [selectedChannel, setSelectedChannel] = useState([]);
+    const [showSelectChannelsModal, setShowSelectChannelsModal] = useState(false);
 
     const [deleteWidgetModal, showDeleteWidgetModal] = useState(false);
     const [deleteApiCalled, setDeleteApiCalled] = useState(false);
     
     const [form] = Form.useForm();
+
+
+    // KPI SELECTION
+    const [queryType, setQueryType] = useState('kpi');
+    const [queries, setQueries] = useState([]);
+    const [selectedMainCategory, setSelectedMainCategory] = useState(false);
+    const [KPIConfigProps, setKPIConfigProps] = useState([]);
+    const [queryOptions, setQueryOptions] = useState({
+      group_analysis: 'users',
+      groupBy: [
+        {
+          prop_category: '', // user / event
+          property: '', // user/eventproperty
+          prop_type: '', // categorical  /numberical
+          eventValue: '', // event name (funnel only)
+          eventName: '', // eventName $present for global user breakdown
+          eventIndex: 0,
+        },
+      ],
+      globalFilters: [],
+    });
 
 
     const confirmRemove = (id) => {
@@ -77,7 +108,6 @@ const Alerts = ({
           deleteWidgetModal
       ]);
 
-
     const menu = (item) => {
         return (
             <Menu>
@@ -100,12 +130,6 @@ const Alerts = ({
         );
     };
 
-
-    const SelectOperator = (val) => {
-        setOperatorState(val[1]);
-        setOperSelectOpen(false);
-    }
-
     // if operatorstate is include 'by more than' in string then show compare field
     useEffect(() => {
         if (operatorState && operatorState.includes('by_more_than')) {
@@ -116,6 +140,13 @@ const Alerts = ({
             setAlertType(1);
         }
     }, [operatorState])
+
+    useEffect(() => {
+        if (viewAlertDetails?.alert_description?.query?.fil) {
+           const filter = getStateFromFilters(viewAlertDetails.alert_description.query.fil);
+           setViewFilter(filter);
+        }
+    }, [viewAlertDetails])
 
     const columns = [
 
@@ -147,59 +178,71 @@ const Alerts = ({
         }
     ];
 
-    let kpiEvents = kpi?.config?.map((item) => {
-        let metricsValues = item?.metrics?.map((value) => {
-          if (value?.display_name) {
-            return [value?.display_name, value?.name];
+      const queryChange = (newEvent, index, changeType = 'add', flag = null) => {
+        const queryupdated = [...queries];
+        if (queryupdated[index]) {
+          if (changeType === 'add') {
+            if (JSON.stringify(queryupdated[index]) !== JSON.stringify(newEvent)) {
+              deleteGroupByForEvent(newEvent, index);
+            }
+            queryupdated[index] = newEvent;
           } else {
-            return [value, value];
+            if (changeType === 'filters_updated') {
+              // dont remove group by if filter is changed
+              queryupdated[index] = newEvent;
+            } else {
+              deleteGroupByForEvent(newEvent, index);
+              queryupdated.splice(index, 1);
+            }
           }
-        });
-        return {
-          label: item.display_category,
-          group: item.display_category,
-          category: item.category,
-          icon: 'custom_events',
-          values: metricsValues,
-        };
-      });
-
-      const onChangeDD = (value, group, category) => {
-        const newEvent = { alias: '', label: '', filters: [], group: '' };
-        newEvent.label = value[0];
-        newEvent.metric = value[1];
-        newEvent.group = group;
-        if (category) {
-          newEvent.category = category;
+        } else {
+          if (flag) {
+            Object.assign(newEvent, { pageViewVal: flag });
+          }
+          queryupdated.push(newEvent);
         }
-        setDDVisible(false);
-        setQueries(newEvent)
+        setQueries(queryupdated);
       };
 
-
-        const triggerDropDown = () => {
-            setDDVisible(true);
-        };
+      const queryList = () => {
+        const blockList = [];
     
-      const selectEvents = () => {
-        return (
-          <>
-            {isDDVisible ? (
-              <div>
-                <GroupSelect2
-                  groupedProperties={kpiEvents ? kpiEvents : []}
-                  placeholder='Select Event'
-                  optionClick={(group, val, category) =>
-                    onChangeDD(val, group, category)
-                  }
-                  onClickOutside={() => setDDVisible(false)}
-                  allowEmpty={true}
-                />
-              </div>
-            ) : null}
-          </>
-        );
-      }; 
+        queries.forEach((event, index) => {
+          blockList.push(
+            <div key={index} >
+              <QueryBlock
+                index={index + 1}
+                queryType={queryType}
+                event={event}
+                queries={queries}
+                eventChange={queryChange}
+                selectedMainCategory={selectedMainCategory}
+                setSelectedMainCategory={setSelectedMainCategory}
+                KPIConfigProps={KPIConfigProps}
+              />
+            </div>
+          );
+        });
+    
+        if (queries.length < 1) {
+          blockList.push(
+            <div key={'init'}>
+              <QueryBlock
+                queryType={queryType}
+                index={queries.length + 1}
+                queries={queries}
+                eventChange={queryChange}
+                groupBy={queryOptions.groupBy}
+                selectedMainCategory={selectedMainCategory}
+                setSelectedMainCategory={setSelectedMainCategory}
+                KPIConfigProps={KPIConfigProps}
+              />
+            </div>
+          );
+        }
+    
+        return blockList;
+      };
     
 
     const onFinish = data => {
@@ -209,22 +252,31 @@ const Alerts = ({
         if(emailEnabled) {
             if (data.emails) {
                 emails = data.emails.map((item) => {
-                    return item.email
+                    return item.email;
                 })
             }
             if (data.email) {
-                emails.push(data.email)
+                emails.push(data.email);
             }
         }
-        
+
+        let channelsId = [];
+        if(selectedChannel.length > 0) {
+            channelsId = selectedChannel.map((item) => {
+                return item.value;
+            })
+        }
+
         let payload = {
             "alert_type": alertType,
             "alert_description": {
-              "name" : queries.metric,
+              "name" : queries[0].metric,
               "query": {
-                'ca': queries.category,
-                'dc': queries.group,
-                'me': [queries.metric],
+                'ca': queries[0].category,
+                'dc': queries[0].group,
+                'fil': getEventsWithPropertiesKPI(queries[0].filters, queries[0]?.category),
+                'me': [queries[0].metric],
+                'pgUrl': queries[0]?.pageViewVal ? queries[0]?.pageViewVal : '',
                 "tz": localStorage.getItem('project_timeZone') || 'Asia/Kolkata',
               },
               "query_type": "kpi",
@@ -237,6 +289,7 @@ const Alerts = ({
               "email_enabled": emailEnabled ,
               "slack_enabled": slackEnabled,
               "emails": emails,
+              'channels': channelsId,
             }
           }
         
@@ -315,16 +368,49 @@ const Alerts = ({
     );
 
     const operatorOpts = [
-        ['is less than', 'is_less_than'],
-        ['is greater than', 'is_greater_than'],
-        ['decreased by more than', 'decreased_by_more_than'],
-        ['increased by more than', 'increased_by_more_than'],
-        ['increased or decreased by more than', 'increased_or_decreased_by_more_than'],
-        ['% has decreased by more than', '%_has_decreased_by_more_than'],
-        ['% has increased by more than', '%_has_increased_by_more_than'],
-        ['% has increased or decreased by more than', '%_has_increased_or_decreased_by_more_than'],
+        {label: 'is less than', value: 'is_less_than'},
+        {label: 'is greater than', value: 'is_greater_than'},
+        {label: 'decreased by more than', value: 'decreased_by_more_than'},
+        {label: 'increased by more than', value: 'increased_by_more_than'},
+        {label: 'increased or decreased by more than', value: 'increased_or_decreased_by_more_than'},
+        {label: '% has decreased by more than', value: '%_has_decreased_by_more_than'},
+        {label: '% has increased by more than', value: '%_has_increased_by_more_than'},
+        {label: '% has increased or decreased by more than', value: '%_has_increased_or_decreased_by_more_than'},
     ];
 
+    const selectOperator = (
+        <Select className={'fa-select w-full'} size={'large'}
+            options={operatorOpts}
+            placeholder="Operator"
+            showSearch
+            onChange={(value) => {
+                setOperatorState(value);
+            }
+            }
+        >
+        </Select>
+    );
+
+    useEffect(() => {
+        fetchAgentInfo();
+        fetchSlackChannels(agent_details.uuid);
+    }, [activeProject, agent_details?.is_slack_integrated]);
+
+    useEffect(() => {
+        if (slack?.length > 0) {
+            let tempArr = [];
+            for (let i = 0; i < slack.length; i++) {
+                tempArr.push({label: slack[i].name, value: slack[i].id});
+            }
+            setChannelOpts(tempArr);
+        }
+    }, [activeProject, agent_details, slack]);
+
+    const handleOk = () => {
+        setSelectedChannel(selectedChannel);
+        setShowSelectChannelsModal(false);
+    }
+    
     return (
         <div className={'fa-container mt-32 mb-12 min-h-screen'}>
           <Row gutter={[24, 24]} justify='center'>
@@ -375,6 +461,12 @@ const Alerts = ({
                                 <div className={'flex justify-end'}>
                                     <Button size={'large'} disabled={loading} onClick={() => {
                                         setShowForm(false);
+                                        setOperatorState('');
+                                        setValue('');
+                                        setQueries([]);
+                                        setShowCompareField(false);
+                                        setEmailEnabled(false);
+                                        setSlackEnabled(false);
                                         form.resetFields();
                                     }}>Cancel</Button>
                                     <Button size={'large'} disabled={loading} loading={loading} className={'ml-2'} type={'primary'} htmlType="submit">Save</Button>
@@ -386,63 +478,38 @@ const Alerts = ({
                                 <Text type={'title'} level={7} weight={'bold'} color={'grey-2'} extraClass={'m-0'}>Notify me when</Text>
                             </Col>
                         </Row>
-                        <Row className={'mt-4'}>
-                            <Col>
+                        <Row className={'m-0'}>
+                            <Col span={18}>
                                 <Form.Item
                                     name="query_type"
                                     className={'m-0'}
-                                    // rules={[{ required: true, message: 'Please select KPI' }]}
                                 >
-                                    <Button
-                                    className={`mr-2`}
-                                    type='link'
-                                    onClick={triggerDropDown}
-                                    >
-                                        {queries?.label ? queries?.label :'Select KPI'}
-                                    </Button>
-                                    {selectEvents()}
+                                    {queryList()}
                                 </Form.Item>
                             </Col>
-                            <Col className={'ml-1'}>
+                        </Row>
+                        <Row className={'mt-4'}>
+                            <Col span={18}>
+                                <Text type={'title'} level={7} weight={'bold'} color={'grey-2'} extraClass={'m-0'}>Operator</Text>
+                            </Col>
+                        </Row>
+                        <Row className={'mt-4'}>
+                            <Col span={8} className={'m-0'}>
                                 <Form.Item
                                     name="operator"
                                     className={'m-0'}
-                                    // rules={[{ required: true, message: 'Please select operator' }]}
+                                    rules={[{ required: true, message: 'Please select Operator' }]}
                                 >
-                                    <Button
-                                    className={`mr-2`}
-                                    type='link'
-                                    onClick={() => setOperSelectOpen(true)}
-                                    >
-                                    {operatorState ? operatorState.replace(/_/g, ' ') : 'Select Operator'}
-                                    </Button>
-
-                                    {operSelectOpen && (
-                                    <FaSelect
-                                        options={operatorOpts}
-                                        optionClick={(val) => SelectOperator(val)}
-                                        onClickOutside={() => setOperSelectOpen(false)}
-                                    ></FaSelect>
-                                    )}
+                                    {selectOperator}
                                 </Form.Item>
                             </Col>
-                            <Col className={'ml-1 w-24'}>
+                            <Col span={8} className={'ml-4'}>
                                 <Form.Item
                                     name="value"
                                     className={'m-0'}
                                     rules={[{ required: true, message: 'Please enter value' }]}
                                 >
-                                    {/* <Button
-                                    className={`mr-2`}
-                                    type='link'
-                                    onClick={() => setValueOpen(!ValueOpen)}
-                                    >
-                                    {Value ? Value : 'Value'}
-                                    </Button> */}
-
-                                    {/* {ValueOpen && ( */}
-                                        <Input className={'fa-input'} type={'number'} onChange={(e) => setValue(e.target.value)}/>
-                                    {/* )} */}
+                                    <Input className={'fa-input'} size={'large'} type={'number'} placeholder={'Qualifier'} onChange={(e) => setValue(e.target.value)}/>
                                 </Form.Item>
                             </Col>
                         </Row>
@@ -495,14 +562,6 @@ const Alerts = ({
                                     <Checkbox defaultChecked={emailEnabled} onChange={(e) => setEmailEnabled(e.target.checked)}>Email</Checkbox>
                                 </Form.Item>
                             </Col>
-                            {/* <Col span={4} className={'ml-4'}>
-                                <Form.Item
-                                    name="slack_enabled"
-                                    className={'m-0'}
-                                >
-                                    <Checkbox defaultChecked={slackEnabled} onChange={(e) => setSlackEnabled(e.target.checked)}>Slack</Checkbox>
-                                </Form.Item>
-                            </Col> */}
                         </Row>
                         {emailEnabled && (
                         <Row className={'mt-4'}>
@@ -561,6 +620,59 @@ const Alerts = ({
                             </Form.List>
                         </Row>
                         )}
+                        <Row className={'mt-2 ml-2'}>
+                            <Col className={'m-0'}>
+                                <Form.Item
+                                    name="slack_enabled"
+                                    className={'m-0'}
+                                >
+                                    <Checkbox defaultChecked={slackEnabled} onChange={(e) => setSlackEnabled(e.target.checked)}>Slack</Checkbox>
+                                </Form.Item>
+                            </Col>
+                        </Row>
+                        {slackEnabled && !agent_details.is_slack_integrated && (
+                            <>
+                                <Row className={'mt-2 ml-2'}>
+                                    <Col span={10} className={'m-0'}>
+                                        <Text type={'title'} level={6} color={'grey'} extraClass={'m-0'}>Slack is not integrated, Do you want to integrate with your slack account now?</Text>
+                                    </Col>
+                                </Row>
+                                <Row className={'mt-2 ml-2'}>
+                                    <Col span={10} className={'m-0'}>
+                                        <a href={'/settings/integration'} target='_blank'><Button><SVG name={'Slack'} />Connect to slack</Button></a>
+                                    </Col>
+                                </Row>
+                            </>
+                        )}
+                        {slackEnabled && agent_details.is_slack_integrated && (
+                            <>
+                                {selectedChannel.length > 0 && (
+                                <Row className={'rounded-lg border-2 border-gray-200 mt-2 ml-2 w-2/6'}>
+                                    <Col className={'m-0'}>
+                                        <Text type={'title'} level={6} color={'grey-2'} extraClass={'m-0 mt-2 ml-2'}>Selected Channels</Text>
+                                        {selectedChannel.map((channel, index) => (
+                                            <div key={index} >
+                                                <Text type={'title'} level={7} color={'grey'} extraClass={'m-0 ml-2 mt-1 mb-1'}>{'#'+ channel.label}</Text>
+                                            </div>
+                                        ))}
+                                    </Col>
+                                </Row>
+                                )}
+                                {!selectedChannel.length > 0 ? (
+                                <Row className={'mt-2 ml-2'}>
+                                    <Col span={10} className={'m-0'}>
+                                        <Button type={'link'} onClick={() => setShowSelectChannelsModal(true)}>Select Channels</Button>
+                                    </Col>
+                                </Row>
+                                ):
+                                <Row className={'mt-2 ml-2'}>
+                                    <Col span={10} className={'m-0'}>
+                                        <Button type={'link'} onClick={() => setShowSelectChannelsModal(true)}>Manage Channels</Button>
+                                    </Col>
+                                </Row>
+                                }
+                            </>
+                        )}
 
                     </Form>
 
@@ -583,67 +695,128 @@ const Alerts = ({
                     </Row>
 
                     <Row className={'mt-8'}>
-                            <Col span={18}>
-                                <Text type={'title'} level={7} weight={'bold'} color={'grey-2'} extraClass={'m-0'}>Notify me when</Text>
-                            </Col>
-                        </Row>
-                        <Row className={'mt-4'}>
-                            <Col>
+                        <Col span={18}>
+                            <Text type={'title'} level={7} weight={'bold'} color={'grey-2'} extraClass={'m-0'}>Notify me when</Text>
+                        </Col>
+                    </Row>
+                    <Row className={'m-0 mt-2'}>
+                        <Col>
+                            <Button
+                            className={`mr-2`}
+                            type='link'
+                            disabled={true}
+                            >
+                                {viewAlertDetails?.alert_description?.name}
+                            </Button>
+                        </Col>
+                        <Col>
+                            {viewAlertDetails?.alert_description?.query?.pgUrl && (
+                                <div>
+                                    <span className={'mr-2'}>from</span>
                                     <Button
                                     className={`mr-2`}
                                     type='link'
                                     disabled={true}
                                     >
-                                        {viewAlertDetails?.alert_description?.name}
+                                        {viewAlertDetails?.alert_description?.query?.pgUrl}
                                     </Button>
-                            </Col>
-                            <Col className={'ml-1'}>
-                                    <Button
-                                    className={`mr-2`}
-                                    type='link'
-                                    disabled={true}
-                                    >
-                                        {(viewAlertDetails?.alert_description?.operator).replace(/_/g, ' ')}
-                                    </Button>
-                            </Col>
-                            <Col className={'ml-1 w-24'}>
-                                    <Input disabled={true} className={'fa-input'} type={'number'} value={viewAlertDetails?.alert_description?.value}/>
-                            </Col>
-                        </Row>
-
-                        <Row className={'mt-4'}>
-                            <Col span={8}>
-                                <Text type={'title'} level={7} weight={'bold'} color={'grey-2'} extraClass={'m-0 mb-1'}>In the period of</Text>
-                                <Input disabled={true} size="large"  className={'fa-input w-full'} value={viewAlertDetails?.alert_description?.date_range} />
-                            </Col>
-                            {viewAlertDetails?.alert_description?.compared_to && (
-                            <Col span={8} className={'ml-4'}>
-                                <Text type={'title'} level={7} weight={'bold'} color={'grey-2'} extraClass={'m-0 mb-1'}>Compared to</Text>
-                                <Input disabled={true} size="large" className={'fa-input w-full'} value={viewAlertDetails?.alert_description?.compared_to}  />
-                            </Col>
+                                </div>
                             )}
-                        </Row>
-
+                        </Col>
+                    </Row>
+                    {viewAlertDetails?.alert_description?.query?.fil && (
                         <Row className={'mt-2'}>
-                            <Col span={24}>
-                                <div className={'border-top--thin-2 pt-2 mt-2'} />
-                                <Text type={'title'} level={7} weight={'bold'} color={'grey-2'} extraClass={'m-0'}>Delivery options</Text>
+                            <Col span={18}>
+                                <Text type={'title'} level={7} weight={'bold'} color={'grey-2'} extraClass={'m-0 my-1'}>Filters</Text>
+                                {viewFilter.map((filter, index) => (
+                                    <div key={index} className={'mt-1'}>
+                                        <Button
+                                        className={`mr-2`}
+                                        type='link'
+                                        disabled={true}
+                                        >
+                                            {filter.extra[0]}
+                                        </Button>
+                                        <Button
+                                        className={`mr-2`}
+                                        type='link'
+                                        disabled={true}
+                                        >
+                                            {filter.operator}
+                                        </Button>
+                                        <Button
+                                        className={`mr-2`}
+                                        type='link'
+                                        disabled={true}
+                                        >
+                                            {filter.values[0]}
+                                        </Button>
+                                    </div>
+                                ))}
                             </Col>
                         </Row>
-                        
-                        <Row className={'mt-2 ml-2'}>
-                            <Col span={4}>
-                                    <Checkbox disabled={true} checked={viewAlertDetails?.alert_configuration?.email_enabled}>Email</Checkbox>
-                            </Col>
-                            {/* <Col span={4} className={'ml-4'}>
-                                    <Checkbox disabled={true} checked={viewAlertDetails?.alert_configuration?.slack_enabled}>Slack</Checkbox>
-                            </Col> */}
-                        </Row>
-                        <Row className={'mt-4'}>
-                            <Col span={10}>
-                                {emailView()}
-                            </Col>
-                        </Row>
+                    )}
+                    <Row className={'mt-4'}>
+                        <Col span={18}>
+                            <Text type={'title'} level={7} weight={'bold'} color={'grey-2'} extraClass={'m-0'}>Operator</Text>
+                        </Col>
+                    </Row>
+                    <Row className={'mt-4'}>
+                        <Col span={8} className={'ml-1'}>
+                            <Input disabled={true} size="large"  className={'fa-input w-full'} value={(viewAlertDetails?.alert_description?.operator).replace(/_/g, ' ')} />
+                        </Col>
+                        <Col span={8} className={'ml-4 w-24'}>
+                            <Input disabled={true} className={'fa-input'} size={'large'} type={'number'} value={viewAlertDetails?.alert_description?.value}/>
+                        </Col>
+                    </Row>
+
+                    <Row className={'mt-4'}>
+                        <Col span={8}>
+                            <Text type={'title'} level={7} weight={'bold'} color={'grey-2'} extraClass={'m-0 mb-1'}>In the period of</Text>
+                            <Input disabled={true} size="large"  className={'fa-input w-full'} value={viewAlertDetails?.alert_description?.date_range} />
+                        </Col>
+                        {viewAlertDetails?.alert_description?.compared_to && (
+                        <Col span={8} className={'ml-4'}>
+                            <Text type={'title'} level={7} weight={'bold'} color={'grey-2'} extraClass={'m-0 mb-1'}>Compared to</Text>
+                            <Input disabled={true} size="large" className={'fa-input w-full'} value={viewAlertDetails?.alert_description?.compared_to}  />
+                        </Col>
+                        )}
+                    </Row>
+
+                    <Row className={'mt-2'}>
+                        <Col span={24}>
+                            <div className={'border-top--thin-2 pt-2 mt-2'} />
+                            <Text type={'title'} level={7} weight={'bold'} color={'grey-2'} extraClass={'m-0'}>Delivery options</Text>
+                        </Col>
+                    </Row>
+                    
+                    <Row className={'mt-2 ml-2'}>
+                        <Col span={4}>
+                                <Checkbox disabled={true} checked={viewAlertDetails?.alert_configuration?.email_enabled}>Email</Checkbox>
+                        </Col>
+                    </Row>
+                    <Row className={'mt-4'}>
+                        <Col span={10}>
+                            {emailView()}
+                        </Col>
+                    </Row>
+                    <Row className={'mt-2 ml-2'}>
+                        <Col span={4}>
+                                <Checkbox disabled={true} checked={viewAlertDetails?.alert_configuration?.slack_enabled}>Slack</Checkbox>
+                        </Col>
+                    </Row>
+                    {viewAlertDetails?.alert_configuration?.channels?.length > 0 && (
+                    <Row className={'rounded-lg border-2 border-gray-200 mt-2 ml-2 w-2/6'}>
+                        <Col className={'m-0'}>
+                            <Text type={'title'} level={6} color={'grey-2'} extraClass={'m-0 mt-2 ml-2'}>Selected Channels Id</Text>
+                            {viewAlertDetails?.alert_configuration?.channels.map((channel, index) => (
+                                <div key={index} >
+                                    <Text type={'title'} level={7} color={'grey'} extraClass={'m-0 ml-2 mt-1 mb-1'}>{'#'+ channel}</Text>
+                                </div>
+                            ))}
+                        </Col>
+                    </Row>
+                    )}
 
                 </>}
 
@@ -660,6 +833,49 @@ const Alerts = ({
             </div>
             </Col>
           </Row>
+
+            <Modal
+                title={null}
+                visible={showSelectChannelsModal}
+                centered={true}
+                zIndex={1005}
+                width={700}
+                onCancel={() => setShowSelectChannelsModal(false)}
+                onOk={handleOk}
+                className={'fa-modal--regular p-4 fa-modal--slideInDown'}
+                closable={true}
+                okText={'Save'}
+                cancelText={'Close'}
+                transitionName=''
+                maskTransitionName=''
+                okButtonProps={{ size: 'large' }}
+                cancelButtonProps={{ size: 'large' }}
+            >
+                <div>
+                <Row>
+                    <Col span={24}>
+                    <Text
+                        type={'title'}
+                        level={4}
+                        weight={'bold'}
+                        size={'grey'}
+                        extraClass={'m-0'}
+                    >
+                        Select slack channels
+                    </Text>
+                    </Col>
+                </Row>
+                <Row>
+                    <Col span={24}>
+                        <SelectChannels
+                            channelOpts={channelOpts}
+                            selectedChannel={selectedChannel}
+                            setSelectedChannel={setSelectedChannel}
+                        />
+                    </Col>
+                </Row>
+                </div>
+            </Modal>
         </div>
     )
 }
@@ -668,7 +884,9 @@ const mapStateToProps = (state) => ({
     activeProject: state.global.active_project,
     savedAlerts: state.global.Alerts,
     kpi: state?.kpi,
+    agent_details: state.agent.agent_details,
+    slack: state.global.slack,
 });
 
 
-export default connect(mapStateToProps, { createAlerts, fetchAlerts, deleteAlerts })(Alerts)
+export default connect(mapStateToProps, { createAlerts, fetchAlerts, deleteAlerts, fetchSlackChannels, fetchAgentInfo })(Alerts)
