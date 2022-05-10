@@ -1,15 +1,16 @@
+import _ from 'lodash';
 import { EMPTY_ARRAY } from 'Utils/global';
 import {
   QUERY_TYPE_KPI,
   QUERY_TYPE_EVENT,
-  QUERY_TYPE_PROFILE,
+  QUERY_TYPE_PROFILE
 } from 'Utils/constants';
 
 import { getKpiLabel } from '../../Views/CoreQuery/KPIAnalysis/kpiAnalysis.helpers';
 import { EVENT_COUNT_KEY } from '../../Views/CoreQuery/EventsAnalytics/eventsAnalytics.constants';
 import {
   getBreakdownDisplayName,
-  getEventDisplayName,
+  getEventDisplayName
 } from '../../Views/CoreQuery/EventsAnalytics/eventsAnalytics.helpers';
 import { getProfileQueryDisplayName } from '../../Views/CoreQuery/ProfilesResultPage/BreakdownCharts/utils';
 
@@ -23,7 +24,7 @@ export const getMetricLabel = ({ metric, queryType, eventNames }) => {
   if (queryType === QUERY_TYPE_PROFILE) {
     return getProfileQueryDisplayName({
       query: metric,
-      groupAnalysis: 'users',
+      groupAnalysis: 'users'
     });
   }
   return metric;
@@ -34,8 +35,7 @@ export const getMetricValue = ({
   index,
   dataObject,
   queryType,
-  metricsLength,
-  eventNames,
+  eventNames
 }) => {
   if (queryType === QUERY_TYPE_KPI) {
     return dataObject[
@@ -63,11 +63,16 @@ export const formatPivotData = ({
   queryType,
   eventNames,
   userPropNames,
-  eventPropNames,
+  eventPropNames
 }) => {
   try {
     const breakdownAttributes = breakdown.map((b) =>
-      getBreakdownDisplayName({ breakdown: b, userPropNames, eventPropNames })
+      getBreakdownDisplayName({
+        breakdown: b,
+        userPropNames,
+        eventPropNames,
+        queryType
+      })
     );
     const metricAttributes = metrics.map((metric) =>
       getMetricLabel({ metric, queryType, eventNames })
@@ -83,8 +88,7 @@ export const formatPivotData = ({
           index,
           dataObject: d,
           queryType,
-          metricsLength: metrics.length,
-          eventNames,
+          eventNames
         });
       });
       const current = breakdownVals.concat(metricVals);
@@ -107,9 +111,15 @@ export const getColumnOptions = ({
   breakdown,
   userPropNames,
   eventPropNames,
+  queryType
 }) => {
   return _.map(breakdown, (b) =>
-    getBreakdownDisplayName({ breakdown: b, userPropNames, eventPropNames })
+    getBreakdownDisplayName({
+      breakdown: b,
+      userPropNames,
+      eventPropNames,
+      queryType
+    })
   );
 };
 
@@ -120,13 +130,14 @@ export const getRowOptions = ({
   queryType,
   eventNames,
   userPropNames,
-  eventPropNames,
+  eventPropNames
 }) => {
   const valueOptions = getValueOptions({ metrics, queryType, eventNames });
   const columnOptions = getColumnOptions({
     breakdown,
     userPropNames,
     eventPropNames,
+    queryType
   });
   const allOptions = _.concat(valueOptions, columnOptions);
   return _.filter(allOptions, (option) => !selectedRows.includes(option));
@@ -139,12 +150,13 @@ export const SortRowOptions = ({
   queryType,
   eventNames,
   userPropNames,
-  eventPropNames,
+  eventPropNames
 }) => {
   const breakdownOptions = getColumnOptions({
     breakdown,
     userPropNames,
     eventPropNames,
+    queryType
   });
   const metricsOptions = getValueOptions({ metrics, queryType, eventNames });
   const breakdownsSelected = data.filter((d) => breakdownOptions.includes(d));
@@ -161,6 +173,6 @@ export const getFunctionOptions = () => {
     'Median',
     'Sum as Fraction of Rows',
     'Sum as Fraction of Columns',
-    'Sum as Fraction of Total',
+    'Sum as Fraction of Total'
   ];
 };
