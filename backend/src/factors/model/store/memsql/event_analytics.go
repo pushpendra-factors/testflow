@@ -699,7 +699,8 @@ func sortResultRowsByTimestamp(resultRows [][]interface{}, timestampIndex int) {
 	})
 }
 
-func getAllTimestampsBetweenByType(from, to int64, typ, timezone string, isTimezoneEnabled bool) []time.Time {
+// In day light savings, the timezone gets changed at 1:00AM or 2:00AM. Hence giving the beginning timestamp, but offset which remains for longer time.
+func getAllTimestampsAndOffsetBetweenByType(from, to int64, typ, timezone string, isTimezoneEnabled bool) ([]time.Time, []string) {
 	logFields := log.Fields{
 		"from":                from,
 		"to":                  to,
@@ -709,7 +710,7 @@ func getAllTimestampsBetweenByType(from, to int64, typ, timezone string, isTimez
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if typ == model.GroupByTimestampDate {
-		return U.GetAllDatesAsTimestamp(from, to, timezone, isTimezoneEnabled)
+		return U.GetAllDatesAndOffsetAsTimestamp(from, to, timezone, isTimezoneEnabled)
 	}
 
 	if typ == model.GroupByTimestampHour {
@@ -723,10 +724,12 @@ func getAllTimestampsBetweenByType(from, to int64, typ, timezone string, isTimez
 	if typ == model.GroupByTimestampMonth {
 		return U.GetAllMonthsAsTimestamp(from, to, timezone, isTimezoneEnabled)
 	}
+
 	if typ == model.GroupByTimestampQuarter {
 		return U.GetAllQuartersAsTimestamp(from, to, timezone, isTimezoneEnabled)
 	}
-	return []time.Time{}
+
+	return []time.Time{}, []string{}
 }
 
 func addMissingTimestampsOnResultWithoutGroupByProps(result *model.QueryResult,
@@ -745,14 +748,15 @@ func addMissingTimestampsOnResultWithoutGroupByProps(result *model.QueryResult,
 		rowsByTimestamp[U.GetTimestampAsStrWithTimezone(ts, query.Timezone)] = row
 	}
 
-	timestamps := getAllTimestampsBetweenByType(query.From, query.To,
+	timestamps, offsets := getAllTimestampsAndOffsetBetweenByType(query.From, query.To,
 		query.GetGroupByTimestamp(), query.Timezone, isTimezoneEnabled)
 
 	filledResult := make([][]interface{}, 0, 0)
 	// range over timestamps between given from and to.
 	// uses timestamp string for comparison.
-	for _, ts := range timestamps {
-		if row, exists := rowsByTimestamp[U.GetTimestampAsStrWithTimezone(ts, query.Timezone)]; exists {
+	for index, ts := range timestamps {
+
+		if row, exists := rowsByTimestamp[U.GetTimestampAsStrWithTimezoneGivenOffset(ts, offsets[index])]; exists {
 			// overrides timestamp with user timezone as sql results doesn't
 			// return timezone used to query.
 			row[timestampIndex] = ts
@@ -806,15 +810,17 @@ func addMissingTimestampsOnResultWithGroupByProps(result *model.QueryResult,
 		filledResult = append(filledResult, row)
 	}
 
-	timestamps := getAllTimestampsBetweenByType(query.From, query.To,
+	timestamps, offsets := getAllTimestampsAndOffsetBetweenByType(query.From, query.To,
 		query.GetGroupByTimestamp(), query.Timezone, isTimezoneEnabled)
 
+	log.WithField("timestamps", timestamps).WithField("offsets", offsets).WithField("rowsByGroupAndTimestamp", rowsByGroupAndTimestamp).Warn("kark1")
+
 	for _, row := range result.Rows {
-		for _, ts := range timestamps {
+		for index, ts := range timestamps {
 			encCols := make([]interface{}, 0, 0)
 			encCols = append(encCols, row[gkStart:gkEnd]...)
 			// encoded key with generated timestamp.
-			encCols = append(encCols, U.GetTimestampAsStrWithTimezone(ts, query.Timezone))
+			encCols = append(encCols, U.GetTimestampAsStrWithTimezoneGivenOffset(ts, offsets[index]))
 			encKey := getEncodedKeyForCols(encCols)
 
 			_, exists := rowsByGroupAndTimestamp[encKey]
