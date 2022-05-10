@@ -76,6 +76,7 @@ class FieldsMapping:
         '9' : "Smart",
         '10' : "Performance Max",
         '11' : "Local Services",
+        '12' : "Discovery",
     }
 
     ADVERTISING_CHANNEL_SUB_TYPE_MAPPING = {
