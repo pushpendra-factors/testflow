@@ -34,7 +34,7 @@ class FetchService:
         adwords_client.SetClientCustomerId(customer_acc_id)
         return adwords_client.GetReportDownloader(version=self.VERSION)
 
-    def new_get_service(self, service_name, refresh_token):
+    def new_get_service(self, service_name, refresh_token, login_customer_id=None):
         # GoogleAdsClient will read the credentials dictionary
         credentials = {
             "developer_token": self.CONFIG.developer_token,
@@ -43,5 +43,7 @@ class FetchService:
             "client_secret": self.CONFIG.client_secret,
             "use_proto_plus": True
         }   
+        if login_customer_id != None and login_customer_id != '':
+            credentials["login_customer_id"] = login_customer_id
         ads_client = GoogleAdsClient.load_from_dict(credentials)
         return ads_client.get_service(service_name, version=self.NEW_VERSION)

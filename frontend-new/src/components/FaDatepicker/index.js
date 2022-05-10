@@ -85,7 +85,7 @@ const FaDatepicker = ({
           endDate: endDateMonth,
           dateType: datePickerType,
         };
-
+        setQuarterDateStr(`${endDate.year()}, Q${startDate.quarter()}`)
         onSelect(newDateDataMonth);
       } else {
         endDate = MomentTz(startDate).endOf('Q');
@@ -95,7 +95,7 @@ const FaDatepicker = ({
           endDate,
           dateType: datePickerType,
         };
-        setQuarterDateStr(`${new Date().getFullYear()}, Q${startDate.quarter()}`)
+        setQuarterDateStr(`${endDate.year()}, Q${startDate.quarter()}`)
         onSelect(newDateDataMonth);
       }
     } else {

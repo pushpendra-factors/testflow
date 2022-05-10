@@ -72,36 +72,43 @@ const QuarterMap = (month, lastXNo = 0) => {
   let rng;
   let mnth = month;
   let year = new Date().getFullYear();
-  if(lastXNo) {
-    month-3 >= 0? mnth = month-3 : (mnth = 11 , year = year-1);
+  if (lastXNo > 0) {
+    month - 3 >= 0 ? mnth = month - 3 : (mnth = 11, year = year - 1);
   }
-  
-  if(mnth<=2) {
+
+  if (mnth <= 2) {
     rng = {
-        startDate: MomentTz().set({'month': 0, 'date': 1, 'year': year}).startOf('day'),
-        endDate: MomentTz().set({'month': 2, 'year': year}).endOf('month').endOf('day'),
-        dateStr: `${year}, Q1`
-      }
-    } else if(mnth<=5) {
-      rng = {
-        startDate: MomentTz().set({ 'date': 1, 'month': 3, 'year': year}).startOf('day'),
-        endDate: MomentTz().set({'month': 5, 'year': year}).endOf('month').endOf('day'),
-        dateStr: `${year}, Q2`
-      }
+      startDate: MomentTz().set({ 'month': 0, 'date': 1, 'year': year }).startOf('day'),
+      endDate: MomentTz().set({ 'month': 2, 'year': year }).endOf('day').endOf('month'),
+      dateStr: `${year}, Q1`
     }
-    else if(mnth<=7) {
-      rng = {
-        startDate: MomentTz().set({ 'date': 1, 'month': 6, 'year': year}).startOf('day'),
-        endDate: MomentTz().set({'month': 8, 'year': year}).endOf('month').endOf('day'),
-        dateStr: `${year}, Q3`
-      }
-    } else if (mnth<=11) {
-      rng = {
-        startDate: MomentTz().set({'month': 9, 'date': 1, 'year': year}).startOf('day'),
-        endDate: MomentTz().set({'month': 11, 'year': year}).endOf('month').endOf('day'),
-        dateStr: `${year}, Q4`
-      }
+    rng.endDate = rng.endDate.set({ 'date': rng.endDate.daysInMonth() });
+  } else if (mnth <= 5) {
+    rng = {
+      startDate: MomentTz().set({ 'date': 1, 'month': 3, 'year': year }).startOf('day'),
+      endDate: MomentTz().set({ 'month': 5, 'year': year }).endOf('day'),
+      dateStr: `${year}, Q2`
     }
+    rng.endDate = rng.endDate.set({ 'date': rng.endDate.daysInMonth() });
+  }
+  else if (mnth <= 7) {
+    rng = {
+      startDate: MomentTz().set({ 'date': 1, 'month': 6, 'year': year }).startOf('day'),
+      endDate: MomentTz().set({ 'month': 8, 'year': year }).endOf('day').endOf('month'),
+      dateStr: `${year}, Q3`
+    }
+    rng.endDate = rng.endDate.set({ 'date': rng.endDate.daysInMonth() });
+  } else if (mnth <= 11) {
+    rng = {
+      startDate: MomentTz().set({ 'month': 9, 'date': 1, 'year': year }).startOf('day'),
+      endDate: MomentTz().set({ 'month': 11, 'year': year }).endOf('day').endOf('month'),
+      dateStr: `${year}, Q4`
+    }
+    rng.endDate = rng.endDate.set({ 'date': rng.endDate.daysInMonth() });
+  }
+  if(rng.endDate.isAfter()) {
+    rng.endDate = MomentTz();
+  }
   return rng;
 }
 

@@ -271,6 +271,7 @@ class FieldsMapping:
         '9': "SMART",
         '10': "PERFORMANCE_MAX ",
         '11': "LOCAL_SERVICES ",
+        '12': "DISCOVERY"
     }
 
     SERVICE_ADVERTISING_CHANNEL_SUB_TYPE_MAPPING = {
@@ -334,6 +335,8 @@ class FieldsMapping:
         '32': "CALL_AD",
         '33': "APP_PRE_REGISTRATION_AD",
         '34': "IN_FEED_VIDEO_AD",
+        '35': "DISCOVERY_MULTI_ASSET_AD",
+        '36': "DISCOVERY_CAROUSEL_AD"
     }
 
     @staticmethod

@@ -831,12 +831,12 @@ func AddHeadersByAttributionKey(result *QueryResult, query *AttributionQuery, go
 			if strings.ToLower(goalEventAggFuncTypes[idx]) == "sum" {
 				conversion := fmt.Sprintf("%s - Conversion Value", goal)
 				cpc := fmt.Sprintf("%s - Return on Cost", goal)
-				userCPCRate := fmt.Sprintf("%s - UserConversionRate", goal)
+				userCPCRate := fmt.Sprintf("%s - UserConversionRate (remove)", goal)
 				result.Headers = append(result.Headers, conversion, cpc, userCPCRate)
 
 				conversionC := fmt.Sprintf("%s - Conversion Value(compare)", goal)
 				cpcC := fmt.Sprintf("%s - Return on Cost (compare)", goal)
-				userCPCRateC := fmt.Sprintf("%s - UserConversionRate (compare)", goal)
+				userCPCRateC := fmt.Sprintf("%s - UserConversionRate (compare) (remove)", goal)
 				result.Headers = append(result.Headers, conversionC, cpcC, userCPCRateC)
 			} else {
 				conversion := fmt.Sprintf("%s - Conversion", goal)
@@ -1677,6 +1677,38 @@ func MergeTwoDataRows(row1 []interface{}, row2 []interface{}, keyIndex int, attr
 
 		return row1
 	}
+}
+
+// SanitizeResult removes unwanted headers which are marked by (remove).
+// Ex. For KPIs like Revenue/Pipeline, User conversion rate is not needed.
+func SanitizeResult(result *QueryResult) {
+
+	// Populating the valid index
+	var validIdx []int
+	for idx, colName := range result.Headers {
+		if !strings.Contains(colName, "(remove)") {
+			validIdx = append(validIdx, idx)
+		}
+	}
+
+	// Building new headers
+	var resultHeader []string
+	for _, val := range validIdx {
+		resultHeader = append(resultHeader, result.Headers[val])
+	}
+
+	// Building new rows
+	resultRows := make([][]interface{}, 0)
+	for _, row := range result.Rows {
+		resultRow := make([]interface{}, 0)
+		for _, val := range validIdx {
+			resultRow = append(resultRow, row[val])
+		}
+		resultRows = append(resultRows, resultRow)
+	}
+
+	result.Headers = resultHeader
+	result.Rows = resultRows
 }
 
 // MergeDataRowsHavingSameKey merges rows having same key by adding each column value
