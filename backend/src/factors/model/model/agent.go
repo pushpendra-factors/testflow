@@ -38,10 +38,10 @@ type Agent struct {
 	SubscribeNewsletter          bool   `json:"subscribe_newsletter"`
 	IntGoogleOrganicRefreshToken string `json:"int_google_organic_refresh_token"`
 
-	IsAuth0User bool            `json:"is_auth0_user" gorm:"default:false"`
-	Value       *postgres.Jsonb `json:"value"`
+	IsAuth0User       bool            `json:"is_auth0_user" gorm:"default:false"`
+	Value             *postgres.Jsonb `json:"value"`
+	SlackAuthTokens   *postgres.Jsonb  `json:"slack_auth_tokens"`
 }
-
 type CreateAgentParams struct {
 	Agent    *Agent
 	PlanCode string
@@ -94,6 +94,12 @@ func CreateAgentInfos(agents []*Agent) []*AgentInfo {
 type FieldsToUpdate map[string]interface{}
 
 type Option func(FieldsToUpdate)
+
+type SlackAuthTokens map[uint64]SlackAccessTokens
+type SlackAccessTokens struct {
+	BotAccessToken string `json:"bot_access_token"`
+	UserAccessToken string `json:"user_access_token"`
+}
 
 func Firstname(firstName string) Option {
 	return func(fields FieldsToUpdate) {
@@ -178,3 +184,4 @@ func Auth0Value(value *postgres.Jsonb) Option {
 		fields["value"] = value
 	}
 }
+

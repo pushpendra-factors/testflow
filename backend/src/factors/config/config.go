@@ -244,6 +244,8 @@ type Configuration struct {
 	AllowHubspotEngagementsByProjectID              string
 	HubspotPropertyLookBackLimit                    int
 	EnableSlowDBQueryLogging                        bool
+	SlackAppClientID                                string
+	SlackAppClientSecret                            string
 	EnableDryRunAlerts							    bool
 }
 
@@ -2156,4 +2158,11 @@ func GetHubspotPropertiesLookbackLimit() int {
 
 func IsSlowDBQueryLoggingEnabled() bool {
 	return configuration.EnableSlowDBQueryLogging
+}
+func GetSlackClientID() string {
+	return configuration.SlackAppClientID
+}
+
+func GetSlackClientSecret() string {
+	return configuration.SlackAppClientSecret
 }

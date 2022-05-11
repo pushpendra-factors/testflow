@@ -45,6 +45,7 @@ type Model interface {
 	UpdateAgentVerificationDetailsFromAuth0(agentUUID, firstName, lastName string, verified bool, value *postgres.Jsonb) int
 	GetPrimaryAgentOfProject(projectId uint64) (uuid string, errCode int)
 	UpdateAgentSalesforceInstanceURL(agentUUID string, instanceURL string) int
+	IsSlackIntegratedForProject(projectID uint64, agentUUID string) (bool,int)
 
 	// analytics
 	ExecQuery(stmnt string, params []interface{}) (*model.QueryResult, error)
@@ -582,6 +583,9 @@ type Model interface {
 	UpsertIntegrationDocument(doc model.IntegrationDocument) error
 
 	// alerts
+	SetAuthTokenforSlackIntegration(projectID uint64, agentUUID string, authTokens model.SlackAccessTokens) error
+	GetSlackAuthToken(agentUUID string) (model.SlackAuthTokens, error)
+	DeleteSlackIntegration(agentUUID string) error
 	GetAlertById(id string, projectID uint64) (model.Alert, int)
 	GetAllAlerts(projectID uint64) ([]model.Alert, int)
 	DeleteAlert(id string, projectID uint64) (int, string)
