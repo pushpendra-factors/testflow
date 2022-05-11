@@ -52,7 +52,7 @@ func (store *MemSQL) GetAllAlerts(projectID uint64) ([]model.Alert, int) {
 	}
 	return alerts, http.StatusFound
 }
-func (store *MemSQL) UpdateAlert(id string, projectID uint64) (int, string) {
+func (store *MemSQL) DeleteAlert(id string, projectID uint64) (int, string) {
 	logFields := log.Fields{
 		"id":         id,
 		"project_id": projectID,
@@ -70,6 +70,16 @@ func (store *MemSQL) UpdateAlert(id string, projectID uint64) (int, string) {
 	err := db.Table("alerts").Where("project_id = ? AND id = ?", projectID, id).Updates(map[string]interface{}{"is_deleted": true, "updated_at": time.Now().UTC()}).Error
 	if err != nil {
 		log.WithField("project_id", projectID).Error(err)
+		return http.StatusInternalServerError, err.Error()
+	}
+	return http.StatusAccepted, ""
+}
+func (store *MemSQL) UpdateAlert(alert model.Alert) (int, string) {
+	db := C.GetServices().Db
+	alert.UpdatedAt = time.Now().UTC()
+	err := db.Update(&alert).Error
+	if err != nil {
+		log.WithField("project_id", alert.ProjectID).Error(err)
 		return http.StatusInternalServerError, err.Error()
 	}
 	return http.StatusAccepted, ""

@@ -584,8 +584,9 @@ type Model interface {
 	// alerts
 	GetAlertById(id string, projectID uint64) (model.Alert, int)
 	GetAllAlerts(projectID uint64) ([]model.Alert, int)
-	UpdateAlert(id string, projectID uint64) (int, string)
+	DeleteAlert(id string, projectID uint64) (int, string)
 	CreateAlert(projectID uint64, alert model.Alert) (model.Alert, int, string)
+	UpdateAlert(alert model.Alert) (int, string)
 
 	// sharable url
 	CreateShareableURL(sharableURLParams *model.ShareableURL) (*model.ShareableURL, int)

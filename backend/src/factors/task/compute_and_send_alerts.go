@@ -55,6 +55,7 @@ func ComputeAndSendAlerts(projectID uint64, configs map[string]interface{}) (map
 	}
 	endTimestamp := time.Unix(endTimestampUnix, 0)
 	for _, alert := range allAlerts {
+		alert.LastRunTime = time.Now()
 
 		err := U.DecodePostgresJsonbToStructType(alert.AlertDescription, &alertDescription)
 		if err != nil {
@@ -73,6 +74,9 @@ func ComputeAndSendAlerts(projectID uint64, configs map[string]interface{}) (map
 			log.Errorf("Error decoding query for project_id: %v, alert_name: %s", projectID, alert.AlertName)
 			log.Error(err)
 			continue
+		}
+		if kpiQuery.Category == model.ProfileQueryClass {
+			kpiQuery.GroupByTimestamp = getGBTForKPIQuery(alertDescription.DateRange)
 		}
 		timezoneString := U.TimeZoneString(kpiQuery.Timezone)
 		dateRange, err = getDateRange(timezoneString, alertDescription.DateRange, alertDescription.ComparedTo, endTimestamp)
@@ -111,12 +115,18 @@ func ComputeAndSendAlerts(projectID uint64, configs map[string]interface{}) (map
 				To:            dateRange.to,
 			}
 			if alertConfiguration.IsEmailEnabled {
-				sendEmailAlert(msg, dateRange, timezoneString, alertConfiguration.Emails)
+				sendEmailAlert(projectID, msg, dateRange, timezoneString, alertConfiguration.Emails)
 			}
 			if alertConfiguration.IsSlackEnabled {
 				sendSlackAlert(msg)
 			}
 		}
+		alert.LastAlertSent = true
+		statusCode,errMsg := store.GetStore().UpdateAlert(alert)
+		if errMsg != "" {
+			log.Errorf("failed to update alert for project_id: %v, alert_name: %s, error: %v", projectID, alert.AlertName, errMsg)
+			continue
+		}		
 	}
 	return nil, true
 }
@@ -132,12 +142,15 @@ func executeAlertsKPIQuery(projectID uint64, alertType int, date_range dateRange
 	kpiQueryGroup.Queries = append(kpiQueryGroup.Queries, kpiQuery)
 	results, statusCode := store.GetStore().ExecuteKPIQueryGroup(projectID, "", kpiQueryGroup)
 	if len(results) != 1 {
+		log.Error("empty or invalid result for ", kpiQuery)
 		return statusCode, actualValue, comparedValue, errors.New("empty or invalid result")
 	}
 	if len(results[0].Rows) == 0 {
+		log.Error("empty result for ", kpiQuery)
 		return statusCode, actualValue, comparedValue, errors.New("empty or invalid value in result")
 	}
 	if statusCode != http.StatusOK {
+		log.Error("failed to execute query for ", kpiQuery)
 		return statusCode, actualValue, comparedValue, nil
 	}
 	actualValue = results[0].Rows[0][0].(float64)
@@ -148,9 +161,11 @@ func executeAlertsKPIQuery(projectID uint64, alertType int, date_range dateRange
 		kpiQueryGroup.Queries = append(kpiQueryGroup.Queries, kpiQuery)
 		results, statusCode = store.GetStore().ExecuteKPIQueryGroup(projectID, "", kpiQueryGroup)
 		if len(results) != 1 {
+			log.Error("empty or invalid result for comparision type alerts  ", kpiQuery)
 			return statusCode, actualValue, comparedValue, errors.New("empty or invalid result")
 		}
 		if len(results[0].Rows) == 0 {
+			log.Error("empty result for comparision type alerts ", kpiQuery)
 			return statusCode, actualValue, comparedValue, errors.New("empty or invalid value in result")
 		}
 		if statusCode != http.StatusOK {
@@ -264,7 +279,7 @@ func sendAlert(operator string, actualValue float64, comparedValue float64, valu
 	return false, nil
 }
 
-func sendEmailAlert(msg Message, dateRange dateRanges, timezone U.TimeZoneString, emails []string) {
+func sendEmailAlert(projectID uint64, msg Message, dateRange dateRanges, timezone U.TimeZoneString, emails []string) {
 	var success, fail int
 	sub := "Factors Alert"
 	text := ""
@@ -302,10 +317,21 @@ func sendEmailAlert(msg Message, dateRange dateRanges, timezone U.TimeZoneString
 		}
 		success++
 	}
+	log.Info(statement, projectID)
 	log.Info("sent email alert to ", success, " failed to send email alert to ", fail)
 }
 
 func sendSlackAlert(msg Message) bool {
 	fmt.Println("slack alert sent")
 	return true
+}
+func getGBTForKPIQuery(dateRangeType string) string {
+	if dateRangeType == model.LAST_WEEK {
+		return model.GroupByTimestampWeek
+	} else if dateRangeType == model.LAST_MONTH {
+		return model.GroupByTimestampMonth
+	} else if dateRangeType == model.LAST_QUARTER {
+		return model.GroupByTimestampQuarter
+	}
+	return ""
 }

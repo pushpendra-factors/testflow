@@ -84,11 +84,11 @@ func main() {
 			Certificate: *memSQLCertificate,
 			AppName:     appName,
 		},
-		PrimaryDatastore: *primaryDatastore,
-		AWSKey:           *awsAccessKeyId,
-		AWSSecret:        *awsSecretAccessKey,
-		AWSRegion:        *awsRegion,
-		EmailSender:      *factorsEmailSender,
+		PrimaryDatastore:   *primaryDatastore,
+		AWSKey:             *awsAccessKeyId,
+		AWSSecret:          *awsSecretAccessKey,
+		AWSRegion:          *awsRegion,
+		EmailSender:        *factorsEmailSender,
 		EnableDryRunAlerts: *enableDryRunAlerts,
 	}
 	C.InitConf(config)
@@ -102,7 +102,7 @@ func main() {
 	defer db.Close()
 	//Initialized configs
 
-	query := "select DISTINCT(project_id) from alerts;"
+	query := "select DISTINCT(project_id) from alerts where is_deleted = false;"
 	rows, err := db.Raw(query).Rows()
 	if err != nil {
 		log.Fatal(err)
