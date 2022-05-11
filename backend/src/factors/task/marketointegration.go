@@ -48,6 +48,7 @@ func MarketoIntegration(projectId uint64, configs map[string]interface{}) (map[s
 		propertySuccess := 0
 		propertyFailures := 0
 		offset := 0
+		lastProcessedId := 0
 		metadataQuery, exists := model.GetMarketoDocumentMetadataQuery(docType, configs["BigqueryProjectId"].(string), mapping.SchemaID, model.MarketoDataObjectColumnsQuery[docType])
 		var metadataQueryResult [][]string
 		columnNamesFromMetadata := make([]string, 0)
@@ -72,13 +73,13 @@ func MarketoIntegration(projectId uint64, configs map[string]interface{}) (map[s
 				tableRef := client.Dataset(mapping.SchemaID).Table("lead_segment")
 				_, existsErr := tableRef.Metadata(ctx)
 				if existsErr == nil {
-					query = model.GetMarketoDocumentQuery(configs["BigqueryProjectId"].(string), mapping.SchemaID, model.MarketoDocumentToQuery[docType], executionDateString, docType, PAGE_SIZE, offset)
+					query = model.GetMarketoDocumentQuery(configs["BigqueryProjectId"].(string), mapping.SchemaID, model.MarketoDocumentToQuery[docType], executionDateString, docType, PAGE_SIZE, offset, 0)
 				} else {
-					query = model.GetMarketoDocumentQuery(configs["BigqueryProjectId"].(string), mapping.SchemaID, model.MarketoDocumentToQuery[model.MARKETO_TYPE_NAME_LEAD_NO_SEGMENT], executionDateString, model.MARKETO_TYPE_NAME_LEAD_NO_SEGMENT, PAGE_SIZE, offset)
+					query = model.GetMarketoDocumentQuery(configs["BigqueryProjectId"].(string), mapping.SchemaID, model.MarketoDocumentToQuery[model.MARKETO_TYPE_NAME_LEAD_NO_SEGMENT], executionDateString, model.MARKETO_TYPE_NAME_LEAD_NO_SEGMENT, PAGE_SIZE, offset, lastProcessedId)
 				}
 
 			} else {
-				query = model.GetMarketoDocumentQuery(configs["BigqueryProjectId"].(string), mapping.SchemaID, model.MarketoDocumentToQuery[docType], executionDateString, docType, PAGE_SIZE, offset)
+				query = model.GetMarketoDocumentQuery(configs["BigqueryProjectId"].(string), mapping.SchemaID, model.MarketoDocumentToQuery[docType], executionDateString, docType, PAGE_SIZE, offset, 0)
 			}
 			var queryResult [][]string
 			err = BQ.ExecuteQuery(&ctx, client, query, &queryResult)
@@ -94,6 +95,7 @@ func MarketoIntegration(projectId uint64, configs map[string]interface{}) (map[s
 				break
 			}
 			offset = offset + PAGE_SIZE
+			lastProcessedId = int(model.ConvertToNumber(model.GetMarketoUserId(docType, queryResult[len(queryResult)-1], columnNamesFromMetadata)))
 		}
 		resultStatus["failure-"+docType] = totalFailures
 		resultStatus["success-"+docType] = totalSuccess
