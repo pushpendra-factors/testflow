@@ -24,7 +24,7 @@ var MarketoDocumentToQuery = map[string]string{
 		" left outer join `%s.%s.segmentation` AS sg on s.segmentation_id = sg.id group by ls.id) lead_seg_agg on l.id = lead_seg_agg.id " +
 		" WHERE %v order by id asc LIMIT %v OFFSET %v",
 	MARKETO_TYPE_NAME_LEAD_NO_SEGMENT: "select NULL AS segment_ids, NULL AS segment_names, NULL AS segmentation_ids, NULL AS segmentation_names,l.* FROM `%s.%s.lead` AS l " +
-		" WHERE %v order by id asc LIMIT %v OFFSET %v",
+		" WHERE %v AND id > %v order by id asc LIMIT %v",
 }
 
 func GetMarketoDocumentFilterCondition(docType string, addPrefix bool, prefix string, executionDate string) string {
@@ -51,7 +51,7 @@ var MarketoDataObjectFiltersColumn = map[string]string{
 	MARKETO_TYPE_NAME_LEAD_NO_SEGMENT:    "_fivetran_synced",
 }
 
-func GetMarketoDocumentQuery(bigQueryProjectId string, schemaId string, baseQuery string, executionDate string, docType string, limit int, offset int) string {
+func GetMarketoDocumentQuery(bigQueryProjectId string, schemaId string, baseQuery string, executionDate string, docType string, limit int, offset int, lastProcessedRecord int) string {
 
 	if docType == MARKETO_TYPE_NAME_PROGRAM_MEMBERSHIP {
 		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId, bigQueryProjectId, schemaId, GetMarketoDocumentFilterCondition(docType, true, "pm", executionDate), limit, offset)
@@ -60,7 +60,7 @@ func GetMarketoDocumentQuery(bigQueryProjectId string, schemaId string, baseQuer
 		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId, bigQueryProjectId, schemaId, bigQueryProjectId, schemaId, bigQueryProjectId, schemaId, GetMarketoDocumentFilterCondition(docType, true, "l", executionDate), limit, offset)
 	}
 	if docType == MARKETO_TYPE_NAME_LEAD_NO_SEGMENT {
-		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId, GetMarketoDocumentFilterCondition(docType, true, "l", executionDate), limit, offset)
+		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId, GetMarketoDocumentFilterCondition(docType, true, "l", executionDate), lastProcessedRecord, limit)
 	}
 	return ""
 }
