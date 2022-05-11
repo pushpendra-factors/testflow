@@ -10,10 +10,10 @@ import (
 	"factors/model/store"
 	U "factors/util"
 	"fmt"
-	"net/http"
-
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
+	"net/http"
+	"net/url"
 )
 
 type oauthState struct {
@@ -39,7 +39,7 @@ func SlackAuthRedirectHandler(c *gin.Context) {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
-	redirectURL := GetSlackAuthorisationURL(C.GetSlackClientID(), string(enOAuthState))
+	redirectURL := GetSlackAuthorisationURL(C.GetSlackClientID(), url.QueryEscape(string(enOAuthState)))
 	c.JSON(http.StatusOK, gin.H{"redirectURL": redirectURL})
 }
 func GetSlackAuthorisationURL(clientID string, state string) string {
@@ -81,7 +81,7 @@ func SlackCallbackHandler(c *gin.Context) {
 	err = json.NewDecoder(resp.Body).Decode(&jsonResponse)
 	if err != nil {
 		logCtx.Error("failed to decode json response", err)
-		return 
+		return
 	}
 	access_token := jsonResponse["access_token"].(string)
 
