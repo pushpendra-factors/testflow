@@ -818,7 +818,7 @@ CREATE ROWSTORE TABLE IF NOT EXISTS custom_metrics(
     SHARD KEY (project_id),
     PRIMARY KEY (project_id, id),
     UNIQUE KEY unique_custom_metrics_project_id_name_idx(project_id, name) USING HASH
-)
+);
 -- DOWN
 -- DROP TABLE IF EXISTS custom_metrics;
 

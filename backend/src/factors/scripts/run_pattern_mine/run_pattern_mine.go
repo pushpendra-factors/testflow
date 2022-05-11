@@ -33,6 +33,7 @@ func registerStructs() {
 	beam.RegisterType(reflect.TypeOf((*C.Configuration)(nil)).Elem())
 
 	beam.RegisterType(reflect.TypeOf((*T.CpThreadDoFn)(nil)).Elem())
+	beam.RegisterType(reflect.TypeOf((*T.UpThreadDoFn)(nil)).Elem())
 	beam.RegisterType(reflect.TypeOf((*T.RunBeamConfig)(nil)).Elem())
 	beam.RegisterType(reflect.TypeOf((*T.CPatternsBeam)(nil)).Elem())
 

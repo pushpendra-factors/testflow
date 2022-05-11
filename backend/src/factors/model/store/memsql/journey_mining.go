@@ -3,7 +3,9 @@ package memsql
 import (
 	"bufio"
 	"encoding/json"
-	"factors/model/model"
+	"factors/filestore"
+	serviceGCS "factors/services/gcstorage"
+	U "factors/util"
 	"fmt"
 	"runtime"
 	osDebug "runtime/debug"
@@ -12,11 +14,9 @@ import (
 	"strings"
 	"time"
 
-	"factors/filestore"
-	serviceGCS "factors/services/gcstorage"
-	U "factors/util"
-
 	log "github.com/sirupsen/logrus"
+
+	"factors/model/model"
 )
 
 // General idea of plotting Journey Map would be as follows.
