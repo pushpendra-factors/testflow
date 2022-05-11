@@ -210,7 +210,7 @@ def get_with_fallback_retry(project_id, get_url, request = requests.get, json=No
                 r = request(url=get_url, headers = {}, json=json, timeout=REQUEST_TIMEOUT)
                 if r.status_code != 429:
                     if not r.ok:
-                        if r.status_code== 414 or r.status_codes == 404:
+                        if r.status_code== 414 or r.status_code == 404:
                             return r
                         if retries < RETRY_LIMIT:
                             log.error("Failed to get data from hubspot %d.Retries %d. Retrying in 2 seconds",r.status_code,retries)
