@@ -424,3 +424,19 @@ func (store *MemSQL) GetPrimaryAgentOfProject(projectId uint64) (uuid string, er
 
 	return projectAgentMappings[0].AgentUUID, http.StatusFound
 }
+func (store *MemSQL)IsSlackIntegratedForProject(projectID uint64, agentUUID string) (bool,int) {
+	agent,errCode := store.GetAgentByUUID(agentUUID)
+	if errCode != http.StatusOK {
+		return false,errCode
+	}
+	var authToken model.SlackAuthTokens
+	err := U.DecodePostgresJsonbToStructType(agent.SlackAuthTokens,&authToken)
+	if err != nil {
+		log.WithError(err).Error("Failed to decode slack auth tokens")
+		return false,http.StatusInternalServerError
+	}
+	if _,ok := authToken[projectID];ok {
+		return true,http.StatusOK
+	}
+	return false,http.StatusOK
+}

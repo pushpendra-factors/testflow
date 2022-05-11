@@ -1,9 +1,13 @@
-import { SortData } from "../../utils/dataFormatter";
+import _ from 'lodash';
+import { SortData } from '../../utils/dataFormatter';
+import { defaultState } from './constants';
+import { DASHBOARD_KEYS } from '../../constants/localStorage.constants';
+import { getItemFromLocalStorage } from '../../utils/localStorage.helpers';
 
 export const cardClassNames = {
   1: 'w-full',
   0: 'w-1/2',
-  2: 'w-1/4',
+  2: 'w-1/4'
 };
 
 export const getRearrangedData = (units, dashboard) => {
@@ -20,10 +24,10 @@ export const getRearrangedData = (units, dashboard) => {
     });
   } else {
     const unitsPosition = dashboard.units_position.position;
-    const nonPositionedUnits = units.filter(u => {
+    const nonPositionedUnits = units.filter((u) => {
       return !Object.prototype.hasOwnProperty.call(unitsPosition, u.id);
     });
-    const positionedUnits = units.filter(u => {
+    const positionedUnits = units.filter((u) => {
       return Object.prototype.hasOwnProperty.call(unitsPosition, u.id);
     });
     const result1 = nonPositionedUnits.reverse().map((u, index) => {
@@ -59,4 +63,30 @@ export const getRequestForNewState = (newState) => {
     body.size[elem.id] = elem.cardSize;
   });
   return body;
+};
+
+export const getUpdateStateOnDashboardsLoaded = ({ payload }) => {
+  const lastSelectedDashboardID = getItemFromLocalStorage(
+    DASHBOARD_KEYS.ACTIVE_DASHBOARD_ID
+  );
+  const fixedState = {
+    ...defaultState,
+    dashboards: { ...defaultState.dashboards, data: payload }
+  };
+  if (lastSelectedDashboardID) {
+    const lastSelectedDashboard = _.find(
+      payload,
+      (db) => db.id === +lastSelectedDashboardID
+    );
+    if (lastSelectedDashboard) {
+      return {
+        ...fixedState,
+        activeDashboard: lastSelectedDashboard
+      };
+    }
+  }
+  return {
+    ...fixedState,
+    activeDashboard: payload[0]
+  };
 };

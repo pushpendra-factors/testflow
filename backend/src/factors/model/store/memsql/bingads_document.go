@@ -7,6 +7,7 @@ import (
 	U "factors/util"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -14,12 +15,13 @@ import (
 )
 
 const (
-	bingadsCampaign                = "campaigns"
-	bingadsAdGroup                 = "ad_groups"
-	bingadsKeyword                 = "keyword"
-	fromIntegrationDocuments       = " FROM integration_documents "
-	staticWhereStatementForBingAds = "WHERE project_id = ? AND source= ? AND document_type = ? AND customer_account_id IN (?) AND timestamp between ? AND ? "
-	bingadsFilterQueryStr          = "SELECT DISTINCT(LCASE(JSON_EXTRACT_STRING(value, ?))) as filter_value FROM integration_documents WHERE project_id = ? AND customer_account_id IN (?) AND document_type = ? AND JSON_EXTRACT_STRING(value, ?) IS NOT NULL LIMIT 5000"
+	bingadsCampaign                                 = "campaigns"
+	bingadsAdGroup                                  = "ad_groups"
+	bingadsKeyword                                  = "keyword"
+	fromIntegrationDocuments                        = " FROM integration_documents "
+	staticWhereStatementForBingAds                  = "WHERE project_id = ? AND source= ? AND document_type = ? AND customer_account_id IN (?) AND timestamp between ? AND ? "
+	staticWhereStatementForBingAdsWithSmartProperty = "WHERE integration_documents.project_id = ? AND integration_documents.source= ?  AND integration_documents.customer_account_id IN ( ? ) AND integration_documents.document_type = ? AND integration_documents.timestamp between ? AND ? "
+	bingadsFilterQueryStr                           = "SELECT DISTINCT(LCASE(JSON_EXTRACT_STRING(value, ?))) as filter_value FROM integration_documents WHERE project_id = ? AND customer_account_id IN (?) AND document_type = ? AND JSON_EXTRACT_STRING(value, ?) IS NOT NULL LIMIT 5000"
 )
 
 // add other properties and vals
@@ -44,6 +46,42 @@ var BingAdsMetricsToAggregatesInReportsMapping = map[string]string{
 	"conversions": "SUM(JSON_EXTRACT_STRING(value, 'conversions'))",
 }
 
+const bingadsAdGroupMetadataFetchQueryStr = "WITH ad_group as (select ad_group_information.campaign_id_1 as campaign_id, ad_group_information.ad_group_id_1 as ad_group_id, ad_group_information.ad_group_name_1 as ad_group_name " +
+	"from ( " +
+	"select JSON_EXTRACT_STRING(value, 'campaign_id') as campaign_id_1, document_id as ad_group_id_1, JSON_EXTRACT_STRING(value, 'name') as ad_group_name_1, timestamp " +
+	"from integration_documents where document_type = ? AND project_id = ? AND source= ? AND timestamp between ? AND ? AND customer_account_id IN (?) " +
+	") as ad_group_information " +
+	"INNER JOIN " +
+	"(select document_id as ad_group_id_1, max(timestamp) as timestamp " +
+	"from integration_documents where document_type = ? AND project_id = ? AND source= ? AND timestamp between ? AND ? AND customer_account_id IN (?) group by ad_group_id_1 " +
+	") as ad_group_latest_timestamp_id " +
+	"ON ad_group_information.ad_group_id_1 = ad_group_latest_timestamp_id.ad_group_id_1 AND ad_group_information.timestamp = ad_group_latest_timestamp_id.timestamp), " +
+
+	" campaign as (select campaign_information.campaign_id_1 as campaign_id, campaign_information.campaign_name_1 as campaign_name " +
+	"from ( " +
+	"select document_id as campaign_id_1, JSON_EXTRACT_STRING(value, 'name') as campaign_name_1, timestamp " +
+	"from integration_documents where document_type = ? AND project_id = ? AND source= ? AND timestamp between ? AND ? AND customer_account_id IN (?) " +
+	") as campaign_information " +
+	"INNER JOIN " +
+	"(select document_id as campaign_id_1, max(timestamp) as timestamp " +
+	"from integration_documents where document_type = ? AND project_id = ? AND source= ? AND timestamp between ? AND ? AND customer_account_id IN (?) group by campaign_id_1 " +
+	") as campaign_latest_timestamp_id " +
+	"ON campaign_information.campaign_id_1 = campaign_latest_timestamp_id.campaign_id_1 AND campaign_information.timestamp = campaign_latest_timestamp_id.timestamp) " +
+
+	"select campaign.campaign_id as campaign_id, campaign.campaign_name as campaign_name, ad_group.ad_group_id as ad_group_id, ad_group.ad_group_name as ad_group_name " +
+	"from campaign join ad_group on ad_group.campaign_id = campaign.campaign_id"
+
+const bingadsCampaignMetadataFetchQueryStr = "select campaign_information.campaign_id as campaign_id, campaign_information.campaign_name as campaign_name " +
+	"from ( " +
+	"select document_id AS campaign_id, JSON_EXTRACT_STRING(value, 'name') as campaign_name, timestamp " +
+	"from integration_documents where document_type = ? AND project_id = ? AND source= ? AND timestamp between ? AND ? AND customer_account_id IN (?) " +
+	") as campaign_information " +
+	"INNER JOIN " +
+	"(select document_id AS campaign_id, max(timestamp) as timestamp " +
+	"from integration_documents where document_type = ? AND project_id = ? AND source= ? AND timestamp between ? AND ? AND customer_account_id IN (?) group by campaign_id " +
+	") as campaign_latest_timestamp_id " +
+	"ON campaign_information.campaign_id = campaign_latest_timestamp_id.campaign_id AND campaign_information.timestamp = campaign_latest_timestamp_id.timestamp "
+
 func (store *MemSQL) GetBingadsFilterValues(projectID uint64, requestFilterObject string, requestFilterProperty string, reqID string) ([]interface{}, int) {
 	logFields := log.Fields{
 		"project_id":              projectID,
@@ -60,6 +98,14 @@ func (store *MemSQL) GetBingadsFilterValues(projectID uint64, requestFilterObjec
 		return nil, http.StatusInternalServerError
 	}
 	customerAccountIDs := strings.Split(ftMapping.Accounts, ",")
+	_, isPresent := model.SmartPropertyReservedNames[requestFilterProperty]
+	if !isPresent {
+		filterValues, errCode := store.getSmartPropertyFilterValues(projectID, requestFilterObject, requestFilterProperty, "bingads", reqID)
+		if errCode != http.StatusFound {
+			return []interface{}{}, http.StatusInternalServerError
+		}
+		return filterValues, http.StatusFound
+	}
 	requestFilterProperty = strings.TrimPrefix(requestFilterProperty, fmt.Sprintf("%v_", requestFilterObject))
 	docType := model.BingadsDocumentTypeAlias[model.BingAdsObjectInternalRepresentationToExternalRepresentation[requestFilterObject]]
 	filterProperty := model.BingAdsInternalRepresentationToExternalRepresentation[fmt.Sprintf("%v.%v", model.BingAdsObjectInternalRepresentationToExternalRepresentation[requestFilterObject], requestFilterProperty)]
@@ -115,13 +161,13 @@ func (store *MemSQL) buildObjectAndPropertiesForBingAds(projectID uint64, object
 		var currentPropertiesSmart []model.ChannelProperty
 		if isPresent {
 			currentProperties = buildProperties(propertiesAndRelated)
-			//	smartProperty := GetSmartPropertyAndRelated(projectID, currentObject, "bing_ads")
-			//	currentPropertiesSmart = buildProperties(smartProperty)
+			smartProperty := store.GetSmartPropertyAndRelated(projectID, currentObject, "bingads")
+			currentPropertiesSmart = buildProperties(smartProperty)
 			currentProperties = append(currentProperties, currentPropertiesSmart...)
 		} else {
 			currentProperties = buildProperties(allChannelsPropertyToRelated)
-			//	smartProperty := GetSmartPropertyAndRelated(projectID, currentObject, "bing_ads")
-			//	currentPropertiesSmart = buildProperties(smartProperty)
+			smartProperty := store.GetSmartPropertyAndRelated(projectID, currentObject, "bingads")
+			currentPropertiesSmart = buildProperties(smartProperty)
 			currentProperties = append(currentProperties, currentPropertiesSmart...)
 		}
 		objectsAndProperties = append(objectsAndProperties, buildObjectsAndProperties(currentProperties, []string{currentObject})...)
@@ -222,6 +268,14 @@ func (store *MemSQL) GetSQLQueryAndParametersForBingAdsQueryV1(projectID uint64,
 		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusBadRequest
 	}
 	// smart properties check
+	isSmartPropertyPresent := checkSmartProperty(query.Filters, query.GroupBy)
+	if isSmartPropertyPresent {
+		sql, params, selectKeys, selectMetrics, err = buildBingAdsQueryWithSmartProperty(transformedQuery, projectID, customerAccountID, fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT)
+		if err != nil {
+			return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusInternalServerError
+		}
+		return sql, params, selectKeys, selectMetrics, http.StatusOK
+	}
 	sql, params, selectKeys, selectMetrics, err = buildBingAdsQueryV1(transformedQuery, projectID, customerAccountID, fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT)
 	if err != nil {
 		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusInternalServerError
@@ -350,6 +404,25 @@ func buildBingAdsQueryV1(query *model.ChannelQueryV1, projectID uint64, customer
 		fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT, customerAccountID)
 	return sql, params, selectKeys, selectMetrics, nil
 }
+
+func buildBingAdsQueryWithSmartProperty(query *model.ChannelQueryV1, projectID uint64, customerAccountID string, fetchSource bool,
+	limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string, error) {
+	logFields := log.Fields{
+		"project_id":                    projectID,
+		"query":                         query,
+		"fetch_source":                  fetchSource,
+		"limit_string":                  limitString,
+		"is_group_by_timestamp":         isGroupByTimestamp,
+		"group_by_combinations_for_gbt": groupByCombinationsForGBT,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	lowestHierarchyLevel := getLowestHierarchyLevelForBingAds(query)
+	lowestHierarchyReportLevel := model.BingAdsObjectToPerfomanceReportRepresentation[lowestHierarchyLevel] // suffix tbd
+	sql, params, selectKeys, selectMetrics := getSQLAndParamsFromBingAdsReportsWithSmartProperty(query, projectID, query.From, query.To, model.BingadsDocumentTypeAlias[lowestHierarchyReportLevel],
+		fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT, customerAccountID)
+	return sql, params, selectKeys, selectMetrics, nil
+}
+
 func getLowestHierarchyLevelForBingAds(query *model.ChannelQueryV1) string {
 	logFields := log.Fields{
 		"query": query,
@@ -468,6 +541,126 @@ func getSQLAndParamsFromBingAdsReports(query *model.ChannelQueryV1, projectID ui
 	return resultSQLStatement, finalParams, responseSelectKeys, responseSelectMetrics
 }
 
+func getBingAdsFromStatementWithJoins(filters []model.ChannelFilterV1, groupBys []model.ChannelGroupBy) string {
+	logFields := log.Fields{
+		"filters":   filters,
+		"group_bys": groupBys,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	isPresentCampaignSmartProperty, isPresentAdGroupSmartProperty := checkSmartPropertyWithTypeAndSource(filters, groupBys, "bingads")
+	fromStatement := fromIntegrationDocuments
+	if isPresentAdGroupSmartProperty {
+		fromStatement += "inner join smart_properties ad_group on ad_group.project_id = integration_documents.project_id and ad_group.object_id = document_id "
+	}
+	if isPresentCampaignSmartProperty {
+		fromStatement += "inner join smart_properties campaign on campaign.project_id = integration_documents.project_id and campaign.object_id = document_id "
+	}
+	return fromStatement
+}
+
+func getSQLAndParamsFromBingAdsReportsWithSmartProperty(query *model.ChannelQueryV1, projectID uint64, from, to int64, docType int,
+	fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}, customerAccountID string) (string, []interface{}, []string, []string) {
+	logFields := log.Fields{
+		"project_id":                    projectID,
+		"query":                         query,
+		"from":                          from,
+		"to":                            to,
+		"document_type":                 docType,
+		"fetch_source":                  fetchSource,
+		"limit_string":                  limitString,
+		"is_group_by_timestamp":         isGroupByTimestamp,
+		"group_by_combinations_for_gbt": groupByCombinationsForGBT,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	selectQuery := "SELECT "
+	selectMetrics := make([]string, 0, 0)
+	groupByStatement := ""
+	groupByKeysWithoutTimestamp := make([]string, 0, 0)
+	selectKeys := make([]string, 0, 0)
+	finalSelectKeys := make([]string, 0, 0)
+	responseSelectKeys := make([]string, 0, 0)
+	responseSelectMetrics := make([]string, 0, 0)
+
+	// SelectKeys
+
+	for _, groupBy := range query.GroupBy {
+		_, isPresent := model.SmartPropertyReservedNames[groupBy.Property]
+		isSmartProperty := !isPresent
+		if isSmartProperty {
+			if groupBy.Object == bingadsCampaign {
+
+				value := fmt.Sprintf("JSON_EXTRACT_STRING(campaign.properties, '%s') as campaign_%s", groupBy.Property, groupBy.Property)
+				selectKeys = append(selectKeys, value)
+				responseSelectKeys = append(responseSelectKeys, fmt.Sprintf("campaign_%s", groupBy.Property))
+
+				groupByKeysWithoutTimestamp = append(groupByKeysWithoutTimestamp, fmt.Sprintf("campaign_%s", groupBy.Property))
+			} else {
+				value := fmt.Sprintf("JSON_EXTRACT_STRING(ad_group.properties,'%s') as ad_group_%s", groupBy.Property, groupBy.Property)
+				selectKeys = append(selectKeys, value)
+				responseSelectKeys = append(responseSelectKeys, fmt.Sprintf("ad_group_%s", groupBy.Property))
+
+				groupByKeysWithoutTimestamp = append(groupByKeysWithoutTimestamp, fmt.Sprintf("ad_group_%s", groupBy.Property))
+			}
+		} else {
+			key := groupBy.Object + "." + groupBy.Property
+			if groupBy.Object == CAFilterChannel {
+				value := fmt.Sprintf("'bingads' as %s", model.BingAdsInternalRepresentationToExternalRepresentationForReports[key])
+				selectKeys = append(selectKeys, value)
+				responseSelectKeys = append(responseSelectKeys, model.BingAdsInternalRepresentationToExternalRepresentationForReports[key])
+			} else {
+				value := fmt.Sprintf("%s as %s", objectAndPropertyToValueInBingAdsReportsMapping[key], model.BingAdsInternalRepresentationToExternalRepresentationForReports[key])
+				selectKeys = append(selectKeys, value)
+				responseSelectKeys = append(responseSelectKeys, model.BingAdsInternalRepresentationToExternalRepresentationForReports[key])
+			}
+			groupByKeysWithoutTimestamp = append(groupByKeysWithoutTimestamp, model.BingAdsInternalRepresentationToExternalRepresentationForReports[key])
+		}
+	}
+
+	if isGroupByTimestamp {
+		groupByStatement = joinWithComma(append(groupByKeysWithoutTimestamp, model.AliasDateTime)...)
+	} else {
+		groupByStatement = joinWithComma(groupByKeysWithoutTimestamp...)
+	}
+
+	finalSelectKeys = append(finalSelectKeys, selectKeys...)
+	if isGroupByTimestamp {
+		finalSelectKeys = append(finalSelectKeys, fmt.Sprintf("%s as %s",
+			getSelectTimestampByTypeForChannels(query.GetGroupByTimestamp(), query.Timezone), model.AliasDateTime))
+		responseSelectKeys = append(responseSelectKeys, model.AliasDateTime)
+	}
+
+	for _, selectMetric := range query.SelectMetrics {
+		value := fmt.Sprintf("%s as %s", BingAdsMetricsToAggregatesInReportsMapping[selectMetric], model.BingAdsInternalRepresentationToExternalRepresentationForReports[selectMetric])
+		selectMetrics = append(selectMetrics, value)
+
+		value = model.BingAdsInternalRepresentationToExternalRepresentationForReports[selectMetric]
+		responseSelectMetrics = append(responseSelectMetrics, value)
+	}
+
+	selectQuery += joinWithComma(append(finalSelectKeys, selectMetrics...)...)
+	orderByQuery := "ORDER BY " + getOrderByClause(isGroupByTimestamp, responseSelectMetrics)
+	whereConditionForFilters := getBingAdsFiltersWhereStatementWithSmartProperty(query.Filters)
+	filterStatementForSmartPropertyGroupBy := getNotNullFilterStatementForSmartPropertyGroupBys(query.GroupBy)
+	finalFilterStatement := joinWithWordInBetween("AND", staticWhereStatementForBingAdsWithSmartProperty, whereConditionForFilters, filterStatementForSmartPropertyGroupBy)
+	customerAccountIDs := strings.Split(customerAccountID, ",")
+	finalParams := make([]interface{}, 0)
+	staticWhereParams := []interface{}{projectID, model.BingAdsIntegration, customerAccountIDs, docType, from, to}
+	finalParams = append(finalParams, staticWhereParams...)
+	if len(groupByCombinationsForGBT) != 0 {
+		whereConditionForGBT, whereParams := buildWhereConditionForGBTForBingAds(groupByCombinationsForGBT)
+		whereConditionForFilters += (" AND (" + whereConditionForGBT + ")")
+		finalParams = append(finalParams, whereParams...)
+	}
+
+	fromStatement := getBingAdsFromStatementWithJoins(query.Filters, query.GroupBy)
+	resultSQLStatement := selectQuery + fromStatement + finalFilterStatement
+	if len(groupByStatement) != 0 {
+		resultSQLStatement += "GROUP BY " + groupByStatement
+	}
+	resultSQLStatement += " " + orderByQuery + limitString + ";"
+	return resultSQLStatement, finalParams, responseSelectKeys, responseSelectMetrics
+}
+
 func getBingAdsFiltersWhereStatement(filters []model.ChannelFilterV1) string {
 	logFields := log.Fields{
 		"filters": filters,
@@ -497,6 +690,61 @@ func getBingAdsFiltersWhereStatement(filters []model.ChannelFilterV1) string {
 	return resultStatement
 }
 
+func getBingAdsFiltersWhereStatementWithSmartProperty(filters []model.ChannelFilterV1) string {
+	logFields := log.Fields{
+		"filters": filters,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	resultStatement := ""
+	var filterValue string
+	campaignFilter := ""
+	adGroupFilter := ""
+	for index, filter := range filters {
+		currentFilterStatement := ""
+		if filter.LogicalOp == "" {
+			filter.LogicalOp = "AND"
+		}
+		filterOperator := getOp(filter.Condition, "categorical")
+		if filter.Condition == model.ContainsOpStr || filter.Condition == model.NotContainsOpStr {
+			filterValue = fmt.Sprintf("%s", filter.Value)
+		} else {
+			filterValue = filter.Value
+		}
+		_, isPresent := model.SmartPropertyReservedNames[filter.Property]
+		if isPresent {
+			currentFilterStatement = fmt.Sprintf("%s %s '%s' ", objectAndPropertyToValueInBingAdsReportsMapping[filter.Object+"."+filter.Property], filterOperator, filterValue)
+			if index == 0 {
+				resultStatement = " AND " + currentFilterStatement
+			} else {
+				resultStatement = fmt.Sprintf("%s %s %s ", resultStatement, filter.LogicalOp, currentFilterStatement)
+			}
+		} else {
+			currentFilterStatement = fmt.Sprintf("JSON_EXTRACT_STRING(%s.properties, '%s') %s '%s'", model.BingAdsObjectMapForSmartProperty[filter.Object], filter.Property, filterOperator, filterValue)
+			if index == 0 {
+				resultStatement = fmt.Sprintf("(%s", currentFilterStatement)
+			} else {
+				resultStatement = fmt.Sprintf("%s %s %s", resultStatement, filter.LogicalOp, currentFilterStatement)
+			}
+			if filter.Object == bingadsCampaign {
+				campaignFilter = smartPropertyCampaignStaticFilter
+			} else {
+				adGroupFilter = smartPropertyAdGroupStaticFilter
+			}
+		}
+	}
+	if campaignFilter != "" {
+		resultStatement += (" AND " + campaignFilter)
+	}
+	if adGroupFilter != "" {
+		resultStatement += (" AND " + adGroupFilter)
+	}
+	if resultStatement == "" {
+		return resultStatement
+	}
+	return resultStatement + ")"
+	return resultStatement
+}
+
 func buildWhereConditionForGBTForBingAds(groupByCombinations []map[string]interface{}) (string, []interface{}) {
 	logFields := log.Fields{
 		"group_by_combinations": groupByCombinations,
@@ -504,19 +752,29 @@ func buildWhereConditionForGBTForBingAds(groupByCombinations []map[string]interf
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	whereConditionForGBT := ""
 	params := make([]interface{}, 0)
+	filterStringSmartPropertiesCampaign := "campaign.properties"
+	filterStringSmartPropertiesAdGroup := "ad_group.properties"
 	for _, groupByCombination := range groupByCombinations {
 		whereConditionForEachCombination := ""
 		for dimension, value := range groupByCombination {
 			filterString := ""
 			if strings.HasPrefix(dimension, model.CampaignPrefix) {
 				key := fmt.Sprintf(`%s.%s`, "campaigns", strings.TrimPrefix(dimension, model.CampaignPrefix))
-				currentFilterKey, _ := objectAndPropertyToValueInBingAdsReportsMapping[key]
-				filterString = currentFilterKey
+				currentFilterKey, isPresent := objectAndPropertyToValueInBingAdsReportsMapping[key]
+				if isPresent {
+					filterString = currentFilterKey
+				} else {
+					filterString = fmt.Sprintf("JSON_EXTRACT_STRING(%s,'%s')", filterStringSmartPropertiesCampaign, strings.TrimPrefix(dimension, model.CampaignPrefix))
+				}
 
 			} else if strings.HasPrefix(dimension, model.AdgroupPrefix) {
 				key := fmt.Sprintf(`%s.%s`, "ad_groups", strings.TrimPrefix(dimension, model.AdgroupPrefix))
-				currentFilterKey, _ := objectAndPropertyToValueInBingAdsReportsMapping[key]
-				filterString = currentFilterKey
+				currentFilterKey, isPresent := objectAndPropertyToValueInBingAdsReportsMapping[key]
+				if isPresent {
+					filterString = currentFilterKey
+				} else {
+					filterString = fmt.Sprintf("JSON_EXTRACT_STRING(%s,'%s')", filterStringSmartPropertiesAdGroup, strings.TrimPrefix(dimension, model.AdgroupPrefix))
+				}
 			} else {
 				key := fmt.Sprintf(`%s.%s`, "keyword", strings.TrimPrefix(dimension, model.KeywordPrefix))
 				currentFilterKey := objectAndPropertyToValueInBingAdsReportsMapping[key]
@@ -550,4 +808,72 @@ func buildWhereConditionForGBTForBingAds(groupByCombinations []map[string]interf
 	}
 
 	return whereConditionForGBT, params
+}
+
+func (store *MemSQL) GetLatestMetaForBingAdsForGivenDays(projectID uint64, days int) ([]model.ChannelDocumentsWithFields, []model.ChannelDocumentsWithFields) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"days":       days,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	channelDocumentsCampaign := make([]model.ChannelDocumentsWithFields, 0)
+	channelDocumentsAdGroup := make([]model.ChannelDocumentsWithFields, 0)
+
+	ftMapping, err := store.GetActiveFiveTranMapping(projectID, model.BingAdsIntegration)
+	if err != nil {
+		log.WithError(err).Error("Failed to fetch connector id from db")
+		return channelDocumentsCampaign, channelDocumentsAdGroup
+	}
+	customerAccountIDs := strings.Split(ftMapping.Accounts, ",")
+
+	to, err := strconv.ParseUint(time.Now().Format("20060102"), 10, 64)
+	if err != nil {
+		log.Error("Failed to parse to timestamp")
+		return channelDocumentsCampaign, channelDocumentsAdGroup
+	}
+
+	from, err := strconv.ParseUint(time.Now().AddDate(0, 0, -days).Format("20060102"), 10, 64)
+	if err != nil {
+		log.Error("Failed to parse from timestamp")
+		return channelDocumentsCampaign, channelDocumentsAdGroup
+	}
+	query := bingadsAdGroupMetadataFetchQueryStr
+	params := []interface{}{model.BingadsDocumentTypeAlias["ad_groups"], projectID, model.BingAdsIntegration, from, to,
+		customerAccountIDs, model.BingadsDocumentTypeAlias["ad_groups"], projectID, model.BingAdsIntegration, from, to, customerAccountIDs,
+		model.BingadsDocumentTypeAlias["campaigns"], projectID, model.BingAdsIntegration, from, to, customerAccountIDs,
+		model.BingadsDocumentTypeAlias["campaigns"], projectID, model.BingAdsIntegration, from, to, customerAccountIDs}
+
+	rows1, tx1, err := store.ExecQueryWithContext(query, params)
+	if err != nil {
+		errString := fmt.Sprintf("failed to get last %d ad_group meta for bingads", days)
+		log.WithField("error string", err).Error(errString)
+		U.CloseReadQuery(rows1, tx1)
+		return channelDocumentsCampaign, channelDocumentsAdGroup
+	}
+	for rows1.Next() {
+		currentRecord := model.ChannelDocumentsWithFields{}
+		rows1.Scan(&currentRecord.CampaignID, &currentRecord.CampaignName, &currentRecord.AdGroupID, &currentRecord.AdGroupName)
+		channelDocumentsAdGroup = append(channelDocumentsAdGroup, currentRecord)
+	}
+	U.CloseReadQuery(rows1, tx1)
+
+	query = bingadsCampaignMetadataFetchQueryStr
+	params = []interface{}{model.BingadsDocumentTypeAlias["campaigns"], projectID, model.BingAdsIntegration, from, to,
+		customerAccountIDs, model.BingadsDocumentTypeAlias["campaigns"], projectID, model.BingAdsIntegration, from, to, customerAccountIDs}
+	rows2, tx2, err := store.ExecQueryWithContext(query, params)
+	if err != nil {
+		errString := fmt.Sprintf("failed to get last %d campaign meta for bingads", days)
+		log.WithField("error string", err).Error(errString)
+		U.CloseReadQuery(rows2, tx2)
+		return channelDocumentsCampaign, channelDocumentsAdGroup
+	}
+	for rows2.Next() {
+		currentRecord := model.ChannelDocumentsWithFields{}
+		rows2.Scan(&currentRecord.CampaignID, &currentRecord.CampaignName)
+		channelDocumentsCampaign = append(channelDocumentsCampaign, currentRecord)
+	}
+	U.CloseReadQuery(rows2, tx2)
+
+	return channelDocumentsCampaign, channelDocumentsAdGroup
 }

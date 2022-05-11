@@ -62,4 +62,5 @@ type AlertConfiguration struct {
 	IsEmailEnabled bool     `json:"email_enabled"`
 	IsSlackEnabled bool     `json:"slack_enabled"`
 	Emails         []string `json:"emails"`
+	SlackChannelsAndUserGroups  map[string][]string `json:"slack_channels_and_user_groups"`
 }

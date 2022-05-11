@@ -5,33 +5,33 @@ import {
   getAttributionsData,
   getCampaignsData,
   getProfileData,
-  getKPIData,
+  getKPIData
 } from '../../reducers/coreQuery/services';
 import {
   QUERY_TYPE_ATTRIBUTION,
   QUERY_TYPE_CAMPAIGN,
   NAMED_QUERY,
-  LOCAL_STORAGE_ITEMS,
   ATTRIBUTION_METRICS,
   PREDEFINED_DATES,
   QUERY_TYPE_PROFILE,
-  QUERY_TYPE_KPI,
+  QUERY_TYPE_KPI
 } from '../../utils/constants';
 import {
   getItemFromLocalStorage,
-  setItemToLocalStorage,
+  setItemToLocalStorage
 } from '../../utils/localStorage.helpers';
 import {
   DashboardDefaultDateRangeFormat,
-  DefaultDateRangeFormat,
+  DefaultDateRangeFormat
 } from '../CoreQuery/utils';
+import { DASHBOARD_KEYS } from '../../constants/localStorage.constants';
 
 const formatFilters = (pr) => {
   return pr.map((p) => {
     if (p.ty === 'datetime') {
       return {
         ...p,
-        va: p.va,
+        va: p.va
       };
     }
     return p;
@@ -56,14 +56,14 @@ export const getDataFromServer = (
           ...elem,
           fr: MomentTz(durationObj.from).startOf('day').utc().unix(),
           to: MomentTz(durationObj.to).endOf('day').utc().unix(),
-          gbt: elem.gbt ? elem.gbt : '',
+          gbt: elem.gbt ? elem.gbt : ''
         };
         if (!isCampaignQuery) {
           obj.ewp = obj.ewp.map((e) => {
             const pr = formatFilters(e.pr || []);
             return {
               ...e,
-              pr,
+              pr
             };
           });
           obj.gup = formatFilters(obj.gup || []);
@@ -79,14 +79,14 @@ export const getDataFromServer = (
             MomentTz().format('dddd') !== 'Sunday'
               ? MomentTz().subtract(1, 'day').endOf('day').utc().unix()
               : MomentTz().utc().unix(),
-          gbt: elem.gbt ? elem.gbt : '',
+          gbt: elem.gbt ? elem.gbt : ''
         };
         if (!isCampaignQuery) {
           obj.ewp = obj.ewp.map((e) => {
             const pr = formatFilters(e.pr || []);
             return {
               ...e,
-              pr,
+              pr
             };
           });
           obj.gup = formatFilters(obj.gup || []);
@@ -101,7 +101,7 @@ export const getDataFromServer = (
         {
           refresh,
           unit_id: unitId,
-          id: dashboardId,
+          id: dashboardId
         },
         false
       );
@@ -112,7 +112,7 @@ export const getDataFromServer = (
         {
           refresh,
           unit_id: unitId,
-          id: dashboardId,
+          id: dashboardId
         },
         false
       );
@@ -136,9 +136,9 @@ export const getDataFromServer = (
         return {
           ...q,
           fr,
-          to,
+          to
         };
-      }),
+      })
     };
 
     return getKPIData(
@@ -147,7 +147,7 @@ export const getDataFromServer = (
       {
         refresh,
         unit_id: unitId,
-        id: dashboardId,
+        id: dashboardId
       },
       false
     );
@@ -159,8 +159,8 @@ export const getDataFromServer = (
         query: {
           ...attributionQuery.query,
           from: MomentTz(durationObj.from).startOf('day').utc().unix(),
-          to: MomentTz(durationObj.to).endOf('day').utc().unix(),
-        },
+          to: MomentTz(durationObj.to).endOf('day').utc().unix()
+        }
       };
     } else {
       attributionQuery = {
@@ -171,8 +171,8 @@ export const getDataFromServer = (
           to:
             MomentTz().format('dddd') !== 'Sunday'
               ? MomentTz().subtract(1, 'day').endOf('day').utc().unix()
-              : MomentTz().utc().unix(),
-        },
+              : MomentTz().utc().unix()
+        }
       };
     }
     return getAttributionsData(
@@ -181,7 +181,7 @@ export const getDataFromServer = (
       {
         refresh,
         unit_id: unitId,
-        id: dashboardId,
+        id: dashboardId
       },
       false
     );
@@ -193,7 +193,7 @@ export const getDataFromServer = (
       {
         refresh,
         unit_id: unitId,
-        id: dashboardId,
+        id: dashboardId
       },
       false
     );
@@ -203,7 +203,7 @@ export const getDataFromServer = (
       funnelQuery = {
         ...funnelQuery,
         fr: MomentTz(durationObj.from).startOf('day').utc().unix(),
-        to: MomentTz(durationObj.to).endOf('day').utc().unix(),
+        to: MomentTz(durationObj.to).endOf('day').utc().unix()
       };
     } else {
       funnelQuery = {
@@ -212,13 +212,13 @@ export const getDataFromServer = (
         to:
           MomentTz().format('dddd') !== 'Sunday'
             ? MomentTz().subtract(1, 'day').endOf('day').utc().unix()
-            : MomentTz().utc().unix(),
+            : MomentTz().utc().unix()
       };
       funnelQuery.ewp = funnelQuery.ewp.map((e) => {
         const pr = formatFilters(e.pr || []);
         return {
           ...e,
-          pr,
+          pr
         };
       });
       funnelQuery.gup = formatFilters(funnelQuery.gup || []);
@@ -229,7 +229,7 @@ export const getDataFromServer = (
       {
         refresh,
         unit_id: unitId,
-        id: dashboardId,
+        id: dashboardId
       },
       false
     );
@@ -246,7 +246,7 @@ export const getWebAnalyticsRequestBody = (units, durationObj) => {
   query.units = namedUnits.map((unit) => {
     return {
       query_name: unit.query.qname,
-      unit_id: unit.id,
+      unit_id: unit.id
     };
   });
 
@@ -256,7 +256,7 @@ export const getWebAnalyticsRequestBody = (units, durationObj) => {
     delete usefulQuery.cl;
     return {
       unit_id: unit.id,
-      ...usefulQuery,
+      ...usefulQuery
     };
   });
 
@@ -282,7 +282,7 @@ export const getWebAnalyticsRequestBody = (units, durationObj) => {
 
 export const getDashboardDateRange = () => {
   const lastAppliedDuration = JSON.parse(
-    getItemFromLocalStorage(LOCAL_STORAGE_ITEMS.DASHBOARD_DURATION)
+    getItemFromLocalStorage(DASHBOARD_KEYS.DASHBOARD_DURATION)
   );
   if (lastAppliedDuration) {
     const dateType = lastAppliedDuration.dateType;
@@ -291,31 +291,31 @@ export const getDashboardDateRange = () => {
         return {
           ...lastAppliedDuration,
           from: MomentTz().startOf('day'),
-          to: MomentTz().endOf('day'),
+          to: MomentTz().endOf('day')
         };
       }
       case PREDEFINED_DATES.YESTERDAY: {
         return {
           ...lastAppliedDuration,
           from: MomentTz().subtract(1, 'day').startOf('day'),
-          to: MomentTz().subtract(1, 'day').endOf('day'),
+          to: MomentTz().subtract(1, 'day').endOf('day')
         };
       }
       case PREDEFINED_DATES.THIS_WEEK: {
         return {
-          ...DefaultDateRangeFormat,
+          ...DefaultDateRangeFormat
         };
       }
       case PREDEFINED_DATES.LAST_WEEK: {
         return {
-          ...DashboardDefaultDateRangeFormat,
+          ...DashboardDefaultDateRangeFormat
         };
       }
       case PREDEFINED_DATES.LAST_MONTH: {
         return {
           ...lastAppliedDuration,
           from: MomentTz().subtract(1, 'month').startOf('month'),
-          to: MomentTz().subtract(1, 'month').endOf('month'),
+          to: MomentTz().subtract(1, 'month').endOf('month')
         };
       }
       case PREDEFINED_DATES.THIS_MONTH: {
@@ -324,13 +324,13 @@ export const getDashboardDateRange = () => {
             ...lastAppliedDuration,
             from: MomentTz().subtract(1, 'day').startOf('month'),
             to: MomentTz().subtract(1, 'day').endOf('month'),
-            dateType: PREDEFINED_DATES.LAST_MONTH,
+            dateType: PREDEFINED_DATES.LAST_MONTH
           };
         } else {
           return {
             ...lastAppliedDuration,
             from: MomentTz().startOf('month'),
-            to: MomentTz().subtract(1, 'day').endOf('day'),
+            to: MomentTz().subtract(1, 'day').endOf('day')
           };
         }
       }
@@ -339,11 +339,11 @@ export const getDashboardDateRange = () => {
     }
   }
   setItemToLocalStorage(
-    LOCAL_STORAGE_ITEMS.DASHBOARD_DURATION,
+    DASHBOARD_KEYS.DASHBOARD_DURATION,
     JSON.stringify(DashboardDefaultDateRangeFormat)
   );
   return {
-    ...DashboardDefaultDateRangeFormat,
+    ...DashboardDefaultDateRangeFormat
   };
 };
 
@@ -359,7 +359,7 @@ export const getSavedAttributionMetrics = (metrics) => {
     });
     return {
       ...am,
-      enabled: currentMetric.length ? currentMetric[0].enabled : am.enabled,
+      enabled: currentMetric.length ? currentMetric[0].enabled : am.enabled
     };
   });
   return result;

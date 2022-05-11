@@ -4,7 +4,7 @@ import React, {
   useEffect,
   useCallback,
   useContext,
-  useMemo,
+  useMemo
 } from 'react';
 import PropTypes from 'prop-types';
 import { useSelector } from 'react-redux';
@@ -20,7 +20,7 @@ import {
   getValueOptions,
   SortRowOptions,
   getFunctionOptions,
-  getMetricLabel,
+  getMetricLabel
 } from './pivotTable.helpers';
 import styles from './pivotTable.module.scss';
 import ControlledComponent from '../ControlledComponent';
@@ -36,7 +36,7 @@ const PivotTableComponent = (props) => {
     showControls,
     pivotConfig,
     updatePivotConfig,
-    queryType,
+    queryType
   } = props;
 
   const { eventNames, userPropNames, eventPropNames } = useSelector(
@@ -47,14 +47,14 @@ const PivotTableComponent = (props) => {
 
   const [pivotState, setPivotState] = useState({
     data: EMPTY_ARRAY,
-    hiddenFromAggregators: EMPTY_ARRAY,
+    hiddenFromAggregators: EMPTY_ARRAY
   });
 
   const updateState = useCallback((updates) => {
     setPivotState((currState) => {
       return {
         ...currState,
-        ...updates,
+        ...updates
       };
     });
   }, []);
@@ -62,7 +62,7 @@ const PivotTableComponent = (props) => {
   const handleRowAttributeRemove = useCallback(
     (attr) => {
       updatePivotConfig({
-        rows: pivotConfig.rows.filter((row) => row !== attr),
+        rows: pivotConfig.rows.filter((row) => row !== attr)
       });
     },
     [pivotConfig, updatePivotConfig]
@@ -75,7 +75,7 @@ const PivotTableComponent = (props) => {
   const handleValueChange = useCallback(
     (val) => {
       updatePivotConfig({
-        vals: [val],
+        vals: [val]
       });
     },
     [updatePivotConfig]
@@ -84,7 +84,7 @@ const PivotTableComponent = (props) => {
   const handleFunctionChange = useCallback(
     (val) => {
       updatePivotConfig({
-        aggregatorName: val,
+        aggregatorName: val
       });
     },
     [updatePivotConfig]
@@ -94,7 +94,7 @@ const PivotTableComponent = (props) => {
     (val) => {
       updatePivotConfig({
         cols: [val],
-        rows: pivotConfig.rows.filter((row) => row !== val),
+        rows: pivotConfig.rows.filter((row) => row !== val)
       });
     },
     [pivotConfig, updatePivotConfig]
@@ -111,8 +111,8 @@ const PivotTableComponent = (props) => {
           queryType,
           eventNames,
           userPropNames,
-          eventPropNames,
-        }),
+          eventPropNames
+        })
       });
     },
     [
@@ -123,7 +123,7 @@ const PivotTableComponent = (props) => {
       breakdown,
       eventNames,
       userPropNames,
-      eventPropNames,
+      eventPropNames
     ]
   );
 
@@ -132,7 +132,7 @@ const PivotTableComponent = (props) => {
       rowOrder:
         pivotConfig.rowOrder === PIVOT_SORT_ORDERS.ASCEND
           ? PIVOT_SORT_ORDERS.DESCEND
-          : PIVOT_SORT_ORDERS.ASCEND,
+          : PIVOT_SORT_ORDERS.ASCEND
     });
   }, [updatePivotConfig, pivotConfig]);
 
@@ -144,20 +144,20 @@ const PivotTableComponent = (props) => {
       queryType,
       eventNames,
       userPropNames,
-      eventPropNames,
+      eventPropNames
     });
 
     if (!configLoaded) {
       updatePivotConfig({
         rows: breakdownAttributes,
         vals: [getMetricLabel({ metric: metrics[0], queryType })],
-        configLoaded: true,
+        configLoaded: true
       });
     }
 
     updateState({
       data: [attributes, ...values],
-      hiddenFromAggregators: breakdownAttributes,
+      hiddenFromAggregators: breakdownAttributes
     });
   }, [
     data,
@@ -169,14 +169,14 @@ const PivotTableComponent = (props) => {
     queryType,
     eventNames,
     userPropNames,
-    eventPropNames,
+    eventPropNames
   ]);
 
   const aggregatorOptions = useMemo(() => {
     return getValueOptions({
       metrics,
       queryType,
-      eventNames,
+      eventNames
     });
   }, [metrics, queryType, eventNames]);
 
@@ -188,12 +188,17 @@ const PivotTableComponent = (props) => {
       queryType,
       eventNames,
       userPropNames,
-      eventPropNames,
+      eventPropNames
     });
   }, [pivotConfig.rows, metrics, breakdown, queryType]);
 
   const columnOptions = useMemo(() => {
-    return getColumnOptions({ breakdown, eventPropNames, userPropNames });
+    return getColumnOptions({
+      breakdown,
+      eventPropNames,
+      userPropNames,
+      queryType
+    });
   }, [breakdown, eventPropNames, userPropNames]);
 
   return (
@@ -218,7 +223,7 @@ const PivotTableComponent = (props) => {
           onSortChange={handleSortChange}
         />
       </ControlledComponent>
-      <div className='w-full overflow-auto'>
+      <div className="w-full overflow-auto">
         <PivotTableUI
           onChange={(s) => {
             console.log(s);
@@ -226,7 +231,7 @@ const PivotTableComponent = (props) => {
           }}
           {...pivotState}
           {...pivotConfig}
-          rowOrder='key_a_to_z' // hardcoded for now to remove sorting. Will be removed later
+          rowOrder="key_a_to_z" // hardcoded for now to remove sorting. Will be removed later
         />
       </div>
     </div>
@@ -238,7 +243,7 @@ const PivotTableMemoized = memo(PivotTableComponent);
 const PivotTable = (props) => {
   const {
     coreQueryState: { pivotConfig },
-    updatePivotConfig,
+    updatePivotConfig
   } = useContext(CoreQueryContext);
 
   return (
@@ -257,7 +262,7 @@ PivotTable.propTypes = {
   breakdown: PropTypes.array,
   metrics: PropTypes.array,
   showControls: PropTypes.bool,
-  queryType: PropTypes.string,
+  queryType: PropTypes.string
 };
 
 PivotTable.defaultProps = {
@@ -265,5 +270,5 @@ PivotTable.defaultProps = {
   breakdown: EMPTY_ARRAY,
   metrics: EMPTY_ARRAY,
   showControls: true,
-  queryType: QUERY_TYPE_KPI,
+  queryType: QUERY_TYPE_KPI
 };

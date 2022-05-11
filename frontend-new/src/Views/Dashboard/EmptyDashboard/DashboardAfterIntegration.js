@@ -53,8 +53,8 @@ function DashboardAfterIntegration({setaddDashboardModal, getHubspotContact, cur
                 }
                 onError={FaErrorLog}
             >
-                <Header>
-                    <div className={'rounded-lg border-2 border-gray-200 w-full h-24 mt-8'}>
+                <div className={'fa-container'}>
+                    <div className={'rounded-lg border-2 border-gray-200 w-full h-24 mt-24'}>
                             <div className='w-20 float-left mt-2 ml-4 mr-4 mb-1'>
                                 <img src='https://s3.amazonaws.com/www.factors.ai/assets/img/product/NoData.png'/>
                             </div>
@@ -70,10 +70,10 @@ function DashboardAfterIntegration({setaddDashboardModal, getHubspotContact, cur
                                 <Button type={'link'} style={{backgroundColor:'white'}} className={'mt-2'} onClick={()=> history.push('/welcome')}>Setup Assist<SVG name={'Arrowright'} size={16} extraClass={'ml-1'} color={'blue'} /></Button>
                             </div>
                     </div>
-                </Header>
+                </div>
 
                 <div
-                    style={{marginTop:'20em'}}
+                    style={{marginTop:'10em'}}
                     className={
                     'flex justify-center flex-col items-center fa-dashboard--no-data-container'
                     }

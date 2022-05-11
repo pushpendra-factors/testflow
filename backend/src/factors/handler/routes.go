@@ -2,14 +2,14 @@ package handler
 
 import (
 	C "factors/config"
+	IH "factors/handler/internal"
+	V1 "factors/handler/v1"
 	mid "factors/middleware"
 	"factors/model/model"
 	U "factors/util"
 	"net/http"
 
-	IH "factors/handler/internal"
-	V1 "factors/handler/v1"
-
+	slack "factors/slack_bot/handler"
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -270,6 +270,10 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id/v1/alerts", responseWrapper(V1.GetAlertsHandler))
 	authRouteGroup.GET("/:project_id/v1/alerts/:id", responseWrapper(V1.GetAlertByIDHandler))
 	authRouteGroup.DELETE("/:project_id/v1/alerts/:id", responseWrapper(V1.DeleteAlertHandler))
+	authRouteGroup.POST("slack/auth", slack.SlackAuthRedirectHandler)
+	authRouteGroup.GET("slack/callback", slack.SlackCallbackHandler)
+	authRouteGroup.GET("slack/channels", slack.GetSlackChannelsListHandler)
+	authRouteGroup.DELETE("slack/delete", slack.DeleteSlackIntegrationHandler)
 
 }
 

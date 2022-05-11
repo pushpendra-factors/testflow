@@ -688,7 +688,7 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q model.Query, groupIds []int
 		addParams = egParams
 		var addJoinStatement string
 		if groupIds[i] != 0 {
-			addJoinStatement = fmt.Sprintf("JOIN users AS groups ON events.user_id=groups.id JOIN users ON users.group_%d_user_id = groups.id AND users.project_id = ? ", groupIds[i])
+			addJoinStatement = fmt.Sprintf("LEFT JOIN users ON users.group_%d_user_id = events.user_id AND users.project_id = ? ", groupIds[i])
 		} else {
 			addJoinStatement = "JOIN users ON events.user_id=users.id AND users.project_id = ? "
 		}

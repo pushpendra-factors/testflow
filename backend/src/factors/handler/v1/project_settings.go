@@ -5,14 +5,15 @@ import (
 	"factors/model/model"
 	"factors/model/store"
 	U "factors/util"
-	"net/http"
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
+	"net/http"
 )
 
 type ProjectSettings struct {
 	Settings     model.ProjectSetting `json:"project_settings"`
 	IntCompleted bool                 `json:"int_completed"`
+	IntSlack     bool                 `json:"int_slack"`
 }
 
 func GetProjectSettingHandler(c *gin.Context) {
@@ -22,8 +23,16 @@ func GetProjectSettingHandler(c *gin.Context) {
 	})
 
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 	if projectId == 0 {
 		logCtx.Error("Get project_settings failed. Failed to get project_id.")
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+	
+	isSlackIntegrated, errCode := store.GetStore().IsSlackIntegratedForProject(projectId, agentUUID)
+	if errCode != http.StatusOK {
+		logCtx.Error("Get slack integration status failed.")
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
@@ -39,10 +48,11 @@ func GetProjectSettingHandler(c *gin.Context) {
 		int_completed = true
 	}
 	projectSettings := ProjectSettings{
-		Settings: *settings,
+		Settings:     *settings,
 		IntCompleted: int_completed,
+		IntSlack:     isSlackIntegrated,
 	}
-	if errCode != http.StatusFound && errCode != http.StatusNotFound{
+	if errCode != http.StatusFound && errCode != http.StatusNotFound {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Failed to get project settings."})
 	} else {
 		c.JSON(http.StatusOK, projectSettings)

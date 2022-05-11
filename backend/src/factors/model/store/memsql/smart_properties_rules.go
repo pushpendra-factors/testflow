@@ -17,6 +17,7 @@ var sourceSmartProperty = map[string]bool{
 	"adwords":  true,
 	"facebook": true,
 	"linkedin": true,
+	"bingads":  true,
 }
 
 // to do: @ashhar make it similar to channels fields ASAP
@@ -37,7 +38,7 @@ var mapOfObjectAndProperty = map[string]map[string]map[string]model.PropertiesAn
 }
 
 var smartPropertyObjects = []string{model.AdwordsCampaign, model.AdwordsAdGroup}
-var smartPropertySources = []string{"all", "facebook", "adwords", "linkedin"}
+var smartPropertySources = []string{"all", "facebook", "adwords", "linkedin", "bingads"}
 
 func (store *MemSQL) satisfiesSmartPropertyRulesForeignConstraints(rule model.SmartPropertyRules) int {
 	logFields := log.Fields{

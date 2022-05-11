@@ -188,6 +188,15 @@ export default function (state = defaultState, action) {
     case 'DISABLE_MARKETO_FULFILLED': {
       return {...state, marketo: {}}
     }
+    case 'FETCH_SLACK_FULFILLED': {
+      return { ...state, slack: action.payload };
+    }
+    case 'FETCH_SLACK_REJECTED': {
+      return { ...state, slack: action.payload };
+    }
+    case 'DISABLE_SLACK_FULFILLED': {
+      return {...state, slack: {}}
+    }
     default:
       return state;
   }
@@ -932,6 +941,67 @@ export function deleteAlerts(projectId, id) {
       del(dispatch, host + 'projects/'+ projectId +'/v1/alerts/' + id)
       .then((res) => {
             resolve(res);
+        }).catch((err) => {
+            reject(err);
+        });
+    });
+  };
+}
+
+
+export function enableSlackIntegration() {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      get(dispatch, host + 'integrations/slack/auth')
+        .then((r) => {
+          if (r.ok) {
+            dispatch({ type: 'ENABLE_SLACK_FULFILLED', payload: r.data });
+            resolve(r);
+          } else {
+            dispatch({ type: 'ENABLE_SLACK_REJECTED' });
+            reject(r);
+          }
+        })
+        .catch((err) => {
+          dispatch({ type: 'ENABLE_SLACK_REJECTED', payload: err });
+          reject(err);
+        });
+    });
+  };
+}
+
+export function fetchSlackChannels(agentUUID) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      get(dispatch, host + 'integrations/slack/channels?agent_uuid=' + agentUUID)
+        .then((r) => {
+          if (r.ok) {
+            dispatch({ type: 'FETCH_SLACK_FULFILLED', payload: r.data});
+            resolve(r);
+          } else {
+            dispatch({ type: 'FETCH_SLACK_REJECTED', payload: {}});
+            reject(r);
+          }
+        })
+        .catch((err) => {
+          dispatch({ type: 'FETCH_SLACK_REJECTED', payload: {}});
+          reject(err);
+        });
+    });
+  };
+}
+
+export function disableSlackIntegration() {
+  return (dispatch) => {
+    return new Promise((resolve, reject) => {
+      del(dispatch, host + 'integrations/slack/delete', {})
+      .then((res) => {
+          if(res.ok) {
+            dispatch({ type: 'DISABLE_SLACK_FULFILLED', payload: res.data});
+            resolve(res);
+          } else {
+            reject(res);
+          }
         }).catch((err) => {
             reject(err);
         });

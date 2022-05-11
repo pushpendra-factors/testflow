@@ -3,6 +3,7 @@ package model
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 )
 
@@ -93,6 +94,10 @@ var MarketoDataObjectColumnsDatetimeType = map[string]map[string]bool{
 	MARKETO_TYPE_NAME_PROGRAM_MEMBERSHIP: {"membership_date": true, "reached_success_date": true, "program_created_at": true, "program_end_date": true, "program_start_date": true},
 }
 
+var MarketoDataObjectColumnsNumericalType = map[string]map[string]bool{
+	MARKETO_TYPE_NAME_PROGRAM_MEMBERSHIP: {"lead_id": true, "program_id": true},
+}
+
 var DocTypeIntegrationObjectMap = map[string]string{
 	MARKETO_TYPE_NAME_PROGRAM_MEMBERSHIP: "activity",
 	MARKETO_TYPE_NAME_LEAD:               "user",
@@ -110,7 +115,7 @@ func GetObjectDataColumns(docType string, metadataColumns []string) map[string]i
 	}
 	return dataObjectColumns
 }
-func GetMarketoDocumentValues(docType string, data []string, metadataColumns []string, metadataColumnDateTimeType map[string]bool) map[string]interface{} {
+func GetMarketoDocumentValues(docType string, data []string, metadataColumns []string, metadataColumnDateTimeType map[string]bool, metadataColumnNumericalType map[string]bool) map[string]interface{} {
 	values := make(map[string]interface{})
 	dataObjectColumns := GetObjectDataColumns(docType, metadataColumns)
 	for key, index := range dataObjectColumns {
@@ -120,6 +125,13 @@ func GetMarketoDocumentValues(docType string, data []string, metadataColumns []s
 				values[key] = nil
 			} else {
 				values[key] = convertedTimestamp
+			}
+		} else if MarketoDataObjectColumnsNumericalType[docType][key] || (metadataColumnNumericalType != nil && metadataColumnNumericalType[key]) {
+			convertedNumber := ConvertToNumber(data[index])
+			if convertedNumber == 0 {
+				values[key] = nil
+			} else {
+				values[key] = convertedNumber
 			}
 		} else {
 			if data[index] == "<nil>" {
@@ -147,7 +159,7 @@ const (
 )
 
 var MarketoDocumentTypeAlias = map[string]int{
-	//MARKETO_TYPE_NAME_PROGRAM_MEMBERSHIP: 1,
+	// MARKETO_TYPE_NAME_PROGRAM_MEMBERSHIP: 1,
 	MARKETO_TYPE_NAME_LEAD: 2,
 }
 
@@ -362,4 +374,11 @@ func ConvertTimestamp(date string) int64 {
 		}
 	}
 	return dateConverted.Unix()
+}
+
+func ConvertToNumber(num string) float64 {
+	if s, err := strconv.ParseFloat(num, 64); err == nil {
+		return s
+	}
+	return 0
 }

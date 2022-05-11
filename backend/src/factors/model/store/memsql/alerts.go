@@ -5,11 +5,78 @@ import (
 	"factors/model/model"
 	U "factors/util"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"net/http"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
+func (store *MemSQL) SetAuthTokenforSlackIntegration(projectID uint64, agentUUID string, authTokens model.SlackAccessTokens) error {
+	db := C.GetServices().Db
+	var agent model.Agent
+	err := db.Where("uuid = ?", agentUUID).Find(&agent).Error
+	if err != nil {
+		log.WithFields(log.Fields{
+			"uuid": agentUUID,
+		}).Error(err)
+		return err
+	}
+	var token model.SlackAuthTokens
+	token[projectID] = authTokens
+	// convert token to json
+	TokenJson, err := U.EncodeStructTypeToPostgresJsonb(token)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	agent.SlackAuthTokens = TokenJson
+	err = db.Update(&agent).Error
+	if err != nil {
+		log.WithFields(log.Fields{
+			"uuid": agentUUID,
+		}).Error(err)
+		return err
+	}
+	return nil
+}
+func (store *MemSQL) GetSlackAuthToken(agentUUID string) (model.SlackAuthTokens, error) {
+	db := C.GetServices().Db
+	var agent model.Agent
+	err := db.Where("uuid = ?", agentUUID).Find(&agent).Error
+	if err != nil {
+		log.WithFields(log.Fields{
+			"uuid": agentUUID,
+		}).Error(err)
+		return nil, err
+	}
+	var token model.SlackAuthTokens
+	err = U.DecodePostgresJsonbToStructType(agent.SlackAuthTokens, &token)
+	if err != nil {
+		log.Error(err)
+		return nil, err
+	}
+	return token, nil
+}
+func (store *MemSQL) DeleteSlackIntegration(agentUUID string) error {
+	db := C.GetServices().Db
+	var agent model.Agent
+	err := db.Where("uuid = ?", agentUUID).Find(&agent).Error
+	if err != nil {
+		log.WithFields(log.Fields{
+			"uuid": agentUUID,
+		}).Error(err)
+		return err
+	}
+	agent.SlackAuthTokens = nil
+	err = db.Save(&agent).Error
+	if err != nil {
+		log.WithFields(log.Fields{
+			"uuid": agentUUID,
+		}).Error(err)
+		return err
+	}
+	return nil
+}
 func (store *MemSQL) GetAlertById(id string, projectID uint64) (model.Alert, int) {
 	logFields := log.Fields{
 		"id":         id,
@@ -52,7 +119,7 @@ func (store *MemSQL) GetAllAlerts(projectID uint64) ([]model.Alert, int) {
 	}
 	return alerts, http.StatusFound
 }
-func (store *MemSQL) UpdateAlert(id string, projectID uint64) (int, string) {
+func (store *MemSQL) DeleteAlert(id string, projectID uint64) (int, string) {
 	logFields := log.Fields{
 		"id":         id,
 		"project_id": projectID,
@@ -70,6 +137,16 @@ func (store *MemSQL) UpdateAlert(id string, projectID uint64) (int, string) {
 	err := db.Table("alerts").Where("project_id = ? AND id = ?", projectID, id).Updates(map[string]interface{}{"is_deleted": true, "updated_at": time.Now().UTC()}).Error
 	if err != nil {
 		log.WithField("project_id", projectID).Error(err)
+		return http.StatusInternalServerError, err.Error()
+	}
+	return http.StatusAccepted, ""
+}
+func (store *MemSQL) UpdateAlert(alert model.Alert) (int, string) {
+	db := C.GetServices().Db
+	alert.UpdatedAt = time.Now().UTC()
+	err := db.Update(&alert).Error
+	if err != nil {
+		log.WithField("project_id", alert.ProjectID).Error(err)
 		return http.StatusInternalServerError, err.Error()
 	}
 	return http.StatusAccepted, ""

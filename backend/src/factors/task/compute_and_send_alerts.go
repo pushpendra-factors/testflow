@@ -7,16 +7,16 @@ import (
 	"factors/model/store"
 	U "factors/util"
 	"fmt"
+	"github.com/jinzhu/now"
+	log "github.com/sirupsen/logrus"
 	"math"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
-
-	"github.com/jinzhu/now"
-	log "github.com/sirupsen/logrus"
 )
 
-type message struct {
+type Message struct {
 	AlertName     string
 	AlertType     int
 	Operator      string
@@ -26,6 +26,8 @@ type message struct {
 	Value         float64
 	DateRange     string
 	ComparedTo    string
+	From          int64
+	To            int64
 }
 
 type dateRanges struct {
@@ -44,9 +46,16 @@ func ComputeAndSendAlerts(projectID uint64, configs map[string]interface{}) (map
 	var alertDescription model.AlertDescription
 	var alertConfiguration model.AlertConfiguration
 	var kpiQuery model.KPIQuery
-	var date_range dateRanges
-
+	var dateRange dateRanges
+	status := make(map[string]interface{})
+	endTimestampUnix := configs["endTimestamp"].(int64)
+	if endTimestampUnix == 0 || endTimestampUnix > U.TimeNowUnix() {
+		status["error"] = "invalid end timestamp"
+		return status, false
+	}
+	endTimestamp := time.Unix(endTimestampUnix, 0)
 	for _, alert := range allAlerts {
+		alert.LastRunTime = time.Now()
 
 		err := U.DecodePostgresJsonbToStructType(alert.AlertDescription, &alertDescription)
 		if err != nil {
@@ -66,13 +75,16 @@ func ComputeAndSendAlerts(projectID uint64, configs map[string]interface{}) (map
 			log.Error(err)
 			continue
 		}
+		if kpiQuery.Category == model.ProfileQueryClass {
+			kpiQuery.GroupByTimestamp = getGBTForKPIQuery(alertDescription.DateRange)
+		}
 		timezoneString := U.TimeZoneString(kpiQuery.Timezone)
-		date_range, err = getDateRange(timezoneString, alertDescription.DateRange, alertDescription.ComparedTo)
+		dateRange, err = getDateRange(timezoneString, alertDescription.DateRange, alertDescription.ComparedTo, endTimestamp)
 		if err != nil {
 			log.Errorf("failed to getDateRange, error: %v for project_id: %v,alert_name: %s,", err, projectID, alert.AlertName)
 			continue
 		}
-		statusCode, actualValue, comparedValue, err := executeAlertsKPIQuery(projectID, alert.AlertType, date_range, kpiQuery)
+		statusCode, actualValue, comparedValue, err := executeAlertsKPIQuery(projectID, alert.AlertType, dateRange, kpiQuery)
 		if (err != nil) || (statusCode != http.StatusOK) {
 			log.Errorf("failed to execute query for project_id: %v, alert_name: %s", projectID, alert.AlertName)
 			log.Errorf("status code: %v, error: %s", statusCode, err)
@@ -89,7 +101,7 @@ func ComputeAndSendAlerts(projectID uint64, configs map[string]interface{}) (map
 			continue
 		}
 		if notify {
-			msg := message{
+			msg := Message{
 				AlertName:     alertDescription.Name,
 				AlertType:     alert.AlertType,
 				Operator:      alertDescription.Operator,
@@ -99,14 +111,22 @@ func ComputeAndSendAlerts(projectID uint64, configs map[string]interface{}) (map
 				Value:         value,
 				DateRange:     alertDescription.DateRange,
 				ComparedTo:    alertDescription.ComparedTo,
+				From:          dateRange.from,
+				To:            dateRange.to,
 			}
 			if alertConfiguration.IsEmailEnabled {
-				sendEmailAlert(msg, alertConfiguration.Emails)
+				sendEmailAlert(projectID, msg, dateRange, timezoneString, alertConfiguration.Emails)
 			}
 			if alertConfiguration.IsSlackEnabled {
 				sendSlackAlert(msg)
 			}
 		}
+		alert.LastAlertSent = true
+		statusCode,errMsg := store.GetStore().UpdateAlert(alert)
+		if errMsg != "" {
+			log.Errorf("failed to update alert for project_id: %v, alert_name: %s, error: %v", projectID, alert.AlertName, errMsg)
+			continue
+		}		
 	}
 	return nil, true
 }
@@ -122,12 +142,15 @@ func executeAlertsKPIQuery(projectID uint64, alertType int, date_range dateRange
 	kpiQueryGroup.Queries = append(kpiQueryGroup.Queries, kpiQuery)
 	results, statusCode := store.GetStore().ExecuteKPIQueryGroup(projectID, "", kpiQueryGroup)
 	if len(results) != 1 {
+		log.Error("empty or invalid result for ", kpiQuery)
 		return statusCode, actualValue, comparedValue, errors.New("empty or invalid result")
 	}
 	if len(results[0].Rows) == 0 {
+		log.Error("empty result for ", kpiQuery)
 		return statusCode, actualValue, comparedValue, errors.New("empty or invalid value in result")
 	}
 	if statusCode != http.StatusOK {
+		log.Error("failed to execute query for ", kpiQuery)
 		return statusCode, actualValue, comparedValue, nil
 	}
 	actualValue = results[0].Rows[0][0].(float64)
@@ -138,9 +161,11 @@ func executeAlertsKPIQuery(projectID uint64, alertType int, date_range dateRange
 		kpiQueryGroup.Queries = append(kpiQueryGroup.Queries, kpiQuery)
 		results, statusCode = store.GetStore().ExecuteKPIQueryGroup(projectID, "", kpiQueryGroup)
 		if len(results) != 1 {
+			log.Error("empty or invalid result for comparision type alerts  ", kpiQuery)
 			return statusCode, actualValue, comparedValue, errors.New("empty or invalid result")
 		}
 		if len(results[0].Rows) == 0 {
+			log.Error("empty result for comparision type alerts ", kpiQuery)
 			return statusCode, actualValue, comparedValue, errors.New("empty or invalid value in result")
 		}
 		if statusCode != http.StatusOK {
@@ -152,18 +177,18 @@ func executeAlertsKPIQuery(projectID uint64, alertType int, date_range dateRange
 	return statusCode, actualValue, comparedValue, nil
 }
 
-func getDateRange(timezone U.TimeZoneString, dateRange string, prevDateRange string) (dateRanges, error) {
+func getDateRange(timezone U.TimeZoneString, dateRange string, prevDateRange string, endTimeStamp time.Time) (dateRanges, error) {
 
 	if dateRange == model.LAST_MONTH || dateRange == model.LAST_QUARTER {
 		return dateRanges{}, errors.New("invalid date range")
 	}
 	var from, to, prev_from, prev_to time.Time
 	var err error
-	// remove this after cache support
-	currentTime := U.TimeNowIn(timezone)
+	endTimeStamp = U.ConvertTimeIn(endTimeStamp, timezone)
 	switch dateRange {
 	case model.LAST_WEEK:
-		from = currentTime.AddDate(0, 0, -6)
+		// end time stamp from config
+		from = endTimeStamp.AddDate(0, 0, -6)
 		from = now.New(from).BeginningOfWeek()
 		to = now.New(from).EndOfWeek()
 		if prevDateRange == model.PREVIOUS_PERIOD {
@@ -176,7 +201,7 @@ func getDateRange(timezone U.TimeZoneString, dateRange string, prevDateRange str
 			prev_to = now.New(prev_from).EndOfWeek()
 		}
 	case model.LAST_MONTH:
-		from = currentTime.AddDate(0, 0, 1)
+		from = endTimeStamp.AddDate(0, 0, 1)
 		from = now.New(from).BeginningOfMonth().AddDate(0, 0, -1)
 		from = now.New(from).BeginningOfMonth()
 		to = now.New(from).EndOfMonth()
@@ -190,7 +215,7 @@ func getDateRange(timezone U.TimeZoneString, dateRange string, prevDateRange str
 			prev_to = now.New(prev_from).EndOfMonth()
 		}
 	case model.LAST_QUARTER:
-		from = currentTime.AddDate(0, 0, 1)
+		from = endTimeStamp.AddDate(0, 0, 1)
 		from = now.New(from).BeginningOfMonth().AddDate(0, 0, -1)
 		from = now.New(from).BeginningOfQuarter()
 		to = now.New(from).EndOfQuarter()
@@ -254,9 +279,35 @@ func sendAlert(operator string, actualValue float64, comparedValue float64, valu
 	return false, nil
 }
 
-func sendEmailAlert(msg message, emails []string) {
+func sendEmailAlert(projectID uint64, msg Message, dateRange dateRanges, timezone U.TimeZoneString, emails []string) {
 	var success, fail int
-	sub, text, html := CreateAlertTemplate(msg)
+	sub := "Factors Alert"
+	text := ""
+	var statement string
+	fromTime := time.Unix(dateRange.from, 0)
+	toTime := time.Unix(dateRange.to, 0)
+
+	fromTime = U.ConvertTimeIn(fromTime, timezone)
+	toTime = U.ConvertTimeIn(toTime, timezone)
+
+	year, month, day := fromTime.Date()
+	from := fmt.Sprintf("%d-%d-%d", day, month, year)
+
+	year, month, day = toTime.Date()
+	to := fmt.Sprintf("%d-%d-%d", day, month, year)
+
+	if msg.AlertType == 1 {
+		statement = fmt.Sprintf(`%s %s recorded for %s in %s from %s to %s`, fmt.Sprint(msg.ActualValue), strings.ReplaceAll(msg.AlertName, "_", " "), strings.ReplaceAll(msg.Category, "_", " "), strings.ReplaceAll(msg.DateRange, "_", " "), from, to)
+	} else if msg.AlertType == 2 {
+		statement = fmt.Sprintf(`%s %s %s for %s in %s (from %s to %s ) compared to %s - %s(%s)`, strings.ReplaceAll(msg.AlertName, "_", " "), strings.ReplaceAll(msg.Operator, "_", " "), fmt.Sprint(msg.Value), strings.ReplaceAll(msg.Category, "_", " "), strings.ReplaceAll(msg.DateRange, "_", " "), from, to, strings.ReplaceAll(msg.ComparedTo, "_", " "), fmt.Sprint(msg.ActualValue), fmt.Sprint(msg.ComparedValue))
+	}
+	html := U.CreateAlertTemplate(statement)
+	dryRunFlag := C.GetConfig().EnableDryRunAlerts
+	if dryRunFlag {
+		log.Info("Dry run mode enabled. No emails will be sent")
+		log.Info(html)
+		return
+	}
 	for _, email := range emails {
 		err := C.GetServices().Mailer.SendMail(email, C.GetFactorsSenderEmail(), sub, html, text)
 		if err != nil {
@@ -266,25 +317,21 @@ func sendEmailAlert(msg message, emails []string) {
 		}
 		success++
 	}
-	log.Info("sent email alert to ", success, "failed to send email alert to ", fail)
+	log.Info(statement, projectID)
+	log.Info("sent email alert to ", success, " failed to send email alert to ", fail)
 }
 
-func CreateAlertTemplate(msg message) (subject, text, html string) {
-	subject = "Factors.ai Alert"
-	if msg.AlertType == 1 {
-		html = fmt.Sprintf(`<h1>%s</h1><br><br><p>%s %s recorded for %s in %s </p>`, "Alert", fmt.Sprint(msg.Value), msg.AlertName, msg.Category, msg.DateRange)
-	} else if msg.AlertType == 2 {
-		html = fmt.Sprintf(`<h1>%s</h1><br><br><p>%s has %s %s for %s in %s compared to %s - %s( %s)</p>`, "Alert", msg.AlertName, msg.Operator, fmt.Sprint(msg.Value), msg.Category, msg.DateRange, msg.ComparedTo, fmt.Sprint(msg.ActualValue), fmt.Sprint(msg.ComparedValue))
-	}
-	return subject, "", html
-	// html = fmt.Sprintf(`<h1>Email Alert</h1><p>This alert is regarding %s <br> actual_value : %v , %s value : %v <br>
-	// for date range : %s %s<br></p>`, msg.AlertName, msg.ActualValue, comparedValue, msg.Value, msg.DateRange, comparedDate)
-	// text = fmt.Sprintf(`<h1>Email Alert</h1><p>This alert is regarding %s <br> actual_value : %v , %s value : %v <br>
-	// for date range : %s %s<br></p>`, msg.AlertName, msg.ActualValue, comparedValue, msg.Value, msg.DateRange, comparedDate)
-	// return subject, text, html
-}
-
-func sendSlackAlert(msg message) bool {
+func sendSlackAlert(msg Message) bool {
 	fmt.Println("slack alert sent")
 	return true
+}
+func getGBTForKPIQuery(dateRangeType string) string {
+	if dateRangeType == model.LAST_WEEK {
+		return model.GroupByTimestampWeek
+	} else if dateRangeType == model.LAST_MONTH {
+		return model.GroupByTimestampMonth
+	} else if dateRangeType == model.LAST_QUARTER {
+		return model.GroupByTimestampQuarter
+	}
+	return ""
 }

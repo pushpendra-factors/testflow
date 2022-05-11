@@ -45,6 +45,7 @@ type Model interface {
 	UpdateAgentVerificationDetailsFromAuth0(agentUUID, firstName, lastName string, verified bool, value *postgres.Jsonb) int
 	GetPrimaryAgentOfProject(projectId uint64) (uuid string, errCode int)
 	UpdateAgentSalesforceInstanceURL(agentUUID string, instanceURL string) int
+	IsSlackIntegratedForProject(projectID uint64, agentUUID string) (bool,int)
 
 	// analytics
 	ExecQuery(stmnt string, params []interface{}) (*model.QueryResult, error)
@@ -465,6 +466,7 @@ type Model interface {
 	GetLatestMetaForAdwordsForGivenDays(projectID uint64, days int) ([]model.ChannelDocumentsWithFields, []model.ChannelDocumentsWithFields)
 	GetLatestMetaForFacebookForGivenDays(projectID uint64, days int) ([]model.ChannelDocumentsWithFields, []model.ChannelDocumentsWithFields)
 	GetLatestMetaForLinkedinForGivenDays(projectID uint64, days int) ([]model.ChannelDocumentsWithFields, []model.ChannelDocumentsWithFields)
+	GetLatestMetaForBingAdsForGivenDays(projectID uint64, days int) ([]model.ChannelDocumentsWithFields, []model.ChannelDocumentsWithFields)
 	BuildAndCreateSmartPropertyFromChannelDocumentAndRule(smartPropertyRule *model.SmartPropertyRules, rule model.Rule,
 		channelDocument model.ChannelDocumentsWithFields, source string) int
 	DeleteSmartPropertyByRuleID(projectID uint64, ruleID string) (int, int, int)
@@ -581,10 +583,14 @@ type Model interface {
 	UpsertIntegrationDocument(doc model.IntegrationDocument) error
 
 	// alerts
+	SetAuthTokenforSlackIntegration(projectID uint64, agentUUID string, authTokens model.SlackAccessTokens) error
+	GetSlackAuthToken(agentUUID string) (model.SlackAuthTokens, error)
+	DeleteSlackIntegration(agentUUID string) error
 	GetAlertById(id string, projectID uint64) (model.Alert, int)
 	GetAllAlerts(projectID uint64) ([]model.Alert, int)
-	UpdateAlert(id string, projectID uint64) (int, string)
+	DeleteAlert(id string, projectID uint64) (int, string)
 	CreateAlert(projectID uint64, alert model.Alert) (model.Alert, int, string)
+	UpdateAlert(alert model.Alert) (int, string)
 
 	// sharable url
 	CreateShareableURL(sharableURLParams *model.ShareableURL) (*model.ShareableURL, int)
