@@ -32,7 +32,8 @@ function Dashboard({
   const [refreshClicked, setRefreshClicked] = useState(false);
   const [sdkCheck, setSdkCheck] = useState(false);
   const { dashboards } = useSelector((state) => state.dashboard);
-  let integration = useSelector((state) => state.global.currentProjectSettings);
+  const integration = useSelector((state) => state.global.currentProjectSettings);
+  const integrationV1 = useSelector((state) => state.global.projectSettingsV1);
   const activeProject = useSelector((state) => state.global.active_project);
   const { bingAds, marketo } = useSelector((state) => state.global);
   const currentAgent = useSelector((state) => state.agent.agent_details);
@@ -52,8 +53,6 @@ function Dashboard({
     fetchMarketoIntegration(activeProject.id);
   }, [activeProject, sdkCheck]);
 
-  integration = integration?.project_settings || integration;
-
   const checkIntegration =
     integration?.int_segment ||
     integration?.int_adwords_enabled_agent_uuid ||
@@ -66,7 +65,7 @@ function Dashboard({
     integration?.int_clear_bit ||
     sdkCheck ||
     bingAds?.accounts ||
-    marketo?.status || integration?.int_slack;
+    marketo?.status || integrationV1?.int_slack;
 
   const handleEditClick = useCallback((dashboard) => {
     setaddDashboardModal(true);

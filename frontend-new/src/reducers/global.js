@@ -93,6 +93,12 @@ export default function (state = defaultState, action) {
         currentProjectSettings: action.payload.settings,
       };
     }
+    case 'FETCH_PROJECT_SETTINGS_V1_FULFILLED': {
+      return {
+        ...state,
+        projectSettingsV1: action.payload.settings,
+      };
+    }
     case 'FETCH_PROJECT_SETTINGS_REJECTED': {
       return {
         ...state,
@@ -360,7 +366,7 @@ export function fetchProjectSettingsV1(projectId) {
         .then((r) => {
           if (r.ok) {
             dispatch({
-              type: 'FETCH_PROJECT_SETTINGS_FULFILLED',
+              type: 'FETCH_PROJECT_SETTINGS_V1_FULFILLED',
               payload: {
                 currentProjectId: projectId,
                 settings: r.data,

@@ -41,12 +41,34 @@ const SlackIntegration = ({
 
   useEffect(() => {
     isSlackEnabled();
-    if (projectSettings.int_slack) {
+    if (projectSettings?.int_slack) {
       setIsStatus('Active');
     } else {
       setIsStatus('');
     }
-  }, [activeProject, projectSettings.int_slack]);
+  }, [activeProject, projectSettings?.int_slack]);
+
+  const sendSlackNotification = (email, projectname) => {
+    let webhookURL = 'https://hooks.slack.com/services/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';
+    let data = {
+        "text": `User ${email} from Project "${projectname}" Activated Integration: Bing Ads`,
+        "username" : "Signup User Actions",
+        "icon_emoji" : ":golf:"
+    }
+    let params = {
+        method: 'POST',
+        body: JSON.stringify(data)
+    }
+
+    fetch(webhookURL, params)
+    .then((response) => response.json())
+    .then((response) => {
+        console.log(response);
+    })
+    .catch((err) => {
+        console.log('err',err);
+    });
+  }
 
   const enableSlack = () => {
     setLoading(true);
@@ -55,6 +77,7 @@ const SlackIntegration = ({
         setLoading(false);
         if (r.status == 200) {
           window.location = r.data.redirectURL;
+          sendSlackNotification(agent_details.email, activeProject.name);
         }
         if (r.status >= 400) {
           message.error('Error fetching slack redirect url');
@@ -76,7 +99,7 @@ const SlackIntegration = ({
         onError={FaErrorLog}
       >
         <div className={'mt-4 flex w-full'}>
-          {projectSettings.int_slack && (
+          {projectSettings?.int_slack && (
             <>
               <div
                 className={
@@ -101,7 +124,7 @@ const SlackIntegration = ({
         </div>
 
         <div className={'mt-4 flex'}>
-          {!projectSettings.int_slack ? (
+          {!projectSettings?.int_slack ? (
             <Button
               className={'mr-2'}
               type={'primary'}
@@ -133,7 +156,7 @@ const SlackIntegration = ({
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   agent_details: state.agent.agent_details,
-  projectSettings: state.global.currentProjectSettings,
+  projectSettings: state.global.projectSettingsV1,
 });
 
 export default connect(mapStateToProps, { fetchProjectSettingsV1, enableSlackIntegration, disableSlackIntegration })(SlackIntegration);

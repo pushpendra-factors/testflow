@@ -913,7 +913,7 @@ const mapStateToProps = (state) => ({
     kpi: state?.kpi,
     agent_details: state.agent.agent_details,
     slack: state.global.slack,
-    projectSettings: state.global.currentProjectSettings,
+    projectSettings: state.global.projectSettingsV1,
 });
 
 

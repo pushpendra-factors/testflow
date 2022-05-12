@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Row, Col, Tag, Avatar, Skeleton, Button, Tooltip } from 'antd';
 import { Text, SVG, FaErrorComp, FaErrorLog } from 'factorsComponents';
 import { connect } from 'react-redux';
-import { fetchProjectSettings } from 'Reducers/global';
+import { fetchProjectSettings, fetchProjectSettingsV1 } from 'Reducers/global';
 import retryDynamicImport from 'Utils/dynamicImport';
 
 // const HubspotIntegration = lazy(()=>retryDynamicImport(() => import("./Hubspot")));
@@ -276,6 +276,7 @@ function IntegrationSettings({
   activeProject,
   fetchProjectSettings,
   currentAgent,
+  fetchProjectSettingsV1,
 }) {
   const [dataLoading, setDataLoading] = useState(true);
 
@@ -283,6 +284,7 @@ function IntegrationSettings({
     fetchProjectSettings(activeProject.id).then(() => {
       setDataLoading(false);
     });
+    fetchProjectSettingsV1(activeProject.id);
   }, [activeProject]);
 
   return (
@@ -348,6 +350,6 @@ const mapStateToProps = (state) => ({
   currentAgent: state.agent.agent_details,
 });
 
-export default connect(mapStateToProps, { fetchProjectSettings })(
+export default connect(mapStateToProps, { fetchProjectSettings, fetchProjectSettingsV1 })(
   IntegrationSettings
 );

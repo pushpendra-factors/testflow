@@ -16,7 +16,7 @@ import { fetchProjectSettingsV1, getHubspotContact, fetchBingAdsIntegration, fet
 import styles from './index.module.scss';
 import { meetLink } from '../../../utils/hubspot';
 
-const SetupAssist = ({currentAgent, integration, activeProject, fetchProjectSettingsV1, getHubspotContact, bingAds, fetchBingAdsIntegration, fetchMarketoIntegration, marketo}) => {
+const SetupAssist = ({currentAgent, integration, integrationV1, activeProject, fetchProjectSettingsV1, getHubspotContact, bingAds, fetchBingAdsIntegration, fetchMarketoIntegration, marketo}) => {
     const [current, setCurrent] = useState(0);
     const [showModal,setShowModal] = useState(false);
     const [ownerID, setownerID] = useState();
@@ -50,8 +50,6 @@ const SetupAssist = ({currentAgent, integration, activeProject, fetchProjectSett
         fetchMarketoIntegration(activeProject.id);
     }, [activeProject, sdkCheck]);
 
-    integration = integration?.project_settings || integration;
-
     const checkIntegration = integration?.int_segment || 
     integration?.int_adwords_enabled_agent_uuid ||
     integration?.int_linkedin_agent_uuid ||
@@ -60,7 +58,7 @@ const SetupAssist = ({currentAgent, integration, activeProject, fetchProjectSett
     integration?.int_salesforce_enabled_agent_uuid ||
     integration?.int_drift ||
     integration?.int_google_organic_enabled_agent_uuid ||
-    integration?.int_clear_bit || sdkCheck || bingAds?.accounts || marketo?.status || integration?.int_slack;
+    integration?.int_clear_bit || sdkCheck || bingAds?.accounts || marketo?.status || integrationV1?.int_slack;
 
     return (
         <>
@@ -190,6 +188,7 @@ const mapStateToProps = (state) => ({
     integration: state.global.currentProjectSettings,
     bingAds: state.global.bingAds,
     marketo: state.global.marketo,
+    integrationV1: state.global.projectSettingsV1,
 });
 
 export default connect(mapStateToProps, { fetchProjectSettingsV1, getHubspotContact, fetchBingAdsIntegration, fetchMarketoIntegration })(SetupAssist);
