@@ -66,7 +66,7 @@ function Dashboard({
     integration?.int_clear_bit ||
     sdkCheck ||
     bingAds?.accounts ||
-    marketo?.status || currentAgent?.is_slack_integrated;
+    marketo?.status || integration?.int_slack;
 
   const handleEditClick = useCallback((dashboard) => {
     setaddDashboardModal(true);
