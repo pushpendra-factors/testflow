@@ -13,15 +13,9 @@ import (
 
 func (store *MemSQL) SetAuthTokenforSlackIntegration(projectID uint64, agentUUID string, authTokens model.SlackAccessTokens) error {
 	db := C.GetServices().Db
-	var agent model.Agent
-	err := db.Where("uuid = ?", agentUUID).Find(&agent).Error
-	if err != nil {
-		log.WithFields(log.Fields{
-			"uuid": agentUUID,
-		}).Error(err)
-		return err
-	}
 	var token model.SlackAuthTokens
+	token = make(map[uint64]model.SlackAccessTokens)
+	
 	token[projectID] = authTokens
 	// convert token to json
 	TokenJson, err := U.EncodeStructTypeToPostgresJsonb(token)
@@ -29,12 +23,10 @@ func (store *MemSQL) SetAuthTokenforSlackIntegration(projectID uint64, agentUUID
 		log.Error(err)
 		return err
 	}
-	agent.SlackAuthTokens = TokenJson
-	err = db.Update(&agent).Error
+	// update the db
+	err = db.Model(&model.Agent{}).Where("uuid = ?", agentUUID).Update("slack_auth_tokens", TokenJson).Error
 	if err != nil {
-		log.WithFields(log.Fields{
-			"uuid": agentUUID,
-		}).Error(err)
+		log.Error(err)
 		return err
 	}
 	return nil
@@ -59,20 +51,9 @@ func (store *MemSQL) GetSlackAuthToken(agentUUID string) (model.SlackAuthTokens,
 }
 func (store *MemSQL) DeleteSlackIntegration(agentUUID string) error {
 	db := C.GetServices().Db
-	var agent model.Agent
-	err := db.Where("uuid = ?", agentUUID).Find(&agent).Error
+	err := db.Model(&model.Agent{}).Where("uuid = ?", agentUUID).Update("slack_auth_tokens", nil).Error
 	if err != nil {
-		log.WithFields(log.Fields{
-			"uuid": agentUUID,
-		}).Error(err)
-		return err
-	}
-	agent.SlackAuthTokens = nil
-	err = db.Save(&agent).Error
-	if err != nil {
-		log.WithFields(log.Fields{
-			"uuid": agentUUID,
-		}).Error(err)
+		log.Error(err)
 		return err
 	}
 	return nil

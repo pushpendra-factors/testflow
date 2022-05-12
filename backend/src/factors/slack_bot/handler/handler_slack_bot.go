@@ -76,18 +76,18 @@ func SlackCallbackHandler(c *gin.Context) {
 		return
 	}
 	var jsonResponse map[string]interface{}
-	// remove this after seeing structure of json response
-	fmt.Println("resp.Body", resp.Body)
 	err = json.NewDecoder(resp.Body).Decode(&jsonResponse)
 	if err != nil {
 		logCtx.Error("failed to decode json response", err)
 		return
 	}
 	access_token := jsonResponse["access_token"].(string)
+	authed_user := jsonResponse["authed_user"].(map[string]interface{})
+	user_access_token := authed_user["access_token"].(string)
 
 	var tokens model.SlackAccessTokens
 	tokens.BotAccessToken = access_token
-	tokens.UserAccessToken = ""
+	tokens.UserAccessToken = user_access_token
 
 	//store the access token in the database
 	err = store.GetStore().SetAuthTokenforSlackIntegration(oauthState.ProjectID, *oauthState.AgentUUID, tokens)
@@ -109,14 +109,24 @@ func GetSlackChannelsListHandler(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get slack auth token"})
 		return
 	}
+	if authToken == nil {
+		log.Error("Failed to get slack auth token, Slack not integrated")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get slack auth token, Slack not integrated"})
+		return
+	}
+	// add query params
 	request, err := http.NewRequest("GET", fmt.Sprintf("https://slack.com/api/conversations.list"), nil)
 	if err != nil {
 		log.Error("Failed to create request to get slack channels list")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create request to get slack channels list"})
 		return
 	}
+	q := request.URL.Query()
+	q.Add("types", "public_channel,private_channel,mpim")
+	q.Add("limit", "250")
+	request.URL.RawQuery = q.Encode()
 	request.Header.Set("Content-Type", "application/json; charset=utf-8")
-	request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", authToken[projectId].BotAccessToken))
+	request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", authToken[projectId].UserAccessToken))
 	client := &http.Client{}
 	resp, err := client.Do(request)
 	if err != nil {

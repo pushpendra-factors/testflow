@@ -271,7 +271,6 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id/v1/alerts/:id", responseWrapper(V1.GetAlertByIDHandler))
 	authRouteGroup.DELETE("/:project_id/v1/alerts/:id", responseWrapper(V1.DeleteAlertHandler))
 	authRouteGroup.POST("/:project_id/slack/auth", slack.SlackAuthRedirectHandler)
-	authRouteGroup.GET("/:project_id/slack/callback", slack.SlackCallbackHandler)
 	authRouteGroup.GET("/:project_id/slack/channels", slack.GetSlackChannelsListHandler)
 	authRouteGroup.DELETE("/:project_id/slack/delete", slack.DeleteSlackIntegrationHandler)
 
@@ -367,6 +366,8 @@ func InitIntRoutes(r *gin.Engine) {
 		mid.SetLoggedInAgent(),
 		mid.SetAuthorizedProjectsByLoggedInAgent(),
 		IntDeleteHandler)
+
+	intRouteGroup.GET("/slack/callback",slack.SlackCallbackHandler)
 
 }
 
