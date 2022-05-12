@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useHistory } from 'react-router-dom';
 import { connect } from 'react-redux';
 import {
   Button,
@@ -12,7 +13,7 @@ import {
   Skeleton,
   Spin
 } from 'antd';
-import {ADWORDS_REDIRECT_URI_NEW, ADWORDS_INTERNAL_REDIRECT_URI} from '../util';
+import {ADWORDS_REDIRECT_URI_NEW, ADWORDS_INTERNAL_REDIRECT_URI, INTEGRATION_HOME_PAGE} from '../util';
 
 import {
   enableAdwordsIntegration,
@@ -56,6 +57,7 @@ const GoogleIntegration = ({
   const [showManageBtn, setShowManageBtn] = useState(true);
   const [showURLModal, setShowURLModal] = useState(false);
   const [managerIDArr, SetManagerIDArr] = useState({});
+  const history = useHistory();
 
   const onDisconnect = () => {
     setLoading(true);
@@ -305,6 +307,31 @@ const GoogleIntegration = ({
         });
     }
   }; 
+
+  useEffect(()=>{ 
+    let mapManagerAccount = {}
+    if(customerAccounts){
+      customerAccounts?.map((account)=>{
+        return mapManagerAccount[account.customer_id] = account.manager_id
+      });
+  
+      SetManagerIDArr({
+        ...managerIDArr,
+        ...mapManagerAccount
+      }) 
+    }
+    
+  },[customerAccounts]);
+
+  const closeCustomerManagerIDModal = () => {
+  
+  setShowURLModal(false); 
+  setCustomerAccounts([]);
+  setCustomerAccountsLoaded(false);
+  history.push(INTEGRATION_HOME_PAGE);
+
+    
+  }
   return (
     <>
       <ErrorBoundary
@@ -320,17 +347,11 @@ const GoogleIntegration = ({
         visible={showURLModal}
         zIndex={10}
         width={600}
-        afterClose={() => { 
-          setShowURLModal(false); 
-      setCustomerAccounts([]);
-      setCustomerAccountsLoaded(false); 
-        }}
+        afterClose={() => closeCustomerManagerIDModal()}
         className={'fa-modal--regular fa-modal--slideInDown'}
         centered={true}
         footer={null} 
-        onCancel={() => {
-          setShowURLModal(false)
-        }}
+        onCancel={() => closeCustomerManagerIDModal()}
         transitionName=''
         maskTransitionName=''
       >
