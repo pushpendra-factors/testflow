@@ -42,7 +42,7 @@ func (store *MemSQL) GetSlackAuthToken(agentUUID string) (model.SlackAuthTokens,
 		return nil, err
 	}
 	var token model.SlackAuthTokens
-	err = U.DecodePostgresJsonbToStructType(agent.SlackAuthTokens, &token)
+	err = U.DecodePostgresJsonbToStructType(agent.SlackAccessTokens, &token)
 	if err != nil {
 		log.Error(err)
 		return nil, err
@@ -51,7 +51,7 @@ func (store *MemSQL) GetSlackAuthToken(agentUUID string) (model.SlackAuthTokens,
 }
 func (store *MemSQL) DeleteSlackIntegration(agentUUID string) error {
 	db := C.GetServices().Db
-	err := db.Model(&model.Agent{}).Where("uuid = ?", agentUUID).Update("slack_auth_tokens", nil).Error
+	err := db.Model(&model.Agent{}).Where("uuid = ?", agentUUID).Update("slack_access_tokens", nil).Error
 	if err != nil {
 		log.Error(err)
 		return err

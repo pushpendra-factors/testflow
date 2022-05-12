@@ -1,1 +1,1 @@
-ALTER TABLE agents ADD COLUMN slack_auth_tokens JSON;
+ALTER TABLE agents ADD COLUMN slack_access_tokens JSON;

@@ -40,7 +40,7 @@ type Agent struct {
 
 	IsAuth0User       bool            `json:"is_auth0_user" gorm:"default:false"`
 	Value             *postgres.Jsonb `json:"value"`
-	SlackAuthTokens   *postgres.Jsonb  `json:"slack_auth_tokens"`
+	SlackAccessTokens   *postgres.Jsonb  `json:"slack_access_tokens"`
 }
 type CreateAgentParams struct {
 	Agent    *Agent

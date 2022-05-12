@@ -429,15 +429,15 @@ func (store *MemSQL)IsSlackIntegratedForProject(projectID uint64, agentUUID stri
 	if errCode != http.StatusFound {
 		return false,errCode
 	}
-	if agent.SlackAuthTokens == nil {
+	if agent.SlackAccessTokens == nil {
 		return false,http.StatusOK
 	}
 	var authToken model.SlackAuthTokens
-	isEmpty := U.IsEmptyPostgresJsonb(agent.SlackAuthTokens)
+	isEmpty := U.IsEmptyPostgresJsonb(agent.SlackAccessTokens)
 	if isEmpty {
 		return false,http.StatusOK
 	}
-	err := U.DecodePostgresJsonbToStructType(agent.SlackAuthTokens,&authToken)
+	err := U.DecodePostgresJsonbToStructType(agent.SlackAccessTokens,&authToken)
 	if err != nil {
 		log.WithError(err).Error("Failed to decode slack auth tokens")
 		return false,http.StatusInternalServerError
