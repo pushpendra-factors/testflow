@@ -11,6 +11,7 @@ import { Button, message, Select, Modal, Row, Col, Input } from 'antd';
 import { Text, FaErrorComp, FaErrorLog } from 'factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary';
 import factorsai from 'factorsai';
+import { sendSlackNotification } from '../../../../../utils/slack';
 
 const LinkedInIntegration = ({
   fetchProjectSettings,
@@ -135,29 +136,6 @@ const LinkedInIntegration = ({
     }
   };
 
-  const sendSlackNotification = () => {
-    let webhookURL =
-      'https://hooks.slack.com/services/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';
-    let data = {
-      text: `User ${currentAgent.email} from Project "${activeProject.name}" Activated Integration: LinkedIn`,
-      username: 'Signup User Actions',
-      icon_emoji: ':golf:',
-    };
-    let params = {
-      method: 'POST',
-      body: JSON.stringify(data),
-    };
-
-    fetch(webhookURL, params)
-      .then((response) => response.json())
-      .then((response) => {
-        console.log(response);
-      })
-      .catch((err) => {
-        console.log('err', err);
-      });
-  };
-
   const handleSubmit = (e) => {
     e.preventDefault();
 
@@ -183,7 +161,7 @@ const LinkedInIntegration = ({
           setShowForm(false);
           setIsActive(true);
           message.success('LinkedIn integration enabled!');
-          sendSlackNotification();
+          sendSlackNotification(currentAgent.email, activeProject.name, 'Linkedin');
         })
         .catch((e) => {
           console.log(e);

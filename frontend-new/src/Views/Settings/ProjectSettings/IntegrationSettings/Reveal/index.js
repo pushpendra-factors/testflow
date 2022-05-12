@@ -7,6 +7,7 @@ import { ErrorBoundary } from 'react-error-boundary';
 import { useSelector } from 'react-redux';
 import { udpateProjectSettings } from 'Reducers/global';
 import factorsai from 'factorsai';
+import { sendSlackNotification } from '../../../../../utils/slack';
 
 const RevealIntegration = ({
   udpateProjectSettings,
@@ -27,28 +28,6 @@ const RevealIntegration = ({
     }
   }, [currentProjectSettings]);
 
-  const sendSlackNotification = () => {
-    let webhookURL = 'https://hooks.slack.com/services/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';
-    let data = {
-        "text": `User ${currentAgent.email} from Project "${activeProject.name}" Activated Integration: Reveal`,
-        "username" : "Signup User Actions",
-        "icon_emoji" : ":golf:"
-    }
-    let params = {
-        method: 'POST',
-        body: JSON.stringify(data)
-    }
-
-    fetch(webhookURL, params)
-    .then((response) => response.json())
-    .then((response) => {
-        console.log(response);
-    })
-    .catch((err) => {
-        console.log('err',err);
-    });
-  }
-
   const enableClearbitReveal = () => {
     setLoading(true);
 
@@ -62,7 +41,7 @@ const RevealIntegration = ({
           message.success('Clearbit Reveal integration enabled!');
         }, 500);
         setIsActive(true);
-        sendSlackNotification();
+        sendSlackNotification(currentAgent.email, activeProject.name, 'Reveal');
       })
       .catch((err) => {
         setLoading(false);

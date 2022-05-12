@@ -4,6 +4,7 @@ import { Button, message, Input, Avatar, Popover } from 'antd';
 import { Text, FaErrorComp, FaErrorLog, SVG } from 'factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary';
 import { disableSlackIntegration, enableSlackIntegration, fetchProjectSettingsV1 } from '../../../../../reducers/global';
+import { sendSlackNotification } from '../../../../../utils/slack';
 
 const SlackIntegration = ({
   activeProject,
@@ -48,28 +49,6 @@ const SlackIntegration = ({
     }
   }, [activeProject, projectSettings?.int_slack]);
 
-  const sendSlackNotification = (email, projectname) => {
-    let webhookURL = 'https://hooks.slack.com/services/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';
-    let data = {
-        "text": `User ${email} from Project "${projectname}" Activated Integration: Bing Ads`,
-        "username" : "Signup User Actions",
-        "icon_emoji" : ":golf:"
-    }
-    let params = {
-        method: 'POST',
-        body: JSON.stringify(data)
-    }
-
-    fetch(webhookURL, params)
-    .then((response) => response.json())
-    .then((response) => {
-        console.log(response);
-    })
-    .catch((err) => {
-        console.log('err',err);
-    });
-  }
-
   const enableSlack = () => {
     setLoading(true);
     enableSlackIntegration(activeProject.id)
@@ -77,7 +56,7 @@ const SlackIntegration = ({
         setLoading(false);
         if (r.status == 200) {
           window.location = r.data.redirectURL;
-          sendSlackNotification(agent_details.email, activeProject.name);
+          sendSlackNotification(agent_details.email, activeProject.name, 'Slack');
         }
         if (r.status >= 400) {
           message.error('Error fetching slack redirect url');

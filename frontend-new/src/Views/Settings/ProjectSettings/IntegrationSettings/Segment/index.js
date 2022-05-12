@@ -8,6 +8,7 @@ import {
   import { Text, FaErrorComp, FaErrorLog } from 'factorsComponents';
   import {ErrorBoundary} from 'react-error-boundary';
   import factorsai from 'factorsai';
+import { sendSlackNotification } from '../../../../../utils/slack';
 
 const SegmentIntegration = ({
     fetchProjectSettings,
@@ -29,28 +30,6 @@ const SegmentIntegration = ({
       }
     }, [currentProjectSettings]);
 
-   const sendSlackNotification = () => {
-        let webhookURL = 'https://hooks.slack.com/services/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';
-        let data = {
-            "text": `User ${currentAgent.email} from Project "${activeProject.name}" Activated Integration: Segment`,
-            "username" : "Signup User Actions",
-            "icon_emoji" : ":golf:"
-        }
-        let params = {
-            method: 'POST',
-            body: JSON.stringify(data)
-        }
-
-        fetch(webhookURL, params)
-        .then((response) => response.json())
-        .then((response) => {
-            console.log(response);
-        })
-        .catch((err) => {
-            console.log('err',err);
-        });
-   }
-
 const enableSegment = () => { 
     setLoading(true);
 
@@ -68,7 +47,7 @@ const enableSegment = () => {
             message.success('Segment integration enabled!'); 
         }, 500);
         setIsActive(true);
-        sendSlackNotification();
+        sendSlackNotification(currentAgent.email, activeProject.name, 'Segment');
     }).catch((err) => {
         setShowForm(false);
         setLoading(false);

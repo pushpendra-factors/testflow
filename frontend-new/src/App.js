@@ -15,6 +15,7 @@ import { ErrorBoundary } from 'react-error-boundary';
 import factorsai from 'factorsai';
 import { enableBingAdsIntegration, enableMarketoIntegration } from 'Reducers/global';
 import { SSO_LOGIN_FULFILLED } from "./reducers/types";
+import { sendSlackNotification } from "./utils/slack";
 
 
 const Login = lazyWithRetry(() => import("./Views/Pages/Login"));
@@ -43,28 +44,6 @@ function App({ isAgentLoggedIn, agent_details, active_project, enableBingAdsInte
 
   ssoLogin();
 
-  const sendSlackNotification = (email, projectname) => {
-    let webhookURL = 'https://hooks.slack.com/services/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';
-    let data = {
-        "text": `User ${email} from Project "${projectname}" Activated Integration: Bing Ads`,
-        "username" : "Signup User Actions",
-        "icon_emoji" : ":golf:"
-    }
-    let params = {
-        method: 'POST',
-        body: JSON.stringify(data)
-    }
-
-    fetch(webhookURL, params)
-    .then((response) => response.json())
-    .then((response) => {
-        console.log(response);
-    })
-    .catch((err) => {
-        console.log('err',err);
-    });
-  }
-
   useEffect(() => {
 
     if (window.location.origin.startsWith("https://tufte-prod.factors.ai")) {
@@ -89,7 +68,7 @@ function App({ isAgentLoggedIn, agent_details, active_project, enableBingAdsInte
         let email = searchParams.get('email');
         let projectname = searchParams.get('projectname');
         enableBingAdsIntegration(projectID).then(() => {
-          sendSlackNotification(email, projectname);
+          sendSlackNotification(email, projectname, 'Bing Ads');
           window.location.replace("/settings/integration");
         }).catch((err) => {
           console.log('bing ads enable error', err)
@@ -104,7 +83,7 @@ function App({ isAgentLoggedIn, agent_details, active_project, enableBingAdsInte
         let email = searchParams.get('email');
         let projectname = searchParams.get('projectname');
         enableMarketoIntegration(projectID).then(() => {
-          sendSlackNotification(email, projectname);
+          sendSlackNotification(email, projectname, 'Marketo');
           window.location.replace("/settings/integration");
         }).catch((err) => {
           console.log('Marketo enable error', err)

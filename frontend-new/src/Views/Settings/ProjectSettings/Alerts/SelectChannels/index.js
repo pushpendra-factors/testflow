@@ -8,7 +8,7 @@ function SelectChannels({ channelOpts, selectedChannel, setSelectedChannel }) {
   const [searchVal, setSearchVal] = useState('');
 
   const handleSearchChange = useCallback((e) => {
-    setSearchVal(e.target.id);
+    setSearchVal(e.target.value);
   }, []);
 
   const handleCheckBoxClick = useCallback(
@@ -37,7 +37,7 @@ function SelectChannels({ channelOpts, selectedChannel, setSelectedChannel }) {
       <div className={`${styles.searchBar} query-search`}>
         <Input
           onChange={handleSearchChange}
-          id={searchVal}
+          value={searchVal}
           className={styles.searchInput}
           placeholder='Select channels'
           prefix={<SearchOutlined style={{ width: '1rem' }} color='#0E2647' />}
