@@ -28,6 +28,8 @@ import BingIntegration from './Bing';
 import MarketoIntegration from './Marketo';
 import SlackIntegration from './Slack';
 
+import {ADWORDS_INTERNAL_REDIRECT_URI} from './util';
+
 const IntegrationProviderData = [
   {
     name: 'Segment',
@@ -103,7 +105,7 @@ const IntegrationProviderData = [
   },
 ];
 
-const IntegrationCard = ({ item, index }) => {
+const IntegrationCard = ({ item, index, defaultOpen }) => {
   const [showForm, setShowForm] = useState(false);
   const [isActive, setIsActive] = useState(false);
   const [toggle, setToggle] = useState(false);
@@ -175,7 +177,11 @@ const IntegrationCard = ({ item, index }) => {
   };
 
   useEffect(() => {
-    setToggle(!(isActive || isStatus === 'Active'));
+    setToggle(!(isActive || isStatus === 'Active')); 
+
+    if(defaultOpen){
+      setToggle(true)
+    }
   }, [isActive, isStatus]);
 
   return (
@@ -323,11 +329,16 @@ function IntegrationSettings({
                       <Skeleton active paragraph={{ rows: 4 }} />
                     ) : (
                       IntegrationProviderData.map((item, index) => {
+                        let defaultOpen = false;
+                        if (window.location.href.indexOf(ADWORDS_INTERNAL_REDIRECT_URI) > -1) { 
+                          defaultOpen = true;
+                        }
                         return (
                           <IntegrationCard
                             item={item}
                             index={index}
                             key={index}
+                            defaultOpen={defaultOpen}
                             currentProjectSettings={currentProjectSettings}
                           />
                         );
