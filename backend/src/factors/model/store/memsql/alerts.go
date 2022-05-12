@@ -24,7 +24,7 @@ func (store *MemSQL) SetAuthTokenforSlackIntegration(projectID uint64, agentUUID
 		return err
 	}
 	// update the db
-	err = db.Model(&model.Agent{}).Where("uuid = ?", agentUUID).Update("slack_auth_tokens", TokenJson).Error
+	err = db.Model(&model.Agent{}).Where("uuid = ?", agentUUID).Update("slack_access_tokens", TokenJson).Error
 	if err != nil {
 		log.Error(err)
 		return err
