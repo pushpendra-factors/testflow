@@ -651,7 +651,7 @@ const Alerts = ({
                             </Form.List>
                         </Row>
                         )}
-                        <Row className={'mt-2 ml-2'}>
+                        {/* <Row className={'mt-2 ml-2'}>
                             <Col className={'m-0'}>
                                 <Form.Item
                                     name="slack_enabled"
@@ -703,7 +703,7 @@ const Alerts = ({
                                 </Row>
                                 }
                             </>
-                        )}
+                        )} */}
 
                     </Form>
 
@@ -827,11 +827,11 @@ const Alerts = ({
                         </Col>
                     </Row>
                     <Row className={'mt-4'}>
-                        <Col span={10}>
+                        <Col span={8}>
                             {emailView()}
                         </Col>
                     </Row>
-                    <Row className={'mt-2 ml-2'}>
+                    {/* <Row className={'mt-2 ml-2'}>
                         <Col span={4}>
                                 <Checkbox disabled={true} checked={viewAlertDetails?.alert_configuration?.slack_enabled}>Slack</Checkbox>
                         </Col>
@@ -847,7 +847,7 @@ const Alerts = ({
                             ))}
                         </Col>
                     </Row>
-                    )}
+                    )} */}
 
                 </>}
 

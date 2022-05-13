@@ -43,12 +43,12 @@ const IntegrationProviderData = [
     icon: 'Marketo',
     kbLink: false,
   },
-  {
-    name: 'Slack',
-    desc: 'Slack is a leader in marketing automation. Using our slack source, we will ingest your Program, Campaign, Person and List records into Factors.',
-    icon: 'Slack',
-    kbLink: false,
-  },
+  // {
+  //   name: 'Slack',
+  //   desc: 'Slack is a leader in marketing automation. Using our slack source, we will ingest your Program, Campaign, Person and List records into Factors.',
+  //   icon: 'Slack',
+  //   kbLink: false,
+  // },
   {
     name: 'Hubspot',
     desc: 'Sync your Contact, Company and Deal objects with Factors on a daily basis',
@@ -154,10 +154,10 @@ const IntegrationCard = ({ item, index, defaultOpen }) => {
         return (
           <MarketoIntegration kbLink={item.kbLink} setIsStatus={setIsStatus} />
         );
-      case 'Slack':
-        return (
-          <SlackIntegration kbLink={item.kbLink} setIsStatus={setIsStatus} />
-        );
+      // case 'Slack':
+      //   return (
+      //     <SlackIntegration kbLink={item.kbLink} setIsStatus={setIsStatus} />
+      //   );
       case 'Clearbit Reveal':
         return (
           <RevealIntegration active={isActive} setIsActive={setIsActive} />
