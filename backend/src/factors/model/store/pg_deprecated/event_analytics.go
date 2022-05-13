@@ -610,9 +610,18 @@ func sortResultRowsByTimestamp(resultRows [][]interface{}, timestampIndex int) {
 	})
 }
 
-func getAllTimestampsBetweenByType(from, to int64, typ, timezone string, isTimezoneEnabled bool) []time.Time {
+// In day light savings, the timezone gets changed at 1:00AM or 2:00AM. Hence giving the beginning timestamp, but offset which remains for longer time.
+func getAllTimestampsAndOffsetBetweenByType(from, to int64, typ, timezone string, isTimezoneEnabled bool) ([]time.Time, []string) {
+	logFields := log.Fields{
+		"from":                from,
+		"to":                  to,
+		"typ":                 typ,
+		"timezone":            timezone,
+		"is_timezone_enabled": isTimezoneEnabled,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if typ == model.GroupByTimestampDate {
-		return U.GetAllDatesAsTimestamp(from, to, timezone, isTimezoneEnabled)
+		return U.GetAllDatesAndOffsetAsTimestamp(from, to, timezone, isTimezoneEnabled)
 	}
 
 	if typ == model.GroupByTimestampHour {
@@ -630,7 +639,8 @@ func getAllTimestampsBetweenByType(from, to int64, typ, timezone string, isTimez
 	if typ == model.GroupByTimestampQuarter {
 		return U.GetAllQuartersAsTimestamp(from, to, timezone, isTimezoneEnabled)
 	}
-	return []time.Time{}
+
+	return []time.Time{}, []string{}
 }
 
 func addMissingTimestampsOnResultWithoutGroupByProps(result *model.QueryResult,
@@ -642,7 +652,8 @@ func addMissingTimestampsOnResultWithoutGroupByProps(result *model.QueryResult,
 		rowsByTimestamp[U.GetTimestampAsStrWithTimezone(ts, query.Timezone)] = row
 	}
 
-	timestamps := getAllTimestampsBetweenByType(query.From, query.To,
+	// NOTE: Not making modifications. Can cause issues.
+	timestamps, _ := getAllTimestampsAndOffsetBetweenByType(query.From, query.To,
 		query.GetGroupByTimestamp(), query.Timezone, isTimezoneEnabled)
 
 	filledResult := make([][]interface{}, 0, 0)
@@ -696,7 +707,8 @@ func addMissingTimestampsOnResultWithGroupByProps(result *model.QueryResult,
 		filledResult = append(filledResult, row)
 	}
 
-	timestamps := getAllTimestampsBetweenByType(query.From, query.To,
+	// NOTE: Not making modifications. Can cause issues.
+	timestamps, _ := getAllTimestampsAndOffsetBetweenByType(query.From, query.To,
 		query.GetGroupByTimestamp(), query.Timezone, isTimezoneEnabled)
 
 	for _, row := range result.Rows {

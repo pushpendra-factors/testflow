@@ -54,6 +54,7 @@ func main() {
 	isQuarterlyEnabled := flag.Bool("quarterly_enabled", false, "")
 	projectIdFlag := flag.String("project_id", "", "Comma separated list of project ids to run")
 	lookback := flag.Int("lookback", 30, "lookback_for_delta lookup")
+	enableDryRunAlerts := flag.Bool("dry_run_alerts", false, "")
 
 	flag.Parse()
 	if *env != "development" &&
@@ -83,11 +84,12 @@ func main() {
 			Certificate: *memSQLCertificate,
 			AppName:     appName,
 		},
-		PrimaryDatastore: *primaryDatastore,
-		AWSKey:           *awsAccessKeyId,
-		AWSSecret:        *awsSecretAccessKey,
-		AWSRegion:        *awsRegion,
-		EmailSender:      *factorsEmailSender,
+		PrimaryDatastore:   *primaryDatastore,
+		AWSKey:             *awsAccessKeyId,
+		AWSSecret:          *awsSecretAccessKey,
+		AWSRegion:          *awsRegion,
+		EmailSender:        *factorsEmailSender,
+		EnableDryRunAlerts: *enableDryRunAlerts,
 	}
 	C.InitConf(config)
 	C.InitSenderEmail(C.GetFactorsSenderEmail())
@@ -100,7 +102,7 @@ func main() {
 	defer db.Close()
 	//Initialized configs
 
-	query := "select DISTINCT(project_id) from alerts;"
+	query := "select DISTINCT(project_id) from alerts where is_deleted = false;"
 	rows, err := db.Raw(query).Rows()
 	if err != nil {
 		log.Fatal(err)

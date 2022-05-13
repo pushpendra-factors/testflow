@@ -94,6 +94,23 @@ func countPatternsWorkerBeam(ctx context.Context, projectID uint64, filepath str
 	P.CountPatterns(projectID, scanner, patterns, countOccurence, cAlgoProps)
 }
 
+func ComputeHistogramWorkerBeam(ctx context.Context, projectID uint64, filepath string,
+	patterns []*P.Pattern, countOccurence bool, countsVersion int, hmineSupport float32) error {
+
+	var cAlgoProps P.CountAlgoProperties
+	cAlgoProps.Counting_version = countsVersion
+	cAlgoProps.Hmine_support = hmineSupport
+	if countsVersion == 3 {
+		log.Infof("Number of pattens to CounPatterns using hmine :%d,%d,%d", len(patterns), countsVersion, hmineSupport)
+	}
+
+	if err := computeAllUserPropertiesHistogram(projectID, filepath, patterns[0], countsVersion, hmineSupport); err != nil {
+		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to compute user properties.")
+		return err
+	}
+	return nil
+}
+
 func writeFileToGCP(projectId, modelId uint64, name string, fpath string,
 	cloudManager *filestore.FileManager, writePath string) error {
 
@@ -265,6 +282,146 @@ func countPatternController(beamStruct *RunBeamConfig, projectId uint64, modelId
 		itrFname = `gs://` + bucketName + `/` + efTmpPath + fileNameIntermediate
 	}
 	countPatternsExecutor(s, scopeName, configEncodedString, itrFname, countsVersion)
+	err = beamx.Run(ctx, p)
+	if err != nil {
+		mineLog.Fatalf("unable to run beam pipeline :  %s", err)
+		return "", err
+	}
+	patternsFpath := filepath.Join(modelpathDir, "patterns_part", scopeName)
+	mineLog.Infof("Patterns writtens to GCP : %s ", patternsFpath)
+	mineLog.Infof("completed counting patterns in beam")
+	return patternsFpath, nil
+
+}
+
+func UserPropertiesHistogramController(beamStruct *RunBeamConfig, projectId uint64, modelId uint64,
+	cloudManager *filestore.FileManager,
+	mod_events_path string, patterns []*P.Pattern, numRoutines int,
+	userAndEventsInfo *P.UserAndEventsInfo, countOccurence bool,
+	efTmpPath string,
+	scopeName string, cAlgoProps P.CountAlgoProperties) (string, error) {
+
+	var countsVersion int = cAlgoProps.Counting_version
+	var hmineSupport float32 = cAlgoProps.Hmine_support
+	numPatterns := len(patterns)
+	mineLog.Info(fmt.Sprintf("Num patterns to count Range: %d - %d", 0, numPatterns-1))
+	batchSize := batch_size_beam //600 too long , will have issue in len three stage
+
+	numRoutines = int(math.Ceil(float64(numPatterns) / float64(batchSize)))
+
+	patternEnames := make([][]string, 0)
+	for _, v := range patterns {
+		patternEnames = append(patternEnames, v.EventNames)
+	}
+
+	bucketName := (*cloudManager).GetBucketName()
+	modelpathDir := (*cloudManager).GetProjectModelDir(projectId, modelId)
+	mineLog.Infof("bucketName :%s", bucketName)
+	mineLog.Infof("model path :%s", modelpathDir)
+	modEventsFile := fmt.Sprintf("events_modified_%d.txt", modelId)
+
+	modelpath := modelpathDir + modEventsFile
+	mineLog.Infof("model path of modified file:%s", modelpath)
+
+	cPatterns := make([]string, 0)
+	for i := 0; i < numRoutines; i++ {
+		// Each worker gets a slice of patterns to count.
+		low := int(math.Min(float64(batchSize*i), float64(numPatterns)))
+		high := int(math.Min(float64(batchSize*(i+1)), float64(numPatterns)))
+		mineLog.Info(fmt.Sprintf("Batch %d patterns to count range: %d:%d", i+1, low, high))
+
+		t, err := json.Marshal(CPatternsBeam{
+			projectId, modelId, patternEnames[low:high], mod_events_path, countOccurence, countsVersion, hmineSupport,
+			bucketName, modelpath, scopeName, beamStruct.Env})
+		if err != nil {
+			return "", fmt.Errorf("unable to encode string : %v", err)
+		}
+		cPatterns = append(cPatterns, string(t))
+
+	}
+
+	ptInputPath := filepath.Join(efTmpPath, "pinput", scopeName+".txt")
+	mineLog.Infof("File patterns name : %s", ptInputPath)
+
+	pfFile, err := create(ptInputPath)
+	mineLog.Info(err)
+	if err != nil {
+		return "", fmt.Errorf("unable to create file :%v", ptInputPath)
+	}
+	for _, cp := range cPatterns {
+		_, err := pfFile.WriteString(fmt.Sprintf("%s\n", cp))
+		if err != nil {
+			return "", fmt.Errorf("error writing json to file :%v", err)
+		}
+	}
+	err = pfFile.Close()
+	if err != nil {
+		return "", fmt.Errorf("error in closing file : %v", err)
+	}
+
+	//-------Write events Info file to GCP--------
+	userAndEventsInfoBytes, err := json.Marshal(userAndEventsInfo)
+	if err != nil {
+		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to unmarshal events Info.")
+		return "", err
+	}
+
+	if len(userAndEventsInfoBytes) > 249900000 {
+		// Limit is 250MB
+		errorString := fmt.Sprintf(
+			"Too big properties info, modelId: %d,projectId: %d, numBytes: %d",
+			modelId, projectId, len(userAndEventsInfoBytes))
+		mineLog.Error(errorString)
+		return "", fmt.Errorf(errorString)
+	}
+	events := bytes.NewReader(userAndEventsInfoBytes)
+	path, _ := (*cloudManager).GetModelEventInfoFilePathAndName(projectId, modelId)
+	nameUI := scopeName + "_UI.txt"
+	path = path + "patterns_part/" + scopeName + "/"
+	err = (*cloudManager).Create(path, nameUI, events)
+	if err != nil {
+		mineLog.WithError(err).Error("writeEventInfoFile Failed to write to cloud")
+		return "", err
+	}
+
+	//-------End Write events Info file to GCP--------
+
+	//-------Write intermediate patterns file to GCP--------
+	fileNameIntermediate := scopeName + "_itm_patterns.txt"
+	err = writeFileToGCP(projectId, modelId, fileNameIntermediate, ptInputPath, cloudManager, path)
+	if err != nil {
+		return "", fmt.Errorf("unable to write to cloud : %s", fileNameIntermediate)
+	}
+	//-------END of Write intermediate patterns file to GCP--------
+
+	p, s := beam.NewPipelineWithRoot()
+	ctx := beamStruct.Ctx
+	config_ := beamStruct.DriverConfig
+	configJson, err := json.Marshal(config_)
+	if err != nil {
+		return "", fmt.Errorf("unable to marshall string :%v", err)
+	}
+	configEncodedString := string(configJson)
+	efTmpPath = modelpathDir
+	if beam.Initialized() {
+		mineLog.Info("Initialized beam")
+	} else {
+		mineLog.Fatal("Unable to init beam")
+	}
+	if s.IsValid() {
+		mineLog.Info("Scope is Valid")
+	} else {
+		mineLog.Fatal("Scope is not valid")
+	}
+	var itrFname string
+	efTmpPath = efTmpPath + "patterns_part/" + scopeName + "/"
+	if beamStruct.Env == "development" {
+
+		itrFname = filepath.Join(efTmpPath, fileNameIntermediate)
+	} else {
+		itrFname = `gs://` + bucketName + `/` + efTmpPath + fileNameIntermediate
+	}
+	UserPropertiesExecutor(s, scopeName, configEncodedString, itrFname, countsVersion)
 	err = beamx.Run(ctx, p)
 	if err != nil {
 		mineLog.Fatalf("unable to run beam pipeline :  %s", err)
@@ -719,6 +876,7 @@ func ReadFilterAndCompressPatternsFromFile(partFilesDir string, cloudManager *fi
 				if err != nil {
 					return []*P.Pattern{}, 0, err
 				}
+				// TODO : write it to a file ,instead of accumulating in memory
 				patterns = append(patterns, pattern)
 				patternsBytes += pbytes
 			}
@@ -848,4 +1006,303 @@ func getPatternSize(pattern *P.Pattern) (int64, error) {
 	pString := string(b)
 	pBytes := int64(len([]byte(pString)))
 	return pBytes, nil
+}
+
+// == user properties and all user histogram on beam
+
+func UserPropertiesExecutor(s beam.Scope, scopeName string, config_ string,
+	itrFname string, countsVersion int) {
+
+	s = s.Scope(scopeName)
+	cPatternsPcol := Read(s, itrFname)
+	cPatternsPcolReshuffled := beam.Reshuffle(s, cPatternsPcol)
+	beam.ParDo0(s, &UpThreadDoFn{Config: config_}, cPatternsPcolReshuffled)
+}
+
+type UpThreadDoFn struct {
+	// UserPropertiesHistogram
+	Config string
+}
+
+func (f *UpThreadDoFn) StartBundle(ctx context.Context) {
+	beamlog.Info(ctx, "Initializing conf from CpThreadDoFn")
+	var configVar *C.Configuration
+	err := json.Unmarshal([]byte(f.Config), &configVar)
+	if err != nil {
+		log.Infof("Unable to unmarshall :%v", err)
+	}
+	InitConfBeam(configVar)
+}
+
+func (f *UpThreadDoFn) FinishBundle(ctx context.Context) {
+	beamlog.Info(ctx, "Closing DB Connection from FinishBundle cpThreadDoFn")
+	C.SafeFlushAllCollectors()
+}
+
+func (f *UpThreadDoFn) ProcessElement(ctx context.Context, cpString string) error {
+	beamlog.Info(ctx, "Inside UserPropertiesHistogramThread")
+
+	var cp CPatternsBeam
+	var inBeam bool = true
+	var debugHmine bool = true
+
+	err := json.Unmarshal([]byte(cpString), &cp)
+	if err != nil {
+		return fmt.Errorf("unable to unmarshall string in processElement :%s", cpString)
+	}
+
+	var patterns []*P.Pattern
+	var UserAndEventsInfo = P.NewUserAndEventsInfo()
+	projectID := cp.ProjectID
+	eventsFilePath := cp.ModEventsFilepath
+	countOccurence := cp.CountOccurence
+	bucketName := cp.BucketName
+	objectName := cp.ObjectName
+	modelId := cp.ModelId
+	scopeName := cp.ScopeName
+	envFlag := cp.Env
+	countsVersion := cp.CountsVersion
+	hmineSupport := cp.HmineSupport
+	log.Infof("Project Id : %d  ", projectID)
+	log.Infof("Model Id : %d  ", modelId)
+	log.Infof("BucketName: %s  ", bucketName)
+	if countsVersion == 3 {
+		log.Infof("counting algo : hmine")
+	}
+
+	// enable client for GCP
+	var cloudManager filestore.FileManager
+	if envFlag == "development" {
+		cloudManager = serviceDisk.New(bucketName)
+	} else {
+		cloudManager, err = serviceGCS.New(bucketName)
+		if err != nil {
+			log.WithError(err).Errorln("Failed to init New GCS Client")
+			panic(err)
+		}
+	}
+
+	modelpath := cloudManager.GetProjectModelDir(projectID, modelId)
+	pathEinfo, _ := cloudManager.GetModelEventInfoFilePathAndName(projectID, modelId)
+	pathEinfo = pathEinfo + "patterns_part/" + scopeName + "/"
+	einfo, err := (cloudManager).Get(pathEinfo, scopeName+"_UI.txt")
+	if err != nil {
+		return fmt.Errorf("unable to get events info file :%v", err)
+	}
+
+	line, err := ioutil.ReadAll(einfo)
+	if err != nil {
+		return fmt.Errorf("unable to read string :%v", err)
+	}
+	log.Infof("Number of bytes read :%d", len(line))
+	err = json.Unmarshal(line, &UserAndEventsInfo)
+	if err != nil {
+		return fmt.Errorf("unable to unmarshall userEventsInfo :%v", err)
+	}
+
+	log.Infof("Read user and events Info Model Version : %d", UserAndEventsInfo.ModelVersion)
+	log.Infof("number of patterns : %d", len(cp.PtEnames))
+
+	for _, eventNames := range cp.PtEnames {
+		p, err := P.NewPattern(eventNames, UserAndEventsInfo)
+		if err != nil {
+			return nil
+		}
+
+		patterns = append(patterns, p)
+	}
+
+	// downloading events file
+	eventsTmpFile, err := ioutil.TempFile("", "patterns_")
+	if err != nil {
+		return fmt.Errorf("unable to create tmp file :%v", err)
+	}
+
+	log.Infof("bucket : %s, objectName : %s", bucketName, objectName)
+	modEventsFile := fmt.Sprintf("events_modified_%d.txt", modelId)
+	rc, err := (cloudManager).Get(modelpath, modEventsFile)
+	if err != nil {
+		return fmt.Errorf("unable to get file from cloud :%v", err)
+	}
+	scannerEvents := bufio.NewScanner(rc)
+	buf := make([]byte, 0, 64*1024)
+	scannerEvents.Buffer(buf, 1024*1024)
+	countEventLines := 0
+	tmparr := []string{"$hubspot_deal_state_changed",
+		"MQLs", "Lead Status - Connected", "Lead Status - Demo Completed"}
+	for scannerEvents.Scan() {
+		line := scannerEvents.Text()
+		n, err := eventsTmpFile.WriteString(line + "\n")
+		if err != nil {
+
+			for _, v := range tmparr {
+				if strings.Contains(v, line) {
+					log.Infof("Error reading line :%s,%d", line, n)
+				}
+			}
+
+			return err
+		} else {
+			countEventLines++
+		}
+	}
+	log.Infof("Number of Event lines written :%d", countEventLines)
+	info, err := os.Stat(eventsTmpFile.Name())
+	if err != nil {
+		return err
+	}
+	eventsFileSize := info.Size()
+
+	log.Infof("tmpFile name : %s", eventsTmpFile.Name())
+	log.Infof("tmpFile size : %d", eventsFileSize)
+
+	eventsFilePath = eventsTmpFile.Name()
+	beamlog.Info(ctx, "calling  countPatternsWorkerBeam")
+	// create a temp folder for artifacts
+
+	if inBeam {
+		dname, err := ioutil.TempDir("", "fptree")
+		if err != nil {
+			return fmt.Errorf("unable to create tmp folder :%v", err)
+		}
+		for _, p := range patterns {
+			p.PropertiesBaseFolder = dname
+		}
+		log.Infof("creating a base folder for artifacts:%s", dname)
+
+		if countsVersion == 3 {
+
+			baseFolder := dname
+			basePathUserProps := path.Join(baseFolder, "fptree", "userProps")
+			basePathEventProps := path.Join(baseFolder, "fptree", "eventProps")
+			basePathUserPropsRes := path.Join(baseFolder, "fptree", "userPropsRes")
+			basePathEventPropsRes := path.Join(baseFolder, "fptree", "eventPropsRes")
+
+			err = os.MkdirAll(basePathUserPropsRes, os.ModePerm)
+			if err != nil {
+				log.Fatal("unable to create temp user directory")
+			}
+
+			err = os.MkdirAll(basePathEventPropsRes, os.ModePerm)
+			if err != nil {
+				log.Fatal("unable to create temp event directory")
+			}
+
+			err = os.MkdirAll(basePathUserProps, os.ModePerm)
+			if err != nil {
+				log.Fatal("unable to create temp user directory")
+			}
+
+			err = os.MkdirAll(basePathEventProps, os.ModePerm)
+			if err != nil {
+				log.Fatal("unable to create temp event directory")
+			}
+
+			log.Infof("created tmp properties User folder : %s", basePathUserProps)
+			log.Infof("created tmp properties Events folder : %s", basePathEventProps)
+			log.Infof("created tmp properties User Results folder : %s", basePathUserPropsRes)
+			log.Infof("created tmp properties Events Results folder : %s", basePathEventPropsRes)
+
+		}
+	}
+	ComputeHistogramWorkerBeam(ctx, projectID, eventsFilePath, patterns, countOccurence, countsVersion, hmineSupport)
+
+	//-------write as part files---------
+	key := time.Now().Nanosecond()
+	patternTmpFileLocal, err := ioutil.TempFile("", "patterns_computed_")
+	if err != nil {
+		return fmt.Errorf("unable to create tmp file :%v", err)
+	}
+	log.Infof("Writing patterns to local tmp file :%s", patternTmpFileLocal.Name())
+	tmpPatternsFile := filepath.Join("patterns_part", scopeName, "part_"+fmt.Sprint(key)+"_UI.txt")
+	lineNum := 0
+	for _, pat := range patterns {
+		pattBytes, _ := json.Marshal(pat)
+		patternTmpFileLocal.WriteString(string(pattBytes) + "\n")
+		lineNum++
+		if math.Mod(float64(lineNum), 100.0) == 0.0 {
+			log.Infof("Written %d lines", lineNum)
+		}
+	}
+
+	if envFlag == "development" {
+		fi, err := create(filepath.Join(modelpath, tmpPatternsFile))
+		if err != nil {
+			return err
+		}
+		fi.Close()
+	}
+
+	err = writeFileToGCP(projectID, modelId, tmpPatternsFile, patternTmpFileLocal.Name(), &cloudManager, "")
+	if err != nil {
+		return fmt.Errorf("unable to write part file to GCP : %v", err)
+	}
+
+	err = deleteFile(patternTmpFileLocal.Name())
+	if err != nil {
+		return err
+	}
+	log.Infof("Delete patterns File :%s", patternTmpFileLocal.Name())
+
+	if debugHmine {
+		// upload all temp files generated if need to debug
+		for _, pt := range patterns {
+
+			up_local_path := filepath.Join(pt.PropertiesBaseFolder, "userProps", pt.PropertiesBasePath)
+			if _, err := os.Stat(up_local_path); err == nil {
+				if envFlag == "development" {
+					fi, err := create(filepath.Join(modelpath, up_local_path))
+					if err != nil {
+						return err
+					}
+					fi.Close()
+				}
+
+				up_cloud_path := filepath.Join("patterns_part", "user_properties", pt.PropertiesBasePath)
+				err := writeFileToGCP(projectID, modelId, up_cloud_path, up_local_path, &cloudManager, "")
+				if err != nil {
+					return fmt.Errorf("unable to upload tmp user properties file :%v", err)
+				}
+
+			} else if errors.Is(err, os.ErrNotExist) {
+				// path/to/whatever does *not* exist
+				log.Infof("userProperties file does not exist: %s", up_local_path)
+
+			}
+
+			ep_local_path := filepath.Join(pt.PropertiesBaseFolder, "eventProps", pt.PropertiesBasePath)
+
+			if _, err := os.Stat(ep_local_path); err == nil {
+				if envFlag == "development" {
+					fi, err := create(filepath.Join(modelpath, ep_local_path))
+					if err != nil {
+						return err
+					}
+					fi.Close()
+				}
+
+				ep_cloud_path := filepath.Join("patterns_part", "event_properties", pt.PropertiesBasePath)
+				err := writeFileToGCP(projectID, modelId, ep_cloud_path, ep_local_path, &cloudManager, "")
+				if err != nil {
+					return fmt.Errorf("unable to upload tmp user properties file :%v", err)
+				}
+
+			} else if errors.Is(err, os.ErrNotExist) {
+				// path/to/whatever does *not* exist
+				log.Infof("eventProperties file does not exist: %s", ep_local_path)
+
+			}
+
+		}
+
+	}
+
+	//--destroy events file---
+	err = deleteFile(eventsTmpFile.Name())
+	if err != nil {
+		return err
+	}
+	log.Infof("Delete events File :%s", eventsTmpFile.Name())
+
+	return nil
 }

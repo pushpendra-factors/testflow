@@ -45,20 +45,41 @@ func MarketoIntegration(projectId uint64, configs map[string]interface{}) (map[s
 	for docType, _ := range model.MarketoDocumentTypeAlias {
 		totalSuccess := 0
 		totalFailures := 0
+		propertySuccess := 0
+		propertyFailures := 0
 		offset := 0
+		lastProcessedId := 0
+		metadataQuery, exists := model.GetMarketoDocumentMetadataQuery(docType, configs["BigqueryProjectId"].(string), mapping.SchemaID, model.MarketoDataObjectColumnsQuery[docType])
+		var metadataQueryResult [][]string
+		columnNamesFromMetadata := make([]string, 0)
+		columnNamesFromMetadataDateTime := make(map[string]bool)
+		columnNamesFromMetadataNumerical := make(map[string]bool)
+		if exists {
+			err = BQ.ExecuteQuery(&ctx, client, metadataQuery, &metadataQueryResult)
+			if err != nil {
+				resultStatus["failure-"+docType] = "Error while executing metadata query" + err.Error()
+				status = false
+				log.WithError(err).Error("Error while executing query")
+			}
+			columnNamesFromMetadata, columnNamesFromMetadataDateTime, columnNamesFromMetadataNumerical = extractMetadataColumns(metadataQueryResult)
+			propertySuccess, propertyFailures = InsertPropertyDataTypes(columnNamesFromMetadataDateTime, columnNamesFromMetadataNumerical, docType, projectId)
+
+		} else {
+			propertySuccess, propertyFailures = InsertPropertyDataTypes(model.MarketoDataObjectColumnsDatetimeType[docType], model.MarketoDataObjectColumnsNumericalType[docType], docType, projectId)
+		}
 		for {
 			var query string
 			if docType == model.MARKETO_TYPE_NAME_LEAD {
 				tableRef := client.Dataset(mapping.SchemaID).Table("lead_segment")
 				_, existsErr := tableRef.Metadata(ctx)
 				if existsErr == nil {
-					query = model.GetMarketoDocumentQuery(configs["BigqueryProjectId"].(string), mapping.SchemaID, model.MarketoDocumentToQuery[docType], executionDateString, docType, PAGE_SIZE, offset)
+					query = model.GetMarketoDocumentQuery(configs["BigqueryProjectId"].(string), mapping.SchemaID, model.MarketoDocumentToQuery[docType], executionDateString, docType, PAGE_SIZE, offset, 0)
 				} else {
-					query = model.GetMarketoDocumentQuery(configs["BigqueryProjectId"].(string), mapping.SchemaID, model.MarketoDocumentToQuery[model.MARKETO_TYPE_NAME_LEAD_NO_SEGMENT], executionDateString, model.MARKETO_TYPE_NAME_LEAD_NO_SEGMENT, PAGE_SIZE, offset)
+					query = model.GetMarketoDocumentQuery(configs["BigqueryProjectId"].(string), mapping.SchemaID, model.MarketoDocumentToQuery[model.MARKETO_TYPE_NAME_LEAD_NO_SEGMENT], executionDateString, model.MARKETO_TYPE_NAME_LEAD_NO_SEGMENT, PAGE_SIZE, offset, lastProcessedId)
 				}
 
 			} else {
-				query = model.GetMarketoDocumentQuery(configs["BigqueryProjectId"].(string), mapping.SchemaID, model.MarketoDocumentToQuery[docType], executionDateString, docType, PAGE_SIZE, offset)
+				query = model.GetMarketoDocumentQuery(configs["BigqueryProjectId"].(string), mapping.SchemaID, model.MarketoDocumentToQuery[docType], executionDateString, docType, PAGE_SIZE, offset, 0)
 			}
 			var queryResult [][]string
 			err = BQ.ExecuteQuery(&ctx, client, query, &queryResult)
@@ -67,29 +88,19 @@ func MarketoIntegration(projectId uint64, configs map[string]interface{}) (map[s
 				status = false
 				log.WithError(err).Error("Error while executing query")
 			}
-			metadataQuery, exists := model.GetMarketoDocumentMetadataQuery(docType, configs["BigqueryProjectId"].(string), mapping.SchemaID, model.MarketoDataObjectColumnsQuery[docType])
-			var metadataQueryResult [][]string
-			columnNamesFromMetadata := make([]string, 0)
-			columnNamesFromMetadataDateTime := make(map[string]bool)
-			if exists {
-				err = BQ.ExecuteQuery(&ctx, client, metadataQuery, &metadataQueryResult)
-				if err != nil {
-					resultStatus["failure-"+docType] = "Error while executing metadata query" + err.Error()
-					status = false
-					log.WithError(err).Error("Error while executing query")
-				}
-				columnNamesFromMetadata, columnNamesFromMetadataDateTime = extractMetadataColumns(metadataQueryResult)
-			}
-			success, failures := InsertIntegrationDocument(projectId, docType, queryResult, columnNamesFromMetadata, columnNamesFromMetadataDateTime)
+			success, failures := InsertIntegrationDocument(projectId, docType, queryResult, columnNamesFromMetadata, columnNamesFromMetadataDateTime, columnNamesFromMetadataNumerical)
 			totalFailures = totalFailures + failures
 			totalSuccess = totalSuccess + success
 			if len(queryResult) < PAGE_SIZE {
 				break
 			}
 			offset = offset + PAGE_SIZE
+			lastProcessedId = int(model.ConvertToNumber(model.GetMarketoUserId(docType, queryResult[len(queryResult)-1], columnNamesFromMetadata)))
 		}
 		resultStatus["failure-"+docType] = totalFailures
 		resultStatus["success-"+docType] = totalSuccess
+		resultStatus["property-failure-"+docType] = propertyFailures
+		resultStatus["property-success-"+docType] = propertySuccess
 	}
 	if status == false {
 		return resultStatus, false
@@ -97,10 +108,48 @@ func MarketoIntegration(projectId uint64, configs map[string]interface{}) (map[s
 	return resultStatus, true
 }
 
-func extractMetadataColumns(metadataQueryResult [][]string) ([]string, map[string]bool) {
+func InsertPropertyDataTypes(columnNamesFromMetadataDateTime map[string]bool, columnNamesFromMetadataNumerical map[string]bool, docType string, projectId uint64) (int, int) {
+	success, failures := int(0), int(0)
+	for columnName, _ := range columnNamesFromMetadataDateTime {
+		_, err := store.GetStore().CreateCRMProperties(&model.CRMProperty{
+			ProjectID:        projectId,
+			Source:           U.CRM_SOURCE_MARKETO,
+			Type:             model.MarketoDocumentTypeAlias[docType],
+			Name:             columnName,
+			ExternalDataType: "timestamp",
+			MappedDataType:   U.PropertyTypeDateTime,
+		})
+		if err != nil {
+			failures++
+		} else {
+			success++
+		}
+	}
+
+	for columnName, _ := range columnNamesFromMetadataNumerical {
+		_, err := store.GetStore().CreateCRMProperties(&model.CRMProperty{
+			ProjectID:        projectId,
+			Source:           U.CRM_SOURCE_MARKETO,
+			Type:             model.MarketoDocumentTypeAlias[docType],
+			Name:             columnName,
+			ExternalDataType: "float64",
+			MappedDataType:   U.PropertyTypeNumerical,
+		})
+		if err != nil {
+			failures++
+		} else {
+			success++
+		}
+	}
+	return success, failures
+
+}
+
+func extractMetadataColumns(metadataQueryResult [][]string) ([]string, map[string]bool, map[string]bool) {
 
 	columnNamesFromMetadata := make([]string, 0)
 	columnNamesFromMetadataDateTime := make(map[string]bool)
+	columnNamesFromMetadataNumerical := make(map[string]bool)
 	for _, metadataLine := range metadataQueryResult {
 		metadataIndex := model.GetMetadataColumnNameIndex("column_name")
 		columnName := metadataLine[metadataIndex]
@@ -110,15 +159,18 @@ func extractMetadataColumns(metadataQueryResult [][]string) ([]string, map[strin
 		if dataType == "TIMESTAMP" || dataType == "DATE" {
 			columnNamesFromMetadataDateTime[columnName] = true
 		}
+		if dataType == "INT64" || dataType == "FLOAT64" {
+			columnNamesFromMetadataNumerical[columnName] = true
+		}
 	}
-	return columnNamesFromMetadata, columnNamesFromMetadataDateTime
+	return columnNamesFromMetadata, columnNamesFromMetadataDateTime, columnNamesFromMetadataNumerical
 }
 
-func InsertIntegrationDocument(projectId uint64, docType string, queryResult [][]string, columnNamesFromMetadata []string, columnNamesFromMetadataDateTime map[string]bool) (int, int) {
+func InsertIntegrationDocument(projectId uint64, docType string, queryResult [][]string, columnNamesFromMetadata []string, columnNamesFromMetadataDateTime map[string]bool, columnNamesFromMetadataNumerical map[string]bool) (int, int) {
 	success := 0
 	failures := 0
 	for _, line := range queryResult {
-		values := model.GetMarketoDocumentValues(docType, line, columnNamesFromMetadata, columnNamesFromMetadataDateTime)
+		values := model.GetMarketoDocumentValues(docType, line, columnNamesFromMetadata, columnNamesFromMetadataDateTime, columnNamesFromMetadataNumerical)
 		valuesBlob, err := U.EncodeToPostgresJsonb(&values)
 		if err != nil {
 			log.WithError(err).Error("Error while encoding to jsonb")

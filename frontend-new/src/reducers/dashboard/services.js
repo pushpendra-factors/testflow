@@ -1,11 +1,13 @@
-import { get, getHostUrl, post, del, put } from '../../utils/request';
+import {
+  get, getHostUrl, post, del, put
+} from '../../utils/request';
 import {
   DASHBOARDS_LOADED,
   DASHBOARD_UNITS_LOADING_FAILED,
   DASHBOARDS_LOADING,
   DASHBOARDS_LOADING_FAILED,
   DASHBOARD_UNITS_LOADING,
-  DASHBOARD_UNITS_LOADED,
+  DASHBOARD_UNITS_LOADED
 } from '../types';
 
 const host = getHostUrl();

@@ -10,6 +10,6 @@ export const removeItemFromLocalStorage = (key) => {
   localStorage.removeItem(key);
 };
 
-export const clearLocalStorage = (key) => {
+export const clearLocalStorage = () => {
   localStorage.clear();
 };

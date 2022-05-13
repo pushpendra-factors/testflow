@@ -1,16 +1,18 @@
-import React, { useState, useCallback, useEffect, memo } from 'react';
+import React, {
+  useState, useCallback, useEffect, memo
+} from 'react';
 import { useSelector } from 'react-redux';
 import {
   getTableColumns,
   getDataInTableFormat,
   getDateBasedColumns,
-  getDateBasedTableData,
+  getDateBasedTableData
 } from './utils';
 import DataTable from '../../../../components/DataTable';
 import {
   MAX_ALLOWED_VISIBLE_PROPERTIES,
   CHART_TYPE_HORIZONTAL_BAR_CHART,
-  DASHBOARD_WIDGET_SECTION,
+  DASHBOARD_WIDGET_SECTION
 } from '../../../../utils/constants';
 import { isSeriesChart } from '../../../../utils/dataFormatter';
 
@@ -30,7 +32,7 @@ const BreakdownTable = ({
   handleDateSorting,
   visibleSeriesData,
   setVisibleSeriesData,
-  frequency = 'date',
+  frequency = 'date'
 }) => {
   const [searchText, setSearchText] = useState('');
   const { userPropNames, eventPropNames } = useSelector(
@@ -78,7 +80,7 @@ const BreakdownTable = ({
     dateSorter,
     handleDateSorting,
     userPropNames,
-    eventPropNames,
+    eventPropNames
   ]);
 
   useEffect(() => {
@@ -91,10 +93,10 @@ const BreakdownTable = ({
     const activeTableData =
       chartType === isSeriesChart(chartType) ? dateBasedTableData : tableData;
     return {
-      fileName: `KPI.csv`,
+      fileName: 'KPI.csv',
       data: activeTableData.map(({ index, label, ...rest }) => {
         return { ...rest };
-      }),
+      })
     };
   };
 
@@ -142,7 +144,7 @@ const BreakdownTable = ({
       : selectedRowKeys(visibleProperties),
     onChange: isSeriesChart(chartType)
       ? onDateWiseSelectionChange
-      : onSelectionChange,
+      : onSelectionChange
   };
 
   return (

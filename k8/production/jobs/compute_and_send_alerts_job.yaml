@@ -1,0 +1,54 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  labels:
+    nodePool: shared-persistent-pool
+  name: compute-and-send-alerts-job
+spec:
+  schedule: "1 2 3 4 5"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            layer: jobs
+            nodePool: shared-persistent-pool
+        spec:
+          nodeSelector:
+            cloud.google.com/gke-nodepool: shared-persistent-pool
+          containers:
+          - name: compute-and-send-alerts-job
+            image: us.gcr.io/factors-production/compute-and-send-alerts-job:v1-test
+            imagePullPolicy: IfNotPresent
+            args:
+            - --env
+            - $(ENV)
+            - --memsql_host
+            - $(MEMSQL_HOST)
+            - --memsql_port
+            - $(MEMSQL_PORT)
+            - --memsql_name
+            - $(MEMSQL_DB)
+            - --memsql_user
+            - $(MEMSQL_USER)
+            - --memsql_pass
+            - $(MEMSQL_PASSWORD)
+            - --memsql_cert
+            - $(MEMSQL_CERTIFICATE)
+            - --primary_datastore
+            - "memsql"
+            envFrom:
+            - configMapRef:
+                name: config-env
+            - configMapRef:
+                name: config-memsql
+            - configMapRef:
+                name: config-redis
+            - secretRef:
+                name: secret-memsql
+            - secretRef:
+                name: secret-sentry
+          restartPolicy: OnFailure

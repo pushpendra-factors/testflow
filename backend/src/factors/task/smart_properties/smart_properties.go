@@ -46,11 +46,12 @@ func EnrichSmartPropertyForChangedRulesForProject(projectID uint64) int {
 	adwordsCampaigns, adwordsAdGroups := store.GetStore().GetLatestMetaForAdwordsForGivenDays(projectID, 30)
 	facebookCampaigns, facebookAdGroups := store.GetStore().GetLatestMetaForFacebookForGivenDays(projectID, 30)
 	linkedinCampaigns, linkedinAdGroups := store.GetStore().GetLatestMetaForLinkedinForGivenDays(projectID, 30)
+	bingadsCampaigns, bingadsAdGroups := store.GetStore().GetLatestMetaForBingAdsForGivenDays(projectID, 30)
 
 	for _, smartPropertyRule := range smartPropertyRules {
 		switch checkState(smartPropertyRule) {
 		case model.CREATED:
-			noOfRecordsUpdated, noOfRecordsEvaluated, errCode := createSmartPropertyFromRuleObject(smartPropertyRule, adwordsCampaigns, adwordsAdGroups, facebookCampaigns, facebookAdGroups, linkedinCampaigns, linkedinAdGroups)
+			noOfRecordsUpdated, noOfRecordsEvaluated, errCode := createSmartPropertyFromRuleObject(smartPropertyRule, adwordsCampaigns, adwordsAdGroups, facebookCampaigns, facebookAdGroups, linkedinCampaigns, linkedinAdGroups, bingadsCampaigns, bingadsAdGroups)
 			recordsEvaluated += noOfRecordsEvaluated
 			recordsUpdated += noOfRecordsUpdated
 			if errCode != http.StatusCreated {
@@ -64,7 +65,7 @@ func EnrichSmartPropertyForChangedRulesForProject(projectID uint64) int {
 				continue
 			}
 		case model.UPDATED:
-			noOfRecordsUpdated, noOfRecordsEvaluated, errCode := updateSmartPropertyFromRule(smartPropertyRule, adwordsCampaigns, adwordsAdGroups, facebookCampaigns, facebookAdGroups, linkedinCampaigns, linkedinAdGroups)
+			noOfRecordsUpdated, noOfRecordsEvaluated, errCode := updateSmartPropertyFromRule(smartPropertyRule, adwordsCampaigns, adwordsAdGroups, facebookCampaigns, facebookAdGroups, linkedinCampaigns, linkedinAdGroups, bingadsCampaigns, bingadsAdGroups)
 			recordsEvaluated += noOfRecordsEvaluated
 			recordsUpdated += noOfRecordsUpdated
 			if errCode != http.StatusAccepted {
@@ -102,13 +103,15 @@ func EnrichSmartPropertyForCurrentDayForProject(projectID uint64) int {
 	adwordsCampaigns, adwordsAdGroups := store.GetStore().GetLatestMetaForAdwordsForGivenDays(projectID, 1)
 	facebookCampaigns, facebookAdGroups := store.GetStore().GetLatestMetaForFacebookForGivenDays(projectID, 1)
 	linkedinCampaigns, linkedinAdGroups := store.GetStore().GetLatestMetaForLinkedinForGivenDays(projectID, 1)
+	bingadsCampaigns, bingadsAdGroups := store.GetStore().GetLatestMetaForBingAdsForGivenDays(projectID, 1)
 
 	changedAdwordsCampaigns, changedAdwordsAdGroups := getUpdatedAndNonExistingInSmartPropertiesChannelDocuments(projectID, adwordsCampaigns, adwordsAdGroups, "adwords")
 	changedFacebookCampaigns, changedFacebookAdGroups := getUpdatedAndNonExistingInSmartPropertiesChannelDocuments(projectID, facebookCampaigns, facebookAdGroups, "facebook")
 	changedLinkedinCampaigns, changedLinkedinAdGroups := getUpdatedAndNonExistingInSmartPropertiesChannelDocuments(projectID, linkedinCampaigns, linkedinAdGroups, "linkedin")
+	changedBingadsCampaigns, changedBingadsAdGroups := getUpdatedAndNonExistingInSmartPropertiesChannelDocuments(projectID, bingadsCampaigns, bingadsAdGroups, "bingads")
 
 	for _, smartPropertyRule := range smartPropertyRules {
-		noOfRecordsUpdated, noOfRecordsEvaluated, errCode := createSmartPropertyFromRuleObject(smartPropertyRule, changedAdwordsCampaigns, changedAdwordsAdGroups, changedFacebookCampaigns, changedFacebookAdGroups, changedLinkedinCampaigns, changedLinkedinAdGroups)
+		noOfRecordsUpdated, noOfRecordsEvaluated, errCode := createSmartPropertyFromRuleObject(smartPropertyRule, changedAdwordsCampaigns, changedAdwordsAdGroups, changedFacebookCampaigns, changedFacebookAdGroups, changedLinkedinCampaigns, changedLinkedinAdGroups, changedBingadsCampaigns, changedBingadsAdGroups)
 		recordsUpdated += noOfRecordsUpdated
 		recordsEvaluated += noOfRecordsEvaluated
 		if errCode != http.StatusCreated {
@@ -205,7 +208,8 @@ func getUpdatedAndNonExistingInSmartPropertiesChannelDocuments(projectID uint64,
 func createSmartPropertyFromRuleObject(smartPropertyRule model.SmartPropertyRules, adwordsCampaigns []model.ChannelDocumentsWithFields,
 	adwordsAdGroups []model.ChannelDocumentsWithFields, facebookCampaigns []model.ChannelDocumentsWithFields,
 	facebookAdGroups []model.ChannelDocumentsWithFields, linkedinCampaigns []model.ChannelDocumentsWithFields,
-	linkedinAdGroups []model.ChannelDocumentsWithFields) (int, int, int) {
+	linkedinAdGroups []model.ChannelDocumentsWithFields, bingadsCampaigns []model.ChannelDocumentsWithFields,
+	bingadsAdGroups []model.ChannelDocumentsWithFields) (int, int, int) {
 
 	recordsUpdated := 0
 	recordsEvaluated := 0
@@ -230,6 +234,13 @@ func createSmartPropertyFromRuleObject(smartPropertyRule model.SmartPropertyRule
 	}
 
 	noOfRecordsUpdated, noOfRecordsEvaluated, errCode = createSmartPropertyFromRuleObjectForSource(smartPropertyRule, linkedinCampaigns, linkedinAdGroups, rules, "linkedin")
+	recordsEvaluated += noOfRecordsEvaluated
+	recordsUpdated += noOfRecordsUpdated
+	if errCode != http.StatusCreated {
+		return recordsUpdated, recordsEvaluated, errCode
+	}
+
+	noOfRecordsUpdated, noOfRecordsEvaluated, errCode = createSmartPropertyFromRuleObjectForSource(smartPropertyRule, bingadsCampaigns, bingadsAdGroups, rules, "bingads")
 	recordsEvaluated += noOfRecordsEvaluated
 	recordsUpdated += noOfRecordsUpdated
 	if errCode != http.StatusCreated {
@@ -346,7 +357,8 @@ func deleteSmartPropertyFromRule(smartPropertyRule model.SmartPropertyRules) (in
 func updateSmartPropertyFromRule(smartPropertyRule model.SmartPropertyRules, adwordsCampaigns []model.ChannelDocumentsWithFields,
 	adwordsAdGroups []model.ChannelDocumentsWithFields, facebookCampaigns []model.ChannelDocumentsWithFields,
 	facebookAdGroups []model.ChannelDocumentsWithFields, linkedinCampaigns []model.ChannelDocumentsWithFields,
-	linkedinAdGroups []model.ChannelDocumentsWithFields) (int, int, int) {
+	linkedinAdGroups []model.ChannelDocumentsWithFields, bingadsCampaigns []model.ChannelDocumentsWithFields,
+	bingadsAdGroups []model.ChannelDocumentsWithFields) (int, int, int) {
 	recordsEvaluated := 0
 	recordsUpdated := 0
 	noOfRecordsUpdated, noOfRecordsEvaluated, errCode := deleteSmartPropertyFromRule(smartPropertyRule)
@@ -354,7 +366,7 @@ func updateSmartPropertyFromRule(smartPropertyRule model.SmartPropertyRules, adw
 	recordsUpdated += noOfRecordsUpdated
 	if errCode == http.StatusAccepted {
 		noOfRecordsUpdated, noOfRecordsEvaluated, errCode = createSmartPropertyFromRuleObject(smartPropertyRule, adwordsCampaigns,
-			adwordsAdGroups, facebookCampaigns, facebookAdGroups, linkedinCampaigns, linkedinAdGroups)
+			adwordsAdGroups, facebookCampaigns, facebookAdGroups, linkedinCampaigns, linkedinAdGroups, bingadsCampaigns, bingadsAdGroups)
 		recordsEvaluated += noOfRecordsEvaluated
 		recordsUpdated += noOfRecordsUpdated
 		if errCode != http.StatusCreated {

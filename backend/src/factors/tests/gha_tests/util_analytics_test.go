@@ -16,6 +16,17 @@ func TestGetTimeFromTimestampStr(t *testing.T) {
 func TestGetAllDatesAsTimestamp(t *testing.T) {
 	timestamp1 := 1637316219
 	timestamp2 := 1639908216
-	time := U.GetAllDatesAsTimestamp(int64(timestamp1), int64(timestamp2), "", false)
+	time, _ := U.GetAllDatesAndOffsetAsTimestamp(int64(timestamp1), int64(timestamp2), "", false)
 	assert.Len(t, time, 31)
+}
+
+func TestGetAllDatesAndOffsetsAsTimestampForAustraliaTimezone(t *testing.T) {
+	timestamp1 := 1648818000
+	timestamp2 := 1649080799
+	time, offsets := U.GetAllDatesAndOffsetAsTimestamp(int64(timestamp1), int64(timestamp2), "Australia/Sydney", true)
+	assert.Len(t, time, 3)
+	assert.Len(t, offsets, 3)
+	assert.Equal(t, "+11:00", offsets[0])
+	assert.Equal(t, "+10:00", offsets[1])
+	assert.Equal(t, "+10:00", offsets[2])
 }

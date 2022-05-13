@@ -1683,8 +1683,28 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 			"eventFileName": efCloudName}).Error("Failed downloading events file from cloud.")
 		return 0, err
 	}
+	tmpChunksDir := diskManager.GetPatternChunksDir(projectId, modelId)
+	if err := serviceDisk.MkdirAll(tmpChunksDir); err != nil {
+		mineLog.WithFields(log.Fields{"chunkDir": tmpChunksDir, "error": err}).Error("Unable to create chunks directory.")
+		return 0, err
+	}
+
 	tmpEventsFilepath := efTmpPath + efTmpName
 	mineLog.Info("Successfuly downloaded events file from cloud.", tmpEventsFilepath, efTmpPath, efTmpName)
+
+	// ---+++++++++---
+	basePathUserProps := path.Join("/", "tmp", "fptree", "userProps")
+	basePathEventProps := path.Join("/", "tmp", "fptree", "eventProps")
+	err = os.MkdirAll(basePathUserProps, os.ModePerm)
+	if err != nil {
+		log.Fatal("unable to create temp user directory")
+	}
+	err = os.MkdirAll(basePathEventProps, os.ModePerm)
+	if err != nil {
+		log.Fatal("unable to create temp event directory")
+	}
+	// ----++++++------
+
 	eventNames, eventNamesWithType, err := GetEventNamesAndType(tmpEventsFilepath, cloudManager, projectId, modelId, countsVersion)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to get eventName and event type.")
@@ -1743,28 +1763,6 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 	mineLog.Info("Number of repeated Events: ", len(repeatedEvents))
 	mineLog.Info("Repeated Events", repeatedEvents)
 
-	// build histogram of all user properties.
-	mineLog.WithField("tmpEventsFilePath", tmpEventsFilepath).Info("Building all user properties histogram.")
-	allActiveUsersPattern, err := P.NewPattern([]string{U.SEN_ALL_ACTIVE_USERS}, userAndEventsInfo)
-	if err != nil {
-		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to build pattern with histogram of all active user properties.")
-		return 0, err
-	}
-	if err := computeAllUserPropertiesHistogram(projectId, tmpEventsFilepath, allActiveUsersPattern, countsVersion, hmineSupport); err != nil {
-		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to compute user properties.")
-		return 0, err
-	}
-	tmpChunksDir := diskManager.GetPatternChunksDir(projectId, modelId)
-	if err := serviceDisk.MkdirAll(tmpChunksDir); err != nil {
-		mineLog.WithFields(log.Fields{"chunkDir": tmpChunksDir, "error": err}).Error("Unable to create chunks directory.")
-		return 0, err
-	}
-	if err := writePatternsAsChunks([]*P.Pattern{allActiveUsersPattern}, tmpChunksDir, createMetadata, metaDataDir); err != nil {
-		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to write user properties.")
-		return 0, err
-	}
-	mineLog.Info("Successfully built all user properties histogram.")
-
 	//write events file to GCP
 	modEventsFile := fmt.Sprintf("events_modified_%d.txt", modelId)
 	err = writeFileToGCP(projectId, modelId, modEventsFile, tmpEventsFilepath, cloudManager, "")
@@ -1772,18 +1770,49 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 		return 0, fmt.Errorf("unable to write modified events file to GCP")
 	}
 
-	// ---+++++++++---
-	basePathUserProps := path.Join("/", "tmp", "fptree", "userProps")
-	basePathEventProps := path.Join("/", "tmp", "fptree", "eventProps")
-	err = os.MkdirAll(basePathUserProps, os.ModePerm)
-	if err != nil {
-		log.Fatal("unable to create temp user directory")
+	allActiveUsersPattern, err := P.NewPattern([]string{U.SEN_ALL_ACTIVE_USERS}, userAndEventsInfo)
+
+	if !beamConfig.RunOnBeam {
+		// build histogram of all user properties.
+		mineLog.WithField("tmpEventsFilePath", tmpEventsFilepath).Info("Building all user properties histogram.")
+		if err != nil {
+			mineLog.WithFields(log.Fields{"err": err}).Error("Failed to build pattern with histogram of all active user properties.")
+			return 0, err
+		}
+		if err := computeAllUserPropertiesHistogram(projectId, tmpEventsFilepath, allActiveUsersPattern, countsVersion, hmineSupport); err != nil {
+			mineLog.WithFields(log.Fields{"err": err}).Error("Failed to compute user properties.")
+			return 0, err
+		}
+		if err := writePatternsAsChunks([]*P.Pattern{allActiveUsersPattern}, tmpChunksDir, createMetadata, metaDataDir); err != nil {
+			mineLog.WithFields(log.Fields{"err": err}).Error("Failed to write user properties.")
+			return 0, err
+		}
+	} else {
+		//call beam
+		scopeName := "Count_user_prop_hist"
+		patts_all_activeUsers := make([]*P.Pattern, 0)
+		patts_all_activeUsers = append(patts_all_activeUsers, allActiveUsersPattern)
+		all_active_patternsFpath, err := UserPropertiesHistogramController(beamConfig, projectId, modelId, cloudManager, tmpEventsFilepath,
+			patts_all_activeUsers, numRoutines, userAndEventsInfo, countOccurence,
+			efTmpPath, scopeName, cAlgoProps)
+		if err != nil {
+			return 0, fmt.Errorf("error in counting len two patterns in beam :%v", err)
+		}
+		mineLog.Info("Reading from file")
+		allActiveUsersPatterns, _, err := ReadFilterAndCompressPatternsFromFile(
+			all_active_patternsFpath, cloudManager, maxModelSize, 0, 2, max_PATTERN_LENGTH)
+		if err != nil {
+			return 0, err
+		}
+		allActiveUsersPattern := allActiveUsersPatterns[0]
+		if err := writePatternsAsChunks([]*P.Pattern{allActiveUsersPattern}, tmpChunksDir, createMetadata, metaDataDir); err != nil {
+			mineLog.WithFields(log.Fields{"err": err}).Error("Failed to write user properties.")
+			return 0, err
+		}
+
 	}
-	err = os.MkdirAll(basePathEventProps, os.ModePerm)
-	if err != nil {
-		log.Fatal("unable to create temp event directory")
-	}
-	// ----++++++------
+
+	mineLog.Info("Successfully built all user properties histogram.")
 
 	// mine and write patterns as chunks
 	mineLog.WithFields(log.Fields{"projectId": projectId, "tmpEventsFilepath": tmpEventsFilepath,

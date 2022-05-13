@@ -271,6 +271,11 @@ var BingAdsObjectToPerfomanceReportRepresentation = map[string]string{
 	"keyword":   KeywordPerformanceReport,
 }
 
+var BingAdsObjectMapForSmartProperty = map[string]string{
+	"campaigns": FilterCampaign,
+	"ad_groups": FilterAdGroup,
+}
+
 func GetAllAccountsQuery(bigQueryProjectId string, schemaId string) string {
 	return fmt.Sprintf(AllAccountQuery, bigQueryProjectId, schemaId)
 }

@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
+import _ from 'lodash';
 import PropTypes from 'prop-types';
 import { SVG } from 'factorsComponents';
-import { Button, Tooltip, Dropdown, Menu } from 'antd';
-import { BUTTON_TYPES } from '../../utils/buttons.constants';
+import { Button, Tooltip } from 'antd';
+import { BUTTON_TYPES } from '../../constants/buttons.constants';
 import ControlledComponent from '../ControlledComponent';
 import styles from './index.module.scss';
 import { QUERY_TYPE_PROFILE } from '../../utils/constants';
@@ -14,7 +15,7 @@ const QueryActions = ({
   handleSaveClick,
   handleEditClick,
   handleDeleteClick,
-  toggleAddToDashboardModal,
+  toggleAddToDashboardModal
 }) => {
   const [options, setOptions] = useState(false);
 
@@ -33,7 +34,7 @@ const QueryActions = ({
         extraClass={styles.additionalops}
         options={[
           ['Edit Details', 'edit'],
-          ['Delete', 'trash'],
+          ['Delete', 'trash']
         ]}
         optionClick={(val) => setActions(val)}
         onClickOutside={() => setOptions(false)}
@@ -43,7 +44,7 @@ const QueryActions = ({
   };
 
   return (
-    <div className='flex gap-x-6 items-center'>
+    <div className="flex gap-x-6 items-center">
       <ControlledComponent controller={!savedQueryId}>
         <Button
           onClick={handleSaveClick}
@@ -75,28 +76,28 @@ const QueryActions = ({
             {'Save'}
           </Button>
         </Popover> */}
-        <Tooltip placement='bottom' title='Save as New'>
+        <Tooltip placement="bottom" title="Save as New">
           <Button
             onClick={handleSaveClick}
-            size='large'
-            type='text'
+            size="large"
+            type="text"
             icon={<SVG name={'pluscopy'} />}
           ></Button>
         </Tooltip>
         <ControlledComponent controller={queryType !== QUERY_TYPE_PROFILE}>
-          <Tooltip placement='bottom' title='Add to Dashboard'>
+          <Tooltip placement="bottom" title="Add to Dashboard">
             <Button
               onClick={toggleAddToDashboardModal}
-              size='large'
-              type='text'
+              size="large"
+              type="text"
               icon={<SVG name={'addtodash'} />}
             ></Button>
           </Tooltip>
         </ControlledComponent>
-        <div className={`relative`}>
+        <div className={'relative'}>
           <Button
-            size='large'
-            type='text'
+            size="large"
+            type="text"
             icon={<SVG name={'threedot'} />}
             onClick={() => setOptions(!options)}
           ></Button>
@@ -112,12 +113,12 @@ export default QueryActions;
 QueryActions.propTypes = {
   savedQueryId: PropTypes.oneOfType([
     PropTypes.number,
-    PropTypes.instanceOf(null),
+    PropTypes.instanceOf(null)
   ]),
   handleSaveClick: PropTypes.func,
   handleEditClick: PropTypes.func,
   handleDeleteReport: PropTypes.func,
-  toggleAddToDashboardModal: PropTypes.func,
+  toggleAddToDashboardModal: PropTypes.func
 };
 
 QueryActions.defaultProps = {
@@ -125,5 +126,5 @@ QueryActions.defaultProps = {
   handleSaveClick: _.noop,
   handleEditClick: _.noop,
   handleDeleteReport: _.noop,
-  toggleAddToDashboardModal: _.noop,
+  toggleAddToDashboardModal: _.noop
 };

@@ -4,7 +4,7 @@ import {
   Text,
   SVG,
   FaErrorComp,
-  FaErrorLog,
+  FaErrorLog
 } from '../../components/factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary';
 import { Row, Col, Table, Avatar, Button, Dropdown, Menu, Tag } from 'antd';
@@ -18,7 +18,7 @@ import {
   getCampaignStateFromRequestQuery,
   getProfileQueryFromRequestQuery,
   getKPIStateFromRequestQuery,
-  DefaultDateRangeFormat,
+  DefaultDateRangeFormat
 } from '../CoreQuery/utils';
 import { INITIALIZE_GROUPBY } from '../../reducers/coreQuery/actions';
 import ConfirmationModal from '../../components/ConfirmationModal';
@@ -29,7 +29,6 @@ import {
   QUERY_TYPE_FUNNEL,
   QUERY_TYPE_CAMPAIGN,
   QUERY_TYPE_KPI,
-  QUERY_TYPE_TEMPLATE,
   TYPE_EVENTS_OCCURRENCE,
   TOTAL_EVENTS_CRITERIA,
   TOTAL_USERS_CRITERIA,
@@ -39,18 +38,16 @@ import {
   EACH_USER_TYPE,
   QUERY_TYPE_WEB,
   DefaultChartTypes,
-  LOCAL_STORAGE_ITEMS,
-  QUERY_TYPE_PROFILE,
-  PREDEFINED_DATES,
+  QUERY_TYPE_PROFILE
 } from '../../utils/constants';
 import {
   SHOW_ANALYTICS_RESULT,
   INITIALIZE_MTA_STATE,
-  INITIALIZE_CAMPAIGN_STATE,
+  INITIALIZE_CAMPAIGN_STATE
 } from '../../reducers/types';
 import {
   SET_SHOW_CRITERIA,
-  SET_PERFORMANCE_CRITERIA,
+  SET_PERFORMANCE_CRITERIA
 } from '../../reducers/analyticsQuery';
 import { getDashboardDateRange } from '../Dashboard/utils';
 import TemplatesModal from '../CoreQuery/Templates';
@@ -76,27 +73,27 @@ const coreQueryoptions = [
   {
     title: 'KPIs',
     icon: 'KPI_cq',
-    desc: 'Access your key marketing metrics',
+    desc: 'Access your key marketing metrics'
   },
   {
     title: 'Funnels',
     icon: 'funnels_cq',
-    desc: 'Find how users are navigating a defined path',
+    desc: 'Find how users are navigating a defined path'
   },
   {
     title: 'Attribution',
     icon: 'attributions_cq',
-    desc: 'Analyse Multi Touch Attributions',
+    desc: 'Analyse Multi Touch Attributions'
   },
   {
     title: 'Profiles',
     icon: 'profiles_cq',
-    desc: 'Explore all Profiles with filters and breakdowns',
+    desc: 'Explore all Profiles with filters and breakdowns'
   },
   {
     title: 'Events',
     icon: 'events_cq',
-    desc: 'Create charts from events and related properties',
+    desc: 'Create charts from events and related properties'
   },
   // {
   //   title: 'Campaigns',
@@ -106,8 +103,8 @@ const coreQueryoptions = [
   {
     title: 'Templates',
     icon: 'templates_cq',
-    desc: 'A list of advanced queries crafted by experts',
-  },
+    desc: 'A list of advanced queries crafted by experts'
+  }
 ];
 
 const columns = [
@@ -115,7 +112,7 @@ const columns = [
     title: 'Type',
     dataIndex: 'type',
     width: 60,
-    key: 'type',
+    key: 'type'
   },
   {
     title: 'Title of the Report',
@@ -125,7 +122,7 @@ const columns = [
       <Text type={'title'} level={7} weight={'bold'} extraClass={'m-0'}>
         {text}
       </Text>
-    ),
+    )
   },
   {
     title: 'Created By',
@@ -133,18 +130,18 @@ const columns = [
     width: 240,
     key: 'author',
     render: (text) => (
-      <div className='flex items-center'>
-        <Avatar src='assets/avatar/avatar.png' size={24} className={'mr-2'} />
+      <div className="flex items-center">
+        <Avatar src="assets/avatar/avatar.png" size={24} className={'mr-2'} />
         &nbsp; {text}
       </div>
-    ),
+    )
   },
   {
     title: 'Date',
     dataIndex: 'date',
     width: 240,
-    key: 'date',
-  },
+    key: 'date'
+  }
 ];
 
 function CoreQuery({
@@ -162,7 +159,7 @@ function CoreQuery({
   updateSavedQuerySettings,
   setProfileQueries,
   fetchAgentInfo,
-  setAttributionMetrics,
+  setAttributionMetrics
 }) {
   const queriesState = useSelector((state) => state.queries);
   const [deleteModal, showDeleteModal] = useState(false);
@@ -191,7 +188,7 @@ function CoreQuery({
       channel_v1: 'campaigns_cq',
       attribution: 'attributions_cq',
       profiles: 'profiles_cq',
-      kpi: 'KPI_cq',
+      kpi: 'KPI_cq'
     };
     let svgName = '';
     Object.entries(queryTypeName).forEach(([k, v]) => {
@@ -207,17 +204,17 @@ function CoreQuery({
       author: q.created_by_name,
       settings: q.settings,
       date: (
-        <div className='flex justify-between items-center'>
+        <div className="flex justify-between items-center">
           <div>{MomentTz(q.created_at).format('MMM DD, YYYY')}</div>
           <div>
             <Dropdown overlay={getMenu(q)} trigger={['hover']}>
-              <Button type='text' icon={<MoreOutlined />} />
+              <Button type="text" icon={<MoreOutlined />} />
             </Dropdown>
           </div>
         </div>
       ),
       query: requestQuery,
-      actions: '',
+      actions: ''
     };
   };
 
@@ -252,11 +249,11 @@ function CoreQuery({
       let newDateRange = getDashboardDateRange();
       const dashboardDateRange = {
         ...newDateRange,
-        frequency: equivalentQuery.dateRange.frequency,
+        frequency: equivalentQuery.dateRange.frequency
       };
       dispatch({
         type: INITIALIZE_GROUPBY,
-        payload: equivalentQuery.breakdown,
+        payload: equivalentQuery.breakdown
       });
       setQueries(equivalentQuery.events);
       setQueryOptions((currData) => {
@@ -271,10 +268,10 @@ function CoreQuery({
           session_analytics_seq: equivalentQuery.session_analytics_seq,
           groupBy: [
             ...equivalentQuery.breakdown.global,
-            ...equivalentQuery.breakdown.event,
+            ...equivalentQuery.breakdown.event
           ],
           globalFilters: equivalentQuery.globalFilters,
-          ...queryDateRange,
+          ...queryDateRange
         };
         return queryOpts;
       });
@@ -287,7 +284,7 @@ function CoreQuery({
       const dateRange = { ...equivalentQuery.dateRange };
       dispatch({
         type: INITIALIZE_GROUPBY,
-        payload: equivalentQuery.breakdown,
+        payload: equivalentQuery.breakdown
       });
       setProfileQueries(equivalentQuery.events);
       setQueryOptions((currData) => {
@@ -296,11 +293,11 @@ function CoreQuery({
           ...currData,
           groupBy: [
             ...equivalentQuery.breakdown.global,
-            ...equivalentQuery.breakdown.event,
+            ...equivalentQuery.breakdown.event
           ],
           globalFilters: equivalentQuery.globalFilters,
           group_analysis: equivalentQuery.groupAnalysis,
-          date_range: { ...DefaultDateRangeFormat, ...dateRange },
+          date_range: { ...DefaultDateRangeFormat, ...dateRange }
         };
         return queryOpts;
       });
@@ -314,11 +311,11 @@ function CoreQuery({
       let newDateRange = getDashboardDateRange();
       const dashboardDateRange = {
         ...newDateRange,
-        frequency: equivalentQuery.dateRange.frequency,
+        frequency: equivalentQuery.dateRange.frequency
       };
       dispatch({
         type: INITIALIZE_GROUPBY,
-        payload: equivalentQuery.breakdown,
+        payload: equivalentQuery.breakdown
       });
       setQueries(equivalentQuery.events);
       setQueryOptions((currData) => {
@@ -333,10 +330,10 @@ function CoreQuery({
           session_analytics_seq: equivalentQuery.session_analytics_seq,
           groupBy: [
             ...equivalentQuery.breakdown.global,
-            ...equivalentQuery.breakdown.event,
+            ...equivalentQuery.breakdown.event
           ],
           globalFilters: equivalentQuery.globalFilters,
-          ...queryDateRange,
+          ...queryDateRange
         };
         return queryOpts;
       });
@@ -353,8 +350,8 @@ function CoreQuery({
           payload: {
             id: record?.key,
             isDashboard: false,
-            ...insightsItem,
-          },
+            ...insightsItem
+          }
         });
       } else {
         dispatch({ type: 'SET_ACTIVE_INSIGHT', payload: false });
@@ -411,16 +408,16 @@ function CoreQuery({
             if (record.query.query_group.length === 1) {
               dispatch({
                 type: SET_PERFORMANCE_CRITERIA,
-                payload: reverse_user_types[record.query.query_group[0].ec],
+                payload: reverse_user_types[record.query.query_group[0].ec]
               });
               dispatch({
                 type: SET_SHOW_CRITERIA,
-                payload: TOTAL_USERS_CRITERIA,
+                payload: TOTAL_USERS_CRITERIA
               });
             } else {
               dispatch({
                 type: SET_PERFORMANCE_CRITERIA,
-                payload: EACH_USER_TYPE,
+                payload: EACH_USER_TYPE
               });
               if (record.query.query_group.length === 2) {
                 dispatch({
@@ -428,17 +425,17 @@ function CoreQuery({
                   payload:
                     record.query.query_group[0].ty === TYPE_EVENTS_OCCURRENCE
                       ? TOTAL_EVENTS_CRITERIA
-                      : TOTAL_USERS_CRITERIA,
+                      : TOTAL_USERS_CRITERIA
                 });
               } else if (record.query.query_group.length === 3) {
                 dispatch({
                   type: SET_SHOW_CRITERIA,
-                  payload: ACTIVE_USERS_CRITERIA,
+                  payload: ACTIVE_USERS_CRITERIA
                 });
               } else {
                 dispatch({
                   type: SET_SHOW_CRITERIA,
-                  payload: FREQUENCY_CRITERIA,
+                  payload: FREQUENCY_CRITERIA
                 });
               }
             }
@@ -473,7 +470,7 @@ function CoreQuery({
           setQueryOptions((currData) => {
             return {
               ...currData,
-              group_analysis: record.query.query.analyze_type,
+              group_analysis: record.query.query.analyze_type
             };
           });
         } else if (record.query.cl && record.query.cl === QUERY_TYPE_PROFILE) {
@@ -489,14 +486,14 @@ function CoreQuery({
           queryType: equivalentQuery.queryType,
           queryName: record.title,
           settings: record.settings,
-          query_id: record.key || record.id,
+          query_id: record.key || record.id
         });
 
         //Factors VIEW_QUERY tracking
         factorsai.track('VIEW_QUERY', {
           query_type: equivalentQuery?.queryType,
           saved_query_id: record?.key || record?.id,
-          query_title: record?.title,
+          query_title: record?.title
         });
       } catch (err) {
         console.log(err);
@@ -508,18 +505,18 @@ function CoreQuery({
   const getMenu = (row) => {
     return (
       <Menu>
-        <Menu.Item key='0'>
-          <a onClick={handleViewResult.bind(this, row)} href='#!'>
+        <Menu.Item key="0">
+          <a onClick={handleViewResult.bind(this, row)} href="#!">
             View Report
           </a>
         </Menu.Item>
-        <Menu.Item key='1'>
+        <Menu.Item key="1">
           {/* <a onClick={(e) => e.stopPropagation()} href="#!">
             Copy Link
           </a>
         </Menu.Item>
         <Menu.Item key="2"> */}
-          <a onClick={handleDelete.bind(this, row)} href='#!'>
+          <a onClick={handleDelete.bind(this, row)} href="#!">
             Delete Report
           </a>
         </Menu.Item>
@@ -562,15 +559,15 @@ function CoreQuery({
         return {
           ...currData,
           globalFilters: [],
-          date_range: { ...DefaultDateRangeFormat },
+          date_range: { ...DefaultDateRangeFormat }
         };
       });
       dispatch({
         type: INITIALIZE_GROUPBY,
         payload: {
           global: [],
-          event: [],
-        },
+          event: []
+        }
       });
     }
 
@@ -581,15 +578,15 @@ function CoreQuery({
         return {
           ...currData,
           globalFilters: [],
-          date_range: { ...DefaultDateRangeFormat },
+          date_range: { ...DefaultDateRangeFormat }
         };
       });
       dispatch({
         type: INITIALIZE_GROUPBY,
         payload: {
           global: [],
-          event: [],
-        },
+          event: []
+        }
       });
     }
 
@@ -604,15 +601,15 @@ function CoreQuery({
         return {
           ...currData,
           globalFilters: [],
-          date_range: { ...DefaultDateRangeFormat },
+          date_range: { ...DefaultDateRangeFormat }
         };
       });
       dispatch({
         type: INITIALIZE_GROUPBY,
         payload: {
           global: [],
-          event: [],
-        },
+          event: []
+        }
       });
     }
 
@@ -628,15 +625,15 @@ function CoreQuery({
           ...currData,
           globalFilters: [],
           group_analysis: 'users',
-          date_range: { ...DefaultDateRangeFormat },
+          date_range: { ...DefaultDateRangeFormat }
         };
       });
       dispatch({
         type: INITIALIZE_GROUPBY,
         payload: {
           global: [],
-          event: [],
-        },
+          event: []
+        }
       });
     }
   };
@@ -657,12 +654,12 @@ function CoreQuery({
       >
         <ConfirmationModal
           visible={deleteModal}
-          confirmationText='Are you sure you want to delete this report?'
+          confirmationText="Are you sure you want to delete this report?"
           onOk={confirmDelete}
           onCancel={showDeleteModal.bind(this, false)}
-          title='Delete Report'
-          okText='Confirm'
-          cancelText='Cancel'
+          title="Delete Report"
+          okText="Confirm"
+          cancelText="Cancel"
         />
         <TemplatesModal
           templatesModalVisible={templatesModalVisible}
@@ -673,7 +670,7 @@ function CoreQuery({
         </FaHeader> */}
         <div>
           <div className={'fa-container mt-24 min-h-screen'}>
-            <Row gutter={[24, 24]} justify='center'>
+            <Row gutter={[24, 24]} justify="center">
               <Col span={20}>
                 <Row gutter={[24, 24]}>
                   <Col span={24}>
@@ -725,7 +722,7 @@ function CoreQuery({
                               <SVG name={item.icon} size={40} />
                             </div>
 
-                            <div className='fai--custom-card-new--bottom-section'>
+                            <div className="fai--custom-card-new--bottom-section">
                               <Text
                                 type={'title'}
                                 level={7}
@@ -771,15 +768,15 @@ function CoreQuery({
                           onClick: (e) => {
                             getWeeklyIngishts(record);
                             setQueryToState(record);
-                          },
+                          }
                         };
                       }}
                       loading={queriesState.loading}
-                      className='fa-table--basic'
+                      className="fa-table--basic"
                       columns={columns}
                       dataSource={data}
                       pagination={true}
-                      rowClassName='cursor-pointer'
+                      rowClassName="cursor-pointer"
                     />
                   </Col>
                 </Row>
@@ -793,10 +790,10 @@ function CoreQuery({
 }
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
-  activeAgent: state.agent?.agent_details?.email,
+  activeAgent: state.agent?.agent_details?.email
 });
 
 export default connect(mapStateToProps, {
   fetchWeeklyIngishts,
-  fetchAgentInfo,
+  fetchAgentInfo
 })(CoreQuery);

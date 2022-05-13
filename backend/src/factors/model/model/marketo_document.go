@@ -3,6 +3,7 @@ package model
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 )
 
@@ -23,7 +24,7 @@ var MarketoDocumentToQuery = map[string]string{
 		" left outer join `%s.%s.segmentation` AS sg on s.segmentation_id = sg.id group by ls.id) lead_seg_agg on l.id = lead_seg_agg.id " +
 		" WHERE %v order by id asc LIMIT %v OFFSET %v",
 	MARKETO_TYPE_NAME_LEAD_NO_SEGMENT: "select NULL AS segment_ids, NULL AS segment_names, NULL AS segmentation_ids, NULL AS segmentation_names,l.* FROM `%s.%s.lead` AS l " +
-		" WHERE %v order by id asc LIMIT %v OFFSET %v",
+		" WHERE %v AND id > %v order by id asc LIMIT %v",
 }
 
 func GetMarketoDocumentFilterCondition(docType string, addPrefix bool, prefix string, executionDate string) string {
@@ -50,7 +51,7 @@ var MarketoDataObjectFiltersColumn = map[string]string{
 	MARKETO_TYPE_NAME_LEAD_NO_SEGMENT:    "_fivetran_synced",
 }
 
-func GetMarketoDocumentQuery(bigQueryProjectId string, schemaId string, baseQuery string, executionDate string, docType string, limit int, offset int) string {
+func GetMarketoDocumentQuery(bigQueryProjectId string, schemaId string, baseQuery string, executionDate string, docType string, limit int, offset int, lastProcessedRecord int) string {
 
 	if docType == MARKETO_TYPE_NAME_PROGRAM_MEMBERSHIP {
 		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId, bigQueryProjectId, schemaId, GetMarketoDocumentFilterCondition(docType, true, "pm", executionDate), limit, offset)
@@ -59,7 +60,7 @@ func GetMarketoDocumentQuery(bigQueryProjectId string, schemaId string, baseQuer
 		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId, bigQueryProjectId, schemaId, bigQueryProjectId, schemaId, bigQueryProjectId, schemaId, GetMarketoDocumentFilterCondition(docType, true, "l", executionDate), limit, offset)
 	}
 	if docType == MARKETO_TYPE_NAME_LEAD_NO_SEGMENT {
-		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId, GetMarketoDocumentFilterCondition(docType, true, "l", executionDate), limit, offset)
+		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId, GetMarketoDocumentFilterCondition(docType, true, "l", executionDate), lastProcessedRecord, limit)
 	}
 	return ""
 }
@@ -93,6 +94,10 @@ var MarketoDataObjectColumnsDatetimeType = map[string]map[string]bool{
 	MARKETO_TYPE_NAME_PROGRAM_MEMBERSHIP: {"membership_date": true, "reached_success_date": true, "program_created_at": true, "program_end_date": true, "program_start_date": true},
 }
 
+var MarketoDataObjectColumnsNumericalType = map[string]map[string]bool{
+	MARKETO_TYPE_NAME_PROGRAM_MEMBERSHIP: {"lead_id": true, "program_id": true},
+}
+
 var DocTypeIntegrationObjectMap = map[string]string{
 	MARKETO_TYPE_NAME_PROGRAM_MEMBERSHIP: "activity",
 	MARKETO_TYPE_NAME_LEAD:               "user",
@@ -110,7 +115,7 @@ func GetObjectDataColumns(docType string, metadataColumns []string) map[string]i
 	}
 	return dataObjectColumns
 }
-func GetMarketoDocumentValues(docType string, data []string, metadataColumns []string, metadataColumnDateTimeType map[string]bool) map[string]interface{} {
+func GetMarketoDocumentValues(docType string, data []string, metadataColumns []string, metadataColumnDateTimeType map[string]bool, metadataColumnNumericalType map[string]bool) map[string]interface{} {
 	values := make(map[string]interface{})
 	dataObjectColumns := GetObjectDataColumns(docType, metadataColumns)
 	for key, index := range dataObjectColumns {
@@ -120,6 +125,13 @@ func GetMarketoDocumentValues(docType string, data []string, metadataColumns []s
 				values[key] = nil
 			} else {
 				values[key] = convertedTimestamp
+			}
+		} else if MarketoDataObjectColumnsNumericalType[docType][key] || (metadataColumnNumericalType != nil && metadataColumnNumericalType[key]) {
+			convertedNumber := ConvertToNumber(data[index])
+			if convertedNumber == 0 {
+				values[key] = nil
+			} else {
+				values[key] = convertedNumber
 			}
 		} else {
 			if data[index] == "<nil>" {
@@ -147,7 +159,7 @@ const (
 )
 
 var MarketoDocumentTypeAlias = map[string]int{
-	//MARKETO_TYPE_NAME_PROGRAM_MEMBERSHIP: 1,
+	// MARKETO_TYPE_NAME_PROGRAM_MEMBERSHIP: 1,
 	MARKETO_TYPE_NAME_LEAD: 2,
 }
 
@@ -362,4 +374,11 @@ func ConvertTimestamp(date string) int64 {
 		}
 	}
 	return dateConverted.Unix()
+}
+
+func ConvertToNumber(num string) float64 {
+	if s, err := strconv.ParseFloat(num, 64); err == nil {
+		return s
+	}
+	return 0
 }

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useHistory } from 'react-router-dom';
 import { connect } from 'react-redux';
 import {
   Button,
@@ -10,9 +11,10 @@ import {
   Input,
   Checkbox,
   Skeleton,
+  Spin
 } from 'antd';
-// const ADWORDS_REDIRECT_URI = "/adwords/auth/redirect";
-const ADWORDS_REDIRECT_URI_NEW = '/adwords/v1/auth/redirect';
+import {ADWORDS_REDIRECT_URI_NEW, ADWORDS_INTERNAL_REDIRECT_URI, INTEGRATION_HOME_PAGE} from '../util';
+
 import {
   enableAdwordsIntegration,
   fetchAdwordsCustomerAccounts,
@@ -26,6 +28,7 @@ const isDevelopment = () => {
 import { Text, FaErrorComp, FaErrorLog } from 'factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary';
 import factorsai from 'factorsai';
+import { sendSlackNotification } from '../../../../../utils/slack';
 const getAdwordsHostURL = () => {
   // return isDevelopment() ? BUILD_CONFIG.adwords_service_host : BUILD_CONFIG.backend_host;
   return BUILD_CONFIG.backend_host;
@@ -55,6 +58,7 @@ const GoogleIntegration = ({
   const [showManageBtn, setShowManageBtn] = useState(true);
   const [showURLModal, setShowURLModal] = useState(false);
   const [managerIDArr, SetManagerIDArr] = useState({});
+  const history = useHistory();
 
   const onDisconnect = () => {
     setLoading(true);
@@ -111,6 +115,7 @@ const GoogleIntegration = ({
         return false;
       });
   };
+ 
 
   useEffect(() => {
     if (isIntAdwordsEnabled()) {
@@ -119,29 +124,15 @@ const GoogleIntegration = ({
         ? setIsStatus('Active')
         : setIsStatus('Pending');
     } else setIsStatus('');
+
+    if(isIntAdwordsEnabled()){
+    renderSettingInfo();
+    if (window.location.href.indexOf(ADWORDS_INTERNAL_REDIRECT_URI) > -1) {
+        setShowURLModal(true); 
+      }
+    }
+
   }, [activeProject, agent_details, currentProjectSettings]);
-
-  const sendSlackNotification = () => {
-    let webhookURL = 'https://hooks.slack.com/services/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';
-    let data = {
-        "text": `User ${agent_details.email} from Project "${activeProject.name}" Activated Integration: Google Adword`,
-        "username" : "Signup User Actions",
-        "icon_emoji" : ":golf:"
-    }
-    let params = {
-        method: 'POST',
-        body: JSON.stringify(data)
-    }
-
-    fetch(webhookURL, params)
-    .then((response) => response.json())
-    .then((response) => {
-        console.log(response);
-    })
-    .catch((err) => {
-        console.log('err',err);
-    });
-  }
 
   const enableAdwords = () => {
     setLoading(true);
@@ -154,12 +145,12 @@ const GoogleIntegration = ({
         if (r.status == 200) {
           renderSettingInfo();
           fetchProjectSettings(activeProject.id);
-          sendSlackNotification();
+          sendSlackNotification(agent_details.email, activeProject.name, 'Google Adwords');
         }
         if (r.status >= 400) {
           setShowManageBtn(true);
           setCustomerAccountsLoaded(false);
-          message.error('Error fetching Google Ad accounts');
+          message.error('Error while fetching Google Ads accounts');
         }
       })
       .catch((err) => {
@@ -216,9 +207,11 @@ const GoogleIntegration = ({
     udpateProjectSettings(activeProject.id, accountsData).then(() => {
       setAddNewAccount(false);
       setSelectedAdwordsAccounts([]);
+      setShowURLModal(false); 
+      setCustomerAccounts([]);
+      setCustomerAccountsLoaded(false); 
       message.success('Adwords Accounts updated!');
       setShowManageBtn(true);
-      setCustomerAccountsLoaded(false); 
     });
 
   };
@@ -239,9 +232,9 @@ const GoogleIntegration = ({
           <td style={{ border: 'none', paddingTop: '5px' }}>
             {account.customer_id}
           </td>
-          <td style={{ border: 'none', paddingTop: '5px' }}>{account.name ? account.name : '-'}</td>
+          <td style={{ border: 'none', paddingTop: '5px' }}>{account.descriptiveName ? account.descriptiveName : '-'}</td>
           <td style={{ border: 'none', paddingTop: '5px', paddingBottom: '5px' }}>
-            <Input size={'small'} style={{'width': '180px'}} onChange={e=>onManagerIDSelect(account.customer_id,e)} />
+            {account.manager_id ? account.manager_id : '-'}
           </td>
         </tr>
       );
@@ -264,16 +257,80 @@ const GoogleIntegration = ({
       );
     }
 
-    return (
-      <Modal
+    return accountRows
+  };
+
+  // const isCustomerAccountSelected = () => {
+  //     return currentProjectSettings && currentProjectSettings.int_adwords_customer_account_id && !addNewAccount;
+  // };
+
+  const renderSettingInfo = () => {
+    let isCustomerAccountChosen =
+      currentProjectSettings.int_adwords_customer_account_id &&
+      currentProjectSettings.int_adwords_customer_account_id != '' &&
+      !addNewAccount;
+
+    // get all adwords account when no account is chosen and not account list not loaded.
+    // if (isIntAdwordsEnabled() && !isCustomerAccountChosen && !customerAccountsLoaded) {
+    if (isIntAdwordsEnabled() && !customerAccountsLoaded) {
+      setLoadingData(true);
+      fetchAdwordsCustomerAccounts({ project_id: activeProject.id })
+        .then((data) => {
+          setCustomerAccountsLoaded(true);
+          setCustomerAccounts(data?.customer_accounts);
+          setLoadingData(false);
+        })
+        .catch((error) => {
+          message.error('Error while fetch Google Ads Customer Accounts.');
+          setLoadingData(false);
+        });
+    }
+  }; 
+
+  useEffect(()=>{ 
+    let mapManagerAccount = {}
+    if(customerAccounts){
+      customerAccounts?.map((account)=>{
+        return mapManagerAccount[account.customer_id] = account.manager_id
+      });
+  
+      SetManagerIDArr({
+        ...managerIDArr,
+        ...mapManagerAccount
+      }) 
+    }
+    
+  },[customerAccounts]);
+
+  const closeCustomerManagerIDModal = () => {
+  
+  setShowURLModal(false); 
+  setCustomerAccounts([]);
+  setCustomerAccountsLoaded(false);
+  history.push(INTEGRATION_HOME_PAGE);
+
+    
+  }
+  return (
+    <>
+      <ErrorBoundary
+        fallback={
+          <FaErrorComp
+            subtitle={'Facing issues with GoogleAdWords integrations'}
+          />
+        }
+        onError={FaErrorLog}
+      >
+
+<Modal
         visible={showURLModal}
         zIndex={10}
         width={600}
-        afterClose={() => setShowURLModal(false)}
+        afterClose={() => closeCustomerManagerIDModal()}
         className={'fa-modal--regular fa-modal--slideInDown'}
         centered={true}
-        footer={null}
-        closable={false}
+        footer={null} 
+        onCancel={() => closeCustomerManagerIDModal()}
         transitionName=''
         maskTransitionName=''
       >
@@ -325,15 +382,20 @@ const GoogleIntegration = ({
                 </td>
               </tr>
             </thead>
-            <tbody>{accountRows}</tbody>
+          {customerAccountsLoaded ? <tbody>{renderAccountsList()}</tbody> : <div className='p-4'>
+            <Spin />
+            </div>
+            }
+            
           </table>
           <div className={'mt-6 flex justify-end'}>
-            <Button onClick={() => setShowModal(true)}>
+            <Button onClick={() => setShowModal(true)} disabled={!customerAccountsLoaded}>
               {' '}
               Enter Id Manually{' '}
             </Button>
             <Button
               type={'primary'}
+              disabled={!customerAccountsLoaded}
               className={'ml-2'}
               onClick={onClickFinishSetup}
             >
@@ -343,44 +405,7 @@ const GoogleIntegration = ({
           </div>
         </div>
       </Modal>
-    );
-  };
 
-  // const isCustomerAccountSelected = () => {
-  //     return currentProjectSettings && currentProjectSettings.int_adwords_customer_account_id && !addNewAccount;
-  // };
-
-  const renderSettingInfo = () => {
-    let isCustomerAccountChosen =
-      currentProjectSettings.int_adwords_customer_account_id &&
-      currentProjectSettings.int_adwords_customer_account_id != '' &&
-      !addNewAccount;
-
-    // get all adwords account when no account is chosen and not account list not loaded.
-    // if (isIntAdwordsEnabled() && !isCustomerAccountChosen && !customerAccountsLoaded) {
-    if (isIntAdwordsEnabled() && !customerAccountsLoaded) {
-      // setLoadingData(true);
-      fetchAdwordsCustomerAccounts({ project_id: activeProject.id })
-        .then((data) => {
-          setCustomerAccountsLoaded(true);
-          setCustomerAccounts(data?.customer_accounts);
-          // setLoadingData(false);
-        })
-        .catch((error) => {
-          message.error('Error while fetch Customer Accounts.');
-        });
-    }
-  }; 
-  return (
-    <>
-      <ErrorBoundary
-        fallback={
-          <FaErrorComp
-            subtitle={'Facing issues with GoogleAdWords integrations'}
-          />
-        }
-        onError={FaErrorLog}
-      >
         <div className={'mt-4 flex w-full'}>
           {currentProjectSettings?.int_adwords_customer_account_id && (
             <>
@@ -432,10 +457,11 @@ const GoogleIntegration = ({
             <div className={'mt-4'}>
               <Button
                 type={'primary'}
+                loading={loading}
                 onClick={() => {
                   renderSettingInfo();
                   setShowURLModal(true);
-                  setShowManageBtn(false);
+                  // setShowManageBtn(false);
                 }}
               >
                 {currentProjectSettings?.int_adwords_customer_account_id
@@ -448,7 +474,7 @@ const GoogleIntegration = ({
         <div className={'w-full'}>
           {!showManageBtn && !customerAccountsLoaded && <Skeleton />}
         </div>
-        <div>{customerAccountsLoaded && renderAccountsList()}</div>
+        {/* <div>{customerAccountsLoaded && renderAccountsList()}</div> */}
 
         <div className={'mt-4 flex'}>
           {!currentProjectSettings?.int_adwords_enabled_agent_uuid ? 

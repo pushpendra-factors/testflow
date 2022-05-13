@@ -4,7 +4,7 @@ import { labelsObj } from '../../utils';
 import {
   addQforQuarter,
   getClickableTitleSorter,
-  SortResults,
+  SortResults
 } from '../../../../utils/dataFormatter';
 import { Number as NumFormat } from '../../../../components/factorsComponents';
 import { parseForDateTimeLabel } from '../SingleEventSingleBreakdown/utils';
@@ -12,8 +12,8 @@ import { getBreakDownGranularities } from '../SingleEventMultipleBreakdown/utils
 import {
   DATE_FORMATS,
   MAX_ALLOWED_VISIBLE_PROPERTIES,
+  DISPLAY_PROP
 } from '../../../../utils/constants';
-import { DISPLAY_PROP } from '../../../../utils/constants';
 import { EVENT_COUNT_KEY } from '../eventsAnalytics.constants';
 
 export const defaultSortProp = () => {
@@ -22,8 +22,8 @@ export const defaultSortProp = () => {
       order: 'descend',
       key: EVENT_COUNT_KEY,
       type: 'numerical',
-      subtype: null,
-    },
+      subtype: null
+    }
   ];
 };
 
@@ -49,18 +49,18 @@ export const getBreakdownTitle = (breakdown, userPropNames, eventPropNames) => {
     breakdown.prop_category === 'user'
       ? userPropNames[breakdown.property] || breakdown.property
       : breakdown.prop_category === 'event'
-      ? eventPropNames[breakdown.property] || breakdown.property
-      : breakdown.property;
+        ? eventPropNames[breakdown.property] || breakdown.property
+        : breakdown.property;
 
   if (!breakdown.eventIndex) {
     return displayTitle;
   }
   return (
-    <div className='flex items-center'>
-      <div className='mr-1'>{displayTitle} of </div>
+    <div className="flex items-center">
+      <div className="mr-1">{displayTitle} of </div>
       <div
         style={{ backgroundColor: '#3E516C' }}
-        className='text-white w-4 h-4 flex justify-center items-center rounded-full font-semibold leading-5 text-xs'
+        className="text-white w-4 h-4 flex justify-center items-center rounded-full font-semibold leading-5 text-xs"
       >
         {charArr[breakdown.eventIndex - 1]}
       </div>
@@ -111,12 +111,12 @@ export const formatData = (data, queries, colors, eventNames) => {
     return {
       label: str,
       value: d[countIndex],
-      [EVENT_COUNT_KEY]: d[countIndex], //used for sorting, value key will be removed soon
+      [EVENT_COUNT_KEY]: d[countIndex], // used for sorting, value key will be removed soon
       index,
       event: eventName,
       eventIndex: d[event_indexIndex],
       color: colors[queryIndex],
-      ...breakdownData,
+      ...breakdownData
     };
   });
 
@@ -161,7 +161,7 @@ export const getTableColumns = (
     fixed: 'left',
     render: (d) => {
       return eventNames[d] || d;
-    },
+    }
   });
   breakdown.forEach((b, index) => {
     result.push({
@@ -172,7 +172,7 @@ export const getTableColumns = (
         handleSorting
       ),
       dataIndex: `${b.property} - ${index}`,
-      width: 200,
+      width: 200
     });
   });
   result.push({
@@ -188,7 +188,7 @@ export const getTableColumns = (
     width: 150,
     render: (d) => {
       return <NumFormat number={d} />;
-    },
+    }
   });
   return result;
 };
@@ -223,7 +223,7 @@ export const getDateBasedColumns = (
     ),
     className: 'text-right',
     dataIndex: EVENT_COUNT_KEY,
-    width: 150,
+    width: 150
   };
   const breakdownColumns = breakdown.map((b, index) => {
     return {
@@ -234,10 +234,10 @@ export const getDateBasedColumns = (
         handleSorting
       ),
       dataIndex: `${b.property} - ${index}`,
-      width: 200,
+      width: 200
     };
   });
-  const format = DATE_FORMATS[frequency] || DATE_FORMATS['date'];
+  const format = DATE_FORMATS[frequency] || DATE_FORMATS.date;
 
   const dateColumns = categories.map((cat) => {
     return {
@@ -246,7 +246,7 @@ export const getDateBasedColumns = (
         {
           key: addQforQuarter(frequency) + moment(cat).format(format),
           type: 'numerical',
-          subtype: null,
+          subtype: null
         },
         currentSorter,
         handleSorting,
@@ -257,7 +257,7 @@ export const getDateBasedColumns = (
       render: (d) => {
         return <NumFormat number={d} />;
       },
-      className: 'text-right',
+      className: 'text-right'
     };
   });
   const eventCol = {
@@ -269,7 +269,7 @@ export const getDateBasedColumns = (
     ),
     dataIndex: 'event',
     fixed: 'left',
-    width: 200,
+    width: 200
   };
   return [eventCol, ...breakdownColumns, ...dateColumns, OverallColumn];
 };
@@ -301,7 +301,7 @@ export const formatDataInStackedAreaFormat = (
   ) {
     return {
       categories: [],
-      data: [],
+      data: []
     };
   }
   console.log('mewb formatDataInStackedAreaFormat');
@@ -325,16 +325,16 @@ export const formatDataInStackedAreaFormat = (
       name: d.label,
       data: [...initializedDatesData],
       marker: {
-        enabled: false,
+        enabled: false
       },
-      ...d,
+      ...d
     };
   });
 
   const headerSlice = data.headers.slice(eventIndex + 1, countIndex);
   const breakdowns = data.meta.query.gbp ? [...data.meta.query.gbp] : [];
   const grns = getBreakDownGranularities(headerSlice, breakdowns);
-  const format = DATE_FORMATS[frequency] || DATE_FORMATS['date'];
+  const format = DATE_FORMATS[frequency] || DATE_FORMATS.date;
 
   data.rows.forEach((row) => {
     const eventName = eventNames[row[eventIndex]] || row[eventIndex];
@@ -362,6 +362,6 @@ export const formatDataInStackedAreaFormat = (
   });
   return {
     categories: differentDates,
-    data: resultantData,
+    data: resultantData
   };
 };
