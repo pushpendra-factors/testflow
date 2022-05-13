@@ -214,6 +214,10 @@ const Alerts = ({
         setQueries(queryupdated);
       };
 
+      useEffect(() => {
+        setSelectedMainCategory(queries[0]);
+      }, [queries]);
+
       const queryList = () => {
         const blockList = [];
     
@@ -751,7 +755,7 @@ const Alerts = ({
                             )}
                         </Col>
                     </Row>
-                    {viewAlertDetails?.alert_description?.query?.fil && (
+                    {viewAlertDetails?.alert_description?.query?.fil?.length > 0 && (
                         <Row className={'mt-2'}>
                             <Col span={18}>
                                 <Text type={'title'} level={7} weight={'bold'} color={'grey-2'} extraClass={'m-0 my-1'}>Filters</Text>
