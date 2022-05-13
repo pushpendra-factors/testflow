@@ -1,21 +1,28 @@
 package memsql
 
 import (
+	"errors"
 	C "factors/config"
 	"factors/model/model"
 	U "factors/util"
 	"fmt"
-	"net/http"
-	"time"
-
 	log "github.com/sirupsen/logrus"
+	"net/http"
+	"sort"
+	"time"
 )
 
 func (store *MemSQL) SetAuthTokenforSlackIntegration(projectID uint64, agentUUID string, authTokens model.SlackAccessTokens) error {
 	db := C.GetServices().Db
+	_, errCode := store.GetProjectAgentMapping(projectID, agentUUID)
+	if errCode != http.StatusFound {
+		log.Error("Project agent mapping not found.")
+		return errors.New("Project agent mapping not found.")
+	}
+
 	var token model.SlackAuthTokens
 	token = make(map[uint64]model.SlackAccessTokens)
-	
+
 	token[projectID] = authTokens
 	// convert token to json
 	TokenJson, err := U.EncodeStructTypeToPostgresJsonb(token)
@@ -98,6 +105,9 @@ func (store *MemSQL) GetAllAlerts(projectID uint64) ([]model.Alert, int) {
 		log.WithField("project_id", projectID).Warn(err)
 		return make([]model.Alert, 0), http.StatusNotFound
 	}
+	sort.Slice(alerts, func(i, j int) bool {
+		return alerts[i].CreatedAt.After(alerts[j].CreatedAt)
+	})
 	return alerts, http.StatusFound
 }
 func (store *MemSQL) DeleteAlert(id string, projectID uint64) (int, string) {

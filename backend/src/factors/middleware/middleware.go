@@ -908,6 +908,13 @@ func SkipDemoProjectWriteAccess() gin.HandlerFunc {
 			blacklistedHandlerNames["CreateContentGroupHandler"] = true
 			blacklistedHandlerNames["AgentInviteBatch"] = true
 			blacklistedHandlerNames["CreateCustomMetric"] = true
+			blacklistedHandlerNames["CreateAlertHandler"] = true
+			blacklistedHandlerNames["DeleteAlertHandler"] = true
+			blacklistedHandlerNames["SlackAuthRedirectHandler"] = true
+			blacklistedHandlerNames["GetSlackChannelsListHandler"] = true
+			blacklistedHandlerNames["DeleteSlackIntegrationHandler"] = true
+			blacklistedHandlerNames["SlackCallbackHandler"] = true
+
 			handlerName := c.HandlerName()
 			handlerNameStrings := strings.Split(handlerName, "/")
 			handlerNameStrings = strings.Split(handlerNameStrings[len(handlerNameStrings)-1], ".")

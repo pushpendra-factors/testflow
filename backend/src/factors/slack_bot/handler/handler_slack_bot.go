@@ -50,36 +50,37 @@ func SlackCallbackHandler(c *gin.Context) {
 	code := c.Query("code")
 	if code == "" {
 		log.Error("Failed to get auth code")
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to get auth code"})
-		return
+		redirectURL := buildRedirectURL("AUTH_ERROR")
+		c.Redirect(http.StatusPermanentRedirect, redirectURL)
 	}
 	var oauthState oauthState
 	state := c.Query("state")
 	err := json.Unmarshal([]byte(state), &oauthState)
 	if err != nil || oauthState.ProjectID == 0 || *oauthState.AgentUUID == "" {
-		c.AbortWithStatus(http.StatusBadRequest)
-		return
+		redirectURL := buildRedirectURL("invalid values in state")
+		c.Redirect(http.StatusPermanentRedirect, redirectURL)
 	}
 	logCtx := log.WithFields(log.Fields{"project_id": oauthState.ProjectID, "agent_uuid": oauthState.AgentUUID})
 	request, err := http.NewRequest("POST", fmt.Sprintf("https://slack.com/api/oauth.v2.access?client_id=%s&client_secret=%s&code=%s", C.GetSlackClientID(), C.GetSlackClientSecret(), code), nil)
 	if err != nil {
 		log.Error("Failed to create request to get auth code")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create request to get auth code"})
-		return
+		redirectURL := buildRedirectURL("AUTH_ERROR")
+		c.Redirect(http.StatusPermanentRedirect, redirectURL)
 	}
 	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	client := &http.Client{}
 	resp, err := client.Do(request)
 	if err != nil {
 		logCtx.Error("Failed to get auth code")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get auth code"})
-		return
+		redirectURL := buildRedirectURL("AUTH_ERROR")
+		c.Redirect(http.StatusPermanentRedirect, redirectURL)
 	}
 	var jsonResponse map[string]interface{}
 	err = json.NewDecoder(resp.Body).Decode(&jsonResponse)
 	if err != nil {
 		logCtx.Error("failed to decode json response", err)
-		return
+		redirectURL := buildRedirectURL("AUTH_ERROR")
+		c.Redirect(http.StatusPermanentRedirect, redirectURL)
 	}
 	access_token := jsonResponse["access_token"].(string)
 	authed_user := jsonResponse["authed_user"].(map[string]interface{})
@@ -93,12 +94,15 @@ func SlackCallbackHandler(c *gin.Context) {
 	err = store.GetStore().SetAuthTokenforSlackIntegration(oauthState.ProjectID, *oauthState.AgentUUID, tokens)
 	if err != nil {
 		logCtx.Error("Failed to store access token for slack")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to store access token for slack"})
-		return
+		redirectURl := buildRedirectURL("AUTH_ERROR")
+		c.Redirect(http.StatusPermanentRedirect, redirectURl)
 	}
-	redirectURL := C.GetProtocol() + C.GetAPPDomain()
+	redirectURL := buildRedirectURL("")
 	c.Redirect(http.StatusPermanentRedirect, redirectURL)
 	defer resp.Body.Close()
+}
+func buildRedirectURL(errMsg string) string {
+	return C.GetProtocol() + C.GetAPPDomain() + "/settings/integration?error=" + url.QueryEscape(errMsg)
 }
 func GetSlackChannelsListHandler(c *gin.Context) {
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)

@@ -9,7 +9,7 @@ import (
 	U "factors/util"
 	"net/http"
 
-	slack "factors/slack_bot/handler"
+//	slack "factors/slack_bot/handler"
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -270,9 +270,9 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id/v1/alerts", responseWrapper(V1.GetAlertsHandler))
 	authRouteGroup.GET("/:project_id/v1/alerts/:id", responseWrapper(V1.GetAlertByIDHandler))
 	authRouteGroup.DELETE("/:project_id/v1/alerts/:id", responseWrapper(V1.DeleteAlertHandler))
-	authRouteGroup.POST("/:project_id/slack/auth", slack.SlackAuthRedirectHandler)
-	authRouteGroup.GET("/:project_id/slack/channels", slack.GetSlackChannelsListHandler)
-	authRouteGroup.DELETE("/:project_id/slack/delete", slack.DeleteSlackIntegrationHandler)
+//	authRouteGroup.POST("/:project_id/slack/auth", slack.SlackAuthRedirectHandler)
+//	authRouteGroup.GET("/:project_id/slack/channels", slack.GetSlackChannelsListHandler)
+//	authRouteGroup.DELETE("/:project_id/slack/delete", slack.DeleteSlackIntegrationHandler)
 
 }
 
@@ -367,7 +367,7 @@ func InitIntRoutes(r *gin.Engine) {
 		mid.SetAuthorizedProjectsByLoggedInAgent(),
 		IntDeleteHandler)
 
-	intRouteGroup.GET("/slack/callback",slack.SlackCallbackHandler)
+//	intRouteGroup.GET("/slack/callback",slack.SlackCallbackHandler)
 
 }
 
