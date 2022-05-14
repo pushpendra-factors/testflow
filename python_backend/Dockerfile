@@ -10,8 +10,7 @@ COPY . ./
 RUN apk add --no-cache --virtual .build-deps gcc g++ libxslt-dev libffi-dev && \
     apk add --no-cache libxslt libffi && \
     pip install --no-cache-dir lxml>=3.5.0 && \
-    pip install -r adwords_requirements.txt && \
-    apk del .build-deps
+    pip install -r adwords_requirements.txt
 
 ENTRYPOINT ["python", "app.py"]
 EXPOSE 8091
