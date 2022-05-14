@@ -13,8 +13,7 @@ import ConfirmationModal from '../../../../components/ConfirmationModal';
 import QueryBlock from './QueryBlock';
 import { deleteGroupByForEvent } from '../../../../reducers/coreQuery/middleware';
 import { getEventsWithPropertiesKPI, getStateFromFilters } from './utils';
-import { fetchSlackChannels } from '../../../../reducers/global';
-import { fetchAgentInfo } from 'Reducers/agentActions';
+import { fetchSlackChannels, fetchProjectSettingsV1, enableSlackIntegration } from '../../../../reducers/global';
 import SelectChannels from './SelectChannels';
 
 const { Option } = Select;
@@ -29,7 +28,9 @@ const Alerts = ({
     agent_details,
     slack,
     fetchSlackChannels,
-    fetchAgentInfo,
+    fetchProjectSettingsV1,
+    projectSettings,
+    enableSlackIntegration,
 }) => {
 
     const [showForm, setShowForm] = useState(false);
@@ -49,6 +50,7 @@ const Alerts = ({
     const [channelOpts, setChannelOpts] = useState([]);
     const [selectedChannel, setSelectedChannel] = useState([]);
     const [showSelectChannelsModal, setShowSelectChannelsModal] = useState(false);
+    const [viewSelectedChannels, setViewSelectedChannels] = useState([]);
 
     const [deleteWidgetModal, showDeleteWidgetModal] = useState(false);
     const [deleteApiCalled, setDeleteApiCalled] = useState(false);
@@ -146,6 +148,14 @@ const Alerts = ({
            const filter = getStateFromFilters(viewAlertDetails.alert_description.query.fil);
            setViewFilter(filter);
         }
+        if(viewAlertDetails?.alert_configuration?.slack_channels_and_user_groups) {
+            let obj = viewAlertDetails?.alert_configuration?.slack_channels_and_user_groups
+            for(let key in obj) {
+                if(obj[key].length > 0) {
+                    setViewSelectedChannels(obj[key]);
+                }
+            }
+        }
     }, [viewAlertDetails])
 
     const columns = [
@@ -204,6 +214,10 @@ const Alerts = ({
         setQueries(queryupdated);
       };
 
+      useEffect(() => {
+        setSelectedMainCategory(queries[0]);
+      }, [queries]);
+
       const queryList = () => {
         const blockList = [];
     
@@ -260,11 +274,13 @@ const Alerts = ({
             }
         }
 
-        let channelsId = [];
-        if(selectedChannel.length > 0) {
-            channelsId = selectedChannel.map((item) => {
-                return item.value;
-            })
+        let slackChannels = {}
+        if(slackEnabled) {
+            const map = new Map();
+            map.set(agent_details.uuid , selectedChannel);
+            for (const [key, value] of map) {
+                slackChannels = {...slackChannels, [key]: value}
+            }
         }
 
         let payload = {
@@ -289,7 +305,7 @@ const Alerts = ({
               "email_enabled": emailEnabled ,
               "slack_enabled": slackEnabled,
               "emails": emails,
-              'channels': channelsId,
+              "slack_channels_and_user_groups": slackChannels,
             }
           }
         
@@ -320,6 +336,21 @@ const Alerts = ({
                 )
             })
         }
+    }
+
+    const onConnectSlack = () => {
+        enableSlackIntegration(activeProject.id)
+        .then((r) => {
+            if (r.status == 200) {
+                window.open(r.data.redirectURL, "_blank");
+            }
+            if (r.status >= 400) {
+                message.error('Error fetching slack redirect url');
+            }
+        })
+        .catch((err) => {
+            console.log('Slack error-->', err);
+        });
     }
 
 
@@ -392,15 +423,15 @@ const Alerts = ({
     );
 
     useEffect(() => {
-        fetchAgentInfo();
-        fetchSlackChannels(agent_details.uuid);
-    }, [activeProject, agent_details?.is_slack_integrated]);
+        fetchProjectSettingsV1(activeProject.id);
+        fetchSlackChannels(activeProject.id);
+    }, [activeProject, projectSettings?.int_slack, slackEnabled]);
 
     useEffect(() => {
         if (slack?.length > 0) {
             let tempArr = [];
             for (let i = 0; i < slack.length; i++) {
-                tempArr.push({label: slack[i].name, value: slack[i].id});
+                tempArr.push({name: slack[i].name, id: slack[i].id, is_private: slack[i].is_private});
             }
             setChannelOpts(tempArr);
         }
@@ -565,7 +596,7 @@ const Alerts = ({
                         </Row>
                         {emailEnabled && (
                         <Row className={'mt-4'}>
-                            <Col span={10}>
+                            <Col span={8}>
                                 <Form.Item
                                     label={null}
                                     name={'email'}
@@ -581,13 +612,13 @@ const Alerts = ({
                             {(fields, { add, remove }) => (
                                 <>
                                 {fields.map((field, index) => (
-                                <Col span={16}>
+                                <Col span={21}>
                                 <Form.Item
                                     required={false}
                                     key={field.key}
                                 >
                                 <Row className={'mt-4'}>
-                                    <Col span={15}>
+                                    <Col span={9}>
                                         <Form.Item
                                             label={null}
                                             {...field}
@@ -612,7 +643,7 @@ const Alerts = ({
                                 </Form.Item>
                                 </Col>
                                 ))}
-                                <Col span={16} className={'mt-3'}>
+                                <Col span={20} className={'mt-3'}>
                                 {fields.length === 4 ? null: <Button type={'text'} icon={<PlusOutlined style={{color:'gray', fontSize:'18px'}} />} onClick={() => add()}>Add Email</Button>}
                                 </Col>
                                 </>
@@ -620,7 +651,7 @@ const Alerts = ({
                             </Form.List>
                         </Row>
                         )}
-                        <Row className={'mt-2 ml-2'}>
+                        {/* <Row className={'mt-2 ml-2'}>
                             <Col className={'m-0'}>
                                 <Form.Item
                                     name="slack_enabled"
@@ -630,7 +661,7 @@ const Alerts = ({
                                 </Form.Item>
                             </Col>
                         </Row>
-                        {slackEnabled && !agent_details.is_slack_integrated && (
+                        {slackEnabled && !projectSettings.int_slack && (
                             <>
                                 <Row className={'mt-2 ml-2'}>
                                     <Col span={10} className={'m-0'}>
@@ -639,20 +670,20 @@ const Alerts = ({
                                 </Row>
                                 <Row className={'mt-2 ml-2'}>
                                     <Col span={10} className={'m-0'}>
-                                        <a href={'/settings/integration'} target='_blank'><Button><SVG name={'Slack'} />Connect to slack</Button></a>
+                                        <Button onClick={onConnectSlack}><SVG name={'Slack'} />Connect to slack</Button>
                                     </Col>
                                 </Row>
                             </>
                         )}
-                        {slackEnabled && agent_details.is_slack_integrated && (
+                        {slackEnabled && projectSettings.int_slack && (
                             <>
                                 {selectedChannel.length > 0 && (
-                                <Row className={'rounded-lg border-2 border-gray-200 mt-2 ml-2 w-2/6'}>
+                                <Row className={'rounded-lg border-2 border-gray-200 mt-2 w-2/6'}>
                                     <Col className={'m-0'}>
                                         <Text type={'title'} level={6} color={'grey-2'} extraClass={'m-0 mt-2 ml-2'}>Selected Channels</Text>
                                         {selectedChannel.map((channel, index) => (
                                             <div key={index} >
-                                                <Text type={'title'} level={7} color={'grey'} extraClass={'m-0 ml-2 mt-1 mb-1'}>{'#'+ channel.label}</Text>
+                                                <Text type={'title'} level={7} color={'grey'} extraClass={'m-0 ml-2 mt-1 mb-1'}>{'#'+ channel.name}</Text>
                                             </div>
                                         ))}
                                     </Col>
@@ -672,7 +703,7 @@ const Alerts = ({
                                 </Row>
                                 }
                             </>
-                        )}
+                        )} */}
 
                     </Form>
 
@@ -724,7 +755,7 @@ const Alerts = ({
                             )}
                         </Col>
                     </Row>
-                    {viewAlertDetails?.alert_description?.query?.fil && (
+                    {viewAlertDetails?.alert_description?.query?.fil?.length > 0 && (
                         <Row className={'mt-2'}>
                             <Col span={18}>
                                 <Text type={'title'} level={7} weight={'bold'} color={'grey-2'} extraClass={'m-0 my-1'}>Filters</Text>
@@ -796,27 +827,27 @@ const Alerts = ({
                         </Col>
                     </Row>
                     <Row className={'mt-4'}>
-                        <Col span={10}>
+                        <Col span={8}>
                             {emailView()}
                         </Col>
                     </Row>
-                    <Row className={'mt-2 ml-2'}>
+                    {/* <Row className={'mt-2 ml-2'}>
                         <Col span={4}>
                                 <Checkbox disabled={true} checked={viewAlertDetails?.alert_configuration?.slack_enabled}>Slack</Checkbox>
                         </Col>
                     </Row>
-                    {viewAlertDetails?.alert_configuration?.channels?.length > 0 && (
+                    {viewAlertDetails?.alert_configuration?.slack_enabled && viewAlertDetails?.alert_configuration?.slack_channels_and_user_groups && (
                     <Row className={'rounded-lg border-2 border-gray-200 mt-2 ml-2 w-2/6'}>
                         <Col className={'m-0'}>
-                            <Text type={'title'} level={6} color={'grey-2'} extraClass={'m-0 mt-2 ml-2'}>Selected Channels Id</Text>
-                            {viewAlertDetails?.alert_configuration?.channels.map((channel, index) => (
+                            <Text type={'title'} level={6} color={'grey-2'} extraClass={'m-0 mt-2 ml-2'}>Selected Channels</Text>
+                            {viewSelectedChannels.map((channel, index) => (
                                 <div key={index} >
-                                    <Text type={'title'} level={7} color={'grey'} extraClass={'m-0 ml-2 mt-1 mb-1'}>{'#'+ channel}</Text>
+                                    <Text type={'title'} level={7} color={'grey'} extraClass={'m-0 ml-2 mt-1 mb-1'}>{'#'+ channel.name}</Text>
                                 </div>
                             ))}
                         </Col>
                     </Row>
-                    )}
+                    )} */}
 
                 </>}
 
@@ -886,7 +917,8 @@ const mapStateToProps = (state) => ({
     kpi: state?.kpi,
     agent_details: state.agent.agent_details,
     slack: state.global.slack,
+    projectSettings: state.global.projectSettingsV1,
 });
 
 
-export default connect(mapStateToProps, { createAlerts, fetchAlerts, deleteAlerts, fetchSlackChannels, fetchAgentInfo })(Alerts)
+export default connect(mapStateToProps, { createAlerts, fetchAlerts, deleteAlerts, fetchSlackChannels, fetchProjectSettingsV1, enableSlackIntegration })(Alerts)

@@ -1,27 +1,28 @@
 package memsql
 
 import (
+	"errors"
 	C "factors/config"
 	"factors/model/model"
 	U "factors/util"
 	"fmt"
-	"net/http"
-	"time"
-
 	log "github.com/sirupsen/logrus"
+	"net/http"
+	"sort"
+	"time"
 )
 
 func (store *MemSQL) SetAuthTokenforSlackIntegration(projectID uint64, agentUUID string, authTokens model.SlackAccessTokens) error {
 	db := C.GetServices().Db
-	var agent model.Agent
-	err := db.Where("uuid = ?", agentUUID).Find(&agent).Error
-	if err != nil {
-		log.WithFields(log.Fields{
-			"uuid": agentUUID,
-		}).Error(err)
-		return err
+	_, errCode := store.GetProjectAgentMapping(projectID, agentUUID)
+	if errCode != http.StatusFound {
+		log.Error("Project agent mapping not found.")
+		return errors.New("Project agent mapping not found.")
 	}
+
 	var token model.SlackAuthTokens
+	token = make(map[uint64]model.SlackAccessTokens)
+
 	token[projectID] = authTokens
 	// convert token to json
 	TokenJson, err := U.EncodeStructTypeToPostgresJsonb(token)
@@ -29,12 +30,10 @@ func (store *MemSQL) SetAuthTokenforSlackIntegration(projectID uint64, agentUUID
 		log.Error(err)
 		return err
 	}
-	agent.SlackAuthTokens = TokenJson
-	err = db.Update(&agent).Error
+	// update the db
+	err = db.Model(&model.Agent{}).Where("uuid = ?", agentUUID).Update("slack_access_tokens", TokenJson).Error
 	if err != nil {
-		log.WithFields(log.Fields{
-			"uuid": agentUUID,
-		}).Error(err)
+		log.Error(err)
 		return err
 	}
 	return nil
@@ -50,7 +49,7 @@ func (store *MemSQL) GetSlackAuthToken(agentUUID string) (model.SlackAuthTokens,
 		return nil, err
 	}
 	var token model.SlackAuthTokens
-	err = U.DecodePostgresJsonbToStructType(agent.SlackAuthTokens, &token)
+	err = U.DecodePostgresJsonbToStructType(agent.SlackAccessTokens, &token)
 	if err != nil {
 		log.Error(err)
 		return nil, err
@@ -59,20 +58,9 @@ func (store *MemSQL) GetSlackAuthToken(agentUUID string) (model.SlackAuthTokens,
 }
 func (store *MemSQL) DeleteSlackIntegration(agentUUID string) error {
 	db := C.GetServices().Db
-	var agent model.Agent
-	err := db.Where("uuid = ?", agentUUID).Find(&agent).Error
+	err := db.Model(&model.Agent{}).Where("uuid = ?", agentUUID).Update("slack_access_tokens", nil).Error
 	if err != nil {
-		log.WithFields(log.Fields{
-			"uuid": agentUUID,
-		}).Error(err)
-		return err
-	}
-	agent.SlackAuthTokens = nil
-	err = db.Save(&agent).Error
-	if err != nil {
-		log.WithFields(log.Fields{
-			"uuid": agentUUID,
-		}).Error(err)
+		log.Error(err)
 		return err
 	}
 	return nil
@@ -117,6 +105,9 @@ func (store *MemSQL) GetAllAlerts(projectID uint64) ([]model.Alert, int) {
 		log.WithField("project_id", projectID).Warn(err)
 		return make([]model.Alert, 0), http.StatusNotFound
 	}
+	sort.Slice(alerts, func(i, j int) bool {
+		return alerts[i].CreatedAt.After(alerts[j].CreatedAt)
+	})
 	return alerts, http.StatusFound
 }
 func (store *MemSQL) DeleteAlert(id string, projectID uint64) (int, string) {

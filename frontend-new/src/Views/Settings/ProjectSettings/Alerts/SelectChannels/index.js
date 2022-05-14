@@ -13,14 +13,14 @@ function SelectChannels({ channelOpts, selectedChannel, setSelectedChannel }) {
 
   const handleCheckBoxClick = useCallback(
     (q) => {
-      const isSelected = selectedChannel.findIndex((sq) => sq.value === q.value) > -1;
+      const isSelected = selectedChannel.findIndex((sq) => sq.id === q.id) > -1;
       if (isSelected) {
         setSelectedChannel((currData) => {
-          return currData.filter((c) => c.value !== q.value);
+          return currData.filter((c) => c.id !== q.id);
         });
       } else {
         setSelectedChannel((currData) => {
-          return [...currData, { ...q, value: q.value }];
+          return [...currData, { ...q, id: q.id }];
         });
       }
       console.log(selectedChannel)
@@ -29,11 +29,11 @@ function SelectChannels({ channelOpts, selectedChannel, setSelectedChannel }) {
   );
 
   const filteredQueries = channelOpts.filter(
-    (q) => q.label.toLowerCase().indexOf(searchVal.toLowerCase()) > -1
+    (q) => q.name.toLowerCase().indexOf(searchVal.toLowerCase()) > -1
   );
 
   return (
-    <div className='widget-selection'>
+    <div className={`widget-selection ${styles.tabContent}`}>
       <div className={`${styles.searchBar} query-search`}>
         <Input
           onChange={handleSearchChange}
@@ -48,11 +48,11 @@ function SelectChannels({ channelOpts, selectedChannel, setSelectedChannel }) {
         {filteredQueries.map((q) => {
 
           const isSelected =
-          selectedChannel.findIndex((sq) => sq.value === q.value) > -1;
+          selectedChannel.findIndex((sq) => sq.id === q.id) > -1;
 
           return (
             <div
-              key={q.value}
+              key={q.id}
               className={`flex items-center justify-between px-1 py-3 cursor-pointer ${
                 styles.queryRow
               } ${isSelected ? styles.selected : ''}`}
@@ -65,7 +65,7 @@ function SelectChannels({ channelOpts, selectedChannel, setSelectedChannel }) {
                   />
                 </div>
                 <Text mini extraClass={styles.queryTitle} type='paragraph'>
-                  {'#'+ q.label}
+                  {'#'+ q.name}
                 </Text>
               </div>
             </div>

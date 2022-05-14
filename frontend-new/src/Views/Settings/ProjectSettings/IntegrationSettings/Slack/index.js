@@ -3,29 +3,31 @@ import { connect } from 'react-redux';
 import { Button, message, Input, Avatar, Popover } from 'antd';
 import { Text, FaErrorComp, FaErrorLog, SVG } from 'factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary';
-import { fetchAgentInfo } from 'Reducers/agentActions';
-import { disableSlackIntegration, enableSlackIntegration } from '../../../../../reducers/global';
+import { disableSlackIntegration, enableSlackIntegration, fetchProjectSettingsV1 } from '../../../../../reducers/global';
+import { sendSlackNotification } from '../../../../../utils/slack';
 
 const SlackIntegration = ({
   activeProject,
   agent_details,
   setIsStatus,
   kbLink = false,
-  fetchAgentInfo,
+  fetchProjectSettingsV1,
   enableSlackIntegration,
   disableSlackIntegration,
+  projectSettings,
 }) => {
   const [loading, setLoading] = useState(false);
 
   const onDisconnect = () => {
     setLoading(true);
-    disableSlackIntegration()
+    disableSlackIntegration(activeProject.id)
       .then(() => {
         setLoading(false);
         setTimeout(() => {
           message.success('Slack integration disconnected!');
         }, 500);
         setIsStatus('');
+        fetchProjectSettingsV1(activeProject.id);
       })
       .catch((err) => {
         message.error(`${err?.data?.error}`);
@@ -35,25 +37,26 @@ const SlackIntegration = ({
   };
 
   const isSlackEnabled = () => {
-    fetchAgentInfo();
+    fetchProjectSettingsV1(activeProject.id);
   };
 
   useEffect(() => {
     isSlackEnabled();
-    if (agent_details.is_slack_integrated) {
+    if (projectSettings?.int_slack) {
       setIsStatus('Active');
     } else {
       setIsStatus('');
     }
-  }, [activeProject, agent_details?.is_slack_integrated]);
+  }, [activeProject, projectSettings?.int_slack]);
 
   const enableSlack = () => {
     setLoading(true);
-    enableSlackIntegration()
+    enableSlackIntegration(activeProject.id)
       .then((r) => {
         setLoading(false);
         if (r.status == 200) {
           window.location = r.data.redirectURL;
+          sendSlackNotification(agent_details.email, activeProject.name, 'Slack');
         }
         if (r.status >= 400) {
           message.error('Error fetching slack redirect url');
@@ -75,7 +78,7 @@ const SlackIntegration = ({
         onError={FaErrorLog}
       >
         <div className={'mt-4 flex w-full'}>
-          {agent_details.is_slack_integrated && (
+          {projectSettings?.int_slack && (
             <>
               <div
                 className={
@@ -100,7 +103,7 @@ const SlackIntegration = ({
         </div>
 
         <div className={'mt-4 flex'}>
-          {!agent_details.is_slack_integrated ? (
+          {!projectSettings?.int_slack ? (
             <Button
               className={'mr-2'}
               type={'primary'}
@@ -132,6 +135,7 @@ const SlackIntegration = ({
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   agent_details: state.agent.agent_details,
+  projectSettings: state.global.projectSettingsV1,
 });
 
-export default connect(mapStateToProps, { fetchAgentInfo, enableSlackIntegration, disableSlackIntegration })(SlackIntegration);
+export default connect(mapStateToProps, { fetchProjectSettingsV1, enableSlackIntegration, disableSlackIntegration })(SlackIntegration);

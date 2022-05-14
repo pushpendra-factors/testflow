@@ -10,6 +10,7 @@ import { Text, FaErrorComp, FaErrorLog } from 'factorsComponents';
 import _ from 'lodash';
 import {ErrorBoundary} from 'react-error-boundary';
 import factorsai from 'factorsai';
+import { sendSlackNotification } from '../../../../../utils/slack';
 
 const FacebookIntegration = ({
   fetchProjectSettings,
@@ -90,28 +91,6 @@ const FacebookIntegration = ({
     SetSelectAdAccount(dataString) 
   } 
 
-  const sendSlackNotification = () => {
-    let webhookURL = 'https://hooks.slack.com/services/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';
-    let data = {
-        "text": `User ${currentAgent.email} from Project "${activeProject.name}" Activated Integration: Facebook`,
-        "username" : "Signup User Actions",
-        "icon_emoji" : ":golf:"
-    }
-    let params = {
-        method: 'POST',
-        body: JSON.stringify(data)
-    }
-
-    fetch(webhookURL, params)
-    .then((response) => response.json())
-    .then((response) => {
-        console.log(response);
-    })
-    .catch((err) => {
-        console.log('err',err);
-    });
-  }
-
   const handleSubmit = e => {
     e.preventDefault();
 
@@ -131,7 +110,7 @@ const FacebookIntegration = ({
         setShowForm(false);
         setIsActive(true);
         message.success('Facebok integration enabled!');
-        sendSlackNotification();
+        sendSlackNotification(currentAgent.email, activeProject.name, 'Facebook');
       }).catch((e) => {
         console.log(e);
         message.error(e);

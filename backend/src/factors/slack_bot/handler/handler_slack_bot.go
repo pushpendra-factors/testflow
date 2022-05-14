@@ -10,10 +10,10 @@ import (
 	"factors/model/store"
 	U "factors/util"
 	"fmt"
-	"net/http"
-
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
+	"net/http"
+	"net/url"
 )
 
 type oauthState struct {
@@ -39,7 +39,7 @@ func SlackAuthRedirectHandler(c *gin.Context) {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
-	redirectURL := GetSlackAuthorisationURL(C.GetSlackClientID(), string(enOAuthState))
+	redirectURL := GetSlackAuthorisationURL(C.GetSlackClientID(), url.QueryEscape(string(enOAuthState)))
 	c.JSON(http.StatusOK, gin.H{"redirectURL": redirectURL})
 }
 func GetSlackAuthorisationURL(clientID string, state string) string {
@@ -50,55 +50,59 @@ func SlackCallbackHandler(c *gin.Context) {
 	code := c.Query("code")
 	if code == "" {
 		log.Error("Failed to get auth code")
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to get auth code"})
-		return
+		redirectURL := buildRedirectURL("AUTH_ERROR")
+		c.Redirect(http.StatusPermanentRedirect, redirectURL)
 	}
 	var oauthState oauthState
 	state := c.Query("state")
 	err := json.Unmarshal([]byte(state), &oauthState)
 	if err != nil || oauthState.ProjectID == 0 || *oauthState.AgentUUID == "" {
-		c.AbortWithStatus(http.StatusBadRequest)
-		return
+		redirectURL := buildRedirectURL("invalid values in state")
+		c.Redirect(http.StatusPermanentRedirect, redirectURL)
 	}
 	logCtx := log.WithFields(log.Fields{"project_id": oauthState.ProjectID, "agent_uuid": oauthState.AgentUUID})
 	request, err := http.NewRequest("POST", fmt.Sprintf("https://slack.com/api/oauth.v2.access?client_id=%s&client_secret=%s&code=%s", C.GetSlackClientID(), C.GetSlackClientSecret(), code), nil)
 	if err != nil {
 		log.Error("Failed to create request to get auth code")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create request to get auth code"})
-		return
+		redirectURL := buildRedirectURL("AUTH_ERROR")
+		c.Redirect(http.StatusPermanentRedirect, redirectURL)
 	}
 	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	client := &http.Client{}
 	resp, err := client.Do(request)
 	if err != nil {
 		logCtx.Error("Failed to get auth code")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get auth code"})
-		return
+		redirectURL := buildRedirectURL("AUTH_ERROR")
+		c.Redirect(http.StatusPermanentRedirect, redirectURL)
 	}
 	var jsonResponse map[string]interface{}
-	// remove this after seeing structure of json response
-	fmt.Println("resp.Body", resp.Body)
 	err = json.NewDecoder(resp.Body).Decode(&jsonResponse)
 	if err != nil {
 		logCtx.Error("failed to decode json response", err)
-		return 
+		redirectURL := buildRedirectURL("AUTH_ERROR")
+		c.Redirect(http.StatusPermanentRedirect, redirectURL)
 	}
 	access_token := jsonResponse["access_token"].(string)
+	authed_user := jsonResponse["authed_user"].(map[string]interface{})
+	user_access_token := authed_user["access_token"].(string)
 
 	var tokens model.SlackAccessTokens
 	tokens.BotAccessToken = access_token
-	tokens.UserAccessToken = ""
+	tokens.UserAccessToken = user_access_token
 
 	//store the access token in the database
 	err = store.GetStore().SetAuthTokenforSlackIntegration(oauthState.ProjectID, *oauthState.AgentUUID, tokens)
 	if err != nil {
 		logCtx.Error("Failed to store access token for slack")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to store access token for slack"})
-		return
+		redirectURl := buildRedirectURL("AUTH_ERROR")
+		c.Redirect(http.StatusPermanentRedirect, redirectURl)
 	}
-	redirectURL := C.GetProtocol() + C.GetAPPDomain()
+	redirectURL := buildRedirectURL("")
 	c.Redirect(http.StatusPermanentRedirect, redirectURL)
 	defer resp.Body.Close()
+}
+func buildRedirectURL(errMsg string) string {
+	return C.GetProtocol() + C.GetAPPDomain() + "/settings/integration?error=" + url.QueryEscape(errMsg)
 }
 func GetSlackChannelsListHandler(c *gin.Context) {
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
@@ -109,14 +113,24 @@ func GetSlackChannelsListHandler(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get slack auth token"})
 		return
 	}
+	if authToken == nil {
+		log.Error("Failed to get slack auth token, Slack not integrated")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get slack auth token, Slack not integrated"})
+		return
+	}
+	// add query params
 	request, err := http.NewRequest("GET", fmt.Sprintf("https://slack.com/api/conversations.list"), nil)
 	if err != nil {
 		log.Error("Failed to create request to get slack channels list")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create request to get slack channels list"})
 		return
 	}
+	q := request.URL.Query()
+	q.Add("types", "public_channel,private_channel,mpim")
+	q.Add("limit", "250")
+	request.URL.RawQuery = q.Encode()
 	request.Header.Set("Content-Type", "application/json; charset=utf-8")
-	request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", authToken[projectId].BotAccessToken))
+	request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", authToken[projectId].UserAccessToken))
 	client := &http.Client{}
 	resp, err := client.Do(request)
 	if err != nil {

@@ -26,6 +26,7 @@ const isDevelopment = () => {
 import { Text, FaErrorComp, FaErrorLog } from 'factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary';
 import factorsai from 'factorsai';
+import { sendSlackNotification } from '../../../../../utils/slack';
 const getGSCHostURL = () => {
   // return isDevelopment() ? BUILD_CONFIG.adwords_service_host : BUILD_CONFIG.backend_host;
   return BUILD_CONFIG.backend_host;
@@ -120,28 +121,6 @@ const GoogleSearchConsole = ({
     } else setIsStatus('');
   }, [activeProject, agent_details, currentProjectSettings]);
 
-  const sendSlackNotification = () => {
-    let webhookURL = 'https://hooks.slack.com/services/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';
-    let data = {
-        "text": `User ${agent_details.email} from Project "${activeProject.name}" Activated Integration: Google Search Console`,
-        "username" : "Signup User Actions",
-        "icon_emoji" : ":golf:"
-    }
-    let params = {
-        method: 'POST',
-        body: JSON.stringify(data)
-    }
-
-    fetch(webhookURL, params)
-    .then((response) => response.json())
-    .then((response) => {
-        console.log(response);
-    })
-    .catch((err) => {
-        console.log('err',err);
-    });
-  }
-
   const enableGSC = () => {
     setLoading(true);
     enableSearchConsoleIntegration(activeProject.id)
@@ -153,7 +132,7 @@ const GoogleSearchConsole = ({
         if (r.status == 200) {
           renderSettingInfo();
           fetchProjectSettings(activeProject.id);
-          sendSlackNotification();
+          sendSlackNotification(agent_details.email, activeProject.name, 'Google Search Console');
         }
         if (r.status >= 400) {
           setShowManageBtn(true);
