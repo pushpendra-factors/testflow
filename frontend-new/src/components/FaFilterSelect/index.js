@@ -449,7 +449,7 @@ const FAFilterSelect = ({
       selectorComponent = (
         <DatePicker
           disabled={disabled}
-          disabledDate={(d) => !d || d.isAfter(MomentTz())}
+          // disabledDate={(d) => !d || d.isAfter(MomentTz())}
           autoFocus={false}
           className={`fa-date-picker`}
           open={showDatePicker}
