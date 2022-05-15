@@ -274,10 +274,12 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 		// for KPI queries, use the kpiData.KpiAggFunctionTypes as ConvAggFunctionType
 		var convAggFunctionType []string
 		for _, val := range kpiData {
-			convAggFunctionType = val.KpiAggFunctionTypes
-			break
+			if len(val.KpiAggFunctionTypes) > 0 {
+				convAggFunctionType = val.KpiAggFunctionTypes
+				break
+			}
 		}
-		for key, _ := range *attributionData {
+		for key := range *attributionData {
 			(*attributionData)[key].ConvAggFunctionType = convAggFunctionType
 		}
 
@@ -287,7 +289,7 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 		// Add the performance information
 		model.AddPerformanceData(attributionData, query.AttributionKey, marketingReports, noOfConversionEvents)
 
-		for key, _ := range *attributionData {
+		for key := range *attributionData {
 			(*attributionData)[key].ConvAggFunctionType = convAggFunctionType
 		}
 	}
