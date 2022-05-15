@@ -102,7 +102,7 @@ if __name__ == "__main__":
             MetricsAggregator.publish()
             if ("Token about to expire" in token_expiry_payload and len(token_expiry_payload["Token about to expire"]) != 0) \
                  or ("Token expired" in token_expiry_payload and len(token_expiry_payload["Token expired"]) != 0) or \
-                     ("Token about to expire" in token_expiry_payload and len(token_expiry_payload["Invalid or incomplete integration"]) != 0):
+                     ("Invalid or incomplete integration" in token_expiry_payload and len(token_expiry_payload["Invalid or incomplete integration"]) != 0):
                 HealthChecksUtil.ping(MetricsAggregator.env, token_expiry_payload, MetricsAggregator.HEALTHCHECK_PING_ID_TOKEN_FAILURE, endpoint="/fail")
         log.warning("Successfully synced. End of facebook sync job.")
         sys.exit(0)            
