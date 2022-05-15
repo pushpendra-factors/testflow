@@ -507,3 +507,11 @@ pack-compute-and-send-alerts:
 upload-compute-and-send-alerts: export IMAGE_NAME=compute-and-send-alerts-job
 upload-compute-and-send-alerts: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/compute-and-send-alerts-job:$(TAG)
+
+
+pack-adhoc-db-query:
+	docker build -t us.gcr.io/factors-$(ENV)/adhoc-db-query-job:$(TAG) -f Dockerfile.adhoc_db_query .
+
+upload-adhoc-db-query: export IMAGE_NAME=adhoc-db-query-job
+upload-adhoc-db-query: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/adhoc-db-query-job:$(TAG)
