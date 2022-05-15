@@ -26,6 +26,7 @@ class BaseExtract:
     source = None
     destination = None
     total_number_of_records = 0
+    total_number_of_async_requests = 0
 
     # Setters start here.
     def add_last_sync_info(self, last_sync_info):
@@ -70,8 +71,11 @@ class BaseExtract:
         self.project_min_timestamp = project_min_timestamp
 
     def add_log(self, running_status):
-        log.warning("%s extract of job for Project Id: %s, Timestamp: %d, Doc Type: %s", running_status,
-                    self.project_id, self.curr_timestamp, self.type_alias)
+        log.warning("%s extract of job for Project Id: %s, Customer account id: %s Timestamp: %d, Doc Type: %s", running_status,
+                    self.project_id, self.customer_account_id, self.curr_timestamp, self.type_alias)
 
     def reset_total_number_of_records(self):
         self.total_number_of_records = 0
+
+    def reset_total_number_of_async_requests(self):
+        self.total_number_of_async_requests = 0
