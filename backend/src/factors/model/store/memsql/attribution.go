@@ -323,6 +323,8 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 	}
 	logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartORG) / 60}).Info("Total query took time")
 	queryStartTime = time.Now().UTC().Unix()
+
+	model.SanitizeResult(result)
 	return result, nil
 }
 

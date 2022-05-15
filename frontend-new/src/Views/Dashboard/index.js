@@ -1,60 +1,57 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import MomentTz from 'Components/MomentTz';
-import FaHeader from '../../components/FaHeader';
-import SearchBar from '../../components/SearchBar';
-import AddDashboard from './AddDashboard';
-import { useDispatch, useSelector } from 'react-redux';
-import { DASHBOARD_UNMOUNTED } from '../../reducers/types';
-import { FaErrorComp, FaErrorLog } from '../../components/factorsComponents';
+import { useDispatch, useSelector, connect } from 'react-redux';
 import { ErrorBoundary } from 'react-error-boundary';
-import { setItemToLocalStorage } from '../../utils/dataFormatter';
-import { getDashboardDateRange } from './utils';
-import { LOCAL_STORAGE_ITEMS } from '../../utils/constants';
-import EmptyDashboard from './EmptyDashboard';
-import DashboardAfterIntegration from './EmptyDashboard/DashboardAfterIntegration';
-import ProjectDropdown from './ProjectDropdown';
-import { connect } from 'react-redux';
+import { useHistory } from 'react-router-dom';
+import { Spin } from 'antd';
+
 import {
   fetchProjectSettingsV1,
   fetchDemoProject,
   fetchBingAdsIntegration,
-  fetchMarketoIntegration,
+  fetchMarketoIntegration
 } from 'Reducers/global';
-import { useHistory } from 'react-router-dom';
-import { Spin } from 'antd';
+
+import AddDashboard from './AddDashboard';
+import { DASHBOARD_UNMOUNTED } from '../../reducers/types';
+import { FaErrorComp, FaErrorLog } from '../../components/factorsComponents';
+import { setItemToLocalStorage } from '../../utils/localStorage.helpers';
+import { getDashboardDateRange } from './utils';
+import EmptyDashboard from './EmptyDashboard';
+import DashboardAfterIntegration from './EmptyDashboard/DashboardAfterIntegration';
+import ProjectDropdown from './ProjectDropdown';
+import { DASHBOARD_KEYS } from '../../constants/localStorage.constants';
 
 function Dashboard({
   fetchProjectSettingsV1,
-  fetchDemoProject,
   fetchBingAdsIntegration,
-  fetchMarketoIntegration,
+  fetchMarketoIntegration
 }) {
   const [addDashboardModal, setaddDashboardModal] = useState(false);
   const [editDashboard, setEditDashboard] = useState(null);
   const [durationObj, setDurationObj] = useState(getDashboardDateRange());
   const [refreshClicked, setRefreshClicked] = useState(false);
-  const [sdkCheck, setsdkCheck] = useState();
+  const [sdkCheck, setSdkCheck] = useState(false);
   const { dashboards } = useSelector((state) => state.dashboard);
-  let integration = useSelector((state) => state.global.currentProjectSettings);
+  const integration = useSelector((state) => state.global.currentProjectSettings);
+  const integrationV1 = useSelector((state) => state.global.projectSettingsV1);
   const activeProject = useSelector((state) => state.global.active_project);
   const { bingAds, marketo } = useSelector((state) => state.global);
+  const currentAgent = useSelector((state) => state.agent.agent_details);
   const dispatch = useDispatch();
   const history = useHistory();
 
   useEffect(() => {
     fetchProjectSettingsV1(activeProject.id)
       .then((res) => {
-        setsdkCheck(res.data.int_completed);
+        setSdkCheck(res.data.int_completed);
       })
       .catch((err) => {
-        console.log(err.data.error);
+        console.log(err);
         history.push('/');
       });
     fetchBingAdsIntegration(activeProject.id);
     fetchMarketoIntegration(activeProject.id);
   }, [activeProject, sdkCheck]);
-
-  integration = integration?.project_settings || integration;
 
   const checkIntegration =
     integration?.int_segment ||
@@ -68,7 +65,7 @@ function Dashboard({
     integration?.int_clear_bit ||
     sdkCheck ||
     bingAds?.accounts ||
-    marketo?.status;
+    marketo?.status || integrationV1?.int_slack;
 
   const handleEditClick = useCallback((dashboard) => {
     setaddDashboardModal(true);
@@ -90,10 +87,10 @@ function Dashboard({
         ...currState,
         from,
         to,
-        dateType: dates.dateType,
+        dateType: dates.dateType
       };
       setItemToLocalStorage(
-        LOCAL_STORAGE_ITEMS.DASHBOARD_DURATION,
+        DASHBOARD_KEYS.DASHBOARD_DURATION,
         JSON.stringify(newState)
       );
       return newState;
@@ -108,8 +105,8 @@ function Dashboard({
 
   if (dashboards.loading) {
     return (
-      <div className='flex justify-center items-center w-full h-64'>
-        <Spin size='large' />
+      <div className="flex justify-center items-center w-full h-64">
+        <Spin size="large" />
       </div>
     );
   }
@@ -132,7 +129,7 @@ function Dashboard({
           {/* <FaHeader>
             <SearchBar />
           </FaHeader> */}
-          <div className={`mt-20 flex-1 flex flex-col`}>
+          <div className="mt-20 flex-1 flex flex-col">
             <ProjectDropdown
               handleEditClick={handleEditClick}
               setaddDashboardModal={setaddDashboardModal}
@@ -179,5 +176,5 @@ export default connect(null, {
   fetchProjectSettingsV1,
   fetchDemoProject,
   fetchBingAdsIntegration,
-  fetchMarketoIntegration,
+  fetchMarketoIntegration
 })(Dashboard);

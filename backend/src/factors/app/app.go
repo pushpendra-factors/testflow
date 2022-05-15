@@ -160,6 +160,9 @@ func main() {
 	salesforcePropertyLookBackTimeHr := flag.Int("salesforce_property_lookback_time_hr", 0, "")
 	hubspotPropertyLookbackLimit := flag.Int("hubspot_property_lookback_limit", 1000, "")
 	enableSlowDBQueryLogging := flag.Bool("log_slow_db_queries", false, "Logs queries with execution time greater than 50ms.")
+	
+	slackAppClientID := flag.String("slack_app_client_id", "", "")
+	slackAppClientSecret := flag.String("slack_app_client_secret", "", "")
 
 	flag.Parse()
 
@@ -273,6 +276,8 @@ func main() {
 		SalesforcePropertyLookBackTimeHr:               *salesforcePropertyLookBackTimeHr,
 		HubspotPropertyLookBackLimit:                   *hubspotPropertyLookbackLimit,
 		EnableSlowDBQueryLogging:                       *enableSlowDBQueryLogging,
+		SlackAppClientID: 							  *slackAppClientID,
+		SlackAppClientSecret: 						  *slackAppClientSecret,
 	}
 	C.InitConf(config)
 

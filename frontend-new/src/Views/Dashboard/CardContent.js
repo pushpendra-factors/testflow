@@ -138,6 +138,8 @@ function CardContent({ unit, resultState, durationObj }) {
         linkedEvents: equivalentQuery.linkedEvents,
         attr_dimensions: equivalentQuery.attr_dimensions,
         content_groups: equivalentQuery.content_groups,
+        queryOptions: {group_analysis: equivalentQuery.analyze_type},
+        attrQueries: equivalentQuery.attrQueries
       };
     }
   }, [equivalentQuery, queryType]);

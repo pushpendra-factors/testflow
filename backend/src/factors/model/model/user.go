@@ -87,6 +87,7 @@ var UserPropertiesToSkipOnMergeByCustomerUserID = []string{
 	UserPropertyHubspotContactDeleted,
 	UserPropertyHubspotContactMerged,
 	UserPropertyHubspotContactPrimaryContact,
+	U.UP_SESSION_COUNT,
 }
 
 var ErrDifferentEmailSeen error = errors.New("different_email_seen_for_customer_user_id")
@@ -689,15 +690,14 @@ func MergeUserPropertiesByCustomerUserID(projectID uint64, users []User, custome
 		for property := range *userProperties {
 			mergedUserPropertiesValues[property] = append(mergedUserPropertiesValues[property], (*userProperties)[property])
 			if U.StringValueIn(property, U.USER_PROPERTIES_MERGE_TYPE_ADD[:]) ||
-				IsEmptyPropertyValue((*userProperties)[property]) {
+				(IsEmptyPropertyValue((*userProperties)[property]) && !U.IsCRMPropertyKey(property)) {
 				continue
 			}
 
 			_, isInitialProperty := initialPropertiesVisitedMap[property]
 			if !isInitialProperty {
 				if useSourcePropertyOverwrite && !overwritePropertiesError {
-					if (source == SmartCRMEventSourceHubspot && strings.HasPrefix(property, U.HUBSPOT_PROPERTY_PREFIX)) ||
-						(source == SmartCRMEventSourceSalesforce && strings.HasPrefix(property, U.SALESFORCE_PROPERTY_PREFIX)) {
+					if U.IsCRMPropertyKeyBySource(source, property) {
 						if overwriteProperties {
 							mergedUserProperties[property] = (*userProperties)[property]
 						} else {
@@ -728,6 +728,9 @@ func MergeUserPropertiesByCustomerUserID(projectID uint64, users []User, custome
 	}
 	mergedUserProperties[U.UP_MERGE_TIMESTAMP] = U.TimeNowUnix()
 
+	// removing U.UP_SESSION_COUNT, from user properties.
+	delete(mergedUserProperties, U.UP_SESSION_COUNT)
+
 	return &mergedUserProperties, http.StatusOK
 }
 
@@ -750,20 +753,12 @@ func getCRMTimestampValue(value interface{}) (int64, error) {
 	return timestamp, nil
 }
 
-func IsAllowedCRMSourceForOverwrites(source string) bool {
-	if source != SmartCRMEventSourceHubspot && source != SmartCRMEventSourceSalesforce && source != CRM_SOURCE_NAME_MARKETO {
-		return false
-	}
-
-	return true
-}
-
 func CheckForCRMUserPropertiesOverwrite(source string, objectType string, incomingProperties map[string]interface{},
 	currentProperties map[string]interface{}) (bool, error) {
 	logCtx := log.WithField("source", source).
 		WithField("objectType", objectType)
 
-	if !IsAllowedCRMSourceForOverwrites(source) {
+	if !IsCRMSource(source) {
 		return false, nil
 	}
 
@@ -792,28 +787,37 @@ func CheckForCRMUserPropertiesOverwrite(source string, objectType string, incomi
 	return overwriteProperties, nil
 }
 
-var SourceUserPropertiesOverwritePropertyKeys = map[string]map[string]string{
-	SmartCRMEventSourceHubspot: {
-		HubspotDocumentTypeNameContact: util.PROPERTY_KEY_LAST_MODIFIED_DATE,
-		HubspotDocumentTypeNameCompany: util.PROPERTY_KEY_LAST_MODIFIED_DATE_HS,
-		HubspotDocumentTypeNameDeal:    util.PROPERTY_KEY_LAST_MODIFIED_DATE_HS,
-	},
-	SmartCRMEventSourceSalesforce: {
-		SalesforceDocumentTypeNameLead:        util.PROPERTY_KEY_LAST_MODIFIED_DATE,
-		SalesforceDocumentTypeNameContact:     util.PROPERTY_KEY_LAST_MODIFIED_DATE,
-		SalesforceDocumentTypeNameAccount:     util.PROPERTY_KEY_LAST_MODIFIED_DATE,
-		SalesforceDocumentTypeNameOpportunity: util.PROPERTY_KEY_LAST_MODIFIED_DATE,
-	},
-	CRM_SOURCE_NAME_MARKETO: {
-		"lead": "updated_at",
-	},
-}
+//  List of constants to be upadated for each CRM
+var (
+	// List of property key which tracks update in the object. Property key without prefixes
+	SourceUserPropertiesOverwritePropertyKeys = map[string]map[string]string{
+		U.CRM_SOURCE_NAME_HUBSPOT: {
+			HubspotDocumentTypeNameContact: util.PROPERTY_KEY_LAST_MODIFIED_DATE,
+			HubspotDocumentTypeNameCompany: util.PROPERTY_KEY_LAST_MODIFIED_DATE_HS,
+			HubspotDocumentTypeNameDeal:    util.PROPERTY_KEY_LAST_MODIFIED_DATE_HS,
+		},
+		U.CRM_SOURCE_NAME_SALESFORCE: {
+			SalesforceDocumentTypeNameLead:        util.PROPERTY_KEY_LAST_MODIFIED_DATE,
+			SalesforceDocumentTypeNameContact:     util.PROPERTY_KEY_LAST_MODIFIED_DATE,
+			SalesforceDocumentTypeNameAccount:     util.PROPERTY_KEY_LAST_MODIFIED_DATE,
+			SalesforceDocumentTypeNameOpportunity: util.PROPERTY_KEY_LAST_MODIFIED_DATE,
+		},
+		U.CRM_SOURCE_NAME_MARKETO: {
+			"lead": "updated_at",
+		},
+	}
 
-var BlacklistUserPropertiesUpdateTimestampBySource = map[string]bool{
-	SmartCRMEventSourceHubspot:    true,
-	SmartCRMEventSourceSalesforce: true,
-	CRM_SOURCE_NAME_MARKETO:       true,
-}
+	// Block updating user properties_update_timestamp. CRM uses object property key to update.
+	BlacklistUserPropertiesUpdateTimestampBySource = map[string]bool{
+		SmartCRMEventSourceHubspot:    true,
+		SmartCRMEventSourceSalesforce: true,
+		U.CRM_SOURCE_NAME_MARKETO:     true,
+	}
+
+	/*
+		CRM_SOURCE and ALLOWED_CRM_SOURCES constants should be updated for CRM source check
+	*/
+)
 
 func GetSourceUserPropertyOverwritePropertySuffix(source string, objectType string) string {
 

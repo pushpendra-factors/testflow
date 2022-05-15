@@ -47,7 +47,7 @@ func GetDisplayEventNamesHandler(displayNames map[string]string) map[string]stri
 	for event, displayName := range displayNames {
 		displayNameEvents[event] = displayName
 	}
-	return displayNames
+	return displayNameEvents
 }
 
 func RemoveGroupEventNamesOnUserEventNames(eventNames map[string][]string) map[string][]string {

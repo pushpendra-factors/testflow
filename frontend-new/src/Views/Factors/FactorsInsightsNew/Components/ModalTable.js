@@ -5,29 +5,10 @@ import {
 import _, { isEmpty } from 'lodash';
 import { connect } from 'react-redux';
 import { Text, SVG, FaErrorComp, FaErrorLog, Number } from 'factorsComponents';
+import {renderAttributeValue} from '../Utils/renderAttributeVal'
 
-const InsightItem = ({ data, modalData, explainMatchEventName }) => {
 
-    const renderAttributeValue = (data) => {
-        let attributeValue = '';
-        if (_.isEmpty(data?.factors_insights_attribute[0]?.factors_attribute_value)) {
-            let attributeBoundKey = '';
-            if (data?.factors_insights_attribute[0]?.factors_attribute_use_bound == 'OnlyUpper') {
-                attributeBoundKey = `<= ${data?.factors_insights_attribute[0]?.factors_attribute_upper_bound}`
-            }
-            if (data?.factors_insights_attribute[0]?.factors_attribute_use_bound == 'OnlyLower') {
-                attributeBoundKey = `>= ${data?.factors_insights_attribute[0]?.factors_attribute_lower_bound}`
-            }
-            if (data?.factors_insights_attribute[0]?.factors_attribute_use_bound == 'Both') {
-                attributeBoundKey = `>= ${data?.factors_insights_attribute[0]?.factors_attribute_lower_bound} and <= ${data?.factors_insights_attribute[0]?.factors_attribute_upper_bound}`
-            }
-            attributeValue = attributeBoundKey;
-        }
-        else {
-            attributeValue = `= ${data?.factors_insights_attribute[0]?.factors_attribute_value}`;
-        }
-        return attributeValue
-    }
+const InsightItem = ({ data, modalData, explainMatchEventName }) => { 
 
     if (data) {
         return data?.map((item) => {
@@ -35,7 +16,7 @@ const InsightItem = ({ data, modalData, explainMatchEventName }) => {
                 return (
                     <div className={`flex items-center justify-between cursor-pointer explain-table--row`}>
                         <div className={`py-2 px-4 flex items-center `}>
-                            <Tag className={'m-0 mx-2'} className={'fa-tag--regular fa-tag--highlight truncate'}> {explainMatchEventName(item?.factors_insights_attribute[0]?.factors_attribute_key, false, 'blue')}</Tag>
+                            <Tag className={'fa-tag--regular fa-tag--highlight truncate'}> {explainMatchEventName(item?.factors_insights_attribute[0]?.factors_attribute_key, false, 'blue')}</Tag>
                             {/* <Text type={'title'} level={7} weight={'bold'} color={'grey'} extraClass={'m-0 mr-3'}>{generateInsightKey(item)}</Text> */}
                             <Text type={'title'} level={7} weight={'bold'} color={'grey'} extraClass={'m-0 mr-3'}>{renderAttributeValue(item)}</Text>
 

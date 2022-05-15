@@ -50,15 +50,16 @@ type ProjectSetting struct {
 	//Salesforce settings
 	IntSalesforceEnabledAgentUUID *string `json:"int_salesforce_enabled_agent_uuid,omitempty"`
 	//Linkedin related fields
-	IntLinkedinAdAccount          string  `json:"int_linkedin_ad_account"`
-	IntLinkedinAccessToken        string  `json:"int_linkedin_access_token"`
-	IntLinkedinRefreshToken       string  `json:"int_linkedin_refresh_token"`
-	IntLinkedinRefreshTokenExpiry int64   `json:"int_linkedin_refresh_token_expiry"`
-	IntLinkedinAccessTokenExpiry  int64   `json:"int_linkedin_access_token_expiry"`
-	IntLinkedinAgentUUID          *string `json:"int_linkedin_agent_uuid"`
-	IntDrift                      *bool   `gorm:"not null;default:false" json:"int_drift,omitempty"`
-	IntGoogleIngestionTimezone    string  `json:"int_google_ingestion_timezone"`
-	IntClearBit                   *bool   `gorm:"not null;default:false" json:"int_clear_bit,omitempty"`
+	IntLinkedinAdAccount          string          `json:"int_linkedin_ad_account"`
+	IntLinkedinAccessToken        string          `json:"int_linkedin_access_token"`
+	IntLinkedinRefreshToken       string          `json:"int_linkedin_refresh_token"`
+	IntLinkedinRefreshTokenExpiry int64           `json:"int_linkedin_refresh_token_expiry"`
+	IntLinkedinAccessTokenExpiry  int64           `json:"int_linkedin_access_token_expiry"`
+	IntLinkedinAgentUUID          *string         `json:"int_linkedin_agent_uuid"`
+	IntDrift                      *bool           `gorm:"not null;default:false" json:"int_drift,omitempty"`
+	IntGoogleIngestionTimezone    string          `json:"int_google_ingestion_timezone"`
+	IntClearBit                   *bool           `gorm:"not null;default:false" json:"int_clear_bit,omitempty"`
+	IntAdwordsClientManagerMap    *postgres.Jsonb `json:"int_adwords_client_manager_map"`
 }
 
 type AttributionConfig struct {
@@ -87,6 +88,7 @@ type AdwordsProjectSettings struct {
 	AgentUUID                  string
 	RefreshToken               string
 	IntGoogleIngestionTimezone string
+	IntAdwordsClientManagerMap *postgres.Jsonb
 }
 
 type GoogleOrganicProjectSettings struct {

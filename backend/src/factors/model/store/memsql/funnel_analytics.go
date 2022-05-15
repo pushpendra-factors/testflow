@@ -67,7 +67,7 @@ func (store *MemSQL) RunFunnelQuery(projectId uint64, query model.Query) (*model
 		logCtx.WithFields(log.Fields{"result": result, "err": err}).Info("SenseHQDebugLog1")
 	}
 
-	if len(query.GroupByProperties) > 0 {
+	if len(query.GroupByProperties) > 0 && len(result.Rows) > 0 {
 		// $no_group comes as the last record for MemSQL query. Put back as first.
 		noGroupRow := result.Rows[len(result.Rows)-1]
 		result.Rows = append([][]interface{}{noGroupRow}, result.Rows[0:len(result.Rows)-1]...)
@@ -141,9 +141,7 @@ func (store *MemSQL) RunFunnelQuery(projectId uint64, query model.Query) (*model
 
 // updatedMetaStepTimeInfoHeaders updates meta rows to match the result rows
 func updatedMetaStepTimeInfoHeaders(result *model.QueryResult) {
-	logFields := log.Fields{
-		"result": result,
-	}
+	logFields := log.Fields{}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	// Update the row headers in MetaStepTimeInfo using result original group count
@@ -165,7 +163,6 @@ func updatedMetaStepTimeInfoHeaders(result *model.QueryResult) {
 // addStepTimeToMeta adds step time in result's meta metrics
 func addStepTimeToMeta(result *model.QueryResult, logCtx *log.Entry) error {
 	logFields := log.Fields{
-		"result":  result,
 		"log_ctx": logCtx,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -246,9 +243,7 @@ func BuildFunnelQuery(projectId uint64, query model.Query, groupIds []int) (stri
 }
 
 func translateNullToZeroOnFunnelResult(result *model.QueryResult) {
-	logFields := log.Fields{
-		"result": result,
-	}
+	logFields := log.Fields{}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	var percentageIndexes []int
 
@@ -270,9 +265,7 @@ func translateNullToZeroOnFunnelResult(result *model.QueryResult) {
 }
 
 func addStepConversionPercentageToFunnel(result *model.QueryResult) error {
-	logFields := log.Fields{
-		"result": result,
-	}
+	logFields := log.Fields{}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if len(result.Rows) == 0 {
 		return errors.New("invalid funnel result")
@@ -695,7 +688,7 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q model.Query, groupIds []int
 		addParams = egParams
 		var addJoinStatement string
 		if groupIds[i] != 0 {
-			addJoinStatement = fmt.Sprintf("JOIN users AS groups ON events.user_id=groups.id JOIN users ON users.group_%d_user_id = groups.id AND users.project_id = ? ", groupIds[i])
+			addJoinStatement = fmt.Sprintf("LEFT JOIN users ON users.group_%d_user_id = events.user_id AND users.project_id = ? ", groupIds[i])
 		} else {
 			addJoinStatement = "JOIN users ON events.user_id=users.id AND users.project_id = ? "
 		}

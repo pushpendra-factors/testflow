@@ -5,10 +5,6 @@ import MomentTz from 'Components/MomentTz';
 import { useSelector } from 'react-redux';
 // import { TimeZoneOffsetValues } from 'Utils/constants';
 import {
-  getFirstDayOfLastWeek,
-  getLastDayOfLastWeek,
-  getFirstDayOfLastMonth,
-  getLastDayOfLastMonth,
   getRangeByLabel,
 } from './utils';
 
@@ -34,6 +30,7 @@ const FaDatepicker = ({
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [datePickerType, setdatePickerType] = useState('');
   const [dateString, setdateString] = useState(false);
+  const [quarterDateStr, setQuarterDateStr] = useState('');
 
   // const { active_project } = useSelector((state) => state.global); 
   
@@ -58,7 +55,7 @@ const FaDatepicker = ({
   const onChange = (startDate, dateString) => { 
     setShowDatePicker(false);
     const dateType = datePickerType;
-    const endDate = MomentTz(startDate).add(1, MomentTzKey[dateType]);
+    let endDate = MomentTz(startDate).startOf('day').add(1, MomentTzKey[dateType]);
 
     const newDateData = {
       ...dateData,
@@ -88,16 +85,17 @@ const FaDatepicker = ({
           endDate: endDateMonth,
           dateType: datePickerType,
         };
-
+        setQuarterDateStr(`${endDate.year()}, Q${startDate.quarter()}`)
         onSelect(newDateDataMonth);
       } else {
+        endDate = MomentTz(startDate).endOf('Q');
         let newDateDataMonth = {
           ...dateData,
           startDate,
           endDate,
           dateType: datePickerType,
         };
-
+        setQuarterDateStr(`${endDate.year()}, Q${startDate.quarter()}`)
         onSelect(newDateDataMonth);
       }
     } else {
@@ -231,6 +229,36 @@ const FaDatepicker = ({
       setdateString('Last Month');
       onSelect(newDateData);
     }
+    if (type == 'this_quarter') {
+      const dateRng = getRangeByLabel('This Quarter');
+      let startDate = dateRng.startDate;
+      let endDate = dateRng.endDate;
+      let newDateData = {
+        ...dateData,
+        startDate,
+        endDate,
+        dateType: type,
+        dateString: dateRng,
+      };
+      setdateString('This Quarter');
+      onSelect(newDateData);
+      setQuarterDateStr(dateRng.dateStr);
+    }
+    if (type == 'last_quarter') { 
+      const dateRng = getRangeByLabel('Last Quarter');
+      let startDate = dateRng.startDate;
+      let endDate = dateRng.endDate;
+      let newDateData = {
+        ...dateData,
+        startDate,
+        endDate,
+        dateType: type,
+        dateString: dateRng,
+      };
+      setdateString('Last Quarter');
+      onSelect(newDateData);
+      setQuarterDateStr(dateRng.dateStr);
+    }
   };
 
   const showDatePickerFn = (type) => {
@@ -278,6 +306,16 @@ const FaDatepicker = ({
           <Menu.Item key="last_month">
             <a target='_blank' onClick={() => returnPreSetDate('last_month')}>
               Last Month
+            </a>
+          </Menu.Item>
+          <Menu.Item key="this_quarter">
+            <a target='_blank' onClick={() => returnPreSetDate('this_quarter')}>
+              This Quarter
+            </a>
+          </Menu.Item>
+          <Menu.Item key="last_quarter">
+            <a target='_blank' onClick={() => returnPreSetDate('last_quarter')}>
+              Last Quarter
             </a>
           </Menu.Item>
           <Menu.Divider />
@@ -340,6 +378,9 @@ const FaDatepicker = ({
     if (dateString == 'Now') {
       // return MomentTz(range.startDate).format('MMM DD, YYYY hh:mma')
       return 'Now';
+    }
+    if(dateString === 'This Quarter' || dateString === 'Last Quarter' || datePickerType === 'quarter') {
+      return quarterDateStr;
     }
     if (dateString == 'Today' || range.startDate == range.endDate) {
       return MomentTz(range.startDate).format('MMM DD, YYYY');

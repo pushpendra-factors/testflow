@@ -3,7 +3,9 @@ package memsql
 import (
 	"bufio"
 	"encoding/json"
-	"factors/model/model"
+	"factors/filestore"
+	serviceGCS "factors/services/gcstorage"
+	U "factors/util"
 	"fmt"
 	"runtime"
 	osDebug "runtime/debug"
@@ -12,11 +14,9 @@ import (
 	"strings"
 	"time"
 
-	"factors/filestore"
-	serviceGCS "factors/services/gcstorage"
-	U "factors/util"
-
 	log "github.com/sirupsen/logrus"
+
+	"factors/model/model"
 )
 
 // General idea of plotting Journey Map would be as follows.
@@ -85,7 +85,7 @@ func getEventAsString(event interface{}) string {
 
 func getValueFromProperties(propertyMap map[string]interface{}, propertyName string) interface{} {
 	logFields := log.Fields{
-		"property_map": propertyMap,
+		"property_map":  propertyMap,
 		"property_name": propertyName,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -120,22 +120,22 @@ func updateEventWithParsedFields(denormalizedEvent *ArchiveEventFormat) error {
 func getUserEventsFromFileChargebee(fileName string, segmentAGoals, segmentBGoals, segmentCGoals []model.QueryEventWithProperties,
 	userEventsMap *map[string][]ArchiveEventFormat, segmentAUsers, segmentBUsers, segmentCUsers *map[string]bool,
 	journeyEvents []model.QueryEventWithProperties, startTime, endTime int64, cloudManager filestore.FileManager) error {
-		logFields := log.Fields{
-			"file_name": fileName,
-			"segment_a_goals": segmentAGoals,
-			"segment_b_goals": segmentBGoals,
-			"segment_c_goals": segmentCGoals,
-			"user_events_map": userEventsMap,
-			"segment_a_user": segmentAUsers,
-			"segment_b_users": segmentBUsers,
-			"segment_c_user": segmentCUsers,
-			"journey_events": journeyEvents,
-			"start_time": startTime,
-			"end_time": endTime,
-			"cloud_manager": cloudManager,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-		logCtx := log.WithFields(logFields)
+	logFields := log.Fields{
+		"file_name":       fileName,
+		"segment_a_goals": segmentAGoals,
+		"segment_b_goals": segmentBGoals,
+		"segment_c_goals": segmentCGoals,
+		"user_events_map": userEventsMap,
+		"segment_a_user":  segmentAUsers,
+		"segment_b_users": segmentBUsers,
+		"segment_c_user":  segmentCUsers,
+		"journey_events":  journeyEvents,
+		"start_time":      startTime,
+		"end_time":        endTime,
+		"cloud_manager":   cloudManager,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
 
 	logCtx.Infof("Scanning events from file %s", fileName)
 	fileNameSplit := strings.Split(fileName, "/")
@@ -195,20 +195,20 @@ func getUserEventsFromFile(fileName string, goalEvents []model.QueryEventWithPro
 	userEventsMap *map[string][]ArchiveEventFormat, userCustomerUserIDMap map[string]string,
 	goalFulfilledUsersMap *map[string]bool, journeyEvents []model.QueryEventWithProperties,
 	startTime, endTime int64, cloudManager filestore.FileManager) error {
-		logFields := log.Fields{
-			"file_name": fileName,
-			"goal_events": goalEvents,
-			"user_customer_user_id_map": userCustomerUserIDMap,
-			"goal_ful_filled_users_map": goalFulfilledUsersMap,
-			"user_events_map": userEventsMap,
-			"journey_events": journeyEvents,
-			"start_time": startTime,
-			"end_time": endTime,
-			"cloud_manager": cloudManager,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"file_name":                 fileName,
+		"goal_events":               goalEvents,
+		"user_customer_user_id_map": userCustomerUserIDMap,
+		"goal_ful_filled_users_map": goalFulfilledUsersMap,
+		"user_events_map":           userEventsMap,
+		"journey_events":            journeyEvents,
+		"start_time":                startTime,
+		"end_time":                  endTime,
+		"cloud_manager":             cloudManager,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
-		logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(logFields)
 
 	logCtx.Infof("Scanning events from file %s", fileName)
 	fileNameSplit := strings.Split(fileName, "/")
@@ -274,9 +274,9 @@ func getUserEventsFromFile(fileName string, goalEvents []model.QueryEventWithPro
 
 func getUserCustomerUserIDMapFromFile(fileName string, userCustomerUserIDMap *map[string]string, cloudManager filestore.FileManager) error {
 	logFields := log.Fields{
-		"file_name": fileName,
+		"file_name":                 fileName,
 		"user_customer_user_id_map": userCustomerUserIDMap,
-		"cloud_manager": cloudManager,
+		"cloud_manager":             cloudManager,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	log.Infof("Scanning events from file %s", fileName)
@@ -324,10 +324,10 @@ func getUserCustomerUserIDMapFromFile(fileName string, userCustomerUserIDMap *ma
 // TODO(prateek): Add tests for this. Move to model.go model.
 func areEqualPropertyValues(value1, value2 interface{}, propertyType, operator string) bool {
 	logFields := log.Fields{
-		"value1": value1,
-		"value2": value2,
+		"value1":        value1,
+		"value2":        value2,
 		"property_type": propertyType,
-		"operator": operator,
+		"operator":      operator,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if propertyType == U.PropertyTypeCategorical {
@@ -370,7 +370,7 @@ func areEqualPropertyValues(value1, value2 interface{}, propertyType, operator s
 func areEqualEventsWithFilters(denormalizedEvent ArchiveEventFormat, journeyEvent model.QueryEventWithProperties) bool {
 	logFields := log.Fields{
 		"denormalized_event": denormalizedEvent,
-		"journey_event": journeyEvent,
+		"journey_event":      journeyEvent,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	// Remove any traling / in event name before matching.
@@ -419,12 +419,12 @@ func areEqualEventsWithFilters(denormalizedEvent ArchiveEventFormat, journeyEven
 
 func satisfiesAnyJourneyEvent(denormalizedEvent ArchiveEventFormat, journeyEvents []model.QueryEventWithProperties,
 	visitedEventsMap map[string]bool) (bool, model.QueryEventWithProperties) {
-		logFields := log.Fields{
-			"denormalized_event": denormalizedEvent,
-			"journey_events": journeyEvents,
-			"visited_events_map": visitedEventsMap,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"denormalized_event": denormalizedEvent,
+		"journey_events":     journeyEvents,
+		"visited_events_map": visitedEventsMap,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	for _, journeyEvent := range journeyEvents {
 		if areEqualEventsWithFilters(denormalizedEvent, journeyEvent) {
 			if visitedEventsMap != nil {
@@ -449,14 +449,14 @@ func satisfiesAnyJourneyEvent(denormalizedEvent ArchiveEventFormat, journeyEvent
 func pruneUserEventsPath(userEventsMap *map[string][]ArchiveEventFormat,
 	goalEvents []model.QueryEventWithProperties, journeyEvents []model.QueryEventWithProperties,
 	eventAliasLegend map[string]string, sessionProperty string) map[string]*JourneyPatternMap {
-		logFields := log.Fields{
-			"user_events_map": userEventsMap,
-			"journey_events": journeyEvents,
-			"goal_events": goalEvents,
-			"event_alias_legend": eventAliasLegend,
-			"session_property": sessionProperty,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"user_events_map":    userEventsMap,
+		"journey_events":     journeyEvents,
+		"goal_events":        goalEvents,
+		"event_alias_legend": eventAliasLegend,
+		"session_property":   sessionProperty,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	allPatternsMap := make(map[string]*JourneyPatternMap)
 	logCtx := log.WithFields(logFields)
@@ -589,14 +589,14 @@ func dedupJourneyEvents(journeyEvents []model.QueryEventWithProperties) []model.
 }
 
 func createEventAliasLegendForJourneyEvents(journeyEvents []model.QueryEventWithProperties) (
-	
+
 	eventAliasLegend, reverseEventAliasLegend map[string]string) {
-		logFields := log.Fields{
-			"event_alias_legend": eventAliasLegend,
-			"journey_events": journeyEvents,
-			"reverse_event_alias_legend": reverseEventAliasLegend,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"event_alias_legend":         eventAliasLegend,
+		"journey_events":             journeyEvents,
+		"reverse_event_alias_legend": reverseEventAliasLegend,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	eventAliasLegend = make(map[string]string)
 	reverseEventAliasLegend = make(map[string]string)
@@ -611,15 +611,15 @@ func createEventAliasLegendForJourneyEvents(journeyEvents []model.QueryEventWith
 func prettyPrintJourneyPatterns(projectID uint64, allPatternsMap map[string]*JourneyPatternMap,
 	outputFileContents string, journeyEvents []model.QueryEventWithProperties,
 	eventAliasLegend, reverseEventAliasLegend map[string]string) {
-		logFields := log.Fields{
-			"project_id": projectID,
-			"journey_events": journeyEvents,
-			"all_patterns_map": allPatternsMap,
-			"output_file_contents": outputFileContents,
-			"event_alias_legend": eventAliasLegend,
-			"reverse_event_alias_legend": reverseEventAliasLegend,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"project_id":                 projectID,
+		"journey_events":             journeyEvents,
+		"all_patterns_map":           allPatternsMap,
+		"output_file_contents":       outputFileContents,
+		"event_alias_legend":         eventAliasLegend,
+		"reverse_event_alias_legend": reverseEventAliasLegend,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	allPaterns := []string{}
 	for pattern := range allPatternsMap {
@@ -660,11 +660,11 @@ func prettyPrintJourneyPatterns(projectID uint64, allPatternsMap map[string]*Jou
 
 func filterUsersForGoalCompleted(userEventsMap map[string][]ArchiveEventFormat,
 	goalFulfilledUsersMap map[string]bool) map[string][]ArchiveEventFormat {
-		logFields := log.Fields{
-			"user_events_map": userEventsMap,
-			"goal_fulfilled_users_map": goalFulfilledUsersMap,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"user_events_map":          userEventsMap,
+		"goal_fulfilled_users_map": goalFulfilledUsersMap,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	filteredUserEventsMap := make(map[string][]ArchiveEventFormat)
 	for userID, goalFulfilled := range goalFulfilledUsersMap {
 		if goalFulfilled {
@@ -676,11 +676,11 @@ func filterUsersForGoalCompleted(userEventsMap map[string][]ArchiveEventFormat,
 
 func filterUsersForGoalNotCompleted(userEventsMap map[string][]ArchiveEventFormat,
 	goalFulfilledUsersMap map[string]bool) map[string][]ArchiveEventFormat {
-		logFields := log.Fields{
-			"user_events_map": userEventsMap,
-			"goal_fulfilled_users_map": goalFulfilledUsersMap,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"user_events_map":          userEventsMap,
+		"goal_fulfilled_users_map": goalFulfilledUsersMap,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	filteredUserEventsMap := make(map[string][]ArchiveEventFormat)
 	for userID, goalFulfilled := range goalFulfilledUsersMap {
 		if !goalFulfilled {
@@ -694,21 +694,21 @@ func filterUsersForGoalNotCompleted(userEventsMap map[string][]ArchiveEventForma
 func (store *MemSQL) GetWeightedJourneyMatrix(projectID uint64, journeyEvents []model.QueryEventWithProperties,
 	goalEvents []model.QueryEventWithProperties, startTime, endTime, lookbackDays int64, eventFiles,
 	userFiles string, includeSession bool, sessionProperty string, cloudManager filestore.FileManager) {
-		logFields := log.Fields{
-			"project_id": projectID,
-			"journey_events": journeyEvents,
-			"goal_events": goalEvents,
-			"start_time": startTime,
-			"end_time": endTime,
-			"look_back_days": lookbackDays,
-			"event_files": eventFiles,
-			"user_files": userFiles,
-			"include_session": includeSession,
-			"session_property": sessionProperty,
-			"cloud_manager": cloudManager,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-		logCtx := log.WithFields(logFields)
+	logFields := log.Fields{
+		"project_id":       projectID,
+		"journey_events":   journeyEvents,
+		"goal_events":      goalEvents,
+		"start_time":       startTime,
+		"end_time":         endTime,
+		"look_back_days":   lookbackDays,
+		"event_files":      eventFiles,
+		"user_files":       userFiles,
+		"include_session":  includeSession,
+		"session_property": sessionProperty,
+		"cloud_manager":    cloudManager,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
 	userEventsMap := make(map[string][]ArchiveEventFormat)
 	goalFulfilledUsersMap := make(map[string]bool)
 
@@ -764,7 +764,7 @@ func (store *MemSQL) GetWeightedJourneyMatrix(projectID uint64, journeyEvents []
 func computeInsights5(userEventsMap map[string][]ArchiveEventFormat, segmentUsers map[string]bool) {
 	logFields := log.Fields{
 		"user_events_map": userEventsMap,
-		"segment_users": segmentUsers,
+		"segment_users":   segmentUsers,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	trialSignupEvent := model.QueryEventWithProperties{Name: "www.chargebee.com/trial-signup"}
@@ -830,12 +830,12 @@ func computeInsights5(userEventsMap map[string][]ArchiveEventFormat, segmentUser
 
 func computeInsights4(userEventsMap map[string][]ArchiveEventFormat, segmentUsers map[string]bool,
 	segmentVisitedPages []model.QueryEventWithProperties) {
-		logFields := log.Fields{
-			"user_events_map": userEventsMap,
-			"segment_users": segmentUsers,
-			"segment_visited_pages": segmentVisitedPages,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"user_events_map":       userEventsMap,
+		"segment_users":         segmentUsers,
+		"segment_visited_pages": segmentVisitedPages,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	totalSegmentUsers := len(segmentUsers)
 
@@ -872,7 +872,7 @@ func computeInsights4(userEventsMap map[string][]ArchiveEventFormat, segmentUser
 func computeInsights3(userEventsMap map[string][]ArchiveEventFormat, segmentUsers map[string]bool) {
 	logFields := log.Fields{
 		"user_events_map": userEventsMap,
-		"segment_users": segmentUsers,
+		"segment_users":   segmentUsers,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	sessionsByCampaignInitialPageURL := make(map[string]map[string]int64)
@@ -927,7 +927,7 @@ func computeInsights3(userEventsMap map[string][]ArchiveEventFormat, segmentUser
 func computeInsights2(userEventsMap map[string][]ArchiveEventFormat, segmentUsers map[string]bool) {
 	logFields := log.Fields{
 		"user_events_map": userEventsMap,
-		"segment_users": segmentUsers,
+		"segment_users":   segmentUsers,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	latestPageURLMap := make(map[string]int64)
@@ -959,13 +959,13 @@ func computeInsights2(userEventsMap map[string][]ArchiveEventFormat, segmentUser
 func computeInsights1(userEventsMap map[string][]ArchiveEventFormat, segmentUsers map[string]bool) {
 	logFields := log.Fields{
 		"user_events_map": userEventsMap,
-		"segment_users": segmentUsers,
+		"segment_users":   segmentUsers,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	propertyCounts := make(map[string][]float64)
 	noneCounts := make(map[string]int64)
-	properties := []string{U.UP_SESSION_COUNT, U.UP_PAGE_COUNT, U.UP_TOTAL_SPENT_TIME}
-	sessionEvent := model.QueryEventWithProperties{Name: U.EVENT_NAME_SESSION}
+	properties := []string{U.UP_PAGE_COUNT, U.UP_TOTAL_SPENT_TIME}
+	//sessionEvent := model.QueryEventWithProperties{Name: U.EVENT_NAME_SESSION}
 
 	for _, property := range properties {
 		propertyCounts[property] = []float64{}
@@ -974,7 +974,6 @@ func computeInsights1(userEventsMap map[string][]ArchiveEventFormat, segmentUser
 
 	for userID := range segmentUsers {
 		userCounts := map[string]float64{
-			U.UP_SESSION_COUNT:    0,
 			U.UP_PAGE_COUNT:       0,
 			U.UP_TOTAL_SPENT_TIME: 0,
 		}
@@ -999,9 +998,7 @@ func computeInsights1(userEventsMap map[string][]ArchiveEventFormat, segmentUser
 		// 	}
 		// }
 		for _, denormalizedEvent := range userEventsMap[userID] {
-			if areEqualEventsWithFilters(denormalizedEvent, sessionEvent) {
-				userCounts[U.UP_SESSION_COUNT]++
-			} else if strings.HasPrefix(denormalizedEvent.EventName, "www.") {
+			if strings.HasPrefix(denormalizedEvent.EventName, "www.") {
 				userCounts[U.UP_PAGE_COUNT]++
 				eventProperties := denormalizedEvent.EventPropertiesMap
 
@@ -1047,17 +1044,17 @@ func computeInsights1(userEventsMap map[string][]ArchiveEventFormat, segmentUser
 func ChargebeeAnalysis(segmentAGoals, segmentBGoals, segmentCGoals,
 	segmentVisitedPages []model.QueryEventWithProperties, sourceFileNames string,
 	startTime, endTime int64, cloudManager filestore.FileManager) {
-		logFields := log.Fields{
-			"segment_a_goals": segmentAGoals,
-			"segment_b_goals": segmentBGoals,
-			"segment_c_goals": segmentCGoals,
-			"segment_visited_pages": segmentVisitedPages,
-			"source_file_names": sourceFileNames,
-			"start_time": startTime,
-			"end_time": endTime,
-			"cloud_manager": cloudManager,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"segment_a_goals":       segmentAGoals,
+		"segment_b_goals":       segmentBGoals,
+		"segment_c_goals":       segmentCGoals,
+		"segment_visited_pages": segmentVisitedPages,
+		"source_file_names":     sourceFileNames,
+		"start_time":            startTime,
+		"end_time":              endTime,
+		"cloud_manager":         cloudManager,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	userEventsMap := make(map[string][]ArchiveEventFormat)
 

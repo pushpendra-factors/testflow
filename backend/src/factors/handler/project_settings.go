@@ -33,7 +33,6 @@ func GetProjectSettingHandler(c *gin.Context) {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-
 	settings, errCode := store.GetStore().GetProjectSetting(projectId)
 	if errCode != http.StatusFound {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Failed to get project settings."})

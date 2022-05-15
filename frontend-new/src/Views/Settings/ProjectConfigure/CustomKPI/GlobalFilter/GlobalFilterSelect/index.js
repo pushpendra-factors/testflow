@@ -1,22 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import styles from './index.module.scss';
-import { SVG, Text } from 'factorsComponents';
+import { SVG, Text } from 'Components/factorsComponents';
 import { Button, InputNumber, Tooltip, Select, DatePicker } from 'antd';
+// import GroupSelect2 from 'Components/QueryComposer/GroupSelect2';
 import GroupSelect2 from '../../GroupSelect2';
 import FaDatepicker from 'Components/FaDatepicker';
 import FaSelect from 'Components/FaSelect';
 import MomentTz from 'Components/MomentTz';
 import { isArray } from 'lodash';
 import moment from 'moment';
-import _ from 'lodash';
 import { DEFAULT_OPERATOR_PROPS } from 'Components/FaFilterSelect/utils';
-
-const DISPLAY_PROP = { $none: '(Not Set)' };
+import { DISPLAY_PROP } from '../../../../../../utils/constants';
 
 const defaultOpProps = DEFAULT_OPERATOR_PROPS;
 
 const { Option } = Select;
+
+const rangePicker = ['=', '!='];
+const customRangePicker = ['between', 'not between'];
+const deltaPicker = ['in the previous', 'not in the previous'];
+const currentPicker = ['in the current', 'not in the current'];
+const datePicker = ['before', 'since'];
 
 const GlobalFilterSelect = ({
   propOpts = [],
@@ -26,19 +31,13 @@ const GlobalFilterSelect = ({
   applyFilter,
   filter,
 }) => {
-  const rangePicker = ['=', '!='];
-  const customRangePicker = ['between', 'not between'];
-  const deltaPicker = ['in the previous', 'not in the previous'];
-  const currentPicker = ['in the current', 'not in the current'];
-  const datePicker = ['before', 'since'];
-
   const [propState, setPropState] = useState({
     icon: '',
     name: '',
     type: '',
   });
 
-  const [operatorState, setOperatorState] = useState('between');
+  const [operatorState, setOperatorState] = useState('=');
   const [valuesState, setValuesState] = useState(null);
 
   const [propSelectOpen, setPropSelectOpen] = useState(false);
@@ -54,7 +53,27 @@ const GlobalFilterSelect = ({
   );
 
   useEffect(() => {
-    if (filter) {
+    if (
+      currentPicker.includes(
+        isArray(operatorState) ? operatorState[0] : operatorState
+      )
+    ) {
+      setCurrentFilt();
+    }
+    if (
+      deltaPicker.includes(
+        isArray(operatorState) ? operatorState[0] : operatorState
+      )
+    ) {
+      setDeltaFilt();
+    }
+  }, [operatorState]);
+
+  useEffect(() => {
+    if (
+      (filter && !valuesState) ||
+      (filter && filter?.values !== valuesState)
+    ) {
       const prop = filter.props;
       setPropState({ icon: prop[2], name: prop[0], type: prop[1] });
       setOperatorState(filter.operator);
@@ -76,10 +95,13 @@ const GlobalFilterSelect = ({
   const setValues = () => {
     let values;
     if (filter.props[1] === 'datetime') {
-      const parsedValues = filter.values[0]
-        ? typeof filter.values[0] === 'string'
-          ? JSON.parse(filter.values)
-          : filter.values
+      const filterVals = isArray(filter.values)
+        ? filter.values[0]
+        : filter.values;
+      const parsedValues = filterVals
+        ? typeof filterVals === 'string'
+          ? JSON.parse(filterVals)
+          : filterVals
         : {};
       values = parseDateRangeFilter(
         parsedValues.fr,
@@ -89,7 +111,18 @@ const GlobalFilterSelect = ({
     } else {
       values = filter.values;
     }
-    setValuesState(values);
+    if (
+      currentPicker.includes(
+        isArray(filter.operator) ? filter.operator[0] : filter.operator
+      ) ||
+      deltaPicker.includes(
+        isArray(filter.operator) ? filter.operator[0] : filter.operator
+      )
+    ) {
+      setValuesState(JSON.stringify(values));
+    } else {
+      setValuesState(values);
+    }
   };
 
   const emitFilter = () => {
@@ -207,8 +240,12 @@ const GlobalFilterSelect = ({
       <div className={styles.filter__propContainer}>
         <Tooltip title={renderGroupDisplayName(propState)}>
           <Button
-            // icon={propState && propState.icon ? <SVG name={propState.icon} size={16} color={'purple'} /> : null}
-            className={`fa-button--truncate-xs mr-2`}
+            icon={
+              propState && propState.icon ? (
+                <SVG name={propState.icon} size={16} color={'purple'} />
+              ) : null
+            }
+            className={`fa-button--truncate fa-button--truncate-xs mr-2`}
             type='link'
             onClick={() => setPropSelectOpen(!propSelectOpen)}
           >
@@ -260,7 +297,6 @@ const GlobalFilterSelect = ({
         : valuesState
       : {};
     parsedValues['num'] = val;
-    parsedValues['gran'] = 'days';
     setValuesState(JSON.stringify(parsedValues));
     updateStateApply(true);
   };
@@ -508,7 +544,7 @@ const GlobalFilterSelect = ({
             }
           >
             <Button
-              className={`fa-button--truncate fa-button--truncate-lg`}
+              className={`fa-button--truncate`}
               type='link'
               onClick={() => setValuesSelectionOpen(!valuesSelectionOpen)}
             >

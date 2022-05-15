@@ -96,6 +96,9 @@ func (store *MemSQL) createUserWithError(user *model.User) (*model.User, error) 
 		}
 	}
 
+	// removing U.UP_SESSION_COUNT, from user properties.
+	delete(newUserProperties, U.UP_SESSION_COUNT)
+
 	newUserPropertiesJsonb, err := U.AddToPostgresJsonb(&user.Properties, newUserProperties, true)
 	if err != nil {
 		return nil, err
@@ -1378,13 +1381,13 @@ func (store *MemSQL) mergeNewPropertiesWithCurrentUserProperties(projectID uint6
 			mergedPropertiesMap[U.UP_META_OBJECT_IDENTIFIER_KEY] = newPropertiesMap[U.UP_META_OBJECT_IDENTIFIER_KEY]
 		}
 	} else {
-		if useSourcePropertyOverwrite && (source == model.SmartCRMEventSourceHubspot || source == model.SmartCRMEventSourceSalesforce) {
+		if useSourcePropertyOverwrite && model.IsCRMSource(source) {
 			for property := range newPropertiesMap {
-				if model.IsEmptyPropertyValue(newPropertiesMap[property]) {
+				if model.IsEmptyPropertyValue(newPropertiesMap[property]) && !U.IsCRMPropertyKey(property) {
 					continue
 				}
 
-				if (strings.HasPrefix(property, U.HUBSPOT_PROPERTY_PREFIX) || strings.HasPrefix(property, U.SALESFORCE_PROPERTY_PREFIX)) && overwriteProperties {
+				if U.IsCRMPropertyKeyBySource(source, property) && overwriteProperties {
 					mergedPropertiesMap[property] = newPropertiesMap[property]
 				} else {
 					if _, exists := mergedPropertiesMap[property]; !exists {
@@ -1523,6 +1526,9 @@ func (store *MemSQL) UpdateUserPropertiesV2(projectID uint64, id string,
 				(*mergedPropertiesAfterSkipMap)[property] = userPropertiesOriginalValues[user.ID][property]
 			}
 		}
+
+		// removing U.UP_SESSION_COUNT, from user properties.
+		delete(*mergedPropertiesAfterSkipMap, U.UP_SESSION_COUNT)
 
 		mergedPropertiesAfterSkipJSON, err := U.EncodeToPostgresJsonb(mergedPropertiesAfterSkipMap)
 		if err != nil {
@@ -1971,7 +1977,6 @@ func (store *MemSQL) updateUserPropertiesForSessionV2(projectID uint64,
 
 		(*userPropertiesMap)[U.UP_PAGE_COUNT] = newPageCount
 		(*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME] = newTotalSpentTime
-		(*userPropertiesMap)[U.UP_SESSION_COUNT] = newSessionCount
 
 		userPropertiesJsonb, err := U.EncodeToPostgresJsonb(userPropertiesMap)
 		if err != nil {
@@ -2061,7 +2066,6 @@ func (store *MemSQL) updateLatestUserPropertiesForSessionIfNotUpdatedV2(
 		newUserProperties := map[string]interface{}{
 			U.UP_TOTAL_SPENT_TIME: sessionUserProperties.TotalSpentTime,
 			U.UP_PAGE_COUNT:       sessionUserProperties.PageCount,
-			U.UP_SESSION_COUNT:    sessionUserProperties.SessionCount,
 		}
 		userPropertiesJsonb, err := U.AddToPostgresJsonb(existingUserProperties, newUserProperties, true)
 		if err != nil {

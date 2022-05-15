@@ -81,7 +81,7 @@ func DeleteAlertHandler(c *gin.Context) (interface{}, int, string, string, bool)
 		return nil, http.StatusBadRequest, INVALID_INPUT, "ID parse failed", true
 	}
 
-	errCode, errMsg := store.GetStore().UpdateAlert(alertID, projectID)
+	errCode, errMsg := store.GetStore().DeleteAlert(alertID, projectID)
 	if errCode != http.StatusAccepted {
 		log.Error("failed to delete alert" + errMsg)
 		return nil, errCode, PROCESSING_FAILED, "Failed to delete alert " , true

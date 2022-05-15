@@ -10,6 +10,7 @@ import DriftIntegration from "../ProjectSettings/IntegrationSettings/Drift";
 import GoogleSearchConsole from "../ProjectSettings/IntegrationSettings/GoogleSearchConsole";
 import RevealIntegration from "../ProjectSettings/IntegrationSettings/Reveal";
 import MarketoIntegration from "../ProjectSettings/IntegrationSettings/Marketo";
+import SlackIntegration from "../ProjectSettings/IntegrationSettings/Slack";
 
 import { ErrorBoundary } from "react-error-boundary";
 
@@ -38,6 +39,12 @@ const IntegrationProviderData = [
     icon: 'Marketo',
     kbLink: false,
   },
+  // {
+  //   name: 'Slack',
+  //   desc: 'Slack is a leader in marketing automation. Using our slack source, we will ingest your Program, Campaign, Person and List records into Factors.',
+  //   icon: 'Slack',
+  //   kbLink: false,
+  // },
 ];
 
 
@@ -66,6 +73,10 @@ const IntegrationCard = ({ item, index }) => {
         return (
           <MarketoIntegration kbLink={item.kbLink} setIsStatus={setIsStatus} />
         );
+      // case 'Slack':
+      //   return (
+      //     <SlackIntegration kbLink={item.kbLink} setIsStatus={setIsStatus} />
+      //   );
       default:
         return (
           <>

@@ -1,23 +1,27 @@
-import React, { useState } from 'react';
-import { Menu, Icon } from 'antd';
+import React, { useEffect, useState } from 'react';
+import { Menu, Icon, Popover, Button } from 'antd';
 import { SVG } from '../factorsComponents';
 import { useLocation, NavLink } from 'react-router-dom';
 import styles from './index.module.scss';
+import { fetchSmartEvents } from 'Reducers/events';
+import { connect } from 'react-redux';
+import { fetchProjectAgents, fetchAgentInfo } from 'Reducers/agentActions';
+import { fetchProjects } from 'Reducers/global';
 
 const { SubMenu } = Menu;
 
 const MenuItems = {
-  generalSettings: 'General Settings',
+  general: 'General Settings',
   SDK: 'Javascript SDK',
-  Users: 'Users',
-  Integrations: 'Integrations',
+  User: 'Users',
+  Integration: 'Integrations',
   EventAlias: 'Event Alias',
   Events: 'Events',
   Properties: 'Properties',
   MarketingInteractions: 'Marketing Touchpoints',
   ContentGroups: 'Content Groups',
   Touchpoints: 'Touchpoints',
-  Attributions: 'Attributions',
+  Attribution: 'Attributions',
   CustomKPI: 'Custom KPIs',
   ExplainDP: 'Top Events and Properties',
   TargetGoals: 'Target/Goals',
@@ -36,12 +40,24 @@ const MapNametToLocation = {
   attribution: '/attribution',
   configure: '/configure',
   settings: '/settings',
-  Emoji: '/welcome',
+  setup_assist: '/welcome',
 };
 
-const SiderMenu = ({ collapsed, setCollapsed, handleClick }) => {
+function SiderMenu({
+  collapsed,
+  setCollapsed,
+  handleClick,
+  activeProject,
+  fetchSmartEvents,
+  fetchProjectAgents,
+  fetchAgentInfo,
+  fetchProjects,
+}) {
   const location = useLocation();
   const [openKeys, setOpenKeys] = useState([]);
+  const [ShowPopOverSettings, setShowPopOverSettings] = useState(false);
+  const [ShowPopOverConfigure, setShowPopOverConfigure] = useState(false);
+
   const submenuKeys = ['sub1', 'sub2', 'sub3'];
 
   const handleOpenChange = (items) => {
@@ -54,6 +70,66 @@ const SiderMenu = ({ collapsed, setCollapsed, handleClick }) => {
       setOpenKeys(latestOpenKey ? [latestOpenKey] : []);
     }
   };
+
+  const renderSubmenu = (title) => {
+    if (title === 'configure') {
+      const items = [
+        'Events',
+        'Properties',
+        'ContentGroups',
+        'Touchpoints',
+        'CustomKPI',
+        'ExplainDP',
+        'Alerts',
+      ];
+      return (
+        <div className={styles.popover_content}>
+          {items.map((item) => {
+            return (
+              <NavLink
+                activeStyle={{ color: '#1890ff' }}
+                exact
+                to={`/configure/${item.toLowerCase()}`}
+                onClick={() => setShowPopOverConfigure(false)}
+              >
+                {MenuItems[item]}
+              </NavLink>
+            );
+          })}
+        </div>
+      );
+    } else if (title === 'settings') {
+      const items = ['general', 'User', 'Attribution', 'SDK', 'Integration'];
+      return (
+        <div className={styles.popover_content}>
+          {items.map((item) => {
+            return (
+              <NavLink
+                activeStyle={{ color: '#1890ff' }}
+                exact
+                to={`/settings/${item.toLowerCase()}`}
+                onClick={() => setShowPopOverSettings(false)}
+              >
+                {MenuItems[item]}
+              </NavLink>
+            );
+          })}
+        </div>
+      );
+    }
+  };
+
+  useEffect(() => {
+    const getData = async () => {
+      await fetchAgentInfo();
+      await fetchProjects();
+      await fetchProjectAgents(activeProject.id);
+    };
+    getData();
+    if (location.pathname === '/configure/events') {
+      fetchSmartEvents(activeProject.id);
+    }
+  }, [location.pathname, activeProject]);
 
   const onClickAction = (key) => {
     if (key.key === 'collapse') {
@@ -90,10 +166,18 @@ const SiderMenu = ({ collapsed, setCollapsed, handleClick }) => {
       className={styles.menu}
     >
       {/* <div style={{height:}}></div> */}
-      <Menu.Item key='/' icon={setIcon('dashboard')}>
+      <Menu.Item
+        className={styles.menuitems}
+        key='/'
+        icon={setIcon('dashboard')}
+      >
         <b>Dashboard</b>
       </Menu.Item>
-      <Menu.Item key='/analyse' icon={setIcon('corequery')}>
+      <Menu.Item
+        className={styles.menuitems}
+        key='/analyse'
+        icon={setIcon('corequery')}
+      >
         <b>Analyse</b>
       </Menu.Item>
       {/* <SubMenu
@@ -106,72 +190,159 @@ const SiderMenu = ({ collapsed, setCollapsed, handleClick }) => {
         icon={setIcon('profile')}
         title={<b>Profiles</b>}
       >
-        <Menu.Item key={`/profiles/people`}>{MenuItems.People}</Menu.Item>
-        <Menu.Item key={`/profiles/accounts`}>{MenuItems.Accounts}</Menu.Item>
-        <Menu.Item key={`/profiles/campaigns`}>{MenuItems.Campaigns}</Menu.Item>
-        <Menu.Item key={`/profiles/pages`}>{MenuItems.Pages}</Menu.Item>
+        <Menu.Item className={styles.menuitems} key={`/profiles/people`}>
+          {MenuItems.People}
+        </Menu.Item>
+        <Menu.Item className={styles.menuitems} key={`/profiles/accounts`}>
+          {MenuItems.Accounts}
+        </Menu.Item>
+        <Menu.Item className={styles.menuitems} key={`/profiles/campaigns`}>
+          {MenuItems.Campaigns}
+        </Menu.Item>
+        <Menu.Item className={styles.menuitems} key={`/profiles/pages`}>
+          {MenuItems.Pages}
+        </Menu.Item>
       </SubMenu> */}
-      <Menu.Item key='/explain' icon={setIcon('key')}>
+      <Menu.Item
+        className={styles.menuitems}
+        key='/explain'
+        icon={setIcon('key')}
+      >
         <b>Explain</b>
       </Menu.Item>
-      {/* <Menu.Item key='/attribution' icon={setIcon('attribution')}>
+      {/* <Menu.Item
+        className={styles.menuitems}
+        key='/attribution'
+        icon={setIcon('attribution')}
+      >
         <b>Attributions</b>
       </Menu.Item> */}
-      <SubMenu
-        onTitleClick={() => {
-          if (collapsed) {
-            setCollapsed(false);
+
+      {collapsed ? (
+        <Popover
+          overlayClassName={styles.popover}
+          title={false}
+          visible={ShowPopOverConfigure}
+          content={renderSubmenu('configure')}
+          placement={'rightTop'}
+          onVisibleChange={(visible) => {
+            setShowPopOverConfigure(visible);
+          }}
+          trigger='hover'
+        >
+          <Menu.Item
+            className={styles.menuitems}
+            key='sub2'
+            icon={setIcon('configure')}
+          ></Menu.Item>
+        </Popover>
+      ) : (
+        <SubMenu
+          onTitleClick={() => {
+            if (collapsed) {
+              setCollapsed(false);
+            }
+          }}
+          key='sub2'
+          icon={setIcon('configure')}
+          title={<b>Configure</b>}
+        >
+          <Menu.Item className={styles.menuitems_sub} key={`/configure/events`}>
+            {MenuItems.Events}
+          </Menu.Item>
+          <Menu.Item
+            className={styles.menuitems_sub}
+            key={`/configure/properties`}
+          >
+            {MenuItems.Properties}
+          </Menu.Item>
+          <Menu.Item
+            className={styles.menuitems_sub}
+            key={`/configure/contentgroups`}
+          >
+            {MenuItems.ContentGroups}
+          </Menu.Item>
+          <Menu.Item
+            className={styles.menuitems_sub}
+            key={`/configure/touchpoints`}
+          >
+            {MenuItems.Touchpoints}
+          </Menu.Item>
+          <Menu.Item
+            className={styles.menuitems_sub}
+            key={`/configure/customkpi`}
+          >
+            {MenuItems.CustomKPI}
+          </Menu.Item>
+          {/* <Menu.Item className={styles.menuitems} key={`/configure/goals`}>
+            {MenuItems.TargetGoals}
+          </Menu.Item> */}
+          <Menu.Item
+            className={styles.menuitems_sub}
+            key={`/configure/explaindp`}
+          >
+            {MenuItems.ExplainDP}
+          </Menu.Item>
+          <Menu.Item className={styles.menuitems_sub} key={`/configure/alerts`}>
+            {MenuItems.Alerts}
+          </Menu.Item>
+        </SubMenu>
+      )}
+      {collapsed ? (
+        <Popover
+          overlayClassName={styles.popover}
+          title={false}
+          visible={ShowPopOverSettings}
+          content={renderSubmenu('settings')}
+          placement={'rightTop'}
+          onVisibleChange={(visible) => {
+            setShowPopOverSettings(visible);
+          }}
+          trigger='hover'
+        >
+          <Menu.Item
+            className={styles.menuitems}
+            key='sub3'
+            icon={setIcon('settings')}
+          ></Menu.Item>
+        </Popover>
+      ) : (
+        <SubMenu
+          key='sub3'
+          icon={setIcon('settings')}
+          title={
+            <span style={{ paddingLeft: 0 }}>
+              <b>Settings</b>
+            </span>
           }
-        }}
-        key='sub2'
-        icon={setIcon('configure')}
-        title={<b>Configure</b>}
-      >
-        <Menu.Item key={`/configure/events`}>{MenuItems.Events}</Menu.Item>
-        <Menu.Item key={`/configure/properties`}>
-          {MenuItems.Properties}
-        </Menu.Item>
-        <Menu.Item key={`/configure/contentgroups`}>
-          {MenuItems.ContentGroups}
-        </Menu.Item>
-        <Menu.Item key={`/configure/touchpoints`}>
-          {MenuItems.Touchpoints}
-        </Menu.Item>
-        <Menu.Item key={`/configure/customkpi`}>
-          {MenuItems.CustomKPI}
-        </Menu.Item>
-        {/* <Menu.Item key={`/configure/goals`}>{MenuItems.TargetGoals}</Menu.Item> */}
-        <Menu.Item key={`/configure/explaindp`}>
-          {MenuItems.ExplainDP}
-        </Menu.Item>
-        <Menu.Item key={`/configure/alerts`}>{MenuItems.Alerts}</Menu.Item>
-      </SubMenu>
-      <SubMenu
-        onTitleClick={() => {
-          if (collapsed) {
-            setCollapsed(false);
-          }
-        }}
-        key='sub3'
-        icon={setIcon('settings')}
-        title={<b>Settings</b>}
-      >
-        <Menu.Item key={`/settings/general`}>
-          {MenuItems.generalSettings}
-        </Menu.Item>
-        <Menu.Item key={`/settings/user`}>{MenuItems.Users}</Menu.Item>
-        <Menu.Item key={`/settings/attribution`}>
-          {MenuItems.Attributions}
-        </Menu.Item>
-        <Menu.Item key={`/settings/sdk`}>{MenuItems.SDK}</Menu.Item>
-        <Menu.Item key={`/settings/integration`}>
-          {MenuItems.Integrations}
-        </Menu.Item>
-      </SubMenu>
+        >
+          <Menu.Item className={styles.menuitems_sub} key={`/settings/general`}>
+            {MenuItems.general}
+          </Menu.Item>
+          <Menu.Item className={styles.menuitems_sub} key={`/settings/user`}>
+            {MenuItems.User}
+          </Menu.Item>
+          <Menu.Item
+            className={styles.menuitems_sub}
+            key={`/settings/attribution`}
+          >
+            {MenuItems.Attribution}
+          </Menu.Item>
+          <Menu.Item className={styles.menuitems_sub} key={`/settings/sdk`}>
+            {MenuItems.SDK}
+          </Menu.Item>
+          <Menu.Item
+            className={styles.menuitems_sub}
+            key={`/settings/integration`}
+          >
+            {MenuItems.Integration}
+          </Menu.Item>
+        </SubMenu>
+      )}
       <Menu.Item
         className={styles.menu_assist}
         key='/welcome'
-        icon={setIcon('Emoji')}
+        icon={setIcon('setup_assist')}
       >
         <b>Setup Assist</b>
       </Menu.Item>
@@ -185,6 +356,13 @@ const SiderMenu = ({ collapsed, setCollapsed, handleClick }) => {
       <div style={{ height: '120px' }}></div>
     </Menu>
   );
-};
-
-export default SiderMenu;
+}
+const mapStateToProps = (state) => ({
+  activeProject: state.global.active_project,
+});
+export default connect(mapStateToProps, {
+  fetchSmartEvents,
+  fetchProjectAgents,
+  fetchAgentInfo,
+  fetchProjects,
+})(SiderMenu);

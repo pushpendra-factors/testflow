@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Row, Col, Tag, Avatar, Skeleton, Button, Tooltip } from 'antd';
 import { Text, SVG, FaErrorComp, FaErrorLog } from 'factorsComponents';
 import { connect } from 'react-redux';
-import { fetchProjectSettings } from 'Reducers/global';
+import { fetchProjectSettings, fetchProjectSettingsV1 } from 'Reducers/global';
 import retryDynamicImport from 'Utils/dynamicImport';
 
 // const HubspotIntegration = lazy(()=>retryDynamicImport(() => import("./Hubspot")));
@@ -26,6 +26,9 @@ import { ErrorBoundary } from 'react-error-boundary';
 import RevealIntegration from './Reveal';
 import BingIntegration from './Bing';
 import MarketoIntegration from './Marketo';
+import SlackIntegration from './Slack';
+
+import {ADWORDS_INTERNAL_REDIRECT_URI} from './util';
 
 const IntegrationProviderData = [
   {
@@ -40,6 +43,12 @@ const IntegrationProviderData = [
     icon: 'Marketo',
     kbLink: false,
   },
+  // {
+  //   name: 'Slack',
+  //   desc: 'Slack is a leader in marketing automation. Using our slack source, we will ingest your Program, Campaign, Person and List records into Factors.',
+  //   icon: 'Slack',
+  //   kbLink: false,
+  // },
   {
     name: 'Hubspot',
     desc: 'Sync your Contact, Company and Deal objects with Factors on a daily basis',
@@ -96,7 +105,7 @@ const IntegrationProviderData = [
   },
 ];
 
-const IntegrationCard = ({ item, index }) => {
+const IntegrationCard = ({ item, index, defaultOpen }) => {
   const [showForm, setShowForm] = useState(false);
   const [isActive, setIsActive] = useState(false);
   const [toggle, setToggle] = useState(false);
@@ -145,6 +154,10 @@ const IntegrationCard = ({ item, index }) => {
         return (
           <MarketoIntegration kbLink={item.kbLink} setIsStatus={setIsStatus} />
         );
+      // case 'Slack':
+      //   return (
+      //     <SlackIntegration kbLink={item.kbLink} setIsStatus={setIsStatus} />
+      //   );
       case 'Clearbit Reveal':
         return (
           <RevealIntegration active={isActive} setIsActive={setIsActive} />
@@ -164,7 +177,11 @@ const IntegrationCard = ({ item, index }) => {
   };
 
   useEffect(() => {
-    setToggle(!(isActive || isStatus === 'Active'));
+    setToggle(!(isActive || isStatus === 'Active')); 
+
+    if(defaultOpen){
+      setToggle(true)
+    }
   }, [isActive, isStatus]);
 
   return (
@@ -265,6 +282,7 @@ function IntegrationSettings({
   activeProject,
   fetchProjectSettings,
   currentAgent,
+  fetchProjectSettingsV1,
 }) {
   const [dataLoading, setDataLoading] = useState(true);
 
@@ -272,6 +290,7 @@ function IntegrationSettings({
     fetchProjectSettings(activeProject.id).then(() => {
       setDataLoading(false);
     });
+    fetchProjectSettingsV1(activeProject.id);
   }, [activeProject]);
 
   return (
@@ -310,11 +329,16 @@ function IntegrationSettings({
                       <Skeleton active paragraph={{ rows: 4 }} />
                     ) : (
                       IntegrationProviderData.map((item, index) => {
+                        let defaultOpen = false;
+                        if (window.location.href.indexOf(ADWORDS_INTERNAL_REDIRECT_URI) > -1) { 
+                          defaultOpen = true;
+                        }
                         return (
                           <IntegrationCard
                             item={item}
                             index={index}
                             key={index}
+                            defaultOpen={defaultOpen}
                             currentProjectSettings={currentProjectSettings}
                           />
                         );
@@ -337,6 +361,6 @@ const mapStateToProps = (state) => ({
   currentAgent: state.agent.agent_details,
 });
 
-export default connect(mapStateToProps, { fetchProjectSettings })(
+export default connect(mapStateToProps, { fetchProjectSettings, fetchProjectSettingsV1 })(
   IntegrationSettings
 );

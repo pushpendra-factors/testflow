@@ -555,6 +555,7 @@ func (store *MemSQL) GetIntAdwordsProjectSettingsForProjectID(projectID uint64) 
 
 	queryStr := "SELECT project_settings.project_id, project_settings.int_adwords_customer_account_id as customer_account_id," +
 		" " + "project_settings.int_google_ingestion_timezone as int_google_ingestion_timezone," +
+		" " + "project_settings.int_adwords_client_manager_map as int_adwords_client_manager_map," +
 		" " + "agents.int_adwords_refresh_token as refresh_token, project_settings.int_adwords_enabled_agent_uuid as agent_uuid" +
 		" " + "FROM project_settings LEFT JOIN agents ON project_settings.int_adwords_enabled_agent_uuid = agents.uuid" +
 		" " + "WHERE project_settings.project_id = ?" +
@@ -570,6 +571,7 @@ func (store *MemSQL) GetAllIntAdwordsProjectSettings() ([]model.AdwordsProjectSe
 
 	queryStr := "SELECT project_settings.project_id, project_settings.int_adwords_customer_account_id as customer_account_id," +
 		" " + "project_settings.int_google_ingestion_timezone as int_google_ingestion_timezone," +
+		" " + "project_settings.int_adwords_client_manager_map as int_adwords_client_manager_map," +
 		" " + "agents.int_adwords_refresh_token as refresh_token, project_settings.int_adwords_enabled_agent_uuid as agent_uuid" +
 		" " + "FROM project_settings LEFT JOIN agents ON project_settings.int_adwords_enabled_agent_uuid = agents.uuid" +
 		" " + "WHERE project_settings.int_adwords_customer_account_id IS NOT NULL" +

@@ -2,6 +2,7 @@ package model
 
 import (
 	"errors"
+	U "factors/util"
 	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -10,7 +11,7 @@ import (
 type CRMUser struct {
 	ID         string          `gorm:"primary_key:true;auto_increment:false" json:"id"`
 	ProjectID  uint64          `gorm:"primary_key:true;auto_increment:false" json:"project_id"`
-	Source     CRMSource       `gorm:"primary_key:true;auto_increment:false" json:"source"`
+	Source     U.CRMSource     `gorm:"primary_key:true;auto_increment:false" json:"source"`
 	Type       int             `gorm:"primary_key:true;auto_increment:false" json:"type"`
 	Timestamp  int64           `gorm:"primary_key:true;auto_increment:false" json:"timestamp"`
 	Email      string          `gorm:"default:null" json:"email"`
@@ -33,34 +34,32 @@ const (
 	CRMActionDeleted CRMAction = 2
 )
 
-type CRMSource int
-
-const (
-	CRM_SOURCE_HUBSPOT         CRMSource = 1
-	CRM_SOURCE_SALESFORCE      CRMSource = 2
-	CRM_SOURCE_MARKETO         CRMSource = 3
-	CRM_SOURCE_NAME_HUBSPOT              = "hubspot"
-	CRM_SOURCE_NAME_SALESFORCE           = "salesforce"
-	CRM_SOURCE_NAME_MARKETO              = "marketo"
-)
-
-var ALLOWED_CRM_SOURCES = map[CRMSource]bool{
-	CRM_SOURCE_HUBSPOT:    true,
-	CRM_SOURCE_SALESFORCE: true,
-	CRM_SOURCE_MARKETO:    true,
+var ALLOWED_CRM_SOURCES = map[U.CRMSource]bool{
+	U.CRM_SOURCE_HUBSPOT:    true,
+	U.CRM_SOURCE_SALESFORCE: true,
+	U.CRM_SOURCE_MARKETO:    true,
 }
 
-var CRM_SOURCE = map[CRMSource]string{
-	CRM_SOURCE_HUBSPOT:    CRM_SOURCE_NAME_HUBSPOT,
-	CRM_SOURCE_SALESFORCE: CRM_SOURCE_NAME_SALESFORCE,
-	CRM_SOURCE_MARKETO:    CRM_SOURCE_NAME_MARKETO,
+var CRM_SOURCE = map[U.CRMSource]string{
+	U.CRM_SOURCE_HUBSPOT:    U.CRM_SOURCE_NAME_HUBSPOT,
+	U.CRM_SOURCE_SALESFORCE: U.CRM_SOURCE_NAME_SALESFORCE,
+	U.CRM_SOURCE_MARKETO:    U.CRM_SOURCE_NAME_MARKETO,
 }
 
-func AllowedCRMBySource(crmSource CRMSource) bool {
+func AllowedCRMBySource(crmSource U.CRMSource) bool {
 	return ALLOWED_CRM_SOURCES[crmSource]
 }
 
-func GetCRMSourceByAliasName(sourceAlias string) (CRMSource, error) {
+func IsCRMSource(source string) bool {
+	for _, crmSource := range CRM_SOURCE {
+		if source == crmSource {
+			return true
+		}
+	}
+	return false
+}
+
+func GetCRMSourceByAliasName(sourceAlias string) (U.CRMSource, error) {
 	for sourceType, alias := range CRM_SOURCE {
 		if sourceAlias == alias {
 			return sourceType, nil

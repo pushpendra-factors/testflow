@@ -1,7 +1,6 @@
 import React from 'react';
 import moment from 'moment';
 import {
-  QUERY_TYPE_CAMPAIGN,
   QUERY_TYPE_EVENT,
   CHART_TYPE_STACKED_AREA,
   CHART_TYPE_LINECHART,
@@ -9,14 +8,6 @@ import {
   CHART_TYPE_SPARKLINES,
   PREDEFINED_DATES,
   DATE_FORMATS,
-  QUERY_TYPE_ATTRIBUTION,
-  CHART_TYPE_BARCHART,
-  CHART_TYPE_SCATTER_PLOT,
-  QUERY_TYPE_FUNNEL,
-  CHART_TYPE_HORIZONTAL_BAR_CHART,
-  QUERY_TYPE_KPI,
-  QUERY_TYPE_PROFILE,
-  CHART_TYPE_PIVOT_CHART,
 } from './constants';
 import { Text } from '../components/factorsComponents';
 import { ArrowDownOutlined, ArrowUpOutlined } from '@ant-design/icons';
@@ -270,139 +261,6 @@ export const formatCount = (count, precision) => {
   }
 };
 
-export const getChartTypeMenuItems = (queryType, breakdownLength, events) => {
-  let menuItems = [];
-  if (queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_CAMPAIGN) {
-    if (breakdownLength) {
-      menuItems = [
-        {
-          key: CHART_TYPE_BARCHART,
-          name: 'Columns',
-        },
-        {
-          key: CHART_TYPE_LINECHART,
-          name: 'Line Chart',
-        },
-        {
-          key: CHART_TYPE_STACKED_AREA,
-          name: 'Stacked Area',
-        },
-        {
-          key: CHART_TYPE_STACKED_BAR,
-          name: 'Stacked Column',
-        },
-      ];
-      if (
-        queryType === QUERY_TYPE_EVENT &&
-        events.length === 1 &&
-        breakdownLength <= 3
-      ) {
-        // this chart type is only supported when there is atmost one event and there is atleast 1 breakdown and atmost 3 breakdowns
-        menuItems.push({
-          key: CHART_TYPE_HORIZONTAL_BAR_CHART,
-          name: 'Bars',
-        });
-      }
-    } else {
-      menuItems = [
-        {
-          key: CHART_TYPE_SPARKLINES,
-          name: 'Sparkline',
-        },
-        {
-          key: CHART_TYPE_LINECHART,
-          name: 'Line Chart',
-        },
-      ];
-    }
-  }
-  if (queryType === QUERY_TYPE_ATTRIBUTION) {
-    menuItems = [
-      {
-        key: CHART_TYPE_BARCHART,
-        name: 'Barchart',
-      },
-      {
-        key: CHART_TYPE_SCATTER_PLOT,
-        name: 'Scatter Plot',
-      },
-    ];
-  }
-  if (queryType === QUERY_TYPE_FUNNEL && breakdownLength) {
-    menuItems = [
-      {
-        key: CHART_TYPE_BARCHART,
-        name: 'Barchart',
-      },
-      {
-        key: CHART_TYPE_SCATTER_PLOT,
-        name: 'Scatter Plot',
-      },
-    ];
-  }
-  if (queryType === QUERY_TYPE_KPI && !breakdownLength) {
-    menuItems = [
-      {
-        key: CHART_TYPE_SPARKLINES,
-        name: 'Sparkline',
-      },
-      {
-        key: CHART_TYPE_LINECHART,
-        name: 'Line Chart',
-      },
-    ];
-  }
-
-  if (queryType === QUERY_TYPE_KPI && breakdownLength) {
-    menuItems = [
-      {
-        key: CHART_TYPE_BARCHART,
-        name: 'Columns',
-      },
-      {
-        key: CHART_TYPE_LINECHART,
-        name: 'Line Chart',
-      },
-      {
-        key: CHART_TYPE_STACKED_AREA,
-        name: 'Stacked Area',
-      },
-      {
-        key: CHART_TYPE_STACKED_BAR,
-        name: 'Stacked Column',
-      },
-    ];
-    if (breakdownLength <= 3) {
-      menuItems.push({
-        key: CHART_TYPE_HORIZONTAL_BAR_CHART,
-        name: 'Bars',
-      });
-    }
-    if (breakdownLength > 1) {
-      menuItems.push({
-        key: CHART_TYPE_PIVOT_CHART,
-        name: 'Pivot Chart',
-      });
-    }
-  }
-
-  if (queryType === QUERY_TYPE_PROFILE && breakdownLength) {
-    menuItems = [
-      {
-        key: CHART_TYPE_BARCHART,
-        name: 'Columns',
-      },
-    ];
-    if (breakdownLength <= 3) {
-      menuItems.push({
-        key: CHART_TYPE_HORIZONTAL_BAR_CHART,
-        name: 'Bars',
-      });
-    }
-  }
-  return menuItems;
-};
-
 export const formatDuration = (seconds) => {
   seconds = Number(seconds);
   if (seconds < 60) {
@@ -435,22 +293,6 @@ export const getErrorMessage = (err) => {
   }
 
   return 'Something went wrong!';
-};
-
-export const setItemToLocalStorage = (key, payload) => {
-  localStorage.setItem(key, payload);
-};
-
-export const getItemFromLocalStorage = (key) => {
-  return localStorage.getItem(key);
-};
-
-export const removeItemFromLocalStorage = (key) => {
-  localStorage.removeItem(key);
-};
-
-export const clearLocalStorage = (key) => {
-  localStorage.clear();
 };
 
 export const getValidGranularityOptions = ({ from, to }) => {
@@ -767,26 +609,6 @@ export const formatFilterDate = (selectedDates) => {
 export function isDateInMilliSeconds(date) {
   return date?.toString().length === 13;
 }
-
-export const getBreakdownDisplayTitle = (
-  breakdown,
-  userPropNames,
-  eventPropNames
-) => {
-  const property = breakdown.pr || breakdown.property;
-  const prop_category = breakdown.en || breakdown.prop_category;
-  let displayTitle =
-    prop_category === 'user'
-      ? userPropNames[property] || property
-      : prop_category === 'event'
-      ? eventPropNames[property] || property
-      : property;
-
-  if (breakdown.eventIndex) {
-    displayTitle = displayTitle + ' (event)';
-  }
-  return displayTitle;
-};
 
 export const Wait = (duration) => {
   return new Promise((resolve) => {

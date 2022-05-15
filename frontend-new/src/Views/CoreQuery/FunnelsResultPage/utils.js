@@ -7,18 +7,18 @@ import {
   getClickableTitleSorter,
   SortResults,
   SortData,
-  getDurationInSeconds,
+  getDurationInSeconds
 } from '../../../utils/dataFormatter';
 import {
   Number as NumFormat,
   Text,
-  SVG,
+  SVG
 } from '../../../components/factorsComponents';
 import styles from './index.module.scss';
 import { parseForDateTimeLabel } from '../EventsAnalytics/SingleEventSingleBreakdown/utils';
 import {
   GROUPED_MAX_ALLOWED_VISIBLE_PROPERTIES,
-  DISPLAY_PROP,
+  DISPLAY_PROP
 } from '../../../utils/constants';
 import NonClickableTableHeader from '../../../components/NonClickableTableHeader';
 
@@ -26,7 +26,7 @@ const windowSize = {
   w: window.outerWidth,
   h: window.outerHeight,
   iw: window.innerWidth,
-  ih: window.innerHeight,
+  ih: window.innerHeight
 };
 
 export const getVisibleData = (data, sorter) => {
@@ -47,34 +47,34 @@ const NoBreakdownUsersColumn = (d, breakdown, isComparisonApplied) => {
   } else {
     if (isComparisonApplied) {
       return (
-        <div className='flex items-center'>
+        <div className="flex items-center">
           <Text
-            type='title'
-            weight='normal'
-            color='grey-8'
-            extraClass='text-sm mb-0 py-2 px-4 w-1/2'
+            type="title"
+            weight="normal"
+            color="grey-8"
+            extraClass="text-sm mb-0 py-2 px-4 w-1/2"
           >
             All
           </Text>
           <div
             style={{ borderLeft: '1px solid #E7E9ED' }}
-            className='flex py-2 flex-col px-4 w-1/2'
+            className="flex py-2 flex-col px-4 w-1/2"
           >
             <Text
-              type='title'
-              weight='normal'
-              color='grey-8'
-              extraClass='text-sm mb-0'
+              type="title"
+              weight="normal"
+              color="grey-8"
+              extraClass="text-sm mb-0"
             >
               {`${moment(d.durationObj.from).format('MMM DD')} - ${moment(
                 d.durationObj.to
               ).format('MMM DD')}`}
             </Text>
             <Text
-              type='title'
-              weight='normal'
-              color='grey'
-              extraClass='text-xs mb-0'
+              type="title"
+              weight="normal"
+              color="grey"
+              extraClass="text-xs mb-0"
             >{`vs ${moment(d.comparison_duration.from).format(
               'MMM DD'
             )} - ${moment(d.comparison_duration.to).format('MMM DD')}`}</Text>
@@ -88,7 +88,7 @@ const NoBreakdownUsersColumn = (d, breakdown, isComparisonApplied) => {
 };
 
 export const grnByIndex = (headersSlice, breakdowns) => {
-  let grns = [];
+  const grns = [];
   const clonnedBreakdown = [...breakdowns];
   headersSlice.forEach((h) => {
     const brkIndex = clonnedBreakdown.findIndex((x) => h === x.pr);
@@ -129,7 +129,7 @@ export const formatData = (response, arrayMapper) => {
     return {
       index: index + 1,
       name: am.mapper,
-      data: {},
+      data: {}
     };
   });
 
@@ -190,31 +190,31 @@ export const formatData = (response, arrayMapper) => {
       value: `${value}%`,
       ...breakdownData,
       ...groupEventData,
-      Conversion: value, //used for sorting, value will be removed soon
+      Conversion: value, // used for sorting, value will be removed soon
       nonConvertedName,
       'Conversion Time': formatDuration(totalDuration),
-      ...timeData,
+      ...timeData
     };
   });
 
   return {
     groups: result,
-    events: eventsData,
+    events: eventsData
   };
 };
 
 const compareSkeleton = (val1, val2) => {
   return (
-    <div className='flex flex-col'>
+    <div className="flex flex-col">
       <Text
-        type='title'
-        weight='normal'
-        color='grey-8'
-        extraClass='text-sm mb-0'
+        type="title"
+        weight="normal"
+        color="grey-8"
+        extraClass="text-sm mb-0"
       >
         {val1}
       </Text>
-      <Text type='title' weight='normal' color='grey' extraClass='text-xs mb-0'>
+      <Text type="title" weight="normal" color="grey" extraClass="text-xs mb-0">
         {val2}
       </Text>
     </div>
@@ -250,11 +250,11 @@ export const getBreakdownTitle = (breakdown, userPropNames, eventPropNames) => {
     return displayTitle;
   }
   return (
-    <div className='flex items-center'>
-      <div className='mr-1'>{displayTitle} of </div>
+    <div className="flex items-center">
+      <div className="mr-1">{displayTitle} of </div>
       <div
         style={{ backgroundColor: '#3E516C' }}
-        className='text-white w-4 h-4 flex justify-center items-center rounded-full font-semibold leading-5 text-xs'
+        className="text-white w-4 h-4 flex justify-center items-center rounded-full font-semibold leading-5 text-xs"
       >
         {charArr[breakdown.eni - 1]}
       </div>
@@ -274,7 +274,7 @@ export const getTableColumns = (
 ) => {
   const unsortedBreakdown = _.get(resultData, 'meta.query.gbp', []);
   const isBreakdownApplied = unsortedBreakdown.length > 0;
-  const breakdown = SortData(unsortedBreakdown, 'eni', 'ascend')
+  const breakdown = SortData(unsortedBreakdown, 'eni', 'ascend');
 
   const getBreakdownColConfig = (e, index) => {
     return {
@@ -283,7 +283,7 @@ export const getTableColumns = (
         {
           key: `${e.pr} - ${e.eni}`,
           type: e.pty,
-          subtype: e.grn,
+          subtype: e.grn
         },
         currentSorter,
         handleSorting,
@@ -292,7 +292,7 @@ export const getTableColumns = (
         'pb-3'
       ),
       dataIndex: `${e.pr} - ${e.eni}`,
-      width: 200,
+      width: 400,
       fixed: !index ? 'left' : ''
     };
   };
@@ -301,7 +301,7 @@ export const getTableColumns = (
     ? breakdown
       .filter((e) => e.eni)
       .map((e, index) => {
-        return getBreakdownColConfig(e, index)
+        return getBreakdownColConfig(e, index);
       })
     : [];
 
@@ -309,21 +309,24 @@ export const getTableColumns = (
     ? breakdown
       .filter((e) => !e.eni)
       .map((e, index) => {
-        return { ...getBreakdownColConfig(e), fixed: !index && !eventBreakdownColumns.length ? 'left' : '' };
+        return {
+          ...getBreakdownColConfig(e),
+          fixed: !index && !eventBreakdownColumns.length ? 'left' : ''
+        };
       })
     : [];
 
   const UserCol = !isBreakdownApplied
     ? [
       {
-        title: <NonClickableTableHeader title='Users' />,
+        title: <NonClickableTableHeader title="Users" />,
         dataIndex: 'Grouping',
         fixed: 'left',
         width: isComparisonApplied ? 300 : 150,
         className: isComparisonApplied ? styles.usersColumn : '',
         render: (d) =>
-          NoBreakdownUsersColumn(d, breakdown, isComparisonApplied),
-      },
+          NoBreakdownUsersColumn(d, breakdown, isComparisonApplied)
+      }
     ]
     : [];
 
@@ -332,9 +335,9 @@ export const getTableColumns = (
       getClickableTitleSorter(
         'Conversion Rate',
         {
-          key: `Conversion`,
+          key: 'Conversion',
           type: 'numerical',
-          subtype: null,
+          subtype: null
         },
         currentSorter,
         handleSorting,
@@ -343,12 +346,16 @@ export const getTableColumns = (
         'pb-3'
       )
     ) : (
-        <NonClickableTableHeader verticalAlignment='end' alignment='right' title='Conversion Rate' />
-      ),
+      <NonClickableTableHeader
+        verticalAlignment="end"
+        alignment="right"
+        title="Conversion Rate"
+      />
+    ),
     dataIndex: 'Conversion',
     className: 'text-right border-none',
     width: 150,
-    render: (d) => RenderTotalConversion(d, breakdown, isComparisonApplied),
+    render: (d) => RenderTotalConversion(d, breakdown, isComparisonApplied)
   };
 
   const conversionTimeColumn = {
@@ -356,9 +363,9 @@ export const getTableColumns = (
       getClickableTitleSorter(
         'Time to Convert',
         {
-          key: `Conversion Time`,
+          key: 'Conversion Time',
           type: 'duration',
-          subtype: null,
+          subtype: null
         },
         currentSorter,
         handleSorting,
@@ -367,81 +374,100 @@ export const getTableColumns = (
         'pb-3'
       )
     ) : (
-        <NonClickableTableHeader verticalAlignment='end' alignment='right' title='Time to Convert' />
-      ),
+      <NonClickableTableHeader
+        verticalAlignment="end"
+        alignment="right"
+        title="Time to Convert"
+      />
+    ),
     dataIndex: 'Conversion Time',
     className: 'text-right has-border',
     width: 150,
-    render: (d) => RenderConversionTime(d, breakdown, isComparisonApplied),
+    render: (d) => RenderConversionTime(d, breakdown, isComparisonApplied)
   };
-
-
 
   const eventColumns = queries.map((_, index) => {
     const queryColumn = {
       title: arrayMapper[index].displayName,
-      className: 'bg-white',
+      className: 'bg-white'
     };
 
     const percentCol = {
       width: 100,
       className: 'text-right border-none',
       dataIndex: `${arrayMapper[index].displayName}-${index}-percent`,
-      title: isBreakdownApplied ? getClickableTitleSorter(
-        <SVG name='percentconversion' />,
-        {
-          key: `${arrayMapper[index].displayName}-${index}-percent`,
-          type: 'numerical',
-          subtype: null,
-        },
-        currentSorter,
-        handleSorting,
-        'right',
-        'center',
-        '',
-        'Conv. from prev. step'
+      title: isBreakdownApplied ? (
+        getClickableTitleSorter(
+          <SVG name="percentconversion" />,
+          {
+            key: `${arrayMapper[index].displayName}-${index}-percent`,
+            type: 'numerical',
+            subtype: null
+          },
+          currentSorter,
+          handleSorting,
+          'right',
+          'center',
+          '',
+          'Conv. from prev. step'
+        )
       ) : (
-          <NonClickableTableHeader
-            titleTooltip='Conv. from prev. step'
-            verticalAlignment='end'
-            alignment='right'
-            title={<SVG name='percentconversion' />}
-          />
-        ),
+        <NonClickableTableHeader
+          titleTooltip="Conv. from prev. step"
+          verticalAlignment="end"
+          alignment="right"
+          title={<SVG name="percentconversion" />}
+        />
+      ),
       render: (d) => {
-        return (isBreakdownApplied || !isComparisonApplied) ? (<><NumFormat number={d} />%</>) : compareSkeleton(d.percent + '%', d.compare_percent + '%')
-      },
+        return isBreakdownApplied || !isComparisonApplied ? (
+          <>
+            <NumFormat number={d} />%
+          </>
+        ) : (
+          compareSkeleton(d.percent + '%', d.compare_percent + '%')
+        );
+      }
     };
     const countCol = {
       width: 100,
       className: `text-right ${
         index < queries.length - 1 ? 'has-border' : 'border-none'
-        }`,
+      }`,
       dataIndex: `${arrayMapper[index].displayName}-${index}-count`,
-      title: isBreakdownApplied ? getClickableTitleSorter(
-        <SVG name='countconversion' />,
-        {
-          key: `${arrayMapper[index].displayName}-${index}-count`,
-          type: 'numerical',
-          subtype: null,
-        },
-        currentSorter,
-        handleSorting,
-        'right',
-        'center',
-        '',
-        'count'
+      title: isBreakdownApplied ? (
+        getClickableTitleSorter(
+          <SVG name="countconversion" />,
+          {
+            key: `${arrayMapper[index].displayName}-${index}-count`,
+            type: 'numerical',
+            subtype: null
+          },
+          currentSorter,
+          handleSorting,
+          'right',
+          'center',
+          '',
+          'count'
+        )
       ) : (
-          <NonClickableTableHeader
-            titleTooltip='count'
-            verticalAlignment='end'
-            alignment='right'
-            title={<SVG name='countconversion' />}
-          />
-        ),
+        <NonClickableTableHeader
+          titleTooltip="count"
+          verticalAlignment="end"
+          alignment="right"
+          title={<SVG name="countconversion" />}
+        />
+      ),
       render: (d) => {
-        return (isBreakdownApplied || !isComparisonApplied) ? (<NumFormat shortHand={true} number={d} />) : compareSkeleton(<NumFormat shortHand={true} number={d.count} />, <NumFormat shortHand={true} number={d.compare_count} />)
-      },
+        return isBreakdownApplied || !isComparisonApplied ? (
+          <NumFormat shortHand={true} number={d} />
+        ) : (
+          compareSkeleton(
+            <NumFormat shortHand={true} number={d.count} />,
+            <NumFormat shortHand={true} number={d.compare_count} />
+          )
+        );
+      }
     };
     const timeCol = [];
     if (index > 0) {
@@ -449,30 +475,34 @@ export const getTableColumns = (
         width: 100,
         className: 'text-right border-none',
         dataIndex: `time[${index - 1}-${index}]`,
-        title: isBreakdownApplied ? getClickableTitleSorter(
-          <SVG name='timeconversion' />,
-          {
-            key: `time[${index - 1}-${index}]`,
-            type: 'duration',
-            subtype: null,
-          },
-          currentSorter,
-          handleSorting,
-          'right',
-          'center',
-          '',
-          'Duration from prev. step'
+        title: isBreakdownApplied ? (
+          getClickableTitleSorter(
+            <SVG name="timeconversion" />,
+            {
+              key: `time[${index - 1}-${index}]`,
+              type: 'duration',
+              subtype: null
+            },
+            currentSorter,
+            handleSorting,
+            'right',
+            'center',
+            '',
+            'Duration from prev. step'
+          )
         ) : (
-            <NonClickableTableHeader
-              titleTooltip='Duration from prev. step'
-              verticalAlignment='end'
-              alignment='right'
-              title={<SVG name='timeconversion' />}
-            />
-          ),
+          <NonClickableTableHeader
+            titleTooltip="Duration from prev. step"
+            verticalAlignment="end"
+            alignment="right"
+            title={<SVG name="timeconversion" />}
+          />
+        ),
         render: (d) => {
-          return (isBreakdownApplied || !isComparisonApplied) ? d : compareSkeleton(d.time, d.compare_time)
-        },
+          return isBreakdownApplied || !isComparisonApplied
+            ? d
+            : compareSkeleton(d.time, d.compare_time);
+        }
       });
     }
     queryColumn.children = [percentCol, ...timeCol, countCol];
@@ -515,17 +545,25 @@ export const getTableData = (
     );
     queries.forEach((_, index) => {
       const percent = data[index].value;
-      const compare_percent = comparisonChartData && comparisonChartData[index].value;
+      const compare_percent =
+        comparisonChartData && comparisonChartData[index].value;
       const count = data[index].netCount;
-      const compare_count = comparisonChartData && comparisonChartData[index].netCount;
-      queryData[`${arrayMapper[index].displayName}-${index}-percent`] = comparisonChartData ? {
-        percent,
-        compare_percent
-      } : percent;
-      queryData[`${arrayMapper[index].displayName}-${index}-count`] = comparisonChartData ? {
-        count,
-        compare_count
-      } : count;
+      const compare_count =
+        comparisonChartData && comparisonChartData[index].netCount;
+      queryData[`${arrayMapper[index].displayName}-${index}-percent`] =
+        comparisonChartData
+          ? {
+            percent,
+            compare_percent
+          }
+          : percent;
+      queryData[`${arrayMapper[index].displayName}-${index}-count`] =
+        comparisonChartData
+          ? {
+            count,
+            compare_count
+          }
+          : count;
       if (index < queries.length - 1) {
         const time = getStepDuration(durations, index, index + 1);
         const compare_time =
@@ -534,7 +572,7 @@ export const getTableData = (
         queryData[`time[${index}-${index + 1}]`] = comparisonChartData
           ? {
             time,
-            compare_time,
+            compare_time
           }
           : time;
       }
@@ -555,8 +593,8 @@ export const getTableData = (
         'Conversion Time': comparisonChartData
           ? { overallDuration, comparisonOverallDuration }
           : overallDuration,
-        ...queryData,
-      },
+        ...queryData
+      }
     ];
   } else {
     const appliedGroups = groups.filter(
@@ -582,13 +620,13 @@ export const generateUngroupedChartsData = (response, arrayMapper) => {
       result.push({
         event: arrayMapper[index].mapper,
         netCount: netCounts[index],
-        value: 100,
+        value: 100
       });
     } else {
       result.push({
         event: arrayMapper[index].mapper,
         netCount: netCounts[index],
-        value: calculatePercentage(netCounts[index], netCounts[0]),
+        value: calculatePercentage(netCounts[index], netCounts[0])
       });
     }
     index++;
@@ -608,10 +646,7 @@ export const checkForWindowSizeChange = (callback) => {
       windowSize.ih = window.innerHeight;
     }, 0);
     callback();
-  }
-
-  // if the window doesn't resize but the content inside does by + or - 5%
-  else if (
+  } else if (
     window.innerWidth + window.innerWidth * 0.05 < windowSize.iw ||
     window.innerWidth - window.innerWidth * 0.05 > windowSize.iw
   ) {
@@ -672,7 +707,10 @@ const getConvertedValuesForScatterPlot = (metric, originalValue) => {
   if (metric === 'Conversion Time' || metric.includes('time')) {
     return Number(getDurationInSeconds(originalValue));
   }
-  console.log("getConvertedValuesForScatterPlot -> originalValue", originalValue)
+  console.log(
+    'getConvertedValuesForScatterPlot -> originalValue',
+    originalValue
+  );
   return originalValue.value || originalValue.value === 0
     ? Number(originalValue.value)
     : Number(originalValue);
@@ -701,10 +739,10 @@ export const getScatterPlotChartData = (
     series: [
       {
         color: '#4D7DB4',
-        data: plotData,
-      },
+        data: plotData
+      }
     ],
-    categories,
+    categories
   };
 };
 
@@ -713,24 +751,26 @@ export const getAxisMetricOptions = (arrayMapper) => {
   const result = [
     {
       title: 'Conversion',
-      value: 'Conversion',
+      value: 'Conversion'
     },
     {
       title: 'Conversion Time (in seconds)',
-      value: 'Conversion Time',
-    },
+      value: 'Conversion Time'
+    }
   ];
   for (let i = 0; i < arrayMapper.length; i++) {
     result.push({
       title: `${
         arrayMapper[i].displayName || arrayMapper[i].displayName
-        } (Event ${i + 1})`,
-      value: `${arrayMapper[i].displayName || arrayMapper[i].displayName}-${i}-count`,
+      } (Event ${i + 1})`,
+      value: `${
+        arrayMapper[i].displayName || arrayMapper[i].displayName
+      }-${i}-count`
     });
     if (i < arrayMapper.length - 1) {
       result.push({
         title: `Conversion Time from Event ${i + 1} to Event ${i + 2}`,
-        value: `time[${i}-${i + 1}]`,
+        value: `time[${i}-${i + 1}]`
       });
     }
   }

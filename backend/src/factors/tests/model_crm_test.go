@@ -23,7 +23,7 @@ func TestCRMCreateData(t *testing.T) {
 
 		user1 := &model.CRMUser{
 			ProjectID:  project.ID,
-			Source:     model.CRM_SOURCE_HUBSPOT,
+			Source:     U.CRM_SOURCE_HUBSPOT,
 			Type:       1,
 			ID:         "123",
 			Properties: &user1Properties,
@@ -57,7 +57,7 @@ func TestCRMCreateData(t *testing.T) {
 
 		group1 := &model.CRMGroup{
 			ProjectID:  project.ID,
-			Source:     model.CRM_SOURCE_HUBSPOT,
+			Source:     U.CRM_SOURCE_HUBSPOT,
 			Type:       1,
 			ID:         "123",
 			Properties: &user1Properties,
@@ -90,7 +90,7 @@ func TestCRMCreateData(t *testing.T) {
 
 		relationship := &model.CRMRelationship{
 			ProjectID: project.ID,
-			Source:    model.CRM_SOURCE_HUBSPOT,
+			Source:    U.CRM_SOURCE_HUBSPOT,
 			FromType:  1,
 			FromID:    "123",
 			ToType:    2,
@@ -110,10 +110,10 @@ func TestCRMCreateData(t *testing.T) {
 		activityProperties := postgres.Jsonb{json.RawMessage(`{"name":"abc","clicked":"true"}`)}
 		activity := &model.CRMActivity{
 			ProjectID:          project.ID,
-			Source:             model.CRM_SOURCE_HUBSPOT,
+			Source:             U.CRM_SOURCE_HUBSPOT,
 			Name:               "test1",
-			ExternalActivityID: "123",
 			Type:               1,
+			ExternalActivityID: "123",
 			ActorType:          1,
 			ActorID:            "123",
 			Properties:         &activityProperties,
@@ -150,7 +150,7 @@ func TestCRMMarketoEnrichment(t *testing.T) {
 
 	user1 := &model.CRMUser{
 		ProjectID:  project.ID,
-		Source:     model.CRM_SOURCE_MARKETO,
+		Source:     U.CRM_SOURCE_MARKETO,
 		Type:       typeUserLead,
 		ID:         "lead1",
 		Properties: &user1Properties,
@@ -173,7 +173,7 @@ func TestCRMMarketoEnrichment(t *testing.T) {
 	activity1Properties := postgres.Jsonb{json.RawMessage(activityProperties)}
 	activity1 := &model.CRMActivity{
 		ProjectID:          project.ID,
-		Source:             model.CRM_SOURCE_MARKETO,
+		Source:             U.CRM_SOURCE_MARKETO,
 		ExternalActivityID: externalActivityID,
 		Type:               typeActivityProgramMember,
 		Name:               "program_membership_created",
@@ -197,7 +197,7 @@ func TestCRMMarketoEnrichment(t *testing.T) {
 	activity2Properties := postgres.Jsonb{json.RawMessage(activityProperties)}
 	activity2 := &model.CRMActivity{
 		ProjectID:          project.ID,
-		Source:             model.CRM_SOURCE_MARKETO,
+		Source:             U.CRM_SOURCE_MARKETO,
 		ExternalActivityID: externalActivityID2,
 		Type:               typeActivityProgramMember,
 		Name:               "program_membership_created",
@@ -228,7 +228,7 @@ func TestCRMMarketoEnrichment(t *testing.T) {
 		typeActivityProgramMember: true,
 	}
 
-	sourceConfig, err := enrichment.NewCRMEnrichmentConfig(model.CRM_SOURCE_NAME_MARKETO, sourceObjectTypeAndAlias, userTypes, nil, activityTypes)
+	sourceConfig, err := enrichment.NewCRMEnrichmentConfig(U.CRM_SOURCE_NAME_MARKETO, sourceObjectTypeAndAlias, userTypes, nil, activityTypes)
 	assert.Nil(t, err)
 	enrichStatus := enrichment.Enrich(project.ID, sourceConfig)
 
@@ -236,7 +236,7 @@ func TestCRMMarketoEnrichment(t *testing.T) {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
 	}
 
-	sourceAlias, err := model.GetCRMSourceByAliasName(model.CRM_SOURCE_NAME_MARKETO)
+	sourceAlias, err := model.GetCRMSourceByAliasName(U.CRM_SOURCE_NAME_MARKETO)
 	assert.Nil(t, err)
 	crmUser, status := store.GetStore().GetCRMUserByTypeAndAction(project.ID, sourceAlias, "lead1", typeUserLead, model.CRMActionCreated)
 	assert.Equal(t, http.StatusFound, status)
@@ -299,7 +299,7 @@ func TestCRMMarketoEnrichment(t *testing.T) {
 	user2Properties := postgres.Jsonb{json.RawMessage(leadProperties)}
 	user2 := &model.CRMUser{
 		ProjectID:  project.ID,
-		Source:     model.CRM_SOURCE_MARKETO,
+		Source:     U.CRM_SOURCE_MARKETO,
 		Type:       typeUserLead,
 		ID:         "lead2",
 		Email:      "abc2@abc.com",
@@ -351,7 +351,7 @@ func TestCRMMarketoEnrichment(t *testing.T) {
 	user2Properties = postgres.Jsonb{json.RawMessage(leadProperties)}
 	user2 = &model.CRMUser{
 		ProjectID:  project.ID,
-		Source:     model.CRM_SOURCE_MARKETO,
+		Source:     U.CRM_SOURCE_MARKETO,
 		Type:       typeUserLead,
 		ID:         "lead2",
 		Email:      "abc2@abc.com",
@@ -379,9 +379,146 @@ func TestCRMMarketoEnrichment(t *testing.T) {
 	properties = make(map[string]interface{})
 	err = json.Unmarshal(user.Properties.RawMessage, &properties)
 	assert.Nil(t, err)
-
 	assert.Equal(t, "name3", properties["$marketo_lead_name"])
 	assert.Equal(t, "city2", properties["$marketo_lead_city"])
+
+	// update user2 crm properties if user update_timestamp is ahead of crm property timestamp
+	crmUser, status = store.GetStore().GetCRMUserByTypeAndAction(project.ID, sourceAlias, "lead2", typeUserLead, model.CRMActionCreated)
+	assert.Equal(t, http.StatusFound, status)
+	userProperties := &postgres.Jsonb{RawMessage: []byte(`{"name":"user1","city":"bangalore"}`)}
+	propertiesUpdateTimestamp := time.Now().Unix()
+	_, status = store.GetStore().UpdateUserProperties(project.ID, crmUser.UserID, userProperties, propertiesUpdateTimestamp)
+	assert.Equal(t, http.StatusAccepted, status)
+	leadProperties = fmt.Sprintf(`{"Name":"name4","city":"city2","%s":%d}`, leadUpdateTimestampProperty, lead2Timestmap.Unix()+100)
+	user2Properties = postgres.Jsonb{json.RawMessage(leadProperties)}
+	user2 = &model.CRMUser{
+		ProjectID:  project.ID,
+		Source:     U.CRM_SOURCE_MARKETO,
+		Type:       typeUserLead,
+		ID:         "lead2",
+		Email:      "abc2@abc.com",
+		Properties: &user2Properties,
+		Timestamp:  lead2Timestmap.Unix() + 100,
+	}
+	status, err = store.GetStore().CreateCRMUser(user2)
+	assert.Nil(t, err)
+	enrichStatus = enrichment.Enrich(project.ID, sourceConfig)
+	for i := range enrichStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
+	}
+	user, status = store.GetStore().GetUser(project.ID, crmUser.UserID)
+	assert.Equal(t, http.StatusFound, status)
+	// crm user updates shouldn't affect the user properties update timestamp
+	assert.Equal(t, user.PropertiesUpdatedTimestamp, propertiesUpdateTimestamp)
+	properties = make(map[string]interface{})
+	err = json.Unmarshal(user.Properties.RawMessage, &properties)
+	assert.Nil(t, err)
+	assert.Equal(t, "name4", properties["$marketo_lead_name"])
+	assert.Equal(t, "city2", properties["$marketo_lead_city"])
+}
+
+func TestCRMEmptyPropertiesUpdated(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	leadTimestmap := time.Now().AddDate(0, 0, -1)
+	leadUpdateTimestampProperty := "updated_at"
+	leadProperties := fmt.Sprintf(`{"Name":"name2","city":"city2","Stage":"lead","%s":%d}`, leadUpdateTimestampProperty, leadTimestmap.Unix())
+	leadEnProperties := postgres.Jsonb{json.RawMessage(leadProperties)}
+
+	typeUserLead := 1
+	crmUser := &model.CRMUser{
+		ProjectID:  project.ID,
+		Source:     U.CRM_SOURCE_MARKETO,
+		Type:       typeUserLead,
+		ID:         "lead1",
+		Email:      "abc2@abc.com",
+		Properties: &leadEnProperties,
+		Timestamp:  leadTimestmap.Unix(),
+	}
+	status, err := store.GetStore().CreateCRMUser(crmUser)
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, crmUser.Action, model.CRMActionCreated)
+
+	userTypes := map[int]bool{
+		typeUserLead: true,
+	}
+	sourceObjectTypeAndAlias := map[int]string{
+		typeUserLead: "lead",
+	}
+
+	sourceConfig, err := enrichment.NewCRMEnrichmentConfig(U.CRM_SOURCE_NAME_MARKETO, sourceObjectTypeAndAlias, userTypes, nil, nil)
+	assert.Nil(t, err)
+
+	enrichStatus := enrichment.Enrich(project.ID, sourceConfig)
+	for i := range enrichStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
+	}
+
+	crmUser, status = store.GetStore().GetCRMUserByTypeAndAction(project.ID, U.CRM_SOURCE_MARKETO, "lead1", typeUserLead, model.CRMActionCreated)
+	assert.Equal(t, http.StatusFound, status)
+	assert.NotEqual(t, "", crmUser.UserID)
+
+	// validte properties without empty
+	user, status := store.GetStore().GetUser(project.ID, crmUser.UserID)
+	assert.Equal(t, http.StatusFound, status)
+	event, status := store.GetStore().GetEventById(project.ID, crmUser.SyncID, crmUser.UserID)
+	assert.Equal(t, http.StatusFound, status)
+	var userProperties map[string]interface{}
+	var eventProperties map[string]interface{}
+	var eventUserProperties map[string]interface{}
+	json.Unmarshal(user.Properties.RawMessage, &userProperties)
+	json.Unmarshal(event.Properties.RawMessage, &eventProperties)
+	json.Unmarshal(event.UserProperties.RawMessage, &eventUserProperties)
+	for key, value := range map[string]interface{}{"name": "name2", "city": "city2", "stage": "lead"} {
+		enKey := model.GetCRMEnrichPropertyKeyByType(U.CRM_SOURCE_NAME_MARKETO,
+			"lead", key)
+		assert.Equal(t, value, userProperties[enKey])
+		assert.Equal(t, value, eventProperties[enKey])
+		assert.Equal(t, value, eventUserProperties[enKey])
+	}
+
+	// update with empty and null value. Both should be converted to empty string and overridden
+	leadEnProperties = postgres.Jsonb{json.RawMessage(`{"city":"","Stage":null}`)}
+
+	crmUser = &model.CRMUser{
+		ProjectID:  project.ID,
+		Source:     U.CRM_SOURCE_MARKETO,
+		Type:       typeUserLead,
+		ID:         "lead1",
+		Email:      "abc2@abc.com",
+		Properties: &leadEnProperties,
+		Timestamp:  leadTimestmap.Unix(),
+	}
+	status, err = store.GetStore().CreateCRMUser(crmUser)
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, crmUser.Action, model.CRMActionUpdated)
+
+	enrichStatus = enrichment.Enrich(project.ID, sourceConfig)
+	for i := range enrichStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
+	}
+
+	crmUser, status = store.GetStore().GetCRMUserByTypeAndAction(project.ID, U.CRM_SOURCE_MARKETO, "lead1", typeUserLead, model.CRMActionUpdated)
+	assert.Equal(t, http.StatusFound, status)
+	assert.NotEqual(t, "", crmUser.UserID)
+	user, status = store.GetStore().GetUser(project.ID, crmUser.UserID)
+	assert.Equal(t, http.StatusFound, status)
+	event, status = store.GetStore().GetEventById(project.ID, crmUser.SyncID, crmUser.UserID)
+	assert.Equal(t, http.StatusFound, status)
+
+	json.Unmarshal(user.Properties.RawMessage, &userProperties)
+	json.Unmarshal(event.Properties.RawMessage, &eventProperties)
+	json.Unmarshal(event.UserProperties.RawMessage, &eventUserProperties)
+	for key, value := range map[string]interface{}{"name": "name2", "city": "", "stage": ""} {
+		enKey := model.GetCRMEnrichPropertyKeyByType(U.CRM_SOURCE_NAME_MARKETO,
+			"lead", key)
+		assert.Equal(t, value, userProperties[enKey], enKey)
+		assert.Equal(t, value, eventProperties[enKey], enKey)
+		assert.Equal(t, value, eventUserProperties[enKey], enKey)
+	}
 }
 
 func TestCRMPropertiesSync(t *testing.T) {
@@ -402,7 +539,7 @@ func TestCRMPropertiesSync(t *testing.T) {
 
 	property1 := model.CRMProperty{
 		ProjectID:        project.ID,
-		Source:           model.CRM_SOURCE_MARKETO,
+		Source:           U.CRM_SOURCE_MARKETO,
 		Type:             1,
 		Name:             "created_at",
 		ExternalDataType: "datetime",
@@ -423,7 +560,7 @@ func TestCRMPropertiesSync(t *testing.T) {
 
 	user1 := &model.CRMUser{
 		ProjectID:  project.ID,
-		Source:     model.CRM_SOURCE_MARKETO,
+		Source:     U.CRM_SOURCE_MARKETO,
 		Type:       1,
 		ID:         "lead1",
 		Properties: &user1Properties,
@@ -438,7 +575,7 @@ func TestCRMPropertiesSync(t *testing.T) {
 	activityProperties := fmt.Sprintf(`{"Name":"Click event","status":"Responded","%s":%d}`, activityUpdateTimestampProperty, activityTimestamp.Unix())
 	activity1 := &model.CRMActivity{
 		ProjectID:          project.ID,
-		Source:             model.CRM_SOURCE_MARKETO,
+		Source:             U.CRM_SOURCE_MARKETO,
 		ExternalActivityID: "123",
 		Type:               2,
 		Name:               "program_membership_created",
@@ -454,7 +591,7 @@ func TestCRMPropertiesSync(t *testing.T) {
 
 	activityProperty1 := model.CRMProperty{
 		ProjectID:        project.ID,
-		Source:           model.CRM_SOURCE_MARKETO,
+		Source:           U.CRM_SOURCE_MARKETO,
 		Type:             2,
 		Name:             "created_at",
 		ExternalDataType: "datetime",
@@ -469,7 +606,7 @@ func TestCRMPropertiesSync(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, http.StatusConflict, status)
 
-	sourceConfig, err := enrichment.NewCRMEnrichmentConfig(model.CRM_SOURCE_NAME_MARKETO, typeAlias, userTypeMap, nil, activityTypeMap)
+	sourceConfig, err := enrichment.NewCRMEnrichmentConfig(U.CRM_SOURCE_NAME_MARKETO, typeAlias, userTypeMap, nil, activityTypeMap)
 	assert.Nil(t, err)
 	enrichStatus := enrichment.Enrich(project.ID, sourceConfig)
 	for i := range enrichStatus {
@@ -480,19 +617,18 @@ func TestCRMPropertiesSync(t *testing.T) {
 	for i := range enrichStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
 	}
-
 	propertyDetails, status := store.GetStore().GetAllPropertyDetailsByProjectID(project.ID, "", true)
 	assert.Equal(t, http.StatusFound, status)
 	assert.Len(t, *propertyDetails, 1)
-	assert.Equal(t, U.PropertyTypeDateTime, (*propertyDetails)[model.GetCRMEnrichPropertyKeyByType(model.CRM_SOURCE_NAME_MARKETO, "lead", "created_at")])
+	assert.Equal(t, U.PropertyTypeDateTime, (*propertyDetails)[model.GetCRMEnrichPropertyKeyByType(U.CRM_SOURCE_NAME_MARKETO, "lead", "created_at")])
 
 	status, displayNames := store.GetStore().GetDisplayNamesForObjectEntities(project.ID)
 	assert.Equal(t, http.StatusFound, status)
-	assert.Equal(t, "marketo lead Created At", displayNames[model.GetCRMEnrichPropertyKeyByType(model.CRM_SOURCE_NAME_MARKETO, "lead", "created_at")])
+	assert.Equal(t, "marketo lead Created At", displayNames[model.GetCRMEnrichPropertyKeyByType(U.CRM_SOURCE_NAME_MARKETO, "lead", "created_at")])
 
 	status, displayNames = store.GetStore().GetDisplayNamesForObjectEntities(project.ID)
 	assert.Equal(t, http.StatusFound, status)
-	assert.Equal(t, "marketo program_member Created At", displayNames[model.GetCRMEnrichPropertyKeyByType(model.CRM_SOURCE_NAME_MARKETO, "program_member", "created_at")])
+	assert.Equal(t, "marketo program_member Created At", displayNames[model.GetCRMEnrichPropertyKeyByType(U.CRM_SOURCE_NAME_MARKETO, "program_member", "created_at")])
 
 	// change data type should be allowed to insert
 	property1.ExternalDataType = "int"

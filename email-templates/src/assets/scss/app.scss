@@ -19,18 +19,32 @@ body{
 }
 
 .primary-btn{
-    background-color: #5949BC; 
+    background-color: #5949BC;
     min-width: 150px; 
     border-radius: 4px;
     padding: 12px 20px;
     text-align: center;
     color: #fff !important;
 
+    &.small{
+        font-size: 14px;
+        padding: 8px 20px;
+    }
+
+}
+.divider-line{
+    border-top: 1px solid #E7E9ED;
+    display: block;
+    padding: 5px 0;
+    margin: 10px 0;
+    width: 100%;
+    height: 1px; 
 }
 
 .h7{
     font-size: $small-font-size;
     font-size: 400;
+    font-size: 14px;
 }
 .medium-grey{
     color: $medium-gray;

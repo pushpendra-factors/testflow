@@ -62,10 +62,9 @@ func (store *MemSQL) RunEventsGroupQuery(queriesOriginal []model.Query, projectI
 func (store *MemSQL) runSingleEventsQuery(projectId uint64, query model.Query,
 	resultHolder *model.QueryResult, waitGroup *sync.WaitGroup) {
 	logFields := log.Fields{
-		"query":         query,
-		"project_id":    projectId,
-		"result_holder": resultHolder,
-		"wait_group":    waitGroup,
+		"query":      query,
+		"project_id": projectId,
+		"wait_group": waitGroup,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
@@ -233,9 +232,7 @@ func buildErrorResult(errMsg string) *model.QueryResult {
 // updateEventNameInHeaderAndAddMeta makes header from 0_$session to $session
 // and adds event's index, name and headerIndex in meta
 func updateEventNameInHeaderAndAddMeta(result *model.QueryResult) {
-	logFields := log.Fields{
-		"result": result,
-	}
+	logFields := log.Fields{}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	var rows [][]interface{}
@@ -261,9 +258,7 @@ func updateEventNameInHeaderAndAddMeta(result *model.QueryResult) {
 
 // addEventNameIndexInResult adds event_index and fills up the rows accordingly
 func addEventNameIndexInResult(result *model.QueryResult) {
-	logFields := log.Fields{
-		"result": result,
-	}
+	logFields := log.Fields{}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	eventNameIndex := -1
@@ -456,9 +451,7 @@ func transformResultsForEachEventQuery(oldResult *model.QueryResult, query model
 // addEventMetricsMetaToQueryResult adds meta metrics in query result based on query type, event
 // condition and group by inputs
 func addEventMetricsMetaToQueryResult(result *model.QueryResult) {
-	logFields := log.Fields{
-		"result": result,
-	}
+	logFields := log.Fields{}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	metaMetricsEventCount := model.HeaderRows{}
@@ -517,19 +510,19 @@ func (store *MemSQL) BuildInsightsQuery(projectId uint64, query model.Query) (st
 
 	if query.Type == model.QueryTypeUniqueUsers {
 		if len(query.EventsWithProperties) == 1 {
-			return buildUniqueUsersSingleEventQuery(projectId, query)
+			return store.buildUniqueUsersSingleEventQuery(projectId, query)
 		}
 
 		if query.EventsCondition == model.EventCondAnyGivenEvent {
-			return buildUniqueUsersWithAnyGivenEventsQuery(projectId, query)
+			return store.buildUniqueUsersWithAnyGivenEventsQuery(projectId, query)
 		}
 
 		if query.EventsCondition == model.EventCondAllGivenEvent {
-			return buildUniqueUsersWithAllGivenEventsQuery(projectId, query)
+			return store.buildUniqueUsersWithAllGivenEventsQuery(projectId, query)
 		}
 
 		if query.EventsCondition == model.EventCondEachGivenEvent {
-			return buildUniqueUsersWithEachGivenEventsQuery(projectId, query)
+			return store.buildUniqueUsersWithEachGivenEventsQuery(projectId, query)
 		}
 	}
 
@@ -538,7 +531,6 @@ func (store *MemSQL) BuildInsightsQuery(projectId uint64, query model.Query) (st
 
 func LimitQueryResult(result *model.QueryResult, groupPropsLen int, groupByTimestamp bool) error {
 	logFields := log.Fields{
-		"result":          result,
 		"group_props_len": groupPropsLen,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -559,7 +551,6 @@ func LimitQueryResult(result *model.QueryResult, groupPropsLen int, groupByTimes
 // datetime for the limited combination of group keys.
 func limitGroupByTimestampResult(result *model.QueryResult, groupByTimestamp bool) error {
 	logFields := log.Fields{
-		"result":             result,
 		"group_by_timestamp": groupByTimestamp,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -598,7 +589,6 @@ func limitGroupByTimestampResult(result *model.QueryResult, groupByTimestamp boo
 // values together as unique). Limited set dimension = ResultLimit * ResultLimit.
 func limitMultiGroupByPropertiesResult(result *model.QueryResult, groupByTimestamp bool) error {
 	logFields := log.Fields{
-		"result":             result,
 		"group_by_timestamp": groupByTimestamp,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -646,8 +636,7 @@ func limitMultiGroupByPropertiesResult(result *model.QueryResult, groupByTimesta
 // SanitizeQueryResult Converts DB results into plottable query results.
 func SanitizeQueryResult(result *model.QueryResult, query *model.Query, isTimezoneEnabled bool) error {
 	logFields := log.Fields{
-		"query":  query,
-		"result": result,
+		"query": query,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if query.GetGroupByTimestamp() != "" {
@@ -674,8 +663,7 @@ func SanitizeQueryResult(result *model.QueryResult, query *model.Query, isTimezo
 
 func sanitizeGroupByTimestampResult(result *model.QueryResult, query *model.Query, isTimezoneEnabled bool) error {
 	logFields := log.Fields{
-		"query":  query,
-		"result": result,
+		"query": query,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	aggrIndex, timeIndex, err := GetTimstampAndAggregateIndexOnQueryResult(result.Headers)
@@ -711,7 +699,8 @@ func sortResultRowsByTimestamp(resultRows [][]interface{}, timestampIndex int) {
 	})
 }
 
-func getAllTimestampsBetweenByType(from, to int64, typ, timezone string, isTimezoneEnabled bool) []time.Time {
+// In day light savings, the timezone gets changed at 1:00AM or 2:00AM. Hence giving the beginning timestamp, but offset which remains for longer time.
+func getAllTimestampsAndOffsetBetweenByType(from, to int64, typ, timezone string, isTimezoneEnabled bool) ([]time.Time, []string) {
 	logFields := log.Fields{
 		"from":                from,
 		"to":                  to,
@@ -721,7 +710,7 @@ func getAllTimestampsBetweenByType(from, to int64, typ, timezone string, isTimez
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if typ == model.GroupByTimestampDate {
-		return U.GetAllDatesAsTimestamp(from, to, timezone, isTimezoneEnabled)
+		return U.GetAllDatesAndOffsetAsTimestamp(from, to, timezone, isTimezoneEnabled)
 	}
 
 	if typ == model.GroupByTimestampHour {
@@ -735,16 +724,17 @@ func getAllTimestampsBetweenByType(from, to int64, typ, timezone string, isTimez
 	if typ == model.GroupByTimestampMonth {
 		return U.GetAllMonthsAsTimestamp(from, to, timezone, isTimezoneEnabled)
 	}
+
 	if typ == model.GroupByTimestampQuarter {
 		return U.GetAllQuartersAsTimestamp(from, to, timezone, isTimezoneEnabled)
 	}
-	return []time.Time{}
+
+	return []time.Time{}, []string{}
 }
 
 func addMissingTimestampsOnResultWithoutGroupByProps(result *model.QueryResult,
 	query *model.Query, aggrIndex int, timestampIndex int, isTimezoneEnabled bool) error {
 	logFields := log.Fields{
-		"result":              result,
 		"query":               query,
 		"aggr_index":          aggrIndex,
 		"timestamp_index":     timestampIndex,
@@ -758,14 +748,15 @@ func addMissingTimestampsOnResultWithoutGroupByProps(result *model.QueryResult,
 		rowsByTimestamp[U.GetTimestampAsStrWithTimezone(ts, query.Timezone)] = row
 	}
 
-	timestamps := getAllTimestampsBetweenByType(query.From, query.To,
+	timestamps, offsets := getAllTimestampsAndOffsetBetweenByType(query.From, query.To,
 		query.GetGroupByTimestamp(), query.Timezone, isTimezoneEnabled)
 
 	filledResult := make([][]interface{}, 0, 0)
 	// range over timestamps between given from and to.
 	// uses timestamp string for comparison.
-	for _, ts := range timestamps {
-		if row, exists := rowsByTimestamp[U.GetTimestampAsStrWithTimezone(ts, query.Timezone)]; exists {
+	for index, ts := range timestamps {
+
+		if row, exists := rowsByTimestamp[U.GetTimestampAsStrWithTimezoneGivenOffset(ts, offsets[index])]; exists {
 			// overrides timestamp with user timezone as sql results doesn't
 			// return timezone used to query.
 			row[timestampIndex] = ts
@@ -787,7 +778,6 @@ func addMissingTimestampsOnResultWithoutGroupByProps(result *model.QueryResult,
 func addMissingTimestampsOnResultWithGroupByProps(result *model.QueryResult,
 	query *model.Query, aggrIndex int, timestampIndex int, isTimezoneEnabled bool) error {
 	logFields := log.Fields{
-		"result":              result,
 		"query":               query,
 		"aggr_index":          aggrIndex,
 		"timestamp_index":     timestampIndex,
@@ -820,15 +810,17 @@ func addMissingTimestampsOnResultWithGroupByProps(result *model.QueryResult,
 		filledResult = append(filledResult, row)
 	}
 
-	timestamps := getAllTimestampsBetweenByType(query.From, query.To,
+	timestamps, offsets := getAllTimestampsAndOffsetBetweenByType(query.From, query.To,
 		query.GetGroupByTimestamp(), query.Timezone, isTimezoneEnabled)
 
+	log.WithField("timestamps", timestamps).WithField("offsets", offsets).WithField("rowsByGroupAndTimestamp", rowsByGroupAndTimestamp).Warn("kark1")
+
 	for _, row := range result.Rows {
-		for _, ts := range timestamps {
+		for index, ts := range timestamps {
 			encCols := make([]interface{}, 0, 0)
 			encCols = append(encCols, row[gkStart:gkEnd]...)
 			// encoded key with generated timestamp.
-			encCols = append(encCols, U.GetTimestampAsStrWithTimezone(ts, query.Timezone))
+			encCols = append(encCols, U.GetTimestampAsStrWithTimezoneGivenOffset(ts, offsets[index]))
 			encKey := getEncodedKeyForCols(encCols)
 
 			_, exists := rowsByGroupAndTimestamp[encKey]
@@ -893,7 +885,7 @@ step1 AS (
 )
 */
 
-func addEventFilterStepsForUniqueUsersQuery(projectID uint64, q *model.Query,
+func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID uint64, q *model.Query,
 	qStmnt *string, qParams *[]interface{}) ([]string, map[string][]string) {
 	logFields := log.Fields{
 		"project_id": projectID,
@@ -918,8 +910,8 @@ func addEventFilterStepsForUniqueUsersQuery(projectID uint64, q *model.Query,
 	if q.GetGroupByTimestamp() != "" {
 		selectTimestamp := getSelectTimestampByType(q.GetGroupByTimestamp(), q.Timezone)
 		// select and order by with datetime.
-		commonSelect = fmt.Sprintf("COALESCE(users.customer_user_id,events.user_id) as coal_user_id%%, %s as %s,", selectTimestamp, model.AliasDateTime) +
-			" FIRST(events.user_id, FROM_UNIXTIME(events.timestamp)) as event_user_id"
+		commonSelect = fmt.Sprintf("COALESCE(users.customer_user_id, users.id) as coal_user_id%%, %s as %s,", selectTimestamp, model.AliasDateTime) +
+			" FIRST(users.id, FROM_UNIXTIME(events.timestamp)) as event_user_id"
 
 		commonSelect = strings.ReplaceAll(commonSelect, "%", "%s")
 
@@ -928,8 +920,8 @@ func addEventFilterStepsForUniqueUsersQuery(projectID uint64, q *model.Query,
 		commonGroupBy = "datetime, coal_user_id"
 	} else {
 		// default select.
-		commonSelect = "COALESCE(users.customer_user_id,events.user_id)" +
-			" as coal_user_id%s, FIRST(events.user_id, FROM_UNIXTIME(events.timestamp)) as event_user_id"
+		commonSelect = "COALESCE(users.customer_user_id, users.id)" +
+			" as coal_user_id%s, FIRST(users.id, FROM_UNIXTIME(events.timestamp)) as event_user_id"
 		commonGroupBy = "coal_user_id"
 	}
 
@@ -975,7 +967,21 @@ func addEventFilterStepsForUniqueUsersQuery(projectID uint64, q *model.Query,
 			stepGroupBy = commonGroupBy
 		}
 
+		// Default join statement for users.
 		addJoinStmnt := "JOIN users ON events.user_id=users.id AND users.project_id = ?"
+
+		// Join support for original users of group.
+		if U.IsGroupEventName(q.EventsWithProperties[i].Name) {
+			groupName := U.GetGroupNameFromGroupEventName(q.EventsWithProperties[i].Name)
+			group, status := store.GetGroup(projectID, groupName)
+			if status == http.StatusFound {
+				addJoinStmnt = fmt.Sprintf("LEFT JOIN users ON events.user_id=users.group_%d_user_id AND users.project_id = ? ", group.ID)
+			} else {
+				log.WithField("project_id", projectID).WithField("group", groupName).
+					Error("Failed to find group on analytical query execution.")
+			}
+		}
+
 		addJoinStmnt = addJoinStmnt + getUsersFilterJoinStatement(projectID, q.GlobalUserProperties)
 		stepParams = append(stepParams, projectID)
 		addFilterEventsWithPropsQuery(projectID, qStmnt, qParams, ewp, q.From, q.To,
@@ -1299,7 +1305,9 @@ SELECT datetime, event_name, _group_key_0, _group_key_1, _group_key_2, _group_ke
 COUNT(DISTINCT(event_user_id)) AS count FROM each_users_union GROUP BY event_name, _group_key_0,
 _group_key_1, _group_key_2, _group_key_3, _group_key_4, datetime ORDER BY count DESC LIMIT 100000
 */
-func buildUniqueUsersWithEachGivenEventsQuery(projectID uint64, query model.Query) (string, []interface{}, error) {
+func (store *MemSQL) buildUniqueUsersWithEachGivenEventsQuery(projectID uint64,
+	query model.Query) (string, []interface{}, error) {
+
 	logFields := log.Fields{
 		"project_id": projectID,
 		"query":      query,
@@ -1312,7 +1320,7 @@ func buildUniqueUsersWithEachGivenEventsQuery(projectID uint64, query model.Quer
 	qStmnt := ""
 	qParams := make([]interface{}, 0)
 
-	steps, stepsToKeysMap := addEventFilterStepsForUniqueUsersQuery(projectID, &query, &qStmnt, &qParams)
+	steps, stepsToKeysMap := store.addEventFilterStepsForUniqueUsersQuery(projectID, &query, &qStmnt, &qParams)
 	totalGroupKeys := 0
 	for _, val := range stepsToKeysMap {
 		totalGroupKeys = totalGroupKeys + len(val)
@@ -1476,7 +1484,7 @@ SELECT date, COUNT(DISTINCT(COALESCE(users.customer_user_id, event_user_id))) AS
 LEFT JOIN users ON users_intersect.event_user_id=users.id GROUP BY date ORDER BY count DESC LIMIT 100000;
 
 */
-func buildUniqueUsersWithAllGivenEventsQuery(projectID uint64,
+func (store *MemSQL) buildUniqueUsersWithAllGivenEventsQuery(projectID uint64,
 	query model.Query) (string, []interface{}, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
@@ -1491,7 +1499,7 @@ func buildUniqueUsersWithAllGivenEventsQuery(projectID uint64,
 	qStmnt := ""
 	qParams := make([]interface{}, 0)
 
-	steps, _ := addEventFilterStepsForUniqueUsersQuery(projectID, &query, &qStmnt, &qParams)
+	steps, _ := store.addEventFilterStepsForUniqueUsersQuery(projectID, &query, &qStmnt, &qParams)
 
 	// users intersection
 	intersectSelect := fmt.Sprintf("%s.event_user_id as event_user_id, %s.coal_user_id as coal_user_id", steps[0], steps[0])
@@ -1614,7 +1622,7 @@ WITH
 	SELECT date, COUNT(DISTINCT(COALESCE(users.customer_user_id, event_user_id))) AS count FROM users_union
 	LEFT JOIN users ON users_union.event_user_id=users.id GROUP BY date ORDER BY count DESC LIMIT 100000;
 */
-func buildUniqueUsersWithAnyGivenEventsQuery(projectID uint64,
+func (store *MemSQL) buildUniqueUsersWithAnyGivenEventsQuery(projectID uint64,
 	query model.Query) (string, []interface{}, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
@@ -1629,7 +1637,7 @@ func buildUniqueUsersWithAnyGivenEventsQuery(projectID uint64,
 	qStmnt := ""
 	qParams := make([]interface{}, 0)
 
-	steps, stepsToKeysMap := addEventFilterStepsForUniqueUsersQuery(projectID, &query, &qStmnt, &qParams)
+	steps, stepsToKeysMap := store.addEventFilterStepsForUniqueUsersQuery(projectID, &query, &qStmnt, &qParams)
 	totalGroupKeys := 0
 	for _, val := range stepsToKeysMap {
 		totalGroupKeys = totalGroupKeys + len(val)
@@ -1695,7 +1703,7 @@ SELECT COALESCE(NULLIF(concat(round(min(_group_key_0::numeric), 1), ' - ', round
 _group_key_1,  COUNT(DISTINCT(event_user_id)) AS count FROM bucketed GROUP BY _group_key_0_bucket, _group_key_1
 ORDER BY _group_key_0_bucket LIMIT 100000
 */
-func buildUniqueUsersSingleEventQuery(projectID uint64,
+func (store *MemSQL) buildUniqueUsersSingleEventQuery(projectID uint64,
 	query model.Query) (string, []interface{}, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
@@ -1710,7 +1718,7 @@ func buildUniqueUsersSingleEventQuery(projectID uint64,
 	qStmnt := ""
 	qParams := make([]interface{}, 0)
 
-	steps, _ := addEventFilterStepsForUniqueUsersQuery(projectID, &query, &qStmnt, &qParams)
+	steps, _ := store.addEventFilterStepsForUniqueUsersQuery(projectID, &query, &qStmnt, &qParams)
 	addUniqueUsersAggregationQuery(projectID, &query, &qStmnt, &qParams, steps[0])
 	qStmnt = with(qStmnt)
 

@@ -28,10 +28,13 @@ import _ from 'lodash';
 import {
   reverseOperatorMap,
   reverseDateOperatorMap,
+  convertDateTimeObjectValuesToMilliSeconds,
 } from '../../../../Views/CoreQuery/utils';
+import { FILTER_TYPES } from '../../../CoreQuery/constants';
 
 const { Panel } = Collapse;
-const { Option, OptGroup } = Select;
+const { Option, OptGroup } = Select; 
+ 
 
 const CustomKPI = ({
   activeProject,
@@ -40,6 +43,8 @@ const CustomKPI = ({
   customKPIConfig,
   savedCustomKPI,
   addNewCustomKPI,
+  eventPropNames,
+  userPropNames
 }) => {
   const [showForm, setShowForm] = useState(false);
   const [tableData, setTableData] = useState([]);
@@ -57,6 +62,14 @@ const CustomKPI = ({
   const [form] = Form.useForm();
 
   const [queryOptions, setQueryOptions] = useState({});
+
+ 
+
+const matchEventName = (item) => { 
+  let findItem = eventPropNames?.[item] || userPropNames?.[item]
+  return findItem ? findItem : item
+}
+
 
   const menu = (item) => {
     return (
@@ -102,9 +115,9 @@ const CustomKPI = ({
       dataIndex: 'transformations',
       key: 'transformations',
       render: (item) => (
-        <Text type={'title'} level={7} truncate={true} charLimit={25}>{`${
+        <Text type={'title'} level={7} truncate={true} charLimit={35}>{`${
           item.agFn
-        }(${item.agPr ? item.agPr : item.daFie ? item.daFie : ''})`}</Text>
+        }(${item.agPr ? matchEventName(item.agPr) : item.daFie ? matchEventName(item.daFie) : ''})`}</Text>
       ),
       width: 'auto',
     },
@@ -138,10 +151,6 @@ const CustomKPI = ({
     opts.globalFilters = filters;
     setFilterValues(opts);
   };
-  useEffect(() => {
-    setQueryOptions({});
-    setFilterValues([]);
-  }, [viewMode]);
 
   const operatorMap = {
     '=': 'equals',
@@ -239,6 +248,7 @@ const CustomKPI = ({
         });
         form.resetFields();
         setShowForm(false);
+        setFilterValues([]);
       })
       .catch((err) => {
         setLoading(false);
@@ -251,13 +261,13 @@ const CustomKPI = ({
   };
 
   useEffect(() => {
-    if (!customKPIConfig) {
-      fetchCustomKPIConfig(activeProject.id);
-    }
-    if (!savedCustomKPI) {
-      fetchSavedCustomKPI(activeProject.id);
-    }
-  }, [customKPIConfig, savedCustomKPI]);
+    // if (!customKPIConfig) {
+    fetchCustomKPIConfig(activeProject.id);
+    // }
+    // if (!savedCustomKPI) {
+    fetchSavedCustomKPI(activeProject.id);
+    // }
+  }, [activeProject]); 
 
   useEffect(() => {
     let DDCategory = customKPIConfig?.result?.objTyAndProp?.find((category) => {
@@ -272,14 +282,6 @@ const CustomKPI = ({
 
     setFilterDDValues(DDvalues);
   }, [selKPICategory, customKPIConfig]);
-
-  console.log('customKPIConfig values-->',customKPIConfig);
-  console.log('customKPIConfig values with space-->',customKPIConfig?.result?.objTyAndProp?.map((item) => {
-      return item?.properties?.find((j) => {
-        if(j?.name?.includes(' ')){
-          return j
-        } 
-    })}));
 
   const onKPICategoryChange = (value) => {
     setKPICategory(value);
@@ -301,19 +303,28 @@ const CustomKPI = ({
     }
   }, [savedCustomKPI]);
 
-  const getStateFromFilters = (rawFilters = []) => {
+  const getStateFromFilters = (rawFilters) => {
     const filters = [];
+
     rawFilters.forEach((pr) => {
       if (pr.lOp === 'AND') {
+        const val = pr.prDaTy === FILTER_TYPES.CATEGORICAL ? [pr.va] : pr.va;
+
+        const DNa = _.startCase(pr.prNa);
+
         filters.push({
           operator:
-            pr.objTy === 'datetime'
+            pr.prDaTy === 'datetime'
               ? reverseDateOperatorMap[pr.co]
               : reverseOperatorMap[pr.co],
-          props: [pr.prNa, pr.prDaTy, pr.objTy],
-          values: [pr.va],
+          props: [DNa, pr.prDaTy],
+          values:
+            pr.prDaTy === FILTER_TYPES.DATETIME
+              ? convertDateTimeObjectValuesToMilliSeconds(val)
+              : val,
+          extra: [DNa, pr.prNa, pr.prDaTy],
         });
-      } else {
+      } else if (pr.prDaTy === FILTER_TYPES.CATEGORICAL) {
         filters[filters.length - 1].values.push(pr.va);
       }
     });
@@ -324,7 +335,6 @@ const CustomKPI = ({
     <div className={'fa-container mt-32 mb-12 min-h-screen'}>
       <Row gutter={[24, 24]} justify='center'>
         <Col span={18}>
-          {' '}
           <div className={'mb-10 pl-4'}>
             {!showForm && !viewMode && (
               <>
@@ -789,6 +799,22 @@ const CustomKPI = ({
                     />
                   </Col>
                 </Row>
+                {!_.isEmpty(viewKPIDetails?.transformations?.agPr) && (
+                <Row>
+                  <Col span={18}>
+                    <Text type={'title'} level={7} extraClass={'m-0 mt-6'}>
+                      Property
+                    </Text>
+                    <Input
+                      disabled={true}
+                      size='large'
+                      value={matchEventName(viewKPIDetails?.transformations?.agPr)}
+                      className={'fa-input w-full'}
+                      placeholder='Display Name'
+                    />
+                  </Col>
+                </Row>
+                )}
                 {!_.isEmpty(viewKPIDetails?.transformations?.fil) && (
                   <Row>
                     <Col span={18}>
@@ -822,7 +848,7 @@ const CustomKPI = ({
                     <Input
                       disabled={true}
                       size='large'
-                      value={viewKPIDetails?.transformations?.daFie}
+                      value={matchEventName(viewKPIDetails?.transformations?.daFie)}
                       className={'fa-input w-full'}
                       placeholder='Display Name'
                     />
@@ -841,6 +867,8 @@ const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   customKPIConfig: state.kpi?.custom_kpi_config,
   savedCustomKPI: state.kpi?.saved_custom_kpi,
+  userPropNames: state.coreQuery?.userPropNames,
+  eventPropNames: state.coreQuery?.eventPropNames, 
 });
 
 export default connect(mapStateToProps, {

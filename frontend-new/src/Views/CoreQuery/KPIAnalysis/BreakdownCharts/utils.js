@@ -1,24 +1,27 @@
 import React from 'react';
+import _ from 'lodash';
 import moment from 'moment';
 
 import { Number as NumFormat } from '../../../../components/factorsComponents';
 import {
   SortResults,
   getClickableTitleSorter,
-  addQforQuarter,
+  addQforQuarter
 } from '../../../../utils/dataFormatter';
 import {
   MAX_ALLOWED_VISIBLE_PROPERTIES,
   DATE_FORMATS,
+  DISPLAY_PROP,
+  QUERY_TYPE_KPI
 } from '../../../../utils/constants';
 import { parseForDateTimeLabel } from '../../EventsAnalytics/SingleEventSingleBreakdown/utils';
 import {
   getBreakDownGranularities,
   renderHorizontalBarChart,
-  getBreakdownDataMapperWithUniqueValues,
+  getBreakdownDataMapperWithUniqueValues
 } from '../../EventsAnalytics/SingleEventMultipleBreakdown/utils';
+import { getBreakdownDisplayName } from '../../EventsAnalytics/eventsAnalytics.helpers';
 import tableStyles from '../../../../components/DataTable/index.module.scss';
-import { DISPLAY_PROP } from '../../../../utils/constants';
 import NonClickableTableHeader from '../../../../components/NonClickableTableHeader';
 
 import { getKpiLabel } from '../kpiAnalysis.helpers';
@@ -30,8 +33,8 @@ export const getDefaultSortProp = (kpis) => {
         key: `${getKpiLabel(kpis[0])} - 0`,
         type: 'numerical',
         subtype: null,
-        order: 'descend',
-      },
+        order: 'descend'
+      }
     ];
   }
   return [];
@@ -97,7 +100,7 @@ export const formatData = (data, kpis, breakdown, currentEventIndex) => {
         value: kpiVals[currentEventIndex],
         index,
         ...breakdownData,
-        ...kpisData,
+        ...kpisData
       };
     });
     return result;
@@ -112,21 +115,26 @@ export const getTableColumns = (
   kpis,
   currentSorter,
   handleSorting,
-  eventNames,
   userPropNames,
   eventPropNames
 ) => {
   const breakdownColumns = breakdown.map((e, index) => {
+    const displayTitle = getBreakdownDisplayName({
+      breakdown: e,
+      userPropNames,
+      eventPropNames,
+      queryType: QUERY_TYPE_KPI
+    });
     return {
       title: getClickableTitleSorter(
-        e.property,
+        displayTitle,
         { key: `${e.property} - ${index}`, type: e.prop_type, subtype: e.grn },
         currentSorter,
         handleSorting
       ),
       dataIndex: `${e.property} - ${index}`,
       fixed: !index ? 'left' : '',
-      width: 200,
+      width: 200
     };
   });
 
@@ -138,7 +146,7 @@ export const getTableColumns = (
         {
           key: `${kpiLabel} - ${index}`,
           type: 'numerical',
-          subtype: null,
+          subtype: null
         },
         currentSorter,
         handleSorting,
@@ -149,7 +157,7 @@ export const getTableColumns = (
       width: 300,
       render: (d) => {
         return d ? <NumFormat number={d} /> : 0;
-      },
+      }
     };
   });
   return [...breakdownColumns, ...kpiColumns];
@@ -171,13 +179,12 @@ export const getHorizontalBarChartColumns = (
 ) => {
   console.log('kpi with breakdown getHorizontalBarChartColumns');
   const result = breakdown.map((e, index) => {
-    // const displayTitle = getBreakdownDisplayTitle(
-    //   e,
-    //   userPropNames,
-    //   eventPropNames
-    // );
-
-    const displayTitle = e.property;
+    const displayTitle = getBreakdownDisplayName({
+      breakdown: e,
+      userPropNames,
+      eventPropNames,
+      queryType: QUERY_TYPE_KPI
+    });
 
     return {
       title: <NonClickableTableHeader title={displayTitle} />,
@@ -186,11 +193,11 @@ export const getHorizontalBarChartColumns = (
       className: tableStyles.horizontalBarTableHeader,
       render: (d) => {
         const obj = {
-          children: <div className='h-full p-6'>{d.value}</div>,
-          props: d.hasOwnProperty('rowSpan') ? { rowSpan: d.rowSpan } : {},
+          children: <div className="h-full p-6">{d.value}</div>,
+          props: _.has(d, 'rowSpan') ? { rowSpan: d.rowSpan } : {}
         };
         return obj;
-      },
+      }
     };
   });
   if (cardSize !== 1) {
@@ -213,7 +220,7 @@ export const getDataInHorizontalBarChartFormat = (
   console.log('kpi with breakdown getDataInHorizontalBarChartFormat');
   const sortedData = SortResults(aggregateData, {
     key: 'value',
-    order: 'descend',
+    order: 'descend'
   });
 
   const firstBreakdownKey = `${breakdown[0].property} - 0`;
@@ -230,7 +237,7 @@ export const getDataInHorizontalBarChartFormat = (
         cardSize,
         isDashboardWidget,
         false
-      ),
+      )
     };
 
     const result = [row];
@@ -239,7 +246,7 @@ export const getDataInHorizontalBarChartFormat = (
 
   const {
     values: uniqueFirstBreakdownValues,
-    breakdownMapper: firstBreakdownMapper,
+    breakdownMapper: firstBreakdownMapper
   } = getBreakdownDataMapperWithUniqueValues(sortedData, firstBreakdownKey);
 
   const secondBreakdownKey = `${breakdown[1].property} - 1`;
@@ -255,7 +262,7 @@ export const getDataInHorizontalBarChartFormat = (
           secondBreakdownKey,
           cardSize,
           isDashboardWidget
-        ),
+        )
       };
       return row;
     });
@@ -271,7 +278,7 @@ export const getDataInHorizontalBarChartFormat = (
     uniqueFirstBreakdownValues.forEach((bValue) => {
       const {
         values: uniqueSecondBreakdownValues,
-        breakdownMapper: secondBreakdownMapper,
+        breakdownMapper: secondBreakdownMapper
       } = getBreakdownDataMapperWithUniqueValues(
         firstBreakdownMapper[bValue],
         secondBreakdownKey
@@ -282,7 +289,7 @@ export const getDataInHorizontalBarChartFormat = (
         row.index = bValue + firstBreakdownKey + sbValue + secondBreakdownKey;
         row[firstBreakdownKey] = {
           value: bValue,
-          rowSpan: !sbIndex ? uniqueSecondBreakdownValues.length : 0,
+          rowSpan: !sbIndex ? uniqueSecondBreakdownValues.length : 0
         };
         row[secondBreakdownKey] = { value: sbValue };
         row[thirdBreakdownKey] = {
@@ -291,7 +298,7 @@ export const getDataInHorizontalBarChartFormat = (
             thirdBreakdownKey,
             cardSize,
             isDashboardWidget
-          ),
+          )
         };
         result.push(row);
       });
@@ -333,7 +340,7 @@ export const formatDataInSeriesFormat = (
   ) {
     return {
       categories: [],
-      data: [],
+      data: []
     };
   }
   const { headers, rows } = data[dataIndex];
@@ -350,9 +357,9 @@ export const formatDataInSeriesFormat = (
       name: d.label,
       data: [...initializedDatesData],
       marker: {
-        enabled: false,
+        enabled: false
       },
-      ...d,
+      ...d
     };
   });
   const headerSlice = headers.slice(
@@ -360,7 +367,7 @@ export const formatDataInSeriesFormat = (
     breakdown.length + breakdownIndex
   );
   const grns = getBreakDownGranularities(headerSlice, breakdown);
-  const format = DATE_FORMATS[frequency] || DATE_FORMATS['date'];
+  const format = DATE_FORMATS[frequency] || DATE_FORMATS.date;
 
   rows.forEach((row) => {
     const kpiVals = row.slice(breakdown.length + breakdownIndex);
@@ -382,7 +389,7 @@ export const formatDataInSeriesFormat = (
   });
   return {
     categories: differentDates,
-    data: resultantData,
+    data: resultantData
   };
 };
 
@@ -398,30 +405,23 @@ export const getDateBasedColumns = (
 ) => {
   console.log('kpi with breakdown getDateBasedColumns');
 
-  const OverallColumn = {
-    title: getClickableTitleSorter(
-      'Overall',
-      { key: `value`, type: 'numerical', subtype: null },
-      currentSorter,
-      handleSorting,
-      'right'
-    ),
-    className: 'text-right',
-    dataIndex: `value`,
-    width: 150,
-  };
-
   const breakdownColumns = breakdown.map((e, index) => {
+    const displayTitle = getBreakdownDisplayName({
+      breakdown: e,
+      userPropNames,
+      eventPropNames,
+      queryType: QUERY_TYPE_KPI
+    });
     return {
       title: getClickableTitleSorter(
-        e.property,
+        displayTitle,
         { key: `${e.property} - ${index}`, type: e.prop_type, subtype: e.grn },
         currentSorter,
         handleSorting
       ),
       dataIndex: `${e.property} - ${index}`,
       fixed: !index ? 'left' : '',
-      width: 200,
+      width: 200
     };
   });
 
@@ -433,7 +433,7 @@ export const getDateBasedColumns = (
         {
           key: `${kpiLabel} - ${index}`,
           type: 'numerical',
-          subtype: null,
+          subtype: null
         },
         currentSorter,
         handleSorting,
@@ -444,11 +444,11 @@ export const getDateBasedColumns = (
       width: 300,
       render: (d) => {
         return d ? <NumFormat number={d} /> : 0;
-      },
+      }
     };
   });
 
-  const format = DATE_FORMATS[frequency] || DATE_FORMATS['date'];
+  const format = DATE_FORMATS[frequency] || DATE_FORMATS.date;
 
   const dateColumns = categories.map((cat) => {
     return {
@@ -457,7 +457,7 @@ export const getDateBasedColumns = (
         {
           key: addQforQuarter(frequency) + moment(cat).format(format),
           type: 'numerical',
-          subtype: null,
+          subtype: null
         },
         currentSorter,
         handleSorting,
@@ -468,7 +468,7 @@ export const getDateBasedColumns = (
       dataIndex: addQforQuarter(frequency) + moment(cat).format(format),
       render: (d) => {
         return d ? <NumFormat number={d} /> : 0;
-      },
+      }
     };
   });
   return [...breakdownColumns, ...kpiColumns, ...dateColumns];

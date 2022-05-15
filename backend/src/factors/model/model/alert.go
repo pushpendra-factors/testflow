@@ -53,13 +53,22 @@ type AlertDescription struct {
 	Query     *postgres.Jsonb `json:"query"`
 	QueryType string          `json:"query_type"`
 	Operator  string          `json:"operator"`
-	Value     string           `json:"value"`
+	Value     string          `json:"value"`
 	DateRange string          `json:"date_range"`
 	// only for type 2 (daterange a compared to daterange b )
 	ComparedTo string `json:"compared_to"`
 }
 type AlertConfiguration struct {
-	IsEmailEnabled bool     `json:"email_enabled"`
-	IsSlackEnabled bool     `json:"slack_enabled"`
-	Emails         []string `json:"emails"`
+	IsEmailEnabled             bool           `json:"email_enabled"`
+	IsSlackEnabled             bool           `json:"slack_enabled"`
+	Emails                     []string       `json:"emails"`
+	SlackChannelsAndUserGroups *postgres.Jsonb `json:"slack_channels_and_user_groups"`
+}
+type SlackChannels struct {
+	Channels map[string][]SlackChannel `json:"channels"`
+}
+type SlackChannel struct {
+	ChannelName string `json:"channel_name"`
+	ChannelID   string `json:"channel_id"`
+	IsPrivate   bool   `json:"is_private"`
 }

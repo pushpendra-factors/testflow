@@ -64,7 +64,7 @@ var allowedCampaignFields = map[string]bool{}
 
 func getSalesforceMappedDataTypeValue(projectID uint64, eventName, enKey string, value interface{}) (interface{}, error) {
 	if value == nil || value == "" {
-		return nil, nil
+		return "", nil
 	}
 
 	if !C.IsEnabledPropertyDetailFromDB() || !C.IsEnabledPropertyDetailByProjectID(projectID) {
@@ -105,9 +105,6 @@ func GetSalesforceDocumentProperties(projectID uint64, document *model.Salesforc
 	eventName := model.GetSalesforceEventNameByDocumentAndAction(document, model.SalesforceDocumentUpdated)
 
 	for key, value := range enProperties {
-		if value == nil || value == "" {
-			continue
-		}
 
 		enKey := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceSalesforce, model.GetSalesforceAliasByDocType(document.Type), key)
 		enValue, err := getSalesforceMappedDataTypeValue(projectID, eventName, enKey, value)
@@ -135,11 +132,7 @@ func filterPropertyFieldsByProjectID(projectID uint64, properties *map[string]in
 	}
 
 	allowedfields := model.GetSalesforceAllowedfiedsByObject(projectID, model.GetSalesforceAliasByDocType(docType))
-	for field, value := range *properties {
-		if value == nil || value == "" || value == 0 {
-			delete(*properties, field)
-			continue
-		}
+	for field := range *properties {
 
 		if allowedfields != nil {
 			if _, exist := allowedfields[field]; !exist {

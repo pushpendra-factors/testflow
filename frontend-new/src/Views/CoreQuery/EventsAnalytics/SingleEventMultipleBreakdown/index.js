@@ -6,27 +6,33 @@ import React, {
   useImperativeHandle,
   useContext,
 } from 'react';
-import {
-  formatData,
-  formatDataInStackedAreaFormat,
-  defaultSortProp,
-  getVisibleData,
-} from './utils';
-import BarChart from '../../../../components/BarChart';
-import LineChart from '../../../../components/HCLineChart';
-import SingleEventMultipleBreakdownTable from './SingleEventMultipleBreakdownTable';
-import { getNewSorterState } from '../../../../utils/dataFormatter';
+
+import BarChart from 'Components/BarChart';
+import LineChart from 'Components/HCLineChart';
+import StackedAreaChart from 'Components/StackedAreaChart';
+import StackedBarChart from 'Components/StackedBarChart';
+import PivotTable from 'Components/PivotTable';
+import { getNewSorterState } from 'Utils/dataFormatter';
 import {
   DASHBOARD_MODAL,
   CHART_TYPE_STACKED_AREA,
   CHART_TYPE_BARCHART,
   CHART_TYPE_STACKED_BAR,
   CHART_TYPE_LINECHART,
-} from '../../../../utils/constants';
-import StackedAreaChart from '../../../../components/StackedAreaChart';
-import StackedBarChart from '../../../../components/StackedBarChart';
-import { CoreQueryContext } from '../../../../contexts/CoreQueryContext';
+  CHART_TYPE_PIVOT_CHART,
+  QUERY_TYPE_EVENT,
+} from 'Utils/constants';
+
+import {
+  formatData,
+  formatDataInStackedAreaFormat,
+  defaultSortProp,
+  getVisibleData,
+} from './utils';
+import SingleEventMultipleBreakdownTable from './SingleEventMultipleBreakdownTable';
 import SingleEventMultipleBreakdownHorizontalBarChart from './SingleEventMultipleBreakdownHorizontalBarChart';
+
+import { CoreQueryContext } from '../../../../contexts/CoreQueryContext';
 
 const SingleEventMultipleBreakdown = forwardRef(
   (
@@ -168,6 +174,17 @@ const SingleEventMultipleBreakdown = forwardRef(
             categories={categories}
             data={visibleSeriesData}
             showAllLegends={true}
+          />
+        </div>
+      );
+    } else if (chartType === CHART_TYPE_PIVOT_CHART) {
+      chart = (
+        <div className='w-full'>
+          <PivotTable
+            data={aggregateData}
+            breakdown={breakdown}
+            metrics={queries}
+            queryType={QUERY_TYPE_EVENT}
           />
         </div>
       );

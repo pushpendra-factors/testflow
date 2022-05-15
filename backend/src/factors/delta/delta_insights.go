@@ -63,9 +63,13 @@ func ComputeDeltaInsights(projectId uint64, configs map[string]interface{}) (map
 			continue
 		}
 
+		if len(kpiQuery.Queries) > 0 && configs["runKpi"] == false {
+			continue
+		}
+
 		if len(kpiQuery.Queries) > 0 {
 			if err := CreateKpiInsights(diskManager, cloudManager, periodCodesWithWeekNMinus1, projectId,
-				dashboardUnit.QueryId, kpiQuery, insightGranularity); err != nil {
+				dashboardUnit.QueryId, kpiQuery, insightGranularity, skipWpi, skipWpi2); err != nil {
 				log.WithError(err).Error("KPI insights error query: ", dashboardUnit.QueryId)
 				status["error-kpi-pass-"+queryIdString] = err
 				continue

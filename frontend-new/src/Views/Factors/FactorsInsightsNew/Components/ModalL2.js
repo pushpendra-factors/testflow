@@ -17,15 +17,14 @@ const L2Modal = ({ data, setModalL2, showModalL2, modalData, explainMatchEventNa
             <Modal
                 visible={showModalL2}
                 onCancel={() => setModalL2(false)}
-                onOk={() => setModalL2(false)}
-                title={null}
+                onOk={() => setModalL2(false)} 
                 footer={null}
                 className='explain-insight--modal'
                 title={<Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 capitalize'}>{`${isAttribute ? 'Significant Segments' : `Significant Engagements`}`}</Text>}
             >
                 <div className='p-4'>
                     {isAttribute && <div className={`py-2 px-2 flex items-center mb-2`}>
-                        <Tag className={'m-0 mx-2'} className={'fa-tag--regular fa-tag--highlight truncate'}>
+                        <Tag className={'fa-tag--regular fa-tag--highlight truncate'}>
                             {explainMatchEventName(modalData?.factors_insights_attribute[0]?.factors_attribute_key, false, 'blue')}
                         </Tag>
                         <Text type={'title'} level={7} weight={'bold'} color={'grey'} extraClass={'m-0 mr-3'}>
@@ -76,7 +75,7 @@ const L2Modal = ({ data, setModalL2, showModalL2, modalData, explainMatchEventNa
                         <Text type={'title'} level={7} extraClass={'m-0 mr-1'}>
                             {`From A, ${modalData?.factors_insights_users_count} were of `}
                         </Text>
-                        <Tag className={'m-0 mx-2'} className={'fa-tag--regular fa-tag--highlight truncate'}>
+                        <Tag className={'fa-tag--regular fa-tag--highlight truncate'}>
                             {explainMatchEventName(modalData?.factors_insights_attribute[0]?.factors_attribute_key, false, 'blue')}
                         </Tag>
                         <Text type={'title'} level={7} extraClass={'m-0 mr-1'}>

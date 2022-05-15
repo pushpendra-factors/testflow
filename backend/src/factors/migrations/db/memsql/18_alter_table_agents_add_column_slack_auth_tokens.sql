@@ -1,0 +1,1 @@
+ALTER TABLE agents ADD COLUMN slack_access_tokens JSON;

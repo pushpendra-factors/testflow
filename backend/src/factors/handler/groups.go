@@ -55,7 +55,6 @@ func GetGroupPropertiesHandler(c *gin.Context) {
 
 	logCtx := log.WithField("projectId", projectId)
 
-	isDisplayNameEnabled := c.Query("is_display_name_enabled")
 	encodedGroupName := c.Params.ByName("group_name")
 	if encodedGroupName == "" {
 		logCtx.WithField("group_name", encodedGroupName).Error("null group_name")
@@ -79,21 +78,19 @@ func GetGroupPropertiesHandler(c *gin.Context) {
 	}
 
 	response := gin.H{"properties": propertiesFromCache}
-	if isDisplayNameEnabled == "true" {
-		displayNamesOp := make(map[string]string)
 
-		_, displayNames := store.GetStore().GetDisplayNamesForAllUserProperties(projectId)
-		for property, displayName := range displayNames {
-			displayNamesOp[property] = displayName
-		}
-
-		_, displayNames = store.GetStore().GetDisplayNamesForObjectEntities(projectId)
-		for property, displayName := range displayNames {
-			displayNamesOp[property] = displayName
-		}
-
-		response["display_names"] = displayNamesOp
+	displayNamesOp := make(map[string]string)
+	_, displayNames := store.GetStore().GetDisplayNamesForAllUserProperties(projectId)
+	for property, displayName := range displayNames {
+		displayNamesOp[property] = displayName
 	}
+
+	_, displayNames = store.GetStore().GetDisplayNamesForObjectEntities(projectId)
+	for property, displayName := range displayNames {
+		displayNamesOp[property] = displayName
+	}
+
+	response["display_names"] = displayNamesOp
 
 	c.JSON(http.StatusOK, response)
 }

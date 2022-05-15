@@ -5,14 +5,14 @@ import React, {
   forwardRef,
   useImperativeHandle,
   useContext,
-  memo,
+  memo
 } from 'react';
 import {
   formatData,
   getVisibleData,
   formatDataInSeriesFormat,
   getVisibleSeriesData,
-  getDefaultSortProp,
+  getDefaultSortProp
 } from './utils';
 import { getNewSorterState } from '../../../../utils/dataFormatter';
 import { CoreQueryContext } from '../../../../contexts/CoreQueryContext';
@@ -23,7 +23,7 @@ import {
   CHART_TYPE_LINECHART,
   CHART_TYPE_STACKED_AREA,
   CHART_TYPE_STACKED_BAR,
-  CHART_TYPE_PIVOT_CHART,
+  CHART_TYPE_PIVOT_CHART
 } from '../../../../utils/constants';
 import LineChart from '../../../../components/HCLineChart';
 import BarChart from '../../../../components/BarChart';
@@ -43,12 +43,12 @@ const BreakdownCharts = forwardRef(
       durationObj,
       title = 'Kpi',
       section,
-      currentEventIndex,
+      currentEventIndex
     },
     ref
   ) => {
     const {
-      coreQueryState: { savedQuerySettings },
+      coreQueryState: { savedQuerySettings }
     } = useContext(CoreQueryContext);
     const [visibleProperties, setVisibleProperties] = useState([]);
     const [visibleSeriesData, setVisibleSeriesData] = useState([]);
@@ -81,7 +81,7 @@ const BreakdownCharts = forwardRef(
 
     useImperativeHandle(ref, () => {
       return {
-        currentSorter: { sorter, dateSorter },
+        currentSorter: { sorter, dateSorter }
       };
     });
 
@@ -114,7 +114,7 @@ const BreakdownCharts = forwardRef(
 
     if (!aggregateData.length) {
       return (
-        <div className='mt-4 flex justify-center items-center w-full h-64 '>
+        <div className="mt-4 flex justify-center items-center w-full h-64 ">
           <NoDataChart />
         </div>
       );
@@ -122,7 +122,7 @@ const BreakdownCharts = forwardRef(
 
     let chart = null;
     const table = (
-      <div className='mt-12 w-full'>
+      <div className="mt-12 w-full">
         <BreakdownTable
           kpis={kpis}
           data={aggregateData}
@@ -154,7 +154,7 @@ const BreakdownCharts = forwardRef(
       );
     } else if (chartType === CHART_TYPE_HORIZONTAL_BAR_CHART) {
       chart = (
-        <div className='w-full'>
+        <div className="w-full">
           <HorizontalBarChartTable
             breakdown={breakdown}
             aggregateData={aggregateData}
@@ -163,7 +163,7 @@ const BreakdownCharts = forwardRef(
       );
     } else if (chartType === CHART_TYPE_LINECHART) {
       chart = (
-        <div className='w-full'>
+        <div className="w-full">
           <LineChart
             frequency={durationObj.frequency}
             categories={categories}
@@ -174,7 +174,7 @@ const BreakdownCharts = forwardRef(
       );
     } else if (chartType === CHART_TYPE_STACKED_AREA) {
       chart = (
-        <div className='w-full'>
+        <div className="w-full">
           <StackedAreaChart
             frequency={durationObj.frequency}
             categories={categories}
@@ -185,7 +185,7 @@ const BreakdownCharts = forwardRef(
       );
     } else if (chartType === CHART_TYPE_STACKED_BAR) {
       chart = (
-        <div className='w-full'>
+        <div className="w-full">
           <StackedBarChart
             frequency={durationObj.frequency}
             categories={categories}
@@ -196,14 +196,18 @@ const BreakdownCharts = forwardRef(
       );
     } else if (chartType === CHART_TYPE_PIVOT_CHART) {
       chart = (
-        <div className='w-full'>
-          <PivotTable data={aggregateData} breakdown={breakdown} kpis={kpis} />
+        <div className="w-full">
+          <PivotTable
+            data={aggregateData}
+            breakdown={breakdown}
+            metrics={kpis}
+          />
         </div>
       );
     }
 
     return (
-      <div className='flex items-center justify-center flex-col'>
+      <div className="flex items-center justify-center flex-col">
         {chart}
         {table}
       </div>

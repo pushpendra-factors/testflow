@@ -118,7 +118,7 @@ func (store *MemSQL) GetCRMPropertiesForSync(projectID uint64) ([]model.CRMPrope
 	return properties, http.StatusFound
 }
 
-func (store *MemSQL) UpdateCRMProperyAsSynced(projectID uint64, source model.CRMSource, crmProperty *model.CRMProperty) (*model.CRMProperty, int) {
+func (store *MemSQL) UpdateCRMProperyAsSynced(projectID uint64, source U.CRMSource, crmProperty *model.CRMProperty) (*model.CRMProperty, int) {
 
 	logFields := log.Fields{"crm_properties": crmProperty, "source": source, "project_id": projectID}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)

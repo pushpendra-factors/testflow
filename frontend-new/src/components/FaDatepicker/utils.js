@@ -1,5 +1,7 @@
 import MomentTz from 'Components/MomentTz';
 
+export const DATE_RANGE_LABEL_CURRENT_QUARTER = 'This Quarter';
+export const DATE_RANGE_LABEL_LAST_QUARTER = 'Last Quarter';
 export const DATE_RANGE_LABEL_CURRENT_MONTH = 'This Month';
 export const DEFAULT_DATE_RANGE_LABEL = 'This Week';
 export const DATE_RANGE_LABEL_LAST_MONTH = 'Last Month';
@@ -9,6 +11,8 @@ export const DATE_RANGE_TODAY_LABEL = 'Today';
 export const DATE_RANGE_LABEL_LAST_7_DAYS = 'Last 7 Days';
 export const DATE_RANGE_LAST_2_MIN_LABEL = 'Last 2 mins';
 export const DATE_RANGE_LAST_30_MIN_LABEL = 'Last 30 mins';
+
+
 
 export const getFirstDayOfLastWeek = () => {
     const d = new Date();
@@ -62,6 +66,50 @@ export const getRangeByLabel = (label) => {
     }
     return rnge;
 
+}
+
+const QuarterMap = (month, lastXNo = 0) => {
+  let rng;
+  let mnth = month;
+  let year = new Date().getFullYear();
+  if (lastXNo > 0) {
+    month - 3 >= 0 ? mnth = month - 3 : (mnth = 11, year = year - 1);
+  }
+
+  if (mnth <= 2) {
+    rng = {
+      startDate: MomentTz().set({ 'month': 0, 'date': 1, 'year': year }).startOf('day'),
+      endDate: MomentTz().set({ 'month': 2, 'year': year }).endOf('day').endOf('month'),
+      dateStr: `${year}, Q1`
+    }
+    rng.endDate = rng.endDate.set({ 'date': rng.endDate.daysInMonth() });
+  } else if (mnth <= 5) {
+    rng = {
+      startDate: MomentTz().set({ 'date': 1, 'month': 3, 'year': year }).startOf('day'),
+      endDate: MomentTz().set({ 'month': 5, 'year': year }).endOf('day'),
+      dateStr: `${year}, Q2`
+    }
+    rng.endDate = rng.endDate.set({ 'date': rng.endDate.daysInMonth() });
+  }
+  else if (mnth <= 7) {
+    rng = {
+      startDate: MomentTz().set({ 'date': 1, 'month': 6, 'year': year }).startOf('day'),
+      endDate: MomentTz().set({ 'month': 8, 'year': year }).endOf('day').endOf('month'),
+      dateStr: `${year}, Q3`
+    }
+    rng.endDate = rng.endDate.set({ 'date': rng.endDate.daysInMonth() });
+  } else if (mnth <= 11) {
+    rng = {
+      startDate: MomentTz().set({ 'month': 9, 'date': 1, 'year': year }).startOf('day'),
+      endDate: MomentTz().set({ 'month': 11, 'year': year }).endOf('day').endOf('month'),
+      dateStr: `${year}, Q4`
+    }
+    rng.endDate = rng.endDate.set({ 'date': rng.endDate.daysInMonth() });
+  }
+  if(rng.endDate.isAfter()) {
+    rng.endDate = MomentTz();
+  }
+  return rng;
 }
 
 const DEFAULT_DATE_RANGES = [
@@ -136,5 +184,19 @@ const DEFAULT_DATE_RANGES = [
         startDate: MomentTz().subtract(7, 'days').startOf('day'),
         endDate: MomentTz()
       })
+    },
+    {
+      label: DATE_RANGE_LABEL_CURRENT_QUARTER,
+      range: () => {
+        const currMonthNumber = MomentTz().month();
+        return QuarterMap(currMonthNumber);
+      }
+    },
+    {
+      label: DATE_RANGE_LABEL_LAST_QUARTER,
+      range: () => {
+        const currMonthNumber = MomentTz().month();
+        return QuarterMap(currMonthNumber, 1);
+      }
     }
   ]; 

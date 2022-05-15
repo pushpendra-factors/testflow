@@ -33,6 +33,7 @@ type AdwordsLastSyncInfo struct {
 	DocumentType      int    `json:"-"`
 	DocumentTypeAlias string `json:"doc_type_alias"`
 	LastTimestamp     int64  `json:"last_timestamp"`
+	ManagerID         string `json:"manager_id"`
 }
 
 type AdwordsLastSyncInfoPayload struct {

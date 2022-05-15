@@ -253,6 +253,7 @@ function QueryComposer({
                 customPicker
                 presetRange
                 monthPicker
+                quarterPicker
                 placement='topRight'
                 buttonSize={'large'}
                 range={{

@@ -24,6 +24,7 @@ func SetSmartPropertiesReservedNames() {
 	adwordsReservedNames := GetAdwordsReservedNamesForSmartProperties()
 	facebookReservedNames := GetFacebookReservedNamesForSmartProperties()
 	linkedinReservedNames := GetLinkedinReservedNamesForSmartProperties()
+	bingadsReservedNames := GetBingAdsReservedNamesForSmartProperties()
 	for key, value := range adwordsReservedNames {
 		SmartPropertyReservedNames[key] = value
 	}
@@ -31,6 +32,9 @@ func SetSmartPropertiesReservedNames() {
 		SmartPropertyReservedNames[key] = value
 	}
 	for key, value := range linkedinReservedNames {
+		SmartPropertyReservedNames[key] = value
+	}
+	for key, value := range bingadsReservedNames {
 		SmartPropertyReservedNames[key] = value
 	}
 
@@ -104,4 +108,16 @@ func GetLinkedinReservedNamesForSmartProperties() map[string]bool {
 		linkedinReservedNames[value] = true
 	}
 	return linkedinReservedNames
+}
+func GetBingAdsReservedNamesForSmartProperties() map[string]bool {
+	bingadsReservedNames := make(map[string]bool)
+	for key, value := range BingAdsInternalRepresentationToExternalRepresentation {
+		bingadsReservedNames[key] = true
+		bingadsReservedNames[value] = true
+	}
+	for key, value := range BingAdsInternalRepresentationToExternalRepresentationForReports {
+		bingadsReservedNames[key] = true
+		bingadsReservedNames[value] = true
+	}
+	return bingadsReservedNames
 }

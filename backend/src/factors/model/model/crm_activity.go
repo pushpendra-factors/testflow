@@ -1,6 +1,7 @@
 package model
 
 import (
+	U "factors/util"
 	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -10,7 +11,7 @@ type CRMActivity struct {
 	ID                 string          `gorm:"primary_key:true;auto_increment:false" json:"id"`
 	ProjectID          uint64          `gorm:"primary_key:true;auto_increment:false" json:"project_id"`
 	ExternalActivityID string          `gorm:"primary_key:true;auto_increment:false" json:"external_activity_id"`
-	Source             CRMSource       `gorm:"primary_key:true;auto_increment:false" json:"source"`
+	Source             U.CRMSource     `gorm:"primary_key:true;auto_increment:false" json:"source"`
 	Name               string          `gorm:"primary_key:true;auto_increment:false" json:"name"`
 	Type               int             `gorm:"primary_key:true;auto_increment:false" json:"type"`
 	ActorType          int             `gorm:"primary_key:true;auto_increment:false" json:"actor_type"`

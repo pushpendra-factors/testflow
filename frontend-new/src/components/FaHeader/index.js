@@ -29,7 +29,7 @@ function FaHeader(props) {
           size='large'
           type='text'
         >
-          <img src='assets/images/header-logo.svg' />
+          <img alt='brand-logo' src='https://s3.amazonaws.com/www.factors.ai/assets/img/header-logo.svg' />
         </Button>
       </div>
       {props.children}

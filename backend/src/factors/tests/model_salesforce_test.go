@@ -4111,6 +4111,118 @@ func TestSalesforceCampaignMemberCampaignAssociation(t *testing.T) {
 	assert.Equal(t, "4", rows[2][5])
 }
 
+func TestSalesforceEmptyPropertiesUpdate(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+
+	contactcreatedDate := time.Now().UTC().AddDate(0, 0, -3)
+	customerUserID := "abc@xyz.com"
+	contact := map[string]interface{}{
+		"Id":               "1",
+		"Name":             "ContactUser",
+		"Email":            customerUserID,
+		"Stage":            "lead",
+		"Workflow":         "A",
+		"CreatedDate":      contactcreatedDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": contactcreatedDate.Format(model.SalesforceDocumentDateTimeLayout),
+	}
+	err = createDummySalesforceDocument(project.ID, contact, model.SalesforceDocumentTypeNameContact)
+	assert.Nil(t, err)
+
+	enrichStatus, _ := IntSalesforce.Enrich(project.ID, 2)
+	for i := range enrichStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
+	}
+
+	documents, status := store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{"1"}, model.SalesforceDocumentTypeContact, false)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Len(t, documents, 1)
+	// Verify event and user properties without empty value
+	user, status := store.GetStore().GetUser(project.ID, documents[0].UserID)
+	assert.Equal(t, http.StatusFound, status)
+	event, status := store.GetStore().GetEventById(project.ID, documents[0].SyncID, documents[0].UserID)
+	assert.Equal(t, http.StatusFound, status)
+	var userProperties map[string]interface{}
+	var eventProperties map[string]interface{}
+	var eventUserProperties map[string]interface{}
+	json.Unmarshal(user.Properties.RawMessage, &userProperties)
+	json.Unmarshal(event.Properties.RawMessage, &eventProperties)
+	json.Unmarshal(event.UserProperties.RawMessage, &eventUserProperties)
+	for key, value := range map[string]interface{}{"Id": "1", "Name": "ContactUser", "Stage": "lead", "Email": customerUserID, "Workflow": "A"} {
+		enKey := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceSalesforce,
+			model.SalesforceDocumentTypeNameContact, key)
+		assert.Equal(t, value, userProperties[enKey])
+		assert.Equal(t, value, eventProperties[enKey])
+		assert.Equal(t, value, eventUserProperties[enKey])
+	}
+
+	// update with empty and null value. Both should be converted to empty string and overridden
+	contact = map[string]interface{}{
+		"Id":               "1",
+		"Name":             "ContactUser",
+		"Email":            customerUserID,
+		"Stage":            "",
+		"Workflow":         nil,
+		"CreatedDate":      contactcreatedDate.Add(10 * time.Second).Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": contactcreatedDate.Add(10 * time.Second).Format(model.SalesforceDocumentDateTimeLayout),
+	}
+	err = createDummySalesforceDocument(project.ID, contact, model.SalesforceDocumentTypeNameContact)
+	assert.Nil(t, err)
+
+	enrichStatus, _ = IntSalesforce.Enrich(project.ID, 2)
+	for i := range enrichStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
+	}
+
+	documents, status = store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{"1"}, model.SalesforceDocumentTypeContact, false)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Len(t, documents, 2)
+
+	user, status = store.GetStore().GetUser(project.ID, documents[0].UserID)
+	assert.Equal(t, http.StatusFound, status)
+	event, status = store.GetStore().GetEventById(project.ID, documents[1].SyncID, documents[1].UserID)
+	assert.Equal(t, http.StatusFound, status)
+	json.Unmarshal(user.Properties.RawMessage, &userProperties)
+	json.Unmarshal(event.Properties.RawMessage, &eventProperties)
+	json.Unmarshal(event.UserProperties.RawMessage, &eventUserProperties)
+	// Expected value, nil and empty value should be converted to empty string
+	for key, value := range map[string]interface{}{"Id": "1", "Name": "ContactUser", "Stage": "", "Email": customerUserID, "Workflow": ""} {
+		enKey := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceSalesforce,
+			model.SalesforceDocumentTypeNameContact, key)
+		assert.Equal(t, value, userProperties[enKey])
+		assert.Equal(t, value, eventProperties[enKey])
+		assert.Equal(t, value, eventUserProperties[enKey])
+	}
+
+	newUserID, status := store.GetStore().CreateUser(&model.User{
+		ProjectId:      project.ID,
+		CustomerUserId: customerUserID,
+		Source:         model.GetRequestSourcePointer(model.UserSourceWeb),
+	})
+	assert.Equal(t, http.StatusCreated, status)
+	w := ServePostRequestWithHeaders(r, "/sdk/event/track",
+		[]byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "event_1", "event_properties": {"mobile" : "true"}, "user_properties": {"name":"name1"}}`, newUserID)),
+		map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	// Properties should still be empty and not removed after merge by customer_user_id
+	users, status := store.GetStore().GetUsersByCustomerUserID(project.ID, customerUserID)
+	assert.Equal(t, http.StatusFound, status)
+	for i := range users {
+		json.Unmarshal(users[i].Properties.RawMessage, &userProperties)
+		// expected value, nil and empty value should be converted to empty string
+		for key, value := range map[string]interface{}{"Id": "1", "Name": "ContactUser", "Stage": "", "Email": customerUserID, "Workflow": ""} {
+			enKey := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceSalesforce,
+				model.SalesforceDocumentTypeNameContact, key)
+			assert.Equal(t, value, userProperties[enKey])
+		}
+		// test website property
+		assert.Equal(t, "name1", userProperties["name"])
+	}
+}
+
 func TestSalesforceBatchCreate(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
