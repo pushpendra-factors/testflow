@@ -137,6 +137,14 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 		}
 
 		attributionData, isCompare, err = store.FireAttribution(projectID, query, eventNameToIDList, sessions, sessionWT, *logCtx)
+		if projectID == 399 {
+			conversionEventCountList := [][]float64{}
+			for key, _ := range *attributionData {
+				conversionEventCountList = append(conversionEventCountList, (*attributionData)[key].ConversionEventCount)
+
+			}
+			logCtx.WithFields(log.Fields{"ConversionEventCountList": conversionEventCountList}).Info("debug attr keyword conversion")
+		}
 		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("FireAttribution took time")
 		queryStartTime = time.Now().UTC().Unix()
 
@@ -314,7 +322,7 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Process Query KPI took time")
 		queryStartTime = time.Now().UTC().Unix()
 	} else {
-		result = model.ProcessQuery(query, attributionData, marketingReports, isCompare)
+		result = model.ProcessQuery(query, attributionData, marketingReports, isCompare, projectID)
 		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Process Query Normal took time")
 		queryStartTime = time.Now().UTC().Unix()
 	}
@@ -564,7 +572,9 @@ func (store *MemSQL) runAttribution(projectID uint64,
 	if err != nil {
 		return nil, err
 	}
-
+	if projectID == 399 {
+		logCtx.WithFields(log.Fields{"coalescedIDToInfoConverted": len(coalescedIDToInfoConverted)}).Info("debug attr keyword conversion")
+	}
 	// Add users who hit conversion event
 	var usersToBeAttributed []model.UserEventInfo
 	for key := range coalescedIDToInfoConverted {

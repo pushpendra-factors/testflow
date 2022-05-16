@@ -293,7 +293,7 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 		// execution similar to the normal run - still keeping it separate for better understanding
 		result = model.ProcessQueryKPI(query, attributionData, marketingReports, isCompare, kpiData)
 	} else {
-		result = model.ProcessQuery(query, attributionData, marketingReports, isCompare)
+		result = model.ProcessQuery(query, attributionData, marketingReports, isCompare, projectID)
 	}
 	result.Meta.Currency = ""
 	if projectSetting.IntAdwordsCustomerAccountId != nil && *projectSetting.IntAdwordsCustomerAccountId != "" {

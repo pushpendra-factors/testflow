@@ -1287,7 +1287,7 @@ func ProcessQueryLandingPageUrl(query *AttributionQuery, attributionData *map[st
 
 }
 
-func ProcessQuery(query *AttributionQuery, attributionData *map[string]*AttributionData, marketingReports *MarketingReports, isCompare bool) *QueryResult {
+func ProcessQuery(query *AttributionQuery, attributionData *map[string]*AttributionData, marketingReports *MarketingReports, isCompare bool, projectId uint64) *QueryResult {
 	logCtx := log.WithFields(log.Fields{"Method": "ProcessQuery"})
 	// Add additional metrics values
 	ComputeAdditionalMetrics(attributionData)
@@ -1298,6 +1298,9 @@ func ProcessQuery(query *AttributionQuery, attributionData *map[string]*Attribut
 	logCtx.Info("Done AddTheAddedKeysAndMetrics AddPerformanceData ApplyFilter ComputeAdditionalMetrics AddCustomDimensions")
 	// Attribution data to rows
 	dataRows := GetRowsByMaps(query.AttributionKey, query.AttributionKeyCustomDimension, attributionData, query.LinkedEvents, isCompare)
+	if projectId == 399 {
+		logCtx.WithFields(log.Fields{"dataRows": dataRows}).Info("debug attr keyword conversion")
+	}
 	result := &QueryResult{}
 	AddHeadersByAttributionKey(result, query, nil, nil)
 	result.Rows = dataRows
