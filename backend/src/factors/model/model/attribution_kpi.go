@@ -1,7 +1,6 @@
 package model
 
 import (
-	C "factors/config"
 	U "factors/util"
 	log "github.com/sirupsen/logrus"
 	"strings"
