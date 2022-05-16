@@ -1389,12 +1389,12 @@ func ProcessQueryKPI(query *AttributionQuery, attributionData *map[string]*Attri
 		return nil
 	}
 
-	result.Rows = MergeDataRowsHavingSameKey(result.Rows, GetLastKeyValueIndex(result.Headers), query.AttributionKey, query.AnalyzeType, goalEventAggFuncTypes, *logCtx)
+	result.Rows = MergeDataRowsHavingSameKeyKPI(result.Rows, GetLastKeyValueIndex(result.Headers), query.AttributionKey, query.AnalyzeType, goalEventAggFuncTypes, *logCtx)
 
 	// Additional filtering based on AttributionKey.
 	result.Rows = FilterRows(result.Rows, query.AttributionKey, GetLastKeyValueIndex(result.Headers))
 
-	logCtx.Info("Done GetRowsByMaps GetUpdatedRowsByDimensions MergeDataRowsHavingSameKey FilterRows")
+	logCtx.Info("Done GetRowsByMaps GetUpdatedRowsByDimensions MergeDataRowsHavingSameKeyKPI FilterRows")
 	log.WithFields(log.Fields{"KPIAttribution": "Debug", "Result": result}).Info("KPI Attribution result")
 
 	// sort the rows by conversionEvent
@@ -1536,6 +1536,7 @@ func MergeTwoDataRows(row1 []interface{}, row2 []interface{}, keyIndex int, attr
 		impressions := (row1[keyIndex+1]).(int64)
 		clicks := (row1[keyIndex+2]).(int64)
 		spend := row1[keyIndex+3].(float64)
+
 		if float64(impressions) > 0 {
 			row1[keyIndex+4], _ = U.FloatRoundOffWithPrecision(100*float64(clicks)/float64(impressions), U.DefaultPrecision) // CTR.
 			row1[keyIndex+6], _ = U.FloatRoundOffWithPrecision(1000*float64(spend)/float64(impressions), U.DefaultPrecision) // CPM.
@@ -1576,14 +1577,12 @@ func MergeTwoDataRows(row1 []interface{}, row2 []interface{}, keyIndex int, attr
 				if spend > 0 {
 					row1[keyIndex+13+nextConPosition], _ = U.FloatRoundOffWithPrecision(row1[keyIndex+12+nextConPosition].(float64)/spend, U.DefaultPrecision) // Conversion - CPC.
 				} else {
-					row1[keyIndex+12+nextConPosition] = float64(0)
 					row1[keyIndex+13+nextConPosition] = float64(0) // Conversion - CPC.
 				}
 
 				if spend > 0 {
 					row1[keyIndex+16+nextConPosition], _ = U.FloatRoundOffWithPrecision(row1[keyIndex+15+nextConPosition].(float64)/spend, U.DefaultPrecision) // Compare Conversion - CPC.
 				} else {
-					row1[keyIndex+15+nextConPosition] = float64(0)
 					row1[keyIndex+16+nextConPosition] = float64(0) // Compare Conversion - CPC.
 				}
 
