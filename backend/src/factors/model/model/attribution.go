@@ -1295,11 +1295,24 @@ func ProcessQuery(query *AttributionQuery, attributionData *map[string]*Attribut
 	// Add custom dimensions
 	AddCustomDimensions(attributionData, query, marketingReports)
 
+	if projectId == 399 {
+		conversionEventCountList := [][]float64{}
+		for key, _ := range *attributionData {
+			conversionEventCountList = append(conversionEventCountList, (*attributionData)[key].ConversionEventCount)
+
+		}
+		logCtx.WithFields(log.Fields{"4ConversionEventCountListAfterAddCustomDimensions": conversionEventCountList}).Info("debug attr keyword conversion")
+	}
 	logCtx.Info("Done AddTheAddedKeysAndMetrics AddPerformanceData ApplyFilter ComputeAdditionalMetrics AddCustomDimensions")
 	// Attribution data to rows
 	dataRows := GetRowsByMaps(query.AttributionKey, query.AttributionKeyCustomDimension, attributionData, query.LinkedEvents, isCompare)
 	if projectId == 399 {
-		logCtx.WithFields(log.Fields{"dataRows": dataRows}).Info("debug attr keyword conversion")
+
+		conversions := []int64{}
+		for i := 0; i < len(dataRows); i++ {
+			conversions = append(conversions, dataRows[i][16].(int64))
+		}
+		logCtx.WithFields(log.Fields{"5conversionsInDataRows": conversions}).Info("debug attr keyword conversion")
 	}
 	result := &QueryResult{}
 	AddHeadersByAttributionKey(result, query, nil, nil)
@@ -1318,6 +1331,15 @@ func ProcessQuery(query *AttributionQuery, attributionData *map[string]*Attribut
 	}
 
 	result.Rows = MergeDataRowsHavingSameKey(result.Rows, GetLastKeyValueIndex(result.Headers), query.AttributionKey, query.AnalyzeType, goalEventAggFuncTypes, *logCtx)
+
+	if projectId == 399 {
+
+		conversions := []int64{}
+		for i := 0; i < len(result.Rows); i++ {
+			conversions = append(conversions, result.Rows[i][15].(int64))
+		}
+		logCtx.WithFields(log.Fields{"6conversionsInResultAfterMerge": conversions}).Info("debug attr keyword conversion")
+	}
 
 	// Additional filtering based on AttributionKey.
 	result.Rows = FilterRows(result.Rows, query.AttributionKey, GetLastKeyValueIndex(result.Headers))

@@ -143,7 +143,7 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 				conversionEventCountList = append(conversionEventCountList, (*attributionData)[key].ConversionEventCount)
 
 			}
-			logCtx.WithFields(log.Fields{"ConversionEventCountList": conversionEventCountList}).Info("debug attr keyword conversion")
+			logCtx.WithFields(log.Fields{"2ConversionEventCountListAfterFireAttribution": conversionEventCountList}).Info("debug attr keyword conversion")
 		}
 		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("FireAttribution took time")
 		queryStartTime = time.Now().UTC().Unix()
@@ -166,6 +166,15 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 		model.AddPerformanceData(attributionData, query.AttributionKey, marketingReports, 1)
 		for key, _ := range *attributionData {
 			(*attributionData)[key].ConvAggFunctionType = convAggFunctionType
+		}
+
+		if projectID == 399 {
+			conversionEventCountList := [][]float64{}
+			for key, _ := range *attributionData {
+				conversionEventCountList = append(conversionEventCountList, (*attributionData)[key].ConversionEventCount)
+
+			}
+			logCtx.WithFields(log.Fields{"3ConversionEventCountListAfterAddPerformanceData": conversionEventCountList}).Info("debug attr keyword conversion")
 		}
 	} else {
 		// This thread is for query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities.
@@ -573,7 +582,7 @@ func (store *MemSQL) runAttribution(projectID uint64,
 		return nil, err
 	}
 	if projectID == 399 {
-		logCtx.WithFields(log.Fields{"coalescedIDToInfoConverted": len(coalescedIDToInfoConverted)}).Info("debug attr keyword conversion")
+		logCtx.WithFields(log.Fields{"1coalescedIDToInfoConverted": len(coalescedIDToInfoConverted)}).Info("debug attr keyword conversion")
 	}
 	// Add users who hit conversion event
 	var usersToBeAttributed []model.UserEventInfo
