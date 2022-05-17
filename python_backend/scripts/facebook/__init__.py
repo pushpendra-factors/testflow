@@ -62,4 +62,4 @@ WORKFLOW_TO_TASKS = {
 STARTED = "started"
 COMPlETED = "completed"
 
-ERROR_MESSAGE = "Failed to get {} from facebook. StatusCode: {} Error: {}. Project_id: {}"
+ERROR_MESSAGE = "Failed to get {} from facebook. StatusCode: {} Error: {}. Project_id: {}. Customer_account_id: {}"

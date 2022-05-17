@@ -62,6 +62,8 @@ class BaseReportLoad(BaseLoad):
                 message = str_exception
                 log.warning("Failed with exception: %d %s %s", task_context.project_id,
                             task_context.customer_account_id, message)
+                if "No such object" in message and "HTTPStatus.PARTIAL_CONTENT" in message and "facebook_extract" in message:
+                    message = "Failed to load from cloud storage"
                 MetricsAggregator.update_job_stats(task_context.project_id, task_context.customer_account_id,
                                                    task_context.type_alias, "failed", message)
         return

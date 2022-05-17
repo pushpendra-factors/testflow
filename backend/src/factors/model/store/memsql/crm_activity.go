@@ -139,24 +139,26 @@ func (store *MemSQL) CreateCRMActivity(crmActivity *model.CRMActivity) (int, err
 	return http.StatusCreated, nil
 }
 
-func (store *MemSQL) GetCRMActivityInOrderForSync(projectID uint64, source U.CRMSource) ([]model.CRMActivity, int) {
+func (store *MemSQL) GetCRMActivityInOrderForSync(projectID uint64, source U.CRMSource, startTimestamp, endTimestamp int64) ([]model.CRMActivity, int) {
 	logFields := log.Fields{
-		"project_id": projectID,
-		"source":     source,
+		"project_id":     projectID,
+		"source":         source,
+		"start_timestam": startTimestamp,
+		"end_timestamp":  endTimestamp,
 	}
 
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	logCtx := log.WithFields(logFields)
-	if projectID == 0 || source == 0 {
+	if projectID == 0 || source == 0 || startTimestamp == 0 || endTimestamp == 0 {
 		logCtx.Error("Invalid parameters")
 		return nil, http.StatusBadRequest
 	}
 
 	var crmActivity []model.CRMActivity
 	db := C.GetServices().Db
-	err := db.Model(&model.CRMActivity{}).Where("project_id = ? AND source = ? AND synced = false ",
-		projectID, source).Order("timestamp, created_at").Find(&crmActivity).Error
+	err := db.Model(&model.CRMActivity{}).Where("project_id = ? AND source = ? AND synced = false AND timestamp between ? AND ?",
+		projectID, source, startTimestamp, endTimestamp).Order("timestamp, created_at").Find(&crmActivity).Error
 	if err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			return nil, http.StatusNotFound
@@ -171,6 +173,42 @@ func (store *MemSQL) GetCRMActivityInOrderForSync(projectID uint64, source U.CRM
 	}
 
 	return crmActivity, http.StatusFound
+}
+
+func (store *MemSQL) GetCRMActivityMinimumTimestampForSync(projectID uint64, source U.CRMSource) (int64, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"source":     source,
+	}
+
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+	if projectID == 0 || source == 0 {
+		logCtx.Error("Invalid parameters")
+		return 0, http.StatusBadRequest
+	}
+
+	var minTimestamp struct {
+		Timestamp int64
+	}
+	db := C.GetServices().Db
+	err := db.Model(&model.CRMActivity{}).Where("project_id = ? AND source = ? AND synced = false ",
+		projectID, source).Select("min(timestamp) as timestamp").Scan(&minTimestamp).Error
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return 0, http.StatusNotFound
+		}
+
+		logCtx.WithError(err).Error("Failed to get crm activity records for sync.")
+		return 0, http.StatusInternalServerError
+	}
+
+	if minTimestamp.Timestamp == 0 {
+		return 0, http.StatusNotFound
+	}
+
+	return minTimestamp.Timestamp, http.StatusFound
 }
 
 func (store *MemSQL) UpdateCRMActivityAsSynced(projectID uint64, source U.CRMSource, crmActivity *model.CRMActivity, syncID, userID string) (*model.CRMActivity, int) {

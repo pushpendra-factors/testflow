@@ -26,6 +26,9 @@ type SalesforceDocument struct {
 	GroupUserID string           `gorm:"default:null" json:"group_user_id"`
 	CreatedAt   time.Time        `json:"created_at"`
 	UpdatedAt   time.Time        `json:"updated_at"`
+	// fields for internal use
+	dateTimeZone   util.TimeZoneString `gorm:"-" json:"-"`
+	dateProperties *map[string]bool    `gorm:"-" json:"-"`
 }
 
 type SalesforceAction int
@@ -47,10 +50,15 @@ type SalesforceSyncInfo struct {
 // SalesforceRecord is map for fields and their values
 type SalesforceRecord map[string]interface{}
 
+const (
+	SalesforceDataTypeDate     = "date"
+	SalesforceDataTypeDateTime = "datetime"
+)
+
 var (
 	salesforceDataTypeDatetime = map[string]bool{
-		"datetime": true,
-		"date":     true,
+		SalesforceDataTypeDateTime: true,
+		SalesforceDataTypeDate:     true,
 	}
 
 	salesforceDataTypeNumerical = map[string]bool{
@@ -264,6 +272,26 @@ func GetSalesforceDocumentTimestampByAction(document *SalesforceDocument,
 	return GetSalesforceDocumentTimestamp(date)
 }
 
+func GetDateAsMidnightTimestampByTimeZone(date interface{}, timeZoneStr util.TimeZoneString) (interface{}, error) {
+	if date == nil || date == "" {
+		return "", nil
+	}
+
+	loc, err := time.LoadLocation(string(timeZoneStr))
+	if err != nil {
+		log.WithField("time_zone", timeZoneStr).WithError(err).Error("Failed to parse time location.")
+		return nil, err
+	}
+
+	t, err := time.ParseInLocation(SalesforceDocumentDateLayout, util.GetPropertyValueAsString(date), loc)
+	if err != nil {
+		log.WithField("date", date).WithError(err).Error("Failed to parse date in timezone.")
+		return nil, err
+	}
+
+	return t.Unix(), nil
+}
+
 // GetSalesforceDocumentTimestamp return unix timestamp for salesforce formated timestamp
 func GetSalesforceDocumentTimestamp(timestamp interface{}) (int64, error) {
 	timestampStr, ok := timestamp.(string)
@@ -335,4 +363,20 @@ func GetSalesforceDocumentsAsBatch(list []*SalesforceDocument, batchSize int) []
 	}
 
 	return batchList
+}
+
+func (document *SalesforceDocument) SetDocumentTimeZone(timeZone util.TimeZoneString) {
+	document.dateTimeZone = timeZone
+}
+
+func (document *SalesforceDocument) SetDateProperties(dateProperties *map[string]bool) {
+	document.dateProperties = dateProperties
+}
+
+func (document *SalesforceDocument) GetDocumentTimeZone() util.TimeZoneString {
+	return document.dateTimeZone
+}
+
+func (document *SalesforceDocument) GetDateProperties() *map[string]bool {
+	return document.dateProperties
 }
