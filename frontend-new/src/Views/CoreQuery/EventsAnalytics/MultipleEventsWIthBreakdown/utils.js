@@ -15,6 +15,7 @@ import {
   DISPLAY_PROP
 } from '../../../../utils/constants';
 import { EVENT_COUNT_KEY } from '../eventsAnalytics.constants';
+import { getBreakdownDisplayName } from '../eventsAnalytics.helpers';
 
 export const defaultSortProp = () => {
   return [
@@ -45,25 +46,27 @@ export const getVisibleSeriesData = (data, sorter) => {
 
 export const getBreakdownTitle = (breakdown, userPropNames, eventPropNames) => {
   const charArr = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
-  const displayTitle =
-    breakdown.prop_category === 'user'
-      ? userPropNames[breakdown.property] || breakdown.property
-      : breakdown.prop_category === 'event'
-        ? eventPropNames[breakdown.property] || breakdown.property
-        : breakdown.property;
+  const displayTitle = getBreakdownDisplayName({
+    breakdown,
+    userPropNames,
+    eventPropNames,
+    multipleEvents: true
+  });
 
   if (!breakdown.eventIndex) {
     return displayTitle;
   }
   return (
-    <div className="flex items-center">
-      <div className="mr-1">{displayTitle} of </div>
-      <div
-        style={{ backgroundColor: '#3E516C' }}
-        className="text-white w-4 h-4 flex justify-center items-center rounded-full font-semibold leading-5 text-xs"
-      >
-        {charArr[breakdown.eventIndex - 1]}
-      </div>
+    <div className="break-all">
+      <span>{displayTitle} of </span>
+      <span className="inline-block">
+        <span
+          style={{ backgroundColor: '#3E516C' }}
+          className="text-white w-4 h-4 flex justify-center items-center rounded-full font-semibold leading-5 text-xs"
+        >
+          {charArr[breakdown.eventIndex - 1]}
+        </span>
+      </span>
     </div>
   );
 };
