@@ -132,12 +132,11 @@ func (store *MemSQL) DeleteAlert(id string, projectID uint64) (int, string) {
 	}
 	return http.StatusAccepted, ""
 }
-func (store *MemSQL) UpdateAlert(alert model.Alert) (int, string) {
+func (store *MemSQL) UpdateAlert(lastAlertSent bool) (int, string) {
 	db := C.GetServices().Db
-	alert.UpdatedAt = time.Now().UTC()
-	err := db.Update(&alert).Error
+	err := db.Table("alerts").Where("id = ?", lastAlertSent).Updates(map[string]interface{}{"last_alert_sent": lastAlertSent, "updated_at": time.Now().UTC()}).Error
 	if err != nil {
-		log.WithField("project_id", alert.ProjectID).Error(err)
+		log.Error(err)
 		return http.StatusInternalServerError, err.Error()
 	}
 	return http.StatusAccepted, ""
