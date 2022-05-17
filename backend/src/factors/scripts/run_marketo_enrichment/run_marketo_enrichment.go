@@ -159,6 +159,24 @@ func main() {
 		anyFailure = true
 	}
 
+	propertySyncStatus := make(map[uint64][]enrichment.EnrichStatus)
+	for i := range fivetranIntegrations {
+		projectID := fivetranIntegrations[i].ProjectID
+
+		if exists := disabledProjects[projectID]; exists {
+			continue
+		}
+
+		if !allProjects {
+			if _, exists := allowedProjects[projectID]; !exists {
+				continue
+			}
+		}
+
+		propertyEnrichStatus := enrichment.SyncProperties(projectID, sourceConfig)
+		propertySyncStatus[projectID] = propertyEnrichStatus
+	}
+
 	enrichStatus := make(map[uint64][]enrichment.EnrichStatus)
 	for i := range fivetranIntegrations {
 		projectID := fivetranIntegrations[i].ProjectID
@@ -182,9 +200,14 @@ func main() {
 		}
 	}
 
+	overAllSyncStatus := map[string]interface{}{
+		"property_sync": propertySyncStatus,
+		"enrich":        enrichStatus,
+	}
+
 	if anyFailure {
-		C.PingHealthcheckForFailure(healthcheckPingID, enrichStatus)
+		C.PingHealthcheckForFailure(healthcheckPingID, overAllSyncStatus)
 	} else {
-		C.PingHealthcheckForSuccess(healthcheckPingID, enrichStatus)
+		C.PingHealthcheckForSuccess(healthcheckPingID, overAllSyncStatus)
 	}
 }
