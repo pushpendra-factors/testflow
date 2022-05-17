@@ -1308,9 +1308,11 @@ func ProcessQuery(query *AttributionQuery, attributionData *map[string]*Attribut
 	dataRows := GetRowsByMaps(query.AttributionKey, query.AttributionKeyCustomDimension, attributionData, query.LinkedEvents, isCompare)
 	if projectId == 399 {
 
-		conversions := []int64{}
+		conversions := []float64{}
 		for i := 0; i < len(dataRows); i++ {
-			conversions = append(conversions, dataRows[i][16].(int64))
+			if len(dataRows[i]) > 16 {
+				conversions = append(conversions, dataRows[i][16].(float64))
+			}
 		}
 		logCtx.WithFields(log.Fields{"5conversionsInDataRows": conversions}).Info("debug attr keyword conversion")
 	}
@@ -1334,9 +1336,11 @@ func ProcessQuery(query *AttributionQuery, attributionData *map[string]*Attribut
 
 	if projectId == 399 {
 
-		conversions := []int64{}
+		conversions := []float64{}
 		for i := 0; i < len(result.Rows); i++ {
-			conversions = append(conversions, result.Rows[i][15].(int64))
+			if len(result.Rows[i]) > 15 {
+				conversions = append(conversions, result.Rows[i][15].(float64))
+			}
 		}
 		logCtx.WithFields(log.Fields{"6conversionsInResultAfterMerge": conversions}).Info("debug attr keyword conversion")
 	}
