@@ -119,10 +119,12 @@ function ProjectDropdown({
       factorsai.track('VIEW_DASHBOARD', {
         dashboard_name: activeDashboard?.name,
         dashboard_type: activeDashboard?.type,
-        dashboard_id: activeDashboard?.id
+        dashboard_id: activeDashboard?.id,
+        project_id: active_project?.id,
+        project_name: active_project?.name,
       });
     }
-  }, [activeDashboard]);
+  }, [activeDashboard?.id]);
 
   const handleOptChange = useCallback(
     (group, data) => {

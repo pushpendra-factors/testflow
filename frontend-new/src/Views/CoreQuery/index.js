@@ -387,8 +387,10 @@ function CoreQuery({
           globalFilters
         );
 
-        //Factors RUN_QUERY tracking
-        factorsai.track('RUN-QUERY', { query_type: QUERY_TYPE_EVENT });
+        if(!isQuerySaved) {
+          //Factors RUN_QUERY tracking
+          factorsai.track('RUN-QUERY', { query_type: QUERY_TYPE_EVENT, project_id: activeProject?.id, project_name: activeProject?.name });
+        }
 
         if (!isCompareQuery) {
           configActionsOnRunningQuery(isQuerySaved);
@@ -484,8 +486,10 @@ function CoreQuery({
           globalFilters
         );
 
-        //Factors RUN_QUERY tracking
-        factorsai.track('RUN-QUERY', { query_type: QUERY_TYPE_FUNNEL });
+        if(!isQuerySaved) {
+          //Factors RUN_QUERY tracking
+          factorsai.track('RUN-QUERY', { query_type: QUERY_TYPE_FUNNEL, project_id: activeProject?.id, project_name: activeProject?.name });
+        }
 
         if (!isCompareQuery) {
           configActionsOnRunningQuery(isQuerySaved);
@@ -592,8 +596,10 @@ function CoreQuery({
           query.query.kpi_query_group = kpiQuery;
         }
 
-        //Factors RUN_QUERY tracking
-        factorsai.track('RUN-QUERY', { query_type: QUERY_TYPE_ATTRIBUTION });
+        if(!isQuerySaved) {
+          //Factors RUN_QUERY tracking
+          factorsai.track('RUN-QUERY', { query_type: QUERY_TYPE_ATTRIBUTION, project_id: activeProject?.id, project_name: activeProject?.name });
+        }
 
         if (!isCompareQuery) {
           configActionsOnRunningQuery(isQuerySaved);
@@ -694,8 +700,10 @@ function CoreQuery({
           queryOptions
         );
 
-        //Factors RUN_QUERY tracking
-        factorsai.track('RUN-QUERY', { query_type: QUERY_TYPE_KPI });
+        if(!isQuerySaved) {
+          //Factors RUN_QUERY tracking
+          factorsai.track('RUN-QUERY', { query_type: QUERY_TYPE_KPI, project_id: activeProject?.id, project_name: activeProject?.name });
+        }
 
         if (!isCompareQuery) {
           configActionsOnRunningQuery(isQuerySaved);
@@ -763,8 +771,10 @@ function CoreQuery({
           durationObj
         );
 
-        //Factors RUN_QUERY tracking
-        factorsai.track('RUN-QUERY', { query_type: QUERY_TYPE_CAMPAIGN });
+        if(!isQuerySaved) {
+          //Factors RUN_QUERY tracking
+          factorsai.track('RUN-QUERY', { query_type: QUERY_TYPE_CAMPAIGN, project_id: activeProject?.id, project_name: activeProject?.name });
+        }
 
         setCampaignState({
           channel: query.query_group[0].channel,
@@ -819,8 +829,11 @@ function CoreQuery({
           durationObj,
           groupAnalysis
         );
-        //Factors RUN_QUERY tracking
-        factorsai.track('RUN-QUERY', { query_type: QUERY_TYPE_PROFILE });
+
+        if(!isQuerySaved) {
+          //Factors RUN_QUERY tracking
+          factorsai.track('RUN-QUERY', { query_type: QUERY_TYPE_PROFILE, project_id: activeProject?.id, project_name: activeProject?.name });
+        }
 
         configActionsOnRunningQuery(isQuerySaved);
         updateRequestQuery(query);

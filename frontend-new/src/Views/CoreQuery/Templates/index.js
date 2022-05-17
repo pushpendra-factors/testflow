@@ -23,7 +23,7 @@ const TemplatesModal = ({
   const ChooseTemplate = (templateID) => { 
 
     //Factors RUN_QUERY tracking
-    factorsai.track('RUN-QUERY',{'query_type': 'template', 'templateID': templateID});
+    factorsai.track('RUN-QUERY',{'query_type': 'template', 'templateID': templateID, project_id: activeProject?.id, project_name: activeProject?.name});
 
     fetchTemplateConfig(activeProject.id, templateID).then(() => {
       routeChange('/templates');

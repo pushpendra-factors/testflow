@@ -275,6 +275,8 @@ function SaveQuery({
           query_type: queryType,
           saved_query_id: savedQueryId,
           query_title: title,
+          project_id: active_project.id,
+          project_name: active_project.name,
         });
 
         notification.success({
