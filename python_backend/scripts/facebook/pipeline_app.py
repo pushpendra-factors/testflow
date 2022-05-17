@@ -89,6 +89,8 @@ if __name__ == "__main__":
                 token_expiry_payload["Token expired"].append({PROJECT_ID: facebook_int_setting[PROJECT_ID]})
             else:
                 customer_account_ids = facebook_int_setting[FACEBOOK_AD_ACCOUNT].split(',')
+                if len(customer_account_ids) == 0:
+                    token_expiry_payload["Invalid or incomplete integration"].append({PROJECT_ID: facebook_int_setting[PROJECT_ID]})
                 for customer_account_id in customer_account_ids:
                     last_sync_info_with_type: dict = FactorsDataService.get_facebook_last_sync_info(
                         facebook_int_setting[PROJECT_ID], customer_account_id)
@@ -98,7 +100,9 @@ if __name__ == "__main__":
                     JobSchedulerAndRunner.sync(facebook_int_setting_with_customer_account, last_sync_info_with_type)
         if facebook_config.dry != True and facebook_config.env not in [DEVELOPMENT, TEST]:
             MetricsAggregator.publish()
-            if len(token_expiry_payload["Token about to expire"]) != 0 or len(token_expiry_payload["Token expired"]) != 0:
+            if ("Token about to expire" in token_expiry_payload and len(token_expiry_payload["Token about to expire"]) != 0) \
+                 or ("Token expired" in token_expiry_payload and len(token_expiry_payload["Token expired"]) != 0) or \
+                     ("Invalid or incomplete integration" in token_expiry_payload and len(token_expiry_payload["Invalid or incomplete integration"]) != 0):
                 HealthChecksUtil.ping(MetricsAggregator.env, token_expiry_payload, MetricsAggregator.HEALTHCHECK_PING_ID_TOKEN_FAILURE, endpoint="/fail")
         log.warning("Successfully synced. End of facebook sync job.")
         sys.exit(0)            

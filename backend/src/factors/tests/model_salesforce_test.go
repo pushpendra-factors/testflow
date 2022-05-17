@@ -86,7 +86,7 @@ func TestSalesforceCreateSalesforceDocument(t *testing.T) {
 	assert.Equal(t, http.StatusOK, status)
 
 	// enrich job, create contact created and contact updated event.
-	enrichStatus, _ := IntSalesforce.Enrich(project.ID, 2)
+	enrichStatus, _ := IntSalesforce.Enrich(project.ID, 2, nil)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
 	assert.Len(t, enrichStatus, 1)
 	assert.Equal(t, "success", enrichStatus[0].Status)
@@ -181,7 +181,7 @@ func TestSalesforceCreateSalesforceDocument(t *testing.T) {
 	assert.Equal(t, http.StatusOK, status)
 
 	//enrich job, create contact created and contact updated event
-	enrichStatus, _ = IntSalesforce.Enrich(project.ID, 2)
+	enrichStatus, _ = IntSalesforce.Enrich(project.ID, 2, nil)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
 	assert.Len(t, enrichStatus, 1)
 	assert.Equal(t, "success", enrichStatus[0].Status)
@@ -894,7 +894,7 @@ func TestSalesforceEventUserPropertiesState(t *testing.T) {
 	assert.Equal(t, http.StatusOK, status)
 
 	//enrich job, create contact created and contact updated event
-	enrichStatus, _ := IntSalesforce.Enrich(project.ID, 2)
+	enrichStatus, _ := IntSalesforce.Enrich(project.ID, 2, nil)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
 	assert.Len(t, enrichStatus, 1)
 	assert.Equal(t, "success", enrichStatus[0].Status)
@@ -1183,7 +1183,7 @@ func TestSalesforcePropertyDetails(t *testing.T) {
 	status = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
 	assert.Equal(t, http.StatusOK, status)
 
-	allStatus, _ := IntSalesforce.Enrich(project.ID, 2)
+	allStatus, _ := IntSalesforce.Enrich(project.ID, 2, nil)
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
 	}
@@ -1361,7 +1361,7 @@ func TestSalesforceIdentification(t *testing.T) {
 	status = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
 	assert.Equal(t, http.StatusOK, status)
 
-	allStatus, _ := IntSalesforce.Enrich(project.ID, 2)
+	allStatus, _ := IntSalesforce.Enrich(project.ID, 2, nil)
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
 	}
@@ -1532,7 +1532,7 @@ func TestSalesforceSmartEventPropertyDetails(t *testing.T) {
 	status = store.GetStore().CreatePropertyDetails(project.ID, "", dtEnKey3, U.PropertyTypeDateTime, true, false)
 	assert.Equal(t, http.StatusCreated, status)
 
-	enrichStatus, _ := IntSalesforce.Enrich(project.ID, 2)
+	enrichStatus, _ := IntSalesforce.Enrich(project.ID, 2, nil)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
 	assert.Len(t, enrichStatus, 1)
 	assert.Equal(t, "success", enrichStatus[0].Status)
@@ -1769,7 +1769,7 @@ func TestSalesforceCampaignTest(t *testing.T) {
 		assert.Nil(t, err)
 	}
 
-	enrichStatus, anyFailure := IntSalesforce.Enrich(project.ID, 2)
+	enrichStatus, anyFailure := IntSalesforce.Enrich(project.ID, 2, nil)
 	assert.Equal(t, false, anyFailure)
 	assert.Len(t, enrichStatus, 3) // only camapaing, lead and contact
 	assert.Equal(t, util.CRM_SYNC_STATUS_SUCCESS, enrichStatus[0].Status)
@@ -2142,7 +2142,7 @@ func TestSalesforceOpportunityAssociations(t *testing.T) {
 	err = createDummySalesforceDocument(project.ID, oppCreated, model.SalesforceDocumentTypeNameOpportunity)
 	assert.Nil(t, err)
 
-	enrichStatus, _ := IntSalesforce.Enrich(project.ID, 2)
+	enrichStatus, _ := IntSalesforce.Enrich(project.ID, 2, nil)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
 	assert.Len(t, enrichStatus, 3)
 	assert.Equal(t, "success", enrichStatus[0].Status)
@@ -2237,7 +2237,7 @@ func TestSalesforceOpportunityAssociations(t *testing.T) {
 	err = createDummySalesforceDocument(project.ID, lead1Created, model.SalesforceDocumentTypeNameLead)
 	assert.Nil(t, err)
 
-	enrichStatus, _ = IntSalesforce.Enrich(project.ID, 2)
+	enrichStatus, _ = IntSalesforce.Enrich(project.ID, 2, nil)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
 	assert.Len(t, enrichStatus, 3)
 	assert.Equal(t, "success", enrichStatus[0].Status)
@@ -2376,7 +2376,7 @@ func TestSalesforcePerDayBatching(t *testing.T) {
 	}
 	err = createDummySalesforceDocument(project.ID, contactUpdated, model.SalesforceDocumentTypeNameContact)
 	assert.Nil(t, err)
-	enrichStatus, _ := IntSalesforce.Enrich(project.ID, 2)
+	enrichStatus, _ := IntSalesforce.Enrich(project.ID, 2, nil)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
 	assert.Len(t, enrichStatus, 2)
 	assert.Equal(t, "success", enrichStatus[0].Status)
@@ -2545,7 +2545,7 @@ func TestSalesforcePerDayBatching(t *testing.T) {
 	}
 	err = createDummySalesforceDocument(project.ID, campaignMember1, model.SalesforceDocumentTypeNameCampaignMember)
 	assert.Nil(t, err)
-	enrichStatus, _ = IntSalesforce.Enrich(project.ID, 2)
+	enrichStatus, _ = IntSalesforce.Enrich(project.ID, 2, nil)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
 	assert.Equal(t, "success", enrichStatus[0].Status)
 	assert.Equal(t, "success", enrichStatus[1].Status)
@@ -2618,7 +2618,7 @@ func TestSalesforceOpportunitySkipOnUnsyncedLead(t *testing.T) {
 	err = createDummySalesforceDocument(project.ID, leadDocument, model.SalesforceDocumentTypeNameOpportunity)
 	assert.Nil(t, err)
 
-	enrichStatus, _ := IntSalesforce.Enrich(project.ID, 2)
+	enrichStatus, _ := IntSalesforce.Enrich(project.ID, 2, nil)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
 	assert.Len(t, enrichStatus, 3)
 	assert.Equal(t, "success", enrichStatus[0].Status)
@@ -2652,7 +2652,7 @@ func TestSalesforceOpportunitySkipOnUnsyncedLead(t *testing.T) {
 	assert.Equal(t, float64(1), analyzeResult.Rows[idx][1])
 
 	// failed opportunity should be process now
-	enrichStatus, _ = IntSalesforce.Enrich(project.ID, 2)
+	enrichStatus, _ = IntSalesforce.Enrich(project.ID, 2, nil)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
 	assert.Len(t, enrichStatus, 2)
 	assert.Equal(t, "success", enrichStatus[0].Status)
@@ -3074,7 +3074,7 @@ func TestSalesforceGroups(t *testing.T) {
 		err = createDummySalesforceDocument(project.ID, processRecords[i], processRecordsType[i])
 		assert.Nil(t, err, fmt.Sprintf("doc_type %s", processRecordsType[i]))
 	}
-	enrichStatus, _ := IntSalesforce.Enrich(project.ID, 2)
+	enrichStatus, _ := IntSalesforce.Enrich(project.ID, 2, nil)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
 	assert.Len(t, enrichStatus, 7) // group account status, contact roles and group opportunity status
 	assert.Equal(t, "success", enrichStatus[0].Status)
@@ -3247,7 +3247,7 @@ func TestSalesforceGroups(t *testing.T) {
 	assert.Equal(t, http.StatusOK, status)
 	assert.Len(t, result, 0)
 
-	enrichStatus, _ = IntSalesforce.Enrich(project.ID, 2)
+	enrichStatus, _ = IntSalesforce.Enrich(project.ID, 2, nil)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
 	assert.Len(t, enrichStatus, 2) // includes group account status
 	assert.Equal(t, "success", enrichStatus[0].Status)
@@ -3419,7 +3419,7 @@ func TestSalesforceGroups(t *testing.T) {
 	}
 	err = createDummySalesforceDocument(project.ID, document, model.SalesforceDocumentTypeNameLead)
 	assert.Nil(t, err)
-	enrichStatus, _ = IntSalesforce.Enrich(project.ID, 2)
+	enrichStatus, _ = IntSalesforce.Enrich(project.ID, 2, nil)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
 	assert.Len(t, enrichStatus, 1)
 	assert.Equal(t, "success", enrichStatus[0].Status)
@@ -3547,7 +3547,7 @@ func TestSalesforceUserPropertiesOverwrite(t *testing.T) {
 	assert.Equal(t, http.StatusOK, status)
 
 	// Execute enrich job to process the contact created above
-	enrichStatus, _ := IntSalesforce.Enrich(project.ID, 2)
+	enrichStatus, _ := IntSalesforce.Enrich(project.ID, 2, nil)
 	for i := range enrichStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
 	}
@@ -3588,7 +3588,7 @@ func TestSalesforceUserPropertiesOverwrite(t *testing.T) {
 	assert.Equal(t, http.StatusOK, status)
 
 	// Execute enrich job to process the contact created above
-	enrichStatus, _ = IntSalesforce.Enrich(project.ID, 2)
+	enrichStatus, _ = IntSalesforce.Enrich(project.ID, 2, nil)
 	for i := range enrichStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
 	}
@@ -3625,7 +3625,7 @@ func TestSalesforceUserPropertiesOverwrite(t *testing.T) {
 	assert.Equal(t, http.StatusOK, status)
 
 	// Execute enrich job to process the contact created above
-	enrichStatus, _ = IntSalesforce.Enrich(project.ID, 2)
+	enrichStatus, _ = IntSalesforce.Enrich(project.ID, 2, nil)
 	for i := range enrichStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
 	}
@@ -3664,7 +3664,7 @@ func TestSalesforceUserPropertiesOverwrite(t *testing.T) {
 	assert.Equal(t, http.StatusOK, status)
 
 	// Execute enrich job to process the contact created above
-	enrichStatus, _ = IntSalesforce.Enrich(project.ID, 2)
+	enrichStatus, _ = IntSalesforce.Enrich(project.ID, 2, nil)
 	for i := range enrichStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
 	}
@@ -3735,7 +3735,7 @@ func TestSalesforceGroupUserFix(t *testing.T) {
 	assert.Equal(t, http.StatusOK, status)
 
 	// execute enrich job to process the contacts created above
-	enrichStatus, _ := IntSalesforce.Enrich(project.ID, 2)
+	enrichStatus, _ := IntSalesforce.Enrich(project.ID, 2, nil)
 	for i := range enrichStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
 	}
@@ -3801,7 +3801,7 @@ func TestSalesforceGroupUserFix(t *testing.T) {
 	assert.Equal(t, http.StatusOK, status)
 
 	// Execute enrich job to process the contacts created above
-	enrichStatus, _ = IntSalesforce.Enrich(project.ID, 2)
+	enrichStatus, _ = IntSalesforce.Enrich(project.ID, 2, nil)
 	for i := range enrichStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
 	}
@@ -3841,7 +3841,7 @@ func TestSalesforceOpportunityLateIdentification(t *testing.T) {
 	err = createDummySalesforceDocument(project.ID, document, model.SalesforceDocumentTypeNameOpportunity)
 	assert.Nil(t, err)
 
-	enrichStatus, _ := IntSalesforce.Enrich(project.ID, 2)
+	enrichStatus, _ := IntSalesforce.Enrich(project.ID, 2, nil)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
 	assert.Len(t, enrichStatus, 2)
 	assert.Equal(t, "success", enrichStatus[0].Status)
@@ -3891,7 +3891,7 @@ func TestSalesforceOpportunityLateIdentification(t *testing.T) {
 	err = createDummySalesforceDocument(project.ID, document, model.SalesforceDocumentTypeNameOpportunity)
 	assert.Nil(t, err)
 
-	enrichStatus, _ = IntSalesforce.Enrich(project.ID, 2)
+	enrichStatus, _ = IntSalesforce.Enrich(project.ID, 2, nil)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
 	assert.Len(t, enrichStatus, 3)
 	assert.Equal(t, "success", enrichStatus[0].Status)
@@ -3976,7 +3976,7 @@ func TestSalesforceCampaignMemberCampaignAssociation(t *testing.T) {
 	err = createDummySalesforceDocument(project.ID, campaignMember, model.SalesforceDocumentTypeNameCampaignMember)
 	assert.Nil(t, err)
 
-	enrichStatus, _ := IntSalesforce.Enrich(project.ID, 2)
+	enrichStatus, _ := IntSalesforce.Enrich(project.ID, 2, nil)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
 	assert.Len(t, enrichStatus, 2)
 	// campaign member and contact
@@ -4131,7 +4131,7 @@ func TestSalesforceEmptyPropertiesUpdate(t *testing.T) {
 	err = createDummySalesforceDocument(project.ID, contact, model.SalesforceDocumentTypeNameContact)
 	assert.Nil(t, err)
 
-	enrichStatus, _ := IntSalesforce.Enrich(project.ID, 2)
+	enrichStatus, _ := IntSalesforce.Enrich(project.ID, 2, nil)
 	for i := range enrichStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
 	}
@@ -4171,7 +4171,7 @@ func TestSalesforceEmptyPropertiesUpdate(t *testing.T) {
 	err = createDummySalesforceDocument(project.ID, contact, model.SalesforceDocumentTypeNameContact)
 	assert.Nil(t, err)
 
-	enrichStatus, _ = IntSalesforce.Enrich(project.ID, 2)
+	enrichStatus, _ = IntSalesforce.Enrich(project.ID, 2, nil)
 	for i := range enrichStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
 	}
@@ -4290,4 +4290,128 @@ func TestSalesforceBatchCreate(t *testing.T) {
 	assert.Nil(t, err)
 	_, status = store.GetStore().GetSalesforceDocumentsByTypeForSync(project.ID, model.SalesforceDocumentTypeContact, 0, 0)
 	assert.Equal(t, http.StatusNotFound, status) // no records for process
+}
+
+func TestSalesforceDatePropertyTimeZone(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+	createdTime := time.Now()
+	lastModifiedTime := createdTime.Add(2 * time.Minute)
+	value := map[string]interface{}{
+		"Id":               "123",
+		"Name":             "name1",
+		"Date":             "2022-01-29",
+		"CreatedDate":      createdTime.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": lastModifiedTime.Format(model.SalesforceDocumentDateTimeLayout),
+	}
+	enValue, err := json.Marshal(value)
+	assert.Nil(t, err)
+	document := model.SalesforceDocument{
+		Value: &postgres.Jsonb{RawMessage: json.RawMessage(enValue)},
+		Type:  model.SalesforceDocumentTypeLead,
+	}
+
+	// Expected beginning time
+	expectedTimestamp := map[U.TimeZoneString]int64{
+		util.TimeZoneStringIST: 1643394600,
+		util.TimeZoneStringUTC: 1643414400,
+		"America/Vancouver":    1643443200,
+		"Australia/Sydney":     1643374800,
+	}
+	for timeZone, timeZoneTimestamp := range expectedTimestamp {
+		document.SetDocumentTimeZone(timeZone)
+		document.SetDateProperties(&map[string]bool{
+			"Date": true,
+		})
+		enProperties, properties, err := IntSalesforce.GetSalesforceDocumentProperties(project.ID, &document)
+		assert.Nil(t, err)
+		for key, expectedValue := range map[string]interface{}{
+			"Id":   "123",
+			"Name": "name1",
+			"Date": timeZoneTimestamp,
+		} {
+			enKey := model.GetCRMEnrichPropertyKeyByType(
+				U.CRM_SOURCE_NAME_SALESFORCE,
+				model.SalesforceDocumentTypeNameLead,
+				key,
+			)
+			assert.Equal(t, expectedValue, (*enProperties)[enKey], timeZone)
+			assert.Equal(t, expectedValue, (*properties)[key], timeZone)
+		}
+	}
+
+	// Test Daylight saving start time
+	value["Date"] = "2021-10-04" // start date of daylight saving time for Australia/Sydney
+	enValue, err = json.Marshal(value)
+	assert.Nil(t, err)
+	document = model.SalesforceDocument{
+		Value: &postgres.Jsonb{RawMessage: json.RawMessage(enValue)},
+		Type:  model.SalesforceDocumentTypeLead,
+	}
+	// Expected beginning time
+	expectedTimestamp = map[U.TimeZoneString]int64{
+		util.TimeZoneStringIST: 1633285800,
+		util.TimeZoneStringUTC: 1633305600,
+		"America/Vancouver":    1633330800, // already experiencing  daylight saving -07:00 offset
+		"Australia/Sydney":     1633266000, // chaneds +10 to +11:00 offset
+	}
+	for timeZone, timeZoneTimestamp := range expectedTimestamp {
+		document.SetDocumentTimeZone(timeZone)
+		document.SetDateProperties(&map[string]bool{
+			"Date": true,
+		})
+		enProperties, properties, err := IntSalesforce.GetSalesforceDocumentProperties(project.ID, &document)
+		assert.Nil(t, err)
+		enKey := model.GetCRMEnrichPropertyKeyByType(
+			U.CRM_SOURCE_NAME_SALESFORCE,
+			model.SalesforceDocumentTypeNameLead,
+			"Date",
+		)
+		assert.Equal(t, timeZoneTimestamp, (*enProperties)[enKey], timeZone)
+		assert.Equal(t, timeZoneTimestamp, (*properties)["Date"], timeZone)
+	}
+}
+
+func TestSalesforceDatePropertyEnrichment(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+	createdTime := time.Now().AddDate(0, 0, -1)
+	lastModifiedTime := createdTime.Add(2 * time.Minute)
+	value := map[string]interface{}{
+		"Id":               "123",
+		"Name":             "name1",
+		"Date":             "2022-01-29",
+		"CreatedDate":      createdTime.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": lastModifiedTime.Format(model.SalesforceDocumentDateTimeLayout),
+	}
+	err = store.GetStore().BuildAndUpsertDocumentInBatch(project.ID, model.SalesforceDocumentTypeNameContact, []model.SalesforceRecord{value})
+	assert.Nil(t, err)
+	datePropertiesByType := map[int]*map[string]bool{
+		model.SalesforceDocumentTypeContact: {
+			"Date": true,
+		},
+	}
+
+	status := store.GetStore().UpdateProject(project.ID, &model.Project{
+		TimeZone: string("America/Vancouver"),
+	})
+	assert.Equal(t, 0, status)
+	enrichStatus, failure := IntSalesforce.Enrich(project.ID, 2, datePropertiesByType)
+	assert.Equal(t, false, failure)
+	for i := range enrichStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
+	}
+
+	documents, status := store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{"123"}, model.SalesforceDocumentTypeContact, false)
+	assert.Len(t, documents, 1)
+	event, status := store.GetStore().GetEvent(project.ID, documents[0].UserID, documents[0].SyncID)
+	assert.Equal(t, http.StatusFound, status)
+	properties := make(map[string]interface{})
+	json.Unmarshal(event.Properties.RawMessage, &properties)
+	dateKey := model.GetCRMEnrichPropertyKeyByType(
+		U.CRM_SOURCE_NAME_SALESFORCE,
+		model.SalesforceDocumentTypeNameContact,
+		"Date",
+	)
+	assert.Equal(t, float64(1643443200), properties[dateKey])
 }

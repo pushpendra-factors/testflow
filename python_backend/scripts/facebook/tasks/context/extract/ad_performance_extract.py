@@ -67,7 +67,7 @@ class AdPerformanceReportExtract(BaseExtractContext):
 
     def add_source_attributes_for_metrics_or_fields(self, metrics):
         url = self.get_url_for_extract(metrics)
-        attributes = {"url": url}
+        attributes = {"url": url, "access_token": self.int_facebook_access_token}
         self.source.set_attributes(attributes)
         return
     

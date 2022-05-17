@@ -129,6 +129,7 @@ class GetCustomerAccountsV1Handler(BaseHandler):
         # Get customer accounts.
         seed_customer_ids = []
         final_customer_ids = []
+        mapClientToManager = {}
 
         # manager(bool): returns if query customer id is manager or not. level 0 signifies directly related accounts of logged in user i.e no child/sub-accounts included
         query = """
@@ -137,7 +138,7 @@ class GetCustomerAccountsV1Handler(BaseHandler):
             customer_client.id,
             customer_client.descriptive_name
             FROM customer_client
-            WHERE customer_client.level = 0"""
+            WHERE customer_client.level <= 1"""
 
         try:
             customer_service = FetchService(app.CONFIG.ADWORDS_OAUTH).new_get_service('CustomerService',refresh_token)
@@ -168,12 +169,42 @@ class GetCustomerAccountsV1Handler(BaseHandler):
                 log.warning("Error during manager status fetch " + str(e))
                 continue
             for row in response:
+                """
+                customer_client format:
+                {
+                    resource_name: "customers/3695327103/customerClients/5624605264"
+                    manager: false
+                    descriptive_name: "DhiWise"
+                    id: 5624605264
+                }
+                the id after customers is manager ID which we extract in function getManagerIDClientIDNameFromClient
+                """
                 customer_client = row.customer_client
                 if not customer_client.manager:
-                     final_customer_ids.append({"customer_id": customer_client.id, "descriptiveName": customer_client.descriptive_name})
+                    manager_id, client_id, name = getManagerIDClientIDNameFromClient(customer_client)
+
+                    # in some cases same client_id is being repeated with and without maanger id, here we are making a map to keep unique ones
+                    if client_id in mapClientToManager and mapClientToManager[client_id]["manager_id"] == '':
+                        mapClientToManager[client_id] = {"descriptiveName": name, "manager_id": manager_id}
+                    elif not client_id in mapClientToManager:
+                        mapClientToManager[client_id] = {"descriptiveName": name, "manager_id": manager_id}
+                    else:
+                        continue
+
                 else:
                     log.warning("Skipping manager account")
 
+        for customer_id in mapClientToManager:
+            final_customer_ids.append({"customer_id": customer_id, "descriptiveName": mapClientToManager[customer_id]["descriptiveName"],
+             "manager_id": mapClientToManager[customer_id]["manager_id"]})
+            
         self.set_status(200)
         self.finish({"customer_accounts": final_customer_ids})
         return
+
+def getManagerIDClientIDNameFromClient(client):
+    manager_id = client.resource_name.split('/')[1]
+    # resource_name: "customers/3695327103/customerClients/5624605264" in case of non manager account first and last IDs are same. Checking the same below
+    if manager_id == str(client.id):
+        manager_id = ''
+    return manager_id, client.id, client.descriptive_name

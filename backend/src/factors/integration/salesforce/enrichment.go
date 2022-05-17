@@ -25,6 +25,7 @@ type Status struct {
 	ProjectID uint64 `json:"project_id"`
 	Type      string `json:"type"`
 	Status    string `json:"status"`
+	Message   string `json:"message,omitempty"`
 }
 
 var salesforceEnrichOrderByType = [...]int{
@@ -62,13 +63,29 @@ var opportunityMappingOrder = []string{
 
 var allowedCampaignFields = map[string]bool{}
 
-func getSalesforceMappedDataTypeValue(projectID uint64, eventName, enKey string, value interface{}) (interface{}, error) {
+func getSalesforceMappedDataTypeValue(projectID uint64, eventName, enKey string, value interface{}, typeAlias string, dateProperties *map[string]bool, timeZoneStr U.TimeZoneString) (interface{}, error) {
 	if value == nil || value == "" {
 		return "", nil
 	}
 
 	if !C.IsEnabledPropertyDetailFromDB() || !C.IsEnabledPropertyDetailByProjectID(projectID) {
 		return value, nil
+	}
+
+	if dateProperties != nil {
+		for key := range *dateProperties {
+			dateEnKey := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceSalesforce, typeAlias, key)
+			if enKey != dateEnKey {
+				continue
+			}
+
+			enValue, err := model.GetDateAsMidnightTimestampByTimeZone(value, timeZoneStr)
+			if err != nil {
+				return nil, err
+			}
+			return enValue, nil
+
+		}
 	}
 
 	ptype := store.GetStore().GetPropertyTypeByKeyValue(projectID, eventName, enKey, value, false)
@@ -91,6 +108,7 @@ func getSalesforceMappedDataTypeValue(projectID uint64, eventName, enKey string,
 
 // GetSalesforceDocumentProperties return map of enriched properties
 func GetSalesforceDocumentProperties(projectID uint64, document *model.SalesforceDocument) (*map[string]interface{}, *map[string]interface{}, error) {
+
 	var enProperties map[string]interface{}
 	err := json.Unmarshal(document.Value.RawMessage, &enProperties)
 	if err != nil {
@@ -104,10 +122,13 @@ func GetSalesforceDocumentProperties(projectID uint64, document *model.Salesforc
 
 	eventName := model.GetSalesforceEventNameByDocumentAndAction(document, model.SalesforceDocumentUpdated)
 
+	dateProperties := document.GetDateProperties()
 	for key, value := range enProperties {
 
-		enKey := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceSalesforce, model.GetSalesforceAliasByDocType(document.Type), key)
-		enValue, err := getSalesforceMappedDataTypeValue(projectID, eventName, enKey, value)
+		typeAlias := model.GetSalesforceAliasByDocType(document.Type)
+		enKey := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceSalesforce, typeAlias, key)
+
+		enValue, err := getSalesforceMappedDataTypeValue(projectID, eventName, enKey, value, typeAlias, dateProperties, document.GetDocumentTimeZone())
 		if err != nil {
 			log.WithFields(log.Fields{"project_id": projectID, "property_key": enKey}).WithError(err).Error("Failed to get property value.")
 			continue
@@ -1785,7 +1806,6 @@ func enrichAll(project *model.Project, documents []model.SalesforceDocument, sal
 	var errCode int
 	for i := range documents {
 		startTime := time.Now().Unix()
-
 		switch documents[i].Type {
 		case model.SalesforceDocumentTypeAccount:
 			errCode = enrichAccount(project.ID, &documents[i], salesforceSmartEventNames)
@@ -2052,8 +2072,20 @@ func enrichAllWorker(project *model.Project, wg *sync.WaitGroup, enrichStatus *e
 	}
 }
 
+func fillTimeZoneAndDateProperty(documents []model.SalesforceDocument, TimeZoneStr U.TimeZoneString, dateProperties *map[string]bool) error {
+	if dateProperties == nil || TimeZoneStr == "" {
+		return errors.New("missing date properties")
+	}
+
+	for i := range documents {
+		documents[i].SetDocumentTimeZone(TimeZoneStr)
+		documents[i].SetDateProperties(dateProperties)
+	}
+	return nil
+}
+
 // Enrich sync salesforce documents to events
-func Enrich(projectID uint64, workerPerProject int) ([]Status, bool) {
+func Enrich(projectID uint64, workerPerProject int, dataPropertiesByType map[int]*map[string]bool) ([]Status, bool) {
 
 	logCtx := log.WithField("project_id", projectID)
 
@@ -2121,6 +2153,12 @@ func Enrich(projectID uint64, workerPerProject int) ([]Status, bool) {
 		enrichOrderByType = append(enrichOrderByType, model.SalesforceDocumentTypeOpportunityContactRole)
 	}
 
+	timeZoneStr, status := store.GetStore().GetTimezoneForProject(projectID)
+	if status != http.StatusFound {
+		logCtx.Error("Failed to get timezone for project.")
+		return statusByProjectAndType, true
+	}
+
 	for _, timeRange := range orderedTimeSeries {
 
 		for _, docType := range enrichOrderByType {
@@ -2145,6 +2183,8 @@ func Enrich(projectID uint64, workerPerProject int) ([]Status, bool) {
 				}
 				continue
 			}
+
+			fillTimeZoneAndDateProperty(documents, timeZoneStr, dataPropertiesByType[docType])
 
 			batches := GetBatchedOrderedDocumentsByID(documents, workerPerProject)
 

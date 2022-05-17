@@ -217,7 +217,8 @@ func GetCRMTimeSeriesByStartTimestamp(projectID uint64, from int64, CRMEventSour
 		return nil
 	}
 
-	if CRMEventSource != SmartCRMEventSourceSalesforce && CRMEventSource != SmartCRMEventSourceHubspot {
+	if CRMEventSource != SmartCRMEventSourceSalesforce && CRMEventSource != SmartCRMEventSourceHubspot &&
+		CRMEventSource != U.CRM_SOURCE_NAME_MARKETO {
 		logCtx.Error("Invalid source.")
 		return nil
 	}

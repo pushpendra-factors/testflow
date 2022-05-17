@@ -12,23 +12,32 @@ from ...utils.json import JsonUtil
 # paginated strategy with support for systems with http and url only.
 # May be a separate class requirement is required so that client and system implementation are decoupled.
 # This is specific implementation for facebook.
+# response of class methods are different.
+# eg - local_storage vs external - though we have same base class being used..
 class ExternalSystem(BaseSystem):
+    BASE_URL_POLL_ASYNC = "https://graph.facebook.com/v13.0/{}?access_token={}"
+    BASE_URL_INSIGHTS_ASYNC = "https://graph.facebook.com/v13.0/{}/insights?access_token={}"
 
     def read(self):
         total_requests = 0
+        total_async_requests = 0
         result_records = []
-        records, next_page_metadata, result_response = self.get_paginated_from_source(self.system_attributes["url"])
+        records, next_page_metadata, result_response, is_async = self.get_paginated_from_source(self.system_attributes["url"])
         total_requests += 1
+        if is_async:
+            total_async_requests += 1
         if not result_response.ok:
-            return "", result_response, 1
+            return "", result_response, total_requests, total_async_requests
         result_records.extend(records)
 
         while next_page_metadata["exists"]:
             next_page_link = next_page_metadata["link"]
-            records, next_page_metadata, result_response = self.get_paginated_from_source(next_page_link)
+            records, next_page_metadata, result_response, is_async = self.get_paginated_from_source(next_page_link)
             total_requests += 1
+            if is_async:
+                total_async_requests += 1
             result_records.extend(records)
-        return JsonUtil.create(records), result_response, total_requests
+        return JsonUtil.create(records), result_response, total_requests, total_async_requests
 
     def write(self, input_string):
         input_records = JsonUtil.read(input_string)
@@ -51,14 +60,14 @@ class ExternalSystem(BaseSystem):
         return
 
     def get_paginated_from_source(self, url):
-        result_response = self.handle_request_with_retries(url)
+        result_response, is_async = self.handle_request_with_retries(url)
         if not result_response.ok:
-            return [], {"exists": False, "link": ""}, result_response
+            return [], {"exists": False, "link": ""}, result_response, is_async
         if "paging" in result_response.json() and "next" in result_response.json()["paging"]:
             next_page_metadata = {"exists": True, "link": result_response.json()["paging"]["next"]}
         else:
             next_page_metadata = {"exists": False, "link": ""}
-        return result_response.json()['data'], next_page_metadata, result_response
+        return result_response.json()['data'], next_page_metadata, result_response, is_async
 
     def get_payload_for_facebook_data_service(self, value):
         payload = {
@@ -73,13 +82,28 @@ class ExternalSystem(BaseSystem):
         return payload
 
     def handle_request_with_retries(self, url):
-        r = None
-        for retry in range(3):
-            r = requests.get(url)
-            if r.status_code == 500:
-                err_json = r.json()['error']
-                if err_json['code'] == 1 and 'error_subcode' in err_json and err_json['error_subcode'] == 99:
-                    time.sleep(2)
-                    continue
+        r = requests.get(url)
+        if r.ok:
+            return r, False
+        r = self.try_async_request(url)
+        return r, True
+
+    def try_async_request(self, url):
+        r = requests.post(url=url)
+        if not r.ok:
             return r
+        rep_id = r.json()["report_run_id"]
+        poll = True
+        sleep_time = 5
+        while poll and sleep_time < 65:
+            time.sleep(sleep_time)
+            sleep_time += 5
+            r = requests.get(self.BASE_URL_POLL_ASYNC.format(rep_id, self.system_attributes["access_token"]), timeout=300)
+            if not r.ok:
+                return r
+            if r.json()["async_status"] == "Job Completed" and r.json()["async_percent_completion"] == 100:
+                poll = False
+        
+        r = requests.get(self.BASE_URL_INSIGHTS_ASYNC.format(rep_id, self.system_attributes["access_token"]), timeout=300)
         return r
+

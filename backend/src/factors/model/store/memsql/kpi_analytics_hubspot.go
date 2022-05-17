@@ -72,15 +72,20 @@ func (store *MemSQL) getConfigForSpecificHubspotCategory(projectID uint64, reqID
 	if statusCode != http.StatusFound {
 		logCtx.WithField("err", err).WithField("displayCategory", displayCategory).Warn("Failed to get the custom Metric by object type")
 	}
-	customMetricNames := make([]string, 0)
+	rCustomMetrics := make([]map[string]string, 0)
+
 	for _, customMetric := range customMetrics {
-		customMetricNames = append(customMetricNames, customMetric.Name)
+		currentMetric := make(map[string]string)
+		currentMetric["name"] = customMetric.Name
+		currentMetric["display_name"] = customMetric.Name
+		currentMetric["type"] = ""
+		rCustomMetrics = append(rCustomMetrics, currentMetric)
 	}
 
 	return map[string]interface{}{
 		"category":         model.ProfileCategory,
 		"display_category": displayCategory,
-		"metrics":          customMetricNames,
+		"metrics":          rCustomMetrics,
 		"properties":       store.GetPropertiesForHubspot(projectID, reqID),
 	}
 }

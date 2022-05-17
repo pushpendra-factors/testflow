@@ -68,3 +68,39 @@ func GetCRMSourceByAliasName(sourceAlias string) (U.CRMSource, error) {
 
 	return 0, errors.New("invalid source alias")
 }
+
+// GetCRMUserBatchedOrderedRecordsByID return list of document in batches. Order is maintained on records id.
+func GetCRMUserBatchedOrderedRecordsByID(records []CRMUser, batchSize int) []map[string]interface{} {
+
+	if len(records) < 0 {
+		return nil
+	}
+
+	recordsMap := make(map[string][]CRMUser)
+	for i := range records {
+		if _, exist := recordsMap[records[i].ID]; !exist {
+			recordsMap[records[i].ID] = make([]CRMUser, 0)
+		}
+		recordsMap[records[i].ID] = append(recordsMap[records[i].ID], records[i])
+	}
+
+	batchedRecordsByID := make([]map[string]interface{}, 1)
+	isBatched := make(map[string]bool)
+	batchLen := 0
+	batchedRecordsByID[batchLen] = make(map[string]interface{})
+	for i := range records {
+		if isBatched[records[i].ID] {
+			continue
+		}
+
+		if len(batchedRecordsByID[batchLen]) >= batchSize {
+			batchedRecordsByID = append(batchedRecordsByID, make(map[string]interface{}))
+			batchLen++
+		}
+
+		batchedRecordsByID[batchLen][records[i].ID] = recordsMap[records[i].ID]
+		isBatched[records[i].ID] = true
+	}
+
+	return batchedRecordsByID
+}

@@ -64,7 +64,8 @@ class MetricsAggregator:
             message = "Sync status is missing on response"
             cls.etl_stats["failures"].setdefault(message, {})
             cls.etl_stats["failures"][message].setdefault(doc_type, set())
-            cls.etl_stats["failures"][message][doc_type].add(project_id)
+            cls.etl_stats["failures"][message][doc_type].setdefault(project_id, set())
+            cls.etl_stats["failures"][message][doc_type][project_id].add(customer_acc_id)
         elif status == "failed":
             # In our observation we have encountered that "No such object" error comes when extract has failed due to some reason(highly due to token expiry)
             # We'll keep monitoring it manually, if we figure some other cases happening, we'll seprate the two.
@@ -74,8 +75,9 @@ class MetricsAggregator:
                 cls.etl_stats["token_failures"][message][doc_type].add(project_id)
             else:
                 cls.etl_stats["failures"].setdefault(message, {})
-                cls.etl_stats["failures"][message].setdefault(doc_type, set())
-                cls.etl_stats["failures"][message][doc_type].add(project_id)
+                cls.etl_stats["failures"][message].setdefault(doc_type, {})
+                cls.etl_stats["failures"][message][doc_type].setdefault(project_id, set())
+                cls.etl_stats["failures"][message][doc_type][project_id].add(customer_acc_id)
         elif status == "skipped":
             cls.etl_stats["skipped"].setdefault(project_id, set())
             cls.etl_stats["skipped"][project_id].add(customer_acc_id)
