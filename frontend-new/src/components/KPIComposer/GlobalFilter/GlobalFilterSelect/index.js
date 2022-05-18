@@ -207,7 +207,7 @@ const GlobalFilterSelect = ({
         <Tooltip title={renderGroupDisplayName(propState)}>
           <Button
             // icon={propState && propState.icon ? <SVG name={propState.icon} size={16} color={'purple'} /> : null}
-            className={`fa-button--truncate-xs mr-2`}
+            className={`fa-button--truncate fa-button--truncate-xs btn-left-round filter-buttons-margin`}
             type='link'
             onClick={() => setPropSelectOpen(!propSelectOpen)}
           >
@@ -235,7 +235,7 @@ const GlobalFilterSelect = ({
     return (
       <div className={styles.filter__propContainer}>
         <Button
-          className={`mr-2`}
+          className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
           type='link'
           onClick={() => setOperSelectOpen(true)}
         >
@@ -413,7 +413,7 @@ const GlobalFilterSelect = ({
     if (datePicker.includes(operator)) {
       selectorComponent = (
         <DatePicker
-          disabledDate={(d) => !d || d.isAfter(MomentTz())}
+          // disabledDate={(d) => !d || d.isAfter(MomentTz())}
           autoFocus={false}
           className={`fa-date-picker`}
           open={showDatePicker}
@@ -508,7 +508,7 @@ const GlobalFilterSelect = ({
             }
           >
             <Button
-              className={`fa-button--truncate fa-button--truncate-lg`}
+              className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
               type='link'
               onClick={() => setValuesSelectionOpen(!valuesSelectionOpen)}
             >
