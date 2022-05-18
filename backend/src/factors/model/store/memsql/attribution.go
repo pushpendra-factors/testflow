@@ -139,8 +139,13 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 		attributionData, isCompare, err = store.FireAttribution(projectID, query, eventNameToIDList, sessions, sessionWT, *logCtx)
 		if projectID == 399 {
 			conversionEventCountList := [][]float64{}
+			count := 0
 			for key, _ := range *attributionData {
 				conversionEventCountList = append(conversionEventCountList, (*attributionData)[key].ConversionEventCount)
+				count++
+				if count > 100 {
+					break
+				}
 
 			}
 			logCtx.WithFields(log.Fields{"2ConversionEventCountListAfterFireAttribution": conversionEventCountList}).Info("debug attr keyword conversion")
