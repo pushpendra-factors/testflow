@@ -3,6 +3,7 @@ package hubspot_enrich
 import (
 	C "factors/config"
 	IntHubspot "factors/integration/hubspot"
+	"factors/model/model"
 	"factors/model/store"
 	U "factors/util"
 	"fmt"
@@ -28,10 +29,24 @@ func (s *SyncStatus) AddSyncStatus(status []IntHubspot.Status, hasFailure bool) 
 	}
 }
 
-func syncWorker(projectID uint64, wg *sync.WaitGroup, numDocRoutines int, syncStatus *SyncStatus, recordsMaxCreatedAt int64) {
+func syncWorker(projectID uint64, wg *sync.WaitGroup, numDocRoutines int, syncStatus *SyncStatus, recordsMaxCreatedAt int64, hubspotProjectSettings *model.HubspotProjectSettings) {
 	defer wg.Done()
+	datePropertiesByObjectType, err := IntHubspot.GetHubspotPropertiesByDataType(projectID, model.GetHubspotAllowedObjects(projectID), hubspotProjectSettings.APIKey, model.HubspotDataTypeDate)
+	if err != nil {
+		log.WithFields(log.Fields{"project_id": projectID}).WithError(err).Error("Failed to get date properties.")
 
-	status, hasFailure := IntHubspot.Sync(projectID, numDocRoutines, recordsMaxCreatedAt)
+		syncStatus.AddSyncStatus([]IntHubspot.Status{{ProjectId: projectID, Message: err.Error(), Status: U.CRM_SYNC_STATUS_FAILURES}}, true)
+		return
+	}
+
+	timeZone, err := IntHubspot.GetHubspotAccountTimezone(projectID, hubspotProjectSettings.APIKey)
+	if err != nil {
+		log.WithFields(log.Fields{"project_id": projectID}).WithError(err).Error("Failed to get timezone for enrichment.")
+		syncStatus.AddSyncStatus([]IntHubspot.Status{{ProjectId: projectID, Message: err.Error(), Status: U.CRM_SYNC_STATUS_FAILURES}}, true)
+		return
+	}
+
+	status, hasFailure := IntHubspot.Sync(projectID, numDocRoutines, recordsMaxCreatedAt, datePropertiesByObjectType, timeZone)
 	syncStatus.AddSyncStatus(status, hasFailure)
 }
 
@@ -75,6 +90,7 @@ func RunHubspotEnrich(configs map[string]interface{}) (map[string]interface{}, b
 	}
 
 	projectIDs := make([]uint64, 0, 0)
+	hubspotProjectSettingsMap := make(map[uint64]*model.HubspotProjectSettings, 0)
 	for _, settings := range hubspotEnabledProjectSettings {
 		if exists := disabledProjects[settings.ProjectId]; exists {
 			continue
@@ -99,6 +115,7 @@ func RunHubspotEnrich(configs map[string]interface{}) (map[string]interface{}, b
 		}
 
 		projectIDs = append(projectIDs, settings.ProjectId)
+		hubspotProjectSettingsMap[settings.ProjectId] = &settings
 	}
 
 	// Runs enrichment for list of project_ids as batch using go routines.
@@ -111,7 +128,7 @@ func RunHubspotEnrich(configs map[string]interface{}) (map[string]interface{}, b
 		var wg sync.WaitGroup
 		for pi := range batch {
 			wg.Add(1)
-			go syncWorker(batch[pi], &wg, numDocRoutines, &syncStatus, hubspotMaxCreatedAt)
+			go syncWorker(batch[pi], &wg, numDocRoutines, &syncStatus, hubspotMaxCreatedAt, hubspotProjectSettingsMap[batch[pi]])
 		}
 		wg.Wait()
 	}
