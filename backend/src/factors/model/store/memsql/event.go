@@ -32,7 +32,6 @@ func (store *MemSQL) GetHubspotFormEvents(projectID uint64, userId string, times
 		"timestamps": timestamps,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	fmt.Println("GetHubspotFormEvents ", projectID, userId)
 	if projectID < 1 || userId == "" {
 		log.Error("GetHubspotFormEvents Failed. Invalid projectId or userId")
 		return nil, http.StatusBadRequest
