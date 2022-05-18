@@ -493,7 +493,9 @@ function CoreQuery({
         factorsai.track('VIEW_QUERY', {
           query_type: equivalentQuery?.queryType,
           saved_query_id: record?.key || record?.id,
-          query_title: record?.title
+          query_title: record?.title,
+          project_id: activeProject?.id,
+          project_name: activeProject?.name,
         });
       } catch (err) {
         console.log(err);

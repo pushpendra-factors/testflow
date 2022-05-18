@@ -7,13 +7,14 @@ import (
 	"factors/model/store"
 	U "factors/util"
 	"fmt"
-	"github.com/jinzhu/now"
-	log "github.com/sirupsen/logrus"
 	"math"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/jinzhu/now"
+	log "github.com/sirupsen/logrus"
 )
 
 type Message struct {

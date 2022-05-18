@@ -175,7 +175,7 @@ const AttrFilterSelect = ({
                 <SVG name={propState.icon} size={16} color={'purple'} />
               ) : null
             }
-            className={`fa-button--truncate fa-button--truncate-xs mr-2`}
+            className={`fa-button--truncate fa-button--truncate-xs btn-left-round filter-buttons-margin`}
             type='link'
             onClick={() => setPropSelectOpen(!propSelectOpen)}
           >
@@ -203,7 +203,7 @@ const AttrFilterSelect = ({
     return (
       <div className={styles.filter__propContainer}>
         <Button
-          className={`mr-2`}
+          className={`filter-buttons-radius filter-buttons-margin`}
           type='link'
           onClick={() => setOperSelectOpen(true)}
         >
@@ -290,7 +290,7 @@ const AttrFilterSelect = ({
               }
             >
               <Button
-                className={`fa-button--truncate`}
+                className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
                 type='link'
                 onClick={() => setValuesSelectionOpen(!valuesSelectionOpen)}
               >
