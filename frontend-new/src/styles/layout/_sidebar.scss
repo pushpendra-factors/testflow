@@ -143,14 +143,14 @@
         overflow-y:auto;
     }
     input.fa-project-list--search{
-        width: 100%;
+        width: 332px;
         background-color: $fa-color--mono-1;
         font-size: 14px;
         color: $fa-color--mono-5;
         border-radius: 8px;
         height: 38px;
         display: block;
-        margin:10px 0px;
+        margin:10px;
         padding:0 10px;
         &:active,&:hover,&:focus{
             outline: none;
