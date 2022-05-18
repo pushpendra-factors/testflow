@@ -105,6 +105,7 @@ import {
 } from './coreQuery.helpers';
 import { getChartChangedKey } from './AnalysisResultsPage/analysisResultsPage.helpers';
 import { EMPTY_OBJECT } from '../../utils/global';
+import moment from 'moment';
 
 function CoreQuery({
   activeProject,
@@ -289,7 +290,7 @@ function CoreQuery({
             queryType,
             selectedReport,
           });
-          
+
           updatePivotConfig(pivotConfig);
 
           //update the chart type to the saved chart type
@@ -896,7 +897,7 @@ function CoreQuery({
     (dates, isCompareDate) => {
       let from,
         to,
-        frequency = 'date',
+        frequency,
         { dateType } = dates;
 
       if (Array.isArray(dates.startDate)) {
@@ -914,6 +915,16 @@ function CoreQuery({
       ) {
         frequency = getValidGranularityOptions({ from, to })[0];
       }
+
+      const startDate = moment(from).startOf('day').utc().unix() * 1000;
+      const endDate = moment(to).endOf('day').utc().unix() * 1000 + 1000;
+      const daysDiff = moment(endDate).diff(startDate, 'days');
+      if (daysDiff > 1) {
+        frequency =
+          queryOptions.date_range.frequency === 'hour' || frequency === 'hour'
+            ? 'date'
+            : queryOptions.date_range.frequency;
+      } else frequency = 'hour';
 
       const payload = {
         from: MomentTz(from).startOf('day'),

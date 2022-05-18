@@ -94,9 +94,60 @@ function ProjectModal(props) {
   const popoverContent = () => {
     return (
       <div data-tour='step-9' className={'fa-popupcard'}>
-        <Text type={'title'} level={7} weight={'bold'} extraClass={'m-0'}>
-          Projects
-        </Text>
+        <div className={`${styles.popover_content__header}`}>Signed in as</div>
+        <div
+          className={`${styles.popover_content__settings}`}
+          onClick={() => {
+            setShowPopOver(false);
+            showUserSettingsModal();
+          }}
+        >
+          <div className='flex items-center'>
+            <Avatar
+              size={40}
+              style={{
+                color: '#f56a00',
+                backgroundColor: '#fde3cf',
+                fontSize: '12px',
+              }}
+            >{`${props.currentAgent?.first_name?.charAt(
+              0
+            )}${props.currentAgent?.last_name?.charAt(0)}`}</Avatar>
+            <div className='flex flex-col ml-3'>
+              <Text
+                type={'title'}
+                level={7}
+                weight={'bold'}
+                extraClass={'m-0'}
+              >{`${props.currentAgent?.first_name} ${props.currentAgent?.last_name}`}</Text>
+              <div className={`text-xs`}>{props.currentAgent?.email}</div>
+            </div>
+          </div>
+          <SVG name='settings' size={24} />
+        </div>
+        <div className={'fa-popupcard-divider'} />
+        <div className={`${styles.popover_content__projectList}`}>
+          <Text
+            type={'title'}
+            level={7}
+            weight={'bold'}
+            extraClass={'m-0'}
+            color='grey-2'
+          >
+            Your Projects
+          </Text>
+          <Button
+            type={'text'}
+            className='fa-btn--custom'
+            onClick={() => {
+              setShowPopOver(false);
+              setShowProjectModal(true);
+            }}
+          >
+            <SVG name='plus' />
+          </Button>
+        </div>
+
         {props.projects.length > 6 ? (
           <input
             onChange={(e) => searchProject(e)}
@@ -116,7 +167,7 @@ function ProjectModal(props) {
               return (
                 <div
                   key={index}
-                  className={`flex justify-start items-center project-item ${
+                  className={`flex justify-between items-center project-item mx-2 ${
                     props.active_project.id === project.id ? 'active' : null
                   }`}
                   onClick={() => {
@@ -127,77 +178,50 @@ function ProjectModal(props) {
                     }
                   }}
                 >
-                  <Avatar
-                    size={28}
-                    style={{
-                      color: '#fff',
-                      backgroundColor: '#52BE95',
-                      fontSize: '14px',
-                      textTransform: 'uppercase',
-                      fontWeight: '400',
-                    }}
-                  >{`${project?.name?.charAt(0)}`}</Avatar>
-                  <Text
-                    type={'title'}
-                    level={7}
-                    weight={'bold'}
-                    extraClass={'m-0 ml-2'}
-                  >
-                    {project.name}
-                  </Text>
+                  <div className='flex items-center flex-no-wrap'>
+                    <Avatar
+                      size={28}
+                      shape='square'
+                      style={{
+                        background: '#83D2D2',
+                        fontSize: '14px',
+                        textTransform: 'uppercase',
+                        fontWeight: '400',
+                        borderRadius: '4px',
+                      }}
+                    >{`${project?.name?.charAt(0)}`}</Avatar>
+                    <span className='font-bold ml-3'>{project.name}</span>
+                  </div>
+                  {props.active_project.id === project.id ? (
+                    <SVG name='check_circle' />
+                  ) : null}
                 </div>
               );
             })}
         </div>
         <div className={'fa-popupcard-divider'} />
-        <Button
-          size={'large'}
-          type={'text'}
-          onClick={() => {
-            setShowPopOver(false);
-            setShowProjectModal(true);
-          }}
-        >
-          <span className={'mr-4'}>
-            <PlusOutlined />
-          </span>
-          New Project
-        </Button>
-        <div className={'fa-popupcard-divider'} />
-        <div
-          className={'flex justify-start items-center project-item'}
-          onClick={() => {
-            setShowPopOver(false);
-            showUserSettingsModal();
-          }}
-        >
-          <Avatar
-            size={28}
-            style={{
-              color: '#f56a00',
-              backgroundColor: '#fde3cf',
-              fontSize: '12px',
-            }}
-          >{`${props.currentAgent?.first_name?.charAt(
-            0
-          )}${props.currentAgent?.last_name?.charAt(0)}`}</Avatar>
-          <Text type={'title'} level={7} extraClass={'m-0 ml-2'}>
-            Account Settings
-          </Text>
+        <div className={styles.popover_content__additionalActions}>
+          <a href='https://help.factors.ai' target='_blank'>
+            Help
+          </a>
         </div>
-        <Button
-          size={'large'}
-          type={'text'}
-          onClick={() => {
-            setShowPopOver(false);
-            props.signout();
-          }}
-        >
-          <span className={'mr-4'}>
-            <PoweroffOutlined />
-          </span>
-          Logout
-        </Button>
+
+        <div style={{ borderTop: 'thin solid #e7e9ed' }}>
+          <Button
+            size={'large'}
+            type={'text'}
+            onClick={() => {
+              setShowPopOver(false);
+              props.signout();
+            }}
+            className={styles.popover_content__signout}
+          >
+            <div className='flex items-center'>
+              <SVG name='signout' extraClass='mr-1' color='#EA6262' />
+              <span style={{ color: '#EA6262' }}>Logout</span>
+            </div>
+          </Button>
+        </div>
       </div>
     );
   };

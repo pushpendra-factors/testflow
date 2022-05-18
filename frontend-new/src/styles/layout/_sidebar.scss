@@ -85,17 +85,18 @@
 .fa-popupcard--wrapper
 {
     position: fixed;
-    top: 52px !important;
+    top: 48px !important;
 
     .ant-popover-inner
     {
-
-        width: 320px; 
-        margin-left: 2em;
+        width: 356px;
+        max-height: 640px; 
+        border: 1px solid #f7f5f8;
+        border-radius: 12px;
     }
     .ant-popover-inner-content
     { 
-        padding: 1em 1.5em;
+        padding: 0;
     }
     .ant-popover-arrow
     {
@@ -104,13 +105,14 @@
 
     .fa-popupcard
     {
-        button{
-            text-align: left;
-            width: 100%;
+        box-shadow: 0px 0px 20px rgba(0, 0, 0, 0.2);
+        border-radius: 8px;
+        a {
+            color: #0B1E39;
         }
         .fa-popupcard-divider{
             width: 100%;
-            margin: 10px 0;
+            margin: 8px 0;
             border-bottom: thin solid $fa-color--mono-2;
         }
         .project-item{
@@ -118,7 +120,7 @@
             cursor: pointer;
             border-radius: 8px;
             width: 100%;
-            padding: 7px 10px;
+            padding: 6px 16px;
             margin: 2px 0;
             transition: all 0.3s;
             &:hover{
@@ -126,8 +128,9 @@
             }
             &.active
             {
-                border: 2px solid $fa-color--brand-color;
-                background-color: $fa-color--mono-1;
+                // border: 2px solid $fa-color--brand-color;
+                // background-color: $fa-color--mono-1;
+                color: #1890FF;
             }
             
         }

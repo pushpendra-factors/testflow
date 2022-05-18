@@ -33,10 +33,10 @@ const MenuItems = {
 };
 
 const MapNametToLocation = {
-  dashboard: '/',
-  corequery: '/analyse',
+  dashboardFilled: '/',
+  analysis: '/analyse',
   profile: '/profile',
-  key: '/explain',
+  explain: '/explain',
   attribution: '/attribution',
   configure: '/configure',
   settings: '/settings',
@@ -137,8 +137,8 @@ function SiderMenu({
     } else handleClick(key);
   };
 
-  const setIcon = (name, size = 24) => {
-    let color;
+  const setIcon = (name, size = 28) => {
+    let color = '#8692A3'
     if (location.pathname === MapNametToLocation[name]) {
       color = 'purple';
     }
@@ -162,21 +162,20 @@ function SiderMenu({
       mode='inline'
       onOpenChange={handleOpenChange}
       onClick={onClickAction}
-      style={{ background: '#f0f2f5' }}
       className={styles.menu}
     >
       {/* <div style={{height:}}></div> */}
       <Menu.Item
         className={styles.menuitems}
         key='/'
-        icon={setIcon('dashboard')}
+        icon={setIcon('dashboardFilled')}
       >
         <b>Dashboard</b>
       </Menu.Item>
       <Menu.Item
         className={styles.menuitems}
         key='/analyse'
-        icon={setIcon('corequery')}
+        icon={setIcon('analysis')}
       >
         <b>Analyse</b>
       </Menu.Item>
@@ -206,7 +205,7 @@ function SiderMenu({
       <Menu.Item
         className={styles.menuitems}
         key='/explain'
-        icon={setIcon('key')}
+        icon={setIcon('explain')}
       >
         <b>Explain</b>
       </Menu.Item>
