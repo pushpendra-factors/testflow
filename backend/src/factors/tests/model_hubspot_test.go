@@ -3437,7 +3437,7 @@ func TestHubspotCompanyGroups(t *testing.T) {
 		TypeAlias: model.HubspotDocumentTypeNameCompany,
 		Value:     &companyPJson,
 	}
-	status := store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	status := store.GetStore().CreateHubspotDocumentInBatch(project.ID, model.HubspotDocumentTypeCompany, []*model.HubspotDocument{&hubspotDocument}, 1)
 	assert.Equal(t, http.StatusCreated, status)
 
 	// extra company creation for go routines test
@@ -3451,7 +3451,7 @@ func TestHubspotCompanyGroups(t *testing.T) {
 			TypeAlias: model.HubspotDocumentTypeNameCompany,
 			Value:     &companyPJson,
 		}
-		status := store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+		status := store.GetStore().CreateHubspotDocumentInBatch(project.ID, model.HubspotDocumentTypeCompany, []*model.HubspotDocument{&hubspotDocument}, 1)
 		assert.Equal(t, http.StatusCreated, status)
 	}
 
@@ -3483,7 +3483,7 @@ func TestHubspotCompanyGroups(t *testing.T) {
 			TypeAlias: model.HubspotDocumentTypeNameContact,
 			Value:     &contactPJson,
 		}
-		status := store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+		status := store.GetStore().CreateHubspotDocumentInBatch(project.ID, model.HubspotDocumentTypeContact, []*model.HubspotDocument{&hubspotDocument}, 1)
 		assert.Equal(t, http.StatusCreated, status)
 	}
 
@@ -3524,7 +3524,7 @@ func TestHubspotCompanyGroups(t *testing.T) {
 			Value:     &dealPJson,
 		}
 
-		status := store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+		status := store.GetStore().CreateHubspotDocumentInBatch(project.ID, model.HubspotDocumentTypeDeal, []*model.HubspotDocument{&hubspotDocument}, 1)
 		assert.Equal(t, http.StatusCreated, status)
 	}
 
@@ -3586,7 +3586,7 @@ func TestHubspotCompanyGroups(t *testing.T) {
 		TypeAlias: model.HubspotDocumentTypeNameCompany,
 		Value:     &companyPJson,
 	}
-	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	status = store.GetStore().CreateHubspotDocumentInBatch(project.ID, model.HubspotDocumentTypeCompany, []*model.HubspotDocument{&hubspotDocument}, 1)
 	assert.Equal(t, http.StatusCreated, status)
 
 	enrichStatus, _ = IntHubspot.Sync(project.ID, 1, time.Now().Unix())
@@ -3680,7 +3680,7 @@ func TestHubspotCompanyGroups(t *testing.T) {
 		TypeAlias: model.HubspotDocumentTypeNameCompany,
 		Value:     &companyPJson,
 	}
-	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	status = store.GetStore().CreateHubspotDocumentInBatch(project.ID, model.HubspotDocumentTypeCompany, []*model.HubspotDocument{&hubspotDocument}, 1)
 	assert.Equal(t, http.StatusCreated, status)
 
 	enrichStatus, _ = IntHubspot.Sync(project.ID, 1, time.Now().Unix())
@@ -3803,7 +3803,7 @@ func TestHubspotCompanyGroups(t *testing.T) {
 		Value:     &dealPJson,
 	}
 
-	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	status = store.GetStore().CreateHubspotDocumentInBatch(project.ID, model.HubspotDocumentTypeDeal, []*model.HubspotDocument{&hubspotDocument}, 1)
 	assert.Equal(t, http.StatusCreated, status)
 
 	enrichStatus, _ = IntHubspot.Sync(project.ID, 1, time.Now().Unix())
@@ -3865,11 +3865,11 @@ func TestHubspotCompanyGroups(t *testing.T) {
 		Value:     &dealPJson,
 	}
 
-	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	status = store.GetStore().CreateHubspotDocumentInBatch(project.ID, model.HubspotDocumentTypeDeal, []*model.HubspotDocument{&hubspotDocument}, 1)
 	assert.Equal(t, http.StatusCreated, status)
 	// inserting again should return status conflict
-	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
-	assert.Equal(t, http.StatusConflict, status)
+	status = store.GetStore().CreateHubspotDocumentInBatch(project.ID, model.HubspotDocumentTypeDeal, []*model.HubspotDocument{&hubspotDocument}, 1)
+	assert.Equal(t, http.StatusCreated, status)
 	documents, status = store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID,
 		[]string{U.GetPropertyValueAsString(dealIds[2])}, model.HubspotDocumentTypeDeal, []int{model.HubspotDocumentActionAssociationsUpdated})
 	assert.Len(t, documents, 1)
