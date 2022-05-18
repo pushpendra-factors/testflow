@@ -1306,7 +1306,7 @@ func ProcessQuery(query *AttributionQuery, attributionData *map[string]*Attribut
 				break
 			}
 		}
-		logCtx.WithFields(log.Fields{"4ConversionEventCountListAfterAddCustomDimensions": attributionData200}).Info("debug attr keyword conversion")
+		logCtx.WithFields(log.Fields{"4ConversionEventCountListAfterAddCustomDimensions": attributionData, "#attributionData": len(*attributionData)}).Info("debug attr keyword conversion")
 	}
 	logCtx.Info("Done AddTheAddedKeysAndMetrics AddPerformanceData ApplyFilter ComputeAdditionalMetrics AddCustomDimensions")
 	// Attribution data to rows
@@ -1317,7 +1317,7 @@ func ProcessQuery(query *AttributionQuery, attributionData *map[string]*Attribut
 		for i := 0; i < len(dataRows) && i < 200; i++ {
 			dataRows200 = append(dataRows200, dataRows[i])
 		}
-		logCtx.WithFields(log.Fields{"5conversionsInDataRows": dataRows200}).Info("debug attr keyword conversion")
+		logCtx.WithFields(log.Fields{"5conversionsInDataRows": dataRows200, "#dataRows": len(dataRows)}).Info("debug attr keyword conversion")
 	}
 	result := &QueryResult{}
 	AddHeadersByAttributionKey(result, query, nil, nil)
@@ -1343,7 +1343,7 @@ func ProcessQuery(query *AttributionQuery, attributionData *map[string]*Attribut
 		for i := 0; i < len(result.Rows) && i < 200; i++ {
 			dataRows200 = append(dataRows200, result.Rows[i])
 		}
-		logCtx.WithFields(log.Fields{"6resultRowsAfterMerge": dataRows200}).Info("debug attr keyword conversion")
+		logCtx.WithFields(log.Fields{"6resultRowsAfterMerge": dataRows200, "#dataRows": len(result.Rows)}).Info("debug attr keyword conversion")
 	}
 
 	// Additional filtering based on AttributionKey.
@@ -1354,7 +1354,7 @@ func ProcessQuery(query *AttributionQuery, attributionData *map[string]*Attribut
 		for i := 0; i < len(result.Rows) && i < 200; i++ {
 			dataRows200 = append(dataRows200, result.Rows[i])
 		}
-		logCtx.WithFields(log.Fields{"7resultRowsAfterFilter": dataRows200}).Info("debug attr keyword conversion")
+		logCtx.WithFields(log.Fields{"7resultRowsAfterFilter": dataRows200, "#dataRows": len(result.Rows)}).Info("debug attr keyword conversion")
 	}
 	logCtx.Info("Done GetRowsByMaps GetUpdatedRowsByDimensions MergeDataRowsHavingSameKey FilterRows")
 

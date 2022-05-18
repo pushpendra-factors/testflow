@@ -138,17 +138,11 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 
 		attributionData, isCompare, err = store.FireAttribution(projectID, query, eventNameToIDList, sessions, sessionWT, *logCtx)
 		if projectID == 399 {
-			conversionEventCountList := [][]float64{}
-			count := 0
+			conversionEventCountListByKey := make(map[string][]float64)
 			for key, _ := range *attributionData {
-				conversionEventCountList = append(conversionEventCountList, (*attributionData)[key].ConversionEventCount)
-				count++
-				if count > 100 {
-					break
-				}
-
+				conversionEventCountListByKey[key] = (*attributionData)[key].ConversionEventCount
 			}
-			logCtx.WithFields(log.Fields{"2ConversionEventCountListAfterFireAttribution": conversionEventCountList}).Info("debug attr keyword conversion")
+			logCtx.WithFields(log.Fields{"2ConversionEventCountListByKeyAfterFireAttribution": conversionEventCountListByKey, "#attributionData": len(*attributionData)}).Info("debug attr keyword conversion")
 		}
 		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("FireAttribution took time")
 		queryStartTime = time.Now().UTC().Unix()
@@ -174,12 +168,12 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 		}
 
 		if projectID == 399 {
-			conversionEventCountList := [][]float64{}
+			conversionEventCountListByKey := make(map[string][]float64)
 			for key, _ := range *attributionData {
-				conversionEventCountList = append(conversionEventCountList, (*attributionData)[key].ConversionEventCount)
-
+				conversionEventCountListByKey[key] = (*attributionData)[key].ConversionEventCount
 			}
-			logCtx.WithFields(log.Fields{"3ConversionEventCountListAfterAddPerformanceData": conversionEventCountList}).Info("debug attr keyword conversion")
+
+			logCtx.WithFields(log.Fields{"3ConversionEventCountListAfterAddPerformanceData": conversionEventCountListByKey, "#attributionData": len(*attributionData)}).Info("debug attr keyword conversion")
 		}
 	} else {
 		// This thread is for query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities.
