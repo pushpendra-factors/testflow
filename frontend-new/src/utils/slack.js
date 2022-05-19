@@ -1,3 +1,5 @@
+const host = BUILD_CONFIG.backend_host;
+
 export const sendSlackNotification = (email, projectname, name) => {
     let webhookURL = 'https://hooks.slack.com/services/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';
     let data = {
@@ -10,7 +12,7 @@ export const sendSlackNotification = (email, projectname, name) => {
         body: JSON.stringify(data)
     }
 
-    if(!process.env.NODE_ENV || process.env.NODE_ENV === 'production') {
+    if(host === 'https://api.factors.ai') {
         fetch(webhookURL, params)
         .then((response) => response.json())
         .then((response) => {
