@@ -1979,7 +1979,7 @@ func getNotNullFilterStatementForSmartPropertyGroupBys(groupBys []model.ChannelG
 		_, isPresent := model.SmartPropertyReservedNames[groupBy.Property]
 		isSmartProperty := !isPresent
 		if isSmartProperty {
-			if groupBy.Object == model.AdwordsCampaign {
+			if groupBy.Object == model.AdwordsCampaign || groupBy.Object == model.BingAdsCampaign {
 				if resultStatement == "" {
 					resultStatement += fmt.Sprintf("( JSON_EXTRACT_STRING(campaign.properties, '%s') IS NOT NULL ", groupBy.Property)
 				} else {
