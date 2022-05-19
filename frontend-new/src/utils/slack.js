@@ -10,12 +10,14 @@ export const sendSlackNotification = (email, projectname, name) => {
         body: JSON.stringify(data)
     }
 
-    fetch(webhookURL, params)
-    .then((response) => response.json())
-    .then((response) => {
-        console.log(response);
-    })
-    .catch((err) => {
-        console.log('err',err);
-    });
+    if(!process.env.NODE_ENV || process.env.NODE_ENV === 'production') {
+        fetch(webhookURL, params)
+        .then((response) => response.json())
+        .then((response) => {
+            console.log(response);
+        })
+        .catch((err) => {
+            console.log('err',err);
+        });
+    }
   }
