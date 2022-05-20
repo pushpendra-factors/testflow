@@ -883,7 +883,7 @@ func (store *MemSQL) PullGCLIDReport(projectID uint64, from, to int64, adwordsAc
 		var keywordNameTmp2 sql.NullString
 		var keywordIDTmp2 sql.NullString
 		var slotTmp sql.NullString
-		if err = rows.Scan(&gclIDTmp, &adgroupNameTmp, &adgroupIDTmp, &campaignNameTmp, &campaignIDTmp, &adIDTmp, &keywordNameTmp2, &keywordIDTmp2, &slotTmp); err != nil {
+		if err = rows.Scan(&gclIDTmp, &adgroupNameTmp, &adgroupIDTmp, &campaignNameTmp, &campaignIDTmp, &adIDTmp, &keywordNameTmp, &keywordIDTmp, &keywordNameTmp2, &keywordIDTmp2, &slotTmp); err != nil {
 			logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
 			continue
 		}
