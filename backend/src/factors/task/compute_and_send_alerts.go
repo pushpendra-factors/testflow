@@ -7,13 +7,14 @@ import (
 	"factors/model/store"
 	U "factors/util"
 	"fmt"
-	"github.com/jinzhu/now"
-	log "github.com/sirupsen/logrus"
 	"math"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/jinzhu/now"
+	log "github.com/sirupsen/logrus"
 )
 
 type Message struct {
@@ -23,6 +24,7 @@ type Message struct {
 	Category      string
 	ActualValue   float64
 	ComparedValue float64
+	PageURL       string
 	Value         float64
 	DateRange     string
 	ComparedTo    string
@@ -45,7 +47,6 @@ func ComputeAndSendAlerts(projectID uint64, configs map[string]interface{}) (map
 	}
 	var alertDescription model.AlertDescription
 	var alertConfiguration model.AlertConfiguration
-	var kpiQuery model.KPIQuery
 	var dateRange dateRanges
 	status := make(map[string]interface{})
 	endTimestampUnix := configs["endTimestamp"].(int64)
@@ -55,6 +56,7 @@ func ComputeAndSendAlerts(projectID uint64, configs map[string]interface{}) (map
 	}
 	endTimestamp := time.Unix(endTimestampUnix, 0)
 	for _, alert := range allAlerts {
+		var kpiQuery model.KPIQuery
 		alert.LastRunTime = time.Now()
 
 		err := U.DecodePostgresJsonbToStructType(alert.AlertDescription, &alertDescription)
@@ -102,12 +104,13 @@ func ComputeAndSendAlerts(projectID uint64, configs map[string]interface{}) (map
 		}
 		if notify {
 			msg := Message{
-				AlertName:     alertDescription.Name,
+				AlertName:     strings.Title(alertDescription.Name),
 				AlertType:     alert.AlertType,
 				Operator:      alertDescription.Operator,
-				Category:      kpiQuery.DisplayCategory,
+				Category:      strings.Title(filterStringbyLastWord(kpiQuery.DisplayCategory, "metrics")),
 				ActualValue:   actualValue,
 				ComparedValue: comparedValue,
+				PageURL:       kpiQuery.PageUrl,
 				Value:         value,
 				DateRange:     alertDescription.DateRange,
 				ComparedTo:    alertDescription.ComparedTo,
@@ -122,11 +125,11 @@ func ComputeAndSendAlerts(projectID uint64, configs map[string]interface{}) (map
 			}
 		}
 		alert.LastAlertSent = true
-		statusCode,errMsg := store.GetStore().UpdateAlert(alert)
+		statusCode, errMsg := store.GetStore().UpdateAlert(alert.LastAlertSent)
 		if errMsg != "" {
 			log.Errorf("failed to update alert for project_id: %v, alert_name: %s, error: %v", projectID, alert.AlertName, errMsg)
 			continue
-		}		
+		}
 	}
 	return nil, true
 }
@@ -141,6 +144,7 @@ func executeAlertsKPIQuery(projectID uint64, alertType int, date_range dateRange
 	kpiQuery.To = date_range.to
 	kpiQueryGroup.Queries = append(kpiQueryGroup.Queries, kpiQuery)
 	results, statusCode := store.GetStore().ExecuteKPIQueryGroup(projectID, "", kpiQueryGroup)
+	log.Info("query response first", results, statusCode)
 	if len(results) != 1 {
 		log.Error("empty or invalid result for ", kpiQuery)
 		return statusCode, actualValue, comparedValue, errors.New("empty or invalid result")
@@ -153,13 +157,43 @@ func executeAlertsKPIQuery(projectID uint64, alertType int, date_range dateRange
 		log.Error("failed to execute query for ", kpiQuery)
 		return statusCode, actualValue, comparedValue, nil
 	}
-	actualValue = results[0].Rows[0][0].(float64)
+	if kpiQuery.Category == model.ProfileQueryClass {
+		switch results[0].Rows[0][1].(type) {
+		case float64:
+			actualValue = results[0].Rows[0][1].(float64)
+		case int64:
+			actualValue = float64(results[0].Rows[0][1].(int64))
+		case int:
+			actualValue = float64(results[0].Rows[0][1].(int))
+		case float32:
+			actualValue = float64(results[0].Rows[0][1].(float32))
+		default:
+			log.Error("failed to convert value to float64 for ", kpiQuery)
+			return statusCode, actualValue, comparedValue, errors.New("failed to convert value to float64")
+		}
+	} else {
+		switch results[0].Rows[0][0].(type) {
+		case float64:
+			actualValue = results[0].Rows[0][0].(float64)
+		case int64:
+			actualValue = float64(results[0].Rows[0][0].(int64))
+		case int:
+			actualValue = float64(results[0].Rows[0][0].(int))
+		case float32:
+			actualValue = float64(results[0].Rows[0][0].(float32))
+		default:
+			log.Error("invalid value for ", kpiQuery)
+			return statusCode, actualValue, comparedValue, errors.New("invalid value")
+		}
+
+	}
 	if alertType == 2 {
 		kpiQueryGroup.Queries = []model.KPIQuery{}
 		kpiQuery.From = date_range.prev_from
 		kpiQuery.To = date_range.prev_to
 		kpiQueryGroup.Queries = append(kpiQueryGroup.Queries, kpiQuery)
 		results, statusCode = store.GetStore().ExecuteKPIQueryGroup(projectID, "", kpiQueryGroup)
+		log.Info("query response second", results, statusCode)
 		if len(results) != 1 {
 			log.Error("empty or invalid result for comparision type alerts  ", kpiQuery)
 			return statusCode, actualValue, comparedValue, errors.New("empty or invalid result")
@@ -171,7 +205,11 @@ func executeAlertsKPIQuery(projectID uint64, alertType int, date_range dateRange
 		if statusCode != http.StatusOK {
 			return statusCode, actualValue, comparedValue, nil
 		}
-		comparedValue = results[0].Rows[0][0].(float64)
+		if kpiQuery.Category == model.ProfileQueryClass {
+			comparedValue = results[0].Rows[0][1].(float64)
+		} else {
+			comparedValue = results[0].Rows[0][0].(float64)
+		}
 	}
 
 	return statusCode, actualValue, comparedValue, nil
@@ -274,7 +312,7 @@ func sendAlert(operator string, actualValue float64, comparedValue float64, valu
 			return true, nil
 		}
 	default:
-		return false, errors.New("invalied comparsion")
+		return false, errors.New("invalid comparsion")
 	}
 	return false, nil
 }
@@ -290,22 +328,48 @@ func sendEmailAlert(projectID uint64, msg Message, dateRange dateRanges, timezon
 	fromTime = U.ConvertTimeIn(fromTime, timezone)
 	toTime = U.ConvertTimeIn(toTime, timezone)
 
-	year, month, day := fromTime.Date()
-	from := fmt.Sprintf("%d-%d-%d", day, month, year)
+	from := fromTime.Format("02 Jan 2006")
+	to := toTime.Format("02 Jan 2006")
 
-	year, month, day = toTime.Date()
-	to := fmt.Sprintf("%d-%d-%d", day, month, year)
+	if msg.Operator == model.INCREASED_OR_DECREASED_BY_MORE_THAN || msg.Operator == model.PERCENTAGE_HAS_INCREASED_OR_DECREASED_BY_MORE_THAN {
+		if msg.ActualValue > msg.ComparedValue {
+			if msg.Operator == model.INCREASED_OR_DECREASED_BY_MORE_THAN {
+				msg.Operator = model.INCREASED_BY_MORE_THAN
+			} else {
+				msg.Operator = model.PERCENTAGE_HAS_INCREASED_BY_MORE_THAN
+			}
+		} else {
+			if msg.Operator == model.INCREASED_OR_DECREASED_BY_MORE_THAN {
+				msg.Operator = model.DECREASED_BY_MORE_THAN
+			} else {
+				msg.Operator = model.PERCENTAGE_HAS_DECREASED_BY_MORE_THAN
+			}
+		}
+	}
+	actualValue := strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.2f", msg.ActualValue), "0"), ".")
 
 	if msg.AlertType == 1 {
-		statement = fmt.Sprintf(`%s %s recorded for %s in %s from %s to %s`, fmt.Sprint(msg.ActualValue), strings.ReplaceAll(msg.AlertName, "_", " "), strings.ReplaceAll(msg.Category, "_", " "), strings.ReplaceAll(msg.DateRange, "_", " "), from, to)
+		if msg.Category == strings.Title(model.PageViews) {
+			statement = fmt.Sprintf(`For the %s (%s to %s) <br> <b> %s from %s %s %s : %s </b>`, strings.ReplaceAll(msg.DateRange, "_", " "), from, to, strings.ReplaceAll(msg.AlertName, "_", " "), msg.PageURL, strings.ReplaceAll(msg.Operator, "_", " "), fmt.Sprint(msg.Value), actualValue)
+		} else {
+			statement = fmt.Sprintf(`For the %s (%s to %s) <br> <b> %s from %s %s %s : %s </b>`, strings.ReplaceAll(msg.DateRange, "_", " "), from, to, strings.ReplaceAll(msg.AlertName, "_", " "), strings.ReplaceAll(msg.Category, "_", " "), strings.ReplaceAll(msg.Operator, "_", " "), fmt.Sprint(msg.Value), actualValue)
+		}
+
+		//	statement = fmt.Sprintf(`%s %s recorded for %s in %s from %s to %s`, fmt.Sprint(msg.ActualValue), strings.ReplaceAll(msg.AlertName, "_", " "), strings.ReplaceAll(msg.Category, "_", " "), strings.ReplaceAll(msg.DateRange, "_", " "), from, to)
 	} else if msg.AlertType == 2 {
-		statement = fmt.Sprintf(`%s %s %s for %s in %s (from %s to %s ) compared to %s - %s(%s)`, strings.ReplaceAll(msg.AlertName, "_", " "), strings.ReplaceAll(msg.Operator, "_", " "), fmt.Sprint(msg.Value), strings.ReplaceAll(msg.Category, "_", " "), strings.ReplaceAll(msg.DateRange, "_", " "), from, to, strings.ReplaceAll(msg.ComparedTo, "_", " "), fmt.Sprint(msg.ActualValue), fmt.Sprint(msg.ComparedValue))
+		ComparedValue := strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.2f", msg.ComparedValue), "0"), ".")
+		if msg.Category == strings.Title(model.PageViews) {
+			statement = fmt.Sprintf(`For the %s (%s to %s) compared to %s <br> <b> %s from %s %s %s : %s(%s) </b>`, strings.ReplaceAll(msg.DateRange, "_", " "), from, to, strings.ReplaceAll(msg.ComparedTo, "_", " "), strings.ReplaceAll(msg.AlertName, "_", " "), msg.PageURL, strings.ReplaceAll(msg.Operator, "_", " "), fmt.Sprint(msg.Value), actualValue, ComparedValue)
+		} else {
+			statement = fmt.Sprintf(`For the %s (%s to %s) compared to %s <br> <b> %s from %s %s %s : %s(%s) </b>`, strings.ReplaceAll(msg.DateRange, "_", " "), from, to, strings.ReplaceAll(msg.ComparedTo, "_", " "), strings.ReplaceAll(msg.AlertName, "_", " "), strings.ReplaceAll(msg.Category, "_", " "), strings.ReplaceAll(msg.Operator, "_", " "), fmt.Sprint(msg.Value), actualValue, ComparedValue)
+		}
+		//	statement = fmt.Sprintf(`%s %s %s for %s in %s (from %s to %s ) compared to %s - %s(%s)`, strings.ReplaceAll(msg.AlertName, "_", " "), strings.ReplaceAll(msg.Operator, "_", " "), fmt.Sprint(msg.Value), strings.ReplaceAll(msg.Category, "_", " "), strings.ReplaceAll(msg.DateRange, "_", " "), from, to, strings.ReplaceAll(msg.ComparedTo, "_", " "), fmt.Sprint(msg.ActualValue), fmt.Sprint(msg.ComparedValue))
 	}
 	html := U.CreateAlertTemplate(statement)
 	dryRunFlag := C.GetConfig().EnableDryRunAlerts
 	if dryRunFlag {
 		log.Info("Dry run mode enabled. No emails will be sent")
-		log.Info(html)
+		log.Info(statement, projectID)
 		return
 	}
 	for _, email := range emails {
@@ -334,4 +398,12 @@ func getGBTForKPIQuery(dateRangeType string) string {
 		return model.GroupByTimestampQuarter
 	}
 	return ""
+}
+func filterStringbyLastWord(displayCategory string, word string) string {
+	arr := strings.Split(displayCategory, "_")
+	// check last element of array is "metrics" if yes delete that
+	if arr[len(arr)-1] == word || arr[len(arr)-1] == strings.Title(word) {
+		arr = arr[:len(arr)-1]
+	}
+	return strings.Join(arr, "_")
 }

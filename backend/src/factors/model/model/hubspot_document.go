@@ -29,6 +29,9 @@ type HubspotDocument struct {
 	GroupUserId string          `gorm:"default:null" json:"group_user_id"`
 	CreatedAt   time.Time       `json:"created_at"`
 	UpdatedAt   time.Time       `json:"updated_at"`
+	// for internal use only
+	timeZone       U.TimeZoneString `gorm:"-" json:"-"`
+	dateProperties *map[string]bool `gorm:"-" json:"-"`
 }
 
 // HubspotLastSyncInfo doc type last sync info
@@ -66,13 +69,15 @@ const (
 	HubspotDocumentTypeEngagement         = 6
 	HubspotDocumentTypeNameEngagement     = "engagement"
 
-	HubspotDateTimeLayout = "2006-01-02T15:04:05.000Z"
+	HubspotDateTimeLayout   = "2006-01-02T15:04:05.000Z"
+	HubspotDataTypeDate     = "date"
+	HubspotDataTypeDatetime = "datetime"
 )
 
 var (
 	hubspotDataTypeDatetime = map[string]bool{
-		"datetime": true,
-		"date":     true,
+		HubspotDataTypeDatetime: true,
+		HubspotDataTypeDate:     true,
 	}
 
 	hubspotDataTypeNumerical = map[string]bool{
@@ -123,6 +128,22 @@ type Associations struct {
 // Deal definition
 type Deal struct {
 	Associations Associations `json:"associations"`
+}
+
+func (document *HubspotDocument) SetTimeZone(timeZone U.TimeZoneString) {
+	document.timeZone = timeZone
+}
+
+func (document *HubspotDocument) GetTimeZone() U.TimeZoneString {
+	return document.timeZone
+}
+
+func (document *HubspotDocument) SetDateProperties(dateProperties *map[string]bool) {
+	document.dateProperties = dateProperties
+}
+
+func (document *HubspotDocument) GetDateProperties() *map[string]bool {
+	return document.dateProperties
 }
 
 // GetHubspotMappedDataType returns mapped factors data type
@@ -217,7 +238,8 @@ func GetCRMTimeSeriesByStartTimestamp(projectID uint64, from int64, CRMEventSour
 		return nil
 	}
 
-	if CRMEventSource != SmartCRMEventSourceSalesforce && CRMEventSource != SmartCRMEventSourceHubspot {
+	if CRMEventSource != SmartCRMEventSourceSalesforce && CRMEventSource != SmartCRMEventSourceHubspot &&
+		CRMEventSource != U.CRM_SOURCE_NAME_MARKETO {
 		logCtx.Error("Invalid source.")
 		return nil
 	}

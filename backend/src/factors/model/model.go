@@ -584,13 +584,13 @@ type Model interface {
 
 	// alerts
 	SetAuthTokenforSlackIntegration(projectID uint64, agentUUID string, authTokens model.SlackAccessTokens) error
-	GetSlackAuthToken(agentUUID string) (model.SlackAuthTokens, error)
-	DeleteSlackIntegration(agentUUID string) error
+	GetSlackAuthToken(projectID uint64, agentUUID string) (model.SlackAccessTokens, error)
+	DeleteSlackIntegration(projectID uint64, agentUUID string) error
 	GetAlertById(id string, projectID uint64) (model.Alert, int)
 	GetAllAlerts(projectID uint64) ([]model.Alert, int)
 	DeleteAlert(id string, projectID uint64) (int, string)
 	CreateAlert(projectID uint64, alert model.Alert) (model.Alert, int, string)
-	UpdateAlert(alert model.Alert) (int, string)
+	UpdateAlert(lastAlertSent bool) (int, string)
 
 	// sharable url
 	CreateShareableURL(sharableURLParams *model.ShareableURL) (*model.ShareableURL, int)
@@ -614,8 +614,10 @@ type Model interface {
 	CreateCRMProperties(crmProperty *model.CRMProperty) (int, error)
 	GetCRMUserByTypeAndAction(projectID uint64, source U.CRMSource, id string, userType int, action model.CRMAction) (*model.CRMUser, int)
 	UpdateCRMUserAsSynced(projectID uint64, source U.CRMSource, crmUser *model.CRMUser, userID, syncID string) (*model.CRMUser, int)
-	GetCRMUsersInOrderForSync(projectID uint64, source U.CRMSource) ([]model.CRMUser, int)
-	GetCRMActivityInOrderForSync(projectID uint64, source U.CRMSource) ([]model.CRMActivity, int)
+	GetCRMUsersInOrderForSync(projectID uint64, source U.CRMSource, startTimestamp, endTimestamp int64) ([]model.CRMUser, int)
+	GetCRMActivityInOrderForSync(projectID uint64, source U.CRMSource, startTimestamp, endTimestamp int64) ([]model.CRMActivity, int)
+	GetCRMActivityMinimumTimestampForSync(projectID uint64, source U.CRMSource) (int64, int)
+	GetCRMUsersMinimumTimestampForSync(projectID uint64, source U.CRMSource) (int64, int)
 	GetCRMPropertiesForSync(projectID uint64) ([]model.CRMProperty, int)
 	GetActivitiesDistinctEventNamesByType(projectID uint64, objectTypes []int) (map[int][]string, int)
 	UpdateCRMProperyAsSynced(projectID uint64, source U.CRMSource, crmProperty *model.CRMProperty) (*model.CRMProperty, int)

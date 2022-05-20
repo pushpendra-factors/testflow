@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS hubspot_documents (
     KEY (project_id, type, action, id, timestamp) USING CLUSTERED COLUMNSTORE,
     KEY (user_id) USING HASH,
     KEY (type) USING HASH,
-    KEY (synced) USING HASH
+    KEY (synced) USING HASH,
     UNIQUE KEY project_id_id_type_action_timestamp_unique_idx(project_id, id, type,action,timestamp) USING HASH
     -- Required constraints.
     -- Ref (project_id) -> projects(id)

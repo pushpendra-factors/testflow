@@ -67,7 +67,7 @@ class BaseInfoExtract(BaseExtract):
 
     def add_source_attributes(self):
         url = self.get_url()
-        attributes = {"url": url}
+        attributes = {"url": url, "access_token": self.int_facebook_access_token}
         self.source.set_attributes(attributes)
         return
 
@@ -87,11 +87,12 @@ class BaseInfoExtract(BaseExtract):
         return
 
     def read_records(self):
-        records_string, result_response, current_no_of_requests = self.source.read()
+        records_string, result_response, current_no_of_requests, async_requests = self.source.read()
         self.total_number_of_records += current_no_of_requests 
+        self.total_number_of_async_requests += async_requests
         if not result_response.ok:
             log.warning(ERROR_MESSAGE.format(self.get_name(), result_response.status_code, result_response.text,
-                                 self.project_id))
+                                 self.project_id, self.customer_account_id))
             MetricsAggregator.update_job_stats(self.project_id, self.customer_account_id,
                                                self.type_alias, "failed", result_response.text)
             return "failed"

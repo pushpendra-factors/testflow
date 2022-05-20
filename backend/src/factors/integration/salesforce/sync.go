@@ -125,6 +125,42 @@ func getSalesforceObjectDescription(objectName, accessToken, instanceURL string)
 	return &jsonRespone, nil
 }
 
+func GetSalesforcePropertiesByDataType(projectID uint64, dataType string, docTypes []int, accessToken, instanceURL string) (map[int]*map[string]bool, int) {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "doc_type": docTypes})
+
+	if projectID == 0 || len(docTypes) == 0 {
+		logCtx.Error("Missing project_id or doc_types")
+		return nil, http.StatusBadRequest
+	}
+
+	if accessToken == "" || instanceURL == "" {
+		logCtx.Error("Missing salesforce access token or instance URL")
+		return nil, http.StatusBadRequest
+	}
+
+	propertiesByObjectType := make(map[int]*map[string]bool)
+	for i := range docTypes {
+		typeAlias := model.GetSalesforceAliasByDocType(docTypes[i])
+		describe, err := getSalesforceObjectDescription(typeAlias, accessToken, instanceURL)
+		if err != nil {
+			logCtx.WithError(err).Errorf("Failed to get salesforce object description.")
+			return nil, http.StatusInternalServerError
+		}
+
+		properties := make(map[string]bool)
+		for _, property := range describe.Fields {
+			name := U.GetPropertyValueAsString(property["name"])
+			fieldType := U.GetPropertyValueAsString(property["type"])
+			if fieldType == dataType {
+				properties[name] = true
+			}
+		}
+		propertiesByObjectType[docTypes[i]] = &properties
+	}
+
+	return propertiesByObjectType, http.StatusOK
+}
+
 func getFieldsListFromDescription(description *Describe) ([]string, error) {
 	var objectFields []string
 	objectFieldDescriptions := description.Fields

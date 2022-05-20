@@ -63,6 +63,7 @@ const FactorsSessionCookieName = "factors-sid"
 
 const FactorsAuth0StateCookieName = "factors-auth0-state"
 
+
 // URL for loading SDK on client side.
 const SDKAssetsURL = "https://app.factors.ai/assets/factors.js"
 
@@ -246,7 +247,7 @@ type Configuration struct {
 	EnableSlowDBQueryLogging                        bool
 	SlackAppClientID                                string
 	SlackAppClientSecret                            string
-	EnableDryRunAlerts							    bool
+	EnableDryRunAlerts                              bool
 }
 
 type Services struct {
@@ -622,7 +623,6 @@ func initCookieInfo(env string) {
 
 	cookieName := fmt.Sprintf("%s%s", FactorsSessionCookieName, "d")
 	stateCookieName := fmt.Sprintf("%s%s", FactorsAuth0StateCookieName, "d")
-
 	if env == STAGING {
 		cookieName = fmt.Sprintf("%s%s", FactorsSessionCookieName, "s")
 		stateCookieName = fmt.Sprintf("%s%s", FactorsAuth0StateCookieName, "s")
@@ -1607,7 +1607,6 @@ func GetFactorsCookieName() string {
 func GetAuth0StateCookieName() string {
 	return configuration.Auth0StateName
 }
-
 func GetSkipTrackProjectIds() []uint64 {
 	return configuration.SkipTrackProjectIds
 }

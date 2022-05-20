@@ -42,8 +42,8 @@ class JobSchedulerAndRunner:
                     traceback.print_tb(e.__traceback__)
                     str_exception = str(e)
                     message = str_exception
-                    log.warning("Failed with exception: %d %s %s", facebook_int_setting["project_id"],
-                                facebook_int_setting["int_facebook_ad_account"], message)
+                    log.warning("Failed with exception: %d %s %s %s", facebook_int_setting["project_id"],
+                                facebook_int_setting["int_facebook_ad_account"], last_sync_info.get("type_alias"), message)
                     MetricsAggregator.update_job_stats(facebook_int_setting["project_id"],
                                                        facebook_int_setting["int_facebook_ad_account"],
                                                        last_sync_info.get("type_alias"), "failed", message)

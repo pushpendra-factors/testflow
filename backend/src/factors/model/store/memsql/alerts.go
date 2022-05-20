@@ -19,10 +19,18 @@ func (store *MemSQL) SetAuthTokenforSlackIntegration(projectID uint64, agentUUID
 		log.Error("Project agent mapping not found.")
 		return errors.New("Project agent mapping not found.")
 	}
-
+	var agent model.Agent
+	err := db.Where("uuid = ?", agentUUID).Find(&agent).Error
+	if err != nil {
+		log.Error(err)
+		return err
+	}
 	var token model.SlackAuthTokens
-	token = make(map[uint64]model.SlackAccessTokens)
-
+	err = U.DecodePostgresJsonbToStructType(agent.SlackAccessTokens, &token)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
 	token[projectID] = authTokens
 	// convert token to json
 	TokenJson, err := U.EncodeStructTypeToPostgresJsonb(token)
@@ -38,27 +46,54 @@ func (store *MemSQL) SetAuthTokenforSlackIntegration(projectID uint64, agentUUID
 	}
 	return nil
 }
-func (store *MemSQL) GetSlackAuthToken(agentUUID string) (model.SlackAuthTokens, error) {
+func (store *MemSQL) GetSlackAuthToken(projectID uint64, agentUUID string) (model.SlackAccessTokens, error) {
 	db := C.GetServices().Db
 	var agent model.Agent
 	err := db.Where("uuid = ?", agentUUID).Find(&agent).Error
 	if err != nil {
-		log.WithFields(log.Fields{
-			"uuid": agentUUID,
-		}).Error(err)
-		return nil, err
+		log.Error(err)
+		return model.SlackAccessTokens{}, err
+	}
+	var token model.SlackAuthTokens
+
+	err = U.DecodePostgresJsonbToStructType(agent.SlackAccessTokens, &token)
+	if err != nil {
+		log.Error(err)
+		return model.SlackAccessTokens{}, err
+	}
+	if _, ok := token[projectID]; !ok {
+		return model.SlackAccessTokens{}, errors.New("Slack token not found.")
+	}
+	return token[projectID], nil
+
+}
+func (store *MemSQL) DeleteSlackIntegration(projectID uint64, agentUUID string) error {
+	db := C.GetServices().Db
+	var agent model.Agent
+	err := db.Where("uuid = ?", agentUUID).Find(&agent).Error
+	if err != nil {
+		log.Error(err)
+		return err
 	}
 	var token model.SlackAuthTokens
 	err = U.DecodePostgresJsonbToStructType(agent.SlackAccessTokens, &token)
 	if err != nil {
 		log.Error(err)
-		return nil, err
+		return err
 	}
-	return token, nil
-}
-func (store *MemSQL) DeleteSlackIntegration(agentUUID string) error {
-	db := C.GetServices().Db
-	err := db.Model(&model.Agent{}).Where("uuid = ?", agentUUID).Update("slack_access_tokens", nil).Error
+	var newToken model.SlackAuthTokens
+	for k, v := range token {
+		if k != projectID {
+			newToken[k] = v
+		}
+	}
+	TokenJson, err := U.EncodeStructTypeToPostgresJsonb(newToken)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	// update the db
+	err = db.Model(&model.Agent{}).Where("uuid = ?", agentUUID).Update("slack_access_tokens", TokenJson).Error
 	if err != nil {
 		log.Error(err)
 		return err
@@ -132,12 +167,11 @@ func (store *MemSQL) DeleteAlert(id string, projectID uint64) (int, string) {
 	}
 	return http.StatusAccepted, ""
 }
-func (store *MemSQL) UpdateAlert(alert model.Alert) (int, string) {
+func (store *MemSQL) UpdateAlert(lastAlertSent bool) (int, string) {
 	db := C.GetServices().Db
-	alert.UpdatedAt = time.Now().UTC()
-	err := db.Update(&alert).Error
+	err := db.Table("alerts").Where("id = ?", lastAlertSent).Updates(map[string]interface{}{"last_alert_sent": lastAlertSent, "updated_at": time.Now().UTC()}).Error
 	if err != nil {
-		log.WithField("project_id", alert.ProjectID).Error(err)
+		log.Error(err)
 		return http.StatusInternalServerError, err.Error()
 	}
 	return http.StatusAccepted, ""

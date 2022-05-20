@@ -6,6 +6,7 @@ import logging as log
 class TaskStats:
     # metrics constants
     REQUEST_COUNT = "request_count"
+    ASYNC_REQUEST_COUNT = "aync_request_count"
     RECORDS_COUNT = "request_count"
     LATENCY_COUNT = "latency_count"
     TO_IN_MEMORY = "to_in_memory"

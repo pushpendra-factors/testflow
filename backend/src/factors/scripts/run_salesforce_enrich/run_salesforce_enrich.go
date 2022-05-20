@@ -4,6 +4,7 @@ import (
 	C "factors/config"
 	H "factors/handler"
 	IntSalesforce "factors/integration/salesforce"
+	"factors/model/model"
 	"factors/model/store"
 	U "factors/util"
 	"flag"
@@ -44,13 +45,27 @@ func (es *EnrichStatus) AddEnrichStatus(status []IntSalesforce.Status, hasFailur
 	}
 }
 
-func syncWorker(projectID uint64, wg *sync.WaitGroup, workerIndex, workerPerProject int, enrichStatus *EnrichStatus) {
+func syncWorker(projectID uint64, wg *sync.WaitGroup, workerIndex, workerPerProject int, enrichStatus *EnrichStatus, salesforceProjectSettings *model.SalesforceProjectSettings) {
 	defer wg.Done()
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "worder_index": workerIndex})
 	logCtx.Info("Enrichment started for given project.")
 
-	status, hasFailure := IntSalesforce.Enrich(projectID, workerPerProject)
+	accessToken, instanceURL, err := IntSalesforce.GetAccessToken(salesforceProjectSettings, H.GetSalesforceRedirectURL())
+	if err != nil || accessToken == "" || instanceURL == "" {
+		log.WithField("project_id", salesforceProjectSettings.ProjectID).Errorf("Failed to get salesforce access token: %s", err)
+		enrichStatus.AddEnrichStatus([]IntSalesforce.Status{{ProjectID: projectID, Message: err.Error()}}, true)
+		return
+	}
+
+	dataPropertyByType, errCode := IntSalesforce.GetSalesforcePropertiesByDataType(projectID, model.SalesforceDataTypeDate, model.GetSalesforceAllowedObjects(projectID), accessToken, instanceURL)
+	if errCode != http.StatusOK {
+		log.WithField("project_id", salesforceProjectSettings.ProjectID).Error("Failed to get salesforce date properties.")
+		enrichStatus.AddEnrichStatus([]IntSalesforce.Status{{ProjectID: projectID, Message: "Failed to get date properies"}}, true)
+		return
+	}
+
+	status, hasFailure := IntSalesforce.Enrich(projectID, workerPerProject, dataPropertyByType)
 	enrichStatus.AddEnrichStatus(status, hasFailure)
 	logCtx.Info("Processing completed for given project.")
 }
@@ -266,6 +281,7 @@ func main() {
 		}
 
 		allowedProjectIDs := make([]uint64, 0)
+		allowedSalesforceProjectSettings := make(map[uint64]*model.SalesforceProjectSettings)
 		for i := range salesforceEnabledProjects {
 			if !allowProjectByProjectIDList(salesforceEnabledProjects[i].ProjectID, allProjects, allowedProjects, disabledProjects) {
 				continue
@@ -275,6 +291,7 @@ func main() {
 				continue
 			}
 
+			allowedSalesforceProjectSettings[salesforceEnabledProjects[i].ProjectID] = &salesforceEnabledProjects[i]
 			allowedProjectIDs = append(allowedProjectIDs, salesforceEnabledProjects[i].ProjectID)
 		}
 
@@ -288,7 +305,7 @@ func main() {
 			var wg sync.WaitGroup
 			for pi := range batch {
 				wg.Add(1)
-				go syncWorker(batch[pi], &wg, workerIndex, *numDocRoutines, &enrichStatus)
+				go syncWorker(batch[pi], &wg, workerIndex, *numDocRoutines, &enrichStatus, allowedSalesforceProjectSettings[batch[pi]])
 				workerIndex++
 			}
 			wg.Wait()
