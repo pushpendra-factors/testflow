@@ -227,12 +227,6 @@ func (store *MemSQL) CreateAlert(projectID uint64, alert model.Alert) (model.Ale
 		logCtx.Error("Slack integration is not enabled for this project")
 		return model.Alert{}, http.StatusBadRequest, "Slack integration is not enabled for this project"
 	}
-	var slackChannels model.SlackChannels
-	err = U.DecodePostgresJsonbToStructType(alertConfiguration.SlackChannelsAndUserGroups, &slackChannels)
-	if alertConfiguration.IsSlackEnabled && len(slackChannels.Channels[alert.CreatedBy]) == 0 {
-		logCtx.Error("empty slack channel list")
-		return model.Alert{}, http.StatusBadRequest, "Select at least one slack channel"
-	}
 	if !store.isValidOperator(alertDescription.Operator) {
 		return model.Alert{}, http.StatusBadRequest, "Invalid Operator for Alert"
 	}
