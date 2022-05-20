@@ -120,7 +120,7 @@ export const getTableColumns = (
 
     return {
       title: getClickableTitleSorter(
-        displayTitle,
+        <div className="break-all">{displayTitle}</div>,
         { key: `${e.property} - ${index}`, type: e.prop_type, subtype: e.grn },
         currentSorter,
         handleSorting
@@ -191,7 +191,7 @@ export const getDateBasedColumns = (
 
     return {
       title: getClickableTitleSorter(
-        displayTitle,
+        <div className="break-all">{displayTitle}</div>,
         { key: `${e.property} - ${index}`, type: e.prop_type, subtype: e.grn },
         currentSorter,
         handleSorting

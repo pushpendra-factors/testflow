@@ -54,7 +54,7 @@ export const getBreakdownTitle = (breakdown, userPropNames, eventPropNames) => {
   });
 
   if (!breakdown.eventIndex) {
-    return displayTitle;
+    return <div className="break-all">{displayTitle}</div>;
   }
   return (
     <div className="break-all">

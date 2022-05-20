@@ -248,7 +248,7 @@ export const getBreakdownTitle = (breakdown, userPropNames, eventPropNames) => {
   });
 
   if (!breakdown.eni) {
-    return displayTitle;
+    return <div className="break-all">{displayTitle}</div>;
   }
   return (
     <div className="break-all">
