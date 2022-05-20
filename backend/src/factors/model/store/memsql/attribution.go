@@ -211,7 +211,7 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 					continue
 				}
 
-				userSession := sessions[user] // map[string]model.UserSessionData
+				userSession := sessions[user]
 
 				for attributionKey, newUserSession := range userSession {
 
@@ -228,7 +228,6 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 					}
 				}
 			}
-			logCtx.WithFields(log.Fields{"KPIGroupSession": groupSessions}).Info("KPI-Attribution Group session 1")
 
 			// for new users who may have customer id not set for global users
 			for _, user := range kpiInfo.KpiUserIds {
@@ -257,6 +256,23 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 			}
 		}
 		logCtx.WithFields(log.Fields{"KPIGroupSession": groupSessions}).Info("KPI-Attribution Group session 2")
+
+		found := false
+		for _, data := range groupSessions {
+			for _, journey := range data {
+				if len(journey.SessionSpentTimes) > 0 {
+					found = true
+					break
+				}
+			}
+			if found {
+				break
+			}
+		}
+		if !found {
+			logCtx.Info("no user journey found (neither sessions nor offline touch points)")
+			return nil, errors.New("no user journey found (neither sessions nor offline touch points)")
+		}
 
 		// Build attribution weight
 		noOfConversionEvents := 1
