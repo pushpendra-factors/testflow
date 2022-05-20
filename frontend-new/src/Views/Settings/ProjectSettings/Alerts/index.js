@@ -356,13 +356,11 @@ const Alerts = ({
 
 
     useEffect(() => {
-        if (!savedAlerts) {
-            setTableLoading(true);
-            fetchAlerts(activeProject.id).then(() => {
-                setTableLoading(false);
-            })
-        }
-    }, [savedAlerts]);
+        setTableLoading(true);
+        fetchAlerts(activeProject.id).then(() => {
+            setTableLoading(false);
+        })
+    }, [activeProject]);
 
     useEffect(() => {
         if (savedAlerts) {
@@ -376,6 +374,8 @@ const Alerts = ({
                 });
             });
             setTableData(savedArr);
+        } else {
+            setTableData([]);
         }
     }, [savedAlerts]);
 
