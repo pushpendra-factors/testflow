@@ -584,8 +584,8 @@ type Model interface {
 
 	// alerts
 	SetAuthTokenforSlackIntegration(projectID uint64, agentUUID string, authTokens model.SlackAccessTokens) error
-	GetSlackAuthToken(agentUUID string) (model.SlackAuthTokens, error)
-	DeleteSlackIntegration(agentUUID string) error
+	GetSlackAuthToken(projectID uint64, agentUUID string) (model.SlackAccessTokens, error)
+	DeleteSlackIntegration(projectID uint64, agentUUID string) error
 	GetAlertById(id string, projectID uint64) (model.Alert, int)
 	GetAllAlerts(projectID uint64) ([]model.Alert, int)
 	DeleteAlert(id string, projectID uint64) (int, string)

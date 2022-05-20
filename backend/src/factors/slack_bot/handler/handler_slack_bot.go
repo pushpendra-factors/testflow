@@ -24,7 +24,7 @@ type oauthState struct {
 func SlackAuthRedirectHandler(c *gin.Context) {
 	currentAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
-	if currentAgentUUID == "" {
+	if currentAgentUUID == "" || projectId == 0 {
 		c.AbortWithStatusJSON(http.StatusBadRequest,
 			gin.H{"error": "Invalid agent id."})
 		return
@@ -43,7 +43,7 @@ func SlackAuthRedirectHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"redirectURL": redirectURL})
 }
 func GetSlackAuthorisationURL(clientID string, state string) string {
-	url := fmt.Sprintf(`https://slack.com/oauth/v2/authorize?client_id=%s&scope=channels:read,chat:write,chat:write.public,im:read&user_scope=channels:read,chat:write,groups:read,mpim:read,im:read&state=%s`, clientID, state)
+	url := fmt.Sprintf(`https://slack.com/oauth/v2/authorize?client_id=%s&scope=channels:read,chat:write,chat:write.public,im:read&user_scope=channels:read,chat:write,groups:read,mpim:read&state=%s`, clientID, state)
 	return url
 }
 func SlackCallbackHandler(c *gin.Context) {
@@ -58,6 +58,11 @@ func SlackCallbackHandler(c *gin.Context) {
 	err := json.Unmarshal([]byte(state), &oauthState)
 	if err != nil || oauthState.ProjectID == 0 || *oauthState.AgentUUID == "" {
 		redirectURL := buildRedirectURL("invalid values in state")
+		c.Redirect(http.StatusPermanentRedirect, redirectURL)
+	}
+	_, status := store.GetStore().GetProjectAgentMapping(oauthState.ProjectID, *oauthState.AgentUUID)
+	if status != http.StatusFound {
+		redirectURL := buildRedirectURL("AUTH_ERROR")
 		c.Redirect(http.StatusPermanentRedirect, redirectURL)
 	}
 	logCtx := log.WithFields(log.Fields{"project_id": oauthState.ProjectID, "agent_uuid": oauthState.AgentUUID})
@@ -82,8 +87,23 @@ func SlackCallbackHandler(c *gin.Context) {
 		redirectURL := buildRedirectURL("AUTH_ERROR")
 		c.Redirect(http.StatusPermanentRedirect, redirectURL)
 	}
+	if jsonResponse["ok"] != true {
+		logCtx.Error("Failed to get auth code")
+		redirectURL := buildRedirectURL("AUTH_ERROR")
+		c.Redirect(http.StatusPermanentRedirect, redirectURL)
+	}
+	if jsonResponse["access_token"] == nil || jsonResponse["authed_user"] == nil {
+		logCtx.Error("Failed to get access token")
+		redirectURL := buildRedirectURL("AUTH_ERROR")
+		c.Redirect(http.StatusPermanentRedirect, redirectURL)
+	}
 	access_token := jsonResponse["access_token"].(string)
 	authed_user := jsonResponse["authed_user"].(map[string]interface{})
+	if authed_user["access_token"] == nil {
+		logCtx.Error("Failed to get access token")
+		redirectURL := buildRedirectURL("AUTH_ERROR")
+		c.Redirect(http.StatusPermanentRedirect, redirectURL)
+	}
 	user_access_token := authed_user["access_token"].(string)
 
 	var tokens model.SlackAccessTokens
@@ -105,17 +125,16 @@ func buildRedirectURL(errMsg string) string {
 	return C.GetProtocol() + C.GetAPPDomain() + "/settings/integration?error=" + url.QueryEscape(errMsg)
 }
 func GetSlackChannelsListHandler(c *gin.Context) {
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	loggedInAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
-	authToken, err := store.GetStore().GetSlackAuthToken(loggedInAgentUUID)
+	if projectID == 0 || loggedInAgentUUID == "" {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid project id or agent id"})
+		return
+	}
+	accessTokens, err := store.GetStore().GetSlackAuthToken(projectID, loggedInAgentUUID)
 	if err != nil {
 		log.Error("Failed to get slack auth token")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get slack auth token"})
-		return
-	}
-	if authToken == nil {
-		log.Error("Failed to get slack auth token, Slack not integrated")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get slack auth token, Slack not integrated"})
 		return
 	}
 	// add query params
@@ -127,10 +146,10 @@ func GetSlackChannelsListHandler(c *gin.Context) {
 	}
 	q := request.URL.Query()
 	q.Add("types", "public_channel,private_channel,mpim")
-	q.Add("limit", "250")
+	q.Add("limit", "2000")
 	request.URL.RawQuery = q.Encode()
 	request.Header.Set("Content-Type", "application/json; charset=utf-8")
-	request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", authToken[projectId].UserAccessToken))
+	request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessTokens.UserAccessToken))
 	client := &http.Client{}
 	resp, err := client.Do(request)
 	if err != nil {
@@ -147,13 +166,14 @@ func GetSlackChannelsListHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, channels)
 }
 func DeleteSlackIntegrationHandler(c *gin.Context) {
+	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	loggedInAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
-	if loggedInAgentUUID == "" {
+	if loggedInAgentUUID == "" || projectID == 0 {
 		c.AbortWithStatusJSON(http.StatusBadRequest,
-			gin.H{"error": "Invalid agent id."})
+			gin.H{"error": "Invalid agent id. or project id"})
 		return
 	}
-	err := store.GetStore().DeleteSlackIntegration(loggedInAgentUUID)
+	err := store.GetStore().DeleteSlackIntegration(projectID, loggedInAgentUUID)
 	if err != nil {
 		log.Error("Failed to delete slack integration")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete slack integration"})
@@ -163,9 +183,9 @@ func DeleteSlackIntegrationHandler(c *gin.Context) {
 
 }
 
-func SendSlackAlert(projectID uint64, message, agentUUID, channelID string) (bool, error) {
+func SendSlackAlert(projectID uint64, message, agentUUID string, channel model.SlackChannel) (bool, error) {
 	// get the auth token for the agent uuid and then call the POST method to send the message
-	authToken, err := store.GetStore().GetSlackAuthToken(agentUUID)
+	accessTokens, err := store.GetStore().GetSlackAuthToken(projectID, agentUUID)
 	if err != nil {
 		log.Error("Failed to get access token for slack")
 		return false, err
@@ -173,7 +193,7 @@ func SendSlackAlert(projectID uint64, message, agentUUID, channelID string) (boo
 	url := fmt.Sprintf("https://slack.com/api/chat.postMessage")
 	// create new http post request
 	reqBody := map[string]interface{}{
-		"channel": channelID,
+		"channel": channel.ChannelID,
 		"text":    message,
 	}
 	jsonBody, err := json.Marshal(reqBody)
@@ -183,8 +203,11 @@ func SendSlackAlert(projectID uint64, message, agentUUID, channelID string) (boo
 	}
 	request, _ := http.NewRequest("POST", url, bytes.NewBuffer(jsonBody))
 	request.Header.Set("Content-Type", "application/json")
-	accessToken := authToken[projectID].BotAccessToken
-	request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
+	if channel.IsPrivate {
+		request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessTokens.UserAccessToken))
+	} else {
+		request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessTokens.BotAccessToken))
+	}
 	client := &http.Client{}
 	resp, err := client.Do(request)
 	if err != nil {

@@ -255,6 +255,104 @@ func syncContactFormSubmissions(project *model.Project, userId string, document 
 	}
 }
 
+const URL_PORTAL_INFO = "https://api.hubapi.com/integrations/v1/me"
+
+type AccountInfo struct {
+	PortalID              int              `json:"portalId"`
+	TimeZone              U.TimeZoneString `json:"timeZone"`
+	Currency              string           `json:"currency"`
+	UTCOffsetMilliseconds int              `json:"utcOffsetMilliseconds"`
+	UTCOffset             string           `json:"utcOffset"`
+}
+
+func getHubspotAccountInfo(projectID uint64, apiKey string) (*AccountInfo, error) {
+	url := URL_PORTAL_INFO + "?" + "hapikey=" + apiKey
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	client := &http.Client{
+		Timeout: 1 * time.Minute,
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		var errBody interface{}
+		err := json.NewDecoder(resp.Body).Decode(&errBody)
+		if err != nil {
+			return nil, err
+		}
+		return nil, fmt.Errorf("error while getting account info  %+v", errBody)
+	}
+
+	var accountInfo AccountInfo
+	err = json.NewDecoder(resp.Body).Decode(&accountInfo)
+	if err != nil {
+		return nil, err
+	}
+
+	return &accountInfo, nil
+}
+
+func GetHubspotAccountTimezone(projectID uint64, apiKey string) (U.TimeZoneString, error) {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID})
+	account, err := getHubspotAccountInfo(projectID, apiKey)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get hubspot account info for timezone.")
+		return "", err
+	}
+
+	_, err = time.LoadLocation(string(account.TimeZone))
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to load timezone from account.")
+		return "", err
+	}
+
+	return account.TimeZone, nil
+}
+
+func fillDatePropertiesAndTimeZone(documents []model.HubspotDocument, dateProperties *map[string]bool, timeZone U.TimeZoneString) {
+	for i := range documents {
+		documents[i].SetDateProperties(dateProperties)
+		documents[i].SetTimeZone(timeZone)
+	}
+}
+
+func GetHubspotPropertiesByDataType(projectId uint64, docTypeAPIObjects *map[string]string, apiKey, dataType string) (map[int]*map[string]bool, error) {
+	propertiesByObjectType := make(map[int]*map[string]bool)
+	for typeAlias, apiObjectName := range *docTypeAPIObjects {
+		propertiesMeta, err := GetHubspotPropertiesMeta(apiObjectName, apiKey)
+		if err != nil {
+			log.WithFields(log.Fields{"project_id": projectId, "api_object_name": apiObjectName, "doc_Type": typeAlias}).
+				WithError(err).Error("Failed to get hubspot properties meta.")
+			return nil, err
+		}
+
+		dataTypeProperties := make(map[string]bool)
+		for _, property := range propertiesMeta {
+			if property.Type == dataType {
+				dataTypeProperties[property.Name] = true
+			}
+		}
+		docType, err := model.GetHubspotTypeByAlias(typeAlias)
+		if err != nil {
+			return nil, err
+		}
+
+		propertiesByObjectType[docType] = &dataTypeProperties
+	}
+
+	return propertiesByObjectType, nil
+}
+
 func GetContactProperties(projectID uint64, document *model.HubspotDocument) (*map[string]interface{}, *map[string]interface{}, error) {
 	if document.Type != model.HubspotDocumentTypeContact {
 		return nil, nil, errors.New("invalid type")
@@ -290,7 +388,7 @@ func GetContactProperties(projectID uint64, document *model.HubspotDocument) (*m
 	for pkey, pvalue := range contact.Properties {
 		enKey := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot,
 			model.HubspotDocumentTypeNameContact, pkey)
-		value, err := getHubspotMappedDataTypeValue(projectID, U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED, enKey, pvalue.Value)
+		value, err := getHubspotMappedDataTypeValue(projectID, U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED, enKey, pvalue.Value, model.HubspotDocumentTypeContact, document.GetDateProperties(), string(document.GetTimeZone()))
 		if err != nil {
 			log.WithFields(log.Fields{"project_id": projectID, "property_key": enKey}).WithError(err).Error("Failed to get property value.")
 			continue
@@ -540,7 +638,6 @@ func GetHubspotPropertiesMeta(objectType string, apiKey string) ([]PropertyDetai
 	if err != nil {
 		return nil, err
 	}
-
 	client := &http.Client{
 		Timeout: 10 * time.Minute,
 	}
@@ -1378,7 +1475,8 @@ func getCompanyProperties(projectID uint64, document *model.HubspotDocument) (ma
 
 		propertyKey := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot,
 			model.HubspotDocumentTypeNameCompany, key)
-		value, err := getHubspotMappedDataTypeValue(projectID, U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED, propertyKey, value.Value)
+		value, err := getHubspotMappedDataTypeValue(projectID, U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED, propertyKey,
+			value.Value, model.HubspotDocumentTypeCompany, document.GetDateProperties(), string(document.GetTimeZone()))
 		if err != nil {
 			log.WithFields(log.Fields{"project_id": projectID, "property_key": propertyKey}).WithError(err).Error("Failed to get property value.")
 			continue
@@ -1504,7 +1602,23 @@ func syncCompany(projectID uint64, document *model.HubspotDocument) int {
 	return http.StatusOK
 }
 
-func getHubspotMappedDataTypeValue(projectID uint64, eventName, enKey string, value interface{}) (interface{}, error) {
+func getHubspotDateTimestampAsMidnightTimeZoneTimestamp(dateUTCMS interface{}, timeZone string) (int64, error) {
+	timestamp, err := model.ReadHubspotTimestamp(dateUTCMS)
+	if err != nil {
+		return 0, err
+	}
+
+	loc, err := time.LoadLocation(timeZone)
+	if err != nil {
+		return 0, err
+	}
+
+	t := time.Unix(getEventTimestamp(timestamp), 0).UTC()
+	timeInLoc := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, loc)
+	return timeInLoc.Unix(), nil
+}
+
+func getHubspotMappedDataTypeValue(projectID uint64, eventName, enKey string, value interface{}, typ int, dateProperties *map[string]bool, timeZone string) (interface{}, error) {
 	if value == nil || value == "" {
 		return "", nil
 	}
@@ -1513,6 +1627,18 @@ func getHubspotMappedDataTypeValue(projectID uint64, eventName, enKey string, va
 		return value, nil
 	}
 
+	if dateProperties != nil {
+		for key := range *dateProperties {
+			typeAlias := model.GetHubspotTypeAliasByType(typ)
+			enDateKey := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot,
+				typeAlias, key)
+
+			if enDateKey != enKey {
+				continue
+			}
+			return getHubspotDateTimestampAsMidnightTimeZoneTimestamp(value, timeZone)
+		}
+	}
 	ptype := store.GetStore().GetPropertyTypeByKeyValue(projectID, eventName, enKey, value, false)
 
 	if ptype == U.PropertyTypeDateTime {
@@ -1568,9 +1694,11 @@ func getDealProperties(projectID uint64, document *model.HubspotDocument) (*map[
 	for k, v := range deal.Properties {
 		enKey := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot,
 			model.HubspotDocumentTypeNameDeal, k)
-		value, err := getHubspotMappedDataTypeValue(projectID, U.EVENT_NAME_HUBSPOT_DEAL_STATE_CHANGED, enKey, v.Value)
+		value, err := getHubspotMappedDataTypeValue(projectID, U.EVENT_NAME_HUBSPOT_DEAL_STATE_CHANGED, enKey,
+			v.Value, model.HubspotDocumentTypeDeal, document.GetDateProperties(), string(document.GetTimeZone()))
 		if err != nil {
-			log.WithFields(log.Fields{"project_id": projectID, "property_key": enKey}).WithError(err).Error("Failed to get property value.")
+			log.WithFields(log.Fields{"project_id": projectID, "property_key": enKey, "value": value}).
+				WithError(err).Error("Failed to get property value.")
 			continue
 		}
 
@@ -2368,6 +2496,7 @@ type Status struct {
 	ProjectId uint64 `json:"project_id"`
 	Type      string `json:"type"`
 	Status    string `json:"status"`
+	Message   string `json:"message,omiempty"`
 }
 
 type syncWorkerStatus struct {
@@ -2389,7 +2518,7 @@ func syncAllWorker(project *model.Project, wg *sync.WaitGroup, syncStatus *syncW
 }
 
 // Sync - Syncs hubspot documents in an order of type.
-func Sync(projectID uint64, workersPerProject int, recordsMaxCreatedAtSec int64) ([]Status, bool) {
+func Sync(projectID uint64, workersPerProject int, recordsMaxCreatedAtSec int64, datePropertiesByObjectType map[int]*map[string]bool, timeZone U.TimeZoneString) ([]Status, bool) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "workers_per_project": workersPerProject, "record_max_created_at": recordsMaxCreatedAtSec})
 	logCtx.Info("Running sync for project.")
 
@@ -2460,6 +2589,7 @@ func Sync(projectID uint64, workersPerProject int, recordsMaxCreatedAtSec int64)
 				continue
 			}
 
+			fillDatePropertiesAndTimeZone(documents, datePropertiesByObjectType[syncOrderByType[i]], timeZone)
 			docTypeAlias := model.GetHubspotTypeAliasByType(syncOrderByType[i])
 
 			batches := GetBatchedOrderedDocumentsByID(documents, workersPerProject)
