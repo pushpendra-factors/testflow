@@ -49,6 +49,7 @@ const Alerts = ({
     const [viewFilter, setViewFilter] = useState([]);
     const [channelOpts, setChannelOpts] = useState([]);
     const [selectedChannel, setSelectedChannel] = useState([]);
+    const [saveSelectedChannel, setSaveSelectedChannel] = useState([]);
     const [showSelectChannelsModal, setShowSelectChannelsModal] = useState(false);
     const [viewSelectedChannels, setViewSelectedChannels] = useState([]);
 
@@ -277,7 +278,7 @@ const Alerts = ({
         let slackChannels = {}
         if(slackEnabled) {
             const map = new Map();
-            map.set(agent_details.uuid , selectedChannel);
+            map.set(agent_details.uuid , saveSelectedChannel);
             for (const [key, value] of map) {
                 slackChannels = {...slackChannels, [key]: value}
             }
@@ -438,7 +439,12 @@ const Alerts = ({
     }, [activeProject, agent_details, slack]);
 
     const handleOk = () => {
-        setSelectedChannel(selectedChannel);
+        setSaveSelectedChannel(selectedChannel);
+        setShowSelectChannelsModal(false);
+    }
+    
+    const handleCancel = () => {
+        setSelectedChannel(saveSelectedChannel);
         setShowSelectChannelsModal(false);
     }
     
@@ -498,6 +504,8 @@ const Alerts = ({
                                         setShowCompareField(false);
                                         setEmailEnabled(false);
                                         setSlackEnabled(false);
+                                        setSelectedChannel([]);
+                                        setSaveSelectedChannel([]);
                                         form.resetFields();
                                     }}>Cancel</Button>
                                     <Button size={'large'} disabled={loading} loading={loading} className={'ml-2'} type={'primary'} htmlType="submit">Save</Button>
@@ -651,7 +659,7 @@ const Alerts = ({
                             </Form.List>
                         </Row>
                         )}
-                        {/* <Row className={'mt-2 ml-2'}>
+                        <Row className={'mt-2 ml-2'}>
                             <Col className={'m-0'}>
                                 <Form.Item
                                     name="slack_enabled"
@@ -661,7 +669,7 @@ const Alerts = ({
                                 </Form.Item>
                             </Col>
                         </Row>
-                        {slackEnabled && !projectSettings.int_slack && (
+                        {slackEnabled && !projectSettings?.int_slack && (
                             <>
                                 <Row className={'mt-2 ml-2'}>
                                     <Col span={10} className={'m-0'}>
@@ -675,13 +683,13 @@ const Alerts = ({
                                 </Row>
                             </>
                         )}
-                        {slackEnabled && projectSettings.int_slack && (
+                        {slackEnabled && projectSettings?.int_slack && (
                             <>
-                                {selectedChannel.length > 0 && (
+                                {saveSelectedChannel.length > 0 && (
                                 <Row className={'rounded-lg border-2 border-gray-200 mt-2 w-2/6'}>
                                     <Col className={'m-0'}>
                                         <Text type={'title'} level={6} color={'grey-2'} extraClass={'m-0 mt-2 ml-2'}>Selected Channels</Text>
-                                        {selectedChannel.map((channel, index) => (
+                                        {saveSelectedChannel.map((channel, index) => (
                                             <div key={index} >
                                                 <Text type={'title'} level={7} color={'grey'} extraClass={'m-0 ml-2 mt-1 mb-1'}>{'#'+ channel.name}</Text>
                                             </div>
@@ -689,7 +697,7 @@ const Alerts = ({
                                     </Col>
                                 </Row>
                                 )}
-                                {!selectedChannel.length > 0 ? (
+                                {!saveSelectedChannel.length > 0 ? (
                                 <Row className={'mt-2 ml-2'}>
                                     <Col span={10} className={'m-0'}>
                                         <Button type={'link'} onClick={() => setShowSelectChannelsModal(true)}>Select Channels</Button>
@@ -703,7 +711,7 @@ const Alerts = ({
                                 </Row>
                                 }
                             </>
-                        )} */}
+                        )}
 
                     </Form>
 
@@ -831,7 +839,7 @@ const Alerts = ({
                             {emailView()}
                         </Col>
                     </Row>
-                    {/* <Row className={'mt-2 ml-2'}>
+                    <Row className={'mt-2 ml-2'}>
                         <Col span={4}>
                                 <Checkbox disabled={true} checked={viewAlertDetails?.alert_configuration?.slack_enabled}>Slack</Checkbox>
                         </Col>
@@ -847,7 +855,7 @@ const Alerts = ({
                             ))}
                         </Col>
                     </Row>
-                    )} */}
+                    )}
 
                 </>}
 
@@ -871,7 +879,7 @@ const Alerts = ({
                 centered={true}
                 zIndex={1005}
                 width={700}
-                onCancel={() => setShowSelectChannelsModal(false)}
+                onCancel={handleCancel}
                 onOk={handleOk}
                 className={'fa-modal--regular p-4 fa-modal--slideInDown'}
                 closable={true}

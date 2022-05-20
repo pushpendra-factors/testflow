@@ -1,30 +1,31 @@
-import _ from 'lodash';
+import { startCase, get } from 'lodash';
 import { QUERY_TYPE_KPI } from '../../../utils/constants';
 
 export const getBreakdownDisplayName = ({
   breakdown,
   userPropNames,
   eventPropNames,
-  queryType
+  queryType,
+  multipleEvents
 }) => {
   if (queryType === QUERY_TYPE_KPI) {
-    return _.startCase(breakdown.property);
+    return startCase(breakdown.property);
   }
   const property = breakdown.pr || breakdown.property;
   const propCategory = breakdown.en || breakdown.prop_category;
   const displayTitle =
     propCategory === 'user'
-      ? _.get(userPropNames, property, property)
+      ? get(userPropNames, property, property)
       : propCategory === 'event'
-        ? _.get(eventPropNames, property, property)
+        ? get(eventPropNames, property, property)
         : property;
 
-  if (breakdown.eventIndex) {
+  if (breakdown.eventIndex && !multipleEvents) {
     return displayTitle + ' (event)';
   }
   return displayTitle;
 };
 
 export const getEventDisplayName = ({ eventNames, event }) => {
-  return _.get(eventNames, event, event);
+  return get(eventNames, event, event);
 };

@@ -16,7 +16,6 @@ function SignUp({ signup }) {
   const [dataLoading, setDataLoading] = useState(false);
   const [errorInfo, seterrorInfo] = useState(null);
   const [formData, setformData] = useState(null);
-  const [showModal, setShowModal] = useState(false);
   const [showForm, setShowForm] = useState(false);
 
   const history = useHistory();
@@ -53,7 +52,6 @@ function SignUp({ signup }) {
         signup(filteredValues).then(() => {
             setDataLoading(false);
             setformData(filteredValues);
-            setShowModal(true);
         }).catch((err) => {
             setDataLoading(false);
             form.resetFields();
@@ -331,7 +329,7 @@ function SignUp({ signup }) {
       </div>
         }
         {formData &&
-            <Congrats data = {formData} setShowModal={setShowModal} showModal={showModal} />
+            <Congrats data = {formData} />
         }
 
         {/* <MoreAuthOptions showModal={showModal} setShowModal={setShowModal}/>   */}

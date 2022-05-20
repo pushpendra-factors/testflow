@@ -343,7 +343,7 @@ const CreateGoalDrawer = (props) => {
     });
 
     //Factors RUN_EXPLAIN tracking
-    factorsai.track('RUN_EXPLAIN', { 'query_type': 'explain' });
+    factorsai.track('RUN_EXPLAIN', { 'query_type': 'explain', project_name: props.activeProject.name, project_id: props.activeProject.id });
 
   }
 

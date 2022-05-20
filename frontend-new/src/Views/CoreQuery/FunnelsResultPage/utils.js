@@ -21,6 +21,7 @@ import {
   DISPLAY_PROP
 } from '../../../utils/constants';
 import NonClickableTableHeader from '../../../components/NonClickableTableHeader';
+import { getBreakdownDisplayName } from '../EventsAnalytics/eventsAnalytics.helpers';
 
 const windowSize = {
   w: window.outerWidth,
@@ -239,25 +240,27 @@ const RenderConversionTime = (d, breakdown, isComparisonApplied) => {
 
 export const getBreakdownTitle = (breakdown, userPropNames, eventPropNames) => {
   const charArr = ['1', '2', '3', '4', '5', '6'];
-  const displayTitle =
-    breakdown.en === 'user'
-      ? userPropNames[breakdown.pr] || breakdown.pr
-      : breakdown.en === 'event'
-        ? eventPropNames[breakdown.pr] || breakdown.pr
-        : breakdown.pr;
+  const displayTitle = getBreakdownDisplayName({
+    breakdown,
+    userPropNames,
+    eventPropNames,
+    multipleEvents: true
+  });
 
   if (!breakdown.eni) {
     return displayTitle;
   }
   return (
-    <div className="flex items-center">
-      <div className="mr-1">{displayTitle} of </div>
-      <div
-        style={{ backgroundColor: '#3E516C' }}
-        className="text-white w-4 h-4 flex justify-center items-center rounded-full font-semibold leading-5 text-xs"
-      >
-        {charArr[breakdown.eni - 1]}
-      </div>
+    <div className="break-all">
+      <span>{displayTitle} of </span>
+      <span className="inline-block">
+        <span
+          style={{ backgroundColor: '#3E516C' }}
+          className="text-white w-4 h-4 flex justify-center items-center rounded-full font-semibold leading-5 text-xs"
+        >
+          {charArr[breakdown.eni - 1]}
+        </span>
+      </span>
     </div>
   );
 };
@@ -292,7 +295,7 @@ export const getTableColumns = (
         'pb-3'
       ),
       dataIndex: `${e.pr} - ${e.eni}`,
-      width: 400,
+      width: 200,
       fixed: !index ? 'left' : ''
     };
   };

@@ -1,5 +1,8 @@
 import React from 'react';
+import { escapeRegExp, isArray } from 'lodash';
 import moment from 'moment';
+import { ArrowDownOutlined, ArrowUpOutlined } from '@ant-design/icons';
+import { Tooltip } from 'antd';
 import {
   QUERY_TYPE_EVENT,
   CHART_TYPE_STACKED_AREA,
@@ -7,12 +10,9 @@ import {
   CHART_TYPE_STACKED_BAR,
   CHART_TYPE_SPARKLINES,
   PREDEFINED_DATES,
-  DATE_FORMATS,
+  DATE_FORMATS
 } from './constants';
 import { Text } from '../components/factorsComponents';
-import { ArrowDownOutlined, ArrowUpOutlined } from '@ant-design/icons';
-import { isArray } from 'lodash';
-import { Tooltip } from 'antd';
 
 const visualizationColors = [
   '#4D7DB4',
@@ -24,7 +24,7 @@ const visualizationColors = [
   '#E89E7B',
   '#D4787D',
   '#B87B7E',
-  '#9982B5',
+  '#9982B5'
 ];
 
 export const numberWithCommas = (x) => {
@@ -150,12 +150,8 @@ export const SortDataByAlphabets = (arr, key, order) => {
 export const SortWeekFormattedData = (arr, key, order) => {
   const result = [...arr];
   result.sort((a, b) => {
-    const val1 = moment(a[key].split(' to ')[0], DATE_FORMATS['day'])
-      .utc()
-      .unix();
-    const val2 = moment(b[key].split(' to ')[0], DATE_FORMATS['day'])
-      .utc()
-      .unix();
+    const val1 = moment(a[key].split(' to ')[0], DATE_FORMATS.day).utc().unix();
+    const val2 = moment(b[key].split(' to ')[0], DATE_FORMATS.day).utc().unix();
     if (order === 'ascend') {
       return val1 >= val2 ? 1 : -1;
     }
@@ -187,14 +183,14 @@ export const getClickableTitleSorter = (
   if (titleTooltip) {
     titleText = (
       <Tooltip title={titleTooltip}>
-        <Text weight='bold' color='grey-2' type='title' extraClass='mb-0'>
+        <Text weight="bold" color="grey-2" type="title" extraClass="mb-0">
           {title}
         </Text>
       </Tooltip>
     );
   } else {
     titleText = (
-      <Text weight='bold' color='grey-2' type='title' extraClass='mb-0'>
+      <Text weight="bold" color="grey-2" type="title" extraClass="mb-0">
         {title}
       </Text>
     );
@@ -217,17 +213,17 @@ export const getClickableTitleSorter = (
     verticalAlignment === 'start'
       ? 'items-start'
       : verticalAlignment === 'end'
-      ? 'items-end'
-      : 'items-center';
+        ? 'items-end'
+        : 'items-center';
 
   return (
     <div
-      role='button'
+      role="button"
       tabIndex={0}
       onClick={() => handleSorting(sorterProp)}
-      className={`flex ${verticalAlignmentClass} ${justifyAlignment} cursor-pointer h-full px-4 ${containerClassName}`}
+      className={`flex ${verticalAlignmentClass} ${justifyAlignment} cursor-pointer h-full p-4 ${containerClassName}`}
     >
-      <div className='flex gap-x-1 items-center'>
+      <div className="flex gap-x-1 items-center">
         {alignment === 'left' ? (
           <>
             {titleText}
@@ -318,8 +314,8 @@ export const getQueryType = (query) => {
   const cl = query.cl
     ? query.cl
     : Array.isArray(query.query_group) && query.query_group.length
-    ? query.query_group[0].cl
-    : QUERY_TYPE_EVENT;
+      ? query.query_group[0].cl
+      : QUERY_TYPE_EVENT;
   return cl;
 };
 
@@ -335,56 +331,58 @@ export const shouldDataFetch = (durationObj) => {
     if (moment().format('D') === '1') {
       return {
         required: false,
-        message: `Attribution reports don't show data for today`,
+        message: "Attribution reports don't show data for today"
       };
     }
     if (moment().format('D') === '2') {
       return {
         required: false,
-        message: `Attribution reports don't show data for yesterday`,
+        message: "Attribution reports don't show data for yesterday"
       };
     }
     return {
       required: true,
       message:
-        'Attribution reports for "This Month" cover data till the day before yesterday.',
+        'Attribution reports for "This Month" cover data till the day before yesterday.'
     };
   }
   if (durationObj.dateType === PREDEFINED_DATES.THIS_WEEK) {
     if (moment().format('dddd') === 'Sunday') {
       return {
         required: false,
-        message: `Attribution reports don't show data for today`,
+        message: "Attribution reports don't show data for today"
       };
     }
     if (moment().format('dddd') === 'Monday') {
       return {
         required: false,
-        message: `Attribution reports don't show data for yesterday`,
+        message: "Attribution reports don't show data for yesterday"
       };
     }
     return {
       required: true,
-      message: `Attribution reports for "This Week" cover data till the day before yesterday.`,
+      message:
+        'Attribution reports for "This Week" cover data till the day before yesterday.'
     };
   }
   if (durationObj.dateType === PREDEFINED_DATES.TODAY) {
     return {
       required: false,
-      message: `Attribution reports don't show data for today`,
+      message: "Attribution reports don't show data for today"
     };
   }
   if (durationObj.dateType === PREDEFINED_DATES.YESTERDAY) {
     return {
       required: false,
-      message: `Attribution reports don't show data for yesterday`,
+      message: "Attribution reports don't show data for yesterday"
     };
   }
   if (durationObj.dateType === PREDEFINED_DATES.LAST_MONTH) {
     if (moment().format('D') === '1') {
       return {
         required: true,
-        message: `Attribution reports for "Last Month" cover data till the day before yesterday.`,
+        message:
+          'Attribution reports for "Last Month" cover data till the day before yesterday.'
       };
     }
   }
@@ -392,13 +390,14 @@ export const shouldDataFetch = (durationObj) => {
     if (moment().format('dddd') === 'Sunday') {
       return {
         required: true,
-        message: `Attribution reports for "Last Week" cover data till the day before yesterday.`,
+        message:
+          'Attribution reports for "Last Week" cover data till the day before yesterday.'
       };
     }
   }
   return {
     required: true,
-    message: null,
+    message: null
   };
 };
 
@@ -412,8 +411,8 @@ export const getNewSorterState = (currentSorter, newSortProp) => {
     return [
       {
         ...newSortProp,
-        order: 'descend',
-      },
+        order: 'descend'
+      }
     ];
   }
 
@@ -423,21 +422,21 @@ export const getNewSorterState = (currentSorter, newSortProp) => {
       return [
         {
           ...newSortProp,
-          order: 'descend',
-        },
+          order: 'descend'
+        }
       ];
     } else {
       // we are editing existing level of sorting here
       if (currentSorter[newSortPropIndex].order === 'ascend') {
         return [
           ...currentSorter.slice(0, newSortPropIndex),
-          ...currentSorter.slice(newSortPropIndex + 1),
+          ...currentSorter.slice(newSortPropIndex + 1)
         ];
       } else {
         return [
           ...currentSorter.slice(0, newSortPropIndex),
           { ...newSortProp, order: 'ascend' },
-          ...currentSorter.slice(newSortPropIndex + 1),
+          ...currentSorter.slice(newSortPropIndex + 1)
         ];
       }
     }
@@ -447,22 +446,22 @@ export const getNewSorterState = (currentSorter, newSortProp) => {
       return [
         {
           ...newSortProp,
-          order: 'descend',
+          order: 'descend'
         },
-        ...currentSorter,
+        ...currentSorter
       ];
     } else {
       // we are editing existing level of sorting here
       if (currentSorter[newSortPropIndex].order === 'ascend') {
         return [
           ...currentSorter.slice(0, newSortPropIndex),
-          ...currentSorter.slice(newSortPropIndex + 1),
+          ...currentSorter.slice(newSortPropIndex + 1)
         ];
       } else {
         return [
           ...currentSorter.slice(0, newSortPropIndex),
           { ...newSortProp, order: 'ascend' },
-          ...currentSorter.slice(newSortPropIndex + 1),
+          ...currentSorter.slice(newSortPropIndex + 1)
         ];
       }
     }
@@ -601,7 +600,7 @@ export const formatFilterDate = (selectedDates) => {
 
   const convertedVal = {
     ...parsedVal,
-    ...convertedKeys,
+    ...convertedKeys
   };
   return JSON.stringify(convertedVal);
 };
@@ -635,7 +634,7 @@ export const HighlightSearchText = ({ text = '', highlight = '' }) => {
   if (!highlight.trim()) {
     return <span>{text}</span>;
   }
-  const regex = new RegExp(`(${_.escapeRegExp(highlight)})`, 'gi');
+  const regex = new RegExp(`(${escapeRegExp(highlight)})`, 'gi');
   const parts = text.split(regex);
   return (
     <span className={'truncate'}>
