@@ -75,6 +75,7 @@ CREATE TABLE IF NOT EXISTS users (
     KEY (group_2_id) USING HASH,
     KEY (group_3_id) USING HASH,
     KEY (group_4_id) USING HASH,
+    KEY (source) USING HASH,
     UNIQUE KEY (project_id, id) USING HASH,
     SHARD KEY (id)
 
