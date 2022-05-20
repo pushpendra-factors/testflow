@@ -260,7 +260,7 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 		found := false
 		for _, data := range groupSessions {
 			for _, journey := range data {
-				if len(journey.SessionSpentTimes) > 0 {
+				if len(journey.TimeStamps) > 0 {
 					found = true
 					break
 				}
