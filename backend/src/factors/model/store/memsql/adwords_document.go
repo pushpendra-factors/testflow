@@ -846,14 +846,19 @@ func (store *MemSQL) PullGCLIDReport(projectID uint64, from, to int64, adwordsAc
 		" WHEN JSON_EXTRACT_STRING(value, 'criteria_name') = '' THEN ? ELSE JSON_EXTRACT_STRING(value, 'criteria_name') END AS criteria_name"
 	keywordIDCase := "CASE WHEN JSON_EXTRACT_STRING(value, 'criteria_id') IS NULL THEN ? " +
 		" WHEN JSON_EXTRACT_STRING(value, 'criteria_id') = '' THEN ? ELSE JSON_EXTRACT_STRING(value, 'criteria_id') END AS criteria_id"
+	keywordNameCase2 := "CASE WHEN JSON_EXTRACT_STRING(value, 'keyword_name') IS NULL THEN ? " +
+		" WHEN JSON_EXTRACT_STRING(value, 'keyword_name') = '' THEN ? ELSE JSON_EXTRACT_STRING(value, 'keyword_name') END AS keyword_name"
+	keywordIDCase2 := "CASE WHEN JSON_EXTRACT_STRING(value, 'keyword_id') IS NULL THEN ? " +
+		" WHEN JSON_EXTRACT_STRING(value, 'keyword_id') = '' THEN ? ELSE JSON_EXTRACT_STRING(value, 'keyword_id') END AS keyword_id"
 	slotCase := "CASE WHEN JSON_EXTRACT_STRING(value, 'slot') IS NULL THEN ? " +
 		" WHEN JSON_EXTRACT_STRING(value, 'slot') = '' THEN ? ELSE JSON_EXTRACT_STRING(value, 'slot') END AS slot"
 
 	performanceQuery := "SELECT id, " + adGroupNameCase + ", " + adGroupIDCase + ", " + campaignNameCase + ", " +
-		campaignIDCase + ", " + adIDCase + ", " + keywordNameCase + ", " + keywordIDCase + ", " + slotCase +
+		campaignIDCase + ", " + adIDCase + ", " + keywordNameCase + ", " + keywordIDCase + ", " + keywordNameCase2 + ", " + keywordIDCase2 + ", " + slotCase +
 		" FROM adwords_documents where project_id = ? AND customer_account_id IN (?) AND type = ? AND timestamp between ? AND ? "
 	customerAccountIDs := strings.Split(adwordsAccountIDs, ",")
 	rows, tx, err := store.ExecQueryWithContext(performanceQuery, []interface{}{model.PropertyValueNone, model.PropertyValueNone,
+		model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone,
 		model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone,
 		model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone,
 		model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone,
@@ -875,8 +880,10 @@ func (store *MemSQL) PullGCLIDReport(projectID uint64, from, to int64, adwordsAc
 		var adIDTmp sql.NullString
 		var keywordNameTmp sql.NullString
 		var keywordIDTmp sql.NullString
+		var keywordNameTmp2 sql.NullString
+		var keywordIDTmp2 sql.NullString
 		var slotTmp sql.NullString
-		if err = rows.Scan(&gclIDTmp, &adgroupNameTmp, &adgroupIDTmp, &campaignNameTmp, &campaignIDTmp, &adIDTmp, &keywordNameTmp, &keywordIDTmp, &slotTmp); err != nil {
+		if err = rows.Scan(&gclIDTmp, &adgroupNameTmp, &adgroupIDTmp, &campaignNameTmp, &campaignIDTmp, &adIDTmp, &keywordNameTmp2, &keywordIDTmp2, &slotTmp); err != nil {
 			logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
 			continue
 		}
@@ -891,6 +898,8 @@ func (store *MemSQL) PullGCLIDReport(projectID uint64, from, to int64, adwordsAc
 		var adID string
 		var keywordName string
 		var keywordID string
+		var keywordName2 string
+		var keywordID2 string
 		var slot string
 		gclID = gclIDTmp.String
 		adgroupName = U.IfThenElse(adgroupNameTmp.Valid == true, adgroupNameTmp.String, model.PropertyValueNone).(string)
@@ -900,6 +909,8 @@ func (store *MemSQL) PullGCLIDReport(projectID uint64, from, to int64, adwordsAc
 		adID = U.IfThenElse(adIDTmp.Valid == true, adIDTmp.String, model.PropertyValueNone).(string)
 		keywordName = U.IfThenElse(keywordNameTmp.Valid == true, keywordNameTmp.String, model.PropertyValueNone).(string)
 		keywordID = U.IfThenElse(keywordIDTmp.Valid == true, keywordIDTmp.String, model.PropertyValueNone).(string)
+		keywordName2 = U.IfThenElse(keywordNameTmp2.Valid == true, keywordNameTmp2.String, model.PropertyValueNone).(string)
+		keywordID2 = U.IfThenElse(keywordIDTmp2.Valid == true, keywordIDTmp2.String, model.PropertyValueNone).(string)
 		slot = U.IfThenElse(slotTmp.Valid == true, slotTmp.String, model.PropertyValueNone).(string)
 
 		// Enriching GCLID report using other reports
@@ -919,6 +930,18 @@ func (store *MemSQL) PullGCLIDReport(projectID uint64, from, to int64, adwordsAc
 				keywordName = val.Name
 				keywordMatchType = val.KeywordMatchType
 			}
+		}
+		if U.IsNonEmptyKey(keywordID2) {
+			if val, exists := keywordIDReport[keywordID2]; exists {
+				keywordName = val.Name
+				keywordMatchType = val.KeywordMatchType
+			}
+		}
+		if !U.IsNonEmptyKey(keywordName) {
+			keywordName = keywordName2
+		}
+		if !U.IsNonEmptyKey(keywordID) {
+			keywordID = keywordID2
 		}
 
 		gclidBasedMarketData[gclID] = model.MarketingData{
