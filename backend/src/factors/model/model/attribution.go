@@ -836,8 +836,8 @@ func AddHeadersByAttributionKey(result *QueryResult, query *AttributionQuery, go
 				result.Headers = append(result.Headers, conversion, cpc, userCPCRate)
 
 				conversionC := fmt.Sprintf("%s - Conversion Value(compare)", goal)
-				cpcC := fmt.Sprintf("%s - Return on Cost (compare)", goal)
-				userCPCRateC := fmt.Sprintf("%s - UserConversionRate (compare) (remove)", goal)
+				cpcC := fmt.Sprintf("%s - Return on Cost(compare)", goal)
+				userCPCRateC := fmt.Sprintf("%s - UserConversionRate(compare) (remove)", goal)
 				result.Headers = append(result.Headers, conversionC, cpcC, userCPCRateC)
 			} else {
 				conversion := fmt.Sprintf("%s - Conversion", goal)
@@ -845,9 +845,9 @@ func AddHeadersByAttributionKey(result *QueryResult, query *AttributionQuery, go
 				userCPCRate := fmt.Sprintf("%s - UserConversionRate", goal)
 				result.Headers = append(result.Headers, conversion, cpc, userCPCRate)
 
-				conversionC := fmt.Sprintf("%s - Conversion (compare)", goal)
-				cpcC := fmt.Sprintf("%s - Cost Per Conversion (compare)", goal)
-				userCPCRateC := fmt.Sprintf("%s - UserConversionRate (compare)", goal)
+				conversionC := fmt.Sprintf("%s - Conversion(compare)", goal)
+				cpcC := fmt.Sprintf("%s - Cost Per Conversion(compare)", goal)
+				userCPCRateC := fmt.Sprintf("%s - UserConversionRate(compare)", goal)
 				result.Headers = append(result.Headers, conversionC, cpcC, userCPCRateC)
 			}
 		}
