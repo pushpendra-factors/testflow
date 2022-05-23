@@ -534,10 +534,10 @@ export const getTableColumns = (
       }
       const attrChildren = attrQueryHeaders.filter((hd)=> {
         let title = hd.split(' - ')[1];
-        if(title === 'Conversion Value' || ('Conversion Value(compare)')) {
+        if(title === 'Conversion Value' || title ===  'Conversion Value(compare)') {
           return showCV;
         }
-        if(title === 'Return on Cost' || ('Return on Cost(compare)')) {
+        if(title === ('Return on Cost' || title === 'Return on Cost(compare)')) {
           return showROC;
         }
 
@@ -549,7 +549,7 @@ export const getTableColumns = (
           title = title.replace('UserConversionRate', 'Conversion Rate');
         };
 
-        if(hd.search('compare')) {
+        if(hd.search('compare') >= 0) {
           attrMetod = attribution_method_compare;
         }
         
