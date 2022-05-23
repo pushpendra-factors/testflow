@@ -6,6 +6,7 @@ import (
 	cacheRedis "factors/cache/redis"
 	U "factors/util"
 	"fmt"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -465,6 +466,13 @@ var comparisonOp = map[string]func(interface{}, interface{}) bool{
 		if rValue == U.PROPERTY_VALUE_ANY { // should not be blank
 			return pValue != ""
 		}
+		if reflect.ValueOf(pValue).Kind() == reflect.Bool {
+			if strconv.FormatBool(pValue.(bool)) == rValue {
+				return true
+			} else {
+				return false
+			}
+		}
 
 		return rValue == pValue
 	},
@@ -473,19 +481,36 @@ var comparisonOp = map[string]func(interface{}, interface{}) bool{
 			return pValue == ""
 		}
 
+		if reflect.ValueOf(pValue).Kind() == reflect.Bool {
+			if strconv.FormatBool(pValue.(bool)) != rValue {
+				return true
+			} else {
+				return false
+			}
+		}
+
 		return rValue != pValue
 	},
 	COMPARE_GREATER_THAN: func(rValue, pValue interface{}) bool {
+		if reflect.ValueOf(pValue).Kind() == reflect.Bool {
+			return false
+		}
 		intRValue, _ := U.GetPropertyValueAsFloat64(rValue)
 		intpValue, _ := U.GetPropertyValueAsFloat64(pValue)
 		return intpValue > intRValue
 	},
 	COMPARE_LESS_THAN: func(rValue, pValue interface{}) bool {
+		if reflect.ValueOf(pValue).Kind() == reflect.Bool {
+			return false
+		}
 		intRValue, _ := U.GetPropertyValueAsFloat64(rValue)
 		intpValue, _ := U.GetPropertyValueAsFloat64(pValue)
 		return intpValue < intRValue
 	},
 	COMPARE_CONTAINS: func(rValue, pValue interface{}) bool {
+		if reflect.ValueOf(pValue).Kind() == reflect.Bool {
+			return false
+		}
 		rValueStr := U.GetPropertyValueAsString(rValue)
 		pValueStr := U.GetPropertyValueAsString(pValue)
 		if rValueStr == "" || pValueStr == "" {
@@ -495,6 +520,9 @@ var comparisonOp = map[string]func(interface{}, interface{}) bool{
 		return strings.Contains(pValueStr, rValueStr)
 	},
 	COMPARE_NOT_CONTAINS: func(rValue, pValue interface{}) bool {
+		if reflect.ValueOf(pValue).Kind() == reflect.Bool {
+			return false
+		}
 		rValueStr := U.GetPropertyValueAsString(rValue)
 		pValueStr := U.GetPropertyValueAsString(pValue)
 		if pValueStr == "" {

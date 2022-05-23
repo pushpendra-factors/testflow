@@ -922,6 +922,57 @@ func TestSmartCRMFilterCreation(t *testing.T) {
 	assert.Equal(t, intComp, &smartCRMEvents[intFilterIndex].FilterExpr)
 }
 
+func TestSmartCRMFilterBoolCompare(t *testing.T) {
+
+	project, _, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+
+	filter := &model.SmartCRMEventFilter{
+		Source:               model.SmartCRMEventSourceSalesforce,
+		ObjectType:           "contact",
+		Description:          "salesforce contact",
+		FilterEvaluationType: model.FilterEvaluationTypeSpecific,
+		Filters: []model.PropertyFilter{
+			{
+				Name: "bool_compare",
+				Rules: []model.CRMFilterRule{
+					{
+						PropertyState: model.CurrentState,
+						Value:         "true",
+						Operator:      model.COMPARE_EQUAL,
+					},
+					{
+						PropertyState: model.PreviousState,
+						Value:         "false",
+						Operator:      model.COMPARE_EQUAL,
+					},
+				},
+				LogicalOp: model.LOGICAL_OP_AND,
+			},
+		},
+
+		LogicalOp:               model.LOGICAL_OP_AND,
+		TimestampReferenceField: "time",
+	}
+
+	currentProperties := make(map[string]interface{})
+	prevProperties := make(map[string]interface{})
+	currentProperties["bool_compare"] = true
+	prevProperties["bool_compare"] = "false"
+
+	_, rPrevProperties, ok := IntSalesforce.GetSalesforceSmartEventPayload(project.ID, "smartEventBool", "", "", 0, &currentProperties, &prevProperties, filter)
+	assert.Equal(t, true, ok)
+	assert.Equal(t, prevProperties, *rPrevProperties)
+
+	// individual test
+	// individual properties test
+	state := model.CRMFilterEvaluator(1, &currentProperties, nil, filter, model.CompareStateCurr)
+	assert.Equal(t, true, state)
+	state = model.CRMFilterEvaluator(1, nil, &prevProperties, filter, model.CompareStatePrev)
+	assert.Equal(t, true, state)
+}
+
 func TestSmartCRMFilterStringCompare(t *testing.T) {
 
 	/* (current email == test1@gmail.com and prev email == test@gmail.com )
