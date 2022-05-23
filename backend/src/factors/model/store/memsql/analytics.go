@@ -1533,7 +1533,7 @@ func (store *MemSQL) ExecQueryWithContext(stmnt string, params []interface{}) (*
 
 	startExecTime := time.Now()
 	rows, err := tx.QueryContext(*C.GetServices().DBContext, stmnt, params...)
-	U.LogReadTimeWithQueryRequestID(startExecTime, reqID, &logFields)
+	U.LogExecutionTimeWithQueryRequestID(startExecTime, reqID, &logFields)
 	if err != nil {
 		log.WithError(err).WithFields(logFields).Error("Failed to exec query with context.")
 	}

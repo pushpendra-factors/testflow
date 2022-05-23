@@ -312,12 +312,12 @@ func GetUniqueQueryRequestID() string {
 
 func LogReadTimeWithQueryRequestID(startTime time.Time, reqID string, logFields *log.Fields) {
 	timeTaken := time.Now().Sub(startTime).Microseconds()
-	log.WithFields(*logFields).WithField("req_id", reqID).
-		WithField("query_read_time_in_ms", timeTaken).Info("Query rows read.")
+	log.WithFields(*logFields).WithField("query_id", reqID).
+		WithField("time_in_ms", timeTaken).Info("Query rows read.")
 }
 
 func LogExecutionTimeWithQueryRequestID(startTime time.Time, reqID string, logFields *log.Fields) {
 	timeTaken := time.Now().Sub(startTime).Microseconds()
-	log.WithFields(*logFields).WithField("req_id", reqID).
-		WithField("query_exec_time_in_ms", timeTaken).Info("Query executed.")
+	log.WithFields(*logFields).WithField("query_id", reqID).
+		WithField("time_in_ms", timeTaken).Info("Query executed.")
 }
