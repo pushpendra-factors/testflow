@@ -641,21 +641,27 @@ def get_deals_with_properties(project_id,get_url):
 
 
 def sync_deals(project_id, api_key, sync_all=False):
+    page_count_key = ""
+    page_count = 0
     if sync_all:
         urls = [ "https://api.hubapi.com/deals/v1/deal/paged?" ]
         log.warning("Downloading all deals for project_id : "+ str(project_id) + ".")
+        page_count_key = "limit"
+        page_count = 250 # max size
     else:
         urls = [
             "https://api.hubapi.com/deals/v1/deal/recent/created?", # created
             "https://api.hubapi.com/deals/v1/deal/recent/modified?", # modified
         ]
         log.warning("Downloading recently created or modified deals for project_id : "+ str(project_id) + ".")
+        page_count_key = "count"
+        page_count = 100 # max size
 
     deal_api_calls = 0
     err_url_too_long = False
     for url in urls:
         count = 0
-        parameter_dict = {'hapikey': api_key, 'limit': PAGE_SIZE}
+        parameter_dict = {'hapikey': api_key, page_count_key: page_count}
 
         # mandatory property needed on response, returns no properties if not given.
         properties = []
