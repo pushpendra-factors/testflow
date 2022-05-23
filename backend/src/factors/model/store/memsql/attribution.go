@@ -628,7 +628,8 @@ func (store *MemSQL) runAttribution(projectID uint64,
 }
 
 // GetCoalesceIDFromUserIDs returns the map of coalesce userId for given list of users
-func (store *MemSQL) GetCoalesceIDFromUserIDs(userIDs []string, projectID uint64, logCtx log.Entry) (map[string]model.UserInfo, error) {
+func (store *MemSQL) GetCoalesceIDFromUserIDs(userIDs []string, projectID uint64,
+	logCtx log.Entry) (map[string]model.UserInfo, error) {
 
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logCtx.Data)
 
@@ -640,13 +641,14 @@ func (store *MemSQL) GetCoalesceIDFromUserIDs(userIDs []string, projectID uint64
 		value := U.GetInterfaceList(users)
 		queryUserIDCoalID := "SELECT id, COALESCE(users.customer_user_id,users.id) AS coal_user_id" + " " +
 			"FROM users WHERE id IN (" + placeHolder + ")"
-		rows, tx, err := store.ExecQueryWithContext(queryUserIDCoalID, value)
+		rows, tx, err, reqID := store.ExecQueryWithContext(queryUserIDCoalID, value)
 		if err != nil {
 			logCtx.WithError(err).Error("SQL Query failed for GetCoalesceIDFromUserIDs")
 			return nil, err
 		}
 		logCtx.Info("GetCoalesceIDFromUserIDs 2")
 
+		startReadTime := time.Now()
 		for rows.Next() {
 			var userID string
 			var coalesceID string
@@ -658,6 +660,7 @@ func (store *MemSQL) GetCoalesceIDFromUserIDs(userIDs []string, projectID uint64
 			userIDToCoalUserIDMap[userID] = model.UserInfo{CoalUserID: coalesceID}
 		}
 		U.CloseReadQuery(rows, tx)
+		U.LogReadTimeWithQueryRequestID(startReadTime, reqID, &log.Fields{"project_id": projectID})
 	}
 	logCtx.WithFields(log.Fields{"user_count": len(userIDToCoalUserIDMap)}).Info("GetCoalesceIDFromUserIDs 3")
 	return userIDToCoalUserIDMap, nil
@@ -733,14 +736,14 @@ func (store *MemSQL) getAllTheSessions(projectId uint64, sessionEventNameId stri
 
 	wParams = []interface{}{projectId, sessionEventNameId, effectiveFrom, effectiveTo}
 	qParams = append(qParams, wParams...)
-	rows, tx, err := store.ExecQueryWithContext(queryUserSessionTimeRange, qParams)
+	rows, tx, err, reqID := store.ExecQueryWithContext(queryUserSessionTimeRange, qParams)
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
 		return nil, nil, err
 	}
 	defer U.CloseReadQuery(rows, tx)
 	logCtx.Info("Attribution before ProcessEventRows")
-	return model.ProcessEventRows(rows, query, reports, contentGroupNamesList, logCtx)
+	return model.ProcessEventRows(rows, query, reports, contentGroupNamesList, logCtx, reqID)
 }
 
 // getOfflineEventData returns  offline touch point event id
@@ -879,12 +882,13 @@ func (store *MemSQL) GetLinkedFunnelEventUsersFilter(projectID uint64, queryFrom
 			queryEventHits := selectEventHits + " " + eventJoinStmnt + " " + whereEventHits
 
 			// fetch query results
-			rows, tx, err := store.ExecQueryWithContext(queryEventHits, qParams)
+			rows, tx, err, reqID := store.ExecQueryWithContext(queryEventHits, qParams)
 			if err != nil {
 				logCtx.WithError(err).Error("SQL Query failed for queryEventHits")
 				return err, nil
 			}
 
+			startReadTime := time.Now()
 			for rows.Next() {
 				var userID string
 				var timestamp int64
@@ -903,6 +907,7 @@ func (store *MemSQL) GetLinkedFunnelEventUsersFilter(projectID uint64, queryFrom
 				}
 			}
 			U.CloseReadQuery(rows, tx)
+			U.LogReadTimeWithQueryRequestID(startReadTime, reqID, &log.Fields{"project_id": projectID})
 		}
 		// Get coalesced Id for Funnel Event user_ids
 		userIDToCoalIDInfo, err := store.GetCoalesceIDFromUserIDs(userIDList, projectID, logCtx)
@@ -972,7 +977,7 @@ func (store *MemSQL) GetConvertedUsersWithFilter(projectID uint64, goalEventName
 	queryEventHits := selectEventHits + " " + eventJoinStmnt + " " + whereEventHits
 
 	// fetch query results
-	rows, tx, err := store.ExecQueryWithContext(queryEventHits, qParams)
+	rows, tx, err, reqID := store.ExecQueryWithContext(queryEventHits, qParams)
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed for queryEventHits")
 		return nil, nil, nil, err
@@ -980,6 +985,7 @@ func (store *MemSQL) GetConvertedUsersWithFilter(projectID uint64, goalEventName
 	defer U.CloseReadQuery(rows, tx)
 	var userIDList []string
 	userIdHitGoalEventTimestamp := make(map[string]int64)
+	startReadTime := time.Now()
 	for rows.Next() {
 		var userID string
 		var timestamp int64
@@ -997,6 +1003,7 @@ func (store *MemSQL) GetConvertedUsersWithFilter(projectID uint64, goalEventName
 			}
 		}
 	}
+	U.LogReadTimeWithQueryRequestID(startReadTime, reqID, &log.Fields{"project_id": projectID})
 
 	// Get coalesced Id for converted user_ids (without filter)
 	userIDToCoalIDInfo, err := store.GetCoalesceIDFromUserIDs(userIDList, projectID, logCtx)
@@ -1057,7 +1064,7 @@ func (store *MemSQL) GetAdwordsCurrency(projectID uint64, customerAccountID stri
 		" ORDER BY timestamp DESC LIMIT 1"
 	logCtx := log.WithFields(logFields)
 	// Checking just for customerAccountIDs[0], we are assuming that all accounts have same currency.
-	rows, tx, err := store.ExecQueryWithContext(queryCurrency,
+	rows, tx, err, reqID := store.ExecQueryWithContext(queryCurrency,
 		[]interface{}{projectID, customerAccountIDs[0], 9, U.GetDateOnlyFromTimestampZ(from),
 			U.GetDateOnlyFromTimestampZ(to)})
 	if err != nil {
@@ -1066,6 +1073,7 @@ func (store *MemSQL) GetAdwordsCurrency(projectID uint64, customerAccountID stri
 	}
 	defer U.CloseReadQuery(rows, tx)
 
+	startReadTime := time.Now()
 	var currency string
 	for rows.Next() {
 		if err = rows.Scan(&currency); err != nil {
@@ -1073,5 +1081,7 @@ func (store *MemSQL) GetAdwordsCurrency(projectID uint64, customerAccountID stri
 			return "", err
 		}
 	}
+	U.LogReadTimeWithQueryRequestID(startReadTime, reqID, &logFields)
+
 	return currency, nil
 }

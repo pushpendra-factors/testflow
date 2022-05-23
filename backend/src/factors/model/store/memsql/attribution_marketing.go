@@ -360,14 +360,14 @@ func (store *MemSQL) PullAdwordsMarketingData(projectID uint64, from, to int64, 
 
 	params := []interface{}{keyID, keyName, extraValue1, projectID, customerAccountIDs, reportType,
 		U.GetDateAsStringIn(from, U.TimeZoneString(timeZone)), U.GetDateAsStringIn(to, U.TimeZoneString(timeZone))}
-	rows, tx, err := store.ExecQueryWithContext(performanceQuery, params)
+	rows, tx, err, reqID := store.ExecQueryWithContext(performanceQuery, params)
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
 		return nil, nil, err
 	}
 	defer U.CloseReadQuery(rows, tx)
 
-	marketingDataIDMap, allRows := model.ProcessRow(rows, reportName, logCtx, model.ChannelAdwords)
+	marketingDataIDMap, allRows := model.ProcessRow(rows, reportName, logCtx, model.ChannelAdwords, reqID)
 	return marketingDataIDMap, allRows, nil
 }
 
@@ -398,14 +398,15 @@ func (store *MemSQL) PullFacebookMarketingData(projectID uint64, from, to int64,
 
 	params := []interface{}{keyID, keyName, extraValue1, projectID, customerAccountIDs, reportType,
 		U.GetDateAsStringIn(from, U.TimeZoneString(timeZone)), U.GetDateAsStringIn(to, U.TimeZoneString(timeZone))}
-	rows, tx, err := store.ExecQueryWithContext(performanceQuery, params)
+
+	rows, tx, err, reqID := store.ExecQueryWithContext(performanceQuery, params)
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
 		return nil, nil, err
 	}
 	defer U.CloseReadQuery(rows, tx)
 
-	marketingDataIDMap, allRows := model.ProcessRow(rows, reportName, logCtx, model.ChannelFacebook)
+	marketingDataIDMap, allRows := model.ProcessRow(rows, reportName, logCtx, model.ChannelFacebook, reqID)
 	return marketingDataIDMap, allRows, nil
 }
 
@@ -436,14 +437,14 @@ func (store *MemSQL) PullLinkedinMarketingData(projectID uint64, from, to int64,
 
 	params := []interface{}{keyID, keyName, extraValue1, projectID, customerAccountIDs, reportType,
 		U.GetDateAsStringIn(from, U.TimeZoneString(timeZone)), U.GetDateAsStringIn(to, U.TimeZoneString(timeZone))}
-	rows, tx, err := store.ExecQueryWithContext(performanceQuery, params)
+	rows, tx, err, reqID := store.ExecQueryWithContext(performanceQuery, params)
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
 		return nil, nil, err
 	}
 	defer U.CloseReadQuery(rows, tx)
 
-	marketingDataIDMap, allRows := model.ProcessRow(rows, reportName, logCtx, model.ChannelLinkedin)
+	marketingDataIDMap, allRows := model.ProcessRow(rows, reportName, logCtx, model.ChannelLinkedin, reqID)
 	return marketingDataIDMap, allRows, nil
 }
 func (store *MemSQL) PullBingAdsMarketingData(projectID uint64, from, to int64, customerAccountID string, keyID string,
@@ -472,14 +473,14 @@ func (store *MemSQL) PullBingAdsMarketingData(projectID uint64, from, to int64, 
 
 	params := []interface{}{keyID, keyName, extraValue1, projectID, model.BingAdsIntegration, customerAccountIDs, reportType,
 		U.GetDateAsStringIn(from, U.TimeZoneString(timeZone)), U.GetDateAsStringIn(to, U.TimeZoneString(timeZone))}
-	rows, tx, err := store.ExecQueryWithContext(performanceQuery, params)
+	rows, tx, err, reqID := store.ExecQueryWithContext(performanceQuery, params)
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
 		return nil, nil, err
 	}
 	defer U.CloseReadQuery(rows, tx)
 
-	marketingDataIDMap, allRows := model.ProcessRow(rows, reportName, logCtx, model.BingAdsIntegration)
+	marketingDataIDMap, allRows := model.ProcessRow(rows, reportName, logCtx, model.BingAdsIntegration, reqID)
 	return marketingDataIDMap, allRows, nil
 }
 func (store *MemSQL) PullCustomDimensionData(projectID uint64, attributionKey string, marketingReport *model.MarketingReports, logCtx log.Entry) error {
@@ -555,13 +556,14 @@ func (store *MemSQL) PullSmartProperties(projectID uint64, campaignIDPlaceHolder
 		"where project_id = ? AND source = ? AND object_type = ?"
 
 	params := []interface{}{campaignIDPlaceHolder, campaignNamePlaceHolder, adgroupIDPlaceHolder, adgroupNamePlaceHolder, projectID, sourceChannelPlaceHolder, objectType}
-	rows, tx, err := store.ExecQueryWithContext(stmt, params)
+	rows, tx, err, reqID := store.ExecQueryWithContext(stmt, params)
 	if err != nil {
 		logCtx1.WithError(err).Error("SQL Query failed")
 		return nil, err
 	}
 	defer U.CloseReadQuery(rows, tx)
 
+	startReadTime := time.Now()
 	dataKeyDimensions := make(map[string]model.MarketingData)
 	for rows.Next() {
 		var campaignIDNull sql.NullString
@@ -616,6 +618,10 @@ func (store *MemSQL) PullSmartProperties(projectID uint64, campaignIDPlaceHolder
 		}
 
 	}
-	logCtx1.WithFields(log.Fields{"CustomDebug": "True", "ProjectId": projectID, "UnitType": objectType, "Source": sourceChannelPlaceHolder}).Info("Pull Smart Properties")
+	logCtx1.WithFields(log.Fields{"CustomDebug": "True", "ProjectId": projectID,
+		"UnitType": objectType, "Source": sourceChannelPlaceHolder}).
+		Info("Pull Smart Properties")
+	U.LogReadTimeWithQueryRequestID(startReadTime, reqID, &logFields)
+
 	return dataKeyDimensions, nil
 }

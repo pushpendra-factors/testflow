@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -2735,14 +2736,15 @@ func GetKeyMapToData(attributionKey string, allRows []MarketingData) map[string]
 	return keyToData
 }
 
-func ProcessOTPEventRows(rows *sql.Rows, query *AttributionQuery, logCtx log.Entry) (map[string]map[string]UserSessionData, []string, error) {
+func ProcessOTPEventRows(rows *sql.Rows, query *AttributionQuery,
+	logCtx log.Entry, queryID string) (map[string]map[string]UserSessionData, []string, error) {
 
 	attributedSessionsByUserId := make(map[string]map[string]UserSessionData)
 	userIdMap := make(map[string]bool)
 	var userIdsWithSession []string
 
+	startReadTime := time.Now()
 	for rows.Next() {
-
 		var userIDNull sql.NullString
 		var campaignIDNull sql.NullString
 		var campaignNameNull sql.NullString
@@ -2827,10 +2829,13 @@ func ProcessOTPEventRows(rows *sql.Rows, query *AttributionQuery, logCtx log.Ent
 			attributedSessionsByUserId[userID][uniqueAttributionKey] = userSessionDataNew
 		}
 	}
+	U.LogReadTimeWithQueryRequestID(startReadTime, queryID, &log.Fields{"query": query})
+
 	return attributedSessionsByUserId, userIdsWithSession, nil
 }
 
-func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, reports *MarketingReports, contentGroupNamesList []string, logCtx log.Entry) (map[string]map[string]UserSessionData, []string, error) {
+func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, reports *MarketingReports,
+	contentGroupNamesList []string, logCtx log.Entry, queryID string) (map[string]map[string]UserSessionData, []string, error) {
 
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	attributedSessionsByUserId := make(map[string]map[string]UserSessionData)
@@ -2845,8 +2850,9 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, reports *Marketin
 	}
 	var missingIDs []MissingCollection
 	count := 0
-	for rows.Next() {
 
+	startReadTime := time.Now()
+	for rows.Next() {
 		var userIDNull sql.NullString
 		var sessionSpentTimeNull sql.NullFloat64
 		var pageCountNull sql.NullInt64
@@ -2999,16 +3005,22 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, reports *Marketin
 			log.WithFields(log.Fields{"Method": "ProcessEventRows", "Count": count}).Info("Processing event rows")
 		}
 	}
-	logCtx.WithFields(log.Fields{"AttributionKey": query.AttributionKey}).Info("no document was found in any of the reports for ID. Logging and continuing %+v", missingIDs[:U.MinInt(100, len(missingIDs))])
+	logCtx.WithFields(log.Fields{"AttributionKey": query.AttributionKey}).
+		Info("no document was found in any of the reports for ID. Logging and continuing %+v",
+			missingIDs[:U.MinInt(100, len(missingIDs))])
+	U.LogReadTimeWithQueryRequestID(startReadTime, queryID, &log.Fields{})
+
 	return attributedSessionsByUserId, userIdsWithSession, nil
 }
 
-func ProcessRow(rows *sql.Rows, reportName string, logCtx *log.Entry, channel string) (map[string]MarketingData, []MarketingData) {
+func ProcessRow(rows *sql.Rows, reportName string, logCtx *log.Entry,
+	channel string, queryID string) (map[string]MarketingData, []MarketingData) {
 
 	// ID is CampaignID, AdgroupID, KeywordID etc
 	marketingDataIDMap := make(map[string]MarketingData)
 	var allRows []MarketingData
 
+	startReadTime := time.Now()
 	for rows.Next() {
 		var campaignIDNull sql.NullString
 		var adgroupIDNull sql.NullString
@@ -3037,6 +3049,8 @@ func ProcessRow(rows *sql.Rows, reportName string, logCtx *log.Entry, channel st
 		marketingDataIDMap[ID] = data
 		allRows = append(allRows, data)
 	}
+	U.LogReadTimeWithQueryRequestID(startReadTime, queryID, &log.Fields{})
+
 	return marketingDataIDMap, allRows
 }
 

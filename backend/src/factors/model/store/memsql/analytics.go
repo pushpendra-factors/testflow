@@ -1498,14 +1498,16 @@ func sanitizeNumericalBucketRanges(result *model.QueryResult, query *model.Query
 	}
 }
 
-// ExecQueryWithContext Executes raw query with context. Useful to kill queries on program exit or crash.
-func (store *MemSQL) ExecQueryWithContext(stmnt string, params []interface{}) (*sql.Rows, *sql.Tx, error) {
+// ExecQueryWithContext Executes raw query with context. Useful to kill
+// queries on program exit or crash.
+func (store *MemSQL) ExecQueryWithContext(stmnt string, params []interface{}) (*sql.Rows, *sql.Tx, error, string) {
+	reqID := U.GetUniqueQueryRequestID()
 
 	db := C.GetServices().Db
 	tx, err := db.DB().Begin()
 	if err != nil {
 		log.WithError(err).Error("Failed to begin DB transaction.")
-		return nil, nil, err
+		return nil, nil, err, reqID
 	}
 
 	// For query: ...where id in ($1) where $1 is passed as a slice, convert to pq.Array()
@@ -1514,22 +1516,31 @@ func (store *MemSQL) ExecQueryWithContext(stmnt string, params []interface{}) (*
 	logFields := log.Fields{
 		"anaytics":       true,
 		"expanded_query": U.DBDebugPreparedStatement(stmnt, params),
-		"original_query": stmnt,
-		"params":         params,
+		// Limit statement and params length.
+		"original_query": U.TrimQueryString(stmnt),
+		"params":         U.TrimQueryParams(params),
+		"query_id":       reqID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	// Prefix application name for in comment for debugging.
-	stmnt = fmt.Sprintf("/*!%s*/ ", C.GetConfig().AppName) + stmnt
+	stmnt = fmt.Sprintf("/*!%s-%s*/ ", C.GetConfig().AppName, reqID) + stmnt
 
 	// Set resource pool before query.
 	if usePool, poolName := C.UseResourcePoolForAnalytics(); usePool {
 		C.SetMemSQLResourcePoolQueryCallbackUsingSQLTx(tx, poolName)
 	}
-	rows, err := tx.QueryContext(*C.GetServices().DBContext, stmnt, params...)
-	log.WithError(err).WithFields(logFields).Info("Exec query with context")
 
-	return rows, tx, err
+	startExecTime := time.Now()
+	rows, err := tx.QueryContext(*C.GetServices().DBContext, stmnt, params...)
+	U.LogReadTimeWithQueryRequestID(startExecTime, reqID, &logFields)
+	if err != nil {
+		log.WithError(err).WithFields(logFields).Error("Failed to exec query with context.")
+	}
+
+	log.WithError(err).WithFields(logFields).Info("Exec query with context.")
+
+	return rows, tx, err, reqID
 }
 
 func (store *MemSQL) ExecQuery(stmnt string, params []interface{}) (*model.QueryResult, error) {
@@ -1539,12 +1550,13 @@ func (store *MemSQL) ExecQuery(stmnt string, params []interface{}) (*model.Query
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
-	rows, tx, err := store.ExecQueryWithContext(stmnt, params)
+
+	rows, tx, err, reqID := store.ExecQueryWithContext(stmnt, params)
 	if err != nil {
 		return nil, err
 	}
 
-	resultHeaders, resultRows, err := U.DBReadRows(rows, tx)
+	resultHeaders, resultRows, err := U.DBReadRows(rows, tx, reqID)
 	if err != nil {
 		return nil, err
 	}
