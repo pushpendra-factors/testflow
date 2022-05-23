@@ -103,7 +103,7 @@ const ConversionGoalBlock = ({
             return {
               "label": selGroup?.display_category,
               "group": selGroup?.display_category,
-              "category": selGroup.category,
+              "category": selGroup?.category,
               "icon": "custom_events",
               "values": metricsValues
             }

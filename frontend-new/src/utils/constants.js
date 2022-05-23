@@ -229,6 +229,18 @@ export const ATTRIBUTION_METRICS = [
     enabled: false
   },
   {
+    title: 'Conversion Value',
+    header: 'CV',
+    enabled: true,
+    isEventMetric: true
+  },
+  {
+    title: 'Return on Cost',
+    header: 'ROC',
+    enabled: true,
+    isEventMetric: true
+  },
+  {
     title: 'Click Conversion Rate (%)',
     header: 'ConversionRate(%) OR ClickConversionRate(%)',
     enabled: false
@@ -254,7 +266,7 @@ export const ATTRIBUTION_METRICS = [
     header: 'ALL CR',
     enabled: false,
     isEventMetric: true
-  }
+  },
 ];
 
 export const KEY_TOUCH_POINT_DIMENSIONS = [

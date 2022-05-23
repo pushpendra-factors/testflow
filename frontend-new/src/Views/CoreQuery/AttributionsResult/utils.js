@@ -517,6 +517,8 @@ export const getTableColumns = (
 
   const showCPC = metrics.find((elem) => elem.header === 'ALL CPC')?.enabled;
   const showCR = metrics.find((elem) => elem.header === 'ALL CR')?.enabled;
+  const showCV = metrics.find((elem) => elem.header === 'CV')?.enabled;
+  const showROC = metrics.find((elem) => elem.header === 'ROC')?.enabled;
 
   const conversionBorderCondition = !showCPC && !showCR;
   const costBorderCondition = !showCR;
@@ -530,15 +532,31 @@ export const getTableColumns = (
       if(!attribution_method_compare) {
         attrQueryHeaders = attrQueryHeaders.filter((hd) => hd.search('(compare)') < 0);
       }
-      const attrChildren = attrQueryHeaders.map((hd) => {
+      const attrChildren = attrQueryHeaders.filter((hd)=> {
         let title = hd.split(' - ')[1];
+        if(title === 'Conversion Value' || ('Conversion Value(compare)')) {
+          return showCV;
+        }
+        if(title === 'Return on Cost' || ('Return on Cost(compare)')) {
+          return showROC;
+        }
+
+        return hd;
+      }).map((hd) => {
+        let title = hd.split(' - ')[1];
+        let attrMetod;
         if (hd.search('UserConversionRate') >= 0) {
           title = title.replace('UserConversionRate', 'Conversion Rate');
         };
+
+        if(hd.search('compare')) {
+          attrMetod = attribution_method_compare;
+        }
+        
         return getEventColumnConfig({
           title: title, 
           key: hd, 
-          method: attribution_method,
+          method: attrMetod,
           hasBorder: true
         });
       });
