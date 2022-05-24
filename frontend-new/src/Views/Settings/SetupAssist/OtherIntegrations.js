@@ -41,7 +41,7 @@ const IntegrationProviderData = [
   },
   {
     name: 'Slack',
-    desc: 'Slack is a leader in marketing automation. Using our slack source, we will ingest your Program, Campaign, Person and List records into Factors.',
+    desc: 'Does your team live on Slack? Set up alerts that track KPIs and marketing data. Nudge your team to take the right actions.',
     icon: 'Slack',
     kbLink: false,
   },

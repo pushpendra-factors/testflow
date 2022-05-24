@@ -298,7 +298,9 @@ function ContentGroupsForm({activeProject, selectedGroup, setShowSmartProperty, 
                                 </Col>
                                 <Col span={12}>
                                     <div className={'flex justify-end'}>
+                                    {formState !== 'view'?
                                     <Button size={'large'} onClick={() => setShowSmartProperty(false)}>Cancel</Button>
+                                    : null}
                                     {/* {formState === 'view' ? 
                                     <Button size={'large'} className={'ml-2'} type={'primary'}  onClick={() => setFormState('edit')}>Edit</Button>
                                     : null} */}
