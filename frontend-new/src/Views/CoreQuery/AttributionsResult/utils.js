@@ -544,7 +544,7 @@ export const getTableColumns = (
         return hd;
       }).map((hd) => {
         let title = hd.split(' - ')[1];
-        let attrMetod;
+        let attrMetod = attribution_method;
         if (hd.search('UserConversionRate') >= 0) {
           title = title.replace('UserConversionRate', 'Conversion Rate');
         };
