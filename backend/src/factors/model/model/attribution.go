@@ -1296,30 +1296,10 @@ func ProcessQuery(query *AttributionQuery, attributionData *map[string]*Attribut
 	// Add custom dimensions
 	AddCustomDimensions(attributionData, query, marketingReports)
 
-	if projectId == 399 {
-
-		attributionData200 := make(map[string]*AttributionData)
-		count := 0
-		for key, val := range *attributionData {
-			attributionData200[key] = val
-			count++
-			if count >= 200 {
-				break
-			}
-		}
-		logCtx.WithFields(log.Fields{"4ConversionEventCountListAfterAddCustomDimensions": attributionData, "#attributionData": len(*attributionData)}).Info("debug attr keyword conversion")
-	}
 	logCtx.Info("Done AddTheAddedKeysAndMetrics AddPerformanceData ApplyFilter ComputeAdditionalMetrics AddCustomDimensions")
 	// Attribution data to rows
 	dataRows := GetRowsByMaps(query.AttributionKey, query.AttributionKeyCustomDimension, attributionData, query.LinkedEvents, isCompare)
-	if projectId == 399 {
 
-		var dataRows200 [][]interface{}
-		for i := 0; i < len(dataRows) && i < 200; i++ {
-			dataRows200 = append(dataRows200, dataRows[i])
-		}
-		logCtx.WithFields(log.Fields{"5conversionsInDataRows": dataRows200, "#dataRows": len(dataRows)}).Info("debug attr keyword conversion")
-	}
 	result := &QueryResult{}
 	AddHeadersByAttributionKey(result, query, nil, nil)
 	result.Rows = dataRows
@@ -1338,25 +1318,8 @@ func ProcessQuery(query *AttributionQuery, attributionData *map[string]*Attribut
 
 	result.Rows = MergeDataRowsHavingSameKey(result.Rows, GetLastKeyValueIndex(result.Headers), query.AttributionKey, query.AnalyzeType, goalEventAggFuncTypes, *logCtx)
 
-	if projectId == 399 {
-
-		var dataRows200 [][]interface{}
-		for i := 0; i < len(result.Rows) && i < 200; i++ {
-			dataRows200 = append(dataRows200, result.Rows[i])
-		}
-		logCtx.WithFields(log.Fields{"6resultRowsAfterMerge": dataRows200, "#dataRows": len(result.Rows)}).Info("debug attr keyword conversion")
-	}
-
 	// Additional filtering based on AttributionKey.
 	result.Rows = FilterRows(result.Rows, query.AttributionKey, GetLastKeyValueIndex(result.Headers))
-	if projectId == 399 {
-
-		var dataRows200 [][]interface{}
-		for i := 0; i < len(result.Rows) && i < 200; i++ {
-			dataRows200 = append(dataRows200, result.Rows[i])
-		}
-		logCtx.WithFields(log.Fields{"7resultRowsAfterFilter": dataRows200, "#dataRows": len(result.Rows)}).Info("debug attr keyword conversion")
-	}
 	logCtx.Info("Done GetRowsByMaps GetUpdatedRowsByDimensions MergeDataRowsHavingSameKey FilterRows")
 
 	// sort the rows by conversionEvent
