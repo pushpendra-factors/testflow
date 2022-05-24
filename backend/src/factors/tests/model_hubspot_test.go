@@ -209,6 +209,67 @@ func TestHubspotEngagements(t *testing.T) {
 		]
 	  }`
 
+	jsonContactModelMeetingsWithOutContactId := `{
+		"engagement": {
+			"id": 49861280154,
+			"portalId": 5928728,
+			"active": true,
+			"createdAt": 1579771558604,
+			"lastUpdated": 1626648055847,
+			"createdBy": 9765292,
+			"modifiedBy": 9765292,
+			"ownerId": 42479827,
+			"type": "MEETING",
+			"uid": "s16eeoebshn9mda18kdba4tt010",
+			"timestamp": 1579837500000,
+			"teamId": "3a81141",
+			"allAccessibleTeamIds": [381141],
+			"queueMembershipIds": [],
+			"bodyPreviewIsTruncated": true,
+			"gdprDeleted": false,
+			"source": "engage",
+			"active": "true"
+		},
+		"associations": {
+			"contactIds": [],
+			"companyIds": [],
+			"dealIds": [],
+			"ownerIds": [],
+			"workflowIds": [],
+			"ticketIds": [],
+			"contentIds": [],
+			"quoteIds": []
+		},
+		"attachments": [],
+		"scheduledTasks": [{
+			"engagementId": 4986280153,
+			"portalId": 5928728,
+			"engagementType": "MEETING",
+			"taskType": "PRE_MEETING_NOTIFICATION",
+			"timestamp": 1579835700000,
+			"uuid": "MEETING:8e1628saa68-d93c-41ff-9c02-2a17659e987f"
+		}],
+		"metadata": {
+			"startTime": 1579837500000,
+			"endTime": 1579838400000,
+			"title": "abc",
+			"source": "MEETINGS_PUBLIC",
+			"sourceId": "s16eeoebhasdn9mda18kdba4tt010",
+			"createdFromLinkId": 852169,
+			"preMeetingProspectReminders": [],
+			"attendeeOwnerIds": [],
+			"meetingOutcome": "nope"
+		}
+}
+`
+	contactPJsonMeetingsWithOutContactId := postgres.Jsonb{json.RawMessage(jsonContactModelMeetingsWithOutContactId)}
+	hubspotDocumentMeetingsWithOutContactId := model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameEngagement,
+		Value:     &contactPJsonMeetingsWithOutContactId,
+	}
+	status := store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocumentMeetingsWithOutContactId)
+	assert.Equal(t, http.StatusCreated, status)
+
 	jsonContact := fmt.Sprintf(jsonContactModel, 54051, 1428586724779, 1428586724779, 1428586724779, "lead", "a", "123-45")
 	contactPJson := postgres.Jsonb{json.RawMessage(jsonContact)}
 
@@ -217,7 +278,7 @@ func TestHubspotEngagements(t *testing.T) {
 		Value:     &contactPJson,
 	}
 
-	status := store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
 	assert.Equal(t, http.StatusCreated, status)
 
 	contactPJsonMeetings := postgres.Jsonb{json.RawMessage(jsonContactModelMeetings)}
@@ -259,6 +320,11 @@ func TestHubspotEngagements(t *testing.T) {
 	enrichStatus, _ := IntHubspot.Sync(project.ID, 1, time.Now().Unix(), nil, "")
 	for i := range enrichStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
+	}
+
+	docMeetingsWithoutContactId, status := store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{"49861280154"}, model.HubspotDocumentTypeEngagement, []int{model.HubspotDocumentActionCreated})
+	for _, document := range docMeetingsWithoutContactId {
+		assert.Equal(t, document.Synced, true)
 	}
 
 	docMeetings, status := store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{"54051"}, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated})

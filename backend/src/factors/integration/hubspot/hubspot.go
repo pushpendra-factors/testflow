@@ -2236,8 +2236,7 @@ func getEngagementContactIds(engagementTypeStr string, engagement Engagements) (
 			}
 
 			if len(interfaceArray) == 0 {
-				logCtx.Error("length of interface array is zero")
-				return contactIds, http.StatusInternalServerError
+				return contactIds, http.StatusOK
 			}
 
 			toMap, isConvert := interfaceArray[0].(map[string]interface{})
@@ -2247,8 +2246,7 @@ func getEngagementContactIds(engagementTypeStr string, engagement Engagements) (
 			}
 
 			if len(toMap) == 0 {
-				logCtx.Error("length of array is zero")
-				return contactIds, http.StatusInternalServerError
+				return contactIds, http.StatusOK
 			}
 			contact = toMap["contactId"]
 			if fmt.Sprintf("%v", contact) == "" {
@@ -2310,18 +2308,25 @@ func syncEngagements(projectID uint64, document *model.HubspotDocument) int {
 		logCtx.Error("failed to get the contact id")
 		return error
 	}
+	if len(contactIds) == 0 {
+		errCode := store.GetStore().UpdateHubspotDocumentAsSynced(projectID, document.ID, model.HubspotDocumentTypeEngagement, "", document.Timestamp, document.Action, "", "")
+		if errCode != http.StatusAccepted {
+			logCtx.Error("Failed to update hubspot engagement document as synced.")
+			return http.StatusInternalServerError
+		}
+		return http.StatusOK
+	}
+
 	properties := extractionOfPropertiesWithOutEmailOrContact(engagement, engagementTypeStr)
 	contactEngagementProperties := make(map[string]map[string]interface{})
 
 	var contactDocuments []model.HubspotDocument
 	var status int
-	if len(contactIds) > 0 {
-		contactDocuments, status = store.GetStore().GetHubspotDocumentByTypeAndActions(projectID, contactIds, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated, model.HubspotDocumentActionUpdated})
-		if status != http.StatusFound {
-			logCtx.Error(
-				"Failed to get hubspot documents by type and action on sync engagement.")
-			return http.StatusInternalServerError
-		}
+	contactDocuments, status = store.GetStore().GetHubspotDocumentByTypeAndActions(projectID, contactIds, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated, model.HubspotDocumentActionUpdated})
+	if status != http.StatusFound {
+		logCtx.Error(
+			"Failed to get hubspot documents by type and action on sync engagement.")
+		return http.StatusInternalServerError
 	}
 
 	for i := range contactIds {
