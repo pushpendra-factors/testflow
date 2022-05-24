@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -835,8 +836,8 @@ func AddHeadersByAttributionKey(result *QueryResult, query *AttributionQuery, go
 				result.Headers = append(result.Headers, conversion, cpc, userCPCRate)
 
 				conversionC := fmt.Sprintf("%s - Conversion Value(compare)", goal)
-				cpcC := fmt.Sprintf("%s - Return on Cost (compare)", goal)
-				userCPCRateC := fmt.Sprintf("%s - UserConversionRate (compare) (remove)", goal)
+				cpcC := fmt.Sprintf("%s - Return on Cost(compare)", goal)
+				userCPCRateC := fmt.Sprintf("%s - UserConversionRate(compare) (remove)", goal)
 				result.Headers = append(result.Headers, conversionC, cpcC, userCPCRateC)
 			} else {
 				conversion := fmt.Sprintf("%s - Conversion", goal)
@@ -844,9 +845,9 @@ func AddHeadersByAttributionKey(result *QueryResult, query *AttributionQuery, go
 				userCPCRate := fmt.Sprintf("%s - UserConversionRate", goal)
 				result.Headers = append(result.Headers, conversion, cpc, userCPCRate)
 
-				conversionC := fmt.Sprintf("%s - Conversion (compare)", goal)
-				cpcC := fmt.Sprintf("%s - Cost Per Conversion (compare)", goal)
-				userCPCRateC := fmt.Sprintf("%s - UserConversionRate (compare)", goal)
+				conversionC := fmt.Sprintf("%s - Conversion(compare)", goal)
+				cpcC := fmt.Sprintf("%s - Cost Per Conversion(compare)", goal)
+				userCPCRateC := fmt.Sprintf("%s - UserConversionRate(compare)", goal)
 				result.Headers = append(result.Headers, conversionC, cpcC, userCPCRateC)
 			}
 		}
@@ -1295,11 +1296,29 @@ func ProcessQuery(query *AttributionQuery, attributionData *map[string]*Attribut
 	// Add custom dimensions
 	AddCustomDimensions(attributionData, query, marketingReports)
 
+	if projectId == 399 {
+
+		attributionData200 := make(map[string]*AttributionData)
+		count := 0
+		for key, val := range *attributionData {
+			attributionData200[key] = val
+			count++
+			if count >= 200 {
+				break
+			}
+		}
+		logCtx.WithFields(log.Fields{"4ConversionEventCountListAfterAddCustomDimensions": attributionData, "#attributionData": len(*attributionData)}).Info("debug attr keyword conversion")
+	}
 	logCtx.Info("Done AddTheAddedKeysAndMetrics AddPerformanceData ApplyFilter ComputeAdditionalMetrics AddCustomDimensions")
 	// Attribution data to rows
 	dataRows := GetRowsByMaps(query.AttributionKey, query.AttributionKeyCustomDimension, attributionData, query.LinkedEvents, isCompare)
 	if projectId == 399 {
-		logCtx.WithFields(log.Fields{"dataRows": dataRows}).Info("debug attr keyword conversion")
+
+		var dataRows200 [][]interface{}
+		for i := 0; i < len(dataRows) && i < 200; i++ {
+			dataRows200 = append(dataRows200, dataRows[i])
+		}
+		logCtx.WithFields(log.Fields{"5conversionsInDataRows": dataRows200, "#dataRows": len(dataRows)}).Info("debug attr keyword conversion")
 	}
 	result := &QueryResult{}
 	AddHeadersByAttributionKey(result, query, nil, nil)
@@ -1319,9 +1338,25 @@ func ProcessQuery(query *AttributionQuery, attributionData *map[string]*Attribut
 
 	result.Rows = MergeDataRowsHavingSameKey(result.Rows, GetLastKeyValueIndex(result.Headers), query.AttributionKey, query.AnalyzeType, goalEventAggFuncTypes, *logCtx)
 
+	if projectId == 399 {
+
+		var dataRows200 [][]interface{}
+		for i := 0; i < len(result.Rows) && i < 200; i++ {
+			dataRows200 = append(dataRows200, result.Rows[i])
+		}
+		logCtx.WithFields(log.Fields{"6resultRowsAfterMerge": dataRows200, "#dataRows": len(result.Rows)}).Info("debug attr keyword conversion")
+	}
+
 	// Additional filtering based on AttributionKey.
 	result.Rows = FilterRows(result.Rows, query.AttributionKey, GetLastKeyValueIndex(result.Headers))
+	if projectId == 399 {
 
+		var dataRows200 [][]interface{}
+		for i := 0; i < len(result.Rows) && i < 200; i++ {
+			dataRows200 = append(dataRows200, result.Rows[i])
+		}
+		logCtx.WithFields(log.Fields{"7resultRowsAfterFilter": dataRows200, "#dataRows": len(result.Rows)}).Info("debug attr keyword conversion")
+	}
 	logCtx.Info("Done GetRowsByMaps GetUpdatedRowsByDimensions MergeDataRowsHavingSameKey FilterRows")
 
 	// sort the rows by conversionEvent
@@ -2701,14 +2736,15 @@ func GetKeyMapToData(attributionKey string, allRows []MarketingData) map[string]
 	return keyToData
 }
 
-func ProcessOTPEventRows(rows *sql.Rows, query *AttributionQuery, logCtx log.Entry) (map[string]map[string]UserSessionData, []string, error) {
+func ProcessOTPEventRows(rows *sql.Rows, query *AttributionQuery,
+	logCtx log.Entry, queryID string) (map[string]map[string]UserSessionData, []string, error) {
 
 	attributedSessionsByUserId := make(map[string]map[string]UserSessionData)
 	userIdMap := make(map[string]bool)
 	var userIdsWithSession []string
 
+	startReadTime := time.Now()
 	for rows.Next() {
-
 		var userIDNull sql.NullString
 		var campaignIDNull sql.NullString
 		var campaignNameNull sql.NullString
@@ -2793,10 +2829,13 @@ func ProcessOTPEventRows(rows *sql.Rows, query *AttributionQuery, logCtx log.Ent
 			attributedSessionsByUserId[userID][uniqueAttributionKey] = userSessionDataNew
 		}
 	}
+	U.LogReadTimeWithQueryRequestID(startReadTime, queryID, &log.Fields{"query": query})
+
 	return attributedSessionsByUserId, userIdsWithSession, nil
 }
 
-func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, reports *MarketingReports, contentGroupNamesList []string, logCtx log.Entry) (map[string]map[string]UserSessionData, []string, error) {
+func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, reports *MarketingReports,
+	contentGroupNamesList []string, logCtx log.Entry, queryID string) (map[string]map[string]UserSessionData, []string, error) {
 
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	attributedSessionsByUserId := make(map[string]map[string]UserSessionData)
@@ -2811,8 +2850,9 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, reports *Marketin
 	}
 	var missingIDs []MissingCollection
 	count := 0
-	for rows.Next() {
 
+	startReadTime := time.Now()
+	for rows.Next() {
 		var userIDNull sql.NullString
 		var sessionSpentTimeNull sql.NullFloat64
 		var pageCountNull sql.NullInt64
@@ -2965,16 +3005,22 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, reports *Marketin
 			log.WithFields(log.Fields{"Method": "ProcessEventRows", "Count": count}).Info("Processing event rows")
 		}
 	}
-	logCtx.WithFields(log.Fields{"AttributionKey": query.AttributionKey}).Info("no document was found in any of the reports for ID. Logging and continuing %+v", missingIDs[:U.MinInt(100, len(missingIDs))])
+	logCtx.WithFields(log.Fields{"AttributionKey": query.AttributionKey}).
+		Info("no document was found in any of the reports for ID. Logging and continuing %+v",
+			missingIDs[:U.MinInt(100, len(missingIDs))])
+	U.LogReadTimeWithQueryRequestID(startReadTime, queryID, &log.Fields{})
+
 	return attributedSessionsByUserId, userIdsWithSession, nil
 }
 
-func ProcessRow(rows *sql.Rows, reportName string, logCtx *log.Entry, channel string) (map[string]MarketingData, []MarketingData) {
+func ProcessRow(rows *sql.Rows, reportName string, logCtx *log.Entry,
+	channel string, queryID string) (map[string]MarketingData, []MarketingData) {
 
 	// ID is CampaignID, AdgroupID, KeywordID etc
 	marketingDataIDMap := make(map[string]MarketingData)
 	var allRows []MarketingData
 
+	startReadTime := time.Now()
 	for rows.Next() {
 		var campaignIDNull sql.NullString
 		var adgroupIDNull sql.NullString
@@ -3003,6 +3049,8 @@ func ProcessRow(rows *sql.Rows, reportName string, logCtx *log.Entry, channel st
 		marketingDataIDMap[ID] = data
 		allRows = append(allRows, data)
 	}
+	U.LogReadTimeWithQueryRequestID(startReadTime, queryID, &log.Fields{})
+
 	return marketingDataIDMap, allRows
 }
 

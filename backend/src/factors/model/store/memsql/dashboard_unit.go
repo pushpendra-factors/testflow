@@ -79,7 +79,7 @@ func (store *MemSQL) CreateMultipleDashboardUnits(requestPayload []model.Dashboa
 
 		// query should have been created before the dashboard unit
 		if payload.QueryId == 0 {
-			return dashboardUnits, http.StatusBadRequest, "invalid queryID. empty queryID."
+			return dashboardUnits, http.StatusBadRequest, "invalid reqID. empty reqID."
 		}
 		dashboardUnit, errCode, errMsg := store.CreateDashboardUnit(projectId, agentUUID,
 			&model.DashboardUnit{

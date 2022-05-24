@@ -28,7 +28,8 @@ parser.add_option("--enable_deleted_projectIDs", dest="enable_deleted_projectIDs
 parser.add_option("--enable_company_contact_association_v2_by_project_id",
     dest="enable_company_contact_association_v2_by_project_id",help="Enable company contact association v2 for project",
     default="")
-parser.add_option("--project_ids", dest="project_ids", help="Allowed project_ids", default="")
+parser.add_option("--project_ids", dest="project_ids", help="Allowed project_ids", default="*")
+parser.add_option("--disabled_project_ids", dest="disabled_project_ids", help="Disabled project_ids", default="")
 
 
 APP_NAME = "hubspot_sync"
@@ -354,11 +355,12 @@ def add_contactId(api_key, email, project_id, engagement):
     elif engagements["type"] == "EMAIL":
         engagement["metadata"]["to"][0]["contactId"] = response["vid"]
         
-def sync_engagements(project_id, api_key):
-    get_url = "https://api.hubapi.com/engagements/v1/engagements/recent/modified?hapikey=" + api_key + "&count=100"
+def sync_engagements(project_id, api_key, last_sync_timestamp=0):
+    get_url = "https://api.hubapi.com/engagements/v1/engagements/recent/modified?hapikey=" + api_key + "&count=100&since="+str(last_sync_timestamp)
     final_url = get_url
     has_more = True
     engagement_api_calls = 0
+    latest_timestamp = None
     while has_more:
         log.warning("Downloading engagements for project_id %d from url %s.", project_id, final_url)
         r = get_with_fallback_retry(project_id, final_url)
@@ -368,11 +370,15 @@ def sync_engagements(project_id, api_key):
         engagement_api_calls += 1
         filter_engagements = []
         if not r.ok:
-            log.error("Failure response %d from hubspot on sync_contacts", r.status_code)
+            log.error("Failure response %d from hubspot on sync_engagements", r.status_code)
+            latest_timestamp  = last_sync_timestamp
             break
         else:
             response = json.loads(r.text)
             for engagement in response['results']:
+                # pick first timestamp in reverse chronological order
+                if latest_timestamp is None and "lastUpdated" in engagement["engagement"]:
+                    latest_timestamp = engagement["engagement"]["lastUpdated"]
                 engagements = engagement["engagement"]
                 if engagements["type"] == "CALL" or engagements["type"] == "MEETING":
                     filter_engagements.append(engagement)
@@ -392,7 +398,7 @@ def sync_engagements(project_id, api_key):
             final_url = get_url + "&offset=" + str(response['offset'])
         else :
             has_more = False
-    return engagement_api_calls
+    return engagement_api_calls,latest_timestamp
 
 def sync_contacts(project_id, api_key,last_sync_timestamp, sync_all=False):
     if sync_all:
@@ -635,21 +641,27 @@ def get_deals_with_properties(project_id,get_url):
 
 
 def sync_deals(project_id, api_key, sync_all=False):
+    page_count_key = ""
+    page_count = 0
     if sync_all:
         urls = [ "https://api.hubapi.com/deals/v1/deal/paged?" ]
         log.warning("Downloading all deals for project_id : "+ str(project_id) + ".")
+        page_count_key = "limit"
+        page_count = 250 # max size
     else:
         urls = [
             "https://api.hubapi.com/deals/v1/deal/recent/created?", # created
             "https://api.hubapi.com/deals/v1/deal/recent/modified?", # modified
         ]
         log.warning("Downloading recently created or modified deals for project_id : "+ str(project_id) + ".")
+        page_count_key = "count"
+        page_count = 100 # max size
 
     deal_api_calls = 0
     err_url_too_long = False
     for url in urls:
         count = 0
-        parameter_dict = {'hapikey': api_key, 'limit': PAGE_SIZE}
+        parameter_dict = {'hapikey': api_key, page_count_key: page_count}
 
         # mandatory property needed on response, returns no properties if not given.
         properties = []
@@ -926,25 +938,37 @@ def update_sync_status(request_payload, first_sync=False):
             retries += 1
             time.sleep(2)
 
-def get_allowed_list_with_all_element_support(list_string):
-    if list_string =="*":
-        return True, {}
-    elements = [s.strip() for s in list_string.split(",")]
-    elements_map = {}
+def get_allowed_list_with_all_element_support(allowed_list_string, disallowed_list_string=""):
+    disallowed_map = {}
+    elements = [s.strip() for s in disallowed_list_string.split(",")]
     for element in elements:
-        elements_map[element] = True
-    return False,elements_map
+        disallowed_map[element]= True
+
+    if allowed_list_string =="*":
+        return True, {},disallowed_map
+
+    elements = [s.strip() for s in allowed_list_string.split(",")]
+    allowed_map = {}
+    for element in elements:
+        if element not in disallowed_map:
+            allowed_map[element]=True
+
+    return False,allowed_map,disallowed_map
 
 def allow_sync_by_project_id(project_id):
-    all_projects, allowed_projects = get_allowed_list_with_all_element_support(options.project_ids)
-    if all_projects:
-        return True
-    return str(project_id) in allowed_projects
+    all_projects, allowed_projects, disallowed_projects = get_allowed_list_with_all_element_support(options.project_ids, options.disabled_project_ids)
+    if str(project_id) in disallowed_projects:
+        return False
+
+    if not all_projects:
+        return str(project_id) in allowed_projects
+
+    return True
 
 def allow_delete_api_by_project_id(project_id):
     if not options.enable_deleted_contacts:
         return False
-    all_projects, allowed_projects = get_allowed_list_with_all_element_support(options.enable_deleted_projectIDs)
+    all_projects, allowed_projects,_ = get_allowed_list_with_all_element_support(options.enable_deleted_projectIDs)
     if all_projects:
         return True
     return str(project_id) in allowed_projects
@@ -952,19 +976,19 @@ def allow_delete_api_by_project_id(project_id):
 def use_company_contact_association_v2_by_project_id(project_id):
     if not options.enable_company_contact_association_v2_by_project_id:
         return False
-    all_projects, allowed_projects = get_allowed_list_with_all_element_support(options.enable_company_contact_association_v2_by_project_id)
+    all_projects, allowed_projects,_ = get_allowed_list_with_all_element_support(options.enable_company_contact_association_v2_by_project_id)
     if all_projects:
         return True
     return str(project_id) in allowed_projects
 
 def allow_batch_insert_doc_type(doc_type):
-    all_doc_type, allowed_doc_type = get_allowed_list_with_all_element_support(options.batch_insert_doc_types)
+    all_doc_type, allowed_doc_type,_ = get_allowed_list_with_all_element_support(options.batch_insert_doc_types)
     if all_doc_type:
         return True
     return str(doc_type) in allowed_doc_type
 
 def allow_batch_insert_by_project_id(project_id):
-    all_projects, allowed_projects = get_allowed_list_with_all_element_support(options.batch_insert_by_project_ids)
+    all_projects, allowed_projects,_ = get_allowed_list_with_all_element_support(options.batch_insert_by_project_ids)
     if all_projects:
         return True
     return str(project_id) in allowed_projects
@@ -1032,7 +1056,7 @@ def sync(project_id, api_key, doc_type, sync_all, last_sync_timestamp):
         elif doc_type == "deleted_contacts":
             response["deleted_contacts_api_calls"] = get_deleted_contacts(project_id, api_key)
         elif doc_type == "engagement":
-            response["engagement_api_calls"] = sync_engagements(project_id, api_key)
+            response["engagement_api_calls"],max_timestamp = sync_engagements(project_id, api_key, last_sync_timestamp)
         else:
             raise Exception("invalid doc_type "+ doc_type)
 

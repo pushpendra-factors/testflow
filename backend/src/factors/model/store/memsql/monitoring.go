@@ -3,9 +3,9 @@ package memsql
 import (
 	C "factors/config"
 	"factors/metrics"
+	"factors/model/model"
 	"factors/util"
 	U "factors/util"
-	"factors/model/model"
 	"fmt"
 	"time"
 
@@ -89,7 +89,8 @@ func (store *MemSQL) MonitorMemSQLDiskUsage() MemSQLNodeUsageStatsWithErrors {
 
 	rows, err := db.Raw(queryStr).Rows()
 	if err != nil {
-		log.WithError(err).Panic("Failed to get disk usage stats")
+		log.WithError(err).Error("Failed to get disk usage stats")
+		return MemSQLNodeUsageStatsWithErrors{ErrorMessage: []string{"Failed to run disk usage query.", err.Error()}}
 	}
 
 	nodeUsageStatsWithErrors := MemSQLNodeUsageStatsWithErrors{}
@@ -98,7 +99,8 @@ func (store *MemSQL) MonitorMemSQLDiskUsage() MemSQLNodeUsageStatsWithErrors {
 	for rows.Next() {
 		var nodeStats NodeUsageStats
 		if err := db.ScanRows(rows, &nodeStats); err != nil {
-			log.WithError(err).Panic("Failed to scan slow queries from db.")
+			log.WithError(err).Error("Failed to scan slow queries from db.")
+			continue
 		}
 		if nodeStats.AvailableDataDiskPercent < 20 {
 			// If disk available is less than 20 percent for any node, raise an alert.

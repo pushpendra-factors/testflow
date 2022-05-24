@@ -842,13 +842,13 @@ func (store *MemSQL) ExecuteSQL(sqlStatement string, params []interface{}, logCt
 		"log_ctx":       logCtx,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	rows, tx, err := store.ExecQueryWithContext(sqlStatement, params)
+	rows, tx, err, reqID := store.ExecQueryWithContext(sqlStatement, params)
 	if err != nil {
 		logCtx.WithError(err).WithField("query", sqlStatement).WithField("params", params).Error("SQL Query failed.")
 		return nil, nil, err
 	}
 
-	columns, resultRows, err := U.DBReadRows(rows, tx)
+	columns, resultRows, err := U.DBReadRows(rows, tx, reqID)
 	if err != nil {
 		return nil, nil, err
 	}

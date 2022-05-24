@@ -1307,7 +1307,7 @@ func (store *MemSQL) ExecuteWebAnalyticsQueries(projectId uint64, queries *model
 		U.EP_IS_PAGE_VIEW, "true", sessionEventName.ID)
 
 	queryStartTimestamp := U.TimeNowUnix()
-	rows, tx, err := store.ExecQueryWithContext(queryStmnt, queryParams)
+	rows, tx, err, reqID := store.ExecQueryWithContext(queryStmnt, queryParams)
 	if err != nil {
 		logCtx.WithError(err).
 			Error("Failed to execute raw query to download events on execute_web_analytics_query.")
@@ -1316,6 +1316,7 @@ func (store *MemSQL) ExecuteWebAnalyticsQueries(projectId uint64, queries *model
 	defer U.CloseReadQuery(rows, tx)
 	logCtx = logCtx.WithField("query_exec_time_in_secs", U.TimeNowUnix()-queryStartTimestamp)
 
+	startReadTime := time.Now()
 	var rowCount int
 	for rows.Next() {
 		var id string
@@ -1429,6 +1430,7 @@ func (store *MemSQL) ExecuteWebAnalyticsQueries(projectId uint64, queries *model
 
 		rowCount++
 	}
+	U.LogReadTimeWithQueryRequestID(startReadTime, reqID, &logFields)
 
 	logCtx = logCtx.WithField("no_of_events", rowCount).
 		WithField("total_time_taken_in_secs", U.TimeNowUnix()-funcStartTimestamp)

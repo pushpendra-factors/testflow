@@ -8,6 +8,7 @@ import (
 	PC "factors/pattern_client"
 	U "factors/util"
 	"net/http"
+	"strings"
 
 	C "factors/config"
 
@@ -45,6 +46,11 @@ func CreateProjectHandler(c *gin.Context) {
 	}
 
 	if project.Name == "" {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	if project.ProfilePicture != "" && !(strings.HasPrefix(project.ProfilePicture, "data:image/png") || strings.HasPrefix(project.ProfilePicture, "data:image/jpeg")) {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
@@ -122,6 +128,10 @@ func EditProjectHandler(c *gin.Context) {
 	}
 	if project.TimeZone != "Asia/Kolkata" && projectEditDetails.TimeZone != "" {
 		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "cannot edit existing timezone"})
+		return
+	}
+	if projectEditDetails.ProfilePicture != "" && !(strings.HasPrefix(projectEditDetails.ProfilePicture, "data:image/png") || strings.HasPrefix(projectEditDetails.ProfilePicture, "data:image/jpeg")) {
+		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
 	errCode = store.GetStore().UpdateProject(projectID, &projectEditDetails)

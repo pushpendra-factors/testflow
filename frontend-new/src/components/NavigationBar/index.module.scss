@@ -15,6 +15,7 @@
   overflow-y: scroll;
   max-width: 252px !important;
   z-index: 1001;
+  background: #f0f2f5;
 
   //hiding scrollbar
   -ms-overflow-style: none;
@@ -29,10 +30,13 @@
   &_assist {
     position: fixed !important;
     margin: 0 12px !important;
+    padding: 6px !important;
     bottom: 60px !important;
     background-color: #f0f2f5 !important;
     max-width: 240px !important;
+
     &:hover {
+      border-radius: 8px !important;
       background: #e2e4e8 !important;
     }
   }
@@ -44,18 +48,6 @@
     background-color: #f0f2f5 !important;
     max-width: 240px !important;
     height: 60px !important;
-  }
-}
-
-.button {
-  margin: 0;
-  padding: 0;
-  background: #f0f2f5 !important;
-  height: 60px;
-
-  &:hover,
-  &:focus {
-    background: #f0f2f5 !important;
   }
 }
 
@@ -80,9 +72,10 @@
 .menuitems {
 
   margin: 8px 12px !important;
-  padding: 8px !important;
+  padding: 6px !important;
   background: transparent;
   height: 40px !important;
+  align-items: center;
 
   &_sub {
     margin-left: 12px !important;
@@ -91,6 +84,7 @@
   }
 
   &:hover {
+    border-radius: 8px !important;
     background: #e2e4e8 !important;
   }
 }

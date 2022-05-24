@@ -386,15 +386,20 @@ func getLinkedinChannelResult(projectID uint64, customerAccountID string, query 
 
 	queryResult := &model.ChannelQueryResult{}
 	db := C.GetServices().Db
+
+	reqID := U.GetUniqueQueryRequestID()
+	startExecTime := time.Now()
 	rows, err := db.Raw(sqlQuery, projectID, customerAccountID,
 		query.From,
 		query.To,
 		documentType).Rows()
+	U.LogExecutionTimeWithQueryRequestID(startExecTime, reqID, &logFields)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to build channel query result.")
 		return queryResult, err
 	}
-	resultHeaders, resultRows, err := U.DBReadRows(rows, nil)
+
+	resultHeaders, resultRows, err := U.DBReadRows(rows, nil, reqID)
 	if err != nil {
 		return nil, err
 	}
@@ -426,17 +431,21 @@ func (store *MemSQL) getLinkedinMetricBreakdown(projectID uint64, customerAccoun
 
 	sqlQuery, documentType := getLinkedinMetricsQuery(query, true)
 
+	startExecTime := time.Now()
+	reqID := U.GetUniqueQueryRequestID()
 	db := C.GetServices().Db
 	rows, err := db.Raw(sqlQuery, projectID, customerAccountID,
 		query.From,
 		query.To,
 		documentType).Rows()
+	U.LogReadTimeWithQueryRequestID(startExecTime, reqID, &logFields)
+
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to build channel query result.")
 		return nil, err
 	}
 
-	resultHeaders, resultRows, err := U.DBReadRows(rows, nil)
+	resultHeaders, resultRows, err := U.DBReadRows(rows, nil, reqID)
 	if err != nil {
 		return nil, err
 	}
@@ -1353,7 +1362,7 @@ func (store *MemSQL) GetLatestMetaForLinkedinForGivenDays(projectID uint64, days
 		customerAccountIDs, linkedinDocumentTypeAlias["campaign_group"], projectID, from, to,
 		customerAccountIDs}
 
-	rows1, tx1, err := store.ExecQueryWithContext(query, params)
+	rows1, tx1, err, queryID1 := store.ExecQueryWithContext(query, params)
 	if err != nil {
 		errString := fmt.Sprintf("failed to get last %d ad_group meta for facebook", days)
 		log.WithField("error string", err).Error(errString)
@@ -1361,18 +1370,21 @@ func (store *MemSQL) GetLatestMetaForLinkedinForGivenDays(projectID uint64, days
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
 
+	startReadTime1 := time.Now()
 	for rows1.Next() {
 		currentRecord := model.ChannelDocumentsWithFields{}
 		rows1.Scan(&currentRecord.CampaignID, &currentRecord.CampaignName, &currentRecord.AdGroupID, &currentRecord.AdGroupName)
 		channelDocumentsAdGroup = append(channelDocumentsAdGroup, currentRecord)
 	}
 	U.CloseReadQuery(rows1, tx1)
+	U.LogReadTimeWithQueryRequestID(startReadTime1, queryID1, &logFields)
 
 	query = linkedinCampaignMetadataFetchQueryStr
 	params = []interface{}{linkedinDocumentTypeAlias["campaign_group"], projectID, from, to,
 		customerAccountIDs, linkedinDocumentTypeAlias["campaign_group"], projectID, from, to,
 		customerAccountIDs}
-	rows2, tx2, err := store.ExecQueryWithContext(query, params)
+
+	rows2, tx2, err, queryID2 := store.ExecQueryWithContext(query, params)
 	if err != nil {
 		errString := fmt.Sprintf("failed to get last %d campaign meta for Linkedin", days)
 		log.WithField("error string", err).Error(errString)
@@ -1380,12 +1392,14 @@ func (store *MemSQL) GetLatestMetaForLinkedinForGivenDays(projectID uint64, days
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
 
+	startReadTime := time.Now()
 	for rows2.Next() {
 		currentRecord := model.ChannelDocumentsWithFields{}
 		rows2.Scan(&currentRecord.CampaignID, &currentRecord.CampaignName)
 		channelDocumentsCampaign = append(channelDocumentsCampaign, currentRecord)
 	}
 	U.CloseReadQuery(rows2, tx2)
+	U.LogReadTimeWithQueryRequestID(startReadTime, queryID2, &logFields)
 
 	return channelDocumentsCampaign, channelDocumentsAdGroup
 }

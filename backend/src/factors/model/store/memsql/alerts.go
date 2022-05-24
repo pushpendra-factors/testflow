@@ -6,6 +6,7 @@ import (
 	"factors/model/model"
 	U "factors/util"
 	"fmt"
+	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	"sort"
@@ -26,13 +27,14 @@ func (store *MemSQL) SetAuthTokenforSlackIntegration(projectID uint64, agentUUID
 		return err
 	}
 	var token model.SlackAuthTokens
-	err = U.DecodePostgresJsonbToStructType(agent.SlackAccessTokens, &token)
-	if err != nil && err.Error() != "Empty jsonb object" {
-		log.Error(err)
-		return err
-	}
-	if err != nil && err.Error() == "Empty jsonb object" {
+	if IsEmptyPostgresJsonb(agent.SlackAccessTokens) {
 		token = make(map[uint64]model.SlackAccessTokens)
+	} else {
+		err = U.DecodePostgresJsonbToStructType(agent.SlackAccessTokens, &token)
+		if err != nil {
+			log.Error(err)
+			return err
+		}
 	}
 	token[projectID] = authTokens
 	// convert token to json
@@ -299,4 +301,12 @@ func (store *MemSQL) isValidDateRangeAndComparedTo(dateRange, comparedTo string)
 func (store *MemSQL) getNameForAlert(metric, operator, value string) string {
 	AlertName := fmt.Sprintf("%s%s%s", metric, operator, value)
 	return AlertName
+}
+func IsEmptyPostgresJsonb(jsonb *postgres.Jsonb) bool {
+	if jsonb == nil {
+		log.Info("jsonb is nil abcd")
+		return true
+	}
+	strJson := string((*jsonb).RawMessage)
+	return strJson == "" || strJson == "null"
 }

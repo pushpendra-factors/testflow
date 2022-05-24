@@ -276,6 +276,8 @@ var BingAdsObjectMapForSmartProperty = map[string]string{
 	"ad_groups": FilterAdGroup,
 }
 
+var BingAdsCampaign = "campaigns"
+
 func GetAllAccountsQuery(bigQueryProjectId string, schemaId string) string {
 	return fmt.Sprintf(AllAccountQuery, bigQueryProjectId, schemaId)
 }

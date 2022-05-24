@@ -438,7 +438,7 @@ function WidgetCard({
                     </div>
                   </Tooltip>
                 ) : null}
-                <Dropdown overlay={getMenu()} trigger={['hover']}>
+                <Dropdown placement='bottomRight' overlay={getMenu()} trigger={['hover']}>
                   <Button
                     type='text'
                     icon={<SVG size={20} name={'threedot'} color='#8692A3' />}
