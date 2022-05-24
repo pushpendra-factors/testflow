@@ -282,6 +282,10 @@ func (query *AttributionQueryUnit) ConvertAllDatesFromTimezone1ToTimezone2(curre
 	return nil
 }
 
+func (query *AttributionQueryUnit) CheckIfNameIsPresent(nameOfQuery string) bool {
+	return false
+}
+
 type MarketingReports struct {
 	AdwordsGCLIDData       map[string]MarketingData
 	AdwordsCampaignIDData  map[string]MarketingData

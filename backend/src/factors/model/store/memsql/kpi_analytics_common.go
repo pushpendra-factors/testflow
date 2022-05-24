@@ -93,12 +93,6 @@ func (store *MemSQL) kpiQueryFunctionDeciderBasedOnCategory(category string, que
 		result = store.ExecuteKPIQueryForChannels
 	} else if category == model.EventCategory {
 		result = store.ExecuteKPIQueryForEvents
-		// Wait and remove by may 2022.
-		// else if category == model.EventCategory && !U.ContainsStringInArray([]string{model.HubspotContactsDisplayCategory, model.SalesforceUsersDisplayCategory}, query.DisplayCategory) {
-		// 	result = store.ExecuteKPIQueryForEvents
-		// } else if U.ContainsStringInArray([]string{model.HubspotContactsDisplayCategory, model.SalesforceUsersDisplayCategory}, query.DisplayCategory) &&
-		// 	U.ContainsStringInArray([]string{model.CountOfContactsCreated, model.CountOfContactsUpdated, model.CountOfLeadsCreated, model.CountOfLeadsUpdated}, query.Metrics[0]) {
-		// 	result = store.ExecuteKPIQueryForEvents
 	} else {
 		result = store.ExecuteKPIQueryForProfiles
 	}

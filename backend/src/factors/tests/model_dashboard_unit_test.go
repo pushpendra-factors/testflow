@@ -1462,3 +1462,61 @@ func TestGetEffectiveTimeRangeForDashboardUnitAttributionQuery(t *testing.T) {
 		})
 	}
 }
+
+func TestCheckIfNameIsPresent(t *testing.T) {
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	project.TimeZone = string(U.TimeZoneStringIST)
+	store.GetStore().UpdateProject(project.ID, project)
+
+	dashboardName := U.RandomString(5)
+	dashboard, errCode := store.GetStore().CreateDashboard(project.ID, agent.UUID, &model.Dashboard{Name: dashboardName, Type: model.DashboardTypeProjectVisible})
+	assert.NotNil(t, dashboard)
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	dashboardUnitQueriesMap := make(map[uint64]map[string]interface{})
+	var dashboardQueriesStr = map[string]string{
+		model.QueryClassInsights:    `{"cl": "insights", "ec": "any_given_event", "fr": 1393612200, "to": 1396290599, "ty": "events_occurrence", "tz": "", "ewp": [{"na": "$session", "pr": []}], "gbp": [], "gbt": ""}`,
+		model.QueryClassFunnel:      `{"cl": "funnel", "ec": "any_given_event", "fr": 1594492200, "to": 1594578599, "ty": "unique_users", "tz": "", "ewp": [{"na": "$session", "pr": []}, {"na": "www.chargebee.com/schedule-a-demo", "pr": []}], "gbp": [], "gbt": ""}`,
+		model.QueryClassAttribution: `{"cl": "attribution", "meta": {"metrics_breakdown": true}, "query": {"ce": {"na": "$session", "pr": []}, "cm": ["Impressions", "Clicks", "Spend"], "to": 1596479399, "lbw": 1, "lfe": [], "from": 1595874600, "attribution_key": "Campaign", "attribution_methodology": "Last_Touch"}}`,
+		model.QueryClassChannel:     `{"cl": "channel", "meta": {"metric": "total_cost"}, "query": {"to": 1576060774, "from": 1573468774, "channel": "google_ads", "filter_key": "campaign", "filter_value": "all"}}`,
+		model.QueryClassKPI:         `{"cl":"kpi","qG":[{"ca":"events","pgUrl":"www.acme.com/pricing","dc":"page_views","me":["page_views"],"gBy":[],"fil":[],"gbt":"","fr":1633233600,"to":1633579199}],"gFil":[],"gGBy":[]}`,
+	}
+
+	var dashboardQueryClassList []string
+	var dashboardUnitsList []model.DashboardUnit
+	for queryClass, queryString := range dashboardQueriesStr {
+		dashboardQueryClassList = append(dashboardQueryClassList, queryClass)
+		queryJSON := postgres.Jsonb{json.RawMessage(queryString)}
+		baseQuery, err := model.DecodeQueryForClass(queryJSON, queryClass)
+		assert.Nil(t, err)
+
+		dashboardQuery, errCode, errMsg := store.GetStore().CreateQuery(project.ID, &model.Queries{
+			ProjectID: project.ID,
+			Title:     queryClass,
+			Type:      model.QueryTypeDashboardQuery,
+			Query:     postgres.Jsonb{json.RawMessage(queryString)},
+		})
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.Empty(t, errMsg)
+		assert.NotNil(t, dashboardQuery)
+
+		dashboardUnit, errCode, _ := store.GetStore().CreateDashboardUnit(project.ID, agent.UUID, &model.DashboardUnit{
+			DashboardId:  dashboard.ID,
+			Presentation: model.PresentationCard,
+			QueryId:      dashboardQuery.ID,
+		})
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.NotNil(t, dashboardUnit)
+		dashboardUnitsList = append(dashboardUnitsList, *dashboardUnit)
+		dashboardUnitQueriesMap[dashboardUnit.ID] = make(map[string]interface{})
+		dashboardUnitQueriesMap[dashboardUnit.ID]["class"] = queryClass
+		dashboardUnitQueriesMap[dashboardUnit.ID]["query"] = baseQuery
+	}
+
+	dashboardNames, _ := store.GetStore().GetDashboardUnitNamesByProjectIdTypeAndName(project.ID, "", model.QueryClassInsights, "page_views")
+	assert.Len(t, dashboardNames, 0)
+
+	dashboardNames, _ = store.GetStore().GetDashboardUnitNamesByProjectIdTypeAndName(project.ID, "", model.QueryClassKPI, "page_views")
+	assert.Len(t, dashboardNames, 1)
+}

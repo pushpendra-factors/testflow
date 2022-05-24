@@ -58,25 +58,12 @@ func ComputeAndSendAlerts(projectID uint64, configs map[string]interface{}) (map
 	for _, alert := range allAlerts {
 		var kpiQuery model.KPIQuery
 		alert.LastRunTime = time.Now()
+		var err error
+		alertDescription, alertConfiguration, kpiQuery, err = model.DecodeAndFetchAlertRelatedStructs(projectID, alert)
+		if err != nil {
+			continue
+		}
 
-		err := U.DecodePostgresJsonbToStructType(alert.AlertDescription, &alertDescription)
-		if err != nil {
-			log.Errorf("failed to decode alert description for project_id: %v, alert_name: %s", projectID, alert.AlertName)
-			log.Error(err)
-			continue
-		}
-		err = U.DecodePostgresJsonbToStructType(alert.AlertConfiguration, &alertConfiguration)
-		if err != nil {
-			log.Errorf("failed to decode alert configuration for project_id: %v, alert_name: %s", projectID, alert.AlertName)
-			log.Error(err)
-			continue
-		}
-		err = U.DecodePostgresJsonbToStructType(alertDescription.Query, &kpiQuery)
-		if err != nil {
-			log.Errorf("Error decoding query for project_id: %v, alert_name: %s", projectID, alert.AlertName)
-			log.Error(err)
-			continue
-		}
 		if kpiQuery.Category == model.ProfileQueryClass {
 			kpiQuery.GroupByTimestamp = getGBTForKPIQuery(alertDescription.DateRange)
 		}

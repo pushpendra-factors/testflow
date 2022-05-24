@@ -6,10 +6,11 @@ import (
 	"factors/model/model"
 	U "factors/util"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"net/http"
 	"sort"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func (store *MemSQL) SetAuthTokenforSlackIntegration(projectID uint64, agentUUID string, authTokens model.SlackAccessTokens) error {
@@ -145,6 +146,31 @@ func (store *MemSQL) GetAllAlerts(projectID uint64) ([]model.Alert, int) {
 	})
 	return alerts, http.StatusFound
 }
+
+// Note: Currently keeping the implementation specific to kpi.
+func (store *MemSQL) GetAlertNamesByProjectIdTypeAndName(projectID uint64, nameOfQuery string) ([]string, int) {
+	rAlertNames := make([]string, 0)
+	alerts, statusCode := store.GetAllAlerts(projectID)
+	if statusCode != http.StatusFound {
+		return rAlertNames, statusCode
+	}
+
+	for _, alert := range alerts {
+		_, _, kpiQuery, err := model.DecodeAndFetchAlertRelatedStructs(projectID, alert)
+		if err != nil {
+			return rAlertNames, http.StatusInternalServerError
+		}
+
+		for _, metric := range kpiQuery.Metrics {
+			if metric == nameOfQuery {
+				rAlertNames = append(rAlertNames, alert.AlertName)
+			}
+		}
+	}
+
+	return rAlertNames, http.StatusFound
+}
+
 func (store *MemSQL) DeleteAlert(id string, projectID uint64) (int, string) {
 	logFields := log.Fields{
 		"id":         id,

@@ -1,6 +1,8 @@
 package model
 
 import (
+	U "factors/util"
+	"strings"
 	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -17,11 +19,11 @@ type CustomMetricObjectTypeAndProperties struct {
 }
 
 const (
-	SumAggregateFunction      = "sum"
-	UniqueAggregationFunction = "unique"
+	SumAggregateFunction    = "sum"
+	UniqueAggregateFunction = "unique"
 )
 
-var CustomMetricAggregateFunctions = []string{SumAggregateFunction, UniqueAggregationFunction}
+var CustomMetricAggregateFunctions = []string{SumAggregateFunction, UniqueAggregateFunction}
 var CustomMetricObjectTypeNames = []string{HubspotContactsDisplayCategory, HubspotCompaniesDisplayCategory, HubspotDealsDisplayCategory,
 	SalesforceUsersDisplayCategory, SalesforceAccountsDisplayCategory, SalesforceOpportunitiesDisplayCategory, MarketoLeadsDisplayCategory}
 var ProfileQueryType = 1
@@ -44,6 +46,21 @@ type CustomMetricTransformation struct {
 	AggregatePropertyType string      `json:"agPrTy"`
 	Filters               []KPIFilter `json:"fil"`
 	DateField             string      `json:"daFie"`
+}
+
+// Check if filter is being passed with objectType in create Custom metric.
+func (transformation *CustomMetricTransformation) IsValid() bool {
+	if !U.ContainsStringInArray(CustomMetricAggregateFunctions, transformation.AggregateFunction) || strings.Contains(transformation.AggregateProperty, " ") {
+		return false
+	}
+
+	for _, filter := range transformation.Filters {
+		if !filter.IsValid() {
+			return false
+		}
+	}
+
+	return true
 }
 
 // invalid name - duplicate and blacklist.

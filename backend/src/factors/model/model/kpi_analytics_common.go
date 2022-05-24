@@ -36,6 +36,15 @@ func (q *KPIQueryGroup) GetQueryDateRange() (from, to int64) {
 	return 0, 0
 }
 
+func (query *KPIQueryGroup) CheckIfNameIsPresent(nameOfQuery string) bool {
+	for _, query := range query.Queries {
+		if query.CheckIfNameIsPresent(nameOfQuery) {
+			return true
+		}
+	}
+	return false
+}
+
 func (q *KPIQueryGroup) SetQueryDateRange(from, to int64) {
 	for index, _ := range q.Queries {
 		q.Queries[index].From, q.Queries[index].To = from, to
@@ -153,6 +162,15 @@ func (q *KPIQuery) GetQueryCacheHashString() (string, error) {
 	return queryHash, nil
 }
 
+func (query *KPIQuery) CheckIfNameIsPresent(nameOfQuery string) bool {
+	for _, metric := range query.Metrics {
+		if metric == nameOfQuery {
+			return true
+		}
+	}
+	return false
+}
+
 type KPIFilter struct {
 	ObjectType       string `json:"objTy"`
 	PropertyName     string `json:"prNa"`
@@ -161,6 +179,11 @@ type KPIFilter struct {
 	Condition        string `json:"co"`
 	Value            string `json:"va"`
 	LogicalOp        string `json:"lOp"`
+}
+
+// Basic type validation.
+func (qFilter *KPIFilter) IsValid() bool {
+	return !(strings.Contains(qFilter.Entity, " ") || strings.Contains(qFilter.ObjectType, " ") || strings.Contains(qFilter.PropertyName, " "))
 }
 
 func (qFilter *KPIFilter) ConvertAllDatesFromTimezone1ToTimzone2(currentTimezone, nextTimezone string) error {

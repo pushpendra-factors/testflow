@@ -92,6 +92,10 @@ func (q *TemplateQuery) ConvertAllDatesFromTimezone1ToTimezone2(currentTimezone,
 	return nil
 }
 
+func (query *TemplateQuery) CheckIfNameIsPresent(nameOfQuery string) bool {
+	return false
+}
+
 var DefaultThresholds = RequestThresholds{
 	PercentageChange: 10,
 	AbsoluteChange:   0,

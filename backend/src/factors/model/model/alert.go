@@ -1,9 +1,11 @@
 package model
 
 import (
+	U "factors/util"
 	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -71,4 +73,33 @@ type SlackChannel struct {
 	ChannelName string `json:"channel_name"`
 	ChannelID   string `json:"channel_id"`
 	IsPrivate   bool   `json:"is_private"`
+}
+
+func DecodeAndFetchAlertRelatedStructs(projectID uint64, alert Alert) (AlertDescription, AlertConfiguration, KPIQuery, error) {
+	var alertDescription AlertDescription
+	var alertConfiguration AlertConfiguration
+	var kpiQuery KPIQuery
+
+	err := U.DecodePostgresJsonbToStructType(alert.AlertDescription, &alertDescription)
+	if err != nil {
+		log.Errorf("failed to decode alert description for project_id: %v, alert_name: %s", projectID, alert.AlertName)
+		log.Error(err)
+		return alertDescription, alertConfiguration, kpiQuery, err
+	}
+
+	err = U.DecodePostgresJsonbToStructType(alert.AlertConfiguration, &alertConfiguration)
+	if err != nil {
+		log.Errorf("failed to decode alert configuration for project_id: %v, alert_name: %s", projectID, alert.AlertName)
+		log.Error(err)
+		return alertDescription, alertConfiguration, kpiQuery, err
+	}
+
+	err = U.DecodePostgresJsonbToStructType(alertDescription.Query, &kpiQuery)
+	if err != nil {
+		log.Errorf("Error decoding query for project_id: %v, alert_name: %s", projectID, alert.AlertName)
+		log.Error(err)
+		return alertDescription, alertConfiguration, kpiQuery, err
+	}
+
+	return alertDescription, alertConfiguration, kpiQuery, err
 }
