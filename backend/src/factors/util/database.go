@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"runtime/debug"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/jinzhu/gorm"
@@ -31,7 +33,7 @@ func CloseReadQuery(rows *sql.Rows, tx *sql.Tx) {
 
 // DBReadRows Creates [][]interface{} from sql result rows.
 // Ref: https://kylewbanks.com/blog/query-result-to-map-in-golang
-func DBReadRows(rows *sql.Rows, tx *sql.Tx) ([]string, [][]interface{}, error) {
+func DBReadRows(rows *sql.Rows, tx *sql.Tx, queryID string) ([]string, [][]interface{}, error) {
 	defer CloseReadQuery(rows, tx)
 
 	cols, err := rows.Columns()
@@ -39,6 +41,7 @@ func DBReadRows(rows *sql.Rows, tx *sql.Tx) ([]string, [][]interface{}, error) {
 		return nil, nil, err
 	}
 
+	startReadTime := time.Now()
 	resultRows := make([][]interface{}, 0, 0)
 	for rows.Next() {
 		columns := make([]interface{}, len(cols))
@@ -71,12 +74,26 @@ func DBReadRows(rows *sql.Rows, tx *sql.Tx) ([]string, [][]interface{}, error) {
 
 		resultRows = append(resultRows, resultRow)
 	}
+	LogReadTimeWithQueryRequestID(startReadTime, queryID, &log.Fields{"function": "DBReadRows"})
 
 	return cols, resultRows, nil
 }
 
 func DBDebugPreparedStatement(stmnt string, params []interface{}) string {
-	return fmt.Sprintf(strings.Replace(stmnt, "?", "'%v'", len(params)), params...)
+	// Trimming params and statement for logging.
+	limitedParams := TrimQueryParams(params)
+	stmntWithParams := fmt.Sprintf(strings.Replace(stmnt, "?", "'%v'", len(limitedParams)), limitedParams...)
+	return TrimQueryString(stmntWithParams)
+}
+
+func TrimQueryString(stmnt string) string {
+	// Limiting statement length to 500 characters.
+	return stmnt[:int(math.Min(float64(len(stmnt)), 500))] + "..."
+}
+
+func TrimQueryParams(params []interface{}) []interface{} {
+	// Limiting params to 100.
+	return params[:int(math.Min(float64(len(params)), 100))]
 }
 
 func IsEmptyPostgresJsonb(jsonb *postgres.Jsonb) bool {
@@ -287,4 +304,20 @@ func SantizePostgresJsonbForUnicode(jsonb *postgres.Jsonb) {
 	}
 
 	jsonb.RawMessage = json.RawMessage(SanitizeStringValueForUnicode(string(jsonb.RawMessage)))
+}
+
+func GetUniqueQueryRequestID() string {
+	return RandomLowerAphaNumString(5)
+}
+
+func LogReadTimeWithQueryRequestID(startTime time.Time, reqID string, logFields *log.Fields) {
+	timeTaken := time.Now().Sub(startTime).Microseconds()
+	log.WithFields(*logFields).WithField("query_id", reqID).
+		WithField("time_in_ms", timeTaken).Info("Query rows read.")
+}
+
+func LogExecutionTimeWithQueryRequestID(startTime time.Time, reqID string, logFields *log.Fields) {
+	timeTaken := time.Now().Sub(startTime).Microseconds()
+	log.WithFields(*logFields).WithField("query_id", reqID).
+		WithField("time_in_ms", timeTaken).Info("Query executed.")
 }

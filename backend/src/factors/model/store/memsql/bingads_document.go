@@ -844,35 +844,46 @@ func (store *MemSQL) GetLatestMetaForBingAdsForGivenDays(projectID uint64, days 
 		model.BingadsDocumentTypeAlias["campaigns"], projectID, model.BingAdsIntegration, from, to, customerAccountIDs,
 		model.BingadsDocumentTypeAlias["campaigns"], projectID, model.BingAdsIntegration, from, to, customerAccountIDs}
 
-	rows1, tx1, err := store.ExecQueryWithContext(query, params)
+	startExecTime1 := time.Now()
+	rows1, tx1, err, queryID1 := store.ExecQueryWithContext(query, params)
+	U.LogExecutionTimeWithQueryRequestID(startExecTime1, queryID1, &logFields)
 	if err != nil {
 		errString := fmt.Sprintf("failed to get last %d ad_group meta for bingads", days)
 		log.WithField("error string", err).Error(errString)
 		U.CloseReadQuery(rows1, tx1)
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
+
+	startReadTime1 := time.Now()
 	for rows1.Next() {
 		currentRecord := model.ChannelDocumentsWithFields{}
 		rows1.Scan(&currentRecord.CampaignID, &currentRecord.CampaignName, &currentRecord.AdGroupID, &currentRecord.AdGroupName)
 		channelDocumentsAdGroup = append(channelDocumentsAdGroup, currentRecord)
 	}
+	U.LogReadTimeWithQueryRequestID(startReadTime1, queryID1, &logFields)
 	U.CloseReadQuery(rows1, tx1)
 
 	query = bingadsCampaignMetadataFetchQueryStr
 	params = []interface{}{model.BingadsDocumentTypeAlias["campaigns"], projectID, model.BingAdsIntegration, from, to,
 		customerAccountIDs, model.BingadsDocumentTypeAlias["campaigns"], projectID, model.BingAdsIntegration, from, to, customerAccountIDs}
-	rows2, tx2, err := store.ExecQueryWithContext(query, params)
+
+	startExecTime2 := time.Now()
+	rows2, tx2, err, queryID2 := store.ExecQueryWithContext(query, params)
+	U.LogExecutionTimeWithQueryRequestID(startExecTime2, queryID2, &logFields)
 	if err != nil {
 		errString := fmt.Sprintf("failed to get last %d campaign meta for bingads", days)
 		log.WithField("error string", err).Error(errString)
 		U.CloseReadQuery(rows2, tx2)
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
+
+	startReadTime2 := time.Now()
 	for rows2.Next() {
 		currentRecord := model.ChannelDocumentsWithFields{}
 		rows2.Scan(&currentRecord.CampaignID, &currentRecord.CampaignName)
 		channelDocumentsCampaign = append(channelDocumentsCampaign, currentRecord)
 	}
+	U.LogReadTimeWithQueryRequestID(startReadTime2, queryID2, &logFields)
 	U.CloseReadQuery(rows2, tx2)
 
 	return channelDocumentsCampaign, channelDocumentsAdGroup

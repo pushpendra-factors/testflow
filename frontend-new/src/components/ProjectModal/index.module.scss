@@ -7,3 +7,61 @@
     background: #F5F6F8;
   }
 }
+
+.popover_content {
+
+  &__header {
+    display: flex;
+    align-items: center;
+    margin: 0;
+    padding: 0 16px;
+    font-weight: 700;
+    background: #F5F6F8;
+    height: 40px;
+    border-radius: 12px 12px 0 0;
+  }
+
+  &__settings {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 8px;
+    padding: 0 12px;
+    height: 64px;
+    cursor: pointer;
+
+    &:hover,
+    &:focus {
+      background: #F5F6F8;
+    }
+  }
+
+  &__projectList {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 0 8px 0 16px;
+  }
+
+  &__additionalActions {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 8px;
+
+    a {
+      padding: 8px 16px;
+
+      &:hover,
+      &:focus {
+        background: #F5F6F8;
+      }
+    }
+  }
+
+  &__signout {
+    width: 100%;
+    border-radius: 0 0 12px 12px;
+    text-align: left;
+    height: 48px;
+  }
+}

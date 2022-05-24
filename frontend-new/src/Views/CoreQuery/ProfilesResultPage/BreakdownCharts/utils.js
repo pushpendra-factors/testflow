@@ -1,22 +1,24 @@
 import React from 'react';
+import { get, has } from 'lodash';
 import {
   getClickableTitleSorter,
   SortResults,
-  generateColors,
+  generateColors
 } from '../../../../utils/dataFormatter';
 import { Number as NumFormat } from '../../../../components/factorsComponents';
 import {
   MAX_ALLOWED_VISIBLE_PROPERTIES,
   ReverseProfileMapper,
+  DISPLAY_PROP,
+  QUERY_TYPE_PROFILE
 } from '../../../../utils/constants';
 import {
   getBreakdownDataMapperWithUniqueValues,
-  renderHorizontalBarChart,
+  renderHorizontalBarChart
 } from '../../EventsAnalytics/SingleEventMultipleBreakdown/utils';
 import { getBreakdownDisplayName } from '../../EventsAnalytics/eventsAnalytics.helpers';
 import tableStyles from '../../../../components/DataTable/index.module.scss';
 import { parseForDateTimeLabel } from '../../EventsAnalytics/SingleEventSingleBreakdown/utils';
-import { DISPLAY_PROP } from '../../../../utils/constants';
 import NonClickableTableHeader from '../../../../components/NonClickableTableHeader';
 
 export const defaultSortProp = () => {
@@ -25,8 +27,8 @@ export const defaultSortProp = () => {
       order: 'descend',
       key: 'value',
       type: 'numerical',
-      subtype: null,
-    },
+      subtype: null
+    }
   ];
 };
 
@@ -63,7 +65,7 @@ export const getProfileBreakDownGranularities = (
   breakdowns
 ) => {
   const grns = [];
-  let brks = [...breakdowns];
+  const brks = [...breakdowns];
   breakDownSlice.forEach((h) => {
     const brkIndex = brks.findIndex((x) => h === x.property);
     grns.push(
@@ -93,7 +95,7 @@ export const formatData = (data, breakdown, queries, currentEventIndex) => {
   }
   try {
     const { headers, rows } = data.result_group[currentEventIndex];
-    const activeQuery = queries[currentEventIndex];
+    // const activeQuery = queries[currentEventIndex];
     const valIndex = headers.findIndex(
       (elem) => elem === 'count' || elem === 'aggregate' || elem === 'all_users'
     );
@@ -101,7 +103,7 @@ export const formatData = (data, breakdown, queries, currentEventIndex) => {
     const breakdownHeaders = headers.slice(breakdownIndices[0]);
     const grns = getProfileBreakDownGranularities(breakdownHeaders, breakdown);
 
-    let result = [];
+    const result = [];
     rows.forEach((elem, index) => {
       const breakdownVals = {};
       breakdownIndices.forEach((b, bIdx) => {
@@ -119,7 +121,7 @@ export const formatData = (data, breakdown, queries, currentEventIndex) => {
         label: Object.values(breakdownVals).join(),
         color,
         ...breakdownVals,
-        value: elem[valIndex],
+        value: elem[valIndex]
       });
     });
     return result;
@@ -130,7 +132,7 @@ export const formatData = (data, breakdown, queries, currentEventIndex) => {
 };
 
 export const getProfileQueryDisplayName = ({ query, groupAnalysis }) => {
-  return _.get(ReverseProfileMapper, `${query}.${groupAnalysis}`, query);
+  return get(ReverseProfileMapper, `${query}.${groupAnalysis}`, query);
 };
 
 export const getTableColumns = (
@@ -144,29 +146,29 @@ export const getTableColumns = (
   userPropNames
 ) => {
   const breakdownColumns = breakdown.map((e, index) => {
-    const displayTitle =
-      e.prop_category === 'user'
-        ? userPropNames[e.property] || e.property
-        : e.prop_category === 'event'
-        ? eventPropNames[e.property] || `${e.property}`
-        : e.property;
+    const displayTitle = getBreakdownDisplayName({
+      breakdown: e,
+      userPropNames,
+      eventPropNames,
+      queryType: QUERY_TYPE_PROFILE
+    });
 
     return {
       title: getClickableTitleSorter(
-        displayTitle,
+        <div className="break-all">{displayTitle}</div>,
         { key: `${e.property} - ${index}`, type: e.prop_type, subtype: e.grn },
         currentSorter,
         handleSorting
       ),
       dataIndex: `${e.property} - ${index}`,
       fixed: !index ? 'left' : '',
-      width: 200,
+      width: 200
     };
   });
 
   const queryDisplayName = getProfileQueryDisplayName({
     query: queries[currentEventIndex],
-    groupAnalysis,
+    groupAnalysis
   });
 
   const eventCol = {
@@ -182,7 +184,7 @@ export const getTableColumns = (
     width: 150,
     render: (d) => {
       return <NumFormat number={d} />;
-    },
+    }
   };
 
   return [...breakdownColumns, eventCol];
@@ -191,10 +193,10 @@ export const getTableColumns = (
 export const getTableData = (
   data,
   searchText,
-  currentSorter,
-  queries,
-  currentEventIndex,
-  groupAnalysis
+  currentSorter
+  // queries,
+  // currentEventIndex,
+  // groupAnalysis
 ) => {
   const filteredData = data.filter((elem) =>
     elem.label.toLowerCase().includes(searchText.toLowerCase())
@@ -211,8 +213,8 @@ export const getDataInHorizontalBarChartFormat = (
   const sortedData = SortResults(aggregateData, [
     {
       key: 'value',
-      order: 'descend',
-    },
+      order: 'descend'
+    }
   ]);
 
   const firstBreakdownKey = `${breakdown[0].property} - 0`;
@@ -229,7 +231,7 @@ export const getDataInHorizontalBarChartFormat = (
         cardSize,
         isDashboardWidget,
         false
-      ),
+      )
     };
 
     const result = [row];
@@ -240,7 +242,7 @@ export const getDataInHorizontalBarChartFormat = (
 
   const {
     values: uniqueFirstBreakdownValues,
-    breakdownMapper: firstBreakdownMapper,
+    breakdownMapper: firstBreakdownMapper
   } = getBreakdownDataMapperWithUniqueValues(sortedData, firstBreakdownKey);
 
   if (breakdown.length === 2) {
@@ -254,7 +256,7 @@ export const getDataInHorizontalBarChartFormat = (
           secondBreakdownKey,
           cardSize,
           isDashboardWidget
-        ),
+        )
       };
       return row;
     });
@@ -268,7 +270,7 @@ export const getDataInHorizontalBarChartFormat = (
     uniqueFirstBreakdownValues.forEach((bValue) => {
       const {
         values: uniqueSecondBreakdownValues,
-        breakdownMapper: secondBreakdownMapper,
+        breakdownMapper: secondBreakdownMapper
       } = getBreakdownDataMapperWithUniqueValues(
         firstBreakdownMapper[bValue],
         secondBreakdownKey
@@ -279,7 +281,7 @@ export const getDataInHorizontalBarChartFormat = (
         row.index = bValue + firstBreakdownKey + sbValue + secondBreakdownKey;
         row[firstBreakdownKey] = {
           value: bValue,
-          rowSpan: !sbIndex ? uniqueSecondBreakdownValues.length : 0,
+          rowSpan: !sbIndex ? uniqueSecondBreakdownValues.length : 0
         };
         row[secondBreakdownKey] = { value: sbValue };
         row[thirdBreakdownKey] = {
@@ -288,7 +290,7 @@ export const getDataInHorizontalBarChartFormat = (
             thirdBreakdownKey,
             cardSize,
             isDashboardWidget
-          ),
+          )
         };
         result.push(row);
       });
@@ -310,7 +312,7 @@ export const getHorizontalBarChartColumns = (
     const displayTitle = getBreakdownDisplayName({
       breakdown: e,
       userPropNames,
-      eventPropNames,
+      eventPropNames
     });
 
     return {
@@ -320,11 +322,11 @@ export const getHorizontalBarChartColumns = (
       className: tableStyles.horizontalBarTableHeader,
       render: (d) => {
         const obj = {
-          children: <div className='h-full p-6 break-all'>{d.value}</div>,
-          props: d.hasOwnProperty('rowSpan') ? { rowSpan: d.rowSpan } : {},
+          children: <div className="h-full p-6 break-all">{d.value}</div>,
+          props: has(d, 'rowSpan') ? { rowSpan: d.rowSpan } : {}
         };
         return obj;
-      },
+      }
     };
   });
   if (cardSize !== 1) {

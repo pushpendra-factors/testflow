@@ -681,23 +681,24 @@ export default function GlobalFilterBlock({
 
   return (
     <div className={`flex items-center relative w-full`}>
+      {
+        <Text level={8} type={'title'} extraClass={'m-0 mr-2'} weight={'thin'}>
+          {index >= 1 ? 'and' : 'Filter by'}
+        </Text>
+      }
+      <div className={`relative flex`}>
+        {filter ? renderFilterContent() : filterSelComp()}
+      </div>
       {delFilter && (
         <Button
           type='text'
           onClick={delFilter}
-          className={'fa-btn--custom mr-1'}
+          size={'small'}
+          className={`fa-btn--custom filter-buttons-margin btn-right-round filter-remove-button`}
         >
           <SVG name={delIcon} />
         </Button>
       )}
-      {
-        <Text level={8} type={'title'} extraClass={'m-0 mr-2'} weight={'thin'}>
-          {index >= 1 ? '...and' : 'Filter By'}
-        </Text>
-      }
-      <div className={`relative flex flex-grow`}>
-        {filter ? renderFilterContent() : filterSelComp()}
-      </div>
     </div>
   );
 }
