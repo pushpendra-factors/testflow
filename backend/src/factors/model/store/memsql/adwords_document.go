@@ -846,14 +846,19 @@ func (store *MemSQL) PullGCLIDReport(projectID uint64, from, to int64, adwordsAc
 		" WHEN JSON_EXTRACT_STRING(value, 'criteria_name') = '' THEN ? ELSE JSON_EXTRACT_STRING(value, 'criteria_name') END AS criteria_name"
 	keywordIDCase := "CASE WHEN JSON_EXTRACT_STRING(value, 'criteria_id') IS NULL THEN ? " +
 		" WHEN JSON_EXTRACT_STRING(value, 'criteria_id') = '' THEN ? ELSE JSON_EXTRACT_STRING(value, 'criteria_id') END AS criteria_id"
+	keywordNameCase2 := "CASE WHEN JSON_EXTRACT_STRING(value, 'keyword_name') IS NULL THEN ? " +
+		" WHEN JSON_EXTRACT_STRING(value, 'keyword_name') = '' THEN ? ELSE JSON_EXTRACT_STRING(value, 'keyword_name') END AS keyword_name"
+	keywordIDCase2 := "CASE WHEN JSON_EXTRACT_STRING(value, 'keyword_id') IS NULL THEN ? " +
+		" WHEN JSON_EXTRACT_STRING(value, 'keyword_id') = '' THEN ? ELSE JSON_EXTRACT_STRING(value, 'keyword_id') END AS keyword_id"
 	slotCase := "CASE WHEN JSON_EXTRACT_STRING(value, 'slot') IS NULL THEN ? " +
 		" WHEN JSON_EXTRACT_STRING(value, 'slot') = '' THEN ? ELSE JSON_EXTRACT_STRING(value, 'slot') END AS slot"
 
 	performanceQuery := "SELECT id, " + adGroupNameCase + ", " + adGroupIDCase + ", " + campaignNameCase + ", " +
-		campaignIDCase + ", " + adIDCase + ", " + keywordNameCase + ", " + keywordIDCase + ", " + slotCase +
+		campaignIDCase + ", " + adIDCase + ", " + keywordNameCase + ", " + keywordIDCase + ", " + keywordNameCase2 + ", " + keywordIDCase2 + ", " + slotCase +
 		" FROM adwords_documents where project_id = ? AND customer_account_id IN (?) AND type = ? AND timestamp between ? AND ? "
 	customerAccountIDs := strings.Split(adwordsAccountIDs, ",")
-	rows, tx, err := store.ExecQueryWithContext(performanceQuery, []interface{}{model.PropertyValueNone, model.PropertyValueNone,
+	rows, tx, err, reqID := store.ExecQueryWithContext(performanceQuery, []interface{}{model.PropertyValueNone, model.PropertyValueNone,
+		model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone,
 		model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone,
 		model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone,
 		model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone,
@@ -866,6 +871,7 @@ func (store *MemSQL) PullGCLIDReport(projectID uint64, from, to int64, adwordsAc
 	}
 	defer U.CloseReadQuery(rows, tx)
 	gclidBasedMarketData := make(map[string]model.MarketingData)
+	startReadTime := time.Now()
 	for rows.Next() {
 		var gclIDTmp sql.NullString
 		var adgroupNameTmp sql.NullString
@@ -875,8 +881,10 @@ func (store *MemSQL) PullGCLIDReport(projectID uint64, from, to int64, adwordsAc
 		var adIDTmp sql.NullString
 		var keywordNameTmp sql.NullString
 		var keywordIDTmp sql.NullString
+		var keywordNameTmp2 sql.NullString
+		var keywordIDTmp2 sql.NullString
 		var slotTmp sql.NullString
-		if err = rows.Scan(&gclIDTmp, &adgroupNameTmp, &adgroupIDTmp, &campaignNameTmp, &campaignIDTmp, &adIDTmp, &keywordNameTmp, &keywordIDTmp, &slotTmp); err != nil {
+		if err = rows.Scan(&gclIDTmp, &adgroupNameTmp, &adgroupIDTmp, &campaignNameTmp, &campaignIDTmp, &adIDTmp, &keywordNameTmp, &keywordIDTmp, &keywordNameTmp2, &keywordIDTmp2, &slotTmp); err != nil {
 			logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
 			continue
 		}
@@ -891,6 +899,8 @@ func (store *MemSQL) PullGCLIDReport(projectID uint64, from, to int64, adwordsAc
 		var adID string
 		var keywordName string
 		var keywordID string
+		var keywordName2 string
+		var keywordID2 string
 		var slot string
 		gclID = gclIDTmp.String
 		adgroupName = U.IfThenElse(adgroupNameTmp.Valid == true, adgroupNameTmp.String, model.PropertyValueNone).(string)
@@ -900,6 +910,8 @@ func (store *MemSQL) PullGCLIDReport(projectID uint64, from, to int64, adwordsAc
 		adID = U.IfThenElse(adIDTmp.Valid == true, adIDTmp.String, model.PropertyValueNone).(string)
 		keywordName = U.IfThenElse(keywordNameTmp.Valid == true, keywordNameTmp.String, model.PropertyValueNone).(string)
 		keywordID = U.IfThenElse(keywordIDTmp.Valid == true, keywordIDTmp.String, model.PropertyValueNone).(string)
+		keywordName2 = U.IfThenElse(keywordNameTmp2.Valid == true, keywordNameTmp2.String, model.PropertyValueNone).(string)
+		keywordID2 = U.IfThenElse(keywordIDTmp2.Valid == true, keywordIDTmp2.String, model.PropertyValueNone).(string)
 		slot = U.IfThenElse(slotTmp.Valid == true, slotTmp.String, model.PropertyValueNone).(string)
 
 		// Enriching GCLID report using other reports
@@ -920,6 +932,18 @@ func (store *MemSQL) PullGCLIDReport(projectID uint64, from, to int64, adwordsAc
 				keywordMatchType = val.KeywordMatchType
 			}
 		}
+		if U.IsNonEmptyKey(keywordID2) {
+			if val, exists := keywordIDReport[keywordID2]; exists {
+				keywordName = val.Name
+				keywordMatchType = val.KeywordMatchType
+			}
+		}
+		if !U.IsNonEmptyKey(keywordName) {
+			keywordName = keywordName2
+		}
+		if !U.IsNonEmptyKey(keywordID) {
+			keywordID = keywordID2
+		}
 
 		gclidBasedMarketData[gclID] = model.MarketingData{
 			ID:               gclID,
@@ -934,6 +958,7 @@ func (store *MemSQL) PullGCLIDReport(projectID uint64, from, to int64, adwordsAc
 			Slot:             slot,
 		}
 	}
+	U.LogReadTimeWithQueryRequestID(startReadTime, reqID, &logFields)
 	return gclidBasedMarketData, nil
 }
 
@@ -1030,7 +1055,8 @@ func (store *MemSQL) getSmartPropertyFilterValues(projectID uint64, requestFilte
 	smartPropertyRule := model.SmartPropertyRules{}
 	filterValues := make([]interface{}, 0, 0)
 	db := C.GetServices().Db
-	err := db.Table("smart_property_rules").Where("project_id = ? AND type = ? AND name = ?", projectID, objectType, requestFilterProperty).Find(&smartPropertyRule).Error
+	err := db.Table("smart_property_rules").Where("project_id = ? AND type = ? AND name = ?",
+		projectID, objectType, requestFilterProperty).Find(&smartPropertyRule).Error
 	if err != nil {
 		return make([]interface{}, 0, 0), http.StatusNotFound
 	}
@@ -1055,7 +1081,8 @@ func (store *MemSQL) getSmartPropertyFilterValues(projectID uint64, requestFilte
 
 // GetAdwordsSQLQueryAndParametersForFilterValues - @TODO Kark v1
 // Currently, properties in object dont vary with Object.
-func (store *MemSQL) GetAdwordsSQLQueryAndParametersForFilterValues(projectID uint64, requestFilterObject string, requestFilterProperty string, reqID string) (string, []interface{}, int) {
+func (store *MemSQL) GetAdwordsSQLQueryAndParametersForFilterValues(projectID uint64,
+	requestFilterObject string, requestFilterProperty string, reqID string) (string, []interface{}, int) {
 	logFields := log.Fields{
 		"project_id":              projectID,
 		"request_filter_object":   requestFilterObject,
@@ -1979,7 +2006,7 @@ func getNotNullFilterStatementForSmartPropertyGroupBys(groupBys []model.ChannelG
 		_, isPresent := model.SmartPropertyReservedNames[groupBy.Property]
 		isSmartProperty := !isPresent
 		if isSmartProperty {
-			if groupBy.Object == model.AdwordsCampaign {
+			if groupBy.Object == model.AdwordsCampaign || groupBy.Object == model.BingAdsCampaign {
 				if resultStatement == "" {
 					resultStatement += fmt.Sprintf("( JSON_EXTRACT_STRING(campaign.properties, '%s') IS NOT NULL ", groupBy.Property)
 				} else {
@@ -2019,7 +2046,7 @@ func (store *MemSQL) GetAdwordsChannelResultMeta(projectID uint64, customerAccou
 
 	logCtx := log.WithFields(logFields)
 
-	rows, tx, err := store.ExecQueryWithContext(stmnt, []interface{}{projectID, customerAccountIDArray,
+	rows, tx, err, reqID := store.ExecQueryWithContext(stmnt, []interface{}{projectID, customerAccountIDArray,
 		model.AdwordsDocumentTypeAlias["customer_account_properties"],
 		GetAdwordsDateOnlyTimestamp(query.From),
 		GetAdwordsDateOnlyTimestamp(query.To)})
@@ -2029,6 +2056,7 @@ func (store *MemSQL) GetAdwordsChannelResultMeta(projectID uint64, customerAccou
 	}
 	defer U.CloseReadQuery(rows, tx)
 
+	startReadTime := time.Now()
 	var currency string
 	for rows.Next() {
 		rows.Scan(&currency)
@@ -2039,6 +2067,7 @@ func (store *MemSQL) GetAdwordsChannelResultMeta(projectID uint64, customerAccou
 		logCtx.WithError(err).Error("Failed to build meta for channel query result.")
 		return nil, err
 	}
+	U.LogReadTimeWithQueryRequestID(startReadTime, reqID, &logFields)
 
 	return &model.ChannelQueryResultMeta{Currency: currency}, nil
 }
@@ -2321,12 +2350,12 @@ func (store *MemSQL) getAdwordsMetrics(projectID uint64, customerAccountID strin
 		return nil, err
 	}
 
-	rows, tx, err := store.ExecQueryWithContext(stmnt, params)
+	rows, tx, err, reqID := store.ExecQueryWithContext(stmnt, params)
 	if err != nil {
 		return nil, err
 	}
 
-	resultHeaders, resultRows, err := U.DBReadRows(rows, tx)
+	resultHeaders, resultRows, err := U.DBReadRows(rows, tx, reqID)
 
 	if err != nil {
 		return nil, err
@@ -2366,12 +2395,12 @@ func (store *MemSQL) getAdwordsMetricsBreakdown(projectID uint64, customerAccoun
 		return nil, err
 	}
 
-	rows, tx, err := store.ExecQueryWithContext(stmnt, params)
+	rows, tx, err, reqID := store.ExecQueryWithContext(stmnt, params)
 	if err != nil {
 		return nil, err
 	}
 
-	resultHeaders, resultRows, err := U.DBReadRows(rows, tx)
+	resultHeaders, resultRows, err := U.DBReadRows(rows, tx, reqID)
 	if err != nil {
 		return nil, err
 	}
@@ -2433,7 +2462,8 @@ func (store *MemSQL) GetLatestMetaForAdwordsForGivenDays(projectID uint64, days 
 	query := adwordsAdGroupMetadataFetchQueryStr
 	params := []interface{}{model.AdwordsDocumentTypeAlias["ad_groups"], projectID, from, to, customerAccountIDs,
 		model.AdwordsDocumentTypeAlias["ad_groups"], projectID, from, to, customerAccountIDs}
-	rows1, tx1, err := store.ExecQueryWithContext(query, params)
+
+	rows1, tx1, err, queryID1 := store.ExecQueryWithContext(query, params)
 	if err != nil {
 		errString := fmt.Sprintf("failed to get last %d ad_group meta for adwords", days)
 		log.WithField("error string", err).Error(errString)
@@ -2441,16 +2471,19 @@ func (store *MemSQL) GetLatestMetaForAdwordsForGivenDays(projectID uint64, days 
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
 
+	startReadTime1 := time.Now()
 	for rows1.Next() {
 		currentRecord := model.ChannelDocumentsWithFields{}
 		rows1.Scan(&currentRecord.AdGroupID, &currentRecord.CampaignID, &currentRecord.AdGroupName, &currentRecord.CampaignName)
 		channelDocumentsAdGroup = append(channelDocumentsAdGroup, currentRecord)
 	}
 	U.CloseReadQuery(rows1, tx1)
+	U.LogReadTimeWithQueryRequestID(startReadTime1, queryID1, &logFields)
 
 	query = adwordsCampaignMetadataFetchQueryStr
 	params = []interface{}{model.AdwordsDocumentTypeAlias["campaigns"], projectID, from, to, customerAccountIDs, model.AdwordsDocumentTypeAlias["campaigns"], projectID, from, to, customerAccountIDs}
-	rows2, tx2, err := store.ExecQueryWithContext(query, params)
+
+	rows2, tx2, err, queryID2 := store.ExecQueryWithContext(query, params)
 	if err != nil {
 		errString := fmt.Sprintf("failed to get last %d campaign meta for adwords", days)
 		log.WithField("error string", err).Error(errString)
@@ -2458,12 +2491,14 @@ func (store *MemSQL) GetLatestMetaForAdwordsForGivenDays(projectID uint64, days 
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
 
+	startReadTime2 := time.Now()
 	for rows2.Next() {
 		currentRecord := model.ChannelDocumentsWithFields{}
 		rows2.Scan(&currentRecord.CampaignID, &currentRecord.CampaignName)
 		channelDocumentsCampaign = append(channelDocumentsCampaign, currentRecord)
 	}
 	U.CloseReadQuery(rows2, tx2)
+	U.LogReadTimeWithQueryRequestID(startReadTime2, queryID2, &logFields)
 
 	return channelDocumentsCampaign, channelDocumentsAdGroup
 }
@@ -2579,11 +2614,13 @@ func (store *MemSQL) getKeywordLevelDataForTemplates(projectID uint64, customerA
 
 	var keywordAnalysisResult []model.KeywordAnalysis
 	db := C.GetServices().Db
-	rows, tx, err := store.ExecQueryWithContext(finalKeywordQuery, params)
+	rows, tx, err, reqID := store.ExecQueryWithContext(finalKeywordQuery, params)
 	if err != nil {
 		return make([]model.KeywordAnalysis, 0), err
 	}
 	defer U.CloseReadQuery(rows, tx)
+
+	startReadTime := time.Now()
 	for rows.Next() {
 		var keywordAnalysisRow model.KeywordAnalysis
 		err := db.ScanRows(rows, &keywordAnalysisRow)
@@ -2592,6 +2629,8 @@ func (store *MemSQL) getKeywordLevelDataForTemplates(projectID uint64, customerA
 		}
 		keywordAnalysisResult = append(keywordAnalysisResult, keywordAnalysisRow)
 	}
+	U.LogReadTimeWithQueryRequestID(startReadTime, reqID, &logFields)
+
 	cleanKeywordAnalysisResult := model.SanitiseKeywordsAnalysisResult(query, keywordAnalysisResult)
 	sort.SliceStable(cleanKeywordAnalysisResult, func(i, j int) bool {
 		return cleanKeywordAnalysisResult[i].AbsoluteChange > cleanKeywordAnalysisResult[j].AbsoluteChange
@@ -2624,11 +2663,13 @@ func (store *MemSQL) getCampaignLevelDataForTemplates(projectID uint64, customer
 
 	var campaignAnalysisResult []model.CampaignAnalysis
 	db := C.GetServices().Db
-	rows, tx, err := store.ExecQueryWithContext(finalCampaignQuery, params)
+	rows, tx, err, reqID := store.ExecQueryWithContext(finalCampaignQuery, params)
 	if err != nil {
 		return make([]model.CampaignAnalysis, 0), err
 	}
 	defer U.CloseReadQuery(rows, tx)
+
+	startReadTime := time.Now()
 	for rows.Next() {
 		var campaignAnalysisRow model.CampaignAnalysis
 		err := db.ScanRows(rows, &campaignAnalysisRow)
@@ -2637,12 +2678,15 @@ func (store *MemSQL) getCampaignLevelDataForTemplates(projectID uint64, customer
 		}
 		campaignAnalysisResult = append(campaignAnalysisResult, campaignAnalysisRow)
 	}
+	U.LogReadTimeWithQueryRequestID(startReadTime, reqID, &logFields)
+
 	cleanCampaignAnalysisResult := model.SanitiseCampaignAnalysisResult(query, campaignAnalysisResult)
 	sort.SliceStable(cleanCampaignAnalysisResult, func(i, j int) bool {
 		return cleanCampaignAnalysisResult[i].AbsoluteChange > cleanCampaignAnalysisResult[j].AbsoluteChange
 	})
 	return cleanCampaignAnalysisResult, nil
 }
+
 func (store *MemSQL) getOverallChangesDataForTemplates(projectID uint64, customerAccountID []string, query model.TemplateQuery) ([]model.OverallChanges, error) {
 	logFields := log.Fields{
 		"query":               query,
@@ -2661,26 +2705,26 @@ func (store *MemSQL) getOverallChangesDataForTemplates(projectID uint64, custome
 	paramsLastWeek = append(paramsLastWeek, staticParamsForOverallAnaysis...)
 	paramsLastWeek = append(paramsLastWeek, query.From, query.To)
 
-	rows, tx, err := store.ExecQueryWithContext(overallAnalysisQuery, paramsLastWeek)
+	rows, tx, err, queryID1 := store.ExecQueryWithContext(overallAnalysisQuery, paramsLastWeek)
 	if err != nil {
 		return make([]model.OverallChanges, 0), err
 	}
 
-	resultHeadersLastWeek, resultRowsLastWeek, err := U.DBReadRows(rows, tx)
+	resultHeadersLastWeek, resultRowsLastWeek, err := U.DBReadRows(rows, tx, queryID1)
 	if err != nil {
 		return make([]model.OverallChanges, 0), err
 	}
 
-	rows, tx, err = store.ExecQueryWithContext(overallAnalysisQuery, paramsPrevWeek)
+	rows, tx, err, queryID2 := store.ExecQueryWithContext(overallAnalysisQuery, paramsPrevWeek)
 	if err != nil {
 		return make([]model.OverallChanges, 0), err
 	}
 
-	_, resultRowsPreviousWeek, err := U.DBReadRows(rows, tx)
-
+	_, resultRowsPreviousWeek, err := U.DBReadRows(rows, tx, queryID2)
 	if err != nil {
 		return make([]model.OverallChanges, 0), err
 	}
+
 	for index, value := range resultHeadersLastWeek {
 		var percentageChange float64
 		var previousValue, lastValue float64
@@ -2713,6 +2757,7 @@ func (store *MemSQL) getOverallChangesDataForTemplates(projectID uint64, custome
 	}
 	return overallChangesResult, nil
 }
+
 func (store *MemSQL) getAdwordsSEMChecklistQueryData(query model.TemplateQuery, projectID uint64, customerAccountID []string,
 	reqID string) (model.TemplateResponse, error) {
 	logFields := log.Fields{

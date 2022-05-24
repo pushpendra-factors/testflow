@@ -8,7 +8,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (store *MemSQL) fetchOTPSessions(projectID uint64, offlineTouchPointEventNameId string, query *model.AttributionQuery, logCtx log.Entry) (map[string]map[string]model.UserSessionData, []string, error) {
+func (store *MemSQL) fetchOTPSessions(projectID uint64, offlineTouchPointEventNameId string,
+	query *model.AttributionQuery, logCtx log.Entry) (map[string]map[string]model.UserSessionData, []string, error) {
 
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logCtx.Data)
 
@@ -48,13 +49,13 @@ func (store *MemSQL) fetchOTPSessions(projectID uint64, offlineTouchPointEventNa
 		attributionEventKey, model.PropertyValueNone, attributionEventKey, model.PropertyValueNone, attributionEventKey,
 		projectID, offlineTouchPointEventNameId, effectiveFrom, effectiveTo)
 
-	rows, tx, err := store.ExecQueryWithContext(queryUserOTPsessions, qParams)
+	rows, tx, err, reqID := store.ExecQueryWithContext(queryUserOTPsessions, qParams)
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
 		return nil, nil, err
 	}
 	defer U.CloseReadQuery(rows, tx)
 
-	return model.ProcessOTPEventRows(rows, query, logCtx)
+	return model.ProcessOTPEventRows(rows, query, logCtx, reqID)
 
 }

@@ -139,7 +139,6 @@ function ReportsLayout({
           setQueryOptions={composerFunctions.setExtraOptions}
           eventChange={composerFunctions.queryChange}
           queryType={queryType}
-          setQueryOptions={composerFunctions.setExtraOptions}
           activeKey={composerFunctions.activeKey}
           collapse={composerFunctions.showResult}
           setCollapse={() => setQueryOpen(false)}

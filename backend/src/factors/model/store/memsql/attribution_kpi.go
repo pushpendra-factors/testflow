@@ -212,7 +212,12 @@ func (store *MemSQL) GetDataFromKPIResult(projectID uint64, kpiQueryResult model
 	return kpiKeys
 }
 
-func (store *MemSQL) PullGroupUserIDs(projectID uint64, kpiKeys []string, _groupIDKey string, kpiData *map[string]model.KPIInfo, groupUserIDToKpiID *map[string]string, logCtx log.Entry) ([]string, error) {
+func (store *MemSQL) PullGroupUserIDs(projectID uint64, kpiKeys []string, _groupIDKey string,
+	kpiData *map[string]model.KPIInfo, groupUserIDToKpiID *map[string]string, logCtx log.Entry) ([]string, error) {
+	logFields := log.Fields{
+		"project_id":    projectID,
+		"_group_id_key": _groupIDKey,
+	}
 
 	var kpiKeyGroupUserIDList []string
 	kpiKeysIdPlaceHolder := U.GetValuePlaceHolder(len(kpiKeys))
@@ -221,11 +226,13 @@ func (store *MemSQL) PullGroupUserIDs(projectID uint64, kpiKeys []string, _group
 	var gUParams []interface{}
 	gUParams = append(gUParams, projectID)
 	gUParams = append(gUParams, kpiKeysIdValue...)
-	gURows, tx1, err := store.ExecQueryWithContext(groupUserQuery, gUParams)
+	gURows, tx1, err, reqID := store.ExecQueryWithContext(groupUserQuery, gUParams)
 	if err != nil {
-		logCtx.WithError(err).Error("SQL Query failed")
+		logCtx.WithField("query_id", reqID).WithError(err).Error("SQL Query failed")
 		return kpiKeyGroupUserIDList, errors.New("failed to get groupUserQuery result for project")
 	}
+
+	startReadTime := time.Now()
 	for gURows.Next() {
 		var groupUserIDNull sql.NullString
 		var kpiIDNull sql.NullString
@@ -250,6 +257,8 @@ func (store *MemSQL) PullGroupUserIDs(projectID uint64, kpiKeys []string, _group
 		kpiKeyGroupUserIDList = append(kpiKeyGroupUserIDList, groupUserID)
 
 	}
+	U.LogReadTimeWithQueryRequestID(startReadTime, reqID, &logFields)
+
 	defer U.CloseReadQuery(gURows, tx1)
 	return kpiKeyGroupUserIDList, nil
 }
@@ -264,11 +273,13 @@ func (store *MemSQL) PullKPIKeyUserGroupInfo(projectID uint64, kpiKeyGroupUserID
 	var gULParams []interface{}
 	gULParams = append(gULParams, projectID)
 	gULParams = append(gULParams, kpiKeysGroupUserIdValue...)
-	gULRows, tx2, err := store.ExecQueryWithContext(groupUserListQuery, gULParams)
+	gULRows, tx2, err, reqID := store.ExecQueryWithContext(groupUserListQuery, gULParams)
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
 		return errors.New("failed to get groupUserListQuery result for project")
 	}
+
+	startReadTime := time.Now()
 	for gULRows.Next() {
 		var groupIDNull sql.NullString
 		var userIDNull sql.NullString
@@ -294,8 +305,12 @@ func (store *MemSQL) PullKPIKeyUserGroupInfo(projectID uint64, kpiKeyGroupUserID
 			(*kpiData)[kpiID] = v
 		}
 	}
-	log.WithFields(log.Fields{"kpiData": kpiData}).Info("KPI-Attribution group set")
+	logFields := log.Fields{"kpiData": kpiData, "project_id": projectID}
+	log.WithFields(logFields).Info("KPI-Attribution group set")
 	defer U.CloseReadQuery(gULRows, tx2)
+
+	U.LogReadTimeWithQueryRequestID(startReadTime, reqID, &logFields)
+
 	return nil
 }
 
@@ -315,11 +330,13 @@ func (store *MemSQL) PullAllUsersByCustomerUserID(projectID uint64, kpiData *map
 	var gULParams []interface{}
 	gULParams = append(gULParams, projectID)
 	gULParams = append(gULParams, custUserIDs...)
-	gULRows, tx2, err := store.ExecQueryWithContext(groupUserListQuery, gULParams)
+	gULRows, tx2, err, reqID := store.ExecQueryWithContext(groupUserListQuery, gULParams)
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
 		return errors.New("failed to get groupUserListQuery result for project")
 	}
+
+	startReadTime := time.Now()
 	for gULRows.Next() {
 		var userIDNull sql.NullString
 		var custUserIDNull sql.NullString
@@ -345,7 +362,9 @@ func (store *MemSQL) PullAllUsersByCustomerUserID(projectID uint64, kpiData *map
 			custUserIdToUserIds[custUserID] = users
 		}
 	}
-	log.WithFields(log.Fields{"custUserIdToUserIds": custUserIdToUserIds}).Info("KPI-Attribution custUserIdToUserIds set")
+	log.WithFields(log.Fields{"custUserIdToUserIds": custUserIdToUserIds}).
+		Info("KPI-Attribution custUserIdToUserIds set")
+	U.LogReadTimeWithQueryRequestID(startReadTime, reqID, &log.Fields{})
 
 	for k, v := range *kpiData {
 		userIdMap := make(map[string]bool)

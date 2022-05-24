@@ -10,6 +10,8 @@ import (
 	"sort"
 	"time"
 
+	"github.com/jinzhu/gorm/dialects/postgres"
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -27,10 +29,14 @@ func (store *MemSQL) SetAuthTokenforSlackIntegration(projectID uint64, agentUUID
 		return err
 	}
 	var token model.SlackAuthTokens
-	err = U.DecodePostgresJsonbToStructType(agent.SlackAccessTokens, &token)
-	if err != nil {
-		log.Error(err)
-		return err
+	if IsEmptyPostgresJsonb(agent.SlackAccessTokens) {
+		token = make(map[uint64]model.SlackAccessTokens)
+	} else {
+		err = U.DecodePostgresJsonbToStructType(agent.SlackAccessTokens, &token)
+		if err != nil {
+			log.Error(err)
+			return err
+		}
 	}
 	token[projectID] = authTokens
 	// convert token to json
@@ -58,9 +64,12 @@ func (store *MemSQL) GetSlackAuthToken(projectID uint64, agentUUID string) (mode
 	var token model.SlackAuthTokens
 
 	err = U.DecodePostgresJsonbToStructType(agent.SlackAccessTokens, &token)
-	if err != nil {
+	if err != nil && err.Error() != "Empty jsonb object" {
 		log.Error(err)
 		return model.SlackAccessTokens{}, err
+	}
+	if err != nil && err.Error() == "Empty jsonb object" {
+		return model.SlackAccessTokens{}, errors.New("No slack auth token found")
 	}
 	if _, ok := token[projectID]; !ok {
 		return model.SlackAccessTokens{}, errors.New("Slack token not found.")
@@ -78,11 +87,15 @@ func (store *MemSQL) DeleteSlackIntegration(projectID uint64, agentUUID string) 
 	}
 	var token model.SlackAuthTokens
 	err = U.DecodePostgresJsonbToStructType(agent.SlackAccessTokens, &token)
-	if err != nil {
+	if err != nil && err.Error() != "Empty jsonb object" {
 		log.Error(err)
 		return err
 	}
+	if err != nil && err.Error() == "Empty jsonb object" {
+		return errors.New("No slack auth token found")
+	}
 	var newToken model.SlackAuthTokens
+	newToken = make(map[uint64]model.SlackAccessTokens)
 	for k, v := range token {
 		if k != projectID {
 			newToken[k] = v
@@ -227,11 +240,22 @@ func (store *MemSQL) CreateAlert(projectID uint64, alert model.Alert) (model.Ale
 	if err != nil {
 		return model.Alert{}, http.StatusInternalServerError, "failed to decode jsonb to alert configuration"
 	}
+	if !alertConfiguration.IsEmailEnabled && !alertConfiguration.IsSlackEnabled {
+		logCtx.Error("Select at least one notification method")
+		return model.Alert{}, http.StatusBadRequest, "Select at least one notification method"
+	}
 	if alertConfiguration.IsEmailEnabled && len(alertConfiguration.Emails) == 0 {
 		logCtx.Error("empty email list")
 		return model.Alert{}, http.StatusBadRequest, "empty email list"
 	}
-
+	isSlackIntegrated, errCode := store.IsSlackIntegratedForProject(projectID, alert.CreatedBy)
+	if errCode != http.StatusOK {
+		return model.Alert{}, errCode, "failed to check slack integration"
+	}
+	if alertConfiguration.IsSlackEnabled && !isSlackIntegrated {
+		logCtx.Error("Slack integration is not enabled for this project")
+		return model.Alert{}, http.StatusBadRequest, "Slack integration is not enabled for this project"
+	}
 	if !store.isValidOperator(alertDescription.Operator) {
 		return model.Alert{}, http.StatusBadRequest, "Invalid Operator for Alert"
 	}
@@ -304,4 +328,12 @@ func (store *MemSQL) isValidDateRangeAndComparedTo(dateRange, comparedTo string)
 func (store *MemSQL) getNameForAlert(metric, operator, value string) string {
 	AlertName := fmt.Sprintf("%s%s%s", metric, operator, value)
 	return AlertName
+}
+func IsEmptyPostgresJsonb(jsonb *postgres.Jsonb) bool {
+	if jsonb == nil {
+		log.Info("jsonb is nil abcd")
+		return true
+	}
+	strJson := string((*jsonb).RawMessage)
+	return strJson == "" || strJson == "null"
 }

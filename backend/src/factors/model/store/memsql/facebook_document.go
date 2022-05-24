@@ -1275,7 +1275,7 @@ func (store *MemSQL) GetFacebookMetricBreakdown(projectID uint64, customerAccoun
 	logCtx := log.WithFields(logFields)
 	sqlQuery, documentType := getFacebookMetricsQuery(query, true)
 
-	rows, tx, err := store.ExecQueryWithContext(sqlQuery, []interface{}{projectID, customerAccountID,
+	rows, tx, err, reqID := store.ExecQueryWithContext(sqlQuery, []interface{}{projectID, customerAccountID,
 		query.From,
 		query.To,
 		documentType})
@@ -1284,7 +1284,7 @@ func (store *MemSQL) GetFacebookMetricBreakdown(projectID uint64, customerAccoun
 		return nil, err
 	}
 
-	resultHeaders, resultRows, err := U.DBReadRows(rows, tx)
+	resultHeaders, resultRows, err := U.DBReadRows(rows, tx, reqID)
 	if err != nil {
 		return nil, err
 	}
@@ -1382,7 +1382,7 @@ func (store *MemSQL) GetFacebookChannelResult(projectID uint64, customerAccountI
 	sqlQuery, documentType := getFacebookMetricsQuery(query, false)
 
 	queryResult := &model.ChannelQueryResult{}
-	rows, tx, err := store.ExecQueryWithContext(sqlQuery, []interface{}{projectID, customerAccountID,
+	rows, tx, err, reqID := store.ExecQueryWithContext(sqlQuery, []interface{}{projectID, customerAccountID,
 		query.From,
 		query.To,
 		documentType})
@@ -1390,7 +1390,7 @@ func (store *MemSQL) GetFacebookChannelResult(projectID uint64, customerAccountI
 		logCtx.WithError(err).Error("Failed to build channel query result.")
 		return queryResult, err
 	}
-	resultHeaders, resultRows, err := U.DBReadRows(rows, tx)
+	resultHeaders, resultRows, err := U.DBReadRows(rows, tx, reqID)
 	if err != nil {
 		return nil, err
 	}
@@ -1450,36 +1450,42 @@ func (store *MemSQL) GetLatestMetaForFacebookForGivenDays(projectID uint64, days
 		facebookDocumentTypeAlias[facebookCampaign], projectID, from, to, customerAccountIDs,
 		facebookDocumentTypeAlias[facebookCampaign], projectID, from, to, customerAccountIDs}
 
-	rows1, tx1, err := store.ExecQueryWithContext(query, params)
+	rows1, tx1, err, queryID1 := store.ExecQueryWithContext(query, params)
 	if err != nil {
 		errString := fmt.Sprintf("failed to get last %d ad_group meta for facebook", days)
 		log.WithField("error string", err).Error(errString)
 		U.CloseReadQuery(rows1, tx1)
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
+
+	startReadTime1 := time.Now()
 	for rows1.Next() {
 		currentRecord := model.ChannelDocumentsWithFields{}
 		rows1.Scan(&currentRecord.CampaignID, &currentRecord.CampaignName, &currentRecord.AdGroupID, &currentRecord.AdGroupName)
 		channelDocumentsAdGroup = append(channelDocumentsAdGroup, currentRecord)
 	}
 	U.CloseReadQuery(rows1, tx1)
+	U.LogReadTimeWithQueryRequestID(startReadTime1, queryID1, &logFields)
 
 	query = facebookCampaignMetadataFetchQueryStr
 	params = []interface{}{facebookDocumentTypeAlias[facebookCampaign], projectID, from, to,
 		customerAccountIDs, facebookDocumentTypeAlias[facebookCampaign], projectID, from, to, customerAccountIDs}
-	rows2, tx2, err := store.ExecQueryWithContext(query, params)
+	rows2, tx2, err, queryID2 := store.ExecQueryWithContext(query, params)
 	if err != nil {
 		errString := fmt.Sprintf("failed to get last %d campaign meta for facebook", days)
 		log.WithField("error string", err).Error(errString)
 		U.CloseReadQuery(rows2, tx2)
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
+
+	startReadTime2 := time.Now()
 	for rows2.Next() {
 		currentRecord := model.ChannelDocumentsWithFields{}
 		rows2.Scan(&currentRecord.CampaignID, &currentRecord.CampaignName)
 		channelDocumentsCampaign = append(channelDocumentsCampaign, currentRecord)
 	}
 	U.CloseReadQuery(rows2, tx2)
+	U.LogReadTimeWithQueryRequestID(startReadTime2, queryID2, &logFields)
 
 	return channelDocumentsCampaign, channelDocumentsAdGroup
 }

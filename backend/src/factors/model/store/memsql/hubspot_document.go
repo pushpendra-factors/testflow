@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"time"
 
-
 	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
@@ -310,7 +309,6 @@ func (store *MemSQL) getUpdatedDealAssociationDocument(projectID uint64, incomin
 		[]int{incomingDocument.Action, model.HubspotDocumentActionAssociationsUpdated})
 	if status != http.StatusNotFound && status != http.StatusFound {
 
-
 		return nil, http.StatusInternalServerError
 	}
 
@@ -361,9 +359,9 @@ func (store *MemSQL) getUpdatedDealAssociationDocuments(projectID uint64, incomi
 		}
 	}
 	var incomingDocumentIds []string
-	
+
 	for _, incomingDocument := range incomingDocuments {
-		if incomingDocument.Action == model.HubspotDocumentActionUpdated{
+		if incomingDocument.Action == model.HubspotDocumentActionUpdated {
 			incomingDocumentIds = append(incomingDocumentIds, incomingDocument.ID)
 		}
 	}
@@ -383,15 +381,15 @@ func (store *MemSQL) getUpdatedDealAssociationDocuments(projectID uint64, incomi
 	var modifiedDocuments []*model.HubspotDocument
 	for i := 0; i < len(incomingDocumentIds); i++ {
 		var latestDocument *model.HubspotDocument
-		
+
 		for _, existingDocument := range existingDocuments {
 			if existingDocument.ID == incomingDocumentIds[i] && latestDocument == nil {
 				latestDocument = &existingDocument
-			}else if existingDocument.ID == incomingDocumentIds[i] && existingDocument.Timestamp > latestDocument.Timestamp {
+			} else if existingDocument.ID == incomingDocumentIds[i] && existingDocument.Timestamp > latestDocument.Timestamp {
 				latestDocument = &existingDocument
 			}
 		}
-		if(latestDocument == nil){
+		if latestDocument == nil {
 			continue
 		}
 
@@ -401,8 +399,8 @@ func (store *MemSQL) getUpdatedDealAssociationDocuments(projectID uint64, incomi
 				WithError(err).Error("Failed to check for IsDealUpdatedRequired.")
 			return nil, http.StatusInternalServerError
 		}
-		
-		if !updateRequired || incomingDocuments[i].Timestamp != latestDocument.Timestamp{
+
+		if !updateRequired || incomingDocuments[i].Timestamp != latestDocument.Timestamp {
 			continue
 		}
 
@@ -513,7 +511,6 @@ func (store *MemSQL) getHubspotDocumentsForInsertion(projectId uint64, documents
 		}
 	}
 
-	
 	if documentType == model.HubspotDocumentTypeDeal {
 		associationDocuments, errCode := store.getUpdatedDealAssociationDocuments(projectId, processDocuments)
 		if errCode != http.StatusOK {
@@ -521,13 +518,14 @@ func (store *MemSQL) getHubspotDocumentsForInsertion(projectId uint64, documents
 		}
 		processDocuments = append(associationDocuments, processDocuments...)
 	}
-	
 
 	return processDocuments, nil
 }
 
 func allowedHubspotDocTypeForBatchInsert(docType int) bool {
-	return docType == model.HubspotDocumentTypeContact || docType == model.HubspotDocumentTypeCompany || docType == model.HubspotDocumentTypeDeal
+	return docType == model.HubspotDocumentTypeContact || docType == model.HubspotDocumentTypeCompany ||
+		docType == model.HubspotDocumentTypeEngagement || docType == model.HubspotDocumentTypeForm ||
+		docType == model.HubspotDocumentTypeFormSubmission || docType == model.HubspotDocumentTypeDeal
 }
 
 func (store *MemSQL) CreateHubspotDocumentInBatch(projectID uint64, docType int, documents []*model.HubspotDocument, batchSize int) int {

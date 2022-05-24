@@ -2138,7 +2138,8 @@ func (store *MemSQL) PullEventRowsForBuildSequenceJob(projectID uint64, startTim
 		"ORDER BY COALESCE(users.customer_user_id, users.id), events.timestamp LIMIT %d",
 		projectID, projectID, startTime, endTime, model.EventsPullLimit+1)
 
-	return store.ExecQueryWithContext(rawQuery, []interface{}{})
+	rows, tx, err, _ := store.ExecQueryWithContext(rawQuery, []interface{}{})
+	return rows, tx, err
 }
 
 // PullEventsForArchivalJob - Function to pull events for archival.
@@ -2156,5 +2157,6 @@ func (store *MemSQL) PullEventRowsForArchivalJob(projectID uint64, startTime, en
 		"LEFT JOIN users ON events.user_id = users.id AND users.project_id = %d "+
 		"WHERE events.project_id = %d AND events.timestamp BETWEEN %d AND %d", projectID, projectID, startTime, endTime)
 
-	return store.ExecQueryWithContext(rawQuery, []interface{}{})
+	rows, tx, err, _ := store.ExecQueryWithContext(rawQuery, []interface{}{})
+	return rows, tx, err
 }
