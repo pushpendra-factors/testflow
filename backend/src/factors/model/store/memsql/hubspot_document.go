@@ -1112,6 +1112,37 @@ func (store *MemSQL) GetHubspotDocumentBeginingTimestampByDocumentTypeForSync(pr
 	return *minTimestamp, http.StatusFound
 }
 
+// GetHubspotDocumentCountForSync returns count for records for each project
+func (store *MemSQL) GetHubspotDocumentCountForSync(projectIDs []uint64, docTypes []int, maxCreatedAtSec int64) ([]model.HubspotDocumentCount, int) {
+	logFields := log.Fields{"project_ids": projectIDs,"doc_types":docTypes,"max_created_at":maxCreatedAtSec}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+
+	if len(projectIDs) == 0 {
+		logCtx.Error("Invalid parameters.")
+		return nil, http.StatusBadRequest
+	}
+
+	var projectRecordCount []model.HubspotDocumentCount
+
+	maxCreatedAtFmt := time.Unix(maxCreatedAtSec+1, 0).Format("2006-01-02 15:04:05")
+	db := C.GetServices().Db
+	err := db.Model(model.HubspotDocument{}).Select("project_id, count(*) as count").
+		Where("project_id IN (?) AND synced=false and type IN ( ? ) AND created_at <= ? ", projectIDs, docTypes, maxCreatedAtFmt).
+		Group("project_id").Scan(&projectRecordCount).Error
+	if err != nil {
+		log.WithError(err).Error("Failed to get hubspot minimum timestamp.")
+		return nil, http.StatusInternalServerError
+	}
+
+	if len(projectRecordCount) == 0 {
+		return nil, http.StatusNotFound
+	}
+
+	return projectRecordCount, http.StatusFound
+}
+
 // GetHubspotDocumentsByTypeANDRangeForSync return list of documents unsynced for given time range
 func (store *MemSQL) GetHubspotDocumentsByTypeANDRangeForSync(projectID uint64,
 	docType int, from, to, maxCreatedAtSec int64) ([]model.HubspotDocument, int) {

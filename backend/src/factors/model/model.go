@@ -289,6 +289,7 @@ type Model interface {
 	GetLastSyncedHubspotDocumentByID(projectID uint64, docID string, docType int) (*model.HubspotDocument, int)
 	GetLastSyncedHubspotUpdateDocumentByID(projectID uint64, docID string, docType int) (*model.HubspotDocument, int)
 	GetAllHubspotObjectValuesByPropertyName(ProjectID uint64, objectType, propertyName string) []interface{}
+	GetHubspotDocumentCountForSync(projectIDs []uint64, docTypes []int, maxCreatedAtSec int64) ([]model.HubspotDocumentCount, int)
 
 	// plan
 	GetPlanByID(planID uint64) (*model.Plan, int)
@@ -627,4 +628,9 @@ type Model interface {
 	GetActivitiesDistinctEventNamesByType(projectID uint64, objectTypes []int) (map[int][]string, int)
 	UpdateCRMProperyAsSynced(projectID uint64, source U.CRMSource, crmProperty *model.CRMProperty) (*model.CRMProperty, int)
 	UpdateCRMActivityAsSynced(projectID uint64, source U.CRMSource, crmActivity *model.CRMActivity, syncID, userID string) (*model.CRMActivity, int)
+
+	GetCRMSetting(projectID uint64) (*model.CRMSetting, int)
+	GetAllCRMSetting() ([]model.CRMSetting, int)
+	UpdateCRMSetting(projectID uint64, option model.CRMSettingOption) int
+	CreateOrUpdateCRMSetting(projectID uint64, crmSetting *model.CRMSetting) int
 }

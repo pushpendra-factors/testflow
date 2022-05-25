@@ -98,6 +98,10 @@ var syncOrderByType = [...]int{
 	model.HubspotDocumentTypeEngagement,
 }
 
+func GetHubspotObjectTypeForSync() []int {
+	return syncOrderByType[:]
+}
+
 func GetURLParameterAsMap(pageUrl string) map[string]interface{} {
 
 	u, err := url.Parse(pageUrl)

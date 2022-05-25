@@ -1050,5 +1050,14 @@ CREATE TABLE IF NOT EXISTS crm_properties (
     UNIQUE KEY crm_properties_project_id_source_type_name_unique_idx(project_id, id, source,`type`,name,timestamp)
     -- Required constraints.
     -- Ref (project_id) -> projects(id)
-)
+);
+
+CREATE TABLE IF NOT EXISTS crm_settings (
+    project_id bigint NOT NULL,
+    hubspot_enrich_heavy boolean NOT NULL DEFAULT FALSE,
+    PRIMARY KEY (project_id),
+    -- Required constraints.
+    -- Ref (project_id) -> projects(id)
+);
+
 -- DROP DATABASE factors;
