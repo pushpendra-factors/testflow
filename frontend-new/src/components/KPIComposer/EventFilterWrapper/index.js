@@ -729,7 +729,7 @@ function EventFilterWrapper({
           type='text'
           onClick={delFilter}
           size={'small'}
-          className={`fa-btn--custom filter-buttons-margin btn-right-round`}
+          className={`fa-btn--custom filter-buttons-margin btn-right-round filter-remove-button`}
         >
           <SVG name={delIcon} />
         </Button>

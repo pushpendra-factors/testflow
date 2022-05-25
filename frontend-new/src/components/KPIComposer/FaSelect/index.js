@@ -189,14 +189,9 @@ const FaSelect = ({
       rendOpts.push(
         <div
           key={'apply_opt'}
-          className={`${
-            allowSearch
-              ? 'fa-select-group-select--options'
-              : 'fa-select--options'
-          } ${styles.dropdown__apply_opt}`}
-          onClick={applyClick}
+          className={`fa-select--buttons ${styles.dropdown__apply_opt} p `}
         >
-          <Button disabled={!optClickArr.length} type='primary'>
+          <Button disabled={!optClickArr.length} type='primary' onClick={applyClick} className={'w-full'}>
             Apply
           </Button>
         </div>
@@ -212,7 +207,7 @@ const FaSelect = ({
 
   const renderSearchInput = () => {
     return (
-      <div className={`${styles.selectInput} fa-filter-select`}>
+      <div className={`${styles.selectInput} fa-filter-select fa-search-select`}>
         <Input
           prefix={<SVG name={'search'} />}
           size='large'

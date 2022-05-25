@@ -53,7 +53,8 @@
             font-weight: $font-weight--regular;
             cursor: pointer;
             display: inline-flex;
-            
+            margin-bottom: 4px;
+
             &:hover{
                 background-color: rgba($fa-color--brand-1, 1);
             }
@@ -74,6 +75,28 @@
             font-weight: $font-weight--regular;
             cursor: pointer;
             display: inline-flex;
+            margin-bottom: 4px;
+            
+            &:hover{
+                background-color: rgba($fa-color--brand-1, 1);
+            }
+
+            h4 {
+                overflow: hidden;
+                text-overflow: ellipsis;
+                overflow-wrap: normal;
+                height: 22px;
+                min-width: 48px;
+            }
+        }
+
+        .fa-select--buttons{
+            padding: 0px;
+            color: $fa-color--mono-5;
+            font-weight: $font-weight--regular;
+            cursor: pointer;
+            display: inline-flex;
+            margin-bottom: 4px;
             
             &:hover{
                 background-color: rgba($fa-color--brand-1, 1);
@@ -145,4 +168,8 @@
     @extend .fa-select--group-select;
     width: 220px;
     padding: 12px 8px;
+}
+
+.fa-search-select{
+    padding-bottom: 4px;
 }
