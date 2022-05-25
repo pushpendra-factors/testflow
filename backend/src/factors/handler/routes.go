@@ -10,6 +10,7 @@ import (
 	"net/http"
 
 	slack "factors/slack_bot/handler"
+
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -56,7 +57,7 @@ func InitAppRoutes(r *gin.Engine) {
 	r.GET(routePrefix+"/health", mid.MonitoringAPIMiddleware(), Monitoring)
 	r.POST(routePrefix+"/accounts/signup", SignUp)
 	r.POST(routePrefix+"/agents/signin", Signin)
-	r.GET(routePrefix+"/agents/signout", Signout)
+	r.GET(routePrefix+"/agents/signout", mid.SetLoggedInAgent(), Signout)
 	r.POST(routePrefix+"/agents/forgotpassword", AgentGenerateResetPasswordLinkEmail)
 	r.POST(routePrefix+"/agents/setpassword", mid.ValidateAgentSetPasswordRequest(), AgentSetPassword)
 	r.PUT(routePrefix+"/agents/updatepassword", mid.SetLoggedInAgent(), UpdateAgentPassword)
@@ -368,7 +369,7 @@ func InitIntRoutes(r *gin.Engine) {
 		mid.SetAuthorizedProjectsByLoggedInAgent(),
 		IntDeleteHandler)
 
-	intRouteGroup.GET("/slack/callback",slack.SlackCallbackHandler)
+	intRouteGroup.GET("/slack/callback", slack.SlackCallbackHandler)
 
 }
 

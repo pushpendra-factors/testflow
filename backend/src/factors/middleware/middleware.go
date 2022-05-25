@@ -413,7 +413,7 @@ func validateAuthData(authDataStr string) (*model.Agent, string, int) {
 		return nil, "error fetching agent", http.StatusInternalServerError
 	}
 
-	email, err := helpers.ParseAndDecryptProtectedFields(agent.Salt, authData.ProtectedFields)
+	email, _, err := helpers.ParseAndDecryptProtectedFields(agent.Salt, agent.LastLoggedOut, agent.PasswordCreatedAt.Unix(), authData.ProtectedFields)
 	if err != nil {
 		return nil, "error parsing protected fields", http.StatusUnauthorized
 	}

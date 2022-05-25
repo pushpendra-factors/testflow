@@ -158,6 +158,8 @@ CREATE TABLE IF NOT EXISTS agents (
     is_onboarding_flow_seen boolean,
     is_auth0_user boolean NOT NULL DEFAULT false,
     value json,
+    slack_access_tokens JSON;
+    last_logged_out bigint DEFAULT 0,
     SHARD KEY (uuid),
     PRIMARY KEY (uuid),
     KEY (updated_at),

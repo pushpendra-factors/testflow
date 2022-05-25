@@ -46,6 +46,7 @@ type Model interface {
 	GetPrimaryAgentOfProject(projectId uint64) (uuid string, errCode int)
 	UpdateAgentSalesforceInstanceURL(agentUUID string, instanceURL string) int
 	IsSlackIntegratedForProject(projectID uint64, agentUUID string) (bool, int)
+	UpdateLastLoggedOut(agentUUID string, timestamp int64) int
 
 	// analytics
 	ExecQuery(stmnt string, params []interface{}) (*model.QueryResult, error)
