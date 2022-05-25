@@ -56,7 +56,7 @@ const GTMSetup = ({ activeProject }) => {
     <Row>
           <Col span={24}>
             <Text type={'title'} level={5} weight={'bold'} color={'grey'} extraClass={'m-0 mt-2 mb-1'}>Setup 1</Text>
-            <Text type={'paragraph'} extraClass={'m-0'}>1. Sign in to <span className={'underline'}><a href='https://tagmanager.google.com/' target='_blank'>Google Tag Manager</a>, select “Workspace”, and “Add a new tag”</span></Text>
+            <Text type={'paragraph'} extraClass={'m-0'}>1. Sign in to <span className={'underline'}><a href='https://tagmanager.google.com/' target='_blank'>Google Tag Manager</a></span>, select “Workspace”, and “Add a new tag”</Text>
             <Text type={'paragraph'} extraClass={'m-0'}>2. Name it “Factors tag”. Select <span className={'italic'}>Edit</span> on Tag Configuration</Text>
             <Text type={'paragraph'} extraClass={'m-0'}>3. Under custom, select <span className={'italic'}>custom HTML</span></Text>
             <Text type={'paragraph'} extraClass={'m-0'}>4. Copy the below tracking script and <span className={'italic'}>paste</span> it on the HTML field, Select <span className={'font-extrabold'}>Save</span></Text>
@@ -79,7 +79,7 @@ window.factors=window.factors||function(){this.q=[];var i=new CustomEvent("FACTO
           </Col>
           <Col span={24}>
             <Text type={'title'} level={5} weight={'bold'} color={'grey'} extraClass={'m-0 mt-4'}>Setup 2 (Optional)</Text>
-            <Text type={'paragraph'} extraClass={'m-0'}>Send us an event (Enable Auto-track for capturing user visits automatically).</Text>
+            <Text type={'paragraph'} extraClass={'m-0'}>Send us custom events that you define using GTM’s triggers (Enable Auto-track for capturing user visits automatically).</Text>
           </Col>
           <Col span={24}>
             <pre className={'fa-code-block my-4'}>
