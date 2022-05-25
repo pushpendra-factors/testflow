@@ -1713,8 +1713,13 @@ func SanitizeResult(result *QueryResult) {
 	// Building new rows
 	resultRows := make([][]interface{}, 0)
 	for _, row := range result.Rows {
+
+		for len(row) < len(result.Headers) {
+			row = append(row, float64(0))
+		}
 		resultRow := make([]interface{}, 0)
 		for _, val := range validIdx {
+
 			resultRow = append(resultRow, row[val])
 		}
 		resultRows = append(resultRows, resultRow)
