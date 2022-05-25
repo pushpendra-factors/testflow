@@ -138,8 +138,9 @@ func (store *MemSQL) GetBingadsFilterValuesSQLAndParams(projectID uint64, reques
 	customerAccountIDs := strings.Split(ftMapping.Accounts, ",")
 	requestFilterProperty = strings.TrimPrefix(requestFilterProperty, fmt.Sprintf("%v_", requestFilterObject))
 	docType := model.BingadsDocumentTypeAlias[model.BingAdsObjectInternalRepresentationToExternalRepresentation[requestFilterObject]]
+	from, to := model.GetFromAndToDatesForFilterValues()
 	filterProperty := model.BingAdsInternalRepresentationToExternalRepresentation[fmt.Sprintf("%v.%v", model.BingAdsObjectInternalRepresentationToExternalRepresentation[requestFilterObject], requestFilterProperty)]
-	params := []interface{}{filterProperty, projectID, customerAccountIDs, docType, filterProperty}
+	params := []interface{}{filterProperty, projectID, customerAccountIDs, docType, filterProperty, from, to}
 	return bingadsFilterQueryStr, params, http.StatusFound
 }
 

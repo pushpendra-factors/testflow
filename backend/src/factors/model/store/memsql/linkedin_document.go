@@ -651,7 +651,8 @@ func (store *MemSQL) GetLinkedinSQLQueryAndParametersForFilterValues(projectID u
 		logCtx.Info(integrationNotAvailable)
 		return "", nil, http.StatusNotFound
 	}
-	params := []interface{}{linkedinInternalFilterProperty, projectID, customerAccountID, docType, linkedinInternalFilterProperty}
+	from, to := model.GetFromAndToDatesForFilterValues()
+	params := []interface{}{linkedinInternalFilterProperty, projectID, customerAccountID, docType, linkedinInternalFilterProperty, from, to}
 
 	return "(" + linkedinFilterQueryStr + ")", params, http.StatusFound
 }

@@ -1106,8 +1106,9 @@ func (store *MemSQL) GetAdwordsSQLQueryAndParametersForFilterValues(projectID ui
 		return "", []interface{}{}, http.StatusInternalServerError
 	}
 	customerAccountIDs := strings.Split(*customerAccountID, ",")
+	from, to := model.GetFromAndToDatesForFilterValues()
 
-	params := []interface{}{adwordsInternalFilterProperty, projectID, customerAccountIDs, docType, adwordsInternalFilterProperty}
+	params := []interface{}{adwordsInternalFilterProperty, projectID, customerAccountIDs, docType, adwordsInternalFilterProperty, from, to}
 	return "(" + adwordsFilterQueryStr + ")", params, http.StatusFound
 }
 

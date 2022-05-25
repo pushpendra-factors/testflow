@@ -448,9 +448,10 @@ func (store *MemSQL) GetFacebookSQLQueryAndParametersForFilterValues(projectID u
 		logCtx.Error(integrationNotAvailable)
 		return "", make([]interface{}, 0, 0), http.StatusNotFound
 	}
+	from, to := model.GetFromAndToDatesForFilterValues()
 	customerAccountIDs := strings.Split(customerAccountID, ",")
 	params := []interface{}{facebookInternalFilterProperty, projectID, customerAccountIDs,
-		docType, facebookInternalFilterProperty}
+		docType, facebookInternalFilterProperty, from, to}
 
 	return "(" + facebookFilterQueryStr + ")", params, http.StatusFound
 }
