@@ -1575,7 +1575,7 @@ func syncCompany(projectID uint64, document *model.HubspotDocument) int {
 						logCtx.Error("Failed to update user group id.")
 					}
 				}
-
+				logCtx.WithFields(log.Fields{"total_contacts": len(contactIds)}).Info("Updating company contact properties.")
 				_, errCode := store.GetStore().UpdateUserPropertiesV2(projectID, contactUser.ID, userPropertiesJsonb,
 					contactUser.PropertiesUpdatedTimestamp+1, SDK.SourceHubspot, model.HubspotDocumentTypeNameCompany)
 				if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
@@ -2454,7 +2454,7 @@ func syncAll(project *model.Project, documents []model.HubspotDocument, hubspotS
 	logCtx := log.WithField("project_id", project.ID)
 	var seenFailures bool
 	for i := range documents {
-		logCtx = logCtx.WithField("document", documents[i])
+		logCtx = logCtx.WithFields(log.Fields{"document_id": documents[i].ID, "doc_type": documents[i].Type, "document_timestamp": documents[i].Timestamp})
 		startTime := time.Now().Unix()
 		switch documents[i].Type {
 
@@ -2480,8 +2480,8 @@ func syncAll(project *model.Project, documents []model.HubspotDocument, hubspotS
 			}
 		}
 
-		logCtx.WithField("time_taken_in_secs", time.Now().Unix()-startTime).Debugf(
-			"Sync %s completed.", documents[i].TypeAlias)
+		logCtx.WithField("time_taken_in_secs", time.Now().Unix()-startTime).Info(
+			"Sync completed.")
 	}
 
 	if seenFailures {
@@ -2496,6 +2496,8 @@ type Status struct {
 	ProjectId uint64 `json:"project_id"`
 	Type      string `json:"type"`
 	Status    string `json:"status"`
+	Count     int    `json:"count"`
+	TimeMs    int64  `json:"time_in_ms`
 	Message   string `json:"message,omiempty"`
 }
 
@@ -2568,10 +2570,12 @@ func Sync(projectID uint64, workersPerProject int, recordsMaxCreatedAtSec int64,
 
 	anyFailure := false
 	overAllSyncStatus := make(map[string]bool)
+	overallExecutionTime := make(map[string]int64)
+	overallProcessedCount := make(map[string]int)
 	for _, timeRange := range orderedTimeSeries {
 
 		for i := range syncOrderByType {
-
+			startTime := time.Now()
 			logCtx = logCtx.WithFields(log.Fields{"type": syncOrderByType[i], "time_range": timeRange})
 
 			logCtx.Info("Processing started for given time range")
@@ -2616,6 +2620,9 @@ func Sync(projectID uint64, workersPerProject int, recordsMaxCreatedAtSec int64,
 				overAllSyncStatus[docTypeAlias] = true
 			}
 
+			overallExecutionTime[docTypeAlias] += time.Since(startTime).Milliseconds()
+			overallProcessedCount[docTypeAlias] += len(documents)
+
 			logCtx.Info("Processing completed for given time range")
 		}
 	}
@@ -2629,6 +2636,8 @@ func Sync(projectID uint64, workersPerProject int, recordsMaxCreatedAtSec int64,
 		} else {
 			status.Status = U.CRM_SYNC_STATUS_SUCCESS
 		}
+		status.Count = overallProcessedCount[docTypeAlias]
+		status.TimeMs = overallExecutionTime[docTypeAlias]
 		statusByProjectAndType = append(statusByProjectAndType, status)
 	}
 
