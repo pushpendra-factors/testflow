@@ -32,7 +32,7 @@ const (
 	lastSyncInfoForAProject = "SELECT project_id, customer_account_id, type as document_type, max(timestamp) as last_timestamp" +
 		" " + "FROM adwords_documents WHERE project_id = ? GROUP BY project_id, customer_account_id, type"
 	insertAdwordsStr               = "INSERT INTO adwords_documents (project_id,customer_account_id,type,timestamp,id,campaign_id,ad_group_id,ad_id,keyword_id,value,created_at,updated_at) VALUES "
-	adwordsFilterQueryStr          = "SELECT DISTINCT(LCASE(JSON_EXTRACT_STRING(value, ?))) as filter_value FROM adwords_documents WHERE project_id = ? AND" + " " + "customer_account_id IN (?) AND type = ? AND JSON_EXTRACT_STRING(value, ?) IS NOT NULL LIMIT 5000"
+	adwordsFilterQueryStr          = "SELECT DISTINCT(LCASE(JSON_EXTRACT_STRING(value, ?))) as filter_value FROM adwords_documents WHERE project_id = ? AND" + " " + "customer_account_id IN (?) AND type = ? AND JSON_EXTRACT_STRING(value, ?) IS NOT NULL AND timestamp BETWEEN ? AND ? LIMIT 5000"
 	staticWhereStatementForAdwords = "WHERE project_id = ? AND customer_account_id IN ( ? ) AND type = ? AND timestamp between ? AND ? "
 	fromAdwordsDocument            = " FROM adwords_documents "
 
@@ -1140,6 +1140,7 @@ func getFilterRelatedInformationForAdwords(requestFilterObject string, requestFi
 }
 
 // @TODO Kark v1
+// Not considering timezone since the impact is going to be very less.
 func (store *MemSQL) getAdwordsFilterValuesByType(projectID uint64, docType int, property string, reqID string) ([]interface{}, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
@@ -1162,8 +1163,9 @@ func (store *MemSQL) getAdwordsFilterValuesByType(projectID uint64, docType int,
 	var customerAccountIDs []string
 	customerAccountIDs = strings.Split(*customerAccountID, ",")
 
+	from, to := model.GetFromAndToDatesForFilterValues()
 	logCtx = log.WithField("doc_type", docType)
-	params := []interface{}{property, projectID, customerAccountIDs, docType, property}
+	params := []interface{}{property, projectID, customerAccountIDs, docType, property, from, to}
 	_, resultRows, err := store.ExecuteSQL(adwordsFilterQueryStr, params, logCtx)
 	if err != nil {
 		logCtx.WithError(err).WithField("query", adwordsFilterQueryStr).WithField("params", params).Error(model.AdwordsSpecificError)

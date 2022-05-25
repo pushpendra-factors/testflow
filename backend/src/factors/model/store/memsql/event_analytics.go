@@ -813,8 +813,6 @@ func addMissingTimestampsOnResultWithGroupByProps(result *model.QueryResult,
 	timestamps, offsets := getAllTimestampsAndOffsetBetweenByType(query.From, query.To,
 		query.GetGroupByTimestamp(), query.Timezone, isTimezoneEnabled)
 
-	log.WithField("timestamps", timestamps).WithField("offsets", offsets).WithField("rowsByGroupAndTimestamp", rowsByGroupAndTimestamp).Warn("kark1")
-
 	for _, row := range result.Rows {
 		for index, ts := range timestamps {
 			encCols := make([]interface{}, 0, 0)

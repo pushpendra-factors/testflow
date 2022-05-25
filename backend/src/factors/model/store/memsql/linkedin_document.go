@@ -74,7 +74,7 @@ var mapOfTypeToLinkedinJobCTEAlias = map[string]string{
 var errorEmptyLinkedinDocument = errors.New("empty linked document")
 
 const linkedinFilterQueryStr = "SELECT DISTINCT(LCASE(JSON_EXTRACT_STRING(value, ?))) as filter_value FROM linkedin_documents WHERE project_id = ? AND" +
-	" " + "customer_ad_account_id = ? AND type = ? AND JSON_EXTRACT_STRING(value, ?) IS NOT NULL LIMIT 5000"
+	" " + "customer_ad_account_id = ? AND type = ? AND JSON_EXTRACT_STRING(value, ?) IS NOT NULL AND timestamp BETWEEN ? AND ? LIMIT 5000"
 
 const fromLinkedinDocuments = " FROM linkedin_documents "
 
@@ -617,7 +617,8 @@ func (store *MemSQL) getLinkedinFilterValuesByType(projectID uint64, docType int
 		return []interface{}{}, http.StatusNotFound
 	}
 	logCtx = log.WithField("project_id", projectID).WithField("doc_type", docType).WithField("req_id", reqID)
-	params := []interface{}{property, projectID, customerAccountID, docType, property}
+	from, to := model.GetFromAndToDatesForFilterValues()
+	params := []interface{}{property, projectID, customerAccountID, docType, property, from, to}
 	_, resultRows, err := store.ExecuteSQL(linkedinFilterQueryStr, params, logCtx)
 	if err != nil {
 		logCtx.WithError(err).WithField("query", linkedinFilterQueryStr).WithField("params", params).Error(model.LinkedinSpecificError)

@@ -409,3 +409,13 @@ func GetRequiredChannels(filters []ChannelFilterV1) (bool, bool, bool, bool, int
 	isBingAdsReq = checkIfChannelReq(ChannelBingAds, filters)
 	return isAdwordsReq, isFacebookReq, isLinkedinReq, isBingAdsReq, http.StatusOK
 }
+
+func GetFromAndToDatesForFilterValues() (string, string) {
+	currentDayUnix := U.GetCurrentDayTimestamp()
+	currentDayString := U.GetDateOnlyFromTimestampZ(currentDayUnix)
+	currentDayTime := time.Unix(currentDayUnix, 0)
+	aMonthAgoUnix := currentDayTime.AddDate(0, 0, -30).Unix()
+	aMonthAgoString := U.GetDateOnlyFromTimestampZ(aMonthAgoUnix)
+
+	return aMonthAgoString, currentDayString
+}
