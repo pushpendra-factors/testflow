@@ -17,6 +17,8 @@ import { QUERY_TYPE_FUNNEL } from '../../../utils/constants';
 
 import FaSelect from 'Components/FaSelect';
 import AliasModal from '../AliasModal';
+import { getNormalizedKpi } from '../../../utils/kpiQueryComposer.helpers';
+import { get } from 'lodash';
 
 function QueryBlock({
   index,
@@ -24,18 +26,18 @@ function QueryBlock({
   eventChange,
   queries,
   queryType,
-  eventOptions,
+  // eventOptions,
   eventNames,
   activeProject,
   groupBy,
   setGroupBy,
   delGroupBy,
-  userProperties,
-  eventProperties,
-  setSelectedMainCategory,
+  // userProperties,
+  // eventProperties,
+  // setSelectedMainCategory,
   kpi,
   KPIConfigProps,
-  selectedMainCategory,
+  selectedMainCategory
 }) {
   const [isDDVisible, setDDVisible] = useState(false);
   const [isFilterDDVisible, setFilterDDVisible] = useState(false);
@@ -70,10 +72,11 @@ function QueryBlock({
     setPageUrlDD(false);
   };
 
-  const onChange = (value, group, category) => {
+  const onChange = (value, group, category, type) => {
     const newEvent = { alias: '', label: '', filters: [], group: '' };
     newEvent.label = value[0];
     newEvent.metric = value[1];
+    newEvent.metricType = get(value, '2', '');
     newEvent.group = group;
     if (category) {
       newEvent.category = category;
@@ -107,21 +110,8 @@ function QueryBlock({
     eventChange(event, index - 1, 'delete');
   };
 
-  let kpiEvents = kpi?.config?.map((item) => {
-    let metricsValues = item?.metrics?.map((value) => {
-      if (value?.display_name) {
-        return [value?.display_name, value?.name];
-      } else {
-        return [value, value];
-      }
-    });
-    return {
-      label: item.display_category,
-      group: item.display_category,
-      category: item.category,
-      icon: 'custom_events',
-      values: metricsValues,
-    };
+  const kpiEvents = kpi?.config?.map((item) => {
+    return getNormalizedKpi({ kpi: item });
   });
 
   const selectEvents = () => {
@@ -131,7 +121,7 @@ function QueryBlock({
           <div className={styles.query_block__event_selector}>
             <GroupSelect2
               groupedProperties={kpiEvents ? kpiEvents : []}
-              placeholder='Select Event'
+              placeholder="Select Event"
               optionClick={(group, val, category) =>
                 onChange(val, group, category)
               }
@@ -165,7 +155,7 @@ function QueryBlock({
               {pageUrlDD ? (
                 <FaSelect
                   options={pageURLs || []}
-                  placeholder='Select Event'
+                  placeholder="Select Event"
                   optionClick={(val) => setPageURL(val)}
                   onClickOutside={() => setPageUrlDD(false)}
                   allowSearch={true}
@@ -264,12 +254,12 @@ function QueryBlock({
       <div className={'fa--query_block--actions-cols flex'}>
         <div className={`relative`}>
           <Button
-            type='text'
+            type="text"
             size={'large'}
             onClick={() => setMoreOptions(true)}
             className={`fa-btn--custom mr-1`}
           >
-            <SVG name='more' />
+            <SVG name="more" />
           </Button>
 
           {moreOptions ? (
@@ -295,11 +285,11 @@ function QueryBlock({
         </div>
         <Button
           size={'large'}
-          type='text'
+          type="text"
           onClick={deleteItem}
           className={`fa-btn--custom`}
         >
-          <SVG name='trash' />
+          <SVG name="trash" />
         </Button>
       </div>
     );
@@ -392,7 +382,7 @@ function QueryBlock({
         >
           {
             <Button
-              type='text'
+              type="text"
               onClick={triggerDropDown}
               icon={<SVG name={'plus'} color={'grey'} />}
             >
@@ -438,17 +428,17 @@ function QueryBlock({
               <Tooltip title={'Edit Alias'}>
                 <Button
                   className={`${styles.custombtn} mx-1`}
-                  type='text'
+                  type="text"
                   onClick={showModal}
                 >
-                  <SVG size={20} name='edit' color={'grey'} />
+                  <SVG size={20} name="edit" color={'grey'} />
                 </Button>
               </Tooltip>
             </Text>
           ) : null}
         </div>
         <div className={`flex ${!event?.alias?.length ? '' : 'ml-8 mt-2'}`}>
-          <div className='max-w-7xl'>
+          <div className="max-w-7xl">
             <Tooltip
               title={
                 eventNames[event.label] ? eventNames[event.label] : event.label
@@ -457,7 +447,7 @@ function QueryBlock({
               <Button
                 // icon={<SVG name='mouseevent' size={16} color={'purple'} />}
                 className={`fa-button--truncate fa-button--truncate-lg`}
-                type='link'
+                type="link"
                 onClick={triggerDropDown}
               >
                 {eventNames[event.label]
@@ -487,14 +477,14 @@ const mapStateToProps = (state) => ({
   eventProperties: state.coreQuery.eventProperties,
   groupBy: state.coreQuery.groupBy.event,
   eventNames: state.coreQuery.eventNames,
-  kpi: state.kpi,
+  kpi: state.kpi
 });
 
 const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
     {
       setGroupBy,
-      delGroupBy,
+      delGroupBy
     },
     dispatch
   );

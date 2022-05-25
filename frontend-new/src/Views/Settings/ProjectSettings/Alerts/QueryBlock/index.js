@@ -14,6 +14,7 @@ import EventFilterWrapper from '../../../../../components/KPIComposer/EventFilte
 import EventGroupBlock from '../../../../../components/KPIComposer/EventGroupBlock';
 import { QUERY_TYPE_FUNNEL } from '../../../../../utils/constants';
 import AliasModal from '../../../../../components/KPIComposer/AliasModal';
+import { getNormalizedKpi } from '../../../../../utils/kpiQueryComposer.helpers';
 
 function QueryBlock({
   index,
@@ -102,21 +103,8 @@ function QueryBlock({
     eventChange(event, index - 1, 'delete');
   };
 
-  let kpiEvents = kpi?.config?.map((item) => {
-    let metricsValues = item?.metrics?.map((value) => {
-      if (value?.display_name) {
-        return [value?.display_name, value?.name];
-      } else {
-        return [value, value];
-      }
-    });
-    return {
-      label: item.display_category,
-      group: item.display_category,
-      category: item.category,
-      icon: 'custom_events',
-      values: metricsValues,
-    };
+  const kpiEvents = kpi?.config?.map((item) => {
+    return getNormalizedKpi({kpi:item})
   });
 
   const selectEvents = () => {

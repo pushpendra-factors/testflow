@@ -1,6 +1,4 @@
-import React from 'react';
 import _ from 'lodash';
-import { Radio } from 'antd';
 
 import { EMPTY_ARRAY } from 'Utils/global';
 import { formatFilterDate } from 'Utils/dataFormatter';
@@ -22,19 +20,10 @@ import {
   ALL_USER_TYPE,
   EACH_USER_TYPE,
   TOTAL_USERS_CRITERIA,
-  CHART_TYPE_BARCHART,
-  CHART_TYPE_LINECHART,
-  CHART_TYPE_TABLE,
-  CHART_TYPE_SPARKLINES,
-  CHART_TYPE_STACKED_AREA,
-  CHART_TYPE_STACKED_BAR,
-  apiChartAnnotations,
   INITIAL_SESSION_ANALYTICS_SEQ,
   MARKETING_TOUCHPOINTS,
   PREDEFINED_DATES,
-  CHART_TYPE_SCATTER_PLOT,
-  CHART_TYPE_HORIZONTAL_BAR_CHART,
-  QUERY_TYPE_PROFILE,
+  QUERY_TYPE_PROFILE
 } from '../../utils/constants';
 import { FILTER_TYPES, INITIAL_STATE } from './constants';
 import { isDateInMilliSeconds } from '../../utils/dataFormatter';
@@ -45,7 +34,7 @@ export const labelsObj = {
   [TOTAL_EVENTS_CRITERIA]: 'Event Count',
   [TOTAL_USERS_CRITERIA]: 'User Count',
   [ACTIVE_USERS_CRITERIA]: 'User Count',
-  [FREQUENCY_CRITERIA]: 'Count',
+  [FREQUENCY_CRITERIA]: 'Count'
 };
 
 const operatorMap = {
@@ -64,7 +53,7 @@ const operatorMap = {
   'in the current': 'inCurrent',
   'not in the current': 'notInCurrent',
   before: 'before',
-  since: 'since',
+  since: 'since'
 };
 
 export const reverseOperatorMap = {
@@ -75,7 +64,7 @@ export const reverseOperatorMap = {
   lesserThan: '<',
   lesserThanOrEqual: '<=',
   greaterThan: '>',
-  greaterThanOrEqual: '>=',
+  greaterThanOrEqual: '>='
 };
 
 export const reverseDateOperatorMap = {
@@ -88,7 +77,7 @@ export const reverseDateOperatorMap = {
   inCurrent: 'in the current',
   notInCurrent: 'not in the current',
   before: 'before',
-  since: 'since',
+  since: 'since'
 };
 
 const getEventsWithProperties = (queries) => {
@@ -104,7 +93,7 @@ const getEventsWithProperties = (queries) => {
             op: operatorMap[fil.operator],
             pr: fil.props[0],
             ty: fil.props[1],
-            va: fil.props[1] === 'datetime' ? val : val,
+            va: fil.props[1] === 'datetime' ? val : val
           });
         });
       } else {
@@ -114,14 +103,14 @@ const getEventsWithProperties = (queries) => {
           op: operatorMap[fil.operator],
           pr: fil.props[0],
           ty: fil.props[1],
-          va: fil.props[1] === 'datetime' ? fil.values : fil.values,
+          va: fil.props[1] === 'datetime' ? fil.values : fil.values
         });
       }
     });
     ewps.push({
       an: ev.alias,
       na: ev.label,
-      pr: filterProps,
+      pr: filterProps
     });
   });
   return ewps;
@@ -140,7 +129,7 @@ const getProfileWithProperties = (queries) => {
             op: operatorMap[fil.operator],
             va: val,
             lop: !index ? 'AND' : 'OR',
-            ty: fil.props[1],
+            ty: fil.props[1]
           });
         });
       } else {
@@ -150,7 +139,7 @@ const getProfileWithProperties = (queries) => {
           op: operatorMap[fil.operator],
           va: fil.values,
           lop: 'AND',
-          ty: fil.props[1],
+          ty: fil.props[1]
         });
       }
     });
@@ -158,7 +147,7 @@ const getProfileWithProperties = (queries) => {
       an: ev.alias,
       ty: ev.label,
       pr: filterProps,
-      tz: localStorage.getItem('project_timeZone') || 'Asia/Kolkata',
+      tz: localStorage.getItem('project_timeZone') || 'Asia/Kolkata'
     });
   });
   return pwps;
@@ -175,7 +164,7 @@ const getGlobalFilters = (globalFilters = []) => {
           op: operatorMap[fil.operator],
           pr: fil.props[0],
           ty: fil.props[1],
-          va: fil.props[1] === 'datetime' ? val : val,
+          va: fil.props[1] === 'datetime' ? val : val
         });
       });
     } else {
@@ -185,7 +174,7 @@ const getGlobalFilters = (globalFilters = []) => {
         op: operatorMap[fil.operator],
         pr: fil.props[0],
         ty: fil.props[1],
-        va: fil.props[1] === 'datetime' ? fil.values : fil.values,
+        va: fil.props[1] === 'datetime' ? fil.values : fil.values
       });
     }
   });
@@ -203,7 +192,7 @@ const getGlobalProfileFilters = (globalFilters = []) => {
           op: operatorMap[fil.operator],
           pr: fil.props[0],
           ty: fil.props[1],
-          va: fil.props[1] === 'datetime' ? val : val,
+          va: fil.props[1] === 'datetime' ? val : val
         });
       });
     } else {
@@ -213,7 +202,7 @@ const getGlobalProfileFilters = (globalFilters = []) => {
         op: operatorMap[fil.operator],
         pr: fil.props[0],
         ty: fil.props[1],
-        va: fil.props[1] === 'datetime' ? fil.values : fil.values,
+        va: fil.props[1] === 'datetime' ? fil.values : fil.values
       });
     }
   });
@@ -248,20 +237,20 @@ export const getProfileQuery = (
         pr: opt.property,
         en: opt.prop_category,
         pty: opt.prop_type,
-        eni: opt.eventIndex,
+        eni: opt.eventIndex
       };
     } else {
       appGbp = {
         pr: opt.property,
         en: opt.prop_category,
-        pty: opt.prop_type,
+        pty: opt.prop_type
       };
     }
     if (opt.prop_type === 'datetime') {
-      opt.grn ? (appGbp['grn'] = opt.grn) : (appGbp['grn'] = 'day');
+      opt.grn ? (appGbp.grn = opt.grn) : (appGbp.grn = 'day');
     }
     if (opt.prop_type === 'numerical') {
-      opt.gbty ? (appGbp['gbty'] = opt.gbty) : (appGbp['gbty'] = '');
+      opt.gbty ? (appGbp.gbty = opt.gbty) : (appGbp.gbty = '');
     }
     return appGbp;
   });
@@ -308,21 +297,21 @@ export const getFunnelQuery = (
         en: opt.prop_category,
         pty: opt.prop_type,
         ena: opt.eventName,
-        eni: opt.eventIndex,
+        eni: opt.eventIndex
       };
     } else {
       appGbp = {
         pr: opt.property,
         en: opt.prop_category,
         pty: opt.prop_type,
-        ena: opt.eventName,
+        ena: opt.eventName
       };
     }
     if (opt.prop_type === 'datetime') {
-      opt.grn ? (appGbp['grn'] = opt.grn) : (appGbp['grn'] = 'day');
+      opt.grn ? (appGbp.grn = opt.grn) : (appGbp.grn = 'day');
     }
     if (opt.prop_type === 'numerical') {
-      opt.gbty ? (appGbp['gbty'] = opt.gbty) : (appGbp['gbty'] = '');
+      opt.gbty ? (appGbp.gbty = opt.gbty) : (appGbp.gbty = '');
     }
     return appGbp;
   });
@@ -348,14 +337,14 @@ const getEventsWithPropertiesKPI = (filters, category) => {
           co: operatorMap[fil.operator],
           lOp: !index ? 'AND' : 'OR',
           en:
-            category == 'channels' ? '' : fil?.extra ? fil?.extra[3] : 'event',
+            category === 'channels' ? '' : fil?.extra ? fil?.extra[3] : 'event',
           objTy:
-            category == 'channels'
+            category === 'channels'
               ? fil?.extra
                 ? fil?.extra[3]
                 : 'event'
               : '',
-          va: fil.props[1] === 'datetime' ? formatFilterDate(val) : val,
+          va: fil.props[1] === 'datetime' ? formatFilterDate(val) : val
         });
       });
     } else {
@@ -364,13 +353,13 @@ const getEventsWithPropertiesKPI = (filters, category) => {
         prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
         co: operatorMap[fil.operator],
         lOp: 'AND',
-        en: category == 'channels' ? '' : fil?.extra ? fil?.extra[3] : 'event',
+        en: category === 'channels' ? '' : fil?.extra ? fil?.extra[3] : 'event',
         objTy:
-          category == 'channels' ? (fil?.extra ? fil?.extra[3] : 'event') : '',
+          category === 'channels' ? (fil?.extra ? fil?.extra[3] : 'event') : '',
         va:
           fil.props[1] === 'datetime'
             ? formatFilterDate(fil.values)
-            : fil.values,
+            : fil.values
       });
     }
   });
@@ -380,38 +369,40 @@ const getEventsWithPropertiesKPI = (filters, category) => {
 const getGroupByWithPropertiesKPI = (appliedGroupBy, index, category) => {
   return appliedGroupBy.map((opt) => {
     let appGbp = {};
-    if (opt.eventIndex == index) {
+    if (opt.eventIndex === index) {
       appGbp = {
         gr: '',
         prNa: opt.property,
         prDaTy: opt.prop_type,
         eni: opt.eventIndex,
-        en: category == 'channels' ? '' : opt.prop_category,
-        objTy: category == 'channels' ? opt.prop_category : '',
+        en: category === 'channels' ? '' : opt.prop_category,
+        objTy: category === 'channels' ? opt.prop_category : ''
       };
     } else {
       appGbp = {
         gr: '',
         prNa: opt.property,
         prDaTy: opt.prop_type,
-        en: category == 'channels' ? '' : opt.prop_category,
-        objTy: category == 'channels' ? opt.prop_category : '',
+        en: category === 'channels' ? '' : opt.prop_category,
+        objTy: category === 'channels' ? opt.prop_category : ''
       };
     }
     if (opt.prop_type === 'datetime') {
-      opt.grn ? (appGbp['grn'] = opt.grn) : (appGbp['grn'] = 'day');
+      opt.grn ? (appGbp.grn = opt.grn) : (appGbp.grn = 'day');
     }
     if (opt.prop_type === 'numerical') {
-      opt.gbty ? (appGbp['gbty'] = opt.gbty) : (appGbp['gbty'] = '');
+      opt.gbty ? (appGbp.gbty = opt.gbty) : (appGbp.gbty = '');
     }
     return appGbp;
   });
 };
 
 const getKPIqueryGroup = (queries, eventGrpBy, period) => {
-  let queryArr = [];
+  const queryArr = [];
   queries.forEach((item, index) => {
-    let GrpByItem = eventGrpBy.filter((item) => item.eventIndex == index + 1);
+    const GrpByItem = eventGrpBy.filter(
+      (item) => item.eventIndex === index + 1
+    );
     queryArr.push({
       ca: item?.category,
       pgUrl: item?.pageViewVal ? item?.pageViewVal : '',
@@ -421,7 +412,7 @@ const getKPIqueryGroup = (queries, eventGrpBy, period) => {
       gBy: getGroupByWithPropertiesKPI(GrpByItem, index, item?.category),
       fr: period.from,
       to: period.to,
-      tz: localStorage.getItem('project_timeZone') || 'Asia/Kolkata',
+      tz: localStorage.getItem('project_timeZone') || 'Asia/Kolkata'
     });
     queryArr.push({
       ca: item?.category,
@@ -433,7 +424,7 @@ const getKPIqueryGroup = (queries, eventGrpBy, period) => {
       gbt: period.frequency,
       fr: period.from,
       to: period.to,
-      tz: localStorage.getItem('project_timeZone') || 'Asia/Kolkata',
+      tz: localStorage.getItem('project_timeZone') || 'Asia/Kolkata'
     });
   });
   return queryArr;
@@ -443,8 +434,8 @@ export const getKPIQuery = (
   queries,
   date_range,
   groupBy,
-  queryOptions,
-  globalFilters = []
+  queryOptions
+  // globalFilters = []
 ) => {
   const query = {};
   query.cl = QUERY_TYPE_KPI?.toLocaleLowerCase();
@@ -525,21 +516,21 @@ export const getQuery = (
         en: opt.prop_category,
         pty: opt.prop_type,
         ena: opt.eventName,
-        eni: opt.eventIndex,
+        eni: opt.eventIndex
       };
     } else {
       gbpReq = {
         pr: opt.property,
         en: opt.prop_category,
         pty: opt.prop_type,
-        ena: opt.eventName,
+        ena: opt.eventName
       };
     }
     if (opt.prop_type === 'datetime') {
-      opt.grn ? (gbpReq['grn'] = opt.grn) : (gbpReq['grn'] = 'day');
+      opt.grn ? (gbpReq.grn = opt.grn) : (gbpReq.grn = 'day');
     }
     if (opt.prop_type === 'numerical') {
-      opt.gbty ? (gbpReq['gbty'] = opt.gbty) : (gbpReq['gbty'] = '');
+      opt.gbty ? (gbpReq.gbty = opt.gbty) : (gbpReq.gbty = '');
     }
     return gbpReq;
   });
@@ -553,13 +544,13 @@ export const getQuery = (
     ewp: [
       {
         na: '$session',
-        pr: [],
-      },
+        pr: []
+      }
     ],
     gup: [],
     gbt: '',
     ec: constantObj.each,
-    tz: localStorage.getItem('project_timeZone') || 'Asia/Kolkata',
+    tz: localStorage.getItem('project_timeZone') || 'Asia/Kolkata'
   };
   if (result_criteria === ACTIVE_USERS_CRITERIA) {
     return [query, { ...query, gbt: '' }, sessionsQuery];
@@ -568,7 +559,7 @@ export const getQuery = (
       query,
       { ...query, gbt: '' },
       { ...query, ty: TYPE_UNIQUE_USERS },
-      { ...query, ty: TYPE_UNIQUE_USERS, gbt: '' },
+      { ...query, ty: TYPE_UNIQUE_USERS, gbt: '' }
     ];
   }
   if (user_type === ANY_USER_TYPE || user_type === ALL_USER_TYPE) {
@@ -609,8 +600,8 @@ export const calculateFrequencyDataForNoBreakdown = (eventData, userData) => {
     rows,
     metrics: {
       ...userData.metrics,
-      rows: metrics,
-    },
+      rows: metrics
+    }
   };
   return result;
 };
@@ -658,7 +649,7 @@ export const calculateFrequencyDataForBreakdown = (eventData, userData) => {
     }
     return [
       ...userObj.slice(0, userObj.length - 1),
-      parseFloat(eVal.toFixed(2)),
+      parseFloat(eVal.toFixed(2))
     ];
   });
 
@@ -667,8 +658,8 @@ export const calculateFrequencyDataForBreakdown = (eventData, userData) => {
     rows,
     metrics: {
       ...userData.metrics,
-      rows: metrics,
-    },
+      rows: metrics
+    }
   };
   return result;
 };
@@ -706,8 +697,8 @@ const calculateActiveUsersDataForNoBreakdown = (userData, sessionData) => {
     rows,
     metrics: {
       ...userData.metrics,
-      rows: metrics,
-    },
+      rows: metrics
+    }
   };
 
   return result;
@@ -737,8 +728,8 @@ const calculateActiveUsersDataForBreakdown = (userData, sessionData) => {
     rows,
     metrics: {
       ...userData.metrics,
-      rows: metrics,
-    },
+      rows: metrics
+    }
   };
   return result;
 };
@@ -789,7 +780,7 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
               ? reverseDateOperatorMap[pr.op]
               : reverseOperatorMap[pr.op],
           props: [pr.pr, pr.ty, pr.en],
-          values: [pr.va],
+          values: [pr.va]
         });
       } else {
         filters[filters.length - 1].values.push(pr.va);
@@ -798,7 +789,7 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
     return {
       alias: e.an,
       label: e.na,
-      filters,
+      filters
     };
   });
 
@@ -813,7 +804,7 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
               ? reverseDateOperatorMap[pr.op]
               : reverseOperatorMap[pr.op],
           props: [pr.pr, pr.ty, pr.en],
-          values: [pr.va],
+          values: [pr.va]
         });
       } else {
         globalFilters[globalFilters.length - 1].values.push(pr.va);
@@ -837,7 +828,7 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
       eventName: opt.ena,
       eventIndex: opt.eni ? opt.eni : 0,
       grn: opt.grn,
-      gbty: opt.gbty,
+      gbty: opt.gbty
     };
   });
   const event = breakdown
@@ -845,7 +836,7 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
     .map((b, index) => {
       return {
         ...b,
-        overAllIndex: index,
+        overAllIndex: index
       };
     });
   const global = breakdown
@@ -853,14 +844,14 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
     .map((b, index) => {
       return {
         ...b,
-        overAllIndex: index,
+        overAllIndex: index
       };
     });
 
   const dateRange = {
     from: requestQuery.fr * 1000,
     to: requestQuery.to * 1000,
-    frequency: requestQuery.gbt,
+    frequency: requestQuery.gbt
   };
   const result = {
     events,
@@ -869,9 +860,9 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
     globalFilters,
     breakdown: {
       event,
-      global,
+      global
     },
-    dateRange: dateRange,
+    dateRange
   };
   return result;
 };
@@ -889,14 +880,14 @@ export const DefaultDateRangeFormat = {
   dateType:
     MomentTz().format('dddd') === 'Sunday'
       ? PREDEFINED_DATES.LAST_WEEK
-      : PREDEFINED_DATES.THIS_WEEK,
+      : PREDEFINED_DATES.THIS_WEEK
 };
 
 export const DashboardDefaultDateRangeFormat = {
   from: MomentTz().subtract(7, 'days').startOf('week'),
   to: MomentTz().subtract(7, 'days').endOf('week'),
   frequency: 'date',
-  dateType: PREDEFINED_DATES.LAST_WEEK,
+  dateType: PREDEFINED_DATES.LAST_WEEK
 };
 
 export const getStateFromFilters = (rawFilters = []) => {
@@ -909,7 +900,7 @@ export const getStateFromFilters = (rawFilters = []) => {
             ? reverseDateOperatorMap[pr.op]
             : reverseOperatorMap[pr.op],
         props: [pr.pr, pr.ty, pr.en],
-        values: [pr.va],
+        values: [pr.va]
       });
     } else {
       filters[filters.length - 1].values.push(pr.va);
@@ -928,7 +919,7 @@ export const getFilters = (filters) => {
         op: operatorMap[filter.operator],
         pr: filter.props[0],
         ty: filter.props[1],
-        va: filter.values,
+        va: filter.values
       });
     }
 
@@ -940,7 +931,7 @@ export const getFilters = (filters) => {
           op: operatorMap[filter.operator],
           pr: filter.props[0],
           ty: filter.props[1],
-          va: value,
+          va: value
         });
       });
     }
@@ -958,7 +949,7 @@ const getFiltersTouchpoints = (filters, touchpoint) => {
         op: operatorMap[filter.operator],
         pr: filter.props[0],
         ty: filter.props[1],
-        va: filter.props[1] === 'datetime' ? filter.values : filter.values,
+        va: filter.props[1] === 'datetime' ? filter.values : filter.values
       });
     }
 
@@ -970,7 +961,7 @@ const getFiltersTouchpoints = (filters, touchpoint) => {
           op: operatorMap[filter.operator],
           pr: filter.props[0],
           ty: filter.props[1],
-          va: value,
+          va: value
         });
       });
     }
@@ -1003,21 +994,21 @@ export const getAttributionQuery = (
   const query = {
     cl: QUERY_TYPE_ATTRIBUTION,
     meta: {
-      metrics_breakdown: true,
+      metrics_breakdown: true
     },
     query: {
       cm: ['Impressions', 'Clicks', 'Spend'],
       ce: {
         na: eventGoal.label,
-        pr: eventFilters,
+        pr: eventFilters
       },
       attribution_key: touchpoint,
       attribution_key_f: touchPointFiltersQuery,
       query_type: queryType,
       attribution_methodology: models[0],
       lbw: window,
-      tactic_offer_type: tacticOfferType,
-    },
+      tactic_offer_type: tacticOfferType
+    }
   };
   if (!eventGoal || !eventGoal.label) {
     query.query.ce = {};
@@ -1040,7 +1031,7 @@ export const getAttributionQuery = (
       const linkedEventFilters = getFilters(le.filters);
       return {
         na: le.label,
-        pr: linkedEventFilters,
+        pr: linkedEventFilters
       };
     });
   }
@@ -1086,16 +1077,17 @@ export const getAttributionStateFromRequestQuery = (
   }
 
   const filters = [];
-  requestQuery.ce?.pr?.forEach((pr) => {
+
+  _.get(requestQuery, 'ce.pr', []).forEach((pr) => {
     if (pr.lop === 'AND') {
-      let val = pr.ty === 'categorical' ? [pr.va] : pr.va;
+      const val = pr.ty === 'categorical' ? [pr.va] : pr.va;
       filters.push({
         operator:
           pr.ty === 'datetime'
             ? reverseDateOperatorMap[pr.op]
             : reverseOperatorMap[pr.op],
         props: [pr.pr, pr.ty, pr.en],
-        values: val,
+        values: val
       });
     } else if (pr.ty === 'categorical') {
       filters[filters.length - 1].values.push(pr.va);
@@ -1106,14 +1098,14 @@ export const getAttributionStateFromRequestQuery = (
   if (requestQuery.attribution_key_f) {
     requestQuery.attribution_key_f.forEach((pr) => {
       if (pr.lop === 'AND') {
-        let val = pr.ty === 'categorical' ? [pr.va] : pr.va;
+        const val = pr.ty === 'categorical' ? [pr.va] : pr.va;
         touchPointFilters.push({
           operator:
             pr.ty === 'datetime'
               ? reverseDateOperatorMap[pr.op]
               : reverseOperatorMap[pr.op],
           props: [pr.pr, pr.ty, pr.attribution_key],
-          values: val,
+          values: val
         });
       } else if (pr.ty === 'categorical') {
         touchPointFilters[touchPointFilters.length - 1].values.push(pr.va);
@@ -1132,7 +1124,7 @@ export const getAttributionStateFromRequestQuery = (
               -1 ||
             requestQuery.attribution_key_custom_dimensions?.indexOf(
               dimension.header
-            ) > -1,
+            ) > -1
       };
     }
     return dimension;
@@ -1147,7 +1139,7 @@ export const getAttributionStateFromRequestQuery = (
           : requestQuery.attribution_key_dimensions?.indexOf(dimension.header) >
               -1 ||
             requestQuery.attribution_content_groups?.indexOf(dimension.header) >
-              -1,
+              -1
       };
     }
     return dimension;
@@ -1157,9 +1149,9 @@ export const getAttributionStateFromRequestQuery = (
     queryType: QUERY_TYPE_ATTRIBUTION,
     eventGoal: {
       label: requestQuery.ce.na,
-      filters,
+      filters
     },
-    attrQueries: attrQueries,
+    attrQueries,
     touchpoint_filters: touchPointFilters,
     attr_query_type: requestQuery.query_type,
     touchpoint,
@@ -1176,18 +1168,18 @@ export const getAttributionStateFromRequestQuery = (
   }
 
   if (requestQuery.lfe && requestQuery.lfe.length) {
-    result['linkedEvents'] = requestQuery.lfe.map((le) => {
+    result.linkedEvents = requestQuery.lfe.map((le) => {
       const linkedFilters = [];
       le.pr.forEach((pr) => {
         if (pr.lop === 'AND') {
-          let val = pr.ty === 'categorical' ? [pr.va] : pr.va;
+          const val = pr.ty === 'categorical' ? [pr.va] : pr.va;
           linkedFilters.push({
             operator:
               pr.ty === 'datetime'
                 ? reverseDateOperatorMap[pr.op]
                 : reverseOperatorMap[pr.op],
             props: [pr.pr, pr.ty, pr.en],
-            values: val,
+            values: val
           });
         } else if (pr.ty === 'categorical') {
           linkedFilters[linkedFilters.length - 1].values.push(pr.va);
@@ -1195,11 +1187,11 @@ export const getAttributionStateFromRequestQuery = (
       });
       return {
         label: le.na,
-        filters: linkedFilters,
+        filters: linkedFilters
       };
     });
   } else {
-    result['linkedEvents'] = [];
+    result.linkedEvents = [];
   }
   return result;
 };
@@ -1220,7 +1212,7 @@ export const getCampaignsQuery = (
         property: filter.props[0],
         condition: operatorMap[filter.operator],
         logical_operator: !index ? 'AND' : 'OR',
-        value,
+        value
       });
     });
   });
@@ -1231,11 +1223,11 @@ export const getCampaignsQuery = (
     group_by: group_by.map((elem) => {
       return {
         name: elem.prop_category,
-        property: elem.property,
+        property: elem.property
       };
     }),
     filters: appliedFilters,
-    gbt: dateRange.frequency,
+    gbt: dateRange.frequency
   };
   if (dateRange.from && dateRange.to) {
     query.fr = MomentTz(dateRange.from).startOf('day').utc().unix();
@@ -1249,7 +1241,7 @@ export const getCampaignsQuery = (
   }
   return {
     query_group: [query, { ...query, gbt: '' }],
-    cl: QUERY_TYPE_CAMPAIGN,
+    cl: QUERY_TYPE_CAMPAIGN
   };
 };
 
@@ -1260,7 +1252,7 @@ export const getCampaignStateFromRequestQuery = (requestQuery) => {
       camp_filters.push({
         operator: reverseOperatorMap[filter.condition],
         props: [filter.property, '', filter.name],
-        values: [filter.value],
+        values: [filter.value]
       });
     } else {
       camp_filters[camp_filters.length - 1].values.push(filter.value);
@@ -1274,9 +1266,9 @@ export const getCampaignStateFromRequestQuery = (requestQuery) => {
     camp_groupBy: requestQuery.group_by.map((gb) => {
       return {
         prop_category: gb.name,
-        property: gb.property,
+        property: gb.property
       };
-    }),
+    })
   };
 
   return result;
@@ -1545,7 +1537,7 @@ export const getProfileQueryFromRequestQuery = (requestQuery) => {
               ? reverseDateOperatorMap[pr.op]
               : reverseOperatorMap[pr.op],
           props: [pr.pr, pr.ty, 'user'],
-          values: [pr.va],
+          values: [pr.va]
         });
       } else {
         evfilters[evfilters.length - 1].values.push(pr.va);
@@ -1554,7 +1546,7 @@ export const getProfileQueryFromRequestQuery = (requestQuery) => {
     return {
       alias: e.an,
       label: e.ty,
-      filters: evfilters,
+      filters: evfilters
     };
   });
 
@@ -1568,7 +1560,7 @@ export const getProfileQueryFromRequestQuery = (requestQuery) => {
               ? reverseDateOperatorMap[pr.op]
               : reverseOperatorMap[pr.op],
           props: [pr.pr, pr.ty, pr.en],
-          values: [pr.va],
+          values: [pr.va]
         });
       } else {
         filters[filters.length - 1].values.push(pr.va);
@@ -1584,7 +1576,7 @@ export const getProfileQueryFromRequestQuery = (requestQuery) => {
       eventName: opt.ena,
       eventIndex: opt.eni ? opt.eni : 0,
       grn: opt.grn,
-      gbty: opt.gbty,
+      gbty: opt.gbty
     };
   });
   const globalBreakdown = breakdown
@@ -1592,25 +1584,25 @@ export const getProfileQueryFromRequestQuery = (requestQuery) => {
     .map((b, index) => {
       return {
         ...b,
-        overAllIndex: index,
+        overAllIndex: index
       };
     });
 
   const groupBy = {
     global: globalBreakdown,
-    event: [],
+    event: []
   };
   const dateRange = {
     from: requestQuery.from * 1000,
-    to: requestQuery.to * 1000,
+    to: requestQuery.to * 1000
   };
   const result = {
     queryType,
-    groupAnalysis: groupAnalysis,
+    groupAnalysis,
     events: queries,
     globalFilters: filters,
     breakdown: groupBy,
-    dateRange: dateRange,
+    dateRange
   };
   return result;
 };
@@ -1636,7 +1628,7 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
       ? config.metrics.find((m) => m.name === q.me[0])
       : null;
 
-    let eventFilters = [];
+    const eventFilters = [];
     _.get(q, 'fil', EMPTY_ARRAY).forEach((pr) => {
       if (pr.lOp === 'AND') {
         const val = pr.prDaTy === 'categorical' ? [pr.va] : pr.va;
@@ -1653,7 +1645,7 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
             pr.prDaTy === FILTER_TYPES.DATETIME
               ? convertDateTimeObjectValuesToMilliSeconds(val)
               : val,
-          extra: [DNa, pr.prNa, pr.prDaTy, isCamp],
+          extra: [DNa, pr.prNa, pr.prDaTy, isCamp]
         });
       } else if (pr.prDaTy === 'categorical') {
         eventFilters[eventFilters.length - 1].values.push(pr.va);
@@ -1668,9 +1660,10 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
       label: metric ? metric.display_name : q.me[0],
       filters: eventFilters,
       alias: '',
+      metricType: metric.type
     });
   }
-  const globalFilters = [];
+  // const globalFilters = [];
 
   const filters = [];
 
@@ -1692,7 +1685,7 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
           pr.prDaTy === FILTER_TYPES.DATETIME
             ? convertDateTimeObjectValuesToMilliSeconds(val)
             : val,
-        extra: [DNa, pr.prNa, pr.prDaTy, isCamp],
+        extra: [DNa, pr.prNa, pr.prDaTy, isCamp]
       });
     } else if (pr.prDaTy === FILTER_TYPES.CATEGORICAL) {
       filters[filters.length - 1].values.push(pr.va);
@@ -1705,33 +1698,33 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
       property: opt.prNa,
       prop_type: opt.prDaTy,
       overAllIndex: index,
-      prop_category: opt.en || opt.objTy,
+      prop_category: opt.en || opt.objTy
     };
     if (opt.prDaTy === 'datetime') {
-      opt.grn ? (appGbp['grn'] = opt.grn) : (appGbp['grn'] = 'day');
+      opt.grn ? (appGbp.grn = opt.grn) : (appGbp.grn = 'day');
     }
     if (opt.prDaTy === 'numerical') {
-      opt.gbty ? (appGbp['gbty'] = opt.gbty) : (appGbp['gbty'] = '');
+      opt.gbty ? (appGbp.gbty = opt.gbty) : (appGbp.gbty = '');
     }
     return appGbp;
   });
 
   const groupBy = {
     global: globalBreakdown,
-    event: [], //will be added later
+    event: [] // will be added later
   };
   const dateRange = {
     ...DefaultDateRangeFormat,
     from: requestQuery.qG[1].fr * 1000,
     to: requestQuery.qG[1].to * 1000,
-    frequency: requestQuery.qG[1].gbt,
+    frequency: requestQuery.qG[1].gbt
   };
   const result = {
     events: queries,
     queryType,
     globalFilters: filters,
     breakdown: groupBy,
-    dateRange: dateRange,
+    dateRange
   };
   return result;
 };

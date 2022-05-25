@@ -517,3 +517,7 @@ export const ReverseProfileMapper = {
 
 export const DISPLAY_PROP = { $none: '(Not Set)' };
 export const REV_DISPLAY_PROP = { '(Not Set)': '$none' };
+
+export const METRIC_TYPES = {
+  dateType: 'date_type'
+};
