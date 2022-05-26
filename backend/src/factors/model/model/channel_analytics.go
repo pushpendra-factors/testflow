@@ -66,6 +66,13 @@ type ChannelQueryV1 struct {
 	To               int64             `json:"to"`
 }
 
+func (query *ChannelQueryV1) GetGroupByTimestamp() string {
+	if query.GroupByTimestamp == nil {
+		return ""
+	}
+	return query.GroupByTimestamp.(string)
+}
+
 // ChannelGroupBy - @TODO Kark v1
 type ChannelGroupBy struct {
 	Object   string `json:"name"`
@@ -182,6 +189,10 @@ func (q *ChannelQueryUnit) ConvertAllDatesFromTimezone1ToTimezone2(currentTimezo
 	return nil
 }
 
+func (query *ChannelQueryUnit) CheckIfNameIsPresent(nameOfQuery string) bool {
+	return false
+}
+
 // ChannelGroupQueryV1 - @TODO Kark v1
 type ChannelGroupQueryV1 struct {
 	Class   string           `json:"cl"`
@@ -259,11 +270,8 @@ func (q *ChannelGroupQueryV1) ConvertAllDatesFromTimezone1ToTimezone2(currentTim
 	return nil
 }
 
-func (query *ChannelQueryV1) GetGroupByTimestamp() string {
-	if query.GroupByTimestamp == nil {
-		return ""
-	}
-	return query.GroupByTimestamp.(string)
+func (query *ChannelGroupQueryV1) CheckIfNameIsPresent(nameOfQuery string) bool {
+	return false
 }
 
 var ChannelNameProperty = ChannelObjectAndProperties{

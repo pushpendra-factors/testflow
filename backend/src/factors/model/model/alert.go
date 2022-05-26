@@ -1,9 +1,11 @@
 package model
 
 import (
+	U "factors/util"
 	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -59,16 +61,45 @@ type AlertDescription struct {
 	ComparedTo string `json:"compared_to"`
 }
 type AlertConfiguration struct {
-	IsEmailEnabled             bool           `json:"email_enabled"`
-	IsSlackEnabled             bool           `json:"slack_enabled"`
-	Emails                     []string       `json:"emails"`
+	IsEmailEnabled             bool            `json:"email_enabled"`
+	IsSlackEnabled             bool            `json:"slack_enabled"`
+	Emails                     []string        `json:"emails"`
 	SlackChannelsAndUserGroups *postgres.Jsonb `json:"slack_channels_and_user_groups"`
 }
-type SlackChannels struct {
-	Channels map[string][]SlackChannel `json:"channels"`
+type SlackChannelsAndUserGroups struct {
+	SlackChannelsAndUserGroups map[string][]SlackChannel `json:"slack_channels_and_user_groups"`
 }
 type SlackChannel struct {
-	ChannelName string `json:"channel_name"`
-	ChannelID   string `json:"channel_id"`
-	IsPrivate   bool   `json:"is_private"`
+	Name      string `json:"name"`
+	Id        string `json:"id"`
+	IsPrivate bool   `json:"is_private"`
+}
+
+func DecodeAndFetchAlertRelatedStructs(projectID uint64, alert Alert) (AlertDescription, AlertConfiguration, KPIQuery, error) {
+	var alertDescription AlertDescription
+	var alertConfiguration AlertConfiguration
+	var kpiQuery KPIQuery
+
+	err := U.DecodePostgresJsonbToStructType(alert.AlertDescription, &alertDescription)
+	if err != nil {
+		log.Errorf("failed to decode alert description for project_id: %v, alert_name: %s", projectID, alert.AlertName)
+		log.Error(err)
+		return alertDescription, alertConfiguration, kpiQuery, err
+	}
+
+	err = U.DecodePostgresJsonbToStructType(alert.AlertConfiguration, &alertConfiguration)
+	if err != nil {
+		log.Errorf("failed to decode alert configuration for project_id: %v, alert_name: %s", projectID, alert.AlertName)
+		log.Error(err)
+		return alertDescription, alertConfiguration, kpiQuery, err
+	}
+
+	err = U.DecodePostgresJsonbToStructType(alertDescription.Query, &kpiQuery)
+	if err != nil {
+		log.Errorf("Error decoding query for project_id: %v, alert_name: %s", projectID, alert.AlertName)
+		log.Error(err)
+		return alertDescription, alertConfiguration, kpiQuery, err
+	}
+
+	return alertDescription, alertConfiguration, kpiQuery, err
 }

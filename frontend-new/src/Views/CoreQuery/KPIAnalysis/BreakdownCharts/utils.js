@@ -6,13 +6,15 @@ import { Number as NumFormat } from '../../../../components/factorsComponents';
 import {
   SortResults,
   getClickableTitleSorter,
-  addQforQuarter
+  addQforQuarter,
+  formatDuration
 } from '../../../../utils/dataFormatter';
 import {
   MAX_ALLOWED_VISIBLE_PROPERTIES,
   DATE_FORMATS,
   DISPLAY_PROP,
-  QUERY_TYPE_KPI
+  QUERY_TYPE_KPI,
+  METRIC_TYPES
 } from '../../../../utils/constants';
 import { parseForDateTimeLabel } from '../../EventsAnalytics/SingleEventSingleBreakdown/utils';
 import {
@@ -156,6 +158,9 @@ export const getTableColumns = (
       dataIndex: `${kpiLabel} - ${index}`,
       width: 300,
       render: (d) => {
+        if (kpi.metricType === METRIC_TYPES.dateType) {
+          return formatDuration(d);
+        }
         return d ? <NumFormat number={d} /> : 0;
       }
     };
@@ -443,6 +448,9 @@ export const getDateBasedColumns = (
       dataIndex: `${kpiLabel} - ${index}`,
       width: 300,
       render: (d) => {
+        if (kpi.metricType === METRIC_TYPES.dateType) {
+          return formatDuration(d);
+        }
         return d ? <NumFormat number={d} /> : 0;
       }
     };

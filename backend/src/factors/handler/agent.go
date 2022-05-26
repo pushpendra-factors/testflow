@@ -79,7 +79,7 @@ func Signin(c *gin.Context) {
 		logCtx.WithField("email", email).Error("Failed to update Agent lastLoginInfo")
 	}
 
-	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, helpers.SecondsInOneMonth*time.Second)
+	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, helpers.CookieExpiry*time.Second)
 
 	domain := C.GetCookieDomian()
 
@@ -90,7 +90,7 @@ func Signin(c *gin.Context) {
 		httpOnly = true
 		c.SetSameSite(http.SameSiteNoneMode)
 	}
-	c.SetCookie(C.GetFactorsCookieName(), cookieData, helpers.SecondsInOneMonth, "/", domain, cookie, httpOnly)
+	c.SetCookie(C.GetFactorsCookieName(), cookieData, helpers.CookieExpiry, "/", domain, cookie, httpOnly)
 	resp := map[string]string{
 		"status": "success",
 	}
@@ -100,8 +100,17 @@ func Signin(c *gin.Context) {
 // curl -X GET  http://localhost:8080/agents/signout
 func Signout(c *gin.Context) {
 
+	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 	domain := C.GetCookieDomian()
 	c.SetCookie(C.GetFactorsCookieName(), "", helpers.ExpireCookie, "/", domain, C.UseSecureCookie(), C.UseHTTPOnlyCookie())
+	errCode := store.GetStore().UpdateLastLoggedOut(agentUUID, U.TimeNowUnix())
+	if errCode != http.StatusAccepted {
+		resp := map[string]string{
+			"status": "failed",
+		}
+		c.JSON(http.StatusInternalServerError, resp)
+		return
+	}
 	// redirect to login
 	resp := map[string]string{
 		"status": "success",

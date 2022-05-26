@@ -23,8 +23,14 @@ var MarketoDocumentToQuery = map[string]string{
 		" FROM `%s.%s.lead_segment` AS ls left outer join `%s.%s.segment` AS s on ls.segment_id = s.id " +
 		" left outer join `%s.%s.segmentation` AS sg on s.segmentation_id = sg.id group by ls.id) lead_seg_agg on l.id = lead_seg_agg.id " +
 		" WHERE %v order by id asc LIMIT %v OFFSET %v",
-	MARKETO_TYPE_NAME_LEAD_NO_SEGMENT: "select NULL AS segment_ids, NULL AS segment_names, NULL AS segmentation_ids, NULL AS segmentation_names,l.* FROM `%s.%s.lead` AS l " +
-		" WHERE %v AND id > %v order by id asc LIMIT %v",
+	MARKETO_TYPE_NAME_LEAD_NO_SEGMENT: "select NULL AS segment_ids, NULL AS segment_names, NULL AS segmentation_ids, NULL AS segmentation_names, p.channel AS program_channel, p.created_at AS program_created_at, p.description AS program_description, p.end_date AS program_end_date, " +
+		" p.name AS program_name, p.sfdc_id AS program_sfdc_id, p.sfdc_name AS program_sfdc_name, p.start_date AS program_start_date, p.status AS program_status, " +
+		" p.type AS program_type, p.url AS program_url, p.workspace,l.* FROM `%s.%s.lead` AS l " +
+		" left outer join " +
+		" (SELECT * FROM (SELECT *, ROW_NUMBER() OVER (PARTITION BY  id ORDER BY updated_at DESC) AS row_num " +
+		" FROM `%s.%s.program`)prog WHERE prog.row_num = 1)p " +
+		" ON l.acquisition_program_id = p.id " +
+		" WHERE %v AND l.id > %v order by l.id asc LIMIT %v",
 }
 
 func GetMarketoDocumentFilterCondition(docType string, addPrefix bool, prefix string, executionDate string) string {
@@ -60,7 +66,7 @@ func GetMarketoDocumentQuery(bigQueryProjectId string, schemaId string, baseQuer
 		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId, bigQueryProjectId, schemaId, bigQueryProjectId, schemaId, bigQueryProjectId, schemaId, GetMarketoDocumentFilterCondition(docType, true, "l", executionDate), limit, offset)
 	}
 	if docType == MARKETO_TYPE_NAME_LEAD_NO_SEGMENT {
-		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId, GetMarketoDocumentFilterCondition(docType, true, "l", executionDate), lastProcessedRecord, limit)
+		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId, bigQueryProjectId, schemaId, GetMarketoDocumentFilterCondition(docType, true, "l", executionDate), lastProcessedRecord, limit)
 	}
 	return ""
 }
@@ -83,7 +89,9 @@ var MarketoDataObjectColumnsInValue = map[string]map[string]int{
 		"reached_success": 7, "reached_success_date": 8, "stream": 9, "program_channel": 10, "program_created_at": 11, "program_description": 12, "program_end_date": 13,
 		"program_name": 14, "program_sfdc_id": 15, "program_sfdc_name": 16, "program_start_date": 17, "program_status": 18,
 		"program_type": 19, "program_url": 20, "program_workspace": 21},
-	MARKETO_TYPE_NAME_LEAD: {"segment_ids": 0, "segment_names": 1, "segmentation_ids": 2, "segmentation_names": 3},
+	MARKETO_TYPE_NAME_LEAD: {"segment_ids": 0, "segment_names": 1, "segmentation_ids": 2, "segmentation_names": 3, "program_channel": 4, "program_created_at": 5, "program_description": 6, "program_end_date": 7,
+		"program_name": 8, "program_sfdc_id": 9, "program_sfdc_name": 10, "program_start_date": 11, "program_status": 12,
+		"program_type": 13, "program_url": 14, "program_workspace": 15},
 }
 
 var MarketoDataObjectColumnsQuery = map[string]string{
@@ -92,6 +100,7 @@ var MarketoDataObjectColumnsQuery = map[string]string{
 
 var MarketoDataObjectColumnsDatetimeType = map[string]map[string]bool{
 	MARKETO_TYPE_NAME_PROGRAM_MEMBERSHIP: {"membership_date": true, "reached_success_date": true, "program_created_at": true, "program_end_date": true, "program_start_date": true},
+	MARKETO_TYPE_NAME_LEAD:               {"program_created_at": true, "program_end_date": true, "program_start_date": true},
 }
 
 var MarketoDataObjectColumnsNumericalType = map[string]map[string]bool{

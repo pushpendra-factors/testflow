@@ -45,7 +45,7 @@ const IntegrationProviderData = [
   },
   {
     name: 'Slack',
-    desc: 'Slack is a leader in marketing automation. Using our slack source, we will ingest your Program, Campaign, Person and List records into Factors.',
+    desc: 'Does your team live on Slack? Set up alerts that track KPIs and marketing data. Nudge your team to take the right actions.',
     icon: 'Slack',
     kbLink: false,
   },
@@ -302,6 +302,18 @@ function IntegrationSettings({
           let finalmsg = str.toLocaleLowerCase();
           if(finalmsg) {
             message.error(finalmsg);
+          }
+        }
+      }
+
+      if (window.location.href.indexOf("status=") > -1) {
+        var searchParams = new URLSearchParams(window.location.search);
+        if (searchParams) {
+          let error = searchParams.get("status");
+          let str = error.replace("_", " ");
+          let finalmsg = str.toLocaleLowerCase();
+          if(finalmsg) {
+            message.error(`Error: ${finalmsg}. Sorry! That doesn’t seem right. Please try again`);
           }
         }
       }

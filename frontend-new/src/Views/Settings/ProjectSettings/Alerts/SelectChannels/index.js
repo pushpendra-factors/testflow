@@ -23,7 +23,6 @@ function SelectChannels({ channelOpts, selectedChannel, setSelectedChannel }) {
           return [...currData, { ...q, id: q.id }];
         });
       }
-      console.log(selectedChannel)
     },
     [selectedChannel, setSelectedChannel]
   );

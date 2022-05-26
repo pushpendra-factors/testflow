@@ -158,6 +158,8 @@ CREATE TABLE IF NOT EXISTS agents (
     is_onboarding_flow_seen boolean,
     is_auth0_user boolean NOT NULL DEFAULT false,
     value json,
+    slack_access_tokens JSON;
+    last_logged_out bigint DEFAULT 0,
     SHARD KEY (uuid),
     PRIMARY KEY (uuid),
     KEY (updated_at),
@@ -1048,5 +1050,14 @@ CREATE TABLE IF NOT EXISTS crm_properties (
     UNIQUE KEY crm_properties_project_id_source_type_name_unique_idx(project_id, id, source,`type`,name,timestamp)
     -- Required constraints.
     -- Ref (project_id) -> projects(id)
-)
+);
+
+CREATE TABLE IF NOT EXISTS crm_settings (
+    project_id bigint NOT NULL,
+    hubspot_enrich_heavy boolean NOT NULL DEFAULT FALSE,
+    PRIMARY KEY (project_id),
+    -- Required constraints.
+    -- Ref (project_id) -> projects(id)
+);
+
 -- DROP DATABASE factors;

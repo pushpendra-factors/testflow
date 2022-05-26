@@ -203,6 +203,10 @@ func (pg *Postgres) GetDashboardUnitsByProjectIDAndDashboardIDAndTypes(projectID
 	return dashboardUnits, http.StatusFound
 }
 
+func (pg *Postgres) GetDashboardUnitNamesByProjectIdTypeAndName(projectID uint64, reqID string, typeOfQuery string, nameOfQuery string) ([]string, int) {
+	return make([]string, 0), http.StatusFound
+}
+
 func (pg *Postgres) DeleteDashboardUnit(projectId uint64, agentUUID string, dashboardId uint64, id uint64) int {
 
 	if projectId == 0 || agentUUID == "" ||

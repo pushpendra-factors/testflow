@@ -40,7 +40,8 @@ type Agent struct {
 
 	IsAuth0User       bool            `json:"is_auth0_user" gorm:"default:false"`
 	Value             *postgres.Jsonb `json:"value"`
-	SlackAccessTokens   *postgres.Jsonb  `json:"slack_access_tokens"`
+	SlackAccessTokens *postgres.Jsonb `json:"slack_access_tokens"`
+	LastLoggedOut     int64           `json:"last_logged_out"`
 }
 type CreateAgentParams struct {
 	Agent    *Agent
@@ -97,7 +98,7 @@ type Option func(FieldsToUpdate)
 
 type SlackAuthTokens map[uint64]SlackAccessTokens
 type SlackAccessTokens struct {
-	BotAccessToken string `json:"bot_access_token"`
+	BotAccessToken  string `json:"bot_access_token"`
 	UserAccessToken string `json:"user_access_token"`
 }
 
@@ -144,6 +145,12 @@ func LastLoggedInAtAndIncrLoginCount(time time.Time) Option {
 	}
 }
 
+func LastLoggedOut(timestamp int64) Option {
+	return func(fields FieldsToUpdate) {
+		fields["last_logged_out"] = timestamp
+	}
+}
+
 func IntAdwordsRefreshToken(refreshToken string) Option {
 	return func(fields FieldsToUpdate) {
 		fields["int_adwords_refresh_token"] = refreshToken
@@ -184,4 +191,3 @@ func Auth0Value(value *postgres.Jsonb) Option {
 		fields["value"] = value
 	}
 }
-

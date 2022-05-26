@@ -10,6 +10,7 @@ import (
 	"factors/model/store"
 	SDK "factors/sdk"
 	"factors/task/event_user_cache"
+	"factors/task/hubspot_enrich"
 	U "factors/util"
 	"fmt"
 	"io/ioutil"
@@ -209,6 +210,67 @@ func TestHubspotEngagements(t *testing.T) {
 		]
 	  }`
 
+	jsonContactModelMeetingsWithOutContactId := `{
+		"engagement": {
+			"id": 49861280154,
+			"portalId": 5928728,
+			"active": true,
+			"createdAt": 1579771558604,
+			"lastUpdated": 1626648055847,
+			"createdBy": 9765292,
+			"modifiedBy": 9765292,
+			"ownerId": 42479827,
+			"type": "MEETING",
+			"uid": "s16eeoebshn9mda18kdba4tt010",
+			"timestamp": 1579837500000,
+			"teamId": "3a81141",
+			"allAccessibleTeamIds": [381141],
+			"queueMembershipIds": [],
+			"bodyPreviewIsTruncated": true,
+			"gdprDeleted": false,
+			"source": "engage",
+			"active": "true"
+		},
+		"associations": {
+			"contactIds": [],
+			"companyIds": [],
+			"dealIds": [],
+			"ownerIds": [],
+			"workflowIds": [],
+			"ticketIds": [],
+			"contentIds": [],
+			"quoteIds": []
+		},
+		"attachments": [],
+		"scheduledTasks": [{
+			"engagementId": 4986280153,
+			"portalId": 5928728,
+			"engagementType": "MEETING",
+			"taskType": "PRE_MEETING_NOTIFICATION",
+			"timestamp": 1579835700000,
+			"uuid": "MEETING:8e1628saa68-d93c-41ff-9c02-2a17659e987f"
+		}],
+		"metadata": {
+			"startTime": 1579837500000,
+			"endTime": 1579838400000,
+			"title": "abc",
+			"source": "MEETINGS_PUBLIC",
+			"sourceId": "s16eeoebhasdn9mda18kdba4tt010",
+			"createdFromLinkId": 852169,
+			"preMeetingProspectReminders": [],
+			"attendeeOwnerIds": [],
+			"meetingOutcome": "nope"
+		}
+}
+`
+	contactPJsonMeetingsWithOutContactId := postgres.Jsonb{json.RawMessage(jsonContactModelMeetingsWithOutContactId)}
+	hubspotDocumentMeetingsWithOutContactId := model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameEngagement,
+		Value:     &contactPJsonMeetingsWithOutContactId,
+	}
+	status := store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocumentMeetingsWithOutContactId)
+	assert.Equal(t, http.StatusCreated, status)
+
 	jsonContact := fmt.Sprintf(jsonContactModel, 54051, 1428586724779, 1428586724779, 1428586724779, "lead", "a", "123-45")
 	contactPJson := postgres.Jsonb{json.RawMessage(jsonContact)}
 
@@ -217,7 +279,7 @@ func TestHubspotEngagements(t *testing.T) {
 		Value:     &contactPJson,
 	}
 
-	status := store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
 	assert.Equal(t, http.StatusCreated, status)
 
 	contactPJsonMeetings := postgres.Jsonb{json.RawMessage(jsonContactModelMeetings)}
@@ -259,6 +321,11 @@ func TestHubspotEngagements(t *testing.T) {
 	enrichStatus, _ := IntHubspot.Sync(project.ID, 1, time.Now().Unix(), nil, "")
 	for i := range enrichStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
+	}
+
+	docMeetingsWithoutContactId, status := store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{"49861280154"}, model.HubspotDocumentTypeEngagement, []int{model.HubspotDocumentActionCreated})
+	for _, document := range docMeetingsWithoutContactId {
+		assert.Equal(t, document.Synced, true)
 	}
 
 	docMeetings, status := store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{"54051"}, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated})
@@ -4822,6 +4889,114 @@ func TestHubspotEmptyPropertiesUpdated(t *testing.T) {
 			assert.Equal(t, value, eventUserProperties[enKey])
 		}
 	}
+}
+
+func TestHubspotProjectDistributer(t *testing.T) {
+	project1, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+	project2, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	intHubspot := true
+	_, errCode := store.GetStore().UpdateProjectSettings(project1.ID, &model.ProjectSetting{
+		IntHubspot: &intHubspot, IntHubspotApiKey: "1234",
+	})
+	assert.Equal(t, http.StatusAccepted, errCode)
+	_, errCode = store.GetStore().UpdateProjectSettings(project2.ID, &model.ProjectSetting{
+		IntHubspot: &intHubspot, IntHubspotApiKey: "1234",
+	})
+	assert.Equal(t, http.StatusAccepted, errCode)
+	contactCreatedDate := time.Now().AddDate(0, 0, -5)
+	contact := IntHubspot.Contact{
+		Vid: 1,
+		Properties: map[string]IntHubspot.Property{
+			"createdate":       {Value: fmt.Sprintf("%d", contactCreatedDate.Unix()*1000+10)},
+			"lastmodifieddate": {Value: fmt.Sprintf("%d", contactCreatedDate.Unix()*1000+10)},
+			"lifecyclestage":   {Value: "lead"},
+			"Workflow":         {Value: "A"},
+		},
+		IdentityProfiles: []IntHubspot.ContactIdentityProfile{
+			{
+				[]IntHubspot.ContactIdentity{
+					{
+						Type:  "LEAD_GUID",
+						Value: "123-45",
+					},
+				},
+			},
+		},
+	}
+	// project_id 1 - > 20 records, project_id 2 - 40 records
+	for projecID, count := range map[uint64]int{project1.ID: 10, project2.ID: 20} {
+		processDocuments := []*model.HubspotDocument{}
+		for i := 0; i < count; i++ {
+			contact.Vid = int64(i)
+			enJSON, err := json.Marshal(contact)
+			assert.Nil(t, err)
+			contactPJson := postgres.Jsonb{json.RawMessage(enJSON)}
+			contactDocument := model.HubspotDocument{
+				TypeAlias: model.HubspotDocumentTypeNameContact,
+				Value:     &contactPJson,
+			}
+			processDocuments = append(processDocuments, &contactDocument)
+		}
+		status := store.GetStore().CreateHubspotDocumentInBatch(projecID, model.HubspotDocumentTypeContact, processDocuments, 5)
+		assert.Equal(t, http.StatusCreated, status)
+	}
+
+	// threshold of 20 should distribute project 1 to light and 2 to heavy
+	config := map[string]interface{}{
+		"light_projects_count_threshold": 20,
+		"health_check_ping_id":           "",
+		"override_healthcheck_ping_id":   "",
+	}
+
+	jobStatus, success := hubspot_enrich.RunHubspotProjectDistributer(config)
+	assert.Equal(t, true, success)
+	assert.Contains(t, jobStatus["light_projects"], project1.ID) // project 1 has been marked as light
+	assert.NotContains(t, jobStatus["light_projects"], project2.ID)
+	assert.Contains(t, jobStatus["heavy_projects"], project2.ID) // project 2 has been marked as heavy_project
+	assert.NotContains(t, jobStatus["heavy_projects"], project1.ID)
+	crmSetting, status := store.GetStore().GetCRMSetting(project1.ID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, false, crmSetting.HubspotEnrichHeavy)
+	crmSetting, status = store.GetStore().GetCRMSetting(project2.ID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, true, crmSetting.HubspotEnrichHeavy)
+
+	// running RunHubspotProjectDistributer again shouldn't return the currently marked heavy project
+	jobStatus, success = hubspot_enrich.RunHubspotProjectDistributer(config)
+	assert.Equal(t, true, success)
+
+	assert.Contains(t, jobStatus["light_projects"], project1.ID)
+	assert.NotContains(t, jobStatus["light_projects"], project2.ID)
+	assert.NotContains(t, jobStatus["heavy_projects"], project2.ID) // project 2 not present as still marked as heavy project
+	assert.NotContains(t, jobStatus["heavy_projects"], project1.ID)
+	crmSetting, status = store.GetStore().GetCRMSetting(project1.ID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, false, crmSetting.HubspotEnrichHeavy)
+	crmSetting, status = store.GetStore().GetCRMSetting(project2.ID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, true, crmSetting.HubspotEnrichHeavy)
+
+	// after marking enrich heavy as false, the project will be consider for re distribution
+	status = store.GetStore().UpdateCRMSetting(project2.ID, model.HubspotEnrichHeavy(false))
+	assert.Equal(t, http.StatusAccepted, status)
+	crmSetting, status = store.GetStore().GetCRMSetting(project2.ID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, false, crmSetting.HubspotEnrichHeavy)
+	jobStatus, success = hubspot_enrich.RunHubspotProjectDistributer(config)
+	assert.Equal(t, true, success)
+	assert.Contains(t, jobStatus["light_projects"], project1.ID)
+	assert.NotContains(t, jobStatus["light_projects"], project2.ID)
+	assert.Contains(t, jobStatus["heavy_projects"], project2.ID) // project 2 is present as heavy project is marked a false
+	assert.NotContains(t, jobStatus["heavy_projects"], project1.ID)
+	crmSetting, status = store.GetStore().GetCRMSetting(project1.ID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, false, crmSetting.HubspotEnrichHeavy)
+	crmSetting, status = store.GetStore().GetCRMSetting(project2.ID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, true, crmSetting.HubspotEnrichHeavy)
 }
 
 func TestHubspotDateTimezone(t *testing.T) {

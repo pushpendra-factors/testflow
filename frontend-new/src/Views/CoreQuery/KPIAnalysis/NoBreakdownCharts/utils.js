@@ -1,12 +1,13 @@
 import React from 'react';
 import moment from 'moment';
 
-import { DATE_FORMATS } from '../../../../utils/constants';
+import { DATE_FORMATS, METRIC_TYPES } from '../../../../utils/constants';
 import { Number as NumFormat } from '../../../../components/factorsComponents';
 import {
   addQforQuarter,
   getClickableTitleSorter,
   SortResults,
+  formatDuration
 } from '../../../../utils/dataFormatter';
 
 import { getKpiLabel } from '../kpiAnalysis.helpers';
@@ -18,8 +19,8 @@ export const getDefaultSortProp = (kpis) => {
         key: `${getKpiLabel(kpis[0])} - 0`,
         type: 'numerical',
         subtype: null,
-        order: 'descend',
-      },
+        order: 'descend'
+      }
     ];
   }
   return [];
@@ -31,8 +32,8 @@ export const getDefaultDateSortProp = () => {
       key: 'Overall',
       type: 'numerical',
       subtype: null,
-      order: 'descend',
-    },
+      order: 'descend'
+    }
   ];
 };
 
@@ -45,6 +46,7 @@ export const formatData = (data, kpis) => {
       const obj = {
         index,
         name: kpiLabel,
+        metricType: kpi.metricType
       };
       if (data[totalIndex] && data[dateSplitIndex]) {
         const dateIndex = data[dateSplitIndex].headers.findIndex(
@@ -59,14 +61,14 @@ export const formatData = (data, kpis) => {
           dataOverTime: data[dateSplitIndex].rows.map((row) => {
             return {
               date: new Date(row[dateIndex]),
-              [kpiLabel]: row[kpiIndex],
+              [kpiLabel]: row[kpiIndex]
             };
-          }),
+          })
         };
       } else {
         return {
           ...obj,
-          total: 0,
+          total: 0
         };
       }
     });
@@ -95,9 +97,9 @@ export const formatDataInSeriesFormat = (aggData) => {
         name: m.name,
         data: [...initializedDatesData],
         marker: {
-          enabled: false,
+          enabled: false
         },
-        total: m.total,
+        total: m.total
       };
     });
     aggData.forEach((m, index) => {
@@ -112,12 +114,12 @@ export const formatDataInSeriesFormat = (aggData) => {
     });
     return {
       categories,
-      data,
+      data
     };
   } catch (err) {
     return {
       categories: [],
-      data: [],
+      data: []
     };
   }
 };
@@ -129,7 +131,7 @@ export const getTableColumns = (
   eventNames,
   frequency
 ) => {
-  const format = DATE_FORMATS[frequency] || DATE_FORMATS['date'];
+  const format = DATE_FORMATS[frequency] || DATE_FORMATS.date;
   const result = [
     {
       title: getClickableTitleSorter(
@@ -141,8 +143,8 @@ export const getTableColumns = (
       dataIndex: 'date',
       render: (d) => {
         return addQforQuarter(frequency) + moment(d).format(format);
-      },
-    },
+      }
+    }
   ];
   const eventColumns = kpis.map((e, idx) => {
     const kpiLabel = getKpiLabel(e);
@@ -152,7 +154,7 @@ export const getTableColumns = (
         {
           key: `${kpiLabel} - ${idx}`,
           type: 'numerical',
-          subtype: null,
+          subtype: null
         },
         currentSorter,
         handleSorting,
@@ -161,8 +163,11 @@ export const getTableColumns = (
       className: 'text-right',
       dataIndex: `${kpiLabel} - ${idx}`,
       render: (d) => {
+        if (e.metricType === METRIC_TYPES.dateType) {
+          return formatDuration(d);
+        }
         return <NumFormat number={d} />;
-      },
+      }
     };
   });
   return [...result, ...eventColumns];
@@ -177,7 +182,7 @@ export const getDataInTableFormat = (
   const result = categories.map((cat, catIndex) => {
     const obj = {
       index: catIndex,
-      date: cat,
+      date: cat
     };
     queries.forEach((q, qIndex) => {
       const kpiLabel = getKpiLabel(q);
@@ -198,17 +203,17 @@ export const getDateBasedColumns = (
   const OverallColumn = {
     title: getClickableTitleSorter(
       'Overall',
-      { key: `Overall`, type: 'numerical', subtype: null },
+      { key: 'Overall', type: 'numerical', subtype: null },
       currentSorter,
       handleSorting,
       'right'
     ),
     className: 'text-right',
-    dataIndex: `Overall`,
+    dataIndex: 'Overall',
     width: 150,
     render: (d) => {
       return <NumFormat number={d} />;
-    },
+    }
   };
   const result = [
     {
@@ -217,7 +222,7 @@ export const getDateBasedColumns = (
         {
           key: 'event',
           type: 'categorical',
-          subtype: null,
+          subtype: null
         },
         currentSorter,
         handleSorting
@@ -227,10 +232,10 @@ export const getDateBasedColumns = (
       width: 200,
       render: (d) => {
         return eventNames[d] || d;
-      },
-    },
+      }
+    }
   ];
-  const format = DATE_FORMATS[frequency] || DATE_FORMATS['date'];
+  const format = DATE_FORMATS[frequency] || DATE_FORMATS.date;
   const dateColumns = categories.map((cat) => {
     return {
       title: getClickableTitleSorter(
@@ -238,7 +243,7 @@ export const getDateBasedColumns = (
         {
           key: addQforQuarter(frequency) + moment(cat).format(format),
           type: 'numerical',
-          subtype: null,
+          subtype: null
         },
         currentSorter,
         handleSorting,
@@ -249,7 +254,7 @@ export const getDateBasedColumns = (
       dataIndex: addQforQuarter(frequency) + moment(cat).format(format),
       render: (d) => {
         return <NumFormat number={d} />;
-      },
+      }
     };
   });
   return [...result, ...dateColumns, OverallColumn];
@@ -262,12 +267,12 @@ export const getDateBasedTableData = (
   currentSorter,
   frequency
 ) => {
-  const format = DATE_FORMATS[frequency] || DATE_FORMATS['date'];
+  const format = DATE_FORMATS[frequency] || DATE_FORMATS.date;
   const result = seriesData.map((sd, index) => {
     const obj = {
       index,
       event: sd.name,
-      Overall: sd.total,
+      Overall: sd.total
     };
     const dateData = {};
     categories.forEach((cat, catIndex) => {
@@ -276,7 +281,7 @@ export const getDateBasedTableData = (
     });
     return {
       ...obj,
-      ...dateData,
+      ...dateData
     };
   });
   const filteredResult = result.filter(

@@ -45,7 +45,8 @@ type Model interface {
 	UpdateAgentVerificationDetailsFromAuth0(agentUUID, firstName, lastName string, verified bool, value *postgres.Jsonb) int
 	GetPrimaryAgentOfProject(projectId uint64) (uuid string, errCode int)
 	UpdateAgentSalesforceInstanceURL(agentUUID string, instanceURL string) int
-	IsSlackIntegratedForProject(projectID uint64, agentUUID string) (bool,int)
+	IsSlackIntegratedForProject(projectID uint64, agentUUID string) (bool, int)
+	UpdateLastLoggedOut(agentUUID string, timestamp int64) int
 
 	// analytics
 	ExecQuery(stmnt string, params []interface{}) (*model.QueryResult, error)
@@ -120,6 +121,8 @@ type Model interface {
 	GetCustomMetricsByProjectId(projectID uint64) ([]model.CustomMetric, string, int)
 	GetCustomMetricByProjectIdAndObjectType(projectID uint64, queryType int, objectType string) ([]model.CustomMetric, string, int)
 	GetCustomMetricsByName(projectID uint64, name string) (model.CustomMetric, string, int)
+	GetCustomMetricsByID(projectID uint64, id string) (model.CustomMetric, string, int)
+	DeleteCustomMetricByID(projectID uint64, id string) int
 
 	//templates
 	RunTemplateQuery(projectID uint64, query model.TemplateQuery, reqID string) (model.TemplateResponse, int)
@@ -147,6 +150,7 @@ type Model interface {
 	GetQueryWithQueryIdString(projectID uint64, queryIDString string) (*model.Queries, int)
 	CacheDashboardUnitForDateRange(cachePayload model.DashboardUnitCachePayload) (int, string, model.CachingUnitReport)
 	CacheDashboardsForMonthlyRange(projectIDs, excludeProjectIDs string, numMonths, numRoutines int, reportCollector *sync.Map)
+	GetDashboardUnitNamesByProjectIdTypeAndName(projectID uint64, reqID string, typeOfQuery string, nameOfQuery string) ([]string, int)
 
 	// dashboard
 	CreateDashboard(projectID uint64, agentUUID string, dashboard *model.Dashboard) (*model.Dashboard, int)
@@ -285,6 +289,7 @@ type Model interface {
 	GetLastSyncedHubspotDocumentByID(projectID uint64, docID string, docType int) (*model.HubspotDocument, int)
 	GetLastSyncedHubspotUpdateDocumentByID(projectID uint64, docID string, docType int) (*model.HubspotDocument, int)
 	GetAllHubspotObjectValuesByPropertyName(ProjectID uint64, objectType, propertyName string) []interface{}
+	GetHubspotDocumentCountForSync(projectIDs []uint64, docTypes []int, maxCreatedAtSec int64) ([]model.HubspotDocumentCount, int)
 
 	// plan
 	GetPlanByID(planID uint64) (*model.Plan, int)
@@ -590,6 +595,7 @@ type Model interface {
 	GetAllAlerts(projectID uint64) ([]model.Alert, int)
 	DeleteAlert(id string, projectID uint64) (int, string)
 	CreateAlert(projectID uint64, alert model.Alert) (model.Alert, int, string)
+	GetAlertNamesByProjectIdTypeAndName(projectID uint64, nameOfQuery string) ([]string, int)
 	UpdateAlert(lastAlertSent bool) (int, string)
 
 	// sharable url
@@ -622,4 +628,9 @@ type Model interface {
 	GetActivitiesDistinctEventNamesByType(projectID uint64, objectTypes []int) (map[int][]string, int)
 	UpdateCRMProperyAsSynced(projectID uint64, source U.CRMSource, crmProperty *model.CRMProperty) (*model.CRMProperty, int)
 	UpdateCRMActivityAsSynced(projectID uint64, source U.CRMSource, crmActivity *model.CRMActivity, syncID, userID string) (*model.CRMActivity, int)
+
+	GetCRMSetting(projectID uint64) (*model.CRMSetting, int)
+	GetAllCRMSetting() ([]model.CRMSetting, int)
+	UpdateCRMSetting(projectID uint64, option model.CRMSettingOption) int
+	CreateOrUpdateCRMSetting(projectID uint64, crmSetting *model.CRMSetting) int
 }
