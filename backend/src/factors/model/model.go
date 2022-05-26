@@ -45,10 +45,10 @@ type Model interface {
 	UpdateAgentVerificationDetailsFromAuth0(agentUUID, firstName, lastName string, verified bool, value *postgres.Jsonb) int
 	GetPrimaryAgentOfProject(projectId uint64) (uuid string, errCode int)
 	UpdateAgentSalesforceInstanceURL(agentUUID string, instanceURL string) int
-	IsSlackIntegratedForProject(projectID uint64, agentUUID string) (bool,int)
+	IsSlackIntegratedForProject(projectID uint64, agentUUID string) (bool, int)
 
 	// analytics
-	ExecQuery(stmnt string, params []interface{}) (*model.QueryResult, error)
+	ExecQuery(stmnt string, params []interface{}) (*model.QueryResult, error, string)
 	ExecQueryWithContext(stmnt string, params []interface{}) (*sql.Rows, *sql.Tx, error, string)
 	Analyze(projectID uint64, query model.Query) (*model.QueryResult, int, string)
 

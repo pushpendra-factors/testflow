@@ -106,16 +106,20 @@ func (store *MemSQL) ExecuteAllUsersProfilesQuery(projectID uint64, query model.
 		return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
 	}
 
-	result, err := store.ExecQuery(sql, params)
+	result, err, reqID := store.ExecQuery(sql, params)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed executing SQL query generated.")
 		return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
 	}
+
+	startComputeTime := time.Now()
 	err = SanitizeQueryResultProfiles(result, &query)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to sanitize query results.")
 		return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
 	}
+	U.LogComputeTimeWithQueryRequestID(startComputeTime, reqID, &logFields)
+
 	return result, http.StatusOK, ""
 }
 

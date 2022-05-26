@@ -141,14 +141,14 @@ func (store *MemSQL) RunInsightsQuery(projectId uint64, query model.Query) (*mod
 		return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
 	}
 
-	result, err := store.ExecQuery(stmnt, params)
+	result, err, reqID := store.ExecQuery(stmnt, params)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed executing SQL query generated.")
 		return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
 	}
 
+	startComputeTime := time.Now()
 	groupPropsLen := len(query.GroupByProperties)
-
 	err = LimitQueryResult(result, groupPropsLen, query.GetGroupByTimestamp() != "")
 	if err != nil {
 		logCtx.WithError(err).Error("Failed processing query results for limiting.")
@@ -209,6 +209,7 @@ func (store *MemSQL) RunInsightsQuery(projectId uint64, query model.Query) (*mod
 		}
 	}
 	addQueryToResultMeta(result, query)
+	U.LogComputeTimeWithQueryRequestID(startComputeTime, reqID, &logFields)
 
 	return result, http.StatusOK, "Successfully executed query"
 }
