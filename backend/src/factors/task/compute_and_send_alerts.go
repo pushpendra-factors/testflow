@@ -388,6 +388,12 @@ func sendSlackAlert(projectID uint64, agentUUID string, msg Message, dateRange d
 	}
 	var success, fail int
 	slackMsg := getSlackMessage(msg, dateRange, timezone)
+	dryRunFlag := C.GetConfig().EnableDryRunAlerts
+	if dryRunFlag {
+		log.Info("Dry run mode enabled. No alerts will be sent")
+		log.Info(slackMsg, projectID)
+		return
+	}
 	for _, channels := range slackChannels {
 		for _, channel := range channels {
 			status, err := slack.SendSlackAlert(projectID, slackMsg, agentUUID, channel)
@@ -447,9 +453,8 @@ func getSlackMessage(msg Message, dateRange dateRanges, timezone U.TimeZoneStrin
 					{
 						"type": "section",
 						"text": {
-							"type": "plain_text",
+							"type": "mrkdwn",
 							"text": "*For the %s (%s - %s) %s *",
-							"emoji": true
 						}
 					},
 					{
