@@ -61,18 +61,18 @@ type AlertDescription struct {
 	ComparedTo string `json:"compared_to"`
 }
 type AlertConfiguration struct {
-	IsEmailEnabled             bool           `json:"email_enabled"`
-	IsSlackEnabled             bool           `json:"slack_enabled"`
-	Emails                     []string       `json:"emails"`
+	IsEmailEnabled             bool            `json:"email_enabled"`
+	IsSlackEnabled             bool            `json:"slack_enabled"`
+	Emails                     []string        `json:"emails"`
 	SlackChannelsAndUserGroups *postgres.Jsonb `json:"slack_channels_and_user_groups"`
 }
-type SlackChannels struct {
-	Channels map[string][]SlackChannel `json:"channels"`
+type SlackChannelsAndUserGroups struct {
+	SlackChannelsAndUserGroups map[string][]SlackChannel `json:"slack_channels_and_user_groups"`
 }
 type SlackChannel struct {
-	ChannelName string `json:"channel_name"`
-	ChannelID   string `json:"channel_id"`
-	IsPrivate   bool   `json:"is_private"`
+	Name      string `json:"name"`
+	Id        string `json:"id"`
+	IsPrivate bool   `json:"is_private"`
 }
 
 func DecodeAndFetchAlertRelatedStructs(projectID uint64, alert Alert) (AlertDescription, AlertConfiguration, KPIQuery, error) {

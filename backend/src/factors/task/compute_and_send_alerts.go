@@ -5,16 +5,17 @@ import (
 	C "factors/config"
 	"factors/model/model"
 	"factors/model/store"
+	slack "factors/slack_bot/handler"
 	U "factors/util"
 	"fmt"
+	"github.com/jinzhu/gorm/dialects/postgres"
+	"github.com/jinzhu/now"
+	log "github.com/sirupsen/logrus"
 	"math"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/jinzhu/now"
-	log "github.com/sirupsen/logrus"
 )
 
 type Message struct {
@@ -108,7 +109,7 @@ func ComputeAndSendAlerts(projectID uint64, configs map[string]interface{}) (map
 				sendEmailAlert(projectID, msg, dateRange, timezoneString, alertConfiguration.Emails)
 			}
 			if alertConfiguration.IsSlackEnabled {
-				sendSlackAlert(msg)
+				sendSlackAlert(alert.ProjectID, alert.CreatedBy, msg, dateRange, timezoneString, alertConfiguration.SlackChannelsAndUserGroups)
 			}
 		}
 		alert.LastAlertSent = true
@@ -334,21 +335,23 @@ func sendEmailAlert(projectID uint64, msg Message, dateRange dateRanges, timezon
 		}
 	}
 	actualValue := strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.2f", msg.ActualValue), "0"), ".")
+	actualValue = AddCommaToNumber(actualValue)
 
 	if msg.AlertType == 1 {
 		if msg.Category == strings.Title(model.PageViews) {
-			statement = fmt.Sprintf(`For the %s (%s to %s) <br> <b> %s from %s %s %s : %s </b>`, strings.ReplaceAll(msg.DateRange, "_", " "), from, to, strings.ReplaceAll(msg.AlertName, "_", " "), msg.PageURL, strings.ReplaceAll(msg.Operator, "_", " "), fmt.Sprint(msg.Value), actualValue)
+			statement = fmt.Sprintf(`For the %s (%s to %s) <br> <b> %s for %s %s %s : %s . </b>`, strings.ReplaceAll(msg.DateRange, "_", " "), from, to, strings.ReplaceAll(msg.AlertName, "_", " "), msg.PageURL, strings.ReplaceAll(msg.Operator, "_", " "), AddCommaToNumber(fmt.Sprint(msg.Value)), actualValue)
 		} else {
-			statement = fmt.Sprintf(`For the %s (%s to %s) <br> <b> %s from %s %s %s : %s </b>`, strings.ReplaceAll(msg.DateRange, "_", " "), from, to, strings.ReplaceAll(msg.AlertName, "_", " "), strings.ReplaceAll(msg.Category, "_", " "), strings.ReplaceAll(msg.Operator, "_", " "), fmt.Sprint(msg.Value), actualValue)
+			statement = fmt.Sprintf(`For the %s (%s to %s) <br> <b> %s for %s %s %s : %s . </b>`, strings.ReplaceAll(msg.DateRange, "_", " "), from, to, strings.ReplaceAll(msg.AlertName, "_", " "), strings.ReplaceAll(msg.Category, "_", " "), strings.ReplaceAll(msg.Operator, "_", " "), AddCommaToNumber(fmt.Sprint(msg.Value)), actualValue)
 		}
 
 		//	statement = fmt.Sprintf(`%s %s recorded for %s in %s from %s to %s`, fmt.Sprint(msg.ActualValue), strings.ReplaceAll(msg.AlertName, "_", " "), strings.ReplaceAll(msg.Category, "_", " "), strings.ReplaceAll(msg.DateRange, "_", " "), from, to)
 	} else if msg.AlertType == 2 {
 		ComparedValue := strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.2f", msg.ComparedValue), "0"), ".")
+		ComparedValue = AddCommaToNumber(ComparedValue)
 		if msg.Category == strings.Title(model.PageViews) {
-			statement = fmt.Sprintf(`For the %s (%s to %s) compared to %s <br> <b> %s from %s %s %s : %s(%s) </b>`, strings.ReplaceAll(msg.DateRange, "_", " "), from, to, strings.ReplaceAll(msg.ComparedTo, "_", " "), strings.ReplaceAll(msg.AlertName, "_", " "), msg.PageURL, strings.ReplaceAll(msg.Operator, "_", " "), fmt.Sprint(msg.Value), actualValue, ComparedValue)
+			statement = fmt.Sprintf(`For the %s (%s to %s) compared to %s <br> <b> %s for %s %s %s : %s(%s) . </b>`, strings.ReplaceAll(msg.DateRange, "_", " "), from, to, strings.ReplaceAll(msg.ComparedTo, "_", " "), strings.ReplaceAll(msg.AlertName, "_", " "), msg.PageURL, strings.ReplaceAll(msg.Operator, "_", " "), AddCommaToNumber(fmt.Sprint(msg.Value)), actualValue, ComparedValue)
 		} else {
-			statement = fmt.Sprintf(`For the %s (%s to %s) compared to %s <br> <b> %s from %s %s %s : %s(%s) </b>`, strings.ReplaceAll(msg.DateRange, "_", " "), from, to, strings.ReplaceAll(msg.ComparedTo, "_", " "), strings.ReplaceAll(msg.AlertName, "_", " "), strings.ReplaceAll(msg.Category, "_", " "), strings.ReplaceAll(msg.Operator, "_", " "), fmt.Sprint(msg.Value), actualValue, ComparedValue)
+			statement = fmt.Sprintf(`For the %s (%s to %s) compared to %s <br> <b> %s for %s %s %s : %s(%s) . </b>`, strings.ReplaceAll(msg.DateRange, "_", " "), from, to, strings.ReplaceAll(msg.ComparedTo, "_", " "), strings.ReplaceAll(msg.AlertName, "_", " "), strings.ReplaceAll(msg.Category, "_", " "), strings.ReplaceAll(msg.Operator, "_", " "), AddCommaToNumber(fmt.Sprint(msg.Value)), actualValue, ComparedValue)
 		}
 		//	statement = fmt.Sprintf(`%s %s %s for %s in %s (from %s to %s ) compared to %s - %s(%s)`, strings.ReplaceAll(msg.AlertName, "_", " "), strings.ReplaceAll(msg.Operator, "_", " "), fmt.Sprint(msg.Value), strings.ReplaceAll(msg.Category, "_", " "), strings.ReplaceAll(msg.DateRange, "_", " "), from, to, strings.ReplaceAll(msg.ComparedTo, "_", " "), fmt.Sprint(msg.ActualValue), fmt.Sprint(msg.ComparedValue))
 	}
@@ -372,10 +375,122 @@ func sendEmailAlert(projectID uint64, msg Message, dateRange dateRanges, timezon
 	log.Info("sent email alert to ", success, " failed to send email alert to ", fail)
 }
 
-func sendSlackAlert(msg Message) bool {
-	fmt.Println("slack alert sent")
-	return true
+func sendSlackAlert(projectID uint64, agentUUID string, msg Message, dateRange dateRanges, timezone U.TimeZoneString, config *postgres.Jsonb) {
+	logCtx := log.WithFields(log.Fields{
+		"project_id": projectID,
+		"agent_uuid": agentUUID,
+	})
+	slackChannels := make(map[string][]model.SlackChannel)
+	err := U.DecodePostgresJsonbToStructType(config, &slackChannels)
+	if err != nil {
+		log.WithError(err).Error("failed to decode slack channels")
+		return
+	}
+	var success, fail int
+	slackMsg := getSlackMessage(msg, dateRange, timezone)
+	for _, channels := range slackChannels {
+		for _, channel := range channels {
+			status, err := slack.SendSlackAlert(projectID, slackMsg, agentUUID, channel)
+			if err != nil || !status {
+				fail++
+				logCtx.WithError(err).Error("failed to send slack alert")
+				return
+			}
+			success++
+		}
+	}
+	logCtx.Info("sent slack alert to ", success, " failed to send slack alert to ", fail)
+
 }
+func getSlackMessage(msg Message, dateRange dateRanges, timezone U.TimeZoneString) string {
+	fromTime := time.Unix(dateRange.from, 0)
+	toTime := time.Unix(dateRange.to, 0)
+
+	fromTime = U.ConvertTimeIn(fromTime, timezone)
+	toTime = U.ConvertTimeIn(toTime, timezone)
+
+	from := fromTime.Format("02 Jan 2006")
+	to := toTime.Format("02 Jan 2006")
+
+	if msg.Operator == model.INCREASED_OR_DECREASED_BY_MORE_THAN || msg.Operator == model.PERCENTAGE_HAS_INCREASED_OR_DECREASED_BY_MORE_THAN {
+		if msg.ActualValue > msg.ComparedValue {
+			if msg.Operator == model.INCREASED_OR_DECREASED_BY_MORE_THAN {
+				msg.Operator = model.INCREASED_BY_MORE_THAN
+			} else {
+				msg.Operator = model.PERCENTAGE_HAS_INCREASED_BY_MORE_THAN
+			}
+		} else {
+			if msg.Operator == model.INCREASED_OR_DECREASED_BY_MORE_THAN {
+				msg.Operator = model.DECREASED_BY_MORE_THAN
+			} else {
+				msg.Operator = model.PERCENTAGE_HAS_DECREASED_BY_MORE_THAN
+			}
+		}
+	}
+	emoji := getEmojiForSlackByOperator(msg.Operator)
+	actualValue := strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.2f", msg.ActualValue), "0"), ".")
+	actualValue = AddCommaToNumber(actualValue)
+	CategoryVar := strings.ReplaceAll(msg.Category, "_", " ")
+	if msg.Category == strings.Title(model.PageViews) {
+		CategoryVar = msg.PageURL
+	}
+	var slackMsg string
+	comparedToStatement := ""
+	ComparedValue := ""
+	if msg.AlertType == 2 {
+		comparedToStatement = "compared to previous period "
+		ComparedValue = strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.2f", msg.ComparedValue), "0"), ".")
+		ComparedValue = AddCommaToNumber(ComparedValue)
+	}
+	slackMsg = fmt.Sprintf(`
+				[
+					{
+						"type": "section",
+						"text": {
+							"type": "plain_text",
+							"text": "*For the %s (%s - %s) %s *",
+							"emoji": true
+						}
+					},
+					{
+						"type": "header",
+						"text": {
+							"type": "plain_text",
+							"text": "%s for %s %s %s "
+						}
+					},
+					{
+						"type": "divider"
+					},
+					{
+						"type": "section",
+						"fields": [
+							{
+								"type": "mrkdwn",
+								"text": "*%s %s*"
+							},
+							{
+								"type": "mrkdwn",
+								"text": "%s"
+							}
+						]
+					},
+					{
+						"type": "divider"
+					},
+					{
+						"type": "section",
+						"text": {
+							"type": "mrkdwn",
+							"text": "*<https://app.factors.ai/|Go to Factors.ai>*"
+						}
+					}
+				]
+				`, strings.ReplaceAll(msg.DateRange, "_", " "), from, to, comparedToStatement, strings.ReplaceAll(msg.AlertName, "_", " "), CategoryVar, strings.ReplaceAll(msg.Operator, "_", " "), AddCommaToNumber(fmt.Sprint(msg.Value)), actualValue, ComparedValue, emoji)
+
+	return slackMsg
+}
+
 func getGBTForKPIQuery(dateRangeType string) string {
 	if dateRangeType == model.LAST_WEEK {
 		return model.GroupByTimestampWeek
@@ -393,4 +508,28 @@ func filterStringbyLastWord(displayCategory string, word string) string {
 		arr = arr[:len(arr)-1]
 	}
 	return strings.Join(arr, "_")
+}
+func getEmojiForSlackByOperator(op string) string {
+	if op == model.INCREASED_BY_MORE_THAN || op == model.PERCENTAGE_HAS_INCREASED_BY_MORE_THAN || op == model.IS_GREATER_THAN {
+		return ":large_green_circle:"
+	} else if op == model.DECREASED_BY_MORE_THAN || op == model.PERCENTAGE_HAS_DECREASED_BY_MORE_THAN || op == model.IS_LESS_THAN {
+		return ":red_circle:"
+	}
+	return ""
+}
+func AddCommaToNumber(number string) string {
+	if number == "" {
+		return ""
+	}
+	arr := strings.Split(number, ".")
+	output := arr[0]
+	startOffset := 3
+	for outputIndex := len(output); outputIndex > startOffset; {
+		outputIndex -= 3
+		output = output[:outputIndex] + "," + output[outputIndex:]
+	}
+	if len(arr) == 1 {
+		return output
+	}
+	return output + "." + arr[1]
 }

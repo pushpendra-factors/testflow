@@ -193,8 +193,8 @@ func SendSlackAlert(projectID uint64, message, agentUUID string, channel model.S
 	url := fmt.Sprintf("https://slack.com/api/chat.postMessage")
 	// create new http post request
 	reqBody := map[string]interface{}{
-		"channel": channel.ChannelID,
-		"text":    message,
+		"channel": channel.Id,
+		"blocks":  message,
 	}
 	jsonBody, err := json.Marshal(reqBody)
 	if err != nil {
@@ -211,18 +211,18 @@ func SendSlackAlert(projectID uint64, message, agentUUID string, channel model.S
 	client := &http.Client{}
 	resp, err := client.Do(request)
 	if err != nil {
-		log.Error("Failed to send slack alert")
+		log.Error("Failed to make request to slack for sending alert")
 		return false, err
 	}
-	var response string
+	var response map[string]interface{}
 	err = json.NewDecoder(resp.Body).Decode(&response)
 	if err != nil {
 		log.Error("Failed to decode response from slack")
 		return false, err
 	}
-	defer resp.Body.Close()
-	if response == "ok" {
+	if response["ok"] == true {
 		return true, nil
 	}
+	defer resp.Body.Close()
 	return false, errors.New("Failed to send slack alert")
 }
