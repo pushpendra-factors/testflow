@@ -447,6 +447,7 @@ func getSlackMessage(msg Message, dateRange dateRanges, timezone U.TimeZoneStrin
 		comparedToStatement = "compared to previous period "
 		ComparedValue = strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.2f", msg.ComparedValue), "0"), ".")
 		ComparedValue = AddCommaToNumber(ComparedValue)
+		ComparedValue = " (" + ComparedValue + ") "
 	}
 	slackMsg = fmt.Sprintf(`
 				[
