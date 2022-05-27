@@ -12,6 +12,8 @@ import {
   QUERY_TYPE_FUNNEL,
   QUERY_TYPE_EVENT,
   QUERY_TYPE_KPI,
+  INITIAL_SESSION_ANALYTICS_SEQ,
+  QUERY_OPTIONS_DEFAULT_VALUE
 } from '../../utils/constants';
 
 import FaDatepicker from '../../components/FaDatepicker';
@@ -26,10 +28,19 @@ import {
   fetchEventNames,
   getUserProperties,
   getEventProperties,
+  setGroupBy, 
+  delGroupBy,
 } from 'Reducers/coreQuery/middleware';
+
+import {
+  resetGroupByAction 
+} from 'Reducers/coreQuery/actions';
 
 import GLobalFilter from './GlobalFilter';
 import { getValidGranularityOptions } from '../../utils/dataFormatter';
+
+import { DefaultDateRangeFormat } from '../../Views/CoreQuery/utils';
+
 
 const { Option } = Select;
 
@@ -54,13 +65,24 @@ function KPIComposer({
   setCollapse,
   selectedMainCategory,
   setSelectedMainCategory,
-  KPIConfigProps,
+  KPIConfigProps, 
+  resetGroupByAction
 }) {
   const [analyticsSeqOpen, setAnalyticsSeqVisible] = useState(false);
   const [calendarLabel, setCalendarLabel] = useState('Pick Dates');
   const [criteriaTabOpen, setCriteriaTabOpen] = useState(false);
 
   const userProperties = useSelector((state) => state.coreQuery.userProperties);
+
+  const {
+    groupBy
+  } = useSelector((state) => state.coreQuery);
+
+  const DefaultQueryOptsVal = {
+      ...QUERY_OPTIONS_DEFAULT_VALUE,
+      session_analytics_seq: INITIAL_SESSION_ANALYTICS_SEQ,
+      date_range: { ...DefaultDateRangeFormat },
+  }
 
   // useEffect(() => {
   //   if (activeProject && activeProject.id) {
@@ -122,10 +144,14 @@ function KPIComposer({
     opts.globalFilters = filters;
     setQueryOptions(opts);
   };
-
+   
   const renderGlobalFilterBlock = (isSameKPIgrp) => {
     const [filterBlockOpen, setFilterBlockOpen] = useState(true);
     if (!isSameKPIgrp || _.isEmpty(queries)) {
+      //resetting setQueryOptions to default values
+      if(!_.isEmpty(queries) && !_.isEqual(queryOptions, DefaultQueryOptsVal)){
+        setQueryOptions({ ...DefaultQueryOptsVal });
+      }
       return null;
     }
     try {
@@ -162,11 +188,16 @@ function KPIComposer({
     } catch (err) {
       console.log(err);
     }
-  };
+  }; 
 
   const groupByBlock = (isSameKPIgrp) => {
     const [groupBlockOpen, setGroupBlockOpen] = useState(true);
     if (!isSameKPIgrp || _.isEmpty(queries)) {
+       //resetting setQueryOptions to default values
+       if(!_.isEmpty(queries) && !_.isEmpty(groupBy?.global)){ 
+        resetGroupByAction()
+      }
+      
       return null;
     }
 
@@ -507,6 +538,7 @@ const mapDispatchToProps = (dispatch) =>
       fetchEventNames,
       getEventProperties,
       getUserProperties,
+      resetGroupByAction
     },
     dispatch
   );

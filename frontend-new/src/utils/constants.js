@@ -521,3 +521,22 @@ export const REV_DISPLAY_PROP = { '(Not Set)': '$none' };
 export const METRIC_TYPES = {
   dateType: 'date_type'
 };
+
+
+export const QUERY_OPTIONS_DEFAULT_VALUE = { 
+  group_analysis: 'users',
+  groupBy: [
+    {
+      prop_category: '', // user / event
+      property: '', // user/eventproperty
+      prop_type: '', // categorical  /numberical
+      eventValue: '', // event name (funnel only)
+      eventName: '', // eventName $present for global user breakdown
+      eventIndex: 0,
+    },
+  ],
+  globalFilters: [],
+  event_analysis_seq: '',
+  session_analytics_seq: {},
+  date_range: {},
+}

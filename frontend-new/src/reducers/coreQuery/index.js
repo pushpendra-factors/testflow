@@ -5,6 +5,7 @@ import {
   FETCH_EVENT_PROPERTIES,
   FETCH_USER_PROPERTIES,
   SET_GROUPBY,
+  RESET_GROUPBY,
   DEL_GROUPBY,
   INITIALIZE_GROUPBY,
   DEL_GROUPBY_EVENT,
@@ -27,7 +28,7 @@ import {
   SET_EVENT_NAMES,
   SET_USER_PROP_NAME,
   SET_EVENT_PROP_NAME,
-  SET_ATTR_QUERIES
+  SET_ATTR_QUERIES, 
 } from './actions';
 import {
   SHOW_ANALYTICS_RESULT,
@@ -141,7 +142,7 @@ export default function (state = defaultState, action) {
       };
     }
 
-    case SET_GROUPBY:
+    case SET_GROUPBY:{
       let groupByState = Object.assign({}, state.groupBy);
       if (
         groupByState[action.groupByType] &&
@@ -158,6 +159,13 @@ export default function (state = defaultState, action) {
         });
       }
       return { ...state, groupBy: groupByState };
+    }
+    case RESET_GROUPBY:{ 
+      return { ...state, groupBy: {
+        global:[],
+        event:[]
+      } };
+    }
     case DEL_GROUPBY_EVENT: {
       return {
         ...state,
