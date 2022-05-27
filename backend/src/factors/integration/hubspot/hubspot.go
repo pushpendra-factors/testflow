@@ -1555,6 +1555,7 @@ func syncCompany(projectID uint64, document *model.HubspotDocument) int {
 	// update $hubspot_company_name and other company
 	// properties on each associated contact user.
 	isContactsUpdateFailed := false
+	contactUpdateCount := 0
 	for _, contactDocument := range contactDocuments {
 		if contactDocument.SyncId != "" {
 			contactSyncEvent, errCode := store.GetStore().GetEventById(
@@ -1570,11 +1571,17 @@ func syncCompany(projectID uint64, document *model.HubspotDocument) int {
 				}
 
 				if C.IsAllowedHubspotGroupsByProjectID(projectID) {
+					logCtx.Info("Updating user company group user id.")
 					_, status = store.GetStore().UpdateUserGroup(projectID, contactUser.ID, model.GROUP_NAME_HUBSPOT_COMPANY, companyGroupID, companyUserID)
 					if status != http.StatusAccepted && status != http.StatusNotModified {
 						logCtx.Error("Failed to update user group id.")
 					}
 				}
+
+				if contactUpdateCount > 100 {
+					continue
+				}
+
 				logCtx.WithFields(log.Fields{"total_contacts": len(contactIds)}).Info("Updating company contact properties.")
 				_, errCode := store.GetStore().UpdateUserPropertiesV2(projectID, contactUser.ID, userPropertiesJsonb,
 					contactUser.PropertiesUpdatedTimestamp+1, SDK.SourceHubspot, model.HubspotDocumentTypeNameCompany)
@@ -1583,6 +1590,7 @@ func syncCompany(projectID uint64, document *model.HubspotDocument) int {
 						"Failed to update user properites with company properties.")
 					isContactsUpdateFailed = true
 				}
+				contactUpdateCount++
 			}
 		}
 	}
