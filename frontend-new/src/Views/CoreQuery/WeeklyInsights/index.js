@@ -184,8 +184,8 @@ const WeeklyInishgtsResults = ({data, activeInsight, requestQuery,activeProject 
             const data = item?.change_in_scale;
             const value1 = data?.w1[0];
             const value2 = data?.w2[0];
-            const valuePercentage1 = data?.percentage[0];
-            const valuePercentage2 = data?.percentage[1];
+            const valuePercentage1 = data?.w1[1];
+            const valuePercentage2 = data?.w2[1];
             return( 
                     <div className={'flex  items-center pl-10'}> 
                         <Text type={"title"} weight={'thin'} color={'grey'} level={8} extraClass={"m-0 mr-2"}> {`Scale of`}</Text> 
