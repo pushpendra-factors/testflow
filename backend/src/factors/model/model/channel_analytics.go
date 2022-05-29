@@ -276,7 +276,7 @@ var ChannelNameProperty = ChannelObjectAndProperties{
 	},
 }
 
-// buildErrorResult takes the failure msg and wraps it into a model.QueryResult object
+// buildErrorResult takes the failure msg and wraps it into a QueryResult object
 func BuildErrorResultForChannelsV1(errMsg string) *ChannelQueryResultV1 {
 	errMsg = "Query failed:" + " - " + errMsg
 	headers := []string{AliasError}
@@ -408,6 +408,80 @@ func GetRequiredChannels(filters []ChannelFilterV1) (bool, bool, bool, bool, int
 	isLinkedinReq = checkIfChannelReq(LinkedinAds, filters) || checkIfChannelReq(OldLinkedinAds, filters)
 	isBingAdsReq = checkIfChannelReq(ChannelBingAds, filters)
 	return isAdwordsReq, isFacebookReq, isLinkedinReq, isBingAdsReq, http.StatusOK
+}
+
+// Migration of Channel to KPI specific.
+func TransformChannelsV1QueryToKPIQueryGroup(channelsV1QueryGroup ChannelGroupQueryV1) KPIQueryGroup {
+	finalResultantKPIQuery := KPIQueryGroup{}
+	finalResultantKPIQuery.Class = QueryClassKPI
+	finalResultantKPIQuery.GlobalFilters = getTransformFilters(channelsV1QueryGroup.Queries[0].Filters)
+	finalResultantKPIQuery.GlobalGroupBy = getTransformGroupBy(channelsV1QueryGroup.Queries[0].GroupBy)
+	for _, channelQuery := range channelsV1QueryGroup.Queries {
+		finalResultantKPIQuery.Queries = append(finalResultantKPIQuery.Queries, transformChannelsV1QueryToKPIQuery(channelQuery)...)
+	}
+	return finalResultantKPIQuery
+}
+
+func transformChannelsV1QueryToKPIQuery(channelsV1Query ChannelQueryV1) []KPIQuery {
+	kpiQuery := KPIQuery{}
+	kpiQuery.Category = "channels"
+	kpiQuery.DisplayCategory = getDisplayCategory(channelsV1Query.Channel)
+	kpiQuery.PageUrl = ""
+	kpiQuery.From = channelsV1Query.From
+	kpiQuery.To = channelsV1Query.To
+	kpiQuery.Timezone = channelsV1Query.Timezone
+	kpiQuery.GroupByTimestamp = channelsV1Query.GetGroupByTimestamp()
+
+	rKPIQueries := make([]KPIQuery, 0)
+	for _, metric := range channelsV1Query.SelectMetrics {
+		currentKPIQuery := KPIQuery{}
+		U.DeepCopy(&kpiQuery, &currentKPIQuery)
+		currentKPIQuery.Metrics = []string{metric}
+		rKPIQueries = append(rKPIQueries, currentKPIQuery)
+	}
+
+	return rKPIQueries
+}
+
+func getDisplayCategory(channel string) string {
+	var MapOfCategoryToChannel = map[string]string{
+		"all_ads":        AllChannelsDisplayCategory,
+		"google_ads":     AdwordsDisplayCategory,
+		"facebook_ads":   FacebookDisplayCategory,
+		"linkedin_ads":   LinkedinDisplayCategory,
+		"search_console": GoogleOrganicDisplayCategory,
+	}
+	return MapOfCategoryToChannel[channel]
+}
+
+func getTransformFilters(filters []ChannelFilterV1) []KPIFilter {
+	finalResultantFilters := make([]KPIFilter, 0)
+	for _, currentChannelFilter := range filters {
+		currentKPIFilter := KPIFilter{}
+		currentKPIFilter.Condition = currentChannelFilter.Condition
+		currentKPIFilter.Entity = ""
+		currentKPIFilter.LogicalOp = currentChannelFilter.LogicalOp
+		currentKPIFilter.ObjectType = currentChannelFilter.Object
+		currentKPIFilter.PropertyName = currentChannelFilter.Object + "_" + currentChannelFilter.Property
+		currentKPIFilter.PropertyDataType = "categorical"
+		currentKPIFilter.Value = currentChannelFilter.Value
+		finalResultantFilters = append(finalResultantFilters, currentKPIFilter)
+	}
+	return finalResultantFilters
+}
+
+func getTransformGroupBy(groupBys []ChannelGroupBy) []KPIGroupBy {
+	finalResultantGroupBys := make([]KPIGroupBy, 0)
+	for _, groupBy := range groupBys {
+		currentKPIGroup := KPIGroupBy{}
+		currentKPIGroup.Entity = ""
+		currentKPIGroup.Granularity = ""
+		currentKPIGroup.ObjectType = groupBy.Object
+		currentKPIGroup.PropertyName = groupBy.Object + "_" + groupBy.Property
+		currentKPIGroup.PropertyDataType = "categorical"
+		finalResultantGroupBys = append(finalResultantGroupBys, currentKPIGroup)
+	}
+	return finalResultantGroupBys
 }
 
 func GetFromAndToDatesForFilterValues() (string, string) {
