@@ -333,20 +333,16 @@ func TestKpiAnalyticsForProfile(t *testing.T) {
 	w := sendCreateCustomMetric(a, project.ID, agent, transformations1, name1, description1, "hubspot_contacts")
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	type KPIFilter struct {
-		ObjectType       string `json:"objTy"`
-		PropertyName     string `json:"prNa"`
-		PropertyDataType string `json:"prDaTy"`
-		Entity           string `json:"en"`
-		Condition        string `json:"co"`
-		Value            string `json:"va"`
-		LogicalOp        string `json:"lOp"`
-	}
-
 	name2 := U.RandomString(8)
 	description2 := U.RandomString(8)
 	transformations2 := &postgres.Jsonb{json.RawMessage(`{"agFn": "sum", "agPr": "$hubspot_amount", "agPrTy": "categorical", "fil": [{"objTy": "", "prNa": "country", "prDaTy": "categorical", "en": "user", "co": "equals", "va": "india", "lOp": "AND"}], "daFie": "$hubspot_datefield1"}`)}
 	w = sendCreateCustomMetric(a, project.ID, agent, transformations2, name2, description2, "hubspot_contacts")
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	name3 := U.RandomString(8)
+	description3 := U.RandomString(8)
+	transformations3 := &postgres.Jsonb{json.RawMessage(`{"agFn": "average", "agPr": "$hubspot_amount", "agPrTy": "categorical", "fil": [{"objTy": "", "prNa": "country", "prDaTy": "categorical", "en": "user", "co": "equals", "va": "india", "lOp": "AND"}], "daFie": "$hubspot_datefield1"}`)}
+	w = sendCreateCustomMetric(a, project.ID, agent, transformations3, name3, description3, "hubspot_contacts")
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	t.Run("test hubspot contacts with no filters and no group by", func(t *testing.T) {
@@ -429,6 +425,7 @@ func TestKpiAnalyticsForProfile(t *testing.T) {
 	})
 
 	t.Run("test hubspot contacts with filters present in custom metric", func(t *testing.T) {
+		// Query which supports simple function - Sum or count
 		query1 := model.KPIQuery{
 			Category:         "profile",
 			DisplayCategory:  "hubspot_contacts",
@@ -444,13 +441,13 @@ func TestKpiAnalyticsForProfile(t *testing.T) {
 		U.DeepCopy(&query1, &query2)
 		query2.GroupByTimestamp = ""
 
-		kpiQueryGroup2 := model.KPIQueryGroup{
+		kpiQueryGroup := model.KPIQueryGroup{
 			Class:         "kpi",
 			Queries:       []model.KPIQuery{query1, query2},
 			GlobalFilters: []model.KPIFilter{},
 			GlobalGroupBy: []model.KPIGroupBy{},
 		}
-		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup2)
+		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup)
 		assert.Equal(t, http.StatusOK, statusCode)
 		assert.Equal(t, result[0].Headers, []string{"datetime", name2})
 		assert.Equal(t, len(result[0].Rows), 1)
@@ -461,9 +458,39 @@ func TestKpiAnalyticsForProfile(t *testing.T) {
 		assert.Equal(t, result[1].Rows[0][0], float64(300))
 
 		log.WithField("result", result).Warn("kark1")
+
+		// Query which supports complex function - Average
+		query3 := model.KPIQuery{
+			Category:         "profile",
+			DisplayCategory:  "hubspot_contacts",
+			PageUrl:          "",
+			Metrics:          []string{name3},
+			GroupBy:          []M.KPIGroupBy{},
+			From:             1640975425 - 200,
+			To:               1640975425 + 200,
+			GroupByTimestamp: "date",
+		}
+
+		query4 := model.KPIQuery{}
+		U.DeepCopy(&query3, &query4)
+		query4.GroupByTimestamp = ""
+
+		kpiQueryGroup2 := model.KPIQueryGroup{
+			Class:         "kpi",
+			Queries:       []model.KPIQuery{query3, query4},
+			GlobalFilters: []model.KPIFilter{},
+			GlobalGroupBy: []model.KPIGroupBy{},
+		}
+		result2, statusCode2 := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup2)
+		log.WithField("result2", result2).Warn("kark2")
+		assert.Equal(t, http.StatusOK, statusCode2)
+		assert.Equal(t, result2[0].Headers, []string{"datetime", name3})
+		assert.Equal(t, len(result2[0].Rows), 1)
+		assert.Equal(t, result[0].Rows[0][1], float64(300))
 	})
 
 	t.Run("test hubspot contacts with filter and group by", func(t *testing.T) {
+		// Query which supports simple function - Sum or count
 		query1 := model.KPIQuery{
 			Category:         "profile",
 			DisplayCategory:  "hubspot_contacts",
@@ -488,13 +515,13 @@ func TestKpiAnalyticsForProfile(t *testing.T) {
 			Granularity:      "",
 		}
 
-		kpiQueryGroup2 := model.KPIQueryGroup{
+		kpiQueryGroup1 := model.KPIQueryGroup{
 			Class:         "kpi",
 			Queries:       []model.KPIQuery{query1, query2},
 			GlobalFilters: []model.KPIFilter{},
 			GlobalGroupBy: []model.KPIGroupBy{groupBy},
 		}
-		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup2)
+		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup1)
 		assert.Equal(t, http.StatusOK, statusCode)
 		assert.Equal(t, result[0].Headers, []string{"datetime", groupBy.PropertyName, name2})
 		assert.Equal(t, len(result[0].Rows), 1)
@@ -507,6 +534,36 @@ func TestKpiAnalyticsForProfile(t *testing.T) {
 		assert.Equal(t, result[1].Rows[0][1], float64(300))
 
 		log.WithField("result", result).Warn("kark1")
+
+		// Query which supports complex function - Average
+		query3 := model.KPIQuery{
+			Category:         "profile",
+			DisplayCategory:  "hubspot_contacts",
+			PageUrl:          "",
+			Metrics:          []string{name3},
+			GroupBy:          []M.KPIGroupBy{},
+			From:             1640975425 - 200,
+			To:               1640975425 + 200,
+			GroupByTimestamp: "date",
+		}
+
+		query4 := model.KPIQuery{}
+		U.DeepCopy(&query3, &query4)
+		query4.GroupByTimestamp = ""
+
+		kpiQueryGroup2 := model.KPIQueryGroup{
+			Class:         "kpi",
+			Queries:       []model.KPIQuery{query3, query4},
+			GlobalFilters: []model.KPIFilter{},
+			GlobalGroupBy: []model.KPIGroupBy{groupBy},
+		}
+		result2, statusCode2 := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup2)
+		log.WithField("result2", result2).Warn("kark2")
+		assert.Equal(t, http.StatusOK, statusCode2)
+		assert.Equal(t, result2[0].Headers, []string{"datetime", groupBy.PropertyName, name3})
+		assert.Equal(t, len(result2[0].Rows), 1)
+		assert.Equal(t, result[0].Rows[0][1], "india")
+		assert.Equal(t, result[0].Rows[0][2], float64(300))
 	})
 }
 

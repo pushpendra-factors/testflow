@@ -19,11 +19,12 @@ type CustomMetricObjectTypeAndProperties struct {
 }
 
 const (
-	SumAggregateFunction    = "sum"
-	UniqueAggregateFunction = "unique"
+	SumAggregateFunction     = "sum"
+	UniqueAggregateFunction  = "unique"
+	AverageAggregateFunction = "average"
 )
 
-var CustomMetricAggregateFunctions = []string{SumAggregateFunction, UniqueAggregateFunction}
+var CustomMetricAggregateFunctions = []string{SumAggregateFunction, UniqueAggregateFunction, AverageAggregateFunction}
 var CustomMetricObjectTypeNames = []string{HubspotContactsDisplayCategory, HubspotCompaniesDisplayCategory, HubspotDealsDisplayCategory,
 	SalesforceUsersDisplayCategory, SalesforceAccountsDisplayCategory, SalesforceOpportunitiesDisplayCategory, MarketoLeadsDisplayCategory}
 var ProfileQueryType = 1

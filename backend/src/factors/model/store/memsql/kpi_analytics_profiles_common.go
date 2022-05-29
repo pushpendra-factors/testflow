@@ -90,7 +90,7 @@ func (store *MemSQL) wrappedExecuteForResultProfile(projectID uint64, profileQue
 		return finalResult
 	} else {
 		results := model.TransformProfileResultsToKPIResults(resultGroup.Results, hasGroupByTimestamp, hasAnyGroupBys)
-		finalResult = model.HandlingProfileResultsByApplyingOperations(results, "Division", kpiQuery.Timezone, isTimezoneEnabled)
+		finalResult = model.HandlingProfileResultsByApplyingOperations(results, currentQueries, kpiQuery.Timezone, isTimezoneEnabled)
 	}
 	return finalResult
 }

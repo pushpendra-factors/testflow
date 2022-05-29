@@ -111,6 +111,10 @@ type ProfileQuery struct {
 	AggregateFunction     string `json:"agFn"`
 	AggregateProperty     string `json:"agPr"`
 	AggregatePropertyType string `json:"agPrTy"`
+
+	// We convert the exposed expression to internal ones.
+	// If average is considered as an exposed expression, we break it to 2 queries and assign the operator here.
+	Operator string `json:"op"`
 }
 
 func (q *ProfileQuery) SetTimeZone(timezoneString U.TimeZoneString) {
@@ -120,6 +124,7 @@ func (q *ProfileQuery) SetTimeZone(timezoneString U.TimeZoneString) {
 func (q *ProfileQuery) GetTimeZone() U.TimeZoneString {
 	return U.TimeZoneString(q.Timezone)
 }
+
 func (query *ProfileQuery) TransformDateTypeFilters() error {
 	timezoneString := query.GetTimeZone()
 	for i, _ := range query.Filters {
