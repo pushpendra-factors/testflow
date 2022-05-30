@@ -70,6 +70,7 @@ import {
   presentationObj,
   DefaultChartTypes,
   CHART_TYPE_TABLE,
+  QUERY_OPTIONS_DEFAULT_VALUE
 } from '../../utils/constants';
 import { SHOW_ANALYTICS_RESULT } from '../../reducers/types';
 import AnalysisResultsPage from './AnalysisResultsPage';
@@ -139,19 +140,7 @@ function CoreQuery({
 
   const [profileQueries, setProfileQueries] = useState([]);
   const [queryOptions, setQueryOptions] = useState({
-    group_analysis: 'users',
-    groupBy: [
-      {
-        prop_category: '', // user / event
-        property: '', // user/eventproperty
-        prop_type: '', // categorical  /numberical
-        eventValue: '', // event name (funnel only)
-        eventName: '', // eventName $present for global user breakdown
-        eventIndex: 0,
-      },
-    ],
-    globalFilters: [],
-    event_analysis_seq: '',
+    ...QUERY_OPTIONS_DEFAULT_VALUE,
     session_analytics_seq: INITIAL_SESSION_ANALYTICS_SEQ,
     date_range: { ...DefaultDateRangeFormat },
   });

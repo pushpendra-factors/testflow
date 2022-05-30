@@ -49,8 +49,11 @@ function Dashboard({
         console.log(err);
         history.push('/');
       });
-    fetchBingAdsIntegration(activeProject.id);
-    fetchMarketoIntegration(activeProject.id);
+
+    if (dashboards?.data?.length == 0) {
+      fetchBingAdsIntegration(activeProject.id);
+      fetchMarketoIntegration(activeProject.id);
+    }
   }, [activeProject, sdkCheck]);
 
   const checkIntegration =

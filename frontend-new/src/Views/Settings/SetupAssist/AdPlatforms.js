@@ -185,6 +185,12 @@ function IntegrationSettings({ currentProjectSettings, activeProject, fetchProje
             {/* <Text type={'title'} size={8} color={'grey'} extraClass={'m-0'}>LEARN MORE</Text> */}
           </Col>
         </Row>
+        <Row>
+          <Col span={24}>
+            <Text type={'title'} level={7} color={'grey-2'} extraClass={'m-0 mb-1'}>Your Ads account data will be available on the platform 24 hours from the point of integration. Once it’s available, you’ll have the last 30 days of data to start working with.</Text>
+            <Text type={'title'} level={7} color={'grey-2'} extraClass={'m-0'}>You can connect to multiple ad accounts within each ad platform. </Text>
+          </Col>
+        </Row>
         <Row className={'mt-4'}>
           <Col span={24}>
             {dataLoading ? <Skeleton active paragraph={{ rows: 4 }} />

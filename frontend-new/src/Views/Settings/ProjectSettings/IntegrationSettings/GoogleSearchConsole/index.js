@@ -137,7 +137,7 @@ const GoogleSearchConsole = ({
         if (r.status >= 400) {
           setShowManageBtn(true);
           setCustomerAccountsLoaded(false);
-          message.error('Error fetching Google Ad accounts');
+          message.error('Oops! We noticed an error whilst trying to fetch your Google Ads account. Please try again.');
         }
       })
       .catch((err) => {

@@ -48,6 +48,20 @@ func syncWorker(projectID uint64, wg *sync.WaitGroup, numDocRoutines int, syncSt
 
 	status, hasFailure := IntHubspot.Sync(projectID, numDocRoutines, recordsMaxCreatedAt, datePropertiesByObjectType, timeZone)
 	syncStatus.AddSyncStatus(status, hasFailure)
+
+	// mark enrich_heavy as false irrespective of failure, let the distributer re distribute the project
+	errCode := store.GetStore().UpdateCRMSetting(projectID, model.HubspotEnrichHeavy(false))
+	if errCode != http.StatusAccepted {
+		log.WithFields(log.Fields{"project_id": projectID}).Error("Failed to mark hubspot project for crm settings")
+	}
+}
+
+func isEnrichHeavyProject(projectID uint64, settings map[uint64]model.CRMSetting) bool {
+	if _, exists := settings[projectID]; !exists {
+		return false
+	}
+
+	return settings[projectID].HubspotEnrichHeavy
 }
 
 // RunHubspotEnrich task management compatible function for hubspot enrichment job
@@ -60,6 +74,7 @@ func RunHubspotEnrich(configs map[string]interface{}) (map[string]interface{}, b
 	overrideHealthcheckPingID := configs["override_healthcheck_ping_id"].(string)
 	numProjectRoutines := configs["num_project_routines"].(int)
 	hubspotMaxCreatedAt := configs["max_record_created_at"].(int64)
+	enrichHeavy := configs["enrich_heavy"].(bool)
 	healthcheckPingID := C.GetHealthcheckPingID(defaultHealthcheckPingID, overrideHealthcheckPingID)
 
 	hubspotEnabledProjectSettings, errCode := store.GetStore().GetAllHubspotProjectSettings()
@@ -89,6 +104,12 @@ func RunHubspotEnrich(configs map[string]interface{}) (map[string]interface{}, b
 		log.WithField("excluded_projects", disabledProjectIDList).Info("Running with exclusion of projects.")
 	}
 
+	crmSettingsMap, err := getAllCRMSettingsAsMap()
+	if err != nil || len(crmSettingsMap) == 0 { // crmSettingsMap cannot be 0 since project distributer would have created entries
+		log.WithError(err).Error("Failed to get all crm settings for hubspot enrich.")
+		return nil, false
+	}
+
 	projectIDs := make([]uint64, 0, 0)
 	hubspotProjectSettingsMap := make(map[uint64]*model.HubspotProjectSettings, 0)
 	for _, settings := range hubspotEnabledProjectSettings {
@@ -100,6 +121,11 @@ func RunHubspotEnrich(configs map[string]interface{}) (map[string]interface{}, b
 			if _, exists := allowedProjects[settings.ProjectId]; !exists {
 				continue
 			}
+		}
+
+		if (enrichHeavy && !isEnrichHeavyProject(settings.ProjectId, crmSettingsMap)) ||
+			(!enrichHeavy && isEnrichHeavyProject(settings.ProjectId, crmSettingsMap)) {
+			continue
 		}
 
 		if C.IsEnabledPropertyDetailByProjectID(settings.ProjectId) {

@@ -1,10 +1,17 @@
-import React from "react";
-import styles from "./index.module.scss";
-import { Number as NumFormat } from "../factorsComponents";
-import {  useSelector } from 'react-redux';
+import React from 'react';
+import styles from './index.module.scss';
+import { Number as NumFormat } from '../factorsComponents';
+import { useSelector } from 'react-redux';
+import { METRIC_TYPES } from '../../utils/constants';
+import { formatDuration } from '../../utils/dataFormatter';
 
-function ChartHeader({ total, query, bgColor, smallFont = false }) {
-
+function ChartHeader({
+  total,
+  query,
+  bgColor,
+  smallFont = false,
+  metricType = null
+}) {
   const { eventNames } = useSelector((state) => state.coreQuery);
 
   const displayQueryName = (q) => {
@@ -13,19 +20,25 @@ function ChartHeader({ total, query, bgColor, smallFont = false }) {
 
   return (
     <div className="flex flex-col items-center justify-center">
-      <div className={`flex items-center ${smallFont ? "mb-2" : "mb-4"}`}>
+      <div className={`flex items-center ${smallFont ? 'mb-2' : 'mb-4'}`}>
         <div
           style={{ backgroundColor: bgColor }}
           className={`mr-1 ${styles.eventCircle}`}
         ></div>
         <div className={styles.eventText}>
-          {query.length > 20 ? displayQueryName(query).slice(0, 20) + "..." : displayQueryName(query)}
+          {query.length > 30
+            ? displayQueryName(query).slice(0, 30) + '...'
+            : displayQueryName(query)}
         </div>
       </div>
       <div
         className={`${smallFont ? styles.smallerTotalText : styles.totalText}`}
       >
-        <NumFormat shortHand={total > 10000} number={total} />
+        {metricType === METRIC_TYPES.dateType ? (
+          formatDuration(total)
+        ) : (
+          <NumFormat shortHand={total > 10000} number={total} />
+        )}
       </div>
     </div>
   );

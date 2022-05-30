@@ -1,5 +1,6 @@
 import React from 'react';
-import _ from 'lodash';
+import get from 'lodash/get';
+import has from 'lodash/has';
 import moment from 'moment';
 import {
   getClickableTitleSorter,
@@ -330,7 +331,8 @@ export const renderHorizontalBarChart = (
   const categories = data.map((elem, index) => {
     series[0].data.push({
       y: elem.value,
-      color: colors[index % 10]
+      color: colors[index % 10],
+      metricType: get(elem, 'metricType', null)
     });
     return elem[key];
   });
@@ -470,7 +472,7 @@ export const getHorizontalBarChartColumns = (
       render: (d) => {
         const obj = {
           children: <div className="h-full p-6">{d.value}</div>,
-          props: _.has(d, 'rowSpan') ? { rowSpan: d.rowSpan } : {}
+          props: has(d, 'rowSpan') ? { rowSpan: d.rowSpan } : {}
         };
         return obj;
       }

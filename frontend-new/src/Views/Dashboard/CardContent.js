@@ -1,11 +1,12 @@
 import React, { useMemo } from 'react';
 import { Spin } from 'antd';
+import { get } from 'lodash';
 import {
   getStateQueryFromRequestQuery,
   getAttributionStateFromRequestQuery,
   getCampaignStateFromRequestQuery,
   getProfileQueryFromRequestQuery,
-  getKPIStateFromRequestQuery,
+  getKPIStateFromRequestQuery
 } from '../CoreQuery/utils';
 import EventsAnalytics from './EventsAnalytics';
 import Funnels from './Funnels';
@@ -20,7 +21,7 @@ import {
   QUERY_TYPE_PROFILE,
   QUERY_TYPE_KPI,
   apiChartAnnotations,
-  CHART_TYPE_TABLE,
+  CHART_TYPE_TABLE
 } from '../../utils/constants';
 import Attributions from './Attributions';
 import CampaignAnalytics from './CampaignAnalytics';
@@ -31,7 +32,7 @@ import ProfileAnalysis from './ProfileAnalysis';
 import KPIAnalysis from './KPIAnalysis';
 import {
   DEFAULT_DASHBOARD_PRESENTATION,
-  DASHBOARD_PRESENTATION_KEYS,
+  DASHBOARD_PRESENTATION_KEYS
 } from '../../components/SaveQuery/saveQuery.constants';
 
 function CardContent({ unit, resultState, durationObj }) {
@@ -61,7 +62,8 @@ function CardContent({ unit, resultState, durationObj }) {
       return getAttributionStateFromRequestQuery(
         unit.query.query.query,
         attr_dimensions,
-        content_groups
+        content_groups,
+        kpiConfig
       );
     } else if (
       unit.query.query.cl &&
@@ -71,7 +73,7 @@ function CardContent({ unit, resultState, durationObj }) {
     } else {
       return getStateQueryFromRequestQuery(unit.query.query);
     }
-  }, [unit.query.query, attr_dimensions, content_groups]);
+  }, [unit.query.query, attr_dimensions, content_groups, kpiConfig]);
 
   const { queryType } = equivalentQuery;
   const breakdownType = useMemo(() => {
@@ -99,12 +101,12 @@ function CardContent({ unit, resultState, durationObj }) {
     if (
       queryType === QUERY_TYPE_EVENT ||
       queryType === QUERY_TYPE_FUNNEL ||
-      queryType == QUERY_TYPE_PROFILE ||
+      queryType === QUERY_TYPE_PROFILE ||
       queryType === QUERY_TYPE_KPI
     ) {
       return [
         ...equivalentQuery.breakdown.event,
-        ...equivalentQuery.breakdown.global,
+        ...equivalentQuery.breakdown.global
       ];
     }
   }, [queryType, equivalentQuery.breakdown]);
@@ -122,7 +124,7 @@ function CardContent({ unit, resultState, durationObj }) {
           eventName: q.alias ? q.alias : eventNames[q.label] || q.label,
           index,
           mapper: `event${index + 1}`,
-          displayName: q.alias ? q.alias : eventNames[q.label] || q.label,
+          displayName: q.alias ? q.alias : eventNames[q.label] || q.label
         });
       });
       return am;
@@ -138,7 +140,7 @@ function CardContent({ unit, resultState, durationObj }) {
         linkedEvents: equivalentQuery.linkedEvents,
         attr_dimensions: equivalentQuery.attr_dimensions,
         content_groups: equivalentQuery.content_groups,
-        queryOptions: {group_analysis: equivalentQuery.analyze_type},
+        queryOptions: { group_analysis: equivalentQuery.analyze_type },
         attrQueries: equivalentQuery.attrQueries
       };
     }
@@ -150,7 +152,7 @@ function CardContent({ unit, resultState, durationObj }) {
         channel: unit.query.query.query_group[0].channel,
         filters: unit.query.query.query_group[0].filters,
         select_metrics: unit.query.query.query_group[0].select_metrics,
-        group_by: unit.query.query.query_group[0].group_by,
+        group_by: unit.query.query.query_group[0].group_by
       };
     }
   }, [queryType, unit.query.query]);
@@ -161,7 +163,7 @@ function CardContent({ unit, resultState, durationObj }) {
         return {
           eventName: metric,
           index,
-          mapper: `event${index + 1}`,
+          mapper: `event${index + 1}`
         };
       });
     }
@@ -169,15 +171,15 @@ function CardContent({ unit, resultState, durationObj }) {
 
   if (resultState.loading) {
     content = (
-      <div className='flex justify-center items-center w-full h-full'>
-        <Spin size='small' />
+      <div className="flex justify-center items-center w-full h-full">
+        <Spin size="small" />
       </div>
     );
   }
 
   if (resultState.error) {
     content = (
-      <div className='flex justify-center items-center w-full h-full'>
+      <div className="flex justify-center items-center w-full h-full">
         <NoDataChart />
       </div>
     );
@@ -185,9 +187,9 @@ function CardContent({ unit, resultState, durationObj }) {
 
   if (resultState.apiCallStatus && !resultState.apiCallStatus.required) {
     content = (
-      <div className='flex justify-center flex-col items-center w-full h-full px-2 text-center'>
-        <SVG name='nodata' />
-        <Text type='title' color='grey' extraClass='mb-0'>
+      <div className="flex justify-center flex-col items-center w-full h-full px-2 text-center">
+        <SVG name="nodata" />
+        <Text type="title" color="grey" extraClass="mb-0">
           {resultState.apiCallStatus.message}
         </Text>
       </div>
@@ -195,13 +197,13 @@ function CardContent({ unit, resultState, durationObj }) {
   }
 
   if (resultState.data) {
-    const reportSelectedChart = _.get(
+    const reportSelectedChart = get(
       unit,
       'query.settings.chart',
       apiChartAnnotations[CHART_TYPE_TABLE]
     );
 
-    const selectedDashboardPresentation = _.get(
+    const selectedDashboardPresentation = get(
       unit,
       'query.settings.dashboardPresentation',
       DEFAULT_DASHBOARD_PRESENTATION

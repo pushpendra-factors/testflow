@@ -81,3 +81,31 @@ func (store *MemSQL) GetCustomMetricsByName(projectID uint64, name string) (mode
 	}
 	return customMetric, "", http.StatusFound
 }
+
+// TODO lets see if unique index can be used for fetching.
+func (store *MemSQL) GetCustomMetricsByID(projectID uint64, id string) (model.CustomMetric, string, int) {
+	logCtx := log.WithField("projectID", projectID)
+	db := C.GetServices().Db
+	if projectID == 0 {
+		return model.CustomMetric{}, "Invalid project ID for custom metric", http.StatusBadRequest
+	}
+	var customMetric model.CustomMetric
+	err := db.Where("project_id = ? AND type_of_query = 1 AND id = ?", projectID, id).Find(&customMetric).Error
+	if err != nil {
+		logCtx.WithError(err).Warn("Failed while retrieving custom metrics.")
+		return customMetric, err.Error(), http.StatusInternalServerError
+	}
+	return customMetric, "", http.StatusFound
+}
+
+func (store *MemSQL) DeleteCustomMetricByID(projectID uint64, id string) int {
+	logCtx := log.WithField("projectID", projectID)
+	db := C.GetServices().Db
+	var customMetric model.CustomMetric
+	err := db.Where("project_id = ? AND type_of_query = 1 AND id = ?", projectID, id).Delete(&customMetric).Error
+	if err != nil {
+		logCtx.WithError(err).Warn("Failed while deleting custom metrics.")
+		return http.StatusInternalServerError
+	}
+	return http.StatusAccepted
+}

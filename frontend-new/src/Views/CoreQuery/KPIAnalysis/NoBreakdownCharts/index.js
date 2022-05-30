@@ -5,23 +5,23 @@ import React, {
   forwardRef,
   useImperativeHandle,
   useContext,
-  memo,
+  memo
 } from 'react';
 import { CoreQueryContext } from '../../../../contexts/CoreQueryContext';
 import {
   getDefaultDateSortProp,
   getDefaultSortProp,
   formatData,
-  formatDataInSeriesFormat,
+  formatDataInSeriesFormat
 } from './utils';
 import NoDataChart from '../../../../components/NoDataChart';
 import {
   generateColors,
-  getNewSorterState,
+  getNewSorterState
 } from '../../../../utils/dataFormatter';
 import {
   CHART_TYPE_SPARKLINES,
-  CHART_TYPE_LINECHART,
+  CHART_TYPE_LINECHART
 } from '../../../../utils/constants';
 import ChartHeader from '../../../../components/SparkLineChart/ChartHeader';
 import SparkChart from '../../../../components/SparkLineChart/Chart';
@@ -29,12 +29,11 @@ import LineChart from '../../../../components/HCLineChart';
 import NoBreakdownTable from './NoBreakdownTable';
 
 const NoBreakdownCharts = forwardRef(
-  (
-    { kpis, responseData, chartType, durationObj, title = 'Kpi', section },
-    ref
-  ) => {
+  ({
+    kpis, responseData, chartType, durationObj, section
+  }, ref) => {
     const {
-      coreQueryState: { savedQuerySettings },
+      coreQueryState: { savedQuerySettings }
     } = useContext(CoreQueryContext);
 
     const [sorter, setSorter] = useState(
@@ -66,7 +65,7 @@ const NoBreakdownCharts = forwardRef(
 
     useImperativeHandle(ref, () => {
       return {
-        currentSorter: { sorter, dateSorter },
+        currentSorter: { sorter, dateSorter }
       };
     });
 
@@ -80,7 +79,7 @@ const NoBreakdownCharts = forwardRef(
 
     if (!aggregateData.length) {
       return (
-        <div className='mt-4 flex justify-center items-center w-full h-64 '>
+        <div className="mt-4 flex justify-center items-center w-full h-64 ">
           <NoDataChart />
         </div>
       );
@@ -88,9 +87,8 @@ const NoBreakdownCharts = forwardRef(
 
     let chart = null;
     const table = (
-      <div className='mt-12 w-full'>
+      <div className="mt-12 w-full">
         <NoBreakdownTable
-          data={aggregateData}
           seriesData={data}
           section={section}
           chartType={chartType}
@@ -108,21 +106,23 @@ const NoBreakdownCharts = forwardRef(
     if (chartType === CHART_TYPE_SPARKLINES) {
       if (aggregateData.length === 1) {
         chart = (
-          <div className='flex items-center justify-center w-full'>
-            <div className='w-1/4'>
+          <div className="flex items-center justify-center w-full">
+            <div className="w-1/4">
               <ChartHeader
-                bgColor='#4D7DB4'
+                bgColor="#4D7DB4"
                 query={aggregateData[0].name}
-                total={_.round(aggregateData[0].total, 1)}
+                total={aggregateData[0].total}
+                metricType={aggregateData[0].metricType}
               />
             </div>
-            <div className='w-3/4'>
+            <div className="w-3/4">
               <SparkChart
                 frequency={durationObj.frequency}
-                page='kpi'
+                page="kpi"
                 event={aggregateData[0].name}
                 chartData={aggregateData[0].dataOverTime}
-                chartColor='#4D7DB4'
+                chartColor="#4D7DB4"
+                metricType={aggregateData[0].metricType}
               />
             </div>
           </div>
@@ -132,7 +132,7 @@ const NoBreakdownCharts = forwardRef(
       if (aggregateData.length > 1) {
         const appliedColors = generateColors(aggregateData.length);
         chart = (
-          <div className='flex items-center flex-wrap justify-center w-full'>
+          <div className="flex items-center flex-wrap justify-center w-full">
             {aggregateData
               .filter((d) => d.total)
               .map((chartData, index) => {
@@ -140,21 +140,23 @@ const NoBreakdownCharts = forwardRef(
                   <div
                     style={{ minWidth: '300px' }}
                     key={chartData.index}
-                    className='w-1/3 mt-4 px-4'
+                    className="w-1/3 mt-4 px-4"
                   >
-                    <div className='flex flex-col'>
+                    <div className="flex flex-col">
                       <ChartHeader
                         total={chartData.total}
                         query={chartData.name}
                         bgColor={appliedColors[index]}
+                        metricType={chartData.metricType}
                       />
-                      <div className='mt-8'>
+                      <div className="mt-8">
                         <SparkChart
                           frequency={durationObj.frequency}
-                          page='kpi'
+                          page="kpi"
                           event={chartData.name}
                           chartData={chartData.dataOverTime}
                           chartColor={appliedColors[index]}
+                          metricType={chartData.metricType}
                         />
                       </div>
                     </div>
@@ -166,7 +168,7 @@ const NoBreakdownCharts = forwardRef(
       }
     } else if (chartType === CHART_TYPE_LINECHART) {
       chart = (
-        <div className='w-full'>
+        <div className="w-full">
           <LineChart
             frequency={durationObj.frequency}
             categories={categories}
@@ -178,7 +180,7 @@ const NoBreakdownCharts = forwardRef(
     }
 
     return (
-      <div className='flex items-center justify-center flex-col'>
+      <div className="flex items-center justify-center flex-col">
         {chart}
         {table}
       </div>

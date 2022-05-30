@@ -6,6 +6,7 @@ import (
 	"factors/model/store"
 	U "factors/util"
 	"net/http"
+	"reflect"
 
 	"github.com/gin-gonic/gin"
 )
@@ -86,6 +87,15 @@ func GetCRMObjectValuesByPropertyNameHandler(c *gin.Context) {
 		properties = store.GetStore().GetAllHubspotObjectValuesByPropertyName(projectID, objectType, propertyName)
 	}
 
+	for i, value := range properties {
+		if reflect.ValueOf(value).Kind() == reflect.Bool {
+			if value == true {
+				properties[i] = "true"
+			} else {
+				properties[i] = "false"
+			}
+		}
+	}
 	properties = append([]interface{}{model.PropertyValueNone}, properties...)
 	c.JSON(http.StatusOK, properties)
 }

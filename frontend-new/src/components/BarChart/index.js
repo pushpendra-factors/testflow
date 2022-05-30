@@ -1,16 +1,24 @@
-import React, { useRef, useCallback, useEffect, memo } from 'react';
+import React, {
+  useRef, useCallback, useEffect, memo
+} from 'react';
+import get from 'lodash/get';
 import * as d3 from 'd3';
 import styles from '../../Views/CoreQuery/FunnelsResultPage/UngroupedChart/index.module.scss';
 import { checkForWindowSizeChange } from '../../Views/CoreQuery/FunnelsResultPage/utils';
 import { getMaxYpoint, getBarChartLeftMargin } from './utils';
 import ChartLegends from './ChartLegends';
-import { numberWithCommas, generateColors } from '../../utils/dataFormatter';
+import {
+  numberWithCommas,
+  generateColors,
+  formatDuration
+} from '../../utils/dataFormatter';
 import {
   BAR_CHART_XAXIS_TICK_LENGTH,
   REPORT_SECTION,
   DASHBOARD_MODAL,
   DASHBOARD_WIDGET_SECTION,
   BAR_COUNT,
+  METRIC_TYPES
 } from '../../utils/constants';
 import DashboardWidgetLegends from '../DashboardWidgetLegends';
 
@@ -20,7 +28,7 @@ function BarChart({
   title = 'chart',
   height: widgetHeight,
   section,
-  cardSize = 1,
+  cardSize = 1
 }) {
   const tooltip = useRef(null);
   const chartRef = useRef(null);
@@ -63,10 +71,10 @@ function BarChart({
         window.pageYOffset !== undefined
           ? window.pageYOffset
           : (
-              document.documentElement ||
+            document.documentElement ||
               document.body.parentNode ||
               document.body
-            ).scrollTop;
+          ).scrollTop;
       const top = nodePosition.y + scrollTop;
       const toolTipHeight = d3
         .select('.toolTip')
@@ -76,11 +84,17 @@ function BarChart({
       tooltip.current
         .html(
           `
-                  <div>${getLabel(d.label, 'tooltip')}</div>
-                  <div style="color: #0E2647;" class="mt-2 leading-5 text-base"><span class="font-semibold">${numberWithCommas(
-                    d.value
-                  )}</span></div>
-                `
+            <div>${getLabel(d.label, 'tooltip')}</div>
+            <div style="color: #0E2647;" class="mt-2 leading-5 text-base">
+              <span class="font-semibold">
+                ${
+  get(d, 'metricType', null) === METRIC_TYPES.dateType
+    ? formatDuration(d.value)
+    : numberWithCommas(d.value)
+}
+              </span>
+            </div>
+          `
         )
         .style('opacity', 1)
         .style('left', left + 'px')
@@ -116,7 +130,7 @@ function BarChart({
       top: 10,
       right: 0,
       bottom: 30,
-      left: getBarChartLeftMargin(max),
+      left: getBarChartLeftMargin(max)
     };
     const width = +svg.attr('width') - margin.left - margin.right;
     const height = +svg.attr('height') - margin.top - margin.bottom;
@@ -222,7 +236,7 @@ function BarChart({
     title,
     widgetHeight,
     getLabel,
-    cardSize,
+    cardSize
   ]);
 
   const displayChart = useCallback(() => {
@@ -245,7 +259,7 @@ function BarChart({
   }, [displayChart, cardSize]);
 
   let legendsMapper = [];
-  let legendColors = {};
+  const legendColors = {};
 
   if (queries && queries.length > 1 && section === DASHBOARD_WIDGET_SECTION) {
     const appliedColors = generateColors(queries.length);
@@ -254,13 +268,13 @@ function BarChart({
       return {
         index,
         eventName: q,
-        mapper: `event${index + 1}`,
+        mapper: `event${index + 1}`
       };
     });
   }
 
   return (
-    <div className='w-full bar-chart'>
+    <div className="w-full bar-chart">
       {queries && queries.length > 1 && section === DASHBOARD_WIDGET_SECTION ? (
         <DashboardWidgetLegends
           arrayMapper={legendsMapper}
@@ -273,10 +287,10 @@ function BarChart({
       {queries &&
       queries.length > 1 &&
       (section === REPORT_SECTION || section === DASHBOARD_MODAL) ? (
-        <div className='mt-4'>
+        <div className="mt-4">
           <ChartLegends events={queries} chartData={chartData} />
         </div>
-      ) : null}
+        ) : null}
     </div>
   );
 }

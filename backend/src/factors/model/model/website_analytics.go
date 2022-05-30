@@ -249,6 +249,10 @@ func (q *DashboardUnitsWebAnalyticsQuery) ConvertAllDatesFromTimezone1ToTimezone
 	return nil
 }
 
+func (query *DashboardUnitsWebAnalyticsQuery) CheckIfNameIsPresent(nameOfQuery string) bool {
+	return false
+}
+
 func GetCacheResultForWebAnalyticsDashboard(projectID, dashboardID uint64,
 	from, to int64, timezoneString U.TimeZoneString) (WebAnalyticsCacheResult, int) {
 

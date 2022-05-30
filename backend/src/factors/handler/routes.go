@@ -10,6 +10,7 @@ import (
 	"net/http"
 
 	slack "factors/slack_bot/handler"
+
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -56,7 +57,7 @@ func InitAppRoutes(r *gin.Engine) {
 	r.GET(routePrefix+"/health", mid.MonitoringAPIMiddleware(), Monitoring)
 	r.POST(routePrefix+"/accounts/signup", SignUp)
 	r.POST(routePrefix+"/agents/signin", Signin)
-	r.GET(routePrefix+"/agents/signout", Signout)
+	r.GET(routePrefix+"/agents/signout", mid.SetLoggedInAgent(), Signout)
 	r.POST(routePrefix+"/agents/forgotpassword", AgentGenerateResetPasswordLinkEmail)
 	r.POST(routePrefix+"/agents/setpassword", mid.ValidateAgentSetPasswordRequest(), AgentSetPassword)
 	r.PUT(routePrefix+"/agents/updatepassword", mid.SetLoggedInAgent(), UpdateAgentPassword)
@@ -173,9 +174,10 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/kpi/filter_values", responseWrapper(V1.GetKPIFilterValuesHandler))
 
 	// v1 custom metrics - admin/settings side.
-	authRouteGroup.GET("/:project_id/"+ROUTE_VERSION_V1+"/custom_metrics/config", V1.GetCustomMetricsConfig)
-	authRouteGroup.POST("/:project_id/"+ROUTE_VERSION_V1+"/custom_metrics", responseWrapper(V1.CreateCustomMetric))
-	authRouteGroup.GET("/:project_id/"+ROUTE_VERSION_V1+"/custom_metrics", responseWrapper(V1.GetCustomMetrics))
+	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics/config", V1.GetCustomMetricsConfig)
+	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics", responseWrapper(V1.CreateCustomMetric))
+	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics", responseWrapper(V1.GetCustomMetrics))
+	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics/:id", responseWrapper(V1.DeleteCustomMetrics))
 
 	// v1 CRM And Smart Event endpoints
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/smart_event", GetSmartEventFiltersHandler)
@@ -367,7 +369,7 @@ func InitIntRoutes(r *gin.Engine) {
 		mid.SetAuthorizedProjectsByLoggedInAgent(),
 		IntDeleteHandler)
 
-	intRouteGroup.GET("/slack/callback",slack.SlackCallbackHandler)
+	intRouteGroup.GET("/slack/callback", slack.SlackCallbackHandler)
 
 }
 

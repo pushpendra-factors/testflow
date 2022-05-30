@@ -53,7 +53,9 @@ func main() {
 	numDocRoutines := flag.Int("num_unique_doc_routines", 1, "Number of unique document go routines per project")
 
 	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
+	overrideHubspotProjectDistributerHealthcheckPingID := flag.String("project_distributer_healthcheck_ping_id", "", "Override default project distributer healthcheck ping id.")
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
+	projectDistributerAppName := flag.String("project_distributer_app_name", "hubspot_project_distributer", "Override default app_name for project distributer.")
 	taskManagementLookback := flag.Int("task_management_lookback", 1, "")
 	enableHubspotGroupsByProjectID := flag.String("enable_hubspot_groups_by_project_id", "", "Enable hubspot groups for projects.")
 	useSourcePropertyOverwriteByProjectID := flag.String("use_source_property_overwrite_by_project_id", "", "")
@@ -61,6 +63,8 @@ func main() {
 	restrictReusingUsersByCustomerUserId := flag.String("restrict_reusing_users_by_customer_user_id", "", "")
 	enableHubspotFormEventsByProjectID := flag.String("enable_hubspot_form_events_by_project_id", "", "")
 	hubspotMaxCreatedAt := flag.Int64("huspot_max_created_at", time.Now().Unix(), "max created_at for records to process.")
+	lightProjectsCountThreshold := flag.Int("light_projects_count_threshold", 50000, "Threshold on count for distribution across jobs")
+	enrichHeavy := flag.Bool("enrich_heavy", false, "Run heavy projects")
 
 	flag.Parse()
 	if *env != "development" && *env != "staging" && *env != "production" {
@@ -130,14 +134,25 @@ func main() {
 	C.InitPropertiesTypeCache(*enablePropertyTypeFromDB, *propertiesTypeCacheSize, *whitelistedProjectIDPropertyTypeFromDB, *blacklistedProjectIDPropertyTypeFromDB)
 	defer C.WaitAndFlushAllCollectors(65 * time.Second)
 
-	configs := make(map[string]interface{})
-	configs["project_ids"] = *projectIDList
-	configs["disabled_project_ids"] = *disabledProjectIDList
-	configs["num_unique_doc_routines"] = *numDocRoutines
-	configs["health_check_ping_id"] = defaultHealthcheckPingID
-	configs["override_healthcheck_ping_id"] = *overrideHealthcheckPingID
-	configs["num_project_routines"] = *numProjectRoutines
-	configs["max_record_created_at"] = *hubspotMaxCreatedAt
+	configsEnrich := make(map[string]interface{})
+	configsEnrich["project_ids"] = *projectIDList
+	configsEnrich["disabled_project_ids"] = *disabledProjectIDList
+	configsEnrich["num_unique_doc_routines"] = *numDocRoutines
+	configsEnrich["health_check_ping_id"] = defaultHealthcheckPingID
+	configsEnrich["override_healthcheck_ping_id"] = *overrideHealthcheckPingID
+	configsEnrich["num_project_routines"] = *numProjectRoutines
+	configsEnrich["max_record_created_at"] = *hubspotMaxCreatedAt
+	configsEnrich["enrich_heavy"] = *enrichHeavy
 
-	taskWrapper.TaskFunc(appName, *taskManagementLookback, T.RunHubspotEnrich, configs)
+	configsDistributer := make(map[string]interface{})
+	configsDistributer["health_check_ping_id"] = ""
+	configsDistributer["override_healthcheck_ping_id"] = *overrideHubspotProjectDistributerHealthcheckPingID
+	configsDistributer["light_projects_count_threshold"] = *lightProjectsCountThreshold
+
+	// distributer should only run on light job
+	if !(*enrichHeavy) {
+		taskWrapper.TaskFunc(*projectDistributerAppName, *taskManagementLookback, T.RunHubspotProjectDistributer, configsDistributer)
+	}
+
+	taskWrapper.TaskFunc(appName, *taskManagementLookback, T.RunHubspotEnrich, configsEnrich)
 }
