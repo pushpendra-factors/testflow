@@ -1635,7 +1635,8 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
       : null;
 
     const eventFilters = [];
-    get(q, 'fil', EMPTY_ARRAY).forEach((pr) => {
+    const fil = get(q, 'fil', EMPTY_ARRAY) ? get(q, 'fil', EMPTY_ARRAY) : EMPTY_ARRAY;
+    fil.forEach((pr) => {
       if (pr.lOp === 'AND') {
         const val = pr.prDaTy === 'categorical' ? [pr.va] : pr.va;
         const DNa = startCase(pr.prNa);
