@@ -11,9 +11,9 @@ export const getNormalizedKpi = ({ kpi }) => {
     ];
   });
   return {
-    label: kpi.display_category,
-    group: kpi.display_category,
-    category: kpi.category,
+    label: get(kpi, 'display_category'),
+    group: get(kpi, 'display_category'),
+    category: get(kpi, 'category'),
     icon: 'custom_events',
     values: metricsValues
   };

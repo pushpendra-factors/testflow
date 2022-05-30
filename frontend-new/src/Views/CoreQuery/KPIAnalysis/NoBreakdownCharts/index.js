@@ -89,7 +89,6 @@ const NoBreakdownCharts = forwardRef(
     const table = (
       <div className="mt-12 w-full">
         <NoBreakdownTable
-          data={aggregateData}
           seriesData={data}
           section={section}
           chartType={chartType}
@@ -123,6 +122,7 @@ const NoBreakdownCharts = forwardRef(
                 event={aggregateData[0].name}
                 chartData={aggregateData[0].dataOverTime}
                 chartColor="#4D7DB4"
+                metricType={aggregateData[0].metricType}
               />
             </div>
           </div>
@@ -156,6 +156,7 @@ const NoBreakdownCharts = forwardRef(
                           event={chartData.name}
                           chartData={chartData.dataOverTime}
                           chartColor={appliedColors[index]}
+                          metricType={chartData.metricType}
                         />
                       </div>
                     </div>

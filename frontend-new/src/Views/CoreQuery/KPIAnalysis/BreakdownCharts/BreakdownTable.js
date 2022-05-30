@@ -2,6 +2,7 @@ import React, {
   useState, useCallback, useEffect, memo
 } from 'react';
 import { useSelector } from 'react-redux';
+import { find } from 'lodash';
 import {
   getTableColumns,
   getDataInTableFormat,
@@ -12,9 +13,10 @@ import DataTable from '../../../../components/DataTable';
 import {
   MAX_ALLOWED_VISIBLE_PROPERTIES,
   CHART_TYPE_HORIZONTAL_BAR_CHART,
-  DASHBOARD_WIDGET_SECTION
+  DASHBOARD_WIDGET_SECTION,
+  METRIC_TYPES
 } from '../../../../utils/constants';
-import { isSeriesChart } from '../../../../utils/dataFormatter';
+import { isSeriesChart, formatDuration } from '../../../../utils/dataFormatter';
 
 const BreakdownTable = ({
   data,
@@ -89,16 +91,28 @@ const BreakdownTable = ({
     );
   }, [seriesData, searchText, dateSorter]);
 
-  const getCSVData = () => {
-    const activeTableData =
-      chartType === isSeriesChart(chartType) ? dateBasedTableData : tableData;
+  const getCSVData = useCallback(() => {
     return {
       fileName: 'KPI.csv',
-      data: activeTableData.map(({ index, label, ...rest }) => {
+      data: tableData.map(({
+        index, label, value, metricType, ...rest
+      }) => {
+        for (const key in rest) {
+          const isCurrentKeyKpi = find(
+            kpis,
+            (kpi, index) => kpi.label + ' - ' + index === key
+          );
+          if (
+            isCurrentKeyKpi &&
+            isCurrentKeyKpi.metricType === METRIC_TYPES.dateType
+          ) {
+            rest[key] = formatDuration(rest[key]);
+          }
+        }
         return { ...rest };
       })
     };
-  };
+  }, [dateBasedTableData, chartType, tableData]);
 
   const selectedRowKeys = useCallback((rows) => {
     return rows.map((vp) => vp.index);

@@ -448,7 +448,8 @@ function CoreQuery({
           equivalentQuery = getAttributionStateFromRequestQuery(
             record.query.query,
             attr_dimensions,
-            content_groups
+            content_groups,
+            kpiConfig
           );
           let newDateRange = {};
           if (navigatedFromDashboard) {
@@ -490,7 +491,7 @@ function CoreQuery({
           saved_query_id: record?.key || record?.id,
           query_title: record?.title,
           project_id: activeProject?.id,
-          project_name: activeProject?.name,
+          project_name: activeProject?.name
         });
       } catch (err) {
         console.log(err);

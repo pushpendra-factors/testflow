@@ -1,12 +1,21 @@
-import React, { memo, useCallback, useEffect, useRef } from 'react';
+import React, {
+  memo, useCallback, useEffect, useRef
+} from 'react';
 import ReactDOMServer from 'react-dom/server';
 import Highcharts from 'highcharts';
-import styles from './index.module.scss';
+import get from 'lodash/get';
 import { Text, Number as NumFormat } from '../factorsComponents';
-import { BAR_CHART_XAXIS_TICK_LENGTH } from '../../utils/constants';
+import {
+  BAR_CHART_XAXIS_TICK_LENGTH,
+  METRIC_TYPES
+} from '../../utils/constants';
 import LegendsCircle from '../../styles/components/LegendsCircle';
+import { formatDuration } from '../../utils/dataFormatter';
+import styles from './index.module.scss';
 
-function HorizontalBarChart({ series, categories, height, width, cardSize }) {
+function HorizontalBarChart({
+  series, categories, height, width, cardSize
+}) {
   const chartRef = useRef(null);
   const drawChart = useCallback(() => {
     Highcharts.chart(chartRef.current, {
@@ -16,100 +25,110 @@ function HorizontalBarChart({ series, categories, height, width, cardSize }) {
         height,
         width,
         style: {
-          fontFamily: "'Work Sans', sans-serif",
-        },
+          fontFamily: "'Work Sans', sans-serif"
+        }
       },
       title: {
-        text: undefined,
+        text: undefined
       },
       credits: {
-        enabled: false,
+        enabled: false
       },
       tooltip: {
         backgroundColor: 'white',
         borderWidth: 0,
         borderRadius: 12,
         useHTML: true,
-        formatter: function () {
+        formatter() {
+          const metricType = get(this.point, 'metricType', null);
           return ReactDOMServer.renderToString(
             <>
               <Text
-                color='grey-2'
-                type='title'
+                color="grey-2"
+                type="title"
                 extraClass={`mt-1 ${styles.infoText} mb-0`}
               >
                 {this.point.category}
               </Text>
-              <span className='flex items-center mt-1'>
-                <LegendsCircle extraClass='mr-2' color={this.point.color} />
+              <span className="flex items-center mt-1">
+                <LegendsCircle extraClass="mr-2" color={this.point.color} />
                 <Text
-                  color='grey-8'
-                  type='title'
-                  weight='bold'
-                  extraClass='text-base mb-0'
+                  color="grey-8"
+                  type="title"
+                  weight="bold"
+                  extraClass="text-base mb-0"
                 >
-                  <NumFormat className='number' number={this.point.y} />
+                  {metricType === METRIC_TYPES.dateType ? (
+                    <div className="number">{formatDuration(this.point.y)}</div>
+                  ) : (
+                    <NumFormat className="number" number={this.point.y} />
+                  )}
                 </Text>
               </span>
             </>
           );
-        },
+        }
       },
       xAxis: {
         categories,
         grid: {
-          enabled: false,
+          enabled: false
         },
         labels: {
           useHTML: true,
-          formatter: function () {
+          formatter() {
             return ReactDOMServer.renderToString(
               <>
                 <Text
-                  color='grey-2'
-                  type='title'
+                  color="grey-2"
+                  type="title"
                   extraClass={`${styles.xAxisLabels} mb-0`}
                 >
                   {this.value.length > BAR_CHART_XAXIS_TICK_LENGTH[cardSize]
                     ? this.value.substr(
-                        0,
-                        BAR_CHART_XAXIS_TICK_LENGTH[cardSize]
-                      ) + '...'
+                      0,
+                      BAR_CHART_XAXIS_TICK_LENGTH[cardSize]
+                    ) + '...'
                     : this.value}
                 </Text>
               </>
             );
-          },
-        },
+          }
+        }
       },
       yAxis: {
         labels: {
-          enabled: false,
+          enabled: false
         },
         grid: {
-          borderWidth: 0,
+          borderWidth: 0
         },
         title: {
-          text: undefined,
-        },
+          text: undefined
+        }
       },
       legend: {
-        enabled: false,
+        enabled: false
       },
       plotOptions: {
         series: {
           animation: false,
           dataLabels: {
             enabled: true,
-            formatter: function () {
+            formatter() {
+              const metricType = get(this.point, 'metricType', null);
               return ReactDOMServer.renderToString(
-                <NumFormat number={this.y} shortHand={true} />
+                metricType === METRIC_TYPES.dateType ? (
+                  formatDuration(this.y)
+                ) : (
+                  <NumFormat number={this.y} shortHand={true} />
+                )
               );
-            },
-          },
-        },
+            }
+          }
+        }
       },
-      series,
+      series
     });
   }, [series, categories, height, width, cardSize]);
 

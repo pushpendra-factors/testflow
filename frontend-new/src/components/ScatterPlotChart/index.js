@@ -1,17 +1,17 @@
 import React, { useCallback, useEffect, memo } from 'react';
 import styles from './styles.module.scss';
 import Highcharts from 'highcharts';
-import { high_charts_scatter_plot_default_spacing } from '../../utils/constants';
+import { HIGH_CHARTS_SCATTER_PLOT_DEFAULT_SPACING } from '../../utils/constants';
 
 function ScatterPlotChart({
   series,
   yAxisTitle = 'Unique Users',
   xAxisTitle = 'Cost Per Conversion',
   generateTooltip,
-  spacing = high_charts_scatter_plot_default_spacing,
+  spacing = HIGH_CHARTS_SCATTER_PLOT_DEFAULT_SPACING,
   chartId = 'areaChartContainer',
   cardSize = 1,
-  height = null,
+  height = null
 }) {
   const drawChart = useCallback(() => {
     Highcharts.chart(chartId, {
@@ -19,16 +19,16 @@ function ScatterPlotChart({
         type: 'scatter',
         height,
         spacing:
-          cardSize !== 1 ? high_charts_scatter_plot_default_spacing : spacing,
+          cardSize !== 1 ? HIGH_CHARTS_SCATTER_PLOT_DEFAULT_SPACING : spacing,
         style: {
-          fontFamily: "'Work Sans', sans-serif",
-        },
+          fontFamily: "'Work Sans', sans-serif"
+        }
       },
       title: {
-        text: undefined,
+        text: undefined
       },
       credits: {
-        enabled: false,
+        enabled: false
       },
       tooltip: {
         shared: false,
@@ -37,9 +37,9 @@ function ScatterPlotChart({
         borderRadius: 12,
         padding: 16,
         useHTML: true,
-        formatter: function () {
+        formatter() {
           return generateTooltip(this.point.index);
-        },
+        }
       },
       xAxis: {
         gridLineDashStyle: 'Dash',
@@ -48,8 +48,8 @@ function ScatterPlotChart({
         labels: {
           style: {
             color: '#8692A3',
-            fontSize: '12px',
-          },
+            fontSize: '12px'
+          }
         },
         title: {
           margin: 10,
@@ -57,9 +57,9 @@ function ScatterPlotChart({
           text: xAxisTitle,
           style: {
             color: '#3E516C',
-            fontSize: '14px',
-          },
-        },
+            fontSize: '14px'
+          }
+        }
       },
       yAxis: [
         {
@@ -70,21 +70,21 @@ function ScatterPlotChart({
           labels: {
             style: {
               color: '#8692A3',
-              fontSize: '12px',
-            },
+              fontSize: '12px'
+            }
           },
           title: {
             margin: 20,
             text: yAxisTitle,
             style: {
               color: '#3E516C',
-              fontSize: '14px',
-            },
-          },
-        },
+              fontSize: '14px'
+            }
+          }
+        }
       ],
       legend: {
-        enabled: false,
+        enabled: false
       },
       plotOptions: {
         scatter: {
@@ -93,20 +93,20 @@ function ScatterPlotChart({
             radius: 5,
             states: {
               hover: {
-                enabled: true,
-              },
-            },
+                enabled: true
+              }
+            }
           },
           states: {
             hover: {
               marker: {
-                enabled: false,
-              },
-            },
-          },
-        },
+                enabled: false
+              }
+            }
+          }
+        }
       },
-      series,
+      series
     });
   }, [series, xAxisTitle, yAxisTitle, chartId, height, generateTooltip]);
 

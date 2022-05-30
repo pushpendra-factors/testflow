@@ -138,8 +138,8 @@ export const charts_legend_length = {
 };
 
 export const high_charts_default_spacing = [20, 10, 15, 10];
-export const high_charts_barLine_default_spacing = [20, 0, 15, 0];
-export const high_charts_scatter_plot_default_spacing = [20, 0, 15, 0];
+export const HIGH_CHARTS_BARLINE_DEFAULT_SPACING = [20, 0, 15, 0];
+export const HIGH_CHARTS_SCATTER_PLOT_DEFAULT_SPACING = [20, 0, 15, 0];
 
 export const presentationObj = {
   pb: CHART_TYPE_BARCHART,
@@ -266,7 +266,7 @@ export const ATTRIBUTION_METRICS = [
     header: 'ALL CR',
     enabled: false,
     isEventMetric: true
-  },
+  }
 ];
 
 export const KEY_TOUCH_POINT_DIMENSIONS = [
@@ -522,8 +522,7 @@ export const METRIC_TYPES = {
   dateType: 'date_type'
 };
 
-
-export const QUERY_OPTIONS_DEFAULT_VALUE = { 
+export const QUERY_OPTIONS_DEFAULT_VALUE = {
   group_analysis: 'users',
   groupBy: [
     {
@@ -532,11 +531,11 @@ export const QUERY_OPTIONS_DEFAULT_VALUE = {
       prop_type: '', // categorical  /numberical
       eventValue: '', // event name (funnel only)
       eventName: '', // eventName $present for global user breakdown
-      eventIndex: 0,
-    },
+      eventIndex: 0
+    }
   ],
   globalFilters: [],
   event_analysis_seq: '',
   session_analytics_seq: {},
-  date_range: {},
-}
+  date_range: {}
+};
