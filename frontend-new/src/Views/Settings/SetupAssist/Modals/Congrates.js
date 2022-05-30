@@ -32,7 +32,7 @@ function Congrates({handleCancel}) {
                         <Row className={'mb-1'}>
                             <Col span={24}>
                                 <img src='https://s3.amazonaws.com/www.factors.ai/assets/img/product/pop-gift.png' style={{width: '100%',maxWidth: '80px', marginLeft:'11vw'}}/>
-                                <Text type={'title'} level={3} color={'grey-2'} align={'center'} weight={'bold'}>Project created succesfully</Text>
+                                <Text type={'title'} level={3} color={'grey-2'} align={'center'} weight={'bold'}>Project created successfully</Text>
                                 {/* <Progress percent={100} status={'normal'} strokeWidth={3} showInfo={false} /> */}
                             </Col>
                         </Row>

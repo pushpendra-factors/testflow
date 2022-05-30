@@ -153,7 +153,7 @@ function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel, 
                                 })} 
                                 </Select>
                             </Form.Item>
-                            <Text type={'title'} size={10} color={'grey'} extraClass={'inline m-0 mt-4 ml-1 mb-2'}>This must reflect the same timezone as in your CRM</Text>
+                            <Text type={'title'} size={10} color={'grey-2'} extraClass={'inline m-0 mt-4 ml-1 mb-2'}>This must reflect the same timezone as in your CRM</Text>
                             <Popconfirm placement="rightTop" title={<Text type={'title'} size={10} extraClass={'max-w-xs'}>This must reflect the same timezone as used in your CRM. Once selected, this action cannot be edited.</Text>} icon={<ExclamationCircleFilled style={{color:'#1E89FF'}}/>} okText="Got it" cancelText="Learn More" cancelButtonProps={{ type: 'text', style:{color:'#1E89FF', display:'none'}}}>
                                 <Button type={'text'} className={'m-0'} style={{backgroundColor:'white'}}><SVG name={'infoCircle'} size={18} color="gray"/></Button>
                             </Popconfirm>
@@ -165,7 +165,7 @@ function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel, 
                             >
                                 <div className='flex items-center'>
                                     <Checkbox defaultChecked={checkbox} onChange={(e) => setcheckbox(e.target.checked)}></Checkbox>
-                                    <Text type={'title'} size={10} color={'grey'} extraClass={'m-0 ml-2 mt-2 mb-2'} >Invite <span className={'font-bold'}>solutions@factors.ai</span> into this project for ongoing support</Text>
+                                    <Text type={'title'} size={10} color={'grey-2'} extraClass={'m-0 ml-2 mt-2 mb-2'} >Invite <span className={'font-bold'}>solutions@factors.ai</span> into this project for ongoing support</Text>
                                 </div>
                             </Form.Item>
                         </Col>

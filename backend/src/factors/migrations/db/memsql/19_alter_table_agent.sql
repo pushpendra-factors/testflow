@@ -1,0 +1,1 @@
+ALTER TABLE agents ADD COLUMN last_logged_out bigint DEFAULT 0;

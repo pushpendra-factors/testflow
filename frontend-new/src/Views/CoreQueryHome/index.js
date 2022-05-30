@@ -1,4 +1,3 @@
-/* eslint-disable */
 import React, { useCallback, useState, useEffect } from 'react';
 import {
   Text,
@@ -7,9 +6,11 @@ import {
   FaErrorLog
 } from '../../components/factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary';
-import { Row, Col, Table, Avatar, Button, Dropdown, Menu, Tag } from 'antd';
+import {
+  Row, Col, Table, Avatar, Button, Dropdown, Menu
+} from 'antd';
 import { MoreOutlined } from '@ant-design/icons';
-import SearchBar from '../../components/SearchBar';
+// import SearchBar from '../../components/SearchBar';
 import { connect, useSelector, useDispatch } from 'react-redux';
 import MomentTz from 'Components/MomentTz';
 import {
@@ -56,7 +57,6 @@ import _ from 'lodash';
 import { getQueryType } from '../../utils/dataFormatter';
 import { fetchAgentInfo } from 'Reducers/agentActions';
 import factorsai from 'factorsai';
-import FaHeader from '../../components/FaHeader';
 
 // const whiteListedAccounts_KPI = [
 //   'jitesh@factors.ai',
@@ -155,7 +155,6 @@ function CoreQuery({
   fetchWeeklyIngishts,
   activeProject,
   updateChartTypes,
-  activeAgent,
   updateSavedQuerySettings,
   setProfileQueries,
   fetchAgentInfo,
@@ -246,7 +245,7 @@ function CoreQuery({
   const updateEventFunnelsState = useCallback(
     (equivalentQuery, navigatedFromDashboard) => {
       const savedDateRange = { ...equivalentQuery.dateRange };
-      let newDateRange = getDashboardDateRange();
+      const newDateRange = getDashboardDateRange();
       const dashboardDateRange = {
         ...newDateRange,
         frequency: equivalentQuery.dateRange.frequency
@@ -308,7 +307,7 @@ function CoreQuery({
   const updateKPIQueryState = useCallback(
     (equivalentQuery, navigatedFromDashboard) => {
       const savedDateRange = { ...equivalentQuery.dateRange };
-      let newDateRange = getDashboardDateRange();
+      const newDateRange = getDashboardDateRange();
       const dashboardDateRange = {
         ...newDateRange,
         frequency: equivalentQuery.dateRange.frequency
@@ -358,7 +357,7 @@ function CoreQuery({
       }
       if (insightsItem?.Enabled) {
         if (!_.isEmpty(insightsItem?.InsightsRange)) {
-          let insightsLen =
+          const insightsLen =
             Object.keys(insightsItem?.InsightsRange)?.length || 0;
           fetchWeeklyIngishts(
             activeProject.id,
@@ -396,11 +395,7 @@ function CoreQuery({
             const usefulQuery = { ...equivalentQuery, ...newDateRange };
             delete usefulQuery.queryType;
             dispatch({ type: INITIALIZE_CAMPAIGN_STATE, payload: usefulQuery });
-          }
-          // else if(queryType === QUERY_TYPE_KPI) {
-          //  // Vishnu convert backend formatted query to  our local state query
-          // }
-          else {
+          } else {
             equivalentQuery = getStateQueryFromRequestQuery(
               record.query.query_group[0]
             );
@@ -453,7 +448,8 @@ function CoreQuery({
           equivalentQuery = getAttributionStateFromRequestQuery(
             record.query.query,
             attr_dimensions,
-            content_groups
+            content_groups,
+            kpiConfig
           );
           let newDateRange = {};
           if (navigatedFromDashboard) {
@@ -489,13 +485,13 @@ function CoreQuery({
           query_id: record.key || record.id
         });
 
-        //Factors VIEW_QUERY tracking
+        // Factors VIEW_QUERY tracking
         factorsai.track('VIEW_QUERY', {
           query_type: equivalentQuery?.queryType,
           saved_query_id: record?.key || record?.id,
           query_title: record?.title,
           project_id: activeProject?.id,
-          project_name: activeProject?.name,
+          project_name: activeProject?.name
         });
       } catch (err) {
         console.log(err);
@@ -696,7 +692,7 @@ function CoreQuery({
                     </Text>
                   </Col>
                   <Col span={24}>
-                    <div className={`flex justify-between mt-4`}>
+                    <div className={'flex justify-between mt-4'}>
                       {coreQueryoptions.map((item, index) => {
                         // if (
                         //   item.title === 'KPIs' &&
@@ -708,10 +704,12 @@ function CoreQuery({
                           <div
                             key={index}
                             onClick={() => setQueryTypeTab(item)}
-                            className={`fai--custom-card-new flex flex-col`}
+                            className={'fai--custom-card-new flex flex-col'}
                           >
                             <div
-                              className={`fai--custom-card-new--top-section flex justify-center items-center`}
+                              className={
+                                'fai--custom-card-new--top-section flex justify-center items-center'
+                              }
                             >
                               {/* {item.title == 'KPIs' && (
                           <Tag
@@ -767,7 +765,7 @@ function CoreQuery({
                     <Table
                       onRow={(record) => {
                         return {
-                          onClick: (e) => {
+                          onClick: () => {
                             getWeeklyIngishts(record);
                             setQueryToState(record);
                           }

@@ -37,12 +37,12 @@ const FacebookIntegration = ({
 
   const makeSelectOpt = (value, label) => {
     if (!label) label = value;
-    return { value: value, label: label }
+    return { value: value, label: `${label} (${value})` }
   }
 
   const createSelectOpts = (opts) => {
     let ropts = [];
-    for (let k in opts) ropts.push(makeSelectOpt(k, opts[k]));
+    for (let k in opts) ropts.push(makeSelectOpt(k, opts[k])); 
     return ropts;
   }
 
@@ -50,11 +50,11 @@ const FacebookIntegration = ({
   const responseFacebook = (response) => {
     SetFbResponse(response)
     if (response.id != undefined) {
-      fetch(`https://graph.facebook.com/v13.0/${response.id}/adaccounts?access_token=${response.accessToken}`)
+      fetch(`https://graph.facebook.com/v13.0/${response.id}/adaccounts?access_token=${response.accessToken}&fields=id,name`)
         .then(res => res.json().then((r) => {
           if (r.data?.length != 0) {
-            let adAccounts = r.data.map(account => {
-              return { value: account.id, label: account.id }
+            let adAccounts = r.data.map(account => { 
+              return { value: account.id, label: account.name }
             })
             SetFbAdAccounts(adAccounts);
             setShowForm(true)
@@ -85,11 +85,11 @@ const FacebookIntegration = ({
     //   )
     // }
   }
-
-  const convertToString = (e) => { 
-    let dataString = _.toString(e);
-    SetSelectAdAccount(dataString) 
-  } 
+ 
+    const convertToString = (e) => {  
+      let dataString = _.toString(e);
+      SetSelectAdAccount(dataString) 
+    } 
 
   const handleSubmit = e => {
     e.preventDefault();
@@ -145,7 +145,7 @@ const FacebookIntegration = ({
     for (let i in FbAdAccounts) {
       let adAccount = FbAdAccounts[i];
       opts[adAccount.value] = adAccount.label;
-    }
+    } 
     return opts;
   }
 

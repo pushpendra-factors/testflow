@@ -278,6 +278,19 @@ func (store *MemSQL) UpdateAgentLastLoginInfo(agentUUID string, ts time.Time) in
 
 	return updateAgent(agentUUID, model.LastLoggedInAtAndIncrLoginCount(ts))
 }
+func (store *MemSQL) UpdateLastLoggedOut(agentUUID string, timestamp int64) int {
+	logFields := log.Fields{
+		"agent_uuid": agentUUID,
+		"timestamp":  timestamp,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	if agentUUID == "" {
+		log.Error("Update Last Logged out Failed. Missing params")
+		return http.StatusBadRequest
+	}
+
+	return updateAgent(agentUUID, model.LastLoggedOut(timestamp))
+}
 
 func (store *MemSQL) UpdateAgentVerificationDetails(agentUUID, password, firstName,
 	lastName string, verified bool, passUpdatedAt time.Time) int {

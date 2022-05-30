@@ -92,6 +92,10 @@ func (q *ProfileQueryGroup) ConvertAllDatesFromTimezone1ToTimezone2(currentTimez
 	return nil
 }
 
+func (query *ProfileQueryGroup) CheckIfNameIsPresent(nameOfQuery string) bool {
+	return false
+}
+
 type ProfileQuery struct {
 	Type          string                 `json:"ty"` // all_users, hubspot_events, etc
 	Filters       []QueryProperty        `json:"pr"`

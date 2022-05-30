@@ -130,6 +130,11 @@ type Deal struct {
 	Associations Associations `json:"associations"`
 }
 
+type HubspotDocumentCount struct {
+	ProjectID uint64
+	Count     int
+}
+
 func (document *HubspotDocument) SetTimeZone(timeZone U.TimeZoneString) {
 	document.timeZone = timeZone
 }

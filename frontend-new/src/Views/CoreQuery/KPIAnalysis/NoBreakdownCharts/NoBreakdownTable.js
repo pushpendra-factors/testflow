@@ -1,22 +1,28 @@
-import React, { useState, useCallback, useEffect, memo } from 'react';
+import React, {
+  useState, useEffect, memo, useCallback
+} from 'react';
 import moment from 'moment';
 import { useSelector } from 'react-redux';
+import { find, get } from 'lodash';
 import {
   getTableColumns,
   getDataInTableFormat,
   getDateBasedColumns,
-  getDateBasedTableData,
+  getDateBasedTableData
 } from './utils';
 import DataTable from '../../../../components/DataTable';
 import {
   CHART_TYPE_SPARKLINES,
   DASHBOARD_WIDGET_SECTION,
   DATE_FORMATS,
+  METRIC_TYPES
 } from '../../../../utils/constants';
-import { addQforQuarter } from '../../../../utils/dataFormatter';
+import {
+  addQforQuarter,
+  formatDuration
+} from '../../../../utils/dataFormatter';
 
 const NoBreakdownTable = ({
-  data,
   seriesData,
   categories,
   kpis,
@@ -26,7 +32,7 @@ const NoBreakdownTable = ({
   handleSorting,
   dateSorter,
   handleDateSorting,
-  frequency = 'date',
+  frequency = 'date'
 }) => {
   const { eventNames } = useSelector((state) => state.coreQuery);
   const [searchText, setSearchText] = useState('');
@@ -48,6 +54,7 @@ const NoBreakdownTable = ({
   useEffect(() => {
     setDateBasedColumns(
       getDateBasedColumns(
+        kpis,
         categories,
         dateSorter,
         handleDateSorting,
@@ -55,7 +62,7 @@ const NoBreakdownTable = ({
         frequency
       )
     );
-  }, [categories, dateSorter, handleDateSorting]);
+  }, [kpis, categories, dateSorter, handleDateSorting, eventNames, frequency]);
 
   useEffect(() => {
     setDateBasedTableData(
@@ -69,22 +76,47 @@ const NoBreakdownTable = ({
     );
   }, [seriesData, searchText, dateSorter]);
 
-  const getCSVData = () => {
+  const getCSVData = useCallback(() => {
     const activeTableData =
       chartType !== CHART_TYPE_SPARKLINES ? dateBasedTableData : tableData;
-    const format = DATE_FORMATS[frequency] || DATE_FORMATS['date'];
+    const format = DATE_FORMATS[frequency] || DATE_FORMATS.date;
     return {
-      fileName: `KPI.csv`,
-      data: activeTableData.map(({ index, label, date, ...rest }) => {
-        return chartType === CHART_TYPE_SPARKLINES
-          ? {
-              date: addQforQuarter(frequency) + moment(date).format(format),
-              ...rest,
+      fileName: 'KPI.csv',
+      data: activeTableData.map(({
+        index, label, date, ...rest
+      }) => {
+        if (chartType === CHART_TYPE_SPARKLINES) {
+          for (const key in rest) {
+            const metricType = get(
+              find(kpis, (kpi, index) => kpi.label + ' - ' + index === key),
+              'metricType',
+              null
+            );
+            if (metricType === METRIC_TYPES.dateType) {
+              rest[key] = formatDuration(rest[key]);
             }
-          : { ...rest };
-      }),
+          }
+          return {
+            ...rest,
+            date: addQforQuarter(frequency) + moment(date).format(format)
+          };
+        }
+        const metricType = get(
+          find(kpis, (kpi) => kpi.label === rest.event),
+          'metricType',
+          null
+        );
+        if (metricType === METRIC_TYPES.dateType) {
+          for (const key in rest) {
+            if (key !== 'event') {
+              rest[key] = formatDuration(rest[key]);
+            }
+          }
+        }
+        return { ...rest };
+      })
     };
-  };
+  }, [chartType, frequency, dateBasedTableData, tableData, kpis]);
 
   return (
     <DataTable

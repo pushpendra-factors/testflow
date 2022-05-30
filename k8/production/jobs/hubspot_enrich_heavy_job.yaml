@@ -20,7 +20,7 @@ spec:
           nodeSelector:
             cloud.google.com/gke-nodepool: shared-persistent-pool
           containers:
-          - name: hubspot-enrich-job
+          - name: hubspot-enrich-heavy-job
             image: us.gcr.io/factors-production/hubspot-enrich-job:4e644a2a-2445
             imagePullPolicy: IfNotPresent
             args:
@@ -64,12 +64,19 @@ spec:
             - "100"
             - --task_management_lookback
             - "3"
+            - --app_name
+            - "hubspot_enrich_heavy"
+            - --enrich_heavy
             - --enable_hubspot_groups_by_project_id
             - "*"
             - --use_source_property_overwrite_by_project_id
             - "*"
-            - --project_distributer_app_name
-            - "hubspot_project_distributer"
+            - --capture_source_in_users_table
+            - "*"
+            - --enable_hubspot_form_events_by_project_id
+            - "*"
+            - --restrict_reusing_users_by_customer_user_id
+            - "*"
             envFrom:
             - configMapRef:
                 name: config-env

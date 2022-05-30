@@ -209,7 +209,7 @@ func buildAllUsersQuery(projectID uint64, query model.ProfileQuery) (string, []i
 }
 
 func getSelectKeysForProfile(query model.ProfileQuery) string {
-	if query.AggregateProperty == "1" || query.AggregateProperty == "" || query.AggregateFunction == model.UniqueAggregationFunction { // Generally count is only used againt them.
+	if query.AggregateProperty == "1" || query.AggregateProperty == "" || query.AggregateFunction == model.UniqueAggregateFunction { // Generally count is only used againt them.
 		return model.DefaultSelectForAllUsers
 	} else {
 		return fmt.Sprintf("%s(CASE WHEN JSON_EXTRACT_STRING(%s.properties, '%s') IS NULL THEN 0 ELSE JSON_EXTRACT_STRING(%s.properties, '%s') END ) as %s", query.AggregateFunction,

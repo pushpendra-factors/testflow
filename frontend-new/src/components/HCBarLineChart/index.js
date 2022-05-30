@@ -2,7 +2,7 @@ import React, { useEffect, memo, useCallback } from 'react';
 import Highcharts from 'highcharts';
 import styles from './styles.module.scss';
 import {
-  high_charts_barLine_default_spacing,
+  HIGH_CHARTS_BARLINE_DEFAULT_SPACING,
   BAR_CHART_XAXIS_TICK_LENGTH
 } from '../../utils/constants';
 import { renderBigLengthTicks } from '../../utils/dataFormatter';
@@ -12,7 +12,7 @@ function HCBarLineChart({
   height = null,
   legendsPosition = 'bottom',
   cardSize = 1,
-  spacing = high_charts_barLine_default_spacing,
+  spacing = HIGH_CHARTS_BARLINE_DEFAULT_SPACING,
   chartId = 'lineChartContainer',
   categories,
   series,
@@ -23,7 +23,7 @@ function HCBarLineChart({
     Highcharts.chart(chartId, {
       chart: {
         height,
-        spacing: cardSize !== 1 ? high_charts_barLine_default_spacing : spacing,
+        spacing: cardSize !== 1 ? HIGH_CHARTS_BARLINE_DEFAULT_SPACING : spacing,
         style: {
           fontFamily: "'Work Sans', sans-serif"
         }

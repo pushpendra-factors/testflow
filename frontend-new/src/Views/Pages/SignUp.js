@@ -135,6 +135,35 @@ function SignUp({ signup }) {
                                 </Col>
                             </Row>
                             { showForm ? <>
+
+                            <Row>
+                                <Col span={24}>
+                                        <div className={'flex flex-col mt-5 w-full'} >
+                                            {/* <Text type={'title'} level={7} extraClass={'m-0'}>Work Email</Text> */}
+                                            <Form.Item label={null}
+                                                name="email"
+                                                rules={[
+                                                    { 
+                                                        required: true, message: 'Please enter your business email address.' 
+                                                    },
+                                                    ({ getFieldValue }) => ({
+                                                        validator(rule, value) { 
+                                                          if (!value || value.match(/^([a-z0-9!'#$%&*+\/=?^_`{|}~-]+(?:\.[a-z0-9!'#$%&*+\/=?^_`{|}~-]+)*@(?!gmail.com)(?!yahoo.com)(?!hotmail.com)(?!yahoo.co.in)(?!hey.com)(?!icloud.com)(?!me.com)(?!mac.com)(?!aol.com)(?!abc.com)(?!xyz.com)(?!pqr.com)(?!rediffmail.com)(?!live.com)(?!outlook.com)(?!msn.com)(?!ymail.com)([\w-]+\.)+[\w-]{2,})?$/)) {
+                                                            return Promise.resolve();
+                                                          }
+                                                          return Promise.reject(new Error('Please enter your business email address.'));
+                                                        }
+                                                    })
+                                                ]}
+                                                >
+                                                <Input className={'fa-input w-full'} disabled={dataLoading} size={'large'}
+                                                placeholder="Work Email"
+                                                 />
+                                            </Form.Item>
+                                        </div>
+                                </Col>
+                            </Row>
+
                             <Row>
                                 <Col span={24}>
                                         <div className={'flex flex-col mt-5'} >
@@ -164,34 +193,6 @@ function SignUp({ signup }) {
                                             </Form.Item>
                                         </div>
                                 </Col> */}
-                            </Row>
-
-                            <Row>
-                                <Col span={24}>
-                                        <div className={'flex flex-col mt-5 w-full'} >
-                                            {/* <Text type={'title'} level={7} extraClass={'m-0'}>Work Email</Text> */}
-                                            <Form.Item label={null}
-                                                name="email"
-                                                rules={[
-                                                    { 
-                                                        required: true, message: 'Please enter your business email address.' 
-                                                    },
-                                                    ({ getFieldValue }) => ({
-                                                        validator(rule, value) { 
-                                                          if (!value || value.match(/^([a-z0-9!'#$%&*+\/=?^_`{|}~-]+(?:\.[a-z0-9!'#$%&*+\/=?^_`{|}~-]+)*@(?!gmail.com)(?!yahoo.com)(?!hotmail.com)(?!yahoo.co.in)(?!hey.com)(?!icloud.com)(?!me.com)(?!mac.com)(?!aol.com)(?!abc.com)(?!xyz.com)(?!pqr.com)(?!rediffmail.com)(?!live.com)(?!outlook.com)(?!msn.com)(?!ymail.com)([\w-]+\.)+[\w-]{2,})?$/)) {
-                                                            return Promise.resolve();
-                                                          }
-                                                          return Promise.reject(new Error('Please enter your business email address.'));
-                                                        }
-                                                    })
-                                                ]}
-                                                >
-                                                <Input className={'fa-input w-full'} disabled={dataLoading} size={'large'}
-                                                placeholder="Work Email"
-                                                 />
-                                            </Form.Item>
-                                        </div>
-                                </Col>
                             </Row>
 
                             <Row>
@@ -227,7 +228,7 @@ function SignUp({ signup }) {
                                                 >
                                                 <div className='flex items-center'>
                                                     <Checkbox disabled={dataLoading} ></Checkbox>
-                                                    <Text type={'title'} level={7} color={'grey'} extraClass={'m-0 ml-4'} >Please keep me up to date on Factors, including news, new products, and services.</Text>
+                                                    <Text type={'title'} level={7} color={'grey-2'} extraClass={'m-0 ml-4'} >Please keep me up to date on Factors, including news, new products, and services.</Text>
                                                 </div>
                                             </Form.Item>
                                         </div>
@@ -243,7 +244,7 @@ function SignUp({ signup }) {
                                                 >
                                                 <div className='flex items-center' >
                                                     <Checkbox disabled={dataLoading} ></Checkbox>
-                                                    <Text type={'title'} level={7} color={'grey'} extraClass={'m-0 ml-4'} >By signing up, I agree to the <a href='https://www.factors.ai/terms-of-use' target='_blank'>terms of service</a> and <a href='https://www.factors.ai/privacy-policy' target='_blank'>privacy policy</a> of factors.ai</Text>
+                                                    <Text type={'title'} level={7} color={'grey-2'} extraClass={'m-0 ml-4'} >By signing up, I agree to the <a href='https://www.factors.ai/terms-of-use' target='_blank'>terms of service</a> and <a href='https://www.factors.ai/privacy-policy' target='_blank'>privacy policy</a> of factors.ai</Text>
                                                 </div>
                                             </Form.Item>
                                         </div>

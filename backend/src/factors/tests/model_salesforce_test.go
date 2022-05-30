@@ -18,6 +18,7 @@ import (
 	"math/rand"
 	"net/http"
 	"net/http/httptest"
+
 	"sort"
 	"testing"
 	"time"
@@ -1072,6 +1073,7 @@ func TestSalesforceObjectPropertiesAPI(t *testing.T) {
 	jsonResponse, _ = ioutil.ReadAll(w.Body)
 	err = json.Unmarshal(jsonResponse, &property2Values)
 	assert.Nil(t, err)
+
 	for i := range property1Values[:6] {
 		if i == 0 {
 			assert.Equal(t, "$none", property1Values[i])
@@ -1080,6 +1082,41 @@ func TestSalesforceObjectPropertiesAPI(t *testing.T) {
 		assert.Equal(t, fmt.Sprintf("%s_%d", property1, 5-i), property1Values[i])
 		assert.Equal(t, fmt.Sprintf("%s_%d", property2, 5-i), property2Values[i])
 	}
+
+	property1 = U.RandomLowerAphaNumString(4)
+	documentID = U.RandomLowerAphaNumString(4)
+	createdDate = createdDate.Add(10 * time.Second)
+
+	jsonval := true
+	jsonData = fmt.Sprintf(`{"Id":"%s","%s":"%t","CreatedDate":"%s", "LastModifiedDate":"%s"}`, documentID, property1, jsonval, createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout), createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout))
+
+	var propertyValues []interface{}
+	salesforceDocumentPrev = &model.SalesforceDocument{
+		ProjectID: project.ID,
+		TypeAlias: model.SalesforceDocumentTypeNameContact,
+		Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonData))},
+	}
+	status = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocumentPrev)
+	assert.Equal(t, http.StatusOK, status)
+
+	createdDate = createdDate.Add(15 * time.Second)
+	jsonData1 := fmt.Sprintf(`{"Id":"%s","%s":"%t","CreatedDate":"%s", "LastModifiedDate":"%s"}`, documentID, property1, jsonval, createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout), createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout))
+	salesforceDocumentPrev1 := &model.SalesforceDocument{
+		ProjectID: project.ID,
+		TypeAlias: model.SalesforceDocumentTypeNameContact,
+		Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonData1))},
+	}
+
+	status = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocumentPrev1)
+	assert.Equal(t, http.StatusOK, status)
+
+	w = sendGetCRMObjectValuesByPropertyNameReq(r, project.ID, agent, model.SmartCRMEventSourceSalesforce, model.SalesforceDocumentTypeNameContact, property1)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	err = json.Unmarshal(jsonResponse, &propertyValues)
+	assert.Nil(t, err)
+
+	assert.Equal(t, "true", propertyValues[1])
 
 }
 

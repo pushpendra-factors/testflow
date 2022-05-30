@@ -10,6 +10,7 @@ import { Button, Tooltip } from 'antd';
 import { SVG, Text } from 'factorsComponents';
 import { isArray } from 'lodash';
 import FaSelect from 'Components/FaSelect';
+import { getNormalizedKpi } from '../../../utils/kpiQueryComposer.helpers';
 
 const ConversionGoalBlock = ({
     eventGoal, 
@@ -91,22 +92,7 @@ const ConversionGoalBlock = ({
         });
 
         const group = ((selGroup) => {
-            let metricsValues = selGroup?.metrics?.map((value) => {
-              if (value?.display_name) {
-                return [value?.display_name, value?.name]
-              }
-              else {
-                return [value, value]
-              }
-        
-            })
-            return {
-              "label": selGroup?.display_category,
-              "group": selGroup?.display_category,
-              "category": selGroup?.category,
-              "icon": "custom_events",
-              "values": metricsValues
-            }
+          return getNormalizedKpi({ kpi: selGroup });
           })(selGroup);
         return [group];
     }

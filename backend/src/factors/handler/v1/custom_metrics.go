@@ -1,6 +1,7 @@
 package v1
 
 import (
+	mid "factors/middleware"
 	"factors/model/model"
 	"factors/model/store"
 	U "factors/util"
@@ -39,6 +40,9 @@ func CreateCustomMetric(c *gin.Context) (interface{}, int, string, string, bool)
 	err = U.DecodePostgresJsonbToStructType(request.Transformations, &customMetricTransformation)
 	if err != nil {
 		return nil, http.StatusBadRequest, INVALID_INPUT, "Error during decode of custom metrics transformations.", true
+	}
+	if !customMetricTransformation.IsValid() {
+		return nil, http.StatusBadRequest, INVALID_INPUT, "Error with values passed in transformations.", true
 	}
 	request.ProjectID = projectID
 	customMetric, errMsg, statusCode := store.GetStore().CreateCustomMetric(request)
@@ -93,6 +97,50 @@ func GetCustomMetrics(c *gin.Context) (interface{}, int, string, string, bool) {
 		return nil, statusCode, PROCESSING_FAILED, "Failed to get custom metrics", true
 	}
 	return customMetrics, http.StatusOK, "", "", false
+}
+
+// DeleteCustomMetrics godoc
+// @Summary To delete custom metrics for a project id.
+// @Tags CustomMetric
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Param name path integer true "id"
+// @Router /{project_id}/v1/custom_metrics/{id} [delete]
+func DeleteCustomMetrics(c *gin.Context) (interface{}, int, string, string, bool) {
+	reqID := U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID)
+	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	customMetricsID := c.Params.ByName("id")
+
+	if projectID == 0 {
+		return nil, http.StatusBadRequest, INVALID_PROJECT, ErrorMessages[INVALID_PROJECT], true
+	}
+
+	customMetric, _, statusCode := store.GetStore().GetCustomMetricsByID(projectID, customMetricsID)
+	if statusCode != http.StatusFound {
+		return nil, http.StatusInternalServerError, INVALID_INPUT, ErrorMessages[INVALID_INPUT], true
+	}
+
+	dashboardUnitNames, statusCode := store.GetStore().GetDashboardUnitNamesByProjectIdTypeAndName(projectID, reqID, model.QueryClassKPI, customMetric.Name)
+	if statusCode != http.StatusFound {
+		return nil, http.StatusInternalServerError, PROCESSING_FAILED, "Error Processing/Fetching GetDashboardUnitNamesByProjectIdTypeAndName", true
+	}
+
+	alertNames, statusCode := store.GetStore().GetAlertNamesByProjectIdTypeAndName(projectID, customMetric.Name)
+	if statusCode != http.StatusFound {
+		return nil, http.StatusInternalServerError, PROCESSING_FAILED, "Error Processing/Fetching GetAlertNamesByProjectIdTypeAndName", true
+	}
+
+	if len(dashboardUnitNames) == 0 && len(alertNames) == 0 {
+		statusCode = store.GetStore().DeleteCustomMetricByID(projectID, customMetricsID)
+		if statusCode != http.StatusFound {
+			return nil, http.StatusInternalServerError, PROCESSING_FAILED, "", true
+		} else {
+			return nil, http.StatusOK, "", "", false
+		}
+
+	} else {
+		return gin.H{"dashboardUnitNames": dashboardUnitNames, "alertNames": alertNames}, http.StatusBadRequest, DEPENDENT_RECORD_PRESENT, "", false
+	}
 }
 
 func getPropertiesFunctionBasedOnObjectType(objectType string) func(uint64, string) []map[string]string {

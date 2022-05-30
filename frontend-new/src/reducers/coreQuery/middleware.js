@@ -14,7 +14,7 @@ import {
   setTacticOfferTypeAction,
   setEventsDisplayAction,
   setUserPropertiesNamesAction,
-  setEventPropertiesNamesAction
+  setEventPropertiesNamesAction, resetGroupByAction
 } from './actions';
 import { getEventNames, fetchEventProperties, fetchUserProperties, fetchCampaignConfig } from './services';
 import { convertToEventOptions, convertPropsToOptions, convertCampaignConfig } from './utils';
@@ -67,6 +67,13 @@ export const setGroupBy = (type, groupBy, index) => {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
       resolve(dispatch(setGroupByAction(type, groupBy, index)))
+    })
+  }
+}
+export const resetGroupBy = () => {
+  return (dispatch) => {
+    return new Promise((resolve, reject) => {
+      resolve(dispatch(resetGroupByAction()))
     })
   }
 }

@@ -268,6 +268,39 @@ func (store *MemSQL) GetDashboardUnitsByProjectIDAndDashboardIDAndTypes(projectI
 	return dashboardUnits, http.StatusFound
 }
 
+// NOTE: This can cause more latency when more dashboardUnits are there.
+// Currently preload of related structs is not possible. Hence using loop.
+func (store *MemSQL) GetDashboardUnitNamesByProjectIdTypeAndName(projectID uint64, reqID string, typeOfQuery string, nameOfQuery string) ([]string, int) {
+	rDashboardUnitNames := make([]string, 0)
+	dashboardUnits, statusCode := store.GetDashboardUnitsForProjectID(projectID)
+	if statusCode != http.StatusFound {
+		return rDashboardUnitNames, statusCode
+	}
+	logCtx := log.WithField("reqID", reqID).WithField("projectID", projectID)
+	for _, dashboardUnit := range dashboardUnits {
+		queryClass, queryInfo, errMsg := store.GetQueryAndClassFromDashboardUnit(&dashboardUnit)
+		if errMsg != "" {
+			logCtx.Warn("Error during decode of Dashboard unit - GetDashboardUnitNamesByProjectIdTypeAndName")
+			return rDashboardUnitNames, http.StatusInternalServerError
+		}
+
+		if queryClass == typeOfQuery {
+			baseQuery, err := model.DecodeQueryForClass(queryInfo.Query, queryClass)
+			if err != nil {
+				errMsg := fmt.Sprintf("Error decoding query, query_id %d", dashboardUnit.QueryId)
+				logCtx.WithField("error message", errMsg).Warn("GetDashboardUnitNamesByProjectIdTypeAndName")
+				return rDashboardUnitNames, http.StatusInternalServerError
+			}
+
+			isPresent := baseQuery.CheckIfNameIsPresent(nameOfQuery)
+			if isPresent {
+				rDashboardUnitNames = append(rDashboardUnitNames, dashboardUnit.Description)
+			}
+		}
+	}
+	return rDashboardUnitNames, http.StatusFound
+}
+
 func (store *MemSQL) DeleteDashboardUnit(projectId uint64, agentUUID string, dashboardId uint64, id uint64) int {
 	logFields := log.Fields{
 		"project_id":   projectId,

@@ -180,6 +180,24 @@ const WeeklyInishgtsResults = ({data, activeInsight, requestQuery,activeProject 
     const genBody = (item)=> {
         const prevalance = item.change_in_prevalance;
         const conversion = item.change_in_conversion;   
+        if(item?.category== 'kpi' ){
+            const data = item?.change_in_scale;
+            const value1 = data?.w1[0];
+            const value2 = data?.w2[0];
+            const valuePercentage1 = data?.w1[1];
+            const valuePercentage2 = data?.w2[1];
+            return( 
+                    <div className={'flex  items-center pl-10'}> 
+                        <Text type={"title"} weight={'thin'} color={'grey'} level={8} extraClass={"m-0 mr-2"}> {`Scale of`}</Text> 
+                        <Tag className={'m-0 mx-2'}>{matchEventName(item.key)}</Tag>
+                        <Text type={"title"} weight={'thin'} color={'grey'} level={8} extraClass={"m-0 ml-1"}> {`=`}</Text> 
+                        <Text type={"title"} weight={'bold'} color={'grey'} level={8} extraClass={"m-0 ml-1"} truncate={true} charLimit={50}>{item.value}</Text>
+                        <Text type={"title"} weight={'thin'} color={'grey'} level={8} extraClass={"m-0 ml-1"}>{`${data.isIncrease[0] ? 'has increased' : 'has decreased'} from`}</Text>  
+                        <Text type={"title"} weight={'thin'} color={'grey'} level={8} extraClass={"m-0 mx-1"}>{`${value1} (`} <Number number={valuePercentage1} suffix={'%'}  />{` of total)`}</Text>
+                        <Text type={"title"} weight={'thin'} color={'grey'} level={8} extraClass={"m-0"}>{`to ${value2} (`} <Number number={valuePercentage2} suffix={'%'}  />{` of total)`}</Text> 
+                    </div>  
+            )
+        }  
         if(item?.type== 'distribution' ){
             const data = item?.change_in_distribution;
             const value1 = item?.change_in_distribution?.w1;
@@ -253,7 +271,7 @@ const WeeklyInishgtsResults = ({data, activeInsight, requestQuery,activeProject 
             setLoading(false);
             console.log('weekly-ingishts fetch error', e);
           }); 
-    }
+    } 
     let insightsLen =  Object.keys(dateData)?.length || 0; 
     const defaultDate = `${moment.unix(Object.keys(dateData)[insightsLen-1]).utc().format("MMM DD, YYYY")} - ${moment.unix(Object.keys(dateData)[insightsLen-1]).utc().endOf('week').format("MMM DD, YYYY")}`;
     // const WeekData = `${moment.unix(1624147200).format("MMM DD, YYYY")} - ${moment.unix(1624147200).endOf('week').format("MMM DD, YYYY")}`; 

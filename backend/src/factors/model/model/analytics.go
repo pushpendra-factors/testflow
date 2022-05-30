@@ -193,6 +193,7 @@ type BaseQuery interface {
 	GetQueryCacheExpiry() float64
 	TransformDateTypeFilters() error
 	ConvertAllDatesFromTimezone1ToTimezone2(currentTimezone, nextTimezone string) error
+	CheckIfNameIsPresent(nameOfQuery string) bool
 }
 
 type Query struct {
@@ -323,6 +324,10 @@ func (query *Query) ConvertAllDatesFromTimezone1ToTimezone2(currentTimezone, nex
 		query.GlobalUserProperties[i].ConvertAllDatesFromTimezone1ToTimzone2(currentTimezone, nextTimezone)
 	}
 	return nil
+}
+
+func (query *Query) CheckIfNameIsPresent(nameOfQuery string) bool {
+	return false
 }
 
 type QueryProperty struct {
@@ -541,6 +546,10 @@ func (q *QueryGroup) TransformDateTypeFilters() error {
 		}
 	}
 	return nil
+}
+
+func (q *QueryGroup) CheckIfNameIsPresent(nameOfQuery string) bool {
+	return false
 }
 
 func (q *QueryGroup) ConvertAllDatesFromTimezone1ToTimezone2(currentTimezone, nextTimezone string) error {
