@@ -248,6 +248,7 @@ function QueryBlock({
         <div className={`relative`}>
           <Button
             type='text'
+            style={{color: '#1E89FF'}}
             onClick={() => setAdditionalactions(['Filter By', 'filter'])}
             className={`-ml-2`}
           >
@@ -416,9 +417,9 @@ function QueryBlock({
             selectPageUrls()}
         </div>
       </div>
-      <div className={'mt-4 mb-1'}>
+      {/* <div className={'mt-4 mb-1'}>
         <Text type={'title'} level={7} weight={'bold'} color={'grey-2'} extraClass={'m-0'}>FILTER BY</Text>
-      </div>
+      </div> */}
       {eventFilters()}
       <div className={'mt-2'}>
         {additionalActions()}
