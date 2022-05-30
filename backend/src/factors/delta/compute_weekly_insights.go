@@ -33,21 +33,30 @@ type Base struct {
 	IsIncreased bool    `json:"isIncrease"`
 	Percentage  float64 `json:"percentage"`
 }
+type BaseWithPerc struct {
+	W1          [2]float64 `json:"w1"`
+	W2          [2]float64 `json:"w2"`
+	IsIncreased [2]bool    `json:"isIncrease"`
+	Percentage  [2]float64 `json:"percentage"`
+}
 
 type ActualMetrics struct {
-	Key                  string `json:"key"`
-	Value                string `json:"value"`
-	Entity               string `json:"entity"`
-	VoteStatus           string `json:"vote_status"`
-	ActualValues         Base   `json:"actual_values"`
-	ChangeInConversion   Base   `json:"change_in_conversion"`
-	ChangeInPrevalance   Base   `json:"change_in_prevalance"`
-	ChangeInDistribution Base   `json:"change_in_distribution"`
-	Type                 string `json:"type"`
+	Category             string       `json:"category"`
+	Key                  string       `json:"key"`
+	Value                string       `json:"value"`
+	Entity               string       `json:"entity"`
+	VoteStatus           string       `json:"vote_status"`
+	ActualValues         Base         `json:"actual_values"`
+	ChangeInConversion   Base         `json:"change_in_conversion"`
+	ChangeInPrevalance   Base         `json:"change_in_prevalance"`
+	ChangeInDistribution Base         `json:"change_in_distribution"`
+	ChangeInScale        BaseWithPerc `json:"change_in_scale"`
+	Type                 string       `json:"type"`
 }
 
 // temporary structure to hold values
 type ValueWithDetails struct {
+	Category             string            `json:"category"`
 	Key                  string            `json:"key"`
 	Value                string            `json:"value"`
 	Entity               string            `json:"entity"`
@@ -56,6 +65,7 @@ type ValueWithDetails struct {
 	ChangeInConversion   Base              `json:"change_in_conversion"`
 	ChangeInPrevalance   Base              `json:"change_in_prevalance"`
 	ChangeInDistribution Base              `json:"change_in_distribution"`
+	ChangeInScale        BaseWithPerc      `json:"change_in_scale"`
 	Type                 string            `json:"type"`
 }
 type BaseTargetMetrics struct {
@@ -95,8 +105,8 @@ const DistributionChangePer float64 = 5 // x of overall to be comapared with dis
 func getInsightImportance(valWithDetails ValueWithDetails) float64 {
 	w1 := valWithDetails.ActualValues.W1
 	w2 := valWithDetails.ActualValues.W2
-	dist1 := valWithDetails.ChangeInDistribution.W1
-	dist2 := valWithDetails.ChangeInDistribution.W1
+	dist1 := valWithDetails.ChangeInScale.W1[1]
+	dist2 := valWithDetails.ChangeInScale.W2[1]
 	if w2+w1 == 0 {
 		return 0
 	}
@@ -113,81 +123,104 @@ func GetInsightsKpi(file CrossPeriodInsightsKpi, numberOfRecords int, QueryClass
 	var tmpGlobal Base
 	var valWithDetailsArr []ValueWithDetails
 	var ActualValuearr []ActualMetrics
-	for _, cpiInfo := range file.Target {
-		var globalW1, globalW2 float64
-		if cpiInfo.GlobalMetrics.First != nil {
-			globalW1 = cpiInfo.GlobalMetrics.First.(float64)
-		}
-		tmpGlobal.W1 = globalW1
-		if cpiInfo.GlobalMetrics.Second != nil {
-			globalW2 = cpiInfo.GlobalMetrics.Second.(float64)
-		}
-		tmpGlobal.W2 = globalW2
-		tmpGlobal.IsIncreased = cpiInfo.GlobalMetrics.PercentChange > 0
-		tmpGlobal.Percentage = cpiInfo.GlobalMetrics.PercentChange
-		insights.Goal = tmpGlobal
+	cpiInfo := file.Target
+	scaleInfo := file.ScaleInfo
 
-		var tmp ValueWithDetails
-		var temp BaseTargetMetrics
+	//get scale
+	var globalScaleW1, globalScaleW2 float64
+	if scaleInfo.GlobalMetrics.First != nil {
+		globalScaleW1 = scaleInfo.GlobalMetrics.First.(float64)
+	}
+	if scaleInfo.GlobalMetrics.Second != nil {
+		globalScaleW2 = scaleInfo.GlobalMetrics.Second.(float64)
+	}
 
-		for key, valMap := range cpiInfo.FeatureMetrics {
-			keyNameType := strings.SplitN(key, "#", 2)
-			keyType, keyName := keyNameType[0], keyNameType[1]
+	var globalW1, globalW2 float64
+	if cpiInfo.GlobalMetrics.First != nil {
+		globalW1 = cpiInfo.GlobalMetrics.First.(float64)
+	}
+	tmpGlobal.W1 = globalW1
+	if cpiInfo.GlobalMetrics.Second != nil {
+		globalW2 = cpiInfo.GlobalMetrics.Second.(float64)
+	}
+	tmpGlobal.W2 = globalW2
+	tmpGlobal.IsIncreased = cpiInfo.GlobalMetrics.PercentChange > 0
+	tmpGlobal.Percentage = cpiInfo.GlobalMetrics.PercentChange
+	insights.Goal = tmpGlobal
 
-			for val, diff := range valMap {
-				if val == "" { // omitting "" values
-					continue
-				}
-				if KeyMapForDistribution[val] {
-					continue
-				}
-				if BlackListedKeys[keyName] {
-					continue
-				}
-				KeyMapForDistribution[val] = true
-				featW1 := diff.First.(float64)
-				featW2 := diff.Second.(float64)
-				tmp.Key = keyName
-				tmp.Value = val
-				tmp.Entity = keyType
-				temp.W1 = featW1
-				temp.W2 = featW2
-				// tmp.ActualValues.IsIncreased = diff.PercentChange > 0
-				temp.Per = diff.PercentChange
+	var tmp ValueWithDetails
+	var temp BaseTargetMetrics
 
-				if _, exists := file.JSDivergence.Target[key][val]; exists {
-					temp.JSDivergence = file.JSDivergence.Target[key][val] * temp.W1
-					if _, exists := PriorityKeysDistribution[tmp.Key]; exists {
-						temp.JSDivergence = 4
+	for key, valMap := range cpiInfo.FeatureMetrics {
+		keyNameType := strings.SplitN(key, "#", 2)
+		keyType, keyName := keyNameType[0], keyNameType[1]
+
+		for val, diff := range valMap {
+			if val == "" { // omitting "" values
+				continue
+			}
+			if KeyMapForDistribution[val] {
+				continue
+			}
+			if BlackListedKeys[keyName] {
+				continue
+			}
+			KeyMapForDistribution[val] = true
+
+			if _, ok := scaleInfo.FeatureMetrics[key][val]; !ok {
+				scaleInfo.FeatureMetrics[key] = make(map[string]DiffMetric)
+			}
+			featScaleW1 := scaleInfo.FeatureMetrics[key][val].First.(float64)
+			featScaleW2 := scaleInfo.FeatureMetrics[key][val].Second.(float64)
+
+			featW1 := diff.First.(float64)
+			featW2 := diff.Second.(float64)
+			tmp.Key = keyName
+			tmp.Value = val
+			tmp.Entity = keyType
+			temp.W1 = featW1
+			temp.W2 = featW2
+			temp.Per = diff.PercentChange
+
+			if _, exists := file.JSDivergence.Target[key][val]; exists {
+				temp.JSDivergence = file.JSDivergence.Target[key][val] * temp.W1
+				if _, exists := PriorityKeysDistribution[tmp.Key]; exists {
+					temp.JSDivergence = 4
+				} else {
+					if WhiteListedKeys[tmp.Key] {
+						temp.JSDivergence = 3
+						tmp.VoteStatus = Upvoted
+					} else if WhiteListedKeysOtherQuery[tmp.Key] {
+						temp.JSDivergence = 2
+						tmp.VoteStatus = UpvotedForOtherQuery
+					} else if DecreaseBoostKeys[tmp.Key] {
+						temp.JSDivergence = 0
+						tmp.VoteStatus = DownvotedForOtherQuery
 					} else {
-						if WhiteListedKeys[tmp.Key] {
-							temp.JSDivergence = 3
-							tmp.VoteStatus = Upvoted
-						} else if WhiteListedKeysOtherQuery[tmp.Key] {
-							temp.JSDivergence = 2
-							tmp.VoteStatus = UpvotedForOtherQuery
-						} else if DecreaseBoostKeys[tmp.Key] {
-							temp.JSDivergence = 0
-							tmp.VoteStatus = DownvotedForOtherQuery
-						} else {
-							temp.JSDivergence = 1
-						}
+						temp.JSDivergence = 1
 					}
 				}
-				tmp.ActualValues = temp
+			}
+			tmp.ActualValues = temp
 
-				if globalW1 != 0 {
-					tmp.ChangeInDistribution.W1 = featW1 * 100 / globalW1
-				}
-				if globalW2 != 0 {
-					tmp.ChangeInDistribution.W2 = featW2 * 100 / globalW2
-				}
-				tmp.ChangeInDistribution.IsIncreased = tmp.ChangeInDistribution.W1 < tmp.ChangeInDistribution.W2
-				tmp.ChangeInDistribution.Percentage = tmp.ChangeInDistribution.W2 - tmp.ChangeInDistribution.W1
-				tmp.Type = "distribution"
-				if !(CheckPercentageChange(globalW1, featW1) || CheckPercentageChange(globalW2, featW2)) && math.Abs(tmp.ActualValues.Per) > 5 {
-					valWithDetailsArr = append(valWithDetailsArr, tmp)
-				}
+			tmp.ChangeInScale.W1[0] = featScaleW1
+			if globalScaleW1 != 0 {
+				tmp.ChangeInScale.W1[1] = featScaleW1 * 100 / globalScaleW1
+			}
+			tmp.ChangeInScale.W2[0] = featScaleW2
+			if globalScaleW2 != 0 {
+				tmp.ChangeInScale.W2[1] = featScaleW2 * 100 / globalScaleW2
+			}
+			tmp.ChangeInScale.IsIncreased[0] = tmp.ChangeInScale.W1[0] < tmp.ChangeInScale.W2[0]
+			tmp.ChangeInScale.IsIncreased[1] = tmp.ChangeInScale.W1[1] < tmp.ChangeInScale.W2[1]
+			tmp.ChangeInScale.Percentage[0] = (tmp.ChangeInScale.W2[0] - tmp.ChangeInScale.W1[0]) * 100 / tmp.ChangeInScale.W1[0]
+			tmp.ChangeInScale.Percentage[1] = tmp.ChangeInScale.W2[1] - tmp.ChangeInScale.W1[1]
+
+			tmp.Type = "distribution"
+			tmp.Category = "kpi"
+
+			if !(CheckPercentageChange(globalScaleW1, featScaleW1) || CheckPercentageChange(globalScaleW2, featScaleW2)) && math.Abs(tmp.ActualValues.Per) > 5 {
+				valWithDetailsArr = append(valWithDetailsArr, tmp)
 			}
 		}
 	}
@@ -218,7 +251,8 @@ func GetInsightsKpi(file CrossPeriodInsightsKpi, numberOfRecords int, QueryClass
 				Percentage:  data.ActualValues.Per,
 			},
 		}
-		tempActualValue.ChangeInDistribution = data.ChangeInDistribution
+		tempActualValue.ChangeInScale = data.ChangeInScale
+		tempActualValue.Category = data.Category
 		propertyMap[data.Key] = true
 		tempActualValue.Key = data.Key
 		tempActualValue.Value = data.Value
@@ -413,6 +447,7 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 					value.ChangeInConversion.IsIncreased = value.ChangeInConversion.Percentage > 0
 
 					value.Type = "conversion"
+					value.Category = "events"
 
 					valWithDetailsArr = append(valWithDetailsArr, value)
 				}
@@ -447,6 +482,7 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 			},
 		}
 		propertyMap[data.Key] = true
+		tempActualValue.Category = data.Category
 		tempActualValue.Key = data.Key
 		tempActualValue.Value = data.Value
 		tempActualValue.Entity = data.Entity
@@ -540,6 +576,7 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 					val2.ChangeInDistribution.Percentage = (val2.ChangeInDistribution.W1) - (val2.ChangeInDistribution.W2)
 
 					val2.Type = "distribution"
+					val2.Category = "events"
 					valWithDetailsArr2 = append(valWithDetailsArr2, val2)
 				}
 			}
@@ -612,6 +649,7 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 					val2.ChangeInDistribution.Percentage = (val2.ChangeInDistribution.W1) - (val2.ChangeInDistribution.W2)
 
 					val2.Type = "distribution"
+					val2.Category = "events"
 					valWithDetailsArr2 = append(valWithDetailsArr2, val2)
 				}
 			}
@@ -645,6 +683,7 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 			},
 		}
 		tempActualValue.ChangeInDistribution = data.ChangeInDistribution
+		tempActualValue.Category = data.Category
 		propertyMap[data.Key] = true
 		tempActualValue.Key = data.Key
 		tempActualValue.Value = data.Value
@@ -1168,6 +1207,6 @@ func CaptureBlackListedAndWhiteListedKeys(projectID uint64, agentUUID string, qu
 
 func CheckPercentageChange(overall, week float64) bool {
 	//filtering  if week1 data is less than x % of overall w1 data
-	actual := (DistributionChangePer / 100 * overall)
+	actual := (DistributionChangePer / 100) * overall
 	return week < actual
 }
