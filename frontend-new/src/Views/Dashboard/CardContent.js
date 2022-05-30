@@ -62,7 +62,8 @@ function CardContent({ unit, resultState, durationObj }) {
       return getAttributionStateFromRequestQuery(
         unit.query.query.query,
         attr_dimensions,
-        content_groups
+        content_groups,
+        kpiConfig
       );
     } else if (
       unit.query.query.cl &&

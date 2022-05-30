@@ -1,4 +1,6 @@
-import _ from 'lodash';
+import get from 'lodash/get';
+import lowerCase from 'lodash/lowerCase';
+import startCase from 'lodash/startCase';
 
 import { EMPTY_ARRAY } from 'Utils/global';
 import { formatFilterDate } from 'Utils/dataFormatter';
@@ -332,7 +334,7 @@ const getEventsWithPropertiesKPI = (filters, category) => {
     if (Array.isArray(fil.values)) {
       fil.values.forEach((val, index) => {
         filterProps.push({
-          prNa: fil?.extra ? fil?.extra[1] : `$${_.lowerCase(fil?.props[0])}`,
+          prNa: fil?.extra ? fil?.extra[1] : `$${lowerCase(fil?.props[0])}`,
           prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
           co: operatorMap[fil.operator],
           lOp: !index ? 'AND' : 'OR',
@@ -349,7 +351,7 @@ const getEventsWithPropertiesKPI = (filters, category) => {
       });
     } else {
       filterProps.push({
-        prNa: fil?.extra ? fil?.extra[1] : `$${_.lowerCase(fil?.props[0])}`,
+        prNa: fil?.extra ? fil?.extra[1] : `$${lowerCase(fil?.props[0])}`,
         prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
         co: operatorMap[fil.operator],
         lOp: 'AND',
@@ -1068,17 +1070,21 @@ export const getAttributionQuery = (
 export const getAttributionStateFromRequestQuery = (
   requestQuery,
   initial_attr_dimensions,
-  initial_content_groups
+  initial_content_groups,
+  kpiConfig
 ) => {
   let attrQueries = [];
   if (requestQuery.analyze_type && requestQuery.analyze_type !== 'users') {
-    const kpiQuery = getKPIStateFromRequestQuery(requestQuery.kpi_query_group);
+    const kpiQuery = getKPIStateFromRequestQuery(
+      requestQuery.kpi_query_group,
+      kpiConfig
+    );
     attrQueries = kpiQuery.events;
   }
 
   const filters = [];
 
-  _.get(requestQuery, 'ce.pr', []).forEach((pr) => {
+  get(requestQuery, 'ce.pr', []).forEach((pr) => {
     if (pr.lop === 'AND') {
       const val = pr.ty === 'categorical' ? [pr.va] : pr.va;
       filters.push({
@@ -1629,10 +1635,11 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
       : null;
 
     const eventFilters = [];
-    _.get(q, 'fil', EMPTY_ARRAY).forEach((pr) => {
+    const fil = get(q, 'fil', EMPTY_ARRAY) ? get(q, 'fil', EMPTY_ARRAY) : EMPTY_ARRAY;
+    fil.forEach((pr) => {
       if (pr.lOp === 'AND') {
         const val = pr.prDaTy === 'categorical' ? [pr.va] : pr.va;
-        const DNa = _.startCase(pr.prNa);
+        const DNa = startCase(pr.prNa);
         const isCamp =
           requestQuery?.qG[0]?.ca === 'channels' ? pr.objTy : pr.en;
         eventFilters.push({
@@ -1660,7 +1667,7 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
       label: metric ? metric.display_name : q.me[0],
       filters: eventFilters,
       alias: '',
-      metricType: metric.type
+      metricType: get(metric, 'type', null)
     });
   }
   // const globalFilters = [];
@@ -1671,7 +1678,7 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
     if (pr.lOp === 'AND') {
       const val = pr.prDaTy === FILTER_TYPES.CATEGORICAL ? [pr.va] : pr.va;
 
-      const DNa = _.startCase(pr.prNa);
+      const DNa = startCase(pr.prNa);
 
       const isCamp = requestQuery?.qG[0]?.ca === 'channels' ? pr.objTy : pr.en;
 

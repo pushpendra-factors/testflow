@@ -12,7 +12,7 @@ import {
   CHART_TYPE_HORIZONTAL_BAR_CHART,
   QUERY_TYPE_KPI,
   QUERY_TYPE_PROFILE,
-  CHART_TYPE_PIVOT_CHART,
+  CHART_TYPE_PIVOT_CHART
 } from './constants';
 
 export const isPivotSupported = ({ queryType }) => {
@@ -30,20 +30,20 @@ export const getChartTypeMenuItems = (queryType, breakdownLength, events) => {
       menuItems = [
         {
           key: CHART_TYPE_BARCHART,
-          name: 'Columns',
+          name: 'Columns'
         },
         {
           key: CHART_TYPE_LINECHART,
-          name: 'Line Chart',
+          name: 'Line Chart'
         },
         {
           key: CHART_TYPE_STACKED_AREA,
-          name: 'Stacked Area',
+          name: 'Stacked Area'
         },
         {
           key: CHART_TYPE_STACKED_BAR,
-          name: 'Stacked Column',
-        },
+          name: 'Stacked Column'
+        }
       ];
       if (
         queryType === QUERY_TYPE_EVENT &&
@@ -53,25 +53,25 @@ export const getChartTypeMenuItems = (queryType, breakdownLength, events) => {
         // this chart type is only supported when there is atmost one event and there is atleast 1 breakdown and atmost 3 breakdowns
         menuItems.push({
           key: CHART_TYPE_HORIZONTAL_BAR_CHART,
-          name: 'Bars',
+          name: 'Bars'
         });
       }
       if (queryType === QUERY_TYPE_EVENT && breakdownLength > 1) {
         menuItems.push({
           key: CHART_TYPE_PIVOT_CHART,
-          name: 'Pivot Chart',
+          name: 'Pivot Chart'
         });
       }
     } else {
       menuItems = [
         {
           key: CHART_TYPE_SPARKLINES,
-          name: 'Sparkline',
+          name: 'Sparkline'
         },
         {
           key: CHART_TYPE_LINECHART,
-          name: 'Line Chart',
-        },
+          name: 'Line Chart'
+        }
       ];
     }
   }
@@ -79,36 +79,36 @@ export const getChartTypeMenuItems = (queryType, breakdownLength, events) => {
     menuItems = [
       {
         key: CHART_TYPE_BARCHART,
-        name: 'Barchart',
+        name: 'Barchart'
       },
       {
         key: CHART_TYPE_SCATTER_PLOT,
-        name: 'Scatter Plot',
-      },
+        name: 'Scatter Plot'
+      }
     ];
   }
   if (queryType === QUERY_TYPE_FUNNEL && breakdownLength) {
     menuItems = [
       {
         key: CHART_TYPE_BARCHART,
-        name: 'Barchart',
+        name: 'Barchart'
       },
       {
         key: CHART_TYPE_SCATTER_PLOT,
-        name: 'Scatter Plot',
-      },
+        name: 'Scatter Plot'
+      }
     ];
   }
   if (queryType === QUERY_TYPE_KPI && !breakdownLength) {
     menuItems = [
       {
         key: CHART_TYPE_SPARKLINES,
-        name: 'Sparkline',
+        name: 'Sparkline'
       },
       {
         key: CHART_TYPE_LINECHART,
-        name: 'Line Chart',
-      },
+        name: 'Line Chart'
+      }
     ];
   }
 
@@ -116,31 +116,31 @@ export const getChartTypeMenuItems = (queryType, breakdownLength, events) => {
     menuItems = [
       {
         key: CHART_TYPE_BARCHART,
-        name: 'Columns',
+        name: 'Columns'
       },
       {
         key: CHART_TYPE_LINECHART,
-        name: 'Line Chart',
+        name: 'Line Chart'
       },
       {
         key: CHART_TYPE_STACKED_AREA,
-        name: 'Stacked Area',
+        name: 'Stacked Area'
       },
       {
         key: CHART_TYPE_STACKED_BAR,
-        name: 'Stacked Column',
-      },
+        name: 'Stacked Column'
+      }
     ];
     if (breakdownLength <= 3) {
       menuItems.push({
         key: CHART_TYPE_HORIZONTAL_BAR_CHART,
-        name: 'Bars',
+        name: 'Bars'
       });
     }
     if (breakdownLength > 1) {
       menuItems.push({
         key: CHART_TYPE_PIVOT_CHART,
-        name: 'Pivot Chart',
+        name: 'Pivot Chart'
       });
     }
   }
@@ -149,21 +149,31 @@ export const getChartTypeMenuItems = (queryType, breakdownLength, events) => {
     menuItems = [
       {
         key: CHART_TYPE_BARCHART,
-        name: 'Columns',
-      },
+        name: 'Columns'
+      }
     ];
     if (breakdownLength <= 3) {
       menuItems.push({
         key: CHART_TYPE_HORIZONTAL_BAR_CHART,
-        name: 'Bars',
+        name: 'Bars'
       });
     }
     if (breakdownLength > 1) {
       menuItems.push({
         key: CHART_TYPE_PIVOT_CHART,
-        name: 'Pivot Chart',
+        name: 'Pivot Chart'
       });
     }
   }
   return menuItems;
+};
+
+export const getDateFormatForTimeSeriesChart = ({ frequency }) => {
+  return frequency === 'hour'
+    ? 'h A, MMM D, YYYY'
+    : frequency === 'date' || frequency === 'week'
+      ? 'MMM D, YYYY'
+      : frequency === 'month'
+        ? 'MMM YYYY'
+        : 'Q, YYYY';
 };

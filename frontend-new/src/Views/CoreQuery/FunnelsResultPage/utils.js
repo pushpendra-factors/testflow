@@ -710,10 +710,6 @@ const getConvertedValuesForScatterPlot = (metric, originalValue) => {
   if (metric === 'Conversion Time' || metric.includes('time')) {
     return Number(getDurationInSeconds(originalValue));
   }
-  console.log(
-    'getConvertedValuesForScatterPlot -> originalValue',
-    originalValue
-  );
   return originalValue.value || originalValue.value === 0
     ? Number(originalValue.value)
     : Number(originalValue);

@@ -1,5 +1,6 @@
 import React from 'react';
-import _ from 'lodash';
+import get from 'lodash/get';
+import has from 'lodash/has';
 import moment from 'moment';
 
 import { Number as NumFormat } from '../../../../components/factorsComponents';
@@ -100,6 +101,7 @@ export const formatData = (data, kpis, breakdown, currentEventIndex) => {
       return {
         label: grpLabel,
         value: kpiVals[currentEventIndex],
+        metricType: get(kpis[currentEventIndex], 'metricType', null),
         index,
         ...breakdownData,
         ...kpisData
@@ -199,7 +201,7 @@ export const getHorizontalBarChartColumns = (
       render: (d) => {
         const obj = {
           children: <div className="h-full p-6">{d.value}</div>,
-          props: _.has(d, 'rowSpan') ? { rowSpan: d.rowSpan } : {}
+          props: has(d, 'rowSpan') ? { rowSpan: d.rowSpan } : {}
         };
         return obj;
       }
@@ -330,9 +332,8 @@ export const formatDataInSeriesFormat = (
   frequency,
   breakdown
 ) => {
-  // console.log('kpi with breakdown formatDataInSeriesFormat');
+  console.log('kpi with breakdown formatDataInSeriesFormat');
   const dataIndex = 0;
-  // console.log('dataIndex', dataIndex);
   if (
     !aggregateData.length ||
     !data[dataIndex] ||
@@ -474,8 +475,17 @@ export const getDateBasedColumns = (
       className: 'text-right',
       width: 150,
       dataIndex: addQforQuarter(frequency) + moment(cat).format(format),
-      render: (d) => {
-        return d ? <NumFormat number={d} /> : 0;
+      render: (d, rowDetails) => {
+        const metricType = get(rowDetails, 'metricType', null);
+        return d ? (
+          metricType === METRIC_TYPES.dateType ? (
+            formatDuration(d)
+          ) : (
+            <NumFormat number={d} />
+          )
+        ) : (
+          0
+        );
       }
     };
   });

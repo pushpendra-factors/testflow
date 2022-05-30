@@ -1274,6 +1274,8 @@ var STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	"$hubspot_form_submission_phone":         "Phone",
 	"$hubspot_form_submission_timestamp":     "Form Submit Timestamp",
 	"$hubspot_form_submission_portal-id":     "Portal ID",
+	"Source-Medium":                          "Source Medium",
+	"page_url":                               "Page URL",
 }
 
 var STANDARD_USER_PROPERTIES_DISPLAY_NAMES = map[string]string{

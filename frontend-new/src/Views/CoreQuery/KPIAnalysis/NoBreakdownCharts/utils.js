@@ -1,4 +1,5 @@
 import React from 'react';
+import get from 'lodash/get';
 import moment from 'moment';
 
 import { DATE_FORMATS, METRIC_TYPES } from '../../../../utils/constants';
@@ -99,6 +100,7 @@ export const formatDataInSeriesFormat = (aggData) => {
         marker: {
           enabled: false
         },
+        metricType: get(m, 'metricType', null),
         total: m.total
       };
     });
@@ -194,6 +196,7 @@ export const getDataInTableFormat = (
 };
 
 export const getDateBasedColumns = (
+  kpis,
   categories,
   currentSorter,
   handleSorting,
@@ -211,8 +214,13 @@ export const getDateBasedColumns = (
     className: 'text-right',
     dataIndex: 'Overall',
     width: 150,
-    render: (d) => {
-      return <NumFormat number={d} />;
+    render: (d, _, index) => {
+      const metricType = get(kpis[index], 'metricType', null);
+      return metricType === METRIC_TYPES.dateType ? (
+        formatDuration(d)
+      ) : (
+        <NumFormat number={d} />
+      );
     }
   };
   const result = [
@@ -252,8 +260,13 @@ export const getDateBasedColumns = (
       className: 'text-right',
       width: frequency === 'hour' ? 200 : 150,
       dataIndex: addQforQuarter(frequency) + moment(cat).format(format),
-      render: (d) => {
-        return <NumFormat number={d} />;
+      render: (d, _, index) => {
+        const metricType = get(kpis[index], 'metricType', null);
+        return metricType === METRIC_TYPES.dateType ? (
+          formatDuration(d)
+        ) : (
+          <NumFormat number={d} />
+        );
       }
     };
   });

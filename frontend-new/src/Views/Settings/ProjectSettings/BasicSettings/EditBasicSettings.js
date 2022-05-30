@@ -32,9 +32,11 @@ function EditBasicSettings({ activeProject, setEditMode, udpateProjectDetails, a
     }, 200);
   }, []);
 
-  const onFinish = values => { 
+  const onFinish = values => {  
+    const sanitizeName = /(<([^>]+)>)/ig; 
     let projectData = {
       ...values,
+      name: values?.name?.replace(sanitizeName,''),
       profile_picture: imageUrl,
       time_zone: TimeZoneOffsetValues[values.time_zone]?.city
     }; 

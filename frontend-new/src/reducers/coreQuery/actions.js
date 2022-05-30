@@ -7,6 +7,7 @@ export const SET_USER_PROP_NAME = 'SET_USER_PROP_NAME';
 export const SET_EVENT_PROP_NAME = 'SET_EVENT_PROP_NAME';
 export const INITIALIZE_GROUPBY = 'INITIALIZE_GROUPBY';
 export const SET_GROUPBY = 'SET_GROUPBY';
+export const RESET_GROUPBY = 'RESET_GROUPBY';
 export const DEL_GROUPBY = 'DEL_GROUPBY';
 export const DEL_GROUPBY_EVENT = 'DEL_GROUPBY_EVENT';
 export const SET_EVENT_GOAL = 'SET_EVENT_GOAL';
@@ -63,6 +64,9 @@ export const deleteGroupByEventAction = (ev, index) => {
 
 export const setGroupByAction = (type, groupBy, index) => {
   return { type: SET_GROUPBY, payload: groupBy, index: index, groupByType: type };
+}
+export const resetGroupByAction = () => {
+  return { type: RESET_GROUPBY};
 }
 
 export const setEventGoalAction = (goal) => {

@@ -121,8 +121,8 @@ const  FAFilterSelect = ({
   };
 
   const valuesSelect = (val) => { 
-    // setValuesState(val.map((vl) => JSON.parse(vl)[0]));
-    setValuesState(val);
+    setValuesState(val.map((vl) => JSON.parse(vl)[0]));
+    // setValuesState(val);
     setValuesSelectionOpen(false);
     updateStateApply(true);
   };
@@ -442,7 +442,7 @@ const  FAFilterSelect = ({
     if (propState.type === 'categorical') {
       selectionComponent = (
         <FaSelect
-          multiSelect={false}
+          multiSelect={true}
           options={
             valueOpts && valueOpts[propState.name]?.length
               ? valueOpts[propState.name].map((op) => [op])
