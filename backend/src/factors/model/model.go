@@ -49,7 +49,7 @@ type Model interface {
 	UpdateLastLoggedOut(agentUUID string, timestamp int64) int
 
 	// analytics
-	ExecQuery(stmnt string, params []interface{}) (*model.QueryResult, error)
+	ExecQuery(stmnt string, params []interface{}) (*model.QueryResult, error, string)
 	ExecQueryWithContext(stmnt string, params []interface{}) (*sql.Rows, *sql.Tx, error, string)
 	Analyze(projectID uint64, query model.Query) (*model.QueryResult, int, string)
 

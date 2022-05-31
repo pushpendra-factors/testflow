@@ -172,7 +172,7 @@ func (store *MemSQL) addCreatedByNameInQuery(query model.Queries) (model.Queries
 func (store *MemSQL) GetDashboardQueryWithQueryId(projectID uint64, reqID uint64) (*model.Queries, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
-		"query_id":   reqID,
+		"req_id":     reqID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	return store.getQueryWithQueryID(projectID, reqID, model.QueryTypeDashboardQuery)
@@ -182,7 +182,7 @@ func (store *MemSQL) GetDashboardQueryWithQueryId(projectID uint64, reqID uint64
 func (store *MemSQL) GetSavedQueryWithQueryId(projectID uint64, reqID uint64) (*model.Queries, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
-		"query_id":   reqID,
+		"req_id":     reqID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	return store.getQueryWithQueryID(projectID, reqID, model.QueryTypeSavedQuery)
@@ -192,7 +192,7 @@ func (store *MemSQL) GetSavedQueryWithQueryId(projectID uint64, reqID uint64) (*
 func (store *MemSQL) GetQueryWithQueryId(projectID uint64, reqID uint64) (*model.Queries, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
-		"query_id":   reqID,
+		"req_id":     reqID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	return store.getQueryWithQueryID(projectID, reqID, model.QueryTypeAllQueries)
@@ -218,7 +218,7 @@ func (store *MemSQL) GetQueryWithQueryIdString(projectID uint64, queryIDString s
 func (store *MemSQL) getQueryWithQueryID(projectID uint64, reqID uint64, queryType int) (*model.Queries, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
-		"query_id":   reqID,
+		"req_id":     reqID,
 		"query_type": queryType,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -240,7 +240,7 @@ func (store *MemSQL) getQueryWithQueryID(projectID uint64, reqID uint64, queryTy
 		q, errCode := store.addCreatedByNameInQuery(query)
 		if errCode != http.StatusFound {
 			// logging error but still sending the queries
-			log.WithField("project_id", projectID).WithField("query_id",
+			log.WithField("project_id", projectID).WithField("req_id",
 				reqID).Error("could not update created by name for queries")
 			return &query, http.StatusFound
 		}
@@ -253,13 +253,13 @@ func (store *MemSQL) getQueryWithQueryID(projectID uint64, reqID uint64, queryTy
 func existsDashboardUnitForQueryID(projectID uint64, reqID uint64) bool {
 	logFields := log.Fields{
 		"project_id": projectID,
-		"query_id":   reqID,
+		"req_id":     reqID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
 
 	var dashboardUnits []model.DashboardUnit
-	if err := db.Where("project_id = ? AND query_id = ? AND is_deleted = ?", projectID, reqID, false).
+	if err := db.Where("project_id = ? AND req_id = ? AND is_deleted = ?", projectID, reqID, false).
 		Find(&dashboardUnits).Error; err != nil {
 		log.WithError(err).Errorf("Failed to get dashboard units for projectID %d", projectID)
 		// in case of failure allow delete
@@ -276,7 +276,7 @@ func existsDashboardUnitForQueryID(projectID uint64, reqID uint64) bool {
 func (store *MemSQL) DeleteQuery(projectID uint64, reqID uint64) (int, string) {
 	logFields := log.Fields{
 		"project_id": projectID,
-		"query_id":   reqID,
+		"req_id":     reqID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	return deleteQuery(projectID, reqID, 0)
@@ -286,7 +286,7 @@ func (store *MemSQL) DeleteQuery(projectID uint64, reqID uint64) (int, string) {
 func (store *MemSQL) DeleteSavedQuery(projectID uint64, reqID uint64) (int, string) {
 	logFields := log.Fields{
 		"project_id": projectID,
-		"query_id":   reqID,
+		"req_id":     reqID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	return deleteQuery(projectID, reqID, model.QueryTypeSavedQuery)
@@ -296,7 +296,7 @@ func (store *MemSQL) DeleteSavedQuery(projectID uint64, reqID uint64) (int, stri
 func (store *MemSQL) DeleteDashboardQuery(projectID uint64, reqID uint64) (int, string) {
 	logFields := log.Fields{
 		"project_id": projectID,
-		"query_id":   reqID,
+		"req_id":     reqID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	return deleteQuery(projectID, reqID, model.QueryTypeDashboardQuery)
@@ -305,7 +305,7 @@ func (store *MemSQL) DeleteDashboardQuery(projectID uint64, reqID uint64) (int, 
 func deleteQuery(projectID uint64, reqID uint64, queryType int) (int, string) {
 	logFields := log.Fields{
 		"project_id": projectID,
-		"query_id":   reqID,
+		"req_id":     reqID,
 		"query_type": queryType,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -338,7 +338,7 @@ func deleteQuery(projectID uint64, reqID uint64, queryType int) (int, string) {
 func (store *MemSQL) UpdateSavedQuery(projectID uint64, reqID uint64, query *model.Queries) (*model.Queries, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
-		"query_id":   reqID,
+		"req_id":     reqID,
 		"query":      query,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)

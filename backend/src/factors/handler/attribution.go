@@ -207,6 +207,12 @@ func AttributionHandler(c *gin.Context) (interface{}, int, string, string, bool)
 		logCtx.WithError(err).Error("Failed to process query from DB")
 		return nil, http.StatusInternalServerError, V1.PROCESSING_FAILED, err.Error(), true
 	}
+	if result == nil {
+		model.DeleteQueryCacheKey(projectId, &attributionQueryUnitPayload)
+		logCtx.WithError(err).Error(" Result is nil")
+		return nil, http.StatusInternalServerError, V1.PROCESSING_FAILED, "Result is nil " + err.Error(), true
+	}
+
 	model.SetQueryCacheResult(projectId, &attributionQueryUnitPayload, result)
 
 	if isDashboardQueryRequest {

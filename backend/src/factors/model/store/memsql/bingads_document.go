@@ -21,7 +21,7 @@ const (
 	fromIntegrationDocuments                        = " FROM integration_documents "
 	staticWhereStatementForBingAds                  = "WHERE project_id = ? AND source= ? AND document_type = ? AND customer_account_id IN (?) AND timestamp between ? AND ? "
 	staticWhereStatementForBingAdsWithSmartProperty = "WHERE integration_documents.project_id = ? AND integration_documents.source= ?  AND integration_documents.customer_account_id IN ( ? ) AND integration_documents.document_type = ? AND integration_documents.timestamp between ? AND ? "
-	bingadsFilterQueryStr                           = "SELECT DISTINCT(LCASE(JSON_EXTRACT_STRING(value, ?))) as filter_value FROM integration_documents WHERE project_id = ? AND customer_account_id IN (?) AND document_type = ? AND JSON_EXTRACT_STRING(value, ?) IS NOT NULL LIMIT 5000"
+	bingadsFilterQueryStr                           = "SELECT DISTINCT(LCASE(JSON_EXTRACT_STRING(value, ?))) as filter_value FROM integration_documents WHERE project_id = ? AND customer_account_id IN (?) AND document_type = ? AND JSON_EXTRACT_STRING(value, ?) IS NOT NULL AND timestamp BETWEEN ? AND ? LIMIT 5000"
 )
 
 // add other properties and vals
@@ -109,7 +109,9 @@ func (store *MemSQL) GetBingadsFilterValues(projectID uint64, requestFilterObjec
 	requestFilterProperty = strings.TrimPrefix(requestFilterProperty, fmt.Sprintf("%v_", requestFilterObject))
 	docType := model.BingadsDocumentTypeAlias[model.BingAdsObjectInternalRepresentationToExternalRepresentation[requestFilterObject]]
 	filterProperty := model.BingAdsInternalRepresentationToExternalRepresentation[fmt.Sprintf("%v.%v", model.BingAdsObjectInternalRepresentationToExternalRepresentation[requestFilterObject], requestFilterProperty)]
-	params := []interface{}{filterProperty, projectID, customerAccountIDs, docType, filterProperty}
+
+	from, to := model.GetFromAndToDatesForFilterValues()
+	params := []interface{}{filterProperty, projectID, customerAccountIDs, docType, filterProperty, from, to}
 	_, resultRows, err := store.ExecuteSQL(bingadsFilterQueryStr, params, logCtx)
 	if err != nil {
 		logCtx.WithError(err).WithField("query", bingadsFilterQueryStr).WithField("params", params).Error(model.BingSpecificError)
@@ -136,8 +138,9 @@ func (store *MemSQL) GetBingadsFilterValuesSQLAndParams(projectID uint64, reques
 	customerAccountIDs := strings.Split(ftMapping.Accounts, ",")
 	requestFilterProperty = strings.TrimPrefix(requestFilterProperty, fmt.Sprintf("%v_", requestFilterObject))
 	docType := model.BingadsDocumentTypeAlias[model.BingAdsObjectInternalRepresentationToExternalRepresentation[requestFilterObject]]
+	from, to := model.GetFromAndToDatesForFilterValues()
 	filterProperty := model.BingAdsInternalRepresentationToExternalRepresentation[fmt.Sprintf("%v.%v", model.BingAdsObjectInternalRepresentationToExternalRepresentation[requestFilterObject], requestFilterProperty)]
-	params := []interface{}{filterProperty, projectID, customerAccountIDs, docType, filterProperty}
+	params := []interface{}{filterProperty, projectID, customerAccountIDs, docType, filterProperty, from, to}
 	return bingadsFilterQueryStr, params, http.StatusFound
 }
 

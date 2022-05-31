@@ -1519,7 +1519,7 @@ func (store *MemSQL) ExecQueryWithContext(stmnt string, params []interface{}) (*
 		// Limit statement and params length.
 		"original_query": U.TrimQueryString(stmnt),
 		"params":         U.TrimQueryParams(params),
-		"query_id":       reqID,
+		"req_id":         reqID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
@@ -1543,7 +1543,7 @@ func (store *MemSQL) ExecQueryWithContext(stmnt string, params []interface{}) (*
 	return rows, tx, err, reqID
 }
 
-func (store *MemSQL) ExecQuery(stmnt string, params []interface{}) (*model.QueryResult, error) {
+func (store *MemSQL) ExecQuery(stmnt string, params []interface{}) (*model.QueryResult, error, string) {
 	logFields := log.Fields{
 		"stmnt":  stmnt,
 		"params": params,
@@ -1553,16 +1553,16 @@ func (store *MemSQL) ExecQuery(stmnt string, params []interface{}) (*model.Query
 
 	rows, tx, err, reqID := store.ExecQueryWithContext(stmnt, params)
 	if err != nil {
-		return nil, err
+		return nil, err, reqID
 	}
 
 	resultHeaders, resultRows, err := U.DBReadRows(rows, tx, reqID)
 	if err != nil {
-		return nil, err
+		return nil, err, reqID
 	}
 
 	result := &model.QueryResult{Headers: resultHeaders, Rows: resultRows}
-	return result, nil
+	return result, nil, reqID
 }
 
 func addQueryToResultMeta(result *model.QueryResult, query model.Query) {

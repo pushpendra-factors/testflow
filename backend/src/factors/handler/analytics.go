@@ -336,6 +336,12 @@ func QueryHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 		logCtx.Error("Failed to process query from DB - " + errMsg)
 		return nil, errCode, V1.PROCESSING_FAILED, "Failed to process query from DB - " + errMsg, true
 	}
+	if result == nil {
+		model.DeleteQueryCacheKey(projectId, &requestPayload.Query)
+		logCtx.Error(" Result is nil - " + errMsg)
+		return nil, errCode, V1.PROCESSING_FAILED, "Result is nil - " + errMsg, true
+	}
+
 	model.SetQueryCacheResult(projectId, &requestPayload.Query, result)
 
 	if isDashboardQueryRequest {

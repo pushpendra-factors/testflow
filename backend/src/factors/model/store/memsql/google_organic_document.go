@@ -21,7 +21,7 @@ const (
 		" " + "FROM google_organic_documents WHERE project_id = ? GROUP BY project_id, url_prefix, type"
 	insertGoogleOrganicDocumentsStr = "INSERT INTO google_organic_documents (id,project_id,url_prefix,timestamp,value,type,created_at,updated_at) VALUES "
 	googleOrganicFilterQueryStr     = "SELECT DISTINCT LCASE(JSON_EXTRACT_STRING(value, ?)) as filter_value FROM google_organic_documents WHERE project_id = ? AND" +
-		" " + "JSON_EXTRACT_STRING(value, ?) IS NOT NULL LIMIT 5000"
+		" " + "JSON_EXTRACT_STRING(value, ?) IS NOT NULL AND timestamp BETWEEN ? AND ? LIMIT 5000"
 	fromGoogleOrganicDocuments                              = " FROM google_organic_documents "
 	staticWhereStatementForGoogleOrganic                    = "WHERE project_id = ? AND url_prefix IN ( ? ) AND timestamp between ? AND ? "
 	weightedMetricsExpressionOfDivisionWithHandleOf0AndNull = "SUM(JSON_EXTRACT_STRING(value, '%s')*JSON_EXTRACT_STRING(value, '%s'))/(case when sum(JSON_EXTRACT_STRING(value, '%s')) = 0 then 100000 else NULLIF(sum(JSON_EXTRACT_STRING(value, '%s')), 100000) end)"
@@ -36,7 +36,7 @@ var googleOrganicMetricsToAggregatesInReportsMapping = map[string]string{
 }
 
 func (store *MemSQL) buildGoogleOrganicChannelConfig() *model.ChannelConfigResult {
-	
+
 	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 	googleOrganicObjectsAndProperties := store.buildObjectAndPropertiesForGoogleOrganic(model.ObjectsForGoogleOrganic)
 	selectMetrics := model.SelectableMetricsForGoogleOrganic
@@ -68,10 +68,10 @@ func (store *MemSQL) buildObjectAndPropertiesForGoogleOrganic(objects []string) 
 
 func (store *MemSQL) GetGoogleOrganicFilterValues(projectID uint64, requestFilterObject string, requestFilterProperty string, reqID string) ([]interface{}, int) {
 	logFields := log.Fields{
-		"project_id": projectID,
-		"request_filter_object": requestFilterObject,
+		"project_id":              projectID,
+		"request_filter_object":   requestFilterObject,
 		"request_filter_property": requestFilterProperty,
-		"req_id": reqID,
+		"req_id":                  reqID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
@@ -86,8 +86,10 @@ func (store *MemSQL) GetGoogleOrganicFilterValues(projectID uint64, requestFilte
 		logCtx.Info(integrationNotAvailable)
 		return []interface{}{}, http.StatusNotFound
 	}
+
+	from, to := model.GetFromAndToDatesForFilterValues()
 	logCtx = log.WithField("project_id", projectID).WithField("req_id", reqID)
-	params := []interface{}{requestFilterProperty, projectID, requestFilterProperty}
+	params := []interface{}{requestFilterProperty, projectID, requestFilterProperty, from, to}
 	_, resultRows, err := store.ExecuteSQL(googleOrganicFilterQueryStr, params, logCtx)
 	if err != nil {
 		logCtx.WithError(err).WithField("query", googleOrganicFilterQueryStr).WithField("params", params).Error(model.GoogleOrganicSpecificError)
@@ -97,7 +99,7 @@ func (store *MemSQL) GetGoogleOrganicFilterValues(projectID uint64, requestFilte
 }
 
 func (store *MemSQL) GetAllGoogleOrganicLastSyncInfoForAllProjects() ([]model.GoogleOrganicLastSyncInfo, int) {
-	
+
 	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 	params := make([]interface{}, 0)
 	googleOrganicLastSyncInfos, status := getGoogleOrganicLastSyncInfo(lastSyncInfoQueryForAllProjectsGoogleOrganic, params)
@@ -134,7 +136,7 @@ func (store *MemSQL) GetGoogleOrganicLastSyncInfoForProject(projectID uint64) ([
 
 func getGoogleOrganicLastSyncInfo(query string, params []interface{}) ([]model.GoogleOrganicLastSyncInfo, int) {
 	logFields := log.Fields{
-		"query": query,
+		"query":  query,
 		"params": params,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -165,7 +167,7 @@ func getGoogleOrganicLastSyncInfo(query string, params []interface{}) ([]model.G
 func sanitizedLastSyncInfosGoogleOrganic(googleOrganicLastSyncInfos []model.GoogleOrganicLastSyncInfo, googleOrganicSettings []model.GoogleOrganicProjectSettings) ([]model.GoogleOrganicLastSyncInfo, int) {
 	logFields := log.Fields{
 		"google_organic_last_sync_infos": googleOrganicLastSyncInfos,
-		"google_organ_settings": googleOrganicSettings,
+		"google_organ_settings":          googleOrganicSettings,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
@@ -371,8 +373,8 @@ func addColumnInformationForGoogleOrganicDocument(googleOrganicDocument *model.G
 func (store *MemSQL) ExecuteGoogleOrganicChannelQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string) ([]string, [][]interface{}, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
-		"query": query,
-		"req_id": reqID,
+		"query":      query,
+		"req_id":     reqID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
@@ -429,7 +431,7 @@ func (store *MemSQL) ExecuteGoogleOrganicChannelQueryV1(projectID uint64, query 
 }
 func getGroupByCombinationsForSearchConsole(columns []string, resultMetrics [][]interface{}) []map[string]interface{} {
 	logFields := log.Fields{
-		"columns": columns,
+		"columns":        columns,
 		"result_metrics": resultMetrics,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -481,12 +483,12 @@ func buildWhereConditionForGBTForSearchConsole(groupByCombinations []map[string]
 // GetSQLQueryAndParametersForGoogleOrganicQueryV1 ...
 func (store *MemSQL) GetSQLQueryAndParametersForGoogleOrganicQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string, int) {
 	logFields := log.Fields{
-		"project_id": projectID,
-		"query": query,
-		"req_id": reqID,
-		"fetch_source": fetchSource,
-		"limit_string": limitString,
-		"is_group_by_timestamp": isGroupByTimestamp,
+		"project_id":                    projectID,
+		"query":                         query,
+		"req_id":                        reqID,
+		"fetch_source":                  fetchSource,
+		"limit_string":                  limitString,
+		"is_group_by_timestamp":         isGroupByTimestamp,
 		"group_by+combinations_for_gbt": groupByCombinationsForGBT,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -515,9 +517,8 @@ func (store *MemSQL) GetSQLQueryAndParametersForGoogleOrganicQueryV1(projectID u
 func (store *MemSQL) transFormRequestFieldsAndFetchRequiredFieldsForGoogleOrganic(projectID uint64, query model.ChannelQueryV1, reqID string) (*model.ChannelQueryV1, string, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
-		"query": query,
-		"req_id": reqID,
-
+		"query":      query,
+		"req_id":     reqID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	query.From = U.GetDateAsStringIn(query.From, U.TimeZoneString(query.Timezone))
@@ -535,7 +536,7 @@ func (store *MemSQL) transFormRequestFieldsAndFetchRequiredFieldsForGoogleOrgani
 
 func checkIfOnlyPageExistsInFiltersAndGroupBys(filters []model.ChannelFilterV1, groupBys []model.ChannelGroupBy) bool {
 	logFields := log.Fields{
-		"filters": filters,
+		"filters":   filters,
 		"group_bys": groupBys,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -554,11 +555,11 @@ func checkIfOnlyPageExistsInFiltersAndGroupBys(filters []model.ChannelFilterV1, 
 
 func buildGoogleOrganicQueryV1(query *model.ChannelQueryV1, projectID uint64, urlPrefixes string, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string) {
 	logFields := log.Fields{
-		"project_id": projectID,
-		"query": query,
-		"url_prefixes": urlPrefixes,
-		"limit_string": limitString,
-		"is_group_by_timestamp": isGroupByTimestamp,
+		"project_id":                    projectID,
+		"query":                         query,
+		"url_prefixes":                  urlPrefixes,
+		"limit_string":                  limitString,
+		"is_group_by_timestamp":         isGroupByTimestamp,
 		"group_by+combinations_for_gbt": groupByCombinationsForGBT,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)

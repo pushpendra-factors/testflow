@@ -83,7 +83,8 @@ function EventFilterWrapper({
         if (selectedMainCategory?.category == 'channels') {
           filterData = {
             category: selectedMainCategory?.category,
-            object_type: filter?.extra[3],
+            // object_type: filter?.extra[3],
+            object_type: event?.group,
             property_name: filter?.extra[1],
             display_category: selectedMainCategory?.group,
             entity: 'event',
@@ -91,7 +92,7 @@ function EventFilterWrapper({
         } else {
           filterData = {
             category: selectedMainCategory?.category,
-            object_type: selectedMainCategory?.group,
+            object_type: event?.group,
             property_name: filter?.extra[1],
             entity: filter?.extra[3] ? filter?.extra[3] : filter?.extra[2],
           };
@@ -171,7 +172,7 @@ function EventFilterWrapper({
       if (selectedMainCategory?.category == 'channels') {
         filterData = {
           category: selectedMainCategory?.category,
-          object_type: props[3] ? props[3] : selectedMainCategory?.filters[0]?.extra[1] ,
+          object_type: props[3] ? props[3] : event?.group,
           property_name: props[1],
           display_category: selectedMainCategory?.group,
           entity: 'event',
@@ -179,7 +180,7 @@ function EventFilterWrapper({
       } else {
         filterData = {
           category: selectedMainCategory?.category,
-          object_type: selectedMainCategory?.group,
+          object_type: event?.group,
           property_name: props[1],
           entity: props[3] ? props[3] : props[2],
         };
