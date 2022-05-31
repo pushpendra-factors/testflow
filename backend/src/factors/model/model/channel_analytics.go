@@ -496,8 +496,8 @@ func GetFromAndToDatesForFilterValues() (string, string) {
 	currentDayUnix := U.GetCurrentDayTimestamp()
 	currentDayString := U.GetDateOnlyFromTimestampZ(currentDayUnix)
 	currentDayTime := time.Unix(currentDayUnix, 0)
-	aMonthAgoUnix := currentDayTime.AddDate(0, 0, -30).Unix()
-	aMonthAgoString := U.GetDateOnlyFromTimestampZ(aMonthAgoUnix)
+	daysAgoUnix := currentDayTime.AddDate(0, 0, -7).Unix()
+	daysAgoString := U.GetDateOnlyFromTimestampZ(daysAgoUnix)
 
-	return aMonthAgoString, currentDayString
+	return daysAgoString, currentDayString
 }
