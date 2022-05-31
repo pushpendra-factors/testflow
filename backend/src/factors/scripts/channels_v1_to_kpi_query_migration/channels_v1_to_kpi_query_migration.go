@@ -32,6 +32,8 @@ func main() {
 	disabledProjectIDsFlag := flag.String("disabled_project_ids", "", "List of project_ids to exclude.")
 	flag.Parse()
 
+	model.SetSmartPropertiesReservedNames()
+
 	if *envFlag != "development" && *envFlag != "staging" && *envFlag != "production" {
 		panic(fmt.Errorf("env [ %s ] not recognised", *envFlag))
 	}
