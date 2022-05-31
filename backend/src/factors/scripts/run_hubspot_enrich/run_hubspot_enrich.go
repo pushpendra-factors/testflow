@@ -78,7 +78,6 @@ func main() {
 
 	defer C.PingHealthcheckForPanic(appName, *env, healthcheckPingID)
 
-	// init DB, etcd
 	config := &C.Configuration{
 		AppName:            appName,
 		Env:                *env,

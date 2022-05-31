@@ -1,0 +1,53 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  labels:
+    nodePool: shared-persistent-pool
+  name: channel-to-kpi-migration
+spec:
+  schedule: "* * 1 12 *" # In UTC
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            layer: jobs
+            nodePool: shared-persistent-pool
+        spec:
+          nodeSelector:
+            cloud.google.com/gke-nodepool: shared-persistent-pool
+          containers:
+          - name: channel-to-kpi-migration
+            image: us.gcr.io/factors-production/channels-to-kpi-migration:v1
+            imagePullPolicy: IfNotPresent
+            args:
+            - --env
+            - $(ENV)
+            - --memsql_host
+            - $(MEMSQL_HOST)
+            - --memsql_port
+            - $(MEMSQL_PORT)
+            - --memsql_name
+            - $(MEMSQL_DB)
+            - --memsql_user
+            - $(MEMSQL_HEAVY_USER)
+            - --memsql_pass
+            - $(MEMSQL_PASSWORD)
+            - --memsql_cert
+            - $(MEMSQL_CERTIFICATE)
+            - --primary_datastore
+            - memsql
+            - --project_ids
+            - "2"
+            - --disabled_project_ids
+            - ""
+            envFrom:
+            - configMapRef:
+                name: config-env
+            - configMapRef:
+                name: config-memsql
+            - secretRef:
+                name: secret-memsql
+          restartPolicy: OnFailure

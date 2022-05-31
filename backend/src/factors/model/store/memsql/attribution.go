@@ -137,13 +137,7 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 		}
 
 		attributionData, isCompare, err = store.FireAttribution(projectID, query, eventNameToIDList, sessions, sessionWT, *logCtx)
-		if projectID == 399 {
-			conversionEventCountListByKey := make(map[string][]float64)
-			for key, _ := range *attributionData {
-				conversionEventCountListByKey[key] = (*attributionData)[key].ConversionEventCount
-			}
-			logCtx.WithFields(log.Fields{"2ConversionEventCountListByKeyAfterFireAttribution": conversionEventCountListByKey, "#attributionData": len(*attributionData)}).Info("debug attr keyword conversion")
-		}
+
 		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("FireAttribution took time")
 		queryStartTime = time.Now().UTC().Unix()
 
@@ -167,14 +161,6 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 			(*attributionData)[key].ConvAggFunctionType = convAggFunctionType
 		}
 
-		if projectID == 399 {
-			conversionEventCountListByKey := make(map[string][]float64)
-			for key, _ := range *attributionData {
-				conversionEventCountListByKey[key] = (*attributionData)[key].ConversionEventCount
-			}
-
-			logCtx.WithFields(log.Fields{"3ConversionEventCountListAfterAddPerformanceData": conversionEventCountListByKey, "#attributionData": len(*attributionData)}).Info("debug attr keyword conversion")
-		}
 	} else {
 		// This thread is for query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities.
 		kpiData, _, _, err = store.ExecuteKPIForAttribution(projectID, query, debugQueryKey, *logCtx)
@@ -596,9 +582,7 @@ func (store *MemSQL) runAttribution(projectID uint64,
 	if err != nil {
 		return nil, err
 	}
-	if projectID == 399 {
-		logCtx.WithFields(log.Fields{"1coalescedIDToInfoConverted": len(coalescedIDToInfoConverted)}).Info("debug attr keyword conversion")
-	}
+
 	// Add users who hit conversion event
 	var usersToBeAttributed []model.UserEventInfo
 	for key := range coalescedIDToInfoConverted {

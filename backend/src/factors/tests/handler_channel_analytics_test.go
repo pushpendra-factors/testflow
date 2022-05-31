@@ -917,3 +917,42 @@ func TestExecuteAllChannelQuery(t *testing.T) {
 		assert.Equal(t, expectedResults[i], *res)
 	}
 }
+
+func TestChannelsV1ToKPIMigrationTransformation(t *testing.T) {
+	r := gin.Default()
+	H.InitDataServiceRoutes(r)
+	model.SetSmartPropertiesReservedNames()
+
+	project, _, _, statusCode := createProjectAndAddAdwordsDocument(t, r)
+	if statusCode != http.StatusAccepted {
+		assert.Equal(t, false, true)
+		return
+	}
+
+	channelGroupQueryV1 := model.ChannelGroupQueryV1{
+		Class: "channel_v1",
+		Queries: []model.ChannelQueryV1{
+			{
+				Channel:       "google_ads",
+				SelectMetrics: []string{"clicks", "impressions"},
+				Filters: []M.ChannelFilterV1{
+					{Object: "ad_group", Property: "name", Condition: "contains", Value: "1", LogicalOp: "AND"},
+				},
+				GroupBy: []M.ChannelGroupBy{
+					{Object: "campaign", Property: "id"},
+				},
+				GroupByTimestamp: "date",
+				Timezone:         "Asia/Kolkata",
+				From:             1611964800,
+				To:               1612310400,
+			},
+		},
+	}
+	kpiQueryGroup := model.TransformChannelsV1QueryToKPIQueryGroup(channelGroupQueryV1)
+
+	log.WithField("kpiQueryGroup", kpiQueryGroup).Warn("testing kark1")
+	result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, "", kpiQueryGroup)
+	log.WithField("result", result).WithField("statusCode", statusCode).Warn("kark1")
+	assert.NotNil(t, result[0].Headers)
+	assert.NotNil(t, result[0].Rows)
+}

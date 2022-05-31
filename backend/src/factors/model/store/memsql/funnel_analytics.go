@@ -58,11 +58,14 @@ func (store *MemSQL) RunFunnelQuery(projectId uint64, query model.Query) (*model
 		logCtx.Error("Failed generating SQL query from analytics query.")
 		return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
 	}
-	result, err := store.ExecQuery(stmnt, params)
+
+	result, err, reqID := store.ExecQuery(stmnt, params)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed executing SQL query generated.")
 		return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
 	}
+
+	startComputeTime := time.Now()
 	if projectId == 659 {
 		logCtx.WithFields(log.Fields{"result": result, "err": err}).Info("SenseHQDebugLog1")
 	}
@@ -136,6 +139,9 @@ func (store *MemSQL) RunFunnelQuery(projectId uint64, query model.Query) (*model
 	if projectId == 659 {
 		logCtx.WithFields(log.Fields{"result": result, "err": err}).Info("SenseHQDebugLog11")
 	}
+
+	U.LogComputeTimeWithQueryRequestID(startComputeTime, reqID, &logFields)
+
 	return result, http.StatusOK, "Successfully executed query"
 }
 

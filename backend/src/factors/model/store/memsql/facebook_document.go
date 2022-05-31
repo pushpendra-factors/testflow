@@ -135,7 +135,7 @@ const platform = "platform"
 var errorEmptyFacebookDocument = errors.New("empty facebook document")
 
 const facebookFilterQueryStr = "SELECT DISTINCT(LCASE(JSON_EXTRACT_STRING(value, ?))) as filter_value FROM facebook_documents WHERE project_id = ? AND" +
-	" " + "customer_ad_account_id IN (?) AND type = ? AND JSON_EXTRACT_STRING(value, ?) IS NOT NULL LIMIT 5000"
+	" " + "customer_ad_account_id IN (?) AND type = ? AND JSON_EXTRACT_STRING(value, ?) IS NOT NULL AND timestamp BETWEEN ? AND ? LIMIT 5000"
 
 const fromFacebookDocuments = " FROM facebook_documents "
 
@@ -448,9 +448,10 @@ func (store *MemSQL) GetFacebookSQLQueryAndParametersForFilterValues(projectID u
 		logCtx.Error(integrationNotAvailable)
 		return "", make([]interface{}, 0, 0), http.StatusNotFound
 	}
+	from, to := model.GetFromAndToDatesForFilterValues()
 	customerAccountIDs := strings.Split(customerAccountID, ",")
 	params := []interface{}{facebookInternalFilterProperty, projectID, customerAccountIDs,
-		docType, facebookInternalFilterProperty}
+		docType, facebookInternalFilterProperty, from, to}
 
 	return "(" + facebookFilterQueryStr + ")", params, http.StatusFound
 }
@@ -501,7 +502,8 @@ func (store *MemSQL) getFacebookFilterValuesByType(projectID uint64, docType int
 	customerAccountIDs := strings.Split(customerAccountID, ",")
 
 	logCtx = logCtx.WithField("doc_type", docType)
-	params := []interface{}{property, projectID, customerAccountIDs, docType, property}
+	from, to := model.GetFromAndToDatesForFilterValues()
+	params := []interface{}{property, projectID, customerAccountIDs, docType, property, from, to}
 	_, resultRows, err := store.ExecuteSQL(facebookFilterQueryStr, params, logCtx)
 	if err != nil {
 		logCtx.WithError(err).WithField("query", facebookFilterQueryStr).WithField("params", params).Error(model.FacebookSpecificError)
