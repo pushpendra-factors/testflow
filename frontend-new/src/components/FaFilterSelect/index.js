@@ -49,7 +49,7 @@ const FAFilterSelect = ({
 
   const [updateState, updateStateApply] = useState(false);
 
-  const { userPropNames, eventPropNames } = useSelector(
+  const { userPropNames, eventPropNames, groupPropNames } = useSelector(
     (state) => state.coreQuery
   );
 
@@ -209,6 +209,11 @@ const FAFilterSelect = ({
   const renderGroupDisplayName = (propState) => {
     // propState?.name ? userPropNames[propState?.name] ? userPropNames[propState?.name] : propState?.name : 'Select Property'
     let propertyName = '';
+    if (propState.name && propState.icon === 'group') {
+      propertyName = groupPropNames[propState.name]
+        ? groupPropNames[propState.name]
+        : propState.name;
+    }
     if (propState.name && propState.icon === 'user') {
       propertyName = userPropNames[propState.name]
         ? userPropNames[propState.name]

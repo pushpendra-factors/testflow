@@ -43,6 +43,7 @@ func main() {
 	memSQLCertificate := flag.String("memsql_cert", "", "")
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypeMemSQL, "Primary datastore type as memsql or postgres")
 
+	clearbitEnabled := flag.Int("clearbit_enabled", 0, "To enable clearbit enrichment")
 	geoLocFilePath := flag.String("geo_loc_path",
 		"/usr/local/var/factors/geolocation_data/GeoLite2-City.mmdb", "")
 
@@ -128,6 +129,7 @@ func main() {
 		DuplicateQueueRedisPort: *duplicateQueueRedisPort,
 		SentryDSN:               *sentryDSN,
 		AllowSupportForUserPropertiesInIdentifyCall: *allowSupportForUserPropertiesInIdentifyCall,
+		ClearbitEnabled: *clearbitEnabled,
 	}
 	C.InitConf(config)
 

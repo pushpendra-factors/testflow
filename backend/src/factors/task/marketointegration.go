@@ -62,11 +62,9 @@ func MarketoIntegration(projectId uint64, configs map[string]interface{}) (map[s
 				log.WithError(err).Error("Error while executing query")
 			}
 			columnNamesFromMetadata, columnNamesFromMetadataDateTime, columnNamesFromMetadataNumerical = extractMetadataColumns(metadataQueryResult)
-			propertySuccess, propertyFailures = InsertPropertyDataTypes(columnNamesFromMetadataDateTime, columnNamesFromMetadataNumerical, docType, projectId)
 
-		} else {
-			propertySuccess, propertyFailures = InsertPropertyDataTypes(model.MarketoDataObjectColumnsDatetimeType[docType], model.MarketoDataObjectColumnsNumericalType[docType], docType, projectId)
 		}
+		propertySuccess, propertyFailures = InsertPropertyDataTypes(columnNamesFromMetadataDateTime, columnNamesFromMetadataNumerical, docType, projectId)
 		for {
 			var query string
 			if docType == model.MARKETO_TYPE_NAME_LEAD {
@@ -125,8 +123,38 @@ func InsertPropertyDataTypes(columnNamesFromMetadataDateTime map[string]bool, co
 			success++
 		}
 	}
+	for columnName, _ := range model.MarketoDataObjectColumnsDatetimeType[docType] {
+		_, err := store.GetStore().CreateCRMProperties(&model.CRMProperty{
+			ProjectID:        projectId,
+			Source:           U.CRM_SOURCE_MARKETO,
+			Type:             model.MarketoDocumentTypeAlias[docType],
+			Name:             columnName,
+			ExternalDataType: "timestamp",
+			MappedDataType:   U.PropertyTypeDateTime,
+		})
+		if err != nil {
+			failures++
+		} else {
+			success++
+		}
+	}
 
 	for columnName, _ := range columnNamesFromMetadataNumerical {
+		_, err := store.GetStore().CreateCRMProperties(&model.CRMProperty{
+			ProjectID:        projectId,
+			Source:           U.CRM_SOURCE_MARKETO,
+			Type:             model.MarketoDocumentTypeAlias[docType],
+			Name:             columnName,
+			ExternalDataType: "float64",
+			MappedDataType:   U.PropertyTypeNumerical,
+		})
+		if err != nil {
+			failures++
+		} else {
+			success++
+		}
+	}
+	for columnName, _ := range model.MarketoDataObjectColumnsNumericalType[docType] {
 		_, err := store.GetStore().CreateCRMProperties(&model.CRMProperty{
 			ProjectID:        projectId,
 			Source:           U.CRM_SOURCE_MARKETO,

@@ -482,6 +482,7 @@ func getRowAfterDeletionOfDateTime(row []interface{}, headers []string) []interf
 	}
 	return finalResultantRow
 }
+
 func getKeyWithoutDateTime(row []interface{}) string {
 	if len(row) <= 1 {
 		return "1"

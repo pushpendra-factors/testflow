@@ -12,34 +12,38 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var formSubmitMetricToFunc = map[string]func(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, error){
+var formSubmitMetricToFunc = map[string]func(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, *MetricInfo, error){
 	M.Count:        GetFormSubmitCount,
 	M.UniqueUsers:  GetFormSubmitUniqueUsers,
 	M.CountPerUser: GetFormSubmitCountPerUser,
 }
 
-func GetFormSubmitMetrics(metricNames []string, queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (map[string]*MetricInfo, error) {
-	metricsInfoMap := make(map[string]*MetricInfo)
-	// if queryEvent != U.EVENT_NAME_SESSION {
-	// 	return nil, fmt.Errorf("wrong query event for session metric: %s", queryEvent)
-	// }
-	for _, metric := range metricNames {
+func GetFormSubmitMetrics(metricNames []string, queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*WithinPeriodInsightsKpi, error) {
+	var wpi WithinPeriodInsightsKpi
+	for i, metric := range metricNames {
+		if i == 1 {
+			break
+		}
 		if _, ok := formSubmitMetricToFunc[metric]; !ok {
 			continue
 		}
-		if info, err := formSubmitMetricToFunc[metric](queryEvent, scanner, propFilter, propsToEval); err != nil {
+		if info, scale, err := formSubmitMetricToFunc[metric](queryEvent, scanner, propFilter, propsToEval); err != nil {
 			log.WithError(err).Error("error getFormSubmitMetrics")
 		} else {
-			metricsInfoMap[metric] = info
+			wpi.MetricInfo = info
+			wpi.ScaleInfo = scale
 		}
 	}
-	return metricsInfoMap, nil
+	return &wpi, nil
 }
 
-func GetFormSubmitCount(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, error) {
+func GetFormSubmitCount(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, *MetricInfo, error) {
 	var count float64
+	var globalScale float64
 	var reqMap = make(map[string]map[string]float64)
+	var scaleMap = make(map[string]map[string]float64)
 	var info MetricInfo
+	var scale MetricInfo
 
 	for scanner.Scan() {
 		txtline := scanner.Text()
@@ -47,7 +51,7 @@ func GetFormSubmitCount(queryEvent string, scanner *bufio.Scanner, propFilter []
 		var eventDetails P.CounterEventFormat
 		if err := json.Unmarshal([]byte(txtline), &eventDetails); err != nil {
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
-			return &MetricInfo{}, err
+			return nil, nil, err
 		}
 		eventNameString := eventDetails.EventName
 
@@ -58,10 +62,12 @@ func GetFormSubmitCount(queryEvent string, scanner *bufio.Scanner, propFilter []
 
 		//check if event contains all requiredProps(constraint)
 		if yes, err := eventSatisfiesConstraints(eventDetails, propFilter); err != nil {
-			return &MetricInfo{}, err
+			return nil, nil, err
 		} else if !yes {
 			continue
 		}
+
+		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
 		//global
 		count++
@@ -92,15 +98,19 @@ func GetFormSubmitCount(queryEvent string, scanner *bufio.Scanner, propFilter []
 	}
 	info = MetricInfo{Global: count, Features: reqMap}
 
-	return &info, nil
+	scale = MetricInfo{Global: globalScale, Features: scaleMap}
+	return &info, &scale, nil
 }
 
-func GetFormSubmitUniqueUsers(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, error) {
+func GetFormSubmitUniqueUsers(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, *MetricInfo, error) {
 	uniqueUsers := make(map[string]bool)
 	uniqueUsersFeat := make(map[string]map[string]bool)
 	var unique float64
+	var globalScale float64
 	var reqMap = make(map[string]map[string]float64)
+	var scaleMap = make(map[string]map[string]float64)
 	var info MetricInfo
+	var scale MetricInfo
 
 	for scanner.Scan() {
 		txtline := scanner.Text()
@@ -108,7 +118,7 @@ func GetFormSubmitUniqueUsers(queryEvent string, scanner *bufio.Scanner, propFil
 		var eventDetails P.CounterEventFormat
 		if err := json.Unmarshal([]byte(txtline), &eventDetails); err != nil {
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
-			return nil, err
+			return nil, nil, err
 		}
 		eventNameString := eventDetails.EventName
 		userId := eventDetails.UserId
@@ -120,10 +130,12 @@ func GetFormSubmitUniqueUsers(queryEvent string, scanner *bufio.Scanner, propFil
 
 		//check if event contains all requiredProps(constraint)
 		if yes, err := eventSatisfiesConstraints(eventDetails, propFilter); err != nil {
-			return nil, err
+			return nil, nil, err
 		} else if !yes {
 			continue
 		}
+
+		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
 		//global
 		if _, ok := uniqueUsers[userId]; !ok {
@@ -163,18 +175,22 @@ func GetFormSubmitUniqueUsers(queryEvent string, scanner *bufio.Scanner, propFil
 		}
 	}
 	info = MetricInfo{Global: unique, Features: reqMap}
-	return &info, nil
+	scale = MetricInfo{Global: globalScale, Features: scaleMap}
+	return &info, &scale, nil
 }
 
-func GetFormSubmitCountPerUser(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, error) {
+func GetFormSubmitCountPerUser(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, *MetricInfo, error) {
 	uniqueUsers := make(map[string]bool)
 	uniqueUsersFeat := make(map[string]map[string]bool)
 	featInfoMap := make(map[string]map[string]Fraction)
 	var unique float64
 	var count float64
 	var countPerUser float64
+	var globalScale float64
 	var reqMap = make(map[string]map[string]float64)
+	var scaleMap = make(map[string]map[string]float64)
 	var info MetricInfo
+	var scale MetricInfo
 
 	for scanner.Scan() {
 		txtline := scanner.Text()
@@ -182,7 +198,7 @@ func GetFormSubmitCountPerUser(queryEvent string, scanner *bufio.Scanner, propFi
 		var eventDetails P.CounterEventFormat
 		if err := json.Unmarshal([]byte(txtline), &eventDetails); err != nil {
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
-			return nil, err
+			return nil, nil, err
 		}
 		eventNameString := eventDetails.EventName
 		userId := eventDetails.UserId
@@ -194,10 +210,12 @@ func GetFormSubmitCountPerUser(queryEvent string, scanner *bufio.Scanner, propFi
 
 		//check if event contains all requiredProps(constraint)
 		if yes, err := eventSatisfiesConstraints(eventDetails, propFilter); err != nil {
-			return nil, err
+			return nil, nil, err
 		} else if !yes {
 			continue
 		}
+
+		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
 		//global
 		count++
@@ -217,9 +235,9 @@ func GetFormSubmitCountPerUser(queryEvent string, scanner *bufio.Scanner, propFi
 					featInfoMap[propWithType] = make(map[string]Fraction)
 				}
 				if frac, ok := featInfoMap[prop][val]; !ok {
-					featInfoMap[propWithType][val] = Fraction{}
+					featInfoMap[propWithType][val] = Fraction{Numerator: 1}
 				} else {
-					frac.Denominator += 1
+					frac.Numerator += 1
 					featInfoMap[propWithType][val] = frac
 				}
 				propWithVal := strings.Join([]string{prop, val}, ":")
@@ -229,7 +247,7 @@ func GetFormSubmitCountPerUser(queryEvent string, scanner *bufio.Scanner, propFi
 				if _, ok := uniqueUsersFeat[propWithVal][userId]; !ok {
 					uniqueUsersFeat[propWithVal][userId] = true
 					if frac, ok := featInfoMap[propWithType][val]; !ok {
-						featInfoMap[propWithType][val] = Fraction{}
+						featInfoMap[propWithType][val] = Fraction{Denominator: 1}
 					} else {
 						frac.Denominator += 1
 						featInfoMap[propWithType][val] = frac
@@ -261,5 +279,6 @@ func GetFormSubmitCountPerUser(queryEvent string, scanner *bufio.Scanner, propFi
 	}
 
 	info = MetricInfo{Global: countPerUser, Features: reqMap}
-	return &info, nil
+	scale = MetricInfo{Global: globalScale, Features: scaleMap}
+	return &info, &scale, nil
 }

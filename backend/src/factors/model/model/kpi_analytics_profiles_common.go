@@ -85,19 +85,19 @@ func GetProfileGroupByFromDateField(dateField string, groupByTimestamp string) Q
 func AddCustomMetricsTransformationsToProfileQuery(profileQueryGroup ProfileQueryGroup, kpiMetric string, customMetric CustomMetric, transformation CustomMetricTransformation, kpiQuery KPIQuery) []ProfileQuery {
 	resultantProfileQueries := make([]ProfileQuery, 0)
 
-	if transformation.AggregateFunction == "AVG" {
-		currentProfileQuery1 := GetProfileQueriesOnCustomMetric(profileQueryGroup, transformation, SumAggregateFunction, transformation.AggregateProperty, transformation.AggregatePropertyType, kpiQuery)
-		currentProfileQuery2 := GetProfileQueriesOnCustomMetric(profileQueryGroup, transformation, Count, "1", "categorical", kpiQuery)
+	if transformation.AggregateFunction == AverageAggregateFunction {
+		currentProfileQuery1 := GetProfileQueriesOnCustomMetric(profileQueryGroup, transformation, SumAggregateFunction, transformation.AggregateProperty, transformation.AggregatePropertyType, kpiQuery, "Division")
+		currentProfileQuery2 := GetProfileQueriesOnCustomMetric(profileQueryGroup, transformation, Count, "1", "categorical", kpiQuery, "")
 		resultantProfileQueries = append([]ProfileQuery{currentProfileQuery1}, currentProfileQuery2)
 	} else {
-		currentProfileQuery := GetProfileQueriesOnCustomMetric(profileQueryGroup, transformation, transformation.AggregateFunction, transformation.AggregateProperty, transformation.AggregatePropertyType, kpiQuery)
+		currentProfileQuery := GetProfileQueriesOnCustomMetric(profileQueryGroup, transformation, transformation.AggregateFunction, transformation.AggregateProperty, transformation.AggregatePropertyType, kpiQuery, "")
 		resultantProfileQueries = append(resultantProfileQueries, currentProfileQuery)
 	}
 	return resultantProfileQueries
 }
 
 func GetProfileQueriesOnCustomMetric(profileQueryGroup ProfileQueryGroup, transformation CustomMetricTransformation,
-	aggregateFunction string, AggregateProperty string, AggregatePropertyType string, kpiQuery KPIQuery) ProfileQuery {
+	aggregateFunction string, AggregateProperty string, AggregatePropertyType string, kpiQuery KPIQuery, Operator string) ProfileQuery {
 	profileQuery := ProfileQuery{}
 
 	profileCategory, exists := mapOfKPIToProfileType[kpiQuery.DisplayCategory]
@@ -107,6 +107,7 @@ func GetProfileQueriesOnCustomMetric(profileQueryGroup ProfileQueryGroup, transf
 	profileQuery.AggregateFunction = aggregateFunction
 	profileQuery.AggregateProperty = transformation.AggregateProperty
 	profileQuery.AggregatePropertyType = transformation.AggregatePropertyType
+	profileQuery.Operator = Operator
 	profileQuery.From = profileQueryGroup.From
 	profileQuery.To = profileQueryGroup.To
 	profileQuery.Timezone = profileQueryGroup.Timezone
@@ -198,7 +199,7 @@ func getTransformedRowsForProfileResults(rows [][]interface{}, hasGroupByTimesta
 }
 
 // Here we are considering only one transformation
-func HandlingProfileResultsByApplyingOperations(results []QueryResult, operator string, timezone string, isTimezoneEnabled bool) QueryResult {
+func HandlingProfileResultsByApplyingOperations(results []QueryResult, profileQueries []ProfileQuery, timezone string, isTimezoneEnabled bool) QueryResult {
 	resultKeys := getAllKeysFromResultsArray(results)
 	var finalResult QueryResult
 	finalResultRows := make([][]interface{}, 0)
@@ -208,6 +209,7 @@ func HandlingProfileResultsByApplyingOperations(results []QueryResult, operator 
 		key := U.GetkeyFromRow(row)
 		value1 := resultKeys[key]
 		value2 := row[len(row)-1]
+		operator := profileQueries[0].Operator
 		result := getValueFromValuesAndOperator(value1, value2, operator)
 		resultKeys[key] = result
 	}

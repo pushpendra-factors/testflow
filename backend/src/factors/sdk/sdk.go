@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	cacheRedis "factors/cache/redis"
+	"factors/integration/clear_bit"
 	"factors/model/model"
 	"factors/model/store"
 	"factors/util"
@@ -660,6 +661,26 @@ func Track(projectId uint64, request *TrackPayload,
 	} else {
 		userProperties = requestUserProperties
 	}
+	if C.GetClearbitEnabled() == 1 {
+		if projectSettings.ClearbitKey != "" {
+			executeClearBitStatusChannel := make(chan int)
+			clearBitExists, _ := clear_bit.GetClearbitCacheResult(projectId, request.UserId, clientIP)
+			if !clearBitExists {
+				go clear_bit.ExecuteClearBitEnrich(projectSettings.ClearbitKey, userProperties, clientIP, executeClearBitStatusChannel)
+
+				select {
+				case ok := <-executeClearBitStatusChannel:
+					if ok == 1 {
+						clear_bit.SetClearBitCacheResult(projectId, request.UserId, clientIP)
+					} else {
+						logCtx.Info("ExecuteClearbit failed in Track call")
+					}
+				case <-time.After(U.TimeoutOneSecond):
+					logCtx.Info("clear_bit enrichment timed out in Track call")
+				}
+			}
+		}
+	}
 
 	_ = model.FillLocationUserProperties(userProperties, clientIP)
 	// Add latest touch user properties.
@@ -1095,6 +1116,33 @@ func AddUserProperties(projectId uint64,
 
 	// Validate properties.
 	validProperties := U.GetValidatedUserProperties(&request.Properties)
+	if C.GetClearbitEnabled() == 1 {
+		clearbitKey, errCode := store.GetStore().GetClearbitKeyFromProjectSetting(projectId)
+		if errCode != http.StatusFound {
+			logCtx.Info("Get clear_bit key from project_settings failed.")
+		}
+		if clearbitKey != "" {
+
+			statusChannel := make(chan int)
+			clearBitExists, _ := clear_bit.GetClearbitCacheResult(projectId, request.UserId, request.ClientIP)
+
+			if !clearBitExists {
+				go clear_bit.ExecuteClearBitEnrich(clearbitKey, validProperties, request.ClientIP, statusChannel)
+
+				select {
+				case ok := <-statusChannel:
+					if ok == 1 {
+						clear_bit.SetClearBitCacheResult(projectId, request.UserId, request.ClientIP)
+					} else {
+						logCtx.Info("ExecuteClearbit failed in AddUserProperties")
+					}
+				case <-time.After(U.TimeoutOneSecond):
+					logCtx.Info("clear_bit enrichment timed out in AddUserProperties")
+				}
+			}
+		}
+
+	}
 	_ = model.FillLocationUserProperties(validProperties, request.ClientIP)
 	propertiesJSON, err := json.Marshal(validProperties)
 	if err != nil {
@@ -1244,6 +1292,7 @@ func TrackWithQueue(token string, reqPayload *TrackPayload,
 
 		// create user with given id,
 		// if user_id not given on request.
+
 		if reqPayload.UserId == "" {
 			reqPayload.CreateUser = true
 			reqPayload.UserId = U.GetUUID()
