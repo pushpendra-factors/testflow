@@ -2,7 +2,7 @@ import get from 'lodash/get';
 import lowerCase from 'lodash/lowerCase';
 import startCase from 'lodash/startCase';
 
-import { EMPTY_ARRAY } from 'Utils/global';
+import { EMPTY_ARRAY,groupFilters } from 'Utils/global';
 import { formatFilterDate } from 'Utils/dataFormatter';
 import MomentTz from 'Components/MomentTz';
 
@@ -82,33 +82,87 @@ export const reverseDateOperatorMap = {
   since: 'since'
 };
 
+
+
 const getEventsWithProperties = (queries) => {
   const ewps = [];
   queries.forEach((ev) => {
     const filterProps = [];
-    ev.filters.forEach((fil) => {
-      if (Array.isArray(fil.values)) {
-        fil.values.forEach((val, index) => {
+
+    const filtersGroupedByRef = Object.values(groupFilters(ev.filters, 'ref'));
+    filtersGroupedByRef.forEach((filtersGr)=>{
+      if(filtersGr.length == 1){
+          const fil = filtersGr[0];
+          if (Array.isArray(fil.values)) {
+            fil.values.forEach((val, index) => {
+              filterProps.push({
+                en: fil.props[2],
+                lop: !index ? 'AND' : 'OR',
+                op: operatorMap[fil.operator],
+                pr: fil.props[0],
+                ty: fil.props[1],
+                va: fil.props[1] === 'datetime' ? val : val,
+              });
+            });
+          } else {
+            filterProps.push({
+              en: fil.props[2],
+              lop: 'AND',
+              op: operatorMap[fil.operator],
+              pr: fil.props[0],
+              ty: fil.props[1],
+              va: fil.props[1] === 'datetime' ? fil.values : fil.values,
+            });
+          }
+      }
+      else{
+        let fil = filtersGr[0];
+        if (Array.isArray(fil.values)) {
+          fil.values.forEach((val, index) => {
+            filterProps.push({
+              en: fil.props[2],
+              lop: !index ? 'AND' : 'OR',
+              op: operatorMap[fil.operator],
+              pr: fil.props[0],
+              ty: fil.props[1],
+              va: fil.props[1] === 'datetime' ? val : val,
+            });
+          });
+        } else {
           filterProps.push({
             en: fil.props[2],
-            lop: !index ? 'AND' : 'OR',
+            lop: 'AND',
             op: operatorMap[fil.operator],
             pr: fil.props[0],
             ty: fil.props[1],
-            va: fil.props[1] === 'datetime' ? val : val
+            va: fil.props[1] === 'datetime' ? fil.values : fil.values,
           });
-        });
-      } else {
-        filterProps.push({
-          en: fil.props[2],
-          lop: 'AND',
-          op: operatorMap[fil.operator],
-          pr: fil.props[0],
-          ty: fil.props[1],
-          va: fil.props[1] === 'datetime' ? fil.values : fil.values
-        });
+        }
+        fil = filtersGr[1];
+        if (Array.isArray(fil.values)) {
+          fil.values.forEach((val, index) => {
+            filterProps.push({
+              en: fil.props[2],
+              lop: 'OR',
+              op: operatorMap[fil.operator],
+              pr: fil.props[0],
+              ty: fil.props[1],
+              va: fil.props[1] === 'datetime' ? val : val,
+            });
+          });
+        } else {
+          filterProps.push({
+            en: fil.props[2],
+            lop: 'OR',
+            op: operatorMap[fil.operator],
+            pr: fil.props[0],
+            ty: fil.props[1],
+            va: fil.props[1] === 'datetime' ? fil.values : fil.values,
+          });
+        }
       }
-    });
+    })
+
     ewps.push({
       an: ev.alias,
       na: ev.label,
@@ -121,29 +175,79 @@ const getEventsWithProperties = (queries) => {
 const getProfileWithProperties = (queries) => {
   const pwps = [];
   queries.forEach((ev) => {
-    const filterProps = [];
-    ev.filters.forEach((fil) => {
-      if (Array.isArray(fil.values)) {
-        fil.values.forEach((val, index) => {
-          filterProps.push({
-            en: fil.props[2],
-            pr: fil.props[0],
-            op: operatorMap[fil.operator],
-            va: val,
-            lop: !index ? 'AND' : 'OR',
-            ty: fil.props[1]
-          });
-        });
-      } else {
-        filterProps.push({
-          en: fil.props[2],
-          pr: fil.props[0],
-          op: operatorMap[fil.operator],
-          va: fil.values,
-          lop: 'AND',
-          ty: fil.props[1]
-        });
-      }
+    const filterProps = []; 
+      const filtersGroupedByRef = Object.values(groupFilters(ev.filters, 'ref'));
+      filtersGroupedByRef.forEach((filtersGr)=>{
+        if(filtersGr.length == 1){
+            const fil = filtersGr[0];
+            if (Array.isArray(fil.values)) {
+              fil.values.forEach((val, index) => {
+                filterProps.push({
+                  en: fil.props[2],
+                  pr: fil.props[0],
+                  op: operatorMap[fil.operator],
+                  va: val,
+                  lop: !index ? 'AND' : 'OR',
+                  ty: fil.props[1],
+                });
+              });
+            } else {
+              filterProps.push({
+                en: fil.props[2],
+                pr: fil.props[0],
+                op: operatorMap[fil.operator],
+                va: fil.values,
+                lop: 'AND',
+                ty: fil.props[1],
+              });
+            }
+        }
+        else{
+          let fil = filtersGr[0];
+          if (Array.isArray(fil.values)) {
+            fil.values.forEach((val, index) => {
+              filterProps.push({
+                en: fil.props[2],
+                pr: fil.props[0],
+                op: operatorMap[fil.operator],
+                va: val,
+                lop: !index ? 'AND' : 'OR',
+                ty: fil.props[1],
+              });
+            });
+          } else {
+            filterProps.push({
+              en: fil.props[2],
+              pr: fil.props[0],
+              op: operatorMap[fil.operator],
+              va: fil.values,
+              lop: 'AND',
+              ty: fil.props[1],
+            });
+          }
+          fil = filtersGr[1];
+          if (Array.isArray(fil.values)) {
+            fil.values.forEach((val, index) => {
+              filterProps.push({
+                en: fil.props[2],
+                pr: fil.props[0],
+                op: operatorMap[fil.operator],
+                va: val,
+                lop: 'OR',
+                ty: fil.props[1],
+              });
+            });
+          } else {
+            filterProps.push({
+              en: fil.props[2],
+              pr: fil.props[0],
+              op: operatorMap[fil.operator],
+              va: fil.values,
+              lop: 'OR',
+              ty: fil.props[1],
+            });
+          }
+        }
     });
     pwps.push({
       an: ev.alias,
@@ -330,41 +434,116 @@ export const getFunnelQuery = (
 const getEventsWithPropertiesKPI = (filters, category) => {
   const filterProps = [];
   // adding fil?.extra ? fil?.extra[*] check as a hotfix for timestamp filters
-  filters.forEach((fil) => {
-    if (Array.isArray(fil.values)) {
-      fil.values.forEach((val, index) => {
+
+  const filtersGroupedByRef = Object.values(groupFilters(filters, 'ref'));
+  filtersGroupedByRef.forEach((filtersGr)=>{
+    if(filtersGr.length == 1){
+        const fil = filtersGr[0];
+        if (Array.isArray(fil.values)) {
+          fil.values.forEach((val, index) => {
+            filterProps.push({
+              prNa: fil?.extra ? fil?.extra[1] : `$${_.lowerCase(fil?.props[0])}`,
+              prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
+              co: operatorMap[fil.operator],
+              lOp: !index ? 'AND' : 'OR',
+              en:
+                category == 'channels' ? '' : fil?.extra ? fil?.extra[3] : 'event',
+              objTy:
+                category == 'channels'
+                  ? fil?.extra
+                    ? fil?.extra[3]
+                    : 'event'
+                  : '',
+              va: fil.props[1] === 'datetime' ? formatFilterDate(val) : val,
+            });
+          });
+        } else {
+          filterProps.push({
+            prNa: fil?.extra ? fil?.extra[1] : `$${_.lowerCase(fil?.props[0])}`,
+            prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
+            co: operatorMap[fil.operator],
+            lOp: 'AND',
+            en: category == 'channels' ? '' : fil?.extra ? fil?.extra[3] : 'event',
+            objTy:
+              category == 'channels' ? (fil?.extra ? fil?.extra[3] : 'event') : '',
+            va:
+              fil.props[1] === 'datetime'
+                ? formatFilterDate(fil.values)
+                : fil.values,
+          });
+        }
+    }
+    else{
+      let fil = filtersGr[0];
+      if (Array.isArray(fil.values)) {
+        fil.values.forEach((val, index) => {
+          filterProps.push({
+            prNa: fil?.extra ? fil?.extra[1] : `$${_.lowerCase(fil?.props[0])}`,
+            prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
+            co: operatorMap[fil.operator],
+            lOp: !index ? 'AND' : 'OR',
+            en:
+              category == 'channels' ? '' : fil?.extra ? fil?.extra[3] : 'event',
+            objTy:
+              category == 'channels'
+                ? fil?.extra
+                  ? fil?.extra[3]
+                  : 'event'
+                : '',
+            va: fil.props[1] === 'datetime' ? formatFilterDate(val) : val,
+          });
+        });
+      } else {
         filterProps.push({
           prNa: fil?.extra ? fil?.extra[1] : `$${lowerCase(fil?.props[0])}`,
           prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
           co: operatorMap[fil.operator],
-          lOp: !index ? 'AND' : 'OR',
-          en:
-            category === 'channels' ? '' : fil?.extra ? fil?.extra[3] : 'event',
+          lOp: 'AND',
+          en: category == 'channels' ? '' : fil?.extra ? fil?.extra[3] : 'event',
           objTy:
-            category === 'channels'
-              ? fil?.extra
-                ? fil?.extra[3]
-                : 'event'
-              : '',
-          va: fil.props[1] === 'datetime' ? formatFilterDate(val) : val
+            category == 'channels' ? (fil?.extra ? fil?.extra[3] : 'event') : '',
+          va:
+            fil.props[1] === 'datetime'
+              ? formatFilterDate(fil.values)
+              : fil.values,
         });
-      });
-    } else {
-      filterProps.push({
-        prNa: fil?.extra ? fil?.extra[1] : `$${lowerCase(fil?.props[0])}`,
-        prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
-        co: operatorMap[fil.operator],
-        lOp: 'AND',
-        en: category === 'channels' ? '' : fil?.extra ? fil?.extra[3] : 'event',
-        objTy:
-          category === 'channels' ? (fil?.extra ? fil?.extra[3] : 'event') : '',
-        va:
-          fil.props[1] === 'datetime'
-            ? formatFilterDate(fil.values)
-            : fil.values
-      });
+      }
+      fil = filtersGr[1];
+      if (Array.isArray(fil.values)) {
+        fil.values.forEach((val, index) => {
+          filterProps.push({
+            prNa: fil?.extra ? fil?.extra[1] : `$${_.lowerCase(fil?.props[0])}`,
+            prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
+            co: operatorMap[fil.operator],
+            lOp:'OR',
+            en:
+              category == 'channels' ? '' : fil?.extra ? fil?.extra[3] : 'event',
+            objTy:
+              category == 'channels'
+                ? fil?.extra
+                  ? fil?.extra[3]
+                  : 'event'
+                : '',
+            va: fil.props[1] === 'datetime' ? formatFilterDate(val) : val,
+          });
+        });
+      } else {
+        filterProps.push({
+          prNa: fil?.extra ? fil?.extra[1] : `$${_.lowerCase(fil?.props[0])}`,
+          prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
+          co: operatorMap[fil.operator],
+          lOp: 'OR',
+          en: category == 'channels' ? '' : fil?.extra ? fil?.extra[3] : 'event',
+          objTy:
+            category == 'channels' ? (fil?.extra ? fil?.extra[3] : 'event') : '',
+          va:
+            fil.props[1] === 'datetime'
+              ? formatFilterDate(fil.values)
+              : fil.values,
+        });
+      }
     }
-  });
+  })
   return filterProps;
 };
 

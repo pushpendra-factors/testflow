@@ -2197,6 +2197,14 @@ const SlackSVG = ({ size = 16, extraClass, color }) => {
   )
 }
 
+const UnionSVG = ()=>{
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M8.83333 1.41659C8.83333 0.956348 8.46024 0.583252 8 0.583252C7.53976 0.583252 7.16667 0.956348 7.16667 1.41659V7.24992H1.33333C0.873096 7.24992 0.5 7.62301 0.5 8.08325C0.5 8.54349 0.873096 8.91658 1.33333 8.91658H7.16667V14.7499C7.16667 15.2102 7.53976 15.5833 8 15.5833C8.46024 15.5833 8.83333 15.2102 8.83333 14.7499V8.91658H14.6667C15.1269 8.91658 15.5 8.54349 15.5 8.08325C15.5 7.62301 15.1269 7.24992 14.6667 7.24992H8.83333V1.41659Z" fill="#1890FF"/>
+    </svg>
+  );
+}
+
 export {
   BrandSVG,
   DeleteSVG,
@@ -2341,6 +2349,7 @@ export {
   Arrow_rightSVG,
   Arrow_leftSVG,
   Setup_assistSVG,
+  UnionSVG,
   SignoutSVG,
   Check_circleSVG,
   DashboardFilledSVG,
