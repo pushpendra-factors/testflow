@@ -41,6 +41,11 @@ const (
 	LastModifiedTimeRef                      = "LAST_MODIFIED_TIME_REF"
 	TouchPointPropertyValueAsProperty        = "Property"
 	TouchPointPropertyValueAsConstant        = "Constant"
+
+	TouchPointRuleTypeEmails   = "Emails"
+	TouchPointRuleTypeMeetings = "Meetings"
+	TouchPointRuleTypeCalls    = "Calls"
+	TouchPointRuleTypeForms    = "Form_Submissions"
 )
 
 const DefaultProjectName = "My Project"
@@ -83,6 +88,7 @@ type HubspotTouchPoints struct {
 }
 
 type HSTouchPointRule struct {
+	RuleType          string                             `json:"rule_type"`
 	Filters           []TouchPointFilter                 `json:"filters"`
 	TouchPointTimeRef string                             `json:"touch_point_time_ref"`
 	PropertiesMap     map[string]TouchPointPropertyValue `json:"properties_map"`
