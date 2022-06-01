@@ -1114,7 +1114,7 @@ func (store *MemSQL) GetHubspotDocumentBeginingTimestampByDocumentTypeForSync(pr
 
 // GetHubspotDocumentCountForSync returns count for records for each project
 func (store *MemSQL) GetHubspotDocumentCountForSync(projectIDs []uint64, docTypes []int, maxCreatedAtSec int64) ([]model.HubspotDocumentCount, int) {
-	logFields := log.Fields{"project_ids": projectIDs,"doc_types":docTypes,"max_created_at":maxCreatedAtSec}
+	logFields := log.Fields{"project_ids": projectIDs, "doc_types": docTypes, "max_created_at": maxCreatedAtSec}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	logCtx := log.WithFields(logFields)

@@ -13,8 +13,10 @@ import {
   fetchEventPropertyValues,
   fetchUserPropertyValues,
   fetchChannelObjPropertyValues,
+  fetchGroupPropertyValues,
 } from '../../../reducers/coreQuery/services';
 import FAFilterSelect from '../../FaFilterSelect';
+import { AvailableGroups } from '../../../utils/constants';
 
 const defaultOpProps = DEFAULT_OPERATOR_PROPS;
 
@@ -30,7 +32,7 @@ export default function EventFilterWrapper({
   event,
   filter,
   delIcon = 'remove',
-  propsConstants = ['user', 'event'],
+  propsConstants = ['user', 'event', 'group'],
   extraClass,
   delBtnClass,
   deleteFilter,
@@ -67,6 +69,10 @@ export default function EventFilterWrapper({
       {
         label: 'User Properties',
         icon: 'user',
+      },
+      {
+        label: 'Group Properties',
+        icon: 'group',
       },
     ],
     operator: operatorProps,
@@ -208,6 +214,25 @@ export default function EventFilterWrapper({
           fetchEventPropertyValues(
             activeProject.id,
             event.label,
+            newFilterState.props[0]
+          )
+            .then((res) => {
+              const ddValues = Object.assign({}, dropDownValues);
+              ddValues[newFilterState.props[0]] = [...res.data, '$none'];
+              setDropDownValues(ddValues);
+            })
+            .catch(() => {
+              console.log(err);
+              const ddValues = Object.assign({}, dropDownValues);
+              ddValues[newFilterState.props[0]] = ['$none'];
+              setDropDownValues(ddValues);
+            });
+        }
+      } else if (newFilterState.props[2] === 'group') {
+        if (!dropDownValues[newFilterState.props[0]]) {
+          fetchGroupPropertyValues(
+            activeProject.id,
+            AvailableGroups[event.group],
             newFilterState.props[0]
           )
             .then((res) => {
@@ -622,6 +647,24 @@ export default function EventFilterWrapper({
       } else if (props[3] === 'event') {
         if (!dropDownValues[props[0]]) {
           fetchEventPropertyValues(activeProject.id, event.label, props[1])
+            .then((res) => {
+              const ddValues = Object.assign({}, dropDownValues);
+              ddValues[props[1]] = [...res.data, '$none'];
+              setDropDownValues(ddValues);
+            })
+            .catch((err) => {
+              const ddValues = Object.assign({}, dropDownValues);
+              ddValues[props[0]] = ['$none'];
+              setDropDownValues(ddValues);
+            });
+        }
+      } else if (props[3] === 'group') {
+        if (!dropDownValues[props[0]]) {
+          fetchEventPropertyValues(
+            activeProject.id,
+            AvailableGroups[event.group],
+            props[1]
+          )
             .then((res) => {
               const ddValues = Object.assign({}, dropDownValues);
               ddValues[props[1]] = [...res.data, '$none'];

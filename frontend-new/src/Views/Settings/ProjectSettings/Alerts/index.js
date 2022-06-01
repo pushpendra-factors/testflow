@@ -103,6 +103,7 @@ const Alerts = ({
             await confirmRemove(deleteWidgetModal);
             setDeleteApiCalled(false);
             showDeleteWidgetModal(false);
+            SetViewMode(false);
         } catch (err) {
             console.log(err);
             console.log(err.response);
@@ -114,14 +115,14 @@ const Alerts = ({
     const menu = (item) => {
         return (
             <Menu>
-                <Menu.Item key="0"
+                {/* <Menu.Item key="0"
                      onClick={() => {
                         showDeleteWidgetModal(item.id);
                      }}
                  >
                     <a>Remove</a>
-                </Menu.Item>
-                <Menu.Item key="1"
+                </Menu.Item> */}
+                <Menu.Item key="0"
                     onClick={() => {
                         SetViewMode(true)
                         setAlertDetails(item)
@@ -182,7 +183,7 @@ const Alerts = ({
             align: 'right',
             width: 75,
             render: (obj) => (
-                <Dropdown overlay={() => menu(obj)} trigger={['click']}>
+                <Dropdown overlay={() => menu(obj)} trigger={['hover']}>
                     <Button type="text" icon={<MoreOutlined rotate={90} style={{ color: 'gray', fontSize: '18px' }} />} />
                 </Dropdown>
             )
@@ -260,6 +261,19 @@ const Alerts = ({
       };
     
 
+    const onReset = () => {
+        setShowForm(false);
+        setOperatorState('');
+        setValue('');
+        setQueries([]);
+        setShowCompareField(false);
+        setEmailEnabled(false);
+        setSlackEnabled(false);
+        setSelectedChannel([]);
+        setSaveSelectedChannel([]);
+        form.resetFields();
+    };
+
     const onFinish = data => {
         setLoading(true);
         // Putting All emails into single array
@@ -285,6 +299,7 @@ const Alerts = ({
         }
 
         let payload = {
+            "alert_name": data.alert_name,
             "alert_type": alertType,
             "alert_description": {
               "name" : queries[0].metric,
@@ -317,8 +332,7 @@ const Alerts = ({
                 message: "Alerts Saved",
                 description: "New Alerts is created and saved successfully.",
             });
-            form.resetFields();
-            setShowForm(false);
+            onReset();
         }).catch(err => {
             setLoading(false);
             notification.error({
@@ -333,7 +347,7 @@ const Alerts = ({
         if (viewAlertDetails.alert_configuration.emails) {
             return viewAlertDetails.alert_configuration.emails.map((item, index) => {
                 return (
-                    <Input disabled={true} key={index} value={item} className={'fa-input'} size={'large'} placeholder={'yourmail@gmail.com'} />
+                    <Input disabled={true} key={index} value={item} className={'fa-input'} placeholder={'yourmail@gmail.com'} />
                 )
             })
         }
@@ -390,7 +404,7 @@ const Alerts = ({
       ];
     
     const DateRangeTypeSelect = (
-        <Select className={'fa-select w-full'} size={'large'}
+        <Select className={'fa-select w-full'}
             options={DateRangeTypes}
             placeholder="Date range"
             showSearch
@@ -411,7 +425,7 @@ const Alerts = ({
     ];
 
     const selectOperator = (
-        <Select className={'fa-select w-full'} size={'large'}
+        <Select className={'fa-select w-full'}
             options={operatorOpts}
             placeholder="Operator"
             showSearch
@@ -469,6 +483,14 @@ const Alerts = ({
                         <Col span={24}>
                             <div className={'m-0'}>
                                 <Table className="fa-table--basic mt-8"
+                                    onRow={(record, rowIndex) => {
+                                        return {
+                                            onClick: event => {
+                                                SetViewMode(true)
+                                                setAlertDetails(record.actions)
+                                            }, // click row
+                                        };
+                                    }}
                                     columns={columns}
                                     dataSource={tableData}
                                     pagination={false}
@@ -497,22 +519,29 @@ const Alerts = ({
                             <Col span={12}>
                                 <div className={'flex justify-end'}>
                                     <Button size={'large'} disabled={loading} onClick={() => {
-                                        setShowForm(false);
-                                        setOperatorState('');
-                                        setValue('');
-                                        setQueries([]);
-                                        setShowCompareField(false);
-                                        setEmailEnabled(false);
-                                        setSlackEnabled(false);
-                                        setSelectedChannel([]);
-                                        setSaveSelectedChannel([]);
-                                        form.resetFields();
+                                        onReset();
                                     }}>Cancel</Button>
                                     <Button size={'large'} disabled={loading} loading={loading} className={'ml-2'} type={'primary'} htmlType="submit">Save</Button>
                                 </div>
                             </Col>
                         </Row>
-                        <Row className={'mt-8'}>
+                        <Row className={'mt-6'}>
+                            <Col span={18}>
+                                <Text type={'title'} level={7} weight={'bold'} color={'grey-2'} extraClass={'m-0'}>Alert name</Text>
+                            </Col>
+                        </Row>
+                        <Row className={'mt-4'}>
+                            <Col span={8} className={'m-0'}>
+                                <Form.Item
+                                    name="alert_name"
+                                    className={'m-0'}
+                                    rules={[{ required: true, message: 'Please enter alert name' }]}
+                                >
+                                    <Input className={'fa-input'} placeholder={'Enter name'}/>
+                                </Form.Item>
+                            </Col>
+                        </Row>
+                        <Row className={'mt-4'}>
                             <Col span={18}>
                                 <Text type={'title'} level={7} weight={'bold'} color={'grey-2'} extraClass={'m-0'}>Notify me when</Text>
                             </Col>
@@ -548,7 +577,7 @@ const Alerts = ({
                                     className={'m-0'}
                                     rules={[{ required: true, message: 'Please enter value' }]}
                                 >
-                                    <Input className={'fa-input'} size={'large'} type={'number'} placeholder={'Qualifier'} onChange={(e) => setValue(e.target.value)}/>
+                                    <Input className={'fa-input'} type={'number'} placeholder={'Qualifier'} onChange={(e) => setValue(e.target.value)}/>
                                 </Form.Item>
                             </Col>
                         </Row>
@@ -573,7 +602,7 @@ const Alerts = ({
                                     initialValue={'previous_period'}
                                     rules={[{ required: true, message: 'Please select Compare' }]}
                                 >
-                                    <Select className={'fa-select w-full'} size={'large'}
+                                    <Select className={'fa-select w-full'}
                                         placeholder="Compare"
                                         showSearch
                                         disabled={true}
@@ -611,7 +640,7 @@ const Alerts = ({
                                     validateTrigger={['onChange', 'onBlur']}
                                     rules={[{ type: 'email', message: 'Please enter a valid e-mail' }, { required: true, message: 'Please enter email' }]} className={'m-0'}
                                 >
-                                <Input className={'fa-input'} size={'large'} placeholder={'yourmail@gmail.com'} />
+                                <Input className={'fa-input'} placeholder={'yourmail@gmail.com'} />
                                 </Form.Item>
                             </Col>
                             <Form.List
@@ -634,7 +663,7 @@ const Alerts = ({
                                             validateTrigger={['onChange', 'onBlur']}
                                             rules={[{ type: 'email', message: 'Please enter a valid e-mail' }, { required: true, message: 'Please enter email' }]} className={'m-0'}
                                         >
-                                        <Input className={'fa-input'} size={'large'} placeholder={'yourmail@gmail.com'} />
+                                        <Input className={'fa-input'} placeholder={'yourmail@gmail.com'} />
                                         </Form.Item>
                                     </Col>
                                     {fields.length > 0 ? (
@@ -733,7 +762,18 @@ const Alerts = ({
                         </Col>
                     </Row>
 
-                    <Row className={'mt-8'}>
+                    <Row className={'mt-6'}>
+                        <Col span={18}>
+                            <Text type={'title'} level={7} weight={'bold'} color={'grey-2'} extraClass={'m-0'}>Alert name</Text>
+                        </Col>
+                    </Row>
+                    <Row className={'mt-4'}>
+                        <Col span={8} className={'m-0'}>
+                                <Input disabled={true} className={'fa-input'} value={viewAlertDetails?.alert_name}/>
+                        </Col>
+                    </Row>
+
+                    <Row className={'mt-4'}>
                         <Col span={18}>
                             <Text type={'title'} level={7} weight={'bold'} color={'grey-2'} extraClass={'m-0'}>Notify me when</Text>
                         </Col>
@@ -802,22 +842,22 @@ const Alerts = ({
                     </Row>
                     <Row className={'mt-4'}>
                         <Col span={8} className={'ml-1'}>
-                            <Input disabled={true} size="large"  className={'fa-input w-full'} value={(viewAlertDetails?.alert_description?.operator).replace(/_/g, ' ')} />
+                            <Input disabled={true}  className={'fa-input w-full'} value={(viewAlertDetails?.alert_description?.operator).replace(/_/g, ' ')} />
                         </Col>
                         <Col span={8} className={'ml-4 w-24'}>
-                            <Input disabled={true} className={'fa-input'} size={'large'} type={'number'} value={viewAlertDetails?.alert_description?.value}/>
+                            <Input disabled={true} className={'fa-input'} type={'number'} value={viewAlertDetails?.alert_description?.value}/>
                         </Col>
                     </Row>
 
                     <Row className={'mt-4'}>
                         <Col span={8}>
                             <Text type={'title'} level={7} weight={'bold'} color={'grey-2'} extraClass={'m-0 mb-1'}>In the period of</Text>
-                            <Input disabled={true} size="large"  className={'fa-input w-full'} value={viewAlertDetails?.alert_description?.date_range} />
+                            <Input disabled={true} className={'fa-input w-full'} value={viewAlertDetails?.alert_description?.date_range} />
                         </Col>
                         {viewAlertDetails?.alert_description?.compared_to && (
                         <Col span={8} className={'ml-4'}>
                             <Text type={'title'} level={7} weight={'bold'} color={'grey-2'} extraClass={'m-0 mb-1'}>Compared to</Text>
-                            <Input disabled={true} size="large" className={'fa-input w-full'} value={viewAlertDetails?.alert_description?.compared_to}  />
+                            <Input disabled={true} className={'fa-input w-full'} value={viewAlertDetails?.alert_description?.compared_to}  />
                         </Col>
                         )}
                     </Row>
@@ -856,6 +896,12 @@ const Alerts = ({
                         </Col>
                     </Row>
                     )}
+                    <Row className={'mt-2'}>
+                        <Col span={24}>
+                            <div className={'border-top--thin-2 mt-2 mb-4'} />
+                            <Button type={'text'} size={'large'} style={{color: '#EE3C3C'}} className={'m-0'} onClick={()=> showDeleteWidgetModal(viewAlertDetails?.id)}><SVG name={'Delete1'} extraClass={'-mt-1 -mr-1'} size={18} color={'#EE3C3C'} />Delete</Button>
+                        </Col>
+                    </Row>
 
                 </>}
 

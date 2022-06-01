@@ -12,7 +12,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var pageViewMetricToFunc = map[string]func(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, error){
+var pageViewMetricToFunc = map[string]func(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, *MetricInfo, error){
 	M.Entrances:                GetPageviewEntrances,
 	M.Exits:                    GetPageviewExits,
 	M.PageViews:                GetPageviewPageViews,
@@ -26,25 +26,32 @@ var pageViewMetricToFunc = map[string]func(queryEvent string, scanner *bufio.Sca
 	M.EngagementRate:           GetPageviewEngagementRate,
 }
 
-func GetPageViewMetrics(metricNames []string, queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (map[string]*MetricInfo, error) {
-	metricsInfoMap := make(map[string]*MetricInfo)
-	for _, metric := range metricNames {
+func GetPageViewMetrics(metricNames []string, queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*WithinPeriodInsightsKpi, error) {
+	var wpi WithinPeriodInsightsKpi
+	for i, metric := range metricNames {
+		if i == 1 {
+			break
+		}
 		if _, ok := pageViewMetricToFunc[metric]; !ok {
 			continue
 		}
-		if info, err := pageViewMetricToFunc[metric](queryEvent, scanner, propFilter, propsToEval); err != nil {
+		if info, scale, err := pageViewMetricToFunc[metric](queryEvent, scanner, propFilter, propsToEval); err != nil {
 			log.WithError(err).Error("error getPageViewMetrics")
 		} else {
-			metricsInfoMap[metric] = info
+			wpi.MetricInfo = info
+			wpi.ScaleInfo = scale
 		}
 	}
-	return metricsInfoMap, nil
+	return &wpi, nil
 }
 
-func GetPageviewEntrances(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, error) {
+func GetPageviewEntrances(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, *MetricInfo, error) {
 	var entrances float64
+	var globalScale float64
 	var reqMap = make(map[string]map[string]float64)
+	var scaleMap = make(map[string]map[string]float64)
 	var info MetricInfo
+	var scale MetricInfo
 
 	for scanner.Scan() {
 		txtline := scanner.Text()
@@ -52,7 +59,7 @@ func GetPageviewEntrances(queryEvent string, scanner *bufio.Scanner, propFilter 
 		var eventDetails P.CounterEventFormat
 		if err := json.Unmarshal([]byte(txtline), &eventDetails); err != nil {
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
-			return &MetricInfo{}, err
+			return nil, nil, err
 		}
 		eventNameString := eventDetails.EventName
 
@@ -63,10 +70,12 @@ func GetPageviewEntrances(queryEvent string, scanner *bufio.Scanner, propFilter 
 
 		//check if event contains all requiredProps(constraint)
 		if yes, err := eventSatisfiesConstraints(eventDetails, propFilter); err != nil {
-			return &MetricInfo{}, err
+			return nil, nil, err
 		} else if !yes {
 			continue
 		}
+
+		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
 		isEntrance := false
 		if url, ok := ExistsInProps(U.SP_INITIAL_PAGE_URL, eventDetails, "ep"); ok {
@@ -107,13 +116,17 @@ func GetPageviewEntrances(queryEvent string, scanner *bufio.Scanner, propFilter 
 	}
 	info = MetricInfo{Global: entrances, Features: reqMap}
 
-	return &info, nil
+	scale = MetricInfo{Global: globalScale, Features: scaleMap}
+	return &info, &scale, nil
 }
 
-func GetPageviewExits(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, error) {
+func GetPageviewExits(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, *MetricInfo, error) {
 	var exits float64
+	var globalScale float64
 	var reqMap = make(map[string]map[string]float64)
+	var scaleMap = make(map[string]map[string]float64)
 	var info MetricInfo
+	var scale MetricInfo
 
 	for scanner.Scan() {
 		txtline := scanner.Text()
@@ -121,7 +134,7 @@ func GetPageviewExits(queryEvent string, scanner *bufio.Scanner, propFilter []M.
 		var eventDetails P.CounterEventFormat
 		if err := json.Unmarshal([]byte(txtline), &eventDetails); err != nil {
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
-			return &MetricInfo{}, err
+			return nil, nil, err
 		}
 		eventNameString := eventDetails.EventName
 
@@ -132,10 +145,12 @@ func GetPageviewExits(queryEvent string, scanner *bufio.Scanner, propFilter []M.
 
 		//check if event contains all requiredProps(constraint)
 		if yes, err := eventSatisfiesConstraints(eventDetails, propFilter); err != nil {
-			return &MetricInfo{}, err
+			return nil, nil, err
 		} else if !yes {
 			continue
 		}
+
+		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
 		isExit := false
 		if url, ok := ExistsInProps(U.SP_LATEST_PAGE_URL, eventDetails, "ep"); ok {
@@ -176,13 +191,17 @@ func GetPageviewExits(queryEvent string, scanner *bufio.Scanner, propFilter []M.
 	}
 	info = MetricInfo{Global: exits, Features: reqMap}
 
-	return &info, nil
+	scale = MetricInfo{Global: globalScale, Features: scaleMap}
+	return &info, &scale, nil
 }
 
-func GetPageviewPageViews(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, error) {
+func GetPageviewPageViews(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, *MetricInfo, error) {
 	var pageviews float64
+	var globalScale float64
 	var reqMap = make(map[string]map[string]float64)
+	var scaleMap = make(map[string]map[string]float64)
 	var info MetricInfo
+	var scale MetricInfo
 
 	for scanner.Scan() {
 		txtline := scanner.Text()
@@ -190,7 +209,7 @@ func GetPageviewPageViews(queryEvent string, scanner *bufio.Scanner, propFilter 
 		var eventDetails P.CounterEventFormat
 		if err := json.Unmarshal([]byte(txtline), &eventDetails); err != nil {
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
-			return &MetricInfo{}, err
+			return nil, nil, err
 		}
 		eventNameString := eventDetails.EventName
 
@@ -201,10 +220,12 @@ func GetPageviewPageViews(queryEvent string, scanner *bufio.Scanner, propFilter 
 
 		//check if event contains all requiredProps(constraint)
 		if yes, err := eventSatisfiesConstraints(eventDetails, propFilter); err != nil {
-			return &MetricInfo{}, err
+			return nil, nil, err
 		} else if !yes {
 			continue
 		}
+
+		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
 		//global
 		pageviews++
@@ -235,15 +256,19 @@ func GetPageviewPageViews(queryEvent string, scanner *bufio.Scanner, propFilter 
 	}
 	info = MetricInfo{Global: pageviews, Features: reqMap}
 
-	return &info, nil
+	scale = MetricInfo{Global: globalScale, Features: scaleMap}
+	return &info, &scale, nil
 }
 
-func GetPageviewUniqueUsers(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, error) {
+func GetPageviewUniqueUsers(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, *MetricInfo, error) {
 	uniqueUsers := make(map[string]bool)
 	uniqueUsersFeat := make(map[string]map[string]bool)
 	var unique float64
+	var globalScale float64
 	var reqMap = make(map[string]map[string]float64)
+	var scaleMap = make(map[string]map[string]float64)
 	var info MetricInfo
+	var scale MetricInfo
 
 	for scanner.Scan() {
 		txtline := scanner.Text()
@@ -251,7 +276,7 @@ func GetPageviewUniqueUsers(queryEvent string, scanner *bufio.Scanner, propFilte
 		var eventDetails P.CounterEventFormat
 		if err := json.Unmarshal([]byte(txtline), &eventDetails); err != nil {
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
-			return nil, err
+			return nil, nil, err
 		}
 		eventNameString := eventDetails.EventName
 		userId := eventDetails.UserId
@@ -263,10 +288,12 @@ func GetPageviewUniqueUsers(queryEvent string, scanner *bufio.Scanner, propFilte
 
 		//check if event contains all requiredProps(constraint)
 		if yes, err := eventSatisfiesConstraints(eventDetails, propFilter); err != nil {
-			return nil, err
+			return nil, nil, err
 		} else if !yes {
 			continue
 		}
+
+		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
 		//global
 		if _, ok := uniqueUsers[userId]; !ok {
@@ -306,18 +333,22 @@ func GetPageviewUniqueUsers(queryEvent string, scanner *bufio.Scanner, propFilte
 		}
 	}
 	info = MetricInfo{Global: unique, Features: reqMap}
-	return &info, nil
+	scale = MetricInfo{Global: globalScale, Features: scaleMap}
+	return &info, &scale, nil
 }
 
-func GetPageviewPageviewsPerUser(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, error) {
+func GetPageviewPageviewsPerUser(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, *MetricInfo, error) {
 	uniqueUsers := make(map[string]bool)
 	uniqueUsersFeat := make(map[string]map[string]bool)
 	featInfoMap := make(map[string]map[string]Fraction)
 	var unique float64
 	var pageviews float64
 	var PageviewsPerUser float64
+	var globalScale float64
 	var reqMap = make(map[string]map[string]float64)
+	var scaleMap = make(map[string]map[string]float64)
 	var info MetricInfo
+	var scale MetricInfo
 
 	for scanner.Scan() {
 		txtline := scanner.Text()
@@ -325,7 +356,7 @@ func GetPageviewPageviewsPerUser(queryEvent string, scanner *bufio.Scanner, prop
 		var eventDetails P.CounterEventFormat
 		if err := json.Unmarshal([]byte(txtline), &eventDetails); err != nil {
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
-			return nil, err
+			return nil, nil, err
 		}
 		eventNameString := eventDetails.EventName
 		userId := eventDetails.UserId
@@ -337,10 +368,12 @@ func GetPageviewPageviewsPerUser(queryEvent string, scanner *bufio.Scanner, prop
 
 		//check if event contains all requiredProps(constraint)
 		if yes, err := eventSatisfiesConstraints(eventDetails, propFilter); err != nil {
-			return nil, err
+			return nil, nil, err
 		} else if !yes {
 			continue
 		}
+
+		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
 		//global
 		pageviews++
@@ -401,16 +434,20 @@ func GetPageviewPageviewsPerUser(queryEvent string, scanner *bufio.Scanner, prop
 	}
 
 	info = MetricInfo{Global: PageviewsPerUser, Features: reqMap}
-	return &info, nil
+	scale = MetricInfo{Global: globalScale, Features: scaleMap}
+	return &info, &scale, nil
 }
 
-func GetPageviewAvgPageLoadTime(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, error) {
+func GetPageviewAvgPageLoadTime(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, *MetricInfo, error) {
 	var avgPageLoadTime float64
 	var pageviews float64
 	var totalPageLoadTime float64
 	var featInfoMap = make(map[string]map[string]Fraction)
+	var globalScale float64
 	var reqMap = make(map[string]map[string]float64)
+	var scaleMap = make(map[string]map[string]float64)
 	var info MetricInfo
+	var scale MetricInfo
 
 	for scanner.Scan() {
 		txtline := scanner.Text()
@@ -418,7 +455,7 @@ func GetPageviewAvgPageLoadTime(queryEvent string, scanner *bufio.Scanner, propF
 		var eventDetails P.CounterEventFormat
 		if err := json.Unmarshal([]byte(txtline), &eventDetails); err != nil {
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
-			return &MetricInfo{}, err
+			return nil, nil, err
 		}
 		eventNameString := eventDetails.EventName
 
@@ -429,10 +466,12 @@ func GetPageviewAvgPageLoadTime(queryEvent string, scanner *bufio.Scanner, propF
 
 		//check if event contains all requiredProps(constraint)
 		if yes, err := eventSatisfiesConstraints(eventDetails, propFilter); err != nil {
-			return &MetricInfo{}, err
+			return nil, nil, err
 		} else if !yes {
 			continue
 		}
+
+		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
 		if loadTime, ok := ExistsInProps(U.EP_PAGE_LOAD_TIME, eventDetails, "ep"); ok {
 			loadTime := loadTime.(float64)
@@ -485,16 +524,20 @@ func GetPageviewAvgPageLoadTime(queryEvent string, scanner *bufio.Scanner, propF
 	}
 	info = MetricInfo{Global: avgPageLoadTime, Features: reqMap}
 
-	return &info, nil
+	scale = MetricInfo{Global: globalScale, Features: scaleMap}
+	return &info, &scale, nil
 }
 
-func GetPageviewAvgVerticalScrollPercent(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, error) {
+func GetPageviewAvgVerticalScrollPercent(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, *MetricInfo, error) {
 	var totalVerticalScrollPercent float64
 	var pageviews float64
 	var avgVerticalScrollPercent float64
 	var featInfoMap = make(map[string]map[string]Fraction)
+	var globalScale float64
 	var reqMap = make(map[string]map[string]float64)
+	var scaleMap = make(map[string]map[string]float64)
 	var info MetricInfo
+	var scale MetricInfo
 
 	for scanner.Scan() {
 		txtline := scanner.Text()
@@ -502,7 +545,7 @@ func GetPageviewAvgVerticalScrollPercent(queryEvent string, scanner *bufio.Scann
 		var eventDetails P.CounterEventFormat
 		if err := json.Unmarshal([]byte(txtline), &eventDetails); err != nil {
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
-			return &MetricInfo{}, err
+			return nil, nil, err
 		}
 		eventNameString := eventDetails.EventName
 
@@ -513,10 +556,12 @@ func GetPageviewAvgVerticalScrollPercent(queryEvent string, scanner *bufio.Scann
 
 		//check if event contains all requiredProps(constraint)
 		if yes, err := eventSatisfiesConstraints(eventDetails, propFilter); err != nil {
-			return &MetricInfo{}, err
+			return nil, nil, err
 		} else if !yes {
 			continue
 		}
+
+		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
 		//global
 		pageviews++
@@ -584,16 +629,20 @@ func GetPageviewAvgVerticalScrollPercent(queryEvent string, scanner *bufio.Scann
 
 	info = MetricInfo{Global: avgVerticalScrollPercent, Features: reqMap}
 
-	return &info, nil
+	scale = MetricInfo{Global: globalScale, Features: scaleMap}
+	return &info, &scale, nil
 }
 
-func GetPageviewAvgTimeOnPage(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, error) {
+func GetPageviewAvgTimeOnPage(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, *MetricInfo, error) {
 	var avgTimeOnPage float64
 	var pageviews float64
 	var totalTimeOnPage float64
 	var featInfoMap = make(map[string]map[string]Fraction)
+	var globalScale float64
 	var reqMap = make(map[string]map[string]float64)
+	var scaleMap = make(map[string]map[string]float64)
 	var info MetricInfo
+	var scale MetricInfo
 
 	for scanner.Scan() {
 		txtline := scanner.Text()
@@ -601,7 +650,7 @@ func GetPageviewAvgTimeOnPage(queryEvent string, scanner *bufio.Scanner, propFil
 		var eventDetails P.CounterEventFormat
 		if err := json.Unmarshal([]byte(txtline), &eventDetails); err != nil {
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
-			return &MetricInfo{}, err
+			return nil, nil, err
 		}
 		eventNameString := eventDetails.EventName
 
@@ -612,10 +661,12 @@ func GetPageviewAvgTimeOnPage(queryEvent string, scanner *bufio.Scanner, propFil
 
 		//check if event contains all requiredProps(constraint)
 		if yes, err := eventSatisfiesConstraints(eventDetails, propFilter); err != nil {
-			return &MetricInfo{}, err
+			return nil, nil, err
 		} else if !yes {
 			continue
 		}
+
+		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
 		if time, ok := ExistsInProps(U.EP_PAGE_SPENT_TIME, eventDetails, "ep"); ok {
 			time := time.(float64)
@@ -668,13 +719,17 @@ func GetPageviewAvgTimeOnPage(queryEvent string, scanner *bufio.Scanner, propFil
 	}
 	info = MetricInfo{Global: avgTimeOnPage, Features: reqMap}
 
-	return &info, nil
+	scale = MetricInfo{Global: globalScale, Features: scaleMap}
+	return &info, &scale, nil
 }
 
-func GetPageviewEngagedPageViews(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, error) {
+func GetPageviewEngagedPageViews(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, *MetricInfo, error) {
 	var engaged float64
+	var globalScale float64
 	var reqMap = make(map[string]map[string]float64)
+	var scaleMap = make(map[string]map[string]float64)
 	var info MetricInfo
+	var scale MetricInfo
 
 	for scanner.Scan() {
 		txtline := scanner.Text()
@@ -682,7 +737,7 @@ func GetPageviewEngagedPageViews(queryEvent string, scanner *bufio.Scanner, prop
 		var eventDetails P.CounterEventFormat
 		if err := json.Unmarshal([]byte(txtline), &eventDetails); err != nil {
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
-			return nil, err
+			return nil, nil, err
 		}
 		eventNameString := eventDetails.EventName
 
@@ -693,10 +748,12 @@ func GetPageviewEngagedPageViews(queryEvent string, scanner *bufio.Scanner, prop
 
 		//check if event contains all requiredProps(constraint)
 		if yes, err := eventSatisfiesConstraints(eventDetails, propFilter); err != nil {
-			return nil, err
+			return nil, nil, err
 		} else if !yes {
 			continue
 		}
+
+		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
 		//check if engaged
 		isEngaged := false
@@ -745,15 +802,19 @@ func GetPageviewEngagedPageViews(queryEvent string, scanner *bufio.Scanner, prop
 	}
 	info = MetricInfo{Global: engaged, Features: reqMap}
 
-	return &info, nil
+	scale = MetricInfo{Global: globalScale, Features: scaleMap}
+	return &info, &scale, nil
 }
 
-func GetPageviewEngagedUsers(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, error) {
+func GetPageviewEngagedUsers(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, *MetricInfo, error) {
 	uniqueUsers := make(map[string]bool)
 	uniqueUsersFeat := make(map[string]map[string]bool)
 	var unique float64
+	var globalScale float64
 	var reqMap = make(map[string]map[string]float64)
+	var scaleMap = make(map[string]map[string]float64)
 	var info MetricInfo
+	var scale MetricInfo
 
 	for scanner.Scan() {
 		txtline := scanner.Text()
@@ -761,7 +822,7 @@ func GetPageviewEngagedUsers(queryEvent string, scanner *bufio.Scanner, propFilt
 		var eventDetails P.CounterEventFormat
 		if err := json.Unmarshal([]byte(txtline), &eventDetails); err != nil {
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
-			return nil, err
+			return nil, nil, err
 		}
 		eventNameString := eventDetails.EventName
 		userId := eventDetails.UserId
@@ -773,10 +834,12 @@ func GetPageviewEngagedUsers(queryEvent string, scanner *bufio.Scanner, propFilt
 
 		//check if event contains all requiredProps(constraint)
 		if yes, err := eventSatisfiesConstraints(eventDetails, propFilter); err != nil {
-			return nil, err
+			return nil, nil, err
 		} else if !yes {
 			continue
 		}
+
+		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
 		//check if engaged
 		isEngaged := false
@@ -834,16 +897,20 @@ func GetPageviewEngagedUsers(queryEvent string, scanner *bufio.Scanner, propFilt
 		}
 	}
 	info = MetricInfo{Global: unique, Features: reqMap}
-	return &info, nil
+	scale = MetricInfo{Global: globalScale, Features: scaleMap}
+	return &info, &scale, nil
 }
 
-func GetPageviewEngagementRate(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, error) {
+func GetPageviewEngagementRate(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, *MetricInfo, error) {
 	var engagedPageviews float64
 	var pageviews float64
 	var engagementRate float64
 	var featInfoMap = make(map[string]map[string]Fraction)
+	var globalScale float64
 	var reqMap = make(map[string]map[string]float64)
+	var scaleMap = make(map[string]map[string]float64)
 	var info MetricInfo
+	var scale MetricInfo
 
 	for scanner.Scan() {
 		txtline := scanner.Text()
@@ -851,7 +918,7 @@ func GetPageviewEngagementRate(queryEvent string, scanner *bufio.Scanner, propFi
 		var eventDetails P.CounterEventFormat
 		if err := json.Unmarshal([]byte(txtline), &eventDetails); err != nil {
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
-			return &MetricInfo{}, err
+			return nil, nil, err
 		}
 		eventNameString := eventDetails.EventName
 
@@ -862,10 +929,12 @@ func GetPageviewEngagementRate(queryEvent string, scanner *bufio.Scanner, propFi
 
 		//check if event contains all requiredProps(constraint)
 		if yes, err := eventSatisfiesConstraints(eventDetails, propFilter); err != nil {
-			return &MetricInfo{}, err
+			return nil, nil, err
 		} else if !yes {
 			continue
 		}
+
+		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
 		//global
 		pageviews++
@@ -944,5 +1013,6 @@ func GetPageviewEngagementRate(queryEvent string, scanner *bufio.Scanner, propFi
 
 	info = MetricInfo{Global: engagementRate, Features: reqMap}
 
-	return &info, nil
+	scale = MetricInfo{Global: globalScale, Features: scaleMap}
+	return &info, &scale, nil
 }

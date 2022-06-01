@@ -60,6 +60,7 @@ type ProjectSetting struct {
 	IntGoogleIngestionTimezone    string          `json:"int_google_ingestion_timezone"`
 	IntClearBit                   *bool           `gorm:"not null;default:false" json:"int_clear_bit,omitempty"`
 	IntAdwordsClientManagerMap    *postgres.Jsonb `json:"int_adwords_client_manager_map"`
+	ClearbitKey                   string          `json:"clearbit_key"`
 }
 
 type AttributionConfig struct {

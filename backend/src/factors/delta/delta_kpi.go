@@ -106,38 +106,54 @@ func CreateKpiInsights(diskManager *serviceDisk.DiskDriver, cloudManager *filest
 		}
 	}
 	if !skipW2 {
-		wpiBytes, _ := json.Marshal(newInsightsList)
+		wpiBytes, err := json.Marshal(newInsightsList)
+		if err != nil {
+			log.WithFields(log.Fields{"err": err}).Error("failed to marshal wpi2 Info.")
+			return err
+		}
+
 		err = WriteWpiPath(projectId, Period(periodCodesWithWeekNMinus1[1]), queryId, 100, bytes.NewReader(wpiBytes), *cloudManager)
 		if err != nil {
 			log.WithError(err).Error("write WPI error - ", err)
+			return err
 		}
 	}
 	if !skipW1 {
-		wpiBytes, _ := json.Marshal(oldInsightsList)
+		wpiBytes, err := json.Marshal(oldInsightsList)
+		if err != nil {
+			log.WithFields(log.Fields{"err": err}).Error("failed to marshal wpi1 Info.")
+			return err
+		}
 		err = WriteWpiPath(projectId, Period(periodCodesWithWeekNMinus1[0]), queryId, 100, bytes.NewReader(wpiBytes), *cloudManager)
 		if err != nil {
 			log.WithError(err).Error("write WPI error - ", err)
+			return err
 		}
 	}
 
 	//get insights between the weeks
+	var crossPeriodInsightsList []*CrossPeriodInsightsKpi
 	periodPair := PeriodPair{First: periodCodesWithWeekNMinus1[0], Second: periodCodesWithWeekNMinus1[1]}
-	crossPeriodInsightsList, err := ComputeCrossPeriodKpiInsights(periodPair, newInsightsList, oldInsightsList)
-	if err != nil {
-		log.WithError(err).Error("compute cpi for kpi error - ", err)
-		return err
+	if len(newInsightsList) > 0 && len(oldInsightsList) > 0 {
+		crossPeriodInsightsList, err = ComputeCrossPeriodKpiInsights(periodPair, newInsightsList, oldInsightsList)
+		if err != nil {
+			log.WithError(err).Error("compute cpi for kpi error - ", err)
+			return err
+		}
 	}
 
 	//Create cpi file with insights
-	crossPeriodInsightsBytes, err := json.Marshal(crossPeriodInsightsList)
-	if err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("failed to unmarshal cpi Info.")
-		return err
-	}
-	err = WriteCpiPath(projectId, periodPair.Second, uint64(queryId), 100, bytes.NewReader(crossPeriodInsightsBytes), *cloudManager)
-	if err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("failed to write cpi files to cloud")
-		return err
+	if len(crossPeriodInsightsList) > 0 {
+		crossPeriodInsightsBytes, err := json.Marshal(crossPeriodInsightsList)
+		if err != nil {
+			log.WithFields(log.Fields{"err": err}).Error("failed to unmarshal cpi Info.")
+			return err
+		}
+		err = WriteCpiPath(projectId, periodPair.Second, uint64(queryId), 100, bytes.NewReader(crossPeriodInsightsBytes), *cloudManager)
+		if err != nil {
+			log.WithFields(log.Fields{"err": err}).Error("failed to write cpi files to cloud")
+			return err
+		}
 	}
 	return nil
 }
@@ -145,14 +161,14 @@ func CreateKpiInsights(diskManager *serviceDisk.DiskDriver, cloudManager *filest
 func GetMetricsEvaluated(category string, metricNames []string, queryEvent string, propFilter []M.KPIFilter, propsToEval []string, projectId uint64, periodCode Period, cloudManager *filestore.FileManager,
 	diskManager *serviceDisk.DiskDriver, insightGranularity string) (*WithinPeriodInsightsKpi, error) {
 
-	var insights WithinPeriodInsightsKpi
+	var insights *WithinPeriodInsightsKpi
 	var scanner *bufio.Scanner
 	var err error
 	if scanner, err = GetEventFileScanner(projectId, periodCode, cloudManager, diskManager, insightGranularity, true); err != nil {
 		log.WithError(err).Error("failed getting event file scanner")
 		return nil, err
 	}
-	var GetMetrics func(metricNames []string, queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (map[string]*MetricInfo, error)
+	var GetMetrics func(metricNames []string, queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*WithinPeriodInsightsKpi, error)
 	if category == M.WebsiteSessionDisplayCategory {
 		GetMetrics = GetSessionMetrics
 	} else if category == M.FormSubmissionsDisplayCategory {
@@ -162,10 +178,10 @@ func GetMetricsEvaluated(category string, metricNames []string, queryEvent strin
 	} else {
 		err := fmt.Errorf("no kpi Insights for category: %s", category)
 		log.WithError(err).Error("not computing insights for this category")
-		return &insights, err
+		return insights, err
 	}
 	insights, err = GetMetrics(metricNames, queryEvent, scanner, propFilter, propsToEval)
-	return &insights, err
+	return insights, err
 }
 
 //check if prop exists in user or event props
@@ -282,80 +298,119 @@ func eventSatisfiesConstraints(eventDetails P.CounterEventFormat, propFilter []M
 
 //compute cross period using within period infos
 func ComputeCrossPeriodKpiInsights(periodPair PeriodPair, newInsightsList, oldInsightsList []*WithinPeriodInsightsKpi) ([]*CrossPeriodInsightsKpi, error) {
-	crossPeriodInsightsList := []*CrossPeriodInsightsKpi{}
+	crossPeriodInsightsList := make([]*CrossPeriodInsightsKpi, 0)
 	for i := range newInsightsList {
-		crossPeriodInsights := make(map[string]*CpiMetricInfo)
+		var crossPeriodInsights CpiMetricInfo
 		newInsights := newInsightsList[i]
-		oldInsights := oldInsightsList[i]
-		var oldInfo, newInfo *MetricInfo
+		oldInsights := *oldInsightsList[i]
+		oldInfo := oldInsights.MetricInfo
+		newInfo := newInsights.MetricInfo
+
+		//get union of props
 		var allProps = make(map[string]map[string]bool)
-		for metric := range *oldInsights {
-			oldInfo = (*oldInsights)[metric]
-			newInfo = (*newInsights)[metric]
-
-			//global
-			first := oldInfo.Global
-			second := newInfo.Global
-			var percentChange, factor float64
-			if first != 0 {
-				percentChange = 100 * float64(second-first) / float64(first)
-				factor = float64(second) / float64(first)
-			} else {
-				percentChange = 100
-				factor = float64(second)
+		for key, valMap := range oldInfo.Features {
+			allProps[key] = make(map[string]bool)
+			for val := range valMap {
+				allProps[key][val] = true
 			}
-			crossPeriodInsights[metric] = &CpiMetricInfo{}
-			crossPeriodInsights[metric].GlobalMetrics = DiffMetric{First: first, Second: second, PercentChange: percentChange, FactorChange: factor}
-
-			//get union of props
-			for key, valMap := range oldInfo.Features {
+		}
+		for key, valMap := range newInfo.Features {
+			if _, ok := allProps[key]; !ok {
 				allProps[key] = make(map[string]bool)
-				for val := range valMap {
-					allProps[key][val] = true
-				}
 			}
-			for key, valMap := range newInfo.Features {
-				if _, ok := allProps[key]; !ok {
-					allProps[key] = make(map[string]bool)
-				}
-				for val := range valMap {
-					allProps[key][val] = true
-				}
+			for val := range valMap {
+				allProps[key][val] = true
 			}
+		}
 
-			//features
-			crossPeriodInsights[metric].FeatureMetrics = make(map[string]map[string]DiffMetric)
-			for key, valMap := range allProps {
-				if _, ok := newInfo.Features[key]; !ok {
-					newInfo.Features[key] = make(map[string]float64)
+		//global
+		first := oldInfo.Global
+		second := newInfo.Global
+		var percentChange, factor float64
+		if first != 0 {
+			percentChange = 100 * float64(second-first) / float64(first)
+			factor = float64(second) / float64(first)
+		} else {
+			percentChange = 100
+			factor = float64(second)
+		}
+		crossPeriodInsights.GlobalMetrics = DiffMetric{First: first, Second: second, PercentChange: percentChange, FactorChange: factor}
+
+		//features
+		crossPeriodInsights.FeatureMetrics = make(map[string]map[string]DiffMetric)
+		for key, valMap := range allProps {
+			if _, ok := newInfo.Features[key]; !ok {
+				newInfo.Features[key] = make(map[string]float64)
+			}
+			if _, ok := oldInfo.Features[key]; !ok {
+				oldInfo.Features[key] = make(map[string]float64)
+			}
+			for val := range valMap {
+				first := oldInfo.Features[key][val]
+				second := newInfo.Features[key][val]
+				var percentChange, factor float64
+				if first != 0 {
+					percentChange = 100 * (second - first) / first
+					factor = second / first
+				} else {
+					percentChange = 100
+					factor = second
 				}
-				if _, ok := oldInfo.Features[key]; !ok {
-					oldInfo.Features[key] = make(map[string]float64)
+				if _, ok := crossPeriodInsights.FeatureMetrics[key]; !ok {
+					crossPeriodInsights.FeatureMetrics[key] = make(map[string]DiffMetric)
 				}
-				for val := range valMap {
-					first := oldInfo.Features[key][val]
-					second := newInfo.Features[key][val]
-					var percentChange, factor float64
-					if first != 0 {
-						percentChange = 100 * (second - first) / first
-						factor = second / first
-					} else {
-						percentChange = 100
-						factor = second
-					}
-					if _, ok := crossPeriodInsights[metric].FeatureMetrics[key]; !ok {
-						crossPeriodInsights[metric].FeatureMetrics[key] = make(map[string]DiffMetric)
-					}
-					crossPeriodInsights[metric].FeatureMetrics[key][val] = DiffMetric{First: first, Second: second, PercentChange: percentChange, FactorChange: factor}
+				crossPeriodInsights.FeatureMetrics[key][val] = DiffMetric{First: first, Second: second, PercentChange: percentChange, FactorChange: factor}
+			}
+		}
+
+		var scaleInfo CpiMetricInfo
+		oldScale := oldInsights.ScaleInfo
+		newScale := newInsights.ScaleInfo
+
+		//global
+		first = oldScale.Global
+		second = newScale.Global
+		if first != 0 {
+			percentChange = 100 * float64(second-first) / float64(first)
+			factor = float64(second) / float64(first)
+		} else {
+			percentChange = 100
+			factor = float64(second)
+		}
+		scaleInfo.GlobalMetrics = DiffMetric{First: first, Second: second, PercentChange: percentChange, FactorChange: factor}
+
+		//features
+		scaleInfo.FeatureMetrics = make(map[string]map[string]DiffMetric)
+		for key, valMap := range allProps {
+			if _, ok := newScale.Features[key]; !ok {
+				newScale.Features[key] = make(map[string]float64)
+			}
+			if _, ok := oldScale.Features[key]; !ok {
+				oldScale.Features[key] = make(map[string]float64)
+			}
+			for val := range valMap {
+				first := oldScale.Features[key][val]
+				second := newScale.Features[key][val]
+				var percentChange, factor float64
+				if first != 0 {
+					percentChange = 100 * (second - first) / first
+					factor = second / first
+				} else {
+					percentChange = 100
+					factor = second
 				}
+				if _, ok := scaleInfo.FeatureMetrics[key]; !ok {
+					scaleInfo.FeatureMetrics[key] = make(map[string]DiffMetric)
+				}
+				scaleInfo.FeatureMetrics[key][val] = DiffMetric{First: first, Second: second, PercentChange: percentChange, FactorChange: factor}
 			}
 		}
 		var cpiInsightsKpi CrossPeriodInsightsKpi
-		cpiInsightsKpi.Target = crossPeriodInsights
-		cpiInsightsKpi.BaseAndTarget = crossPeriodInsights
 		cpiInsightsKpi.Periods = periodPair
+		cpiInsightsKpi.Target = &crossPeriodInsights
+		cpiInsightsKpi.BaseAndTarget = &crossPeriodInsights
+		cpiInsightsKpi.ScaleInfo = &scaleInfo
 		// cpiInsightsKpi.JSDivergence = JSDType{Target: MultipleJSDivergenceKpi(oldInfo, newInfo, allProps)}
-
 		crossPeriodInsightsList = append(crossPeriodInsightsList, &cpiInsightsKpi)
 	}
 	return crossPeriodInsightsList, nil
@@ -373,4 +428,20 @@ func MultipleJSDivergenceKpi(metricInfo1, metricInfo2 *MetricInfo, allProps map[
 		}
 	}
 	return jsdMetrics
+}
+
+func addToScale(globalScale *float64, scaleMap map[string]map[string]float64, propsToEval []string, eventDetails P.CounterEventFormat) {
+	(*globalScale)++
+	for _, propWithType := range propsToEval {
+		propTypeName := strings.SplitN(propWithType, "#", 2)
+		prop := propTypeName[1]
+		propType := propTypeName[0]
+		if val, ok := ExistsInProps(prop, eventDetails, propType); ok {
+			val := fmt.Sprintf("%s", val)
+			if _, ok := scaleMap[propWithType]; !ok {
+				scaleMap[propWithType] = make(map[string]float64)
+			}
+			scaleMap[propWithType][val] += 1
+		}
+	}
 }

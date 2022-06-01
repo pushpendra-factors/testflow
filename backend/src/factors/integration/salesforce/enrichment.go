@@ -1704,7 +1704,7 @@ func CreateTouchPointEvent(project *model.Project, trackPayload *SDK.TrackPayloa
 		}
 	}
 
-	status, trackResponse := SDK.Track(project.ID, payload, true, "", "")
+	status, trackResponse := SDK.Track(project.ID, payload, true, SDK.SourceSalesforce, "")
 	if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
 		logCtx.WithField("Document", trackPayload).WithError(err).Error(fmt.Errorf("create salesforce touchpoint event track failed for doc type %d, message %s", document.Type, trackResponse.Error))
 		return trackResponse, errors.New(fmt.Sprintf("create salesforce touchpoint event track failed for doc type %d, message %s", document.Type, trackResponse.Error))

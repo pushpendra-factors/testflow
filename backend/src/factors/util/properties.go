@@ -365,6 +365,7 @@ var SP_INITIAL_COST string = UP_INITIAL_COST
 var SP_INITIAL_REVENUE string = UP_INITIAL_REVENUE
 
 // clearbit properties
+var CLR_IP = "$clr_ip"
 var CLR_COMPANY_NAME = "$clr_company_name"
 var CLR_COMPANY_GEO_CITY = "$clr_company_geo_city"
 var CLR_COMPANY_GEO_COUNTRY = "$clr_company_geo_country"
@@ -392,6 +393,10 @@ var CLR_COMPANY_CATEGORY_SUBINDUSTRY = "$clr_company_category_subIndustry"
 var CLR_COMPANY_CATEGORY_SICCODE = "$clr_company_category_sicCode"
 var CLR_COMPANY_CATEGORY_NAICSCODE = "$clr_company_category_naicsCode"
 var CLR_COMPANY_PARENT_DOMAIN = "$clr_company_parent_domain"
+var CLR_COMPANY_ID = "$clr_company_id"
+var CLR_COMPANY_LEGALNAME = "$clr_company_legalname"
+var CLR_COMPANY_TECH = "$clr_company_tech"
+var CLR_COMPANY_TAGS = "$clr_company_tags"
 
 var SDK_ALLOWED_EVENT_PROPERTIES = [...]string{
 	EP_INTERNAL_IP,

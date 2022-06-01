@@ -63,7 +63,6 @@ const FactorsSessionCookieName = "factors-sid"
 
 const FactorsAuth0StateCookieName = "factors-auth0-state"
 
-
 // URL for loading SDK on client side.
 const SDKAssetsURL = "https://app.factors.ai/assets/factors.js"
 
@@ -248,6 +247,7 @@ type Configuration struct {
 	SlackAppClientID                                string
 	SlackAppClientSecret                            string
 	EnableDryRunAlerts                              bool
+	ClearbitEnabled                                 int
 }
 
 type Services struct {
@@ -1731,6 +1731,10 @@ func GetTokensFromStringListAsString(stringList string) []string {
 
 func GetAttributionDebug() int {
 	return configuration.AttributionDebug
+}
+
+func GetClearbitEnabled() int {
+	return configuration.ClearbitEnabled
 }
 
 func GetOnlyAttributionDashboardCaching() int {

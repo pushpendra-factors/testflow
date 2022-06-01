@@ -11,32 +11,32 @@ export const QUERY_TYPE_PROFILE = 'profiles';
 export const ATTRIBUTION_METHODOLOGY = [
   {
     text: 'First Touch',
-    value: 'First_Touch'
+    value: 'First_Touch',
   },
   {
     text: 'Last Touch',
-    value: 'Last_Touch'
+    value: 'Last_Touch',
   },
   {
     text: 'First Touch Non-Direct',
-    value: 'First_Touch_ND'
+    value: 'First_Touch_ND',
   },
   {
     text: 'Last Touch Non-Direct',
-    value: 'Last_Touch_ND'
+    value: 'Last_Touch_ND',
   },
   {
     text: 'Linear Touch',
-    value: 'Linear'
+    value: 'Linear',
   },
   {
     text: 'U Shaped',
-    value: 'U_Shaped'
+    value: 'U_Shaped',
   },
   {
     text: 'Time Decay',
-    value: 'Time_Decay'
-  }
+    value: 'Time_Decay',
+  },
 ];
 
 export const CHART_TYPE_HORIZONTAL_BAR_CHART = 'horizontalbarchart';
@@ -57,11 +57,11 @@ export const EVENT_BREADCRUMB = {
   [QUERY_TYPE_ATTRIBUTION]: 'Attribution',
   [QUERY_TYPE_CAMPAIGN]: 'Campaigns',
   [QUERY_TYPE_KPI]: 'KPI',
-  [QUERY_TYPE_PROFILE]: 'Profiles'
+  [QUERY_TYPE_PROFILE]: 'Profiles',
 };
 
 export const valueMapper = {
-  $no_group: 'Overall'
+  $no_group: 'Overall',
 };
 
 export const TOTAL_EVENTS_CRITERIA = 'total_events';
@@ -79,13 +79,13 @@ export const ALL_USER_TYPE = 'all';
 export const constantObj = {
   [EACH_USER_TYPE]: 'each_given_event',
   [ANY_USER_TYPE]: 'any_given_event',
-  [ALL_USER_TYPE]: 'all_given_event'
+  [ALL_USER_TYPE]: 'all_given_event',
 };
 
 export const reverse_user_types = {
   each_given_event: EACH_USER_TYPE,
   any_given_event: ANY_USER_TYPE,
-  all_given_event: ALL_USER_TYPE
+  all_given_event: ALL_USER_TYPE,
 };
 
 export const REPORT_SECTION = 'reports';
@@ -104,37 +104,37 @@ export const DASHBOARD_WIDGET_ATTRIBUTION_DUAL_TOUCHPOINT_BAR_CHART_HEIGHT = 225
 export const BAR_CHART_XAXIS_TICK_LENGTH = {
   0: 10,
   1: 15,
-  2: 5
+  2: 5,
 };
 
 export const BAR_COUNT = {
   0: 5,
   1: 10,
-  2: 3
+  2: 3,
 };
 
 export const BARLINE_COUNT = {
   0: 3,
   1: 5,
-  2: 2
+  2: 2,
 };
 
 export const FUNNELS_COUNT = {
   0: 3,
   1: 10,
-  2: 2
+  2: 2,
 };
 
 export const legend_counts = {
   0: 3,
   1: 6,
-  2: 1
+  2: 1,
 };
 
 export const charts_legend_length = {
   0: 15,
   1: 20,
-  2: 10
+  2: 10,
 };
 
 export const high_charts_default_spacing = [20, 10, 15, 10];
@@ -150,7 +150,7 @@ export const presentationObj = {
   ps: CHART_TYPE_STACKED_BAR,
   sp: CHART_TYPE_SCATTER_PLOT,
   hb: CHART_TYPE_HORIZONTAL_BAR_CHART,
-  pi: CHART_TYPE_PIVOT_CHART
+  pi: CHART_TYPE_PIVOT_CHART,
 };
 
 export const apiChartAnnotations = {
@@ -162,7 +162,7 @@ export const apiChartAnnotations = {
   [CHART_TYPE_STACKED_BAR]: 'ps',
   [CHART_TYPE_SCATTER_PLOT]: 'sp',
   [CHART_TYPE_HORIZONTAL_BAR_CHART]: 'hb',
-  [CHART_TYPE_PIVOT_CHART]: 'pi'
+  [CHART_TYPE_PIVOT_CHART]: 'pi',
 };
 
 export const MAX_ALLOWED_VISIBLE_PROPERTIES = 10;
@@ -170,7 +170,7 @@ export const GROUPED_MAX_ALLOWED_VISIBLE_PROPERTIES = 5;
 
 export const DASHBOARD_TYPES = {
   WEB: 'web',
-  USER_CREATED: 'user_created'
+  USER_CREATED: 'user_created',
 };
 
 export const MARKETING_TOUCHPOINTS = {
@@ -179,94 +179,94 @@ export const MARKETING_TOUCHPOINTS = {
   SOURCE: 'Source',
   KEYWORD: 'Keyword',
   MATCHTYPE: 'MatchType',
-  LANDING_PAGE: 'LandingPage'
+  LANDING_PAGE: 'LandingPage',
 };
 
 export const INITIAL_SESSION_ANALYTICS_SEQ = {
   start: 0,
-  end: 0
+  end: 0,
 };
 
 export const ATTRIBUTION_METRICS = [
   {
     title: 'Impressions',
     header: 'Impressions',
-    enabled: true
+    enabled: true,
   },
   {
     title: 'Clicks',
     header: 'Clicks',
-    enabled: true
+    enabled: true,
   },
   {
     title: 'Spend',
     header: 'Spend',
-    enabled: true
+    enabled: true,
   },
   {
     title: 'CTR (%)',
     header: 'CTR(%)',
-    enabled: true
+    enabled: true,
   },
   {
     title: 'Sessions',
     header: 'Sessions OR Website Visitors',
-    enabled: true
+    enabled: true,
   },
   {
     title: 'Users',
     header: 'Users',
-    enabled: true
+    enabled: true,
   },
   {
     title: 'Average CPC',
     header: 'Average CPC',
-    enabled: false
+    enabled: false,
   },
   {
     title: 'CPM',
     header: 'CPM',
-    enabled: false
+    enabled: false,
   },
   {
     title: 'Conversion Value',
     header: 'CV',
     enabled: true,
-    isEventMetric: true
+    isEventMetric: true,
   },
   {
     title: 'Return on Cost',
     header: 'ROC',
     enabled: true,
-    isEventMetric: true
+    isEventMetric: true,
   },
   {
     title: 'Click Conversion Rate (%)',
     header: 'ConversionRate(%) OR ClickConversionRate(%)',
-    enabled: false
+    enabled: false,
   },
   {
     title: 'Avg Session Time (in sec)',
     header: 'Average Session Time',
-    enabled: false
+    enabled: false,
   },
   {
     title: 'Page Views',
     header: 'PageViews',
-    enabled: false
+    enabled: false,
   },
   {
     title: 'All Cost/Conv',
     header: 'ALL CPC',
     enabled: true,
-    isEventMetric: true
+    isEventMetric: true,
   },
   {
     title: 'All Conv Rate (%)',
     header: 'ALL CR',
     enabled: false,
-    isEventMetric: true
-  }
+    isEventMetric: true,
+  },
 ];
 
 export const KEY_TOUCH_POINT_DIMENSIONS = [
@@ -277,7 +277,7 @@ export const KEY_TOUCH_POINT_DIMENSIONS = [
     enabled: false,
     type: 'key',
     touchPoint: MARKETING_TOUCHPOINTS.CAMPAIGN,
-    defaultValue: false
+    defaultValue: false,
   },
   {
     title: 'Campaign Name',
@@ -286,7 +286,7 @@ export const KEY_TOUCH_POINT_DIMENSIONS = [
     enabled: true,
     type: 'key',
     touchPoint: MARKETING_TOUCHPOINTS.CAMPAIGN,
-    defaultValue: true
+    defaultValue: true,
   },
   {
     title: 'Ads Platform',
@@ -295,7 +295,7 @@ export const KEY_TOUCH_POINT_DIMENSIONS = [
     enabled: false,
     type: 'key',
     touchPoint: MARKETING_TOUCHPOINTS.ADGROUP,
-    defaultValue: false
+    defaultValue: false,
   },
   {
     title: 'Campaign Name',
@@ -304,7 +304,7 @@ export const KEY_TOUCH_POINT_DIMENSIONS = [
     enabled: true,
     type: 'key',
     touchPoint: MARKETING_TOUCHPOINTS.ADGROUP,
-    defaultValue: true
+    defaultValue: true,
   },
   {
     title: 'AdGroup Name',
@@ -313,7 +313,7 @@ export const KEY_TOUCH_POINT_DIMENSIONS = [
     enabled: true,
     type: 'key',
     touchPoint: MARKETING_TOUCHPOINTS.ADGROUP,
-    defaultValue: true
+    defaultValue: true,
   },
   {
     title: 'Ads Platform',
@@ -322,7 +322,7 @@ export const KEY_TOUCH_POINT_DIMENSIONS = [
     enabled: false,
     type: 'key',
     touchPoint: MARKETING_TOUCHPOINTS.KEYWORD,
-    defaultValue: false
+    defaultValue: false,
   },
   {
     title: 'Campaign Name',
@@ -331,7 +331,7 @@ export const KEY_TOUCH_POINT_DIMENSIONS = [
     enabled: true,
     type: 'key',
     touchPoint: MARKETING_TOUCHPOINTS.KEYWORD,
-    defaultValue: true
+    defaultValue: true,
   },
   {
     title: 'AdGroup Name',
@@ -340,7 +340,7 @@ export const KEY_TOUCH_POINT_DIMENSIONS = [
     enabled: true,
     type: 'key',
     touchPoint: MARKETING_TOUCHPOINTS.KEYWORD,
-    defaultValue: true
+    defaultValue: true,
   },
   {
     title: 'Keyword Match Type',
@@ -349,7 +349,7 @@ export const KEY_TOUCH_POINT_DIMENSIONS = [
     enabled: true,
     type: 'key',
     touchPoint: MARKETING_TOUCHPOINTS.KEYWORD,
-    defaultValue: true
+    defaultValue: true,
   },
   {
     title: 'Keyword',
@@ -358,7 +358,7 @@ export const KEY_TOUCH_POINT_DIMENSIONS = [
     enabled: true,
     type: 'key',
     touchPoint: MARKETING_TOUCHPOINTS.KEYWORD,
-    defaultValue: true
+    defaultValue: true,
   },
   {
     title: 'Landing Page URL',
@@ -367,8 +367,8 @@ export const KEY_TOUCH_POINT_DIMENSIONS = [
     enabled: true,
     type: 'key',
     touchPoint: MARKETING_TOUCHPOINTS.LANDING_PAGE,
-    defaultValue: true
-  }
+    defaultValue: true,
+  },
 ];
 
 export const KEY_CONTENT_GROUPS = [
@@ -379,75 +379,75 @@ export const KEY_CONTENT_GROUPS = [
     enabled: true,
     type: 'key',
     touchPoint: MARKETING_TOUCHPOINTS.LANDING_PAGE,
-    defaultValue: true
-  }
+    defaultValue: true,
+  },
 ];
 
 export const MARKETING_TOUCHPOINTS_ALIAS = {
   campaign: MARKETING_TOUCHPOINTS.CAMPAIGN,
-  ad_group: MARKETING_TOUCHPOINTS.ADGROUP
+  ad_group: MARKETING_TOUCHPOINTS.ADGROUP,
 };
 
 export const FUNNEL_CHART_MARGIN = {
   top: 20,
   right: 0,
   bottom: 30,
-  left: 40
+  left: 40,
 };
 
 export const DateBreakdowns = [
   {
     title: 'Hourly Trend',
     key: 'hour',
-    disabled: false
+    disabled: false,
   },
   {
     title: 'Daily Trend',
     key: 'date',
-    disabled: false
+    disabled: false,
   },
   {
     title: 'Weekly Trend',
     key: 'week',
-    disabled: false
+    disabled: false,
   },
   {
     title: 'Monthly Trend',
     key: 'month',
-    disabled: false
+    disabled: false,
   },
   {
     title: 'Quarterly Trend',
     key: 'quarter',
-    disabled: false
-  }
+    disabled: false,
+  },
 ];
 
 export const DefaultChartTypes = {
   [QUERY_TYPE_EVENT]: {
     no_breakdown: CHART_TYPE_SPARKLINES,
-    breakdown: CHART_TYPE_BARCHART
+    breakdown: CHART_TYPE_BARCHART,
   },
   [QUERY_TYPE_CAMPAIGN]: {
     no_breakdown: CHART_TYPE_SPARKLINES,
-    breakdown: CHART_TYPE_BARCHART
+    breakdown: CHART_TYPE_BARCHART,
   },
   [QUERY_TYPE_KPI]: {
     no_breakdown: CHART_TYPE_SPARKLINES,
-    breakdown: CHART_TYPE_BARCHART
+    breakdown: CHART_TYPE_BARCHART,
   },
   [QUERY_TYPE_ATTRIBUTION]: {
     single_touch_point: CHART_TYPE_BARCHART,
-    dual_touch_point: CHART_TYPE_BARCHART
+    dual_touch_point: CHART_TYPE_BARCHART,
   },
   [QUERY_TYPE_FUNNEL]: {
     breakdown: CHART_TYPE_BARCHART,
-    no_breakdown: CHART_TYPE_BARCHART
+    no_breakdown: CHART_TYPE_BARCHART,
   },
   [QUERY_TYPE_PROFILE]: {
     no_breakdown: CHART_TYPE_HORIZONTAL_BAR_CHART,
-    breakdown: CHART_TYPE_BARCHART
-  }
+    breakdown: CHART_TYPE_BARCHART,
+  },
 };
 
 export const QUERY_TYPE_TEXT = {
@@ -456,7 +456,7 @@ export const QUERY_TYPE_TEXT = {
   [QUERY_TYPE_CAMPAIGN]: 'Campaigns',
   [QUERY_TYPE_ATTRIBUTION]: 'Attributions',
   [QUERY_TYPE_KPI]: 'KPI',
-  [QUERY_TYPE_PROFILE]: 'Profiles'
+  [QUERY_TYPE_PROFILE]: 'Profiles',
 };
 
 export const FIRST_METRIC_IN_ATTR_RESPOSE = 'Impressions';
@@ -469,7 +469,7 @@ export const PREDEFINED_DATES = {
   THIS_MONTH: 'this_month',
   LAST_MONTH: 'last_month',
   TODAY: 'today',
-  YESTERDAY: 'yesterday'
+  YESTERDAY: 'yesterday',
 };
 
 export const TimeZoneOffsetValues = {
@@ -478,7 +478,7 @@ export const TimeZoneOffsetValues = {
   CT: { offset: '−06:00', city: 'America/Costa_Rica' },
   ET: { offset: '−05:00', city: 'America/Chicago' },
   GMT: { offset: '+00:00', city: 'UTC' },
-  AEST: { offset: '+10:00', city: 'Australia/Sydney' }
+  AEST: { offset: '+10:00', city: 'Australia/Sydney' },
 };
 
 export const DATE_FORMATS = {
@@ -486,7 +486,7 @@ export const DATE_FORMATS = {
   month: 'MMM-YYYY',
   date: 'D-MMM-YYYY',
   day: 'D-MMM-YYYY',
-  hour: 'D-MMM-YYYY H [h]'
+  hour: 'D-MMM-YYYY H [h]',
 };
 
 export const ProfileMapper = {
@@ -497,7 +497,7 @@ export const ProfileMapper = {
   'All Deals': 'hubspot',
   'All Accounts': 'salesforce',
   'All Companies': 'hubspot',
-  Marketo: 'marketo'
+  Marketo: 'marketo',
 };
 
 export const ReverseProfileMapper = {
@@ -505,21 +505,21 @@ export const ReverseProfileMapper = {
   hubspot: {
     users: 'Hubspot Contacts',
     $hubspot_deal: 'All Deals',
-    $hubspot_company: 'All Companies'
+    $hubspot_company: 'All Companies',
   },
   salesforce: {
     users: 'Salesforce Users',
     $salesforce_opportunity: 'All Opportunities',
-    $salesforce_account: 'All Accounts'
+    $salesforce_account: 'All Accounts',
   },
-  marketo: { users: 'Marketo' }
+  marketo: { users: 'Marketo' },
 };
 
 export const DISPLAY_PROP = { $none: '(Not Set)' };
 export const REV_DISPLAY_PROP = { '(Not Set)': '$none' };
 
 export const METRIC_TYPES = {
-  dateType: 'date_type'
+  dateType: 'date_type',
 };
 
 export const QUERY_OPTIONS_DEFAULT_VALUE = {
@@ -531,11 +531,18 @@ export const QUERY_OPTIONS_DEFAULT_VALUE = {
       prop_type: '', // categorical  /numberical
       eventValue: '', // event name (funnel only)
       eventName: '', // eventName $present for global user breakdown
-      eventIndex: 0
-    }
+      eventIndex: 0,
+    },
   ],
   globalFilters: [],
   event_analysis_seq: '',
   session_analytics_seq: {},
-  date_range: {}
+  date_range: {},
+};
+
+export const AvailableGroups = {
+  'Hubspot Comapnies': '$hubspot_company',
+  'Hubspot Deals': '$hubspot_deal',
+  'Salesforce Accounts': '$salesforce_account',
+  'Salesforce Opportunities': '$salesforce_opportunity',
 };

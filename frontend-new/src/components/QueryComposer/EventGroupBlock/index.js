@@ -8,6 +8,7 @@ import { SVG, Text } from 'factorsComponents';
 import { connect } from 'react-redux';
 import GroupSelect2 from '../GroupSelect2';
 import FaSelect from '../../FaSelect';
+import { AvailableGroups } from '../../../utils/constants';
 
 const EventGroupBlock = ({
   index,
@@ -19,6 +20,8 @@ const EventGroupBlock = ({
   userPropNames,
   eventProperties,
   eventPropNames,
+  groupProperties,
+  groupPropNames,
   setGroupState,
   delGroupState,
   closeDropDown,
@@ -34,6 +37,11 @@ const EventGroupBlock = ({
       icon: 'user',
       values: [],
     },
+    {
+      label: 'Group Properties',
+      icon: 'group',
+      values: [],
+    },
   ]);
 
   const [propSelVis, setSelVis] = useState(false);
@@ -41,24 +49,26 @@ const EventGroupBlock = ({
 
   useEffect(() => {
     const filterOpts = [...filterOptions];
-    filterOpts[1].values = userProperties;
-    setFilterOptions(filterOpts);
-  }, [userProperties]);
-
-  useEffect(() => {
-    const filterOpts = [...filterOptions];
     filterOpts[0].values = eventProperties[event.label];
+    if (AvailableGroups[event.group]) {
+      filterOpts[2].values = groupProperties[AvailableGroups[event.group]];
+      filterOpts[1].values = [];
+    } else {
+      filterOpts[1].values = userProperties;
+      filterOpts[2].values = [];
+    }
     setFilterOptions(filterOpts);
-  }, [eventProperties]);
+  }, [userProperties, eventProperties, groupProperties]);
 
   const onChange = (group, val, ind) => {
     const newGroupByState = Object.assign({}, groupByEvent);
     if (group === 'User Properties') {
       newGroupByState.prop_category = 'user';
+    } else if (group === 'Group Properties') {
+      newGroupByState.prop_category = 'group';
     } else {
       newGroupByState.prop_category = 'event';
     }
-
     newGroupByState.eventName = event.label;
     newGroupByState.property = val[1];
     newGroupByState.prop_type = val[2];
@@ -154,6 +164,12 @@ const EventGroupBlock = ({
         : groupByEvent.property;
     }
 
+    if (groupByEvent.property && groupByEvent.prop_category === 'group') {
+      propName = groupPropNames[groupByEvent.property]
+        ? groupPropNames[groupByEvent.property]
+        : groupByEvent.property;
+    }
+
     return isGroupByDDVisible ? (
       <div className={`relative`}>
         <Button
@@ -226,10 +242,12 @@ const EventGroupBlock = ({
 
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
+  groupProperties: state.coreQuery.groupProperties,
   userProperties: state.coreQuery.userProperties,
   eventProperties: state.coreQuery.eventProperties,
   userPropNames: state.coreQuery.userPropNames,
   eventPropNames: state.coreQuery.eventPropNames,
+  groupPropNames: state.coreQuery.groupPropNames,
 });
 
 export default connect(mapStateToProps)(EventGroupBlock);
