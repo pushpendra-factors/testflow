@@ -27,7 +27,7 @@ export const getEventNames = (dispatch, projectId) => {
     host +
       'projects/' +
       projectId +
-      '/v1/event_names?is_display_name_enabled=true',
+      '/user/event_names?is_display_name_enabled=true',
     {}
   );
 };
@@ -379,3 +379,27 @@ export const deleteReport = ({ project_id, queryId }) => {
   const url = host + 'projects/' + project_id + '/queries/' + queryId;
   return del(null, url);
 };
+
+export function fetchGroupProperties(projectId, groupName) {
+  const url =
+    host +
+    'projects/' +
+    projectId +
+    '/groups/' +
+    btoa(groupName) +
+    '/properties';
+  return get(null, url);
+}
+
+export function fetchGroupPropertyValues(projectId, groupName, propertyName) {
+  const url =
+    host +
+    'projects/' +
+    projectId +
+    '/groups/' +
+    btoa(groupName) +
+    '/properties/' +
+    btoa(propertyName) +
+    '/values';
+  return get(null, url);
+}

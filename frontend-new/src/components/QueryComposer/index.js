@@ -45,8 +45,6 @@ function QueryComposer({
   const [calendarLabel, setCalendarLabel] = useState('Pick Dates');
   const [criteriaTabOpen, setCriteriaTabOpen] = useState(false);
 
-  const userProperties = useSelector((state) => state.coreQuery.userProperties);
-
   useEffect(() => {
     if (activeProject && activeProject.id) {
       fetchEventNames(activeProject.id);
@@ -83,7 +81,10 @@ function QueryComposer({
       );
     });
 
-    if ((queryType === QUERY_TYPE_FUNNEL && queries.length < 10) || (queryType === QUERY_TYPE_EVENT && queries.length < 6)) {
+    if (
+      (queryType === QUERY_TYPE_FUNNEL && queries.length < 10) ||
+      (queryType === QUERY_TYPE_EVENT && queries.length < 6)
+    ) {
       blockList.push(
         <div key={'init'} className={styles.composer_body__query_block}>
           <QueryBlock

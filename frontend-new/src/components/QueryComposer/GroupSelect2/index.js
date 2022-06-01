@@ -59,6 +59,7 @@ function GroupSelect2({
   const getGroupLabel = (grp) => {
     if (grp === 'event') return 'Event Properties';
     if (grp === 'user') return 'User Properties';
+    if (grp === 'group') return 'Group Properties';
     if (!grp) return 'Properties';
     return grp;
   };

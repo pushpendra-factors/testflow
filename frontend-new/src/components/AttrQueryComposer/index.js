@@ -245,7 +245,6 @@ const AttrQueryComposer = ({ activeProject,
                     monthPicker
                     buttonSize={`large`}
                     className={`mr-2`}
-                    monthPicker
                     range={
                         {
                             startDate: dateRange.from,

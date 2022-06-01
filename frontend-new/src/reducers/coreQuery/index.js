@@ -4,6 +4,7 @@ import {
   FETCH_EVENTS,
   FETCH_EVENT_PROPERTIES,
   FETCH_USER_PROPERTIES,
+  FETCH_GROUP_PROPERTIES,
   SET_GROUPBY,
   RESET_GROUPBY,
   DEL_GROUPBY,
@@ -28,7 +29,8 @@ import {
   SET_EVENT_NAMES,
   SET_USER_PROP_NAME,
   SET_EVENT_PROP_NAME,
-  SET_ATTR_QUERIES, 
+  SET_GROUP_PROP_NAME,
+  SET_ATTR_QUERIES,
 } from './actions';
 import {
   SHOW_ANALYTICS_RESULT,
@@ -52,6 +54,7 @@ const defaultState = {
   eventOptions: [],
   eventProperties: {},
   userProperties: [],
+  groupProperties: {},
   groupBy: {
     global: [],
     event: [],
@@ -65,7 +68,7 @@ const defaultState = {
   ],
   show_analytics_result: false,
   attrQueries: [],
-  eventGoal: {filters: []},
+  eventGoal: { filters: [] },
   touchpoint: '',
   touchpoint_filters: [],
   attr_query_type: 'EngagementBased',
@@ -95,6 +98,7 @@ const defaultState = {
   eventNames: [],
   userPropNames: [],
   eventPropNames: [],
+  groupPropNames: []
 };
 
 export default function (state = defaultState, action) {
@@ -105,6 +109,12 @@ export default function (state = defaultState, action) {
       return { ...state, eventNames: action.payload };
     case SET_USER_PROP_NAME:
       return { ...state, userPropNames: action.payload };
+      case SET_GROUP_PROP_NAME:
+        return { ...state, groupPropNames: action.payload };
+    case FETCH_GROUP_PROPERTIES:
+      const groupPropState = Object.assign({}, state.groupProperties)
+      groupPropState[action.groupName] = action.payload;
+      return { ...state, groupProperties: groupPropState };
     case FETCH_USER_PROPERTIES:
       return { ...state, userProperties: action.payload };
     case FETCH_EVENT_PROPERTIES:

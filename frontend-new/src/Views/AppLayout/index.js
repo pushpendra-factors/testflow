@@ -21,6 +21,7 @@ import {
   getUserProperties,
   getEventProperties,
   fetchEventNames,
+  getGroupProperties,
 } from '../../reducers/coreQuery/middleware';
 import { fetchDashboards } from '../../reducers/dashboard/services';
 import PageSuspenseLoader from '../../components/SuspenseLoaders/PageSuspenseLoader';
@@ -46,6 +47,7 @@ import ContentGroups from '../Settings/ProjectConfigure/ContentGroups';
 import Touchpoints from '../Settings/ProjectConfigure/Touchpoints';
 import CustomKPI from '../Settings/ProjectConfigure/CustomKPI';
 import { EMPTY_ARRAY } from '../../utils/global';
+import UserProfiles from '../../components/Profile/UserProfiles';
 
 const FactorsInsights = lazyWithRetry(() =>
   import('../Factors/FactorsInsightsNew')
@@ -59,6 +61,7 @@ function AppLayout({
   fetchEventNames,
   getEventProperties,
   getUserProperties,
+  getGroupProperties,
   fetchWeeklyIngishtsMetaData,
   setActiveProject,
   fetchDemoProject,
@@ -122,6 +125,7 @@ function AppLayout({
       // dispatch(deleteQueryTest())
       fetchEventNames(active_project.id);
       getUserProperties(active_project.id);
+      getGroupProperties(active_project.id);
       dispatch(fetchSmartPropertyRules(active_project.id));
       fetchWeeklyIngishtsMetaData(active_project.id);
       dispatch(fetchAttrContentGroups(active_project.id));
@@ -228,6 +232,10 @@ function AppLayout({
                     />
                     <Route path='/configure/alerts' component={Alerts} />
                     {/* <Route path='/configure/goals' component={goals} /> */}
+
+                    {/* profiles */}
+                    <Route path='/profiles/people' component={UserProfiles} />
+
                   </Switch>
                 </Suspense>
               </Content>
@@ -247,6 +255,7 @@ const mapDispatchToProps = (dispatch) =>
       fetchEventNames,
       getEventProperties,
       getUserProperties,
+      getGroupProperties,
       fetchWeeklyIngishtsMetaData,
       setActiveProject,
       fetchDemoProject,
