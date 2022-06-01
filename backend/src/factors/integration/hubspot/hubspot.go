@@ -2234,9 +2234,9 @@ func getEngagementContactIds(engagementTypeStr string, engagement Engagements) (
 				return contactIds, http.StatusInternalServerError
 			}
 			contact = fromMap["contactId"]
-			if fmt.Sprintf("%v", contact) == "" {
-				logCtx.Error("there is no contact Id in fromKey")
-				return contactIds, http.StatusInternalServerError
+			if contact == "" || contact == nil {
+				logCtx.Error("No contact id for INCOMING_EMAIL engamement. Will be marked as synced")
+				return nil, http.StatusOK
 			}
 
 		} else {
@@ -2261,9 +2261,9 @@ func getEngagementContactIds(engagementTypeStr string, engagement Engagements) (
 				return contactIds, http.StatusOK
 			}
 			contact = toMap["contactId"]
-			if fmt.Sprintf("%v", contact) == "" {
-				logCtx.Error("there is no contact Id in from toKey")
-				return contactIds, http.StatusInternalServerError
+			if contact == "" || contact == nil {
+				logCtx.Error("No contact id for EMAIL engamement. Will be marked as synced")
+				return nil, http.StatusOK
 			}
 		}
 
