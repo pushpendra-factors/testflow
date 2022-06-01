@@ -3,6 +3,7 @@ package tests
 import (
 	"encoding/json"
 	H "factors/handler"
+	"factors/integration/clear_bit"
 	"factors/model/model"
 	"factors/model/store"
 	"factors/sdk"
@@ -10,6 +11,7 @@ import (
 	"factors/util"
 	U "factors/util"
 	"fmt"
+	"github.com/clearbit/clearbit-go/clearbit"
 	"math"
 	"net/http"
 	"sync"
@@ -18,6 +20,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm/dialects/postgres"
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -443,7 +446,38 @@ func TestDBFillUserDefaultProperties(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Empty(t, propertiesMap[U.EP_INTERNAL_IP])
 }
+func TestDBClearbit(t *testing.T) {
 
+	// Ip= "89.76.236.199"
+	projectId := uint64(4)
+	clientIP := "89.76.236.199"
+	propertiesMap1 := U.PropertiesMap{"prop_1": "value_1"}
+	executeClearBitStatusChannel := make(chan int)
+
+	clearbitKey, errCode := store.GetStore().GetClearbitKeyFromProjectSetting(projectId)
+	if errCode != http.StatusFound {
+		log.Error("Get clear_bit key failed. Invalid project.")
+	}
+	go clear_bit.ExecuteClearBitEnrich(clearbitKey, &propertiesMap1, clientIP, executeClearBitStatusChannel) // Our gateway IP.
+	select {
+	case response, ok := <-executeClearBitStatusChannel:
+		if ok {
+			fmt.Println(response)
+		}
+	case <-time.After(300 * time.Second):
+		fmt.Println("time Out :(")
+
+	}
+	// IP is not stored in user properties.
+	assert.NotNil(t, propertiesMap1[U.CLR_COMPANY_GEO_COUNTRY])
+	assert.Equal(t, "Poland", propertiesMap1[U.CLR_COMPANY_GEO_COUNTRY])
+	assert.Equal(t, "Wrocław", propertiesMap1[U.CLR_COMPANY_GEO_CITY])
+	assert.Equal(t, "50-203", propertiesMap1[U.CLR_COMPANY_GEO_POSTALCODE])
+	assert.Equal(t, "89.76.236.199", propertiesMap1[U.CLR_IP])
+	assert.Equal(t, "divante.pl", propertiesMap1[U.CLR_COMPANY_PARENT_DOMAIN])
+
+	assert.NotNil(t, propertiesMap1["prop_1"]) // Should append to existing values.
+}
 func TestDBCreateOrGetSegmentUserWithSDKIdentify(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
@@ -1484,4 +1518,137 @@ func TestUserDuplicates(t *testing.T) {
 	for i := range users {
 		assert.NotEqual(t, "", users[i].SegmentAnonymousId)
 	}
+}
+
+func clearbit1(ip string, c chan int) {
+	projectId := uint64(4)
+	clearbitKey, errCode := store.GetStore().GetClearbitKeyFromProjectSetting(projectId)
+
+	if errCode != http.StatusFound {
+		log.Error("Get clear_bit key failed. Invalid project.")
+	}
+	client := clearbit.NewClient(clearbit.WithAPIKey(clearbitKey))
+	_, _, _ = client.Reveal.Find(clearbit.RevealFindParams{
+		IP: ip,
+	})
+	res := 5
+	c <- res
+}
+func clearbitAnalysisTestDBClearBit(t *testing.T) {
+	ip := []string{
+		"89.76.236.199",
+		"137.59.242.126",
+		"66.249.81.247",
+		"66.102.8.22",
+		"59.88.57.114",
+		"66.249.81.245",
+		"185.229.59.141",
+		"49.32.238.36",
+		"84.203.150.136",
+		"162.253.209.154",
+		"68.74.220.125",
+		"185.53.227.164",
+		"35.88.129.120",
+		"90.63.220.183",
+		"185.229.59.141",
+		"24.162.23.57",
+		"223.190.80.87",
+		"66.249.88.30",
+		"185.229.59.141",
+		"66.249.93.1",
+		"66.102.8.20",
+		"188.146.239.41",
+		"66.249.93.5",
+		"31.13.127.8",
+		"42.111.163.64",
+		"157.51.142.107",
+		"98.242.148.59",
+		"49.37.219.158",
+		"213.32.243.78",
+		"193.239.59.85",
+		"66.249.83.60",
+		"94.190.204.222",
+		"34.221.93.80",
+		"66.249.93.3",
+		"117.216.103.89",
+		"174.92.160.98",
+		"74.6.40.75",
+		"152.57.192.207",
+		"5.57.52.47",
+		"180.129.121.178",
+		"66.102.6.180",
+		"66.102.9.20",
+		"79.21.248.188",
+		"66.249.81.243",
+		"66.249.93.1",
+		"92.77.126.233",
+		"81.19.223.22",
+		"66.102.9.20",
+		"66.249.93.3",
+		"182.72.76.34",
+		"124.253.113.83",
+		"66.249.83.56",
+		"66.249.93.3",
+		"34.105.204.94",
+		"49.207.202.238",
+		"66.102.6.184",
+		"12.167.12.226",
+		"66.102.8.22",
+		"66.249.88.30",
+		"168.149.146.88",
+		"81.128.133.67",
+		"2.84.215.126",
+		"66.249.83.56",
+		"77.58.53.241",
+		"213.123.54.101",
+		"68.82.33.200",
+		"106.51.1.148",
+		"80.59.251.252",
+		"109.245.127.240",
+		"31.10.147.39",
+		"176.61.95.239",
+		"52.143.249.184",
+		"31.13.127.31",
+		"49.207.212.78",
+		"49.37.210.172",
+		"94.44.225.229",
+		"87.196.73.101",
+		"106.198.83.3",
+		"103.211.22.54",
+		"35.86.97.98",
+		"66.249.93.5",
+		"142.129.183.129",
+		"66.249.93.3",
+		"44.193.77.14",
+		"76.112.99.78",
+		"59.103.76.123",
+		"66.249.81.247",
+		"66.249.83.56",
+		"185.204.179.225",
+		"5.91.254.62",
+		"66.249.93.3",
+		"85.246.71.150",
+		"62.85.92.110",
+		"45.28.131.51",
+		"183.83.208.186",
+		"168.149.165.60",
+		"103.238.109.174",
+		"173.238.75.179",
+		"218.185.235.242",
+		"66.102.8.24",
+	}
+
+	for i := 0; i < 1; i++ {
+		c := make(chan int)
+		go clearbit1(ip[i], c)
+		select {
+		case response := <-c:
+			fmt.Println(response)
+			//fmt.Println(response.length)
+		case <-time.After(1 / 10 * time.Second):
+			fmt.Println("time Out :(")
+		}
+		//fmt.Println("Main function exited!")
+	}
+
 }
