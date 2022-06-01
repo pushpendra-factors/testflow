@@ -446,17 +446,17 @@ func TestDBFillUserDefaultProperties(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Empty(t, propertiesMap[U.EP_INTERNAL_IP])
 }
-func TestDBClearbit(t *testing.T) {
+func clearbitAnalysisTestDBClearbit(t *testing.T) {
 
 	// Ip= "89.76.236.199"
-	projectId := uint64(4)
+	projectId := uint64(5)
 	clientIP := "89.76.236.199"
 	propertiesMap1 := U.PropertiesMap{"prop_1": "value_1"}
 	executeClearBitStatusChannel := make(chan int)
 
 	clearbitKey, errCode := store.GetStore().GetClearbitKeyFromProjectSetting(projectId)
 	if errCode != http.StatusFound {
-		log.Error("Get clear_bit key failed. Invalid project.")
+		log.Info("Get clear_bit key failed.")
 	}
 	go clear_bit.ExecuteClearBitEnrich(clearbitKey, &propertiesMap1, clientIP, executeClearBitStatusChannel) // Our gateway IP.
 	select {
