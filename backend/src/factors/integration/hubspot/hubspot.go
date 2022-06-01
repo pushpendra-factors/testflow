@@ -2510,12 +2510,13 @@ func syncAll(project *model.Project, documents []model.HubspotDocument, hubspotS
 
 // Status definition
 type Status struct {
-	ProjectId uint64 `json:"project_id"`
-	Type      string `json:"type"`
-	Status    string `json:"status"`
-	Count     int    `json:"count"`
-	TimeMs    int64  `json:"time_in_ms`
-	Message   string `json:"message,omiempty"`
+	ProjectId              uint64 `json:"project_id"`
+	Type                   string `json:"type"`
+	Status                 string `json:"status"`
+	Count                  int    `json:"count"`
+	TotalTime              string `json:"total_time`
+	Message                string `json:"message,omiempty"`
+	IsProcessLimitExceeded bool   `json:"process_limit_exceeded"`
 }
 
 type syncWorkerStatus struct {
@@ -2536,8 +2537,89 @@ func syncAllWorker(project *model.Project, wg *sync.WaitGroup, syncStatus *syncW
 	}
 }
 
+func syncByOrderedTimeSeries(project *model.Project, orderedTimeSeries [][]int64, workersPerProject int, recordsMaxCreatedAtSec int64, datePropertiesByObjectType map[int]*map[string]bool, timeZone U.TimeZoneString, recordsProcessLimit int,
+	hubspotSmartEventNames *map[string][]HubspotSmartEventName) (map[string]bool, map[string]int64, map[string]int, bool) {
+	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "worker_per_project": workersPerProject,
+		"record_max_created_at": recordsMaxCreatedAtSec, "record_process_limit": recordsProcessLimit})
+	if project == nil || len(orderedTimeSeries) == 0 {
+		logCtx.Error("Invalid parameters.")
+		return nil, nil, nil, false
+	}
+
+	processedCount := 0
+	overAllSyncStatus := make(map[string]bool)
+	overallExecutionTime := make(map[string]int64)
+	overallProcessedCount := make(map[string]int)
+	for _, timeRange := range orderedTimeSeries {
+
+		for i := range syncOrderByType {
+
+			startTime := time.Now()
+			logCtx = logCtx.WithFields(log.Fields{"type": syncOrderByType[i], "time_range": timeRange})
+
+			logCtx.Info("Processing started for given time range")
+			var documents []model.HubspotDocument
+			var errCode int
+			if workersPerProject > 1 {
+				documents, errCode = store.GetStore().GetHubspotDocumentsByTypeANDRangeForSync(project.ID, syncOrderByType[i], timeRange[0], timeRange[1], recordsMaxCreatedAtSec)
+			} else {
+				documents, errCode = store.GetStore().
+					GetHubspotDocumentsByTypeForSync(project.ID, syncOrderByType[i], recordsMaxCreatedAtSec)
+			}
+
+			if errCode != http.StatusFound {
+				logCtx.WithFields(log.Fields{"time_range": timeRange, "doc_type": syncOrderByType[i]}).Error("Failed to get hubspot document by type for sync.")
+				continue
+			}
+
+			fillDatePropertiesAndTimeZone(documents, datePropertiesByObjectType[syncOrderByType[i]], timeZone)
+			docTypeAlias := model.GetHubspotTypeAliasByType(syncOrderByType[i])
+
+			batches := GetBatchedOrderedDocumentsByID(documents, workersPerProject)
+
+			var syncStatus syncWorkerStatus
+			var workerIndex int
+			isProcessLimitExceeded := false
+			for bi := range batches {
+				batch := batches[bi]
+				var wg sync.WaitGroup
+				for docID := range batch {
+					processedCount += len(batch[docID])
+					logCtx.WithFields(log.Fields{"worker": workerIndex, "doc_id": docID, "type": syncOrderByType[i]}).Info("Processing Batch by doc_id")
+					workerIndex++
+					wg.Add(1)
+					go syncAllWorker(project, &wg, &syncStatus, batch[docID], (*hubspotSmartEventNames)[docTypeAlias])
+				}
+				wg.Wait()
+				if processedCount > recordsProcessLimit {
+					isProcessLimitExceeded = true
+					break
+				}
+			}
+
+			if _, exist := overAllSyncStatus[docTypeAlias]; !exist {
+				overAllSyncStatus[docTypeAlias] = false
+			}
+
+			if syncStatus.HasFailure {
+				overAllSyncStatus[docTypeAlias] = true
+			}
+
+			overallExecutionTime[docTypeAlias] += time.Since(startTime).Milliseconds()
+			overallProcessedCount[docTypeAlias] += len(documents)
+			if isProcessLimitExceeded {
+				return overAllSyncStatus, overallExecutionTime, overallProcessedCount, true
+			}
+
+			logCtx.Info("Processing completed for given time range")
+		}
+	}
+
+	return overAllSyncStatus, overallExecutionTime, overallProcessedCount, false
+}
+
 // Sync - Syncs hubspot documents in an order of type.
-func Sync(projectID uint64, workersPerProject int, recordsMaxCreatedAtSec int64, datePropertiesByObjectType map[int]*map[string]bool, timeZone U.TimeZoneString) ([]Status, bool) {
+func Sync(projectID uint64, workersPerProject int, recordsMaxCreatedAtSec int64, datePropertiesByObjectType map[int]*map[string]bool, timeZone U.TimeZoneString, recordsProcessLimit int) ([]Status, bool) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "workers_per_project": workersPerProject, "record_max_created_at": recordsMaxCreatedAtSec})
 	logCtx.Info("Running sync for project.")
 
@@ -2586,67 +2668,13 @@ func Sync(projectID uint64, workersPerProject int, recordsMaxCreatedAtSec int64,
 	}
 
 	anyFailure := false
-	overAllSyncStatus := make(map[string]bool)
-	overallExecutionTime := make(map[string]int64)
-	overallProcessedCount := make(map[string]int)
-	for _, timeRange := range orderedTimeSeries {
-
-		for i := range syncOrderByType {
-			startTime := time.Now()
-			logCtx = logCtx.WithFields(log.Fields{"type": syncOrderByType[i], "time_range": timeRange})
-
-			logCtx.Info("Processing started for given time range")
-			var documents []model.HubspotDocument
-			var errCode int
-			if workersPerProject > 1 {
-				documents, errCode = store.GetStore().GetHubspotDocumentsByTypeANDRangeForSync(projectID, syncOrderByType[i], timeRange[0], timeRange[1], recordsMaxCreatedAtSec)
-			} else {
-				documents, errCode = store.GetStore().
-					GetHubspotDocumentsByTypeForSync(projectID, syncOrderByType[i], recordsMaxCreatedAtSec)
-			}
-
-			if errCode != http.StatusFound {
-				logCtx.WithFields(log.Fields{"time_range": timeRange, "doc_type": syncOrderByType[i]}).Error("Failed to get hubspot document by type for sync.")
-				continue
-			}
-
-			fillDatePropertiesAndTimeZone(documents, datePropertiesByObjectType[syncOrderByType[i]], timeZone)
-			docTypeAlias := model.GetHubspotTypeAliasByType(syncOrderByType[i])
-
-			batches := GetBatchedOrderedDocumentsByID(documents, workersPerProject)
-
-			var syncStatus syncWorkerStatus
-			var workerIndex int
-			for bi := range batches {
-				batch := batches[bi]
-				var wg sync.WaitGroup
-				for docID := range batch {
-					logCtx.WithFields(log.Fields{"worker": workerIndex, "doc_id": docID, "type": syncOrderByType[i]}).Info("Processing Batch by doc_id")
-					workerIndex++
-					wg.Add(1)
-					go syncAllWorker(project, &wg, &syncStatus, batch[docID], (*hubspotSmartEventNames)[docTypeAlias])
-				}
-				wg.Wait()
-			}
-
-			if _, exist := overAllSyncStatus[docTypeAlias]; !exist {
-				overAllSyncStatus[docTypeAlias] = false
-			}
-
-			if syncStatus.HasFailure {
-				overAllSyncStatus[docTypeAlias] = true
-			}
-
-			overallExecutionTime[docTypeAlias] += time.Since(startTime).Milliseconds()
-			overallProcessedCount[docTypeAlias] += len(documents)
-
-			logCtx.Info("Processing completed for given time range")
-		}
-	}
+	overAllSyncStatus, overallExecutionTime, overallProcessedCount, isProcessLimitExceeded := syncByOrderedTimeSeries(project, orderedTimeSeries, workersPerProject,
+		recordsMaxCreatedAtSec, datePropertiesByObjectType, timeZone, recordsProcessLimit, hubspotSmartEventNames)
 
 	for docTypeAlias, failure := range overAllSyncStatus {
 		status := Status{ProjectId: projectID,
-			Type: docTypeAlias}
+			Type:                   docTypeAlias,
+			IsProcessLimitExceeded: isProcessLimitExceeded}
 		if failure {
 			status.Status = U.CRM_SYNC_STATUS_FAILURES
 			anyFailure = true
@@ -2654,7 +2682,7 @@ func Sync(projectID uint64, workersPerProject int, recordsMaxCreatedAtSec int64,
 			status.Status = U.CRM_SYNC_STATUS_SUCCESS
 		}
 		status.Count = overallProcessedCount[docTypeAlias]
-		status.TimeMs = overallExecutionTime[docTypeAlias]
+		status.TotalTime = time.Duration(overallExecutionTime[docTypeAlias] * int64(time.Millisecond)).String()
 		statusByProjectAndType = append(statusByProjectAndType, status)
 	}
 

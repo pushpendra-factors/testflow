@@ -23,13 +23,21 @@ func (s *SyncStatus) AddSyncStatus(status []IntHubspot.Status, hasFailure bool) 
 	s.Lock.Lock()
 	defer s.Lock.Unlock()
 
-	s.Status = append(s.Status, status...)
+	for i := range status {
+		if status[i].IsProcessLimitExceeded {
+			status[i].Message = "Process limit exceeded"
+			s.Status = append([]IntHubspot.Status{status[i]}, s.Status...)
+		} else {
+			s.Status = append(s.Status, status[i])
+		}
+	}
+
 	if hasFailure {
 		s.HasFailure = hasFailure
 	}
 }
 
-func syncWorker(projectID uint64, wg *sync.WaitGroup, numDocRoutines int, syncStatus *SyncStatus, recordsMaxCreatedAt int64, hubspotProjectSettings *model.HubspotProjectSettings) {
+func syncWorker(projectID uint64, wg *sync.WaitGroup, numDocRoutines int, syncStatus *SyncStatus, recordsMaxCreatedAt int64, hubspotProjectSettings *model.HubspotProjectSettings, recordsProcessLimit int) {
 	defer wg.Done()
 	datePropertiesByObjectType, err := IntHubspot.GetHubspotPropertiesByDataType(projectID, model.GetHubspotAllowedObjects(projectID), hubspotProjectSettings.APIKey, model.HubspotDataTypeDate)
 	if err != nil {
@@ -46,7 +54,7 @@ func syncWorker(projectID uint64, wg *sync.WaitGroup, numDocRoutines int, syncSt
 		return
 	}
 
-	status, hasFailure := IntHubspot.Sync(projectID, numDocRoutines, recordsMaxCreatedAt, datePropertiesByObjectType, timeZone)
+	status, hasFailure := IntHubspot.Sync(projectID, numDocRoutines, recordsMaxCreatedAt, datePropertiesByObjectType, timeZone, recordsProcessLimit)
 	syncStatus.AddSyncStatus(status, hasFailure)
 
 	// mark enrich_heavy as false irrespective of failure, let the distributer re distribute the project
@@ -75,6 +83,7 @@ func RunHubspotEnrich(configs map[string]interface{}) (map[string]interface{}, b
 	numProjectRoutines := configs["num_project_routines"].(int)
 	hubspotMaxCreatedAt := configs["max_record_created_at"].(int64)
 	enrichHeavy := configs["enrich_heavy"].(bool)
+	recordsProcessLimit := configs["record_process_limit_per_project"].(int)
 	healthcheckPingID := C.GetHealthcheckPingID(defaultHealthcheckPingID, overrideHealthcheckPingID)
 
 	hubspotEnabledProjectSettings, errCode := store.GetStore().GetAllHubspotProjectSettings()
@@ -154,7 +163,7 @@ func RunHubspotEnrich(configs map[string]interface{}) (map[string]interface{}, b
 		var wg sync.WaitGroup
 		for pi := range batch {
 			wg.Add(1)
-			go syncWorker(batch[pi], &wg, numDocRoutines, &syncStatus, hubspotMaxCreatedAt, hubspotProjectSettingsMap[batch[pi]])
+			go syncWorker(batch[pi], &wg, numDocRoutines, &syncStatus, hubspotMaxCreatedAt, hubspotProjectSettingsMap[batch[pi]], recordsProcessLimit)
 		}
 		wg.Wait()
 	}
