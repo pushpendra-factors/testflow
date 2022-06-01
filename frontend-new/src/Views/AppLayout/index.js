@@ -47,7 +47,7 @@ import ContentGroups from '../Settings/ProjectConfigure/ContentGroups';
 import Touchpoints from '../Settings/ProjectConfigure/Touchpoints';
 import CustomKPI from '../Settings/ProjectConfigure/CustomKPI';
 import { EMPTY_ARRAY } from '../../utils/global';
-import UserProfiles from '../../components/Profile/UserProfiles';
+// import UserProfiles from '../../components/Profile/UserProfiles';
 
 const FactorsInsights = lazyWithRetry(() =>
   import('../Factors/FactorsInsightsNew')
@@ -234,7 +234,7 @@ function AppLayout({
                     {/* <Route path='/configure/goals' component={goals} /> */}
 
                     {/* profiles */}
-                    <Route path='/profiles/people' component={UserProfiles} />
+                    {/* <Route path='/profiles/people' component={UserProfiles} /> */}
 
                   </Switch>
                 </Suspense>
