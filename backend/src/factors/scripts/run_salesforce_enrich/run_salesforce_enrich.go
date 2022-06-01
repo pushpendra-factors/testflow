@@ -54,7 +54,7 @@ func syncWorker(projectID uint64, wg *sync.WaitGroup, workerIndex, workerPerProj
 	accessToken, instanceURL, err := IntSalesforce.GetAccessToken(salesforceProjectSettings, H.GetSalesforceRedirectURL())
 	if err != nil || accessToken == "" || instanceURL == "" {
 		log.WithField("project_id", salesforceProjectSettings.ProjectID).Errorf("Failed to get salesforce access token: %s", err)
-		enrichStatus.AddEnrichStatus([]IntSalesforce.Status{{ProjectID: projectID, Message: err.Error()}}, true)
+		enrichStatus.AddEnrichStatus([]IntSalesforce.Status{{ProjectID: projectID, Message: err.Error()}}, false)
 		return
 	}
 
