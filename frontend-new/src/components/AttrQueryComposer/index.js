@@ -55,7 +55,6 @@ const AttrQueryComposer = ({ activeProject,
          ['Salesforce Opportunity', 'salesforce_opportunities']];
         return groups;
     };
-
     useEffect(() => {
         if (activeProject && activeProject.id) {
             getCampaignConfigData(activeProject.id, "all_ads")

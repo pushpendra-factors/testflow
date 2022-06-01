@@ -19,6 +19,7 @@ const defaultOpProps = DEFAULT_OPERATOR_PROPS;
 
 export default function ProfileFilterWrapper({
   index,
+  refValue,
   blockType = 'event',
   filterType = 'analytics',
   typeProps,
@@ -34,6 +35,7 @@ export default function ProfileFilterWrapper({
   deleteFilter,
   insertFilter,
   closeFilter,
+  showOr,
 }) {
   const [filterTypeState, setFilterTypeState] = useState('props');
   const [groupCollapseState, setGroupCollapse] = useState({});
@@ -109,6 +111,7 @@ export default function ProfileFilterWrapper({
         applyFilter={applyFilter}
         setValuesByProps={setValuesByProps}
         filter={filter}
+        refValue={refValue}
       ></FAFilterSelect>
     );
   };
@@ -647,31 +650,38 @@ export default function ProfileFilterWrapper({
           valueOpts={dropDownValues}
           applyFilter={applyFilter}
           setValuesByProps={setValuesByProps}
+          refValue={refValue}
         ></FAFilterSelect>
       </>
     );
   };
 
   return (
-    <div className={`flex items-center relative w-full`}>
-      {
-        <Text level={8} type={'title'} extraClass={'m-0 mr-2'} weight={'thin'}>
-          {index >= 1 ? 'and' : 'Filter by'}
-        </Text>
-      }
-      <div className={`relative flex`}>
-        {filter ? renderFilterContent() : filterSelComp()}
-      </div>
-      {delFilter && (
-        <Button
-          type='text'
-          onClick={delFilter}
-          size={'small'}
-          className={`fa-btn--custom filter-buttons-margin btn-right-round filter-remove-button`}
-        >
-          <SVG name={delIcon} />
-        </Button>
-      )}
-    </div>
-  );
+    <div className={`flex items-center relative`}>
+    {!showOr && (
+    <Text level={8} type={'title'} extraClass={'m-0 mr-2'} weight={'thin'}>
+      {index >= 1 ? 'and' : 'Filter by'}
+    </Text>
+    )}
+    {showOr && (
+    <Text level={8} type={'title'} extraClass={'m-0 mr-2 ml-2'} weight={'thin'}>
+      or
+    </Text>
+    )}
+
+  <div className={`relative flex`}>
+    {filter ? renderFilterContent() : filterSelComp()}
+  </div>
+  {delFilter && (
+    <Button
+      type='text'
+      onClick={delFilter}
+      size={'small'}
+      className={`fa-btn--custom filter-buttons-margin btn-right-round filter-remove-button`}
+      >
+      <SVG name={delIcon} />
+    </Button>
+  )}
+</div>
+);
 }
