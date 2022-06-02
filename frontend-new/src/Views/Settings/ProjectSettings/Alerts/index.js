@@ -163,10 +163,10 @@ const Alerts = ({
     const columns = [
 
         {
-            title: 'Alert',
-            dataIndex: 'alert',
-            key: 'alert',
-            render: (text) => <Text type={'title'} level={7} truncate={true} charLimit={25}>{text}</Text>,
+            title: 'Name',
+            dataIndex: 'alert_name',
+            key: 'alert_name',
+            render: (text) => <Text type={'title'} level={7} truncate={true} charLimit={50}>{text}</Text>,
             // width: 100,
         },
         {
@@ -347,7 +347,9 @@ const Alerts = ({
         if (viewAlertDetails.alert_configuration.emails) {
             return viewAlertDetails.alert_configuration.emails.map((item, index) => {
                 return (
-                    <Input disabled={true} key={index} value={item} className={'fa-input'} placeholder={'yourmail@gmail.com'} />
+                    <div className={'mb-3'}>
+                        <Input disabled={true} key={index} value={item} className={'fa-input'} placeholder={'yourmail@gmail.com'} />
+                    </div>
                 )
             })
         }
@@ -382,7 +384,7 @@ const Alerts = ({
             savedAlerts?.map((item, index) => {
                 savedArr.push({
                     key: index,
-                    alert: (item.alert_description.name + ' ' + item.alert_description.operator + ' ' + item.alert_description.value).replace(/_/g, ' '),
+                    alert_name: item.alert_name,
                     dop: (item.alert_configuration.email_enabled ? 'Email': '') + ' ' + (item.alert_configuration.slack_enabled ? 'Slack' : ''),
                     actions: item,
                 });
@@ -668,7 +670,7 @@ const Alerts = ({
                                     </Col>
                                     {fields.length > 0 ? (
                                     <Col span={1} >
-                                    <Button style={{backgroundColor:'white'}} className={'mt-1'} onClick={() => remove(field.name)}>
+                                    <Button style={{backgroundColor:'white'}} className={'mt-0.5'} onClick={() => remove(field.name)}>
                                         <SVG
                                         name={'Trash'}
                                         size={20}
@@ -720,7 +722,7 @@ const Alerts = ({
                                         <Text type={'title'} level={6} color={'grey-2'} extraClass={'m-0 mt-2 ml-2'}>Selected Channels</Text>
                                         {saveSelectedChannel.map((channel, index) => (
                                             <div key={index} >
-                                                <Text type={'title'} level={7} color={'grey'} extraClass={'m-0 ml-2 mt-1 mb-1'}>{'#'+ channel.name}</Text>
+                                                <Text type={'title'} level={7} color={'grey'} extraClass={'m-0 ml-2 my-1'}>{'#'+ channel.name}</Text>
                                             </div>
                                         ))}
                                     </Col>
@@ -841,7 +843,7 @@ const Alerts = ({
                         </Col>
                     </Row>
                     <Row className={'mt-4'}>
-                        <Col span={8} className={'ml-1'}>
+                        <Col span={8} className={'m-0'}>
                             <Input disabled={true}  className={'fa-input w-full'} value={(viewAlertDetails?.alert_description?.operator).replace(/_/g, ' ')} />
                         </Col>
                         <Col span={8} className={'ml-4 w-24'}>
@@ -885,12 +887,12 @@ const Alerts = ({
                         </Col>
                     </Row>
                     {viewAlertDetails?.alert_configuration?.slack_enabled && viewAlertDetails?.alert_configuration?.slack_channels_and_user_groups && (
-                    <Row className={'rounded-lg border-2 border-gray-200 mt-2 ml-2 w-2/6'}>
+                    <Row className={'rounded-lg border-2 border-gray-200 mt-2 w-2/6'}>
                         <Col className={'m-0'}>
                             <Text type={'title'} level={6} color={'grey-2'} extraClass={'m-0 mt-2 ml-2'}>Selected Channels</Text>
                             {viewSelectedChannels.map((channel, index) => (
                                 <div key={index} >
-                                    <Text type={'title'} level={7} color={'grey'} extraClass={'m-0 ml-2 mt-1 mb-1'}>{'#'+ channel.name}</Text>
+                                    <Text type={'title'} level={7} color={'grey'} extraClass={'m-0 ml-2 my-1'}>{'#'+ channel.name}</Text>
                                 </div>
                             ))}
                         </Col>
@@ -910,7 +912,7 @@ const Alerts = ({
                     confirmationText="Do you really want to remove this alert?"
                     onOk={confirmDelete}
                     onCancel={showDeleteWidgetModal.bind(this, false)}
-                    title="Remove Alerts"
+                    title="Remove Alert"
                     okText="Confirm"
                     cancelText="Cancel"
                     confirmLoading={deleteApiCalled}
