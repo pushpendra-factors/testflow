@@ -138,8 +138,9 @@ class BaseReportExtract(BaseExtract):
 
     # Read records gives response of status of message
     def read_records_for_current_columns_and_update_metrics(self):
-        records_string, result_response, current_no_of_requests = self.source.read()
-        self.total_number_of_records += current_no_of_requests
+        records_string, result_response, current_no_of_requests, async_requests = self.source.read()
+        self.total_number_of_records += current_no_of_requests 
+        self.total_number_of_async_requests += async_requests
         if not result_response.ok:
             log.warning(ERROR_MESSAGE.format(self.get_name(), result_response.status_code, result_response.text,
                                  self.project_id, self.customer_account_id))
