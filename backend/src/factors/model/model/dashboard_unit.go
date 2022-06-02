@@ -53,6 +53,8 @@ const (
 	CachingUnitStatusPassed      = 1
 )
 
+const QueryNotFoundError = "Failed to fetch query from query_id"
+
 type CachingUnitReport struct {
 	UnitType     int // CachingUnitNormal=1 or CachingUnitWebAnalytics=1
 	ProjectId    uint64

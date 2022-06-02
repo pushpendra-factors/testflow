@@ -7,6 +7,7 @@ import (
 	U "factors/util"
 	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -274,21 +275,24 @@ func (store *MemSQL) GetDashboardUnitNamesByProjectIdTypeAndName(projectID uint6
 	rDashboardUnitNames := make([]string, 0)
 	dashboardUnits, statusCode := store.GetDashboardUnitsForProjectID(projectID)
 	if statusCode != http.StatusFound {
+		log.WithField("projectID", projectID).Warn("Failed in getting dashboardUnits - GetDashboardUnitNamesByProjectIdTypeAndName")
 		return rDashboardUnitNames, statusCode
 	}
 	logCtx := log.WithField("reqID", reqID).WithField("projectID", projectID)
 	for _, dashboardUnit := range dashboardUnits {
 		queryClass, queryInfo, errMsg := store.GetQueryAndClassFromDashboardUnit(&dashboardUnit)
-		if errMsg != "" {
-			logCtx.Warn("Error during decode of Dashboard unit - GetDashboardUnitNamesByProjectIdTypeAndName")
+		if errMsg != "" && !strings.Contains(errMsg, model.QueryNotFoundError) {
+			logCtx.WithField("errMsg", errMsg).WithField("dashboardUnit", dashboardUnit).Warn("Error during decode of Dashboard unit - GetDashboardUnitNamesByProjectIdTypeAndName")
 			return rDashboardUnitNames, http.StatusInternalServerError
+		} else if strings.Contains(errMsg, model.QueryNotFoundError) {
+			continue
 		}
 
 		if queryClass == typeOfQuery {
 			baseQuery, err := model.DecodeQueryForClass(queryInfo.Query, queryClass)
 			if err != nil {
 				errMsg := fmt.Sprintf("Error decoding query, query_id %d", dashboardUnit.QueryId)
-				logCtx.WithField("error message", errMsg).Warn("GetDashboardUnitNamesByProjectIdTypeAndName")
+				logCtx.WithField("dashboardUnit", dashboardUnit).WithField("errMsg", errMsg).WithField("err", err).Warn("GetDashboardUnitNamesByProjectIdTypeAndName")
 				return rDashboardUnitNames, http.StatusInternalServerError
 			}
 
@@ -579,7 +583,7 @@ func (store *MemSQL) GetQueryAndClassFromDashboardUnit(dashboardUnit *model.Dash
 	projectID := dashboardUnit.ProjectID
 	savedQuery, errCode := store.GetQueryWithQueryId(projectID, dashboardUnit.QueryId)
 	if errCode != http.StatusFound {
-		errMsg = fmt.Sprintf("Failed to fetch query from query_id %d", dashboardUnit.QueryId)
+		errMsg = fmt.Sprintf("%s %d", model.QueryNotFoundError, dashboardUnit.QueryId)
 		return "", nil, errMsg
 	}
 

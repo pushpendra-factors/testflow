@@ -171,6 +171,7 @@ func (store *MemSQL) GetAlertNamesByProjectIdTypeAndName(projectID uint64, nameO
 	for _, alert := range alerts {
 		_, _, kpiQuery, err := model.DecodeAndFetchAlertRelatedStructs(projectID, alert)
 		if err != nil {
+			log.WithField("kpiQuery", kpiQuery).WithField("alert", alert).Warn("Failed to decode and fetch alert - GetAlertNamesByProjectIdTypeAndName")
 			return rAlertNames, http.StatusInternalServerError
 		}
 
