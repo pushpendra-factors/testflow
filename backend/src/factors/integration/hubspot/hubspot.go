@@ -2336,29 +2336,37 @@ func syncEngagements(projectID uint64, document *model.HubspotDocument) int {
 	var status int
 	contactDocuments, status = store.GetStore().GetHubspotDocumentByTypeAndActions(projectID, contactIds, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated, model.HubspotDocumentActionUpdated})
 	if status != http.StatusFound {
-		logCtx.Error(
-			"Failed to get hubspot documents by type and action on sync engagement.")
-		return http.StatusInternalServerError
+		if status != http.StatusNotFound {
+			logCtx.Error(
+				"Failed to get hubspot documents by type and action on sync engagement.")
+			return http.StatusInternalServerError
+		}
+
+		logCtx.Warning("Missing engagement associated contact record.")
+		// Avoid returning error if associated record is not present.
+		return http.StatusOK
 	}
 
 	for i := range contactIds {
-		latestContactDocument := make(map[string]*model.HubspotDocument)
-		var time int64 = -1
+		var latestContactDocument *model.HubspotDocument
 		for j := range contactDocuments {
-			if contactIds[i] == contactDocuments[j].ID && contactDocuments[j].Timestamp <= document.Timestamp &&
-				contactDocuments[j].Timestamp >= time {
-				latestContactDocument[contactIds[i]] = &contactDocuments[j]
-				time = contactDocuments[j].Timestamp
+			if contactIds[i] != contactDocuments[j].ID {
+				continue
+			}
+
+			// pick the latest contact documet before the engagment timestamp or the first contact document.
+			if latestContactDocument == nil || latestContactDocument.Timestamp < contactDocuments[j].Timestamp {
+				latestContactDocument = &contactDocuments[j]
 			}
 		}
 
-		if latestContactDocument[contactIds[i]] == nil {
+		if latestContactDocument == nil {
 			logCtx.WithFields(log.Fields{"contact_id": contactIds[i]}).Warning("Missing contact record for activity.")
 			continue
 		}
 
 		propertiesWithEmailOrContact := make(map[string]interface{})
-		enProperties, _, err := GetContactProperties(projectID, latestContactDocument[contactIds[i]])
+		enProperties, _, err := GetContactProperties(projectID, latestContactDocument)
 		if err != nil {
 			logCtx.WithError(err).Error("can't get contact properties")
 			return http.StatusInternalServerError
