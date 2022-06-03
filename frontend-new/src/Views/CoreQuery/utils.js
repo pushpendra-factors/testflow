@@ -341,14 +341,14 @@ export const getProfileQuery = (
     if (opt.eventIndex) {
       appGbp = {
         pr: opt.property,
-        en: opt.prop_category,
+        en: opt.prop_category === 'group' ? 'user' : opt.prop_category,
         pty: opt.prop_type,
         eni: opt.eventIndex
       };
     } else {
       appGbp = {
         pr: opt.property,
-        en: opt.prop_category,
+        en: opt.prop_category === 'group' ? 'user' : opt.prop_category,
         pty: opt.prop_type
       };
     }
@@ -400,7 +400,7 @@ export const getFunnelQuery = (
     if (opt.eventIndex) {
       appGbp = {
         pr: opt.property,
-        en: opt.prop_category,
+        en: opt.prop_category === 'group' ? 'user' : opt.prop_category,
         pty: opt.prop_type,
         ena: opt.eventName,
         eni: opt.eventIndex
@@ -408,7 +408,7 @@ export const getFunnelQuery = (
     } else {
       appGbp = {
         pr: opt.property,
-        en: opt.prop_category,
+        en: opt.prop_category === 'group' ? 'user' : opt.prop_category,
         pty: opt.prop_type,
         ena: opt.eventName
       };
@@ -694,7 +694,7 @@ export const getQuery = (
     if (opt.eventIndex) {
       gbpReq = {
         pr: opt.property,
-        en: opt.prop_category,
+        en: opt.prop_category === 'group' ? 'user' : opt.prop_category,
         pty: opt.prop_type,
         ena: opt.eventName,
         eni: opt.eventIndex
@@ -702,7 +702,7 @@ export const getQuery = (
     } else {
       gbpReq = {
         pr: opt.property,
-        en: opt.prop_category,
+        en: opt.prop_category === 'group' ? 'user' : opt.prop_category,
         pty: opt.prop_type,
         ena: opt.eventName
       };
