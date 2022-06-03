@@ -96,7 +96,7 @@ const getEventsWithProperties = (queries) => {
           if (Array.isArray(fil.values)) {
             fil.values.forEach((val, index) => {
               filterProps.push({
-                en: fil.props[2],
+                en: fil.props[2] === 'group' ? 'user' : fil.props[2],
                 lop: !index ? 'AND' : 'OR',
                 op: operatorMap[fil.operator],
                 pr: fil.props[0],
@@ -106,7 +106,7 @@ const getEventsWithProperties = (queries) => {
             });
           } else {
             filterProps.push({
-              en: fil.props[2],
+              en: fil.props[2] === 'group' ? 'user' : fil.props[2],
               lop: 'AND',
               op: operatorMap[fil.operator],
               pr: fil.props[0],
@@ -120,7 +120,7 @@ const getEventsWithProperties = (queries) => {
         if (Array.isArray(fil.values)) {
           fil.values.forEach((val, index) => {
             filterProps.push({
-              en: fil.props[2],
+              en: fil.props[2] === 'group' ? 'user' : fil.props[2],
               lop: !index ? 'AND' : 'OR',
               op: operatorMap[fil.operator],
               pr: fil.props[0],
@@ -130,7 +130,7 @@ const getEventsWithProperties = (queries) => {
           });
         } else {
           filterProps.push({
-            en: fil.props[2],
+            en: fil.props[2] === 'group' ? 'user' : fil.props[2],
             lop: 'AND',
             op: operatorMap[fil.operator],
             pr: fil.props[0],
@@ -142,7 +142,7 @@ const getEventsWithProperties = (queries) => {
         if (Array.isArray(fil.values)) {
           fil.values.forEach((val, index) => {
             filterProps.push({
-              en: fil.props[2],
+              en: fil.props[2] === 'group' ? 'user' : fil.props[2],
               lop: 'OR',
               op: operatorMap[fil.operator],
               pr: fil.props[0],
@@ -152,7 +152,7 @@ const getEventsWithProperties = (queries) => {
           });
         } else {
           filterProps.push({
-            en: fil.props[2],
+            en: fil.props[2] === 'group' ? 'user' : fil.props[2],
             lop: 'OR',
             op: operatorMap[fil.operator],
             pr: fil.props[0],
@@ -183,7 +183,7 @@ const getProfileWithProperties = (queries) => {
             if (Array.isArray(fil.values)) {
               fil.values.forEach((val, index) => {
                 filterProps.push({
-                  en: fil.props[2],
+                  en: fil.props[2] === 'group' ? 'user' : fil.props[2],
                   pr: fil.props[0],
                   op: operatorMap[fil.operator],
                   va: val,
@@ -193,7 +193,7 @@ const getProfileWithProperties = (queries) => {
               });
             } else {
               filterProps.push({
-                en: fil.props[2],
+                en: fil.props[2] === 'group' ? 'user' : fil.props[2],
                 pr: fil.props[0],
                 op: operatorMap[fil.operator],
                 va: fil.values,
@@ -207,7 +207,7 @@ const getProfileWithProperties = (queries) => {
           if (Array.isArray(fil.values)) {
             fil.values.forEach((val, index) => {
               filterProps.push({
-                en: fil.props[2],
+                en: fil.props[2] === 'group' ? 'user' : fil.props[2],
                 pr: fil.props[0],
                 op: operatorMap[fil.operator],
                 va: val,
@@ -217,7 +217,7 @@ const getProfileWithProperties = (queries) => {
             });
           } else {
             filterProps.push({
-              en: fil.props[2],
+              en: fil.props[2] === 'group' ? 'user' : fil.props[2],
               pr: fil.props[0],
               op: operatorMap[fil.operator],
               va: fil.values,
@@ -229,7 +229,7 @@ const getProfileWithProperties = (queries) => {
           if (Array.isArray(fil.values)) {
             fil.values.forEach((val, index) => {
               filterProps.push({
-                en: fil.props[2],
+                en: fil.props[2] === 'group' ? 'user' : fil.props[2],
                 pr: fil.props[0],
                 op: operatorMap[fil.operator],
                 va: val,
@@ -239,7 +239,7 @@ const getProfileWithProperties = (queries) => {
             });
           } else {
             filterProps.push({
-              en: fil.props[2],
+              en: fil.props[2] === 'group' ? 'user' : fil.props[2],
               pr: fil.props[0],
               op: operatorMap[fil.operator],
               va: fil.values,
