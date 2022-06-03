@@ -498,6 +498,7 @@ const Alerts = ({
                                     pagination={false}
                                     loading={tableLoading}
                                     tableLayout={'fixed'}
+                                    rowClassName="cursor-pointer"
                                 />
                             </div>
                         </Col>
@@ -669,15 +670,15 @@ const Alerts = ({
                                         </Form.Item>
                                     </Col>
                                     {fields.length > 0 ? (
-                                    <Col span={1} >
-                                    <Button style={{backgroundColor:'white'}} className={'mt-0.5'} onClick={() => remove(field.name)}>
-                                        <SVG
-                                        name={'Trash'}
-                                        size={20}
-                                        color='gray'
-                                        /></Button>
-                                    </Col>
-                                        ) : null}
+                                        <Col span={1} >
+                                            <Button style={{backgroundColor:'white'}} className={'mt-0.5 ml-2'} onClick={() => remove(field.name)}>
+                                            <SVG
+                                            name={'Trash'}
+                                            size={20}
+                                            color='gray'
+                                            /></Button>
+                                        </Col>
+                                    ) : null}
                                 </Row>
                                 </Form.Item>
                                 </Col>
