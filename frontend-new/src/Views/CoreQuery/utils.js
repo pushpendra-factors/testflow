@@ -1724,7 +1724,7 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
     ...DefaultDateRangeFormat,
     from: requestQuery.qG[1].fr * 1000,
     to: requestQuery.qG[1].to * 1000,
-    frequency: requestQuery.qG[1].gbt
+    frequency: requestQuery.qG[1].gbt ? requestQuery.qG[1].gbt : "date" //fix on .gbt for saved channel queries migrated to kpi queries
   };
   const result = {
     events: queries,
