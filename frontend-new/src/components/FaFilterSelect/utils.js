@@ -12,3 +12,6 @@ export const DEFAULT_OPERATOR_PROPS = {
     'since',
   ],
 };
+export const dateTimeSelect = new Map(
+  [['Days','days'],['Weeks','week'],['Months','month'],['Quarters','quarter'],['days','Days'],['week','Weeks'],['month','Months'],['quarter','Quarters']]
+);

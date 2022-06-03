@@ -953,18 +953,37 @@ export const formatApiData = (data, metrics) => {
 export const getStateQueryFromRequestQuery = (requestQuery) => {
   const events = requestQuery.ewp.map((e) => {
     const filters = [];
+    let ref=-1,lastProp='',lastOp='';
     e.pr.forEach((pr) => {
       if (pr.lop === 'AND') {
+        ref+=1;
         filters.push({
           operator:
             pr.ty === 'datetime'
               ? reverseDateOperatorMap[pr.op]
               : reverseOperatorMap[pr.op],
           props: [pr.pr, pr.ty, pr.en],
-          values: [pr.va]
+          values: [pr.va],
+          ref
         });
-      } else {
+        lastProp=pr.pr;
+        lastOp=pr.op;
+      }
+      else if(lastProp===pr.pr && lastOp===pr.op){
         filters[filters.length - 1].values.push(pr.va);
+      } 
+      else{
+        filters.push({
+          operator:
+            pr.ty === 'datetime'
+              ? reverseDateOperatorMap[pr.op]
+              : reverseOperatorMap[pr.op],
+          props: [pr.pr, pr.ty, pr.en],
+          values: [pr.va],
+          ref
+        });
+        lastProp=pr.pr;
+        lastOp=pr.op;        
       }
     });
     return {
@@ -1085,36 +1104,84 @@ export const getStateFromFilters = (rawFilters = []) => {
       });
     } else {
       filters[filters.length - 1].values.push(pr.va);
-    }
+    } 
   });
   return filters;
 };
 
 export const getFilters = (filters) => {
   const result = [];
-  filters.forEach((filter) => {
-    if (filter.props[1] !== 'categorical') {
-      result.push({
-        en: filter.props[2],
-        lop: 'AND',
-        op: operatorMap[filter.operator],
-        pr: filter.props[0],
-        ty: filter.props[1],
-        va: filter.values
-      });
+  const filtersGroupedByRef = Object.values(groupFilters(filters, 'ref'));
+  filtersGroupedByRef.forEach((filtersGr)=>{
+    if(filtersGr.length == 1){
+        const fil = filtersGr[0];
+        if (Array.isArray(fil.values)) {
+          fil.values.forEach((val, index) => {
+            result.push({
+              en: fil.props[2],
+              lop: !index ? 'AND' : 'OR',
+              op: operatorMap[fil.operator],
+              pr: fil.props[0],
+              ty: fil.props[1],
+              va: fil.props[1] === 'datetime' ? val : val,
+            });
+          });
+        } else {
+          result.push({
+            en: fil.props[2],
+            lop: 'AND',
+            op: operatorMap[fil.operator],
+            pr: fil.props[0],
+            ty: fil.props[1],
+            va: fil.props[1] === 'datetime' ? fil.values : fil.values,
+          });
+        }
     }
-
-    if (filter.props[1] === 'categorical') {
-      filter.values.forEach((value, index) => {
-        result.push({
-          en: filter.props[2],
-          lop: !index ? 'AND' : 'OR',
-          op: operatorMap[filter.operator],
-          pr: filter.props[0],
-          ty: filter.props[1],
-          va: value
+    else{
+      let fil = filtersGr[0];
+      if (Array.isArray(fil.values)) {
+        fil.values.forEach((val, index) => {
+          result.push({
+            en: fil.props[2],
+            lop: !index ? 'AND' : 'OR',
+            op: operatorMap[fil.operator],
+            pr: fil.props[0],
+            ty: fil.props[1],
+            va: fil.props[1] === 'datetime' ? val : val,
+          });
         });
-      });
+      } else {
+        result.push({
+          en: fil.props[2],
+          lop: 'AND',
+          op: operatorMap[fil.operator],
+          pr: fil.props[0],
+          ty: fil.props[1],
+          va: fil.props[1] === 'datetime' ? fil.values : fil.values,
+        });
+      }
+      fil = filtersGr[1];
+      if (Array.isArray(fil.values)) {
+        fil.values.forEach((val, index) => {
+          result.push({
+            en: fil.props[2],
+            lop: 'OR',
+            op: operatorMap[fil.operator],
+            pr: fil.props[0],
+            ty: fil.props[1],
+            va: fil.props[1] === 'datetime' ? val : val,
+          });
+        });
+      } else {
+        result.push({
+          en: fil.props[2],
+          lop: 'OR',
+          op: operatorMap[fil.operator],
+          pr: fil.props[0],
+          ty: fil.props[1],
+          va: fil.props[1] === 'datetime' ? fil.values : fil.values,
+        });
+      }
     }
   });
   return result;
@@ -1262,9 +1329,10 @@ export const getAttributionStateFromRequestQuery = (
   }
 
   const filters = [];
-
+  let ref=-1,lastProp='',lastOp='';
   get(requestQuery, 'ce.pr', []).forEach((pr) => {
     if (pr.lop === 'AND') {
+      ref+=1;
       const val = pr.ty === 'categorical' ? [pr.va] : pr.va;
       filters.push({
         operator:
@@ -1272,10 +1340,28 @@ export const getAttributionStateFromRequestQuery = (
             ? reverseDateOperatorMap[pr.op]
             : reverseOperatorMap[pr.op],
         props: [pr.pr, pr.ty, pr.en],
-        values: val
+        values: val,
+        ref
       });
-    } else if (pr.ty === 'categorical') {
+      lastProp=pr.pr;
+      lastOp=pr.op;
+    }
+    else if(lastProp===pr.pr && lastOp===pr.op){
       filters[filters.length - 1].values.push(pr.va);
+    } 
+    else{
+      const val = pr.ty === 'categorical' ? [pr.va] : pr.va;
+      filters.push({
+        operator:
+          pr.ty === 'datetime'
+            ? reverseDateOperatorMap[pr.op]
+            : reverseOperatorMap[pr.op],
+        props: [pr.pr, pr.ty, pr.en],
+        values: val,
+        ref
+      });
+      lastProp=pr.pr;
+      lastOp=pr.op;   
     }
   });
 
@@ -1714,18 +1800,37 @@ export const getProfileQueryFromRequestQuery = (requestQuery) => {
 
   const queries = requestQuery.queries.map((e) => {
     const evfilters = [];
+    let ref=-1,lastProp='',lastOp='';
     e.pr.forEach((pr) => {
       if (pr.lop === 'AND') {
+        ref+=1;
         evfilters.push({
           operator:
             pr.ty === 'datetime'
               ? reverseDateOperatorMap[pr.op]
               : reverseOperatorMap[pr.op],
-          props: [pr.pr, pr.ty, 'user'],
-          values: [pr.va]
+          props: [pr.pr, pr.ty, pr.en],
+          values: [pr.va],
+          ref
         });
-      } else {
+        lastProp=pr.pr;
+        lastOp=pr.op;
+      }
+      else if(lastProp===pr.pr && lastOp===pr.op){
         evfilters[evfilters.length - 1].values.push(pr.va);
+      } 
+      else{
+        evfilters.push({
+          operator:
+            pr.ty === 'datetime'
+              ? reverseDateOperatorMap[pr.op]
+              : reverseOperatorMap[pr.op],
+          props: [pr.pr, pr.ty, pr.en],
+          values: [pr.va],
+          ref
+        });
+        lastProp=pr.pr;
+        lastOp=pr.op;        
       }
     });
     return {
@@ -1815,8 +1920,10 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
 
     const eventFilters = [];
     const fil = get(q, 'fil', EMPTY_ARRAY) ? get(q, 'fil', EMPTY_ARRAY) : EMPTY_ARRAY;
+    let ref=-1,lastProp='',lastOp='';
     fil.forEach((pr) => {
       if (pr.lOp === 'AND') {
+        ref+=1;
         const val = pr.prDaTy === 'categorical' ? [pr.va] : pr.va;
         const DNa = startCase(pr.prNa);
         const isCamp =
@@ -1831,10 +1938,34 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
             pr.prDaTy === FILTER_TYPES.DATETIME
               ? convertDateTimeObjectValuesToMilliSeconds(val)
               : val,
-          extra: [DNa, pr.prNa, pr.prDaTy, isCamp]
+          extra: [DNa, pr.prNa, pr.prDaTy, isCamp],
+          ref
         });
-      } else if (pr.prDaTy === 'categorical') {
+        lastProp=pr.prNa;
+        lastOp=pr.co;
+      } else if (lastProp===pr.prNa && lastOp===pr.co) {
         eventFilters[eventFilters.length - 1].values.push(pr.va);
+      }
+      else{
+        const val = pr.prDaTy === 'categorical' ? [pr.va] : pr.va;
+        const DNa = startCase(pr.prNa);
+        const isCamp =
+          requestQuery?.qG[0]?.ca === 'channels' ? pr.objTy : pr.en;
+        eventFilters.push({
+          operator:
+            pr.prDaTy === 'datetime'
+              ? reverseDateOperatorMap[pr.co]
+              : reverseOperatorMap[pr.co],
+          props: [DNa, pr.prDaTy, isCamp],
+          values:
+            pr.prDaTy === FILTER_TYPES.DATETIME
+              ? convertDateTimeObjectValuesToMilliSeconds(val)
+              : val,
+          extra: [DNa, pr.prNa, pr.prDaTy, isCamp],
+          ref
+        });
+        lastProp=pr.prNa;
+        lastOp=pr.co;
       }
     });
 

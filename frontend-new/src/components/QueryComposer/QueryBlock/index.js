@@ -47,7 +47,6 @@ function QueryBlock({
     group: [],
   });
 
-
   const [orFilterIndex, setOrFilterIndex] = useState(-1);
 
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -140,7 +139,7 @@ function QueryBlock({
   const insertFilters = (filter, filterIndex) => {
     const newEvent = Object.assign({}, event);
     const filtersSorted = newEvent.filters;
-    filtersSorted.sort(compareFilters);
+    filtersSorted.sort(compareFilters);    
     if (filterIndex >= 0) {
       newEvent.filters = filtersSorted.map((filt, i) => {
         if (i === filterIndex) {
@@ -158,7 +157,7 @@ function QueryBlock({
   const removeFilters = (i) => {
     const newEvent = Object.assign({}, event);
     const filtersSorted = newEvent.filters;
-    filtersSorted.sort(compareFilters);
+    filtersSorted.sort(compareFilters); 
     if (filtersSorted[i]) {
       filtersSorted.splice(i, 1);
       newEvent.filters=filtersSorted;
@@ -270,7 +269,7 @@ function QueryBlock({
       const group = groupFilters(event.filters, 'ref');
       const filtersGroupedByRef = Object.values(group);
       const refValues = Object.keys(group);
-      lastRef = refValues[refValues.length-1];
+      lastRef = parseInt(refValues[refValues.length-1]);
 
       filtersGroupedByRef.forEach((filtersGr)=>{
         const refValue = filtersGr[0].ref;
@@ -293,7 +292,7 @@ function QueryBlock({
                 </div>
                {index !== orFilterIndex && (
                  <ORButton index={index} setOrFilterIndex={setOrFilterIndex}/>
-                )}
+                )}       
                {index === orFilterIndex && (
                   <div key={'init'}>
                     <EventFilterWrapper
@@ -306,9 +305,9 @@ function QueryBlock({
                       refValue={refValue}
                       showOr = {true}
                     ></EventFilterWrapper>
-                  </div>
-                )}
-                </div>
+                  </div>                
+                )}  
+                </div>     
             );
             index+=1;
         }else{
@@ -349,7 +348,6 @@ function QueryBlock({
     }
 
     if (isFilterDDVisible) {
-      lastRef+=1;
       filters.push(
         <div key={'init'} className={'fa--query_block--filters'}>
           {selectEventFilter(lastRef+1)}
