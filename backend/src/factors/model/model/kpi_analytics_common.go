@@ -14,7 +14,8 @@ import (
 )
 
 const (
-	MetricsDateType = "date_type"
+	MetricsDateType       = "date_type"
+	MetricsPercentageType = "percentage_type"
 )
 
 type KPIQueryGroup struct {
@@ -258,8 +259,8 @@ var MapOfMetricsToData = map[string]map[string]map[string]string{
 		AvgSessionDuration:     {"display_name": "Avg session duration", "object_type": U.EVENT_NAME_SESSION, "type": MetricsDateType},
 		AvgPageViewsPerSession: {"display_name": "Avg page views per session", "object_type": U.EVENT_NAME_SESSION, "type": ""},
 		AvgInitialPageLoadTime: {"display_name": "Avg initial page load time", "object_type": U.EVENT_NAME_SESSION, "type": MetricsDateType},
-		BounceRate:             {"display_name": "Bounce rate", "object_type": U.EVENT_NAME_SESSION, "type": ""},
-		EngagementRate:         {"display_name": "Engagement rate", "object_type": U.EVENT_NAME_SESSION, "type": ""},
+		BounceRate:             {"display_name": "Bounce rate", "object_type": U.EVENT_NAME_SESSION, "type": MetricsPercentageType},
+		EngagementRate:         {"display_name": "Engagement rate", "object_type": U.EVENT_NAME_SESSION, "type": MetricsPercentageType},
 	},
 	PageViewsDisplayCategory: {
 		Entrances:                {"display_name": "Entrances", "object_type": U.EVENT_NAME_SESSION, "type": ""},
@@ -268,11 +269,11 @@ var MapOfMetricsToData = map[string]map[string]map[string]string{
 		UniqueUsers:              {"display_name": "Unique users", "type": ""},
 		PageviewsPerUser:         {"display_name": "Page views per user", "type": ""},
 		AvgPageLoadTime:          {"display_name": "Avg page load time", "type": MetricsDateType},
-		AvgVerticalScrollPercent: {"display_name": "Avg vertical scroll percent", "type": ""},
+		AvgVerticalScrollPercent: {"display_name": "Avg vertical scroll percent", "type": MetricsPercentageType},
 		AvgTimeOnPage:            {"display_name": "Avg time on page", "type": MetricsDateType},
 		EngagedPageViews:         {"display_name": "Engaged page views", "type": ""},
 		EngagedUsers:             {"display_name": "Engaged Users", "type": ""},
-		EngagementRate:           {"display_name": "Engagement rate", "type": ""},
+		EngagementRate:           {"display_name": "Engagement rate", "type": MetricsPercentageType},
 	},
 	FormSubmissionsDisplayCategory: {
 		Count:        {"display_name": "Count", "object_type": U.EVENT_NAME_FORM_SUBMITTED, "type": ""},
