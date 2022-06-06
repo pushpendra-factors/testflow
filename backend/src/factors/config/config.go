@@ -248,6 +248,7 @@ type Configuration struct {
 	SlackAppClientSecret                            string
 	EnableDryRunAlerts                              bool
 	ClearbitEnabled                                 int
+	UseSalesforceV54APIByProjectID                  string
 }
 
 type Services struct {
@@ -2168,4 +2169,13 @@ func GetSlackClientID() string {
 
 func GetSlackClientSecret() string {
 	return configuration.SlackAppClientSecret
+}
+
+func AllowSalesforcev54APIByProjectID(projectID uint64) bool {
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().UseSalesforceV54APIByProjectID, "")
+	if allProjects {
+		return true
+	}
+
+	return allowedProjectIDs[projectID]
 }

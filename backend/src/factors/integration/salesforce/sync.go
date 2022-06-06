@@ -24,7 +24,12 @@ const (
 	// InstanceURL field instance_url
 	InstanceURL                = "instance_url"
 	salesforceDataServiceRoute = "/services/data/"
-	salesforceAPIVersion       = "v20.0"
+	/*
+		refer website for api end of life
+		https://developer.salesforce.com/docs/atlas.en-us.api_rest.meta/api_rest/api_rest_eol.html
+	*/
+	salesforceAPIVersion20 = "v20.0"
+	salesforceAPIVersion54 = "v54.0"
 )
 
 //Salesforce API structs
@@ -67,6 +72,13 @@ type JobStatus struct {
 const OpportunityLeadID = "opportunity_to_lead"
 const OpportunityMultipleLeadID = "opportunity_to_multiple_lead"
 
+func GetSalesforceAPIVersion(projectID uint64) string {
+	if C.AllowSalesforcev54APIByProjectID(projectID) {
+		return salesforceAPIVersion54
+	}
+	return salesforceAPIVersion20
+}
+
 func buildSalesforceGETRequest(url, accessToken string) (*http.Request, error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -97,12 +109,12 @@ func GETRequest(url, accessToken string) (*http.Response, error) {
 // DataServiceError impelements error interface for salesforce data api error
 type DataServiceError interface{}
 
-func getSalesforceObjectDescription(objectName, accessToken, instanceURL string) (*Describe, error) {
+func getSalesforceObjectDescription(projectID uint64, objectName, accessToken, instanceURL string) (*Describe, error) {
 	if objectName == "" || accessToken == "" || instanceURL == "" {
 		return nil, errors.New("missing required fields")
 	}
 
-	url := instanceURL + salesforceDataServiceRoute + salesforceAPIVersion + "/sobjects/" + objectName + "/describe"
+	url := instanceURL + salesforceDataServiceRoute + GetSalesforceAPIVersion(projectID) + "/sobjects/" + objectName + "/describe"
 	resp, err := GETRequest(url, accessToken)
 	if err != nil {
 		return nil, err
@@ -141,7 +153,7 @@ func GetSalesforcePropertiesByDataType(projectID uint64, dataType string, docTyp
 	propertiesByObjectType := make(map[int]*map[string]bool)
 	for i := range docTypes {
 		typeAlias := model.GetSalesforceAliasByDocType(docTypes[i])
-		describe, err := getSalesforceObjectDescription(typeAlias, accessToken, instanceURL)
+		describe, err := getSalesforceObjectDescription(projectID, typeAlias, accessToken, instanceURL)
 		if err != nil {
 			logCtx.WithError(err).Errorf("Failed to get salesforce object description.")
 			return nil, http.StatusInternalServerError
@@ -182,12 +194,12 @@ func getFieldsListFromDescription(description *Describe) ([]string, error) {
 	return objectFields, nil
 }
 
-func getSalesforceDataByQuery(query, accessToken, instanceURL, dateTime string) (*QueryResponse, error) {
+func getSalesforceDataByQuery(projectID uint64, query, accessToken, instanceURL, dateTime string) (*QueryResponse, error) {
 	if query == "" || accessToken == "" || instanceURL == "" {
 		return nil, errors.New("missing required fields")
 	}
 
-	queryURL := instanceURL + salesforceDataServiceRoute + salesforceAPIVersion + "/query?q=" + query
+	queryURL := instanceURL + salesforceDataServiceRoute + GetSalesforceAPIVersion(projectID) + "/query?q=" + query
 
 	if dateTime != "" {
 		queryURL = queryURL + "+" + "WHERE" + "+" + "LastModifiedDate" + url.QueryEscape(">"+dateTime)
@@ -243,12 +255,12 @@ func NewSalesforceDataClient(accessToken string, instanceURL string) (*DataClien
 	return dataClient, nil
 }
 
-func getSalesforceObjectFieldlList(objectName, accessToken, instanceURL string) ([]string, error) {
+func getSalesforceObjectFieldlList(projectID uint64, objectName, accessToken, instanceURL string) ([]string, error) {
 	if objectName == "" || accessToken == "" || instanceURL == "" {
 		return nil, errors.New("missing required field")
 	}
 
-	description, err := getSalesforceObjectDescription(objectName, accessToken, instanceURL)
+	description, err := getSalesforceObjectDescription(projectID, objectName, accessToken, instanceURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to getSalesforceObjectDescription %s", err)
 	}
@@ -262,14 +274,14 @@ func getSalesforceObjectFieldlList(objectName, accessToken, instanceURL string) 
 }
 
 func (s *DataClient) getRecordByObjectNameANDFilter(projectID uint64, objectName, filterSmnt string) (*DataClient, error) {
-	fields, err := getSalesforceObjectFieldlList(objectName, s.accessToken, s.instanceURL)
+	fields, err := getSalesforceObjectFieldlList(projectID, objectName, s.accessToken, s.instanceURL)
 	if err != nil {
 		return nil, err
 	}
 
 	fieldList := strings.Join(fields, ",")
 	queryStmnt := fmt.Sprintf("SELECT+%s+FROM+%s+WHERE+%s", fieldList, objectName, url.QueryEscape(filterSmnt))
-	queryURL := s.instanceURL + salesforceDataServiceRoute + salesforceAPIVersion + "/query?q=" + queryStmnt
+	queryURL := s.instanceURL + salesforceDataServiceRoute + GetSalesforceAPIVersion(projectID) + "/query?q=" + queryStmnt
 	dataClient := &DataClient{
 		ProjectID:      projectID,
 		accessToken:    s.accessToken,
@@ -284,7 +296,7 @@ func (s *DataClient) getRecordByObjectNameANDFilter(projectID uint64, objectName
 }
 
 func (s *DataClient) getRecordByObjectNameANDStartTimestamp(projectID uint64, objectName string, lookbackTimestamp int64) (*DataClient, error) {
-	fields, err := getSalesforceObjectFieldlList(objectName, s.accessToken, s.instanceURL)
+	fields, err := getSalesforceObjectFieldlList(projectID, objectName, s.accessToken, s.instanceURL)
 	if err != nil {
 		return nil, err
 	}
@@ -301,7 +313,7 @@ func (s *DataClient) getRecordByObjectNameANDStartTimestamp(projectID uint64, ob
 	}
 
 	queryStmnt := fmt.Sprintf("SELECT+%s+FROM+%s", fieldList, objectName)
-	queryURL := s.instanceURL + salesforceDataServiceRoute + salesforceAPIVersion + "/query?q=" + queryStmnt
+	queryURL := s.instanceURL + salesforceDataServiceRoute + GetSalesforceAPIVersion(projectID) + "/query?q=" + queryStmnt
 
 	if lookbackTimestamp > 0 {
 		t := time.Unix(lookbackTimestamp, 0)
@@ -392,7 +404,7 @@ func (s *DataClient) GetObjectRecordsByIDs(projectID uint64, objectName string, 
 		return nil, errors.New("missing required fields")
 	}
 
-	fields, err := getSalesforceObjectFieldlList(objectName, s.accessToken, s.instanceURL)
+	fields, err := getSalesforceObjectFieldlList(projectID, objectName, s.accessToken, s.instanceURL)
 	if err != nil {
 		return nil, err
 	}
@@ -401,7 +413,7 @@ func (s *DataClient) GetObjectRecordsByIDs(projectID uint64, objectName string, 
 	idList := "'" + strings.Join(IDs, "','") + "'"
 
 	queryStmnt := fmt.Sprintf("SELECT+%s+FROM+%s+WHERE+Id+IN+(%s)", fieldList, objectName, idList)
-	queryURL := s.instanceURL + salesforceDataServiceRoute + salesforceAPIVersion + "/query?q=" + queryStmnt
+	queryURL := s.instanceURL + salesforceDataServiceRoute + GetSalesforceAPIVersion(projectID) + "/query?q=" + queryStmnt
 
 	dataClient := &DataClient{
 		ProjectID:      projectID,
@@ -1151,7 +1163,7 @@ func SyncDatetimeAndNumericalProperties(projectID uint64, accessToken, instanceU
 		status.ProjectID = projectID
 
 		docTypeFailure := false
-		describe, err := getSalesforceObjectDescription(typAlias, accessToken, instanceURL)
+		describe, err := getSalesforceObjectDescription(projectID, typAlias, accessToken, instanceURL)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to sync datetime and numerical properties.")
 			anyFailures = true

@@ -6,7 +6,7 @@ import logging as log
 class TaskStats:
     # metrics constants
     REQUEST_COUNT = "request_count"
-    ASYNC_REQUEST_COUNT = "aync_request_count"
+    ASYNC_REQUEST_COUNT = "async_request_count"
     RECORDS_COUNT = "request_count"
     LATENCY_COUNT = "latency_count"
     TO_IN_MEMORY = "to_in_memory"
@@ -18,6 +18,7 @@ class TaskStats:
         REQUEST_COUNT: {PROJECT_KEY: {}, TOTAL_KEY: {}},
         RECORDS_COUNT: {PROJECT_KEY: {}, TOTAL_KEY: {}},
         LATENCY_COUNT: {PROJECT_KEY: {}, TOTAL_KEY: {}},
+        ASYNC_REQUEST_COUNT: {PROJECT_KEY: {}, TOTAL_KEY: {}},
     }
     task_stats = None
     sns_notifier = None

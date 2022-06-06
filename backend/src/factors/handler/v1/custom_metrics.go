@@ -132,7 +132,7 @@ func DeleteCustomMetrics(c *gin.Context) (interface{}, int, string, string, bool
 
 	if len(dashboardUnitNames) == 0 && len(alertNames) == 0 {
 		statusCode = store.GetStore().DeleteCustomMetricByID(projectID, customMetricsID)
-		if statusCode != http.StatusFound {
+		if statusCode != http.StatusAccepted {
 			return nil, http.StatusInternalServerError, PROCESSING_FAILED, "", true
 		} else {
 			return nil, http.StatusOK, "", "", false

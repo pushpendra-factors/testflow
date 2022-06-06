@@ -28,6 +28,27 @@ func getAllCRMSettingsAsMap() (map[uint64]model.CRMSetting, error) {
 	return crmSettingsMap, nil
 }
 
+func getAllProjectsDocumentCount(allHubspotProjects []model.HubspotProjectSettings, projectdocumentCount []model.HubspotDocumentCount) []model.HubspotDocumentCount {
+	// Add projects which have zero counts
+	emptyProjectsDocumentCount := make([]model.HubspotDocumentCount, 0)
+	for i := range allHubspotProjects {
+		projectID := allHubspotProjects[i].ProjectId
+		projectFound := false
+		for j := range projectdocumentCount {
+			if projectdocumentCount[j].ProjectID == projectID {
+				projectFound = true
+				break
+			}
+		}
+
+		if !projectFound {
+			emptyProjectsDocumentCount = append(emptyProjectsDocumentCount, model.HubspotDocumentCount{ProjectID: projectID, Count: 0})
+		}
+	}
+
+	return append(projectdocumentCount, emptyProjectsDocumentCount...)
+}
+
 // RunHubspotProjectDistributer to be used only with light job
 func RunHubspotProjectDistributer(configs map[string]interface{}) (map[string]interface{}, bool) {
 
@@ -52,6 +73,8 @@ func RunHubspotProjectDistributer(configs map[string]interface{}) (map[string]in
 		log.Error("Failed to get hubspot document counts for project.")
 		return nil, false
 	}
+
+	projectdocumentCount = getAllProjectsDocumentCount(hubspotEnabledProjectSettings, projectdocumentCount)
 
 	crmSettingsMap, err := getAllCRMSettingsAsMap()
 	if err != nil {
