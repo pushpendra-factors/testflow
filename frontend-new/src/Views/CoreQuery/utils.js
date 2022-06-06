@@ -2,7 +2,7 @@ import get from 'lodash/get';
 import lowerCase from 'lodash/lowerCase';
 import startCase from 'lodash/startCase';
 
-import { EMPTY_ARRAY,groupFilters } from 'Utils/global';
+import { EMPTY_ARRAY, groupFilters } from 'Utils/global';
 import { formatFilterDate } from 'Utils/dataFormatter';
 import MomentTz from 'Components/MomentTz';
 
@@ -82,41 +82,15 @@ export const reverseDateOperatorMap = {
   since: 'since'
 };
 
-
-
 const getEventsWithProperties = (queries) => {
   const ewps = [];
   queries.forEach((ev) => {
     const filterProps = [];
 
     const filtersGroupedByRef = Object.values(groupFilters(ev.filters, 'ref'));
-    filtersGroupedByRef.forEach((filtersGr)=>{
-      if(filtersGr.length == 1){
-          const fil = filtersGr[0];
-          if (Array.isArray(fil.values)) {
-            fil.values.forEach((val, index) => {
-              filterProps.push({
-                en: fil.props[2],
-                lop: !index ? 'AND' : 'OR',
-                op: operatorMap[fil.operator],
-                pr: fil.props[0],
-                ty: fil.props[1],
-                va: fil.props[1] === 'datetime' ? val : val,
-              });
-            });
-          } else {
-            filterProps.push({
-              en: fil.props[2],
-              lop: 'AND',
-              op: operatorMap[fil.operator],
-              pr: fil.props[0],
-              ty: fil.props[1],
-              va: fil.props[1] === 'datetime' ? fil.values : fil.values,
-            });
-          }
-      }
-      else{
-        let fil = filtersGr[0];
+    filtersGroupedByRef.forEach((filtersGr) => {
+      if (filtersGr.length === 1) {
+        const fil = filtersGr[0];
         if (Array.isArray(fil.values)) {
           fil.values.forEach((val, index) => {
             filterProps.push({
@@ -125,7 +99,7 @@ const getEventsWithProperties = (queries) => {
               op: operatorMap[fil.operator],
               pr: fil.props[0],
               ty: fil.props[1],
-              va: fil.props[1] === 'datetime' ? val : val,
+              va: fil.props[1] === 'datetime' ? val : val
             });
           });
         } else {
@@ -135,19 +109,42 @@ const getEventsWithProperties = (queries) => {
             op: operatorMap[fil.operator],
             pr: fil.props[0],
             ty: fil.props[1],
-            va: fil.props[1] === 'datetime' ? fil.values : fil.values,
+            va: fil.props[1] === 'datetime' ? fil.values : fil.values
+          });
+        }
+      } else {
+        let fil = filtersGr[0];
+        if (Array.isArray(fil.values)) {
+          fil.values.forEach((val, index) => {
+            filterProps.push({
+              en: fil.props[2],
+              lop: !index ? 'AND' : 'OR',
+              op: operatorMap[fil.operator],
+              pr: fil.props[0],
+              ty: fil.props[1],
+              va: fil.props[1] === 'datetime' ? val : val
+            });
+          });
+        } else {
+          filterProps.push({
+            en: fil.props[2],
+            lop: 'AND',
+            op: operatorMap[fil.operator],
+            pr: fil.props[0],
+            ty: fil.props[1],
+            va: fil.props[1] === 'datetime' ? fil.values : fil.values
           });
         }
         fil = filtersGr[1];
         if (Array.isArray(fil.values)) {
-          fil.values.forEach((val, index) => {
+          fil.values.forEach((val) => {
             filterProps.push({
               en: fil.props[2],
               lop: 'OR',
               op: operatorMap[fil.operator],
               pr: fil.props[0],
               ty: fil.props[1],
-              va: fil.props[1] === 'datetime' ? val : val,
+              va: fil.props[1] === 'datetime' ? val : val
             });
           });
         } else {
@@ -157,11 +154,11 @@ const getEventsWithProperties = (queries) => {
             op: operatorMap[fil.operator],
             pr: fil.props[0],
             ty: fil.props[1],
-            va: fil.props[1] === 'datetime' ? fil.values : fil.values,
+            va: fil.props[1] === 'datetime' ? fil.values : fil.values
           });
         }
       }
-    })
+    });
 
     ewps.push({
       an: ev.alias,
@@ -175,79 +172,78 @@ const getEventsWithProperties = (queries) => {
 const getProfileWithProperties = (queries) => {
   const pwps = [];
   queries.forEach((ev) => {
-    const filterProps = []; 
-      const filtersGroupedByRef = Object.values(groupFilters(ev.filters, 'ref'));
-      filtersGroupedByRef.forEach((filtersGr)=>{
-        if(filtersGr.length == 1){
-            const fil = filtersGr[0];
-            if (Array.isArray(fil.values)) {
-              fil.values.forEach((val, index) => {
-                filterProps.push({
-                  en: fil.props[2],
-                  pr: fil.props[0],
-                  op: operatorMap[fil.operator],
-                  va: val,
-                  lop: !index ? 'AND' : 'OR',
-                  ty: fil.props[1],
-                });
-              });
-            } else {
-              filterProps.push({
-                en: fil.props[2],
-                pr: fil.props[0],
-                op: operatorMap[fil.operator],
-                va: fil.values,
-                lop: 'AND',
-                ty: fil.props[1],
-              });
-            }
+    const filterProps = [];
+    const filtersGroupedByRef = Object.values(groupFilters(ev.filters, 'ref'));
+    filtersGroupedByRef.forEach((filtersGr) => {
+      if (filtersGr.length === 1) {
+        const fil = filtersGr[0];
+        if (Array.isArray(fil.values)) {
+          fil.values.forEach((val, index) => {
+            filterProps.push({
+              en: fil.props[2],
+              pr: fil.props[0],
+              op: operatorMap[fil.operator],
+              va: val,
+              lop: !index ? 'AND' : 'OR',
+              ty: fil.props[1]
+            });
+          });
+        } else {
+          filterProps.push({
+            en: fil.props[2],
+            pr: fil.props[0],
+            op: operatorMap[fil.operator],
+            va: fil.values,
+            lop: 'AND',
+            ty: fil.props[1]
+          });
         }
-        else{
-          let fil = filtersGr[0];
-          if (Array.isArray(fil.values)) {
-            fil.values.forEach((val, index) => {
-              filterProps.push({
-                en: fil.props[2],
-                pr: fil.props[0],
-                op: operatorMap[fil.operator],
-                va: val,
-                lop: !index ? 'AND' : 'OR',
-                ty: fil.props[1],
-              });
-            });
-          } else {
+      } else {
+        let fil = filtersGr[0];
+        if (Array.isArray(fil.values)) {
+          fil.values.forEach((val, index) => {
             filterProps.push({
               en: fil.props[2],
               pr: fil.props[0],
               op: operatorMap[fil.operator],
-              va: fil.values,
-              lop: 'AND',
-              ty: fil.props[1],
+              va: val,
+              lop: !index ? 'AND' : 'OR',
+              ty: fil.props[1]
             });
-          }
-          fil = filtersGr[1];
-          if (Array.isArray(fil.values)) {
-            fil.values.forEach((val, index) => {
-              filterProps.push({
-                en: fil.props[2],
-                pr: fil.props[0],
-                op: operatorMap[fil.operator],
-                va: val,
-                lop: 'OR',
-                ty: fil.props[1],
-              });
-            });
-          } else {
+          });
+        } else {
+          filterProps.push({
+            en: fil.props[2],
+            pr: fil.props[0],
+            op: operatorMap[fil.operator],
+            va: fil.values,
+            lop: 'AND',
+            ty: fil.props[1]
+          });
+        }
+        fil = filtersGr[1];
+        if (Array.isArray(fil.values)) {
+          fil.values.forEach((val) => {
             filterProps.push({
               en: fil.props[2],
               pr: fil.props[0],
               op: operatorMap[fil.operator],
-              va: fil.values,
+              va: val,
               lop: 'OR',
-              ty: fil.props[1],
+              ty: fil.props[1]
             });
-          }
+          });
+        } else {
+          filterProps.push({
+            en: fil.props[2],
+            pr: fil.props[0],
+            op: operatorMap[fil.operator],
+            va: fil.values,
+            lop: 'OR',
+            ty: fil.props[1]
+          });
         }
+      }
     });
     pwps.push({
       an: ev.alias,
@@ -436,61 +432,29 @@ const getEventsWithPropertiesKPI = (filters, category) => {
   // adding fil?.extra ? fil?.extra[*] check as a hotfix for timestamp filters
 
   const filtersGroupedByRef = Object.values(groupFilters(filters, 'ref'));
-  filtersGroupedByRef.forEach((filtersGr)=>{
-    if(filtersGr.length == 1){
-        const fil = filtersGr[0];
-        if (Array.isArray(fil.values)) {
-          fil.values.forEach((val, index) => {
-            filterProps.push({
-              prNa: fil?.extra ? fil?.extra[1] : `$${_.lowerCase(fil?.props[0])}`,
-              prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
-              co: operatorMap[fil.operator],
-              lOp: !index ? 'AND' : 'OR',
-              en:
-                category == 'channels' ? '' : fil?.extra ? fil?.extra[3] : 'event',
-              objTy:
-                category == 'channels'
-                  ? fil?.extra
-                    ? fil?.extra[3]
-                    : 'event'
-                  : '',
-              va: fil.props[1] === 'datetime' ? formatFilterDate(val) : val,
-            });
-          });
-        } else {
-          filterProps.push({
-            prNa: fil?.extra ? fil?.extra[1] : `$${_.lowerCase(fil?.props[0])}`,
-            prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
-            co: operatorMap[fil.operator],
-            lOp: 'AND',
-            en: category == 'channels' ? '' : fil?.extra ? fil?.extra[3] : 'event',
-            objTy:
-              category == 'channels' ? (fil?.extra ? fil?.extra[3] : 'event') : '',
-            va:
-              fil.props[1] === 'datetime'
-                ? formatFilterDate(fil.values)
-                : fil.values,
-          });
-        }
-    }
-    else{
-      let fil = filtersGr[0];
+  filtersGroupedByRef.forEach((filtersGr) => {
+    if (filtersGr.length === 1) {
+      const fil = filtersGr[0];
       if (Array.isArray(fil.values)) {
         fil.values.forEach((val, index) => {
           filterProps.push({
-            prNa: fil?.extra ? fil?.extra[1] : `$${_.lowerCase(fil?.props[0])}`,
+            prNa: fil?.extra ? fil?.extra[1] : `$${lowerCase(fil?.props[0])}`,
             prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
             co: operatorMap[fil.operator],
             lOp: !index ? 'AND' : 'OR',
             en:
-              category == 'channels' ? '' : fil?.extra ? fil?.extra[3] : 'event',
+              category === 'channels'
+                ? ''
+                : fil?.extra
+                  ? fil?.extra[3]
+                  : 'event',
             objTy:
-              category == 'channels'
+              category === 'channels'
                 ? fil?.extra
                   ? fil?.extra[3]
                   : 'event'
                 : '',
-            va: fil.props[1] === 'datetime' ? formatFilterDate(val) : val,
+            va: fil.props[1] === 'datetime' ? formatFilterDate(val) : val
           });
         });
       } else {
@@ -499,51 +463,109 @@ const getEventsWithPropertiesKPI = (filters, category) => {
           prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
           co: operatorMap[fil.operator],
           lOp: 'AND',
-          en: category == 'channels' ? '' : fil?.extra ? fil?.extra[3] : 'event',
+          en:
+            category === 'channels' ? '' : fil?.extra ? fil?.extra[3] : 'event',
           objTy:
-            category == 'channels' ? (fil?.extra ? fil?.extra[3] : 'event') : '',
+            category === 'channels'
+              ? fil?.extra
+                ? fil?.extra[3]
+                : 'event'
+              : '',
           va:
             fil.props[1] === 'datetime'
               ? formatFilterDate(fil.values)
-              : fil.values,
+              : fil.values
         });
       }
-      fil = filtersGr[1];
+    } else {
+      let fil = filtersGr[0];
       if (Array.isArray(fil.values)) {
         fil.values.forEach((val, index) => {
           filterProps.push({
-            prNa: fil?.extra ? fil?.extra[1] : `$${_.lowerCase(fil?.props[0])}`,
+            prNa: fil?.extra ? fil?.extra[1] : `$${lowerCase(fil?.props[0])}`,
             prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
             co: operatorMap[fil.operator],
-            lOp:'OR',
+            lOp: !index ? 'AND' : 'OR',
             en:
-              category == 'channels' ? '' : fil?.extra ? fil?.extra[3] : 'event',
+              category === 'channels'
+                ? ''
+                : fil?.extra
+                  ? fil?.extra[3]
+                  : 'event',
             objTy:
-              category == 'channels'
+              category === 'channels'
                 ? fil?.extra
                   ? fil?.extra[3]
                   : 'event'
                 : '',
-            va: fil.props[1] === 'datetime' ? formatFilterDate(val) : val,
+            va: fil.props[1] === 'datetime' ? formatFilterDate(val) : val
           });
         });
       } else {
         filterProps.push({
-          prNa: fil?.extra ? fil?.extra[1] : `$${_.lowerCase(fil?.props[0])}`,
+          prNa: fil?.extra ? fil?.extra[1] : `$${lowerCase(fil?.props[0])}`,
           prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
           co: operatorMap[fil.operator],
-          lOp: 'OR',
-          en: category == 'channels' ? '' : fil?.extra ? fil?.extra[3] : 'event',
+          lOp: 'AND',
+          en:
+            category === 'channels' ? '' : fil?.extra ? fil?.extra[3] : 'event',
           objTy:
-            category == 'channels' ? (fil?.extra ? fil?.extra[3] : 'event') : '',
+            category === 'channels'
+              ? fil?.extra
+                ? fil?.extra[3]
+                : 'event'
+              : '',
           va:
             fil.props[1] === 'datetime'
               ? formatFilterDate(fil.values)
-              : fil.values,
+              : fil.values
+        });
+      }
+      fil = filtersGr[1];
+      if (Array.isArray(fil.values)) {
+        fil.values.forEach((val) => {
+          filterProps.push({
+            prNa: fil?.extra ? fil?.extra[1] : `$${lowerCase(fil?.props[0])}`,
+            prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
+            co: operatorMap[fil.operator],
+            lOp: 'OR',
+            en:
+              category === 'channels'
+                ? ''
+                : fil?.extra
+                  ? fil?.extra[3]
+                  : 'event',
+            objTy:
+              category === 'channels'
+                ? fil?.extra
+                  ? fil?.extra[3]
+                  : 'event'
+                : '',
+            va: fil.props[1] === 'datetime' ? formatFilterDate(val) : val
+          });
+        });
+      } else {
+        filterProps.push({
+          prNa: fil?.extra ? fil?.extra[1] : `$${lowerCase(fil?.props[0])}`,
+          prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
+          co: operatorMap[fil.operator],
+          lOp: 'OR',
+          en:
+            category === 'channels' ? '' : fil?.extra ? fil?.extra[3] : 'event',
+          objTy:
+            category === 'channels'
+              ? fil?.extra
+                ? fil?.extra[3]
+                : 'event'
+              : '',
+          va:
+            fil.props[1] === 'datetime'
+              ? formatFilterDate(fil.values)
+              : fil.values
         });
       }
     }
-  })
+  });
   return filterProps;
 };
 
@@ -1459,247 +1481,11 @@ export const getCampaignStateFromRequestQuery = (requestQuery) => {
   return result;
 };
 
-// export const getSaveChartOptions = (queryType, requestQuery) => {
-//   if (queryType === QUERY_TYPE_FUNNEL) {
-//     if (requestQuery.gbp.length) {
-//       return (
-//         <>
-//           <Radio value={apiChartAnnotations[CHART_TYPE_BARCHART]}>
-//             Display Funnel Chart
-//           </Radio>
-//           <Radio value={apiChartAnnotations[CHART_TYPE_SCATTER_PLOT]}>
-//             Display Scatter Plot
-//           </Radio>
-//           <Radio value={apiChartAnnotations[CHART_TYPE_TABLE]}>
-//             Display Table
-//           </Radio>
-//         </>
-//       );
-//     } else {
-//       return (
-//         <>
-//           <Radio value={apiChartAnnotations[CHART_TYPE_BARCHART]}>
-//             Display Funnel Chart
-//           </Radio>
-//           <Radio value={apiChartAnnotations[CHART_TYPE_TABLE]}>
-//             Display Table
-//           </Radio>
-//         </>
-//       );
-//     }
-//   }
-//   if (queryType === QUERY_TYPE_ATTRIBUTION) {
-//     return (
-//       <>
-//         <Radio value={apiChartAnnotations[CHART_TYPE_BARCHART]}>
-//           Display Columns Chart
-//         </Radio>
-//         <Radio value={apiChartAnnotations[CHART_TYPE_SCATTER_PLOT]}>
-//           Display Scatter Plot Chart
-//         </Radio>
-//         <Radio value={apiChartAnnotations[CHART_TYPE_TABLE]}>
-//           Display Table
-//         </Radio>
-//       </>
-//     );
-//   }
-//   if (queryType === QUERY_TYPE_KPI) {
-//     const commons = (
-//       <>
-//         <Radio value={apiChartAnnotations[CHART_TYPE_LINECHART]}>
-//           Display Line Chart
-//         </Radio>
-//         <Radio value={apiChartAnnotations[CHART_TYPE_TABLE]}>
-//           Display Table
-//         </Radio>
-//       </>
-//     );
-//     if (!requestQuery.gGBy.length) {
-//       return (
-//         <>
-//           <Radio value={apiChartAnnotations[CHART_TYPE_SPARKLINES]}>
-//             Display Spark Line Chart
-//           </Radio>
-//           {commons}
-//         </>
-//       );
-//     } else {
-//       const horizontalBarChart =
-//         requestQuery.gGBy.length <= 3 ? (
-//           <Radio value={apiChartAnnotations[CHART_TYPE_HORIZONTAL_BAR_CHART]}>
-//             Display Bar Chart
-//           </Radio>
-//         ) : null;
-//       return (
-//         <>
-//           <Radio value={apiChartAnnotations[CHART_TYPE_BARCHART]}>
-//             Display Columns Chart
-//           </Radio>
-//           <Radio value={apiChartAnnotations[CHART_TYPE_STACKED_AREA]}>
-//             Display Stacked Area Chart
-//           </Radio>
-//           <Radio value={apiChartAnnotations[CHART_TYPE_STACKED_BAR]}>
-//             Display Stacked Column Chart
-//           </Radio>
-//           {commons}
-//           {horizontalBarChart}
-//         </>
-//       );
-//     }
-//   }
-//   if (queryType === QUERY_TYPE_CAMPAIGN) {
-//     const commons = (
-//       <>
-//         <Radio value={apiChartAnnotations[CHART_TYPE_LINECHART]}>
-//           Display Line Chart
-//         </Radio>
-//         <Radio value={apiChartAnnotations[CHART_TYPE_TABLE]}>
-//           Display Table
-//         </Radio>
-//       </>
-//     );
-//     if (!requestQuery.query_group[0].group_by.length) {
-//       return (
-//         <>
-//           <Radio value={apiChartAnnotations[CHART_TYPE_SPARKLINES]}>
-//             Display Spark Line Chart
-//           </Radio>
-//           {commons}
-//         </>
-//       );
-//     } else {
-//       return (
-//         <>
-//           <Radio value={apiChartAnnotations[CHART_TYPE_BARCHART]}>
-//             Display Columns Chart
-//           </Radio>
-//           <Radio value={apiChartAnnotations[CHART_TYPE_STACKED_AREA]}>
-//             Display Stacked Area Chart
-//           </Radio>
-//           <Radio value={apiChartAnnotations[CHART_TYPE_STACKED_BAR]}>
-//             Display Stacked Column Chart
-//           </Radio>
-//           {commons}
-//         </>
-//       );
-//     }
-//   }
-
-//   if (queryType === QUERY_TYPE_PROFILE) {
-//     let horizontalBarChart = (
-//       <Radio value={apiChartAnnotations[CHART_TYPE_HORIZONTAL_BAR_CHART]}>
-//         Display Bar Chart
-//       </Radio>
-//     );
-//     const commons = (
-//       <Radio value={apiChartAnnotations[CHART_TYPE_TABLE]}>Display Table</Radio>
-//     );
-//     if (requestQuery.gbp.length) {
-//       const columnsChart = (
-//         <Radio value={apiChartAnnotations[CHART_TYPE_BARCHART]}>
-//           Display Columns Chart
-//         </Radio>
-//       );
-//       if (requestQuery.gbp.length > 3) {
-//         horizontalBarChart = null;
-//       }
-//       return (
-//         <>
-//           {columnsChart}
-//           {horizontalBarChart}
-//           {commons}
-//         </>
-//       );
-//     }
-//     return (
-//       <>
-//         {horizontalBarChart}
-//         {commons}
-//       </>
-//     );
-//   }
-
-//   if (queryType === QUERY_TYPE_EVENT) {
-//     if (requestQuery[0].ec === constantObj[EACH_USER_TYPE]) {
-//       const commons = (
-//         <>
-//           <Radio value={apiChartAnnotations[CHART_TYPE_LINECHART]}>
-//             Display Line Chart
-//           </Radio>
-//           <Radio value={apiChartAnnotations[CHART_TYPE_TABLE]}>
-//             Display Table
-//           </Radio>
-//         </>
-//       );
-//       if (!requestQuery[0].gbp.length) {
-//         return (
-//           <>
-//             <Radio value={apiChartAnnotations[CHART_TYPE_SPARKLINES]}>
-//               Display Spark Line Chart
-//             </Radio>
-//             {commons}
-//           </>
-//         );
-//       } else {
-//         const horizontalBarChart =
-//           requestQuery[0].gbp.length <= 3 &&
-//           requestQuery[0].ewp.length === 1 ? (
-//             <Radio value={apiChartAnnotations[CHART_TYPE_HORIZONTAL_BAR_CHART]}>
-//               Display Bar Chart
-//             </Radio>
-//           ) : null;
-//         return (
-//           <>
-//             <Radio value={apiChartAnnotations[CHART_TYPE_BARCHART]}>
-//               Display Columns Chart
-//             </Radio>
-//             <Radio value={apiChartAnnotations[CHART_TYPE_STACKED_AREA]}>
-//               Display Stacked Area Chart
-//             </Radio>
-//             <Radio value={apiChartAnnotations[CHART_TYPE_STACKED_BAR]}>
-//               Display Stacked Column Chart
-//             </Radio>
-//             {commons}
-//             {horizontalBarChart}
-//           </>
-//         );
-//       }
-//     } else {
-//       const commons = (
-//         <>
-//           <Radio value={apiChartAnnotations[CHART_TYPE_TABLE]}>
-//             Display Table
-//           </Radio>
-//         </>
-//       );
-//       if (!requestQuery[0].gbp.length) {
-//         return (
-//           <>
-//             <Radio value='pc'>Display Count</Radio>
-//             {commons}
-//           </>
-//         );
-//       } else {
-//         return (
-//           <>
-//             <Radio value='pb'>Display Columns Chart</Radio>
-//             {commons}
-//           </>
-//         );
-//       }
-//     }
-//   }
-// };
-
 export const isComparisonEnabled = (queryType, events, groupBy, models) => {
   if (queryType === QUERY_TYPE_FUNNEL) {
     const newAppliedBreakdown = [...groupBy.event, ...groupBy.global];
     return newAppliedBreakdown.length === 0;
   }
-  // if (queryType === QUERY_TYPE_EVENT) {
-  //   const newAppliedBreakdown = [...groupBy.event, ...groupBy.global];
-  //   return !(events.length > 1 && newAppliedBreakdown.length > 0);
-  // }
   if (queryType === QUERY_TYPE_ATTRIBUTION) {
     if (models.length === 1) {
       return true;
@@ -1814,7 +1600,9 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
       : null;
 
     const eventFilters = [];
-    const fil = get(q, 'fil', EMPTY_ARRAY) ? get(q, 'fil', EMPTY_ARRAY) : EMPTY_ARRAY;
+    const fil = get(q, 'fil', EMPTY_ARRAY)
+      ? get(q, 'fil', EMPTY_ARRAY)
+      : EMPTY_ARRAY;
     fil.forEach((pr) => {
       if (pr.lOp === 'AND') {
         const val = pr.prDaTy === 'categorical' ? [pr.va] : pr.va;
