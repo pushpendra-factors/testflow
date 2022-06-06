@@ -137,6 +137,7 @@ func main() {
 	numDocRoutines := flag.Int("num_unique_doc_routines", 1, "Number of unique document go routines per project")
 	insertBatchSize := flag.Int("insert_batch_size", 1, "Number of unique document go routines per project")
 	overrideLastSyncTimestamp := flag.Int64("override_last_sync_timestamp", 0, "Override last sync timestamp")
+	useSalesforceV54APIByProjectID := flag.String("use_salesforce_v54_api_by_project_id", "", "Use v54 api for query salesforce data")
 
 	flag.Parse()
 	defaultAppName := "salesforce_enrich"
@@ -195,6 +196,7 @@ func main() {
 		RestrictReusingUsersByCustomerUserId:   *restrictReusingUsersByCustomerUserId,
 		DisableCRMUniquenessConstraintsCheckByProjectID: *disableCRMUniquenessConstraintsCheckByProjectID,
 		SalesforceBatchInsertBatchSize:                  *insertBatchSize,
+		UseSalesforceV54APIByProjectID:                  *useSalesforceV54APIByProjectID,
 	}
 
 	C.InitConf(config)

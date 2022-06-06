@@ -63,7 +63,6 @@ const FactorsSessionCookieName = "factors-sid"
 
 const FactorsAuth0StateCookieName = "factors-auth0-state"
 
-
 // URL for loading SDK on client side.
 const SDKAssetsURL = "https://app.factors.ai/assets/factors.js"
 
@@ -248,6 +247,7 @@ type Configuration struct {
 	SlackAppClientID                                string
 	SlackAppClientSecret                            string
 	EnableDryRunAlerts                              bool
+	UseSalesforceV54APIByProjectID                  string
 }
 
 type Services struct {
@@ -2164,4 +2164,13 @@ func GetSlackClientID() string {
 
 func GetSlackClientSecret() string {
 	return configuration.SlackAppClientSecret
+}
+
+func AllowSalesforcev54APIByProjectID(projectID uint64) bool {
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().UseSalesforceV54APIByProjectID, "")
+	if allProjects {
+		return true
+	}
+
+	return allowedProjectIDs[projectID]
 }
