@@ -784,6 +784,7 @@ func (store *MemSQL) CacheDashboardUnitForDateRange(cachePayload model.Dashboard
 			}
 		case <-time.After(16 * 60 * time.Second):
 			queryTimedOut = true
+			errCode = http.StatusInternalServerError
 			logCtx.WithFields(log.Fields{"Query": *analyticsQuery, "ErrCode": "UnitRunTimeOut"}).Info("Timeout for the FunnelORInsights unit")
 		}
 
@@ -813,6 +814,7 @@ func (store *MemSQL) CacheDashboardUnitForDateRange(cachePayload model.Dashboard
 			}
 		case <-time.After(20 * 60 * time.Second):
 			queryTimedOut = true
+			errCode = http.StatusInternalServerError
 			logCtx.WithFields(log.Fields{"Query": attributionQuery.Query, "ErrCode": "UnitRunTimeOut"}).Info("Timeout for the attribution unit")
 		}
 
