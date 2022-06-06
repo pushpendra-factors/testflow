@@ -346,6 +346,10 @@ const CreateGoalDrawer = (props) => {
     factorsai.track('RUN_EXPLAIN', { 'query_type': 'explain', project_name: props.activeProject.name, project_id: props.activeProject.id });
 
   }
+  const delOption = (val, index) => {
+    const filteredItems = eventsToInc.filter(item => item !== val);
+    setEventsToInc(filteredItems)
+  }
 
 
   const valuesSelect = (val) => {
@@ -512,37 +516,54 @@ const CreateGoalDrawer = (props) => {
 
             <div>
 
+              <div className={`relative mt-2`}>
+                {eventsToInc && eventsToInc?.map((item, index) => {
+                  return <div key={index} className={`flex items-center mt-2`}>
+                    <Button
+                      type='text'
+                      onClick={() => delOption(item, index)}
+                      size={'small'}
+                      className={`fa-btn--custom mr-1`}
+                    >
+                      <SVG name={'remove'} />
+                    </Button>
+                    <Button
+                      className={`flex justify-start`}
+                      type='link'
+                      onClick={() => setShowEventsToIncDD(true)}
+                    >
+                      {item}
+                    </Button>
+                  </div>
 
-              {eventsToInc && eventsToInc?.map((item) => {
-                return <Button
-                  className={`ml-2 mt-4 flex justify-start`}
-                  type='link'
+                })}
+
+                <Button
+                  className={` ml-2 mt-4`}
+                  type={'text'}
                   onClick={() => setShowEventsToIncDD(true)}
+                  icon={<SVG name={'plus'} size={14} color={'grey'} extraClass={'mr-2'} />}
                 >
-                  {item}
+                  {`Add Event`}
                 </Button>
-              })}
 
-              <Button
-                className={` ml-2 mt-4`}
-                type={'text'}
-                onClick={() => setShowEventsToIncDD(true)}
-                icon={<SVG name={'plus'} size={14} color={'grey'} extraClass={'mr-2'} />}
-              >
-                {`Add Event`}
-              </Button>
-
-              {showEventsToIncDD && (
-                <FaSelect
-                  options={modelMetadata ? modelMetadataDDValue : []}
-                  onClickOutside={() => setShowEventsToIncDD(false)}
-                  applClick={(val) => valuesSelect(val)}
-                  allowSearch={true}
-                  multiSelect={true}
-                  selectedOpts={eventsToInc}
-
-                />
-              )}
+                {showEventsToIncDD && (
+                  <div style={{
+                    'top': '-32px',
+                    'position': 'absolute'
+                  }}>
+                    <FaSelect
+                      options={modelMetadata ? modelMetadataDDValue : []}
+                      onClickOutside={() => setShowEventsToIncDD(false)}
+                      applClick={(val) => valuesSelect(val)}
+                      allowSearch={true}
+                      multiSelect={true}
+                      selectedOpts={eventsToInc}
+                      extraClass={'top-0'}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
 
           </ComposerBlock>
