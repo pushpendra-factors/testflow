@@ -5,7 +5,7 @@ import HCBarLineChart from '../../../components/HCBarLineChart';
 import { ATTRIBUTION_METHODOLOGY } from '../../../utils/constants';
 import {
   Text,
-  Number as NumFormat,
+  Number as NumFormat
 } from '../../../components/factorsComponents';
 import chartStyles from '../../../components/HCBarLineChart/styles.module.scss';
 
@@ -18,13 +18,13 @@ const SingleTouchPointChart = ({
   height,
   cardSize = 1,
   legendsPosition,
-  chartId = 'barLineChart',
+  chartId = 'barLineChart'
 }) => {
+  const { legends: chartLegends, categories, series } = aggregateData;
+
   const generateTooltip = useCallback(
     (category) => {
-      const categoryIdx = aggregateData.categories.findIndex(
-        (d) => d === category
-      );
+      const categoryIdx = categories.findIndex((d) => d === category);
       const conversionIdx = 0;
       const compareConversionIdx = comparison_data.data ? 1 : null;
       const costIdx = comparison_data.data ? 2 : 1;
@@ -32,117 +32,111 @@ const SingleTouchPointChart = ({
       return ReactDOMServer.renderToString(
         <>
           <Text
-            color='grey-6'
-            weight='normal'
-            type='title'
+            color="grey-6"
+            weight="normal"
+            type="title"
             extraClass={`text-sm mb-0 ${chartStyles.categoryBottomBorder}`}
           >
             {category}
           </Text>
-          <span className='flex items-center mt-3'>
+          <span className="flex items-center mt-3">
             <Text
-              color='grey'
-              type='title'
-              weight='bold'
-              extraClass='text-sm mb-0'
+              color="grey"
+              type="title"
+              weight="bold"
+              extraClass="text-sm mb-0"
             >
               Conversions
             </Text>
           </span>
-          <span className='flex justify-between items-center mt-3'>
+          <span className="flex justify-between items-center mt-3">
             <span
               className={`flex flex-col justify-center items-start pl-2 ${
                 comparison_data.data ? 'w-1/2' : ''
               } ${chartStyles.leftBlueBar}`}
             >
               <Text
-                color='grey'
-                type='title'
-                weight='normal'
-                extraClass='text-sm mb-0'
+                color="grey"
+                type="title"
+                weight="normal"
+                extraClass="text-sm mb-0"
               >
                 {moment(durationObj.from).format('MMM DD')}
                 {' - '}
                 {moment(durationObj.to).format('MMM DD')}
               </Text>
               <Text
-                color='grey-6'
-                type='title'
-                weight='bold'
-                extraClass='text-base mb-0'
+                color="grey-6"
+                type="title"
+                weight="bold"
+                extraClass="text-base mb-0"
               >
-                <NumFormat
-                  number={aggregateData.series[conversionIdx].data[categoryIdx]}
-                />
+                <NumFormat number={series[conversionIdx].data[categoryIdx]} />
               </Text>
             </span>
             {comparison_data.data ? (
               <span
-                className={`flex flex-col justify-center items-start ml-2 w-1/2`}
+                className={
+                  'flex flex-col justify-center items-start ml-2 w-1/2'
+                }
               >
                 <span className={chartStyles.leftDashedBlueBar}></span>
                 <Text
-                  color='grey'
-                  type='title'
-                  weight='normal'
-                  extraClass='text-sm mb-0 ml-4'
+                  color="grey"
+                  type="title"
+                  weight="normal"
+                  extraClass="text-sm mb-0 ml-4"
                 >
                   {moment(comparison_duration.from).format('MMM DD')}
                   {' - '}
                   {moment(comparison_duration.to).format('MMM DD')}
                 </Text>
                 <Text
-                  color='grey-6'
-                  type='title'
-                  weight='bold'
-                  extraClass='text-base mb-0 ml-4'
+                  color="grey-6"
+                  type="title"
+                  weight="bold"
+                  extraClass="text-base mb-0 ml-4"
                 >
                   <NumFormat
-                    number={
-                      aggregateData.series[compareConversionIdx].data[
-                        categoryIdx
-                      ]
-                    }
+                    number={series[compareConversionIdx].data[categoryIdx]}
                   />
                 </Text>
               </span>
             ) : null}
           </span>
-          <span className='flex items-center mt-3'>
+          <span className="flex items-center mt-3">
             <Text
-              color='grey'
-              type='title'
-              weight='bold'
-              extraClass='text-sm mb-0'
+              color="grey"
+              type="title"
+              weight="bold"
+              extraClass="text-sm mb-0"
             >
               Cost per conversion
             </Text>
           </span>
-          <span className='flex justify-between items-center mt-3'>
+          <span className="flex justify-between items-center mt-3">
             <span
               className={`flex flex-col justify-center items-start pl-2 ${
                 comparison_data.data ? 'w-1/2' : ''
               } ${chartStyles.leftRedBar}`}
             >
               <Text
-                color='grey'
-                type='title'
-                weight='normal'
-                extraClass='text-sm mb-0'
+                color="grey"
+                type="title"
+                weight="normal"
+                extraClass="text-sm mb-0"
               >
                 {moment(durationObj.from).format('MMM DD')}
                 {' - '}
                 {moment(durationObj.to).format('MMM DD')}
               </Text>
               <Text
-                color='grey-6'
-                type='title'
-                weight='bold'
-                extraClass='text-base mb-0'
+                color="grey-6"
+                type="title"
+                weight="bold"
+                extraClass="text-base mb-0"
               >
-                <NumFormat
-                  number={aggregateData.series[costIdx].data[categoryIdx]}
-                />
+                <NumFormat number={series[costIdx].data[categoryIdx]} />
               </Text>
             </span>
             {comparison_data.data ? (
@@ -150,25 +144,23 @@ const SingleTouchPointChart = ({
                 className={`flex flex-col justify-center items-start ml-2 pl-2 w-1/2 ${chartStyles.leftDashedRedBar}`}
               >
                 <Text
-                  color='grey'
-                  type='title'
-                  weight='normal'
-                  extraClass='text-sm mb-0'
+                  color="grey"
+                  type="title"
+                  weight="normal"
+                  extraClass="text-sm mb-0"
                 >
                   {moment(comparison_duration.from).format('MMM DD')}
                   {' - '}
                   {moment(comparison_duration.to).format('MMM DD')}
                 </Text>
                 <Text
-                  color='grey-6'
-                  type='title'
-                  weight='bold'
-                  extraClass='text-base mb-0'
+                  color="grey-6"
+                  type="title"
+                  weight="bold"
+                  extraClass="text-base mb-0"
                 >
                   <NumFormat
-                    number={
-                      aggregateData.series[compareCostIdx].data[categoryIdx]
-                    }
+                    number={series[compareCostIdx].data[categoryIdx]}
                   />
                 </Text>
               </span>
@@ -177,13 +169,7 @@ const SingleTouchPointChart = ({
         </>
       );
     },
-    [
-      aggregateData.categories,
-      aggregateData.series,
-      comparison_data,
-      durationObj,
-      comparison_duration,
-    ]
+    [categories, series, comparison_data, durationObj, comparison_duration]
   );
 
   const attributionMethodsMapper = useMemo(() => {
@@ -196,15 +182,15 @@ const SingleTouchPointChart = ({
 
   const legends = useMemo(() => {
     return [
-      `Conversions as Unique users (${attributionMethodsMapper[attribution_method]})`,
-      'Cost per conversion',
+      `${chartLegends[0]} (${attributionMethodsMapper[attribution_method]})`,
+      chartLegends[1]
     ];
-  }, [attributionMethodsMapper, attribution_method]);
+  }, [attributionMethodsMapper, attribution_method, chartLegends]);
 
   return (
     <HCBarLineChart
-      series={aggregateData.series}
-      categories={aggregateData.categories}
+      series={series}
+      categories={categories}
       legends={legends}
       generateTooltip={generateTooltip}
       height={height}

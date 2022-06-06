@@ -50,7 +50,10 @@ import {
   SET_SHOW_CRITERIA,
   SET_PERFORMANCE_CRITERIA
 } from '../../reducers/analyticsQuery';
-import { getDashboardDateRange } from '../Dashboard/utils';
+import {
+  getDashboardDateRange,
+  getSavedAttributionMetrics
+} from '../Dashboard/utils';
 import TemplatesModal from '../CoreQuery/Templates';
 import { fetchWeeklyIngishts } from '../../reducers/insights';
 import _ from 'lodash';
@@ -458,7 +461,9 @@ function CoreQuery({
           const usefulQuery = { ...equivalentQuery, ...newDateRange };
           if (record.settings && record.settings.attributionMetrics) {
             setAttributionMetrics(
-              JSON.parse(record.settings.attributionMetrics)
+              getSavedAttributionMetrics(
+                JSON.parse(record.settings.attributionMetrics)
+              )
             );
           }
           delete usefulQuery.queryType;

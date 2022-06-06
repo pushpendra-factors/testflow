@@ -1,17 +1,14 @@
 import React, {
-  useState,
-  useContext,
-  useMemo,
-  useCallback,
-  useEffect,
+  useState, useContext, useCallback, useEffect
 } from 'react';
 import { useSelector } from 'react-redux';
+import get from 'lodash/get';
 import {
   defaultSortProp,
   getTableColumns,
   getTableData,
   getSingleTouchPointChartData,
-  getDualTouchPointChartData,
+  getDualTouchPointChartData
 } from '../../CoreQuery/AttributionsResult/utils';
 
 import AttributionTable from '../../CoreQuery/AttributionsResult/AttributionTable';
@@ -26,19 +23,18 @@ import {
   DASHBOARD_WIDGET_BARLINE_CHART_HEIGHT,
   DASHBOARD_WIDGET_SCATTERPLOT_CHART_HEIGHT,
   DASHBOARD_WIDGET_ATTRIBUTION_DUAL_TOUCHPOINT_BAR_CHART_HEIGHT,
-  DASHBOARD_WIDGET_SECTION,
+  DASHBOARD_WIDGET_SECTION
 } from '../../../utils/constants';
-
-import OptionsPopover from '../../CoreQuery/AttributionsResult/OptionsPopover';
 import { getNewSorterState } from '../../../utils/dataFormatter';
 import DualTouchPointChart from '../../CoreQuery/AttributionsResult/DualTouchPointChart';
 import SingleTouchPointChart from '../../CoreQuery/AttributionsResult/SingleTouchPointChart';
 import AttributionsScatterPlot from '../../CoreQuery/AttributionsResult/AttributionsScatterPlot';
 import NoDataChart from '../../../components/NoDataChart';
 import { DashboardContext } from '../../../contexts/DashboardContext';
+import { ATTRIBUTION_GROUP_ANALYSIS_KEYS } from '../../CoreQuery/AttributionsResult/attributionsResult.constants';
 
 const nodata = (
-  <div className='mt-4 flex justify-center items-center w-full h-full'>
+  <div className="mt-4 flex justify-center items-center w-full h-full">
     <NoDataChart />
   </div>
 );
@@ -61,17 +57,13 @@ const AttributionsChart = ({
   attrQueries,
   queryOptions
 }) => {
-  const {
-    attributionMetrics,
-    setAttributionMetrics,
-    handleEditQuery,
-  } = useContext(DashboardContext);
+  const { attributionMetrics, handleEditQuery } = useContext(DashboardContext);
 
   const { eventNames } = useSelector((state) => state.coreQuery);
 
   const [aggregateData, setAggregateData] = useState({
     categories: [],
-    series: [],
+    series: []
   });
   const [dualTouchpointChartData, setDualTouchpointChartData] = useState([]);
   const [searchText, setSearchText] = useState('');
@@ -85,38 +77,6 @@ const AttributionsChart = ({
       return getNewSorterState(currentSorter, prop);
     });
   }, []);
-
-  const handleMetricsVisibilityChange = useCallback(
-    (option) => {
-      setAttributionMetrics((curMetrics) => {
-        const newState = curMetrics.map((metric) => {
-          if (metric.header === option.header) {
-            return {
-              ...metric,
-              enabled: !metric.enabled,
-            };
-          }
-          return metric;
-        });
-        const enabledOptions = newState.filter((metric) => metric.enabled);
-        if (!enabledOptions.length) {
-          return curMetrics;
-        } else {
-          return newState;
-        }
-      });
-    },
-    [setAttributionMetrics]
-  );
-
-  const metricsOptionsPopover = useMemo(() => {
-    return (
-      <OptionsPopover
-        options={attributionMetrics}
-        onChange={handleMetricsVisibilityChange}
-      />
-    );
-  }, [attributionMetrics, handleMetricsVisibilityChange]);
 
   useEffect(() => {
     setColumns(
@@ -133,7 +93,8 @@ const AttributionsChart = ({
         attr_dimensions,
         content_groups,
         durationObj,
-        undefined, undefined, 
+        undefined,
+        undefined,
         queryOptions,
         attrQueries,
         data
@@ -153,6 +114,8 @@ const AttributionsChart = ({
     sorter,
     touchpoint,
     durationObj,
+    queryOptions,
+    attrQueries
   ]);
 
   useEffect(() => {
@@ -166,7 +129,8 @@ const AttributionsChart = ({
       linkedEvents,
       attributionMetrics,
       attr_dimensions,
-      content_groups, undefined, 
+      content_groups,
+      undefined,
       queryOptions,
       attrQueries
     );
@@ -192,6 +156,8 @@ const AttributionsChart = ({
     searchText,
     sorter,
     touchpoint,
+    queryOptions,
+    attrQueries
   ]);
 
   useEffect(() => {
@@ -216,7 +182,14 @@ const AttributionsChart = ({
           visibleIndices,
           attr_dimensions,
           content_groups,
-          touchpoint
+          touchpoint,
+          false,
+          attrQueries,
+          get(
+            queryOptions,
+            'group_analysis',
+            ATTRIBUTION_GROUP_ANALYSIS_KEYS.USERS
+          )
         );
         setAggregateData(chartData);
       }
@@ -230,6 +203,8 @@ const AttributionsChart = ({
     attribution_method,
     attribution_method_compare,
     currMetricsValue,
+    queryOptions,
+    attrQueries
   ]);
 
   let chartContent = null;
@@ -311,7 +286,7 @@ const AttributionsChart = ({
           chartType={chartType}
           height={DASHBOARD_WIDGET_BARLINE_CHART_HEIGHT}
           cardSize={cardSize}
-          legendsPosition='top'
+          legendsPosition="top"
           chartId={`barLineChart-${unitId}`}
         />
       );
@@ -329,7 +304,7 @@ const AttributionsChart = ({
       <div
         onClick={handleEditQuery}
         style={{ color: '#5949BC' }}
-        className='mt-3 font-medium text-base cursor-pointer flex justify-end item-center'
+        className="mt-3 font-medium text-base cursor-pointer flex justify-end item-center"
       >
         Show More &rarr;
       </div>
@@ -337,7 +312,7 @@ const AttributionsChart = ({
   }
 
   return (
-    <div className={`w-full px-6 flex flex-1 flex-col  justify-center`}>
+    <div className={'w-full px-6 flex flex-1 flex-col  justify-center'}>
       {chartContent}
       {tableContent}
     </div>
