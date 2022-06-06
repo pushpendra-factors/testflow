@@ -28,7 +28,7 @@ func (store *MemSQL) GetProfileUsersListByProjectId(projectId uint64) ([]model.C
 		+ (CASE WHEN GROUP_CONCAT(group_3_id) IS NOT NULL THEN 1 ELSE 0 END) 
 		+ (CASE WHEN GROUP_CONCAT(group_4_id) IS NOT NULL THEN 1 ELSE 0 END)) AS groups,
 		MAX(updated_at) AS last_activity`).
-		Where("project_id = ? AND name IS NOT NULL AND updated_at >= DATE(NOW() - INTERVAL 240 HOUR)", projectId).
+		Where("project_id = ? AND updated_at >= DATE(NOW() - INTERVAL 240 HOUR)", projectId).
 		Group("identity").
 		Order("last_activity DESC").
 		Limit(30).
@@ -79,7 +79,7 @@ func (store *MemSQL) GetProfileUserDetailsByID(projectID uint64, identity string
 			GROUP_CONCAT(group_2_id) IS NOT NULL AS group_2,
 			GROUP_CONCAT(group_3_id) IS NOT NULL AS group_3,
 			GROUP_CONCAT(group_4_id) IS NOT NULL AS group_4`).
-		Where("project_id=? AND name IS NOT NULL AND "+userId+"=?", projectID, identity).
+		Where("project_id=? AND "+userId+"=?", projectID, identity).
 		Group("user_id").
 		Order("updated_at desc").
 		Limit(1).
