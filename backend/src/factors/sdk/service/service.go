@@ -43,7 +43,6 @@ func main() {
 	memSQLCertificate := flag.String("memsql_cert", "", "")
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypeMemSQL, "Primary datastore type as memsql or postgres")
 
-	clearbitEnabled := flag.Int("clearbit_enabled", 0, "To enable clearbit enrichment")
 	geoLocFilePath := flag.String("geo_loc_path",
 		"/usr/local/var/factors/geolocation_data/GeoLite2-City.mmdb", "")
 
@@ -82,6 +81,7 @@ func main() {
 	blacklistedProjectIDPropertyTypeFromDB := flag.String("blacklisted_project_ids_property_type_check_from_db", "", "Blocked project id for property type check from db.")
 	cacheSortedSet := flag.Bool("cache_with_sorted_set", false, "Cache with sorted set keys")
 	allowSupportForUserPropertiesInIdentifyCall := flag.String("allow_support_for_user_properties_in_identify_call", "", "")
+	clearbitEnabled := flag.Int("clearbit_enabled", 0, "To enable clearbit enrichment")
 
 	flag.Parse()
 

@@ -65,6 +65,7 @@ func main() {
 	hubspotMaxCreatedAt := flag.Int64("huspot_max_created_at", time.Now().Unix(), "max created_at for records to process.")
 	lightProjectsCountThreshold := flag.Int("light_projects_count_threshold", 50000, "Threshold on count for distribution across jobs")
 	enrichHeavy := flag.Bool("enrich_heavy", false, "Run heavy projects")
+	clearbitEnabled := flag.Int("clearbit_enabled", 0, "To enable clearbit enrichment")
 	recordProcessLimit := flag.Int("record_process_limit", 50000, "Number of records to process per project.")
 
 	flag.Parse()
@@ -114,6 +115,7 @@ func main() {
 		CaptureSourceInUsersTable:              *captureSourceInUsersTable,
 		RestrictReusingUsersByCustomerUserId:   *restrictReusingUsersByCustomerUserId,
 		EnableHubspotFormsEventsByProjectID:    *enableHubspotFormEventsByProjectID,
+		ClearbitEnabled:                        *clearbitEnabled,
 	}
 
 	C.InitConf(config)
