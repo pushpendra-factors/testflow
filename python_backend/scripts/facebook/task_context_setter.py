@@ -106,11 +106,12 @@ class TaskContextSetter:
 
     # Optimise for load in extract_and_load_workflow - localstorage
     def get_source(self):
+        if self.env in [DEVELOPMENT, TEST]:
+            return LocalStorage()
+
         if self.task_type == EXTRACT:
             return ExternalSystem()
         else:
-            if self.env in [DEVELOPMENT, TEST]:
-                return [LocalStorage()]
             return GoogleStorage()
 
     # Optimise for extract in extract_and_Load_workflow - local and google storage.
