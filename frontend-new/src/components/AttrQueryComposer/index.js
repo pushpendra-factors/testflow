@@ -55,7 +55,6 @@ const AttrQueryComposer = ({ activeProject,
          ['Salesforce Opportunity', 'salesforce_opportunities']];
         return groups;
     };
-
     useEffect(() => {
         if (activeProject && activeProject.id) {
             getCampaignConfigData(activeProject.id, "all_ads")
@@ -245,7 +244,6 @@ const AttrQueryComposer = ({ activeProject,
                     monthPicker
                     buttonSize={`large`}
                     className={`mr-2`}
-                    monthPicker
                     range={
                         {
                             startDate: dateRange.from,

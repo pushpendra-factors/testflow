@@ -8,9 +8,11 @@ import EventFilterWrapper from '../../QueryComposer/EventFilterWrapper';
 
 import { Button, Tooltip } from 'antd';
 import { SVG, Text } from 'factorsComponents';
-import { isArray } from 'lodash';
+import { before, isArray } from 'lodash';
 import FaSelect from 'Components/FaSelect';
+import ORButton from '../../ORButton';
 import { getNormalizedKpi } from '../../../utils/kpiQueryComposer.helpers';
+import { compareFilters, groupFilters } from '../../../utils/global';
 
 const ConversionGoalBlock = ({
     eventGoal, 
@@ -29,13 +31,12 @@ const ConversionGoalBlock = ({
     const [filterBlockVisible, setFilterBlockVisible] = useState(false);
 
     const [moreOptions, setMoreOptions] = useState(false);
+    const [orFilterIndex, setOrFilterIndex] = useState(-1);
 
     const [filterProps, setFilterProperties] = useState({
         event: [],
         user: []
     });
-
-    
     
     useEffect(() => {
         if(!group_analysis || group_analysis === 'users') {
@@ -104,31 +105,41 @@ const ConversionGoalBlock = ({
 
   const addFilter = (val) => {
     const updatedEvent = Object.assign({}, eventGoal);
-    const filt = updatedEvent.filters.filter(
+
+    const filtersSorted = updatedEvent.filters;
+    filtersSorted.sort(compareFilters);
+    const filt = filtersSorted.filter(
       (fil) => JSON.stringify(fil) === JSON.stringify(val)
     );
     if (filt && filt.length) return;
+    
     updatedEvent.filters.push(val);
     eventGoalChange(updatedEvent);
   };
 
   const editFiler = (index, val) => {
-    const updatedEvent = Object.assign({}, eventGoal);
+    let updatedEvent = Object.assign({}, eventGoal);
     const filt = Object.assign({}, val);
     filt.operator = isArray(val.operator) ? val.operator[0] : val.operator;
-    updatedEvent.filters[index] = filt;
+    const filtersSorted = updatedEvent.filters;
+    filtersSorted.sort(compareFilters);
+    filtersSorted[index] = filt;
+    updatedEvent.filters = filtersSorted;
     eventGoalChange(updatedEvent);
   };
 
   const delFilter = (val) => {
     const updatedEvent = Object.assign({}, eventGoal);
-    const filt = updatedEvent.filters.filter((v, i) => i !== val);
+    const filtersSorted = updatedEvent.filters;
+    filtersSorted.sort(compareFilters);
+    const filt = filtersSorted.filter((v, i) => i !== val);
     updatedEvent.filters = filt;
     eventGoalChange(updatedEvent);
   };
 
   const closeFilter = () => {
     setFilterBlockVisible(false);
+    setOrFilterIndex(-1);
   };
 
   const deleteItem = () => {
@@ -140,7 +151,7 @@ const ConversionGoalBlock = ({
     setFilterBlockVisible(true);
   };
 
-  const selectEventFilter = () => {
+  const selectEventFilter = (index) => {
     return (
       <EventFilterWrapper
         filterProps={filterProps}
@@ -149,40 +160,109 @@ const ConversionGoalBlock = ({
         deleteFilter={() => closeFilter()}
         insertFilter={addFilter}
         closeFilter={closeFilter}
+        refValue={index}
+        showORFilter = {true}
       ></EventFilterWrapper>
     );
   };
 
   const eventFilters = () => {
     const filters = [];
+    let index = 0;
+    let lastRef = 0;
     if (eventGoal && eventGoal?.filters?.length) {
-      eventGoal.filters.forEach((filter, index) => {
-        let filterContent = filter;
-        filterContent.values =
-          filter.props[1] === 'datetime' && isArray(filter.values)
-            ? filter.values[0]
-            : filter.values;
-        filters.push(
-          <div key={index} className={'fa--query_block--filters'}>
-            <EventFilterWrapper
-              index={index}
-              filter={filter}
-              filterProps={filterProps}
-              activeProject={activeProject}
-              deleteFilter={delFilter}
-              insertFilter={(val) => editFiler(index, val)}
-              closeFilter={closeFilter}
-              event={eventGoal}
-            ></EventFilterWrapper>
+  
+      const group = groupFilters(eventGoal.filters, 'ref');
+      const filtersGroupedByRef = Object.values(group);
+      const refValues = Object.keys(group);
+      lastRef = parseInt(refValues[refValues.length-1]);
+  
+
+      filtersGroupedByRef.forEach((filtersGr)=>{
+        const refValue = filtersGr[0].ref;
+        if(filtersGr.length == 1){
+            const filter = filtersGr[0];
+            let filterContent = filter;
+            filterContent.values =
+              filter.props[1] === 'datetime' && isArray(filter.values)
+                ? filter.values[0]
+                : filter.values;
+            filters.push(
+              <div className={'fa--query_block--filters flex flex-row'}>
+              <div key={index} >
+                <EventFilterWrapper
+                  index={index}
+                  filter={filter}
+                  filterProps={filterProps}
+                  activeProject={activeProject}
+                  deleteFilter={delFilter}
+                  insertFilter={(val,index) => editFiler(index, val)}
+                  closeFilter={closeFilter}
+                  event={eventGoal}
+                  refValue={refValue}
+                ></EventFilterWrapper>
+              </div>
+               {index !== orFilterIndex && (
+                 <ORButton index={index} setOrFilterIndex={setOrFilterIndex}/>
+                )}
+               {index === orFilterIndex && (
+                  <div key={'init'}>
+                    <EventFilterWrapper
+                      filterProps={filterProps}
+                      activeProject={activeProject}
+                      event={eventGoal}
+                      deleteFilter={() => closeFilter()}
+                      insertFilter={addFilter}
+                      closeFilter={closeFilter}
+                      refValue={refValue}
+                      showOr = {true}
+                    ></EventFilterWrapper>
+                  </div>                
+                )}  
+              </div>       
+            );
+            index+=1;
+        }else{
+          filters.push(
+            <div  className={'fa--query_block--filters flex flex-row'}>
+            <div key={index}>
+              <EventFilterWrapper
+                index={index}
+                filter={filtersGr[0]}
+                filterProps={filterProps}
+                activeProject={activeProject}
+                deleteFilter={delFilter}
+                insertFilter={(val,index) => editFiler(index,val)}
+                closeFilter={closeFilter}
+                event={eventGoal}
+                refValue={refValue}
+                ></EventFilterWrapper>
+            </div>
+            <div key={index+1}>
+              <EventFilterWrapper
+                index={index+1}
+                filter={filtersGr[1]}
+                filterProps={filterProps}
+                activeProject={activeProject}
+                deleteFilter={delFilter}
+                insertFilter={(val,index) => editFiler(index, val)}
+                closeFilter={closeFilter}
+                event={eventGoal}
+                refValue={refValue}
+                showOr = {true}
+                ></EventFilterWrapper>
+            </div>
           </div>
-        );
-      });
+          );
+          index+=2;
+        }
+      })
     }
 
     if (filterBlockVisible) {
       filters.push(
         <div key={'init'} className={'fa--query_block--filters'}>
-          {selectEventFilter()}
+          {selectEventFilter(lastRef+1)}
         </div>
       );
     }

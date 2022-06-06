@@ -7,11 +7,6 @@ import { SVG, Text } from 'factorsComponents';
 import { DEFAULT_DATE_RANGE } from 'Components/QueryComposer/DateRangeSelector/utils';
 import MomentTz from 'Components/MomentTz';
 
-import {
-  fetchEventPropertyValues,
-  fetchUserPropertyValues,
-  fetchChannelObjPropertyValues,
-} from 'Reducers/coreQuery/services';
 import GlobalFilterSelect from '../GlobalFilterSelect';
 import { DEFAULT_OPERATOR_PROPS } from '../../../FaFilterSelect/utils';
 import { fetchKPIFilterValues } from 'Reducers/kpi';
@@ -72,6 +67,42 @@ function GlobalFilterBlock({
     if (filter) {
       setValuesByProps(filter.props);
       setNewFilterState(filter);
+
+      if (filter && filter?.extra) {
+        let filterData = {}; 
+        if (selectedMainCategory?.category == 'channels') {
+          filterData = {
+            category: selectedMainCategory?.category,
+            // object_type: filter?.extra[3],
+            object_type: selectedMainCategory?.group,
+            property_name: filter?.extra[1],
+            display_category: selectedMainCategory?.group,
+            entity: 'event',
+          };
+        } else {
+          filterData = {
+            category: selectedMainCategory?.category,
+            object_type: selectedMainCategory?.group,
+            property_name: filter?.extra[1],
+            entity: filter?.extra[3] ? filter?.extra[3] : filter?.extra[2],
+          };
+        } 
+
+        
+        fetchKPIFilterValues(activeProject.id, filterData)
+          .then((res) => {
+            const ddValues = Object.assign({}, dropDownValues);
+            ddValues[filter?.extra[0]] = [...res.data, '$none'];
+            setDropDownValues(ddValues);
+          })
+          .catch((err) => {
+            const ddValues = Object.assign({}, dropDownValues);
+            ddValues[filter?.extra[0]] = ['$none'];
+            setDropDownValues(ddValues);
+          });
+      } 
+
+
     }
   }, [filter]);
 
@@ -105,7 +136,9 @@ function GlobalFilterBlock({
         valueOpts={dropDownValues}
         applyFilter={applyFilter}
         setValuesByProps={setValuesByProps}
-        filter={filter}
+        filter={filter} 
+
+
       />
     );
   };
@@ -178,72 +211,7 @@ function GlobalFilterBlock({
         : (() => {})();
     }
   };
-
-  // useEffect(() => {
-
-  //   console.log("inside use-efffect",selectedMainCategory, newFilterState)
-  //   let filterData = {
-  //     "category": selectedMainCategory?.category || "events",
-  //     "object_type": newFilterState ? newFilterState[3] : "$session",
-  //     "property_name": newFilterState ? newFilterState[1] : "$source",
-  //     "entity": "event"
-  // }
-
-  // newFilterState && fetchKPIFilterValues(activeProject.id,filterData).then(res => {
-  //     const ddValues = Object.assign({}, dropDownValues);
-  //     ddValues[props[1]] = [...res.data, '$none'];
-  //     setDropDownValues(ddValues);
-  //   }).catch(err => {
-  //     const ddValues = Object.assign({}, dropDownValues);
-  //       ddValues[props[0]] = ['$none'];
-  //       setDropDownValues(ddValues);
-  //   });;
-
-  //   if(newFilterState.props[1] === 'categorical') {
-  //     if(newFilterState.props[2] === 'user') {
-  //       if(!dropDownValues[newFilterState.props[0]]) {
-  //         fetchUserPropertyValues(activeProject.id, newFilterState.props[0]).then(res => {
-  //           const ddValues = Object.assign({}, dropDownValues);
-  //           ddValues[newFilterState.props[0]] = [...res.data, '$none'];
-  //           setDropDownValues(ddValues);
-  //         }).catch(() => {
-  //           console.log(err)
-  //           const ddValues = Object.assign({}, dropDownValues);
-  //           ddValues[newFilterState.props[0]] = ['$none'];
-  //           setDropDownValues(ddValues);
-  //         })
-  //       }
-  //   } else if(newFilterState.props[2] === 'event') {
-  //     if(!dropDownValues[newFilterState.props[0]]) {
-  //       fetchEventPropertyValues(activeProject.id, event.label, newFilterState.props[0]).then(res => {
-  //         const ddValues = Object.assign({}, dropDownValues);
-  //         ddValues[newFilterState.props[0]] = [...res.data, '$none'];
-  //         setDropDownValues(ddValues);
-  //       }).catch(() => {
-  //         console.log(err)
-  //         const ddValues = Object.assign({}, dropDownValues);
-  //         ddValues[newFilterState.props[0]] = ['$none'];
-  //         setDropDownValues(ddValues);
-  //       })
-  //     }
-  //   } else {
-  //     if(filterType === 'channel') {
-  //       fetchChannelObjPropertyValues(activeProject.id, typeProps.channel,
-  //         newFilterState.props[2].replace(" ", "_"), newFilterState.props[0]).then(res => {
-  //           const ddValues = Object.assign({}, dropDownValues);
-  //           ddValues[newFilterState.props[0]] = [...res?.data?.result?.filter_values, '$none'];
-  //           setDropDownValues(ddValues);
-  //       }).catch(err => {
-  //         console.log(err)
-  //         const ddValues = Object.assign({}, dropDownValues);
-  //         ddValues[newFilterState.props[0]] = ['$none'];
-  //         setDropDownValues(ddValues);
-  //       });
-  //     }
-  //   }
-  // }
-
-  // }, [newFilterState])
+ 
 
   const delFilter = () => {
     deleteFilter(index);
@@ -607,14 +575,14 @@ function GlobalFilterBlock({
     }
   };
 
-  const setValuesByProps = (props) => {
+  const setValuesByProps = (props) => { 
     if (props) {
-      let filterData = {};
+      let filterData = {}; 
 
       if (selectedMainCategory?.category == 'channels') {
         filterData = {
           category: selectedMainCategory?.category,
-          object_type: props[3],
+          object_type: props[3] ? props[3] : selectedMainCategory?.group,
           property_name: props[1],
           display_category: selectedMainCategory?.group,
           entity: 'event',
@@ -624,7 +592,7 @@ function GlobalFilterBlock({
           category: selectedMainCategory?.category,
           object_type: selectedMainCategory?.group,
           property_name: props[1],
-          entity: props[3],
+          entity: props[3] ? props[3] : props[2],
         };
       }
 
@@ -640,54 +608,10 @@ function GlobalFilterBlock({
           setDropDownValues(ddValues);
         });
     }
-
-    // if(filterType === 'channel') {
-    //   fetchChannelObjPropertyValues(activeProject.id, typeProps.channel,
-    //     props[2].replace(" ", "_"), props[0]).then(res => {
-    //       const ddValues = Object.assign({}, dropDownValues);
-    //       ddValues[props[0]] = [...res?.data?.result?.filter_values, '$none'];
-    //       setDropDownValues(ddValues);
-    //   }).catch(err => {
-    //     const ddValues = Object.assign({}, dropDownValues);
-    //       ddValues[props[0]] = ['$none'];
-    //       setDropDownValues(ddValues);
-    //   });
-    // }
-    // if(propOpByPayload(props, 1) === 'categorical' && filterType === 'analytics') {
-    //   if(propOpByPayload(props, 2) === 'user' || propOpByPayload(props, 2) === 'user_g') {
-    //     if(!dropDownValues[props[0]]) {
-    //       fetchUserPropertyValues(activeProject.id,propOpByPayload(props, 0)).then(res => {
-    //         const ddValues = Object.assign({}, dropDownValues);
-    //         ddValues[propOpByPayload(props, 0)] = [...res.data, '$none'];
-    //         setDropDownValues(ddValues);
-    //       }).catch(err => {
-    //         const ddValues = Object.assign({}, dropDownValues);
-    //           ddValues[propOpByPayload(props, 0)] = ['$none'];
-    //           setDropDownValues(ddValues);
-    //       });
-    //     }
-    //   }
-    //   else if(propOpByPayload(props, 2) === 'event') {
-    //     if(!dropDownValues[propOpByPayload(props, 0)]) {
-    //       fetchEventPropertyValues(activeProject.id, event.label, propOpByPayload(props, 0)).then(res => {
-    //         const ddValues = Object.assign({}, dropDownValues);
-    //         ddValues[propOpByPayload(props, 0)] = [...res.data, '$none'];
-    //         setDropDownValues(ddValues);
-    //       }).catch(err => {
-    //         const ddValues = Object.assign({}, dropDownValues);
-    //           ddValues[propOpByPayload(props, 0)] = ['$none'];
-    //           setDropDownValues(ddValues);
-    //       });
-    //     }
-    //   }
-    // }
+ 
   };
 
-  const filterSelComp = () => {
-    // return <>
-    //   {renderFilterSelect()}
-    //   <div className={styles.filter_block__hd_overlay} onClick={onClickOutside}></div>
-    // </>
+  const filterSelComp = () => { 
 
     return (
       <>
@@ -697,6 +621,7 @@ function GlobalFilterBlock({
           valueOpts={dropDownValues}
           applyFilter={applyFilter}
           setValuesByProps={setValuesByProps}
+          filter={filter} 
         />
       </>
     );

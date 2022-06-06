@@ -8,9 +8,10 @@ import FaDatepicker from '../FaDatepicker';
 import FaSelect from '../FaSelect';
 import MomentTz from 'Components/MomentTz';
 import { isArray } from 'lodash';
-import { DEFAULT_OPERATOR_PROPS } from 'Components/FaFilterSelect/utils';
+import { DEFAULT_OPERATOR_PROPS,dateTimeSelect } from 'Components/FaFilterSelect/utils';
 import moment from 'moment';
-import { DISPLAY_PROP } from '../../utils/constants';
+import { DISPLAY_PROP} from '../../utils/constants';
+import { toCapitalCase } from '../../utils/global';
 
 const defaultOpProps = DEFAULT_OPERATOR_PROPS;
 
@@ -30,6 +31,7 @@ const FAFilterSelect = ({
   applyFilter,
   filter,
   disabled = false,
+  refValue,
 }) => {
   const [propState, setPropState] = useState({
     icon: '',
@@ -40,15 +42,16 @@ const FAFilterSelect = ({
   const [operatorState, setOperatorState] = useState('=');
   const [valuesState, setValuesState] = useState(null);
 
-  const [propSelectOpen, setPropSelectOpen] = useState(false);
+  const [propSelectOpen, setPropSelectOpen] = useState(true);
   const [operSelectOpen, setOperSelectOpen] = useState(false);
   const [valuesSelectionOpen, setValuesSelectionOpen] = useState(false);
   const [grnSelectOpen, setGrnSelectOpen] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [dateOptionSelectOpen,setDateOptionSelectOpen]=useState(false);
 
   const [updateState, updateStateApply] = useState(false);
 
-  const { userPropNames, eventPropNames } = useSelector(
+  const { userPropNames, eventPropNames, groupPropNames } = useSelector(
     (state) => state.coreQuery
   );
 
@@ -131,6 +134,7 @@ const FAFilterSelect = ({
         props: [propState.name, propState.type, propState.icon],
         operator: operatorState,
         values: valuesState,
+        ref: refValue,
       });
     }
   };
@@ -207,6 +211,11 @@ const FAFilterSelect = ({
   const renderGroupDisplayName = (propState) => {
     // propState?.name ? userPropNames[propState?.name] ? userPropNames[propState?.name] : propState?.name : 'Select Property'
     let propertyName = '';
+    if (propState.name && propState.icon === 'group') {
+      propertyName = groupPropNames[propState.name]
+        ? groupPropNames[propState.name]
+        : propState.name;
+    }
     if (propState.name && propState.icon === 'user') {
       propertyName = userPropNames[propState.name]
         ? userPropNames[propState.name]
@@ -302,6 +311,7 @@ const FAFilterSelect = ({
     parsedValues['gran'] = val;
     setValuesState(JSON.stringify(parsedValues));
     setGrnSelectOpen(false);
+    setDateOptionSelectOpen(false);
     setDeltaFilt();
   };
 
@@ -325,6 +335,7 @@ const FAFilterSelect = ({
     parsedValues['gran'] = val;
     setValuesState(JSON.stringify(parsedValues));
     setGrnSelectOpen(false);
+    setDateOptionSelectOpen(false);
     setCurrentFilt();
   };
 
@@ -378,6 +389,7 @@ const FAFilterSelect = ({
           range={rang}
           onSelect={(rng) => onDateSelect(rng)}
           disabled={disabled}
+          className={'filter-buttons-margin filter-buttons-radius'}
         />
       );
     }
@@ -390,6 +402,7 @@ const FAFilterSelect = ({
           range={rang}
           onSelect={(rng) => onDateSelect(rng)}
           disabled={disabled}
+          className={'filter-buttons-margin filter-buttons-radius'}
         />
       );
     }
@@ -403,44 +416,50 @@ const FAFilterSelect = ({
             max={999}
             onChange={setDeltaNumber}
             disabled={disabled}
+            placeholder={'number'}
+            controls={false}
+            className={'filter-buttons-radius date-input-number'}
           ></InputNumber>
 
-          <Select
-            disabled={disabled}
-            defaultValue=''
-            value={parsedValues['gran']}
-            className={'fa-select--ghost'}
-            onChange={setDeltaGran}
+          <Button
+          disabled={disabled}
+          className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
+          type='link'
+          onClick={() => setDateOptionSelectOpen(true)}
           >
-            <Option value='' disabled>
-              <i>Select:</i>
-            </Option>
-            <Option value='days'>Days</Option>
-            <Option value='week'>Weeks</Option>
-            <Option value='month'>Months</Option>
-            <Option value='quarter'>Quarters</Option>
-          </Select>
-        </div>
+          {parsedValues['gran'] ? dateTimeSelect.get(parsedValues['gran']) : 'Select'}
+          </Button>
+
+          {dateOptionSelectOpen && (
+            <FaSelect
+              options={[['Days'],['Weeks'],['Months'],['Quarters']]}
+              optionClick={(val) => setDeltaGran(dateTimeSelect.get(val[0]))}
+              onClickOutside={() => setDateOptionSelectOpen(false)}
+            ></FaSelect>
+          )}
+      </div>
       );
     }
 
     if (currentPicker.includes(operator)) {
       selectorComponent = (
         <div className={`fa-filter-dateDeltaContainer`}>
-          <Select
-            disabled={disabled}
-            defaultValue=''
-            value={parsedValues['gran']}
-            className={'fa-select--ghost'}
-            onChange={setCurrentGran}
+          <Button
+          disabled={disabled}
+          className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
+          type='link'
+          onClick={() => setDateOptionSelectOpen(true)}
           >
-            <Option value='' disabled>
-              <i>Select:</i>
-            </Option>
-            <Option value='week'>Week</Option>
-            <Option value='month'>Month</Option>
-            <Option value='quarter'>Quarter</Option>
-          </Select>
+          {parsedValues['gran'] ? toCapitalCase(parsedValues['gran']) : 'Select'}
+          </Button>
+
+          {dateOptionSelectOpen && (
+            <FaSelect
+              options={[['Week'],['Month'],['Quarter']]}
+              optionClick={(val) => setCurrentGran(val[0].toLowerCase())}
+              onClickOutside={() => setDateOptionSelectOpen(false)}
+            ></FaSelect>
+          )}
         </div>
       );
     }

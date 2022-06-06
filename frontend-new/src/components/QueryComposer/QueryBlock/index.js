@@ -5,18 +5,20 @@ import styles from './index.module.scss';
 import { Button, Tooltip } from 'antd';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
-
-import { setGroupBy, delGroupBy } from '../../../reducers/coreQuery/middleware';
-
-import FilterBlock from '../FilterBlock';
+import {
+  setGroupBy,
+  delGroupBy,
+  getGroupProperties,
+} from '../../../reducers/coreQuery/middleware';
 import EventFilterWrapper from '../EventFilterWrapper';
-
 import GroupSelect2 from '../GroupSelect2';
 import EventGroupBlock from '../EventGroupBlock';
 import { QUERY_TYPE_FUNNEL } from '../../../utils/constants';
-
 import FaSelect from 'Components/FaSelect';
 import AliasModal from '../AliasModal';
+import { AvailableGroups } from '../../../utils/constants';
+import ORButton from '../../ORButton';
+import { compareFilters, groupFilters } from '../../../utils/global';
 
 function QueryBlock({
   index,
@@ -32,6 +34,8 @@ function QueryBlock({
   delGroupBy,
   userProperties,
   eventProperties,
+  groupProperties,
+  getGroupProperties,
 }) {
   const [isDDVisible, setDDVisible] = useState(false);
   const [isFilterDDVisible, setFilterDDVisible] = useState(false);
@@ -40,7 +44,10 @@ function QueryBlock({
   const [filterProps, setFilterProperties] = useState({
     event: [],
     user: [],
+    group: [],
   });
+
+  const [orFilterIndex, setOrFilterIndex] = useState(-1);
 
   const [isModalVisible, setIsModalVisible] = useState(false);
 
@@ -60,25 +67,38 @@ function QueryBlock({
 
   const alphabetIndex = 'ABCDEF';
 
-  const onChange = (value) => {
-    const newEvent = { alias: '', label: '', filters: [] };
+  const onChange = (group, value) => {
+    const newEvent = { alias: '', label: '', filters: [], group: '' };
     newEvent.label = value;
+    newEvent.group = group;
     setDDVisible(false);
     eventChange(newEvent, index - 1);
   };
 
+  useEffect(()=>{
+    if (!event || event === undefined) {
+      return undefined;
+    }
+    if (AvailableGroups[event.group]) {
+      getGroupProperties(activeProject.id, AvailableGroups[event.group]);
+    }
+  },[event])
+
   useEffect(() => {
     if (!event || event === undefined) {
       return undefined;
-    } // Akhil please check this line
-    const assignFilterProps = Object.assign({}, filterProps);
-
-    if (eventProperties[event.label]) {
-      assignFilterProps.event = eventProperties[event.label];
     }
-    assignFilterProps.user = userProperties;
+    const assignFilterProps = Object.assign({}, filterProps);
+    if (AvailableGroups[event.group]) {
+      assignFilterProps.group = groupProperties[AvailableGroups[event.group]];
+      assignFilterProps.user = [];
+    } else {
+      assignFilterProps.user = userProperties;
+      assignFilterProps.group = [];
+    }
+    assignFilterProps.event = eventProperties[event.label] || [];
     setFilterProperties(assignFilterProps);
-  }, [userProperties, eventProperties]);
+  }, [eventProperties, groupProperties, userProperties]);
 
   const triggerDropDown = () => {
     setDDVisible(true);
@@ -96,7 +116,9 @@ function QueryBlock({
             <GroupSelect2
               groupedProperties={eventOptions}
               placeholder='Select Event'
-              optionClick={(group, val) => onChange(val[1] ? val[1] : val[0])}
+              optionClick={(group, val) =>
+                onChange(group, val[1] ? val[1] : val[0])
+              }
               onClickOutside={() => setDDVisible(false)}
               allowEmpty={true}
             ></GroupSelect2>
@@ -116,8 +138,10 @@ function QueryBlock({
 
   const insertFilters = (filter, filterIndex) => {
     const newEvent = Object.assign({}, event);
+    const filtersSorted = newEvent.filters;
+    filtersSorted.sort(compareFilters);    
     if (filterIndex >= 0) {
-      newEvent.filters = newEvent.filters.map((filt, i) => {
+      newEvent.filters = filtersSorted.map((filt, i) => {
         if (i === filterIndex) {
           return filter;
         }
@@ -132,21 +156,29 @@ function QueryBlock({
 
   const removeFilters = (i) => {
     const newEvent = Object.assign({}, event);
-    if (newEvent.filters[i]) {
-      newEvent.filters.splice(i, 1);
+    const filtersSorted = newEvent.filters;
+    filtersSorted.sort(compareFilters); 
+    if (filtersSorted[i]) {
+      filtersSorted.splice(i, 1);
+      newEvent.filters=filtersSorted;
     }
     eventChange(newEvent, index - 1, 'filters_updated');
   };
-
-  const selectEventFilter = () => {
+  const closeFilter = () => {
+    setFilterDDVisible(false);
+    setOrFilterIndex(-1);
+  };
+  const selectEventFilter = (index) => {
     return (
       <EventFilterWrapper
         filterProps={filterProps}
         activeProject={activeProject}
         event={event}
-        deleteFilter={() => setFilterDDVisible(false)}
+        deleteFilter={closeFilter}
         insertFilter={insertFilters}
-        closeFilter={() => setFilterDDVisible(false)}
+        closeFilter={closeFilter}
+        refValue={index}
+        showORFilter = {true}
       ></EventFilterWrapper>
     );
   };
@@ -230,29 +262,95 @@ function QueryBlock({
 
   const eventFilters = () => {
     const filters = [];
+    let index = 0;
+    let lastRef = 0;
     if (event && event?.filters?.length) {
-      event.filters.forEach((filter, filtInd) => {
-        filters.push(
-          <div key={filtInd} className={'fa--query_block--filters'}>
-            <EventFilterWrapper
-              index={filtInd}
-              filter={filter}
-              event={event}
-              filterProps={filterProps}
-              activeProject={activeProject}
-              deleteFilter={removeFilters}
-              insertFilter={insertFilters}
-              closeFilter={() => setFilterDDVisible(false)}
-            ></EventFilterWrapper>
-          </div>
-        );
-      });
+
+      const group = groupFilters(event.filters, 'ref');
+      const filtersGroupedByRef = Object.values(group);
+      const refValues = Object.keys(group);
+      lastRef = parseInt(refValues[refValues.length-1]);
+
+      filtersGroupedByRef.forEach((filtersGr)=>{
+        const refValue = filtersGr[0].ref;
+        if(filtersGr.length == 1){
+            const filter = filtersGr[0];
+            filters.push(
+              <div className={'fa--query_block--filters flex flex-row'}>
+                <div key={index}>
+                <EventFilterWrapper
+                  index={index}
+                  filter={filter}
+                  event={event}
+                  filterProps={filterProps}
+                  activeProject={activeProject}
+                  deleteFilter={removeFilters}
+                  insertFilter={insertFilters}
+                  closeFilter={closeFilter}
+                  refValue={refValue}
+                ></EventFilterWrapper>
+                </div>
+               {index !== orFilterIndex && (
+                 <ORButton index={index} setOrFilterIndex={setOrFilterIndex}/>
+                )}       
+               {index === orFilterIndex && (
+                  <div key={'init'}>
+                    <EventFilterWrapper
+                      filterProps={filterProps}
+                      activeProject={activeProject}
+                      event={event}
+                      deleteFilter={closeFilter}
+                      insertFilter={insertFilters}
+                      closeFilter={closeFilter}
+                      refValue={refValue}
+                      showOr = {true}
+                    ></EventFilterWrapper>
+                  </div>                
+                )}  
+                </div>     
+            );
+            index+=1;
+        }else{
+          filters.push(
+            <div className={'fa--query_block--filters flex flex-row'}>
+              <div key={index}>
+              <EventFilterWrapper
+                  index={index}
+                  filter={filtersGr[0]}
+                  event={event}
+                  filterProps={filterProps}
+                  activeProject={activeProject}
+                  deleteFilter={removeFilters}
+                  insertFilter={insertFilters}
+                  closeFilter={closeFilter}
+                refValue={refValue}
+                ></EventFilterWrapper>
+              </div>
+              <div key={index+1}>
+              <EventFilterWrapper
+                  index={index+1}
+                  filter={filtersGr[1]}
+                  event={event}
+                  filterProps={filterProps}
+                  activeProject={activeProject}
+                  deleteFilter={removeFilters}
+                  insertFilter={insertFilters}
+                  closeFilter={closeFilter}
+                refValue={refValue}
+                showOr = {true}
+                ></EventFilterWrapper>
+              </div>
+            </div>
+          );
+          index+=2;
+        }
+      })
     }
 
     if (isFilterDDVisible) {
       filters.push(
         <div key={'init'} className={'fa--query_block--filters'}>
-          {selectEventFilter()}
+          {selectEventFilter(lastRef+1)}
         </div>
       );
     }
@@ -403,6 +501,7 @@ const mapStateToProps = (state) => ({
   eventOptions: state.coreQuery.eventOptions,
   activeProject: state.global.active_project,
   userProperties: state.coreQuery.userProperties,
+  groupProperties: state.coreQuery.groupProperties,
   eventProperties: state.coreQuery.eventProperties,
   groupBy: state.coreQuery.groupBy.event,
   eventNames: state.coreQuery.eventNames,
@@ -413,6 +512,7 @@ const mapDispatchToProps = (dispatch) =>
     {
       setGroupBy,
       delGroupBy,
+      getGroupProperties,
     },
     dispatch
   );

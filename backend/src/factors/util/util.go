@@ -39,6 +39,11 @@ type PatternProperties interface {
 const SECONDS_IN_A_DAY int64 = 24 * 60 * 60
 const EVENT_USER_CACHE_EXPIRY_SECS = 1728000
 
+// timeoutForClearbitEnrichment
+const TimeoutOneSecond = 1 * time.Second
+const TimeoutTwoSecond = 2 * time.Second
+const TimeoutFiveSecond = 5 * time.Second
+
 type TimeZoneString string
 
 const (

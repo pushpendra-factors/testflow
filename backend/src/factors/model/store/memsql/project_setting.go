@@ -82,6 +82,32 @@ func (store *MemSQL) GetProjectSetting(projectId uint64) (*model.ProjectSetting,
 	return &projectSetting, http.StatusFound
 }
 
+func (store *MemSQL) GetClearbitKeyFromProjectSetting(projectId uint64) (string, int) {
+	logFields := log.Fields{
+		"project_id": projectId,
+	}
+
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	db := C.GetServices().Db
+	logCtx := log.WithFields(logFields)
+
+	if valid := isValidProjectScope(projectId); !valid {
+		return "", http.StatusBadRequest
+	}
+
+	var projectSetting model.ProjectSetting
+	if err := db.Where("project_id = ?", projectId).Select("clearbit_key").Find(&projectSetting).Error; err != nil {
+		logCtx.WithError(err).Error("Getting clear_bit key from project_setting failed")
+
+		if gorm.IsRecordNotFoundError(err) {
+			return "", http.StatusNotFound
+		}
+		return "", http.StatusInternalServerError
+	}
+
+	return projectSetting.ClearbitKey, http.StatusFound
+}
+
 type ProjectSettingChannelResponse struct {
 	Setting   *model.ProjectSetting
 	ErrorCode int

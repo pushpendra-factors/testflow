@@ -3,6 +3,8 @@
 export const FETCH_EVENTS = 'FETCH_EVENTS';
 export const FETCH_EVENT_PROPERTIES = 'FETCH_EVENT_PROPERTIES';
 export const FETCH_USER_PROPERTIES = 'FETCH_USER_PROPERTIES';
+export const FETCH_GROUP_PROPERTIES = 'FETCH_GROUP_PROPERTIES';
+export const SET_GROUP_PROP_NAME = 'SET_GROUP_PROP_NAME';
 export const SET_USER_PROP_NAME = 'SET_USER_PROP_NAME';
 export const SET_EVENT_PROP_NAME = 'SET_EVENT_PROP_NAME';
 export const INITIALIZE_GROUPBY = 'INITIALIZE_GROUPBY';
@@ -40,6 +42,18 @@ export const setEventsDisplayAction = (displayNames, status = 'started') => {
 
 export const fetchUserPropertiesAction = (userProps) => {
   return { type: FETCH_USER_PROPERTIES, payload: userProps};
+}
+
+export const fetchGroupPropertiesAction = (groupProps, groupName) => {
+  return {
+    type: FETCH_GROUP_PROPERTIES,
+    payload: groupProps,
+    groupName: groupName,
+  };
+};
+
+export const setGroupPropertiesNamesAction = (groupPropsDisplayNames) => {
+  return { type: SET_GROUP_PROP_NAME, payload: groupPropsDisplayNames};
 }
 
 export const setUserPropertiesNamesAction = (userPropsDisplayNames) => {

@@ -14,9 +14,12 @@ import {
   setTacticOfferTypeAction,
   setEventsDisplayAction,
   setUserPropertiesNamesAction,
-  setEventPropertiesNamesAction, resetGroupByAction
+  setEventPropertiesNamesAction,
+  setGroupPropertiesNamesAction,
+  fetchGroupPropertiesAction,
+  resetGroupByAction
 } from './actions';
-import { getEventNames, fetchEventProperties, fetchUserProperties, fetchCampaignConfig } from './services';
+import { getEventNames, fetchEventProperties, fetchUserProperties, fetchGroupProperties, fetchCampaignConfig } from './services';
 import { convertToEventOptions, convertPropsToOptions, convertCampaignConfig } from './utils';
 
 export const fetchEventNames = (projectId) => {
@@ -33,6 +36,20 @@ export const fetchEventNames = (projectId) => {
     });
   };
 };
+
+export const getGroupProperties = (projectId, groupName) => {
+  return (dispatch) => {
+    return new Promise((resolve, reject) => {
+      fetchGroupProperties(projectId, groupName).then((response) => {
+        const options = convertPropsToOptions(response.data?.properties, response.data?.display_names);
+        resolve(dispatch(setGroupPropertiesNamesAction(response.data?.display_names)));
+        resolve(dispatch(fetchGroupPropertiesAction(options, groupName)));
+      }).catch((err) => {
+        resolve(dispatch(fetchGroupPropertiesAction({})));
+      })
+    })
+  }
+}
  
 export const getUserProperties = (projectId, queryType = '') => {
   return (dispatch) => {

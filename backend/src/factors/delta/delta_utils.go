@@ -305,13 +305,17 @@ type DiffMetric struct {
 	FactorChange  float64     `json:"factor"`
 }
 
-type WithinPeriodInsightsKpi map[string]*MetricInfo
+type WithinPeriodInsightsKpi struct {
+	MetricInfo *MetricInfo `json:"metric"`
+	ScaleInfo  *MetricInfo `json:"scale"`
+}
 
 type CrossPeriodInsightsKpi struct {
-	Periods       PeriodPair                `json:"periods"`
-	Target        map[string]*CpiMetricInfo `json:"target"`
-	BaseAndTarget map[string]*CpiMetricInfo `json:"base_target"`
-	JSDivergence  JSDType                   `json:"jsd"`
+	Periods       PeriodPair     `json:"periods"`
+	Target        *CpiMetricInfo `json:"target"`
+	BaseAndTarget *CpiMetricInfo `json:"base_target"`
+	ScaleInfo     *CpiMetricInfo `json:"scale"`
+	JSDivergence  JSDType        `json:"jsd"`
 }
 
 type CpiMetricInfo struct {

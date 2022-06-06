@@ -81,6 +81,7 @@ func main() {
 	blacklistedProjectIDPropertyTypeFromDB := flag.String("blacklisted_project_ids_property_type_check_from_db", "", "Blocked project id for property type check from db.")
 	cacheSortedSet := flag.Bool("cache_with_sorted_set", false, "Cache with sorted set keys")
 	allowSupportForUserPropertiesInIdentifyCall := flag.String("allow_support_for_user_properties_in_identify_call", "", "")
+	clearbitEnabled := flag.Int("clearbit_enabled", 0, "To enable clearbit enrichment")
 
 	flag.Parse()
 
@@ -128,6 +129,7 @@ func main() {
 		DuplicateQueueRedisPort: *duplicateQueueRedisPort,
 		SentryDSN:               *sentryDSN,
 		AllowSupportForUserPropertiesInIdentifyCall: *allowSupportForUserPropertiesInIdentifyCall,
+		ClearbitEnabled: *clearbitEnabled,
 	}
 	C.InitConf(config)
 

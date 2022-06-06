@@ -514,6 +514,9 @@ $cq-card-transition: transform 0.2s ease-in-out;
 .btn-right-round{
   border-radius: 0 100px 100px 0 !important;
 }
+.btn-total-round{
+  border-radius: 100px !important;
+}
 .filter-buttons-radius{
   border-radius: 0px !important;
 }
@@ -525,4 +528,12 @@ $cq-card-transition: transform 0.2s ease-in-out;
 }
 .filter-remove-button:hover{
   background: #E7E9ED !important;
+}
+.plus-button{
+  margin-left: 8px;
+  padding-top: 1px;
+}
+.date-input-number{
+  margin-left: 2px;
+  color: #1E89FF;
 }

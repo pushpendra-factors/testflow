@@ -56,6 +56,7 @@ func main() {
 	blacklistedProjectIDPropertyTypeFromDB := flag.String("blacklisted_project_ids_property_type_check_from_db", "", "Blocked project id for property type check from db.")
 	numDocRoutines := flag.Int("num_unique_doc_routines", 1, "Number of unique document go routines per project")
 	minSyncTimestamp := flag.Int64("min_sync_timestamp", 0, "Min timstamp from where to process records")
+	clearbitEnabled := flag.Int("clearbit_enabled", 0, "To enable clearbit enrichment")
 
 	flag.Parse()
 	if *env != "development" && *env != "staging" && *env != "production" {
@@ -102,6 +103,7 @@ func main() {
 		UseSourcePropertyOverwriteByProjectIDs: *useSourcePropertyOverwriteByProjectID,
 		CaptureSourceInUsersTable:              *captureSourceInUsersTable,
 		RestrictReusingUsersByCustomerUserId:   *restrictReusingUsersByCustomerUserId,
+		ClearbitEnabled:                        *clearbitEnabled,
 	}
 
 	C.InitConf(config)

@@ -247,6 +247,7 @@ type Configuration struct {
 	SlackAppClientID                                string
 	SlackAppClientSecret                            string
 	EnableDryRunAlerts                              bool
+	ClearbitEnabled                                 int
 	UseSalesforceV54APIByProjectID                  string
 }
 
@@ -1731,6 +1732,10 @@ func GetTokensFromStringListAsString(stringList string) []string {
 
 func GetAttributionDebug() int {
 	return configuration.AttributionDebug
+}
+
+func GetClearbitEnabled() int {
+	return configuration.ClearbitEnabled
 }
 
 func GetOnlyAttributionDashboardCaching() int {

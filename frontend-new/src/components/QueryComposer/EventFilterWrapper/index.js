@@ -13,13 +13,16 @@ import {
   fetchEventPropertyValues,
   fetchUserPropertyValues,
   fetchChannelObjPropertyValues,
+  fetchGroupPropertyValues,
 } from '../../../reducers/coreQuery/services';
 import FAFilterSelect from '../../FaFilterSelect';
+import { AvailableGroups } from '../../../utils/constants';
 
 const defaultOpProps = DEFAULT_OPERATOR_PROPS;
 
 export default function EventFilterWrapper({
   index,
+  refValue,
   blockType = 'event',
   filterType = 'analytics',
   typeProps,
@@ -29,12 +32,13 @@ export default function EventFilterWrapper({
   event,
   filter,
   delIcon = 'remove',
-  propsConstants = ['user', 'event'],
+  propsConstants = ['user', 'event', 'group'],
   extraClass,
   delBtnClass,
   deleteFilter,
   insertFilter,
   closeFilter,
+  showOr,
 }) {
   const [filterTypeState, setFilterTypeState] = useState('props');
   const [groupCollapseState, setGroupCollapse] = useState({});
@@ -65,6 +69,10 @@ export default function EventFilterWrapper({
       {
         label: 'User Properties',
         icon: 'user',
+      },
+      {
+        label: 'Group Properties',
+        icon: 'group',
       },
     ],
     operator: operatorProps,
@@ -110,6 +118,7 @@ export default function EventFilterWrapper({
         applyFilter={applyFilter}
         setValuesByProps={setValuesByProps}
         filter={filter}
+        refValue={refValue}
       ></FAFilterSelect>
     );
   };
@@ -205,6 +214,25 @@ export default function EventFilterWrapper({
           fetchEventPropertyValues(
             activeProject.id,
             event.label,
+            newFilterState.props[0]
+          )
+            .then((res) => {
+              const ddValues = Object.assign({}, dropDownValues);
+              ddValues[newFilterState.props[0]] = [...res.data, '$none'];
+              setDropDownValues(ddValues);
+            })
+            .catch(() => {
+              console.log(err);
+              const ddValues = Object.assign({}, dropDownValues);
+              ddValues[newFilterState.props[0]] = ['$none'];
+              setDropDownValues(ddValues);
+            });
+        }
+      } else if (newFilterState.props[2] === 'group') {
+        if (!dropDownValues[newFilterState.props[0]]) {
+          fetchGroupPropertyValues(
+            activeProject.id,
+            AvailableGroups[event.group],
             newFilterState.props[0]
           )
             .then((res) => {
@@ -630,6 +658,24 @@ export default function EventFilterWrapper({
               setDropDownValues(ddValues);
             });
         }
+      } else if (props[3] === 'group') {
+        if (!dropDownValues[props[0]]) {
+          fetchEventPropertyValues(
+            activeProject.id,
+            AvailableGroups[event.group],
+            props[1]
+          )
+            .then((res) => {
+              const ddValues = Object.assign({}, dropDownValues);
+              ddValues[props[1]] = [...res.data, '$none'];
+              setDropDownValues(ddValues);
+            })
+            .catch((err) => {
+              const ddValues = Object.assign({}, dropDownValues);
+              ddValues[props[0]] = ['$none'];
+              setDropDownValues(ddValues);
+            });
+        }
       }
     }
   };
@@ -647,6 +693,7 @@ export default function EventFilterWrapper({
           operatorOpts={filterDropDownOptions.operator}
           valueOpts={dropDownValues}
           applyFilter={applyFilter}
+          refValue={refValue}
           setValuesByProps={setValuesByProps}
         ></FAFilterSelect>
       </>
@@ -654,12 +701,18 @@ export default function EventFilterWrapper({
   };
 
   return (
-    <div className={`flex items-center relative w-full`}>
-      {
+    <div className={`flex items-center relative`}>
+        {!showOr && (
         <Text level={8} type={'title'} extraClass={'m-0 mr-2'} weight={'thin'}>
           {index >= 1 ? 'and' : 'Filter by'}
         </Text>
-      }
+        )}
+        {showOr && (
+        <Text level={8} type={'title'} extraClass={'m-0 mr-2 ml-2'} weight={'thin'}>
+          or
+        </Text>
+        )}
+
       <div className={`relative flex`}>
         {filter ? renderFilterContent() : filterSelComp()}
       </div>

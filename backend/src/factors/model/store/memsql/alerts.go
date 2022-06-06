@@ -274,7 +274,7 @@ func (store *MemSQL) CreateAlert(projectID uint64, alert model.Alert) (model.Ale
 	alertRecord := model.Alert{
 		ID:                 U.GetUUID(),
 		ProjectID:          projectID,
-		AlertName:          store.getNameForAlert(alertDescription.Name, alertDescription.Operator, alertDescription.Value),
+		AlertName:          alert.AlertName,
 		CreatedBy:          alert.CreatedBy,
 		AlertType:          alert.AlertType,
 		AlertDescription:   alert.AlertDescription,

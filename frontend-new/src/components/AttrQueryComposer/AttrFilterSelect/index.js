@@ -33,7 +33,7 @@ const AttrFilterSelect = ({
   const [operatorState, setOperatorState] = useState('=');
   const [valuesState, setValuesState] = useState(null);
 
-  const [propSelectOpen, setPropSelectOpen] = useState(false);
+  const [propSelectOpen, setPropSelectOpen] = useState(true);
   const [operSelectOpen, setOperSelectOpen] = useState(false);
   const [valuesSelectionOpen, setValuesSelectionOpen] = useState(false);
 

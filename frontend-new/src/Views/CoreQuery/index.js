@@ -166,7 +166,7 @@ function CoreQuery({
   const [attributionMetrics, setAttributionMetrics] = useState([
     ...ATTRIBUTION_METRICS,
   ]);
-
+  
   const dispatch = useDispatch();
   const {
     groupBy,

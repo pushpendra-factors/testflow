@@ -12,7 +12,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var sessionMetricToFunc = map[string]func(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, error){
+var sessionMetricToFunc = map[string]func(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, *MetricInfo, error){
 	M.TotalSessions:          GetSessionTotalSessions,
 	M.UniqueUsers:            GetSessionUniqueUsers,
 	M.NewUsers:               GetSessionNewUsers,
@@ -29,25 +29,33 @@ var sessionMetricToFunc = map[string]func(queryEvent string, scanner *bufio.Scan
 	M.EngagementRate:         GetSessionEngagementRate,
 }
 
-func GetSessionMetrics(metricNames []string, queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (map[string]*MetricInfo, error) {
-	metricsInfoMap := make(map[string]*MetricInfo)
-	for _, metric := range metricNames {
+func GetSessionMetrics(metricNames []string, queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*WithinPeriodInsightsKpi, error) {
+	var wpi WithinPeriodInsightsKpi
+	for i, metric := range metricNames {
+		if i == 1 {
+			break
+		}
 		if _, ok := sessionMetricToFunc[metric]; !ok {
 			continue
 		}
-		if info, err := sessionMetricToFunc[metric](queryEvent, scanner, propFilter, propsToEval); err != nil {
+		if info, scale, err := sessionMetricToFunc[metric](queryEvent, scanner, propFilter, propsToEval); err != nil {
 			log.WithError(err).Error("error getSessionMetrics")
+			return nil, err
 		} else {
-			metricsInfoMap[metric] = info
+			wpi.MetricInfo = info
+			wpi.ScaleInfo = scale
 		}
 	}
-	return metricsInfoMap, nil
+	return &wpi, nil
 }
 
-func GetSessionTotalSessions(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, error) {
+func GetSessionTotalSessions(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, *MetricInfo, error) {
 	var sessionsCount float64
+	var globalScale float64
 	var reqMap = make(map[string]map[string]float64)
+	var scaleMap = make(map[string]map[string]float64)
 	var info MetricInfo
+	var scale MetricInfo
 
 	for scanner.Scan() {
 		txtline := scanner.Text()
@@ -55,7 +63,7 @@ func GetSessionTotalSessions(queryEvent string, scanner *bufio.Scanner, propFilt
 		var eventDetails P.CounterEventFormat
 		if err := json.Unmarshal([]byte(txtline), &eventDetails); err != nil {
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
-			return &MetricInfo{}, err
+			return nil, nil, err
 		}
 		eventNameString := eventDetails.EventName
 
@@ -66,10 +74,12 @@ func GetSessionTotalSessions(queryEvent string, scanner *bufio.Scanner, propFilt
 
 		//check if event contains all requiredProps(constraint)
 		if yes, err := eventSatisfiesConstraints(eventDetails, propFilter); err != nil {
-			return &MetricInfo{}, err
+			return nil, nil, err
 		} else if !yes {
 			continue
 		}
+
+		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
 		//global
 		sessionsCount++
@@ -99,16 +109,19 @@ func GetSessionTotalSessions(queryEvent string, scanner *bufio.Scanner, propFilt
 		}
 	}
 	info = MetricInfo{Global: sessionsCount, Features: reqMap}
-
-	return &info, nil
+	scale = MetricInfo{Global: globalScale, Features: scaleMap}
+	return &info, &scale, nil
 }
 
-func GetSessionUniqueUsers(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, error) {
+func GetSessionUniqueUsers(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, *MetricInfo, error) {
 	uniqueUsers := make(map[string]bool)
 	uniqueUsersFeat := make(map[string]map[string]bool)
 	var unique float64
+	var globalScale float64
 	var reqMap = make(map[string]map[string]float64)
+	var scaleMap = make(map[string]map[string]float64)
 	var info MetricInfo
+	var scale MetricInfo
 
 	for scanner.Scan() {
 		txtline := scanner.Text()
@@ -116,7 +129,7 @@ func GetSessionUniqueUsers(queryEvent string, scanner *bufio.Scanner, propFilter
 		var eventDetails P.CounterEventFormat
 		if err := json.Unmarshal([]byte(txtline), &eventDetails); err != nil {
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
-			return nil, err
+			return nil, nil, err
 		}
 		eventNameString := eventDetails.EventName
 		userId := eventDetails.UserId
@@ -128,10 +141,12 @@ func GetSessionUniqueUsers(queryEvent string, scanner *bufio.Scanner, propFilter
 
 		//check if event contains all requiredProps(constraint)
 		if yes, err := eventSatisfiesConstraints(eventDetails, propFilter); err != nil {
-			return nil, err
+			return nil, nil, err
 		} else if !yes {
 			continue
 		}
+
+		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
 		//global
 		if _, ok := uniqueUsers[userId]; !ok {
@@ -171,13 +186,17 @@ func GetSessionUniqueUsers(queryEvent string, scanner *bufio.Scanner, propFilter
 		}
 	}
 	info = MetricInfo{Global: unique, Features: reqMap}
-	return &info, nil
+	scale = MetricInfo{Global: globalScale, Features: scaleMap}
+	return &info, &scale, nil
 }
 
-func GetSessionNewUsers(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, error) {
+func GetSessionNewUsers(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, *MetricInfo, error) {
 	var new float64
+	var globalScale float64
 	var reqMap = make(map[string]map[string]float64)
+	var scaleMap = make(map[string]map[string]float64)
 	var info MetricInfo
+	var scale MetricInfo
 
 	for scanner.Scan() {
 		txtline := scanner.Text()
@@ -185,7 +204,7 @@ func GetSessionNewUsers(queryEvent string, scanner *bufio.Scanner, propFilter []
 		var eventDetails P.CounterEventFormat
 		if err := json.Unmarshal([]byte(txtline), &eventDetails); err != nil {
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
-			return nil, err
+			return nil, nil, err
 		}
 		eventNameString := eventDetails.EventName
 
@@ -196,10 +215,12 @@ func GetSessionNewUsers(queryEvent string, scanner *bufio.Scanner, propFilter []
 
 		//check if event contains all requiredProps(constraint)
 		if yes, err := eventSatisfiesConstraints(eventDetails, propFilter); err != nil {
-			return nil, err
+			return nil, nil, err
 		} else if !yes {
 			continue
 		}
+
+		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
 		//check if new user
 		if first, ok := eventDetails.EventProperties[U.SP_IS_FIRST_SESSION]; ok {
@@ -241,15 +262,19 @@ func GetSessionNewUsers(queryEvent string, scanner *bufio.Scanner, propFilter []
 	}
 	info = MetricInfo{Global: new, Features: reqMap}
 
-	return &info, nil
+	scale = MetricInfo{Global: globalScale, Features: scaleMap}
+	return &info, &scale, nil
 }
 
-func GetSessionRepeatUsers(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, error) {
+func GetSessionRepeatUsers(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, *MetricInfo, error) {
 	uniqueUsers := make(map[string]bool)
 	uniqueUsersFeat := make(map[string]map[string]bool)
 	var repeat float64
+	var globalScale float64
 	var reqMap = make(map[string]map[string]float64)
+	var scaleMap = make(map[string]map[string]float64)
 	var info MetricInfo
+	var scale MetricInfo
 
 	for scanner.Scan() {
 		txtline := scanner.Text()
@@ -257,7 +282,7 @@ func GetSessionRepeatUsers(queryEvent string, scanner *bufio.Scanner, propFilter
 		var eventDetails P.CounterEventFormat
 		if err := json.Unmarshal([]byte(txtline), &eventDetails); err != nil {
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
-			return nil, err
+			return nil, nil, err
 		}
 		eventNameString := eventDetails.EventName
 		userId := eventDetails.UserId
@@ -269,10 +294,12 @@ func GetSessionRepeatUsers(queryEvent string, scanner *bufio.Scanner, propFilter
 
 		//check if event contains all requiredProps(constraint)
 		if yes, err := eventSatisfiesConstraints(eventDetails, propFilter); err != nil {
-			return nil, err
+			return nil, nil, err
 		} else if !yes {
 			continue
 		}
+
+		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
 		//global
 		if _, ok := uniqueUsers[userId]; !ok {
@@ -341,18 +368,22 @@ func GetSessionRepeatUsers(queryEvent string, scanner *bufio.Scanner, propFilter
 	}
 
 	info = MetricInfo{Global: repeat, Features: reqMap}
-	return &info, nil
+	scale = MetricInfo{Global: globalScale, Features: scaleMap}
+	return &info, &scale, nil
 }
 
-func GetSessionSessionsPerUser(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, error) {
+func GetSessionSessionsPerUser(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, *MetricInfo, error) {
 	uniqueUsers := make(map[string]bool)
 	uniqueUsersFeat := make(map[string]map[string]bool)
 	featInfoMap := make(map[string]map[string]Fraction)
 	var unique float64
 	var sessionsCount float64
 	var sessionsPerUser float64
+	var globalScale float64
 	var reqMap = make(map[string]map[string]float64)
+	var scaleMap = make(map[string]map[string]float64)
 	var info MetricInfo
+	var scale MetricInfo
 
 	for scanner.Scan() {
 		txtline := scanner.Text()
@@ -360,7 +391,7 @@ func GetSessionSessionsPerUser(queryEvent string, scanner *bufio.Scanner, propFi
 		var eventDetails P.CounterEventFormat
 		if err := json.Unmarshal([]byte(txtline), &eventDetails); err != nil {
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
-			return nil, err
+			return nil, nil, err
 		}
 		eventNameString := eventDetails.EventName
 		userId := eventDetails.UserId
@@ -372,10 +403,12 @@ func GetSessionSessionsPerUser(queryEvent string, scanner *bufio.Scanner, propFi
 
 		//check if event contains all requiredProps(constraint)
 		if yes, err := eventSatisfiesConstraints(eventDetails, propFilter); err != nil {
-			return nil, err
+			return nil, nil, err
 		} else if !yes {
 			continue
 		}
+
+		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
 		//global
 		sessionsCount++
@@ -436,13 +469,17 @@ func GetSessionSessionsPerUser(queryEvent string, scanner *bufio.Scanner, propFi
 	}
 
 	info = MetricInfo{Global: sessionsPerUser, Features: reqMap}
-	return &info, nil
+	scale = MetricInfo{Global: globalScale, Features: scaleMap}
+	return &info, &scale, nil
 }
 
-func GetSessionEngagedSessions(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, error) {
+func GetSessionEngagedSessions(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, *MetricInfo, error) {
 	var engaged float64
+	var globalScale float64
 	var reqMap = make(map[string]map[string]float64)
+	var scaleMap = make(map[string]map[string]float64)
 	var info MetricInfo
+	var scale MetricInfo
 
 	for scanner.Scan() {
 		txtline := scanner.Text()
@@ -450,7 +487,7 @@ func GetSessionEngagedSessions(queryEvent string, scanner *bufio.Scanner, propFi
 		var eventDetails P.CounterEventFormat
 		if err := json.Unmarshal([]byte(txtline), &eventDetails); err != nil {
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
-			return nil, err
+			return nil, nil, err
 		}
 		eventNameString := eventDetails.EventName
 
@@ -461,10 +498,12 @@ func GetSessionEngagedSessions(queryEvent string, scanner *bufio.Scanner, propFi
 
 		//check if event contains all requiredProps(constraint)
 		if yes, err := eventSatisfiesConstraints(eventDetails, propFilter); err != nil {
-			return nil, err
+			return nil, nil, err
 		} else if !yes {
 			continue
 		}
+
+		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
 		//check if engaged
 		isEngaged := false
@@ -513,15 +552,19 @@ func GetSessionEngagedSessions(queryEvent string, scanner *bufio.Scanner, propFi
 	}
 	info = MetricInfo{Global: engaged, Features: reqMap}
 
-	return &info, nil
+	scale = MetricInfo{Global: globalScale, Features: scaleMap}
+	return &info, &scale, nil
 }
 
-func GetSessionEngagedUsers(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, error) {
+func GetSessionEngagedUsers(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, *MetricInfo, error) {
 	uniqueUsers := make(map[string]bool)
 	uniqueUsersFeat := make(map[string]map[string]bool)
 	var unique float64
+	var globalScale float64
 	var reqMap = make(map[string]map[string]float64)
+	var scaleMap = make(map[string]map[string]float64)
 	var info MetricInfo
+	var scale MetricInfo
 
 	for scanner.Scan() {
 		txtline := scanner.Text()
@@ -529,7 +572,7 @@ func GetSessionEngagedUsers(queryEvent string, scanner *bufio.Scanner, propFilte
 		var eventDetails P.CounterEventFormat
 		if err := json.Unmarshal([]byte(txtline), &eventDetails); err != nil {
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
-			return nil, err
+			return nil, nil, err
 		}
 		eventNameString := eventDetails.EventName
 		userId := eventDetails.UserId
@@ -541,10 +584,12 @@ func GetSessionEngagedUsers(queryEvent string, scanner *bufio.Scanner, propFilte
 
 		//check if event contains all requiredProps(constraint)
 		if yes, err := eventSatisfiesConstraints(eventDetails, propFilter); err != nil {
-			return nil, err
+			return nil, nil, err
 		} else if !yes {
 			continue
 		}
+
+		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
 		//check if engaged
 		isEngaged := false
@@ -602,18 +647,22 @@ func GetSessionEngagedUsers(queryEvent string, scanner *bufio.Scanner, propFilte
 		}
 	}
 	info = MetricInfo{Global: unique, Features: reqMap}
-	return &info, nil
+	scale = MetricInfo{Global: globalScale, Features: scaleMap}
+	return &info, &scale, nil
 }
 
-func GetSessionEngagedSessionsPerUser(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, error) {
+func GetSessionEngagedSessionsPerUser(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, *MetricInfo, error) {
 	uniqueUsers := make(map[string]bool)
 	uniqueUsersFeat := make(map[string]map[string]bool)
 	featInfoMap := make(map[string]map[string]Fraction)
 	var unique float64
 	var sessionsCount float64
 	var sessionsPerUser float64
+	var globalScale float64
 	var reqMap = make(map[string]map[string]float64)
+	var scaleMap = make(map[string]map[string]float64)
 	var info MetricInfo
+	var scale MetricInfo
 
 	for scanner.Scan() {
 		txtline := scanner.Text()
@@ -621,7 +670,7 @@ func GetSessionEngagedSessionsPerUser(queryEvent string, scanner *bufio.Scanner,
 		var eventDetails P.CounterEventFormat
 		if err := json.Unmarshal([]byte(txtline), &eventDetails); err != nil {
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
-			return nil, err
+			return nil, nil, err
 		}
 		eventNameString := eventDetails.EventName
 		userId := eventDetails.UserId
@@ -633,10 +682,12 @@ func GetSessionEngagedSessionsPerUser(queryEvent string, scanner *bufio.Scanner,
 
 		//check if event contains all requiredProps(constraint)
 		if yes, err := eventSatisfiesConstraints(eventDetails, propFilter); err != nil {
-			return nil, err
+			return nil, nil, err
 		} else if !yes {
 			continue
 		}
+
+		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
 		//check if engaged
 		isEngaged := false
@@ -715,13 +766,17 @@ func GetSessionEngagedSessionsPerUser(queryEvent string, scanner *bufio.Scanner,
 	}
 
 	info = MetricInfo{Global: sessionsPerUser, Features: reqMap}
-	return &info, nil
+	scale = MetricInfo{Global: globalScale, Features: scaleMap}
+	return &info, &scale, nil
 }
 
-func GetSessionTotalTimeOnSite(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, error) {
+func GetSessionTotalTimeOnSite(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, *MetricInfo, error) {
 	var totalSessionTime float64
+	var globalScale float64
 	var reqMap = make(map[string]map[string]float64)
+	var scaleMap = make(map[string]map[string]float64)
 	var info MetricInfo
+	var scale MetricInfo
 
 	for scanner.Scan() {
 		txtline := scanner.Text()
@@ -729,7 +784,7 @@ func GetSessionTotalTimeOnSite(queryEvent string, scanner *bufio.Scanner, propFi
 		var eventDetails P.CounterEventFormat
 		if err := json.Unmarshal([]byte(txtline), &eventDetails); err != nil {
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
-			return &MetricInfo{}, err
+			return nil, nil, err
 		}
 		eventNameString := eventDetails.EventName
 
@@ -740,10 +795,12 @@ func GetSessionTotalTimeOnSite(queryEvent string, scanner *bufio.Scanner, propFi
 
 		//check if event contains all requiredProps(constraint)
 		if yes, err := eventSatisfiesConstraints(eventDetails, propFilter); err != nil {
-			return &MetricInfo{}, err
+			return nil, nil, err
 		} else if !yes {
 			continue
 		}
+
+		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
 		if timeSpent, ok := ExistsInProps(U.SP_SPENT_TIME, eventDetails, "ep"); ok {
 			timeOnSite := timeSpent.(float64)
@@ -780,16 +837,20 @@ func GetSessionTotalTimeOnSite(queryEvent string, scanner *bufio.Scanner, propFi
 
 	info = MetricInfo{Global: totalSessionTime, Features: reqMap}
 
-	return &info, nil
+	scale = MetricInfo{Global: globalScale, Features: scaleMap}
+	return &info, &scale, nil
 }
 
-func GetSessionAvgSessionDuration(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, error) {
+func GetSessionAvgSessionDuration(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, *MetricInfo, error) {
 	var avgSessionDuration float64
 	var sessionsCount float64
 	var totalSessionTime float64
 	var featInfoMap = make(map[string]map[string]Fraction)
+	var globalScale float64
 	var reqMap = make(map[string]map[string]float64)
+	var scaleMap = make(map[string]map[string]float64)
 	var info MetricInfo
+	var scale MetricInfo
 
 	for scanner.Scan() {
 		txtline := scanner.Text()
@@ -797,7 +858,7 @@ func GetSessionAvgSessionDuration(queryEvent string, scanner *bufio.Scanner, pro
 		var eventDetails P.CounterEventFormat
 		if err := json.Unmarshal([]byte(txtline), &eventDetails); err != nil {
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
-			return &MetricInfo{}, err
+			return nil, nil, err
 		}
 		eventNameString := eventDetails.EventName
 
@@ -808,10 +869,12 @@ func GetSessionAvgSessionDuration(queryEvent string, scanner *bufio.Scanner, pro
 
 		//check if event contains all requiredProps(constraint)
 		if yes, err := eventSatisfiesConstraints(eventDetails, propFilter); err != nil {
-			return &MetricInfo{}, err
+			return nil, nil, err
 		} else if !yes {
 			continue
 		}
+
+		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
 		if timeSpent, ok := ExistsInProps(U.SP_SPENT_TIME, eventDetails, "ep"); ok {
 			timeSpent := timeSpent.(float64)
@@ -865,16 +928,20 @@ func GetSessionAvgSessionDuration(queryEvent string, scanner *bufio.Scanner, pro
 	}
 	info = MetricInfo{Global: avgSessionDuration, Features: reqMap}
 
-	return &info, nil
+	scale = MetricInfo{Global: globalScale, Features: scaleMap}
+	return &info, &scale, nil
 }
 
-func GetSessionAvgPageViewsPerSession(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, error) {
+func GetSessionAvgPageViewsPerSession(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, *MetricInfo, error) {
 	var totalSessionPageCounts float64
 	var sessionsCount float64
 	var avgPageViewsPerSession float64
 	var featInfoMap = make(map[string]map[string]Fraction)
+	var globalScale float64
 	var reqMap = make(map[string]map[string]float64)
+	var scaleMap = make(map[string]map[string]float64)
 	var info MetricInfo
+	var scale MetricInfo
 
 	for scanner.Scan() {
 		txtline := scanner.Text()
@@ -882,7 +949,7 @@ func GetSessionAvgPageViewsPerSession(queryEvent string, scanner *bufio.Scanner,
 		var eventDetails P.CounterEventFormat
 		if err := json.Unmarshal([]byte(txtline), &eventDetails); err != nil {
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
-			return &MetricInfo{}, err
+			return nil, nil, err
 		}
 		eventNameString := eventDetails.EventName
 
@@ -893,10 +960,12 @@ func GetSessionAvgPageViewsPerSession(queryEvent string, scanner *bufio.Scanner,
 
 		//check if event contains all requiredProps(constraint)
 		if yes, err := eventSatisfiesConstraints(eventDetails, propFilter); err != nil {
-			return &MetricInfo{}, err
+			return nil, nil, err
 		} else if !yes {
 			continue
 		}
+
+		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
 		//global
 		sessionsCount++
@@ -965,16 +1034,20 @@ func GetSessionAvgPageViewsPerSession(queryEvent string, scanner *bufio.Scanner,
 
 	info = MetricInfo{Global: avgPageViewsPerSession, Features: reqMap}
 
-	return &info, nil
+	scale = MetricInfo{Global: globalScale, Features: scaleMap}
+	return &info, &scale, nil
 }
 
-func GetSessionAvgInitialPageLoadTime(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, error) {
+func GetSessionAvgInitialPageLoadTime(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, *MetricInfo, error) {
 	var avgInitialPageLoadTime float64
 	var sessionsCount float64
 	var initialPageLoadTime float64
 	var featInfoMap = make(map[string]map[string]Fraction)
+	var globalScale float64
 	var reqMap = make(map[string]map[string]float64)
+	var scaleMap = make(map[string]map[string]float64)
 	var info MetricInfo
+	var scale MetricInfo
 
 	for scanner.Scan() {
 		txtline := scanner.Text()
@@ -982,7 +1055,7 @@ func GetSessionAvgInitialPageLoadTime(queryEvent string, scanner *bufio.Scanner,
 		var eventDetails P.CounterEventFormat
 		if err := json.Unmarshal([]byte(txtline), &eventDetails); err != nil {
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
-			return &MetricInfo{}, err
+			return nil, nil, err
 		}
 		eventNameString := eventDetails.EventName
 
@@ -993,10 +1066,12 @@ func GetSessionAvgInitialPageLoadTime(queryEvent string, scanner *bufio.Scanner,
 
 		//check if event contains all requiredProps(constraint)
 		if yes, err := eventSatisfiesConstraints(eventDetails, propFilter); err != nil {
-			return &MetricInfo{}, err
+			return nil, nil, err
 		} else if !yes {
 			continue
 		}
+
+		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
 		if time, ok := ExistsInProps(U.SP_INITIAL_PAGE_LOAD_TIME, eventDetails, "ep"); ok {
 			time := time.(float64)
@@ -1049,16 +1124,20 @@ func GetSessionAvgInitialPageLoadTime(queryEvent string, scanner *bufio.Scanner,
 	}
 	info = MetricInfo{Global: avgInitialPageLoadTime, Features: reqMap}
 
-	return &info, nil
+	scale = MetricInfo{Global: globalScale, Features: scaleMap}
+	return &info, &scale, nil
 }
 
-func GetSessionBounceRate(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, error) {
+func GetSessionBounceRate(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, *MetricInfo, error) {
 	var bounceSessions float64
 	var sessionsCount float64
 	var bounceRate float64
 	var featInfoMap = make(map[string]map[string]Fraction) //[]string = (bounceSessions,sessionsCount)
+	var globalScale float64
 	var reqMap = make(map[string]map[string]float64)
+	var scaleMap = make(map[string]map[string]float64)
 	var info MetricInfo
+	var scale MetricInfo
 
 	for scanner.Scan() {
 		txtline := scanner.Text()
@@ -1066,7 +1145,7 @@ func GetSessionBounceRate(queryEvent string, scanner *bufio.Scanner, propFilter 
 		var eventDetails P.CounterEventFormat
 		if err := json.Unmarshal([]byte(txtline), &eventDetails); err != nil {
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
-			return &MetricInfo{}, err
+			return nil, nil, err
 		}
 		eventNameString := eventDetails.EventName
 
@@ -1077,10 +1156,12 @@ func GetSessionBounceRate(queryEvent string, scanner *bufio.Scanner, propFilter 
 
 		//check if event contains all requiredProps(constraint)
 		if yes, err := eventSatisfiesConstraints(eventDetails, propFilter); err != nil {
-			return &MetricInfo{}, err
+			return nil, nil, err
 		} else if !yes {
 			continue
 		}
+
+		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
 		//global
 		sessionsCount++
@@ -1153,16 +1234,20 @@ func GetSessionBounceRate(queryEvent string, scanner *bufio.Scanner, propFilter 
 
 	info = MetricInfo{Global: bounceRate, Features: reqMap}
 
-	return &info, nil
+	scale = MetricInfo{Global: globalScale, Features: scaleMap}
+	return &info, &scale, nil
 }
 
-func GetSessionEngagementRate(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, error) {
+func GetSessionEngagementRate(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, *MetricInfo, error) {
 	var engagedSessions float64
 	var sessionsCount float64
 	var engagementRate float64
 	var featInfoMap = make(map[string]map[string]Fraction) //[]string = (bounceSessions,sessionsCount)
+	var globalScale float64
 	var reqMap = make(map[string]map[string]float64)
+	var scaleMap = make(map[string]map[string]float64)
 	var info MetricInfo
+	var scale MetricInfo
 
 	for scanner.Scan() {
 		txtline := scanner.Text()
@@ -1170,7 +1255,7 @@ func GetSessionEngagementRate(queryEvent string, scanner *bufio.Scanner, propFil
 		var eventDetails P.CounterEventFormat
 		if err := json.Unmarshal([]byte(txtline), &eventDetails); err != nil {
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
-			return &MetricInfo{}, err
+			return nil, nil, err
 		}
 		eventNameString := eventDetails.EventName
 
@@ -1181,10 +1266,12 @@ func GetSessionEngagementRate(queryEvent string, scanner *bufio.Scanner, propFil
 
 		//check if event contains all requiredProps(constraint)
 		if yes, err := eventSatisfiesConstraints(eventDetails, propFilter); err != nil {
-			return &MetricInfo{}, err
+			return nil, nil, err
 		} else if !yes {
 			continue
 		}
+
+		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
 		//global
 		sessionsCount++
@@ -1264,6 +1351,6 @@ func GetSessionEngagementRate(queryEvent string, scanner *bufio.Scanner, propFil
 	}
 
 	info = MetricInfo{Global: engagementRate, Features: reqMap}
-
-	return &info, nil
+	scale = MetricInfo{Global: globalScale, Features: scaleMap}
+	return &info, &scale, nil
 }

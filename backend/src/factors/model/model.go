@@ -312,6 +312,7 @@ type Model interface {
 
 	// project_setting
 	GetProjectSetting(projectID uint64) (*model.ProjectSetting, int)
+	GetClearbitKeyFromProjectSetting(projectId uint64) (string, int)
 	GetProjectSettingByKeyWithTimeout(key, value string, timeout time.Duration) (*model.ProjectSetting, int)
 	GetProjectSettingByTokenWithCacheAndDefault(token string) (*model.ProjectSetting, int)
 	GetProjectSettingByPrivateTokenWithCacheAndDefault(privateToken string) (*model.ProjectSetting, int)
@@ -633,4 +634,8 @@ type Model interface {
 	GetAllCRMSetting() ([]model.CRMSetting, int)
 	UpdateCRMSetting(projectID uint64, option model.CRMSettingOption) int
 	CreateOrUpdateCRMSetting(projectID uint64, crmSetting *model.CRMSetting) int
+
+	// Timeline
+	GetProfileUsersListByProjectId(projectID uint64) ([]model.Contact, int)
+	GetProfileUserDetailsByID(projectID uint64, identity string, isAnonymous string) (*model.ContactDetails, int)
 }

@@ -9,8 +9,9 @@ import FaSelect from 'Components/FaSelect';
 import MomentTz from 'Components/MomentTz';
 import { isArray } from 'lodash';
 import moment from 'moment';
-import { DEFAULT_OPERATOR_PROPS } from 'Components/FaFilterSelect/utils';
+import { DEFAULT_OPERATOR_PROPS,dateTimeSelect } from 'Components/FaFilterSelect/utils';
 import { DISPLAY_PROP } from '../../../../utils/constants';
+import { toCapitalCase } from '../../../../utils/global';
 
 const defaultOpProps = DEFAULT_OPERATOR_PROPS;
 
@@ -39,7 +40,7 @@ const GlobalFilterSelect = ({
   const [operatorState, setOperatorState] = useState('=');
   const [valuesState, setValuesState] = useState(null);
 
-  const [propSelectOpen, setPropSelectOpen] = useState(false);
+  const [propSelectOpen, setPropSelectOpen] = useState(true);
   const [operSelectOpen, setOperSelectOpen] = useState(false);
   const [valuesSelectionOpen, setValuesSelectionOpen] = useState(false);
   const [grnSelectOpen, setGrnSelectOpen] = useState(false);
@@ -50,6 +51,7 @@ const GlobalFilterSelect = ({
   const { userPropNames, eventPropNames } = useSelector(
     (state) => state.coreQuery
   );
+  const [dateOptionSelectOpen,setDateOptionSelectOpen]=useState(false);
 
   useEffect(() => {
     if (
@@ -309,6 +311,7 @@ const GlobalFilterSelect = ({
     parsedValues['gran'] = val;
     setValuesState(JSON.stringify(parsedValues));
     setGrnSelectOpen(false);
+    setDateOptionSelectOpen(false);
     setDeltaFilt();
   };
 
@@ -332,6 +335,7 @@ const GlobalFilterSelect = ({
     parsedValues['gran'] = val;
     setValuesState(JSON.stringify(parsedValues));
     setGrnSelectOpen(false);
+    setDateOptionSelectOpen(false);
     setCurrentFilt();
   };
 
@@ -384,6 +388,7 @@ const GlobalFilterSelect = ({
           placement='topRight'
           range={rang}
           onSelect={(rng) => onDateSelect(rng)}
+          className={'filter-buttons-margin filter-buttons-radius'}
         />
       );
     }
@@ -395,6 +400,7 @@ const GlobalFilterSelect = ({
           placement='topRight'
           range={rang}
           onSelect={(rng) => onDateSelect(rng)}
+          className={'filter-buttons-margin filter-buttons-radius'}
         />
       );
     }
@@ -407,45 +413,52 @@ const GlobalFilterSelect = ({
             min={1}
             max={999}
             onChange={setDeltaNumber}
+            placeholder={'number'}
+            controls={false}
+            className={'filter-buttons-radius date-input-number'}
           ></InputNumber>
 
-          <Select
-            defaultValue=''
-            value={parsedValues['gran']}
-            className={'fa-select--ghost'}
-            onChange={setDeltaGran}
+          <Button
+          className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
+          type='link'
+          onClick={() => setDateOptionSelectOpen(true)}
           >
-            <Option value='' disabled>
-              <i>Select:</i>
-            </Option>
-            <Option value='days'>Days</Option>
-            <Option value='week'>Weeks</Option>
-            <Option value='month'>Months</Option>
-            <Option value='quarter'>Quarters</Option>
-          </Select>
-        </div>
+          {parsedValues['gran'] ? dateTimeSelect.get(parsedValues['gran']) : 'Select'}
+          </Button>
+
+          {dateOptionSelectOpen && (
+            <FaSelect
+              options={[['Days'],['Weeks'],['Months'],['Quarters']]}
+              optionClick={(val) => setDeltaGran(dateTimeSelect.get(val[0]))}
+              onClickOutside={() => setDateOptionSelectOpen(false)}
+            ></FaSelect>
+          )}
+      </div>
       );
     }
 
     if (currentPicker.includes(operator)) {
       selectorComponent = (
         <div className={`fa-filter-dateDeltaContainer`}>
-          <Select
-            defaultValue=''
-            value={parsedValues['gran']}
-            className={'fa-select--ghost'}
-            onChange={setCurrentGran}
+          <Button
+          className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
+          type='link'
+          onClick={() => setDateOptionSelectOpen(true)}
           >
-            <Option value='' disabled>
-              <i>Select:</i>
-            </Option>
-            <Option value='week'>Week</Option>
-            <Option value='month'>Month</Option>
-            <Option value='quarter'>Quarter</Option>
-          </Select>
+          {parsedValues['gran'] ? toCapitalCase(parsedValues['gran']) : 'Select'}
+          </Button>
+
+          {dateOptionSelectOpen && (
+            <FaSelect
+              options={[['Week'],['Month'],['Quarter']]}
+              optionClick={(val) => setCurrentGran(val[0].toLowerCase())}
+              onClickOutside={() => setDateOptionSelectOpen(false)}
+            ></FaSelect>
+          )}
         </div>
       );
     }
+
 
     if (datePicker.includes(operator)) {
       selectorComponent = (
