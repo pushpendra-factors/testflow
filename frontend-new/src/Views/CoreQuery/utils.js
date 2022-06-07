@@ -235,7 +235,7 @@ const getProfileWithProperties = (queries) => {
           });
         } else {
           filterProps.push({
-            en: fil.props[2],
+            en: fil.props[2] === 'group' ? 'user' : fil.props[2],
             pr: fil.props[0],
             op: operatorMap[fil.operator],
             va: fil.values,
@@ -1707,6 +1707,9 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
     const fil = get(q, 'fil', EMPTY_ARRAY)
       ? get(q, 'fil', EMPTY_ARRAY)
       : EMPTY_ARRAY;
+    let ref = -1,
+      lastProp = '',
+      lastOp = '';
     fil.forEach((pr) => {
       if (pr.lOp === 'AND') {
         ref += 1;
