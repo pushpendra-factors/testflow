@@ -47,7 +47,9 @@ import ContentGroups from '../Settings/ProjectConfigure/ContentGroups';
 import Touchpoints from '../Settings/ProjectConfigure/Touchpoints';
 import CustomKPI from '../Settings/ProjectConfigure/CustomKPI';
 import { EMPTY_ARRAY } from '../../utils/global';
-// import UserProfiles from '../../components/Profile/UserProfiles';
+import UserProfiles from '../../components/Profile/UserProfiles';
+
+const whiteListedAccounts = ['solutions@factors.ai'];
 
 const FactorsInsights = lazyWithRetry(() =>
   import('../Factors/FactorsInsightsNew')
@@ -78,6 +80,8 @@ function AppLayout({
   const dispatch = useDispatch();
   const [sidebarCollapse, setSidebarCollapse] = useState(true);
 
+  const activeAgent = useSelector((state) => state.agent?.agent_details?.email);
+ 
   const asyncCallOnLoad = useCallback(async () => {
     try {
       await fetchProjects();
@@ -179,7 +183,6 @@ function AppLayout({
                       name='componentsLib'
                       component={componentsLib}
                     />
-                    {/* <Route path='/settings' component={ProjectSettings} /> */}
                     <Route path='/analyse' name='Home' component={CoreQuery} />
 
                     <Route
@@ -234,8 +237,12 @@ function AppLayout({
                     {/* <Route path='/configure/goals' component={goals} /> */}
 
                     {/* profiles */}
-                    {/* <Route path='/profiles/people' component={UserProfiles} /> */}
-
+                    {(window.document.domain === 'app.factors.ai' &&
+                      whiteListedAccounts.includes(activeAgent)) ||
+                    window.document.domain === 'staging-app.factors.ai' ||
+                    window.document.domain === 'factors-dev.com' ? (
+                      <Route path='/profiles/people' component={UserProfiles} />
+                    ) : null}
                   </Switch>
                 </Suspense>
               </Content>
