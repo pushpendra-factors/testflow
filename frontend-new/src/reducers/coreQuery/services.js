@@ -399,7 +399,7 @@ export function fetchGroupPropertyValues(projectId, groupName, propertyName) {
     '/groups/' +
     btoa(groupName) +
     '/properties/' +
-    btoa(propertyName) +
+    propertyName +
     '/values';
   return get(null, url);
 }

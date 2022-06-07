@@ -48,7 +48,6 @@ export default function EventFilterWrapper({
     operator: '',
     values: [],
   });
-
   const [dropDownValues, setDropDownValues] = useState({});
   const [selectedRngState, setSelectedRngState] = useState([
     { ...DEFAULT_DATE_RANGE },
@@ -93,7 +92,7 @@ export default function EventFilterWrapper({
     Object.keys(filterProps).forEach((k, i) => {
       propState.push({
         label: k,
-        icon: k === 'event' ? 'event' : k,
+        icon: k,
         values: filterProps[k],
       });
     });
@@ -660,7 +659,7 @@ export default function EventFilterWrapper({
         }
       } else if (props[3] === 'group') {
         if (!dropDownValues[props[0]]) {
-          fetchEventPropertyValues(
+          fetchGroupPropertyValues(
             activeProject.id,
             AvailableGroups[event.group],
             props[1]
