@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { connect } from 'react-redux';
+import { bindActionCreators } from 'redux';
 import { Text, SVG } from 'factorsComponents';
 import {
     Row, Col, Button, Radio, Input, Select, Tooltip
 } from 'antd';
+
+import { getEventProperties } from 'Reducers/coreQuery/middleware';
 
 import FaFilterSelect from 'Components/FaFilterSelect';
 import { DEFAULT_OPERATOR_PROPS } from 'Components/FaFilterSelect/utils';
@@ -15,7 +18,7 @@ import {
     getFilters, getStateFromFilters
 } from '../../../../../Views/CoreQuery/utils';
 
-const TouchpointView = ({ activeProject, tchType = '2', eventProperties, userProperties, rule, onCancel, onSave }) => {
+const TouchpointView = ({ activeProject, tchType = '2', getEventProperties, eventProperties, userProperties, rule, onCancel, onSave }) => {
     const [dropDownValues, setDropDownValues] = useState({});
     const [filterDD, setFilterDD] = useState(false);
 
@@ -86,10 +89,17 @@ const TouchpointView = ({ activeProject, tchType = '2', eventProperties, userPro
 
     }, [rule])
 
+    useEffect(() => {
+        if(tchType === '2') {
+            const eventToCall = getEventToCall();
+            getEventProperties(activeProject.id, eventToCall);
+        }
+    }, [tchRuleType])
+
 
     const setValuesByProps = (props) => {
         const eventToCall = tchType === '2' ?
-            '$hubspot_contact_updated' : timestampRef === 'campaign_member_created_date' ? '$sf_campaign_member_created' : '$sf_campaign_member_updated';
+            getEventToCall() : timestampRef === 'campaign_member_created_date' ? '$sf_campaign_member_created' : '$sf_campaign_member_updated';
         fetchEventPropertyValues(activeProject.id, eventToCall, props[1]).then(res => {
             const ddValues = Object.assign({}, dropDownValues);
             ddValues[props[1]] = [...res.data, '$none'];
@@ -623,4 +633,12 @@ const mapStateToProps = (state) => ({
     userProperties: state.coreQuery.userProperties
 });
 
-export default connect(mapStateToProps, {})(TouchpointView);
+const mapDispatchToProps = (dispatch) =>
+  bindActionCreators(
+    {
+      getEventProperties,
+    },
+    dispatch
+  );
+
+export default connect(mapStateToProps, mapDispatchToProps)(TouchpointView);
