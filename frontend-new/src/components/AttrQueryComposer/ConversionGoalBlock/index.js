@@ -108,7 +108,6 @@ const ConversionGoalBlock = ({
 
     const filtersSorted = updatedEvent.filters;
     filtersSorted.sort(compareFilters);
-    //To check Duplicate Filters.
     const filt = filtersSorted.filter(
       (fil) => JSON.stringify(fil) === JSON.stringify(val)
     );
@@ -176,7 +175,7 @@ const ConversionGoalBlock = ({
       const group = groupFilters(eventGoal.filters, 'ref');
       const filtersGroupedByRef = Object.values(group);
       const refValues = Object.keys(group);
-      lastRef = refValues[refValues.length-1];
+      lastRef = parseInt(refValues[refValues.length-1]);
   
 
       filtersGroupedByRef.forEach((filtersGr)=>{
@@ -197,7 +196,7 @@ const ConversionGoalBlock = ({
                   filterProps={filterProps}
                   activeProject={activeProject}
                   deleteFilter={delFilter}
-                  insertFilter={(val) => editFiler(index, val)}
+                  insertFilter={(val,index) => editFiler(index, val)}
                   closeFilter={closeFilter}
                   event={eventGoal}
                   refValue={refValue}
@@ -233,7 +232,7 @@ const ConversionGoalBlock = ({
                 filterProps={filterProps}
                 activeProject={activeProject}
                 deleteFilter={delFilter}
-                insertFilter={(val) => editFiler(index, val)}
+                insertFilter={(val,index) => editFiler(index,val)}
                 closeFilter={closeFilter}
                 event={eventGoal}
                 refValue={refValue}
@@ -246,7 +245,7 @@ const ConversionGoalBlock = ({
                 filterProps={filterProps}
                 activeProject={activeProject}
                 deleteFilter={delFilter}
-                insertFilter={(val) => editFiler(index, val)}
+                insertFilter={(val,index) => editFiler(index, val)}
                 closeFilter={closeFilter}
                 event={eventGoal}
                 refValue={refValue}

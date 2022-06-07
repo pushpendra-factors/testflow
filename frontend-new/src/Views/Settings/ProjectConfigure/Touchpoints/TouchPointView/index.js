@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { connect } from 'react-redux';
+import { bindActionCreators } from 'redux';
 import { Text, SVG } from 'factorsComponents';
 import {
     Row, Col, Button, Radio, Input, Select, Tooltip
 } from 'antd';
+
+import { getEventProperties } from 'Reducers/coreQuery/middleware';
 
 import FaFilterSelect from 'Components/FaFilterSelect';
 import { DEFAULT_OPERATOR_PROPS } from 'Components/FaFilterSelect/utils';
@@ -15,12 +18,15 @@ import {
     getFilters, getStateFromFilters
 } from '../../../../../Views/CoreQuery/utils';
 
-const TouchpointView = ({ activeProject, tchType = '2', eventProperties, userProperties, rule, onCancel, onSave }) => {
+const TouchpointView = ({ activeProject, tchType = '2', getEventProperties, eventProperties, userProperties, rule, onCancel, onSave }) => {
     const [dropDownValues, setDropDownValues] = useState({});
     const [filterDD, setFilterDD] = useState(false);
-    const [timestampRef, setTimestampRefState] = tchType === '2'? useState('LAST_MODIFIED_TIME_REF') : useState('campaign_member_created_date');
+
+    const [tchRuleType, setTchRuleType] = useState('hubspot_contact_fields');
+
+    const [timestampRef, setTimestampRefState] = tchType === '2' ? useState('LAST_MODIFIED_TIME_REF') : useState('campaign_member_created_date');
     //touch_point_time_ref
-    const [touchPointPropRef, setTouchPointPropRef] = tchType === '2'? useState('LAST_MODIFIED_TIME_REF') : useState('campaign_member_created_date');
+    const [touchPointPropRef, setTouchPointPropRef] = tchType === '2' ? useState('LAST_MODIFIED_TIME_REF') : useState('campaign_member_created_date');
     const [timestampPropertyRef, setTimestampPropRef] = useState(false);
     const [dateTypeDD, setDateTypeDD] = useState(false);
     const [dateTypeProps, setDateTypeProps] = useState([]);
@@ -29,7 +35,7 @@ const TouchpointView = ({ activeProject, tchType = '2', eventProperties, userPro
 
     //Search Keys 
     const [searchSour, setSearchSour] = useState({
-        'source': '', 
+        'source': '',
         'campaign': '',
         'channel': ''
     });
@@ -64,12 +70,12 @@ const TouchpointView = ({ activeProject, tchType = '2', eventProperties, userPro
         operator: DEFAULT_OPERATOR_PROPS,
     });
 
-    useEffect(()=>{
-        if(rule) {
+    useEffect(() => {
+        if (rule) {
             const filterState = getStateFromFilters(rule.filters);
             setNewFilterStates(filterState);
             setPropertyMap(rule.properties_map);
-            if(rule.touchPointPropRef === 'LAST_MODIFIED_TIME_REF') {
+            if (rule.touchPointPropRef === 'LAST_MODIFIED_TIME_REF') {
                 setTimestampRefState('LAST_MODIFIED_TIME_REF');
                 setTimestampPropRef(false);
                 setTouchPointPropRef('LAST_MODIFIED_TIME_REF');
@@ -80,13 +86,20 @@ const TouchpointView = ({ activeProject, tchType = '2', eventProperties, userPro
                 setDateTypeDD(false);
             }
         }
-        
+
     }, [rule])
+
+    useEffect(() => {
+        if(tchType === '2') {
+            const eventToCall = getEventToCall();
+            getEventProperties(activeProject.id, eventToCall);
+        }
+    }, [tchRuleType])
 
 
     const setValuesByProps = (props) => {
-        const eventToCall = tchType === '2' ? 
-            '$hubspot_contact_updated' : timestampRef === 'campaign_member_created_date'? '$sf_campaign_member_created' :  '$sf_campaign_member_updated';
+        const eventToCall = tchType === '2' ?
+            getEventToCall() : timestampRef === 'campaign_member_created_date' ? '$sf_campaign_member_created' : '$sf_campaign_member_updated';
         fetchEventPropertyValues(activeProject.id, eventToCall, props[1]).then(res => {
             const ddValues = Object.assign({}, dropDownValues);
             ddValues[props[1]] = [...res.data, '$none'];
@@ -98,25 +111,35 @@ const TouchpointView = ({ activeProject, tchType = '2', eventProperties, userPro
         });
     }
 
+    const getEventToCall = () => {
+        if(tchRuleType === 'Emails') {
+            return '$hubspot_engagement_email';
+        }
+        else if(tchRuleType === 'hubspot_contact_fields') {
+            return '$hubspot_contact_updated';
+        }
+    }
+
     useEffect(() => {
-        const eventToCall = tchType === '2' ? 
-            '$hubspot_contact_updated' : timestampRef === 'campaign_member_created_date'? '$sf_campaign_member_created' :  '$sf_campaign_member_updated';
+        const eventToCall = tchType === '2' ?
+        getEventToCall() : timestampRef === 'campaign_member_created_date' ? '$sf_campaign_member_created' : '$sf_campaign_member_updated';
         const tchUserProps = [];
         const filterDD = Object.assign({}, filterDropDownOptions);
         const propState = [];
         const eventProps = [];
-        if(tchType === '2') {
-            eventProperties[eventToCall]? 
-            eventProperties[eventToCall].forEach((prop) => {if(prop[1]?.startsWith('$hubspot_contact')){eventProps.push(prop)}}) : null;
-            userProperties.forEach((prop) => {if(prop[1]?.startsWith('$hubspot_contact')){tchUserProps.push(prop)}})
-        } else if(tchType === '3') {
-            eventProperties[eventToCall]? 
-                eventProperties[eventToCall].forEach((prop) => {if(prop[1]?.startsWith('$salesforce_campaign')){eventProps.push(prop)}}) : null;
+        if (tchType === '2') {
+            const startsWith = tchRuleType === 'Emails'? '$hubspot_engagement' : '$hubspot_contact';  
+            eventProperties[eventToCall] ?
+                eventProperties[eventToCall].forEach((prop) => { if (prop[1]?.startsWith(startsWith)) { eventProps.push(prop) } }) : null;
+            userProperties.forEach((prop) => { if (prop[1]?.startsWith(startsWith)) { tchUserProps.push(prop) } })
+        } else if (tchType === '3') {
+            eventProperties[eventToCall] ?
+                eventProperties[eventToCall].forEach((prop) => { if (prop[1]?.startsWith('$salesforce_campaign')) { eventProps.push(prop) } }) : null;
             userProperties.forEach((prop) => {
-                if(prop[1]?.startsWith('$salesforce_campaign')){tchUserProps.push(prop)}
+                if (prop[1]?.startsWith('$salesforce_campaign')) { tchUserProps.push(prop) }
             });
         }
-        
+
         filterDropDownOptions.props.forEach((k) => {
             propState.push({ label: k.label, icon: 'event', values: [...eventProps, ...tchUserProps] });
         });
@@ -133,8 +156,8 @@ const TouchpointView = ({ activeProject, tchType = '2', eventProperties, userPro
         //         }
         //     }
         // } });
-        eventProps.forEach((prop) => { if (prop[2] === 'datetime') { dateTypepoperties.push(prop)}});
-        tchUserProps.forEach((prop) => { if (prop[2] === 'datetime') { dateTypepoperties.push(prop)}});
+        eventProps.forEach((prop) => { if (prop[2] === 'datetime') { dateTypepoperties.push(prop) } });
+        tchUserProps.forEach((prop) => { if (prop[2] === 'datetime') { dateTypepoperties.push(prop) } });
         setDateTypeProps(dateTypepoperties);
         filterDD.props = propState;
         setFiltDD(filterDD);
@@ -153,11 +176,11 @@ const TouchpointView = ({ activeProject, tchType = '2', eventProperties, userPro
         setFilterDD(false);
     };
 
-    const closeFilter = (index) => { 
+    const closeFilter = (index) => {
         const filtrs = [...newFilterStates];
         filtrs.splice(index, 1);
         setNewFilterStates(filtrs);
-     }
+    }
 
     const addFilter = () => { console.log("Added") }
 
@@ -168,7 +191,6 @@ const TouchpointView = ({ activeProject, tchType = '2', eventProperties, userPro
                 filterRows.push((
                     <Row className={`mt-2`}>
                         <FaFilterSelect
-                            
                             filter={filter}
                             propOpts={filterDropDownOptions.props}
                             operatorOpts={filterDropDownOptions.operator}
@@ -242,7 +264,7 @@ const TouchpointView = ({ activeProject, tchType = '2', eventProperties, userPro
         setTimestampRefState(timeStVal);
         setTimestampPropRef(false);
         setTouchPointPropRef(timeStVal);
-    } 
+    }
 
     const setTimestampProp = (val) => {
         setTouchPointPropRef(val[1]);
@@ -252,27 +274,45 @@ const TouchpointView = ({ activeProject, tchType = '2', eventProperties, userPro
     const validateInputs = () => {
         let isReady = true;
         const propKeys = Object.keys(propertyMap);
-        for(let i =0;i<propKeys.length; i++) {
-            propertyMap[propKeys[i]]['va']? null : isReady = false;
-            if(!isReady) {break}
+        for (let i = 0; i < propKeys.length; i++) {
+            propertyMap[propKeys[i]]['va'] ? null : isReady = false;
+            if (!isReady) { break }
         }
         return isReady;
     }
 
     const validateRuleInfo = () => {
-        if(newFilterStates.length < 1 || !touchPointPropRef) {
+        if (newFilterStates.length < 1 || !touchPointPropRef) {
             return false;
         }
         return true;
     }
 
-    const renderTimestampRenderOption = () => {
-        let radioGroupElement = null;
-        if(tchType === '2') {
-            radioGroupElement = (<Radio.Group onChange={setTimestampRef} value={timestampRef}>
+    const setTimestampRefEmail = (val) => {
+        setTimestampRefState(val);
+        setTimestampPropRef(false);
+        setTouchPointPropRef(val);
+    }
+
+    const getTimestampOptionByRule = () => {
+        if(tchRuleType === 'hubspot_contact_fields') {
+            return (<Radio.Group onChange={setTimestampRef} value={timestampRef}>
                 <Radio value={`LAST_MODIFIED_TIME_REF`}>Factors Last modified time</Radio>
                 <Radio value={``}>Select a property</Radio>
-            </Radio.Group>)
+            </Radio.Group>);
+        }
+        else if(tchRuleType === 'Emails') {
+            return (<Radio.Group onChange={() => setTimestampRefEmail('hubspot_engagement_timestamp')} value={timestampRef}>
+                <Radio value={`hubspot_engagement_timestamp`}>Email Sent Timestamp</Radio>
+                <Radio value={`email_replied_timestamp`}>Email Replied Timestamp</Radio>
+            </Radio.Group>);
+        }
+    }
+
+    const renderTimestampRenderOption = () => {
+        let radioGroupElement = null;
+        if (tchType === '2') {
+            radioGroupElement = getTimestampOptionByRule();
         }
         else if (tchType === '3') {
             radioGroupElement = (<Radio.Group onChange={setTimestampRefSF} value={timestampRef}>
@@ -280,7 +320,7 @@ const TouchpointView = ({ activeProject, tchType = '2', eventProperties, userPro
                 <Radio value={`campaign_member_first_responded_date`}>Campaign First Responded Date</Radio>
             </Radio.Group>)
         }
-        
+
         return radioGroupElement;
     }
 
@@ -293,7 +333,7 @@ const TouchpointView = ({ activeProject, tchType = '2', eventProperties, userPro
                 {renderTimestampRenderOption()}
             </Row>
             <Row className={`mt-2`}>
-                {timestampPropertyRef &&
+                {tchRuleType === 'hubspot_contact_fields' && timestampPropertyRef &&
                     <div className={`relative`}>
                         <Button type='link' onClick={() => setDateTypeDD(!dateTypeDD)}>
                             {touchPointPropRef ? touchPointPropRef : 'Select Date type property'}
@@ -318,25 +358,25 @@ const TouchpointView = ({ activeProject, tchType = '2', eventProperties, userPro
     const setPropSource = (val) => {
         let propMap = Object.assign({}, propertyMap);
         propertyMap['$source']['va'] = val;
-        if(val === searchSour['source']) {
-            propMap = setSearchValue('source',propMap);
+        if (val === searchSour['source']) {
+            propMap = setSearchValue('source', propMap);
         }
-        setSearchSour({'source': '', 'campaign': '', 'channel': ''});
+        setSearchSour({ 'source': '', 'campaign': '', 'channel': '' });
         setPropertyMap(propMap);
     }
 
-    const setSearchValue = (type,propMap) => {
+    const setSearchValue = (type, propMap) => {
         propertyMap['$' + type]['va'] = searchSour[type];
         propMap['$' + type]['ty'] = 'Constant';
         return propMap;
     }
 
     const setPropCampaign = (val) => {
-        setSearchSour({'source': '', 'campaign': '', 'channel': ''});
+        setSearchSour({ 'source': '', 'campaign': '', 'channel': '' });
         let propMap = Object.assign({}, propertyMap);
         propertyMap['$campaign']['va'] = val;
-        if(val === searchSour['campaign']) {
-            propMap = setSearchValue('campaign',propMap);
+        if (val === searchSour['campaign']) {
+            propMap = setSearchValue('campaign', propMap);
         }
         setPropertyMap(propMap);
     }
@@ -344,17 +384,17 @@ const TouchpointView = ({ activeProject, tchType = '2', eventProperties, userPro
     const setPropChannel = (val) => {
         let propMap = Object.assign({}, propertyMap);
         propertyMap['$channel']['va'] = val;
-        if(val === searchSour['channel']) {
-            propMap = setSearchValue('channel',propMap);
+        if (val === searchSour['channel']) {
+            propMap = setSearchValue('channel', propMap);
         }
         setPropertyMap(propMap);
     }
 
     const isSearchProps = (dropDownType, prop) => {
-        if(dropDownType && searchSour[dropDownType] && prop[1]?.search(searchSour[dropDownType])){
+        if (dropDownType && searchSour[dropDownType] && prop[1]?.search(searchSour[dropDownType])) {
             return true;
         }
-        if(dropDownType && !searchSour[dropDownType]) {
+        if (dropDownType && !searchSour[dropDownType]) {
             return true;
         }
         return false;
@@ -377,40 +417,40 @@ const TouchpointView = ({ activeProject, tchType = '2', eventProperties, userPro
     }
 
     const renderEventPropertyCampOptions = (dropDownType) => {
-        const eventToCall = tchType === '2' ? 
-            '$hubspot_contact_updated' : timestampRef === 'campaign_member_created_date'? '$sf_campaign_member_created' :  '$sf_campaign_member_updated';
+        const eventToCall = tchType === '2' ?
+            getEventToCall() : timestampRef === 'campaign_member_created_date' ? '$sf_campaign_member_created' : '$sf_campaign_member_updated';
         const propertiesMp = [];
-        if(tchType === '2') {
+        if (tchType === '2') {
+            const startsWith = tchRuleType === 'Emails'? '$hubspot_engagement' : '$hubspot_contact';
             eventProperties[eventToCall]?.forEach((prop) => {
-                if(prop[1]?.startsWith('$hubspot') && isSearchProps(dropDownType, prop)){
+                if (prop[1]?.startsWith(startsWith) && isSearchProps(dropDownType, prop)) {
                     propertiesMp.push(
-                    <Option key={prop[1]} value={prop[1]}> {propOption(prop[0])}  </Option>
+                        <Option key={prop[1]} value={prop[1]}> {propOption(prop[0])}  </Option>
                     );
                 }
             });
             userProperties.forEach((prop) => {
-                if(prop[1]?.startsWith('$hubspot') && isSearchProps(dropDownType, prop)){
-                    propertiesMp.push( 
+                if (prop[1]?.startsWith(startsWith) && isSearchProps(dropDownType, prop)) {
+                    propertiesMp.push(
                         <Option key={prop[1]} value={prop[1]}> {propOption(prop[0])} </Option>
-                        );
+                    );
                 }
             });
-        } else if(tchType === '3') {
+        } else if (tchType === '3') {
             eventProperties[eventToCall]?.forEach((prop) => {
-                if(prop[1]?.startsWith('$salesforce') && isSearchProps(dropDownType, prop)){
+                if (prop[1]?.startsWith('$salesforce') && isSearchProps(dropDownType, prop)) {
                     propertiesMp.push(
                         <Option key={prop[1]} value={prop[1]}> {propOption(prop[0])}  </Option>);
                 }
             });
             userProperties.forEach((prop) => {
-                if(prop[1]?.startsWith('$salesforce') && isSearchProps(dropDownType, prop))
-                {
-                    propertiesMp.push( 
+                if (prop[1]?.startsWith('$salesforce') && isSearchProps(dropDownType, prop)) {
+                    propertiesMp.push(
                         <Option key={prop[1]} value={prop[1]}> {propOption(prop[0])}  </Option>);
                 }
             });
         }
-        if(dropDownType && searchSour[dropDownType]) {
+        if (dropDownType && searchSour[dropDownType]) {
             propertiesMp.push((<Option value={searchSour[dropDownType]}> <span>Select: </span> {searchSour[dropDownType]} </Option>));
         }
         return propertiesMp;
@@ -432,14 +472,14 @@ const TouchpointView = ({ activeProject, tchType = '2', eventProperties, userPro
                     <Text level={7} type={'title'} extraClass={'m-0'} weight={'thin'}>Type</Text>
                 </Col>
                 <Col>
-                    <Select 
-                         className={'fa-select w-full'} 
+                    <Select
+                        className={'fa-select w-full'}
                         size={'large'} value={propertyMap['$type']['va']} onSelect={setPropType} defaultValue={``}
-                        
+
                     >
                         <Option value={``}>Select Type </Option>
                         <Option value="tactic">Tactic</Option>
-                        <Option value="offer">Offer</Option>
+                        {tchRuleType!=='Emails' && <Option value="offer">Offer</Option>}
                     </Select>
                 </Col>
             </Row>
@@ -451,13 +491,13 @@ const TouchpointView = ({ activeProject, tchType = '2', eventProperties, userPro
 
                 <Col>
                     {
-                        <Select 
-                        showSearch
-                        onSearch={(val) => setSearch('source', val)}
-                        className={'fa-select w-full'} size={'large'} 
-                        value={propertyMap['$source']['va']} onSelect={setPropSource} 
-                        defaultValue={``} style={{minWidth: '200px' , maxWidth: '210px'}}>
-                            {searchSour['source'] ?  null:
+                        <Select
+                            showSearch
+                            onSearch={(val) => setSearch('source', val)}
+                            className={'fa-select w-full'} size={'large'}
+                            value={propertyMap['$source']['va']} onSelect={setPropSource}
+                            defaultValue={``} style={{ minWidth: '200px', maxWidth: '210px' }}>
+                            {searchSour['source'] ? null :
                                 <Option value={``}>Select Source Property </Option>
                             }
                             {renderEventPropertyCampOptions('source')}
@@ -472,15 +512,15 @@ const TouchpointView = ({ activeProject, tchType = '2', eventProperties, userPro
                 </Col>
 
                 <Col>
-                    <Select 
-                    showSearch
-                    onSearch={(val) => setSearch('campaign', val)}
-                    className={'fa-select w-full'} style={{minWidth: '200px' , maxWidth: '210px'}}
-                    size={'large'} value={propertyMap['$campaign']['va']} onSelect={setPropCampaign} defaultValue={``}>
-                        {searchSour['campaign'] ?  null:
-                                <Option value={``}>Select Campaign Property </Option>
-                            }
-                        
+                    <Select
+                        showSearch
+                        onSearch={(val) => setSearch('campaign', val)}
+                        className={'fa-select w-full'} style={{ minWidth: '200px', maxWidth: '210px' }}
+                        size={'large'} value={propertyMap['$campaign']['va']} onSelect={setPropCampaign} defaultValue={``}>
+                        {searchSour['campaign'] ? null :
+                            <Option value={``}>Select Campaign Property </Option>
+                        }
+
                         {renderEventPropertyCampOptions('campaign')}
                     </Select>
                 </Col>
@@ -492,17 +532,17 @@ const TouchpointView = ({ activeProject, tchType = '2', eventProperties, userPro
                 </Col>
 
                 <Col>
-                    <Select 
+                    <Select
                         showSearch
                         onSearch={(val) => setSearch('channel', val)}
-                        className={'fa-select w-full'} style={{minWidth: '200px', maxWidth: '210px'}}
+                        className={'fa-select w-full'} style={{ minWidth: '200px', maxWidth: '210px' }}
                         size={'large'} value={propertyMap['$channel']['va']} onSelect={setPropChannel} defaultValue={``}>
-                            {searchSour['channel'] ?  null:
-                                    <Option value={``}>Select Channel Property </Option>
-                                }
-                            
-                            {renderEventPropertyCampOptions('channel')}
-                        </Select>
+                        {searchSour['channel'] ? null :
+                            <Option value={``}>Select Channel Property </Option>
+                        }
+
+                        {renderEventPropertyCampOptions('channel')}
+                    </Select>
                 </Col>
             </Row>
 
@@ -517,7 +557,10 @@ const TouchpointView = ({ activeProject, tchType = '2', eventProperties, userPro
             "filters": getFilters(newFilterStates),
             // set propMap
             "properties_map": propertyMap,
-            "touch_point_time_ref": touchPointPropRef
+            "touch_point_time_ref": touchPointPropRef,
+        }
+        if(tchType === '2') {
+            touchPointObj["rule_type"] = tchRuleType
         }
         onSave(touchPointObj);
     }
@@ -528,7 +571,7 @@ const TouchpointView = ({ activeProject, tchType = '2', eventProperties, userPro
                 <Row className={`mt-20 relative justify-start`}>
                     <Text level={7} type={'title'} extraClass={'m-0 italic'} weight={'thin'}><sup>*</sup> All these fields are mandatory</Text>
                 </Row>
-                <Row  className={`border-top--thin mt-4 relative justify-start`}>
+                <Row className={`border-top--thin mt-4 relative justify-start`}>
                     <Col className={`mt-6`} span={10}>
                         <Button size={'large'} onClick={() => onCancel()}>Cancel</Button>
                         <Button disabled={!validateRuleInfo() || !validateInputs()} size={'large'} type="primary" className={'ml-2'}
@@ -540,10 +583,40 @@ const TouchpointView = ({ activeProject, tchType = '2', eventProperties, userPro
         )
     }
 
+    const renderTchRuleTypeOptions = () => {
+        return (
+            <Col>
+                    <Select
+                        className={'fa-select w-64'}
+                        size={'large'} value={tchRuleType} onSelect={setTchRuleType} defaultValue={``}
+
+                    >
+                        <Option value="Emails">Email</Option>
+                        <Option value="hubspot_contact_fields">Change in Hubspot contact field value</Option>
+                    </Select>
+                </Col>
+        )
+    }
+
+    const renderTchRuleType = () => {
+        if(tchType === '3') {return;}
+        return (<div className={`mt-8`}>
+            <Row className={`mt-2`}>
+                <Text level={7} type={'title'} extraClass={'m-0'} weight={'thin'}>Create a touchpoint using<sup>*</sup></Text>
+            </Row>
+            <Row className={`mt-4`}>
+                {renderTchRuleTypeOptions()}
+            </Row>
+        </div>
+        )
+    }
+
     return (
         <div>
 
-            {renderTimestampSelector()} 
+            {renderTchRuleType()}
+
+            {renderTimestampSelector()}
 
             {renderFilterBlock()}
 
@@ -560,4 +633,12 @@ const mapStateToProps = (state) => ({
     userProperties: state.coreQuery.userProperties
 });
 
-export default connect(mapStateToProps, {})(TouchpointView);
+const mapDispatchToProps = (dispatch) =>
+  bindActionCreators(
+    {
+      getEventProperties,
+    },
+    dispatch
+  );
+
+export default connect(mapStateToProps, mapDispatchToProps)(TouchpointView);

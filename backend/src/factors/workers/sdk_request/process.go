@@ -63,6 +63,8 @@ func main() {
 	enableOLTPQueriesMemSQLImprovements := flag.String("enable_OLTP_queries_memsql_improvements", "", "")
 	restrictReusingUsersByCustomerUserId := flag.String("restrict_reusing_users_by_customer_user_id", "", "")
 	mergeAmpIDAndSegmentIDWithUserIDByProjectID := flag.String("allow_amp_id_and_segment_id_with_user_id_by_project_id", "", "")
+	clearbitEnabled := flag.Int("clearbit_enabled", 0, "To enable clearbit enrichment")
+
 	flag.Parse()
 
 	workerName := defaultWorkerName
@@ -113,6 +115,7 @@ func main() {
 		EnableOLTPQueriesMemSQLImprovements:            *enableOLTPQueriesMemSQLImprovements,
 		RestrictReusingUsersByCustomerUserId:           *restrictReusingUsersByCustomerUserId,
 		MergeAmpIDAndSegmentIDWithUserIDByProjectID:    *mergeAmpIDAndSegmentIDWithUserIDByProjectID,
+		ClearbitEnabled:                                *clearbitEnabled,
 	}
 	C.InitConf(config)
 

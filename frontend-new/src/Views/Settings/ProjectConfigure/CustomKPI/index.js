@@ -20,6 +20,7 @@ import {
   fetchCustomKPIConfig,
   fetchSavedCustomKPI,
   addNewCustomKPI,
+  removeCustomKPI
 } from 'Reducers/kpi';
 import GLobalFilter from './GLobalFilter';
 import { getUserProperties } from 'Reducers/coreQuery/middleware';
@@ -44,7 +45,8 @@ const CustomKPI = ({
   savedCustomKPI,
   addNewCustomKPI,
   eventPropNames,
-  userPropNames
+  userPropNames,
+  removeCustomKPI
 }) => {
   const [showForm, setShowForm] = useState(false);
   const [tableData, setTableData] = useState([]);
@@ -83,9 +85,20 @@ const matchEventName = (item) => {
         >
           <a>View</a>
         </Menu.Item>
+        <Menu.Item
+          key='1'
+          onClick={() => { 
+            deleteKPI(item);
+          }}
+        >
+          <a>Remove</a>
+        </Menu.Item>
       </Menu>
     );
   };
+
+
+
 
   const columns = [
     {
@@ -259,6 +272,24 @@ const matchEventName = (item) => {
         console.log('addNewCustomKPI error->', err);
       });
   };
+
+  const deleteKPI = (item) =>{ 
+      removeCustomKPI(activeProject.id,item?.id).then(()=>{
+        fetchSavedCustomKPI(activeProject.id);
+        notification.success({
+          message: 'KPI Removed',
+          description:
+            'Custom KPI is removed successfully.',
+        });
+      }).catch((err) => {
+        notification.error({
+          message: 'Error',
+          description: err?.data?.error,
+        });
+        console.log('addNewCustomKPI error->', err);
+      });
+}
+
 
   useEffect(() => {
     // if (!customKPIConfig) {
@@ -875,4 +906,6 @@ export default connect(mapStateToProps, {
   fetchCustomKPIConfig,
   fetchSavedCustomKPI,
   addNewCustomKPI,
+  removeCustomKPI,
+
 })(CustomKPI);

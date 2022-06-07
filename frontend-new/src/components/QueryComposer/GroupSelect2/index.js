@@ -78,9 +78,15 @@ function GroupSelect2({
       let hasSearchTerm = false;
       const valuesOptions = [];
 
-      const icon = group?.icon
+      const checkIcon = group?.icon
         ? group.icon.toLowerCase().split(' ').join('_')
         : group.icon;
+      const icon = checkIcon.includes('salesforce')
+        ? 'salesforce'
+        : checkIcon.includes('hubspot')
+        ? 'hubspot'
+        : checkIcon;
+
       const groupItem = (
         <div key={group.label} className={`fa-select-group-select--content`}>
           {

@@ -23,12 +23,14 @@ class BaseReportExtract(BaseExtract):
             MetricsAggregator.update_job_stats(task_context.project_id, task_context.customer_account_id,
                                                task_context.type_alias, "skipped", "")
             return
-
-        for curr_timestamp in task_context.get_next_timestamps():
-            try:
+        current_timestamp = None
+        try:
+            for curr_timestamp in task_context.get_next_timestamps():
+                current_timestamp = curr_timestamp
                 task_context.add_curr_timestamp(curr_timestamp)
                 task_context.add_log("started")
                 task_context.reset_total_number_of_records()
+                task_context.reset_total_number_of_async_requests()
                 start_time = datetime.now()
 
                 read_records_status = task_context.read_records()
@@ -43,6 +45,9 @@ class BaseReportExtract(BaseExtract):
                 MetricsAggregator.update_task_stats(BaseExtractContext.TASK_TYPE, TaskStats.TO_IN_MEMORY,
                                                     TaskStats.REQUEST_COUNT,
                                                     task_context.project_id, task_context.type_alias, task_context.total_number_of_records)
+                MetricsAggregator.update_task_stats(BaseExtractContext.TASK_TYPE, TaskStats.TO_IN_MEMORY,
+                                                    TaskStats.ASYNC_REQUEST_COUNT,
+                                                    task_context.project_id, task_context.type_alias, task_context.total_number_of_async_requests)
 
                 start_time = datetime.now()
 
@@ -56,14 +61,15 @@ class BaseReportExtract(BaseExtract):
                                                     task_context.project_id, task_context.type_alias, latency_metric)
                 MetricsAggregator.update_job_stats(task_context.project_id, task_context.customer_account_id,
                                                    task_context.type_alias, "success", "")
-            except Exception as e:
-                traceback.print_tb(e.__traceback__)
-                str_exception = str(e)
-                message = str_exception
-                log.warning("Failed with exception: %d %s %s", task_context.project_id,
-                            task_context.customer_account_id, message)
-                MetricsAggregator.update_job_stats(task_context.project_id, task_context.customer_account_id,
-                                                   task_context.type_alias, "failed", message)
+        except Exception as e:
+            traceback.print_tb(e.__traceback__)
+            str_exception = str(e)
+            message = str_exception
+            message = "Timestamp: " + str(current_timestamp) + ". Message: " + str_exception
+            log.warning("Failed with exception: %d %s %s", task_context.project_id,
+                        task_context.customer_account_id, message)
+            MetricsAggregator.update_job_stats(task_context.project_id, task_context.customer_account_id,
+                                                task_context.type_alias, "failed", message)
         return
 
     # Later can add decorators for tracking.

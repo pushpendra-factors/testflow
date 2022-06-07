@@ -1188,7 +1188,7 @@ var STANDARD_EVENTS_DISPLAY_NAMES = map[string]string{
 }
 
 var STANDARD_GROUP_DISPLAY_NAMES = map[string]string{
-	"$hubspot_company":        "Hubspot Comapnies",
+	"$hubspot_company":        "Hubspot Companies",
 	"$hubspot_deal":           "Hubspot Deals",
 	"$salesforce_account":     "Salesforce Accounts",
 	"$salesforce_opportunity": "Salesforce Opportunities",

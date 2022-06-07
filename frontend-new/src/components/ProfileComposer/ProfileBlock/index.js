@@ -221,7 +221,7 @@ function ProfileBlock({
       const group = groupFilters(event.filters, 'ref');
       const filtersGroupedByRef = Object.values(group);
       const refValues = Object.keys(group);
-      lastRef = refValues[refValues.length-1];
+      lastRef = parseInt(refValues[refValues.length-1]);
       
       filtersGroupedByRef.forEach((filtersGr)=>{
         const refValue = filtersGr[0].ref;
@@ -300,10 +300,9 @@ function ProfileBlock({
     }
 
     if (isFilterDDVisible) {
-      lastRef+=1;
       filters.push(
         <div key={'init'} className={'fa--query_block--filters'}>
-          {selectEventFilter(lastRef)}
+          {selectEventFilter(lastRef+1)}
         </div>
       );
     }
