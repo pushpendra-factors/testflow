@@ -82,6 +82,7 @@ const TouchpointView = ({ activeProject, tchType = '2', getEventProperties, even
             } else {
                 setTimestampRefState(``);
                 setTouchPointPropRef(rule.touch_point_time_ref)
+                setTchRuleType(rule.rule_type);
                 setTimestampPropRef(true);
                 setDateTypeDD(false);
             }
