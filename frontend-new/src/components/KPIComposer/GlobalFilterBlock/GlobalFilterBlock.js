@@ -1,0 +1,109 @@
+import React, {
+  useState, useMemo, useEffect, memo
+} from 'react';
+import isEmpty from 'lodash/isEmpty';
+import get from 'lodash/get';
+import isEqual from 'lodash/isEqual';
+import isArray from 'lodash/isArray';
+import { QUERY_TYPE_EVENT, QUERY_TYPE_FUNNEL } from '../../../utils/constants';
+import ComposerBlock from '../../QueryCommons/ComposerBlock';
+import GlobalFilter from '../GlobalFilter';
+import { getUserProperties } from '../../../reducers/coreQuery/middleware';
+import { connect } from 'react-redux';
+import { bindActionCreators } from 'redux';
+
+const GlobalFilterBlock = ({
+  queryType,
+  queries,
+  queryOptions,
+  setGlobalFiltersOption,
+  activeProject,
+  selectedMainCategory,
+  KPIConfigProps,
+  setQueryOptions,
+  DefaultQueryOptsVal,
+  getUserProperties
+}) => {
+  const [filterBlockOpen, setFilterBlockOpen] = useState(true);
+  const isSameKPIGrp = useMemo(() => {
+    return queries.every(
+      (_, index) => queries[0].group === queries[index].group
+    );
+  }, [queries]);
+
+  useEffect(() => {
+    if (
+      ((!isSameKPIGrp && isArray(queries) && queries.length > 1) ||
+        isEmpty(queries)) &&
+      !isEqual(
+        get(queryOptions, 'globalFilters', []),
+        get(DefaultQueryOptsVal, 'globalFilters', [])
+      )
+    ) {
+      // we will not show global filters when kpis selected are from different groups. hence we reset global filters
+      setQueryOptions((currState) => {
+        return {
+          ...currState,
+          globalFilters: DefaultQueryOptsVal.globalFilters
+        };
+      });
+    }
+  }, [
+    isSameKPIGrp,
+    queries,
+    queryOptions,
+    DefaultQueryOptsVal,
+    setQueryOptions
+  ]);
+
+  if (!isSameKPIGrp || isEmpty(queries)) {
+    return null;
+  }
+
+  if (queryType === QUERY_TYPE_EVENT && queries.length < 1) {
+    return null;
+  }
+  if (queryType === QUERY_TYPE_FUNNEL && queries.length < 2) {
+    return null;
+  }
+
+  return (
+    <ComposerBlock
+      blockTitle={'FILTER BY'}
+      isOpen={filterBlockOpen}
+      showIcon={true}
+      onClick={() => setFilterBlockOpen(!filterBlockOpen)}
+      extraClass={'no-padding-l'}
+    >
+      <div key={0} className={'fa--query_block borderless no-padding '}>
+        <GlobalFilter
+          filters={queryOptions.globalFilters}
+          setGlobalFilters={setGlobalFiltersOption}
+          onFiltersLoad={[
+            () => {
+              getUserProperties(activeProject.id, queryType);
+            }
+          ]}
+          selectedMainCategory={selectedMainCategory}
+          KPIConfigProps={KPIConfigProps}
+        ></GlobalFilter>
+      </div>
+    </ComposerBlock>
+  );
+};
+
+const mapStateToProps = (state) => ({
+  activeProject: state.global.active_project
+});
+
+const mapDispatchToProps = (dispatch) =>
+  bindActionCreators(
+    {
+      getUserProperties
+    },
+    dispatch
+  );
+
+export default memo(
+  connect(mapStateToProps, mapDispatchToProps)(GlobalFilterBlock)
+);

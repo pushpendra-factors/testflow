@@ -164,6 +164,7 @@ func main() {
 	slackAppClientID := flag.String("slack_app_client_id", "", "")
 	slackAppClientSecret := flag.String("slack_app_client_secret", "", "")
 
+	dataAvailabilityExpiry := flag.Int("data_availability_expiry", 30, "")
 	flag.Parse()
 
 	defaultAppName := "app_server"
@@ -278,6 +279,7 @@ func main() {
 		EnableSlowDBQueryLogging:                       *enableSlowDBQueryLogging,
 		SlackAppClientID:                               *slackAppClientID,
 		SlackAppClientSecret:                           *slackAppClientSecret,
+		DataAvailabilityExpiry:                         *dataAvailabilityExpiry,
 	}
 	C.InitConf(config)
 

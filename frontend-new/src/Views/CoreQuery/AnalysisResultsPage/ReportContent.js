@@ -1,5 +1,10 @@
-import React, { useState, useEffect, useMemo, useContext } from 'react';
+import React, {
+  useState, useEffect, useMemo, useContext
+} from 'react';
+import { useSelector } from 'react-redux';
 import { Spin } from 'antd';
+import get from 'lodash/get';
+import isArray from 'lodash/isArray';
 
 import {
   QUERY_TYPE_EVENT,
@@ -11,7 +16,7 @@ import {
   EACH_USER_TYPE,
   QUERY_TYPE_WEB,
   CHART_TYPE_BARCHART,
-  ReverseProfileMapper,
+  ReverseProfileMapper
 } from 'Utils/constants';
 import { toLetters } from 'Utils/dataFormatter';
 import { getChartTypeMenuItems } from 'Utils/chart.helpers';
@@ -30,6 +35,7 @@ import KPIAnalysis from '../KPIAnalysis';
 import ProfilesResultPage from '../ProfilesResultPage';
 import { getChartType } from './analysisResultsPage.helpers';
 import { getKpiLabel } from '../KPIAnalysis/kpiAnalysis.helpers';
+import { ATTRIBUTION_GROUP_ANALYSIS_KEYS } from '../AttributionsResult/attributionsResult.constants';
 
 function ReportContent({
   resultState,
@@ -51,17 +57,19 @@ function ReportContent({
   campaignsArrayMapper,
   handleGranularityChange,
   renderedCompRef,
-  handleChartTypeChange,
+  handleChartTypeChange
 }) {
-  let content = null,
-    queryDetail = null,
-    durationObj = {},
-    groupAnalysis = '',
-    metricsDropdown = <div className='mr-0'></div>;
+  let content = null;
+  let queryDetail = null;
+  let durationObj = {};
+  let groupAnalysis = '';
+  let metricsDropdown = <div className="mr-0"></div>;
 
   const {
-    coreQueryState: { chartTypes },
+    coreQueryState: { chartTypes }
   } = useContext(CoreQueryContext);
+
+  const { attrQueries } = useSelector((state) => state.coreQuery);
 
   const chartType = useMemo(() => {
     return getChartType({
@@ -69,14 +77,14 @@ function ReportContent({
       chartTypes,
       queryType,
       campaignGroupBy: campaignState.group_by,
-      attributionModels: attributionsState.models,
+      attributionModels: attributionsState.models
     });
   }, [
     breakdown,
     campaignState.group_by,
     chartTypes,
     queryType,
-    attributionsState.models,
+    attributionsState.models
   ]);
 
   const [currMetricsValue, setCurrMetricsValue] = useState(0);
@@ -111,7 +119,7 @@ function ReportContent({
 
   if (resultState.loading) {
     content = (
-      <div className='h-64 flex items-center justify-center w-full'>
+      <div className="h-64 flex items-center justify-center w-full">
         <Spin size={'large'} />
       </div>
     );
@@ -119,7 +127,7 @@ function ReportContent({
 
   if (resultState.error) {
     content = (
-      <div className='h-64 flex items-center justify-center w-full'>
+      <div className="h-64 flex items-center justify-center w-full">
         Something Went Wrong!
       </div>
     );
@@ -127,9 +135,9 @@ function ReportContent({
 
   if (resultState.apiCallStatus && !resultState.apiCallStatus.required) {
     content = (
-      <div className='h-64 flex flex-col items-center justify-center w-full'>
-        <SVG name='nodata' />
-        <Text type='title' color='grey' extraClass='mb-0'>
+      <div className="h-64 flex flex-col items-center justify-center w-full">
+        <SVG name="nodata" />
+        <Text type="title" color="grey" extraClass="mb-0">
           {resultState.apiCallStatus.message}
         </Text>
       </div>
@@ -169,6 +177,24 @@ function ReportContent({
       metricsDropdown = (
         <CampaignMetricsDropdown
           metrics={['Conversions', 'Cost Per Conversion']}
+          currValue={currMetricsValue}
+          onChange={setCurrMetricsValue}
+        />
+      );
+    }
+    if (
+      attributionsState.models.length === 1 &&
+      isArray(attrQueries) &&
+      attrQueries.length > 1 &&
+      get(
+        queryOptions,
+        'group_analysis',
+        ATTRIBUTION_GROUP_ANALYSIS_KEYS.USERS
+      ) !== ATTRIBUTION_GROUP_ANALYSIS_KEYS.USERS
+    ) {
+      metricsDropdown = (
+        <CampaignMetricsDropdown
+          metrics={attrQueries.map((q) => q.label)}
           currValue={currMetricsValue}
           onChange={setCurrMetricsValue}
         />
@@ -342,7 +368,7 @@ function ReportContent({
             apiCallStatus={resultState.apiCallStatus}
           />
         ) : null}
-        <div className='mt-6'>
+        <div className="mt-6">
           <CalendarRow
             queryType={queryType}
             handleDurationChange={handleDurationChange}
@@ -358,7 +384,7 @@ function ReportContent({
         </div>
       </>
 
-      <div className='mt-12'>{content}</div>
+      <div className="mt-12">{content}</div>
     </>
   );
 }

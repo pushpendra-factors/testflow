@@ -247,6 +247,7 @@ type Configuration struct {
 	SlackAppClientID                                string
 	SlackAppClientSecret                            string
 	EnableDryRunAlerts                              bool
+	DataAvailabilityExpiry                          int
 	ClearbitEnabled                                 int
 	UseSalesforceV54APIByProjectID                  string
 }

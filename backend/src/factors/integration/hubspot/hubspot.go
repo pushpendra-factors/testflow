@@ -102,8 +102,28 @@ func GetHubspotObjectTypeForSync() []int {
 	return syncOrderByType[:]
 }
 
-func GetURLParameterAsMap(pageUrl string) map[string]interface{} {
+func GetDecodedValue(encodedValue string, limit int) string {
+	prevValue := encodedValue
+	for i := 0; i <= limit; i++{
+		curr_value, err := url.QueryUnescape(prevValue)
+		if err  != nil || curr_value == prevValue {
+			if err != nil {
+				log.WithField("encodedValue", encodedValue).Error("error while decoding")
+			}
+			return prevValue
+		}
+		if i == limit && prevValue != curr_value{
+			log.WithField("encodedValue", encodedValue).Error("limit exceeded on decoding")
+			return prevValue
+		}
+		prevValue = curr_value
+	}
+		
+	return prevValue
+}
+	
 
+func GetURLParameterAsMap(pageUrl string) map[string]interface{} {
 	u, err := url.Parse(pageUrl)
 	if err != nil {
 		log.Error(err)
@@ -115,11 +135,10 @@ func GetURLParameterAsMap(pageUrl string) map[string]interface{} {
 	for key, value := range queries {
 		if _, exists := urlParameters[key]; !exists {
 			for _, v := range value {
-				urlParameters[key] = v
+				urlParameters[key] = GetDecodedValue(v, 2)
 			}
 		}
 	}
-
 	return urlParameters
 }
 

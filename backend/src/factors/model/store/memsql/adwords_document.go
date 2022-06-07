@@ -1079,6 +1079,18 @@ func (store *MemSQL) getSmartPropertyFilterValues(projectID uint64, requestFilte
 	return filterValues, http.StatusFound
 }
 
+func (store *MemSQL) IsAdwordsIntegrationAvailable(projectID uint64) bool {
+	projectSetting, errCode := store.GetProjectSetting(projectID)
+	if errCode != http.StatusFound {
+		return false
+	}
+	customerAccountID := projectSetting.IntAdwordsCustomerAccountId
+	if customerAccountID == nil || len(*customerAccountID) == 0 {
+		return false
+	}
+	return true
+}
+
 // GetAdwordsSQLQueryAndParametersForFilterValues - @TODO Kark v1
 // Currently, properties in object dont vary with Object.
 func (store *MemSQL) GetAdwordsSQLQueryAndParametersForFilterValues(projectID uint64,

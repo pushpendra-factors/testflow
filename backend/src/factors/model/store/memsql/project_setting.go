@@ -710,6 +710,19 @@ func (store *MemSQL) GetAllHubspotProjectSettings() ([]model.HubspotProjectSetti
 	return hubspotProjectSettings, http.StatusFound
 }
 
+func (store *MemSQL) IsHubspotIntegrationAvailable(projectID uint64) bool {
+	hubspotProjectSettings, errCode := store.GetAllHubspotProjectSettingsForProjectID(projectID)
+	if errCode != http.StatusFound && errCode != http.StatusOK {
+		log.WithField("projectId", projectID).Warn(" Failed in getting hubspot project settings.")
+		return false
+	}
+	if len(hubspotProjectSettings) == 0 {
+		log.WithField("projectId", projectID).Warn("Hubspot integration is not available.")
+		return false
+	}
+	return true
+}
+
 func (store *MemSQL) GetAllHubspotProjectSettingsForProjectID(projectID uint64) ([]model.HubspotProjectSettings, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
@@ -913,6 +926,19 @@ func (store *MemSQL) GetBigqueryEnabledProjectIDs() ([]uint64, int) {
 	return projectIDs, http.StatusFound
 }
 
+func (store *MemSQL) IsSalesforceIntegrationAvailable(projectID uint64) bool {
+	salesforceProjectSettings, errCode := store.GetAllSalesforceProjectSettingsForProject(projectID)
+	if errCode != http.StatusFound && errCode != http.StatusOK {
+		log.WithField("projectId", projectID).Warn(" Failed in getting salesforce project settings.")
+		return false
+	}
+	if len(salesforceProjectSettings) == 0 {
+		log.WithField("projectId", projectID).Warn("Salesforce integration is not available.")
+		return false
+	}
+	return true
+}
+
 // GetAllSalesforceProjectSettings return list of all enabled salesforce projects and their meta data
 func (store *MemSQL) GetAllSalesforceProjectSettings() ([]model.SalesforceProjectSettings, int) {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
@@ -1009,4 +1035,15 @@ func (store *MemSQL) DeleteChannelIntegration(projectID uint64, channelName stri
 	default:
 		return http.StatusBadRequest, errors.New("invalid channel name")
 	}
+}
+
+func (store *MemSQL) IsMarketoIntegrationAvailable(projectID uint64) bool {
+	connectorId, err := store.GetFiveTranMapping(projectID, model.MarketoIntegration)
+	if err != nil {
+		return false
+	}
+	if connectorId == "" {
+		return false
+	}
+	return true
 }

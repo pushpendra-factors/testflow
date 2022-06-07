@@ -66,6 +66,18 @@ func (store *MemSQL) buildObjectAndPropertiesForGoogleOrganic(objects []string) 
 	return objectsAndProperties
 }
 
+func (store *MemSQL) IsGoogleOrganicIntegrationAvailable(projectID uint64) bool {
+	projectSetting, errCode := store.GetProjectSetting(projectID)
+	if errCode != http.StatusFound {
+		return false
+	}
+	urlPrefix := projectSetting.IntGoogleOrganicURLPrefixes
+
+	if urlPrefix == nil || *urlPrefix == "" {
+		return false
+	}
+	return true
+}
 func (store *MemSQL) GetGoogleOrganicFilterValues(projectID uint64, requestFilterObject string, requestFilterProperty string, reqID string) ([]interface{}, int) {
 	logFields := log.Fields{
 		"project_id":              projectID,

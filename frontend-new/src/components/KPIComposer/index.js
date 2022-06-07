@@ -1,13 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import { connect, useSelector } from 'react-redux';
 import { bindActionCreators } from 'redux';
-import { Button, Collapse, Select, Popover } from 'antd';
+import { Button } from 'antd';
 import MomentTz from 'Components/MomentTz';
-import { SVG, Text } from '../factorsComponents';
+import { SVG } from '../factorsComponents';
 import styles from './index.module.scss';
 import QueryBlock from './QueryBlock';
-import SeqSelector from './AnalysisSeqSelector';
-import GroupBlock from './GroupBlock';
 import {
   QUERY_TYPE_FUNNEL,
   QUERY_TYPE_EVENT,
@@ -26,63 +24,59 @@ import { DEFAULT_DATE_RANGE, displayRange } from './DateRangeSelector/utils';
 
 import {
   fetchEventNames,
-  getUserProperties,
-  getEventProperties,
-  setGroupBy, 
-  delGroupBy,
+  getEventProperties
+  // setGroupBy,
+  // delGroupBy
 } from 'Reducers/coreQuery/middleware';
 
-import {
-  resetGroupByAction 
-} from 'Reducers/coreQuery/actions';
-
-import GLobalFilter from './GlobalFilter';
+import { resetGroupByAction } from 'Reducers/coreQuery/actions';
 import { getValidGranularityOptions } from '../../utils/dataFormatter';
 
 import { DefaultDateRangeFormat } from '../../Views/CoreQuery/utils';
+import GlobalFilterBlock from './GlobalFilterBlock';
+import GroupByBlock from './GroupByBlock';
 
+// const { Option } = Select;
 
-const { Option } = Select;
-
-const { Panel } = Collapse;
+// const { Panel } = Collapse;
 
 function KPIComposer({
   queries,
-  runQuery,
+  // runQuery,
   eventChange,
   queryType,
-  fetchEventNames,
-  getUserProperties,
-  getEventProperties,
+  // fetchEventNames,
+  // getUserProperties,
+  // getEventProperties,
   activeProject,
-  eventProperties,
+  // eventProperties,
   queryOptions,
   setQueryOptions,
-  runFunnelQuery,
-  runCampaignsQuery,
+  // runFunnelQuery,
+  // runCampaignsQuery,
   handleRunQuery,
   collapse = false,
   setCollapse,
   selectedMainCategory,
   setSelectedMainCategory,
-  KPIConfigProps, 
+  KPIConfigProps,
   resetGroupByAction
 }) {
-  const [analyticsSeqOpen, setAnalyticsSeqVisible] = useState(false);
-  const [calendarLabel, setCalendarLabel] = useState('Pick Dates');
-  const [criteriaTabOpen, setCriteriaTabOpen] = useState(false);
+  // const [analyticsSeqOpen, setAnalyticsSeqVisible] = useState(false);
+  const [_, setCalendarLabel] = useState('Pick Dates');
+  const [criteriaBlockOpen, setCriteriaBlockOpen] = useState(true);
+  const [eventBlockOpen, setEventBlockOpen] = useState(true);
+  // const [criteriaTabOpen, setCriteriaTabOpen] = useState(false);
 
-  const userProperties = useSelector((state) => state.coreQuery.userProperties);
+  // const userProperties = useSelector((state) => state.coreQuery.userProperties);
 
-  const {
-    groupBy
-  } = useSelector((state) => state.coreQuery);
+  const { groupBy } = useSelector((state) => state.coreQuery);
 
   const DefaultQueryOptsVal = {
-      ...QUERY_OPTIONS_DEFAULT_VALUE,
-      session_analytics_seq: INITIAL_SESSION_ANALYTICS_SEQ,
-      date_range: { ...DefaultDateRangeFormat },
-  }
+    ...QUERY_OPTIONS_DEFAULT_VALUE,
+    session_analytics_seq: INITIAL_SESSION_ANALYTICS_SEQ,
+    date_range: { ...DefaultDateRangeFormat }
+  };
 
   // useEffect(() => {
   //   if (activeProject && activeProject.id) {
@@ -99,6 +93,10 @@ function KPIComposer({
     convertToDateRange();
   }, [queryOptions]);
 
+  const handleEventChange = (...props) => {
+    eventChange(...props);
+  };
+
   const queryList = () => {
     const blockList = [];
 
@@ -110,7 +108,7 @@ function KPIComposer({
             queryType={queryType}
             event={event}
             queries={queries}
-            eventChange={eventChange}
+            eventChange={handleEventChange}
             selectedMainCategory={selectedMainCategory}
             setSelectedMainCategory={setSelectedMainCategory}
             KPIConfigProps={KPIConfigProps}
@@ -126,7 +124,7 @@ function KPIComposer({
             queryType={queryType}
             index={queries.length + 1}
             queries={queries}
-            eventChange={eventChange}
+            eventChange={handleEventChange}
             groupBy={queryOptions.groupBy}
             selectedMainCategory={selectedMainCategory}
             setSelectedMainCategory={setSelectedMainCategory}
@@ -144,105 +142,105 @@ function KPIComposer({
     opts.globalFilters = filters;
     setQueryOptions(opts);
   };
-   
-  const renderGlobalFilterBlock = (isSameKPIgrp) => {
-    const [filterBlockOpen, setFilterBlockOpen] = useState(true);
-    if (!isSameKPIgrp || _.isEmpty(queries)) {
-      //resetting setQueryOptions to default values
-      if(!_.isEmpty(queries) && !_.isEqual(queryOptions, DefaultQueryOptsVal)){
-        setQueryOptions({ ...DefaultQueryOptsVal });
-      }
-      return null;
-    }
-    try {
-      if (queryType === QUERY_TYPE_EVENT && queries.length < 1) {
-        return null;
-      }
-      if (queryType === QUERY_TYPE_FUNNEL && queries.length < 2) {
-        return null;
-      }
 
-      return (
-        <ComposerBlock
-          blockTitle={'FILTER BY'}
-          isOpen={filterBlockOpen}
-          showIcon={true}
-          onClick={() => setFilterBlockOpen(!filterBlockOpen)}
-          extraClass={`no-padding-l`}
-        >
-          <div key={0} className={'fa--query_block borderless no-padding '}>
-            <GLobalFilter
-              filters={queryOptions.globalFilters}
-              setGlobalFilters={setGlobalFiltersOption}
-              onFiltersLoad={[
-                () => {
-                  getUserProperties(activeProject.id, queryType);
-                },
-              ]}
-              selectedMainCategory={selectedMainCategory}
-              KPIConfigProps={KPIConfigProps}
-            ></GLobalFilter>
-          </div>
-        </ComposerBlock>
-      );
-    } catch (err) {
-      console.log(err);
-    }
-  }; 
+  // const renderGlobalFilterBlock = (isSameKPIgrp) => {
+  //   // if (!isSameKPIgrp || isEmpty(queries)) {
+  //   // we cannot set state inside render function. Bad code.
+  //   //   // resetting setQueryOptions to default values
+  //   //   if (!isEmpty(queries) && !isEqual(queryOptions, DefaultQueryOptsVal)) {
+  //   //     setQueryOptions({ ...DefaultQueryOptsVal });
+  //   //   }
+  //   //   return null;
+  //   // }
+  //   try {
+  //     if (queryType === QUERY_TYPE_EVENT && queries.length < 1) {
+  //       return null;
+  //     }
+  //     if (queryType === QUERY_TYPE_FUNNEL && queries.length < 2) {
+  //       return null;
+  //     }
 
-  const groupByBlock = (isSameKPIgrp) => {
-    const [groupBlockOpen, setGroupBlockOpen] = useState(true);
-    if (!isSameKPIgrp || _.isEmpty(queries)) {
-       //resetting setQueryOptions to default values
-       if(!_.isEmpty(queries) && !_.isEmpty(groupBy?.global)){ 
-        resetGroupByAction()
-      }
-      
-      return null;
-    }
+  //     return (
+  //       <ComposerBlock
+  //         blockTitle={'FILTER BY'}
+  //         isOpen={filterBlockOpen}
+  //         showIcon={true}
+  //         onClick={() => setFilterBlockOpen(!filterBlockOpen)}
+  //         extraClass={'no-padding-l'}
+  //       >
+  //         <div key={0} className={'fa--query_block borderless no-padding '}>
+  //           <GLobalFilter
+  //             filters={queryOptions.globalFilters}
+  //             setGlobalFilters={setGlobalFiltersOption}
+  //             onFiltersLoad={[
+  //               () => {
+  //                 getUserProperties(activeProject.id, queryType);
+  //               }
+  //             ]}
+  //             selectedMainCategory={selectedMainCategory}
+  //             KPIConfigProps={KPIConfigProps}
+  //           ></GLobalFilter>
+  //         </div>
+  //       </ComposerBlock>
+  //     );
+  //   } catch (err) {
+  //     console.log(err);
+  //   }
+  // };
 
-    try {
-      if (queryType === QUERY_TYPE_EVENT && queries.length < 1) {
-        return null;
-      }
-      if (queryType === QUERY_TYPE_FUNNEL && queries.length < 2) {
-        return null;
-      }
+  // const groupByBlock = (isSameKPIgrp) => {
+  //   // if (!isSameKPIgrp || isEmpty(queries)) {
+  //   // we cannot set state inside render function. Very bad code.
+  //   //   // resetting setQueryOptions to default values
+  //   //   if (!isEmpty(queries) && !isEmpty(groupBy?.global)) {
+  //   //     resetGroupByAction();
+  //   //   }
 
-      return (
-        <ComposerBlock
-          blockTitle={'BREAKDOWN'}
-          isOpen={groupBlockOpen}
-          showIcon={true}
-          onClick={() => setGroupBlockOpen(!groupBlockOpen)}
-          extraClass={`no-padding-l`}
-        >
-          <div key={0} className={'fa--query_block borderless no-padding '}>
-            <GroupBlock
-              queryType={queryType}
-              events={queries}
-              selectedMainCategory={selectedMainCategory}
-              KPIConfigProps={KPIConfigProps}
-            />
-          </div>
-        </ComposerBlock>
-      );
-    } catch (err) {
-      console.log(err);
-    }
-  };
+  //   //   return null;
+  //   // }
 
-  const setEventSequence = (value) => {
-    const options = Object.assign({}, queryOptions);
-    options.event_analysis_seq = value;
-    setQueryOptions(options);
-  };
+  //   try {
+  //     if (queryType === QUERY_TYPE_EVENT && queries.length < 1) {
+  //       return null;
+  //     }
+  //     if (queryType === QUERY_TYPE_FUNNEL && queries.length < 2) {
+  //       return null;
+  //     }
 
-  const setAnalysisSequence = (seq) => {
-    const options = Object.assign({}, queryOptions);
-    options.session_analytics_seq = seq;
-    setQueryOptions(options);
-  };
+  //     return (
+  //       <ComposerBlock
+  //         blockTitle={'BREAKDOWN'}
+  //         isOpen={groupBlockOpen}
+  //         showIcon={true}
+  //         onClick={() => setGroupBlockOpen(!groupBlockOpen)}
+  //         extraClass={'no-padding-l'}
+  //       >
+  //         <div key={0} className={'fa--query_block borderless no-padding '}>
+  //           <GroupBlock
+  //             queryType={queryType}
+  //             events={queries}
+  //             selectedMainCategory={selectedMainCategory}
+  //             KPIConfigProps={KPIConfigProps}
+  //           />
+  //         </div>
+  //       </ComposerBlock>
+  //     );
+  //   } catch (err) {
+  //     console.log(err);
+  //   }
+  // };
+
+  // const setEventSequence = (value) => {
+  //   const options = Object.assign({}, queryOptions);
+  //   options.event_analysis_seq = value;
+  //   setQueryOptions(options);
+  // };
+
+  // const setAnalysisSequence = (seq) => {
+  //   const options = Object.assign({}, queryOptions);
+  //   options.session_analytics_seq = seq;
+  //   setQueryOptions(options);
+  // };
 
   const getDateRange = () => {
     const ranges = [{ ...DEFAULT_DATE_RANGE }];
@@ -262,7 +260,7 @@ function KPIComposer({
   };
 
   const setDateRange = (dates) => {
-    const queryOptionsState = Object.assign({}, queryOptions);
+    const queryOptionsState = { ...queryOptions };
     if (dates && dates.startDate && dates.endDate) {
       if (Array.isArray(dates.startDate)) {
         queryOptionsState.date_range.from = dates.startDate[0];
@@ -273,7 +271,7 @@ function KPIComposer({
       }
       const frequency = getValidGranularityOptions({
         from: queryOptionsState.date_range.from,
-        to: queryOptionsState.date_range.to,
+        to: queryOptionsState.date_range.to
       })[0];
       queryOptionsState.date_range.frequency = frequency;
       setQueryOptions(queryOptionsState);
@@ -301,7 +299,7 @@ function KPIComposer({
 
   const footer = () => {
     try {
-      if (queryType === QUERY_TYPE_KPI && queries.length == 0) {
+      if (queryType === QUERY_TYPE_KPI && queries.length === 0) {
         return null;
       } else {
         return (
@@ -316,29 +314,29 @@ function KPIComposer({
                 presetRange
                 monthPicker
                 quarterPicker
-                placement='topRight'
+                placement="topRight"
                 buttonSize={'large'}
                 range={{
                   startDate: queryOptions.date_range.from,
-                  endDate: queryOptions.date_range.to,
+                  endDate: queryOptions.date_range.to
                 }}
                 onSelect={setDateRange}
               />
             ) : (
               <Button
-                className={`mr-2`}
+                className={'mr-2'}
                 size={'large'}
                 type={'default'}
                 onClick={() => setCollapse(false)}
               >
-                <SVG name={`arrowUp`} size={20} extraClass={`mr-1`}></SVG>
+                <SVG name={'arrowUp'} size={20} extraClass={'mr-1'}></SVG>
                 Collapse all
               </Button>
             )}
             <Button
-              className={`ml-2`}
+              className={'ml-2'}
               size={'large'}
-              type='primary'
+              type="primary"
               onClick={handleRunQueryCamp}
             >
               Run Analysis
@@ -362,104 +360,104 @@ function KPIComposer({
     );
   };
 
-  const renderSeqSel = () => {
-    if (
-      queryOptions.session_analytics_seq.start &&
-      queryOptions.session_analytics_seq.end
-    ) {
-      return (
-        <>
-          <Text
-            type={'paragraph'}
-            mini
-            weight={'thin'}
-            extraClass={'m-0 ml-2 inline'}
-          >
-            Where sequence
-          </Text>
-          <Popover
-            className='fa-event-popover'
-            content={
-              <SeqSelector
-                seq={queryOptions.session_analytics_seq}
-                queryCount={queries.length}
-                setAnalysisSequence={setAnalysisSequence}
-              />
-            }
-            trigger='click'
-            visible={analyticsSeqOpen}
-            onVisibleChange={(visible) => setAnalyticsSeqVisible(visible)}
-          >
-            <Button Button type='link' className={'ml-2'}>
-              Between &nbsp;
-              {queryOptions.session_analytics_seq.start}
-              &nbsp; to &nbsp;
-              {queryOptions.session_analytics_seq.end}
-            </Button>
-          </Popover>
-          <Text
-            type={'paragraph'}
-            mini
-            weight={'thin'}
-            extraClass={'m-0 ml-2 inline'}
-          >
-            happened in the same session
-          </Text>
-        </>
-      );
-    } else {
-      return (
-        <>
-          <Text
-            type={'paragraph'}
-            mini
-            weight={'thin'}
-            extraClass={'m-0 ml-2 inline'}
-          >
-            Where
-          </Text>
-          <Popover
-            className='fa-event-popover'
-            content={
-              <SeqSelector
-                seq={queryOptions.session_analytics_seq}
-                queryCount={queries.length}
-                setAnalysisSequence={setAnalysisSequence}
-              />
-            }
-            trigger='click'
-            visible={analyticsSeqOpen}
-            onVisibleChange={(visible) => setAnalyticsSeqVisible(visible)}
-          >
-            <Button Button type='link' className={'ml-2'}>
-              Select Sequence
-            </Button>
-          </Popover>
-          <Text
-            type={'paragraph'}
-            mini
-            weight={'thin'}
-            extraClass={'m-0 ml-2 inline'}
-          >
-            happened in the same session
-          </Text>
-        </>
-      );
-    }
-  };
+  // const renderSeqSel = () => {
+  //   if (
+  //     queryOptions.session_analytics_seq.start &&
+  //     queryOptions.session_analytics_seq.end
+  //   ) {
+  //     return (
+  //       <>
+  //         <Text
+  //           type={'paragraph'}
+  //           mini
+  //           weight={'thin'}
+  //           extraClass={'m-0 ml-2 inline'}
+  //         >
+  //           Where sequence
+  //         </Text>
+  //         <Popover
+  //           className="fa-event-popover"
+  //           content={
+  //             <SeqSelector
+  //               seq={queryOptions.session_analytics_seq}
+  //               queryCount={queries.length}
+  //               setAnalysisSequence={setAnalysisSequence}
+  //             />
+  //           }
+  //           trigger="click"
+  //           visible={analyticsSeqOpen}
+  //           onVisibleChange={(visible) => setAnalyticsSeqVisible(visible)}
+  //         >
+  //           <Button Button type="link" className={'ml-2'}>
+  //             Between &nbsp;
+  //             {queryOptions.session_analytics_seq.start}
+  //             &nbsp; to &nbsp;
+  //             {queryOptions.session_analytics_seq.end}
+  //           </Button>
+  //         </Popover>
+  //         <Text
+  //           type={'paragraph'}
+  //           mini
+  //           weight={'thin'}
+  //           extraClass={'m-0 ml-2 inline'}
+  //         >
+  //           happened in the same session
+  //         </Text>
+  //       </>
+  //     );
+  //   } else {
+  //     return (
+  //       <>
+  //         <Text
+  //           type={'paragraph'}
+  //           mini
+  //           weight={'thin'}
+  //           extraClass={'m-0 ml-2 inline'}
+  //         >
+  //           Where
+  //         </Text>
+  //         <Popover
+  //           className="fa-event-popover"
+  //           content={
+  //             <SeqSelector
+  //               seq={queryOptions.session_analytics_seq}
+  //               queryCount={queries.length}
+  //               setAnalysisSequence={setAnalysisSequence}
+  //             />
+  //           }
+  //           trigger="click"
+  //           visible={analyticsSeqOpen}
+  //           onVisibleChange={(visible) => setAnalyticsSeqVisible(visible)}
+  //         >
+  //           <Button Button type="link" className={'ml-2'}>
+  //             Select Sequence
+  //           </Button>
+  //         </Popover>
+  //         <Text
+  //           type={'paragraph'}
+  //           mini
+  //           weight={'thin'}
+  //           extraClass={'m-0 ml-2 inline'}
+  //         >
+  //           happened in the same session
+  //         </Text>
+  //       </>
+  //     );
+  //   }
+  // };
 
-  const renderFuCrit = () => {
-    return (
-      <div className={'flex justify-start items-center mt-2'}>
-        <div className={styles.composer_body__session_analytics__options}>
-          {renderSeqSel()}
-        </div>
-      </div>
-    );
-  };
+  // const renderFuCrit = () => {
+  //   return (
+  //     <div className={'flex justify-start items-center mt-2'}>
+  //       <div className={styles.composer_body__session_analytics__options}>
+  //         {renderSeqSel()}
+  //       </div>
+  //     </div>
+  //   );
+  // };
 
+  // this is fine
   const renderCriteria = () => {
-    const [criterieaBlockOpen, setCriterieaBlockOpen] = useState(true);
     try {
       if (queryType === QUERY_TYPE_EVENT) {
         if (queries.length <= 0) return null;
@@ -467,12 +465,12 @@ function KPIComposer({
         return (
           <ComposerBlock
             blockTitle={'CRITERIA'}
-            isOpen={criterieaBlockOpen}
+            isOpen={criteriaBlockOpen}
             showIcon={true}
             onClick={() => {
-              setCriterieaBlockOpen(!criterieaBlockOpen);
+              setCriteriaBlockOpen(!criteriaBlockOpen);
             }}
-            extraClass={`no-padding-l`}
+            extraClass={'no-padding-l'}
           >
             <div className={styles.criteria}>{renderEACrit()}</div>
           </ComposerBlock>
@@ -494,8 +492,8 @@ function KPIComposer({
     }
   };
 
+  // this is fine
   const renderQueryList = () => {
-    const [eventBlockOpen, setEventBlockOpen] = useState(true);
     try {
       return (
         <ComposerBlock
@@ -503,7 +501,7 @@ function KPIComposer({
           isOpen={eventBlockOpen}
           showIcon={true}
           onClick={() => setEventBlockOpen(!eventBlockOpen)}
-          extraClass={`no-padding-l`}
+          extraClass={'no-padding-l'}
         >
           {queryList()}
         </ComposerBlock>
@@ -513,14 +511,28 @@ function KPIComposer({
     }
   };
 
-  const isSameKPIgrp = queries.every(
-    (item, index) => queries[0].group == queries[index].group
-  );
   return (
     <div className={styles.composer_body}>
       {renderQueryList()}
-      {renderGlobalFilterBlock(isSameKPIgrp)}
-      {groupByBlock(isSameKPIgrp)}
+      <GlobalFilterBlock
+        queryType={queryType}
+        queries={queries}
+        queryOptions={queryOptions}
+        setGlobalFiltersOption={setGlobalFiltersOption}
+        activeProject={activeProject}
+        selectedMainCategory={selectedMainCategory}
+        KPIConfigProps={KPIConfigProps}
+        setQueryOptions={setQueryOptions}
+        DefaultQueryOptsVal={DefaultQueryOptsVal}
+      />
+      <GroupByBlock
+        queryType={queryType}
+        queries={queries}
+        selectedMainCategory={selectedMainCategory}
+        KPIConfigProps={KPIConfigProps}
+        groupBy={groupBy}
+        resetGroupByAction={resetGroupByAction}
+      />
       {renderCriteria()}
       {footer()}
     </div>
@@ -529,7 +541,7 @@ function KPIComposer({
 
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
-  eventProperties: state.coreQuery.eventProperties,
+  eventProperties: state.coreQuery.eventProperties
 });
 
 const mapDispatchToProps = (dispatch) =>
@@ -537,10 +549,9 @@ const mapDispatchToProps = (dispatch) =>
     {
       fetchEventNames,
       getEventProperties,
-      getUserProperties,
       resetGroupByAction
     },
     dispatch
   );
 
-export default connect(mapStateToProps, mapDispatchToProps)(KPIComposer);
+export default connect(mapStateToProps, mapDispatchToProps)(memo(KPIComposer));

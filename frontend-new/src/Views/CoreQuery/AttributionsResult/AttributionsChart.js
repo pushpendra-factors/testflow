@@ -5,15 +5,17 @@ import React, {
   useCallback,
   useEffect,
   forwardRef,
-  useImperativeHandle,
+  useImperativeHandle
 } from 'react';
+import get from 'lodash/get';
+
 import {
   defaultSortProp,
   getTableColumns,
   getTableData,
   getSingleTouchPointChartData,
   getDualTouchPointChartData,
-  getResultantMetrics,
+  getResultantMetrics
 } from './utils';
 
 import AttributionTable from './AttributionTable';
@@ -21,7 +23,7 @@ import {
   DASHBOARD_MODAL,
   MAX_ALLOWED_VISIBLE_PROPERTIES,
   GROUPED_MAX_ALLOWED_VISIBLE_PROPERTIES,
-  CHART_TYPE_BARCHART,
+  CHART_TYPE_BARCHART
 } from '../../../utils/constants';
 import { CoreQueryContext } from '../../../contexts/CoreQueryContext';
 import OptionsPopover from './OptionsPopover';
@@ -31,9 +33,10 @@ import DualTouchPointChart from './DualTouchPointChart';
 import SingleTouchPointChart from './SingleTouchPointChart';
 import AttributionsScatterPlot from './AttributionsScatterPlot';
 import NoDataChart from '../../../components/NoDataChart';
+import { ATTRIBUTION_GROUP_ANALYSIS_KEYS } from './attributionsResult.constants';
 
 const nodata = (
-  <div className='mt-4 flex justify-center items-center w-full h-full'>
+  <div className="mt-4 flex justify-center items-center w-full h-full">
     <NoDataChart />
   </div>
 );
@@ -53,7 +56,7 @@ const AttributionsChart = forwardRef(
       attr_dimensions,
       content_groups,
       chartType,
-      queryOptions,
+      queryOptions
     },
     ref
   ) => {
@@ -61,20 +64,17 @@ const AttributionsChart = forwardRef(
       coreQueryState: {
         comparison_data,
         comparison_duration,
-        savedQuerySettings,
+        savedQuerySettings
       },
       attributionMetrics,
-      setAttributionMetrics,
+      setAttributionMetrics
     } = useContext(CoreQueryContext);
 
-    const { 
-      eventNames, 
-      attrQueries
-    } = useSelector((state) => state.coreQuery);
+    const { eventNames, attrQueries } = useSelector((state) => state.coreQuery);
 
     const [aggregateData, setAggregateData] = useState({
       categories: [],
-      series: [],
+      series: []
     });
     const [dualTouchpointChartData, setDualTouchpointChartData] = useState([]);
     const [searchText, setSearchText] = useState('');
@@ -93,7 +93,7 @@ const AttributionsChart = forwardRef(
 
     useImperativeHandle(ref, () => {
       return {
-        currentSorter: { sorter },
+        currentSorter: { sorter }
       };
     });
 
@@ -110,7 +110,7 @@ const AttributionsChart = forwardRef(
             if (metric.header === option.header) {
               return {
                 ...metric,
-                enabled: !metric.enabled,
+                enabled: !metric.enabled
               };
             }
             return metric;
@@ -169,7 +169,6 @@ const AttributionsChart = forwardRef(
           data
         )
       );
-      
     }, [
       attr_dimensions,
       content_groups,
@@ -186,6 +185,8 @@ const AttributionsChart = forwardRef(
       durationObj,
       comparison_data.data,
       comparison_duration,
+      queryOptions,
+      attrQueries
     ]);
 
     useEffect(() => {
@@ -228,6 +229,8 @@ const AttributionsChart = forwardRef(
       sorter,
       touchpoint,
       comparison_data.data,
+      queryOptions,
+      attrQueries
     ]);
 
     useEffect(() => {
@@ -253,7 +256,14 @@ const AttributionsChart = forwardRef(
             attr_dimensions,
             content_groups,
             touchpoint,
-            !!comparison_data.data
+            !!comparison_data.data,
+            attrQueries,
+            get(
+              queryOptions,
+              'group_analysis',
+              ATTRIBUTION_GROUP_ANALYSIS_KEYS.USERS
+            ),
+            currMetricsValue
           );
           setAggregateData(chartData);
         }
@@ -268,6 +278,8 @@ const AttributionsChart = forwardRef(
       attribution_method,
       attribution_method_compare,
       currMetricsValue,
+      attrQueries,
+      queryOptions
     ]);
 
     let chart = null;
@@ -330,9 +342,9 @@ const AttributionsChart = forwardRef(
     }
 
     return (
-      <div className='flex items-center justify-center flex-col'>
-        <div className='w-full'>{chart}</div>
-        <div className='mt-12 w-full'>
+      <div className="flex items-center justify-center flex-col">
+        <div className="w-full">{chart}</div>
+        <div className="mt-12 w-full">
           <AttributionTable
             comparison_data={comparison_data.data}
             durationObj={durationObj}
@@ -356,6 +368,7 @@ const AttributionsChart = forwardRef(
         </div>
       </div>
     );
-  });
+  }
+);
 
 export default AttributionsChart;

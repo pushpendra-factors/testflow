@@ -1,5 +1,4 @@
 import {
-  SET_ATTRIBUTION_METRICS,
   SET_NAVIGATED_FROM_DASHBOARD,
   SET_COMPARISON_ENABLED,
   COMPARISON_DATA_LOADING,
@@ -9,31 +8,26 @@ import {
   SET_COMPARE_DURATION,
   UPDATE_CHART_TYPES,
   SET_SAVED_QUERY_SETTINGS,
-  UPDATE_PIVOT_CONFIG,
+  UPDATE_PIVOT_CONFIG
 } from './constants';
 
 export default function (state, action) {
   const { payload } = action;
   switch (action.type) {
-    case SET_ATTRIBUTION_METRICS:
-      return {
-        ...state,
-        attributionMetrics: payload,
-      };
     case SET_NAVIGATED_FROM_DASHBOARD:
       return {
         ...state,
-        navigatedFromDashboard: payload,
+        navigatedFromDashboard: payload
       };
     case SET_COMPARISON_SUPPORTED:
       return {
         ...state,
-        comparison_supported: payload,
+        comparison_supported: payload
       };
     case SET_COMPARISON_ENABLED:
       return {
         ...state,
-        comparison_enabled: payload,
+        comparison_enabled: payload
       };
     case COMPARISON_DATA_LOADING:
       return {
@@ -41,8 +35,8 @@ export default function (state, action) {
         comparison_data: {
           loading: true,
           error: false,
-          data: null,
-        },
+          data: null
+        }
       };
     case COMPARISON_DATA_FETCHED:
       return {
@@ -50,8 +44,8 @@ export default function (state, action) {
         comparison_data: {
           loading: false,
           error: false,
-          data: payload,
-        },
+          data: payload
+        }
       };
     case RESET_COMPARISON_DATA:
       return {
@@ -61,23 +55,23 @@ export default function (state, action) {
         comparison_data: {
           loading: false,
           error: false,
-          data: null,
-        },
+          data: null
+        }
       };
     case SET_COMPARE_DURATION:
       return {
         ...state,
-        comparison_duration: payload,
+        comparison_duration: payload
       };
     case UPDATE_CHART_TYPES:
       return {
         ...state,
-        chartTypes: payload,
+        chartTypes: payload
       };
     case SET_SAVED_QUERY_SETTINGS: {
       return {
         ...state,
-        savedQuerySettings: payload,
+        savedQuerySettings: payload
       };
     }
     case UPDATE_PIVOT_CONFIG: {
@@ -85,8 +79,8 @@ export default function (state, action) {
         ...state,
         pivotConfig: {
           ...state.pivotConfig,
-          ...payload,
-        },
+          ...payload
+        }
       };
     }
     default:
