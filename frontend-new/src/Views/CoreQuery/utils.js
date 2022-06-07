@@ -25,7 +25,7 @@ import {
   INITIAL_SESSION_ANALYTICS_SEQ,
   MARKETING_TOUCHPOINTS,
   PREDEFINED_DATES,
-  QUERY_TYPE_PROFILE
+  QUERY_TYPE_PROFILE,
 } from '../../utils/constants';
 import { FILTER_TYPES, INITIAL_STATE } from './constants';
 import { isDateInMilliSeconds } from '../../utils/dataFormatter';
@@ -36,7 +36,7 @@ export const labelsObj = {
   [TOTAL_EVENTS_CRITERIA]: 'Event Count',
   [TOTAL_USERS_CRITERIA]: 'User Count',
   [ACTIVE_USERS_CRITERIA]: 'User Count',
-  [FREQUENCY_CRITERIA]: 'Count'
+  [FREQUENCY_CRITERIA]: 'Count',
 };
 
 const operatorMap = {
@@ -55,7 +55,7 @@ const operatorMap = {
   'in the current': 'inCurrent',
   'not in the current': 'notInCurrent',
   before: 'before',
-  since: 'since'
+  since: 'since',
 };
 
 export const reverseOperatorMap = {
@@ -66,7 +66,7 @@ export const reverseOperatorMap = {
   lesserThan: '<',
   lesserThanOrEqual: '<=',
   greaterThan: '>',
-  greaterThanOrEqual: '>='
+  greaterThanOrEqual: '>=',
 };
 
 export const reverseDateOperatorMap = {
@@ -79,7 +79,7 @@ export const reverseDateOperatorMap = {
   inCurrent: 'in the current',
   notInCurrent: 'not in the current',
   before: 'before',
-  since: 'since'
+  since: 'since',
 };
 
 const getEventsWithProperties = (queries) => {
@@ -94,22 +94,22 @@ const getEventsWithProperties = (queries) => {
         if (Array.isArray(fil.values)) {
           fil.values.forEach((val, index) => {
             filterProps.push({
-              en: fil.props[2],
+              en: fil.props[2] === 'group' ? 'user' : fil.props[2],
               lop: !index ? 'AND' : 'OR',
               op: operatorMap[fil.operator],
               pr: fil.props[0],
               ty: fil.props[1],
-              va: fil.props[1] === 'datetime' ? val : val
+              va: fil.props[1] === 'datetime' ? val : val,
             });
           });
         } else {
           filterProps.push({
-            en: fil.props[2],
+            en: fil.props[2] === 'group' ? 'user' : fil.props[2],
             lop: 'AND',
             op: operatorMap[fil.operator],
             pr: fil.props[0],
             ty: fil.props[1],
-            va: fil.props[1] === 'datetime' ? fil.values : fil.values
+            va: fil.props[1] === 'datetime' ? fil.values : fil.values,
           });
         }
       } else {
@@ -117,44 +117,44 @@ const getEventsWithProperties = (queries) => {
         if (Array.isArray(fil.values)) {
           fil.values.forEach((val, index) => {
             filterProps.push({
-              en: fil.props[2],
+              en: fil.props[2] === 'group' ? 'user' : fil.props[2],
               lop: !index ? 'AND' : 'OR',
               op: operatorMap[fil.operator],
               pr: fil.props[0],
               ty: fil.props[1],
-              va: fil.props[1] === 'datetime' ? val : val
+              va: fil.props[1] === 'datetime' ? val : val,
             });
           });
         } else {
           filterProps.push({
-            en: fil.props[2],
+            en: fil.props[2] === 'group' ? 'user' : fil.props[2],
             lop: 'AND',
             op: operatorMap[fil.operator],
             pr: fil.props[0],
             ty: fil.props[1],
-            va: fil.props[1] === 'datetime' ? fil.values : fil.values
+            va: fil.props[1] === 'datetime' ? fil.values : fil.values,
           });
         }
         fil = filtersGr[1];
         if (Array.isArray(fil.values)) {
           fil.values.forEach((val) => {
             filterProps.push({
-              en: fil.props[2],
+              en: fil.props[2] === 'group' ? 'user' : fil.props[2],
               lop: 'OR',
               op: operatorMap[fil.operator],
               pr: fil.props[0],
               ty: fil.props[1],
-              va: fil.props[1] === 'datetime' ? val : val
+              va: fil.props[1] === 'datetime' ? val : val,
             });
           });
         } else {
           filterProps.push({
-            en: fil.props[2],
+            en: fil.props[2] === 'group' ? 'user' : fil.props[2],
             lop: 'OR',
             op: operatorMap[fil.operator],
             pr: fil.props[0],
             ty: fil.props[1],
-            va: fil.props[1] === 'datetime' ? fil.values : fil.values
+            va: fil.props[1] === 'datetime' ? fil.values : fil.values,
           });
         }
       }
@@ -163,7 +163,7 @@ const getEventsWithProperties = (queries) => {
     ewps.push({
       an: ev.alias,
       na: ev.label,
-      pr: filterProps
+      pr: filterProps,
     });
   });
   return ewps;
@@ -180,22 +180,22 @@ const getProfileWithProperties = (queries) => {
         if (Array.isArray(fil.values)) {
           fil.values.forEach((val, index) => {
             filterProps.push({
-              en: fil.props[2],
+              en: fil.props[2] === 'group' ? 'user' : fil.props[2],
               pr: fil.props[0],
               op: operatorMap[fil.operator],
               va: val,
               lop: !index ? 'AND' : 'OR',
-              ty: fil.props[1]
+              ty: fil.props[1],
             });
           });
         } else {
           filterProps.push({
-            en: fil.props[2],
+            en: fil.props[2] === 'group' ? 'user' : fil.props[2],
             pr: fil.props[0],
             op: operatorMap[fil.operator],
             va: fil.values,
             lop: 'AND',
-            ty: fil.props[1]
+            ty: fil.props[1],
           });
         }
       } else {
@@ -203,34 +203,34 @@ const getProfileWithProperties = (queries) => {
         if (Array.isArray(fil.values)) {
           fil.values.forEach((val, index) => {
             filterProps.push({
-              en: fil.props[2],
+              en: fil.props[2] === 'group' ? 'user' : fil.props[2],
               pr: fil.props[0],
               op: operatorMap[fil.operator],
               va: val,
               lop: !index ? 'AND' : 'OR',
-              ty: fil.props[1]
+              ty: fil.props[1],
             });
           });
         } else {
           filterProps.push({
-            en: fil.props[2],
+            en: fil.props[2] === 'group' ? 'user' : fil.props[2],
             pr: fil.props[0],
             op: operatorMap[fil.operator],
             va: fil.values,
             lop: 'AND',
-            ty: fil.props[1]
+            ty: fil.props[1],
           });
         }
         fil = filtersGr[1];
         if (Array.isArray(fil.values)) {
           fil.values.forEach((val) => {
             filterProps.push({
-              en: fil.props[2],
+              en: fil.props[2] === 'group' ? 'user' : fil.props[2],
               pr: fil.props[0],
               op: operatorMap[fil.operator],
               va: val,
               lop: 'OR',
-              ty: fil.props[1]
+              ty: fil.props[1],
             });
           });
         } else {
@@ -240,7 +240,7 @@ const getProfileWithProperties = (queries) => {
             op: operatorMap[fil.operator],
             va: fil.values,
             lop: 'OR',
-            ty: fil.props[1]
+            ty: fil.props[1],
           });
         }
       }
@@ -249,7 +249,7 @@ const getProfileWithProperties = (queries) => {
       an: ev.alias,
       ty: ev.label,
       pr: filterProps,
-      tz: localStorage.getItem('project_timeZone') || 'Asia/Kolkata'
+      tz: localStorage.getItem('project_timeZone') || 'Asia/Kolkata',
     });
   });
   return pwps;
@@ -266,7 +266,7 @@ const getGlobalFilters = (globalFilters = []) => {
           op: operatorMap[fil.operator],
           pr: fil.props[0],
           ty: fil.props[1],
-          va: fil.props[1] === 'datetime' ? val : val
+          va: fil.props[1] === 'datetime' ? val : val,
         });
       });
     } else {
@@ -276,7 +276,7 @@ const getGlobalFilters = (globalFilters = []) => {
         op: operatorMap[fil.operator],
         pr: fil.props[0],
         ty: fil.props[1],
-        va: fil.props[1] === 'datetime' ? fil.values : fil.values
+        va: fil.props[1] === 'datetime' ? fil.values : fil.values,
       });
     }
   });
@@ -294,7 +294,7 @@ const getGlobalProfileFilters = (globalFilters = []) => {
           op: operatorMap[fil.operator],
           pr: fil.props[0],
           ty: fil.props[1],
-          va: fil.props[1] === 'datetime' ? val : val
+          va: fil.props[1] === 'datetime' ? val : val,
         });
       });
     } else {
@@ -304,7 +304,7 @@ const getGlobalProfileFilters = (globalFilters = []) => {
         op: operatorMap[fil.operator],
         pr: fil.props[0],
         ty: fil.props[1],
-        va: fil.props[1] === 'datetime' ? fil.values : fil.values
+        va: fil.props[1] === 'datetime' ? fil.values : fil.values,
       });
     }
   });
@@ -337,15 +337,15 @@ export const getProfileQuery = (
     if (opt.eventIndex) {
       appGbp = {
         pr: opt.property,
-        en: opt.prop_category,
+        en: opt.prop_category === 'group' ? 'user' : opt.prop_category,
         pty: opt.prop_type,
-        eni: opt.eventIndex
+        eni: opt.eventIndex,
       };
     } else {
       appGbp = {
         pr: opt.property,
-        en: opt.prop_category,
-        pty: opt.prop_type
+        en: opt.prop_category === 'group' ? 'user' : opt.prop_category,
+        pty: opt.prop_type,
       };
     }
     if (opt.prop_type === 'datetime') {
@@ -396,17 +396,17 @@ export const getFunnelQuery = (
     if (opt.eventIndex) {
       appGbp = {
         pr: opt.property,
-        en: opt.prop_category,
+        en: opt.prop_category === 'group' ? 'user' : opt.prop_category,
         pty: opt.prop_type,
         ena: opt.eventName,
-        eni: opt.eventIndex
+        eni: opt.eventIndex,
       };
     } else {
       appGbp = {
         pr: opt.property,
-        en: opt.prop_category,
+        en: opt.prop_category === 'group' ? 'user' : opt.prop_category,
         pty: opt.prop_type,
-        ena: opt.eventName
+        ena: opt.eventName,
       };
     }
     if (opt.prop_type === 'datetime') {
@@ -446,15 +446,15 @@ const getEventsWithPropertiesKPI = (filters, category) => {
               category === 'channels'
                 ? ''
                 : fil?.extra
-                  ? fil?.extra[3]
-                  : 'event',
+                ? fil?.extra[3]
+                : 'event',
             objTy:
               category === 'channels'
                 ? fil?.extra
                   ? fil?.extra[3]
                   : 'event'
                 : '',
-            va: fil.props[1] === 'datetime' ? formatFilterDate(val) : val
+            va: fil.props[1] === 'datetime' ? formatFilterDate(val) : val,
           });
         });
       } else {
@@ -474,7 +474,7 @@ const getEventsWithPropertiesKPI = (filters, category) => {
           va:
             fil.props[1] === 'datetime'
               ? formatFilterDate(fil.values)
-              : fil.values
+              : fil.values,
         });
       }
     } else {
@@ -490,15 +490,15 @@ const getEventsWithPropertiesKPI = (filters, category) => {
               category === 'channels'
                 ? ''
                 : fil?.extra
-                  ? fil?.extra[3]
-                  : 'event',
+                ? fil?.extra[3]
+                : 'event',
             objTy:
               category === 'channels'
                 ? fil?.extra
                   ? fil?.extra[3]
                   : 'event'
                 : '',
-            va: fil.props[1] === 'datetime' ? formatFilterDate(val) : val
+            va: fil.props[1] === 'datetime' ? formatFilterDate(val) : val,
           });
         });
       } else {
@@ -518,7 +518,7 @@ const getEventsWithPropertiesKPI = (filters, category) => {
           va:
             fil.props[1] === 'datetime'
               ? formatFilterDate(fil.values)
-              : fil.values
+              : fil.values,
         });
       }
       fil = filtersGr[1];
@@ -533,15 +533,15 @@ const getEventsWithPropertiesKPI = (filters, category) => {
               category === 'channels'
                 ? ''
                 : fil?.extra
-                  ? fil?.extra[3]
-                  : 'event',
+                ? fil?.extra[3]
+                : 'event',
             objTy:
               category === 'channels'
                 ? fil?.extra
                   ? fil?.extra[3]
                   : 'event'
                 : '',
-            va: fil.props[1] === 'datetime' ? formatFilterDate(val) : val
+            va: fil.props[1] === 'datetime' ? formatFilterDate(val) : val,
           });
         });
       } else {
@@ -561,7 +561,7 @@ const getEventsWithPropertiesKPI = (filters, category) => {
           va:
             fil.props[1] === 'datetime'
               ? formatFilterDate(fil.values)
-              : fil.values
+              : fil.values,
         });
       }
     }
@@ -579,7 +579,7 @@ const getGroupByWithPropertiesKPI = (appliedGroupBy, index, category) => {
         prDaTy: opt.prop_type,
         eni: opt.eventIndex,
         en: category === 'channels' ? '' : opt.prop_category,
-        objTy: category === 'channels' ? opt.prop_category : ''
+        objTy: category === 'channels' ? opt.prop_category : '',
       };
     } else {
       appGbp = {
@@ -587,7 +587,7 @@ const getGroupByWithPropertiesKPI = (appliedGroupBy, index, category) => {
         prNa: opt.property,
         prDaTy: opt.prop_type,
         en: category === 'channels' ? '' : opt.prop_category,
-        objTy: category === 'channels' ? opt.prop_category : ''
+        objTy: category === 'channels' ? opt.prop_category : '',
       };
     }
     if (opt.prop_type === 'datetime') {
@@ -615,7 +615,7 @@ const getKPIqueryGroup = (queries, eventGrpBy, period) => {
       gBy: getGroupByWithPropertiesKPI(GrpByItem, index, item?.category),
       fr: period.from,
       to: period.to,
-      tz: localStorage.getItem('project_timeZone') || 'Asia/Kolkata'
+      tz: localStorage.getItem('project_timeZone') || 'Asia/Kolkata',
     });
     queryArr.push({
       ca: item?.category,
@@ -627,7 +627,7 @@ const getKPIqueryGroup = (queries, eventGrpBy, period) => {
       gbt: period.frequency,
       fr: period.from,
       to: period.to,
-      tz: localStorage.getItem('project_timeZone') || 'Asia/Kolkata'
+      tz: localStorage.getItem('project_timeZone') || 'Asia/Kolkata',
     });
   });
   return queryArr;
@@ -716,17 +716,17 @@ export const getQuery = (
     if (opt.eventIndex) {
       gbpReq = {
         pr: opt.property,
-        en: opt.prop_category,
+        en: opt.prop_category === 'group' ? 'user' : opt.prop_category,
         pty: opt.prop_type,
         ena: opt.eventName,
-        eni: opt.eventIndex
+        eni: opt.eventIndex,
       };
     } else {
       gbpReq = {
         pr: opt.property,
-        en: opt.prop_category,
+        en: opt.prop_category === 'group' ? 'user' : opt.prop_category,
         pty: opt.prop_type,
-        ena: opt.eventName
+        ena: opt.eventName,
       };
     }
     if (opt.prop_type === 'datetime') {
@@ -747,13 +747,13 @@ export const getQuery = (
     ewp: [
       {
         na: '$session',
-        pr: []
-      }
+        pr: [],
+      },
     ],
     gup: [],
     gbt: '',
     ec: constantObj.each,
-    tz: localStorage.getItem('project_timeZone') || 'Asia/Kolkata'
+    tz: localStorage.getItem('project_timeZone') || 'Asia/Kolkata',
   };
   if (result_criteria === ACTIVE_USERS_CRITERIA) {
     return [query, { ...query, gbt: '' }, sessionsQuery];
@@ -762,7 +762,7 @@ export const getQuery = (
       query,
       { ...query, gbt: '' },
       { ...query, ty: TYPE_UNIQUE_USERS },
-      { ...query, ty: TYPE_UNIQUE_USERS, gbt: '' }
+      { ...query, ty: TYPE_UNIQUE_USERS, gbt: '' },
     ];
   }
   if (user_type === ANY_USER_TYPE || user_type === ALL_USER_TYPE) {
@@ -803,8 +803,8 @@ export const calculateFrequencyDataForNoBreakdown = (eventData, userData) => {
     rows,
     metrics: {
       ...userData.metrics,
-      rows: metrics
-    }
+      rows: metrics,
+    },
   };
   return result;
 };
@@ -852,7 +852,7 @@ export const calculateFrequencyDataForBreakdown = (eventData, userData) => {
     }
     return [
       ...userObj.slice(0, userObj.length - 1),
-      parseFloat(eVal.toFixed(2))
+      parseFloat(eVal.toFixed(2)),
     ];
   });
 
@@ -861,8 +861,8 @@ export const calculateFrequencyDataForBreakdown = (eventData, userData) => {
     rows,
     metrics: {
       ...userData.metrics,
-      rows: metrics
-    }
+      rows: metrics,
+    },
   };
   return result;
 };
@@ -900,8 +900,8 @@ const calculateActiveUsersDataForNoBreakdown = (userData, sessionData) => {
     rows,
     metrics: {
       ...userData.metrics,
-      rows: metrics
-    }
+      rows: metrics,
+    },
   };
 
   return result;
@@ -931,8 +931,8 @@ const calculateActiveUsersDataForBreakdown = (userData, sessionData) => {
     rows,
     metrics: {
       ...userData.metrics,
-      rows: metrics
-    }
+      rows: metrics,
+    },
   };
   return result;
 };
@@ -975,24 +975,43 @@ export const formatApiData = (data, metrics) => {
 export const getStateQueryFromRequestQuery = (requestQuery) => {
   const events = requestQuery.ewp.map((e) => {
     const filters = [];
+    let ref = -1,
+      lastProp = '',
+      lastOp = '';
     e.pr.forEach((pr) => {
       if (pr.lop === 'AND') {
+        ref += 1;
         filters.push({
           operator:
             pr.ty === 'datetime'
               ? reverseDateOperatorMap[pr.op]
               : reverseOperatorMap[pr.op],
           props: [pr.pr, pr.ty, pr.en],
-          values: [pr.va]
+          values: [pr.va],
+          ref,
         });
-      } else {
+        lastProp = pr.pr;
+        lastOp = pr.op;
+      } else if (lastProp === pr.pr && lastOp === pr.op) {
         filters[filters.length - 1].values.push(pr.va);
+      } else {
+        filters.push({
+          operator:
+            pr.ty === 'datetime'
+              ? reverseDateOperatorMap[pr.op]
+              : reverseOperatorMap[pr.op],
+          props: [pr.pr, pr.ty, pr.en],
+          values: [pr.va],
+          ref,
+        });
+        lastProp = pr.pr;
+        lastOp = pr.op;
       }
     });
     return {
       alias: e.an,
       label: e.na,
-      filters
+      filters,
     };
   });
 
@@ -1007,7 +1026,7 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
               ? reverseDateOperatorMap[pr.op]
               : reverseOperatorMap[pr.op],
           props: [pr.pr, pr.ty, pr.en],
-          values: [pr.va]
+          values: [pr.va],
         });
       } else {
         globalFilters[globalFilters.length - 1].values.push(pr.va);
@@ -1031,7 +1050,7 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
       eventName: opt.ena,
       eventIndex: opt.eni ? opt.eni : 0,
       grn: opt.grn,
-      gbty: opt.gbty
+      gbty: opt.gbty,
     };
   });
   const event = breakdown
@@ -1039,7 +1058,7 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
     .map((b, index) => {
       return {
         ...b,
-        overAllIndex: index
+        overAllIndex: index,
       };
     });
   const global = breakdown
@@ -1047,14 +1066,14 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
     .map((b, index) => {
       return {
         ...b,
-        overAllIndex: index
+        overAllIndex: index,
       };
     });
 
   const dateRange = {
     from: requestQuery.fr * 1000,
     to: requestQuery.to * 1000,
-    frequency: requestQuery.gbt
+    frequency: requestQuery.gbt,
   };
   const result = {
     events,
@@ -1063,9 +1082,9 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
     globalFilters,
     breakdown: {
       event,
-      global
+      global,
     },
-    dateRange
+    dateRange,
   };
   return result;
 };
@@ -1083,14 +1102,14 @@ export const DefaultDateRangeFormat = {
   dateType:
     MomentTz().format('dddd') === 'Sunday'
       ? PREDEFINED_DATES.LAST_WEEK
-      : PREDEFINED_DATES.THIS_WEEK
+      : PREDEFINED_DATES.THIS_WEEK,
 };
 
 export const DashboardDefaultDateRangeFormat = {
   from: MomentTz().subtract(7, 'days').startOf('week'),
   to: MomentTz().subtract(7, 'days').endOf('week'),
   frequency: 'date',
-  dateType: PREDEFINED_DATES.LAST_WEEK
+  dateType: PREDEFINED_DATES.LAST_WEEK,
 };
 
 export const getStateFromFilters = (rawFilters = []) => {
@@ -1103,7 +1122,7 @@ export const getStateFromFilters = (rawFilters = []) => {
             ? reverseDateOperatorMap[pr.op]
             : reverseOperatorMap[pr.op],
         props: [pr.pr, pr.ty, pr.en],
-        values: [pr.va]
+        values: [pr.va],
       });
     } else {
       filters[filters.length - 1].values.push(pr.va);
@@ -1114,29 +1133,76 @@ export const getStateFromFilters = (rawFilters = []) => {
 
 export const getFilters = (filters) => {
   const result = [];
-  filters.forEach((filter) => {
-    if (filter.props[1] !== 'categorical') {
-      result.push({
-        en: filter.props[2],
-        lop: 'AND',
-        op: operatorMap[filter.operator],
-        pr: filter.props[0],
-        ty: filter.props[1],
-        va: filter.values
-      });
-    }
-
-    if (filter.props[1] === 'categorical') {
-      filter.values.forEach((value, index) => {
-        result.push({
-          en: filter.props[2],
-          lop: !index ? 'AND' : 'OR',
-          op: operatorMap[filter.operator],
-          pr: filter.props[0],
-          ty: filter.props[1],
-          va: value
+  const filtersGroupedByRef = Object.values(groupFilters(filters, 'ref'));
+  filtersGroupedByRef.forEach((filtersGr) => {
+    if (filtersGr.length == 1) {
+      const fil = filtersGr[0];
+      if (Array.isArray(fil.values)) {
+        fil.values.forEach((val, index) => {
+          result.push({
+            en: fil.props[2] === 'group' ? 'user' : fil.props[2],
+            lop: !index ? 'AND' : 'OR',
+            op: operatorMap[fil.operator],
+            pr: fil.props[0],
+            ty: fil.props[1],
+            va: fil.props[1] === 'datetime' ? val : val,
+          });
         });
-      });
+      } else {
+        result.push({
+          en: fil.props[2] === 'group' ? 'user' : fil.props[2],
+          lop: 'AND',
+          op: operatorMap[fil.operator],
+          pr: fil.props[0],
+          ty: fil.props[1],
+          va: fil.props[1] === 'datetime' ? fil.values : fil.values,
+        });
+      }
+    } else {
+      let fil = filtersGr[0];
+      if (Array.isArray(fil.values)) {
+        fil.values.forEach((val, index) => {
+          result.push({
+            en: fil.props[2] === 'group' ? 'user' : fil.props[2],
+            lop: !index ? 'AND' : 'OR',
+            op: operatorMap[fil.operator],
+            pr: fil.props[0],
+            ty: fil.props[1],
+            va: fil.props[1] === 'datetime' ? val : val,
+          });
+        });
+      } else {
+        result.push({
+          en: fil.props[2] === 'group' ? 'user' : fil.props[2],
+          lop: 'AND',
+          op: operatorMap[fil.operator],
+          pr: fil.props[0],
+          ty: fil.props[1],
+          va: fil.props[1] === 'datetime' ? fil.values : fil.values,
+        });
+      }
+      fil = filtersGr[1];
+      if (Array.isArray(fil.values)) {
+        fil.values.forEach((val, index) => {
+          result.push({
+            en: fil.props[2] === 'group' ? 'user' : fil.props[2],
+            lop: 'OR',
+            op: operatorMap[fil.operator],
+            pr: fil.props[0],
+            ty: fil.props[1],
+            va: fil.props[1] === 'datetime' ? val : val,
+          });
+        });
+      } else {
+        result.push({
+          en: fil.props[2] === 'group' ? 'user' : fil.props[2],
+          lop: 'OR',
+          op: operatorMap[fil.operator],
+          pr: fil.props[0],
+          ty: fil.props[1],
+          va: fil.props[1] === 'datetime' ? fil.values : fil.values,
+        });
+      }
     }
   });
   return result;
@@ -1152,7 +1218,7 @@ const getFiltersTouchpoints = (filters, touchpoint) => {
         op: operatorMap[filter.operator],
         pr: filter.props[0],
         ty: filter.props[1],
-        va: filter.props[1] === 'datetime' ? filter.values : filter.values
+        va: filter.props[1] === 'datetime' ? filter.values : filter.values,
       });
     }
 
@@ -1164,7 +1230,7 @@ const getFiltersTouchpoints = (filters, touchpoint) => {
           op: operatorMap[filter.operator],
           pr: filter.props[0],
           ty: filter.props[1],
-          va: value
+          va: value,
         });
       });
     }
@@ -1197,21 +1263,21 @@ export const getAttributionQuery = (
   const query = {
     cl: QUERY_TYPE_ATTRIBUTION,
     meta: {
-      metrics_breakdown: true
+      metrics_breakdown: true,
     },
     query: {
       cm: ['Impressions', 'Clicks', 'Spend'],
       ce: {
         na: eventGoal.label,
-        pr: eventFilters
+        pr: eventFilters,
       },
       attribution_key: touchpoint,
       attribution_key_f: touchPointFiltersQuery,
       query_type: queryType,
       attribution_methodology: models[0],
       lbw: window,
-      tactic_offer_type: tacticOfferType
-    }
+      tactic_offer_type: tacticOfferType,
+    },
   };
   if (!eventGoal || !eventGoal.label) {
     query.query.ce = {};
@@ -1234,7 +1300,7 @@ export const getAttributionQuery = (
       const linkedEventFilters = getFilters(le.filters);
       return {
         na: le.label,
-        pr: linkedEventFilters
+        pr: linkedEventFilters,
       };
     });
   }
@@ -1284,9 +1350,12 @@ export const getAttributionStateFromRequestQuery = (
   }
 
   const filters = [];
-
+  let ref = -1,
+    lastProp = '',
+    lastOp = '';
   get(requestQuery, 'ce.pr', []).forEach((pr) => {
     if (pr.lop === 'AND') {
+      ref += 1;
       const val = pr.ty === 'categorical' ? [pr.va] : pr.va;
       filters.push({
         operator:
@@ -1294,10 +1363,26 @@ export const getAttributionStateFromRequestQuery = (
             ? reverseDateOperatorMap[pr.op]
             : reverseOperatorMap[pr.op],
         props: [pr.pr, pr.ty, pr.en],
-        values: val
+        values: val,
+        ref,
       });
-    } else if (pr.ty === 'categorical') {
+      lastProp = pr.pr;
+      lastOp = pr.op;
+    } else if (lastProp === pr.pr && lastOp === pr.op) {
       filters[filters.length - 1].values.push(pr.va);
+    } else {
+      const val = pr.ty === 'categorical' ? [pr.va] : pr.va;
+      filters.push({
+        operator:
+          pr.ty === 'datetime'
+            ? reverseDateOperatorMap[pr.op]
+            : reverseOperatorMap[pr.op],
+        props: [pr.pr, pr.ty, pr.en],
+        values: val,
+        ref,
+      });
+      lastProp = pr.pr;
+      lastOp = pr.op;
     }
   });
 
@@ -1312,7 +1397,7 @@ export const getAttributionStateFromRequestQuery = (
               ? reverseDateOperatorMap[pr.op]
               : reverseOperatorMap[pr.op],
           props: [pr.pr, pr.ty, pr.attribution_key],
-          values: val
+          values: val,
         });
       } else if (pr.ty === 'categorical') {
         touchPointFilters[touchPointFilters.length - 1].values.push(pr.va);
@@ -1331,7 +1416,7 @@ export const getAttributionStateFromRequestQuery = (
               -1 ||
             requestQuery.attribution_key_custom_dimensions?.indexOf(
               dimension.header
-            ) > -1
+            ) > -1,
       };
     }
     return dimension;
@@ -1346,7 +1431,7 @@ export const getAttributionStateFromRequestQuery = (
           : requestQuery.attribution_key_dimensions?.indexOf(dimension.header) >
               -1 ||
             requestQuery.attribution_content_groups?.indexOf(dimension.header) >
-              -1
+              -1,
       };
     }
     return dimension;
@@ -1356,7 +1441,7 @@ export const getAttributionStateFromRequestQuery = (
     queryType: QUERY_TYPE_ATTRIBUTION,
     eventGoal: {
       label: requestQuery.ce.na,
-      filters
+      filters,
     },
     attrQueries,
     touchpoint_filters: touchPointFilters,
@@ -1367,7 +1452,7 @@ export const getAttributionStateFromRequestQuery = (
     models: [requestQuery.attribution_methodology],
     window: requestQuery.lbw,
     tacticOfferType: requestQuery.tactic_offer_type,
-    analyze_type: requestQuery.analyze_type
+    analyze_type: requestQuery.analyze_type,
   };
 
   if (requestQuery.attribution_methodology_c) {
@@ -1386,7 +1471,7 @@ export const getAttributionStateFromRequestQuery = (
                 ? reverseDateOperatorMap[pr.op]
                 : reverseOperatorMap[pr.op],
             props: [pr.pr, pr.ty, pr.en],
-            values: val
+            values: val,
           });
         } else if (pr.ty === 'categorical') {
           linkedFilters[linkedFilters.length - 1].values.push(pr.va);
@@ -1394,7 +1479,7 @@ export const getAttributionStateFromRequestQuery = (
       });
       return {
         label: le.na,
-        filters: linkedFilters
+        filters: linkedFilters,
       };
     });
   } else {
@@ -1419,7 +1504,7 @@ export const getCampaignsQuery = (
         property: filter.props[0],
         condition: operatorMap[filter.operator],
         logical_operator: !index ? 'AND' : 'OR',
-        value
+        value,
       });
     });
   });
@@ -1430,11 +1515,11 @@ export const getCampaignsQuery = (
     group_by: group_by.map((elem) => {
       return {
         name: elem.prop_category,
-        property: elem.property
+        property: elem.property,
       };
     }),
     filters: appliedFilters,
-    gbt: dateRange.frequency
+    gbt: dateRange.frequency,
   };
   if (dateRange.from && dateRange.to) {
     query.fr = MomentTz(dateRange.from).startOf('day').utc().unix();
@@ -1448,7 +1533,7 @@ export const getCampaignsQuery = (
   }
   return {
     query_group: [query, { ...query, gbt: '' }],
-    cl: QUERY_TYPE_CAMPAIGN
+    cl: QUERY_TYPE_CAMPAIGN,
   };
 };
 
@@ -1459,7 +1544,7 @@ export const getCampaignStateFromRequestQuery = (requestQuery) => {
       camp_filters.push({
         operator: reverseOperatorMap[filter.condition],
         props: [filter.property, '', filter.name],
-        values: [filter.value]
+        values: [filter.value],
       });
     } else {
       camp_filters[camp_filters.length - 1].values.push(filter.value);
@@ -1473,9 +1558,9 @@ export const getCampaignStateFromRequestQuery = (requestQuery) => {
     camp_groupBy: requestQuery.group_by.map((gb) => {
       return {
         prop_category: gb.name,
-        property: gb.property
+        property: gb.property,
       };
-    })
+    }),
   };
 
   return result;
@@ -1500,24 +1585,43 @@ export const getProfileQueryFromRequestQuery = (requestQuery) => {
 
   const queries = requestQuery.queries.map((e) => {
     const evfilters = [];
+    let ref = -1,
+      lastProp = '',
+      lastOp = '';
     e.pr.forEach((pr) => {
       if (pr.lop === 'AND') {
+        ref += 1;
         evfilters.push({
           operator:
             pr.ty === 'datetime'
               ? reverseDateOperatorMap[pr.op]
               : reverseOperatorMap[pr.op],
-          props: [pr.pr, pr.ty, 'user'],
-          values: [pr.va]
+          props: [pr.pr, pr.ty, pr.en],
+          values: [pr.va],
+          ref,
         });
-      } else {
+        lastProp = pr.pr;
+        lastOp = pr.op;
+      } else if (lastProp === pr.pr && lastOp === pr.op) {
         evfilters[evfilters.length - 1].values.push(pr.va);
+      } else {
+        evfilters.push({
+          operator:
+            pr.ty === 'datetime'
+              ? reverseDateOperatorMap[pr.op]
+              : reverseOperatorMap[pr.op],
+          props: [pr.pr, pr.ty, pr.en],
+          values: [pr.va],
+          ref,
+        });
+        lastProp = pr.pr;
+        lastOp = pr.op;
       }
     });
     return {
       alias: e.an,
       label: e.ty,
-      filters: evfilters
+      filters: evfilters,
     };
   });
 
@@ -1531,7 +1635,7 @@ export const getProfileQueryFromRequestQuery = (requestQuery) => {
               ? reverseDateOperatorMap[pr.op]
               : reverseOperatorMap[pr.op],
           props: [pr.pr, pr.ty, pr.en],
-          values: [pr.va]
+          values: [pr.va],
         });
       } else {
         filters[filters.length - 1].values.push(pr.va);
@@ -1547,7 +1651,7 @@ export const getProfileQueryFromRequestQuery = (requestQuery) => {
       eventName: opt.ena,
       eventIndex: opt.eni ? opt.eni : 0,
       grn: opt.grn,
-      gbty: opt.gbty
+      gbty: opt.gbty,
     };
   });
   const globalBreakdown = breakdown
@@ -1555,17 +1659,17 @@ export const getProfileQueryFromRequestQuery = (requestQuery) => {
     .map((b, index) => {
       return {
         ...b,
-        overAllIndex: index
+        overAllIndex: index,
       };
     });
 
   const groupBy = {
     global: globalBreakdown,
-    event: []
+    event: [],
   };
   const dateRange = {
     from: requestQuery.from * 1000,
-    to: requestQuery.to * 1000
+    to: requestQuery.to * 1000,
   };
   const result = {
     queryType,
@@ -1573,7 +1677,7 @@ export const getProfileQueryFromRequestQuery = (requestQuery) => {
     events: queries,
     globalFilters: filters,
     breakdown: groupBy,
-    dateRange
+    dateRange,
   };
   return result;
 };
@@ -1605,6 +1709,7 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
       : EMPTY_ARRAY;
     fil.forEach((pr) => {
       if (pr.lOp === 'AND') {
+        ref += 1;
         const val = pr.prDaTy === 'categorical' ? [pr.va] : pr.va;
         const DNa = startCase(pr.prNa);
         const isCamp =
@@ -1619,10 +1724,33 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
             pr.prDaTy === FILTER_TYPES.DATETIME
               ? convertDateTimeObjectValuesToMilliSeconds(val)
               : val,
-          extra: [DNa, pr.prNa, pr.prDaTy, isCamp]
+          extra: [DNa, pr.prNa, pr.prDaTy, isCamp],
+          ref,
         });
-      } else if (pr.prDaTy === 'categorical') {
+        lastProp = pr.prNa;
+        lastOp = pr.co;
+      } else if (lastProp === pr.prNa && lastOp === pr.co) {
         eventFilters[eventFilters.length - 1].values.push(pr.va);
+      } else {
+        const val = pr.prDaTy === 'categorical' ? [pr.va] : pr.va;
+        const DNa = startCase(pr.prNa);
+        const isCamp =
+          requestQuery?.qG[0]?.ca === 'channels' ? pr.objTy : pr.en;
+        eventFilters.push({
+          operator:
+            pr.prDaTy === 'datetime'
+              ? reverseDateOperatorMap[pr.co]
+              : reverseOperatorMap[pr.co],
+          props: [DNa, pr.prDaTy, isCamp],
+          values:
+            pr.prDaTy === FILTER_TYPES.DATETIME
+              ? convertDateTimeObjectValuesToMilliSeconds(val)
+              : val,
+          extra: [DNa, pr.prNa, pr.prDaTy, isCamp],
+          ref,
+        });
+        lastProp = pr.prNa;
+        lastOp = pr.co;
       }
     });
 
@@ -1634,7 +1762,7 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
       label: metric ? metric.display_name : q.me[0],
       filters: eventFilters,
       alias: '',
-      metricType: get(metric, 'type', null)
+      metricType: get(metric, 'type', null),
     });
   }
   // const globalFilters = [];
@@ -1659,7 +1787,7 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
           pr.prDaTy === FILTER_TYPES.DATETIME
             ? convertDateTimeObjectValuesToMilliSeconds(val)
             : val,
-        extra: [DNa, pr.prNa, pr.prDaTy, isCamp]
+        extra: [DNa, pr.prNa, pr.prDaTy, isCamp],
       });
     } else if (pr.prDaTy === FILTER_TYPES.CATEGORICAL) {
       filters[filters.length - 1].values.push(pr.va);
@@ -1672,7 +1800,7 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
       property: opt.prNa,
       prop_type: opt.prDaTy,
       overAllIndex: index,
-      prop_category: opt.en || opt.objTy
+      prop_category: opt.en || opt.objTy,
     };
     if (opt.prDaTy === 'datetime') {
       opt.grn ? (appGbp.grn = opt.grn) : (appGbp.grn = 'day');
@@ -1685,20 +1813,20 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
 
   const groupBy = {
     global: globalBreakdown,
-    event: [] // will be added later
+    event: [], // will be added later
   };
   const dateRange = {
     ...DefaultDateRangeFormat,
     from: requestQuery.qG[1].fr * 1000,
     to: requestQuery.qG[1].to * 1000,
-    frequency: requestQuery.qG[1].gbt
+    frequency: requestQuery.qG[1].gbt ? requestQuery.qG[1].gbt : 'date', //fix on .gbt for saved channel queries migrated to kpi queries
   };
   const result = {
     events: queries,
     queryType,
     globalFilters: filters,
     breakdown: groupBy,
-    dateRange
+    dateRange,
   };
   return result;
 };

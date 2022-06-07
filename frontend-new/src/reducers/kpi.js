@@ -20,6 +20,9 @@ export default function reducer(state = inititalState, action) {
     case 'FETCH_SAVED_CUSTOM_KPI_FULFILLED': {
       return { ...state, saved_custom_kpi: action.payload };
     }
+    case 'DEL_CUSTOM_KPI_FULFILLED': {
+      return { ...state };
+    }
     case 'FETCH_KPI_QUERY_FULFILLED': {
       return { ...state, query_result: action.payload };
     }
@@ -108,7 +111,20 @@ export function addNewCustomKPI(projectID, data) {
     });
   };
 }
-
+export function removeCustomKPI(projectID, data) { 
+  return function(dispatch) {
+    return new Promise((resolve,reject) => { 
+      del(dispatch, host + 'projects/' + projectID + `/v1/custom_metrics/` + data)
+        .then((response)=>{        
+          dispatch({type:"DEL_CUSTOM_KPI_FULFILLED", payload: response.data});
+          resolve(response)
+        }).catch((err)=>{        
+          dispatch({type:"DEL_CUSTOM_KPI_REJECTED", payload: err});
+          reject(err);
+        });
+    });
+  }
+}
 export function fetchKPIFilterValues(projectID, data) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {

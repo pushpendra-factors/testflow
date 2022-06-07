@@ -22,9 +22,10 @@ class BaseReportLoad(BaseLoad):
             MetricsAggregator.update_job_stats(task_context.project_id, task_context.customer_account_id,
                                                task_context.type_alias, "skipped", "")
             return
-
-        for curr_timestamp in task_context.get_next_timestamps():
-            try:
+        current_timestamp = None
+        try:
+            for curr_timestamp in task_context.get_next_timestamps():
+                current_timestamp = curr_timestamp
                 task_context.add_curr_timestamp(curr_timestamp)
                 task_context.add_log("started")
                 start_time = datetime.now()
@@ -56,16 +57,14 @@ class BaseReportLoad(BaseLoad):
 
                 MetricsAggregator.update_job_stats(task_context.project_id, task_context.customer_account_id,
                                                    task_context.type_alias, "success", "")
-            except Exception as e:
-                traceback.print_tb(e.__traceback__)
-                str_exception = str(e)
-                message = str_exception
-                log.warning("Failed with exception: %d %s %s", task_context.project_id,
-                            task_context.customer_account_id, message)
-                if "No such object" in message and "HTTPStatus.PARTIAL_CONTENT" in message and "facebook_extract" in message:
-                    message = "Failed to load from cloud storage"
-                MetricsAggregator.update_job_stats(task_context.project_id, task_context.customer_account_id,
-                                                   task_context.type_alias, "failed", message)
+        except Exception as e:
+            traceback.print_tb(e.__traceback__)
+            str_exception = str(e)
+            message = "Timestamp: " + str(current_timestamp) + ". Message: " + str_exception
+            log.warning("Failed with exception: %d %s %s", task_context.project_id,
+                        task_context.customer_account_id, message)
+            MetricsAggregator.update_job_stats(task_context.project_id, task_context.customer_account_id,
+                                                task_context.type_alias, "failed", message)
         return
 
     @staticmethod

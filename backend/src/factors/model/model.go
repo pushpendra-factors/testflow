@@ -648,4 +648,8 @@ type Model interface {
 	IsHubspotIntegrationAvailable(projectID uint64) bool
 	IsSalesforceIntegrationAvailable(projectID uint64) bool
 	IsMarketoIntegrationAvailable(projectID uint64) bool
+
+	// Timeline
+	GetProfileUsersListByProjectId(projectID uint64) ([]model.Contact, int)
+	GetProfileUserDetailsByID(projectID uint64, identity string, isAnonymous string) (*model.ContactDetails, int)
 }

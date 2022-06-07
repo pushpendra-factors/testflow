@@ -3,12 +3,13 @@ import logging as log
 import sys
 import traceback
 import time
+import requests
 
 import scripts
 from lib.data_services.factors_data_service import FactorsDataService
 from lib.utils.facebook.metrics_aggregator import MetricsAggregator
 from lib.utils.healthchecks import HealthChecksUtil
-from scripts.facebook import FACEBOOK_AD_ACCOUNT, PROJECT_ID, DEVELOPMENT, TEST, TOKEN_EXPIRY
+from scripts.facebook import FACEBOOK_AD_ACCOUNT, PROJECT_ID, DEVELOPMENT, TEST, TOKEN_EXPIRY, ACCESS_TOKEN
 from scripts.facebook.etl_config import EtlConfig
 from scripts.facebook.etl_parser import EtlParser
 from scripts.facebook.job_scheduler_and_runner import JobSchedulerAndRunner
@@ -50,8 +51,13 @@ def filter_based_on_input_timezone(facebook_settings, input_timezone):
     return resultant_facebook_settings
 
 # takes in token expriy timestamp as parameter, returns if token is already expired, will token expire within 10 days, days in which it'll expire
-def check_token_expiry(token_expiry):
+def check_token_expiry(token_expiry, access_token):
     current_timestamp = int(time.time())
+    # Precheck for access token expiry
+    r = requests.get('https://graph.facebook.com/me?access_token={}'.format(access_token))
+    if not r.ok and 'Error validating access token' in r.text:
+        return True, False, 0
+    
     if token_expiry == 0:
         return False, False, 0
     if token_expiry-current_timestamp < (SECONDS_IN_A_DAY * 10):
@@ -82,14 +88,14 @@ if __name__ == "__main__":
 
     try:
         for facebook_int_setting in facebook_settings:
-            is_token_expired, will_token_expire, days_to_expire = check_token_expiry(facebook_int_setting[TOKEN_EXPIRY])
+            is_token_expired, will_token_expire, days_to_expire = check_token_expiry(facebook_int_setting[TOKEN_EXPIRY], facebook_int_setting[ACCESS_TOKEN])
             if will_token_expire:
                 token_expiry_payload["Token about to expire"].append({PROJECT_ID: facebook_int_setting[PROJECT_ID], "days_remaining": days_to_expire})
             if is_token_expired:
                 token_expiry_payload["Token expired"].append({PROJECT_ID: facebook_int_setting[PROJECT_ID]})
             else:
                 customer_account_ids = facebook_int_setting[FACEBOOK_AD_ACCOUNT].split(',')
-                if len(customer_account_ids) == 0:
+                if len(customer_account_ids) == 0 or facebook_int_setting[FACEBOOK_AD_ACCOUNT] == '':
                     token_expiry_payload["Invalid or incomplete integration"].append({PROJECT_ID: facebook_int_setting[PROJECT_ID]})
                 for customer_account_id in customer_account_ids:
                     last_sync_info_with_type: dict = FactorsDataService.get_facebook_last_sync_info(

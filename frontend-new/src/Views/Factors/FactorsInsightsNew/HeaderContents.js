@@ -70,8 +70,7 @@ function Header({ saveGoalInsights, activeProject, factors_insight_rules, setSav
   }, [addShadowToHeader]);
 
   return (
-    <Header id="app-header" className="ant-layout-header--custom bg-white w-full z-20 fixed p-0 top-0" >
-
+    <Header id="app-header" className="ant-layout-header--custom bg-white w-full z-20 fixed px-8 p-0 top-0" > 
       <div className="flex py-4 justify-between items-center">
         <div className="flex items-center items-center">
           <div>

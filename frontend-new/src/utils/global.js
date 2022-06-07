@@ -31,3 +31,9 @@ export const compareFilters = (a,b)=>{
     return 1;
   return 0;
 }
+
+export const toCapitalCase = (str)=>{
+  const lower=str.toLowerCase();
+  return lower.charAt(0).toUpperCase()+lower.slice(1);
+
+}
