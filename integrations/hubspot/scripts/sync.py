@@ -30,6 +30,7 @@ parser.add_option("--enable_company_contact_association_v2_by_project_id",
     default="")
 parser.add_option("--project_ids", dest="project_ids", help="Allowed project_ids", default="*")
 parser.add_option("--disabled_project_ids", dest="disabled_project_ids", help="Disabled project_ids", default="")
+parser.add_option("--disable_non_marketing_contacts_project_id", dest="disable_non_marketing_contacts_project_id", help="Projects to only pick marketing contacts", default="")
 
 
 APP_NAME = "hubspot_sync"
@@ -400,6 +401,25 @@ def sync_engagements(project_id, api_key, last_sync_timestamp=0):
             has_more = False
     return engagement_api_calls,latest_timestamp
 
+def is_marketing_contact(doc):
+    if "properties" in doc:
+        properties = doc["properties"]
+        if "hs_marketable_status" in properties:
+            return properties["hs_marketable_status"]["value"] =='true'
+    return False
+
+
+def get_filtered_contacts_project_id(project_id, docs):
+    if disable_non_marketing_contacts_by_project_id(project_id):
+        log.warning("Filtering only marketing contacts")
+        marketing_docs = []
+        for doc in docs:
+            if is_marketing_contact(doc):
+                marketing_docs.append(doc)
+        log.warning("Filtered marketing contacts %d",len(marketing_docs))
+        return marketing_docs
+    return docs
+
 def sync_contacts(project_id, api_key,last_sync_timestamp, sync_all=False):
     if sync_all:
         # init sync all contacts.
@@ -473,6 +493,7 @@ def sync_contacts(project_id, api_key,last_sync_timestamp, sync_all=False):
             parameter_dict['vidOffset'] = response_dict['vid-offset']
 
         max_timestamp = get_batch_documents_max_timestamp(project_id, docs,"contacts",max_timestamp)
+        docs = get_filtered_contacts_project_id(project_id, docs)
         create_all_documents(project_id, 'contact', docs)
         count = count + len(docs)
         log.warning("Downloaded and created %d contacts. total %d.", len(docs), count)
@@ -964,6 +985,13 @@ def allow_sync_by_project_id(project_id):
         return str(project_id) in allowed_projects
 
     return True
+
+def disable_non_marketing_contacts_by_project_id(project_id):
+    all_projects, allowed_projects, _ = get_allowed_list_with_all_element_support(options.disable_non_marketing_contacts_project_id)
+
+    if all_projects:
+        return True
+    return str(project_id) in allowed_projects
 
 def allow_delete_api_by_project_id(project_id):
     if not options.enable_deleted_contacts:

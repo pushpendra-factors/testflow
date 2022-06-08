@@ -295,12 +295,17 @@ func getTimestampFromPropertiesByKey(propertiesMap map[string]interface{}, key s
 	}
 
 	propertyValueMap := propertyValue.(map[string]interface{})
+	timestamp, err := ReadHubspotTimestamp(propertyValueMap["value"])
+	if err == nil {
+		return timestamp, nil
+	}
+
 	timestampValue, exists := propertyValueMap["timestamp"]
 	if !exists || timestampValue == nil {
 		return 0, errors.New("timestamp key not exist on property map")
 	}
 
-	timestamp, err := ReadHubspotTimestamp(timestampValue)
+	timestamp, err = ReadHubspotTimestamp(timestampValue)
 	if err != nil || timestamp == 0 {
 		return 0, errors.New("failed to read hubspot timestamp value")
 	}
@@ -446,9 +451,9 @@ func GetHubspotDocumentCreatedTimestamp(document *HubspotDocument) (int64, error
 		}
 		propertiesMap := properties.(map[string]interface{})
 
-		createdAt, err := getTimestampFromPropertiesByKey(propertiesMap, "name")
+		createdAt, err := getTimestampFromPropertiesByKey(propertiesMap, "createdate")
 		if err != nil {
-			createdAt, err = getTimestampFromPropertiesByKey(propertiesMap, "createdate")
+			createdAt, err = getTimestampFromPropertiesByKey(propertiesMap, "name")
 			if err != nil {
 				return 0, err
 			}
