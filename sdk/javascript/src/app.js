@@ -24,7 +24,7 @@ function isAllowedEventName(eventName) {
 function updateCookieIfUserIdInResponse(response){
     if (response && response.body && response.body.user_id) {
         let cleanUserId = response.body.user_id.trim();
-        
+        window.FACTORS_USER_ID = cleanUserId;
         if (cleanUserId) 
             Cookie.setEncoded(constant.cookie.USER_ID, cleanUserId, constant.cookie.EXPIRY);
     }
@@ -255,7 +255,7 @@ App.prototype.track = function(eventName, eventProperties, auto=false, afterCall
         var pageLoadTime = Properties.getPageLoadTime();
         if (pageLoadTime > 0) eventProperties[Properties.PAGE_LOAD_TIME] = pageLoadTime;
     }
-
+    console.log(payload.event_name + ' / ' + window.FACTORS_USER_ID);
     return this.client.track(payload)
         .then(updateCookieIfUserIdInResponse)
         .then(function(response) {
