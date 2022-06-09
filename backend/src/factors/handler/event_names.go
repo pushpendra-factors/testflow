@@ -50,19 +50,19 @@ func GetDisplayEventNamesHandler(displayNames map[string]string) map[string]stri
 	return displayNameEvents
 }
 
-func RemoveGroupEventNamesOnUserEventNames(eventNames map[string][]string) map[string][]string {
+func RemoveGroupEventNamesOnUserEventNames(categoryToEventNames map[string][]string) map[string][]string {
 
-	for key, tempString := range eventNames {
-		for index, eventName := range tempString {
+	for category, eventNames := range categoryToEventNames {
+		nonGroupEventNames := make([]string, 0)
+		for _, eventName := range eventNames {
 			_, isPresent := U.GROUP_EVENT_NAME_TO_GROUP_NAME_MAPPING[eventName]
-			if isPresent {
-				tempString[index] = tempString[len(tempString)-1]
-				tempString = tempString[:len(tempString)-1]
+			if !isPresent {
+				nonGroupEventNames = append(nonGroupEventNames, eventName)
 			}
 		}
-		eventNames[key] = tempString
+		categoryToEventNames[category] = nonGroupEventNames
 	}
-	return eventNames
+	return categoryToEventNames
 }
 
 // GetEventNamesHandler godoc
