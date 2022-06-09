@@ -7,6 +7,7 @@ import (
 	U "factors/util"
 	"fmt"
 	"net/http"
+	"reflect"
 	"strings"
 	"sync"
 	"time"
@@ -775,7 +776,7 @@ func (store *MemSQL) CacheDashboardUnitForDateRange(cachePayload model.Dashboard
 			if err != nil {
 				logCtx.WithFields(log.Fields{"Query": *analyticsQuery, "ErrCode": "UnitRunTimeOut", "Error": response.err}).Info("Failed for the FunnelORInsights unit")
 				errCode = http.StatusInternalServerError
-			} else if result == nil {
+			} else if reflect.ValueOf(result).IsNil() {
 				logCtx.WithFields(log.Fields{"Query": *analyticsQuery, "ErrCode": "UnitRunTimeOut", "Error": response.err}).Info("Failed for the FunnelORInsights unit - Result is nil")
 				errCode = http.StatusInternalServerError
 			} else {
@@ -805,7 +806,7 @@ func (store *MemSQL) CacheDashboardUnitForDateRange(cachePayload model.Dashboard
 			if err != nil && !model.IsIntegrationNotFoundError(response.err) {
 				logCtx.WithFields(log.Fields{"Query": attributionQuery.Query, "ErrCode": "UnitRunTimeOut", "Error": response.err}).Info("Failed for the attribution unit")
 				errCode = http.StatusInternalServerError
-			} else if result == nil {
+			} else if reflect.ValueOf(result).IsNil() {
 				logCtx.WithFields(log.Fields{"Query": attributionQuery.Query, "ErrCode": "UnitRunTimeOut", "Error": response.err}).Info("Failed for the attribution unit - Result is nil")
 				errCode = http.StatusInternalServerError
 			} else {
