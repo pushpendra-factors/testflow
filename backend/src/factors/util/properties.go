@@ -1395,6 +1395,11 @@ var STANDARD_USER_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	CLR_COMPANY_PARENT_DOMAIN:                    "Clearbit Company Parent Domain",
 	UP_POSTAL_CODE:                               "Postal Code",
 	UP_CONTINENT:                                 "Continent",
+	CLR_IP:                                       "Clearbit IP",
+	CLR_COMPANY_ID:                               "Clearbit Company ID",
+	CLR_COMPANY_LEGALNAME:                        "Clearbit Company Legalname",
+	CLR_COMPANY_TECH:                             "Clearbit Company Tech",
+	CLR_COMPANY_TAGS:                             "Clearbit Company Tags",
 }
 
 var STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES = map[string]string{

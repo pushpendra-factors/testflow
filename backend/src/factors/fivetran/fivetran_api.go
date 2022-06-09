@@ -81,7 +81,7 @@ func FiveTranCreateBingAdsConnector(projectId uint64) (int, string, string, stri
 		TrustCertificates: true,
 		RunSetupTests:     false,
 		Paused:            true,
-		PauseAfterTrial:   true,
+		PauseAfterTrial:   false,
 		SyncFrequency:     1440,
 		Config: ConfigSchema{
 			Schema: fmt.Sprintf("%v_%v_%v", "bingads", projectId, U.TimeNowUnix()),
@@ -246,7 +246,7 @@ func FiveTranCreateMarketoConnector(projectId uint64) (int, string, string, stri
 		TrustCertificates: true,
 		RunSetupTests:     false,
 		Paused:            true,
-		PauseAfterTrial:   true,
+		PauseAfterTrial:   false,
 		SyncFrequency:     1440,
 		Config: ConfigSchema{
 			Schema: fmt.Sprintf("%v_%v_%v", "marketo", projectId, U.TimeNowUnix()),

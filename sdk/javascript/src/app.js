@@ -24,7 +24,6 @@ function isAllowedEventName(eventName) {
 function updateCookieIfUserIdInResponse(response){
     if (response && response.body && response.body.user_id) {
         let cleanUserId = response.body.user_id.trim();
-        
         if (cleanUserId) 
             Cookie.setEncoded(constant.cookie.USER_ID, cleanUserId, constant.cookie.EXPIRY);
     }
@@ -90,6 +89,10 @@ function  waitForGlobalKey(key, callback, timer = 0, subkey = null, waitTime = 1
       waitForGlobalKey(key, callback, timer + 1, subkey, waitTime, totalTimerCount);
     }, waitTime);
   }
+}
+
+function triggerFactorsStartQueu() {
+    window.dispatchEvent(new CustomEvent('FACTORS_INITIALISED_EVENT'));
 }
 
 const FACTORS_WINDOW_TIMEOUT_KEY_PREFIX = 'lastTimeoutId_';
@@ -203,9 +206,7 @@ App.prototype.init = function(token, opts={}, afterPageTrackCallback) {
             var enableTrackSPA = Cache.getFactorsCache(Cache.trackPageOnSPA) || _this.getConfig("auto_track_spa_page_view");
             Cache.setFactorsCache(Cache.trackPageOnSPA, enableTrackSPA);
             // Auto-track current page on init, if not disabled.
-            return trackOnInit ? _this.autoTrack(_this.getConfig("auto_track"), false, afterPageTrackCallback) : null;
-        }).then(function(){
-            window.dispatchEvent(new CustomEvent('FACTORS_INITIALISED_EVENT'));
+            return trackOnInit ? _this.autoTrack(_this.getConfig("auto_track"), false, afterPageTrackCallback, true) : triggerFactorsStartQueu();
         })
         .then(function() {
             return _this.autoFormCapture(_this.getConfig("auto_form_capture"));
@@ -255,7 +256,6 @@ App.prototype.track = function(eventName, eventProperties, auto=false, afterCall
         var pageLoadTime = Properties.getPageLoadTime();
         if (pageLoadTime > 0) eventProperties[Properties.PAGE_LOAD_TIME] = pageLoadTime;
     }
-
     return this.client.track(payload)
         .then(updateCookieIfUserIdInResponse)
         .then(function(response) {
@@ -345,8 +345,11 @@ function isPageAutoTracked() {
     return false
 }
 
-App.prototype.autoTrack = function(enabled=false, force=false, afterCallback) {
-    if (!enabled) return false; // not enabled.
+App.prototype.autoTrack = function(enabled=false, force=false, afterCallback, initFactorsQueue=false) {
+    if (!enabled) {
+        initFactorsQueue ? triggerFactorsStartQueu() : null;
+        return false;
+    } // not enabled.
 
     if (!force && isPageAutoTracked()) {
         logger.debug('Page tracked already as per store : '+JSON.stringify(Cache.getFactorsCacheObject()))
@@ -355,7 +358,11 @@ App.prototype.autoTrack = function(enabled=false, force=false, afterCallback) {
     
     var _this = this;
 
-    this.track(getAutoTrackURL(), Properties.getFromQueryParams(window.location), true, afterCallback);
+    this.track(getAutoTrackURL(), Properties.getFromQueryParams(window.location), true, afterCallback).then(function(){
+        if(initFactorsQueue) {
+            triggerFactorsStartQueu()
+        }
+    });
 
     var lastPageProperties = {};
     var startOfPageSpentTime = util.getCurrentUnixTimestampInMs();

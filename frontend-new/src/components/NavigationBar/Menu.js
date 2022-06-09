@@ -7,8 +7,11 @@ import { fetchSmartEvents } from 'Reducers/events';
 import { connect } from 'react-redux';
 import { fetchProjectAgents, fetchAgentInfo } from 'Reducers/agentActions';
 import { fetchProjects } from 'Reducers/global';
+import { getActiveDomain } from '@sentry/hub';
 
 const { SubMenu } = Menu;
+
+const whiteListedAccounts = ['solutions@factors.ai'];
 
 const MenuItems = {
   general: 'General Settings',
@@ -48,6 +51,7 @@ function SiderMenu({
   setCollapsed,
   handleClick,
   activeProject,
+  activeAgent,
   fetchSmartEvents,
   fetchProjectAgents,
   fetchAgentInfo,
@@ -57,6 +61,7 @@ function SiderMenu({
   const [openKeys, setOpenKeys] = useState([]);
   const [ShowPopOverSettings, setShowPopOverSettings] = useState(false);
   const [ShowPopOverConfigure, setShowPopOverConfigure] = useState(false);
+  const [ShowPopOverProfiles, setShowPopOverProfiles] = useState(false);
 
   const submenuKeys = ['sub1', 'sub2', 'sub3'];
 
@@ -116,6 +121,24 @@ function SiderMenu({
           })}
         </div>
       );
+    } else if (title === 'profile') {
+      const items = ['People'];
+      return (
+        <div className={styles.popover_content}>
+          {items.map((item) => {
+            return (
+              <NavLink
+                activeStyle={{ color: '#1890ff' }}
+                exact
+                to={`/profiles/${item.toLowerCase()}`}
+                onClick={() => setShowPopOverSettings(false)}
+              >
+                {MenuItems[item]}
+              </NavLink>
+            );
+          })}
+        </div>
+      );
     }
   };
 
@@ -138,7 +161,7 @@ function SiderMenu({
   };
 
   const setIcon = (name, size = 28) => {
-    let color = '#8692A3'
+    let color = '#8692A3';
     if (location.pathname === MapNametToLocation[name]) {
       color = 'purple';
     }
@@ -179,29 +202,55 @@ function SiderMenu({
       >
         <b>Analyse</b>
       </Menu.Item>
-      {/* <SubMenu
-        onTitleClick={() => {
-          if (collapsed) {
-            setCollapsed(false);
-          }
-        }}
-        key='sub1'
-        icon={setIcon('profile')}
-        title={<b>Profiles</b>}
-      >
-        <Menu.Item className={styles.menuitems} key={`/profiles/people`}>
-          {MenuItems.People}
-        </Menu.Item>
-        <Menu.Item className={styles.menuitems} key={`/profiles/accounts`}>
-          {MenuItems.Accounts}
-        </Menu.Item>
-        <Menu.Item className={styles.menuitems} key={`/profiles/campaigns`}>
-          {MenuItems.Campaigns}
-        </Menu.Item>
-        <Menu.Item className={styles.menuitems} key={`/profiles/pages`}>
-          {MenuItems.Pages}
-        </Menu.Item>
-      </SubMenu> */}
+      {(window.document.domain === 'app.factors.ai' &&
+        whiteListedAccounts.includes(activeAgent)) ||
+      window.document.domain === 'staging-app.factors.ai' ||
+      window.document.domain === 'factors-dev.com' ? (
+        collapsed ? (
+          <Popover
+            overlayClassName={styles.popover}
+            title={false}
+            visible={ShowPopOverProfiles}
+            content={renderSubmenu('profile')}
+            placement={'rightTop'}
+            onVisibleChange={(visible) => {
+              setShowPopOverProfiles(visible);
+            }}
+            trigger='hover'
+          >
+            <Menu.Item
+              className={styles.menuitems}
+              key='sub3'
+              icon={setIcon('profile')}
+            ></Menu.Item>
+          </Popover>
+        ) : (
+          <SubMenu key='sub1' icon={setIcon('profile')} title={<b>Profiles</b>}>
+            <Menu.Item
+              className={styles.menuitems_sub}
+              key={`/profiles/people`}
+            >
+              {MenuItems.People}
+            </Menu.Item>
+            {/* <Menu.Item
+            className={styles.menuitems_sub}
+            key={`/profiles/accounts`}
+          >
+            {MenuItems.Accounts}
+          </Menu.Item>
+          <Menu.Item
+            className={styles.menuitems_sub}
+            key={`/profiles/campaigns`}
+          >
+            {MenuItems.Campaigns}
+          </Menu.Item>
+          <Menu.Item className={styles.menuitems_sub} key={`/profiles/pages`}>
+            {MenuItems.Pages}
+          </Menu.Item> */}
+          </SubMenu>
+        )
+      ) : null}
+
       <Menu.Item
         className={styles.menuitems}
         key='/explain'
@@ -237,11 +286,6 @@ function SiderMenu({
         </Popover>
       ) : (
         <SubMenu
-          onTitleClick={() => {
-            if (collapsed) {
-              setCollapsed(false);
-            }
-          }}
           key='sub2'
           icon={setIcon('configure')}
           title={<b>Configure</b>}
@@ -306,15 +350,7 @@ function SiderMenu({
           ></Menu.Item>
         </Popover>
       ) : (
-        <SubMenu
-          key='sub3'
-          icon={setIcon('settings')}
-          title={
-            <span style={{ paddingLeft: 0 }}>
-              <b>Settings</b>
-            </span>
-          }
-        >
+        <SubMenu key='sub3' icon={setIcon('settings')} title={<b>Settings</b>}>
           <Menu.Item className={styles.menuitems_sub} key={`/settings/general`}>
             {MenuItems.general}
           </Menu.Item>
@@ -358,6 +394,7 @@ function SiderMenu({
 }
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
+  activeAgent: state.agent?.agent_details?.email,
 });
 export default connect(mapStateToProps, {
   fetchSmartEvents,
