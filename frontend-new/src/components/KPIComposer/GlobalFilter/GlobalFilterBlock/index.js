@@ -74,7 +74,7 @@ function GlobalFilterBlock({
           filterData = {
             category: selectedMainCategory?.category,
             // object_type: filter?.extra[3],
-            object_type: selectedMainCategory?.group,
+            object_type: filter?.extra[3],
             property_name: filter?.extra[1],
             display_category: selectedMainCategory?.group,
             entity: 'event',

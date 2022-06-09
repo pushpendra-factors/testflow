@@ -80,13 +80,13 @@ function EventFilterWrapper({
       setValuesByProps(filter.props);
       setNewFilterState(filter);
 
-      if (filter && filter?.extra) {
+      if (filter && filter?.extra) { 
         let filterData = {}; 
         if (selectedMainCategory?.category == 'channels') {
           filterData = {
             category: selectedMainCategory?.category,
             // object_type: filter?.extra[3],
-            object_type: event?.group,
+            object_type: filter?.extra[3],
             property_name: filter?.extra[1],
             display_category: selectedMainCategory?.group,
             entity: 'event',

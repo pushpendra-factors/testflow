@@ -160,7 +160,7 @@ function AnalysisHeader({
         </div>
 
         <div className='flex items-center gap-x-2'>
-          <div className='pr-6 border-r'>{renderSaveQueryComp()}</div>
+          <div className='pr-2 border-r'>{renderSaveQueryComp()}</div>
           {renderReportCloseIcon()}
         </div>
       </div>
