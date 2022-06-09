@@ -104,24 +104,23 @@ func GetHubspotObjectTypeForSync() []int {
 
 func GetDecodedValue(encodedValue string, limit int) string {
 	prevValue := encodedValue
-	for i := 0; i <= limit; i++{
+	for i := 0; i <= limit; i++ {
 		curr_value, err := url.QueryUnescape(prevValue)
-		if err  != nil || curr_value == prevValue {
+		if err != nil || curr_value == prevValue {
 			if err != nil {
 				log.WithField("encodedValue", encodedValue).Error("error while decoding")
 			}
 			return prevValue
 		}
-		if i == limit && prevValue != curr_value{
+		if i == limit && prevValue != curr_value {
 			log.WithField("encodedValue", encodedValue).Error("limit exceeded on decoding")
 			return prevValue
 		}
 		prevValue = curr_value
 	}
-		
+
 	return prevValue
 }
-	
 
 func GetURLParameterAsMap(pageUrl string) map[string]interface{} {
 	u, err := url.Parse(pageUrl)
@@ -1091,6 +1090,7 @@ func syncContact(project *model.Project, document *model.HubspotDocument, hubspo
 	user, status := store.GetStore().GetUser(project.ID, userID)
 	if status != http.StatusFound {
 		logCtx.WithField("error_code", status).Error("Failed to get user on sync contact.")
+		return http.StatusInternalServerError
 	}
 
 	existingCustomerUserID := user.CustomerUserId
