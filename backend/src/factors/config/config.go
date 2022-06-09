@@ -237,6 +237,7 @@ type Configuration struct {
 	SkipKPICaching                                  int
 	EnableBingAdsAttribution                        bool
 	EnableHubspotFormsEventsByProjectID             string
+	DisableHubspotNonMarketingContactsByProjectID   string
 	HubspotBatchInsertBatchSize                     int
 	UseHubspotBatchInsertByProjectID                string
 	SalesforcePropertyLookBackTimeHr                int
@@ -247,6 +248,7 @@ type Configuration struct {
 	SlackAppClientID                                string
 	SlackAppClientSecret                            string
 	EnableDryRunAlerts                              bool
+	DataAvailabilityExpiry                          int
 	ClearbitEnabled                                 int
 	UseSalesforceV54APIByProjectID                  string
 }
@@ -2149,6 +2151,15 @@ func GetSalesforceBatchInsertBatchSize() int {
 
 func AllowHubspotEngagementsByProjectID(projectID uint64) bool {
 	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().AllowHubspotEngagementsByProjectID, "")
+	if allProjects {
+		return true
+	}
+
+	return allowedProjectIDs[projectID]
+}
+
+func DisableHubspotNonMarketingContactsByProjectID(projectID uint64) bool {
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().DisableHubspotNonMarketingContactsByProjectID, "")
 	if allProjects {
 		return true
 	}

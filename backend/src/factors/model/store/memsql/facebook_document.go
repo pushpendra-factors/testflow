@@ -423,6 +423,18 @@ func (store *MemSQL) GetFacebookFilterValues(projectID uint64, requestFilterObje
 	return filterValues, http.StatusFound
 }
 
+func (store *MemSQL) IsFacebookIntegrationAvailable(projectID uint64) bool {
+	projectSetting, errCode := store.GetProjectSetting(projectID)
+	if errCode != http.StatusFound {
+		return false
+	}
+	customerAccountID := projectSetting.IntFacebookAdAccount
+	if customerAccountID == "" || len(customerAccountID) == 0 {
+		return false
+	}
+	return true
+}
+
 // GetFacebookSQLQueryAndParametersForFilterValues - @TODO Kark v1
 func (store *MemSQL) GetFacebookSQLQueryAndParametersForFilterValues(projectID uint64, requestFilterObject string, requestFilterProperty string, reqID string) (string, []interface{}, int) {
 	logFields := log.Fields{

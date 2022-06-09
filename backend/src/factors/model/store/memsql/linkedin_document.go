@@ -320,6 +320,18 @@ func getLinkedinHierarchyColumnsByType(docType int, valueJSON *postgres.Jsonb) (
 	return U.GetStringFromMapOfInterface(*valueMap, "campaign_group_id", ""), U.GetStringFromMapOfInterface(*valueMap, "campaign_id", ""), U.GetStringFromMapOfInterface(*valueMap, "creative_id", ""), nil
 }
 
+func (store *MemSQL) IsLinkedInIntegrationAvailable(projectID uint64) bool {
+	projectSetting, errCode := store.GetProjectSetting(projectID)
+	if errCode != http.StatusFound {
+		return false
+	}
+
+	if projectSetting.IntLinkedinAdAccount == "" {
+		return false
+	}
+	return true
+}
+
 func (store *MemSQL) ExecuteLinkedinChannelQuery(projectID uint64, query *model.ChannelQuery) (*model.ChannelQueryResult, int) {
 	logFields := log.Fields{
 		"project_id": projectID,

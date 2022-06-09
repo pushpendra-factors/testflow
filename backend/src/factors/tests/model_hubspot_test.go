@@ -570,6 +570,11 @@ func TestHubspotContactFormSubmission(t *testing.T) {
 	assert.Equal(t, (float64)(2361873), propertyValues["$hubspot_form_submission_portal-id"])
 	assert.Equal(t, (float64)(1647393874), propertyValues["$hubspot_form_submission_timestamp"])
 	assert.Equal(t, " Webinar 20th Jan 2021", propertyValues["$hubspot_form_submission_title"])
+
+	decodedString := IntHubspot.GetDecodedValue("Danny%2520%2526%2520Co", 2)
+	assert.Equal(t, "Danny & Co", decodedString)
+	decodedString = IntHubspot.GetDecodedValue("Danny%2520%2526%2520Co", 3)
+	assert.Equal(t, "Danny & Co", decodedString)
 }
 
 func TestHubspotCRMSmartEvent(t *testing.T) {

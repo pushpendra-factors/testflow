@@ -56,19 +56,19 @@ function GroupBlock({
     setSelVis(ddVis);
   };
 
-  const onChange = (value, index, category) => {
+  const onChange = (value, index, category) => { 
     const newGroupByState = Object.assign({}, groupByState.global[index]);
     newGroupByState.prop_category = value[1][3];
     newGroupByState.eventName = value[1][2];
     newGroupByState.property = value[1][1];
     newGroupByState.prop_type = value[1][2];
+    newGroupByState.display_name = value[1][0];
     if (newGroupByState.prop_type === 'numerical') {
       newGroupByState.gbty = 'raw_values';
     }
     if (newGroupByState.prop_type === 'datetime') {
       newGroupByState.grn = 'day';
-    }
-
+    } 
     setGroupBy('global', newGroupByState, index);
     const ddVis = [...isDDVisible];
     ddVis[index] = false;
@@ -174,15 +174,10 @@ function GroupBlock({
   };
 
   const renderGroupDisplayName = (opt, index) => {
-    let propertyName = '';
-    // if (opt.property && opt.prop_category === 'user') {
-    //   propertyName = userPropNames[opt.property] ? userPropNames[opt.property] : opt.property;
-    // }
-    // if (opt.property && opt.prop_category === 'event') {
-    //   propertyName = eventPropNames[opt.property] ? eventPropNames[opt.property] : opt.property;
-    // }
+    console.log('renderGroupDisplayName-->>',opt)
+    let propertyName = ''; 
     if (opt?.property) {
-      propertyName = _.startCase(opt.property);
+      propertyName = opt?.display_name ? _.startCase(opt.display_name) : _.startCase(opt.property);
     }
     if (!opt.property) {
       propertyName = 'Select user property';

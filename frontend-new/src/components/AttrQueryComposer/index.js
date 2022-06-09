@@ -124,8 +124,12 @@ const AttrQueryComposer = ({ activeProject,
     }
 
     const delQuery = (index) => {
-        const qs = [...queries];
-        setQueries(qs.filter((v, i) => i != index));
+        const qs = [...queries].filter((v, i) => i != index);
+        setQueries(qs);
+        dispatch({
+            type: SET_ATTR_QUERIES,
+            payload: qs,
+        });
     }
 
 

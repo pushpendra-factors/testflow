@@ -21,9 +21,7 @@ CREATE TABLE IF NOT EXISTS events (
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
     KEY (project_id, event_name_id, timestamp) USING CLUSTERED COLUMNSTORE,
-    KEY (project_id) USING HASH,
     KEY (id) USING HASH,
-    KEY (event_name_id) USING HASH,
     KEY (user_id) USING HASH,
     KEY (customer_event_id) USING HASH,
     SHARD KEY (user_id)

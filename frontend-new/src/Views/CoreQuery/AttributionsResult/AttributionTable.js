@@ -39,7 +39,7 @@ function AttributionTable({
         if (
           !enabledAttributionMetricKeys.includes(key) &&
           key !== 'Conversion' &&
-          key !== 'Cost per Conversion' &&
+          key !== 'Cost Per Conversion' &&
           key !== 'Conversion Rate' &&
           !key.includes('Linked Event')
         ) {
@@ -55,8 +55,8 @@ function AttributionTable({
           result[`${key} change`] = isNaN(changePercent)
             ? '0%'
             : changePercent === 'Infinity' || changePercent === '-Infinity'
-            ? 'Infinity'
-            : changePercent + '%';
+              ? 'Infinity'
+              : changePercent + '%';
         }
       });
       return result;
@@ -64,7 +64,7 @@ function AttributionTable({
 
     return {
       fileName: `${reportTitle}.csv`,
-      data: mappedData,
+      data: mappedData
     };
   };
 
@@ -81,7 +81,7 @@ function AttributionTable({
 
   const rowSelection = {
     selectedRowKeys: visibleIndices,
-    onChange: onSelectionChange,
+    onChange: onSelectionChange
   };
 
   return (

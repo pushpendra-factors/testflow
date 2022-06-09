@@ -44,7 +44,7 @@ const QueryActions = ({
   };
 
   return (
-    <div className="flex gap-x-6 items-center">
+    <div className="flex gap-x-2 items-center">
       <ControlledComponent controller={!savedQueryId}>
         <Button
           onClick={handleSaveClick}

@@ -334,6 +334,15 @@ func sendEmailAlert(projectID uint64, msg Message, dateRange dateRanges, timezon
 			}
 		}
 	}
+	percentageSymbol := ""
+	if msg.Operator == model.PERCENTAGE_HAS_INCREASED_BY_MORE_THAN || msg.Operator == model.PERCENTAGE_HAS_DECREASED_BY_MORE_THAN {
+		percentageSymbol = "%"
+		if msg.Operator == model.PERCENTAGE_HAS_INCREASED_BY_MORE_THAN {
+			msg.Operator = model.INCREASED_BY_MORE_THAN
+		} else {
+			msg.Operator = model.DECREASED_BY_MORE_THAN
+		}
+	}
 	actualValue := strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.2f", msg.ActualValue), "0"), ".")
 	actualValue = AddCommaToNumber(actualValue)
 
@@ -349,9 +358,9 @@ func sendEmailAlert(projectID uint64, msg Message, dateRange dateRanges, timezon
 		ComparedValue := strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.2f", msg.ComparedValue), "0"), ".")
 		ComparedValue = AddCommaToNumber(ComparedValue)
 		if msg.Category == strings.Title(model.PageViews) {
-			statement = fmt.Sprintf(`For the %s (%s to %s) compared to %s <br> <b> %s for %s %s %s : %s(%s) . </b>`, strings.ReplaceAll(msg.DateRange, "_", " "), from, to, strings.ReplaceAll(msg.ComparedTo, "_", " "), strings.ReplaceAll(msg.AlertName, "_", " "), msg.PageURL, strings.ReplaceAll(msg.Operator, "_", " "), AddCommaToNumber(fmt.Sprint(msg.Value)), actualValue, ComparedValue)
+			statement = fmt.Sprintf(`For the %s (%s to %s) compared to %s <br> <b> %s for %s %s %s%s : %s(%s) . </b>`, strings.ReplaceAll(msg.DateRange, "_", " "), from, to, strings.ReplaceAll(msg.ComparedTo, "_", " "), strings.ReplaceAll(msg.AlertName, "_", " "), msg.PageURL, strings.ReplaceAll(msg.Operator, "_", " "), AddCommaToNumber(fmt.Sprint(msg.Value)), percentageSymbol, actualValue, ComparedValue)
 		} else {
-			statement = fmt.Sprintf(`For the %s (%s to %s) compared to %s <br> <b> %s for %s %s %s : %s(%s) . </b>`, strings.ReplaceAll(msg.DateRange, "_", " "), from, to, strings.ReplaceAll(msg.ComparedTo, "_", " "), strings.ReplaceAll(msg.AlertName, "_", " "), strings.ReplaceAll(msg.Category, "_", " "), strings.ReplaceAll(msg.Operator, "_", " "), AddCommaToNumber(fmt.Sprint(msg.Value)), actualValue, ComparedValue)
+			statement = fmt.Sprintf(`For the %s (%s to %s) compared to %s <br> <b> %s for %s %s %s%s : %s(%s) . </b>`, strings.ReplaceAll(msg.DateRange, "_", " "), from, to, strings.ReplaceAll(msg.ComparedTo, "_", " "), strings.ReplaceAll(msg.AlertName, "_", " "), strings.ReplaceAll(msg.Category, "_", " "), strings.ReplaceAll(msg.Operator, "_", " "), AddCommaToNumber(fmt.Sprint(msg.Value)), percentageSymbol, actualValue, ComparedValue)
 		}
 		//	statement = fmt.Sprintf(`%s %s %s for %s in %s (from %s to %s ) compared to %s - %s(%s)`, strings.ReplaceAll(msg.AlertName, "_", " "), strings.ReplaceAll(msg.Operator, "_", " "), fmt.Sprint(msg.Value), strings.ReplaceAll(msg.Category, "_", " "), strings.ReplaceAll(msg.DateRange, "_", " "), from, to, strings.ReplaceAll(msg.ComparedTo, "_", " "), fmt.Sprint(msg.ActualValue), fmt.Sprint(msg.ComparedValue))
 	}
@@ -433,6 +442,15 @@ func getSlackMessage(msg Message, dateRange dateRanges, timezone U.TimeZoneStrin
 			}
 		}
 	}
+	percentageSymbol := ""
+	if msg.Operator == model.PERCENTAGE_HAS_INCREASED_BY_MORE_THAN || msg.Operator == model.PERCENTAGE_HAS_DECREASED_BY_MORE_THAN {
+		percentageSymbol = "%"
+		if msg.Operator == model.PERCENTAGE_HAS_INCREASED_BY_MORE_THAN {
+			msg.Operator = model.INCREASED_BY_MORE_THAN
+		} else {
+			msg.Operator = model.DECREASED_BY_MORE_THAN
+		}
+	}
 	emoji := getEmojiForSlackByOperator(msg.Operator)
 	actualValue := strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.2f", msg.ActualValue), "0"), ".")
 	actualValue = AddCommaToNumber(actualValue)
@@ -462,7 +480,7 @@ func getSlackMessage(msg Message, dateRange dateRanges, timezone U.TimeZoneStrin
 						"type": "header",
 						"text": {
 							"type": "plain_text",
-							"text": "%s for %s %s %s "
+							"text": "%s for %s %s %s%s "
 						}
 					},
 					{
@@ -490,9 +508,12 @@ func getSlackMessage(msg Message, dateRange dateRanges, timezone U.TimeZoneStrin
 							"type": "mrkdwn",
 							"text": "*<https://app.factors.ai/|Go to Factors.ai>*"
 						}
+					},
+					{
+						"type": "divider"
 					}
 				]
-				`, strings.ReplaceAll(msg.DateRange, "_", " "), from, to, comparedToStatement, strings.ReplaceAll(msg.AlertName, "_", " "), CategoryVar, strings.ReplaceAll(msg.Operator, "_", " "), AddCommaToNumber(fmt.Sprint(msg.Value)), actualValue, ComparedValue, emoji)
+				`, strings.ReplaceAll(msg.DateRange, "_", " "), from, to, comparedToStatement, strings.ReplaceAll(msg.AlertName, "_", " "), CategoryVar, strings.ReplaceAll(msg.Operator, "_", " "), AddCommaToNumber(fmt.Sprint(msg.Value)), percentageSymbol, actualValue, ComparedValue, emoji)
 
 	return slackMsg
 }

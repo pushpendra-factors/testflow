@@ -6,17 +6,18 @@ import {
   SortData,
   formatCount,
   getClickableTitleSorter,
-  SortResults,
+  SortResults
 } from '../../../utils/dataFormatter';
 import {
   ATTRIBUTION_METHODOLOGY,
   FIRST_METRIC_IN_ATTR_RESPOSE,
   ARR_JOINER,
   ATTRIBUTION_METRICS,
-  DISPLAY_PROP,
+  DISPLAY_PROP
 } from '../../../utils/constants';
 import styles from './index.module.scss';
-import { isArray } from 'lodash';
+import { keys } from 'lodash';
+import { ATTRIBUTION_GROUP_ANALYSIS_KEYS } from './attributionsResult.constants';
 
 export const defaultSortProp = () => {
   return [
@@ -24,19 +25,54 @@ export const defaultSortProp = () => {
       order: 'descend',
       key: 'Conversion',
       type: 'numerical',
-      subtype: null,
-    },
+      subtype: null
+    }
   ];
 };
 
 export const getDifferentCampaingns = (data) => {
   const { headers } = data.result;
   const campaignIdx = headers.indexOf('Campaign');
-  let differentCampaigns = new Set();
+  const differentCampaigns = new Set();
   data.result.rows.forEach((row) => {
     differentCampaigns.add(row[campaignIdx]);
   });
   return Array.from(differentCampaigns);
+};
+
+const getBarLineChartSeriesKeys = ({
+  attrQueries,
+  groupAnalysis,
+  currentEventIndex = 0,
+  headers
+}) => {
+  console.log('groupAnalysis', groupAnalysis);
+  if (
+    groupAnalysis &&
+    groupAnalysis !== ATTRIBUTION_GROUP_ANALYSIS_KEYS.USERS
+  ) {
+    const query = attrQueries[currentEventIndex];
+    const result = [];
+    if (headers.includes(`${query.label} - Conversion Value`)) {
+      result.push(`${query.label} - Conversion Value`);
+    } else {
+      result.push(`${query.label} - Conversion`);
+    }
+    if (headers.includes(`${query.label} - Return on Cost`)) {
+      result.push(`${query.label} - Return on Cost`);
+    } else {
+      result.push(`${query.label} - Cost Per Conversion`);
+    }
+    return result;
+  }
+  return ['Conversion', 'Cost Per Conversion'];
+};
+
+const getLegendsLabel = ({ key }) => {
+  if (key === 'Conversion') {
+    return 'Conversions as Unique users';
+  }
+  return key;
 };
 
 export const getSingleTouchPointChartData = (
@@ -44,15 +80,24 @@ export const getSingleTouchPointChartData = (
   visibleIndices,
   attr_dimensions,
   content_groups,
-  touchpoint,
-  isComparisonApplied
+  touchPoint,
+  isComparisonApplied,
+  attrQueries,
+  groupAnalysis,
+  currentEventIndex = 0
 ) => {
-  const list_dimensions =
-    touchpoint === 'LandingPage'
+  const seriesKeys = getBarLineChartSeriesKeys({
+    attrQueries,
+    groupAnalysis,
+    currentEventIndex,
+    headers: keys(data[0])
+  });
+  const listDimensions =
+    touchPoint === 'LandingPage'
       ? content_groups.slice()
       : attr_dimensions.slice();
-  const enabledDimensions = list_dimensions.filter(
-    (d) => d.touchPoint === touchpoint && d.enabled
+  const enabledDimensions = listDimensions.filter(
+    (d) => d.touchPoint === touchPoint && d.enabled
   );
   const slicedTableData = data.filter(
     (d) => visibleIndices.indexOf(d.index) > -1
@@ -61,9 +106,9 @@ export const getSingleTouchPointChartData = (
   const categories = slicedTableData.map((d) => {
     const cat = enabledDimensions.length
       ? enabledDimensions.map((dimension) => {
-          return d[dimension.title];
-        })
-      : [d[touchpoint]];
+        return d[dimension.title];
+      })
+      : [d[touchPoint]];
     return cat.join(', ');
   });
 
@@ -73,53 +118,60 @@ export const getSingleTouchPointChartData = (
       yAxis: 0,
       data: slicedTableData.map((row) =>
         isComparisonApplied
-          ? Number(row['Conversion'].value)
-          : Number(row['Conversion'])
+          ? Number(row[seriesKeys[0]].value)
+          : Number(row[[seriesKeys[0]]])
       ),
-      color: '#4d7db4',
+      color: '#4d7db4'
     },
     {
       type: 'line',
       yAxis: 1,
       data: slicedTableData.map((row) =>
         isComparisonApplied
-          ? Number(row['Cost per Conversion'].value)
-          : Number(row['Cost per Conversion'])
+          ? Number(row[seriesKeys[1]].value)
+          : Number(row[seriesKeys[1]])
       ),
       color: '#d4787d',
       marker: {
-        symbol: 'circle',
-      },
-    },
+        symbol: 'circle'
+      }
+    }
   ];
   if (isComparisonApplied) {
     series.push({
       type: 'column',
       yAxis: 0,
       data: slicedTableData.map((row) =>
-        Number(row['Conversion'].compare_value)
+        Number(row[seriesKeys[0]].compare_value)
       ),
-      color: '#4d7db4',
+      color: '#4d7db4'
     });
     series.push({
       type: 'line',
       yAxis: 1,
       data: slicedTableData.map((row) =>
-        Number(row['Cost per Conversion'].compare_value)
+        Number(row[seriesKeys[1]].compare_value)
       ),
       color: '#d4787d',
       marker: {
-        symbol: 'circle',
+        symbol: 'circle'
       },
-      dashStyle: 'dash',
+      dashStyle: 'dash'
     });
-    let temp = series[1];
+    const temp = series[1];
     series[1] = series[2];
     series[2] = temp;
   }
+
+  const legends = [
+    getLegendsLabel({ key: seriesKeys[0] }),
+    getLegendsLabel({ key: seriesKeys[1] })
+  ];
+
   return {
     categories,
     series,
+    legends
   };
 };
 
@@ -133,11 +185,11 @@ export const getDualTouchPointChartData = (
   attribution_method_compare,
   currMetricsValue
 ) => {
-  const list_dimensions =
+  const listDimensions =
     touchpoint === 'LandingPage'
       ? content_groups.slice()
       : attr_dimensions.slice();
-  const enabledDimensions = list_dimensions.filter(
+  const enabledDimensions = listDimensions.filter(
     (d) => d.touchPoint === touchpoint && d.enabled
   );
   const slicedTableData = data.filter(
@@ -146,17 +198,17 @@ export const getDualTouchPointChartData = (
   const result = slicedTableData.map((d) => {
     const name = enabledDimensions.length
       ? enabledDimensions.map((dimension) => {
-          return d[dimension.title];
-        })
+        return d[dimension.title];
+      })
       : [d[touchpoint]];
     return {
       name: name.join(', '),
       [attribution_method]: !currMetricsValue
-        ? d['Conversion']
-        : d['Cost per Conversion'],
+        ? d.Conversion
+        : d['Cost Per Conversion'],
       [attribution_method_compare]: !currMetricsValue
-        ? d['conversion_compare']
-        : d['cost_compare'],
+        ? d.conversion_compare
+        : d.cost_compare
     };
   });
   return result;
@@ -181,17 +233,17 @@ export const formatData = (
   ) {
     return {
       categories: [],
-      series: [],
+      series: []
     };
   }
   const { headers, rows } = data;
   const touchpointIdx = headers.indexOf(touchPoint);
 
-  const list_dimensions =
+  const listDimensions =
     touchPoint === 'LandingPage'
       ? content_groups.slice()
       : attr_dimensions.slice();
-  const enabledDimensions = list_dimensions.filter(
+  const enabledDimensions = listDimensions.filter(
     (d) => d.touchPoint === touchPoint && d.enabled
   );
   let categories;
@@ -221,7 +273,7 @@ export const formatData = (
       type: 'column',
       yAxis: 0,
       data: rows.map((row) => row[conversionIdx]),
-      color: '#4d7db4',
+      color: '#4d7db4'
     },
     {
       type: 'line',
@@ -229,9 +281,9 @@ export const formatData = (
       data: rows.map((row) => row[costIdx]),
       color: '#d4787d',
       marker: {
-        symbol: 'circle',
-      },
-    },
+        symbol: 'circle'
+      }
+    }
   ];
   if (comparison_data) {
     series.push({
@@ -246,7 +298,7 @@ export const formatData = (
           ? equivalent_compare_row[conversionIdx]
           : 0;
       }),
-      color: '#4d7db4',
+      color: '#4d7db4'
     });
     series.push({
       type: 'line',
@@ -260,17 +312,17 @@ export const formatData = (
       }),
       color: '#d4787d',
       marker: {
-        symbol: 'circle',
+        symbol: 'circle'
       },
-      dashStyle: 'dash',
+      dashStyle: 'dash'
     });
-    let temp = series[1];
+    const temp = series[1];
     series[1] = series[2];
     series[2] = temp;
   }
   return {
     categories,
-    series,
+    series
   };
 };
 
@@ -283,10 +335,10 @@ export const formatGroupedData = (
   currMetricsValue
 ) => {
   const { headers } = data;
-  const str = currMetricsValue ? `Cost Per Conversion` : `${event} - Users`;
+  const str = currMetricsValue ? 'Cost Per Conversion' : `${event} - Users`;
   const compareStr = currMetricsValue
-    ? `Compare Cost Per Conversion`
-    : `Compare - Users`;
+    ? 'Compare Cost Per Conversion'
+    : 'Compare - Users';
   const userIdx = headers.indexOf(str);
   const compareUsersIdx = headers.indexOf(compareStr);
   let rows = data.rows.filter((_, index) => visibleIndices.indexOf(index) > -1);
@@ -295,7 +347,7 @@ export const formatGroupedData = (
     return {
       name: row[0],
       [attribution_method]: row[userIdx],
-      [attribution_method_compare]: row[compareUsersIdx],
+      [attribution_method_compare]: row[compareUsersIdx]
     };
   });
   return chartData;
@@ -304,34 +356,34 @@ export const formatGroupedData = (
 const firstColumn = (d, durationObj, cmprDuration) => {
   if (cmprDuration) {
     return (
-      <div className='flex items-center'>
+      <div className="flex items-center">
         <Text
-          type='title'
-          weight='normal'
-          color='grey-8'
-          extraClass='text-sm mb-0 py-2 px-4 w-1/2'
+          type="title"
+          weight="normal"
+          color="grey-8"
+          extraClass="text-sm mb-0 py-2 px-4 w-1/2"
         >
           {d}
         </Text>
         <div
           style={{ borderLeft: '1px solid #E7E9ED' }}
-          className='flex py-2 flex-col px-4 w-1/2'
+          className="flex py-2 flex-col px-4 w-1/2"
         >
           <Text
-            type='title'
-            weight='normal'
-            color='grey-8'
-            extraClass='text-sm mb-0'
+            type="title"
+            weight="normal"
+            color="grey-8"
+            extraClass="text-sm mb-0"
           >
             {`${moment(durationObj.from).format('MMM DD')} - ${moment(
               durationObj.to
             ).format('MMM DD')}`}
           </Text>
           <Text
-            type='title'
-            weight='normal'
-            color='grey'
-            extraClass='text-xs mb-0'
+            type="title"
+            weight="normal"
+            color="grey"
+            extraClass="text-xs mb-0"
           >{`vs ${moment(cmprDuration.from).format('MMM DD')} - ${moment(
             cmprDuration.to
           ).format('MMM DD')}`}</Text>
@@ -346,7 +398,7 @@ const renderMetric = (d, comparison_data) => {
   if (!comparison_data) {
     return <NumFormat number={d} />;
   }
-  let changePercent = calcChangePerc(d.value, d.compare_value);
+  const changePercent = calcChangePerc(d.value, d.compare_value);
   let compareText = null;
   if (isNaN(changePercent) || changePercent === 0) {
     compareText = (
@@ -357,7 +409,7 @@ const renderMetric = (d, comparison_data) => {
   } else if (changePercent === 'Infinity') {
     compareText = (
       <>
-        <SVG color='#5ACA89' name={`arrowLift`} size={16}></SVG>
+        <SVG color="#5ACA89" name={'arrowLift'} size={16}></SVG>
         <span>&#8734; %</span>
       </>
     );
@@ -366,7 +418,7 @@ const renderMetric = (d, comparison_data) => {
       <>
         <SVG
           color={changePercent > 0 ? '#5ACA89' : '#FF0000'}
-          name={changePercent > 0 ? `arrowLift` : `arrowDown`}
+          name={changePercent > 0 ? 'arrowLift' : 'arrowDown'}
           size={16}
         ></SVG>
         <NumFormat number={Math.abs(changePercent)} />%
@@ -374,8 +426,8 @@ const renderMetric = (d, comparison_data) => {
     );
   }
   return (
-    <div className='flex gap-x-2 justify-end items-start'>
-      <div className='flex flex-col items-center'>
+    <div className="flex gap-x-2 justify-end items-start">
+      <div className="flex flex-col items-center">
         <div>
           <NumFormat number={d.value} />
         </div>
@@ -407,13 +459,17 @@ export const getTableColumns = (
   attrQueries,
   data
 ) => {
-  if(!data) {return []};
+  if (!data) {
+    return [];
+  }
   const { headers } = data;
 
-  const getEventColumnConfig = ({ title, key, method, hasBorder = false }) => {
+  const getEventColumnConfig = ({
+    title, key, method, hasBorder = false
+  }) => {
     return {
       title: getClickableTitleSorter(
-        <div className='flex flex-col items-start justify-center'>
+        <div className="flex flex-col items-start justify-center">
           <div>{title}</div>
           {!!method && (
             <div
@@ -433,7 +489,7 @@ export const getTableColumns = (
       width: 200,
       render: (d) => {
         return renderMetric(d, comparison_data);
-      },
+      }
     };
   };
 
@@ -455,16 +511,16 @@ export const getTableColumns = (
       render: (d) =>
         !index
           ? firstColumn(d, durationObj, comparison_data ? cmprDuration : null)
-          : d,
+          : d
     };
   };
 
-  const list_dimensions =
+  const listDimensions =
     touchpoint === 'LandingPage'
       ? content_groups.slice()
       : attr_dimensions.slice();
 
-  const enabledDimensions = list_dimensions.filter(
+  const enabledDimensions = listDimensions.filter(
     (d) => d.touchPoint === touchpoint && d.enabled
   );
 
@@ -488,8 +544,8 @@ export const getTableColumns = (
         fixed: 'left',
         width: 200,
         render: (d) =>
-          firstColumn(d, durationObj, comparison_data ? cmprDuration : null),
-      },
+          firstColumn(d, durationObj, comparison_data ? cmprDuration : null)
+      }
     ];
   }
 
@@ -508,10 +564,10 @@ export const getTableColumns = (
         ),
         dataIndex: metric.title,
         width: 180,
-        className: `text-right`,
+        className: 'text-right',
         render: (d) => {
           return renderMetric(d, comparison_data);
-        },
+        }
       };
     });
 
@@ -525,42 +581,55 @@ export const getTableColumns = (
   const eventColumns = [];
   let attrQueryEvents = [];
 
-  if(queryOptions.group_analysis && queryOptions.group_analysis !== 'users' && headers.length) {
-    attrQueryEvents = attrQueries.map((q, i) => {
+  if (
+    queryOptions.group_analysis &&
+    queryOptions.group_analysis !== 'users' &&
+    headers.length
+  ) {
+    attrQueryEvents = attrQueries.map((q) => {
       const lbl = q.label;
-      let attrQueryHeaders = headers.filter((h, i) => h.startsWith(lbl));
-      if(!attribution_method_compare) {
-        attrQueryHeaders = attrQueryHeaders.filter((hd) => hd.search('(compare)') < 0);
+      let attrQueryHeaders = headers.filter((h) => h.startsWith(lbl));
+      if (!attribution_method_compare) {
+        attrQueryHeaders = attrQueryHeaders.filter(
+          (hd) => hd.search('(compare)') < 0
+        );
       }
-      const attrChildren = attrQueryHeaders.filter((hd)=> {
-        let title = hd.split(' - ')[1];
-        if(title === 'Conversion Value' || title ===  'Conversion Value(compare)') {
-          return showCV;
-        }
-        if(title === ('Return on Cost' || title === 'Return on Cost(compare)')) {
-          return showROC;
-        }
+      const attrChildren = attrQueryHeaders
+        .filter((hd) => {
+          const title = hd.split(' - ')[1];
+          if (
+            title === 'Conversion Value' ||
+            title === 'Conversion Value(compare)'
+          ) {
+            return showCV;
+          }
+          if (
+            title === ('Return on Cost' || title === 'Return on Cost(compare)')
+          ) {
+            return showROC;
+          }
 
-        return hd;
-      }).map((hd) => {
-        let title = hd.split(' - ')[1];
-        let attrMetod = attribution_method;
-        if (hd.search('UserConversionRate') >= 0) {
-          title = title.replace('UserConversionRate', 'Conversion Rate');
-        };
+          return hd;
+        })
+        .map((hd) => {
+          let title = hd.split(' - ')[1];
+          let attrMetod = attribution_method;
+          if (hd.search('UserConversionRate') >= 0) {
+            title = title.replace('UserConversionRate', 'Conversion Rate');
+          }
 
-        if(hd.search('compare') >= 0) {
-          attrMetod = attribution_method_compare;
-        }
-        
-        return getEventColumnConfig({
-          title: title, 
-          key: hd, 
-          method: attrMetod,
-          hasBorder: true
+          if (hd.search('compare') >= 0) {
+            attrMetod = attribution_method_compare;
+          }
+
+          return getEventColumnConfig({
+            title,
+            key: hd,
+            method: attrMetod,
+            hasBorder: true
+          });
         });
-      });
-      
+
       // const attrChildren = [
       //   getEventColumnConfig({
       //     title: 'Conversion',
@@ -576,7 +645,7 @@ export const getTableColumns = (
       //       hasBorder: costBorderCondition,
       //     })
       //   );
-      // } 
+      // }
       // if (showCR) {
       //   attrChildren.push(
       //     getEventColumnConfig({
@@ -589,7 +658,7 @@ export const getTableColumns = (
       return {
         title: eventNames[lbl] || lbl,
         className: 'bg-white tableParentHeader ',
-        children: attrChildren,
+        children: attrChildren
       };
     });
   } else {
@@ -598,17 +667,17 @@ export const getTableColumns = (
         title: 'Conversion',
         key: 'Conversion',
         method: attribution_method,
-        hasBorder: conversionBorderCondition,
-      }),
+        hasBorder: conversionBorderCondition
+      })
     );
 
     if (showCPC) {
       eventColumns.push(
         getEventColumnConfig({
           title: 'Cost Per Conversion',
-          key: 'Cost per Conversion',
+          key: 'Cost Per Conversion',
           method: attribution_method,
-          hasBorder: costBorderCondition,
+          hasBorder: costBorderCondition
         })
       );
     }
@@ -618,7 +687,7 @@ export const getTableColumns = (
           title: 'Conversion Rate',
           key: 'Conversion Rate',
           method: attribution_method,
-          hasBorder: true,
+          hasBorder: true
         })
       );
     }
@@ -629,7 +698,7 @@ export const getTableColumns = (
           title: 'Conversion',
           key: 'conversion_compare',
           method: attribution_method_compare,
-          hasBorder: conversionBorderCondition,
+          hasBorder: conversionBorderCondition
         })
       );
       if (showCPC) {
@@ -638,7 +707,7 @@ export const getTableColumns = (
             title: 'Cost Per Conversion',
             key: 'cost_compare',
             method: attribution_method_compare,
-            hasBorder: costBorderCondition,
+            hasBorder: costBorderCondition
           })
         );
       }
@@ -648,12 +717,11 @@ export const getTableColumns = (
             title: 'Conversion Rate',
             key: 'conversion_rate_compare',
             method: attribution_method_compare,
-            hasBorder: true,
+            hasBorder: true
           })
         );
       }
     }
-
   }
 
   let linkedEventsColumns = [];
@@ -663,31 +731,31 @@ export const getTableColumns = (
         getEventColumnConfig({
           title: 'Conversion',
           key: 'Linked Event - ' + le.label + ' - Users',
-          hasBorder: conversionBorderCondition,
-        }),
+          hasBorder: conversionBorderCondition
+        })
       ];
       if (showCPC) {
         linkedEventsChildren.push(
           getEventColumnConfig({
             title: 'Cost Per Conversion',
             key: 'Linked Event - ' + le.label + ' - CPC',
-            hasBorder: costBorderCondition,
+            hasBorder: costBorderCondition
           })
         );
-      } 
+      }
       if (showCR) {
         linkedEventsChildren.push(
           getEventColumnConfig({
             title: 'Conversion Rate',
             key: 'Linked Event - ' + le.label + ' - Conversion Rate',
-            hasBorder: true,
+            hasBorder: true
           })
         );
       }
       return {
         title: eventNames[le.label] || le.label,
         className: 'bg-white tableParentHeader ',
-        children: linkedEventsChildren,
+        children: linkedEventsChildren
       };
     });
   }
@@ -697,11 +765,15 @@ export const getTableColumns = (
   if (queryOptions.group_analysis && queryOptions.group_analysis !== 'users') {
     tableColumns = [...tableColumns, ...attrQueryEvents];
   } else {
-    tableColumns = [...tableColumns, {
-      title: eventNames[event] || event,
-      className: 'bg-white tableParentHeader ',
-      children: eventColumns,
-    }, ...linkedEventsColumns];
+    tableColumns = [
+      ...tableColumns,
+      {
+        title: eventNames[event] || event,
+        className: 'bg-white tableParentHeader ',
+        children: eventColumns
+      },
+      ...linkedEventsColumns
+    ];
   }
 
   return tableColumns;
@@ -759,16 +831,16 @@ export const getTableData = (
   const { headers } = data;
   const costIdx = headers.indexOf('Cost Per Conversion');
   const userIdx = headers.indexOf(`${event} - Users`);
-  const conversionRateIdx = headers.indexOf(`UserConversionRate(%)`);
-  const compareUsersIdx = headers.indexOf(`Compare - Users`);
-  const compareCostIdx = headers.indexOf(`Compare Cost Per Conversion`);
-  const compareConvRateIdx = headers.indexOf(`Compare UserConversionRate(%)`);
+  const conversionRateIdx = headers.indexOf('UserConversionRate(%)');
+  const compareUsersIdx = headers.indexOf('Compare - Users');
+  const compareCostIdx = headers.indexOf('Compare Cost Per Conversion');
+  const compareConvRateIdx = headers.indexOf('Compare UserConversionRate(%)');
 
-  const list_dimensions =
+  const listDimensions =
     touchpoint === 'LandingPage'
       ? content_groups.slice()
       : attr_dimensions.slice();
-  const enabledDimensions = list_dimensions.filter(
+  const enabledDimensions = listDimensions.filter(
     (d) => d.touchPoint === touchpoint && d.enabled
   );
   const equivalentIndicesMapper = comparison_data
@@ -789,7 +861,7 @@ export const getTableData = (
             value: row[metricIndex],
             compare_value: equivalent_compare_row
               ? equivalent_compare_row[metricIndex]
-              : 0,
+              : 0
           };
         } else {
           metricsData[metric.title] = row[metricIndex];
@@ -821,89 +893,94 @@ export const getTableData = (
         ...metricsData
       };
 
-      if(queryOptions.group_analysis && queryOptions.group_analysis !== 'users' && attrQueries.length && headers.length) {
-        attrQueries.forEach((q, i) => {
+      if (
+        queryOptions.group_analysis &&
+        queryOptions.group_analysis !== 'users' &&
+        attrQueries.length &&
+        headers.length
+      ) {
+        attrQueries.forEach((q) => {
           const lbl = q.label;
           headers.forEach((head, i) => {
-            if(head.startsWith(`${lbl} - `)) {
-              resultantRow[head] = !comparison_data? formatCount(row[i], 1) 
-              : {
-                value: formatCount(row[i]),
-                compare_value: equivalent_compare_row? formatCount(equivalent_compare_row[i], 1) : 0,
-              };
-            };     
-          })
-        
-          })
+            if (head.startsWith(`${lbl} - `)) {
+              resultantRow[head] = !comparison_data
+                ? formatCount(row[i], 1)
+                : {
+                  value: formatCount(row[i]),
+                  compare_value: equivalent_compare_row
+                    ? formatCount(equivalent_compare_row[i], 1)
+                    : 0
+                };
+            }
+          });
+        });
 
-
-          // resultantRow[`${lbl} - Conversion`] = !comparison_data
-          //   ? formatCount(row[eventUsersIdx], 1)
-          //   : {
-          //       value: formatCount(row[eventUsersIdx], 1),
-          //       compare_value: equivalent_compare_row
-          //         ? formatCount(equivalent_compare_row[eventUsersIdx], 1)
-          //         : 0,
-          //     };
-          // resultantRow[`${lbl} - Cost Per Conversion`] = !comparison_data
-          //   ? formatCount(row[eventCPCIdx], 1)
-          //   : {
-          //       value: formatCount(row[eventCPCIdx], 1),
-          //       compare_value: equivalent_compare_row
-          //         ? formatCount(equivalent_compare_row[eventCPCIdx], 1)
-          //         : 0,
-          //     };
-          // resultantRow[`${lbl} - UserConversionRate(%)`] =
-          //   !comparison_data
-          //     ? formatCount(row[eventConvRateIdx], 1)
-          //     : {
-          //         value: formatCount(row[eventConvRateIdx], 1),
-          //         compare_value: equivalent_compare_row
-          //           ? formatCount(equivalent_compare_row[eventConvRateIdx], 1)
-          //           : 0,
-          //       };
-          // resultantRow[`${lbl} - Conversion Rate`] = !comparison_data
-          //       ? formatCount(row[conversionRateIdx], 1)
-          //       : {
-          //           value: formatCount(row[conversionRateIdx], 1),
-          //           compare_value: equivalent_compare_row
-          //             ? formatCount(equivalent_compare_row[conversionRateIdx], 1)
-          //             : 0,
-          //         };     
-        
+        // resultantRow[`${lbl} - Conversion`] = !comparison_data
+        //   ? formatCount(row[eventUsersIdx], 1)
+        //   : {
+        //       value: formatCount(row[eventUsersIdx], 1),
+        //       compare_value: equivalent_compare_row
+        //         ? formatCount(equivalent_compare_row[eventUsersIdx], 1)
+        //         : 0,
+        //     };
+        // resultantRow[`${lbl} - Cost Per Conversion`] = !comparison_data
+        //   ? formatCount(row[eventCPCIdx], 1)
+        //   : {
+        //       value: formatCount(row[eventCPCIdx], 1),
+        //       compare_value: equivalent_compare_row
+        //         ? formatCount(equivalent_compare_row[eventCPCIdx], 1)
+        //         : 0,
+        //     };
+        // resultantRow[`${lbl} - UserConversionRate(%)`] =
+        //   !comparison_data
+        //     ? formatCount(row[eventConvRateIdx], 1)
+        //     : {
+        //         value: formatCount(row[eventConvRateIdx], 1),
+        //         compare_value: equivalent_compare_row
+        //           ? formatCount(equivalent_compare_row[eventConvRateIdx], 1)
+        //           : 0,
+        //       };
+        // resultantRow[`${lbl} - Conversion Rate`] = !comparison_data
+        //       ? formatCount(row[conversionRateIdx], 1)
+        //       : {
+        //           value: formatCount(row[conversionRateIdx], 1),
+        //           compare_value: equivalent_compare_row
+        //             ? formatCount(equivalent_compare_row[conversionRateIdx], 1)
+        //             : 0,
+        //         };
       } else {
         resultantRow = {
-        index,
-        category: Object.values(dimensionsData).join(', '),
-        ...dimensionsData,
-        ...metricsData,
-        Conversion: !comparison_data
-          ? formatCount(row[userIdx], 1)
-          : {
+          index,
+          category: Object.values(dimensionsData).join(', '),
+          ...dimensionsData,
+          ...metricsData,
+          Conversion: !comparison_data
+            ? formatCount(row[userIdx], 1)
+            : {
               value: formatCount(row[userIdx], 1),
               compare_value: equivalent_compare_row
                 ? equivalent_compare_row[userIdx]
-                : 0,
+                : 0
             },
-        'Cost per Conversion': !comparison_data
-          ? formatCount(row[costIdx], 1)
-          : {
+          'Cost Per Conversion': !comparison_data
+            ? formatCount(row[costIdx], 1)
+            : {
               value: formatCount(row[costIdx], 1),
               compare_value: equivalent_compare_row
                 ? formatCount(equivalent_compare_row[costIdx], 1)
-                : 0,
+                : 0
             },
-        'Conversion Rate': !comparison_data
-          ? formatCount(row[conversionRateIdx], 1)
-          : {
+          'Conversion Rate': !comparison_data
+            ? formatCount(row[conversionRateIdx], 1)
+            : {
               value: formatCount(row[conversionRateIdx], 1),
               compare_value: equivalent_compare_row
                 ? formatCount(equivalent_compare_row[conversionRateIdx], 1)
-                : 0,
-            },
+                : 0
+            }
+        };
       }
-    };
-    if (linkedEvents.length) {
+      if (linkedEvents.length) {
         linkedEvents.forEach((le) => {
           const eventUsersIdx = headers.indexOf(`${le.label} - Users`);
           const eventCPCIdx = headers.indexOf(`${le.label} - CPC`);
@@ -913,34 +990,34 @@ export const getTableData = (
           resultantRow[`Linked Event - ${le.label} - Users`] = !comparison_data
             ? formatCount(row[eventUsersIdx], 1)
             : {
-                value: formatCount(row[eventUsersIdx], 1),
-                compare_value: equivalent_compare_row
-                  ? formatCount(equivalent_compare_row[eventUsersIdx], 1)
-                  : 0,
-              };
+              value: formatCount(row[eventUsersIdx], 1),
+              compare_value: equivalent_compare_row
+                ? formatCount(equivalent_compare_row[eventUsersIdx], 1)
+                : 0
+            };
           resultantRow[`Linked Event - ${le.label} - CPC`] = !comparison_data
             ? formatCount(row[eventCPCIdx], 1)
             : {
-                value: formatCount(row[eventCPCIdx], 1),
-                compare_value: equivalent_compare_row
-                  ? formatCount(equivalent_compare_row[eventCPCIdx], 1)
-                  : 0,
-              };
+              value: formatCount(row[eventCPCIdx], 1),
+              compare_value: equivalent_compare_row
+                ? formatCount(equivalent_compare_row[eventCPCIdx], 1)
+                : 0
+            };
           resultantRow[`Linked Event - ${le.label} - Conversion Rate`] =
             !comparison_data
               ? formatCount(row[eventConvRateIdx], 1)
               : {
-                  value: formatCount(row[eventConvRateIdx], 1),
-                  compare_value: equivalent_compare_row
-                    ? formatCount(equivalent_compare_row[eventConvRateIdx], 1)
-                    : 0,
-                };
+                value: formatCount(row[eventConvRateIdx], 1),
+                compare_value: equivalent_compare_row
+                  ? formatCount(equivalent_compare_row[eventConvRateIdx], 1)
+                  : 0
+              };
         });
       }
       if (attribution_method_compare) {
-        resultantRow['conversion_compare'] = row[compareUsersIdx];
-        resultantRow['cost_compare'] = formatCount(row[compareCostIdx], 1);
-        resultantRow['conversion_rate_compare'] = formatCount(
+        resultantRow.conversion_compare = row[compareUsersIdx];
+        resultantRow.cost_compare = formatCount(row[compareCostIdx], 1);
+        resultantRow.conversion_rate_compare = formatCount(
           row[compareConvRateIdx],
           1
         );
@@ -970,11 +1047,11 @@ export const getScatterPlotChartData = (
   yAxisMetric,
   isComparisonApplied
 ) => {
-  const list_dimensions =
+  const listDimensions =
     selectedTouchPoint === 'LandingPage'
       ? content_groups.slice()
       : attr_dimensions.slice();
-  const enabledDimensions = list_dimensions.filter(
+  const enabledDimensions = listDimensions.filter(
     (d) => d.touchPoint === selectedTouchPoint && d.enabled
   );
   const visibleData = data.filter((d) => visibleIndices.indexOf(d.index) > -1);
@@ -983,7 +1060,7 @@ export const getScatterPlotChartData = (
   const plotData = visibleData.map((d) => {
     const category = [];
     if (enabledDimensions.length) {
-      for (let dimension of enabledDimensions) {
+      for (const dimension of enabledDimensions) {
         category.push(d[dimension.title]);
       }
     } else {
@@ -994,7 +1071,7 @@ export const getScatterPlotChartData = (
     if (isComparisonApplied) {
       comparisonPlotData.push([
         Number(d[xAxisMetric].compare_value),
-        Number(d[yAxisMetric].compare_value),
+        Number(d[yAxisMetric].compare_value)
       ]);
       return [Number(d[xAxisMetric].value), Number(d[yAxisMetric].value)];
     }
@@ -1005,16 +1082,16 @@ export const getScatterPlotChartData = (
     series: [
       {
         color: '#4D7DB4',
-        data: plotData,
-      },
+        data: plotData
+      }
     ],
-    categories,
+    categories
   };
 
   if (isComparisonApplied) {
     finalResult.series.push({
       color: '#d4787d',
-      data: comparisonPlotData,
+      data: comparisonPlotData
     });
   }
 
@@ -1033,38 +1110,38 @@ export const getAxisMetricOptions = (
     .map((metric) => {
       return {
         title: metric.title,
-        value: metric.title,
+        value: metric.title
       };
     });
 
   result.push({
     title: attribution_method_compare
       ? `Conversion - ${
-          ATTRIBUTION_METHODOLOGY.find((m) => m.value === attribution_method)
-            .text
-        }`
+        ATTRIBUTION_METHODOLOGY.find((m) => m.value === attribution_method)
+          .text
+      }`
       : 'Conversion',
-    value: 'Conversion',
+    value: 'Conversion'
   });
 
   result.push({
     title: attribution_method_compare
-      ? `Cost per Conversion - ${
-          ATTRIBUTION_METHODOLOGY.find((m) => m.value === attribution_method)
-            .text
-        }`
-      : 'Cost per Conversion',
-    value: 'Cost per Conversion',
+      ? `Cost Per Conversion - ${
+        ATTRIBUTION_METHODOLOGY.find((m) => m.value === attribution_method)
+          .text
+      }`
+      : 'Cost Per Conversion',
+    value: 'Cost Per Conversion'
   });
 
   result.push({
     title: attribution_method_compare
       ? `Conversion Rate - ${
-          ATTRIBUTION_METHODOLOGY.find((m) => m.value === attribution_method)
-            .text
-        }`
+        ATTRIBUTION_METHODOLOGY.find((m) => m.value === attribution_method)
+          .text
+      }`
       : 'Conversion Rate',
-    value: 'Conversion Rate',
+    value: 'Conversion Rate'
   });
 
   if (attribution_method_compare) {
@@ -1074,16 +1151,16 @@ export const getAxisMetricOptions = (
           (m) => m.value === attribution_method_compare
         ).text
       }`,
-      value: 'conversion_compare',
+      value: 'conversion_compare'
     });
 
     result.push({
-      title: `Cost per Conversion - ${
+      title: `Cost Per Conversion - ${
         ATTRIBUTION_METHODOLOGY.find(
           (m) => m.value === attribution_method_compare
         ).text
       }`,
-      value: 'cost_compare',
+      value: 'cost_compare'
     });
 
     result.push({
@@ -1092,24 +1169,24 @@ export const getAxisMetricOptions = (
           (m) => m.value === attribution_method_compare
         ).text
       }`,
-      value: 'conversion_rate_compare',
+      value: 'conversion_rate_compare'
     });
   }
 
   linkedEvents.map((le) => {
     result.push({
       title: `Conversion - ${eventNames[le.label] || le.label}`,
-      value: `Linked Event - ${le.label} - Users`,
+      value: `Linked Event - ${le.label} - Users`
     });
 
     result.push({
-      title: `Cost per Conversion - ${eventNames[le.label] || le.label}`,
-      value: `Linked Event - ${le.label} - CPC`,
+      title: `Cost Per Conversion - ${eventNames[le.label] || le.label}`,
+      value: `Linked Event - ${le.label} - CPC`
     });
 
     result.push({
       title: `Conversion Rate - ${eventNames[le.label] || le.label}`,
-      value: `Linked Event - ${le.label} - Conversion Rate`,
+      value: `Linked Event - ${le.label} - Conversion Rate`
     });
   });
 
@@ -1127,21 +1204,14 @@ export const listAttributionDimensions = (
 };
 
 export const getResultantMetrics = (touchpoint, attribution_metrics) => {
-  const array = [
-    'Sessions',
-    'Users',
-    'Average Session Time',
-    'PageViews',
-    'ALL CR',
-  ];
   return touchpoint === 'LandingPage'
     ? attribution_metrics.filter(
-        (metrics) =>
-          metrics.header.includes('Sessions') ||
+      (metrics) =>
+        metrics.header.includes('Sessions') ||
           metrics.header.includes('Users') ||
           metrics.header.includes('Average Session Time') ||
           metrics.header.includes('PageViews') ||
           metrics.header.includes('ALL CR')
-      )
+    )
     : attribution_metrics;
 };

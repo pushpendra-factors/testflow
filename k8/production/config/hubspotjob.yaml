@@ -1,0 +1,8 @@
+kind: ConfigMap
+metadata:
+  name: config-crm-jobs
+  labels:
+    env: production
+    project: factors-production
+data:
+  HUBSPOT_MARKETING_CONTACT_PROJECTS: ""

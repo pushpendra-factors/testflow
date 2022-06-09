@@ -635,6 +635,20 @@ type Model interface {
 	UpdateCRMSetting(projectID uint64, option model.CRMSettingOption) int
 	CreateOrUpdateCRMSetting(projectID uint64, crmSetting *model.CRMSetting) int
 
+	// data availability checks
+	GetLatestDataStatus(integrations []string, project_id uint64, hardRefresh bool) (map[string]model.DataAvailabilityStatus, error)
+	IsIntegrationAvailable(projectID uint64) map[string]bool
+	GetIntegrationStatusByProjectId(project_id uint64) (map[string]model.DataAvailability, int)
+	IsDataAvailable(project_id uint64, integration string, timestamp uint64) bool
+	FindLatestProcessedStatus(integration string, projectID uint64) uint64
+	IsAdwordsIntegrationAvailable(projectID uint64) bool
+	IsFacebookIntegrationAvailable(projectID uint64) bool
+	IsGoogleOrganicIntegrationAvailable(projectID uint64) bool
+	IsLinkedInIntegrationAvailable(projectID uint64) bool
+	IsHubspotIntegrationAvailable(projectID uint64) bool
+	IsSalesforceIntegrationAvailable(projectID uint64) bool
+	IsMarketoIntegrationAvailable(projectID uint64) bool
+
 	// Timeline
 	GetProfileUsersListByProjectId(projectID uint64) ([]model.Contact, int)
 	GetProfileUserDetailsByID(projectID uint64, identity string, isAnonymous string) (*model.ContactDetails, int)

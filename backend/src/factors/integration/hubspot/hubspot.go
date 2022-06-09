@@ -102,8 +102,28 @@ func GetHubspotObjectTypeForSync() []int {
 	return syncOrderByType[:]
 }
 
-func GetURLParameterAsMap(pageUrl string) map[string]interface{} {
+func GetDecodedValue(encodedValue string, limit int) string {
+	prevValue := encodedValue
+	for i := 0; i <= limit; i++{
+		curr_value, err := url.QueryUnescape(prevValue)
+		if err  != nil || curr_value == prevValue {
+			if err != nil {
+				log.WithField("encodedValue", encodedValue).Error("error while decoding")
+			}
+			return prevValue
+		}
+		if i == limit && prevValue != curr_value{
+			log.WithField("encodedValue", encodedValue).Error("limit exceeded on decoding")
+			return prevValue
+		}
+		prevValue = curr_value
+	}
+		
+	return prevValue
+}
+	
 
+func GetURLParameterAsMap(pageUrl string) map[string]interface{} {
 	u, err := url.Parse(pageUrl)
 	if err != nil {
 		log.Error(err)
@@ -115,11 +135,10 @@ func GetURLParameterAsMap(pageUrl string) map[string]interface{} {
 	for key, value := range queries {
 		if _, exists := urlParameters[key]; !exists {
 			for _, v := range value {
-				urlParameters[key] = v
+				urlParameters[key] = GetDecodedValue(v, 2)
 			}
 		}
 	}
-
 	return urlParameters
 }
 
@@ -829,6 +848,11 @@ func SyncDatetimeAndNumericalProperties(projectID uint64, apiKey string) (bool, 
 func syncContact(project *model.Project, document *model.HubspotDocument, hubspotSmartEventNames []HubspotSmartEventName) int {
 	logCtx := log.WithField("project_id", project.ID).WithField("document_id", document.ID)
 
+	if document.Type != model.HubspotDocumentTypeContact {
+		logCtx.Error("Invalid contact document.")
+		return http.StatusInternalServerError
+	}
+
 	if document.Action == model.HubspotDocumentActionDeleted {
 		contactDocuments, status := store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{document.ID}, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated})
 		if status != http.StatusFound {
@@ -864,7 +888,7 @@ func syncContact(project *model.Project, document *model.HubspotDocument, hubspo
 			return http.StatusInternalServerError
 		}
 		errCode = store.GetStore().UpdateHubspotDocumentAsSynced(
-			project.ID, document.ID, model.HubspotDocumentTypeContact, " ", document.Timestamp, document.Action, contactDocuments[0].UserId, "")
+			project.ID, document.ID, model.HubspotDocumentTypeContact, "", document.Timestamp, document.Action, contactDocuments[0].UserId, "")
 		if errCode != http.StatusAccepted {
 			logCtx.Error("Failed to update hubspot contact document as synced, contact deleted document.")
 			return http.StatusInternalServerError
@@ -1531,6 +1555,10 @@ func getDealUserID(projectID uint64, deal *Deal) string {
 		return ""
 	}
 
+	if C.DisableHubspotNonMarketingContactsByProjectID(projectID) && len(contactDocuments) == 0 {
+		logCtx.Warning("No marketing contacts found for hubspot deal.")
+	}
+
 	// No synced contact document.
 	if errCode == http.StatusNotFound || len(contactDocuments) == 0 {
 		return ""
@@ -1733,6 +1761,10 @@ func syncCompany(projectID uint64, document *model.HubspotDocument) int {
 			logCtx.Error("Failed to get hubspot documents by type and action on sync company.")
 			return errCode
 		}
+	}
+
+	if C.DisableHubspotNonMarketingContactsByProjectID(projectID) && len(contactDocuments) == 0 {
+		logCtx.Warning("No marketing contacts found for hubspot company.")
 	}
 
 	// update $hubspot_company_name and other company
@@ -2134,9 +2166,13 @@ func syncGroupDeal(projectID uint64, enProperties *map[string]interface{}, docum
 
 	if len(contactIDList) > 0 {
 		documents, status := store.GetStore().GetHubspotDocumentByTypeAndActions(projectID, contactIDList, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated})
-		if status != http.StatusFound {
+		if status != http.StatusFound && status != http.StatusNotFound {
 			logCtx.WithFields(log.Fields{"contact_ids": contactIDList, "err_code": status}).
 				Error("Failed to get contact created documents for syncGroupDeal.")
+		}
+
+		if C.DisableHubspotNonMarketingContactsByProjectID(projectID) && len(documents) == 0 {
+			logCtx.Warning("No marketing contacts found for hubspot deal group..")
 		}
 
 		for i := range documents {
@@ -2535,6 +2571,10 @@ func syncEngagements(project *model.Project, document *model.HubspotDocument) in
 			// Avoid returning error if associated record is not present.
 			return http.StatusOK
 		}
+	}
+
+	if C.DisableHubspotNonMarketingContactsByProjectID(project.ID) && len(contactDocuments) == 0 {
+		logCtx.Warning("No marketing contacts found for hubspot engagement.")
 	}
 
 	for i := range contactIds {
