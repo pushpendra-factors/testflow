@@ -713,18 +713,19 @@ func (p *Pattern) GetPerUserCount(
 		return 0, fmt.Errorf(errorString)
 	}
 	if p.PatternVersion >= 2 {
-		//p.GenFrequentProperties()
+		p.GenFrequentProperties()
 
 		epf, upf := int(p.PerUserCount), int(p.PerUserCount)
 		var err error
-		for _, ecs := range patternConstraints {
+		for kIdx, ecs := range patternConstraints {
 
 			if len(ecs.EPCategoricalConstraints) != 0 {
 				pntv := Fp.PropertyMapType{}
 				pntv.PropertyType = "event"
 				PropMap := make(map[string]string)
 				for _, ccs := range ecs.EPCategoricalConstraints {
-					PropMap[ccs.PropertyName] = ccs.PropertyValue
+					key := PatternPropertyKey(kIdx, ccs.PropertyName)
+					PropMap[key] = ccs.PropertyValue
 				}
 				pntv.PropertyMap = PropMap
 				epf, err = p.FreqProps.GetFrequency(pntv)
@@ -739,7 +740,8 @@ func (p *Pattern) GetPerUserCount(
 				pntv.PropertyType = "user"
 				PropMap := make(map[string]string)
 				for _, ccs := range ecs.UPCategoricalConstraints {
-					PropMap[ccs.PropertyName] = ccs.PropertyValue
+					key := PatternPropertyKey(kIdx, ccs.PropertyName)
+					PropMap[key] = ccs.PropertyValue
 				}
 				pntv.PropertyMap = PropMap
 				epf, err = p.FreqProps.GetFrequency(pntv)
@@ -1023,7 +1025,7 @@ func (p *Pattern) GetPerUserEventPropertyValues(eventIndex int, propertyName str
 		// Return the ranges of the bin [min, max], in which the numeric values for the event property occurr.
 		return p.PerUserEventCategoricalProperties.GetBinValues(PatternPropertyKey(eventIndex, propertyName))
 	} else {
-		return p.FreqProps.GetPropertyValues(propertyName, "event")
+		return p.FreqProps.GetPropertyValues(PatternPropertyKey(eventIndex, propertyName), "event")
 	}
 }
 
@@ -1032,7 +1034,7 @@ func (p *Pattern) GetPerUserUserPropertyValues(eventIndex int, propertyName stri
 		// Return the ranges of the bin [min, max], in which the numeric values for the event property occurr.
 		return p.PerUserUserCategoricalProperties.GetBinValues(PatternPropertyKey(eventIndex, propertyName))
 	} else {
-		return p.FreqProps.GetPropertyValues(propertyName, "user")
+		return p.FreqProps.GetPropertyValues(PatternPropertyKey(eventIndex, propertyName), "user")
 	}
 }
 

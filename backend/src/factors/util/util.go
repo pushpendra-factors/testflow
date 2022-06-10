@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/google/uuid"
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -1293,4 +1294,14 @@ func GetBrowser(p *user_agent.UserAgent) (string, string) {
 		return "PingdomBot", ""
 	}
 	return p.Browser()
+}
+
+// FormatProperty get property split based on demlimiter
+func FormatProperty(property string) string {
+	// check if first character is digit to support previously built models
+	prop := []rune(property)
+	if unicode.IsDigit(prop[0]) == true {
+		return strings.SplitN(property, ".", 2)[1]
+	}
+	return property
 }
