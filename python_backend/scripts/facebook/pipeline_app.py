@@ -84,7 +84,7 @@ if __name__ == "__main__":
     facebook_settings = allow_project_ids(facebook_settings, facebook_config.project_ids)
     facebook_settings = remove_project_ids(facebook_settings, facebook_config.exclude_project_ids)
     facebook_settings = filter_based_on_input_timezone(facebook_settings, facebook_config.timezone)
-    token_expiry_payload = {"Token about to expire": [], "Token expired": []}
+    token_expiry_payload = {"Token about to expire": [], "Token expired": [], "Invalid or incomplete integration": []}
 
     try:
         for facebook_int_setting in facebook_settings:
@@ -97,6 +97,7 @@ if __name__ == "__main__":
                 customer_account_ids = facebook_int_setting[FACEBOOK_AD_ACCOUNT].split(',')
                 if len(customer_account_ids) == 0 or facebook_int_setting[FACEBOOK_AD_ACCOUNT] == '':
                     token_expiry_payload["Invalid or incomplete integration"].append({PROJECT_ID: facebook_int_setting[PROJECT_ID]})
+                    continue
                 for customer_account_id in customer_account_ids:
                     last_sync_info_with_type: dict = FactorsDataService.get_facebook_last_sync_info(
                         facebook_int_setting[PROJECT_ID], customer_account_id)

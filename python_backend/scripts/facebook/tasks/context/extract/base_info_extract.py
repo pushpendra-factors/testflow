@@ -91,10 +91,14 @@ class BaseInfoExtract(BaseExtract):
         self.total_number_of_records += current_no_of_requests 
         self.total_number_of_async_requests += async_requests
         if not result_response.ok:
-            log.warning(ERROR_MESSAGE.format(self.get_name(), result_response.status_code, result_response.text,
+            error_msg = result_response.text
+            if 'error' in result_response.json():
+                # error_subcode is not always present
+                error_msg = 'Message: {}, code: {}'.format(result_response.json()['error']['message'], result_response.json()['error']['code'])
+            log.warning(ERROR_MESSAGE.format(self.get_name(), result_response.status_code, error_msg,
                                  self.project_id, self.customer_account_id))
             MetricsAggregator.update_job_stats(self.project_id, self.customer_account_id,
-                                               self.type_alias, "failed", result_response.text)
+                                               self.type_alias, "failed", error_msg)
             return "failed"
         else:
             MetricsAggregator.update_job_stats(self.project_id, self.customer_account_id,
