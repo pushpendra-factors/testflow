@@ -106,7 +106,7 @@ function Login(props) {
                                     <div className={'flex flex-col justify-center items-center mt-8 w-full'} >
                                         <Form.Item label={null}
                                             name="form_username"
-                                            rules={[{ required: true, type: 'email', message: 'Please enter email' }]}
+                                            rules={[{ required: true, type: 'email', message: 'Please enter a valid email' }]}
                                             >
                                             <Input className={'fa-input w-full'} disabled={dataLoading} size={'large'} placeholder="Email" />
                                         </Form.Item>
