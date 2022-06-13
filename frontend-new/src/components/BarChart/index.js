@@ -7,20 +7,16 @@ import styles from '../../Views/CoreQuery/FunnelsResultPage/UngroupedChart/index
 import { checkForWindowSizeChange } from '../../Views/CoreQuery/FunnelsResultPage/utils';
 import { getMaxYpoint, getBarChartLeftMargin } from './utils';
 import ChartLegends from './ChartLegends';
-import {
-  numberWithCommas,
-  generateColors,
-  formatDuration
-} from '../../utils/dataFormatter';
+import { numberWithCommas, generateColors } from '../../utils/dataFormatter';
 import {
   BAR_CHART_XAXIS_TICK_LENGTH,
   REPORT_SECTION,
   DASHBOARD_MODAL,
   DASHBOARD_WIDGET_SECTION,
-  BAR_COUNT,
-  METRIC_TYPES
+  BAR_COUNT
 } from '../../utils/constants';
 import DashboardWidgetLegends from '../DashboardWidgetLegends';
+import { getFormattedKpiValue } from '../../Views/CoreQuery/KPIAnalysis/kpiAnalysis.helpers';
 
 function BarChart({
   chartData,
@@ -88,8 +84,11 @@ function BarChart({
             <div style="color: #0E2647;" class="mt-2 leading-5 text-base">
               <span class="font-semibold">
                 ${
-  get(d, 'metricType', null) === METRIC_TYPES.dateType
-    ? formatDuration(d.value)
+  get(d, 'metricType', null)
+    ? getFormattedKpiValue({
+      value: d.value,
+      metricType: get(d, 'metricType', null)
+    })
     : numberWithCommas(d.value)
 }
               </span>

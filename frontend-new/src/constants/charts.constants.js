@@ -1,0 +1,1 @@
+export const SPARK_LINE_CHART_TITLE_CHAR_COUNT = 40;

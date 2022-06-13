@@ -2,7 +2,6 @@ import React, {
   useState, useEffect, memo, useCallback
 } from 'react';
 import moment from 'moment';
-import { useSelector } from 'react-redux';
 import { find, get } from 'lodash';
 import {
   getTableColumns,
@@ -14,13 +13,10 @@ import DataTable from '../../../../components/DataTable';
 import {
   CHART_TYPE_SPARKLINES,
   DASHBOARD_WIDGET_SECTION,
-  DATE_FORMATS,
-  METRIC_TYPES
+  DATE_FORMATS
 } from '../../../../utils/constants';
-import {
-  addQforQuarter,
-  formatDuration
-} from '../../../../utils/dataFormatter';
+import { addQforQuarter } from '../../../../utils/dataFormatter';
+import { getFormattedKpiValue } from '../kpiAnalysis.helpers';
 
 const NoBreakdownTable = ({
   seriesData,
@@ -34,7 +30,6 @@ const NoBreakdownTable = ({
   handleDateSorting,
   frequency = 'date'
 }) => {
-  const { eventNames } = useSelector((state) => state.coreQuery);
   const [searchText, setSearchText] = useState('');
   const [columns, setColumns] = useState([]);
   const [dateBasedColumns, setDateBasedColumns] = useState([]);
@@ -43,9 +38,14 @@ const NoBreakdownTable = ({
 
   useEffect(() => {
     setColumns(
-      getTableColumns(kpis, sorter, handleSorting, eventNames, frequency)
+      getTableColumns({
+        kpis,
+        currentSorter: sorter,
+        handleSorting,
+        frequency
+      })
     );
-  }, [kpis, sorter, handleSorting, eventNames]);
+  }, [kpis, sorter, handleSorting, frequency]);
 
   useEffect(() => {
     setTableData(getDataInTableFormat(seriesData, categories, kpis, sorter));
@@ -53,16 +53,15 @@ const NoBreakdownTable = ({
 
   useEffect(() => {
     setDateBasedColumns(
-      getDateBasedColumns(
+      getDateBasedColumns({
         kpis,
         categories,
-        dateSorter,
-        handleDateSorting,
-        eventNames,
+        currentSorter: dateSorter,
+        handleSorting: handleDateSorting,
         frequency
-      )
+      })
     );
-  }, [kpis, categories, dateSorter, handleDateSorting, eventNames, frequency]);
+  }, [kpis, categories, dateSorter, handleDateSorting, frequency]);
 
   useEffect(() => {
     setDateBasedTableData(
@@ -92,8 +91,11 @@ const NoBreakdownTable = ({
               'metricType',
               null
             );
-            if (metricType === METRIC_TYPES.dateType) {
-              rest[key] = formatDuration(rest[key]);
+            if (metricType) {
+              rest[key] = getFormattedKpiValue({
+                value: rest[key],
+                metricType
+              });
             }
           }
           return {
@@ -106,10 +108,13 @@ const NoBreakdownTable = ({
           'metricType',
           null
         );
-        if (metricType === METRIC_TYPES.dateType) {
+        if (metricType) {
           for (const key in rest) {
             if (key !== 'event') {
-              rest[key] = formatDuration(rest[key]);
+              rest[key] = getFormattedKpiValue({
+                value: rest[key],
+                metricType
+              });
             }
           }
         }
