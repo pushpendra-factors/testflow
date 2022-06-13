@@ -130,7 +130,12 @@ function HorizontalBarChart({
           }
         }
       },
-      series
+      series: series.map((s) => {
+        return {
+          ...s,
+          data: [...s.data].sort((point1, point2) => point2.y - point1.y)
+        };
+      })
     });
   }, [series, categories, height, width, cardSize]);
 
