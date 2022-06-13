@@ -7,7 +7,7 @@ import {
 } from '../../components/factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary';
 import {
-  Row, Col, Table, Avatar, Button, Dropdown, Menu
+  Row, Col, Table, Avatar, Button, Dropdown, Menu, Input
 } from 'antd';
 import { MoreOutlined } from '@ant-design/icons';
 // import SearchBar from '../../components/SearchBar';
@@ -173,6 +173,9 @@ function CoreQuery({
   const { config: kpiConfig } = useSelector((state) => state.kpi);
   const { metadata } = useSelector((state) => state.insights);
   const [templatesModalVisible, setTemplatesModalVisible] = useState(false);
+  const [tableData, setTableData] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
 
   useEffect(() => {
     const getData = async () => {
@@ -641,6 +644,15 @@ function CoreQuery({
     }
   };
 
+  const searchReport = (e) =>
+  { 
+    let term = e.target.value
+    let searchResults = data.filter((item)=>{
+      return item?.title?.includes(searchTerm)
+    })
+    setSearchTerm(term);
+    setTableData(searchResults); 
+  } 
   return (
     <>
       <ErrorBoundary
@@ -755,16 +767,41 @@ function CoreQuery({
                 </Row>
                 <Row>
                   <Col span={24}>
+                    <div className='flex items-center space-between w-full  mt-8 mb-2'>
+                    <div className='flex items-center w-full'>
                     <Text
                       type={'title'}
                       level={6}
                       weight={'bold'}
-                      extraClass={'m-0 mb-2 mt-8'}
+                      extraClass={'m-0'}
                     >
                       Saved Reports
                     </Text>
+                    </div> 
+
+                    <div className={'flex items-center justify-between'}>
+                              {showSearch ? <Input 
+                                onChange={searchReport}
+                                className={''}
+                                placeholder={'Search reports'}
+                                style={{'width':'220px', 'border-radius': '5px'}}
+                                prefix={(<SVG name="search" size={16} color={'grey'} />)}
+                              /> : null}
+                              <Button
+                                type='text'
+                                ghost={true}
+                                className={'p-2 bg-white'}
+                                onClick={() => { setShowSearch(!showSearch); if(showSearch){setSearchTerm('')} }}
+                              >
+                                <SVG name={!showSearch ? 'search' : 'close'} size={20} color={'grey'} />
+                              </Button>
+                              
+                            </div>
+
+
+                    </div>
                   </Col>
-                </Row>
+                </Row> 
                 <Row className={'mt-2 mb-20'}>
                   <Col span={24}>
                     <Table
@@ -779,7 +816,7 @@ function CoreQuery({
                       loading={queriesState.loading}
                       className="fa-table--basic"
                       columns={columns}
-                      dataSource={data}
+                      dataSource={searchTerm ? tableData : data}
                       pagination={true}
                       rowClassName="cursor-pointer"
                     />

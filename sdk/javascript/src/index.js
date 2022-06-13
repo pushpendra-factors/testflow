@@ -16,7 +16,7 @@ var isQueueBeingProcessed = false;
 function init(appToken, opts={}, afterPageTrackCallback) {
     try {
         return app.init(appToken, opts, afterPageTrackCallback)
-            .catch(app.handleError);
+        .catch(app.handleError);
     } catch(e) {
         return app.handleError(e);
     }

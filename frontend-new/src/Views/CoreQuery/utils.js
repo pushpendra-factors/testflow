@@ -235,7 +235,7 @@ const getProfileWithProperties = (queries) => {
           });
         } else {
           filterProps.push({
-            en: fil.props[2],
+            en: fil.props[2] === 'group' ? 'user' : fil.props[2],
             pr: fil.props[0],
             op: operatorMap[fil.operator],
             va: fil.values,
@@ -580,6 +580,7 @@ const getGroupByWithPropertiesKPI = (appliedGroupBy, index, category) => {
         eni: opt.eventIndex,
         en: category === 'channels' ? '' : opt.prop_category,
         objTy: category === 'channels' ? opt.prop_category : '',
+        dpNa: opt?.display_name ? opt?.display_name : ""
       };
     } else {
       appGbp = {
@@ -588,6 +589,7 @@ const getGroupByWithPropertiesKPI = (appliedGroupBy, index, category) => {
         prDaTy: opt.prop_type,
         en: category === 'channels' ? '' : opt.prop_category,
         objTy: category === 'channels' ? opt.prop_category : '',
+        dpNa: opt?.display_name ? opt?.display_name : ""
       };
     }
     if (opt.prop_type === 'datetime') {
@@ -1693,7 +1695,7 @@ export const convertDateTimeObjectValuesToMilliSeconds = (obj) => {
   return JSON.stringify(parsedObj);
 };
 
-export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
+export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => { 
   const queryType = requestQuery.cl;
   const queries = [];
   for (let i = 0; i < requestQuery.qG.length; i = i + 2) {
@@ -1707,6 +1709,9 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
     const fil = get(q, 'fil', EMPTY_ARRAY)
       ? get(q, 'fil', EMPTY_ARRAY)
       : EMPTY_ARRAY;
+    let ref = -1,
+      lastProp = '',
+      lastOp = '';
     fil.forEach((pr) => {
       if (pr.lOp === 'AND') {
         ref += 1;
@@ -1801,6 +1806,7 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
       prop_type: opt.prDaTy,
       overAllIndex: index,
       prop_category: opt.en || opt.objTy,
+      display_name: opt?.dpNa ? opt?.dpNa : ""
     };
     if (opt.prDaTy === 'datetime') {
       opt.grn ? (appGbp.grn = opt.grn) : (appGbp.grn = 'day');

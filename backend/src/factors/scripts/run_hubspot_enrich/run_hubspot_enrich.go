@@ -67,6 +67,7 @@ func main() {
 	enrichHeavy := flag.Bool("enrich_heavy", false, "Run heavy projects")
 	clearbitEnabled := flag.Int("clearbit_enabled", 0, "To enable clearbit enrichment")
 	recordProcessLimit := flag.Int("record_process_limit", 50000, "Number of records to process per project.")
+	disableNonMarketingContactByProjectID := flag.String("disable_non_marketing_contact_by_project_id", "", "Disable hubspot non marketing contacts from processing")
 
 	flag.Parse()
 	if *env != "development" && *env != "staging" && *env != "production" {
@@ -102,20 +103,21 @@ func main() {
 			Certificate: *memSQLCertificate,
 			AppName:     appName,
 		},
-		PrimaryDatastore:                       *primaryDatastore,
-		RedisHost:                              *redisHost,
-		RedisPort:                              *redisPort,
-		RedisHostPersistent:                    *redisHostPersistent,
-		RedisPortPersistent:                    *redisPortPersistent,
-		SentryDSN:                              *sentryDSN,
-		DryRunCRMSmartEvent:                    *dryRunSmartEvent,
-		CacheSortedSet:                         *cacheSortedSet,
-		AllowedHubspotGroupsByProjectIDs:       *enableHubspotGroupsByProjectID,
-		UseSourcePropertyOverwriteByProjectIDs: *useSourcePropertyOverwriteByProjectID,
-		CaptureSourceInUsersTable:              *captureSourceInUsersTable,
-		RestrictReusingUsersByCustomerUserId:   *restrictReusingUsersByCustomerUserId,
-		EnableHubspotFormsEventsByProjectID:    *enableHubspotFormEventsByProjectID,
-		ClearbitEnabled:                        *clearbitEnabled,
+		PrimaryDatastore:                              *primaryDatastore,
+		RedisHost:                                     *redisHost,
+		RedisPort:                                     *redisPort,
+		RedisHostPersistent:                           *redisHostPersistent,
+		RedisPortPersistent:                           *redisPortPersistent,
+		SentryDSN:                                     *sentryDSN,
+		DryRunCRMSmartEvent:                           *dryRunSmartEvent,
+		CacheSortedSet:                                *cacheSortedSet,
+		AllowedHubspotGroupsByProjectIDs:              *enableHubspotGroupsByProjectID,
+		UseSourcePropertyOverwriteByProjectIDs:        *useSourcePropertyOverwriteByProjectID,
+		CaptureSourceInUsersTable:                     *captureSourceInUsersTable,
+		RestrictReusingUsersByCustomerUserId:          *restrictReusingUsersByCustomerUserId,
+		EnableHubspotFormsEventsByProjectID:           *enableHubspotFormEventsByProjectID,
+		ClearbitEnabled:                               *clearbitEnabled,
+		DisableHubspotNonMarketingContactsByProjectID: *disableNonMarketingContactByProjectID,
 	}
 
 	C.InitConf(config)

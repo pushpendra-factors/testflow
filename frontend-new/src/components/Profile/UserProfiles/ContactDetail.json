@@ -1,0 +1,146 @@
+{
+  "user_id": "cameron1@example.com",
+  "name": "Cameron",
+  "company": "Freshworks",
+  "role": "Head of Marketing",
+  "email": "cameron1@example.com",
+  "country": "Australia",
+  "web_sessions_count": 8,
+  "groups": [
+    { "group_name": "Salesforce Account" },
+    { "group_name": "Salesforce Opportunity" }
+  ],
+  "user_activities": [
+    {
+      "event_name": "Page View",
+      "timestamp": "unixtimestamp"
+    },
+    {
+      "timestamp": "unixtimestamp"
+    },
+    {
+      "timestamp": "unixtimestamp"
+    },
+    {
+      "timestamp": "unixtimestamp"
+    },
+    {
+      "event_name": "Page View",
+      "timestamp": "unixtimestamp"
+    },
+    {
+      "event_name": "Associated to Company",
+      "timestamp": "unixtimestamp"
+    },
+    {
+      "event_name": "Page View",
+      "timestamp": "unixtimestamp"
+    },
+    {
+      "event_name": "Associated to Company",
+      "timestamp": "unixtimestamp"
+    },
+    {
+      "event_name": "Page View",
+      "timestamp": "unixtimestamp"
+    },
+    {
+      "event_name": "Associated to Company",
+      "timestamp": "unixtimestamp"
+    },
+    {
+      "event_name": "Page View",
+      "timestamp": "unixtimestamp"
+    },    {
+      "event_name": "Page View",
+      "timestamp": "unixtimestamp"
+    },
+    {
+      "event_name": "Associated to Company",
+      "timestamp": "unixtimestamp"
+    },
+    {
+      "event_name": "Page View",
+      "timestamp": "unixtimestamp"
+    },
+    {
+      "event_name": "Associated to Company",
+      "timestamp": "unixtimestamp"
+    },
+    {
+      "event_name": "Page View",
+      "timestamp": "unixtimestamp"
+    },
+    {
+      "event_name": "Associated to Company",
+      "timestamp": "unixtimestamp"
+    },
+    {
+      "event_name": "Page View",
+      "timestamp": "unixtimestamp"
+    },
+    {
+      "event_name": "Associated to Company",
+      "timestamp": "unixtimestamp"
+    },
+    {
+      "event_name": "Page View",
+      "timestamp": "unixtimestamp"
+    },
+    {
+      "event_name": "Associated to Company",
+      "timestamp": "unixtimestamp"
+    },
+    {
+      "event_name": "Page View",
+      "timestamp": "unixtimestamp"
+    },    {
+      "event_name": "Page View",
+      "timestamp": "unixtimestamp"
+    },
+    {
+      "event_name": "Associated to Company",
+      "timestamp": "unixtimestamp"
+    },
+    {
+      "event_name": "Page View",
+      "timestamp": "unixtimestamp"
+    },
+    {
+      "event_name": "Associated to Company",
+      "timestamp": "unixtimestamp"
+    },
+    {
+      "event_name": "Page View",
+      "timestamp": "unixtimestamp"
+    },
+    {
+      "event_name": "Associated to Company",
+      "timestamp": "unixtimestamp"
+    },
+    {
+      "event_name": "Page View",
+      "timestamp": "unixtimestamp"
+    },
+    {
+      "event_name": "Associated to Company",
+      "timestamp": "unixtimestamp"
+    },
+    {
+      "event_name": "Page View",
+      "timestamp": "unixtimestamp"
+    },
+    {
+      "event_name": "Associated to Company",
+      "timestamp": "unixtimestamp"
+    },
+    {
+      "event_name": "Page View",
+      "timestamp": "unixtimestamp"
+    },
+    {
+      "event_name": "Associated to Company",
+      "timestamp": "unixtimestamp"
+    }
+  ]
+}
