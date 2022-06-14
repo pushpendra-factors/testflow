@@ -92,7 +92,7 @@ func ComputeAndSendAlerts(projectID uint64, configs map[string]interface{}) (map
 		}
 		if notify {
 			msg := Message{
-				AlertName:     strings.Title(alertDescription.Name),
+				AlertName:     strings.Title(alert.AlertName),
 				AlertType:     alert.AlertType,
 				Operator:      alertDescription.Operator,
 				Category:      strings.Title(filterStringbyLastWord(kpiQuery.DisplayCategory, "metrics")),
@@ -377,7 +377,7 @@ func sendEmailAlert(projectID uint64, msg Message, dateRange dateRanges, timezon
 		if err != nil {
 			fail++
 			log.WithError(err).Error("failed to send email alert")
-			return
+			continue
 		}
 		success++
 	}
@@ -409,8 +409,8 @@ func sendSlackAlert(projectID uint64, agentUUID string, msg Message, dateRange d
 			status, err := slack.SendSlackAlert(projectID, slackMsg, agentUUID, channel)
 			if err != nil || !status {
 				fail++
-				logCtx.WithError(err).Error("failed to send slack alert")
-				return
+				logCtx.WithError(err).Error("failed to send slack alert ",slackMsg)
+				continue
 			}
 			success++
 		}
