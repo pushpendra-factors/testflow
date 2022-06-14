@@ -178,7 +178,6 @@ function QueryBlock({
         insertFilter={insertFilters}
         closeFilter={closeFilter}
         refValue={index}
-        showORFilter = {true}
       ></EventFilterWrapper>
     );
   };

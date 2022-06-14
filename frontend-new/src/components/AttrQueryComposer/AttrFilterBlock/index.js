@@ -22,6 +22,7 @@ import AttrFilterSelect from '../AttrFilterSelect';
 
 export default function AttrFilterBlock({
   index,
+  refValue,
   blockType = 'event',
   filterType = 'analytics',
   typeProps,
@@ -37,6 +38,7 @@ export default function AttrFilterBlock({
   deleteFilter,
   insertFilter,
   closeFilter,
+  showOr,
 }) {
   const [filterTypeState, setFilterTypeState] = useState('props');
   const [groupCollapseState, setGroupCollapse] = useState({});
@@ -112,6 +114,7 @@ export default function AttrFilterBlock({
         applyFilter={applyFilter}
         setValuesByProps={setValuesByProps}
         filter={filter}
+        refValue={refValue}
       ></AttrFilterSelect>
     );
   };
@@ -668,19 +671,25 @@ export default function AttrFilterBlock({
           valueOpts={dropDownValues}
           applyFilter={applyFilter}
           setValuesByProps={setValuesByProps}
+          refValue={refValue}
         ></AttrFilterSelect>
       </>
     );
   };
 
   return (
-    <div className={`flex items-center relative w-full`}>
-      {
+    <div className={`flex items-center relative`}>
+        {!showOr && (
         <Text level={8} type={'title'} extraClass={'m-0 mr-2'} weight={'thin'}>
           {index >= 1 ? 'and' : 'Filter by'}
         </Text>
-      }
-      <div className={`relative flex flex-grow`}>
+        )}
+        {showOr && (
+        <Text level={8} type={'title'} extraClass={'m-0 mr-2 ml-2'} weight={'thin'}>
+          or
+        </Text>
+        )}
+      <div className={`relative flex`}>
         {filter ? renderFilterContent() : filterSelComp()}
       </div>
       {delFilter && (
