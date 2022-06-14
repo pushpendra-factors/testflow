@@ -5,13 +5,19 @@ import {
 import { Text } from 'factorsComponents';
 import { updateAgentInfo, fetchAgentInfo } from 'Reducers/agentActions';
 import { connect } from 'react-redux';
+import sanitizeInputString from 'Utils/sanitizeInputString';
 
 function EditUserDetails(props) {
   const [form] = Form.useForm();
   const [errorInfo, seterrorInfo] = useState(null);
 
-  const onFinish = values => {
-    props.updateAgentInfo(values).then(() => {
+  const onFinish = values => { 
+    let sanitizedValues = {
+      ...values,
+      first_name: sanitizeInputString(values?.first_name),
+      last_name: sanitizeInputString(values?.last_name),
+    } 
+    props.updateAgentInfo(sanitizedValues).then(() => {
       props.fetchAgentInfo().then(() => {
         message.success('Profile details updated!');
         props.onCancel();

@@ -7,6 +7,7 @@ import { UserOutlined } from '@ant-design/icons';
 import { connect } from 'react-redux';
 import { udpateProjectDetails } from 'Reducers/global';
 import { TimeZoneOffsetValues } from 'Utils/constants';  
+import sanitizeInputString from 'Utils/sanitizeInputString';
 
 const getKeyByValue = (obj, value) =>  Object.keys(obj).find(key => obj[key]?.city === value);
 
@@ -32,11 +33,11 @@ function EditBasicSettings({ activeProject, setEditMode, udpateProjectDetails, a
     }, 200);
   }, []);
 
-  const onFinish = values => {  
-    const sanitizeName = /(<([^>]+)>)/ig; 
+  const onFinish = values => { 
+    let projectName = sanitizeInputString(values?.name);
     let projectData = {
       ...values,
-      name: values?.name?.replace(sanitizeName,''),
+      name: projectName,
       profile_picture: imageUrl,
       time_zone: TimeZoneOffsetValues[values.time_zone]?.city
     }; 
