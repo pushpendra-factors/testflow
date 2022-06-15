@@ -37,7 +37,7 @@ func (store *MemSQL) TransformToAndExecuteProfileAnalyticsQueries(projectID uint
 	for index, result := range queryResults {
 		if result.Headers == nil || result.Headers[0] == model.AliasError {
 			log.WithField("kpiquery", kpiQuery).WithField("query result", queryResults).WithField("index", index).Warn("Failed in executing following KPI profile query.")
-			return queryResults, http.StatusPartialContent
+			return []model.QueryResult{queryResults[index]}, http.StatusBadRequest
 		}
 	}
 	return queryResults, http.StatusOK
@@ -69,7 +69,7 @@ func (store *MemSQL) wrappedExecuteForResultProfile(projectID uint64, profileQue
 	var transformation model.CustomMetricTransformation
 	customMetric, err, statusCode := store.GetCustomMetricsByName(projectID, kpiMetric)
 	if statusCode != http.StatusFound {
-		finalResult.Headers = append(finalResult.Headers, model.AliasError)
+		finalResult = *buildErrorResult(err)
 		return finalResult
 	}
 	err1 := U.DecodePostgresJsonbToStructType(customMetric.Transformations, &transformation)
@@ -79,8 +79,8 @@ func (store *MemSQL) wrappedExecuteForResultProfile(projectID uint64, profileQue
 	currentQueries := model.AddCustomMetricsTransformationsToProfileQuery(profileQueryGroup, kpiMetric, customMetric, transformation, kpiQuery)
 	resultGroup, errCode := store.RunProfilesGroupQuery(currentQueries, projectID)
 	if errCode != http.StatusOK {
-		// Log or not.
-		finalResult.Headers = append(finalResult.Headers, model.AliasError)
+		log.WithField("kpiQuery", kpiQuery).WithField("kpiMetric", kpiMetric).WithField("customMetric", customMetric).Warn("Failed in Running profile query - kpi - wrappedExecuteForResultProfile")
+		finalResult = *buildErrorResult(err)
 		return finalResult
 	}
 	// Transformation of Profiles Results of Single KPI.
