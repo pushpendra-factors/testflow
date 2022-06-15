@@ -374,12 +374,15 @@ func GetMarketoDocumentTimestamp(documentType string, data []string, metadataCol
 }
 
 func ConvertTimestamp(date string) int64 {
-	var err1 error
+	var err1, err2 error
 	dateConverted, err := time.Parse("2006-01-02 15:04:05 +0000 UTC", date)
 	if err != nil {
-		dateConverted, err1 = time.Parse("2006-01-02", date)
+		dateConverted, err1 = time.Parse("2006-01-02T15:04:05", date)
 		if err1 != nil {
-			return 0
+			dateConverted, err2 = time.Parse("2006-01-02", date)
+			if err2 != nil {
+				return 0
+			}
 		}
 	}
 	return dateConverted.Unix()

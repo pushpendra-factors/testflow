@@ -7,6 +7,7 @@ import (
 	C "factors/config"
 	"factors/metrics"
 	"factors/model/model"
+	U "factors/util"
 	"fmt"
 	"net/http"
 	"strings"
@@ -1046,4 +1047,49 @@ func (store *MemSQL) IsMarketoIntegrationAvailable(projectID uint64) bool {
 		return false
 	}
 	return true
+}
+
+func (store *MemSQL) GetAllLeadSquaredEnabledProjects() (map[uint64]model.LeadSquaredConfig, error) {
+
+	db := C.GetServices().Db
+	result := make(map[uint64]model.LeadSquaredConfig)
+	projectSettings := make([]model.ProjectSetting, 0, 0)
+	err := db.Table("project_settings").Where("lead_squared_config IS NOT NULL").Find(&projectSettings).Error
+
+	for _, setting := range projectSettings {
+		var leadSquaredConfig model.LeadSquaredConfig
+		err = U.DecodePostgresJsonbToStructType(setting.LeadSquaredConfig, &leadSquaredConfig)
+		if err != nil {
+			return nil, errors.New("failed to decode jsonb to lead squared setting")
+		}
+		result[setting.ProjectId] = leadSquaredConfig
+	}
+	return result, nil
+}
+
+func (store *MemSQL) UpdateLeadSquaredFirstTimeSyncStatus(projectId uint64) int {
+	db := C.GetServices().Db
+	var projectSetting model.ProjectSetting
+	if err := db.Where("project_id = ?", projectId).First(&projectSetting).Error; err != nil {
+		log.WithError(err).Error("Getting Project setting failed")
+		if gorm.IsRecordNotFoundError(err) {
+			return http.StatusNotFound
+		}
+		return http.StatusInternalServerError
+	}
+	var leadSquaredConfig model.LeadSquaredConfig
+	err := U.DecodePostgresJsonbToStructType(projectSetting.LeadSquaredConfig, &leadSquaredConfig)
+	if err != nil {
+		log.WithError(err).Error("decoding postgres json failed")
+		return http.StatusInternalServerError
+	}
+	leadSquaredConfig.FirstTimeSync = true
+	leadSquaredConfigJsonb, err := U.EncodeStructTypeToPostgresJsonb(leadSquaredConfig)
+	if err := db.Model(&model.ProjectSetting{}).
+		Where("project_id = ?", projectId).
+		Update("lead_squared_config", leadSquaredConfigJsonb).Error; err != nil {
+		log.WithError(err).Error("Updating leadsquared config failed")
+		return http.StatusInternalServerError
+	}
+	return http.StatusOK
 }

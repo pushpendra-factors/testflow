@@ -168,6 +168,20 @@ upload-marketo-sync: export IMAGE_NAME=marketo-sync-job
 upload-marketo-sync: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/marketo-sync-job:$(TAG)
 
+pack-leadsquared-sync:
+	docker build -t us.gcr.io/factors-$(ENV)/leadsquared-sync-job:$(TAG) -f Dockerfile.leadsquared_sync_job .
+
+upload-leadsquared-sync: export IMAGE_NAME=leadsquared-sync-job
+upload-leadsquared-sync: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/leadsquared-sync-job:$(TAG)
+
+pack-leadsquared-pull:
+	docker build -t us.gcr.io/factors-$(ENV)/leadsquared-pull-job:$(TAG) -f Dockerfile.leadsquared_pull_job .
+
+upload-leadsquared-pull: export IMAGE_NAME=leadsquared-pull-job
+upload-leadsquared-pull: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/leadsquared-pull-job:$(TAG)
+
 pack-enrich-smart-properties:
 	docker build -t us.gcr.io/factors-$(ENV)/enrich-smart-properties-job:$(TAG) -f Dockerfile.enrich_smart_properties_job .
 
