@@ -1194,7 +1194,7 @@ var STANDARD_GROUP_DISPLAY_NAMES = map[string]string{
 	"$salesforce_opportunity": "Salesforce Opportunities",
 }
 
-var EVENT_NAMES_LABELS = map[string]string{
+var CRM_USER_EVENT_NAME_LABELS = map[string]string{
 	"$hubspot_contact_created": "Hubspot Contacts",
 	"$hubspot_contact_updated": "Hubspot Contacts",
 	"$marketo_lead_created":    "Marketo Person",
