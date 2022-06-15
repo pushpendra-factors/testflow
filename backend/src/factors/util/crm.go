@@ -5,12 +5,14 @@ import "strings"
 type CRMSource int
 
 const (
-	CRM_SOURCE_HUBSPOT         CRMSource = 1
-	CRM_SOURCE_SALESFORCE      CRMSource = 2
-	CRM_SOURCE_MARKETO         CRMSource = 3
-	CRM_SOURCE_NAME_HUBSPOT              = "hubspot"
-	CRM_SOURCE_NAME_SALESFORCE           = "salesforce"
-	CRM_SOURCE_NAME_MARKETO              = "marketo"
+	CRM_SOURCE_HUBSPOT          CRMSource = 1
+	CRM_SOURCE_SALESFORCE       CRMSource = 2
+	CRM_SOURCE_MARKETO          CRMSource = 3
+	CRM_SOURCE_LEADSQUARED      CRMSource = 4
+	CRM_SOURCE_NAME_HUBSPOT               = "hubspot"
+	CRM_SOURCE_NAME_SALESFORCE            = "salesforce"
+	CRM_SOURCE_NAME_MARKETO               = "marketo"
+	CRM_SOURCE_NAME_LEADSQUARED           = "leadsquared"
 )
 
 // List of prefix to differentiate CRM property from other properties. Only properties with prefix will overwritten by CRM

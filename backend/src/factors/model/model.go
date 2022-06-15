@@ -334,6 +334,8 @@ type Model interface {
 	GetProjectDetailsByShopifyDomain(shopifyDomain string) (uint64, string, bool, int)
 	EnableBigqueryArchivalForProject(projectID uint64) int
 	IsBingIntegrationAvailable(projectID uint64) bool
+	GetAllLeadSquaredEnabledProjects() (map[uint64]model.LeadSquaredConfig, error)
+	UpdateLeadSquaredFirstTimeSyncStatus(projectId uint64) int
 
 	// project
 	UpdateProject(projectID uint64, project *model.Project) int

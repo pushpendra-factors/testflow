@@ -68,7 +68,7 @@ func RemoveGroupEventNamesOnUserEventNames(categoryToEventNames map[string][]str
 func RemoveLabeledEventNamesFromOtherUserEvents(categoryToEventNames map[string][]string) map[string][]string {
 	for category, eventNames := range categoryToEventNames {
 		flag := false
-		for _, tempCategory := range U.EVENT_NAMES_LABELS {
+		for _, tempCategory := range U.CRM_USER_EVENT_NAME_LABELS {
 			if tempCategory == category {
 				flag = true
 				break
@@ -78,7 +78,7 @@ func RemoveLabeledEventNamesFromOtherUserEvents(categoryToEventNames map[string]
 		if !flag {
 			tempString := make([]string, 0)
 			for _, eventName := range eventNames {
-				_, isPresent := U.EVENT_NAMES_LABELS[eventName]
+				_, isPresent := U.CRM_USER_EVENT_NAME_LABELS[eventName]
 				if !isPresent {
 					tempString = append(tempString, eventName)
 				}
@@ -175,8 +175,8 @@ func GetEventNamesByUserHandler(c *gin.Context) {
 	// labeled the non group user event names
 	for _, userEventNames := range eventNames {
 		for _, eventName := range userEventNames {
-			if _, ok := U.EVENT_NAMES_LABELS[eventName]; ok {
-				category := U.EVENT_NAMES_LABELS[eventName]
+			if _, ok := U.CRM_USER_EVENT_NAME_LABELS[eventName]; ok {
+				category := U.CRM_USER_EVENT_NAME_LABELS[eventName]
 				eventNames[category] = append(eventNames[category], eventName)
 			}
 		}
