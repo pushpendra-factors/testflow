@@ -185,9 +185,10 @@ function GroupBlock({
     return (
       <Tooltip title={propertyName}>
         <Button
-          className={`fa-button--truncate`}
+          className={`fa-button--truncate fa-button--truncate-xs btn-left-round filter-buttons-margin`}
           type='link'
           onClick={() => triggerDropDown(index)}
+          
         >
           {!opt.property && <SVG name='plus' extraClass={`mr-2`} />}
           {propertyName}
@@ -202,14 +203,6 @@ function GroupBlock({
       <div key={index} className={`flex relative items-center mt-2`}>
         {
           <>
-            <Button
-              type='text'
-              onClick={() => delOption(index)}
-              size={'small'}
-              className={`fa-btn--custom mr-1`}
-            >
-              <SVG name={'remove'} />
-            </Button>
             {
               <Text
                 level={8}
@@ -217,7 +210,7 @@ function GroupBlock({
                 extraClass={'m-0 mr-2'}
                 weight={'thin'}
               >
-                {index >= 1 ? '...and' : 'Breakdown'}
+                {index >= 1 ? 'and' : 'Breakdown'}
               </Text>
             }
             <div className={`flex relative`}>
@@ -236,6 +229,16 @@ function GroupBlock({
               ) : null}
             </div>
             {renderGroupPropertyOptions(opt, index)}
+
+            <Button
+              type='text'
+              onClick={() => delOption(index)}
+              size={'small'}
+              className={`fa-btn--custom filter-buttons-margin btn-right-round filter-remove-button`}
+            >
+              <SVG name={'remove'} />
+            </Button>
+
           </>
         }
       </div>

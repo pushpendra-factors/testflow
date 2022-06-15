@@ -6,6 +6,8 @@ import { SVG } from 'factorsComponents';
 import { Button } from 'antd';
 
 import GlobalFilterBlock from './GlobalFilterBlock';
+import ORButton from '../../ORButton';
+import { compareFilters, groupFilters } from '../../../utils/global';
 
 const GLobalFilter = ({
   filters = [],
@@ -17,6 +19,7 @@ const GLobalFilter = ({
 
   const [filterProps, setFilterProperties] = useState({});
   const [filterDD, setFilterDD] = useState(false);
+  const [orFilterIndex, setOrFilterIndex] = useState(-1);
 
   useEffect(() => {
     const props = Object.assign({}, filterProps);
@@ -31,11 +34,15 @@ const GLobalFilter = ({
   }, [filters]);
 
   const delFilter = (index) => {
-    const fltrs = [...filters].filter((f, i) => i !== index);
+    const filtersSorted = [...filters];
+    filtersSorted.sort(compareFilters); 
+    const fltrs = filtersSorted.filter((f, i) => i !== index);
     setGlobalFilters(fltrs);
   };
   const editFilter = (id, filter) => {
-    const fltrs = [...filters].map((f, i) => (i === id ? filter : f));
+    const filtersSorted = [...filters];
+    filtersSorted.sort(compareFilters); 
+    const fltrs = filtersSorted.map((f, i) => (i === id ? filter : f));
     setGlobalFilters(fltrs);
   };
   const addFilter = (filter) => {
@@ -45,31 +52,109 @@ const GLobalFilter = ({
   };
   const closeFilter = () => {
     setFilterDD(false);
+    setOrFilterIndex(-1);
   };
 
   if (filterProps) {
     const filtrs = [];
+    let index = 0;
+    let lastRef = 0;
+    if(filters?.length){
+    const group = groupFilters(filters, 'ref');
+    const filtersGroupedByRef = Object.values(group);
+    const refValues = Object.keys(group);
+    lastRef = parseInt(refValues[refValues.length-1]);
 
-    filters.forEach((filt, id) => {
+    filtersGroupedByRef.forEach((filtersGr)=>{
+      const refValue = filtersGr[0].ref;
+      if(filtersGr.length == 1){
+        const filt = filtersGr[0];
+        filtrs.push(
+          <div className={'fa--query_block--filters flex flex-row'}>
+            <div key={index} className={`mt-2`}>
+              <GlobalFilterBlock
+                activeProject={activeProject}
+                index={index}
+                filterType={'analytics'}
+                filter={filt}
+                extraClass={styles.filterSelect}
+                delIcon={`remove`}
+                deleteFilter={delFilter}
+                insertFilter={(val,index) => editFilter(index, val)}
+                closeFilter={closeFilter}
+                filterProps={filterProps}
+                propsConstants={['user']}
+                refValue={refValue}
+              ></GlobalFilterBlock>
+            </div>
+           {index !== orFilterIndex && (
+             <div className={`mt-2`}>
+             <ORButton index={index} setOrFilterIndex={setOrFilterIndex}/>
+             </div>
+            )}       
+           {index === orFilterIndex && (
+              <div key={'init'} className={`mt-2`}>
+              <GlobalFilterBlock
+                activeProject={activeProject}
+                blockType={'global'}
+                filterType={'analytics'}
+                extraClass={styles.filterSelect}
+                delBtnClass={styles.filterDelBtn}
+                filterProps={filterProps}
+                propsConstants={Object.keys(filterProps)}
+                insertFilter={addFilter}
+                deleteFilter={() => closeFilter()}
+                closeFilter={closeFilter}
+                refValue={refValue}
+                showOr = {true}
+              ></GlobalFilterBlock>
+              </div>              
+            )}  
+            </div>     
+        );
+        index+=1;
+    }else{
       filtrs.push(
-        <div key={id} className={`mt-2`}>
-          <GlobalFilterBlock
-            activeProject={activeProject}
-            index={id}
-            filterType={'analytics'}
-            filter={filt}
-            extraClass={styles.filterSelect}
-            delIcon={`remove`}
-            deleteFilter={delFilter}
-            insertFilter={(val) => editFilter(id, val)}
-            closeFilter={closeFilter}
-            filterProps={filterProps}
-            propsConstants={['user']}
-          ></GlobalFilterBlock>
+        <div className={'fa--query_block--filters flex flex-row'}>
+          <div key={index} className={`mt-2`}>
+              <GlobalFilterBlock
+                activeProject={activeProject}
+                index={index}
+                filterType={'analytics'}
+                filter={filtersGr[0]}
+                extraClass={styles.filterSelect}
+                delIcon={`remove`}
+                deleteFilter={delFilter}
+                insertFilter={(val,index) => editFilter(index, val)}
+                closeFilter={closeFilter}
+                filterProps={filterProps}
+                propsConstants={['user']}
+                refValue={refValue}
+              ></GlobalFilterBlock>
+            </div>
+          <div key={index+1} className={`mt-2`}>
+            <GlobalFilterBlock
+                activeProject={activeProject}
+                index={index+1}
+                filterType={'analytics'}
+                filter={filtersGr[1]}
+                extraClass={styles.filterSelect}
+                delIcon={`remove`}
+                deleteFilter={delFilter}
+                insertFilter={(val,index) => editFilter(index, val)}
+                closeFilter={closeFilter}
+                filterProps={filterProps}
+                propsConstants={['user']}
+                refValue={refValue}
+                showOr = {true}
+              ></GlobalFilterBlock>
+          </div>
         </div>
       );
-    });
-
+      index+=2;
+    }
+  })
+}
     if (filterDD) {
       filtrs.push(
         <div key={filtrs.length} className={`mt-2`}>
@@ -79,12 +164,12 @@ const GLobalFilter = ({
             filterType={'analytics'}
             extraClass={styles.filterSelect}
             delBtnClass={styles.filterDelBtn}
-            propsConstants={['user']}
             filterProps={filterProps}
             propsConstants={Object.keys(filterProps)}
             insertFilter={addFilter}
             deleteFilter={() => closeFilter()}
             closeFilter={closeFilter}
+            refValue={lastRef+1}
           ></GlobalFilterBlock>
         </div>
       );
@@ -103,9 +188,8 @@ const GLobalFilter = ({
         </div>
       );
     }
-
     return <div className={styles.block}>{filtrs}</div>;
   }
-};
-
+  
+  };
 export default GLobalFilter;

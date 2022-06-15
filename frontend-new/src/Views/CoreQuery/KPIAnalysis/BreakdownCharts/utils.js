@@ -7,15 +7,13 @@ import { Number as NumFormat } from '../../../../components/factorsComponents';
 import {
   SortResults,
   getClickableTitleSorter,
-  addQforQuarter,
-  formatDuration
+  addQforQuarter
 } from '../../../../utils/dataFormatter';
 import {
   MAX_ALLOWED_VISIBLE_PROPERTIES,
   DATE_FORMATS,
   DISPLAY_PROP,
-  QUERY_TYPE_KPI,
-  METRIC_TYPES
+  QUERY_TYPE_KPI
 } from '../../../../utils/constants';
 import { parseForDateTimeLabel } from '../../EventsAnalytics/SingleEventSingleBreakdown/utils';
 import {
@@ -27,7 +25,7 @@ import { getBreakdownDisplayName } from '../../EventsAnalytics/eventsAnalytics.h
 import tableStyles from '../../../../components/DataTable/index.module.scss';
 import NonClickableTableHeader from '../../../../components/NonClickableTableHeader';
 
-import { getKpiLabel } from '../kpiAnalysis.helpers';
+import { getKpiLabel, getFormattedKpiValue } from '../kpiAnalysis.helpers';
 
 export const getDefaultSortProp = (kpis) => {
   if (Array.isArray(kpis) && kpis.length) {
@@ -160,8 +158,8 @@ export const getTableColumns = (
       dataIndex: `${kpiLabel} - ${index}`,
       width: 300,
       render: (d) => {
-        if (kpi.metricType === METRIC_TYPES.dateType) {
-          return formatDuration(d);
+        if (kpi.metricType) {
+          return getFormattedKpiValue({ value: d, metricType: kpi.metricType });
         }
         return d ? <NumFormat number={d} /> : 0;
       }
@@ -449,8 +447,8 @@ export const getDateBasedColumns = (
       dataIndex: `${kpiLabel} - ${index}`,
       width: 300,
       render: (d) => {
-        if (kpi.metricType === METRIC_TYPES.dateType) {
-          return formatDuration(d);
+        if (kpi.metricType) {
+          return getFormattedKpiValue({ value: d, metricType: kpi.metricType });
         }
         return d ? <NumFormat number={d} /> : 0;
       }
@@ -478,8 +476,8 @@ export const getDateBasedColumns = (
       render: (d, rowDetails) => {
         const metricType = get(rowDetails, 'metricType', null);
         return d ? (
-          metricType === METRIC_TYPES.dateType ? (
-            formatDuration(d)
+          metricType ? (
+            getFormattedKpiValue({ value: d, metricType })
           ) : (
             <NumFormat number={d} />
           )

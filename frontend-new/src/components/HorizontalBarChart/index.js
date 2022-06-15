@@ -5,13 +5,10 @@ import ReactDOMServer from 'react-dom/server';
 import Highcharts from 'highcharts';
 import get from 'lodash/get';
 import { Text, Number as NumFormat } from '../factorsComponents';
-import {
-  BAR_CHART_XAXIS_TICK_LENGTH,
-  METRIC_TYPES
-} from '../../utils/constants';
+import { BAR_CHART_XAXIS_TICK_LENGTH } from '../../utils/constants';
 import LegendsCircle from '../../styles/components/LegendsCircle';
-import { formatDuration } from '../../utils/dataFormatter';
 import styles from './index.module.scss';
+import { getFormattedKpiValue } from '../../Views/CoreQuery/KPIAnalysis/kpiAnalysis.helpers';
 
 function HorizontalBarChart({
   series, categories, height, width, cardSize
@@ -58,8 +55,13 @@ function HorizontalBarChart({
                   weight="bold"
                   extraClass="text-base mb-0"
                 >
-                  {metricType === METRIC_TYPES.dateType ? (
-                    <div className="number">{formatDuration(this.point.y)}</div>
+                  {metricType ? (
+                    <div className="number">
+                      {getFormattedKpiValue({
+                        value: this.point.y,
+                        metricType
+                      })}
+                    </div>
                   ) : (
                     <NumFormat className="number" number={this.point.y} />
                   )}
@@ -118,8 +120,8 @@ function HorizontalBarChart({
             formatter() {
               const metricType = get(this.point, 'metricType', null);
               return ReactDOMServer.renderToString(
-                metricType === METRIC_TYPES.dateType ? (
-                  formatDuration(this.y)
+                metricType ? (
+                  getFormattedKpiValue({ value: this.y, metricType })
                 ) : (
                   <NumFormat number={this.y} shortHand={true} />
                 )
@@ -128,7 +130,12 @@ function HorizontalBarChart({
           }
         }
       },
-      series
+      series: series.map((s) => {
+        return {
+          ...s,
+          data: [...s.data].sort((point1, point2) => point2.y - point1.y)
+        };
+      })
     });
   }, [series, categories, height, width, cardSize]);
 

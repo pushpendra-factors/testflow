@@ -26,6 +26,7 @@ const GlobalFilterSelect = ({
   setValuesByProps,
   applyFilter,
   filter,
+  refValue,
 }) => {
   const rangePicker = ['=', '!='];
   const customRangePicker = ['between', 'not between'];
@@ -101,6 +102,7 @@ const GlobalFilterSelect = ({
         operator: operatorState,
         values: valuesState,
         extra: eventFilterInfo ? eventFilterInfo : null,
+        ref: refValue,
       });
     }
   };

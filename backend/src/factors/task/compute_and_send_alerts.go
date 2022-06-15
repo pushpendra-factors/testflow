@@ -92,7 +92,7 @@ func ComputeAndSendAlerts(projectID uint64, configs map[string]interface{}) (map
 		}
 		if notify {
 			msg := Message{
-				AlertName:     strings.Title(alertDescription.Name),
+				AlertName:     strings.Title(alert.AlertName),
 				AlertType:     alert.AlertType,
 				Operator:      alertDescription.Operator,
 				Category:      strings.Title(filterStringbyLastWord(kpiQuery.DisplayCategory, "metrics")),
@@ -343,27 +343,28 @@ func sendEmailAlert(projectID uint64, msg Message, dateRange dateRanges, timezon
 			msg.Operator = model.DECREASED_BY_MORE_THAN
 		}
 	}
+
 	actualValue := strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.2f", msg.ActualValue), "0"), ".")
 	actualValue = AddCommaToNumber(actualValue)
 
-	if msg.AlertType == 1 {
-		if msg.Category == strings.Title(model.PageViews) {
-			statement = fmt.Sprintf(`For the %s (%s to %s) <br> <b> %s for %s %s %s : %s . </b>`, strings.ReplaceAll(msg.DateRange, "_", " "), from, to, strings.ReplaceAll(msg.AlertName, "_", " "), msg.PageURL, strings.ReplaceAll(msg.Operator, "_", " "), AddCommaToNumber(fmt.Sprint(msg.Value)), actualValue)
-		} else {
-			statement = fmt.Sprintf(`For the %s (%s to %s) <br> <b> %s for %s %s %s : %s . </b>`, strings.ReplaceAll(msg.DateRange, "_", " "), from, to, strings.ReplaceAll(msg.AlertName, "_", " "), strings.ReplaceAll(msg.Category, "_", " "), strings.ReplaceAll(msg.Operator, "_", " "), AddCommaToNumber(fmt.Sprint(msg.Value)), actualValue)
+	var comparedValue, comparedToStatement string
+	if msg.AlertType == 2 {
+		comparedValue = strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.2f", msg.ComparedValue), "0"), ".")
+		comparedValue = "(" + AddCommaToNumber(comparedValue) + ")"
+		previousPeriod := ""
+		switch msg.DateRange {
+		case model.LAST_WEEK:
+			previousPeriod = "week before"
+		case model.LAST_MONTH:
+			previousPeriod = "month before"
+		case model.LAST_QUARTER:
+			previousPeriod = "quarter before"
 		}
-
-		//	statement = fmt.Sprintf(`%s %s recorded for %s in %s from %s to %s`, fmt.Sprint(msg.ActualValue), strings.ReplaceAll(msg.AlertName, "_", " "), strings.ReplaceAll(msg.Category, "_", " "), strings.ReplaceAll(msg.DateRange, "_", " "), from, to)
-	} else if msg.AlertType == 2 {
-		ComparedValue := strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.2f", msg.ComparedValue), "0"), ".")
-		ComparedValue = AddCommaToNumber(ComparedValue)
-		if msg.Category == strings.Title(model.PageViews) {
-			statement = fmt.Sprintf(`For the %s (%s to %s) compared to %s <br> <b> %s for %s %s %s%s : %s(%s) . </b>`, strings.ReplaceAll(msg.DateRange, "_", " "), from, to, strings.ReplaceAll(msg.ComparedTo, "_", " "), strings.ReplaceAll(msg.AlertName, "_", " "), msg.PageURL, strings.ReplaceAll(msg.Operator, "_", " "), AddCommaToNumber(fmt.Sprint(msg.Value)), percentageSymbol, actualValue, ComparedValue)
-		} else {
-			statement = fmt.Sprintf(`For the %s (%s to %s) compared to %s <br> <b> %s for %s %s %s%s : %s(%s) . </b>`, strings.ReplaceAll(msg.DateRange, "_", " "), from, to, strings.ReplaceAll(msg.ComparedTo, "_", " "), strings.ReplaceAll(msg.AlertName, "_", " "), strings.ReplaceAll(msg.Category, "_", " "), strings.ReplaceAll(msg.Operator, "_", " "), AddCommaToNumber(fmt.Sprint(msg.Value)), percentageSymbol, actualValue, ComparedValue)
-		}
-		//	statement = fmt.Sprintf(`%s %s %s for %s in %s (from %s to %s ) compared to %s - %s(%s)`, strings.ReplaceAll(msg.AlertName, "_", " "), strings.ReplaceAll(msg.Operator, "_", " "), fmt.Sprint(msg.Value), strings.ReplaceAll(msg.Category, "_", " "), strings.ReplaceAll(msg.DateRange, "_", " "), from, to, strings.ReplaceAll(msg.ComparedTo, "_", " "), fmt.Sprint(msg.ActualValue), fmt.Sprint(msg.ComparedValue))
+		comparedToStatement = "compared to " + previousPeriod
 	}
+	// For the last week (10 may 2022 - 16 may 2022) compared to previous period
+	// Sessions is increased by more than 100 :  400(250)
+	statement = fmt.Sprintf(`For the %s (%s to %s) %s<br> <b> %s %s %s%s : %s%s . </b>`, strings.ReplaceAll(msg.DateRange, "_", " "), from, to, comparedToStatement, strings.ReplaceAll(msg.AlertName, "_", " "), strings.ReplaceAll(msg.Operator, "_", " "), AddCommaToNumber(fmt.Sprint(msg.Value)), percentageSymbol, actualValue, comparedValue)
 	html := U.CreateAlertTemplate(statement)
 	dryRunFlag := C.GetConfig().EnableDryRunAlerts
 	if dryRunFlag {
@@ -376,7 +377,7 @@ func sendEmailAlert(projectID uint64, msg Message, dateRange dateRanges, timezon
 		if err != nil {
 			fail++
 			log.WithError(err).Error("failed to send email alert")
-			return
+			continue
 		}
 		success++
 	}
@@ -408,8 +409,8 @@ func sendSlackAlert(projectID uint64, agentUUID string, msg Message, dateRange d
 			status, err := slack.SendSlackAlert(projectID, slackMsg, agentUUID, channel)
 			if err != nil || !status {
 				fail++
-				logCtx.WithError(err).Error("failed to send slack alert")
-				return
+				logCtx.WithError(err).Error("failed to send slack alert ",slackMsg)
+				continue
 			}
 			success++
 		}
@@ -454,10 +455,6 @@ func getSlackMessage(msg Message, dateRange dateRanges, timezone U.TimeZoneStrin
 	emoji := getEmojiForSlackByOperator(msg.Operator)
 	actualValue := strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.2f", msg.ActualValue), "0"), ".")
 	actualValue = AddCommaToNumber(actualValue)
-	CategoryVar := strings.ReplaceAll(msg.Category, "_", " ")
-	if msg.Category == strings.Title(model.PageViews) {
-		CategoryVar = msg.PageURL
-	}
 	var slackMsg string
 	comparedToStatement := ""
 	ComparedValue := ""
@@ -480,7 +477,7 @@ func getSlackMessage(msg Message, dateRange dateRanges, timezone U.TimeZoneStrin
 						"type": "header",
 						"text": {
 							"type": "plain_text",
-							"text": "%s for %s %s %s%s "
+							"text": "%s %s %s%s "
 						}
 					},
 					{
@@ -513,7 +510,7 @@ func getSlackMessage(msg Message, dateRange dateRanges, timezone U.TimeZoneStrin
 						"type": "divider"
 					}
 				]
-				`, strings.ReplaceAll(msg.DateRange, "_", " "), from, to, comparedToStatement, strings.ReplaceAll(msg.AlertName, "_", " "), CategoryVar, strings.ReplaceAll(msg.Operator, "_", " "), AddCommaToNumber(fmt.Sprint(msg.Value)), percentageSymbol, actualValue, ComparedValue, emoji)
+				`, strings.ReplaceAll(msg.DateRange, "_", " "), from, to, comparedToStatement, strings.ReplaceAll(msg.AlertName, "_", " "), strings.ReplaceAll(msg.Operator, "_", " "), AddCommaToNumber(fmt.Sprint(msg.Value)), percentageSymbol, actualValue, ComparedValue, emoji)
 
 	return slackMsg
 }

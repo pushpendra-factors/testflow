@@ -1313,7 +1313,7 @@ func BuildNewItreeV1(reqId string,
 
 	var len1PatternCount, len2PatternCount, len3PatternCount int
 	for _, pattern := range candidatePatterns {
-		//pattern.GenFrequentProperties()
+		pattern.GenFrequentProperties()
 		if len(pattern.EventNames) == 1 {
 			len1PatternCount++
 		}

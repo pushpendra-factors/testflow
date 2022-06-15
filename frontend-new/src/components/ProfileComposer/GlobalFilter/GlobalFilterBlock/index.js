@@ -18,6 +18,7 @@ const defaultOpProps = DEFAULT_OPERATOR_PROPS;
 
 export default function GlobalFilterBlock({
   index,
+  refValue,
   blockType = 'event',
   filterType = 'analytics',
   typeProps,
@@ -33,6 +34,7 @@ export default function GlobalFilterBlock({
   deleteFilter,
   insertFilter,
   closeFilter,
+  showOr,
 }) {
   const [filterTypeState, setFilterTypeState] = useState('props');
   const [groupCollapseState, setGroupCollapse] = useState({});
@@ -106,6 +108,7 @@ export default function GlobalFilterBlock({
         applyFilter={applyFilter}
         setValuesByProps={setValuesByProps}
         filter={filter}
+        refValue={refValue}
       ></GlobalFilterSelect>
     );
   };
@@ -673,19 +676,24 @@ export default function GlobalFilterBlock({
           operatorOpts={filterDropDownOptions.operator}
           valueOpts={dropDownValues}
           applyFilter={applyFilter}
+          refValue={refValue}
           setValuesByProps={setValuesByProps}
         ></GlobalFilterSelect>
       </>
     );
   };
-
   return (
-    <div className={`flex items-center relative w-full`}>
-      {
+    <div className={`flex items-center relative`}>
+        {!showOr && (
         <Text level={8} type={'title'} extraClass={'m-0 mr-2'} weight={'thin'}>
           {index >= 1 ? 'and' : 'Filter by'}
         </Text>
-      }
+        )}
+        {showOr && (
+        <Text level={8} type={'title'} extraClass={'m-0 mr-2 ml-2'} weight={'thin'}>
+          or
+        </Text>
+        )}
       <div className={`relative flex`}>
         {filter ? renderFilterContent() : filterSelComp()}
       </div>

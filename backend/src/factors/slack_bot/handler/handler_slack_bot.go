@@ -195,6 +195,7 @@ func SendSlackAlert(projectID uint64, message, agentUUID string, channel model.S
 	reqBody := map[string]interface{}{
 		"channel": channel.Id,
 		"blocks":  message,
+		"unfurl_links": false,
 	}
 	jsonBody, err := json.Marshal(reqBody)
 	if err != nil {
@@ -202,7 +203,7 @@ func SendSlackAlert(projectID uint64, message, agentUUID string, channel model.S
 		return false, err
 	}
 	request, _ := http.NewRequest("POST", url, bytes.NewBuffer(jsonBody))
-	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Content-Type", "application/json; charset=utf-8")
 	if channel.IsPrivate {
 		request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessTokens.UserAccessToken))
 	} else {
@@ -223,6 +224,7 @@ func SendSlackAlert(projectID uint64, message, agentUUID string, channel model.S
 	if response["ok"] == true {
 		return true, nil
 	}
+	log.Error("failed to send slack alert ", message, response)
 	defer resp.Body.Close()
 	return false, errors.New("Failed to send slack alert")
 }

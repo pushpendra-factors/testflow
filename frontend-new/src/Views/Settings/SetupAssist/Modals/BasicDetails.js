@@ -13,6 +13,7 @@ import 'animate.css';
 import factorsai from 'factorsai';
 const { Option } = Select;
 import styles from './index.module.scss';
+import sanitizeInputString from 'Utils/sanitizeInputString';
 
 const getKeyByValue = (obj, value) =>  Object.keys(obj).find(key => obj[key]?.city === value);
 
@@ -25,7 +26,7 @@ const TimeZoneName =
   "GMT" :'GMT',
   "AEST" :'AEST (Australia Eastern Standard Time)', 
 }
-
+ 
 function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel, udpateProjectDetails, projectAgentInvite, fetchProjectAgents }) {
   const [form] = Form.useForm();
   const [formData, setFormData] = useState(null);
@@ -36,9 +37,9 @@ function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel, 
 
   const onFinish = values => {
       setloading(true);
-
+      let projectName = sanitizeInputString(values?.projectName); 
        let projectData = {
-        name: values.projectName,
+        name: projectName,
         time_zone: TimeZoneOffsetValues[values.time_zone]?.city
       }; 
 

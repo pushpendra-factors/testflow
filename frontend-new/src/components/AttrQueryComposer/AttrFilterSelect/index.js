@@ -23,6 +23,7 @@ const AttrFilterSelect = ({
   setValuesByProps,
   applyFilter,
   filter,
+  refValue,
 }) => {
   const [propState, setPropState] = useState({
     icon: '',
@@ -84,6 +85,7 @@ const AttrFilterSelect = ({
         props: [propState.name, propState.type, propState.icon],
         operator: operatorState,
         values: valuesState,
+        ref: refValue,
       });
     }
   };

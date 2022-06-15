@@ -2,16 +2,15 @@ import React from 'react';
 import get from 'lodash/get';
 import moment from 'moment';
 
-import { DATE_FORMATS, METRIC_TYPES } from '../../../../utils/constants';
+import { DATE_FORMATS } from '../../../../utils/constants';
 import { Number as NumFormat } from '../../../../components/factorsComponents';
 import {
   addQforQuarter,
   getClickableTitleSorter,
-  SortResults,
-  formatDuration
+  SortResults
 } from '../../../../utils/dataFormatter';
 
-import { getKpiLabel } from '../kpiAnalysis.helpers';
+import { getKpiLabel, getFormattedKpiValue } from '../kpiAnalysis.helpers';
 
 export const getDefaultSortProp = (kpis) => {
   if (Array.isArray(kpis) && kpis.length) {
@@ -126,13 +125,12 @@ export const formatDataInSeriesFormat = (aggData) => {
   }
 };
 
-export const getTableColumns = (
+export const getTableColumns = ({
   kpis,
   currentSorter,
   handleSorting,
-  eventNames,
   frequency
-) => {
+}) => {
   const format = DATE_FORMATS[frequency] || DATE_FORMATS.date;
   const result = [
     {
@@ -152,7 +150,7 @@ export const getTableColumns = (
     const kpiLabel = getKpiLabel(e);
     return {
       title: getClickableTitleSorter(
-        eventNames[kpiLabel] || kpiLabel,
+        kpiLabel,
         {
           key: `${kpiLabel} - ${idx}`,
           type: 'numerical',
@@ -165,8 +163,8 @@ export const getTableColumns = (
       className: 'text-right',
       dataIndex: `${kpiLabel} - ${idx}`,
       render: (d) => {
-        if (e.metricType === METRIC_TYPES.dateType) {
-          return formatDuration(d);
+        if (e.metricType) {
+          return getFormattedKpiValue({ value: d, metricType: e.metricType });
         }
         return <NumFormat number={d} />;
       }
@@ -195,14 +193,13 @@ export const getDataInTableFormat = (
   return SortResults(result, currentSorter);
 };
 
-export const getDateBasedColumns = (
+export const getDateBasedColumns = ({
   kpis,
   categories,
   currentSorter,
   handleSorting,
-  eventNames,
   frequency
-) => {
+}) => {
   const OverallColumn = {
     title: getClickableTitleSorter(
       'Overall',
@@ -216,8 +213,8 @@ export const getDateBasedColumns = (
     width: 150,
     render: (d, _, index) => {
       const metricType = get(kpis[index], 'metricType', null);
-      return metricType === METRIC_TYPES.dateType ? (
-        formatDuration(d)
+      return metricType ? (
+        getFormattedKpiValue({ value: d, metricType })
       ) : (
         <NumFormat number={d} />
       );
@@ -226,7 +223,7 @@ export const getDateBasedColumns = (
   const result = [
     {
       title: getClickableTitleSorter(
-        'Event',
+        'KPI',
         {
           key: 'event',
           type: 'categorical',
@@ -239,7 +236,7 @@ export const getDateBasedColumns = (
       fixed: 'left',
       width: 200,
       render: (d) => {
-        return eventNames[d] || d;
+        return d;
       }
     }
   ];
@@ -262,8 +259,8 @@ export const getDateBasedColumns = (
       dataIndex: addQforQuarter(frequency) + moment(cat).format(format),
       render: (d, _, index) => {
         const metricType = get(kpis[index], 'metricType', null);
-        return metricType === METRIC_TYPES.dateType ? (
-          formatDuration(d)
+        return metricType ? (
+          getFormattedKpiValue({ value: d, metricType })
         ) : (
           <NumFormat number={d} />
         );

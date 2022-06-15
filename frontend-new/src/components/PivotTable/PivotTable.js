@@ -150,7 +150,7 @@ const PivotTableComponent = (props) => {
     if (!configLoaded) {
       updatePivotConfig({
         rows: breakdownAttributes,
-        vals: [getMetricLabel({ metric: metrics[0], queryType })],
+        vals: [getMetricLabel({ metric: metrics[0], queryType, eventNames })],
         configLoaded: true
       });
     }
@@ -219,7 +219,6 @@ const PivotTableComponent = (props) => {
           onColumnChange={handleColumnChange}
           onRowChange={handleRowOptionSelect}
           onFunctionChange={handleFunctionChange}
-          // rowOrder={pivotConfig.rowOrder}
           onSortChange={handleSortChange}
         />
       </ControlledComponent>

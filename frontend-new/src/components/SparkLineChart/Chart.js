@@ -5,11 +5,10 @@ import styles from './index.module.scss';
 import {
   numberWithCommas,
   formatCount,
-  addQforQuarter,
-  formatDuration
+  addQforQuarter
 } from '../../utils/dataFormatter';
-import { METRIC_TYPES } from '../../utils/constants';
 import { getDateFormatForTimeSeriesChart } from '../../utils/chart.helpers';
+import { getFormattedKpiValue } from '../../Views/CoreQuery/KPIAnalysis/kpiAnalysis.helpers';
 
 function SparkChart({
   chartData,
@@ -194,8 +193,8 @@ function SparkChart({
           `<div class="font-semibold">${
             addQforQuarter(frequency) + moment(d.date).format(format)
           }</div><div class="font-normal mt-1">${
-            metricType === METRIC_TYPES.dateType
-              ? formatDuration(d[event])
+            metricType
+              ? getFormattedKpiValue({ value: d[event], metricType })
               : numberWithCommas(formatCount(d[event], 1))
           }</div>`
         )

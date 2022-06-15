@@ -2,8 +2,9 @@ import React from 'react';
 import styles from './index.module.scss';
 import { Number as NumFormat } from '../factorsComponents';
 import { useSelector } from 'react-redux';
-import { METRIC_TYPES } from '../../utils/constants';
-import { formatDuration } from '../../utils/dataFormatter';
+import { SPARK_LINE_CHART_TITLE_CHAR_COUNT } from '../../constants/charts.constants';
+import { displayQueryName } from './sparkLineChart.helpers';
+import { getFormattedKpiValue } from '../../Views/CoreQuery/KPIAnalysis/kpiAnalysis.helpers';
 
 function ChartHeader({
   total,
@@ -14,9 +15,7 @@ function ChartHeader({
 }) {
   const { eventNames } = useSelector((state) => state.coreQuery);
 
-  const displayQueryName = (q) => {
-    return eventNames[q] || q;
-  };
+  const queryName = displayQueryName({ query, eventNames });
 
   return (
     <div className="flex flex-col items-center justify-center">
@@ -26,16 +25,16 @@ function ChartHeader({
           className={`mr-1 ${styles.eventCircle}`}
         ></div>
         <div className={styles.eventText}>
-          {query.length > 30
-            ? displayQueryName(query).slice(0, 30) + '...'
-            : displayQueryName(query)}
+          {queryName.length > SPARK_LINE_CHART_TITLE_CHAR_COUNT
+            ? queryName.slice(0, SPARK_LINE_CHART_TITLE_CHAR_COUNT) + '...'
+            : queryName}
         </div>
       </div>
       <div
         className={`${smallFont ? styles.smallerTotalText : styles.totalText}`}
       >
-        {metricType === METRIC_TYPES.dateType ? (
-          formatDuration(total)
+        {metricType ? (
+          getFormattedKpiValue({ value: total, metricType })
         ) : (
           <NumFormat shortHand={total > 10000} number={total} />
         )}

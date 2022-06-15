@@ -13,10 +13,10 @@ import DataTable from '../../../../components/DataTable';
 import {
   MAX_ALLOWED_VISIBLE_PROPERTIES,
   CHART_TYPE_HORIZONTAL_BAR_CHART,
-  DASHBOARD_WIDGET_SECTION,
-  METRIC_TYPES
+  DASHBOARD_WIDGET_SECTION
 } from '../../../../utils/constants';
-import { isSeriesChart, formatDuration } from '../../../../utils/dataFormatter';
+import { isSeriesChart } from '../../../../utils/dataFormatter';
+import { getFormattedKpiValue } from '../kpiAnalysis.helpers';
 
 const BreakdownTable = ({
   data,
@@ -102,11 +102,11 @@ const BreakdownTable = ({
             kpis,
             (kpi, index) => kpi.label + ' - ' + index === key
           );
-          if (
-            isCurrentKeyKpi &&
-            isCurrentKeyKpi.metricType === METRIC_TYPES.dateType
-          ) {
-            rest[key] = formatDuration(rest[key]);
+          if (isCurrentKeyKpi && isCurrentKeyKpi.metricType) {
+            rest[key] = getFormattedKpiValue({
+              value: rest[key],
+              metricType: isCurrentKeyKpi.metricType
+            });
           }
         }
         return { ...rest };

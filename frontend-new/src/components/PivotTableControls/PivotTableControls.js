@@ -1,7 +1,9 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import cx from 'classnames';
-import { Menu, Dropdown, Button } from 'antd';
+import { Menu, Dropdown } from 'antd';
+import map from 'lodash/map';
+import noop from 'lodash/noop';
 
 import { EMPTY_ARRAY, EMPTY_STRING } from 'Utils/global';
 
@@ -27,8 +29,7 @@ const PivotTableControls = ({
   onValueChange,
   onColumnChange,
   onRowChange,
-  onFunctionChange,
-  onSortChange,
+  onFunctionChange
 }) => {
   const handleValueChange = (obj) => {
     onValueChange(obj.key);
@@ -49,7 +50,7 @@ const PivotTableControls = ({
   const getMenu = ({ options, onOptionClick }) => {
     return (
       <Menu className={styles.dropdownMenu}>
-        {_.map(options, (option) => {
+        {map(options, (option) => {
           return (
             <Menu.Item onClick={onOptionClick} key={option}>
               {option}
@@ -62,22 +63,22 @@ const PivotTableControls = ({
 
   const aggregatorMenu = getMenu({
     options: aggregatorOptions,
-    onOptionClick: handleValueChange,
+    onOptionClick: handleValueChange
   });
 
   const columnsMenu = getMenu({
     options: columnOptions,
-    onOptionClick: handleColumnChange,
+    onOptionClick: handleColumnChange
   });
 
   const rowsMenu = getMenu({
     options: rowOptions,
-    onOptionClick: handleRowChange,
+    onOptionClick: handleRowChange
   });
 
   const functionsMenu = getMenu({
     options: functionOptions,
-    onOptionClick: handleFunctionChange,
+    onOptionClick: handleFunctionChange
   });
 
   const renderDropdown = ({ dropdownMenu, label }) => {
@@ -90,9 +91,9 @@ const PivotTableControls = ({
 
   const renderRowsColumn = () => {
     return (
-      <ColumnsWrapper heading='Rows'>
-        <div className='flex flex-col gap-y-2'>
-          {_.map(selectedRows, (row) => {
+      <ColumnsWrapper heading="Rows">
+        <div className="flex flex-col gap-y-2">
+          {map(selectedRows, (row) => {
             return (
               <React.Fragment key={row}>
                 <SelectedItem onRemove={onRowAttributeRemove} label={row} />
@@ -109,8 +110,8 @@ const PivotTableControls = ({
 
   const renderColumnsColumn = () => {
     return (
-      <ColumnsWrapper heading='Columns'>
-        <div className='flex flex-col gap-y-2'>
+      <ColumnsWrapper heading="Columns">
+        <div className="flex flex-col gap-y-2">
           <ControlledComponent controller={!!selectedCol}>
             <SelectedItem
               onRemove={onColumnAttributeRemove}
@@ -128,11 +129,11 @@ const PivotTableControls = ({
 
   const renderValuesColumn = () => {
     return (
-      <ColumnsWrapper heading='Value'>
-        <div className='flex flex-col gap-y-2'>
+      <ColumnsWrapper heading="Value">
+        <div className="flex flex-col gap-y-2">
           {renderDropdown({
             dropdownMenu: aggregatorMenu,
-            label: selectedValue,
+            label: selectedValue
           })}
         </div>
       </ColumnsWrapper>
@@ -140,41 +141,29 @@ const PivotTableControls = ({
   };
 
   return (
-    <div className='flex flex-col'>
+    <div className="flex flex-col">
       <div className={cx('flex border border-solid', styles.controls)}>
-        <div className='w-1/3 py-5 px-10 border-r border-solid'>
+        <div className="w-1/3 py-5 px-10 border-r border-solid">
           {renderRowsColumn()}
         </div>
 
-        <div className='w-1/3 py-5 px-10 border-r border-solid'>
+        <div className="w-1/3 py-5 px-10 border-r border-solid">
           {renderColumnsColumn()}
         </div>
 
-        <div className='w-1/3 py-5 px-10'>{renderValuesColumn()}</div>
+        <div className="w-1/3 py-5 px-10">{renderValuesColumn()}</div>
       </div>
 
-      <div className='flex border border-solid'>
-        <div className='w-1/3'></div>
-        <div className='w-1/3'></div>
-        <div className='w-1/3 py-5 px-10'>
-          <div className='flex gap-x-2 items-center'>
+      <div className="flex border border-solid">
+        <div className="w-1/3"></div>
+        <div className="w-1/3"></div>
+        <div className="w-1/3 py-5 px-10">
+          <div className="flex gap-x-2 items-center">
             <span>Function:</span>
             {renderDropdown({
               dropdownMenu: functionsMenu,
-              label: aggregatorName,
+              label: aggregatorName
             })}
-            {/* <ControlledComponent controller={rowOrder === PIVOT_SORT_ORDERS.ASCEND}>
-              <ArrowDownOutlined
-                onClick={onSortChange}
-                className='cursor-pointer'
-              />
-            </ControlledComponent>
-            <ControlledComponent controller={rowOrder === PIVOT_SORT_ORDERS.DESCEND}>
-              <ArrowUpOutlined
-                onClick={onSortChange}
-                className='cursor-pointer'
-              />
-            </ControlledComponent> */}
           </div>
         </div>
       </div>
@@ -193,7 +182,6 @@ PivotTableControls.propTypes = {
   rowOptions: PropTypes.array,
   functionOptions: PropTypes.array,
   aggregatorName: PropTypes.string,
-  // rowOrder: PropTypes.string,
   onRowAttributeRemove: PropTypes.func,
   onColumnAttributeRemove: PropTypes.func,
   onColumnChange: PropTypes.func,
@@ -212,12 +200,11 @@ PivotTableControls.defaultProps = {
   rowOptions: EMPTY_ARRAY,
   functionOptions: EMPTY_ARRAY,
   aggregatorName: EMPTY_STRING,
-  // rowOrder: PIVOT_SORT_ORDERS.ASCEND,
-  onRowAttributeRemove: _.noop,
-  onColumnAttributeRemove: _.noop,
-  onColumnChange: _.noop,
-  onValueChange: _.noop,
-  onRowChange: _.noop,
-  onFunctionChange: _.noop,
-  onSortChange: _.noop
+  onRowAttributeRemove: noop,
+  onColumnAttributeRemove: noop,
+  onColumnChange: noop,
+  onValueChange: noop,
+  onRowChange: noop,
+  onFunctionChange: noop,
+  onSortChange: noop
 };

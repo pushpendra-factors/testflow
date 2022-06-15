@@ -1,12 +1,17 @@
 package tests
 
 import (
+	"bufio"
+	"encoding/json"
 	P "factors/pattern"
+	PS "factors/pattern_server/store"
 	PW "factors/pattern_service_wrapper"
 	U "factors/util"
 	"fmt"
+	"os"
 	"testing"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -236,5 +241,151 @@ func TestBuildNewItree(t *testing.T) {
 			assert.InDelta(t, eNode.infoDrop, aNode.InformationDrop, 0.0001, fmt.Sprintf("Node: %s", eNode.patternString))
 			assert.InDelta(t, eNode.confidenceGain, aNode.ConfidenceGain, 0.0001, fmt.Sprintf("Node: %s", eNode.patternString))
 		}
+	}
+}
+
+func TestFactorV1(t *testing.T) {
+
+	filepath := "data/chunk_data.txt"
+
+	patterns := make([]*P.Pattern, 0)
+
+	file, err := os.Open(filepath)
+	assert.Nil(t, err)
+	scanner := bufio.NewScanner(file)
+	buf := make([]byte, P.MAX_PATTERN_BYTES)
+	scanner.Buffer(buf, P.MAX_PATTERN_BYTES)
+
+	for scanner.Scan() {
+		line := string(scanner.Text())
+		var ptm PS.PatternWithMeta
+		var patternDetail P.Pattern
+		err := json.Unmarshal([]byte(line), &ptm)
+		if err != nil {
+			log.Debugf("error : %v", err)
+		}
+		err = json.Unmarshal([]byte(ptm.RawPattern), &patternDetail)
+		assert.Nil(t, err)
+		patterns = append(patterns, &patternDetail)
+	}
+
+	pw := NewMockPatternServiceWrapper(patterns, nil)
+	assert.Equal(t, 86, len(pw.patterns))
+
+	var projectId uint64 = uint64(1)
+	reqId := ""
+	startEvent := "$session"
+	endEvent := "Schedule A Demo Form"
+	var startEventConstraints *P.EventConstraints
+	var endEventConstraints *P.EventConstraints
+	startEventConstraints, endEventConstraints = createUserEventConstraint()
+	countType := P.COUNT_TYPE_PER_USER
+	debugKey := ""
+	debugParams := make(map[string]string)
+	includedEvents := make(map[string]bool, 0)
+	includedEventProperties := make(map[string]bool)
+	includedUserProperties := make(map[string]bool)
+
+	factors, err, _ := PW.FactorV1(reqId, projectId, startEvent, startEventConstraints, endEvent,
+		endEventConstraints, countType, pw, debugKey, debugParams, includedEvents, includedEventProperties,
+		includedUserProperties)
+
+	assert.Nil(t, err)
+
+	for _, ft := range factors.Insights {
+		log.Debugf("factors insight: %d,%d, %v", len(ft.FactorsInsightsAttribute), len(ft.FactorsSubInsights), ft.FactorsInsightsAttribute)
+	}
+
+	assert.Equal(t, len(factors.Insights), 5)
+
+}
+
+func createUserEventConstraint() (*P.EventConstraints, *P.EventConstraints) {
+
+	var startEventConstraints *P.EventConstraints
+	var endEventConstraints *P.EventConstraints
+	startEventConstraints = &P.EventConstraints{
+		EPNumericConstraints:     []P.NumericConstraint{},
+		EPCategoricalConstraints: []P.CategoricalConstraint{},
+		UPNumericConstraints:     []P.NumericConstraint{},
+		UPCategoricalConstraints: []P.CategoricalConstraint{},
+	}
+	endEventConstraints = &P.EventConstraints{
+		EPNumericConstraints:     []P.NumericConstraint{},
+		EPCategoricalConstraints: []P.CategoricalConstraint{},
+		UPNumericConstraints:     []P.NumericConstraint{},
+		UPCategoricalConstraints: []P.CategoricalConstraint{},
+	}
+
+	ep1 := P.CategoricalConstraint{PropertyName: "Country", PropertyValue: "US", Operator: P.EQUALS_OPERATOR_CONST}
+	// ep2 := P.CategoricalConstraint{PropertyName: "$user_agent", PropertyValue: "Go-http-client/2.0", Operator: P.EQUALS_OPERATOR_CONST}
+	startEventConstraints.UPCategoricalConstraints = append(startEventConstraints.UPCategoricalConstraints, ep1)
+	endEventConstraints.UPCategoricalConstraints = append(endEventConstraints.UPCategoricalConstraints, ep1)
+	// startEventConstraints.UPCategoricalConstraints = append(startEventConstraints.EPCategoricalConstraints, ep2)
+
+	return startEventConstraints, endEventConstraints
+
+}
+
+func TestGenFreqProperties(t *testing.T) {
+
+	patterns := make([]*P.Pattern, 0)
+	filepath := "data/chunk_data.txt"
+
+	file, err := os.Open(filepath)
+	assert.Nil(t, err)
+	scanner := bufio.NewScanner(file)
+	buf := make([]byte, P.MAX_PATTERN_BYTES)
+	scanner.Buffer(buf, P.MAX_PATTERN_BYTES)
+
+	for scanner.Scan() {
+		line := string(scanner.Text())
+		var ptm PS.PatternWithMeta
+		var patternDetail P.Pattern
+		err := json.Unmarshal([]byte(line), &ptm)
+		if err != nil {
+			log.Debugf("error : %v", err)
+		}
+		err = json.Unmarshal([]byte(ptm.RawPattern), &patternDetail)
+		assert.Nil(t, err)
+		patterns = append(patterns, &patternDetail)
+	}
+
+	var testPattern *P.Pattern
+
+	for _, pt := range patterns {
+		if pt.EventNames[0] == "Schedule A Demo Form" {
+			testPattern = pt
+		}
+	}
+
+	tfr := testPattern.GenFrequentProperties()
+	for _, t := range tfr.FrequentItemsets {
+		log.Debugf("fitem :%v", t)
+	}
+	ap, err := tfr.GetPropertiesOfType("event")
+
+	for _, s := range ap {
+		log.Debugf("prop string :%s", s)
+	}
+	assert.Nil(t, err)
+
+	assert.Equal(t, len(testPattern.FreqProps.FrequentItemsets), 302)
+
+}
+
+func TestFormatProperty(t *testing.T) {
+
+	pos := []string{"1.$Country", "1.$country"}
+	pos_true := []string{"$Country", "$country"}
+	neg := []string{"a1.$Country", "a2.$Country"}
+
+	for idx, sr := range pos {
+		tstring := U.FormatProperty(sr)
+		assert.Equal(t, pos_true[idx], tstring)
+	}
+	for _, sr := range neg {
+		tstring := U.FormatProperty(sr)
+		assert.Equal(t, tstring, sr)
 	}
 }
