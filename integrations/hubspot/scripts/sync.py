@@ -1016,6 +1016,8 @@ def allow_batch_insert_doc_type(doc_type):
     return str(doc_type) in allowed_doc_type
 
 def allow_batch_insert_by_project_id(project_id):
+    if str(project_id) == str(559):
+        return False
     all_projects, allowed_projects,_ = get_allowed_list_with_all_element_support(options.batch_insert_by_project_ids)
     if all_projects:
         return True
