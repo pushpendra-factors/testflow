@@ -306,7 +306,37 @@ func TestGetEventNameByUserHandler(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
+	rEventName = "$hubspot_contact_updated"
+	w = ServePostRequestWithHeaders(r, uri,
+		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"name": "Jhon"}}`, createdUserID, rEventName)),
+		map[string]string{
+			"Authorization": project.Token,
+			"User-Agent":    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36",
+		})
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
 	rEventName = "$sf_lead_created"
+	w = ServePostRequestWithHeaders(r, uri,
+		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"name": "Jhon"}}`, createdUserID, rEventName)),
+		map[string]string{
+			"Authorization": project.Token,
+			"User-Agent":    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36",
+		})
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	rEventName = "$sf_lead_updated"
+	w = ServePostRequestWithHeaders(r, uri,
+		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"name": "Jhon"}}`, createdUserID, rEventName)),
+		map[string]string{
+			"Authorization": project.Token,
+			"User-Agent":    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36",
+		})
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	rEventName = "$sf_contact_created"
 	w = ServePostRequestWithHeaders(r, uri,
 		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"name": "Jhon"}}`, createdUserID, rEventName)),
 		map[string]string{
@@ -326,7 +356,7 @@ func TestGetEventNameByUserHandler(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	rEventName = "$hubspot_contact_updated"
+	rEventName = "$sf_campaign_member_created"
 	w = ServePostRequestWithHeaders(r, uri,
 		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"name": "Jhon"}}`, createdUserID, rEventName)),
 		map[string]string{
@@ -349,8 +379,14 @@ func TestGetEventNameByUserHandler(t *testing.T) {
 		assert.Contains(t, eventNames.EventNames[U.STANDARD_GROUP_DISPLAY_NAMES[model.GROUP_NAME_HUBSPOT_COMPANY]], "$hubspot_company_created", "$hubspot_company_updated")
 		assert.Contains(t, eventNames.EventNames[U.STANDARD_GROUP_DISPLAY_NAMES[model.GROUP_NAME_SALESFORCE_ACCOUNT]], "$salesforce_account_created", "$salesforce_account_updated")
 		assert.Contains(t, eventNames.EventNames["Hubspot Contacts"], "$hubspot_contact_created", "$hubspot_contact_updated")
-		assert.Contains(t, eventNames.EventNames["Salesforce Users"], "$sf_lead_created")
+		assert.Contains(t, eventNames.EventNames["Salesforce Users"], "$sf_lead_created", "$sf_lead_updated", "$sf_contact_created")
 		assert.Contains(t, eventNames.EventNames["Marketo Person"], "$marketo_lead_created")
+		assert.Equal(t, len(eventNames.EventNames["Hubspot Contacts"]), 2)
+		assert.Equal(t, len(eventNames.EventNames["Salesforce Users"]), 3)
+		assert.Equal(t, len(eventNames.EventNames["Marketo Person"]), 1)
+
+		//check whether other user event names are not deleted
+		assert.Contains(t, eventNames.EventNames[U.MostRecent], "$sf_campaign_member_created")
 	})
 
 }
