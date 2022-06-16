@@ -22,7 +22,7 @@ func (store *MemSQL) ExecuteKPIQueryForEvents(projectID uint64, reqID string, kp
 	queryResults := make([]model.QueryResult, len(kpiQuery.Metrics))
 	isValid := store.ValidateKPIQuery(projectID, kpiQuery)
 	if !isValid {
-		return queryResults, http.StatusBadRequest
+		return queryResults, http.StatusPartialContent
 	}
 	return store.transformToAndExecuteEventAnalyticsQueries(projectID, kpiQuery)
 }
@@ -55,12 +55,13 @@ func (store *MemSQL) transformToAndExecuteEventAnalyticsQueries(projectID uint64
 	for index, result := range queryResults {
 		if result.Headers == nil || result.Headers[0] == model.AliasError {
 			log.WithField("kpiQuery", kpiQuery).WithField("queryResults", queryResults).WithField("index", index).Error("Failed in executing following KPI Query.")
-			return queryResults, http.StatusBadRequest
+			return queryResults, http.StatusPartialContent
 		}
 	}
 	return queryResults, http.StatusOK
 }
 
+// To Change.
 func (store *MemSQL) ValidateKPIQuery(projectID uint64, kpiQuery model.KPIQuery) bool {
 	if kpiQuery.DisplayCategory == model.WebsiteSessionDisplayCategory {
 		return store.ValidateKPISessions(projectID, kpiQuery)
@@ -68,6 +69,16 @@ func (store *MemSQL) ValidateKPIQuery(projectID uint64, kpiQuery model.KPIQuery)
 		return model.ValidateKPIPageView(kpiQuery)
 	} else if kpiQuery.DisplayCategory == model.FormSubmissionsDisplayCategory {
 		return model.ValidateKPIFormSubmissions(kpiQuery)
+		// } else if kpiQuery.DisplayCategory == HubspotContactsDisplayCategory {
+		// 	return ValidateKPIHubspotContacts(kpiQuery)
+		// } else if kpiQuery.DisplayCategory == HubspotCompaniesDisplayCategory {
+		// 	return ValidateKPIHubspotCompanies(kpiQuery)
+		// } else if kpiQuery.DisplayCategory == SalesforceUsersDisplayCategory {
+		// 	return ValidateKPISalesforceUsers(kpiQuery)
+		// } else if kpiQuery.DisplayCategory == SalesforceAccountsDisplayCategory {
+		// 	return ValidateKPISalesforceAccounts(kpiQuery)
+		// } else if kpiQuery.DisplayCategory == SalesforceOpportunitiesDisplayCategory {
+		// 	return ValidateKPISalesforceOpportunities(kpiQuery)
 	} else {
 		return false
 	}
@@ -120,7 +131,7 @@ func (store *MemSQL) executeForResults(projectID uint64, queries []model.Query, 
 	results := make([]*model.QueryResult, len(queries))
 	hasGroupByTimestamp := false
 	displayCategory := kpiQuery.DisplayCategory
-	var finalResult *model.QueryResult
+	var finalResult model.QueryResult
 	isTimezoneEnabled := false
 	if C.IsMultipleProjectTimezoneEnabled(projectID) {
 		isTimezoneEnabled = true
@@ -128,28 +139,28 @@ func (store *MemSQL) executeForResults(projectID uint64, queries []model.Query, 
 	if kpiQuery.GroupByTimestamp != "" {
 		hasGroupByTimestamp = true
 	}
-	var statusCode int
-	var errMsg string
 	if len(queries) == 1 {
 		hasAnyGroupBy := len(queries[0].GroupByProperties) != 0
-		results[0], statusCode, errMsg = store.RunInsightsQuery(projectID, queries[0])
-		if statusCode != http.StatusOK {
-			finalResult = buildErrorResult(errMsg)
-			return *finalResult
+		results[0], _, _ = store.RunInsightsQuery(projectID, queries[0])
+		if results[0].Headers == nil || results[0].Headers[0] == model.AliasError {
+			finalResult = model.QueryResult{}
+			finalResult.Headers = results[0].Headers
+			return finalResult
 		}
 		results = model.TransformResultsToKPIResults(results, hasGroupByTimestamp, hasAnyGroupBy, displayCategory, kpiQuery.Timezone)
-		finalResult = results[0]
+		finalResult = *results[0]
 	} else {
 		for i, query := range queries {
-			results[i], statusCode, errMsg = store.RunInsightsQuery(projectID, query)
-			if statusCode != http.StatusOK {
-				finalResult = buildErrorResult(errMsg)
-				return *finalResult
+			results[i], _, _ = store.RunInsightsQuery(projectID, query)
+			if results[i].Headers == nil || results[i].Headers[0] == model.AliasError {
+				finalResult = model.QueryResult{}
+				finalResult.Headers = results[i].Headers
+				return finalResult
 			}
 		}
 		hasAnyGroupBy := len(queries[0].GroupByProperties) != 0
 		results = model.TransformResultsToKPIResults(results, hasGroupByTimestamp, hasAnyGroupBy, displayCategory, kpiQuery.Timezone)
-		*finalResult = model.HandlingEventResultsByApplyingOperations(results, transformations, kpiQuery.Timezone, isTimezoneEnabled)
+		finalResult = model.HandlingEventResultsByApplyingOperations(results, transformations, kpiQuery.Timezone, isTimezoneEnabled)
 	}
-	return *finalResult
+	return finalResult
 }

@@ -15,7 +15,6 @@ func (store *MemSQL) ExecuteKPIQueryGroup(projectID uint64, reqID string, kpiQue
 	var queryResults []model.QueryResult
 	finalStatusCode := http.StatusOK
 	isTimezoneEnabled := false
-	failedIndex := -1
 	kpiTimezoneString := string(kpiQueryGroup.GetTimeZone())
 	hashMapOfQueryToResult := make(map[string][]model.QueryResult)
 	if C.IsMultipleProjectTimezoneEnabled(projectID) {
@@ -25,18 +24,15 @@ func (store *MemSQL) ExecuteKPIQueryGroup(projectID uint64, reqID string, kpiQue
 		kpiQueryGroup.Queries[index].Filters = append(query.Filters, kpiQueryGroup.GlobalFilters...)
 		kpiQueryGroup.Queries[index].GroupBy = kpiQueryGroup.GlobalGroupBy
 	}
-
 	for _, query := range kpiQueryGroup.Queries {
 		if query.Category == model.ProfileCategory {
 			if query.GroupByTimestamp != "" {
 				kpiFunction := store.kpiQueryFunctionDeciderBasedOnCategory(query.Category, query)
 				result, statusCode := kpiFunction(projectID, reqID, query)
-				queryResults = append(queryResults, result...)
 				if statusCode != http.StatusOK {
-					failedIndex = len(queryResults) - 1
 					finalStatusCode = statusCode
-					break
 				}
+				queryResults = append(queryResults, result...)
 
 				query.GroupByTimestamp = ""
 				hashCode, err := query.GetQueryCacheHashString()
@@ -51,17 +47,15 @@ func (store *MemSQL) ExecuteKPIQueryGroup(projectID uint64, reqID string, kpiQue
 		} else {
 			kpiFunction := store.kpiQueryFunctionDeciderBasedOnCategory(query.Category, query)
 			result, statusCode := kpiFunction(projectID, reqID, query)
-			queryResults = append(queryResults, result...)
 			if statusCode != http.StatusOK {
-				failedIndex = len(queryResults) - 1
 				finalStatusCode = statusCode
-				break
 			}
+			queryResults = append(queryResults, result...)
 		}
 	}
 	if finalStatusCode != http.StatusOK {
 		log.WithField("kpiQueryGroup", kpiQueryGroup).WithField("queryResults", queryResults).Error("Failed in executing following KPI Query with status Not Ok.")
-		return []model.QueryResult{queryResults[failedIndex]}, finalStatusCode
+		return []model.QueryResult{model.QueryResult{}, model.QueryResult{}}, finalStatusCode
 	}
 
 	for index, query := range kpiQueryGroup.Queries {
@@ -69,15 +63,13 @@ func (store *MemSQL) ExecuteKPIQueryGroup(projectID uint64, reqID string, kpiQue
 			hashCode, err := query.GetQueryCacheHashString()
 			if err != nil {
 				log.WithField("reqID", reqID).WithField("kpiQueryGroup", kpiQueryGroup).WithField("query", query).Error("Failed while generating hashString for kpi 2.")
-				errorQueryResult := buildErrorResult("Failed in query cache Hash string")
-				return []model.QueryResult{*errorQueryResult}, http.StatusBadRequest
+				return []model.QueryResult{model.QueryResult{}, model.QueryResult{}}, http.StatusBadRequest
 			}
 			if resultsWithGbt, exists := hashMapOfQueryToResult[hashCode]; exists {
 				queryResults[index] = model.GetNonGBTResultsFromGBTResults(resultsWithGbt, query)[0]
 			} else {
 				log.WithField("kpiQueryGroup", kpiQueryGroup).WithField("queryResults", queryResults).Error("Query group doesnt contain all the gbt and non gbt pair of query.")
-				errorQueryResult := buildErrorResult("Query group doesnt contain all gbt and non gbt pair of query.")
-				return []model.QueryResult{*errorQueryResult}, http.StatusBadRequest
+				return []model.QueryResult{model.QueryResult{}, model.QueryResult{}}, http.StatusBadRequest
 			}
 		}
 	}
