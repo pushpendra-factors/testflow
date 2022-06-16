@@ -81,11 +81,11 @@ function EventFilterWrapper({
       setNewFilterState(filter);
 
       if (filter && filter?.extra) { 
+       
         let filterData = {}; 
         if (selectedMainCategory?.category == 'channels') {
           filterData = {
-            category: selectedMainCategory?.category,
-            // object_type: filter?.extra[3],
+            category: event?.category, //use event instead of selectedMainCategory since it is in induvidual level
             object_type: filter?.extra[3],
             property_name: filter?.extra[1],
             display_category: selectedMainCategory?.group,
@@ -93,12 +93,12 @@ function EventFilterWrapper({
           };
         } else {
           filterData = {
-            category: selectedMainCategory?.category,
+            category: event?.category, //use event instead of selectedMainCategory since it is in induvidual level
             object_type: event?.group,
             property_name: filter?.extra[1],
             entity: filter?.extra[3] ? filter?.extra[3] : filter?.extra[2],
           };
-        } 
+        }
         fetchKPIFilterValues(activeProject.id, filterData)
           .then((res) => {
             const ddValues = Object.assign({}, dropDownValues);
