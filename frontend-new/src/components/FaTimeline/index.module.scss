@@ -14,29 +14,35 @@
 
 .timeline {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     border-bottom: 1px solid #E7E9ED;
 
     &_timestamp {
-        display: flex;
-        align-items: center;
         margin: 0;
-        width: 200px;
-        padding: 12px;
-        min-height: 52px;
-        border-right: 2px solid #E7E9ED;
+        width: 172px;
+        padding: 16px;
+
+        &_text {
+            width: 96px;
+        }
     }
 
-    &_event {
-        position: relative;
-        padding: 12px 0;
-        margin-left: 100px;
+    &_events {
+        padding: 16px 100px 0;
+        border-left: 2px solid #E7E9ED;
+        align-items: center;
+        min-height: 76px;
 
-        &_tail {
-            position: absolute;
-            left: 16px;
-            height: 52px;
-            border-left: 2px solid #BAE7FF;
+        &_event {
+            position: relative;
+            padding-bottom: 24px;
+
+            &_tail {
+                position: absolute;
+                left: 16px;
+                height: 52px;
+                border-left: 2px solid #BAE7FF;
+            }
         }
     }
 }
@@ -49,4 +55,11 @@
     gap: 10px;
     background: #F5F6F8;
     border-radius: 4px;
+}
+
+.num {
+    @extend .tag;
+    padding: 3px 10px;
+    margin: 0 4px;
+    color: #1890FF;
 }

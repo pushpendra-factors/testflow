@@ -29,28 +29,26 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
 
-	m := map[string]string{"$name": "Batman!"}
+	m := map[string]string{"$country": "Ukraine"}
 	propertiesJSON, err := json.Marshal(m)
 	if err != nil {
 		log.WithError(err).Fatal("Marshal error.")
 	}
 	properties := postgres.Jsonb{RawMessage: propertiesJSON}
 
-	boolTrue := true
 	customerEmail := "@example.com"
 
-	// Create 5 Users.
+	// Create 10 Users.
 	users := make([]model.User, 0)
-	numUsers := 5
-	for i := 0; i < numUsers; i++ {
+	numUsers := 10
+	for i := 1; i <= numUsers; i++ {
 		createdUserID, _ := store.GetStore().CreateUser(&model.User{
 			ProjectId:      project.ID,
 			Source:         model.GetRequestSourcePointer(model.UserSourceWeb),
 			Group1ID:       "1",
 			Group2ID:       "2",
-			CustomerUserId: strconv.Itoa(i) + customerEmail,
+			CustomerUserId: "user" + strconv.Itoa(i) + customerEmail,
 			Properties:     properties,
-			IsGroupUser:    &boolTrue,
 		})
 		user, errCode := store.GetStore().GetUser(project.ID, createdUserID)
 		assert.Equal(t, http.StatusFound, errCode)
@@ -64,8 +62,15 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 		resp := make([]model.Contact, 0)
 		err := json.Unmarshal(jsonResponse, &resp)
 		assert.Nil(t, err)
-		assert.Equal(t, len(users), 5)
-		assert.Contains(t, resp[0].Identity, customerEmail)
+		assert.Condition(t, func() bool { return len(resp) <= 1000 })
+		assert.Condition(t, func() bool {
+			for _, user := range resp {
+				assert.Equal(t, user.IsAnonymous, false)
+				assert.Equal(t, user.Country, "Ukraine")
+				assert.NotNil(t, user.LastActivity)
+			}
+			return true
+		})
 	})
 }
 
@@ -99,11 +104,12 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 	assert.Nil(t, err)
 
 	props := map[string]string{
-		"$name":          "Cameron Williomson",
-		"$role":          "Head of Marketing",
-		"$company":       "Freshworks",
-		"$country":       "Australia",
-		"$session_count": "8",
+		"$name":               "Cameron Williomson",
+		"$company":            "Freshworks",
+		"$country":            "Australia",
+		"$session_count":      "8",
+		"$session_spent_time": "500",
+		"$page_count":         "10",
 	}
 	propertiesJSON, err := json.Marshal(props)
 	if err != nil {
@@ -211,7 +217,6 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 
 	t.Run("Success", func(t *testing.T) {
 		w := sendGetProfileUserDetailsRequest(r, project.ID, agent, userId, isAnonymous)
-		// log.Fatal("Output::", w)
 		assert.Equal(t, http.StatusOK, w.Code)
 		jsonResponse, _ := ioutil.ReadAll(w.Body)
 		resp := &model.ContactDetails{}
@@ -220,10 +225,11 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 		assert.Equal(t, resp.UserId, userId)
 		assert.Contains(t, resp.Name, "Cameron")
 		assert.Equal(t, resp.Company, "Freshworks")
-		assert.Contains(t, resp.Role, "Head")
 		assert.Equal(t, resp.Email, customerEmail)
 		assert.Equal(t, resp.Country, "Australia")
-		assert.Equal(t, resp.WebSessionsCount, uint64(8))
+		assert.Equal(t, resp.WebSessionsCount, uint32(8))
+		assert.Equal(t, resp.NumberOfPageViews, uint32(10))
+		assert.Equal(t, resp.TimeSpentOnSite, uint32(500))
 		assert.NotNil(t, resp.GroupInfos)
 		assert.Condition(t, func() bool { return len(resp.GroupInfos) <= 4 })
 		assert.Equal(t, resp.GroupInfos[0].GroupName, model.GROUP_NAME_HUBSPOT_COMPANY)

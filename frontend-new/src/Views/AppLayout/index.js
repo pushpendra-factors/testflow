@@ -48,6 +48,7 @@ import Touchpoints from '../Settings/ProjectConfigure/Touchpoints';
 import CustomKPI from '../Settings/ProjectConfigure/CustomKPI';
 import { EMPTY_ARRAY } from '../../utils/global';
 import UserProfiles from '../../components/Profile/UserProfiles';
+import { fetchProfileUsers } from '../../reducers/timeline';
 
 const whiteListedAccounts = ['solutions@factors.ai'];
 
@@ -133,6 +134,7 @@ function AppLayout({
       dispatch(fetchSmartPropertyRules(active_project.id));
       fetchWeeklyIngishtsMetaData(active_project.id);
       dispatch(fetchAttrContentGroups(active_project.id));
+      dispatch(fetchProfileUsers(active_project.id))
     }
   }, [dispatch, active_project]);
 
