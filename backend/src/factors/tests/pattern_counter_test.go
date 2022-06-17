@@ -7,6 +7,7 @@ import (
 	U "factors/util"
 	"fmt"
 	"math"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -2231,4 +2232,78 @@ func TestCountPatternsWithSameTimeStamp4(t *testing.T) {
 		assert.Equal(t, uint(2), v.TotalUserCount, txt)
 
 	}
+}
+
+func TestCountPatternWithProperties(t *testing.T) {
+	// project, err := SetupProjectReturnDAO()
+	projectId := uint64(1)
+	var cAlgoProps P.CountAlgoProperties
+	cAlgoProps.Counting_version = 3
+	cAlgoProps.Hmine_support = 0.0001
+	cAlgoProps.Hmine_persist = 0
+	shouldCountOccurence := false
+
+	p1, _ := P.NewPattern([]string{"$session", "$form_submitted"}, nil)
+	// p2, _ := P.NewPattern([]string{"$form_submitted", "$session"}, nil)
+
+	patterns := []*P.Pattern{p1}
+	file, err := os.Open("./data/events_test.txt")
+	assert.Nil(t, err)
+	scanner := bufio.NewScanner(file)
+
+	err = P.CountPatterns(projectId, scanner, patterns, shouldCountOccurence, cAlgoProps)
+	assert.Nil(t, err)
+
+	var patsSlice []string = make([]string, 0)
+	for _, p := range patterns {
+		channel_count := 0
+		for _, pats := range p.EventPropertiesPatterns {
+			pats_string := strings.Join(pats.Items, "_")
+			if strings.Contains(pats_string, "$channel") {
+				fmt.Println(pats_string)
+				channel_count += 1
+			}
+			patsSlice = append(patsSlice, pats_string)
+		}
+		assert.Equal(t, 6, channel_count)
+
+	}
+
+	p := patterns[0]
+	eps := p.PerUserCount
+	assert.Equal(t, uint(1), eps, fmt.Sprintf("count of %v", p.EventNames))
+
+}
+
+func TestPatternPropertyKeyNumerical(t *testing.T) {
+
+	key := "A"
+	val := float64(0.0045)
+	tString := P.PatternPropertyKeyValueNumerical(key, val)
+	assert.Equal(t, "A::0.0045", tString)
+	val = float64(0.00000045)
+	tString = P.PatternPropertyKeyValueNumerical(key, val)
+	assert.Equal(t, "A::0.00000045", tString)
+
+}
+
+func TestPatternPropertyKeyCategorical(t *testing.T) {
+
+	key := "Country"
+	categoricalValue := "US"
+	tString := P.PatternPropertyKeyCategorical(key, categoricalValue)
+	assert.Equal(t, "Country::US", tString)
+
+}
+
+func TestPropertyCategoricalValue(t *testing.T) {
+
+	propKV := []string{"0.$Country::US", "1.$PageView::0.045"}
+	pK, pV := P.PropertySplitKeyValue(propKV[0])
+	assert.Equal(t, pK, "0.$Country")
+	assert.Equal(t, pV, "US")
+	pK, pV = P.PropertySplitKeyValue(propKV[1])
+	assert.Equal(t, pK, "1.$PageView")
+	assert.Equal(t, pV, "0.045")
+
 }

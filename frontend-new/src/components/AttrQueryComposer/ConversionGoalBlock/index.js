@@ -161,7 +161,6 @@ const ConversionGoalBlock = ({
         insertFilter={addFilter}
         closeFilter={closeFilter}
         refValue={index}
-        showORFilter = {true}
       ></EventFilterWrapper>
     );
   };

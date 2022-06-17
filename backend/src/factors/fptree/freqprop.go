@@ -160,7 +160,8 @@ func (fp *FrequentPropertiesStruct) GetPropertiesOfType(propType string) ([]stri
 	var propNames = make([]string, 0)
 	for pnt, _ := range fp.PropertyMap {
 		if pnt.PropertyType == propType {
-			propNames = append(propNames, pnt.PropertyName)
+			prNameWithoutIndex := U.FormatProperty(pnt.PropertyName)
+			propNames = append(propNames, prNameWithoutIndex)
 		}
 	}
 	return propNames, nil
@@ -172,7 +173,8 @@ func (fp *FrequentPropertiesStruct) GetPropertiesWithCount(propType string) map[
 		if itemset.PropertyMapType.PropertyType == propType || propType == "all" {
 			if len(itemset.PropertyMapType.PropertyMap) == 1 {
 				for key, _ := range itemset.PropertyMapType.PropertyMap {
-					propertyCountMap[key] = uint64(itemset.Frequency)
+					key_val := U.FormatProperty(key)
+					propertyCountMap[key_val] += uint64(itemset.Frequency)
 				}
 			}
 		}

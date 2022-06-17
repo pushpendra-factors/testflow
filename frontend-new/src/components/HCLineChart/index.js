@@ -4,20 +4,14 @@ import moment from 'moment';
 import Highcharts from 'highcharts';
 
 import { Text, Number as NumFormat } from '../factorsComponents';
-import {
-  high_charts_default_spacing,
-  METRIC_TYPES
-} from '../../utils/constants';
+import { high_charts_default_spacing } from '../../utils/constants';
 import LegendsCircle from '../../styles/components/LegendsCircle';
 import TopLegends from '../GroupedBarChart/TopLegends';
-import {
-  addQforQuarter,
-  generateColors,
-  formatDuration
-} from '../../utils/dataFormatter';
+import { addQforQuarter, generateColors } from '../../utils/dataFormatter';
 import { getDateFormatForTimeSeriesChart } from '../../utils/chart.helpers';
 import styles from './styles.module.scss';
 import { get } from 'lodash';
+import { getFormattedKpiValue } from '../../Views/CoreQuery/KPIAnalysis/kpiAnalysis.helpers';
 
 function LineChart({
   categories,
@@ -109,8 +103,13 @@ function LineChart({
                   weight="bold"
                   extraClass="text-base mb-0"
                 >
-                  {metricType === METRIC_TYPES.dateType ? (
-                    <div className="number">{formatDuration(this.point.y)}</div>
+                  {metricType ? (
+                    <div className="number">
+                      {getFormattedKpiValue({
+                        value: this.point.y,
+                        metricType
+                      })}
+                    </div>
                   ) : (
                     <NumFormat className="number" number={this.point.y} />
                   )}

@@ -177,7 +177,8 @@ const EventGroupBlock = ({
             <SVG name={groupByEvent.prop_category} size={16} color={'purple'} />
           }
           type={'link'}
-        >
+          className={`fa-button--truncate fa-button--truncate-xs btn-left-round filter-buttons-margin`}
+          >
           {propName}
         </Button>
         <div className={styles.group_block__event_selector}>
@@ -196,6 +197,7 @@ const EventGroupBlock = ({
             <SVG name={groupByEvent.prop_category} size={16} color={'purple'} />
           }
           type={'link'}
+          className={`fa-button--truncate fa-button--truncate-xs btn-left-round filter-buttons-margin`}
           onClick={() => setGroupByDDVisible(true)}
         >
           {propName}
@@ -220,22 +222,22 @@ const EventGroupBlock = ({
 
   return (
     <div className={`flex items-center relative w-full`}>
-      <Button
-        type='text'
-        onClick={() => delGroupState(groupByEvent)}
-        size={'small'}
-        className={`fa-btn--custom mr-1`}
-      >
-        <SVG name={'remove'} />
-      </Button>
       <Text level={8} type={'title'} extraClass={'m-0 mr-2'} weight={'thin'}>
-        {grpIndex < 1 ? 'Breakdown' : '...and'}
+        {grpIndex >= 1 ? 'and' : 'Breakdown'}
       </Text>
       {groupByEvent && groupByEvent.property ? (
         renderGroupContent()
       ) : (
         <>{renderGroupBySelect()}</>
       )}
+      <Button
+        type='text'
+        onClick={() => delGroupState(groupByEvent)}
+        size={'small'}
+        className={`fa-btn--custom filter-buttons-margin btn-right-round filter-remove-button`}
+        >
+        <SVG name={'remove'} />
+      </Button>
     </div>
   );
 };

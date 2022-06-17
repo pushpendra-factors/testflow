@@ -160,7 +160,6 @@ function ProfileBlock({
         insertFilter={insertFilters}
         closeFilter={closeFilter}
         refValue={refValue}
-        showORFilter = {true}
       ></ProfileFilterWrapper>
     );
   };

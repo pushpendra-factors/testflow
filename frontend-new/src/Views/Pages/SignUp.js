@@ -10,6 +10,7 @@ import factorsai from 'factorsai';
 import Congrats from './Congrats';
 import MoreAuthOptions from './MoreAuthOptions';
 import { SSO_SIGNUP_URL } from '../../utils/sso';
+import sanitizeInputString from 'Utils/sanitizeInputString';
 
 function SignUp({ signup }) {
   const [form] = Form.useForm();
@@ -40,14 +41,18 @@ function SignUp({ signup }) {
   const SignUpFn = () => {
     setDataLoading(true);
     form.validateFields().then((values) => {
-        setDataLoading(true);
-
-        //Factors SIGNUP tracking
-        factorsai.track('SIGNUP',{'first_name':values?.first_name,'email':values?.email});
+        setDataLoading(true); 
         
-        let data = {...values, 'last_name': ''};
+        let sanitizedValues = {
+            ...values,
+            first_name: sanitizeInputString(values?.first_name), 
+            'last_name': ''
+          }
+        //Factors SIGNUP tracking
+        factorsai.track('SIGNUP',{'first_name':sanitizedValues?.first_name,'email':sanitizedValues?.email}); 
+        
         const filteredValues = Object.fromEntries(
-        Object.entries(data).filter(([key, value]) => key !== 'terms_and_conditions') );
+        Object.entries(sanitizedValues).filter(([key, value]) => key !== 'terms_and_conditions') );
         
         signup(filteredValues).then(() => {
             setDataLoading(false);

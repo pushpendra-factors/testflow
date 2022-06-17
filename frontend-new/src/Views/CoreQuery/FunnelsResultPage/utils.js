@@ -392,7 +392,7 @@ export const getTableColumns = (
   const eventColumns = queries.map((_, index) => {
     const queryColumn = {
       title: arrayMapper[index].displayName,
-      className: 'bg-white'
+      className: 'bg-white tableParentHeader'
     };
 
     const percentCol = {
@@ -547,9 +547,19 @@ export const getTableData = (
       comparisonChartDurations
     );
     queries.forEach((_, index) => {
-      const percent = data[index].value;
-      const compare_percent =
-        comparisonChartData && comparisonChartData[index].value;
+      console.log(index);
+      console.log(data);
+      const percent = !index
+        ? 100
+        : calculatePercentage(data[index].netCount, data[index - 1].netCount);
+      const compare_percent = comparisonChartData
+        ? !index
+          ? 100
+          : calculatePercentage(
+            comparisonChartData[index].netCount,
+            comparisonChartData[index - 1].netCount
+          )
+        : null;
       const count = data[index].netCount;
       const compare_count =
         comparisonChartData && comparisonChartData[index].netCount;
@@ -600,10 +610,33 @@ export const getTableData = (
       }
     ];
   } else {
-    const appliedGroups = groups.filter(
+    const appliedGroups = groups.map((group) => {
+      const eventPercentages = arrayMapper.reduce(
+        (agg, currentItem, currentIndex) => {
+          const prevItem = arrayMapper[currentIndex - 1];
+          return {
+            ...agg,
+            [`${currentItem.displayName}-${currentIndex}-percent`]:
+              !currentIndex
+                ? 100
+                : calculatePercentage(
+                  group[`${currentItem.displayName}-${currentIndex}-count`],
+                  group[`${prevItem.displayName}-${currentIndex - 1}-count`]
+                )
+          };
+        },
+        {}
+      );
+      return {
+        ...group,
+        ...eventPercentages
+      };
+    });
+    const filteredGroups = appliedGroups.filter(
       (elem) => elem.name.toLowerCase().indexOf(searchText.toLowerCase()) > -1
     );
-    return SortResults(appliedGroups, currentSorter);
+
+    return SortResults(filteredGroups, currentSorter);
   }
 };
 

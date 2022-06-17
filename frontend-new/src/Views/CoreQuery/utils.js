@@ -257,57 +257,157 @@ const getProfileWithProperties = (queries) => {
 
 const getGlobalFilters = (globalFilters = []) => {
   const filterProps = [];
-  globalFilters.forEach((fil) => {
-    if (Array.isArray(fil.values)) {
-      fil.values.forEach((val, index) => {
+  const filtersGroupedByRef = Object.values(groupFilters(globalFilters, 'ref'));
+  filtersGroupedByRef.forEach((filtersGr)=>{
+    if(filtersGr.length == 1){
+        const fil = filtersGr[0];
+        if (Array.isArray(fil.values)) {
+          fil.values.forEach((val, index) => {
+            filterProps.push({
+              en: 'user_g',
+              lop: !index ? 'AND' : 'OR',
+              op: operatorMap[fil.operator],
+              pr: fil.props[0],
+              ty: fil.props[1],
+              va: fil.props[1] === 'datetime' ? val : val
+            });
+          });
+        } else {
+          filterProps.push({
+            en: 'user_g',
+            lop: 'AND',
+            op: operatorMap[fil.operator],
+            pr: fil.props[0],
+            ty: fil.props[1],
+            va: fil.props[1] === 'datetime' ? fil.values : fil.values
+          });
+        }
+    }
+    else{
+      let fil = filtersGr[0];
+      if (Array.isArray(fil.values)) {
+        fil.values.forEach((val, index) => {
+          filterProps.push({
+            en: 'user_g',
+            lop: !index ? 'AND' : 'OR',
+            op: operatorMap[fil.operator],
+            pr: fil.props[0],
+            ty: fil.props[1],
+            va: fil.props[1] === 'datetime' ? val : val
+          });
+        });
+      } else {
         filterProps.push({
           en: 'user_g',
-          lop: !index ? 'AND' : 'OR',
+          lop: 'AND',
           op: operatorMap[fil.operator],
           pr: fil.props[0],
           ty: fil.props[1],
-          va: fil.props[1] === 'datetime' ? val : val,
+          va: fil.props[1] === 'datetime' ? fil.values : fil.values
         });
-      });
-    } else {
-      filterProps.push({
-        en: 'user_g',
-        lop: 'AND',
-        op: operatorMap[fil.operator],
-        pr: fil.props[0],
-        ty: fil.props[1],
-        va: fil.props[1] === 'datetime' ? fil.values : fil.values,
-      });
+      }
+      fil = filtersGr[1];
+      if (Array.isArray(fil.values)) {
+        fil.values.forEach((val, index) => {
+          filterProps.push({
+            en: 'user_g',
+            lop:'OR',
+            op: operatorMap[fil.operator],
+            pr: fil.props[0],
+            ty: fil.props[1],
+            va: fil.props[1] === 'datetime' ? val : val
+          });
+        });
+      } else {
+        filterProps.push({
+          en: 'user_g',
+          lop:'OR',
+          op: operatorMap[fil.operator],
+          pr: fil.props[0],
+          ty: fil.props[1],
+          va: fil.props[1] === 'datetime' ? fil.values : fil.values
+        });
+      }
     }
-  });
+  })
   return filterProps;
 };
 
 const getGlobalProfileFilters = (globalFilters = []) => {
   const filterProps = [];
-  globalFilters.forEach((fil) => {
-    if (Array.isArray(fil.values)) {
-      fil.values.forEach((val, index) => {
+  const filtersGroupedByRef = Object.values(groupFilters(globalFilters, 'ref'));
+  filtersGroupedByRef.forEach((filtersGr)=>{
+    if(filtersGr.length == 1){
+        const fil = filtersGr[0];
+        if (Array.isArray(fil.values)) {
+          fil.values.forEach((val, index) => {
+            filterProps.push({
+              en: 'user',
+              lop: !index ? 'AND' : 'OR',
+              op: operatorMap[fil.operator],
+              pr: fil.props[0],
+              ty: fil.props[1],
+              va: fil.props[1] === 'datetime' ? val : val
+            });
+          });
+        } else {
+          filterProps.push({
+            en: 'user',
+            lop: 'AND',
+            op: operatorMap[fil.operator],
+            pr: fil.props[0],
+            ty: fil.props[1],
+            va: fil.props[1] === 'datetime' ? fil.values : fil.values
+          });
+        }
+    }
+    else{
+      let fil = filtersGr[0];
+      if (Array.isArray(fil.values)) {
+        fil.values.forEach((val, index) => {
+          filterProps.push({
+            en: 'user',
+            lop: !index ? 'AND' : 'OR',
+            op: operatorMap[fil.operator],
+            pr: fil.props[0],
+            ty: fil.props[1],
+            va: fil.props[1] === 'datetime' ? val : val
+          });
+        });
+      } else {
         filterProps.push({
           en: 'user',
-          lop: !index ? 'AND' : 'OR',
+          lop: 'AND',
           op: operatorMap[fil.operator],
           pr: fil.props[0],
           ty: fil.props[1],
-          va: fil.props[1] === 'datetime' ? val : val,
+          va: fil.props[1] === 'datetime' ? fil.values : fil.values
         });
-      });
-    } else {
-      filterProps.push({
-        en: 'user',
-        lop: 'AND',
-        op: operatorMap[fil.operator],
-        pr: fil.props[0],
-        ty: fil.props[1],
-        va: fil.props[1] === 'datetime' ? fil.values : fil.values,
-      });
+      }
+      fil = filtersGr[1];
+      if (Array.isArray(fil.values)) {
+        fil.values.forEach((val, index) => {
+          filterProps.push({
+            en: 'user',
+            lop:'OR',
+            op: operatorMap[fil.operator],
+            pr: fil.props[0],
+            ty: fil.props[1],
+            va: fil.props[1] === 'datetime' ? val : val
+          });
+        });
+      } else {
+        filterProps.push({
+          en: 'user',
+          lop:'OR',
+          op: operatorMap[fil.operator],
+          pr: fil.props[0],
+          ty: fil.props[1],
+          va: fil.props[1] === 'datetime' ? fil.values : fil.values
+        });
+      }
     }
-  });
+  })
   return filterProps;
 };
 
@@ -1020,8 +1120,10 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
   const globalFilters = [];
 
   if (requestQuery && requestQuery.gup && Array.isArray(requestQuery.gup)) {
+    let ref=-1,lastProp='',lastOp='';
     requestQuery.gup.forEach((pr) => {
       if (pr.lop === 'AND') {
+        ref+=1;
         globalFilters.push({
           operator:
             pr.ty === 'datetime'
@@ -1029,9 +1131,26 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
               : reverseOperatorMap[pr.op],
           props: [pr.pr, pr.ty, pr.en],
           values: [pr.va],
+          ref
         });
-      } else {
+        lastProp=pr.pr;
+        lastOp=pr.op;
+      }
+      else if(lastProp===pr.pr && lastOp===pr.op){
         globalFilters[globalFilters.length - 1].values.push(pr.va);
+      } 
+      else{
+        globalFilters.push({
+          operator:
+            pr.ty === 'datetime'
+              ? reverseDateOperatorMap[pr.op]
+              : reverseOperatorMap[pr.op],
+          props: [pr.pr, pr.ty, pr.en],
+          values: [pr.va],
+          ref
+        });
+        lastProp=pr.pr;
+        lastOp=pr.op;        
       }
     });
   }
@@ -1212,29 +1331,77 @@ export const getFilters = (filters) => {
 
 const getFiltersTouchpoints = (filters, touchpoint) => {
   const result = [];
-  filters.forEach((filter) => {
-    if (filter.props[1] !== 'categorical') {
-      result.push({
-        attribution_key: touchpoint,
-        lop: 'AND',
-        op: operatorMap[filter.operator],
-        pr: filter.props[0],
-        ty: filter.props[1],
-        va: filter.props[1] === 'datetime' ? filter.values : filter.values,
-      });
+  const filtersGroupedByRef = Object.values(groupFilters(filters, 'ref'));
+  filtersGroupedByRef.forEach((filtersGr)=>{
+    if(filtersGr.length == 1){
+        const fil = filtersGr[0];
+        if (Array.isArray(fil.values)) {
+          fil.values.forEach((val, index) => {
+            result.push({
+              attribution_key: touchpoint,
+              lop: !index ? 'AND' : 'OR',
+              op: operatorMap[fil.operator],
+              pr: fil.props[0],
+              ty: fil.props[1],
+              va: val
+            });
+          });
+        } else {
+          result.push({
+            attribution_key: touchpoint,
+            lop: 'AND',
+            op: operatorMap[fil.operator],
+            pr: fil.props[0],
+            ty: fil.props[1],
+            va: fil.props[1] === 'datetime' ? fil.values : fil.values,
+          });
+        }
     }
-
-    if (filter.props[1] === 'categorical') {
-      filter.values.forEach((value, index) => {
+    else{
+      let fil = filtersGr[0];
+      if (Array.isArray(fil.values)) {
+        fil.values.forEach((val, index) => {
+          result.push({
+            attribution_key: touchpoint,
+            lop: !index ? 'AND' : 'OR',
+            op: operatorMap[fil.operator],
+            pr: fil.props[0],
+            ty: fil.props[1],
+            va: val
+          });
+        });
+      } else {
         result.push({
           attribution_key: touchpoint,
-          lop: !index ? 'AND' : 'OR',
-          op: operatorMap[filter.operator],
-          pr: filter.props[0],
-          ty: filter.props[1],
-          va: value,
+          lop: 'AND',
+          op: operatorMap[fil.operator],
+          pr: fil.props[0],
+          ty: fil.props[1],
+          va: fil.props[1] === 'datetime' ? fil.values : fil.values,
         });
-      });
+      }
+      fil = filtersGr[1];
+      if (Array.isArray(fil.values)) {
+        fil.values.forEach((val) => {
+          result.push({
+            attribution_key: touchpoint,
+            lop: 'OR',
+            op: operatorMap[fil.operator],
+            pr: fil.props[0],
+            ty: fil.props[1],
+            va: val
+          });
+        });
+      } else {
+        result.push({
+          attribution_key: touchpoint,
+          lop: 'OR',
+          op: operatorMap[fil.operator],
+          pr: fil.props[0],
+          ty: fil.props[1],
+          va: fil.props[1] === 'datetime' ? fil.values : fil.values,
+        });
+      }
     }
   });
   return result;
@@ -1390,8 +1557,10 @@ export const getAttributionStateFromRequestQuery = (
 
   const touchPointFilters = [];
   if (requestQuery.attribution_key_f) {
+    let ref=-1,lastProp='',lastOp='';
     requestQuery.attribution_key_f.forEach((pr) => {
       if (pr.lop === 'AND') {
+        ref+=1;
         const val = pr.ty === 'categorical' ? [pr.va] : pr.va;
         touchPointFilters.push({
           operator:
@@ -1400,12 +1569,31 @@ export const getAttributionStateFromRequestQuery = (
               : reverseOperatorMap[pr.op],
           props: [pr.pr, pr.ty, pr.attribution_key],
           values: val,
+          ref
         });
-      } else if (pr.ty === 'categorical') {
+        lastProp=pr.pr;
+        lastOp=pr.op;
+      }
+      else if(lastProp===pr.pr && lastOp===pr.op){
         touchPointFilters[touchPointFilters.length - 1].values.push(pr.va);
+      } 
+      else{
+        const val = pr.ty === 'categorical' ? [pr.va] : pr.va;
+        touchPointFilters.push({
+          operator:
+            pr.ty === 'datetime'
+              ? reverseDateOperatorMap[pr.op]
+              : reverseOperatorMap[pr.op],
+          props: [pr.pr, pr.ty, pr.attribution_key],
+          values: val,
+          ref
+        });
+        lastProp=pr.pr;
+        lastOp=pr.op;   
       }
     });
   }
+
 
   const touchpoint = requestQuery.attribution_key;
   const attr_dimensions = initial_attr_dimensions.map((dimension) => {
@@ -1629,8 +1817,10 @@ export const getProfileQueryFromRequestQuery = (requestQuery) => {
 
   const filters = [];
   if (requestQuery && requestQuery.gup && Array.isArray(requestQuery.gup)) {
+    let ref=-1,lastProp='',lastOp='';
     requestQuery.gup.forEach((pr) => {
       if (pr.lop === 'AND') {
+        ref+=1;
         filters.push({
           operator:
             pr.ty === 'datetime'
@@ -1638,9 +1828,26 @@ export const getProfileQueryFromRequestQuery = (requestQuery) => {
               : reverseOperatorMap[pr.op],
           props: [pr.pr, pr.ty, pr.en],
           values: [pr.va],
+          ref
         });
-      } else {
+        lastProp=pr.pr;
+        lastOp=pr.op;
+      }
+      else if(lastProp===pr.pr && lastOp===pr.op){
         filters[filters.length - 1].values.push(pr.va);
+      } 
+      else{
+        filters.push({
+          operator:
+            pr.ty === 'datetime'
+              ? reverseDateOperatorMap[pr.op]
+              : reverseOperatorMap[pr.op],
+          props: [pr.pr, pr.ty, pr.en],
+          values: [pr.va],
+          ref
+        });
+        lastProp=pr.pr;
+        lastOp=pr.op;        
       }
     });
   }
@@ -1773,15 +1980,14 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
   // const globalFilters = [];
 
   const filters = [];
-
+  let ref=-1,lastProp='',lastOp='';
   requestQuery.gFil.forEach((pr) => {
     if (pr.lOp === 'AND') {
+      ref+=1;
       const val = pr.prDaTy === FILTER_TYPES.CATEGORICAL ? [pr.va] : pr.va;
-
       const DNa = startCase(pr.prNa);
-
-      const isCamp = requestQuery?.qG[0]?.ca === 'channels' ? pr.objTy : pr.en;
-
+      const isCamp =
+        requestQuery?.qG[0]?.ca === 'channels' ? pr.objTy : pr.en;
       filters.push({
         operator:
           pr.prDaTy === 'datetime'
@@ -1793,9 +1999,33 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
             ? convertDateTimeObjectValuesToMilliSeconds(val)
             : val,
         extra: [DNa, pr.prNa, pr.prDaTy, isCamp],
+        ref
       });
-    } else if (pr.prDaTy === FILTER_TYPES.CATEGORICAL) {
+      lastProp=pr.prNa;
+      lastOp=pr.co;
+    } else if (lastProp===pr.prNa && lastOp===pr.co) {
       filters[filters.length - 1].values.push(pr.va);
+    }
+    else{
+      const val = pr.prDaTy === 'categorical' ? [pr.va] : pr.va;
+      const DNa = startCase(pr.prNa);
+      const isCamp =
+        requestQuery?.qG[0]?.ca === 'channels' ? pr.objTy : pr.en;
+        filters.push({
+        operator:
+          pr.prDaTy === 'datetime'
+            ? reverseDateOperatorMap[pr.co]
+            : reverseOperatorMap[pr.co],
+        props: [DNa, pr.prDaTy, isCamp],
+        values:
+          pr.prDaTy === FILTER_TYPES.DATETIME
+            ? convertDateTimeObjectValuesToMilliSeconds(val)
+            : val,
+        extra: [DNa, pr.prNa, pr.prDaTy, isCamp],
+        ref
+      });
+      lastProp=pr.prNa;
+      lastOp=pr.co;
     }
   });
 

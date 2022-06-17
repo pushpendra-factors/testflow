@@ -224,7 +224,6 @@ function QueryBlock({
         closeFilter={closeFilter}
         selectedMainCategory={selectedMainCategory}
         refValue={index}
-        showORFilter = {true}
       ></EventFilterWrapper>
     );
   };

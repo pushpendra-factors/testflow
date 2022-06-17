@@ -126,8 +126,7 @@ const GoogleIntegration = ({
     } else setIsStatus('');
 
     if(isIntAdwordsEnabled()){
-    renderSettingInfo();
-    if (window.location.href.indexOf(ADWORDS_INTERNAL_REDIRECT_URI) > -1) {
+      if (window.location.href.indexOf(ADWORDS_INTERNAL_REDIRECT_URI) > -1) {
         setShowURLModal(true); 
       }
     }
@@ -281,7 +280,7 @@ const GoogleIntegration = ({
           setLoadingData(false);
         })
         .catch((error) => {
-          message.error('Error while fetch Google Ads Customer Accounts.');
+          message.error('Error while fetching Google Ads Customer Accounts.');
           setLoadingData(false);
         });
     }

@@ -65,6 +65,30 @@ func RemoveGroupEventNamesOnUserEventNames(categoryToEventNames map[string][]str
 	return categoryToEventNames
 }
 
+func RemoveLabeledEventNamesFromOtherUserEventNames(categoryToEventNames map[string][]string) map[string][]string {
+	for category, eventNames := range categoryToEventNames {
+		flag := false
+		for _, tempCategory := range U.CRM_USER_EVENT_NAME_LABELS {
+			if tempCategory == category {
+				flag = true
+				break
+			}
+		}
+
+		if !flag {
+			tempString := make([]string, 0)
+			for _, eventName := range eventNames {
+				_, isPresent := U.CRM_USER_EVENT_NAME_LABELS[eventName]
+				if !isPresent {
+					tempString = append(tempString, eventName)
+				}
+			}
+			categoryToEventNames[category] = tempString
+		}
+	}
+	return categoryToEventNames
+}
+
 // GetEventNamesHandler godoc
 // @Summary Te fetch event names for a given project id.
 // @Tags Events
@@ -148,6 +172,21 @@ func GetEventNamesByUserHandler(c *gin.Context) {
 
 	eventNames = RemoveGroupEventNamesOnUserEventNames(eventNames)
 
+	// labeled the non group user event names
+
+	tempEventNames := make(map[string][]string)
+	for category, userEventNames := range eventNames {
+		tempEventNames[category] = userEventNames
+		for _, eventName := range userEventNames {
+			if _, ok := U.CRM_USER_EVENT_NAME_LABELS[eventName]; ok {
+				category := U.CRM_USER_EVENT_NAME_LABELS[eventName]
+				tempEventNames[category] = append(tempEventNames[category], eventName)
+			}
+		}
+	}
+	eventNames = tempEventNames
+	eventNames = RemoveLabeledEventNamesFromOtherUserEventNames(eventNames)
+
 	_, displayNames := store.GetStore().GetDisplayNamesForAllEvents(projectId)
 	displayNameEvents := GetDisplayEventNamesHandler(displayNames)
 
@@ -157,6 +196,7 @@ func GetEventNamesByUserHandler(c *gin.Context) {
 		return
 	}
 
+	// all groups event names added to the api response
 	for _, group := range groups {
 		for key := range U.GROUP_EVENT_NAME_TO_GROUP_NAME_MAPPING {
 			groupName := U.GROUP_EVENT_NAME_TO_GROUP_NAME_MAPPING[key]

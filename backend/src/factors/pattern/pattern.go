@@ -444,8 +444,8 @@ func FilterCategoricalProperties(projectID uint64, eventName string,
 		propertyType := store.GetStore().GetPropertyTypeByKeyValue(projectID, eventName, key, value, isUserProperty)
 		if propertyType == U.PropertyTypeCategorical {
 			categoricalValue := U.GetPropertyValueAsString(value)
-			categoricalValue = clipCategoricalValue(categoricalValue)
-			catValueString := strings.Join([]string{key, categoricalValue}, "::")
+			key_with_index := PatternPropertyKey(eventIndex, key)
+			catValueString := PatternPropertyKeyCategorical(key_with_index, categoricalValue)
 			catProperties = append(catProperties, catValueString)
 
 		}
@@ -467,6 +467,25 @@ func AddNumericAndCategoricalProperties(projectID uint64, eventName string,
 			cMap[PatternPropertyKey(eventIndex, key)] = categoricalValue
 		}
 	}
+}
+
+func AddNumericAndCategoricalPropertiesToHmine(
+	nMap map[string]float64, cMap map[string]string) []string {
+
+	props := make([]string, 0)
+	for nKey, nVal := range nMap {
+		kvAsString := PatternPropertyKeyValueNumerical(nKey, nVal)
+		props = append(props, kvAsString)
+	}
+
+	for cKey, cValue := range cMap {
+
+		kvAsString := PatternPropertyKeyCategorical(cKey, cValue)
+		props = append(props, kvAsString)
+	}
+
+	return props
+
 }
 
 // If data is visualized in below format, where U(.) are users, E(.) are events,
@@ -591,33 +610,6 @@ func (p *Pattern) CountForEvent(projectID uint64, userId string,
 		pLen := len(p.EventNames)
 		if p.waitIndex == pLen {
 			p.currentUserOccurrenceCount += 1
-
-			// Record the pattern occurrence.
-			if shouldCountOccurence {
-				p.PerOccurrenceCount += 1
-
-				// Update properties histograms.
-				if p.PerOccurrenceEventNumericProperties != nil {
-					if err := p.PerOccurrenceEventNumericProperties.AddMap(p.currentEPropertiesNMap); err != nil {
-						return err
-					}
-				}
-				if p.PerOccurrenceEventCategoricalProperties != nil {
-					if err := p.PerOccurrenceEventCategoricalProperties.AddMap(p.currentEPropertiesCMap); err != nil {
-						return err
-					}
-				}
-				if p.PerOccurrenceUserNumericProperties != nil {
-					if err := p.PerOccurrenceUserNumericProperties.AddMap(p.currentUPropertiesNMap); err != nil {
-						return err
-					}
-				}
-				if p.PerOccurrenceUserCategoricalProperties != nil {
-					if err := p.PerOccurrenceUserCategoricalProperties.AddMap(p.currentUPropertiesCMap); err != nil {
-						return err
-					}
-				}
-			}
 			if p.currentUserOccurrenceCount == 1 {
 				p.PerUserCount += 1
 
@@ -645,12 +637,10 @@ func (p *Pattern) CountForEvent(projectID uint64, userId string,
 						}
 					}
 				} else if countVersion == 3 {
-					var eventCatProperties_ []string = make([]string, 0)
-					var userCatProperties_ []string = make([]string, 0)
 
-					userCatProperties_ = FilterCategoricalProperties(projectID, eventName, p.waitIndex, userProperties, true)
-					eventCatProperties_ = FilterCategoricalProperties(projectID, eventName, p.waitIndex, eventProperties, false)
-					persistHmineProperties = false // set this to true if you need to write the properties to file for each pattern
+					eProps := AddNumericAndCategoricalPropertiesToHmine(p.currentEPropertiesNMap, p.currentEPropertiesCMap)
+					uProps := AddNumericAndCategoricalPropertiesToHmine(p.currentUPropertiesNMap, p.currentUPropertiesCMap)
+
 					if persistHmineProperties == true {
 						var basePathUserProps string
 						var basePathEventProps string
@@ -665,25 +655,24 @@ func (p *Pattern) CountForEvent(projectID uint64, userId string,
 						ptName := p.PropertiesBasePath
 						treePathEvent := path.Join(basePathEventProps, ptName)
 						treePathUser := path.Join(basePathUserProps, ptName)
-						if len(eventCatProperties_) > 0 {
-							Fp.WriteSinglePropertyToFile(treePathEvent, eventCatProperties_)
+						if len(eProps) > 0 {
+							Fp.WriteSinglePropertyToFile(treePathEvent, eProps)
 							p.numPropsEvent += 1
 						}
-						if len(userCatProperties_) > 0 {
-							Fp.WriteSinglePropertyToFile(treePathUser, userCatProperties_)
+						if len(uProps) > 0 {
+							Fp.WriteSinglePropertyToFile(treePathUser, uProps)
 							p.numPropsUser += 1
 						}
 					} else {
 
-						if len(eventCatProperties_) > 0 {
+						if len(eProps) > 0 {
+							p.EventProps = append(p.EventProps, eProps)
 							p.numPropsEvent += 1
-							p.EventProps = append(p.EventProps, eventCatProperties_)
 						}
 
-						if len(eventCatProperties_) > 0 {
+						if len(uProps) > 0 {
+							p.UserProps = append(p.UserProps, uProps)
 							p.numPropsUser += 1
-							p.UserProps = append(p.UserProps, userCatProperties_)
-
 						}
 					}
 
@@ -713,18 +702,19 @@ func (p *Pattern) GetPerUserCount(
 		return 0, fmt.Errorf(errorString)
 	}
 	if p.PatternVersion >= 2 {
-		//p.GenFrequentProperties()
+		p.GenFrequentProperties()
 
 		epf, upf := int(p.PerUserCount), int(p.PerUserCount)
 		var err error
-		for _, ecs := range patternConstraints {
+		for kIdx, ecs := range patternConstraints {
 
 			if len(ecs.EPCategoricalConstraints) != 0 {
 				pntv := Fp.PropertyMapType{}
 				pntv.PropertyType = "event"
 				PropMap := make(map[string]string)
 				for _, ccs := range ecs.EPCategoricalConstraints {
-					PropMap[ccs.PropertyName] = ccs.PropertyValue
+					key := PatternPropertyKey(kIdx, ccs.PropertyName)
+					PropMap[key] = ccs.PropertyValue
 				}
 				pntv.PropertyMap = PropMap
 				epf, err = p.FreqProps.GetFrequency(pntv)
@@ -739,7 +729,8 @@ func (p *Pattern) GetPerUserCount(
 				pntv.PropertyType = "user"
 				PropMap := make(map[string]string)
 				for _, ccs := range ecs.UPCategoricalConstraints {
-					PropMap[ccs.PropertyName] = ccs.PropertyValue
+					key := PatternPropertyKey(kIdx, ccs.PropertyName)
+					PropMap[key] = ccs.PropertyValue
 				}
 				pntv.PropertyMap = PropMap
 				epf, err = p.FreqProps.GetFrequency(pntv)
@@ -1023,7 +1014,7 @@ func (p *Pattern) GetPerUserEventPropertyValues(eventIndex int, propertyName str
 		// Return the ranges of the bin [min, max], in which the numeric values for the event property occurr.
 		return p.PerUserEventCategoricalProperties.GetBinValues(PatternPropertyKey(eventIndex, propertyName))
 	} else {
-		return p.FreqProps.GetPropertyValues(propertyName, "event")
+		return p.FreqProps.GetPropertyValues(PatternPropertyKey(eventIndex, propertyName), "event")
 	}
 }
 
@@ -1032,7 +1023,7 @@ func (p *Pattern) GetPerUserUserPropertyValues(eventIndex int, propertyName stri
 		// Return the ranges of the bin [min, max], in which the numeric values for the event property occurr.
 		return p.PerUserUserCategoricalProperties.GetBinValues(PatternPropertyKey(eventIndex, propertyName))
 	} else {
-		return p.FreqProps.GetPropertyValues(propertyName, "user")
+		return p.FreqProps.GetPropertyValues(PatternPropertyKey(eventIndex, propertyName), "user")
 	}
 }
 
@@ -1110,8 +1101,7 @@ func (p *Pattern) GenFrequentProperties() *Fp.FrequentPropertiesStruct {
 		fq.Frequency = int(cp.Count)
 
 		for _, pn := range cp.Items {
-			propkeyval := strings.Split(pn, "::")
-			pk, pv := propkeyval[0], propkeyval[1]
+			pk, pv := PropertySplitKeyValue(pn)
 			pnt := Fp.PropertyNameType{PropertyName: pk, PropertyType: "user"}
 			tmp.PropertyMap[pk] = pv
 			if _, ok := allProps[pnt]; !ok {
@@ -1122,8 +1112,7 @@ func (p *Pattern) GenFrequentProperties() *Fp.FrequentPropertiesStruct {
 			}
 		}
 		for _, pn := range cp.CondItem {
-			propkeyval := strings.Split(pn, "::")
-			pk, pv := propkeyval[0], propkeyval[1]
+			pk, pv := PropertySplitKeyValue(pn)
 			pnt := Fp.PropertyNameType{PropertyName: pk, PropertyType: "user"}
 			tmp.PropertyMap[pk] = pv
 			if _, ok := allProps[pnt]; !ok {
@@ -1145,8 +1134,7 @@ func (p *Pattern) GenFrequentProperties() *Fp.FrequentPropertiesStruct {
 		fq.Frequency = int(cp.Count)
 
 		for _, pn := range cp.Items {
-			propkeyval := strings.Split(pn, "::")
-			pk, pv := propkeyval[0], propkeyval[1]
+			pk, pv := PropertySplitKeyValue(pn)
 			pnt := Fp.PropertyNameType{PropertyName: pk, PropertyType: "event"}
 			tmp.PropertyMap[pk] = pv
 			if _, ok := allProps[pnt]; !ok {
@@ -1157,8 +1145,7 @@ func (p *Pattern) GenFrequentProperties() *Fp.FrequentPropertiesStruct {
 			}
 		}
 		for _, pn := range cp.CondItem {
-			propkeyval := strings.Split(pn, "::")
-			pk, pv := propkeyval[0], propkeyval[1]
+			pk, pv := PropertySplitKeyValue(pn)
 			pnt := Fp.PropertyNameType{PropertyName: pk, PropertyType: "event"}
 			tmp.PropertyMap[pk] = pv
 			if _, ok := allProps[pnt]; !ok {

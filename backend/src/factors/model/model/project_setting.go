@@ -61,6 +61,7 @@ type ProjectSetting struct {
 	IntClearBit                   *bool           `gorm:"not null;default:false" json:"int_clear_bit,omitempty"`
 	IntAdwordsClientManagerMap    *postgres.Jsonb `json:"int_adwords_client_manager_map"`
 	ClearbitKey                   string          `json:"clearbit_key"`
+	LeadSquaredConfig             *postgres.Jsonb `json:"lead_squared_config"`
 }
 
 type AttributionConfig struct {
@@ -73,6 +74,14 @@ type AttributionKpis struct {
 	UserKpi []*postgres.Jsonb `json:"user_kpi"`
 	HsKpi   []*postgres.Jsonb `json:"hs_kpi"`
 	SfKpi   []*postgres.Jsonb `json:"sf_kpi"`
+}
+
+type LeadSquaredConfig struct {
+	Host            string `json:"host"`
+	AccessKey       string `json:"access_key"`
+	SecretKey       string `json:"secret_key"`
+	BigqueryDataset string `json:"bigquery_dataset"`
+	FirstTimeSync   bool   `json:"first_time_sync"`
 }
 
 const ProjectSettingKeyToken = "token"
