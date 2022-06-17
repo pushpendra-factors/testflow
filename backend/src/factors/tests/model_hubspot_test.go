@@ -3279,12 +3279,6 @@ func TestHubspotParallelProcessingByDocumentID(t *testing.T) {
 				EventName:      U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED,
 				EventNameIndex: 1,
 			},
-			{
-				Entity:         model.PropertyEntityUser,
-				Property:       "$hubspot_company_hs_lastmodifieddate",
-				EventName:      U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED,
-				EventNameIndex: 1,
-			},
 		},
 	}
 
@@ -3297,18 +3291,38 @@ func TestHubspotParallelProcessingByDocumentID(t *testing.T) {
 		p2, _ := U.GetPropertyValueAsFloat64(rows[j][2])
 		return p1 < p2
 	})
+
 	contactTimestamp := createdAt
-	companyTimestamp := createdAt
 	for i := 0; i < 10; i++ {
 		if i == 0 {
 			assert.Equal(t, fmt.Sprintf("%d", contactTimestamp.Unix()), rows[i][2])
-			assert.Equal(t, "$none", rows[0][3])
 		} else {
 			assert.Equal(t, fmt.Sprintf("%d", contactTimestamp.Unix()), rows[i][2])
-			assert.Equal(t, fmt.Sprintf("%d", companyTimestamp.Unix()), rows[i][3])
-			companyTimestamp = companyTimestamp.AddDate(0, 0, 1)
 		}
 		contactTimestamp = contactTimestamp.AddDate(0, 0, 1)
+	}
+
+	// Verfiying contact to company association
+	for i := 1; i <= 3; i++ {
+		companyID := int64(i)
+		companyContact := []int64{int64(i)}
+		contactIDS := []string{}
+		for i := range companyContact {
+			contactIDS = append(contactIDS, fmt.Sprintf("%d", companyContact[i]))
+		}
+		companyIDstring := fmt.Sprintf("%d", companyID)
+		companyDocuments, status := store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{companyIDstring}, model.HubspotDocumentTypeCompany, []int{model.HubspotDocumentActionCreated})
+
+		contactDocuments, status := store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, contactIDS, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated})
+		assert.Equal(t, http.StatusFound, status)
+		assert.Len(t, contactDocuments, 1)
+		for i := range contactDocuments {
+			contactUser, status := store.GetStore().GetUser(project.ID, contactDocuments[i].UserId)
+			assert.Equal(t, http.StatusFound, status)
+			// verify group_1_id is company unique id and group_1_user_id is company user_id
+			assert.Equal(t, true, assertUserGroupValueByColumnName(contactUser, "group_1_id", companyDocuments[0].ID))
+			assert.Equal(t, true, assertUserGroupValueByColumnName(contactUser, "group_1_user_id", companyDocuments[0].GroupUserId))
+		}
 	}
 
 	// query unqiue users and total events

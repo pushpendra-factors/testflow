@@ -1735,12 +1735,6 @@ func syncCompany(projectID uint64, document *model.HubspotDocument) int {
 		}
 	}
 
-	userPropertiesJsonb, err := U.EncodeToPostgresJsonb(&userProperties)
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to marshal company properties to Jsonb.")
-		return http.StatusInternalServerError
-	}
-
 	if len(company.ContactIds) == 0 {
 		logCtx.Warning("Skipped company sync. No contacts associated to company.")
 		// No sync_id as no event or user or one user property created.
@@ -1796,16 +1790,6 @@ func syncCompany(projectID uint64, document *model.HubspotDocument) int {
 				if contactUpdateCount > 100 {
 					continue
 				}
-
-				logCtx.WithFields(log.Fields{"total_contacts": len(contactIds)}).Info("Updating company contact properties.")
-				_, errCode := store.GetStore().UpdateUserPropertiesV2(projectID, contactUser.ID, userPropertiesJsonb,
-					contactUser.PropertiesUpdatedTimestamp+1, SDK.SourceHubspot, model.HubspotDocumentTypeNameCompany)
-				if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
-					logCtx.WithField("user_id", contactSyncEvent.UserId).Error(
-						"Failed to update user properites with company properties.")
-					isContactsUpdateFailed = true
-				}
-				contactUpdateCount++
 			}
 		}
 	}
