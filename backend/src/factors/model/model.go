@@ -635,7 +635,7 @@ type Model interface {
 	GetCRMSetting(projectID uint64) (*model.CRMSetting, int)
 	GetAllCRMSetting() ([]model.CRMSetting, int)
 	UpdateCRMSetting(projectID uint64, option model.CRMSettingOption) int
-	CreateOrUpdateCRMSetting(projectID uint64, crmSetting *model.CRMSetting) int
+	CreateOrUpdateCRMSettingHubspotEnrich(projectID uint64, isHeavy bool, maxCreatedAtSec *int64) int
 
 	// data availability checks
 	GetLatestDataStatus(integrations []string, project_id uint64, hardRefresh bool) (map[string]model.DataAvailabilityStatus, error)

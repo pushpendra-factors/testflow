@@ -4968,6 +4968,7 @@ func TestHubspotProjectDistributer(t *testing.T) {
 		"light_projects_count_threshold": 20,
 		"health_check_ping_id":           "",
 		"override_healthcheck_ping_id":   "",
+		"max_record_created_at":          time.Now().Unix(),
 	}
 
 	jobStatus, success := hubspot_enrich.RunHubspotProjectDistributer(config)
@@ -4999,7 +5000,7 @@ func TestHubspotProjectDistributer(t *testing.T) {
 	assert.Equal(t, true, crmSetting.HubspotEnrichHeavy)
 
 	// after marking enrich heavy as false, the project will be consider for re distribution
-	status = store.GetStore().UpdateCRMSetting(project2.ID, model.HubspotEnrichHeavy(false))
+	status = store.GetStore().UpdateCRMSetting(project2.ID, model.HubspotEnrichHeavy(false, nil))
 	assert.Equal(t, http.StatusAccepted, status)
 	crmSetting, status = store.GetStore().GetCRMSetting(project2.ID)
 	assert.Equal(t, http.StatusFound, status)
@@ -5016,6 +5017,7 @@ func TestHubspotProjectDistributer(t *testing.T) {
 	crmSetting, status = store.GetStore().GetCRMSetting(project2.ID)
 	assert.Equal(t, http.StatusFound, status)
 	assert.Equal(t, true, crmSetting.HubspotEnrichHeavy)
+
 }
 
 func TestHubspotDateTimezone(t *testing.T) {

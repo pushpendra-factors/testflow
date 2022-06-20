@@ -1055,7 +1055,8 @@ CREATE TABLE IF NOT EXISTS crm_properties (
 CREATE TABLE IF NOT EXISTS crm_settings (
     project_id bigint NOT NULL,
     hubspot_enrich_heavy boolean NOT NULL DEFAULT FALSE,
-    PRIMARY KEY (project_id),
+    hubspot_enrich_heavy_max_created_at bigint,
+    PRIMARY KEY (project_id)
     -- Required constraints.
     -- Ref (project_id) -> projects(id)
 );

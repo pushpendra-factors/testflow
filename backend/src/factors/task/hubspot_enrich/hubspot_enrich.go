@@ -14,22 +14,42 @@ import (
 )
 
 type SyncStatus struct {
-	Status     []IntHubspot.Status
-	HasFailure bool
-	Lock       sync.Mutex
+	Status                  []IntHubspot.Status
+	HasFailure              bool
+	AnyProcessLimitExceeded bool
+	Lock                    sync.Mutex
+}
+
+func isStatusProcessLimitExceeded(status []IntHubspot.Status) bool {
+	for i := range status {
+		if status[i].IsProcessLimitExceeded {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (s *SyncStatus) AddSyncStatus(status []IntHubspot.Status, hasFailure bool) {
 	s.Lock.Lock()
 	defer s.Lock.Unlock()
+	processLimitExceeded := false
+	if isStatusProcessLimitExceeded(status) {
+		processLimitExceeded = true
+	}
 
 	for i := range status {
-		if status[i].IsProcessLimitExceeded {
-			status[i].Message = "Process limit exceeded"
-			s.Status = append([]IntHubspot.Status{status[i]}, s.Status...)
-		} else {
+		if !processLimitExceeded {
 			s.Status = append(s.Status, status[i])
+			continue
 		}
+
+		if s.AnyProcessLimitExceeded == false {
+			s.AnyProcessLimitExceeded = true
+		}
+
+		status[i].Message = "Process limit exceeded"
+		s.Status = append([]IntHubspot.Status{status[i]}, s.Status...)
 	}
 
 	if hasFailure {
@@ -58,10 +78,13 @@ func syncWorker(projectID uint64, wg *sync.WaitGroup, numDocRoutines int, syncSt
 	syncStatus.AddSyncStatus(status, hasFailure)
 
 	// mark enrich_heavy as false irrespective of failure, let the distributer re distribute the project
-	errCode := store.GetStore().UpdateCRMSetting(projectID, model.HubspotEnrichHeavy(false))
-	if errCode != http.StatusAccepted {
-		log.WithFields(log.Fields{"project_id": projectID}).Error("Failed to mark hubspot project for crm settings")
+	if !isStatusProcessLimitExceeded(status) {
+		errCode := store.GetStore().UpdateCRMSetting(projectID, model.HubspotEnrichHeavy(false, nil))
+		if errCode != http.StatusAccepted {
+			log.WithFields(log.Fields{"project_id": projectID}).Error("Failed to mark hubspot project for crm settings")
+		}
 	}
+
 }
 
 func isEnrichHeavyProject(projectID uint64, settings map[uint64]model.CRMSetting) bool {
@@ -70,6 +93,28 @@ func isEnrichHeavyProject(projectID uint64, settings map[uint64]model.CRMSetting
 	}
 
 	return settings[projectID].HubspotEnrichHeavy
+}
+
+/*
+getProjectMaxCreatedAt returns the maximum created_at timestamp for a records in a project to be processed in the current job
+Max created at should be limited so as to avoid future partial updates to get processed which can cause inconsistency is user properties state
+For light projects maximum created_at will be the job start time, since they process all records in single job
+
+For heavy projects maximum created_at is decided by project distributer and set to project distributer start time, since all records till that time has led it to heavy project.
+Heavy job will process all records till created_at in multiple runs and then exit from heavy job.
+*/
+func getProjectMaxCreatedAt(projectID uint64, jobMaxCreatedAt int64, settings map[uint64]model.CRMSetting) int64 {
+	if !isEnrichHeavyProject(projectID, settings) {
+		return jobMaxCreatedAt
+	}
+
+	if settings[projectID].HubspotEnrichHeavyMaxCreatedAt == nil {
+		log.WithFields(log.Fields{"project_id": projectID}).Error("Found empty max created at on hubspot enrich heavy.")
+		return 0
+	}
+
+	return *settings[projectID].HubspotEnrichHeavyMaxCreatedAt
+
 }
 
 // RunHubspotEnrich task management compatible function for hubspot enrichment job
@@ -120,6 +165,7 @@ func RunHubspotEnrich(configs map[string]interface{}) (map[string]interface{}, b
 	}
 
 	projectIDs := make([]uint64, 0, 0)
+	projectsMaxCreatedAt := make(map[uint64]int64)
 	hubspotProjectSettingsMap := make(map[uint64]*model.HubspotProjectSettings, 0)
 	for _, settings := range hubspotEnabledProjectSettings {
 		if exists := disabledProjects[settings.ProjectId]; exists {
@@ -136,6 +182,8 @@ func RunHubspotEnrich(configs map[string]interface{}) (map[string]interface{}, b
 			(!enrichHeavy && isEnrichHeavyProject(settings.ProjectId, crmSettingsMap)) {
 			continue
 		}
+
+		projectsMaxCreatedAt[settings.ProjectId] = getProjectMaxCreatedAt(settings.ProjectId, hubspotMaxCreatedAt, crmSettingsMap)
 
 		if C.IsEnabledPropertyDetailByProjectID(settings.ProjectId) {
 			log.Info(fmt.Sprintf("Starting sync property details for project %d", settings.ProjectId))
@@ -163,7 +211,7 @@ func RunHubspotEnrich(configs map[string]interface{}) (map[string]interface{}, b
 		var wg sync.WaitGroup
 		for pi := range batch {
 			wg.Add(1)
-			go syncWorker(batch[pi], &wg, numDocRoutines, &syncStatus, hubspotMaxCreatedAt, hubspotProjectSettingsMap[batch[pi]], recordsProcessLimit)
+			go syncWorker(batch[pi], &wg, numDocRoutines, &syncStatus, projectsMaxCreatedAt[batch[pi]], hubspotProjectSettingsMap[batch[pi]], recordsProcessLimit)
 		}
 		wg.Wait()
 	}
@@ -173,7 +221,12 @@ func RunHubspotEnrich(configs map[string]interface{}) (map[string]interface{}, b
 		"document_sync":      syncStatus.Status,
 		"property_type_sync": propertyDetailSyncStatus,
 	}
-
 	panicError = false
+
+	// For enrichment heavy, if any project limit is exceeded then return false to re-run the task on a new pod
+	if enrichHeavy && syncStatus.AnyProcessLimitExceeded == true {
+		return jobStatus, false
+	}
+
 	return jobStatus, true
 }

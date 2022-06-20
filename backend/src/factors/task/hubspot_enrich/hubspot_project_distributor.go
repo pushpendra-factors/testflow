@@ -54,6 +54,7 @@ func RunHubspotProjectDistributer(configs map[string]interface{}) (map[string]in
 
 	countThreshold := configs["light_projects_count_threshold"].(int)
 	defaultHealthcheckPingID := configs["health_check_ping_id"].(string)
+	hubspotMaxCreatedAt := configs["max_record_created_at"].(int64)
 	overrideHealthcheckPingID := configs["override_healthcheck_ping_id"].(string)
 	healthcheckPingID := C.GetHealthcheckPingID(defaultHealthcheckPingID, overrideHealthcheckPingID)
 
@@ -102,7 +103,16 @@ func RunHubspotProjectDistributer(configs map[string]interface{}) (map[string]in
 	anyFailure := false
 	for heavy, projects := range map[bool][]uint64{true: newHeavyProjects, false: newLightProjects} {
 		for i := range projects {
-			status := store.GetStore().CreateOrUpdateCRMSetting(projects[i], &model.CRMSetting{HubspotEnrichHeavy: heavy})
+			if heavy {
+				status := store.GetStore().CreateOrUpdateCRMSettingHubspotEnrich(projects[i], true, &hubspotMaxCreatedAt)
+				if status != http.StatusAccepted && status != http.StatusCreated {
+					log.WithFields(log.Fields{"project_id": projects[i]}).Error("Failed to update crm settings for hubspot project distributer.")
+					anyFailure = true
+				}
+				continue
+			}
+
+			status := store.GetStore().CreateOrUpdateCRMSettingHubspotEnrich(projects[i], false, nil)
 			if status != http.StatusAccepted && status != http.StatusCreated {
 				log.WithFields(log.Fields{"project_id": projects[i]}).Error("Failed to update crm settings for hubspot project distributer.")
 				anyFailure = true
