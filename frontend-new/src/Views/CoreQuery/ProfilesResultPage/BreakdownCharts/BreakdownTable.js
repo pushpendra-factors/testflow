@@ -1,12 +1,15 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, {
+  useState, useCallback, useMemo, useEffect
+} from 'react';
+import find from 'lodash/find';
 import { getTableColumns, getTableData } from './utils';
 import DataTable from '../../../../components/DataTable';
 import {
   MAX_ALLOWED_VISIBLE_PROPERTIES,
-  DASHBOARD_WIDGET_SECTION,
-  CHART_TYPE_HORIZONTAL_BAR_CHART,
+  CHART_TYPE_HORIZONTAL_BAR_CHART
 } from '../../../../utils/constants';
 import { useSelector } from 'react-redux';
+import { getBreakdownDisplayName } from '../../EventsAnalytics/eventsAnalytics.helpers';
 
 function BreakdownTable({
   aggregateData,
@@ -18,10 +21,9 @@ function BreakdownTable({
   isWidgetModal,
   visibleProperties,
   setVisibleProperties,
-  section,
   reportTitle = 'Profile Analytics',
   handleSorting,
-  sorter,
+  sorter
 }) {
   const [searchText, setSearchText] = useState('');
   const [columns, setColumns] = useState([]);
@@ -51,7 +53,7 @@ function BreakdownTable({
     sorter,
     handleSorting,
     eventPropNames,
-    userPropNames,
+    userPropNames
   ]);
 
   useEffect(() => {
@@ -71,15 +73,35 @@ function BreakdownTable({
     sorter,
     queries,
     currentEventIndex,
-    groupAnalysis,
+    groupAnalysis
   ]);
 
   const getCSVData = () => {
     return {
       fileName: `${reportTitle}.csv`,
-      data: tableData.map(({ index, color, label, ...rest }) => {
-        return rest;
-      }),
+      data: tableData.map(({
+        index, color, label, ...rest
+      }) => {
+        const result = {};
+        for (const key in rest) {
+          const isCurrentKeyForBreakdown = find(
+            breakdown,
+            (b, index) => b.property + ' - ' + index === key
+          );
+          if (isCurrentKeyForBreakdown) {
+            result[
+              `${getBreakdownDisplayName({
+                breakdown: isCurrentKeyForBreakdown,
+                userPropNames,
+                eventPropNames
+              })} - ${key.split(' - ')[1]}`
+            ] = rest[key];
+            continue;
+          }
+          result[key] = rest[key];
+        }
+        return result;
+      })
     };
   };
 
@@ -107,9 +129,9 @@ function BreakdownTable({
   const rowSelection =
     chartType !== CHART_TYPE_HORIZONTAL_BAR_CHART
       ? {
-          selectedRowKeys,
-          onChange: onSelectionChange,
-        }
+        selectedRowKeys,
+        onChange: onSelectionChange
+      }
       : null;
 
   return (

@@ -1,10 +1,15 @@
-import React, { useCallback, useState, useMemo, useEffect } from 'react';
+/* eslint-disable camelcase */
+import React, {
+  useCallback, useState, useMemo, useEffect
+} from 'react';
 import moment from 'moment';
+import find from 'lodash/find';
 import { getTableColumns, getTableData } from '../utils';
 import DataTable from '../../../../components/DataTable';
 import { GROUPED_MAX_ALLOWED_VISIBLE_PROPERTIES } from '../../../../utils/constants';
 import { getNewSorterState } from '../../../../utils/dataFormatter';
 import { useSelector } from 'react-redux';
+import { getBreakdownDisplayName } from '../../EventsAnalytics/eventsAnalytics.helpers';
 
 function FunnelsResultTable({
   breakdown,
@@ -22,7 +27,7 @@ function FunnelsResultTable({
   comparison_duration,
   resultData,
   sorter,
-  setSorter,
+  setSorter
 }) {
   const [columns, setColumns] = useState([]);
   const [tableData, setTableData] = useState([]);
@@ -61,7 +66,7 @@ function FunnelsResultTable({
     comparisonChartData,
     resultData,
     userPropNames,
-    eventPropNames,
+    eventPropNames
   ]);
 
   // const columns = ;
@@ -94,7 +99,7 @@ function FunnelsResultTable({
     comparisonChartDurations,
     comparison_duration,
     durationObj,
-    resultData,
+    resultData
   ]);
 
   const getCSVData = () => {
@@ -102,12 +107,37 @@ function FunnelsResultTable({
       if (!comparisonChartData) {
         return {
           fileName: `${reportTitle}.csv`,
-          data: tableData.map(({ index, value, name, nonConvertedName, ...rest }) => {
-            arrayMapper.forEach((elem) => {
-              delete rest[`${elem.mapper}`];
-            });
-            return { ...rest, Conversion: rest.Conversion + '%' };
-          }),
+          data: tableData.map(
+            ({
+              index, value, name, nonConvertedName, ...rest
+            }) => {
+              arrayMapper.forEach((elem) => {
+                delete rest[`${elem.mapper}`];
+              });
+              const result = {};
+              for (const key in rest) {
+                if (key === 'Conversion') {
+                  result[key] = rest[key] + '%';
+                  continue;
+                }
+                const isCurrentKeyForBreakdown = find(breakdown, (b) => {
+                  return b.property + ' - ' + b.eventIndex === key;
+                });
+                if (isCurrentKeyForBreakdown) {
+                  result[
+                    `${getBreakdownDisplayName({
+                      breakdown: isCurrentKeyForBreakdown,
+                      userPropNames,
+                      eventPropNames
+                    })} - ${isCurrentKeyForBreakdown.overAllIndex}`
+                  ] = rest[key];
+                  continue;
+                }
+                result[key] = rest[key];
+              }
+              return result;
+            }
+          )
         };
       } else {
         const data = [];
@@ -120,22 +150,23 @@ function FunnelsResultTable({
           'MMM DD'
         );
         tableData.forEach(({ index, ...rest }) => {
-          rest['Users'] = 'All';
+          rest.Users = 'All';
 
           rest[`Conversion (${duration_from} - ${duration_to})`] =
-            rest[`Conversion`].conversion;
-          rest[`Conversion (${compare_duration_from} - ${compare_duration_to})`] =
-            rest[`Conversion`].comparsion_conversion;
+            rest.Conversion.conversion;
+          rest[
+            `Conversion (${compare_duration_from} - ${compare_duration_to})`
+          ] = rest.Conversion.comparsion_conversion;
 
           rest[`Conversion Time (${duration_from} - ${duration_to})`] =
-            rest[`Conversion Time`].overallDuration;
+            rest['Conversion Time'].overallDuration;
           rest[
             `Conversion Time (${compare_duration_from} - ${compare_duration_to})`
-          ] = rest[`Conversion Time`].comparisonOverallDuration;
+          ] = rest['Conversion Time'].comparisonOverallDuration;
 
-          delete rest[`Conversion Time`];
-          delete rest[`Conversion`];
-          delete rest['Grouping'];
+          delete rest['Conversion Time'];
+          delete rest.Conversion;
+          delete rest.Grouping;
 
           arrayMapper.forEach((elem, index) => {
             rest[
@@ -147,11 +178,13 @@ function FunnelsResultTable({
 
             if (index < arrayMapper.length - 1) {
               rest[
-                `time[${index}-${index + 1}] (${duration_from} - ${duration_to})`
+                `time[${index}-${
+                  index + 1
+                }] (${duration_from} - ${duration_to})`
               ] = rest[`time[${index}-${index + 1}]`].time;
               rest[
                 `time[${index}-${
-                index + 1
+                  index + 1
                 }] (${compare_duration_from} - ${compare_duration_to})`
               ] = rest[`time[${index}-${index + 1}]`].compare_time;
               delete rest[`time[${index}-${index + 1}]`];
@@ -163,14 +196,12 @@ function FunnelsResultTable({
         });
         return {
           fileName: `${reportTitle}.csv`,
-          data,
+          data
         };
       }
     } catch (err) {
-      console.log("err", err)
-      return "bannat"
+      console.log('err', err);
     }
-
   };
 
   const onSelectionChange = useCallback(
@@ -198,7 +229,7 @@ function FunnelsResultTable({
   const rowSelection = useMemo(() => {
     return {
       selectedRowKeys,
-      onChange: onSelectionChange,
+      onChange: onSelectionChange
     };
   }, [selectedRowKeys, onSelectionChange]);
 
