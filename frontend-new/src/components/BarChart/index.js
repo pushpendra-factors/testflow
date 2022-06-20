@@ -3,10 +3,8 @@ import React, {
 } from 'react';
 import get from 'lodash/get';
 import * as d3 from 'd3';
-import styles from '../../Views/CoreQuery/FunnelsResultPage/UngroupedChart/index.module.scss';
 import { checkForWindowSizeChange } from '../../Views/CoreQuery/FunnelsResultPage/utils';
 import { getMaxYpoint, getBarChartLeftMargin } from './utils';
-import ChartLegends from './ChartLegends';
 import { numberWithCommas, generateColors } from '../../utils/dataFormatter';
 import {
   BAR_CHART_XAXIS_TICK_LENGTH,
@@ -15,8 +13,9 @@ import {
   DASHBOARD_WIDGET_SECTION,
   BAR_COUNT
 } from '../../utils/constants';
-import DashboardWidgetLegends from '../DashboardWidgetLegends';
+import TopLegends from '../GroupedBarChart/TopLegends';
 import { getFormattedKpiValue } from '../../Views/CoreQuery/KPIAnalysis/kpiAnalysis.helpers';
+import styles from '../../Views/CoreQuery/FunnelsResultPage/UngroupedChart/index.module.scss';
 
 function BarChart({
   chartData,
@@ -257,29 +256,24 @@ function BarChart({
     displayChart();
   }, [displayChart, cardSize]);
 
-  let legendsMapper = [];
-  const legendColors = {};
+  let legendColors = {};
 
-  if (queries && queries.length > 1 && section === DASHBOARD_WIDGET_SECTION) {
+  if (queries && queries.length > 1) {
     const appliedColors = generateColors(queries.length);
-    legendsMapper = queries.map((q, index) => {
-      legendColors[`event${index + 1}`] = appliedColors[index];
-      return {
-        index,
-        eventName: q,
-        mapper: `event${index + 1}`
-      };
+    legendColors = queries.map((_, index) => {
+      return appliedColors[index];
     });
   }
 
   return (
     <div className="w-full bar-chart">
       {queries && queries.length > 1 && section === DASHBOARD_WIDGET_SECTION ? (
-        <DashboardWidgetLegends
-          arrayMapper={legendsMapper}
+        <TopLegends
           cardSize={cardSize}
-          colors={legendColors}
+          showAllLegends={true}
+          showFullLengthLegends={true}
           legends={queries}
+          colors={legendColors}
         />
       ) : null}
       <div ref={chartRef} className={styles.ungroupedChart}></div>
@@ -287,7 +281,13 @@ function BarChart({
       queries.length > 1 &&
       (section === REPORT_SECTION || section === DASHBOARD_MODAL) ? (
         <div className="mt-4">
-          <ChartLegends events={queries} chartData={chartData} />
+          <TopLegends
+            cardSize={cardSize}
+            showAllLegends={true}
+            showFullLengthLegends={true}
+            legends={queries}
+            colors={legendColors}
+          />
         </div>
         ) : null}
     </div>
