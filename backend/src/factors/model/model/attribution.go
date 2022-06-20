@@ -2822,6 +2822,8 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, reports *Marketin
 	}
 	var missingIDs []MissingCollection
 	count := 0
+	countEnrichedGclid := 0
+	countEnrichedMarketingId := 0
 
 	startReadTime := time.Now()
 	for rows.Next() {
@@ -2911,6 +2913,7 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, reports *Marketin
 		gclIDEnrichSuccess := 0
 		// Override GCLID based campaign info if presents
 		if gclID != PropertyValueNone && !(query.AttributionKey == AttributionKeyKeyword && !IsASearchSlotKeyword(&(*reports).AdwordsGCLIDData, gclID)) {
+			countEnrichedGclid++
 			var attributionIdBasedOnGclID string
 			attributionIdBasedOnGclID, marketingValues = EnrichUsingGCLID(&(*reports).AdwordsGCLIDData, gclID, query.AttributionKey, marketingValues)
 			marketingValues.Channel = ChannelAdwords
@@ -2926,6 +2929,7 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, reports *Marketin
 		if ((query.AttributionKey == AttributionKeyCampaign && U.IsNonEmptyKey(campaignID)) ||
 			(query.AttributionKey == AttributionKeyAdgroup && U.IsNonEmptyKey(adgroupID))) && gclIDEnrichSuccess == 0 {
 			// enrich for campaign/adgroup based session having campaign_id/adgroup_id
+			countEnrichedMarketingId++
 			var attributionIdBasedOnEnrichment string
 			attributionIdBasedOnEnrichment, marketingValues = EnrichUsingMarketingID(query.AttributionKey, marketingValues, reports)
 			if U.IsNonEmptyKey(attributionIdBasedOnEnrichment) {
@@ -2981,7 +2985,9 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, reports *Marketin
 		Info("no document was found in any of the reports for ID. Logging and continuing %+v",
 			missingIDs[:U.MinInt(100, len(missingIDs))])
 	U.LogReadTimeWithQueryRequestID(startReadTime, queryID, &log.Fields{})
-
+	logCtx.WithFields(log.Fields{"SessionDataCount": count,
+		"countEnrichedGclid":       countEnrichedGclid,
+		"countEnrichedMarketingId": countEnrichedMarketingId}).Info("Attribution keyword razorpay debug")
 	return attributedSessionsByUserId, userIdsWithSession, nil
 }
 
