@@ -273,7 +273,7 @@ func DoHistoricalSync(host string, endpoint string, urlParams map[string]string,
 	for {
 		request := model.SearchLeadsByCriteriaRequest{
 			Parameter: model.LeadSearchParameterObj{
-				LookupName:  "ModifiedOn",
+				LookupName:  "CreatedOn",
 				LookupValue: StartDateinLeadSquaredFormat,
 				SqlOperator: ">",
 			},
@@ -285,7 +285,7 @@ func DoHistoricalSync(host string, endpoint string, urlParams map[string]string,
 				IncludeCSV: columns,
 			},
 			Sorting: model.SortingObj{
-				ColumnName: "ModifiedOn",
+				ColumnName: "CreatedOn",
 				Direction:  "1",
 			},
 		}
