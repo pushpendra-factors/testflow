@@ -336,7 +336,11 @@ func transformResultsForEachEventQuery(oldResult *model.QueryResult, query model
 	for _, row := range oldResult.Rows {
 		eventName := ""
 		if row[eventNameIndex] == nil && len(query.EventsWithProperties) == 1 {
-			eventName = "0_" + query.EventsWithProperties[0].Name
+			if query.EventsWithProperties[0].AliasName != "" {
+				eventName = "0_" + query.EventsWithProperties[0].AliasName
+			} else {
+				eventName = "0_" + query.EventsWithProperties[0].Name
+			}
 		} else {
 			eventName = row[eventNameIndex].(string)
 		}

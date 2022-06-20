@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 
 	H "factors/handler"
@@ -2183,6 +2184,48 @@ func TestAnalyticsInsightsQueryForAliasName(t *testing.T) {
 		}
 		assert.Equal(t, float64(1), result.Rows[0][a0_Index])
 		assert.Equal(t, float64(4), result.Rows[0][a1_Index])
+	})
+
+	t.Run("AliasWithOnEventAndResultHavingNullEventName", func(t *testing.T) {
+
+		query := model.Query{
+			From: startTimestamp,
+			To:   startTimestamp + 2*86400,
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
+					Name:      "www.factors.ai/pricing",
+					AliasName: "a0",
+					Properties: []model.QueryProperty{
+						model.QueryProperty{
+							Entity:    model.PropertyEntityUser,
+							Property:  "$initial_source",
+							Operator:  "equals",
+							Type:      "categorial",
+							LogicalOp: "AND",
+							Value:     "A",
+						},
+					},
+				},
+			},
+			Class:            model.QueryClassInsights,
+			GroupByTimestamp: model.GroupByTimestampDate,
+
+			Type:            model.QueryTypeEventsOccurrence,
+			EventsCondition: model.EventCondEachGivenEvent,
+		}
+
+		result, errCode, _ := store.GetStore().Analyze(project.ID, query)
+		log.WithField("result", result).WithField("errCode", errCode).Warn("kark1")
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.NotNil(t, result)
+		a0_Index := 0
+		for index := range result.Headers {
+			if result.Headers[index] == "a0" {
+				a0_Index = index
+			}
+		}
+		assert.Equal(t, 2, len(result.Headers))
+		assert.Equal(t, float64(1), result.Rows[0][a0_Index])
 	})
 }
 
