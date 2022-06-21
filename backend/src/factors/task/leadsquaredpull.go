@@ -48,7 +48,7 @@ type IncrementalSyncLeadResponse struct {
 
 type IncrementalSyncLeadListResponse struct {
 	Attribute string
-	Value     string
+	Value     interface{}
 }
 
 var DUPLICATESCHEMAERRORPREFIX = "Error 409: Already Exists"
