@@ -5,7 +5,7 @@ import componentsLib from '../../Views/componentsLib';
 import SetupAssist from '../Settings/SetupAssist';
 import { connect, useSelector, useDispatch } from 'react-redux';
 import { bindActionCreators } from 'redux';
-import { Route, Switch, useHistory } from 'react-router-dom';
+import { Redirect, Route, Switch, useHistory } from 'react-router-dom';
 import {
   fetchProjects,
   setActiveProject,
@@ -200,7 +200,6 @@ function AppLayout({
                       component={FactorsInsights}
                     />
 
-                    <Route path='/project-setup' component={SetupAssist} />
                     <Route path='/welcome' component={Welcome} />
 
                     {/* settings */}
@@ -209,11 +208,6 @@ function AppLayout({
                     <Route
                       path='/settings/attribution'
                       component={AttributionSettings}
-                    />
-                    <Route path='/settings/sdk' component={SDKSettings} />
-                    <Route
-                      path='/settings/integration'
-                      component={IntegrationSettings}
                     />
 
                     {/* configure */}
@@ -245,6 +239,27 @@ function AppLayout({
                     window.document.domain === 'factors-dev.com' ? (
                       <Route path='/profiles/people' component={UserProfiles} />
                     ) : null}
+
+                    {!(demoProjectId.includes(active_project.id)) ? (
+                      <Route path='/project-setup' component={SetupAssist} />
+                    ) : (
+                      <Redirect to='/' />
+                    )}
+
+                    {!(demoProjectId.includes(active_project.id)) ? (
+                      <Route path='/settings/sdk' component={SDKSettings} />
+                    ) : (
+                      <Redirect to='/' />
+                    )}
+
+                    {!(demoProjectId.includes(active_project.id)) ? (
+                      <Route
+                        path='/settings/integration'
+                        component={IntegrationSettings}
+                      />
+                    ) : (
+                      <Redirect to='/' />
+                    )}
                   </Switch>
                 </Suspense>
               </Content>

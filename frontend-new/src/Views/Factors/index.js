@@ -14,7 +14,7 @@ import {
   fetchEventNames,
   getUserProperties,
 } from 'Reducers/coreQuery/middleware';
-import { connect } from 'react-redux';
+import { connect, useSelector } from 'react-redux';
 import { fetchProjectAgents } from 'Reducers/agentActions';
 import _, { isEmpty } from 'lodash';
 import SavedGoals from './SavedGoals';
@@ -25,6 +25,9 @@ import { useHistory } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar';
 import FaHeader from '../../components/FaHeader';
 import NavigationBar from '../../components/NavigationBar';
+import { fetchDemoProject, getHubspotContact } from '../../reducers/global';
+import NewProject from '../Settings/SetupAssist/Modals/NewProject';
+import { meetLink } from '../../utils/hubspot';
 
 const ExplainTypeList = [
   {
@@ -59,6 +62,8 @@ const Factors = ({
   fetchFactorsTrackedEvents,
   fetchFactorsTrackedUserProperties,
   getUserProperties,
+  fetchDemoProject,
+  getHubspotContact,
 }) => {
   const [loadingTable, SetLoadingTable] = useState(true);
   const [fetchingIngishts, SetfetchingIngishts] = useState(false);
@@ -66,6 +71,34 @@ const Factors = ({
   const [showGoalDrawer, setGoalDrawer] = useState(false);
   const [dataSource, setdataSource] = useState(null);
   const history = useHistory();
+
+  const [demoProjectId, setDemoProjectId] = useState(null);
+  const [ownerID, setOwnerID] = useState();
+  const [showProjectModal, setShowProjectModal] = useState(false);
+  const { projects } = useSelector((state) => state.global);
+  const currentAgent = useSelector((state) => state.agent.agent_details);
+
+  useEffect(() => {
+    fetchDemoProject()
+      .then((res) => {
+        setDemoProjectId(res.data[0]);
+      })
+      .catch((err) => {
+        console.log(err.data.error);
+      });
+  }, [activeProject]);
+
+  useEffect(() => {
+    const email = currentAgent.email;
+    getHubspotContact(email)
+      .then((res) => {
+        setOwnerID(res.data.hubspot_owner_id);
+      })
+      .catch((err) => {
+        console.log(err.data.error);
+      });
+  }, []);
+
 
   useEffect(() => {
     const getData1 = async () => {
@@ -98,6 +131,68 @@ const Factors = ({
         }
         onError={FaErrorLog}
       >
+
+        {activeProject.id === demoProjectId ? (
+          <div className={'rounded-lg border-2 h-20 mt-20 -mb-20 mx-20'}>
+            <Row justify={'space-between'} className={'m-0 p-3'}>
+              <Col span={projects.length === 1 ? 12 : 18}>
+                <img
+                  src="assets/icons/welcome.svg"
+                  style={{ float: 'left', marginRight: '20px' }}
+                />
+                <Text
+                  type={'title'}
+                  level={6}
+                  weight={'bold'}
+                  extraClass={'m-0'}
+                >
+                  Welcome! You just entered a Factors demo project
+                </Text>
+                {projects.length === 1 ? (
+                  <Text type={'title'} level={7} extraClass={'m-0'}>
+                    These reports have been built with a sample dataset. Use
+                    this to start exploring!
+                  </Text>
+                ) : (
+                  <Text type={'title'} level={7} extraClass={'m-0'}>
+                    To jump back into your Factors project, click on your
+                    account card on the <span className={'font-bold'}>top right</span> of the screen.
+                  </Text>
+                )}
+              </Col>
+              <Col className={'mr-2 mt-2'}>
+                <a href={meetLink(ownerID)} target="_blank" rel="noreferrer">
+                  <Button
+                    type={'default'}
+                    style={{
+                      background: 'white',
+                      border: '1px solid #E7E9ED',
+                      height: '40px'
+                    }}
+                    className={'m-0 mr-2'}
+                  >
+                    Get a Personalized Demo
+                  </Button>
+                </a>
+                {projects.length === 1 ? (
+                  <Button
+                    type={'default'}
+                    style={{
+                      background: 'white',
+                      border: '1px solid #E7E9ED',
+                      height: '40px'
+                    }}
+                    className={'m-0 mr-2'}
+                    onClick={() => setShowProjectModal(true)}
+                  >
+                    Set up my own Factors project
+                  </Button>
+                ) : null}
+              </Col>
+            </Row>
+          </div>
+        ) : null}
+
         {fetchingIngishts ? (
           <Spin size={'large'} className={'fa-page-loader'} />
         ) : (
@@ -199,6 +294,12 @@ const Factors = ({
             </div>
           </>
         )}
+
+        {/* create project modal */}
+        <NewProject
+          visible={showProjectModal}
+          handleCancel={() => setShowProjectModal(false)}
+        />
       </ErrorBoundary>
     </>
   );
@@ -221,4 +322,6 @@ export default connect(mapStateToProps, {
   fetchFactorsModels,
   fetchEventNames,
   getUserProperties,
+  fetchDemoProject,
+  getHubspotContact,
 })(Factors);
