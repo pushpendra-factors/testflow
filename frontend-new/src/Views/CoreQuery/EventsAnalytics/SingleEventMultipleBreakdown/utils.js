@@ -6,7 +6,8 @@ import {
   getClickableTitleSorter,
   SortResults,
   generateColors,
-  addQforQuarter
+  addQforQuarter,
+  SortData
 } from '../../../../utils/dataFormatter';
 import { Number as NumFormat } from '../../../../components/factorsComponents';
 import { parseForDateTimeLabel } from '../SingleEventSingleBreakdown/utils';
@@ -328,7 +329,8 @@ export const renderHorizontalBarChart = (
     }
   ];
   const colors = generateColors(10);
-  const categories = data.map((elem, index) => {
+  const sortedData = SortData(data, 'value', 'descend');
+  const categories = sortedData.map((elem, index) => {
     series[0].data.push({
       y: elem.value,
       color: colors[index % 10],
