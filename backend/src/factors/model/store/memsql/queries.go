@@ -81,7 +81,13 @@ func (store *MemSQL) GetALLQueriesWithProjectId(projectID uint64) ([]model.Queri
 	if len(queries) == 0 {
 		return queries, http.StatusFound
 	}
+	if projectID == 1125899918000010 {
+		log.WithField("queries", queries).Warn("Result after db query")
+	}
 	q, errCode := store.addCreatedByNameInQueries(queries, projectID)
+	if projectID == 1125899918000010 {
+		log.WithField("queries", queries).Warn("Result after db query")
+	}
 	if errCode != http.StatusFound {
 		// logging error but still sending the queries
 		log.WithField("project_id", projectID).Error("could not update created " +

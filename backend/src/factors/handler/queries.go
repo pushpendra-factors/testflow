@@ -49,7 +49,7 @@ func GetQueriesHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusFound, queries)
+	c.JSON(http.StatusOK, queries)
 }
 
 // CreateQueryHandler godoc
