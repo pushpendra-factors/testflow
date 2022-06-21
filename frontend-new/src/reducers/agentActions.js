@@ -319,7 +319,7 @@ export function projectAgentRemove(projectId, agentUUID){
               type: "PROJECT_AGENT_REMOVE_REJECTED",
               error: r
             });
-            reject(r.data.error);
+            reject(r);
           }
           if (r.status == 202) {
             dispatch({
