@@ -93,3 +93,82 @@ func UpdateProjectSettingsHandler(c *gin.Context) {
 
 	c.JSON(http.StatusOK, &updatedPSetting)
 }
+
+type updateParams struct {
+	Status bool `json:"status"`
+}
+
+func getUpdateParams(c *gin.Context) (*updateParams, error) {
+	params := updateParams{}
+	err := c.BindJSON(&params)
+	if err != nil {
+		return nil, err
+	}
+	return &params, nil
+}
+
+func UpdateWeeklyInsightsHandler(c *gin.Context) {
+
+	logCtx := log.WithFields(log.Fields{
+		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
+	})
+
+	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
+		logCtx.Error("Update project_settings for weekly insights failed. Failed to get project_id.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid project id."})
+		return
+	}
+
+	params, err := getUpdateParams(c)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to parse UpdateParams")
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+	var errCode int
+	if params.Status == true {
+		errCode = store.GetStore().EnableWeeklyInsights(projectId)
+	} else {
+		errCode = store.GetStore().DisableWeeklyInsights(projectId)
+	}
+	if errCode != http.StatusOK {
+		c.AbortWithStatusJSON(http.StatusInternalServerError,
+			gin.H{"error": "Project setting update failed for weekly insights"})
+		return
+	}
+	c.JSON(http.StatusOK, nil)
+}
+
+func UpdateExplainHandler(c *gin.Context) {
+
+	logCtx := log.WithFields(log.Fields{
+		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
+	})
+
+	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
+		logCtx.Error("Update project_settings for explain failed. Failed to get project_id.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid project id."})
+		return
+	}
+
+	params, err := getUpdateParams(c)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to parse UpdateParams")
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+	var errCode int
+	if params.Status == true {
+		errCode = store.GetStore().EnableExplain(projectId)
+	} else {
+		errCode = store.GetStore().DisableExplain(projectId)
+	}
+	if errCode != http.StatusOK {
+		c.AbortWithStatusJSON(http.StatusInternalServerError,
+			gin.H{"error": "Project setting update failed for explain"})
+		return
+	}
+	c.JSON(http.StatusOK, nil)
+}

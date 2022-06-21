@@ -430,6 +430,9 @@ CREATE TABLE IF NOT EXISTS project_settings (
     clearbit_key text,
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
+    lead_squared_config json,
+    is_weekly_insights_enabled boolean,
+    is_explain_enabled boolean,
     KEY (updated_at),
     SHARD KEY (project_id),
     PRIMARY KEY (project_id)

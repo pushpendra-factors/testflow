@@ -336,6 +336,10 @@ type Model interface {
 	IsBingIntegrationAvailable(projectID uint64) bool
 	GetAllLeadSquaredEnabledProjects() (map[uint64]model.LeadSquaredConfig, error)
 	UpdateLeadSquaredFirstTimeSyncStatus(projectId uint64) int
+	EnableWeeklyInsights(projectId uint64) int
+	EnableExplain(projectId uint64) int
+	DisableWeeklyInsights(projectId uint64) int
+	DisableExplain(projectId uint64) int
 
 	// project
 	UpdateProject(projectID uint64, project *model.Project) int
