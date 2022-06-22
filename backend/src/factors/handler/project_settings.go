@@ -137,7 +137,10 @@ func UpdateWeeklyInsightsHandler(c *gin.Context) {
 			gin.H{"error": "Project setting update failed for weekly insights"})
 		return
 	}
-	c.JSON(http.StatusOK, nil)
+	resp := map[string]string{
+		"status": "success",
+	}
+	c.JSON(http.StatusOK, resp)
 }
 
 func UpdateExplainHandler(c *gin.Context) {
@@ -170,5 +173,8 @@ func UpdateExplainHandler(c *gin.Context) {
 			gin.H{"error": "Project setting update failed for explain"})
 		return
 	}
-	c.JSON(http.StatusOK, nil)
+	resp := map[string]string{
+		"status": "success",
+	}
+	c.JSON(http.StatusOK, resp)
 }
