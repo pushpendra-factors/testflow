@@ -164,8 +164,14 @@ class JobScheduler:
                 metrics_controller.update_job_stats(project_id, customer_acc_id, doc_type, STATUS_FAILED, message)
                 metrics_controller.publish()
                 sys.exit(0)
+            
+            elif "HTTPStatus.PARTIAL_CONTENT" in str_exception and "No such object" in str_exception:
+                message = "Failed to load data from cloud storage"
 
             else:
                 message = "Failed with exception: " + str_exception
 
             metrics_controller.update_job_stats(project_id, customer_acc_id, doc_type, STATUS_FAILED, message)
+            log.error("Failed with exception on timestamp: %s %d %s %s", str(self.timestamp), project_id, customer_acc_id, str_exception)
+            return ("Failed with exception on timestamp: %s %d %s %s", str(self.timestamp), project_id, customer_acc_id, str_exception)
+        return None
