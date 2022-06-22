@@ -24,8 +24,7 @@ function ProjectDetails({
         projectAgentRemove(projectId, agentUUID).then(() => {
           message.success(`Left project ${projectName}`);
         }).catch((err) => {
-          console.log('leave project err->>', err);
-          message.error('Oops something went wrong!');
+          message.error(err?.data?.error);
         });
       }
     });

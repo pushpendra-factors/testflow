@@ -124,6 +124,7 @@ func SlackCallbackHandler(c *gin.Context) {
 func buildRedirectURL(errMsg string) string {
 	return C.GetProtocol() + C.GetAPPDomain() + "/settings/integration?error=" + url.QueryEscape(errMsg)
 }
+
 func GetSlackChannelsListHandler(c *gin.Context) {
 	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	loggedInAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
@@ -137,16 +138,38 @@ func GetSlackChannelsListHandler(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get slack auth token"})
 		return
 	}
-	// add query params
+	jsonResponse, status, err := GetSlackChannels(accessTokens, "")
+	if err != nil {
+		c.JSON(status, gin.H{"error": err})
+	}
+	channels := jsonResponse["channels"].([]interface{})
+	responseMetadata := jsonResponse["response_metadata"].(map[string]interface{})
+	nextCursor := responseMetadata["next_cursor"].(string)
+	for nextCursor != "" {
+		jsonResponse, status, err = GetSlackChannels(accessTokens, nextCursor)
+		if err != nil {
+			c.JSON(status, gin.H{"error": err})
+		}
+		newChannels := jsonResponse["channels"].([]interface{})
+		channels = append(channels, newChannels...)
+		responseMetadata = jsonResponse["response_metadata"].(map[string]interface{})
+		nextCursor = responseMetadata["next_cursor"].(string)
+	}
+
+	c.JSON(http.StatusOK, channels)
+}
+func GetSlackChannels(accessTokens model.SlackAccessTokens, nextCursor string) (response map[string]interface{}, status int, err error) {
 	request, err := http.NewRequest("GET", fmt.Sprintf("https://slack.com/api/conversations.list"), nil)
 	if err != nil {
 		log.Error("Failed to create request to get slack channels list")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create request to get slack channels list"})
-		return
+		return nil, http.StatusInternalServerError, errors.New("Failed to create request to get slack channels list")
 	}
 	q := request.URL.Query()
 	q.Add("types", "public_channel,private_channel,mpim")
 	q.Add("limit", "2000")
+	if nextCursor != "" {
+		q.Add("cursor", nextCursor)
+	}
 	request.URL.RawQuery = q.Encode()
 	request.Header.Set("Content-Type", "application/json; charset=utf-8")
 	request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessTokens.UserAccessToken))
@@ -154,16 +177,15 @@ func GetSlackChannelsListHandler(c *gin.Context) {
 	resp, err := client.Do(request)
 	if err != nil {
 		log.Error("Failed to get slack channels list")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get slack channels list"})
-		return
+		return nil, http.StatusInternalServerError, errors.New("Failed to get slack channels list")
 	}
 	var jsonResponse map[string]interface{}
 	err = json.NewDecoder(resp.Body).Decode(&jsonResponse)
 	if err != nil {
 		log.Error("failed to decode json response", err)
+		return jsonResponse, http.StatusInternalServerError, errors.New("failed to decode json response.")
 	}
-	channels := jsonResponse["channels"].([]interface{})
-	c.JSON(http.StatusOK, channels)
+	return jsonResponse, http.StatusOK, nil
 }
 func DeleteSlackIntegrationHandler(c *gin.Context) {
 	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
@@ -180,7 +202,6 @@ func DeleteSlackIntegrationHandler(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"success": "Slack integration deleted successfully"})
-
 }
 
 func SendSlackAlert(projectID uint64, message, agentUUID string, channel model.SlackChannel) (bool, error) {
@@ -193,8 +214,8 @@ func SendSlackAlert(projectID uint64, message, agentUUID string, channel model.S
 	url := fmt.Sprintf("https://slack.com/api/chat.postMessage")
 	// create new http post request
 	reqBody := map[string]interface{}{
-		"channel": channel.Id,
-		"blocks":  message,
+		"channel":      channel.Id,
+		"blocks":       message,
 		"unfurl_links": false,
 	}
 	jsonBody, err := json.Marshal(reqBody)

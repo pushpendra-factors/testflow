@@ -5,6 +5,7 @@ import React, {
   useContext,
   memo
 } from 'react';
+import { values } from 'lodash';
 import { DashboardContext } from '../../../contexts/DashboardContext';
 import {
   getDefaultDateSortProp,
@@ -31,7 +32,7 @@ import {
   Number as NumFormat
 } from '../../../components/factorsComponents';
 import NoBreakdownTable from '../../CoreQuery/KPIAnalysis/NoBreakdownCharts/NoBreakdownTable';
-import DashboardWidgetLegends from '../../../components/DashboardWidgetLegends';
+import TopLegends from '../../../components/GroupedBarChart/TopLegends';
 
 const NoBreakdownCharts = ({
   kpis,
@@ -153,11 +154,10 @@ const NoBreakdownCharts = ({
           }`}
         >
           {!unit.cardSize ? (
-            <DashboardWidgetLegends
-              arrayMapper={arrayMapper}
+            <TopLegends
               cardSize={unit.cardSize}
-              colors={colors}
               legends={aggregateData.map((c) => c.name)}
+              colors={values(colors)}
             />
           ) : null}
           {aggregateData

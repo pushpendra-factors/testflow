@@ -13,10 +13,12 @@ import DataTable from '../../../../components/DataTable';
 import {
   MAX_ALLOWED_VISIBLE_PROPERTIES,
   CHART_TYPE_HORIZONTAL_BAR_CHART,
-  DASHBOARD_WIDGET_SECTION
+  DASHBOARD_WIDGET_SECTION,
+  QUERY_TYPE_KPI
 } from '../../../../utils/constants';
 import { isSeriesChart } from '../../../../utils/dataFormatter';
 import { getFormattedKpiValue } from '../kpiAnalysis.helpers';
+import { getBreakdownDisplayName } from '../../EventsAnalytics/eventsAnalytics.helpers';
 
 const BreakdownTable = ({
   data,
@@ -97,19 +99,37 @@ const BreakdownTable = ({
       data: tableData.map(({
         index, label, value, metricType, ...rest
       }) => {
+        const result = {};
         for (const key in rest) {
           const isCurrentKeyKpi = find(
             kpis,
             (kpi, index) => kpi.label + ' - ' + index === key
           );
           if (isCurrentKeyKpi && isCurrentKeyKpi.metricType) {
-            rest[key] = getFormattedKpiValue({
+            result[key] = getFormattedKpiValue({
               value: rest[key],
               metricType: isCurrentKeyKpi.metricType
             });
+            continue;
           }
+          const isCurrentKeyForBreakdown = find(
+            breakdown,
+            (b, index) => b.property + ' - ' + index === key
+          );
+          if (isCurrentKeyForBreakdown) {
+            result[
+              `${getBreakdownDisplayName({
+                breakdown: isCurrentKeyForBreakdown,
+                userPropNames,
+                eventPropNames,
+                queryType: QUERY_TYPE_KPI
+              })} - ${key.split(' - ')[1]}`
+            ] = rest[key];
+            continue;
+          }
+          result[key] = rest[key];
         }
-        return { ...rest };
+        return result;
       })
     };
   }, [dateBasedTableData, chartType, tableData]);

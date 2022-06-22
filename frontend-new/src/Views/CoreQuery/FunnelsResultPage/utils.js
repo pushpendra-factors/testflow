@@ -547,8 +547,6 @@ export const getTableData = (
       comparisonChartDurations
     );
     queries.forEach((_, index) => {
-      console.log(index);
-      console.log(data);
       const percent = !index
         ? 100
         : calculatePercentage(data[index].netCount, data[index - 1].netCount);

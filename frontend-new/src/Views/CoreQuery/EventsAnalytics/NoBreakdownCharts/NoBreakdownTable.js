@@ -5,11 +5,15 @@ import {
   getNoGroupingTableData,
   getColumns,
   getDateBasedColumns,
-  getNoGroupingTablularDatesBasedData,
+  getNoGroupingTablularDatesBasedData
 } from './utils';
 import { CHART_TYPE_SPARKLINES } from '../../../../utils/constants';
 import { useSelector } from 'react-redux';
-import { addQforQuarter, getNewSorterState } from '../../../../utils/dataFormatter';
+import {
+  addQforQuarter,
+  getNewSorterState
+} from '../../../../utils/dataFormatter';
+import { getEventDisplayName } from '../eventsAnalytics.helpers';
 
 function NoBreakdownTable({
   data,
@@ -25,22 +29,28 @@ function NoBreakdownTable({
   setSorter,
   dateSorter,
   setDateSorter,
-  responseData,
+  responseData
 }) {
   const [searchText, setSearchText] = useState('');
   const { eventNames } = useSelector((state) => state.coreQuery);
 
-  const handleSorting = useCallback((prop) => {
-    setSorter((currentSorter) => {
-      return getNewSorterState(currentSorter, prop);
-    });
-  }, [setSorter]);
+  const handleSorting = useCallback(
+    (prop) => {
+      setSorter((currentSorter) => {
+        return getNewSorterState(currentSorter, prop);
+      });
+    },
+    [setSorter]
+  );
 
-  const handleDateSorting = useCallback((prop) => {
-    setDateSorter((currentSorter) => {
-      return getNewSorterState(currentSorter, prop);
-    });
-  }, [setDateSorter]);
+  const handleDateSorting = useCallback(
+    (prop) => {
+      setDateSorter((currentSorter) => {
+        return getNewSorterState(currentSorter, prop);
+      });
+    },
+    [setDateSorter]
+  );
 
   let columns;
   let tableData;
@@ -95,27 +105,30 @@ function NoBreakdownTable({
 
     rowSelection = {
       selectedRowKeys,
-      onChange: onSelectionChange,
+      onChange: onSelectionChange
     };
   }
 
-  const getCSVData = () => {
+  const getCSVData = useCallback(() => {
     return {
       fileName: `${reportTitle}.csv`,
-      data: tableData.map(({ index, date, event, ...rest }) => {
+      data: tableData.map(({
+        index, date, event, ...rest
+      }) => {
         if (chartType === CHART_TYPE_SPARKLINES) {
           let format = 'MMM D, YYYY';
           if (durationObj.frequency === 'hour') {
             format = 'h A, MMM D';
           }
           const eventsData = {};
-          for (let key in rest) {
+          for (const key in rest) {
             const mapper = arrayMapper.find((elem) => elem.mapper === key);
             if (mapper) {
               eventsData[
-                `${eventNames[mapper.eventName] || mapper.eventName}-${
-                  mapper.index
-                }`
+                `${getEventDisplayName({
+                  event: mapper.eventName,
+                  eventNames
+                })} - ${mapper.index}`
               ] = rest[key];
             }
           }
@@ -123,17 +136,17 @@ function NoBreakdownTable({
             date:
               addQforQuarter(durationObj.frequency) +
               moment(date).format(format),
-            ...eventsData,
+            ...eventsData
           };
         } else {
           return {
-            Event: eventNames[event] || event,
-            ...rest,
+            Event: getEventDisplayName({ eventNames, event }),
+            ...rest
           };
         }
-      }),
+      })
     };
-  };
+  }, [tableData, chartType, arrayMapper, eventNames, durationObj, reportTitle]);
 
   return (
     <DataTable

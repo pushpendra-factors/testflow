@@ -104,24 +104,23 @@ func GetHubspotObjectTypeForSync() []int {
 
 func GetDecodedValue(encodedValue string, limit int) string {
 	prevValue := encodedValue
-	for i := 0; i <= limit; i++{
+	for i := 0; i <= limit; i++ {
 		curr_value, err := url.QueryUnescape(prevValue)
-		if err  != nil || curr_value == prevValue {
+		if err != nil || curr_value == prevValue {
 			if err != nil {
 				log.WithField("encodedValue", encodedValue).Error("error while decoding")
 			}
 			return prevValue
 		}
-		if i == limit && prevValue != curr_value{
+		if i == limit && prevValue != curr_value {
 			log.WithField("encodedValue", encodedValue).Error("limit exceeded on decoding")
 			return prevValue
 		}
 		prevValue = curr_value
 	}
-		
+
 	return prevValue
 }
-	
 
 func GetURLParameterAsMap(pageUrl string) map[string]interface{} {
 	u, err := url.Parse(pageUrl)
@@ -1735,12 +1734,6 @@ func syncCompany(projectID uint64, document *model.HubspotDocument) int {
 		}
 	}
 
-	userPropertiesJsonb, err := U.EncodeToPostgresJsonb(&userProperties)
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to marshal company properties to Jsonb.")
-		return http.StatusInternalServerError
-	}
-
 	if len(company.ContactIds) == 0 {
 		logCtx.Warning("Skipped company sync. No contacts associated to company.")
 		// No sync_id as no event or user or one user property created.
@@ -1796,16 +1789,6 @@ func syncCompany(projectID uint64, document *model.HubspotDocument) int {
 				if contactUpdateCount > 100 {
 					continue
 				}
-
-				logCtx.WithFields(log.Fields{"total_contacts": len(contactIds)}).Info("Updating company contact properties.")
-				_, errCode := store.GetStore().UpdateUserPropertiesV2(projectID, contactUser.ID, userPropertiesJsonb,
-					contactUser.PropertiesUpdatedTimestamp+1, SDK.SourceHubspot, model.HubspotDocumentTypeNameCompany)
-				if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
-					logCtx.WithField("user_id", contactSyncEvent.UserId).Error(
-						"Failed to update user properites with company properties.")
-					isContactsUpdateFailed = true
-				}
-				contactUpdateCount++
 			}
 		}
 	}

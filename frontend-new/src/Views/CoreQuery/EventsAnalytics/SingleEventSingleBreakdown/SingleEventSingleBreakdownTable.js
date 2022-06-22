@@ -5,15 +5,17 @@ import {
   getTableColumns,
   getDataInTableFormat,
   getDateBasedColumns,
-  getDateBasedTableData,
+  getDateBasedTableData
 } from './utils';
 import {
   CHART_TYPE_BARCHART,
   MAX_ALLOWED_VISIBLE_PROPERTIES,
   DASHBOARD_WIDGET_SECTION,
-  CHART_TYPE_HORIZONTAL_BAR_CHART,
+  CHART_TYPE_HORIZONTAL_BAR_CHART
 } from '../../../../utils/constants';
 import { isSeriesChart } from '../../../../utils/dataFormatter';
+import { EVENT_COUNT_KEY } from '../eventsAnalytics.constants';
+import { getEventDisplayName } from '../eventsAnalytics.helpers';
 
 function SingleEventSingleBreakdownTable({
   data,
@@ -34,7 +36,7 @@ function SingleEventSingleBreakdownTable({
   dateSorter,
   handleDateSorting,
   visibleSeriesData,
-  setVisibleSeriesData,
+  setVisibleSeriesData
 }) {
   const [searchText, setSearchText] = useState('');
   const { eventNames, userPropNames, eventPropNames } = useSelector(
@@ -45,16 +47,41 @@ function SingleEventSingleBreakdownTable({
   const [tableData, setTableData] = useState([]);
   const [dateBasedTableData, setDateBasedTableData] = useState([]);
 
-  const getCSVData = () => {
+  const getCSVData = useCallback(() => {
     const activeTableData =
       chartType === CHART_TYPE_BARCHART ? tableData : dateBasedTableData;
     return {
       fileName: `${reportTitle}.csv`,
-      data: activeTableData.map(({ index, ...rest }) => {
-        return { ...rest };
-      }),
+      data: activeTableData.map(
+        ({
+          index, label, value, name, marker, data, ...rest
+        }) => {
+          const result = {};
+          for (const key in rest) {
+            if (key === EVENT_COUNT_KEY) {
+              result[getEventDisplayName({ eventNames, event: events[0] })] =
+                rest[EVENT_COUNT_KEY];
+              continue;
+            }
+            if (key === events[0]) {
+              result[getEventDisplayName({ eventNames, event: events[0] })] =
+                rest[events[0]];
+              continue;
+            }
+            result[key] = rest[key];
+          }
+          return result;
+        }
+      )
     };
-  };
+  }, [
+    chartType,
+    tableData,
+    dateBasedTableData,
+    reportTitle,
+    eventNames,
+    events
+  ]);
 
   useEffect(() => {
     setColumns(
@@ -77,7 +104,7 @@ function SingleEventSingleBreakdownTable({
     handleSorting,
     eventNames,
     userPropNames,
-    eventPropNames,
+    eventPropNames
   ]);
 
   useEffect(() => {
@@ -103,7 +130,7 @@ function SingleEventSingleBreakdownTable({
     durationObj.frequency,
     handleDateSorting,
     userPropNames,
-    eventPropNames,
+    eventPropNames
   ]);
 
   useEffect(() => {
@@ -156,7 +183,7 @@ function SingleEventSingleBreakdownTable({
       : selectedRowKeys(visibleProperties),
     onChange: isSeriesChart(chartType)
       ? onDateWiseSelectionChange
-      : onSelectionChange,
+      : onSelectionChange
   };
 
   return (

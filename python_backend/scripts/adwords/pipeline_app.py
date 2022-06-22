@@ -88,7 +88,9 @@ if __name__ == "__main__":
         for next_sync in next_sync_infos:
             if JobScheduler.validate(next_sync, skip_today):
                 is_new_job = '*' in new_extract_project_id or next_sync["project_id"] in new_extract_project_id
-                JobScheduler(next_sync, skip_today).sync(env, is_dry, is_new_job)
+                err = JobScheduler(next_sync, skip_today).sync(env, is_dry, is_new_job)
+                if err != '' and err != None:
+                    break
             else:
                 log.warning("Skipping job scheduler for following project with following properties: "+ str(next_sync))
                 continue

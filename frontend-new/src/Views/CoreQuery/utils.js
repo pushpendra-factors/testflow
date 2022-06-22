@@ -1329,6 +1329,36 @@ export const getFilters = (filters) => {
   return result;
 };
 
+export const getFiltersWithoutOrProperty = (filters) => {
+  const result = [];
+  filters.forEach((filter) => {
+    if (filter.props[1] !== 'categorical') {
+      result.push({
+        en: filter.props[2],
+        lop: 'AND',
+        op: operatorMap[filter.operator],
+        pr: filter.props[0],
+        ty: filter.props[1],
+        va: filter.values
+      });
+    }
+
+    if (filter.props[1] === 'categorical') {
+      filter.values.forEach((value, index) => {
+        result.push({
+          en: filter.props[2],
+          lop: !index ? 'AND' : 'OR',
+          op: operatorMap[filter.operator],
+          pr: filter.props[0],
+          ty: filter.props[1],
+          va: value
+        });
+      })
+    }
+    });
+    return result;
+}
+
 const getFiltersTouchpoints = (filters, touchpoint) => {
   const result = [];
   const filtersGroupedByRef = Object.values(groupFilters(filters, 'ref'));

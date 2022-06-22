@@ -1,27 +1,31 @@
 import React, { useRef, useCallback, useEffect } from 'react';
 import * as d3 from 'd3';
 import ReactDOMServer from 'react-dom/server';
-import styles from './styles.module.scss';
+import { find, get, map } from 'lodash';
+
 import {
   calculatePercentage,
   generateColors,
   formatCount,
-  formatDuration,
+  formatDuration
 } from '../../../../utils/dataFormatter';
+
 import {
   REPORT_SECTION,
   DASHBOARD_WIDGET_SECTION,
   DASHBOARD_MODAL,
   FUNNELS_COUNT,
-  BAR_CHART_XAXIS_TICK_LENGTH,
+  BAR_CHART_XAXIS_TICK_LENGTH
 } from '../../../../utils/constants';
-import ChartLegends from './ChartLegends';
+
 import {
   Text,
   SVG,
-  Number as NumFormat,
+  Number as NumFormat
 } from '../../../../components/factorsComponents';
 import LegendsCircle from '../../../../styles/components/LegendsCircle';
+import TopLegends from '../../../../components/GroupedBarChart/TopLegends';
+import styles from './styles.module.scss';
 
 function Chart({
   eventsData,
@@ -31,7 +35,7 @@ function Chart({
   height: widgetHeight,
   section,
   cardSize = 1,
-  durations,
+  durations
 }) {
   const chartRef = useRef(null);
   const tooltipRef = useRef(null);
@@ -60,18 +64,18 @@ function Chart({
       .attr('width', availableWidth)
       .attr('height', widgetHeight || 420)
       .attr('id', `funnel-grouped-svg-${title}`);
-    const svg = d3.select(`#funnel-grouped-svg-${title}`),
-      margin = {
-        top: 10,
-        right: 20,
-        bottom: 30,
-        left: 40,
-      },
-      width = +svg.attr('width') - margin.left - margin.right,
-      height = +svg.attr('height') - margin.top - margin.bottom,
-      g = svg
-        .append('g')
-        .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+    const svg = d3.select(`#funnel-grouped-svg-${title}`);
+    const margin = {
+      top: 10,
+      right: 20,
+      bottom: 30,
+      left: 40
+    };
+    const width = +svg.attr('width') - margin.left - margin.right;
+    const height = +svg.attr('height') - margin.top - margin.bottom;
+    const g = svg
+      .append('g')
+      .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
 
     const x0 = d3.scaleBand().rangeRound([0, width]).padding(0.25);
     const x1 = d3.scaleBand().paddingInner(0.05);
@@ -90,7 +94,7 @@ function Chart({
         return d3.max(keys, function (key) {
           return Number(d[key]);
         });
-      }),
+      })
     ]).nice();
 
     const yAxisGrid = d3.axisLeft(y).tickSize(-width).tickFormat('').ticks(5);
@@ -99,8 +103,9 @@ function Chart({
     const infoDivWidth = 75;
 
     const showTooltip = (data) => {
-      const nonConvertedName = groups.find((g) => g.name === data.group)
-        ?.nonConvertedName;
+      const nonConvertedName = groups.find(
+        (g) => g.name === data.group
+      )?.nonConvertedName;
       const currGrp = groups.find((g) => g.name === data.group);
       const durationGrp = durationMetric.rows.find(
         (elem) => elem.slice(0, firstEventIdx).join(', ') === nonConvertedName
@@ -139,51 +144,51 @@ function Chart({
         .html(
           ReactDOMServer.renderToString(
             <>
-              <div className='pb-3 groupInfo'>
+              <div className="pb-3 groupInfo">
                 <Text
-                  type='title'
-                  weight='bold'
-                  color='grey-8'
-                  extraClass='mb-0'
+                  type="title"
+                  weight="bold"
+                  color="grey-8"
+                  extraClass="mb-0"
                 >
                   {data.group.includes('$no_group') ? 'Overall' : data.group}
                 </Text>
-                <Text type='title' color='grey-2' extraClass='mb-0'>
+                <Text type="title" color="grey-2" extraClass="mb-0">
                   {currGrp.value} Overall Conversion
                 </Text>
               </div>
-              <div className='pt-3'>
+              <div className="pt-3">
                 {prevEventData ? (
                   <Text
-                    type='title'
-                    color='grey'
-                    weight='bold'
-                    extraClass='text-xs mb-0'
-                    lineHeight='small'
+                    type="title"
+                    color="grey"
+                    weight="bold"
+                    extraClass="text-xs mb-0"
+                    lineHeight="small"
                   >
                     Between steps:
                   </Text>
                 ) : null}
                 {prevEventData ? (
-                  <div className={`flex items-center mt-1`}>
+                  <div className={'flex items-center mt-1'}>
                     <LegendsCircle
-                      extraClass='mr-1'
+                      extraClass="mr-1"
                       color={colors[prevEventData.index - 1]}
                     />
                     <Text
-                      extraClass='mr-1 mb-0 text-base'
-                      lineHeight='medium'
-                      type='title'
-                      weight='bold'
+                      extraClass="mr-1 mb-0 text-base"
+                      lineHeight="medium"
+                      type="title"
+                      weight="bold"
                     >
                       <NumFormat number={prevEventData.data[data.group]} />
                     </Text>
                     <Text
-                      extraClass='mr-1 mb-0 text-base'
-                      lineHeight='medium'
-                      color='grey'
-                      type='title'
-                      weight='medium'
+                      extraClass="mr-1 mb-0 text-base"
+                      lineHeight="medium"
+                      color="grey"
+                      type="title"
+                      weight="medium"
                     >
                       (
                       {calculatePercentage(
@@ -194,25 +199,25 @@ function Chart({
                     </Text>
                   </div>
                 ) : null}
-                <div className={`flex items-center mt-1`}>
+                <div className={'flex items-center mt-1'}>
                   <LegendsCircle
-                    extraClass='mr-1'
+                    extraClass="mr-1"
                     color={colors[currEventData.index - 1]}
                   />
                   <Text
-                    extraClass='mr-1 mb-0 text-base'
-                    lineHeight='medium'
-                    type='title'
-                    weight='bold'
+                    extraClass="mr-1 mb-0 text-base"
+                    lineHeight="medium"
+                    type="title"
+                    weight="bold"
                   >
                     <NumFormat number={currEventData.data[data.group]} />
                   </Text>
                   <Text
-                    extraClass='mr-1 mb-0 text-base'
-                    lineHeight='medium'
-                    color='grey'
-                    type='title'
-                    weight='medium'
+                    extraClass="mr-1 mb-0 text-base"
+                    lineHeight="medium"
+                    color="grey"
+                    type="title"
+                    weight="medium"
                   >
                     (
                     {calculatePercentage(
@@ -223,37 +228,37 @@ function Chart({
                   </Text>
                 </div>
                 {prevEventData ? (
-                  <div className='flex justify-between items-center mt-2'>
-                    <div className='flex flex-col items-start'>
-                      <div className='flex items-center'>
-                        <SVG name='clock' fill='#8692A3' />
+                  <div className="flex justify-between items-center mt-2">
+                    <div className="flex flex-col items-start">
+                      <div className="flex items-center">
+                        <SVG name="clock" fill="#8692A3" />
                         <Text
-                          type='title'
-                          color='grey-2'
-                          weight='medium'
-                          extraClass='text-xs mb-0 ml-1 mt-1'
-                          lineHeight='1'
+                          type="title"
+                          color="grey-2"
+                          weight="medium"
+                          extraClass="text-xs mb-0 ml-1 mt-1"
+                          lineHeight="1"
                         >
                           {timeTaken}
                         </Text>
                       </div>
                       <Text
-                        type='title'
-                        color='grey'
-                        weight='medium'
-                        extraClass='text-xs mb-0 mt-1'
+                        type="title"
+                        color="grey"
+                        weight="medium"
+                        extraClass="text-xs mb-0 mt-1"
                       >
                         TIME TAKEN
                       </Text>
                     </div>
-                    <div className='flex flex-col items-start'>
-                      <div className='flex items-center'>
+                    <div className="flex flex-col items-start">
+                      <div className="flex items-center">
                         <Text
-                          type='title'
-                          color='grey-2'
-                          weight='medium'
-                          extraClass='text-xs mb-0 mr-1'
-                          lineHeight='1'
+                          type="title"
+                          color="grey-2"
+                          weight="medium"
+                          extraClass="text-xs mb-0 mr-1"
+                          lineHeight="1"
                         >
                           {formatCount(
                             100 -
@@ -265,13 +270,13 @@ function Chart({
                           )}
                           %
                         </Text>
-                        <SVG name='dropoff' fill='#8692A3' />
+                        <SVG name="dropoff" fill="#8692A3" />
                       </div>
                       <Text
-                        type='title'
-                        color='grey'
-                        weight='medium'
-                        extraClass='text-xs mb-0 mt-1'
+                        type="title"
+                        color="grey"
+                        weight="medium"
+                        extraClass="text-xs mb-0 mt-1"
                       >
                         DROP-OFF
                       </Text>
@@ -308,7 +313,7 @@ function Chart({
       .selectAll('rect')
       .data(function (d) {
         return keys.map(function (key) {
-          return { key: key, value: Number(d[key]), group: d.name };
+          return { key, value: Number(d[key]), group: d.name };
         });
       })
       .enter()
@@ -337,7 +342,7 @@ function Chart({
       .selectAll('.area')
       .data(function (d) {
         return keys.map(function (key) {
-          return { key: key, value: Number(d[key]), group: d.name };
+          return { key, value: Number(d[key]), group: d.name };
         });
       })
       .enter()
@@ -376,7 +381,7 @@ function Chart({
         .data(renderedData)
         .enter()
         .append('foreignObject')
-        .attr('x', function (d, index) {
+        .attr('x', function (d) {
           return x0(d.name) + x0.bandwidth() - infoDivWidth;
         })
         .attr('y', 1)
@@ -388,8 +393,9 @@ function Chart({
           'infoDiv flex flex-col items-center h-full justify-center bg-white w-full'
         )
         .html((d) => {
-          const nonConvertedName = groups.find((g) => g.name === d.name)
-            ?.nonConvertedName;
+          const nonConvertedName = groups.find(
+            (g) => g.name === d.name
+          )?.nonConvertedName;
           const durationGrp = durationMetric.rows.find(
             (elem) =>
               elem.slice(0, firstEventIdx).join(', ') === nonConvertedName
@@ -404,18 +410,18 @@ function Chart({
           return ReactDOMServer.renderToString(
             <>
               <Text
-                type='title'
-                weight='medium'
-                color='grey-2'
-                extraClass='text-xs mb-0 percent'
+                type="title"
+                weight="medium"
+                color="grey-2"
+                extraClass="text-xs mb-0 percent"
               >
                 {d[`event${keys.length}`]}%
               </Text>
               <Text
-                type='title'
-                weight='medium'
-                color='grey'
-                extraClass='text-xs mb-0 count'
+                type="title"
+                weight="medium"
+                color="grey"
+                extraClass="text-xs mb-0 count"
               >
                 {formatDuration(total)}
               </Text>
@@ -466,7 +472,7 @@ function Chart({
     section,
     durationMetric.headers,
     durationMetric.rows,
-    firstEventIdx,
+    firstEventIdx
   ]);
 
   useEffect(() => {
@@ -474,30 +480,35 @@ function Chart({
   }, [drawChart, cardSize]);
 
   return (
-    <div className='w-full'>
+    <div className="w-full">
       {section === DASHBOARD_WIDGET_SECTION ? (
-        <ChartLegends
+        <TopLegends
           colors={colors}
-          legends={keys}
-          arrayMapper={arrayMapper}
+          legends={map(keys, (key) =>
+            get(
+              find(arrayMapper, (am) => am.mapper === key),
+              'eventName',
+              key
+            )
+          )}
           cardSize={cardSize}
           section={section}
         />
       ) : null}
       <div ref={chartRef} className={styles.groupedChart}></div>
-      <svg width='0' height='0'>
+      <svg width="0" height="0">
         <defs>
           {colors.map((color, index) => {
             return (
               <linearGradient
                 key={index}
                 id={`funnel-grouped-gradient-${title}-${index}`}
-                x1='.5'
-                x2='.5'
-                y2='1'
+                x1=".5"
+                x2=".5"
+                y2="1"
               >
-                <stop stopColor={color} stopOpacity='0.5' />
-                <stop offset='1' stopColor={color} stopOpacity='0.1' />
+                <stop stopColor={color} stopOpacity="0.5" />
+                <stop offset="1" stopColor={color} stopOpacity="0.1" />
               </linearGradient>
             );
           })}
@@ -505,12 +516,19 @@ function Chart({
       </svg>
       <div ref={tooltipRef} className={styles.groupedFunnelTooltip}></div>
       {section === REPORT_SECTION || section === DASHBOARD_MODAL ? (
-        <ChartLegends
+        <TopLegends
           colors={colors}
-          legends={keys}
-          arrayMapper={arrayMapper}
+          legends={map(keys, (key) =>
+            get(
+              find(arrayMapper, (am) => am.mapper === key),
+              'eventName',
+              key
+            )
+          )}
           cardSize={cardSize}
           section={section}
+          showAllLegends={true}
+          showFullLengthLegends={true}
         />
       ) : null}
     </div>

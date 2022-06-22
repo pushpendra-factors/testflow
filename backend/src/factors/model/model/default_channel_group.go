@@ -4,8 +4,6 @@ import (
 	U "factors/util"
 	"fmt"
 	"strings"
-
-	log "github.com/sirupsen/logrus"
 )
 
 type ChannelPropertyFilter struct {
@@ -640,9 +638,6 @@ func EvaluateChannelPropertyRules(channelGroupRules []ChannelPropertyRule, sessi
 				}
 			}
 			checkCondition = checkCondition && checkConditionForProperty
-		}
-		if projectID == 641 || projectID == 645 {
-			log.WithFields(log.Fields{"project_id": projectID, "rule": rule, "check_condition": checkCondition, "sessionPropertiesMap": sessionPropertiesMap}).Info("Debug Add Session")
 		}
 		if checkCondition {
 			return rule.Channel

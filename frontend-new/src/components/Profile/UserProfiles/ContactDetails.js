@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { Row, Col, Button, Avatar, Table, Radio } from 'antd';
+import { Row, Col, Button, Avatar, Table, Radio, Menu, Dropdown } from 'antd';
 import { SVG, Text } from '../../factorsComponents';
-import ContactDetail from './ContactDetail.json';
 import FaTimeline from '../../FaTimeline';
 
 function ContactDetails({ onCancel, userDetails }) {
@@ -9,6 +8,22 @@ function ContactDetails({ onCancel, userDetails }) {
     return userDetails;
   }, [userDetails]);
 
+  const [granularity, setGranularity] = useState('Hourly');
+  const [collapse, setCollapse] = useState(true);
+  const options = ['Default', 'Hourly', 'Daily', 'Weekly', 'Monthly'];
+  const menu = (
+    <Menu>
+      {options.map((option) => {
+        return (
+          <Menu.Item key={option} onClick={(key) => setGranularity(key.key)}>
+            <div className={'flex items-center'}>
+              <span className='mr-3'>{option}</span>
+            </div>
+          </Menu.Item>
+        );
+      })}
+    </Menu>
+  );
   return (
     <>
       <div
@@ -53,7 +68,7 @@ function ContactDetails({ onCancel, userDetails }) {
                       fontWeight: '400',
                     }}
                   >
-                    ICON
+                    U
                   </Avatar>
                 </Col>
               </Row>
@@ -68,7 +83,9 @@ function ContactDetails({ onCancel, userDetails }) {
                     >
                       {userDetail.name}
                     </Text>
-                  ) : null}
+                  ) : (
+                    'Unidentified User'
+                  )}
                   {userDetail.role && userDetail.company ? (
                     <Text
                       type={'title'}
@@ -78,62 +95,94 @@ function ContactDetails({ onCancel, userDetails }) {
                     >
                       {`${userDetail?.role}, ${userDetail?.company}`}
                     </Text>
-                  ) : null}
+                  ) : (
+                    <Text
+                      type={'title'}
+                      level={7}
+                      extraClass={'m-0'}
+                      color={'grey'}
+                    >
+                      {`${userDetail?.user_id}`}
+                    </Text>
+                  )}
                 </Col>
               </Row>
               <Row className={'py-2'}>
-                {userDetail.email ? (
-                  <Col>
-                    <Text
-                      type={'title'}
-                      level={7}
-                      extraClass={'m-0'}
-                      color={'grey'}
-                    >
-                      Email
-                    </Text>
-                    <Text type={'title'} level={7} extraClass={'m-0'}>
-                      {userDetail.email}
-                    </Text>
-                  </Col>
-                ) : null}
+                <Col>
+                  <Text
+                    type={'title'}
+                    level={7}
+                    extraClass={'m-0'}
+                    color={'grey'}
+                  >
+                    Email
+                  </Text>
+
+                  <Text type={'title'} level={7} extraClass={'m-0'}>
+                    {userDetail?.email || '-'}
+                  </Text>
+                </Col>
               </Row>
               <Row className={'py-2'}>
-                {userDetail.country ? (
-                  <Col>
-                    <Text
-                      type={'title'}
-                      level={7}
-                      extraClass={'m-0'}
-                      color={'grey'}
-                    >
-                      Country
-                    </Text>
-                    <Text type={'title'} level={7} extraClass={'m-0'}>
-                      {userDetail?.country}
-                    </Text>
-                  </Col>
-                ) : null}
+                <Col>
+                  <Text
+                    type={'title'}
+                    level={7}
+                    extraClass={'m-0'}
+                    color={'grey'}
+                  >
+                    Country
+                  </Text>
+                  <Text type={'title'} level={7} extraClass={'m-0'}>
+                    {userDetail?.country || '-'}
+                  </Text>
+                </Col>
               </Row>
-
               <Row className={'py-2'}>
-                {userDetail.web_sessions_count ? (
-                  <Col>
-                    <Text
-                      type={'title'}
-                      level={7}
-                      extraClass={'m-0'}
-                      color={'grey'}
-                    >
-                      Number of Web Sessions
-                    </Text>
-                    <Text type={'title'} level={7} extraClass={'m-0'}>
-                      {userDetail?.web_sessions_count}
-                    </Text>
-                  </Col>
-                ) : null}
+                <Col>
+                  <Text
+                    type={'title'}
+                    level={7}
+                    extraClass={'m-0'}
+                    color={'grey'}
+                  >
+                    Number of Web Sessions
+                  </Text>
+                  <Text type={'title'} level={7} extraClass={'m-0'}>
+                    {userDetail?.web_sessions_count || '-'}
+                  </Text>
+                </Col>
               </Row>
-
+              <Row className={'py-2'}>
+                <Col>
+                  <Text
+                    type={'title'}
+                    level={7}
+                    extraClass={'m-0'}
+                    color={'grey'}
+                  >
+                    Number of Page Views
+                  </Text>
+                  <Text type={'title'} level={7} extraClass={'m-0'}>
+                    {userDetail?.number_of_page_views || '-'}
+                  </Text>
+                </Col>
+              </Row>
+              <Row className={'py-2'}>
+                <Col>
+                  <Text
+                    type={'title'}
+                    level={7}
+                    extraClass={'m-0'}
+                    color={'grey'}
+                  >
+                    Time Spent on Site
+                  </Text>
+                  <Text type={'title'} level={7} extraClass={'m-0'}>
+                    {userDetail?.time_spent_on_site + ' secs' || '-'}
+                  </Text>
+                </Col>
+              </Row>
               <Row
                 className={'mt-3 pt-3'}
                 style={{ borderTop: '1px dashed #e7e9ed' }}
@@ -153,7 +202,7 @@ function ContactDetails({ onCancel, userDetails }) {
                         {group.group_name}
                       </Text>
                     );
-                  })}
+                  }) || '-'}
                 </Col>
               </Row>
               <Row className={'mt-6'}>
@@ -170,19 +219,41 @@ function ContactDetails({ onCancel, userDetails }) {
                       Timeline
                     </Text>
                   </div>
-                  {/* <div>
-                    <Radio.Group onChange={(e) => setCollapse(e.target.value)}>
-                      <Radio.Button value={false} className={'fa-btn--custom'}>
-                        <SVG name='line_height' />
-                      </Radio.Button>
-                      <Radio.Button value={true} className={'fa-btn--custom'}>
-                        <SVG name='grip_lines' />
-                      </Radio.Button>
-                    </Radio.Group>
-                  </div> */}
+                  <div className='flex justify-between'>
+                    <div className='mr-2'>
+                      <Radio.Group
+                        onChange={(e) => setCollapse(e.target.value)}
+                        defaultValue={true}
+                      >
+                        <Radio.Button
+                          value={false}
+                          className={'fa-btn--custom'}
+                        >
+                          <SVG name='line_height' size={22} />
+                        </Radio.Button>
+                        <Radio.Button value={true} className={'fa-btn--custom'}>
+                          <SVG name='grip_lines' size={22} />
+                        </Radio.Button>
+                      </Radio.Group>
+                    </div>
+                    <div>
+                      <Dropdown overlay={menu} placement='bottomRight'>
+                        <Button
+                          className={`ant-dropdown-link flex items-center`}
+                        >
+                          {granularity}
+                          {<SVG name='caretDown' size={16} extraClass='ml-1' />}
+                        </Button>
+                      </Dropdown>
+                    </div>
+                  </div>
                 </Col>
                 <Col span={24}>
-                  <FaTimeline activities={userDetail?.user_activities} />
+                  <FaTimeline
+                    activities={userDetail?.user_activities}
+                    granularity={granularity}
+                    collapse={collapse}
+                  />
                 </Col>
               </Col>
             </Row>

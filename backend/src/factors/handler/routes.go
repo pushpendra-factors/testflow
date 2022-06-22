@@ -279,6 +279,10 @@ func InitAppRoutes(r *gin.Engine) {
 	// Timeline
 	authRouteGroup.GET("/:project_id/v1/profiles/users", responseWrapper(V1.GetProfileUsersHandler))
 	authRouteGroup.GET("/:project_id/v1/profiles/users/:id", responseWrapper(V1.GetProfileUserDetailsHandler))
+
+	// weekly insights, explain
+	authRouteGroup.PUT("/:project_id/v1/weeklyinsights", mid.SetLoggedInAgentInternalOnly(), UpdateWeeklyInsightsHandler)
+	authRouteGroup.PUT("/:project_id/v1/explain", mid.SetLoggedInAgentInternalOnly(), UpdateExplainHandler)
 }
 
 func InitSDKServiceRoutes(r *gin.Engine) {
