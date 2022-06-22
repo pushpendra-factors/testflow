@@ -180,7 +180,7 @@ function ProfileBlock({
           <Button
             type='text'
             onClick={() => setMoreOptions(true)}
-            className={`fa-btn--custom mr-1`}
+            className={`fa-btn--custom mr-1 btn-total-round`}
           >
             <SVG name='more'></SVG>
           </Button>
@@ -205,7 +205,7 @@ function ProfileBlock({
             alias={event.alias}
           ></AliasModal>
         </div>
-        <Button type='text' onClick={deleteItem} className={`fa-btn--custom`}>
+        <Button type='text' onClick={deleteItem} className={`fa-btn--custom btn-total-round`}>
           <SVG name='trash'></SVG>
         </Button>
       </div>
@@ -375,11 +375,11 @@ function ProfileBlock({
           ) : null}
         </div>
         <div className={`flex ${!event?.alias?.length ? '' : 'ml-8 mt-1'}`}>
-          <div className='relative'>
+        <div className='relative ml-2'>
             <Tooltip title={ReverseProfileMapper[event.label][groupAnalysis]}>
               <Button
                 icon={<SVG name='mouseevent' size={16} color={'purple'} />}
-                className={``}
+                className={`btn-total-round`}
                 type={'link'}
                 onClick={triggerDropDown}
               >

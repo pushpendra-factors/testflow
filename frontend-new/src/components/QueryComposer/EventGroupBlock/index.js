@@ -221,10 +221,16 @@ const EventGroupBlock = ({
   };
 
   return (
-    <div className={`flex items-center relative w-full`}>
-      <Text level={8} type={'title'} extraClass={'m-0 mr-2'} weight={'thin'}>
-        {grpIndex >= 1 ? 'and' : 'Breakdown'}
-      </Text>
+    <div className={`flex items-center relative ml-10`}>
+      {grpIndex >=1 ? (
+      <Text level={8} type={'title'} extraClass={'m-0 mr-16'} weight={'thin'}>
+          and
+        </Text>
+        ):(
+        <Text level={8} type={'title'} extraClass={'m-0 breakdown-margin'} weight={'thin'}>
+          Breakdown
+        </Text>
+        )}
       {groupByEvent && groupByEvent.property ? (
         renderGroupContent()
       ) : (

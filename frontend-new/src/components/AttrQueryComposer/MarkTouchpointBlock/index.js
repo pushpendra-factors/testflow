@@ -184,7 +184,7 @@ const MarkTouchpointBlock = ({
               type='text'
               size={'large'}
               onClick={() => setMoreOptions(true)}
-              className={'fa-btn--custom mr-1'}
+              className={'fa-btn--custom mr-1 btn-total-round'}
             >
               <SVG name='more'></SVG>
             </Button>
@@ -204,7 +204,7 @@ const MarkTouchpointBlock = ({
           </div>
         )}
         <Button
-          className={'fa-btn--custom'}
+          className={'fa-btn--custom btn-total-round'}
           size={'large'}
           type='text'
           onClick={deleteItem}
@@ -348,7 +348,7 @@ const MarkTouchpointBlock = ({
         className={`${styles.block__content} fa--query_block_section--basic relative mt-3`}
       >
         {
-          <Button type='link' onClick={toggleTouchPointSelect}>
+          <Button type='link' onClick={toggleTouchPointSelect} className={'btn-total-round'}>
             <SVG name='mouseevent' extraClass={'mr-1'}></SVG>
             {touchPoint === 'ChannelGroup' ? 'Channel' : touchPoint}
           </Button>

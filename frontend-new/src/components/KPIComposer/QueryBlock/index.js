@@ -271,7 +271,7 @@ function QueryBlock({
             type="text"
             size={'large'}
             onClick={() => setMoreOptions(true)}
-            className={`fa-btn--custom mr-1`}
+            className={`fa-btn--custom mr-1 btn-total-round`}
           >
             <SVG name="more" />
           </Button>
@@ -301,7 +301,7 @@ function QueryBlock({
           size={'large'}
           type="text"
           onClick={deleteItem}
-          className={`fa-btn--custom`}
+          className={`fa-btn--custom btn-total-round`}
         >
           <SVG name="trash" />
         </Button>
@@ -521,7 +521,7 @@ function QueryBlock({
           ) : null}
         </div>
         <div className={`flex ${!event?.alias?.length ? '' : 'ml-8 mt-2'}`}>
-          <div className="max-w-7xl">
+          <div className="max-w-7xl ml-2">
             <Tooltip
               title={
                 eventNames[event.label] ? eventNames[event.label] : event.label
@@ -529,7 +529,7 @@ function QueryBlock({
             >
               <Button
                 // icon={<SVG name='mouseevent' size={16} color={'purple'} />}
-                className={`fa-button--truncate fa-button--truncate-lg`}
+                className={`fa-button--truncate fa-button--truncate-lg btn-total-round`}
                 type="link"
                 onClick={triggerDropDown}
               >
