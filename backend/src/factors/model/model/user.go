@@ -112,6 +112,7 @@ const (
 	UserSourceHubspotString    = "hubspot"
 	UserSourceSalesforceString = "salesforce"
 	UserSourceMarketo          = "marketo"
+	UserSourceLeadSquared      = U.CRM_SOURCE_NAME_LEADSQUARED
 )
 
 var UserSourceMap = map[string]int{
@@ -119,6 +120,7 @@ var UserSourceMap = map[string]int{
 	UserSourceHubspotString:    2,
 	UserSourceSalesforceString: 3,
 	UserSourceMarketo:          6,
+	UserSourceLeadSquared:      7,
 }
 
 const USERS = "users"
@@ -805,6 +807,9 @@ var (
 		U.CRM_SOURCE_NAME_MARKETO: {
 			"lead": "updated_at",
 		},
+		UserSourceLeadSquared: {
+			"lead": "ModifiedOn",
+		},
 	}
 
 	// Block updating user properties_update_timestamp. CRM uses object property key to update.
@@ -812,6 +817,7 @@ var (
 		SmartCRMEventSourceHubspot:    true,
 		SmartCRMEventSourceSalesforce: true,
 		U.CRM_SOURCE_NAME_MARKETO:     true,
+		UserSourceLeadSquared:         true,
 	}
 
 	/*

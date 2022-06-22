@@ -17,9 +17,10 @@ const (
 
 // List of prefix to differentiate CRM property from other properties. Only properties with prefix will overwritten by CRM
 var CRMUserPropertiesOverwritePrefixes = map[string]string{
-	CRM_SOURCE_NAME_HUBSPOT:    HUBSPOT_PROPERTY_PREFIX,
-	CRM_SOURCE_NAME_SALESFORCE: SALESFORCE_PROPERTY_PREFIX,
-	CRM_SOURCE_NAME_MARKETO:    MARKETO_PROPERTY_PREFIX,
+	CRM_SOURCE_NAME_HUBSPOT:     HUBSPOT_PROPERTY_PREFIX,
+	CRM_SOURCE_NAME_SALESFORCE:  SALESFORCE_PROPERTY_PREFIX,
+	CRM_SOURCE_NAME_MARKETO:     MARKETO_PROPERTY_PREFIX,
+	CRM_SOURCE_NAME_LEADSQUARED: LEADSQUARED_PROPERTY_PREFIX,
 }
 
 func IsCRMPropertyKeyBySource(source, key string) bool {

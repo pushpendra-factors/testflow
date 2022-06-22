@@ -182,6 +182,13 @@ upload-leadsquared-pull: export IMAGE_NAME=leadsquared-pull-job
 upload-leadsquared-pull: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/leadsquared-pull-job:$(TAG)
 
+pack-leadsquared-enrich:
+	docker build -t us.gcr.io/factors-$(ENV)/leadsquared-enrich-job:$(TAG) -f Dockerfile.leadsquared_enrich_job .
+
+upload-leadsquared-enrich: export IMAGE_NAME=leadsquared-enrich-job
+upload-leadsquared-enrich: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/leadsquared-enrich-job:$(TAG)
+
 pack-enrich-smart-properties:
 	docker build -t us.gcr.io/factors-$(ENV)/enrich-smart-properties-job:$(TAG) -f Dockerfile.enrich_smart_properties_job .
 
