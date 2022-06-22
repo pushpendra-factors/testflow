@@ -68,7 +68,7 @@ func sendGetSavedQueriesReq(r *gin.Engine, projectId uint64, agent *model.Agent)
 	return w
 }
 
-func sendUpdateSavedQueryReq(r *gin.Engine, projectId uint64, queryId uint64, agent *model.Agent, query *H.SavedQueryUpdatePayload) *httptest.ResponseRecorder {
+func sendUpdateSavedQueryReq(r *gin.Engine, projectId uint64, queryId int64, agent *model.Agent, query *H.SavedQueryUpdatePayload) *httptest.ResponseRecorder {
 
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
@@ -93,7 +93,7 @@ func sendUpdateSavedQueryReq(r *gin.Engine, projectId uint64, queryId uint64, ag
 	return w
 }
 
-func sendDeleteSavedQueryReq(r *gin.Engine, projectId uint64, queryId uint64, agent *model.Agent) *httptest.ResponseRecorder {
+func sendDeleteSavedQueryReq(r *gin.Engine, projectId uint64, queryId int64, agent *model.Agent) *httptest.ResponseRecorder {
 
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
@@ -289,7 +289,7 @@ func TestAPIUpdateSavedQueryHandler(t *testing.T) {
 
 	responseMap := DecodeJSONResponseToMap(w.Body)
 
-	queryId := uint64(responseMap["id"].(float64))
+	queryId := int64(responseMap["id"].(float64))
 	rTitle1 := U.RandomString(5)
 
 	w = sendUpdateSavedQueryReq(r, project.ID, queryId, agent, &H.SavedQueryUpdatePayload{Title: rTitle1})
@@ -334,7 +334,7 @@ func TestAPIDeleteSavedQueryHandler(t *testing.T) {
 
 	responseMap := DecodeJSONResponseToMap(w.Body)
 
-	queryId := uint64(responseMap["id"].(float64))
+	queryId := int64(responseMap["id"].(float64))
 	shareString := responseMap["id_text"].(string)
 
 	// Create public shareable url
@@ -396,7 +396,7 @@ func TestAPIGetQueriesHandler(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, w.Code)
 	responseMap := DecodeJSONResponseToMap(w.Body)
 
-	queryId := uint64(responseMap["id"].(float64))
+	queryId := int64(responseMap["id"].(float64))
 	shareString := responseMap["id_text"].(string)
 
 	// Get query without agent

@@ -161,7 +161,7 @@ func UpdateSavedQueryHandler(c *gin.Context) {
 		return
 	}
 
-	queryID, err := strconv.ParseUint(c.Params.ByName("query_id"), 10, 64)
+	queryID, err := strconv.ParseInt(c.Params.ByName("query_id"), 10, 64)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid query id."})
 		return
@@ -207,7 +207,7 @@ func DeleteSavedQueryHandler(c *gin.Context) {
 		return
 	}
 
-	queryID, err := strconv.ParseUint(c.Params.ByName("query_id"), 10, 64)
+	queryID, err := strconv.ParseInt(c.Params.ByName("query_id"), 10, 64)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid query id."})
 		return

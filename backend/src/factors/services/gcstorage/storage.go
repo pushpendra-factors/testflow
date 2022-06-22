@@ -200,25 +200,25 @@ func (gcsd *GCSDriver) ListFiles(prefix string) []string {
 	return files
 }
 
-func (gcsd *GCSDriver) GetInsightsWpiFilePathAndName(projectId uint64, dateString string, queryId uint64, k int) (string, string) {
+func (gcsd *GCSDriver) GetInsightsWpiFilePathAndName(projectId uint64, dateString string, queryId int64, k int) (string, string) {
 	path := gcsd.GetWeeklyInsightsModelDir(projectId, dateString, queryId, k)
 	return path, "wpi.txt"
 }
 
-func (gcsd *GCSDriver) GetInsightsCpiFilePathAndName(projectId uint64, dateString string, queryId uint64, k int) (string, string) {
+func (gcsd *GCSDriver) GetInsightsCpiFilePathAndName(projectId uint64, dateString string, queryId int64, k int) (string, string) {
 	path := gcsd.GetWeeklyInsightsModelDir(projectId, dateString, queryId, k)
 	return path, "cpi.txt"
 }
 
-func (gcsd *GCSDriver) GetWeeklyInsightsModelDir(projectId uint64, dateString string, queryId uint64, k int) string {
+func (gcsd *GCSDriver) GetWeeklyInsightsModelDir(projectId uint64, dateString string, queryId int64, k int) string {
 	return fmt.Sprintf("projects/%v/weeklyinsights/%v/q-%v/k-%v/", projectId, dateString, queryId, k)
 }
 
-func (gcsd *GCSDriver) GetWeeklyKPIModelDir(projectId uint64, dateString string, queryId uint64) string {
+func (gcsd *GCSDriver) GetWeeklyKPIModelDir(projectId uint64, dateString string, queryId int64) string {
 	return fmt.Sprintf("projects/%v/weeklyKPI/%v/q-%v/", projectId, dateString, queryId)
 }
 
-func (gcsd *GCSDriver) GetKPIFilePathAndName(projectId uint64, dateString string, queryId uint64) (string, string) {
+func (gcsd *GCSDriver) GetKPIFilePathAndName(projectId uint64, dateString string, queryId int64) (string, string) {
 	path := gcsd.GetWeeklyKPIModelDir(projectId, dateString, queryId)
 	return path, "kpi.txt"
 }

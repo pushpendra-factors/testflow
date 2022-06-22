@@ -222,7 +222,7 @@ func deleteQuery(queryObj *model.Queries) (status int) {
 	}
 	return http.StatusOK
 }
-func createQuery(QueryId uint64, ProjectID uint64) (queryObj model.Queries, status int) {
+func createQuery(QueryId int64, ProjectID uint64) (queryObj model.Queries, status int) {
 	var query model.Queries
 	query.ID = QueryId
 	query.ProjectID = ProjectID
@@ -305,8 +305,8 @@ func isTokenExist(token string, private bool) (exists int, err error) {
 
 	return 0, nil
 }
-func createPathAndAddCpiFile(projectID uint64, baseStartTime time.Time, QueryId uint64) (err error) {
-	path := fmt.Sprintf("projects/" + strconv.FormatUint(projectID, 10) + "/weeklyinsights/" + U.GetDateOnlyFromTimestampZ(baseStartTime.Unix()) + "/q-" + strconv.FormatUint(QueryId, 10) + "/k-100")
+func createPathAndAddCpiFile(projectID uint64, baseStartTime time.Time, QueryId int64) (err error) {
+	path := fmt.Sprintf("projects/" + strconv.FormatUint(projectID, 10) + "/weeklyinsights/" + U.GetDateOnlyFromTimestampZ(baseStartTime.Unix()) + "/q-" + strconv.FormatInt(QueryId, 10) + "/k-100")
 	os.MkdirAll(path, 0777)
 
 	sourceFile, err := os.Open("data/cpi.txt")
@@ -329,7 +329,7 @@ func deletePath(path string) error {
 	err := os.RemoveAll("projects")
 	return err
 }
-func CreateWIPropertyObj(queryID uint64, key, value, Type, entity string, order int, IsIncreased bool) model.WeeklyInsightsProperty {
+func CreateWIPropertyObj(queryID int64, key, value, Type, entity string, order int, IsIncreased bool) model.WeeklyInsightsProperty {
 	var WIPropertyObj model.WeeklyInsightsProperty
 	WIPropertyObj.Key = key
 	WIPropertyObj.Value = value

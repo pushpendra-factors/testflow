@@ -13,12 +13,12 @@ import (
 )
 
 type ShareableURLParams struct {
-	EntityID   uint64 `json:"entity_id"`
-	EntityType int    `json:"entity_type"`
-	ShareType  int    `json:"share_type"`
+	EntityID   int64 `json:"entity_id"`
+	EntityType int   `json:"entity_type"`
+	ShareType  int   `json:"share_type"`
 	// AllowedUsers    string `json:"allowed_users"`
-	IsExpirationSet bool      `json:"is_expiration_set"`
-	ExpirationTime  int64     `json:"expiration_time"`
+	IsExpirationSet bool  `json:"is_expiration_set"`
+	ExpirationTime  int64 `json:"expiration_time"`
 }
 
 type UpdateShareableURLParams struct {

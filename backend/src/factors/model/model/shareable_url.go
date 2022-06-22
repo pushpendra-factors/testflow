@@ -10,15 +10,14 @@ type ShareableURL struct {
 	EntityType int    `gorm:"not null" json:"entity_type"`
 	ShareType  int    `gorm:"not null" json:"share_type"`
 	// AllowedUsers   string    `gorm:"type:varchar" json:"allowed_users"`
-	EntityID      uint64    `gorm:"not null" json:"entity_id"`
-	CreatedAt     time.Time `json:"created_at"`
-	UpdatedAt     time.Time `json:"updated_at"`
-	IsDeleted     bool      `gorm:"not null;default:false" json:"is_deleted"`
-	ExpiresAt     int64     `json:"expires_at"`
-	ProjectID     uint64    `gorm:"not null" json:"project_id"`
-	CreatedBy     string    `gorm:"not null;type:varchar(255)" json:"created_by"`
+	EntityID  int64     `gorm:"not null" json:"entity_id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	IsDeleted bool      `gorm:"not null;default:false" json:"is_deleted"`
+	ExpiresAt int64     `json:"expires_at"`
+	ProjectID uint64    `gorm:"not null" json:"project_id"`
+	CreatedBy string    `gorm:"not null;type:varchar(255)" json:"created_by"`
 }
-
 
 // Keep them ordered in ascending order with respect to scope of the share type
 const (
@@ -28,17 +27,17 @@ const (
 )
 
 const (
-	ShareableURLEntityTypeQuery  int = iota + 1
+	ShareableURLEntityTypeQuery int = iota + 1
 	ShareableURLEntityTypeTemplate
 	ShareableURLEntityTypeDashboard
 )
 
-var ValidShareTypes = map[int]bool {
+var ValidShareTypes = map[int]bool{
 	ShareableURLShareTypePublic: true,
 }
 
-var ValidShareEntityTypes = map[int]bool {
-	ShareableURLEntityTypeQuery: true,
-	ShareableURLEntityTypeTemplate: true,
+var ValidShareEntityTypes = map[int]bool{
+	ShareableURLEntityTypeQuery:     true,
+	ShareableURLEntityTypeTemplate:  true,
 	ShareableURLEntityTypeDashboard: true,
 }
