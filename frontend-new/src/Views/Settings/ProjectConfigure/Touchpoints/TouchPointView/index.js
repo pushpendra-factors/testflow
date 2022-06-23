@@ -15,7 +15,7 @@ import { fetchEventPropertyValues } from 'Reducers/coreQuery/services';
 import FaSelect from '../../../../../components/FaSelect';
 
 import {
-    getFilters, getStateFromFilters
+    getFiltersWithoutOrProperty, getStateFromFilters
 } from '../../../../../Views/CoreQuery/utils';
 
 const TouchpointView = ({ activeProject, tchType = '2', getEventProperties, eventProperties, userProperties, rule, onCancel, onSave }) => {
@@ -555,7 +555,7 @@ const TouchpointView = ({ activeProject, tchType = '2', getEventProperties, even
 
         const touchPointObj = {
             //parse and set filterstate
-            "filters": getFilters(newFilterStates),
+            "filters": getFiltersWithoutOrProperty(newFilterStates),
             // set propMap
             "properties_map": propertyMap,
             "touch_point_time_ref": touchPointPropRef,
