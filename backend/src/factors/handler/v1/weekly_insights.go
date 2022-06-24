@@ -38,7 +38,7 @@ func GetWeeklyInsightsParams(c *gin.Context) (*WeeklyInsightsParams, error) {
 		}
 		QueryId = Qid
 	} else {
-		DashBoardUnitID, err := strconv.ParseUint(c.Query("dashboard_unit_id"), 10, 64)
+		DashBoardUnitID, err := strconv.ParseInt(c.Query("dashboard_unit_id"), 10, 64)
 		if err != nil {
 			return nil, err
 		}

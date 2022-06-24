@@ -29,8 +29,8 @@ func ProfilesQueryHandler(c *gin.Context) (interface{}, int, string, string, boo
 	dashboardIdParam := c.Query("dashboard_id")
 	unitIdParam := c.Query("dashboard_unit_id")
 	refreshParam := c.Query("refresh")
-	var dashboardId uint64
-	var unitId uint64
+	var dashboardId int64
+	var unitId int64
 
 	reqID := U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID)
 	logCtx := log.WithFields(log.Fields{
@@ -48,12 +48,12 @@ func ProfilesQueryHandler(c *gin.Context) (interface{}, int, string, string, boo
 
 	isDashboardQueryRequest := dashboardIdParam != "" && unitIdParam != ""
 	if isDashboardQueryRequest {
-		dashboardId, err = strconv.ParseUint(dashboardIdParam, 10, 64)
+		dashboardId, err = strconv.ParseInt(dashboardIdParam, 10, 64)
 		if err != nil || dashboardId == 0 {
 			logCtx.WithError(err).Error("Query failed. Invalid DashboardID.")
 			return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Invalid DashboardID.", true
 		}
-		unitId, err = strconv.ParseUint(unitIdParam, 10, 64)
+		unitId, err = strconv.ParseInt(unitIdParam, 10, 64)
 		if err != nil || unitId == 0 {
 			logCtx.WithError(err).Error("Query failed. Invalid DashboardUnitID.")
 			return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Invalid DashboardUnitID.", true

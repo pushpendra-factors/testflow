@@ -125,7 +125,7 @@ func UpdateDashboardHandler(c *gin.Context) {
 
 	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 
-	dashboardId, err := strconv.ParseUint(c.Params.ByName("dashboard_id"), 10, 64)
+	dashboardId, err := strconv.ParseInt(c.Params.ByName("dashboard_id"), 10, 64)
 	if err != nil || dashboardId == 0 {
 		log.WithError(err).Error("Update dashboard failed. Invalid dashboard.")
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid dashboard id."})
@@ -172,7 +172,7 @@ func DeleteDashboardHandler(c *gin.Context) {
 
 	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 
-	dashboardId, err := strconv.ParseUint(c.Params.ByName("dashboard_id"), 10, 64)
+	dashboardId, err := strconv.ParseInt(c.Params.ByName("dashboard_id"), 10, 64)
 	if err != nil || dashboardId == 0 {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid dashboard id."})
 		return
@@ -204,7 +204,7 @@ func GetDashboardUnitsHandler(c *gin.Context) (interface{}, int, string, bool) {
 
 	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 
-	dashboardId, err := strconv.ParseUint(c.Params.ByName("dashboard_id"), 10, 64)
+	dashboardId, err := strconv.ParseInt(c.Params.ByName("dashboard_id"), 10, 64)
 	if err != nil || dashboardId == 0 {
 		log.WithError(err).Error("Get dashboard units failed. Invalid dashboard.")
 		return nil, http.StatusBadRequest, "Invalid dashboard id.", true
@@ -237,7 +237,7 @@ func CreateDashboardUnitHandler(c *gin.Context) (interface{}, int, string, bool)
 
 	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 
-	dashboardId, err := strconv.ParseUint(c.Params.ByName("dashboard_id"), 10, 64)
+	dashboardId, err := strconv.ParseInt(c.Params.ByName("dashboard_id"), 10, 64)
 	if err != nil || dashboardId == 0 {
 		return nil, http.StatusBadRequest, "Invalid dashboard id.", true
 	}
@@ -299,9 +299,9 @@ func CreateDashboardUnitForMultiDashboardsHandler(c *gin.Context) (interface{}, 
 
 	dashboardIdsStr := strings.Split(c.Params.ByName("dashboard_ids"), ",")
 
-	var dashboardIds []uint64
+	var dashboardIds []int64
 	for _, id := range dashboardIdsStr {
-		dashboardId, err := strconv.ParseUint(id, 10, 64)
+		dashboardId, err := strconv.ParseInt(id, 10, 64)
 		if err != nil || dashboardId == 0 {
 			return nil, http.StatusBadRequest, "Invalid dashboard id =" + id, true
 		}
@@ -358,7 +358,7 @@ func CreateDashboardUnitsForMultipleQueriesHandler(c *gin.Context) (interface{},
 
 	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 
-	dashboardId, err := strconv.ParseUint(c.Params.ByName("dashboard_id"), 10, 64)
+	dashboardId, err := strconv.ParseInt(c.Params.ByName("dashboard_id"), 10, 64)
 	if err != nil || dashboardId == 0 {
 		return nil, http.StatusBadRequest, "Invalid dashboard id.", true
 	}
@@ -430,13 +430,13 @@ func UpdateDashboardUnitHandler(c *gin.Context) {
 		QueryId:      int64(queryId),
 	}
 
-	dashboardId, err := strconv.ParseUint(c.Params.ByName("dashboard_id"), 10, 64)
+	dashboardId, err := strconv.ParseInt(c.Params.ByName("dashboard_id"), 10, 64)
 	if err != nil || dashboardId == 0 {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid dashboard id."})
 		return
 	}
 
-	unitId, err := strconv.ParseUint(c.Params.ByName("unit_id"), 10, 64)
+	unitId, err := strconv.ParseInt(c.Params.ByName("unit_id"), 10, 64)
 	if err != nil || dashboardId == 0 {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid dashboard unit id."})
 		return
@@ -480,13 +480,13 @@ func DeleteDashboardUnitHandler(c *gin.Context) {
 
 	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 
-	dashboardId, err := strconv.ParseUint(c.Params.ByName("dashboard_id"), 10, 64)
+	dashboardId, err := strconv.ParseInt(c.Params.ByName("dashboard_id"), 10, 64)
 	if err != nil || dashboardId == 0 {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid dashboard id."})
 		return
 	}
 
-	unitId, err := strconv.ParseUint(c.Params.ByName("unit_id"), 10, 64)
+	unitId, err := strconv.ParseInt(c.Params.ByName("unit_id"), 10, 64)
 	if err != nil || dashboardId == 0 {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid dashboard unit id."})
 		return
@@ -521,7 +521,7 @@ func DeleteMultiDashboardUnitHandler(c *gin.Context) {
 
 	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 
-	dashboardID, err := strconv.ParseUint(c.Params.ByName("dashboard_id"), 10, 64)
+	dashboardID, err := strconv.ParseInt(c.Params.ByName("dashboard_id"), 10, 64)
 	if err != nil || dashboardID == 0 {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid dashboard id."})
 		return
@@ -529,9 +529,9 @@ func DeleteMultiDashboardUnitHandler(c *gin.Context) {
 
 	dashboardUnitIDsStr := strings.Split(c.Params.ByName("unit_ids"), ",")
 
-	var dashboardUnitIDs []uint64
+	var dashboardUnitIDs []int64
 	for _, ID := range dashboardUnitIDsStr {
-		dashboardUnitID, err := strconv.ParseUint(ID, 10, 64)
+		dashboardUnitID, err := strconv.ParseInt(ID, 10, 64)
 		if err != nil || dashboardUnitID == 0 {
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid dashboard id =" + ID})
 			return
@@ -587,7 +587,7 @@ func DashboardUnitsWebAnalyticsQueryHandler(c *gin.Context) {
 		return
 	}
 
-	dashboardId, err := strconv.ParseUint(c.Params.ByName("dashboard_id"), 10, 64)
+	dashboardId, err := strconv.ParseInt(c.Params.ByName("dashboard_id"), 10, 64)
 	if err != nil || dashboardId == 0 {
 		c.AbortWithStatusJSON(http.StatusBadRequest,
 			gin.H{"error": "Web analytics query failed. Invalid dashboard id."})

@@ -45,8 +45,8 @@ func ChannelQueryHandler(c *gin.Context) {
 
 	var err error
 	var queryPayload model.ChannelQuery
-	var dashboardId uint64
-	var unitId uint64
+	var dashboardId int64
+	var unitId int64
 	hardRefresh := false
 	dashboardIdParam := c.Query("dashboard_id")
 	unitIdParam := c.Query("dashboard_unit_id")
@@ -64,12 +64,12 @@ func ChannelQueryHandler(c *gin.Context) {
 
 	isDashboardQueryRequest := dashboardIdParam != "" && unitIdParam != ""
 	if isDashboardQueryRequest {
-		dashboardId, err = strconv.ParseUint(dashboardIdParam, 10, 64)
+		dashboardId, err = strconv.ParseInt(dashboardIdParam, 10, 64)
 		if err != nil {
 			c.AbortWithStatus(http.StatusBadRequest)
 			return
 		}
-		unitId, err = strconv.ParseUint(unitIdParam, 10, 64)
+		unitId, err = strconv.ParseInt(unitIdParam, 10, 64)
 		if err != nil {
 			c.AbortWithStatus(http.StatusBadRequest)
 			return

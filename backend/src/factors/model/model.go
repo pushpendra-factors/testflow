@@ -132,15 +132,15 @@ type Model interface {
 	// dashboard_unit
 	CreateDashboardUnit(projectID uint64, agentUUID string, dashboardUnit *model.DashboardUnit) (*model.DashboardUnit, int, string)
 	CreateDashboardUnitForDashboardClass(projectID uint64, agentUUID string, dashboardUnit *model.DashboardUnit, dashboardClass string) (*model.DashboardUnit, int, string)
-	CreateDashboardUnitForMultipleDashboards(dashboardIds []uint64, projectId uint64, agentUUID string, unitPayload model.DashboardUnitRequestPayload) ([]*model.DashboardUnit, int, string)
-	CreateMultipleDashboardUnits(requestPayload []model.DashboardUnitRequestPayload, projectId uint64, agentUUID string, dashboardId uint64) ([]*model.DashboardUnit, int, string)
+	CreateDashboardUnitForMultipleDashboards(dashboardIds []int64, projectId uint64, agentUUID string, unitPayload model.DashboardUnitRequestPayload) ([]*model.DashboardUnit, int, string)
+	CreateMultipleDashboardUnits(requestPayload []model.DashboardUnitRequestPayload, projectId uint64, agentUUID string, dashboardId int64) ([]*model.DashboardUnit, int, string)
 	GetDashboardUnitsForProjectID(projectID uint64) ([]model.DashboardUnit, int)
-	GetDashboardUnits(projectID uint64, agentUUID string, dashboardId uint64) ([]model.DashboardUnit, int)
-	GetDashboardUnitByUnitID(projectID, unitID uint64) (*model.DashboardUnit, int)
-	GetDashboardUnitsByProjectIDAndDashboardIDAndTypes(projectID, dashboardID uint64, types []string) ([]model.DashboardUnit, int)
-	DeleteDashboardUnit(projectID uint64, agentUUID string, dashboardId uint64, id uint64) int
-	DeleteMultipleDashboardUnits(projectID uint64, agentUUID string, dashboardID uint64, dashboardUnitIDs []uint64) (int, string)
-	UpdateDashboardUnit(projectId uint64, agentUUID string, dashboardId uint64, id uint64, unit *model.DashboardUnit) (*model.DashboardUnit, int)
+	GetDashboardUnits(projectID uint64, agentUUID string, dashboardId int64) ([]model.DashboardUnit, int)
+	GetDashboardUnitByUnitID(projectID uint64, unitID int64) (*model.DashboardUnit, int)
+	GetDashboardUnitsByProjectIDAndDashboardIDAndTypes(projectID uint64, dashboardID int64, types []string) ([]model.DashboardUnit, int)
+	DeleteDashboardUnit(projectID uint64, agentUUID string, dashboardId int64, id int64) int
+	DeleteMultipleDashboardUnits(projectID uint64, agentUUID string, dashboardID int64, dashboardUnitIDs []int64) (int, string)
+	UpdateDashboardUnit(projectId uint64, agentUUID string, dashboardId int64, id int64, unit *model.DashboardUnit) (*model.DashboardUnit, int)
 	CacheDashboardUnitsForProjects(stringProjectsIDs, excludeProjectIDs string, numRoutines int, reportCollector *sync.Map)
 	CacheDashboardUnitsForProjectID(projectID uint64, dashboardUnits []model.DashboardUnit, queryClasses []string, numRoutines int, reportCollector *sync.Map) int
 	CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitGroup *sync.WaitGroup, reportCollector *sync.Map, queryClass string)
@@ -156,10 +156,10 @@ type Model interface {
 	CreateDashboard(projectID uint64, agentUUID string, dashboard *model.Dashboard) (*model.Dashboard, int)
 	CreateAgentPersonalDashboardForProject(projectID uint64, agentUUID string) (*model.Dashboard, int)
 	GetDashboards(projectID uint64, agentUUID string) ([]model.Dashboard, int)
-	GetDashboard(projectID uint64, agentUUID string, id uint64) (*model.Dashboard, int)
-	HasAccessToDashboard(projectID uint64, agentUUID string, id uint64) (bool, *model.Dashboard)
-	UpdateDashboard(projectID uint64, agentUUID string, id uint64, dashboard *model.UpdatableDashboard) int
-	DeleteDashboard(projectID uint64, agentUUID string, dashboardID uint64) int
+	GetDashboard(projectID uint64, agentUUID string, id int64) (*model.Dashboard, int)
+	HasAccessToDashboard(projectID uint64, agentUUID string, id int64) (bool, *model.Dashboard)
+	UpdateDashboard(projectID uint64, agentUUID string, id int64, dashboard *model.UpdatableDashboard) int
+	DeleteDashboard(projectID uint64, agentUUID string, dashboardID int64) int
 
 	// event_analytics
 	RunEventsGroupQuery(queriesOriginal []model.Query, projectId uint64) (model.ResultGroup, int)
@@ -448,7 +448,7 @@ type Model interface {
 	GetPropertiesUpdatedTimestampOfUser(projectId uint64, id string) (int64, int)
 
 	// web_analytics
-	GetWebAnalyticsQueriesFromDashboardUnits(projectID uint64) (uint64, *model.WebAnalyticsQueries, int)
+	GetWebAnalyticsQueriesFromDashboardUnits(projectID uint64) (int64, *model.WebAnalyticsQueries, int)
 	CreateWebAnalyticsDefaultDashboardWithUnits(projectID uint64, agentUUID string) int
 	ExecuteWebAnalyticsQueries(projectID uint64, queries *model.WebAnalyticsQueries) (queryResult *model.WebAnalyticsQueryResult, errCode int)
 	CacheWebsiteAnalyticsForProjects(stringProjectsIDs, excludeProjectIDs string, numRoutines int, reportCollector *sync.Map)

@@ -39,7 +39,7 @@ func (store *MemSQL) satisfiesDashboardUnitForeignConstraints(dashboardUnit mode
 
 // CreateDashboardUnitForMultipleDashboards creates multiple dashboard units each for given
 // list of dashboards
-func (store *MemSQL) CreateDashboardUnitForMultipleDashboards(dashboardIds []uint64, projectId uint64,
+func (store *MemSQL) CreateDashboardUnitForMultipleDashboards(dashboardIds []int64, projectId uint64,
 	agentUUID string, unitPayload model.DashboardUnitRequestPayload) ([]*model.DashboardUnit, int, string) {
 	logFields := log.Fields{
 		"dash_board_ids": dashboardIds,
@@ -68,7 +68,7 @@ func (store *MemSQL) CreateDashboardUnitForMultipleDashboards(dashboardIds []uin
 
 // CreateMultipleDashboardUnits creates multiple dashboard units for list of queries for single dashboard
 func (store *MemSQL) CreateMultipleDashboardUnits(requestPayload []model.DashboardUnitRequestPayload, projectId uint64,
-	agentUUID string, dashboardId uint64) ([]*model.DashboardUnit, int, string) {
+	agentUUID string, dashboardId int64) ([]*model.DashboardUnit, int, string) {
 	logFields := log.Fields{
 		"request_payload": requestPayload,
 		"project_id":      projectId,
@@ -193,7 +193,7 @@ func (store *MemSQL) GetDashboardUnitsForProjectID(projectID uint64) ([]model.Da
 	return dashboardUnits, http.StatusFound
 }
 
-func (store *MemSQL) GetDashboardUnits(projectId uint64, agentUUID string, dashboardId uint64) ([]model.DashboardUnit, int) {
+func (store *MemSQL) GetDashboardUnits(projectId uint64, agentUUID string, dashboardId int64) ([]model.DashboardUnit, int) {
 	logFields := log.Fields{
 		"project_id":   projectId,
 		"agent_uuid":   agentUUID,
@@ -223,7 +223,7 @@ func (store *MemSQL) GetDashboardUnits(projectId uint64, agentUUID string, dashb
 }
 
 // GetDashboardUnitByUnitID To get a dashboard unit by project id and unit id.
-func (store *MemSQL) GetDashboardUnitByUnitID(projectID, unitID uint64) (*model.DashboardUnit, int) {
+func (store *MemSQL) GetDashboardUnitByUnitID(projectID uint64, unitID int64) (*model.DashboardUnit, int) {
 	logFields := log.Fields{
 		"unit_id":    unitID,
 		"project_id": projectID,
@@ -241,7 +241,7 @@ func (store *MemSQL) GetDashboardUnitByUnitID(projectID, unitID uint64) (*model.
 	return &dashboardUnit, http.StatusFound
 }
 
-func (store *MemSQL) GetDashboardUnitsByProjectIDAndDashboardIDAndTypes(projectID, dashboardID uint64, types []string) ([]model.DashboardUnit, int) {
+func (store *MemSQL) GetDashboardUnitsByProjectIDAndDashboardIDAndTypes(projectID uint64, dashboardID int64, types []string) ([]model.DashboardUnit, int) {
 	logFields := log.Fields{
 		"project_id":   projectID,
 		"types":        types,
@@ -306,7 +306,7 @@ func (store *MemSQL) GetDashboardUnitNamesByProjectIdTypeAndName(projectID uint6
 	return rDashboardUnitNames, http.StatusFound
 }
 
-func (store *MemSQL) DeleteDashboardUnit(projectId uint64, agentUUID string, dashboardId uint64, id uint64) int {
+func (store *MemSQL) DeleteDashboardUnit(projectId uint64, agentUUID string, dashboardId int64, id int64) int {
 	logFields := log.Fields{
 		"project_id":   projectId,
 		"agent_uuid":   agentUUID,
@@ -337,8 +337,8 @@ func (store *MemSQL) DeleteDashboardUnit(projectId uint64, agentUUID string, das
 }
 
 // DeleteMultipleDashboardUnits deletes multiple dashboard units for given dashboard
-func (store *MemSQL) DeleteMultipleDashboardUnits(projectID uint64, agentUUID string, dashboardID uint64,
-	dashboardUnitIDs []uint64) (int, string) {
+func (store *MemSQL) DeleteMultipleDashboardUnits(projectID uint64, agentUUID string, dashboardID int64,
+	dashboardUnitIDs []int64) (int, string) {
 	logFields := log.Fields{
 		"dashboard_unit_ids": dashboardUnitIDs,
 		"project_id":         projectID,
@@ -359,7 +359,7 @@ func (store *MemSQL) DeleteMultipleDashboardUnits(projectID uint64, agentUUID st
 	return http.StatusAccepted, ""
 }
 
-func (store *MemSQL) deleteDashboardUnit(projectID uint64, dashboardID uint64, ID uint64) int {
+func (store *MemSQL) deleteDashboardUnit(projectID uint64, dashboardID int64, ID int64) int {
 	logFields := log.Fields{
 		"project_id":   projectID,
 		"id":           ID,
@@ -379,7 +379,7 @@ func (store *MemSQL) deleteDashboardUnit(projectID uint64, dashboardID uint64, I
 }
 
 func (store *MemSQL) UpdateDashboardUnit(projectId uint64, agentUUID string,
-	dashboardId uint64, id uint64, unit *model.DashboardUnit) (*model.DashboardUnit, int) {
+	dashboardId int64, id int64, unit *model.DashboardUnit) (*model.DashboardUnit, int) {
 	logFields := log.Fields{
 		"id":           id,
 		"unit":         unit,
@@ -440,7 +440,7 @@ func (store *MemSQL) CacheDashboardUnitsForProjects(stringProjectsIDs, excludePr
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	projectIDs := store.GetProjectsToRunForIncludeExcludeString(stringProjectsIDs, excludeProjectIDs)
-	var mapOfValidDashboardUnits map[uint64]map[uint64]bool
+	var mapOfValidDashboardUnits map[uint64]map[int64]bool
 	var err error
 	validUnitCount := int64(0)
 	if C.GetUsageBasedDashboardCaching() == 1 {
