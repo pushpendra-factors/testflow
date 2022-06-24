@@ -44,22 +44,20 @@ type queryCacheWebResult struct {
 // @Param project_id path integer true "Project ID"
 // @Success 302 {array} model.Dashboard
 // @Router /{project_id}/dashboards [get]
-func GetDashboardsHandler(c *gin.Context) {
+func GetDashboardsHandler(c *gin.Context) (interface{}, int, string, bool) {
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
-		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Get dashboards failed. Invalid project."})
-		return
+		return nil, http.StatusForbidden, "Get dashboards failed. Invalid project.", true
 	}
 
 	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 
 	dashboards, errCode := store.GetStore().GetDashboards(projectId, agentUUID)
 	if errCode != http.StatusFound {
-		c.AbortWithStatusJSON(errCode, gin.H{"error": "Get dashboards failed."})
-		return
+		return nil, errCode, "Get dashboards failed.", true
 	}
 
-	c.JSON(http.StatusFound, dashboards)
+	return dashboards, http.StatusFound, "", false
 }
 
 // CreateDashboardHandler godoc
@@ -71,11 +69,10 @@ func GetDashboardsHandler(c *gin.Context) {
 // @Param dashboard body handler.DashboardRequestPayload true "Create new dashboard"
 // @Success 201 {object} model.Dashboard
 // @Router /{project_id}/dashboards [post]
-func CreateDashboardHandler(c *gin.Context) {
+func CreateDashboardHandler(c *gin.Context) (interface{}, int, string, bool) {
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
-		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Create dashboard failed. Invalid project."})
-		return
+		return nil, http.StatusForbidden, "Create dashboard failed. Invalid project.", true
 	}
 
 	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
@@ -87,8 +84,7 @@ func CreateDashboardHandler(c *gin.Context) {
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&requestPayload); err != nil {
 		errMsg := "Create dashboard failed. Invalid JSON"
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": errMsg})
-		return
+		return nil, http.StatusBadRequest, errMsg, true
 	}
 
 	dashboardRequest := &model.Dashboard{
@@ -104,11 +100,10 @@ func CreateDashboardHandler(c *gin.Context) {
 	dashboard, errCode := store.GetStore().CreateDashboard(projectId, agentUUID, dashboardRequest)
 
 	if errCode != http.StatusCreated {
-		c.AbortWithStatusJSON(errCode, gin.H{"error": "Failed to create dashboard."})
-		return
+		return nil, errCode, "Failed to create dashboard.", true
 	}
 
-	c.JSON(http.StatusCreated, dashboard)
+	return dashboard, http.StatusCreated, "", false
 }
 
 // UpdateDashboardHandler godoc
@@ -201,11 +196,10 @@ func DeleteDashboardHandler(c *gin.Context) {
 // @Param dashboard_id path integer true "Dashboard ID"
 // @Success 302 {array} model.DashboardUnit
 // @Router /{project_id}/dashboards/{dashboard_id}/units [get]
-func GetDashboardUnitsHandler(c *gin.Context) {
+func GetDashboardUnitsHandler(c *gin.Context) (interface{}, int, string, bool) {
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Get dashboard units failed. Invalid project."})
-		return
 	}
 
 	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
@@ -213,17 +207,15 @@ func GetDashboardUnitsHandler(c *gin.Context) {
 	dashboardId, err := strconv.ParseUint(c.Params.ByName("dashboard_id"), 10, 64)
 	if err != nil || dashboardId == 0 {
 		log.WithError(err).Error("Get dashboard units failed. Invalid dashboard.")
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid dashboard id."})
-		return
+		return nil, http.StatusBadRequest, "Invalid dashboard id.", true
 	}
 
 	dashboardUnits, errCode := store.GetStore().GetDashboardUnits(projectId, agentUUID, dashboardId)
 	if errCode != http.StatusFound {
-		c.AbortWithStatusJSON(errCode, gin.H{"error": "Get dashboard units failed."})
-		return
+		return nil, errCode, "Get dashboard units failed.", true
 	}
 
-	c.JSON(http.StatusFound, dashboardUnits)
+	return dashboardUnits, http.StatusFound, "", false
 }
 
 // CreateDashboardUnitHandler godoc
@@ -236,38 +228,41 @@ func GetDashboardUnitsHandler(c *gin.Context) {
 // @Param unit body model.DashboardUnitRequestPayload true "Create dashboard unit"
 // @Success 201 {object} model.DashboardUnit
 // @Router /{project_id}/dashboards/{dashboard_id}/units [post]
-func CreateDashboardUnitHandler(c *gin.Context) {
+func CreateDashboardUnitHandler(c *gin.Context) (interface{}, int, string, bool) {
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
-		c.AbortWithStatusJSON(http.StatusForbidden,
-			gin.H{"error": "Get dashboard units failed. Invalid project."})
-		return
+		return nil, http.StatusForbidden,
+			"Get dashboard units failed. Invalid project.", true
 	}
 
 	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 
 	dashboardId, err := strconv.ParseUint(c.Params.ByName("dashboard_id"), 10, 64)
 	if err != nil || dashboardId == 0 {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid dashboard id."})
-		return
+		return nil, http.StatusBadRequest, "Invalid dashboard id.", true
 	}
 
-	var requestPayload model.DashboardUnitRequestPayload
+	var requestPayloadString model.DashboardUnitRequestPayloadString
 
 	r := c.Request
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 	logCtx := log.WithFields(log.Fields{"project_id": projectId, "dashboard_id": dashboardId})
-	if err := decoder.Decode(&requestPayload); err != nil {
+	if err := decoder.Decode(&requestPayloadString); err != nil {
 		errMsg := "Get dashboard units failed. Invalid JSON."
 		logCtx.WithError(err).Error(errMsg)
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": errMsg})
-		return
+		return nil, http.StatusBadRequest, errMsg, true
+	}
+
+	queryId, _ := strconv.Atoi(requestPayloadString.QueryId)
+	requestPayload := model.DashboardUnitRequestPayload{
+		Description:  requestPayloadString.Description,
+		Presentation: requestPayloadString.Presentation,
+		QueryId:      int64(queryId),
 	}
 
 	if requestPayload.QueryId == 0 {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "no queryId."})
-		return
+		return nil, http.StatusBadRequest, "no queryId.", true
 	}
 
 	dashboardUnit, errCode, errMsg := store.GetStore().CreateDashboardUnit(projectId, agentUUID,
@@ -277,11 +272,10 @@ func CreateDashboardUnitHandler(c *gin.Context) {
 			QueryId:      requestPayload.QueryId,
 		})
 	if errCode != http.StatusCreated {
-		c.AbortWithStatusJSON(errCode, errMsg)
-		return
+		return nil, errCode, errMsg, true
 	}
 
-	c.JSON(http.StatusCreated, dashboardUnit)
+	return dashboardUnit, http.StatusCreated, "", false
 }
 
 // CreateDashboardUnitForMultiDashboardsHandler godoc
@@ -294,12 +288,11 @@ func CreateDashboardUnitHandler(c *gin.Context) {
 // @Param payload body model.DashboardUnitRequestPayload true "Create dashboard unit"
 // @Success 201 {array} model.DashboardUnit
 // @Router /{project_id}/v1/dashboards/multi/{dashboard_ids}/units [post]
-func CreateDashboardUnitForMultiDashboardsHandler(c *gin.Context) {
+func CreateDashboardUnitForMultiDashboardsHandler(c *gin.Context) (interface{}, int, string, bool) {
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
-		c.AbortWithStatusJSON(http.StatusForbidden,
-			gin.H{"error": "Get dashboard units failed. Invalid project."})
-		return
+		return nil, http.StatusForbidden,
+			"Get dashboard units failed. Invalid project.", true
 	}
 
 	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
@@ -310,37 +303,40 @@ func CreateDashboardUnitForMultiDashboardsHandler(c *gin.Context) {
 	for _, id := range dashboardIdsStr {
 		dashboardId, err := strconv.ParseUint(id, 10, 64)
 		if err != nil || dashboardId == 0 {
-			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid dashboard id =" + id})
-			return
+			return nil, http.StatusBadRequest, "Invalid dashboard id =" + id, true
 		}
 		dashboardIds = append(dashboardIds, dashboardId)
 	}
 
-	var requestPayload model.DashboardUnitRequestPayload
+	var requestPayloadString model.DashboardUnitRequestPayloadString
 
 	r := c.Request
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 	logCtx := log.WithFields(log.Fields{"project_id": projectId})
-	if err := decoder.Decode(&requestPayload); err != nil {
+	if err := decoder.Decode(&requestPayloadString); err != nil {
 		errMsg := "Get dashboard units failed. Invalid JSON."
 		logCtx.WithError(err).Error(errMsg)
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": errMsg})
-		return
+		return nil, http.StatusBadRequest, errMsg, true
+	}
+
+	queryId, _ := strconv.Atoi(requestPayloadString.QueryId)
+	requestPayload := model.DashboardUnitRequestPayload{
+		Description:  requestPayloadString.Description,
+		Presentation: requestPayloadString.Presentation,
+		QueryId:      int64(queryId),
 	}
 
 	// query should have been created before the dashboard unit
 	if requestPayload.QueryId == 0 {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid queryID. empty queryID."})
-		return
+		return nil, http.StatusBadRequest, "invalid queryID. empty queryID.", true
 	}
 
 	dashboardUnits, errCode, errMsg := store.GetStore().CreateDashboardUnitForMultipleDashboards(dashboardIds, projectId, agentUUID, requestPayload)
 	if errCode != http.StatusCreated {
-		c.AbortWithStatusJSON(errCode, errMsg)
-		return
+		return nil, errCode, errMsg, true
 	}
-	c.JSON(http.StatusCreated, dashboardUnits)
+	return dashboardUnits, http.StatusCreated, "", false
 }
 
 // CreateDashboardUnitsForMultipleQueriesHandler godoc
@@ -353,41 +349,46 @@ func CreateDashboardUnitForMultiDashboardsHandler(c *gin.Context) {
 // @Param payload body model.DashboardUnitRequestPayload true "Array of DashboardUnitRequestPayload"
 // @Success 201 {array} model.DashboardUnit
 // @Router /{project_id}/v1/dashboards/queries/{dashboard_id}/units [post]
-func CreateDashboardUnitsForMultipleQueriesHandler(c *gin.Context) {
+func CreateDashboardUnitsForMultipleQueriesHandler(c *gin.Context) (interface{}, int, string, bool) {
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
-		c.AbortWithStatusJSON(http.StatusForbidden,
-			gin.H{"error": "Get dashboard units failed. Invalid project."})
-		return
+		return nil, http.StatusForbidden,
+			"Get dashboard units failed. Invalid project.", true
 	}
 
 	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 
 	dashboardId, err := strconv.ParseUint(c.Params.ByName("dashboard_id"), 10, 64)
 	if err != nil || dashboardId == 0 {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid dashboard id."})
-		return
+		return nil, http.StatusBadRequest, "Invalid dashboard id.", true
 	}
 
-	var requestPayload []model.DashboardUnitRequestPayload
+	var requestPayloadString []model.DashboardUnitRequestPayloadString
 
 	r := c.Request
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 	logCtx := log.WithFields(log.Fields{"project_id": projectId})
-	if err := decoder.Decode(&requestPayload); err != nil {
+	if err := decoder.Decode(&requestPayloadString); err != nil {
 		errMsg := "Get dashboard units failed. Invalid JSON."
 		logCtx.WithError(err).Error(errMsg)
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": errMsg})
-		return
+		return nil, http.StatusBadRequest, errMsg, true
 	}
 
+	requestPayload := make([]model.DashboardUnitRequestPayload, 0)
+	for _, reqPayload := range requestPayloadString {
+		queryId, _ := strconv.Atoi(reqPayload.QueryId)
+		requestPayload = append(requestPayload, model.DashboardUnitRequestPayload{
+			Description:  reqPayload.Description,
+			Presentation: reqPayload.Presentation,
+			QueryId:      int64(queryId),
+		})
+	}
 	dashboardUnits, errCode, errMsg := store.GetStore().CreateMultipleDashboardUnits(requestPayload, projectId, agentUUID, dashboardId)
 	if errCode != http.StatusCreated {
-		c.AbortWithStatusJSON(errCode, errMsg)
-		return
+		return nil, errCode, errMsg, true
 	}
-	c.JSON(http.StatusCreated, dashboardUnits)
+	return dashboardUnits, http.StatusCreated, "", false
 }
 
 // UpdateDashboardUnitHandler godoc
@@ -411,15 +412,22 @@ func UpdateDashboardUnitHandler(c *gin.Context) {
 
 	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 
-	var requestPayload model.DashboardUnitRequestPayload
+	var requestPayloadString model.DashboardUnitRequestPayloadString
 
 	r := c.Request
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&requestPayload); err != nil {
+	if err := decoder.Decode(&requestPayloadString); err != nil {
 		errMsg := "Update dashboard unit failed. Invalid JSON"
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": errMsg})
 		return
+	}
+
+	queryId, _ := strconv.Atoi(requestPayloadString.QueryId)
+	requestPayload := model.DashboardUnitRequestPayload{
+		Description:  requestPayloadString.Description,
+		Presentation: requestPayloadString.Presentation,
+		QueryId:      int64(queryId),
 	}
 
 	dashboardId, err := strconv.ParseUint(c.Params.ByName("dashboard_id"), 10, 64)

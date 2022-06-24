@@ -91,12 +91,10 @@ function ProjectDropdown({
 
   const changeActiveDashboard = useCallback(
     (val) => {
-      if (parseInt(val) === activeDashboard?.id) {
+      if (val === activeDashboard?.id) {
         return false;
       }
-      const selectedDashboard = dashboards.data.find(
-        (d) => d.id === parseInt(val)
-      );
+      const selectedDashboard = dashboards.data.find((d) => d.id === val);
       dispatch({
         type: ACTIVE_DASHBOARD_CHANGE,
         payload: selectedDashboard
@@ -121,7 +119,7 @@ function ProjectDropdown({
         dashboard_type: activeDashboard?.type,
         dashboard_id: activeDashboard?.id,
         project_id: active_project?.id,
-        project_name: active_project?.name,
+        project_name: active_project?.name
       });
     }
   }, [activeDashboard?.id]);

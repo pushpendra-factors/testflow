@@ -25,13 +25,13 @@ type FileManager interface {
 	GetEventArchiveFilePathAndName(projectID uint64, startTime, endTime int64) (string, string)
 	GetUsersArchiveFilePathAndName(projectID uint64, startTime, endTime int64) (string, string)
 	ListFiles(path string) []string
-	GetInsightsWpiFilePathAndName(projectId uint64, dateString string, queryId uint64, k int) (string, string)
-	GetInsightsCpiFilePathAndName(projectId uint64, dateString string, queryId uint64, k int) (string, string)
-	GetWeeklyInsightsModelDir(projectId uint64, dateString string, queryId uint64, k int) string
+	GetInsightsWpiFilePathAndName(projectId uint64, dateString string, queryId int64, k int) (string, string)
+	GetInsightsCpiFilePathAndName(projectId uint64, dateString string, queryId int64, k int) (string, string)
+	GetWeeklyInsightsModelDir(projectId uint64, dateString string, queryId int64, k int) string
 	GetModelUserPropertiesCategoricalFilePathAndName(projectId, modelId uint64) (string, string)
 	GetModelEventPropertiesCategoricalFilePathAndName(projectId, modelId uint64) (string, string)
 	GetModelUserPropertiesFilePathAndName(projectId, modelId uint64) (string, string)
 	GetModelEventPropertiesFilePathAndName(projectId, modelId uint64) (string, string)
-	GetWeeklyKPIModelDir(projectId uint64, dateString string, queryId uint64) string
-	GetKPIFilePathAndName(projectId uint64, dateString string, queryId uint64) (string, string)
+	GetWeeklyKPIModelDir(projectId uint64, dateString string, queryId int64) string
+	GetKPIFilePathAndName(projectId uint64, dateString string, queryId int64) (string, string)
 }

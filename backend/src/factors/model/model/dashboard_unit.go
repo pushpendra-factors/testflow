@@ -21,13 +21,19 @@ type DashboardUnit struct {
 	IsDeleted    bool      `gorm:"not null;default:false" json:"is_deleted"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
-	QueryId      uint64    `gorm:"not null" json:"query_id"`
+	QueryId      int64     `gorm:"not null" json:"query_id"`
 }
 
 type DashboardUnitRequestPayload struct {
 	Description  string `json:"description"`
 	Presentation string `json:"presentation"`
-	QueryId      uint64 `json:"query_id"`
+	QueryId      int64  `json:"query_id"`
+}
+
+type DashboardUnitRequestPayloadString struct {
+	Description  string `json:"description"`
+	Presentation string `json:"presentation"`
+	QueryId      string `json:"query_id"`
 }
 
 // DashboardUnitCachePayload Payload for dashboard caching method.

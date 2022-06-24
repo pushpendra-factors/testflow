@@ -137,7 +137,7 @@ export const getTableColumns = (
 
   const countColumn = {
     title: getClickableTitleSorter(
-      `${title}: ${labelsObj[page]}`,
+      <div className="break-all">${title}: ${labelsObj[page]}</div>,
       { key: EVENT_COUNT_KEY, type: 'numerical', subtype: null },
       currentSorter,
       handleSorting,
@@ -145,7 +145,7 @@ export const getTableColumns = (
     ),
     className: 'text-right',
     dataIndex: EVENT_COUNT_KEY,
-    width: 150,
+    width: 200,
     render: (d) => {
       return <NumFormat number={d} />;
     }

@@ -65,7 +65,9 @@ class BaseReportExtract(BaseExtract):
             traceback.print_tb(e.__traceback__)
             str_exception = str(e)
             message = str_exception
-            message = "Timestamp: " + str(current_timestamp) + ". Message: " + str_exception
+            if 'No such object' in str_exception:
+                message = 'Failed to get data from cloud storage'
+            message = "Timestamp: " + str(current_timestamp) + ". Message: " + message
             log.warning("Failed with exception: %d %s %s", task_context.project_id,
                         task_context.customer_account_id, message)
             MetricsAggregator.update_job_stats(task_context.project_id, task_context.customer_account_id,

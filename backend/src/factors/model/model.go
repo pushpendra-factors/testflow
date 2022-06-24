@@ -360,13 +360,13 @@ type Model interface {
 	// queries
 	CreateQuery(projectID uint64, query *model.Queries) (*model.Queries, int, string)
 	GetALLQueriesWithProjectId(projectID uint64) ([]model.Queries, int)
-	GetDashboardQueryWithQueryId(projectID uint64, queryID uint64) (*model.Queries, int)
-	GetSavedQueryWithQueryId(projectID uint64, queryID uint64) (*model.Queries, int)
-	GetQueryWithQueryId(projectID uint64, queryID uint64) (*model.Queries, int)
-	DeleteQuery(projectID uint64, queryID uint64) (int, string)
-	DeleteSavedQuery(projectID uint64, queryID uint64) (int, string)
-	DeleteDashboardQuery(projectID uint64, queryID uint64) (int, string)
-	UpdateSavedQuery(projectID uint64, queryID uint64, query *model.Queries) (*model.Queries, int)
+	GetDashboardQueryWithQueryId(projectID uint64, queryID int64) (*model.Queries, int)
+	GetSavedQueryWithQueryId(projectID uint64, queryID int64) (*model.Queries, int)
+	GetQueryWithQueryId(projectID uint64, queryID int64) (*model.Queries, int)
+	DeleteQuery(projectID uint64, queryID int64) (int, string)
+	DeleteSavedQuery(projectID uint64, queryID int64) (int, string)
+	DeleteDashboardQuery(projectID uint64, queryID int64) (int, string)
+	UpdateSavedQuery(projectID uint64, queryID int64, query *model.Queries) (*model.Queries, int)
 	UpdateQueryIDsWithNewIDs(projectID uint64, shareableURLs []string) int
 	SearchQueriesWithProjectId(projectID uint64, searchString string) ([]model.Queries, int)
 	GetAllNonConvertedQueries(projectID uint64) ([]model.Queries, int)
@@ -613,7 +613,7 @@ type Model interface {
 	// GetShareableURLWithID(projectID uint64, shareId string) (*model.ShareableURL, int)
 	// UpdateShareableURLShareTypeWithShareIDandCreatedBy(projectID uint64, shareId, createdBy string, shareType int, allowedUsers string) int
 	DeleteShareableURLWithShareIDandAgentID(projectID uint64, shareId, createdBy string) int
-	DeleteShareableURLWithEntityIDandType(projectID, entityID uint64, entityType int) int
+	DeleteShareableURLWithEntityIDandType(projectID uint64, entityID int64, entityType int) int
 	RevokeShareableURLsWithShareString(projectId uint64, shareString string) (int, string)
 	RevokeShareableURLsWithProjectID(projectId uint64) (int, string)
 

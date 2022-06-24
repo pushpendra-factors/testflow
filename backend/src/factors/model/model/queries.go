@@ -8,7 +8,7 @@ import (
 
 type Queries struct {
 	// Composite primary key, id + project_id.
-	ID uint64 `gorm:"primary_key:true" json:"id"`
+	ID int64 `gorm:"primary_key:true;auto_increment:false" json:"id"`
 	// Foreign key queries(project_id) ref projects(id).
 	ProjectID     uint64         `gorm:"primary_key:true" json:"project_id"`
 	Title         string         `gorm:"not null" json:"title"`

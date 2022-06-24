@@ -1090,6 +1090,7 @@ func syncContact(project *model.Project, document *model.HubspotDocument, hubspo
 	user, status := store.GetStore().GetUser(project.ID, userID)
 	if status != http.StatusFound {
 		logCtx.WithField("error_code", status).Error("Failed to get user on sync contact.")
+		return http.StatusInternalServerError
 	}
 
 	existingCustomerUserID := user.CustomerUserId

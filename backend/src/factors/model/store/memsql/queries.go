@@ -58,7 +58,6 @@ func (store *MemSQL) CreateQuery(projectId uint64, query *model.Queries) (*model
 			"project_id": projectId}).WithError(err).Error(errMsg)
 		return nil, http.StatusInternalServerError, errMsg
 	}
-
 	return query, http.StatusCreated, ""
 }
 
@@ -169,7 +168,7 @@ func (store *MemSQL) addCreatedByNameInQuery(query model.Queries) (model.Queries
 }
 
 // GetDashboardQueryWithQueryId Get query of type DashboardQuery.
-func (store *MemSQL) GetDashboardQueryWithQueryId(projectID uint64, queryID uint64) (*model.Queries, int) {
+func (store *MemSQL) GetDashboardQueryWithQueryId(projectID uint64, queryID int64) (*model.Queries, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"query_id":   queryID,
@@ -179,7 +178,7 @@ func (store *MemSQL) GetDashboardQueryWithQueryId(projectID uint64, queryID uint
 }
 
 // GetSavedQueryWithQueryId Get query of type SavedQuery.
-func (store *MemSQL) GetSavedQueryWithQueryId(projectID uint64, queryID uint64) (*model.Queries, int) {
+func (store *MemSQL) GetSavedQueryWithQueryId(projectID uint64, queryID int64) (*model.Queries, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"query_id":   queryID,
@@ -189,7 +188,7 @@ func (store *MemSQL) GetSavedQueryWithQueryId(projectID uint64, queryID uint64) 
 }
 
 // GetQueryWithQueryId Get query by query id of any type.
-func (store *MemSQL) GetQueryWithQueryId(projectID uint64, queryID uint64) (*model.Queries, int) {
+func (store *MemSQL) GetQueryWithQueryId(projectID uint64, queryID int64) (*model.Queries, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"query_id":   queryID,
@@ -215,7 +214,7 @@ func (store *MemSQL) GetQueryWithQueryIdString(projectID uint64, queryIDString s
 	return store.getQueryWithQueryID(projectID, query.ID, model.QueryTypeAllQueries)
 }
 
-func (store *MemSQL) getQueryWithQueryID(projectID uint64, queryID uint64, queryType int) (*model.Queries, int) {
+func (store *MemSQL) getQueryWithQueryID(projectID uint64, queryID int64, queryType int) (*model.Queries, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"query_id":   queryID,
@@ -250,7 +249,7 @@ func (store *MemSQL) getQueryWithQueryID(projectID uint64, queryID uint64, query
 }
 
 // existsDashboardUnitForQueryID checks if dashboard unit exists for given queryID
-func existsDashboardUnitForQueryID(projectID uint64, queryID uint64) bool {
+func existsDashboardUnitForQueryID(projectID uint64, queryID int64) bool {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"query_id":   queryID,
@@ -273,7 +272,7 @@ func existsDashboardUnitForQueryID(projectID uint64, queryID uint64) bool {
 }
 
 // DeleteQuery To delete query of any type.
-func (store *MemSQL) DeleteQuery(projectID uint64, queryID uint64) (int, string) {
+func (store *MemSQL) DeleteQuery(projectID uint64, queryID int64) (int, string) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"query_id":   queryID,
@@ -283,7 +282,7 @@ func (store *MemSQL) DeleteQuery(projectID uint64, queryID uint64) (int, string)
 }
 
 // DeleteSavedQuery Deletes query of type QueryTypeSavedQuery.
-func (store *MemSQL) DeleteSavedQuery(projectID uint64, queryID uint64) (int, string) {
+func (store *MemSQL) DeleteSavedQuery(projectID uint64, queryID int64) (int, string) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"query_id":   queryID,
@@ -293,7 +292,7 @@ func (store *MemSQL) DeleteSavedQuery(projectID uint64, queryID uint64) (int, st
 }
 
 // DeleteDashboardQuery Deletes query of type QueryTypeDashboardQuery.
-func (store *MemSQL) DeleteDashboardQuery(projectID uint64, queryID uint64) (int, string) {
+func (store *MemSQL) DeleteDashboardQuery(projectID uint64, queryID int64) (int, string) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"query_id":   queryID,
@@ -302,7 +301,7 @@ func (store *MemSQL) DeleteDashboardQuery(projectID uint64, queryID uint64) (int
 	return deleteQuery(projectID, queryID, model.QueryTypeDashboardQuery)
 }
 
-func deleteQuery(projectID uint64, queryID uint64, queryType int) (int, string) {
+func deleteQuery(projectID uint64, queryID int64, queryType int) (int, string) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"query_id":   queryID,
@@ -335,7 +334,7 @@ func deleteQuery(projectID uint64, queryID uint64, queryType int) (int, string) 
 	return http.StatusAccepted, ""
 }
 
-func (store *MemSQL) UpdateSavedQuery(projectID uint64, queryID uint64, query *model.Queries) (*model.Queries, int) {
+func (store *MemSQL) UpdateSavedQuery(projectID uint64, queryID int64, query *model.Queries) (*model.Queries, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"query_id":   queryID,

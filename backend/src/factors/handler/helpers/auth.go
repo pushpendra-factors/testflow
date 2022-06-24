@@ -16,7 +16,6 @@ const (
 	SecondsInFifteenDays = SecondsInOneDay * 15
 	SecondsInOneMonth    = SecondsInOneDay * 30
 	ExpireCookie         = -1
-	CookieExpiry         = SecondsInOneMonth
 )
 
 var (
@@ -78,7 +77,7 @@ func ParseAuthData(data string) (*AuthData, error) {
 	return &ad, nil
 }
 
-func ParseAndDecryptProtectedFields(key string, lastLoggedOut int64, lastPasswordUpdated int64, protectedFields string) (string, string, error) {
+func ParseAndDecryptProtectedFields(key string, lastLoggedOut int64, lastPasswordUpdated int64, protectedFields string, cookieExpiry int64) (string, string, error) {
 	pf, err := decodeSecureData([]byte(key), protectedFields)
 	if err != nil {
 		return "", "Tampering", err
@@ -90,7 +89,7 @@ func ParseAndDecryptProtectedFields(key string, lastLoggedOut int64, lastPasswor
 		return "", "ExpiredKey", ErrExpired
 	}
 
-	cookieCreatedAt := pf.ExpAt - CookieExpiry
+	cookieCreatedAt := pf.ExpAt - cookieExpiry
 	if cookieCreatedAt < lastLoggedOut || cookieCreatedAt < lastPasswordUpdated {
 		return "", "CookieInvalid", ErrExpired
 	}

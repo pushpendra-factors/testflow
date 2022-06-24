@@ -76,7 +76,7 @@ export const getUpdateStateOnDashboardsLoaded = ({ payload }) => {
   if (lastSelectedDashboardID) {
     const lastSelectedDashboard = _.find(
       payload,
-      (db) => db.id === +lastSelectedDashboardID
+      (db) => db.id === lastSelectedDashboardID
     );
     if (lastSelectedDashboard) {
       return {

@@ -180,16 +180,16 @@ func TestAPIGetShareableURLsHandler(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, w.Code)
 
 	responseMap := DecodeJSONResponseToMap(w.Body)
-	queryId := uint64(responseMap["id"].(float64))
-	
+	queryId := int64(responseMap["id"].(float64))
+
 	w = sendCreateShareableUrlReq(r, project.ID, agent1, &H.ShareableURLParams{
-		EntityID: queryId,
-		EntityType: model.ShareableURLEntityTypeQuery,
-		ShareType: model.ShareableURLShareTypePublic,
+		EntityID:        queryId,
+		EntityType:      model.ShareableURLEntityTypeQuery,
+		ShareType:       model.ShareableURLShareTypePublic,
 		IsExpirationSet: false,
 	})
 	assert.Equal(t, http.StatusCreated, w.Code)
-	
+
 	w = sendGetShareableUrlReq(r, project.ID, agent1)
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -212,9 +212,9 @@ func TestAPIGetShareableURLsHandler(t *testing.T) {
 	assert.Equal(t, 0, len(shares))
 
 	w = sendCreateShareableUrlReq(r, project.ID, agent2, &H.ShareableURLParams{
-		EntityID: queryId,
-		EntityType: model.ShareableURLEntityTypeQuery,
-		ShareType: model.ShareableURLShareTypePublic,
+		EntityID:        queryId,
+		EntityType:      model.ShareableURLEntityTypeQuery,
+		ShareType:       model.ShareableURLShareTypePublic,
 		IsExpirationSet: false,
 	})
 	assert.Equal(t, http.StatusCreated, w.Code)
@@ -289,12 +289,12 @@ func TestAPICreateShareableURLHandler(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, w.Code)
 
 	responseMap := DecodeJSONResponseToMap(w.Body)
-	queryId := uint64(responseMap["id"].(float64))
+	queryId := int64(responseMap["id"].(float64))
 
 	shareableUrl := &H.ShareableURLParams{
-		EntityID: queryId,
-		EntityType: model.ShareableURLEntityTypeQuery,
-		ShareType: model.ShareableURLShareTypePublic,
+		EntityID:        queryId,
+		EntityType:      model.ShareableURLEntityTypeQuery,
+		ShareType:       model.ShareableURLShareTypePublic,
 		IsExpirationSet: false,
 	}
 
@@ -410,13 +410,13 @@ func TestAPIDeleteShareableURLHandler(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, w.Code)
 
 	responseMap := DecodeJSONResponseToMap(w.Body)
-	queryId := uint64(responseMap["id"].(float64))
+	queryId := int64(responseMap["id"].(float64))
 	shareString := responseMap["id_text"].(string)
 
 	shareableUrl := &H.ShareableURLParams{
-		EntityID: queryId,
-		EntityType: model.ShareableURLEntityTypeQuery,
-		ShareType: model.ShareableURLShareTypePublic,
+		EntityID:        queryId,
+		EntityType:      model.ShareableURLEntityTypeQuery,
+		ShareType:       model.ShareableURLShareTypePublic,
 		IsExpirationSet: false,
 	}
 
@@ -495,17 +495,17 @@ func TestAPIRevokeAllShareableURLHandler(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, w.Code)
 
 	responseMap := DecodeJSONResponseToMap(w.Body)
-	queryId := uint64(responseMap["id"].(float64))
+	queryId := int64(responseMap["id"].(float64))
 	shareString1 := responseMap["id_text"].(string)
-	
+
 	w = sendCreateShareableUrlReq(r, project.ID, admin, &H.ShareableURLParams{
-		EntityID: queryId,
-		EntityType: model.ShareableURLEntityTypeQuery,
-		ShareType: model.ShareableURLShareTypePublic,
+		EntityID:        queryId,
+		EntityType:      model.ShareableURLEntityTypeQuery,
+		ShareType:       model.ShareableURLShareTypePublic,
 		IsExpirationSet: false,
 	})
 	assert.Equal(t, http.StatusCreated, w.Code)
-	
+
 	w = sendCreateQueryReq(r, project.ID, admin, &H.SavedQueryRequestPayload{
 		Title: U.RandomString(5),
 		Type:  model.QueryTypeSavedQuery,
@@ -514,13 +514,13 @@ func TestAPIRevokeAllShareableURLHandler(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, w.Code)
 
 	responseMap = DecodeJSONResponseToMap(w.Body)
-	queryId = uint64(responseMap["id"].(float64))
+	queryId = int64(responseMap["id"].(float64))
 	shareString2 := responseMap["id_text"].(string)
-	
+
 	w = sendCreateShareableUrlReq(r, project.ID, admin, &H.ShareableURLParams{
-		EntityID: queryId,
-		EntityType: model.ShareableURLEntityTypeQuery,
-		ShareType: model.ShareableURLShareTypePublic,
+		EntityID:        queryId,
+		EntityType:      model.ShareableURLEntityTypeQuery,
+		ShareType:       model.ShareableURLShareTypePublic,
 		IsExpirationSet: false,
 	})
 	assert.Equal(t, http.StatusCreated, w.Code)
@@ -626,20 +626,20 @@ func TestAPIRevokeShareableURLHandler(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, w.Code)
 
 	responseMap := DecodeJSONResponseToMap(w.Body)
-	queryId := uint64(responseMap["id"].(float64))
+	queryId := int64(responseMap["id"].(float64))
 	shareString := responseMap["id_text"].(string)
-	
+
 	w = sendCreateShareableUrlReq(r, project.ID, agent, &H.ShareableURLParams{
-		EntityID: queryId,
-		EntityType: model.ShareableURLEntityTypeQuery,
-		ShareType: model.ShareableURLShareTypePublic,
+		EntityID:        queryId,
+		EntityType:      model.ShareableURLEntityTypeQuery,
+		ShareType:       model.ShareableURLShareTypePublic,
 		IsExpirationSet: false,
 	})
 	assert.Equal(t, http.StatusCreated, w.Code)
 
 	w = sendGetShareableUrlReq(r, project.ID, agent)
 	assert.Equal(t, http.StatusOK, w.Code)
-	
+
 	var shares []model.ShareableURL
 	decoder := json.NewDecoder(w.Body)
 	decoder.DisallowUnknownFields()
@@ -649,9 +649,9 @@ func TestAPIRevokeShareableURLHandler(t *testing.T) {
 	assert.Equal(t, 1, len(shares))
 
 	w = sendCreateShareableUrlReq(r, project.ID, admin, &H.ShareableURLParams{
-		EntityID: queryId,
-		EntityType: model.ShareableURLEntityTypeQuery,
-		ShareType: model.ShareableURLShareTypePublic,
+		EntityID:        queryId,
+		EntityType:      model.ShareableURLEntityTypeQuery,
+		ShareType:       model.ShareableURLShareTypePublic,
 		IsExpirationSet: false,
 	})
 	assert.Equal(t, http.StatusCreated, w.Code)
@@ -671,7 +671,7 @@ func TestAPIRevokeShareableURLHandler(t *testing.T) {
 
 	w = sendGetShareableUrlReq(r, project.ID, agent)
 	assert.Equal(t, http.StatusOK, w.Code)
-	
+
 	decoder = json.NewDecoder(w.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&shares); err != nil {
@@ -701,7 +701,7 @@ func TestAPIRevokeShareableURLHandler(t *testing.T) {
 
 	w = sendGetShareableUrlReq(r, project.ID, agent)
 	assert.Equal(t, http.StatusOK, w.Code)
-	
+
 	decoder = json.NewDecoder(w.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&shares); err != nil {
