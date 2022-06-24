@@ -1,13 +1,17 @@
 package handler
 
 import (
+	"encoding/json"
 	C "factors/config"
 	IH "factors/handler/internal"
 	V1 "factors/handler/v1"
 	mid "factors/middleware"
 	"factors/model/model"
 	U "factors/util"
+	"fmt"
 	"net/http"
+	"reflect"
+	"strings"
 
 	slack "factors/slack_bot/handler"
 
@@ -106,11 +110,11 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.PUT("/:project_id", EditProjectHandler)
 
 	// Dashboard endpoints
-	authRouteGroup.GET("/:project_id/dashboards", GetDashboardsHandler)
-	authRouteGroup.POST("/:project_id/dashboards", CreateDashboardHandler)
+	authRouteGroup.GET("/:project_id/dashboards", stringifyWrapper(GetDashboardsHandler))
+	authRouteGroup.POST("/:project_id/dashboards", stringifyWrapper(CreateDashboardHandler))
 	authRouteGroup.PUT("/:project_id/dashboards/:dashboard_id", UpdateDashboardHandler)
-	authRouteGroup.GET("/:project_id/dashboards/:dashboard_id/units", GetDashboardUnitsHandler)
-	authRouteGroup.POST("/:project_id/dashboards/:dashboard_id/units", CreateDashboardUnitHandler)
+	authRouteGroup.GET("/:project_id/dashboards/:dashboard_id/units", stringifyWrapper(GetDashboardUnitsHandler))
+	authRouteGroup.POST("/:project_id/dashboards/:dashboard_id/units", stringifyWrapper(CreateDashboardUnitHandler))
 	authRouteGroup.PUT("/:project_id/dashboards/:dashboard_id/units/:unit_id", UpdateDashboardUnitHandler)
 	authRouteGroup.DELETE("/:project_id/dashboards/:dashboard_id/units/:unit_id", DeleteDashboardUnitHandler)
 	authRouteGroup.POST("/:project_id/dashboard/:dashboard_id/units/query/web_analytics",
@@ -119,11 +123,11 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id/event_names", GetEventNamesHandler)
 	authRouteGroup.GET("/:project_id/user/event_names", GetEventNamesByUserHandler)
 	authRouteGroup.GET(":project_id/groups/:group_name/event_names", GetEventNamesByGroupHandler)
-	authRouteGroup.GET("/:project_id/queries", GetQueriesHandler)
-	authRouteGroup.POST("/:project_id/queries", CreateQueryHandler)
+	authRouteGroup.GET("/:project_id/queries", stringifyWrapper(GetQueriesHandler))
+	authRouteGroup.POST("/:project_id/queries", stringifyWrapper(CreateQueryHandler))
 	authRouteGroup.PUT("/:project_id/queries/:query_id", UpdateSavedQueryHandler)
 	authRouteGroup.DELETE("/:project_id/queries/:query_id", DeleteSavedQueryHandler)
-	authRouteGroup.GET("/:project_id/queries/search", SearchQueriesHandler)
+	authRouteGroup.GET("/:project_id/queries/search", stringifyWrapper(SearchQueriesHandler))
 	authRouteGroup.GET("/:project_id/models", GetProjectModelsHandler)
 	authRouteGroup.GET("/:project_id/filters", GetFiltersHandler)
 	authRouteGroup.POST("/:project_id/filters", CreateFilterHandler)
@@ -160,8 +164,8 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.DELETE("/:project_id/shareable_url/revoke/:query_id", RevokeShareableURLHandler)
 
 	// v1 Dashboard endpoints
-	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/dashboards/multi/:dashboard_ids/units", CreateDashboardUnitForMultiDashboardsHandler)
-	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/dashboards/queries/:dashboard_id/units", CreateDashboardUnitsForMultipleQueriesHandler)
+	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/dashboards/multi/:dashboard_ids/units", stringifyWrapper(CreateDashboardUnitForMultiDashboardsHandler))
+	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/dashboards/queries/:dashboard_id/units", stringifyWrapper(CreateDashboardUnitsForMultipleQueriesHandler))
 	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/dashboards/:dashboard_id/units/multi/:unit_ids", DeleteMultiDashboardUnitHandler)
 	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/dashboards/:dashboard_id", DeleteDashboardHandler)
 
@@ -495,4 +499,47 @@ func responseWrapper(f func(c *gin.Context) (interface{}, int, string, string, b
 		}
 		c.JSON(statusCode, data)
 	}
+}
+
+func stringifyWrapper(f func(c *gin.Context) (interface{}, int, string, bool)) gin.HandlerFunc {
+
+	return func(c *gin.Context) {
+		data, statusCode, errMsg, isErr := f(c)
+		if isErr {
+			c.AbortWithStatusJSON(statusCode, gin.H{"error": errMsg})
+			return
+		}
+		responseType := reflect.TypeOf(data).Kind()
+		if responseType == reflect.Slice {
+			stringifiedResponse := make([]interface{}, 0)
+			byteSlice, _ := json.Marshal(data)
+			dataSlice := make([]interface{}, 0)
+			json.Unmarshal(byteSlice, &dataSlice)
+			for _, dataObj := range dataSlice {
+				stringifiedResponse = append(stringifiedResponse, stringifyIds(dataObj))
+			}
+			c.JSON(statusCode, stringifiedResponse)
+		} else {
+			byteData, _ := json.Marshal(data)
+			dataMap := make(map[string]interface{}, 0)
+			json.Unmarshal(byteData, &dataMap)
+			c.JSON(statusCode, stringifyIds(dataMap))
+		}
+	}
+}
+
+func stringifyIds(dataObj interface{}) interface{} {
+	responseObj, ok := dataObj.(map[string]interface{})
+	if !ok {
+		return dataObj
+	}
+	stringifiedObj := make(map[string]interface{})
+	for key, value := range responseObj {
+		if key == "ID" || key == "id" || key == "query_id" || key == "dashboard_id" {
+			stringifiedObj[key] = strings.Split(fmt.Sprintf("%f", value.(float64)), ".")[0]
+		} else {
+			stringifiedObj[key] = value
+		}
+	}
+	return stringifiedObj
 }

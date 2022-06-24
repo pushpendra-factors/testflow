@@ -37,19 +37,17 @@ type SavedQueryUpdatePayload struct {
 // @Param project_id path integer true "Project ID"
 // @Success 302 {array} model.Queries
 // @Router /{project_id}/queries [get]
-func GetQueriesHandler(c *gin.Context) {
+func GetQueriesHandler(c *gin.Context) (interface{}, int, string, bool) {
 	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
-		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Get Queries failed. Invalid project."})
-		return
+		return nil, http.StatusForbidden, "Get Queries failed. Invalid project.", true
 	}
 	queries, errCode := store.GetStore().GetALLQueriesWithProjectId(projectID)
 	if errCode != http.StatusFound {
-		c.AbortWithStatusJSON(errCode, gin.H{"error": "Get Saved Queries failed."})
-		return
+		return nil, errCode, "Get Saved Queries failed.", true
 	}
 
-	c.JSON(http.StatusOK, queries)
+	return queries, http.StatusOK, "", false
 }
 
 // CreateQueryHandler godoc
@@ -61,11 +59,10 @@ func GetQueriesHandler(c *gin.Context) {
 // @Param query body handler.SavedQueryRequestPayload true "Create saved query"
 // @Success 201 {array} model.Queries
 // @Router /{project_id}/queries [post]
-func CreateQueryHandler(c *gin.Context) {
+func CreateQueryHandler(c *gin.Context) (interface{}, int, string, bool) {
 	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
-		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Create query failed. Invalid project."})
-		return
+		return nil, http.StatusForbidden, "Create query failed. Invalid project", true
 	}
 
 	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
@@ -79,23 +76,19 @@ func CreateQueryHandler(c *gin.Context) {
 	if err := decoder.Decode(&requestPayload); err != nil {
 		errMsg := "Get queries failed. Invalid JSON."
 		logCtx.WithError(err).Error(errMsg)
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": errMsg})
-		return
+		return nil, http.StatusBadRequest, errMsg, true
 	}
 
 	if requestPayload.Query == nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid query. empty query."})
-		return
+		return nil, http.StatusBadRequest, "invalid query. empty query.", true
 	}
 
 	if requestPayload.Title == "" {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid title. empty title"})
-		return
+		return nil, http.StatusBadRequest, "invalid title. empty title", true
 	}
 
 	if requestPayload.Type == 0 {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid query type. empty type"})
-		return
+		return nil, http.StatusBadRequest, "invalid query type. empty type", true
 	}
 
 	queryRequest := &model.Queries{
@@ -114,11 +107,10 @@ func CreateQueryHandler(c *gin.Context) {
 
 	query, errCode, errMsg := store.GetStore().CreateQuery(projectID, queryRequest)
 	if errCode != http.StatusCreated {
-		c.AbortWithStatusJSON(errCode, errMsg)
-		return
+		return nil, errCode, errMsg, true
 	}
 
-	c.JSON(http.StatusCreated, query)
+	return query, http.StatusCreated, "", false
 }
 
 // UpdateSavedQueryHandler godoc
@@ -236,23 +228,21 @@ func DeleteSavedQueryHandler(c *gin.Context) {
 // @Param project_id path integer true "Project ID"
 // @Success 302 {array} model.Queries
 // @Router /{project_id}/queries/search [get]
-func SearchQueriesHandler(c *gin.Context) {
+func SearchQueriesHandler(c *gin.Context) (interface{}, int, string, bool) {
 
 	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
-		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Search queries failed. Invalid project."})
-		return
+		return nil, http.StatusForbidden, "Search queries failed. Invalid project.", true
 	}
 	queryParams, ok := c.GetQuery("query")
 	if !ok || queryParams == "" {
-		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Search queries failed. Invalid search query."})
-		return
+		return nil, http.StatusForbidden, "Search queries failed. Invalid search query.", true
 	}
 
 	queries, errCode := store.GetStore().SearchQueriesWithProjectId(projectID, queryParams)
 	if errCode != http.StatusFound {
-		c.AbortWithStatusJSON(errCode, gin.H{"error": "Search Queries failed. No query found"})
+		return nil, errCode, "Search Queries failed. No query found", true
 	}
 
-	c.JSON(errCode, queries)
+	return queries, errCode, "", false
 }

@@ -30,6 +30,12 @@ type DashboardUnitRequestPayload struct {
 	QueryId      int64  `json:"query_id"`
 }
 
+type DashboardUnitRequestPayloadString struct {
+	Description  string `json:"description"`
+	Presentation string `json:"presentation"`
+	QueryId      string `json:"query_id"`
+}
+
 // DashboardUnitCachePayload Payload for dashboard caching method.
 type DashboardUnitCachePayload struct {
 	DashboardUnit DashboardUnit
