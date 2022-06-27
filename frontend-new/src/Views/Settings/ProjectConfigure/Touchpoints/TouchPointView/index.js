@@ -303,8 +303,8 @@ const TouchpointView = ({ activeProject, tchType = '2', getEventProperties, even
             </Radio.Group>);
         }
         else if(tchRuleType === 'Emails') {
-            return (<Radio.Group onChange={() => setTimestampRefEmail('hubspot_engagement_timestamp')} value={timestampRef} defaultValue={`hubspot_engagement_timestamp`}>
-                <Radio value={`hubspot_engagement_timestamp`}>Email Timestamp</Radio>
+            return (<Radio.Group onChange={() => setTimestampRefEmail('$hubspot_engagement_timestamp')} value={timestampRef} defaultValue={`$hubspot_engagement_timestamp`}>
+                <Radio value={`$hubspot_engagement_timestamp`}>Email Timestamp</Radio>
                 {/* <Radio value={`email_replied_timestamp`}>Email Replied Timestamp</Radio> */}
             </Radio.Group>);
         }
