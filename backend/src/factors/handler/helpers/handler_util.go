@@ -99,7 +99,7 @@ func GetResponseIfCachedQuery(c *gin.Context, projectID uint64, requestPayload m
 }
 
 // GetResponseIfCachedDashboardQuery Common function to fetch result from cache if present for dashboard query.
-func GetResponseIfCachedDashboardQuery(reqId string, projectID, dashboardID, unitID uint64, from, to int64, timezoneString U.TimeZoneString) (bool, int, interface{}) {
+func GetResponseIfCachedDashboardQuery(reqId string, projectID uint64, dashboardID, unitID int64, from, to int64, timezoneString U.TimeZoneString) (bool, int, interface{}) {
 	cacheResult, errCode, err := model.GetCacheResultByDashboardIdAndUnitId(reqId, projectID, dashboardID, unitID, from, to, timezoneString)
 	if errCode == http.StatusFound && cacheResult != nil {
 		return true, http.StatusOK, DashboardQueryResponsePayload{Result: cacheResult.Result, Cache: true, RefreshedAt: cacheResult.RefreshedAt, TimeZone: string(timezoneString)}

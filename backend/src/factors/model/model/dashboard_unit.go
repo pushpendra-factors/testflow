@@ -12,16 +12,30 @@ import (
 
 type DashboardUnit struct {
 	// Composite primary key, id + project_id.
-	ID uint64 `gorm:"primary_key:true" json:"id"`
+	ID int64 `gorm:"primary_key:true" json:"id"`
 	// Foreign key dashboard_units(project_id) ref projects(id).
 	ProjectID    uint64    `gorm:"primary_key:true" json:"project_id"`
-	DashboardId  uint64    `gorm:"primary_key:true" json:"dashboard_id"`
+	DashboardId  int64     `gorm:"primary_key:true" json:"dashboard_id"`
 	Description  string    `json:"description"`
 	Presentation string    `gorm:"type:varchar(5);not null" json:"presentation"`
 	IsDeleted    bool      `gorm:"not null;default:false" json:"is_deleted"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
 	QueryId      int64     `gorm:"not null" json:"query_id"`
+}
+
+type DashboardUnitString struct {
+	// Composite primary key, id + project_id.
+	ID string `gorm:"primary_key:true" json:"id"`
+	// Foreign key dashboard_units(project_id) ref projects(id).
+	ProjectID    uint64    `gorm:"primary_key:true" json:"project_id"`
+	DashboardId  string    `gorm:"primary_key:true" json:"dashboard_id"`
+	Description  string    `json:"description"`
+	Presentation string    `gorm:"type:varchar(5);not null" json:"presentation"`
+	IsDeleted    bool      `gorm:"not null;default:false" json:"is_deleted"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+	QueryId      string    `gorm:"not null" json:"query_id"`
 }
 
 type DashboardUnitRequestPayload struct {
@@ -64,8 +78,8 @@ const QueryNotFoundError = "Failed to fetch query from query_id"
 type CachingUnitReport struct {
 	UnitType     int // CachingUnitNormal=1 or CachingUnitWebAnalytics=1
 	ProjectId    uint64
-	DashboardID  uint64
-	UnitID       uint64
+	DashboardID  int64
+	UnitID       int64
 	QueryID      uint64
 	QueryClass   string
 	Query        interface{}
@@ -88,13 +102,13 @@ type CachingProjectReport struct {
 }
 
 type FailedDashboardUnitReport struct {
-	DashboardID uint64
-	UnitID      uint64
+	DashboardID int64
+	UnitID      int64
 	QueryClass  string
 	QueryRange  string
 }
 
-func getDashboardUnitQueryResultCacheKey(projectID, dashboardID, unitID uint64, from, to int64, timezoneString U.TimeZoneString) (*cacheRedis.Key, error) {
+func getDashboardUnitQueryResultCacheKey(projectID uint64, dashboardID, unitID int64, from, to int64, timezoneString U.TimeZoneString) (*cacheRedis.Key, error) {
 	prefix := "dashboard:query"
 	var suffix string
 	if U.IsStartOfTodaysRangeIn(from, timezoneString) {
@@ -106,7 +120,7 @@ func getDashboardUnitQueryResultCacheKey(projectID, dashboardID, unitID uint64, 
 	return cacheRedis.NewKey(projectID, prefix, suffix)
 }
 
-func getDashboardCacheAnalyticsCacheKey(projectID, dashboardID, unitID uint64, from, to int64, timezoneString U.TimeZoneString, preset string) (*cacheRedis.Key, error) {
+func getDashboardCacheAnalyticsCacheKey(projectID uint64, dashboardID, unitID int64, from, to int64, timezoneString U.TimeZoneString, preset string) (*cacheRedis.Key, error) {
 	prefix := "dashboard:analytics"
 	var suffix string
 	if U.IsStartOfTodaysRangeIn(from, timezoneString) {

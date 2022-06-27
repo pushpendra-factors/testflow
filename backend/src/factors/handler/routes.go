@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"encoding/json"
 	C "factors/config"
 	IH "factors/handler/internal"
 	V1 "factors/handler/v1"
@@ -11,7 +10,6 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
-	"strings"
 
 	slack "factors/slack_bot/handler"
 
@@ -515,35 +513,141 @@ func stringifyWrapper(f func(c *gin.Context) (interface{}, int, string, bool)) g
 		}
 		responseType := reflect.TypeOf(data).Kind()
 		if responseType == reflect.Slice {
-			stringifiedResponse := make([]interface{}, 0)
-			byteSlice, _ := json.Marshal(data)
-			dataSlice := make([]interface{}, 0)
-			json.Unmarshal(byteSlice, &dataSlice)
-			for _, dataObj := range dataSlice {
-				stringifiedResponse = append(stringifiedResponse, stringifyIds(dataObj))
+			switch data.(type) {
+			case []model.Queries:
+				queriesResp := make([]model.QueriesString, 0)
+				responseObj := data.([]model.Queries)
+				for _, query := range responseObj {
+					queriesResp = append(queriesResp, ConvertQuery(query))
+				}
+				c.JSON(statusCode, queriesResp)
+				return
+			case []*model.Queries:
+				queriesResp := make([]model.QueriesString, 0)
+				responseObj := data.([]*model.Queries)
+				for _, query := range responseObj {
+					queriesResp = append(queriesResp, ConvertQuery(*query))
+				}
+				c.JSON(statusCode, queriesResp)
+				return
+			case []model.DashboardUnit:
+				unitResp := make([]model.DashboardUnitString, 0)
+				responseObj := data.([]model.DashboardUnit)
+				for _, du := range responseObj {
+					unitResp = append(unitResp, ConvertDashboardUnit(du))
+				}
+				c.JSON(statusCode, unitResp)
+				return
+			case []*model.DashboardUnit:
+				unitResp := make([]model.DashboardUnitString, 0)
+				responseObj := data.([]*model.DashboardUnit)
+				for _, du := range responseObj {
+					unitResp = append(unitResp, ConvertDashboardUnit(*du))
+				}
+				c.JSON(statusCode, unitResp)
+				return
+			case []model.Dashboard:
+				dashboardResp := make([]model.DashboardString, 0)
+				responseObj := data.([]model.Dashboard)
+				for _, da := range responseObj {
+					dashboardResp = append(dashboardResp, ConvertDashboard(da))
+				}
+				c.JSON(statusCode, dashboardResp)
+				return
+			case []*model.Dashboard:
+				dashboardResp := make([]model.DashboardString, 0)
+				responseObj := data.([]*model.Dashboard)
+				for _, da := range responseObj {
+					dashboardResp = append(dashboardResp, ConvertDashboard(*da))
+				}
+				c.JSON(statusCode, dashboardResp)
+				return
+			default:
+				c.JSON(statusCode, data)
+				return
 			}
-			c.JSON(statusCode, stringifiedResponse)
 		} else {
-			byteData, _ := json.Marshal(data)
-			dataMap := make(map[string]interface{}, 0)
-			json.Unmarshal(byteData, &dataMap)
-			c.JSON(statusCode, stringifyIds(dataMap))
+			switch data.(type) {
+			case model.Queries:
+				responseObj := data.(model.Queries)
+				c.JSON(statusCode, ConvertQuery(responseObj))
+				return
+			case *model.Queries:
+				responseObj := data.(*model.Queries)
+				c.JSON(statusCode, ConvertQuery(*responseObj))
+				return
+			case model.DashboardUnit:
+				responseObj := data.(model.DashboardUnit)
+				c.JSON(statusCode, ConvertDashboardUnit(responseObj))
+				return
+			case *model.DashboardUnit:
+				responseObj := data.(*model.DashboardUnit)
+				c.JSON(statusCode, ConvertDashboardUnit(*responseObj))
+				return
+			case model.Dashboard:
+				responseObj := data.(model.Dashboard)
+				c.JSON(statusCode, ConvertDashboard(responseObj))
+				return
+			case *model.Dashboard:
+				responseObj := data.(*model.Dashboard)
+				c.JSON(statusCode, ConvertDashboard(*responseObj))
+				return
+			default:
+				c.JSON(statusCode, data)
+				return
+			}
 		}
 	}
 }
 
-func stringifyIds(dataObj interface{}) interface{} {
-	responseObj, ok := dataObj.(map[string]interface{})
-	if !ok {
-		return dataObj
+func ConvertQuery(data model.Queries) model.QueriesString {
+	return model.QueriesString{
+		ID: fmt.Sprintf("%d", data.ID),
+		// Foreign key queries(project_id) ref projects(id).
+		ProjectID:     data.ProjectID,
+		Title:         data.Title,
+		Query:         data.Query,
+		Type:          data.Type,
+		IsDeleted:     data.IsDeleted,
+		CreatedBy:     data.CreatedBy,
+		CreatedByName: data.CreatedByName,
+		CreatedAt:     data.CreatedAt,
+		UpdatedAt:     data.UpdatedAt,
+		Settings:      data.Settings,
+		IdText:        data.IdText,
+		Converted:     data.Converted,
 	}
-	stringifiedObj := make(map[string]interface{})
-	for key, value := range responseObj {
-		if key == "ID" || key == "id" || key == "query_id" || key == "dashboard_id" {
-			stringifiedObj[key] = strings.Split(fmt.Sprintf("%f", value.(float64)), ".")[0]
-		} else {
-			stringifiedObj[key] = value
-		}
+}
+
+func ConvertDashboardUnit(data model.DashboardUnit) model.DashboardUnitString {
+	return model.DashboardUnitString{
+		ID: fmt.Sprintf("%d", data.ID),
+		// Foreign key dashboard_units(project_id) ref projects(id).
+		ProjectID:    data.ProjectID,
+		DashboardId:  fmt.Sprintf("%d", data.DashboardId),
+		Description:  data.Description,
+		Presentation: data.Presentation,
+		IsDeleted:    data.IsDeleted,
+		CreatedAt:    data.CreatedAt,
+		UpdatedAt:    data.UpdatedAt,
+		QueryId:      fmt.Sprintf("%d", data.QueryId),
 	}
-	return stringifiedObj
+}
+
+func ConvertDashboard(data model.Dashboard) model.DashboardString {
+	return model.DashboardString{
+		ID: fmt.Sprintf("%d", data.ID),
+		// Foreign key dashboards(project_id) ref projects(id).
+		ProjectId:     data.ProjectId,
+		AgentUUID:     data.AgentUUID,
+		Name:          data.Name,
+		Description:   data.Description,
+		Type:          data.Type,
+		Settings:      data.Settings,
+		Class:         data.Class,
+		UnitsPosition: data.UnitsPosition,
+		IsDeleted:     data.IsDeleted,
+		CreatedAt:     data.CreatedAt,
+		UpdatedAt:     data.UpdatedAt,
+	}
 }
