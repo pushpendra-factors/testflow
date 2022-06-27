@@ -1093,3 +1093,73 @@ func (store *MemSQL) UpdateLeadSquaredFirstTimeSyncStatus(projectId uint64) int 
 	}
 	return http.StatusOK
 }
+
+func (store *MemSQL) GetAllWeeklyInsightsEnabledProjects() ([]uint64, error) {
+
+	db := C.GetServices().Db
+	result := make([]uint64, 0)
+	projectSettings := make([]model.ProjectSetting, 0, 0)
+	_ = db.Table("project_settings").Where("is_weekly_insights_enabled = true").Find(&projectSettings).Error
+
+	for _, setting := range projectSettings {
+		result = append(result, setting.ProjectId)
+	}
+	return result, nil
+}
+
+func (store *MemSQL) GetAllExplainEnabledProjects() ([]uint64, error) {
+
+	db := C.GetServices().Db
+	result := make([]uint64, 0)
+	projectSettings := make([]model.ProjectSetting, 0, 0)
+	_ = db.Table("project_settings").Where("is_explain_enabled = true").Find(&projectSettings).Error
+
+	for _, setting := range projectSettings {
+		result = append(result, setting.ProjectId)
+	}
+	return result, nil
+}
+
+func (store *MemSQL) EnableWeeklyInsights(projectId uint64) int {
+	db := C.GetServices().Db
+	if err := db.Model(&model.ProjectSetting{}).
+		Where("project_id = ?", projectId).
+		Update("is_weekly_insights_enabled", true).Error; err != nil {
+		log.WithError(err).Error("Updating is_weekly_insights_enabled config failed")
+		return http.StatusInternalServerError
+	}
+	return http.StatusOK
+}
+
+func (store *MemSQL) EnableExplain(projectId uint64) int {
+	db := C.GetServices().Db
+	if err := db.Model(&model.ProjectSetting{}).
+		Where("project_id = ?", projectId).
+		Update("is_explain_enabled", true).Error; err != nil {
+		log.WithError(err).Error("Updating is_explain_enabled config failed")
+		return http.StatusInternalServerError
+	}
+	return http.StatusOK
+}
+
+func (store *MemSQL) DisableWeeklyInsights(projectId uint64) int {
+	db := C.GetServices().Db
+	if err := db.Model(&model.ProjectSetting{}).
+		Where("project_id = ?", projectId).
+		Update("is_weekly_insights_enabled", false).Error; err != nil {
+		log.WithError(err).Error("Updating is_weekly_insights_enabled config failed")
+		return http.StatusInternalServerError
+	}
+	return http.StatusOK
+}
+
+func (store *MemSQL) DisableExplain(projectId uint64) int {
+	db := C.GetServices().Db
+	if err := db.Model(&model.ProjectSetting{}).
+		Where("project_id = ?", projectId).
+		Update("is_explain_enabled", false).Error; err != nil {
+		log.WithError(err).Error("Updating is_explain_enabled config failed")
+		return http.StatusInternalServerError
+	}
+	return http.StatusOK
+}

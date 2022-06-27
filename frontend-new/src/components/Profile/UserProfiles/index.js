@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Row, Col, Table } from 'antd';
-import People from './People.json';
 import { Text } from '../../factorsComponents';
 import Modal from 'antd/lib/modal/Modal';
 import ContactDetails from './ContactDetails';
-import { connect, useSelector } from 'react-redux';
+import { connect } from 'react-redux';
 import {
   fetchProfileUserDetails,
   fetchProfileUsers,
@@ -24,17 +23,11 @@ const UserProfiles = ({
       title: 'Identity',
       dataIndex: 'identity',
       key: 'identity',
-      width: 300,
     },
     {
-      title: 'Name',
-      dataIndex: 'name',
-      key: 'name',
-    },
-    {
-      title: 'Groups',
-      dataIndex: 'groups',
-      key: 'groups',
+      title: 'Country',
+      dataIndex: 'country',
+      key: 'country',
     },
     {
       title: 'Last Activity',

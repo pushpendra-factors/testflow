@@ -68,6 +68,14 @@ var LeadSquaredTimestampMapping = map[string][]string{
 	LEADSQUARED_LEAD: []string{"CreatedOn", "CreatedOn", "ModifiedOn"},
 }
 
+func GetLeadSquaredTypeToAliasMap(aliasType map[string]int) map[int]string {
+	typeAlias := make(map[int]string)
+	for alias, typ := range aliasType {
+		typeAlias[typ] = alias
+	}
+	return typeAlias
+}
+
 func GetLeadSquaredDocumentQuery(bigQueryProjectId string, schemaId string, baseQuery string, executionDate string, docType string, limit int, lastProcessedId int) string {
 	if docType == LEADSQUARED_LEAD {
 		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId, GetLeadSquaredDocumentFilterCondition(docType, false, "", executionDate), lastProcessedId, limit)

@@ -473,7 +473,7 @@ func AgentUpdate(c *gin.Context) {
 	}
 
 	if !isAdmin(loggedInAgentPAM.Role) {
-		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Agent Edit is allowed only fro admins"})
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Agent Edit is allowed only for admins"})
 		return
 	}
 
@@ -621,6 +621,10 @@ func AgentActivate(c *gin.Context) {
 		skipProject = true
 	}
 	ts := time.Now().UTC()
+	if !U.IsUserOrProjectNameValid(params.FirstName) || !U.IsUserOrProjectNameValid(params.LastName) {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid character"})
+		return
+	}
 	errCode := store.GetStore().UpdateAgentVerificationDetails(agentUUID, params.Password, params.FirstName, params.LastName, true, ts)
 	if errCode == http.StatusInternalServerError {
 		c.AbortWithStatus(http.StatusInternalServerError)
@@ -964,7 +968,10 @@ func UpdateAgentInfo(c *gin.Context) {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-
+	if !U.IsUserOrProjectNameValid(params.FirstName) || !U.IsUserOrProjectNameValid(params.LastName) {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid character"})
+		return
+	}
 	errCode := store.GetStore().UpdateAgentInformation(loggedInAgentUUID, params.FirstName, params.LastName, params.Phone, params.IsOnboardingFlowSeen)
 	if errCode == http.StatusInternalServerError {
 		c.AbortWithStatus(errCode)

@@ -1,19 +1,24 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useSelector } from 'react-redux';
+import find from 'lodash/find';
 import {
   getTableColumns,
   getDataInTableFormat,
   getDateBasedColumns,
-  getDateBasedTableData,
+  getDateBasedTableData
 } from './utils';
 import DataTable from '../../../../components/DataTable';
 import {
-  CHART_TYPE_BARCHART,
   MAX_ALLOWED_VISIBLE_PROPERTIES,
   DASHBOARD_WIDGET_SECTION,
-  CHART_TYPE_HORIZONTAL_BAR_CHART,
+  CHART_TYPE_HORIZONTAL_BAR_CHART
 } from '../../../../utils/constants';
 import { isSeriesChart } from '../../../../utils/dataFormatter';
+import { EVENT_COUNT_KEY } from '../eventsAnalytics.constants';
+import {
+  getEventDisplayName,
+  getBreakdownDisplayName
+} from '../eventsAnalytics.helpers';
 
 function SingleEventMultipleBreakdownTable({
   data,
@@ -34,7 +39,7 @@ function SingleEventMultipleBreakdownTable({
   dateSorter,
   handleDateSorting,
   visibleSeriesData,
-  setVisibleSeriesData,
+  setVisibleSeriesData
 }) {
   const [searchText, setSearchText] = useState('');
   const { eventNames, userPropNames, eventPropNames } = useSelector(
@@ -66,7 +71,7 @@ function SingleEventMultipleBreakdownTable({
     handleSorting,
     eventNames,
     userPropNames,
-    eventPropNames,
+    eventPropNames
   ]);
 
   useEffect(() => {
@@ -92,7 +97,7 @@ function SingleEventMultipleBreakdownTable({
     durationObj.frequency,
     handleDateSorting,
     userPropNames,
-    eventPropNames,
+    eventPropNames
   ]);
 
   useEffect(() => {
@@ -101,16 +106,59 @@ function SingleEventMultipleBreakdownTable({
     );
   }, [seriesData, searchText, dateSorter]);
 
-  const getCSVData = () => {
-    const activeTableData =
-      chartType === isSeriesChart(chartType) ? dateBasedTableData : tableData;
+  const getCSVData = useCallback(() => {
+    const activeTableData = isSeriesChart(chartType)
+      ? dateBasedTableData
+      : tableData;
     return {
       fileName: `${reportTitle}.csv`,
-      data: activeTableData.map(({ index, ...rest }) => {
-        return { ...rest };
-      }),
+      data: activeTableData.map(
+        ({
+          index, label, value, name, data, marker, ...rest
+        }) => {
+          const result = {};
+          for (const key in rest) {
+            if (key === EVENT_COUNT_KEY) {
+              result[getEventDisplayName({ eventNames, event: events[0] })] =
+                rest[EVENT_COUNT_KEY];
+              continue;
+            }
+            if (key === events[0]) {
+              result[getEventDisplayName({ eventNames, event: events[0] })] =
+                rest[events[0]];
+              continue;
+            }
+            const isCurrentKeyForBreakdown = find(
+              breakdown,
+              (b, index) => b.property + ' - ' + index === key
+            );
+            if (isCurrentKeyForBreakdown) {
+              result[
+                `${getBreakdownDisplayName({
+                  breakdown: isCurrentKeyForBreakdown,
+                  userPropNames,
+                  eventPropNames
+                })} - ${key.split(' - ')[1]}`
+              ] = rest[key];
+              continue;
+            }
+            result[key] = rest[key];
+          }
+          return result;
+        }
+      )
     };
-  };
+  }, [
+    dateBasedTableData,
+    tableData,
+    reportTitle,
+    eventNames,
+    events,
+    breakdown,
+    chartType,
+    userPropNames,
+    eventPropNames
+  ]);
 
   const selectedRowKeys = useCallback((rows) => {
     return rows.map((vp) => vp.index);
@@ -156,7 +204,7 @@ function SingleEventMultipleBreakdownTable({
       : selectedRowKeys(visibleProperties),
     onChange: isSeriesChart(chartType)
       ? onDateWiseSelectionChange
-      : onSelectionChange,
+      : onSelectionChange
   };
 
   return (

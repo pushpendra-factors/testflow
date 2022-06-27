@@ -203,16 +203,6 @@ function GroupBlock({
       <div key={index} className={`flex relative items-center mt-2`}>
         {
           <>
-            {
-              <Text
-                level={8}
-                type={'title'}
-                extraClass={'m-0 mr-2'}
-                weight={'thin'}
-              >
-                {index >= 1 ? 'and' : 'Breakdown'}
-              </Text>
-            }
             <div className={`flex relative`}>
               {renderGroupDisplayName(opt, index)}
               {isDDVisible[index] ? (

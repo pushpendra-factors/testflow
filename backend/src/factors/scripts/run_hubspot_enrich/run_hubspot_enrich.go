@@ -152,6 +152,7 @@ func main() {
 
 	configsDistributer := make(map[string]interface{})
 	configsDistributer["health_check_ping_id"] = ""
+	configsDistributer["max_record_created_at"] = *hubspotMaxCreatedAt
 	configsDistributer["override_healthcheck_ping_id"] = *overrideHubspotProjectDistributerHealthcheckPingID
 	configsDistributer["light_projects_count_threshold"] = *lightProjectsCountThreshold
 

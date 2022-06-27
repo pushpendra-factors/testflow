@@ -336,6 +336,10 @@ type Model interface {
 	IsBingIntegrationAvailable(projectID uint64) bool
 	GetAllLeadSquaredEnabledProjects() (map[uint64]model.LeadSquaredConfig, error)
 	UpdateLeadSquaredFirstTimeSyncStatus(projectId uint64) int
+	EnableWeeklyInsights(projectId uint64) int
+	EnableExplain(projectId uint64) int
+	DisableWeeklyInsights(projectId uint64) int
+	DisableExplain(projectId uint64) int
 
 	// project
 	UpdateProject(projectID uint64, project *model.Project) int
@@ -635,7 +639,7 @@ type Model interface {
 	GetCRMSetting(projectID uint64) (*model.CRMSetting, int)
 	GetAllCRMSetting() ([]model.CRMSetting, int)
 	UpdateCRMSetting(projectID uint64, option model.CRMSettingOption) int
-	CreateOrUpdateCRMSetting(projectID uint64, crmSetting *model.CRMSetting) int
+	CreateOrUpdateCRMSettingHubspotEnrich(projectID uint64, isHeavy bool, maxCreatedAtSec *int64) int
 
 	// data availability checks
 	GetLatestDataStatus(integrations []string, project_id uint64, hardRefresh bool) (map[string]model.DataAvailabilityStatus, error)

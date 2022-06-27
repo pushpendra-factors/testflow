@@ -103,7 +103,7 @@ func (store *MemSQL) CreateCRMSetting(projectID uint64, crmSetting *model.CRMSet
 	return http.StatusCreated
 }
 
-func (store *MemSQL) CreateOrUpdateCRMSetting(projectID uint64, crmSetting *model.CRMSetting) int {
+func (store *MemSQL) CreateOrUpdateCRMSettingHubspotEnrich(projectID uint64, isHeavy bool, maxCreatedAtSec *int64) int {
 	logFields := log.Fields{"project_id": projectID}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
@@ -111,11 +111,13 @@ func (store *MemSQL) CreateOrUpdateCRMSetting(projectID uint64, crmSetting *mode
 	_, status := store.GetCRMSetting(projectID)
 	if status != http.StatusFound {
 		if status != http.StatusNotFound {
-			logCtx.Error("Failed to get crm settings on CreateOrUpdateCRMSetting.")
+			logCtx.Error("Failed to get crm settings on CreateOrUpdateCRMSettingHubspotEnrich.")
 			return status
 		}
 
-		return store.CreateCRMSetting(projectID, crmSetting)
+		return store.CreateCRMSetting(projectID, &model.CRMSetting{HubspotEnrichHeavy: isHeavy,
+			HubspotEnrichHeavyMaxCreatedAt: maxCreatedAtSec})
 	}
-	return store.UpdateCRMSetting(projectID, model.HubspotEnrichHeavy(crmSetting.HubspotEnrichHeavy))
+
+	return store.UpdateCRMSetting(projectID, model.HubspotEnrichHeavy(isHeavy, maxCreatedAtSec))
 }

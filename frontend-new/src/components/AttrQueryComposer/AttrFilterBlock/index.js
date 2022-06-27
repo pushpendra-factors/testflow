@@ -678,12 +678,16 @@ export default function AttrFilterBlock({
   };
 
   return (
-    <div className={`flex items-center relative`}>
-        {!showOr && (
-        <Text level={8} type={'title'} extraClass={'m-0 mr-2'} weight={'thin'}>
-          {index >= 1 ? 'and' : 'Filter by'}
+      <div className={`flex items-center relative ${!showOr?'ml-10':''}`}>
+        {!showOr && (index >=1 ? (
+        <Text level={8} type={'title'} extraClass={'m-0 mr-16'} weight={'thin'}>
+          and
         </Text>
-        )}
+        ):(
+        <Text level={8} type={'title'} extraClass={'m-0 mr-10'} weight={'thin'}>
+          Filter by
+        </Text>
+        ))}
         {showOr && (
         <Text level={8} type={'title'} extraClass={'m-0 mr-2 ml-2'} weight={'thin'}>
           or

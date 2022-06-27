@@ -430,6 +430,9 @@ CREATE TABLE IF NOT EXISTS project_settings (
     clearbit_key text,
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
+    lead_squared_config json,
+    is_weekly_insights_enabled boolean,
+    is_explain_enabled boolean,
     KEY (updated_at),
     SHARD KEY (project_id),
     PRIMARY KEY (project_id)
@@ -1055,7 +1058,8 @@ CREATE TABLE IF NOT EXISTS crm_properties (
 CREATE TABLE IF NOT EXISTS crm_settings (
     project_id bigint NOT NULL,
     hubspot_enrich_heavy boolean NOT NULL DEFAULT FALSE,
-    PRIMARY KEY (project_id),
+    hubspot_enrich_heavy_max_created_at bigint,
+    PRIMARY KEY (project_id)
     -- Required constraints.
     -- Ref (project_id) -> projects(id)
 );

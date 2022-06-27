@@ -1289,6 +1289,15 @@ func HasMaliciousContent(reqPayload string) (bool, error) {
 	return false, nil
 }
 
+// The string should contain alphabets(upper/lower case), number, hyphen, underscore, space
+func IsUserOrProjectNameValid(actualString string) bool {
+	isValid, _ := regexp.MatchString(
+		"^[A-Za-z0-9-_ ]*$",
+		actualString,
+	)
+	return isValid
+}
+
 func GetBrowser(p *user_agent.UserAgent) (string, string) {
 	if IsPingdomBot(p.UA()) {
 		return "PingdomBot", ""

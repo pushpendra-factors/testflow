@@ -1,10 +1,14 @@
 import React from 'react';
-import styles from './index.module.scss';
-import { Number as NumFormat } from '../factorsComponents';
+import cx from 'classnames';
+import { Tooltip } from 'antd';
 import { useSelector } from 'react-redux';
+
+import { Number as NumFormat } from '../factorsComponents';
 import { SPARK_LINE_CHART_TITLE_CHAR_COUNT } from '../../constants/charts.constants';
-import { displayQueryName } from './sparkLineChart.helpers';
 import { getFormattedKpiValue } from '../../Views/CoreQuery/KPIAnalysis/kpiAnalysis.helpers';
+import LegendsCircle from '../../styles/components/LegendsCircle';
+import { getEventDisplayName } from '../../Views/CoreQuery/EventsAnalytics/eventsAnalytics.helpers';
+import styles from './index.module.scss';
 
 function ChartHeader({
   total,
@@ -15,21 +19,27 @@ function ChartHeader({
 }) {
   const { eventNames } = useSelector((state) => state.coreQuery);
 
-  const queryName = displayQueryName({ query, eventNames });
+  const queryName = getEventDisplayName({ event: query, eventNames });
 
   return (
-    <div className="flex flex-col items-center justify-center">
-      <div className={`flex items-center ${smallFont ? 'mb-2' : 'mb-4'}`}>
-        <div
-          style={{ backgroundColor: bgColor }}
-          className={`mr-1 ${styles.eventCircle}`}
-        ></div>
-        <div className={styles.eventText}>
-          {queryName.length > SPARK_LINE_CHART_TITLE_CHAR_COUNT
-            ? queryName.slice(0, SPARK_LINE_CHART_TITLE_CHAR_COUNT) + '...'
-            : queryName}
+    <div
+      className={cx(
+        'flex flex-col items-center justify-center',
+        { 'row-gap-2': smallFont },
+        { 'row-gap-4': !smallFont }
+      )}
+    >
+      <Tooltip title={queryName}>
+        <div className={'flex items-center col-gap-1'}>
+          <LegendsCircle color={bgColor} />
+          <div className={styles.eventText}>
+            {queryName.length > SPARK_LINE_CHART_TITLE_CHAR_COUNT
+              ? queryName.slice(0, SPARK_LINE_CHART_TITLE_CHAR_COUNT) + '...'
+              : queryName}
+          </div>
         </div>
-      </div>
+      </Tooltip>
+
       <div
         className={`${smallFont ? styles.smallerTotalText : styles.totalText}`}
       >

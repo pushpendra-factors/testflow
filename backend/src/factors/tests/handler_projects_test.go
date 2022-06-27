@@ -74,7 +74,7 @@ func sendEditProjectRequest(r *gin.Engine, projectId uint64, projectName string,
 	}
 	rb := C.NewRequestBuilderWithPrefix(http.MethodPut, fmt.Sprintf("/projects/%v", projectId)).
 		WithHeader("Content-UnitType", "application/json").
-		WithPostParams(map[string]string{"name": "edit", "project_uri": "factors.ai.edit", "time_format": "HH:mm:ss.edit", "date_format": "yyyy-MM-dd.edit", "time_zone": "IST.edit"}).
+		WithPostParams(map[string]string{"name": projectName, "project_uri": "factors.ai.edit", "time_format": "HH:mm:ss.edit", "date_format": "yyyy-MM-dd.edit", "time_zone": "IST.edit"}).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
 			Value:  cookieData,
@@ -125,6 +125,12 @@ func TestAPICreateProject(t *testing.T) {
 		assert.Equal(t, http.StatusFound, status)
 		// The project name should match exactly by case.
 		assert.Equal(t, projectName, project.Name)
+
+		projectName = "Test_Project_Name!!!"
+		agent, errCode = SetupAgentReturnDAO(getRandomEmail(), "+254346477")
+		assert.Equal(t, http.StatusCreated, errCode)
+		w = sendCreateProjectRequest(r, projectName, agent)
+		assert.Equal(t, http.StatusBadRequest, w.Code)
 	})
 }
 
@@ -202,7 +208,7 @@ func TestAPIEditProject(t *testing.T) {
 		assert.Nil(t, jsonResponseMap["salesforce_touch_points"])
 		assert.Nil(t, jsonResponseMap["hubspot_touch_points"])
 		assert.Equal(t, 17, len(jsonResponseMap))
-		w = sendEditProjectRequest(r, uint64(jsonResponseMap["id"].(float64)), projectName, agent)
+		w = sendEditProjectRequest(r, uint64(jsonResponseMap["id"].(float64)), "edit", agent)
 		assert.Equal(t, http.StatusCreated, w.Code)
 		jsonResponse, _ = ioutil.ReadAll(w.Body)
 		json.Unmarshal(jsonResponse, &jsonResponseMap)
@@ -221,6 +227,8 @@ func TestAPIEditProject(t *testing.T) {
 		assert.Nil(t, jsonResponseMap["salesforce_touch_points"])
 		assert.Nil(t, jsonResponseMap["hubspot_touch_points"])
 		assert.Equal(t, 17, len(jsonResponseMap))
+		w = sendEditProjectRequest(r, uint64(jsonResponseMap["id"].(float64)), "edit@@", agent)
+		assert.Equal(t, http.StatusBadRequest, w.Code)
 	})
 }
 

@@ -355,7 +355,7 @@ function ProjectDropdown({
                   ) : (
                     <Text type={'title'} level={7} extraClass={'m-0'}>
                       To jump back into your Factors project, click on your
-                      account card on the bottom left of the screen.
+                      account card on the <span className={'font-bold'}>top right</span> of the screen.
                     </Text>
                   )}
                 </Col>

@@ -9,7 +9,7 @@ import MomentTz from 'Components/MomentTz';
 import { bindActionCreators } from 'redux';
 import { connect, useSelector, useDispatch } from 'react-redux';
 import { ErrorBoundary } from 'react-error-boundary';
-import { Drawer, Button, Modal } from 'antd';
+import { Drawer, Button, Modal, Row, Col } from 'antd';
 import _ from 'lodash';
 import factorsai from 'factorsai';
 
@@ -107,13 +107,18 @@ import {
 import { getChartChangedKey } from './AnalysisResultsPage/analysisResultsPage.helpers';
 import { EMPTY_OBJECT } from '../../utils/global';
 import moment from 'moment';
+import { fetchDemoProject, getHubspotContact } from 'Reducers/global';
+import { meetLink } from '../../utils/hubspot';
+import NewProject from '../Settings/SetupAssist/Modals/NewProject';
 
 function CoreQuery({
   activeProject,
   deleteGroupByForEvent,
   location,
   getCampaignConfigData,
-  KPI_config
+  KPI_config,
+  fetchDemoProject,
+  getHubspotContact,
 }) {
   const savedQueries = useSelector((state) =>
     _.get(state, 'queries.data', EMPTY_ARRAY)
@@ -137,6 +142,12 @@ function CoreQuery({
   const [queries, setQueries] = useState([]);
   const [selectedMainCategory, setSelectedMainCategory] = useState(false);
   const [KPIConfigProps, setKPIConfigProps] = useState([]);
+
+  const [demoProjectId, setDemoProjectId] = useState(null);
+  const [ownerID, setOwnerID] = useState();
+  const [showProjectModal, setShowProjectModal] = useState(false);
+  const { projects } = useSelector((state) => state.global);
+  const currentAgent = useSelector((state) => state.agent.agent_details);
 
   const [profileQueries, setProfileQueries] = useState([]);
   const [queryOptions, setQueryOptions] = useState({
@@ -201,6 +212,27 @@ function CoreQuery({
   const { session_analytics_seq } = queryOptions;
   const { globalFilters } = queryOptions;
   const groupAnalysis = queryOptions.group_analysis;
+
+  useEffect(() => {
+    fetchDemoProject()
+      .then((res) => {
+        setDemoProjectId(res.data[0]);
+      })
+      .catch((err) => {
+        console.log(err.data.error);
+      });
+  }, [activeProject]);
+
+  useEffect(() => {
+    const email = currentAgent.email;
+    getHubspotContact(email)
+      .then((res) => {
+        setOwnerID(res.data.hubspot_owner_id);
+      })
+      .catch((err) => {
+        console.log(err.data.error);
+      });
+  }, []);
 
   useEffect(() => {
     if (activeProject && activeProject.id) {
@@ -1472,6 +1504,67 @@ function CoreQuery({
           </Drawer>
         }
 
+        {activeProject.id === demoProjectId ? (
+          <div className={'rounded-lg border-2 h-20 mt-20 -mb-20 mx-20'}>
+            <Row justify={'space-between'} className={'m-0 p-3'}>
+              <Col span={projects.length === 1 ? 12 : 18}>
+                <img
+                  src="assets/icons/welcome.svg"
+                  style={{ float: 'left', marginRight: '20px' }}
+                />
+                <Text
+                  type={'title'}
+                  level={6}
+                  weight={'bold'}
+                  extraClass={'m-0'}
+                >
+                  Welcome! You just entered a Factors demo project
+                </Text>
+                {projects.length === 1 ? (
+                  <Text type={'title'} level={7} extraClass={'m-0'}>
+                    These reports have been built with a sample dataset. Use
+                    this to start exploring!
+                  </Text>
+                ) : (
+                  <Text type={'title'} level={7} extraClass={'m-0'}>
+                    To jump back into your Factors project, click on your
+                    account card on the <span className={'font-bold'}>top right</span> of the screen.
+                  </Text>
+                )}
+              </Col>
+              <Col className={'mr-2 mt-2'}>
+                <a href={meetLink(ownerID)} target="_blank" rel="noreferrer">
+                  <Button
+                    type={'default'}
+                    style={{
+                      background: 'white',
+                      border: '1px solid #E7E9ED',
+                      height: '40px'
+                    }}
+                    className={'m-0 mr-2'}
+                  >
+                    Get a Personalized Demo
+                  </Button>
+                </a>
+                {projects.length === 1 ? (
+                  <Button
+                    type={'default'}
+                    style={{
+                      background: 'white',
+                      border: '1px solid #E7E9ED',
+                      height: '40px'
+                    }}
+                    className={'m-0 mr-2'}
+                    onClick={() => setShowProjectModal(true)}
+                  >
+                    Set up my own Factors project
+                  </Button>
+                ) : null}
+              </Col>
+            </Row>
+          </div>
+        ) : null}
+
         {!showResult && drawerVisible && checkIfnewComposer()
           ? renderCreateQFlow()
           : !showResult && (
@@ -1536,6 +1629,11 @@ function CoreQuery({
             />
           </CoreQueryContext.Provider>
         ) : null}
+        {/* create project modal */}
+        <NewProject
+            visible={showProjectModal}
+            handleCancel={() => setShowProjectModal(false)}
+          />
       </ErrorBoundary>
     </>
   );
@@ -1550,7 +1648,9 @@ const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
     {
       deleteGroupByForEvent,
-      getCampaignConfigData
+      getCampaignConfigData,
+      fetchDemoProject,
+      getHubspotContact,
     },
     dispatch
   );

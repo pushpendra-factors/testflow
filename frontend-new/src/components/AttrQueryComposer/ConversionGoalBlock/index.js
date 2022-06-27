@@ -293,7 +293,7 @@ const ConversionGoalBlock = ({
           <Button
             type='text'
             onClick={() => setMoreOptions(true)}
-            className={'fa-btn--custom mr-1'}
+            className={`fa-btn--custom mr-1 btn-total-round`}
           >
             <SVG name='more'></SVG>
           </Button>
@@ -311,7 +311,7 @@ const ConversionGoalBlock = ({
             false
           )}
         </div>
-        <Button className={'fa-btn--custom'} type='text' onClick={deleteItem}>
+        <Button type='text' onClick={deleteItem} className={`fa-btn--custom btn-total-round`}>
           <SVG name='trash'></SVG>
         </Button>
       </div>
@@ -358,7 +358,7 @@ const ConversionGoalBlock = ({
               type='link'
               onClick={toggleEventSelect}
               icon={<SVG name='mouseevent' />}
-              className={`fa-button--truncate fa-button--truncate-lg`}
+              className={`fa-button--truncate fa-button--truncate-lg btn-total-round`}
             >
               {eventNames[eventGoal?.label]
                 ? eventNames[eventGoal?.label]

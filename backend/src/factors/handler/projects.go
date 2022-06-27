@@ -49,7 +49,10 @@ func CreateProjectHandler(c *gin.Context) {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-
+	if !U.IsUserOrProjectNameValid(project.Name) {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid character"})
+		return
+	}
 	if project.ProfilePicture != "" && !(strings.HasPrefix(project.ProfilePicture, "data:image/png") || strings.HasPrefix(project.ProfilePicture, "data:image/jpeg")) {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
@@ -120,6 +123,10 @@ func EditProjectHandler(c *gin.Context) {
 	err := json.NewDecoder(r.Body).Decode(&projectEditDetails)
 	if err != nil {
 		logCtx.WithError(err).Error("EditProject Failed. Json Decoding failed.")
+	}
+	if !U.IsUserOrProjectNameValid(projectEditDetails.Name) {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid character"})
+		return
 	}
 	project, status := store.GetStore().GetProject(projectID)
 	if status != http.StatusFound {
