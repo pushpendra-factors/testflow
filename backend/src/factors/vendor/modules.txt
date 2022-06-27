@@ -1,4 +1,5 @@
 # cloud.google.com/go v0.52.0
+## explicit
 cloud.google.com/go
 cloud.google.com/go/civil
 cloud.google.com/go/compute/metadata
@@ -259,6 +260,7 @@ github.com/go-playground/locales/currency
 # github.com/go-playground/universal-translator v0.17.0
 github.com/go-playground/universal-translator
 # github.com/go-playground/validator/v10 v10.4.1
+## explicit
 github.com/go-playground/validator/v10
 # github.com/go-redis/redis v6.15.7+incompatible
 ## explicit
