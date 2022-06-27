@@ -1,10 +1,12 @@
-import React, { useState, useEffect, useContext, useCallback } from 'react';
+import React, {
+  useState, useEffect, useContext, useCallback
+} from 'react';
 import {
   formatData,
   formatDataInStackedAreaFormat,
   defaultSortProp,
   getVisibleData,
-  getVisibleSeriesData,
+  getVisibleSeriesData
 } from '../../CoreQuery/EventsAnalytics/SingleEventSingleBreakdown/utils';
 import BarChart from '../../../components/BarChart';
 import SingleEventSingleBreakdownTable from '../../CoreQuery/EventsAnalytics/SingleEventSingleBreakdown/SingleEventSingleBreakdownTable';
@@ -19,7 +21,7 @@ import {
   DASHBOARD_WIDGET_AREA_CHART_HEIGHT,
   CHART_TYPE_STACKED_BAR,
   CHART_TYPE_LINECHART,
-  CHART_TYPE_HORIZONTAL_BAR_CHART,
+  CHART_TYPE_HORIZONTAL_BAR_CHART
 } from '../../../utils/constants';
 import StackedBarChart from '../../../components/StackedBarChart';
 import { DashboardContext } from '../../../contexts/DashboardContext';
@@ -34,12 +36,12 @@ function SingleEventSingleBreakdown({
   queries,
   unit,
   durationObj,
-  section,
+  section
 }) {
   const [visibleProperties, setVisibleProperties] = useState([]);
   const [visibleSeriesData, setVisibleSeriesData] = useState([]);
-  const [sorter, setSorter] = useState(defaultSortProp());
-  const [dateSorter, setDateSorter] = useState(defaultSortProp());
+  const [sorter, setSorter] = useState(defaultSortProp({ breakdown }));
+  const [dateSorter, setDateSorter] = useState(defaultSortProp({ breakdown }));
   const [aggregateData, setAggregateData] = useState([]);
   const [categories, setCategories] = useState([]);
   const [data, setData] = useState([]);
@@ -62,10 +64,10 @@ function SingleEventSingleBreakdown({
     const aggData = formatData(resultState.data);
     const { categories: cats, data: d } = isSeriesChart(chartType)
       ? formatDataInStackedAreaFormat(
-          resultState.data,
-          aggData,
-          durationObj.frequency
-        )
+        resultState.data,
+        aggData,
+        durationObj.frequency
+      )
       : { categories: [], data: [] };
     setAggregateData(aggData);
     setCategories(cats);
@@ -82,7 +84,7 @@ function SingleEventSingleBreakdown({
 
   if (!visibleProperties.length) {
     return (
-      <div className='flex justify-center items-center w-full h-full'>
+      <div className="flex justify-center items-center w-full h-full">
         <NoDataChart />
       </div>
     );
@@ -96,7 +98,7 @@ function SingleEventSingleBreakdown({
       <div
         onClick={handleEditQuery}
         style={{ color: '#5949BC' }}
-        className='mt-3 font-medium text-base cursor-pointer flex justify-end item-center'
+        className="mt-3 font-medium text-base cursor-pointer flex justify-end item-center"
       >
         Show More &rarr;
       </div>
@@ -143,7 +145,7 @@ function SingleEventSingleBreakdown({
         categories={categories}
         data={visibleSeriesData}
         height={DASHBOARD_WIDGET_AREA_CHART_HEIGHT}
-        legendsPosition='top'
+        legendsPosition="top"
         cardSize={unit.cardSize}
         chartId={`area-${unit.id}`}
       />
@@ -155,7 +157,7 @@ function SingleEventSingleBreakdown({
         categories={categories}
         data={visibleSeriesData}
         height={DASHBOARD_WIDGET_AREA_CHART_HEIGHT}
-        legendsPosition='top'
+        legendsPosition="top"
         cardSize={unit.cardSize}
         chartId={`bar-${unit.id}`}
       />
@@ -167,7 +169,7 @@ function SingleEventSingleBreakdown({
         categories={categories}
         data={visibleSeriesData}
         height={DASHBOARD_WIDGET_AREA_CHART_HEIGHT}
-        legendsPosition='top'
+        legendsPosition="top"
         cardSize={unit.cardSize}
         chartId={`line-${unit.id}`}
       />
@@ -184,7 +186,7 @@ function SingleEventSingleBreakdown({
   }
 
   return (
-    <div className={`w-full px-6 flex flex-1 flex-col justify-center`}>
+    <div className={'w-full px-6 flex flex-1 flex-col justify-center'}>
       {chartContent}
       {tableContent}
     </div>

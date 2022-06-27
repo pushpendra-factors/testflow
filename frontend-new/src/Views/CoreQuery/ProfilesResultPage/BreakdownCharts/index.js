@@ -4,7 +4,7 @@ import React, {
   useContext,
   useCallback,
   useImperativeHandle,
-  forwardRef,
+  forwardRef
 } from 'react';
 
 import BarChart from 'Components/BarChart';
@@ -15,7 +15,7 @@ import {
   CHART_TYPE_BARCHART,
   CHART_TYPE_HORIZONTAL_BAR_CHART,
   CHART_TYPE_PIVOT_CHART,
-  QUERY_TYPE_PROFILE,
+  QUERY_TYPE_PROFILE
 } from 'Utils/constants';
 import { getNewSorterState } from 'Utils/dataFormatter';
 
@@ -34,17 +34,17 @@ const BreakdownCharts = forwardRef(
       currentEventIndex,
       section,
       queries,
-      groupAnalysis,
+      groupAnalysis
     },
     ref
   ) => {
     const {
-      coreQueryState: { savedQuerySettings },
+      coreQueryState: { savedQuerySettings }
     } = useContext(CoreQueryContext);
     const [sorter, setSorter] = useState(
       savedQuerySettings.sorter && Array.isArray(savedQuerySettings.sorter)
         ? savedQuerySettings.sorter
-        : defaultSortProp()
+        : defaultSortProp({ breakdown })
     );
     const [visibleProperties, setVisibleProperties] = useState([]);
     const [aggregateData, setAggregateData] = useState([]);
@@ -57,7 +57,7 @@ const BreakdownCharts = forwardRef(
 
     useImperativeHandle(ref, () => {
       return {
-        currentSorter: { sorter },
+        currentSorter: { sorter }
       };
     });
 
@@ -72,7 +72,7 @@ const BreakdownCharts = forwardRef(
 
     if (!aggregateData.length) {
       return (
-        <div className='mt-4 flex justify-center items-center w-full h-64 '>
+        <div className="mt-4 flex justify-center items-center w-full h-64 ">
           <NoDataChart />
         </div>
       );
@@ -92,7 +92,7 @@ const BreakdownCharts = forwardRef(
 
     if (chartType === CHART_TYPE_HORIZONTAL_BAR_CHART) {
       chart = (
-        <div className='w-full'>
+        <div className="w-full">
           <HorizontalBarChartTable
             aggregateData={aggregateData}
             breakdown={breakdown}
@@ -103,7 +103,7 @@ const BreakdownCharts = forwardRef(
 
     if (chartType === CHART_TYPE_PIVOT_CHART) {
       chart = (
-        <div className='w-full'>
+        <div className="w-full">
           <PivotTable
             data={aggregateData}
             breakdown={breakdown}
@@ -116,14 +116,13 @@ const BreakdownCharts = forwardRef(
     }
 
     const table = (
-      <div className='mt-12 w-full'>
+      <div className="mt-12 w-full">
         <BreakdownTable
           aggregateData={aggregateData}
           sorter={sorter}
           breakdown={breakdown}
           currentEventIndex={currentEventIndex}
           chartType={chartType}
-          sorter={sorter}
           handleSorting={handleSorting}
           visibleProperties={visibleProperties}
           isWidgetModal={false}
@@ -136,7 +135,7 @@ const BreakdownCharts = forwardRef(
     );
 
     return (
-      <div className='flex items-center justify-center flex-col'>
+      <div className="flex items-center justify-center flex-col">
         {chart}
         {table}
       </div>

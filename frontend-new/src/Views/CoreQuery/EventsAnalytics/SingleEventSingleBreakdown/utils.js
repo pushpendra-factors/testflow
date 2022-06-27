@@ -1,5 +1,7 @@
 import React from 'react';
 import moment from 'moment';
+import get from 'lodash/get';
+import findIndex from 'lodash/findIndex';
 import { labelsObj } from '../../utils';
 import {
   getClickableTitleSorter,
@@ -17,8 +19,20 @@ import { getBreakdownDisplayName } from '../eventsAnalytics.helpers';
 import tableStyles from '../../../../components/DataTable/index.module.scss';
 import NonClickableTableHeader from '../../../../components/NonClickableTableHeader';
 import { EVENT_COUNT_KEY } from '../eventsAnalytics.constants';
+import { BREAKDOWN_TYPES } from '../../constants';
 
-export const defaultSortProp = () => {
+export const defaultSortProp = ({ breakdown }) => {
+  const dateTimeBreakdownIndex = findIndex(breakdown, b => b.prop_type === BREAKDOWN_TYPES.DATETIME);
+  if (dateTimeBreakdownIndex > -1) {
+    return [
+      {
+        key: `${breakdown[dateTimeBreakdownIndex].property}`,
+        type: BREAKDOWN_TYPES.DATETIME,
+        subtype: get(breakdown[dateTimeBreakdownIndex], 'grn', null),
+        order: 'descend'
+      }
+    ];
+  }
   return [
     {
       order: 'descend',

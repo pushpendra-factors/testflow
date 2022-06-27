@@ -1,9 +1,11 @@
-import React, { useState, useEffect, useContext, useCallback } from 'react';
+import React, {
+  useState, useEffect, useContext, useCallback
+} from 'react';
 import {
   formatData,
   formatDataInStackedAreaFormat,
   defaultSortProp,
-  getVisibleData,
+  getVisibleData
 } from '../../CoreQuery/EventsAnalytics/SingleEventMultipleBreakdown/utils';
 import BarChart from '../../../components/BarChart';
 import LineChart from '../../../components/HCLineChart';
@@ -18,7 +20,7 @@ import {
   CHART_TYPE_STACKED_BAR,
   CHART_TYPE_LINECHART,
   CHART_TYPE_HORIZONTAL_BAR_CHART,
-  CHART_TYPE_PIVOT_CHART,
+  CHART_TYPE_PIVOT_CHART
 } from '../../../utils/constants';
 import StackedAreaChart from '../../../components/StackedAreaChart';
 import StackedBarChart from '../../../components/StackedBarChart';
@@ -34,12 +36,12 @@ function SingleEventMultipleBreakdown({
   queries,
   unit,
   durationObj,
-  section,
+  section
 }) {
   const [visibleProperties, setVisibleProperties] = useState([]);
-  const [sorter, setSorter] = useState(defaultSortProp());
+  const [sorter, setSorter] = useState(defaultSortProp({ breakdown }));
   const [visibleSeriesData, setVisibleSeriesData] = useState([]);
-  const [dateSorter, setDateSorter] = useState(defaultSortProp());
+  const [dateSorter, setDateSorter] = useState(defaultSortProp({ breakdown }));
   const [aggregateData, setAggregateData] = useState([]);
   const [categories, setCategories] = useState([]);
   const [data, setData] = useState([]);
@@ -61,10 +63,10 @@ function SingleEventMultipleBreakdown({
     const aggData = formatData(resultState.data);
     const { categories: cats, data: d } = isSeriesChart(chartType)
       ? formatDataInStackedAreaFormat(
-          resultState.data,
-          aggData,
-          durationObj.frequency
-        )
+        resultState.data,
+        aggData,
+        durationObj.frequency
+      )
       : { categories: [], data: [] };
     setAggregateData(aggData);
     setCategories(cats);
@@ -81,7 +83,7 @@ function SingleEventMultipleBreakdown({
 
   if (!visibleProperties.length) {
     return (
-      <div className='flex justify-center items-center w-full h-full'>
+      <div className="flex justify-center items-center w-full h-full">
         <NoDataChart />
       </div>
     );
@@ -96,7 +98,7 @@ function SingleEventMultipleBreakdown({
       <div
         onClick={handleEditQuery}
         style={{ color: '#5949BC' }}
-        className='mt-3 font-medium text-base cursor-pointer flex justify-end item-center'
+        className="mt-3 font-medium text-base cursor-pointer flex justify-end item-center"
       >
         Show More &rarr;
       </div>
@@ -105,7 +107,7 @@ function SingleEventMultipleBreakdown({
 
   if (chartType === CHART_TYPE_BARCHART) {
     chartContent = (
-      <div className='flex mt-4'>
+      <div className="flex mt-4">
         <BarChart
           chartData={visibleProperties}
           height={DASHBOARD_WIDGET_BAR_CHART_HEIGHT}
@@ -148,7 +150,7 @@ function SingleEventMultipleBreakdown({
         categories={categories}
         data={visibleSeriesData}
         height={DASHBOARD_WIDGET_AREA_CHART_HEIGHT}
-        legendsPosition='top'
+        legendsPosition="top"
         cardSize={unit.cardSize}
         chartId={`area-${unit.id}`}
       />
@@ -160,7 +162,7 @@ function SingleEventMultipleBreakdown({
         categories={categories}
         data={visibleSeriesData}
         height={DASHBOARD_WIDGET_AREA_CHART_HEIGHT}
-        legendsPosition='top'
+        legendsPosition="top"
         cardSize={unit.cardSize}
         chartId={`bar-${unit.id}`}
       />
@@ -172,7 +174,7 @@ function SingleEventMultipleBreakdown({
         categories={categories}
         data={visibleSeriesData}
         height={DASHBOARD_WIDGET_AREA_CHART_HEIGHT}
-        legendsPosition='top'
+        legendsPosition="top"
         cardSize={unit.cardSize}
         chartId={`line-${unit.id}`}
       />
@@ -189,7 +191,7 @@ function SingleEventMultipleBreakdown({
   }
 
   return (
-    <div className={`w-full px-6 flex flex-1 flex-col  justify-center`}>
+    <div className={'w-full px-6 flex flex-1 flex-col  justify-center'}>
       {chartContent}
       {tableContent}
     </div>

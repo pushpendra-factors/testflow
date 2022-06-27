@@ -1,5 +1,5 @@
 import React from 'react';
-import { get, has } from 'lodash';
+import { findIndex, get, has } from 'lodash';
 import {
   getClickableTitleSorter,
   SortResults,
@@ -20,8 +20,20 @@ import { getBreakdownDisplayName } from '../../EventsAnalytics/eventsAnalytics.h
 import tableStyles from '../../../../components/DataTable/index.module.scss';
 import { parseForDateTimeLabel } from '../../EventsAnalytics/SingleEventSingleBreakdown/utils';
 import NonClickableTableHeader from '../../../../components/NonClickableTableHeader';
+import { BREAKDOWN_TYPES } from '../../constants';
 
-export const defaultSortProp = () => {
+export const defaultSortProp = ({ breakdown }) => {
+  const dateTimeBreakdownIndex = findIndex(breakdown, b => b.prop_type === BREAKDOWN_TYPES.DATETIME);
+  if (dateTimeBreakdownIndex > -1) {
+    return [
+      {
+        key: `${breakdown[dateTimeBreakdownIndex].property} - ${dateTimeBreakdownIndex}`,
+        type: BREAKDOWN_TYPES.DATETIME,
+        subtype: get(breakdown[dateTimeBreakdownIndex], 'grn', null),
+        order: 'descend'
+      }
+    ];
+  }
   return [
     {
       order: 'descend',

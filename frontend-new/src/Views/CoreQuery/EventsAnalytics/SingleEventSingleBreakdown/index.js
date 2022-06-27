@@ -4,14 +4,14 @@ import React, {
   useCallback,
   forwardRef,
   useImperativeHandle,
-  useContext,
+  useContext
 } from 'react';
 import {
   formatData,
   formatDataInStackedAreaFormat,
   defaultSortProp,
   getVisibleData,
-  getVisibleSeriesData,
+  getVisibleSeriesData
 } from './utils';
 import BarChart from '../../../../components/BarChart';
 import SingleEventSingleBreakdownTable from './SingleEventSingleBreakdownTable';
@@ -21,7 +21,7 @@ import {
   CHART_TYPE_BARCHART,
   CHART_TYPE_STACKED_AREA,
   CHART_TYPE_STACKED_BAR,
-  CHART_TYPE_LINECHART,
+  CHART_TYPE_LINECHART
 } from '../../../../utils/constants';
 import StackedAreaChart from '../../../../components/StackedAreaChart';
 import StackedBarChart from '../../../../components/StackedBarChart';
@@ -39,25 +39,25 @@ const SingleEventSingleBreakdown = forwardRef(
       chartType,
       durationObj,
       title,
-      section,
+      section
     },
     ref
   ) => {
     const {
-      coreQueryState: { savedQuerySettings },
+      coreQueryState: { savedQuerySettings }
     } = useContext(CoreQueryContext);
     const [visibleProperties, setVisibleProperties] = useState([]);
     const [visibleSeriesData, setVisibleSeriesData] = useState([]);
     const [sorter, setSorter] = useState(
       savedQuerySettings.sorter && Array.isArray(savedQuerySettings.sorter)
         ? savedQuerySettings.sorter
-        : defaultSortProp()
+        : defaultSortProp({ breakdown })
     );
     const [dateSorter, setDateSorter] = useState(
       savedQuerySettings.dateSorter &&
         Array.isArray(savedQuerySettings.dateSorter)
         ? savedQuerySettings.dateSorter
-        : defaultSortProp()
+        : defaultSortProp({ breakdown })
     );
     const [aggregateData, setAggregateData] = useState([]);
     const [categories, setCategories] = useState([]);
@@ -77,7 +77,7 @@ const SingleEventSingleBreakdown = forwardRef(
 
     useImperativeHandle(ref, () => {
       return {
-        currentSorter: { sorter, dateSorter },
+        currentSorter: { sorter, dateSorter }
       };
     });
 
@@ -108,7 +108,7 @@ const SingleEventSingleBreakdown = forwardRef(
     let chart = null;
 
     const table = (
-      <div className='mt-12 w-full'>
+      <div className="mt-12 w-full">
         <SingleEventSingleBreakdownTable
           isWidgetModal={section === DASHBOARD_MODAL}
           data={aggregateData}
@@ -141,7 +141,7 @@ const SingleEventSingleBreakdown = forwardRef(
       );
     } else if (chartType === CHART_TYPE_STACKED_AREA) {
       chart = (
-        <div className='w-full'>
+        <div className="w-full">
           <StackedAreaChart
             frequency={durationObj.frequency}
             categories={categories}
@@ -152,7 +152,7 @@ const SingleEventSingleBreakdown = forwardRef(
       );
     } else if (chartType === CHART_TYPE_STACKED_BAR) {
       chart = (
-        <div className='w-full'>
+        <div className="w-full">
           <StackedBarChart
             frequency={durationObj.frequency}
             categories={categories}
@@ -163,7 +163,7 @@ const SingleEventSingleBreakdown = forwardRef(
       );
     } else if (chartType === CHART_TYPE_LINECHART) {
       chart = (
-        <div className='w-full'>
+        <div className="w-full">
           <LineChart
             frequency={durationObj.frequency}
             categories={categories}
@@ -174,7 +174,7 @@ const SingleEventSingleBreakdown = forwardRef(
       );
     } else {
       chart = (
-        <div className='w-full'>
+        <div className="w-full">
           <SingleEventSingleBreakdownHorizontalBarChart
             aggregateData={aggregateData}
             breakdown={resultState.data.meta.query.gbp}
@@ -184,7 +184,7 @@ const SingleEventSingleBreakdown = forwardRef(
     }
 
     return (
-      <div className='flex items-center justify-center flex-col'>
+      <div className="flex items-center justify-center flex-col">
         {chart}
         {table}
       </div>

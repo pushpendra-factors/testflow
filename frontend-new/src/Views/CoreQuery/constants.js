@@ -45,3 +45,7 @@ export const FILTER_TYPES = {
   CATEGORICAL: 'categorical',
   DATETIME: 'datetime'
 };
+
+export const BREAKDOWN_TYPES = {
+  DATETIME: 'datetime'
+};
