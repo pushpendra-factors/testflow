@@ -7,6 +7,8 @@ import (
 	"factors/util"
 	U "factors/util"
 	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -15,11 +17,29 @@ import (
 type SlowQueries struct {
 	ID           int64   `json:"id"`
 	Time         float64 `json:"time"`
+	ProjectName  string  `json:"project_name"`
 	TimeString   string  `json:"time_string"`
 	Info         string  `json:"info"`
 	User         string  `json:"user"`
 	Command      string  `json:"command"`
 	ResourcePool string  `json:"resource_pool"`
+}
+
+func (store *MemSQL) GetProjectIdFromInfo(info string) (projectId int) {
+	tempString := "project_id="
+	index := strings.LastIndex(info, tempString)
+	projectString := ""
+	for index := index + len(tempString); index < len(info); index++ {
+		value := info[index : index+1]
+		_, err := strconv.Atoi(value)
+		if err != nil {
+			break
+		} else {
+			projectString += value
+		}
+	}
+	projectId, _ = strconv.Atoi(projectString)
+	return projectId
 }
 
 func (store *MemSQL) MonitorSlowQueries() ([]interface{}, []interface{}, error) {
@@ -45,10 +65,16 @@ func (store *MemSQL) MonitorSlowQueries() ([]interface{}, []interface{}, error) 
 			return sqlAdminSlowQueries, factorsSlowQueries, err
 		}
 		slowQuery.TimeString = U.SecondsToHMSString(int64(slowQuery.Time))
+
+		// project name field intialized
+		projectID := store.GetProjectIdFromInfo(slowQuery.Info)
+		project, _ := store.GetProject(uint64(projectID))
+		slowQuery.ProjectName = project.Name
 		slowQuery.Info = slowQuery.Info[:U.MinInt(len(slowQuery.Info), 500)]
 
 		if slowQuery.Info != "" {
-			if slowQuery.User != "factors_ro" && slowQuery.User != "factors_rw" {
+			//segregated admin queries
+			if slowQuery.User == "admin" {
 				sqlAdminSlowQueries = append(sqlAdminSlowQueries, slowQuery)
 			} else {
 				factorsSlowQueries = append(factorsSlowQueries, slowQuery)

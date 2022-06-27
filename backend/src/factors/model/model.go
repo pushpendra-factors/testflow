@@ -539,6 +539,7 @@ type Model interface {
 	CreateMultipleGoogleOrganicDocument(gscDocuments []model.GoogleOrganicDocument) int
 
 	// monitoring
+	GetProjectIdFromInfo(string) int
 	MonitorSlowQueries() ([]interface{}, []interface{}, error)
 	CollectTableSizes() map[string]string
 
