@@ -174,7 +174,7 @@ function App({ isAgentLoggedIn, agent_details, active_project, enableBingAdsInte
 
     if ((window.location.href.indexOf("https://staging-app.factors.ai/") != -1) || (window.location.href.indexOf("https://app.factors.ai/") != -1)) {
       userflow.init('ct_4iqdnn267zdr5ednpbgbyvubky')
-      userflow.identify(agent_details.uuid, {
+      userflow.identify(agent_details?.uuid, {
         name: agent_details?.first_name,
         email: agent_details?.email,
         signed_up_at: agent_details?.signed_up_at
