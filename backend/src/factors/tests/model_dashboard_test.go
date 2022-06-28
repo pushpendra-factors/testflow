@@ -177,8 +177,8 @@ func TestUpdateDashboard(t *testing.T) {
 		assert.NotNil(t, dashboard)
 		assert.Equal(t, http.StatusCreated, errCode)
 
-		positions := map[string]map[uint64]int{
-			model.UnitChart: map[uint64]int{
+		positions := map[string]map[int64]int{
+			model.UnitChart: map[int64]int{
 				1: 0,
 				2: 1,
 			},
@@ -192,12 +192,12 @@ func TestUpdateDashboard(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, positions, gPositions)
 
-		validPositions := map[string]map[uint64]int{
-			model.UnitChart: map[uint64]int{
+		validPositions := map[string]map[int64]int{
+			model.UnitChart: map[int64]int{
 				1: 0,
 				2: 1,
 			},
-			model.UnitCard: map[uint64]int{
+			model.UnitCard: map[int64]int{
 				4: 1,
 				3: 0,
 			},
