@@ -164,6 +164,7 @@ func GetMetricsEvaluated(category string, metricNames []string, queryEvent strin
 	var insights *WithinPeriodInsightsKpi
 	var scanner *bufio.Scanner
 	var err error
+	var spectrum string
 	if scanner, err = GetEventFileScanner(projectId, periodCode, cloudManager, diskManager, insightGranularity, true); err != nil {
 		log.WithError(err).Error("failed getting event file scanner")
 		return nil, err
@@ -171,16 +172,20 @@ func GetMetricsEvaluated(category string, metricNames []string, queryEvent strin
 	var GetMetrics func(metricNames []string, queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*WithinPeriodInsightsKpi, error)
 	if category == M.WebsiteSessionDisplayCategory {
 		GetMetrics = GetSessionMetrics
+		spectrum = "events"
 	} else if category == M.FormSubmissionsDisplayCategory {
 		GetMetrics = GetFormSubmitMetrics
+		spectrum = "events"
 	} else if category == M.PageViewsDisplayCategory {
 		GetMetrics = GetPageViewMetrics
+		spectrum = "events"
 	} else {
 		err := fmt.Errorf("no kpi Insights for category: %s", category)
 		log.WithError(err).Error("not computing insights for this category")
 		return insights, err
 	}
 	insights, err = GetMetrics(metricNames, queryEvent, scanner, propFilter, propsToEval)
+	insights.Category = spectrum
 	return insights, err
 }
 
@@ -406,6 +411,7 @@ func ComputeCrossPeriodKpiInsights(periodPair PeriodPair, newInsightsList, oldIn
 			}
 		}
 		var cpiInsightsKpi CrossPeriodInsightsKpi
+		cpiInsightsKpi.Category = newInsights.Category
 		cpiInsightsKpi.Periods = periodPair
 		cpiInsightsKpi.Target = &crossPeriodInsights
 		cpiInsightsKpi.BaseAndTarget = &crossPeriodInsights
