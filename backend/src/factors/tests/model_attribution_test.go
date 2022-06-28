@@ -778,6 +778,111 @@ func TestAttributionModelEndToEndWithEnrichment(t *testing.T) {
 	})
 }
 
+func TestAttributionForCampaignNameChange(t *testing.T) {
+	// Initialize routes and dependent data.
+	r := gin.Default()
+	H.InitAppRoutes(r)
+
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	addMarketingDataWithDifferentCampaignNames(t, project)
+
+	timestamp := int64(1589068800)
+
+	// Creating 3 users
+	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
+		JoinTimestamp: timestamp, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.NotEmpty(t, createdUserID1)
+	assert.Equal(t, http.StatusCreated, errCode)
+	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
+		JoinTimestamp: timestamp, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.NotNil(t, createdUserID2)
+	assert.Equal(t, http.StatusCreated, errCode)
+	createdUserID3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
+		JoinTimestamp: timestamp, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.NotNil(t, createdUserID3)
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	// Events with +1 Days
+	errCode = createEventWithSession(project.ID, "event1", createdUserID1,
+		timestamp+1*U.SECONDS_IN_A_DAY, "Campaign_Adwords_Old",
+		"Adgroup_Adwords_200", "Keyword_Adwords_300", "Cj0KCQjwmpb0BRCBARIsAG7y4zbZArcUWztiqP5bs", "google", "")
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	errCode = createEventWithSession(project.ID, "event1",
+		createdUserID2, timestamp+1*U.SECONDS_IN_A_DAY, "Campaign_Adwords_Old",
+		"Adgroup_Adwords_200", "Keyword_Adwords_300", "", "google", "")
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	errCode = createEventWithSession(project.ID, "event1",
+		createdUserID3, timestamp+1*U.SECONDS_IN_A_DAY, "Campaign_Adwords_Old",
+		"Adgroup_Adwords_200", "Keyword_Adwords_300", "", "google", "")
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	t.Run("AttributionQueryLinearCampaignMultiUserSession", func(t *testing.T) {
+		query := &model.AttributionQuery{
+			From:                    timestamp,
+			To:                      timestamp + 4*U.SECONDS_IN_A_DAY,
+			AttributionKey:          model.AttributionKeyCampaign,
+			AttributionMethodology:  model.AttributionMethodLinear,
+			AttributionKeyDimension: []string{model.FieldCampaignName},
+			ConversionEvent:         model.QueryEventWithProperties{Name: "event1"},
+			LookbackDays:            10,
+		}
+		var debugQueryKey string
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey)
+		assert.Nil(t, err)
+		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "Campaign_Adwords_New"))
+		assert.Equal(t, float64(2), getConversionUserCount(query.AttributionKey, result, "Campaign_Adwords_Old"))
+		assert.Equal(t, int64(2), getImpressions(query.AttributionKey, result, "Campaign_Adwords_New"))
+		assert.Equal(t, int64(2), getClicks(query.AttributionKey, result, "Campaign_Adwords_New"))
+		assert.Equal(t, float64(0.000002), getSpend(query.AttributionKey, result, "Campaign_Adwords_New"))
+	})
+
+	t.Run("AttributionQueryLinearAdgroupMultiUserSession", func(t *testing.T) {
+		query := &model.AttributionQuery{
+			From:                    timestamp,
+			To:                      timestamp + 4*U.SECONDS_IN_A_DAY,
+			AttributionKey:          model.AttributionKeyAdgroup,
+			AttributionMethodology:  model.AttributionMethodLinear,
+			AttributionKeyDimension: []string{model.FieldChannelName, model.FieldCampaignName, model.FieldAdgroupName},
+			ConversionEvent:         model.QueryEventWithProperties{Name: "event1"},
+			LookbackDays:            10,
+		}
+		var debugQueryKey string
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey)
+		assert.Nil(t, err)
+		assert.Equal(t, float64(2), getConversionUserCount(query.AttributionKey, result, "$none"+model.KeyDelimiter+"Campaign_Adwords_Old"+model.KeyDelimiter+"Adgroup_Adwords_200"))
+		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_New"+model.KeyDelimiter+"Adgroup_Adwords_200"))
+		assert.Equal(t, int64(2), getImpressions(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_New"+model.KeyDelimiter+"Adgroup_Adwords_200"))
+		assert.Equal(t, int64(2), getClicks(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_New"+model.KeyDelimiter+"Adgroup_Adwords_200"))
+		assert.Equal(t, float64(0.000002), getSpend(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_New"+model.KeyDelimiter+"Adgroup_Adwords_200"))
+	})
+
+	t.Run("AttributionQueryLinearKeywordMultiUserSession", func(t *testing.T) {
+		query := &model.AttributionQuery{
+			From:                    timestamp,
+			To:                      timestamp + 4*U.SECONDS_IN_A_DAY,
+			AttributionKey:          model.AttributionKeyKeyword,
+			AttributionMethodology:  model.AttributionMethodLinear,
+			AttributionKeyDimension: []string{model.FieldChannelName, model.FieldCampaignName, model.FieldAdgroupName, model.FieldKeywordMatchType, model.FieldKeyword},
+			ConversionEvent:         model.QueryEventWithProperties{Name: "event1"},
+			LookbackDays:            10,
+		}
+		var debugQueryKey string
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey)
+		assert.Nil(t, err)
+		// with "$none" match type for 2 users
+		assert.Equal(t, float64(2), getConversionUserCount(query.AttributionKey, result, "$none"+model.KeyDelimiter+"Campaign_Adwords_Old"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"$none"+model.KeyDelimiter+"Keyword_Adwords_300"))
+		// with 'Board' match type for 1 user1
+		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_New"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"Broad"+model.KeyDelimiter+"Keyword_Adwords_300"))
+		assert.Equal(t, int64(3), getImpressions(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_New"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"Broad"+model.KeyDelimiter+"Keyword_Adwords_300"))
+		assert.Equal(t, int64(3), getClicks(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_New"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"Broad"+model.KeyDelimiter+"Keyword_Adwords_300"))
+		assert.Equal(t, float64(0.000003), getSpend(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_New"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"Broad"+model.KeyDelimiter+"Keyword_Adwords_300"))
+	})
+}
+
 func addMarketingData(t *testing.T, project *model.Project) {
 
 	adwordsCustomerAccountId := U.RandomLowerAphaNumString(5)
@@ -927,6 +1032,102 @@ func addMarketingData(t *testing.T, project *model.Project) {
 	}
 	status = store.GetStore().CreateLinkedinDocument(project.ID, documentLinkedin)
 	assert.Equal(t, http.StatusCreated, status)
+}
+
+func addMarketingDataWithDifferentCampaignNames(t *testing.T, project *model.Project) {
+	adwordsCustomerAccountId := U.RandomLowerAphaNumString(5)
+
+	// Setting up Adwords account
+	_, errCode := store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{
+		IntAdwordsCustomerAccountId: &adwordsCustomerAccountId,
+	})
+	assert.Equal(t, http.StatusAccepted, errCode)
+	/*
+			Adwords:
+			CampaignID: 100, CampaignName: "Campaign_Adwords_Old"
+		    CampaignID: 100, CampaignName: "Campaign_Adwords_New"
+			AdgroupID: 200, AdgroupName: "Adgroup_Adwords_200"
+			KeywordID: 300, KeywordName: "Keyword_Adwords_300"
+			AdID: 400, AdName: "AdName_Adwords_400"
+			GCLID: Cj0KCQjwmpb0BRCBARIsAG7y4zbZArcUWztiqP5bs
+
+	*/
+
+	// Adwords Campaign performance report for old campaign name
+	value := []byte(`{"cost": "1","clicks": "1","campaign_id":"101","impressions": "1", "campaign_name": "Campaign_Adwords_Old"}`)
+	document := &model.AdwordsDocument{
+		ProjectID:         project.ID,
+		ID:                "101",
+		CustomerAccountID: adwordsCustomerAccountId,
+		TypeAlias:         model.CampaignPerformanceReport,
+		Timestamp:         20200510,
+		Value:             &postgres.Jsonb{RawMessage: value},
+		CampaignID:        101,
+	}
+	status := store.GetStore().CreateAdwordsDocument(document)
+	assert.Equal(t, http.StatusCreated, status)
+
+	// Adwords Campaign performance report for new campaign name
+	value = []byte(`{"cost": "1","clicks": "1","campaign_id":"101","impressions": "1", "campaign_name": "Campaign_Adwords_New"}`)
+	document = &model.AdwordsDocument{
+		ProjectID:         project.ID,
+		ID:                "101",
+		CustomerAccountID: adwordsCustomerAccountId,
+		TypeAlias:         model.CampaignPerformanceReport,
+		Timestamp:         20200510 + 1,
+		Value:             &postgres.Jsonb{RawMessage: value},
+		CampaignID:        101,
+	}
+	status = store.GetStore().CreateAdwordsDocument(document)
+	assert.Equal(t, http.StatusCreated, status)
+
+	// Adwords Adgroup performance report
+	value = []byte(`{"cost": "2","clicks": "2","ad_group_id":"200","impressions": "2", "ad_group_name": "Adgroup_Adwords_200", "campaign_id":"101"}`)
+	document = &model.AdwordsDocument{
+		ProjectID:         project.ID,
+		ID:                "200",
+		CustomerAccountID: adwordsCustomerAccountId,
+		TypeAlias:         model.AdGroupPerformanceReport,
+		Timestamp:         20200510,
+		Value:             &postgres.Jsonb{RawMessage: value},
+		CampaignID:        101,
+		AdGroupID:         200,
+	}
+	status = store.GetStore().CreateAdwordsDocument(document)
+	assert.Equal(t, http.StatusCreated, status)
+
+	// Adwords Keyword performance report
+	value = []byte(`{"cost": "3","clicks": "3","id":"300","impressions": "3", "criteria": "Keyword_Adwords_300", "ad_group_id":"200", "campaign_id":"101", "keyword_match_type":"Broad"}`)
+	document = &model.AdwordsDocument{
+		ProjectID:         project.ID,
+		ID:                "300",
+		CustomerAccountID: adwordsCustomerAccountId,
+		TypeAlias:         model.KeywordPerformanceReport,
+		Timestamp:         20200510,
+		Value:             &postgres.Jsonb{RawMessage: value},
+		CampaignID:        101,
+		AdGroupID:         200,
+		KeywordID:         300,
+	}
+	status = store.GetStore().CreateAdwordsDocument(document)
+	assert.Equal(t, http.StatusCreated, status)
+
+	// GCLID performance report
+	value = []byte(`{"gcl_id": "Cj0KCQjwmpb0BRCBARIsAG7y4zbZArcUWztiqP5bs","ad_group_id": "200","campaign_id":"101","creative_id": "400", "criteria_id": "300", "slot": "Google search: Top"}`)
+	document = &model.AdwordsDocument{
+		ProjectID:         project.ID,
+		ID:                "Cj0KCQjwmpb0BRCBARIsAG7y4zbZArcUWztiqP5bs",
+		CustomerAccountID: adwordsCustomerAccountId,
+		TypeAlias:         "click_performance_report",
+		Timestamp:         20200510,
+		Value:             &postgres.Jsonb{RawMessage: value},
+		CampaignID:        101,
+		AdGroupID:         200,
+		KeywordID:         300,
+	}
+	status = store.GetStore().CreateAdwordsDocument(document)
+	assert.Equal(t, http.StatusCreated, status)
+
 }
 
 func getConversionUserCount(attributionKey string, result *model.QueryResult, key interface{}) interface{} {

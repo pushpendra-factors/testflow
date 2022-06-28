@@ -356,7 +356,7 @@ func (store *MemSQL) PullAdwordsMarketingData(projectID uint64, from, to int64, 
 		"SUM(JSON_EXTRACT_STRING(value, 'impressions')) AS impressions, SUM(JSON_EXTRACT_STRING(value, 'clicks')) AS clicks, " +
 		"SUM(JSON_EXTRACT_STRING(value, 'cost'))/1000000 AS total_cost FROM adwords_documents " +
 		"where project_id = ? AND customer_account_id IN (?) AND type = ? AND timestamp between ? AND ? " +
-		"group by campaignID, adgroupID, keywordID, adID, key_id, key_name, extra_value1"
+		"group by campaignID, adgroupID, keywordID, adID, key_id, key_name, extra_value1 " + "order by timestamp"
 
 	params := []interface{}{keyID, keyName, extraValue1, projectID, customerAccountIDs, reportType,
 		U.GetDateAsStringIn(from, U.TimeZoneString(timeZone)), U.GetDateAsStringIn(to, U.TimeZoneString(timeZone))}
@@ -391,7 +391,7 @@ func (store *MemSQL) PullFacebookMarketingData(projectID uint64, from, to int64,
 	customerAccountIDs := strings.Split(customerAccountID, ",")
 	performanceQuery := "SELECT campaign_id as campaignID, ad_set_id as adgroupID, '$none' as keywordID, ad_id as adID, " +
 		"JSON_EXTRACT_STRING(value, ?) AS key_id, JSON_EXTRACT_STRING(value, ?) AS key_name, JSON_EXTRACT_STRING(value, ?) AS extra_value1, " +
-		"SUM(JSON_EXTRACT_STRING(value, 'impressions')) AS impressions, SUM(JSON_EXTRACT_STRING(value, 'clicks')) AS clicks, " +
+		"SUM(JSON_EXTRACT_STRING(value, 'impressions')) AS impressions, SUM(JSON_EXTRACT_STRING(value, 'inline_link_clicks')) AS clicks, " +
 		"SUM(JSON_EXTRACT_STRING(value, 'spend')) AS total_cost FROM facebook_documents " +
 		"where project_id = ? AND customer_ad_account_id IN (?) AND type = ? AND timestamp between ? AND ? " +
 		"group by campaignID, adgroupID, keywordID, adID, key_id, key_name, extra_value1"
