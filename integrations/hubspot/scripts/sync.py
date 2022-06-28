@@ -31,7 +31,8 @@ parser.add_option("--enable_company_contact_association_v2_by_project_id",
 parser.add_option("--project_ids", dest="project_ids", help="Allowed project_ids", default="*")
 parser.add_option("--disabled_project_ids", dest="disabled_project_ids", help="Disabled project_ids", default="")
 parser.add_option("--disable_non_marketing_contacts_project_id", dest="disable_non_marketing_contacts_project_id", help="Projects to only pick marketing contacts", default="")
-
+parser.add_option("--buffer_size_by_api_count", dest="buffer_size_by_api_count", help="Buffer size by number of api counts before performing insertion", default=1)
+parser.add_option("--enable_buffer_before_insert_by_project_id", dest="enable_buffer_before_insert_by_project_id", help="Enable buffer before inserting by project id", default="")
 
 APP_NAME = "hubspot_sync"
 PAGE_SIZE = 100
@@ -167,6 +168,19 @@ def create_document(project_id, doc_type, doc, fetch_deleted_contact=False):
         finally:
             end_time = time.time()
             log.warning("Create_document took %ds", end_time-start_time )
+
+def get_create_all_documents_with_buffer(project_id, doc_type, buffer_size, fetch_deleted_contact=False):
+    buffered_docs = []
+    def create_all_documents_with_buffer(docs, hasMore):
+        nonlocal buffered_docs
+        buffered_docs = buffered_docs + docs
+        log.warning("Buffered %s of size %d",doc_type, len(buffered_docs) )
+        if len(buffered_docs)<buffer_size and hasMore:
+            return
+        create_all_documents(project_id, doc_type,buffered_docs,fetch_deleted_contact)
+        log.warning("Created %d %s.", len(buffered_docs),doc_type)
+        buffered_docs = []
+    return create_all_documents_with_buffer
 
 def create_all_documents(project_id, doc_type, docs, fetch_deleted_contact=False):
     if options.dry == "True":
@@ -357,11 +371,14 @@ def add_contactId(api_key, email, project_id, engagement):
         engagement["metadata"]["to"][0]["contactId"] = response["vid"]
         
 def sync_engagements(project_id, api_key, last_sync_timestamp=0):
-    get_url = "https://api.hubapi.com/engagements/v1/engagements/recent/modified?hapikey=" + api_key + "&count=100&since="+str(last_sync_timestamp)
+    page_count = 100
+    get_url = "https://api.hubapi.com/engagements/v1/engagements/recent/modified?hapikey=" + api_key + "&count="+str(page_count)+"&since="+str(last_sync_timestamp)
     final_url = get_url
     has_more = True
     engagement_api_calls = 0
     latest_timestamp = None
+    buffer_size = page_count * get_buffer_size_by_api_count()
+    create_all_engagement_documents_with_buffer = get_create_all_documents_with_buffer(project_id, 'engagement', buffer_size)
     while has_more:
         log.warning("Downloading engagements for project_id %d from url %s.", project_id, final_url)
         r = get_with_fallback_retry(project_id, final_url)
@@ -391,14 +408,19 @@ def sync_engagements(project_id, api_key, last_sync_timestamp=0):
                     if "metadata" in engagement and "to" in engagement["metadata"] and len(engagement["metadata"]["to"])>0 and "email" in engagement["metadata"]["to"][0]:
                         add_contactId(api_key, engagement["metadata"]["to"][0]["email"], project_id, engagement)
                     filter_engagements.append(engagement)
-        create_all_documents(project_id, 'engagement', filter_engagements)
-        log.warning("Downloaded and created %d engagements.", len(filter_engagements))
         response = json.loads(r.text)
         if 'hasMore' in response and 'offset' in response:
             has_more = response['hasMore']
             final_url = get_url + "&offset=" + str(response['offset'])
         else :
             has_more = False
+        if allow_buffer_before_insert_by_project_id(project_id):
+            create_all_engagement_documents_with_buffer(filter_engagements,has_more)
+            log.warning("Downloaded %d engagements.", len(filter_engagements))
+        else:
+            create_all_documents(project_id, 'engagement', filter_engagements)
+            log.warning("Downloaded and created %d engagements.", len(filter_engagements))
+    create_all_engagement_documents_with_buffer([],False) ## flush any remaining docs in memory
     return engagement_api_calls,latest_timestamp
 
 def is_marketing_contact(doc):
@@ -430,6 +452,8 @@ def sync_contacts(project_id, api_key,last_sync_timestamp, sync_all=False):
         url = "https://api.hubapi.com/contacts/v1/lists/recently_updated/contacts/recent?"
         log.warning("Downloading recently created or modified contacts for project_id : "+ str(project_id) + ".")
 
+    buffer_size = PAGE_SIZE * get_buffer_size_by_api_count()
+    create_all_contact_documents_with_buffer = get_create_all_documents_with_buffer(project_id,"contact",buffer_size)
     has_more = True
     count = 0
     parameter_dict = { 'hapikey': api_key, 'count': PAGE_SIZE }
@@ -494,9 +518,15 @@ def sync_contacts(project_id, api_key,last_sync_timestamp, sync_all=False):
 
         max_timestamp = get_batch_documents_max_timestamp(project_id, docs,"contacts",max_timestamp)
         docs = get_filtered_contacts_project_id(project_id, docs)
-        create_all_documents(project_id, 'contact', docs)
         count = count + len(docs)
-        log.warning("Downloaded and created %d contacts. total %d.", len(docs), count)
+        if allow_buffer_before_insert_by_project_id(project_id):
+            create_all_contact_documents_with_buffer(docs,has_more)
+            log.warning("Downloaded %d contacts. total %d.", len(docs), count)
+        else:
+            create_all_documents(project_id, 'contact', docs)
+            log.warning("Downloaded and created %d contacts. total %d.", len(docs), count)
+    
+    create_all_contact_documents_with_buffer([],False) ## flush any remainig docs in memory
     return contact_api_calls, max_timestamp
 
 def add_paginated_associations(project_id, to_object_ids, next_page_url, api_key):
@@ -678,6 +708,8 @@ def sync_deals(project_id, api_key, sync_all=False):
         page_count_key = "count"
         page_count = 100 # max size
 
+    buffer_size = page_count * get_buffer_size_by_api_count()
+    create_all_deal_documents_with_buffer = get_create_all_documents_with_buffer(project_id,"deal",buffer_size)
     deal_api_calls = 0
     err_url_too_long = False
     for url in urls:
@@ -739,9 +771,14 @@ def sync_deals(project_id, api_key, sync_all=False):
                 docs = response_dict['results']
             parameter_dict['offset']= response_dict['offset']
 
-            create_all_documents(project_id, 'deal', docs)
             count = count + len(docs)
-            log.warning("Downloaded and created %d deals. total %d.", len(docs), count)
+            if allow_buffer_before_insert_by_project_id(project_id):
+                create_all_deal_documents_with_buffer(docs, has_more)
+                log.warning("Downloaded %d deals. total %d.", len(docs), count)
+            else:
+                create_all_documents(project_id, 'deal', docs)
+                log.warning("Downloaded and created %d deals. total %d.", len(docs), count)
+    create_all_deal_documents_with_buffer([], False) ## flush any remaining docs in memory
     return deal_api_calls
 
 
@@ -800,6 +837,9 @@ def sync_companies(project_id, api_key,last_sync_timestamp, sync_all=False):
         log.warning("Downloading recently created or modified companies for project_id : "+ str(project_id) + ".")
         limit_key = "count"
 
+    buffer_size = PAGE_SIZE * get_buffer_size_by_api_count()
+    create_all_company_documents_with_buffer = get_create_all_documents_with_buffer(project_id,"company",buffer_size)
+
     companies_api_calls = 0
     companies_contacts_api_calls = 0
     max_timestamp = 0
@@ -848,9 +888,14 @@ def sync_companies(project_id, api_key,last_sync_timestamp, sync_all=False):
             # fills contact ids for each comapany under 'contactIds'.
             _, api_calls = fill_contacts_for_companies(project_id, api_key, docs)
             companies_contacts_api_calls += api_calls
-            create_all_documents(project_id, 'company', docs)
             count = count + len(docs)
-            log.warning("Downloaded and created %d companies. total %d.", len(docs), count)
+            if allow_buffer_before_insert_by_project_id(project_id):
+                create_all_company_documents_with_buffer(docs,has_more)
+                log.warning("Downloaded %d companies. total %d.", len(docs), count)
+            else:
+                create_all_documents(project_id, 'company', docs)
+                log.warning("Downloaded and created %d companies. total %d.", len(docs), count)
+    create_all_company_documents_with_buffer([],False) ## flush any remaining docs in memory
     return companies_api_calls, companies_contacts_api_calls, max_timestamp
 
 def sync_forms(project_id, api_key):
@@ -989,6 +1034,15 @@ def allow_sync_by_project_id(project_id):
 def disable_non_marketing_contacts_by_project_id(project_id):
     all_projects, allowed_projects, _ = get_allowed_list_with_all_element_support(options.disable_non_marketing_contacts_project_id)
 
+    if all_projects:
+        return True
+    return str(project_id) in allowed_projects
+
+def get_buffer_size_by_api_count():
+    return int(options.buffer_size_by_api_count)
+
+def allow_buffer_before_insert_by_project_id(project_id):
+    all_projects, allowed_projects,_ = get_allowed_list_with_all_element_support(options.enable_buffer_before_insert_by_project_id)
     if all_projects:
         return True
     return str(project_id) in allowed_projects
