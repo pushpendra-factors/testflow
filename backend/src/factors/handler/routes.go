@@ -277,7 +277,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.DELETE("/:project_id/slack/delete", slack.DeleteSlackIntegrationHandler)
 
 	// Timeline
-	authRouteGroup.GET("/:project_id/v1/profiles/users", responseWrapper(V1.GetProfileUsersHandler))
+	authRouteGroup.POST("/:project_id/v1/profiles/users", responseWrapper(V1.GetProfileUsersHandler))
 	authRouteGroup.GET("/:project_id/v1/profiles/users/:id", responseWrapper(V1.GetProfileUserDetailsHandler))
 
 	// weekly insights, explain

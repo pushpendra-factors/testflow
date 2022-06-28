@@ -5,7 +5,7 @@ import { Button, Tooltip } from 'antd';
 import { connect } from 'react-redux';
 import ProfileFilterWrapper from '../ProfileFilterWrapper';
 import FaSelect from 'Components/FaSelect';
-import { ProfileMapper, ReverseProfileMapper } from '../../../utils/constants';
+import { ProfileMapper, ReverseProfileMapper, profileOptions } from '../../../utils/constants';
 import AliasModal from '../../QueryComposer/AliasModal';
 import { INITIALIZE_GROUPBY } from '../../../reducers/coreQuery/actions';
 import { useDispatch } from 'react-redux';
@@ -32,14 +32,6 @@ function ProfileBlock({
   const dispatch = useDispatch();
 
   const alphabetIndex = 'ABCDEF';
-
-  const profileOptions = {
-    users: [['Website Visitors'], ['Hubspot Contacts'], ['Salesforce Users'], ['Marketo']],
-    $salesforce_opportunity: [['All Opportunities']],
-    $hubspot_deal: [['All Deals']],
-    $salesforce_account: [['All Accounts']],
-    $hubspot_company: [['All Companies']],
-  };
 
   const [orFilterIndex, setOrFilterIndex] = useState(-1);
 
@@ -75,7 +67,7 @@ function ProfileBlock({
 
   const onChange = (value) => {
     const newEvent = { alias: '', label: '', filters: [] };
-    newEvent.label = ProfileMapper[value] ? ProfileMapper[value] : value;
+    newEvent.label = ProfileMapper[value] || value;
     setDDVisible(false);
     eventChange(newEvent, index - 1);
     // resetQueryOptions();

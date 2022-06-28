@@ -174,3 +174,44 @@
     color: $fa-color--orange;
 
 }
+
+.fa-search-bar {
+    position: sticky;
+    top: 0;
+    background-color: white;
+    z-index: 1;
+}
+
+
+.fa-activity--filter {
+    position: absolute;
+    padding-top: 0 !important;
+
+    .ant-popover-inner {
+        width: 264px;
+        max-height: 640px;
+        border: 1px solid #f7f5f8;
+        border-radius: 12px;
+    }
+
+    .ant-popover-inner-content {
+        padding: 0;
+    }
+
+    .ant-popover-arrow {
+        display: none;
+    }
+
+    .fa-popupcard {
+        box-shadow: 0px 0px 4px rgba(0, 0, 0, 0.2);
+        border-radius: 8px;
+        max-height: 600px;
+        overflow-y: scroll;
+
+        .fa-popupcard-divider {
+            width: 100%;
+            margin: 8px 0;
+            border-bottom: thin solid $fa-color--mono-2;
+        }
+    }
+}

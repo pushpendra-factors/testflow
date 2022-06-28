@@ -1,4 +1,4 @@
-import { get, getHostUrl } from '../utils/request';
+import { get, getHostUrl, post } from '../utils/request';
 
 var host = getHostUrl();
 host = host[host.length - 1] === '/' ? host : host + '/';
@@ -24,11 +24,11 @@ export default function (state = initialState, action) {
   }
 }
 
-export const fetchProfileUsers = (projectId) => {
+export const fetchProfileUsers = (projectId, reqBody) => {
   return async (dispatch) => {
     try {
       const url = host + 'projects/' + projectId + '/v1/profiles/users';
-      const response = await get(null, url);
+      const response = await post(null, url, reqBody);
       dispatch({
         type: 'FETCH_PROFILE_USERS_FULFILLED',
         payload: response.data,

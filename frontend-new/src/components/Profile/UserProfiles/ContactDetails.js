@@ -1,13 +1,26 @@
-import React, { useMemo, useState } from 'react';
-import { Row, Col, Button, Avatar, Table, Radio, Menu, Dropdown } from 'antd';
+import React, { useState } from 'react';
+import {
+  Row,
+  Col,
+  Button,
+  Avatar,
+  Radio,
+  Menu,
+  Dropdown,
+  Popover,
+  Checkbox,
+} from 'antd';
 import { SVG, Text } from '../../factorsComponents';
 import FaTimeline from '../../FaTimeline';
 
-function ContactDetails({ onCancel, userDetails }) {
-  const userDetail = useMemo(() => {
-    return userDetails;
-  }, [userDetails]);
-
+function ContactDetails({ onCancel, userDetails, timelineLoading }) {
+  const allActivitiesEnabled = userDetails?.user_activities?.map((activity) => {
+    return {
+      ...activity,
+      enabled: true,
+    };
+  });
+  const [activities, setActivities] = useState(allActivitiesEnabled);
   const [granularity, setGranularity] = useState('Hourly');
   const [collapse, setCollapse] = useState(true);
   const options = ['Default', 'Hourly', 'Daily', 'Weekly', 'Monthly'];
@@ -24,6 +37,65 @@ function ContactDetails({ onCancel, userDetails }) {
       })}
     </Menu>
   );
+
+  const handleChange = (option) => {
+    setActivities((currActivities) => {
+      const newState = currActivities.map((activity) => {
+        if (activity.event_name === option.event_name) {
+          return {
+            ...activity,
+            enabled: !activity.enabled,
+          };
+        }
+        return activity;
+      });
+      return newState;
+    });
+  };
+
+  const controlsPopover = () => {
+    return (
+      <div className='fa-popupcard'>
+        <div className='fa-search-bar'>
+          <Text
+            type='title'
+            level={7}
+            weight='bold'
+            color='grey'
+            extraClass='px-2 pt-2'
+          >
+            Filter Activities
+          </Text>
+          <div className={'fa-popupcard-divider'} />
+        </div>
+
+        {activities
+          ?.filter(
+            (value, index, self) =>
+              index === self.findIndex((t) => t.event_name === value.event_name)
+          )
+          .map((option) => {
+            return (
+              <div
+                key={option.event_name}
+                className='flex justify-start items-center px-4 py-2'
+              >
+                <div className='mr-2'>
+                  <Checkbox
+                    checked={option.enabled}
+                    onChange={handleChange.bind(this, option)}
+                  />
+                </div>
+                <Text mini extraClass='mb-0' type='paragraph'>
+                  {option.display_name || option.event_name}
+                </Text>
+              </div>
+            );
+          }) || <div className='text-center p-2 italic'>No Activity</div>}
+      </div>
+    );
+  };
+
   return (
     <>
       <div
@@ -61,48 +133,48 @@ function ContactDetails({ onCancel, userDetails }) {
                   <Avatar
                     size={72}
                     style={{
-                      color: '#f56a00',
-                      backgroundColor: '#fde3cf',
+                      color: '#3E516C',
+                      backgroundColor: '#F1F1F1',
                       fontSize: '42px',
                       textTransform: 'uppercase',
                       fontWeight: '400',
                     }}
                   >
-                    U
+                    {userDetails?.name[0] || 'U'}
                   </Avatar>
                 </Col>
               </Row>
               <Row className='py-2'>
                 <Col>
-                  {userDetail.name ? (
-                    <Text
-                      type={'title'}
-                      level={6}
-                      extraClass={'m-0'}
-                      weight={'bold'}
-                    >
-                      {userDetail.name}
-                    </Text>
-                  ) : (
-                    'Unidentified User'
-                  )}
-                  {userDetail.role && userDetail.company ? (
-                    <Text
-                      type={'title'}
-                      level={7}
-                      extraClass={'m-0'}
-                      color={'grey'}
-                    >
-                      {`${userDetail?.role}, ${userDetail?.company}`}
-                    </Text>
-                  ) : (
+                  <Text
+                    type={'title'}
+                    level={6}
+                    extraClass={'m-0'}
+                    weight={'bold'}
+                  >
+                    {!userDetails?.is_anonymous
+                      ? userDetails?.name || '-'
+                      : 'Unidentified User'}
+                  </Text>
+                  {userDetails?.role && userDetails?.company ? (
                     <Text
                       type={'title'}
                       level={7}
                       extraClass={'m-0'}
                       color={'grey'}
                     >
-                      {`${userDetail?.user_id}`}
+                      {`${userDetails?.role || '-'}, ${
+                        userDetails?.company || '-'
+                      }`}
+                    </Text>
+                  ) : (
+                    <Text
+                      type={'title'}
+                      level={7}
+                      extraClass={'m-0'}
+                      color={'grey'}
+                    >
+                      {`${userDetails?.user_id || '-'}`}
                     </Text>
                   )}
                 </Col>
@@ -119,7 +191,7 @@ function ContactDetails({ onCancel, userDetails }) {
                   </Text>
 
                   <Text type={'title'} level={7} extraClass={'m-0'}>
-                    {userDetail?.email || '-'}
+                    {userDetails?.email || '-'}
                   </Text>
                 </Col>
               </Row>
@@ -134,7 +206,7 @@ function ContactDetails({ onCancel, userDetails }) {
                     Country
                   </Text>
                   <Text type={'title'} level={7} extraClass={'m-0'}>
-                    {userDetail?.country || '-'}
+                    {userDetails?.country || '-'}
                   </Text>
                 </Col>
               </Row>
@@ -149,7 +221,7 @@ function ContactDetails({ onCancel, userDetails }) {
                     Number of Web Sessions
                   </Text>
                   <Text type={'title'} level={7} extraClass={'m-0'}>
-                    {userDetail?.web_sessions_count || '-'}
+                    {userDetails?.web_sessions_count || '-'}
                   </Text>
                 </Col>
               </Row>
@@ -164,7 +236,7 @@ function ContactDetails({ onCancel, userDetails }) {
                     Number of Page Views
                   </Text>
                   <Text type={'title'} level={7} extraClass={'m-0'}>
-                    {userDetail?.number_of_page_views || '-'}
+                    {userDetails?.number_of_page_views || '-'}
                   </Text>
                 </Col>
               </Row>
@@ -179,7 +251,7 @@ function ContactDetails({ onCancel, userDetails }) {
                     Time Spent on Site
                   </Text>
                   <Text type={'title'} level={7} extraClass={'m-0'}>
-                    {userDetail?.time_spent_on_site + ' secs' || '-'}
+                    {userDetails?.time_spent_on_site || '-' + ' secs'}
                   </Text>
                 </Col>
               </Row>
@@ -196,7 +268,7 @@ function ContactDetails({ onCancel, userDetails }) {
                   >
                     Associated Groups:
                   </Text>
-                  {userDetail?.groups?.map((group) => {
+                  {userDetails?.groups?.map((group) => {
                     return (
                       <Text type={'title'} level={7} extraClass={'m-0 mb-2'}>
                         {group.group_name}
@@ -220,7 +292,7 @@ function ContactDetails({ onCancel, userDetails }) {
                     </Text>
                   </div>
                   <div className='flex justify-between'>
-                    <div className='mr-2'>
+                    <div>
                       <Radio.Group
                         onChange={(e) => setCollapse(e.target.value)}
                         defaultValue={true}
@@ -237,6 +309,22 @@ function ContactDetails({ onCancel, userDetails }) {
                       </Radio.Group>
                     </div>
                     <div>
+                      <Popover
+                        overlayClassName='fa-activity--filter'
+                        placement='bottomLeft'
+                        trigger='hover'
+                        content={controlsPopover}
+                      >
+                        <Button
+                          size='large'
+                          className='fa-btn--custom mx-2 relative'
+                          type='text'
+                        >
+                          <SVG name={'controls'} />
+                        </Button>
+                      </Popover>
+                    </div>
+                    <div>
                       <Dropdown overlay={menu} placement='bottomRight'>
                         <Button
                           className={`ant-dropdown-link flex items-center`}
@@ -250,9 +338,12 @@ function ContactDetails({ onCancel, userDetails }) {
                 </Col>
                 <Col span={24}>
                   <FaTimeline
-                    activities={userDetail?.user_activities}
+                    activities={activities?.filter(
+                      (activity) => activity.enabled === true
+                    )}
                     granularity={granularity}
                     collapse={collapse}
+                    loading={timelineLoading}
                   />
                 </Col>
               </Col>

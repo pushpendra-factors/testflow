@@ -134,7 +134,9 @@ function AppLayout({
       dispatch(fetchSmartPropertyRules(active_project.id));
       fetchWeeklyIngishtsMetaData(active_project.id);
       dispatch(fetchAttrContentGroups(active_project.id));
-      dispatch(fetchProfileUsers(active_project.id))
+      dispatch(
+        fetchProfileUsers(active_project.id, { source: 'web', filters: [] })
+      );
     }
   }, [dispatch, active_project]);
 
