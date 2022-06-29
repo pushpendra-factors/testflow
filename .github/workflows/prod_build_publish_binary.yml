@@ -1,19 +1,23 @@
-name: prod-pattern-mine-setup-build-publish
+name: Prod-binary-setup-build-publish
 
 on:
   workflow_dispatch:
     inputs:
       image_id:
-        description: 'IMAGE_TAG'
+        description: 'Image Tag'
         required: true
         default: 'test'
+      binary:
+        description: 'Binary Name'
+        required: true
+        default: ''    
 
 
     
 env:
   PROJECT_ID: ${{ secrets.GKE_PRODUCTION_PROJECT }}
-  GKE_CLUSTER: ${{ secrets.GKE_PRODUCTION_CLUSTER }}   # TODO: update to cluster name
-  GKE_ZONE: ${{ secrets.GKE_PRODUCTION_ZONE }}   # TODO: update to cluster zone
+  GKE_CLUSTER: factors-production    # TODO: update to cluster name
+  GKE_ZONE: us-west1-b   # TODO: update to cluster zone
   DEPLOYMENT_NAME: pattern_mine_job # TODO: update to deployment name
   PATH_TO_FACTORS : /home/runner/work/factors
   IMAGE: pattern_mine
@@ -24,7 +28,7 @@ jobs:
     name: Setup, Build, Publish
     runs-on: ubuntu-latest
     environment: production
-
+    if: github.ref == 'refs/heads/release'
     steps:
     - name: Checkout
       uses: actions/checkout@v2
@@ -47,16 +51,16 @@ jobs:
     - run: |-
         gcloud --quiet auth configure-docker
     
-    - name: Build Pattern Mine 
+    - name: Build binary
       env : 
         GOPATH: ${{ env.PATH_TO_FACTORS }}/factors/backend
         IMAGE_NAME: ${{ github.event.inputs.image_id}}
       working-directory: ${{ env.GOPATH}}/src
-      run : TAG=${{ env.IMAGE_NAME}} ENV=production make pack-pattern-mine
+      run : TAG=${{ env.IMAGE_NAME}} ENV=production make pack-${{ github.event.inputs.binary}}
 
-    - name: Publish Pattern Mine 
+    - name: Publish binary
       env : 
         GOPATH: ${{ env.PATH_TO_FACTORS }}/factors/backend
         IMAGE_NAME: ${{ github.event.inputs.image_id}}
       working-directory: ${{ env.GOPATH}}/src
-      run : TAG=${{ env.IMAGE_NAME}} ENV=production make upload-pattern-mine
+      run : TAG=${{ env.IMAGE_NAME}} ENV=production make upload-${{ github.event.inputs.binary}}
