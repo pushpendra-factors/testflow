@@ -1289,13 +1289,35 @@ def hubspot_sync(configs):
             log.warning("Failed to process doc type %s for project_id %d. exception: %s", doc_type, project_id, str(e))
             next_sync_failures.append(str(project_id)+":"+doc_type+" -> "+str(e))
 
-    sync_status = {
-        "next_sync_failures":next_sync_failures,
-        "next_sync_success": next_sync_success
+    success = len(next_sync_failures)<1
+    status_msg = "Successfully synced." if success else "Failures on sync."
+
+    notification_payload = {
+        "status": status_msg, 
+        "failures": next_sync_failures, 
+        "success": next_sync_success,
     }
 
-    success = len(next_sync_failures)<1
-    return sync_status, success
+    log.warning("Successfully synced. End of hubspot sync job.")
+
+    try:
+        if first_sync == True:
+            ping_healthcheck(options.env, options.healthcheck_ping_id, notification_payload)
+        else:
+            if len(next_sync_failures) > 0:
+                ping_healthcheck(options.env, HEALTHCHECK_PING_ID, notification_payload, endpoint="/fail")
+            else:
+                ping_healthcheck(options.env, HEALTHCHECK_PING_ID, notification_payload)
+
+    except Exception as e:
+        log.warning(e)
+        next_sync_failures.append(str(e))
+        if first_sync == True:
+            ping_healthcheck(options.env, options.healthcheck_ping_id, notification_payload, endpoint="/fail")
+        else:
+            ping_healthcheck(options.env, HEALTHCHECK_PING_ID, notification_payload, endpoint="/fail")
+
+    return None, True
 
 def task_func(job_name, lookback, f, configs, latest_interval=False):
     task_details = get_task_detail(job_name)
@@ -1353,53 +1375,20 @@ if __name__ == "__main__":
         "first_sync":options.first_sync
     }
 
-    app_name = options.app_name if options.first_sync else APP_NAME
+    ## prioritize app_name from environment
+    app_name = options.app_name if options.app_name != "" else APP_NAME
     status = task_func(app_name,1,hubspot_sync,configs,True)
     if len(status)<1:
         sys.exit(0)
     
-    status_msg = ""
     err = ""
-    next_sync_failures = []
-    next_sync_success = []
     for delta in status:
         delta_status = status[delta]
 
-        if delta_status["success"] == False:
-            status_msg = "Failures on sync."
-            err = delta_status["error"] if "error" in delta_status else ""
-        else:
-            status_msg = "Successfully synced."
+        if "error" in delta_status:
+            err = delta_status["error"]
 
-        if "status" in delta_status:
-            if "next_sync_failures" in delta_status["status"]: next_sync_failures = delta_status["status"]["next_sync_failures"]
-            if "next_sync_success" in delta_status["status"]: next_sync_success = delta_status["status"]["next_sync_success"]
-
-    notification_payload = {
-        "status": status_msg, 
-        "failures": next_sync_failures, 
-        "success": next_sync_success,
-    }
-
-    log.warning("Successfully synced. End of hubspot sync job.")
-    if err!="": # append error after processing data
-            next_sync_failures.insert(0,err)
-    
-    try:
-        if options.first_sync == True:
-            ping_healthcheck(options.env, options.healthcheck_ping_id, notification_payload)
-        else:
-            if len(next_sync_failures) > 0:
-                ping_healthcheck(options.env, HEALTHCHECK_PING_ID, notification_payload, endpoint="/fail")
-            else:
-                ping_healthcheck(options.env, HEALTHCHECK_PING_ID, notification_payload)
-
-    except Exception as e:
-        log.warning(e)
-        next_sync_failures.append(str(e))
-        if options.first_sync == True:
-            ping_healthcheck(options.env, options.healthcheck_ping_id, notification_payload, endpoint="/fail")
-        else:
-            ping_healthcheck(options.env, HEALTHCHECK_PING_ID, notification_payload, endpoint="/fail")
+    if err!="":
+        ping_healthcheck(options.env, options.healthcheck_ping_id, err, endpoint="/fail")
 
     sys.exit(0)
