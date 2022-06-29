@@ -173,7 +173,7 @@ func TestCreateMultipleDashboardUnits(t *testing.T) {
 		requestPayload []model.DashboardUnitRequestPayload
 		projectId      uint64
 		agentUUID      string
-		dashboardId    uint64
+		dashboardId    int64
 	}
 
 	requestPayload1 := []model.DashboardUnitRequestPayload{{Description: U.RandomString(20)}}
@@ -259,7 +259,7 @@ func TestCreateDashboardUnitForMultipleDashboards(t *testing.T) {
 	assert.Equal(t, rName, dashboard3.Name)
 
 	type args struct {
-		dashboardIds []uint64
+		dashboardIds []int64
 		projectId    uint64
 		agentUUID    string
 		unitPayload  model.DashboardUnitRequestPayload
@@ -267,13 +267,13 @@ func TestCreateDashboardUnitForMultipleDashboards(t *testing.T) {
 	requestPayload := model.DashboardUnitRequestPayload{Description: U.RandomString(20)}
 
 	testArgs1 := args{
-		dashboardIds: []uint64{dashboard1.ID},
+		dashboardIds: []int64{dashboard1.ID},
 		projectId:    project.ID,
 		agentUUID:    agent.UUID,
 		unitPayload:  requestPayload}
 
 	testArgs2 := args{
-		dashboardIds: []uint64{dashboard1.ID, dashboard2.ID, dashboard3.ID},
+		dashboardIds: []int64{dashboard1.ID, dashboard2.ID, dashboard3.ID},
 		projectId:    project.ID,
 		agentUUID:    agent.UUID,
 		unitPayload:  requestPayload}
@@ -840,7 +840,7 @@ func TestCacheDashboardUnitsForProjectID(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.Equal(t, dashboardName, dashboard.Name)
 
-	dashboardUnitQueriesMap := make(map[uint64]map[string]interface{})
+	dashboardUnitQueriesMap := make(map[int64]map[string]interface{})
 	var dashboardQueriesStr = map[string]string{
 		model.QueryClassInsights:    `{"cl": "insights", "ec": "any_given_event", "fr": 1393612200, "to": 1396290599, "ty": "events_occurrence", "tz": "", "ewp": [{"na": "$session", "pr": []}], "gbp": [], "gbt": ""}`,
 		model.QueryClassFunnel:      `{"cl": "funnel", "ec": "any_given_event", "fr": 1594492200, "to": 1594578599, "ty": "unique_users", "tz": "", "ewp": [{"na": "$session", "pr": []}, {"na": "www.chargebee.com/schedule-a-demo", "pr": []}], "gbp": [], "gbt": ""}`,
@@ -963,7 +963,7 @@ func TestCacheDashboardUnitsForProjectIDEventsGroupQuery(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.Equal(t, dashboardName, dashboard.Name)
 
-	dashboardUnitQueriesMap := make(map[uint64]map[string]interface{})
+	dashboardUnitQueriesMap := make(map[int64]map[string]interface{})
 	dashboardQueriesStr := []string{`{"query_group":[{"cl":"events","ty":"unique_users","ec":"each_given_event","fr":1583001000,"to":1585679399,"ewp":[{"na":"$session","pr":[{"en":"event","pr":"$source","op":"equals","va":"google","ty":"categorical","lop":"AND"},{"en":"user","pr":"$country","op":"equals","va":"India","ty":"categorical","lop":"AND"}]},{"na":"MagazineViews","pr":[{"en":"event","pr":"$source","op":"equals","va":"google","ty":"categorical","lop":"AND"},{"en":"user","pr":"$country","op":"equals","va":"India","ty":"categorical","lop":"AND"}]}],"gbp":[],"gbt":"date","tz":"Asia/Calcutta"}]}`,
 		`{"query_group":[{"cl":"events","ty":"unique_users","ec":"each_given_event","fr":1583001000,"to":1585679399,"ewp":[{"na":"$session","pr":[{"en":"event","pr":"$source","op":"equals","va":"google","ty":"categorical","lop":"AND"},{"en":"user","pr":"$country","op":"equals","va":"India","ty":"categorical","lop":"AND"}]},{"na":"MagazineViews","pr":[{"en":"event","pr":"$source","op":"equals","va":"google","ty":"categorical","lop":"AND"},{"en":"user","pr":"$country","op":"equals","va":"India","ty":"categorical","lop":"AND"}]}],"gbp":[{"pr":"$browser","en":"event","pty":"categorical","ena":"$session","eni":1},{"pr":"$campaign","en":"event","pty":"categorical","ena":"MagazineViews","eni":2}],"gbt":"","tz":"Asia/Calcutta"}]}`,
 		`{"query_group":[{"cl":"events","ty":"unique_users","ec":"each_given_event","fr":1583001000,"to":1585679399,"ewp":[{"na":"$session","pr":[{"en":"event","pr":"$source","op":"equals","va":"google","ty":"categorical","lop":"AND"},{"en":"user","pr":"$country","op":"equals","va":"India","ty":"categorical","lop":"AND"}]},{"na":"MagazineViews","pr":[{"en":"event","pr":"$source","op":"equals","va":"google","ty":"categorical","lop":"AND"},{"en":"user","pr":"$country","op":"equals","va":"India","ty":"categorical","lop":"AND"}]}],"gbp":[{"pr":"$browser","en":"event","pty":"categorical","ena":"$session","eni":1},{"pr":"$campaign","en":"event","pty":"categorical","ena":"MagazineViews","eni":2},{"pr":"$city","en":"user","pty":"categorical","ena":"$session","eni":1},{"pr":"$city","en":"user","pty":"categorical","ena":"MagazineViews","eni":2},{"pr":"$city","en":"user","pty":"categorical","ena":"$present"}],"gbt":"date","tz":"Asia/Calcutta"}]}`,
@@ -1062,7 +1062,7 @@ func TestCacheDashboardUnitsForProjectIDChannelsGroupQuery(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.Equal(t, dashboardName, dashboard.Name)
 
-	dashboardUnitQueriesMap := make(map[uint64]map[string]interface{})
+	dashboardUnitQueriesMap := make(map[int64]map[string]interface{})
 
 	dashboardQueriesStr := []string{
 		`{ "query_group":[{ "channel": "google_ads", "select_metrics": ["impressions"], "filters": [], "group_by": [], "gbt": "hour", "fr": 1585679400, "to": 1585765800 }], "cl": "channel_v1" }`,
@@ -1222,7 +1222,7 @@ func TestDashboardUnitEventForDateTypeFilters(t *testing.T) {
 			QueryId:      dashboardQuery.ID,
 			Presentation: model.PresentationCard,
 		})
-	dashboardUnitQueriesMap := make(map[uint64]map[string]interface{})
+	dashboardUnitQueriesMap := make(map[int64]map[string]interface{})
 	dashboardUnitQueriesMap[dashboardUnit.ID] = make(map[string]interface{})
 	dashboardUnitQueriesMap[dashboardUnit.ID]["class"] = query1.GetClass()
 	dashboardUnitQueriesMap[dashboardUnit.ID]["query"] = query1
@@ -1281,13 +1281,13 @@ func sendAttributionQueryReq(r *gin.Engine, projectID uint64, agent *model.Agent
 }
 
 func sendAnalyticsQueryReq(r *gin.Engine, queryClass string, projectID uint64, agent *model.Agent, dashboardID,
-	unitID uint64, baseQuery model.BaseQuery, refresh bool, withDashboardParams bool) *httptest.ResponseRecorder {
+	unitID int64, baseQuery model.BaseQuery, refresh bool, withDashboardParams bool) *httptest.ResponseRecorder {
 	return sendAnalyticsQueryReqWithHeader(r, queryClass, projectID, agent, dashboardID, unitID,
 		baseQuery, refresh, withDashboardParams, map[string]string{})
 }
 
 func sendAnalyticsQueryReqWithHeader(r *gin.Engine, queryClass string, projectID uint64, agent *model.Agent, dashboardID,
-	unitID uint64, baseQuery model.BaseQuery, refresh bool, withDashboardParams bool, headers map[string]string) *httptest.ResponseRecorder {
+	unitID int64, baseQuery model.BaseQuery, refresh bool, withDashboardParams bool, headers map[string]string) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")
@@ -1474,7 +1474,7 @@ func TestCheckIfNameIsPresent(t *testing.T) {
 	assert.NotNil(t, dashboard)
 	assert.Equal(t, http.StatusCreated, errCode)
 
-	dashboardUnitQueriesMap := make(map[uint64]map[string]interface{})
+	dashboardUnitQueriesMap := make(map[int64]map[string]interface{})
 	var dashboardQueriesStr = map[string]string{
 		model.QueryClassInsights:    `{"cl": "insights", "ec": "any_given_event", "fr": 1393612200, "to": 1396290599, "ty": "events_occurrence", "tz": "", "ewp": [{"na": "$session", "pr": []}], "gbp": [], "gbt": ""}`,
 		model.QueryClassFunnel:      `{"cl": "funnel", "ec": "any_given_event", "fr": 1594492200, "to": 1594578599, "ty": "unique_users", "tz": "", "ewp": [{"na": "$session", "pr": []}, {"na": "www.chargebee.com/schedule-a-demo", "pr": []}], "gbp": [], "gbt": ""}`,

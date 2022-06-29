@@ -3034,7 +3034,7 @@ func TestQueryCaching(t *testing.T) {
 
 	var waitGroup sync.WaitGroup
 	for queryClass, queryString := range queriesStr {
-		var dashboardID, unitID uint64
+		var dashboardID, unitID int64
 		if queryClass == model.QueryClassWeb {
 			dashboardID, _, _ = store.GetStore().GetWebAnalyticsQueriesFromDashboardUnits(project.ID)
 		}
@@ -3190,7 +3190,7 @@ func TestExpandArrayWithIndividualValues(t *testing.T) {
 }
 
 func sendAnalyticsQueryFromRoutine(r *gin.Engine, queryClass string, projectID uint64, agent *model.Agent, dashboardID,
-	unitID uint64, baseQuery model.BaseQuery, refresh bool, withDashboardParams bool, queryWaitSeconds int, waitGroup *sync.WaitGroup) {
+	unitID int64, baseQuery model.BaseQuery, refresh bool, withDashboardParams bool, queryWaitSeconds int, waitGroup *sync.WaitGroup) {
 	defer waitGroup.Done()
 	sendAnalyticsQueryReqWithHeader(r, queryClass, projectID, agent, dashboardID, unitID,
 		baseQuery, false, false, map[string]string{model.QueryCacheRequestSleepHeader: fmt.Sprint(queryWaitSeconds)})
