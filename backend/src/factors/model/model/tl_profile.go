@@ -18,6 +18,7 @@ type Contact struct {
 
 type ContactDetails struct {
 	UserId            string            `json:"user_id"`
+	IsAnonymous       bool              `json:"is_anonymous"`
 	Name              string            `json:"name"`
 	Company           string            `json:"company"`
 	Role              string            `json:"role"`

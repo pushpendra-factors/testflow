@@ -125,7 +125,6 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 		Source:         model.GetRequestSourcePointer(model.UserSourceWeb),
 		Group1ID:       "1",
 		Group2ID:       "2",
-		Group3ID:       "3",
 		CustomerUserId: customerEmail,
 		Properties:     properties,
 		IsGroupUser:    &boolTrue,
@@ -141,6 +140,9 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, status)
 	group3, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_SALESFORCE_OPPORTUNITY, model.AllowedGroupNames)
 	assert.NotNil(t, group3)
+	assert.Equal(t, http.StatusCreated, status)
+	group4, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_SALESFORCE_OPPORTUNITY, model.AllowedGroupNames)
+	assert.NotNil(t, group4)
 	assert.Equal(t, http.StatusCreated, status)
 
 	timestamp := U.UnixTimeBeforeDuration(1 * time.Hour)
