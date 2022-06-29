@@ -1966,23 +1966,23 @@ func getGroupUserID(createdDocument *model.HubspotDocument) string {
 }
 
 func createOrUpdateHubspotGroupsProperties(projectID uint64, document *model.HubspotDocument,
-	enProperties *map[string]interface{}, groupName, groupID string) (string, int) {
+	enProperties *map[string]interface{}, groupName, groupID string) (string, string, int) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "doc_type": document.Type, "document": document,
 		"group_name": groupName, "group_id": groupID})
 
 	if projectID == 0 || document == nil || enProperties == nil {
 		logCtx.Error("Invalid parameters")
-		return "", http.StatusBadRequest
+		return "", "", http.StatusBadRequest
 	}
 
 	if document.GroupUserId != "" {
 		logCtx.Error("Document already processed for groups. Using existing group user id.")
-		return document.GroupUserId, http.StatusOK
+		return document.GroupUserId, "", http.StatusOK
 	}
 
 	if !isValidGroupName(document.Type, groupName) {
 		logCtx.Error("Invalid group name")
-		return "", http.StatusBadRequest
+		return "", "", http.StatusBadRequest
 	}
 
 	groupUserID := ""
@@ -1997,7 +1997,7 @@ func createOrUpdateHubspotGroupsProperties(projectID uint64, document *model.Hub
 
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to update hubspot created group properties.")
-			return "", http.StatusInternalServerError
+			return "", "", http.StatusInternalServerError
 		}
 
 		processEventNames = append(processEventNames, createdEventName)
@@ -2010,7 +2010,7 @@ func createOrUpdateHubspotGroupsProperties(projectID uint64, document *model.Hub
 			document.ID, document.Type, model.HubspotDocumentActionCreated)
 		if status != http.StatusFound {
 			logCtx.Error("Failed to get hubspot company created document for groups.")
-			return "", http.StatusInternalServerError
+			return "", "", http.StatusInternalServerError
 		}
 
 		if updateCreatedDocument(createdDocument) {
@@ -2025,7 +2025,7 @@ func createOrUpdateHubspotGroupsProperties(projectID uint64, document *model.Hub
 			model.SmartCRMEventSourceHubspot)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to update hubspot updated group properties.")
-			return "", http.StatusInternalServerError
+			return "", "", http.StatusInternalServerError
 		}
 
 		processEventNames = append(processEventNames, updatedEventName)
@@ -2038,17 +2038,18 @@ func createOrUpdateHubspotGroupsProperties(projectID uint64, document *model.Hub
 			document.ID, document.Type, model.HubspotDocumentActionCreated)
 		if status != http.StatusFound {
 			logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to get hubspot company created document for deals association update.")
-			return "", http.StatusInternalServerError
+			return "", "", http.StatusInternalServerError
 		}
 
-		return createdDocument.GroupUserId, http.StatusOK
+		return createdDocument.GroupUserId, "", http.StatusOK
 	}
 
 	if groupUserID == "" {
 		logCtx.Error("Invalid group user id state.")
-		return "", http.StatusInternalServerError
+		return "", "", http.StatusInternalServerError
 	}
 
+	var eventId string
 	for i := range processEventNames {
 
 		trackPayload := &SDK.TrackPayload{
@@ -2065,20 +2066,21 @@ func createOrUpdateHubspotGroupsProperties(projectID uint64, document *model.Hub
 			logCtx.WithFields(log.Fields{"status": status, "track_response": response, "doc_type": docTypeAlias,
 				"event_name": processEventNames[i], "event_timestamp": processEventTimestamps[i]}).
 				Error("Failed to track hubspot group event.")
-			return "", http.StatusInternalServerError
+			return "", "", http.StatusInternalServerError
 		}
+		eventId = response.EventId
 
 		if processEventNames[i] == createdEventName && updateCreatedRecord {
 			errCode := store.GetStore().UpdateHubspotDocumentAsSynced(projectID, document.ID, document.Type, "",
 				processEventTimestamps[i], model.HubspotDocumentActionCreated, "", groupUserID) // marking user_id as empty won't update the column
 			if errCode != http.StatusAccepted {
 				logCtx.Error("Failed to update group user_id in hubspot created document as synced.")
-				return "", http.StatusInternalServerError
+				return "", "", http.StatusInternalServerError
 			}
 		}
 	}
 
-	return groupUserID, http.StatusOK
+	return groupUserID, eventId, http.StatusOK
 }
 
 func getDealAssociatedIDs(projectID uint64, document *model.HubspotDocument) ([]string, []string, error) {
@@ -2116,7 +2118,7 @@ func syncGroupCompany(projectID uint64, document *model.HubspotDocument, enPrope
 	}
 
 	companyGroupID := getCompanyGroupID(document, companyName, domainName)
-	companyUserID, status := createOrUpdateHubspotGroupsProperties(projectID, document, enProperties, model.GROUP_NAME_HUBSPOT_COMPANY, companyGroupID)
+	companyUserID, _, status := createOrUpdateHubspotGroupsProperties(projectID, document, enProperties, model.GROUP_NAME_HUBSPOT_COMPANY, companyGroupID)
 	if status != http.StatusOK {
 		return "", "", errors.New("failed to update company group properties")
 	}
@@ -2124,28 +2126,28 @@ func syncGroupCompany(projectID uint64, document *model.HubspotDocument, enPrope
 	return companyUserID, companyGroupID, nil
 }
 
-func syncGroupDeal(projectID uint64, enProperties *map[string]interface{}, document *model.HubspotDocument) (string, int) {
+func syncGroupDeal(projectID uint64, enProperties *map[string]interface{}, document *model.HubspotDocument) (string, string, int) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "document": document.ID, "doc_type": document.Type})
 	if document.Type != model.HubspotDocumentTypeDeal {
 		logCtx.Error("Invalid document type on syncGroupDeal.")
-		return "", http.StatusBadRequest
+		return "", "", http.StatusBadRequest
 	}
 	if document.GroupUserId != "" {
 		logCtx.Error("Deal already processed for groups.")
-		return document.GroupUserId, http.StatusOK
+		return document.GroupUserId, "", http.StatusOK
 	}
 
-	dealGroupUserID, status := createOrUpdateHubspotGroupsProperties(projectID, document, enProperties, model.GROUP_NAME_HUBSPOT_DEAL, document.ID)
+	dealGroupUserID, eventId, status := createOrUpdateHubspotGroupsProperties(projectID, document, enProperties, model.GROUP_NAME_HUBSPOT_DEAL, document.ID)
 	if status != http.StatusOK {
 		logCtx.Error("Failed to update deal group properties.")
-		return "", http.StatusInternalServerError
+		return "", "", http.StatusInternalServerError
 	}
 
 	contactIDList, companyIDList, err := getDealAssociatedIDs(projectID, document)
 	if err != nil {
 		logCtx.WithFields(log.Fields{"contact_ids": contactIDList, "company_ids": companyIDList}).
 			WithError(err).Error("Failed to getDealAssociatedIDs.")
-		return dealGroupUserID, http.StatusOK
+		return dealGroupUserID, eventId, http.StatusOK
 	}
 
 	if len(contactIDList) > 0 {
@@ -2231,7 +2233,7 @@ func syncGroupDeal(projectID uint64, enProperties *map[string]interface{}, docum
 		}
 	}
 
-	return dealGroupUserID, http.StatusOK
+	return dealGroupUserID, eventId, http.StatusOK
 }
 
 func syncDeal(projectID uint64, document *model.HubspotDocument, hubspotSmartEventNames []HubspotSmartEventName) int {
@@ -2257,78 +2259,31 @@ func syncDeal(projectID uint64, document *model.HubspotDocument, hubspotSmartEve
 
 	var groupUserID string
 	var status int
+	var eventId string
 	if C.IsAllowedHubspotGroupsByProjectID(projectID) {
-		groupUserID, status = syncGroupDeal(projectID, enProperties, document)
+		groupUserID, eventId, status = syncGroupDeal(projectID, enProperties, document)
 		if status != http.StatusOK {
 			logCtx.Error("Failed to syncGroupDeal.")
+			return http.StatusInternalServerError
 		}
 	}
 
-	dealStage, dealstageExists := (*enProperties)[U.CRM_HUBSPOT_DEALSTAGE]
-	userID := getDealUserID(projectID, &deal)
+	var defaultSmartEventTimestamp int64
+	if timestamp, err := model.GetHubspotDocumentUpdatedTimestamp(document); err != nil {
+		logCtx.WithError(err).Warn("Failed to get last modified timestamp for smart event. Using document timestamp")
+		defaultSmartEventTimestamp = document.Timestamp
+	} else {
+		defaultSmartEventTimestamp = timestamp
+	}
 
-	eventID := ""
-	if userID == "" {
-		logCtx.Error("Skipped deal sync. No user associated to hubspot deal.")
-	} else if !dealstageExists || dealStage == nil {
-		logCtx.Error("No deal stage property found on hubspot deal.")
-	} else if document.Action != model.HubspotDocumentActionAssociationsUpdated {
-		trackPayload := &SDK.TrackPayload{
-			Name:            U.EVENT_NAME_HUBSPOT_DEAL_STATE_CHANGED,
-			ProjectId:       projectID,
-			UserId:          userID,
-			EventProperties: *enProperties,
-			UserProperties:  *enProperties,
-			Timestamp:       getEventTimestamp(document.Timestamp),
-			RequestSource:   model.UserSourceHubspot,
-		}
-
-		// Track deal stage change only if, deal with same id and
-		// same stage, not synced before.
-		dealID := strconv.FormatInt(deal.DealId, 10)
-		if dealID == "" {
-			logCtx.Error("Invalid deal_id on conversion. Failed to sync deal.")
-			return http.StatusInternalServerError
-		}
-
-		_, errCode := store.GetStore().GetSyncedHubspotDealDocumentByIdAndStage(projectID,
-			dealID, dealStage.(string))
-		if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest {
-			logCtx.Error("Failed to get synced deal document by stage on sync_deal")
-			return http.StatusInternalServerError
-		}
-
-		// skip sync as deal stage is synced already.
-		if errCode != http.StatusFound {
-			status, response := SDK.Track(projectID, trackPayload, true, SDK.SourceHubspot, model.HubspotDocumentTypeNameDeal)
-			if status != http.StatusOK && status != http.StatusFound &&
-				status != http.StatusNotModified {
-
-				logCtx.WithField("status", status).Error(
-					"Failed to track hubspot contact deal stage change event.")
-				return http.StatusInternalServerError
-			}
-
-			var defaultSmartEventTimestamp int64
-			if timestamp, err := model.GetHubspotDocumentUpdatedTimestamp(document); err != nil {
-				logCtx.WithError(err).Warn("Failed to get last modified timestamp for smart event. Using document timestamp")
-				defaultSmartEventTimestamp = document.Timestamp
-			} else {
-				defaultSmartEventTimestamp = timestamp
-			}
-
-			eventID = response.EventId
-			var prevProperties *map[string]interface{}
-			for i := range hubspotSmartEventNames {
-				prevProperties = TrackHubspotSmartEvent(projectID, &hubspotSmartEventNames[i], response.EventId, document.ID, userID, document.Type,
-					properties, prevProperties, defaultSmartEventTimestamp, false)
-			}
-		}
-
+	var prevProperties *map[string]interface{}
+	for i := range hubspotSmartEventNames {
+		prevProperties = TrackHubspotSmartEvent(projectID, &hubspotSmartEventNames[i], eventId, document.ID, groupUserID, document.Type,
+			properties, prevProperties, defaultSmartEventTimestamp, false)
 	}
 
 	errCode := store.GetStore().UpdateHubspotDocumentAsSynced(projectID,
-		document.ID, model.HubspotDocumentTypeDeal, eventID, document.Timestamp, document.Action, userID, groupUserID)
+		document.ID, model.HubspotDocumentTypeDeal, eventId, document.Timestamp, document.Action, "", groupUserID)
 	if errCode != http.StatusAccepted {
 		logCtx.Error("Failed to update hubspot deal document as synced.")
 		return http.StatusInternalServerError

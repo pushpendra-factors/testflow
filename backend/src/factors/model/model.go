@@ -539,6 +539,7 @@ type Model interface {
 	CreateMultipleGoogleOrganicDocument(gscDocuments []model.GoogleOrganicDocument) int
 
 	// monitoring
+	GetProjectIdFromInfo(string) int
 	MonitorSlowQueries() ([]interface{}, []interface{}, error)
 	CollectTableSizes() map[string]string
 
@@ -656,6 +657,6 @@ type Model interface {
 	IsMarketoIntegrationAvailable(projectID uint64) bool
 
 	// Timeline
-	GetProfileUsersListByProjectId(projectID uint64) ([]model.Contact, int)
+	GetProfileUsersListByProjectId(projectID uint64, payload model.UTListPayload) ([]model.Contact, int)
 	GetProfileUserDetailsByID(projectID uint64, identity string, isAnonymous string) (*model.ContactDetails, int)
 }

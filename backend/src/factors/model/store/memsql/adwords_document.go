@@ -36,9 +36,10 @@ const (
 	staticWhereStatementForAdwords = "WHERE project_id = ? AND customer_account_id IN ( ? ) AND type = ? AND timestamp between ? AND ? "
 	fromAdwordsDocument            = " FROM adwords_documents "
 
-	shareHigherOrderExpression         = "sum(case when JSON_EXTRACT_STRING(value, '%s') IS NOT NULL THEN (JSON_EXTRACT_STRING(value, '%s')) else 0 END)/NULLIF(sum(case when JSON_EXTRACT_STRING(value, '%s') IS NOT NULL THEN (JSON_EXTRACT_STRING(value, '%s')) else 0 END), 0)"
-	higherOrderExpressionsWithMultiply = "SUM(JSON_EXTRACT_STRING(value, '%s'))*%s/(COALESCE( NULLIF(sum(JSON_EXTRACT_STRING(value, '%s')), 0), 100000))"
-	higherOrderExpressionsWithDiv      = "(SUM(JSON_EXTRACT_STRING(value, '%s'))/1000000)/(COALESCE( NULLIF(sum(JSON_EXTRACT_STRING(value, '%s')), 0), 100000))"
+	shareHigherOrderExpression              = "sum(case when JSON_EXTRACT_STRING(value, '%s') IS NOT NULL THEN (JSON_EXTRACT_STRING(value, '%s')) else 0 END)/NULLIF(sum(case when JSON_EXTRACT_STRING(value, '%s') IS NOT NULL THEN (JSON_EXTRACT_STRING(value, '%s')) else 0 END), 0)"
+	shareHigherOrderExpressionWithZeroCheck = "sum(case when JSON_EXTRACT_STRING(value, '%s') IS NOT NULL AND JSON_EXTRACT_STRING(value, '%s') != '0.0' THEN (JSON_EXTRACT_STRING(value, '%s')) else 0 END)/NULLIF(sum(case when JSON_EXTRACT_STRING(value, '%s') IS NOT NULL THEN (JSON_EXTRACT_STRING(value, '%s')) else 0 END), 0)"
+	higherOrderExpressionsWithMultiply      = "SUM(JSON_EXTRACT_STRING(value, '%s'))*%s/(COALESCE( NULLIF(sum(JSON_EXTRACT_STRING(value, '%s')), 0), 100000))"
+	higherOrderExpressionsWithDiv           = "(SUM(JSON_EXTRACT_STRING(value, '%s'))/1000000)/(COALESCE( NULLIF(sum(JSON_EXTRACT_STRING(value, '%s')), 0), 100000))"
 
 	sumOfFloatExp = "sum((JSON_EXTRACT_STRING(value, '%s')))"
 
@@ -200,7 +201,8 @@ var adwordsInternalMetricsToAllRep = map[string]metricsAndRelated{
 		externalOperation:        "sum",
 	},
 	model.SearchImpressionShare: {
-		higherOrderExpression:    fmt.Sprintf(shareHigherOrderExpression, model.SearchImpressionShare, model.Impressions, model.SearchImpressionShare, model.TotalSearchImpression),
+		// For campaign_type != 'Search', in adwords api Si share is Null but in ads api it's 0.0, excluding those cases here in Case When with shareHigherOrderExpressionWithZeroCheck
+		higherOrderExpression:    fmt.Sprintf(shareHigherOrderExpressionWithZeroCheck, model.SearchImpressionShare, model.SearchImpressionShare, model.Impressions, model.SearchImpressionShare, model.TotalSearchImpression),
 		nonHigherOrderExpression: fmt.Sprintf(sumOfFloatExp, model.TotalSearchImpression),
 		externalValue:            model.SearchImpressionShare,
 		externalOperation:        "sum",

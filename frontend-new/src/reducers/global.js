@@ -160,7 +160,7 @@ export default function (state = defaultState, action) {
         if(prop.id === action.payload.id) {
             return action.payload;
         } else {
-            return action.payload;
+            return prop;
         }
       })];
       return { ...state, contentGroup: propsToUpdate}

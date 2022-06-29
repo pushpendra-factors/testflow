@@ -267,7 +267,11 @@ func IsEventNameTypeSmartEvent(eventType string) bool {
 	return eventType == TYPE_CRM_HUBSPOT || eventType == TYPE_CRM_SALESFORCE
 }
 
-func checkDuplicatePropertyFilters(existingFilter, incomingFilter []PropertyFilter) bool {
+func isDuplicateTimestampReferenceField(existingFilter, incomingFilter *SmartCRMEventFilter) bool {
+	return existingFilter.TimestampReferenceField == incomingFilter.TimestampReferenceField
+}
+
+func isDuplicatePropertyFilters(existingFilter, incomingFilter []PropertyFilter) bool {
 
 	if len(existingFilter) != len(incomingFilter) {
 		return false
@@ -319,8 +323,10 @@ func checkDuplicatePropertyFilters(existingFilter, incomingFilter []PropertyFilt
 // CheckSmartEventNameDuplicateFilter validates two smart event filter for duplicates.
 func CheckSmartEventNameDuplicateFilter(existingFilter *SmartCRMEventFilter, incomingFilter *SmartCRMEventFilter) bool {
 	if isSameSourceAndObjectType(existingFilter, incomingFilter) {
-		if checkDuplicatePropertyFilters(existingFilter.Filters, incomingFilter.Filters) {
-			return true
+		if isDuplicatePropertyFilters(existingFilter.Filters, incomingFilter.Filters) {
+			if isDuplicateTimestampReferenceField(existingFilter, incomingFilter) {
+				return true
+			}
 		}
 	}
 

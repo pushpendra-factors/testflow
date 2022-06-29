@@ -3,6 +3,7 @@ module factors
 go 1.14
 
 require (
+	cloud.google.com/go v0.52.0
 	cloud.google.com/go/bigquery v1.4.0
 	cloud.google.com/go/pubsub v1.1.0
 	cloud.google.com/go/storage v1.5.0
@@ -40,6 +41,7 @@ require (
 	github.com/go-openapi/jsonpointer v0.19.5 // indirect
 	github.com/go-openapi/spec v0.19.13 // indirect
 	github.com/go-openapi/swag v0.19.12 // indirect
+	github.com/go-playground/validator/v10 v10.4.1
 	github.com/go-redis/redis v6.15.7+incompatible
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/go-stack/stack v1.8.0 // indirect

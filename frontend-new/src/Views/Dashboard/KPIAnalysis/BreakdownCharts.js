@@ -3,14 +3,14 @@ import React, {
   useEffect,
   useCallback,
   useContext,
-  memo,
+  memo
 } from 'react';
 import {
   formatData,
   getVisibleData,
   formatDataInSeriesFormat,
   getVisibleSeriesData,
-  getDefaultSortProp,
+  getDefaultSortProp
 } from '../../CoreQuery/KPIAnalysis/BreakdownCharts/utils';
 import { getNewSorterState, isSeriesChart } from '../../../utils/dataFormatter';
 import NoDataChart from '../../../components/NoDataChart';
@@ -20,7 +20,11 @@ import {
   CHART_TYPE_LINECHART,
   CHART_TYPE_STACKED_AREA,
   CHART_TYPE_STACKED_BAR,
-  CHART_TYPE_PIVOT_CHART,
+  CHART_TYPE_PIVOT_CHART
+  ,
+  CHART_TYPE_TABLE,
+  DASHBOARD_WIDGET_BAR_CHART_HEIGHT,
+  DASHBOARD_WIDGET_AREA_CHART_HEIGHT
 } from '../../../utils/constants';
 import LineChart from '../../../components/HCLineChart';
 import BarChart from '../../../components/BarChart';
@@ -28,11 +32,6 @@ import BreakdownTable from '../../CoreQuery/KPIAnalysis/BreakdownCharts/Breakdow
 import HorizontalBarChartTable from '../../CoreQuery/KPIAnalysis/BreakdownCharts/HorizontalBarChartTable';
 import StackedAreaChart from '../../../components/StackedAreaChart';
 import StackedBarChart from '../../../components/StackedBarChart';
-import {
-  CHART_TYPE_TABLE,
-  DASHBOARD_WIDGET_BAR_CHART_HEIGHT,
-  DASHBOARD_WIDGET_AREA_CHART_HEIGHT,
-} from '../../../utils/constants';
 import { DashboardContext } from '../../../contexts/DashboardContext';
 
 const BreakdownCharts = ({
@@ -43,12 +42,12 @@ const BreakdownCharts = ({
   section,
   currentEventIndex,
   unit,
-  durationObj,
+  durationObj
 }) => {
   const [visibleProperties, setVisibleProperties] = useState([]);
   const [visibleSeriesData, setVisibleSeriesData] = useState([]);
-  const [sorter, setSorter] = useState(getDefaultSortProp(kpis));
-  const [dateSorter, setDateSorter] = useState(getDefaultSortProp(kpis));
+  const [sorter, setSorter] = useState(getDefaultSortProp({ kpis, breakdown }));
+  const [dateSorter, setDateSorter] = useState(getDefaultSortProp({ kpis, breakdown }));
   const [aggregateData, setAggregateData] = useState([]);
   const [categories, setCategories] = useState([]);
   const [data, setData] = useState([]);
@@ -70,12 +69,12 @@ const BreakdownCharts = ({
     const aggData = formatData(responseData, kpis, breakdown, currentEventIndex);
     const { categories: cats, data: d } = isSeriesChart(chartType)
       ? formatDataInSeriesFormat(
-          responseData,
-          aggData,
-          currentEventIndex,
-          'date',
-          breakdown
-        )
+        responseData,
+        aggData,
+        currentEventIndex,
+        'date',
+        breakdown
+      )
       : { categories: [], data: [] };
     setAggregateData(aggData);
     setCategories(cats);
@@ -92,7 +91,7 @@ const BreakdownCharts = ({
 
   if (!aggregateData.length) {
     return (
-      <div className='mt-4 flex justify-center items-center w-full h-64 '>
+      <div className="mt-4 flex justify-center items-center w-full h-64 ">
         <NoDataChart />
       </div>
     );
@@ -106,7 +105,7 @@ const BreakdownCharts = ({
       <div
         onClick={handleEditQuery}
         style={{ color: '#5949BC' }}
-        className='mt-3 font-medium text-base cursor-pointer flex justify-end item-center'
+        className="mt-3 font-medium text-base cursor-pointer flex justify-end item-center"
       >
         Show More &rarr;
       </div>
@@ -162,7 +161,7 @@ const BreakdownCharts = ({
         categories={categories}
         data={visibleSeriesData}
         height={DASHBOARD_WIDGET_AREA_CHART_HEIGHT}
-        legendsPosition='top'
+        legendsPosition="top"
         cardSize={unit.cardSize}
         chartId={`line-${unit.id}`}
       />
@@ -174,7 +173,7 @@ const BreakdownCharts = ({
         categories={categories}
         data={visibleSeriesData}
         height={DASHBOARD_WIDGET_AREA_CHART_HEIGHT}
-        legendsPosition='top'
+        legendsPosition="top"
         cardSize={unit.cardSize}
         chartId={`bar-${unit.id}`}
       />
@@ -186,7 +185,7 @@ const BreakdownCharts = ({
         categories={categories}
         data={visibleSeriesData}
         height={DASHBOARD_WIDGET_AREA_CHART_HEIGHT}
-        legendsPosition='top'
+        legendsPosition="top"
         cardSize={unit.cardSize}
         chartId={`bar-${unit.id}`}
       />
@@ -194,7 +193,7 @@ const BreakdownCharts = ({
   }
 
   return (
-    <div className={`w-full px-6 flex flex-1 flex-col justify-center`}>
+    <div className={'w-full px-6 flex flex-1 flex-col justify-center'}>
       {chartContent}
       {tableContent}
     </div>

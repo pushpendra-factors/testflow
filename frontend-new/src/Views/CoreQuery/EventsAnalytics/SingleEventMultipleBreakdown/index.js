@@ -4,7 +4,7 @@ import React, {
   useCallback,
   forwardRef,
   useImperativeHandle,
-  useContext,
+  useContext
 } from 'react';
 
 import BarChart from 'Components/BarChart';
@@ -20,14 +20,14 @@ import {
   CHART_TYPE_STACKED_BAR,
   CHART_TYPE_LINECHART,
   CHART_TYPE_PIVOT_CHART,
-  QUERY_TYPE_EVENT,
+  QUERY_TYPE_EVENT
 } from 'Utils/constants';
 
 import {
   formatData,
   formatDataInStackedAreaFormat,
   defaultSortProp,
-  getVisibleData,
+  getVisibleData
 } from './utils';
 import SingleEventMultipleBreakdownTable from './SingleEventMultipleBreakdownTable';
 import SingleEventMultipleBreakdownHorizontalBarChart from './SingleEventMultipleBreakdownHorizontalBarChart';
@@ -44,26 +44,26 @@ const SingleEventMultipleBreakdown = forwardRef(
       chartType,
       durationObj,
       title,
-      section,
+      section
     },
     ref
   ) => {
     const {
-      coreQueryState: { savedQuerySettings },
+      coreQueryState: { savedQuerySettings }
     } = useContext(CoreQueryContext);
     const [visibleProperties, setVisibleProperties] = useState([]);
     const [visibleSeriesData, setVisibleSeriesData] = useState([]);
     const [sorter, setSorter] = useState(
       savedQuerySettings.sorter && Array.isArray(savedQuerySettings.sorter)
         ? savedQuerySettings.sorter
-        : defaultSortProp()
+        : defaultSortProp({ breakdown })
     );
 
     const [dateSorter, setDateSorter] = useState(
       savedQuerySettings.dateSorter &&
         Array.isArray(savedQuerySettings.dateSorter)
         ? savedQuerySettings.dateSorter
-        : defaultSortProp()
+        : defaultSortProp({ breakdown })
     );
     const [aggregateData, setAggregateData] = useState([]);
     const [categories, setCategories] = useState([]);
@@ -83,7 +83,7 @@ const SingleEventMultipleBreakdown = forwardRef(
 
     useImperativeHandle(ref, () => {
       return {
-        currentSorter: { sorter, dateSorter },
+        currentSorter: { sorter, dateSorter }
       };
     });
 
@@ -113,7 +113,7 @@ const SingleEventMultipleBreakdown = forwardRef(
 
     let chart = null;
     const table = (
-      <div className='mt-12 w-full'>
+      <div className="mt-12 w-full">
         <SingleEventMultipleBreakdownTable
           isWidgetModal={section === DASHBOARD_MODAL}
           data={aggregateData}
@@ -146,7 +146,7 @@ const SingleEventMultipleBreakdown = forwardRef(
       );
     } else if (chartType === CHART_TYPE_STACKED_AREA) {
       chart = (
-        <div className='w-full'>
+        <div className="w-full">
           <StackedAreaChart
             frequency={durationObj.frequency}
             categories={categories}
@@ -157,7 +157,7 @@ const SingleEventMultipleBreakdown = forwardRef(
       );
     } else if (chartType === CHART_TYPE_STACKED_BAR) {
       chart = (
-        <div className='w-full'>
+        <div className="w-full">
           <StackedBarChart
             frequency={durationObj.frequency}
             categories={categories}
@@ -168,7 +168,7 @@ const SingleEventMultipleBreakdown = forwardRef(
       );
     } else if (chartType === CHART_TYPE_LINECHART) {
       chart = (
-        <div className='w-full'>
+        <div className="w-full">
           <LineChart
             frequency={durationObj.frequency}
             categories={categories}
@@ -179,7 +179,7 @@ const SingleEventMultipleBreakdown = forwardRef(
       );
     } else if (chartType === CHART_TYPE_PIVOT_CHART) {
       chart = (
-        <div className='w-full'>
+        <div className="w-full">
           <PivotTable
             data={aggregateData}
             breakdown={breakdown}
@@ -190,7 +190,7 @@ const SingleEventMultipleBreakdown = forwardRef(
       );
     } else {
       chart = (
-        <div className='w-full'>
+        <div className="w-full">
           <SingleEventMultipleBreakdownHorizontalBarChart
             aggregateData={aggregateData}
             breakdown={resultState.data.meta.query.gbp}
@@ -200,7 +200,7 @@ const SingleEventMultipleBreakdown = forwardRef(
     }
 
     return (
-      <div className='flex items-center justify-center flex-col'>
+      <div className="flex items-center justify-center flex-col">
         {chart}
         {table}
       </div>

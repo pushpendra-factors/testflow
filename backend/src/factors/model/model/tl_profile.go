@@ -18,6 +18,7 @@ type Contact struct {
 
 type ContactDetails struct {
 	UserId            string            `json:"user_id"`
+	IsAnonymous       bool              `json:"is_anonymous"`
 	Name              string            `json:"name"`
 	Company           string            `json:"company"`
 	Role              string            `json:"role"`
@@ -39,6 +40,12 @@ type GroupsInfo struct {
 }
 
 type ContactActivity struct {
-	EventName string `json:"event_name"`
-	Timestamp uint64 `json:"timestamp"`
+	EventName   string `json:"event_name"`
+	DisplayName string `json:"display_name"`
+	Timestamp   uint64 `json:"timestamp"`
+}
+
+type UTListPayload struct {
+	Source  string          `json:"source"`
+	Filters []QueryProperty `json:"filters"`
 }

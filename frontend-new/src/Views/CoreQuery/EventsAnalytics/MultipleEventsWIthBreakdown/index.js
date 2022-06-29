@@ -4,7 +4,7 @@ import React, {
   useCallback,
   forwardRef,
   useContext,
-  useImperativeHandle,
+  useImperativeHandle
 } from 'react';
 import { useSelector } from 'react-redux';
 
@@ -16,7 +16,7 @@ import PivotTable from 'Components/PivotTable';
 
 import {
   generateColors,
-  getNewSorterState,
+  getNewSorterState
 } from 'Utils/dataFormatter';
 import {
   DASHBOARD_MODAL,
@@ -24,7 +24,7 @@ import {
   CHART_TYPE_STACKED_AREA,
   CHART_TYPE_STACKED_BAR,
   CHART_TYPE_PIVOT_CHART,
-  QUERY_TYPE_EVENT,
+  QUERY_TYPE_EVENT
 } from 'Utils/constants';
 
 import {
@@ -32,7 +32,7 @@ import {
   formatDataInStackedAreaFormat,
   defaultSortProp,
   getVisibleData,
-  getVisibleSeriesData,
+  getVisibleSeriesData
 } from './utils';
 import MultipleEventsWithBreakdownTable from './MultipleEventsWithBreakdownTable';
 
@@ -48,12 +48,12 @@ const MultipleEventsWithBreakdown = forwardRef(
       chartType,
       durationObj,
       title,
-      section,
+      section
     },
     ref
   ) => {
     const {
-      coreQueryState: { savedQuerySettings },
+      coreQueryState: { savedQuerySettings }
     } = useContext(CoreQueryContext);
     const [visibleProperties, setVisibleProperties] = useState([]);
     const [visibleSeriesData, setVisibleSeriesData] = useState([]);
@@ -61,13 +61,13 @@ const MultipleEventsWithBreakdown = forwardRef(
     const [sorter, setSorter] = useState(
       savedQuerySettings.sorter && Array.isArray(savedQuerySettings.sorter)
         ? savedQuerySettings.sorter
-        : defaultSortProp()
+        : defaultSortProp({ breakdown })
     );
     const [dateSorter, setDateSorter] = useState(
       savedQuerySettings.dateSorter &&
         Array.isArray(savedQuerySettings.dateSorter)
         ? savedQuerySettings.dateSorter
-        : defaultSortProp()
+        : defaultSortProp({ breakdown })
     );
     const [aggregateData, setAggregateData] = useState([]);
     const [categories, setCategories] = useState([]);
@@ -87,7 +87,7 @@ const MultipleEventsWithBreakdown = forwardRef(
 
     useImperativeHandle(ref, () => {
       return {
-        currentSorter: { sorter, dateSorter },
+        currentSorter: { sorter, dateSorter }
       };
     });
 
@@ -125,7 +125,7 @@ const MultipleEventsWithBreakdown = forwardRef(
     let chart = null;
 
     const table = (
-      <div className='mt-12 w-full'>
+      <div className="mt-12 w-full">
         <MultipleEventsWithBreakdownTable
           isWidgetModal={section === DASHBOARD_MODAL}
           data={aggregateData}
@@ -160,7 +160,7 @@ const MultipleEventsWithBreakdown = forwardRef(
       );
     } else if (chartType === CHART_TYPE_STACKED_AREA) {
       chart = (
-        <div className='w-full'>
+        <div className="w-full">
           <StackedAreaChart
             frequency={durationObj.frequency}
             categories={categories}
@@ -171,7 +171,7 @@ const MultipleEventsWithBreakdown = forwardRef(
       );
     } else if (chartType === CHART_TYPE_STACKED_BAR) {
       chart = (
-        <div className='w-full'>
+        <div className="w-full">
           <StackedBarChart
             frequency={durationObj.frequency}
             categories={categories}
@@ -182,7 +182,7 @@ const MultipleEventsWithBreakdown = forwardRef(
       );
     } else if (chartType === CHART_TYPE_PIVOT_CHART) {
       chart = (
-        <div className='w-full'>
+        <div className="w-full">
           <PivotTable
             data={aggregateData}
             breakdown={breakdown}
@@ -193,7 +193,7 @@ const MultipleEventsWithBreakdown = forwardRef(
       );
     } else {
       chart = (
-        <div className='w-full'>
+        <div className="w-full">
           <LineChart
             frequency={durationObj.frequency}
             categories={categories}
@@ -205,7 +205,7 @@ const MultipleEventsWithBreakdown = forwardRef(
     }
 
     return (
-      <div className='flex items-center justify-center flex-col'>
+      <div className="flex items-center justify-center flex-col">
         {chart}
         {table}
       </div>

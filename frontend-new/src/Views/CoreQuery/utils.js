@@ -39,7 +39,7 @@ export const labelsObj = {
   [FREQUENCY_CRITERIA]: 'Count',
 };
 
-const operatorMap = {
+export const operatorMap = {
   '=': 'equals',
   '!=': 'notEqual',
   contains: 'contains',

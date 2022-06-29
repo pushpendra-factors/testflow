@@ -1,12 +1,13 @@
-import React, { useMemo, useState } from 'react';
-import { Table, Button, Timeline } from 'antd';
+import React from 'react';
+import { Spin } from 'antd';
 import styles from './index.module.scss';
 import moment from 'moment';
+import { SVG } from '../factorsComponents';
 
-function FaTimeline({ activities, granularity, collapse }) {
-
+function FaTimeline({ activities = [], granularity, collapse, loading }) {
   const groups = {
-    Default: (item) => moment(item.timestamp*1000).format('DD MMMM YYYY, hh:mm:ss '),
+    Default: (item) =>
+      moment(item.timestamp * 1000).format('DD MMMM YYYY, hh:mm:ss '),
     Hourly: (item) =>
       moment(item.timestamp * 1000)
         .startOf('hour')
@@ -34,11 +35,16 @@ function FaTimeline({ activities, granularity, collapse }) {
         .format('MMM YYYY'),
   };
 
-  const data = useMemo(() => {
-    return _.groupBy(activities, groups[granularity]);
-  }, [activities, granularity]);
-
   const renderTimeline = (data) => {
+    if (!Object.entries(data).length)
+      return (
+        <div class='ant-empty ant-empty-normal'>
+          <div class='ant-empty-image'>
+            <SVG name='nodata' />
+          </div>
+          <div class='ant-empty-description'>No Activity</div>
+        </div>
+      );
     const timeline = [];
     Object.entries(data).forEach(([key, values], index) => {
       const array = collapse ? values.slice(0, 1) : values;
@@ -53,7 +59,9 @@ function FaTimeline({ activities, granularity, collapse }) {
                 <div className={styles.timeline_events_event}>
                   {event ? (
                     <div className='flex'>
-                      <div className={styles.tag}> {event.event_name} </div>
+                      <div className={styles.tag}>
+                        {event.display_name || event.event_name}
+                      </div>
                       {collapse && values.length > 1 ? (
                         <div className={`${styles.num}`}>
                           {'+' + Number(values.length - 1)}
@@ -78,7 +86,11 @@ function FaTimeline({ activities, granularity, collapse }) {
   return (
     <>
       <div className={styles.header}>Date and Time</div>
-      {renderTimeline(data)}
+      {loading ? (
+        <Spin size={'large'} className={'fa-page-loader'} />
+      ) : (
+        renderTimeline(_.groupBy(activities, groups[granularity]))
+      )}
     </>
   );
 }

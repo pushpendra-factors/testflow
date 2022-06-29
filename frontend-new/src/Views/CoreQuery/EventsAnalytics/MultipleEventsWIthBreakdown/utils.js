@@ -1,5 +1,7 @@
 import React from 'react';
 import moment from 'moment';
+import get from 'lodash/get';
+import findIndex from 'lodash/findIndex';
 import { labelsObj } from '../../utils';
 import {
   addQforQuarter,
@@ -16,8 +18,20 @@ import {
 } from '../../../../utils/constants';
 import { EVENT_COUNT_KEY } from '../eventsAnalytics.constants';
 import { getBreakdownDisplayName } from '../eventsAnalytics.helpers';
+import { BREAKDOWN_TYPES } from '../../constants';
 
-export const defaultSortProp = () => {
+export const defaultSortProp = ({ breakdown }) => {
+  const dateTimeBreakdownIndex = findIndex(breakdown, b => b.prop_type === BREAKDOWN_TYPES.DATETIME);
+  if (dateTimeBreakdownIndex > -1) {
+    return [
+      {
+        key: `${breakdown[dateTimeBreakdownIndex].property} - ${dateTimeBreakdownIndex}`,
+        type: BREAKDOWN_TYPES.DATETIME,
+        subtype: get(breakdown[dateTimeBreakdownIndex], 'grn', null),
+        order: 'descend'
+      }
+    ];
+  }
   return [
     {
       order: 'descend',
@@ -84,6 +98,7 @@ export const formatData = (data, queries, colors, eventNames) => {
   }
   console.log('mewb formatData');
   const { headers, rows } = data.metrics;
+  // eslint-disable-next-line camelcase
   const event_indexIndex = headers.findIndex((elem) => elem === 'event_index');
   const countIndex = headers.findIndex(
     (elem) => elem === 'count' || elem === 'aggregate'
