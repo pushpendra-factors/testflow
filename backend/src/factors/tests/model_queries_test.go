@@ -23,7 +23,7 @@ func TestModelQuery(t *testing.T) {
 		ProjectID: project.ID, AgentUUID: agent2.UUID})
 	assert.Equal(t, http.StatusCreated, errCode)
 
-	var queryId uint64
+	var queryId int64
 	t.Run("CreateQuery:SavedQuery:valid", func(t *testing.T) {
 		rName1 := U.RandomString(5)
 		query, errCode, errMsg := store.GetStore().CreateQuery(project.ID, &model.Queries{ProjectID: project.ID,

@@ -98,7 +98,7 @@ func (store *MemSQL) CreateAgentPersonalDashboardForProject(projectId uint64, ag
 		})
 }
 
-func (store *MemSQL) existsDashboardByID(projectID, dashboardID uint64) bool {
+func (store *MemSQL) existsDashboardByID(projectID uint64, dashboardID int64) bool {
 	logFields := log.Fields{
 		"dashboard_id": dashboardID,
 		"project_id":   projectID,
@@ -144,7 +144,7 @@ func (store *MemSQL) GetDashboards(projectId uint64, agentUUID string) ([]model.
 	return dashboards, http.StatusFound
 }
 
-func (store *MemSQL) GetDashboard(projectId uint64, agentUUID string, id uint64) (*model.Dashboard, int) {
+func (store *MemSQL) GetDashboard(projectId uint64, agentUUID string, id int64) (*model.Dashboard, int) {
 	logFields := log.Fields{
 		"id":         id,
 		"project_id": projectId,
@@ -176,7 +176,7 @@ func (store *MemSQL) GetDashboard(projectId uint64, agentUUID string, id uint64)
 }
 
 // HasAccessToDashboard validates access to dashboard.
-func (store *MemSQL) HasAccessToDashboard(projectId uint64, agentUUID string, id uint64) (bool, *model.Dashboard) {
+func (store *MemSQL) HasAccessToDashboard(projectId uint64, agentUUID string, id int64) (bool, *model.Dashboard) {
 	logFields := log.Fields{
 		"id":         id,
 		"project_id": projectId,
@@ -193,7 +193,7 @@ func (store *MemSQL) HasAccessToDashboard(projectId uint64, agentUUID string, id
 
 // Adds a position to the given unit on dashboard by unit_type.
 func (store *MemSQL) addUnitPositionOnDashboard(projectId uint64, agentUUID string,
-	id uint64, unitId uint64, unitType string, currentUnitsPos *postgres.Jsonb) int {
+	id int64, unitId int64, unitType string, currentUnitsPos *postgres.Jsonb) int {
 	logFields := log.Fields{
 		"id":               id,
 		"project_id":       projectId,
@@ -208,7 +208,7 @@ func (store *MemSQL) addUnitPositionOnDashboard(projectId uint64, agentUUID stri
 		return http.StatusBadRequest
 	}
 
-	var currentPosition map[string]map[uint64]int
+	var currentPosition map[string]map[int64]int
 	newPos := 0
 	if currentUnitsPos != nil {
 		err := json.Unmarshal((*currentUnitsPos).RawMessage, &currentPosition)
@@ -218,11 +218,11 @@ func (store *MemSQL) addUnitPositionOnDashboard(projectId uint64, agentUUID stri
 			return http.StatusInternalServerError
 		}
 	} else {
-		currentPosition = make(map[string]map[uint64]int, 0)
+		currentPosition = make(map[string]map[int64]int, 0)
 	}
 
 	if _, typeExists := currentPosition[unitType]; !typeExists {
-		currentPosition[unitType] = make(map[uint64]int, 0)
+		currentPosition[unitType] = make(map[int64]int, 0)
 	}
 
 	maxPos := -1
@@ -243,8 +243,8 @@ func (store *MemSQL) addUnitPositionOnDashboard(projectId uint64, agentUUID stri
 		&model.UpdatableDashboard{UnitsPosition: &currentPosition})
 }
 
-func removeAndRebalanceUnitsPositionByType(positions *map[string]map[uint64]int,
-	unitId uint64, unitType string) {
+func removeAndRebalanceUnitsPositionByType(positions *map[string]map[int64]int,
+	unitId int64, unitType string) {
 	logFields := log.Fields{
 		"positions": positions,
 		"unit_id":   unitId,
@@ -264,7 +264,7 @@ func removeAndRebalanceUnitsPositionByType(positions *map[string]map[uint64]int,
 }
 
 func (store *MemSQL) removeUnitPositionOnDashboard(projectId uint64, agentUUID string,
-	id uint64, unitId uint64, currentUnitsPos *postgres.Jsonb) int {
+	id int64, unitId int64, currentUnitsPos *postgres.Jsonb) int {
 	logFields := log.Fields{
 		"id":               id,
 		"project_id":       projectId,
@@ -279,7 +279,7 @@ func (store *MemSQL) removeUnitPositionOnDashboard(projectId uint64, agentUUID s
 		return http.StatusBadRequest
 	}
 
-	var currentPositions map[string]map[uint64]int
+	var currentPositions map[string]map[int64]int
 	err := json.Unmarshal((*currentUnitsPos).RawMessage, &currentPositions)
 	if err != nil {
 		log.WithFields(log.Fields{"project_id": projectId, "id": id,
@@ -307,7 +307,7 @@ func (store *MemSQL) removeUnitPositionOnDashboard(projectId uint64, agentUUID s
 		&model.UpdatableDashboard{UnitsPosition: &currentPositions})
 }
 
-func isValidUnitsPosition(positions *map[string]map[uint64]int) (bool, error) {
+func isValidUnitsPosition(positions *map[string]map[int64]int) (bool, error) {
 	logFields := log.Fields{
 		"positions": positions,
 	}
@@ -344,7 +344,7 @@ func isValidUnitsPosition(positions *map[string]map[uint64]int) (bool, error) {
 	return true, nil
 }
 
-func (store *MemSQL) UpdateDashboard(projectId uint64, agentUUID string, id uint64, dashboard *model.UpdatableDashboard) int {
+func (store *MemSQL) UpdateDashboard(projectId uint64, agentUUID string, id int64, dashboard *model.UpdatableDashboard) int {
 	logFields := log.Fields{
 		"id":         id,
 		"project_id": projectId,
@@ -416,7 +416,7 @@ func (store *MemSQL) UpdateDashboard(projectId uint64, agentUUID string, id uint
 }
 
 // DeleteDashboard To delete a dashboard by id.
-func (store *MemSQL) DeleteDashboard(projectID uint64, agentUUID string, dashboardID uint64) int {
+func (store *MemSQL) DeleteDashboard(projectID uint64, agentUUID string, dashboardID int64) int {
 	logFields := log.Fields{
 		"project_id":   projectID,
 		"agent_uuid":   agentUUID,

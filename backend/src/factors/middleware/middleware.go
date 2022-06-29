@@ -397,7 +397,7 @@ func ValidateLoggedInAgentHasAccessToRequestProject() gin.HandlerFunc {
 	}
 }
 
-func validateAuthData(authDataStr string) (*model.Agent, string, int) {
+func validateAuthData(authDataStr string, cookieExpiry int64) (*model.Agent, string, int) {
 	if authDataStr == "" {
 		return nil, "error parsing auth data empty", http.StatusBadRequest
 	}
@@ -419,7 +419,7 @@ func validateAuthData(authDataStr string) (*model.Agent, string, int) {
 	} else {
 		passwordCreatedAt = 0
 	}
-	email, _, err := helpers.ParseAndDecryptProtectedFields(agent.Salt, agent.LastLoggedOut, passwordCreatedAt, authData.ProtectedFields)
+	email, _, err := helpers.ParseAndDecryptProtectedFields(agent.Salt, agent.LastLoggedOut, passwordCreatedAt, authData.ProtectedFields, cookieExpiry)
 	if err != nil {
 		return nil, "error parsing protected fields", http.StatusUnauthorized
 	}
@@ -492,7 +492,7 @@ func SetLoggedInAgent() gin.HandlerFunc {
 				return
 			}
 
-			agent, errMsg, errCode := validateAuthData(cookieStr)
+			agent, errMsg, errCode := validateAuthData(cookieStr, helpers.SecondsInOneMonth)
 			if errCode != http.StatusOK {
 				c.AbortWithStatusJSON(errCode, gin.H{"error": errMsg})
 				return
@@ -570,7 +570,7 @@ func DefineSetLoggedInAgentInternalOnly(c *gin.Context) (int, string, *model.Age
 		return statusCode, msg, nil
 	}
 
-	agent, errMsg, errCode := validateAuthData(cookieStr)
+	agent, errMsg, errCode := validateAuthData(cookieStr, helpers.SecondsInOneMonth)
 	if errCode != http.StatusOK {
 		statusCode = errCode
 		msg = errMsg
@@ -648,7 +648,7 @@ func ValidateAgentActivationRequest() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := c.Query("token")
 
-		agent, errMsg, errCode := validateAuthData(token)
+		agent, errMsg, errCode := validateAuthData(token, helpers.SecondsInFifteenDays)
 		if errCode != http.StatusOK {
 			c.AbortWithStatusJSON(errCode, gin.H{
 				"error": errMsg,
@@ -672,7 +672,7 @@ func ValidateAgentSetPasswordRequest() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := c.Query("token")
 
-		agent, errMsg, errCode := validateAuthData(token)
+		agent, errMsg, errCode := validateAuthData(token, helpers.SecondsInOneDay)
 		if errCode != http.StatusOK {
 			c.AbortWithStatusJSON(errCode, gin.H{
 				"error": errMsg,
@@ -700,7 +700,7 @@ func ValidateAccessToSharedEntity(entityType int) gin.HandlerFunc {
 		if err != nil {
 			agentId = ""
 		} else {
-			agent, errMsg, errCode := validateAuthData(cookieStr)
+			agent, errMsg, errCode := validateAuthData(cookieStr, helpers.SecondsInOneMonth)
 			if errCode != http.StatusOK {
 				log.Error(errMsg + ": Failed to validate auth data.")
 				c.AbortWithStatusJSON(errCode, gin.H{"error": errMsg})

@@ -76,7 +76,7 @@ export default function reducer(state = {
     }
     case "PROJECT_AGENT_REMOVE_FULFILLED": {
       let nextState = { ...state }; 
-      nextState.projects = state.projects.filter((projectAgent)=>{ 
+      nextState.agents = state.agents.filter((projectAgent)=>{ 
         return projectAgent.uuid != action.payload.agent_uuid
       })  
       return nextState
@@ -333,7 +333,7 @@ export function projectAgentRemove(projectId, agentUUID){
             type: "PROJECT_AGENT_REMOVE_FULFILLED",
             payload: r.data
           });
-          resolve(r.data);
+          resolve(r.data); 
 
         })
         .catch((r) => { 

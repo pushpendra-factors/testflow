@@ -7,7 +7,9 @@ import (
 	mid "factors/middleware"
 	"factors/model/model"
 	U "factors/util"
+	"fmt"
 	"net/http"
+	"reflect"
 
 	slack "factors/slack_bot/handler"
 
@@ -106,11 +108,11 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.PUT("/:project_id", EditProjectHandler)
 
 	// Dashboard endpoints
-	authRouteGroup.GET("/:project_id/dashboards", GetDashboardsHandler)
-	authRouteGroup.POST("/:project_id/dashboards", CreateDashboardHandler)
+	authRouteGroup.GET("/:project_id/dashboards", stringifyWrapper(GetDashboardsHandler))
+	authRouteGroup.POST("/:project_id/dashboards", stringifyWrapper(CreateDashboardHandler))
 	authRouteGroup.PUT("/:project_id/dashboards/:dashboard_id", UpdateDashboardHandler)
-	authRouteGroup.GET("/:project_id/dashboards/:dashboard_id/units", GetDashboardUnitsHandler)
-	authRouteGroup.POST("/:project_id/dashboards/:dashboard_id/units", CreateDashboardUnitHandler)
+	authRouteGroup.GET("/:project_id/dashboards/:dashboard_id/units", stringifyWrapper(GetDashboardUnitsHandler))
+	authRouteGroup.POST("/:project_id/dashboards/:dashboard_id/units", stringifyWrapper(CreateDashboardUnitHandler))
 	authRouteGroup.PUT("/:project_id/dashboards/:dashboard_id/units/:unit_id", UpdateDashboardUnitHandler)
 	authRouteGroup.DELETE("/:project_id/dashboards/:dashboard_id/units/:unit_id", DeleteDashboardUnitHandler)
 	authRouteGroup.POST("/:project_id/dashboard/:dashboard_id/units/query/web_analytics",
@@ -119,11 +121,11 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id/event_names", GetEventNamesHandler)
 	authRouteGroup.GET("/:project_id/user/event_names", GetEventNamesByUserHandler)
 	authRouteGroup.GET(":project_id/groups/:group_name/event_names", GetEventNamesByGroupHandler)
-	authRouteGroup.GET("/:project_id/queries", GetQueriesHandler)
-	authRouteGroup.POST("/:project_id/queries", CreateQueryHandler)
+	authRouteGroup.GET("/:project_id/queries", stringifyWrapper(GetQueriesHandler))
+	authRouteGroup.POST("/:project_id/queries", stringifyWrapper(CreateQueryHandler))
 	authRouteGroup.PUT("/:project_id/queries/:query_id", UpdateSavedQueryHandler)
 	authRouteGroup.DELETE("/:project_id/queries/:query_id", DeleteSavedQueryHandler)
-	authRouteGroup.GET("/:project_id/queries/search", SearchQueriesHandler)
+	authRouteGroup.GET("/:project_id/queries/search", stringifyWrapper(SearchQueriesHandler))
 	authRouteGroup.GET("/:project_id/models", GetProjectModelsHandler)
 	authRouteGroup.GET("/:project_id/filters", GetFiltersHandler)
 	authRouteGroup.POST("/:project_id/filters", CreateFilterHandler)
@@ -160,8 +162,8 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.DELETE("/:project_id/shareable_url/revoke/:query_id", RevokeShareableURLHandler)
 
 	// v1 Dashboard endpoints
-	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/dashboards/multi/:dashboard_ids/units", CreateDashboardUnitForMultiDashboardsHandler)
-	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/dashboards/queries/:dashboard_id/units", CreateDashboardUnitsForMultipleQueriesHandler)
+	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/dashboards/multi/:dashboard_ids/units", stringifyWrapper(CreateDashboardUnitForMultiDashboardsHandler))
+	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/dashboards/queries/:dashboard_id/units", stringifyWrapper(CreateDashboardUnitsForMultipleQueriesHandler))
 	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/dashboards/:dashboard_id/units/multi/:unit_ids", DeleteMultiDashboardUnitHandler)
 	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/dashboards/:dashboard_id", DeleteDashboardHandler)
 
@@ -498,5 +500,154 @@ func responseWrapper(f func(c *gin.Context) (interface{}, int, string, string, b
 			return
 		}
 		c.JSON(statusCode, data)
+	}
+}
+
+func stringifyWrapper(f func(c *gin.Context) (interface{}, int, string, bool)) gin.HandlerFunc {
+
+	return func(c *gin.Context) {
+		data, statusCode, errMsg, isErr := f(c)
+		if isErr {
+			c.AbortWithStatusJSON(statusCode, gin.H{"error": errMsg})
+			return
+		}
+		responseType := reflect.TypeOf(data).Kind()
+		if responseType == reflect.Slice {
+			switch data.(type) {
+			case []model.Queries:
+				queriesResp := make([]model.QueriesString, 0)
+				responseObj := data.([]model.Queries)
+				for _, query := range responseObj {
+					queriesResp = append(queriesResp, ConvertQuery(query))
+				}
+				c.JSON(statusCode, queriesResp)
+				return
+			case []*model.Queries:
+				queriesResp := make([]model.QueriesString, 0)
+				responseObj := data.([]*model.Queries)
+				for _, query := range responseObj {
+					queriesResp = append(queriesResp, ConvertQuery(*query))
+				}
+				c.JSON(statusCode, queriesResp)
+				return
+			case []model.DashboardUnit:
+				unitResp := make([]model.DashboardUnitString, 0)
+				responseObj := data.([]model.DashboardUnit)
+				for _, du := range responseObj {
+					unitResp = append(unitResp, ConvertDashboardUnit(du))
+				}
+				c.JSON(statusCode, unitResp)
+				return
+			case []*model.DashboardUnit:
+				unitResp := make([]model.DashboardUnitString, 0)
+				responseObj := data.([]*model.DashboardUnit)
+				for _, du := range responseObj {
+					unitResp = append(unitResp, ConvertDashboardUnit(*du))
+				}
+				c.JSON(statusCode, unitResp)
+				return
+			case []model.Dashboard:
+				dashboardResp := make([]model.DashboardString, 0)
+				responseObj := data.([]model.Dashboard)
+				for _, da := range responseObj {
+					dashboardResp = append(dashboardResp, ConvertDashboard(da))
+				}
+				c.JSON(statusCode, dashboardResp)
+				return
+			case []*model.Dashboard:
+				dashboardResp := make([]model.DashboardString, 0)
+				responseObj := data.([]*model.Dashboard)
+				for _, da := range responseObj {
+					dashboardResp = append(dashboardResp, ConvertDashboard(*da))
+				}
+				c.JSON(statusCode, dashboardResp)
+				return
+			default:
+				c.JSON(statusCode, data)
+				return
+			}
+		} else {
+			switch data.(type) {
+			case model.Queries:
+				responseObj := data.(model.Queries)
+				c.JSON(statusCode, ConvertQuery(responseObj))
+				return
+			case *model.Queries:
+				responseObj := data.(*model.Queries)
+				c.JSON(statusCode, ConvertQuery(*responseObj))
+				return
+			case model.DashboardUnit:
+				responseObj := data.(model.DashboardUnit)
+				c.JSON(statusCode, ConvertDashboardUnit(responseObj))
+				return
+			case *model.DashboardUnit:
+				responseObj := data.(*model.DashboardUnit)
+				c.JSON(statusCode, ConvertDashboardUnit(*responseObj))
+				return
+			case model.Dashboard:
+				responseObj := data.(model.Dashboard)
+				c.JSON(statusCode, ConvertDashboard(responseObj))
+				return
+			case *model.Dashboard:
+				responseObj := data.(*model.Dashboard)
+				c.JSON(statusCode, ConvertDashboard(*responseObj))
+				return
+			default:
+				c.JSON(statusCode, data)
+				return
+			}
+		}
+	}
+}
+
+func ConvertQuery(data model.Queries) model.QueriesString {
+	return model.QueriesString{
+		ID: fmt.Sprintf("%d", data.ID),
+		// Foreign key queries(project_id) ref projects(id).
+		ProjectID:     data.ProjectID,
+		Title:         data.Title,
+		Query:         data.Query,
+		Type:          data.Type,
+		IsDeleted:     data.IsDeleted,
+		CreatedBy:     data.CreatedBy,
+		CreatedByName: data.CreatedByName,
+		CreatedAt:     data.CreatedAt,
+		UpdatedAt:     data.UpdatedAt,
+		Settings:      data.Settings,
+		IdText:        data.IdText,
+		Converted:     data.Converted,
+	}
+}
+
+func ConvertDashboardUnit(data model.DashboardUnit) model.DashboardUnitString {
+	return model.DashboardUnitString{
+		ID: fmt.Sprintf("%d", data.ID),
+		// Foreign key dashboard_units(project_id) ref projects(id).
+		ProjectID:    data.ProjectID,
+		DashboardId:  fmt.Sprintf("%d", data.DashboardId),
+		Description:  data.Description,
+		Presentation: data.Presentation,
+		IsDeleted:    data.IsDeleted,
+		CreatedAt:    data.CreatedAt,
+		UpdatedAt:    data.UpdatedAt,
+		QueryId:      fmt.Sprintf("%d", data.QueryId),
+	}
+}
+
+func ConvertDashboard(data model.Dashboard) model.DashboardString {
+	return model.DashboardString{
+		ID: fmt.Sprintf("%d", data.ID),
+		// Foreign key dashboards(project_id) ref projects(id).
+		ProjectId:     data.ProjectId,
+		AgentUUID:     data.AgentUUID,
+		Name:          data.Name,
+		Description:   data.Description,
+		Type:          data.Type,
+		Settings:      data.Settings,
+		Class:         data.Class,
+		UnitsPosition: data.UnitsPosition,
+		IsDeleted:     data.IsDeleted,
+		CreatedAt:     data.CreatedAt,
+		UpdatedAt:     data.UpdatedAt,
 	}
 }

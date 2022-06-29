@@ -69,7 +69,7 @@ class MetricsAggregator:
         elif status == "failed":
             # In our observation we have encountered that "No such object" error comes when extract has failed due to some reason(highly due to token expiry)
             # We'll keep monitoring it manually, if we figure some other cases happening, we'll seprate the two.
-            if ("Error validating access token".lower() in message.lower()) or ("No such object".lower() in message.lower()):
+            if ("Error validating access token".lower() in message.lower()):
                 cls.etl_stats["token_failures"].setdefault(message, {})
                 cls.etl_stats["token_failures"][message].setdefault(doc_type, set())
                 cls.etl_stats["token_failures"][message][doc_type].add(project_id)

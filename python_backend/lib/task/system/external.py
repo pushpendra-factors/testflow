@@ -83,7 +83,7 @@ class ExternalSystem(BaseSystem):
 
     def handle_request_with_retries(self, url):
         r = requests.get(url)
-        if r.ok:
+        if r.ok or 'OAuthException' in r.text:
             return r, False
         r = self.try_async_request(url)
         return r, True

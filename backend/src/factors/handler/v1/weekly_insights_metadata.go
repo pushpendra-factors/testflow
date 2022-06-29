@@ -19,8 +19,8 @@ type WeeklyInsights struct {
 }
 
 type Result struct {
-	QueryWiseResult         map[uint64]WeeklyInsights
-	DashboardUnitWiseResult map[uint64]WeeklyInsights
+	QueryWiseResult         interface{}
+	DashboardUnitWiseResult interface{}
 }
 
 func GetWeeklyInsightsMetadata(c *gin.Context) (interface{}, int, string, string, bool) {
@@ -44,9 +44,9 @@ func GetWeeklyInsightsMetadata(c *gin.Context) (interface{}, int, string, string
 		"projectId": projectId,
 	})
 
-	weeklyInsightsByDashboard := make(map[uint64]WeeklyInsights)
-	weeklyInsightsByQuery := make(map[uint64]WeeklyInsights)
-	queryToDashboardUnitMap := make(map[uint64][]uint64)
+	weeklyInsightsByDashboard := make(map[int64]WeeklyInsights)
+	weeklyInsightsByQuery := make(map[int64]WeeklyInsights)
+	queryToDashboardUnitMap := make(map[int64][]int64)
 
 	dashboardUnits, errCode := store.GetStore().GetDashboardUnitsForProjectID(projectId)
 	if errCode != http.StatusFound {
@@ -56,7 +56,7 @@ func GetWeeklyInsightsMetadata(c *gin.Context) (interface{}, int, string, string
 
 	for _, dashboardUnit := range dashboardUnits {
 		if queryToDashboardUnitMap[dashboardUnit.QueryId] == nil {
-			queryToDashboardUnitMap[dashboardUnit.QueryId] = make([]uint64, 0)
+			queryToDashboardUnitMap[dashboardUnit.QueryId] = make([]int64, 0)
 		}
 		queryToDashboardUnitMap[dashboardUnit.QueryId] = append(queryToDashboardUnitMap[dashboardUnit.QueryId], dashboardUnit.ID)
 	}

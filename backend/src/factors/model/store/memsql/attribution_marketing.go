@@ -121,6 +121,8 @@ func (store *MemSQL) FetchMarketingReports(projectID uint64, q model.Attribution
 		if err != nil {
 			return data, err
 		}
+
+		log.WithFields(log.Fields{"size of adwordsGCLIDData map": len(adwordsGCLIDData)}).Info("Attribution keyword razorpay debug")
 	}
 
 	// Facebook.

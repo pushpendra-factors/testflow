@@ -65,7 +65,7 @@ func RemoveGroupEventNamesOnUserEventNames(categoryToEventNames map[string][]str
 	return categoryToEventNames
 }
 
-func RemoveLabeledEventNamesFromOtherUserEvents(categoryToEventNames map[string][]string) map[string][]string {
+func RemoveLabeledEventNamesFromOtherUserEventNames(categoryToEventNames map[string][]string) map[string][]string {
 	for category, eventNames := range categoryToEventNames {
 		flag := false
 		for _, tempCategory := range U.CRM_USER_EVENT_NAME_LABELS {
@@ -173,15 +173,19 @@ func GetEventNamesByUserHandler(c *gin.Context) {
 	eventNames = RemoveGroupEventNamesOnUserEventNames(eventNames)
 
 	// labeled the non group user event names
-	for _, userEventNames := range eventNames {
+
+	tempEventNames := make(map[string][]string)
+	for category, userEventNames := range eventNames {
+		tempEventNames[category] = userEventNames
 		for _, eventName := range userEventNames {
 			if _, ok := U.CRM_USER_EVENT_NAME_LABELS[eventName]; ok {
 				category := U.CRM_USER_EVENT_NAME_LABELS[eventName]
-				eventNames[category] = append(eventNames[category], eventName)
+				tempEventNames[category] = append(tempEventNames[category], eventName)
 			}
 		}
 	}
-	eventNames = RemoveLabeledEventNamesFromOtherUserEvents(eventNames)
+	eventNames = tempEventNames
+	eventNames = RemoveLabeledEventNamesFromOtherUserEventNames(eventNames)
 
 	_, displayNames := store.GetStore().GetDisplayNamesForAllEvents(projectId)
 	displayNameEvents := GetDisplayEventNamesHandler(displayNames)

@@ -164,25 +164,25 @@ func (sd *S3Driver) GetBucketName() string {
 	return ""
 }
 
-func (sd *S3Driver) GetInsightsWpiFilePathAndName(projectId uint64, dateString string, queryId uint64, k int) (string, string) {
+func (sd *S3Driver) GetInsightsWpiFilePathAndName(projectId uint64, dateString string, queryId int64, k int) (string, string) {
 	path := sd.GetWeeklyInsightsModelDir(projectId, dateString, queryId, k)
 	return path, "wpi.txt"
 }
 
-func (sd *S3Driver) GetInsightsCpiFilePathAndName(projectId uint64, dateString string, queryId uint64, k int) (string, string) {
+func (sd *S3Driver) GetInsightsCpiFilePathAndName(projectId uint64, dateString string, queryId int64, k int) (string, string) {
 	path := sd.GetWeeklyInsightsModelDir(projectId, dateString, queryId, k)
 	return path, "cpi.txt"
 }
 
-func (sd *S3Driver) GetWeeklyInsightsModelDir(projectId uint64, dateString string, queryId uint64, k int) string {
+func (sd *S3Driver) GetWeeklyInsightsModelDir(projectId uint64, dateString string, queryId int64, k int) string {
 	return fmt.Sprintf("projects/%v/weeklyinsights/%v/q-%v/k-%v/", projectId, dateString, queryId, k)
 }
 
-func (sd *S3Driver) GetWeeklyKPIModelDir(projectId uint64, dateString string, queryId uint64) string {
+func (sd *S3Driver) GetWeeklyKPIModelDir(projectId uint64, dateString string, queryId int64) string {
 	return fmt.Sprintf("projects/%v/weeklyKPI/%v/q-%v/", projectId, dateString, queryId)
 }
 
-func (sd *S3Driver) GetKPIFilePathAndName(projectId uint64, dateString string, queryId uint64) (string, string) {
+func (sd *S3Driver) GetKPIFilePathAndName(projectId uint64, dateString string, queryId int64) (string, string) {
 	path := sd.GetWeeklyKPIModelDir(projectId, dateString, queryId)
 	return path, "kpi.txt"
 }

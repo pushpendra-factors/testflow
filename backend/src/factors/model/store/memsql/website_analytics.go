@@ -130,7 +130,7 @@ func getWebAnalyticsEnabledProjectIDs() ([]uint64, int) {
 	return projectIDs, http.StatusFound
 }
 
-func (store *MemSQL) GetWebAnalyticsQueriesFromDashboardUnits(projectID uint64) (uint64, *model.WebAnalyticsQueries, int) {
+func (store *MemSQL) GetWebAnalyticsQueriesFromDashboardUnits(projectID uint64) (int64, *model.WebAnalyticsQueries, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
@@ -149,7 +149,7 @@ func (store *MemSQL) GetWebAnalyticsQueriesFromDashboardUnits(projectID uint64) 
 
 	// Build web analytics queries from dashboard units.
 	namedQueries := make([]string, 0, 0)
-	webAnalyticsDashboardIDCandidates := make(map[uint64]int64)
+	webAnalyticsDashboardIDCandidates := make(map[int64]int64)
 	customGroupQueries := make([]model.WebAnalyticsCustomGroupQuery, 0, 0)
 	for i := range dashboardUnits {
 		dunit := dashboardUnits[i]
@@ -215,7 +215,7 @@ func (store *MemSQL) GetWebAnalyticsQueriesFromDashboardUnits(projectID uint64) 
 	}
 
 	// Get the dashboardID with max web analytics type units.
-	var webAnalyticsDashboardID uint64
+	var webAnalyticsDashboardID int64
 	var maxCount int64
 	for did, count := range webAnalyticsDashboardIDCandidates {
 		if count > maxCount {
@@ -245,7 +245,7 @@ func getQueryForNamedQueryUnit(class, queryName string) (*postgres.Jsonb, error)
 }
 
 func (store *MemSQL) addWebAnalyticsDefaultDashboardUnits(projectId uint64,
-	agentUUID string, dashboardId uint64) int {
+	agentUUID string, dashboardId int64) int {
 	logFields := log.Fields{
 		"project_id":   projectId,
 		"agent_uuid":   agentUUID,

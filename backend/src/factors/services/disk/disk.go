@@ -193,25 +193,25 @@ func (dd *DiskDriver) ListFiles(path string) []string {
 	return files
 }
 
-func (dd *DiskDriver) GetInsightsWpiFilePathAndName(projectId uint64, dateString string, queryId uint64, k int) (string, string) {
+func (dd *DiskDriver) GetInsightsWpiFilePathAndName(projectId uint64, dateString string, queryId int64, k int) (string, string) {
 	path := dd.GetWeeklyInsightsModelDir(projectId, dateString, queryId, k)
 	return path, "wpi.txt"
 }
 
-func (dd *DiskDriver) GetInsightsCpiFilePathAndName(projectId uint64, dateString string, queryId uint64, k int) (string, string) {
+func (dd *DiskDriver) GetInsightsCpiFilePathAndName(projectId uint64, dateString string, queryId int64, k int) (string, string) {
 	path := dd.GetWeeklyInsightsModelDir(projectId, dateString, queryId, k)
 	return path, "cpi.txt"
 }
 
-func (dd *DiskDriver) GetWeeklyInsightsModelDir(projectId uint64, dateString string, queryId uint64, k int) string {
+func (dd *DiskDriver) GetWeeklyInsightsModelDir(projectId uint64, dateString string, queryId int64, k int) string {
 	return fmt.Sprintf("%v/projects/%d/weeklyinsights/%v/q-%v/k-%v/", dd.baseDir, projectId, dateString, queryId, k)
 }
 
-func (dd *DiskDriver) GetWeeklyKPIModelDir(projectId uint64, dateString string, queryId uint64) string {
+func (dd *DiskDriver) GetWeeklyKPIModelDir(projectId uint64, dateString string, queryId int64) string {
 	return fmt.Sprintf("%v/projects/%v/weeklyKPI/%v/q-%v/", dd.baseDir, projectId, dateString, queryId)
 }
 
-func (dd *DiskDriver) GetKPIFilePathAndName(projectId uint64, dateString string, queryId uint64) (string, string) {
+func (dd *DiskDriver) GetKPIFilePathAndName(projectId uint64, dateString string, queryId int64) (string, string) {
 	path := dd.GetWeeklyKPIModelDir(projectId, dateString, queryId)
 	return path, "kpi.txt"
 }

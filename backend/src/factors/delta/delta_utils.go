@@ -162,13 +162,13 @@ type CriterionResult struct {
 
 // Query abstracts the concept of a delta-query, consisting of one base, and a list of target criteria.
 type Query struct {
-	Id     int            `json:"id"`
+	Id     int64          `json:"id"`
 	Base   EventsCriteria `json:"base"`
 	Target EventsCriteria `json:"target"`
 }
 
 type MultiFunnelQuery struct {
-	Id           int              `json:"id"`
+	Id           int64            `json:"id"`
 	Base         EventsCriteria   `json:"base"`
 	Intermediate []EventsCriteria `json:"intermediate"`
 	Target       EventsCriteria   `json:"target"`

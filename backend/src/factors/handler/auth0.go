@@ -258,7 +258,7 @@ func CallbackHandler(auth *Authenticator) gin.HandlerFunc {
 			c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, "", "INVALID_FLOW"))
 			return
 		}
-		cookieData, err := helpers.GetAuthData(existingAgent.Email, existingAgent.UUID, existingAgent.Salt, helpers.CookieExpiry*time.Second)
+		cookieData, err := helpers.GetAuthData(existingAgent.Email, existingAgent.UUID, existingAgent.Salt, helpers.SecondsInOneMonth*time.Second)
 		if err != nil {
 			c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, flow, "SERVER_ERROR"))
 			return
@@ -272,7 +272,7 @@ func CallbackHandler(auth *Authenticator) gin.HandlerFunc {
 			httpOnly = true
 			c.SetSameSite(http.SameSiteNoneMode)
 		}
-		c.SetCookie(C.GetFactorsCookieName(), cookieData, helpers.CookieExpiry, "/", domain, cookie, httpOnly)
+		c.SetCookie(C.GetFactorsCookieName(), cookieData, helpers.SecondsInOneMonth, "/", domain, cookie, httpOnly)
 		c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, "", ""))
 	}
 }

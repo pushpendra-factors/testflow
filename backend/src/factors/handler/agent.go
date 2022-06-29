@@ -79,7 +79,7 @@ func Signin(c *gin.Context) {
 		logCtx.WithField("email", email).Error("Failed to update Agent lastLoginInfo")
 	}
 
-	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, helpers.CookieExpiry*time.Second)
+	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, helpers.SecondsInOneMonth*time.Second)
 
 	domain := C.GetCookieDomian()
 
@@ -90,7 +90,7 @@ func Signin(c *gin.Context) {
 		httpOnly = true
 		c.SetSameSite(http.SameSiteNoneMode)
 	}
-	c.SetCookie(C.GetFactorsCookieName(), cookieData, helpers.CookieExpiry, "/", domain, cookie, httpOnly)
+	c.SetCookie(C.GetFactorsCookieName(), cookieData, helpers.SecondsInOneMonth, "/", domain, cookie, httpOnly)
 	resp := map[string]string{
 		"status": "success",
 	}

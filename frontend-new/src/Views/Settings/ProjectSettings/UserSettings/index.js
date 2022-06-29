@@ -47,37 +47,20 @@ function UserSettings({
       content: 'Please confirm to proceed',
       okText: 'Yes',
       onOk() {
-        if (agent[0].role === 2) {
-          projectAgentRemove(activeProjectID, uuid)
-            .then(() => {
-              fetchProjectAgents(activeProjectID);
-              const rulesToUpdate = [
-                ...dataSource.filter(
-                  (val) => JSON.stringify(val.uuid) !== JSON.stringify(uuid)
-                ),
-              ];
-              setdataSource(rulesToUpdate);
-              message.success('User removed!');
-            })
-            .catch((err) => {
-              if (!err) {
-                console.log('rm err', err);
-                message.error(err?.data?.error);
-              } else {
-                // temporary fix for now will fix it later
-                fetchProjectAgents(activeProjectID);
-                const rulesToUpdate = [
-                  ...dataSource.filter(
-                    (val) => JSON.stringify(val.uuid) !== JSON.stringify(uuid)
-                  ),
-                ];
-                setdataSource(rulesToUpdate);
-                message.success('User removed!');
-              }
-            });
-        } else {
-          message.error('Agent user can not remove other users');
-        }
+        projectAgentRemove(activeProjectID, uuid)
+        .then(() => {
+          fetchProjectAgents(activeProjectID);
+          const rulesToUpdate = [
+            ...dataSource.filter(
+              (val) => JSON.stringify(val.uuid) !== JSON.stringify(uuid)
+            ),
+          ];
+          setdataSource(rulesToUpdate);
+          message.success('User removed successfully!');
+        })
+        .catch((err) => {
+            message.error(err?.data?.error);
+        });
       },
     });
   };
@@ -98,7 +81,7 @@ function UserSettings({
               ),
             ];
             setdataSource(rulesToUpdate);
-            message.success('User role updated!');
+            message.success('User role updated successfully!');
           })
           .catch((err) => {
             message.error(err.data.error);

@@ -70,6 +70,7 @@ func main() {
 	skipEventNameStepByProjectID := flag.String("skip_event_name_step_by_project_id", "", "")
 	skipUserJoinInEventQueryByProjectID := flag.String("skip_user_join_in_event_query_by_project_id", "", "")
 	enableSlowDBQueryLogging := flag.Bool("log_slow_db_queries", false, "Logs queries with execution time greater than 50ms.")
+	allowProfilesGroupSupport := flag.String("allow_profiles_group_support", "", "")
 
 	flag.Parse()
 
@@ -122,6 +123,7 @@ func main() {
 		},
 		PrimaryDatastore:                    *primaryDatastore,
 		EnableFilterOptimisation:            *enableFilterOptimisation,
+		AllowProfilesGroupSupport:           *allowProfilesGroupSupport,
 		FilterPropertiesStartTimestamp:      *filterPropertiesStartTimestamp,
 		SkipAttributionDashboardCaching:     *skipAttribution,
 		OnlyAttributionDashboardCaching:     *onlyAttribution,

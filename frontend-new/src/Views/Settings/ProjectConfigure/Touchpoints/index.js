@@ -462,6 +462,7 @@ const Touchpoints = ({
     } else if (touchPointState.state === 'edit') {
       touchPointContent = (
         <TouchpointView
+          tchType={tabNo}
           rule={touchPointsData[touchPointState.index]}
           onSave={(obj) => onTchSave(obj, touchPointState.index)}
           onCancel={onTchCancel}

@@ -62,6 +62,7 @@ type AgentInfo struct {
 	LastLoggedIn         *time.Time `json:"last_logged_in"`
 	Phone                string     `json:"phone"`
 	IsOnboardingFlowSeen bool       `json:"is_onboarding_flow_seen"`
+	SignedUpAt           *time.Time `json:"signed_up_at"`
 }
 
 const (
@@ -81,6 +82,7 @@ func CreateAgentInfo(agent *Agent) *AgentInfo {
 		LastLoggedIn:         agent.LastLoggedInAt,
 		Phone:                agent.Phone,
 		IsOnboardingFlowSeen: agent.IsOnboardingFlowSeen,
+		SignedUpAt:           &agent.CreatedAt,
 	}
 }
 

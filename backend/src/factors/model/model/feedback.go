@@ -1,8 +1,9 @@
 package model
 
 import (
-	"github.com/jinzhu/gorm/dialects/postgres"
 	"time"
+
+	"github.com/jinzhu/gorm/dialects/postgres"
 )
 
 const VOTE_TYPE_UPVOTE int = 1
@@ -22,7 +23,7 @@ type Feedback struct {
 type WeeklyInsightsProperty struct {
 	Key         string `json:"key"`
 	Value       string `json:"value"`
-	QueryID     uint64 `json:"query_id"`
+	QueryID     int64  `json:"query_id"`
 	Type        string `json:"type"`
 	Order       int    `json:"order"`
 	Entity      string `json:"entity"`

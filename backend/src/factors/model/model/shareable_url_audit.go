@@ -5,13 +5,13 @@ import (
 )
 
 type ShareableURLAudit struct {
-	ID         string 	`gorm:"type:uuid;default:uuid_generate_v4()" json:"id"`
-	ProjectID  uint64 	`gorm:"not null" json:"project_id"`
-	ShareID    string 	`gorm:"type:uuid;not null" json:"share_id"`
-	QueryID    string 	`json:"query_id"`
-	EntityID   uint64 	`json:"entity_id"`
-	EntityType int    	`json:"entity_type"`
-	ShareType  int    	`json:"share_type"`
+	ID         string `gorm:"type:uuid;default:uuid_generate_v4()" json:"id"`
+	ProjectID  uint64 `gorm:"not null" json:"project_id"`
+	ShareID    string `gorm:"type:uuid;not null" json:"share_id"`
+	QueryID    string `json:"query_id"`
+	EntityID   int64  `json:"entity_id"`
+	EntityType int    `json:"entity_type"`
+	ShareType  int    `json:"share_type"`
 	// AllowedUsers   string    `gorm:"type:varchar" json:"allowed_users"`
 	CreatedAt  time.Time `json:"created_at"`
 	UpdatedAt  time.Time `json:"updated_at"`

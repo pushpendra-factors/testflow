@@ -126,6 +126,9 @@ func main() {
 	configs["document_routines"] = *numDocRoutines
 	configs["min_sync_timestamp"] = *minSyncTimestamp
 	status := taskWrapper.TaskFuncWithProjectId(appName, *lookback, projectIdsArray, leadSquaredEnrich.RunLeadSquaredEnrich, configs)
+	if len(status) == 0 { // skip ping to healthcheck if no task ran
+		return
+	}
 
 	anyFailure := false
 	for _, valInt := range status {

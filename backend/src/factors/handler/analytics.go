@@ -90,8 +90,8 @@ func EventsQueryHandler(c *gin.Context) (interface{}, int, string, string, bool)
 		commonQueryTo = requestPayload.Queries[0].To
 	}
 
-	var dashboardId uint64
-	var unitId uint64
+	var dashboardId int64
+	var unitId int64
 	var err error
 	hardRefresh := false
 	dashboardIdParam := c.Query("dashboard_id")
@@ -106,12 +106,12 @@ func EventsQueryHandler(c *gin.Context) (interface{}, int, string, string, bool)
 
 	isDashboardQueryRequest := dashboardIdParam != "" && unitIdParam != ""
 	if isDashboardQueryRequest {
-		dashboardId, err = strconv.ParseUint(dashboardIdParam, 10, 64)
+		dashboardId, err = strconv.ParseInt(dashboardIdParam, 10, 64)
 		if err != nil || dashboardId == 0 {
 			logCtx.WithError(err).Error("Query failed. Invalid DashboardID.")
 			return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Invalid DashboardID.", true
 		}
-		unitId, err = strconv.ParseUint(unitIdParam, 10, 64)
+		unitId, err = strconv.ParseInt(unitIdParam, 10, 64)
 		if err != nil || unitId == 0 {
 			logCtx.WithError(err).Error("Query failed. Invalid DashboardUnitID.")
 			return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Invalid DashboardUnitID.", true
@@ -215,8 +215,8 @@ func QueryHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 	}
 
 	var requestPayload QueryRequestPayload
-	var dashboardId uint64
-	var unitId uint64
+	var dashboardId int64
+	var unitId int64
 	var err error
 	var result *model.QueryResult
 	hardRefresh := false
@@ -237,12 +237,12 @@ func QueryHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 
 	isDashboardQueryRequest := dashboardIdParam != "" && unitIdParam != ""
 	if isDashboardQueryRequest {
-		dashboardId, err = strconv.ParseUint(dashboardIdParam, 10, 64)
+		dashboardId, err = strconv.ParseInt(dashboardIdParam, 10, 64)
 		if err != nil || dashboardId == 0 {
 			logCtx.WithError(err).Error("Query failed. Invalid DashboardID.")
 			return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Invalid DashboardID.", true
 		}
-		unitId, err = strconv.ParseUint(unitIdParam, 10, 64)
+		unitId, err = strconv.ParseInt(unitIdParam, 10, 64)
 		if err != nil || unitId == 0 {
 			logCtx.WithError(err).Error("Query failed. Invalid DashboardUnitID.")
 			return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Invalid DashboardUnitID.", true

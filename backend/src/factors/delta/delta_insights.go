@@ -49,7 +49,7 @@ func ComputeDeltaInsights(projectId uint64, configs map[string]interface{}) (map
 	skipWpi := configs["skipWpi"].(bool)
 	skipWpi2 := configs["skipWpi2"].(bool)
 	log.Info("Reading delta query.")
-	computedQueries := make(map[uint64]bool)
+	computedQueries := make(map[int64]bool)
 	dashboardUnits, _ := store.GetStore().GetDashboardUnitsForProjectID(projectId)
 	isDownloaded = false
 	for _, dashboardUnit := range dashboardUnits {
@@ -95,7 +95,7 @@ func ComputeDeltaInsights(projectId uint64, configs map[string]interface{}) (map
 				continue
 			}
 			log.Info("Computing cross-period insights.")
-			var queryId int
+			var queryId int64
 			if deltaQuery.Id == 0 {
 				queryId = multiStepQuery.Id
 			} else {
@@ -133,11 +133,11 @@ func ComputeDeltaInsights(projectId uint64, configs map[string]interface{}) (map
 	return status, true
 }
 
-func processCrossPeriods(periodCodes []Period, diskManager *serviceDisk.DiskDriver, projectId uint64, k int, queryId int, cloudManager *filestore.FileManager) error {
+func processCrossPeriods(periodCodes []Period, diskManager *serviceDisk.DiskDriver, projectId uint64, k int, queryId int64, cloudManager *filestore.FileManager) error {
 	for i, periodCode1 := range periodCodes {
 		var wpi1 WithinPeriodInsights
 		dateString1 := U.GetDateOnlyFromTimestampZ(periodCode1.From)
-		efTmpPath1, efTmpName1 := diskManager.GetInsightsWpiFilePathAndName(projectId, dateString1, uint64(queryId), k)
+		efTmpPath1, efTmpName1 := diskManager.GetInsightsWpiFilePathAndName(projectId, dateString1, queryId, k)
 		ReadFromJSONFile(efTmpPath1+efTmpName1, &wpi1)
 		for j, periodCode2 := range periodCodes {
 			if i >= j {
@@ -145,7 +145,7 @@ func processCrossPeriods(periodCodes []Period, diskManager *serviceDisk.DiskDriv
 			}
 			var wpi2 WithinPeriodInsights
 			dateString2 := U.GetDateOnlyFromTimestampZ(periodCode2.From)
-			efTmpPath2, efTmpName2 := diskManager.GetInsightsWpiFilePathAndName(projectId, dateString2, uint64(queryId), k)
+			efTmpPath2, efTmpName2 := diskManager.GetInsightsWpiFilePathAndName(projectId, dateString2, queryId, k)
 
 			err := ReadFromJSONFile(efTmpPath2+efTmpName2, &wpi2)
 			if err != nil {
@@ -164,7 +164,7 @@ func processCrossPeriods(periodCodes []Period, diskManager *serviceDisk.DiskDriv
 				log.WithFields(log.Fields{"err": err}).Error("failed to unmarshal events Info.")
 				return err
 			}
-			err = WriteCpiPath(projectId, periodPair.Second, uint64(queryId), k, bytes.NewReader(crossPeriodInsightsBytes), *cloudManager)
+			err = WriteCpiPath(projectId, periodPair.Second, queryId, k, bytes.NewReader(crossPeriodInsightsBytes), *cloudManager)
 			if err != nil {
 				log.WithFields(log.Fields{"err": err}).Error("failed to write files to cloud")
 				return err
@@ -190,13 +190,13 @@ func processSeparatePeriods(projectId uint64, periodCodes []Period, cloudManager
 			if deltaQuery.Id == 0 {
 				deltaQuery.Id = multiStepQuery.Id
 			}
-			path, name := (*cloudManager).GetInsightsWpiFilePathAndName(projectId, dateString, uint64(deltaQuery.Id), k)
+			path, name := (*cloudManager).GetInsightsWpiFilePathAndName(projectId, dateString, deltaQuery.Id, k)
 			reader, err := (*cloudManager).Get(path, name)
 			if err != nil {
 				log.WithFields(log.Fields{"err": err, "filePath": path,
 					"eventFileName": name}).Error("Failed to write to fetch from cloud path")
 			} else {
-				efTmpPath, efTmpName := diskManager.GetInsightsWpiFilePathAndName(projectId, dateString, uint64(deltaQuery.Id), k)
+				efTmpPath, efTmpName := diskManager.GetInsightsWpiFilePathAndName(projectId, dateString, deltaQuery.Id, k)
 				err = diskManager.Create(efTmpPath, efTmpName, reader)
 				if err != nil {
 					log.WithFields(log.Fields{"err": err, "filePath": efTmpPath,
@@ -272,9 +272,9 @@ func processSinglePeriodData(projectId uint64, periodCode Period, cloudManager *
 		if deltaQuery.Id == 0 {
 			deltaQuery.Id = multiStepQuery.Id
 		}
-		WriteWpiPath(projectId, periodCode, uint64(deltaQuery.Id), k, bytes.NewReader(withinPeriodInsightsBytes), *cloudManager)
+		WriteWpiPath(projectId, periodCode, deltaQuery.Id, k, bytes.NewReader(withinPeriodInsightsBytes), *cloudManager)
 		dateString := U.GetDateOnlyFromTimestampZ(periodCode.From)
-		efTmpPath, efTmpName := diskManager.GetInsightsWpiFilePathAndName(projectId, dateString, uint64(deltaQuery.Id), k)
+		efTmpPath, efTmpName := diskManager.GetInsightsWpiFilePathAndName(projectId, dateString, deltaQuery.Id, k)
 		err = diskManager.Create(efTmpPath, efTmpName, bytes.NewReader(withinPeriodInsightsBytes))
 		if err != nil {
 			log.WithFields(log.Fields{"err": err, "filePath": efTmpPath,
@@ -285,7 +285,7 @@ func processSinglePeriodData(projectId uint64, periodCode Period, cloudManager *
 	return nil
 }
 
-func WriteWpiPath(projectId uint64, periodCode Period, queryId uint64, k int, events *bytes.Reader,
+func WriteWpiPath(projectId uint64, periodCode Period, queryId int64, k int, events *bytes.Reader,
 	cloudManager filestore.FileManager) error {
 	dateString := U.GetDateOnlyFromTimestampZ(periodCode.From)
 	path, name := cloudManager.GetInsightsWpiFilePathAndName(projectId, dateString, queryId, k)
@@ -297,7 +297,7 @@ func WriteWpiPath(projectId uint64, periodCode Period, queryId uint64, k int, ev
 	return err
 }
 
-func WriteCpiPath(projectId uint64, periodCode Period, queryId uint64, k int, events *bytes.Reader,
+func WriteCpiPath(projectId uint64, periodCode Period, queryId int64, k int, events *bytes.Reader,
 	cloudManager filestore.FileManager) error {
 	dateString := U.GetDateOnlyFromTimestampZ(periodCode.From)
 	path, name := cloudManager.GetInsightsCpiFilePathAndName(projectId, dateString, queryId, k)
@@ -324,7 +324,7 @@ func IsDashboardUnitWIEnabled(dashboardUnit M.DashboardUnit) (Query, MultiFunnel
 		if query.Type == M.QueryTypeUniqueUsers || query.Type == M.QueryTypeEventsOccurrence {
 			isEventOccurence := query.Type == M.QueryTypeEventsOccurrence
 			if (query.EventsCondition == M.EventCondAnyGivenEvent || query.EventsCondition == M.EventCondAllGivenEvent) || (query.EventsCondition == M.EventCondEachGivenEvent && len(query.EventsWithProperties) == 1) {
-				deltaQuery = Query{Id: int(dashboardUnit.QueryId),
+				deltaQuery = Query{Id: dashboardUnit.QueryId,
 					Base: EventsCriteria{
 						Operator: "And",
 						EventCriterionList: []EventCriterion{{
@@ -371,7 +371,7 @@ func IsDashboardUnitWIEnabled(dashboardUnit M.DashboardUnit) (Query, MultiFunnel
 		if query.Type == M.QueryTypeUniqueUsers {
 			if query.EventsCondition == M.EventCondAnyGivenEvent {
 				if len(query.EventsWithProperties) == 2 {
-					deltaQuery = Query{Id: int(dashboardUnit.QueryId),
+					deltaQuery = Query{Id: dashboardUnit.QueryId,
 						Base: EventsCriteria{
 							Operator: "And",
 							EventCriterionList: []EventCriterion{{
@@ -389,7 +389,7 @@ func IsDashboardUnitWIEnabled(dashboardUnit M.DashboardUnit) (Query, MultiFunnel
 						}}
 					return deltaQuery, MultiFunnelQuery{}, M.KPIQueryGroup{}, true, false, false
 				} else {
-					multiStepFunnel := MultiFunnelQuery{Id: int(dashboardUnit.QueryId),
+					multiStepFunnel := MultiFunnelQuery{Id: dashboardUnit.QueryId,
 						Base: EventsCriteria{
 							Operator: "And",
 							EventCriterionList: []EventCriterion{{

@@ -245,9 +245,9 @@ func ExecuteKPIQueryHandler(c *gin.Context) (interface{}, int, string, string, b
 	return gin.H{"result": queryResult, "query": request}, http.StatusOK, "", "", false
 }
 
-func getDashboardRelatedInformationFromRequest(request model.KPIQueryGroup, dashboardIdParam, unitIdParam, refreshParam, isQueryParam string) (uint64, uint64, int64, int64, bool, bool, bool, error) {
-	var dashboardId uint64
-	var unitId uint64
+func getDashboardRelatedInformationFromRequest(request model.KPIQueryGroup, dashboardIdParam, unitIdParam, refreshParam, isQueryParam string) (int64, int64, int64, int64, bool, bool, bool, error) {
+	var dashboardId int64
+	var unitId int64
 	var err error
 	hardRefresh := false
 
@@ -265,8 +265,8 @@ func getDashboardRelatedInformationFromRequest(request model.KPIQueryGroup, dash
 	if !isDashboardQueryRequest {
 		return dashboardId, unitId, commonQueryFrom, commonQueryTo, hardRefresh, isDashboardQueryRequest, isQuery, err
 	}
-	dashboardId, err = strconv.ParseUint(dashboardIdParam, 10, 64)
-	unitId, err = strconv.ParseUint(unitIdParam, 10, 64)
+	dashboardId, err = strconv.ParseInt(dashboardIdParam, 10, 64)
+	unitId, err = strconv.ParseInt(unitIdParam, 10, 64)
 	if err != nil || unitId == 0 {
 		err = errors.New("Query failed. Invalid DashboardID.")
 	}
@@ -277,7 +277,7 @@ func getDashboardRelatedInformationFromRequest(request model.KPIQueryGroup, dash
 }
 
 func getResultFromCacheOrDashboard(c *gin.Context, reqID string, projectID uint64, request model.KPIQueryGroup,
-	dashboardId uint64, unitId uint64, commonQueryFrom int64, commonQueryTo int64, hardRefresh bool,
+	dashboardId int64, unitId int64, commonQueryFrom int64, commonQueryTo int64, hardRefresh bool,
 	timezoneString U.TimeZoneString, isDashboardQueryRequest bool, logCtx *log.Entry) (interface{}, int, string, string, bool) {
 
 	// Tracking dashboard query request.

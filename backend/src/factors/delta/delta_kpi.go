@@ -17,7 +17,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func CreateKpiInsights(diskManager *serviceDisk.DiskDriver, cloudManager *filestore.FileManager, periodCodesWithWeekNMinus1 []Period, projectId uint64, queryId uint64, queryGroup M.KPIQueryGroup, insightGranularity string, skipWpi, skipWpi2 bool) error {
+func CreateKpiInsights(diskManager *serviceDisk.DiskDriver, cloudManager *filestore.FileManager, periodCodesWithWeekNMinus1 []Period, projectId uint64, queryId int64, queryGroup M.KPIQueryGroup, insightGranularity string, skipWpi, skipWpi2 bool) error {
 	// readEvents := true
 	var err error
 	var newInsightsList = make([]*WithinPeriodInsightsKpi, 0)
@@ -149,7 +149,7 @@ func CreateKpiInsights(diskManager *serviceDisk.DiskDriver, cloudManager *filest
 			log.WithFields(log.Fields{"err": err}).Error("failed to unmarshal cpi Info.")
 			return err
 		}
-		err = WriteCpiPath(projectId, periodPair.Second, uint64(queryId), 100, bytes.NewReader(crossPeriodInsightsBytes), *cloudManager)
+		err = WriteCpiPath(projectId, periodPair.Second, queryId, 100, bytes.NewReader(crossPeriodInsightsBytes), *cloudManager)
 		if err != nil {
 			log.WithFields(log.Fields{"err": err}).Error("failed to write cpi files to cloud")
 			return err

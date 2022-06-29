@@ -2,8 +2,8 @@ package memsql
 
 import (
 	C "factors/config"
-	U "factors/util"
 	"factors/model/model"
+	U "factors/util"
 	"net/http"
 	"time"
 
@@ -219,7 +219,7 @@ func (store *MemSQL) DeleteShareableURLWithShareIDandAgentID(projectID uint64, s
 	return store.updateShareableURL(whereFields, updateFields)
 }
 
-func (store *MemSQL) DeleteShareableURLWithEntityIDandType(projectID, entityID uint64, entityType int) int {
+func (store *MemSQL) DeleteShareableURLWithEntityIDandType(projectID uint64, entityID int64, entityType int) int {
 	logFields := log.Fields{
 		"project_id":  projectID,
 		"entity_id":   entityID,

@@ -25,7 +25,7 @@ type WeeklyInsights struct {
 	Goal         Base            `json:"goal"`
 	Conv         Base            `json:"conv"`
 	Insights     []ActualMetrics `json:"actual_metrics"`
-	QueryId      uint64          `json:"query_id"`
+	QueryId      int64           `json:"query_id"`
 }
 type Base struct {
 	W1          float64 `json:"w1"`
@@ -723,7 +723,7 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 	return insights
 }
 
-func GetWeeklyInsights(projectId uint64, agentUUID string, queryId uint64, baseStartTime *time.Time, compStartTime *time.Time, insightsType string, numberOfRecords int) (interface{}, error) {
+func GetWeeklyInsights(projectId uint64, agentUUID string, queryId int64, baseStartTime *time.Time, compStartTime *time.Time, insightsType string, numberOfRecords int) (interface{}, error) {
 	k := make(map[uint64]int)
 	k[399] = 100
 	k[594] = 100
@@ -1189,7 +1189,7 @@ func removeNegativePercentageFromInsights(insightsObj *WeeklyInsights) {
 	}
 }
 
-func CaptureBlackListedAndWhiteListedKeys(projectID uint64, agentUUID string, queryID uint64) {
+func CaptureBlackListedAndWhiteListedKeys(projectID uint64, agentUUID string, queryID int64) {
 	records, err := store.GetStore().GetRecordsFromFeedback(projectID, agentUUID)
 	if err != nil {
 		log.Error(err)

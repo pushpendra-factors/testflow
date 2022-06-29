@@ -138,8 +138,8 @@ func ExecuteChannelQueryHandler(c *gin.Context) (interface{}, int, string, strin
 		commonQueryTo = queryPayload.Queries[0].To
 	}
 
-	var dashboardId uint64
-	var unitId uint64
+	var dashboardId int64
+	var unitId int64
 	var err error
 	hardRefresh := false
 	dashboardIdParam := c.Query("dashboard_id")
@@ -154,12 +154,12 @@ func ExecuteChannelQueryHandler(c *gin.Context) (interface{}, int, string, strin
 
 	isDashboardQueryRequest := dashboardIdParam != "" && unitIdParam != ""
 	if isDashboardQueryRequest {
-		dashboardId, err = strconv.ParseUint(dashboardIdParam, 10, 64)
+		dashboardId, err = strconv.ParseInt(dashboardIdParam, 10, 64)
 		if err != nil || dashboardId == 0 {
 			logCtx.WithError(err).Error("Query failed. Invalid DashboardID.")
 			return nil, http.StatusBadRequest, INVALID_INPUT, "Query failed. Invalid DashboardID.", true
 		}
-		unitId, err = strconv.ParseUint(unitIdParam, 10, 64)
+		unitId, err = strconv.ParseInt(unitIdParam, 10, 64)
 		if err != nil || unitId == 0 {
 			logCtx.WithError(err).Error("Query failed. Invalid DashboardUnitID.")
 			return nil, http.StatusBadRequest, INVALID_INPUT, "Query failed. Invalid DashboardUnitID.", true
