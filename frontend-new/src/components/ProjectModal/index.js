@@ -15,6 +15,7 @@ import NewProject from '../../Views/Settings/SetupAssist/Modals/NewProject';
 import { connect } from 'react-redux';
 import { useHistory } from 'react-router-dom';
 import factorsai from 'factorsai';
+import { fetchProjectSettings } from 'Reducers/global';
 
 function ProjectModal(props) {
   const [ShowPopOver, setShowPopOver] = useState(false);
@@ -38,6 +39,7 @@ function ProjectModal(props) {
   const switchProject = () => {
     localStorage.setItem('activeProject', selectedProject?.id);
     props.setActiveProject(selectedProject);
+    props.fetchProjectSettings(selectedProject?.id)
     history.push('/');
     notification.success({
       message: 'Project Changed!',
@@ -335,4 +337,5 @@ export default connect(mapStateToProps, {
   signout,
   updateAgentInfo,
   fetchAgentInfo,
+  fetchProjectSettings
 })(ProjectModal);

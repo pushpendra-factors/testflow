@@ -11,7 +11,10 @@ import { getActiveDomain } from '@sentry/hub';
 
 const { SubMenu } = Menu;
 
-const whiteListedAccounts = ['solutions@factors.ai'];
+const whiteListedAccounts = [
+  'solutions@factors.ai',
+  'baliga@factors.ai'
+];
 
 const MenuItems = {
   general: 'General Settings',
@@ -33,6 +36,7 @@ const MenuItems = {
   Campaigns: 'Campaigns',
   Pages: 'Pages',
   Alerts: 'Alerts',
+  Insights: 'Build Insights',
 };
 
 const MapNametToLocation = {
@@ -104,10 +108,13 @@ function SiderMenu({
         </div>
       );
     } else if (title === 'settings') {
-      const items = ['general', 'User', 'Attribution', 'SDK', 'Integration'];
+      const items = ['general', 'User', 'Attribution', 'SDK', 'Integration', 'Insights'];
       return (
         <div className={styles.popover_content}>
           {items.map((item) => {
+            if(item == 'Insights' && !whiteListedAccounts.includes(activeAgent)){
+              return null
+            } 
             return (
               <NavLink
                 activeStyle={{ color: '#1890ff' }}

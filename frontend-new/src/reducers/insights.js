@@ -1,6 +1,6 @@
 /* eslint-disable */
 
-import { get, post, del, getHostUrl } from '../utils/request';
+import { get, post, del, put, getHostUrl } from '../utils/request';
 var host = getHostUrl();
     host = (host[host.length - 1] === '/') ? host : host + '/';
 
@@ -76,6 +76,35 @@ export function updateInsightFeedback(projectID,data) {
   return function(dispatch) {
     return new Promise((resolve,reject) => { 
       post(dispatch, host + "projects/"+projectID+`/feedback`, data)    
+        .then((response)=>{        
+          dispatch({type:"UPDATE_INSIGHT_FEEDBACK_FULLFILLED", payload: response.data});
+          resolve(response)
+        }).catch((err)=>{        
+          dispatch({type:"UPDATE_INSIGHT_FEEDBACK__REJECTED", payload: err});
+          reject(err);
+        });
+    });
+  }
+}
+
+export function buildExplainInsights(projectID,data) {
+  return function(dispatch) {
+    return new Promise((resolve,reject) => { 
+      put(dispatch, host + "projects/"+projectID+`/v1/explain`, data)    
+        .then((response)=>{        
+          dispatch({type:"UPDATE_INSIGHT_FEEDBACK_FULLFILLED", payload: response.data});
+          resolve(response)
+        }).catch((err)=>{        
+          dispatch({type:"UPDATE_INSIGHT_FEEDBACK__REJECTED", payload: err});
+          reject(err);
+        });
+    });
+  }
+}
+export function buildWeeklyInsights(projectID,data) {
+  return function(dispatch) {
+    return new Promise((resolve,reject) => { 
+      put(dispatch, host + "projects/"+projectID+`/v1/weeklyinsights`, data)    
         .then((response)=>{        
           dispatch({type:"UPDATE_INSIGHT_FEEDBACK_FULLFILLED", payload: response.data});
           resolve(response)
