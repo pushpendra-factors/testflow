@@ -62,21 +62,29 @@ function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel, 
             message.error('error:',err)
           })
         }
-        setloading(false);
-        setFormData(projectData);
         localStorage.setItem('activeProject', projectId);
+        setloading(false);
         message.success('New Project Created!');
+        setFormData(projectData);
       }).catch((err) => {
         setloading(false);
-        message.error('Oops! Something went wrong.');
+        message.error(err?.data?.error);
         console.log('createProject Failed:', err);
       });
   };
 
   const onSkip = () => {
     handleCancel();
-    form.resetFields();
+    handleReset();
   };
+
+  const handleReset = () => {
+    setImageUrl('');
+    setcheckbox(true);
+    setShowProfile(false);
+    setFormData(null);
+    form.resetFields();
+  }
 
   function getBase64(img, callback) {
     const reader = new FileReader();
@@ -234,7 +242,7 @@ function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel, 
             </div>
       </div>
     }
-    {formData && <Congrates handleCancel = {handleCancel} />}
+    {formData && <Congrates handleCancel = {handleCancel} handleReset={handleReset} />}
     </>
 
   );

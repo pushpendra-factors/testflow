@@ -11,7 +11,7 @@ import { useHistory } from 'react-router-dom';
 import factorsai from 'factorsai';
 const { Option } = Select;
 
-function BasicDetails({handleCancel, fetchProjectAgents, projectAgentBatchInvite, activeProjectID}) {
+function BasicDetails({handleCancel, fetchProjectAgents, projectAgentBatchInvite, activeProjectID, setShowInvite}) {
   const [form] = Form.useForm();
   const [loading, setloading] = useState(false); 
   const history = useHistory();
@@ -70,6 +70,7 @@ function BasicDetails({handleCancel, fetchProjectAgents, projectAgentBatchInvite
   const onSkip = () => {
     form.resetFields();
     handleCancel();
+    setShowInvite(false);
     history.push('/welcome');
   };
 
