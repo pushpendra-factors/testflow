@@ -208,7 +208,7 @@ var TransformationOfKPIMetricsToEventAnalyticsQuery = map[string]map[string][]Tr
 		},
 		BounceRate: []TransformQueryi{
 			{
-				Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: EventEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: "Division"},
+				Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: EventEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: "Percentage"},
 				Filters: []QueryProperty{
 					{Entity: EventEntity, Type: U.PropertyTypeNumerical, Property: U.SP_PAGE_COUNT, LogicalOp: "AND", Operator: EqualsOpStr, Value: "1"},
 				},
@@ -219,7 +219,7 @@ var TransformationOfKPIMetricsToEventAnalyticsQuery = map[string]map[string][]Tr
 		},
 		EngagementRate: []TransformQueryi{
 			{
-				Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: "Division"},
+				Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: "Percentage"},
 				Filters: []QueryProperty{
 					{Entity: EventEntity, Type: U.PropertyTypeNumerical, Property: U.SP_SPENT_TIME, LogicalOp: "AND", Operator: GreaterThanOpStr, Value: "10"},
 					{Entity: EventEntity, Type: U.PropertyTypeNumerical, Property: U.SP_PAGE_COUNT, LogicalOp: "OR", Operator: GreaterThanOpStr, Value: "2"},
@@ -281,7 +281,7 @@ var TransformationOfKPIMetricsToEventAnalyticsQuery = map[string]map[string][]Tr
 		},
 		EngagementRate: []TransformQueryi{
 			{
-				Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: EventEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: "Division"},
+				Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: EventEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: "Percentage"},
 				Filters: []QueryProperty{
 					{Entity: EventEntity, Type: U.PropertyTypeNumerical, Property: U.EP_PAGE_SPENT_TIME, LogicalOp: "AND", Operator: GreaterThanOpStr, Value: "10"},
 					{Entity: EventEntity, Type: U.PropertyTypeNumerical, Property: U.EP_PAGE_SCROLL_PERCENT, LogicalOp: "OR", Operator: GreaterThanOpStr, Value: "50"},
@@ -622,6 +622,12 @@ func getValueFromValuesAndOperator(value1 interface{}, value2 interface{}, opera
 			result = 0
 		} else {
 			result = value1InFloat / value2InFloat
+		}
+	} else if operator == "Percentage" {
+		if value2InFloat == 0 {
+			result = 0
+		} else {
+			result = value1InFloat * 100 / value2InFloat
 		}
 	}
 	return result
