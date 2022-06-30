@@ -213,49 +213,41 @@ function SiderMenu({
         whiteListedAccounts.includes(activeAgent)) ||
       window.document.domain === 'staging-app.factors.ai' ||
       window.document.domain === 'factors-dev.com' ? (
-        collapsed ? (
-          <Popover
-            overlayClassName={styles.popover}
-            title={false}
-            visible={ShowPopOverProfiles}
-            content={renderSubmenu('profile')}
-            placement={'rightTop'}
-            onVisibleChange={(visible) => {
-              setShowPopOverProfiles(visible);
-            }}
-            trigger='hover'
-          >
-            <Menu.Item
-              className={styles.menuitems}
-              key='sub3'
-              icon={setIcon('profile')}
-            ></Menu.Item>
-          </Popover>
-        ) : (
-          <SubMenu key='sub1' icon={setIcon('profile')} title={<b>Profiles</b>}>
-            <Menu.Item
-              className={styles.menuitems_sub}
-              key={`/profiles/people`}
-            >
-              {MenuItems.People}
-            </Menu.Item>
-            {/* <Menu.Item
-            className={styles.menuitems_sub}
-            key={`/profiles/accounts`}
-          >
-            {MenuItems.Accounts}
-          </Menu.Item>
-          <Menu.Item
-            className={styles.menuitems_sub}
-            key={`/profiles/campaigns`}
-          >
-            {MenuItems.Campaigns}
-          </Menu.Item>
-          <Menu.Item className={styles.menuitems_sub} key={`/profiles/pages`}>
-            {MenuItems.Pages}
-          </Menu.Item> */}
-          </SubMenu>
-        )
+        // collapsed ? (
+        //   <Popover
+        //     overlayClassName={styles.popover}
+        //     title={false}
+        //     visible={ShowPopOverProfiles}
+        //     content={renderSubmenu('profile')}
+        //     placement={'rightTop'}
+        //     onVisibleChange={(visible) => {
+        //       setShowPopOverProfiles(visible);
+        //     }}
+        //     trigger='hover'
+        //   >
+        //     <Menu.Item
+        //       className={styles.menuitems}
+        //       key='sub3'
+        //       icon={setIcon('profile')}
+        //     ></Menu.Item>
+        //   </Popover>
+        // ) : (
+        //   <SubMenu key='sub1' icon={setIcon('profile')} title={<b>Profiles</b>}>
+        //     <Menu.Item
+        //       className={styles.menuitems_sub}
+        //       key={`/profiles/people`}
+        //     >
+        //       {MenuItems.People}
+        //     </Menu.Item>
+        //   </SubMenu>
+        // )
+        <Menu.Item
+          className={styles.menuitems}
+          key={`/profiles/people`}
+          icon={setIcon('profile')}
+        >
+          <b>User Profiles</b>
+        </Menu.Item>
       ) : null}
 
       <Menu.Item
@@ -265,13 +257,6 @@ function SiderMenu({
       >
         <b>Explain</b>
       </Menu.Item>
-      {/* <Menu.Item
-        className={styles.menuitems}
-        key='/attribution'
-        icon={setIcon('attribution')}
-      >
-        <b>Attributions</b>
-      </Menu.Item> */}
 
       {collapsed ? (
         <Popover
@@ -324,9 +309,6 @@ function SiderMenu({
           >
             {MenuItems.CustomKPI}
           </Menu.Item>
-          {/* <Menu.Item className={styles.menuitems} key={`/configure/goals`}>
-            {MenuItems.TargetGoals}
-          </Menu.Item> */}
           <Menu.Item
             className={styles.menuitems_sub}
             key={`/configure/explaindp`}
