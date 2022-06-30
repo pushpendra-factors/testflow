@@ -117,7 +117,7 @@ function KPIComposer({
       );
     });
 
-    if (queries.length < 6) {
+    if (queries.length < 10) {
       blockList.push(
         <div key={'init'} className={styles.composer_body__query_block}>
           <QueryBlock

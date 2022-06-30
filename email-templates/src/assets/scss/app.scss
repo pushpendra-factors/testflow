@@ -17,9 +17,11 @@ body{
 .text-center{
     text-align: center;
 }
-
+.text-bold{
+    font-weight: bold;
+}
 .primary-btn{
-    background-color: #5949BC;
+    background-color: #1890FF; 
     min-width: 150px; 
     border-radius: 4px;
     padding: 12px 20px;
@@ -31,6 +33,9 @@ body{
         padding: 8px 20px;
     }
 
+}
+a{
+    color:  #1890FF; 
 }
 .divider-line{
     border-top: 1px solid #E7E9ED;
