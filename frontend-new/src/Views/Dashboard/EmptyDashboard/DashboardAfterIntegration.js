@@ -21,7 +21,7 @@ function DashboardAfterIntegration({setaddDashboardModal, getHubspotContact, cur
             selectedProject = selectedProject[0];
             localStorage.setItem('activeProject', selectedProject?.id);
             setActiveProject(selectedProject);
-            history.push('/');
+            history.push('/?userflow=c162ed75-0983-41f3-ae56-8aedd7dbbfbd');
             notification.success({
               message: 'Project Changed!',
               description: `You are currently viewing data from ${selectedProject.name}`

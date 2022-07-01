@@ -515,6 +515,14 @@ export const ReverseProfileMapper = {
   marketo: { users: 'Marketo' }
 };
 
+export const profileOptions = {
+  users: [['Website Visitors'], ['Hubspot Contacts'], ['Salesforce Users'], ['Marketo']],
+  $salesforce_opportunity: [['All Opportunities']],
+  $hubspot_deal: [['All Deals']],
+  $salesforce_account: [['All Accounts']],
+  $hubspot_company: [['All Companies']],
+};
+
 export const DISPLAY_PROP = { $none: '(Not Set)' };
 export const REV_DISPLAY_PROP = { '(Not Set)': '$none' };
 
@@ -545,5 +553,12 @@ export const AvailableGroups = {
   'Hubspot Companies': '$hubspot_company',
   'Hubspot Deals': '$hubspot_deal',
   'Salesforce Accounts': '$salesforce_account',
-  'Salesforce Opportunities': '$salesforce_opportunity'
+  'Salesforce Opportunities': '$salesforce_opportunity',
+};
+
+export const RevAvailableGroups = {
+  $hubspot_company: 'Hubspot Companies',
+  $hubspot_deal: 'Hubspot Deals',
+  $salesforce_account: 'Salesforce Accounts',
+  $salesforce_opportunity: 'Salesforce Opportunities',
 };

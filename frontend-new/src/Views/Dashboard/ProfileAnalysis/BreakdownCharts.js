@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useCallback, useContext } from 'react';
+import React, {
+  useState, useEffect, useCallback, useContext
+} from 'react';
 import {
   formatData,
   defaultSortProp,
-  getVisibleData,
+  getVisibleData
 } from '../../CoreQuery/ProfilesResultPage/BreakdownCharts/utils';
 import BarChart from '../../../components/BarChart';
 import BreakdownTable from '../../CoreQuery/ProfilesResultPage/BreakdownCharts/BreakdownTable';
@@ -13,7 +15,7 @@ import {
   CHART_TYPE_BARCHART,
   CHART_TYPE_HORIZONTAL_BAR_CHART,
   CHART_TYPE_TABLE,
-  DASHBOARD_WIDGET_BAR_CHART_HEIGHT,
+  DASHBOARD_WIDGET_BAR_CHART_HEIGHT
 } from '../../../utils/constants';
 import { DashboardContext } from '../../../contexts/DashboardContext';
 
@@ -24,10 +26,10 @@ const BreakdownCharts = ({
   unit,
   currentEventIndex,
   section,
-  queries,
+  queries
 }) => {
   const { handleEditQuery } = useContext(DashboardContext);
-  const [sorter, setSorter] = useState(defaultSortProp());
+  const [sorter, setSorter] = useState(defaultSortProp({ breakdown }));
   const [visibleProperties, setVisibleProperties] = useState([]);
   const [aggregateData, setAggregateData] = useState([]);
 
@@ -48,7 +50,7 @@ const BreakdownCharts = ({
 
   if (!aggregateData.length) {
     return (
-      <div className='flex justify-center items-center w-full h-full'>
+      <div className="flex justify-center items-center w-full h-full">
         <NoDataChart />
       </div>
     );
@@ -62,7 +64,7 @@ const BreakdownCharts = ({
       <div
         onClick={handleEditQuery}
         style={{ color: '#5949BC' }}
-        className='mt-3 font-medium text-base cursor-pointer flex justify-end item-center'
+        className="mt-3 font-medium text-base cursor-pointer flex justify-end item-center"
       >
         Show More &rarr;
       </div>
@@ -111,7 +113,7 @@ const BreakdownCharts = ({
   }
 
   return (
-    <div className={`w-full px-6 flex flex-1 flex-col justify-center`}>
+    <div className={'w-full px-6 flex flex-1 flex-col justify-center'}>
       {chartContent}
       {tableContent}
     </div>

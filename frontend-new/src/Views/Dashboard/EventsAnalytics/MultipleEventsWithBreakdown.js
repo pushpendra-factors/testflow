@@ -48,8 +48,8 @@ function MultipleEventsWithBreakdown({
 }) {
   const [visibleProperties, setVisibleProperties] = useState([]);
   const [visibleSeriesData, setVisibleSeriesData] = useState([]);
-  const [sorter, setSorter] = useState(defaultSortProp());
-  const [dateSorter, setDateSorter] = useState(defaultSortProp());
+  const [sorter, setSorter] = useState(defaultSortProp({ breakdown }));
+  const [dateSorter, setDateSorter] = useState(defaultSortProp({ breakdown }));
   const [aggregateData, setAggregateData] = useState([]);
   const [categories, setCategories] = useState([]);
   const [data, setData] = useState([]);

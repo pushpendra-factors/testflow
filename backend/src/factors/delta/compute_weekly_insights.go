@@ -103,19 +103,25 @@ const (
 const DistributionChangePer float64 = 5 // x of overall to be comapared with distrubution W1
 
 func getInsightImportance(valWithDetails ValueWithDetails) float64 {
+	var cons float64
 	w1 := valWithDetails.ActualValues.W1
 	w2 := valWithDetails.ActualValues.W2
 	dist1 := valWithDetails.ChangeInScale.W1[1]
 	dist2 := valWithDetails.ChangeInScale.W2[1]
-	if w2+w1 == 0 {
+	if w2 == 0 || w1 == 0 {
 		return 0
 	}
-	return math.Abs(w2-w1) * (dist1 + dist2) / (w2 + w1)
+	if valWithDetails.Category == "kpi_events" {
+		cons = (dist1 + dist2)
+	} else {
+		cons = 1
+	}
+	return math.Abs(w2-w1) * cons / (w2 + w1)
 }
 
 func GetInsightsKpi(file CrossPeriodInsightsKpi, numberOfRecords int, QueryClass, KpiType string, isEventWebsite bool) WeeklyInsights {
 	var KeyMapForDistribution = make(map[string]bool)
-	propertyMap := make(map[string]bool)
+	propertyMap = make(map[string]bool)
 	var insights WeeklyInsights
 	insights.Insights = make([]ActualMetrics, 0)
 	insights.InsightsType = "DistOnly"
@@ -148,10 +154,10 @@ func GetInsightsKpi(file CrossPeriodInsightsKpi, numberOfRecords int, QueryClass
 	tmpGlobal.Percentage = cpiInfo.GlobalMetrics.PercentChange
 	insights.Goal = tmpGlobal
 
-	var tmp ValueWithDetails
-	var temp BaseTargetMetrics
-
 	for key, valMap := range cpiInfo.FeatureMetrics {
+		var tmp ValueWithDetails
+		var temp BaseTargetMetrics
+
 		keyNameType := strings.SplitN(key, "#", 2)
 		keyType, keyName := keyNameType[0], keyNameType[1]
 
@@ -213,11 +219,17 @@ func GetInsightsKpi(file CrossPeriodInsightsKpi, numberOfRecords int, QueryClass
 			}
 			tmp.ChangeInScale.IsIncreased[0] = tmp.ChangeInScale.W1[0] < tmp.ChangeInScale.W2[0]
 			tmp.ChangeInScale.IsIncreased[1] = tmp.ChangeInScale.W1[1] < tmp.ChangeInScale.W2[1]
-			tmp.ChangeInScale.Percentage[0] = (tmp.ChangeInScale.W2[0] - tmp.ChangeInScale.W1[0]) * 100 / tmp.ChangeInScale.W1[0]
+			if tmp.ChangeInScale.W1[0] != 0 {
+				tmp.ChangeInScale.Percentage[0] = (tmp.ChangeInScale.W2[0] - tmp.ChangeInScale.W1[0]) * 100 / tmp.ChangeInScale.W1[0]
+			}
 			tmp.ChangeInScale.Percentage[1] = tmp.ChangeInScale.W2[1] - tmp.ChangeInScale.W1[1]
 
 			tmp.Type = "distribution"
-			tmp.Category = "kpi"
+			if file.Category == "" { //for older models built without category
+				tmp.Category = "kpi_events"
+			} else {
+				tmp.Category = "kpi_" + file.Category
+			}
 
 			if !(CheckPercentageChange(globalScaleW1, featScaleW1) || CheckPercentageChange(globalScaleW2, featScaleW2)) && math.Abs(tmp.ActualValues.Per) > 5 {
 				valWithDetailsArr = append(valWithDetailsArr, tmp)
@@ -242,7 +254,12 @@ func GetInsightsKpi(file CrossPeriodInsightsKpi, numberOfRecords int, QueryClass
 		increasedRecords = numberOfRecords - increasedRecords
 	}
 
+	keysUsedInInsights := make(map[string]bool)
 	for _, data := range valWithDetailsArr {
+		if data.Category == "kpi_campaign" && keysUsedInInsights[data.Key] {
+			continue
+		}
+		keysUsedInInsights[data.Key] = true
 		var tempActualValue = ActualMetrics{
 			ActualValues: Base{
 				W1:          data.ActualValues.W1,

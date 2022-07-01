@@ -1,11 +1,41 @@
-import React, { useMemo, useState } from 'react';
-import { Row, Col, Button, Avatar, Table, Radio, Menu, Dropdown } from 'antd';
+import React, { useEffect, useState } from 'react';
+import {
+  Row,
+  Col,
+  Button,
+  Avatar,
+  Radio,
+  Menu,
+  Dropdown,
+  Popover,
+  Checkbox,
+} from 'antd';
 import { SVG, Text } from '../../factorsComponents';
 import FaTimeline from '../../FaTimeline';
+import { RevAvailableGroups } from '../../../utils/constants';
 
 function ContactDetails({ onCancel, userDetails }) {
-  const userDetail = useMemo(() => {
-    return userDetails;
+  const [activities, setActivities] = useState([]);
+
+  useEffect(() => {
+    let allActivitiesEnabled = [];
+    if (userDetails.data.user_activities) {
+      allActivitiesEnabled = userDetails.data.user_activities.map(
+        (activity) => {
+          let isEnabled = true;
+          if (
+            activity.display_name.includes('Contact Updated') ||
+            activity.display_name.includes('Campaign Member Updated')
+          )
+            isEnabled = false;
+          return {
+            ...activity,
+            enabled: isEnabled,
+          };
+        }
+      );
+    }
+    setActivities(allActivitiesEnabled);
   }, [userDetails]);
 
   const [granularity, setGranularity] = useState('Hourly');
@@ -24,32 +54,94 @@ function ContactDetails({ onCancel, userDetails }) {
       })}
     </Menu>
   );
+
+  const handleChange = (option) => {
+    setActivities((currActivities) => {
+      const newState = currActivities.map((activity) => {
+        if (activity.event_name === option.event_name) {
+          return {
+            ...activity,
+            enabled: !activity.enabled,
+          };
+        }
+        return activity;
+      });
+      return newState;
+    });
+  };
+
+  const controlsPopover = () => {
+    return (
+      <div className='fa-filter-popupcard'>
+        <div className='fa-header'>
+          <Text
+            type='title'
+            level={7}
+            weight='bold'
+            color='grey'
+            extraClass='px-2 pt-2'
+          >
+            Filter Activities
+          </Text>
+          <div className={'fa-divider'} />
+        </div>
+
+        {activities.length ? (
+          activities
+            .filter(
+              (value, index, self) =>
+                index ===
+                self.findIndex((t) => t.event_name === value.event_name)
+            )
+            .map((option) => {
+              return (
+                <div
+                  key={option.event_name}
+                  className='flex justify-start items-center px-4 py-2'
+                >
+                  <div className='mr-2'>
+                    <Checkbox
+                      checked={option.enabled}
+                      onChange={handleChange.bind(this, option)}
+                    />
+                  </div>
+                  <Text mini extraClass='mb-0 truncate' type='paragraph'>
+                    {option.display_name || option.event_name}
+                  </Text>
+                </div>
+              );
+            })
+        ) : (
+          <div className='text-center p-2 italic'>No Activity</div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <>
       <div
-        className={'fa-modal--header'}
+        className={'fa-modal--header px-8'}
         style={{ borderBottom: '1px solid #e7e9ed' }}
       >
-        <div className={'fa-container'}>
-          <Row justify={'space-between'} className={'my-3 m-0'}>
-            <Col className='flex items-center'>
-              <SVG name={'brand'} size={36} />
-              <Text type={'title'} level={4} weight={'bold'} extraClass={'m-0'}>
-                Contact Details
-              </Text>
-            </Col>
-            <Col>
-              <Button
-                size={'large'}
-                type='text'
-                onClick={() => {
-                  onCancel();
-                }}
-                icon={<SVG name='times'></SVG>}
-              ></Button>
-            </Col>
-          </Row>
-        </div>
+        <Row justify={'space-between'} className={'my-3 m-0'}>
+          <Col className='flex items-center'>
+            <SVG name={'brand'} size={36} />
+            <Text type={'title'} level={4} weight={'bold'} extraClass={'m-0'}>
+              Contact Details
+            </Text>
+          </Col>
+          <Col>
+            <Button
+              size={'large'}
+              type='text'
+              onClick={() => {
+                onCancel();
+              }}
+              icon={<SVG name='times'></SVG>}
+            ></Button>
+          </Col>
+        </Row>
       </div>
 
       <div className='my-16'>
@@ -61,50 +153,41 @@ function ContactDetails({ onCancel, userDetails }) {
                   <Avatar
                     size={72}
                     style={{
-                      color: '#f56a00',
-                      backgroundColor: '#fde3cf',
+                      color: '#3E516C',
+                      backgroundColor: '#F1F1F1',
                       fontSize: '42px',
                       textTransform: 'uppercase',
                       fontWeight: '400',
                     }}
                   >
-                    U
+                    {userDetails?.data?.name
+                      ? userDetails.data.name[0] || 'U'
+                      : 'U'}
                   </Avatar>
                 </Col>
               </Row>
               <Row className='py-2'>
                 <Col>
-                  {userDetail.name ? (
-                    <Text
-                      type={'title'}
-                      level={6}
-                      extraClass={'m-0'}
-                      weight={'bold'}
-                    >
-                      {userDetail.name}
-                    </Text>
-                  ) : (
-                    'Unidentified User'
-                  )}
-                  {userDetail.role && userDetail.company ? (
-                    <Text
-                      type={'title'}
-                      level={7}
-                      extraClass={'m-0'}
-                      color={'grey'}
-                    >
-                      {`${userDetail?.role}, ${userDetail?.company}`}
-                    </Text>
-                  ) : (
+                  <Text
+                    type={'title'}
+                    level={6}
+                    extraClass={'m-0'}
+                    weight={'bold'}
+                  >
+                    {!userDetails?.data?.is_anonymous
+                      ? userDetails?.data?.name || '-'
+                      : 'Unidentified User'}
+                  </Text>
+                  {
                     <Text
                       type={'title'}
                       level={7}
                       extraClass={'m-0'}
                       color={'grey'}
                     >
-                      {`${userDetail?.user_id}`}
+                      {userDetails?.data?.company || userDetails?.data?.user_id}
                     </Text>
-                  )}
+                  }
                 </Col>
               </Row>
               <Row className={'py-2'}>
@@ -119,7 +202,7 @@ function ContactDetails({ onCancel, userDetails }) {
                   </Text>
 
                   <Text type={'title'} level={7} extraClass={'m-0'}>
-                    {userDetail?.email || '-'}
+                    {userDetails?.data?.email || '-'}
                   </Text>
                 </Col>
               </Row>
@@ -134,7 +217,7 @@ function ContactDetails({ onCancel, userDetails }) {
                     Country
                   </Text>
                   <Text type={'title'} level={7} extraClass={'m-0'}>
-                    {userDetail?.country || '-'}
+                    {userDetails?.data?.country || '-'}
                   </Text>
                 </Col>
               </Row>
@@ -149,7 +232,7 @@ function ContactDetails({ onCancel, userDetails }) {
                     Number of Web Sessions
                   </Text>
                   <Text type={'title'} level={7} extraClass={'m-0'}>
-                    {userDetail?.web_sessions_count || '-'}
+                    {userDetails?.data?.web_sessions_count || '-'}
                   </Text>
                 </Col>
               </Row>
@@ -164,7 +247,7 @@ function ContactDetails({ onCancel, userDetails }) {
                     Number of Page Views
                   </Text>
                   <Text type={'title'} level={7} extraClass={'m-0'}>
-                    {userDetail?.number_of_page_views || '-'}
+                    {userDetails?.data?.number_of_page_views || '-'}
                   </Text>
                 </Col>
               </Row>
@@ -179,7 +262,7 @@ function ContactDetails({ onCancel, userDetails }) {
                     Time Spent on Site
                   </Text>
                   <Text type={'title'} level={7} extraClass={'m-0'}>
-                    {userDetail?.time_spent_on_site + ' secs' || '-'}
+                    {userDetails?.data?.time_spent_on_site || '-' + ' secs'}
                   </Text>
                 </Col>
               </Row>
@@ -196,10 +279,10 @@ function ContactDetails({ onCancel, userDetails }) {
                   >
                     Associated Groups:
                   </Text>
-                  {userDetail?.groups?.map((group) => {
+                  {userDetails?.data?.group_infos?.map((group) => {
                     return (
                       <Text type={'title'} level={7} extraClass={'m-0 mb-2'}>
-                        {group.group_name}
+                        {RevAvailableGroups[group.group_name]}
                       </Text>
                     );
                   }) || '-'}
@@ -220,7 +303,7 @@ function ContactDetails({ onCancel, userDetails }) {
                     </Text>
                   </div>
                   <div className='flex justify-between'>
-                    <div className='mr-2'>
+                    <div>
                       <Radio.Group
                         onChange={(e) => setCollapse(e.target.value)}
                         defaultValue={true}
@@ -237,6 +320,22 @@ function ContactDetails({ onCancel, userDetails }) {
                       </Radio.Group>
                     </div>
                     <div>
+                      <Popover
+                        overlayClassName='fa-activity--filter'
+                        placement='bottomLeft'
+                        trigger='hover'
+                        content={controlsPopover}
+                      >
+                        <Button
+                          size='large'
+                          className='fa-btn--custom mx-2 relative'
+                          type='text'
+                        >
+                          <SVG name={'controls'} />
+                        </Button>
+                      </Popover>
+                    </div>
+                    <div>
                       <Dropdown overlay={menu} placement='bottomRight'>
                         <Button
                           className={`ant-dropdown-link flex items-center`}
@@ -250,7 +349,10 @@ function ContactDetails({ onCancel, userDetails }) {
                 </Col>
                 <Col span={24}>
                   <FaTimeline
-                    activities={userDetail?.user_activities}
+                    activities={activities?.filter(
+                      (activity) => activity.enabled === true
+                    )}
+                    loading={userDetails.isLoading}
                     granularity={granularity}
                     collapse={collapse}
                   />

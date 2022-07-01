@@ -2948,7 +2948,6 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, reports *Marketin
 		marketingValues.Key = GetMarketingDataKey(query.AttributionKey, marketingValues)
 		uniqueAttributionKey := marketingValues.Key
 		// add session info uniquely for user-attributionId pair
-		//todo(Satya): Landing Page Url-Assuming that content group values are consistent in all event rows with same LPUrl
 		if _, ok := attributedSessionsByUserId[userID]; ok {
 
 			if userSessionData, ok := attributedSessionsByUserId[userID][uniqueAttributionKey]; ok {
@@ -3024,11 +3023,15 @@ func ProcessRow(rows *sql.Rows, reportName string, logCtx *log.Entry,
 			continue
 		}
 		data.Channel = channel
+		if _, ok := marketingDataIDMap[ID]; ok {
+			data = mergeMarketingData(marketingDataIDMap[ID], data)
+		}
 		marketingDataIDMap[ID] = data
-		allRows = append(allRows, data)
 	}
 	U.LogReadTimeWithQueryRequestID(startReadTime, queryID, &log.Fields{})
-
+	for _, data := range marketingDataIDMap {
+		allRows = append(allRows, data)
+	}
 	return marketingDataIDMap, allRows
 }
 
@@ -3105,6 +3108,29 @@ func getMarketingDataFromValues(campaignIDNull sql.NullString, adgroupIDNull sql
 		data.KeywordName = name
 	}
 	return ID, data
+}
+
+// mergeMarketingData combines values in two MarketingData rows having same marketing id but different names
+func mergeMarketingData(marketingDataOld MarketingData, marketingDataNew MarketingData) MarketingData {
+
+	data := MarketingData{
+		Key:              marketingDataNew.Key,
+		ID:               marketingDataNew.ID,
+		Name:             marketingDataNew.Name,
+		CampaignID:       marketingDataNew.CampaignID,
+		CampaignName:     marketingDataNew.CampaignName,
+		AdgroupID:        marketingDataNew.AdgroupID,
+		AdgroupName:      marketingDataNew.AdgroupName,
+		KeywordMatchType: marketingDataNew.KeywordMatchType,
+		KeywordName:      marketingDataNew.KeywordName,
+		KeywordID:        marketingDataNew.KeywordID,
+		AdName:           marketingDataNew.AdName,
+		AdID:             marketingDataNew.AdID,
+		Slot:             marketingDataNew.Slot,
+		Impressions:      marketingDataOld.Impressions + marketingDataNew.Impressions,
+		Clicks:           marketingDataOld.Clicks + marketingDataNew.Clicks,
+		Spend:            marketingDataOld.Spend + marketingDataNew.Spend}
+	return data
 }
 
 func AddCustomDimensions(attributionData *map[string]*AttributionData, query *AttributionQuery, reports *MarketingReports) {

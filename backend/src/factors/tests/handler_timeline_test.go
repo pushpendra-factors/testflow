@@ -38,9 +38,9 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 
 	customerEmail := "@example.com"
 
-	// Create 10 Users.
+	// Create 5 Users with Properties.
 	users := make([]model.User, 0)
-	numUsers := 10
+	numUsers := 5
 	for i := 1; i <= numUsers; i++ {
 		createdUserID, _ := store.GetStore().CreateUser(&model.User{
 			ProjectId:      project.ID,
@@ -54,19 +54,54 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 		assert.Equal(t, http.StatusFound, errCode)
 		users = append(users, *user)
 	}
+	assert.Equal(t, len(users), numUsers)
+	// Create 5 Users without Properties.
+	users = make([]model.User, 0)
+	numUsers = 5
+	for i := 1; i <= numUsers; i++ {
+		createdUserID, _ := store.GetStore().CreateUser(&model.User{
+			ProjectId:      project.ID,
+			Source:         model.GetRequestSourcePointer(model.UserSourceWeb),
+			Group1ID:       "1",
+			Group2ID:       "2",
+			CustomerUserId: "user" + strconv.Itoa(i+5) + customerEmail,
+		})
+		user, errCode := store.GetStore().GetUser(project.ID, createdUserID)
+		assert.Equal(t, http.StatusFound, errCode)
+		users = append(users, *user)
+	}
+	assert.Equal(t, len(users), numUsers)
+
+	var payload model.UTListPayload
+	payload.Source = "web"
+
+	filters := model.QueryProperty{
+		Entity:    "user_g",
+		Type:      "categorical",
+		Property:  "$country",
+		Operator:  "equals",
+		Value:     "Ukraine",
+		LogicalOp: "AND",
+	}
+	payload.Filters = append(payload.Filters, filters)
 
 	t.Run("Success", func(t *testing.T) {
-		w := sendGetProfileUserRequest(r, project.ID, agent)
+		w := sendGetProfileUserRequest(r, project.ID, agent, payload)
 		assert.Equal(t, http.StatusOK, w.Code)
 		jsonResponse, _ := ioutil.ReadAll(w.Body)
 		resp := make([]model.Contact, 0)
 		err := json.Unmarshal(jsonResponse, &resp)
 		assert.Nil(t, err)
+		assert.Equal(t, len(resp), 5)
 		assert.Condition(t, func() bool { return len(resp) <= 1000 })
 		assert.Condition(t, func() bool {
-			for _, user := range resp {
+			for i, user := range resp {
 				assert.Equal(t, user.IsAnonymous, false)
-				assert.Equal(t, user.Country, "Ukraine")
+				if i < 5 {
+					assert.Equal(t, user.Country, "Ukraine")
+				} else {
+					assert.Equal(t, user.Country, "")
+				}
 				assert.NotNil(t, user.LastActivity)
 			}
 			return true
@@ -74,13 +109,14 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 	})
 }
 
-func sendGetProfileUserRequest(r *gin.Engine, projectId uint64, agent *model.Agent) *httptest.ResponseRecorder {
+func sendGetProfileUserRequest(r *gin.Engine, projectId uint64, agent *model.Agent, payload model.UTListPayload) *httptest.ResponseRecorder {
 
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error Creating cookieData")
 	}
-	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, fmt.Sprintf("/projects/%d/v1/profiles/users", projectId)).
+	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, fmt.Sprintf("/projects/%d/v1/profiles/users", projectId)).
+		WithPostParams(payload).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
 			Value:  cookieData,
@@ -243,6 +279,7 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 			n := len(resp.UserActivity)
 			for i, activity := range resp.UserActivity {
 				assert.NotNil(t, activity.EventName)
+				assert.NotNil(t, activity.DisplayName)
 				if i < n-1 {
 					assert.Equal(t, activity.EventName, U.EVENT_NAME_FORM_SUBMITTED)
 				}

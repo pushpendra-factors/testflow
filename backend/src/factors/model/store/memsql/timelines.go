@@ -3,8 +3,9 @@ package memsql
 import (
 	C "factors/config"
 	"factors/model/model"
-	"factors/util"
+	U "factors/util"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -12,12 +13,13 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (store *MemSQL) GetProfileUsersListByProjectId(projectId uint64) ([]model.Contact, int) {
+func (store *MemSQL) GetProfileUsersListByProjectId(projectId uint64, payload model.UTListPayload) ([]model.Contact, int) {
 	logFields := log.Fields{
 		"project_id": projectId,
+		"payload":    payload,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	if projectId == 0 {
+	if projectId == 0 || payload.Source == "" {
 		return nil, http.StatusBadRequest
 	}
 
@@ -27,14 +29,41 @@ func (store *MemSQL) GetProfileUsersListByProjectId(projectId uint64) ([]model.C
 		MaxUpdatedAt time.Time `json:"max_updated_at"`
 	}
 	var minMax MinMaxTime
+
+	whereStr := []string{`project_id = ? 
+	AND (is_group_user=0 OR is_group_user IS NULL)`}
+
+	var sourceString string
+	if model.UserSourceMap[payload.Source] == model.UserSourceWeb {
+		sourceString = "AND (source=" + strconv.Itoa(model.UserSourceMap[payload.Source]) + " OR source IS NULL)"
+	} else if payload.Source == "All" {
+		sourceString = ""
+	} else {
+		sourceString = "AND source=" + strconv.Itoa(model.UserSourceMap[payload.Source])
+	}
+	whereStr = append(whereStr, sourceString)
+
+	var filterParameters []interface{}
+	if len(payload.Filters) > 0 {
+		filterString, filterParams, err := buildWhereFromProperties(projectId, payload.Filters, 0)
+		if filterString != "" {
+			filterString = " AND " + filterString
+		}
+		if err != nil {
+			return nil, http.StatusBadRequest
+		}
+		whereStr = append(whereStr, filterString)
+		filterParameters = filterParams
+	}
+
+	whereString := strings.Join(whereStr, " ")
+	parameters := []interface{}{projectId}
+	parameters = append(parameters, filterParameters...)
+	parameters = append(parameters, gorm.NowFunc())
+
 	err := db.Raw(`SELECT MIN(updated_at) AS min_updated_at, 
-        MAX(updated_at) AS max_updated_at 
-        FROM (
-            SELECT updated_at FROM users 
-            WHERE project_id = ? AND 
-            (is_group_user=0 OR is_group_user IS NULL) AND 
-            updated_at < ? LIMIT 1000
-        )`, projectId, gorm.NowFunc()).
+		MAX(updated_at) AS max_updated_at 
+		FROM (SELECT updated_at FROM users WHERE `+whereString+` AND updated_at < ? LIMIT 1000)`, parameters...).
 		Scan(&minMax).Error
 	if err != nil {
 		log.WithField("status", err).Error("min and max updated_at couldn't be defined.")
@@ -42,14 +71,15 @@ func (store *MemSQL) GetProfileUsersListByProjectId(projectId uint64) ([]model.C
 	}
 
 	var profileUsers []model.Contact
+	parameters = parameters[:len(parameters)-1]
+	parameters = append(parameters, minMax.MinUpdatedAt, minMax.MaxUpdatedAt)
+
 	err = db.Table("users").
 		Select(`COALESCE(customer_user_id, id) AS identity,
-        ISNULL(customer_user_id) AS is_anonymous,
-        JSON_EXTRACT_STRING(properties, ?) AS country,
-        MAX(updated_at) AS last_activity`, util.UP_COUNTRY).
-		Where(`project_id = ? AND 
-        (is_group_user=0 OR is_group_user IS NULL) AND 
-        updated_at BETWEEN ? AND ?`, projectId, minMax.MinUpdatedAt, minMax.MaxUpdatedAt).
+		ISNULL(customer_user_id) AS is_anonymous,
+		JSON_EXTRACT_STRING(properties, ?) AS country,
+		MAX(updated_at) AS last_activity`, U.UP_COUNTRY).
+		Where(whereString+` AND updated_at BETWEEN ? AND ?`, parameters...).
 		Group("identity").
 		Order("last_activity DESC").
 		Limit(1000).
@@ -89,19 +119,19 @@ func (store *MemSQL) GetProfileUserDetailsByID(projectID uint64, identity string
 	db := C.GetServices().Db
 	var uniqueUser model.ContactDetails
 	err := db.Table("users").Select(`COALESCE(customer_user_id,id) AS user_id,
-        ISNULL(customer_user_id) AS is_anonymous,
-        JSON_EXTRACT_STRING(properties, ?) AS name,
-        JSON_EXTRACT_STRING(properties, ?) AS company,
-        JSON_EXTRACT_STRING(properties, ?) AS email,
-        JSON_EXTRACT_STRING(properties, ?) AS country,
-        JSON_EXTRACT_STRING(properties, ?) AS web_sessions_count,
-        JSON_EXTRACT_STRING(properties, ?) AS time_spent_on_site,
-        JSON_EXTRACT_STRING(properties, ?) AS number_of_page_views,
-        GROUP_CONCAT(group_1_id) IS NOT NULL AS group_1,
-        GROUP_CONCAT(group_2_id) IS NOT NULL AS group_2,
-        GROUP_CONCAT(group_3_id) IS NOT NULL AS group_3,
-        GROUP_CONCAT(group_4_id) IS NOT NULL AS group_4`,
-		util.UP_NAME, util.UP_COMPANY, util.UP_EMAIL, util.UP_COUNTRY, util.UP_SESSION_COUNT, util.UP_TOTAL_SPENT_TIME, util.UP_PAGE_COUNT).
+		ISNULL(customer_user_id) AS is_anonymous,
+		JSON_EXTRACT_STRING(properties, ?) AS name,
+		JSON_EXTRACT_STRING(properties, ?) AS company,
+		JSON_EXTRACT_STRING(properties, ?) AS email,
+		JSON_EXTRACT_STRING(properties, ?) AS country,
+		JSON_EXTRACT_STRING(properties, ?) AS web_sessions_count,
+		JSON_EXTRACT_STRING(properties, ?) AS time_spent_on_site,
+		JSON_EXTRACT_STRING(properties, ?) AS number_of_page_views,
+		GROUP_CONCAT(group_1_id) IS NOT NULL AS group_1,
+		GROUP_CONCAT(group_2_id) IS NOT NULL AS group_2,
+		GROUP_CONCAT(group_3_id) IS NOT NULL AS group_3,
+		GROUP_CONCAT(group_4_id) IS NOT NULL AS group_4`,
+		U.UP_NAME, U.UP_COMPANY, U.UP_EMAIL, U.UP_COUNTRY, U.UP_SESSION_COUNT, U.UP_TOTAL_SPENT_TIME, U.UP_PAGE_COUNT).
 		Where("project_id=? AND "+userId+"=?", projectID, identity).
 		Group("user_id").
 		Order("updated_at desc").
@@ -127,11 +157,20 @@ func (store *MemSQL) GetProfileUserDetailsByID(projectID uint64, identity string
 		return nil, http.StatusNotFound
 	}
 
+	standardDisplayNames := U.STANDARD_EVENTS_DISPLAY_NAMES
+	_, projectDisplayNames := store.GetDisplayNamesForAllEvents(projectID)
+
 	for rows.Next() {
 		var contactActivity model.ContactActivity
 		if err := db.ScanRows(rows, &contactActivity); err != nil {
 			log.WithError(err).Error("Failed scanning events list")
-			return nil, http.StatusInternalServerError
+		}
+		if standardDisplayNames[contactActivity.EventName] != "" {
+			contactActivity.DisplayName = standardDisplayNames[contactActivity.EventName]
+		} else if projectDisplayNames[contactActivity.EventName] != "" {
+			contactActivity.DisplayName = projectDisplayNames[contactActivity.EventName]
+		} else {
+			contactActivity.DisplayName = contactActivity.EventName
 		}
 		uniqueUser.UserActivity = append(uniqueUser.UserActivity, contactActivity)
 	}

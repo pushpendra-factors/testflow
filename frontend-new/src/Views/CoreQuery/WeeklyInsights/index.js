@@ -159,7 +159,7 @@ const WeeklyInishgtsResults = ({data, activeInsight, requestQuery,activeProject 
                         <Number suffix={'%'} number={data.percentage} />
                     </Tag>
                     <Text type={"title"} level={7} extraClass={"m-0 mx-2"}>{`${data.isIncrease ? 'Increase' : 'Decrease'}  where`}</Text>
-                    <Tag className={'m-0 mx-2'} className={'fa-tag--regular fa-tag--highlight'}>{matchEventName(item.key)}</Tag>
+                    <Tag  className={'fa-tag--regular fa-tag--highlight'}>{matchEventName(item.key)}</Tag>
                     <Text type={"title"} level={7} extraClass={"m-0 ml-2"}>is</Text>
                     <Text type={"title"} level={7} weight={'bold'} extraClass={"m-0 ml-1 mr-2"} truncate={true} charLimit={50}>{`${item.value}`}</Text>
                     <Text type={"title"} weight={'thin'} color={'grey'} level={8} extraClass={"m-0"}>{`(`}<Number number={data?.w1}   /> {` -> `}<Number number={data?.w2}   />{`)`}</Text>
@@ -180,7 +180,7 @@ const WeeklyInishgtsResults = ({data, activeInsight, requestQuery,activeProject 
     const genBody = (item)=> {
         const prevalance = item.change_in_prevalance;
         const conversion = item.change_in_conversion;   
-        if(item?.category== 'kpi' ){
+        if(item?.category== 'kpi' || item?.category== 'kpi_events'){
             const data = item?.change_in_scale;
             const value1 = data?.w1[0];
             const value2 = data?.w2[0];
@@ -189,7 +189,7 @@ const WeeklyInishgtsResults = ({data, activeInsight, requestQuery,activeProject 
             return( 
                     <div className={'flex  items-center pl-10'}> 
                         <Text type={"title"} weight={'thin'} color={'grey'} level={8} extraClass={"m-0 mr-2"}> {`Scale of`}</Text> 
-                        <Tag className={'m-0 mx-2'}>{matchEventName(item.key)}</Tag>
+                        <Tag >{matchEventName(item.key)}</Tag>
                         <Text type={"title"} weight={'thin'} color={'grey'} level={8} extraClass={"m-0 ml-1"}> {`=`}</Text> 
                         <Text type={"title"} weight={'bold'} color={'grey'} level={8} extraClass={"m-0 ml-1"} truncate={true} charLimit={50}>{item.value}</Text>
                         <Text type={"title"} weight={'thin'} color={'grey'} level={8} extraClass={"m-0 ml-1"}>{`${data.isIncrease[0] ? 'has increased' : 'has decreased'} from`}</Text>  
@@ -205,7 +205,7 @@ const WeeklyInishgtsResults = ({data, activeInsight, requestQuery,activeProject 
             return( 
                     <div className={'flex  items-center pl-10'}> 
                         <Text type={"title"} weight={'thin'} color={'grey'} level={8} extraClass={"m-0 mr-2"}> {`Share of`}</Text> 
-                        <Tag className={'m-0 mx-2'} className={'fa-tag--regular fa-tag--highlight'}>{matchEventName(item.key)}</Tag>
+                        <Tag  className={'fa-tag--regular fa-tag--highlight'}>{matchEventName(item.key)}</Tag>
                         <Text type={"title"} weight={'thin'} color={'grey'} level={8} extraClass={"m-0 ml-1"}> {`is`}</Text> 
                         <Text type={"title"} weight={'bold'} color={'grey'} level={8} extraClass={"m-0 ml-1"} truncate={true} charLimit={50}>{item.value}</Text>
                         <Text type={"title"} weight={'thin'} color={'grey'} level={8} extraClass={"m-0 mx-1"}>{`${data.isIncrease ? 'increased' : 'decreased'} by`}</Text>  
@@ -348,11 +348,12 @@ const WeeklyInishgtsResults = ({data, activeInsight, requestQuery,activeProject 
                             className={`fa-insights--panel`}
                             onChange={panelActive}
                         >
-                            {data?.actual_metrics && data?.actual_metrics?.map((item, index) => { 
+                            {data?.actual_metrics && data?.actual_metrics?.map((item, index) => {
                                 return (
                                     <Panel 
                                      className={'fa-insights--panel-item'}
                                      header={genHeader(item,index, data)} key={index} 
+                                     collapsible={item?.category == 'kpi_campaign' ? 'disabled' : ''}
                                      > 
                                         {genBody(item)}
                                     </Panel>

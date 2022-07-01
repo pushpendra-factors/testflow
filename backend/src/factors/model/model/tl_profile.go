@@ -40,6 +40,12 @@ type GroupsInfo struct {
 }
 
 type ContactActivity struct {
-	EventName string `json:"event_name"`
-	Timestamp uint64 `json:"timestamp"`
+	EventName   string `json:"event_name"`
+	DisplayName string `json:"display_name"`
+	Timestamp   uint64 `json:"timestamp"`
+}
+
+type UTListPayload struct {
+	Source  string          `json:"source"`
+	Filters []QueryProperty `json:"filters"`
 }

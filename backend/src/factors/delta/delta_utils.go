@@ -306,6 +306,7 @@ type DiffMetric struct {
 }
 
 type WithinPeriodInsightsKpi struct {
+	Category   string      `json:"categ"`
 	MetricInfo *MetricInfo `json:"metric"`
 	ScaleInfo  *MetricInfo `json:"scale"`
 }
@@ -316,6 +317,7 @@ type CrossPeriodInsightsKpi struct {
 	BaseAndTarget *CpiMetricInfo `json:"base_target"`
 	ScaleInfo     *CpiMetricInfo `json:"scale"`
 	JSDivergence  JSDType        `json:"jsd"`
+	Category      string         `json:"categ"`
 }
 
 type CpiMetricInfo struct {

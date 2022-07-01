@@ -21,7 +21,13 @@
                 }
             }
         }
+        &.ant-collapse-item-disabled {
+            .ant-collapse-arrow{
+                display: none;
+            }
+        }
     }
+
 }   
 
 

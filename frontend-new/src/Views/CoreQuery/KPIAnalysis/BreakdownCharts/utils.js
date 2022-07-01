@@ -1,6 +1,7 @@
 import React from 'react';
 import get from 'lodash/get';
 import has from 'lodash/has';
+import findIndex from 'lodash/findIndex';
 import moment from 'moment';
 
 import { Number as NumFormat } from '../../../../components/factorsComponents';
@@ -26,8 +27,20 @@ import tableStyles from '../../../../components/DataTable/index.module.scss';
 import NonClickableTableHeader from '../../../../components/NonClickableTableHeader';
 
 import { getKpiLabel, getFormattedKpiValue } from '../kpiAnalysis.helpers';
+import { BREAKDOWN_TYPES } from '../../constants';
 
-export const getDefaultSortProp = (kpis) => {
+export const getDefaultSortProp = ({ kpis, breakdown }) => {
+  const dateTimeBreakdownIndex = findIndex(breakdown, b => b.prop_type === BREAKDOWN_TYPES.DATETIME);
+  if (dateTimeBreakdownIndex > -1) {
+    return [
+      {
+        key: `${breakdown[dateTimeBreakdownIndex].property} - ${dateTimeBreakdownIndex}`,
+        type: BREAKDOWN_TYPES.DATETIME,
+        subtype: get(breakdown[dateTimeBreakdownIndex], 'grn', null),
+        order: 'descend'
+      }
+    ];
+  }
   if (Array.isArray(kpis) && kpis.length) {
     return [
       {

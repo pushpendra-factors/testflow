@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Row, Col, Table } from 'antd';
-import { Text } from '../../factorsComponents';
+import { Table, Button, Spin, notification } from 'antd';
+import { Text, SVG } from '../../factorsComponents';
 import Modal from 'antd/lib/modal/Modal';
 import ContactDetails from './ContactDetails';
 import { connect } from 'react-redux';
@@ -10,14 +10,24 @@ import {
 } from '../../../reducers/timeline';
 import moment from 'moment';
 import { bindActionCreators } from 'redux';
+import {
+  ProfileMapper,
+  profileOptions,
+  ReverseProfileMapper,
+} from '../../../utils/constants';
+import FaSelect from '../../FaSelect';
+import { getUserProperties } from '../../../reducers/coreQuery/middleware';
+import PropertyFilter from './PropertyFilter';
+import { operatorMap } from '../../../Views/CoreQuery/utils';
 
-const UserProfiles = ({
+function UserProfiles({
   activeProject,
   contacts,
   userDetails,
   fetchProfileUsers,
   fetchProfileUserDetails,
-}) => {
+  getUserProperties,
+}) {
   const columns = [
     {
       title: 'Identity',
@@ -37,11 +47,17 @@ const UserProfiles = ({
       render: (item) => moment(item).format('DD MMMM YYYY, hh:mm:ss'),
     },
   ];
-
+  const [usersLoading, setUsersLoading] = useState(true);
+  const [isDDVisible, setDDVisible] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
 
+  const [filterPayload, setFilterPayload] = useState({
+    source: 'web',
+    filters: [],
+  });
+
   useEffect(() => {
-    fetchProfileUsers(activeProject.id);
+    getUserProperties(activeProject.id);
   }, [activeProject]);
 
   const showModal = () => {
@@ -52,43 +68,157 @@ const UserProfiles = ({
     setIsModalVisible(false);
   };
 
+  const onChange = (val) => {
+    if ((ProfileMapper[val[0]] || val[0]) !== filterPayload.source) {
+      setUsersLoading(true);
+      const opts = Object.assign({}, filterPayload);
+      opts.source = ProfileMapper[val[0]] || val[0];
+      setFilterPayload(opts);
+    }
+    setDDVisible(false);
+  };
+
+  const setFilters = (filters) => {
+    setUsersLoading(true);
+    const opts = Object.assign({}, filterPayload);
+    opts.filters = filters;
+    setFilterPayload(opts);
+  };
+
+  const clearFilters = () => {
+    setUsersLoading(true);
+    const opts = Object.assign({}, filterPayload);
+    opts.filters = [];
+    setFilterPayload(opts);
+  };
+
+  const formatFiltersForPayload = (filters = []) => {
+    const filterProps = [];
+    filters.forEach((fil) => {
+      if (Array.isArray(fil.values)) {
+        fil.values.forEach((val, index) => {
+          filterProps.push({
+            en: 'user_g',
+            lop: !index ? 'AND' : 'OR',
+            op: operatorMap[fil.operator],
+            pr: fil.props[0],
+            ty: fil.props[1],
+            va: fil.props[1] === 'datetime' ? val : val,
+          });
+        });
+      } else {
+        filterProps.push({
+          en: 'user_g',
+          lop: 'AND',
+          op: operatorMap[fil.operator],
+          pr: fil.props[0],
+          ty: fil.props[1],
+          va: fil.props[1] === 'datetime' ? fil.values : fil.values,
+        });
+      }
+    });
+    return filterProps;
+  };
+
+  useEffect(() => {
+    (async () => {
+      const opts = Object.assign({}, filterPayload);
+      opts.filters = formatFiltersForPayload(filterPayload.filters);
+      try {
+        await fetchProfileUsers(activeProject.id, opts);
+        setUsersLoading(false);
+      } catch (err) {
+        notification.error({
+          message: 'Error loading users.',
+          description: getErrorMessage(err),
+          duration: 3,
+        });
+      }
+    })();
+  }, [activeProject, filterPayload]);
+
+  const selectUsers = () => {
+    return (
+      <div className='absolute top-0'>
+        {isDDVisible ? (
+          <FaSelect
+            options={[['All'], ...profileOptions.users]}
+            onClickOutside={() => setDDVisible(false)}
+            optionClick={(val) => onChange(val)}
+          ></FaSelect>
+        ) : null}
+      </div>
+    );
+  };
+
   return (
     <div className={'fa-container mt-24 mb-12 min-h-screen'}>
-      <Row gutter={[24, 24]} justify='center'>
-        <Col span={24}>
-          <Col span={24}>
-            <Text
-              type={'title'}
-              level={3}
-              weight={'bold'}
-              extraClass={'m-0 mb-4'}
+      <Text type={'title'} level={3} weight={'bold'}>
+        User Profiles
+      </Text>
+      <div className='flex justify-between items-start my-4'>
+        <div className='flex items-start'>
+          <div className='relative mr-2'>
+            {
+              <Button
+                className='fa-dd--custom-btn'
+                type='text'
+                icon={<SVG name='user_friends' size={16} />}
+                onClick={() => setDDVisible(!isDDVisible)}
+              >
+                {ReverseProfileMapper[filterPayload.source]?.users || 'All'}
+                <SVG name='caretDown' size={16} />
+              </Button>
+            }
+            {selectUsers()}
+          </div>
+          <div key={0} className='max-w-3xl'>
+            <PropertyFilter
+              filters={filterPayload.filters}
+              setFilters={setFilters}
+              onFiltersLoad={[() => getUserProperties(activeProject.id)]}
+            ></PropertyFilter>
+          </div>
+        </div>
+        {filterPayload.filters.length ? (
+          <div>
+            <Button
+              className='fa-dd--custom-btn'
+              type='text'
+              icon={<SVG name='times_circle' size={16} />}
+              onClick={clearFilters}
             >
-              User Profiles
-            </Text>
-          </Col>
-          <Col span={24}>
-            <Table
-              onRow={(user) => {
-                return {
-                  onClick: () => {
-                    fetchProfileUserDetails(
-                      activeProject.id,
-                      user.identity,
-                      user.is_anonymous
-                    );
-                    showModal();
-                  },
-                };
-              }}
-              className='fa-table--basic'
-              dataSource={contacts}
-              columns={columns}
-              rowClassName='cursor-pointer'
-              pagination={{ position: ['bottom', 'left'] }}
-            />
-          </Col>
-        </Col>
-      </Row>
+              Clear Filters
+            </Button>
+          </div>
+        ) : null}
+      </div>
+      {usersLoading ? (
+        <Spin size={'large'} className={'fa-page-loader'} />
+      ) : (
+        <div>
+          <Table
+            onRow={(user) => {
+              return {
+                onClick: () => {
+                  fetchProfileUserDetails(
+                    activeProject.id,
+                    user.identity,
+                    user.is_anonymous
+                  );
+                  showModal();
+                },
+              };
+            }}
+            className='fa-table--basic'
+            dataSource={contacts}
+            columns={columns}
+            rowClassName='cursor-pointer'
+            pagination={{ position: ['bottom', 'left'] }}
+          />
+        </div>
+      )}
+
       <Modal
         title={null}
         visible={isModalVisible}
@@ -101,7 +231,7 @@ const UserProfiles = ({
       </Modal>
     </div>
   );
-};
+}
 
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
@@ -114,6 +244,7 @@ const mapDispatchToProps = (dispatch) =>
     {
       fetchProfileUsers,
       fetchProfileUserDetails,
+      getUserProperties,
     },
     dispatch
   );

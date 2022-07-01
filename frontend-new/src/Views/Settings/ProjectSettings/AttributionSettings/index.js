@@ -35,7 +35,6 @@ const AttributionSettings = ({
   useEffect(() => {
     if (currentProjectSettings?.attribution_config) {
       setAttrConfig(currentProjectSettings.attribution_config);
-      console.log('I was called');
     }
   }, [currentProjectSettings]);
 
@@ -95,9 +94,7 @@ const AttributionSettings = ({
 
   const kpiList = (header) => {
     const blockList = [];
-    const value = attrConfig?.kpis_to_attribute[header]
-      ? attrConfig?.kpis_to_attribute[header]
-      : [];
+    const value = attrConfig?.kpis_to_attribute[header] || [];
 
     value.forEach((ev, index) => {
       blockList.push(

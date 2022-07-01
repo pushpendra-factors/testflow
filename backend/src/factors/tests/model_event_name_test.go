@@ -920,6 +920,51 @@ func TestSmartCRMFilterCreation(t *testing.T) {
 	}
 
 	assert.Equal(t, intComp, &smartCRMEvents[intFilterIndex].FilterExpr)
+
+	// de duplicate using timestamp reference field
+	rule := &model.SmartCRMEventFilter{
+		Source:               model.SmartCRMEventSourceSalesforce,
+		ObjectType:           "contact",
+		Description:          "salesforce contact",
+		FilterEvaluationType: model.FilterEvaluationTypeSpecific,
+		Filters: []model.PropertyFilter{
+			{
+				Name: "hs_count",
+				Rules: []model.CRMFilterRule{
+					{
+						PropertyState: model.CurrentState,
+						Value:         "5",
+						Operator:      model.COMPARE_GREATER_THAN,
+					},
+					{
+						PropertyState: model.PreviousState,
+						Value:         "4",
+						Operator:      model.COMPARE_GREATER_THAN,
+					},
+				},
+				LogicalOp: model.LOGICAL_OP_AND,
+			},
+		},
+		LogicalOp:               model.LOGICAL_OP_AND,
+		TimestampReferenceField: "time",
+	}
+	requestPayload = make(map[string]interface{})
+	requestPayload["name"] = "smartEvent_same_rule_1"
+	requestPayload["expr"] = rule
+
+	w = sendUpdateSmartEventFilterReq(r, project.ID, agent, &requestPayload, smartCRMEvents[intFilterIndex].EventNameID)
+	assert.Equal(t, http.StatusAccepted, w.Code)
+	// same rule with timestamp field should be blocked
+	w = sendUpdateSmartEventFilterReq(r, project.ID, agent, &requestPayload, smartCRMEvents[intFilterIndex].EventNameID)
+	assert.Equal(t, http.StatusConflict, w.Code)
+	// change only timestamp reference field should be allowed
+	rule.TimestampReferenceField = "time_1"
+	requestPayload = make(map[string]interface{})
+	requestPayload["name"] = "smartEvent_same_rule_1"
+	requestPayload["expr"] = rule
+	w = sendUpdateSmartEventFilterReq(r, project.ID, agent, &requestPayload, smartCRMEvents[intFilterIndex].EventNameID)
+	assert.Equal(t, http.StatusAccepted, w.Code)
+
 }
 
 func TestSmartCRMFilterBoolCompare(t *testing.T) {

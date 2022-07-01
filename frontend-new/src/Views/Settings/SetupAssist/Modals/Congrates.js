@@ -9,12 +9,13 @@ import InviteMembers from './InviteMembers';
 import styles from './index.module.scss';
 
 
-function Congrates({handleCancel}) {
+function Congrates({handleCancel, handleReset}) {
     const [showInvite, setShowInvite] = useState(false);
     const history = useHistory();
 
     const handleContinue = () => {
         handleCancel();
+        handleReset();
         history.push('/welcome');
     }
 
@@ -60,7 +61,7 @@ function Congrates({handleCancel}) {
             </div>
       </div>
     } {
-        showInvite && <InviteMembers handleCancel = {handleCancel} />
+        showInvite && <InviteMembers handleCancel = {handleCancel} setShowInvite={setShowInvite} />
     }
     </>
 

@@ -55,13 +55,13 @@ const BreakdownCharts = forwardRef(
     const [sorter, setSorter] = useState(
       savedQuerySettings.sorter && Array.isArray(savedQuerySettings.sorter)
         ? savedQuerySettings.sorter
-        : getDefaultSortProp(kpis)
+        : getDefaultSortProp({ kpis, breakdown })
     );
     const [dateSorter, setDateSorter] = useState(
       savedQuerySettings.dateSorter &&
         Array.isArray(savedQuerySettings.dateSorter)
         ? savedQuerySettings.dateSorter
-        : getDefaultSortProp(kpis)
+        : getDefaultSortProp({ kpis, breakdown })
     );
     const [aggregateData, setAggregateData] = useState([]);
     const [categories, setCategories] = useState([]);
