@@ -24,9 +24,9 @@ type ContactDetails struct {
 	Role              string            `json:"role"`
 	Email             string            `json:"email"`
 	Country           string            `json:"country"`
-	WebSessionsCount  uint32            `json:"web_sessions_count"`
-	TimeSpentOnSite   uint32            `json:"time_spent_on_site"`
-	NumberOfPageViews uint32            `json:"number_of_page_views"`
+	WebSessionsCount  float64           `json:"web_sessions_count"`
+	TimeSpentOnSite   float64           `json:"time_spent_on_site"`
+	NumberOfPageViews float64           `json:"number_of_page_views"`
 	Group1            bool              `gorm:"default:false;column:group_1" json:"group_1"`
 	Group2            bool              `gorm:"default:false;column:group_2" json:"group_2"`
 	Group3            bool              `gorm:"default:false;column:group_3" json:"group_3"`
