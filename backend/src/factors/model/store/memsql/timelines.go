@@ -112,16 +112,16 @@ func (store *MemSQL) GetProfileUserDetailsByID(projectID uint64, identity string
 		return nil, http.StatusInternalServerError
 	}
 
-	str := []string{`SELECT event_names.name AS event_name, events.timestamp AS timestamp 
-        FROM (SELECT project_id, user_id, event_name_id, timestamp FROM events WHERE project_id=? AND timestamp < ? LIMIT 5000) AS events
+	str := []string{`SELECT event_names.name AS event_name, events1.timestamp AS timestamp 
+        FROM (SELECT project_id, event_name_id, timestamp FROM events WHERE 
+			project_id=? AND timestamp <= ? AND 
+			user_id IN (SELECT id FROM users WHERE project_id=? AND`, userId, `= ?)  LIMIT 5000) AS events1
         LEFT JOIN event_names 
-        ON events.event_name_id=event_names.id 
-        WHERE events.project_id=? 
-        AND user_id 
-        IN (SELECT id FROM users WHERE project_id=? AND`, userId, `= ?) 
+        ON events1.event_name_id=event_names.id 
+        WHERE events1.project_id=? 
 		ORDER BY timestamp DESC;`}
 	eventsQuery := strings.Join(str, " ")
-	rows, err := db.Raw(eventsQuery, projectID, gorm.NowFunc().Unix(), projectID, projectID, identity).Rows()
+	rows, err := db.Raw(eventsQuery, projectID, gorm.NowFunc().Unix(), projectID, identity, projectID).Rows()
 	if err != nil {
 		log.WithError(err).Error("Failed to get events")
 		return nil, http.StatusNotFound
