@@ -13,7 +13,9 @@ const { SubMenu } = Menu;
 
 const whiteListedAccounts = [
   'solutions@factors.ai',
-  'baliga@factors.ai'
+  'baliga@factors.ai',
+  'sonali@factors.ai',
+  'praveenr@factors.ai',
 ];
 
 const MenuItems = {

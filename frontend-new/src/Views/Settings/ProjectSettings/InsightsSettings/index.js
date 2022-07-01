@@ -26,10 +26,10 @@ const InsightsSettings = ({
   const whiteListedAccounts = [
     'baliga@factors.ai',
     'solutions@factors.ai',
+    'sonali@factors.ai',
+    'praveenr@factors.ai',
     //   'janani@factors.ai', 
     //   'praveenr@factors.ai',
-    //   'sonali@factors.ai',
-    //   'praveen@factors.ai',
     //   'ashwin@factors.ai',
   ];
 
@@ -83,9 +83,9 @@ const InsightsSettings = ({
             <div span={24} className={'flex flex-start items-center mt-2'}>
               <span style={{ width: '50px' }}><Switch checkedChildren="On"
                 // disabled={enableEdit} 
-                defaultChecked={projectSettings?.is_explain_enabled}
+                defaultChecked={projectSettings?.is_weekly_insights_enabled} 
                 unCheckedChildren="OFF"
-                onChange={toggleEnableExplain}
+                onChange={toggleEnableWI}
 
               /></span>
               <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-2'}>Weekly Insights</Text>
@@ -96,9 +96,9 @@ const InsightsSettings = ({
             <div span={24} className={'flex flex-start items-center mt-2'}>
               <span style={{ width: '50px' }}><Switch checkedChildren="On"
                 // disabled={enableEdit} 
-                defaultChecked={projectSettings?.is_weekly_insights_enabled}
+                defaultChecked={projectSettings?.is_explain_enabled}
                 unCheckedChildren="OFF"
-                onChange={toggleEnableWI}
+                onChange={toggleEnableExplain}
               /></span>
               <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-2'}>Explain Insights</Text>
             </div>
