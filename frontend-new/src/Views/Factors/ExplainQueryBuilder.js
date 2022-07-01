@@ -358,6 +358,15 @@ const CreateGoalDrawer = (props) => {
     setShowEventsToIncDD(false);
   };
 
+  const removeEvent1 = () =>{
+    setEvent1(null);
+    setfiltersEvent1([]);
+  }
+  const removeEvent2 = () =>{
+    setEvent2(null);
+    setfiltersEvent2([]);
+  }
+
   const modelMetadataDDValue = modelMetadata?.map((item) => { return [matchEventName(item)] })
   const queryBuilderCollapse = !_.isEmpty(props?.goal_insights?.insights)
 
@@ -445,8 +454,8 @@ const CreateGoalDrawer = (props) => {
                           }
                         </div>
                       </div>
-                      {event1 && <Button type={'text'} onClick={() => setEventFilter1DD(true)} className={'fa-btn--custom m-0'}><SVG name={'filter'} extraClass={'m-0'} /></Button>}
-                      {event1 && <Button type={'text'} onClick={() => setEvent1(null)} className={'fa-btn--custom m-0'}><SVG name={'delete'} extraClass={'m-0'} /></Button>}
+                      {(event1 && filtersEvent1.length<1) && <Button type={'text'} onClick={() => setEventFilter1DD(true)} className={'fa-btn--custom m-0'}><SVG name={'filter'} extraClass={'m-0'} /></Button>}
+                      {event1 && <Button type={'text'} onClick={() => removeEvent1()} className={'fa-btn--custom m-0'}><SVG name={'delete'} extraClass={'m-0'} /></Button>}
                     </div>
                     <EventFilterBy event={event1} setfiltersParent={setfiltersEvent1} showEventFilterDD={showEventFilter1DD} setEventFilterDD={setEventFilter1DD} />
                   </div>
@@ -495,8 +504,8 @@ const CreateGoalDrawer = (props) => {
                             }
                           </div>
                         </div>
-                        {event2 && <Button type={'text'} onClick={() => setEventFilter2DD(true)} className={'fa-btn--custom m-0'}><SVG name={'filter'} extraClass={'m-0'} /></Button>}
-                        {event2 && <Button type={'text'} onClick={() => setEvent2(null)} className={'fa-btn--custom m-0'}><SVG name={'delete'} extraClass={'m-0'} /></Button>}
+                        {(event2 && filtersEvent2.length<1) && <Button type={'text'} onClick={() => setEventFilter2DD(true)} className={'fa-btn--custom m-0'}><SVG name={'filter'} extraClass={'m-0'} /></Button>}
+                        {event2 && <Button type={'text'} onClick={() => removeEvent2()} className={'fa-btn--custom m-0'}><SVG name={'delete'} extraClass={'m-0'} /></Button>}
                       </div>
                       <EventFilterBy event={event2} setfiltersParent={setfiltersEvent2} showEventFilterDD={showEventFilter2DD} setEventFilterDD={setEventFilter2DD} />
                       {/* {event2 && <EventFilterBy setfiltersParent={setfiltersEvent2} /> } */}
