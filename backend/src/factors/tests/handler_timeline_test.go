@@ -141,7 +141,7 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 	group3, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_SALESFORCE_OPPORTUNITY, model.AllowedGroupNames)
 	assert.NotNil(t, group3)
 	assert.Equal(t, http.StatusCreated, status)
-	group4, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_SALESFORCE_OPPORTUNITY, model.AllowedGroupNames)
+	group4, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_HUBSPOT_DEAL, model.AllowedGroupNames)
 	assert.NotNil(t, group4)
 	assert.Equal(t, http.StatusCreated, status)
 
@@ -229,13 +229,12 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 		assert.Equal(t, resp.Company, "Freshworks")
 		assert.Equal(t, resp.Email, customerEmail)
 		assert.Equal(t, resp.Country, "Australia")
-		assert.Equal(t, resp.WebSessionsCount, uint32(8))
-		assert.Equal(t, resp.NumberOfPageViews, uint32(10))
-		assert.Equal(t, resp.TimeSpentOnSite, uint32(500))
+		assert.Equal(t, resp.WebSessionsCount, float64(8))
+		assert.Equal(t, resp.NumberOfPageViews, float64(10))
+		assert.Equal(t, resp.TimeSpentOnSite, float64(500))
 		assert.NotNil(t, resp.GroupInfos)
 		assert.Condition(t, func() bool { return len(resp.GroupInfos) <= 4 })
 		assert.Equal(t, resp.GroupInfos[0].GroupName, model.GROUP_NAME_HUBSPOT_COMPANY)
-		assert.Equal(t, resp.GroupInfos[len(resp.GroupInfos)-1].GroupName, model.GROUP_NAME_SALESFORCE_OPPORTUNITY)
 		assert.NotNil(t, resp.UserActivity)
 		assert.Condition(t, func() bool {
 			if resp.UserActivity == nil {
