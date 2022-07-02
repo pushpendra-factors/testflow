@@ -371,6 +371,12 @@ type Model interface {
 	SearchQueriesWithProjectId(projectID uint64, searchString string) ([]model.Queries, int)
 	GetAllNonConvertedQueries(projectID uint64) ([]model.Queries, int)
 
+	// dashboard_templates
+	CreateTemplate(template *model.DashboardTemplate) (*model.DashboardTemplate, int, string)
+	DeleteTemplate(templateId string) int
+	SearchTemplateWithTemplateID(templateId string) (model.DashboardTemplate, int)
+	GetAllTemplates() ([]model.DashboardTemplate, int)
+
 	// salesforce_document
 	GetSalesforceSyncInfo() (model.SalesforceSyncInfo, int)
 	GetSalesforceObjectPropertiesName(ProjectID uint64, objectType string) ([]string, []string)
