@@ -214,7 +214,7 @@ function PropertyValueModal({
         <Row className={'mt-8'}>
           <Col span={24}>
             <Text type={'title'} level={7} extraClass={'m-0'}>Condition(s)</Text>
-          <div style={{'width':"100%", 'overflow':'hidden'}}>
+          <div style={{'width':"100%"}}>
             <GlobalFilter event={{ label: '$session' }} filters={globalFilters} setGlobalFilters={setGlobalFilters} />
           </div>
 
