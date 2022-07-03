@@ -142,15 +142,15 @@ func GenerateDashboardFromTemplateHandler(c *gin.Context){
 	}
 
 	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
-	var dashboardDetails model.Dashboard
+	var dashboardDetails *model.Dashboard
 	json.Unmarshal(DashboardTemplate.Dashboard.RawMessage, dashboardDetails)
 
-	var unitsArray []model.UnitInfo
+	var unitsArray *[]model.UnitInfo
 	json.Unmarshal(DashboardTemplate.Units.RawMessage, unitsArray)
 	q, _ := json.Marshal(unitsArray)
 
 	var queryArray []model.Query
-	for _, unit := range unitsArray {
+	for _, unit := range *unitsArray {
 		var queryValue model.Query
 		json.Unmarshal(unit.Query.RawMessage, queryValue)
 		queryArray = append(queryArray, queryValue)
@@ -163,14 +163,14 @@ func GenerateDashboardFromTemplateHandler(c *gin.Context){
 	dashboardDetails.IsDeleted = false
 	dashboardDetails.ProjectId = projectID
 
-	dashboard, err := store.GetStore().CreateDashboard(projectID, agentUUID, &dashboardDetails)
+	dashboard, err := store.GetStore().CreateDashboard(projectID, agentUUID, dashboardDetails)
 	if err != http.StatusCreated {
 		c.AbortWithStatusJSON(err, "error")
 	}
 	c.JSON(http.StatusCreated, dashboard)
 }
 
-func GenerateTemplateFromDashboardHandler(c *gin.Context){
+func GenerateTemplateFromDashboardHandler(c *gin.Context) {
 	// extract the project Id and agentUUID from the url similarly to dashboardId. USe it as arguments
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
@@ -205,7 +205,8 @@ func GenerateTemplateFromDashboardHandler(c *gin.Context){
 	dashboardValues.Type = dashboardParams.Type
 	dashboardValues.Class = dashboardParams.Class
 	dashboardValues.UnitsPosition = dashboardParams.UnitsPosition
-
+	dash, _ := json.Marshal(dashboardValues)
+	dashboardTemplate.Dashboard = postgres.Jsonb{json.RawMessage(dash)}
 
 	UnitsInDashboard, _ := store.GetStore().GetDashboardUnits(projectId, agentUUID, dashboardParams.ID)
 
