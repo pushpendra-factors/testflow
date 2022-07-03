@@ -1,35 +1,22 @@
 package tests
 
 import (
-	// "encoding/json"
 	"fmt"
 	"time"
 
-	// C "factors/config"
-	// "factors/handler/helpers"
 	C "factors/config"
 	H "factors/handler"
 	"factors/handler/helpers"
 	"factors/model/model"
 	"factors/model/store"
 	U "factors/util"
-
-	// U "factors/util"
-
-	// "fmt"
 	"net/http"
 	"net/http/httptest"
-
-	// "net/http/httptest"
 	"testing"
-	// "time"
-
-	// "github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin"
-	// "github.com/jinzhu/gorm/dialects/postgres"
+
 	log "github.com/sirupsen/logrus"
 
-	// log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -102,7 +89,7 @@ func sendCreateDashboardFromTemplateReq(r *gin.Engine, projectId uint64, agent *
 	return w
 }
 
-func sendCreateTemplateFromDashboardReq(r *gin.Engine, projectId uint64, agent *model.Agent, dashboardID uint64, dashboard *model.Dashboard) *httptest.ResponseRecorder {
+func sendCreateTemplateFromDashboardReq(r *gin.Engine, projectId uint64, agent *model.Agent, dashboardID int64, dashboard *model.Dashboard) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")

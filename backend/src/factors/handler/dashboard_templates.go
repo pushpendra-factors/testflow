@@ -179,7 +179,7 @@ func GenerateTemplateFromDashboardHandler(c *gin.Context){
 	}
 
 	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
-	dashboardId, err := strconv.ParseUint(c.Params.ByName("dashboard_id"), 10, 64)
+	dashboardId, err := strconv.ParseInt(c.Params.ByName("dashboard_id"), 10, 64)
 	if err != nil || dashboardId == 0 {
 		log.WithError(err).Error("Update dashboard failed. Invalid dashboard.")
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid dashboard id."})
