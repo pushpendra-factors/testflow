@@ -1,7 +1,9 @@
 package tests
 
 import (
+	"encoding/json"
 	"fmt"
+	"github.com/jinzhu/gorm/dialects/postgres"
 	"time"
 
 	C "factors/config"
@@ -10,33 +12,104 @@ import (
 	"factors/model/model"
 	"factors/model/store"
 	U "factors/util"
+	"github.com/gin-gonic/gin"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"github.com/gin-gonic/gin"
 
 	log "github.com/sirupsen/logrus"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func TestCreateDashboardTemplate(t *testing.T){
+func TestCreateDashboardTemplate(t *testing.T) {
 
 	rName := U.RandomString(5)
 	rDesc := U.RandomString(10)
 	t.Run("CreateDashboardTemplate", func(t *testing.T) {
 		template, errCode, str := store.GetStore().CreateTemplate(
 			&model.DashboardTemplate{
-				Title: rName, 
-				Description: rDesc, 
-	})
+				Title:       rName,
+				Description: rDesc,
+			})
 		assert.NotNil(t, template)
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.Equal(t, "", str)
 	})
 }
 
-func TestDeleteDashboardTemplate(t *testing.T){
+func TestCreateDashboardTemplateData(t *testing.T) {
+
+	rName := U.RandomString(5)
+	rDesc := U.RandomString(10)
+	t.Run("CreateDashboardTemplate", func(t *testing.T) {
+		template, errCode, str := store.GetStore().CreateTemplate(
+			&model.DashboardTemplate{
+				Title:       rName,
+				Description: rDesc,
+
+				Dashboard: &postgres.Jsonb{RawMessage: json.RawMessage(`{"id":1,
+        "name": "First Dashboard in Test Project",
+        "type": "pv",
+        "class": "template_created",
+        "is_deleted":false,
+        "settings":{"type":"public"}}`)},
+				Units: &postgres.Jsonb{RawMessage: json.RawMessage(`[
+        {
+            "id": 1,
+            "title": "Unit 1",
+            "description": "Description 1",
+            "presentation": "sp",
+            "position": 11,
+            "size": 111,
+            "query_type": 1111,
+            "query_settings": {
+                "chart": "x1"
+            },
+            "query": {
+                "cl": "events",
+                "ec": "each_given_event",
+                "ewp": [
+                    {
+                        "an": "",
+                        "na": "Deal Won",
+                        "pr": []
+                    }
+                ]
+            }
+        },
+        {
+            "id": 2,
+            "title": "Unit 2",
+            "description": "Description 2",
+            "presentation": "pb",
+            "position": 22,
+            "size": 222,
+            "query_type": 2222,
+            "query_settings": {
+                "chart": "x2"
+            },
+            "query": {
+                "cl": "events",
+                "ec": "each_given_event",
+                "ewp": [
+                    {
+                        "an": "",
+                        "na": "Deal Won",
+                        "pr": []
+                    }
+                ]
+            }
+        }
+    ]`)},
+			})
+		assert.NotNil(t, template)
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.Equal(t, "", str)
+	})
+}
+
+func TestDeleteDashboardTemplate(t *testing.T) {
 	rName := U.RandomString(5)
 	rDesc := U.RandomString(10)
 	template, errCode, str := store.GetStore().CreateTemplate(&model.DashboardTemplate{Title: rName, Description: rDesc})
@@ -49,7 +122,7 @@ func TestDeleteDashboardTemplate(t *testing.T){
 	})
 }
 
-func TestReadDashboardTemplate(t *testing.T){
+func TestReadDashboardTemplate(t *testing.T) {
 	rName := U.RandomString(5)
 	rDesc := U.RandomString(10)
 	template, errCode, str := store.GetStore().CreateTemplate(&model.DashboardTemplate{Title: rName, Description: rDesc})
@@ -57,7 +130,7 @@ func TestReadDashboardTemplate(t *testing.T){
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.Equal(t, "", str)
 
-	t.Run("ReadDashboardTemplate", func(t *testing.T){
+	t.Run("ReadDashboardTemplate", func(t *testing.T) {
 		template, errCode := store.GetStore().SearchTemplateWithTemplateID(template.ID)
 		assert.NotNil(t, template)
 		assert.Equal(t, 302, errCode)
@@ -72,12 +145,12 @@ func sendCreateDashboardFromTemplateReq(r *gin.Engine, projectId uint64, agent *
 	}
 
 	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, fmt.Sprintf("/projects/%d/dashboard_template/%s/trigger", projectId, templateID)).
-	WithPostParams(dashboardTemplate).
-	WithCookie(&http.Cookie{
-		Name: C.GetFactorsCookieName(),
-		Value: cookieData,
-		MaxAge: 1000,
-	})
+		WithPostParams(dashboardTemplate).
+		WithCookie(&http.Cookie{
+			Name:   C.GetFactorsCookieName(),
+			Value:  cookieData,
+			MaxAge: 1000,
+		})
 
 	req, err := rb.Build()
 	if err != nil {
@@ -96,12 +169,12 @@ func sendCreateTemplateFromDashboardReq(r *gin.Engine, projectId uint64, agent *
 	}
 
 	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, fmt.Sprintf("/projects/%d/dashboards/%d/trigger", projectId, dashboard.ID)).
-	WithPostParams(dashboard).
-	WithCookie(&http.Cookie{
-		Name: C.GetFactorsCookieName(),
-		Value: cookieData,
-		MaxAge: 1000,
-	})
+		WithPostParams(dashboard).
+		WithCookie(&http.Cookie{
+			Name:   C.GetFactorsCookieName(),
+			Value:  cookieData,
+			MaxAge: 1000,
+		})
 
 	req, err := rb.Build()
 	if err != nil {
@@ -110,7 +183,7 @@ func sendCreateTemplateFromDashboardReq(r *gin.Engine, projectId uint64, agent *
 
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
-	return w;
+	return w
 }
 
 func TestAPICreateDashboardFromTemplate(t *testing.T) {
@@ -135,12 +208,12 @@ func TestAPICreateDashboardFromTemplate(t *testing.T) {
 		log.Error("Error fetching dashboard from database")
 	}
 
-	t.Run("CreateDashboardFromTemplate:WithNoQuery", func(t *testing.T){
+	t.Run("CreateDashboardFromTemplate:WithNoQuery", func(t *testing.T) {
 		sendCreateDashboardFromTemplateReq(r, project.ID, agent, template2.ID, &template2)
 	})
 }
 
-func TestAPICreateTemplateFromDashboard(t *testing.T){
+func TestAPICreateTemplateFromDashboard(t *testing.T) {
 	//assert.Nil(t, err)
 	r := gin.Default()
 	H.InitAppRoutes(r)
@@ -164,7 +237,7 @@ func TestAPICreateTemplateFromDashboard(t *testing.T){
 		log.Error("Error fetching dashboard from database")
 	}
 
-	t.Run("CreateTemplateFromDashboard:WithNoQuery", func(t *testing.T){
+	t.Run("CreateTemplateFromDashboard:WithNoQuery", func(t *testing.T) {
 		sendCreateTemplateFromDashboardReq(r, project.ID, agent, dashboard2.ID, dashboard2)
 	})
 }

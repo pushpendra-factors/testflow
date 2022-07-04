@@ -116,7 +116,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.PUT("/:project_id/dashboards/:dashboard_id/units/:unit_id", UpdateDashboardUnitHandler)
 	authRouteGroup.DELETE("/:project_id/dashboards/:dashboard_id/units/:unit_id", DeleteDashboardUnitHandler)
 	authRouteGroup.POST("/:project_id/dashboard/:dashboard_id/units/query/web_analytics",
-	DashboardUnitsWebAnalyticsQueryHandler)
+		DashboardUnitsWebAnalyticsQueryHandler)
 	authRouteGroup.GET("/:project_id/event_names", GetEventNamesHandler)
 	authRouteGroup.GET("/:project_id/user/event_names", GetEventNamesByUserHandler)
 	authRouteGroup.GET(":project_id/groups/:group_name/event_names", GetEventNamesByGroupHandler)
@@ -124,6 +124,7 @@ func InitAppRoutes(r *gin.Engine) {
 	// Dashboard templates
 	authRouteGroup.GET("/dashboard_templates/:id/search", SearchTemplateHandler)
 	authRouteGroup.GET("/dashboard_templates", GetDashboardTemplatesHandler)
+	authRouteGroup.POST("/:project_id/dashboard_template/create", CreateTemplateHandler)
 	authRouteGroup.POST("/:project_id/dashboard_template/:id/trigger", GenerateDashboardFromTemplateHandler)
 	authRouteGroup.POST("/:project_id/dashboards/:dashboard_id/trigger", GenerateTemplateFromDashboardHandler)
 
