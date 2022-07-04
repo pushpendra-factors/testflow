@@ -62,7 +62,7 @@ type Model interface {
 	GetLinkedFunnelEventUsersFilter(projectID uint64, queryFrom, queryTo int64,
 		linkedEvents []model.QueryEventWithProperties, eventNameToId map[string][]interface{},
 		userIDInfo map[string]model.UserInfo, logCtx log.Entry) (error, []model.UserEventInfo)
-	GetAdwordsCurrency(projectId uint64, customerAccountId string, from, to int64) (string, error)
+	GetAdwordsCurrency(projectId uint64, customerAccountId string, from, to int64, logCtx log.Entry) (string, error)
 	GetConvertedUsersWithFilter(projectID uint64, goalEventName string,
 		goalEventProperties []model.QueryProperty, conversionFrom, conversionTo int64,
 		eventNameToIdList map[string][]interface{}, logCtx log.Entry) (map[string]model.UserInfo,

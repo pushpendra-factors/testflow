@@ -1257,15 +1257,17 @@ func GetRowsByMapsLandingPage(contentGroupNamesList []string, attributionData *m
 }
 
 func ProcessQueryLandingPageUrl(query *AttributionQuery, attributionData *map[string]*AttributionData, logCtx log.Entry, isCompare bool) *QueryResult {
-
+	logFields := log.Fields{"Method": "ProcessQueryLandingPageUrl"}
+	logCtx = *logCtx.WithFields(logFields)
 	dataRows := GetRowsByMapsLandingPage(query.AttributionContentGroups, attributionData, query.LinkedEvents, isCompare)
+	logCtx.Info("Done GetRowsByMapsLandingPage")
 	result := &QueryResult{}
 	AddHeadersByAttributionKey(result, query, nil, nil)
 
 	result.Rows = dataRows
 
 	// Update result based on Key Dimensions
-	err := GetUpdatedRowsByDimensions(result, query)
+	err := GetUpdatedRowsByDimensions(result, query, logCtx)
 	if err != nil {
 		return nil
 	}
@@ -1285,25 +1287,28 @@ func ProcessQueryLandingPageUrl(query *AttributionQuery, attributionData *map[st
 		}
 		return v1 > v2
 	})
+	logCtx.Info("MergeDataRowsHavingSameKey")
 
 	result.Rows = AddGrandTotalRowLandingPage(result.Headers, result.Rows, GetLastKeyValueIndexLandingPage(result.Headers))
-
+	logCtx.Info("Done AddGrandTotal")
 	return result
 
 }
 
-func ProcessQuery(query *AttributionQuery, attributionData *map[string]*AttributionData, marketingReports *MarketingReports, isCompare bool, projectId uint64) *QueryResult {
-	logCtx := log.WithFields(log.Fields{"Method": "ProcessQuery"})
+func ProcessQuery(query *AttributionQuery, attributionData *map[string]*AttributionData, marketingReports *MarketingReports, isCompare bool, projectId uint64, logCtx log.Entry) *QueryResult {
+	logFields := log.Fields{"Method": "ProcessQuery"}
+	logCtx = *logCtx.WithFields(logFields)
 	// Add additional metrics values
 	ComputeAdditionalMetrics(attributionData)
-
+	logCtx.Info("Done ComputeAdditionalMetrics")
 	// Add custom dimensions
 	AddCustomDimensions(attributionData, query, marketingReports)
 
-	logCtx.Info("Done AddTheAddedKeysAndMetrics AddPerformanceData ApplyFilter ComputeAdditionalMetrics AddCustomDimensions")
+	logCtx.Info("Done AddCustomDimensions")
 	// Attribution data to rows
 	dataRows := GetRowsByMaps(query.AttributionKey, query.AttributionKeyCustomDimension, attributionData, query.LinkedEvents, isCompare)
 
+	logCtx.Info("Done GetRowsByMaps")
 	result := &QueryResult{}
 	AddHeadersByAttributionKey(result, query, nil, nil)
 	result.Rows = dataRows
@@ -1315,12 +1320,12 @@ func ProcessQuery(query *AttributionQuery, attributionData *map[string]*Attribut
 		break
 	}
 	// Update result based on Key Dimensions
-	err := GetUpdatedRowsByDimensions(result, query)
+	err := GetUpdatedRowsByDimensions(result, query, logCtx)
 	if err != nil {
 		return nil
 	}
 
-	result.Rows = MergeDataRowsHavingSameKey(result.Rows, GetLastKeyValueIndex(result.Headers), query.AttributionKey, query.AnalyzeType, goalEventAggFuncTypes, *logCtx)
+	result.Rows = MergeDataRowsHavingSameKey(result.Rows, GetLastKeyValueIndex(result.Headers), query.AttributionKey, query.AnalyzeType, goalEventAggFuncTypes, logCtx)
 
 	// Additional filtering based on AttributionKey.
 	result.Rows = FilterRows(result.Rows, query.AttributionKey, GetLastKeyValueIndex(result.Headers))
@@ -1343,6 +1348,7 @@ func ProcessQuery(query *AttributionQuery, attributionData *map[string]*Attribut
 	})
 
 	result.Rows = AddGrandTotalRow(result.Headers, result.Rows, GetLastKeyValueIndex(result.Headers), query.AnalyzeType, goalEventAggFuncTypes)
+	logCtx.Info("Done AddGrandTotal")
 	return result
 }
 
@@ -1389,7 +1395,7 @@ func ProcessQueryKPI(query *AttributionQuery, attributionData *map[string]*Attri
 	log.WithFields(log.Fields{"KPIAttribution": "Debug", "Result": result}).Info("Before GetUpdatedRowsByDimensions")
 
 	// Update result based on Key Dimensions
-	err := GetUpdatedRowsByDimensions(result, query)
+	err := GetUpdatedRowsByDimensions(result, query, *logCtx)
 	if err != nil {
 		return nil
 	}
@@ -1432,7 +1438,7 @@ func ProcessQueryKPI(query *AttributionQuery, attributionData *map[string]*Attri
 }
 
 // GetUpdatedRowsByDimensions updated the granular result with reduced dimensions
-func GetUpdatedRowsByDimensions(result *QueryResult, query *AttributionQuery) error {
+func GetUpdatedRowsByDimensions(result *QueryResult, query *AttributionQuery, logCtx log.Entry) error {
 
 	validHeadersDimensions := make(map[string]int)
 	for _, val := range query.AttributionKeyDimension {
@@ -1457,6 +1463,13 @@ func GetUpdatedRowsByDimensions(result *QueryResult, query *AttributionQuery) er
 	newRows := make([][]interface{}, 0)
 	for _, data := range result.Rows {
 		var row []interface{}
+		if len(result.Headers) > len(data) {
+			logCtx.WithFields(log.Fields{"data_row": data,
+				"header": result.Headers}).Info("length of data_row is less than header length")
+			for i := len(data); i < len(result.Headers); i++ {
+				data = append(data, float64(0))
+			}
+		}
 		for j, field := range result.Headers {
 			// filter out the Added Key Dimensions if reduced
 			if j <= addedKeysSize && validHeadersDimensions[field] == 0 {
