@@ -150,6 +150,8 @@ func getPropertiesFunctionBasedOnObjectType(objectType string) func(uint64, stri
 		return store.GetStore().GetPropertiesForSalesforce
 	} else if strings.Contains(objectType, U.CRM_SOURCE_NAME_MARKETO) {
 		return store.GetStore().GetPropertiesForMarketo
+	} else if strings.Contains(objectType, U.CRM_SOURCE_NAME_LEADSQUARED) {
+		return store.GetStore().GetPropertiesForLeadSquared
 	}
 	return nil
 }

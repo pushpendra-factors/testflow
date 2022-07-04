@@ -110,6 +110,9 @@ type Model interface {
 	GetKPIConfigsForAllChannels(projectID uint64, reqID string) (map[string]interface{}, int)
 	GetKPIConfigsForMarketoLeads(projectID uint64, reqID string) (map[string]interface{}, int)
 	GetKPIConfigsForMarketo(projectID uint64, reqID string, displayCategory string) (map[string]interface{}, int)
+	GetPropertiesForLeadSquared(projectID uint64, reqID string) []map[string]string
+	GetKPIConfigsForLeadSquaredLeads(projectID uint64, reqID string) (map[string]interface{}, int)
+	GetKPIConfigsForLeadSquared(projectID uint64, reqID string, displayCategory string) (map[string]interface{}, int)
 
 	// ExecuteKPIQueryGroup(kpiQueryGroup model.KPIQueryGroup)
 	ExecuteKPIQueryGroup(projectID uint64, reqID string, kpiQueryGroup model.KPIQueryGroup) ([]model.QueryResult, int)
