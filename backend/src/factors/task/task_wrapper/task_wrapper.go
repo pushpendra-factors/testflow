@@ -72,7 +72,7 @@ func TaskFunc(JobName string, lookback int, f func(map[string]interface{}) (map[
 	return finalStatus
 }
 
-func TaskFuncWithProjectId(JobName string, lookback int, projectIds []uint64, f func(uint64, map[string]interface{}) (map[string]interface{}, bool), configs map[string]interface{}) map[string]interface{} {
+func TaskFuncWithProjectId(JobName string, lookback int, projectIds []int64, f func(int64, map[string]interface{}) (map[string]interface{}, bool), configs map[string]interface{}) map[string]interface{} {
 	taskDetails, _, _ := store.GetStore().GetTaskDetailsByName(JobName)
 	finalStatus := make(map[string]interface{})
 	if taskDetails.IsProjectEnabled == false {

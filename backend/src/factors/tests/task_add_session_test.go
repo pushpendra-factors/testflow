@@ -17,7 +17,7 @@ import (
 	U "factors/util"
 )
 
-func assertAssociatedSession(t *testing.T, projectId uint64, eventIdsInOrder []string,
+func assertAssociatedSession(t *testing.T, projectId int64, eventIdsInOrder []string,
 	skipSessionEventIds []string, message string) (sessionEvent *model.Event) {
 
 	var firstEvent *model.Event
@@ -148,7 +148,7 @@ func TestAddSessionLatestUserProperties(t *testing.T) {
 	assert.Equal(t, "1234567", properitesMap[U.UP_LATEST_CAMPAIGN_ID])
 	assert.Equal(t, "android3", properitesMap[U.UP_OS])
 
-	_, err = TaskSession.AddSession([]uint64{project.ID}, 2*24*60*60, 0, 0, 30, 1, 1)
+	_, err = TaskSession.AddSession([]int64{project.ID}, 2*24*60*60, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 
 	// session created.
@@ -205,7 +205,7 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 	_, errCode = store.GetStore().GetEventName(U.EVENT_NAME_SESSION, project.ID)
 	assert.Equal(t, http.StatusNotFound, errCode)
 
-	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 
 	sessionEvent1 := assertAssociatedSession(t, project.ID, []string{eventId},
@@ -243,7 +243,7 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 	assert.NotEmpty(t, response.UserId)
 	eventId = response.EventId
 
-	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 
 	sessionEvent2 := assertAssociatedSession(t, project.ID, []string{eventId},
@@ -282,7 +282,7 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 	assert.NotEmpty(t, response.UserId)
 	eventId = response.EventId
 
-	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 
 	sessionEvent3 := assertAssociatedSession(t, project.ID, []string{eventId},
@@ -321,7 +321,7 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 	assert.NotEmpty(t, response.UserId)
 	eventId = response.EventId
 
-	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 
 	sessionEvent4 := assertAssociatedSession(t, project.ID, []string{eventId},
@@ -360,7 +360,7 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 	assert.NotEmpty(t, response.UserId)
 	eventId = response.EventId
 
-	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 
 	sessionEvent5 := assertAssociatedSession(t, project.ID, []string{eventId},
@@ -399,7 +399,7 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 	assert.NotEmpty(t, response.UserId)
 	eventId = response.EventId
 
-	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 
 	sessionEvent6 := assertAssociatedSession(t, project.ID, []string{eventId},
@@ -438,7 +438,7 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 	assert.NotEmpty(t, response.UserId)
 	eventId = response.EventId
 
-	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 
 	sessionEvent7 := assertAssociatedSession(t, project.ID, []string{eventId},
@@ -477,7 +477,7 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 	assert.NotEmpty(t, response.UserId)
 	eventId = response.EventId
 
-	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 
 	sessionEvent8 := assertAssociatedSession(t, project.ID, []string{eventId},
@@ -516,7 +516,7 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 	assert.NotEmpty(t, response.UserId)
 	eventId = response.EventId
 
-	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 
 	sessionEvent9 := assertAssociatedSession(t, project.ID, []string{eventId},
@@ -554,7 +554,7 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 	assert.NotEmpty(t, response.UserId)
 	eventId = response.EventId
 
-	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 
 	sessionEvent10 := assertAssociatedSession(t, project.ID, []string{eventId},
@@ -592,7 +592,7 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 	assert.NotEmpty(t, response.UserId)
 	eventId = response.EventId
 
-	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 
 	sessionEvent11 := assertAssociatedSession(t, project.ID, []string{eventId},
@@ -630,7 +630,7 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 	assert.NotEmpty(t, response.UserId)
 	eventId = response.EventId
 
-	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 
 	sessionEvent12 := assertAssociatedSession(t, project.ID, []string{eventId},
@@ -668,7 +668,7 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 	assert.NotEmpty(t, response.UserId)
 	eventId = response.EventId
 
-	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 
 	sessionEvent13 := assertAssociatedSession(t, project.ID, []string{eventId},
@@ -706,7 +706,7 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 	assert.NotEmpty(t, response.UserId)
 	eventId = response.EventId
 
-	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 
 	sessionEvent14 := assertAssociatedSession(t, project.ID, []string{eventId},
@@ -780,7 +780,7 @@ func TestAddSessionOnUserWithContinuousEvents(t *testing.T) {
 	properties, _ := U.DecodePostgresJsonb(&user.Properties)
 	assert.Equal(t, properties1, properties)
 
-	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 
 	U.SanitizeProperties(&trackEventProperties)
@@ -906,7 +906,7 @@ func TestAddSessionOnUserWithContinuousEvents(t *testing.T) {
 	assert.Equal(t, http.StatusOK, status)
 	eventId4 := response.EventId
 
-	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 	U.SanitizeProperties(&trackEventProperties2)
 
@@ -988,7 +988,7 @@ func TestAddSessionOnUserWithContinuousEvents(t *testing.T) {
 	assert.Equal(t, http.StatusOK, status)
 	eventId6 := response.EventId
 
-	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 
 	// should have created session as campaign property exist.
@@ -1021,7 +1021,7 @@ func TestAddSessionOnUserWithContinuousEvents(t *testing.T) {
 	assert.Equal(t, http.StatusOK, status)
 	eventId7 := response.EventId
 
-	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 
 	// New session should be created after a new event.
@@ -1030,7 +1030,7 @@ func TestAddSessionOnUserWithContinuousEvents(t *testing.T) {
 
 	// Last event with marketing property should be process on next run of add session,
 	// to avoid associating previous session.
-	statusMap, err := TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	statusMap, err := TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 	event7, errCode := store.GetStore().GetEventById(project.ID, eventId7, "")
 	assert.Equal(t, errCode, http.StatusFound)
@@ -1038,7 +1038,7 @@ func TestAddSessionOnUserWithContinuousEvents(t *testing.T) {
 	assert.NotEqual(t, *event6.SessionId, *event7.SessionId)
 
 	// Test: Project with no events and all events with session already.
-	statusMap, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	statusMap, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 	assert.Equal(t, "not_modified", statusMap[project.ID].Status)
 }
@@ -1095,13 +1095,13 @@ func TestEventsConsiderationForAddingSession(t *testing.T) {
 		assert.Equal(t, http.StatusOK, status)
 		eventId3 := response.EventId
 
-		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+		_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 		assert.Nil(t, err)
 
 		// No.of sessions created.
 		sessionEventName, _ := store.GetStore().GetEventName(U.EVENT_NAME_SESSION, project.ID)
 		sessionCount, _ := store.GetStore().GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
-		assert.Equal(t, uint64(1), sessionCount)
+		assert.Equal(t, int64(1), sessionCount)
 
 		// Check session association.
 		event1, _ := store.GetStore().GetEvent(project.ID, userId, eventId1)
@@ -1114,7 +1114,7 @@ func TestEventsConsiderationForAddingSession(t *testing.T) {
 
 		// Second run of add_session with same timerange.
 		// Should not change the session associated.
-		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+		_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 		assert.Nil(t, err)
 
 		// Sessions associated events should be the same.
@@ -1171,7 +1171,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		assert.Equal(t, http.StatusOK, status)
 		eventId2 := response.EventId
 
-		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+		_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 		assert.Nil(t, err)
 
 		// No.of sessions created.
@@ -1237,7 +1237,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		assert.Equal(t, http.StatusOK, status)
 		eventId3 := response.EventId
 
-		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+		_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 		assert.Nil(t, err)
 
 		// No.of sessions created.
@@ -1282,7 +1282,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		userId := response.UserId
 		eventId1 := response.EventId
 
-		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+		_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 		assert.Nil(t, err)
 
 		// No.of sessions for user should be 1.
@@ -1320,7 +1320,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		assert.Equal(t, http.StatusOK, status)
 		eventId3 := response.EventId
 
-		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+		_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 		assert.Nil(t, err)
 
 		// No.of sessions created. Session continued.
@@ -1359,7 +1359,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		userId := response.UserId
 		eventId1 := response.EventId
 
-		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+		_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 		assert.Nil(t, err)
 
 		// No.of sessions for user should be 1.
@@ -1384,7 +1384,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		assert.Equal(t, http.StatusOK, status)
 		eventId2 := response.EventId
 
-		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+		_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 		assert.Nil(t, err)
 
 		// No.of sessions created. Session continued.
@@ -1421,7 +1421,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		userId := response.UserId
 		eventId1 := response.EventId
 
-		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+		_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 		assert.Nil(t, err)
 
 		// No.of sessions created.
@@ -1449,7 +1449,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		assert.Equal(t, http.StatusOK, status)
 		eventId2 := response.EventId
 
-		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+		_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 		assert.Nil(t, err)
 
 		// No.of sessions created.
@@ -1487,7 +1487,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		userId := response.UserId
 		eventId1 := response.EventId
 
-		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+		_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 		assert.Nil(t, err)
 
 		// No.of sessions created.
@@ -1512,7 +1512,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		assert.Equal(t, http.StatusOK, status)
 		eventId2 := response.EventId
 
-		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+		_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 		assert.Nil(t, err)
 
 		// No.of sessions created.
@@ -1579,7 +1579,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		assert.Equal(t, http.StatusOK, status)
 		eventId3 := response.EventId
 
-		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+		_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 		assert.Nil(t, err)
 
 		// Check no.of sessions created for user so far.
@@ -1665,7 +1665,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		assert.Equal(t, http.StatusOK, status)
 		eventId4 := response.EventId
 
-		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+		_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 		assert.Nil(t, err)
 
 		// Check no.of sessions created for user so far.
@@ -1741,7 +1741,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		assert.Equal(t, http.StatusOK, status)
 		eventId3 := response.EventId
 
-		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+		_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 		assert.Nil(t, err)
 
 		// Check no.of sessions created for user so far.
@@ -1789,7 +1789,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		userId := response.UserId
 		eventId1 := response.EventId
 
-		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+		_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 		assert.Nil(t, err)
 
 		// Check no.of sessions created for user so far.
@@ -1856,7 +1856,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		assert.Equal(t, http.StatusOK, status)
 		eventId3 := response.EventId
 
-		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+		_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 		assert.Nil(t, err)
 
 		event1, _ := store.GetStore().GetEvent(project.ID, userId, eventId1)
@@ -1902,7 +1902,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		userId := response.UserId
 		eventId1 := response.EventId
 
-		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+		_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 		assert.Nil(t, err)
 
 		// No.of sessions for user should be 1.
@@ -1927,7 +1927,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		assert.Equal(t, http.StatusOK, status)
 		eventId2 := response.EventId
 
-		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+		_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 		assert.Nil(t, err)
 
 		// No.of sessions created. Session continued.
@@ -2008,7 +2008,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		assert.Equal(t, http.StatusOK, status)
 		eventId4 := response.EventId
 
-		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+		_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 		assert.Nil(t, err)
 
 		// No.of sessions created.
@@ -2077,7 +2077,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		assert.Equal(t, http.StatusOK, status)
 		eventId3 := response.EventId
 
-		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+		_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 		assert.Nil(t, err)
 
 		// No.of sessions created.
@@ -2131,7 +2131,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		userId := response.UserId
 		eventId1 := response.EventId
 
-		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+		_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 		assert.Nil(t, err)
 
 		// No.of sessions for user should be 1.
@@ -2168,7 +2168,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		assert.Equal(t, http.StatusOK, status)
 		eventId2 := response.EventId
 
-		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+		_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 		assert.Nil(t, err)
 
 		// No.of sessions created. Session continued.
@@ -2235,7 +2235,7 @@ func TestAddSessionCreationBufferTime(t *testing.T) {
 	eventId2 := response.EventId
 
 	// Should not create session for last event timestmap  - 30 mins.
-	_, err = TaskSession.AddSession([]uint64{project.ID}, 60, 0, 0, 30, 1, 1)
+	_, err = TaskSession.AddSession([]int64{project.ID}, 60, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 
 	event, errCode := store.GetStore().GetEventById(project.ID, eventId, "")
@@ -2340,7 +2340,7 @@ func TestAddSessionMergingEventsOnCommonMarketingProperty(t *testing.T) {
 	assert.Equal(t, DecodePostgresJsonbWithoutError(newUserProperties),
 		DecodePostgresJsonbWithoutError(&user.Properties))
 
-	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 
 	U.SanitizeProperties(&trackEventProperties)
@@ -2468,7 +2468,7 @@ func TestAddSessionMergingEventsOnCommonMarketingProperty(t *testing.T) {
 	assert.Equal(t, http.StatusOK, status)
 	eventId4 := response.EventId
 
-	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 	U.SanitizeProperties(&trackEventProperties2)
 
@@ -2552,7 +2552,7 @@ func TestAddSessionMergingEventsOnCommonMarketingProperty(t *testing.T) {
 	assert.Equal(t, http.StatusOK, status)
 	eventId6 := response.EventId
 
-	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 
 	// should have created session as campaign property exist.
@@ -2617,7 +2617,7 @@ func TestAddSessionMergingEventsOnCommonMarketingProperty(t *testing.T) {
 	assert.Equal(t, http.StatusOK, status)
 	eventId9 := response.EventId
 
-	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 
 	// New session should be created after a new event.
@@ -2642,7 +2642,7 @@ func TestAddSessionMergingEventsOnCommonMarketingProperty(t *testing.T) {
 	// ==================================
 
 	// Test: Project with no events and all events with session already.
-	statusMap, err := TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	statusMap, err := TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 	assert.Equal(t, "not_modified", statusMap[project.ID].Status)
 }
@@ -2734,7 +2734,7 @@ func TestAddSessionMergingEventsOnDifferentMarketingProperty(t *testing.T) {
 	assert.Equal(t, http.StatusOK, status)
 	eventId9 := response.EventId
 
-	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 
 	event7, errCode := store.GetStore().GetEventById(project.ID, eventId7, "")
@@ -2752,7 +2752,7 @@ func TestAddSessionMergingEventsOnDifferentMarketingProperty(t *testing.T) {
 	assert.NotEqual(t, *event8.SessionId, *event9.SessionId)
 
 	// Test: Project with no events and all events with session already.
-	statusMap, err := TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	statusMap, err := TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 	assert.Equal(t, "not_modified", statusMap[project.ID].Status)
 }
@@ -2818,7 +2818,7 @@ func TestAddSessionMergingEventsOnSameMarketingProperty(t *testing.T) {
 	assert.Equal(t, http.StatusOK, status)
 	eventId9 := response.EventId
 
-	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 
 	event7, errCode := store.GetStore().GetEventById(project.ID, eventId7, "")
@@ -2836,7 +2836,7 @@ func TestAddSessionMergingEventsOnSameMarketingProperty(t *testing.T) {
 	assert.Equal(t, *event8.SessionId, *event9.SessionId)
 
 	// Test: Project with no events and all events with session already.
-	statusMap, err := TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	statusMap, err := TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 	assert.Equal(t, "not_modified", statusMap[project.ID].Status)
 }
@@ -2950,7 +2950,7 @@ func TestAddSessionMergingEventsOnVaryingMarketingProperty(t *testing.T) {
 	assert.Equal(t, http.StatusOK, status)
 	eventId9 := response.EventId
 
-	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 
 	event4, errCode := store.GetStore().GetEventById(project.ID, eventId4, "")
@@ -2985,7 +2985,7 @@ func TestAddSessionMergingEventsOnVaryingMarketingProperty(t *testing.T) {
 	assert.Equal(t, *event8.SessionId, *event9.SessionId)
 
 	// Test: Project with no events and all events with session already.
-	statusMap, err := TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	statusMap, err := TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 	assert.Equal(t, "not_modified", statusMap[project.ID].Status)
 }
@@ -3147,7 +3147,7 @@ func TestAddSessionMergingEventsOnCommonMarketingPropertyInMiddle(t *testing.T) 
 	assert.Equal(t, http.StatusOK, status)
 	eventId9 := response.EventId
 
-	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 
 	event1, errCode := store.GetStore().GetEventById(project.ID, eventId1, "")
@@ -3196,7 +3196,7 @@ func TestAddSessionMergingEventsOnCommonMarketingPropertyInMiddle(t *testing.T) 
 	assert.NotEqual(t, *event9.SessionId, *event8.SessionId)
 
 	// Test: Project with no events and all events with session already.
-	statusMap, err := TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	statusMap, err := TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 	assert.Equal(t, "not_modified", statusMap[project.ID].Status)
 }
@@ -3501,7 +3501,7 @@ func TestAddSessionMergingEventsOnVaryingMarketingPropertyContinuous(t *testing.
 	assert.Equal(t, http.StatusOK, status)
 	eventId99 := response.EventId
 
-	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 
 	event1, errCode := store.GetStore().GetEventById(project.ID, eventId1, "")
@@ -3595,7 +3595,7 @@ func TestAddSessionMergingEventsOnVaryingMarketingPropertyContinuous(t *testing.
 	assert.NotEqual(t, *event99.SessionId, *event98.SessionId)
 
 	// Test: Project with no events and all events with session already.
-	statusMap, err := TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	statusMap, err := TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 	assert.Equal(t, "not_modified", statusMap[project.ID].Status)
 }
@@ -3691,7 +3691,7 @@ func TestAddSessionMergingEventsOnMissedMarketingProperty(t *testing.T) {
 	assert.Equal(t, http.StatusOK, status)
 	eventId5 := response.EventId
 
-	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 
 	event1, errCode := store.GetStore().GetEventById(project.ID, eventId1, "")
@@ -3719,7 +3719,7 @@ func TestAddSessionMergingEventsOnMissedMarketingProperty(t *testing.T) {
 	assert.Equal(t, *event5.SessionId, *event1.SessionId)
 
 	// Test: Project with no events and all events with session already.
-	statusMap, err := TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	statusMap, err := TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 	assert.Equal(t, "not_modified", statusMap[project.ID].Status)
 }
@@ -3830,7 +3830,7 @@ func TestAddSessionMergingEventsOnMissedMarketingPropertyMultiSession(t *testing
 	assert.Equal(t, http.StatusOK, status)
 	eventId6 := response.EventId
 
-	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 
 	event1, errCode := store.GetStore().GetEventById(project.ID, eventId1, "")
@@ -3864,7 +3864,7 @@ func TestAddSessionMergingEventsOnMissedMarketingPropertyMultiSession(t *testing
 	assert.NotEqual(t, *event6.SessionId, *event5.SessionId)
 
 	// Test: Project with no events and all events with session already.
-	statusMap, err := TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	statusMap, err := TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 	assert.Equal(t, "not_modified", statusMap[project.ID].Status)
 }
@@ -3980,7 +3980,7 @@ func TestAddSessionMergingEventsOnMissedMarketingPropertyMultiSessionEmptyProper
 	assert.Equal(t, http.StatusOK, status)
 	eventId6 := response.EventId
 
-	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 
 	event1, errCode := store.GetStore().GetEventById(project.ID, eventId1, "")
@@ -4015,7 +4015,7 @@ func TestAddSessionMergingEventsOnMissedMarketingPropertyMultiSessionEmptyProper
 	assert.NotEqual(t, *event6.SessionId, *event5.SessionId)
 
 	// Test: Project with no events and all events with session already.
-	statusMap, err := TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	statusMap, err := TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 	assert.Equal(t, "not_modified", statusMap[project.ID].Status)
 }

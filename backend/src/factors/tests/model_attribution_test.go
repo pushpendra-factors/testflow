@@ -22,7 +22,7 @@ import (
 )
 
 // Creating mock session with campaign.
-func createSession(projectId uint64, userId string, timestamp int64, campaignName string, adgroupName string,
+func createSession(projectId int64, userId string, timestamp int64, campaignName string, adgroupName string,
 	keyword string, gclid string, source string, landingPage string) (*model.Event, int) {
 	randomEventName := RandomURL()
 
@@ -56,7 +56,7 @@ func createSession(projectId uint64, userId string, timestamp int64, campaignNam
 		RequestSource:   model.UserSourceWeb,
 	}
 	_, response := SDK.Track(projectId, &trackPayload, false, SDK.SourceJSSDK, "")
-	TaskSession.AddSession([]uint64{projectId}, timestamp-60, 0, 0, 0, 0, 1)
+	TaskSession.AddSession([]int64{projectId}, timestamp-60, 0, 0, 0, 0, 1)
 
 	event, errCode := store.GetStore().GetEventById(projectId, response.EventId, "")
 	if errCode != http.StatusFound {
@@ -75,7 +75,7 @@ func createSession(projectId uint64, userId string, timestamp int64, campaignNam
 	return sessionEvent, errCode
 }
 
-func createEventWithSession(projectId uint64, conversionEventName string, userId string, timestamp int64,
+func createEventWithSession(projectId int64, conversionEventName string, userId string, timestamp int64,
 	sessionCampaignName string, adgroupName string, keyword string, gclid string, source string, landingPage string) int {
 
 	userSession, errCode := createSession(projectId, userId, timestamp, sessionCampaignName, adgroupName, keyword, gclid, source, landingPage)

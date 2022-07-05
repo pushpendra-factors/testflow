@@ -80,7 +80,7 @@ func (q *KPIQueryGroup) GetQueryCacheHashString() (string, error) {
 	return queryHash, nil
 }
 
-func (q *KPIQueryGroup) GetQueryCacheRedisKey(projectID uint64) (*cacheRedis.Key, error) {
+func (q *KPIQueryGroup) GetQueryCacheRedisKey(projectID int64) (*cacheRedis.Key, error) {
 	hashString, err := q.GetQueryCacheHashString()
 	if err != nil {
 		return nil, err

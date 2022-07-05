@@ -21,7 +21,7 @@ import (
 const appName = "ingest_leadgen_data"
 
 type Status struct {
-	ProjectID uint64 `json:"project_id"`
+	ProjectID int64  `json:"project_id"`
 	ErrCode   int    `json:"err_code"`
 	ErrMsg    string `json:"err_msg"`
 	Source    string `json:"source"`
@@ -266,7 +266,7 @@ func main() {
 	}
 }
 
-func CreateOrGetUserBySource(eventProperties map[string]interface{}, userProperties map[string]interface{}, projectID uint64,
+func CreateOrGetUserBySource(eventProperties map[string]interface{}, userProperties map[string]interface{}, projectID int64,
 	source int, timestamp int64) (string, error) {
 	email, phone, code := "", "", 0
 	customerUserID, userID := "", ""

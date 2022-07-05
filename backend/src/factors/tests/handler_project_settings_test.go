@@ -18,7 +18,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func sendGetProjectSettingsReq(r *gin.Engine, projectId uint64, agent *model.Agent) *httptest.ResponseRecorder {
+func sendGetProjectSettingsReq(r *gin.Engine, projectId int64, agent *model.Agent) *httptest.ResponseRecorder {
 
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
@@ -63,7 +63,7 @@ func TestAPIGetProjectSettingHandler(t *testing.T) {
 
 	// Test get project settings with bad id.
 	t.Run("BadID", func(t *testing.T) {
-		badProjectID := uint64(0)
+		badProjectID := int64(0)
 		w := sendGetProjectSettingsReq(r, badProjectID, agent)
 		assert.Equal(t, http.StatusBadRequest, w.Code)
 		jsonResponse, _ := ioutil.ReadAll(w.Body)
@@ -75,7 +75,7 @@ func TestAPIGetProjectSettingHandler(t *testing.T) {
 
 }
 
-func sendUpdateProjectSettingReq(r *gin.Engine, projectId uint64, agent *model.Agent, params map[string]interface{}) *httptest.ResponseRecorder {
+func sendUpdateProjectSettingReq(r *gin.Engine, projectId int64, agent *model.Agent, params map[string]interface{}) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error Creating cookieData")
@@ -164,7 +164,7 @@ func TestAPIUpdateProjectSettingsHandler(t *testing.T) {
 
 	// Test updating project id.
 	t.Run("BadParamsTryUpdatingProjectId", func(t *testing.T) {
-		randomProjectId := uint64(999999999)
+		randomProjectId := int64(999999999)
 		params := map[string]interface{}{
 			"auto_track": true,
 			"project_id": randomProjectId,

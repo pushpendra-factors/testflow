@@ -88,7 +88,7 @@ func TestKpiAnalytics(t *testing.T) {
 	w1 := sendCreateContentGroupRequest(a, contentGroupRequest, agent, project.ID)
 	assert.Equal(t, http.StatusCreated, w1.Code)
 
-	_, err := TaskSession.AddSession([]uint64{project.ID}, timestamp-60, 0, 0, 0, 1, 1)
+	_, err := TaskSession.AddSession([]int64{project.ID}, timestamp-60, 0, 0, 0, 1, 1)
 	assert.Nil(t, err)
 
 	t.Run("Query with no groupby and no filter.", func(t *testing.T) {
@@ -676,7 +676,7 @@ func TestKpiAnalyticsHandler(t *testing.T) {
 	sendKPIAnalyticsQueryReq(a, project.ID, agent, kpiQueryGroup)
 }
 
-func sendKPIAnalyticsQueryReq(r *gin.Engine, projectId uint64, agent *M.Agent, kpiqueryGroup model.KPIQueryGroup) *httptest.ResponseRecorder {
+func sendKPIAnalyticsQueryReq(r *gin.Engine, projectId int64, agent *M.Agent, kpiqueryGroup model.KPIQueryGroup) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")
@@ -722,7 +722,7 @@ func TestKpiFilterValuesHandler(t *testing.T) {
 	sendKPIFilterValuesReq(a, project.ID, agent, filterValueRequest)
 }
 
-func sendKPIFilterValuesReq(r *gin.Engine, projectId uint64, agent *M.Agent, filterValueRequest v1.KPIFilterValuesRequest) *httptest.ResponseRecorder {
+func sendKPIFilterValuesReq(r *gin.Engine, projectId int64, agent *M.Agent, filterValueRequest v1.KPIFilterValuesRequest) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")
@@ -761,7 +761,7 @@ func TestEventNamesByTypeHandler(t *testing.T) {
 	sendEventNamesTypeQueryReq(a, project.ID, agent)
 }
 
-func sendEventNamesTypeQueryReq(r *gin.Engine, projectId uint64, agent *M.Agent) *httptest.ResponseRecorder {
+func sendEventNamesTypeQueryReq(r *gin.Engine, projectId int64, agent *M.Agent) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")

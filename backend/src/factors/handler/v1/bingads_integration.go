@@ -14,7 +14,7 @@ import (
 )
 
 func CreateBingAdsIntegration(c *gin.Context) (interface{}, int, string, string, bool) {
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		return nil, http.StatusBadRequest, INVALID_PROJECT, "", true
 	}
@@ -61,7 +61,7 @@ func CreateBingAdsIntegration(c *gin.Context) (interface{}, int, string, string,
 }
 
 func EnableBingAdsIntegration(c *gin.Context) (interface{}, int, string, string, bool) {
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		return nil, http.StatusBadRequest, INVALID_PROJECT, "", true
 	}
@@ -95,7 +95,7 @@ func EnableBingAdsIntegration(c *gin.Context) (interface{}, int, string, string,
 }
 
 func GetBingAdsIntegration(c *gin.Context) (interface{}, int, string, string, bool) {
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		return nil, http.StatusBadRequest, INVALID_PROJECT, "", true
 	}
@@ -123,7 +123,7 @@ func GetBingAdsIntegration(c *gin.Context) (interface{}, int, string, string, bo
 }
 
 func DisableBingAdsIntegration(c *gin.Context) (interface{}, int, string, string, bool) {
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		return nil, http.StatusBadRequest, INVALID_PROJECT, "", true
 	}

@@ -13,14 +13,14 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func getAllCRMSettingsAsMap() (map[uint64]model.CRMSetting, error) {
+func getAllCRMSettingsAsMap() (map[int64]model.CRMSetting, error) {
 	crmSettings, status := store.GetStore().GetAllCRMSetting()
 	if status != http.StatusFound && status != http.StatusNotFound {
 		log.Error("Failed to get all crm settings as map")
 		return nil, errors.New("failed to get crm settings as map")
 	}
 
-	crmSettingsMap := make(map[uint64]model.CRMSetting, 0)
+	crmSettingsMap := make(map[int64]model.CRMSetting, 0)
 	for i := range crmSettings {
 		crmSettingsMap[crmSettings[i].ProjectID] = crmSettings[i]
 	}
@@ -64,7 +64,7 @@ func RunHubspotProjectDistributer(configs map[string]interface{}) (map[string]in
 		return nil, false
 	}
 
-	projectIDs := make([]uint64, 0)
+	projectIDs := make([]int64, 0)
 	for i := range hubspotEnabledProjectSettings {
 		projectIDs = append(projectIDs, hubspotEnabledProjectSettings[i].ProjectId)
 	}
@@ -83,8 +83,8 @@ func RunHubspotProjectDistributer(configs map[string]interface{}) (map[string]in
 		return nil, false
 	}
 
-	newHeavyProjects := make([]uint64, 0)
-	newLightProjects := make([]uint64, 0)
+	newHeavyProjects := make([]int64, 0)
+	newLightProjects := make([]int64, 0)
 	for i := range projectdocumentCount {
 		projectID := projectdocumentCount[i].ProjectID
 		count := projectdocumentCount[i].Count
@@ -101,7 +101,7 @@ func RunHubspotProjectDistributer(configs map[string]interface{}) (map[string]in
 	}
 
 	anyFailure := false
-	for heavy, projects := range map[bool][]uint64{true: newHeavyProjects, false: newLightProjects} {
+	for heavy, projects := range map[bool][]int64{true: newHeavyProjects, false: newLightProjects} {
 		for i := range projects {
 			if heavy {
 				status := store.GetStore().CreateOrUpdateCRMSettingHubspotEnrich(projects[i], true, &hubspotMaxCreatedAt)

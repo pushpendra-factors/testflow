@@ -24,7 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func sendCreateContentGroupRequest(r *gin.Engine, request model.ContentGroup, agent *model.Agent, projectID uint64) *httptest.ResponseRecorder {
+func sendCreateContentGroupRequest(r *gin.Engine, request model.ContentGroup, agent *model.Agent, projectID int64) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")
@@ -48,7 +48,7 @@ func sendCreateContentGroupRequest(r *gin.Engine, request model.ContentGroup, ag
 	return w
 }
 
-func sendUpdateContentGroupRequest(r *gin.Engine, request model.ContentGroup, agent *model.Agent, projectID uint64, id string) *httptest.ResponseRecorder {
+func sendUpdateContentGroupRequest(r *gin.Engine, request model.ContentGroup, agent *model.Agent, projectID int64, id string) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")
@@ -72,7 +72,7 @@ func sendUpdateContentGroupRequest(r *gin.Engine, request model.ContentGroup, ag
 	return w
 }
 
-func sendGetContentGroupsRequest(r *gin.Engine, agent *model.Agent, projectID uint64) *httptest.ResponseRecorder {
+func sendGetContentGroupsRequest(r *gin.Engine, agent *model.Agent, projectID int64) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")
@@ -95,7 +95,7 @@ func sendGetContentGroupsRequest(r *gin.Engine, agent *model.Agent, projectID ui
 	return w
 }
 
-func sendDeleteContentGroupRequest(r *gin.Engine, agent *model.Agent, projectID uint64, id string) *httptest.ResponseRecorder {
+func sendDeleteContentGroupRequest(r *gin.Engine, agent *model.Agent, projectID int64, id string) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")

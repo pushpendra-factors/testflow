@@ -38,7 +38,7 @@ func AttributionHandler(c *gin.Context) (interface{}, int, string, string, bool)
 
 	r := c.Request
 	reqId := U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID)
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	logCtx := log.WithFields(log.Fields{
 		"reqId": reqId, "project_id": projectId,
 	})

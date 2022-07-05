@@ -1370,7 +1370,7 @@ func TestHubspotDocumentDelete(t *testing.T) {
 		Value:     &contactPJson,
 	}
 
-	project.ID = uint64(rand.Intn(10000))
+	project.ID = int64(rand.Intn(10000))
 	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
 	assert.Equal(t, http.StatusOK, status)
 	document, status := store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{fmt.Sprintf("%v", documentID)}, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionDeleted})
@@ -1912,7 +1912,7 @@ func TestHubspotPropertyDetails(t *testing.T) {
 	assert.Equal(t, 4, count)
 }
 
-func sendCreateHubspotDocumentRequest(projectID uint64, r *gin.Engine, agent *model.Agent, documentType string, documentValue *map[string]interface{}) *httptest.ResponseRecorder {
+func sendCreateHubspotDocumentRequest(projectID int64, r *gin.Engine, agent *model.Agent, documentType string, documentValue *map[string]interface{}) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")
@@ -4946,7 +4946,7 @@ func TestHubspotProjectDistributer(t *testing.T) {
 		},
 	}
 	// project_id 1 - > 20 records, project_id 2 - 40 records
-	for projecID, count := range map[uint64]int{project1.ID: 10, project2.ID: 20} {
+	for projecID, count := range map[int64]int{project1.ID: 10, project2.ID: 20} {
 		processDocuments := []*model.HubspotDocument{}
 		for i := 0; i < count; i++ {
 			contact.Vid = int64(i)

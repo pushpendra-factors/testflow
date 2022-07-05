@@ -9,7 +9,7 @@ import (
 type ProjectSetting struct {
 	// Foreign key constraint project_id -> projects(id)
 	// Used project_id as primary key also, becase of 1-1 relationship.
-	ProjectId         uint64          `gorm:"primary_key:true" json:"project_id,omitempty"`
+	ProjectId         int64           `gorm:"primary_key:true" json:"project_id,omitempty"`
 	AttributionConfig *postgres.Jsonb `json:"attribution_config"`
 
 	// Using pointers to avoid update by default value.
@@ -95,7 +95,7 @@ var projectSettingKeys = [...]string{
 }
 
 type AdwordsProjectSettings struct {
-	ProjectId                  uint64
+	ProjectId                  int64
 	CustomerAccountId          string
 	AgentUUID                  string
 	RefreshToken               string
@@ -104,20 +104,20 @@ type AdwordsProjectSettings struct {
 }
 
 type GoogleOrganicProjectSettings struct {
-	ProjectID    uint64
+	ProjectID    int64
 	URLPrefix    string
 	AgentUUID    string
 	RefreshToken string
 }
 type HubspotProjectSettings struct {
-	ProjectId         uint64          `json:"-"`
+	ProjectId         int64           `json:"-"`
 	APIKey            string          `json:"api_key"`
 	IsFirstTimeSynced bool            `json:"is_first_time_synced"`
 	SyncInfo          *postgres.Jsonb `json:"sync_info"`
 }
 
 type FacebookProjectSettings struct {
-	ProjectId              uint64 `json:"project_id"`
+	ProjectId              int64  `json:"project_id"`
 	Timezone               string `json:"timezone" gorm:"column:int_google_ingestion_timezone"`
 	IntFacebookUserId      string `json:"int_facebook_user_id"`
 	IntFacebookAccessToken string `json:"int_facebook_access_token"`
@@ -136,7 +136,7 @@ type LinkedinProjectSettings struct {
 
 // SalesforceProjectSettings contains refresh_token and instance_url for enabled projects
 type SalesforceProjectSettings struct {
-	ProjectID    uint64 `json:"-"`
+	ProjectID    int64  `json:"-"`
 	RefreshToken string `json:"refresh_token"`
 	InstanceURL  string `json:"instance_url"`
 }
@@ -149,12 +149,12 @@ const (
 
 var standardOrderedIdentifiers = []string{IdentificationTypeEmail, IdentificationTypePhone}
 
-var overWriteIndentificationOrderByProjectID = map[uint64][]string{
+var overWriteIndentificationOrderByProjectID = map[int64][]string{
 	483: {IdentificationTypePhone, IdentificationTypeEmail},
 }
 
 // GetIdentifierPrecendenceOrderByProjectID return ordered identifier type by projectID
-func GetIdentifierPrecendenceOrderByProjectID(projectID uint64) []string {
+func GetIdentifierPrecendenceOrderByProjectID(projectID int64) []string {
 	if orderedIndentifiers, exists := overWriteIndentificationOrderByProjectID[projectID]; exists {
 		return orderedIndentifiers
 	}

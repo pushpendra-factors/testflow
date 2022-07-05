@@ -4,7 +4,7 @@ import "time"
 
 type ProjectModelMetadata struct {
 	ID        string    `gorm:"primary_key:true;type:uuid;default:uuid_generate_v4()" json:"id"`
-	ProjectId uint64    `json:"project_id"`
+	ProjectId int64     `json:"project_id"`
 	ModelId   uint64    `json:"model_id"`
 	ModelType string    `json:"model_type"`
 	StartTime int64     `json:"start_time"`

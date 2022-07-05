@@ -162,7 +162,7 @@ func AgentInvite(c *gin.Context) {
 		return
 	}
 
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	emailOfAgentToInvite := params.Email
 	roleOfAgent := params.Role
 
@@ -303,7 +303,7 @@ func AgentInviteBatch(c *gin.Context) {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	invitedByAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 	createDefaultDashBoard := c.Query("create_dashboard")
 	var createDashboard bool = true // by default
@@ -449,7 +449,7 @@ func AgentInviteBatch(c *gin.Context) {
 // @Router /{project_id}/agents/update [put]
 func AgentUpdate(c *gin.Context) {
 	loggedInAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	logCtx := log.WithFields(log.Fields{
 		"reqId":         U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
 		"loggedInAgent": loggedInAgentUUID,
@@ -536,7 +536,7 @@ func getUpdateProjectAgentParams(c *gin.Context) (*updateProjectAgentParams, err
 // @Router /{project_id}/agents/remove [put]
 func RemoveProjectAgent(c *gin.Context) {
 	loggedInAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	logCtx := log.WithFields(log.Fields{
 		"reqId":         U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
 		"loggedInAgent": loggedInAgentUUID,
@@ -791,7 +791,7 @@ func AgentInfo(c *gin.Context) {
 // @Success 200 {string} json "{"agents": agentInfoMap, "project_agent_mappings": projectAgentMappings}"
 // @Router /{project_id}/agents [get]
 func GetProjectAgentsHandler(c *gin.Context) {
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
@@ -822,11 +822,25 @@ func GetProjectAgentsHandler(c *gin.Context) {
 
 	resp := make(map[string]interface{})
 	resp["agents"] = agentInfoMap
-	resp["project_agent_mappings"] = projectAgentMappings
+	mappingStringObj := make([]model.ProjectAgentMappingString, 0)
+	for _, mapping := range projectAgentMappings {
+		mappingStringObj = append(mappingStringObj, MapProjectAgentMapping(mapping))
+	}
+	resp["project_agent_mappings"] = mappingStringObj
 
 	c.JSON(http.StatusOK, resp)
 }
 
+func MapProjectAgentMapping(mapping model.ProjectAgentMapping) model.ProjectAgentMappingString {
+	return model.ProjectAgentMappingString{
+		AgentUUID: mapping.AgentUUID,
+		ProjectID: fmt.Sprintf("%v", mapping.ProjectID),
+		Role:      mapping.Role,
+		InvitedBy: mapping.InvitedBy,
+		CreatedAt: mapping.CreatedAt,
+		UpdatedAt: mapping.UpdatedAt,
+	}
+}
 func GetAgentBillingAccount(c *gin.Context) {
 	loggedInAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 
@@ -838,7 +852,7 @@ func GetAgentBillingAccount(c *gin.Context) {
 
 	projects, errCode := store.GetStore().GetProjectsUnderBillingAccountID(bA.ID)
 
-	projectIDs := make([]uint64, len(projects), len(projects))
+	projectIDs := make([]int64, len(projects), len(projects))
 	for i := range projects {
 		projectIDs[i] = projects[i].ID
 	}

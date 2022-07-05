@@ -595,7 +595,7 @@ func TestDBGetEventNamesOrderedByOccurrenceWithLimit(t *testing.T) {
 		})
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	_, err = TaskSession.AddSession([]uint64{project.ID}, timestamp-60, 0, 0, 0, 1, 1)
+	_, err = TaskSession.AddSession([]int64{project.ID}, timestamp-60, 0, 0, 0, 1, 1)
 	assert.Nil(t, err)
 
 	configs := make(map[string]interface{})
@@ -641,7 +641,7 @@ func TestDBGetEventNamesOrderedByOccurrenceWithLimit(t *testing.T) {
 	assert.Equal(t, "event3", getEventNames2[U.MostRecent][1])
 }
 
-func sendCreateSmartEventFilterReq(r *gin.Engine, projectId uint64, agent *model.Agent, enPayload *map[string]interface{}) *httptest.ResponseRecorder {
+func sendCreateSmartEventFilterReq(r *gin.Engine, projectId int64, agent *model.Agent, enPayload *map[string]interface{}) *httptest.ResponseRecorder {
 
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
@@ -667,7 +667,7 @@ func sendCreateSmartEventFilterReq(r *gin.Engine, projectId uint64, agent *model
 	return w
 }
 
-func sendDeleteSmartEventFilterReq(r *gin.Engine, projectId uint64, agent *model.Agent, eventNameID string) *httptest.ResponseRecorder {
+func sendDeleteSmartEventFilterReq(r *gin.Engine, projectId int64, agent *model.Agent, eventNameID string) *httptest.ResponseRecorder {
 
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
@@ -693,7 +693,7 @@ func sendDeleteSmartEventFilterReq(r *gin.Engine, projectId uint64, agent *model
 	return w
 }
 
-func sendGetSmartEventFilterReq(r *gin.Engine, projectId uint64, agent *model.Agent) *httptest.ResponseRecorder {
+func sendGetSmartEventFilterReq(r *gin.Engine, projectId int64, agent *model.Agent) *httptest.ResponseRecorder {
 
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
@@ -718,7 +718,7 @@ func sendGetSmartEventFilterReq(r *gin.Engine, projectId uint64, agent *model.Ag
 	return w
 }
 
-func sendUpdateSmartEventFilterReq(r *gin.Engine, projectID uint64, agent *model.Agent,
+func sendUpdateSmartEventFilterReq(r *gin.Engine, projectID int64, agent *model.Agent,
 	enPayload *map[string]interface{}, filterID string) *httptest.ResponseRecorder {
 
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)

@@ -168,7 +168,7 @@ func (q *ChannelQueryUnit) GetQueryCacheHashString() (string, error) {
 	return queryHash, nil
 }
 
-func (q *ChannelQueryUnit) GetQueryCacheRedisKey(projectID uint64) (*cacheRedis.Key, error) {
+func (q *ChannelQueryUnit) GetQueryCacheRedisKey(projectID int64) (*cacheRedis.Key, error) {
 	hashString, err := q.GetQueryCacheHashString()
 	if err != nil {
 		return nil, err
@@ -249,7 +249,7 @@ func (q *ChannelGroupQueryV1) GetQueryCacheHashString() (string, error) {
 	return queryHash, nil
 }
 
-func (q *ChannelGroupQueryV1) GetQueryCacheRedisKey(projectID uint64) (*cacheRedis.Key, error) {
+func (q *ChannelGroupQueryV1) GetQueryCacheRedisKey(projectID int64) (*cacheRedis.Key, error) {
 	hashString, err := q.GetQueryCacheHashString()
 	if err != nil {
 		return nil, err

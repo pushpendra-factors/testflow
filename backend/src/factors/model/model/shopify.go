@@ -9,13 +9,13 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func getShopifyCartTokenCacheKey(projectId uint64, cartToken string) (*cacheRedis.Key, error) {
+func getShopifyCartTokenCacheKey(projectId int64, cartToken string) (*cacheRedis.Key, error) {
 	prefix := "shp:ctkn"
 	suffix := cartToken
 	return cacheRedis.NewKey(projectId, prefix, suffix)
 }
 
-func SetCacheShopifyCartTokenToUserId(projectId uint64, cartToken string, userId string) int {
+func SetCacheShopifyCartTokenToUserId(projectId int64, cartToken string, userId string) int {
 	logCtx := log.WithField("project_id", projectId)
 	if projectId == 0 || cartToken == "" || userId == "" {
 		logCtx.Error(fmt.Sprintf(
@@ -38,7 +38,7 @@ func SetCacheShopifyCartTokenToUserId(projectId uint64, cartToken string, userId
 	return http.StatusOK
 }
 
-func GetCacheUserIdForShopifyCartToken(projectId uint64, cartToken string) (string, int) {
+func GetCacheUserIdForShopifyCartToken(projectId int64, cartToken string) (string, int) {
 	userId := ""
 	logCtx := log.WithField("project_id", projectId)
 	if projectId == 0 {

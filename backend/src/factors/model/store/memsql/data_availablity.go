@@ -14,7 +14,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (store *MemSQL) IsDataAvailable(project_id uint64, integration string, timestamp uint64) bool {
+func (store *MemSQL) IsDataAvailable(project_id int64, integration string, timestamp uint64) bool {
 	data, _ := store.GetLatestDataStatus([]string{integration}, project_id, false)
 	if data[integration].LatestData >= timestamp {
 		return true
@@ -44,7 +44,7 @@ func lastProcessedFromDb(integration string, existingRecordFromDb map[string]mod
 	return 0
 
 }
-func (store *MemSQL) IsIntegrationAvailable(projectID uint64) map[string]bool {
+func (store *MemSQL) IsIntegrationAvailable(projectID int64) map[string]bool {
 	result := make(map[string]bool)
 	for integration, _ := range model.INTEGRATIONS {
 		if integration == model.HUBSPOT {
@@ -89,7 +89,7 @@ func transformTimestampValue(integration string, timestamp int64) int64 {
 	return timestamp
 }
 
-func (store *MemSQL) FindLatestProcessedStatus(integration string, projectID uint64) uint64 {
+func (store *MemSQL) FindLatestProcessedStatus(integration string, projectID int64) uint64 {
 	db := C.GetServices().Db
 	query := model.INTEGRATIONS_QUERY[integration]
 	rows, err := db.Raw(query, projectID).Rows()
@@ -108,7 +108,7 @@ func (store *MemSQL) FindLatestProcessedStatus(integration string, projectID uin
 	}
 	return 0
 }
-func (store *MemSQL) GetLatestDataStatus(integrations []string, project_id uint64, hardRefresh bool) (map[string]model.DataAvailabilityStatus, error) {
+func (store *MemSQL) GetLatestDataStatus(integrations []string, project_id int64, hardRefresh bool) (map[string]model.DataAvailabilityStatus, error) {
 	allIntegration := false
 	integrationMap := make(map[string]bool)
 	for _, integration := range integrations {
@@ -150,7 +150,7 @@ func (store *MemSQL) GetLatestDataStatus(integrations []string, project_id uint6
 	return result, nil
 }
 
-func (store *MemSQL) GetIntegrationStatusByProjectId(project_id uint64) (map[string]model.DataAvailability, int) {
+func (store *MemSQL) GetIntegrationStatusByProjectId(project_id int64) (map[string]model.DataAvailability, int) {
 	db := C.GetServices().Db
 	var dataAvailability []model.DataAvailability
 	if err := db.Model(&model.DataAvailability{}).Where("project_id = ?", project_id).Find(&dataAvailability).Error; err != nil {
@@ -164,7 +164,7 @@ func (store *MemSQL) GetIntegrationStatusByProjectId(project_id uint64) (map[str
 	return result, http.StatusOK
 }
 
-func (store *MemSQL) AddIntegrationStatusByProjectId(project_id uint64, integration string, latest_data uint64, source string) int {
+func (store *MemSQL) AddIntegrationStatusByProjectId(project_id int64, integration string, latest_data uint64, source string) int {
 	db := C.GetServices().Db
 	dataAvailability := model.DataAvailability{
 		ProjectID:           project_id,

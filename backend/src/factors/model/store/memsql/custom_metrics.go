@@ -32,7 +32,7 @@ func (store *MemSQL) CreateCustomMetric(customMetric model.CustomMetric) (*model
 	return &customMetric, "", http.StatusCreated
 }
 
-func (store *MemSQL) GetCustomMetricsByProjectId(projectID uint64) ([]model.CustomMetric, string, int) {
+func (store *MemSQL) GetCustomMetricsByProjectId(projectID int64) ([]model.CustomMetric, string, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
@@ -51,7 +51,7 @@ func (store *MemSQL) GetCustomMetricsByProjectId(projectID uint64) ([]model.Cust
 	return customMetrics, "", http.StatusFound
 }
 
-func (store *MemSQL) GetCustomMetricByProjectIdAndObjectType(projectID uint64, queryType int, objectType string) ([]model.CustomMetric, string, int) {
+func (store *MemSQL) GetCustomMetricByProjectIdAndObjectType(projectID int64, queryType int, objectType string) ([]model.CustomMetric, string, int) {
 	logCtx := log.WithField("projectID", projectID)
 	db := C.GetServices().Db
 	customMetrics := make([]model.CustomMetric, 0, 0)
@@ -67,7 +67,7 @@ func (store *MemSQL) GetCustomMetricByProjectIdAndObjectType(projectID uint64, q
 }
 
 // TODO lets see if unique index can be used for fetching.
-func (store *MemSQL) GetCustomMetricsByName(projectID uint64, name string) (model.CustomMetric, string, int) {
+func (store *MemSQL) GetCustomMetricsByName(projectID int64, name string) (model.CustomMetric, string, int) {
 	logCtx := log.WithField("projectID", projectID)
 	db := C.GetServices().Db
 	if projectID == 0 {
@@ -83,7 +83,7 @@ func (store *MemSQL) GetCustomMetricsByName(projectID uint64, name string) (mode
 }
 
 // TODO lets see if unique index can be used for fetching.
-func (store *MemSQL) GetCustomMetricsByID(projectID uint64, id string) (model.CustomMetric, string, int) {
+func (store *MemSQL) GetCustomMetricsByID(projectID int64, id string) (model.CustomMetric, string, int) {
 	logCtx := log.WithField("projectID", projectID)
 	db := C.GetServices().Db
 	if projectID == 0 {
@@ -98,7 +98,7 @@ func (store *MemSQL) GetCustomMetricsByID(projectID uint64, id string) (model.Cu
 	return customMetric, "", http.StatusFound
 }
 
-func (store *MemSQL) DeleteCustomMetricByID(projectID uint64, id string) int {
+func (store *MemSQL) DeleteCustomMetricByID(projectID int64, id string) int {
 	logCtx := log.WithField("projectID", projectID)
 	db := C.GetServices().Db
 	var customMetric model.CustomMetric

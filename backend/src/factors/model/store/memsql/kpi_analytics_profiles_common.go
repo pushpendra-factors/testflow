@@ -10,12 +10,12 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (store *MemSQL) ExecuteKPIQueryForProfiles(projectID uint64, reqID string, kpiQuery model.KPIQuery) ([]model.QueryResult, int) {
+func (store *MemSQL) ExecuteKPIQueryForProfiles(projectID int64, reqID string, kpiQuery model.KPIQuery) ([]model.QueryResult, int) {
 	return store.TransformToAndExecuteProfileAnalyticsQueries(projectID, kpiQuery, reqID)
 }
 
 // Check statusCode
-func (store *MemSQL) TransformToAndExecuteProfileAnalyticsQueries(projectID uint64, kpiQuery model.KPIQuery, reqID string) ([]model.QueryResult, int) {
+func (store *MemSQL) TransformToAndExecuteProfileAnalyticsQueries(projectID int64, kpiQuery model.KPIQuery, reqID string) ([]model.QueryResult, int) {
 	var profileQueryGroup model.ProfileQueryGroup
 	var queryResults []model.QueryResult
 	queryResults = make([]model.QueryResult, len(kpiQuery.Metrics))
@@ -43,7 +43,7 @@ func (store *MemSQL) TransformToAndExecuteProfileAnalyticsQueries(projectID uint
 	return queryResults, http.StatusOK
 }
 
-func (store *MemSQL) transformAndExecuteForSingleKPIMetricProfile(projectID uint64, profileQueryGroup model.ProfileQueryGroup, kpiQuery model.KPIQuery,
+func (store *MemSQL) transformAndExecuteForSingleKPIMetricProfile(projectID int64, profileQueryGroup model.ProfileQueryGroup, kpiQuery model.KPIQuery,
 	kpiMetric string, result *model.QueryResult, waitGroup *sync.WaitGroup) {
 	defer waitGroup.Done()
 	finalResult := model.QueryResult{}
@@ -54,7 +54,7 @@ func (store *MemSQL) transformAndExecuteForSingleKPIMetricProfile(projectID uint
 
 // TODO Later - Generalising the transformation of external computation to internal computations.
 // Eg - representing avg in terms of count(property)/count(*) with division operator.
-func (store *MemSQL) wrappedExecuteForResultProfile(projectID uint64, profileQueryGroup model.ProfileQueryGroup, kpiQuery model.KPIQuery,
+func (store *MemSQL) wrappedExecuteForResultProfile(projectID int64, profileQueryGroup model.ProfileQueryGroup, kpiQuery model.KPIQuery,
 	kpiMetric string) model.QueryResult {
 	// Execute Profiles Query For Single KPI.
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)

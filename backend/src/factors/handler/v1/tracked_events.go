@@ -5,10 +5,11 @@ import (
 	"factors/model/model"
 	"factors/model/store"
 	U "factors/util"
-	"github.com/gin-gonic/gin"
-	log "github.com/sirupsen/logrus"
 	"net/http"
 	"strings"
+
+	"github.com/gin-gonic/gin"
+	log "github.com/sirupsen/logrus"
 )
 
 // GetAllFactorsTrackedEventsHandler - Get All tracked events handler
@@ -29,7 +30,7 @@ const (
 )
 
 func GetAllFactorsTrackedEventsHandler(c *gin.Context) {
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
@@ -47,7 +48,7 @@ type CreateFactorsTrackedEventParams struct {
 }
 
 func GetAllGroupedFactorsTrackedEventsHandler(c *gin.Context) {
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
@@ -126,7 +127,7 @@ func getcreateFactorsTrackedEventParams(c *gin.Context) (*CreateFactorsTrackedEv
 // @Router /{project_id}/v1/factors/tracked_event [POST]
 func CreateFactorsTrackedEventsHandler(c *gin.Context) {
 	loggedInAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
@@ -187,7 +188,7 @@ func getRemoveFactorsTrackedEventParams(c *gin.Context) (*RemoveFactorsTrackedEv
 // @Success 200 {string} json "{"id": uint64, "status": string}"
 // @Router /{project_id}/v1/factors/tracked_event/remove [DELETE]
 func RemoveFactorsTrackedEventsHandler(c *gin.Context) {
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return

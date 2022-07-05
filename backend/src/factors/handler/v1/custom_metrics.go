@@ -108,7 +108,7 @@ func GetCustomMetrics(c *gin.Context) (interface{}, int, string, string, bool) {
 // @Router /{project_id}/v1/custom_metrics/{id} [delete]
 func DeleteCustomMetrics(c *gin.Context) (interface{}, int, string, string, bool) {
 	reqID := U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID)
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	customMetricsID := c.Params.ByName("id")
 
 	if projectID == 0 {
@@ -143,7 +143,7 @@ func DeleteCustomMetrics(c *gin.Context) (interface{}, int, string, string, bool
 	}
 }
 
-func getPropertiesFunctionBasedOnObjectType(objectType string) func(uint64, string) []map[string]string {
+func getPropertiesFunctionBasedOnObjectType(objectType string) func(int64, string) []map[string]string {
 	if strings.Contains(objectType, U.CRM_SOURCE_NAME_HUBSPOT) {
 		return store.GetStore().GetPropertiesForHubspot
 	} else if strings.Contains(objectType, U.CRM_SOURCE_NAME_SALESFORCE) {

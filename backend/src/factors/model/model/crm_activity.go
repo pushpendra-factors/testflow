@@ -9,7 +9,7 @@ import (
 
 type CRMActivity struct {
 	ID                 string          `gorm:"primary_key:true;auto_increment:false" json:"id"`
-	ProjectID          uint64          `gorm:"primary_key:true;auto_increment:false" json:"project_id"`
+	ProjectID          int64           `gorm:"primary_key:true;auto_increment:false" json:"project_id"`
 	ExternalActivityID string          `gorm:"primary_key:true;auto_increment:false" json:"external_activity_id"`
 	Source             U.CRMSource     `gorm:"primary_key:true;auto_increment:false" json:"source"`
 	Name               string          `gorm:"primary_key:true;auto_increment:false" json:"name"`

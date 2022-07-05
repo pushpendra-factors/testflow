@@ -66,7 +66,7 @@ func TestGetProjectAgentMapping(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	t.Run("MappingMissing", func(t *testing.T) {
-		randomProjectId := U.RandomUint64()%10007 + 5
+		randomProjectId := U.RandomInt64()%10007 + 5
 		_, errCode = store.GetStore().GetProjectAgentMapping(randomProjectId, agent.UUID)
 		assert.Equal(t, http.StatusNotFound, errCode)
 	})
@@ -85,7 +85,7 @@ func TestDBGetProjectAgentMappingsByProjectId(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, errCode)
 	})
 	t.Run("NotFound", func(t *testing.T) {
-		randProjectId := U.RandomUint64WithUnixNano()
+		randProjectId := int64(U.RandomUint64WithUnixNano())
 		_, errCode := store.GetStore().GetProjectAgentMappingsByProjectId(randProjectId)
 		assert.Equal(t, http.StatusNotFound, errCode)
 	})
@@ -93,7 +93,7 @@ func TestDBGetProjectAgentMappingsByProjectId(t *testing.T) {
 	t.Run("Found", func(t *testing.T) {
 		project, err := SetupProjectReturnDAO()
 		assert.Nil(t, err)
-		noOfAgents := int(U.RandomUint64()%10 + 5)
+		noOfAgents := int(U.RandomInt64()%10 + 5)
 		createdAgents := make([]*model.Agent, 0, 0)
 		for i := 0; i < noOfAgents; i++ {
 			ag, errCode := SetupAgentReturnDAO(getRandomEmail(), "+13425356")
@@ -131,7 +131,7 @@ func TestDBGetProjectAgentMappingsByAgentUUID(t *testing.T) {
 	t.Run("Found", func(t *testing.T) {
 		agent, errCode := SetupAgentReturnDAO(getRandomEmail(), "+13425356")
 		assert.Equal(t, http.StatusCreated, errCode)
-		noOfProjects := int(U.RandomUint64()%10 + 5)
+		noOfProjects := int(U.RandomInt64()%10 + 5)
 		var projects []*model.Project
 		for i := 0; i < noOfProjects; i++ {
 			project, err := SetupProjectReturnDAO()

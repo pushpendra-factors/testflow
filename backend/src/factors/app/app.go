@@ -240,7 +240,7 @@ func main() {
 		AllowSmartEventRuleCreation:             *allowSmartEventRuleCreation,
 		ProjectAnalyticsWhitelistedUUIds:        C.GetUUIdsFromStringListAsString(*projectAnalyticsWhitelistedUUIds),
 		CustomerEnabledProjectsWeeklyInsights:   C.GetTokensFromStringListAsUint64(*customerEnabledProjectsWeeklyInsights),
-		DemoProjectIds:                          C.GetTokensFromStringListAsUint64(*demoProjectIds),
+		DemoProjectIds:                          C.GetTokensFromStringListAsString(*demoProjectIds),
 		EnableDemoReadAccess:                    enableDemoReadAccess,
 		EnableMQLAPI:                            *enableMQLAPI,
 		DisableDBWrites:                         disableDBWrites,

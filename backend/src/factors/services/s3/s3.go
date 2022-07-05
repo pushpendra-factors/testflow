@@ -69,88 +69,88 @@ func (sd *S3Driver) GetObjectSize(dir, fileName string) (int64, error) {
 	return *objSize, err
 }
 
-func (sd *S3Driver) GetProjectModelDir(projectId, modelId uint64) string {
+func (sd *S3Driver) GetProjectModelDir(projectId int64, modelId uint64) string {
 	return fmt.Sprintf("projects/%d/models/%d/", projectId, modelId)
 }
 
-func (sd *S3Driver) GetProjectEventFileDir(projectId uint64, startTimestamp int64, modelType string) string {
+func (sd *S3Driver) GetProjectEventFileDir(projectId int64, startTimestamp int64, modelType string) string {
 	dateFormatted := U.GetDateOnlyFromTimestampZ(startTimestamp)
 	return fmt.Sprintf("projects/%d/events/%s/%s/", projectId, modelType, dateFormatted)
 }
 
-func (sd *S3Driver) GetProjectDir(projectId uint64) string {
+func (sd *S3Driver) GetProjectDir(projectId int64) string {
 	return fmt.Sprintf("projects/%d/events/", projectId)
 }
 
-func (gcsd *S3Driver) GetModelUserPropertiesCategoricalFilePathAndName(projectId, modelId uint64) (string, string) {
+func (gcsd *S3Driver) GetModelUserPropertiesCategoricalFilePathAndName(projectId int64, modelId uint64) (string, string) {
 	path := gcsd.GetProjectModelDir(projectId, modelId) + "properties/"
 	return path, fmt.Sprintf("userPropCatgMap_%d.txt", modelId)
 }
 
-func (gcsd *S3Driver) GetModelEventPropertiesCategoricalFilePathAndName(projectId, modelId uint64) (string, string) {
+func (gcsd *S3Driver) GetModelEventPropertiesCategoricalFilePathAndName(projectId int64, modelId uint64) (string, string) {
 	path := gcsd.GetProjectModelDir(projectId, modelId) + "properties/"
 	return path, fmt.Sprintf("eventPropCatgMap_%d.txt", modelId)
 }
 
-func (gcsd *S3Driver) GetModelUserPropertiesFilePathAndName(projectId, modelId uint64) (string, string) {
+func (gcsd *S3Driver) GetModelUserPropertiesFilePathAndName(projectId int64, modelId uint64) (string, string) {
 	path := gcsd.GetProjectModelDir(projectId, modelId) + "properties/"
 	return path, fmt.Sprintf("eventUserPropMap_%d.txt", modelId)
 }
 
-func (gcsd *S3Driver) GetModelEventPropertiesFilePathAndName(projectId, modelId uint64) (string, string) {
+func (gcsd *S3Driver) GetModelEventPropertiesFilePathAndName(projectId int64, modelId uint64) (string, string) {
 	path := gcsd.GetProjectModelDir(projectId, modelId) + "properties/"
 	return path, fmt.Sprintf("eventEventPropMap_%d.txt", modelId)
 }
 
-func (sd *S3Driver) GetModelEventInfoFilePathAndName(projectId, modelId uint64) (string, string) {
+func (sd *S3Driver) GetModelEventInfoFilePathAndName(projectId int64, modelId uint64) (string, string) {
 	path := sd.GetProjectModelDir(projectId, modelId)
 	return path, fmt.Sprintf("event_info_%d.txt", modelId)
 }
 
-func (sd *S3Driver) GetModelEventsFilePathAndName(projectId uint64, startTimestamp int64, modelType string) (string, string) {
+func (sd *S3Driver) GetModelEventsFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string) {
 	path := sd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
 	return path, "events.txt"
 }
 
-func (sd *S3Driver) GetModelEventsBucketingFilePathAndName(projectId uint64, startTimestamp int64, modelType string) (string, string) {
+func (sd *S3Driver) GetModelEventsBucketingFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string) {
 	path := sd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
 	return path, "events_bucketed.txt"
 }
 
-func (sd *S3Driver) GetMasterNumericalBucketsFile(projectId uint64) (string, string) {
+func (sd *S3Driver) GetMasterNumericalBucketsFile(projectId int64) (string, string) {
 	path := sd.GetProjectDir(projectId)
 	return path, "numerical_buckets_master.txt"
 }
 
-func (sd *S3Driver) GetModelEventsNumericalBucketsFile(projectId uint64, startTimestamp int64, modelType string) (string, string) {
+func (sd *S3Driver) GetModelEventsNumericalBucketsFile(projectId int64, startTimestamp int64, modelType string) (string, string) {
 	path := sd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
 	return path, "numerical_buckets.txt"
 }
 
-func (sd *S3Driver) GetPatternChunksDir(projectId, modelId uint64) string {
+func (sd *S3Driver) GetPatternChunksDir(projectId int64, modelId uint64) string {
 	modelDir := sd.GetProjectModelDir(projectId, modelId)
 	return fmt.Sprintf("%schunks/", modelDir)
 }
-func (sd *S3Driver) GetChunksMetaDataDir(projectId, modelId uint64) string {
+func (sd *S3Driver) GetChunksMetaDataDir(projectId int64, modelId uint64) string {
 	modelDir := sd.GetProjectModelDir(projectId, modelId)
 	return fmt.Sprintf("%smetadata/", modelDir)
 }
 
 // GetPatternChunkFilePathAndName - Placeholder definition. Has to be implemented.
-func (sd *S3Driver) GetPatternChunkFilePathAndName(projectId, modelId uint64, chunkId string) (string, string) {
+func (sd *S3Driver) GetPatternChunkFilePathAndName(projectId int64, modelId uint64, chunkId string) (string, string) {
 	return sd.GetPatternChunksDir(projectId, modelId), fmt.Sprintf("chunk_%s.txt", chunkId)
 }
-func (sd *S3Driver) GetChunksMetaDataFilePathAndName(projectId, modelId uint64) (string, string) {
+func (sd *S3Driver) GetChunksMetaDataFilePathAndName(projectId int64, modelId uint64) (string, string) {
 	return sd.GetChunksMetaDataDir(projectId, modelId), "metadata.txt"
 }
 
 // GetEventArchiveFilePathAndName - Placeholder definition. Has to be implemented.
-func (sd *S3Driver) GetEventArchiveFilePathAndName(projectID uint64, startTime, endTime int64) (string, string) {
+func (sd *S3Driver) GetEventArchiveFilePathAndName(projectID int64, startTime, endTime int64) (string, string) {
 	return "", ""
 }
 
 // GetUsersArchiveFilePathAndName - Placeholder definition. Has to be implemented.
-func (sd *S3Driver) GetUsersArchiveFilePathAndName(projectID uint64, startTime, endTime int64) (string, string) {
+func (sd *S3Driver) GetUsersArchiveFilePathAndName(projectID int64, startTime, endTime int64) (string, string) {
 	return "", ""
 }
 
@@ -164,25 +164,25 @@ func (sd *S3Driver) GetBucketName() string {
 	return ""
 }
 
-func (sd *S3Driver) GetInsightsWpiFilePathAndName(projectId uint64, dateString string, queryId int64, k int) (string, string) {
+func (sd *S3Driver) GetInsightsWpiFilePathAndName(projectId int64, dateString string, queryId int64, k int) (string, string) {
 	path := sd.GetWeeklyInsightsModelDir(projectId, dateString, queryId, k)
 	return path, "wpi.txt"
 }
 
-func (sd *S3Driver) GetInsightsCpiFilePathAndName(projectId uint64, dateString string, queryId int64, k int) (string, string) {
+func (sd *S3Driver) GetInsightsCpiFilePathAndName(projectId int64, dateString string, queryId int64, k int) (string, string) {
 	path := sd.GetWeeklyInsightsModelDir(projectId, dateString, queryId, k)
 	return path, "cpi.txt"
 }
 
-func (sd *S3Driver) GetWeeklyInsightsModelDir(projectId uint64, dateString string, queryId int64, k int) string {
+func (sd *S3Driver) GetWeeklyInsightsModelDir(projectId int64, dateString string, queryId int64, k int) string {
 	return fmt.Sprintf("projects/%v/weeklyinsights/%v/q-%v/k-%v/", projectId, dateString, queryId, k)
 }
 
-func (sd *S3Driver) GetWeeklyKPIModelDir(projectId uint64, dateString string, queryId int64) string {
+func (sd *S3Driver) GetWeeklyKPIModelDir(projectId int64, dateString string, queryId int64) string {
 	return fmt.Sprintf("projects/%v/weeklyKPI/%v/q-%v/", projectId, dateString, queryId)
 }
 
-func (sd *S3Driver) GetKPIFilePathAndName(projectId uint64, dateString string, queryId int64) (string, string) {
+func (sd *S3Driver) GetKPIFilePathAndName(projectId int64, dateString string, queryId int64) (string, string) {
 	path := sd.GetWeeklyKPIModelDir(projectId, dateString, queryId)
 	return path, "kpi.txt"
 }

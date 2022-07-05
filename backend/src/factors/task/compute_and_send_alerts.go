@@ -8,14 +8,15 @@ import (
 	slack "factors/slack_bot/handler"
 	U "factors/util"
 	"fmt"
-	"github.com/jinzhu/gorm/dialects/postgres"
-	"github.com/jinzhu/now"
-	log "github.com/sirupsen/logrus"
 	"math"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/jinzhu/gorm/dialects/postgres"
+	"github.com/jinzhu/now"
+	log "github.com/sirupsen/logrus"
 )
 
 type Message struct {
@@ -40,7 +41,7 @@ type dateRanges struct {
 	prev_to   int64
 }
 
-func ComputeAndSendAlerts(projectID uint64, configs map[string]interface{}) (map[string]interface{}, bool) {
+func ComputeAndSendAlerts(projectID int64, configs map[string]interface{}) (map[string]interface{}, bool) {
 	allAlerts, errCode := store.GetStore().GetAllAlerts(projectID)
 	if errCode != http.StatusFound {
 		log.Fatalf("Failed to get all alerts for project_id: %v", projectID)
@@ -121,7 +122,7 @@ func ComputeAndSendAlerts(projectID uint64, configs map[string]interface{}) (map
 	}
 	return nil, true
 }
-func executeAlertsKPIQuery(projectID uint64, alertType int, date_range dateRanges, kpiQuery model.KPIQuery) (statusCode int, actualValue float64, comparedValue float64, err error) {
+func executeAlertsKPIQuery(projectID int64, alertType int, date_range dateRanges, kpiQuery model.KPIQuery) (statusCode int, actualValue float64, comparedValue float64, err error) {
 	kpiQueryGroup := model.KPIQueryGroup{
 		Class:         "kpi",
 		Queries:       []model.KPIQuery{},
@@ -331,7 +332,7 @@ func sendAlert(operator string, actualValue float64, comparedValue float64, valu
 	return false, nil
 }
 
-func sendEmailAlert(projectID uint64, msg Message, dateRange dateRanges, timezone U.TimeZoneString, emails []string) {
+func sendEmailAlert(projectID int64, msg Message, dateRange dateRanges, timezone U.TimeZoneString, emails []string) {
 	var success, fail int
 	sub := "Factors Alert"
 	text := ""
@@ -411,7 +412,7 @@ func sendEmailAlert(projectID uint64, msg Message, dateRange dateRanges, timezon
 	log.Info("sent email alert to ", success, " failed to send email alert to ", fail)
 }
 
-func sendSlackAlert(projectID uint64, agentUUID string, msg Message, dateRange dateRanges, timezone U.TimeZoneString, config *postgres.Jsonb) {
+func sendSlackAlert(projectID int64, agentUUID string, msg Message, dateRange dateRanges, timezone U.TimeZoneString, config *postgres.Jsonb) {
 	logCtx := log.WithFields(log.Fields{
 		"project_id": projectID,
 		"agent_uuid": agentUUID,

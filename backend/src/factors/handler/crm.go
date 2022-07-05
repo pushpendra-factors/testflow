@@ -29,7 +29,7 @@ type CRMResponsePayload struct {
 // @Router /{project_id}/v1/crm/{crm_source}/{object_type}/properties [get]
 func GetCRMObjectPropertiesHandler(c *gin.Context) {
 
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid project id."})
 		return
@@ -65,7 +65,7 @@ func GetCRMObjectPropertiesHandler(c *gin.Context) {
 // @Router /{project_id}/v1/crm/{crm_source}/{object_type}/properties/{property_name}/values [get]
 func GetCRMObjectValuesByPropertyNameHandler(c *gin.Context) {
 
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid project id."})
 		return

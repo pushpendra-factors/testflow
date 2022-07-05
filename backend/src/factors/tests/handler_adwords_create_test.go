@@ -51,7 +51,7 @@ func createProjectAndAddAdwordsDocument(t *testing.T, r *gin.Engine) (*M.Project
 	return project, customerAccountID1, agent, statusCode
 }
 
-func sendCreateAdwordsDocumentReq(r *gin.Engine, projectID uint64, customerAccountID string, typeAlias string, timestamp int64, id string, valueJSON *postgres.Jsonb) *httptest.ResponseRecorder {
+func sendCreateAdwordsDocumentReq(r *gin.Engine, projectID int64, customerAccountID string, typeAlias string, timestamp int64, id string, valueJSON *postgres.Jsonb) *httptest.ResponseRecorder {
 	payload := map[string]interface{}{
 		"project_id":      projectID,
 		"customer_acc_id": customerAccountID,

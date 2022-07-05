@@ -82,7 +82,7 @@ const bingadsCampaignMetadataFetchQueryStr = "select campaign_information.campai
 	") as campaign_latest_timestamp_id " +
 	"ON campaign_information.campaign_id = campaign_latest_timestamp_id.campaign_id AND campaign_information.timestamp = campaign_latest_timestamp_id.timestamp "
 
-func (store *MemSQL) GetBingadsFilterValues(projectID uint64, requestFilterObject string, requestFilterProperty string, reqID string) ([]interface{}, int) {
+func (store *MemSQL) GetBingadsFilterValues(projectID int64, requestFilterObject string, requestFilterProperty string, reqID string) ([]interface{}, int) {
 	logFields := log.Fields{
 		"project_id":              projectID,
 		"request_filter_object":   requestFilterObject,
@@ -120,7 +120,7 @@ func (store *MemSQL) GetBingadsFilterValues(projectID uint64, requestFilterObjec
 	return Convert2DArrayTo1DArray(resultRows), http.StatusFound
 }
 
-func (store *MemSQL) GetBingadsFilterValuesSQLAndParams(projectID uint64, requestFilterObject string, requestFilterProperty string, reqID string) (string, []interface{}, int) {
+func (store *MemSQL) GetBingadsFilterValuesSQLAndParams(projectID int64, requestFilterObject string, requestFilterProperty string, reqID string) (string, []interface{}, int) {
 	logFields := log.Fields{
 		"project_id":              projectID,
 		"request_filter_object":   requestFilterObject,
@@ -144,7 +144,7 @@ func (store *MemSQL) GetBingadsFilterValuesSQLAndParams(projectID uint64, reques
 	return bingadsFilterQueryStr, params, http.StatusFound
 }
 
-func (store *MemSQL) buildBingAdsChannelConfig(projectID uint64) *model.ChannelConfigResult {
+func (store *MemSQL) buildBingAdsChannelConfig(projectID int64) *model.ChannelConfigResult {
 	bingAdsObjectsAndProperties := store.buildObjectAndPropertiesForBingAds(projectID, model.ObjectsForBingads)
 	// selectable metrics for bing ads to be added ?
 	selectMetrics := append(SelectableMetricsForAllChannels)
@@ -155,7 +155,7 @@ func (store *MemSQL) buildBingAdsChannelConfig(projectID uint64) *model.ChannelC
 		ObjectsAndProperties: objectsAndProperties,
 	}
 }
-func (store *MemSQL) buildObjectAndPropertiesForBingAds(projectID uint64, objects []string) []model.ChannelObjectAndProperties {
+func (store *MemSQL) buildObjectAndPropertiesForBingAds(projectID int64, objects []string) []model.ChannelObjectAndProperties {
 	objectsAndProperties := make([]model.ChannelObjectAndProperties, 0)
 	for _, currentObject := range objects {
 		// to do: check if normal properties present then only smart properties will be there
@@ -179,7 +179,7 @@ func (store *MemSQL) buildObjectAndPropertiesForBingAds(projectID uint64, object
 }
 
 // modify
-func (store *MemSQL) ExecuteBingAdsChannelQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string) ([]string, [][]interface{}, int) {
+func (store *MemSQL) ExecuteBingAdsChannelQueryV1(projectID int64, query *model.ChannelQueryV1, reqID string) ([]string, [][]interface{}, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"query":      query,
@@ -243,7 +243,7 @@ func (store *MemSQL) ExecuteBingAdsChannelQueryV1(projectID uint64, query *model
 }
 
 // modify acc to sample data
-func (store *MemSQL) GetSQLQueryAndParametersForBingAdsQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string, fetchSource bool,
+func (store *MemSQL) GetSQLQueryAndParametersForBingAdsQueryV1(projectID int64, query *model.ChannelQueryV1, reqID string, fetchSource bool,
 	limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string, int) {
 	logFields := log.Fields{
 		"project_id":                    projectID,
@@ -286,7 +286,7 @@ func (store *MemSQL) GetSQLQueryAndParametersForBingAdsQueryV1(projectID uint64,
 	return sql, params, selectKeys, selectMetrics, http.StatusOK
 }
 
-func (store *MemSQL) transFormRequestFieldsAndFetchRequiredFieldsForBingads(projectID uint64,
+func (store *MemSQL) transFormRequestFieldsAndFetchRequiredFieldsForBingads(projectID int64,
 	query model.ChannelQueryV1, reqID string) (*model.ChannelQueryV1, string, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
@@ -390,7 +390,7 @@ func getBingAdsSpecificGroupBy(requestGroupBys []model.ChannelGroupBy) ([]model.
 	return resultGroupBys, nil
 }
 
-func buildBingAdsQueryV1(query *model.ChannelQueryV1, projectID uint64, customerAccountID string, fetchSource bool,
+func buildBingAdsQueryV1(query *model.ChannelQueryV1, projectID int64, customerAccountID string, fetchSource bool,
 	limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string, error) {
 	logFields := log.Fields{
 		"project_id":                    projectID,
@@ -408,7 +408,7 @@ func buildBingAdsQueryV1(query *model.ChannelQueryV1, projectID uint64, customer
 	return sql, params, selectKeys, selectMetrics, nil
 }
 
-func buildBingAdsQueryWithSmartProperty(query *model.ChannelQueryV1, projectID uint64, customerAccountID string, fetchSource bool,
+func buildBingAdsQueryWithSmartProperty(query *model.ChannelQueryV1, projectID int64, customerAccountID string, fetchSource bool,
 	limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string, error) {
 	logFields := log.Fields{
 		"project_id":                    projectID,
@@ -461,7 +461,7 @@ func getLowestHierarchyLevelForBingAds(query *model.ChannelQueryV1) string {
 	}
 	return bingadsCampaign
 }
-func getSQLAndParamsFromBingAdsReports(query *model.ChannelQueryV1, projectID uint64, from, to int64, docType int,
+func getSQLAndParamsFromBingAdsReports(query *model.ChannelQueryV1, projectID int64, from, to int64, docType int,
 	fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}, customerAccountID string) (string, []interface{}, []string, []string) {
 	logFields := log.Fields{
 		"project_id":                    projectID,
@@ -561,7 +561,7 @@ func getBingAdsFromStatementWithJoins(filters []model.ChannelFilterV1, groupBys 
 	return fromStatement
 }
 
-func getSQLAndParamsFromBingAdsReportsWithSmartProperty(query *model.ChannelQueryV1, projectID uint64, from, to int64, docType int,
+func getSQLAndParamsFromBingAdsReportsWithSmartProperty(query *model.ChannelQueryV1, projectID int64, from, to int64, docType int,
 	fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}, customerAccountID string) (string, []interface{}, []string, []string) {
 	logFields := log.Fields{
 		"project_id":                    projectID,
@@ -813,7 +813,7 @@ func buildWhereConditionForGBTForBingAds(groupByCombinations []map[string]interf
 	return whereConditionForGBT, params
 }
 
-func (store *MemSQL) GetLatestMetaForBingAdsForGivenDays(projectID uint64, days int) ([]model.ChannelDocumentsWithFields, []model.ChannelDocumentsWithFields) {
+func (store *MemSQL) GetLatestMetaForBingAdsForGivenDays(projectID int64, days int) ([]model.ChannelDocumentsWithFields, []model.ChannelDocumentsWithFields) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"days":       days,

@@ -16,7 +16,7 @@ import (
 )
 
 type WeeklyInsightsParams struct {
-	ProjectID       uint64    `json:"project_id"`
+	ProjectID       int64     `json:"project_id"`
 	QueryId         int64     `json:"query_id"`
 	BaseStartTime   time.Time `json:"base_start_time"`
 	CompStartTime   time.Time `json:"comp_start_time"`
@@ -26,7 +26,7 @@ type WeeklyInsightsParams struct {
 
 func GetWeeklyInsightsParams(c *gin.Context) (*WeeklyInsightsParams, error) {
 	params := WeeklyInsightsParams{}
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		return nil, errors.New("Invalid Project ID")
 	}

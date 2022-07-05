@@ -61,7 +61,7 @@ func (s *Status) Set(noOfProcessedEvents, noOfCreated int, isContinuedFirst bool
 }
 
 // addSessionByProjectId - Adds session to all users of project.
-func addSessionByProjectId(projectId uint64, maxLookbackTimestamp, startTimestamp,
+func addSessionByProjectId(projectId int64, maxLookbackTimestamp, startTimestamp,
 	endTimestamp, bufferTimeBeforeSessionCreateInSecs int64, numUserRoutines int) (*Status, int) {
 
 	status := &Status{}
@@ -142,7 +142,7 @@ func addSessionByProjectId(projectId uint64, maxLookbackTimestamp, startTimestam
 	return status, http.StatusOK
 }
 
-func GetNextSessionAndPullEvent(projectId uint64, maxLookbackTimestamp int64, startTimestamp int64,
+func GetNextSessionAndPullEvent(projectId int64, maxLookbackTimestamp int64, startTimestamp int64,
 	endTimestamp int64, bufferTimeBeforeSessionCreateInSecs int64, logCtx *log.Entry) (bool, *model.EventName, int, *map[string][]model.Event, int, string) {
 	sessionEventName, errCode := store.GetStore().CreateOrGetSessionEventName(projectId)
 
@@ -192,7 +192,7 @@ func GetNextSessionAndPullEvent(projectId uint64, maxLookbackTimestamp int64, st
 	return false, sessionEventName, errCode, userEventsMap, noOfEventsDownloaded, ""
 }
 
-func GetAddSessionAllowedProjects(allowedProjectsList, disallowedProjectsList string) ([]uint64, int) {
+func GetAddSessionAllowedProjects(allowedProjectsList, disallowedProjectsList string) ([]int64, int) {
 	isAllProjects, projectIDsMap, skipProjectIdMap := C.GetProjectsFromListWithAllProjectSupport(
 		allowedProjectsList, disallowedProjectsList)
 
@@ -215,7 +215,7 @@ func GetAddSessionAllowedProjects(allowedProjectsList, disallowedProjectsList st
 		return projectIds, http.StatusFound
 	}
 
-	allowedProjectIds := make([]uint64, 0, len(projectIds))
+	allowedProjectIds := make([]int64, 0, len(projectIds))
 	for i, cpid := range projectIds {
 		if _, exists := skipProjectIdMap[cpid]; !exists {
 			allowedProjectIds = append(allowedProjectIds, projectIds[i])
@@ -225,7 +225,7 @@ func GetAddSessionAllowedProjects(allowedProjectsList, disallowedProjectsList st
 	return allowedProjectIds, http.StatusFound
 }
 
-func setProjectStatus(projectId uint64, statusMap *map[uint64]Status, status *Status,
+func setProjectStatus(projectId int64, statusMap *map[int64]Status, status *Status,
 	hasFailures *bool, isFailed bool, statusLock *sync.Mutex) {
 
 	defer statusLock.Unlock()
@@ -235,8 +235,8 @@ func setProjectStatus(projectId uint64, statusMap *map[uint64]Status, status *St
 	*hasFailures = isFailed
 }
 
-func addSessionProjectWorker(projectId uint64, maxLookbackTimestamp, startTimestamp, endTimestamp,
-	bufferTimeBeforeSessionCreateInSecs int64, statusMap *map[uint64]Status,
+func addSessionProjectWorker(projectId int64, maxLookbackTimestamp, startTimestamp, endTimestamp,
+	bufferTimeBeforeSessionCreateInSecs int64, statusMap *map[int64]Status,
 	hasFailures *bool, wg *sync.WaitGroup, statusLock *sync.Mutex, numUserRoutines int) {
 
 	defer (*wg).Done()
@@ -273,7 +273,7 @@ func addSessionProjectWorker(projectId uint64, maxLookbackTimestamp, startTimest
 	setProjectStatus(projectId, statusMap, status, hasFailures, false, statusLock)
 }
 
-func addSessionUserEventsWorker(projectID uint64, userID string, events []model.Event,
+func addSessionUserEventsWorker(projectID int64, userID string, events []model.Event,
 	sessionEventNameID string, bufferTimeBeforeSessionCreateInSecs int64,
 	wg *sync.WaitGroup, status *Status) {
 	logCtx := log.WithField("project_id", projectID).WithField("user_id", userID)
@@ -294,11 +294,11 @@ func addSessionUserEventsWorker(projectID uint64, userID string, events []model.
 		noOfUserPropUpdates, seenFailure, status)
 }
 
-func AddSession(projectIds []uint64, maxLookbackTimestamp, startTimestamp, endTimestamp,
-	bufferTimeBeforeSessionCreateInMins int64, numProjectRoutines, numUserRoutines int) (map[uint64]Status, error) {
+func AddSession(projectIds []int64, maxLookbackTimestamp, startTimestamp, endTimestamp,
+	bufferTimeBeforeSessionCreateInMins int64, numProjectRoutines, numUserRoutines int) (map[int64]Status, error) {
 
 	hasFailures := false
-	statusMap := make(map[uint64]Status, 0)
+	statusMap := make(map[int64]Status, 0)
 	var statusLock sync.Mutex
 
 	if numProjectRoutines == 0 {
@@ -308,7 +308,7 @@ func AddSession(projectIds []uint64, maxLookbackTimestamp, startTimestamp, endTi
 	// breaks list of projectIds into multiple
 	// chunks of lenght num_routines to run inside
 	// go routines.
-	chunkProjectIds := make([][]uint64, 0, 0)
+	chunkProjectIds := make([][]int64, 0, 0)
 	for i := 0; i < len(projectIds); {
 		next := i + numProjectRoutines
 		if next > len(projectIds) {

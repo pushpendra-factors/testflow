@@ -19,7 +19,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func executeSharedQueryReq(r *gin.Engine, projectId uint64, agent *model.Agent, shareString string) *httptest.ResponseRecorder {
+func executeSharedQueryReq(r *gin.Engine, projectId int64, agent *model.Agent, shareString string) *httptest.ResponseRecorder {
 
 	var rb *U.RequestBuilder
 	if agent != nil {
@@ -47,7 +47,7 @@ func executeSharedQueryReq(r *gin.Engine, projectId uint64, agent *model.Agent, 
 	return w
 }
 
-func sendGetShareableUrlReq(r *gin.Engine, projectID uint64, agent *model.Agent) *httptest.ResponseRecorder {
+func sendGetShareableUrlReq(r *gin.Engine, projectID int64, agent *model.Agent) *httptest.ResponseRecorder {
 
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
@@ -71,7 +71,7 @@ func sendGetShareableUrlReq(r *gin.Engine, projectID uint64, agent *model.Agent)
 	return w
 }
 
-func sendCreateShareableUrlReq(r *gin.Engine, projectID uint64, agent *model.Agent, share *H.ShareableURLParams) *httptest.ResponseRecorder {
+func sendCreateShareableUrlReq(r *gin.Engine, projectID int64, agent *model.Agent, share *H.ShareableURLParams) *httptest.ResponseRecorder {
 
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
@@ -96,7 +96,7 @@ func sendCreateShareableUrlReq(r *gin.Engine, projectID uint64, agent *model.Age
 	return w
 }
 
-func sendDeleteShareableUrlReq(r *gin.Engine, projectID uint64, agent *model.Agent, shareId string) *httptest.ResponseRecorder {
+func sendDeleteShareableUrlReq(r *gin.Engine, projectID int64, agent *model.Agent, shareId string) *httptest.ResponseRecorder {
 
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
@@ -120,7 +120,7 @@ func sendDeleteShareableUrlReq(r *gin.Engine, projectID uint64, agent *model.Age
 	return w
 }
 
-func sendRevokeShareableUrlReq(r *gin.Engine, projectID uint64, agent *model.Agent, shareId string) *httptest.ResponseRecorder {
+func sendRevokeShareableUrlReq(r *gin.Engine, projectID int64, agent *model.Agent, shareId string) *httptest.ResponseRecorder {
 
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {

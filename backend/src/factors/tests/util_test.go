@@ -111,11 +111,11 @@ func TestEmailValidations(t *testing.T) {
 
 func TestParseProjectIDToStringMapFromConfig(t *testing.T) {
 	cMap := C.ParseProjectIDToStringMapFromConfig("1:User Identify1,2:Customer User ID ", "")
-	assert.Contains(t, cMap, uint64(1))
-	assert.Equal(t, "User Identify1", cMap[uint64(1)])
+	assert.Contains(t, cMap, int64(1))
+	assert.Equal(t, "User Identify1", cMap[int64(1)])
 	// Test after trimmed space.
-	assert.Contains(t, cMap, uint64(2))
-	assert.Equal(t, "Customer User ID", cMap[uint64(2)])
+	assert.Contains(t, cMap, int64(2))
+	assert.Equal(t, "Customer User ID", cMap[int64(2)])
 }
 
 func TestCheckOrConvertStandardTimestamp(t *testing.T) {

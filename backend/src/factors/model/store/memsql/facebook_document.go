@@ -245,7 +245,7 @@ func (store *MemSQL) isFacebookDocumentExistByPrimaryKey(document *model.Faceboo
 }
 
 // CreateFacebookDocument ...
-func (store *MemSQL) CreateFacebookDocument(projectID uint64, document *model.FacebookDocument) int {
+func (store *MemSQL) CreateFacebookDocument(projectID int64, document *model.FacebookDocument) int {
 	logFields := log.Fields{
 		"document":   document,
 		"project_id": projectID,
@@ -347,7 +347,7 @@ func getFacebookDocumentTypeAliasByType() map[int]string {
 }
 
 // @TODO Kark v1
-func (store *MemSQL) buildFbChannelConfig(projectID uint64) *model.ChannelConfigResult {
+func (store *MemSQL) buildFbChannelConfig(projectID int64) *model.ChannelConfigResult {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
@@ -362,7 +362,7 @@ func (store *MemSQL) buildFbChannelConfig(projectID uint64) *model.ChannelConfig
 	}
 }
 
-func (store *MemSQL) buildObjectAndPropertiesForFacebook(projectID uint64, objects []string) []model.ChannelObjectAndProperties {
+func (store *MemSQL) buildObjectAndPropertiesForFacebook(projectID int64, objects []string) []model.ChannelObjectAndProperties {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"objects":    objects,
@@ -391,7 +391,7 @@ func (store *MemSQL) buildObjectAndPropertiesForFacebook(projectID uint64, objec
 }
 
 // GetFacebookFilterValues - @TODO Kark v1
-func (store *MemSQL) GetFacebookFilterValues(projectID uint64, requestFilterObject string,
+func (store *MemSQL) GetFacebookFilterValues(projectID int64, requestFilterObject string,
 	requestFilterProperty string, reqID string) ([]interface{}, int) {
 	logFields := log.Fields{
 		"project_id":              projectID,
@@ -423,7 +423,7 @@ func (store *MemSQL) GetFacebookFilterValues(projectID uint64, requestFilterObje
 	return filterValues, http.StatusFound
 }
 
-func (store *MemSQL) IsFacebookIntegrationAvailable(projectID uint64) bool {
+func (store *MemSQL) IsFacebookIntegrationAvailable(projectID int64) bool {
 	projectSetting, errCode := store.GetProjectSetting(projectID)
 	if errCode != http.StatusFound {
 		return false
@@ -436,7 +436,7 @@ func (store *MemSQL) IsFacebookIntegrationAvailable(projectID uint64) bool {
 }
 
 // GetFacebookSQLQueryAndParametersForFilterValues - @TODO Kark v1
-func (store *MemSQL) GetFacebookSQLQueryAndParametersForFilterValues(projectID uint64, requestFilterObject string, requestFilterProperty string, reqID string) (string, []interface{}, int) {
+func (store *MemSQL) GetFacebookSQLQueryAndParametersForFilterValues(projectID int64, requestFilterObject string, requestFilterProperty string, reqID string) (string, []interface{}, int) {
 	logFields := log.Fields{
 		"project_id":              projectID,
 		"request_filter_object":   requestFilterObject,
@@ -492,7 +492,7 @@ func getFilterRelatedInformationForFacebook(requestFilterObject string,
 }
 
 // @TODO Kark v1
-func (store *MemSQL) getFacebookFilterValuesByType(projectID uint64, docType int, property string, reqID string) ([]interface{}, int) {
+func (store *MemSQL) getFacebookFilterValuesByType(projectID int64, docType int, property string, reqID string) ([]interface{}, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"doc_type":   docType,
@@ -527,7 +527,7 @@ func (store *MemSQL) getFacebookFilterValuesByType(projectID uint64, docType int
 // ExecuteFacebookChannelQueryV1 - @Kark TODO v1
 // In this flow, Job represents the meta data associated with particular object type. Reports represent data with metrics and few filters.
 // TODO - Duplicate code/flow in facebook and adwords.
-func (store *MemSQL) ExecuteFacebookChannelQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string) ([]string, [][]interface{}, int) {
+func (store *MemSQL) ExecuteFacebookChannelQueryV1(projectID int64, query *model.ChannelQueryV1, reqID string) ([]string, [][]interface{}, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"query":      query,
@@ -590,7 +590,7 @@ func (store *MemSQL) ExecuteFacebookChannelQueryV1(projectID uint64, query *mode
 }
 
 // GetSQLQueryAndParametersForFacebookQueryV1 ...
-func (store *MemSQL) GetSQLQueryAndParametersForFacebookQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string, fetchSource bool,
+func (store *MemSQL) GetSQLQueryAndParametersForFacebookQueryV1(projectID int64, query *model.ChannelQueryV1, reqID string, fetchSource bool,
 	limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string, int) {
 	logFields := log.Fields{
 		"project_id":                    projectID,
@@ -633,7 +633,7 @@ func (store *MemSQL) GetSQLQueryAndParametersForFacebookQueryV1(projectID uint64
 	return sql, params, selectKeys, selectMetrics, http.StatusOK
 }
 
-func (store *MemSQL) transFormRequestFieldsAndFetchRequiredFieldsForFacebook(projectID uint64,
+func (store *MemSQL) transFormRequestFieldsAndFetchRequiredFieldsForFacebook(projectID int64,
 	query model.ChannelQueryV1, reqID string) (*model.ChannelQueryV1, string, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
@@ -745,7 +745,7 @@ func getFacebookSpecificGroupBy(requestGroupBys []model.ChannelGroupBy) ([]model
 	return resultGroupBys, nil
 }
 
-func buildFacebookQueryV1(query *model.ChannelQueryV1, projectID uint64, customerAccountID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string, error) {
+func buildFacebookQueryV1(query *model.ChannelQueryV1, projectID int64, customerAccountID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string, error) {
 	logFields := log.Fields{
 		"project_id":                    projectID,
 		"query":                         query,
@@ -762,7 +762,7 @@ func buildFacebookQueryV1(query *model.ChannelQueryV1, projectID uint64, custome
 		fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT)
 	return sql, params, selectKeys, selectMetrics, nil
 }
-func buildFacebookQueryWithSmartPropertyV1(query *model.ChannelQueryV1, projectID uint64, customerAccountID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string, error) {
+func buildFacebookQueryWithSmartPropertyV1(query *model.ChannelQueryV1, projectID int64, customerAccountID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string, error) {
 	logFields := log.Fields{
 		"project_id":                    projectID,
 		"query":                         query,
@@ -780,7 +780,7 @@ func buildFacebookQueryWithSmartPropertyV1(query *model.ChannelQueryV1, projectI
 	return sql, params, selectKeys, selectMetrics, nil
 }
 
-func getSQLAndParamsFromFacebookReportsWithSmartProperty(query *model.ChannelQueryV1, projectID uint64, from, to int64, facebookAccountIDs string,
+func getSQLAndParamsFromFacebookReportsWithSmartProperty(query *model.ChannelQueryV1, projectID int64, from, to int64, facebookAccountIDs string,
 	docType int, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string) {
 	logFields := log.Fields{
 		"project_id":                    projectID,
@@ -901,7 +901,7 @@ func getFacebookFromStatementWithJoins(filters []model.ChannelFilterV1, groupBys
 	}
 	return fromStatement
 }
-func getSQLAndParamsFromFacebookReports(query *model.ChannelQueryV1, projectID uint64, from, to int64, facebookAccountIDs string,
+func getSQLAndParamsFromFacebookReports(query *model.ChannelQueryV1, projectID int64, from, to int64, facebookAccountIDs string,
 	docType int, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string) {
 	logFields := log.Fields{
 		"project_id":                    projectID,
@@ -1172,7 +1172,7 @@ func getLowestHierarchyLevelForFacebook(query *model.ChannelQueryV1) string {
 }
 
 // GetFacebookLastSyncInfo ...
-func (store *MemSQL) GetFacebookLastSyncInfo(projectID uint64, CustomerAdAccountID string) ([]model.FacebookLastSyncInfo, int) {
+func (store *MemSQL) GetFacebookLastSyncInfo(projectID int64, CustomerAdAccountID string) ([]model.FacebookLastSyncInfo, int) {
 	logFields := log.Fields{
 		"project_id":             projectID,
 		"customer_ad_account_id": CustomerAdAccountID,
@@ -1219,7 +1219,7 @@ func (store *MemSQL) GetFacebookLastSyncInfo(projectID uint64, CustomerAdAccount
 }
 
 // ExecuteFacebookChannelQuery - @TODO Kark v0
-func (store *MemSQL) ExecuteFacebookChannelQuery(projectID uint64,
+func (store *MemSQL) ExecuteFacebookChannelQuery(projectID int64,
 	query *model.ChannelQuery) (*model.ChannelQueryResult, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
@@ -1277,7 +1277,7 @@ func (store *MemSQL) ExecuteFacebookChannelQuery(projectID uint64,
 }
 
 // @TODO Kark v0
-func (store *MemSQL) GetFacebookMetricBreakdown(projectID uint64, customerAccountID string,
+func (store *MemSQL) GetFacebookMetricBreakdown(projectID int64, customerAccountID string,
 	query *model.ChannelQuery) (*model.ChannelBreakdownResult, error) {
 	logFields := log.Fields{
 		"project_id":          projectID,
@@ -1382,7 +1382,7 @@ func getFacebookMetricsQuery(query *model.ChannelQuery, withBreakdown bool) (str
 }
 
 // @TODO Kark v0
-func (store *MemSQL) GetFacebookChannelResult(projectID uint64, customerAccountID string,
+func (store *MemSQL) GetFacebookChannelResult(projectID int64, customerAccountID string,
 	query *model.ChannelQuery) (*model.ChannelQueryResult, error) {
 	logFields := log.Fields{
 		"project_id":          projectID,
@@ -1426,7 +1426,7 @@ func (store *MemSQL) GetFacebookChannelResult(projectID uint64, customerAccountI
 	return queryResult, nil
 }
 
-func (store *MemSQL) GetLatestMetaForFacebookForGivenDays(projectID uint64, days int) ([]model.ChannelDocumentsWithFields, []model.ChannelDocumentsWithFields) {
+func (store *MemSQL) GetLatestMetaForFacebookForGivenDays(projectID int64, days int) ([]model.ChannelDocumentsWithFields, []model.ChannelDocumentsWithFields) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"days":       days,
@@ -1504,7 +1504,7 @@ func (store *MemSQL) GetLatestMetaForFacebookForGivenDays(projectID uint64, days
 	return channelDocumentsCampaign, channelDocumentsAdGroup
 }
 
-func (store *MemSQL) DeleteFacebookIntegration(projectID uint64) (int, error) {
+func (store *MemSQL) DeleteFacebookIntegration(projectID int64) (int, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}

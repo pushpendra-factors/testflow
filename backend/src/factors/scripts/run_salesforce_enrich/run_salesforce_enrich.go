@@ -45,7 +45,7 @@ func (es *EnrichStatus) AddEnrichStatus(status []IntSalesforce.Status, hasFailur
 	}
 }
 
-func syncWorker(projectID uint64, wg *sync.WaitGroup, workerIndex, workerPerProject int, enrichStatus *EnrichStatus, salesforceProjectSettings *model.SalesforceProjectSettings) {
+func syncWorker(projectID int64, wg *sync.WaitGroup, workerIndex, workerPerProject int, enrichStatus *EnrichStatus, salesforceProjectSettings *model.SalesforceProjectSettings) {
 	defer wg.Done()
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "worder_index": workerIndex})
@@ -70,7 +70,7 @@ func syncWorker(projectID uint64, wg *sync.WaitGroup, workerIndex, workerPerProj
 	logCtx.Info("Processing completed for given project.")
 }
 
-func allowProjectByProjectIDList(projectID uint64, allProjects bool, allowedProjects, disabledProjects map[uint64]bool) bool {
+func allowProjectByProjectIDList(projectID int64, allProjects bool, allowedProjects, disabledProjects map[int64]bool) bool {
 	return !disabledProjects[projectID] && (allProjects || allowedProjects[projectID])
 }
 
@@ -284,8 +284,8 @@ func main() {
 			log.Panic("No projects enabled salesforce integration.")
 		}
 
-		allowedProjectIDs := make([]uint64, 0)
-		allowedSalesforceProjectSettings := make(map[uint64]*model.SalesforceProjectSettings)
+		allowedProjectIDs := make([]int64, 0)
+		allowedSalesforceProjectSettings := make(map[int64]*model.SalesforceProjectSettings)
 		for i := range salesforceEnabledProjects {
 			if !allowProjectByProjectIDList(salesforceEnabledProjects[i].ProjectID, allProjects, allowedProjects, disabledProjects) {
 				continue
@@ -300,7 +300,7 @@ func main() {
 		}
 
 		// Runs enrichment for list of project_ids as batch using go routines.
-		batches := U.GetUint64ListAsBatch(allowedProjectIDs, *numProjectRoutines)
+		batches := U.GetInt64ListAsBatch(allowedProjectIDs, *numProjectRoutines)
 		enrichStatus := EnrichStatus{}
 		workerIndex := 0
 		for bi := range batches {

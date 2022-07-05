@@ -17,7 +17,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func CreateKpiInsights(diskManager *serviceDisk.DiskDriver, cloudManager *filestore.FileManager, periodCodesWithWeekNMinus1 []Period, projectId uint64, queryId int64, queryGroup M.KPIQueryGroup, insightGranularity string, skipWpi, skipWpi2 bool) error {
+func CreateKpiInsights(diskManager *serviceDisk.DiskDriver, cloudManager *filestore.FileManager, periodCodesWithWeekNMinus1 []Period, projectId int64, queryId int64, queryGroup M.KPIQueryGroup, insightGranularity string, skipWpi, skipWpi2 bool) error {
 	// readEvents := true
 	var err error
 	var newInsightsList = make([]*WithinPeriodInsightsKpi, 0)
@@ -158,7 +158,7 @@ func CreateKpiInsights(diskManager *serviceDisk.DiskDriver, cloudManager *filest
 	return nil
 }
 
-func GetMetricsEvaluated(category string, metricNames []string, queryEvent string, propFilter []M.KPIFilter, propsToEval []string, projectId uint64, periodCode Period, cloudManager *filestore.FileManager,
+func GetMetricsEvaluated(category string, metricNames []string, queryEvent string, propFilter []M.KPIFilter, propsToEval []string, projectId int64, periodCode Period, cloudManager *filestore.FileManager,
 	diskManager *serviceDisk.DiskDriver, insightGranularity string) (*WithinPeriodInsightsKpi, error) {
 
 	var insights *WithinPeriodInsightsKpi

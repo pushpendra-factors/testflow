@@ -25,7 +25,7 @@ const (
 
 // CacheResponse Struct to store cache response and emit.
 type CacheResponse struct {
-	ProjectID, DashboardID, DashboardUnitID uint64
+	ProjectID, DashboardID, DashboardUnitID int64
 	From, To, TimeTaken                     int64
 	ErrorCode                               int
 	ErrorMessage                            string
@@ -50,7 +50,7 @@ func initConf(config *C.Configuration) {
 	C.KillDBQueriesOnExit()
 }
 
-func EmitProjectKeyCacheResponse(ctx context.Context, cacheResponse CacheResponse, emit func(uint64, CacheResponse)) {
+func EmitProjectKeyCacheResponse(ctx context.Context, cacheResponse CacheResponse, emit func(int64, CacheResponse)) {
 	log.WithFields(log.Fields{
 		"Method":          "EmitProjectKeyCacheResponse",
 		"ProjectID":       cacheResponse.ProjectID,
@@ -62,11 +62,11 @@ func EmitProjectKeyCacheResponse(ctx context.Context, cacheResponse CacheRespons
 	emit(cacheResponse.ProjectID, cacheResponse)
 }
 
-func EmitCommonKeyCacheResponse(ctx context.Context, cacheResponse CacheResponse, emit func(uint64, CacheResponse)) {
+func EmitCommonKeyCacheResponse(ctx context.Context, cacheResponse CacheResponse, emit func(int64, CacheResponse)) {
 	emit(0, cacheResponse)
 }
 
-func ReportProjectLevelSummary(projectID uint64, values func(*CacheResponse) bool) string {
+func ReportProjectLevelSummary(projectID int64, values func(*CacheResponse) bool) string {
 	var timeTakenForProject int64
 	var successCount, failedCount int64
 
@@ -103,7 +103,7 @@ func ReportProjectLevelSummary(projectID uint64, values func(*CacheResponse) boo
 		projectID, timeTakenString, successCount, failedCount)
 }
 
-func ReportOverallJobSummary(commonKey uint64, values func(*CacheResponse) bool) string {
+func ReportOverallJobSummary(commonKey int64, values func(*CacheResponse) bool) string {
 	overallStats := make(map[string]map[string]int64)
 	overallStats[BeamCacheTypeDashboardUnits] = make(map[string]int64)
 	overallStats[BeamCacheTypeWebAnalytics] = make(map[string]int64)
@@ -222,7 +222,7 @@ func (f *GetDashboardUnitCachePayloadsFn) ProcessElement(ctx context.Context, pr
 			log.Errorf("Failed to get project Timezone for %d", projectID)
 			continue
 		}
-		dashboardUnits, errCode := store.GetStore().GetDashboardUnitsForProjectID(uint64(projectID))
+		dashboardUnits, errCode := store.GetStore().GetDashboardUnitsForProjectID(int64(projectID))
 		if errCode != http.StatusFound {
 			continue
 		}

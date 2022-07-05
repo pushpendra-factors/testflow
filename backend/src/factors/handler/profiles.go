@@ -61,7 +61,7 @@ func ProfilesQueryHandler(c *gin.Context) (interface{}, int, string, string, boo
 	}
 	r := c.Request
 
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		logCtx.Error("Query failed. Invalid project.")
 		return nil, http.StatusUnauthorized, V1.INVALID_PROJECT, "Query failed. Invalid project.", true

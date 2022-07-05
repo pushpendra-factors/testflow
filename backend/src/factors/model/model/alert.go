@@ -37,7 +37,7 @@ var ValidOperators = []string{IS_LESS_THAN, IS_GREATER_THAN, DECREASED_BY_MORE_T
 
 type Alert struct {
 	ID                 string          `gorm:"type:uuid;default:uuid_generate_v4()" json:"id"`
-	ProjectID          uint64          `json:"project_id"`
+	ProjectID          int64           `json:"project_id"`
 	AlertName          string          `json:"alert_name"`
 	CreatedBy          string          `json:"created_by"`
 	AlertType          int             `json:"alert_type"`
@@ -75,7 +75,7 @@ type SlackChannel struct {
 	IsPrivate bool   `json:"is_private"`
 }
 
-func DecodeAndFetchAlertRelatedStructs(projectID uint64, alert Alert) (AlertDescription, AlertConfiguration, KPIQuery, error) {
+func DecodeAndFetchAlertRelatedStructs(projectID int64, alert Alert) (AlertDescription, AlertConfiguration, KPIQuery, error) {
 	var alertDescription AlertDescription
 	var alertConfiguration AlertConfiguration
 	var kpiQuery KPIQuery

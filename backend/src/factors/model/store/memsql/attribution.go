@@ -20,7 +20,7 @@ import (
 //	  ii)	Using users from 3.i) find out users who hit linked funnel event applying filter
 //	4. Apply attribution methodology
 //	5. Add performance data by attributionId
-func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *model.AttributionQuery, debugQueryKey string) (*model.QueryResult, error) {
+func (store *MemSQL) ExecuteAttributionQuery(projectID int64, queryOriginal *model.AttributionQuery, debugQueryKey string) (*model.QueryResult, error) {
 
 	logFields := log.Fields{
 		"project_id":        projectID,
@@ -349,7 +349,7 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 	return result, nil
 }
 
-func (store *MemSQL) AppendOTPSessions(projectID uint64, query *model.AttributionQuery,
+func (store *MemSQL) AppendOTPSessions(projectID int64, query *model.AttributionQuery,
 	sessions *map[string]map[string]model.UserSessionData, logCtx log.Entry) {
 
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logCtx.Data)
@@ -375,7 +375,7 @@ func (store *MemSQL) AppendOTPSessions(projectID uint64, query *model.Attributio
 	model.UpdateSessionsMapWithCoalesceID(_sessionsOTP, usersInfoOTP, sessions)
 }
 
-func (store *MemSQL) FireAttribution(projectID uint64, query *model.AttributionQuery, eventNameToIDList map[string][]interface{},
+func (store *MemSQL) FireAttribution(projectID int64, query *model.AttributionQuery, eventNameToIDList map[string][]interface{},
 	sessions map[string]map[string]model.UserSessionData, sessionWT map[string][]float64, logCtx log.Entry) (*map[string]*model.AttributionData, bool, error) {
 
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logCtx.Data)
@@ -438,7 +438,7 @@ func (store *MemSQL) FireAttribution(projectID uint64, query *model.AttributionQ
 	return attributionData, isCompare, err
 }
 
-func (store *MemSQL) RunAttributionForMethodologyComparison(projectID uint64,
+func (store *MemSQL) RunAttributionForMethodologyComparison(projectID int64,
 	conversionFrom, conversionTo int64, query *model.AttributionQuery, eventNameToIDList map[string][]interface{},
 	sessions map[string]map[string]model.UserSessionData, sessionWT map[string][]float64, logCtx log.Entry) (*map[string]*model.AttributionData, error) {
 
@@ -516,7 +516,7 @@ func (store *MemSQL) RunAttributionForMethodologyComparison(projectID uint64,
 	return &attributionData, nil
 }
 
-func (store *MemSQL) runAttributionKpi(projectID uint64,
+func (store *MemSQL) runAttributionKpi(projectID int64,
 	conversionFrom, conversionTo int64, goalEvent model.QueryEventWithProperties,
 	query *model.AttributionQuery, eventNameToIDList map[string][]interface{},
 	sessions map[string]map[string]model.UserSessionData, sessionWT map[string][]float64, logCtx log.Entry) (*map[string]*model.AttributionData, error) {
@@ -564,7 +564,7 @@ func (store *MemSQL) runAttributionKpi(projectID uint64,
 	return &attributionData, nil
 }
 
-func (store *MemSQL) runAttribution(projectID uint64,
+func (store *MemSQL) runAttribution(projectID int64,
 	conversionFrom, conversionTo int64, goalEvent model.QueryEventWithProperties,
 	query *model.AttributionQuery, eventNameToIDList map[string][]interface{},
 	sessions map[string]map[string]model.UserSessionData, sessionWT map[string][]float64, logCtx log.Entry) (*map[string]*model.AttributionData, error) {
@@ -613,7 +613,7 @@ func (store *MemSQL) runAttribution(projectID uint64,
 }
 
 // GetCoalesceIDFromUserIDs returns the map of coalesce userId for given list of users
-func (store *MemSQL) GetCoalesceIDFromUserIDs(userIDs []string, projectID uint64,
+func (store *MemSQL) GetCoalesceIDFromUserIDs(userIDs []string, projectID int64,
 	logCtx log.Entry) (map[string]model.UserInfo, error) {
 
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logCtx.Data)
@@ -653,7 +653,7 @@ func (store *MemSQL) GetCoalesceIDFromUserIDs(userIDs []string, projectID uint64
 
 // Returns the all the sessions (userId,attributionId,minTimestamp,maxTimestamp) for given
 // users from given period including lookback
-func (store *MemSQL) getAllTheSessions(projectId uint64, sessionEventNameId string, query *model.AttributionQuery, reports *model.MarketingReports, contentGroupNamesList []string, logCtx log.Entry) (map[string]map[string]model.UserSessionData, []string, error) {
+func (store *MemSQL) getAllTheSessions(projectId int64, sessionEventNameId string, query *model.AttributionQuery, reports *model.MarketingReports, contentGroupNamesList []string, logCtx log.Entry) (map[string]map[string]model.UserSessionData, []string, error) {
 	logFields := log.Fields{
 		"project_id":            projectId,
 		"session_event_name_id": sessionEventNameId,
@@ -732,7 +732,7 @@ func (store *MemSQL) getAllTheSessions(projectId uint64, sessionEventNameId stri
 }
 
 // getOfflineEventData returns  offline touch point event id
-func (store *MemSQL) getOfflineEventData(projectID uint64, logCtx log.Entry) (model.EventName, error) {
+func (store *MemSQL) getOfflineEventData(projectID int64, logCtx log.Entry) (model.EventName, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
@@ -749,7 +749,7 @@ func (store *MemSQL) getOfflineEventData(projectID uint64, logCtx log.Entry) (mo
 }
 
 // Return conversion event Id, list of all event_ids(Conversion and funnel events) and a Id to name mapping
-func (store *MemSQL) getEventInformation(projectId uint64,
+func (store *MemSQL) getEventInformation(projectId int64,
 	query *model.AttributionQuery, logCtx log.Entry) (string, map[string][]interface{}, error) {
 
 	names := model.BuildEventNamesPlaceholder(query)
@@ -798,7 +798,7 @@ func (store *MemSQL) getEventInformation(projectId uint64,
 }
 
 // GetLinkedFunnelEventUsersFilter Adds users who hit funnel event with given {event/user properties} to usersToBeAttributed
-func (store *MemSQL) GetLinkedFunnelEventUsersFilter(projectID uint64, queryFrom, queryTo int64,
+func (store *MemSQL) GetLinkedFunnelEventUsersFilter(projectID int64, queryFrom, queryTo int64,
 	linkedEvents []model.QueryEventWithProperties, eventNameToId map[string][]interface{},
 	userIDInfo map[string]model.UserInfo, logCtx log.Entry) (error, []model.UserEventInfo) {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logCtx.Data)
@@ -911,7 +911,7 @@ func (store *MemSQL) GetLinkedFunnelEventUsersFilter(projectID uint64, queryFrom
 
 // GetConvertedUsersWithFilter Returns the list of eligible users who hit conversion
 // event for userProperties from events table
-func (store *MemSQL) GetConvertedUsersWithFilter(projectID uint64, goalEventName string,
+func (store *MemSQL) GetConvertedUsersWithFilter(projectID int64, goalEventName string,
 	goalEventProperties []model.QueryProperty, conversionFrom, conversionTo int64,
 	eventNameToIdList map[string][]interface{}, logCtx log.Entry) (map[string]model.UserInfo,
 	map[string][]model.UserIDPropID, map[string]int64, error) {
@@ -1027,7 +1027,7 @@ func (store *MemSQL) GetConvertedUsersWithFilter(projectID uint64, goalEventName
 }
 
 // GetAdwordsCurrency Returns currency used for adwords customer_account_id
-func (store *MemSQL) GetAdwordsCurrency(projectID uint64, customerAccountID string, from, to int64, logCtx log.Entry) (string, error) {
+func (store *MemSQL) GetAdwordsCurrency(projectID int64, customerAccountID string, from, to int64, logCtx log.Entry) (string, error) {
 	logFields := log.Fields{
 		"project_id":          projectID,
 		"customer_account_id": customerAccountID,

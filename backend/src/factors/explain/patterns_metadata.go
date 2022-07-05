@@ -14,7 +14,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func GetChunksMetaData(projectId, modelId uint64) (metadata []T.ChunkMetaData, errmsg error) {
+func GetChunksMetaData(projectId int64, modelId uint64) (metadata []T.ChunkMetaData, errmsg error) {
 	path, name := C.GetConfig().CloudManager.GetChunksMetaDataFilePathAndName(projectId, modelId)
 	reader, err := C.GetCloudManager().Get(path, name)
 	if err != nil {

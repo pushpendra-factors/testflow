@@ -39,9 +39,9 @@ func (req *KPIFilterValuesRequest) isValid() bool {
 	return true
 }
 
-func getReqIDAndProjectID(c *gin.Context) (string, uint64) {
+func getReqIDAndProjectID(c *gin.Context) (string, int64) {
 	reqID := U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID)
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	return reqID, projectID
 }
 
@@ -59,7 +59,7 @@ func GetKPIConfigHandler(c *gin.Context) (interface{}, int, string, string, bool
 		return nil, http.StatusBadRequest, INVALID_INPUT, "", true
 	}
 	storeSelected := store.GetStore()
-	configFunctions := []func(uint64, string) (map[string]interface{}, int){
+	configFunctions := []func(int64, string) (map[string]interface{}, int){
 		storeSelected.GetKPIConfigsForWebsiteSessions,
 		storeSelected.GetKPIConfigsForPageViews,
 		storeSelected.GetKPIConfigsForFormSubmissions,
@@ -277,7 +277,7 @@ func getDashboardRelatedInformationFromRequest(request model.KPIQueryGroup, dash
 	return dashboardId, unitId, commonQueryFrom, commonQueryTo, hardRefresh, isDashboardQueryRequest, isQuery, err
 }
 
-func getResultFromCacheOrDashboard(c *gin.Context, reqID string, projectID uint64, request model.KPIQueryGroup,
+func getResultFromCacheOrDashboard(c *gin.Context, reqID string, projectID int64, request model.KPIQueryGroup,
 	dashboardId int64, unitId int64, commonQueryFrom int64, commonQueryTo int64, hardRefresh bool,
 	timezoneString U.TimeZoneString, isDashboardQueryRequest bool, logCtx *log.Entry) (interface{}, int, string, string, bool) {
 

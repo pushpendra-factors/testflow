@@ -192,6 +192,10 @@ func RandomUint64() uint64 {
 	return rand.Uint64()
 }
 
+func RandomInt64() int64 {
+	return int64(rand.Uint64())
+}
+
 func RandomUint64WithUnixNano() uint64 {
 	return uint64(time.Now().UnixNano())
 }
@@ -422,6 +426,16 @@ func Uint64ValueIn(value uint64, list []uint64) bool {
 	return false
 }
 
+// Uint64ValueIn Returns true if `value` is in `list` else false.
+func Int64ValueIn(value int64, list []int64) bool {
+	for _, val := range list {
+		if val == value {
+			return true
+		}
+	}
+	return false
+}
+
 // FloatRoundOffWithPrecision Rounds of a float64 value to given precision. Ex: 2.667 with precision 2 -> 2.67.
 func FloatRoundOffWithPrecision(value float64, precision int) (float64, error) {
 	valueString := fmt.Sprintf("%0.*f", precision, value)
@@ -526,8 +540,8 @@ func GetStringListAsBatch(list []string, batchSize int) [][]string {
 }
 
 // GetUint64ListAsBatch - Returns list of uint64 as batches of uint64 list.
-func GetUint64ListAsBatch(list []uint64, batchSize int) [][]uint64 {
-	batchList := make([][]uint64, 0, 0)
+func GetInt64ListAsBatch(list []int64, batchSize int) [][]int64 {
+	batchList := make([][]int64, 0, 0)
 	listLen := len(list)
 	for i := 0; i < listLen; {
 		next := i + batchSize

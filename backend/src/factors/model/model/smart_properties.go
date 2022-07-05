@@ -7,7 +7,7 @@ import (
 )
 
 type SmartProperties struct {
-	ProjectID      uint64          `gorm:"primary_key:true;auto_increment:false" json:"project_id"`
+	ProjectID      int64           `gorm:"primary_key:true;auto_increment:false" json:"project_id"`
 	ObjectType     int             `gorm:"primary_key:true;auto_increment:false" json:"object_type"`
 	ObjectID       string          `gorm:"primary_key:true;auto_increment:false" json:"object_id"`
 	ObjectProperty *postgres.Jsonb `json:"object_property"`

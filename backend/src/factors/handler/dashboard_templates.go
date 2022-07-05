@@ -16,7 +16,7 @@ import (
 
 func GetTemplateHandler(c *gin.Context) {
 
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Get Templates failed. Invalid project."})
 		return
@@ -88,6 +88,11 @@ func DeleteTemplateHandler(c *gin.Context) {
 }
 
 func SearchTemplateHandler(c *gin.Context) {
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	if projectID == 0 {
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Search queries failed. Invalid project."})
+		return
+	}
 
 	templateIDParam := c.Params.ByName("id")
 	if templateIDParam == "" {
@@ -116,7 +121,7 @@ func GenerateDashboardFromTemplateHandler(c *gin.Context) {
 		return
 	}
 
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Create template failed. Invalid project."})
 		return
@@ -250,7 +255,7 @@ func GenerateDashboardFromTemplateHandler(c *gin.Context) {
 
 func GenerateTemplateFromDashboardHandler(c *gin.Context) {
 	// extract the project Id and agentUUID from the url similarly to dashboardId. USe it as arguments
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Get dashboards failed. Invalid project."})
 		return

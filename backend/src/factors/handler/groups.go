@@ -22,7 +22,7 @@ import (
 // @Success 200 {string} json "[]json"
 // @Router /{project_id}/groups [get]
 func GetGroupsHandler(c *gin.Context) {
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Get groups failed. Invalid project."})
 		return
@@ -47,7 +47,7 @@ func GetGroupsHandler(c *gin.Context) {
 // @Success 200 {string} json "map[string]map[string][]string"
 // @Router /{project_id}/groups/{group_name}/properties [get]
 func GetGroupPropertiesHandler(c *gin.Context) {
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
@@ -107,7 +107,7 @@ func GetGroupPropertiesHandler(c *gin.Context) {
 // @Success 200 {string} json "[]string"
 // @Router /{project_id}/groups/{group_name}/properties/{property_name}/values [get]
 func GetGroupPropertyValuesHandler(c *gin.Context) {
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return

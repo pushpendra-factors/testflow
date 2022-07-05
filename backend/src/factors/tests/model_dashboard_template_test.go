@@ -3,8 +3,9 @@ package tests
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/jinzhu/gorm/dialects/postgres"
 	"time"
+
+	"github.com/jinzhu/gorm/dialects/postgres"
 
 	C "factors/config"
 	H "factors/handler"
@@ -12,10 +13,11 @@ import (
 	"factors/model/model"
 	"factors/model/store"
 	U "factors/util"
-	"github.com/gin-gonic/gin"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/gin-gonic/gin"
 
 	log "github.com/sirupsen/logrus"
 
@@ -138,7 +140,7 @@ func TestReadDashboardTemplate(t *testing.T) {
 	})
 }
 
-func sendCreateDashboardFromTemplateReq(r *gin.Engine, projectId uint64, agent *model.Agent, templateID string, dashboardTemplate *model.DashboardTemplate) *httptest.ResponseRecorder {
+func sendCreateDashboardFromTemplateReq(r *gin.Engine, projectId int64, agent *model.Agent, templateID string, dashboardTemplate *model.DashboardTemplate) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")
@@ -162,7 +164,7 @@ func sendCreateDashboardFromTemplateReq(r *gin.Engine, projectId uint64, agent *
 	return w
 }
 
-func sendCreateTemplateFromDashboardReq(r *gin.Engine, projectId uint64, agent *model.Agent, dashboardID int64, dashboard *model.Dashboard) *httptest.ResponseRecorder {
+func sendCreateTemplateFromDashboardReq(r *gin.Engine, projectId int64, agent *model.Agent, dashboardID int64, dashboard *model.Dashboard) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")

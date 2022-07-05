@@ -59,7 +59,7 @@ func (store *MemSQL) satisfiesProjectSettingForeignConstraints(setting model.Pro
 	return http.StatusOK
 }
 
-func (store *MemSQL) GetProjectSetting(projectId uint64) (*model.ProjectSetting, int) {
+func (store *MemSQL) GetProjectSetting(projectId int64) (*model.ProjectSetting, int) {
 	logFields := log.Fields{
 		"project_id": projectId,
 	}
@@ -83,7 +83,7 @@ func (store *MemSQL) GetProjectSetting(projectId uint64) (*model.ProjectSetting,
 	return &projectSetting, http.StatusFound
 }
 
-func (store *MemSQL) GetClearbitKeyFromProjectSetting(projectId uint64) (string, int) {
+func (store *MemSQL) GetClearbitKeyFromProjectSetting(projectId int64) (string, int) {
 	logFields := log.Fields{
 		"project_id": projectId,
 	}
@@ -157,7 +157,7 @@ func (store *MemSQL) GetProjectSettingByKeyWithTimeout(key, value string, timeou
 }
 
 // EnableBigqueryArchivalForProject To enable archival and bigquery in project_settings.
-func (store *MemSQL) EnableBigqueryArchivalForProject(projectID uint64) int {
+func (store *MemSQL) EnableBigqueryArchivalForProject(projectID int64) int {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
@@ -409,7 +409,7 @@ func (store *MemSQL) createProjectSetting(ps *model.ProjectSetting) (*model.Proj
 	return ps, http.StatusCreated
 }
 
-func (store *MemSQL) delAllProjectSettingsCacheForProject(projectId uint64) {
+func (store *MemSQL) delAllProjectSettingsCacheForProject(projectId int64) {
 	logFields := log.Fields{
 		"project_id": projectId,
 	}
@@ -425,7 +425,7 @@ func (store *MemSQL) delAllProjectSettingsCacheForProject(projectId uint64) {
 	delCacheProjectSetting(model.ProjectSettingKeyPrivateToken, project.PrivateToken)
 }
 
-func (store *MemSQL) UpdateProjectSettings(projectId uint64, settings *model.ProjectSetting) (*model.ProjectSetting, int) {
+func (store *MemSQL) UpdateProjectSettings(projectId int64, settings *model.ProjectSetting) (*model.ProjectSetting, int) {
 	logFields := log.Fields{
 		"project_id": projectId,
 		"settings":   settings,
@@ -504,7 +504,7 @@ func (store *MemSQL) UpdateProjectSettings(projectId uint64, settings *model.Pro
 	return &updatedProjectSetting, http.StatusAccepted
 }
 
-func (store *MemSQL) IsPSettingsIntShopifyEnabled(projectId uint64) bool {
+func (store *MemSQL) IsPSettingsIntShopifyEnabled(projectId int64) bool {
 	logFields := log.Fields{
 		"project_id": projectId,
 	}
@@ -512,7 +512,7 @@ func (store *MemSQL) IsPSettingsIntShopifyEnabled(projectId uint64) bool {
 	return true
 }
 
-func (store *MemSQL) GetIntAdwordsRefreshTokenForProject(projectId uint64) (string, int) {
+func (store *MemSQL) GetIntAdwordsRefreshTokenForProject(projectId int64) (string, int) {
 	logFields := log.Fields{
 		"project_id": projectId,
 	}
@@ -543,7 +543,7 @@ func (store *MemSQL) GetIntAdwordsRefreshTokenForProject(projectId uint64) (stri
 	return refreshToken, http.StatusFound
 }
 
-func (store *MemSQL) GetIntGoogleOrganicRefreshTokenForProject(projectId uint64) (string, int) {
+func (store *MemSQL) GetIntGoogleOrganicRefreshTokenForProject(projectId int64) (string, int) {
 	logFields := log.Fields{
 		"project_id": projectId,
 	}
@@ -574,7 +574,7 @@ func (store *MemSQL) GetIntGoogleOrganicRefreshTokenForProject(projectId uint64)
 	return refreshToken, http.StatusFound
 }
 
-func (store *MemSQL) GetIntAdwordsProjectSettingsForProjectID(projectID uint64) ([]model.AdwordsProjectSettings, int) {
+func (store *MemSQL) GetIntAdwordsProjectSettingsForProjectID(projectID int64) ([]model.AdwordsProjectSettings, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
@@ -636,7 +636,7 @@ func (store *MemSQL) getIntAdwordsProjectSettings(query string, params []interfa
 	return adwordsProjectSettings, http.StatusOK
 }
 
-func (store *MemSQL) GetIntGoogleOrganicProjectSettingsForProjectID(projectID uint64) ([]model.GoogleOrganicProjectSettings, int) {
+func (store *MemSQL) GetIntGoogleOrganicProjectSettingsForProjectID(projectID int64) ([]model.GoogleOrganicProjectSettings, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
@@ -711,7 +711,7 @@ func (store *MemSQL) GetAllHubspotProjectSettings() ([]model.HubspotProjectSetti
 	return hubspotProjectSettings, http.StatusFound
 }
 
-func (store *MemSQL) IsHubspotIntegrationAvailable(projectID uint64) bool {
+func (store *MemSQL) IsHubspotIntegrationAvailable(projectID int64) bool {
 	hubspotProjectSettings, errCode := store.GetAllHubspotProjectSettingsForProjectID(projectID)
 	if errCode != http.StatusFound && errCode != http.StatusOK {
 		log.WithField("projectId", projectID).Warn(" Failed in getting hubspot project settings.")
@@ -724,7 +724,7 @@ func (store *MemSQL) IsHubspotIntegrationAvailable(projectID uint64) bool {
 	return true
 }
 
-func (store *MemSQL) GetAllHubspotProjectSettingsForProjectID(projectID uint64) ([]model.HubspotProjectSettings, int) {
+func (store *MemSQL) GetAllHubspotProjectSettingsForProjectID(projectID int64) ([]model.HubspotProjectSettings, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
@@ -747,7 +747,7 @@ func (store *MemSQL) GetAllHubspotProjectSettingsForProjectID(projectID uint64) 
 
 type shopifyInfoStruct struct {
 	apiKey    string
-	projectId uint64
+	projectId int64
 	hashEmail bool
 }
 
@@ -789,7 +789,7 @@ var productionShopifyInfo = map[string]shopifyInfoStruct{
 }
 
 func (store *MemSQL) GetProjectDetailsByShopifyDomain(
-	shopifyDomain string) (uint64, string, bool, int) {
+	shopifyDomain string) (int64, string, bool, int) {
 	logFields := log.Fields{
 		"shopify_domain": shopifyDomain,
 	}
@@ -810,12 +810,12 @@ func (store *MemSQL) GetProjectDetailsByShopifyDomain(
 	return 0, "", false, http.StatusInternalServerError
 }
 
-func (store *MemSQL) GetFacebookEnabledIDsAndProjectSettings() ([]uint64, []model.FacebookProjectSettings, int) {
+func (store *MemSQL) GetFacebookEnabledIDsAndProjectSettings() ([]int64, []model.FacebookProjectSettings, int) {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 	db := C.GetServices().Db
 
 	facebookProjectSettings := make([]model.FacebookProjectSettings, 0, 0)
-	facebookIDs := make([]uint64, 0, 0)
+	facebookIDs := make([]int64, 0, 0)
 
 	err := db.Table("project_settings").Where("int_facebook_access_token IS NOT NULL AND int_facebook_access_token != ''").Find(&facebookProjectSettings).Error
 	if err != nil {
@@ -828,7 +828,7 @@ func (store *MemSQL) GetFacebookEnabledIDsAndProjectSettings() ([]uint64, []mode
 	return facebookIDs, facebookProjectSettings, http.StatusOK
 }
 
-func (store *MemSQL) GetFacebookEnabledIDsAndProjectSettingsForProject(projectIDs []uint64) ([]uint64, []model.FacebookProjectSettings, int) {
+func (store *MemSQL) GetFacebookEnabledIDsAndProjectSettingsForProject(projectIDs []int64) ([]int64, []model.FacebookProjectSettings, int) {
 	logFields := log.Fields{
 		"project_ids": projectIDs,
 	}
@@ -836,7 +836,7 @@ func (store *MemSQL) GetFacebookEnabledIDsAndProjectSettingsForProject(projectID
 	db := C.GetServices().Db
 
 	facebookProjectSettings := make([]model.FacebookProjectSettings, 0, 0)
-	facebookIDs := make([]uint64, 0, 0)
+	facebookIDs := make([]int64, 0, 0)
 
 	err := db.Table("project_settings").Where("int_facebook_access_token IS NOT NULL AND int_facebook_access_token != '' AND project_id IN (?)", projectIDs).Find(&facebookProjectSettings).Error
 	if err != nil {
@@ -880,9 +880,9 @@ func (store *MemSQL) GetLinkedinEnabledProjectSettingsForProjects(projectIDs []s
 }
 
 // GetArchiveEnabledProjectIDs Returns list of project ids which have archive enabled.
-func (store *MemSQL) GetArchiveEnabledProjectIDs() ([]uint64, int) {
+func (store *MemSQL) GetArchiveEnabledProjectIDs() ([]int64, int) {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
-	var projectIDs []uint64
+	var projectIDs []int64
 	db := C.GetServices().Db
 
 	rows, err := db.Model(&model.ProjectSetting{}).Where("archive_enabled = true").Select("project_id").Rows()
@@ -892,7 +892,7 @@ func (store *MemSQL) GetArchiveEnabledProjectIDs() ([]uint64, int) {
 	}
 
 	for rows.Next() {
-		var projectID uint64
+		var projectID int64
 		err = rows.Scan(&projectID)
 		if err != nil {
 			log.WithError(err).Error("Error while scanning")
@@ -904,9 +904,9 @@ func (store *MemSQL) GetArchiveEnabledProjectIDs() ([]uint64, int) {
 }
 
 // GetBigqueryEnabledProjectIDs Returns list of project ids which have bigquery enabled.
-func (store *MemSQL) GetBigqueryEnabledProjectIDs() ([]uint64, int) {
+func (store *MemSQL) GetBigqueryEnabledProjectIDs() ([]int64, int) {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
-	var projectIDs []uint64
+	var projectIDs []int64
 	db := C.GetServices().Db
 
 	rows, err := db.Model(&model.ProjectSetting{}).Where("bigquery_enabled = true").Select("project_id").Rows()
@@ -916,7 +916,7 @@ func (store *MemSQL) GetBigqueryEnabledProjectIDs() ([]uint64, int) {
 	}
 
 	for rows.Next() {
-		var projectID uint64
+		var projectID int64
 		err = rows.Scan(&projectID)
 		if err != nil {
 			log.WithError(err).Error("Error while scanning")
@@ -927,7 +927,7 @@ func (store *MemSQL) GetBigqueryEnabledProjectIDs() ([]uint64, int) {
 	return projectIDs, http.StatusFound
 }
 
-func (store *MemSQL) IsSalesforceIntegrationAvailable(projectID uint64) bool {
+func (store *MemSQL) IsSalesforceIntegrationAvailable(projectID int64) bool {
 	salesforceProjectSettings, errCode := store.GetAllSalesforceProjectSettingsForProject(projectID)
 	if errCode != http.StatusFound && errCode != http.StatusOK {
 		log.WithField("projectId", projectID).Warn(" Failed in getting salesforce project settings.")
@@ -958,7 +958,7 @@ func (store *MemSQL) GetAllSalesforceProjectSettings() ([]model.SalesforceProjec
 	return salesforceProjectSettings, http.StatusFound
 }
 
-func (store *MemSQL) GetAllSalesforceProjectSettingsForProject(projectID uint64) ([]model.SalesforceProjectSettings, int) {
+func (store *MemSQL) GetAllSalesforceProjectSettingsForProject(projectID int64) ([]model.SalesforceProjectSettings, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
@@ -978,12 +978,12 @@ func (store *MemSQL) GetAllSalesforceProjectSettingsForProject(projectID uint64)
 	return salesforceProjectSettings, http.StatusFound
 }
 
-func (store *MemSQL) GetAdwordsEnabledProjectIDAndCustomerIDsFromProjectSettings() (map[uint64][]string, error) {
+func (store *MemSQL) GetAdwordsEnabledProjectIDAndCustomerIDsFromProjectSettings() (map[int64][]string, error) {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 	db := C.GetServices().Db
 
 	projectSettings := make([]model.ProjectSetting, 0, 0)
-	mapOfProjectToCustomerIds := make(map[uint64][]string)
+	mapOfProjectToCustomerIds := make(map[int64][]string)
 
 	err := db.Table("project_settings").Where("int_adwords_enabled_agent_uuid IS NOT NULL AND int_adwords_enabled_agent_uuid != ''").Find(&projectSettings).Error
 	if err != nil {
@@ -1005,7 +1005,7 @@ func (store *MemSQL) GetAdwordsEnabledProjectIDAndCustomerIDsFromProjectSettings
 	}
 	return mapOfProjectToCustomerIds, nil
 }
-func (store *MemSQL) IsBingIntegrationAvailable(projectID uint64) bool {
+func (store *MemSQL) IsBingIntegrationAvailable(projectID int64) bool {
 	ftMapping, err := store.GetActiveFiveTranMapping(projectID, model.BingAdsIntegration)
 	if err != nil {
 		return false
@@ -1015,7 +1015,7 @@ func (store *MemSQL) IsBingIntegrationAvailable(projectID uint64) bool {
 	}
 	return true
 }
-func (store *MemSQL) DeleteChannelIntegration(projectID uint64, channelName string) (int, error) {
+func (store *MemSQL) DeleteChannelIntegration(projectID int64, channelName string) (int, error) {
 	logFields := log.Fields{
 		"project_id":   projectID,
 		"channel_name": channelName,
@@ -1038,7 +1038,7 @@ func (store *MemSQL) DeleteChannelIntegration(projectID uint64, channelName stri
 	}
 }
 
-func (store *MemSQL) IsMarketoIntegrationAvailable(projectID uint64) bool {
+func (store *MemSQL) IsMarketoIntegrationAvailable(projectID int64) bool {
 	connectorId, err := store.GetFiveTranMapping(projectID, model.MarketoIntegration)
 	if err != nil {
 		return false
@@ -1049,10 +1049,10 @@ func (store *MemSQL) IsMarketoIntegrationAvailable(projectID uint64) bool {
 	return true
 }
 
-func (store *MemSQL) GetAllLeadSquaredEnabledProjects() (map[uint64]model.LeadSquaredConfig, error) {
+func (store *MemSQL) GetAllLeadSquaredEnabledProjects() (map[int64]model.LeadSquaredConfig, error) {
 
 	db := C.GetServices().Db
-	result := make(map[uint64]model.LeadSquaredConfig)
+	result := make(map[int64]model.LeadSquaredConfig)
 	projectSettings := make([]model.ProjectSetting, 0, 0)
 	err := db.Table("project_settings").Where("lead_squared_config IS NOT NULL").Find(&projectSettings).Error
 
@@ -1067,7 +1067,7 @@ func (store *MemSQL) GetAllLeadSquaredEnabledProjects() (map[uint64]model.LeadSq
 	return result, nil
 }
 
-func (store *MemSQL) UpdateLeadSquaredFirstTimeSyncStatus(projectId uint64) int {
+func (store *MemSQL) UpdateLeadSquaredFirstTimeSyncStatus(projectId int64) int {
 	db := C.GetServices().Db
 	var projectSetting model.ProjectSetting
 	if err := db.Where("project_id = ?", projectId).First(&projectSetting).Error; err != nil {
@@ -1094,10 +1094,10 @@ func (store *MemSQL) UpdateLeadSquaredFirstTimeSyncStatus(projectId uint64) int 
 	return http.StatusOK
 }
 
-func (store *MemSQL) GetAllWeeklyInsightsEnabledProjects() ([]uint64, error) {
+func (store *MemSQL) GetAllWeeklyInsightsEnabledProjects() ([]int64, error) {
 
 	db := C.GetServices().Db
-	result := make([]uint64, 0)
+	result := make([]int64, 0)
 	projectSettings := make([]model.ProjectSetting, 0, 0)
 	_ = db.Table("project_settings").Where("is_weekly_insights_enabled = true").Find(&projectSettings).Error
 
@@ -1107,10 +1107,10 @@ func (store *MemSQL) GetAllWeeklyInsightsEnabledProjects() ([]uint64, error) {
 	return result, nil
 }
 
-func (store *MemSQL) GetAllExplainEnabledProjects() ([]uint64, error) {
+func (store *MemSQL) GetAllExplainEnabledProjects() ([]int64, error) {
 
 	db := C.GetServices().Db
-	result := make([]uint64, 0)
+	result := make([]int64, 0)
 	projectSettings := make([]model.ProjectSetting, 0, 0)
 	_ = db.Table("project_settings").Where("is_explain_enabled = true").Find(&projectSettings).Error
 
@@ -1120,7 +1120,7 @@ func (store *MemSQL) GetAllExplainEnabledProjects() ([]uint64, error) {
 	return result, nil
 }
 
-func (store *MemSQL) EnableWeeklyInsights(projectId uint64) int {
+func (store *MemSQL) EnableWeeklyInsights(projectId int64) int {
 	db := C.GetServices().Db
 	if err := db.Model(&model.ProjectSetting{}).
 		Where("project_id = ?", projectId).
@@ -1131,7 +1131,7 @@ func (store *MemSQL) EnableWeeklyInsights(projectId uint64) int {
 	return http.StatusOK
 }
 
-func (store *MemSQL) EnableExplain(projectId uint64) int {
+func (store *MemSQL) EnableExplain(projectId int64) int {
 	db := C.GetServices().Db
 	if err := db.Model(&model.ProjectSetting{}).
 		Where("project_id = ?", projectId).
@@ -1142,7 +1142,7 @@ func (store *MemSQL) EnableExplain(projectId uint64) int {
 	return http.StatusOK
 }
 
-func (store *MemSQL) DisableWeeklyInsights(projectId uint64) int {
+func (store *MemSQL) DisableWeeklyInsights(projectId int64) int {
 	db := C.GetServices().Db
 	if err := db.Model(&model.ProjectSetting{}).
 		Where("project_id = ?", projectId).
@@ -1153,7 +1153,7 @@ func (store *MemSQL) DisableWeeklyInsights(projectId uint64) int {
 	return http.StatusOK
 }
 
-func (store *MemSQL) DisableExplain(projectId uint64) int {
+func (store *MemSQL) DisableExplain(projectId int64) int {
 	db := C.GetServices().Db
 	if err := db.Model(&model.ProjectSetting{}).
 		Where("project_id = ?", projectId).

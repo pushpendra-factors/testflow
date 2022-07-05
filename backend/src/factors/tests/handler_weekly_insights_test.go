@@ -24,8 +24,8 @@ import (
 )
 
 type WeeklyInsightsParams struct {
-	ProjectID       uint64    `json:"project_id"`
-	DashBoardUnitID uint64    `json:"dashboard_unit_id"`
+	ProjectID       int64     `json:"project_id"`
+	DashBoardUnitID int64     `json:"dashboard_unit_id"`
 	BaseStartTime   time.Time `json:"base_start_time"`
 	CompStartTime   time.Time `json:"comp_start_time"`
 	InsightsType    string    `json:"insights_type"`
@@ -184,7 +184,7 @@ func TestWeeklyInsights(t *testing.T) {
 	deleteProject(&projectObj)
 }
 
-func createProject(projectID uint64) (projectObj model.Project, status int) {
+func createProject(projectID int64) (projectObj model.Project, status int) {
 	var project model.Project
 	project.Name = "test"
 	token, err := generateUniqueToken(false)
@@ -222,7 +222,7 @@ func deleteQuery(queryObj *model.Queries) (status int) {
 	}
 	return http.StatusOK
 }
-func createQuery(QueryId int64, ProjectID uint64) (queryObj model.Queries, status int) {
+func createQuery(QueryId int64, ProjectID int64) (queryObj model.Queries, status int) {
 	var query model.Queries
 	query.ID = QueryId
 	query.ProjectID = ProjectID
@@ -254,7 +254,7 @@ func createQuery(QueryId int64, ProjectID uint64) (queryObj model.Queries, statu
 	return query, http.StatusCreated
 }
 
-func createEventName(projectID uint64, name string) (EventName model.EventName, status int) {
+func createEventName(projectID int64, name string) (EventName model.EventName, status int) {
 	eventName, errCode := store.GetStore().CreateOrGetUserCreatedEventName(&model.EventName{ProjectId: projectID, Name: name})
 	if errCode != http.StatusCreated {
 		return *eventName, http.StatusNotFound
@@ -305,8 +305,8 @@ func isTokenExist(token string, private bool) (exists int, err error) {
 
 	return 0, nil
 }
-func createPathAndAddCpiFile(projectID uint64, baseStartTime time.Time, QueryId int64) (err error) {
-	path := fmt.Sprintf("projects/" + strconv.FormatUint(projectID, 10) + "/weeklyinsights/" + U.GetDateOnlyFromTimestampZ(baseStartTime.Unix()) + "/q-" + strconv.FormatInt(QueryId, 10) + "/k-100")
+func createPathAndAddCpiFile(projectID int64, baseStartTime time.Time, QueryId int64) (err error) {
+	path := fmt.Sprintf("projects/" + strconv.FormatUint(uint64(projectID), 10) + "/weeklyinsights/" + U.GetDateOnlyFromTimestampZ(baseStartTime.Unix()) + "/q-" + strconv.FormatInt(QueryId, 10) + "/k-100")
 	os.MkdirAll(path, 0777)
 
 	sourceFile, err := os.Open("data/cpi.txt")
@@ -340,7 +340,7 @@ func CreateWIPropertyObj(queryID int64, key, value, Type, entity string, order i
 	WIPropertyObj.IsIncreased = IsIncreased
 	return WIPropertyObj
 }
-func PostFeedback(ProjectID uint64, voteType int, WIPropertyObj model.WeeklyInsightsProperty) (model.Feedback, string) {
+func PostFeedback(ProjectID int64, voteType int, WIPropertyObj model.WeeklyInsightsProperty) (model.Feedback, string) {
 	var feedbackObj model.Feedback
 	email := getRandomEmail()
 	agent, errCode := SetupAgentReturnDAO(email, "+13425356")

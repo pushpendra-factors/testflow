@@ -256,7 +256,7 @@ func (q *AttributionQueryUnit) GetQueryCacheHashString() (string, error) {
 	return queryHash, nil
 }
 
-func (q *AttributionQueryUnit) GetQueryCacheRedisKey(projectID uint64) (*cacheRedis.Key, error) {
+func (q *AttributionQueryUnit) GetQueryCacheRedisKey(projectID int64) (*cacheRedis.Key, error) {
 	hashString, err := q.GetQueryCacheHashString()
 	if err != nil {
 		return nil, err
@@ -1295,7 +1295,7 @@ func ProcessQueryLandingPageUrl(query *AttributionQuery, attributionData *map[st
 
 }
 
-func ProcessQuery(query *AttributionQuery, attributionData *map[string]*AttributionData, marketingReports *MarketingReports, isCompare bool, projectId uint64, logCtx log.Entry) *QueryResult {
+func ProcessQuery(query *AttributionQuery, attributionData *map[string]*AttributionData, marketingReports *MarketingReports, isCompare bool, projectId int64, logCtx log.Entry) *QueryResult {
 	logFields := log.Fields{"Method": "ProcessQuery"}
 	logCtx = *logCtx.WithFields(logFields)
 	// Add additional metrics values

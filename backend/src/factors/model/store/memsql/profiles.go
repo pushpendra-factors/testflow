@@ -13,7 +13,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (store *MemSQL) RunProfilesGroupQuery(queriesOriginal []model.ProfileQuery, projectID uint64) (model.ResultGroup, int) {
+func (store *MemSQL) RunProfilesGroupQuery(queriesOriginal []model.ProfileQuery, projectID int64) (model.ResultGroup, int) {
 	logFields := log.Fields{
 		"queries_original": queriesOriginal,
 		"project_id":       projectID,
@@ -44,7 +44,7 @@ func (store *MemSQL) RunProfilesGroupQuery(queriesOriginal []model.ProfileQuery,
 	return resultGroup, http.StatusOK
 }
 
-func (store *MemSQL) runSingleProfilesQuery(projectID uint64, query model.ProfileQuery,
+func (store *MemSQL) runSingleProfilesQuery(projectID int64, query model.ProfileQuery,
 	resultHolder *model.QueryResult, waitGroup *sync.WaitGroup, queryIndex int) {
 	logFields := log.Fields{
 		"query":         query,
@@ -66,7 +66,7 @@ func (store *MemSQL) runSingleProfilesQuery(projectID uint64, query model.Profil
 	}
 }
 
-func (store *MemSQL) ExecuteProfilesQuery(projectID uint64, query model.ProfileQuery) (*model.QueryResult, int, string) {
+func (store *MemSQL) ExecuteProfilesQuery(projectID int64, query model.ProfileQuery) (*model.QueryResult, int, string) {
 	logFields := log.Fields{
 		"query":      query,
 		"project_id": projectID,
@@ -80,7 +80,7 @@ func (store *MemSQL) ExecuteProfilesQuery(projectID uint64, query model.ProfileQ
 	}
 }
 
-func (store *MemSQL) ExecuteAllUsersProfilesQuery(projectID uint64, query model.ProfileQuery) (*model.QueryResult, int, string) {
+func (store *MemSQL) ExecuteAllUsersProfilesQuery(projectID int64, query model.ProfileQuery) (*model.QueryResult, int, string) {
 	logFields := log.Fields{
 		"query":      query,
 		"project_id": projectID,
@@ -123,7 +123,7 @@ func (store *MemSQL) ExecuteAllUsersProfilesQuery(projectID uint64, query model.
 	return result, http.StatusOK, ""
 }
 
-func buildAllUsersQuery(projectID uint64, query model.ProfileQuery) (string, []interface{}, error) {
+func buildAllUsersQuery(projectID int64, query model.ProfileQuery) (string, []interface{}, error) {
 	logFields := log.Fields{
 		"query":      query,
 		"project_id": projectID,
@@ -217,7 +217,7 @@ func getSelectKeysForProfile(query model.ProfileQuery) string {
 	}
 }
 
-func getNoneHandledGroupBySelectForProfiles(projectID uint64, groupProp model.QueryGroupByProperty, groupKey string, timezoneString string) (string, []interface{}) {
+func getNoneHandledGroupBySelectForProfiles(projectID int64, groupProp model.QueryGroupByProperty, groupKey string, timezoneString string) (string, []interface{}) {
 	logFields := log.Fields{
 		"group_prop":      groupProp,
 		"project_id":      projectID,

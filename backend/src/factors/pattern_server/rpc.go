@@ -157,7 +157,7 @@ func (ps *PatternServer) GetAllPatterns(
 	return nil
 }
 
-func isModelWeekly(ps *PatternServer, modelId uint64, projectId uint64) bool {
+func isModelWeekly(ps *PatternServer, modelId uint64, projectId int64) bool {
 	modelInfos, _, _ := modelstore.GetStore().GetProjectModelMetadata(projectId)
 	for _, model := range modelInfos {
 		if model.ModelId == modelId {

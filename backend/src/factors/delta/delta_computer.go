@@ -1217,7 +1217,7 @@ func updateValCountMap(mapToBeUpdated, updaterMap ValCountTable) {
 	}
 }
 
-// func updateCountList(listToBeUpdated, updaterList []uint64) {
+// func updateCountList(listToBeUpdated, updaterList []int64) {
 // 	for i, item := range updaterList {
 // 		listToBeUpdated[i] += item
 // 	}
@@ -1449,7 +1449,7 @@ func PublishDeltaInsights(topSortedInsights CrossPeriodInsights, filePath string
 }
 
 // GetEventFileScanner Return handle to events file scanner
-func GetEventFileScanner(projectId uint64, periodCode Period, cloudManager *filestore.FileManager,
+func GetEventFileScanner(projectId int64, periodCode Period, cloudManager *filestore.FileManager,
 	diskManager *serviceDisk.DiskDriver, insightGranularity string, isDownloaded bool) (*bufio.Scanner, error) {
 	var err error
 	localFile := true

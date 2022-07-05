@@ -10,7 +10,7 @@ type Queries struct {
 	// Composite primary key, id + project_id.
 	ID int64 `gorm:"primary_key:true;auto_increment:false" json:"id"`
 	// Foreign key queries(project_id) ref projects(id).
-	ProjectID     uint64         `gorm:"primary_key:true" json:"project_id"`
+	ProjectID     int64          `gorm:"primary_key:true" json:"project_id"`
 	Title         string         `gorm:"not null" json:"title"`
 	Query         postgres.Jsonb `gorm:"not null" json:"query"`
 	Type          int            `gorm:"not null; primary_key:true" json:"type"`
@@ -28,7 +28,7 @@ type QueriesString struct {
 	// Composite primary key, id + project_id.
 	ID string `gorm:"primary_key:true;auto_increment:false" json:"id"`
 	// Foreign key queries(project_id) ref projects(id).
-	ProjectID     uint64         `gorm:"primary_key:true" json:"project_id"`
+	ProjectID     int64          `gorm:"primary_key:true" json:"project_id"`
 	Title         string         `gorm:"not null" json:"title"`
 	Query         postgres.Jsonb `gorm:"not null" json:"query"`
 	Type          int            `gorm:"not null; primary_key:true" json:"type"`

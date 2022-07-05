@@ -39,6 +39,14 @@ func GetScopeByKeyAsUint64(c *gin.Context, key string) uint64 {
 	return intrfce.(uint64)
 }
 
+func GetScopeByKeyAsInt64(c *gin.Context, key string) int64 {
+	intrfce := GetScopeByKey(c, key)
+	if intrfce == nil {
+		return 0
+	}
+	return intrfce.(int64)
+}
+
 func GetScopeByKeyAsString(c *gin.Context, key string) string {
 	iface := GetScopeByKey(c, key)
 	if iface == nil {

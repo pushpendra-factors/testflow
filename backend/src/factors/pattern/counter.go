@@ -251,7 +251,7 @@ func GenRepeatedEventCandidates(repeatedEvents []string, pt *Pattern, userAndEve
 
 }
 
-func GetPattEndWithGoal(projectId uint64, combinationPatterns, goalPatterns []*Pattern) []*Pattern {
+func GetPattEndWithGoal(projectId int64, combinationPatterns, goalPatterns []*Pattern) []*Pattern {
 	// Filter combination ending in goal or repeated event
 	goalsMap := make(map[string]bool)
 	allGoals := make([]*Pattern, 0)
@@ -288,7 +288,7 @@ func GetPattEndWithGoal(projectId uint64, combinationPatterns, goalPatterns []*P
 }
 
 //GenSegmentsForTopGoals form candidated with topK goal events
-func GenCombinationPatternsEndingWithGoal(projectId uint64, currentPatterns, GoalPatterns []*Pattern, userAndEventsInfo *UserAndEventsInfo) (
+func GenCombinationPatternsEndingWithGoal(projectId int64, currentPatterns, GoalPatterns []*Pattern, userAndEventsInfo *UserAndEventsInfo) (
 	// create pairs of (startPattern, GoalPattern) to count from events file
 	[]*Pattern, uint, error) {
 	numPatterns := len(currentPatterns)
@@ -418,7 +418,7 @@ func PropertySplitKeyValue(propertyKeyValue string) (string, string) {
 const max_SEEN_PROPERTIES = 20000
 const max_SEEN_PROPERTY_VALUES = 1000
 
-func CollectPropertiesInfoFiltered(projectID uint64, scanner *bufio.Scanner, userAndEventsInfo *UserAndEventsInfo, upCount, epCount map[string]map[string]map[string]int) (*map[string]PropertiesCount, error) {
+func CollectPropertiesInfoFiltered(projectID int64, scanner *bufio.Scanner, userAndEventsInfo *UserAndEventsInfo, upCount, epCount map[string]map[string]map[string]int) (*map[string]PropertiesCount, error) {
 	// same as CollectPropertiesInfo(get all props and userAndEventsInfo by reading file)
 	// except userAndEventsInfo contains keys and values filtered using count maps
 
@@ -534,7 +534,7 @@ func CollectPropertiesInfoFiltered(projectID uint64, scanner *bufio.Scanner, use
 	return &allProps, nil
 }
 
-func CollectPropertiesInfo(projectID uint64, scanner *bufio.Scanner, userAndEventsInfo *UserAndEventsInfo) (*map[string]PropertiesCount, error) {
+func CollectPropertiesInfo(projectID int64, scanner *bufio.Scanner, userAndEventsInfo *UserAndEventsInfo) (*map[string]PropertiesCount, error) {
 	lineNum := 0
 	userPropertiesInfo := userAndEventsInfo.UserPropertiesInfo
 	eventInfoMap := userAndEventsInfo.EventPropertiesInfoMap
@@ -636,7 +636,7 @@ func CollectPropertiesInfo(projectID uint64, scanner *bufio.Scanner, userAndEven
 	return &allProps, nil
 }
 
-func ComputeAllUserPropertiesHistogram(projectID uint64, scanner *bufio.Scanner, pattern *Pattern, countsVersion int, hmineSupport float32) error {
+func ComputeAllUserPropertiesHistogram(projectID int64, scanner *bufio.Scanner, pattern *Pattern, countsVersion int, hmineSupport float32) error {
 	var seenUsers map[string]bool = make(map[string]bool)
 	numEventsProcessed := 0
 	var countUsers uint
@@ -755,7 +755,7 @@ func ComputeAllUserPropertiesHistogram(projectID uint64, scanner *bufio.Scanner,
 	return nil
 }
 
-func CountPatterns(projectID uint64, scanner *bufio.Scanner, patterns []*Pattern,
+func CountPatterns(projectID int64, scanner *bufio.Scanner, patterns []*Pattern,
 	shouldCountOccurence bool, cAlgoProps CountAlgoProperties) error {
 	var seenUsers map[string]bool = make(map[string]bool)
 
@@ -941,7 +941,7 @@ func CountPatterns(projectID uint64, scanner *bufio.Scanner, patterns []*Pattern
 	return nil
 }
 
-func CountPatternsWithTS(projectID uint64, eventsList []CounterEventFormat, numEventsProcessed *int64,
+func CountPatternsWithTS(projectID int64, eventsList []CounterEventFormat, numEventsProcessed *int64,
 	seenUsers map[string]bool, patterns []*Pattern, eventToPatternsMap map[string][]*Pattern,
 	shouldCountOccurence bool, cAlgoProps CountAlgoProperties) error {
 

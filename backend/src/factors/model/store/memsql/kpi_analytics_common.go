@@ -11,7 +11,7 @@ import (
 
 // statusCode need to be clear on http.StatusOk or http.StatusAccepted or something else.
 // Below function relies on fact that each query has only one metric.
-func (store *MemSQL) ExecuteKPIQueryGroup(projectID uint64, reqID string, kpiQueryGroup model.KPIQueryGroup) ([]model.QueryResult, int) {
+func (store *MemSQL) ExecuteKPIQueryGroup(projectID int64, reqID string, kpiQueryGroup model.KPIQueryGroup) ([]model.QueryResult, int) {
 	var queryResults []model.QueryResult
 	finalStatusCode := http.StatusOK
 	isTimezoneEnabled := false
@@ -87,8 +87,8 @@ func (store *MemSQL) ExecuteKPIQueryGroup(projectID uint64, reqID string, kpiQue
 	return finalQueryResult, finalStatusCode
 }
 
-func (store *MemSQL) kpiQueryFunctionDeciderBasedOnCategory(category string, query model.KPIQuery) func(uint64, string, model.KPIQuery) ([]model.QueryResult, int) {
-	var result func(uint64, string, model.KPIQuery) ([]model.QueryResult, int)
+func (store *MemSQL) kpiQueryFunctionDeciderBasedOnCategory(category string, query model.KPIQuery) func(int64, string, model.KPIQuery) ([]model.QueryResult, int) {
+	var result func(int64, string, model.KPIQuery) ([]model.QueryResult, int)
 	if category == model.ChannelCategory {
 		result = store.ExecuteKPIQueryForChannels
 	} else if category == model.EventCategory {

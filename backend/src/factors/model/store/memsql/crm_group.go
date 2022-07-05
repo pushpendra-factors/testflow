@@ -13,7 +13,7 @@ import (
 )
 
 // isExistCRMGroupByID check for existing user external id, object type and source
-func isExistCRMGroupByID(projectID uint64, source U.CRMSource, groupType int, id string) (int, error) {
+func isExistCRMGroupByID(projectID int64, source U.CRMSource, groupType int, id string) (int, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"group_type": groupType,

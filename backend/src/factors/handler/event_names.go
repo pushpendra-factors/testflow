@@ -21,7 +21,7 @@ import (
 // TODO(aravind): Hack below to force some important but not frequent events to show up on production.
 
 //  FORCED_EVENT_NAMES All handlers here have a back up DB call. Will remove this after the cache is functional/updated for all the projects
-var FORCED_EVENT_NAMES = map[uint64][]string{
+var FORCED_EVENT_NAMES = map[int64][]string{
 	215: []string{
 		// Project ExpertRec.
 		"cse.expertrec.com/payments/success",
@@ -99,7 +99,7 @@ func RemoveLabeledEventNamesFromOtherUserEventNames(categoryToEventNames map[str
 // @Router /{project_id}/event_names [get]
 func GetEventNamesHandler(c *gin.Context) {
 
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
@@ -146,7 +146,7 @@ func GetEventNamesHandler(c *gin.Context) {
 }
 
 func GetEventNamesByUserHandler(c *gin.Context) {
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
@@ -221,7 +221,7 @@ func GetEventNamesByUserHandler(c *gin.Context) {
 }
 
 func GetEventNamesByGroupHandler(c *gin.Context) {
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
@@ -279,7 +279,7 @@ func GetEventNamesByGroupHandler(c *gin.Context) {
 // @Router /{project_id}/event_names/{event_name}/properties [get]
 func GetEventPropertiesHandler(c *gin.Context) {
 
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
@@ -399,7 +399,7 @@ func GetEventPropertiesHandler(c *gin.Context) {
 
 func GetChannelGroupingPropertiesHandler(c *gin.Context) {
 
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
@@ -421,7 +421,7 @@ func GetChannelGroupingPropertiesHandler(c *gin.Context) {
 // @Router /{project_id}/event_names/{event_name}/properties/{property_name}/values [get]
 func GetEventPropertyValuesHandler(c *gin.Context) {
 
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
@@ -498,7 +498,7 @@ func GetEventPropertyValuesHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, propertyValues)
 }
 
-func getEventPropertyValuesFromPatternServer(projectId uint64, modelId uint64, eventName, propertyName string) ([]string, int, string) {
+func getEventPropertyValuesFromPatternServer(projectId int64, modelId uint64, eventName, propertyName string) ([]string, int, string) {
 	propertyValues := make([]string, 0)
 	ps, err := PW.NewPatternServiceWrapper("", projectId, modelId)
 	if err != nil {
@@ -517,7 +517,7 @@ func getEventPropertyValuesFromPatternServer(projectId uint64, modelId uint64, e
 	return propertyValues, 0, ""
 }
 
-func getEventPropertiesFromPatternServer(projectId uint64, modelId uint64, eventName string) (map[string][]string, int, string) {
+func getEventPropertiesFromPatternServer(projectId int64, modelId uint64, eventName string) (map[string][]string, int, string) {
 	properties := make(map[string][]string)
 	ps, err := PW.NewPatternServiceWrapper("", projectId, modelId)
 	if err != nil {

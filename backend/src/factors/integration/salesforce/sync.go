@@ -51,7 +51,7 @@ type QueryResponse struct {
 
 // ObjectStatus represents sync info from query to db
 type ObjectStatus struct {
-	ProjetID      uint64         `json:"project_id"`
+	ProjetID      int64          `json:"project_id"`
 	Status        string         `json:"status"`
 	DocType       string         `json:"doc_type"`
 	TotalRecords  int            `json:"total_records"`
@@ -72,7 +72,7 @@ type JobStatus struct {
 const OpportunityLeadID = "opportunity_to_lead"
 const OpportunityMultipleLeadID = "opportunity_to_multiple_lead"
 
-func GetSalesforceAPIVersion(projectID uint64) string {
+func GetSalesforceAPIVersion(projectID int64) string {
 	if C.AllowSalesforcev54APIByProjectID(projectID) {
 		return salesforceAPIVersion54
 	}
@@ -109,7 +109,7 @@ func GETRequest(url, accessToken string) (*http.Response, error) {
 // DataServiceError impelements error interface for salesforce data api error
 type DataServiceError interface{}
 
-func getSalesforceObjectDescription(projectID uint64, objectName, accessToken, instanceURL string) (*Describe, error) {
+func getSalesforceObjectDescription(projectID int64, objectName, accessToken, instanceURL string) (*Describe, error) {
 	if objectName == "" || accessToken == "" || instanceURL == "" {
 		return nil, errors.New("missing required fields")
 	}
@@ -137,7 +137,7 @@ func getSalesforceObjectDescription(projectID uint64, objectName, accessToken, i
 	return &jsonRespone, nil
 }
 
-func GetSalesforcePropertiesByDataType(projectID uint64, dataType string, docTypes []int, accessToken, instanceURL string) (map[int]*map[string]bool, int) {
+func GetSalesforcePropertiesByDataType(projectID int64, dataType string, docTypes []int, accessToken, instanceURL string) (map[int]*map[string]bool, int) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "doc_type": docTypes})
 
 	if projectID == 0 || len(docTypes) == 0 {
@@ -194,7 +194,7 @@ func getFieldsListFromDescription(description *Describe) ([]string, error) {
 	return objectFields, nil
 }
 
-func getSalesforceDataByQuery(projectID uint64, query, accessToken, instanceURL, dateTime string) (*QueryResponse, error) {
+func getSalesforceDataByQuery(projectID int64, query, accessToken, instanceURL, dateTime string) (*QueryResponse, error) {
 	if query == "" || accessToken == "" || instanceURL == "" {
 		return nil, errors.New("missing required fields")
 	}
@@ -230,7 +230,7 @@ func getSalesforceDataByQuery(projectID uint64, query, accessToken, instanceURL,
 
 // DataClient salesforce data client handles data query from salesforce
 type DataClient struct {
-	ProjectID      uint64
+	ProjectID      int64
 	accessToken    string
 	instanceURL    string
 	isFirstRun     bool
@@ -255,7 +255,7 @@ func NewSalesforceDataClient(accessToken string, instanceURL string) (*DataClien
 	return dataClient, nil
 }
 
-func getSalesforceObjectFieldlList(projectID uint64, objectName, accessToken, instanceURL string) ([]string, error) {
+func getSalesforceObjectFieldlList(projectID int64, objectName, accessToken, instanceURL string) ([]string, error) {
 	if objectName == "" || accessToken == "" || instanceURL == "" {
 		return nil, errors.New("missing required field")
 	}
@@ -273,7 +273,7 @@ func getSalesforceObjectFieldlList(projectID uint64, objectName, accessToken, in
 	return fields, nil
 }
 
-func (s *DataClient) getRecordByObjectNameANDFilter(projectID uint64, objectName, filterSmnt string) (*DataClient, error) {
+func (s *DataClient) getRecordByObjectNameANDFilter(projectID int64, objectName, filterSmnt string) (*DataClient, error) {
 	fields, err := getSalesforceObjectFieldlList(projectID, objectName, s.accessToken, s.instanceURL)
 	if err != nil {
 		return nil, err
@@ -295,7 +295,7 @@ func (s *DataClient) getRecordByObjectNameANDFilter(projectID uint64, objectName
 	return dataClient, nil
 }
 
-func (s *DataClient) getRecordByObjectNameANDStartTimestamp(projectID uint64, objectName string, lookbackTimestamp int64) (*DataClient, error) {
+func (s *DataClient) getRecordByObjectNameANDStartTimestamp(projectID int64, objectName string, lookbackTimestamp int64) (*DataClient, error) {
 	fields, err := getSalesforceObjectFieldlList(projectID, objectName, s.accessToken, s.instanceURL)
 	if err != nil {
 		return nil, err
@@ -399,7 +399,7 @@ func (s *DataClient) getRequest(queryURL string) (*QueryResponse, error) {
 }
 
 // GetObjectRecordsByIDs get list of records by Id and object type
-func (s *DataClient) GetObjectRecordsByIDs(projectID uint64, objectName string, IDs []string) (*DataClient, error) {
+func (s *DataClient) GetObjectRecordsByIDs(projectID int64, objectName string, IDs []string) (*DataClient, error) {
 	if objectName == "" {
 		return nil, errors.New("missing required fields")
 	}
@@ -470,7 +470,7 @@ func getSalesforceContactIDANDLeadIDFromCampaignMember(properties *model.Salesfo
 	return contactID, leadID
 }
 
-func getAllCampaignMemberContactAndLeadRecords(projectID uint64, campaignMemberIDs []string, accessToken, instanceURL string) ([]model.SalesforceRecord, []string, int, int, error) {
+func getAllCampaignMemberContactAndLeadRecords(projectID int64, campaignMemberIDs []string, accessToken, instanceURL string) ([]model.SalesforceRecord, []string, int, int, error) {
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectID})
 	salesforceDataClient, err := NewSalesforceDataClient(accessToken, instanceURL)
@@ -557,7 +557,7 @@ func getAllCampaignMemberContactAndLeadRecords(projectID uint64, campaignMemberI
 	return memberRecords, memberRecordsObjectType, campaingMemberAPICalls, memberObjectAPICalls, nil
 }
 
-func syncOpportunityPrimaryContact(projectID uint64, primaryContactIDs []string, accessToken, instanceURL string) ([]string, int, bool) {
+func syncOpportunityPrimaryContact(projectID int64, primaryContactIDs []string, accessToken, instanceURL string) ([]string, int, bool) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID})
 	salesforceDataClient, err := NewSalesforceDataClient(accessToken, instanceURL)
 	if err != nil {
@@ -594,7 +594,7 @@ func syncOpportunityPrimaryContact(projectID uint64, primaryContactIDs []string,
 }
 
 // getLeadIDForOpportunityRecords sync associated leads if missing and return all lead ids
-func getLeadIDForOpportunityRecords(projectID uint64, records []model.SalesforceRecord, accessToken, instanceURL string) (map[string]string, map[string]map[string]bool, int, error) {
+func getLeadIDForOpportunityRecords(projectID int64, records []model.SalesforceRecord, accessToken, instanceURL string) (map[string]string, map[string]map[string]bool, int, error) {
 	if len(records) < 1 {
 		return nil, nil, 0, nil
 	}
@@ -665,7 +665,7 @@ func getLeadIDForOpportunityRecords(projectID uint64, records []model.Salesforce
 
 }
 
-func getOpportunityPrimaryContactIDs(projectID uint64, oppRecords []model.SalesforceRecord) []string {
+func getOpportunityPrimaryContactIDs(projectID int64, oppRecords []model.SalesforceRecord) []string {
 	primaryContacts := make([]string, 0)
 	for i := range oppRecords {
 		opportunityContactRolesInt := oppRecords[i][model.SalesforceChildRelationshipNameOpportunityContactRoles]
@@ -705,7 +705,7 @@ func getOpportunityPrimaryContactIDs(projectID uint64, oppRecords []model.Salesf
 
 }
 
-func syncOpporunitiesUsingAssociations(projectID uint64, accessToken, instanceURL string, timestamp int64) ([]string, int, int, int, error) {
+func syncOpporunitiesUsingAssociations(projectID int64, accessToken, instanceURL string, timestamp int64) ([]string, int, int, int, error) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID})
 	allowedObject := model.GetSalesforceDocumentTypeAlias(projectID)
 	salesforceDataClient, err := NewSalesforceDataClient(accessToken, instanceURL)
@@ -1023,7 +1023,7 @@ func GetAccessToken(ps *model.SalesforceProjectSettings, redirectURL string) (st
 }
 
 // CreateOrGetSalesforceEventName makes sure salesforce event name exists
-func CreateOrGetSalesforceEventName(projectID uint64) int {
+func CreateOrGetSalesforceEventName(projectID int64) int {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID})
 
 	for _, doctype := range model.GetSalesforceAllowedObjects(projectID) {
@@ -1091,7 +1091,7 @@ func CreateOrGetSalesforceEventName(projectID uint64) int {
 	return http.StatusOK
 }
 
-func syncSalesforcePropertyByType(projectID uint64, doctTypeAlias string, fieldName, fieldType string) error {
+func syncSalesforcePropertyByType(projectID int64, doctTypeAlias string, fieldName, fieldType string) error {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "field_name": fieldName, "field_type": fieldType, "doc_type_alias": doctTypeAlias})
 
 	if fieldName == "" || fieldType == "" || projectID == 0 || doctTypeAlias == "" {
@@ -1138,7 +1138,7 @@ func skipObjectEvent(docType int) bool {
 }
 
 // SyncDatetimeAndNumericalProperties sync datetime and numerical properties to the property_details table
-func SyncDatetimeAndNumericalProperties(projectID uint64, accessToken, instanceURL string) (bool, []Status) {
+func SyncDatetimeAndNumericalProperties(projectID int64, accessToken, instanceURL string) (bool, []Status) {
 	if projectID == 0 || accessToken == "" || instanceURL == "" {
 		return false, nil
 	}

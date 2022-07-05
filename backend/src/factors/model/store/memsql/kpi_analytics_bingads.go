@@ -4,13 +4,14 @@ import (
 	"factors/model/model"
 	"net/http"
 	"strconv"
+
 	log "github.com/sirupsen/logrus"
 )
 
-func (store *MemSQL) GetKPIConfigsForBingAds(projectID uint64, reqID string) (map[string]interface{}, int) {
-	projectIDInString := []string{strconv.FormatUint(projectID, 10)}
+func (store *MemSQL) GetKPIConfigsForBingAds(projectID int64, reqID string) (map[string]interface{}, int) {
+	projectIDInString := []string{strconv.FormatInt(projectID, 10)}
 	isBingAdsIntegrationDone := store.IsBingIntegrationAvailable(projectID)
-	if !isBingAdsIntegrationDone{
+	if !isBingAdsIntegrationDone {
 		log.WithField("projectId", projectIDInString).Warn("Bingads integration not available.")
 		return nil, http.StatusOK
 	}

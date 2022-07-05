@@ -10,7 +10,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func OverrideCacheDateRangeForProjects(projectID uint64) time.Time {
+func OverrideCacheDateRangeForProjects(projectID int64) time.Time {
 	seedDate, ok := C.GetConfig().CacheLookUpRangeProjects[projectID]
 	var currentDate time.Time
 	if ok == true {

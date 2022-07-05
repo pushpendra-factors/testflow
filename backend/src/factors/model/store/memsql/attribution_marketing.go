@@ -13,7 +13,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (store *MemSQL) FetchMarketingReports(projectID uint64, q model.AttributionQuery, projectSetting model.ProjectSetting) (*model.MarketingReports, error) {
+func (store *MemSQL) FetchMarketingReports(projectID int64, q model.AttributionQuery, projectSetting model.ProjectSetting) (*model.MarketingReports, error) {
 	logFields := log.Fields{
 		"project_id":      projectID,
 		"q":               q,
@@ -326,7 +326,7 @@ func (store *MemSQL) FetchMarketingReports(projectID uint64, q model.Attribution
 
 	return data, err
 }
-func (store *MemSQL) getBingAdsAccountId(projectID uint64) (string, error) {
+func (store *MemSQL) getBingAdsAccountId(projectID int64) (string, error) {
 	ftMapping, err := store.GetActiveFiveTranMapping(projectID, model.BingAdsIntegration)
 	if err == nil {
 		return ftMapping.Accounts, nil
@@ -336,7 +336,7 @@ func (store *MemSQL) getBingAdsAccountId(projectID uint64) (string, error) {
 }
 
 // PullAdwordsMarketingData Pulls Adds channel data for Adwords.
-func (store *MemSQL) PullAdwordsMarketingData(projectID uint64, from, to int64, customerAccountID string, keyID string,
+func (store *MemSQL) PullAdwordsMarketingData(projectID int64, from, to int64, customerAccountID string, keyID string,
 	keyName string, extraValue1 string, reportType int, reportName string, timeZone string) (map[string]model.MarketingData, []model.MarketingData, error) {
 	logFields := log.Fields{
 		"project_id":          projectID,
@@ -374,7 +374,7 @@ func (store *MemSQL) PullAdwordsMarketingData(projectID uint64, from, to int64, 
 }
 
 // PullFacebookMarketingData Pulls Adds channel data for Facebook.
-func (store *MemSQL) PullFacebookMarketingData(projectID uint64, from, to int64, customerAccountID string, keyID string,
+func (store *MemSQL) PullFacebookMarketingData(projectID int64, from, to int64, customerAccountID string, keyID string,
 	keyName string, extraValue1 string, reportType int, reportName string, timeZone string) (map[string]model.MarketingData, []model.MarketingData, error) {
 	logFields := log.Fields{
 		"project_id":          projectID,
@@ -413,7 +413,7 @@ func (store *MemSQL) PullFacebookMarketingData(projectID uint64, from, to int64,
 }
 
 // PullLinkedinMarketingData Pulls Adds channel data for Linkedin.
-func (store *MemSQL) PullLinkedinMarketingData(projectID uint64, from, to int64, customerAccountID string, keyID string,
+func (store *MemSQL) PullLinkedinMarketingData(projectID int64, from, to int64, customerAccountID string, keyID string,
 	keyName string, extraValue1 string, reportType int, reportName string, timeZone string) (map[string]model.MarketingData, []model.MarketingData, error) {
 	logFields := log.Fields{
 		"project_id":          projectID,
@@ -449,7 +449,7 @@ func (store *MemSQL) PullLinkedinMarketingData(projectID uint64, from, to int64,
 	marketingDataIDMap, allRows := model.ProcessRow(rows, reportName, logCtx, model.ChannelLinkedin, reqID)
 	return marketingDataIDMap, allRows, nil
 }
-func (store *MemSQL) PullBingAdsMarketingData(projectID uint64, from, to int64, customerAccountID string, keyID string,
+func (store *MemSQL) PullBingAdsMarketingData(projectID int64, from, to int64, customerAccountID string, keyID string,
 	keyName string, extraValue1 string, reportType int, reportName string, timeZone string) (map[string]model.MarketingData, []model.MarketingData, error) {
 	logFields := log.Fields{
 		"project_id":   projectID,
@@ -485,7 +485,7 @@ func (store *MemSQL) PullBingAdsMarketingData(projectID uint64, from, to int64, 
 	marketingDataIDMap, allRows := model.ProcessRow(rows, reportName, logCtx, model.BingAdsIntegration, reqID)
 	return marketingDataIDMap, allRows, nil
 }
-func (store *MemSQL) PullCustomDimensionData(projectID uint64, attributionKey string, marketingReport *model.MarketingReports, logCtx log.Entry) error {
+func (store *MemSQL) PullCustomDimensionData(projectID int64, attributionKey string, marketingReport *model.MarketingReports, logCtx log.Entry) error {
 
 	// Custom Dimensions are support only for Campaign and Adgroup currently
 	if attributionKey != model.AttributionKeyCampaign && attributionKey != model.AttributionKeyAdgroup {
@@ -539,7 +539,7 @@ func (store *MemSQL) PullCustomDimensionData(projectID uint64, attributionKey st
 }
 
 // PullSmartProperties Pulls Smart Properties
-func (store *MemSQL) PullSmartProperties(projectID uint64, campaignIDPlaceHolder string, campaignNamePlaceHolder string, adgroupIDPlaceHolder string, adgroupNamePlaceHolder string, sourceChannelPlaceHolder string, objectType int, attributionKey string, logCtx log.Entry) (map[string]model.MarketingData, error) {
+func (store *MemSQL) PullSmartProperties(projectID int64, campaignIDPlaceHolder string, campaignNamePlaceHolder string, adgroupIDPlaceHolder string, adgroupNamePlaceHolder string, sourceChannelPlaceHolder string, objectType int, attributionKey string, logCtx log.Entry) (map[string]model.MarketingData, error) {
 	logFields := log.Fields{
 		"campaign_id_place_holder":    campaignIDPlaceHolder,
 		"campaign_name_place_holder":  campaignNamePlaceHolder,

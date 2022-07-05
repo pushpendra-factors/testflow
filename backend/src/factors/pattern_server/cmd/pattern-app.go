@@ -39,8 +39,8 @@ const (
 )
 
 // Add Test
-func makeProjectModelChunkLookup(projectDatas []model.ProjectModelMetadata) map[uint64]patternserver.ModelChunkMapping {
-	pD := make(map[uint64]patternserver.ModelChunkMapping)
+func makeProjectModelChunkLookup(projectDatas []model.ProjectModelMetadata) map[int64]patternserver.ModelChunkMapping {
+	pD := make(map[int64]patternserver.ModelChunkMapping)
 	for _, p := range projectDatas {
 		mCM, exists := pD[p.ProjectId]
 		if !exists {
@@ -485,7 +485,7 @@ func watchAndHandleEtcdEvents(ps *patternserver.PatternServer, cloudManger files
 	}
 }
 
-func getProjectsDataFromVersion(version string, cloudManger filestore.FileManager) (map[uint64]patternserver.ModelChunkMapping, error) {
+func getProjectsDataFromVersion(version string, cloudManger filestore.FileManager) (map[int64]patternserver.ModelChunkMapping, error) {
 
 	modelMetadata, _, msg := modelstore.GetStore().GetAllProjectModelMetadata()
 

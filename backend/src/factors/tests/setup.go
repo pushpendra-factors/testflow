@@ -64,8 +64,8 @@ func SetupProjectUserReturnDAO() (*model.Project, *model.User, error) {
 }
 
 // Todo(Dinesh): To be replaced with SetupProjectUserEventNameReturnDAO.
-func SetupProjectUserEventName() (uint64, string, string, error) {
-	var projectId uint64
+func SetupProjectUserEventName() (int64, string, string, error) {
+	var projectId int64
 	var userId string
 	var eventNameId string
 
@@ -212,7 +212,7 @@ func SetupProjectWithAdminAgentDAO() (*model.Project, *model.Agent, error) {
 	}
 	return project, agent, nil
 }
-func SetupAgentWithProject(projectID uint64) (*model.Agent, error) {
+func SetupAgentWithProject(projectID int64) (*model.Agent, error) {
 	agent, errCode := SetupAgentReturnDAO(getRandomEmail(), "+1343545")
 	if errCode != http.StatusCreated {
 		return nil, fmt.Errorf("Agent Creation failed.")

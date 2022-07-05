@@ -1,7 +1,9 @@
 package v1
 
 import (
+	"fmt"
 	"net/http"
+	"strconv"
 
 	C "factors/config"
 	"factors/model/model"
@@ -54,7 +56,7 @@ import (
 func GetProjectsHandler(c *gin.Context) {
 	authorizedProjects := U.GetScopeByKey(c, mid.SCOPE_AUTHORIZED_PROJECTS)
 	loggedInAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
-	projects, errCode := store.GetStore().GetProjectsByIDs(authorizedProjects.([]uint64))
+	projects, errCode := store.GetStore().GetProjectsByIDs(authorizedProjects.([]int64))
 	if errCode == http.StatusInternalServerError {
 		c.AbortWithStatus(errCode)
 		return
@@ -66,10 +68,10 @@ func GetProjectsHandler(c *gin.Context) {
 			return
 		}
 	}
-	projectRoleMap := make(map[uint64]uint64)
+	projectRoleMap := make(map[int64]uint64)
 	resp := make(map[uint64][]interface{})
 	if len(projects) > 0 {
-		projectAgentMappings, errCode := store.GetStore().GetProjectAgentMappingsByProjectIds(authorizedProjects.([]uint64))
+		projectAgentMappings, errCode := store.GetStore().GetProjectAgentMappingsByProjectIds(authorizedProjects.([]int64))
 		if errCode != http.StatusFound {
 			c.AbortWithStatus(errCode)
 			return
@@ -82,12 +84,19 @@ func GetProjectsHandler(c *gin.Context) {
 		}
 		for _, project := range projects {
 			project.IsMultipleProjectTimezoneEnabled = C.IsMultipleProjectTimezoneEnabled(project.ID)
-			resp[projectRoleMap[project.ID]] = append(resp[projectRoleMap[project.ID]], project)
+			resp[projectRoleMap[project.ID]] = append(resp[projectRoleMap[project.ID]], MapProjectToString(project))
 		}
 	}
 	if C.EnableDemoReadAccess() {
-		trimmedDemoProjects := make([]model.Project, 0)
-		demoProjects, _ := store.GetStore().GetProjectsByIDs(C.GetConfig().DemoProjectIds)
+		trimmedDemoProjects := make([]model.ProjectString, 0)
+		demoProjectStrings := C.GetConfig().DemoProjectIds
+		demoProjs := make([]int64, 0)
+		for _, demoProj := range demoProjectStrings {
+			num, _ := strconv.ParseInt(demoProj, 10, 64)
+			demoProjs = append(demoProjs, num)
+		}
+
+		demoProjects, _ := store.GetStore().GetProjectsByIDs(demoProjs)
 		for _, project := range demoProjects {
 			project.Token = ""
 			project.PrivateToken = ""
@@ -96,11 +105,12 @@ func GetProjectsHandler(c *gin.Context) {
 			project.HubspotTouchPoints = postgres.Jsonb{}
 			project.JobsMetadata = nil
 			project.ChannelGroupRules = postgres.Jsonb{}
-			trimmedDemoProjects = append(trimmedDemoProjects, project)
+			trimmedDemoProjects = append(trimmedDemoProjects, MapProjectToString(project))
 		}
 		for _, project := range trimmedDemoProjects {
 			if !H.IsDemoProjectInAuthorizedProjects(authorizedProjects.([]uint64), project.ID) {
-				project.IsMultipleProjectTimezoneEnabled = C.IsMultipleProjectTimezoneEnabled(project.ID)
+				projectIdNum, _ := strconv.ParseInt(project.ID, 10, 64)
+				project.IsMultipleProjectTimezoneEnabled = C.IsMultipleProjectTimezoneEnabled(projectIdNum)
 				resp[1] = append(resp[1], project)
 			}
 		}
@@ -110,7 +120,7 @@ func GetProjectsHandler(c *gin.Context) {
 }
 
 func GetDemoProjects(c *gin.Context) {
-	demoProjects := make([]uint64, 0)
+	demoProjects := make([]string, 0)
 	loggedInAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 	projects := C.GetConfig().DemoProjectIds
 
@@ -120,5 +130,27 @@ func GetDemoProjects(c *gin.Context) {
 	} else {
 		c.JSON(http.StatusOK, projects)
 		return
+	}
+}
+
+func MapProjectToString(project model.Project) model.ProjectString {
+	return model.ProjectString{
+		ID:                               fmt.Sprintf("%v", project.ID),
+		Name:                             project.Name,
+		ProfilePicture:                   project.ProfilePicture,
+		Token:                            project.Token,
+		PrivateToken:                     project.PrivateToken,
+		CreatedAt:                        project.CreatedAt,
+		UpdatedAt:                        project.UpdatedAt,
+		ProjectURI:                       project.ProjectURI,
+		TimeFormat:                       project.TimeFormat,
+		DateFormat:                       project.DateFormat,
+		TimeZone:                         project.TimeZone,
+		InteractionSettings:              project.InteractionSettings,
+		SalesforceTouchPoints:            project.SalesforceTouchPoints,
+		HubspotTouchPoints:               project.HubspotTouchPoints,
+		JobsMetadata:                     project.JobsMetadata,
+		ChannelGroupRules:                project.ChannelGroupRules,
+		IsMultipleProjectTimezoneEnabled: project.IsMultipleProjectTimezoneEnabled,
 	}
 }

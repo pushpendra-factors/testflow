@@ -30,14 +30,14 @@ const (
 )
 
 type GenericRPCResp struct {
-	ProjectId uint64 `json:"pid"`
+	ProjectId int64  `json:"pid"`
 	ModelId   uint64 `json:"mid"`
 	Ignored   bool   `json:"ignored"`
 	Error     error  `json:"error"`
 }
 
 type GetAllPatternsRequest struct {
-	ProjectId  uint64 `json:"pid"`
+	ProjectId  int64  `json:"pid"`
 	ModelId    uint64 `json:"mid"`
 	StartEvent string `json:"se"` // optional filter.
 	EndEvent   string `json:"ee"` // optional filter.
@@ -49,7 +49,7 @@ type GetAllPatternsResponse struct {
 }
 
 type GetAllContainingPatternsRequest struct {
-	ProjectId uint64 `json:"pid"`
+	ProjectId int64  `json:"pid"`
 	ModelId   uint64 `json:"mid"`
 	Event     string `json:"en"`
 }
@@ -60,7 +60,7 @@ type GetAllContainingPatternsResponse struct {
 }
 
 type GetPatternsRequest struct {
-	ProjectId     uint64     `json:"pid"`
+	ProjectId     int64      `json:"pid"`
 	ModelId       uint64     `json:"mid"`
 	PatternEvents [][]string `json:"pe"`
 }
@@ -71,7 +71,7 @@ type GetPatternsResponse struct {
 }
 
 type GetTotalEventCountRequest struct {
-	ProjectId uint64 `json:"pid"`
+	ProjectId int64  `json:"pid"`
 	ModelId   uint64 `json:"mid"` // Optional, if not passed latest modelId will be used
 }
 
@@ -88,7 +88,7 @@ type ModelInfo struct {
 }
 
 type GetUserAndEventsInfoRequest struct {
-	ProjectId uint64 `json:"pid"`
+	ProjectId int64  `json:"pid"`
 	ModelId   uint64 `json:"mid"` // Optional, if not passed latest modelId will be used
 }
 
@@ -114,7 +114,7 @@ func CreatePatternsFromRawPatterns(rawPatterns []*json.RawMessage) ([]*pattern.P
 	return patterns, nil
 }
 
-func GetAllPatterns(reqId string, projectId, modelId uint64, startEvent, endEvent string) ([]*pattern.Pattern, error) {
+func GetAllPatterns(reqId string, projectId int64, modelId uint64, startEvent, endEvent string) ([]*pattern.Pattern, error) {
 	params := GetAllPatternsRequest{
 		ProjectId:  projectId,
 		ModelId:    modelId,
@@ -176,7 +176,7 @@ func GetAllPatterns(reqId string, projectId, modelId uint64, startEvent, endEven
 	return patterns, nil
 }
 
-func GetAllContainingPatterns(reqId string, projectId, modelId uint64, event string) ([]*pattern.Pattern, error) {
+func GetAllContainingPatterns(reqId string, projectId int64, modelId uint64, event string) ([]*pattern.Pattern, error) {
 	params := GetAllContainingPatternsRequest{
 		ProjectId: projectId,
 		ModelId:   modelId,
@@ -237,7 +237,7 @@ func GetAllContainingPatterns(reqId string, projectId, modelId uint64, event str
 	return patterns, nil
 }
 
-func GetPatterns(reqId string, projectId, modelId uint64, patternEvents [][]string) ([]*pattern.Pattern, error) {
+func GetPatterns(reqId string, projectId int64, modelId uint64, patternEvents [][]string) ([]*pattern.Pattern, error) {
 	params := GetPatternsRequest{
 		ProjectId:     projectId,
 		ModelId:       modelId,
@@ -297,7 +297,7 @@ func GetPatterns(reqId string, projectId, modelId uint64, patternEvents [][]stri
 	return patterns, nil
 }
 
-func GetUserAndEventsInfo(reqId string, projectId, modelId uint64) (*pattern.UserAndEventsInfo, uint64, error) {
+func GetUserAndEventsInfo(reqId string, projectId int64, modelId uint64) (*pattern.UserAndEventsInfo, uint64, error) {
 
 	params := GetUserAndEventsInfoRequest{
 		ProjectId: projectId,
@@ -355,7 +355,7 @@ func GetUserAndEventsInfo(reqId string, projectId, modelId uint64) (*pattern.Use
 	return &respUserAndEventsInfo, respModelId, nil
 }
 
-func GetTotalEventCount(reqId string, projectId, modelId uint64) (uint64, error) {
+func GetTotalEventCount(reqId string, projectId int64, modelId uint64) (uint64, error) {
 	params := GetTotalEventCountRequest{
 		ProjectId: projectId,
 		ModelId:   modelId,

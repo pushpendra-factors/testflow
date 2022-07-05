@@ -20,7 +20,7 @@ const ENABLE_DEFAULT_WEB_ANALYTICS = false
 // Checks for the existence of token already.
 func isTokenExist(token string, private bool) (exists int, err error) {
 	logFields := log.Fields{
-		"token": token,
+		"token":   token,
 		"private": private,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -30,7 +30,7 @@ func isTokenExist(token string, private bool) (exists int, err error) {
 	if private {
 		whereCondition = "private_token = ?"
 	}
-	var count uint64
+	var count int64
 	if err := db.Model(&model.Project{}).Where(whereCondition, token).Count(&count).Error; err != nil {
 		return -1, err
 	}
@@ -163,10 +163,10 @@ func createProject(project *model.Project) (*model.Project, int) {
 	return project, http.StatusCreated
 }
 
-func (store *MemSQL) UpdateProject(projectId uint64, project *model.Project) int {
+func (store *MemSQL) UpdateProject(projectId int64, project *model.Project) int {
 	logFields := log.Fields{
 		"project_id": projectId,
-		"project": project,
+		"project":    project,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
@@ -226,7 +226,7 @@ func (store *MemSQL) UpdateProject(projectId uint64, project *model.Project) int
 	return 0
 }
 
-func (store *MemSQL) createProjectDependencies(projectID uint64, agentUUID string) int {
+func (store *MemSQL) createProjectDependencies(projectID int64, agentUUID string) int {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"agent_uuid": agentUUID,
@@ -260,14 +260,14 @@ func (store *MemSQL) createProjectDependencies(projectID uint64, agentUUID strin
 // CreateProjectWithDependencies seperate create method with dependencies to avoid breaking tests.
 func (store *MemSQL) CreateProjectWithDependencies(project *model.Project, agentUUID string,
 	agentRole uint64, billingAccountID string, createDashboard bool) (*model.Project, int) {
-		logFields := log.Fields{
-			"project": project,
-			"agent_uuid": agentUUID,
-			"agent_role": agentRole,
-			"billing_account_id": billingAccountID,
-			"create_dashboard": createDashboard,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"project":            project,
+		"agent_uuid":         agentUUID,
+		"agent_role":         agentRole,
+		"billing_account_id": billingAccountID,
+		"create_dashboard":   createDashboard,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	cProject, errCode := createProject(project)
 	if errCode != http.StatusCreated {
@@ -336,7 +336,7 @@ func (store *MemSQL) CreateDefaultProjectForAgent(agentUUID string) (*model.Proj
 	return cProject, http.StatusCreated
 }
 
-func (store *MemSQL) GetProject(id uint64) (*model.Project, int) {
+func (store *MemSQL) GetProject(id int64) (*model.Project, int) {
 	logFields := log.Fields{
 		"id": id,
 	}
@@ -425,7 +425,7 @@ func (store *MemSQL) GetProjects() ([]model.Project, int) {
 }
 
 // isValidProjectScope return false if projectId is invalid.
-func isValidProjectScope(id uint64) bool {
+func isValidProjectScope(id int64) bool {
 	logFields := log.Fields{
 		"id": id,
 	}
@@ -433,7 +433,7 @@ func isValidProjectScope(id uint64) bool {
 	return id != 0
 }
 
-func (store *MemSQL) GetProjectsByIDs(ids []uint64) ([]model.Project, int) {
+func (store *MemSQL) GetProjectsByIDs(ids []int64) ([]model.Project, int) {
 	logFields := log.Fields{
 		"ids": ids,
 	}
@@ -458,9 +458,9 @@ func (store *MemSQL) GetProjectsByIDs(ids []uint64) ([]model.Project, int) {
 }
 
 // GetAllProjectIDs Gets the ids of all the existing projects.
-func (store *MemSQL) GetAllProjectIDs() ([]uint64, int) {
+func (store *MemSQL) GetAllProjectIDs() ([]int64, int) {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
-	projectIds := make([]uint64, 0, 0)
+	projectIds := make([]int64, 0, 0)
 
 	db := C.GetServices().Db
 	rows, err := db.Raw("SELECT id FROM projects").Rows()
@@ -471,7 +471,7 @@ func (store *MemSQL) GetAllProjectIDs() ([]uint64, int) {
 	defer rows.Close()
 
 	for rows.Next() {
-		var projectId uint64
+		var projectId int64
 		if err = rows.Scan(&projectId); err != nil {
 			log.WithError(err).Error("Failed to get all project ids. Scanning failed.")
 			return projectIds, http.StatusInternalServerError
@@ -489,7 +489,7 @@ func (store *MemSQL) GetAllProjectIDs() ([]uint64, int) {
 
 // GetNextSessionStartTimestampForProject - Returns start timestamp for
 // pulling events, for add session job, by project.
-func (store *MemSQL) GetNextSessionStartTimestampForProject(projectID uint64) (int64, int) {
+func (store *MemSQL) GetNextSessionStartTimestampForProject(projectID int64) (int64, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
@@ -535,7 +535,7 @@ func (store *MemSQL) GetNextSessionStartTimestampForProject(projectID uint64) (i
 	return *sessionStartTimestamp, http.StatusFound
 }
 
-func (store *MemSQL) GetTimezoneForProject(projectID uint64) (U.TimeZoneString, int) {
+func (store *MemSQL) GetTimezoneForProject(projectID int64) (U.TimeZoneString, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
@@ -562,10 +562,10 @@ func (store *MemSQL) GetTimezoneForProject(projectID uint64) (U.TimeZoneString, 
 
 // UpdateNextSessionStartTimestampForProject - Updates next session start timestamp
 // on project jobs metadata.
-func (store *MemSQL) UpdateNextSessionStartTimestampForProject(projectID uint64, timestamp int64) int {
+func (store *MemSQL) UpdateNextSessionStartTimestampForProject(projectID int64, timestamp int64) int {
 	logFields := log.Fields{
 		"project_id": projectID,
-		"timestamp": timestamp,
+		"timestamp":  timestamp,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
@@ -593,13 +593,13 @@ func (store *MemSQL) UpdateNextSessionStartTimestampForProject(projectID uint64,
 
 // GetProjectsToRunForIncludeExcludeString For a given list of include / exclude comma separated strings,
 // returns a list of project ids handling * and other cases.
-func (store *MemSQL) GetProjectsToRunForIncludeExcludeString(projectIDs, excludeProjectIDs string) []uint64 {
+func (store *MemSQL) GetProjectsToRunForIncludeExcludeString(projectIDs, excludeProjectIDs string) []int64 {
 	logFields := log.Fields{
-		"project_ids": projectIDs,
+		"project_ids":         projectIDs,
 		"exclude_project_ids": excludeProjectIDs,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	var projectIDsToRun []uint64
+	var projectIDsToRun []int64
 	allProjects, projectIDsMap, excludeProjectIDsMap := C.GetProjectsFromListWithAllProjectSupport(
 		projectIDs, excludeProjectIDs)
 	projectIDsToRun = C.ProjectIdsFromProjectIdBoolMap(projectIDsMap)
@@ -621,10 +621,10 @@ func (store *MemSQL) GetProjectsToRunForIncludeExcludeString(projectIDs, exclude
 
 // FillNextSessionStartTimestampForProject - Fills the initial next session start timestamp.
 // Postgres only implementation.
-func (store *MemSQL) FillNextSessionStartTimestampForProject(projectID uint64, timestamp int64) int {
+func (store *MemSQL) FillNextSessionStartTimestampForProject(projectID int64, timestamp int64) int {
 	logFields := log.Fields{
 		"project_id": projectID,
-		"timestamp": timestamp,
+		"timestamp":  timestamp,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
@@ -648,7 +648,7 @@ func (store *MemSQL) FillNextSessionStartTimestampForProject(projectID uint64, t
 	return http.StatusAccepted
 }
 
-func (store *MemSQL) GetProjectsWithoutWebAnalyticsDashboard(onlyProjectsMap map[uint64]bool) (projectIds []uint64, errCode int) {
+func (store *MemSQL) GetProjectsWithoutWebAnalyticsDashboard(onlyProjectsMap map[int64]bool) (projectIds []int64, errCode int) {
 	logFields := log.Fields{
 		"only_projects_map": onlyProjectsMap,
 	}
@@ -656,12 +656,12 @@ func (store *MemSQL) GetProjectsWithoutWebAnalyticsDashboard(onlyProjectsMap map
 
 	logCtx := log.WithFields(logFields)
 
-	onlyProjectIds := make([]uint64, 0, len(onlyProjectsMap))
+	onlyProjectIds := make([]int64, 0, len(onlyProjectsMap))
 	for k := range onlyProjectsMap {
 		onlyProjectIds = append(onlyProjectIds, k)
 	}
 
-	projectIds = make([]uint64, 0, 0)
+	projectIds = make([]int64, 0, 0)
 
 	db := C.GetServices().Db
 	queryStmnt := "SELECT id FROM projects WHERE id not in (SELECT distinct(project_id) FROM dashboards WHERE dashboards.name = '" + model.DefaultDashboardWebsiteAnalytics + "')"
@@ -689,7 +689,7 @@ func (store *MemSQL) GetProjectsWithoutWebAnalyticsDashboard(onlyProjectsMap map
 	defer rows.Close()
 
 	for rows.Next() {
-		var projectId uint64
+		var projectId int64
 
 		if err = rows.Scan(&projectId); err != nil {
 			logCtx.WithError(err).
@@ -703,7 +703,7 @@ func (store *MemSQL) GetProjectsWithoutWebAnalyticsDashboard(onlyProjectsMap map
 	return projectIds, http.StatusFound
 }
 
-func (store *MemSQL) GetProjectIDByToken(token string) (uint64, int) {
+func (store *MemSQL) GetProjectIDByToken(token string) (int64, int) {
 	logFields := log.Fields{
 		"token": token,
 	}

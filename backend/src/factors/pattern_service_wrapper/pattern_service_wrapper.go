@@ -32,7 +32,7 @@ type PatternServiceWrapperInterface interface {
 }
 
 type PatternServiceWrapper struct {
-	projectId         uint64
+	projectId         int64
 	modelId           uint64
 	pMap              map[string]*P.Pattern
 	totalEventCount   uint
@@ -911,7 +911,7 @@ func buildFactorResultsFromPatterns(reqId string, nodes []*ItreeNode,
 	return results
 }
 
-func NewPatternServiceWrapper(reqId string, projectId uint64, modelId uint64) (*PatternServiceWrapper, error) {
+func NewPatternServiceWrapper(reqId string, projectId int64, modelId uint64) (*PatternServiceWrapper, error) {
 	pMap := make(map[string]*P.Pattern)
 	patternServiceWrapper := PatternServiceWrapper{
 		projectId: projectId,
@@ -922,7 +922,7 @@ func NewPatternServiceWrapper(reqId string, projectId uint64, modelId uint64) (*
 	return &patternServiceWrapper, nil
 }
 
-func Factor(reqId string, projectId uint64, startEvent string,
+func Factor(reqId string, projectId int64, startEvent string,
 	startEventConstraints *P.EventConstraints, endEvent string,
 	endEventConstraints *P.EventConstraints, countType string,
 	pw PatternServiceWrapperInterface) (FactorGraphResults, error) {
@@ -1217,7 +1217,7 @@ func roundTo1Decimal(value float64) float64 {
 	return math.Floor(value*10) / 10
 }
 
-func FactorV1(reqId string, projectId uint64, startEvent string,
+func FactorV1(reqId string, projectId int64, startEvent string,
 	startEventConstraints *P.EventConstraints, endEvent string,
 	endEventConstraints *P.EventConstraints, countType string,
 	pw PatternServiceWrapperInterface, debugKey string, debugParams map[string]string, includedEvents map[string]bool,

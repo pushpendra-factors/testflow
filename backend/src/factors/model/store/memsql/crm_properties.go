@@ -12,7 +12,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func isCurrentPropertyType(projectID uint64, incomingProperty *model.CRMProperty) (int, error) {
+func isCurrentPropertyType(projectID int64, incomingProperty *model.CRMProperty) (int, error) {
 	logFields := log.Fields{"project_id": projectID, "crm_property": incomingProperty}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
@@ -92,7 +92,7 @@ func (store *MemSQL) CreateCRMProperties(crmProperty *model.CRMProperty) (int, e
 	return http.StatusCreated, nil
 }
 
-func (store *MemSQL) GetCRMPropertiesForSync(projectID uint64) ([]model.CRMProperty, int) {
+func (store *MemSQL) GetCRMPropertiesForSync(projectID int64) ([]model.CRMProperty, int) {
 	logFields := log.Fields{"project_id": projectID}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
@@ -118,7 +118,7 @@ func (store *MemSQL) GetCRMPropertiesForSync(projectID uint64) ([]model.CRMPrope
 	return properties, http.StatusFound
 }
 
-func (store *MemSQL) UpdateCRMProperyAsSynced(projectID uint64, source U.CRMSource, crmProperty *model.CRMProperty) (*model.CRMProperty, int) {
+func (store *MemSQL) UpdateCRMProperyAsSynced(projectID int64, source U.CRMSource, crmProperty *model.CRMProperty) (*model.CRMProperty, int) {
 
 	logFields := log.Fields{"crm_properties": crmProperty, "source": source, "project_id": projectID}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)

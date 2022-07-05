@@ -359,7 +359,7 @@ func CustomCors() gin.HandlerFunc {
 
 func ValidateLoggedInAgentHasAccessToRequestProject() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		urlParamProjectId, err := strconv.ParseUint(c.Params.ByName("project_id"), 10, 64)
+		urlParamProjectId, err := strconv.ParseInt(c.Params.ByName("project_id"), 10, 64)
 		if err != nil || urlParamProjectId == 0 {
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid project id on param."})
 			return
@@ -372,7 +372,7 @@ func ValidateLoggedInAgentHasAccessToRequestProject() gin.HandlerFunc {
 			return
 		}
 
-		for _, pid := range authorizedProjects.([]uint64) {
+		for _, pid := range authorizedProjects.([]int64) {
 			if urlParamProjectId == pid {
 				// Set scope projectId. This has to be used by other
 				// handlers for projectId.
@@ -606,7 +606,7 @@ func SetAuthorizedProjectsByLoggedInAgent() gin.HandlerFunc {
 		loginAdminToken := c.Request.Header.Get("Authorization")
 		loginAdminToken = strings.TrimSpace(loginAdminToken)
 
-		var projectIds []uint64
+		var projectIds []int64
 
 		if isAdminTokenLogin(loginAdminToken) {
 			// Set project with admin token.
@@ -618,7 +618,7 @@ func SetAuthorizedProjectsByLoggedInAgent() gin.HandlerFunc {
 			}
 
 			tokenProjectId := strings.TrimSpace(splitToken[1])
-			projectId, err := strconv.ParseUint(tokenProjectId, 10, 64)
+			projectId, err := strconv.ParseInt(tokenProjectId, 10, 64)
 			if err != nil {
 				c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid token and project_id."})
 				return
@@ -687,7 +687,7 @@ func ValidateAgentSetPasswordRequest() gin.HandlerFunc {
 func ValidateAccessToSharedEntity(entityType int) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		shareString := c.Query("query_id")
-		urlParamProjectId, err := strconv.ParseUint(c.Params.ByName("project_id"), 10, 64)
+		urlParamProjectId, err := strconv.ParseInt(c.Params.ByName("project_id"), 10, 64)
 		if err != nil || urlParamProjectId == 0 {
 			log.WithError(err).Error("Failed to parse project_id")
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
@@ -926,7 +926,7 @@ func SkipDemoProjectWriteAccess() gin.HandlerFunc {
 			handlerNameStrings = strings.Split(handlerNameStrings[len(handlerNameStrings)-1], ".")
 			handlerName = handlerNameStrings[len(handlerNameStrings)-1]
 			fmt.Println(handlerName)
-			projectId := U.GetScopeByKeyAsUint64(c, SCOPE_PROJECT_ID)
+			projectId := U.GetScopeByKeyAsInt64(c, SCOPE_PROJECT_ID)
 			agentId := U.GetScopeByKeyAsString(c, SCOPE_LOGGEDIN_AGENT_UUID)
 			if blacklistedHandlerNames[handlerName] == true && !C.IsLoggedInUserWhitelistedForProjectAnalytics(agentId) && C.IsDemoProject(projectId) {
 				c.AbortWithStatusJSON(http.StatusMethodNotAllowed, gin.H{"error": "Operations disallowed for Non-Admin users"})

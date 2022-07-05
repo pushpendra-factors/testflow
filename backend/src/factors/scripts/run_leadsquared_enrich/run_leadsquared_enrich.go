@@ -95,7 +95,7 @@ func main() {
 	defer C.WaitAndFlushAllCollectors(65 * time.Second)
 	C.InitPropertiesTypeCache(*enablePropertyTypeFromDB, *propertiesTypeCacheSize, *whitelistedProjectIDPropertyTypeFromDB, *blacklistedProjectIDPropertyTypeFromDB)
 
-	projectIdsArray := make([]uint64, 0)
+	projectIdsArray := make([]int64, 0)
 	mappings, err := store.GetStore().GetAllLeadSquaredEnabledProjects()
 	if err != nil {
 		C.PingHealthcheckForFailure(healthcheckPingID, "Failed to get LeadSquared Projects")

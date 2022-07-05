@@ -62,7 +62,7 @@ var INTEGRATIONS = map[string]bool{
 }
 
 type DataAvailability struct {
-	ProjectID           uint64    `gorm:"primary_key:true" json:"project_id"`
+	ProjectID           int64     `gorm:"primary_key:true" json:"project_id"`
 	Integration         string    `json:"integration"`
 	LatestDataTimestamp int64     `json:"latest_data_timestamp"`
 	LastPolled          time.Time `json:"last_polled"`

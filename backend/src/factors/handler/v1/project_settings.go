@@ -5,9 +5,10 @@ import (
 	"factors/model/model"
 	"factors/model/store"
 	U "factors/util"
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
-	"net/http"
 )
 
 type ProjectSettings struct {
@@ -22,14 +23,14 @@ func GetProjectSettingHandler(c *gin.Context) {
 		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
 	})
 
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 	if projectId == 0 {
 		logCtx.Error("Get project_settings failed. Failed to get project_id.")
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-	
+
 	isSlackIntegrated, errCode := store.GetStore().IsSlackIntegratedForProject(projectId, agentUUID)
 	if errCode != http.StatusOK {
 		logCtx.Error("Get slack integration status failed.")

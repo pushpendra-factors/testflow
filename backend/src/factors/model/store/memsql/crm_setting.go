@@ -31,7 +31,7 @@ func (store *MemSQL) GetAllCRMSetting() ([]model.CRMSetting, int) {
 	return crmSettings, http.StatusFound
 }
 
-func (store *MemSQL) GetCRMSetting(projectID uint64) (*model.CRMSetting, int) {
+func (store *MemSQL) GetCRMSetting(projectID int64) (*model.CRMSetting, int) {
 	logFields := log.Fields{"project_id": projectID}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
@@ -57,7 +57,7 @@ func (store *MemSQL) GetCRMSetting(projectID uint64) (*model.CRMSetting, int) {
 	return &crmSetting, http.StatusFound
 }
 
-func (store *MemSQL) UpdateCRMSetting(projectID uint64, option model.CRMSettingOption) int {
+func (store *MemSQL) UpdateCRMSetting(projectID int64, option model.CRMSettingOption) int {
 	logFields := log.Fields{"project_id": projectID}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
@@ -81,7 +81,7 @@ func (store *MemSQL) UpdateCRMSetting(projectID uint64, option model.CRMSettingO
 	return http.StatusAccepted
 }
 
-func (store *MemSQL) CreateCRMSetting(projectID uint64, crmSetting *model.CRMSetting) int {
+func (store *MemSQL) CreateCRMSetting(projectID int64, crmSetting *model.CRMSetting) int {
 	logFields := log.Fields{"project_id": projectID, "crm_setting": crmSetting}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
@@ -103,7 +103,7 @@ func (store *MemSQL) CreateCRMSetting(projectID uint64, crmSetting *model.CRMSet
 	return http.StatusCreated
 }
 
-func (store *MemSQL) CreateOrUpdateCRMSettingHubspotEnrich(projectID uint64, isHeavy bool, maxCreatedAtSec *int64) int {
+func (store *MemSQL) CreateOrUpdateCRMSettingHubspotEnrich(projectID int64, isHeavy bool, maxCreatedAtSec *int64) int {
 	logFields := log.Fields{"project_id": projectID}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)

@@ -8,7 +8,7 @@ import (
 
 type ContentGroup struct {
 	ID                      string          `gorm:"primary_key:true;" json:"id"`
-	ProjectID               uint64          `json:"project_id"`
+	ProjectID               int64           `json:"project_id"`
 	ContentGroupName        string          `json:"content_group_name"`
 	ContentGroupDescription string          `json:"content_group_description"`
 	Rule                    *postgres.Jsonb `json:"rule,omitempty"`

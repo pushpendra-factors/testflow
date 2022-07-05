@@ -26,12 +26,12 @@ func (store *MemSQL) satisfiesDisplayNameForeignConstraints(displayName model.Di
 	return http.StatusOK
 }
 
-func (store *MemSQL) CreateOrUpdateDisplayName(projectID uint64, eventName, propertyName, displayName, tag string) int {
+func (store *MemSQL) CreateOrUpdateDisplayName(projectID int64, eventName, propertyName, displayName, tag string) int {
 	logFields := log.Fields{
-		"display_name": displayName,
-		"project_id": projectID,
+		"display_name":  displayName,
+		"project_id":    projectID,
 		"property_name": propertyName,
-		"event_name": eventName,
+		"event_name":    eventName,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
@@ -95,13 +95,13 @@ func (store *MemSQL) CreateOrUpdateDisplayName(projectID uint64, eventName, prop
 	return http.StatusCreated
 }
 
-func (store *MemSQL) CreateOrUpdateDisplayNameByObjectType(projectID uint64, propertyName, objectType, displayName, group string) int {
+func (store *MemSQL) CreateOrUpdateDisplayNameByObjectType(projectID int64, propertyName, objectType, displayName, group string) int {
 	logFields := log.Fields{
-		"display_name": displayName,
-		"project_id": projectID,
+		"display_name":  displayName,
+		"project_id":    projectID,
 		"property_name": propertyName,
-		"object_type": objectType,
-		"group": group,	
+		"object_type":   objectType,
+		"group":         group,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
@@ -149,7 +149,7 @@ func (store *MemSQL) CreateOrUpdateDisplayNameByObjectType(projectID uint64, pro
 	return http.StatusCreated
 }
 
-func (store *MemSQL) GetDisplayNamesForAllEvents(projectID uint64) (int, map[string]string) {
+func (store *MemSQL) GetDisplayNamesForAllEvents(projectID int64) (int, map[string]string) {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
@@ -185,7 +185,7 @@ func (store *MemSQL) GetDisplayNamesForAllEvents(projectID uint64) (int, map[str
 	return http.StatusFound, displayNamesMap
 }
 
-func (store *MemSQL) GetDisplayNamesForAllEventProperties(projectID uint64, eventName string) (int, map[string]string) {
+func (store *MemSQL) GetDisplayNamesForAllEventProperties(projectID int64, eventName string) (int, map[string]string) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"event_name": eventName,
@@ -223,7 +223,7 @@ func (store *MemSQL) GetDisplayNamesForAllEventProperties(projectID uint64, even
 	return http.StatusFound, displayNamesMap
 }
 
-func (store *MemSQL) GetDisplayNamesForAllUserProperties(projectID uint64) (int, map[string]string) {
+func (store *MemSQL) GetDisplayNamesForAllUserProperties(projectID int64) (int, map[string]string) {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
@@ -259,7 +259,7 @@ func (store *MemSQL) GetDisplayNamesForAllUserProperties(projectID uint64) (int,
 	return http.StatusFound, displayNamesMap
 }
 
-func (store *MemSQL) GetDisplayNamesForObjectEntities(projectID uint64) (int, map[string]string) {
+func (store *MemSQL) GetDisplayNamesForObjectEntities(projectID int64) (int, map[string]string) {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}

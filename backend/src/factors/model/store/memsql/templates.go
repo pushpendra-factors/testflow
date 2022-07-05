@@ -12,11 +12,11 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (store *MemSQL) RunTemplateQuery(projectID uint64, query model.TemplateQuery, reqID string) (model.TemplateResponse, int) {
+func (store *MemSQL) RunTemplateQuery(projectID int64, query model.TemplateQuery, reqID string) (model.TemplateResponse, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
-		"query": query,
-		"req_id": reqID,
+		"query":      query,
+		"req_id":     reqID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if query.Type == model.TemplateAliasToType[model.SEMChecklist] {
@@ -30,9 +30,9 @@ func (store *MemSQL) RunTemplateQuery(projectID uint64, query model.TemplateQuer
 }
 
 //get the list of metrics and thresholds for that project in the form of { metrics: [], thresholds:[]}
-func (store *MemSQL) GetTemplateConfig(projectID uint64, templateType int) (model.TemplateConfig, int) {
+func (store *MemSQL) GetTemplateConfig(projectID int64, templateType int) (model.TemplateConfig, int) {
 	logFields := log.Fields{
-		"project_id": projectID,
+		"project_id":    projectID,
 		"template_type": templateType,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -49,9 +49,9 @@ func (store *MemSQL) GetTemplateConfig(projectID uint64, templateType int) (mode
 
 	return templateConfig, http.StatusOK
 }
-func (store *MemSQL) getTemplateThresholds(projectID uint64, templateType int) ([]model.TemplateThreshold, error) {
+func (store *MemSQL) getTemplateThresholds(projectID int64, templateType int) ([]model.TemplateThreshold, error) {
 	logFields := log.Fields{
-		"project_id": projectID,
+		"project_id":    projectID,
 		"template_type": templateType,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -64,11 +64,11 @@ func (store *MemSQL) getTemplateThresholds(projectID uint64, templateType int) (
 	return templateThresholds, nil
 }
 
-func (store *MemSQL) UpdateTemplateConfig(projectID uint64, templateType int, thresholds []model.TemplateThreshold) ([]model.TemplateThreshold, string) {
+func (store *MemSQL) UpdateTemplateConfig(projectID int64, templateType int, thresholds []model.TemplateThreshold) ([]model.TemplateThreshold, string) {
 	logFields := log.Fields{
-		"project_id": projectID,
+		"project_id":    projectID,
 		"template_type": templateType,
-		"thresholds": thresholds,
+		"thresholds":    thresholds,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	isValidConfig := model.ValidateTemplateThresholds(thresholds)

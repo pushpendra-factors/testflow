@@ -437,7 +437,7 @@ func clipCategoricalValue(catValue string) string {
 	return catValue[:MAX_CATEGORICAL_STRING_LENGTH]
 }
 
-func FilterCategoricalProperties(projectID uint64, eventName string,
+func FilterCategoricalProperties(projectID int64, eventName string,
 	eventIndex int, properties map[string]interface{}, isUserProperty bool) []string {
 	catProperties := make([]string, 0)
 	for key, value := range properties {
@@ -453,7 +453,7 @@ func FilterCategoricalProperties(projectID uint64, eventName string,
 	return catProperties
 }
 
-func AddNumericAndCategoricalProperties(projectID uint64, eventName string,
+func AddNumericAndCategoricalProperties(projectID int64, eventName string,
 	eventIndex int, properties map[string]interface{},
 	nMap map[string]float64, cMap map[string]string, isUserProperty bool) {
 	for key, value := range properties {
@@ -500,7 +500,7 @@ func AddNumericAndCategoricalPropertiesToHmine(
 // [U3: E1(T12) -> E5(T13)].
 // Further the distribution of timestamps, event properties and number of occurrences
 // are stored with the patterns.
-func (p *Pattern) CountForEvent(projectID uint64, userId string,
+func (p *Pattern) CountForEvent(projectID int64, userId string,
 	userJoinTimestamp int64, shouldCountOccurence bool, ets EvSameTs, cAlgoProps CountAlgoProperties) error {
 	eventNames := ets.EventsNames
 	evMap := ets.EventsMap
