@@ -184,9 +184,13 @@ func ProfilesQueryHandler(c *gin.Context) (interface{}, int, string, string, boo
 			"error": "Query failed. Not found in cache. Suspended db execution."})
 	}*/
 
+	// Use optimised filter for profiles query if enabled using header or configuration.
+	enableOptimisedFilter := c.Request.Header.Get("Use-Filter-Opt-Profiles") == "true" ||
+		C.EnableOptimisedFilterOnProfileQuery()
+
 	model.SetQueryCachePlaceholder(projectID, &profileQueryGroup)
 	H.SleepIfHeaderSet(c)
-	resultGroup, errCode := store.GetStore().RunProfilesGroupQuery(profileQueryGroup.Queries, projectID)
+	resultGroup, errCode := store.GetStore().RunProfilesGroupQuery(profileQueryGroup.Queries, projectID, enableOptimisedFilter)
 	if errCode != http.StatusOK {
 		model.DeleteQueryCacheKey(projectID, &profileQueryGroup)
 		logCtx.Error("Profile Query failed. Failed to process query from DB")

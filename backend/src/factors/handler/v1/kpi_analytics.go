@@ -224,9 +224,14 @@ func ExecuteKPIQueryHandler(c *gin.Context) (interface{}, int, string, string, b
 	model.SetQueryCachePlaceholder(projectID, &request)
 	H.SleepIfHeaderSet(c)
 
+	// Use JSON optimised filter for profiles query from KPI if enabled using query_param or global config.
+	enableOptimisedFilterOnProfileQuery := c.Request.Header.Get("Use-Filter-Opt-Profiles") == "true" ||
+		C.EnableOptimisedFilterOnProfileQuery()
+
 	var duplicatedRequest model.KPIQueryGroup
 	U.DeepCopy(&request, &duplicatedRequest)
-	queryResult, statusCode := store.GetStore().ExecuteKPIQueryGroup(projectID, reqID, duplicatedRequest)
+	queryResult, statusCode := store.GetStore().ExecuteKPIQueryGroup(projectID, reqID,
+		duplicatedRequest, enableOptimisedFilterOnProfileQuery)
 	if statusCode != http.StatusOK {
 		model.DeleteQueryCacheKey(projectID, &request)
 		logCtx.Error("Failed to process query from DB")

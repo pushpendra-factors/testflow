@@ -122,7 +122,10 @@ func ComputeAndSendAlerts(projectID int64, configs map[string]interface{}) (map[
 	}
 	return nil, true
 }
-func executeAlertsKPIQuery(projectID int64, alertType int, date_range dateRanges, kpiQuery model.KPIQuery) (statusCode int, actualValue float64, comparedValue float64, err error) {
+
+func executeAlertsKPIQuery(projectID int64, alertType int, date_range dateRanges,
+	kpiQuery model.KPIQuery) (statusCode int, actualValue float64, comparedValue float64, err error) {
+
 	kpiQueryGroup := model.KPIQueryGroup{
 		Class:         "kpi",
 		Queries:       []model.KPIQuery{},
@@ -132,7 +135,8 @@ func executeAlertsKPIQuery(projectID int64, alertType int, date_range dateRanges
 	kpiQuery.From = date_range.from
 	kpiQuery.To = date_range.to
 	kpiQueryGroup.Queries = append(kpiQueryGroup.Queries, kpiQuery)
-	results, statusCode := store.GetStore().ExecuteKPIQueryGroup(projectID, "", kpiQueryGroup)
+	results, statusCode := store.GetStore().ExecuteKPIQueryGroup(projectID, "",
+		kpiQueryGroup, C.EnableOptimisedFilterOnProfileQuery())
 	log.Info("query response first", results, statusCode)
 	if len(results) != 1 {
 		log.Error("empty or invalid result for ", kpiQuery)
@@ -174,14 +178,15 @@ func executeAlertsKPIQuery(projectID int64, alertType int, date_range dateRanges
 			log.Error("invalid value for ", kpiQuery)
 			return statusCode, actualValue, comparedValue, errors.New("invalid value")
 		}
-
 	}
+
 	if alertType == 2 {
 		kpiQueryGroup.Queries = []model.KPIQuery{}
 		kpiQuery.From = date_range.prev_from
 		kpiQuery.To = date_range.prev_to
 		kpiQueryGroup.Queries = append(kpiQueryGroup.Queries, kpiQuery)
-		results, statusCode = store.GetStore().ExecuteKPIQueryGroup(projectID, "", kpiQueryGroup)
+		results, statusCode = store.GetStore().ExecuteKPIQueryGroup(projectID, "",
+			kpiQueryGroup, C.EnableOptimisedFilterOnProfileQuery())
 		log.Info("query response second", results, statusCode)
 		if len(results) != 1 {
 			log.Error("empty or invalid result for comparision type alerts  ", kpiQuery)

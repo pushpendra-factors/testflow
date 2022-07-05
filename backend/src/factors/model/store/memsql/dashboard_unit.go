@@ -835,11 +835,11 @@ func (store *MemSQL) CacheDashboardUnitForDateRange(cachePayload model.Dashboard
 	} else if baseQuery.GetClass() == model.QueryClassKPI {
 		groupQuery := baseQuery.(*model.KPIQueryGroup)
 		unitReport.Query = groupQuery
-		result, errCode = store.ExecuteKPIQueryGroup(projectID, "", *groupQuery)
+		result, errCode = store.ExecuteKPIQueryGroup(projectID, "", *groupQuery, C.EnableOptimisedFilterOnProfileQuery())
 	} else if baseQuery.GetClass() == model.QueryClassProfiles {
 		groupQuery := baseQuery.(*model.ProfileQueryGroup)
 		unitReport.Query = groupQuery
-		result, errCode = store.RunProfilesGroupQuery(groupQuery.Queries, projectID)
+		result, errCode = store.RunProfilesGroupQuery(groupQuery.Queries, projectID, C.EnableOptimisedFilterOnProfileQuery())
 	}
 	if errCode != http.StatusOK {
 		if queryTimedOut {
@@ -883,7 +883,7 @@ func (store *MemSQL) runFunnelAndInsightsUnit(projectID int64, queryOriginal mod
 
 func (store *MemSQL) runAttributionUnit(projectID int64, queryOriginal *model.AttributionQuery, c chan Result) {
 	var debugQueryKey string
-	r, err := store.ExecuteAttributionQuery(projectID, queryOriginal, debugQueryKey)
+	r, err := store.ExecuteAttributionQuery(projectID, queryOriginal, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery())
 	result := Result{res: r, err: err, errMsg: ""}
 	c <- result
 }

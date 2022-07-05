@@ -14,7 +14,8 @@ import (
 )
 
 // ExecuteKPIForAttribution Executes the KPI sub-query for Attribution
-func (store *MemSQL) ExecuteKPIForAttribution(projectID int64, query *model.AttributionQuery, debugQueryKey string, logCtx log.Entry) (map[string]model.KPIInfo, map[string]string, []string, error) {
+func (store *MemSQL) ExecuteKPIForAttribution(projectID int64, query *model.AttributionQuery, debugQueryKey string,
+	logCtx log.Entry, enableOptimisedFilterOnProfileQuery bool) (map[string]model.KPIInfo, map[string]string, []string, error) {
 
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 
@@ -27,7 +28,8 @@ func (store *MemSQL) ExecuteKPIForAttribution(projectID int64, query *model.Attr
 
 		var duplicatedRequest model.KPIQueryGroup
 		U.DeepCopy(&query.KPI, &duplicatedRequest)
-		resultGroup, statusCode := store.ExecuteKPIQueryGroup(projectID, debugQueryKey, duplicatedRequest)
+		resultGroup, statusCode := store.ExecuteKPIQueryGroup(projectID, debugQueryKey,
+			duplicatedRequest, enableOptimisedFilterOnProfileQuery)
 		log.WithFields(log.Fields{"ResultGroup": resultGroup, "Status": statusCode}).Info("KPI-Attribution result received")
 		if statusCode != http.StatusOK {
 			logCtx.Error("failed to get KPI result for attribution query")

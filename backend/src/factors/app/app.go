@@ -165,6 +165,8 @@ func main() {
 	slackAppClientSecret := flag.String("slack_app_client_secret", "", "")
 
 	dataAvailabilityExpiry := flag.Int("data_availability_expiry", 30, "")
+	enableOptimisedFilterOnProfileQuery := flag.Bool("enable_optimised_filter_on_profile_query",
+		false, "Enables filter optimisation logic for profiles query.")
 	flag.Parse()
 
 	defaultAppName := "app_server"
@@ -280,6 +282,7 @@ func main() {
 		SlackAppClientID:                               *slackAppClientID,
 		SlackAppClientSecret:                           *slackAppClientSecret,
 		DataAvailabilityExpiry:                         *dataAvailabilityExpiry,
+		EnableOptimisedFilterOnProfileQuery:            *enableOptimisedFilterOnProfileQuery,
 	}
 	C.InitConf(config)
 

@@ -40,7 +40,8 @@ func main() {
 	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
 	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
 	memSQLCertificate := flag.String("memsql_cert", "", "")
-	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypeMemSQL, "Primary datastore type as memsql or postgres")
+	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypeMemSQL,
+		"Primary datastore type as memsql or postgres")
 
 	customStartTime := flag.Int64("start_time", 0, "")
 	customEndTime := flag.Int64("end_time", 0, "")
@@ -49,6 +50,8 @@ func main() {
 	attributionMethod := flag.String("attribution_method", "", "")
 	eventName := flag.String("event_name", "", "")
 	lookbackDays := flag.Int("lookback_days", 0, "")
+	enableOptimisedFilterOnProfileQuery := flag.Bool("enable_optimised_filter_on_profile_query",
+		false, "Enables filter optimisation logic for profiles query.")
 
 	var linkedEvents linkedEvent
 	flag.Var(&linkedEvents, "linked_event", "")
@@ -77,7 +80,8 @@ func main() {
 			Certificate: *memSQLCertificate,
 			AppName:     appName,
 		},
-		PrimaryDatastore: *primaryDatastore,
+		PrimaryDatastore:                    *primaryDatastore,
+		EnableOptimisedFilterOnProfileQuery: *enableOptimisedFilterOnProfileQuery,
 	}
 
 	// Setup.
@@ -111,7 +115,7 @@ func main() {
 		AttributionMethodology: *attributionMethod,
 	}
 	var debugQueryKey string
-	result, err := store.GetStore().ExecuteAttributionQuery(*projectIdFlag, query, debugQueryKey)
+	result, err := store.GetStore().ExecuteAttributionQuery(*projectIdFlag, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery())
 	if err != nil {
 		log.Error("Failed to execute query")
 	}

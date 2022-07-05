@@ -251,6 +251,7 @@ type Configuration struct {
 	DataAvailabilityExpiry                          int
 	ClearbitEnabled                                 int
 	UseSalesforceV54APIByProjectID                  string
+	EnableOptimisedFilterOnProfileQuery             bool
 }
 
 type Services struct {
@@ -2193,4 +2194,8 @@ func AllowSalesforcev54APIByProjectID(projectID int64) bool {
 	}
 
 	return allowedProjectIDs[projectID]
+}
+
+func EnableOptimisedFilterOnProfileQuery() bool {
+	return configuration.EnableOptimisedFilterOnProfileQuery
 }

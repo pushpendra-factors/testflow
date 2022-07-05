@@ -57,7 +57,8 @@ type Model interface {
 	GetNextArchivalBatches(projectID int64, startTime int64, maxLookbackDays int, hardStartTime, hardEndTime time.Time) ([]model.EventsArchivalBatch, error)
 
 	// attribution
-	ExecuteAttributionQuery(projectID int64, query *model.AttributionQuery, debugQueryKey string) (*model.QueryResult, error)
+	ExecuteAttributionQuery(projectID int64, query *model.AttributionQuery, debugQueryKey string,
+		enableOptimisedFilterOnProfileQuery bool) (*model.QueryResult, error)
 	GetCoalesceIDFromUserIDs(userIDs []string, projectID int64, logCtx log.Entry) (map[string]model.UserInfo, error)
 	GetLinkedFunnelEventUsersFilter(projectID int64, queryFrom, queryTo int64,
 		linkedEvents []model.QueryEventWithProperties, eventNameToId map[string][]interface{},
@@ -114,8 +115,8 @@ type Model interface {
 	GetKPIConfigsForLeadSquaredLeads(projectID int64, reqID string) (map[string]interface{}, int)
 	GetKPIConfigsForLeadSquared(projectID int64, reqID string, displayCategory string) (map[string]interface{}, int)
 
-	// ExecuteKPIQueryGroup(kpiQueryGroup model.KPIQueryGroup)
-	ExecuteKPIQueryGroup(projectID int64, reqID string, kpiQueryGroup model.KPIQueryGroup) ([]model.QueryResult, int)
+	// KPI
+	ExecuteKPIQueryGroup(projectID int64, reqID string, kpiQueryGroup model.KPIQueryGroup, enableOptimisedFilterOnProfileQuery bool) ([]model.QueryResult, int)
 	ExecuteKPIQueryForEvents(projectID int64, reqID string, kpiQuery model.KPIQuery) ([]model.QueryResult, int)
 	ExecuteKPIQueryForChannels(projectID int64, reqID string, kpiQuery model.KPIQuery) ([]model.QueryResult, int)
 
@@ -171,8 +172,8 @@ type Model interface {
 	BuildInsightsQuery(projectID int64, query model.Query) (string, []interface{}, error)
 
 	// Profile
-	RunProfilesGroupQuery(queriesOriginal []model.ProfileQuery, projectID int64) (model.ResultGroup, int)
-	ExecuteProfilesQuery(projectID int64, query model.ProfileQuery) (*model.QueryResult, int, string)
+	RunProfilesGroupQuery(queriesOriginal []model.ProfileQuery, projectID int64, enableOptimisedFilter bool) (model.ResultGroup, int)
+	ExecuteProfilesQuery(projectID int64, query model.ProfileQuery, enableOptimisedFilter bool) (*model.QueryResult, int, string)
 
 	// event_name
 	CreateOrGetEventName(eventName *model.EventName) (*model.EventName, int)

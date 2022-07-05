@@ -20,7 +20,8 @@ import (
 //	  ii)	Using users from 3.i) find out users who hit linked funnel event applying filter
 //	4. Apply attribution methodology
 //	5. Add performance data by attributionId
-func (store *MemSQL) ExecuteAttributionQuery(projectID int64, queryOriginal *model.AttributionQuery, debugQueryKey string) (*model.QueryResult, error) {
+func (store *MemSQL) ExecuteAttributionQuery(projectID int64, queryOriginal *model.AttributionQuery,
+	debugQueryKey string, enableOptimisedFilterOnProfileQuery bool) (*model.QueryResult, error) {
 
 	logFields := log.Fields{
 		"project_id":        projectID,
@@ -164,7 +165,8 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID int64, queryOriginal *mod
 
 	} else {
 		// This thread is for query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities.
-		kpiData, _, _, err = store.ExecuteKPIForAttribution(projectID, query, debugQueryKey, *logCtx)
+		kpiData, _, _, err = store.ExecuteKPIForAttribution(projectID, query, debugQueryKey,
+			*logCtx, enableOptimisedFilterOnProfileQuery)
 		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("KPI query execution took time")
 		queryStartTime = time.Now().UTC().Unix()
 		if err != nil {

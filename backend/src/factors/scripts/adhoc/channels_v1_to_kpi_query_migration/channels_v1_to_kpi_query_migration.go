@@ -107,7 +107,7 @@ func main() {
 		finalResultantKPIQuery := model.TransformChannelsV1QueryToKPIQueryGroup(sourceFormatOfQuery)
 
 		if *normalRun == false {
-			result, _ := store.GetStore().ExecuteKPIQueryGroup(dbQuery.ProjectID, "", finalResultantKPIQuery)
+			result, _ := store.GetStore().ExecuteKPIQueryGroup(dbQuery.ProjectID, "", finalResultantKPIQuery, true)
 			if result[0].Headers == nil || result[0].Rows == nil {
 				log.WithField("time", U.TimeNowZ()).WithField("dbQuery", dbQuery).WithField("finalResultantKPIQuery", finalResultantKPIQuery).Warn("Failed in transforming channel v1 to kpi query.")
 			} else {
