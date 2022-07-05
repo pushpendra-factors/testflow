@@ -427,6 +427,8 @@ func FloatRoundOffWithPrecision(value float64, precision int) (float64, error) {
 	valueString := fmt.Sprintf("%0.*f", precision, value)
 	roundOffValue, err := strconv.ParseFloat(valueString, 64)
 	if err != nil {
+		log.WithFields(log.Fields{"value": value,
+			"precision": precision}).Error("error while rounding off float value")
 		return roundOffValue, err
 	}
 	return roundOffValue, nil
@@ -488,7 +490,11 @@ func GetValuePlaceHolder(batchSize int) string {
 		concatenatedIds = concatenatedIds + " (?),"
 	}
 	// removing that extra ',' at end
-	concatenatedIds = concatenatedIds[0 : len(concatenatedIds)-1]
+	if len(concatenatedIds) > 0 {
+		concatenatedIds = concatenatedIds[0 : len(concatenatedIds)-1]
+	} else {
+		log.WithFields(log.Fields{}).Info("batchSize is zero in GetValuePlaceHolder")
+	}
 	return concatenatedIds
 }
 

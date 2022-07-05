@@ -70,7 +70,7 @@ func TestClearbitEnrichmentInSDKTrackHanler(t *testing.T) {
 	json.Unmarshal(sessionUserPropertiesBytes.([]byte), &sessionUserProperties)
 
 	// session properties from user properties.
-	//** commenting it as clearbit enrichment will happen only if clearbit key ios present in db.
+	//** commenting it as clearbit enrichment will happen only if clearbit key is present in db.
 
 	//assert.NotEmpty(t, sessionUserProperties[U.CLR_COMPANY_GEO_COUNTRY])
 	//assert.NotEmpty(t, sessionUserProperties[U.CLR_COMPANY_GEO_CITY])

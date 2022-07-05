@@ -160,6 +160,7 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 		for key, _ := range *attributionData {
 			(*attributionData)[key].ConvAggFunctionType = convAggFunctionType
 		}
+		logCtx.Info("Done AddTheAddedKeysAndMetrics, AddPerformanceData")
 
 	} else {
 		// This thread is for query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities.
@@ -332,13 +333,13 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Process Query KPI took time")
 		queryStartTime = time.Now().UTC().Unix()
 	} else {
-		result = model.ProcessQuery(query, attributionData, marketingReports, isCompare, projectID)
+		result = model.ProcessQuery(query, attributionData, marketingReports, isCompare, projectID, *logCtx)
 		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Process Query Normal took time")
 		queryStartTime = time.Now().UTC().Unix()
 	}
 	result.Meta.Currency = ""
 	if projectSetting.IntAdwordsCustomerAccountId != nil && *projectSetting.IntAdwordsCustomerAccountId != "" {
-		currency, _ := store.GetAdwordsCurrency(projectID, *projectSetting.IntAdwordsCustomerAccountId, query.From, query.To)
+		currency, _ := store.GetAdwordsCurrency(projectID, *projectSetting.IntAdwordsCustomerAccountId, query.From, query.To, *logCtx)
 		result.Meta.Currency = currency
 	}
 	logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartORG) / 60}).Info("Total query took time")
@@ -619,7 +620,7 @@ func (store *MemSQL) GetCoalesceIDFromUserIDs(userIDs []string, projectID uint64
 
 	userIDsInBatches := U.GetStringListAsBatch(userIDs, model.UserBatchSize)
 	userIDToCoalUserIDMap := make(map[string]model.UserInfo)
-	logCtx.Info("GetCoalesceIDFromUserIDs 1")
+	batch := 1
 	for _, users := range userIDsInBatches {
 		placeHolder := U.GetValuePlaceHolder(len(users))
 		value := U.GetInterfaceList(users)
@@ -630,8 +631,8 @@ func (store *MemSQL) GetCoalesceIDFromUserIDs(userIDs []string, projectID uint64
 			logCtx.WithError(err).Error("SQL Query failed for GetCoalesceIDFromUserIDs")
 			return nil, err
 		}
-		logCtx.Info("GetCoalesceIDFromUserIDs 2")
-
+		logCtx.WithFields(log.Fields{"Batch": batch}).Info("Executing GetCoalesceIDFromUserIDs")
+		batch++
 		startReadTime := time.Now()
 		for rows.Next() {
 			var userID string
@@ -1026,13 +1027,14 @@ func (store *MemSQL) GetConvertedUsersWithFilter(projectID uint64, goalEventName
 }
 
 // GetAdwordsCurrency Returns currency used for adwords customer_account_id
-func (store *MemSQL) GetAdwordsCurrency(projectID uint64, customerAccountID string, from, to int64) (string, error) {
+func (store *MemSQL) GetAdwordsCurrency(projectID uint64, customerAccountID string, from, to int64, logCtx log.Entry) (string, error) {
 	logFields := log.Fields{
 		"project_id":          projectID,
 		"customer_account_id": customerAccountID,
 		"from":                from,
 		"to":                  to,
 	}
+	logCtx = *logCtx.WithFields(logFields)
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	// Check for no-adwords account linked
@@ -1046,7 +1048,7 @@ func (store *MemSQL) GetAdwordsCurrency(projectID uint64, customerAccountID stri
 	queryCurrency := "SELECT JSON_EXTRACT_STRING(value, 'currency_code') AS currency FROM adwords_documents " +
 		" WHERE project_id=? AND customer_account_id=? AND type=? AND timestamp BETWEEN ? AND ? " +
 		" ORDER BY timestamp DESC LIMIT 1"
-	logCtx := log.WithFields(logFields)
+
 	// Checking just for customerAccountIDs[0], we are assuming that all accounts have same currency.
 	rows, tx, err, reqID := store.ExecQueryWithContext(queryCurrency,
 		[]interface{}{projectID, customerAccountIDs[0], 9, U.GetDateOnlyFromTimestampZ(from),

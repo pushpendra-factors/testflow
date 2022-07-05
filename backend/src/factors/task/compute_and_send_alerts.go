@@ -194,9 +194,35 @@ func executeAlertsKPIQuery(projectID uint64, alertType int, date_range dateRange
 			return statusCode, actualValue, comparedValue, nil
 		}
 		if kpiQuery.Category == model.ProfileQueryClass {
-			comparedValue = results[0].Rows[0][1].(float64)
+			switch results[0].Rows[0][1].(type) {
+			case float64:
+				comparedValue = results[0].Rows[0][1].(float64)
+			case int64:
+				comparedValue = float64(results[0].Rows[0][1].(int64))
+			case int:
+				comparedValue = float64(results[0].Rows[0][1].(int))
+			case float32:
+				comparedValue = float64(results[0].Rows[0][1].(float32))
+			default:
+				log.Error("invalid value for ", kpiQuery)
+				return statusCode, actualValue, comparedValue, errors.New("invalid value")
+
+			}
+
 		} else {
-			comparedValue = results[0].Rows[0][0].(float64)
+			switch results[0].Rows[0][0].(type) {
+			case float64:
+				comparedValue = results[0].Rows[0][0].(float64)
+			case int64:
+				comparedValue = float64(results[0].Rows[0][0].(int64))
+			case int:
+				comparedValue = float64(results[0].Rows[0][0].(int))
+			case float32:
+				comparedValue = float64(results[0].Rows[0][0].(float32))
+			default:
+				log.Error("invalid value for ", kpiQuery)
+				return statusCode, actualValue, comparedValue, errors.New("invalid value")
+			}
 		}
 	}
 
@@ -409,7 +435,7 @@ func sendSlackAlert(projectID uint64, agentUUID string, msg Message, dateRange d
 			status, err := slack.SendSlackAlert(projectID, slackMsg, agentUUID, channel)
 			if err != nil || !status {
 				fail++
-				logCtx.WithError(err).Error("failed to send slack alert ",slackMsg)
+				logCtx.WithError(err).Error("failed to send slack alert ", slackMsg)
 				continue
 			}
 			success++
