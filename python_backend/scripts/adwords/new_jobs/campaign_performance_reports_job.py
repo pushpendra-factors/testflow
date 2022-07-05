@@ -63,9 +63,72 @@ class NewCampaignPerformanceReportsJob(ReportsFetch):
         "metrics.search_rank_lost_absolute_top_impression_share",
         "metrics.search_rank_lost_impression_share",
         "metrics.search_rank_lost_top_impression_share",
+        "metrics.absolute_top_impression_percentage",
+        "metrics.top_impression_percentage",
     ]
 
-    HEADERS_VMAX = [
+    HEADERS_V02 = [
+        "advertising_channel_sub_type",
+        "average_time_on_site",
+        "base_campaign_id",
+        "campaign_name",
+        "campaign_status",
+        "campaign_trial_type",
+        "start_date",
+        "end_date",
+        "interaction_types",
+        "is_budget_explicitly_shared",
+        "url_custom_parameters",
+        "labels",
+        "advertising_channel_type",
+
+        "campaign_id",
+        
+        "active_view_impressions",
+        "active_view_measurability",
+        "active_view_measurable_cost",
+        "active_view_measurable_impressions",
+        "active_view_viewability",
+        "cost_per_conversion",
+        "all_conversion_value",
+        "all_conversions",
+        "amount",
+        "average_cost",
+        "bounce_rate",
+        "clicks",
+        "conversion_value",
+        "conversions",
+        "cost",
+        "engagements",
+        "gmail_forwards",
+        "gmail_saves",
+        "gmail_secondary_clicks",
+        "impressions",
+        "interactions",
+        "invalid_clicks",
+        "value_per_all_conversion",
+        "video_quartile_100_rate",
+        "video_quartile_25_rate",
+        "video_quartile_50_rate",
+        "video_quartile_75_rate",
+        "video_view_rate",
+        "video_views",
+        "view_through_conversions",
+        "search_click_share",
+        "search_impression_share",
+        "search_top_impression_share",
+        "search_absolute_top_impression_share",
+        "search_budget_lost_absolute_top_impression_share",
+        "search_budget_lost_impression_share",
+        "search_budget_lost_top_impression_share",
+        "search_rank_lost_absolute_top_impression_share",
+        "search_rank_lost_impression_share",
+        "search_rank_lost_top_impression_share",
+        "absolute_top_impression_percentage",
+        "top_impression_percentage",
+    ]
+
+    HEADERS_V01 = [
         "advertising_channel_sub_type",
         "average_time_on_site",
         "base_campaign_id",
@@ -151,6 +214,8 @@ class NewCampaignPerformanceReportsJob(ReportsFetch):
         "search_budget_lost_top_impression_share",
         "search_rank_lost_absolute_top_impression_share", "search_rank_lost_impression_share",
         "search_rank_lost_top_impression_share"]
+    
+    HEADERS_VMAX = HEADERS_V02
     
     REPORT = "campaign"
 

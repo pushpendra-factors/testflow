@@ -112,6 +112,15 @@ const (
 	AdwordsSmartProperty                       = "smart_properties"
 	ConversionValue                            = "conversion_value"
 	SearchPerformanceReport                    = "search_performance_report"
+	TopImpressions                             = "top_impressions"
+	TotalTopImpressions                        = "total_top_impressions"
+	AbsoluteTopImpressions                     = "absolute_top_impressions"
+	ImpressionLostDueToBudget                  = "impression_lost_due_to_budget"
+	ImpressionLostDueToRank                    = "impression_lost_due_to_rank"
+	TopImpressionLostDueToBudget               = "top_impression_lost_due_to_budget"
+	TopImpressionLostDueToRank                 = "top_impression_lost_due_to_rank"
+	AbsoluteTopImpressionLostDueToBudget       = "absolute_top_impression_lost_due_to_budget"
+	AbsoluteTopImpressionLostDueToRank         = "absolute_top_impression_lost_due_to_rank"
 )
 
 /*

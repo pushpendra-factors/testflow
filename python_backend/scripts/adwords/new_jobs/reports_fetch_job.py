@@ -16,10 +16,14 @@ class ReportsFetch(BaseJob):
 
     # New Parameters
     EXTRACT_FIELDS = None
+    # VMAX = latest set of headers
     HEADERS_VMAX = None
-    HEADERS_V00 = None
+    HEADERS_V00 = None # adwords api headers
+    HEADERS_V01 = None # First iteration of ads api
+    HEADERS_V02 = None # additional metrics for campaign perf, Adgroup perf and Keyword perf report. For other reports HEADERS_V01 = HEADERS_V02 = HEADERS_VMAX
     REPORT = None
-    MAX_VERSION = "##V01"
+    MAX_VERSION = "##V02"
+    # changelog: from V01 -> V02,  2 new metrics being pulled in campaign perf, Adgroup perf and Keyword perf report.
 
     FIELDS_WITH_PERCENTAGES = {
         "search_click_share": None,
@@ -38,7 +42,9 @@ class ReportsFetch(BaseJob):
     }
 
     FIELDS_TO_FLOAT = {
-        "impressions": None
+        "impressions": None,
+        "absolute_top_impression_percentage": None,
+        "top_impression_percentage": None
     }
 
     FIELDS = "fields"
@@ -127,7 +133,19 @@ class ReportsFetch(BaseJob):
             fields_with_interaction_types = []
             transform_map = []
         elif version == "##V01":
-            headers = self.HEADERS_VMAX
+            headers = self.HEADERS_V01
+            fields_with_percentages = []
+            fields_in_0_to_1 = self.FIELDS_IN_0_TO_1
+            fields_in_0_to_1.update(self.FIELDS_WITH_PERCENTAGES)
+            fields_to_float = self.FIELDS_TO_FLOAT
+            fields_with_status = self.FIELDS_WITH_STATUS
+            fields_with_boolean = self.FIELDS_WITH_BOOLEAN
+            fields_with_resource_name = self.FIELDS_WITH_RESOURCE_NAME
+            fields_to_percentage = self.FIELDS_TO_PERCENTAGE
+            fields_with_interaction_types = self.FIELDS_WITH_INTERACTION_TYPES
+            transform_map = self.TRANSFORM_MAP_V01
+        elif version == "##V02":
+            headers = self.HEADERS_V02
             fields_with_percentages = []
             fields_in_0_to_1 = self.FIELDS_IN_0_TO_1
             fields_in_0_to_1.update(self.FIELDS_WITH_PERCENTAGES)
