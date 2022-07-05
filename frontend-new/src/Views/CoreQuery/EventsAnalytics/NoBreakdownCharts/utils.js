@@ -3,7 +3,7 @@ import MomentTz from 'Components/MomentTz';
 import {
   addQforQuarter,
   getClickableTitleSorter,
-  SortResults,
+  SortResults
 } from '../../../../utils/dataFormatter';
 import { Number as NumFormat } from '../../../../components/factorsComponents';
 import { DATE_FORMATS } from '../../../../utils/constants';
@@ -18,25 +18,22 @@ export const getNoGroupingTableData = (data, arrayMapper, currentSorter) => {
     return {
       index,
       ...elem,
-      date: elem.date,
+      date: elem.date
     };
   });
 
   return SortResults(result, currentSorter);
 };
 
-export const getDefaultSortProp = (arrayMapper) => {
-  if (Array.isArray(arrayMapper) && arrayMapper.length) {
-    return [
-      {
-        key: arrayMapper[0]?.mapper,
-        type: 'numerical',
-        subtype: null,
-        order: 'descend',
-      },
-    ];
-  }
-  return [];
+export const getDefaultSortProp = () => {
+  return [
+    {
+      key: 'date',
+      type: 'datetime',
+      subtype: 'date',
+      order: 'descend'
+    }
+  ];
 };
 
 export const getDefaultDateSortProp = () => {
@@ -45,8 +42,8 @@ export const getDefaultDateSortProp = () => {
       key: 'Overall',
       type: 'numerical',
       subtype: null,
-      order: 'descend',
-    },
+      order: 'descend'
+    }
   ];
 };
 
@@ -58,7 +55,7 @@ export const getColumns = (
   handleSorting,
   eventNames
 ) => {
-  const format = DATE_FORMATS[frequency] || DATE_FORMATS['date'];
+  const format = DATE_FORMATS[frequency] || DATE_FORMATS.date;
 
   const result = [
     {
@@ -71,8 +68,8 @@ export const getColumns = (
       dataIndex: 'date',
       render: (d) => {
         return addQforQuarter(frequency) + MomentTz(d).format(format);
-      },
-    },
+      }
+    }
   ];
 
   const eventColumns = events.map((e, idx) => {
@@ -82,7 +79,7 @@ export const getColumns = (
         {
           key: arrayMapper.find((elem) => elem.index === idx).mapper,
           type: 'numerical',
-          subtype: null,
+          subtype: null
         },
         currentSorter,
         handleSorting,
@@ -92,7 +89,7 @@ export const getColumns = (
       dataIndex: arrayMapper.find((elem) => elem.index === idx).mapper,
       render: (d) => {
         return <NumFormat number={d} />;
-      },
+      }
     };
   });
   return [...result, ...eventColumns];
@@ -121,7 +118,7 @@ export const formatSingleEventAnalyticsData = (response, arrayMapper) => {
     const key = arrayMapper[0].mapper;
     return {
       date: new Date(row[dateIndex]),
-      [key]: row[dateIndex + 1],
+      [key]: row[dateIndex + 1]
     };
   });
   return result;
@@ -137,7 +134,7 @@ export const formatMultiEventsAnalyticsData = (response, arrayMapper) => {
     });
     result.push({
       date: new Date(r[0]),
-      ...eventsData,
+      ...eventsData
     });
   });
   return result;
@@ -152,7 +149,7 @@ export const getDataInLineChartFormat = (data, arrayMapper, eventNames) => {
   ) {
     return {
       categories: [],
-      data: [],
+      data: []
     };
   }
   const { headers } = data;
@@ -173,8 +170,8 @@ export const getDataInLineChartFormat = (data, arrayMapper, eventNames) => {
       data: [...initializedDatesData],
       index: m.index,
       marker: {
-        enabled: false,
-      },
+        enabled: false
+      }
     };
   });
 
@@ -186,7 +183,7 @@ export const getDataInLineChartFormat = (data, arrayMapper, eventNames) => {
   });
   return {
     categories: differentDates,
-    data: resultantData,
+    data: resultantData
   };
 };
 
@@ -200,14 +197,14 @@ export const getDateBasedColumns = (
   const OverallColumn = {
     title: getClickableTitleSorter(
       'Overall',
-      { key: `Overall`, type: 'numerical', subtype: null },
+      { key: 'Overall', type: 'numerical', subtype: null },
       currentSorter,
       handleSorting,
       'right'
     ),
-    dataIndex: `Overall`,
+    dataIndex: 'Overall',
     className: 'text-right',
-    width: 150,
+    width: 150
   };
 
   const result = [
@@ -217,7 +214,7 @@ export const getDateBasedColumns = (
         {
           key: 'event',
           type: 'categorical',
-          subtype: null,
+          subtype: null
         },
         currentSorter,
         handleSorting
@@ -227,10 +224,10 @@ export const getDateBasedColumns = (
       width: 200,
       render: (d) => {
         return eventNames[d] || d;
-      },
-    },
+      }
+    }
   ];
-  const format = DATE_FORMATS[frequency] || DATE_FORMATS['date'];
+  const format = DATE_FORMATS[frequency] || DATE_FORMATS.date;
 
   const dateColumns = data.map((elem) => {
     return {
@@ -239,7 +236,7 @@ export const getDateBasedColumns = (
         {
           key: addQforQuarter(frequency) + MomentTz(elem.date).format(format),
           type: 'numerical',
-          subtype: null,
+          subtype: null
         },
         currentSorter,
         handleSorting,
@@ -250,7 +247,7 @@ export const getDateBasedColumns = (
       className: 'text-right',
       render: (d) => {
         return <NumFormat number={d} />;
-      },
+      }
     };
   });
   return [...result, ...dateColumns, OverallColumn];
@@ -267,7 +264,7 @@ export const getNoGroupingTablularDatesBasedData = (
   const filteredMapper = arrayMapper.filter((elem) =>
     elem.eventName.toLowerCase().includes(searchText.toLowerCase())
   );
-  const format = DATE_FORMATS[frequency] || DATE_FORMATS['date'];
+  const format = DATE_FORMATS[frequency] || DATE_FORMATS.date;
   const dates = data.map(
     (elem) => addQforQuarter(frequency) + MomentTz(elem.date).format(format)
   );
@@ -285,11 +282,11 @@ export const getNoGroupingTablularDatesBasedData = (
       const countIdx = metrics.headers.findIndex(
         (h) => h === 'count' || h === 'aggregate'
       );
-      const event_indexIdx = metrics.headers.findIndex(
+      const eventIndexIdx = metrics.headers.findIndex(
         (h) => h === 'event_index'
       );
       const metricRow = metrics.rows.find(
-        (mr) => mr[event_indexIdx] === elem.index
+        (mr) => mr[eventIndexIdx] === elem.index
       );
       total = metricRow ? metricRow[countIdx] : 0;
     }
@@ -304,7 +301,7 @@ export const getNoGroupingTablularDatesBasedData = (
       index,
       event: elem.eventName,
       Overall: total,
-      ...eventsData,
+      ...eventsData
     };
   });
 
