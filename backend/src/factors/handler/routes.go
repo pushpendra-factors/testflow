@@ -26,6 +26,7 @@ const ROUTE_INTEGRATIONS_ROOT = "/integrations"
 const ROUTE_DATA_SERVICE_ROOT = "/data_service"
 const ROUTE_SDK_ADWORDS_ROOT = "/adwords_sdk_service"
 const ROUTE_VERSION_V1 = "/v1"
+const ROUTE_COMMON_ROOT = "/common"
 
 func InitExternalAuth(r *gin.Engine, auth *Authenticator) {
 	routePrefix := C.GetRoutesURLPrefix() + "/oauth"
@@ -122,9 +123,10 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET(":project_id/groups/:group_name/event_names", GetEventNamesByGroupHandler)
 
 	// Dashboard templates
-	authRouteGroup.GET("/dashboard_templates/:id/search", SearchTemplateHandler)
-	authRouteGroup.GET("/dashboard_templates", GetDashboardTemplatesHandler)
-	authRouteGroup.POST("/:project_id/dashboard_template/create", CreateTemplateHandler)
+	authCommonRouteGroup := r.Group(routePrefix + ROUTE_COMMON_ROOT)
+	authCommonRouteGroup.GET("/dashboard_templates/:id/search", SearchTemplateHandler)
+	authCommonRouteGroup.GET("/dashboard_templates", GetDashboardTemplatesHandler)
+	authCommonRouteGroup.POST("/dashboard_template/create", CreateTemplateHandler)
 	authRouteGroup.POST("/:project_id/dashboard_template/:id/trigger", GenerateDashboardFromTemplateHandler)
 	authRouteGroup.POST("/:project_id/dashboards/:dashboard_id/trigger", GenerateTemplateFromDashboardHandler)
 

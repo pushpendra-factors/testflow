@@ -88,14 +88,9 @@ func DeleteTemplateHandler(c *gin.Context) {
 }
 
 func SearchTemplateHandler(c *gin.Context) {
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
-	if projectID == 0 {
-		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Search queries failed. Invalid project."})
-		return
-	}
 
-	templateIDParam, ok := c.GetQuery("id")
-	if !ok {
+	templateIDParam := c.Params.ByName("id")
+	if templateIDParam == "" {
 		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Search template failed. Invalid search template."})
 		return
 	}
