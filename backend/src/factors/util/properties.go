@@ -318,6 +318,7 @@ var UP_INITIAL_REFERRER_URL string = "$initial_referrer_url"
 var UP_INITIAL_REFERRER_DOMAIN string = "$initial_referrer_domain"
 var UP_DAY_OF_FIRST_EVENT string = "$day_of_first_event"
 var UP_HOUR_OF_FIRST_EVENT string = "$hour_of_first_event"
+var UP_INITIAL_CHANNEL string = "$initial_channel"
 
 var UP_SESSION_COUNT string = "$session_count"
 var UP_PAGE_COUNT string = "$page_count"
@@ -347,6 +348,7 @@ var UP_LATEST_REVENUE string = "$latest_revenue"
 var UP_LATEST_REFERRER string = "$latest_referrer"
 var UP_LATEST_REFERRER_URL string = "$latest_referrer_url"
 var UP_LATEST_REFERRER_DOMAIN string = "$latest_referrer_domain"
+var UP_LATEST_CHANNEL string = "$latest_channel"
 
 // session properties
 var SP_IS_FIRST_SESSION = "$is_first_session" // type:bool
@@ -1358,6 +1360,7 @@ var STANDARD_USER_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	UP_INITIAL_REFERRER:                 "Initial Referrer",
 	UP_INITIAL_REFERRER_URL:             "Initial Referrer URL",
 	UP_INITIAL_REFERRER_DOMAIN:          "Initial Referrer Domain",
+	UP_INITIAL_CHANNEL:                  "Initial Channel",
 	UP_DAY_OF_FIRST_EVENT:               "Day of First Event",
 	UP_HOUR_OF_FIRST_EVENT:              "Hour of First Event",
 	UP_SESSION_COUNT:                    "Session Count",
@@ -1386,6 +1389,7 @@ var STANDARD_USER_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	UP_LATEST_REFERRER:                  "Latest Referrer",
 	UP_LATEST_REFERRER_URL:              "Latest Referrer URL",
 	UP_LATEST_REFERRER_DOMAIN:           "Latest Referrer Domain",
+	UP_LATEST_CHANNEL:                   "Latest Channel",
 	UP_JOIN_TIME:                        "Join Time",
 	CLR_COMPANY_NAME:                    "Clearbit Company Name",
 	CLR_COMPANY_GEO_CITY:                "Clearbit Company Geo City",

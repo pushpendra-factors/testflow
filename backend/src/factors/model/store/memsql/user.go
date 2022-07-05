@@ -1979,6 +1979,10 @@ func (store *MemSQL) updateUserPropertiesForSessionV2(projectID int64,
 
 		(*userPropertiesMap)[U.UP_PAGE_COUNT] = newPageCount
 		(*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME] = newTotalSpentTime
+		if _, exists := (*userPropertiesMap)[U.UP_INITIAL_CHANNEL]; !exists {
+			(*userPropertiesMap)[U.UP_INITIAL_CHANNEL] = sessionUserProperties.SessionChannel
+		}
+		(*userPropertiesMap)[U.UP_LATEST_CHANNEL] = sessionUserProperties.SessionChannel
 
 		userPropertiesJsonb, err := U.EncodeToPostgresJsonb(userPropertiesMap)
 		if err != nil {
@@ -2003,6 +2007,7 @@ func (store *MemSQL) updateUserPropertiesForSessionV2(projectID int64,
 			TotalSpentTime: newTotalSpentTime,
 			SessionCount:   newSessionCount,
 			Timestamp:      sessionUserProperties.SessionEventTimestamp,
+			Channel:        sessionUserProperties.SessionChannel,
 		}
 		if _, exists := latestSessionUserPropertiesByUserID[sessionUserProperties.UserID]; !exists {
 			latestSessionUserPropertiesByUserID[sessionUserProperties.UserID] = latestUserProperties
@@ -2068,6 +2073,18 @@ func (store *MemSQL) updateLatestUserPropertiesForSessionIfNotUpdatedV2(
 		newUserProperties := map[string]interface{}{
 			U.UP_TOTAL_SPENT_TIME: sessionUserProperties.TotalSpentTime,
 			U.UP_PAGE_COUNT:       sessionUserProperties.PageCount,
+		}
+		existingUserPropertiesMap, err := U.DecodePostgresJsonb(existingUserProperties)
+		if err != nil {
+			logCtx.WithError(err).
+				Error("Failed to decode existing user properites.")
+			hasFailure = true
+			continue
+		} else {
+			if _, exists := (*existingUserPropertiesMap)[U.UP_INITIAL_CHANNEL]; !exists {
+				newUserProperties[U.UP_INITIAL_CHANNEL] = sessionUserProperties.Channel
+			}
+			newUserProperties[U.UP_LATEST_CHANNEL] = sessionUserProperties.Channel
 		}
 		userPropertiesJsonb, err := U.AddToPostgresJsonb(existingUserProperties, newUserProperties, true)
 		if err != nil {

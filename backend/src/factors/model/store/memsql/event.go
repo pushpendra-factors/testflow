@@ -1400,6 +1400,7 @@ func (store *MemSQL) addSessionForUser(projectId int64, userId string, userEvent
 			}
 
 			eventsOfSession := events[sessionStartIndex : sessionEndIndex+1]
+			channelOfEvent := make(map[string]string)
 
 			// Update the session_id to all events between start index and end index + 1.
 			errCode := store.associateSessionToEventsInBatch(projectId, userId,
@@ -1462,7 +1463,9 @@ func (store *MemSQL) addSessionForUser(projectId int64, userId string, userEvent
 					logCtx.Error(errString)
 				} else {
 					sessionPropertiesMap[U.EP_CHANNEL] = channel
+					channelOfEvent[events[i].ID] = channel
 				}
+
 			}
 
 			sessionPropertiesMap[U.EP_SESSION_COUNT] = sessionEvent.Count
@@ -1513,6 +1516,7 @@ func (store *MemSQL) addSessionForUser(projectId int64, userId string, userEvent
 
 					SessionPageCount:     onlyThisSessionPageCount,
 					SessionPageSpentTime: onlyThisSessionPageSpentTime,
+					SessionChannel:       channelOfEvent[userPropertiesRefID],
 
 					EventUserProperties: eventsOfSession[i].UserProperties,
 				}

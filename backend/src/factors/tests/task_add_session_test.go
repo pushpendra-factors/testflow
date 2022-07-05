@@ -200,6 +200,7 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 	assert.Equal(t, http.StatusOK, status)
 	assert.NotEmpty(t, response.UserId)
 	eventId := response.EventId
+	userID := response.UserId
 
 	// no session created.
 	_, errCode = store.GetStore().GetEventName(U.EVENT_NAME_SESSION, project.ID)
@@ -207,6 +208,14 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 
 	_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
+	user, status := store.GetStore().GetUser(project.ID, userID)
+	assert.Equal(t, http.StatusFound, status)
+
+	propertiesMap := make(map[string]interface{})
+	err = json.Unmarshal(user.Properties.RawMessage, &propertiesMap)
+	assert.Nil(t, err)
+	assert.Equal(t, propertiesMap[U.UP_INITIAL_CHANNEL], "Direct")
+	assert.Equal(t, propertiesMap[U.UP_LATEST_CHANNEL], "Direct")
 
 	sessionEvent1 := assertAssociatedSession(t, project.ID, []string{eventId},
 		[]string{}, "Session 1")
@@ -232,6 +241,7 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 	}
 	trackPayload = SDK.TrackPayload{
 		Auto:            true,
+		UserId:          userID,
 		Name:            randomEventName,
 		Timestamp:       timestamp,
 		EventProperties: trackEventProperties1,
@@ -240,11 +250,19 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
-	assert.NotEmpty(t, response.UserId)
+	// assert.NotEmpty(t, response.UserId)
 	eventId = response.EventId
 
 	_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
+	user, status = store.GetStore().GetUser(project.ID, userID)
+	assert.Equal(t, http.StatusFound, status)
+
+	propertiesMap = make(map[string]interface{})
+	err = json.Unmarshal(user.Properties.RawMessage, &propertiesMap)
+	assert.Nil(t, err)
+	assert.Equal(t, propertiesMap[U.UP_INITIAL_CHANNEL], "Direct")
+	assert.Equal(t, propertiesMap[U.UP_LATEST_CHANNEL], "Paid Search")
 
 	sessionEvent2 := assertAssociatedSession(t, project.ID, []string{eventId},
 		[]string{}, "Session 2")
