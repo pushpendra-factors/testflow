@@ -635,11 +635,63 @@ func TestCRMPropertiesSync(t *testing.T) {
 	status, err = store.GetStore().CreateCRMProperties(&property1)
 	assert.Nil(t, err)
 	assert.Equal(t, http.StatusCreated, status)
+	time.Sleep(1 * time.Second) // to avoid same second timestamp failing the test
 	property1.ExternalDataType = "datetime"
 	status, err = store.GetStore().CreateCRMProperties(&property1)
 	assert.Nil(t, err)
 	assert.Equal(t, http.StatusCreated, status)
+	time.Sleep(1 * time.Second)
 	status, err = store.GetStore().CreateCRMProperties(&property1)
 	assert.Nil(t, err)
 	assert.Equal(t, http.StatusConflict, status)
+
+	// Only display name property updates
+	displayName1 := model.CRMProperty{
+		ProjectID: project.ID,
+		Source:    U.CRM_SOURCE_MARKETO,
+		Type:      1,
+		Name:      "created_at",
+		Label:     "Created At 1",
+	}
+
+	displayName2 := model.CRMProperty{
+		ProjectID: project.ID,
+		Source:    U.CRM_SOURCE_MARKETO,
+		Type:      2,
+		Name:      "created_at",
+		Label:     "Created At 1",
+	}
+
+	status, err = store.GetStore().CreateCRMProperties(&displayName1)
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusCreated, status)
+	status, err = store.GetStore().CreateCRMProperties(&displayName1)
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusConflict, status)
+
+	status, err = store.GetStore().CreateCRMProperties(&displayName2)
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusCreated, status)
+	status, err = store.GetStore().CreateCRMProperties(&displayName2)
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusConflict, status)
+
+	enrichStatus = enrichment.SyncProperties(project.ID, sourceConfig)
+	for i := range enrichStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
+	}
+
+	status, displayNames = store.GetStore().GetDisplayNamesForObjectEntities(project.ID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, "marketo lead Created At 1", displayNames[model.GetCRMEnrichPropertyKeyByType(U.CRM_SOURCE_NAME_MARKETO, "lead", "created_at")])
+
+	status, displayNames = store.GetStore().GetDisplayNamesForObjectEntities(project.ID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, "marketo program_member Created At 1", displayNames[model.GetCRMEnrichPropertyKeyByType(U.CRM_SOURCE_NAME_MARKETO, "program_member", "created_at")])
+
+	// property type not changed
+	propertyDetails, status = store.GetStore().GetAllPropertyDetailsByProjectID(project.ID, "", true)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Len(t, *propertyDetails, 1)
+	assert.Equal(t, U.PropertyTypeDateTime, (*propertyDetails)[model.GetCRMEnrichPropertyKeyByType(U.CRM_SOURCE_NAME_MARKETO, "lead", "created_at")])
 }

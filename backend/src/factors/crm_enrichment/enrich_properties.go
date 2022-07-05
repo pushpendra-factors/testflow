@@ -93,44 +93,52 @@ func syncUserProperty(projectID int64, property *model.CRMProperty, sourceConfig
 		return http.StatusBadRequest
 	}
 
+	if property.MappedDataType != "" && !model.IsValidCRMMappedDataType(property.MappedDataType) {
+		logCtx.Error("Invalid mapped data type on sync crm user property.")
+		return http.StatusBadRequest
+	}
+
 	objectTypeAlias, err := sourceConfig.GetCRMObjectTypeAlias(property.Type)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get crm object alias.")
 		return http.StatusInternalServerError
 	}
 
-	eventNames := []string{}
-	for _, action := range []model.CRMAction{model.CRMActionCreated, model.CRMActionUpdated} {
-		eventNames = append(eventNames, GetCRMEventNameByAction(sourceConfig.sourceAlias, objectTypeAlias, action))
-	}
-
 	enKey := model.GetCRMEnrichPropertyKeyByType(sourceConfig.sourceAlias, objectTypeAlias, property.Name)
-	for _, eventName := range eventNames {
-		// create event name before creating properties
-		_, status := store.GetStore().CreateOrGetEventName(&model.EventName{
-			ProjectId: projectID,
-			Name:      eventName,
-			Type:      model.TYPE_USER_CREATED_EVENT_NAME,
-		})
 
-		if status != http.StatusFound && status != http.StatusConflict && status != http.StatusCreated {
-			logCtx.Error("Failed to create event name on sync crm properties.")
-			return http.StatusInternalServerError
+	if property.MappedDataType != "" {
+		eventNames := []string{}
+		for _, action := range []model.CRMAction{model.CRMActionCreated, model.CRMActionUpdated} {
+			eventNames = append(eventNames, GetCRMEventNameByAction(sourceConfig.sourceAlias, objectTypeAlias, action))
 		}
 
-		err = store.GetStore().CreateOrDeletePropertyDetails(projectID, eventName, enKey, property.MappedDataType, false, true)
+		for _, eventName := range eventNames {
+			// create event name before creating properties
+			_, status := store.GetStore().CreateOrGetEventName(&model.EventName{
+				ProjectId: projectID,
+				Name:      eventName,
+				Type:      model.TYPE_USER_CREATED_EVENT_NAME,
+			})
+
+			if status != http.StatusFound && status != http.StatusConflict && status != http.StatusCreated {
+				logCtx.Error("Failed to create event name on sync crm properties.")
+				return http.StatusInternalServerError
+			}
+
+			err = store.GetStore().CreateOrDeletePropertyDetails(projectID, eventName, enKey, property.MappedDataType, false, true)
+			if err != nil {
+				logCtx.WithFields(log.Fields{"enriched_property_key": enKey, "event_name": eventName}).WithError(err).
+					Error("Failed to create event property details.")
+				return http.StatusInternalServerError
+			}
+		}
+
+		err = store.GetStore().CreateOrDeletePropertyDetails(projectID, "", enKey, property.MappedDataType, true, true)
 		if err != nil {
-			logCtx.WithFields(log.Fields{"enriched_property_key": enKey, "event_name": eventName}).WithError(err).
-				Error("Failed to crated event property details.")
+			logCtx.WithFields(log.Fields{"enriched_property_key": enKey}).WithError(err).
+				Error("Failed to create user property details.")
 			return http.StatusInternalServerError
 		}
-	}
-
-	err = store.GetStore().CreateOrDeletePropertyDetails(projectID, "", enKey, property.MappedDataType, true, true)
-	if err != nil {
-		logCtx.WithFields(log.Fields{"enriched_property_key": enKey}).WithError(err).
-			Error("Failed to create user property details.")
-		return http.StatusInternalServerError
 	}
 
 	if property.Label != "" {
@@ -201,6 +209,11 @@ func syncActivityProperty(projectID int64, property *model.CRMProperty, activity
 		return http.StatusBadRequest
 	}
 
+	if property.MappedDataType != "" && !model.IsValidCRMMappedDataType(property.MappedDataType) {
+		logCtx.Error("Invalid mapped data type on sync crm activty property.")
+		return http.StatusBadRequest
+	}
+
 	objectTypeAlias, err := sourceConfig.GetCRMObjectTypeAlias(property.Type)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get crm object alias.")
@@ -208,27 +221,29 @@ func syncActivityProperty(projectID int64, property *model.CRMProperty, activity
 	}
 
 	enKey := model.GetCRMEnrichPropertyKeyByType(sourceConfig.sourceAlias, objectTypeAlias, property.Name)
-	// only update event property data type
-	for _, name := range activityName {
-		eventName := getActivityEventName(sourceConfig.sourceAlias, name)
+	if property.MappedDataType != "" {
+		// only update event property data type
+		for _, name := range activityName {
+			eventName := getActivityEventName(sourceConfig.sourceAlias, name)
 
-		// create event name before adding property details
-		_, status := store.GetStore().CreateOrGetEventName(&model.EventName{
-			ProjectId: projectID,
-			Name:      eventName,
-			Type:      model.TYPE_USER_CREATED_EVENT_NAME,
-		})
+			// create event name before adding property details
+			_, status := store.GetStore().CreateOrGetEventName(&model.EventName{
+				ProjectId: projectID,
+				Name:      eventName,
+				Type:      model.TYPE_USER_CREATED_EVENT_NAME,
+			})
 
-		if status != http.StatusFound && status != http.StatusConflict && status != http.StatusCreated {
-			logCtx.Error("Failed to create event name on sync crm properties.")
-			return http.StatusInternalServerError
-		}
+			if status != http.StatusFound && status != http.StatusConflict && status != http.StatusCreated {
+				logCtx.Error("Failed to create event name on sync crm properties.")
+				return http.StatusInternalServerError
+			}
 
-		err = store.GetStore().CreateOrDeletePropertyDetails(projectID, eventName, enKey, property.MappedDataType, false, true)
-		if err != nil {
-			logCtx.WithFields(log.Fields{"enriched_property_key": enKey, "event_name": eventName}).WithError(err).
-				Error("Failed to crated event property details.")
-			return http.StatusInternalServerError
+			err = store.GetStore().CreateOrDeletePropertyDetails(projectID, eventName, enKey, property.MappedDataType, false, true)
+			if err != nil {
+				logCtx.WithFields(log.Fields{"enriched_property_key": enKey, "event_name": eventName}).WithError(err).
+					Error("Failed to crated event property details.")
+				return http.StatusInternalServerError
+			}
 		}
 	}
 
