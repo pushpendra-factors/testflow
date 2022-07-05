@@ -2657,6 +2657,11 @@ var CUSTOM_BLACKLIST_DELTA = []string{
 	"$hubspot_deal_revenue_segment_ae",
 }
 
+var disableGroupUserPropertiesByKeyPrefix = []string{
+	"$hubspot_company_",
+	"$hubspot_deal_",
+}
+
 const SamplePropertyValuesLimit = 100
 
 // defined property values.
@@ -2669,6 +2674,26 @@ var MandatoryDefaultUserPropertiesByType = map[string][]string{
 	PropertyTypeDateTime: []string{
 		UP_JOIN_TIME,
 	},
+}
+
+func DisableGroupUserPropertiesByKeyPrefix(key string) bool {
+	for _, prefix := range disableGroupUserPropertiesByKeyPrefix {
+		if strings.HasPrefix(key, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+func FilterGroupUserPropertiesKeysByPrefix(propertyKeys []string) []string {
+	filteredPropertiesKeys := make([]string, 0)
+	for _, key := range propertyKeys {
+		if DisableGroupUserPropertiesByKeyPrefix(key) {
+			continue
+		}
+		filteredPropertiesKeys = append(filteredPropertiesKeys, key)
+	}
+	return filteredPropertiesKeys
 }
 
 // isValidProperty - Validate property type.
@@ -3255,6 +3280,9 @@ func FilterDisabledCoreUserProperties(propertiesByType *map[string][]string) {
 	}
 	for propertyType, properties := range *propertiesByType {
 		(*propertiesByType)[propertyType] = StringSliceDiff(properties, DISABLED_USER_PROPERTIES_UI[:])
+	}
+	for propertyType, properties := range *propertiesByType {
+		(*propertiesByType)[propertyType] = FilterGroupUserPropertiesKeysByPrefix(properties)
 	}
 }
 

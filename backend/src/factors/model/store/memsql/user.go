@@ -1771,10 +1771,12 @@ func (store *MemSQL) UpdateCacheForUserProperties(userId string, projectID uint6
 		})
 
 	}
+
+	nonGroupProperties := model.FilterGroupPropertiesFromUserProperties(updatedProperties)
 	keysToIncrSortedSet := make([]cacheRedis.SortedSetKeyValueTuple, 0)
 	propertiesToIncrSortedSet := make([]cacheRedis.SortedSetKeyValueTuple, 0)
 	valuesToIncrSortedSet := make([]cacheRedis.SortedSetKeyValueTuple, 0)
-	for property, value := range updatedProperties {
+	for property, value := range nonGroupProperties {
 		category := store.GetPropertyTypeByKeyValue(projectID, "", property, value, true)
 		var propertyValue string
 		if category == U.PropertyTypeUnknown && reflect.TypeOf(value).Kind() == reflect.Bool {

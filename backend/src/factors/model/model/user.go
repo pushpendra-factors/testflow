@@ -134,6 +134,18 @@ type OverwriteUserPropertiesByIDParams struct {
 	Source              string
 }
 
+func FilterGroupPropertiesFromUserProperties(properties map[string]interface{}) map[string]interface{} {
+	nonGroupProperties := make(map[string]interface{})
+	for key, value := range properties {
+		if U.DisableGroupUserPropertiesByKeyPrefix(key) {
+			continue
+		}
+		nonGroupProperties[key] = value
+	}
+
+	return nonGroupProperties
+}
+
 func GetOverwriteUserPropertiesByIDParamsInBatch(list []OverwriteUserPropertiesByIDParams,
 	batchSize int) [][]OverwriteUserPropertiesByIDParams {
 	batchList := make([][]OverwriteUserPropertiesByIDParams, 0, 0)
