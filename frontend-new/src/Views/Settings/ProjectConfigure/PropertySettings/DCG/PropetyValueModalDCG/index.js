@@ -173,13 +173,19 @@ function PropertyValueModal({
     if (editProperty) {
       setGlobalFilters(editProperty?.conditions);
     }
+    return () => {
+      onReset();
+      setGlobalFilters([]);
+    }
   }, [editProperty])
+
 
   return (
     <Modal title="Add channel group"
       visible={isModalVisible}
       onCancel={() => handleCancel()}
-      footer={null}
+      footer={null} 
+      width={750}
     >
       <Form
         form={form}
@@ -188,7 +194,7 @@ function PropertyValueModal({
         onChange={onChangeValue}
         loading={false}
         initialValues={{
-          value: editProperty ? editProperty?.channel : ""
+          ["value"]: editProperty ? editProperty?.channel : ""
         }
         }
       >
@@ -198,7 +204,7 @@ function PropertyValueModal({
             <Text type={'title'} level={7} extraClass={'m-0'}>Channel</Text>
             <Form.Item
               name="value"
-              rules={[{ required: true, message: 'Please enter a channel name' }]}
+              rules={[{ required: true, message: 'Please enter a channel name' }]} 
             >
               <Input disabled={false} size="large" className={'fa-input w-full'} placeholder="Channel" />
             </Form.Item>
@@ -208,8 +214,9 @@ function PropertyValueModal({
         <Row className={'mt-8'}>
           <Col span={24}>
             <Text type={'title'} level={7} extraClass={'m-0'}>Condition(s)</Text>
-
+          <div style={{'width':"100%"}}>
             <GlobalFilter event={{ label: '$session' }} filters={globalFilters} setGlobalFilters={setGlobalFilters} />
+          </div>
 
           </Col>
         </Row>

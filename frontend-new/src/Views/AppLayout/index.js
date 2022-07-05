@@ -48,6 +48,7 @@ import Touchpoints from '../Settings/ProjectConfigure/Touchpoints';
 import CustomKPI from '../Settings/ProjectConfigure/CustomKPI';
 import { EMPTY_ARRAY } from '../../utils/global';
 import UserProfiles from '../../components/Profile/UserProfiles';
+import InsightsSettings from '../Settings/ProjectSettings/InsightsSettings';
 import { fetchProfileUsers } from '../../reducers/timeline';
 
 const whiteListedAccounts = ['solutions@factors.ai'];
@@ -210,6 +211,15 @@ function AppLayout({
                     <Route
                       path='/settings/attribution'
                       component={AttributionSettings}
+                    />
+                    <Route path='/settings/sdk' component={SDKSettings} />
+                    <Route
+                      path='/settings/integration'
+                      component={IntegrationSettings}
+                    />
+                    <Route
+                      path='/settings/insights'
+                      component={InsightsSettings}
                     />
 
                     {/* configure */}

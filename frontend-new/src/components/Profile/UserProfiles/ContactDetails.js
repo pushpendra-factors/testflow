@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Row,
   Col,
@@ -12,15 +12,32 @@ import {
 } from 'antd';
 import { SVG, Text } from '../../factorsComponents';
 import FaTimeline from '../../FaTimeline';
+import { RevAvailableGroups } from '../../../utils/constants';
 
-function ContactDetails({ onCancel, userDetails, timelineLoading }) {
-  const allActivitiesEnabled = userDetails?.user_activities?.map((activity) => {
-    return {
-      ...activity,
-      enabled: true,
-    };
-  });
-  const [activities, setActivities] = useState(allActivitiesEnabled);
+function ContactDetails({ onCancel, userDetails }) {
+  const [activities, setActivities] = useState([]);
+
+  useEffect(() => {
+    let allActivitiesEnabled = [];
+    if (userDetails.data.user_activities) {
+      allActivitiesEnabled = userDetails.data.user_activities.map(
+        (activity) => {
+          let isEnabled = true;
+          if (
+            activity.display_name.includes('Contact Updated') ||
+            activity.display_name.includes('Campaign Member Updated')
+          )
+            isEnabled = false;
+          return {
+            ...activity,
+            enabled: isEnabled,
+          };
+        }
+      );
+    }
+    setActivities(allActivitiesEnabled);
+  }, [userDetails]);
+
   const [granularity, setGranularity] = useState('Hourly');
   const [collapse, setCollapse] = useState(true);
   const options = ['Default', 'Hourly', 'Daily', 'Weekly', 'Monthly'];
@@ -55,8 +72,8 @@ function ContactDetails({ onCancel, userDetails, timelineLoading }) {
 
   const controlsPopover = () => {
     return (
-      <div className='fa-popupcard'>
-        <div className='fa-search-bar'>
+      <div className='fa-filter-popupcard'>
+        <div className='fa-header'>
           <Text
             type='title'
             level={7}
@@ -66,32 +83,37 @@ function ContactDetails({ onCancel, userDetails, timelineLoading }) {
           >
             Filter Activities
           </Text>
-          <div className={'fa-popupcard-divider'} />
+          <div className={'fa-divider'} />
         </div>
 
-        {activities
-          ?.filter(
-            (value, index, self) =>
-              index === self.findIndex((t) => t.event_name === value.event_name)
-          )
-          .map((option) => {
-            return (
-              <div
-                key={option.event_name}
-                className='flex justify-start items-center px-4 py-2'
-              >
-                <div className='mr-2'>
-                  <Checkbox
-                    checked={option.enabled}
-                    onChange={handleChange.bind(this, option)}
-                  />
+        {activities.length ? (
+          activities
+            .filter(
+              (value, index, self) =>
+                index ===
+                self.findIndex((t) => t.event_name === value.event_name)
+            )
+            .map((option) => {
+              return (
+                <div
+                  key={option.event_name}
+                  className='flex justify-start items-center px-4 py-2'
+                >
+                  <div className='mr-2'>
+                    <Checkbox
+                      checked={option.enabled}
+                      onChange={handleChange.bind(this, option)}
+                    />
+                  </div>
+                  <Text mini extraClass='mb-0 truncate' type='paragraph'>
+                    {option.display_name || option.event_name}
+                  </Text>
                 </div>
-                <Text mini extraClass='mb-0' type='paragraph'>
-                  {option.display_name || option.event_name}
-                </Text>
-              </div>
-            );
-          }) || <div className='text-center p-2 italic'>No Activity</div>}
+              );
+            })
+        ) : (
+          <div className='text-center p-2 italic'>No Activity</div>
+        )}
       </div>
     );
   };
@@ -99,29 +121,27 @@ function ContactDetails({ onCancel, userDetails, timelineLoading }) {
   return (
     <>
       <div
-        className={'fa-modal--header'}
+        className={'fa-modal--header px-8'}
         style={{ borderBottom: '1px solid #e7e9ed' }}
       >
-        <div className={'fa-container'}>
-          <Row justify={'space-between'} className={'my-3 m-0'}>
-            <Col className='flex items-center'>
-              <SVG name={'brand'} size={36} />
-              <Text type={'title'} level={4} weight={'bold'} extraClass={'m-0'}>
-                Contact Details
-              </Text>
-            </Col>
-            <Col>
-              <Button
-                size={'large'}
-                type='text'
-                onClick={() => {
-                  onCancel();
-                }}
-                icon={<SVG name='times'></SVG>}
-              ></Button>
-            </Col>
-          </Row>
-        </div>
+        <Row justify={'space-between'} className={'my-3 m-0'}>
+          <Col className='flex items-center'>
+            <SVG name={'brand'} size={36} />
+            <Text type={'title'} level={4} weight={'bold'} extraClass={'m-0'}>
+              Contact Details
+            </Text>
+          </Col>
+          <Col>
+            <Button
+              size={'large'}
+              type='text'
+              onClick={() => {
+                onCancel();
+              }}
+              icon={<SVG name='times'></SVG>}
+            ></Button>
+          </Col>
+        </Row>
       </div>
 
       <div className='my-16'>
@@ -140,7 +160,9 @@ function ContactDetails({ onCancel, userDetails, timelineLoading }) {
                       fontWeight: '400',
                     }}
                   >
-                    {userDetails?.name[0] || 'U'}
+                    {userDetails?.data?.name
+                      ? userDetails.data.name[0] || 'U'
+                      : 'U'}
                   </Avatar>
                 </Col>
               </Row>
@@ -152,31 +174,20 @@ function ContactDetails({ onCancel, userDetails, timelineLoading }) {
                     extraClass={'m-0'}
                     weight={'bold'}
                   >
-                    {!userDetails?.is_anonymous
-                      ? userDetails?.name || '-'
+                    {!userDetails?.data?.is_anonymous
+                      ? userDetails?.data?.name || '-'
                       : 'Unidentified User'}
                   </Text>
-                  {userDetails?.role && userDetails?.company ? (
+                  {
                     <Text
                       type={'title'}
                       level={7}
                       extraClass={'m-0'}
                       color={'grey'}
                     >
-                      {`${userDetails?.role || '-'}, ${
-                        userDetails?.company || '-'
-                      }`}
+                      {userDetails?.data?.company || userDetails?.data?.user_id}
                     </Text>
-                  ) : (
-                    <Text
-                      type={'title'}
-                      level={7}
-                      extraClass={'m-0'}
-                      color={'grey'}
-                    >
-                      {`${userDetails?.user_id || '-'}`}
-                    </Text>
-                  )}
+                  }
                 </Col>
               </Row>
               <Row className={'py-2'}>
@@ -191,7 +202,7 @@ function ContactDetails({ onCancel, userDetails, timelineLoading }) {
                   </Text>
 
                   <Text type={'title'} level={7} extraClass={'m-0'}>
-                    {userDetails?.email || '-'}
+                    {userDetails?.data?.email || '-'}
                   </Text>
                 </Col>
               </Row>
@@ -206,7 +217,7 @@ function ContactDetails({ onCancel, userDetails, timelineLoading }) {
                     Country
                   </Text>
                   <Text type={'title'} level={7} extraClass={'m-0'}>
-                    {userDetails?.country || '-'}
+                    {userDetails?.data?.country || '-'}
                   </Text>
                 </Col>
               </Row>
@@ -221,7 +232,7 @@ function ContactDetails({ onCancel, userDetails, timelineLoading }) {
                     Number of Web Sessions
                   </Text>
                   <Text type={'title'} level={7} extraClass={'m-0'}>
-                    {userDetails?.web_sessions_count || '-'}
+                    {userDetails?.data?.web_sessions_count || '-'}
                   </Text>
                 </Col>
               </Row>
@@ -236,7 +247,7 @@ function ContactDetails({ onCancel, userDetails, timelineLoading }) {
                     Number of Page Views
                   </Text>
                   <Text type={'title'} level={7} extraClass={'m-0'}>
-                    {userDetails?.number_of_page_views || '-'}
+                    {userDetails?.data?.number_of_page_views || '-'}
                   </Text>
                 </Col>
               </Row>
@@ -251,7 +262,7 @@ function ContactDetails({ onCancel, userDetails, timelineLoading }) {
                     Time Spent on Site
                   </Text>
                   <Text type={'title'} level={7} extraClass={'m-0'}>
-                    {userDetails?.time_spent_on_site || '-' + ' secs'}
+                    {userDetails?.data?.time_spent_on_site || '-' + ' secs'}
                   </Text>
                 </Col>
               </Row>
@@ -268,10 +279,10 @@ function ContactDetails({ onCancel, userDetails, timelineLoading }) {
                   >
                     Associated Groups:
                   </Text>
-                  {userDetails?.groups?.map((group) => {
+                  {userDetails?.data?.group_infos?.map((group) => {
                     return (
                       <Text type={'title'} level={7} extraClass={'m-0 mb-2'}>
-                        {group.group_name}
+                        {RevAvailableGroups[group.group_name]}
                       </Text>
                     );
                   }) || '-'}
@@ -341,9 +352,9 @@ function ContactDetails({ onCancel, userDetails, timelineLoading }) {
                     activities={activities?.filter(
                       (activity) => activity.enabled === true
                     )}
+                    loading={userDetails.isLoading}
                     granularity={granularity}
                     collapse={collapse}
-                    loading={timelineLoading}
                   />
                 </Col>
               </Col>

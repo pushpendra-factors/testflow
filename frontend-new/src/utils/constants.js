@@ -553,5 +553,12 @@ export const AvailableGroups = {
   'Hubspot Companies': '$hubspot_company',
   'Hubspot Deals': '$hubspot_deal',
   'Salesforce Accounts': '$salesforce_account',
-  'Salesforce Opportunities': '$salesforce_opportunity'
+  'Salesforce Opportunities': '$salesforce_opportunity',
+};
+
+export const RevAvailableGroups = {
+  $hubspot_company: 'Hubspot Companies',
+  $hubspot_deal: 'Hubspot Deals',
+  $salesforce_account: 'Salesforce Accounts',
+  $salesforce_opportunity: 'Salesforce Opportunities',
 };

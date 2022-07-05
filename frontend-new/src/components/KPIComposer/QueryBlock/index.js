@@ -67,7 +67,7 @@ function QueryBlock({
     eventChange(newEvent, index - 1, 'filters_updated');
   };
 
-  const alphabetIndex = 'ABCDEF';
+  const alphabetIndex = 'ABCDEFGHIJK';
 
   const setPageURL = (value) => {
     const newEvent = Object.assign({}, event);

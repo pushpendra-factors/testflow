@@ -665,7 +665,10 @@ func Track(projectId uint64, request *TrackPayload,
 		if projectSettings.ClearbitKey != "" {
 			executeClearBitStatusChannel := make(chan int)
 			clearBitExists, _ := clear_bit.GetClearbitCacheResult(projectId, request.UserId, clientIP)
-			if !clearBitExists {
+			if clearBitExists {
+				logCtx.Info("clearbit cache hit")
+			} else {
+				logCtx.Info("clearbit cache miss")
 				go clear_bit.ExecuteClearBitEnrich(projectSettings.ClearbitKey, userProperties, clientIP, executeClearBitStatusChannel)
 
 				select {

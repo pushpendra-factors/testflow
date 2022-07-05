@@ -1203,14 +1203,16 @@ var STANDARD_GROUP_DISPLAY_NAMES = map[string]string{
 }
 
 var CRM_USER_EVENT_NAME_LABELS = map[string]string{
-	"$hubspot_contact_created": "Hubspot Contacts",
-	"$hubspot_contact_updated": "Hubspot Contacts",
-	"$marketo_lead_created":    "Marketo Person",
-	"$marketo_lead_updated":    "Marketo Person",
-	"$sf_contact_created":      "Salesforce Users",
-	"$sf_contact_updated":      "Salesforce Users",
-	"$sf_lead_created":         "Salesforce Users",
-	"$sf_lead_updated":         "Salesforce Users",
+	"$hubspot_contact_created":  "Hubspot Contacts",
+	"$hubspot_contact_updated":  "Hubspot Contacts",
+	"$marketo_lead_created":     "Marketo Person",
+	"$marketo_lead_updated":     "Marketo Person",
+	"$leadsquared_lead_created": "LeadSquared Person",
+	"$eadsquared_lead_updated":  "LeadSquared Person",
+	"$sf_contact_created":       "Salesforce Users",
+	"$sf_contact_updated":       "Salesforce Users",
+	"$sf_lead_created":          "Salesforce Users",
+	"$sf_lead_updated":          "Salesforce Users",
 }
 
 var STANDARD_EVENTS_GROUP_NAMES = map[string]string{

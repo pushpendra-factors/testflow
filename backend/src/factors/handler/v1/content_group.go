@@ -7,6 +7,7 @@ import (
 	"factors/model/store"
 	U "factors/util"
 	"net/http"
+	"sort"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
@@ -81,6 +82,9 @@ func GetContentGroupHandler(c *gin.Context) (interface{}, int, string, string, b
 	if errCode != http.StatusFound {
 		return nil, errCode, PROCESSING_FAILED, "Failed to get content groups", true
 	}
+	sort.Slice(contentGroups, func(i, j int) bool {
+		return contentGroups[i].CreatedAt.After(contentGroups[j].CreatedAt)
+	})
 	return contentGroups, http.StatusOK, "", "", false
 }
 

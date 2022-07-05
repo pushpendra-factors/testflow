@@ -48,7 +48,6 @@ function UserProfiles({
     },
   ];
   const [usersLoading, setUsersLoading] = useState(true);
-  const [timelineLoading, setTimelineLoading] = useState(true);
   const [isDDVisible, setDDVisible] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
 
@@ -70,18 +69,24 @@ function UserProfiles({
   };
 
   const onChange = (val) => {
-    const opts = Object.assign({}, filterPayload);
-    opts.source = ProfileMapper[val[0]] || val[0];
-    setFilterPayload(opts);
+    if ((ProfileMapper[val[0]] || val[0]) !== filterPayload.source) {
+      setUsersLoading(true);
+      const opts = Object.assign({}, filterPayload);
+      opts.source = ProfileMapper[val[0]] || val[0];
+      setFilterPayload(opts);
+    }
     setDDVisible(false);
   };
 
   const setFilters = (filters) => {
+    setUsersLoading(true);
     const opts = Object.assign({}, filterPayload);
     opts.filters = filters;
     setFilterPayload(opts);
   };
+
   const clearFilters = () => {
+    setUsersLoading(true);
     const opts = Object.assign({}, filterPayload);
     opts.filters = [];
     setFilterPayload(opts);
@@ -175,16 +180,18 @@ function UserProfiles({
             ></PropertyFilter>
           </div>
         </div>
-        <div>
-          <Button
-            className='fa-dd--custom-btn'
-            type='text'
-            icon={<SVG name='times_circle' size={16} />}
-            onClick={clearFilters}
-          >
-            Clear Filters
-          </Button>
-        </div>
+        {filterPayload.filters.length ? (
+          <div>
+            <Button
+              className='fa-dd--custom-btn'
+              type='text'
+              icon={<SVG name='times_circle' size={16} />}
+              onClick={clearFilters}
+            >
+              Clear Filters
+            </Button>
+          </div>
+        ) : null}
       </div>
       {usersLoading ? (
         <Spin size={'large'} className={'fa-page-loader'} />
@@ -193,22 +200,13 @@ function UserProfiles({
           <Table
             onRow={(user) => {
               return {
-                onClick: async () => {
-                  try {
-                    await fetchProfileUserDetails(
-                      activeProject.id,
-                      user.identity,
-                      user.is_anonymous
-                    );
-                    setTimelineLoading(false);
-                    showModal();
-                  } catch (err) {
-                    notification.error({
-                      message: 'Error fetching User Details.',
-                      description: getErrorMessage(err),
-                      duration: 3,
-                    });
-                  }
+                onClick: () => {
+                  fetchProfileUserDetails(
+                    activeProject.id,
+                    user.identity,
+                    user.is_anonymous
+                  );
+                  showModal();
                 },
               };
             }}
@@ -229,11 +227,7 @@ function UserProfiles({
         footer={null}
         closable={null}
       >
-        <ContactDetails
-          onCancel={handleCancel}
-          timelineLoading={timelineLoading}
-          userDetails={userDetails}
-        />
+        <ContactDetails onCancel={handleCancel} userDetails={userDetails} />
       </Modal>
     </div>
   );
