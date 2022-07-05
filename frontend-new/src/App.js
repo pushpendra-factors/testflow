@@ -16,7 +16,7 @@ import factorsai from 'factorsai';
 import { enableBingAdsIntegration, enableMarketoIntegration } from 'Reducers/global';
 import { SSO_LOGIN_FULFILLED } from "./reducers/types";
 import { sendSlackNotification } from "./utils/slack";
-import userflow from 'userflow.js'
+import userflow from 'userflow.js';
 
 
 const Login = lazyWithRetry(() => import("./Views/Pages/Login"));
