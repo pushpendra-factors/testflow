@@ -13,6 +13,7 @@ import {
 import { SVG, Text } from '../../factorsComponents';
 import FaTimeline from '../../FaTimeline';
 import { RevAvailableGroups } from '../../../utils/constants';
+import moment from 'moment';
 
 function ContactDetails({ onCancel, userDetails }) {
   const [activities, setActivities] = useState([]);
@@ -232,7 +233,7 @@ function ContactDetails({ onCancel, userDetails }) {
                     Number of Web Sessions
                   </Text>
                   <Text type={'title'} level={7} extraClass={'m-0'}>
-                    {userDetails?.data?.web_sessions_count || '-'}
+                    {parseInt(userDetails?.data?.web_sessions_count) || '-'}
                   </Text>
                 </Col>
               </Row>
@@ -247,7 +248,7 @@ function ContactDetails({ onCancel, userDetails }) {
                     Number of Page Views
                   </Text>
                   <Text type={'title'} level={7} extraClass={'m-0'}>
-                    {userDetails?.data?.number_of_page_views || '-'}
+                    {parseInt(userDetails?.data?.number_of_page_views) || '-'}
                   </Text>
                 </Col>
               </Row>
@@ -262,7 +263,12 @@ function ContactDetails({ onCancel, userDetails }) {
                     Time Spent on Site
                   </Text>
                   <Text type={'title'} level={7} extraClass={'m-0'}>
-                    {userDetails?.data?.time_spent_on_site || '-' + ' secs'}
+                    {moment
+                      .duration(
+                        parseInt(userDetails?.data?.time_spent_on_site),
+                        'seconds'
+                      )
+                      .humanize() || '-'}
                   </Text>
                 </Col>
               </Row>
