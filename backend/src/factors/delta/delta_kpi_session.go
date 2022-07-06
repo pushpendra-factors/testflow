@@ -6,8 +6,6 @@ import (
 	M "factors/model/model"
 	P "factors/pattern"
 	U "factors/util"
-	"fmt"
-	"strings"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -65,51 +63,21 @@ func GetSessionTotalSessions(queryEvent string, scanner *bufio.Scanner, propFilt
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
 			return nil, nil, err
 		}
-		eventNameString := eventDetails.EventName
 
-		//check if event is session
-		if eventNameString != U.EVENT_NAME_SESSION {
+		//check if event is session and contains all requiredProps(constraint)
+		if ok, err := isEventToBeCounted(eventDetails, U.EVENT_NAME_SESSION, propFilter); !ok {
+			if err != nil {
+				return &MetricInfo{}, &MetricInfo{}, err
+			}
 			continue
 		}
-
-		//check if event contains all requiredProps(constraint)
-		if yes, err := eventSatisfiesConstraints(eventDetails, propFilter); err != nil {
-			return nil, nil, err
-		} else if !yes {
-			continue
-		}
-
 		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
-		//global
-		sessionsCount++
-
-		//feat
-		for _, propWithType := range propsToEval {
-			propTypeName := strings.SplitN(propWithType, "#", 2)
-			prop := propTypeName[1]
-			propType := propTypeName[0]
-			if val, ok := ExistsInProps(prop, eventDetails, propType); ok {
-				val := fmt.Sprintf("%s", val)
-				if _, ok := reqMap[propWithType]; !ok {
-					reqMap[propWithType] = make(map[string]float64)
-				}
-				reqMap[propWithType][val] += 1
-			}
-		}
+		addValueToMapForPropsPresent(&sessionsCount, reqMap, 1, propsToEval, eventDetails.EventProperties, eventDetails.UserProperties)
 	}
-	for prop, valMap := range reqMap {
-		for val, cnt := range valMap {
-			if cnt == 0 {
-				delete(reqMap[prop], val)
-			}
-		}
-		if len(reqMap[prop]) == 0 {
-			delete(reqMap, prop)
-		}
-	}
-	info = MetricInfo{Global: sessionsCount, Features: reqMap}
+	deleteEntriesWithZeroFreq(reqMap)
 	scale = MetricInfo{Global: globalScale, Features: scaleMap}
+	info = MetricInfo{Global: sessionsCount, Features: reqMap}
 	return &info, &scale, nil
 }
 
@@ -131,62 +99,22 @@ func GetSessionUniqueUsers(queryEvent string, scanner *bufio.Scanner, propFilter
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
 			return nil, nil, err
 		}
-		eventNameString := eventDetails.EventName
-		userId := eventDetails.UserId
 
-		//check if event is session
-		if eventNameString != U.EVENT_NAME_SESSION {
+		//check if event is session and contains all requiredProps(constraint)
+		if ok, err := isEventToBeCounted(eventDetails, U.EVENT_NAME_SESSION, propFilter); !ok {
+			if err != nil {
+				return &MetricInfo{}, &MetricInfo{}, err
+			}
 			continue
 		}
-
-		//check if event contains all requiredProps(constraint)
-		if yes, err := eventSatisfiesConstraints(eventDetails, propFilter); err != nil {
-			return nil, nil, err
-		} else if !yes {
-			continue
-		}
-
 		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
-		//global
-		if _, ok := uniqueUsers[userId]; !ok {
-			uniqueUsers[userId] = true
-			unique++
-		}
+		addValueToMapForPropsPresentUser(&unique, reqMap, 1, propsToEval, eventDetails, uniqueUsers, uniqueUsersFeat)
+	}
 
-		//feat
-		for _, propWithType := range propsToEval {
-			propTypeName := strings.SplitN(propWithType, "#", 2)
-			prop := propTypeName[1]
-			propType := propTypeName[0]
-			if val, ok := ExistsInProps(prop, eventDetails, propType); ok {
-				val := fmt.Sprintf("%s", val)
-				propWithVal := strings.Join([]string{prop, val}, ":")
-				if _, ok := uniqueUsersFeat[propWithVal]; !ok {
-					uniqueUsersFeat[propWithVal] = make(map[string]bool)
-				}
-				if _, ok := uniqueUsersFeat[propWithVal][userId]; !ok {
-					uniqueUsersFeat[propWithVal][userId] = true
-					if _, ok := reqMap[propWithType]; !ok {
-						reqMap[propWithType] = make(map[string]float64)
-					}
-					reqMap[propWithType][val] += 1
-				}
-			}
-		}
-	}
-	for prop, valMap := range reqMap {
-		for val, cnt := range valMap {
-			if cnt == 0 {
-				delete(reqMap[prop], val)
-			}
-		}
-		if len(reqMap[prop]) == 0 {
-			delete(reqMap, prop)
-		}
-	}
-	info = MetricInfo{Global: unique, Features: reqMap}
+	deleteEntriesWithZeroFreq(reqMap)
 	scale = MetricInfo{Global: globalScale, Features: scaleMap}
+	info = MetricInfo{Global: unique, Features: reqMap}
 	return &info, &scale, nil
 }
 
@@ -206,63 +134,30 @@ func GetSessionNewUsers(queryEvent string, scanner *bufio.Scanner, propFilter []
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
 			return nil, nil, err
 		}
-		eventNameString := eventDetails.EventName
 
-		//check if event is session
-		if eventNameString != U.EVENT_NAME_SESSION {
+		//check if event is session and contains all requiredProps(constraint)
+		if ok, err := isEventToBeCounted(eventDetails, U.EVENT_NAME_SESSION, propFilter); !ok {
+			if err != nil {
+				return &MetricInfo{}, &MetricInfo{}, err
+			}
 			continue
 		}
-
-		//check if event contains all requiredProps(constraint)
-		if yes, err := eventSatisfiesConstraints(eventDetails, propFilter); err != nil {
-			return nil, nil, err
-		} else if !yes {
-			continue
-		}
+		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
 		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
 		//check if new user
-		if first, ok := eventDetails.EventProperties[U.SP_IS_FIRST_SESSION]; ok {
-			first := first.(bool)
-			if !first {
-				continue
-			}
-		} else {
+		if !checkNew(eventDetails) {
 			continue
 		}
 
-		//global
-		new++
-
-		//feat
-		for _, propWithType := range propsToEval {
-			propTypeName := strings.SplitN(propWithType, "#", 2)
-			prop := propTypeName[1]
-			propType := propTypeName[0]
-			if val, ok := ExistsInProps(prop, eventDetails, propType); ok {
-				val := fmt.Sprintf("%s", val)
-				if _, ok := reqMap[propWithType]; !ok {
-					reqMap[propWithType] = make(map[string]float64)
-				}
-				reqMap[propWithType][val] += 1
-			}
-		}
+		addValueToMapForPropsPresent(&new, reqMap, 1, propsToEval, eventDetails.EventProperties, eventDetails.UserProperties)
 
 	}
-	for prop, valMap := range reqMap {
-		for val, cnt := range valMap {
-			if cnt == 0 {
-				delete(reqMap[prop], val)
-			}
-		}
-		if len(reqMap[prop]) == 0 {
-			delete(reqMap, prop)
-		}
-	}
+	deleteEntriesWithZeroFreq(reqMap)
+	scale = MetricInfo{Global: globalScale, Features: scaleMap}
 	info = MetricInfo{Global: new, Features: reqMap}
 
-	scale = MetricInfo{Global: globalScale, Features: scaleMap}
 	return &info, &scale, nil
 }
 
@@ -284,91 +179,30 @@ func GetSessionRepeatUsers(queryEvent string, scanner *bufio.Scanner, propFilter
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
 			return nil, nil, err
 		}
-		eventNameString := eventDetails.EventName
-		userId := eventDetails.UserId
 
-		//check if event is session
-		if eventNameString != U.EVENT_NAME_SESSION {
+		//check if event is session and contains all requiredProps(constraint)
+		if ok, err := isEventToBeCounted(eventDetails, U.EVENT_NAME_SESSION, propFilter); !ok {
+			if err != nil {
+				return &MetricInfo{}, &MetricInfo{}, err
+			}
 			continue
 		}
-
-		//check if event contains all requiredProps(constraint)
-		if yes, err := eventSatisfiesConstraints(eventDetails, propFilter); err != nil {
-			return nil, nil, err
-		} else if !yes {
-			continue
-		}
-
 		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
-		//global
-		if _, ok := uniqueUsers[userId]; !ok {
-			uniqueUsers[userId] = true
-			repeat++
-		}
-
-		//feat
-		for _, propWithType := range propsToEval {
-			propTypeName := strings.SplitN(propWithType, "#", 2)
-			prop := propTypeName[1]
-			propType := propTypeName[0]
-			if val, ok := ExistsInProps(prop, eventDetails, propType); ok {
-				val := fmt.Sprintf("%s", val)
-				propWithVal := strings.Join([]string{prop, val}, ":")
-				if _, ok := uniqueUsersFeat[propWithVal]; !ok {
-					uniqueUsersFeat[propWithVal] = make(map[string]bool)
-				}
-				if _, ok := uniqueUsersFeat[propWithVal][userId]; !ok {
-					uniqueUsersFeat[propWithVal][userId] = true
-					if _, ok := reqMap[propWithType]; !ok {
-						reqMap[propWithType] = make(map[string]float64)
-					}
-					reqMap[propWithType][val] += 1
-				}
-			}
-		}
+		addValueToMapForPropsPresentUser(&repeat, reqMap, 1, propsToEval, eventDetails, uniqueUsers, uniqueUsersFeat)
 
 		//check if new user
-		if first, ok := eventDetails.EventProperties[U.SP_IS_FIRST_SESSION]; ok {
-			first := first.(bool)
-			if !first {
-				continue
-			}
-		} else {
+		if !checkNew(eventDetails) {
 			continue
 		}
 
-		//global
-		repeat--
-
-		//feat
-		for _, propWithType := range propsToEval {
-			propTypeName := strings.SplitN(propWithType, "#", 2)
-			prop := propTypeName[1]
-			propType := propTypeName[0]
-			if val, ok := ExistsInProps(prop, eventDetails, propType); ok {
-				val := fmt.Sprintf("%s", val)
-				if _, ok := reqMap[propWithType]; !ok {
-					reqMap[propWithType] = make(map[string]float64)
-				}
-				reqMap[propWithType][val] -= 1
-			}
-		}
+		addValueToMapForPropsPresent(&repeat, reqMap, -1, propsToEval, eventDetails.EventProperties, eventDetails.UserProperties)
 	}
 
-	for prop, valMap := range reqMap {
-		for val, cnt := range valMap {
-			if cnt == 0 {
-				delete(reqMap[prop], val)
-			}
-		}
-		if len(reqMap[prop]) == 0 {
-			delete(reqMap, prop)
-		}
-	}
+	deleteEntriesWithZeroFreq(reqMap)
 
-	info = MetricInfo{Global: repeat, Features: reqMap}
 	scale = MetricInfo{Global: globalScale, Features: scaleMap}
+	info = MetricInfo{Global: repeat, Features: reqMap}
 	return &info, &scale, nil
 }
 
@@ -376,8 +210,7 @@ func GetSessionSessionsPerUser(queryEvent string, scanner *bufio.Scanner, propFi
 	uniqueUsers := make(map[string]bool)
 	uniqueUsersFeat := make(map[string]map[string]bool)
 	featInfoMap := make(map[string]map[string]Fraction)
-	var unique float64
-	var sessionsCount float64
+	var sessionsPerUserFrac Fraction
 	var sessionsPerUser float64
 	var globalScale float64
 	var reqMap = make(map[string]map[string]float64)
@@ -393,83 +226,24 @@ func GetSessionSessionsPerUser(queryEvent string, scanner *bufio.Scanner, propFi
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
 			return nil, nil, err
 		}
-		eventNameString := eventDetails.EventName
-		userId := eventDetails.UserId
 
-		//check if event is session
-		if eventNameString != U.EVENT_NAME_SESSION {
+		//check if event is session and contains all requiredProps(constraint)
+		if ok, err := isEventToBeCounted(eventDetails, U.EVENT_NAME_SESSION, propFilter); !ok {
+			if err != nil {
+				return &MetricInfo{}, &MetricInfo{}, err
+			}
 			continue
 		}
-
-		//check if event contains all requiredProps(constraint)
-		if yes, err := eventSatisfiesConstraints(eventDetails, propFilter); err != nil {
-			return nil, nil, err
-		} else if !yes {
-			continue
-		}
-
 		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
-		//global
-		sessionsCount++
-		if _, ok := uniqueUsers[userId]; !ok {
-			uniqueUsers[userId] = true
-			unique++
-		}
-
-		//feat
-		for _, propWithType := range propsToEval {
-			propTypeName := strings.SplitN(propWithType, "#", 2)
-			prop := propTypeName[1]
-			propType := propTypeName[0]
-			if val, ok := ExistsInProps(prop, eventDetails, propType); ok {
-				val := fmt.Sprintf("%s", val)
-				if _, ok := featInfoMap[propWithType]; !ok {
-					featInfoMap[propWithType] = make(map[string]Fraction)
-				}
-				if frac, ok := featInfoMap[propWithType][val]; !ok {
-					featInfoMap[propWithType][val] = Fraction{Numerator: 1}
-				} else {
-					frac.Numerator += 1
-					featInfoMap[propWithType][val] = frac
-				}
-				propWithVal := strings.Join([]string{prop, val}, ":")
-				if _, ok := uniqueUsersFeat[propWithVal]; !ok {
-					uniqueUsersFeat[propWithVal] = make(map[string]bool)
-				}
-				if _, ok := uniqueUsersFeat[propWithVal][userId]; !ok {
-					uniqueUsersFeat[propWithVal][userId] = true
-					frac := featInfoMap[propWithType][val]
-					frac.Denominator += 1
-					featInfoMap[propWithType][val] = frac
-				}
-			}
-		}
+		addValuesToFractionForPropsPresentUser(&sessionsPerUserFrac, featInfoMap, 1, 1, propsToEval, eventDetails, uniqueUsers, uniqueUsersFeat)
 	}
 
 	//get sessionsPerUser
+	sessionsPerUser, reqMap = getFractionValue(&sessionsPerUserFrac, featInfoMap)
 
-	//global
-	if unique != 0 {
-		sessionsPerUser = sessionsCount / unique
-	}
-
-	//feat
-
-	for prop, valMap := range featInfoMap {
-		reqMap[prop] = make(map[string]float64)
-		for val, info := range valMap {
-			if !(info.Denominator == 0 || info.Numerator == 0) {
-				reqMap[prop][val] = info.Numerator / info.Denominator
-			}
-		}
-		if len(reqMap[prop]) == 0 {
-			delete(reqMap, prop)
-		}
-	}
-
-	info = MetricInfo{Global: sessionsPerUser, Features: reqMap}
 	scale = MetricInfo{Global: globalScale, Features: scaleMap}
+	info = MetricInfo{Global: sessionsPerUser, Features: reqMap}
 	return &info, &scale, nil
 }
 
@@ -489,70 +263,30 @@ func GetSessionEngagedSessions(queryEvent string, scanner *bufio.Scanner, propFi
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
 			return nil, nil, err
 		}
-		eventNameString := eventDetails.EventName
 
-		//check if event is session
-		if eventNameString != U.EVENT_NAME_SESSION {
+		//check if event is session and contains all requiredProps(constraint)
+		if ok, err := isEventToBeCounted(eventDetails, U.EVENT_NAME_SESSION, propFilter); !ok {
+			if err != nil {
+				return &MetricInfo{}, &MetricInfo{}, err
+			}
 			continue
 		}
-
-		//check if event contains all requiredProps(constraint)
-		if yes, err := eventSatisfiesConstraints(eventDetails, propFilter); err != nil {
-			return nil, nil, err
-		} else if !yes {
-			continue
-		}
+		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
 		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
 		//check if engaged
-		isEngaged := false
-		if timeSpent, ok := ExistsInProps(U.SP_SPENT_TIME, eventDetails, "ep"); ok {
-			timeSpent := timeSpent.(float64)
-			if timeSpent > 10 {
-				isEngaged = true
-			}
-		}
-		if cnt, ok := ExistsInProps(U.SP_PAGE_COUNT, eventDetails, "ep"); ok {
-			cnt := int64(cnt.(float64))
-			if cnt > 2 {
-				isEngaged = true
-			}
-		}
+		isEngaged := checkEngagedSession(eventDetails)
 		if !isEngaged {
 			continue
 		}
 
-		//global
-		engaged++
-
-		//feat
-		for _, propWithType := range propsToEval {
-			propTypeName := strings.SplitN(propWithType, "#", 2)
-			prop := propTypeName[1]
-			propType := propTypeName[0]
-			if val, ok := ExistsInProps(prop, eventDetails, propType); ok {
-				val := fmt.Sprintf("%s", val)
-				if _, ok := reqMap[propWithType]; !ok {
-					reqMap[propWithType] = make(map[string]float64)
-				}
-				reqMap[propWithType][val] += 1
-			}
-		}
+		addValueToMapForPropsPresent(&engaged, reqMap, 1, propsToEval, eventDetails.EventProperties, eventDetails.UserProperties)
 	}
-	for prop, valMap := range reqMap {
-		for val, cnt := range valMap {
-			if cnt == 0 {
-				delete(reqMap[prop], val)
-			}
-		}
-		if len(reqMap[prop]) == 0 {
-			delete(reqMap, prop)
-		}
-	}
+	deleteEntriesWithZeroFreq(reqMap)
+	scale = MetricInfo{Global: globalScale, Features: scaleMap}
 	info = MetricInfo{Global: engaged, Features: reqMap}
 
-	scale = MetricInfo{Global: globalScale, Features: scaleMap}
 	return &info, &scale, nil
 }
 
@@ -574,80 +308,29 @@ func GetSessionEngagedUsers(queryEvent string, scanner *bufio.Scanner, propFilte
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
 			return nil, nil, err
 		}
-		eventNameString := eventDetails.EventName
-		userId := eventDetails.UserId
 
-		//check if event is session
-		if eventNameString != U.EVENT_NAME_SESSION {
+		//check if event is session and contains all requiredProps(constraint)
+		if ok, err := isEventToBeCounted(eventDetails, U.EVENT_NAME_SESSION, propFilter); !ok {
+			if err != nil {
+				return &MetricInfo{}, &MetricInfo{}, err
+			}
 			continue
 		}
-
-		//check if event contains all requiredProps(constraint)
-		if yes, err := eventSatisfiesConstraints(eventDetails, propFilter); err != nil {
-			return nil, nil, err
-		} else if !yes {
-			continue
-		}
+		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
 		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
 		//check if engaged
-		isEngaged := false
-		if timeSpent, ok := ExistsInProps(U.SP_SPENT_TIME, eventDetails, "ep"); ok {
-			timeSpent := timeSpent.(float64)
-			if timeSpent > 10 {
-				isEngaged = true
-			}
-		}
-		if cnt, ok := ExistsInProps(U.SP_PAGE_COUNT, eventDetails, "ep"); ok {
-			cnt := int64(cnt.(float64))
-			if cnt > 2 {
-				isEngaged = true
-			}
-		}
+		isEngaged := checkEngagedSession(eventDetails)
 		if !isEngaged {
 			continue
 		}
 
-		//global
-		if _, ok := uniqueUsers[userId]; !ok {
-			uniqueUsers[userId] = true
-			unique++
-		}
-
-		//feat
-		for _, propWithType := range propsToEval {
-			propTypeName := strings.SplitN(propWithType, "#", 2)
-			prop := propTypeName[1]
-			propType := propTypeName[0]
-			if val, ok := ExistsInProps(prop, eventDetails, propType); ok {
-				val := fmt.Sprintf("%s", val)
-				propWithVal := strings.Join([]string{prop, val}, ":")
-				if _, ok := uniqueUsersFeat[propWithVal]; !ok {
-					uniqueUsersFeat[propWithVal] = make(map[string]bool)
-				}
-				if _, ok := uniqueUsersFeat[propWithVal][userId]; !ok {
-					uniqueUsersFeat[propWithVal][userId] = true
-					if _, ok := reqMap[propWithType]; !ok {
-						reqMap[propWithType] = make(map[string]float64)
-					}
-					reqMap[propWithType][val] += 1
-				}
-			}
-		}
+		addValueToMapForPropsPresentUser(&unique, reqMap, 1, propsToEval, eventDetails, uniqueUsers, uniqueUsersFeat)
 	}
-	for prop, valMap := range reqMap {
-		for val, cnt := range valMap {
-			if cnt == 0 {
-				delete(reqMap[prop], val)
-			}
-		}
-		if len(reqMap[prop]) == 0 {
-			delete(reqMap, prop)
-		}
-	}
-	info = MetricInfo{Global: unique, Features: reqMap}
+	deleteEntriesWithZeroFreq(reqMap)
 	scale = MetricInfo{Global: globalScale, Features: scaleMap}
+	info = MetricInfo{Global: unique, Features: reqMap}
 	return &info, &scale, nil
 }
 
@@ -655,8 +338,7 @@ func GetSessionEngagedSessionsPerUser(queryEvent string, scanner *bufio.Scanner,
 	uniqueUsers := make(map[string]bool)
 	uniqueUsersFeat := make(map[string]map[string]bool)
 	featInfoMap := make(map[string]map[string]Fraction)
-	var unique float64
-	var sessionsCount float64
+	var sessionsPerUserFrac Fraction
 	var sessionsPerUser float64
 	var globalScale float64
 	var reqMap = make(map[string]map[string]float64)
@@ -672,101 +354,30 @@ func GetSessionEngagedSessionsPerUser(queryEvent string, scanner *bufio.Scanner,
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
 			return nil, nil, err
 		}
-		eventNameString := eventDetails.EventName
-		userId := eventDetails.UserId
 
-		//check if event is session
-		if eventNameString != U.EVENT_NAME_SESSION {
+		//check if event is session and contains all requiredProps(constraint)
+		if ok, err := isEventToBeCounted(eventDetails, U.EVENT_NAME_SESSION, propFilter); !ok {
+			if err != nil {
+				return &MetricInfo{}, &MetricInfo{}, err
+			}
 			continue
 		}
-
-		//check if event contains all requiredProps(constraint)
-		if yes, err := eventSatisfiesConstraints(eventDetails, propFilter); err != nil {
-			return nil, nil, err
-		} else if !yes {
-			continue
-		}
-
 		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
 		//check if engaged
-		isEngaged := false
-		if timeSpent, ok := ExistsInProps(U.SP_SPENT_TIME, eventDetails, "ep"); ok {
-			timeSpent := timeSpent.(float64)
-			if timeSpent > 10 {
-				isEngaged = true
-			}
-		}
-		if cnt, ok := ExistsInProps(U.SP_PAGE_COUNT, eventDetails, "ep"); ok {
-			cnt := int64(cnt.(float64))
-			if cnt > 2 {
-				isEngaged = true
-			}
-		}
+		isEngaged := checkEngagedSession(eventDetails)
 		if !isEngaged {
 			continue
 		}
 
-		//global
-		sessionsCount++
-		if _, ok := uniqueUsers[userId]; !ok {
-			uniqueUsers[userId] = true
-			unique++
-		}
-
-		//feat
-		for _, propWithType := range propsToEval {
-			propTypeName := strings.SplitN(propWithType, "#", 2)
-			prop := propTypeName[1]
-			propType := propTypeName[0]
-			if val, ok := ExistsInProps(prop, eventDetails, propType); ok {
-				val := fmt.Sprintf("%s", val)
-				if _, ok := featInfoMap[propWithType]; !ok {
-					featInfoMap[propWithType] = make(map[string]Fraction)
-				}
-				if frac, ok := featInfoMap[propWithType][val]; !ok {
-					featInfoMap[propWithType][val] = Fraction{Numerator: 1}
-				} else {
-					frac.Numerator += 1
-					featInfoMap[propWithType][val] = frac
-				}
-				propWithVal := strings.Join([]string{prop, val}, ":")
-				if _, ok := uniqueUsersFeat[propWithVal]; !ok {
-					uniqueUsersFeat[propWithVal] = make(map[string]bool)
-				}
-				if _, ok := uniqueUsersFeat[propWithVal][userId]; !ok {
-					uniqueUsersFeat[propWithVal][userId] = true
-					frac := featInfoMap[propWithType][val]
-					frac.Denominator += 1
-					featInfoMap[propWithType][val] = frac
-				}
-			}
-		}
+		addValuesToFractionForPropsPresentUser(&sessionsPerUserFrac, featInfoMap, 1, 1, propsToEval, eventDetails, uniqueUsers, uniqueUsersFeat)
 	}
 
 	//get sessionsPerUser
+	sessionsPerUser, reqMap = getFractionValue(&sessionsPerUserFrac, featInfoMap)
 
-	//global
-	if unique != 0 {
-		sessionsPerUser = sessionsCount / unique
-	}
-
-	//feat
-
-	for prop, valMap := range featInfoMap {
-		reqMap[prop] = make(map[string]float64)
-		for val, info := range valMap {
-			if !(info.Denominator == 0 || info.Numerator == 0) {
-				reqMap[prop][val] = info.Numerator / info.Denominator
-			}
-		}
-		if len(reqMap[prop]) == 0 {
-			delete(reqMap, prop)
-		}
-	}
-
-	info = MetricInfo{Global: sessionsPerUser, Features: reqMap}
 	scale = MetricInfo{Global: globalScale, Features: scaleMap}
+	info = MetricInfo{Global: sessionsPerUser, Features: reqMap}
 	return &info, &scale, nil
 }
 
@@ -786,65 +397,35 @@ func GetSessionTotalTimeOnSite(queryEvent string, scanner *bufio.Scanner, propFi
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
 			return nil, nil, err
 		}
-		eventNameString := eventDetails.EventName
 
-		//check if event is session
-		if eventNameString != U.EVENT_NAME_SESSION {
+		//check if event is session and contains all requiredProps(constraint)
+		if ok, err := isEventToBeCounted(eventDetails, U.EVENT_NAME_SESSION, propFilter); !ok {
+			if err != nil {
+				return &MetricInfo{}, &MetricInfo{}, err
+			}
 			continue
 		}
-
-		//check if event contains all requiredProps(constraint)
-		if yes, err := eventSatisfiesConstraints(eventDetails, propFilter); err != nil {
-			return nil, nil, err
-		} else if !yes {
-			continue
-		}
+		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
 		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
-		if timeSpent, ok := ExistsInProps(U.SP_SPENT_TIME, eventDetails, "ep"); ok {
+		if timeSpent, ok := ExistsInProps(U.SP_SPENT_TIME, eventDetails.EventProperties, eventDetails.UserProperties, "ep"); ok {
 			timeOnSite := timeSpent.(float64)
-
-			//global
-			totalSessionTime += timeOnSite
-
-			//feat
-			for _, propWithType := range propsToEval {
-				propTypeName := strings.SplitN(propWithType, "#", 2)
-				prop := propTypeName[1]
-				propType := propTypeName[0]
-				if val, ok := ExistsInProps(prop, eventDetails, propType); ok {
-					val := fmt.Sprintf("%s", val)
-					if _, ok := reqMap[propWithType]; !ok {
-						reqMap[propWithType] = make(map[string]float64)
-					}
-					reqMap[propWithType][val] += timeOnSite
-				}
-			}
+			addValueToMapForPropsPresent(&totalSessionTime, reqMap, timeOnSite, propsToEval, eventDetails.EventProperties, eventDetails.UserProperties)
 		}
 	}
 
-	for prop, valMap := range reqMap {
-		for val, cnt := range valMap {
-			if cnt == 0 {
-				delete(reqMap[prop], val)
-			}
-		}
-		if len(reqMap[prop]) == 0 {
-			delete(reqMap, prop)
-		}
-	}
-
-	info = MetricInfo{Global: totalSessionTime, Features: reqMap}
+	deleteEntriesWithZeroFreq(reqMap)
 
 	scale = MetricInfo{Global: globalScale, Features: scaleMap}
+	info = MetricInfo{Global: totalSessionTime, Features: reqMap}
+
 	return &info, &scale, nil
 }
 
 func GetSessionAvgSessionDuration(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, *MetricInfo, error) {
 	var avgSessionDuration float64
-	var sessionsCount float64
-	var totalSessionTime float64
+	var avgSessionDurationFrac Fraction
 	var featInfoMap = make(map[string]map[string]Fraction)
 	var globalScale float64
 	var reqMap = make(map[string]map[string]float64)
@@ -860,81 +441,35 @@ func GetSessionAvgSessionDuration(queryEvent string, scanner *bufio.Scanner, pro
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
 			return nil, nil, err
 		}
-		eventNameString := eventDetails.EventName
 
-		//check if event is session
-		if eventNameString != U.EVENT_NAME_SESSION {
+		//check if event is session and contains all requiredProps(constraint)
+		if ok, err := isEventToBeCounted(eventDetails, U.EVENT_NAME_SESSION, propFilter); !ok {
+			if err != nil {
+				return &MetricInfo{}, &MetricInfo{}, err
+			}
 			continue
 		}
-
-		//check if event contains all requiredProps(constraint)
-		if yes, err := eventSatisfiesConstraints(eventDetails, propFilter); err != nil {
-			return nil, nil, err
-		} else if !yes {
-			continue
-		}
+		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
 		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
-		if timeSpent, ok := ExistsInProps(U.SP_SPENT_TIME, eventDetails, "ep"); ok {
+		if timeSpent, ok := ExistsInProps(U.SP_SPENT_TIME, eventDetails.EventProperties, eventDetails.UserProperties, "ep"); ok {
 			timeSpent := timeSpent.(float64)
-
 			timeOnSite := float64(timeSpent)
-			//global
-			sessionsCount++
-			totalSessionTime += timeOnSite
-
-			//feat
-			for _, propWithType := range propsToEval {
-				propTypeName := strings.SplitN(propWithType, "#", 2)
-				prop := propTypeName[1]
-				propType := propTypeName[0]
-				if val, ok := ExistsInProps(prop, eventDetails, propType); ok {
-					val := fmt.Sprintf("%s", val)
-					if _, ok := featInfoMap[propWithType]; !ok {
-						featInfoMap[propWithType] = make(map[string]Fraction)
-					}
-					if frac, ok := featInfoMap[propWithType][val]; !ok {
-						featInfoMap[propWithType][val] = Fraction{Denominator: 1, Numerator: timeOnSite}
-					} else {
-						frac.Numerator += timeOnSite
-						frac.Denominator += 1
-						featInfoMap[propWithType][val] = frac
-					}
-				}
-			}
+			addValuesToFractionForPropsPresent(&avgSessionDurationFrac, featInfoMap, timeOnSite, 1, propsToEval, eventDetails.EventProperties, eventDetails.UserProperties)
 		}
 	}
 
-	//get sessionsPerUser
-
-	//global
-	if sessionsCount != 0 {
-		avgSessionDuration = totalSessionTime / sessionsCount
-	}
-
-	//feat
-
-	for prop, valMap := range featInfoMap {
-		reqMap[prop] = make(map[string]float64)
-		for val, info := range valMap {
-			if !(info.Denominator == 0 || info.Numerator == 0) {
-				reqMap[prop][val] = info.Numerator / info.Denominator
-			}
-		}
-		if len(reqMap[prop]) == 0 {
-			delete(reqMap, prop)
-		}
-	}
+	// get average session duration
+	avgSessionDuration, reqMap = getFractionValue(&avgSessionDurationFrac, featInfoMap)
+	scale = MetricInfo{Global: globalScale, Features: scaleMap}
 	info = MetricInfo{Global: avgSessionDuration, Features: reqMap}
 
-	scale = MetricInfo{Global: globalScale, Features: scaleMap}
 	return &info, &scale, nil
 }
 
 func GetSessionAvgPageViewsPerSession(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, *MetricInfo, error) {
-	var totalSessionPageCounts float64
-	var sessionsCount float64
+	var avgPageViewsPerSessionFrac Fraction
 	var avgPageViewsPerSession float64
 	var featInfoMap = make(map[string]map[string]Fraction)
 	var globalScale float64
@@ -951,97 +486,37 @@ func GetSessionAvgPageViewsPerSession(queryEvent string, scanner *bufio.Scanner,
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
 			return nil, nil, err
 		}
-		eventNameString := eventDetails.EventName
 
-		//check if event is session
-		if eventNameString != U.EVENT_NAME_SESSION {
+		//check if event is session and contains all requiredProps(constraint)
+		if ok, err := isEventToBeCounted(eventDetails, U.EVENT_NAME_SESSION, propFilter); !ok {
+			if err != nil {
+				return &MetricInfo{}, &MetricInfo{}, err
+			}
 			continue
 		}
-
-		//check if event contains all requiredProps(constraint)
-		if yes, err := eventSatisfiesConstraints(eventDetails, propFilter); err != nil {
-			return nil, nil, err
-		} else if !yes {
-			continue
-		}
-
 		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
-		//global
-		sessionsCount++
-
-		//feat
-		for _, propWithType := range propsToEval {
-			propTypeName := strings.SplitN(propWithType, "#", 2)
-			prop := propTypeName[1]
-			propType := propTypeName[0]
-			if val, ok := ExistsInProps(prop, eventDetails, propType); ok {
-				val := fmt.Sprintf("%s", val)
-				if _, ok := featInfoMap[propWithType]; !ok {
-					featInfoMap[propWithType] = make(map[string]Fraction)
-				}
-				if frac, ok := featInfoMap[propWithType][val]; !ok {
-					featInfoMap[propWithType][val] = Fraction{Denominator: 1}
-				} else {
-					frac.Denominator += 1
-					featInfoMap[propWithType][val] = frac
-				}
-			}
-		}
+		addValuesToFractionForPropsPresent(&avgPageViewsPerSessionFrac, featInfoMap, 0, 1, propsToEval, eventDetails.EventProperties, eventDetails.UserProperties)
 
 		//check if event has pageview count as property
-		if cnt, ok := ExistsInProps(U.SP_PAGE_COUNT, eventDetails, "ep"); !ok {
-			continue
-		} else {
+		if cnt, ok := ExistsInProps(U.SP_PAGE_COUNT, eventDetails.EventProperties, eventDetails.UserProperties, "ep"); ok {
 			cnt := cnt.(float64)
-			//global
-			totalSessionPageCounts += cnt
-			//feat
-			for _, propWithType := range propsToEval {
-				propTypeName := strings.SplitN(propWithType, "#", 2)
-				prop := propTypeName[1]
-				propType := propTypeName[0]
-				if val, ok := ExistsInProps(prop, eventDetails, propType); ok {
-					val := fmt.Sprintf("%s", val)
-					frac := featInfoMap[propWithType][val]
-					frac.Numerator += cnt
-					featInfoMap[propWithType][val] = frac
-				}
-			}
+			addValuesToFractionForPropsPresent(&avgPageViewsPerSessionFrac, featInfoMap, cnt, 0, propsToEval, eventDetails.EventProperties, eventDetails.UserProperties)
 		}
-
 	}
 
 	// get average PageViews Per Session
-
-	//global
-	if sessionsCount != 0 {
-		avgPageViewsPerSession = totalSessionPageCounts / sessionsCount
-	}
-
-	//feat
-	for key, valMap := range featInfoMap {
-		reqMap[key] = make(map[string]float64)
-		for val, info := range valMap {
-			if !(info.Denominator == 0 || info.Numerator == 0) {
-				reqMap[key][val] = info.Numerator / info.Denominator
-			}
-		}
-		if len(reqMap[key]) == 0 {
-			delete(reqMap, key)
-		}
-	}
-
-	info = MetricInfo{Global: avgPageViewsPerSession, Features: reqMap}
+	avgPageViewsPerSession, reqMap = getFractionValue(&avgPageViewsPerSessionFrac, featInfoMap)
 
 	scale = MetricInfo{Global: globalScale, Features: scaleMap}
+	info = MetricInfo{Global: avgPageViewsPerSession, Features: reqMap}
+
 	return &info, &scale, nil
 }
 
 func GetSessionAvgInitialPageLoadTime(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, *MetricInfo, error) {
 	var avgInitialPageLoadTime float64
-	var sessionsCount float64
-	var initialPageLoadTime float64
+	var avgInitialPageLoadTimeFrac Fraction
 	var featInfoMap = make(map[string]map[string]Fraction)
 	var globalScale float64
 	var reqMap = make(map[string]map[string]float64)
@@ -1057,80 +532,35 @@ func GetSessionAvgInitialPageLoadTime(queryEvent string, scanner *bufio.Scanner,
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
 			return nil, nil, err
 		}
-		eventNameString := eventDetails.EventName
 
-		//check if event is session
-		if eventNameString != U.EVENT_NAME_SESSION {
+		//check if event is session and contains all requiredProps(constraint)
+		if ok, err := isEventToBeCounted(eventDetails, U.EVENT_NAME_SESSION, propFilter); !ok {
+			if err != nil {
+				return &MetricInfo{}, &MetricInfo{}, err
+			}
 			continue
 		}
-
-		//check if event contains all requiredProps(constraint)
-		if yes, err := eventSatisfiesConstraints(eventDetails, propFilter); err != nil {
-			return nil, nil, err
-		} else if !yes {
-			continue
-		}
+		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
 		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
-		if time, ok := ExistsInProps(U.SP_INITIAL_PAGE_LOAD_TIME, eventDetails, "ep"); ok {
+		if time, ok := ExistsInProps(U.SP_INITIAL_PAGE_LOAD_TIME, eventDetails.EventProperties, eventDetails.UserProperties, "ep"); ok {
 			time := time.(float64)
 
-			//global
-			sessionsCount++
-			initialPageLoadTime += time
-
-			//feat
-			for _, propWithType := range propsToEval {
-				propTypeName := strings.SplitN(propWithType, "#", 2)
-				prop := propTypeName[1]
-				propType := propTypeName[0]
-				if val, ok := ExistsInProps(prop, eventDetails, propType); ok {
-					val := fmt.Sprintf("%s", val)
-					if _, ok := featInfoMap[propWithType]; !ok {
-						featInfoMap[propWithType] = make(map[string]Fraction)
-					}
-					if frac, ok := featInfoMap[propWithType][val]; !ok {
-						featInfoMap[propWithType][val] = Fraction{Denominator: 1, Numerator: time}
-					} else {
-						frac.Numerator += time
-						frac.Denominator += 1
-						featInfoMap[propWithType][val] = frac
-					}
-				}
-			}
+			addValuesToFractionForPropsPresent(&avgInitialPageLoadTimeFrac, featInfoMap, time, 1, propsToEval, eventDetails.EventProperties, eventDetails.UserProperties)
 		}
 	}
 
-	//get sessionsPerUser
-
-	//global
-	if sessionsCount != 0 {
-		avgInitialPageLoadTime = initialPageLoadTime / sessionsCount
-	}
-
-	//feat
-
-	for prop, valMap := range featInfoMap {
-		reqMap[prop] = make(map[string]float64)
-		for val, info := range valMap {
-			if !(info.Denominator == 0 || info.Numerator == 0) {
-				reqMap[prop][val] = info.Numerator / info.Denominator
-			}
-		}
-		if len(reqMap[prop]) == 0 {
-			delete(reqMap, prop)
-		}
-	}
+	//get avgInitialPageLoadTime
+	avgInitialPageLoadTime, reqMap = getFractionValue(&avgInitialPageLoadTimeFrac, featInfoMap)
+	scale = MetricInfo{Global: globalScale, Features: scaleMap}
 	info = MetricInfo{Global: avgInitialPageLoadTime, Features: reqMap}
 
-	scale = MetricInfo{Global: globalScale, Features: scaleMap}
 	return &info, &scale, nil
 }
 
 func GetSessionBounceRate(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, *MetricInfo, error) {
-	var bounceSessions float64
-	var sessionsCount float64
+	var bounceRateFrac Fraction
 	var bounceRate float64
 	var featInfoMap = make(map[string]map[string]Fraction) //[]string = (bounceSessions,sessionsCount)
 	var globalScale float64
@@ -1147,46 +577,20 @@ func GetSessionBounceRate(queryEvent string, scanner *bufio.Scanner, propFilter 
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
 			return nil, nil, err
 		}
-		eventNameString := eventDetails.EventName
 
-		//check if event is session
-		if eventNameString != U.EVENT_NAME_SESSION {
+		//check if event is session and contains all requiredProps(constraint)
+		if ok, err := isEventToBeCounted(eventDetails, U.EVENT_NAME_SESSION, propFilter); !ok {
+			if err != nil {
+				return &MetricInfo{}, &MetricInfo{}, err
+			}
 			continue
 		}
-
-		//check if event contains all requiredProps(constraint)
-		if yes, err := eventSatisfiesConstraints(eventDetails, propFilter); err != nil {
-			return nil, nil, err
-		} else if !yes {
-			continue
-		}
-
 		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
-		//global
-		sessionsCount++
-
-		//feat
-		for _, propWithType := range propsToEval {
-			propTypeName := strings.SplitN(propWithType, "#", 2)
-			prop := propTypeName[1]
-			propType := propTypeName[0]
-			if val, ok := ExistsInProps(prop, eventDetails, propType); ok {
-				val := fmt.Sprintf("%s", val)
-				if _, ok := featInfoMap[propWithType]; !ok {
-					featInfoMap[propWithType] = make(map[string]Fraction)
-				}
-				if frac, ok := featInfoMap[propWithType][val]; !ok {
-					featInfoMap[propWithType][val] = Fraction{Denominator: 1}
-				} else {
-					frac.Denominator += 1
-					featInfoMap[propWithType][val] = frac
-				}
-			}
-		}
+		addValuesToFractionForPropsPresent(&bounceRateFrac, featInfoMap, 0, 1, propsToEval, eventDetails.EventProperties, eventDetails.UserProperties)
 
 		//check if it is a bounced session
-		if cnt, ok := ExistsInProps(U.SP_PAGE_COUNT, eventDetails, "ep"); ok {
+		if cnt, ok := ExistsInProps(U.SP_PAGE_COUNT, eventDetails.EventProperties, eventDetails.UserProperties, "ep"); ok {
 			cnt := int64(cnt.(float64))
 			if cnt != 1 {
 				continue
@@ -1195,55 +599,23 @@ func GetSessionBounceRate(queryEvent string, scanner *bufio.Scanner, propFilter 
 			continue
 		}
 
-		//global
-		bounceSessions++
-
-		//feat
-		for _, propWithType := range propsToEval {
-			propTypeName := strings.SplitN(propWithType, "#", 2)
-			prop := propTypeName[1]
-			propType := propTypeName[0]
-			if val, ok := ExistsInProps(prop, eventDetails, propType); ok {
-				val := fmt.Sprintf("%s", val)
-				frac := featInfoMap[propWithType][val]
-				frac.Numerator += 1
-				featInfoMap[propWithType][val] = frac
-			}
-		}
+		addValuesToFractionForPropsPresent(&bounceRateFrac, featInfoMap, 1, 0, propsToEval, eventDetails.EventProperties, eventDetails.UserProperties)
 	}
 
 	// get bounce rate
-
-	//global
-	if sessionsCount != 0 {
-		bounceRate = bounceSessions / sessionsCount
-	}
-
-	//feat
-	for key, valMap := range featInfoMap {
-		reqMap[key] = make(map[string]float64)
-		for val, info := range valMap {
-			if !(info.Denominator == 0 || info.Numerator == 0) {
-				reqMap[key][val] = info.Numerator / info.Denominator
-			}
-		}
-		if len(reqMap[key]) == 0 {
-			delete(reqMap, key)
-		}
-	}
-
-	info = MetricInfo{Global: bounceRate, Features: reqMap}
+	bounceRate, reqMap = getFractionValue(&bounceRateFrac, featInfoMap)
 
 	scale = MetricInfo{Global: globalScale, Features: scaleMap}
+	info = MetricInfo{Global: bounceRate, Features: reqMap}
+
 	return &info, &scale, nil
 }
 
 func GetSessionEngagementRate(queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*MetricInfo, *MetricInfo, error) {
-	var engagedSessions float64
-	var sessionsCount float64
 	var engagementRate float64
-	var featInfoMap = make(map[string]map[string]Fraction) //[]string = (bounceSessions,sessionsCount)
+	var engagementRateFrac Fraction
 	var globalScale float64
+	var featInfoMap = make(map[string]map[string]Fraction) //[]string = (engagedSessions,sessionsCount)
 	var reqMap = make(map[string]map[string]float64)
 	var scaleMap = make(map[string]map[string]float64)
 	var info MetricInfo
@@ -1257,100 +629,56 @@ func GetSessionEngagementRate(queryEvent string, scanner *bufio.Scanner, propFil
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
 			return nil, nil, err
 		}
-		eventNameString := eventDetails.EventName
 
-		//check if event is session
-		if eventNameString != U.EVENT_NAME_SESSION {
-			continue
-		}
-
-		//check if event contains all requiredProps(constraint)
-		if yes, err := eventSatisfiesConstraints(eventDetails, propFilter); err != nil {
-			return nil, nil, err
-		} else if !yes {
-			continue
-		}
-
-		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
-
-		//global
-		sessionsCount++
-
-		//feat
-		for _, propWithType := range propsToEval {
-			propTypeName := strings.SplitN(propWithType, "#", 2)
-			prop := propTypeName[1]
-			propType := propTypeName[0]
-			if val, ok := ExistsInProps(prop, eventDetails, propType); ok {
-				val := fmt.Sprintf("%s", val)
-				if _, ok := featInfoMap[propWithType]; !ok {
-					featInfoMap[propWithType] = make(map[string]Fraction)
-				}
-				if frac, ok := featInfoMap[propWithType][val]; !ok {
-					featInfoMap[propWithType][val] = Fraction{Denominator: 1}
-				} else {
-					frac.Denominator += 1
-					featInfoMap[propWithType][val] = frac
-				}
+		//check if event is session and contains all requiredProps(constraint)
+		if ok, err := isEventToBeCounted(eventDetails, U.EVENT_NAME_SESSION, propFilter); !ok {
+			if err != nil {
+				return &MetricInfo{}, &MetricInfo{}, err
 			}
+			continue
 		}
+		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
+		addValuesToFractionForPropsPresent(&engagementRateFrac, featInfoMap, 0, 1, propsToEval, eventDetails.EventProperties, eventDetails.UserProperties)
 
 		//check if engaged
-		isEngaged := false
-		if timeSpent, ok := ExistsInProps(U.SP_SPENT_TIME, eventDetails, "ep"); ok {
-			timeSpent := timeSpent.(float64)
-			if timeSpent > 10 {
-				isEngaged = true
-			}
-		}
-		if cnt, ok := ExistsInProps(U.SP_PAGE_COUNT, eventDetails, "ep"); ok {
-			cnt := int64(cnt.(float64))
-			if cnt > 2 {
-				isEngaged = true
-			}
-		}
+		isEngaged := checkEngagedSession(eventDetails)
 		if !isEngaged {
 			continue
 		}
 
-		//global
-		engagedSessions++
-
-		//feat
-		for _, propWithType := range propsToEval {
-			propTypeName := strings.SplitN(propWithType, "#", 2)
-			prop := propTypeName[1]
-			propType := propTypeName[0]
-			if val, ok := ExistsInProps(prop, eventDetails, propType); ok {
-				val := fmt.Sprintf("%s", val)
-				frac := featInfoMap[propWithType][val]
-				frac.Numerator += 1
-				featInfoMap[propWithType][val] = frac
-			}
-		}
+		addValuesToFractionForPropsPresent(&engagementRateFrac, featInfoMap, 1, 0, propsToEval, eventDetails.EventProperties, eventDetails.UserProperties)
 	}
 
 	// get engagement rate
+	engagementRate, reqMap = getFractionValue(&engagementRateFrac, featInfoMap)
 
-	//global
-	if sessionsCount != 0 {
-		engagementRate = engagedSessions / sessionsCount
-	}
-
-	//feat
-	for key, valMap := range featInfoMap {
-		reqMap[key] = make(map[string]float64)
-		for val, info := range valMap {
-			if !(info.Denominator == 0 || info.Numerator == 0) {
-				reqMap[key][val] = info.Numerator / info.Denominator
-			}
-		}
-		if len(reqMap[key]) == 0 {
-			delete(reqMap, key)
-		}
-	}
-
-	info = MetricInfo{Global: engagementRate, Features: reqMap}
 	scale = MetricInfo{Global: globalScale, Features: scaleMap}
+	info = MetricInfo{Global: engagementRate, Features: reqMap}
+
 	return &info, &scale, nil
+}
+
+func checkEngagedSession(eventDetails P.CounterEventFormat) bool {
+	isEngaged := false
+	if timeSpent, ok := ExistsInProps(U.SP_SPENT_TIME, eventDetails.EventProperties, eventDetails.UserProperties, "ep"); ok {
+		timeSpent := timeSpent.(float64)
+		if timeSpent > 10 {
+			isEngaged = true
+		}
+	}
+	if cnt, ok := ExistsInProps(U.SP_PAGE_COUNT, eventDetails.EventProperties, eventDetails.UserProperties, "ep"); ok {
+		cnt := int64(cnt.(float64))
+		if cnt > 2 {
+			isEngaged = true
+		}
+	}
+	return isEngaged
+}
+
+func checkNew(eventDetails P.CounterEventFormat) bool {
+	var new bool
+	if first, ok := eventDetails.EventProperties[U.SP_IS_FIRST_SESSION]; ok {
+		new = first.(bool)
+	}
+	return new
 }

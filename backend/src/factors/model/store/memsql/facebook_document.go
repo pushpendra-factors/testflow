@@ -19,14 +19,14 @@ import (
 )
 
 const (
-	facebookCampaign                                = "campaign"
-	facebookAdSet                                   = "ad_set"
-	facebookAd                                      = "ad"
+	FacebookCampaign                                = "campaign"
+	FacebookAdSet                                   = "ad_set"
+	FacebookAd                                      = "ad"
 	facebookStringColumn                            = "facebook"
 	metricsExpressionOfDivisionWithHandleOf0AndNull = "SUM(JSON_EXTRACT_STRING(value,'%s'))*%s/(case when sum(JSON_EXTRACT_STRING(value,'%s')) = 0 then 100000 else NULLIF(sum(JSON_EXTRACT_STRING(value,'%s')), 100000) end)"
 )
 
-var facebookDocumentTypeAlias = map[string]int{
+var FacebookDocumentTypeAlias = map[string]int{
 	"ad_account":        7,
 	"campaign":          1,
 	"ad":                2,
@@ -264,7 +264,7 @@ func (store *MemSQL) CreateFacebookDocument(projectID int64, document *model.Fac
 	}
 
 	logCtx = logCtx.WithField("type_alias", document.TypeAlias)
-	docType, docTypeExists := facebookDocumentTypeAlias[document.TypeAlias]
+	docType, docTypeExists := FacebookDocumentTypeAlias[document.TypeAlias]
 	if !docTypeExists {
 		logCtx.Error("Invalid type alias.")
 		return http.StatusBadRequest
@@ -309,7 +309,7 @@ func getFacebookHierarchyColumnsByType(docType int, valueJSON *postgres.Jsonb) (
 		"value_json": valueJSON,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	if docType > len(facebookDocumentTypeAlias) {
+	if docType > len(FacebookDocumentTypeAlias) {
 		return "", "", "", errors.New("invalid document type")
 	}
 
@@ -340,7 +340,7 @@ func getFacebookDocumentTypeAliasByType() map[int]string {
 
 	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 	documentTypeMap := make(map[int]string, 0)
-	for alias, typ := range facebookDocumentTypeAlias {
+	for alias, typ := range FacebookDocumentTypeAlias {
 		documentTypeMap[typ] = alias
 	}
 
@@ -487,7 +487,7 @@ func getFilterRelatedInformationForFacebook(requestFilterObject string,
 		log.Error("Invalid facebook filter property.")
 		return "", 0, http.StatusBadRequest
 	}
-	docType := facebookDocumentTypeAlias[facebookInternalFilterObject]
+	docType := FacebookDocumentTypeAlias[facebookInternalFilterObject]
 
 	return facebookInternalFilterProperty, docType, http.StatusOK
 }
@@ -759,7 +759,7 @@ func buildFacebookQueryV1(query *model.ChannelQueryV1, projectID int64, customer
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	lowestHierarchyLevel := getLowestHierarchyLevelForFacebook(query)
 	lowestHierarchyReportLevel := lowestHierarchyLevel + "_insights"
-	sql, params, selectKeys, selectMetrics := getSQLAndParamsFromFacebookReports(query, projectID, query.From, query.To, customerAccountID, facebookDocumentTypeAlias[lowestHierarchyReportLevel],
+	sql, params, selectKeys, selectMetrics := getSQLAndParamsFromFacebookReports(query, projectID, query.From, query.To, customerAccountID, FacebookDocumentTypeAlias[lowestHierarchyReportLevel],
 		fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT)
 	return sql, params, selectKeys, selectMetrics, nil
 }
@@ -776,7 +776,7 @@ func buildFacebookQueryWithSmartPropertyV1(query *model.ChannelQueryV1, projectI
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	lowestHierarchyLevel := getLowestHierarchyLevelForFacebook(query)
 	lowestHierarchyReportLevel := lowestHierarchyLevel + "_insights"
-	sql, params, selectKeys, selectMetrics := getSQLAndParamsFromFacebookReportsWithSmartProperty(query, projectID, query.From, query.To, customerAccountID, facebookDocumentTypeAlias[lowestHierarchyReportLevel],
+	sql, params, selectKeys, selectMetrics := getSQLAndParamsFromFacebookReportsWithSmartProperty(query, projectID, query.From, query.To, customerAccountID, FacebookDocumentTypeAlias[lowestHierarchyReportLevel],
 		fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT)
 	return sql, params, selectKeys, selectMetrics, nil
 }
@@ -1153,23 +1153,23 @@ func getLowestHierarchyLevelForFacebook(query *model.ChannelQueryV1) string {
 
 	// Check if present
 	for _, objectName := range objectNames {
-		if objectName == facebookAd {
-			return facebookAd
+		if objectName == FacebookAd {
+			return FacebookAd
 		}
 	}
 
 	for _, objectName := range objectNames {
-		if objectName == facebookAdSet {
-			return facebookAdSet
+		if objectName == FacebookAdSet {
+			return FacebookAdSet
 		}
 	}
 
 	for _, objectName := range objectNames {
-		if objectName == facebookCampaign {
-			return facebookCampaign
+		if objectName == FacebookCampaign {
+			return FacebookCampaign
 		}
 	}
-	return facebookCampaign
+	return FacebookCampaign
 }
 
 // GetFacebookLastSyncInfo ...
@@ -1460,10 +1460,10 @@ func (store *MemSQL) GetLatestMetaForFacebookForGivenDays(projectID int64, days 
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
 	query := facebookAdGroupMetadataFetchQueryStr
-	params := []interface{}{facebookDocumentTypeAlias[facebookAdSet], projectID, from, to,
-		customerAccountIDs, facebookDocumentTypeAlias[facebookAdSet], projectID, from, to, customerAccountIDs,
-		facebookDocumentTypeAlias[facebookCampaign], projectID, from, to, customerAccountIDs,
-		facebookDocumentTypeAlias[facebookCampaign], projectID, from, to, customerAccountIDs}
+	params := []interface{}{FacebookDocumentTypeAlias[FacebookAdSet], projectID, from, to,
+		customerAccountIDs, FacebookDocumentTypeAlias[FacebookAdSet], projectID, from, to, customerAccountIDs,
+		FacebookDocumentTypeAlias[FacebookCampaign], projectID, from, to, customerAccountIDs,
+		FacebookDocumentTypeAlias[FacebookCampaign], projectID, from, to, customerAccountIDs}
 
 	rows1, tx1, err, queryID1 := store.ExecQueryWithContext(query, params)
 	if err != nil {
@@ -1483,8 +1483,8 @@ func (store *MemSQL) GetLatestMetaForFacebookForGivenDays(projectID int64, days 
 	U.LogReadTimeWithQueryRequestID(startReadTime1, queryID1, &logFields)
 
 	query = facebookCampaignMetadataFetchQueryStr
-	params = []interface{}{facebookDocumentTypeAlias[facebookCampaign], projectID, from, to,
-		customerAccountIDs, facebookDocumentTypeAlias[facebookCampaign], projectID, from, to, customerAccountIDs}
+	params = []interface{}{FacebookDocumentTypeAlias[FacebookCampaign], projectID, from, to,
+		customerAccountIDs, FacebookDocumentTypeAlias[FacebookCampaign], projectID, from, to, customerAccountIDs}
 	rows2, tx2, err, queryID2 := store.ExecQueryWithContext(query, params)
 	if err != nil {
 		errString := fmt.Sprintf("failed to get last %d campaign meta for facebook", days)

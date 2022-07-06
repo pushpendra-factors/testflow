@@ -138,11 +138,6 @@ func (dd *DiskDriver) GetModelChannelFilePathAndName(channel string, projectId i
 	return path, channel + ".txt"
 }
 
-func (dd *DiskDriver) GetModelSmartPropertiesFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string) {
-	path := dd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
-	return path, "smart_properties.txt"
-}
-
 func (dd *DiskDriver) GetModelEventsBucketingFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string) {
 	path := dd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
 	return path, "events_bucketed.txt"

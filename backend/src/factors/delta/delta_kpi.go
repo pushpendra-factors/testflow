@@ -59,31 +59,104 @@ func CreateKpiInsights(diskManager *serviceDisk.DiskDriver, cloudManager *filest
 		//get global + local constraints
 		propFilter := append(queryGroup.GlobalFilters, query.Filters...)
 
-		//get proper props based on category
-		var kpiProperties *[]map[string]string
-		if query.DisplayCategory == M.WebsiteSessionDisplayCategory {
-			kpiProperties = &M.KPIPropertiesForWebsiteSessions
-		} else if query.DisplayCategory == M.FormSubmissionsDisplayCategory {
-			kpiProperties = &M.KPIPropertiesForFormSubmissions
-		} else if query.DisplayCategory == M.PageViewsDisplayCategory {
-			kpiProperties = &M.KPIPropertiesForPageViews
-		} else {
-			log.Errorf("no kpi Insights for category: %s", query.DisplayCategory)
-			continue
-		}
-
 		//get features for insights as a map
 		propsToEval := make([]string, 0)
-		for _, propMap := range *kpiProperties {
-			if propMap["data_type"] == U.PropertyTypeCategorical {
-				var propType string
-				if ent, ok := propMap["entity"]; ok && ent == M.UserEntity {
-					propType = "up"
-				} else { //eventEntity or ["object_type"]
-					propType = "ep"
+
+		{
+			//get proper props based on category
+			var kpiProperties []map[string]string
+			if query.DisplayCategory == M.WebsiteSessionDisplayCategory {
+				kpiProperties = M.KPIPropertiesForWebsiteSessions
+			} else if query.DisplayCategory == M.FormSubmissionsDisplayCategory {
+				kpiProperties = M.KPIPropertiesForFormSubmissions
+			} else if query.DisplayCategory == M.PageViewsDisplayCategory {
+				kpiProperties = M.KPIPropertiesForPageViews
+			} else if query.DisplayCategory == M.GoogleAdsDisplayCategory {
+				for category, propMap := range M.MapOfAdwordsObjectsToPropertiesAndRelated {
+					for prop, info := range propMap {
+						kpiProperties = append(kpiProperties, map[string]string{
+							"name":      M.AdwordsInternalPropertiesToReportsInternal[category+":"+prop],
+							"data_type": info.TypeOfProperty,
+							"entity":    category,
+						})
+					}
 				}
-				propName := strings.Join([]string{propType, propMap["name"]}, "#")
-				propsToEval = append(propsToEval, propName)
+			} else if query.DisplayCategory == M.BingAdsDisplayCategory {
+				for category, propMap := range M.MapOfBingAdsObjectsToPropertiesAndRelated {
+					for prop, info := range propMap {
+						kpiProperties = append(kpiProperties, map[string]string{
+							"name":      M.BingAdsInternalRepresentationToExternalRepresentationForReports[category+"."+prop],
+							"data_type": info.TypeOfProperty,
+							"entity":    category,
+						})
+					}
+				}
+				// } else if query.DisplayCategory == M.FacebookDisplayCategory {
+				// 	for category, propMap := range M.MapOfFacebookObjectsToPropertiesAndRelated {
+				// 		if category == M.CAFilterAdGroup {
+				// 			category = "ad_set"
+				// 		}
+				// 		for prop, info := range propMap {
+				// 			kpiProperties = append(kpiProperties, map[string]string{
+				// 				"name":      M.ObjectToValueInFacebookJobsMapping[category+":"+prop],
+				// 				"data_type": info.TypeOfProperty,
+				// 				"entity":    category,
+				// 			})
+				// 		}
+				// 	}
+				// } else if query.DisplayCategory == M.LinkedinDisplayCategory {
+				// 	for _, prop := range []string{"id", "name"} {
+				// 		kpiProperties = append(kpiProperties, map[string]string{
+				// 			"name":      M.LinkedinCampaignGroup + "_" + prop,
+				// 			"data_type": U.PropertyTypeCategorical,
+				// 			"entity":    M.LinkedinCampaignGroup,
+				// 		})
+				// 		kpiProperties = append(kpiProperties, map[string]string{
+				// 			"name":      M.LinkedinCampaign + "_" + prop,
+				// 			"data_type": U.PropertyTypeCategorical,
+				// 			"entity":    M.LinkedinCampaign,
+				// 		})
+				// 	}
+				// } else if query.DisplayCategory == M.GoogleOrganicDisplayCategory {
+				// 	for _, propMap := range M.MapOfObjectsToPropertiesAndRelatedGoogleOrganic {
+				// 		for prop, info := range propMap {
+				// 			kpiProperties = append(kpiProperties, map[string]string{
+				// 				"name":      prop,
+				// 				"data_type": info.TypeOfProperty,
+				// 				"entity":    "combined",
+				// 			})
+				// 		}
+				// 	}
+				// 	for _, propMap := range M.MapOfObjectsToPropertiesAndRelatedGoogleOrganic {
+				// 		for prop, info := range propMap {
+				// 			kpiProperties = append(kpiProperties, map[string]string{
+				// 				"name":      prop,
+				// 				"data_type": info.TypeOfProperty,
+				// 				"entity":    "page",
+				// 			})
+				// 		}
+				// 	}
+			} else {
+				log.Errorf("no kpi Insights for category: %s", query.DisplayCategory)
+				continue
+			}
+
+			//get proper format
+			for _, propMap := range kpiProperties {
+				if propMap["data_type"] == U.PropertyTypeCategorical {
+					var propType string
+					if ent, ok := propMap["entity"]; ok {
+						if ent == M.UserEntity {
+							propType = "up"
+						} else if ent == M.EventEntity {
+							propType = "ep"
+						} else {
+							propType = ent
+						}
+					}
+					propName := strings.Join([]string{propType, propMap["name"]}, "#")
+					propsToEval = append(propsToEval, propName)
+				}
 			}
 		}
 
@@ -158,6 +231,127 @@ func CreateKpiInsights(diskManager *serviceDisk.DiskDriver, cloudManager *filest
 	return nil
 }
 
+//compute cross period using within period infos
+func ComputeCrossPeriodKpiInsights(periodPair PeriodPair, newInsightsList, oldInsightsList []*WithinPeriodInsightsKpi) ([]*CrossPeriodInsightsKpi, error) {
+	crossPeriodInsightsList := make([]*CrossPeriodInsightsKpi, 0)
+	for i := range newInsightsList {
+		var crossPeriodInsights CpiMetricInfo
+		newInsights := newInsightsList[i]
+		oldInsights := oldInsightsList[i]
+		oldInfo := *(*oldInsights).MetricInfo
+		newInfo := *(*newInsights).MetricInfo
+
+		//get union of props
+		var allProps = make(map[string]map[string]bool)
+		for key, valMap := range oldInfo.Features {
+			allProps[key] = make(map[string]bool)
+			for val := range valMap {
+				allProps[key][val] = true
+			}
+		}
+		for key, valMap := range newInfo.Features {
+			if _, ok := allProps[key]; !ok {
+				allProps[key] = make(map[string]bool)
+			}
+			for val := range valMap {
+				allProps[key][val] = true
+			}
+		}
+
+		//global
+		first := oldInfo.Global
+		second := newInfo.Global
+		var percentChange, factor float64
+		if first != 0 {
+			percentChange = 100 * float64(second-first) / float64(first)
+			factor = float64(second) / float64(first)
+		} else {
+			percentChange = 100
+			factor = float64(second)
+		}
+		crossPeriodInsights.GlobalMetrics = DiffMetric{First: first, Second: second, PercentChange: percentChange, FactorChange: factor}
+
+		//features
+		crossPeriodInsights.FeatureMetrics = make(map[string]map[string]DiffMetric)
+		for key, valMap := range allProps {
+			if _, ok := newInfo.Features[key]; !ok {
+				newInfo.Features[key] = make(map[string]float64)
+			}
+			if _, ok := oldInfo.Features[key]; !ok {
+				oldInfo.Features[key] = make(map[string]float64)
+			}
+			for val := range valMap {
+				first := oldInfo.Features[key][val]
+				second := newInfo.Features[key][val]
+				var percentChange, factor float64
+				if first != 0 {
+					percentChange = 100 * (second - first) / first
+					factor = second / first
+				} else {
+					percentChange = 100
+					factor = second
+				}
+				if _, ok := crossPeriodInsights.FeatureMetrics[key]; !ok {
+					crossPeriodInsights.FeatureMetrics[key] = make(map[string]DiffMetric)
+				}
+				crossPeriodInsights.FeatureMetrics[key][val] = DiffMetric{First: first, Second: second, PercentChange: percentChange, FactorChange: factor}
+			}
+		}
+
+		var scaleInfo CpiMetricInfo
+		oldScale := *(*oldInsights).ScaleInfo
+		newScale := *(*newInsights).ScaleInfo
+
+		//global
+		first = oldScale.Global
+		second = newScale.Global
+		if first != 0 {
+			percentChange = 100 * float64(second-first) / float64(first)
+			factor = float64(second) / float64(first)
+		} else {
+			percentChange = 100
+			factor = float64(second)
+		}
+		scaleInfo.GlobalMetrics = DiffMetric{First: first, Second: second, PercentChange: percentChange, FactorChange: factor}
+
+		//features
+		scaleInfo.FeatureMetrics = make(map[string]map[string]DiffMetric)
+		for key, valMap := range allProps {
+			if _, ok := newScale.Features[key]; !ok {
+				newScale.Features[key] = make(map[string]float64)
+			}
+			if _, ok := oldScale.Features[key]; !ok {
+				oldScale.Features[key] = make(map[string]float64)
+			}
+			for val := range valMap {
+				first := oldScale.Features[key][val]
+				second := newScale.Features[key][val]
+				var percentChange, factor float64
+				if first != 0 {
+					percentChange = 100 * (second - first) / first
+					factor = second / first
+				} else {
+					percentChange = 100
+					factor = second
+				}
+				if _, ok := scaleInfo.FeatureMetrics[key]; !ok {
+					scaleInfo.FeatureMetrics[key] = make(map[string]DiffMetric)
+				}
+				scaleInfo.FeatureMetrics[key][val] = DiffMetric{First: first, Second: second, PercentChange: percentChange, FactorChange: factor}
+			}
+		}
+		var cpiInsightsKpi CrossPeriodInsightsKpi
+		cpiInsightsKpi.Category = newInsights.Category
+		cpiInsightsKpi.Periods = periodPair
+		cpiInsightsKpi.Target = &crossPeriodInsights
+		cpiInsightsKpi.BaseAndTarget = &crossPeriodInsights
+		cpiInsightsKpi.ScaleInfo = &scaleInfo
+		// cpiInsightsKpi.JSDivergence = JSDType{Target: MultipleJSDivergenceKpi(oldInfo, newInfo, allProps)}
+		crossPeriodInsightsList = append(crossPeriodInsightsList, &cpiInsightsKpi)
+	}
+	return crossPeriodInsightsList, nil
+}
+
 func GetMetricsEvaluated(category string, metricNames []string, queryEvent string, propFilter []M.KPIFilter, propsToEval []string, projectId int64, periodCode Period, cloudManager *filestore.FileManager,
 	diskManager *serviceDisk.DiskDriver, insightGranularity string) (*WithinPeriodInsightsKpi, error) {
 
@@ -165,10 +359,6 @@ func GetMetricsEvaluated(category string, metricNames []string, queryEvent strin
 	var scanner *bufio.Scanner
 	var err error
 	var spectrum string
-	if scanner, err = GetEventFileScanner(projectId, periodCode, cloudManager, diskManager, insightGranularity, true); err != nil {
-		log.WithError(err).Error("failed getting event file scanner")
-		return nil, err
-	}
 	var GetMetrics func(metricNames []string, queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*WithinPeriodInsightsKpi, error)
 	if category == M.WebsiteSessionDisplayCategory {
 		GetMetrics = GetSessionMetrics
@@ -179,31 +369,78 @@ func GetMetricsEvaluated(category string, metricNames []string, queryEvent strin
 	} else if category == M.PageViewsDisplayCategory {
 		GetMetrics = GetPageViewMetrics
 		spectrum = "events"
+	} else if category == M.GoogleAdsDisplayCategory {
+		GetMetrics = GetCampaignMetricsInfo
+		queryEvent = M.ADWORDS
+		spectrum = "campaign"
+	} else if category == M.BingAdsDisplayCategory {
+		GetMetrics = GetCampaignMetricsInfo
+		queryEvent = M.BINGADS
+		spectrum = "campaign"
+		// } else if category == M.FacebookDisplayCategory {
+		// 	GetMetrics = GetCampaignMetricsInfo
+		// 	queryEvent = M.FACEBOOK
+		// 	spectrum = "campaign"
+		// } else if category == M.LinkedinDisplayCategory {
+		// 	GetMetrics = GetCampaignMetricsInfo
+		// 	queryEvent = M.LINKEDIN
+		// 	spectrum = "campaign"
+		// } else if category == M.GoogleOrganicDisplayCategory {
+		// 	GetMetrics = GetCampaignMetricsInfo
+		// 	queryEvent = M.GOOGLE_ORGANIC
+		// 	spectrum = "campaign"
 	} else {
 		err := fmt.Errorf("no kpi Insights for category: %s", category)
 		log.WithError(err).Error("not computing insights for this category")
 		return insights, err
+	}
+
+	if spectrum == "events" {
+		if scanner, err = GetEventFileScanner(projectId, periodCode, cloudManager, diskManager, insightGranularity, true); err != nil {
+			log.WithError(err).Error("failed getting event file scanner")
+			return nil, err
+		}
+	} else if spectrum == "campaign" {
+		if scanner, err = GetChannelFileScanner(queryEvent, projectId, periodCode, cloudManager, diskManager, insightGranularity, true); err != nil {
+			log.WithError(err).Error("failed getting adwords file scanner")
+			return nil, err
+		}
 	}
 	insights, err = GetMetrics(metricNames, queryEvent, scanner, propFilter, propsToEval)
 	insights.Category = spectrum
 	return insights, err
 }
 
-//check if prop exists in user or event props
-func ExistsInProps(prop string, eventDetails P.CounterEventFormat, entity string) (interface{}, bool) {
-	if entity == "ep" || entity == "both" {
-		if val, ok := eventDetails.EventProperties[prop]; ok {
+func MultipleJSDivergenceKpi(metricInfo1, metricInfo2 *MetricInfo, allProps map[string]map[string]bool) Level2CatRatioDist {
+	jsdMetrics := make(Level2CatRatioDist)
+	for key, valMap := range metricInfo1.Features {
+		jsdMetrics[key] = make(Level1CatRatioDist)
+		for val, _ := range valMap {
+			prev1 := metricInfo1.Features[key][val] / metricInfo1.Global
+			prev2 := metricInfo2.Features[key][val] / metricInfo2.Global
+			jsd := SingleJSDivergence(prev1, prev2)
+			jsdMetrics[key][val] = jsd
+		}
+	}
+	return jsdMetrics
+}
+
+//check if prop exists in props based on entity and returns the value
+func ExistsInProps(prop string, firstMap map[string]interface{}, secondMap map[string]interface{}, entity string) (interface{}, bool) {
+	if entity == "ep" || entity == "either" {
+		if val, ok := firstMap[prop]; ok {
 			return val, true
 		}
-	} else if entity == "up" || entity == "both" {
-		if val, ok := eventDetails.UserProperties[prop]; ok {
+	}
+	if entity == "up" || entity == "either" {
+		if val, ok := secondMap[prop]; ok {
 			return val, true
 		}
 	}
 	return nil, false
 }
 
-//check if event contains all required properties(constraints)
+//check if event contains all required properties(satisfies constraints)
 func eventSatisfiesConstraints(eventDetails P.CounterEventFormat, propFilter []M.KPIFilter) (bool, error) {
 
 	for _, filter := range propFilter {
@@ -218,7 +455,7 @@ func eventSatisfiesConstraints(eventDetails P.CounterEventFormat, propFilter []M
 			return false, fmt.Errorf("strange entity of filter property %s - %s", propName, filter.Entity)
 		}
 
-		if val, ok := ExistsInProps(propName, eventDetails, propType); !ok {
+		if val, ok := ExistsInProps(propName, eventDetails.EventProperties, eventDetails.UserProperties, propType); !ok {
 			return false, nil
 		} else {
 			eventVal = val
@@ -301,139 +538,285 @@ func eventSatisfiesConstraints(eventDetails P.CounterEventFormat, propFilter []M
 	return true, nil
 }
 
-//compute cross period using within period infos
-func ComputeCrossPeriodKpiInsights(periodPair PeriodPair, newInsightsList, oldInsightsList []*WithinPeriodInsightsKpi) ([]*CrossPeriodInsightsKpi, error) {
-	crossPeriodInsightsList := make([]*CrossPeriodInsightsKpi, 0)
-	for i := range newInsightsList {
-		var crossPeriodInsights CpiMetricInfo
-		newInsights := newInsightsList[i]
-		oldInsights := *oldInsightsList[i]
-		oldInfo := oldInsights.MetricInfo
-		newInfo := newInsights.MetricInfo
+//check if event contains all required properties(satisfies constraints)
+func campaignSatisfiesConstraints(campaignDetails CounterCampaignFormat, propFilter []M.KPIFilter) (bool, error) {
 
-		//get union of props
-		var allProps = make(map[string]map[string]bool)
-		for key, valMap := range oldInfo.Features {
-			allProps[key] = make(map[string]bool)
-			for val := range valMap {
-				allProps[key][val] = true
-			}
-		}
-		for key, valMap := range newInfo.Features {
-			if _, ok := allProps[key]; !ok {
-				allProps[key] = make(map[string]bool)
-			}
-			for val := range valMap {
-				allProps[key][val] = true
-			}
-		}
+	for _, filter := range propFilter {
+		var eventVal interface{}
+		propName := filter.PropertyName
 
-		//global
-		first := oldInfo.Global
-		second := newInfo.Global
-		var percentChange, factor float64
-		if first != 0 {
-			percentChange = 100 * float64(second-first) / float64(first)
-			factor = float64(second) / float64(first)
+		if val, ok := ExistsInProps(propName, campaignDetails.Value, campaignDetails.SmartProps, "either"); !ok {
+			return false, nil
 		} else {
-			percentChange = 100
-			factor = float64(second)
-		}
-		crossPeriodInsights.GlobalMetrics = DiffMetric{First: first, Second: second, PercentChange: percentChange, FactorChange: factor}
-
-		//features
-		crossPeriodInsights.FeatureMetrics = make(map[string]map[string]DiffMetric)
-		for key, valMap := range allProps {
-			if _, ok := newInfo.Features[key]; !ok {
-				newInfo.Features[key] = make(map[string]float64)
-			}
-			if _, ok := oldInfo.Features[key]; !ok {
-				oldInfo.Features[key] = make(map[string]float64)
-			}
-			for val := range valMap {
-				first := oldInfo.Features[key][val]
-				second := newInfo.Features[key][val]
-				var percentChange, factor float64
-				if first != 0 {
-					percentChange = 100 * (second - first) / first
-					factor = second / first
-				} else {
-					percentChange = 100
-					factor = second
-				}
-				if _, ok := crossPeriodInsights.FeatureMetrics[key]; !ok {
-					crossPeriodInsights.FeatureMetrics[key] = make(map[string]DiffMetric)
-				}
-				crossPeriodInsights.FeatureMetrics[key][val] = DiffMetric{First: first, Second: second, PercentChange: percentChange, FactorChange: factor}
-			}
+			eventVal = val
 		}
 
-		var scaleInfo CpiMetricInfo
-		oldScale := oldInsights.ScaleInfo
-		newScale := newInsights.ScaleInfo
+		if filter.PropertyDataType == U.PropertyTypeCategorical {
+			eventVal := eventVal.(string)
+			if filter.Condition == M.EqualsOpStr {
+				if eventVal != filter.Value {
+					return false, nil
+				}
+			} else if filter.Condition == M.NotEqualOpStr {
+				if eventVal == filter.Value {
+					return false, nil
+				}
+			} else if filter.Condition == M.ContainsOpStr {
+				if !strings.Contains(eventVal, filter.Value) {
+					return false, nil
+				}
+			} else if filter.Condition == M.NotContainsOpStr {
+				if strings.Contains(eventVal, filter.Value) {
+					return false, nil
+				}
+			} else {
+				return false, fmt.Errorf("")
+			}
+		} else if filter.PropertyDataType == U.PropertyTypeNumerical {
+			eventVal := eventVal.(float64)
+			filterVal, err := strconv.ParseFloat(filter.Value, 64)
+			if err != nil {
+				log.WithError(err).Error("error Decoding Float64 filter value")
+				return false, err
+			}
+			if filter.Condition == M.EqualsOp {
+				if eventVal != filterVal {
+					return false, nil
+				}
+			} else if filter.Condition == M.NotEqualOp {
+				if eventVal == filterVal {
+					return false, nil
+				}
+			} else if filter.Condition == M.LesserThanOpStr {
+				if eventVal >= filterVal {
+					return false, nil
+				}
+			} else if filter.Condition == M.LesserThanOrEqualOpStr {
+				if eventVal > filterVal {
+					return false, nil
+				}
+			} else if filter.Condition == M.GreaterThanOpStr {
+				if eventVal <= filterVal {
+					return false, nil
+				}
+			} else if filter.Condition == M.GreaterThanOrEqualOpStr {
+				if eventVal < filterVal {
+					return false, nil
+				}
+			} else {
+				return false, fmt.Errorf("")
+			}
+		} else if filter.PropertyDataType == U.PropertyTypeDateTime {
+			eventVal := eventVal.(float64)
 
-		//global
-		first = oldScale.Global
-		second = newScale.Global
-		if first != 0 {
-			percentChange = 100 * float64(second-first) / float64(first)
-			factor = float64(second) / float64(first)
+			dateTimeFilter, err := M.DecodeDateTimePropertyValue(filter.Value)
+			if err != nil {
+				log.WithError(err).Error("error Decoding filter value")
+				return false, err
+			}
+			propVal := fmt.Sprintf("%v", int64(eventVal))
+			propertyValue, _ := strconv.ParseInt(propVal, 10, 64)
+			if !(propertyValue >= dateTimeFilter.From && propertyValue <= dateTimeFilter.To) {
+				return false, nil
+			}
+		} else if filter.PropertyDataType == U.PropertyTypeUnknown {
+			return false, fmt.Errorf("property type unknown for %s", propName)
 		} else {
-			percentChange = 100
-			factor = float64(second)
+			return false, fmt.Errorf("strange property type: %s", filter.PropertyDataType)
 		}
-		scaleInfo.GlobalMetrics = DiffMetric{First: first, Second: second, PercentChange: percentChange, FactorChange: factor}
-
-		//features
-		scaleInfo.FeatureMetrics = make(map[string]map[string]DiffMetric)
-		for key, valMap := range allProps {
-			if _, ok := newScale.Features[key]; !ok {
-				newScale.Features[key] = make(map[string]float64)
-			}
-			if _, ok := oldScale.Features[key]; !ok {
-				oldScale.Features[key] = make(map[string]float64)
-			}
-			for val := range valMap {
-				first := oldScale.Features[key][val]
-				second := newScale.Features[key][val]
-				var percentChange, factor float64
-				if first != 0 {
-					percentChange = 100 * (second - first) / first
-					factor = second / first
-				} else {
-					percentChange = 100
-					factor = second
-				}
-				if _, ok := scaleInfo.FeatureMetrics[key]; !ok {
-					scaleInfo.FeatureMetrics[key] = make(map[string]DiffMetric)
-				}
-				scaleInfo.FeatureMetrics[key][val] = DiffMetric{First: first, Second: second, PercentChange: percentChange, FactorChange: factor}
-			}
-		}
-		var cpiInsightsKpi CrossPeriodInsightsKpi
-		cpiInsightsKpi.Category = newInsights.Category
-		cpiInsightsKpi.Periods = periodPair
-		cpiInsightsKpi.Target = &crossPeriodInsights
-		cpiInsightsKpi.BaseAndTarget = &crossPeriodInsights
-		cpiInsightsKpi.ScaleInfo = &scaleInfo
-		// cpiInsightsKpi.JSDivergence = JSDType{Target: MultipleJSDivergenceKpi(oldInfo, newInfo, allProps)}
-		crossPeriodInsightsList = append(crossPeriodInsightsList, &cpiInsightsKpi)
 	}
-	return crossPeriodInsightsList, nil
+	return true, nil
 }
 
-func MultipleJSDivergenceKpi(metricInfo1, metricInfo2 *MetricInfo, allProps map[string]map[string]bool) Level2CatRatioDist {
-	jsdMetrics := make(Level2CatRatioDist)
-	for key, valMap := range metricInfo1.Features {
-		jsdMetrics[key] = make(Level1CatRatioDist)
-		for val, _ := range valMap {
-			prev1 := metricInfo1.Features[key][val] / metricInfo1.Global
-			prev2 := metricInfo2.Features[key][val] / metricInfo2.Global
-			jsd := SingleJSDivergence(prev1, prev2)
-			jsdMetrics[key][val] = jsd
+//check if event name is correct and contains all required properties(satisfies constraints)
+func isEventToBeCounted(eventDetails P.CounterEventFormat, nameFilter string, propFilter []M.KPIFilter) (bool, error) {
+	eventNameString := eventDetails.EventName
+
+	//check if event name is correct
+	if eventNameString != nameFilter {
+		return false, nil
+	}
+
+	//check if event contains all requiredProps(constraint)
+	if ok, err := eventSatisfiesConstraints(eventDetails, propFilter); err != nil {
+		return false, err
+	} else if ok {
+		return true, nil
+	}
+
+	return false, nil
+}
+
+//check if event name is correct and contains all required properties(satisfies constraints)
+func isCampaignToBeCounted(campaignDetails CounterCampaignFormat, propFilter []M.KPIFilter, requiredDocTypes []int) (bool, error) {
+
+	allowed := false
+	for _, dtype := range requiredDocTypes {
+		if campaignDetails.Doctype == dtype {
+			allowed = true
+			break
 		}
 	}
-	return jsdMetrics
+	if !allowed {
+		return false, nil
+	}
+
+	//check if event contains all requiredProps(constraint)
+	if ok, err := campaignSatisfiesConstraints(campaignDetails, propFilter); err != nil {
+		return false, err
+	} else if ok {
+		return true, nil
+	}
+
+	return false, nil
+}
+
+//delete keys and values with zero frequency
+func deleteEntriesWithZeroFreq(reqMap map[string]map[string]float64) {
+	for prop, valMap := range reqMap {
+		for val, cnt := range valMap {
+			if cnt == 0 {
+				delete(reqMap[prop], val)
+			}
+		}
+		if len(reqMap[prop]) == 0 {
+			delete(reqMap, prop)
+		}
+	}
+}
+
+func addValueToMapForPropsPresent(globalVal *float64, featMap map[string]map[string]float64, valueToBeAdded float64, propsToEval []string, propMap1 map[string]interface{}, propMap2 map[string]interface{}) {
+	(*globalVal) += valueToBeAdded
+	for _, propWithType := range propsToEval {
+		propTypeName := strings.SplitN(propWithType, "#", 2)
+		prop := propTypeName[1]
+		propType := propTypeName[0]
+		var pt string
+		if propType == "up" || propType == "ep" {
+			pt = propType
+		} else {
+			pt = "either"
+		}
+		if val, ok := ExistsInProps(prop, propMap1, propMap2, pt); ok {
+			val := fmt.Sprintf("%s", val)
+			if _, ok := featMap[propWithType]; !ok {
+				featMap[propWithType] = make(map[string]float64)
+			}
+			featMap[propWithType][val] += valueToBeAdded
+		}
+	}
+}
+
+func addValueToMapForPropsPresentUser(globalVal *float64, featMap map[string]map[string]float64, valueToBeAdded float64, propsToEval []string, eventDetails P.CounterEventFormat, uniqueUsersGlobal map[string]bool, uniqueUsersFeat map[string]map[string]bool) {
+	uid := eventDetails.UserId
+	if _, ok := uniqueUsersGlobal[uid]; !ok {
+		uniqueUsersGlobal[uid] = true
+		*globalVal += valueToBeAdded
+	}
+	for _, propWithType := range propsToEval {
+		propTypeName := strings.SplitN(propWithType, "#", 2)
+		prop := propTypeName[1]
+		propType := propTypeName[0]
+		if val, ok := ExistsInProps(prop, eventDetails.EventProperties, eventDetails.UserProperties, propType); ok {
+			val := fmt.Sprintf("%s", val)
+			propWithVal := strings.Join([]string{prop, val}, ":")
+			if _, ok := uniqueUsersFeat[propWithVal]; !ok {
+				uniqueUsersFeat[propWithVal] = make(map[string]bool)
+			}
+			if _, ok := uniqueUsersFeat[propWithVal][uid]; !ok {
+				uniqueUsersFeat[propWithVal][uid] = true
+				if _, ok := featMap[propWithType]; !ok {
+					featMap[propWithType] = make(map[string]float64)
+				}
+				featMap[propWithType][val] += valueToBeAdded
+			}
+		}
+	}
+}
+
+func addValuesToFractionForPropsPresent(globalVal *Fraction, featMap map[string]map[string]Fraction, numerValueToBeAdded float64, denomValueToBeAdded float64, propsToEval []string, firstMap map[string]interface{}, secondMap map[string]interface{}) {
+	(*globalVal).Numerator += numerValueToBeAdded
+	(*globalVal).Denominator += denomValueToBeAdded
+	for _, propWithType := range propsToEval {
+		propTypeName := strings.SplitN(propWithType, "#", 2)
+		prop := propTypeName[1]
+		propType := propTypeName[0]
+		var pt string
+		if propType == "up" || propType == "ep" {
+			pt = propType
+		} else {
+			pt = "either"
+		}
+		if val, ok := ExistsInProps(prop, firstMap, secondMap, pt); ok {
+			val := fmt.Sprintf("%s", val)
+			if _, ok := featMap[propWithType]; !ok {
+				featMap[propWithType] = make(map[string]Fraction)
+			}
+			if frac, ok := featMap[propWithType][val]; !ok {
+				featMap[propWithType][val] = Fraction{Numerator: numerValueToBeAdded, Denominator: denomValueToBeAdded}
+			} else {
+				frac.Numerator += numerValueToBeAdded
+				frac.Denominator += denomValueToBeAdded
+				featMap[propWithType][val] = frac
+			}
+		}
+	}
+}
+
+func addValuesToFractionForPropsPresentUser(globalVal *Fraction, featMap map[string]map[string]Fraction, numerValueToBeAdded float64, denomValueToBeAdded float64, propsToEval []string, eventDetails P.CounterEventFormat, uniqueUsersGlobal map[string]bool, uniqueUsersFeat map[string]map[string]bool) {
+	uid := eventDetails.UserId
+	(*globalVal).Numerator += numerValueToBeAdded
+	if _, ok := uniqueUsersGlobal[uid]; !ok {
+		uniqueUsersGlobal[uid] = true
+		(*globalVal).Denominator += denomValueToBeAdded
+	}
+	for _, propWithType := range propsToEval {
+		propTypeName := strings.SplitN(propWithType, "#", 2)
+		prop := propTypeName[1]
+		propType := propTypeName[0]
+		if val, ok := ExistsInProps(prop, eventDetails.EventProperties, eventDetails.UserProperties, propType); ok {
+			val := fmt.Sprintf("%s", val)
+			if _, ok := featMap[propWithType]; !ok {
+				featMap[propWithType] = make(map[string]Fraction)
+			}
+			if frac, ok := featMap[propWithType][val]; !ok {
+				featMap[propWithType][val] = Fraction{Numerator: numerValueToBeAdded}
+			} else {
+				frac.Numerator += numerValueToBeAdded
+				featMap[propWithType][val] = frac
+			}
+			propWithVal := strings.Join([]string{prop, val}, ":")
+			if _, ok := uniqueUsersFeat[propWithVal]; !ok {
+				uniqueUsersFeat[propWithVal] = make(map[string]bool)
+			}
+			if _, ok := uniqueUsersFeat[propWithVal][uid]; !ok {
+				uniqueUsersFeat[propWithVal][uid] = true
+				frac := featMap[propWithType][val]
+				frac.Denominator += denomValueToBeAdded
+				featMap[propWithType][val] = frac
+			}
+		}
+	}
+}
+
+func getFractionValue(globalFrac *Fraction, featInfoMap map[string]map[string]Fraction) (float64, map[string]map[string]float64) {
+	var globalVal float64
+	if globalFrac.Denominator != 0 {
+		globalVal = globalFrac.Numerator / globalFrac.Denominator
+	}
+	reqMap := make(map[string]map[string]float64)
+	for prop, valMap := range featInfoMap {
+		reqMap[prop] = make(map[string]float64)
+		for val, info := range valMap {
+			if !(info.Denominator == 0 || info.Numerator == 0) {
+				reqMap[prop][val] = info.Numerator / info.Denominator
+			}
+		}
+		if len(reqMap[prop]) == 0 {
+			delete(reqMap, prop)
+		}
+	}
+	return globalVal, reqMap
 }
 
 func addToScale(globalScale *float64, scaleMap map[string]map[string]float64, propsToEval []string, eventDetails P.CounterEventFormat) {
@@ -442,7 +825,7 @@ func addToScale(globalScale *float64, scaleMap map[string]map[string]float64, pr
 		propTypeName := strings.SplitN(propWithType, "#", 2)
 		prop := propTypeName[1]
 		propType := propTypeName[0]
-		if val, ok := ExistsInProps(prop, eventDetails, propType); ok {
+		if val, ok := ExistsInProps(prop, eventDetails.EventProperties, eventDetails.UserProperties, propType); ok {
 			val := fmt.Sprintf("%s", val)
 			if _, ok := scaleMap[propWithType]; !ok {
 				scaleMap[propWithType] = make(map[string]float64)

@@ -124,7 +124,7 @@ func (pg *Postgres) FetchMarketingReports(projectID uint64, q model.AttributionQ
 	if projectSetting.IntFacebookAdAccount != "" && model.DoesFBReportExist(q.AttributionKey) {
 		facebookCustomerID := projectSetting.IntFacebookAdAccount
 
-		reportType = facebookDocumentTypeAlias["campaign_insights"] // 5
+		reportType = FacebookDocumentTypeAlias["campaign_insights"] // 5
 		facebookCampaignIDData, facebookCampaignAllRows, err = pg.PullFacebookMarketingData(projectID, effectiveFrom,
 			effectiveTo, facebookCustomerID, model.FacebookCampaignID, model.FacebookCampaignName, model.PropertyValueNone, reportType, model.ReportCampaign, q.Timezone)
 		if err != nil {
@@ -138,7 +138,7 @@ func (pg *Postgres) FetchMarketingReports(projectID uint64, q model.AttributionQ
 			facebookCampaignAllRows[i].CampaignName = U.IfThenElse(U.IsNonEmptyKey(facebookCampaignAllRows[i].CampaignName), facebookCampaignAllRows[i].CampaignName, facebookCampaignAllRows[i].Name).(string)
 		}
 
-		reportType = facebookDocumentTypeAlias["ad_set_insights"] // 6
+		reportType = FacebookDocumentTypeAlias["ad_set_insights"] // 6
 		facebookAdgroupIDData, facebookAdgroupAllRows, err = pg.PullFacebookMarketingData(projectID, effectiveFrom,
 			effectiveTo, facebookCustomerID, model.FacebookAdgroupID, model.FacebookAdgroupName, model.PropertyValueNone, reportType, model.ReportAdGroup, q.Timezone)
 		if err != nil {
@@ -167,7 +167,7 @@ func (pg *Postgres) FetchMarketingReports(projectID uint64, q model.AttributionQ
 	if projectSetting.IntLinkedinAdAccount != "" && model.DoesLinkedinReportExist(q.AttributionKey) {
 		linkedinCustomerID := projectSetting.IntLinkedinAdAccount
 
-		reportType = linkedinDocumentTypeAlias["campaign_group_insights"] // 5
+		reportType = LinkedinDocumentTypeAlias["campaign_group_insights"] // 5
 		linkedinCampaignIDData, linkedinCampaignAllRows, err = pg.PullLinkedinMarketingData(projectID, effectiveFrom,
 			effectiveTo, linkedinCustomerID, model.LinkedinCampaignID, model.LinkedinCampaignName, model.PropertyValueNone, reportType, model.ReportCampaign, q.Timezone)
 		if err != nil {
@@ -181,7 +181,7 @@ func (pg *Postgres) FetchMarketingReports(projectID uint64, q model.AttributionQ
 			linkedinCampaignAllRows[i].CampaignName = U.IfThenElse(U.IsNonEmptyKey(linkedinCampaignAllRows[i].CampaignName), linkedinCampaignAllRows[i].CampaignName, linkedinCampaignAllRows[i].Name).(string)
 		}
 
-		reportType = linkedinDocumentTypeAlias["campaign_insights"] // 6
+		reportType = LinkedinDocumentTypeAlias["campaign_insights"] // 6
 		linkedinAdgroupIDData, linkedinAdgroupAllRows, err = pg.PullLinkedinMarketingData(projectID, effectiveFrom,
 			effectiveTo, linkedinCustomerID, model.LinkedinAdgroupID, model.LinkedinAdgroupName, model.PropertyValueNone, reportType, model.ReportAdGroup, q.Timezone)
 		if err != nil {

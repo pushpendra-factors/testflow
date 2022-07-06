@@ -18,7 +18,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var linkedinDocumentTypeAlias = map[string]int{
+var LinkedinDocumentTypeAlias = map[string]int{
 	"creative":                1,
 	"campaign_group":          2,
 	"campaign":                3,
@@ -188,7 +188,7 @@ func getLinkedinDocumentTypeAliasByType() map[int]string {
 
 	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 	documentTypeMap := make(map[int]string, 0)
-	for alias, typ := range linkedinDocumentTypeAlias {
+	for alias, typ := range LinkedinDocumentTypeAlias {
 		documentTypeMap[typ] = alias
 	}
 
@@ -260,7 +260,7 @@ func (store *MemSQL) CreateLinkedinDocument(projectID int64, document *model.Lin
 	}
 
 	logCtx = logCtx.WithField("type_alias", document.TypeAlias)
-	docType, docTypeExists := linkedinDocumentTypeAlias[document.TypeAlias]
+	docType, docTypeExists := LinkedinDocumentTypeAlias[document.TypeAlias]
 	if !docTypeExists {
 		logCtx.Error("Invalid type alias.")
 		return http.StatusBadRequest
@@ -305,7 +305,7 @@ func getLinkedinHierarchyColumnsByType(docType int, valueJSON *postgres.Jsonb) (
 		"value_json": valueJSON,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	if docType > len(linkedinDocumentTypeAlias) {
+	if docType > len(LinkedinDocumentTypeAlias) {
 		return "", "", "", errors.New("invalid document type")
 	}
 
@@ -605,7 +605,7 @@ func getFilterRelatedInformationForLinkedin(requestFilterObject string, requestF
 		log.Error("Invalid linkedin filter property.")
 		return "", 0, http.StatusBadRequest
 	}
-	docType := linkedinDocumentTypeAlias[linkedinInternalFilterObject]
+	docType := LinkedinDocumentTypeAlias[linkedinInternalFilterObject]
 
 	return linkedinInternalFilterProperty, docType, http.StatusOK
 }
@@ -892,7 +892,7 @@ func buildLinkedinQueryWithSmartPropertyV1(query *model.ChannelQueryV1, projectI
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	lowestHierarchyLevel := getLowestHierarchyLevelForLinkedin(query)
 	lowestHierarchyReportLevel := lowestHierarchyLevel + "_insights"
-	sql, params, selectKeys, selectMetrics := getSQLAndParamsFromLinkedinWithSmartPropertyReports(query, projectID, query.From, query.To, customerAccountID, linkedinDocumentTypeAlias[lowestHierarchyReportLevel],
+	sql, params, selectKeys, selectMetrics := getSQLAndParamsFromLinkedinWithSmartPropertyReports(query, projectID, query.From, query.To, customerAccountID, LinkedinDocumentTypeAlias[lowestHierarchyReportLevel],
 		fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT)
 	return sql, params, selectKeys, selectMetrics, nil
 }
@@ -910,7 +910,7 @@ func buildLinkedinQueryV1(query *model.ChannelQueryV1, projectID int64, customer
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	lowestHierarchyLevel := getLowestHierarchyLevelForLinkedin(query)
 	lowestHierarchyReportLevel := lowestHierarchyLevel + "_insights"
-	sql, params, selectKeys, selectMetrics := getSQLAndParamsFromLinkedinReports(query, projectID, query.From, query.To, customerAccountID, linkedinDocumentTypeAlias[lowestHierarchyReportLevel],
+	sql, params, selectKeys, selectMetrics := getSQLAndParamsFromLinkedinReports(query, projectID, query.From, query.To, customerAccountID, LinkedinDocumentTypeAlias[lowestHierarchyReportLevel],
 		fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT)
 	return sql, params, selectKeys, selectMetrics, nil
 }
@@ -1371,10 +1371,10 @@ func (store *MemSQL) GetLatestMetaForLinkedinForGivenDays(projectID int64, days 
 	}
 
 	query := linkedinAdGroupMetadataFetchQueryStr
-	params := []interface{}{linkedinDocumentTypeAlias["campaign"], projectID, from, to,
-		customerAccountIDs, linkedinDocumentTypeAlias["campaign"], projectID, from, to,
-		customerAccountIDs, linkedinDocumentTypeAlias["campaign_group"], projectID, from, to,
-		customerAccountIDs, linkedinDocumentTypeAlias["campaign_group"], projectID, from, to,
+	params := []interface{}{LinkedinDocumentTypeAlias["campaign"], projectID, from, to,
+		customerAccountIDs, LinkedinDocumentTypeAlias["campaign"], projectID, from, to,
+		customerAccountIDs, LinkedinDocumentTypeAlias["campaign_group"], projectID, from, to,
+		customerAccountIDs, LinkedinDocumentTypeAlias["campaign_group"], projectID, from, to,
 		customerAccountIDs}
 
 	rows1, tx1, err, queryID1 := store.ExecQueryWithContext(query, params)
@@ -1395,8 +1395,8 @@ func (store *MemSQL) GetLatestMetaForLinkedinForGivenDays(projectID int64, days 
 	U.LogReadTimeWithQueryRequestID(startReadTime1, queryID1, &logFields)
 
 	query = linkedinCampaignMetadataFetchQueryStr
-	params = []interface{}{linkedinDocumentTypeAlias["campaign_group"], projectID, from, to,
-		customerAccountIDs, linkedinDocumentTypeAlias["campaign_group"], projectID, from, to,
+	params = []interface{}{LinkedinDocumentTypeAlias["campaign_group"], projectID, from, to,
+		customerAccountIDs, LinkedinDocumentTypeAlias["campaign_group"], projectID, from, to,
 		customerAccountIDs}
 
 	rows2, tx2, err, queryID2 := store.ExecQueryWithContext(query, params)

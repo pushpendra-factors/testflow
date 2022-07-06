@@ -134,11 +134,6 @@ func (gcsd *GCSDriver) GetModelChannelFilePathAndName(channel string, projectId 
 	return path, channel + ".txt"
 }
 
-func (gcsd *GCSDriver) GetModelSmartPropertiesFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string) {
-	path := gcsd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
-	return path, "smart_properties.txt"
-}
-
 func (gcsd *GCSDriver) GetModelEventsBucketingFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string) {
 	path := gcsd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
 	return path, "events_bucketed.txt"
