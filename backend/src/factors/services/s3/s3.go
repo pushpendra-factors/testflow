@@ -112,6 +112,16 @@ func (sd *S3Driver) GetModelEventsFilePathAndName(projectId int64, startTimestam
 	return path, "events.txt"
 }
 
+func (sd *S3Driver) GetModelChannelFilePathAndName(channel string, projectId int64, startTimestamp int64, modelType string) (string, string) {
+	path := sd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
+	return path, channel + ".txt"
+}
+
+func (sd *S3Driver) GetModelSmartPropertiesFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string) {
+	path := sd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
+	return path, "smart_properties.txt"
+}
+
 func (sd *S3Driver) GetModelEventsBucketingFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string) {
 	path := sd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
 	return path, "events_bucketed.txt"

@@ -2125,8 +2125,8 @@ func (store *MemSQL) OverwriteEventUserPropertiesByID(projectID int64, userID,
 	return http.StatusAccepted
 }
 
-// PullEventRowsForBuildSequenceJob - Function to pull events for factors model building sequentially.
-func (store *MemSQL) PullEventRowsForBuildSequenceJob(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error) {
+// PullEventRows - Function to pull events for factors model building sequentially.
+func (store *MemSQL) PullEventRows(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"start_time": startTime,

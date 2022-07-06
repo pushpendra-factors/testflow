@@ -115,7 +115,7 @@ const (
 	ChannelBingads    = "bingads"
 	ChannelFacebook   = "facebook"
 	ChannelLinkedin   = "linkedin"
-	ChannelGoogleAds  = "google ads"
+	ChannelGoogleAds  = "google_ads"
 	ChannelBingAds    = "bingads"
 	SessionChannelOTP = "OfflineTouchPoint"
 

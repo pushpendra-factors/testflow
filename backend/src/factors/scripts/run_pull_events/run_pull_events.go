@@ -16,6 +16,7 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
+	"strings"
 
 	taskWrapper "factors/task/task_wrapper"
 
@@ -51,6 +52,10 @@ func main() {
 	isMonthlyEnabled := flag.Bool("monthly_enabled", false, "")
 	isQuarterlyEnabled := flag.Bool("quarterly_enabled", false, "")
 
+	hardPull := flag.Bool("hard_pull", false, "replace the files already present")
+
+	fileTypesFlag := flag.String("file_types", "",
+		"Optional: file type. A comma separated list of file types and supports '*' for all files. ex: 1,2,6,9") //refer to T.fileType map
 	projectIdFlag := flag.String("project_ids", "",
 		"Optional: Project Id. A comma separated list of project Ids and supports '*' for all projects. ex: 1,2,6,9")
 
@@ -99,6 +104,18 @@ func main() {
 	db := C.GetServices().Db
 	defer db.Close()
 
+	fileTypesList := strings.TrimSpace(*fileTypesFlag)
+	var fileTypes []int64
+	if fileTypesList == "*" {
+		fileTypes = []int64{1, 2, 3, 4, 5, 6}
+	} else {
+		fileTypes = C.GetTokensFromStringListAsUint64(fileTypesList)
+	}
+	fileTypesMap := make(map[int64]bool)
+	for i := range fileTypes {
+		fileTypesMap[fileTypes[i]] = true
+	}
+
 	allProjects, projectIdsToRun, _ := C.GetProjectsFromListWithAllProjectSupport(*projectIdFlag, "")
 	if allProjects {
 		projectIDs, errCode := store.GetStore().GetAllProjectIDs()
@@ -132,22 +149,24 @@ func main() {
 	configs := make(map[string]interface{})
 	configs["diskManager"] = diskManager
 	configs["cloudManager"] = &cloudManager
+	configs["hardPull"] = hardPull
+	configs["fileTypes"] = fileTypesMap
 
 	if *isWeeklyEnabled {
 		configs["modelType"] = T.ModelTypeWeek
-		status := taskWrapper.TaskFuncWithProjectId("PullEventsWeekly", *lookback, projectIdsArray, T.PullEvents, configs)
+		status := taskWrapper.TaskFuncWithProjectId("PullEventsWeekly", *lookback, projectIdsArray, T.PullAllData, configs)
 		log.Info(status)
 	}
 
 	if *isMonthlyEnabled {
 		configs["modelType"] = T.ModelTypeMonth
-		status := taskWrapper.TaskFuncWithProjectId("PullEventsMonthly", *lookback, projectIdsArray, T.PullEvents, configs)
+		status := taskWrapper.TaskFuncWithProjectId("PullEventsMonthly", *lookback, projectIdsArray, T.PullAllData, configs)
 		log.Info(status)
 	}
 
 	if *isQuarterlyEnabled {
 		configs["modelType"] = T.ModelTypeQuarter
-		status := taskWrapper.TaskFuncWithProjectId("PullEventsQuarterly", *lookback, projectIdsArray, T.PullEvents, configs)
+		status := taskWrapper.TaskFuncWithProjectId("PullEventsQuarterly", *lookback, projectIdsArray, T.PullAllData, configs)
 		log.Info(status)
 	}
 }

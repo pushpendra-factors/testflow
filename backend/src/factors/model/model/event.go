@@ -70,6 +70,11 @@ const tableName = "events"
 const NewUserSessionInactivityInSeconds int64 = ThirtyMinutesInSeconds
 const ThirtyMinutesInSeconds int64 = 30 * 60
 const EventsPullLimit = 100000000
+const AdwordsPullLimit = 100000000
+const FacebookPullLimit = 100000000
+const BingPullLimit = 100000000
+const LinkedInPullLimit = 100000000
+const GoggleOrganicPullLimit = 100000000
 
 func SetCacheUserLastEvent(projectId int64, userId string, cacheEvent *CacheEvent) error {
 	logCtx := log.WithField("project_id", projectId).WithField("user_id", userId)

@@ -216,24 +216,29 @@ type Model interface {
 	CreateEvent(event *model.Event) (*model.Event, int)
 	GetEvent(projectID int64, userId string, id string) (*model.Event, int)
 	GetEventById(projectID int64, id, userID string) (*model.Event, int)
-	GetLatestEventOfUserByEventNameId(projectId int64, userId string, eventNameId string, startTimestamp int64, endTimestamp int64) (*model.Event, int)
+	GetLatestEventOfUserByEventNameId(projectID int64, userId string, eventNameId string, startTimestamp int64, endTimestamp int64) (*model.Event, int)
 	GetRecentEventPropertyKeysWithLimits(projectID int64, eventName string, starttime int64, endtime int64, eventsLimit int) ([]U.Property, error)
 	GetRecentEventPropertyValuesWithLimits(projectID int64, eventName string, property string, valuesLimit int, rowsLimit int, starttime int64, endtime int64) ([]U.PropertyValue, string, error)
-	UpdateEventProperties(projectId int64, id, userID string, properties *U.PropertiesMap, updateTimestamp int64, optionalEventUserProperties *postgres.Jsonb) int
+	UpdateEventProperties(projectID int64, id, userID string, properties *U.PropertiesMap, updateTimestamp int64, optionalEventUserProperties *postgres.Jsonb) int
 	GetUserEventsByEventNameId(projectID int64, userId string, eventNameId string) ([]model.Event, int)
-	OverwriteEventProperties(projectId int64, userId string, eventId string, newEventProperties *postgres.Jsonb) int
-	OverwriteEventPropertiesByID(projectId int64, id string, newEventProperties *postgres.Jsonb) int
-	AddSessionForUser(projectId int64, userId string, userEvents []model.Event, bufferTimeBeforeSessionCreateInSecs int64, sessionEventNameId string) (int, int, bool, int, int)
+	OverwriteEventProperties(projectID int64, userId string, eventId string, newEventProperties *postgres.Jsonb) int
+	OverwriteEventPropertiesByID(projectID int64, id string, newEventProperties *postgres.Jsonb) int
+	AddSessionForUser(projectID int64, userId string, userEvents []model.Event, bufferTimeBeforeSessionCreateInSecs int64, sessionEventNameId string) (int, int, bool, int, int)
 	GetDatesForNextEventsArchivalBatch(projectID int64, startTime int64) (map[string]int64, int)
-	GetAllEventsForSessionCreationAsUserEventsMap(projectId int64, sessionEventNameId string, startTimestamp, endTimestamp int64) (*map[string][]model.Event, int, int)
+	GetAllEventsForSessionCreationAsUserEventsMap(projectID int64, sessionEventNameId string, startTimestamp, endTimestamp int64) (*map[string][]model.Event, int, int)
 	GetEventsWithoutPropertiesAndWithPropertiesByNameForYourStory(projectID int64, from, to int64, mandatoryProperties []string) ([]model.EventWithProperties, *map[string]U.PropertiesMap, int)
 	OverwriteEventUserPropertiesByID(projectID int64, userID, id string, properties *postgres.Jsonb) int
-	PullEventRowsForBuildSequenceJob(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error)
+	PullEventRows(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error)
+	PullAdwordsRows(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error)
+	PullFacebookRows(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error)
+	PullBingAdsRows(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error)
+	PullLinkedInRows(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error)
+	PullGoogleOrganicRows(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error)
 	PullEventRowsForArchivalJob(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error)
 	GetUnusedSessionIDsForJob(projectID int64, startTimestamp, endTimestamp int64) ([]string, int)
 	DeleteEventsByIDsInBatchForJob(projectID int64, eventNameID string, ids []string, batchSize int) int
 	DeleteEventByIDs(projectID int64, eventNameID string, ids []string) int
-	AssociateSessionByEventIds(projectId int64, userID string, events []*model.Event, sessionId string, sessionEventNameId string) int
+	AssociateSessionByEventIds(projectID int64, userID string, events []*model.Event, sessionId string, sessionEventNameId string) int
 	GetHubspotFormEvents(projectID int64, userId string, timestamps []interface{}) ([]model.Event, int)
 
 	// facebook_document
