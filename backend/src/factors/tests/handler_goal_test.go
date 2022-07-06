@@ -475,7 +475,7 @@ func TestCreateFactorsGoalHandler(t *testing.T) {
 	goals = []model.FactorsGoal{}
 	jsonResponse, _ = ioutil.ReadAll(w.Body)
 	json.Unmarshal(jsonResponse, &goals)
-	assert.Equal(t, successFactorsGoalIds[0], int64(goals[0].ID))
+	assert.Equal(t, successFactorsGoalIds[len(successFactorsGoalIds)-1], int64(goals[0].ID))
 	assert.Equal(t, false, goals[0].IsActive)
 	assert.Equal(t, false, goals[1].IsActive)
 	assert.Equal(t, false, goals[2].IsActive)

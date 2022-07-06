@@ -21,7 +21,7 @@ func IsAdmin(ProjectID int64, loggedInAgentUUID string) bool {
 	return true
 }
 
-func IsDemoProjectInAuthorizedProjects(authorizedProjects []uint64, id string) bool {
+func IsDemoProjectInAuthorizedProjects(authorizedProjects []int64, id string) bool {
 	for _, project := range authorizedProjects {
 		projectString := fmt.Sprintf("%v", project)
 		if projectString == id {

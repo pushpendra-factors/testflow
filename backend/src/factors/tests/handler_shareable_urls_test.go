@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 	"time"
 
@@ -180,7 +181,8 @@ func TestAPIGetShareableURLsHandler(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, w.Code)
 
 	responseMap := DecodeJSONResponseToMap(w.Body)
-	queryId := int64(responseMap["id"].(float64))
+	queryIdNum, _ := strconv.Atoi(responseMap["id"].(string))
+	queryId := int64(queryIdNum)
 
 	w = sendCreateShareableUrlReq(r, project.ID, agent1, &H.ShareableURLParams{
 		EntityID:        queryId,
@@ -289,7 +291,8 @@ func TestAPICreateShareableURLHandler(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, w.Code)
 
 	responseMap := DecodeJSONResponseToMap(w.Body)
-	queryId := int64(responseMap["id"].(float64))
+	queryIdNum, _ := strconv.Atoi(responseMap["id"].(string))
+	queryId := int64(queryIdNum)
 
 	shareableUrl := &H.ShareableURLParams{
 		EntityID:        queryId,
@@ -410,7 +413,8 @@ func TestAPIDeleteShareableURLHandler(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, w.Code)
 
 	responseMap := DecodeJSONResponseToMap(w.Body)
-	queryId := int64(responseMap["id"].(float64))
+	queryIdNum, _ := strconv.Atoi(responseMap["id"].(string))
+	queryId := int64(queryIdNum)
 	shareString := responseMap["id_text"].(string)
 
 	shareableUrl := &H.ShareableURLParams{
@@ -495,7 +499,8 @@ func TestAPIRevokeAllShareableURLHandler(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, w.Code)
 
 	responseMap := DecodeJSONResponseToMap(w.Body)
-	queryId := int64(responseMap["id"].(float64))
+	queryIdNum, _ := strconv.Atoi(responseMap["id"].(string))
+	queryId := int64(queryIdNum)
 	shareString1 := responseMap["id_text"].(string)
 
 	w = sendCreateShareableUrlReq(r, project.ID, admin, &H.ShareableURLParams{
@@ -514,7 +519,8 @@ func TestAPIRevokeAllShareableURLHandler(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, w.Code)
 
 	responseMap = DecodeJSONResponseToMap(w.Body)
-	queryId = int64(responseMap["id"].(float64))
+	queryIdNum, _ = strconv.Atoi(responseMap["id"].(string))
+	queryId = int64(queryIdNum)
 	shareString2 := responseMap["id_text"].(string)
 
 	w = sendCreateShareableUrlReq(r, project.ID, admin, &H.ShareableURLParams{
@@ -626,7 +632,8 @@ func TestAPIRevokeShareableURLHandler(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, w.Code)
 
 	responseMap := DecodeJSONResponseToMap(w.Body)
-	queryId := int64(responseMap["id"].(float64))
+	queryIdNum, _ := strconv.Atoi(responseMap["id"].(string))
+	queryId := int64(queryIdNum)
 	shareString := responseMap["id_text"].(string)
 
 	w = sendCreateShareableUrlReq(r, project.ID, agent, &H.ShareableURLParams{

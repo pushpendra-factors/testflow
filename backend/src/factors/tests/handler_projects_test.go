@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 	"time"
 
@@ -104,7 +105,7 @@ func TestAPICreateProject(t *testing.T) {
 		jsonResponse, _ := ioutil.ReadAll(w.Body)
 		var jsonResponseMap map[string]interface{}
 		json.Unmarshal(jsonResponse, &jsonResponseMap)
-		assert.NotEqual(t, 0, jsonResponseMap["id"])
+		assert.NotEqual(t, "", jsonResponseMap["id"])
 		assert.Equal(t, projectName, jsonResponseMap["name"].(string))
 		assert.Equal(t, "factors.ai", jsonResponseMap["project_uri"].(string))
 		assert.Equal(t, "HH:mm:ss", jsonResponseMap["time_format"].(string))
@@ -121,7 +122,8 @@ func TestAPICreateProject(t *testing.T) {
 		assert.Nil(t, jsonResponseMap["hubspot_touch_points"])
 		assert.Equal(t, 17, len(jsonResponseMap))
 
-		project, status := store.GetStore().GetProject(int64(jsonResponseMap["id"].(float64)))
+		id, _ := strconv.Atoi(jsonResponseMap["id"].(string))
+		project, status := store.GetStore().GetProject(int64(id))
 		assert.Equal(t, http.StatusFound, status)
 		// The project name should match exactly by case.
 		assert.Equal(t, projectName, project.Name)
@@ -192,7 +194,7 @@ func TestAPIEditProject(t *testing.T) {
 		jsonResponse, _ := ioutil.ReadAll(w.Body)
 		var jsonResponseMap map[string]interface{}
 		json.Unmarshal(jsonResponse, &jsonResponseMap)
-		assert.NotEqual(t, 0, jsonResponseMap["id"])
+		assert.NotEqual(t, "", jsonResponseMap["id"])
 		assert.Equal(t, projectName, jsonResponseMap["name"].(string))
 		assert.Equal(t, "factors.ai", jsonResponseMap["project_uri"].(string))
 		assert.Equal(t, "HH:mm:ss", jsonResponseMap["time_format"].(string))
@@ -208,11 +210,12 @@ func TestAPIEditProject(t *testing.T) {
 		assert.Nil(t, jsonResponseMap["salesforce_touch_points"])
 		assert.Nil(t, jsonResponseMap["hubspot_touch_points"])
 		assert.Equal(t, 17, len(jsonResponseMap))
-		w = sendEditProjectRequest(r, int64(jsonResponseMap["id"].(float64)), "edit", agent)
+		id, _ := strconv.Atoi(jsonResponseMap["id"].(string))
+		w = sendEditProjectRequest(r, int64(id), "edit", agent)
 		assert.Equal(t, http.StatusCreated, w.Code)
 		jsonResponse, _ = ioutil.ReadAll(w.Body)
 		json.Unmarshal(jsonResponse, &jsonResponseMap)
-		assert.NotEqual(t, 0, jsonResponseMap["id"])
+		assert.NotEqual(t, "", jsonResponseMap["id"])
 		assert.Equal(t, "edit", jsonResponseMap["name"].(string))
 		assert.Equal(t, "factors.ai.edit", jsonResponseMap["project_uri"].(string))
 		assert.Equal(t, "HH:mm:ss.edit", jsonResponseMap["time_format"].(string))
@@ -227,7 +230,8 @@ func TestAPIEditProject(t *testing.T) {
 		assert.Nil(t, jsonResponseMap["salesforce_touch_points"])
 		assert.Nil(t, jsonResponseMap["hubspot_touch_points"])
 		assert.Equal(t, 17, len(jsonResponseMap))
-		w = sendEditProjectRequest(r, int64(jsonResponseMap["id"].(float64)), "edit@@", agent)
+		id, _ = strconv.Atoi(jsonResponseMap["id"].(string))
+		w = sendEditProjectRequest(r, int64(id), "edit@@", agent)
 		assert.Equal(t, http.StatusBadRequest, w.Code)
 	})
 }
@@ -250,7 +254,8 @@ func TestAccessControl(t *testing.T) {
 		jsonResponse, _ := ioutil.ReadAll(w.Body)
 		var jsonResponseMap map[string]interface{}
 		json.Unmarshal(jsonResponse, &jsonResponseMap)
-		demoProjectId := int64(jsonResponseMap["id"].(float64))
+		id, _ := strconv.Atoi(jsonResponseMap["id"].(string))
+		demoProjectId := int64(id)
 
 		projectName1 := "Test Project"
 		agent1, errCode1 := SetupAgentReturnDAO(getRandomEmail(), "+12345678")
@@ -260,7 +265,8 @@ func TestAccessControl(t *testing.T) {
 		jsonResponse1, _ := ioutil.ReadAll(w1.Body)
 		var jsonResponseMap1 map[string]interface{}
 		json.Unmarshal(jsonResponse1, &jsonResponseMap1)
-		agentProjectId := int64(jsonResponseMap1["id"].(float64))
+		id, _ = strconv.Atoi(jsonResponseMap1["id"].(string))
+		agentProjectId := int64(id)
 
 		var trueFlag = true
 		C.GetConfig().EnableDemoReadAccess = &trueFlag

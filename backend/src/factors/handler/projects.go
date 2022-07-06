@@ -202,7 +202,7 @@ func GetProjectsHandler(c *gin.Context) {
 		}
 
 		for _, project := range trimmedDemoProjects {
-			if !H.IsDemoProjectInAuthorizedProjects(authorizedProjects.([]uint64), fmt.Sprintf("%v", project.ID)) {
+			if !H.IsDemoProjectInAuthorizedProjects(authorizedProjects.([]int64), fmt.Sprintf("%v", project.ID)) {
 				projects = append(projects, project)
 			}
 		}

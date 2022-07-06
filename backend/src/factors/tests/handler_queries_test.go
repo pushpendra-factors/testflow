@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 	"time"
 
@@ -289,7 +290,8 @@ func TestAPIUpdateSavedQueryHandler(t *testing.T) {
 
 	responseMap := DecodeJSONResponseToMap(w.Body)
 
-	queryId := int64(responseMap["id"].(float64))
+	queryIdNum, _ := strconv.Atoi(responseMap["id"].(string))
+	queryId := int64(queryIdNum)
 	rTitle1 := U.RandomString(5)
 
 	w = sendUpdateSavedQueryReq(r, project.ID, queryId, agent, &H.SavedQueryUpdatePayload{Title: rTitle1})
@@ -334,7 +336,8 @@ func TestAPIDeleteSavedQueryHandler(t *testing.T) {
 
 	responseMap := DecodeJSONResponseToMap(w.Body)
 
-	queryId := int64(responseMap["id"].(float64))
+	queryIdNum, _ := strconv.Atoi(responseMap["id"].(string))
+	queryId := int64(queryIdNum)
 	shareString := responseMap["id_text"].(string)
 
 	// Create public shareable url
@@ -396,7 +399,8 @@ func TestAPIGetQueriesHandler(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, w.Code)
 	responseMap := DecodeJSONResponseToMap(w.Body)
 
-	queryId := int64(responseMap["id"].(float64))
+	queryIdNum, _ := strconv.Atoi(responseMap["id"].(string))
+	queryId := int64(queryIdNum)
 	shareString := responseMap["id_text"].(string)
 
 	// Get query without agent
