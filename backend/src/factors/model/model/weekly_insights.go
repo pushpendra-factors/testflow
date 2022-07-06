@@ -6,7 +6,7 @@ import (
 
 type WeeklyInsightsMetadata struct {
 	ID                  string    `gorm:"primary_key:true;type:uuid;default:uuid_generate_v4()" json:"id"`
-	ProjectId           uint64    `json:"project_id"`
+	ProjectId           int64     `json:"project_id"`
 	QueryId             int64     `json:"query_id"`
 	InsightType         string    `json:"insight_type"`
 	BaseStartTime       int64     `json:"base_start_time"`

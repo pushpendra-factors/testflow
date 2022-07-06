@@ -58,7 +58,7 @@ func getOp(OpStr string, typeStr string) string {
 	return v
 }
 
-func getPropertyEntityField(projectID uint64, groupProp model.QueryGroupByProperty) string {
+func getPropertyEntityField(projectID int64, groupProp model.QueryGroupByProperty) string {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"group_prop": groupProp,
@@ -118,7 +118,7 @@ func isValidLogicalOp(op string) bool {
 	return op == "AND" || op == "OR"
 }
 
-func buildWhereFromProperties(projectID uint64, properties []model.QueryProperty,
+func buildWhereFromProperties(projectID int64, properties []model.QueryProperty,
 	fromTimestamp int64) (rStmnt string, rParams []interface{}, err error) {
 	logFields := log.Fields{
 		"project_id":     projectID,
@@ -283,7 +283,7 @@ func GetDateFilter(qP model.QueryProperty, propertyEntity string, property strin
 	return stmt, resultParams, nil
 }
 
-func getEventsFilterJoinStatement(projectID uint64,
+func getEventsFilterJoinStatement(projectID int64,
 	eventLevelProperties []model.QueryProperty, fromTimestamp int64) string {
 	logFields := log.Fields{
 		"project_id":             projectID,
@@ -305,7 +305,7 @@ func getEventsFilterJoinStatement(projectID uint64,
 	return joinStmnt
 }
 
-func getUsersFilterJoinStatement(projectID uint64,
+func getUsersFilterJoinStatement(projectID int64,
 	globalUserProperties []model.QueryProperty) string {
 	logFields := log.Fields{
 		"project_id":             projectID,
@@ -327,7 +327,7 @@ func getUsersFilterJoinStatement(projectID uint64,
 }
 
 // returns SQL query condition to address conditions only on events.properties
-func getFilterSQLStmtForEventProperties(projectID uint64, properties []model.QueryProperty,
+func getFilterSQLStmtForEventProperties(projectID int64, properties []model.QueryProperty,
 	fromTimestamp int64) (rStmnt string, rParams []interface{}, joinStmnt string, err error) {
 	logFields := log.Fields{
 		"project_id":      projectID,
@@ -352,7 +352,7 @@ func getFilterSQLStmtForEventProperties(projectID uint64, properties []model.Que
 }
 
 // returns SQL query condition to address conditions for Users.properties
-func getFilterSQLStmtForLatestUserProperties(projectID uint64,
+func getFilterSQLStmtForLatestUserProperties(projectID int64,
 	properties []model.QueryProperty, fromTimestamp int64) (
 	rStmnt string, rParams []interface{}, err error) {
 	logFields := log.Fields{
@@ -378,7 +378,7 @@ func getFilterSQLStmtForLatestUserProperties(projectID uint64,
 }
 
 // returns SQL query condition to address conditions only on user_properties.properties
-func getFilterSQLStmtForUserProperties(projectID uint64,
+func getFilterSQLStmtForUserProperties(projectID int64,
 	properties []model.QueryProperty, fromTimestamp int64) (
 	rStmnt string, rParams []interface{}, joinStmnt string, err error) {
 	logFields := log.Fields{
@@ -461,7 +461,7 @@ ELSE date_trunc('day', to_timestamp((events.properties->>'check_Timestamp')::num
 WHERE events.project_id='1' AND timestamp>='1602527400' AND timestamp<='1602576868' AND events.event_name_id IN
 (SELECT id FROM event_names WHERE project_id='1' AND name='factors-dev.com:3000/#/settings') GROUP BY _group_key_0 ORDER BY count DESC LIMIT 100
 */
-func getNoneHandledGroupBySelect(projectID uint64, groupProp model.QueryGroupByProperty, groupKey string, timezoneString string) (string, []interface{}) {
+func getNoneHandledGroupBySelect(projectID int64, groupProp model.QueryGroupByProperty, groupKey string, timezoneString string) (string, []interface{}) {
 	logFields := log.Fields{
 		"project_id":      projectID,
 		"group_prop":      groupProp,
@@ -485,7 +485,7 @@ func getNoneHandledGroupBySelect(projectID uint64, groupProp model.QueryGroupByP
 	}
 	return groupSelect, groupSelectParams
 }
-func getNoneHandledGroupBySelectWithFirst(projectID uint64, groupProp model.QueryGroupByProperty, groupKey string, timezoneString string) (string, []interface{}) {
+func getNoneHandledGroupBySelectWithFirst(projectID int64, groupProp model.QueryGroupByProperty, groupKey string, timezoneString string) (string, []interface{}) {
 	logFields := log.Fields{
 		"project_id":      projectID,
 		"group_prop":      groupProp,
@@ -515,7 +515,7 @@ func getNoneHandledGroupBySelectWithFirst(projectID uint64, groupProp model.Quer
 // How to use?
 // select user_properties.properties->>'age' as gk_1, events.properties->>'category' as gk_2 from events
 // group by gk_1, gk_2
-func buildGroupKeys(projectID uint64, groupProps []model.QueryGroupByProperty, timezoneString string) (groupSelect string,
+func buildGroupKeys(projectID int64, groupProps []model.QueryGroupByProperty, timezoneString string) (groupSelect string,
 	groupSelectParams []interface{}, groupKeys string) {
 	logFields := log.Fields{
 		"project_id":      projectID,
@@ -541,7 +541,7 @@ func buildGroupKeys(projectID uint64, groupProps []model.QueryGroupByProperty, t
 
 	return groupSelect, groupSelectParams, groupKeys
 }
-func buildGroupKeysWithFirst(projectID uint64, groupProps []model.QueryGroupByProperty, timezoneString string) (groupSelect string,
+func buildGroupKeysWithFirst(projectID int64, groupProps []model.QueryGroupByProperty, timezoneString string) (groupSelect string,
 	groupSelectParams []interface{}, groupKeys string) {
 	logFields := log.Fields{
 		"project_id":      projectID,
@@ -705,7 +705,7 @@ func buildEventGroupKeysWithStep(groupProps []model.QueryGroupByProperty,
 // ORDER BY coal_user_id, events.timestamp ASC) , each_users_union AS (SELECT step_0.event_user_id, step_0.coal_user_id, step_0.event_name, FROM step_0)
 // SELECT event_name, _group_key_0, _group_key_1, COUNT(DISTINCT(coal_user_id)) AS count FROM each_users_union GROUP BY event_name ,
 // _group_key_0, _group_key_1 ORDER BY count DESC LIMIT 100000;
-func addFilterEventsWithPropsQuery(projectId uint64, qStmnt *string, qParams *[]interface{},
+func addFilterEventsWithPropsQuery(projectId int64, qStmnt *string, qParams *[]interface{},
 	qep model.QueryEventWithProperties, from int64, to int64, fromStr string,
 	stepName string, addSelecStmnt string, addSelectParams []interface{},
 	addJoinStmnt string, groupBy string, orderBy string, globalUserFilter []model.QueryProperty) error {
@@ -911,7 +911,7 @@ func hasGroupEntity(props []model.QueryGroupByProperty, entity string) bool {
 	return false
 }
 
-func addJoinLatestUserPropsQuery(projectID uint64, groupProps []model.QueryGroupByProperty,
+func addJoinLatestUserPropsQuery(projectID int64, groupProps []model.QueryGroupByProperty,
 	refStepName string, stepName string, qStmnt *string, qParams *[]interface{}, addSelect string, timeZone string) string {
 	logFields := log.Fields{
 		"project_id":    projectID,
@@ -981,7 +981,7 @@ func appendOrderByAggr(qStmnt string) string {
 	return fmt.Sprintf("%s ORDER BY %s DESC", qStmnt, model.AliasAggr)
 }
 
-func appendOrderByAggrAndGroupKeys(projectID uint64, qStmnt string, groupBys []model.QueryGroupByProperty, timeZone string) string {
+func appendOrderByAggrAndGroupKeys(projectID int64, qStmnt string, groupBys []model.QueryGroupByProperty, timeZone string) string {
 	logFields := log.Fields{
 		"q_stmnt":    qStmnt,
 		"project_id": projectID,
@@ -1352,7 +1352,7 @@ func getQueryCacheRedisKeySuffix(hashString string, from, to int64, timezoneStri
 
 // GetQueryResultFromCache To get value from cache for a particular query payload.
 // resultContainer to be passed by reference.
-func GetQueryResultFromCache(projectID uint64, query model.BaseQuery, resultContainer interface{}) (model.QueryCacheResult, int) {
+func GetQueryResultFromCache(projectID int64, query model.BaseQuery, resultContainer interface{}) (model.QueryCacheResult, int) {
 	logFields := log.Fields{
 		"projected_id":     projectID,
 		"query":            query,
@@ -1581,7 +1581,7 @@ func isValidFunnelQuery(query *model.Query) bool {
 	return len(query.EventsWithProperties) <= 10
 }
 
-func (store *MemSQL) Analyze(projectId uint64, queryOriginal model.Query) (*model.QueryResult, int, string) {
+func (store *MemSQL) Analyze(projectId int64, queryOriginal model.Query) (*model.QueryResult, int, string) {
 	logFields := log.Fields{
 		"project_id":     projectId,
 		"query_original": queryOriginal,

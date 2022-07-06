@@ -28,7 +28,7 @@ func getEnrichedProperties(sourceAlias, typeAlias string, properties *map[string
 	return &enProperties
 }
 
-func getUserCustomerUserID(projectID uint64, crmUser *model.CRMUser) string {
+func getUserCustomerUserID(projectID int64, crmUser *model.CRMUser) string {
 	for _, indentifier := range model.GetIdentifierPrecendenceOrderByProjectID(projectID) {
 		if indentifier == model.IdentificationTypePhone && crmUser.Phone != "" {
 			return crmUser.Phone
@@ -75,7 +75,7 @@ func GetCRMEventNameByAction(source, objectType string, action model.CRMAction) 
 	return ""
 }
 
-func createOrGetUserByAction(projectID uint64, sourceAlias string, id string, userType int, action model.CRMAction, timestamp int64,
+func createOrGetUserByAction(projectID int64, sourceAlias string, id string, userType int, action model.CRMAction, timestamp int64,
 	customerUserID string) (string, error) {
 	if action == model.CRMActionCreated {
 		createUserID, status := store.GetStore().CreateUser(&model.User{

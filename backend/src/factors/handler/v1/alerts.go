@@ -7,12 +7,13 @@ import (
 	"factors/model/store"
 	U "factors/util"
 	"net/http"
+
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 )
 
 func CreateAlertHandler(c *gin.Context) (interface{}, int, string, string, bool) {
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		return nil, http.StatusUnauthorized, INVALID_PROJECT, ErrorMessages[INVALID_PROJECT], true
 	}
@@ -37,7 +38,7 @@ func CreateAlertHandler(c *gin.Context) (interface{}, int, string, string, bool)
 }
 
 func GetAlertsHandler(c *gin.Context) (interface{}, int, string, string, bool) {
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		log.Error("Get Alerts Failed, failed to parse project ID.")
 		return nil, http.StatusUnauthorized, INVALID_PROJECT, ErrorMessages[INVALID_PROJECT], true
@@ -50,7 +51,7 @@ func GetAlertsHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 }
 
 func GetAlertByIDHandler(c *gin.Context) (interface{}, int, string, string, bool) {
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		log.Error("Failed to get alert, failed to parse Project")
 		return nil, http.StatusUnauthorized, INVALID_PROJECT, ErrorMessages[INVALID_PROJECT], true
@@ -69,7 +70,7 @@ func GetAlertByIDHandler(c *gin.Context) (interface{}, int, string, string, bool
 }
 
 func DeleteAlertHandler(c *gin.Context) (interface{}, int, string, string, bool) {
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		log.Error("Failed to delete alert, ProjectId parse failed.")
 		return nil, http.StatusUnauthorized, INVALID_PROJECT, ErrorMessages[INVALID_PROJECT], true
@@ -84,7 +85,7 @@ func DeleteAlertHandler(c *gin.Context) (interface{}, int, string, string, bool)
 	errCode, errMsg := store.GetStore().DeleteAlert(alertID, projectID)
 	if errCode != http.StatusAccepted {
 		log.Error("failed to delete alert" + errMsg)
-		return nil, errCode, PROCESSING_FAILED, "Failed to delete alert " , true
+		return nil, errCode, PROCESSING_FAILED, "Failed to delete alert ", true
 	}
 	return nil, http.StatusOK, "", "", false
 }

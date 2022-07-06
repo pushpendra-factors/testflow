@@ -68,14 +68,14 @@ func TestGetProjectsUnderBillingAccount(t *testing.T) {
 	project, errCode := store.GetStore().CreateProjectWithDependencies(&model.Project{Name: U.RandomString(6)}, td.Agent.UUID, model.ADMIN, td.BillingAccount.ID, true)
 	assert.Equal(t, http.StatusCreated, errCode)
 
-	expProjectIDs := []uint64{td.Project.ID, project.ID}
+	expProjectIDs := []int64{td.Project.ID, project.ID}
 	sort.Slice(expProjectIDs, func(i, j int) bool { return expProjectIDs[i] < expProjectIDs[j] })
 
 	resProjects, errCode := store.GetStore().GetProjectsUnderBillingAccountID(td.BillingAccount.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Equal(t, 2, len(resProjects))
 
-	resProjectIDs := []uint64{resProjects[0].ID, resProjects[1].ID}
+	resProjectIDs := []int64{resProjects[0].ID, resProjects[1].ID}
 	sort.Slice(resProjectIDs, func(i, j int) bool { return resProjectIDs[i] < resProjectIDs[j] })
 	assert.Equal(t, expProjectIDs, resProjectIDs)
 
@@ -93,7 +93,7 @@ func TestGetAgentsByProjectIDs(t *testing.T) {
 
 	expAgentsUUID := []string{td.Agent.UUID, agent2.UUID}
 
-	agents, errCode := store.GetStore().GetAgentsByProjectIDs([]uint64{td.Project.ID, project2.ID})
+	agents, errCode := store.GetStore().GetAgentsByProjectIDs([]int64{td.Project.ID, project2.ID})
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Equal(t, 2, len(agents))
 

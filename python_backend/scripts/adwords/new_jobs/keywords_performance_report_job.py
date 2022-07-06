@@ -35,6 +35,8 @@ class NewKeywordPerformanceReportsJob(ReportsFetch):
         "metrics.search_rank_lost_absolute_top_impression_share",
         "metrics.search_rank_lost_impression_share",
         "metrics.search_rank_lost_top_impression_share",
+        "metrics.absolute_top_impression_percentage",
+        "metrics.top_impression_percentage",
 
         "ad_group_criterion.criterion_id",
         "ad_group.id",
@@ -58,7 +60,55 @@ class NewKeywordPerformanceReportsJob(ReportsFetch):
         "ad_group_criterion.quality_info.quality_score",
     ]
 
-    HEADERS_VMAX = [
+    HEADERS_V02 = [
+        "cost_per_conversion",
+        "all_conversion_value",
+        "all_conversions",
+        "cost",
+        "average_cost",
+        "average_cpc",
+        "average_cpm",
+        "average_cpv",
+        "average_pageviews",
+        "average_time_on_site",
+        "clicks",
+        "conversions",
+        "ctr",
+        "impressions",
+        "search_impression_share",
+        "search_top_impression_share",
+        "search_absolute_top_impression_share",
+        "search_budget_lost_absolute_top_impression_share",
+        "search_budget_lost_top_impression_share",
+        "search_rank_lost_absolute_top_impression_share",
+        "search_rank_lost_impression_share",
+        "search_rank_lost_top_impression_share",
+        "absolute_top_impression_percentage",
+        "top_impression_percentage",
+
+        "id",
+        "ad_group_id",
+        "campaign_id",
+
+        "ad_group_name",
+        "ad_group_status",
+        "campaign_name",
+        "campaign_status",
+        "labels",
+        "approval_status",
+        "criteria",
+        "keyword_match_type",
+        "is_negative",
+        "status",
+        "cpc_bid",
+        "cpc_bid_source",
+        "first_position_cpc",
+        "first_page_cpc",
+        "top_of_page_cpc",
+        "quality_score",
+    ]
+
+    HEADERS_V01 = [
         "cost_per_conversion",
         "all_conversion_value",
         "all_conversions",
@@ -120,6 +170,8 @@ class NewKeywordPerformanceReportsJob(ReportsFetch):
         "ad_group_name", "ad_group_status", "campaign_name", "campaign_status", "labels",
         "approval_status", "average_position", "criteria", "keyword_match_type", "is_negative", "status",
         "cpc_bid", "cpc_bid_source", "first_position_cpc", "first_page_cpc", "top_of_page_cpc", "quality_score"]
+
+    HEADERS_VMAX = HEADERS_V02
 
     REPORT = "keyword_view"
 

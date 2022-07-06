@@ -61,7 +61,7 @@ func ProfilesQueryHandler(c *gin.Context) (interface{}, int, string, string, boo
 	}
 	r := c.Request
 
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		logCtx.Error("Query failed. Invalid project.")
 		return nil, http.StatusUnauthorized, V1.INVALID_PROJECT, "Query failed. Invalid project.", true
@@ -184,9 +184,13 @@ func ProfilesQueryHandler(c *gin.Context) (interface{}, int, string, string, boo
 			"error": "Query failed. Not found in cache. Suspended db execution."})
 	}*/
 
+	// Use optimised filter for profiles query if enabled using header or configuration.
+	enableOptimisedFilter := c.Request.Header.Get("Use-Filter-Opt-Profiles") == "true" ||
+		C.EnableOptimisedFilterOnProfileQuery()
+
 	model.SetQueryCachePlaceholder(projectID, &profileQueryGroup)
 	H.SleepIfHeaderSet(c)
-	resultGroup, errCode := store.GetStore().RunProfilesGroupQuery(profileQueryGroup.Queries, projectID)
+	resultGroup, errCode := store.GetStore().RunProfilesGroupQuery(profileQueryGroup.Queries, projectID, enableOptimisedFilter)
 	if errCode != http.StatusOK {
 		model.DeleteQueryCacheKey(projectID, &profileQueryGroup)
 		logCtx.Error("Profile Query failed. Failed to process query from DB")

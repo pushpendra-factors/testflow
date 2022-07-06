@@ -11,7 +11,7 @@ var (
 		SalesforceDocumentTypeNameOpportunity: nil,
 	}
 
-	SalesforceProjectStore = map[uint64]map[string]map[string]bool{
+	SalesforceProjectStore = map[int64]map[string]map[string]bool{
 		483: designcafeAllowedObjects,
 	}
 
@@ -50,7 +50,7 @@ var (
 		SalesforceDocumentTypeNameOpportunity: {"Email__c"},
 	}
 
-	SalesforceProjectIdentificationFieldStore = map[uint64]map[string][]string{
+	SalesforceProjectIdentificationFieldStore = map[int64]map[string][]string{
 		483: DesignCafeIdentificationField,
 		566: MoEngageIdentificationField,
 		587: MercosIdentificationField,
@@ -58,7 +58,7 @@ var (
 )
 
 //GetSalesforceEmailFieldByProjectIDAndObjectName return email indentification field by project, returns standard identification field if no configuration found
-func GetSalesforceEmailFieldByProjectIDAndObjectName(projectID uint64, objectName string, projectIdentificationFieldStore *map[uint64]map[string][]string) []string {
+func GetSalesforceEmailFieldByProjectIDAndObjectName(projectID int64, objectName string, projectIdentificationFieldStore *map[int64]map[string][]string) []string {
 	if projectID == 0 || objectName == "" {
 		return nil
 	}
@@ -73,7 +73,7 @@ func GetSalesforceEmailFieldByProjectIDAndObjectName(projectID uint64, objectNam
 }
 
 //GetSalesforcePhoneFieldByProjectIDAndObjectName return phone indentification field by project, returns standard identification field if no configuration found
-func GetSalesforcePhoneFieldByProjectIDAndObjectName(projectID uint64, objectName string, projectIdentificationFieldStore *map[uint64]map[string][]string) []string {
+func GetSalesforcePhoneFieldByProjectIDAndObjectName(projectID int64, objectName string, projectIdentificationFieldStore *map[int64]map[string][]string) []string {
 	if projectID == 0 || objectName == "" {
 		return nil
 	}
@@ -89,7 +89,7 @@ func GetSalesforcePhoneFieldByProjectIDAndObjectName(projectID uint64, objectNam
 }
 
 // GetSalesforceAllowedObjects return allowed object type for a project
-func GetSalesforceAllowedObjects(projectID uint64) []int {
+func GetSalesforceAllowedObjects(projectID int64) []int {
 	var docTypes []int
 	if projectID == 0 {
 		return docTypes
@@ -117,7 +117,7 @@ func GetSalesforceAllowedObjects(projectID uint64) []int {
 }
 
 // GetSalesforceAllowedfiedsByObject return list of allowed field for a project
-func GetSalesforceAllowedfiedsByObject(projectID uint64, objectName string) map[string]bool {
+func GetSalesforceAllowedfiedsByObject(projectID int64, objectName string) map[string]bool {
 	if projectID == 0 {
 		return nil
 	}

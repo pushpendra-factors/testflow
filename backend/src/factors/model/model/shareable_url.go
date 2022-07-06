@@ -15,7 +15,7 @@ type ShareableURL struct {
 	UpdatedAt time.Time `json:"updated_at"`
 	IsDeleted bool      `gorm:"not null;default:false" json:"is_deleted"`
 	ExpiresAt int64     `json:"expires_at"`
-	ProjectID uint64    `gorm:"not null" json:"project_id"`
+	ProjectID int64     `gorm:"not null" json:"project_id"`
 	CreatedBy string    `gorm:"not null;type:varchar(255)" json:"created_by"`
 }
 

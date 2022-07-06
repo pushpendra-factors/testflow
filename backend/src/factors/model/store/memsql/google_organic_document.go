@@ -1,6 +1,7 @@
 package memsql
 
 import (
+	"database/sql"
 	"errors"
 	C "factors/config"
 	"factors/model/model"
@@ -66,7 +67,7 @@ func (store *MemSQL) buildObjectAndPropertiesForGoogleOrganic(objects []string) 
 	return objectsAndProperties
 }
 
-func (store *MemSQL) IsGoogleOrganicIntegrationAvailable(projectID uint64) bool {
+func (store *MemSQL) IsGoogleOrganicIntegrationAvailable(projectID int64) bool {
 	projectSetting, errCode := store.GetProjectSetting(projectID)
 	if errCode != http.StatusFound {
 		return false
@@ -78,7 +79,7 @@ func (store *MemSQL) IsGoogleOrganicIntegrationAvailable(projectID uint64) bool 
 	}
 	return true
 }
-func (store *MemSQL) GetGoogleOrganicFilterValues(projectID uint64, requestFilterObject string, requestFilterProperty string, reqID string) ([]interface{}, int) {
+func (store *MemSQL) GetGoogleOrganicFilterValues(projectID int64, requestFilterObject string, requestFilterProperty string, reqID string) ([]interface{}, int) {
 	logFields := log.Fields{
 		"project_id":              projectID,
 		"request_filter_object":   requestFilterObject,
@@ -128,7 +129,7 @@ func (store *MemSQL) GetAllGoogleOrganicLastSyncInfoForAllProjects() ([]model.Go
 	return sanitizedLastSyncInfosGoogleOrganic(googleOrganicLastSyncInfos, googleOrganicSettings)
 }
 
-func (store *MemSQL) GetGoogleOrganicLastSyncInfoForProject(projectID uint64) ([]model.GoogleOrganicLastSyncInfo, int) {
+func (store *MemSQL) GetGoogleOrganicLastSyncInfoForProject(projectID int64) ([]model.GoogleOrganicLastSyncInfo, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
@@ -183,7 +184,7 @@ func sanitizedLastSyncInfosGoogleOrganic(googleOrganicLastSyncInfos []model.Goog
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
-	googleOrganicSettingsByProjectAndURL := make(map[uint64]map[string]*model.GoogleOrganicProjectSettings)
+	googleOrganicSettingsByProjectAndURL := make(map[int64]map[string]*model.GoogleOrganicProjectSettings)
 
 	for i := range googleOrganicSettings {
 		URLs := strings.Split(googleOrganicSettings[i].URLPrefix, ",")
@@ -199,7 +200,7 @@ func sanitizedLastSyncInfosGoogleOrganic(googleOrganicLastSyncInfos []model.Goog
 	}
 
 	// add settings for project_id existing on googleOrganic documents.
-	existingProjectAndURLWithTypes := make(map[uint64]map[string]map[int64]bool)
+	existingProjectAndURLWithTypes := make(map[int64]map[string]map[int64]bool)
 	selectedLastSyncInfos := make([]model.GoogleOrganicLastSyncInfo, 0)
 
 	for i := range googleOrganicLastSyncInfos {
@@ -382,7 +383,7 @@ func addColumnInformationForGoogleOrganicDocument(googleOrganicDocument *model.G
 	return http.StatusOK
 }
 
-func (store *MemSQL) ExecuteGoogleOrganicChannelQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string) ([]string, [][]interface{}, int) {
+func (store *MemSQL) ExecuteGoogleOrganicChannelQueryV1(projectID int64, query *model.ChannelQueryV1, reqID string) ([]string, [][]interface{}, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"query":      query,
@@ -493,7 +494,7 @@ func buildWhereConditionForGBTForSearchConsole(groupByCombinations []map[string]
 }
 
 // GetSQLQueryAndParametersForGoogleOrganicQueryV1 ...
-func (store *MemSQL) GetSQLQueryAndParametersForGoogleOrganicQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string, int) {
+func (store *MemSQL) GetSQLQueryAndParametersForGoogleOrganicQueryV1(projectID int64, query *model.ChannelQueryV1, reqID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string, int) {
 	logFields := log.Fields{
 		"project_id":                    projectID,
 		"query":                         query,
@@ -526,7 +527,7 @@ func (store *MemSQL) GetSQLQueryAndParametersForGoogleOrganicQueryV1(projectID u
 	return sql, params, selectKeys, selectMetrics, http.StatusOK
 }
 
-func (store *MemSQL) transFormRequestFieldsAndFetchRequiredFieldsForGoogleOrganic(projectID uint64, query model.ChannelQueryV1, reqID string) (*model.ChannelQueryV1, string, error) {
+func (store *MemSQL) transFormRequestFieldsAndFetchRequiredFieldsForGoogleOrganic(projectID int64, query model.ChannelQueryV1, reqID string) (*model.ChannelQueryV1, string, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"query":      query,
@@ -565,7 +566,7 @@ func checkIfOnlyPageExistsInFiltersAndGroupBys(filters []model.ChannelFilterV1, 
 	return true
 }
 
-func buildGoogleOrganicQueryV1(query *model.ChannelQueryV1, projectID uint64, urlPrefixes string, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string) {
+func buildGoogleOrganicQueryV1(query *model.ChannelQueryV1, projectID int64, urlPrefixes string, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string) {
 	logFields := log.Fields{
 		"project_id":                    projectID,
 		"query":                         query,
@@ -677,7 +678,7 @@ func getGoogleOrganicFiltersWhereStatement(filters []model.ChannelFilterV1) stri
 	return resultStatement + " )"
 
 }
-func (store *MemSQL) DeleteGoogleOrganicIntegration(projectID uint64) (int, error) {
+func (store *MemSQL) DeleteGoogleOrganicIntegration(projectID int64) (int, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
@@ -706,4 +707,35 @@ func (store *MemSQL) DeleteGoogleOrganicIntegration(projectID uint64) (int, erro
 		return http.StatusInternalServerError, err
 	}
 	return http.StatusOK, nil
+}
+
+// PullGoogleOrganicRows - Function to pull GoogleOrganic campaign data
+// Selecting VALUE, TIMESTAMP, TYPE from google_organic_documents and PROPERTIES, OBJECT_TYPE from smart_properties
+// Left join smart_properties filtered by project_id and source=google_ads
+// where google_organic_documents.value["campaign_id"] = smart_properties.object_id (when smart_properties.object_type = 1)
+//	 or google_organic_documents.value["ad_group_id"] = smart_properties.object_id (when smart_properties.object_type = 2)
+// [make sure there aren't multiple smart_properties rows for a particular object,
+// or weekly insights for google_organic would show incorrect data.]
+func (store *MemSQL) PullGoogleOrganicRows(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"start_time": startTime,
+		"end_time":   endTime,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	year, month, date := time.Unix(startTime, 0).Date()
+	start := year*10000 + int(month)*100 + date + 1
+
+	year, month, date = time.Unix(endTime, 0).Date()
+	end := year*10000 + int(month)*100 + date
+
+	rawQuery := fmt.Sprintf("SELECT id, gooDocs.value, gooDocs.timestamp, gooDocs.type, sp.properties FROM google_organic_documents gooDocs "+
+		"LEFT JOIN smart_properties sp ON sp.project_id = %d AND sp.source = '%s' AND sp.object_id = JSON_EXTRACT_STRING(gooDocs.value, 'id')"+
+		"WHERE gooDocs.project_id = %d AND gooDocs.timestamp BETWEEN %d AND %d "+
+		"ORDER BY gooDocs.type, timestamp LIMIT %d",
+		projectID, model.ChannelGoogleAds, projectID, start, end, model.GoggleOrganicPullLimit+1)
+
+	rows, tx, err, _ := store.ExecQueryWithContext(rawQuery, []interface{}{})
+	return rows, tx, err
 }

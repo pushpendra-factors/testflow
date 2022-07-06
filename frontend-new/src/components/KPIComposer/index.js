@@ -35,6 +35,7 @@ import { getValidGranularityOptions } from '../../utils/dataFormatter';
 import { DefaultDateRangeFormat } from '../../Views/CoreQuery/utils';
 import GlobalFilterBlock from './GlobalFilterBlock';
 import GroupByBlock from './GroupByBlock';
+import { areKpisInSameGroup } from '../../utils/kpiQueryComposer.helpers';
 
 // const { Option } = Select;
 
@@ -314,7 +315,7 @@ function KPIComposer({
                 presetRange
                 monthPicker
                 quarterPicker
-                placement="topRight"
+                placement={areKpisInSameGroup({ kpis: queries }) ? 'topRight' : 'bottomRight' }
                 buttonSize={'large'}
                 range={{
                   startDate: queryOptions.date_range.from,

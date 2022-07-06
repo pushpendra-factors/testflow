@@ -50,6 +50,8 @@ import { EMPTY_ARRAY } from '../../utils/global';
 import UserProfiles from '../../components/Profile/UserProfiles';
 import InsightsSettings from '../Settings/ProjectSettings/InsightsSettings';
 import { fetchProfileUsers } from '../../reducers/timeline';
+import DashboardTemplates from "../DashboardTemplates";
+import { fetchTemplates } from "../../reducers/dashboard_templates/services";
 
 const whiteListedAccounts = ['solutions@factors.ai'];
 
@@ -138,6 +140,7 @@ function AppLayout({
       dispatch(
         fetchProfileUsers(active_project.id, { source: 'web', filters: [] })
       );
+      dispatch(fetchTemplates());
     }
   }, [dispatch, active_project]);
 
@@ -204,6 +207,13 @@ function AppLayout({
                     />
 
                     <Route path='/welcome' component={Welcome} />
+
+                    {(window.document.domain === 'app.factors.ai' &&
+                      whiteListedAccounts.includes(activeAgent)) ||
+                    window.document.domain === 'staging-app.factors.ai' ||
+                    window.document.domain === 'factors-dev.com' ? (
+                      <Route path="/template" name="dashboardSettings" component={DashboardTemplates} />
+                    ) : null}
 
                     {/* settings */}
                     <Route path='/settings/general' component={BasicSettings} />

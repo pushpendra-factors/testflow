@@ -11,7 +11,7 @@ import (
 )
 
 type LeadgenSettings struct {
-	ProjectID      uint64    `gorm:"primary_key:true;auto_increment:false" json:"project_id"`
+	ProjectID      int64     `gorm:"primary_key:true;auto_increment:false" json:"project_id"`
 	Source         int       `gorm:"primary_key:true;auto_increment:false" json:"source"`
 	SpreadsheetID  string    `json:"spreadsheet_id"`
 	SheetName      string    `json:"sheet_name"`
@@ -60,7 +60,7 @@ type LeadgenDataPayload struct {
 	CreatedTime  int64  `json:"Created Time"`
 }
 
-func TransformAndGenerateTrackPayload(record []interface{}, projectID uint64, source string) (map[string]interface{}, map[string]interface{}, int64, error) {
+func TransformAndGenerateTrackPayload(record []interface{}, projectID int64, source string) (map[string]interface{}, map[string]interface{}, int64, error) {
 	if projectID == 0 {
 		return nil, nil, 0, errors.New("incorrect project id")
 	}

@@ -19,7 +19,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func sendCreateDashboardUnitReq(r *gin.Engine, projectId uint64, agent *model.Agent, dashboardId int64, dashboardUnit *model.DashboardUnitRequestPayload) *httptest.ResponseRecorder {
+func sendCreateDashboardUnitReq(r *gin.Engine, projectId int64, agent *model.Agent, dashboardId int64, dashboardUnit *model.DashboardUnitRequestPayload) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")
@@ -43,7 +43,7 @@ func sendCreateDashboardUnitReq(r *gin.Engine, projectId uint64, agent *model.Ag
 	return w
 }
 
-func sendGetDashboardUnitResult(r *gin.Engine, projectId uint64, agent *model.Agent, dashboardId int64, dashboardUnitId int64, query *gin.H) *httptest.ResponseRecorder {
+func sendGetDashboardUnitResult(r *gin.Engine, projectId int64, agent *model.Agent, dashboardId int64, dashboardUnitId int64, query *gin.H) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")
@@ -67,7 +67,7 @@ func sendGetDashboardUnitResult(r *gin.Engine, projectId uint64, agent *model.Ag
 	return w
 }
 
-func sendGetDashboardUnitChannelResult(r *gin.Engine, projectId uint64, agent *model.Agent, dashboardId int64, dashboardUnitId int64, query *model.ChannelQuery) *httptest.ResponseRecorder {
+func sendGetDashboardUnitChannelResult(r *gin.Engine, projectId int64, agent *model.Agent, dashboardId int64, dashboardUnitId int64, query *model.ChannelQuery) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")
@@ -91,7 +91,7 @@ func sendGetDashboardUnitChannelResult(r *gin.Engine, projectId uint64, agent *m
 	return w
 }
 
-func sendGetDashboardUnitChannelV1Result(r *gin.Engine, projectId uint64, agent *model.Agent, dashboardId int64, dashboardUnitId int64, query *model.ChannelGroupQueryV1) *httptest.ResponseRecorder {
+func sendGetDashboardUnitChannelV1Result(r *gin.Engine, projectId int64, agent *model.Agent, dashboardId int64, dashboardUnitId int64, query *model.ChannelGroupQueryV1) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")

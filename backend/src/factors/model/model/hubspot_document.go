@@ -15,7 +15,7 @@ import (
 )
 
 type HubspotDocument struct {
-	ProjectId uint64 `gorm:"primary_key:true;auto_increment:false" json:"project_id"`
+	ProjectId int64  `gorm:"primary_key:true;auto_increment:false" json:"project_id"`
 	ID        string `gorm:"primary_key:true;auto_increment:false" json:"id"`
 	Type      int    `gorm:"primary_key:true;auto_increment:false" json:"type"`
 	Action    int    `gorm:"primary_key:true;auto_increment:false" json:"action"`
@@ -36,16 +36,16 @@ type HubspotDocument struct {
 
 // HubspotLastSyncInfo doc type last sync info
 type HubspotLastSyncInfo struct {
-	ProjectID uint64 `json:"-"`
+	ProjectID int64  `json:"-"`
 	Type      int    `json:"type"`
 	TypeAlias string `json:"type_alias"`
 	Timestamp int64  `json:"timestamp"`
 }
 
 type HubspotSyncInfo struct {
-	ProjectSettings map[uint64]*HubspotProjectSettings `json:"project_settings"`
+	ProjectSettings map[int64]*HubspotProjectSettings `json:"project_settings"`
 	// project_id: { type: last_sync_info }
-	LastSyncInfo map[uint64]map[string]int64 `json:"last_sync_info"`
+	LastSyncInfo map[int64]map[string]int64 `json:"last_sync_info"`
 }
 
 const (
@@ -113,7 +113,7 @@ type HubspotDocumentProperties struct {
 
 // HubspotProjectSyncStatus hubspot project sync status
 type HubspotProjectSyncStatus struct {
-	ProjectID uint64 `json:"project_id"`
+	ProjectID int64  `json:"project_id"`
 	DocType   string `json:"doc_type"`
 	Status    string `json:"status"`
 	SyncAll   bool   `json:"sync_all"`
@@ -131,7 +131,7 @@ type Deal struct {
 }
 
 type HubspotDocumentCount struct {
-	ProjectID uint64
+	ProjectID int64
 	Count     int
 }
 
@@ -236,7 +236,7 @@ func GetHubspotTypeAliasByType(typ int) string {
 }
 
 // GetCRMTimeSeriesByStartTimestamp returns time series for batch processing -> {Day1,Day2}, {Day2,Day3},{Day3,Day4} upto current day
-func GetCRMTimeSeriesByStartTimestamp(projectID uint64, from int64, CRMEventSource string) [][]int64 {
+func GetCRMTimeSeriesByStartTimestamp(projectID int64, from int64, CRMEventSource string) [][]int64 {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "from": from, "crm_source": CRMEventSource})
 	if from < 1 {
 		logCtx.Error("Invalid timestamp from batch processing by day.")
@@ -267,7 +267,7 @@ func GetCRMTimeSeriesByStartTimestamp(projectID uint64, from int64, CRMEventSour
 }
 
 // GetHubspotAllowedObjects returns hubspot objects for api
-func GetHubspotAllowedObjects(projectID uint64) *map[string]string {
+func GetHubspotAllowedObjects(projectID int64) *map[string]string {
 	if projectID == 0 {
 		return nil
 	}
@@ -598,10 +598,10 @@ func GetHubspotDecodedSyncInfo(syncInfo *postgres.Jsonb) (*map[string]int64, err
 
 // GetHubspotProjectOverAllStatus return  list of success projects and last successfull timestamp per document type
 func GetHubspotProjectOverAllStatus(success []HubspotProjectSyncStatus,
-	failure []HubspotProjectSyncStatus) (map[uint64]map[string]int64, map[uint64]bool) {
+	failure []HubspotProjectSyncStatus) (map[int64]map[string]int64, map[int64]bool) {
 
-	status := make(map[uint64]bool)
-	syncStatus := make(map[uint64]map[string]int64)
+	status := make(map[int64]bool)
+	syncStatus := make(map[int64]map[string]int64)
 	for i := range success {
 		status[success[i].ProjectID] = true
 

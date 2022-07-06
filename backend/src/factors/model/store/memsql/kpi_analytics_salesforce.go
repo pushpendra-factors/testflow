@@ -9,7 +9,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (store *MemSQL) GetKPIConfigsForSalesforceUsers(projectID uint64, reqID string) (map[string]interface{}, int) {
+func (store *MemSQL) GetKPIConfigsForSalesforceUsers(projectID int64, reqID string) (map[string]interface{}, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"req_id":     reqID,
@@ -18,7 +18,7 @@ func (store *MemSQL) GetKPIConfigsForSalesforceUsers(projectID uint64, reqID str
 	return store.GetKPIConfigsForSalesforce(projectID, reqID, model.SalesforceUsersDisplayCategory)
 }
 
-func (store *MemSQL) GetKPIConfigsForSalesforceAccounts(projectID uint64, reqID string) (map[string]interface{}, int) {
+func (store *MemSQL) GetKPIConfigsForSalesforceAccounts(projectID int64, reqID string) (map[string]interface{}, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"req_id":     reqID,
@@ -27,7 +27,7 @@ func (store *MemSQL) GetKPIConfigsForSalesforceAccounts(projectID uint64, reqID 
 	return store.GetKPIConfigsForSalesforce(projectID, reqID, model.SalesforceAccountsDisplayCategory)
 }
 
-func (store *MemSQL) GetKPIConfigsForSalesforceOpportunities(projectID uint64, reqID string) (map[string]interface{}, int) {
+func (store *MemSQL) GetKPIConfigsForSalesforceOpportunities(projectID int64, reqID string) (map[string]interface{}, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"req_id":     reqID,
@@ -37,7 +37,7 @@ func (store *MemSQL) GetKPIConfigsForSalesforceOpportunities(projectID uint64, r
 }
 
 // Removed constants for hubspot and salesforce kpi metrics in PR - pull/3984.
-func (store *MemSQL) GetKPIConfigsForSalesforce(projectID uint64, reqID string, displayCategory string) (map[string]interface{}, int) {
+func (store *MemSQL) GetKPIConfigsForSalesforce(projectID int64, reqID string, displayCategory string) (map[string]interface{}, int) {
 	logFields := log.Fields{
 		"project_id":       projectID,
 		"req_id":           reqID,
@@ -59,7 +59,7 @@ func (store *MemSQL) GetKPIConfigsForSalesforce(projectID uint64, reqID string, 
 
 // Removed constants for hubspot and salesforce kpi metrics in PR - pull/3984.
 // Only considering hubspot_contacts and salesforce_users for now.
-func (store *MemSQL) getConfigForSpecificSalesforceCategory(projectID uint64, reqID string, displayCategory string) map[string]interface{} {
+func (store *MemSQL) getConfigForSpecificSalesforceCategory(projectID int64, reqID string, displayCategory string) map[string]interface{} {
 	logFields := log.Fields{
 		"project_id":       projectID,
 		"req_id":           reqID,
@@ -90,7 +90,7 @@ func (store *MemSQL) getConfigForSpecificSalesforceCategory(projectID uint64, re
 	}
 }
 
-func (store *MemSQL) GetPropertiesForSalesforce(projectID uint64, reqID string) []map[string]string {
+func (store *MemSQL) GetPropertiesForSalesforce(projectID int64, reqID string) []map[string]string {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"req_id":     reqID,

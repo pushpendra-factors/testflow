@@ -20,7 +20,7 @@ import (
 // @Success 200 {array} model.FactorsTrackedUserProperty
 // @Router /{project_id}/v1/factors/tracked_user_property [GET]
 func GetAllFactorsTrackedUserPropertiesHandler(c *gin.Context) {
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
@@ -58,7 +58,7 @@ func getcreateFactorsTrackedUserPropertyParams(c *gin.Context) (*CreateTrackedus
 // @Router /{project_id}/v1/factors/tracked_user_property [POST]
 func CreateFactorsTrackedUserPropertyHandler(c *gin.Context) {
 	loggedInAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
@@ -119,7 +119,7 @@ func getRemoveFactorsTrackedUserPropertyParams(c *gin.Context) (*RemoveFactorsTr
 // @Success 200 {string} json "{"id": uint64, "status": string}"
 // @Router /{project_id}/v1/factors/tracked_user_property/remove [DELETE]
 func RemoveFactorsTrackedUserPropertyHandler(c *gin.Context) {
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return

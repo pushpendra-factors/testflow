@@ -144,7 +144,7 @@ func TestGetNewArchivalFileNamesAndEndTimeForProject(t *testing.T) {
 	assert.Equal(t, 1, len(newFilesMap))
 }
 
-func getDummyValidArchivalScheduledTask(projectID uint64) (model.ScheduledTask, model.EventArchivalTaskDetails) {
+func getDummyValidArchivalScheduledTask(projectID int64) (model.ScheduledTask, model.EventArchivalTaskDetails) {
 	scheduledTask := model.ScheduledTask{
 		ProjectID:     projectID,
 		JobID:         U.GetUUID(),
@@ -164,7 +164,7 @@ func getDummyValidArchivalScheduledTask(projectID uint64) (model.ScheduledTask, 
 	return scheduledTask, taskDetails
 }
 
-func getDummyValidBigqueryScheduledTask(projectID uint64) (model.ScheduledTask, model.BigqueryUploadTaskDetails) {
+func getDummyValidBigqueryScheduledTask(projectID int64) (model.ScheduledTask, model.BigqueryUploadTaskDetails) {
 	scheduledTask := model.ScheduledTask{
 		ProjectID:     projectID,
 		JobID:         U.GetUUID(),

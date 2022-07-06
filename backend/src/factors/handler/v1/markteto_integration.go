@@ -14,7 +14,7 @@ import (
 )
 
 func CreateMarketoIntegration(c *gin.Context) (interface{}, int, string, string, bool) {
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		return nil, http.StatusBadRequest, INVALID_PROJECT, "", true
 	}
@@ -51,7 +51,7 @@ func CreateMarketoIntegration(c *gin.Context) (interface{}, int, string, string,
 }
 
 func EnableMarketoIntegration(c *gin.Context) (interface{}, int, string, string, bool) {
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		return nil, http.StatusBadRequest, INVALID_PROJECT, "", true
 	}
@@ -95,7 +95,7 @@ func EnableMarketoIntegration(c *gin.Context) (interface{}, int, string, string,
 }
 
 func GetMarketoIntegration(c *gin.Context) (interface{}, int, string, string, bool) {
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		return nil, http.StatusBadRequest, INVALID_PROJECT, "", true
 	}
@@ -123,7 +123,7 @@ func GetMarketoIntegration(c *gin.Context) (interface{}, int, string, string, bo
 }
 
 func DisableMarketoIntegration(c *gin.Context) (interface{}, int, string, string, bool) {
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		return nil, http.StatusBadRequest, INVALID_PROJECT, "", true
 	}

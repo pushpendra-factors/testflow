@@ -7,12 +7,16 @@ import (
 	"factors/model/store"
 	PC "factors/pattern_client"
 	U "factors/util"
+	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	C "factors/config"
 
 	H "factors/handler/helpers"
+
+	V1 "factors/handler/v1"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -70,7 +74,7 @@ func CreateProjectHandler(c *gin.Context) {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Creating project failed."})
 		return
 	}
-	c.JSON(http.StatusCreated, project)
+	c.JSON(http.StatusCreated, V1.MapProjectToString(project))
 	return
 }
 
@@ -89,7 +93,7 @@ func EditProjectHandler(c *gin.Context) {
 	r := c.Request
 
 	loggedInAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 
 	logCtx := log.WithFields(log.Fields{
 		"reqId":      U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
@@ -146,10 +150,10 @@ func EditProjectHandler(c *gin.Context) {
 		c.AbortWithStatus(errCode)
 		return
 	}
-	projectIdsToGet := []uint64{}
+	projectIdsToGet := []int64{}
 	projectIdsToGet = append(projectIdsToGet, projectID)
 	projectDetailsAfterEdit, errCode := store.GetStore().GetProjectsByIDs(projectIdsToGet)
-	c.JSON(http.StatusCreated, projectDetailsAfterEdit[0])
+	c.JSON(http.StatusCreated, V1.MapProjectToString(projectDetailsAfterEdit[0]))
 	return
 }
 
@@ -165,21 +169,27 @@ func EditProjectHandler(c *gin.Context) {
 func GetProjectsHandler(c *gin.Context) {
 	authorizedProjects := U.GetScopeByKey(c, mid.SCOPE_AUTHORIZED_PROJECTS)
 
-	projects, errCode := store.GetStore().GetProjectsByIDs(authorizedProjects.([]uint64))
+	projects, errCode := store.GetStore().GetProjectsByIDs(authorizedProjects.([]int64))
 	if errCode == http.StatusInternalServerError {
 		c.AbortWithStatus(errCode)
 		return
 	} else if errCode == http.StatusNoContent || errCode == http.StatusBadRequest {
 		resp := make(map[string]interface{})
-		resp["projects"] = []model.Project{}
+		resp["projects"] = []model.ProjectString{}
 		c.JSON(http.StatusNotFound, resp)
 		return
 	}
 
-	resp := make(map[string]interface{})
+	resp := make(map[string][]model.ProjectString)
 	if C.EnableDemoReadAccess() {
 		trimmedDemoProjects := make([]model.Project, 0)
-		demoProjects, _ := store.GetStore().GetProjectsByIDs(C.GetConfig().DemoProjectIds)
+		demoProjectStrings := C.GetConfig().DemoProjectIds
+		demoProjs := make([]int64, 0)
+		for _, demoProj := range demoProjectStrings {
+			num, _ := strconv.ParseInt(demoProj, 10, 64)
+			demoProjs = append(demoProjs, num)
+		}
+		demoProjects, _ := store.GetStore().GetProjectsByIDs(demoProjs)
 		for _, project := range demoProjects {
 			project.Token = ""
 			project.PrivateToken = ""
@@ -192,12 +202,14 @@ func GetProjectsHandler(c *gin.Context) {
 		}
 
 		for _, project := range trimmedDemoProjects {
-			if !H.IsDemoProjectInAuthorizedProjects(authorizedProjects.([]uint64), project.ID) {
+			if !H.IsDemoProjectInAuthorizedProjects(authorizedProjects.([]int64), fmt.Sprintf("%v", project.ID)) {
 				projects = append(projects, project)
 			}
 		}
 	}
-	resp["projects"] = projects
+	for _, project := range projects {
+		resp["projects"] = append(resp["projects"], V1.MapProjectToString(project))
+	}
 	c.JSON(http.StatusOK, resp)
 	return
 }
@@ -217,7 +229,7 @@ func GetProjectModelsHandler(c *gin.Context) {
 		"reqId": reqId,
 	})
 
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return

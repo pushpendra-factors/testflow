@@ -12,14 +12,34 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func isCurrentPropertyType(projectID uint64, incomingProperty *model.CRMProperty) (int, error) {
+/*
+ isCurrentPropertyTypeORLabel check if the existing property type or label is same
+ if only label is provided then only label will be deduplicated
+ else deduplication will done on type only
+*/
+func isCurrentPropertyTypeORLabel(projectID int64, incomingProperty *model.CRMProperty) (int, error) {
 	logFields := log.Fields{"project_id": projectID, "crm_property": incomingProperty}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
+	if projectID == 0 || incomingProperty.MappedDataType != "" && !model.IsValidCRMMappedDataType(incomingProperty.MappedDataType) {
+		log.WithFields(logFields).Error("Invalid project_id or mapped data type.")
+		return http.StatusBadRequest, errors.New("invalid project_id or mapped data type")
+	}
+
+	whereStmnt := "project_id = ? AND source = ? AND type = ? and name = ? "
+	whereParams := []interface{}{projectID, incomingProperty.Source, incomingProperty.Type, incomingProperty.Name}
+
+	// only label update check
+	labelUpdateOnly := false
+	if incomingProperty.MappedDataType == "" && incomingProperty.Label != "" {
+		whereStmnt = whereStmnt + " AND label is NOT NULL AND label != '' "
+		labelUpdateOnly = true
+	}
+
 	db := C.GetServices().Db
 	var currentProperty model.CRMProperty
-	err := db.Model(&model.CRMProperty{}).Where("project_id = ? AND source = ? AND type = ? and name = ? ",
-		projectID, incomingProperty.Source, incomingProperty.Type, incomingProperty.Name).Order("timestamp desc").Limit(1).
+	err := db.Model(&model.CRMProperty{}).Where(whereStmnt,
+		whereParams...).Order("timestamp desc").Limit(1).
 		Find(&currentProperty).Error
 
 	if err != nil {
@@ -31,8 +51,19 @@ func isCurrentPropertyType(projectID uint64, incomingProperty *model.CRMProperty
 		return http.StatusInternalServerError, err
 	}
 
-	if currentProperty.ID == "" ||
-		incomingProperty.ExternalDataType != currentProperty.ExternalDataType {
+	if currentProperty.ID == "" {
+		return http.StatusNotFound, nil
+	}
+
+	if labelUpdateOnly {
+		if incomingProperty.Label != currentProperty.Label {
+			return http.StatusNotFound, nil
+		}
+
+		return http.StatusFound, nil
+	}
+
+	if incomingProperty.ExternalDataType != currentProperty.ExternalDataType {
 		return http.StatusNotFound, nil
 	}
 
@@ -53,17 +84,22 @@ func (store *MemSQL) CreateCRMProperties(crmProperty *model.CRMProperty) (int, e
 		return http.StatusBadRequest, errors.New("missing source")
 	}
 
-	if crmProperty.Type == 0 || crmProperty.Name == "" || crmProperty.ExternalDataType == "" {
+	if crmProperty.Type == 0 || crmProperty.Name == "" {
 		logCtx.Error("Missing crm property required fields.")
-		return http.StatusBadRequest, errors.New("missing properties required fields type,name,mapped_data_type")
+		return http.StatusBadRequest, errors.New("missing properties required fields type,name")
 	}
 
-	if !model.IsValidCRMMappedDataType(crmProperty.MappedDataType) {
+	if crmProperty.MappedDataType == "" && crmProperty.Label == "" {
+		logCtx.Error("Missing crm property label and mapped data type.")
+		return http.StatusBadRequest, errors.New("missing crm property label and mapped data type")
+	}
+
+	if crmProperty.MappedDataType != "" && crmProperty.ExternalDataType != "" && !model.IsValidCRMMappedDataType(crmProperty.MappedDataType) {
 		logCtx.Error("Invalid mapped data type.")
-		return http.StatusBadRequest, errors.New("invalid mapped data type")
+		return http.StatusBadRequest, errors.New("invalid mapped data type or external data type")
 	}
 
-	status, err := isCurrentPropertyType(crmProperty.ProjectID, crmProperty)
+	status, err := isCurrentPropertyTypeORLabel(crmProperty.ProjectID, crmProperty)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to check for current property type.")
 		return http.StatusInternalServerError, err
@@ -92,7 +128,7 @@ func (store *MemSQL) CreateCRMProperties(crmProperty *model.CRMProperty) (int, e
 	return http.StatusCreated, nil
 }
 
-func (store *MemSQL) GetCRMPropertiesForSync(projectID uint64) ([]model.CRMProperty, int) {
+func (store *MemSQL) GetCRMPropertiesForSync(projectID int64) ([]model.CRMProperty, int) {
 	logFields := log.Fields{"project_id": projectID}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
@@ -118,7 +154,7 @@ func (store *MemSQL) GetCRMPropertiesForSync(projectID uint64) ([]model.CRMPrope
 	return properties, http.StatusFound
 }
 
-func (store *MemSQL) UpdateCRMProperyAsSynced(projectID uint64, source U.CRMSource, crmProperty *model.CRMProperty) (*model.CRMProperty, int) {
+func (store *MemSQL) UpdateCRMProperyAsSynced(projectID int64, source U.CRMSource, crmProperty *model.CRMProperty) (*model.CRMProperty, int) {
 
 	logFields := log.Fields{"crm_properties": crmProperty, "source": source, "project_id": projectID}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)

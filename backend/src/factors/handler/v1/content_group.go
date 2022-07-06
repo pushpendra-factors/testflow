@@ -14,7 +14,7 @@ import (
 )
 
 func CreateContentGroupHandler(c *gin.Context) (interface{}, int, string, string, bool) {
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		return nil, http.StatusUnauthorized, INVALID_PROJECT, ErrorMessages[INVALID_PROJECT], true
 	}
@@ -40,7 +40,7 @@ func CreateContentGroupHandler(c *gin.Context) (interface{}, int, string, string
 }
 
 func UpdateContentGroupHandler(c *gin.Context) (interface{}, int, string, string, bool) {
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		log.Error("UpdateContentGroup Failed. ProjectId parse failed.")
 		return nil, http.StatusUnauthorized, INVALID_PROJECT, ErrorMessages[INVALID_PROJECT], true
@@ -73,7 +73,7 @@ func UpdateContentGroupHandler(c *gin.Context) (interface{}, int, string, string
 }
 
 func GetContentGroupHandler(c *gin.Context) (interface{}, int, string, string, bool) {
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		log.Error("Get ContentGroup Failed. ProjectId parse failed.")
 		return nil, http.StatusUnauthorized, INVALID_PROJECT, ErrorMessages[INVALID_PROJECT], true
@@ -89,7 +89,7 @@ func GetContentGroupHandler(c *gin.Context) (interface{}, int, string, string, b
 }
 
 func GetContentGroupByIDHandler(c *gin.Context) (interface{}, int, string, string, bool) {
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		log.Error("GetContentGroup Failed. ProjectId parse failed.")
 		return nil, http.StatusUnauthorized, INVALID_PROJECT, ErrorMessages[INVALID_PROJECT], true
@@ -108,7 +108,7 @@ func GetContentGroupByIDHandler(c *gin.Context) (interface{}, int, string, strin
 }
 
 func DeleteContentGroupHandler(c *gin.Context) (interface{}, int, string, string, bool) {
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		log.Error("DeleteContentGroup Failed. ProjectId parse failed.")
 		return nil, http.StatusUnauthorized, INVALID_PROJECT, ErrorMessages[INVALID_PROJECT], true

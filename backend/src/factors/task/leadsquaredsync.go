@@ -13,7 +13,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func LeadSquaredIntegration(projectId uint64, configs map[string]interface{}) (map[string]interface{}, bool) {
+func LeadSquaredIntegration(projectId int64, configs map[string]interface{}) (map[string]interface{}, bool) {
 
 	bigQuerySetting := model.BigquerySetting{
 		BigqueryProjectID:       configs["BigqueryProjectId"].(string),
@@ -98,7 +98,7 @@ func LeadSquaredIntegration(projectId uint64, configs map[string]interface{}) (m
 	return resultStatus, true
 }
 
-func InsertPropertyDataTypesLeadSquared(columnNamesFromMetadataDateTime map[string]bool, columnNamesFromMetadataNumerical map[string]bool, docType string, projectId uint64) (int, int) {
+func InsertPropertyDataTypesLeadSquared(columnNamesFromMetadataDateTime map[string]bool, columnNamesFromMetadataNumerical map[string]bool, docType string, projectId int64) (int, int) {
 	success, failures := int(0), int(0)
 	for columnName, _ := range columnNamesFromMetadataDateTime {
 		_, err := store.GetStore().CreateCRMProperties(&model.CRMProperty{
@@ -156,7 +156,7 @@ func extractMetadataColumnsLeadSquared(metadataQueryResult [][]string) ([]string
 	return columnNamesFromMetadata, columnNamesFromMetadataDateTime, columnNamesFromMetadataNumerical
 }
 
-func InsertIntegrationDocumentLeadSquared(projectId uint64, docType string, queryResult [][]string, columnNamesFromMetadata []string, columnNamesFromMetadataDateTime map[string]bool, columnNamesFromMetadataNumerical map[string]bool) (int, int) {
+func InsertIntegrationDocumentLeadSquared(projectId int64, docType string, queryResult [][]string, columnNamesFromMetadata []string, columnNamesFromMetadataDateTime map[string]bool, columnNamesFromMetadataNumerical map[string]bool) (int, int) {
 	success := 0
 	failures := 0
 	for _, line := range queryResult {
@@ -185,7 +185,7 @@ func InsertIntegrationDocumentLeadSquared(projectId uint64, docType string, quer
 	return success, failures
 }
 
-func insertCRMUserLeadSquared(projectId uint64, line []string, docType string, columnNamesFromMetadata []string, values *postgres.Jsonb) (int, error, string) {
+func insertCRMUserLeadSquared(projectId int64, line []string, docType string, columnNamesFromMetadata []string, values *postgres.Jsonb) (int, error, string) {
 	insertionStatus := int(0)
 	var errCRMStatus error
 	timestamps := model.GetLeadSquaredDocumentTimestamp(docType, line, columnNamesFromMetadata)

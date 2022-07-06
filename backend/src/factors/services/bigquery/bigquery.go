@@ -43,7 +43,7 @@ func CreateBigqueryClient(ctx *context.Context, bigquerySetting *model.BigqueryS
 }
 
 // CreateBigqueryClientForProject Creates and returns a bigquery client for the given projectID.
-func CreateBigqueryClientForProject(ctx *context.Context, projectID uint64) (*bigquery.Client, error) {
+func CreateBigqueryClientForProject(ctx *context.Context, projectID int64) (*bigquery.Client, error) {
 	bigquerySetting, status := store.GetStore().GetBigquerySettingByProjectID(projectID)
 	if status == http.StatusInternalServerError {
 		return nil, fmt.Errorf("Failed to get bigquery setting for project_id %d", projectID)
@@ -95,7 +95,7 @@ func ExecuteQuery(ctx *context.Context, client *bigquery.Client, query string, r
 
 // CreateBigqueryArchivalTables Creates tables required in Bigquery.
 // To be called at the time of onboarding new project to Bigquery.
-func CreateBigqueryArchivalTables(projectID uint64) error {
+func CreateBigqueryArchivalTables(projectID int64) error {
 	bigquerySetting, status := store.GetStore().GetBigquerySettingByProjectID(projectID)
 	if status == http.StatusInternalServerError {
 		return fmt.Errorf("Failed to get bigquery setting for project_id %d", projectID)

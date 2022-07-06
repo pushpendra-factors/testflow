@@ -54,7 +54,7 @@ func main() {
 		log.WithError(err).Fatal("Failed to initialize DB")
 	}
 
-	projectIdsArray := make([]uint64, 0)
+	projectIdsArray := make([]int64, 0)
 	mappings, err := store.GetStore().GetAllLeadSquaredEnabledProjects()
 	if err != nil {
 		C.PingHealthcheckForFailure(healthcheckPingID, "Failed to get LeadSquared Projects")

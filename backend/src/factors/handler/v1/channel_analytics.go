@@ -31,7 +31,7 @@ const ChannelFilterPropertyParamKey = "filter_property"
 // @Router /{project_id}/v1/channels/config [get]
 func GetChannelConfigHandler(c *gin.Context) {
 	reqID := U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID)
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatusJSON(http.StatusUnauthorized,
 			gin.H{"error": "Channel query failed. Invalid project."})
@@ -61,7 +61,7 @@ func GetChannelConfigHandler(c *gin.Context) {
 // @Router /{project_id}/v1/channels/filter_values [get]
 func GetChannelFilterValuesHandler(c *gin.Context) {
 	reqID := U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID)
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		c.AbortWithStatusJSON(http.StatusUnauthorized,
 			gin.H{"error": "Channel query failed. Invalid project."})
@@ -101,7 +101,7 @@ func ExecuteChannelQueryHandler(c *gin.Context) (interface{}, int, string, strin
 	reqID := U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID)
 	logCtx := log.WithField("reqId", reqID)
 
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		logCtx.Error("Query failed. Invalid project.")
 		return nil, http.StatusUnauthorized, INVALID_PROJECT, "Query failed. Invalid project.", true

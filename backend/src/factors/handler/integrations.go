@@ -146,7 +146,7 @@ func IntAdwordsAddRefreshTokenHandler(c *gin.Context) {
 		return
 	}
 
-	projectId, err := strconv.ParseUint(requestPayload.ProjectId, 10, 64)
+	projectId, err := strconv.ParseInt(requestPayload.ProjectId, 10, 64)
 	if err != nil {
 		log.WithError(err).Error("Failed to convert project_id as uint64.")
 		c.AbortWithStatusJSON(http.StatusBadRequest,
@@ -196,7 +196,7 @@ func IntAdwordsGetRefreshTokenHandler(c *gin.Context) {
 		return
 	}
 
-	projectId, err := strconv.ParseUint(requestPayload.ProjectId, 10, 64)
+	projectId, err := strconv.ParseInt(requestPayload.ProjectId, 10, 64)
 	if err != nil {
 		log.WithError(err).Error("Failed to convert project_id as uint64.")
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid project."})
@@ -235,7 +235,7 @@ func IntGoogleOrganicAddRefreshTokenHandler(c *gin.Context) {
 		return
 	}
 
-	projectId, err := strconv.ParseUint(requestPayload.ProjectId, 10, 64)
+	projectId, err := strconv.ParseInt(requestPayload.ProjectId, 10, 64)
 	if err != nil {
 		log.WithError(err).Error("Failed to convert project_id as uint64.")
 		c.AbortWithStatusJSON(http.StatusBadRequest,
@@ -284,7 +284,7 @@ func IntGoogleOrganicGetRefreshTokenHandler(c *gin.Context) {
 		return
 	}
 
-	projectId, err := strconv.ParseUint(requestPayload.ProjectID, 10, 64)
+	projectId, err := strconv.ParseInt(requestPayload.ProjectID, 10, 64)
 	if err != nil {
 		log.WithError(err).Error("Failed to convert project_id as uint64.")
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid project."})
@@ -329,7 +329,7 @@ func IntEnableAdwordsHandler(c *gin.Context) {
 		return
 	}
 
-	projectId, err := strconv.ParseUint(requestPayload.ProjectId, 10, 64)
+	projectId, err := strconv.ParseInt(requestPayload.ProjectId, 10, 64)
 	if err != nil {
 		log.WithError(err).Error("Failed to convert project_id as uint64.")
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid project."})
@@ -374,7 +374,7 @@ func IntEnableGoogleOrganicHandler(c *gin.Context) {
 		return
 	}
 
-	projectId, err := strconv.ParseUint(requestPayload.ProjectId, 10, 64)
+	projectId, err := strconv.ParseInt(requestPayload.ProjectId, 10, 64)
 	if err != nil {
 		log.WithError(err).Error("Failed to convert project_id as uint64.")
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid project."})
@@ -436,7 +436,7 @@ func IntEnableSalesforceHandler(c *gin.Context) {
 		return
 	}
 
-	projectId, err := strconv.ParseUint(requestPayload.ProjectId, 10, 64)
+	projectId, err := strconv.ParseInt(requestPayload.ProjectId, 10, 64)
 	if err != nil {
 		log.WithError(err).Error("Failed to convert project_id as uint64.")
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid project."})
@@ -472,7 +472,7 @@ func IntShopifyHandler(c *gin.Context) {
 		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
 	})
 
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatusJSON(
 			http.StatusUnauthorized,
@@ -816,7 +816,7 @@ func IntFacebookAddAccessTokenHandler(c *gin.Context) {
 		return
 	}
 
-	projectId, err := strconv.ParseUint(requestPayload.ProjectId, 10, 64)
+	projectId, err := strconv.ParseInt(requestPayload.ProjectId, 10, 64)
 	if err != nil {
 		log.WithError(err).Error("Failed to convert project_id as uint64.")
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid project."})
@@ -941,7 +941,7 @@ func IntLinkedinAddAccessTokenHandler(c *gin.Context) {
 		return
 	}
 
-	projectId, err := strconv.ParseUint(requestPayload.ProjectID, 10, 64)
+	projectId, err := strconv.ParseInt(requestPayload.ProjectID, 10, 64)
 	if err != nil {
 		log.WithError(err).Error("Failed to convert project_id as uint64.")
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid project."})
@@ -975,7 +975,7 @@ func IntShopifySDKHandler(c *gin.Context) {
 		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
 	})
 
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatusJSON(
 			http.StatusUnauthorized,
@@ -1128,7 +1128,7 @@ func SalesforceAuthRedirectHandler(c *gin.Context) {
 		return
 	}
 
-	projectID, err := strconv.ParseUint(requestPayload.ProjectID, 10, 64)
+	projectID, err := strconv.ParseInt(requestPayload.ProjectID, 10, 64)
 	if err != nil || projectID == 0 {
 		log.WithError(err).Error("Failed to get project_id on get SalesforceAuthRedirectHandler.")
 		c.AbortWithStatusJSON(http.StatusBadRequest,
@@ -1161,7 +1161,7 @@ func SalesforceAuthRedirectHandler(c *gin.Context) {
 func IntDeleteHandler(c *gin.Context) {
 
 	loggedInAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
-	projectID, err := strconv.ParseUint(c.Params.ByName("project_id"), 10, 64)
+	projectID, err := strconv.ParseInt(c.Params.ByName("project_id"), 10, 64)
 	if projectID == 0 || err != nil {
 		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Delete Integration failed. Invalid project."})
 		return

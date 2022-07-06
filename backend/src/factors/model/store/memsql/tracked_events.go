@@ -34,7 +34,7 @@ func (store *MemSQL) satisfiesTrackedEventForeignConstraints(trackedEvent model.
 }
 
 //CreateTrackedEvent - Inserts the tracked event to db
-func (store *MemSQL) CreateFactorsTrackedEvent(ProjectID uint64, EventName string, agentUUID string) (int64, int) {
+func (store *MemSQL) CreateFactorsTrackedEvent(ProjectID int64, EventName string, agentUUID string) (int64, int) {
 	logFields := log.Fields{
 		"project_id": ProjectID,
 		"event_name": EventName,
@@ -110,10 +110,10 @@ func (store *MemSQL) CreateFactorsTrackedEvent(ProjectID uint64, EventName strin
 }
 
 // DeactivateFactorsTrackedEvent - Mark the tracked event inactive
-func (store *MemSQL) DeactivateFactorsTrackedEvent(ID int64, ProjectID uint64) (int64, int) {
+func (store *MemSQL) DeactivateFactorsTrackedEvent(ID int64, ProjectID int64) (int64, int) {
 	logFields := log.Fields{
 		"project_id": ProjectID,
-		"id": ID,
+		"id":         ID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
@@ -154,7 +154,7 @@ func (store *MemSQL) DeactivateFactorsTrackedEvent(ID int64, ProjectID uint64) (
 }
 
 // GetAllFactorsTrackedEventsByProject - get all the tracked events by project
-func (store *MemSQL) GetAllFactorsTrackedEventsByProject(ProjectID uint64) ([]model.FactorsTrackedEventInfo, int) {
+func (store *MemSQL) GetAllFactorsTrackedEventsByProject(ProjectID int64) ([]model.FactorsTrackedEventInfo, int) {
 	logFields := log.Fields{
 		"project_id": ProjectID,
 	}
@@ -183,7 +183,7 @@ func (store *MemSQL) GetAllFactorsTrackedEventsByProject(ProjectID uint64) ([]mo
 }
 
 // GetAllActiveFactorsTrackedEventsByProject - get all the tracked events by project
-func (store *MemSQL) GetAllActiveFactorsTrackedEventsByProject(ProjectID uint64) ([]model.FactorsTrackedEventInfo, int) {
+func (store *MemSQL) GetAllActiveFactorsTrackedEventsByProject(ProjectID int64) ([]model.FactorsTrackedEventInfo, int) {
 	logFields := log.Fields{
 		"project_id": ProjectID,
 	}
@@ -212,9 +212,9 @@ func (store *MemSQL) GetAllActiveFactorsTrackedEventsByProject(ProjectID uint64)
 }
 
 // GetFactorsTrackedEvent - Get details of tracked event
-func (store *MemSQL) GetFactorsTrackedEvent(EventNameID string, ProjectID uint64) (*model.FactorsTrackedEvent, error) {
+func (store *MemSQL) GetFactorsTrackedEvent(EventNameID string, ProjectID int64) (*model.FactorsTrackedEvent, error) {
 	logFields := log.Fields{
-		"project_id": ProjectID,
+		"project_id":    ProjectID,
 		"event_name_id": EventNameID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -234,10 +234,10 @@ func (store *MemSQL) GetFactorsTrackedEvent(EventNameID string, ProjectID uint64
 }
 
 // GetFactorsTrackedEventByID - Get details of tracked event
-func (store *MemSQL) GetFactorsTrackedEventByID(ID int64, ProjectID uint64) (*model.FactorsTrackedEvent, error) {
+func (store *MemSQL) GetFactorsTrackedEventByID(ID int64, ProjectID int64) (*model.FactorsTrackedEvent, error) {
 	logFields := log.Fields{
 		"project_id": ProjectID,
-		"id": ID,
+		"id":         ID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
@@ -255,11 +255,11 @@ func (store *MemSQL) GetFactorsTrackedEventByID(ID int64, ProjectID uint64) (*mo
 	return &trackedEvent, nil
 }
 
-func updateFactorsTrackedEvent(FactorsTrackedEventID uint64, ProjectID uint64, updatedFields map[string]interface{}) (int64, int) {
+func updateFactorsTrackedEvent(FactorsTrackedEventID uint64, ProjectID int64, updatedFields map[string]interface{}) (int64, int) {
 	logFields := log.Fields{
-		"project_id": ProjectID,
+		"project_id":               ProjectID,
 		"factors_tracked_event_id": FactorsTrackedEventID,
-		"updated_fields": updatedFields,
+		"updated_fields":           updatedFields,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
@@ -272,7 +272,7 @@ func updateFactorsTrackedEvent(FactorsTrackedEventID uint64, ProjectID uint64, u
 	return int64(FactorsTrackedEventID), http.StatusOK
 }
 
-func (store *MemSQL) isActiveFactorsTrackedEventsLimitExceeded(ProjectID uint64) bool {
+func (store *MemSQL) isActiveFactorsTrackedEventsLimitExceeded(ProjectID int64) bool {
 	logFields := log.Fields{
 		"project_id": ProjectID,
 	}

@@ -42,10 +42,10 @@ type state struct {
 	projectDataVersion string
 
 	// project_id -> ModelChunkMapping
-	projectsModelChunkData map[uint64]ModelChunkMapping
+	projectsModelChunkData map[int64]ModelChunkMapping
 
 	// project_id -> true
-	projectsToServe map[uint64]bool
+	projectsToServe map[int64]bool
 
 	// project_id:model_id -> true
 	projectModelsToServe map[string]bool
@@ -66,7 +66,7 @@ func (s *state) getProjectDataVersion() string {
 	return s.projectDataVersion
 }
 
-func (s *state) getProjectModelChunkData() map[uint64]ModelChunkMapping {
+func (s *state) getProjectModelChunkData() map[int64]ModelChunkMapping {
 	return s.projectsModelChunkData
 }
 
@@ -74,7 +74,7 @@ func (s *state) getProjectModelsToServe() map[string]bool {
 	return s.projectModelsToServe
 }
 
-func (s *state) getProjectsToServe() map[uint64]bool {
+func (s *state) getProjectsToServe() map[int64]bool {
 	return s.projectsToServe
 }
 
@@ -104,7 +104,7 @@ func New(ip, rpcPort, httpPort string, etcdClient *serviceEtcd.EtcdClient, diskF
 
 	state := &state{
 		myNum:                  -1,
-		projectsModelChunkData: make(map[uint64]ModelChunkMapping),
+		projectsModelChunkData: make(map[int64]ModelChunkMapping),
 	}
 
 	ps := &PatternServer{
@@ -119,7 +119,7 @@ func New(ip, rpcPort, httpPort string, etcdClient *serviceEtcd.EtcdClient, diskF
 	return ps, nil
 }
 
-func (ps *PatternServer) SetState(myNum int, psNodes []serviceEtcd.KV, projectDataVersion string, projectsModelChunkData map[uint64]ModelChunkMapping) {
+func (ps *PatternServer) SetState(myNum int, psNodes []serviceEtcd.KV, projectDataVersion string, projectsModelChunkData map[int64]ModelChunkMapping) {
 
 	log.Debugln("Computing New State")
 
@@ -160,8 +160,8 @@ func (ps *PatternServer) GetState() *state {
 	return ps.state
 }
 
-func computeProjectsToServe(projectDatas map[uint64]ModelChunkMapping, myNum, noOfPatternServers uint64) map[uint64]bool {
-	projectsToServe := make(map[uint64]bool)
+func computeProjectsToServe(projectDatas map[int64]ModelChunkMapping, myNum, noOfPatternServers uint64) map[int64]bool {
+	projectsToServe := make(map[int64]bool)
 	for projectId := range projectDatas {
 		if serveProject(projectId, myNum, noOfPatternServers) {
 			projectsToServe[projectId] = true
@@ -170,7 +170,7 @@ func computeProjectsToServe(projectDatas map[uint64]ModelChunkMapping, myNum, no
 	return projectsToServe
 }
 
-func computeModelsToServe(projectDatas map[uint64]ModelChunkMapping, myNum, noOfPatternServers uint64) map[string]bool {
+func computeModelsToServe(projectDatas map[int64]ModelChunkMapping, myNum, noOfPatternServers uint64) map[string]bool {
 	modelsToServe := make(map[string]bool)
 	for projectId, pD := range projectDatas {
 		for modelId := range pD {
@@ -182,7 +182,7 @@ func computeModelsToServe(projectDatas map[uint64]ModelChunkMapping, myNum, noOf
 	return modelsToServe
 }
 
-func computeChunksToServe(projectDatas map[uint64]ModelChunkMapping, myNum, noOfPatternServers uint64) map[string]bool {
+func computeChunksToServe(projectDatas map[int64]ModelChunkMapping, myNum, noOfPatternServers uint64) map[string]bool {
 	chunksToServe := make(map[string]bool)
 	for projectId, pd := range projectDatas {
 		for modelId, modelData := range pd {
@@ -205,25 +205,25 @@ func generateHashNum(str string) uint64 {
 	return f.Sum64()
 }
 
-func serveProject(projectId, myNum, noOfPatternServers uint64) bool {
+func serveProject(projectId int64, myNum, noOfPatternServers uint64) bool {
 	str := fmt.Sprintf("%v", projectId)
 	hashN := generateHashNum(str)
 	return hashN%noOfPatternServers == myNum%noOfPatternServers
 }
 
-func serveProjectModel(projectId, modelId, myNum, noOfPatternServers uint64) bool {
+func serveProjectModel(projectId int64, modelId, myNum, noOfPatternServers uint64) bool {
 	str := GetModelKey(projectId, modelId)
 	hashN := generateHashNum(str)
 	return hashN%noOfPatternServers == myNum%noOfPatternServers
 }
 
-func serveProjectModelChunk(projectId, modelId uint64, chunkId string, myNum, noOfPatternServers uint64) bool {
+func serveProjectModelChunk(projectId int64, modelId uint64, chunkId string, myNum, noOfPatternServers uint64) bool {
 	str := GetChunkKey(projectId, modelId, chunkId)
 	hashN := generateHashNum(str)
 	return hashN%noOfPatternServers == myNum%noOfPatternServers
 }
 
-func (ps *PatternServer) GetProjectModelChunks(projectId, modelId uint64) ([]string, bool) {
+func (ps *PatternServer) GetProjectModelChunks(projectId int64, modelId uint64) ([]string, bool) {
 	// call db to get this: janani
 	modelData, _, _ := modelstore.GetStore().GetProjectModelMetadata(projectId)
 	chunkIds := make([]string, 0, 0)
@@ -235,7 +235,7 @@ func (ps *PatternServer) GetProjectModelChunks(projectId, modelId uint64) ([]str
 	return chunkIds, true
 }
 
-func (ps *PatternServer) GetProjectModelLatestInterval(projectId uint64) (client.ModelInfo, error) {
+func (ps *PatternServer) GetProjectModelLatestInterval(projectId int64) (client.ModelInfo, error) {
 	// call db to get this: janani
 	modelMetadata, _, msg := modelstore.GetStore().GetProjectModelMetadata(projectId)
 	var err error
@@ -308,34 +308,34 @@ func (ps *PatternServer) GetProjectModelChunksToServe() map[string]bool {
 	return ps.GetState().getProjectModelChunksToServe()
 }
 
-func (ps *PatternServer) GetProjectModelChunkData() map[uint64]ModelChunkMapping {
+func (ps *PatternServer) GetProjectModelChunkData() map[int64]ModelChunkMapping {
 	return ps.GetState().getProjectModelChunkData()
 }
 
-func (ps *PatternServer) IsProjectServable(projectId uint64) bool {
+func (ps *PatternServer) IsProjectServable(projectId int64) bool {
 	val, exists := ps.GetState().getProjectsToServe()[projectId]
 	return val && exists
 }
 
-func (ps *PatternServer) IsProjectModelServable(projectId, modelId uint64) bool {
+func (ps *PatternServer) IsProjectModelServable(projectId int64, modelId uint64) bool {
 	val, exists := ps.GetState().getProjectModelsToServe()[GetModelKey(projectId, modelId)]
 	return val && exists
 }
 
-func (ps *PatternServer) IsProjectModelChunkServable(projectId, modelId uint64, chunkId string) bool {
+func (ps *PatternServer) IsProjectModelChunkServable(projectId int64, modelId uint64, chunkId string) bool {
 	val, exists := ps.GetState().getProjectModelChunksToServe()[GetChunkKey(projectId, modelId, chunkId)]
 	return val && exists
 }
 
-func (ps *PatternServer) GetModelEventInfo(projectId, modelId uint64) (pattern.UserAndEventsInfo, error) {
+func (ps *PatternServer) GetModelEventInfo(projectId int64, modelId uint64) (pattern.UserAndEventsInfo, error) {
 	return ps.store.GetModelEventInfo(projectId, modelId)
 }
 
-func GetModelKey(projectId, modelId uint64) string {
+func GetModelKey(projectId int64, modelId uint64) string {
 	return fmt.Sprintf("%d%s%d", projectId, IdSeparator, modelId)
 }
 
-func GetChunkKey(projectId, modelId uint64, chunkId string) string {
+func GetChunkKey(projectId int64, modelId uint64, chunkId string) string {
 	return fmt.Sprintf("%d%s%d%s%s", projectId, IdSeparator, modelId, IdSeparator, chunkId)
 }
 

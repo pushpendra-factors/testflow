@@ -31,7 +31,7 @@ class NewClickPerformanceReportsJob(ReportsFetch):
        "click_view.keyword_info.match_type",
     ]
 
-    HEADERS_VMAX =[
+    HEADERS_V01 =[
         "ad_group_id", 
         "ad_group_name", 
         "ad_group_status", 
@@ -63,6 +63,9 @@ class NewClickPerformanceReportsJob(ReportsFetch):
         "click_type", "creative_id", "criteria_id", "criteria_parameters", "date", "device",
         "external_customer_id", "gcl_id",
         "page", "slot", "user_list_id"]
+    
+    HEADERS_V02 = HEADERS_V01
+    HEADERS_VMAX = HEADERS_V01
     
     REPORT = "click_view"
 

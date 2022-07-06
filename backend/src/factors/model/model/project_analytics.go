@@ -2,7 +2,7 @@ package model
 
 type ProjectAnalytics struct {
 	Date              string `json:"date"`
-	ProjectID         uint64 `json:"project_id"`
+	ProjectID         int64  `json:"project_id"`
 	ProjectName       string `json:"project_name"`
 	AdwordsEvents     uint64 `json:"adwords_events"`
 	FacebookEvents    uint64 `json:"facebook_events"`

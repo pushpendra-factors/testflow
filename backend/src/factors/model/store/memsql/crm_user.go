@@ -13,7 +13,7 @@ import (
 )
 
 // isExistCRMUserByID check for existing user by external user id, source, object type
-func isExistCRMUserByID(projectID uint64, source U.CRMSource, userType int, id string) (int, error) {
+func isExistCRMUserByID(projectID int64, source U.CRMSource, userType int, id string) (int, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"source":     source,
@@ -129,7 +129,7 @@ func (store *MemSQL) CreateCRMUser(crmUser *model.CRMUser) (int, error) {
 	return http.StatusCreated, nil
 }
 
-func (store *MemSQL) GetCRMUserByTypeAndAction(projectID uint64, source U.CRMSource, id string, userType int, action model.CRMAction) (*model.CRMUser, int) {
+func (store *MemSQL) GetCRMUserByTypeAndAction(projectID int64, source U.CRMSource, id string, userType int, action model.CRMAction) (*model.CRMUser, int) {
 
 	logFields := log.Fields{
 		"project_id": projectID,
@@ -169,7 +169,7 @@ func (store *MemSQL) GetCRMUserByTypeAndAction(projectID uint64, source U.CRMSou
 	return &crmUser, http.StatusFound
 }
 
-func (store *MemSQL) UpdateCRMUserAsSynced(projectID uint64, source U.CRMSource, crmUser *model.CRMUser, userID, syncID string) (*model.CRMUser, int) {
+func (store *MemSQL) UpdateCRMUserAsSynced(projectID int64, source U.CRMSource, crmUser *model.CRMUser, userID, syncID string) (*model.CRMUser, int) {
 
 	logFields := log.Fields{
 		"project_id": projectID,
@@ -211,7 +211,7 @@ func (store *MemSQL) UpdateCRMUserAsSynced(projectID uint64, source U.CRMSource,
 	return crmUser, http.StatusAccepted
 }
 
-func (store *MemSQL) GetCRMUsersInOrderForSync(projectID uint64, source U.CRMSource, startTimestamp, endTimestamp int64) ([]model.CRMUser, int) {
+func (store *MemSQL) GetCRMUsersInOrderForSync(projectID int64, source U.CRMSource, startTimestamp, endTimestamp int64) ([]model.CRMUser, int) {
 
 	logFields := log.Fields{
 		"project_id":     projectID,
@@ -248,7 +248,7 @@ func (store *MemSQL) GetCRMUsersInOrderForSync(projectID uint64, source U.CRMSou
 	return crmUsers, http.StatusFound
 }
 
-func (store *MemSQL) GetCRMUsersMinimumTimestampForSync(projectID uint64, source U.CRMSource) (int64, int) {
+func (store *MemSQL) GetCRMUsersMinimumTimestampForSync(projectID int64, source U.CRMSource) (int64, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"source":     source,

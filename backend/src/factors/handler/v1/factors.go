@@ -18,7 +18,7 @@ import (
 
 // GetAllFactorsHandler - Factors handler
 func PostFactorsHandler(c *gin.Context) {
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
@@ -142,7 +142,7 @@ func GetUserDistributionParams(c *gin.Context) ([]CreateFactorsGoalParams, error
 }
 
 func GetFactorsHandler(c *gin.Context) {
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
@@ -312,7 +312,7 @@ func GetcompareFactorsGoalParams(c *gin.Context) (*CompareFactorsGoalParams, err
 }
 
 func PostFactorsCompareHandler(c *gin.Context) {
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
@@ -648,7 +648,7 @@ func parseConstraints(filters model.FactorsGoalFilter) (*P.EventConstraints, *P.
 	return &startEventConstraints, &endEventConstraints
 }
 func GetModelMetaData(c *gin.Context) {
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return

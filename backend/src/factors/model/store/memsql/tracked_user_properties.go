@@ -33,11 +33,11 @@ func (store *MemSQL) satisfiesTrackedUserPropertiesForeignConstraints(trackedUse
 }
 
 //CreateFactorsTrackedUserProperty - Inserts the tracked event to db
-func (store *MemSQL) CreateFactorsTrackedUserProperty(ProjectID uint64, UserPropertyName string, agentUUID string) (int64, int) {
+func (store *MemSQL) CreateFactorsTrackedUserProperty(ProjectID int64, UserPropertyName string, agentUUID string) (int64, int) {
 	logFields := log.Fields{
-		"project_id": ProjectID,
+		"project_id":         ProjectID,
 		"user_property_name": UserPropertyName,
-		"agent_uuid": agentUUID,
+		"agent_uuid":         agentUUID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if store.isActiveFactorsTrackedUserPropertiesLimitExceeded(ProjectID) {
@@ -105,10 +105,10 @@ func (store *MemSQL) CreateFactorsTrackedUserProperty(ProjectID uint64, UserProp
 }
 
 // RemoveFactorsTrackedUserProperty - Mark the tracked event inactive
-func (store *MemSQL) RemoveFactorsTrackedUserProperty(ID int64, ProjectID uint64) (int64, int) {
+func (store *MemSQL) RemoveFactorsTrackedUserProperty(ID int64, ProjectID int64) (int64, int) {
 	logFields := log.Fields{
 		"project_id": ProjectID,
-		"id": ID,
+		"id":         ID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
@@ -161,7 +161,7 @@ func isUserPropertyInList(properties []model.KeyValueTuple, searchKey string) bo
 }
 
 // GetAllFactorsTrackedUserPropertiesByProject - get all the tracked user properties by project
-func (store *MemSQL) GetAllFactorsTrackedUserPropertiesByProject(ProjectID uint64) ([]model.FactorsTrackedUserProperty, int) {
+func (store *MemSQL) GetAllFactorsTrackedUserPropertiesByProject(ProjectID int64) ([]model.FactorsTrackedUserProperty, int) {
 	logFields := log.Fields{
 		"project_id": ProjectID,
 	}
@@ -181,7 +181,7 @@ func (store *MemSQL) GetAllFactorsTrackedUserPropertiesByProject(ProjectID uint6
 }
 
 // GetAllActiveFactorsTrackedUserPropertiesByProject - get all the tracked user properties by project
-func (store *MemSQL) GetAllActiveFactorsTrackedUserPropertiesByProject(ProjectID uint64) ([]model.FactorsTrackedUserProperty, int) {
+func (store *MemSQL) GetAllActiveFactorsTrackedUserPropertiesByProject(ProjectID int64) ([]model.FactorsTrackedUserProperty, int) {
 	logFields := log.Fields{
 		"project_id": ProjectID,
 	}
@@ -201,9 +201,9 @@ func (store *MemSQL) GetAllActiveFactorsTrackedUserPropertiesByProject(ProjectID
 }
 
 // GetFactorsTrackedUserProperty - Get tracked user property
-func (store *MemSQL) GetFactorsTrackedUserProperty(UserPropertyName string, ProjectID uint64) (*model.FactorsTrackedUserProperty, error) {
+func (store *MemSQL) GetFactorsTrackedUserProperty(UserPropertyName string, ProjectID int64) (*model.FactorsTrackedUserProperty, error) {
 	logFields := log.Fields{
-		"project_id": ProjectID,
+		"project_id":         ProjectID,
 		"user_property_name": UserPropertyName,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -223,10 +223,10 @@ func (store *MemSQL) GetFactorsTrackedUserProperty(UserPropertyName string, Proj
 }
 
 // GetFactorsTrackedUserPropertyByID - Get tracked user property
-func (store *MemSQL) GetFactorsTrackedUserPropertyByID(ID int64, ProjectID uint64) (*model.FactorsTrackedUserProperty, error) {
+func (store *MemSQL) GetFactorsTrackedUserPropertyByID(ID int64, ProjectID int64) (*model.FactorsTrackedUserProperty, error) {
 	logFields := log.Fields{
 		"project_id": ProjectID,
-		"id": ID,
+		"id":         ID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
@@ -244,11 +244,11 @@ func (store *MemSQL) GetFactorsTrackedUserPropertyByID(ID int64, ProjectID uint6
 	return &trackedUserProperty, nil
 }
 
-func updateFactorsTrackedUserProperty(FactorsTrackedUserPropertyID uint64, ProjectID uint64, updatedFields map[string]interface{}) (int64, int) {
+func updateFactorsTrackedUserProperty(FactorsTrackedUserPropertyID uint64, ProjectID int64, updatedFields map[string]interface{}) (int64, int) {
 	logFields := log.Fields{
-		"project_id": ProjectID,
+		"project_id":                       ProjectID,
 		"factors_tracked_user_property_id": FactorsTrackedUserPropertyID,
-		"updated_fields": updatedFields,
+		"updated_fields":                   updatedFields,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
@@ -261,9 +261,9 @@ func updateFactorsTrackedUserProperty(FactorsTrackedUserPropertyID uint64, Proje
 	return int64(FactorsTrackedUserPropertyID), http.StatusOK
 }
 
-func (store *MemSQL) IsUserPropertyValid(ProjectID uint64, UserProperty string) bool {
+func (store *MemSQL) IsUserPropertyValid(ProjectID int64, UserProperty string) bool {
 	logFields := log.Fields{
-		"project_id": ProjectID,
+		"project_id":    ProjectID,
 		"user_property": UserProperty,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -286,7 +286,7 @@ func (store *MemSQL) IsUserPropertyValid(ProjectID uint64, UserProperty string) 
 	return true
 }
 
-func (store *MemSQL) isActiveFactorsTrackedUserPropertiesLimitExceeded(ProjectID uint64) bool {
+func (store *MemSQL) isActiveFactorsTrackedUserPropertiesLimitExceeded(ProjectID int64) bool {
 	logFields := log.Fields{
 		"project_id": ProjectID,
 	}

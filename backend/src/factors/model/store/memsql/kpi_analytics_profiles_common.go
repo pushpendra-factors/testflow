@@ -10,12 +10,13 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (store *MemSQL) ExecuteKPIQueryForProfiles(projectID uint64, reqID string, kpiQuery model.KPIQuery) ([]model.QueryResult, int) {
-	return store.TransformToAndExecuteProfileAnalyticsQueries(projectID, kpiQuery, reqID)
+func (store *MemSQL) ExecuteKPIQueryForProfiles(projectID int64, reqID string,
+	kpiQuery model.KPIQuery, enableOptimisedFilter bool) ([]model.QueryResult, int) {
+	return store.TransformToAndExecuteProfileAnalyticsQueries(projectID, kpiQuery, reqID, enableOptimisedFilter)
 }
 
-// Check statusCode
-func (store *MemSQL) TransformToAndExecuteProfileAnalyticsQueries(projectID uint64, kpiQuery model.KPIQuery, reqID string) ([]model.QueryResult, int) {
+func (store *MemSQL) TransformToAndExecuteProfileAnalyticsQueries(projectID int64, kpiQuery model.KPIQuery,
+	reqID string, enableOptimisedFilter bool) ([]model.QueryResult, int) {
 	var profileQueryGroup model.ProfileQueryGroup
 	var queryResults []model.QueryResult
 	queryResults = make([]model.QueryResult, len(kpiQuery.Metrics))
@@ -27,7 +28,7 @@ func (store *MemSQL) TransformToAndExecuteProfileAnalyticsQueries(projectID uint
 	waitGroup.Add(actualRoutineLimit)
 	for index, kpiMetric := range kpiQuery.Metrics {
 		count++
-		go store.transformAndExecuteForSingleKPIMetricProfile(projectID, profileQueryGroup, kpiQuery, kpiMetric, &queryResults[index], &waitGroup)
+		go store.transformAndExecuteForSingleKPIMetricProfile(projectID, profileQueryGroup, kpiQuery, kpiMetric, &queryResults[index], &waitGroup, enableOptimisedFilter)
 		if count%actualRoutineLimit == 0 {
 			waitGroup.Wait()
 			waitGroup.Add(U.MinInt(len(kpiQuery.Metrics)-count, actualRoutineLimit))
@@ -43,19 +44,23 @@ func (store *MemSQL) TransformToAndExecuteProfileAnalyticsQueries(projectID uint
 	return queryResults, http.StatusOK
 }
 
-func (store *MemSQL) transformAndExecuteForSingleKPIMetricProfile(projectID uint64, profileQueryGroup model.ProfileQueryGroup, kpiQuery model.KPIQuery,
-	kpiMetric string, result *model.QueryResult, waitGroup *sync.WaitGroup) {
+func (store *MemSQL) transformAndExecuteForSingleKPIMetricProfile(projectID int64,
+	profileQueryGroup model.ProfileQueryGroup,
+	kpiQuery model.KPIQuery, kpiMetric string, result *model.QueryResult,
+	waitGroup *sync.WaitGroup, enableOptimisedFilter bool) {
+
 	defer waitGroup.Done()
 	finalResult := model.QueryResult{}
 
-	finalResult = store.wrappedExecuteForResultProfile(projectID, profileQueryGroup, kpiQuery, kpiMetric)
+	finalResult = store.wrappedExecuteForResultProfile(projectID, profileQueryGroup, kpiQuery,
+		kpiMetric, enableOptimisedFilter)
 	*result = finalResult
 }
 
 // TODO Later - Generalising the transformation of external computation to internal computations.
 // Eg - representing avg in terms of count(property)/count(*) with division operator.
-func (store *MemSQL) wrappedExecuteForResultProfile(projectID uint64, profileQueryGroup model.ProfileQueryGroup, kpiQuery model.KPIQuery,
-	kpiMetric string) model.QueryResult {
+func (store *MemSQL) wrappedExecuteForResultProfile(projectID int64, profileQueryGroup model.ProfileQueryGroup,
+	kpiQuery model.KPIQuery, kpiMetric string, enableOptimisedFilter bool) model.QueryResult {
 	// Execute Profiles Query For Single KPI.
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	hasGroupByTimestamp := (kpiQuery.GroupByTimestamp != "")
@@ -77,7 +82,7 @@ func (store *MemSQL) wrappedExecuteForResultProfile(projectID uint64, profileQue
 		log.WithField("customMetric", customMetric).WithField("err", err).Warn("Failed in decoding custom Metric")
 	}
 	currentQueries := model.AddCustomMetricsTransformationsToProfileQuery(profileQueryGroup, kpiMetric, customMetric, transformation, kpiQuery)
-	resultGroup, errCode := store.RunProfilesGroupQuery(currentQueries, projectID)
+	resultGroup, errCode := store.RunProfilesGroupQuery(currentQueries, projectID, enableOptimisedFilter)
 	if errCode != http.StatusOK {
 		// Log or not.
 		finalResult.Headers = append(finalResult.Headers, model.AliasError)

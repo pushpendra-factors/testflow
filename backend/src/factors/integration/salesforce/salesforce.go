@@ -22,7 +22,7 @@ const (
 
 // OAuthState represent the state parameter for oAuth flow
 type OAuthState struct {
-	ProjectID uint64  `json:"pid"`
+	ProjectID int64   `json:"pid"`
 	AgentUUID *string `json:"aid"`
 }
 

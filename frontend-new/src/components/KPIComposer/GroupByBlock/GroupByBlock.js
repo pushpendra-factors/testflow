@@ -6,6 +6,7 @@ import isArray from 'lodash/isArray';
 import { QUERY_TYPE_EVENT, QUERY_TYPE_FUNNEL } from '../../../utils/constants';
 import ComposerBlock from '../../QueryCommons/ComposerBlock';
 import GroupBlock from '../GroupBlock';
+import { areKpisInSameGroup } from '../../../utils/kpiQueryComposer.helpers';
 
 const GroupByBlock = ({
   queryType,
@@ -17,9 +18,7 @@ const GroupByBlock = ({
 }) => {
   const [groupBlockOpen, setGroupBlockOpen] = useState(true);
   const isSameKPIGrp = useMemo(() => {
-    return queries.every(
-      (_, index) => queries[0].group === queries[index].group
-    );
+    return areKpisInSameGroup({ kpis: queries });
   }, [queries]);
 
   useEffect(() => {

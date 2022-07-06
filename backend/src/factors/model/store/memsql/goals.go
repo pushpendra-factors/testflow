@@ -36,7 +36,7 @@ func (store *MemSQL) satisfiesGoalForeignConstraints(goal model.FactorsGoal) int
 }
 
 // GetAllFactorsGoals - get all the goals for a project
-func (store *MemSQL) GetAllFactorsGoals(ProjectID uint64) ([]model.FactorsGoal, int) {
+func (store *MemSQL) GetAllFactorsGoals(ProjectID int64) ([]model.FactorsGoal, int) {
 	logFields := log.Fields{
 		"project_id": ProjectID,
 	}
@@ -56,7 +56,7 @@ func (store *MemSQL) GetAllFactorsGoals(ProjectID uint64) ([]model.FactorsGoal, 
 }
 
 // GetAllActiveFactorsGoals - get all the goals for a project
-func (store *MemSQL) GetAllActiveFactorsGoals(ProjectID uint64) ([]model.FactorsGoal, int) {
+func (store *MemSQL) GetAllActiveFactorsGoals(ProjectID int64) ([]model.FactorsGoal, int) {
 	logFields := log.Fields{
 		"project_id": ProjectID,
 	}
@@ -76,7 +76,7 @@ func (store *MemSQL) GetAllActiveFactorsGoals(ProjectID uint64) ([]model.Factors
 }
 
 // CreateFactorsGoal - create a new goal
-func (store *MemSQL) CreateFactorsGoal(ProjectID uint64, Name string, Rule model.FactorsGoalRule, agentUUID string) (int64, int, string) {
+func (store *MemSQL) CreateFactorsGoal(ProjectID int64, Name string, Rule model.FactorsGoalRule, agentUUID string) (int64, int, string) {
 	logFields := log.Fields{
 		"project_id": ProjectID,
 		"name":       Name,
@@ -142,7 +142,7 @@ func (store *MemSQL) CreateFactorsGoal(ProjectID uint64, Name string, Rule model
 	return int64(goal.ID), http.StatusCreated, ""
 }
 
-func isDulplicateFactorsGoalRule(ProjectID uint64, Rule model.FactorsGoalRule) bool {
+func isDulplicateFactorsGoalRule(ProjectID int64, Rule model.FactorsGoalRule) bool {
 	logFields := log.Fields{
 		"project_id": ProjectID,
 		"rule":       Rule,
@@ -174,7 +174,7 @@ func isDulplicateFactorsGoalRule(ProjectID uint64, Rule model.FactorsGoalRule) b
 	return false
 }
 
-func (store *MemSQL) isEventObjectValid(event string, eventFilters []model.KeyValueTuple, ProjectID uint64) (bool, string) {
+func (store *MemSQL) isEventObjectValid(event string, eventFilters []model.KeyValueTuple, ProjectID int64) (bool, string) {
 	logFields := log.Fields{
 		"project_id":    ProjectID,
 		"event":         event,
@@ -207,7 +207,7 @@ func (store *MemSQL) isEventObjectValid(event string, eventFilters []model.KeyVa
 	}
 	return true, ""
 }
-func (store *MemSQL) isRuleValid(Rule model.FactorsGoalRule, ProjectID uint64) (bool, string) {
+func (store *MemSQL) isRuleValid(Rule model.FactorsGoalRule, ProjectID int64) (bool, string) {
 	logFields := log.Fields{
 		"project_id": ProjectID,
 		"rule":       Rule,
@@ -254,7 +254,7 @@ func (store *MemSQL) isRuleValid(Rule model.FactorsGoalRule, ProjectID uint64) (
 	return true, ""
 }
 
-func (store *MemSQL) isUserPropertiesValid(ProjectID uint64, UserProperties []string) (bool, string) {
+func (store *MemSQL) isUserPropertiesValid(ProjectID int64, UserProperties []string) (bool, string) {
 	logFields := log.Fields{
 		"project_id":      ProjectID,
 		"user_properties": UserProperties,
@@ -290,7 +290,7 @@ func (store *MemSQL) isUserPropertiesValid(ProjectID uint64, UserProperties []st
 	return true, ""
 }
 
-func (store *MemSQL) isEventPropertiesValid(ProjectID uint64, EventName string, EventProperties []string) (bool, string) {
+func (store *MemSQL) isEventPropertiesValid(ProjectID int64, EventName string, EventProperties []string) (bool, string) {
 	logFields := log.Fields{
 		"project_id":       ProjectID,
 		"event_name":       EventName,
@@ -319,7 +319,7 @@ func (store *MemSQL) isEventPropertiesValid(ProjectID uint64, EventName string, 
 }
 
 // DeactivateFactorsGoal - Mark the existing goal as inactive
-func (store *MemSQL) DeactivateFactorsGoal(ID int64, ProjectID uint64) (int64, int) {
+func (store *MemSQL) DeactivateFactorsGoal(ID int64, ProjectID int64) (int64, int) {
 	logFields := log.Fields{
 		"project_id": ProjectID,
 		"id":         ID,
@@ -345,7 +345,7 @@ func (store *MemSQL) DeactivateFactorsGoal(ID int64, ProjectID uint64) (int64, i
 }
 
 // ActivateFactorsGoal - activating the already deactivated goal
-func (store *MemSQL) ActivateFactorsGoal(Name string, ProjectID uint64) (int64, int) {
+func (store *MemSQL) ActivateFactorsGoal(Name string, ProjectID int64) (int64, int) {
 	logFields := log.Fields{
 		"project_id": ProjectID,
 		"name":       Name,
@@ -374,7 +374,7 @@ func (store *MemSQL) ActivateFactorsGoal(Name string, ProjectID uint64) (int64, 
 }
 
 // UpdateFactorsGoal - Edit the existing goal's name/rule
-func (store *MemSQL) UpdateFactorsGoal(ID int64, Name string, Rule model.FactorsGoalRule, ProjectID uint64) (int64, int) {
+func (store *MemSQL) UpdateFactorsGoal(ID int64, Name string, Rule model.FactorsGoalRule, ProjectID int64) (int64, int) {
 	logFields := log.Fields{
 		"project_id": ProjectID,
 		"name":       Name,
@@ -414,7 +414,7 @@ func (store *MemSQL) UpdateFactorsGoal(ID int64, Name string, Rule model.Factors
 }
 
 // GetFactorsGoal - Get pariticular goal's details by name
-func (store *MemSQL) GetFactorsGoal(Name string, ProjectID uint64) (*model.FactorsGoal, error) {
+func (store *MemSQL) GetFactorsGoal(Name string, ProjectID int64) (*model.FactorsGoal, error) {
 	logFields := log.Fields{
 		"project_id": ProjectID,
 		"name":       Name,
@@ -436,7 +436,7 @@ func (store *MemSQL) GetFactorsGoal(Name string, ProjectID uint64) (*model.Facto
 }
 
 // GetFactorsGoalByID  - Get goal details by ID
-func (store *MemSQL) GetFactorsGoalByID(ID int64, ProjectID uint64) (*model.FactorsGoal, error) {
+func (store *MemSQL) GetFactorsGoalByID(ID int64, ProjectID int64) (*model.FactorsGoal, error) {
 	logFields := log.Fields{
 		"project_id": ProjectID,
 		"id":         ID,
@@ -457,7 +457,7 @@ func (store *MemSQL) GetFactorsGoalByID(ID int64, ProjectID uint64) (*model.Fact
 	return &goal, nil
 }
 
-func updateFactorsGoal(FactorsGoalID uint64, ProjectID uint64, updatedFields map[string]interface{}) (int64, int) {
+func updateFactorsGoal(FactorsGoalID uint64, ProjectID int64, updatedFields map[string]interface{}) (int64, int) {
 	logFields := log.Fields{
 		"project_id":      ProjectID,
 		"factors_goal_id": FactorsGoalID,
@@ -475,7 +475,7 @@ func updateFactorsGoal(FactorsGoalID uint64, ProjectID uint64, updatedFields map
 }
 
 // GetAllFactorsGoalsWithNamePattern - get all the goals for a project matching a specific pattern in the name
-func (store *MemSQL) GetAllFactorsGoalsWithNamePattern(ProjectID uint64, NamePattern string) ([]model.FactorsGoal, int) {
+func (store *MemSQL) GetAllFactorsGoalsWithNamePattern(ProjectID int64, NamePattern string) ([]model.FactorsGoal, int) {
 	logFields := log.Fields{
 		"project_id":   ProjectID,
 		"name_pattern": NamePattern,
@@ -496,7 +496,7 @@ func (store *MemSQL) GetAllFactorsGoalsWithNamePattern(ProjectID uint64, NamePat
 	return goals, http.StatusFound
 }
 
-func (store *MemSQL) isActiveFactorsGoalsLimitExceeded(ProjectID uint64) bool {
+func (store *MemSQL) isActiveFactorsGoalsLimitExceeded(ProjectID int64) bool {
 	logFields := log.Fields{
 		"project_id": ProjectID,
 	}

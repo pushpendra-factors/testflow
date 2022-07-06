@@ -22,7 +22,7 @@ import (
 
 // Status represents current sync status for a doc type
 type Status struct {
-	ProjectID uint64 `json:"project_id"`
+	ProjectID int64  `json:"project_id"`
 	Type      string `json:"type"`
 	Status    string `json:"status"`
 	Message   string `json:"message,omitempty"`
@@ -63,7 +63,7 @@ var opportunityMappingOrder = []string{
 
 var allowedCampaignFields = map[string]bool{}
 
-func getSalesforceMappedDataTypeValue(projectID uint64, eventName, enKey string, value interface{}, typeAlias string, dateProperties *map[string]bool, timeZoneStr U.TimeZoneString) (interface{}, error) {
+func getSalesforceMappedDataTypeValue(projectID int64, eventName, enKey string, value interface{}, typeAlias string, dateProperties *map[string]bool, timeZoneStr U.TimeZoneString) (interface{}, error) {
 	if value == nil || value == "" {
 		return "", nil
 	}
@@ -107,7 +107,7 @@ func getSalesforceMappedDataTypeValue(projectID uint64, eventName, enKey string,
 }
 
 // GetSalesforceDocumentProperties return map of enriched properties
-func GetSalesforceDocumentProperties(projectID uint64, document *model.SalesforceDocument) (*map[string]interface{}, *map[string]interface{}, error) {
+func GetSalesforceDocumentProperties(projectID int64, document *model.SalesforceDocument) (*map[string]interface{}, *map[string]interface{}, error) {
 
 	var enProperties map[string]interface{}
 	err := json.Unmarshal(document.Value.RawMessage, &enProperties)
@@ -146,7 +146,7 @@ func GetSalesforceDocumentProperties(projectID uint64, document *model.Salesforc
 	return &enrichedProperties, &properties, nil
 }
 
-func filterPropertyFieldsByProjectID(projectID uint64, properties *map[string]interface{}, docType int) {
+func filterPropertyFieldsByProjectID(projectID int64, properties *map[string]interface{}, docType int) {
 
 	if projectID == 0 {
 		return
@@ -192,7 +192,7 @@ func getSalesforceAccountID(document *model.SalesforceDocument) (string, error) 
 	return accountID, nil
 }
 
-func getCustomerUserIDFromProperties(projectID uint64, properties map[string]interface{}, docTypeAlias string, salesforceProjectIdentificationFieldStore *map[uint64]map[string][]string) (string, string) {
+func getCustomerUserIDFromProperties(projectID int64, properties map[string]interface{}, docTypeAlias string, salesforceProjectIdentificationFieldStore *map[int64]map[string][]string) (string, string) {
 
 	identifiers := model.GetIdentifierPrecendenceOrderByProjectID(projectID)
 	for _, indentityType := range identifiers {
@@ -234,7 +234,7 @@ TrackSalesforceEventByDocumentType tracks salesforce events by action
 	for action created -> create both created and updated events with date created timestamp
 	for action updated -> create on updated event with last modified timestamp
 */
-func TrackSalesforceEventByDocumentType(projectID uint64, trackPayload *SDK.TrackPayload, document *model.SalesforceDocument, customerUserID string, objectType string) (string, string, SDK.TrackPayload, error) {
+func TrackSalesforceEventByDocumentType(projectID int64, trackPayload *SDK.TrackPayload, document *model.SalesforceDocument, customerUserID string, objectType string) (string, string, SDK.TrackPayload, error) {
 
 	var finalPayload SDK.TrackPayload
 	if projectID == 0 {
@@ -379,7 +379,7 @@ func getAccountGroupID(enProperties *map[string]interface{}, document *model.Sal
 	return accountID
 }
 
-func enrichGroupAcccount(projectID uint64, document *model.SalesforceDocument) int {
+func enrichGroupAcccount(projectID int64, document *model.SalesforceDocument) int {
 	logCtx := log.WithField("project_id", projectID).
 		WithFields(log.Fields{"doc_id": document.ID, "doc_action": document.Action, "doc_timestamp": document.Timestamp})
 
@@ -408,7 +408,7 @@ func enrichGroupAcccount(projectID uint64, document *model.SalesforceDocument) i
 	return status
 }
 
-func enrichAccount(projectID uint64, document *model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName) int {
+func enrichAccount(projectID int64, document *model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName) int {
 	if projectID == 0 || document == nil {
 		return http.StatusBadRequest
 	}
@@ -486,7 +486,7 @@ func getTimestampFromField(propertyName string, properties *map[string]interface
 	return 0, errors.New("field missing")
 }
 
-func enrichContact(projectID uint64, document *model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName, pendingOpportunityAssociatedRecords map[string]string) int {
+func enrichContact(projectID int64, document *model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName, pendingOpportunityAssociatedRecords map[string]string) int {
 	if projectID == 0 || document == nil {
 		return http.StatusBadRequest
 	}
@@ -562,7 +562,7 @@ WITHOUT PREVIOUS PROPERTY :- A query will be made for previous synced record whi
 will require userID or customerUserID and doctType
 WITH PREVIOUS PROPERTY := userID, customerUserID and doctType won't be used
 */
-func GetSalesforceSmartEventPayload(projectID uint64, eventName, documentID, userID string, docType int,
+func GetSalesforceSmartEventPayload(projectID int64, eventName, documentID, userID string, docType int,
 	currentProperties, prevProperties *map[string]interface{}, filter *model.SmartCRMEventFilter) (*model.CRMSmartEvent, *map[string]interface{}, bool) {
 
 	var crmSmartEvent model.CRMSmartEvent
@@ -623,7 +623,7 @@ func GetSalesforceSmartEventPayload(projectID uint64, eventName, documentID, use
 }
 
 // TrackSalesforceSmartEvent valids current properties with CRM smart filter and creates a event
-func TrackSalesforceSmartEvent(projectID uint64, salesforceSmartEventName *SalesforceSmartEventName, eventID, documentID, userID string, docType int,
+func TrackSalesforceSmartEvent(projectID int64, salesforceSmartEventName *SalesforceSmartEventName, eventID, documentID, userID string, docType int,
 	currentProperties, prevProperties *map[string]interface{}, lastModifiedTimestamp int64) *map[string]interface{} {
 	var valid bool
 	var smartEventPayload *model.CRMSmartEvent
@@ -753,7 +753,7 @@ func getOpportuntityLeadAndContactID(document *model.SalesforceDocument) ([]stri
 	return oppLeadIDs, oppContactIDs, oppLeadID, oppContactID, nil
 }
 
-func getOpportunityLinkedLeadOrContactDocument(projectID uint64, document *model.SalesforceDocument) (*model.SalesforceDocument, error) {
+func getOpportunityLinkedLeadOrContactDocument(projectID int64, document *model.SalesforceDocument) (*model.SalesforceDocument, error) {
 
 	_, _, oppLeadID, oppContactID, err := getOpportuntityLeadAndContactID(document)
 	if err != nil {
@@ -805,7 +805,7 @@ func isValidGroupName(documentType int, groupName string) bool {
 	}
 	return false
 }
-func createOrUpdateSalesforceGroupsProperties(projectID uint64, document *model.SalesforceDocument, groupName, groupID string) (string, int) {
+func createOrUpdateSalesforceGroupsProperties(projectID int64, document *model.SalesforceDocument, groupName, groupID string) (string, int) {
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "doc_type": document.Type, "document": document, "group_name": groupName,
 		"group_id": groupID})
@@ -920,7 +920,7 @@ func createOrUpdateSalesforceGroupsProperties(projectID uint64, document *model.
 	return groupUserID, http.StatusOK
 }
 
-func enrichGroupOpportunity(projectID uint64, document *model.SalesforceDocument) (map[string]map[string]string, int) {
+func enrichGroupOpportunity(projectID int64, document *model.SalesforceDocument) (map[string]map[string]string, int) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "document": document})
 	if projectID == 0 || document == nil {
 		logCtx.Error("Invalid project_id or document_id")
@@ -974,7 +974,7 @@ func enrichGroupOpportunity(projectID uint64, document *model.SalesforceDocument
 }
 
 // CreateSalesforceGroupRelationship create two way group relationship in group relationship table
-func CreateSalesforceGroupRelationship(projectID uint64, leftGroupName, leftgroupUserID, rightGroupName, rightDocID string, rightDocTyp int) error {
+func CreateSalesforceGroupRelationship(projectID int64, leftGroupName, leftgroupUserID, rightGroupName, rightDocID string, rightDocTyp int) error {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "left_group_user_id": leftgroupUserID, "right_document_id": rightDocID})
 	if projectID == 0 || leftgroupUserID == "" || rightDocID == "" {
 		logCtx.Error("Missing required fields")
@@ -1008,7 +1008,7 @@ func CreateSalesforceGroupRelationship(projectID uint64, leftGroupName, leftgrou
 	return nil
 }
 
-func enrichOpportunityContactRoles(projectID uint64, document *model.SalesforceDocument) int {
+func enrichOpportunityContactRoles(projectID int64, document *model.SalesforceDocument) int {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "document": document})
 	if projectID == 0 || document == nil {
 		return http.StatusBadRequest
@@ -1080,7 +1080,7 @@ func enrichOpportunityContactRoles(projectID uint64, document *model.SalesforceD
 
 	return http.StatusOK
 }
-func enrichOpportunities(projectID uint64, document *model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName) int {
+func enrichOpportunities(projectID int64, document *model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName) int {
 	if projectID == 0 || document == nil {
 		return http.StatusBadRequest
 	}
@@ -1207,7 +1207,7 @@ func enrichOpportunities(projectID uint64, document *model.SalesforceDocument, s
 	return http.StatusOK
 }
 
-func updateSalesforceUserAccountGroups(projectID uint64, accountID, userID string) int {
+func updateSalesforceUserAccountGroups(projectID int64, accountID, userID string) int {
 	documents, status := store.GetStore().GetSyncedSalesforceDocumentByType(projectID, []string{accountID},
 		model.SalesforceDocumentTypeAccount, true)
 	if status != http.StatusFound {
@@ -1251,7 +1251,7 @@ func updateSalesforceUserAccountGroups(projectID uint64, accountID, userID strin
 	return http.StatusOK
 }
 
-func enrichLeads(projectID uint64, document *model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName, pendingOpportunityAssociatedRecords map[string]string) int {
+func enrichLeads(projectID int64, document *model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName, pendingOpportunityAssociatedRecords map[string]string) int {
 	if projectID == 0 || document == nil {
 		return http.StatusBadRequest
 	}
@@ -1458,7 +1458,7 @@ func enrichCampaignToAllCampaignMembers(project *model.Project, document *model.
 }
 
 // Get existing lead or contact user ID from campaign members data
-func getExistingCampaignMemberUserIDFromProperties(projectID uint64, properties *map[string]interface{}) string {
+func getExistingCampaignMemberUserIDFromProperties(projectID int64, properties *map[string]interface{}) string {
 	existingUserID := ""
 	existingContactMemberID := (*properties)[model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceSalesforce, model.SalesforceDocumentTypeNameCampaignMember, "ContactId")]
 	existingLeadMemberID := (*properties)[model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceSalesforce, model.SalesforceDocumentTypeNameCampaignMember, "LeadId")]
@@ -1840,7 +1840,7 @@ func enrichAll(project *model.Project, documents []model.SalesforceDocument, sal
 }
 
 // GetSalesforceSmartEventNames returns all the smart_event for salesforce by object_type
-func GetSalesforceSmartEventNames(projectID uint64) *map[string][]SalesforceSmartEventName {
+func GetSalesforceSmartEventNames(projectID int64) *map[string][]SalesforceSmartEventName {
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectID})
 
@@ -1916,7 +1916,7 @@ func updateGroupWorkerStatus(errCode int, pendingSyncRecords map[string]map[stri
 	}
 }
 
-func enrichAllGroup(projectID uint64, wg *sync.WaitGroup, docType int, documents []model.SalesforceDocument, status *enrichGroupWorkerStatus) {
+func enrichAllGroup(projectID int64, wg *sync.WaitGroup, docType int, documents []model.SalesforceDocument, status *enrichGroupWorkerStatus) {
 	defer wg.Done()
 	for i := range documents {
 		startTime := time.Now().Unix()
@@ -1937,7 +1937,7 @@ func enrichAllGroup(projectID uint64, wg *sync.WaitGroup, docType int, documents
 	}
 }
 
-func enrichGroup(projectID uint64, workerPerProject int) (map[string]bool, map[string]map[string]string, int) {
+func enrichGroup(projectID int64, workerPerProject int) (map[string]bool, map[string]map[string]string, int) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID})
 
 	if projectID == 0 {
@@ -1984,7 +1984,7 @@ func enrichGroup(projectID uint64, workerPerProject int) (map[string]bool, map[s
 	return overAllSyncStatus, overAllPendingSyncRecords, http.StatusOK
 }
 
-func associateGroupUserOpportunitytoUser(projectID uint64, oppLeadIds, oppContactIds []string, OpportunityGroupUserID string) map[string]map[string]string {
+func associateGroupUserOpportunitytoUser(projectID int64, oppLeadIds, oppContactIds []string, OpportunityGroupUserID string) map[string]map[string]string {
 	pendingSyncRecords := make(map[string]map[string]string)
 	for docTypeAlias, docIDs := range map[string][]string{model.SalesforceDocumentTypeNameLead: oppLeadIds, model.SalesforceDocumentTypeNameContact: oppContactIds} {
 		docType := model.GetSalesforceDocTypeByAlias(docTypeAlias)
@@ -2085,7 +2085,7 @@ func fillTimeZoneAndDateProperty(documents []model.SalesforceDocument, TimeZoneS
 }
 
 // Enrich sync salesforce documents to events
-func Enrich(projectID uint64, workerPerProject int, dataPropertiesByType map[int]*map[string]bool) ([]Status, bool) {
+func Enrich(projectID int64, workerPerProject int, dataPropertiesByType map[int]*map[string]bool) ([]Status, bool) {
 
 	logCtx := log.WithField("project_id", projectID)
 

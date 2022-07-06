@@ -22,7 +22,7 @@ type API_FilterRequestPayload struct {
 
 type API_FilterResponePayload struct {
 	EventNameID string `json:"id,omitempty"`
-	ProjectID   uint64 `json:"project_id,omitempty"`
+	ProjectID   int64  `json:"project_id,omitempty"`
 	EventName   string `json:"name,omitempty"`
 	Deleted     bool   `json:"deleted,omitempty"`
 	FilterExpr  string `json:"expr,omitempty"`
@@ -31,7 +31,7 @@ type API_FilterResponePayload struct {
 // APISmartEventFilterResponePayload implements the response payload for smart event filter
 type APISmartEventFilterResponePayload struct {
 	EventNameID string                    `json:"id,omitempty"`
-	ProjectID   uint64                    `json:"project_id,omitempty"`
+	ProjectID   int64                     `json:"project_id,omitempty"`
 	EventName   string                    `json:"name,omitempty"`
 	Deleted     bool                      `json:"deleted,omitempty" swaggerignore:"true"`
 	FilterExpr  model.SmartCRMEventFilter `json:"expr,omitempty"`
@@ -60,7 +60,7 @@ func CreateFilterHandler(c *gin.Context) {
 		return
 	}
 
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Creating event_name failed. Invalid project."})
 		return
@@ -102,7 +102,7 @@ type APISmartEventFilterRequestPayload struct {
 func CreateSmartEventFilterHandler(c *gin.Context) {
 	r := c.Request
 
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Creating event_name failed. Invalid project."})
 		return
@@ -166,7 +166,7 @@ func CreateSmartEventFilterHandler(c *gin.Context) {
 // @Success 200 {array} handler.API_FilterResponePayload
 // @Router /{project_id}/filters [get]
 func GetFiltersHandler(c *gin.Context) {
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Get filters failed. Invalid project."})
 		return
@@ -203,7 +203,7 @@ func GetFiltersHandler(c *gin.Context) {
 // @Router /{project_id}/v1/smart_event [get]
 func GetSmartEventFiltersHandler(c *gin.Context) {
 
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Get smart event filters failed. Invalid project."})
 		return
@@ -252,7 +252,7 @@ func GetSmartEventFiltersHandler(c *gin.Context) {
 func UpdateSmartEventFilterHandler(c *gin.Context) {
 	r := c.Request
 
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Update event_name failed. Invalid project."})
 		return
@@ -322,7 +322,7 @@ func UpdateSmartEventFilterHandler(c *gin.Context) {
 // @Router /{project_id}/v1/smart_event [delete]
 func DeleteSmartEventFilterHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		return nil, http.StatusUnauthorized, V1.INVALID_PROJECT, "Delete smart event_name filter failed. Invalid project.", true
 	}
@@ -405,7 +405,7 @@ func UpdateFilterHandler(c *gin.Context) {
 		return
 	}
 
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Updating filter failed. Invalid project."})
 		return
@@ -446,7 +446,7 @@ func DeleteFilterHandler(c *gin.Context) {
 		return
 	}
 
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Get filters failed. Invalid project."})
 		return

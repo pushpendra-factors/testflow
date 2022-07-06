@@ -1025,7 +1025,7 @@ func TestIntSegmentHandlerWithSession(t *testing.T) {
 		assert.NotEmpty(t, jsonResponseMap2["event_id"])
 		assert.NotEmpty(t, jsonResponseMap2["user_id"])
 
-		_, err := TaskSession.AddSession([]uint64{project.ID}, timestamp-60, 0, 0, 0, 1, 1)
+		_, err := TaskSession.AddSession([]int64{project.ID}, timestamp-60, 0, 0, 0, 1, 1)
 		assert.Nil(t, err)
 
 		event, errCode := store.GetStore().GetEventById(project.ID, jsonResponseMap2["event_id"].(string), "")
@@ -1180,7 +1180,7 @@ func TestCustomerUserIdOfSegmentUser(t *testing.T) {
 		customerUserID := U.RandomLowerAphaNumString(5)
 
 		// Exclude for project and customer_user_id
-		C.GetConfig().SegmentExcludedCustomerIDByProject = map[uint64]string{
+		C.GetConfig().SegmentExcludedCustomerIDByProject = map[int64]string{
 			project.ID: customerUserID,
 		}
 
@@ -2539,7 +2539,7 @@ func TestApplyRanking(t *testing.T) {
 
 func TestMapEventPropertiesToProjectDefinedProperties(t *testing.T) {
 	type args struct {
-		projectID  uint64
+		projectID  int64
 		logCtx     *log.Entry
 		properties *U.PropertiesMap
 	}

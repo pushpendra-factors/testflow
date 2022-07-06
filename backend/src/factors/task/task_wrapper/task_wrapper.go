@@ -4,6 +4,7 @@ import (
 	"factors/model/model"
 	"factors/model/store"
 	"fmt"
+	"net/http"
 	"runtime"
 	"sort"
 	"time"
@@ -72,7 +73,7 @@ func TaskFunc(JobName string, lookback int, f func(map[string]interface{}) (map[
 	return finalStatus
 }
 
-func TaskFuncWithProjectId(JobName string, lookback int, projectIds []uint64, f func(uint64, map[string]interface{}) (map[string]interface{}, bool), configs map[string]interface{}) map[string]interface{} {
+func TaskFuncWithProjectId(JobName string, lookback int, projectIds []int64, f func(int64, map[string]interface{}) (map[string]interface{}, bool), configs map[string]interface{}) map[string]interface{} {
 	taskDetails, _, _ := store.GetStore().GetTaskDetailsByName(JobName)
 	finalStatus := make(map[string]interface{})
 	if taskDetails.IsProjectEnabled == false {
@@ -80,7 +81,19 @@ func TaskFuncWithProjectId(JobName string, lookback int, projectIds []uint64, f 
 		return finalStatus
 	}
 	for _, projectId := range projectIds {
-		deltas, _, _ := store.GetStore().GetAllToBeExecutedDeltas(taskDetails.TaskID, projectId, lookback, nil)
+		deltasPreFilter, _, _ := store.GetStore().GetAllToBeExecutedDeltas(taskDetails.TaskID, projectId, lookback, nil)
+		projectDetails, _ := store.GetStore().GetProject(projectId)
+		deltas := make([]uint64, 0)
+		if projectDetails.TimeZone != "" {
+			currentMaxDelta := U.DateAsFormattedInt(U.TimeNowIn(U.TimeZoneString(projectDetails.TimeZone)))
+			for _, delta := range deltasPreFilter {
+				if delta <= currentMaxDelta {
+					deltas = append(deltas, delta)
+				}
+			}
+		} else {
+			deltas = deltasPreFilter
+		}
 		log.WithFields(log.Fields{"Deltas": deltas, "projectId": projectId}).Info("Deltas to be processed")
 		sort.SliceStable(deltas, func(i, j int) bool {
 			return deltas[i] < deltas[j]
@@ -91,7 +104,10 @@ func TaskFuncWithProjectId(JobName string, lookback int, projectIds []uint64, f 
 			deltaString := fmt.Sprintf("%v-%v", delta, projectId)
 			if isDone == true {
 				log.WithFields(log.Fields{"delta": delta, "projectId": projectId}).Info("processing")
-				store.GetStore().InsertTaskBeginRecord(taskDetails.TaskID, projectId, delta)
+				errCode, _ := store.GetStore().InsertTaskBeginRecord(taskDetails.TaskID, projectId, delta)
+				if errCode != http.StatusCreated {
+					continue
+				}
 				configs["startTimestamp"] = getDeltaAsTime(delta)
 				configs["endTimestamp"] = getEndTimestamp(delta, taskDetails.Frequency, taskDetails.FrequencyInterval)
 				defer func() {

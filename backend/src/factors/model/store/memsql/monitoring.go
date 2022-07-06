@@ -68,7 +68,7 @@ func (store *MemSQL) MonitorSlowQueries() ([]interface{}, []interface{}, error) 
 
 		// project name field intialized
 		projectID := store.GetProjectIdFromInfo(slowQuery.Info)
-		project, _ := store.GetProject(uint64(projectID))
+		project, _ := store.GetProject(int64(projectID))
 		slowQuery.ProjectName = project.Name
 		slowQuery.Info = slowQuery.Info[:U.MinInt(len(slowQuery.Info), 500)]
 

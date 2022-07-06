@@ -11,12 +11,13 @@ import (
 	"factors/util"
 	U "factors/util"
 	"fmt"
-	"github.com/clearbit/clearbit-go/clearbit"
 	"math"
 	"net/http"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/clearbit/clearbit-go/clearbit"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -449,7 +450,7 @@ func TestDBFillUserDefaultProperties(t *testing.T) {
 func clearbitAnalysisTestDBClearbit(t *testing.T) {
 
 	// Ip= "89.76.236.199"
-	projectId := uint64(5)
+	projectId := int64(5)
 	clientIP := "89.76.236.199"
 	propertiesMap1 := U.PropertiesMap{"prop_1": "value_1"}
 	executeClearBitStatusChannel := make(chan int)
@@ -1521,7 +1522,7 @@ func TestUserDuplicates(t *testing.T) {
 }
 
 func clearbit1(ip string, c chan int) {
-	projectId := uint64(4)
+	projectId := int64(4)
 	clearbitKey, errCode := store.GetStore().GetClearbitKeyFromProjectSetting(projectId)
 
 	if errCode != http.StatusFound {

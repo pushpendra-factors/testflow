@@ -11,6 +11,7 @@ import GlobalFilter from '../GlobalFilter';
 import { getUserProperties } from '../../../reducers/coreQuery/middleware';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
+import { areKpisInSameGroup } from '../../../utils/kpiQueryComposer.helpers';
 
 const GlobalFilterBlock = ({
   queryType,
@@ -26,9 +27,7 @@ const GlobalFilterBlock = ({
 }) => {
   const [filterBlockOpen, setFilterBlockOpen] = useState(true);
   const isSameKPIGrp = useMemo(() => {
-    return queries.every(
-      (_, index) => queries[0].group === queries[index].group
-    );
+    return areKpisInSameGroup({ kpis: queries });
   }, [queries]);
 
   useEffect(() => {

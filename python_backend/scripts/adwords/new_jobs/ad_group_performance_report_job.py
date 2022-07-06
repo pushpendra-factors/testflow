@@ -57,9 +57,66 @@ class NewAdGroupPerformanceReportJob(ReportsFetch):
         "metrics.search_rank_lost_absolute_top_impression_share",
         "metrics.search_rank_lost_impression_share",
         "metrics.search_rank_lost_top_impression_share",
+        "metrics.absolute_top_impression_percentage",
+        "metrics.top_impression_percentage",
+    ]
+
+    HEADERS_V02 = [
+        "ad_group_name",
+        "ad_group_status",
+        "ad_group_type",
+        "base_ad_group_id",
+        "base_campaign_id",
+        "campaign_name",
+        "campaign_status",
+        "final_url_suffix",
+        "interaction_types",
+        "cpc_bid",
+        "cpv_bid",
+
+        "campaign_id",
+        "ad_group_id",
+
+        "active_view_impressions",
+        "active_view_measurability",
+        "active_view_measurable_cost",
+        "active_view_measurable_impressions",
+        "active_view_viewability",
+        "cost_per_conversion",
+        "all_conversion_value",
+        "all_conversions",
+        "average_cost",
+        "clicks",
+        "conversion_value",
+        "conversions",
+        "cost",
+        "engagements",
+        "gmail_forwards",
+        "gmail_saves",
+        "gmail_secondary_clicks",
+        "impressions",
+        "interactions",
+        "value_per_all_conversion",
+        "video_quartile_100_rate",
+        "video_quartile_25_rate",
+        "video_quartile_50_rate",
+        "video_quartile_75_rate",
+        "video_view_rate",
+        "video_views",
+        "view_through_conversions",
+        "search_impression_share",
+        "search_top_impression_share",
+        "search_absolute_top_impression_share",
+        "search_budget_lost_absolute_top_impression_share",
+        "search_budget_lost_top_impression_share",
+        "search_rank_lost_absolute_top_impression_share",
+        "search_rank_lost_impression_share",
+        "search_rank_lost_top_impression_share",
+        "absolute_top_impression_percentage",
+        "top_impression_percentage",
     ]
     
-    HEADERS_VMAX = [
+    HEADERS_V01 = [
         "ad_group_name",
         "ad_group_status",
         "ad_group_type",
@@ -111,7 +168,7 @@ class NewAdGroupPerformanceReportJob(ReportsFetch):
         "search_rank_lost_impression_share",
         "search_rank_lost_top_impression_share",
     ]
-    
+  
     HEADERS_V00 = [
         "average_position", "ad_group_name", "ad_group_status", "ad_group_type", "base_ad_group_id",
         "base_campaign_id", "campaign_name", "campaign_status", "final_url_suffix", "interaction_types",
@@ -134,6 +191,8 @@ class NewAdGroupPerformanceReportJob(ReportsFetch):
         "search_rank_lost_absolute_top_impression_share", "search_rank_lost_impression_share",
         "search_rank_lost_top_impression_share"]
 
+    HEADERS_VMAX = HEADERS_V02
+    
     REPORT = "ad_group"
     
     FIELDS_WITH_STATUS = [

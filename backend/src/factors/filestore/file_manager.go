@@ -10,28 +10,29 @@ type FileManager interface {
 	GetObjectSize(dir, fileName string) (int64, error)
 	// Del(dir, filename string)error
 	GetBucketName() string
-	GetProjectModelDir(projectId, modelId uint64) string
-	GetProjectDir(projectId uint64) string
-	GetProjectEventFileDir(projectId uint64, startTimestamp int64, modelType string) string
-	GetModelEventInfoFilePathAndName(projectId, modelId uint64) (string, string)
-	GetModelEventsFilePathAndName(projectId uint64, startTimestamp int64, modelType string) (string, string)
-	GetModelEventsBucketingFilePathAndName(projectId uint64, startTimestamp int64, modelType string) (string, string)
-	GetMasterNumericalBucketsFile(projectId uint64) (string, string)
-	GetModelEventsNumericalBucketsFile(projectId uint64, startTimestamp int64, modelType string) (string, string)
-	GetPatternChunksDir(projectId, modelId uint64) string
-	GetChunksMetaDataDir(projectId, modelId uint64) string
-	GetPatternChunkFilePathAndName(projectId, modelId uint64, chunkId string) (string, string)
-	GetChunksMetaDataFilePathAndName(projectId, modelId uint64) (string, string)
-	GetEventArchiveFilePathAndName(projectID uint64, startTime, endTime int64) (string, string)
-	GetUsersArchiveFilePathAndName(projectID uint64, startTime, endTime int64) (string, string)
+	GetProjectModelDir(projectId int64, modelId uint64) string
+	GetProjectDir(projectId int64) string
+	GetProjectEventFileDir(projectId int64, startTimestamp int64, modelType string) string
+	GetModelEventInfoFilePathAndName(projectId int64, modelId uint64) (string, string)
+	GetModelEventsFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string)
+	GetModelChannelFilePathAndName(channel string, projectId int64, startTimestamp int64, modelType string) (string, string)
+	GetModelEventsBucketingFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string)
+	GetMasterNumericalBucketsFile(projectId int64) (string, string)
+	GetModelEventsNumericalBucketsFile(projectId int64, startTimestamp int64, modelType string) (string, string)
+	GetPatternChunksDir(projectId int64, modelId uint64) string
+	GetChunksMetaDataDir(projectId int64, modelId uint64) string
+	GetPatternChunkFilePathAndName(projectId int64, modelId uint64, chunkId string) (string, string)
+	GetChunksMetaDataFilePathAndName(projectId int64, modelId uint64) (string, string)
+	GetEventArchiveFilePathAndName(projectID int64, startTime, endTime int64) (string, string)
+	GetUsersArchiveFilePathAndName(projectID int64, startTime, endTime int64) (string, string)
 	ListFiles(path string) []string
-	GetInsightsWpiFilePathAndName(projectId uint64, dateString string, queryId int64, k int) (string, string)
-	GetInsightsCpiFilePathAndName(projectId uint64, dateString string, queryId int64, k int) (string, string)
-	GetWeeklyInsightsModelDir(projectId uint64, dateString string, queryId int64, k int) string
-	GetModelUserPropertiesCategoricalFilePathAndName(projectId, modelId uint64) (string, string)
-	GetModelEventPropertiesCategoricalFilePathAndName(projectId, modelId uint64) (string, string)
-	GetModelUserPropertiesFilePathAndName(projectId, modelId uint64) (string, string)
-	GetModelEventPropertiesFilePathAndName(projectId, modelId uint64) (string, string)
-	GetWeeklyKPIModelDir(projectId uint64, dateString string, queryId int64) string
-	GetKPIFilePathAndName(projectId uint64, dateString string, queryId int64) (string, string)
+	GetInsightsWpiFilePathAndName(projectId int64, dateString string, queryId int64, k int) (string, string)
+	GetInsightsCpiFilePathAndName(projectId int64, dateString string, queryId int64, k int) (string, string)
+	GetWeeklyInsightsModelDir(projectId int64, dateString string, queryId int64, k int) string
+	GetModelUserPropertiesCategoricalFilePathAndName(projectId int64, modelId uint64) (string, string)
+	GetModelEventPropertiesCategoricalFilePathAndName(projectId int64, modelId uint64) (string, string)
+	GetModelUserPropertiesFilePathAndName(projectId int64, modelId uint64) (string, string)
+	GetModelEventPropertiesFilePathAndName(projectId int64, modelId uint64) (string, string)
+	GetWeeklyKPIModelDir(projectId int64, dateString string, queryId int64) string
+	GetKPIFilePathAndName(projectId int64, dateString string, queryId int64) (string, string)
 }

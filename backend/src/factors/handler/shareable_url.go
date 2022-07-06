@@ -26,7 +26,7 @@ type UpdateShareableURLParams struct {
 	// AllowedUsers string `json:"allowed_users"`
 }
 
-func validateCreateShareableURLRequest(params *model.ShareableURL, projectID uint64, agentUUID string) (bool, string) {
+func validateCreateShareableURLRequest(params *model.ShareableURL, projectID int64, agentUUID string) (bool, string) {
 
 	if params.EntityID == 0 {
 		return false, "Invalid entity id."
@@ -64,7 +64,7 @@ func validateCreateShareableURLRequest(params *model.ShareableURL, projectID uin
 }
 
 func GetShareableURLsHandler(c *gin.Context) {
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Invalid project."})
 		return
@@ -90,7 +90,7 @@ func GetShareableURLsHandler(c *gin.Context) {
 
 func CreateShareableURLHandler(c *gin.Context) {
 
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Shareable query creation failed. Invalid project."})
 		return
@@ -146,7 +146,7 @@ func CreateShareableURLHandler(c *gin.Context) {
 
 // func UpdateShareableURLHandler(c *gin.Context) {
 
-// 	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+// 	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 // 	if projectID == 0 {
 // 		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Invalid project."})
 // 		return
@@ -193,7 +193,7 @@ func CreateShareableURLHandler(c *gin.Context) {
 
 func DeleteShareableURLHandler(c *gin.Context) {
 
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Invalid project."})
 		return
@@ -230,7 +230,7 @@ func DeleteShareableURLHandler(c *gin.Context) {
 
 func RevokeShareableURLHandler(c *gin.Context) {
 
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Invalid project."})
 		return

@@ -51,7 +51,7 @@ func (q *ProfileQueryGroup) GetQueryCacheHashString() (string, error) {
 	return queryHash, nil
 }
 
-func (q *ProfileQueryGroup) GetQueryCacheRedisKey(projectID uint64) (*cacheRedis.Key, error) {
+func (q *ProfileQueryGroup) GetQueryCacheRedisKey(projectID int64) (*cacheRedis.Key, error) {
 	hashString, err := q.GetQueryCacheHashString()
 	if err != nil {
 		return nil, err

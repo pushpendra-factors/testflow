@@ -24,7 +24,7 @@ func (store *MemSQL) satisfiesBillingAccountForeignConstraints(ba model.BillingA
 
 func (store *MemSQL) createBillingAccount(planCode string, AgentUUID string) (*model.BillingAccount, int) {
 	logFields := log.Fields{
-		"plan_code": planCode,
+		"plan_code":  planCode,
 		"agent_uuid": AgentUUID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -84,7 +84,7 @@ func (store *MemSQL) existsBillingAccountByID(billingAccountID string) bool {
 	return false
 }
 
-func (store *MemSQL) GetBillingAccountByProjectID(projectID uint64) (*model.BillingAccount, int) {
+func (store *MemSQL) GetBillingAccountByProjectID(projectID int64) (*model.BillingAccount, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
@@ -129,12 +129,12 @@ func (store *MemSQL) GetBillingAccountByAgentUUID(AgentUUID string) (*model.Bill
 
 func (store *MemSQL) UpdateBillingAccount(id string, planId uint64, orgName, billingAddr, pinCode, phoneNo string) int {
 	logFields := log.Fields{
-		"id": id,
-		"plan_id": planId,
-		"org_name": orgName,
+		"id":           id,
+		"plan_id":      planId,
+		"org_name":     orgName,
 		"billing_addr": billingAddr,
-		"pincode": pinCode,
-		"phone_no": phoneNo,
+		"pincode":      pinCode,
+		"phone_no":     phoneNo,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if id == "" || planId == 0 {
@@ -194,7 +194,7 @@ func (store *MemSQL) GetProjectsUnderBillingAccountID(ID string) ([]model.Projec
 	return projects, http.StatusFound
 }
 
-func (store *MemSQL) GetAgentsByProjectIDs(projectIDs []uint64) ([]*model.Agent, int) {
+func (store *MemSQL) GetAgentsByProjectIDs(projectIDs []int64) ([]*model.Agent, int) {
 	logFields := log.Fields{
 		"project_ids": projectIDs,
 	}
@@ -227,9 +227,9 @@ func (store *MemSQL) GetAgentsUnderBillingAccountID(ID string) ([]*model.Agent, 
 	return agents, http.StatusFound
 }
 
-func (store *MemSQL) IsNewProjectAgentMappingCreationAllowed(projectID uint64, emailOfAgentToAdd string) (bool, int) {
+func (store *MemSQL) IsNewProjectAgentMappingCreationAllowed(projectID int64, emailOfAgentToAdd string) (bool, int) {
 	logFields := log.Fields{
-		"project_id": projectID,
+		"project_id":            projectID,
 		"email_of_agent_to_add": emailOfAgentToAdd,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)

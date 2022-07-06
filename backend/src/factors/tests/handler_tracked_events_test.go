@@ -26,7 +26,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func createProjectAgentEventsFactorsTrackedEvents(r *gin.Engine) (uint64, *model.Agent) {
+func createProjectAgentEventsFactorsTrackedEvents(r *gin.Engine) (int64, *model.Agent) {
 
 	C.GetConfig().LookbackWindowForEventUserCache = 1
 
@@ -87,7 +87,7 @@ func createProjectAgentEventsFactorsTrackedEvents(r *gin.Engine) (uint64, *model
 	return project.ID, agent
 }
 
-func sendCreateFactorsTrackedEvent(r *gin.Engine, request V1.CreateFactorsTrackedEventParams, agent *model.Agent, projectID uint64) *httptest.ResponseRecorder {
+func sendCreateFactorsTrackedEvent(r *gin.Engine, request V1.CreateFactorsTrackedEventParams, agent *model.Agent, projectID int64) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")
@@ -111,7 +111,7 @@ func sendCreateFactorsTrackedEvent(r *gin.Engine, request V1.CreateFactorsTracke
 	return w
 }
 
-func sendGetAllFactorsTrackedEventRequest(r *gin.Engine, agent *model.Agent, projectID uint64) *httptest.ResponseRecorder {
+func sendGetAllFactorsTrackedEventRequest(r *gin.Engine, agent *model.Agent, projectID int64) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")
@@ -130,7 +130,7 @@ func sendGetAllFactorsTrackedEventRequest(r *gin.Engine, agent *model.Agent, pro
 	r.ServeHTTP(w, req)
 	return w
 }
-func sendGetAllFactorsGroupedTrackedEventRequest(r *gin.Engine, agent *model.Agent, projectID uint64) *httptest.ResponseRecorder {
+func sendGetAllFactorsGroupedTrackedEventRequest(r *gin.Engine, agent *model.Agent, projectID int64) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")
@@ -149,7 +149,7 @@ func sendGetAllFactorsGroupedTrackedEventRequest(r *gin.Engine, agent *model.Age
 	r.ServeHTTP(w, req)
 	return w
 }
-func sendRemoveFactorsTrackedEventRequest(r *gin.Engine, agent *model.Agent, projectID uint64, request V1.RemoveFactorsTrackedEventParams) *httptest.ResponseRecorder {
+func sendRemoveFactorsTrackedEventRequest(r *gin.Engine, agent *model.Agent, projectID int64, request V1.RemoveFactorsTrackedEventParams) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")

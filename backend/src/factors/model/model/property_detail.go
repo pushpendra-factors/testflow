@@ -16,7 +16,7 @@ import (
 // PropertyDetail implements property_details table
 type PropertyDetail struct {
 	// Composite primary key with project_id, event_name_id,key .
-	ProjectID   uint64    `gorm:"unique_index:configured_properties_project_id_event_name_id_key_unique_idx" json:"project_id"`
+	ProjectID   int64     `gorm:"unique_index:configured_properties_project_id_event_name_id_key_unique_idx" json:"project_id"`
 	EventNameID *string   `gorm:"unique_index:configured_properties_project_id_event_name_id_key_unique_idx" json:"event_name_id"`
 	Key         string    `gorm:"unique_index:configured_properties_project_id_event_name_id_key_unique_idx" json:"key"`
 	Type        string    `gorm:"not null" json:"type"`
@@ -49,7 +49,7 @@ func GetEntity(isUserProperty bool) int {
 }
 
 // GetConfiguredEventPropertiesTypeCacheKey return configured property type cache key
-func GetConfiguredEventPropertiesTypeCacheKey(projectID uint64, eventName, propertyName, configuredType string) string {
+func GetConfiguredEventPropertiesTypeCacheKey(projectID int64, eventName, propertyName, configuredType string) string {
 	if projectID == 0 || eventName == "" || propertyName == "" || configuredType == "" {
 		return ""
 	}
@@ -58,7 +58,7 @@ func GetConfiguredEventPropertiesTypeCacheKey(projectID uint64, eventName, prope
 }
 
 // GetNonConfiguredEventPropertiesTypeCacheKey return non configured property type cache key
-func GetNonConfiguredEventPropertiesTypeCacheKey(projectID uint64, eventName, propertyName string) string {
+func GetNonConfiguredEventPropertiesTypeCacheKey(projectID int64, eventName, propertyName string) string {
 	if projectID == 0 || propertyName == "" || eventName == "" {
 		return ""
 	}
@@ -67,7 +67,7 @@ func GetNonConfiguredEventPropertiesTypeCacheKey(projectID uint64, eventName, pr
 }
 
 // GetConfiguredUserPropertiesTypeCacheKey return non configured user property datetime type cache key
-func GetConfiguredUserPropertiesTypeCacheKey(projectID uint64, propertyName, configuredType string) string {
+func GetConfiguredUserPropertiesTypeCacheKey(projectID int64, propertyName, configuredType string) string {
 	if projectID == 0 || propertyName == "" || configuredType == "" {
 		return ""
 	}
@@ -76,7 +76,7 @@ func GetConfiguredUserPropertiesTypeCacheKey(projectID uint64, propertyName, con
 }
 
 // GetNonConfiguredUserPropertiesTypeCacheKey return non configured user property type cache key
-func GetNonConfiguredUserPropertiesTypeCacheKey(projectID uint64, propertyName string) string {
+func GetNonConfiguredUserPropertiesTypeCacheKey(projectID int64, propertyName string) string {
 	if projectID == 0 || propertyName == "" {
 		return ""
 	}
@@ -84,7 +84,7 @@ func GetNonConfiguredUserPropertiesTypeCacheKey(projectID uint64, propertyName s
 	return fmt.Sprintf("%d:%s:%s", projectID, TypeNonConfiguredProperties, propertyName)
 }
 
-func getCacheConfiguredUserProperties(projectID uint64, propertyName string) string {
+func getCacheConfiguredUserProperties(projectID int64, propertyName string) string {
 	propertiesTypeCache := C.GetPropertiesTypeCache()
 	if propertiesTypeCache == nil {
 		return ""
@@ -111,7 +111,7 @@ func getCacheConfiguredUserProperties(projectID uint64, propertyName string) str
 	return TypeMissingConfiguredProperties
 }
 
-func getCacheConfiguredEventProperties(projectID uint64, eventName, propertyName string) string {
+func getCacheConfiguredEventProperties(projectID int64, eventName, propertyName string) string {
 	propertiesTypeCache := C.GetPropertiesTypeCache()
 	if propertiesTypeCache == nil {
 		return ""
@@ -140,7 +140,7 @@ func getCacheConfiguredEventProperties(projectID uint64, eventName, propertyName
 
 // GetCachePropertiesType returns property type from cache, resets the property cache once every day. event_name
 // will be sent empty for user_property
-func GetCachePropertiesType(projectID uint64, eventName, propertyName string, isUserProperty bool) string {
+func GetCachePropertiesType(projectID int64, eventName, propertyName string, isUserProperty bool) string {
 	propertiesTypeCache := C.GetPropertiesTypeCache()
 	if propertiesTypeCache == nil {
 		return TypeMissingConfiguredProperties
@@ -161,7 +161,7 @@ func GetCachePropertiesType(projectID uint64, eventName, propertyName string, is
 }
 
 // SetCachePropertiesType sets key to cache by property type. If user_property then event_name will be set as empty
-func SetCachePropertiesType(projectID uint64, eventName, propertyName, propertyType string, isUserProperty, isConfigured bool) error {
+func SetCachePropertiesType(projectID int64, eventName, propertyName, propertyType string, isUserProperty, isConfigured bool) error {
 	propertiesTypeCache := C.GetPropertiesTypeCache()
 	if propertiesTypeCache == nil {
 		return nil

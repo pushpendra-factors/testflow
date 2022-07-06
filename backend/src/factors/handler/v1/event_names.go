@@ -14,7 +14,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var FORCED_EVENT_NAMES = map[uint64][]string{
+var FORCED_EVENT_NAMES = map[int64][]string{
 	215: []string{
 		// Project ExpertRec.
 		"cse.expertrec.com/payments/success",
@@ -31,7 +31,7 @@ var FORCED_EVENT_NAMES = map[uint64][]string{
 // @Router /{project_id}/v1/event_names [get]
 func GetEventNamesHandler(c *gin.Context) {
 
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
@@ -105,7 +105,7 @@ func GetEventNamesHandler(c *gin.Context) {
 }
 
 func GetEventNamesByTypeHandler(c *gin.Context) {
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return

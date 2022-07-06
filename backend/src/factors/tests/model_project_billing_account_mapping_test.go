@@ -51,12 +51,12 @@ func TestCreateMultipleProjectsUnderSameBillingAccount(t *testing.T) {
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Equal(t, 2, len(projectBillingAccMappings))
 
-	expProjectIDs := []uint64{testData.Project.ID, newProject.ID}
+	expProjectIDs := []int64{testData.Project.ID, newProject.ID}
 	sort.Slice(expProjectIDs, func(i, j int) bool {
 		return expProjectIDs[i] < expProjectIDs[j]
 	})
 
-	resultProjectIDs := []uint64{projectBillingAccMappings[0].ProjectID, projectBillingAccMappings[1].ProjectID}
+	resultProjectIDs := []int64{projectBillingAccMappings[0].ProjectID, projectBillingAccMappings[1].ProjectID}
 	sort.Slice(resultProjectIDs, func(i, j int) bool {
 		return resultProjectIDs[i] < resultProjectIDs[j]
 	})

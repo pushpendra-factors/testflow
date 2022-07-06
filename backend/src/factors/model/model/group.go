@@ -13,7 +13,7 @@ import (
 
 // Group is an interface for groups table
 type Group struct {
-	ProjectID uint64    `gorm:"primary_key:true;" json:"project_id"`
+	ProjectID int64     `gorm:"primary_key:true;" json:"project_id"`
 	ID        int       `gorm:"not null" json:"id"`
 	Name      string    `gorm:"primary_key:true;" json:"name"`
 	CreatedAt time.Time `json:"created_at"`
@@ -36,27 +36,27 @@ var AllowedGroupNames = map[string]bool{
 // AllowedGroups total groups allowed per project
 var AllowedGroups = 4
 
-func GetPropertiesByGroupCategoryCacheKeySortedSet(projectId uint64, date string) (*cacheRedis.Key, error) {
+func GetPropertiesByGroupCategoryCacheKeySortedSet(projectId int64, date string) (*cacheRedis.Key, error) {
 	prefix := "SS:GN:PC"
 	return cacheRedis.NewKey(projectId, prefix, date)
 }
 
-func GetValuesByGroupPropertyCacheKeySortedSet(projectId uint64, date string) (*cacheRedis.Key, error) {
+func GetValuesByGroupPropertyCacheKeySortedSet(projectId int64, date string) (*cacheRedis.Key, error) {
 	prefix := "SS:GN:PV"
 	return cacheRedis.NewKey(projectId, prefix, date)
 }
 
-func GetPropertiesByGroupCategoryRollUpCacheKey(projectId uint64, groupName string, date string) (*cacheRedis.Key, error) {
+func GetPropertiesByGroupCategoryRollUpCacheKey(projectId int64, groupName string, date string) (*cacheRedis.Key, error) {
 	prefix := "RollUp:GN:PC"
 	return cacheRedis.NewKey(projectId, fmt.Sprintf("%s:%s", prefix, groupName), date)
 }
 
-func GetValuesByGroupPropertyRollUpCacheKey(projectId uint64, groupName string, propertyName string, date string) (*cacheRedis.Key, error) {
+func GetValuesByGroupPropertyRollUpCacheKey(projectId int64, groupName string, propertyName string, date string) (*cacheRedis.Key, error) {
 	prefix := "RollUp:GN:PV"
 	return cacheRedis.NewKey(projectId, fmt.Sprintf("%s:%s:%s", prefix, groupName, propertyName), date)
 }
 
-func GetPropertiesByGroupFromCache(projectID uint64, groupName string, dateKey string) (U.CachePropertyWithTimestamp, error) {
+func GetPropertiesByGroupFromCache(projectID int64, groupName string, dateKey string) (U.CachePropertyWithTimestamp, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"group_name": groupName,
@@ -90,7 +90,7 @@ func GetPropertiesByGroupFromCache(projectID uint64, groupName string, dateKey s
 	return cacheValue, nil
 }
 
-func GetPropertyValuesByGroupPropertyFromCache(projectID uint64, groupName string, propertyName string, dateKey string) (U.CachePropertyValueWithTimestamp, error) {
+func GetPropertyValuesByGroupPropertyFromCache(projectID int64, groupName string, propertyName string, dateKey string) (U.CachePropertyValueWithTimestamp, error) {
 	logFields := log.Fields{
 		"project_id":    projectID,
 		"group_name":    groupName,

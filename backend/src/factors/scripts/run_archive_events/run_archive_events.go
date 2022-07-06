@@ -19,7 +19,7 @@ func main() {
 	envFlag := flag.String("env", "development", "Environment. Could be development|staging|production.")
 	bucketNameFlag := flag.String("bucket_name", "/usr/local/var/factors/cloud_storage", "Bucket name for production.")
 	localDiskTmpDirFlag := flag.String("tmp_dir", "/usr/local/var/factors/local_disk/tmp", "Local directory path for putting tmp files.")
-	projectIDFlag := flag.Uint64("project_id", 0, "Project id to be run for.")
+	projectIDFlag := flag.Int64("project_id", 0, "Project id to be run for.")
 	maxLookbackDaysFlag := flag.Int("max_lookback_days", 365, "Maximum number of lookback days for events.")
 	startDateFlag := flag.String("start_date", "", "Start date in YYYY-MM-DD format to run for specific period. Inclusive.")
 	endDateFlag := flag.String("end_date", "", "End date in YYYY-MM-DD format to run for specific period. Inclusive.")
@@ -128,7 +128,7 @@ func main() {
 
 	diskManager := serviceDisk.New(*localDiskTmpDirFlag)
 
-	allJobDetails := make(map[uint64][]string)
+	allJobDetails := make(map[int64][]string)
 	var projectErrors []error
 	if *runForAllFlag {
 		allJobDetails, projectErrors = T.ArchiveEvents(db, &cloudManager, diskManager, *maxLookbackDaysFlag, startTime, endTime)

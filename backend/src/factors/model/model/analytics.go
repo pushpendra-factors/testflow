@@ -189,7 +189,7 @@ type BaseQuery interface {
 
 	// Query cache related helper methods.
 	GetQueryCacheHashString() (string, error)
-	GetQueryCacheRedisKey(projectID uint64) (*cacheRedis.Key, error)
+	GetQueryCacheRedisKey(projectID int64) (*cacheRedis.Key, error)
 	GetQueryCacheExpiry() float64
 	TransformDateTypeFilters() error
 	ConvertAllDatesFromTimezone1ToTimezone2(currentTimezone, nextTimezone string) error
@@ -254,7 +254,7 @@ func (q *Query) GetQueryCacheHashString() (string, error) {
 	return queryHash, nil
 }
 
-func (q *Query) GetQueryCacheRedisKey(projectID uint64) (*cacheRedis.Key, error) {
+func (q *Query) GetQueryCacheRedisKey(projectID int64) (*cacheRedis.Key, error) {
 	hashString, err := q.GetQueryCacheHashString()
 	if err != nil {
 		return nil, err
@@ -525,7 +525,7 @@ func (q *QueryGroup) GetQueryCacheHashString() (string, error) {
 	return queryHash, nil
 }
 
-func (q *QueryGroup) GetQueryCacheRedisKey(projectID uint64) (*cacheRedis.Key, error) {
+func (q *QueryGroup) GetQueryCacheRedisKey(projectID int64) (*cacheRedis.Key, error) {
 	hashString, err := q.GetQueryCacheHashString()
 	if err != nil {
 		return nil, err
@@ -647,7 +647,7 @@ type NamedQueryUnit struct {
 
 // GetQueryResultFromCache To get value from cache for a particular query payload.
 // resultContainer to be passed by reference.
-func GetQueryResultFromCache(projectID uint64, query BaseQuery,
+func GetQueryResultFromCache(projectID int64, query BaseQuery,
 	resultContainer interface{}) (QueryCacheResult, int) {
 
 	logCtx := log.WithFields(log.Fields{
@@ -740,7 +740,7 @@ func DecodeQueryForClass(queryJSON postgres.Jsonb, queryClass string) (BaseQuery
 }
 
 // SetQueryCachePlaceholder To set a placeholder temporarily to indicate that query is already running.
-func SetQueryCachePlaceholder(projectID uint64, query BaseQuery) {
+func SetQueryCachePlaceholder(projectID int64, query BaseQuery) {
 	cacheKey, err := query.GetQueryCacheRedisKey(projectID)
 	if err != nil {
 		return
@@ -750,7 +750,7 @@ func SetQueryCachePlaceholder(projectID uint64, query BaseQuery) {
 }
 
 // SetQueryCacheResult Sets the query cache result key in redis.
-func SetQueryCacheResult(projectID uint64, query BaseQuery, queryResult interface{}) {
+func SetQueryCacheResult(projectID int64, query BaseQuery, queryResult interface{}) {
 	cacheKey, err := query.GetQueryCacheRedisKey(projectID)
 	if err != nil {
 		return
@@ -770,7 +770,7 @@ func SetQueryCacheResult(projectID uint64, query BaseQuery, queryResult interfac
 }
 
 // DeleteQueryCacheKey Delete a query cache key on error.
-func DeleteQueryCacheKey(projectID uint64, query BaseQuery) {
+func DeleteQueryCacheKey(projectID int64, query BaseQuery) {
 	cacheKey, err := query.GetQueryCacheRedisKey(projectID)
 	if err != nil {
 		return

@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func (store *MemSQL) GetLeadgenSettingsForProject(projectID uint64) ([]model.LeadgenSettings, error) {
+func (store *MemSQL) GetLeadgenSettingsForProject(projectID int64) ([]model.LeadgenSettings, error) {
 	db := C.GetServices().Db
 	leadgenSettings := make([]model.LeadgenSettings, 0)
 	err := db.Model(model.LeadgenSettings{}).Where("project_id = ?", projectID).Find(&leadgenSettings).Error
@@ -20,7 +20,7 @@ func (store *MemSQL) GetLeadgenSettings() ([]model.LeadgenSettings, error) {
 	err := db.Model(model.LeadgenSettings{}).Find(&leadgenSettings).Error
 	return leadgenSettings, err
 }
-func (store *MemSQL) UpdateRowRead(projectID uint64, source int, rowRead int64) (int, error) {
+func (store *MemSQL) UpdateRowRead(projectID int64, source int, rowRead int64) (int, error) {
 	db := C.GetServices().Db
 	updateMap := map[string]interface{}{
 		"row_read":   rowRead,

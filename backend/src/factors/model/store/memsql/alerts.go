@@ -15,7 +15,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (store *MemSQL) SetAuthTokenforSlackIntegration(projectID uint64, agentUUID string, authTokens model.SlackAccessTokens) error {
+func (store *MemSQL) SetAuthTokenforSlackIntegration(projectID int64, agentUUID string, authTokens model.SlackAccessTokens) error {
 	db := C.GetServices().Db
 	_, errCode := store.GetProjectAgentMapping(projectID, agentUUID)
 	if errCode != http.StatusFound {
@@ -30,7 +30,7 @@ func (store *MemSQL) SetAuthTokenforSlackIntegration(projectID uint64, agentUUID
 	}
 	var token model.SlackAuthTokens
 	if IsEmptyPostgresJsonb(agent.SlackAccessTokens) {
-		token = make(map[uint64]model.SlackAccessTokens)
+		token = make(map[int64]model.SlackAccessTokens)
 	} else {
 		err = U.DecodePostgresJsonbToStructType(agent.SlackAccessTokens, &token)
 		if err != nil {
@@ -53,7 +53,7 @@ func (store *MemSQL) SetAuthTokenforSlackIntegration(projectID uint64, agentUUID
 	}
 	return nil
 }
-func (store *MemSQL) GetSlackAuthToken(projectID uint64, agentUUID string) (model.SlackAccessTokens, error) {
+func (store *MemSQL) GetSlackAuthToken(projectID int64, agentUUID string) (model.SlackAccessTokens, error) {
 	db := C.GetServices().Db
 	var agent model.Agent
 	err := db.Where("uuid = ?", agentUUID).Find(&agent).Error
@@ -77,7 +77,7 @@ func (store *MemSQL) GetSlackAuthToken(projectID uint64, agentUUID string) (mode
 	return token[projectID], nil
 
 }
-func (store *MemSQL) DeleteSlackIntegration(projectID uint64, agentUUID string) error {
+func (store *MemSQL) DeleteSlackIntegration(projectID int64, agentUUID string) error {
 	db := C.GetServices().Db
 	var agent model.Agent
 	err := db.Where("uuid = ?", agentUUID).Find(&agent).Error
@@ -95,7 +95,7 @@ func (store *MemSQL) DeleteSlackIntegration(projectID uint64, agentUUID string) 
 		return errors.New("No slack auth token found")
 	}
 	var newToken model.SlackAuthTokens
-	newToken = make(map[uint64]model.SlackAccessTokens)
+	newToken = make(map[int64]model.SlackAccessTokens)
 	for k, v := range token {
 		if k != projectID {
 			newToken[k] = v
@@ -114,7 +114,7 @@ func (store *MemSQL) DeleteSlackIntegration(projectID uint64, agentUUID string) 
 	}
 	return nil
 }
-func (store *MemSQL) GetAlertById(id string, projectID uint64) (model.Alert, int) {
+func (store *MemSQL) GetAlertById(id string, projectID int64) (model.Alert, int) {
 	logFields := log.Fields{
 		"id":         id,
 		"project_id": projectID,
@@ -138,7 +138,7 @@ func (store *MemSQL) GetAlertById(id string, projectID uint64) (model.Alert, int
 
 	return alert, http.StatusFound
 }
-func (store *MemSQL) GetAllAlerts(projectID uint64) ([]model.Alert, int) {
+func (store *MemSQL) GetAllAlerts(projectID int64) ([]model.Alert, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
@@ -161,7 +161,7 @@ func (store *MemSQL) GetAllAlerts(projectID uint64) ([]model.Alert, int) {
 }
 
 // Note: Currently keeping the implementation specific to kpi.
-func (store *MemSQL) GetAlertNamesByProjectIdTypeAndName(projectID uint64, nameOfQuery string) ([]string, int) {
+func (store *MemSQL) GetAlertNamesByProjectIdTypeAndName(projectID int64, nameOfQuery string) ([]string, int) {
 	rAlertNames := make([]string, 0)
 	alerts, statusCode := store.GetAllAlerts(projectID)
 	if statusCode != http.StatusFound {
@@ -185,7 +185,7 @@ func (store *MemSQL) GetAlertNamesByProjectIdTypeAndName(projectID uint64, nameO
 	return rAlertNames, http.StatusFound
 }
 
-func (store *MemSQL) DeleteAlert(id string, projectID uint64) (int, string) {
+func (store *MemSQL) DeleteAlert(id string, projectID int64) (int, string) {
 	logFields := log.Fields{
 		"id":         id,
 		"project_id": projectID,
@@ -216,7 +216,7 @@ func (store *MemSQL) UpdateAlert(lastAlertSent bool) (int, string) {
 	}
 	return http.StatusAccepted, ""
 }
-func (store *MemSQL) CreateAlert(projectID uint64, alert model.Alert) (model.Alert, int, string) {
+func (store *MemSQL) CreateAlert(projectID int64, alert model.Alert) (model.Alert, int, string) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"alert":      alert,

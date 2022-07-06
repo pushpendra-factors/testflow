@@ -13,7 +13,7 @@ import (
 )
 
 // isExistActivty check for existing activity by activity name, type, actor type , actor id and timestamp
-func isExistActivty(projectID uint64, source U.CRMSource,
+func isExistActivty(projectID int64, source U.CRMSource,
 	name string, activtyType int, actorType int, actorID string, externalActivityID string, timestamp int64) (int, error) {
 	logFields := log.Fields{
 		"project_id":    projectID,
@@ -139,7 +139,7 @@ func (store *MemSQL) CreateCRMActivity(crmActivity *model.CRMActivity) (int, err
 	return http.StatusCreated, nil
 }
 
-func (store *MemSQL) GetCRMActivityInOrderForSync(projectID uint64, source U.CRMSource, startTimestamp, endTimestamp int64) ([]model.CRMActivity, int) {
+func (store *MemSQL) GetCRMActivityInOrderForSync(projectID int64, source U.CRMSource, startTimestamp, endTimestamp int64) ([]model.CRMActivity, int) {
 	logFields := log.Fields{
 		"project_id":     projectID,
 		"source":         source,
@@ -175,7 +175,7 @@ func (store *MemSQL) GetCRMActivityInOrderForSync(projectID uint64, source U.CRM
 	return crmActivity, http.StatusFound
 }
 
-func (store *MemSQL) GetCRMActivityMinimumTimestampForSync(projectID uint64, source U.CRMSource) (int64, int) {
+func (store *MemSQL) GetCRMActivityMinimumTimestampForSync(projectID int64, source U.CRMSource) (int64, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"source":     source,
@@ -211,7 +211,7 @@ func (store *MemSQL) GetCRMActivityMinimumTimestampForSync(projectID uint64, sou
 	return minTimestamp.Timestamp, http.StatusFound
 }
 
-func (store *MemSQL) UpdateCRMActivityAsSynced(projectID uint64, source U.CRMSource, crmActivity *model.CRMActivity, syncID, userID string) (*model.CRMActivity, int) {
+func (store *MemSQL) UpdateCRMActivityAsSynced(projectID int64, source U.CRMSource, crmActivity *model.CRMActivity, syncID, userID string) (*model.CRMActivity, int) {
 
 	logFields := log.Fields{
 		"project_id":           projectID,
@@ -262,7 +262,7 @@ func (store *MemSQL) UpdateCRMActivityAsSynced(projectID uint64, source U.CRMSou
 	return crmActivity, http.StatusAccepted
 }
 
-func (store *MemSQL) GetActivitiesDistinctEventNamesByType(projectID uint64, objectTypes []int) (map[int][]string, int) {
+func (store *MemSQL) GetActivitiesDistinctEventNamesByType(projectID int64, objectTypes []int) (map[int][]string, int) {
 	logFields := log.Fields{"project_id": projectID, "object_types": objectTypes}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 

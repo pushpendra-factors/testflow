@@ -53,7 +53,7 @@ func (store *MemSQL) satisfiesSmartPropertyRulesForeignConstraints(rule model.Sm
 	return http.StatusOK
 }
 
-func (store *MemSQL) GetSmartPropertyRulesConfig(projectID uint64, objectType string) (model.SmartPropertyRulesConfig, int) {
+func (store *MemSQL) GetSmartPropertyRulesConfig(projectID int64, objectType string) (model.SmartPropertyRulesConfig, int) {
 	logFields := log.Fields{
 		"project_id":  projectID,
 		"object_type": objectType,
@@ -80,7 +80,7 @@ func (store *MemSQL) GetSmartPropertyRulesConfig(projectID uint64, objectType st
 	result.Sources = sources
 	return result, http.StatusOK
 }
-func (store *MemSQL) checkIfRuleNameAlreadyPresentWhileCreate(projectID uint64, name string, objectType int) int {
+func (store *MemSQL) checkIfRuleNameAlreadyPresentWhileCreate(projectID int64, name string, objectType int) int {
 	logFields := log.Fields{
 		"project_id":  projectID,
 		"name":        name,
@@ -97,7 +97,7 @@ func (store *MemSQL) checkIfRuleNameAlreadyPresentWhileCreate(projectID uint64, 
 	}
 	return http.StatusFound
 }
-func (store *MemSQL) checkIfRuleNameAlreadyPresentWhileUpdate(projectID uint64, name string, ruleID string, objectType int) int {
+func (store *MemSQL) checkIfRuleNameAlreadyPresentWhileUpdate(projectID int64, name string, ruleID string, objectType int) int {
 	logFields := log.Fields{
 		"project_id":  projectID,
 		"name":        name,
@@ -115,7 +115,7 @@ func (store *MemSQL) checkIfRuleNameAlreadyPresentWhileUpdate(projectID uint64, 
 	}
 	return http.StatusFound
 }
-func validateSmartPropertyRules(projectID uint64, smartPropertyRulesDoc *model.SmartPropertyRules) (string, bool) {
+func validateSmartPropertyRules(projectID int64, smartPropertyRulesDoc *model.SmartPropertyRules) (string, bool) {
 	logFields := log.Fields{
 		"project_id":               projectID,
 		"smart_property_rules_doc": smartPropertyRulesDoc,
@@ -142,7 +142,7 @@ func validateSmartPropertyRules(projectID uint64, smartPropertyRulesDoc *model.S
 	return "", true
 }
 
-func (store *MemSQL) CreateSmartPropertyRules(projectID uint64, smartPropertyRulesDoc *model.SmartPropertyRules) (*model.SmartPropertyRules, string, int) {
+func (store *MemSQL) CreateSmartPropertyRules(projectID int64, smartPropertyRulesDoc *model.SmartPropertyRules) (*model.SmartPropertyRules, string, int) {
 	logFields := log.Fields{
 		"project_id":               projectID,
 		"smart_property_rules_doc": smartPropertyRulesDoc,
@@ -202,7 +202,7 @@ func (store *MemSQL) CreateSmartPropertyRules(projectID uint64, smartPropertyRul
 	smartPropertyRule.TypeAlias = objectTypeAlias
 	return &smartPropertyRule, "", http.StatusCreated
 }
-func (store *MemSQL) UpdateSmartPropertyRules(projectID uint64, ruleID string, smartPropertyRulesDoc model.SmartPropertyRules) (model.SmartPropertyRules, string, int) {
+func (store *MemSQL) UpdateSmartPropertyRules(projectID int64, ruleID string, smartPropertyRulesDoc model.SmartPropertyRules) (model.SmartPropertyRules, string, int) {
 	logFields := log.Fields{
 		"project_id":               projectID,
 		"smart_property_rules_doc": smartPropertyRulesDoc,
@@ -292,7 +292,7 @@ func validationRules(rulesJsonb *postgres.Jsonb) bool {
 	return true
 }
 
-func (store *MemSQL) GetSmartPropertyRules(projectID uint64) ([]model.SmartPropertyRules, int) {
+func (store *MemSQL) GetSmartPropertyRules(projectID int64) ([]model.SmartPropertyRules, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
@@ -318,7 +318,7 @@ func (store *MemSQL) GetSmartPropertyRules(projectID uint64) ([]model.SmartPrope
 	return smartPropertyRules, http.StatusFound
 }
 
-func (store *MemSQL) GetAllChangedSmartPropertyRulesForProject(projectID uint64) ([]model.SmartPropertyRules, int) {
+func (store *MemSQL) GetAllChangedSmartPropertyRulesForProject(projectID int64) ([]model.SmartPropertyRules, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
@@ -333,7 +333,7 @@ func (store *MemSQL) GetAllChangedSmartPropertyRulesForProject(projectID uint64)
 	return smartPropertyRules, http.StatusFound
 }
 
-func (store *MemSQL) GetSmartPropertyRule(projectID uint64, ruleID string) (model.SmartPropertyRules, int) {
+func (store *MemSQL) GetSmartPropertyRule(projectID int64, ruleID string) (model.SmartPropertyRules, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"rule_id":    ruleID,
@@ -363,7 +363,7 @@ func (store *MemSQL) GetSmartPropertyRule(projectID uint64, ruleID string) (mode
 	return smartPropertyRule, http.StatusFound
 }
 
-func (store *MemSQL) DeleteSmartPropertyRules(projectID uint64, ruleID string) int {
+func (store *MemSQL) DeleteSmartPropertyRules(projectID int64, ruleID string) int {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"rule_id":    ruleID,
@@ -386,19 +386,19 @@ func (store *MemSQL) DeleteSmartPropertyRules(projectID uint64, ruleID string) i
 	return http.StatusAccepted
 }
 
-func (store *MemSQL) GetProjectIDsHavingSmartPropertyRules() ([]uint64, int) {
+func (store *MemSQL) GetProjectIDsHavingSmartPropertyRules() ([]int64, int) {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 	db := C.GetServices().Db
-	var projectIDs []uint64
+	var projectIDs []int64
 	rows, err := db.Table("smart_property_rules").Select("DISTINCT(project_id)").Rows()
 	if err != nil {
-		return make([]uint64, 0), http.StatusInternalServerError
+		return make([]int64, 0), http.StatusInternalServerError
 	}
 	for rows.Next() {
-		var projectID uint64
+		var projectID int64
 		err = rows.Scan(&projectID)
 		if err != nil {
-			return make([]uint64, 0), http.StatusInternalServerError
+			return make([]int64, 0), http.StatusInternalServerError
 		}
 		projectIDs = append(projectIDs, projectID)
 	}

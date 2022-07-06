@@ -4,7 +4,7 @@ import os
 
 # Though this is not in used in google context, this is used only for google.
 class LocalStorage:
-    BASE_FOLDER = "/usr/local/var/factors/cloud_storage"
+    BASE_FOLDER = "/usr/local/var/factors/cloud_storage/"
 
     def read(self, file_path):
         file_path = LocalStorage.BASE_FOLDER + file_path

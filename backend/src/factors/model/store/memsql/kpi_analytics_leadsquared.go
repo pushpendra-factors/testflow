@@ -9,7 +9,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (store *MemSQL) GetPropertiesForLeadSquared(projectID uint64, reqID string) []map[string]string {
+func (store *MemSQL) GetPropertiesForLeadSquared(projectID int64, reqID string) []map[string]string {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"req_id":     reqID,
@@ -26,7 +26,7 @@ func (store *MemSQL) GetPropertiesForLeadSquared(projectID uint64, reqID string)
 	return model.TransformCRMPropertiesToKPIConfigProperties(properties, propertiesToDisplayNames, "$leadsquared")
 }
 
-func (store *MemSQL) GetKPIConfigsForLeadSquaredLeads(projectID uint64, reqID string) (map[string]interface{}, int) {
+func (store *MemSQL) GetKPIConfigsForLeadSquaredLeads(projectID int64, reqID string) (map[string]interface{}, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"req_id":     reqID,
@@ -35,7 +35,7 @@ func (store *MemSQL) GetKPIConfigsForLeadSquaredLeads(projectID uint64, reqID st
 	return store.GetKPIConfigsForLeadSquared(projectID, reqID, model.LeadSquaredLeadsDisplayCategory)
 }
 
-func (store *MemSQL) GetKPIConfigsForLeadSquared(projectID uint64, reqID string, displayCategory string) (map[string]interface{}, int) {
+func (store *MemSQL) GetKPIConfigsForLeadSquared(projectID int64, reqID string, displayCategory string) (map[string]interface{}, int) {
 	logFields := log.Fields{
 		"project_id":       projectID,
 		"req_id":           reqID,
@@ -52,7 +52,7 @@ func (store *MemSQL) GetKPIConfigsForLeadSquared(projectID uint64, reqID string,
 	return store.getConfigForSpecificLeadSquaredCategory(projectID, reqID, displayCategory), http.StatusOK
 }
 
-func (store *MemSQL) getConfigForSpecificLeadSquaredCategory(projectID uint64, reqID string, displayCategory string) map[string]interface{} {
+func (store *MemSQL) getConfigForSpecificLeadSquaredCategory(projectID int64, reqID string, displayCategory string) map[string]interface{} {
 	logFields := log.Fields{
 		"project_id":       projectID,
 		"req_id":           reqID,

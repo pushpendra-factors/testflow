@@ -67,7 +67,7 @@ func TestCustomMetricsGetHandler(t *testing.T) {
 	})
 }
 
-func sendCreateCustomMetric(r *gin.Engine, project_id uint64, agent *model.Agent, transformations *postgres.Jsonb, name string,
+func sendCreateCustomMetric(r *gin.Engine, project_id int64, agent *model.Agent, transformations *postgres.Jsonb, name string,
 	description string, objectType string) *httptest.ResponseRecorder {
 	payload := map[string]interface{}{
 		"name":            name,
@@ -98,7 +98,7 @@ func sendCreateCustomMetric(r *gin.Engine, project_id uint64, agent *model.Agent
 	return w
 }
 
-func sendGetCustomMetrics(r *gin.Engine, project_id uint64, agent *model.Agent) *httptest.ResponseRecorder {
+func sendGetCustomMetrics(r *gin.Engine, project_id int64, agent *model.Agent) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error Creating cookieData")

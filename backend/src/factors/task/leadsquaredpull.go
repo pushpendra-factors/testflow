@@ -60,7 +60,7 @@ func ifDuplicateSchema(err string) bool {
 		return false
 	}
 }
-func LeadSquaredPull(projectId uint64, configs map[string]interface{}) (map[string]interface{}, bool) {
+func LeadSquaredPull(projectId int64, configs map[string]interface{}) (map[string]interface{}, bool) {
 	bigQuerySetting := model.BigquerySetting{
 		BigqueryProjectID:       configs["BigqueryProjectId"].(string),
 		BigqueryCredentialsJSON: configs["BigqueryCredential"].(string),

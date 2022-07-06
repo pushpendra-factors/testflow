@@ -14,7 +14,29 @@ import (
 )
 
 type Project struct {
-	ID             uint64 `gorm:"primary_key:true;" json:"id"`
+	ID             int64  `gorm:"primary_key:true;" json:"id"`
+	Name           string `gorm:"not null;" json:"name"`
+	ProfilePicture string `json:"profile_picture"`
+	// An index created on token.
+	Token string `gorm:"size:32" json:"token"`
+	// An index created on private_token.
+	PrivateToken                     string          `gorm:"size:32" json:"private_token"`
+	CreatedAt                        time.Time       `json:"created_at"`
+	UpdatedAt                        time.Time       `json:"updated_at"`
+	ProjectURI                       string          `json:"project_uri"`
+	TimeFormat                       string          `json:"time_format"`
+	DateFormat                       string          `json:"date_format"`
+	TimeZone                         string          `json:"time_zone"`
+	InteractionSettings              postgres.Jsonb  `json:"interaction_settings"`
+	SalesforceTouchPoints            postgres.Jsonb  `json:"salesforce_touch_points"`
+	HubspotTouchPoints               postgres.Jsonb  `json:"hubspot_touch_points"`
+	JobsMetadata                     *postgres.Jsonb `json:"jobs_metadata"`
+	ChannelGroupRules                postgres.Jsonb  `json:"channel_group_rules"`
+	IsMultipleProjectTimezoneEnabled bool            `gorm:"-" json:"is_multiple_project_timezone_enabled"`
+}
+
+type ProjectString struct {
+	ID             string `gorm:"primary_key:true;" json:"id"`
 	Name           string `gorm:"not null;" json:"name"`
 	ProfilePicture string `json:"profile_picture"`
 	// An index created on token.
@@ -176,7 +198,7 @@ func getCacheKeyForProjectIDByToken(token string) (*cacheRedis.Key, error) {
 	return cacheRedis.NewKeyWithProjectUID(token, "projects_token_id", "")
 }
 
-func GetCacheProjectIDByToken(token string) (uint64, int) {
+func GetCacheProjectIDByToken(token string) (int64, int) {
 	logCtx := log.WithField("token", token)
 
 	if token == "" {
@@ -200,7 +222,7 @@ func GetCacheProjectIDByToken(token string) (uint64, int) {
 		return 0, http.StatusInternalServerError
 	}
 
-	projectID, err := strconv.ParseUint(projectIDAsString, 10, 64)
+	projectID, err := strconv.ParseInt(projectIDAsString, 10, 64)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to convert project_id to uint64 in GetCacheProjectIDByToken.")
 		return 0, http.StatusInternalServerError
@@ -209,7 +231,7 @@ func GetCacheProjectIDByToken(token string) (uint64, int) {
 	return projectID, http.StatusFound
 }
 
-func SetCacheProjectIDByToken(token string, projectID uint64) int {
+func SetCacheProjectIDByToken(token string, projectID int64) int {
 	logCtx := log.WithField("token", token).WithField("project_id", projectID)
 
 	if token == "" || projectID == 0 {

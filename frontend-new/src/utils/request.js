@@ -38,8 +38,12 @@ function request(dispatch, method, url, headers, data) {
       options.headers.Authorization = window.FACTORS_AI_LOGIN_TOKEN;
     }
 
-    if(window.INVALIDATE_CACHE && window.INVALIDATE_CACHE != "") {
+    if (window.INVALIDATE_CACHE && window.INVALIDATE_CACHE != "") {
       options.headers["Invalidate-Cache"] = true;
+    }
+
+    if (window.USE_FILTER_OPT_PROFILES && window.USE_FILTER_OPT_PROFILES != "") {
+      options.headers["Use-Filter-Opt-Profiles"] = true; 
     }
   
     return fetch(url, options)

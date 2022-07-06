@@ -162,7 +162,7 @@ func (store *MemSQL) CreateUser(user *model.User) (string, int) {
 }
 
 // UpdateUser updates user fields by Id.
-func (store *MemSQL) UpdateUser(projectId uint64, id string,
+func (store *MemSQL) UpdateUser(projectId int64, id string,
 	user *model.User, updateTimestamp int64) (*model.User, int) {
 	logFields := log.Fields{
 		"project_id":       projectId,
@@ -214,7 +214,7 @@ func (store *MemSQL) UpdateUser(projectId uint64, id string,
 }
 
 // UpdateUserProperties only if there is a change in properties values.
-func (store *MemSQL) UpdateUserProperties(projectId uint64, id string,
+func (store *MemSQL) UpdateUserProperties(projectId int64, id string,
 	newProperties *postgres.Jsonb, updateTimestamp int64) (*postgres.Jsonb, int) {
 	logFields := log.Fields{
 		"project_id":       projectId,
@@ -227,7 +227,7 @@ func (store *MemSQL) UpdateUserProperties(projectId uint64, id string,
 	return store.UpdateUserPropertiesV2(projectId, id, newProperties, updateTimestamp, "", "")
 }
 
-func (store *MemSQL) IsUserExistByID(projectID uint64, id string) int {
+func (store *MemSQL) IsUserExistByID(projectID int64, id string) int {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"id":         id,
@@ -255,7 +255,7 @@ func (store *MemSQL) IsUserExistByID(projectID uint64, id string) int {
 	return http.StatusFound
 }
 
-func (store *MemSQL) GetUser(projectId uint64, id string) (*model.User, int) {
+func (store *MemSQL) GetUser(projectId int64, id string) (*model.User, int) {
 	params := log.Fields{"project_id": projectId, "user_id": id}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &params)
 	logCtx := log.WithFields(params)
@@ -276,7 +276,7 @@ func (store *MemSQL) GetUser(projectId uint64, id string) (*model.User, int) {
 	return &user, http.StatusFound
 }
 
-func (store *MemSQL) GetUsers(projectId uint64, offset uint64, limit uint64) ([]model.User, int) {
+func (store *MemSQL) GetUsers(projectId int64, offset uint64, limit uint64) ([]model.User, int) {
 	logFields := log.Fields{
 		"project_id": projectId,
 		"offset":     offset,
@@ -297,7 +297,7 @@ func (store *MemSQL) GetUsers(projectId uint64, offset uint64, limit uint64) ([]
 }
 
 // GetUsersByCustomerUserID Gets all the users indentified by given customer_user_id in increasing order of updated_at.
-func (store *MemSQL) GetUsersByCustomerUserID(projectID uint64, customerUserID string) ([]model.User, int) {
+func (store *MemSQL) GetUsersByCustomerUserID(projectID int64, customerUserID string) ([]model.User, int) {
 	logFields := log.Fields{
 		"project_id":       projectID,
 		"customer_user_id": customerUserID,
@@ -327,7 +327,7 @@ func (store *MemSQL) GetUsersByCustomerUserID(projectID uint64, customerUserID s
 }
 
 // GetSelectedUsersByCustomerUserID gets selected (top 50 & bottom 50) users identified by given customer_user_id in increasing order of updated_at.
-func (store *MemSQL) GetSelectedUsersByCustomerUserID(projectID uint64, customerUserID string, limit uint64, numUsers uint64) ([]model.User, int) {
+func (store *MemSQL) GetSelectedUsersByCustomerUserID(projectID int64, customerUserID string, limit uint64, numUsers uint64) ([]model.User, int) {
 	logFields := log.Fields{
 		"project_id":       projectID,
 		"customer_user_id": customerUserID,
@@ -379,7 +379,7 @@ func (store *MemSQL) GetSelectedUsersByCustomerUserID(projectID uint64, customer
 	return users, http.StatusFound
 }
 
-func (store *MemSQL) GetUserLatestByCustomerUserId(projectId uint64, customerUserId string, requestSource int) (*model.User, int) {
+func (store *MemSQL) GetUserLatestByCustomerUserId(projectId int64, customerUserId string, requestSource int) (*model.User, int) {
 	logFields := log.Fields{
 		"project_id":       projectId,
 		"customer_user_id": customerUserId,
@@ -416,7 +416,7 @@ func (store *MemSQL) GetUserLatestByCustomerUserId(projectId uint64, customerUse
 	return &user, http.StatusFound
 }
 
-func (store *MemSQL) GetExistingCustomerUserID(projectId uint64, arrayCustomerUserID []string) (map[string]string, int) {
+func (store *MemSQL) GetExistingCustomerUserID(projectId int64, arrayCustomerUserID []string) (map[string]string, int) {
 	logFields := log.Fields{
 		"project_id":             projectId,
 		"array_customer_user_id": arrayCustomerUserID,
@@ -451,7 +451,7 @@ func (store *MemSQL) GetExistingCustomerUserID(projectId uint64, arrayCustomerUs
 	return customerUserIDMap, http.StatusFound
 }
 
-func (store *MemSQL) GetUserBySegmentAnonymousId(projectId uint64, segAnonId string) (*model.User, int) {
+func (store *MemSQL) GetUserBySegmentAnonymousId(projectId int64, segAnonId string) (*model.User, int) {
 	logFields := log.Fields{
 		"project_id":  projectId,
 		"seg_anon_id": segAnonId,
@@ -476,7 +476,7 @@ func (store *MemSQL) GetUserBySegmentAnonymousId(projectId uint64, segAnonId str
 }
 
 // GetAllUserIDByCustomerUserID returns all users with same customer_user_id
-func (store *MemSQL) GetAllUserIDByCustomerUserID(projectID uint64, customerUserID string) ([]string, int) {
+func (store *MemSQL) GetAllUserIDByCustomerUserID(projectID int64, customerUserID string) ([]string, int) {
 	logFields := log.Fields{
 		"project_id":       projectID,
 		"customer_user_id": customerUserID,
@@ -530,7 +530,7 @@ func getUserIDBySegementAnonymousID(segAnonID string) string {
 
 // CreateOrGetSegmentUser create or updates(c_uid) and returns user by segement_anonymous_id
 // and/or customer_user_id.
-func (store *MemSQL) CreateOrGetSegmentUser(projectId uint64, segAnonId, custUserId string,
+func (store *MemSQL) CreateOrGetSegmentUser(projectId int64, segAnonId, custUserId string,
 	requestTimestamp int64, requestSource int) (*model.User, int) {
 	logFields := log.Fields{
 		"project_id":        projectId,
@@ -631,7 +631,7 @@ func (store *MemSQL) CreateOrGetSegmentUser(projectId uint64, segAnonId, custUse
 	return user, http.StatusOK
 }
 
-func (store *MemSQL) GetUserIDByAMPUserID(projectId uint64, ampUserId string) (string, int) {
+func (store *MemSQL) GetUserIDByAMPUserID(projectId int64, ampUserId string) (string, int) {
 	logFields := log.Fields{
 		"project_id":  projectId,
 		"amp_user_id": ampUserId,
@@ -666,7 +666,7 @@ func (store *MemSQL) GetUserIDByAMPUserID(projectId uint64, ampUserId string) (s
 	return user.ID, http.StatusFound
 }
 
-func (store *MemSQL) CreateOrGetAMPUser(projectId uint64, ampUserId string, timestamp int64, requestSource int) (string, int) {
+func (store *MemSQL) CreateOrGetAMPUser(projectId int64, ampUserId string, timestamp int64, requestSource int) (string, int) {
 	logFields := log.Fields{
 		"project_id":     projectId,
 		"amp_user_id":    ampUserId,
@@ -725,7 +725,7 @@ func (store *MemSQL) CreateOrGetAMPUser(projectId uint64, ampUserId string, time
 }
 
 //GetRecentUserPropertyKeysWithLimits This method gets all the recent 'limit' property keys from DB for a given project
-func (store *MemSQL) GetRecentUserPropertyKeysWithLimits(projectID uint64, usersLimit int, propertyLimit int, seedDate time.Time) ([]U.Property, error) {
+func (store *MemSQL) GetRecentUserPropertyKeysWithLimits(projectID int64, usersLimit int, propertyLimit int, seedDate time.Time) ([]U.Property, error) {
 	logFields := log.Fields{
 		"project_id":     projectID,
 		"users_limit":    usersLimit,
@@ -799,7 +799,7 @@ func (store *MemSQL) GetRecentUserPropertyKeysWithLimits(projectID uint64, users
 
 // GetRecentUserPropertyValuesWithLimits This method gets all the recent 'limit' property values
 // from DB for a given project/property
-func (store *MemSQL) GetRecentUserPropertyValuesWithLimits(projectID uint64, propertyKey string,
+func (store *MemSQL) GetRecentUserPropertyValuesWithLimits(projectID int64, propertyKey string,
 	usersLimit, valuesLimit int, seedDate time.Time) ([]U.PropertyValue, string, error) {
 	logFields := log.Fields{
 		"project_id":   projectID,
@@ -853,7 +853,7 @@ func (store *MemSQL) GetRecentUserPropertyValuesWithLimits(projectID uint64, pro
 }
 
 // Gets userProperties - sorted by count and time. Update list with required ones.
-func (store *MemSQL) GetRequiredUserPropertiesByProject(projectID uint64, limit int, lastNDays int) (map[string][]string, map[string]string, error) {
+func (store *MemSQL) GetRequiredUserPropertiesByProject(projectID int64, limit int, lastNDays int) (map[string][]string, map[string]string, error) {
 	logFields := log.Fields{
 		"project_id":  projectID,
 		"limit":       limit,
@@ -891,7 +891,7 @@ func (store *MemSQL) GetRequiredUserPropertiesByProject(projectID uint64, limit 
 
 //GetUserPropertiesByProject This method iterates over n days and gets user properties from cache for a given project
 // Picks all past 24 hrs seen properties and sorts the remaining by count and returns top 'limit'
-func (store *MemSQL) GetUserPropertiesByProject(projectID uint64, limit int, lastNDays int) (map[string][]string, error) {
+func (store *MemSQL) GetUserPropertiesByProject(projectID int64, limit int, lastNDays int) (map[string][]string, error) {
 	logFields := log.Fields{
 		"project_id":  projectID,
 		"limit":       limit,
@@ -944,7 +944,7 @@ func (store *MemSQL) GetUserPropertiesByProject(projectID uint64, limit int, las
 	return properties, nil
 }
 
-func getUserPropertiesByProjectFromCache(projectID uint64, dateKey string) (U.CachePropertyWithTimestamp, error) {
+func getUserPropertiesByProjectFromCache(projectID int64, dateKey string) (U.CachePropertyWithTimestamp, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"date_key":   dateKey,
@@ -979,7 +979,7 @@ func getUserPropertiesByProjectFromCache(projectID uint64, dateKey string) (U.Ca
 //GetPropertyValuesByUserProperty This method iterates over n days and gets user property values
 // from cache for a given project/property. Picks all past 24 hrs seen values and sorts the
 // remaining by count and returns top 'limit'
-func (store *MemSQL) GetPropertyValuesByUserProperty(projectID uint64,
+func (store *MemSQL) GetPropertyValuesByUserProperty(projectID int64,
 	propertyName string, limit int, lastNDays int) ([]string, error) {
 	logFields := log.Fields{
 		"project_id":    projectID,
@@ -1023,7 +1023,7 @@ func (store *MemSQL) GetPropertyValuesByUserProperty(projectID uint64,
 	return valueStrings, nil
 }
 
-func getPropertyValuesByUserPropertyFromCache(projectID uint64, propertyName string,
+func getPropertyValuesByUserPropertyFromCache(projectID int64, propertyName string,
 	dateKey string) (U.CachePropertyValueWithTimestamp, error) {
 	logFields := log.Fields{
 		"project_id":    projectID,
@@ -1063,7 +1063,7 @@ func getPropertyValuesByUserPropertyFromCache(projectID uint64, propertyName str
 	return cacheValue, nil
 }
 
-func (store *MemSQL) GetLatestUserPropertiesOfUserAsMap(projectID uint64, id string) (*map[string]interface{}, int) {
+func (store *MemSQL) GetLatestUserPropertiesOfUserAsMap(projectID int64, id string) (*map[string]interface{}, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"id":         id,
@@ -1095,7 +1095,7 @@ func (store *MemSQL) GetLatestUserPropertiesOfUserAsMap(projectID uint64, id str
 }
 
 // GetDistinctCustomerUserIDSForProject Returns all distinct customer_user_id for Project.
-func (store *MemSQL) GetDistinctCustomerUserIDSForProject(projectID uint64) ([]string, int) {
+func (store *MemSQL) GetDistinctCustomerUserIDSForProject(projectID int64) ([]string, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
@@ -1126,7 +1126,7 @@ func (store *MemSQL) GetDistinctCustomerUserIDSForProject(projectID uint64) ([]s
 }
 
 // GetUserIdentificationPhoneNumber tries various patterns of phone number if exist in db and return the phone no based on priority
-func (store *MemSQL) GetUserIdentificationPhoneNumber(projectID uint64, phoneNo string) (string, string) {
+func (store *MemSQL) GetUserIdentificationPhoneNumber(projectID int64, phoneNo string) (string, string) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"phone_no":   phoneNo,
@@ -1150,7 +1150,7 @@ func (store *MemSQL) GetUserIdentificationPhoneNumber(projectID uint64, phoneNo 
 	return phoneNo, ""
 }
 
-func (store *MemSQL) FixAllUsersJoinTimestampForProject(db *gorm.DB, projectId uint64, isDryRun bool) error {
+func (store *MemSQL) FixAllUsersJoinTimestampForProject(db *gorm.DB, projectId int64, isDryRun bool) error {
 	logFields := log.Fields{
 		"project_id": projectId,
 		"db":         db,
@@ -1198,7 +1198,7 @@ func (store *MemSQL) FixAllUsersJoinTimestampForProject(db *gorm.DB, projectId u
 	return nil
 }
 
-func (store *MemSQL) GetUserPropertiesByUserID(projectID uint64, id string) (*postgres.Jsonb, int) {
+func (store *MemSQL) GetUserPropertiesByUserID(projectID int64, id string) (*postgres.Jsonb, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"id":         id,
@@ -1234,7 +1234,7 @@ func (store *MemSQL) GetUserPropertiesByUserID(projectID uint64, id string) (*po
 
 // GetUserByPropertyKey - Returns first user which has the
 // given property with value. No specific order.
-func (store *MemSQL) GetUserByPropertyKey(projectID uint64,
+func (store *MemSQL) GetUserByPropertyKey(projectID int64,
 	key string, value interface{}) (*model.User, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
@@ -1262,7 +1262,7 @@ func (store *MemSQL) GetUserByPropertyKey(projectID uint64,
 	return &user, http.StatusFound
 }
 
-func (store *MemSQL) getUsersForMergingPropertiesByCustomerUserID(projectID uint64,
+func (store *MemSQL) getUsersForMergingPropertiesByCustomerUserID(projectID int64,
 	customerUserID string, includeUser *model.User) ([]model.User, int) {
 	logFields := log.Fields{
 		"project_id":       projectID,
@@ -1315,7 +1315,7 @@ func (store *MemSQL) getUsersForMergingPropertiesByCustomerUserID(projectID uint
 	return users, http.StatusFound
 }
 
-func (store *MemSQL) mergeNewPropertiesWithCurrentUserProperties(projectID uint64, userID string,
+func (store *MemSQL) mergeNewPropertiesWithCurrentUserProperties(projectID int64, userID string,
 	currentProperties *postgres.Jsonb, currentUpdateTimestamp int64,
 	newProperties *postgres.Jsonb, newUpdateTimestamp int64, source string, objectType string,
 ) (*postgres.Jsonb, int) {
@@ -1421,7 +1421,7 @@ func (store *MemSQL) mergeNewPropertiesWithCurrentUserProperties(projectID uint6
 
 // UpdateUserPropertiesV2 - Merge new properties with the existing properties of user and also
 // merge the properties of user with same customer_user_id, then updates properties on users table.
-func (store *MemSQL) UpdateUserPropertiesV2(projectID uint64, id string,
+func (store *MemSQL) UpdateUserPropertiesV2(projectID int64, id string,
 	newProperties *postgres.Jsonb, newUpdateTimestamp int64, sourceValue string, objectType string) (*postgres.Jsonb, int) {
 	logFields := log.Fields{
 		"project_id":           projectID,
@@ -1561,7 +1561,7 @@ func (store *MemSQL) UpdateUserPropertiesV2(projectID uint64, id string,
 
 // OverwriteUserPropertiesByCustomerUserID - Update the properties column value
 // of all users which has the given customer_user_id, with given properties JSON.
-func (store *MemSQL) OverwriteUserPropertiesByCustomerUserID(projectID uint64,
+func (store *MemSQL) OverwriteUserPropertiesByCustomerUserID(projectID int64,
 	customerUserID string, properties *postgres.Jsonb, updateTimestamp int64) int {
 	logFields := log.Fields{
 		"project_id":       projectID,
@@ -1634,13 +1634,13 @@ func (store *MemSQL) OverwriteUserPropertiesByIDInBatch(batchedOverwriteUserProp
 	return hasFailure
 }
 
-func (store *MemSQL) OverwriteUserPropertiesByID(projectID uint64, id string,
+func (store *MemSQL) OverwriteUserPropertiesByID(projectID int64, id string,
 	properties *postgres.Jsonb, withUpdateTimestamp bool, updateTimestamp int64, source string) int {
 	db := C.GetServices().Db
 	return store.overwriteUserPropertiesByIDWithTransaction(projectID, id, properties, withUpdateTimestamp, updateTimestamp, source, db)
 }
 
-func (store *MemSQL) overwriteUserPropertiesByIDWithTransaction(projectID uint64, id string,
+func (store *MemSQL) overwriteUserPropertiesByIDWithTransaction(projectID int64, id string,
 	properties *postgres.Jsonb, withUpdateTimestamp bool, updateTimestamp int64, source string, dbTx *gorm.DB) int {
 	logFields := log.Fields{
 		"project_id":            projectID,
@@ -1704,7 +1704,7 @@ func (store *MemSQL) overwriteUserPropertiesByIDWithTransaction(projectID uint64
 	return http.StatusAccepted
 }
 
-func (store *MemSQL) GetPropertiesUpdatedTimestampOfUser(projectId uint64, id string) (int64, int) {
+func (store *MemSQL) GetPropertiesUpdatedTimestampOfUser(projectId int64, id string) (int64, int) {
 	logFields := log.Fields{
 		"project_id": projectId,
 		"id":         id,
@@ -1726,7 +1726,7 @@ func (store *MemSQL) GetPropertiesUpdatedTimestampOfUser(projectId uint64, id st
 	return user.PropertiesUpdatedTimestamp, http.StatusFound
 }
 
-func (store *MemSQL) UpdateCacheForUserProperties(userId string, projectID uint64,
+func (store *MemSQL) UpdateCacheForUserProperties(userId string, projectID int64,
 	updatedProperties map[string]interface{}, redundantProperty bool) {
 	logFields := log.Fields{
 		"project_id":         projectID,
@@ -1771,10 +1771,12 @@ func (store *MemSQL) UpdateCacheForUserProperties(userId string, projectID uint6
 		})
 
 	}
+
+	nonGroupProperties := model.FilterGroupPropertiesFromUserProperties(updatedProperties)
 	keysToIncrSortedSet := make([]cacheRedis.SortedSetKeyValueTuple, 0)
 	propertiesToIncrSortedSet := make([]cacheRedis.SortedSetKeyValueTuple, 0)
 	valuesToIncrSortedSet := make([]cacheRedis.SortedSetKeyValueTuple, 0)
-	for property, value := range updatedProperties {
+	for property, value := range nonGroupProperties {
 		category := store.GetPropertyTypeByKeyValue(projectID, "", property, value, true)
 		var propertyValue string
 		if category == U.PropertyTypeUnknown && reflect.TypeOf(value).Kind() == reflect.Bool {
@@ -1829,7 +1831,7 @@ func (store *MemSQL) UpdateCacheForUserProperties(userId string, projectID uint6
 
 // UpdateUserPropertiesForSession - Updates total user properties and
 // latest user properties for session.
-func (store *MemSQL) UpdateUserPropertiesForSession(projectID uint64,
+func (store *MemSQL) UpdateUserPropertiesForSession(projectID int64,
 	sessionUserPropertiesRecordMap *map[string]model.SessionUserProperties) int {
 	logFields := log.Fields{
 		"project_id":                         projectID,
@@ -1841,7 +1843,7 @@ func (store *MemSQL) UpdateUserPropertiesForSession(projectID uint64,
 }
 
 // GetCustomerUserIDAndUserPropertiesFromFormSubmit return customer_user_id na and validated user_properties from form submit properties
-func (store *MemSQL) GetCustomerUserIDAndUserPropertiesFromFormSubmit(projectID uint64, userID string,
+func (store *MemSQL) GetCustomerUserIDAndUserPropertiesFromFormSubmit(projectID int64, userID string,
 	formSubmitProperties *U.PropertiesMap) (string, *U.PropertiesMap, int) {
 	logFields := log.Fields{
 		"project_id":             projectID,
@@ -1922,7 +1924,7 @@ func (store *MemSQL) GetCustomerUserIDAndUserPropertiesFromFormSubmit(projectID 
 	return "", nil, http.StatusBadRequest
 }
 
-func (store *MemSQL) updateUserPropertiesForSessionV2(projectID uint64,
+func (store *MemSQL) updateUserPropertiesForSessionV2(projectID int64,
 	sessionUserPropertiesRecordMap *map[string]model.SessionUserProperties) int {
 	logFields := log.Fields{
 		"project_id":                         projectID,
@@ -1977,6 +1979,10 @@ func (store *MemSQL) updateUserPropertiesForSessionV2(projectID uint64,
 
 		(*userPropertiesMap)[U.UP_PAGE_COUNT] = newPageCount
 		(*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME] = newTotalSpentTime
+		if _, exists := (*userPropertiesMap)[U.UP_INITIAL_CHANNEL]; !exists {
+			(*userPropertiesMap)[U.UP_INITIAL_CHANNEL] = sessionUserProperties.SessionChannel
+		}
+		(*userPropertiesMap)[U.UP_LATEST_CHANNEL] = sessionUserProperties.SessionChannel
 
 		userPropertiesJsonb, err := U.EncodeToPostgresJsonb(userPropertiesMap)
 		if err != nil {
@@ -2001,6 +2007,7 @@ func (store *MemSQL) updateUserPropertiesForSessionV2(projectID uint64,
 			TotalSpentTime: newTotalSpentTime,
 			SessionCount:   newSessionCount,
 			Timestamp:      sessionUserProperties.SessionEventTimestamp,
+			Channel:        sessionUserProperties.SessionChannel,
 		}
 		if _, exists := latestSessionUserPropertiesByUserID[sessionUserProperties.UserID]; !exists {
 			latestSessionUserPropertiesByUserID[sessionUserProperties.UserID] = latestUserProperties
@@ -2029,7 +2036,7 @@ func (store *MemSQL) updateUserPropertiesForSessionV2(projectID uint64,
 }
 
 func (store *MemSQL) updateLatestUserPropertiesForSessionIfNotUpdatedV2(
-	projectID uint64,
+	projectID int64,
 	sessionUpdateUserIDs map[string]bool,
 	latestSessionUserPropertiesByUserID *map[string]model.LatestUserPropertiesFromSession,
 ) int {
@@ -2066,6 +2073,18 @@ func (store *MemSQL) updateLatestUserPropertiesForSessionIfNotUpdatedV2(
 		newUserProperties := map[string]interface{}{
 			U.UP_TOTAL_SPENT_TIME: sessionUserProperties.TotalSpentTime,
 			U.UP_PAGE_COUNT:       sessionUserProperties.PageCount,
+		}
+		existingUserPropertiesMap, err := U.DecodePostgresJsonb(existingUserProperties)
+		if err != nil {
+			logCtx.WithError(err).
+				Error("Failed to decode existing user properites.")
+			hasFailure = true
+			continue
+		} else {
+			if _, exists := (*existingUserPropertiesMap)[U.UP_INITIAL_CHANNEL]; !exists {
+				newUserProperties[U.UP_INITIAL_CHANNEL] = sessionUserProperties.Channel
+			}
+			newUserProperties[U.UP_LATEST_CHANNEL] = sessionUserProperties.Channel
 		}
 		userPropertiesJsonb, err := U.AddToPostgresJsonb(existingUserProperties, newUserProperties, true)
 		if err != nil {
@@ -2141,7 +2160,7 @@ func shouldAllowCustomerUserID(current, incoming string) bool {
 }
 
 // UpdateIdentifyOverwriteUserPropertiesMeta adds overwrite information to user properties for debuging purpose. Not available while querying
-func (store *MemSQL) UpdateIdentifyOverwriteUserPropertiesMeta(projectID uint64, customerUserID, userID, pageURL, source string, userProperties *postgres.Jsonb, timestamp int64, isNewUser bool) error {
+func (store *MemSQL) UpdateIdentifyOverwriteUserPropertiesMeta(projectID int64, customerUserID, userID, pageURL, source string, userProperties *postgres.Jsonb, timestamp int64, isNewUser bool) error {
 	logFields := log.Fields{
 		"project_id":       projectID,
 		"customer_user_id": customerUserID,
@@ -2187,7 +2206,7 @@ func (store *MemSQL) UpdateIdentifyOverwriteUserPropertiesMeta(projectID uint64,
 	return model.UpdateUserPropertiesIdentifierMetaObject(userProperties, metaObj)
 }
 
-func (store *MemSQL) addGroupUserPropertyDetailsToCache(projectID uint64, groupName,
+func (store *MemSQL) addGroupUserPropertyDetailsToCache(projectID int64, groupName,
 	groupUserID string, properties *map[string]interface{}) {
 
 	logCtx := log.WithField("properties", properties).WithField("project_id", projectID)
@@ -2315,7 +2334,7 @@ func (store *MemSQL) CreateGroupUser(user *model.User, groupName, groupID string
 	return store.CreateUser(groupUser)
 }
 
-func (store *MemSQL) UpdateUserGroup(projectID uint64, userID, groupName, groupID, groupUserID string) (*model.User, int) {
+func (store *MemSQL) UpdateUserGroup(projectID int64, userID, groupName, groupID, groupUserID string) (*model.User, int) {
 	logFields := log.Fields{
 		"project_id":    projectID,
 		"user_id":       userID,
@@ -2384,7 +2403,7 @@ func (store *MemSQL) UpdateUserGroup(projectID uint64, userID, groupName, groupI
 	return store.UpdateUser(projectID, userID, user, user.PropertiesUpdatedTimestamp)
 }
 
-func (store *MemSQL) UpdateUserGroupProperties(projectID uint64, userID string,
+func (store *MemSQL) UpdateUserGroupProperties(projectID int64, userID string,
 	newProperties *postgres.Jsonb, updateTimestamp int64) (*postgres.Jsonb, int) {
 	logFields := log.Fields{
 		"project_id":       projectID,
@@ -2461,7 +2480,7 @@ func (store *MemSQL) UpdateUserGroupProperties(projectID uint64, userID string,
 	return mergedPropertiesJSON, http.StatusAccepted
 }
 
-func (store *MemSQL) UpdateGroupUserGroupId(projectID uint64, userID string,
+func (store *MemSQL) UpdateGroupUserGroupId(projectID int64, userID string,
 	groupID string, columnName string) int {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "id": userID, "group_id": groupID, "columnName": columnName})
 	if projectID == 0 || userID == "" || groupID == "" || columnName == "" {
