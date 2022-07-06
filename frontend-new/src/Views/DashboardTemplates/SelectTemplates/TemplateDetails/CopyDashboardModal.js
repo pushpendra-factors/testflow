@@ -1,10 +1,22 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { Row, Col, Tabs, Modal, notification, Input, Checkbox} from "antd";
 import {Text, SVG} from '../../../../components/factorsComponents';
+import { useSelector, useDispatch } from 'react-redux';
+
+import {createDashboardFromTemplate} from '../../../../reducers/dashboard_templates/services'
+
 
 function CopyDashboardModal({showCopyDashBoardModal,setShowCopyDashBoardModal}){
-    const handleOk = ()=>{
-        alert('Copy of Dasboard Created!');
+    const { active_project } = useSelector((state) => state.global);
+    const {activeTemplate} = useSelector((state)=>state.dashboardTemplates);
+    const handleOk = async()=>{
+        try{
+            const res = await createDashboardFromTemplate(active_project.id,activeTemplate.id);
+            alert('Copy of Dasboard Created!');
+
+        }catch (err){
+            console.log('raghav',err.response);
+        }
         setShowCopyDashBoardModal(false);
     }
     const handleCancel=()=>{

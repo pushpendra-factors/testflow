@@ -23,3 +23,8 @@ export const fetchTemplates = () => {
     }
   };
 };
+
+export const createDashboardFromTemplate = async (projectId,templateId)=>{
+  const url = host + 'projects/' + projectId + '/dashboard_template/' + templateId+ '/trigger';
+  return post(null,url);
+}
