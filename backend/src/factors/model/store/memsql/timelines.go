@@ -160,10 +160,16 @@ func (store *MemSQL) GetProfileUserDetailsByID(projectID uint64, identity string
 	standardDisplayNames := U.STANDARD_EVENTS_DISPLAY_NAMES
 	_, projectDisplayNames := store.GetDisplayNamesForAllEvents(projectID)
 
+	webSessionCount := 0
+
 	for rows.Next() {
 		var contactActivity model.ContactActivity
 		if err := db.ScanRows(rows, &contactActivity); err != nil {
 			log.WithError(err).Error("Failed scanning events list")
+		}
+		// Session Count workaround
+		if contactActivity.EventName == U.EVENT_NAME_SESSION {
+			webSessionCount += 1
 		}
 		if standardDisplayNames[contactActivity.EventName] != "" {
 			contactActivity.DisplayName = standardDisplayNames[contactActivity.EventName]
@@ -174,6 +180,8 @@ func (store *MemSQL) GetProfileUserDetailsByID(projectID uint64, identity string
 		}
 		uniqueUser.UserActivity = append(uniqueUser.UserActivity, contactActivity)
 	}
+
+	uniqueUser.WebSessionsCount = float64(webSessionCount)
 
 	groups, errCode := store.GetGroups(projectID)
 	if errCode != http.StatusFound {
