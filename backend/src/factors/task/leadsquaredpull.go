@@ -178,7 +178,7 @@ func LeadSquaredPull(projectId uint64, configs map[string]interface{}) (map[stri
 			}
 			return result, true
 		} else {
-			result, errorStatus, msg := DoIncrementalSync(leadSquaredConfig.Host, model.LeadSquaredDocumentEndpoint[documentType], leadSquaredUrlParams, columnsToBeExtracted, PAGESIZE, executionDate, LOOKBACK, datasetID, tableID, client, metadataWithOrder, ctx)
+			result, errorStatus, msg := DoIncrementalSync(leadSquaredConfig.Host, model.LeadSquaredHistoricalSyncEndpoint[documentType], model.LeadSquaredDocumentEndpoint[documentType], leadSquaredUrlParams, columnsToBeExtracted, PAGESIZE, executionDate, LOOKBACK, datasetID, tableID, client, metadataWithOrder, ctx)
 			if errorStatus == true {
 				log.Error(msg)
 				resultStatus["error"] = msg
@@ -347,9 +347,10 @@ func insertBigQueryRow(datasetID string, tableID string, client *bigquery.Client
 	return false, ""
 }
 
-func DoIncrementalSync(host string, endpoint string, urlParams map[string]string, columns string, pageSize int, executionTimestamp int64, lookback int, datasetID string, tableId string, client *bigquery.Client, propertyMetadataList []SchemaPropertyMetadataMapping, ctx context.Context) (map[string]interface{}, bool, string) {
+func DoIncrementalSync(host string, histSyncEndpoint string, endpoint string, urlParams map[string]string, columns string, pageSize int, executionTimestamp int64, lookback int, datasetID string, tableId string, client *bigquery.Client, propertyMetadataList []SchemaPropertyMetadataMapping, ctx context.Context) (map[string]interface{}, bool, string) {
 	log.Info("Starting Incremental Sync")
 	index := 1
+	totalRecordCountModifiedOn := 0
 	startDateinLeadSquaredFormat := fmt.Sprintf("%v", time.Unix(int64(executionTimestamp), 0).Format("2006-01-02 15:04:05"))
 	endDateinLeadSquaredFormat := fmt.Sprintf("%v", time.Unix(int64(executionTimestamp)+U.SECONDS_IN_A_DAY, 0).Format("2006-01-02 15:04:05"))
 	log.Info(fmt.Sprintf("Starting Incremental Sync with date > %v < %v ", startDateinLeadSquaredFormat, endDateinLeadSquaredFormat))
@@ -397,9 +398,64 @@ func DoIncrementalSync(host string, endpoint string, urlParams map[string]string
 			return nil, true, msg
 		}
 		index++
+		totalRecordCountModifiedOn = totalRecordCountModifiedOn + len(dataForInsertion)
 		if len(dataForInsertion) < pageSize {
 			break
 		}
 	}
-	return nil, false, ""
+	index = 1
+	totalRecordCountCreatedOn := 0
+	log.Info("Starting for all records created after the lookback")
+	StartDateinLeadSquaredFormat := fmt.Sprintf("%v", time.Unix(int64(executionTimestamp), 0).Format("2006-01-02 15:04:05"))
+	log.Info(fmt.Sprintf("Starting Historical Sync with date > %v", StartDateinLeadSquaredFormat))
+	for {
+		request := model.SearchLeadsByCriteriaRequest{
+			Parameter: model.LeadSearchParameterObj{
+				LookupName:  "CreatedOn",
+				LookupValue: StartDateinLeadSquaredFormat,
+				SqlOperator: ">",
+			},
+			Paging: model.PagingObj{
+				PageIndex: index,
+				PageSize:  pageSize,
+			},
+			Columns: model.ColumnsObj{
+				IncludeCSV: columns,
+			},
+			Sorting: model.SortingObj{
+				ColumnName: "CreatedOn",
+				Direction:  "1",
+			},
+		}
+		headers := map[string]string{
+			"Content-Type": "application/json",
+		}
+		statusCode, responseHistSyncData, errorObj := L.HttpRequestWrapper(fmt.Sprintf("https://%s", host), histSyncEndpoint, headers, request, "POST", urlParams)
+		if statusCode != http.StatusOK || errorObj != nil {
+			return nil, true, errorObj.Error()
+		}
+		byteSliceHistSync, err := json.Marshal(responseHistSyncData)
+		if err != nil {
+			return nil, true, err.Error()
+		}
+		histSyncData := make([]interface{}, 0)
+		err = json.Unmarshal(byteSliceHistSync, &histSyncData)
+		if err != nil {
+			return nil, true, err.Error()
+		}
+		log.Info(fmt.Sprintf("ModifiedOn - Inserting %v rows with index %v no of records %v", pageSize, index, len(histSyncData)))
+		errorStatus, msg := insertBigQueryRow(datasetID, tableId, client, histSyncData, propertyMetadataList, ctx)
+		if errorStatus != false {
+			return nil, true, msg
+		}
+		index++
+		totalRecordCountCreatedOn = totalRecordCountCreatedOn + len(histSyncData)
+		if len(histSyncData) < pageSize {
+			break
+		}
+	}
+	resultStatus := make(map[string]interface{})
+	resultStatus["ModifiedOnRecords"] = totalRecordCountModifiedOn
+	resultStatus["CreatedOnRecords"] = totalRecordCountCreatedOn
+	return resultStatus, false, ""
 }
