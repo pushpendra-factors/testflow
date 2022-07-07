@@ -15,6 +15,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const HeaderUserFilterOptForProfiles string = "Use-Filter-Opt-Profiles"
+
 // DashboardQueryResponsePayload Query query response with cache and refreshed_at.
 type DashboardQueryResponsePayload struct {
 	Result      interface{} `json:"result"`

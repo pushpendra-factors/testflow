@@ -199,7 +199,7 @@ func AttributionHandler(c *gin.Context) (interface{}, int, string, string, bool)
 	// If not found, set a placeholder for the query hash key that it has been running to avoid running again.
 	model.SetQueryCachePlaceholder(projectId, &attributionQueryUnitPayload)
 
-	enableOptimisedFilterOnProfileQuery := c.Request.Header.Get("Use-Filter-Opt-Profiles") == "true" ||
+	enableOptimisedFilterOnProfileQuery := c.Request.Header.Get(H.HeaderUserFilterOptForProfiles) == "true" ||
 		C.EnableOptimisedFilterOnProfileQuery()
 
 	H.SleepIfHeaderSet(c)
