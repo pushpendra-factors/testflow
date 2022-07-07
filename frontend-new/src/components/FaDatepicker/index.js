@@ -119,8 +119,8 @@ const FaDatepicker = ({
   };
 
   const onCustomChange = (startDate, dateString) => {
-    const startDt = MomentTz(startDate[0]).startOf('day');
-    let endDt = MomentTz(startDate[1]);
+    const startDt = MomentTz(startDate[0]).startOf('day'); 
+    const endDt = MomentTz(startDate[1]).endOf('day');
 
 
     let newDateData = {
