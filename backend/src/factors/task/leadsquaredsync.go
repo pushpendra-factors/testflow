@@ -68,6 +68,19 @@ func LeadSquaredIntegration(projectId int64, configs map[string]interface{}) (ma
 
 		}
 		propertySuccess, propertyFailures = InsertPropertyDataTypesLeadSquared(columnNamesFromMetadataDateTime, columnNamesFromMetadataNumerical, docType, projectId)
+		leadSquaredUrlParams := map[string]string{
+			"accessKey": leadSquaredConfig.AccessKey,
+			"secretKey": leadSquaredConfig.SecretKey,
+		}
+		propertyMetadataList, errorStatus, msg := getMetadataDetails(docType, leadSquaredConfig.Host, leadSquaredUrlParams)
+		if errorStatus != false {
+			resultStatus["error"] = msg
+			log.Error(msg)
+			return resultStatus, false
+		}
+		disNameSuccess, disNameFailures := UpdateDisplayNames(projectId, docType, propertyMetadataList)
+		resultStatus["displayname-failure-"+docType] = disNameFailures
+		resultStatus["displayname-success-"+docType] = disNameSuccess
 		LatestProspectAutoId := 0
 		for {
 			var query string
@@ -91,11 +104,31 @@ func LeadSquaredIntegration(projectId int64, configs map[string]interface{}) (ma
 		resultStatus["success-"+docType] = totalSuccess
 		resultStatus["property-failure-"+docType] = propertyFailures
 		resultStatus["property-success-"+docType] = propertySuccess
+
 	}
 	if status == false {
 		return resultStatus, false
 	}
 	return resultStatus, true
+}
+
+func UpdateDisplayNames(projectId int64, docType string, metadata []PropertyMetadataObjectLeadSquared) (int, int) {
+	success, failures := int(0), int(0)
+	for _, column := range metadata {
+		_, err := store.GetStore().CreateCRMProperties(&model.CRMProperty{
+			ProjectID: projectId,
+			Source:    U.CRM_SOURCE_LEADSQUARED,
+			Type:      model.LeadSquaredDocumentTypeAlias[docType],
+			Name:      column.SchemaName,
+			Label:     column.DisplayName,
+		})
+		if err != nil {
+			failures++
+		} else {
+			success++
+		}
+	}
+	return success, failures
 }
 
 func InsertPropertyDataTypesLeadSquared(columnNamesFromMetadataDateTime map[string]bool, columnNamesFromMetadataNumerical map[string]bool, docType string, projectId int64) (int, int) {
