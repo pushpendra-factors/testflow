@@ -3,6 +3,7 @@ import { Row, Col, Tabs, Modal, notification } from 'antd';
 import { useSelector, useDispatch } from 'react-redux';
 import AddDashboardTab from './AddDashboardTab';
 import AddWidgetsTab from './AddWidgetsTab';
+import { useHistory } from 'react-router-dom';
 
 import { Text } from '../../../components/factorsComponents';
 import {
@@ -18,6 +19,7 @@ function NewDashboard({
   AddDashboardDetailsVisible,
   setAddDashboardDetailsVisible,
 }) {
+  const history = useHistory();
   const [activeKey, setActiveKey] = useState('1');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -106,6 +108,7 @@ function NewDashboard({
   const handleOk = useCallback(async () => {
     if (activeKey === '2') {
       createNewDashboard();
+      history.push('/');
     } else {
       if (!title.trim().length) {
         notification.error({

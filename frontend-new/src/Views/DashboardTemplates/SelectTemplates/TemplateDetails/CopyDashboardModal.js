@@ -1,21 +1,23 @@
-import React, { useState, useCallback, useEffect } from "react";
-import { Row, Col, Tabs, Modal, notification, Input, Checkbox} from "antd";
-import {Text, SVG} from '../../../../components/factorsComponents';
-import { useSelector, useDispatch } from 'react-redux';
+import React from "react";
+import { Row, Col, Modal} from "antd";
+import {Text } from '../../../../components/factorsComponents';
+import { useSelector } from 'react-redux';
+import { useHistory } from 'react-router-dom';
 
 import {createDashboardFromTemplate} from '../../../../reducers/dashboard_templates/services'
 
 
 function CopyDashboardModal({showCopyDashBoardModal,setShowCopyDashBoardModal}){
+    const history = useHistory();
     const { active_project } = useSelector((state) => state.global);
-    const {activeTemplate} = useSelector((state)=>state.dashboardTemplates);
+    const { activeTemplate } = useSelector((state)=>state.dashboardTemplates);
     const handleOk = async()=>{
         try{
             const res = await createDashboardFromTemplate(active_project.id,activeTemplate.id);
-            alert('Copy of Dasboard Created!');
+            history.push('/');
 
         }catch (err){
-            console.log('raghav',err.response);
+            console.log(err.response);
         }
         setShowCopyDashBoardModal(false);
     }
@@ -25,17 +27,17 @@ function CopyDashboardModal({showCopyDashBoardModal,setShowCopyDashBoardModal}){
     return(
             <Modal        
                 centered={true}
-                zIndex={1005}
                 width={'30%'}
                 onCancel={handleCancel}
                 onOk={handleOk}
                 className={"fa-modal--regular p-4 fa-modal--slideInDown"}
-                // confirmLoading={apisCalled}
                 closable={true}
                 okText={"Create Copy"}
                 cancelText={"Cancel"}
                 okButtonProps={{ size: "large"}}
                 cancelButtonProps={{ size: "large" }}
+                transitionName=""
+                maskTransitionName=""
                 visible={showCopyDashBoardModal}>
                 <Row className={'pt-4'} >
                     <Col >
