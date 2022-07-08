@@ -41,7 +41,7 @@ function ContactDetails({ onCancel, userDetails }) {
 
   const [granularity, setGranularity] = useState('Hourly');
   const [collapse, setCollapse] = useState(true);
-  const options = ['Default', 'Hourly', 'Daily', 'Weekly', 'Monthly'];
+  const options = ['Timestamp', 'Hourly', 'Daily', 'Weekly', 'Monthly'];
   const menu = (
     <Menu>
       {options.map((option) => {
@@ -137,6 +137,9 @@ function ContactDetails({ onCancel, userDetails }) {
               size={'large'}
               type='text'
               onClick={() => {
+                setActivities([]);
+                setCollapse(true);
+                setGranularity('Hourly');
                 onCancel();
               }}
               icon={<SVG name='times'></SVG>}
@@ -156,14 +159,11 @@ function ContactDetails({ onCancel, userDetails }) {
                     style={{
                       color: '#3E516C',
                       backgroundColor: '#F1F1F1',
-                      fontSize: '42px',
-                      textTransform: 'uppercase',
-                      fontWeight: '400',
+                      display: 'flex',
+                      alignItems: 'center',
                     }}
                   >
-                    {userDetails?.data?.name
-                      ? userDetails.data.name[0] || 'U'
-                      : 'U'}
+                    <SVG name='user' size={40} />
                   </Avatar>
                 </Col>
               </Row>
@@ -309,21 +309,21 @@ function ContactDetails({ onCancel, userDetails }) {
                     </Text>
                   </div>
                   <div className='flex justify-between'>
-                    <div>
-                      <Radio.Group
-                        onChange={(e) => setCollapse(e.target.value)}
-                        defaultValue={true}
+                    <div className='flex justify-between'>
+                      <Button
+                        className='fa-dd--custom-btn'
+                        type='text'
+                        onClick={() => setCollapse(false)}
                       >
-                        <Radio.Button
-                          value={false}
-                          className={'fa-btn--custom'}
-                        >
-                          <SVG name='line_height' size={22} />
-                        </Radio.Button>
-                        <Radio.Button value={true} className={'fa-btn--custom'}>
-                          <SVG name='grip_lines' size={22} />
-                        </Radio.Button>
-                      </Radio.Group>
+                        <SVG name='line_height' size={22} />
+                      </Button>
+                      <Button
+                        className='fa-dd--custom-btn'
+                        type='text'
+                        onClick={() => setCollapse(true)}
+                      >
+                        <SVG name='grip_lines' size={22} />
+                      </Button>
                     </div>
                     <div>
                       <Popover
@@ -337,7 +337,7 @@ function ContactDetails({ onCancel, userDetails }) {
                           className='fa-btn--custom mx-2 relative'
                           type='text'
                         >
-                          <SVG name={'controls'} />
+                          <SVG name={'activity_filter'} />
                         </Button>
                       </Popover>
                     </div>
@@ -361,6 +361,7 @@ function ContactDetails({ onCancel, userDetails }) {
                     loading={userDetails.isLoading}
                     granularity={granularity}
                     collapse={collapse}
+                    setCollapse={setCollapse}
                   />
                 </Col>
               </Col>

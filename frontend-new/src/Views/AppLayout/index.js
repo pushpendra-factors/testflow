@@ -51,8 +51,6 @@ import UserProfiles from '../../components/Profile/UserProfiles';
 import InsightsSettings from '../Settings/ProjectSettings/InsightsSettings';
 import { fetchProfileUsers } from '../../reducers/timeline';
 
-const whiteListedAccounts = ['solutions@factors.ai'];
-
 const FactorsInsights = lazyWithRetry(() =>
   import('../Factors/FactorsInsightsNew')
 );
@@ -81,8 +79,6 @@ function AppLayout({
   const { show_analytics_result } = useSelector((state) => state.coreQuery);
   const dispatch = useDispatch();
   const [sidebarCollapse, setSidebarCollapse] = useState(true);
-
-  const activeAgent = useSelector((state) => state.agent?.agent_details?.email);
  
   const asyncCallOnLoad = useCallback(async () => {
     try {
@@ -245,12 +241,7 @@ function AppLayout({
                     {/* <Route path='/configure/goals' component={goals} /> */}
 
                     {/* profiles */}
-                    {(window.document.domain === 'app.factors.ai' &&
-                      whiteListedAccounts.includes(activeAgent)) ||
-                    window.document.domain === 'staging-app.factors.ai' ||
-                    window.document.domain === 'factors-dev.com' ? (
-                      <Route path='/profiles/people' component={UserProfiles} />
-                    ) : null}
+                    <Route path='/profiles/people' component={UserProfiles} />
 
                     {!(demoProjectId.includes(active_project.id)) ? (
                       <Route path='/project-setup' component={SetupAssist} />
