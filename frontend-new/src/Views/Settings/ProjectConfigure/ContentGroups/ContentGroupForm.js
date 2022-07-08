@@ -168,7 +168,7 @@ function ContentGroupsForm({activeProject, selectedGroup, setShowSmartProperty, 
             // Save with data
             // Close modal
             setShowSmartProperty(false);
-            const smrtProp = {id: smartPropState.id?smartPropState.id: '', project_id: activeProject.id, content_group_name: data.content_group_name, content_group_description: data.content_group_description, rule:rulesState};
+            const smrtProp = {id: smartPropState.id?smartPropState.id: '', content_group_name: data.content_group_name, content_group_description: data.content_group_description, rule:rulesState};
             if(formState !== 'add') {
                 updateForm(smrtProp);
             } else {
