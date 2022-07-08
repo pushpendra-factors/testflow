@@ -61,9 +61,12 @@ func (store *MemSQL) GetProfileUsersListByProjectId(projectId uint64, payload mo
 	parameters = append(parameters, filterParameters...)
 	parameters = append(parameters, gorm.NowFunc())
 
+	// Get min and max updated_at for 100k after
+	// ordering as part of optimisation.
 	err := db.Raw(`SELECT MIN(updated_at) AS min_updated_at, 
 		MAX(updated_at) AS max_updated_at 
-		FROM (SELECT updated_at FROM users WHERE `+whereString+` AND updated_at < ? LIMIT 1000)`, parameters...).
+		FROM (SELECT updated_at FROM users WHERE `+whereString+` AND updated_at < ? 
+		ORDER BY updated_at DESC LIMIT 100000)`, parameters...).
 		Scan(&minMax).Error
 	if err != nil {
 		log.WithField("status", err).Error("min and max updated_at couldn't be defined.")
