@@ -82,7 +82,7 @@ var DefaultWebAnalyticsQueries = map[string]string{
 	QueryNameTrafficChannelReport: PresentationTable,
 }
 
-func getWebAnalyticsQueryResultCacheKey(projectID uint64, dashboardID int64,
+func getWebAnalyticsQueryResultCacheKey(projectID int64, dashboardID int64,
 	from, to int64, timezoneString U.TimeZoneString) (*cacheRedis.Key, error) {
 
 	prefix := "dashboard:query:web"
@@ -161,7 +161,7 @@ const (
 
 // WebAnalyticsCachePayload Payload for web analytics cache method.
 type WebAnalyticsCachePayload struct {
-	ProjectID   uint64
+	ProjectID   int64
 	DashboardID int64
 	From, To    int64
 	Timezone    U.TimeZoneString
@@ -229,7 +229,7 @@ func (q *DashboardUnitsWebAnalyticsQuery) GetQueryCacheHashString() (string, err
 	return queryHash, nil
 }
 
-func (q *DashboardUnitsWebAnalyticsQuery) GetQueryCacheRedisKey(projectID uint64) (*cacheRedis.Key, error) {
+func (q *DashboardUnitsWebAnalyticsQuery) GetQueryCacheRedisKey(projectID int64) (*cacheRedis.Key, error) {
 	hashString, err := q.GetQueryCacheHashString()
 	if err != nil {
 		return nil, err
@@ -254,7 +254,7 @@ func (query *DashboardUnitsWebAnalyticsQuery) CheckIfNameIsPresent(nameOfQuery s
 	return false
 }
 
-func GetCacheResultForWebAnalyticsDashboard(projectID uint64, dashboardID int64,
+func GetCacheResultForWebAnalyticsDashboard(projectID int64, dashboardID int64,
 	from, to int64, timezoneString U.TimeZoneString) (WebAnalyticsCacheResult, int) {
 
 	var cacheResult WebAnalyticsCacheResult
@@ -309,7 +309,7 @@ func shouldSkipWindow(from, to int64) bool {
 }
 
 func SetCacheResultForWebAnalyticsDashboard(result *WebAnalyticsQueryResult,
-	projectID uint64, dashboardID int64, from, to int64, timezoneString U.TimeZoneString) {
+	projectID int64, dashboardID int64, from, to int64, timezoneString U.TimeZoneString) {
 
 	if shouldSkipWindow(from, to) {
 		return

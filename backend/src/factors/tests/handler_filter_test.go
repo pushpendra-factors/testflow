@@ -19,7 +19,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func sendCreateFilterReq(r *gin.Engine, projectId uint64, agent *model.Agent, name, expr string) *httptest.ResponseRecorder {
+func sendCreateFilterReq(r *gin.Engine, projectId int64, agent *model.Agent, name, expr string) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error Creating cookieData")
@@ -149,7 +149,7 @@ func TestAPICreateFilterHandler(t *testing.T) {
 
 }
 
-func sendGetFilterRequest(projectId uint64, agent *model.Agent, r *gin.Engine) *httptest.ResponseRecorder {
+func sendGetFilterRequest(projectId int64, agent *model.Agent, r *gin.Engine) *httptest.ResponseRecorder {
 
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
@@ -210,7 +210,7 @@ func TestAPIGetFiltersHandler(t *testing.T) {
 
 }
 
-func sendUpdateFilterReq(r *gin.Engine, projectId uint64, filterId string, agent *model.Agent, name, expr *string) *httptest.ResponseRecorder {
+func sendUpdateFilterReq(r *gin.Engine, projectId int64, filterId string, agent *model.Agent, name, expr *string) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error Creating cookieData")
@@ -291,7 +291,7 @@ func TestAPIUpdateFilterHandler(t *testing.T) {
 	})
 }
 
-func sendDeleteFilterReq(r *gin.Engine, projectId uint64, fileterId string, agent *model.Agent) *httptest.ResponseRecorder {
+func sendDeleteFilterReq(r *gin.Engine, projectId int64, fileterId string, agent *model.Agent) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error Creating cookieData")

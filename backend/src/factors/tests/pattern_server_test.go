@@ -14,8 +14,8 @@ import (
 
 func TestGetProjectModels(t *testing.T) {
 	ps := patternserver.PatternServer{}
-	projectData := make(map[uint64]patternserver.ModelChunkMapping)
-	projectId1 := U.RandomUint64()
+	projectData := make(map[int64]patternserver.ModelChunkMapping)
+	projectId1 := U.RandomInt64()
 	modelId1 := U.RandomUint64()
 	chunkId1 := U.RandomString(5)
 
@@ -50,7 +50,7 @@ func TestGetProjectModels(t *testing.T) {
 }
 
 func TestGetChunkKey(t *testing.T) {
-	projectId := U.RandomUint64()
+	projectId := U.RandomInt64()
 	modelId := U.RandomUint64()
 	chunkId := U.RandomString(5)
 	key := patternserver.GetChunkKey(projectId, modelId, chunkId)
@@ -59,7 +59,7 @@ func TestGetChunkKey(t *testing.T) {
 }
 
 func TestGetModelKey(t *testing.T) {
-	projectId := U.RandomUint64()
+	projectId := U.RandomInt64()
 	modelId := U.RandomUint64()
 	key := patternserver.GetModelKey(projectId, modelId)
 	expKey := fmt.Sprintf("%d%s%d", projectId, patternserver.IdSeparator, modelId)

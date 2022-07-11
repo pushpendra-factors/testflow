@@ -11,7 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (store *MemSQL) DisableFiveTranMapping(ProjectID uint64, Integration string, ConnectorId string) error {
+func (store *MemSQL) DisableFiveTranMapping(ProjectID int64, Integration string, ConnectorId string) error {
 	logCtx := log.WithFields(log.Fields{"project_id": ProjectID})
 	db := C.GetServices().Db
 	updatedFields := map[string]interface{}{
@@ -25,7 +25,7 @@ func (store *MemSQL) DisableFiveTranMapping(ProjectID uint64, Integration string
 	return nil
 }
 
-func (store *MemSQL) EnableFiveTranMapping(ProjectID uint64, Integration string, ConnectorId string, Accounts string) error {
+func (store *MemSQL) EnableFiveTranMapping(ProjectID int64, Integration string, ConnectorId string, Accounts string) error {
 	// check if not any for a project-id/source is status = true
 	logCtx := log.WithFields(log.Fields{"project_id": ProjectID})
 	db := C.GetServices().Db
@@ -49,7 +49,7 @@ func (store *MemSQL) EnableFiveTranMapping(ProjectID uint64, Integration string,
 	return nil
 }
 
-func (store *MemSQL) UpdateFiveTranMappingAccount(ProjectID uint64, Integration string, ConnectorId string, Accounts string) error {
+func (store *MemSQL) UpdateFiveTranMappingAccount(ProjectID int64, Integration string, ConnectorId string, Accounts string) error {
 	// check if not any for a project-id/source is status = true
 	logCtx := log.WithFields(log.Fields{"project_id": ProjectID})
 	db := C.GetServices().Db
@@ -64,7 +64,7 @@ func (store *MemSQL) UpdateFiveTranMappingAccount(ProjectID uint64, Integration 
 	return nil
 }
 
-func (store *MemSQL) GetFiveTranMapping(ProjectID uint64, Integration string) (string, error) {
+func (store *MemSQL) GetFiveTranMapping(ProjectID int64, Integration string) (string, error) {
 	db := C.GetServices().Db
 	var records []model.FivetranMappings
 	if err := db.Where("project_id = ?", ProjectID).Where("integration = ?", Integration).Find(&records).Error; err != nil {
@@ -82,7 +82,7 @@ func (store *MemSQL) GetFiveTranMapping(ProjectID uint64, Integration string) (s
 	}
 }
 
-func (store *MemSQL) GetActiveFiveTranMapping(ProjectID uint64, Integration string) (model.FivetranMappings, error) {
+func (store *MemSQL) GetActiveFiveTranMapping(ProjectID int64, Integration string) (model.FivetranMappings, error) {
 	db := C.GetServices().Db
 	var records model.FivetranMappings
 	if err := db.Where("project_id = ?", ProjectID).Where("integration = ?", Integration).Where("status = ?", true).First(&records).Error; err != nil {
@@ -91,7 +91,7 @@ func (store *MemSQL) GetActiveFiveTranMapping(ProjectID uint64, Integration stri
 	return records, nil
 }
 
-func (store *MemSQL) GetLatestFiveTranMapping(ProjectID uint64, Integration string) (string, string, error) {
+func (store *MemSQL) GetLatestFiveTranMapping(ProjectID int64, Integration string) (string, string, error) {
 	db := C.GetServices().Db
 	var records []model.FivetranMappings
 	if err := db.Where("project_id = ?", ProjectID).Where("integration = ?", Integration).Find(&records).Error; err != nil {
@@ -107,7 +107,7 @@ func (store *MemSQL) GetLatestFiveTranMapping(ProjectID uint64, Integration stri
 	}
 }
 
-func (store *MemSQL) GetAllActiveFiveTranMapping(ProjectID uint64, Integration string) ([]string, error) {
+func (store *MemSQL) GetAllActiveFiveTranMapping(ProjectID int64, Integration string) ([]string, error) {
 	db := C.GetServices().Db
 	var records []model.FivetranMappings
 	if err := db.Where("project_id = ?", ProjectID).Where("integration = ?", Integration).Where("status = ?", true).Find(&records).Error; err != nil {
@@ -135,7 +135,7 @@ func (store *MemSQL) GetAllActiveFiveTranMappingByIntegration(Integration string
 	return records, nil
 }
 
-func (store *MemSQL) PostFiveTranMapping(ProjectID uint64, Integration string, ConnectorId string, SchemaId string, Accounts string) error {
+func (store *MemSQL) PostFiveTranMapping(ProjectID int64, Integration string, ConnectorId string, SchemaId string, Accounts string) error {
 	// Check if there is an active mapping already
 	db := C.GetServices().Db
 	allActiveMapping, err := store.GetAllActiveFiveTranMapping(ProjectID, Integration)

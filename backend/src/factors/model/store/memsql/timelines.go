@@ -13,7 +13,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (store *MemSQL) GetProfileUsersListByProjectId(projectId uint64, payload model.UTListPayload) ([]model.Contact, int) {
+func (store *MemSQL) GetProfileUsersListByProjectId(projectId int64, payload model.UTListPayload) ([]model.Contact, int) {
 	logFields := log.Fields{
 		"project_id": projectId,
 		"payload":    payload,
@@ -94,7 +94,7 @@ func (store *MemSQL) GetProfileUsersListByProjectId(projectId uint64, payload mo
 	return profileUsers, http.StatusFound
 }
 
-func (store *MemSQL) GetProfileUserDetailsByID(projectID uint64, identity string, isAnonymous string) (*model.ContactDetails, int) {
+func (store *MemSQL) GetProfileUserDetailsByID(projectID int64, identity string, isAnonymous string) (*model.ContactDetails, int) {
 	logFields := log.Fields{
 		"project_id":   projectID,
 		"id":           identity,

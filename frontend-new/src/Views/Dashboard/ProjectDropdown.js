@@ -34,6 +34,7 @@ import NewProject from '../Settings/SetupAssist/Modals/NewProject';
 import { meetLink } from '../../utils/hubspot';
 import { setItemToLocalStorage } from '../../utils/localStorage.helpers';
 import { DASHBOARD_KEYS } from '../../constants/localStorage.constants';
+import userflow from 'userflow.js'
 
 function ProjectDropdown({
   setaddDashboardModal,
@@ -76,18 +77,8 @@ function ProjectDropdown({
       .catch((err) => {
         console.log(err.data.error);
       });
-  }, [active_project, demoProjectId]);
+  }, [active_project]);
 
-  useEffect(() => {
-    const email = currentAgent.email;
-    getHubspotContact(email)
-      .then((res) => {
-        setOwnerID(res.data.hubspot_owner_id);
-      })
-      .catch((err) => {
-        console.log(err.data.error);
-      });
-  }, []);
 
   const changeActiveDashboard = useCallback(
     (val) => {
@@ -271,6 +262,10 @@ function ProjectDropdown({
     );
   };
 
+  const handleTour = () => {
+    userflow.start('c162ed75-0983-41f3-ae56-8aedd7dbbfbd');
+  }
+
   const generateDBList = () => {
     const dashboardList = [
       { label: 'Pinned Dashboards', icon: 'pin', values: [] },
@@ -360,19 +355,6 @@ function ProjectDropdown({
                   )}
                 </Col>
                 <Col className={'mr-2 mt-2'}>
-                  <a href={meetLink(ownerID)} target="_blank" rel="noreferrer">
-                    <Button
-                      type={'default'}
-                      style={{
-                        background: 'white',
-                        border: '1px solid #E7E9ED',
-                        height: '40px'
-                      }}
-                      className={'m-0 mr-2'}
-                    >
-                      Get a Personalized Demo
-                    </Button>
-                  </a>
                   {projects.length === 1 ? (
                     <Button
                       type={'default'}
@@ -387,6 +369,19 @@ function ProjectDropdown({
                       Set up my own Factors project
                     </Button>
                   ) : null}
+
+                  <Button
+                    type={'link'}
+                    style={{
+                      background: 'white',
+                      // border: '1px solid #E7E9ED',
+                      height: '40px'
+                    }}
+                    className={'m-0 mr-2'}
+                    onClick={() => handleTour()}
+                  >
+                    Take the tour <SVG name={'Arrowright'} size={16} extraClass={'ml-1'} color={'blue'} />
+                  </Button>
                 </Col>
               </Row>
             </div>

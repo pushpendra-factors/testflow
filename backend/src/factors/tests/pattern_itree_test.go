@@ -272,7 +272,7 @@ func TestFactorV1(t *testing.T) {
 	pw := NewMockPatternServiceWrapper(patterns, nil)
 	assert.Equal(t, 86, len(pw.patterns))
 
-	var projectId uint64 = uint64(1)
+	var projectId int64 = int64(1)
 	reqId := ""
 	startEvent := "$session"
 	endEvent := "Schedule A Demo Form"

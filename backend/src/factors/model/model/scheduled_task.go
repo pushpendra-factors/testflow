@@ -10,7 +10,7 @@ import (
 type ScheduledTask struct {
 	ID            string              `gorm:"primary_key:true;uuid;default:uuid_generate_v4()" json:"id"` // Id for the current task.
 	JobID         string              `gorm:"not null" json:"job_id"`                                     // Id for the parent task.
-	ProjectID     uint64              `gorm:"not null" json:"project_id"`
+	ProjectID     int64               `gorm:"not null" json:"project_id"`
 	TaskType      ScheduledTaskType   `gorm:"not null" json:"task_type"`
 	TaskStatus    ScheduledTaskStatus `gorm:"not null" json:"task_status"`
 	TaskStartTime int64               `gorm:"default:null" json:"task_start_time"` // Time when tast run started.

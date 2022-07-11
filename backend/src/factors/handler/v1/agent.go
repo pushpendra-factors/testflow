@@ -5,6 +5,7 @@ import (
 	"factors/model/model"
 	"factors/model/store"
 	U "factors/util"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -20,7 +21,7 @@ import (
 // @Success 200 {array} v1.AgentInfoWithProjectMapping
 // @Router /{project_id}/v1/agents [get]
 func GetProjectAgentsHandler(c *gin.Context) {
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
@@ -66,7 +67,7 @@ func mapAgentInfoWithProjectMapping(pam model.ProjectAgentMapping, agent *model.
 	agentWithProject.IsEmailVerified = agent.IsEmailVerified
 	agentWithProject.LastLoggedIn = agent.LastLoggedIn
 	agentWithProject.Phone = agent.Phone
-	agentWithProject.ProjectID = pam.ProjectID
+	agentWithProject.ProjectID = fmt.Sprintf("%v", pam.ProjectID)
 	agentWithProject.Role = pam.Role
 	agentWithProject.InvitedBy = pam.InvitedBy
 	agentWithProject.CreatedAt = pam.CreatedAt
@@ -82,7 +83,7 @@ type AgentInfoWithProjectMapping struct {
 	IsEmailVerified bool       `json:"is_email_verified"`
 	LastLoggedIn    *time.Time `json:"last_logged_in"`
 	Phone           string     `json:"phone"`
-	ProjectID       uint64     `json:"project_id"`
+	ProjectID       string     `json:"project_id"`
 	Role            uint64     `json:"role"`
 	InvitedBy       *string    `json:"invited_by"`
 	CreatedAt       time.Time  `json:"created_at"`

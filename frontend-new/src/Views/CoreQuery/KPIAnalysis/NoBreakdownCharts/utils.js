@@ -12,18 +12,15 @@ import {
 
 import { getKpiLabel, getFormattedKpiValue } from '../kpiAnalysis.helpers';
 
-export const getDefaultSortProp = (kpis) => {
-  if (Array.isArray(kpis) && kpis.length) {
-    return [
-      {
-        key: `${getKpiLabel(kpis[0])} - 0`,
-        type: 'numerical',
-        subtype: null,
-        order: 'descend'
-      }
-    ];
-  }
-  return [];
+export const getDefaultSortProp = () => {
+  return [
+    {
+      key: 'date',
+      type: 'datetime',
+      subtype: 'date',
+      order: 'descend'
+    }
+  ];
 };
 
 export const getDefaultDateSortProp = () => {

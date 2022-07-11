@@ -723,8 +723,8 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 	return insights
 }
 
-func GetWeeklyInsights(projectId uint64, agentUUID string, queryId int64, baseStartTime *time.Time, compStartTime *time.Time, insightsType string, numberOfRecords int) (interface{}, error) {
-	k := make(map[uint64]int)
+func GetWeeklyInsights(projectId int64, agentUUID string, queryId int64, baseStartTime *time.Time, compStartTime *time.Time, insightsType string, numberOfRecords int) (interface{}, error) {
+	k := make(map[int64]int)
 	k[399] = 100
 	k[594] = 100
 	k[559] = 100
@@ -1128,7 +1128,7 @@ func addGroupByProperties(query model.Query, EventType string, file CrossPeriodI
 	return ActualMetricsArr
 }
 
-func getEventType(query *model.Query, QueryClass string, project_id uint64) string {
+func getEventType(query *model.Query, QueryClass string, project_id int64) string {
 	EventType := ""
 	if QueryClass == model.QueryClassFunnel {
 		return Funnel
@@ -1156,7 +1156,7 @@ func getEventType(query *model.Query, QueryClass string, project_id uint64) stri
 	return EventType
 }
 
-func GetEventTypeForFunnelOrWebsite(query *model.Query, project_id uint64) string {
+func GetEventTypeForFunnelOrWebsite(query *model.Query, project_id int64) string {
 	EventType := ""
 	ewp := query.EventsWithProperties
 	for _, data := range ewp {
@@ -1189,7 +1189,7 @@ func removeNegativePercentageFromInsights(insightsObj *WeeklyInsights) {
 	}
 }
 
-func CaptureBlackListedAndWhiteListedKeys(projectID uint64, agentUUID string, queryID int64) {
+func CaptureBlackListedAndWhiteListedKeys(projectID int64, agentUUID string, queryID int64) {
 	records, err := store.GetStore().GetRecordsFromFeedback(projectID, agentUUID)
 	if err != nil {
 		log.Error(err)

@@ -13,7 +13,7 @@ type EnrichStatus struct {
 	Enrich         []enrichment.EnrichStatus `json:"enrich"`
 }
 
-func RunLeadSquaredEnrich(projectID uint64, config map[string]interface{}) (map[string]interface{}, bool) {
+func RunLeadSquaredEnrich(projectID int64, config map[string]interface{}) (map[string]interface{}, bool) {
 	numDocRoutines := config["document_routines"].(int)
 	minSyncTimestamp := config["min_sync_timestamp"].(int64)
 

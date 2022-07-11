@@ -12,7 +12,7 @@ import (
 )
 
 type Template struct {
-	ProjectID  uint64          `json:"project_id"`
+	ProjectID  int64           `json:"project_id"`
 	Type       int             `json:"type"`
 	Thresholds *postgres.Jsonb `json:"thresholds"`
 	CreatedAt  time.Time       `json:"created_at"`
@@ -63,7 +63,7 @@ func (q *TemplateQuery) GetQueryCacheHashString() (string, error) {
 	return queryHash, nil
 }
 
-func (q *TemplateQuery) GetQueryCacheRedisKey(projectID uint64) (*cacheRedis.Key, error) {
+func (q *TemplateQuery) GetQueryCacheRedisKey(projectID int64) (*cacheRedis.Key, error) {
 	hashString, err := q.GetQueryCacheHashString()
 	if err != nil {
 		return nil, err

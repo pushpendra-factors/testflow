@@ -132,7 +132,7 @@ func getHubspotDocumentId(document *model.HubspotDocument) (string, error) {
 	return idAsString, nil
 }
 
-func isExistHubspotDocumentByIDAndType(projectId uint64, id string, docType int) int {
+func isExistHubspotDocumentByIDAndType(projectId int64, id string, docType int) int {
 	argFields := log.Fields{"project_id": projectId, "id": id, "type": docType}
 	logCtx := log.WithFields(argFields)
 
@@ -153,7 +153,7 @@ func isExistHubspotDocumentByIDAndType(projectId uint64, id string, docType int)
 	return http.StatusFound
 }
 
-func isExistHubspotDocumentByIDAndTypeInBatch(projectId uint64, ids []string, docType int) (map[string]bool, int) {
+func isExistHubspotDocumentByIDAndTypeInBatch(projectId int64, ids []string, docType int) (map[string]bool, int) {
 	argFields := log.Fields{"project_id": projectId, "ids": ids, "type": docType}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &argFields)
 
@@ -199,7 +199,7 @@ func isExistHubspotDocumentByIDAndTypeInBatch(projectId uint64, ids []string, do
 	return documentIds, http.StatusFound
 }
 
-func (store *MemSQL) GetHubspotContactCreatedSyncIDAndUserID(projectID uint64, docID string) ([]model.HubspotDocument, int) {
+func (store *MemSQL) GetHubspotContactCreatedSyncIDAndUserID(projectID int64, docID string) ([]model.HubspotDocument, int) {
 	argFields := log.Fields{"project_id": projectID, "doc_id": docID}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &argFields)
 
@@ -232,7 +232,7 @@ func (store *MemSQL) GetHubspotContactCreatedSyncIDAndUserID(projectID uint64, d
 	return documents, http.StatusFound
 }
 
-func (store *MemSQL) GetHubspotDocumentByTypeAndActions(projectId uint64, ids []string,
+func (store *MemSQL) GetHubspotDocumentByTypeAndActions(projectId int64, ids []string,
 	docType int, actions []int) ([]model.HubspotDocument, int) {
 	argFields := log.Fields{"project_id": projectId, "ids": ids,
 		"type": docType, "actions": actions}
@@ -263,7 +263,7 @@ func (store *MemSQL) GetHubspotDocumentByTypeAndActions(projectId uint64, ids []
 }
 
 // GetSyncedHubspotDocumentByFilter get hubspot synced document by id and action
-func (store *MemSQL) GetSyncedHubspotDocumentByFilter(projectID uint64,
+func (store *MemSQL) GetSyncedHubspotDocumentByFilter(projectID int64,
 	ID string, docType, action int) (*model.HubspotDocument, int) {
 
 	argFields := log.Fields{"project_id": projectID, "type": docType, "action": action}
@@ -293,7 +293,7 @@ func (store *MemSQL) GetSyncedHubspotDocumentByFilter(projectID uint64,
 	return &document, http.StatusFound
 }
 
-func (store *MemSQL) getUpdatedDealAssociationDocument(projectID uint64, incomingDocument *model.HubspotDocument) (*model.HubspotDocument, int) {
+func (store *MemSQL) getUpdatedDealAssociationDocument(projectID int64, incomingDocument *model.HubspotDocument) (*model.HubspotDocument, int) {
 	logFields := log.Fields{
 		"project_id":        projectID,
 		"incoming_document": incomingDocument,
@@ -340,7 +340,7 @@ func (store *MemSQL) getUpdatedDealAssociationDocument(projectID uint64, incomin
 	return incomingDocument, http.StatusOK
 }
 
-func (store *MemSQL) getUpdatedDealAssociationDocuments(projectID uint64, incomingDocuments []*model.HubspotDocument) ([]*model.HubspotDocument, int) {
+func (store *MemSQL) getUpdatedDealAssociationDocuments(projectID int64, incomingDocuments []*model.HubspotDocument) ([]*model.HubspotDocument, int) {
 	logFields := log.Fields{
 		"project_id":         projectID,
 		"incoming_documents": incomingDocuments,
@@ -413,7 +413,7 @@ func (store *MemSQL) getUpdatedDealAssociationDocuments(projectID uint64, incomi
 	return modifiedDocuments, http.StatusOK
 }
 
-func (store *MemSQL) createBatchedHubspotDocuments(projectID uint64, documents []*model.HubspotDocument) int {
+func (store *MemSQL) createBatchedHubspotDocuments(projectID int64, documents []*model.HubspotDocument) int {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &log.Fields{"project_id": projectID})
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "documents": len(documents)})
@@ -458,7 +458,7 @@ func (store *MemSQL) createBatchedHubspotDocuments(projectID uint64, documents [
 	return http.StatusCreated
 }
 
-func (store *MemSQL) getHubspotDocumentsForInsertion(projectId uint64, documents []*model.HubspotDocument, existDocumentIDs map[string]bool, documentType int) ([]*model.HubspotDocument, error) {
+func (store *MemSQL) getHubspotDocumentsForInsertion(projectId int64, documents []*model.HubspotDocument, existDocumentIDs map[string]bool, documentType int) ([]*model.HubspotDocument, error) {
 	processDocuments := make([]*model.HubspotDocument, 0)
 	batchDocumentIDs := make(map[string]bool, 0)
 
@@ -528,7 +528,7 @@ func allowedHubspotDocTypeForBatchInsert(docType int) bool {
 		docType == model.HubspotDocumentTypeFormSubmission || docType == model.HubspotDocumentTypeDeal
 }
 
-func (store *MemSQL) CreateHubspotDocumentInBatch(projectID uint64, docType int, documents []*model.HubspotDocument, batchSize int) int {
+func (store *MemSQL) CreateHubspotDocumentInBatch(projectID int64, docType int, documents []*model.HubspotDocument, batchSize int) int {
 	logFields := log.Fields{"project_id": projectID, "doc_type": docType, "batch_size": batchSize}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
@@ -635,7 +635,7 @@ func getHubspotCreatedAndUpdatedTimestamp(document *model.HubspotDocument) (int6
 
 	return createdTimestamp, updatedTimestamp, nil
 }
-func (store *MemSQL) CreateHubspotDocument(projectId uint64, document *model.HubspotDocument) int {
+func (store *MemSQL) CreateHubspotDocument(projectId int64, document *model.HubspotDocument) int {
 
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &log.Fields{"project_id": projectId})
 
@@ -808,7 +808,7 @@ func getHubspotTypeAlias(t int) string {
 	return ""
 }
 
-func (store *MemSQL) updateHubspotProjectSettingsLastSyncInfo(projectID uint64, incomingSyncInfo map[string]int64) error {
+func (store *MemSQL) updateHubspotProjectSettingsLastSyncInfo(projectID int64, incomingSyncInfo map[string]int64) error {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &log.Fields{"project_id": projectID})
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectID})
@@ -906,7 +906,7 @@ func (store *MemSQL) GetHubspotFirstSyncProjectsInfo() (*model.HubspotSyncInfo, 
 	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
 	// project sync of hubspot enable projects.
-	enabledProjectLastSync := make(map[uint64]map[string]int64, 0)
+	enabledProjectLastSync := make(map[int64]map[string]int64, 0)
 
 	// get project settings of hubspot enabled projects.
 	projectSettings, errCode := store.GetAllHubspotProjectSettings()
@@ -914,7 +914,7 @@ func (store *MemSQL) GetHubspotFirstSyncProjectsInfo() (*model.HubspotSyncInfo, 
 		return nil, http.StatusInternalServerError
 	}
 
-	settingsByProject := make(map[uint64]*model.HubspotProjectSettings, 0)
+	settingsByProject := make(map[int64]*model.HubspotProjectSettings, 0)
 	for i, ps := range projectSettings {
 		if ps.IsFirstTimeSynced {
 			continue
@@ -960,7 +960,7 @@ func (store *MemSQL) GetHubspotSyncInfo() (*model.HubspotSyncInfo, int) {
 		return nil, http.StatusInternalServerError
 	}
 
-	lastSyncInfoByProject := make(map[uint64]map[string]int64, 0)
+	lastSyncInfoByProject := make(map[int64]map[string]int64, 0)
 	for _, syncInfo := range lastSyncInfo {
 		if _, projectExists := lastSyncInfoByProject[syncInfo.ProjectID]; !projectExists {
 			lastSyncInfoByProject[syncInfo.ProjectID] = make(map[string]int64)
@@ -970,7 +970,7 @@ func (store *MemSQL) GetHubspotSyncInfo() (*model.HubspotSyncInfo, int) {
 	}
 
 	// project sync of hubspot enable projects.
-	enabledProjectLastSync := make(map[uint64]map[string]int64, 0)
+	enabledProjectLastSync := make(map[int64]map[string]int64, 0)
 
 	// get project settings of hubspot enaled projects.
 	projectSettings, errCode := store.GetAllHubspotProjectSettings()
@@ -978,7 +978,7 @@ func (store *MemSQL) GetHubspotSyncInfo() (*model.HubspotSyncInfo, int) {
 		return nil, http.StatusInternalServerError
 	}
 
-	settingsByProject := make(map[uint64]*model.HubspotProjectSettings, 0)
+	settingsByProject := make(map[int64]*model.HubspotProjectSettings, 0)
 	for i, ps := range projectSettings {
 		if !ps.IsFirstTimeSynced {
 			continue
@@ -1037,7 +1037,7 @@ func (store *MemSQL) GetHubspotSyncInfo() (*model.HubspotSyncInfo, int) {
 	return &syncInfo, http.StatusFound
 }
 
-func (store *MemSQL) GetHubspotFormDocuments(projectId uint64) ([]model.HubspotDocument, int) {
+func (store *MemSQL) GetHubspotFormDocuments(projectId int64) ([]model.HubspotDocument, int) {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &log.Fields{"project_id": projectId})
 
 	var documents []model.HubspotDocument
@@ -1054,7 +1054,7 @@ func (store *MemSQL) GetHubspotFormDocuments(projectId uint64) ([]model.HubspotD
 	return documents, http.StatusFound
 }
 
-func (store *MemSQL) GetHubspotDocumentsByTypeForSync(projectId uint64, typ int, maxCreatedAtSec int64) ([]model.HubspotDocument, int) {
+func (store *MemSQL) GetHubspotDocumentsByTypeForSync(projectId int64, typ int, maxCreatedAtSec int64) ([]model.HubspotDocument, int) {
 	argFields := log.Fields{"project_id": projectId, "type": typ}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &log.Fields{"project_id": projectId, "typ": typ, "max_created_at_sec": maxCreatedAtSec})
 
@@ -1080,7 +1080,7 @@ func (store *MemSQL) GetHubspotDocumentsByTypeForSync(projectId uint64, typ int,
 }
 
 // GetHubspotDocumentBeginingTimestampByDocumentTypeForSync returns the minimum timestamp for unsynced document
-func (store *MemSQL) GetHubspotDocumentBeginingTimestampByDocumentTypeForSync(projectID uint64, docTypes []int) (int64, int) {
+func (store *MemSQL) GetHubspotDocumentBeginingTimestampByDocumentTypeForSync(projectID int64, docTypes []int) (int64, int) {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &log.Fields{"project_id": projectID})
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "doc_types": docTypes})
@@ -1113,7 +1113,7 @@ func (store *MemSQL) GetHubspotDocumentBeginingTimestampByDocumentTypeForSync(pr
 }
 
 // GetHubspotDocumentCountForSync returns count for records for each project
-func (store *MemSQL) GetHubspotDocumentCountForSync(projectIDs []uint64, docTypes []int, maxCreatedAtSec int64) ([]model.HubspotDocumentCount, int) {
+func (store *MemSQL) GetHubspotDocumentCountForSync(projectIDs []int64, docTypes []int, maxCreatedAtSec int64) ([]model.HubspotDocumentCount, int) {
 	logFields := log.Fields{"project_ids": projectIDs, "doc_types": docTypes, "max_created_at": maxCreatedAtSec}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
@@ -1144,7 +1144,7 @@ func (store *MemSQL) GetHubspotDocumentCountForSync(projectIDs []uint64, docType
 }
 
 // GetHubspotDocumentsByTypeANDRangeForSync return list of documents unsynced for given time range
-func (store *MemSQL) GetHubspotDocumentsByTypeANDRangeForSync(projectID uint64,
+func (store *MemSQL) GetHubspotDocumentsByTypeANDRangeForSync(projectID int64,
 	docType int, from, to, maxCreatedAtSec int64) ([]model.HubspotDocument, int) {
 
 	argFields := log.Fields{"project_id": projectID, "type": docType, "from": from, "to": to, "max_created_at_sec": maxCreatedAtSec}
@@ -1170,7 +1170,7 @@ func (store *MemSQL) GetHubspotDocumentsByTypeANDRangeForSync(projectID uint64,
 	return documents, http.StatusFound
 }
 
-func (store *MemSQL) GetSyncedHubspotDealDocumentByIdAndStage(projectId uint64, id string,
+func (store *MemSQL) GetSyncedHubspotDealDocumentByIdAndStage(projectId int64, id string,
 	stage string) (*model.HubspotDocument, int) {
 
 	argFields := log.Fields{"project_id": projectId, "id": id, "stage": stage}
@@ -1311,7 +1311,7 @@ func getHubspotDocumentPropertiesNameByType(hubspotDocuments []model.HubspotDocu
 	return categoricalPropertiesArray, dateTimePropertiesArray
 }
 
-func getLatestHubspotDocumentsByLimit(projectID uint64, docType int, limit int) ([]model.HubspotDocument, error) {
+func getLatestHubspotDocumentsByLimit(projectID int64, docType int, limit int) ([]model.HubspotDocument, error) {
 	defer model.LogOnSlowExecutionWithParams(time.Now(),
 		&log.Fields{"project_id": projectID, "doc_type": docType, "limit": limit})
 
@@ -1338,7 +1338,7 @@ func getLatestHubspotDocumentsByLimit(projectID uint64, docType int, limit int) 
 }
 
 // GetHubspotObjectPropertiesName returns property names by type
-func (store *MemSQL) GetHubspotObjectPropertiesName(ProjectID uint64, objectType string) ([]string, []string) {
+func (store *MemSQL) GetHubspotObjectPropertiesName(ProjectID int64, objectType string) ([]string, []string) {
 	defer model.LogOnSlowExecutionWithParams(time.Now(),
 		&log.Fields{"project_id": ProjectID, "object_type": objectType})
 
@@ -1363,7 +1363,7 @@ func (store *MemSQL) GetHubspotObjectPropertiesName(ProjectID uint64, objectType
 }
 
 // GetAllHubspotObjectValuesByPropertyName returns all values by property name
-func (store *MemSQL) GetAllHubspotObjectValuesByPropertyName(ProjectID uint64,
+func (store *MemSQL) GetAllHubspotObjectValuesByPropertyName(ProjectID int64,
 	objectType, propertyName string) []interface{} {
 
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &log.Fields{"project_id": ProjectID,
@@ -1390,7 +1390,7 @@ func (store *MemSQL) GetAllHubspotObjectValuesByPropertyName(ProjectID uint64,
 	return getHubspotDocumentValuesByPropertyNameAndLimit(hubspotDocuments, propertyName, 100)
 }
 
-func (store *MemSQL) UpdateHubspotDocumentAsSynced(projectId uint64, id string, docType int,
+func (store *MemSQL) UpdateHubspotDocumentAsSynced(projectId int64, id string, docType int,
 	syncId string, timestamp int64, action int, userID, groupUserID string) int {
 
 	defer model.LogOnSlowExecutionWithParams(time.Now(),
@@ -1425,7 +1425,7 @@ func (store *MemSQL) UpdateHubspotDocumentAsSynced(projectId uint64, id string, 
 }
 
 // GetLastSyncedHubspotUpdateDocumentByID returns latest synced record by document id with preference to the Update doc if timestamp is same.
-func (store *MemSQL) GetLastSyncedHubspotUpdateDocumentByID(projectID uint64, docID string, docType int) (*model.HubspotDocument, int) {
+func (store *MemSQL) GetLastSyncedHubspotUpdateDocumentByID(projectID int64, docID string, docType int) (*model.HubspotDocument, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"doc_id":     docID,
@@ -1474,7 +1474,7 @@ func (store *MemSQL) GetLastSyncedHubspotUpdateDocumentByID(projectID uint64, do
 }
 
 // GetLastSyncedHubspotDocumentByID returns latest synced record by document id.
-func (store *MemSQL) GetLastSyncedHubspotDocumentByID(projectID uint64, docID string, docType int) (*model.HubspotDocument, int) {
+func (store *MemSQL) GetLastSyncedHubspotDocumentByID(projectID int64, docID string, docType int) (*model.HubspotDocument, int) {
 	argFields := log.Fields{"project_id": projectID, "doc_id": docID, "doc_type": docType}
 	model.LogOnSlowExecutionWithParams(time.Now(), &argFields)
 	logCtx := log.WithFields(argFields)
@@ -1504,7 +1504,7 @@ func (store *MemSQL) GetLastSyncedHubspotDocumentByID(projectID uint64, docID st
 	return &document[0], http.StatusFound
 }
 
-func (store *MemSQL) CreateOrUpdateGroupPropertiesBySource(projectID uint64, groupName string, groupID, groupUserID string,
+func (store *MemSQL) CreateOrUpdateGroupPropertiesBySource(projectID int64, groupName string, groupID, groupUserID string,
 	enProperties *map[string]interface{}, createdTimestamp, updatedTimestamp int64, source string) (string, error) {
 	logFields := log.Fields{
 		"project_id":        projectID,

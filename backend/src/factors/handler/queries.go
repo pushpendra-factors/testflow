@@ -38,7 +38,7 @@ type SavedQueryUpdatePayload struct {
 // @Success 302 {array} model.Queries
 // @Router /{project_id}/queries [get]
 func GetQueriesHandler(c *gin.Context) (interface{}, int, string, bool) {
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		return nil, http.StatusForbidden, "Get Queries failed. Invalid project.", true
 	}
@@ -60,7 +60,7 @@ func GetQueriesHandler(c *gin.Context) (interface{}, int, string, bool) {
 // @Success 201 {array} model.Queries
 // @Router /{project_id}/queries [post]
 func CreateQueryHandler(c *gin.Context) (interface{}, int, string, bool) {
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		return nil, http.StatusForbidden, "Create query failed. Invalid project", true
 	}
@@ -124,7 +124,7 @@ func CreateQueryHandler(c *gin.Context) (interface{}, int, string, bool) {
 // @Success 202 {string} string "{"message": "Successfully updated."}"
 // @Router /{project_id}/queries/{query_id} [put]
 func UpdateSavedQueryHandler(c *gin.Context) {
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Update saved query failed. Invalid project."})
 		return
@@ -193,7 +193,7 @@ func UpdateSavedQueryHandler(c *gin.Context) {
 // @Success 202 {string} string "{"message": "Successfully deleted."}"
 // @Router /{project_id}/queries/{query_id} [delete]
 func DeleteSavedQueryHandler(c *gin.Context) {
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Delete query failed. Invalid project."})
 		return
@@ -230,7 +230,7 @@ func DeleteSavedQueryHandler(c *gin.Context) {
 // @Router /{project_id}/queries/search [get]
 func SearchQueriesHandler(c *gin.Context) (interface{}, int, string, bool) {
 
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		return nil, http.StatusForbidden, "Search queries failed. Invalid project.", true
 	}

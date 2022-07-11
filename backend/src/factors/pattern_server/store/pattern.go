@@ -53,23 +53,23 @@ func New(chunkCacheSize, eventInfoCacheSize int, diskManager, cloudManager files
 	}, nil
 }
 
-func GetModelKey(projectId, modelId uint64) string {
+func GetModelKey(projectId int64, modelId uint64) string {
 	return fmt.Sprintf("%d%s%d", projectId, IdSeparator, modelId)
 }
 
-func GetChunkKey(projectId, modelId uint64, chunkId string) string {
+func GetChunkKey(projectId int64, modelId uint64, chunkId string) string {
 	return fmt.Sprintf("%s%s%s", GetModelKey(projectId, modelId), IdSeparator, chunkId)
 }
 
-func getModelEventInfoCacheKey(projectId, modelId uint64) string {
+func getModelEventInfoCacheKey(projectId int64, modelId uint64) string {
 	return fmt.Sprintf("%s%s%s", "model_event_info", IdSeparator, GetModelKey(projectId, modelId))
 }
 
-func getModelChunkCacheKey(projectId, modelId uint64, chunkId string) string {
+func getModelChunkCacheKey(projectId int64, modelId uint64, chunkId string) string {
 	return fmt.Sprintf("%s%s%s", "chunk_", IdSeparator, GetChunkKey(projectId, modelId, chunkId))
 }
 
-func (ps *PatternStore) putModelEventInfoInCache(projectId, modelId uint64, eventInfo pattern.UserAndEventsInfo) {
+func (ps *PatternStore) putModelEventInfoInCache(projectId int64, modelId uint64, eventInfo pattern.UserAndEventsInfo) {
 
 	logCtx := log.WithFields(log.Fields{
 		"pid": projectId,
@@ -91,7 +91,7 @@ func (ps *PatternStore) putModelEventInfoInCache(projectId, modelId uint64, even
 	}
 }
 
-func (ps *PatternStore) getModelEventInfoFromCache(projectId, modelId uint64) (pattern.UserAndEventsInfo, bool) {
+func (ps *PatternStore) getModelEventInfoFromCache(projectId int64, modelId uint64) (pattern.UserAndEventsInfo, bool) {
 
 	log.WithFields(log.Fields{
 		"pid": projectId,
@@ -107,7 +107,7 @@ func (ps *PatternStore) getModelEventInfoFromCache(projectId, modelId uint64) (p
 	return modelEventInfo, ok
 }
 
-func putModelEventInfoToFileManager(fm filestore.FileManager, projectId, modelId uint64, eventInfo pattern.UserAndEventsInfo) error {
+func putModelEventInfoToFileManager(fm filestore.FileManager, projectId int64, modelId uint64, eventInfo pattern.UserAndEventsInfo) error {
 	path, fName := fm.GetModelEventInfoFilePathAndName(projectId, modelId)
 
 	reader, err := CreateReaderFromEventInfo(eventInfo)
@@ -118,7 +118,7 @@ func putModelEventInfoToFileManager(fm filestore.FileManager, projectId, modelId
 	return err
 }
 
-func (ps *PatternStore) PutModelEventInfoInDisk(projectId, modelId uint64, eventInfo pattern.UserAndEventsInfo) error {
+func (ps *PatternStore) PutModelEventInfoInDisk(projectId int64, modelId uint64, eventInfo pattern.UserAndEventsInfo) error {
 
 	log.WithFields(log.Fields{
 		"pid": projectId,
@@ -128,7 +128,7 @@ func (ps *PatternStore) PutModelEventInfoInDisk(projectId, modelId uint64, event
 	return putModelEventInfoToFileManager(ps.diskFileManger, projectId, modelId, eventInfo)
 }
 
-func getModelEventInfoFromFileManager(fm filestore.FileManager, projectId, modelId uint64) (pattern.UserAndEventsInfo, error) {
+func getModelEventInfoFromFileManager(fm filestore.FileManager, projectId int64, modelId uint64) (pattern.UserAndEventsInfo, error) {
 	path, fName := fm.GetModelEventInfoFilePathAndName(projectId, modelId)
 	modelEventInfoFile, err := fm.Get(path, fName)
 	if err != nil {
@@ -143,7 +143,7 @@ func getModelEventInfoFromFileManager(fm filestore.FileManager, projectId, model
 	return patternEventInfo, err
 }
 
-func (ps *PatternStore) getModelEventInfoFromDisk(projectId, modelId uint64) (pattern.UserAndEventsInfo, error) {
+func (ps *PatternStore) getModelEventInfoFromDisk(projectId int64, modelId uint64) (pattern.UserAndEventsInfo, error) {
 
 	log.WithFields(log.Fields{
 		"pid": projectId,
@@ -153,7 +153,7 @@ func (ps *PatternStore) getModelEventInfoFromDisk(projectId, modelId uint64) (pa
 	return getModelEventInfoFromFileManager(ps.diskFileManger, projectId, modelId)
 }
 
-func (ps *PatternStore) getModelEventInfoFromCloud(projectId, modelId uint64) (pattern.UserAndEventsInfo, error) {
+func (ps *PatternStore) getModelEventInfoFromCloud(projectId int64, modelId uint64) (pattern.UserAndEventsInfo, error) {
 	log.WithFields(log.Fields{
 		"pid": projectId,
 		"mid": modelId,
@@ -162,11 +162,11 @@ func (ps *PatternStore) getModelEventInfoFromCloud(projectId, modelId uint64) (p
 	return getModelEventInfoFromFileManager(ps.cloudFileManger, projectId, modelId)
 }
 
-func (ps *PatternStore) PutModelEventInfoInCloud(projectId, modelId uint64, eventInfo pattern.UserAndEventsInfo) error {
+func (ps *PatternStore) PutModelEventInfoInCloud(projectId int64, modelId uint64, eventInfo pattern.UserAndEventsInfo) error {
 	return putModelEventInfoToFileManager(ps.cloudFileManger, projectId, modelId, eventInfo)
 }
 
-func (ps *PatternStore) GetModelEventInfo(projectId, modelId uint64) (pattern.UserAndEventsInfo, error) {
+func (ps *PatternStore) GetModelEventInfo(projectId int64, modelId uint64) (pattern.UserAndEventsInfo, error) {
 
 	logCtx := log.WithFields(log.Fields{
 		"pid": projectId,
@@ -211,7 +211,7 @@ func (ps *PatternStore) GetModelEventInfo(projectId, modelId uint64) (pattern.Us
 	return patternEventInfo, err
 }
 
-func getPatternsFromFileManager(fm filestore.FileManager, projectId, modelId uint64, chunkId string) ([]*PatternWithMeta, error) {
+func getPatternsFromFileManager(fm filestore.FileManager, projectId int64, modelId uint64, chunkId string) ([]*PatternWithMeta, error) {
 	path, fName := fm.GetPatternChunkFilePathAndName(projectId, modelId, chunkId)
 	patternsReader, err := fm.Get(path, fName)
 	if err != nil {
@@ -223,7 +223,7 @@ func getPatternsFromFileManager(fm filestore.FileManager, projectId, modelId uin
 	return patterns, err
 }
 
-func (ps *PatternStore) getPatternsWithMetaFromCloud(projectId, modelId uint64, chunkId string) ([]*PatternWithMeta, error) {
+func (ps *PatternStore) getPatternsWithMetaFromCloud(projectId int64, modelId uint64, chunkId string) ([]*PatternWithMeta, error) {
 	log.WithFields(log.Fields{
 		"pid": projectId,
 		"mid": modelId,
@@ -233,7 +233,7 @@ func (ps *PatternStore) getPatternsWithMetaFromCloud(projectId, modelId uint64, 
 	return getPatternsFromFileManager(ps.cloudFileManger, projectId, modelId, chunkId)
 }
 
-func (ps *PatternStore) PutPatternsWithMetaInCloud(projectId, modelId uint64, chunkId string, patterns []*PatternWithMeta) error {
+func (ps *PatternStore) PutPatternsWithMetaInCloud(projectId int64, modelId uint64, chunkId string, patterns []*PatternWithMeta) error {
 	log.WithFields(log.Fields{
 		"pid": projectId,
 		"mid": modelId,
@@ -252,7 +252,7 @@ func (ps *PatternStore) PutPatternsWithMetaInCloud(projectId, modelId uint64, ch
 	return err
 }
 
-func (ps *PatternStore) PutPatternsWithMetaInDisk(projectId, modelId uint64, chunkId string, patterns []*PatternWithMeta) error {
+func (ps *PatternStore) PutPatternsWithMetaInDisk(projectId int64, modelId uint64, chunkId string, patterns []*PatternWithMeta) error {
 	log.WithFields(log.Fields{
 		"pid": projectId,
 		"mid": modelId,
@@ -271,7 +271,7 @@ func (ps *PatternStore) PutPatternsWithMetaInDisk(projectId, modelId uint64, chu
 	return err
 }
 
-func (ps *PatternStore) getPatternsWithMetaFromDisk(projectId, modelId uint64, chunkId string) ([]*PatternWithMeta, error) {
+func (ps *PatternStore) getPatternsWithMetaFromDisk(projectId int64, modelId uint64, chunkId string) ([]*PatternWithMeta, error) {
 	log.WithFields(log.Fields{
 		"pid": projectId,
 		"mid": modelId,
@@ -281,7 +281,7 @@ func (ps *PatternStore) getPatternsWithMetaFromDisk(projectId, modelId uint64, c
 	return getPatternsFromFileManager(ps.diskFileManger, projectId, modelId, chunkId)
 }
 
-func (ps *PatternStore) putPatternsWithMetaInCache(projectId, modelId uint64, chunkId string, patterns []*PatternWithMeta) {
+func (ps *PatternStore) putPatternsWithMetaInCache(projectId int64, modelId uint64, chunkId string, patterns []*PatternWithMeta) {
 	logCtx := log.WithFields(log.Fields{
 		"pid": projectId,
 		"mid": modelId,
@@ -303,7 +303,7 @@ func (ps *PatternStore) putPatternsWithMetaInCache(projectId, modelId uint64, ch
 	}
 }
 
-func (ps *PatternStore) getPatternsWithMetaFromCache(projectId, modelId uint64, chunkId string) ([]*PatternWithMeta, bool) {
+func (ps *PatternStore) getPatternsWithMetaFromCache(projectId int64, modelId uint64, chunkId string) ([]*PatternWithMeta, bool) {
 	log.WithFields(log.Fields{
 		"pid": projectId,
 		"mid": modelId,
@@ -319,7 +319,7 @@ func (ps *PatternStore) getPatternsWithMetaFromCache(projectId, modelId uint64, 
 	return pwm, ok
 }
 
-func (ps *PatternStore) GetPatternsWithMeta(projectId, modelId uint64, chunkId string) ([]*PatternWithMeta, error) {
+func (ps *PatternStore) GetPatternsWithMeta(projectId int64, modelId uint64, chunkId string) ([]*PatternWithMeta, error) {
 	logCtx := log.WithFields(log.Fields{
 		"pid": projectId,
 		"mid": modelId,

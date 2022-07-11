@@ -12,7 +12,7 @@ import (
 )
 
 // We convert kpi Query to eventQueries by applying transformation.
-func (store *MemSQL) ExecuteKPIQueryForEvents(projectID uint64, reqID string, kpiQuery model.KPIQuery) ([]model.QueryResult, int) {
+func (store *MemSQL) ExecuteKPIQueryForEvents(projectID int64, reqID string, kpiQuery model.KPIQuery) ([]model.QueryResult, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"req_id":     reqID,
@@ -28,7 +28,7 @@ func (store *MemSQL) ExecuteKPIQueryForEvents(projectID uint64, reqID string, kp
 }
 
 // query is being mutated. So, waitGroup can side effects.
-func (store *MemSQL) transformToAndExecuteEventAnalyticsQueries(projectID uint64, kpiQuery model.KPIQuery) ([]model.QueryResult, int) {
+func (store *MemSQL) transformToAndExecuteEventAnalyticsQueries(projectID int64, kpiQuery model.KPIQuery) ([]model.QueryResult, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"kpi_query":  kpiQuery,
@@ -62,7 +62,7 @@ func (store *MemSQL) transformToAndExecuteEventAnalyticsQueries(projectID uint64
 }
 
 // To Change.
-func (store *MemSQL) ValidateKPIQuery(projectID uint64, kpiQuery model.KPIQuery) bool {
+func (store *MemSQL) ValidateKPIQuery(projectID int64, kpiQuery model.KPIQuery) bool {
 	if kpiQuery.DisplayCategory == model.WebsiteSessionDisplayCategory {
 		return store.ValidateKPISessions(projectID, kpiQuery)
 	} else if kpiQuery.DisplayCategory == model.PageViewsDisplayCategory {
@@ -85,7 +85,7 @@ func (store *MemSQL) ValidateKPIQuery(projectID uint64, kpiQuery model.KPIQuery)
 }
 
 // Each KPI Metric is mapped to array of operations containing metrics and aggregates, filters.
-func (store *MemSQL) ExecuteForSingleKPIMetric(projectID uint64, query model.Query, kpiQuery model.KPIQuery,
+func (store *MemSQL) ExecuteForSingleKPIMetric(projectID int64, query model.Query, kpiQuery model.KPIQuery,
 	kpiMetric string, result *model.QueryResult, waitGroup *sync.WaitGroup) {
 	logFields := log.Fields{
 		"project_id": projectID,
@@ -103,7 +103,7 @@ func (store *MemSQL) ExecuteForSingleKPIMetric(projectID uint64, query model.Que
 	*result = finalResult
 }
 
-func (store *MemSQL) wrappedExecuteForResult(projectID uint64, query model.Query, kpiQuery model.KPIQuery,
+func (store *MemSQL) wrappedExecuteForResult(projectID int64, query model.Query, kpiQuery model.KPIQuery,
 	kpiMetric string) model.QueryResult {
 	logFields := log.Fields{
 		"project_id": projectID,
@@ -120,7 +120,7 @@ func (store *MemSQL) wrappedExecuteForResult(projectID uint64, query model.Query
 	return finalResult
 }
 
-func (store *MemSQL) executeForResults(projectID uint64, queries []model.Query, kpiQuery model.KPIQuery, transformations []model.TransformQueryi) model.QueryResult {
+func (store *MemSQL) executeForResults(projectID int64, queries []model.Query, kpiQuery model.KPIQuery, transformations []model.TransformQueryi) model.QueryResult {
 	logFields := log.Fields{
 		"project_id":     projectID,
 		"queries":        queries,

@@ -107,8 +107,8 @@ func main() {
 
 	for _, project_id := range projectIdsList {
 
-		efCloudPath, efCloudName := (cloudManager).GetModelEventsFilePathAndName(uint64(project_id), fromTime.Unix(), *modelType)
-		efTmpPath, efTmpName := diskManager.GetModelEventsFilePathAndName(uint64(project_id), fromTime.Unix(), *modelType)
+		efCloudPath, efCloudName := (cloudManager).GetModelEventsFilePathAndName(int64(project_id), fromTime.Unix(), *modelType)
+		efTmpPath, efTmpName := diskManager.GetModelEventsFilePathAndName(int64(project_id), fromTime.Unix(), *modelType)
 		log.WithFields(log.Fields{"eventFileCloudPath": efCloudPath,
 			"eventFileCloudName": efCloudName}).Info("Downloading events file from cloud.")
 		eReader, err := (cloudManager).Get(efCloudPath, efCloudName)
@@ -328,7 +328,7 @@ func writeDetailedReport(reportMap map[string]map[string]bool, from string, to s
 	_ = closeFile(detailed_report)
 }
 
-func getProjectIdsList(projectIdsString string) (projectIdsList []uint64) {
+func getProjectIdsList(projectIdsString string) (projectIdsList []int64) {
 	allProjects, projectIdsToRun, _ := C.GetProjectsFromListWithAllProjectSupport(projectIdsString, "")
 	if allProjects {
 		projectIDs, errCode := store.GetStore().GetAllProjectIDs()
@@ -336,12 +336,12 @@ func getProjectIdsList(projectIdsString string) (projectIdsList []uint64) {
 			log.Fatal("Failed to get all projects and project_ids set to '*'.")
 		}
 
-		projectIdsToRun = make(map[uint64]bool, 0)
+		projectIdsToRun = make(map[int64]bool, 0)
 		for _, projectID := range projectIDs {
 			projectIdsToRun[projectID] = true
 		}
 	}
-	projectIdsList = make([]uint64, 0)
+	projectIdsList = make([]int64, 0)
 	for projectId := range projectIdsToRun {
 		projectIdsList = append(projectIdsList, projectId)
 	}
@@ -372,7 +372,7 @@ func createFile(fileName string) (*os.File, error) {
 	return f, err
 }
 
-func sendReportviaEmail(emails []string, project_id uint64) {
+func sendReportviaEmail(emails []string, project_id int64) {
 	var success, fail int
 	report, err := openFile(ReportName)
 	if err != nil {

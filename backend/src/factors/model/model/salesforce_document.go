@@ -13,7 +13,7 @@ import (
 
 // SalesforceDocument is an interface for salesforce_documents table
 type SalesforceDocument struct {
-	ProjectID   uint64           `gorm:"primary_key:true;auto_increment:false" json:"project_id"`
+	ProjectID   int64            `gorm:"primary_key:true;auto_increment:false" json:"project_id"`
 	ID          string           `gorm:"primary_key:true;auto_increment:false" json:"id"`
 	Type        int              `gorm:"primary_key:true;auto_increment:false" json:"type"`
 	Action      SalesforceAction `gorm:"auto_increment:false;not null" json:"action"`
@@ -35,16 +35,16 @@ type SalesforceAction int
 
 // SalesforceLastSyncInfo contains information about the latest timestamp and type of document for a project
 type SalesforceLastSyncInfo struct {
-	ProjectID uint64 `json:"-"`
-	Type      int    `json:"type"`
-	Timestamp int64  `json:"timestamp"`
+	ProjectID int64 `json:"-"`
+	Type      int   `json:"type"`
+	Timestamp int64 `json:"timestamp"`
 }
 
 // SalesforceSyncInfo lists project_id and their last sync info per doc type
 type SalesforceSyncInfo struct {
-	ProjectSettings map[uint64]*SalesforceProjectSettings `json:"project_settings"`
+	ProjectSettings map[int64]*SalesforceProjectSettings `json:"project_settings"`
 	// project_id: { type: last_sync_info }
-	LastSyncInfo map[uint64]map[string]int64 `json:"last_sync_info"`
+	LastSyncInfo map[int64]map[string]int64 `json:"last_sync_info"`
 }
 
 // SalesforceRecord is map for fields and their values
@@ -188,7 +188,7 @@ func GetSalesforceDocTypeByAlias(alias string) int {
 }
 
 // GetSalesforceDocumentTypeAlias returns a configured map of doc type name and its corresponding number
-func GetSalesforceDocumentTypeAlias(projectID uint64) map[string]int {
+func GetSalesforceDocumentTypeAlias(projectID int64) map[string]int {
 	docTypes := make(map[string]int)
 	for _, doctype := range GetSalesforceAllowedObjects(projectID) {
 		docTypes[GetSalesforceAliasByDocType(doctype)] = doctype

@@ -99,7 +99,7 @@ func (store *MemSQL) CreateProjectAgentMappingWithDependenciesWithoutDashboard(p
 	}
 	return cPam, http.StatusCreated
 }
-func (store *MemSQL) GetProjectAgentMapping(projectId uint64, agentUUID string) (*model.ProjectAgentMapping, int) {
+func (store *MemSQL) GetProjectAgentMapping(projectId int64, agentUUID string) (*model.ProjectAgentMapping, int) {
 	logFields := log.Fields{
 		"project_id": projectId,
 		"agent_uuid": agentUUID,
@@ -122,7 +122,7 @@ func (store *MemSQL) GetProjectAgentMapping(projectId uint64, agentUUID string) 
 	return pam, http.StatusFound
 }
 
-func (store *MemSQL) GetProjectAgentMappingsByProjectId(projectId uint64) ([]model.ProjectAgentMapping, int) {
+func (store *MemSQL) GetProjectAgentMappingsByProjectId(projectId int64) ([]model.ProjectAgentMapping, int) {
 	logFields := log.Fields{
 		"project_id": projectId,
 	}
@@ -143,7 +143,7 @@ func (store *MemSQL) GetProjectAgentMappingsByProjectId(projectId uint64) ([]mod
 	return pam, http.StatusFound
 }
 
-func (store *MemSQL) GetProjectAgentMappingsByProjectIds(projectIds []uint64) ([]model.ProjectAgentMapping, int) {
+func (store *MemSQL) GetProjectAgentMappingsByProjectIds(projectIds []int64) ([]model.ProjectAgentMapping, int) {
 	logFields := log.Fields{
 		"project_ids": projectIds,
 	}
@@ -211,9 +211,9 @@ func (store *MemSQL) DoesAgentHaveProject(agentUUID string) int {
 	return http.StatusFound
 }
 
-func (store *MemSQL) DeleteProjectAgentMapping(projectId uint64, agentUUIDToRemove string) int {
+func (store *MemSQL) DeleteProjectAgentMapping(projectId int64, agentUUIDToRemove string) int {
 	logFields := log.Fields{
-		"project_id": projectId,
+		"project_id":           projectId,
 		"agent_uuid_to_remove": agentUUIDToRemove,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -237,11 +237,11 @@ func (store *MemSQL) DeleteProjectAgentMapping(projectId uint64, agentUUIDToRemo
 	return http.StatusAccepted
 }
 
-func (store *MemSQL) EditProjectAgentMapping(projectId uint64, agentUUIDToEdit string, role int64) int {
+func (store *MemSQL) EditProjectAgentMapping(projectId int64, agentUUIDToEdit string, role int64) int {
 	logFields := log.Fields{
-		"project_id": projectId,
+		"project_id":         projectId,
 		"agent_uuid_to_edit": agentUUIDToEdit,
-		"role": role,
+		"role":               role,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if projectId == 0 || agentUUIDToEdit == "" || role == 0 {

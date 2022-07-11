@@ -7,7 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (store *MemSQL) ExecuteKPIQueryForChannels(projectID uint64, reqID string, kpiQuery model.KPIQuery) ([]model.QueryResult, int) {
+func (store *MemSQL) ExecuteKPIQueryForChannels(projectID int64, reqID string, kpiQuery model.KPIQuery) ([]model.QueryResult, int) {
 	logCtx := log.WithField("projectId", projectID).WithField("reqId", reqID)
 	channelsV1Query, err := model.TransformKPIQueryToChannelsV1Query(kpiQuery)
 	queryResults := make([]model.QueryResult, 0)

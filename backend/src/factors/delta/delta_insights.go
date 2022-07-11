@@ -21,7 +21,7 @@ import (
 var isDownloaded bool
 
 // ComputeDeltaInsights Take details about two periods, and get delta (difference based) insights
-func ComputeDeltaInsights(projectId uint64, configs map[string]interface{}) (map[string]interface{}, bool) {
+func ComputeDeltaInsights(projectId int64, configs map[string]interface{}) (map[string]interface{}, bool) {
 
 	status := make(map[string]interface{})
 	var insightId uint64
@@ -133,7 +133,7 @@ func ComputeDeltaInsights(projectId uint64, configs map[string]interface{}) (map
 	return status, true
 }
 
-func processCrossPeriods(periodCodes []Period, diskManager *serviceDisk.DiskDriver, projectId uint64, k int, queryId int64, cloudManager *filestore.FileManager) error {
+func processCrossPeriods(periodCodes []Period, diskManager *serviceDisk.DiskDriver, projectId int64, k int, queryId int64, cloudManager *filestore.FileManager) error {
 	for i, periodCode1 := range periodCodes {
 		var wpi1 WithinPeriodInsights
 		dateString1 := U.GetDateOnlyFromTimestampZ(periodCode1.From)
@@ -174,7 +174,7 @@ func processCrossPeriods(periodCodes []Period, diskManager *serviceDisk.DiskDriv
 	return nil
 }
 
-func processSeparatePeriods(projectId uint64, periodCodes []Period, cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, deltaQuery Query, multiStepQuery MultiFunnelQuery, k int, unionOfFeatures *(map[string]map[string]bool), passId int, insightGranularity string, isEventOccurence bool, isMultiStep bool, skipWpi bool, skipWpi2 bool) error {
+func processSeparatePeriods(projectId int64, periodCodes []Period, cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, deltaQuery Query, multiStepQuery MultiFunnelQuery, k int, unionOfFeatures *(map[string]map[string]bool), passId int, insightGranularity string, isEventOccurence bool, isMultiStep bool, skipWpi bool, skipWpi2 bool) error {
 	earlierWeekMap := make(map[int64]bool)
 	earlierWeekMap[periodCodes[0].From] = periodCodes[0].From < periodCodes[1].From
 	earlierWeekMap[periodCodes[1].From] = periodCodes[0].From > periodCodes[1].From
@@ -216,7 +216,7 @@ func processSeparatePeriods(projectId uint64, periodCodes []Period, cloudManager
 	return nil
 }
 
-func processSinglePeriodData(projectId uint64, periodCode Period, cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, deltaQuery Query, multiStepQuery MultiFunnelQuery, k int, unionOfFeatures *(map[string]map[string]bool), passId int, insightGranularity string, isEventOccurence bool, isMultiStep bool) error {
+func processSinglePeriodData(projectId int64, periodCode Period, cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, deltaQuery Query, multiStepQuery MultiFunnelQuery, k int, unionOfFeatures *(map[string]map[string]bool), passId int, insightGranularity string, isEventOccurence bool, isMultiStep bool) error {
 	scanner, err := GetEventFileScanner(projectId, periodCode, cloudManager, diskManager, insightGranularity, isDownloaded)
 	if err != nil {
 		log.WithError(err).Error(fmt.Sprintf("Scanner initialization failed for period %v", periodCode))
@@ -285,7 +285,7 @@ func processSinglePeriodData(projectId uint64, periodCode Period, cloudManager *
 	return nil
 }
 
-func WriteWpiPath(projectId uint64, periodCode Period, queryId int64, k int, events *bytes.Reader,
+func WriteWpiPath(projectId int64, periodCode Period, queryId int64, k int, events *bytes.Reader,
 	cloudManager filestore.FileManager) error {
 	dateString := U.GetDateOnlyFromTimestampZ(periodCode.From)
 	path, name := cloudManager.GetInsightsWpiFilePathAndName(projectId, dateString, queryId, k)
@@ -297,7 +297,7 @@ func WriteWpiPath(projectId uint64, periodCode Period, queryId int64, k int, eve
 	return err
 }
 
-func WriteCpiPath(projectId uint64, periodCode Period, queryId int64, k int, events *bytes.Reader,
+func WriteCpiPath(projectId int64, periodCode Period, queryId int64, k int, events *bytes.Reader,
 	cloudManager filestore.FileManager) error {
 	dateString := U.GetDateOnlyFromTimestampZ(periodCode.From)
 	path, name := cloudManager.GetInsightsCpiFilePathAndName(projectId, dateString, queryId, k)

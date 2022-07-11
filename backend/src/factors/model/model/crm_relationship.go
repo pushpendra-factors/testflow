@@ -9,7 +9,7 @@ import (
 
 type CRMRelationship struct {
 	ID        string      `gorm:"primary_key:true;auto_increment:false" json:"id"`
-	ProjectID uint64      `gorm:"primary_key:true;auto_increment:false" json:"project_id"`
+	ProjectID int64       `gorm:"primary_key:true;auto_increment:false" json:"project_id"`
 	Source    U.CRMSource `gorm:"primary_key:true;auto_increment:false" json:"source"`
 	FromType  int         `gorm:"primary_key:true;auto_increment:false" json:"from_type"`
 	FromID    string      `gorm:"primary_key:true;auto_increment:false" json:"from_id"`

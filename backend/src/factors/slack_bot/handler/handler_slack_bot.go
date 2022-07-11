@@ -10,20 +10,21 @@ import (
 	"factors/model/store"
 	U "factors/util"
 	"fmt"
-	"github.com/gin-gonic/gin"
-	log "github.com/sirupsen/logrus"
 	"net/http"
 	"net/url"
+
+	"github.com/gin-gonic/gin"
+	log "github.com/sirupsen/logrus"
 )
 
 type oauthState struct {
-	ProjectID uint64  `json:"project_id"`
+	ProjectID int64   `json:"project_id"`
 	AgentUUID *string `json:"agent_uuid"`
 }
 
 func SlackAuthRedirectHandler(c *gin.Context) {
 	currentAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if currentAgentUUID == "" || projectId == 0 {
 		c.AbortWithStatusJSON(http.StatusBadRequest,
 			gin.H{"error": "Invalid agent id."})
@@ -126,7 +127,7 @@ func buildRedirectURL(errMsg string) string {
 }
 
 func GetSlackChannelsListHandler(c *gin.Context) {
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	loggedInAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 	if projectID == 0 || loggedInAgentUUID == "" {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid project id or agent id"})
@@ -188,7 +189,7 @@ func GetSlackChannels(accessTokens model.SlackAccessTokens, nextCursor string) (
 	return jsonResponse, http.StatusOK, nil
 }
 func DeleteSlackIntegrationHandler(c *gin.Context) {
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	loggedInAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 	if loggedInAgentUUID == "" || projectID == 0 {
 		c.AbortWithStatusJSON(http.StatusBadRequest,
@@ -204,7 +205,7 @@ func DeleteSlackIntegrationHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": "Slack integration deleted successfully"})
 }
 
-func SendSlackAlert(projectID uint64, message, agentUUID string, channel model.SlackChannel) (bool, error) {
+func SendSlackAlert(projectID int64, message, agentUUID string, channel model.SlackChannel) (bool, error) {
 	// get the auth token for the agent uuid and then call the POST method to send the message
 	accessTokens, err := store.GetStore().GetSlackAuthToken(projectID, agentUUID)
 	if err != nil {

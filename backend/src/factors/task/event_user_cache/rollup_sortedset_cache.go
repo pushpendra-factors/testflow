@@ -45,7 +45,7 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 		}
 		for id, _ := range allProjects {
 			projId, _ := strconv.Atoi(id)
-			projectID := uint64(projId)
+			projectID := int64(projId)
 			log.WithField("ProjectId", projectID).Info("Starting RollUp")
 			eventNamesSmartKeySortedSet, err := model.GetSmartEventNamesOrderByOccurrenceAndRecencyCacheKeySortedSet(projectID,
 				currentTimeDatePart)

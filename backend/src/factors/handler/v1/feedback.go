@@ -5,6 +5,7 @@ import (
 	"factors/model/store"
 	U "factors/util"
 	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm/dialects/postgres"
 )
@@ -25,7 +26,7 @@ func GetPostFeedbackParams(c *gin.Context) (*FeedbackRequestPayload, error) {
 }
 func PostFeedbackHandler(c *gin.Context) {
 	loggedInAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return

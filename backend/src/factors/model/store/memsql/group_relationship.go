@@ -10,17 +10,17 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (store *MemSQL) CreateGroupRelationship(projectID uint64, leftGroupName, leftGroupUserID,
+func (store *MemSQL) CreateGroupRelationship(projectID int64, leftGroupName, leftGroupUserID,
 	rightGroupName, rightGroupUserID string) (*model.GroupRelationship, int) {
-		logFields := log.Fields{
-			"project_id": projectID,
-			"left_group_name": leftGroupName,
-			"left_group_user_id": leftGroupUserID,
-			"right_group_name": rightGroupName,
-			"right_group_user_id": rightGroupUserID,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-		logCtx := log.WithFields(logFields)
+	logFields := log.Fields{
+		"project_id":          projectID,
+		"left_group_name":     leftGroupName,
+		"left_group_user_id":  leftGroupUserID,
+		"right_group_name":    rightGroupName,
+		"right_group_user_id": rightGroupUserID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
 	if projectID < 1 || leftGroupName == "" || leftGroupUserID == "" || rightGroupName == "" || rightGroupUserID == "" {
 		logCtx.Error("Invalid parameters.")
 		return nil, http.StatusBadRequest
@@ -68,9 +68,9 @@ func (store *MemSQL) CreateGroupRelationship(projectID uint64, leftGroupName, le
 	return &groupRelationship, http.StatusCreated
 }
 
-func (store *MemSQL) GetGroupRelationshipByUserID(projectID uint64, leftGroupUserID string) ([]model.GroupRelationship, int) {
+func (store *MemSQL) GetGroupRelationshipByUserID(projectID int64, leftGroupUserID string) ([]model.GroupRelationship, int) {
 	logFields := log.Fields{
-		"project_id": projectID,
+		"project_id":         projectID,
 		"left_group_user_id": leftGroupUserID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)

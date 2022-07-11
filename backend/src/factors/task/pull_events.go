@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"factors/filestore"
-	"factors/model/model"
+	M "factors/model/model"
 	"factors/model/store"
 	P "factors/pattern"
 	serviceDisk "factors/services/disk"
@@ -19,10 +19,37 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+type CounterCampaignFormat struct {
+	Id         string                 `json:"id"`
+	Channel    string                 `json:"source"`
+	Doctype    int                    `json:"type"`
+	Timestamp  int64                  `json:"timestamp"`
+	Value      map[string]interface{} `json:"value"`
+	SmartProps map[string]interface{} `json:"sp"`
+}
+
+var fileType = map[string]int64{
+	"events":         1,
+	M.ADWORDS:        2,
+	M.FACEBOOK:       3,
+	M.BINGADS:        4,
+	M.LINKEDIN:       5,
+	M.GOOGLE_ORGANIC: 6,
+}
+
+var channelToPullMap = map[string]func(int64, int64, int64) (*sql.Rows, *sql.Tx, error){
+	M.ADWORDS:        store.GetStore().PullAdwordsRows,
+	M.FACEBOOK:       store.GetStore().PullFacebookRows,
+	M.BINGADS:        store.GetStore().PullBingAdsRows,
+	M.LINKEDIN:       store.GetStore().PullLinkedInRows,
+	M.GOOGLE_ORGANIC: store.GetStore().PullGoogleOrganicRows,
+}
+
 var peLog = taskLog.WithField("prefix", "Task#PullEvents")
 
-func pullEventsForBuildSeq(projectID uint64, startTime, endTime int64, eventsFilePath string) (int, string, error) {
-	rows, tx, err := store.GetStore().PullEventRowsForBuildSequenceJob(projectID, startTime, endTime)
+//pull Events (with Hubspot and Salesforce)
+func pullEvents(projectID int64, startTime, endTime int64, eventsFilePath string) (int, string, error) {
+	rows, tx, err := store.GetStore().PullEventRows(projectID, startTime, endTime)
 	if err != nil {
 		peLog.WithError(err).Error("SQL Query failed.")
 		return 0, "", err
@@ -117,9 +144,9 @@ func pullEventsForBuildSeq(projectID uint64, startTime, endTime int64, eventsFil
 	}
 	peLog.WithFields(log.Fields{"err": err, "project_id": projectID, "count": nilUserProperties}).Error("Nil user properties.")
 
-	if rowCount > model.EventsPullLimit {
+	if rowCount > M.EventsPullLimit {
 		// Todo(Dinesh): notify
-		return rowCount, eventsFilePath, fmt.Errorf("events count has exceeded the %d limit", model.EventsPullLimit)
+		return rowCount, eventsFilePath, fmt.Errorf("events count has exceeded the %d limit", M.EventsPullLimit)
 	}
 
 	if rowCount > 0 {
@@ -131,7 +158,97 @@ func pullEventsForBuildSeq(projectID uint64, startTime, endTime int64, eventsFil
 	return rowCount, eventsFilePath, nil
 }
 
-func PullEventsForArchive(projectID uint64, eventsFilePath, usersFilePath string,
+//Pull Channel Data
+func pullChannelData(channel string, projectID int64, startTime, endTime int64, eventsFilePath string) (int, string, error) {
+
+	rows, tx, err := channelToPullMap[channel](projectID, startTime, endTime)
+	if err != nil {
+		peLog.WithError(err).Error("SQL Query failed.")
+		return 0, "", err
+	}
+	defer U.CloseReadQuery(rows, tx)
+
+	file, err := os.Create(eventsFilePath)
+	if err != nil {
+		peLog.WithFields(log.Fields{"file": eventsFilePath, "err": err}).Error("Unable to create file.")
+		return 0, "", err
+	}
+	defer file.Close()
+
+	rowCount := 0
+	for rows.Next() {
+		var id string
+		var value *postgres.Jsonb
+		var timestamp int64
+		var docType int
+		var smartProps *postgres.Jsonb
+		if err = rows.Scan(&id, &value, &timestamp, &docType, &smartProps); err != nil {
+			peLog.WithFields(log.Fields{"err": err}).Error("SQL Parse failed.")
+			return 0, "", err
+		}
+
+		var valueMap map[string]interface{}
+		if value != nil {
+			valueBytes, err := value.Value()
+			if err != nil {
+				peLog.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal value")
+				return 0, "", err
+			}
+			err = json.Unmarshal(valueBytes.([]byte), &valueMap)
+			if err != nil {
+				peLog.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal value")
+				return 0, "", err
+			}
+		} else {
+			peLog.WithFields(log.Fields{"err": err, "project_id": projectID}).Error("Nil value")
+		}
+
+		var smartPropsMap map[string]interface{}
+		if smartProps != nil {
+			smartPropsBytes, err := smartProps.Value()
+			if err != nil {
+				peLog.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal smart props")
+				return 0, "", err
+			}
+			err = json.Unmarshal(smartPropsBytes.([]byte), &smartPropsMap)
+			if err != nil {
+				peLog.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal smart props")
+				return 0, "", err
+			}
+		}
+
+		doc := CounterCampaignFormat{
+			Id:         id,
+			Channel:    channel,
+			Value:      valueMap,
+			Timestamp:  timestamp,
+			Doctype:    docType,
+			SmartProps: smartPropsMap,
+		}
+
+		lineBytes, err := json.Marshal(doc)
+		if err != nil {
+			peLog.WithFields(log.Fields{"err": err}).Error("Unable to marshal document.")
+			return 0, "", err
+		}
+		line := string(lineBytes)
+		if _, err := file.WriteString(fmt.Sprintf("%s\n", line)); err != nil {
+			peLog.WithFields(log.Fields{"line": line, "err": err}).Error("Unable to write to file.")
+			return 0, "", err
+		}
+		rowCount++
+	}
+
+	if rowCount > M.EventsPullLimit {
+		// Todo(Dinesh): notify
+		return rowCount, eventsFilePath, fmt.Errorf("events count has exceeded the %d limit", M.EventsPullLimit)
+	}
+
+	return rowCount, eventsFilePath, nil
+}
+
+//pull Events for Archive
+func PullEventsForArchive(projectID int64, eventsFilePath, usersFilePath string,
 	startTime, endTime int64) (int, string, string, error) {
 
 	rows, tx, err := store.GetStore().PullEventRowsForArchivalJob(projectID, startTime, endTime)
@@ -192,14 +309,14 @@ func PullEventsForArchive(projectID uint64, eventsFilePath, usersFilePath string
 				peLog.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal user property.")
 				return 0, "", "", err
 			}
-			userPropertiesString, _ = json.Marshal(model.SanitizeUserProperties(*userPropertiesMap))
+			userPropertiesString, _ = json.Marshal(M.SanitizeUserProperties(*userPropertiesMap))
 		} else {
 			peLog.WithFields(log.Fields{"err": err, "project_id": projectID}).Error("Nil user properties.")
 			userPropertiesString = []byte("")
 		}
 
-		eventPropertiesString, _ = json.Marshal(model.SanitizeEventProperties(*eventPropertiesMap))
-		event := model.ArchiveEventTableFormat{
+		eventPropertiesString, _ = json.Marshal(M.SanitizeEventProperties(*eventPropertiesMap))
+		event := M.ArchiveEventTableFormat{
 			EventID:           eventID,
 			UserID:            userID,
 			UserJoinTimestamp: userJoinTimestamp,
@@ -229,7 +346,7 @@ func PullEventsForArchive(projectID uint64, eventsFilePath, usersFilePath string
 	}
 
 	for userID, customerUserID := range userIDMap {
-		user := model.ArchiveUsersTableFormat{
+		user := M.ArchiveUsersTableFormat{
 			UserID:         userID,
 			CustomerUserID: customerUserID,
 			IngestionDate:  time.Unix(startTime, 0).UTC(),
@@ -249,13 +366,15 @@ func PullEventsForArchive(projectID uint64, eventsFilePath, usersFilePath string
 	return rowCount, eventsFilePath, usersFilePath, nil
 }
 
-func PullEvents(projectId uint64, configs map[string]interface{}) (map[string]interface{}, bool) {
+func PullAllData(projectId int64, configs map[string]interface{}) (map[string]interface{}, bool) {
 
 	modelType := configs["modelType"].(string)
 	startTimestamp := configs["startTimestamp"].(int64)
 	endTimestamp := configs["endTimestamp"].(int64)
 	diskManager := configs["diskManager"].(*serviceDisk.DiskDriver)
 	cloudManager := configs["cloudManager"].(*filestore.FileManager)
+	hardPull := configs["hardPull"].(*bool)
+	fileTypes := configs["fileTypes"].(map[int64]bool)
 
 	status := make(map[string]interface{})
 	if projectId == 0 {
@@ -285,6 +404,77 @@ func PullEvents(projectId uint64, configs map[string]interface{}) (map[string]in
 	logCtx := peLog.WithFields(log.Fields{"ProjectId": projectId,
 		"StartTime": startTimestampInProjectTimezone, "EndTime": endTimestampInProjectTimezone})
 
+	integrations := store.GetStore().IsIntegrationAvailable(projectId)
+
+	success := true
+
+	// EVENTS
+	if fileTypes[fileType["events"]] {
+		pull := true
+
+		if !*hardPull {
+			if ok, _ := checkEventFileExists(cloudManager, diskManager, projectId, startTimestamp, modelType); ok {
+				status["events-info"] = "File already exists"
+				pull = false
+			}
+		}
+
+		var errMsg string = "data not available for "
+		if pull {
+			for _, channel := range []string{M.HUBSPOT, M.SALESFORCE} {
+				if !integrations[channel] {
+					status[channel+"-info"] = "Not Integrated"
+				} else {
+					if !store.GetStore().IsDataAvailable(projectId, channel, uint64(endTimestampInProjectTimezone)) {
+						errMsg += channel + " "
+						pull = false
+					}
+				}
+			}
+		}
+		if pull {
+			if _, ok := PullEventsData(projectId, cloudManager, diskManager, startTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone, modelType, status, logCtx); !ok {
+				return status, false
+			}
+		} else {
+			success = false
+			status["events-error"] = errMsg
+		}
+	}
+
+	// CAMPAIGN REPORTS
+	for _, channel := range []string{M.ADWORDS, M.BINGADS, M.FACEBOOK, M.GOOGLE_ORGANIC, M.LINKEDIN} {
+		if fileTypes[fileType[channel]] {
+			pull := true
+			if !*hardPull {
+				if ok, _ := checkChannelFileExists(channel, cloudManager, diskManager, projectId, startTimestamp, modelType); ok {
+					status[channel+"-error"] = "File already exists"
+					pull = false
+				}
+			}
+			if pull {
+				if !integrations[channel] {
+					status[channel+"-info"] = "Not Integrated"
+				} else {
+					if store.GetStore().IsDataAvailable(projectId, channel, uint64(endTimestampInProjectTimezone)) {
+						if _, ok := PullDataForChannel(channel, projectId, cloudManager, diskManager, startTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone, modelType, status, logCtx); !ok {
+							return status, false
+						}
+					} else {
+						success = false
+						status[channel+"-error"] = "Data not available"
+					}
+				}
+			}
+		}
+	}
+
+	return status, success
+}
+
+func PullEventsData(projectId int64, cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, startTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone int64,
+	modelType string, status map[string]interface{}, logCtx *log.Entry) (error, bool) {
+
 	logCtx.Info("Pulling events.")
 	// Writing events to tmp file before upload.
 	fPath, fName := diskManager.GetModelEventsFilePathAndName(projectId, startTimestamp, modelType)
@@ -292,11 +482,11 @@ func PullEvents(projectId uint64, configs map[string]interface{}) (map[string]in
 	tmpEventsFile := fPath + fName
 	startAt := time.Now().UnixNano()
 
-	eventsCount, eventsFilePath, err := pullEventsForBuildSeq(projectId, startTimestampInProjectTimezone, endTimestampInProjectTimezone, tmpEventsFile)
+	eventsCount, eventsFilePath, err := pullEvents(projectId, startTimestampInProjectTimezone, endTimestampInProjectTimezone, tmpEventsFile)
 	if err != nil {
 		logCtx.WithField("error", err).Error("Pull events failed. Pull and write events failed.")
-		status["error"] = err.Error()
-		return status, false
+		status["events-error"] = err.Error()
+		return err, false
 	}
 	timeTakenToPullEvents := (time.Now().UnixNano() - startAt) / 1000000
 	logCtx = logCtx.WithField("TimeTakenToPullEvents", timeTakenToPullEvents)
@@ -304,23 +494,23 @@ func PullEvents(projectId uint64, configs map[string]interface{}) (map[string]in
 	// Zero events. Returns eventCount as 0.
 	if eventsCount == 0 {
 		logCtx.Info("No events found.")
-		status["error"] = "No events found."
-		return status, true
+		status["events-info"] = "No events found."
+		return nil, true
 	}
 
 	tmpOutputFile, err := os.Open(tmpEventsFile)
 	if err != nil {
 		logCtx.WithField("error", err).Error("Failed to pull events. Write to tmp failed.")
-		status["error"] = "Failed to pull events. Write to tmp failed."
-		return status, false
+		status["events-error"] = "Failed to pull events. Write to tmp failed."
+		return err, false
 	}
 
 	cDir, cName := (*cloudManager).GetModelEventsFilePathAndName(projectId, startTimestamp, modelType)
 	err = (*cloudManager).Create(cDir, cName, tmpOutputFile)
 	if err != nil {
 		logCtx.WithField("error", err).Error("Failed to pull events. Upload failed.")
-		status["error"] = "Failed to pull events. Upload failed."
-		return status, false
+		status["events-error"] = "Failed to pull events. Upload failed."
+		return err, false
 	}
 
 	logCtx.WithFields(log.Fields{
@@ -330,7 +520,78 @@ func PullEvents(projectId uint64, configs map[string]interface{}) (map[string]in
 	}).Info("Successfully pulled events and written to file.")
 
 	status["EventsCount"] = eventsCount
-	status["EventsFilePath"] = eventsFilePath
-	status["TimeTakenToPullEvents"] = timeTakenToPullEvents
-	return status, true
+	return nil, true
+}
+
+func PullDataForChannel(channel string, projectId int64, cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, startTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone int64,
+	modelType string, status map[string]interface{}, logCtx *log.Entry) (error, bool) {
+
+	logCtx.Infof("Pulling " + channel)
+	// Writing adwords data to tmp file before upload.
+	fPath, fName := diskManager.GetModelChannelFilePathAndName(channel, projectId, startTimestamp, modelType)
+	serviceDisk.MkdirAll(fPath) // create dir if not exist.
+	tmpEventsFile := fPath + fName
+	startAt := time.Now().UnixNano()
+
+	count, filePath, err := pullChannelData(channel, projectId, startTimestampInProjectTimezone, endTimestampInProjectTimezone, tmpEventsFile)
+	if err != nil {
+		logCtx.WithField("error", err).Error("Pull " + channel + " failed. Pull and write failed.")
+		status[channel+"-error"] = err.Error()
+		return err, false
+	}
+	timeTaken := (time.Now().UnixNano() - startAt) / 1000000
+
+	// Zero events. Returns eventCount as 0.
+	if count == 0 {
+		logCtx.Info("No " + channel + " data found.")
+		status[channel+"-info"] = "No " + channel + " data found."
+		return err, true
+	}
+
+	tmpOutputFile, err := os.Open(tmpEventsFile)
+	if err != nil {
+		logCtx.WithField("error", err).Error("Failed to pull " + channel + ". Write to tmp failed.")
+		status[channel+"-error"] = "Failed to pull " + channel + ". Write to tmp failed."
+		return err, false
+	}
+
+	cDir, cName := (*cloudManager).GetModelChannelFilePathAndName(channel, projectId, startTimestamp, modelType)
+	err = (*cloudManager).Create(cDir, cName, tmpOutputFile)
+	if err != nil {
+		logCtx.WithField("error", err).Errorf("Failed to pull "+channel+". Upload failed.", channel)
+		status[channel+"-error"] = "Failed to pull " + channel + ". Upload failed."
+		return err, false
+	}
+
+	logCtx.WithFields(log.Fields{
+		channel + "-RowsCount":       count,
+		channel + "-FilePath":        filePath,
+		channel + "-TimeTakenToPull": timeTaken,
+	}).Info("Successfully pulled " + channel + " and written to file.")
+
+	status["DataFolderPath"] = fPath
+	status[channel+"-RowsCount"] = count
+	return nil, true
+}
+
+func checkEventFileExists(cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, projectId int64, startTimestamp int64, modelType string) (bool, error) {
+	path, name := (*cloudManager).GetModelEventsFilePathAndName(projectId, startTimestamp, modelType)
+	if _, err := (*cloudManager).Get(path, name); err != nil {
+		log.WithFields(log.Fields{"err": err, "filePath": path,
+			"fileName": name}).Error("Failed to write to fetch from cloud path")
+		return false, err
+	} else {
+		return true, nil
+	}
+}
+
+func checkChannelFileExists(channel string, cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, projectId int64, startTimestamp int64, modelType string) (bool, error) {
+	path, name := (*cloudManager).GetModelChannelFilePathAndName(channel, projectId, startTimestamp, modelType)
+	if _, err := (*cloudManager).Get(path, name); err != nil {
+		log.WithFields(log.Fields{"err": err, "filePath": path,
+			"fileName": name}).Error("Failed to write to fetch from cloud path")
+		return false, err
+	} else {
+		return true, nil
+	}
 }

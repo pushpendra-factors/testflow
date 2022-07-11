@@ -24,9 +24,9 @@ func (store *MemSQL) satisfiesPBAMForeignConstraints(pbam model.ProjectBillingAc
 	return http.StatusOK
 }
 
-func (store *MemSQL) createProjectBillingAccountMapping(projectID uint64, billingAccID string) (*model.ProjectBillingAccountMapping, int) {
+func (store *MemSQL) createProjectBillingAccountMapping(projectID int64, billingAccID string) (*model.ProjectBillingAccountMapping, int) {
 	logFields := log.Fields{
-		"project_id": projectID,
+		"project_id":      projectID,
 		"billling_acc_id": billingAccID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -72,7 +72,7 @@ func (store *MemSQL) GetProjectBillingAccountMappings(billingAccountID string) (
 	return pBAMS, http.StatusFound
 }
 
-func (store *MemSQL) GetProjectBillingAccountMapping(projectID uint64) (*model.ProjectBillingAccountMapping, int) {
+func (store *MemSQL) GetProjectBillingAccountMapping(projectID int64) (*model.ProjectBillingAccountMapping, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}

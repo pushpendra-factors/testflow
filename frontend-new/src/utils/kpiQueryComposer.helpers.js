@@ -18,3 +18,9 @@ export const getNormalizedKpi = ({ kpi }) => {
     values: metricsValues
   };
 };
+
+export const areKpisInSameGroup = ({ kpis }) => {
+  return kpis.every(
+    (_, index) => kpis[0].group === kpis[index].group
+  );
+};

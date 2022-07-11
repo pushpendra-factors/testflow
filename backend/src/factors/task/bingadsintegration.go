@@ -13,7 +13,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func BingAdsIntegration(projectId uint64, configs map[string]interface{}) (map[string]interface{}, bool) {
+func BingAdsIntegration(projectId int64, configs map[string]interface{}) (map[string]interface{}, bool) {
 
 	bigQuerySetting := model.BigquerySetting{
 		BigqueryProjectID:       configs["BigqueryProjectId"].(string),

@@ -18,7 +18,7 @@ import (
 func main() {
 	envFlag := flag.String("env", "development", "Environment. Could be development|staging|production.")
 	bucketNameFlag := flag.String("bucket_name", "/usr/local/var/factors/cloud_storage", "Bucket name for production.")
-	projectIDFlag := flag.Uint64("project_id", 0, "Project id to be run for.")
+	projectIDFlag := flag.Int64("project_id", 0, "Project id to be run for.")
 	runForAllFlag := flag.Bool("all", false, "Whether to run for all project with bigquery enabled.")
 	startDateFlag := flag.String("start_date", "", "Start date in format YYYY-MM-DD to process older files. Inclusive.")
 	endDateFlag := flag.String("end_date", "", "End date in format YYYY-MM-DD to process older files. Inclusive")
@@ -121,7 +121,7 @@ func main() {
 		}
 	}
 
-	allJobDetails := make(map[uint64][]string)
+	allJobDetails := make(map[int64][]string)
 	var projectErrors []error
 	if *runForAllFlag {
 		allJobDetails, projectErrors = T.PushToBigquery(&cloudManager, startDate, endDate)

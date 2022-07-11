@@ -8,7 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (store *MemSQL) fetchOTPSessions(projectID uint64, offlineTouchPointEventNameId string,
+func (store *MemSQL) fetchOTPSessions(projectID int64, offlineTouchPointEventNameId string,
 	query *model.AttributionQuery, logCtx log.Entry) (map[string]map[string]model.UserSessionData, []string, error) {
 
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logCtx.Data)

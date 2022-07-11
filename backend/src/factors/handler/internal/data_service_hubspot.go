@@ -46,7 +46,7 @@ func DataServiceHubspotAddDocumentHandler(c *gin.Context) {
 }
 
 type HubspotBatchInsertPayload struct {
-	ProjectID    uint64                   `json:"project_id"`
+	ProjectID    int64                    `json:"project_id"`
 	DocTypeAlias string                   `json:"doc_type"`
 	Documents    []*model.HubspotDocument `json:"documents"`
 }
@@ -149,7 +149,7 @@ func DataServiceHubspotUpdateSyncInfo(c *gin.Context) {
 }
 
 func DataServiceGetHubspotFormDocumentsHandler(c *gin.Context) {
-	projectId, err := strconv.ParseUint(c.Query("project_id"), 10, 64)
+	projectId, err := strconv.ParseInt(c.Query("project_id"), 10, 64)
 	if err != nil || projectId == 0 {
 		log.WithError(err).Error(
 			"Failed to get project_id on get hubspot form documents.")

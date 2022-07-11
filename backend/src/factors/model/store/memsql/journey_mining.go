@@ -608,7 +608,7 @@ func createEventAliasLegendForJourneyEvents(journeyEvents []model.QueryEventWith
 	return
 }
 
-func prettyPrintJourneyPatterns(projectID uint64, allPatternsMap map[string]*JourneyPatternMap,
+func prettyPrintJourneyPatterns(projectID int64, allPatternsMap map[string]*JourneyPatternMap,
 	outputFileContents string, journeyEvents []model.QueryEventWithProperties,
 	eventAliasLegend, reverseEventAliasLegend map[string]string) {
 	logFields := log.Fields{
@@ -691,7 +691,7 @@ func filterUsersForGoalNotCompleted(userEventsMap map[string][]ArchiveEventForma
 }
 
 // GetWeightedJourneyMatrix Gets user's journey for the given events in given range.
-func (store *MemSQL) GetWeightedJourneyMatrix(projectID uint64, journeyEvents []model.QueryEventWithProperties,
+func (store *MemSQL) GetWeightedJourneyMatrix(projectID int64, journeyEvents []model.QueryEventWithProperties,
 	goalEvents []model.QueryEventWithProperties, startTime, endTime, lookbackDays int64, eventFiles,
 	userFiles string, includeSession bool, sessionProperty string, cloudManager filestore.FileManager) {
 	logFields := log.Fields{

@@ -36,7 +36,7 @@ func (store *MemSQL) CreateShareableURL(shareableURLParams *model.ShareableURL) 
 	return shareableURLParams, http.StatusCreated
 }
 
-func (store *MemSQL) GetAllShareableURLsWithProjectIDAndAgentID(projectID uint64, agentUUID string) ([]*model.ShareableURL, int) {
+func (store *MemSQL) GetAllShareableURLsWithProjectIDAndAgentID(projectID int64, agentUUID string) ([]*model.ShareableURL, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"agent_uuid": agentUUID,
@@ -58,7 +58,7 @@ func (store *MemSQL) GetAllShareableURLsWithProjectIDAndAgentID(projectID uint64
 	return shareableURLs, http.StatusFound
 }
 
-func (store *MemSQL) GetShareableURLWithShareStringAndAgentID(projectID uint64, shareString, agentUUID string) (*model.ShareableURL, int) {
+func (store *MemSQL) GetShareableURLWithShareStringAndAgentID(projectID int64, shareString, agentUUID string) (*model.ShareableURL, int) {
 	logFields := log.Fields{
 		"project_id":     projectID,
 		"share_query_id": shareString,
@@ -85,7 +85,7 @@ func (store *MemSQL) GetShareableURLWithShareStringAndAgentID(projectID uint64, 
 	return &shareableURL, http.StatusFound
 }
 
-func (store *MemSQL) GetShareableURLWithShareStringWithLargestScope(projectID uint64, shareString string, entityType int) (*model.ShareableURL, int) {
+func (store *MemSQL) GetShareableURLWithShareStringWithLargestScope(projectID int64, shareString string, entityType int) (*model.ShareableURL, int) {
 	logFields := log.Fields{
 		"project_id":     projectID,
 		"share_query_id": shareString,
@@ -200,7 +200,7 @@ func (store *MemSQL) updateShareableURL(whereFields, updateFields map[string]int
 // 	return store.updateShareableURL(whereFields, updateFields)
 // }
 
-func (store *MemSQL) DeleteShareableURLWithShareIDandAgentID(projectID uint64, shareId, createdBy string) int {
+func (store *MemSQL) DeleteShareableURLWithShareIDandAgentID(projectID int64, shareId, createdBy string) int {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"share_id":   shareId,
@@ -219,7 +219,7 @@ func (store *MemSQL) DeleteShareableURLWithShareIDandAgentID(projectID uint64, s
 	return store.updateShareableURL(whereFields, updateFields)
 }
 
-func (store *MemSQL) DeleteShareableURLWithEntityIDandType(projectID uint64, entityID int64, entityType int) int {
+func (store *MemSQL) DeleteShareableURLWithEntityIDandType(projectID int64, entityID int64, entityType int) int {
 	logFields := log.Fields{
 		"project_id":  projectID,
 		"entity_id":   entityID,
@@ -239,7 +239,7 @@ func (store *MemSQL) DeleteShareableURLWithEntityIDandType(projectID uint64, ent
 	return store.updateShareableURL(whereFields, updateFields)
 }
 
-func (store *MemSQL) RevokeShareableURLsWithShareString(projectID uint64, shareString string) (int, string) {
+func (store *MemSQL) RevokeShareableURLsWithShareString(projectID int64, shareString string) (int, string) {
 	logFields := log.Fields{
 		"project_id":   projectID,
 		"share_string": shareString,
@@ -271,7 +271,7 @@ func (store *MemSQL) RevokeShareableURLsWithShareString(projectID uint64, shareS
 	return http.StatusAccepted, ""
 }
 
-func (store *MemSQL) RevokeShareableURLsWithProjectID(projectId uint64) (int, string) {
+func (store *MemSQL) RevokeShareableURLsWithProjectID(projectId int64) (int, string) {
 	logFields := log.Fields{
 		"project_id": projectId,
 	}

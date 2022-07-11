@@ -216,7 +216,7 @@ function SmartProperties({ activeProject,
         if (data) {
             // Save with data
             // Close modal
-            const smrtProp = new SmartPropertyClass(smartPropState.id ? smartPropState.id : '', activeProject.id, data.name, data.description, data.type, rulesState);
+            const smrtProp = new SmartPropertyClass(smartPropState.id ? smartPropState.id : '', data.name, data.description, data.type, rulesState);
             if (formState !== 'add') {
                 updateForm(smrtProp);
             } else {
@@ -250,7 +250,6 @@ function SmartProperties({ activeProject,
             if (formState === 'view') {
                 const smrtProp = new SmartPropertyClass(
                     smartPropState.id,
-                    smartPropState.project_id,
                     smartPropState.name,
                     smartPropState.description,
                     smartPropState.type_alias,

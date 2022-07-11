@@ -66,7 +66,7 @@ func factorsUserIdFromAttributes(attributes []NoteAttribute) string {
 
 // Returns eventName, customerEventId, userId, isNewUser, eventProperties, userProperties, timestamp, err
 func GetTrackDetailsFromCheckoutObject(
-	projectId uint64, actionType int64, shouldHashEmail bool, checkoutObject *CheckoutObject) (
+	projectId int64, actionType int64, shouldHashEmail bool, checkoutObject *CheckoutObject) (
 	string, string, bool, U.PropertiesMap, U.PropertiesMap, int64, error) {
 	var eventTime time.Time
 	var eventName string
@@ -207,7 +207,7 @@ type OrderObject struct {
 
 // Returns eventName, userId, isNewUser, eventProperties, userProperties, timestamp, err
 func GetTrackDetailsFromOrderObject(
-	projectId uint64, actionType int64, shouldHashEmail bool, orderObject *OrderObject) (
+	projectId int64, actionType int64, shouldHashEmail bool, orderObject *OrderObject) (
 	string, string, bool, U.PropertiesMap, U.PropertiesMap, int64, error) {
 
 	var eventTime time.Time
@@ -352,7 +352,7 @@ type CartObject struct {
 
 // Returns eventName, customerEventId, userId, isNewUser, eventProperties, userProperties, timestamp, err
 func GetTrackDetailsFromCartObject(
-	projectId uint64, actionType int64, cartObject *CartObject) (
+	projectId int64, actionType int64, cartObject *CartObject) (
 	string, string, bool, U.PropertiesMap, U.PropertiesMap, int64, error) {
 	cartToken := cartObject.Token
 	if cartToken == "" {

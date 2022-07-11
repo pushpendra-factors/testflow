@@ -15,6 +15,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const HeaderUserFilterOptForProfiles string = "Use-Filter-Opt-Profiles"
+
 // DashboardQueryResponsePayload Query query response with cache and refreshed_at.
 type DashboardQueryResponsePayload struct {
 	Result      interface{} `json:"result"`
@@ -58,7 +60,7 @@ func SleepIfHeaderSet(c *gin.Context) {
 }
 
 // GetResponseIfCachedQuery Returns response for the query is cached.
-func GetResponseIfCachedQuery(c *gin.Context, projectID uint64, requestPayload model.BaseQuery,
+func GetResponseIfCachedQuery(c *gin.Context, projectID int64, requestPayload model.BaseQuery,
 	resultContainer interface{}, forDashboard bool, reqID string) (bool, int, interface{}) {
 	if C.DisableQueryCache() {
 		return false, http.StatusNotFound, nil
@@ -99,7 +101,7 @@ func GetResponseIfCachedQuery(c *gin.Context, projectID uint64, requestPayload m
 }
 
 // GetResponseIfCachedDashboardQuery Common function to fetch result from cache if present for dashboard query.
-func GetResponseIfCachedDashboardQuery(reqId string, projectID uint64, dashboardID, unitID int64, from, to int64, timezoneString U.TimeZoneString) (bool, int, interface{}) {
+func GetResponseIfCachedDashboardQuery(reqId string, projectID int64, dashboardID, unitID int64, from, to int64, timezoneString U.TimeZoneString) (bool, int, interface{}) {
 	cacheResult, errCode, err := model.GetCacheResultByDashboardIdAndUnitId(reqId, projectID, dashboardID, unitID, from, to, timezoneString)
 	if errCode == http.StatusFound && cacheResult != nil {
 		return true, http.StatusOK, DashboardQueryResponsePayload{Result: cacheResult.Result, Cache: true, RefreshedAt: cacheResult.RefreshedAt, TimeZone: string(timezoneString)}

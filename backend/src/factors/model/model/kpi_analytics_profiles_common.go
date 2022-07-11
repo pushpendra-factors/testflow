@@ -18,6 +18,7 @@ var mapOfKPIToProfileType = map[string]string{
 	SalesforceAccountsDisplayCategory:      UserSourceSalesforceString,
 	SalesforceOpportunitiesDisplayCategory: UserSourceSalesforceString,
 	MarketoLeadsDisplayCategory:            UserSourceMarketo,
+	LeadSquaredLeadsDisplayCategory:        UserSourceLeadSquared,
 }
 
 var mapOfKPICategoryToProfileGroupAnalysis = map[string]string{
@@ -28,6 +29,7 @@ var mapOfKPICategoryToProfileGroupAnalysis = map[string]string{
 	SalesforceAccountsDisplayCategory:      GROUP_NAME_SALESFORCE_ACCOUNT,
 	SalesforceOpportunitiesDisplayCategory: GROUP_NAME_SALESFORCE_OPPORTUNITY,
 	MarketoLeadsDisplayCategory:            USERS,
+	LeadSquaredLeadsDisplayCategory:        USERS,
 }
 
 // Setting and getting Time for profiles query is 0,0. Need to understand.

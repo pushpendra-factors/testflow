@@ -141,7 +141,7 @@ func GetURLParameterAsMap(pageUrl string) map[string]interface{} {
 	return urlParameters
 }
 
-func extractingFormSubmissionDetails(projectId uint64, contact Contact, properties map[string]interface{}) []map[string]interface{} {
+func extractingFormSubmissionDetails(projectId int64, contact Contact, properties map[string]interface{}) []map[string]interface{} {
 	form := make([]map[string]interface{}, 0)
 	keyArr := []string{"conversion-id", "form-id", "form-type", "page-title", "page-url", "portal-id", "timestamp", "title"}
 
@@ -287,7 +287,7 @@ type AccountInfo struct {
 	UTCOffset             string           `json:"utcOffset"`
 }
 
-func getHubspotAccountInfo(projectID uint64, apiKey string) (*AccountInfo, error) {
+func getHubspotAccountInfo(projectID int64, apiKey string) (*AccountInfo, error) {
 	url := URL_PORTAL_INFO + "?" + "hapikey=" + apiKey
 
 	req, err := http.NewRequest("GET", url, nil)
@@ -324,7 +324,7 @@ func getHubspotAccountInfo(projectID uint64, apiKey string) (*AccountInfo, error
 	return &accountInfo, nil
 }
 
-func GetHubspotAccountTimezone(projectID uint64, apiKey string) (U.TimeZoneString, error) {
+func GetHubspotAccountTimezone(projectID int64, apiKey string) (U.TimeZoneString, error) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID})
 	account, err := getHubspotAccountInfo(projectID, apiKey)
 	if err != nil {
@@ -348,7 +348,7 @@ func fillDatePropertiesAndTimeZone(documents []model.HubspotDocument, dateProper
 	}
 }
 
-func GetHubspotPropertiesByDataType(projectId uint64, docTypeAPIObjects *map[string]string, apiKey, dataType string) (map[int]*map[string]bool, error) {
+func GetHubspotPropertiesByDataType(projectId int64, docTypeAPIObjects *map[string]string, apiKey, dataType string) (map[int]*map[string]bool, error) {
 	propertiesByObjectType := make(map[int]*map[string]bool)
 	for typeAlias, apiObjectName := range *docTypeAPIObjects {
 		propertiesMeta, err := GetHubspotPropertiesMeta(apiObjectName, apiKey)
@@ -375,7 +375,7 @@ func GetHubspotPropertiesByDataType(projectId uint64, docTypeAPIObjects *map[str
 	return propertiesByObjectType, nil
 }
 
-func GetContactProperties(projectID uint64, document *model.HubspotDocument) (*map[string]interface{}, *map[string]interface{}, error) {
+func GetContactProperties(projectID int64, document *model.HubspotDocument) (*map[string]interface{}, *map[string]interface{}, error) {
 	if document.Type != model.HubspotDocumentTypeContact {
 		return nil, nil, errors.New("invalid type")
 	}
@@ -431,7 +431,7 @@ func GetContactProperties(projectID uint64, document *model.HubspotDocument) (*m
 	return &enrichedProperties, &properties, nil
 }
 
-func getCustomerUserIDFromProperties(projectID uint64, properties map[string]interface{}) (string, string) {
+func getCustomerUserIDFromProperties(projectID int64, properties map[string]interface{}) (string, string) {
 	// identify using email if exist on properties.
 	emailInt, emailExists := properties[model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot,
 		model.HubspotDocumentTypeNameContact, "email")]
@@ -483,7 +483,7 @@ WITHOUT PREVIOUS PROPERTY :- A query will be made for previous synced record whi
 will require docID and doctType
 WITH PREVIOUS PROPERTY := docID and doctType won't be used
 */
-func GetHubspotSmartEventPayload(projectID uint64, eventName, docID string,
+func GetHubspotSmartEventPayload(projectID int64, eventName, docID string,
 	docType int, currentProperties, prevProperties *map[string]interface{},
 	filter *model.SmartCRMEventFilter) (*model.CRMSmartEvent, *map[string]interface{}, bool) {
 
@@ -545,7 +545,7 @@ func GetHubspotSmartEventPayload(projectID uint64, eventName, docID string,
 	return &crmSmartEvent, prevProperties, true
 }
 
-func getTimestampFromField(projectID uint64, propertyName string, properties *map[string]interface{}) (int64, error) {
+func getTimestampFromField(projectID int64, propertyName string, properties *map[string]interface{}) (int64, error) {
 	if timestampInt, exists := (*properties)[propertyName]; exists {
 
 		if C.IsEnabledPropertyDetailFromDB() && C.IsEnabledPropertyDetailByProjectID(projectID) {
@@ -572,7 +572,7 @@ func getTimestampFromField(projectID uint64, propertyName string, properties *ma
 }
 
 // TrackHubspotSmartEvent validates hubspot current properties with CRM smart filter and creates a event
-func TrackHubspotSmartEvent(projectID uint64, hubspotSmartEventName *HubspotSmartEventName, eventID, docID, userID string, docType int,
+func TrackHubspotSmartEvent(projectID int64, hubspotSmartEventName *HubspotSmartEventName, eventID, docID, userID string, docType int,
 	currentProperties, prevProperties *map[string]interface{}, defaultTimestamp int64, usingFallbackUserID bool) *map[string]interface{} {
 	var valid bool
 	var smartEventPayload *model.CRMSmartEvent
@@ -686,7 +686,7 @@ func GetHubspotPropertiesMeta(objectType string, apiKey string) ([]PropertyDetai
 }
 
 // CreateOrGetHubspotEventName makes sure event name exist
-func CreateOrGetHubspotEventName(projectID uint64) int {
+func CreateOrGetHubspotEventName(projectID int64) int {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID})
 
 	for i := range model.AllowedEventNamesForHubspot {
@@ -718,7 +718,7 @@ func CreateOrGetHubspotEventName(projectID uint64) int {
 	return http.StatusOK
 }
 
-func syncHubspotPropertyByType(projectID uint64, doctTypeAlias string, fieldName, fieldType string) error {
+func syncHubspotPropertyByType(projectID int64, doctTypeAlias string, fieldName, fieldType string) error {
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "doct_type_alias": doctTypeAlias, "field_name": fieldName, "field_type": fieldType})
 
@@ -769,7 +769,7 @@ func syncHubspotPropertyByType(projectID uint64, doctTypeAlias string, fieldName
 }
 
 // SyncDatetimeAndNumericalProperties sync datetime and numerical properties to the property_details table
-func SyncDatetimeAndNumericalProperties(projectID uint64, apiKey string) (bool, []Status) {
+func SyncDatetimeAndNumericalProperties(projectID int64, apiKey string) (bool, []Status) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID})
 
 	if projectID == 0 || apiKey == "" {
@@ -1495,7 +1495,7 @@ func filterCheckEngagement(rule model.HSTouchPointRule, trackPayload *SDK.TrackP
 	return false
 }
 
-func getDealUserID(projectID uint64, deal *Deal) string {
+func getDealUserID(projectID int64, deal *Deal) string {
 	logCtx := log.WithField("project_id", projectID)
 
 	contactIds := make([]string, 0, 0)
@@ -1589,7 +1589,7 @@ type HubspotSmartEventName struct {
 }
 
 // GetHubspotSmartEventNames returns all the smart_event for hubspot by object_type
-func GetHubspotSmartEventNames(projectID uint64) *map[string][]HubspotSmartEventName {
+func GetHubspotSmartEventNames(projectID int64) *map[string][]HubspotSmartEventName {
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectID})
 
@@ -1660,7 +1660,7 @@ func getCompanyGroupID(document *model.HubspotDocument, companyName, domainName 
 	return domainName
 }
 
-func getCompanyProperties(projectID uint64, document *model.HubspotDocument) (map[string]interface{}, error) {
+func getCompanyProperties(projectID int64, document *model.HubspotDocument) (map[string]interface{}, error) {
 	if projectID < 1 || document == nil {
 		return nil, errors.New("invalid parameters")
 	}
@@ -1699,7 +1699,7 @@ func getCompanyProperties(projectID uint64, document *model.HubspotDocument) (ma
 	return userProperties, nil
 }
 
-func syncCompany(projectID uint64, document *model.HubspotDocument) int {
+func syncCompany(projectID int64, document *model.HubspotDocument) int {
 	if document.Type != model.HubspotDocumentTypeCompany {
 		return http.StatusInternalServerError
 	}
@@ -1825,7 +1825,7 @@ func getHubspotDateTimestampAsMidnightTimeZoneTimestamp(dateUTCMS interface{}, t
 	return timeInLoc.Unix(), nil
 }
 
-func getHubspotMappedDataTypeValue(projectID uint64, eventName, enKey string, value interface{}, typ int, dateProperties *map[string]bool, timeZone string) (interface{}, error) {
+func getHubspotMappedDataTypeValue(projectID int64, eventName, enKey string, value interface{}, typ int, dateProperties *map[string]bool, timeZone string) (interface{}, error) {
 	if value == nil || value == "" {
 		return "", nil
 	}
@@ -1884,7 +1884,7 @@ func getHubspotMappedDataTypeValue(projectID uint64, eventName, enKey string, va
 	return value, nil
 }
 
-func getDealProperties(projectID uint64, document *model.HubspotDocument) (*map[string]interface{}, *map[string]interface{}, error) {
+func getDealProperties(projectID int64, document *model.HubspotDocument) (*map[string]interface{}, *map[string]interface{}, error) {
 
 	if document.Type != model.HubspotDocumentTypeDeal {
 		return nil, nil, errors.New("invalid type")
@@ -1965,7 +1965,7 @@ func getGroupUserID(createdDocument *model.HubspotDocument) string {
 	return ""
 }
 
-func createOrUpdateHubspotGroupsProperties(projectID uint64, document *model.HubspotDocument,
+func createOrUpdateHubspotGroupsProperties(projectID int64, document *model.HubspotDocument,
 	enProperties *map[string]interface{}, groupName, groupID string) (string, string, int) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "doc_type": document.Type, "document": document,
 		"group_name": groupName, "group_id": groupID})
@@ -2083,7 +2083,7 @@ func createOrUpdateHubspotGroupsProperties(projectID uint64, document *model.Hub
 	return groupUserID, eventId, http.StatusOK
 }
 
-func getDealAssociatedIDs(projectID uint64, document *model.HubspotDocument) ([]string, []string, error) {
+func getDealAssociatedIDs(projectID int64, document *model.HubspotDocument) ([]string, []string, error) {
 	if document.Type != model.HubspotDocumentTypeDeal {
 		return nil, nil, errors.New("invalid document type")
 	}
@@ -2111,7 +2111,7 @@ func getDealAssociatedIDs(projectID uint64, document *model.HubspotDocument) ([]
 	return contactIDs, companyIDs, nil
 }
 
-func syncGroupCompany(projectID uint64, document *model.HubspotDocument, enProperties *map[string]interface{}) (string, string, error) {
+func syncGroupCompany(projectID int64, document *model.HubspotDocument, enProperties *map[string]interface{}) (string, string, error) {
 	companyName, domainName, err := getCompanyNameAndDomainName(document)
 	if err != nil {
 		return "", "", err
@@ -2126,7 +2126,7 @@ func syncGroupCompany(projectID uint64, document *model.HubspotDocument, enPrope
 	return companyUserID, companyGroupID, nil
 }
 
-func syncGroupDeal(projectID uint64, enProperties *map[string]interface{}, document *model.HubspotDocument) (string, string, int) {
+func syncGroupDeal(projectID int64, enProperties *map[string]interface{}, document *model.HubspotDocument) (string, string, int) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "document": document.ID, "doc_type": document.Type})
 	if document.Type != model.HubspotDocumentTypeDeal {
 		logCtx.Error("Invalid document type on syncGroupDeal.")
@@ -2236,7 +2236,7 @@ func syncGroupDeal(projectID uint64, enProperties *map[string]interface{}, docum
 	return dealGroupUserID, eventId, http.StatusOK
 }
 
-func syncDeal(projectID uint64, document *model.HubspotDocument, hubspotSmartEventNames []HubspotSmartEventName) int {
+func syncDeal(projectID int64, document *model.HubspotDocument, hubspotSmartEventNames []HubspotSmartEventName) int {
 	if document.Type != model.HubspotDocumentTypeDeal {
 		return http.StatusInternalServerError
 	}
@@ -2695,7 +2695,7 @@ func syncAll(project *model.Project, documents []model.HubspotDocument, hubspotS
 
 // Status definition
 type Status struct {
-	ProjectId              uint64 `json:"project_id"`
+	ProjectId              int64  `json:"project_id"`
 	Type                   string `json:"type"`
 	Status                 string `json:"status"`
 	Count                  int    `json:"count"`
@@ -2804,7 +2804,7 @@ func syncByOrderedTimeSeries(project *model.Project, orderedTimeSeries [][]int64
 }
 
 // Sync - Syncs hubspot documents in an order of type.
-func Sync(projectID uint64, workersPerProject int, recordsMaxCreatedAtSec int64, datePropertiesByObjectType map[int]*map[string]bool, timeZone U.TimeZoneString, recordsProcessLimit int) ([]Status, bool) {
+func Sync(projectID int64, workersPerProject int, recordsMaxCreatedAtSec int64, datePropertiesByObjectType map[int]*map[string]bool, timeZone U.TimeZoneString, recordsProcessLimit int) ([]Status, bool) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "workers_per_project": workersPerProject, "record_max_created_at": recordsMaxCreatedAtSec})
 	logCtx.Info("Running sync for project.")
 

@@ -171,7 +171,7 @@ func TestCreateMultipleDashboardUnits(t *testing.T) {
 
 	type args struct {
 		requestPayload []model.DashboardUnitRequestPayload
-		projectId      uint64
+		projectId      int64
 		agentUUID      string
 		dashboardId    int64
 	}
@@ -260,7 +260,7 @@ func TestCreateDashboardUnitForMultipleDashboards(t *testing.T) {
 
 	type args struct {
 		dashboardIds []int64
-		projectId    uint64
+		projectId    int64
 		agentUUID    string
 		unitPayload  model.DashboardUnitRequestPayload
 	}
@@ -878,7 +878,7 @@ func TestCacheDashboardUnitsForProjectID(t *testing.T) {
 		dashboardUnitQueriesMap[dashboardUnit.ID]["query"] = baseQuery
 	}
 	var reportCollector sync.Map
-	//dashboardUnitIDs := make([]uint64, 0)
+	//dashboardUnitIDs := make([]int64, 0)
 	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitsList, dashboardQueryClassList, 1, &reportCollector)
 	assert.Equal(t, 5, updatedUnitsCount)
 
@@ -1000,7 +1000,7 @@ func TestCacheDashboardUnitsForProjectIDEventsGroupQuery(t *testing.T) {
 		dashboardUnitQueriesMap[dashboardUnit.ID]["queries"] = baseQuery
 	}
 	var reportCollector sync.Map
-	//dashboardUnitIDs := make([]uint64, 0)
+	//dashboardUnitIDs := make([]int64, 0)
 	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitsList, dashboardQueryClassList, 1, &reportCollector)
 	assert.Equal(t, len(dashboardQueriesStr), updatedUnitsCount)
 	for _, rangeFunction := range U.QueryDateRangePresets {
@@ -1101,7 +1101,7 @@ func TestCacheDashboardUnitsForProjectIDChannelsGroupQuery(t *testing.T) {
 	}
 
 	var reportCollector sync.Map
-	//dashboardUnitIDs := make([]uint64, 0)
+	//dashboardUnitIDs := make([]int64, 0)
 	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitsList, dashboardQueryClassList, 1, &reportCollector)
 	assert.Equal(t, len(dashboardQueriesStr), updatedUnitsCount)
 	timezonestring := U.TimeZoneString(project.TimeZone)
@@ -1231,7 +1231,7 @@ func TestDashboardUnitEventForDateTypeFilters(t *testing.T) {
 	dashboardUnitsList = append(dashboardUnitsList, *dashboardUnit)
 	dashboardQueryClassList = append(dashboardQueryClassList, query1.GetClass())
 	var reportCollector sync.Map
-	//dashboardUnitIDs := make([]uint64, 0)
+	//dashboardUnitIDs := make([]int64, 0)
 	store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitsList, dashboardQueryClassList, 1, &reportCollector)
 	result := struct {
 		Cache  bool              `json:"cache"`
@@ -1252,7 +1252,7 @@ func TestDashboardUnitEventForDateTypeFilters(t *testing.T) {
 	}
 }
 
-func sendAttributionQueryReq(r *gin.Engine, projectID uint64, agent *model.Agent, dashboardID, unitID uint64, query model.AttributionQuery, refresh bool) *httptest.ResponseRecorder {
+func sendAttributionQueryReq(r *gin.Engine, projectID int64, agent *model.Agent, dashboardID, unitID int64, query model.AttributionQuery, refresh bool) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")
@@ -1280,13 +1280,13 @@ func sendAttributionQueryReq(r *gin.Engine, projectID uint64, agent *model.Agent
 	return w
 }
 
-func sendAnalyticsQueryReq(r *gin.Engine, queryClass string, projectID uint64, agent *model.Agent, dashboardID,
+func sendAnalyticsQueryReq(r *gin.Engine, queryClass string, projectID int64, agent *model.Agent, dashboardID,
 	unitID int64, baseQuery model.BaseQuery, refresh bool, withDashboardParams bool) *httptest.ResponseRecorder {
 	return sendAnalyticsQueryReqWithHeader(r, queryClass, projectID, agent, dashboardID, unitID,
 		baseQuery, refresh, withDashboardParams, map[string]string{})
 }
 
-func sendAnalyticsQueryReqWithHeader(r *gin.Engine, queryClass string, projectID uint64, agent *model.Agent, dashboardID,
+func sendAnalyticsQueryReqWithHeader(r *gin.Engine, queryClass string, projectID int64, agent *model.Agent, dashboardID,
 	unitID int64, baseQuery model.BaseQuery, refresh bool, withDashboardParams bool, headers map[string]string) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {

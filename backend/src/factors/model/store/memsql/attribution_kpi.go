@@ -14,7 +14,8 @@ import (
 )
 
 // ExecuteKPIForAttribution Executes the KPI sub-query for Attribution
-func (store *MemSQL) ExecuteKPIForAttribution(projectID uint64, query *model.AttributionQuery, debugQueryKey string, logCtx log.Entry) (map[string]model.KPIInfo, map[string]string, []string, error) {
+func (store *MemSQL) ExecuteKPIForAttribution(projectID int64, query *model.AttributionQuery, debugQueryKey string,
+	logCtx log.Entry, enableOptimisedFilterOnProfileQuery bool) (map[string]model.KPIInfo, map[string]string, []string, error) {
 
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 
@@ -27,7 +28,8 @@ func (store *MemSQL) ExecuteKPIForAttribution(projectID uint64, query *model.Att
 
 		var duplicatedRequest model.KPIQueryGroup
 		U.DeepCopy(&query.KPI, &duplicatedRequest)
-		resultGroup, statusCode := store.ExecuteKPIQueryGroup(projectID, debugQueryKey, duplicatedRequest)
+		resultGroup, statusCode := store.ExecuteKPIQueryGroup(projectID, debugQueryKey,
+			duplicatedRequest, enableOptimisedFilterOnProfileQuery)
 		log.WithFields(log.Fields{"ResultGroup": resultGroup, "Status": statusCode}).Info("KPI-Attribution result received")
 		if statusCode != http.StatusOK {
 			logCtx.Error("failed to get KPI result for attribution query")
@@ -116,7 +118,7 @@ func getGroupKeys(query *model.AttributionQuery, groups []model.Group) (string, 
 	return _groupIDKey, _groupIDUserKey
 }
 
-func (store *MemSQL) GetDataFromKPIResult(projectID uint64, kpiQueryResult model.QueryResult, kpiData *map[string]model.KPIInfo, logCtx log.Entry) []string {
+func (store *MemSQL) GetDataFromKPIResult(projectID int64, kpiQueryResult model.QueryResult, kpiData *map[string]model.KPIInfo, logCtx log.Entry) []string {
 
 	datetimeIdx := 0
 	keyIdx := 1
@@ -212,7 +214,7 @@ func (store *MemSQL) GetDataFromKPIResult(projectID uint64, kpiQueryResult model
 	return kpiKeys
 }
 
-func (store *MemSQL) PullGroupUserIDs(projectID uint64, kpiKeys []string, _groupIDKey string,
+func (store *MemSQL) PullGroupUserIDs(projectID int64, kpiKeys []string, _groupIDKey string,
 	kpiData *map[string]model.KPIInfo, groupUserIDToKpiID *map[string]string, logCtx log.Entry) ([]string, error) {
 	logFields := log.Fields{
 		"project_id":    projectID,
@@ -263,7 +265,7 @@ func (store *MemSQL) PullGroupUserIDs(projectID uint64, kpiKeys []string, _group
 	return kpiKeyGroupUserIDList, nil
 }
 
-func (store *MemSQL) PullKPIKeyUserGroupInfo(projectID uint64, kpiKeyGroupUserIDList []string, _groupIDUserKey string, kpiData *map[string]model.KPIInfo, groupUserIDToKpiID *map[string]string, logCtx log.Entry) error {
+func (store *MemSQL) PullKPIKeyUserGroupInfo(projectID int64, kpiKeyGroupUserIDList []string, _groupIDUserKey string, kpiData *map[string]model.KPIInfo, groupUserIDToKpiID *map[string]string, logCtx log.Entry) error {
 	// Pulling user ID for each KPI ID i.e. associated users with each KPI ID i.e. DealID or OppID - kpiIDToCoalUsers
 
 	kpiKeysGroupUserIdPlaceHolder := U.GetValuePlaceHolder(len(kpiKeyGroupUserIDList))
@@ -314,7 +316,7 @@ func (store *MemSQL) PullKPIKeyUserGroupInfo(projectID uint64, kpiKeyGroupUserID
 	return nil
 }
 
-func (store *MemSQL) PullAllUsersByCustomerUserID(projectID uint64, kpiData *map[string]model.KPIInfo, logCtx log.Entry) error {
+func (store *MemSQL) PullAllUsersByCustomerUserID(projectID int64, kpiData *map[string]model.KPIInfo, logCtx log.Entry) error {
 	// Pulling user ID for each KPI ID i.e. associated users with each KPI ID i.e. DealID or OppID - kpiIDToCoalUsers
 
 	var customerUserIdList []string
@@ -393,7 +395,7 @@ func (store *MemSQL) PullAllUsersByCustomerUserID(projectID uint64, kpiData *map
 	return nil
 }
 
-func (store *MemSQL) FireAttributionForKPI(projectID uint64, query *model.AttributionQuery,
+func (store *MemSQL) FireAttributionForKPI(projectID int64, query *model.AttributionQuery,
 	sessions map[string]map[string]model.UserSessionData,
 	kpiData map[string]model.KPIInfo,
 	sessionWT map[string][]float64, logCtx log.Entry) (*map[string]*model.AttributionData, bool, error) {
@@ -426,7 +428,7 @@ func (store *MemSQL) FireAttributionForKPI(projectID uint64, query *model.Attrib
 	return attributionData, isCompare, err
 }
 
-func (store *MemSQL) runAttributionKPI(projectID uint64,
+func (store *MemSQL) runAttributionKPI(projectID int64,
 	conversionFrom, conversionTo int64,
 	query *model.AttributionQuery,
 	sessions map[string]map[string]model.UserSessionData,
@@ -456,7 +458,7 @@ func (store *MemSQL) runAttributionKPI(projectID uint64,
 	return &attributionData, nil
 }
 
-func (store *MemSQL) RunAttributionForMethodologyComparisonKpi(projectID uint64,
+func (store *MemSQL) RunAttributionForMethodologyComparisonKpi(projectID int64,
 	conversionFrom, conversionTo int64, query *model.AttributionQuery,
 	sessions map[string]map[string]model.UserSessionData,
 	kpiData map[string]model.KPIInfo,

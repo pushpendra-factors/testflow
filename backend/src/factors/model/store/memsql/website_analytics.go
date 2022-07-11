@@ -31,7 +31,7 @@ const (
 
 type WebAnalyticsEvent struct {
 	ID         string
-	ProjectID  uint64
+	ProjectID  int64
 	UserID     string // coalsced user_id
 	IsSession  bool
 	SessionID  string
@@ -101,12 +101,12 @@ type WebAnalyticsAggregate struct {
 	ChannelAggregates map[string]*WebAnalyticsChannelAggregate
 }
 
-func getWebAnalyticsEnabledProjectIDs() ([]uint64, int) {
+func getWebAnalyticsEnabledProjectIDs() ([]int64, int) {
 
 	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 	db := C.GetServices().Db
 
-	var projectIDs []uint64
+	var projectIDs []int64
 	rows, err := db.Raw("SELECT distinct(project_id) FROM dashboards WHERE name = ?",
 		model.DefaultDashboardWebsiteAnalytics).Rows()
 	if err != nil {
@@ -116,7 +116,7 @@ func getWebAnalyticsEnabledProjectIDs() ([]uint64, int) {
 	defer rows.Close()
 
 	for rows.Next() {
-		var projectID uint64
+		var projectID int64
 		if err := rows.Scan(&projectID); err != nil {
 			log.WithError(err).Error("Error scanning web analytics enabled project ids")
 			return projectIDs, http.StatusInternalServerError
@@ -130,7 +130,7 @@ func getWebAnalyticsEnabledProjectIDs() ([]uint64, int) {
 	return projectIDs, http.StatusFound
 }
 
-func (store *MemSQL) GetWebAnalyticsQueriesFromDashboardUnits(projectID uint64) (int64, *model.WebAnalyticsQueries, int) {
+func (store *MemSQL) GetWebAnalyticsQueriesFromDashboardUnits(projectID int64) (int64, *model.WebAnalyticsQueries, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
@@ -244,7 +244,7 @@ func getQueryForNamedQueryUnit(class, queryName string) (*postgres.Jsonb, error)
 		Type: QueryTypeNamed, QueryName: queryName})
 }
 
-func (store *MemSQL) addWebAnalyticsDefaultDashboardUnits(projectId uint64,
+func (store *MemSQL) addWebAnalyticsDefaultDashboardUnits(projectId int64,
 	agentUUID string, dashboardId int64) int {
 	logFields := log.Fields{
 		"project_id":   projectId,
@@ -299,7 +299,7 @@ func (store *MemSQL) addWebAnalyticsDefaultDashboardUnits(projectId uint64,
 	return http.StatusCreated
 }
 
-func (store *MemSQL) CreateWebAnalyticsDefaultDashboardWithUnits(projectId uint64, agentUUID string) int {
+func (store *MemSQL) CreateWebAnalyticsDefaultDashboardWithUnits(projectId int64, agentUUID string) int {
 	logFields := log.Fields{
 		"project_id": projectId,
 		"agent_uuid": agentUUID,
@@ -1185,7 +1185,7 @@ func getResultForCustomGroupQuery(
 }
 
 // ExecuteWebAnalyticsQueries - executes the web analytics query and returns result by query_name.
-func (store *MemSQL) ExecuteWebAnalyticsQueries(projectId uint64, queries *model.WebAnalyticsQueries) (
+func (store *MemSQL) ExecuteWebAnalyticsQueries(projectId int64, queries *model.WebAnalyticsQueries) (
 	queryResult *model.WebAnalyticsQueryResult, errCode int) {
 	logFields := log.Fields{
 		"project_id": projectId,
@@ -1320,7 +1320,7 @@ func (store *MemSQL) ExecuteWebAnalyticsQueries(projectId uint64, queries *model
 	var rowCount int
 	for rows.Next() {
 		var id string
-		var projectID uint64
+		var projectID int64
 		var timestamp int64
 		var userID string
 		var sessionID sql.NullString
@@ -1450,7 +1450,7 @@ func (store *MemSQL) ExecuteWebAnalyticsQueries(projectId uint64, queries *model
 }
 
 // GetWebAnalyticsCachePayloadsForProject Returns web analytics cache payloads with date range and queries.
-func (store *MemSQL) GetWebAnalyticsCachePayloadsForProject(projectID uint64) ([]model.WebAnalyticsCachePayload, int, string) {
+func (store *MemSQL) GetWebAnalyticsCachePayloadsForProject(projectID int64) ([]model.WebAnalyticsCachePayload, int, string) {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
@@ -1485,7 +1485,7 @@ func (store *MemSQL) GetWebAnalyticsCachePayloadsForProject(projectID uint64) ([
 	return cachePayloads, http.StatusFound, ""
 }
 
-func (store *MemSQL) cacheWebsiteAnalyticsForProjectID(projectID uint64, waitGroup *sync.WaitGroup, reportCollector *sync.Map) {
+func (store *MemSQL) cacheWebsiteAnalyticsForProjectID(projectID int64, waitGroup *sync.WaitGroup, reportCollector *sync.Map) {
 	logFields := log.Fields{
 		"project_id":       projectID,
 		"wait_group":       waitGroup,
@@ -1604,7 +1604,7 @@ func (store *MemSQL) cacheWebsiteAnalyticsForDateRange(cachePayload model.WebAna
 }
 
 // GetWebAnalyticsEnabledProjectIDsFromList Returns only project ids for which web analytics is enabled.
-func (store *MemSQL) GetWebAnalyticsEnabledProjectIDsFromList(stringProjectIDs, excludeProjectIDs string) []uint64 {
+func (store *MemSQL) GetWebAnalyticsEnabledProjectIDsFromList(stringProjectIDs, excludeProjectIDs string) []int64 {
 	logFields := log.Fields{
 		"string_project_ids":  stringProjectIDs,
 		"exclude_project_ids": excludeProjectIDs,
@@ -1613,10 +1613,10 @@ func (store *MemSQL) GetWebAnalyticsEnabledProjectIDsFromList(stringProjectIDs, 
 	allProjects, projectIDsMap, excludeProjectIDsMap := C.GetProjectsFromListWithAllProjectSupport(stringProjectIDs, excludeProjectIDs)
 	allWebAnalyticsProjectIDs, errCode := getWebAnalyticsEnabledProjectIDs()
 	if errCode != http.StatusFound {
-		return []uint64{}
+		return []int64{}
 	}
 
-	var projectIDs []uint64
+	var projectIDs []int64
 	if allProjects {
 		projectIDs = allWebAnalyticsProjectIDs
 	} else {
@@ -1624,10 +1624,10 @@ func (store *MemSQL) GetWebAnalyticsEnabledProjectIDsFromList(stringProjectIDs, 
 	}
 
 	// Add only those projects for which website analytics is enabled. Exclude marked ones.
-	var projectIDsToRun []uint64
+	var projectIDsToRun []int64
 	for _, projectID := range projectIDs {
 		_, shouldExclude := excludeProjectIDsMap[projectID]
-		if U.Uint64ValueIn(projectID, allWebAnalyticsProjectIDs) && !shouldExclude {
+		if U.Int64ValueIn(projectID, allWebAnalyticsProjectIDs) && !shouldExclude {
 			projectIDsToRun = append(projectIDsToRun, projectID)
 		}
 	}

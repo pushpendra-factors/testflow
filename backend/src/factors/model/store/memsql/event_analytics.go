@@ -26,7 +26,7 @@ type ResultGroup struct {
 	Results []model.QueryResult `json:"result_group"`
 }
 
-func (store *MemSQL) RunEventsGroupQuery(queriesOriginal []model.Query, projectId uint64) (model.ResultGroup, int) {
+func (store *MemSQL) RunEventsGroupQuery(queriesOriginal []model.Query, projectId int64) (model.ResultGroup, int) {
 	logFields := log.Fields{
 		"queries_original": queriesOriginal,
 		"project_id":       projectId,
@@ -59,7 +59,7 @@ func (store *MemSQL) RunEventsGroupQuery(queriesOriginal []model.Query, projectI
 	return resultGroup, http.StatusOK
 }
 
-func (store *MemSQL) runSingleEventsQuery(projectId uint64, query model.Query,
+func (store *MemSQL) runSingleEventsQuery(projectId int64, query model.Query,
 	resultHolder *model.QueryResult, waitGroup *sync.WaitGroup) {
 	logFields := log.Fields{
 		"query":      query,
@@ -79,7 +79,7 @@ func (store *MemSQL) runSingleEventsQuery(projectId uint64, query model.Query,
 	return
 }
 
-func (store *MemSQL) ExecuteEventsQuery(projectId uint64, query model.Query) (*model.QueryResult, int, string) {
+func (store *MemSQL) ExecuteEventsQuery(projectId int64, query model.Query) (*model.QueryResult, int, string) {
 	logFields := log.Fields{
 		"query":      query,
 		"project_id": projectId,
@@ -92,7 +92,7 @@ func (store *MemSQL) ExecuteEventsQuery(projectId uint64, query model.Query) (*m
 	return store.RunInsightsQuery(projectId, query)
 }
 
-func (store *MemSQL) fillEventNameIDs(projectID uint64, query *model.Query) {
+func (store *MemSQL) fillEventNameIDs(projectID int64, query *model.Query) {
 	logFields := log.Fields{
 		"query":      query,
 		"project_id": projectID,
@@ -114,7 +114,7 @@ func (store *MemSQL) fillEventNameIDs(projectID uint64, query *model.Query) {
 
 }
 
-func (store *MemSQL) RunInsightsQuery(projectId uint64, query model.Query) (*model.QueryResult, int, string) {
+func (store *MemSQL) RunInsightsQuery(projectId int64, query model.Query) (*model.QueryResult, int, string) {
 	logFields := log.Fields{
 		"query":      query,
 		"project_id": projectId,
@@ -493,7 +493,7 @@ func addEventMetricsMetaToQueryResult(result *model.QueryResult) {
 }
 
 // BuildInsightsQuery - Dispatches corresponding build method for insights.
-func (store *MemSQL) BuildInsightsQuery(projectId uint64, query model.Query) (string, []interface{}, error) {
+func (store *MemSQL) BuildInsightsQuery(projectId int64, query model.Query) (string, []interface{}, error) {
 	logFields := log.Fields{
 		"query":      query,
 		"project_id": projectId,
@@ -888,7 +888,7 @@ step1 AS (
 )
 */
 
-func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID uint64, q *model.Query,
+func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *model.Query,
 	qStmnt *string, qParams *[]interface{}) ([]string, map[string][]string) {
 	logFields := log.Fields{
 		"project_id": projectID,
@@ -1010,7 +1010,7 @@ LEFT JOIN users ON users_union.event_user_id=users.id
 LEFT JOIN user_properties ON users.id=user_properties.user_id and user_properties.id=users.properties_id
 GROUP BY gk_0, gk_1 ORDER BY count DESC LIMIT 10000;
 */
-func addUniqueUsersAggregationQuery(projectID uint64, query *model.Query, qStmnt *string,
+func addUniqueUsersAggregationQuery(projectID int64, query *model.Query, qStmnt *string,
 	qParams *[]interface{}, refStep string) {
 	logFields := log.Fields{
 		"project_id": projectID,
@@ -1175,7 +1175,7 @@ WITH
     group by group_prop1, group_prop2 order by group_prop2;
 */
 
-func buildEventsOccurrenceSingleEventQuery(projectId uint64, q model.Query) (string, []interface{}, error) {
+func buildEventsOccurrenceSingleEventQuery(projectId int64, q model.Query) (string, []interface{}, error) {
 	logFields := log.Fields{
 		"project_id": projectId,
 		"q":          q,
@@ -1308,7 +1308,7 @@ SELECT datetime, event_name, _group_key_0, _group_key_1, _group_key_2, _group_ke
 COUNT(DISTINCT(event_user_id)) AS count FROM each_users_union GROUP BY event_name, _group_key_0,
 _group_key_1, _group_key_2, _group_key_3, _group_key_4, datetime ORDER BY count DESC LIMIT 100000
 */
-func (store *MemSQL) buildUniqueUsersWithEachGivenEventsQuery(projectID uint64,
+func (store *MemSQL) buildUniqueUsersWithEachGivenEventsQuery(projectID int64,
 	query model.Query) (string, []interface{}, error) {
 
 	logFields := log.Fields{
@@ -1487,7 +1487,7 @@ SELECT date, COUNT(DISTINCT(COALESCE(users.customer_user_id, event_user_id))) AS
 LEFT JOIN users ON users_intersect.event_user_id=users.id GROUP BY date ORDER BY count DESC LIMIT 100000;
 
 */
-func (store *MemSQL) buildUniqueUsersWithAllGivenEventsQuery(projectID uint64,
+func (store *MemSQL) buildUniqueUsersWithAllGivenEventsQuery(projectID int64,
 	query model.Query) (string, []interface{}, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
@@ -1625,7 +1625,7 @@ WITH
 	SELECT date, COUNT(DISTINCT(COALESCE(users.customer_user_id, event_user_id))) AS count FROM users_union
 	LEFT JOIN users ON users_union.event_user_id=users.id GROUP BY date ORDER BY count DESC LIMIT 100000;
 */
-func (store *MemSQL) buildUniqueUsersWithAnyGivenEventsQuery(projectID uint64,
+func (store *MemSQL) buildUniqueUsersWithAnyGivenEventsQuery(projectID int64,
 	query model.Query) (string, []interface{}, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
@@ -1706,7 +1706,7 @@ SELECT COALESCE(NULLIF(concat(round(min(_group_key_0::numeric), 1), ' - ', round
 _group_key_1,  COUNT(DISTINCT(event_user_id)) AS count FROM bucketed GROUP BY _group_key_0_bucket, _group_key_1
 ORDER BY _group_key_0_bucket LIMIT 100000
 */
-func (store *MemSQL) buildUniqueUsersSingleEventQuery(projectID uint64,
+func (store *MemSQL) buildUniqueUsersSingleEventQuery(projectID int64,
 	query model.Query) (string, []interface{}, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
@@ -1784,7 +1784,7 @@ _group_key_1, COALESCE(NULLIF(concat(round(min(_group_key_2::numeric), 1), ' - '
 COUNT(*) AS count FROM bucketed GROUP BY _group_key_0_bucket, _group_key_1, _group_key_2_bucket, event_name ORDER BY event_name,
 _group_key_0_bucket, _group_key_2_bucket, count DESC LIMIT 100000
 */
-func buildEventsOccurrenceWithGivenEventQuery(projectID uint64,
+func buildEventsOccurrenceWithGivenEventQuery(projectID int64,
 	q model.Query) (string, []interface{}, error) {
 
 	logFields := log.Fields{
@@ -1992,7 +1992,7 @@ SELECT datetime, event_name, _group_key_0, _group_key_1, _group_key_2, _group_ke
 COUNT(event_id) AS count FROM each_users_union GROUP BY event_name, _group_key_0, _group_key_1,
 _group_key_2, _group_key_3, _group_key_4, datetime ORDER BY count DESC LIMIT 100000
 */
-func buildEventCountForEachGivenEventsQueryNEW(projectID uint64,
+func buildEventCountForEachGivenEventsQueryNEW(projectID int64,
 	query model.Query) (string, []interface{}, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
@@ -2098,7 +2098,7 @@ events.event_name_id IN (SELECT id FROM step_1_names WHERE project_id='204' AND 
 AND ( events.properties->>'$source' = 'google' AND user_properties.properties->>'$country' = 'India' )
 ORDER BY event_id, _group_key_2, events.timestamp ASC),
 */
-func addEventFilterStepsForEventCountQuery(projectID uint64, q *model.Query,
+func addEventFilterStepsForEventCountQuery(projectID int64, q *model.Query,
 	qStmnt *string, qParams *[]interface{}) ([]string, map[string][]string, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
@@ -2220,7 +2220,7 @@ COUNT(event_id) AS count FROM each_users_union GROUP BY event_name, _group_key_0
 _group_key_2, _group_key_3, _group_key_4, datetime ORDER BY count DESC LIMIT 100000
 
 */
-func addEventCountAggregationQuery(projectID uint64, query *model.Query, qStmnt *string,
+func addEventCountAggregationQuery(projectID int64, query *model.Query, qStmnt *string,
 	qParams *[]interface{}, refStep string) {
 	logFields := log.Fields{
 		"project_id": projectID,
@@ -2328,7 +2328,7 @@ func addEventCountAggregationQuery(projectID uint64, query *model.Query, qStmnt 
 }
 
 // builds group keys for event properties for given step (event_with_properties).
-func buildGroupKeyForStep(projectID uint64, eventWithProperties *model.QueryEventWithProperties,
+func buildGroupKeyForStep(projectID int64, eventWithProperties *model.QueryEventWithProperties,
 	groupProps []model.QueryGroupByProperty, ewpIndex int, timezoneString string) (string, []interface{}, string, bool) {
 	logFields := log.Fields{
 		"project_id":            projectID,

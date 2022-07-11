@@ -252,7 +252,7 @@ func TestDataAvailability(t *testing.T) {
 	_, errs := store.GetStore().GetLatestDataStatus([]string{"xyz"}, project.ID, false)
 	assert.NotEqual(t, errs, nil)
 
-	isAvailable := store.GetStore().IsDataAvailable(project.ID, model.HUBSPOT, 1654144936)
+	isAvailable := store.GetStore().IsDataAvailable(project.ID, model.HUBSPOT, uint64(U.TimeNowUnix())+uint64(1000000))
 	assert.Equal(t, isAvailable, false)
 	isAvailable = store.GetStore().IsDataAvailable(project.ID, model.HUBSPOT, 1653088333)
 	assert.Equal(t, isAvailable, true)

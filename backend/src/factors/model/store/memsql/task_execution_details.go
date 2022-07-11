@@ -20,9 +20,9 @@ import (
 )
 
 // Given a startdate till now what are all date/hours have the job been completed for
-func (store *MemSQL) GetAllProcessedIntervalsFromStartDate(taskID uint64, projectId uint64, startDate *time.Time) ([]uint64, int, string) {
+func (store *MemSQL) GetAllProcessedIntervalsFromStartDate(taskID uint64, projectId int64, startDate *time.Time) ([]uint64, int, string) {
 	logFields := log.Fields{
-		"task_id": taskID,
+		"task_id":    taskID,
 		"project_id": projectId,
 		"start_data": startDate,
 	}
@@ -77,11 +77,11 @@ func (store *MemSQL) GetAllProcessedIntervalsFromStartDate(taskID uint64, projec
 }
 
 // Given a enddate and lookback what are all date/hours have the job been completed for
-func (store *MemSQL) GetAllProcessedIntervals(taskID uint64, projectId uint64, lookbackInDays int, endDate *time.Time) ([]uint64, int, string) {
+func (store *MemSQL) GetAllProcessedIntervals(taskID uint64, projectId int64, lookbackInDays int, endDate *time.Time) ([]uint64, int, string) {
 	logFields := log.Fields{
-		"task_id": taskID,
-		"project_id": projectId,
-		"end_data": endDate,
+		"task_id":          taskID,
+		"project_id":       projectId,
+		"end_data":         endDate,
 		"lookback_in_days": lookbackInDays,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -135,11 +135,11 @@ func (store *MemSQL) GetAllProcessedIntervals(taskID uint64, projectId uint64, l
 }
 
 // Get all the date/hours which is in progress state
-func (store *MemSQL) GetAllInProgressIntervals(taskID uint64, projectId uint64, lookbackInDays int, endDate *time.Time) ([]uint64, int, string) {
+func (store *MemSQL) GetAllInProgressIntervals(taskID uint64, projectId int64, lookbackInDays int, endDate *time.Time) ([]uint64, int, string) {
 	logFields := log.Fields{
-		"task_id": taskID,
-		"project_id": projectId,
-		"end_data": endDate,
+		"task_id":          taskID,
+		"project_id":       projectId,
+		"end_data":         endDate,
 		"lookback_in_days": lookbackInDays,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -194,11 +194,11 @@ func (store *MemSQL) GetAllInProgressIntervals(taskID uint64, projectId uint64, 
 }
 
 // Insert a record before starting execution
-func (store *MemSQL) InsertTaskBeginRecord(taskId uint64, projectId uint64, delta uint64) (int, string) {
+func (store *MemSQL) InsertTaskBeginRecord(taskId uint64, projectId int64, delta uint64) (int, string) {
 	logFields := log.Fields{
-		"task_id": taskId,
+		"task_id":    taskId,
 		"project_id": projectId,
-		"delta": delta,
+		"delta":      delta,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	// THROW CONFLICT ERROR IT ITS A DUPLICATE ENTRY
@@ -253,11 +253,11 @@ func (store *MemSQL) InsertTaskBeginRecord(taskId uint64, projectId uint64, delt
 }
 
 // Insert a record after execution
-func (store *MemSQL) InsertTaskEndRecord(taskId uint64, projectId uint64, delta uint64) (int, string) {
+func (store *MemSQL) InsertTaskEndRecord(taskId uint64, projectId int64, delta uint64) (int, string) {
 	logFields := log.Fields{
-		"task_id": taskId,
+		"task_id":    taskId,
 		"project_id": projectId,
-		"delta": delta,
+		"delta":      delta,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	// THROW CONFLICT ERROR IT ITS A DUPLICATE ENTRY
@@ -300,11 +300,11 @@ func (store *MemSQL) InsertTaskEndRecord(taskId uint64, projectId uint64, delta 
 }
 
 // Delete a record if failed execution
-func (store *MemSQL) DeleteTaskEndRecord(taskId uint64, projectId uint64, delta uint64) (int, string) {
+func (store *MemSQL) DeleteTaskEndRecord(taskId uint64, projectId int64, delta uint64) (int, string) {
 	logFields := log.Fields{
-		"task_id": taskId,
+		"task_id":    taskId,
 		"project_id": projectId,
-		"delta": delta,
+		"delta":      delta,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	// THROW CONFLICT ERROR IT ITS A DUPLICATE ENTRY
@@ -347,9 +347,9 @@ func (store *MemSQL) DeleteTaskEndRecord(taskId uint64, projectId uint64, delta 
 // Get All the execution date/hour in the given range
 func (store *MemSQL) GetAllDeltasByConfiguration(taskID uint64, lookbackInDays int, endDate *time.Time) ([]uint64, int, string) {
 	logFields := log.Fields{
-		"task_id": taskID,
+		"task_id":          taskID,
 		"lookback_in_days": lookbackInDays,
-		"end_date": endDate,
+		"end_date":         endDate,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
@@ -491,11 +491,11 @@ func (store *MemSQL) GetAllDeltasByConfiguration(taskID uint64, lookbackInDays i
 // TODO: JANANI tasks with same frequency but different offset. how to handle that? - May be avoid adding such dependencies
 // avoid adding offsets for stateless
 // To check if all the dependent jobs for a give date/hour range is done
-func (store *MemSQL) IsDependentTaskDone(taskId uint64, projectId uint64, delta uint64) bool {
+func (store *MemSQL) IsDependentTaskDone(taskId uint64, projectId int64, delta uint64) bool {
 	logFields := log.Fields{
-		"task_id": taskId,
+		"task_id":    taskId,
 		"project_id": projectId,
-		"delta": delta,
+		"delta":      delta,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	dependentTaskOffsetMap := make(map[uint64]int, 0)
@@ -699,12 +699,12 @@ func (store *MemSQL) IsDependentTaskDone(taskId uint64, projectId uint64, delta 
 }
 
 // Get All the date/time range that are yet to be executed
-func (store *MemSQL) GetAllToBeExecutedDeltas(taskId uint64, projectId uint64, lookbackInDays int, endDate *time.Time) ([]uint64, int, string) {
+func (store *MemSQL) GetAllToBeExecutedDeltas(taskId uint64, projectId int64, lookbackInDays int, endDate *time.Time) ([]uint64, int, string) {
 	logFields := log.Fields{
-		"task_id": taskId,
+		"task_id":          taskId,
 		"lookback_in_days": lookbackInDays,
-		"end_date": endDate,
-		"project_id": projectId,
+		"end_date":         endDate,
+		"project_id":       projectId,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if endDate == nil {
@@ -737,7 +737,7 @@ func (store *MemSQL) GetAllToBeExecutedDeltas(taskId uint64, projectId uint64, l
 func isAnyHigherDeltaPresent(processedDeltas []uint64, baseDelta uint64) bool {
 	logFields := log.Fields{
 		"processed_deltas": processedDeltas,
-		"base_delta": baseDelta,
+		"base_delta":       baseDelta,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	for _, delta := range processedDeltas {
@@ -750,7 +750,7 @@ func isAnyHigherDeltaPresent(processedDeltas []uint64, baseDelta uint64) bool {
 
 func isAllDeltaPresent(processedDeltas []uint64, configuredDeltas []uint64) bool {
 	logFields := log.Fields{
-		"processed_deltas": processedDeltas,
+		"processed_deltas":  processedDeltas,
 		"configured_deltas": configuredDeltas,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -778,7 +778,7 @@ func getDeltaAsTime(delta uint64) time.Time {
 func arrayContains(arraySlice []int, value int) bool {
 	logFields := log.Fields{
 		"array_slice": arraySlice,
-		"value": value,
+		"value":       value,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	for _, element := range arraySlice {
@@ -792,7 +792,7 @@ func arrayContains(arraySlice []int, value int) bool {
 func arrayUint64Contains(arraySlice []uint64, value uint64) bool {
 	logFields := log.Fields{
 		"array_slice": arraySlice,
-		"value": value,
+		"value":       value,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	for _, element := range arraySlice {

@@ -29,7 +29,7 @@ func GetWeeklyInsightsMetadata(c *gin.Context) (interface{}, int, string, string
 	// Check if weekly insights is enabled
 	// Merge the results
 
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return nil, http.StatusBadRequest, INVALID_PROJECT, "", true

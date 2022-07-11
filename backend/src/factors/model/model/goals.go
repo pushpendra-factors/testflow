@@ -9,7 +9,7 @@ import (
 // FactorsGoal - DB model for table - goals
 type FactorsGoal struct {
 	ID            uint64         `gorm:"primary_key:true;" json:"id"`
-	ProjectID     uint64         `json:"project_id"`
+	ProjectID     int64          `json:"project_id"`
 	Name          string         `json:"name"`
 	Rule          postgres.Jsonb `json:"rule,omitempty"`
 	Type          string         `gorm:"not null;type:varchar(2)" json:"type"`

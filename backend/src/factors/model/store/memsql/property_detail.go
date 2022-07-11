@@ -27,11 +27,11 @@ func (store *MemSQL) satisfiesPropertyDetailForeignConstraints(propertyDetail mo
 }
 
 // GetPropertyTypeFromDB returns property type by key
-func (store *MemSQL) GetPropertyTypeFromDB(projectID uint64, eventName, propertyKey string, isUserProperty bool) (int, *model.PropertyDetail) {
+func (store *MemSQL) GetPropertyTypeFromDB(projectID int64, eventName, propertyKey string, isUserProperty bool) (int, *model.PropertyDetail) {
 	logFields := log.Fields{
-		"project_id": projectID,
-		"event_name": eventName,
-		"property_key": propertyKey,
+		"project_id":       projectID,
+		"event_name":       eventName,
+		"property_key":     propertyKey,
 		"is_user_property": isUserProperty,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -91,12 +91,12 @@ func (store *MemSQL) GetPropertyTypeFromDB(projectID uint64, eventName, property
 }
 
 // CreatePropertyDetails create configured property by user or event level. Poperty type will be overwrite if allowOverWrite is true
-func (store *MemSQL) CreatePropertyDetails(projectID uint64, eventName, propertyKey, propertyType string, isUserProperty bool, allowOverWrite bool) int {
+func (store *MemSQL) CreatePropertyDetails(projectID int64, eventName, propertyKey, propertyType string, isUserProperty bool, allowOverWrite bool) int {
 	logFields := log.Fields{
-		"project_id": projectID,
-		"event_name": eventName,
-		"property_key": propertyKey,
-		"property_type": propertyType,
+		"project_id":       projectID,
+		"event_name":       eventName,
+		"property_key":     propertyKey,
+		"property_type":    propertyType,
 		"allow_over_write": allowOverWrite,
 		"is_user_property": isUserProperty,
 	}
@@ -173,11 +173,11 @@ func (store *MemSQL) CreatePropertyDetails(projectID uint64, eventName, property
 }
 
 // getPreConfiguredPropertyTypeByName returns if property is configured and property type from cache or DB. Only returns datetime, numerical or unknown.
-func (store *MemSQL) getPreConfiguredPropertyTypeByName(projectID uint64, eventName, propertyKey string, isUserProperty bool) (bool, string) {
+func (store *MemSQL) getPreConfiguredPropertyTypeByName(projectID int64, eventName, propertyKey string, isUserProperty bool) (bool, string) {
 	logFields := log.Fields{
-		"project_id": projectID,
-		"event_name": eventName,
-		"property_key": propertyKey,
+		"project_id":       projectID,
+		"event_name":       eventName,
+		"property_key":     propertyKey,
 		"is_user_property": isUserProperty,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -219,12 +219,12 @@ func (store *MemSQL) getPreConfiguredPropertyTypeByName(projectID uint64, eventN
 }
 
 // GetPropertyTypeByKeyValue returns property type by key, prioritize preconfigured type or uses type casting
-func (store *MemSQL) GetPropertyTypeByKeyValue(projectID uint64, eventName string, propertyKey string, propertyValue interface{}, isUserProperty bool) string {
+func (store *MemSQL) GetPropertyTypeByKeyValue(projectID int64, eventName string, propertyKey string, propertyValue interface{}, isUserProperty bool) string {
 	logFields := log.Fields{
-		"project_id": projectID,
-		"event_name": eventName,
-		"property_key": propertyKey,
-		"property_value": propertyValue,
+		"project_id":       projectID,
+		"event_name":       eventName,
+		"property_key":     propertyKey,
+		"property_value":   propertyValue,
 		"is_user_property": isUserProperty,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -286,12 +286,12 @@ func (store *MemSQL) GetPropertyTypeByKeyValue(projectID uint64, eventName strin
 CreateOrDeletePropertyDetails creates or delete property details by type.
 WARNING Unkown type would be deleted from DB is existed
 */
-func (store *MemSQL) CreateOrDeletePropertyDetails(projectID uint64, eventName, enKey, pType string, isUserProperty, allowOverWrite bool) error {
+func (store *MemSQL) CreateOrDeletePropertyDetails(projectID int64, eventName, enKey, pType string, isUserProperty, allowOverWrite bool) error {
 	logFields := log.Fields{
-		"project_id": projectID,
-		"event_name": eventName,
-		"en_key": enKey,
-		"p_type": pType,
+		"project_id":       projectID,
+		"event_name":       eventName,
+		"en_key":           enKey,
+		"p_type":           pType,
 		"allow_over_write": allowOverWrite,
 		"is_user_property": isUserProperty,
 	}
@@ -323,11 +323,11 @@ func (store *MemSQL) CreateOrDeletePropertyDetails(projectID uint64, eventName, 
 }
 
 // deletePropertyDetailsIfExist delete property details by event_name_id or user_property if exists
-func (store *MemSQL) deletePropertyDetailsIfExist(projectID uint64, eventName, key string, isUserProperty bool) int {
+func (store *MemSQL) deletePropertyDetailsIfExist(projectID int64, eventName, key string, isUserProperty bool) int {
 	logFields := log.Fields{
-		"project_id": projectID,
-		"event_name": eventName,
-		"key": key,
+		"project_id":       projectID,
+		"event_name":       eventName,
+		"key":              key,
 		"is_user_property": isUserProperty,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -366,13 +366,13 @@ func (store *MemSQL) deletePropertyDetailsIfExist(projectID uint64, eventName, k
 }
 
 // updatePropertyDetails updates property details by event_name_id or user_property
-func (store *MemSQL) updatePropertyDetails(projectID uint64, eventNameID string, key, propertyType string, entity int, newPropertyType string) int {
+func (store *MemSQL) updatePropertyDetails(projectID int64, eventNameID string, key, propertyType string, entity int, newPropertyType string) int {
 	logFields := log.Fields{
-		"project_id": projectID,
-		"event_name_id": eventNameID,
-		"key": key,
-		"property_type": propertyType,
-		"entity": entity,
+		"project_id":        projectID,
+		"event_name_id":     eventNameID,
+		"key":               key,
+		"property_type":     propertyType,
+		"entity":            entity,
 		"new_property_type": newPropertyType,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -415,9 +415,9 @@ func (store *MemSQL) updatePropertyDetails(projectID uint64, eventNameID string,
 	return http.StatusAccepted
 }
 
-func (store *MemSQL) getPropertyDetailsForSmartEventName(projectID uint64, eventNameDetails *model.EventName) (*map[string]string, int) {
+func (store *MemSQL) getPropertyDetailsForSmartEventName(projectID int64, eventNameDetails *model.EventName) (*map[string]string, int) {
 	logFields := log.Fields{
-		"project_id": projectID,
+		"project_id":         projectID,
 		"event_name_details": eventNameDetails,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -494,10 +494,10 @@ func (store *MemSQL) getPropertyDetailsForSmartEventName(projectID uint64, event
 }
 
 // GetAllPropertyDetailsByProjectID returns all property details by event_name or user_property
-func (store *MemSQL) GetAllPropertyDetailsByProjectID(projectID uint64, eventName string, isUserProperty bool) (*map[string]string, int) {
+func (store *MemSQL) GetAllPropertyDetailsByProjectID(projectID int64, eventName string, isUserProperty bool) (*map[string]string, int) {
 	logFields := log.Fields{
-		"project_id": projectID,
-		"event_name": eventName,
+		"project_id":       projectID,
+		"event_name":       eventName,
 		"is_user_property": isUserProperty,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)

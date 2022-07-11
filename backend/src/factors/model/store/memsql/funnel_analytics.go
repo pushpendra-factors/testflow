@@ -18,7 +18,7 @@ const (
 	MetaStepTimeInfo = "MetaStepTimeInfo"
 )
 
-func (store *MemSQL) RunFunnelQuery(projectId uint64, query model.Query) (*model.QueryResult, int, string) {
+func (store *MemSQL) RunFunnelQuery(projectId int64, query model.Query) (*model.QueryResult, int, string) {
 	logFields := log.Fields{
 		"project_id": projectId,
 		"query":      query,
@@ -233,7 +233,7 @@ func addStepTimeToMeta(result *model.QueryResult, logCtx *log.Entry) error {
 	return nil
 }
 
-func BuildFunnelQuery(projectId uint64, query model.Query, groupIds []int) (string, []interface{}, error) {
+func BuildFunnelQuery(projectId int64, query model.Query, groupIds []int) (string, []interface{}, error) {
 	logFields := log.Fields{
 		"project_id": projectId,
 		"query":      query,
@@ -650,7 +650,7 @@ funnel UNION ALL SELECT * FROM ( SELECT _group_key_0, COALESCE(NULLIF(concat(rou
 ' - ', round(max(_group_key_1::numeric), 1)), 'NaN - NaN'), '$none') AS _group_key_1, SUM(step_0) AS step_0,
 SUM(step_1) AS step_1 FROM bucketed GROUP BY _group_key_0, _group_key_1_bucket ORDER BY _group_key_1_bucket LIMIT 100 ) AS group_funnel
 */
-func buildUniqueUsersFunnelQuery(projectId uint64, q model.Query, groupIds []int) (string, []interface{}, error) {
+func buildUniqueUsersFunnelQuery(projectId int64, q model.Query, groupIds []int) (string, []interface{}, error) {
 	logFields := log.Fields{
 		"project_id": projectId,
 		"q":          q,
@@ -889,7 +889,7 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q model.Query, groupIds []int
 
 // buildGroupKeyForStep moved to memsql/event_analytics.go
 
-func buildGroupKeyForStepForFunnel(projectID uint64, eventWithProperties *model.QueryEventWithProperties,
+func buildGroupKeyForStepForFunnel(projectID int64, eventWithProperties *model.QueryEventWithProperties,
 	groupProps []model.QueryGroupByProperty, ewpIndex int, timezoneString string) (string, []interface{}, string, bool) {
 	logFields := log.Fields{
 		"project_id":            projectID,

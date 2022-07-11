@@ -11,7 +11,9 @@ import (
 
 // statusCode need to be clear on http.StatusOk or http.StatusAccepted or something else.
 // Below function relies on fact that each query has only one metric.
-func (store *MemSQL) ExecuteKPIQueryGroup(projectID uint64, reqID string, kpiQueryGroup model.KPIQueryGroup) ([]model.QueryResult, int) {
+func (store *MemSQL) ExecuteKPIQueryGroup(projectID int64, reqID string, kpiQueryGroup model.KPIQueryGroup,
+	enableOptimisedFilterOnProfileQuery bool) ([]model.QueryResult, int) {
+
 	var queryResults []model.QueryResult
 	finalStatusCode := http.StatusOK
 	isTimezoneEnabled := false
@@ -27,8 +29,9 @@ func (store *MemSQL) ExecuteKPIQueryGroup(projectID uint64, reqID string, kpiQue
 	for _, query := range kpiQueryGroup.Queries {
 		if query.Category == model.ProfileCategory {
 			if query.GroupByTimestamp != "" {
-				kpiFunction := store.kpiQueryFunctionDeciderBasedOnCategory(query.Category, query)
-				result, statusCode := kpiFunction(projectID, reqID, query)
+				result, statusCode := store.ExecuteKPIQueryForProfiles(projectID, reqID,
+					query, enableOptimisedFilterOnProfileQuery)
+
 				if statusCode != http.StatusOK {
 					finalStatusCode = statusCode
 				}
@@ -37,7 +40,8 @@ func (store *MemSQL) ExecuteKPIQueryGroup(projectID uint64, reqID string, kpiQue
 				query.GroupByTimestamp = ""
 				hashCode, err := query.GetQueryCacheHashString()
 				if err != nil {
-					log.WithField("reqID", reqID).WithField("kpiQueryGroup", kpiQueryGroup).WithField("query", query).Error("Failed while generating hashString for kpi.")
+					log.WithField("reqID", reqID).WithField("kpiQueryGroup", kpiQueryGroup).
+						WithField("query", query).Error("Failed while generating hashString for kpi.")
 				}
 				hashMapOfQueryToResult[hashCode] = result
 			} else {
@@ -45,11 +49,17 @@ func (store *MemSQL) ExecuteKPIQueryGroup(projectID uint64, reqID string, kpiQue
 				queryResults = append(queryResults, result...)
 			}
 		} else {
-			kpiFunction := store.kpiQueryFunctionDeciderBasedOnCategory(query.Category, query)
-			result, statusCode := kpiFunction(projectID, reqID, query)
+			var result []model.QueryResult
+			var statusCode int
+			if query.Category == model.ChannelCategory {
+				result, statusCode = store.ExecuteKPIQueryForChannels(projectID, reqID, query)
+			} else if query.Category == model.EventCategory {
+				result, statusCode = store.ExecuteKPIQueryForEvents(projectID, reqID, query)
+			}
 			if statusCode != http.StatusOK {
 				finalStatusCode = statusCode
 			}
+
 			queryResults = append(queryResults, result...)
 		}
 	}
@@ -85,16 +95,4 @@ func (store *MemSQL) ExecuteKPIQueryGroup(projectID uint64, reqID string, kpiQue
 		finalQueryResult = append(finalQueryResult, nonGbtRelatedMergedResults)
 	}
 	return finalQueryResult, finalStatusCode
-}
-
-func (store *MemSQL) kpiQueryFunctionDeciderBasedOnCategory(category string, query model.KPIQuery) func(uint64, string, model.KPIQuery) ([]model.QueryResult, int) {
-	var result func(uint64, string, model.KPIQuery) ([]model.QueryResult, int)
-	if category == model.ChannelCategory {
-		result = store.ExecuteKPIQueryForChannels
-	} else if category == model.EventCategory {
-		result = store.ExecuteKPIQueryForEvents
-	} else {
-		result = store.ExecuteKPIQueryForProfiles
-	}
-	return result
 }

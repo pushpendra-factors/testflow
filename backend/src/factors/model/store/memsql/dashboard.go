@@ -49,7 +49,7 @@ func isValidDashboard(dashboard *model.Dashboard) bool {
 	return validType
 }
 
-func (store *MemSQL) CreateDashboard(projectId uint64, agentUUID string, dashboard *model.Dashboard) (*model.Dashboard, int) {
+func (store *MemSQL) CreateDashboard(projectId int64, agentUUID string, dashboard *model.Dashboard) (*model.Dashboard, int) {
 	logFields := log.Fields{
 		"dashboard":  dashboard,
 		"project_id": projectId,
@@ -85,7 +85,7 @@ func (store *MemSQL) CreateDashboard(projectId uint64, agentUUID string, dashboa
 	return dashboard, http.StatusCreated
 }
 
-func (store *MemSQL) CreateAgentPersonalDashboardForProject(projectId uint64, agentUUID string) (*model.Dashboard, int) {
+func (store *MemSQL) CreateAgentPersonalDashboardForProject(projectId int64, agentUUID string) (*model.Dashboard, int) {
 	logFields := log.Fields{
 		"project_id": projectId,
 		"agent_uuid": agentUUID,
@@ -98,7 +98,7 @@ func (store *MemSQL) CreateAgentPersonalDashboardForProject(projectId uint64, ag
 		})
 }
 
-func (store *MemSQL) existsDashboardByID(projectID uint64, dashboardID int64) bool {
+func (store *MemSQL) existsDashboardByID(projectID int64, dashboardID int64) bool {
 	logFields := log.Fields{
 		"dashboard_id": dashboardID,
 		"project_id":   projectID,
@@ -120,7 +120,7 @@ func (store *MemSQL) existsDashboardByID(projectID uint64, dashboardID int64) bo
 	return false
 }
 
-func (store *MemSQL) GetDashboards(projectId uint64, agentUUID string) ([]model.Dashboard, int) {
+func (store *MemSQL) GetDashboards(projectId int64, agentUUID string) ([]model.Dashboard, int) {
 	logFields := log.Fields{
 		"project_id": projectId,
 		"agent_uuid": agentUUID,
@@ -144,7 +144,7 @@ func (store *MemSQL) GetDashboards(projectId uint64, agentUUID string) ([]model.
 	return dashboards, http.StatusFound
 }
 
-func (store *MemSQL) GetDashboard(projectId uint64, agentUUID string, id int64) (*model.Dashboard, int) {
+func (store *MemSQL) GetDashboard(projectId int64, agentUUID string, id int64) (*model.Dashboard, int) {
 	logFields := log.Fields{
 		"id":         id,
 		"project_id": projectId,
@@ -176,7 +176,7 @@ func (store *MemSQL) GetDashboard(projectId uint64, agentUUID string, id int64) 
 }
 
 // HasAccessToDashboard validates access to dashboard.
-func (store *MemSQL) HasAccessToDashboard(projectId uint64, agentUUID string, id int64) (bool, *model.Dashboard) {
+func (store *MemSQL) HasAccessToDashboard(projectId int64, agentUUID string, id int64) (bool, *model.Dashboard) {
 	logFields := log.Fields{
 		"id":         id,
 		"project_id": projectId,
@@ -192,7 +192,7 @@ func (store *MemSQL) HasAccessToDashboard(projectId uint64, agentUUID string, id
 }
 
 // Adds a position to the given unit on dashboard by unit_type.
-func (store *MemSQL) addUnitPositionOnDashboard(projectId uint64, agentUUID string,
+func (store *MemSQL) addUnitPositionOnDashboard(projectId int64, agentUUID string,
 	id int64, unitId int64, unitType string, currentUnitsPos *postgres.Jsonb) int {
 	logFields := log.Fields{
 		"id":               id,
@@ -263,7 +263,7 @@ func removeAndRebalanceUnitsPositionByType(positions *map[string]map[int64]int,
 	}
 }
 
-func (store *MemSQL) removeUnitPositionOnDashboard(projectId uint64, agentUUID string,
+func (store *MemSQL) removeUnitPositionOnDashboard(projectId int64, agentUUID string,
 	id int64, unitId int64, currentUnitsPos *postgres.Jsonb) int {
 	logFields := log.Fields{
 		"id":               id,
@@ -344,7 +344,7 @@ func isValidUnitsPosition(positions *map[string]map[int64]int) (bool, error) {
 	return true, nil
 }
 
-func (store *MemSQL) UpdateDashboard(projectId uint64, agentUUID string, id int64, dashboard *model.UpdatableDashboard) int {
+func (store *MemSQL) UpdateDashboard(projectId int64, agentUUID string, id int64, dashboard *model.UpdatableDashboard) int {
 	logFields := log.Fields{
 		"id":         id,
 		"project_id": projectId,
@@ -416,7 +416,7 @@ func (store *MemSQL) UpdateDashboard(projectId uint64, agentUUID string, id int6
 }
 
 // DeleteDashboard To delete a dashboard by id.
-func (store *MemSQL) DeleteDashboard(projectID uint64, agentUUID string, dashboardID int64) int {
+func (store *MemSQL) DeleteDashboard(projectID int64, agentUUID string, dashboardID int64) int {
 	logFields := log.Fields{
 		"project_id":   projectID,
 		"agent_uuid":   agentUUID,
@@ -465,7 +465,7 @@ func (store *MemSQL) DeleteDashboard(projectID uint64, agentUUID string, dashboa
 	return http.StatusAccepted
 }
 
-func (store *MemSQL) createDefaultDashboardsForProject(projectId uint64, agentUUID string) int {
+func (store *MemSQL) createDefaultDashboardsForProject(projectId int64, agentUUID string) int {
 	logFields := log.Fields{
 		"project_id": projectId,
 		"agent_uuid": agentUUID,

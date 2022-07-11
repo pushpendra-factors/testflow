@@ -13,7 +13,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func getActivityAssociatedUserID(projectID uint64, source U.CRMSource, config *CRMSourceConfig, crmActivity *model.CRMActivity) (string, error) {
+func getActivityAssociatedUserID(projectID int64, source U.CRMSource, config *CRMSourceConfig, crmActivity *model.CRMActivity) (string, error) {
 	tableName := ""
 
 	if config.userTypes[crmActivity.ActorType] == true {

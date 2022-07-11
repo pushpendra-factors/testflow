@@ -158,7 +158,7 @@ func main() {
 		*startTimestamp, *endTimestamp, *bufferTimeBeforeCreateSessionInMins,
 		*numProjectRoutines, *numUserRoutines)
 
-	modifiedStatusMap := make(map[uint64]session.Status, 0)
+	modifiedStatusMap := make(map[int64]session.Status, 0)
 
 	for pid, status := range statusMap {
 		if status.Status == session.StatusNotModified {

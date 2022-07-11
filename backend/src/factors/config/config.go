@@ -156,13 +156,13 @@ type Configuration struct {
 	SalesforceAppSecret                            string
 	SentryDSN                                      string
 	LoginTokenMap                                  map[string]string
-	SkipTrackProjectIds                            []uint64
+	SkipTrackProjectIds                            []int64
 	SDKRequestQueueProjectTokens                   []string
 	SegmentRequestQueueProjectTokens               []string
 	UseDefaultProjectSettingForSDK                 bool
 	BlockedSDKRequestProjectTokens                 []string
 	// Usage: 	"--cache_look_up_range_projects", "1:20140307"
-	CacheLookUpRangeProjects                map[uint64]time.Time // Usually cache look up is for past 30 days. If certain projects need override, then this is used
+	CacheLookUpRangeProjects                map[int64]time.Time // Usually cache look up is for past 30 days. If certain projects need override, then this is used
 	LookbackWindowForEventUserCache         int
 	ActiveFactorsGoalsLimit                 int
 	ActiveFactorsTrackedEventsLimit         int
@@ -178,8 +178,8 @@ type Configuration struct {
 	blacklistedProjectIDPropertyTypeFromDB string
 	CacheSortedSet                         bool
 	ProjectAnalyticsWhitelistedUUIds       []string
-	CustomerEnabledProjectsWeeklyInsights  []uint64
-	DemoProjectIds                         []uint64
+	CustomerEnabledProjectsWeeklyInsights  []int64
+	DemoProjectIds                         []string
 	PrimaryDatastore                       string
 	// Flag for enabling only the /mql routes for secondary env testing.
 	EnableMQLAPI bool
@@ -193,7 +193,7 @@ type Configuration struct {
 	UseOpportunityAssociationByProjectID            string
 	AllowChannelGroupingForProjectIDs               string
 	CloudManager                                    filestore.FileManager
-	SegmentExcludedCustomerIDByProject              map[uint64]string // map[project_id]customer_user_id
+	SegmentExcludedCustomerIDByProject              map[int64]string // map[project_id]customer_user_id
 	AttributionDebug                                int
 	DisableDashboardQueryDBExecution                bool
 	AllowedHubspotGroupsByProjectIDs                string
@@ -251,6 +251,7 @@ type Configuration struct {
 	DataAvailabilityExpiry                          int
 	ClearbitEnabled                                 int
 	UseSalesforceV54APIByProjectID                  string
+	EnableOptimisedFilterOnProfileQuery             bool
 }
 
 type Services struct {
@@ -377,7 +378,7 @@ func InitPropertiesTypeCache(enablePropertyTypeFromDB bool, propertiesTypeCacheS
 	log.Info("Properties_type cache initialized.")
 }
 
-func IsAllowedCampaignEnrichementByProjectID(projectID uint64) bool {
+func IsAllowedCampaignEnrichementByProjectID(projectID int64) bool {
 	if configuration.AllowedCampaignEnrichmentByProjectID == "" {
 		return false
 	}
@@ -398,7 +399,7 @@ func IsAllowedCampaignEnrichementByProjectID(projectID uint64) bool {
 
 }
 
-func IsAllowedHubspotGroupsByProjectID(projectID uint64) bool {
+func IsAllowedHubspotGroupsByProjectID(projectID int64) bool {
 	if configuration.AllowedHubspotGroupsByProjectIDs == "" {
 		return false
 	}
@@ -418,7 +419,7 @@ func IsAllowedHubspotGroupsByProjectID(projectID uint64) bool {
 	return false
 }
 
-func IsAllowedSalesforceGroupsByProjectID(projectID uint64) bool {
+func IsAllowedSalesforceGroupsByProjectID(projectID int64) bool {
 	if configuration.AllowedSalesforceGroupsByProjectIDs == "" {
 		return false
 	}
@@ -438,7 +439,7 @@ func IsAllowedSalesforceGroupsByProjectID(projectID uint64) bool {
 	return false
 }
 
-func SkipEventNameStepByProjectID(projectID uint64) bool {
+func SkipEventNameStepByProjectID(projectID int64) bool {
 	if configuration.SkipEventNameStepByProjectID == "" {
 		return false
 	}
@@ -458,7 +459,7 @@ func SkipEventNameStepByProjectID(projectID uint64) bool {
 	return false
 }
 
-func SkipUserJoinInEventQueryByProjectID(projectID uint64) bool {
+func SkipUserJoinInEventQueryByProjectID(projectID int64) bool {
 	if configuration.SkipUserJoinInEventQueryByProjectID == "" {
 		return false
 	}
@@ -496,7 +497,7 @@ func IsEnabledPropertyDetailFromDB() bool {
 }
 
 // IsEnabledPropertyDetailByProjectID enabled project_id for property type check from DB
-func IsEnabledPropertyDetailByProjectID(projectID uint64) bool {
+func IsEnabledPropertyDetailByProjectID(projectID int64) bool {
 	if projectID == 0 || !IsEnabledPropertyDetailFromDB() {
 		return false
 	}
@@ -1312,7 +1313,7 @@ func InitTestServer(config *Configuration) error {
 }
 
 // UseOpportunityAssociationByProjectID should use salesforce association for opportunity stitching
-func UseOpportunityAssociationByProjectID(projectID uint64) bool {
+func UseOpportunityAssociationByProjectID(projectID int64) bool {
 	if configuration.UseOpportunityAssociationByProjectID == "" {
 		return false
 	}
@@ -1333,7 +1334,7 @@ func UseOpportunityAssociationByProjectID(projectID uint64) bool {
 }
 
 // UseSourcePropertyOverwriteByProjectIDs should use property overwrite by source
-func UseSourcePropertyOverwriteByProjectIDs(projectID uint64) bool {
+func UseSourcePropertyOverwriteByProjectIDs(projectID int64) bool {
 	if configuration.UseSourcePropertyOverwriteByProjectIDs == "" {
 		return false
 	}
@@ -1355,7 +1356,7 @@ func UseSourcePropertyOverwriteByProjectIDs(projectID uint64) bool {
 
 // AllowSupportForUserPropertiesInIdentityCall id used to check if support for user properties
 // is allowed for a given (or list of) project
-func AllowSupportForUserPropertiesInIdentifyCall(projectID uint64) bool {
+func AllowSupportForUserPropertiesInIdentifyCall(projectID int64) bool {
 	if configuration.AllowSupportForUserPropertiesInIdentifyCall == "" {
 		return false
 	}
@@ -1377,7 +1378,7 @@ func AllowSupportForUserPropertiesInIdentifyCall(projectID uint64) bool {
 
 // EnableEventLevelEventProperties is used to check if the event level properties
 // are to be enabled for a given (or list of) project
-func EnableEventLevelEventProperties(projectID uint64) bool {
+func EnableEventLevelEventProperties(projectID int64) bool {
 	if configuration.EnableEventLevelEventProperties == "" {
 		return false
 	}
@@ -1399,7 +1400,7 @@ func EnableEventLevelEventProperties(projectID uint64) bool {
 
 // EnableOLTPQueriesMemSQLImprovements is used to check if the OLTP queries performance improvements
 // for memsql are to be enabled for a given (or list of) project
-func EnableOLTPQueriesMemSQLImprovements(projectID uint64) bool {
+func EnableOLTPQueriesMemSQLImprovements(projectID int64) bool {
 	if configuration.EnableOLTPQueriesMemSQLImprovements == "" {
 		return false
 	}
@@ -1613,7 +1614,7 @@ func GetFactorsCookieName() string {
 func GetAuth0StateCookieName() string {
 	return configuration.Auth0StateName
 }
-func GetSkipTrackProjectIds() []uint64 {
+func GetSkipTrackProjectIds() []int64 {
 	return configuration.SkipTrackProjectIds
 }
 
@@ -1637,13 +1638,13 @@ func IsAllowedSmartEventRuleCreation() bool {
 	return configuration.AllowSmartEventRuleCreation
 }
 
-func ExtractProjectIdDateFromConfig(config string) map[uint64]time.Time {
+func ExtractProjectIdDateFromConfig(config string) map[int64]time.Time {
 	convertedMap := ParseConfigStringToMap(config)
-	projectIdDateMap := make(map[uint64]time.Time)
+	projectIdDateMap := make(map[int64]time.Time)
 	for projectId, dateString := range convertedMap {
 		projId, _ := strconv.Atoi(projectId)
 		date, _ := time.Parse(U.DATETIME_FORMAT_YYYYMMDD, dateString)
-		projectIdDateMap[uint64(projId)] = date
+		projectIdDateMap[int64(projId)] = date
 	}
 	return projectIdDateMap
 }
@@ -1672,13 +1673,13 @@ func ParseConfigStringToMap(configStr string) map[string]string {
 	return configMap
 }
 
-func ParseProjectIDToStringMapFromConfig(configValue, configName string) map[uint64]string {
-	cMap := make(map[uint64]string, 0)
+func ParseProjectIDToStringMapFromConfig(configValue, configName string) map[int64]string {
+	cMap := make(map[int64]string, 0)
 
 	cStringMap := ParseConfigStringToMap(configValue)
 
 	for projectIDString, customerUserID := range cStringMap {
-		projectID, err := strconv.ParseUint(projectIDString, 10, 64)
+		projectID, err := strconv.ParseInt(projectIDString, 10, 64)
 		if err != nil {
 			log.WithError(err).WithField("value", configValue).
 				Fatal("Invalid project_id on ParseProjectIDToStringMapFromConfig from %s", configName)
@@ -1693,13 +1694,13 @@ func ParseProjectIDToStringMapFromConfig(configValue, configName string) map[uin
 	return cMap
 }
 
-func IsSegmentExcludedCustomerUserID(projectID uint64, sourceCustomerUserID string) bool {
+func IsSegmentExcludedCustomerUserID(projectID int64, sourceCustomerUserID string) bool {
 	customerUserID, projectExists := configuration.SegmentExcludedCustomerIDByProject[projectID]
 	return projectExists && customerUserID == sourceCustomerUserID
 }
 
-func GetTokensFromStringListAsUint64(stringList string) []uint64 {
-	uint64Tokens := make([]uint64, 0, 0)
+func GetTokensFromStringListAsUint64(stringList string) []int64 {
+	uint64Tokens := make([]int64, 0, 0)
 
 	if stringList == "" {
 		return uint64Tokens
@@ -1707,7 +1708,7 @@ func GetTokensFromStringListAsUint64(stringList string) []uint64 {
 
 	tokens := strings.Split(stringList, ",")
 	for _, token := range tokens {
-		uint64Token, err := strconv.ParseUint(strings.TrimSpace(token), 10, 64)
+		uint64Token, err := strconv.ParseInt(strings.TrimSpace(token), 10, 64)
 		if err != nil {
 			log.WithError(err).
 				Error("Failed to parse project_id on string list config.")
@@ -1781,24 +1782,24 @@ else:
 Returns: allProject flag, map of allowed & disallowed projects
 */
 func GetProjectsFromListWithAllProjectSupport(projectIdsList,
-	disallowedProjectIdsList string) (allProjects bool, allowedMap, disallowedMap map[uint64]bool) {
+	disallowedProjectIdsList string) (allProjects bool, allowedMap, disallowedMap map[int64]bool) {
 	//allowedProjectIds, skipProjectIds []uint64,
 	disallowedProjectIdsList = strings.TrimSpace(disallowedProjectIdsList)
 	skipProjectIds := GetTokensFromStringListAsUint64(disallowedProjectIdsList)
 
-	disallowedMap = make(map[uint64]bool)
+	disallowedMap = make(map[int64]bool)
 	for i := range skipProjectIds {
 		disallowedMap[skipProjectIds[i]] = true
 	}
 
 	projectIdsList = strings.TrimSpace(projectIdsList)
 	if projectIdsList == "*" {
-		return true, map[uint64]bool{}, disallowedMap
+		return true, map[int64]bool{}, disallowedMap
 	}
 
 	projectIds := GetTokensFromStringListAsUint64(projectIdsList)
 
-	allowedProjectIds := make([]uint64, 0, len(projectIds))
+	allowedProjectIds := make([]int64, 0, len(projectIds))
 	for i, cpid := range projectIds {
 		//Prioritizing the skip list over project list!
 		if _, exists := disallowedMap[cpid]; !exists {
@@ -1806,7 +1807,7 @@ func GetProjectsFromListWithAllProjectSupport(projectIdsList,
 		}
 	}
 
-	allowedMap = make(map[uint64]bool)
+	allowedMap = make(map[int64]bool)
 	for i := range allowedProjectIds {
 		allowedMap[allowedProjectIds[i]] = true
 	}
@@ -1814,17 +1815,17 @@ func GetProjectsFromListWithAllProjectSupport(projectIdsList,
 	return false, allowedMap, disallowedMap
 }
 
-func GetDashboardUnitIDs(dashboardUnitIDsList string) []uint64 {
+func GetDashboardUnitIDs(dashboardUnitIDsList string) []int64 {
 	dashboardUnitIDsList = strings.TrimSpace(dashboardUnitIDsList)
 	if dashboardUnitIDsList == "*" {
-		return make([]uint64, 0, 0)
+		return make([]int64, 0, 0)
 	}
 	return GetTokensFromStringListAsUint64(dashboardUnitIDsList)
 }
 
-func ProjectIdsFromProjectIdBoolMap(mp map[uint64]bool) []uint64 {
+func ProjectIdsFromProjectIdBoolMap(mp map[int64]bool) []int64 {
 
-	keys := make([]uint64, 0, len(mp))
+	keys := make([]int64, 0, len(mp))
 	for k := range mp {
 		keys = append(keys, k)
 	}
@@ -1913,7 +1914,7 @@ func PingHealthcheckForPanic(taskID, env, healthcheckID string) {
 	}
 }
 
-func isProjectOnProjectsList(configProjectIDList string, projectID uint64) bool {
+func isProjectOnProjectsList(configProjectIDList string, projectID int64) bool {
 	allProjectIDs, allowedProjectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(
 		configProjectIDList, "")
 
@@ -1925,7 +1926,7 @@ func isProjectOnProjectsList(configProjectIDList string, projectID uint64) bool 
 	return exists
 }
 
-func IsChannelGroupingAllowed(projectID uint64) bool {
+func IsChannelGroupingAllowed(projectID int64) bool {
 	return isProjectOnProjectsList(configuration.AllowChannelGroupingForProjectIDs, projectID)
 }
 
@@ -1960,7 +1961,7 @@ func GetUUIdsFromStringListAsString(stringList string) []string {
 	return stringTokens
 }
 
-func IsWeeklyInsightsWhitelisted(loggedInUUID string, projectId uint64) bool {
+func IsWeeklyInsightsWhitelisted(loggedInUUID string, projectId int64) bool {
 	for _, id := range configuration.CustomerEnabledProjectsWeeklyInsights {
 		if id == projectId {
 			return true
@@ -1974,7 +1975,7 @@ func IsWeeklyInsightsWhitelisted(loggedInUUID string, projectId uint64) bool {
 	return false
 }
 
-func IsMultipleProjectTimezoneEnabled(projectId uint64) bool {
+func IsMultipleProjectTimezoneEnabled(projectId int64) bool {
 	return true
 }
 
@@ -1987,9 +1988,10 @@ func IsLoggedInUserWhitelistedForProjectAnalytics(loggedInUUID string) bool {
 	return false
 }
 
-func IsDemoProject(projectId uint64) bool {
+func IsDemoProject(projectId int64) bool {
 	for _, id := range configuration.DemoProjectIds {
-		if id == projectId {
+		projectIdString := fmt.Sprintf("%v", projectId)
+		if id == projectIdString {
 			return true
 		}
 	}
@@ -2041,11 +2043,11 @@ func IsDevBox() bool {
 	return configuration.DevBox
 }
 
-func SetEnableEventLevelEventProperties(projectId uint64) {
+func SetEnableEventLevelEventProperties(projectId int64) {
 	configuration.EnableEventLevelEventProperties = fmt.Sprintf("%d", projectId)
 }
 
-func IsProfileQuerySourceSupported(projectId uint64) bool {
+func IsProfileQuerySourceSupported(projectId int64) bool {
 	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().AllowSupportForSourceColumnInUsers, "")
 	if allProjects || projectIDsMap[projectId] {
 		return true
@@ -2053,7 +2055,7 @@ func IsProfileQuerySourceSupported(projectId uint64) bool {
 	return false
 }
 
-func CheckRestrictReusingUsersByCustomerUserId(projectId uint64) bool {
+func CheckRestrictReusingUsersByCustomerUserId(projectId int64) bool {
 	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().RestrictReusingUsersByCustomerUserId, "")
 	if allProjects || projectIDsMap[projectId] {
 		return true
@@ -2061,7 +2063,7 @@ func CheckRestrictReusingUsersByCustomerUserId(projectId uint64) bool {
 	return false
 }
 
-func AllowMergeAmpIDAndSegmentIDWithUserIDByProjectID(projectID uint64) bool {
+func AllowMergeAmpIDAndSegmentIDWithUserIDByProjectID(projectID int64) bool {
 	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(configuration.MergeAmpIDAndSegmentIDWithUserIDByProjectID, "")
 	if allProjects {
 		return true
@@ -2070,7 +2072,7 @@ func AllowMergeAmpIDAndSegmentIDWithUserIDByProjectID(projectID uint64) bool {
 	return allowedProjectIDs[projectID]
 }
 
-func IsProfileGroupSupportEnabled(projectId uint64) bool {
+func IsProfileGroupSupportEnabled(projectId int64) bool {
 	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().AllowProfilesGroupSupport, "")
 	if allProjects || projectIDsMap[projectId] {
 		return true
@@ -2078,7 +2080,7 @@ func IsProfileGroupSupportEnabled(projectId uint64) bool {
 	return false
 }
 
-func IsEventsFunnelsGroupSupportEnabled(projectId uint64) bool {
+func IsEventsFunnelsGroupSupportEnabled(projectId int64) bool {
 	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().AllowEventsFunnelsGroupSupport, "")
 	if allProjects || projectIDsMap[projectId] {
 		return true
@@ -2090,7 +2092,7 @@ func GetSessionBatchTransactionBatchSize() int {
 	return GetConfig().SessionBatchTransactionBatchSize
 }
 
-func DisableCRMUniquenessConstraintsCheckByProjectID(projectID uint64) bool {
+func DisableCRMUniquenessConstraintsCheckByProjectID(projectID int64) bool {
 	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().DisableCRMUniquenessConstraintsCheckByProjectID, "")
 	if allProjects {
 		return true
@@ -2103,7 +2105,7 @@ func GetHubspotBatchInsertBatchSize() int {
 	return GetConfig().HubspotBatchInsertBatchSize
 }
 
-func EnableHubspotFormsEventsByProjectID(projectID uint64) bool {
+func EnableHubspotFormsEventsByProjectID(projectID int64) bool {
 	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableHubspotFormsEventsByProjectID, "")
 	if allProjects {
 		return true
@@ -2122,7 +2124,7 @@ func GetOnlyKPICachingCaching() int {
 	return configuration.OnlyKPICaching
 }
 
-func UseHubspotBatchInsertByProjectID(projectID uint64) bool {
+func UseHubspotBatchInsertByProjectID(projectID int64) bool {
 	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().UseHubspotBatchInsertByProjectID, "")
 	if allProjects {
 		return true
@@ -2152,7 +2154,7 @@ func GetSalesforceBatchInsertBatchSize() int {
 	return GetConfig().SalesforceBatchInsertBatchSize
 }
 
-func AllowHubspotEngagementsByProjectID(projectID uint64) bool {
+func AllowHubspotEngagementsByProjectID(projectID int64) bool {
 	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().AllowHubspotEngagementsByProjectID, "")
 	if allProjects {
 		return true
@@ -2161,7 +2163,7 @@ func AllowHubspotEngagementsByProjectID(projectID uint64) bool {
 	return allowedProjectIDs[projectID]
 }
 
-func DisableHubspotNonMarketingContactsByProjectID(projectID uint64) bool {
+func DisableHubspotNonMarketingContactsByProjectID(projectID int64) bool {
 	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().DisableHubspotNonMarketingContactsByProjectID, "")
 	if allProjects {
 		return true
@@ -2185,11 +2187,15 @@ func GetSlackClientSecret() string {
 	return configuration.SlackAppClientSecret
 }
 
-func AllowSalesforcev54APIByProjectID(projectID uint64) bool {
+func AllowSalesforcev54APIByProjectID(projectID int64) bool {
 	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().UseSalesforceV54APIByProjectID, "")
 	if allProjects {
 		return true
 	}
 
 	return allowedProjectIDs[projectID]
+}
+
+func EnableOptimisedFilterOnProfileQuery() bool {
+	return configuration.EnableOptimisedFilterOnProfileQuery
 }

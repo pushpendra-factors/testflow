@@ -416,7 +416,7 @@ func updateAgent(agentUUID string, options ...model.Option) int {
 	return http.StatusAccepted
 }
 
-func (store *MemSQL) GetPrimaryAgentOfProject(projectId uint64) (uuid string, errCode int) {
+func (store *MemSQL) GetPrimaryAgentOfProject(projectId int64) (uuid string, errCode int) {
 	logFields := log.Fields{
 		"project_id": projectId,
 	}
@@ -437,7 +437,7 @@ func (store *MemSQL) GetPrimaryAgentOfProject(projectId uint64) (uuid string, er
 
 	return projectAgentMappings[0].AgentUUID, http.StatusFound
 }
-func (store *MemSQL) IsSlackIntegratedForProject(projectID uint64, agentUUID string) (bool, int) {
+func (store *MemSQL) IsSlackIntegratedForProject(projectID int64, agentUUID string) (bool, int) {
 	agent, errCode := store.GetAgentByUUID(agentUUID)
 	if errCode != http.StatusFound {
 		return false, errCode

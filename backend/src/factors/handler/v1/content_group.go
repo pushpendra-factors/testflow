@@ -7,13 +7,14 @@ import (
 	"factors/model/store"
 	U "factors/util"
 	"net/http"
+	"sort"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 )
 
 func CreateContentGroupHandler(c *gin.Context) (interface{}, int, string, string, bool) {
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		return nil, http.StatusUnauthorized, INVALID_PROJECT, ErrorMessages[INVALID_PROJECT], true
 	}
@@ -39,7 +40,7 @@ func CreateContentGroupHandler(c *gin.Context) (interface{}, int, string, string
 }
 
 func UpdateContentGroupHandler(c *gin.Context) (interface{}, int, string, string, bool) {
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		log.Error("UpdateContentGroup Failed. ProjectId parse failed.")
 		return nil, http.StatusUnauthorized, INVALID_PROJECT, ErrorMessages[INVALID_PROJECT], true
@@ -72,7 +73,7 @@ func UpdateContentGroupHandler(c *gin.Context) (interface{}, int, string, string
 }
 
 func GetContentGroupHandler(c *gin.Context) (interface{}, int, string, string, bool) {
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		log.Error("Get ContentGroup Failed. ProjectId parse failed.")
 		return nil, http.StatusUnauthorized, INVALID_PROJECT, ErrorMessages[INVALID_PROJECT], true
@@ -81,11 +82,14 @@ func GetContentGroupHandler(c *gin.Context) (interface{}, int, string, string, b
 	if errCode != http.StatusFound {
 		return nil, errCode, PROCESSING_FAILED, "Failed to get content groups", true
 	}
+	sort.Slice(contentGroups, func(i, j int) bool {
+		return contentGroups[i].CreatedAt.After(contentGroups[j].CreatedAt)
+	})
 	return contentGroups, http.StatusOK, "", "", false
 }
 
 func GetContentGroupByIDHandler(c *gin.Context) (interface{}, int, string, string, bool) {
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		log.Error("GetContentGroup Failed. ProjectId parse failed.")
 		return nil, http.StatusUnauthorized, INVALID_PROJECT, ErrorMessages[INVALID_PROJECT], true
@@ -104,7 +108,7 @@ func GetContentGroupByIDHandler(c *gin.Context) (interface{}, int, string, strin
 }
 
 func DeleteContentGroupHandler(c *gin.Context) (interface{}, int, string, string, bool) {
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		log.Error("DeleteContentGroup Failed. ProjectId parse failed.")
 		return nil, http.StatusUnauthorized, INVALID_PROJECT, ErrorMessages[INVALID_PROJECT], true

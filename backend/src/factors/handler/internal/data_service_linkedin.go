@@ -61,7 +61,7 @@ func DataServiceLinkedinAddDocumentHandler(c *gin.Context) {
 }
 
 type LinkedinUpdateAccessToken struct {
-	ProjectID   uint64 `json:"project_id"`
+	ProjectID   int64  `json:"project_id"`
 	AccessToken string `json:"access_token"`
 }
 
@@ -98,7 +98,7 @@ func DataServiceLinkedinGetLastSyncInfoHandler(c *gin.Context) {
 			gin.H{"error": "Invalid request json."})
 		return
 	}
-	projectID, _ := strconv.ParseUint(payload.ProjectID, 10, 64)
+	projectID, _ := strconv.ParseInt(payload.ProjectID, 10, 64)
 	lastSyncInfo, status := store.GetStore().GetLinkedinLastSyncInfo(projectID, payload.CustomerAdAccountID)
 	c.JSON(status, lastSyncInfo)
 }

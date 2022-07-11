@@ -25,7 +25,7 @@ const (
 )
 
 // BuildSequential - runs model building sequenitally for all project intervals.
-func BuildSequential(projectId uint64, configs map[string]interface{}) (map[string]interface{}, bool) {
+func BuildSequential(projectId int64, configs map[string]interface{}) (map[string]interface{}, bool) {
 
 	env := configs["env"].(string)
 	db := configs["db"].(*gorm.DB)
@@ -34,7 +34,7 @@ func BuildSequential(projectId uint64, configs map[string]interface{}) (map[stri
 	diskManger := configs["diskManger"].(*serviceDisk.DiskDriver)
 	bucketName := configs["bucketName"].(string)
 	noOfPatternWorkers := configs["noOfPatternWorkers"].(int)
-	projectIdsToSkip := configs["projectIdsToSkip"].(map[uint64]bool)
+	projectIdsToSkip := configs["projectIdsToSkip"].(map[int64]bool)
 	maxModelSize := configs["maxModelSize"].(int64)
 	modelType := configs["modelType"].(string)
 	countOccurence := configs["countOccurence"].(bool)

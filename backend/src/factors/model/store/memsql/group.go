@@ -13,7 +13,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (store *MemSQL) CreateGroup(projectID uint64, groupName string, allowedGroupNames map[string]bool) (*model.Group, int) {
+func (store *MemSQL) CreateGroup(projectID int64, groupName string, allowedGroupNames map[string]bool) (*model.Group, int) {
 	logFields := log.Fields{
 		"project_id":          projectID,
 		"group_name":          groupName,
@@ -79,7 +79,7 @@ func (store *MemSQL) CreateGroup(projectID uint64, groupName string, allowedGrou
 	return &group, http.StatusCreated
 }
 
-func (store *MemSQL) GetGroups(projectId uint64) ([]model.Group, int) {
+func (store *MemSQL) GetGroups(projectId int64) ([]model.Group, int) {
 	logFields := log.Fields{
 		"project_id": projectId,
 	}
@@ -102,7 +102,7 @@ func (store *MemSQL) GetGroups(projectId uint64) ([]model.Group, int) {
 	return groups, http.StatusFound
 
 }
-func (store *MemSQL) GetGroup(projectID uint64, groupName string) (*model.Group, int) {
+func (store *MemSQL) GetGroup(projectID int64, groupName string) (*model.Group, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"group_name": groupName,
@@ -133,7 +133,7 @@ func (store *MemSQL) GetGroup(projectID uint64, groupName string) (*model.Group,
 // GetPropertiesByGroup (Part of group properties caching) This method iterates for last n days to get all the
 // top 'limit' properties for the given group name. Picks all last 24 hours properties and sorts the remaining by occurence
 // and returns top 'limit' properties
-func (store *MemSQL) GetPropertiesByGroup(projectID uint64, groupName string, limit int, lastNDays int) (map[string][]string, int) {
+func (store *MemSQL) GetPropertiesByGroup(projectID int64, groupName string, limit int, lastNDays int) (map[string][]string, int) {
 	logFields := log.Fields{
 		"project_id":  projectID,
 		"group_name":  groupName,
@@ -195,7 +195,7 @@ func (store *MemSQL) GetPropertiesByGroup(projectID uint64, groupName string, li
 // GetPropertyValuesByGroupProperty (Part of event_name and properties caching) This method iterates for
 // last n days to get all the top 'limit' property values for the given property/event
 // Picks all last 24 hours values and sorts the remaining by occurence and returns top 'limit' values
-func (store *MemSQL) GetPropertyValuesByGroupProperty(projectID uint64, groupName string,
+func (store *MemSQL) GetPropertyValuesByGroupProperty(projectID int64, groupName string,
 	propertyName string, limit int, lastNDays int) ([]string, error) {
 	logFields := log.Fields{
 		"project_id":    projectID,

@@ -108,7 +108,7 @@ var allChannelsPropertyToRelated = map[string]model.PropertiesAndRelated{
 }
 
 // GetChannelConfig - @TODO Kark v1
-func (store *MemSQL) GetChannelConfig(projectID uint64, channel string, reqID string) (*model.ChannelConfigResult, int) {
+func (store *MemSQL) GetChannelConfig(projectID int64, channel string, reqID string) (*model.ChannelConfigResult, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"channel":    channel,
@@ -168,7 +168,7 @@ func isValidChannel(channel string) bool {
 }
 
 // @TODO Kark v1
-func (store *MemSQL) buildAllChannelConfig(projectID uint64) *model.ChannelConfigResult {
+func (store *MemSQL) buildAllChannelConfig(projectID int64) *model.ChannelConfigResult {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
@@ -180,7 +180,7 @@ func (store *MemSQL) buildAllChannelConfig(projectID uint64) *model.ChannelConfi
 		ObjectsAndProperties: objectsAndProperties,
 	}
 }
-func (store *MemSQL) buildObjectAndPropertiesForAllChannel(projectID uint64, objects []string) []model.ChannelObjectAndProperties {
+func (store *MemSQL) buildObjectAndPropertiesForAllChannel(projectID int64, objects []string) []model.ChannelObjectAndProperties {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"objects":    objects,
@@ -238,7 +238,7 @@ func buildProperties(PropertiesAndRelated map[string]model.PropertiesAndRelated)
 // Should request params to correct types be converted here - QueryAggregator responsibility?
 // Adwords - Keywords will fail currently.
 // @TODO Kark v1
-func (store *MemSQL) GetChannelFilterValuesV1(projectID uint64, channel, filterObject,
+func (store *MemSQL) GetChannelFilterValuesV1(projectID int64, channel, filterObject,
 	filterProperty string, reqID string) (model.ChannelFilterValues, int) {
 
 	logFields := log.Fields{
@@ -280,7 +280,7 @@ func (store *MemSQL) GetChannelFilterValuesV1(projectID uint64, channel, filterO
 }
 
 // GetAllChannelFilterValues - @Kark TODO v1
-func (store *MemSQL) GetAllChannelFilterValues(projectID uint64, filterObject, filterProperty string, reqID string) ([]interface{}, int) {
+func (store *MemSQL) GetAllChannelFilterValues(projectID int64, filterObject, filterProperty string, reqID string) ([]interface{}, int) {
 	logFields := log.Fields{
 		"project_id":      projectID,
 		"filter_object":   filterObject,
@@ -337,7 +337,7 @@ func (store *MemSQL) GetAllChannelFilterValues(projectID uint64, filterObject, f
 }
 
 // RunChannelGroupQuery - @TODO Kark v1
-func (store *MemSQL) RunChannelGroupQuery(projectID uint64, queriesOriginal []model.ChannelQueryV1, reqID string) (model.ChannelResultGroupV1, int) {
+func (store *MemSQL) RunChannelGroupQuery(projectID int64, queriesOriginal []model.ChannelQueryV1, reqID string) (model.ChannelResultGroupV1, int) {
 	logFields := log.Fields{
 		"project_id":       projectID,
 		"queries_original": queriesOriginal,
@@ -375,7 +375,7 @@ func (store *MemSQL) RunChannelGroupQuery(projectID uint64, queriesOriginal []mo
 
 // @Kark TODO v1
 // TODO Handling errorcase.
-func (store *MemSQL) runSingleChannelQuery(projectID uint64, query model.ChannelQueryV1,
+func (store *MemSQL) runSingleChannelQuery(projectID int64, query model.ChannelQueryV1,
 	resultHolder *model.ChannelQueryResultV1, waitGroup *sync.WaitGroup, reqID string) {
 	logFields := log.Fields{
 		"project_id":    projectID,
@@ -396,7 +396,7 @@ func (store *MemSQL) runSingleChannelQuery(projectID uint64, query model.Channel
 
 // ExecuteChannelQueryV1 - @Kark TODO v1
 // TODO error handling.
-func (store *MemSQL) ExecuteChannelQueryV1(projectID uint64, query *model.ChannelQueryV1,
+func (store *MemSQL) ExecuteChannelQueryV1(projectID int64, query *model.ChannelQueryV1,
 	reqID string) (*model.ChannelQueryResultV1, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
@@ -450,7 +450,7 @@ func (store *MemSQL) ExecuteChannelQueryV1(projectID uint64, query *model.Channe
 // Case 3: When there is breakdown by source and group.property, there is no requirement of regrouping in all channel.
 
 // removed source as we want aggregated results for all channels
-func (store *MemSQL) executeAllChannelsQueryV1(projectID uint64, query *model.ChannelQueryV1,
+func (store *MemSQL) executeAllChannelsQueryV1(projectID int64, query *model.ChannelQueryV1,
 	reqID string) ([]string, [][]interface{}, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
@@ -559,7 +559,7 @@ func (store *MemSQL) executeAllChannelsQueryV1(projectID uint64, query *model.Ch
 	return columns, resultMetrics, http.StatusOK
 }
 
-func (store *MemSQL) getIndividualChannelsSQLAndParametersV1(projectID uint64, query *model.ChannelQueryV1, reqID string, fetchSource bool) (string, []interface{}, []string, []string, string, []interface{}, string, []interface{}, string, []interface{}, int) {
+func (store *MemSQL) getIndividualChannelsSQLAndParametersV1(projectID int64, query *model.ChannelQueryV1, reqID string, fetchSource bool) (string, []interface{}, []string, []string, string, []interface{}, string, []interface{}, string, []interface{}, int) {
 	logFields := log.Fields{
 		"project_id":   projectID,
 		"query":        query,
@@ -641,7 +641,7 @@ func (store *MemSQL) getIndividualChannelsSQLAndParametersV1(projectID uint64, q
 }
 
 // GetChannelFilterValues - @Kark TODO v0
-func (store *MemSQL) GetChannelFilterValues(projectID uint64, channel, filter string) ([]string, int) {
+func (store *MemSQL) GetChannelFilterValues(projectID int64, channel, filter string) ([]string, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"channel":    channel,
@@ -668,7 +668,7 @@ func (store *MemSQL) GetChannelFilterValues(projectID uint64, channel, filter st
 }
 
 // ExecuteChannelQuery - @Kark TODO v0
-func (store *MemSQL) ExecuteChannelQuery(projectID uint64,
+func (store *MemSQL) ExecuteChannelQuery(projectID int64,
 	queryOriginal *model.ChannelQuery) (*model.ChannelQueryResult, int) {
 	logFields := log.Fields{
 		"project_id":     projectID,
@@ -859,7 +859,7 @@ func (store *MemSQL) ExecuteSQL(sqlStatement string, params []interface{}, logCt
 	return columns, resultRows, nil
 }
 
-func (store *MemSQL) GetSmartPropertyAndRelated(projectID uint64, object string, source string) map[string]model.PropertiesAndRelated {
+func (store *MemSQL) GetSmartPropertyAndRelated(projectID int64, object string, source string) map[string]model.PropertiesAndRelated {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"object":     object,

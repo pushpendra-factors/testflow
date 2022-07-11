@@ -45,7 +45,7 @@ type queryCacheWebResult struct {
 // @Success 302 {array} model.Dashboard
 // @Router /{project_id}/dashboards [get]
 func GetDashboardsHandler(c *gin.Context) (interface{}, int, string, bool) {
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		return nil, http.StatusForbidden, "Get dashboards failed. Invalid project.", true
 	}
@@ -70,7 +70,7 @@ func GetDashboardsHandler(c *gin.Context) (interface{}, int, string, bool) {
 // @Success 201 {object} model.Dashboard
 // @Router /{project_id}/dashboards [post]
 func CreateDashboardHandler(c *gin.Context) (interface{}, int, string, bool) {
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		return nil, http.StatusForbidden, "Create dashboard failed. Invalid project.", true
 	}
@@ -117,7 +117,7 @@ func CreateDashboardHandler(c *gin.Context) (interface{}, int, string, bool) {
 // @Success 202
 // @Router /{project_id}/dashboards/{dashboard_id} [put]
 func UpdateDashboardHandler(c *gin.Context) {
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Update dashboard failed. Invalid project."})
 		return
@@ -163,7 +163,7 @@ func UpdateDashboardHandler(c *gin.Context) {
 // @Success 202 {string} json "{"message": "Successfully deleted."}"
 // @Router /{project_id}/v1/dashboards/{dashboard_id} [delete]
 func DeleteDashboardHandler(c *gin.Context) {
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatusJSON(http.StatusForbidden,
 			gin.H{"error": "Delete dashboard unit failed. Invalid project."})
@@ -197,7 +197,7 @@ func DeleteDashboardHandler(c *gin.Context) {
 // @Success 302 {array} model.DashboardUnit
 // @Router /{project_id}/dashboards/{dashboard_id}/units [get]
 func GetDashboardUnitsHandler(c *gin.Context) (interface{}, int, string, bool) {
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Get dashboard units failed. Invalid project."})
 	}
@@ -229,7 +229,7 @@ func GetDashboardUnitsHandler(c *gin.Context) (interface{}, int, string, bool) {
 // @Success 201 {object} model.DashboardUnit
 // @Router /{project_id}/dashboards/{dashboard_id}/units [post]
 func CreateDashboardUnitHandler(c *gin.Context) (interface{}, int, string, bool) {
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		return nil, http.StatusForbidden,
 			"Get dashboard units failed. Invalid project.", true
@@ -289,7 +289,7 @@ func CreateDashboardUnitHandler(c *gin.Context) (interface{}, int, string, bool)
 // @Success 201 {array} model.DashboardUnit
 // @Router /{project_id}/v1/dashboards/multi/{dashboard_ids}/units [post]
 func CreateDashboardUnitForMultiDashboardsHandler(c *gin.Context) (interface{}, int, string, bool) {
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		return nil, http.StatusForbidden,
 			"Get dashboard units failed. Invalid project.", true
@@ -350,7 +350,7 @@ func CreateDashboardUnitForMultiDashboardsHandler(c *gin.Context) (interface{}, 
 // @Success 201 {array} model.DashboardUnit
 // @Router /{project_id}/v1/dashboards/queries/{dashboard_id}/units [post]
 func CreateDashboardUnitsForMultipleQueriesHandler(c *gin.Context) (interface{}, int, string, bool) {
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		return nil, http.StatusForbidden,
 			"Get dashboard units failed. Invalid project.", true
@@ -403,7 +403,7 @@ func CreateDashboardUnitsForMultipleQueriesHandler(c *gin.Context) (interface{},
 // @Success 202 {string} json "{"message": "Successfully updated."}"
 // @Router /{project_id}/dashboards/{dashboard_id}/units/{unit_id} [put]
 func UpdateDashboardUnitHandler(c *gin.Context) {
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatusJSON(http.StatusForbidden,
 			gin.H{"error": "Delete dashboard unit failed. Invalid project."})
@@ -471,7 +471,7 @@ func UpdateDashboardUnitHandler(c *gin.Context) {
 // @Success 202 {string} json "{"message": "Successfully deleted."}"
 // @Router /{project_id}/dashboards/{dashboard_id}/units/{unit_id} [delete]
 func DeleteDashboardUnitHandler(c *gin.Context) {
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatusJSON(http.StatusForbidden,
 			gin.H{"error": "Delete dashboard unit failed. Invalid project."})
@@ -512,7 +512,7 @@ func DeleteDashboardUnitHandler(c *gin.Context) {
 // @Success 202 {string} json "{"message": "Successfully deleted."}"
 // @Router /{project_id}/v1/dashboards/{dashboard_id}/units/multi/{unit_ids} [delete]
 func DeleteMultiDashboardUnitHandler(c *gin.Context) {
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		c.AbortWithStatusJSON(http.StatusForbidden,
 			gin.H{"error": "Delete dashboard unit failed. Invalid project."})
@@ -562,7 +562,7 @@ func DashboardUnitsWebAnalyticsQueryHandler(c *gin.Context) {
 	logCtx := log.WithFields(log.Fields{"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID)})
 
 	reqID := U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID)
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatusJSON(http.StatusUnauthorized,
 			gin.H{"error": "Web analytics query failed. Invalid project."})

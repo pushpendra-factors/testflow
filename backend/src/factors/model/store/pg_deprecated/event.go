@@ -1522,8 +1522,8 @@ func (pg *Postgres) OverwriteEventUserPropertiesByID(projectID uint64, userID,
 	return http.StatusAccepted
 }
 
-// PullEventRowsForBuildSequenceJob - Function to pull events for factors model building sequentially.
-func (pg *Postgres) PullEventRowsForBuildSequenceJob(projectID uint64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error) {
+// PullEventRows - Function to pull events for factors model building sequentially.
+func (pg *Postgres) PullEventRows(projectID uint64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error) {
 	rawQuery := fmt.Sprintf("SELECT COALESCE(users.customer_user_id, users.id), event_names.name, events.timestamp, events.count,"+
 		" events.properties, users.join_timestamp, events.user_properties FROM events "+
 		"LEFT JOIN event_names ON events.event_name_id = event_names.id "+
@@ -1531,6 +1531,56 @@ func (pg *Postgres) PullEventRowsForBuildSequenceJob(projectID uint64, startTime
 		"WHERE events.project_id = %d AND events.timestamp BETWEEN  %d AND %d "+
 		"ORDER BY COALESCE(users.customer_user_id, users.id), events.timestamp LIMIT %d",
 		projectID, projectID, startTime, endTime, model.EventsPullLimit+1)
+
+	return pg.ExecQueryWithContext(rawQuery, []interface{}{})
+}
+
+// PullAdwordsRows - Function to pull adwords campaign data
+func (pg *Postgres) PullAdwordsRows(projectID uint64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error) {
+	rawQuery := fmt.Sprintf("SELECT adwords_documents.value, adwords_documents.campaign_id, adwords_documents.timestamp FROM adwords_documents "+
+		"WHERE adwords_documents.project_id = %d AND adwords_documents.timestamp BETWEEN  %d AND %d "+
+		"ORDER BY adwords_documents.timestamp LIMIT %d",
+		projectID, startTime, endTime, model.EventsPullLimit+1)
+
+	return pg.ExecQueryWithContext(rawQuery, []interface{}{})
+}
+
+// PullFacebookRows - Function to pull facebook campaign data
+func (pg *Postgres) PullFacebookRows(projectID uint64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error) {
+	rawQuery := fmt.Sprintf("SELECT facebook_documents.value, facebook_documents.campaign_id, facebook_documents.timestamp FROM facebook_documents "+
+		"WHERE facebook_documents.project_id = %d AND facebook_documents.timestamp BETWEEN  %d AND %d "+
+		"ORDER BY facebook_documents.timestamp LIMIT %d",
+		projectID, startTime, endTime, model.EventsPullLimit+1)
+
+	return pg.ExecQueryWithContext(rawQuery, []interface{}{})
+}
+
+// PullBingAdsRows - Function to pull bing campaign data
+func (pg *Postgres) PullBingAdsRows(projectID uint64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error) {
+	rawQuery := fmt.Sprintf("SELECT integration_documents.value, integration_documents.timestamp FROM integration_documents "+
+		"WHERE integration_documents.project_id = %d AND integration_documents.timestamp BETWEEN  %d AND %d "+
+		"ORDER BY integration_documents.timestamp LIMIT %d",
+		projectID, startTime, endTime, model.EventsPullLimit+1)
+
+	return pg.ExecQueryWithContext(rawQuery, []interface{}{})
+}
+
+// PullLinkedInRows - Function to pull LinkedIn campaign data
+func (pg *Postgres) PullLinkedInRows(projectID uint64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error) {
+	rawQuery := fmt.Sprintf("SELECT linkedin_documents.value, linkedin_documents.campaign_id, linkedin_documents.timestamp FROM linkedin_documents "+
+		"WHERE linkedin_documents.project_id = %d AND linkedin_documents.timestamp BETWEEN  %d AND %d "+
+		"ORDER BY linkedin_documents.timestamp LIMIT %d",
+		projectID, startTime, endTime, model.EventsPullLimit+1)
+
+	return pg.ExecQueryWithContext(rawQuery, []interface{}{})
+}
+
+// PullGoogleOrganicRows - Function to pull LinkedIn campaign data
+func (pg *Postgres) PullGoogleOrganicRows(projectID uint64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error) {
+	rawQuery := fmt.Sprintf("SELECT google_organic_documents.value, google_organic_documents.campaign_id, google_organic_documents.timestamp FROM google_organic_documents "+
+		"WHERE google_organic_documents.project_id = %d AND google_organic_documents.timestamp BETWEEN  %d AND %d "+
+		"ORDER BY google_organic_documents.timestamp LIMIT %d",
+		projectID, startTime, endTime, model.EventsPullLimit+1)
 
 	return pg.ExecQueryWithContext(rawQuery, []interface{}{})
 }

@@ -667,7 +667,7 @@ func isChildSequence(parent []string, child []string, crmEvents map[string]bool)
 func (it *Itree) buildAndAddSequenceChildNodes(reqId string,
 	parentNode *ItreeNode, candidatePattens []*P.Pattern,
 	patternWrapper PatternServiceWrapperInterface,
-	allActiveUsersPattern *P.Pattern, countType string, projectId uint64) ([]*ItreeNode, error) {
+	allActiveUsersPattern *P.Pattern, countType string, projectId int64) ([]*ItreeNode, error) {
 
 	parentPattern := parentNode.Pattern
 	peLen := len(parentPattern.EventNames)
@@ -1187,7 +1187,7 @@ func (it *Itree) buildAndAddPropertyChildNodes(reqId string,
 func BuildNewItree(reqId,
 	startEvent string, startEventConstraints *P.EventConstraints,
 	endEvent string, endEventConstraints *P.EventConstraints,
-	patternWrapper PatternServiceWrapperInterface, countType string, projectId uint64) (*Itree, error) {
+	patternWrapper PatternServiceWrapperInterface, countType string, projectId int64) (*Itree, error) {
 	if endEvent == "" {
 		return nil, fmt.Errorf("missing end event")
 	}
@@ -1273,7 +1273,7 @@ var debugCounts map[string]int
 func BuildNewItreeV1(reqId string,
 	startEvent string, startEventConstraints *P.EventConstraints,
 	endEvent string, endEventConstraints *P.EventConstraints,
-	patternWrapper PatternServiceWrapperInterface, countType string, debugKey string, debugParams map[string]string, projectId uint64,
+	patternWrapper PatternServiceWrapperInterface, countType string, debugKey string, debugParams map[string]string, projectId int64,
 	includedEventProperties map[string]bool, includedUserProperties map[string]bool, includedEvents map[string]bool) (*Itree, error, interface{}) {
 	if endEvent == "" {
 		return nil, fmt.Errorf("missing end event"), nil
@@ -1577,7 +1577,7 @@ func formatProperty(property string) string {
 func (it *Itree) buildAndAddPropertyChildNodesV1(reqId string,
 	parentNode *ItreeNode, allActiveUsersPattern *P.Pattern,
 	patternWrapper PatternServiceWrapperInterface, countType string, level int, debugKey string, debugPropertyName string, debugPropertyValue string,
-	startEventConstraints *P.EventConstraints, endEventConstraints *P.EventConstraints, includedEventProperties, includedUserProperties map[string]bool, projectId uint64) ([]*ItreeNode, error, interface{}) {
+	startEventConstraints *P.EventConstraints, endEventConstraints *P.EventConstraints, includedEventProperties, includedUserProperties map[string]bool, projectId int64) ([]*ItreeNode, error, interface{}) {
 	// The top child nodes are obtained by adding constraints on the (N-1) event
 	// of parent pattern.
 	// i.e If parrent pattern is A -> B -> C -> Y with

@@ -6,7 +6,7 @@ import (
 
 type ShareableURLAudit struct {
 	ID         string `gorm:"type:uuid;default:uuid_generate_v4()" json:"id"`
-	ProjectID  uint64 `gorm:"not null" json:"project_id"`
+	ProjectID  int64  `gorm:"not null" json:"project_id"`
 	ShareID    string `gorm:"type:uuid;not null" json:"share_id"`
 	QueryID    string `json:"query_id"`
 	EntityID   int64  `json:"entity_id"`

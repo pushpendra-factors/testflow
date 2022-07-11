@@ -95,7 +95,7 @@ func TestDBCreateAndGetProject(t *testing.T) {
 	assert.Equal(t, project.ID, getProject.ID)
 
 	// Test Get Project on random id.
-	var randomId uint64 = U.RandomUint64WithUnixNano()
+	var randomId int64 = int64(U.RandomUint64WithUnixNano())
 	getProject, errCode = store.GetStore().GetProject(randomId)
 	assert.Equal(t, http.StatusNotFound, errCode)
 	assert.Nil(t, getProject)
@@ -141,9 +141,9 @@ func TestDBCreateAndGetProject(t *testing.T) {
 
 func TestDBGetProjectByIDs(t *testing.T) {
 	t.Run("NoProjects", func(t *testing.T) {
-		randIds := []uint64{
-			U.RandomUint64WithUnixNano(),
-			U.RandomUint64WithUnixNano(),
+		randIds := []int64{
+			int64(U.RandomUint64WithUnixNano()),
+			int64(U.RandomUint64WithUnixNano()),
 		}
 		proj, errCode := store.GetStore().GetProjectsByIDs(randIds)
 		assert.Equal(t, 0, len(proj))
@@ -151,14 +151,14 @@ func TestDBGetProjectByIDs(t *testing.T) {
 	})
 
 	t.Run("MissingParams", func(t *testing.T) {
-		randIds := []uint64{}
+		randIds := []int64{}
 		_, errCode := store.GetStore().GetProjectsByIDs(randIds)
 		assert.Equal(t, http.StatusBadRequest, errCode)
 	})
 
 	t.Run("FetchProjects", func(t *testing.T) {
 		noOfProjects := int(U.RandomUint64()%5 + 2)
-		idsToFetch := make([]uint64, 0, 0)
+		idsToFetch := make([]int64, 0, 0)
 		for i := 0; i < noOfProjects; i++ {
 			project, err := SetupProjectReturnDAO()
 			assert.Nil(t, err)
@@ -239,6 +239,6 @@ func TestProjectSettingIngestionTimezoneFetch(t *testing.T) {
 
 	projectSetting.IntGoogleIngestionTimezone = "Australia"
 	db.Save(projectSetting)
-	_, projectSettings, _ := store.GetStore().GetFacebookEnabledIDsAndProjectSettingsForProject([]uint64{project.ID})
+	_, projectSettings, _ := store.GetStore().GetFacebookEnabledIDsAndProjectSettingsForProject([]int64{project.ID})
 	log.Warn(projectSettings)
 }

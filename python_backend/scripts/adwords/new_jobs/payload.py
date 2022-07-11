@@ -3,6 +3,7 @@ import operator
 
 from lib.utils.adwords.format import FormatUtil
 from .fields_mapping import FieldsMapping
+import logging as log
 
 class Payload:
 
@@ -39,7 +40,25 @@ class Payload:
         {OPERAND1: "impressions", OPERAND2: "search_rank_lost_impression_share",
          RESULT_FIELD: "total_search_rank_lost_impression", OPERATION: operator.truediv},
         {OPERAND1: "impressions", OPERAND2: "search_rank_lost_top_impression_share",
-         RESULT_FIELD: "total_search_rank_lost_top_impression", OPERATION: operator.truediv}
+         RESULT_FIELD: "total_search_rank_lost_top_impression", OPERATION: operator.truediv},
+        {OPERAND1: "impressions", OPERAND2: "absolute_top_impression_percentage",
+         RESULT_FIELD: "absolute_top_impressions", OPERATION: operator.mul},
+        {OPERAND1: "impressions", OPERAND2: "top_impression_percentage",
+         RESULT_FIELD: "top_impressions", OPERATION: operator.mul},
+        {OPERAND1: "top_impressions", OPERAND2: "search_top_impression_share",
+         RESULT_FIELD: "total_top_impressions", OPERATION: operator.truediv},
+        {OPERAND1: "total_search_impression", OPERAND2: "search_budget_lost_impression_share",
+         RESULT_FIELD: "impression_lost_due_to_budget", OPERATION: operator.mul},
+        {OPERAND1: "total_search_impression", OPERAND2: "search_rank_lost_impression_share",
+         RESULT_FIELD: "impression_lost_due_to_rank", OPERATION: operator.mul},
+        {OPERAND1: "total_top_impressions", OPERAND2: "search_budget_lost_top_impression_share",
+         RESULT_FIELD: "top_impression_lost_due_to_budget", OPERATION: operator.mul},
+        {OPERAND1: "total_top_impressions", OPERAND2: "search_budget_lost_absolute_top_impression_share",
+         RESULT_FIELD: "absolute_top_impression_lost_due_to_budget", OPERATION: operator.mul},
+        {OPERAND1: "total_top_impressions", OPERAND2: "search_rank_lost_top_impression_share",
+         RESULT_FIELD: "top_impression_lost_due_to_rank", OPERATION: operator.mul},
+        {OPERAND1: "total_top_impressions", OPERAND2: "search_rank_lost_absolute_top_impression_share",
+         RESULT_FIELD: "absolute_top_impression_lost_due_to_rank", OPERATION: operator.mul},
     ]
 
     fields_with_percentages = {}

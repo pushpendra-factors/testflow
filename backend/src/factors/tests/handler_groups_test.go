@@ -22,7 +22,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func sendGetGroupsRequest(projectId uint64, agent *model.Agent, r *gin.Engine) *httptest.ResponseRecorder {
+func sendGetGroupsRequest(projectId int64, agent *model.Agent, r *gin.Engine) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error Creating cookieData")

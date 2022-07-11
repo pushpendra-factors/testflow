@@ -10,7 +10,7 @@ import (
 )
 
 type AdwordsDocument struct {
-	ProjectID         uint64          `gorm:"primary_key:true;auto_increment:false" json:"project_id"`
+	ProjectID         int64           `gorm:"primary_key:true;auto_increment:false" json:"project_id"`
 	CustomerAccountID string          `gorm:"primary_key:true;auto_increment:false" json:"customer_acc_id"`
 	TypeAlias         string          `gorm:"-" json:"type_alias"`
 	Type              int             `gorm:"primary_key:true;auto_increment:false" json:"type"`
@@ -26,7 +26,7 @@ type AdwordsDocument struct {
 }
 
 type AdwordsLastSyncInfo struct {
-	ProjectId         uint64 `json:"project_id"`
+	ProjectId         int64  `json:"project_id"`
 	Timezone          string `json:"timezone"`
 	CustomerAccountId string `json:"customer_acc_id"`
 	RefreshToken      string `json:"refresh_token"`
@@ -37,7 +37,7 @@ type AdwordsLastSyncInfo struct {
 }
 
 type AdwordsLastSyncInfoPayload struct {
-	ProjectId uint64 `json:"project_id"`
+	ProjectId int64 `json:"project_id"`
 }
 
 const (
@@ -112,6 +112,15 @@ const (
 	AdwordsSmartProperty                       = "smart_properties"
 	ConversionValue                            = "conversion_value"
 	SearchPerformanceReport                    = "search_performance_report"
+	TopImpressions                             = "top_impressions"
+	TotalTopImpressions                        = "total_top_impressions"
+	AbsoluteTopImpressions                     = "absolute_top_impressions"
+	ImpressionLostDueToBudget                  = "impression_lost_due_to_budget"
+	ImpressionLostDueToRank                    = "impression_lost_due_to_rank"
+	TopImpressionLostDueToBudget               = "top_impression_lost_due_to_budget"
+	TopImpressionLostDueToRank                 = "top_impression_lost_due_to_rank"
+	AbsoluteTopImpressionLostDueToBudget       = "absolute_top_impression_lost_due_to_budget"
+	AbsoluteTopImpressionLostDueToRank         = "absolute_top_impression_lost_due_to_rank"
 )
 
 /*

@@ -19,7 +19,7 @@ type EventName struct {
 	Type string `gorm:"not null;type:varchar(2)" json:"type"`
 	// Below are the foreign key constraints added in creation script.
 	// project_id -> projects(id)
-	ProjectId uint64 `gorm:"primary_key:true;" json:"project_id"`
+	ProjectId int64 `gorm:"primary_key:true;" json:"project_id"`
 	// if default is not set as NULL empty string will be installed.
 	FilterExpr string    `gorm:"type:varchar(500);default:null" json:"filter_expr"`
 	Deleted    bool      `gorm:"not null;default:false" json:"deleted"`
@@ -135,7 +135,7 @@ type EventNameWithAggregation struct {
 	Type string `gorm:"not null;type:varchar(2)" json:"type"`
 	// Below are the foreign key constraints added in creation script.
 	// project_id -> projects(id)
-	ProjectId uint64 `gorm:"primary_key:true;" json:"project_id"`
+	ProjectId int64 `gorm:"primary_key:true;" json:"project_id"`
 	// if default is not set as NULL empty string will be installed.
 	FilterExpr string    `gorm:"type:varchar(500);default:null" json:"filter_expr"`
 	Deleted    bool      `gorm:"not null;default:false" json:"deleted"`
@@ -334,7 +334,7 @@ func CheckSmartEventNameDuplicateFilter(existingFilter *SmartCRMEventFilter, inc
 }
 
 // CRMFilterEvaluator evaluates a CRM filter on the properties provided. Can work in current properties or current and previous property mode
-func CRMFilterEvaluator(projectID uint64, currProperty, prevProperty *map[string]interface{},
+func CRMFilterEvaluator(projectID int64, currProperty, prevProperty *map[string]interface{},
 	filter *SmartCRMEventFilter, compareState string) bool {
 	if filter == nil {
 		return false
@@ -728,71 +728,71 @@ func AddSmartEventReferenceMeta(properties *map[string]interface{}, eventID stri
 }
 
 // Today's keys
-func GetPropertiesByEventCategoryCacheKey(projectId uint64, event_name string, property string, category string, date string) (*cacheRedis.Key, error) {
+func GetPropertiesByEventCategoryCacheKey(projectId int64, event_name string, property string, category string, date string) (*cacheRedis.Key, error) {
 	prefix := "EN:PC"
 	return cacheRedis.NewKey(projectId, fmt.Sprintf("%s:%s", prefix, event_name), fmt.Sprintf("%s:%s:%s", date, category, property))
 }
-func GetEventNamesOrderByOccurrenceAndRecencyCacheKey(projectId uint64, event_name string, date string) (*cacheRedis.Key, error) {
+func GetEventNamesOrderByOccurrenceAndRecencyCacheKey(projectId int64, event_name string, date string) (*cacheRedis.Key, error) {
 	prefix := "EN"
 	return cacheRedis.NewKey(projectId, prefix, fmt.Sprintf("%s:%s", date, event_name))
 }
 
-func GetSmartEventNamesOrderByOccurrenceAndRecencyCacheKey(projectId uint64, event_name string, date string) (*cacheRedis.Key, error) {
+func GetSmartEventNamesOrderByOccurrenceAndRecencyCacheKey(projectId int64, event_name string, date string) (*cacheRedis.Key, error) {
 	prefix := "EN:SE"
 	return cacheRedis.NewKey(projectId, prefix, fmt.Sprintf("%s:%s", date, event_name))
 }
 
-func GetValuesByEventPropertyCacheKey(projectId uint64, event_name string, property_name string, value string, date string) (*cacheRedis.Key, error) {
+func GetValuesByEventPropertyCacheKey(projectId int64, event_name string, property_name string, value string, date string) (*cacheRedis.Key, error) {
 	prefix := "EN:PV"
 	return cacheRedis.NewKey(projectId, fmt.Sprintf("%s:%s:%s", prefix, event_name, property_name), fmt.Sprintf("%s:%s", date, value))
 }
 
 // For sortedsets
-func GetPropertiesByEventCategoryCacheKeySortedSet(projectId uint64, date string) (*cacheRedis.Key, error) {
+func GetPropertiesByEventCategoryCacheKeySortedSet(projectId int64, date string) (*cacheRedis.Key, error) {
 	prefix := "SS:EN:PC"
 	return cacheRedis.NewKey(projectId, fmt.Sprintf("%s", prefix), fmt.Sprintf("%s", date))
 }
-func GetEventNamesOrderByOccurrenceAndRecencyCacheKeySortedSet(projectId uint64, date string) (*cacheRedis.Key, error) {
+func GetEventNamesOrderByOccurrenceAndRecencyCacheKeySortedSet(projectId int64, date string) (*cacheRedis.Key, error) {
 	prefix := "SS:EN"
 	return cacheRedis.NewKey(projectId, prefix, fmt.Sprintf("%s", date))
 }
 
-func GetSmartEventNamesOrderByOccurrenceAndRecencyCacheKeySortedSet(projectId uint64, date string) (*cacheRedis.Key, error) {
+func GetSmartEventNamesOrderByOccurrenceAndRecencyCacheKeySortedSet(projectId int64, date string) (*cacheRedis.Key, error) {
 	prefix := "SS:EN:SE"
 	return cacheRedis.NewKey(projectId, prefix, fmt.Sprintf("%s", date))
 }
 
-func GetValuesByEventPropertyCacheKeySortedSet(projectId uint64, date string) (*cacheRedis.Key, error) {
+func GetValuesByEventPropertyCacheKeySortedSet(projectId int64, date string) (*cacheRedis.Key, error) {
 	prefix := "SS:EN:PV"
 	return cacheRedis.NewKey(projectId, fmt.Sprintf("%s", prefix), fmt.Sprintf("%s", date))
 }
 
 // Rollup keys
-func GetPropertiesByEventCategoryRollUpCacheKey(projectId uint64, event_name string, date string) (*cacheRedis.Key, error) {
+func GetPropertiesByEventCategoryRollUpCacheKey(projectId int64, event_name string, date string) (*cacheRedis.Key, error) {
 	prefix := "RollUp:EN:PC"
 	return cacheRedis.NewKey(projectId, fmt.Sprintf("%s:%s", prefix, event_name), date)
 }
-func GetEventNamesOrderByOccurrenceAndRecencyRollUpCacheKey(projectId uint64, date string) (*cacheRedis.Key, error) {
+func GetEventNamesOrderByOccurrenceAndRecencyRollUpCacheKey(projectId int64, date string) (*cacheRedis.Key, error) {
 	prefix := "RollUp:EN"
 	return cacheRedis.NewKey(projectId, prefix, date)
 }
 
-func GetValuesByEventPropertyRollUpCacheKey(projectId uint64, event_name string, property_name string, date string) (*cacheRedis.Key, error) {
+func GetValuesByEventPropertyRollUpCacheKey(projectId int64, event_name string, property_name string, date string) (*cacheRedis.Key, error) {
 	prefix := "RollUp:EN:PV"
 	return cacheRedis.NewKey(projectId, fmt.Sprintf("%s:%s:%s", prefix, event_name, property_name), date)
 }
 
 // Today's keys count per project used for clean up
-func GetPropertiesByEventCategoryCountCacheKey(projectId uint64, dateKey string) (*cacheRedis.Key, error) {
+func GetPropertiesByEventCategoryCountCacheKey(projectId int64, dateKey string) (*cacheRedis.Key, error) {
 	prefix := "C:EN:PC"
 	return cacheRedis.NewKeyWithAllProjectsSupport(projectId, prefix, dateKey)
 }
-func GetEventNamesOrderByOccurrenceAndRecencyCountCacheKey(projectId uint64, dateKey string) (*cacheRedis.Key, error) {
+func GetEventNamesOrderByOccurrenceAndRecencyCountCacheKey(projectId int64, dateKey string) (*cacheRedis.Key, error) {
 	prefix := "C:EN"
 	return cacheRedis.NewKeyWithAllProjectsSupport(projectId, prefix, dateKey)
 }
 
-func GetValuesByEventPropertyCountCacheKey(projectId uint64, dateKey string) (*cacheRedis.Key, error) {
+func GetValuesByEventPropertyCountCacheKey(projectId int64, dateKey string) (*cacheRedis.Key, error) {
 	prefix := "C:EN:PV"
 	return cacheRedis.NewKeyWithAllProjectsSupport(projectId, prefix, dateKey)
 

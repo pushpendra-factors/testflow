@@ -38,7 +38,7 @@ type TrackPayload struct {
 	EventProperties U.PropertiesMap `json:"event_properties"`
 	UserProperties  U.PropertiesMap `json:"user_properties"`
 	Timestamp       int64           `json:"timestamp"`
-	ProjectId       uint64          `json:"project_id"`
+	ProjectId       int64           `json:"project_id"`
 	Auto            bool            `json:"auto"`
 	ClientIP        string          `json:"client_ip"`
 	UserAgent       string          `json:"user_agent"`
@@ -329,7 +329,7 @@ func recordLatencyMetricByRequestType(requestType string, execStartTime time.Tim
 	metrics.RecordLatency(C.GetSDKAndIntegrationMetricNameByConfig(metricName), float64(latencyInMs))
 }
 
-func BackFillEventDataInCacheFromDb(project_id uint64, currentTime time.Time, no_of_days int,
+func BackFillEventDataInCacheFromDb(project_id int64, currentTime time.Time, no_of_days int,
 	eventsLimit, propertyLimit, valuesLimit int, rowsLimit int, perQueryPullRange int, skipExpiryForCache bool) {
 
 	// Preload EventNames-count-lastseen
@@ -489,7 +489,7 @@ func isPropertiesDefaultableTrackRequest(source string, isAutoTracked bool) bool
 	return isAutoTracked && (source == SourceJSSDK || source == SourceAMPSDK)
 }
 
-func Track(projectId uint64, request *TrackPayload,
+func Track(projectId int64, request *TrackPayload,
 	skipSession bool, source string, objectType string) (int, *TrackResponse) {
 	logCtx := log.WithField("project_id", projectId)
 
@@ -817,7 +817,7 @@ type Rank struct {
 	Value string
 }
 
-func MapEventPropertiesToProjectDefinedProperties(projectID uint64, logCtx *log.Entry, properties *U.PropertiesMap) (*U.PropertiesMap, bool) {
+func MapEventPropertiesToProjectDefinedProperties(projectID int64, logCtx *log.Entry, properties *U.PropertiesMap) (*U.PropertiesMap, bool) {
 
 	mappedProperties := make(U.PropertiesMap)
 
@@ -878,7 +878,7 @@ func ApplyRanking(interactionSettings model.InteractionSettings, properties *U.P
 	}
 }
 
-func isUserAlreadyIdentifiedBySDKRequest(projectID uint64, userID string) bool {
+func isUserAlreadyIdentifiedBySDKRequest(projectID int64, userID string) bool {
 	userProperties, status := store.GetStore().GetLatestUserPropertiesOfUserAsMap(projectID, userID)
 	if status != http.StatusFound {
 		return false
@@ -898,7 +898,7 @@ func isUserAlreadyIdentifiedBySDKRequest(projectID uint64, userID string) bool {
 	return false
 }
 
-func Identify(projectId uint64, request *IdentifyPayload, overwrite bool) (int, *IdentifyResponse) {
+func Identify(projectId int64, request *IdentifyPayload, overwrite bool) (int, *IdentifyResponse) {
 	// Precondition: Fails to identify if customer_user_id not present.
 	if request.CustomerUserId == "" {
 		log.Error("Identification failed. Missing user_id or c_uid.")
@@ -1108,7 +1108,7 @@ func Identify(projectId uint64, request *IdentifyPayload, overwrite bool) (int, 
 	return http.StatusOK, &IdentifyResponse{Message: "User has been identified successfully."}
 }
 
-func AddUserProperties(projectId uint64,
+func AddUserProperties(projectId int64,
 	request *AddUserPropertiesPayload) (int, *AddUserPropertiesResponse) {
 
 	logCtx := log.WithField("project_id", projectId)
@@ -1543,7 +1543,7 @@ func UpdateEventPropertiesWithQueue(token string, reqPayload *UpdateEventPropert
 	return UpdateEventPropertiesByToken(token, reqPayload)
 }
 
-func updateInitialUserPropertiesFromUpdateEventProperties(projectID uint64,
+func updateInitialUserPropertiesFromUpdateEventProperties(projectID int64,
 	eventID, userID string, newInitialUserProperties *U.PropertiesMap) int {
 
 	logCtx := log.WithField("project_id", projectID).WithField("event_id", eventID)
@@ -1598,7 +1598,7 @@ func updateInitialUserPropertiesFromUpdateEventProperties(projectID uint64,
 	return overwriteUserPropertiesOnTable(projectID, userID, eventID, updateUserPropertiesJson)
 }
 
-func overwriteUserPropertiesOnTable(projectID uint64, userID string, eventID string,
+func overwriteUserPropertiesOnTable(projectID int64, userID string, eventID string,
 	updateUserPropertiesJson *postgres.Jsonb) int {
 
 	logCtx := log.WithField("project_id", projectID).
@@ -1623,7 +1623,7 @@ func overwriteUserPropertiesOnTable(projectID uint64, userID string, eventID str
 	return http.StatusAccepted
 }
 
-func UpdateEventProperties(projectId uint64,
+func UpdateEventProperties(projectId int64,
 	request *UpdateEventPropertiesPayload) (int, *UpdateEventPropertiesResponse) {
 
 	// add received timestamp before processing, if not given.
@@ -1884,13 +1884,13 @@ func AMPTrackByToken(token string, reqPayload *AMPTrackPayload) (int, *Response)
 		Message: trackResponse.Message, Error: trackResponse.Error}
 }
 
-func getAMPSDKByEventIDCacheKey(projectId uint64, userId string, pageURL string) (*cacheRedis.Key, error) {
+func getAMPSDKByEventIDCacheKey(projectId int64, userId string, pageURL string) (*cacheRedis.Key, error) {
 	prefix := "amp_sdk_user_event"
 	suffix := "uid:" + userId + ":url:" + pageURL
 	return cacheRedis.NewKey(projectId, prefix, suffix)
 }
 
-func SetCacheAMPSDKEventIDByPageURL(projectId uint64, userId string, eventId string, pageURL string) int {
+func SetCacheAMPSDKEventIDByPageURL(projectId int64, userId string, eventId string, pageURL string) int {
 	logctx := log.WithFields(log.Fields{"project_id": projectId,
 		"user_id": userId, "event_id": eventId, "page_url": pageURL})
 
@@ -1913,7 +1913,7 @@ func SetCacheAMPSDKEventIDByPageURL(projectId uint64, userId string, eventId str
 	return http.StatusAccepted
 }
 
-func GetCacheAMPSDKEventIDByPageURL(projectId uint64, userId string, pageURL string) (string, int) {
+func GetCacheAMPSDKEventIDByPageURL(projectId int64, userId string, pageURL string) (string, int) {
 	logCtx := log.WithField("project_id", projectId).WithField("user_id", userId).
 		WithField("page_url", pageURL)
 
