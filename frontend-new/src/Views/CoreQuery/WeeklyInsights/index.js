@@ -55,6 +55,7 @@ const WeeklyInishgtsResults = ({data, activeInsight, requestQuery,activeProject 
     const [defaultActive, setDefaultActive] = useState(null);
     const [expandAll, setExpandAll] = useState(true);
     const [loading, setLoading] = useState(false);
+    const [showToggleBtn, setShowToggleBtn] = useState(true);
 
     const TagIconSize = 14;
     const UpIcon = 'growthUp';
@@ -72,10 +73,14 @@ const WeeklyInishgtsResults = ({data, activeInsight, requestQuery,activeProject 
     
     const togglePanels = () =>{
         
-        if(expandAll){
-            const panelCount = data?.actual_metrics?.length;
-            const activePanel = _.range(panelCount)
-            setDefaultActive(activePanel);
+        if(expandAll){ 
+            let activePanels =  data?.actual_metrics?.map((item, index)=>{ 
+                if(item?.category == "kpi_campaign"){
+                    return null 
+                }
+                else return index
+            }) 
+            setDefaultActive(activePanels);
             setExpandAll(false);
         }
         else{
@@ -83,6 +88,21 @@ const WeeklyInishgtsResults = ({data, activeInsight, requestQuery,activeProject 
             setExpandAll(true);
         }
     }
+
+    useEffect(()=>{
+        let activePanels =  data?.actual_metrics?.map((item, index)=>{ 
+            if(item?.category == "kpi_campaign"){
+                return null 
+            }
+            else index
+        })
+        if(activePanels.every(element => element === null)){
+            setShowToggleBtn(false)
+        }
+        else{
+            setShowToggleBtn(true)
+        }
+    },[])
 
     const UserRatingComp = ({item, index, actualData}) =>{
 
@@ -298,9 +318,9 @@ const WeeklyInishgtsResults = ({data, activeInsight, requestQuery,activeProject 
                         </div>
                     </Col>
                     <Col span={12}>
-                        <div className={'flex justify-end items-center mt-6'}>
+                        {showToggleBtn &&<div className={'flex justify-end items-center mt-6'}>
                             <Button type={'text'} style={{minWidth: '170px'}} onClick={togglePanels}>{expandAll ?  <SVG size={16} name={'SortDown'} /> : <SVG size={16} name={'SortUp'} /> } {expandAll ? 'Expand Insights' : 'Collapse Insights' }</Button> 
-                        </div>
+                        </div>}
                     </Col>
                     
                 </Row>
