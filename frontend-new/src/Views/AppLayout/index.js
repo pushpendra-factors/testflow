@@ -81,6 +81,18 @@ function AppLayout({
   const { show_analytics_result } = useSelector((state) => state.coreQuery);
   const dispatch = useDispatch();
   const [sidebarCollapse, setSidebarCollapse] = useState(true);
+
+  const activeAgent = agentState?.agent_details?.email;
+  
+  const whiteListedAccounts = [
+    'baliga@factors.ai',
+    'solutions@factors.ai',
+    'sonali@factors.ai',
+    'praveenr@factors.ai',
+    //   'janani@factors.ai', 
+    //   'praveenr@factors.ai',
+    //   'ashwin@factors.ai',
+  ];
  
   const asyncCallOnLoad = useCallback(async () => {
     try {
