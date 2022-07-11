@@ -3,17 +3,15 @@ package task
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
-	"os"
-	"time"
-
 	"factors/filestore"
 	M "factors/model/model"
 	"factors/model/store"
 	P "factors/pattern"
 	serviceDisk "factors/services/disk"
-
 	U "factors/util"
+	"fmt"
+	"os"
+	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
@@ -142,7 +140,15 @@ func pullEvents(projectID int64, startTime, endTime int64, eventsFilePath string
 		lastEvent = &event
 		rowCount++
 	}
-	peLog.WithFields(log.Fields{"err": err, "project_id": projectID, "count": nilUserProperties}).Error("Nil user properties.")
+	if nilUserProperties > 0 {
+		peLog.WithFields(log.Fields{"err": err, "project_id": projectID, "count": nilUserProperties}).Error("Nil user properties.")
+	}
+	err = rows.Err()
+	if err != nil {
+		// Error from DB is captured eg: timeout error
+		peLog.WithFields(log.Fields{"err": err, "project_id": projectID}).Error("Error in executing query")
+		return 0, "", err
+	}
 
 	if rowCount > M.EventsPullLimit {
 		// Todo(Dinesh): notify
