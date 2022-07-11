@@ -1831,10 +1831,7 @@ func (store *MemSQL) UpdateCacheForUserProperties(userId string, projectID uint6
 // latest user properties for session.
 func (store *MemSQL) UpdateUserPropertiesForSession(projectID uint64,
 	sessionUserPropertiesRecordMap *map[string]model.SessionUserProperties) int {
-	logFields := log.Fields{
-		"project_id":                         projectID,
-		"session_user_properties_record_map": sessionUserPropertiesRecordMap,
-	}
+	logFields := log.Fields{"project_id": projectID}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	return store.updateUserPropertiesForSessionV2(projectID, sessionUserPropertiesRecordMap)
@@ -1922,12 +1919,41 @@ func (store *MemSQL) GetCustomerUserIDAndUserPropertiesFromFormSubmit(projectID 
 	return "", nil, http.StatusBadRequest
 }
 
+func validateAndLogPageCountAndPageSpentTimeDisparity(logCtx *log.Entry,
+	existingUserProperties *postgres.Jsonb,
+	newPageCount, newTotalSpentTime float64) {
+
+	existingUserPropertiesMap, err := U.DecodePostgresJsonbAsPropertiesMap(existingUserProperties)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to decode existing user_proeprties to validate.")
+	}
+
+	existingPageCount, err := U.GetPropertyValueAsFloat64((*existingUserPropertiesMap)[U.UP_PAGE_COUNT])
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to convert page_count to float64.")
+	}
+	if existingPageCount > 0 && existingPageCount > newPageCount {
+		logCtx.WithFields(log.Fields{
+			"existing": existingPageCount,
+			"new":      newPageCount,
+		}).Error("Existing value of page_count is greater than new value")
+	}
+
+	existingTotalSpentTime, err := U.GetPropertyValueAsFloat64((*existingUserPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to convert existing total_spent_time to float64.")
+	}
+	if existingTotalSpentTime > 0 && existingTotalSpentTime > newTotalSpentTime {
+		logCtx.WithFields(log.Fields{
+			"existing": existingTotalSpentTime,
+			"new":      newTotalSpentTime,
+		}).Error("Existing value of total_spent_time greater than new value")
+	}
+}
+
 func (store *MemSQL) updateUserPropertiesForSessionV2(projectID uint64,
 	sessionUserPropertiesRecordMap *map[string]model.SessionUserProperties) int {
-	logFields := log.Fields{
-		"project_id":                         projectID,
-		"session_user_properties_record_map": sessionUserPropertiesRecordMap,
-	}
+	logFields := log.Fields{"project_id": projectID}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	logCtx := log.WithFields(logFields)
@@ -2034,11 +2060,7 @@ func (store *MemSQL) updateLatestUserPropertiesForSessionIfNotUpdatedV2(
 	latestSessionUserPropertiesByUserID *map[string]model.LatestUserPropertiesFromSession,
 ) int {
 
-	logFields := log.Fields{
-		"project_id":                                projectID,
-		"session_update_user_ids":                   sessionUpdateUserIDs,
-		"latest_session_user_properties_by_user_id": latestSessionUserPropertiesByUserID,
-	}
+	logFields := log.Fields{"project_id": projectID}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	logCtx := log.WithFields(logFields)
@@ -2063,10 +2085,14 @@ func (store *MemSQL) updateLatestUserPropertiesForSessionIfNotUpdatedV2(
 			continue
 		}
 
+		validateAndLogPageCountAndPageSpentTimeDisparity(logCtx, existingUserProperties,
+			sessionUserProperties.PageCount, sessionUserProperties.TotalSpentTime)
+
 		newUserProperties := map[string]interface{}{
 			U.UP_TOTAL_SPENT_TIME: sessionUserProperties.TotalSpentTime,
 			U.UP_PAGE_COUNT:       sessionUserProperties.PageCount,
 		}
+
 		userPropertiesJsonb, err := U.AddToPostgresJsonb(existingUserProperties, newUserProperties, true)
 		if err != nil {
 			logCtx.WithError(err).
