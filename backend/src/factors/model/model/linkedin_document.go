@@ -8,7 +8,7 @@ import (
 
 // LinkedinDocument ...
 type LinkedinDocument struct {
-	ProjectID           uint64          `gorm:"primary_key:true;auto_increment:false" json:"project_id"`
+	ProjectID           int64           `gorm:"primary_key:true;auto_increment:false" json:"project_id"`
 	CustomerAdAccountID string          `gorm:"primary_key:true;auto_increment:false" json:"customer_ad_account_id"`
 	TypeAlias           string          `gorm:"-" json:"type_alias"`
 	Type                int             `gorm:"primary_key:true;auto_increment:false" json:"type"`
@@ -27,7 +27,7 @@ type LinkedinLastSyncInfoPayload struct {
 	CustomerAdAccountID string `json:"customer_ad_account_id"`
 }
 type LinkedinLastSyncInfo struct {
-	ProjectID           uint64 `json:"project_id"`
+	ProjectID           int64  `json:"project_id"`
 	CustomerAdAccountID string `json:"customer_ad_account_id"`
 	DocumentType        int    `json:"document_type"`
 	DocumentTypeAlias   string `json:"type_alias"`

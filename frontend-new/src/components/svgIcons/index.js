@@ -2359,6 +2359,87 @@ const Activity_filterSVG = ({ size = 20, extraClass, color }) => {
     </svg>
   );
 };
+const AddNewSVG = ({width,height,extraClass}) => {
+  return(
+    <svg width={width} height={height} viewBox="0 0 49 49" className={extraClass} fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M8.5 10.1729C8.5 9.06828 9.39543 8.17285 10.5 8.17285H20.5C21.6046 8.17285 22.5 9.06828 22.5 10.1729V22.1114C22.5 23.216 21.6046 24.1114 20.5 24.1114H10.5C9.39543 24.1114 8.5 23.216 8.5 22.1114V10.1729Z" fill="url(#paint0_linear_440_31564)"/>
+<path d="M8.5 30.1114C8.5 29.0068 9.39543 28.1114 10.5 28.1114H20.5C21.6046 28.1114 22.5 29.0068 22.5 30.1114V38.1114C22.5 39.216 21.6046 40.1114 20.5 40.1114H10.5C9.39543 40.1114 8.5 39.216 8.5 38.1114V30.1114Z" fill="url(#paint1_linear_440_31564)"/>
+<path fill-rule="evenodd" clip-rule="evenodd" d="M26.9048 32.1114C26.9048 31.283 27.5763 30.6114 28.4048 30.6114H39.0325C39.8609 30.6114 40.5325 31.283 40.5325 32.1114C40.5325 32.9398 39.8609 33.6114 39.0325 33.6114H28.4048C27.5763 33.6114 26.9048 32.9398 26.9048 32.1114Z" fill="url(#paint2_linear_440_31564)"/>
+<path fill-rule="evenodd" clip-rule="evenodd" d="M33.6781 25.6029C34.5065 25.6029 35.1781 26.2745 35.1781 27.1029V37.4394C35.1781 38.2678 34.5065 38.9394 33.6781 38.9394C32.8497 38.9394 32.1781 38.2678 32.1781 37.4394V27.1029C32.1781 26.2745 32.8497 25.6029 33.6781 25.6029Z" fill="url(#paint3_linear_440_31564)"/>
+<path d="M26.686 10.1729C26.686 9.06828 27.5815 8.17285 28.686 8.17285H38.5C39.6046 8.17285 40.5 9.06828 40.5 10.1729V18.1114C40.5 19.216 39.6046 20.1114 38.5 20.1114H28.686C27.5815 20.1114 26.686 19.216 26.686 18.1114V10.1729Z" fill="url(#paint4_linear_440_31564)"/>
+<defs>
+<linearGradient id="paint0_linear_440_31564" x1="24.5162" y1="8.17285" x2="24.5162" y2="40.1114" gradientUnits="userSpaceOnUse">
+<stop stop-color="#54ADFF"/>
+<stop offset="1" stop-color="#88C6FF"/>
+</linearGradient>
+<linearGradient id="paint1_linear_440_31564" x1="24.5162" y1="8.17285" x2="24.5162" y2="40.1114" gradientUnits="userSpaceOnUse">
+<stop stop-color="#54ADFF"/>
+<stop offset="1" stop-color="#88C6FF"/>
+</linearGradient>
+<linearGradient id="paint2_linear_440_31564" x1="24.5162" y1="8.17285" x2="24.5162" y2="40.1114" gradientUnits="userSpaceOnUse">
+<stop stop-color="#54ADFF"/>
+<stop offset="1" stop-color="#88C6FF"/>
+</linearGradient>
+<linearGradient id="paint3_linear_440_31564" x1="24.5162" y1="8.17285" x2="24.5162" y2="40.1114" gradientUnits="userSpaceOnUse">
+<stop stop-color="#54ADFF"/>
+<stop offset="1" stop-color="#88C6FF"/>
+</linearGradient>
+<linearGradient id="paint4_linear_440_31564" x1="24.5162" y1="8.17285" x2="24.5162" y2="40.1114" gradientUnits="userSpaceOnUse">
+<stop stop-color="#54ADFF"/>
+<stop offset="1" stop-color="#88C6FF"/>
+</linearGradient>
+</defs>
+</svg>
+
+  );
+}
+
+const SelectFromTemplatesSVG = ({width,height,extraClass})=>{
+  return(
+    <svg width={width} height={height} className={extraClass} viewBox="0 0 49 49" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M10 8C8.89543 8 8 8.89543 8 10V21.9385C8 23.0431 8.89543 23.9385 10 23.9385H20C21.1046 23.9385 22 23.0431 22 21.9385V10C22 8.89543 21.1046 8 20 8H10Z" fill="url(#paint0_linear_440_31569)"/>
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M10 27.9385C8.89543 27.9385 8 28.834 8 29.9385V37.9385C8 39.0431 8.89543 39.9385 10 39.9385H20C21.1046 39.9385 22 39.0431 22 37.9385V29.9385C22 28.834 21.1046 27.9385 20 27.9385H10Z" fill="url(#paint1_linear_440_31569)"/>
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M28.186 8C27.0815 8 26.186 8.89543 26.186 10V17.9385C26.186 19.0431 27.0815 19.9385 28.186 19.9385H38C39.1046 19.9385 40 19.0431 40 17.9385V10C40 8.89543 39.1046 8 38 8H28.186Z" fill="url(#paint2_linear_440_31569)"/>
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M28.186 23.9385C27.0815 23.9385 26.186 24.834 26.186 25.9385V37.9385C26.186 39.0431 27.0815 39.9385 28.186 39.9385H38C39.1046 39.9385 40 39.0431 40 37.9385V25.9385C40 24.834 39.1046 23.9385 38 23.9385H28.186Z" fill="url(#paint3_linear_440_31569)"/>
+    <defs>
+    <linearGradient id="paint0_linear_440_31569" x1="24" y1="8" x2="24" y2="39.9385" gradientUnits="userSpaceOnUse">
+    <stop stop-color="#70BBFF"/>
+    <stop offset="1" stop-color="#87C6FF"/>
+    </linearGradient>
+    <linearGradient id="paint1_linear_440_31569" x1="24" y1="8" x2="24" y2="39.9385" gradientUnits="userSpaceOnUse">
+    <stop stop-color="#70BBFF"/>
+    <stop offset="1" stop-color="#87C6FF"/>
+    </linearGradient>
+    <linearGradient id="paint2_linear_440_31569" x1="24" y1="8" x2="24" y2="39.9385" gradientUnits="userSpaceOnUse">
+    <stop stop-color="#70BBFF"/>
+    <stop offset="1" stop-color="#87C6FF"/>
+    </linearGradient>
+    <linearGradient id="paint3_linear_440_31569" x1="24" y1="8" x2="24" y2="39.9385" gradientUnits="userSpaceOnUse">
+    <stop stop-color="#70BBFF"/>
+    <stop offset="1" stop-color="#87C6FF"/>
+    </linearGradient>
+    </defs>
+    </svg>
+
+  );
+}
+
+const ArrowLeftSVG = ()=>{
+  return(
+    <svg width="20" height="14" viewBox="0 0 20 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M6.29254 0.406316C6.68292 0.0147861 7.31708 0.0147869 7.70746 0.406317V0.406317C8.09592 0.795922 8.09626 1.42628 7.70823 1.81631L3.83 5.71444H19C19.5523 5.71444 20 6.1651 20 6.71739V6.71739C20 7.26967 19.5523 7.72033 19 7.72033H3.83L7.71351 11.6153C8.10363 12.0065 8.10107 12.6415 7.70958 13.0313V13.0313C7.31841 13.4209 6.68414 13.4212 6.29435 13.0303L0.703993 7.42345C0.314854 7.03317 0.314855 6.4016 0.703994 6.01132L6.29254 0.406316Z" fill="#8692A3"/>
+    </svg>
+  );
+}
+
+const CopySVG = ()=>{
+  return(
+    <svg width="14" height="16" viewBox="0 0 14 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M13.0195 2.64185L11.5254 1.14771C11.2617 0.884033 10.9102 0.708252 10.5293 0.708252H5.49023C4.69922 0.708252 4.08398 1.35278 4.08398 2.1145V3.52075H1.74023C0.949219 3.52075 0.333984 4.16528 0.333984 4.927V14.302C0.333984 15.093 0.949219 15.7083 1.74023 15.7083H8.30273C9.06445 15.7083 9.70898 15.093 9.70898 14.302V12.8958H12.0527C12.8145 12.8958 13.459 12.2805 13.459 11.4895V3.63794C13.459 3.25708 13.2832 2.90552 13.0195 2.64185ZM8.12695 14.302H1.91602C1.79883 14.302 1.74023 14.2434 1.74023 14.1262V5.10278C1.74023 5.01489 1.79883 4.927 1.91602 4.927H4.08398V11.4895C4.08398 12.2805 4.69922 12.8958 5.49023 12.8958H8.30273V14.1262C8.30273 14.2434 8.21484 14.302 8.12695 14.302ZM11.877 11.4895H5.66602C5.54883 11.4895 5.49023 11.4309 5.49023 11.3137V2.29028C5.49023 2.20239 5.54883 2.1145 5.66602 2.1145H8.77148V4.69263C8.77148 5.10278 9.06445 5.39575 9.47461 5.39575H12.0527V11.3137C12.0527 11.4309 11.9648 11.4895 11.877 11.4895ZM12.0527 3.9895H10.1777V2.1145H10.4414C10.5 2.1145 10.5293 2.1438 10.5586 2.1731L11.9941 3.60864C12.0234 3.63794 12.0527 3.66724 12.0527 3.72583V3.9895Z" fill="#F5F6F8"/>
+    </svg>
+
+  );
+}
 
 export {
   BrandSVG,
@@ -2514,5 +2595,9 @@ export {
   Grip_linesSVG,
   User_friendsSVG,
   Times_circleSVG,
-  Activity_filterSVG
+  Activity_filterSVG,
+  AddNewSVG,
+  SelectFromTemplatesSVG,
+  ArrowLeftSVG,
+  CopySVG,
 };

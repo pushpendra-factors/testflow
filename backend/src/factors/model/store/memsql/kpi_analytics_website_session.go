@@ -9,7 +9,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (store *MemSQL) GetKPIConfigsForWebsiteSessions(projectID uint64, reqID string) (map[string]interface{}, int) {
+func (store *MemSQL) GetKPIConfigsForWebsiteSessions(projectID int64, reqID string) (map[string]interface{}, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"req_id":     reqID,
@@ -22,7 +22,7 @@ func (store *MemSQL) GetKPIConfigsForWebsiteSessions(projectID uint64, reqID str
 	return config, http.StatusOK
 }
 
-func (store *MemSQL) getWebsiteRelatedContentGroupPropertiesForKPI(projectID uint64) []map[string]string {
+func (store *MemSQL) getWebsiteRelatedContentGroupPropertiesForKPI(projectID int64) []map[string]string {
 	contentGroups, _ := store.GetAllContentGroups(projectID)
 
 	resultantKPIProperties := make([]map[string]string, 0)
@@ -38,13 +38,13 @@ func (store *MemSQL) getWebsiteRelatedContentGroupPropertiesForKPI(projectID uin
 }
 
 // Validation methods for website session starts here.
-func (store *MemSQL) ValidateKPISessions(projectID uint64, kpiQuery model.KPIQuery) bool {
+func (store *MemSQL) ValidateKPISessions(projectID int64, kpiQuery model.KPIQuery) bool {
 	return model.ValidateKPIQueryMetricsForWebsiteSession(kpiQuery.Metrics) ||
 		store.validateKPIQueryFiltersForWebsiteSession(projectID, kpiQuery.Filters) ||
 		store.validateKPIQueryGroupByForWebsiteSession(projectID, kpiQuery.GroupBy)
 }
 
-func (store *MemSQL) validateKPIQueryFiltersForWebsiteSession(projectID uint64, kpiQueryFilters []model.KPIFilter) bool {
+func (store *MemSQL) validateKPIQueryFiltersForWebsiteSession(projectID int64, kpiQueryFilters []model.KPIFilter) bool {
 	mapOfPredefinedKPIPropertyName := make(map[string]struct{})
 	for _, propertyData := range model.KPIPropertiesForWebsiteSessions {
 		mapOfPredefinedKPIPropertyName[propertyData["name"]] = struct{}{}
@@ -59,7 +59,7 @@ func (store *MemSQL) validateKPIQueryFiltersForWebsiteSession(projectID uint64, 
 	return true
 }
 
-func (store *MemSQL) validateKPIQueryGroupByForWebsiteSession(projectID uint64, kpiQueryGroupBys []model.KPIGroupBy) bool {
+func (store *MemSQL) validateKPIQueryGroupByForWebsiteSession(projectID int64, kpiQueryGroupBys []model.KPIGroupBy) bool {
 	mapOfPropertyName := make(map[string]struct{})
 	for _, propertyData := range model.KPIPropertiesForWebsiteSessions {
 		mapOfPropertyName[propertyData["name"]] = struct{}{}

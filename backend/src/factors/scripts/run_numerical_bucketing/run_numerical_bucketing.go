@@ -116,13 +116,13 @@ func mainRunNumericalBucketing() {
 			log.Fatal("Failed to get all projects and project_ids set to '*'.")
 		}
 
-		projectIdsToRun = make(map[uint64]bool, 0)
+		projectIdsToRun = make(map[int64]bool, 0)
 		for _, projectID := range projectIDs {
 			projectIdsToRun[projectID] = true
 		}
 	}
 
-	projectIdsArray := make([]uint64, 0)
+	projectIdsArray := make([]int64, 0)
 	for projectId, _ := range projectIdsToRun {
 		projectIdsArray = append(projectIdsArray, projectId)
 	}

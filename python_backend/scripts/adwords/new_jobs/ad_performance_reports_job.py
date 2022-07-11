@@ -45,7 +45,7 @@ class NewAdPerformanceReportsJob(ReportsFetch):
         "metrics.view_through_conversions",
     ]
 
-    HEADERS_VMAX = [
+    HEADERS_V01 = [
         "id",
         "account_currency_code",
         "account_descriptive_name",
@@ -99,6 +99,9 @@ class NewAdPerformanceReportsJob(ReportsFetch):
         "interactions", "value_per_all_conversion", "video_quartile_100_rate", "video_quartile_25_rate",
         "video_quartile_50_rate", "video_quartile_75_rate", "video_view_rate", "video_views",
         "view_through_conversions"]
+
+    HEADERS_V02 = HEADERS_V01
+    HEADERS_VMAX = HEADERS_V01
 
     REPORT = "ad_group_ad"
 

@@ -22,7 +22,7 @@ type Event struct {
 	// project_id -> projects(id)
 	// (project_id, user_id) -> users(project_id, id)
 	// (project_id, event_name_id) -> event_names(project_id, id)
-	ProjectId uint64 `gorm:"primary_key:true;" json:"project_id"`
+	ProjectId int64  `gorm:"primary_key:true;" json:"project_id"`
 	UserId    string `json:"user_id"`
 
 	UserProperties *postgres.Jsonb `json:"user_properties"`
@@ -55,7 +55,7 @@ type EventPropertiesWithCount struct {
 }
 
 type UpdateEventPropertiesParams struct {
-	ProjectID                     uint64
+	ProjectID                     int64
 	EventID                       string
 	UserID                        string
 	SessionProperties             *util.PropertiesMap
@@ -70,8 +70,13 @@ const tableName = "events"
 const NewUserSessionInactivityInSeconds int64 = ThirtyMinutesInSeconds
 const ThirtyMinutesInSeconds int64 = 30 * 60
 const EventsPullLimit = 100000000
+const AdwordsPullLimit = 100000000
+const FacebookPullLimit = 100000000
+const BingPullLimit = 100000000
+const LinkedInPullLimit = 100000000
+const GoggleOrganicPullLimit = 100000000
 
-func SetCacheUserLastEvent(projectId uint64, userId string, cacheEvent *CacheEvent) error {
+func SetCacheUserLastEvent(projectId int64, userId string, cacheEvent *CacheEvent) error {
 	logCtx := log.WithField("project_id", projectId).WithField("user_id", userId)
 	if projectId == 0 || userId == "" {
 		logCtx.Error("Invalid project or user id on addToCacheUserLastEventTimestamp")
@@ -104,7 +109,7 @@ func SetCacheUserLastEvent(projectId uint64, userId string, cacheEvent *CacheEve
 	return err
 }
 
-func GetCacheUserLastEvent(projectId uint64, userId string) (*CacheEvent, error) {
+func GetCacheUserLastEvent(projectId int64, userId string) (*CacheEvent, error) {
 	key, err := getUserLastEventCacheKey(projectId, userId)
 	if err != nil {
 		return nil, err
@@ -124,7 +129,7 @@ func GetCacheUserLastEvent(projectId uint64, userId string) (*CacheEvent, error)
 	return &cacheEvent, nil
 }
 
-func getUserLastEventCacheKey(projectId uint64, userId string) (*cacheRedis.Key, error) {
+func getUserLastEventCacheKey(projectId int64, userId string) (*cacheRedis.Key, error) {
 	suffix := fmt.Sprintf("uid:%s", userId)
 	prefix := fmt.Sprintf("%s:%s", tableName, cacheIndexUserLastEvent)
 	return cacheRedis.NewKey(projectId, prefix, suffix)

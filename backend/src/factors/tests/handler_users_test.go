@@ -20,7 +20,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func sendGetUserReq(r *gin.Engine, projectId uint64, agent *model.Agent, offset, limit *int) *httptest.ResponseRecorder {
+func sendGetUserReq(r *gin.Engine, projectId int64, agent *model.Agent, offset, limit *int) *httptest.ResponseRecorder {
 
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {

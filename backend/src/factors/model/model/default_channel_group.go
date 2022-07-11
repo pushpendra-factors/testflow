@@ -620,7 +620,7 @@ func groupConditionsBasedOnProperty(conditions []ChannelPropertyFilter) map[stri
 	}
 	return groupedConditions
 }
-func EvaluateChannelPropertyRules(channelGroupRules []ChannelPropertyRule, sessionPropertiesMap U.PropertiesMap, projectID uint64) string {
+func EvaluateChannelPropertyRules(channelGroupRules []ChannelPropertyRule, sessionPropertiesMap U.PropertiesMap, projectID int64) string {
 	for _, rule := range channelGroupRules {
 		groupedConditions := groupConditionsBasedOnProperty(rule.Conditions)
 		checkCondition := true

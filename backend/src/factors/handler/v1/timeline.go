@@ -13,8 +13,7 @@ import (
 )
 
 func GetProfileUsersHandler(c *gin.Context) (interface{}, int, string, string, bool) {
-
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return "", http.StatusBadRequest, "", "invalid project_id", true
@@ -41,7 +40,7 @@ func GetProfileUsersHandler(c *gin.Context) (interface{}, int, string, string, b
 }
 
 func GetProfileUserDetailsHandler(c *gin.Context) (interface{}, int, string, string, bool) {
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return "", http.StatusBadRequest, "", "", true

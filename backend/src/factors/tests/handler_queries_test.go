@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 	"time"
 
@@ -20,7 +21,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func sendCreateQueryReq(r *gin.Engine, projectId uint64, agent *model.Agent, query *H.SavedQueryRequestPayload) *httptest.ResponseRecorder {
+func sendCreateQueryReq(r *gin.Engine, projectId int64, agent *model.Agent, query *H.SavedQueryRequestPayload) *httptest.ResponseRecorder {
 
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
@@ -44,7 +45,7 @@ func sendCreateQueryReq(r *gin.Engine, projectId uint64, agent *model.Agent, que
 	r.ServeHTTP(w, req)
 	return w
 }
-func sendGetSavedQueriesReq(r *gin.Engine, projectId uint64, agent *model.Agent) *httptest.ResponseRecorder {
+func sendGetSavedQueriesReq(r *gin.Engine, projectId int64, agent *model.Agent) *httptest.ResponseRecorder {
 
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
@@ -68,7 +69,7 @@ func sendGetSavedQueriesReq(r *gin.Engine, projectId uint64, agent *model.Agent)
 	return w
 }
 
-func sendUpdateSavedQueryReq(r *gin.Engine, projectId uint64, queryId int64, agent *model.Agent, query *H.SavedQueryUpdatePayload) *httptest.ResponseRecorder {
+func sendUpdateSavedQueryReq(r *gin.Engine, projectId int64, queryId int64, agent *model.Agent, query *H.SavedQueryUpdatePayload) *httptest.ResponseRecorder {
 
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
@@ -93,7 +94,7 @@ func sendUpdateSavedQueryReq(r *gin.Engine, projectId uint64, queryId int64, age
 	return w
 }
 
-func sendDeleteSavedQueryReq(r *gin.Engine, projectId uint64, queryId int64, agent *model.Agent) *httptest.ResponseRecorder {
+func sendDeleteSavedQueryReq(r *gin.Engine, projectId int64, queryId int64, agent *model.Agent) *httptest.ResponseRecorder {
 
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
@@ -116,7 +117,7 @@ func sendDeleteSavedQueryReq(r *gin.Engine, projectId uint64, queryId int64, age
 	r.ServeHTTP(w, req)
 	return w
 }
-func sendSearchQueryReq(r *gin.Engine, projectId uint64, searchString string, agent *model.Agent) *httptest.ResponseRecorder {
+func sendSearchQueryReq(r *gin.Engine, projectId int64, searchString string, agent *model.Agent) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")
@@ -289,7 +290,8 @@ func TestAPIUpdateSavedQueryHandler(t *testing.T) {
 
 	responseMap := DecodeJSONResponseToMap(w.Body)
 
-	queryId := int64(responseMap["id"].(float64))
+	queryIdNum, _ := strconv.Atoi(responseMap["id"].(string))
+	queryId := int64(queryIdNum)
 	rTitle1 := U.RandomString(5)
 
 	w = sendUpdateSavedQueryReq(r, project.ID, queryId, agent, &H.SavedQueryUpdatePayload{Title: rTitle1})
@@ -334,7 +336,8 @@ func TestAPIDeleteSavedQueryHandler(t *testing.T) {
 
 	responseMap := DecodeJSONResponseToMap(w.Body)
 
-	queryId := int64(responseMap["id"].(float64))
+	queryIdNum, _ := strconv.Atoi(responseMap["id"].(string))
+	queryId := int64(queryIdNum)
 	shareString := responseMap["id_text"].(string)
 
 	// Create public shareable url
@@ -396,7 +399,8 @@ func TestAPIGetQueriesHandler(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, w.Code)
 	responseMap := DecodeJSONResponseToMap(w.Body)
 
-	queryId := int64(responseMap["id"].(float64))
+	queryIdNum, _ := strconv.Atoi(responseMap["id"].(string))
+	queryId := int64(queryIdNum)
 	shareString := responseMap["id_text"].(string)
 
 	// Get query without agent
@@ -454,7 +458,7 @@ func TestAPIGetQueriesHandler(t *testing.T) {
 	assert.Equal(t, 2, len(queries))
 
 	// Test access of the agent to Demo project queries
-	C.GetConfig().DemoProjectIds = append(C.GetConfig().DemoProjectIds, project.ID)
+	C.GetConfig().DemoProjectIds = append(C.GetConfig().DemoProjectIds, fmt.Sprintf("%v", project.ID))
 	b := true
 	C.GetConfig().EnableDemoReadAccess = &b
 

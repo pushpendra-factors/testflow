@@ -4,13 +4,14 @@ import (
 	"encoding/json"
 	cacheRedis "factors/cache/redis"
 	"fmt"
+	"net/http"
+
 	"github.com/gomodule/redigo/redis"
 	log "github.com/sirupsen/logrus"
-	"net/http"
 )
 
 //SetClearBitCacheResult Sets the cache result key in redis.
-func SetClearBitCacheResult(projectID uint64, userId string, userIP string) {
+func SetClearBitCacheResult(projectID int64, userId string, userIP string) {
 	logCtx := log.WithFields(log.Fields{
 		"project_id": projectID,
 		"user_id":    userId,
@@ -36,13 +37,13 @@ func SetClearBitCacheResult(projectID uint64, userId string, userIP string) {
 	}
 
 }
-func GetClearbitCacheRedisKey(projectID uint64, userId string, userIP string) (*cacheRedis.Key, error) {
+func GetClearbitCacheRedisKey(projectID int64, userId string, userIP string) (*cacheRedis.Key, error) {
 	prefix := "ip:enrichment"
 	suffix := fmt.Sprintf("userId:%d:userIP:%v", userId, userIP)
 	return cacheRedis.NewKey(projectID, prefix, suffix)
 }
 
-func GetClearbitCacheResult(projectID uint64, userId string, userIP string) (bool, int) {
+func GetClearbitCacheResult(projectID int64, userId string, userIP string) (bool, int) {
 	var cacheResult bool
 	logCtx := log.WithFields(log.Fields{
 		"project_id": projectID,

@@ -2236,7 +2236,7 @@ func TestCountPatternsWithSameTimeStamp4(t *testing.T) {
 
 func TestCountPatternWithProperties(t *testing.T) {
 	// project, err := SetupProjectReturnDAO()
-	projectId := uint64(1)
+	projectId := int64(1)
 	var cAlgoProps P.CountAlgoProperties
 	cAlgoProps.Counting_version = 3
 	cAlgoProps.Hmine_support = 0.0001

@@ -13,7 +13,9 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (store *MemSQL) RunProfilesGroupQuery(queriesOriginal []model.ProfileQuery, projectID uint64) (model.ResultGroup, int) {
+func (store *MemSQL) RunProfilesGroupQuery(queriesOriginal []model.ProfileQuery,
+	projectID int64, enableOptimisedFilter bool) (model.ResultGroup, int) {
+
 	logFields := log.Fields{
 		"queries_original": queriesOriginal,
 		"project_id":       projectID,
@@ -29,7 +31,7 @@ func (store *MemSQL) RunProfilesGroupQuery(queriesOriginal []model.ProfileQuery,
 	waitGroup.Add(U.MinInt(len(queries), AllowedGoroutines))
 	for index, query := range queries {
 		count++
-		go store.runSingleProfilesQuery(projectID, query, &resultGroup.Results[index], &waitGroup, index)
+		go store.runSingleProfilesQuery(projectID, query, &resultGroup.Results[index], &waitGroup, index, enableOptimisedFilter)
 		if count%AllowedGoroutines == 0 {
 			waitGroup.Wait()
 			waitGroup.Add(U.MinInt(len(queries)-count, AllowedGoroutines))
@@ -44,8 +46,8 @@ func (store *MemSQL) RunProfilesGroupQuery(queriesOriginal []model.ProfileQuery,
 	return resultGroup, http.StatusOK
 }
 
-func (store *MemSQL) runSingleProfilesQuery(projectID uint64, query model.ProfileQuery,
-	resultHolder *model.QueryResult, waitGroup *sync.WaitGroup, queryIndex int) {
+func (store *MemSQL) runSingleProfilesQuery(projectID int64, query model.ProfileQuery,
+	resultHolder *model.QueryResult, waitGroup *sync.WaitGroup, queryIndex int, enableOptimisedFilter bool) {
 	logFields := log.Fields{
 		"query":         query,
 		"project_id":    projectID,
@@ -56,7 +58,7 @@ func (store *MemSQL) runSingleProfilesQuery(projectID uint64, query model.Profil
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	defer waitGroup.Done()
-	result, errCode, errMsg := store.ExecuteProfilesQuery(projectID, query)
+	result, errCode, errMsg := store.ExecuteProfilesQuery(projectID, query, enableOptimisedFilter)
 	if errCode != http.StatusOK {
 		errorResult := buildErrorResult(errMsg)
 		*resultHolder = *errorResult
@@ -66,21 +68,24 @@ func (store *MemSQL) runSingleProfilesQuery(projectID uint64, query model.Profil
 	}
 }
 
-func (store *MemSQL) ExecuteProfilesQuery(projectID uint64, query model.ProfileQuery) (*model.QueryResult, int, string) {
+func (store *MemSQL) ExecuteProfilesQuery(projectID int64, query model.ProfileQuery,
+	enableOptimisedFilter bool) (*model.QueryResult, int, string) {
 	logFields := log.Fields{
 		"query":      query,
 		"project_id": projectID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if model.IsValidUserSource(query.Type) {
-		return store.ExecuteAllUsersProfilesQuery(projectID, query)
+		return store.ExecuteAllUsersProfilesQuery(projectID, query, enableOptimisedFilter)
 	} else {
 		return &model.QueryResult{}, http.StatusBadRequest,
 			fmt.Sprintf("Invalid QueryType or GroupName for profiles. QueryType: %s, GroupName: %s", query.Type, query.GroupAnalysis)
 	}
 }
 
-func (store *MemSQL) ExecuteAllUsersProfilesQuery(projectID uint64, query model.ProfileQuery) (*model.QueryResult, int, string) {
+func (store *MemSQL) ExecuteAllUsersProfilesQuery(projectID int64, query model.ProfileQuery,
+	enableOptimisedFilter bool) (*model.QueryResult, int, string) {
+
 	logFields := log.Fields{
 		"query":      query,
 		"project_id": projectID,
@@ -95,18 +100,26 @@ func (store *MemSQL) ExecuteAllUsersProfilesQuery(projectID uint64, query model.
 		}
 	}
 	query = model.TransformProfilesQuery(query)
-	sql, params, err := buildAllUsersQuery(projectID, query)
+
+	var statement string
+	var params []interface{}
+	var err error
+	if enableOptimisedFilter {
+		statement, params, err = buildAllUsersQueryV2(projectID, query)
+	} else {
+		statement, params, err = buildAllUsersQuery(projectID, query)
+	}
 	if err != nil {
 		log.WithError(err).Error(model.ErrMsgQueryProcessingFailure)
 		return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
 	}
 	logCtx := log.WithFields(logFields)
-	if sql == "" || len(params) == 0 {
+	if statement == "" || len(params) == 0 {
 		logCtx.Error("Failed generating SQL query from analytics query.")
 		return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
 	}
 
-	result, err, reqID := store.ExecQuery(sql, params)
+	result, err, reqID := store.ExecQuery(statement, params)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed executing SQL query generated.")
 		return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
@@ -123,7 +136,7 @@ func (store *MemSQL) ExecuteAllUsersProfilesQuery(projectID uint64, query model.
 	return result, http.StatusOK, ""
 }
 
-func buildAllUsersQuery(projectID uint64, query model.ProfileQuery) (string, []interface{}, error) {
+func buildAllUsersQuery(projectID int64, query model.ProfileQuery) (string, []interface{}, error) {
 	logFields := log.Fields{
 		"query":      query,
 		"project_id": projectID,
@@ -134,7 +147,8 @@ func buildAllUsersQuery(projectID uint64, query model.ProfileQuery) (string, []i
 	selectKeys := make([]string, 0)
 	groupByKeys := make([]string, 0)
 	groupByStmnt := ""
-	selectKeys = append(selectKeys, getSelectKeysForProfile(query))
+	_, selectKeysForProfile := getSelectKeysForProfile(query, model.USERS)
+	selectKeys = append(selectKeys, selectKeysForProfile)
 
 	for _, groupBy := range query.GroupBys {
 		gKey := groupKeyByIndex(groupBy.Index)
@@ -208,16 +222,116 @@ func buildAllUsersQuery(projectID uint64, query model.ProfileQuery) (string, []i
 	return finalSQLStmnt, params, nil
 }
 
-func getSelectKeysForProfile(query model.ProfileQuery) string {
-	if query.AggregateProperty == "1" || query.AggregateProperty == "" || query.AggregateFunction == model.UniqueAggregateFunction { // Generally count is only used againt them.
-		return model.DefaultSelectForAllUsers
+// buildAllUsersQueryV2 - buildAllUsersQuery with JSON Filter wrapper support for optimised performance.
+func buildAllUsersQueryV2(projectID int64, query model.ProfileQuery) (string, []interface{}, error) {
+	logFields := log.Fields{
+		"query":      query,
+		"project_id": projectID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	var params []interface{}
+	var groupBySelectParams []interface{}
+	selectKeys := make([]string, 0)
+	groupByKeys := make([]string, 0)
+	groupByStmnt := ""
+	selectKeys = append(selectKeys)
+
+	for _, groupBy := range query.GroupBys {
+		gKey := groupKeyByIndex(groupBy.Index)
+		groupBySelect, groupByParams := getNoneHandledGroupBySelectForProfiles(projectID, groupBy, gKey, query.Timezone)
+		selectKeys = append(selectKeys, groupBySelect)
+		groupByKeys = append(groupByKeys, gKey)
+		groupBySelectParams = append(groupBySelectParams, groupByParams...)
+	}
+
+	if len(groupByKeys) != 0 {
+		groupByStmnt = "GROUP BY " + joinWithComma(groupByKeys...)
+	}
+
+	// Primary select as sub query with limit and apply JSON filter on the result.
+	wrapperViewName := "wrap_" + U.RandomLowerAphaNumString(5)
+	selectKeysOriginaColumns, selectKeysWithAggregate := getSelectKeysForProfile(query, wrapperViewName)
+	selectKeys = append(selectKeys, selectKeysOriginaColumns)
+
+	selectStmnt := joinWithComma(selectKeys...)
+	// Using 0 as profile queries are not time bound. The additional properties table will
+	// not be used till we migrate all data and remove timestamp condition.
+	filterStmnt, filterParams, err := buildWhereFromProperties(projectID, query.Filters, 0)
+	if err != nil {
+		return "", make([]interface{}, 0), err
+	}
+
+	// TODO: Remove the depdency of user_properties_json table.
+	filterJoinStmnt := getUsersFilterJoinStatement(projectID, query.Filters)
+
+	allowSupportForSourceColumnInUsers := C.IsProfileQuerySourceSupported(projectID)
+	allowProfilesGroupSupport := C.IsProfileGroupSupportEnabled(projectID)
+
+	var stepSqlStmnt string
+	stepSqlStmnt = fmt.Sprintf(
+		"SELECT %s FROM users %s WHERE users.project_id = ? AND join_timestamp>=? AND join_timestamp<=?",
+		selectStmnt, filterJoinStmnt,
+	)
+
+	params = append(params, groupBySelectParams...)
+	params = append(params, projectID)
+	params = append(params, query.From)
+	params = append(params, query.To)
+
+	if allowSupportForSourceColumnInUsers {
+		if model.UserSourceMap[query.Type] == model.UserSourceWeb {
+			stepSqlStmnt = fmt.Sprintf("%s AND (source=? OR source IS NULL)", stepSqlStmnt)
+		} else {
+			stepSqlStmnt = fmt.Sprintf("%s AND source=?", stepSqlStmnt)
+		}
+		params = append(params, model.GetSourceFromQueryTypeOrGroupName(query))
+	}
+
+	if !allowProfilesGroupSupport || (allowProfilesGroupSupport && query.GroupAnalysis == model.USERS) {
+		stepSqlStmnt = fmt.Sprintf("%s AND (is_group_user=0 or is_group_user IS NULL)", stepSqlStmnt)
 	} else {
-		return fmt.Sprintf("%s(CASE WHEN JSON_EXTRACT_STRING(%s.properties, '%s') IS NULL THEN 0 ELSE JSON_EXTRACT_STRING(%s.properties, '%s') END ) as %s", query.AggregateFunction,
-			model.USERS, query.AggregateProperty, model.USERS, query.AggregateProperty, model.AliasAggr)
+		stepSqlStmnt = fmt.Sprintf("%s AND (is_group_user=1 AND group_%d_id IS NOT NULL)", stepSqlStmnt, query.GroupId)
+	}
+
+	wrapperSelectStmnt := joinWithComma(selectKeysWithAggregate, joinWithComma(groupByKeys...))
+	wrappedSqlStmnt := fmt.Sprintf("SELECT %s FROM (%s LIMIT 10000000000) %s", wrapperSelectStmnt, stepSqlStmnt, wrapperViewName)
+	if filterStmnt != "" {
+		wrappedSqlStmnt = wrappedSqlStmnt + " WHERE " + strings.ReplaceAll(filterStmnt, "users.", wrapperViewName+".")
+	}
+	params = append(params, filterParams...)
+
+	wrappedSqlStmnt = fmt.Sprintf("%s %s ORDER BY %s LIMIT 10000", wrappedSqlStmnt, groupByStmnt, model.AliasAggr)
+
+	finalSQLStmnt := ""
+	if isGroupByTypeWithBuckets(query.GroupBys) {
+		selectAliases := model.AliasAggr
+		sqlStmnt := "WITH step_0 AS (" + wrappedSqlStmnt + ")"
+		isAggregateOnProperty := false
+		if query.AggregateProperty != "" && query.AggregateProperty != "1" {
+			isAggregateOnProperty = true
+		}
+		bucketedStepName, aggregateSelectKeys, aggregateGroupBys, aggregateOrderBys := appendNumericalBucketingSteps(isAggregateOnProperty, &sqlStmnt, &params, query.GroupBys, "step_0", "", false, selectAliases)
+		selectAliases = selectAliases + ", " + aggregateSelectKeys[:len(aggregateSelectKeys)-2]
+		finalGroupBy := model.AliasAggr + ", " + strings.Join(aggregateGroupBys, ",")
+		finalOrderBy := model.AliasAggr + ", " + strings.Join(aggregateOrderBys, ",")
+		finalSQLStmnt = fmt.Sprintf("%s SELECT %s FROM %s GROUP BY %s ORDER BY %s LIMIT 1000", sqlStmnt, selectAliases, bucketedStepName, finalGroupBy, finalOrderBy)
+	} else {
+		finalSQLStmnt = wrappedSqlStmnt
+	}
+
+	return finalSQLStmnt, params, nil
+}
+
+func getSelectKeysForProfile(query model.ProfileQuery, tableViewName string) (string, string) {
+	if query.AggregateProperty == "1" || query.AggregateProperty == "" || query.AggregateFunction == model.UniqueAggregateFunction { // Generally count is only used againt them.
+		return "users.customer_user_id, users.id, users.properties", fmt.Sprintf("COUNT(DISTINCT(COALESCE(%s.customer_user_id, %s.id))) as %s", tableViewName, tableViewName, model.AliasAggr)
+	} else {
+		return "users.properties", fmt.Sprintf("%s(CASE WHEN JSON_EXTRACT_STRING(%s.properties, '%s') IS NULL THEN 0 ELSE JSON_EXTRACT_STRING(%s.properties, '%s') END ) as %s", query.AggregateFunction,
+			tableViewName, query.AggregateProperty, tableViewName, query.AggregateProperty, model.AliasAggr)
 	}
 }
 
-func getNoneHandledGroupBySelectForProfiles(projectID uint64, groupProp model.QueryGroupByProperty, groupKey string, timezoneString string) (string, []interface{}) {
+func getNoneHandledGroupBySelectForProfiles(projectID int64, groupProp model.QueryGroupByProperty, groupKey string, timezoneString string) (string, []interface{}) {
 	logFields := log.Fields{
 		"group_prop":      groupProp,
 		"project_id":      projectID,

@@ -97,7 +97,7 @@ func (store *MemSQL) GetSalesforceSyncInfo() (model.SalesforceSyncInfo, int) {
 		return syncInfo, http.StatusInternalServerError
 	}
 
-	lastSyncInfoByProject := make(map[uint64]map[string]int64, 0)
+	lastSyncInfoByProject := make(map[int64]map[string]int64, 0)
 	for _, syncInfo := range lastSyncInfo {
 		if _, projectExists := lastSyncInfoByProject[syncInfo.ProjectID]; !projectExists {
 			lastSyncInfoByProject[syncInfo.ProjectID] = make(map[string]int64)
@@ -106,14 +106,14 @@ func (store *MemSQL) GetSalesforceSyncInfo() (model.SalesforceSyncInfo, int) {
 		lastSyncInfoByProject[syncInfo.ProjectID][model.GetSalesforceAliasByDocType(syncInfo.Type)] = syncInfo.Timestamp
 	}
 
-	enabledProjectLastSync := make(map[uint64]map[string]int64, 0)
+	enabledProjectLastSync := make(map[int64]map[string]int64, 0)
 
 	projectSettings, errCode := store.GetAllSalesforceProjectSettings()
 	if errCode != http.StatusFound {
 		return syncInfo, http.StatusInternalServerError
 	}
 
-	settingsByProject := make(map[uint64]*model.SalesforceProjectSettings, 0)
+	settingsByProject := make(map[int64]*model.SalesforceProjectSettings, 0)
 	for i, ps := range projectSettings {
 		_, pExists := lastSyncInfoByProject[ps.ProjectID]
 
@@ -166,7 +166,7 @@ func getSalesforceDocumentID(document *model.SalesforceDocument) (string, error)
 }
 
 // GetSyncedSalesforceDocumentByType return salesforce_documents by doc type which are synced
-func (store *MemSQL) GetSyncedSalesforceDocumentByType(projectID uint64, ids []string,
+func (store *MemSQL) GetSyncedSalesforceDocumentByType(projectID int64, ids []string,
 	docType int, includeUnSynced bool) ([]model.SalesforceDocument, int) {
 	logFields := log.Fields{
 		"project_id":         projectID,
@@ -204,7 +204,7 @@ func (store *MemSQL) GetSyncedSalesforceDocumentByType(projectID uint64, ids []s
 	return documents, http.StatusFound
 }
 
-func isExistSalesforceDocumentByIds(projectID uint64, ids []string, docType int) (map[string]bool, int) {
+func isExistSalesforceDocumentByIds(projectID int64, ids []string, docType int) (map[string]bool, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"ids":        ids,
@@ -243,7 +243,7 @@ func isExistSalesforceDocumentByIds(projectID uint64, ids []string, docType int)
 	return documentIDs, http.StatusFound
 }
 
-func getSalesforceDocumentByIDAndType(projectID uint64, id string, docType int) ([]model.SalesforceDocument, int) {
+func getSalesforceDocumentByIDAndType(projectID int64, id string, docType int) ([]model.SalesforceDocument, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"id":         id,
@@ -273,13 +273,13 @@ func getSalesforceDocumentByIDAndType(projectID uint64, id string, docType int) 
 	return documents, http.StatusFound
 }
 
-func salesforceBatchInsertTimeMs(projectID uint64, startTime time.Time, totalDocuments int, objectName string) {
+func salesforceBatchInsertTimeMs(projectID int64, startTime time.Time, totalDocuments int, objectName string) {
 	totalTime := time.Now().Sub(startTime).Milliseconds()
 	log.WithFields(log.Fields{"project_id": projectID, "object_name": objectName,
 		"total_time_ms": totalTime, "total_documents": totalDocuments}).Info("Processed Salesforce batch insert.")
 }
 
-func (store *MemSQL) CreateSalesforceDocumentInBatches(projectID uint64, TypeAlias string, documents []*model.SalesforceDocument, batchSize int) int {
+func (store *MemSQL) CreateSalesforceDocumentInBatches(projectID int64, TypeAlias string, documents []*model.SalesforceDocument, batchSize int) int {
 	logFields := log.Fields{"project_id": projectID, "type_alias": TypeAlias, "documents": len(documents)}
 
 	defer salesforceBatchInsertTimeMs(projectID, time.Now(), len(documents), TypeAlias)
@@ -341,11 +341,11 @@ func (store *MemSQL) CreateSalesforceDocumentInBatches(projectID uint64, TypeAli
 	return http.StatusOK
 }
 
-func (store *MemSQL) CreateSalesforceDocument(projectID uint64, document *model.SalesforceDocument) int {
+func (store *MemSQL) CreateSalesforceDocument(projectID int64, document *model.SalesforceDocument) int {
 	return store.CreateSalesforceDocumentInBatches(projectID, document.TypeAlias, []*model.SalesforceDocument{document}, 1)
 }
 
-func executeSalesforceDocumentInsertInBatch(projectID uint64, documents []*model.SalesforceDocument) error {
+func executeSalesforceDocumentInsertInBatch(projectID int64, documents []*model.SalesforceDocument) error {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &log.Fields{"project_id": projectID, "total_documents": len(documents)})
 
 	if len(documents) <= 0 {
@@ -391,7 +391,7 @@ func executeSalesforceDocumentInsertInBatch(projectID uint64, documents []*model
 	return nil
 }
 
-func (store *MemSQL) CreateBatchedSalesforceDocument(projectID uint64, documents []*model.SalesforceDocument) int {
+func (store *MemSQL) CreateBatchedSalesforceDocument(projectID int64, documents []*model.SalesforceDocument) int {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"documents":  documents,
@@ -417,7 +417,7 @@ func (store *MemSQL) CreateBatchedSalesforceDocument(projectID uint64, documents
 }
 
 // CreateSalesforceDocumentByAction inserts salesforce_document to table by SalesforceAction
-func (store *MemSQL) CreateSalesforceDocumentByAction(projectID uint64, document *model.SalesforceDocument, action model.SalesforceAction) int {
+func (store *MemSQL) CreateSalesforceDocumentByAction(projectID int64, document *model.SalesforceDocument, action model.SalesforceAction) int {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"document":   document,
@@ -584,7 +584,7 @@ func getSalesforceDocumentValuesByPropertyAndLimit(salesforceDocument []model.Sa
 	return propertyValues
 }
 
-func getLatestSalesforceDocumetsByLimit(projectID uint64, docType int, limit int, lookbackTimeHr int) ([]model.SalesforceDocument, error) {
+func getLatestSalesforceDocumetsByLimit(projectID int64, docType int, limit int, lookbackTimeHr int) ([]model.SalesforceDocument, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"limit":      limit,
@@ -612,7 +612,7 @@ func getLatestSalesforceDocumetsByLimit(projectID uint64, docType int, limit int
 }
 
 // GetSalesforceObjectPropertiesName returns object property names by type
-func (store *MemSQL) GetSalesforceObjectPropertiesName(ProjectID uint64, objectType string) ([]string, []string) {
+func (store *MemSQL) GetSalesforceObjectPropertiesName(ProjectID int64, objectType string) ([]string, []string) {
 	logFields := log.Fields{
 		"project_id":  ProjectID,
 		"object_type": objectType,
@@ -638,7 +638,7 @@ func (store *MemSQL) GetSalesforceObjectPropertiesName(ProjectID uint64, objectT
 }
 
 // GetSalesforceObjectValuesByPropertyName returns object values by property name
-func (store *MemSQL) GetSalesforceObjectValuesByPropertyName(ProjectID uint64, objectType string, propertyName string) []interface{} {
+func (store *MemSQL) GetSalesforceObjectValuesByPropertyName(ProjectID int64, objectType string, propertyName string) []interface{} {
 	logFields := log.Fields{
 		"project_id":    ProjectID,
 		"object_type":   objectType,
@@ -665,7 +665,7 @@ func (store *MemSQL) GetSalesforceObjectValuesByPropertyName(ProjectID uint64, o
 }
 
 // GetLastSyncedSalesforceDocumentByCustomerUserIDORUserID returns latest synced record by customer_user_id or user_id.
-func (store *MemSQL) GetLastSyncedSalesforceDocumentByCustomerUserIDORUserID(projectID uint64, customerUserID, userID string, docType int) (*model.SalesforceDocument, int) {
+func (store *MemSQL) GetLastSyncedSalesforceDocumentByCustomerUserIDORUserID(projectID int64, customerUserID, userID string, docType int) (*model.SalesforceDocument, int) {
 	logFields := log.Fields{
 		"project_id":       projectID,
 		"customer_user_id": customerUserID,
@@ -720,7 +720,7 @@ func (store *MemSQL) GetLastSyncedSalesforceDocumentByCustomerUserIDORUserID(pro
 }
 
 // UpdateSalesforceDocumentBySyncStatus inserts syncID and updates the status of the document as synced
-func (store *MemSQL) UpdateSalesforceDocumentBySyncStatus(projectID uint64, document *model.SalesforceDocument, syncID, userID, groupUserID string, synced bool) int {
+func (store *MemSQL) UpdateSalesforceDocumentBySyncStatus(projectID int64, document *model.SalesforceDocument, syncID, userID, groupUserID string, synced bool) int {
 	logFields := log.Fields{
 		"project_id":    projectID,
 		"document":      document,
@@ -760,7 +760,7 @@ func (store *MemSQL) UpdateSalesforceDocumentBySyncStatus(projectID uint64, docu
 	return http.StatusAccepted
 }
 
-func (store *MemSQL) BuildAndUpsertDocumentInBatch(projectID uint64, objectName string, values []model.SalesforceRecord) error {
+func (store *MemSQL) BuildAndUpsertDocumentInBatch(projectID int64, objectName string, values []model.SalesforceRecord) error {
 	logFields := log.Fields{
 		"project_id":  projectID,
 		"object_name": objectName,
@@ -813,7 +813,7 @@ func (store *MemSQL) BuildAndUpsertDocumentInBatch(projectID uint64, objectName 
 }
 
 // BuildAndUpsertDocument creates new salesforce_document for insertion
-func (store *MemSQL) BuildAndUpsertDocument(projectID uint64, objectName string, value model.SalesforceRecord) error {
+func (store *MemSQL) BuildAndUpsertDocument(projectID int64, objectName string, value model.SalesforceRecord) error {
 	logFields := log.Fields{
 		"project_id":  projectID,
 		"object_name": objectName,
@@ -855,7 +855,7 @@ func (store *MemSQL) BuildAndUpsertDocument(projectID uint64, objectName string,
 }
 
 // GetSalesforceDocumentsByTypeForSync - Pulls salesforce documents which are not synced
-func (store *MemSQL) GetSalesforceDocumentsByTypeForSync(projectID uint64, typ int, from, to int64) ([]model.SalesforceDocument, int) {
+func (store *MemSQL) GetSalesforceDocumentsByTypeForSync(projectID int64, typ int, from, to int64) ([]model.SalesforceDocument, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"typ":        typ,
@@ -894,7 +894,7 @@ func (store *MemSQL) GetSalesforceDocumentsByTypeForSync(projectID uint64, typ i
 }
 
 //GetLatestSalesforceDocumentByID return latest synced or unsynced document
-func (store *MemSQL) GetLatestSalesforceDocumentByID(projectID uint64, documentIDs []string, docType int, maxTimestamp int64) ([]model.SalesforceDocument, int) {
+func (store *MemSQL) GetLatestSalesforceDocumentByID(projectID int64, documentIDs []string, docType int, maxTimestamp int64) ([]model.SalesforceDocument, int) {
 	logFields := log.Fields{
 		"project_id":    projectID,
 		"document_ids":  documentIDs,
@@ -950,7 +950,7 @@ func (store *MemSQL) GetLatestSalesforceDocumentByID(projectID uint64, documentI
 }
 
 // GetSalesforceDocumentBeginingTimestampByDocumentTypeForSync returns the minimum timestamp for unsynced document
-func (store *MemSQL) GetSalesforceDocumentBeginingTimestampByDocumentTypeForSync(projectID uint64) (map[int]int64, int64, int) {
+func (store *MemSQL) GetSalesforceDocumentBeginingTimestampByDocumentTypeForSync(projectID int64) (map[int]int64, int64, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}

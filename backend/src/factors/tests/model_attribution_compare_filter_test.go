@@ -2,6 +2,7 @@ package tests
 
 import (
 	"encoding/json"
+	C "factors/config"
 	H "factors/handler"
 	"factors/model/model"
 	"factors/model/store"
@@ -84,7 +85,7 @@ func TestAttributionModelCompare(t *testing.T) {
 			QueryType:                     model.AttributionQueryTypeEngagementBased,
 		}
 		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery())
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, float64(1), getCompareConversionUserCount(query.AttributionKey, result, "111111"))
@@ -104,7 +105,7 @@ func TestAttributionModelCompare(t *testing.T) {
 			ConversionEventCompare:        model.QueryEventWithProperties{},
 		}
 		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery())
 		assert.Nil(t, err)
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, int64(-1), getCompareConversionUserCount(query.AttributionKey, result, "111111"))
@@ -134,7 +135,7 @@ func TestAttributionModelCompare(t *testing.T) {
 			QueryType:                     model.AttributionQueryTypeEngagementBased,
 		}
 		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery())
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "222222"))
@@ -163,7 +164,7 @@ func TestAttributionModelCompare(t *testing.T) {
 		}
 		var debugQueryKey string
 		//Should only have user2 with no 0 linked event count
-		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery())
 		assert.Nil(t, err)
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "222222"))
@@ -227,7 +228,7 @@ func TestAttributionCompareWithLookBackWindowX(t *testing.T) {
 	}
 	var debugQueryKey string
 	// Should find within lookBack window
-	_, err = store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey)
+	_, err = store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery())
 	assert.Nil(t, err)
 
 	_, errCode = store.GetStore().CreateEvent(&model.Event{ProjectId: project.ID, EventNameId: userEventName.ID,
@@ -238,7 +239,7 @@ func TestAttributionCompareWithLookBackWindowX(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, errCode)
 	query.From = timestamp + 5*U.SECONDS_IN_A_DAY
 	//event beyond look back window
-	result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey)
+	result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery())
 	assert.Nil(t, err)
 	assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "campaign1"))
 	assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "$none"))
@@ -317,7 +318,7 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 			ConversionEventCompare:        model.QueryEventWithProperties{},
 		}
 		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery())
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, float64(1), getCompareConversionUserCount(query.AttributionKey, result, "111111"))
@@ -341,7 +342,7 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 			ConversionEventCompare:        model.QueryEventWithProperties{},
 		}
 		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery())
 		assert.Nil(t, err)
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, int64(-1), getCompareConversionUserCount(query.AttributionKey, result, "111111"))
@@ -364,7 +365,7 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 			ConversionEventCompare:        model.QueryEventWithProperties{},
 		}
 		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery())
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, float64(1), getCompareConversionUserCount(query.AttributionKey, result, "111111"))
@@ -387,7 +388,7 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 			ConversionEventCompare:        model.QueryEventWithProperties{},
 		}
 		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery())
 		assert.Nil(t, err)
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, int64(-1), getCompareConversionUserCount(query.AttributionKey, result, "111111"))
@@ -420,7 +421,7 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 			ConversionEventCompare:        model.QueryEventWithProperties{},
 		}
 		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery())
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "222222"))
@@ -448,7 +449,7 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 			ConversionEventCompare:        model.QueryEventWithProperties{},
 		}
 		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery())
 		assert.Nil(t, err)
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "222222"))
@@ -498,7 +499,7 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 		}
 		var debugQueryKey string
 		//Should only have user2 with no 0 linked event count
-		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery())
 		assert.Nil(t, err)
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "222222"))
@@ -547,7 +548,7 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 		}
 		var debugQueryKey string
 		//Should only have user2 with no 0 linked event count
-		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery())
 		assert.Nil(t, err)
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "222222"))

@@ -1,6 +1,7 @@
 package memsql
 
 import (
+	"database/sql"
 	"errors"
 	C "factors/config"
 	"factors/model/model"
@@ -17,7 +18,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var linkedinDocumentTypeAlias = map[string]int{
+var LinkedinDocumentTypeAlias = map[string]int{
 	"creative":                1,
 	"campaign_group":          2,
 	"campaign":                3,
@@ -187,14 +188,14 @@ func getLinkedinDocumentTypeAliasByType() map[int]string {
 
 	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 	documentTypeMap := make(map[int]string, 0)
-	for alias, typ := range linkedinDocumentTypeAlias {
+	for alias, typ := range LinkedinDocumentTypeAlias {
 		documentTypeMap[typ] = alias
 	}
 
 	return documentTypeMap
 }
 
-func (store *MemSQL) GetLinkedinLastSyncInfo(projectID uint64, CustomerAdAccountID string) ([]model.LinkedinLastSyncInfo, int) {
+func (store *MemSQL) GetLinkedinLastSyncInfo(projectID int64, CustomerAdAccountID string) ([]model.LinkedinLastSyncInfo, int) {
 	logFields := log.Fields{
 		"project_id":             projectID,
 		"customer_ad_account_id": CustomerAdAccountID,
@@ -241,7 +242,7 @@ func (store *MemSQL) GetLinkedinLastSyncInfo(projectID uint64, CustomerAdAccount
 }
 
 // CreatelinkedinDocument ...
-func (store *MemSQL) CreateLinkedinDocument(projectID uint64, document *model.LinkedinDocument) int {
+func (store *MemSQL) CreateLinkedinDocument(projectID int64, document *model.LinkedinDocument) int {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"document":   document,
@@ -259,7 +260,7 @@ func (store *MemSQL) CreateLinkedinDocument(projectID uint64, document *model.Li
 	}
 
 	logCtx = logCtx.WithField("type_alias", document.TypeAlias)
-	docType, docTypeExists := linkedinDocumentTypeAlias[document.TypeAlias]
+	docType, docTypeExists := LinkedinDocumentTypeAlias[document.TypeAlias]
 	if !docTypeExists {
 		logCtx.Error("Invalid type alias.")
 		return http.StatusBadRequest
@@ -304,7 +305,7 @@ func getLinkedinHierarchyColumnsByType(docType int, valueJSON *postgres.Jsonb) (
 		"value_json": valueJSON,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	if docType > len(linkedinDocumentTypeAlias) {
+	if docType > len(LinkedinDocumentTypeAlias) {
 		return "", "", "", errors.New("invalid document type")
 	}
 
@@ -320,7 +321,7 @@ func getLinkedinHierarchyColumnsByType(docType int, valueJSON *postgres.Jsonb) (
 	return U.GetStringFromMapOfInterface(*valueMap, "campaign_group_id", ""), U.GetStringFromMapOfInterface(*valueMap, "campaign_id", ""), U.GetStringFromMapOfInterface(*valueMap, "creative_id", ""), nil
 }
 
-func (store *MemSQL) IsLinkedInIntegrationAvailable(projectID uint64) bool {
+func (store *MemSQL) IsLinkedInIntegrationAvailable(projectID int64) bool {
 	projectSetting, errCode := store.GetProjectSetting(projectID)
 	if errCode != http.StatusFound {
 		return false
@@ -332,7 +333,7 @@ func (store *MemSQL) IsLinkedInIntegrationAvailable(projectID uint64) bool {
 	return true
 }
 
-func (store *MemSQL) ExecuteLinkedinChannelQuery(projectID uint64, query *model.ChannelQuery) (*model.ChannelQueryResult, int) {
+func (store *MemSQL) ExecuteLinkedinChannelQuery(projectID int64, query *model.ChannelQuery) (*model.ChannelQueryResult, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"query":      query,
@@ -384,7 +385,7 @@ func (store *MemSQL) ExecuteLinkedinChannelQuery(projectID uint64, query *model.
 	}
 	return queryResult, http.StatusOK
 }
-func getLinkedinChannelResult(projectID uint64, customerAccountID string, query *model.ChannelQuery) (*model.ChannelQueryResult, error) {
+func getLinkedinChannelResult(projectID int64, customerAccountID string, query *model.ChannelQuery) (*model.ChannelQueryResult, error) {
 	logFields := log.Fields{
 		"project_id":          projectID,
 		"customer_account_id": customerAccountID,
@@ -432,7 +433,7 @@ func getLinkedinChannelResult(projectID uint64, customerAccountID string, query 
 	queryResult.Metrics = &metricKvs
 	return queryResult, nil
 }
-func (store *MemSQL) getLinkedinMetricBreakdown(projectID uint64, customerAccountID string, query *model.ChannelQuery) (*model.ChannelBreakdownResult, error) {
+func (store *MemSQL) getLinkedinMetricBreakdown(projectID int64, customerAccountID string, query *model.ChannelQuery) (*model.ChannelBreakdownResult, error) {
 	logFields := log.Fields{
 		"project_id":          projectID,
 		"customer_account_id": customerAccountID,
@@ -527,7 +528,7 @@ func getLinkedinMetricsQuery(query *model.ChannelQuery, withBreakdown bool) (str
 }
 
 // v1 Api
-func (store *MemSQL) buildLinkedinChannelConfig(projectID uint64) *model.ChannelConfigResult {
+func (store *MemSQL) buildLinkedinChannelConfig(projectID int64) *model.ChannelConfigResult {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
@@ -541,7 +542,7 @@ func (store *MemSQL) buildLinkedinChannelConfig(projectID uint64) *model.Channel
 	}
 }
 
-func (store *MemSQL) buildObjectAndPropertiesForLinkedin(projectID uint64, objects []string) []model.ChannelObjectAndProperties {
+func (store *MemSQL) buildObjectAndPropertiesForLinkedin(projectID int64, objects []string) []model.ChannelObjectAndProperties {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"objects":    objects,
@@ -560,7 +561,7 @@ func (store *MemSQL) buildObjectAndPropertiesForLinkedin(projectID uint64, objec
 	return objectsAndProperties
 }
 
-func (store *MemSQL) GetLinkedinFilterValues(projectID uint64, requestFilterObject string, requestFilterProperty string, reqID string) ([]interface{}, int) {
+func (store *MemSQL) GetLinkedinFilterValues(projectID int64, requestFilterObject string, requestFilterProperty string, reqID string) ([]interface{}, int) {
 	logFields := log.Fields{
 		"project_id":              projectID,
 		"request_filter_object":   requestFilterObject,
@@ -604,12 +605,12 @@ func getFilterRelatedInformationForLinkedin(requestFilterObject string, requestF
 		log.Error("Invalid linkedin filter property.")
 		return "", 0, http.StatusBadRequest
 	}
-	docType := linkedinDocumentTypeAlias[linkedinInternalFilterObject]
+	docType := LinkedinDocumentTypeAlias[linkedinInternalFilterObject]
 
 	return linkedinInternalFilterProperty, docType, http.StatusOK
 }
 
-func (store *MemSQL) getLinkedinFilterValuesByType(projectID uint64, docType int, property string, reqID string) ([]interface{}, int) {
+func (store *MemSQL) getLinkedinFilterValuesByType(projectID int64, docType int, property string, reqID string) ([]interface{}, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"doc_type":   docType,
@@ -640,7 +641,7 @@ func (store *MemSQL) getLinkedinFilterValuesByType(projectID uint64, docType int
 	return Convert2DArrayTo1DArray(resultRows), http.StatusFound
 }
 
-func (store *MemSQL) GetLinkedinSQLQueryAndParametersForFilterValues(projectID uint64, requestFilterObject string, requestFilterProperty string, reqID string) (string, []interface{}, int) {
+func (store *MemSQL) GetLinkedinSQLQueryAndParametersForFilterValues(projectID int64, requestFilterObject string, requestFilterProperty string, reqID string) (string, []interface{}, int) {
 	logFields := log.Fields{
 		"project_id":              projectID,
 		"request_filter_object":   requestFilterObject,
@@ -669,7 +670,7 @@ func (store *MemSQL) GetLinkedinSQLQueryAndParametersForFilterValues(projectID u
 	return "(" + linkedinFilterQueryStr + ")", params, http.StatusFound
 }
 
-func (store *MemSQL) ExecuteLinkedinChannelQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string) ([]string, [][]interface{}, int) {
+func (store *MemSQL) ExecuteLinkedinChannelQueryV1(projectID int64, query *model.ChannelQueryV1, reqID string) ([]string, [][]interface{}, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"query":      query,
@@ -731,7 +732,7 @@ func (store *MemSQL) ExecuteLinkedinChannelQueryV1(projectID uint64, query *mode
 	}
 }
 
-func (store *MemSQL) GetSQLQueryAndParametersForLinkedinQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string, fetchSource bool,
+func (store *MemSQL) GetSQLQueryAndParametersForLinkedinQueryV1(projectID int64, query *model.ChannelQueryV1, reqID string, fetchSource bool,
 	limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string, int) {
 	logFields := log.Fields{
 		"project_id":                    projectID,
@@ -775,7 +776,7 @@ func (store *MemSQL) GetSQLQueryAndParametersForLinkedinQueryV1(projectID uint64
 	return sql, params, selectKeys, selectMetrics, http.StatusOK
 }
 
-func (store *MemSQL) transFormRequestFieldsAndFetchRequiredFieldsForLinkedin(projectID uint64, query model.ChannelQueryV1, reqID string) (*model.ChannelQueryV1, string, error) {
+func (store *MemSQL) transFormRequestFieldsAndFetchRequiredFieldsForLinkedin(projectID int64, query model.ChannelQueryV1, reqID string) (*model.ChannelQueryV1, string, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"query":      query,
@@ -877,7 +878,7 @@ func getLinkedinSpecificGroupBy(requestGroupBys []model.ChannelGroupBy) ([]model
 	return resultGroupBys, nil
 }
 
-func buildLinkedinQueryWithSmartPropertyV1(query *model.ChannelQueryV1, projectID uint64, customerAccountID string, fetchSource bool,
+func buildLinkedinQueryWithSmartPropertyV1(query *model.ChannelQueryV1, projectID int64, customerAccountID string, fetchSource bool,
 	limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string, error) {
 	logFields := log.Fields{
 		"project_id":                    projectID,
@@ -891,11 +892,11 @@ func buildLinkedinQueryWithSmartPropertyV1(query *model.ChannelQueryV1, projectI
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	lowestHierarchyLevel := getLowestHierarchyLevelForLinkedin(query)
 	lowestHierarchyReportLevel := lowestHierarchyLevel + "_insights"
-	sql, params, selectKeys, selectMetrics := getSQLAndParamsFromLinkedinWithSmartPropertyReports(query, projectID, query.From, query.To, customerAccountID, linkedinDocumentTypeAlias[lowestHierarchyReportLevel],
+	sql, params, selectKeys, selectMetrics := getSQLAndParamsFromLinkedinWithSmartPropertyReports(query, projectID, query.From, query.To, customerAccountID, LinkedinDocumentTypeAlias[lowestHierarchyReportLevel],
 		fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT)
 	return sql, params, selectKeys, selectMetrics, nil
 }
-func buildLinkedinQueryV1(query *model.ChannelQueryV1, projectID uint64, customerAccountID string, fetchSource bool,
+func buildLinkedinQueryV1(query *model.ChannelQueryV1, projectID int64, customerAccountID string, fetchSource bool,
 	limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string, error) {
 	logFields := log.Fields{
 		"project_id":                    projectID,
@@ -909,11 +910,11 @@ func buildLinkedinQueryV1(query *model.ChannelQueryV1, projectID uint64, custome
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	lowestHierarchyLevel := getLowestHierarchyLevelForLinkedin(query)
 	lowestHierarchyReportLevel := lowestHierarchyLevel + "_insights"
-	sql, params, selectKeys, selectMetrics := getSQLAndParamsFromLinkedinReports(query, projectID, query.From, query.To, customerAccountID, linkedinDocumentTypeAlias[lowestHierarchyReportLevel],
+	sql, params, selectKeys, selectMetrics := getSQLAndParamsFromLinkedinReports(query, projectID, query.From, query.To, customerAccountID, LinkedinDocumentTypeAlias[lowestHierarchyReportLevel],
 		fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT)
 	return sql, params, selectKeys, selectMetrics, nil
 }
-func getSQLAndParamsFromLinkedinWithSmartPropertyReports(query *model.ChannelQueryV1, projectID uint64, from, to int64, linkedinAccountIDs string, docType int,
+func getSQLAndParamsFromLinkedinWithSmartPropertyReports(query *model.ChannelQueryV1, projectID int64, from, to int64, linkedinAccountIDs string, docType int,
 	fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string) {
 	logFields := log.Fields{
 		"project_id":                    projectID,
@@ -1033,7 +1034,7 @@ func getLinkedinFromStatementWithJoins(filters []model.ChannelFilterV1, groupBys
 	return fromStatement
 }
 
-func getSQLAndParamsFromLinkedinReports(query *model.ChannelQueryV1, projectID uint64, from, to int64, linkedinAccountIDs string, docType int,
+func getSQLAndParamsFromLinkedinReports(query *model.ChannelQueryV1, projectID int64, from, to int64, linkedinAccountIDs string, docType int,
 	fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string) {
 	logFields := log.Fields{
 		"project_id":                    projectID,
@@ -1336,7 +1337,7 @@ func getLowestHierarchyLevelForLinkedin(query *model.ChannelQueryV1) string {
 }
 
 // Since we dont have a way to store raw format, we are going with the approach of joins on query.
-func (store *MemSQL) GetLatestMetaForLinkedinForGivenDays(projectID uint64, days int) ([]model.ChannelDocumentsWithFields, []model.ChannelDocumentsWithFields) {
+func (store *MemSQL) GetLatestMetaForLinkedinForGivenDays(projectID int64, days int) ([]model.ChannelDocumentsWithFields, []model.ChannelDocumentsWithFields) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"days":       days,
@@ -1370,10 +1371,10 @@ func (store *MemSQL) GetLatestMetaForLinkedinForGivenDays(projectID uint64, days
 	}
 
 	query := linkedinAdGroupMetadataFetchQueryStr
-	params := []interface{}{linkedinDocumentTypeAlias["campaign"], projectID, from, to,
-		customerAccountIDs, linkedinDocumentTypeAlias["campaign"], projectID, from, to,
-		customerAccountIDs, linkedinDocumentTypeAlias["campaign_group"], projectID, from, to,
-		customerAccountIDs, linkedinDocumentTypeAlias["campaign_group"], projectID, from, to,
+	params := []interface{}{LinkedinDocumentTypeAlias["campaign"], projectID, from, to,
+		customerAccountIDs, LinkedinDocumentTypeAlias["campaign"], projectID, from, to,
+		customerAccountIDs, LinkedinDocumentTypeAlias["campaign_group"], projectID, from, to,
+		customerAccountIDs, LinkedinDocumentTypeAlias["campaign_group"], projectID, from, to,
 		customerAccountIDs}
 
 	rows1, tx1, err, queryID1 := store.ExecQueryWithContext(query, params)
@@ -1394,8 +1395,8 @@ func (store *MemSQL) GetLatestMetaForLinkedinForGivenDays(projectID uint64, days
 	U.LogReadTimeWithQueryRequestID(startReadTime1, queryID1, &logFields)
 
 	query = linkedinCampaignMetadataFetchQueryStr
-	params = []interface{}{linkedinDocumentTypeAlias["campaign_group"], projectID, from, to,
-		customerAccountIDs, linkedinDocumentTypeAlias["campaign_group"], projectID, from, to,
+	params = []interface{}{LinkedinDocumentTypeAlias["campaign_group"], projectID, from, to,
+		customerAccountIDs, LinkedinDocumentTypeAlias["campaign_group"], projectID, from, to,
 		customerAccountIDs}
 
 	rows2, tx2, err, queryID2 := store.ExecQueryWithContext(query, params)
@@ -1418,7 +1419,7 @@ func (store *MemSQL) GetLatestMetaForLinkedinForGivenDays(projectID uint64, days
 	return channelDocumentsCampaign, channelDocumentsAdGroup
 }
 
-func (store *MemSQL) DeleteLinkedinIntegration(projectID uint64) (int, error) {
+func (store *MemSQL) DeleteLinkedinIntegration(projectID int64) (int, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
@@ -1436,4 +1437,35 @@ func (store *MemSQL) DeleteLinkedinIntegration(projectID uint64) (int, error) {
 		return http.StatusInternalServerError, err
 	}
 	return http.StatusOK, nil
+}
+
+// PullLinkedInRows - Function to pull LinkedIn campaign data
+// Selecting VALUE, TIMESTAMP, TYPE from linkedin_documents and PROPERTIES, OBJECT_TYPE from smart_properties
+// Left join smart_properties filtered by project_id and source=linkedin
+// where linkedin_documents.value["campaign_id"] = smart_properties.object_id (when smart_properties.object_type = 1)
+//	 or linkedin_documents.value["ad_group_id"] = smart_properties.object_id (when smart_properties.object_type = 2)
+// [make sure there aren't multiple smart_properties rows for a particular object,
+// or weekly insights for LinkedIn would show incorrect data.]
+func (store *MemSQL) PullLinkedInRows(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"start_time": startTime,
+		"end_time":   endTime,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	year, month, date := time.Unix(startTime, 0).Date()
+	start := year*10000 + int(month)*100 + date + 1
+
+	year, month, date = time.Unix(endTime, 0).Date()
+	end := year*10000 + int(month)*100 + date
+
+	rawQuery := fmt.Sprintf("SELECT linDocs.id, linDocs.value, linDocs.timestamp, linDocs.type, sp.properties FROM linkedin_documents linDocs "+
+		"LEFT JOIN smart_properties sp ON sp.project_id = %d AND sp.source = '%s' AND ((COALESCE(sp.object_type,1) = 1 AND sp.object_id = linDocs.campaign_group_id) OR (COALESCE(sp.object_type,2) = 2 AND sp.object_id = linDocs.campaign_id))"+
+		"WHERE linDocs.project_id = %d AND linDocs.timestamp BETWEEN %d AND %d "+
+		"ORDER BY linDocs.type, linDocs.timestamp LIMIT %d",
+		projectID, model.ChannelLinkedin, projectID, start, end, model.LinkedInPullLimit+1)
+
+	rows, tx, err, _ := store.ExecQueryWithContext(rawQuery, []interface{}{})
+	return rows, tx, err
 }

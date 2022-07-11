@@ -51,7 +51,7 @@ func EventsQueryHandler(c *gin.Context) (interface{}, int, string, string, bool)
 
 	r := c.Request
 
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		logCtx.Error("Query failed. Invalid project.")
 		return nil, http.StatusUnauthorized, V1.INVALID_PROJECT, "Query failed. Invalid project.", true
@@ -208,7 +208,7 @@ func QueryHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 
 	r := c.Request
 
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		logCtx.Error("Query failed. Invalid project.")
 		return nil, http.StatusUnauthorized, V1.INVALID_PROJECT, "Query failed. Invalid project.", true

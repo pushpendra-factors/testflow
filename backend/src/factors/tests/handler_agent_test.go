@@ -93,7 +93,7 @@ func TestAPIAgentSignout(t *testing.T) {
 	assert.Equal(t, helpers.ExpireCookie, cookie.MaxAge)
 }
 
-func sendAgentInviteRequest(email string, role int64, projectId uint64,
+func sendAgentInviteRequest(email string, role int64, projectId int64,
 	authData string, exp int, r *gin.Engine) *httptest.ResponseRecorder {
 
 	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, fmt.Sprintf("/projects/%d/agents/invite", projectId)).
@@ -125,7 +125,7 @@ func TestAPIAgentInvite(t *testing.T) {
 
 	t.Run("InviteAgentNotLoggedIn", func(t *testing.T) {
 		emailToAdd := getRandomEmail()
-		projectId := U.RandomUint64()
+		projectId := U.RandomInt64()
 		emptyAuthData := ""
 		w := sendAgentInviteRequest(emailToAdd, model.AGENT, projectId, emptyAuthData, 100, r)
 		assert.Equal(t, http.StatusUnauthorized, w.Code)
@@ -133,7 +133,7 @@ func TestAPIAgentInvite(t *testing.T) {
 
 	t.Run("InviteAgentMissingCookieData", func(t *testing.T) {
 		emailToAdd := getRandomEmail()
-		projectId := U.RandomUint64()
+		projectId := U.RandomInt64()
 		emptyAuthData := ""
 		w := sendAgentInviteRequest(emailToAdd, model.AGENT, projectId, emptyAuthData, 100, r)
 		assert.Equal(t, http.StatusUnauthorized, w.Code)
@@ -141,7 +141,7 @@ func TestAPIAgentInvite(t *testing.T) {
 
 	t.Run("InviteAgentLoggedInAgentDoesNotExist", func(t *testing.T) {
 		emailToAdd := getRandomEmail()
-		projectId := U.RandomUint64()
+		projectId := U.RandomInt64()
 		randomAgentUUID := "6ba7b814-9dad-11d1-80b4-00c04fd430c8"
 		randomAgentEmail := getRandomEmail()
 		key := U.RandomString(model.AgentSaltLength)
@@ -153,7 +153,7 @@ func TestAPIAgentInvite(t *testing.T) {
 
 	t.Run("InviteAgentLoggedInExpiredAuthData", func(t *testing.T) {
 		emailToAdd := getRandomEmail()
-		projectId := U.RandomUint64()
+		projectId := U.RandomInt64()
 		randomAgentUUID := "6ba7b814-9dad-11d1-80b4-00c04fd430c8"
 		randomAgentEmail := getRandomEmail()
 		key := U.RandomString(model.AgentSaltLength)
@@ -266,7 +266,7 @@ func TestAPIAgentInvite(t *testing.T) {
 
 }
 
-func sendProjectAgentRemoveRequest(r *gin.Engine, projectId uint64, agentToRemoveUUID string, agent *model.Agent) *httptest.ResponseRecorder {
+func sendProjectAgentRemoveRequest(r *gin.Engine, projectId int64, agentToRemoveUUID string, agent *model.Agent) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error Creating cookieData")
@@ -289,7 +289,7 @@ func sendProjectAgentRemoveRequest(r *gin.Engine, projectId uint64, agentToRemov
 	return w
 }
 
-func sendProjectAgentEditRequest(r *gin.Engine, projectId uint64, agentToRemoveUUID string, roleId int64, agent *model.Agent) *httptest.ResponseRecorder {
+func sendProjectAgentEditRequest(r *gin.Engine, projectId int64, agentToRemoveUUID string, roleId int64, agent *model.Agent) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error Creating cookieData")
@@ -684,7 +684,7 @@ func TestAPIAgentSetPassword(t *testing.T) {
 	})
 }
 
-func sendGetProjectAgentsRequest(r *gin.Engine, projectId uint64, agent *model.Agent) *httptest.ResponseRecorder {
+func sendGetProjectAgentsRequest(r *gin.Engine, projectId int64, agent *model.Agent) *httptest.ResponseRecorder {
 
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
@@ -706,7 +706,7 @@ func sendGetProjectAgentsRequest(r *gin.Engine, projectId uint64, agent *model.A
 	return w
 }
 
-func sendGetProjectAgentsV1Request(r *gin.Engine, projectId uint64, agent *model.Agent) *httptest.ResponseRecorder {
+func sendGetProjectAgentsV1Request(r *gin.Engine, projectId int64, agent *model.Agent) *httptest.ResponseRecorder {
 
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {

@@ -14,7 +14,7 @@ import (
 	"github.com/jinzhu/gorm"
 )
 
-func (store *MemSQL) GetProjectModelMetadata(projectId uint64) ([]model.ProjectModelMetadata, int, string) {
+func (store *MemSQL) GetProjectModelMetadata(projectId int64) ([]model.ProjectModelMetadata, int, string) {
 	logFields := log.Fields{
 		"project_id": projectId,
 	}

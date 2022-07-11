@@ -67,7 +67,7 @@ type FiveTranHistoricalSyncRequest struct {
 	IsHistoricalSync bool `json:"is_historical_sync"`
 }
 
-func FiveTranCreateBingAdsConnector(projectId uint64) (int, string, string, string) {
+func FiveTranCreateBingAdsConnector(projectId int64) (int, string, string, string) {
 
 	Authorization := map[string]string{
 		"Authorization": C.GetFivetranLicenseKey(),
@@ -232,7 +232,7 @@ func FiveTranGetConnector(ConnectorId string) (int, string, bool, string) {
 	}
 }
 
-func FiveTranCreateMarketoConnector(projectId uint64) (int, string, string, string) {
+func FiveTranCreateMarketoConnector(projectId int64) (int, string, string, string) {
 
 	Authorization := map[string]string{
 		"Authorization": C.GetFivetranLicenseKey(),

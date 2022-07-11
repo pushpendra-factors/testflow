@@ -9,7 +9,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func getBatchedPropertiesByTable(projectID uint64, properties []model.CRMProperty, config *CRMSourceConfig) ([]*model.CRMProperty, []*model.CRMProperty) {
+func getBatchedPropertiesByTable(projectID int64, properties []model.CRMProperty, config *CRMSourceConfig) ([]*model.CRMProperty, []*model.CRMProperty) {
 	userProperties, activityProperties := make([]*model.CRMProperty, 0), make([]*model.CRMProperty, 0)
 	for i := range properties {
 
@@ -25,7 +25,7 @@ func getBatchedPropertiesByTable(projectID uint64, properties []model.CRMPropert
 	return userProperties, activityProperties
 }
 
-func SyncProperties(projectID uint64, sourceConfig *CRMSourceConfig) []EnrichStatus {
+func SyncProperties(projectID int64, sourceConfig *CRMSourceConfig) []EnrichStatus {
 
 	properties, status := store.GetStore().GetCRMPropertiesForSync(projectID)
 	if status != http.StatusFound {
@@ -67,7 +67,7 @@ func SyncProperties(projectID uint64, sourceConfig *CRMSourceConfig) []EnrichSta
 	return overAlltableSyncStatus
 }
 
-func syncAllUserProperty(projectID uint64, properties []*model.CRMProperty, sourceConfig *CRMSourceConfig) bool {
+func syncAllUserProperty(projectID int64, properties []*model.CRMProperty, sourceConfig *CRMSourceConfig) bool {
 	anyFailure := false
 	for i := range properties {
 		status := syncUserProperty(projectID, properties[i], sourceConfig)
@@ -79,7 +79,7 @@ func syncAllUserProperty(projectID uint64, properties []*model.CRMProperty, sour
 	return anyFailure
 }
 
-func syncUserProperty(projectID uint64, property *model.CRMProperty, sourceConfig *CRMSourceConfig) int {
+func syncUserProperty(projectID int64, property *model.CRMProperty, sourceConfig *CRMSourceConfig) int {
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "crm_property": property, "source_config": sourceConfig})
 
@@ -93,44 +93,52 @@ func syncUserProperty(projectID uint64, property *model.CRMProperty, sourceConfi
 		return http.StatusBadRequest
 	}
 
+	if property.MappedDataType != "" && !model.IsValidCRMMappedDataType(property.MappedDataType) {
+		logCtx.Error("Invalid mapped data type on sync crm user property.")
+		return http.StatusBadRequest
+	}
+
 	objectTypeAlias, err := sourceConfig.GetCRMObjectTypeAlias(property.Type)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get crm object alias.")
 		return http.StatusInternalServerError
 	}
 
-	eventNames := []string{}
-	for _, action := range []model.CRMAction{model.CRMActionCreated, model.CRMActionUpdated} {
-		eventNames = append(eventNames, GetCRMEventNameByAction(sourceConfig.sourceAlias, objectTypeAlias, action))
-	}
-
 	enKey := model.GetCRMEnrichPropertyKeyByType(sourceConfig.sourceAlias, objectTypeAlias, property.Name)
-	for _, eventName := range eventNames {
-		// create event name before creating properties
-		_, status := store.GetStore().CreateOrGetEventName(&model.EventName{
-			ProjectId: projectID,
-			Name:      eventName,
-			Type:      model.TYPE_USER_CREATED_EVENT_NAME,
-		})
 
-		if status != http.StatusFound && status != http.StatusConflict && status != http.StatusCreated {
-			logCtx.Error("Failed to create event name on sync crm properties.")
-			return http.StatusInternalServerError
+	if property.MappedDataType != "" {
+		eventNames := []string{}
+		for _, action := range []model.CRMAction{model.CRMActionCreated, model.CRMActionUpdated} {
+			eventNames = append(eventNames, GetCRMEventNameByAction(sourceConfig.sourceAlias, objectTypeAlias, action))
 		}
 
-		err = store.GetStore().CreateOrDeletePropertyDetails(projectID, eventName, enKey, property.MappedDataType, false, true)
+		for _, eventName := range eventNames {
+			// create event name before creating properties
+			_, status := store.GetStore().CreateOrGetEventName(&model.EventName{
+				ProjectId: projectID,
+				Name:      eventName,
+				Type:      model.TYPE_USER_CREATED_EVENT_NAME,
+			})
+
+			if status != http.StatusFound && status != http.StatusConflict && status != http.StatusCreated {
+				logCtx.Error("Failed to create event name on sync crm properties.")
+				return http.StatusInternalServerError
+			}
+
+			err = store.GetStore().CreateOrDeletePropertyDetails(projectID, eventName, enKey, property.MappedDataType, false, true)
+			if err != nil {
+				logCtx.WithFields(log.Fields{"enriched_property_key": enKey, "event_name": eventName}).WithError(err).
+					Error("Failed to create event property details.")
+				return http.StatusInternalServerError
+			}
+		}
+
+		err = store.GetStore().CreateOrDeletePropertyDetails(projectID, "", enKey, property.MappedDataType, true, true)
 		if err != nil {
-			logCtx.WithFields(log.Fields{"enriched_property_key": enKey, "event_name": eventName}).WithError(err).
-				Error("Failed to crated event property details.")
+			logCtx.WithFields(log.Fields{"enriched_property_key": enKey}).WithError(err).
+				Error("Failed to create user property details.")
 			return http.StatusInternalServerError
 		}
-	}
-
-	err = store.GetStore().CreateOrDeletePropertyDetails(projectID, "", enKey, property.MappedDataType, true, true)
-	if err != nil {
-		logCtx.WithFields(log.Fields{"enriched_property_key": enKey}).WithError(err).
-			Error("Failed to create user property details.")
-		return http.StatusInternalServerError
 	}
 
 	if property.Label != "" {
@@ -168,7 +176,7 @@ func getAllPropertiesObjectType(properties []*model.CRMProperty) []int {
 	return propertyObjectTypes
 }
 
-func syncAllActivityProperties(projectID uint64, properties []*model.CRMProperty, sourceConfig *CRMSourceConfig) bool {
+func syncAllActivityProperties(projectID int64, properties []*model.CRMProperty, sourceConfig *CRMSourceConfig) bool {
 	types := getAllPropertiesObjectType(properties)
 	typeNames, status := store.GetStore().GetActivitiesDistinctEventNamesByType(projectID, types)
 	if status != http.StatusFound {
@@ -188,7 +196,7 @@ func syncAllActivityProperties(projectID uint64, properties []*model.CRMProperty
 	return anyFailure
 }
 
-func syncActivityProperty(projectID uint64, property *model.CRMProperty, activityName []string, sourceConfig *CRMSourceConfig) int {
+func syncActivityProperty(projectID int64, property *model.CRMProperty, activityName []string, sourceConfig *CRMSourceConfig) int {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "crm_property": property, "source_config": sourceConfig})
 
 	if !sourceConfig.activityTypes[property.Type] {
@@ -201,6 +209,11 @@ func syncActivityProperty(projectID uint64, property *model.CRMProperty, activit
 		return http.StatusBadRequest
 	}
 
+	if property.MappedDataType != "" && !model.IsValidCRMMappedDataType(property.MappedDataType) {
+		logCtx.Error("Invalid mapped data type on sync crm activty property.")
+		return http.StatusBadRequest
+	}
+
 	objectTypeAlias, err := sourceConfig.GetCRMObjectTypeAlias(property.Type)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get crm object alias.")
@@ -208,27 +221,29 @@ func syncActivityProperty(projectID uint64, property *model.CRMProperty, activit
 	}
 
 	enKey := model.GetCRMEnrichPropertyKeyByType(sourceConfig.sourceAlias, objectTypeAlias, property.Name)
-	// only update event property data type
-	for _, name := range activityName {
-		eventName := getActivityEventName(sourceConfig.sourceAlias, name)
+	if property.MappedDataType != "" {
+		// only update event property data type
+		for _, name := range activityName {
+			eventName := getActivityEventName(sourceConfig.sourceAlias, name)
 
-		// create event name before adding property details
-		_, status := store.GetStore().CreateOrGetEventName(&model.EventName{
-			ProjectId: projectID,
-			Name:      eventName,
-			Type:      model.TYPE_USER_CREATED_EVENT_NAME,
-		})
+			// create event name before adding property details
+			_, status := store.GetStore().CreateOrGetEventName(&model.EventName{
+				ProjectId: projectID,
+				Name:      eventName,
+				Type:      model.TYPE_USER_CREATED_EVENT_NAME,
+			})
 
-		if status != http.StatusFound && status != http.StatusConflict && status != http.StatusCreated {
-			logCtx.Error("Failed to create event name on sync crm properties.")
-			return http.StatusInternalServerError
-		}
+			if status != http.StatusFound && status != http.StatusConflict && status != http.StatusCreated {
+				logCtx.Error("Failed to create event name on sync crm properties.")
+				return http.StatusInternalServerError
+			}
 
-		err = store.GetStore().CreateOrDeletePropertyDetails(projectID, eventName, enKey, property.MappedDataType, false, true)
-		if err != nil {
-			logCtx.WithFields(log.Fields{"enriched_property_key": enKey, "event_name": eventName}).WithError(err).
-				Error("Failed to crated event property details.")
-			return http.StatusInternalServerError
+			err = store.GetStore().CreateOrDeletePropertyDetails(projectID, eventName, enKey, property.MappedDataType, false, true)
+			if err != nil {
+				logCtx.WithFields(log.Fields{"enriched_property_key": enKey, "event_name": eventName}).WithError(err).
+					Error("Failed to crated event property details.")
+				return http.StatusInternalServerError
+			}
 		}
 	}
 

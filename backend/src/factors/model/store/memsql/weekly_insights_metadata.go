@@ -50,7 +50,7 @@ func (store *MemSQL) CreateWeeklyInsightsMetadata(wim *model.WeeklyInsightsMetad
 	return http.StatusCreated, ""
 }
 
-func (store *MemSQL) GetWeeklyInsightsMetadata(projectId uint64) ([]model.WeeklyInsightsMetadata, int, string) {
+func (store *MemSQL) GetWeeklyInsightsMetadata(projectId int64) ([]model.WeeklyInsightsMetadata, int, string) {
 	logFields := log.Fields{
 		"project_id": projectId,
 	}

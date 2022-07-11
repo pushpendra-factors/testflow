@@ -26,11 +26,11 @@ const (
 
 var CustomMetricAggregateFunctions = []string{SumAggregateFunction, UniqueAggregateFunction, AverageAggregateFunction}
 var CustomMetricObjectTypeNames = []string{HubspotContactsDisplayCategory, HubspotCompaniesDisplayCategory, HubspotDealsDisplayCategory,
-	SalesforceUsersDisplayCategory, SalesforceAccountsDisplayCategory, SalesforceOpportunitiesDisplayCategory, MarketoLeadsDisplayCategory}
+	SalesforceUsersDisplayCategory, SalesforceAccountsDisplayCategory, SalesforceOpportunitiesDisplayCategory, MarketoLeadsDisplayCategory, LeadSquaredLeadsDisplayCategory}
 var ProfileQueryType = 1
 
 type CustomMetric struct {
-	ProjectID       uint64          `gorm:"primary_key:true;auto_increment:false" json:"project_id"`
+	ProjectID       int64           `gorm:"primary_key:true;auto_increment:false" json:"project_id"`
 	ID              string          `gorm:"primary_key:true;type:varchar(255)" json:"id"`
 	Name            string          `json:"name"`
 	Description     string          `json:"description"`

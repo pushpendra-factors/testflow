@@ -26,7 +26,7 @@ import (
 // @Success 200 {object} model.User
 // @Router /{project_id}/users/{user_id} [get]
 func GetUserHandler(c *gin.Context) {
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		log.Error("GetUser Failed. ProjectId parse failed.")
 		c.AbortWithStatus(http.StatusBadRequest)
@@ -62,7 +62,7 @@ func GetUserHandler(c *gin.Context) {
 // @Success 200 {array} model.User
 // @Router /{project_id}/users [get]
 func GetUsersHandler(c *gin.Context) {
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
@@ -118,7 +118,7 @@ func GetUserPropertiesHandler(c *gin.Context) {
 	// NOTE: Change in GetRequiredUserPropertiesByProject when this changes.
 	var err error
 	var properties map[string][]string
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
@@ -201,7 +201,7 @@ func GetUserPropertiesHandler(c *gin.Context) {
 func GetUserPropertyValuesHandler(c *gin.Context) {
 	var err error
 	var propertyValues []string
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
@@ -252,7 +252,7 @@ func GetUserPropertyValuesHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, propertyValues)
 }
 
-func getUserPropertyValuesFromPatternServer(projectId uint64, modelId uint64, propertyName string) ([]string, int, string) {
+func getUserPropertyValuesFromPatternServer(projectId int64, modelId uint64, propertyName string) ([]string, int, string) {
 	propertyValues := make([]string, 0)
 	ps, err := PW.NewPatternServiceWrapper("", projectId, modelId)
 	if err != nil {
@@ -272,7 +272,7 @@ func getUserPropertyValuesFromPatternServer(projectId uint64, modelId uint64, pr
 	return propertyValues, 0, ""
 }
 
-func getUserPropertiesFromPatternServer(projectId uint64, modelId uint64) (map[string][]string, int, string) {
+func getUserPropertiesFromPatternServer(projectId int64, modelId uint64) (map[string][]string, int, string) {
 	properties := make(map[string][]string)
 	ps, err := PW.NewPatternServiceWrapper("", projectId, modelId)
 	if err != nil {

@@ -86,86 +86,91 @@ func (gcsd *GCSDriver) GetBucketName() string {
 	return gcsd.BucketName
 }
 
-func (gcsd *GCSDriver) GetProjectModelDir(projectId, modelId uint64) string {
+func (gcsd *GCSDriver) GetProjectModelDir(projectId int64, modelId uint64) string {
 	return fmt.Sprintf("projects/%d/models/%d/", projectId, modelId)
 }
 
-func (gcsd *GCSDriver) GetProjectEventFileDir(projectId uint64, startTimestamp int64, modelType string) string {
+func (gcsd *GCSDriver) GetProjectEventFileDir(projectId int64, startTimestamp int64, modelType string) string {
 	dateFormatted := U.GetDateOnlyFromTimestampZ(startTimestamp)
 	return fmt.Sprintf("projects/%d/events/%s/%s/", projectId, modelType, dateFormatted)
 }
 
-func (gcsd *GCSDriver) GetProjectDir(projectId uint64) string {
+func (gcsd *GCSDriver) GetProjectDir(projectId int64) string {
 	return fmt.Sprintf("projects/%d/events/", projectId)
 }
 
-func (gcsd *GCSDriver) GetModelUserPropertiesCategoricalFilePathAndName(projectId, modelId uint64) (string, string) {
+func (gcsd *GCSDriver) GetModelUserPropertiesCategoricalFilePathAndName(projectId int64, modelId uint64) (string, string) {
 	path := gcsd.GetProjectModelDir(projectId, modelId) + "properties/"
 	return path, fmt.Sprintf("userPropCatgMap_%d.txt", modelId)
 }
 
-func (gcsd *GCSDriver) GetModelEventPropertiesCategoricalFilePathAndName(projectId, modelId uint64) (string, string) {
+func (gcsd *GCSDriver) GetModelEventPropertiesCategoricalFilePathAndName(projectId int64, modelId uint64) (string, string) {
 	path := gcsd.GetProjectModelDir(projectId, modelId) + "properties/"
 	return path, fmt.Sprintf("eventPropCatgMap_%d.txt", modelId)
 }
 
-func (gcsd *GCSDriver) GetModelUserPropertiesFilePathAndName(projectId, modelId uint64) (string, string) {
+func (gcsd *GCSDriver) GetModelUserPropertiesFilePathAndName(projectId int64, modelId uint64) (string, string) {
 	path := gcsd.GetProjectModelDir(projectId, modelId) + "properties/"
 	return path, fmt.Sprintf("eventUserPropMap_%d.txt", modelId)
 }
 
-func (gcsd *GCSDriver) GetModelEventPropertiesFilePathAndName(projectId, modelId uint64) (string, string) {
+func (gcsd *GCSDriver) GetModelEventPropertiesFilePathAndName(projectId int64, modelId uint64) (string, string) {
 	path := gcsd.GetProjectModelDir(projectId, modelId) + "properties/"
 	return path, fmt.Sprintf("eventEventPropMap_%d.txt", modelId)
 }
 
-func (gcsd *GCSDriver) GetModelEventInfoFilePathAndName(projectId, modelId uint64) (string, string) {
+func (gcsd *GCSDriver) GetModelEventInfoFilePathAndName(projectId int64, modelId uint64) (string, string) {
 	path := gcsd.GetProjectModelDir(projectId, modelId)
 	return path, fmt.Sprintf("event_info_%d.txt", modelId)
 }
 
-func (gcsd *GCSDriver) GetModelEventsFilePathAndName(projectId uint64, startTimestamp int64, modelType string) (string, string) {
+func (gcsd *GCSDriver) GetModelEventsFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string) {
 	path := gcsd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
 	return path, "events.txt"
 }
 
-func (gcsd *GCSDriver) GetModelEventsBucketingFilePathAndName(projectId uint64, startTimestamp int64, modelType string) (string, string) {
+func (gcsd *GCSDriver) GetModelChannelFilePathAndName(channel string, projectId int64, startTimestamp int64, modelType string) (string, string) {
+	path := gcsd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
+	return path, channel + ".txt"
+}
+
+func (gcsd *GCSDriver) GetModelEventsBucketingFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string) {
 	path := gcsd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
 	return path, "events_bucketed.txt"
 }
 
-func (gcsd *GCSDriver) GetMasterNumericalBucketsFile(projectId uint64) (string, string) {
+func (gcsd *GCSDriver) GetMasterNumericalBucketsFile(projectId int64) (string, string) {
 	path := gcsd.GetProjectDir(projectId)
 	return path, "numerical_buckets_master.txt"
 }
 
-func (gcsd *GCSDriver) GetModelEventsNumericalBucketsFile(projectId uint64, startTimestamp int64, modelType string) (string, string) {
+func (gcsd *GCSDriver) GetModelEventsNumericalBucketsFile(projectId int64, startTimestamp int64, modelType string) (string, string) {
 	path := gcsd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
 	return path, "numerical_buckets.txt"
 }
 
-func (gcsd *GCSDriver) GetPatternChunksDir(projectId, modelId uint64) string {
+func (gcsd *GCSDriver) GetPatternChunksDir(projectId int64, modelId uint64) string {
 	modelDir := gcsd.GetProjectModelDir(projectId, modelId)
 	return fmt.Sprintf("%schunks/", modelDir)
 }
-func (gcsd *GCSDriver) GetChunksMetaDataDir(projectId, modelId uint64) string {
+func (gcsd *GCSDriver) GetChunksMetaDataDir(projectId int64, modelId uint64) string {
 	modelDir := gcsd.GetProjectModelDir(projectId, modelId)
 	return fmt.Sprintf("%smetadata/", modelDir)
 }
-func (gcsd *GCSDriver) GetPatternChunkFilePathAndName(projectId, modelId uint64, chunkId string) (string, string) {
+func (gcsd *GCSDriver) GetPatternChunkFilePathAndName(projectId int64, modelId uint64, chunkId string) (string, string) {
 	return gcsd.GetPatternChunksDir(projectId, modelId), fmt.Sprintf("chunk_%s.txt", chunkId)
 }
-func (gcsd *GCSDriver) GetChunksMetaDataFilePathAndName(projectId, modelId uint64) (string, string) {
+func (gcsd *GCSDriver) GetChunksMetaDataFilePathAndName(projectId int64, modelId uint64) (string, string) {
 	return gcsd.GetChunksMetaDataDir(projectId, modelId), "metadata.txt"
 }
-func (gcsd *GCSDriver) GetEventArchiveFilePathAndName(projectID uint64, startTime, endTime int64) (string, string) {
+func (gcsd *GCSDriver) GetEventArchiveFilePathAndName(projectID int64, startTime, endTime int64) (string, string) {
 	year, month, date := time.Unix(startTime, 0).UTC().Date()
 	path := fmt.Sprintf("archive/%d/%d/%d/", projectID, year, int(month))
 	fileName := fmt.Sprintf("%d_events_%d-%d.txt", date, startTime, endTime)
 	return path, fileName
 }
 
-func (gcsd *GCSDriver) GetUsersArchiveFilePathAndName(projectID uint64, startTime, endTime int64) (string, string) {
+func (gcsd *GCSDriver) GetUsersArchiveFilePathAndName(projectID int64, startTime, endTime int64) (string, string) {
 	year, month, date := time.Unix(startTime, 0).UTC().Date()
 	path := fmt.Sprintf("archive/%d/%d/%d/", projectID, year, int(month))
 	fileName := fmt.Sprintf("%d_users_%d-%d.txt", date, startTime, endTime)
@@ -200,25 +205,25 @@ func (gcsd *GCSDriver) ListFiles(prefix string) []string {
 	return files
 }
 
-func (gcsd *GCSDriver) GetInsightsWpiFilePathAndName(projectId uint64, dateString string, queryId int64, k int) (string, string) {
+func (gcsd *GCSDriver) GetInsightsWpiFilePathAndName(projectId int64, dateString string, queryId int64, k int) (string, string) {
 	path := gcsd.GetWeeklyInsightsModelDir(projectId, dateString, queryId, k)
 	return path, "wpi.txt"
 }
 
-func (gcsd *GCSDriver) GetInsightsCpiFilePathAndName(projectId uint64, dateString string, queryId int64, k int) (string, string) {
+func (gcsd *GCSDriver) GetInsightsCpiFilePathAndName(projectId int64, dateString string, queryId int64, k int) (string, string) {
 	path := gcsd.GetWeeklyInsightsModelDir(projectId, dateString, queryId, k)
 	return path, "cpi.txt"
 }
 
-func (gcsd *GCSDriver) GetWeeklyInsightsModelDir(projectId uint64, dateString string, queryId int64, k int) string {
+func (gcsd *GCSDriver) GetWeeklyInsightsModelDir(projectId int64, dateString string, queryId int64, k int) string {
 	return fmt.Sprintf("projects/%v/weeklyinsights/%v/q-%v/k-%v/", projectId, dateString, queryId, k)
 }
 
-func (gcsd *GCSDriver) GetWeeklyKPIModelDir(projectId uint64, dateString string, queryId int64) string {
+func (gcsd *GCSDriver) GetWeeklyKPIModelDir(projectId int64, dateString string, queryId int64) string {
 	return fmt.Sprintf("projects/%v/weeklyKPI/%v/q-%v/", projectId, dateString, queryId)
 }
 
-func (gcsd *GCSDriver) GetKPIFilePathAndName(projectId uint64, dateString string, queryId int64) (string, string) {
+func (gcsd *GCSDriver) GetKPIFilePathAndName(projectId int64, dateString string, queryId int64) (string, string) {
 	path := gcsd.GetWeeklyKPIModelDir(projectId, dateString, queryId)
 	return path, "kpi.txt"
 }

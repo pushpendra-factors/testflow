@@ -98,7 +98,7 @@ type FieldsToUpdate map[string]interface{}
 
 type Option func(FieldsToUpdate)
 
-type SlackAuthTokens map[uint64]SlackAccessTokens
+type SlackAuthTokens map[int64]SlackAccessTokens
 type SlackAccessTokens struct {
 	BotAccessToken  string `json:"bot_access_token"`
 	UserAccessToken string `json:"user_access_token"`

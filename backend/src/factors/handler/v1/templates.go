@@ -20,7 +20,7 @@ func ExecuteTemplateQueryHandler(c *gin.Context) (interface{}, int, string, stri
 	reqID := U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID)
 	logCtx := log.WithField("reqId", reqID)
 
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		logCtx.Error("Query failed. Invalid project.")
 		return nil, http.StatusUnauthorized, INVALID_PROJECT, "Query failed. Invalid project.", true
@@ -85,7 +85,7 @@ func ExecuteTemplateQueryHandler(c *gin.Context) (interface{}, int, string, stri
 }
 
 // TODO later. Move all common handler timezone methods to this.
-func getTimezoneForTemplates(projectID uint64, reqID string, inputTimezoneString string) (int, U.TimeZoneString) {
+func getTimezoneForTemplates(projectID int64, reqID string, inputTimezoneString string) (int, U.TimeZoneString) {
 	var timezoneString U.TimeZoneString
 	var statusCode int
 	logCtx := log.WithField("project_id", projectID).WithField("reqId", reqID).WithField("inputTimezone", inputTimezoneString)
@@ -109,7 +109,7 @@ func GetTemplateConfigHandler(c *gin.Context) (interface{}, int, string, string,
 	reqID := U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID)
 	logCtx := log.WithField("reqId", reqID)
 
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		return nil, http.StatusUnauthorized, INVALID_PROJECT, ErrorMessages[INVALID_PROJECT], true
 	}
@@ -135,7 +135,7 @@ func UpdateTemplateConfigHandler(c *gin.Context) (interface{}, int, string, stri
 	reqID := U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID)
 	logCtx := log.WithField("reqId", reqID)
 
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		logCtx.Error("Update thresholds failed. Invalid project.")
 		return nil, http.StatusUnauthorized, INVALID_PROJECT, "Update thresholds failed. Invalid project.", true

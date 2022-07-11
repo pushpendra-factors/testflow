@@ -26,7 +26,7 @@ const ruleIDKey = "rule_id"
 // @Success 200 {object} model.SmartPropertyRulesConfig
 // @Router /{project_id}/v1/smart_properties/config/{object_type} [get]
 func GetSmartPropertyRulesConfigHandler(c *gin.Context) (interface{}, int, string, string, bool) {
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		return nil, http.StatusUnauthorized, V1.INVALID_PROJECT, V1.ErrorMessages[V1.INVALID_PROJECT], true
 	}
@@ -50,7 +50,7 @@ func GetSmartPropertyRulesConfigHandler(c *gin.Context) (interface{}, int, strin
 // @Success 200 {string, CreatedSmartPropertyRule}
 // @Router /{project_id}/v1/smart_properties  [post]
 func CreateSmartPropertyRulesHandler(c *gin.Context) (interface{}, int, string, string, bool) {
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		return nil, http.StatusUnauthorized, V1.INVALID_PROJECT, V1.ErrorMessages[V1.INVALID_PROJECT], true
 	}
@@ -85,7 +85,7 @@ func CreateSmartPropertyRulesHandler(c *gin.Context) (interface{}, int, string, 
 // @Success 200 {string, updatedSmartPropertyRule}
 // @Router /{project_id}/v1/smart_properties/rules/{rule_id}  [put]
 func UpdateSmartPropertyRulesHandler(c *gin.Context) (interface{}, int, string, string, bool) {
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		log.Error("UpdateSmartProperty Failed. ProjectId parse failed.")
 		return nil, http.StatusUnauthorized, V1.INVALID_PROJECT, V1.ErrorMessages[V1.INVALID_PROJECT], true
@@ -125,7 +125,7 @@ func UpdateSmartPropertyRulesHandler(c *gin.Context) (interface{}, int, string, 
 // @Success 200 {array} model.SmartPropertyRules
 // @Router /{project_id}/v1/smart_properties [get]
 func GetSmartPropertyRulesHandler(c *gin.Context) (interface{}, int, string, string, bool) {
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		log.Error("GetSmartProperty Failed. ProjectId parse failed.")
 		return nil, http.StatusUnauthorized, V1.INVALID_PROJECT, V1.ErrorMessages[V1.INVALID_PROJECT], true
@@ -147,7 +147,7 @@ func GetSmartPropertyRulesHandler(c *gin.Context) (interface{}, int, string, str
 // @Success 200 {object} model.SmartPropertyRules
 // @Router /{project_id}/v1/smart_properties/rules/{rule_id} [get]
 func GetSmartPropertyRuleByRuleIDHandler(c *gin.Context) (interface{}, int, string, string, bool) {
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		log.Error("GetSmartProperty Failed. ProjectId parse failed.")
 		return nil, http.StatusUnauthorized, V1.INVALID_PROJECT, V1.ErrorMessages[V1.INVALID_PROJECT], true
@@ -175,7 +175,7 @@ func GetSmartPropertyRuleByRuleIDHandler(c *gin.Context) (interface{}, int, stri
 // @Success 200 {string}
 // @Router /{project_id}/v1/smart_properties/rules/{rule_id} [delete]
 func DeleteSmartPropertyRulesHandler(c *gin.Context) (interface{}, int, string, string, bool) {
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		log.Error("DeleteSmartProperty Failed. ProjectId parse failed.")
 		return nil, http.StatusUnauthorized, V1.INVALID_PROJECT, V1.ErrorMessages[V1.INVALID_PROJECT], true

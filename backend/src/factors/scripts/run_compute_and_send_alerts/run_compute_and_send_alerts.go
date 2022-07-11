@@ -7,6 +7,7 @@ import (
 	U "factors/util"
 	"flag"
 	"fmt"
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -107,14 +108,14 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	allDistinctProjectid := make([]uint64, 0)
+	allDistinctProjectid := make([]int64, 0)
 	for rows.Next() {
-		var projectId uint64
+		var projectId int64
 		rows.Scan(&projectId)
 		allDistinctProjectid = append(allDistinctProjectid, projectId)
 	}
 	runAllProjects, projectIdsToRun, _ := C.GetProjectsFromListWithAllProjectSupport(*projectIdFlag, "")
-	projectIdsArray := make([]uint64, 0)
+	projectIdsArray := make([]int64, 0)
 	if runAllProjects || *projectIdFlag == "" {
 		projectIdsArray = append(projectIdsArray, allDistinctProjectid...)
 	} else {

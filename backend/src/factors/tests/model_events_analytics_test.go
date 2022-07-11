@@ -778,7 +778,7 @@ func TestEventAnalyticsQueryGroupMultiQueryHandler(t *testing.T) {
 	})
 }
 
-func sendEventsQueryHandler(r *gin.Engine, projectId uint64, agent *model.Agent, queryGroup *model.QueryGroup) *httptest.ResponseRecorder {
+func sendEventsQueryHandler(r *gin.Engine, projectId int64, agent *model.Agent, queryGroup *model.QueryGroup) *httptest.ResponseRecorder {
 
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
@@ -802,7 +802,7 @@ func sendEventsQueryHandler(r *gin.Engine, projectId uint64, agent *model.Agent,
 	return w
 }
 
-func sendEventsQueryHandlerWithQueryId(r *gin.Engine, projectId uint64, agent *model.Agent, queryId string) *httptest.ResponseRecorder {
+func sendEventsQueryHandlerWithQueryId(r *gin.Engine, projectId int64, agent *model.Agent, queryId string) *httptest.ResponseRecorder {
 
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {

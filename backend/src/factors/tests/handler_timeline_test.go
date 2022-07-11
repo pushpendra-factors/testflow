@@ -109,7 +109,7 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 	})
 }
 
-func sendGetProfileUserRequest(r *gin.Engine, projectId uint64, agent *model.Agent, payload model.UTListPayload) *httptest.ResponseRecorder {
+func sendGetProfileUserRequest(r *gin.Engine, projectId int64, agent *model.Agent, payload model.UTListPayload) *httptest.ResponseRecorder {
 
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
@@ -292,7 +292,7 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 	})
 }
 
-func sendGetProfileUserDetailsRequest(r *gin.Engine, projectId uint64, agent *model.Agent, userId string, isAnonymous string) *httptest.ResponseRecorder {
+func sendGetProfileUserDetailsRequest(r *gin.Engine, projectId int64, agent *model.Agent, userId string, isAnonymous string) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error Creating cookieData")

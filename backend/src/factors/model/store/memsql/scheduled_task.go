@@ -62,12 +62,12 @@ func (store *MemSQL) CreateScheduledTask(task *model.ScheduledTask) int {
 
 // UpdateScheduledTask Updates runtime details for the task.
 func (store *MemSQL) UpdateScheduledTask(taskID string, taskDetails *postgres.Jsonb, endTime int64, status model.ScheduledTaskStatus) (int64, int) {
-	
+
 	logFields := log.Fields{
-		"task_id": taskID,
+		"task_id":      taskID,
 		"task_details": taskDetails,
-		"end_time": endTime,
-		"status": status,
+		"end_time":     endTime,
+		"status":       status,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
@@ -113,10 +113,10 @@ func (store *MemSQL) GetScheduledTaskByID(taskID string) (*model.ScheduledTask, 
 }
 
 // GetScheduledTaskInProgressCount Returns the count of IN_PROGRESS jobs for particular task.
-func (store *MemSQL) GetScheduledTaskInProgressCount(projectID uint64, taskType model.ScheduledTaskType) (int64, int) {
+func (store *MemSQL) GetScheduledTaskInProgressCount(projectID int64, taskType model.ScheduledTaskType) (int64, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
-		"task_type": taskType,
+		"task_type":  taskType,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
@@ -135,10 +135,10 @@ func (store *MemSQL) GetScheduledTaskInProgressCount(projectID uint64, taskType 
 }
 
 // GetScheduledTaskLastRunTimestamp To get the timestamp of last for project and task_type.
-func (store *MemSQL) GetScheduledTaskLastRunTimestamp(projectID uint64, taskType model.ScheduledTaskType) (int64, int) {
+func (store *MemSQL) GetScheduledTaskLastRunTimestamp(projectID int64, taskType model.ScheduledTaskType) (int64, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
-		"task_type": taskType,
+		"task_type":  taskType,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
@@ -160,11 +160,11 @@ func (store *MemSQL) GetScheduledTaskLastRunTimestamp(projectID uint64, taskType
 }
 
 // GetArchivalFileNamesForProject Get archived fileNames for a time range.
-func (store *MemSQL) GetArchivalFileNamesForProject(projectID uint64, startTime, endTime time.Time) ([]string, []string, int) {
+func (store *MemSQL) GetArchivalFileNamesForProject(projectID int64, startTime, endTime time.Time) ([]string, []string, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"start_time": startTime,
-		"end_time": endTime,
+		"end_time":   endTime,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
@@ -195,15 +195,15 @@ func (store *MemSQL) GetArchivalFileNamesForProject(projectID uint64, startTime,
 }
 
 // GetNewArchivalFileNamesAndEndTimeForProject Lists names of files created during archival process.
-func (store *MemSQL) GetNewArchivalFileNamesAndEndTimeForProject(projectID uint64,
+func (store *MemSQL) GetNewArchivalFileNamesAndEndTimeForProject(projectID int64,
 	lastRunAt int64, hardStartTime, hardEndTime time.Time) (map[int64]map[string]interface{}, int) {
-		logFields := log.Fields{
-			"project_id": projectID,
-			"last_run_at": lastRunAt,
-			"hard_start_time": hardStartTime,
-			"hard_end_time": hardEndTime,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"project_id":      projectID,
+		"last_run_at":     lastRunAt,
+		"hard_start_time": hardStartTime,
+		"hard_end_time":   hardEndTime,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	db := C.GetServices().Db
 	var startTime, endTime int64
@@ -269,11 +269,11 @@ func (store *MemSQL) FailScheduleTask(taskID string) {
 }
 
 // GetCompletedArchivalBatches Returns completed archival batches for a given range.
-func (store *MemSQL) GetCompletedArchivalBatches(projectID uint64, startTime, endTime time.Time) (map[int64]int64, int) {
+func (store *MemSQL) GetCompletedArchivalBatches(projectID int64, startTime, endTime time.Time) (map[int64]int64, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"start_time": startTime,
-		"end_time": endTime,
+		"end_time":   endTime,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
@@ -300,9 +300,9 @@ func (store *MemSQL) GetCompletedArchivalBatches(projectID uint64, startTime, en
 }
 
 // Filters all completed bigquery tasks from the list of allTasksMap.
-func filterCompletedBigqueryTasks(allTasksMap map[int64]map[string]interface{}, projectID uint64) (map[int64]map[string]interface{}, error) {
+func filterCompletedBigqueryTasks(allTasksMap map[int64]map[string]interface{}, projectID int64) (map[int64]map[string]interface{}, error) {
 	logFields := log.Fields{
-		"project_id": projectID,
+		"project_id":    projectID,
 		"all_tasks_map": allTasksMap,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)

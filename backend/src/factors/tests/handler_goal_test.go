@@ -21,7 +21,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func sendCreateFactorsGoalRequest(r *gin.Engine, request V1.CreateFactorsGoalParams, agent *model.Agent, projectID uint64) *httptest.ResponseRecorder {
+func sendCreateFactorsGoalRequest(r *gin.Engine, request V1.CreateFactorsGoalParams, agent *model.Agent, projectID int64) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")
@@ -45,7 +45,7 @@ func sendCreateFactorsGoalRequest(r *gin.Engine, request V1.CreateFactorsGoalPar
 	return w
 }
 
-func sendGetAllFactorsGoalsRequest(r *gin.Engine, agent *model.Agent, projectID uint64) *httptest.ResponseRecorder {
+func sendGetAllFactorsGoalsRequest(r *gin.Engine, agent *model.Agent, projectID int64) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")
@@ -65,7 +65,7 @@ func sendGetAllFactorsGoalsRequest(r *gin.Engine, agent *model.Agent, projectID 
 	return w
 }
 
-func sendSearchFactorsGoalsRequest(r *gin.Engine, agent *model.Agent, projectID uint64, request V1.SearchFactorsGoalParams) *httptest.ResponseRecorder {
+func sendSearchFactorsGoalsRequest(r *gin.Engine, agent *model.Agent, projectID int64, request V1.SearchFactorsGoalParams) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")
@@ -86,7 +86,7 @@ func sendSearchFactorsGoalsRequest(r *gin.Engine, agent *model.Agent, projectID 
 	return w
 }
 
-func sendRemoveFactorsGoalRequest(r *gin.Engine, agent *model.Agent, projectID uint64, request V1.RemoveFactorsGoalParams) *httptest.ResponseRecorder {
+func sendRemoveFactorsGoalRequest(r *gin.Engine, agent *model.Agent, projectID int64, request V1.RemoveFactorsGoalParams) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")
@@ -110,7 +110,7 @@ func sendRemoveFactorsGoalRequest(r *gin.Engine, agent *model.Agent, projectID u
 	return w
 }
 
-func sendUpdateFactorsGoalRequest(r *gin.Engine, agent *model.Agent, projectID uint64, request V1.UpdateFactorsGoalParams) *httptest.ResponseRecorder {
+func sendUpdateFactorsGoalRequest(r *gin.Engine, agent *model.Agent, projectID int64, request V1.UpdateFactorsGoalParams) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")
@@ -136,7 +136,7 @@ func sendUpdateFactorsGoalRequest(r *gin.Engine, agent *model.Agent, projectID u
 
 var id1, id2, id3 int64
 
-func createProjectAgentEvents(r *gin.Engine) (uint64, *model.Agent) {
+func createProjectAgentEvents(r *gin.Engine) (int64, *model.Agent) {
 
 	C.GetConfig().LookbackWindowForEventUserCache = 1
 
@@ -475,7 +475,7 @@ func TestCreateFactorsGoalHandler(t *testing.T) {
 	goals = []model.FactorsGoal{}
 	jsonResponse, _ = ioutil.ReadAll(w.Body)
 	json.Unmarshal(jsonResponse, &goals)
-	assert.Equal(t, successFactorsGoalIds[0], int64(goals[0].ID))
+	assert.Equal(t, successFactorsGoalIds[len(successFactorsGoalIds)-1], int64(goals[0].ID))
 	assert.Equal(t, false, goals[0].IsActive)
 	assert.Equal(t, false, goals[1].IsActive)
 	assert.Equal(t, false, goals[2].IsActive)

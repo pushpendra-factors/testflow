@@ -10,6 +10,6 @@ import (
 func ComputeStreamingMetrics(
 	db *gorm.DB, cloudManager *filestore.FileManager,
 	diskManager *serviceDisk.DiskDriver, bucketName string,
-	projectId uint64, modelId uint64) error {
+	projectId int64, modelId uint64) error {
 	return nil
 }

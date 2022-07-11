@@ -57,7 +57,7 @@ func (s *SyncStatus) AddSyncStatus(status []IntHubspot.Status, hasFailure bool) 
 	}
 }
 
-func syncWorker(projectID uint64, wg *sync.WaitGroup, numDocRoutines int, syncStatus *SyncStatus, recordsMaxCreatedAt int64, hubspotProjectSettings *model.HubspotProjectSettings, recordsProcessLimit int) {
+func syncWorker(projectID int64, wg *sync.WaitGroup, numDocRoutines int, syncStatus *SyncStatus, recordsMaxCreatedAt int64, hubspotProjectSettings *model.HubspotProjectSettings, recordsProcessLimit int) {
 	defer wg.Done()
 	datePropertiesByObjectType, err := IntHubspot.GetHubspotPropertiesByDataType(projectID, model.GetHubspotAllowedObjects(projectID), hubspotProjectSettings.APIKey, model.HubspotDataTypeDate)
 	if err != nil {
@@ -87,7 +87,7 @@ func syncWorker(projectID uint64, wg *sync.WaitGroup, numDocRoutines int, syncSt
 
 }
 
-func isEnrichHeavyProject(projectID uint64, settings map[uint64]model.CRMSetting) bool {
+func isEnrichHeavyProject(projectID int64, settings map[int64]model.CRMSetting) bool {
 	if _, exists := settings[projectID]; !exists {
 		return false
 	}
@@ -103,7 +103,7 @@ For light projects maximum created_at will be the job start time, since they pro
 For heavy projects maximum created_at is decided by project distributer and set to project distributer start time, since all records till that time has led it to heavy project.
 Heavy job will process all records till created_at in multiple runs and then exit from heavy job.
 */
-func getProjectMaxCreatedAt(projectID uint64, jobMaxCreatedAt int64, settings map[uint64]model.CRMSetting) int64 {
+func getProjectMaxCreatedAt(projectID int64, jobMaxCreatedAt int64, settings map[int64]model.CRMSetting) int64 {
 	if !isEnrichHeavyProject(projectID, settings) {
 		return jobMaxCreatedAt
 	}
@@ -164,9 +164,9 @@ func RunHubspotEnrich(configs map[string]interface{}) (map[string]interface{}, b
 		return nil, false
 	}
 
-	projectIDs := make([]uint64, 0, 0)
-	projectsMaxCreatedAt := make(map[uint64]int64)
-	hubspotProjectSettingsMap := make(map[uint64]*model.HubspotProjectSettings, 0)
+	projectIDs := make([]int64, 0, 0)
+	projectsMaxCreatedAt := make(map[int64]int64)
+	hubspotProjectSettingsMap := make(map[int64]*model.HubspotProjectSettings, 0)
 	for _, settings := range hubspotEnabledProjectSettings {
 		if exists := disabledProjects[settings.ProjectId]; exists {
 			continue
@@ -202,7 +202,7 @@ func RunHubspotEnrich(configs map[string]interface{}) (map[string]interface{}, b
 	}
 
 	// Runs enrichment for list of project_ids as batch using go routines.
-	batches := U.GetUint64ListAsBatch(projectIDs, numProjectRoutines)
+	batches := U.GetInt64ListAsBatch(projectIDs, numProjectRoutines)
 	log.WithFields(log.Fields{"project_batches": batches}).Info("Running for batches.")
 	syncStatus := SyncStatus{}
 	for bi := range batches {

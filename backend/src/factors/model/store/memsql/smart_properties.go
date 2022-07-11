@@ -85,7 +85,7 @@ func (store *MemSQL) UpdateSmartProperty(smartPropertyDoc *model.SmartProperties
 	}
 	return http.StatusAccepted
 }
-func (store *MemSQL) GetSmartPropertyByProjectIDAndSourceAndObjectType(projectID uint64, source string, objectType int) ([]model.SmartProperties, int) {
+func (store *MemSQL) GetSmartPropertyByProjectIDAndSourceAndObjectType(projectID int64, source string, objectType int) ([]model.SmartProperties, int) {
 	logFields := log.Fields{
 		"project_id":  projectID,
 		"source":      source,
@@ -103,7 +103,7 @@ func (store *MemSQL) GetSmartPropertyByProjectIDAndSourceAndObjectType(projectID
 		return smartProperty, http.StatusFound
 	}
 }
-func (store *MemSQL) DeleteSmartPropertyByProjectIDAndSourceAndObjectID(projectID uint64, source string, objectID string) int {
+func (store *MemSQL) DeleteSmartPropertyByProjectIDAndSourceAndObjectID(projectID int64, source string, objectID string) int {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"source":     source,
@@ -120,7 +120,7 @@ func (store *MemSQL) DeleteSmartPropertyByProjectIDAndSourceAndObjectID(projectI
 	return http.StatusAccepted
 }
 
-func (store *MemSQL) GetSmartPropertyByProjectIDAndObjectIDAndObjectType(projectID uint64, objectID string, objectType int) (model.SmartProperties, int) {
+func (store *MemSQL) GetSmartPropertyByProjectIDAndObjectIDAndObjectType(projectID int64, objectID string, objectType int) (model.SmartProperties, int) {
 	logFields := log.Fields{
 		"project_id":  projectID,
 		"object_id":   objectID,
@@ -257,7 +257,7 @@ func getUpdatedSmartPropertyObjectForExistingSmartProperty(smartPropertyRule *mo
 	return updatedSmartProperty, http.StatusFound
 }
 
-func (store *MemSQL) DeleteSmartPropertyByRuleID(projectID uint64, ruleID string) (int, int, int) {
+func (store *MemSQL) DeleteSmartPropertyByRuleID(projectID int64, ruleID string) (int, int, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"rule_id":    ruleID,

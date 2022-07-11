@@ -25,7 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func sendCreateFacebookDocumentReq(r *gin.Engine, project_id uint64, customerAccountID string, valueJSON *postgres.Jsonb, id string, timestamp int64, type_alias string) *httptest.ResponseRecorder {
+func sendCreateFacebookDocumentReq(r *gin.Engine, project_id int64, customerAccountID string, valueJSON *postgres.Jsonb, id string, timestamp int64, type_alias string) *httptest.ResponseRecorder {
 	payload := map[string]interface{}{
 		"project_id":             project_id,
 		"customer_ad_account_id": customerAccountID,
@@ -49,7 +49,7 @@ func sendCreateFacebookDocumentReq(r *gin.Engine, project_id uint64, customerAcc
 	return w
 }
 
-func sendChannelAnalyticsQueryReq(r *gin.Engine, project_id uint64, agent *M.Agent, channelQueryJSON map[string]interface{}) *httptest.ResponseRecorder {
+func sendChannelAnalyticsQueryReq(r *gin.Engine, project_id int64, agent *M.Agent, channelQueryJSON map[string]interface{}) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error Creating cookieData")
@@ -951,7 +951,8 @@ func TestChannelsV1ToKPIMigrationTransformation(t *testing.T) {
 	kpiQueryGroup := model.TransformChannelsV1QueryToKPIQueryGroup(channelGroupQueryV1)
 
 	log.WithField("kpiQueryGroup", kpiQueryGroup).Warn("testing kark1")
-	result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, "", kpiQueryGroup)
+	result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, "",
+		kpiQueryGroup, C.EnableOptimisedFilterOnProfileQuery())
 	log.WithField("result", result).WithField("statusCode", statusCode).Warn("kark1")
 	assert.NotNil(t, result[0].Headers)
 	assert.NotNil(t, result[0].Rows)

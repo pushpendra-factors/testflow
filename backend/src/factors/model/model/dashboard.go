@@ -21,7 +21,7 @@ type Dashboard struct {
 	// Composite primary key, id + project_id + agent_id.
 	ID int64 `gorm:"primary_key:true" json:"id"`
 	// Foreign key dashboards(project_id) ref projects(id).
-	ProjectId     uint64          `gorm:"primary_key:true" json:"project_id"`
+	ProjectId     int64           `gorm:"primary_key:true" json:"project_id"`
 	AgentUUID     string          `gorm:"primary_key:true" json:"-"`
 	Name          string          `gorm:"not null" json:"name"`
 	Description   string          `json:"description"`
@@ -38,7 +38,7 @@ type DashboardString struct {
 	// Composite primary key, id + project_id + agent_id.
 	ID string `gorm:"primary_key:true" json:"id"`
 	// Foreign key dashboards(project_id) ref projects(id).
-	ProjectId     uint64          `gorm:"primary_key:true" json:"project_id"`
+	ProjectId     int64           `gorm:"primary_key:true" json:"project_id"`
 	AgentUUID     string          `gorm:"primary_key:true" json:"-"`
 	Name          string          `gorm:"not null" json:"name"`
 	Description   string          `json:"description"`
@@ -85,7 +85,7 @@ var DashboardTypes = []string{DashboardTypePrivate, DashboardTypeProjectVisible}
 const AgentProjectPersonalDashboardName = "My Dashboard"
 const AgentProjectPersonalDashboardDescription = "No Description"
 
-func GetCacheResultByDashboardIdAndUnitId(reqId string, projectId uint64, dashboardId, unitId int64, from, to int64, timezoneString U.TimeZoneString) (*DashboardCacheResult, int, error) {
+func GetCacheResultByDashboardIdAndUnitId(reqId string, projectId int64, dashboardId, unitId int64, from, to int64, timezoneString U.TimeZoneString) (*DashboardCacheResult, int, error) {
 	var cacheResult *DashboardCacheResult
 	logCtx := log.WithFields(log.Fields{
 		"reqId":    reqId,
@@ -121,7 +121,7 @@ func GetCacheResultByDashboardIdAndUnitId(reqId string, projectId uint64, dashbo
 	return cacheResult, http.StatusFound, nil
 }
 
-func SetCacheResultByDashboardIdAndUnitId(result interface{}, projectId uint64, dashboardId int64, unitId int64, from, to int64, timezoneString U.TimeZoneString) {
+func SetCacheResultByDashboardIdAndUnitId(result interface{}, projectId int64, dashboardId int64, unitId int64, from, to int64, timezoneString U.TimeZoneString) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectId,
 		"dashboard_id": dashboardId, "dashboard_unit_id": unitId,
 	})
@@ -159,7 +159,7 @@ func SetCacheResultByDashboardIdAndUnitId(result interface{}, projectId uint64, 
 }
 
 // GetDashboardCacheAnalyticsValidityMap returns a map of all ProjectID-dashboardunitID pairs that have been accessed in the last 14 days
-func GetDashboardCacheAnalyticsValidityMap() (map[uint64]map[int64]bool, int64, error) {
+func GetDashboardCacheAnalyticsValidityMap() (map[int64]map[int64]bool, int64, error) {
 	logCtx := log.WithFields(log.Fields{"method": "GetDashboardCacheAnalyticsValidityMap"})
 
 	cacheKeys, err := cacheRedis.ScanPersistent("dashboard:analytics:*", MaxNumberOfDashboardUnitCacheAccessedIn14Days, MaxNumberOfDashboardUnitCacheAccessedIn14Days)
@@ -169,7 +169,7 @@ func GetDashboardCacheAnalyticsValidityMap() (map[uint64]map[int64]bool, int64, 
 		return nil, 0, err
 	}
 
-	mapOfValidDashboardUnits := map[uint64]map[int64]bool{}
+	mapOfValidDashboardUnits := map[int64]map[int64]bool{}
 	totalValidUnits := int64(0)
 	for _, cacheKey := range cacheKeys {
 		var cacheResult *DashboardCacheResult
@@ -201,7 +201,7 @@ func GetDashboardCacheAnalyticsValidityMap() (map[uint64]map[int64]bool, int64, 
 }
 
 // SetDashboardCacheAnalytics Sets the result in cache after generating a cacheKey to store against
-func SetDashboardCacheAnalytics(projectId uint64, dashboardId int64, unitId int64, from, to int64, timezoneString U.TimeZoneString) {
+func SetDashboardCacheAnalytics(projectId int64, dashboardId int64, unitId int64, from, to int64, timezoneString U.TimeZoneString) {
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectId,
 		"dashboard_id": dashboardId, "dashboard_unit_id": unitId,
@@ -243,7 +243,7 @@ func SetDashboardCacheAnalytics(projectId uint64, dashboardId int64, unitId int6
 }
 
 // ShouldRefreshDashboardUnit Whether to force refresh dashboard unit irrespective of the cache and expiry.
-func ShouldRefreshDashboardUnit(projectID uint64, dashboardID, dashboardUnitID int64, from, to int64, timezoneString U.TimeZoneString, isWebAnalytics bool) bool {
+func ShouldRefreshDashboardUnit(projectID int64, dashboardID, dashboardUnitID int64, from, to int64, timezoneString U.TimeZoneString, isWebAnalytics bool) bool {
 	// If today's range or last 30 minutes window, refresh on every trigger.
 	if U.IsStartOfTodaysRangeIn(from, timezoneString) || U.Is30MinutesTimeRange(from, to) {
 		return true

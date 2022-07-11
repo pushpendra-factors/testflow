@@ -2,6 +2,7 @@ package tests
 
 import (
 	"encoding/json"
+	C "factors/config"
 	H "factors/handler"
 	"factors/model/model"
 	"factors/model/store"
@@ -101,7 +102,7 @@ func TestAttributionModelFile(t *testing.T) {
 	//Update user1 and user2 properties with latest campaign
 	t.Run("AttributionQueryFileBased", func(t *testing.T) {
 		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, &query, debugQueryKey)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, &query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery())
 		assert.Nil(t, err)
 		for _, row := range resultRows {
 			assert.Equal(t, row.Conversion, getConversionUserCount(query.AttributionKey, result, row.AttributionKey))

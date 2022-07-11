@@ -15,12 +15,13 @@ import (
 	"sort"
 	"testing"
 	"time"
+
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
-func sendGetProjectAnalyticsReq(r *gin.Engine, projectId uint64, agent *model.Agent) *httptest.ResponseRecorder {
+func sendGetProjectAnalyticsReq(r *gin.Engine, projectId int64, agent *model.Agent) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error Creating cookieData")
@@ -91,7 +92,7 @@ func incrementCacheCountOfAllDocumentTypes(project *model.Project, currentDate t
 	return status
 }
 
-func validateData(data *model.ProjectAnalytics, projectId uint64) bool {
+func validateData(data *model.ProjectAnalytics, projectId int64) bool {
 	if data.ProjectID != projectId {
 		return false
 	}

@@ -1208,7 +1208,7 @@ func TestAnalyticsFunnelQueryWithFilterAndBreakDown(t *testing.T) {
 	}
 
 	// add session to created events.
-	_, err = TaskSession.AddSession([]uint64{project.ID}, startTimestamp-(60*30), 0, 0, 0, 1, 1)
+	_, err = TaskSession.AddSession([]int64{project.ID}, startTimestamp-(60*30), 0, 0, 0, 1, 1)
 	assert.Nil(t, err)
 
 	//x1 -> x2
@@ -3189,7 +3189,7 @@ func TestExpandArrayWithIndividualValues(t *testing.T) {
 	assert.Equal(t, []interface{}{10, 1, 2, 3, 4, "abc", "def"}, newParams)
 }
 
-func sendAnalyticsQueryFromRoutine(r *gin.Engine, queryClass string, projectID uint64, agent *model.Agent, dashboardID,
+func sendAnalyticsQueryFromRoutine(r *gin.Engine, queryClass string, projectID int64, agent *model.Agent, dashboardID,
 	unitID int64, baseQuery model.BaseQuery, refresh bool, withDashboardParams bool, queryWaitSeconds int, waitGroup *sync.WaitGroup) {
 	defer waitGroup.Done()
 	sendAnalyticsQueryReqWithHeader(r, queryClass, projectID, agent, dashboardID, unitID,

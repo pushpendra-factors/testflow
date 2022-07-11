@@ -48,7 +48,7 @@ func TestClearbitEnrichmentInSDKTrackHanler(t *testing.T) {
 	assert.NotNil(t, responseMap["event_id"])
 	assert.NotNil(t, responseMap["user_id"])
 
-	_, err = TaskSession.AddSession([]uint64{project.ID}, timestamp-60, 0, 0, 0, 1, 1)
+	_, err = TaskSession.AddSession([]int64{project.ID}, timestamp-60, 0, 0, 0, 1, 1)
 	assert.Nil(t, err)
 
 	sessionEventName, errCode := store.GetStore().GetEventName(U.EVENT_NAME_SESSION, project.ID)
@@ -1108,7 +1108,7 @@ func TestTrackHandlerWithUserSession(t *testing.T) {
 	responseEventId := responseMap["event_id"].(string)
 	responseUserId := responseMap["user_id"].(string)
 
-	_, err = TaskSession.AddSession([]uint64{project.ID}, timestamp-60, 0, 0, 0, 1, 1)
+	_, err = TaskSession.AddSession([]int64{project.ID}, timestamp-60, 0, 0, 0, 1, 1)
 	assert.Nil(t, err)
 
 	sessionEventName, errCode := store.GetStore().GetEventName(U.EVENT_NAME_SESSION, project.ID)
@@ -1189,7 +1189,7 @@ func TestTrackHandlerWithUserSession(t *testing.T) {
 	assert.Nil(t, responseMap["user_id"])
 	responseEventId2 := responseMap["event_id"].(string)
 
-	_, err = TaskSession.AddSession([]uint64{project.ID}, timestamp-60, 0, 0, 0, 1, 1)
+	_, err = TaskSession.AddSession([]int64{project.ID}, timestamp-60, 0, 0, 0, 1, 1)
 	assert.Nil(t, err)
 
 	sessionEventName, errCode = store.GetStore().GetEventName(U.EVENT_NAME_SESSION, project.ID)
@@ -1230,7 +1230,7 @@ func TestTrackHandlerUserSessionWithTimestamp(t *testing.T) {
 	responseMap := DecodeJSONResponseToMap(w.Body)
 	assert.NotEmpty(t, responseMap)
 	assert.NotNil(t, responseMap["event_id"])
-	_, err = TaskSession.AddSession([]uint64{project.ID}, timestampBeforeOneDay-60, 0, 0, 0, 1, 1)
+	_, err = TaskSession.AddSession([]int64{project.ID}, timestampBeforeOneDay-60, 0, 0, 0, 1, 1)
 	assert.Nil(t, err)
 	event1, errCode := store.GetStore().GetEventById(project.ID, responseMap["event_id"].(string), "")
 	assert.Equal(t, http.StatusFound, errCode)
@@ -1245,7 +1245,7 @@ func TestTrackHandlerUserSessionWithTimestamp(t *testing.T) {
 	responseMap = DecodeJSONResponseToMap(w.Body)
 	assert.NotEmpty(t, responseMap)
 	assert.NotNil(t, responseMap["event_id"])
-	_, err = TaskSession.AddSession([]uint64{project.ID}, lastEventTimestamp-60, 0, 0, 0, 1, 1)
+	_, err = TaskSession.AddSession([]int64{project.ID}, lastEventTimestamp-60, 0, 0, 0, 1, 1)
 	assert.Nil(t, err)
 	event2, errCode := store.GetStore().GetEventById(project.ID, responseMap["event_id"].(string), "")
 	assert.Equal(t, http.StatusFound, errCode)
@@ -1270,7 +1270,7 @@ func TestTrackHandlerUserSessionWithTimestamp(t *testing.T) {
 	responseMap = DecodeJSONResponseToMap(w.Body)
 	assert.NotEmpty(t, responseMap)
 	assert.NotNil(t, responseMap["event_id"])
-	_, err = TaskSession.AddSession([]uint64{project.ID}, lastEventTimestamp-60, 0, 0, 0, 1, 1)
+	_, err = TaskSession.AddSession([]int64{project.ID}, lastEventTimestamp-60, 0, 0, 0, 1, 1)
 	assert.Nil(t, err)
 	event3, errCode := store.GetStore().GetEventById(project.ID, responseMap["event_id"].(string), "")
 	assert.Equal(t, http.StatusFound, errCode)
@@ -2080,7 +2080,7 @@ func getAutoTrackedEventIdWithPageRawURL(t *testing.T, projectAuthToken, pageRaw
 
 	project, errCode := store.GetStore().GetProjectByToken(projectAuthToken)
 	assert.Equal(t, http.StatusFound, errCode)
-	_, err := TaskSession.AddSession([]uint64{project.ID}, timestamp-60, 0, 0, 0, 1, 1)
+	_, err := TaskSession.AddSession([]int64{project.ID}, timestamp-60, 0, 0, 0, 1, 1)
 	assert.Nil(t, err)
 
 	return responseMap["event_id"].(string), responseMap["user_id"].(string)
@@ -2104,7 +2104,7 @@ func getAutoTrackedEventIdWithUserIdAndPageRawURL(t *testing.T, projectAuthToken
 
 	project, errCode := store.GetStore().GetProjectByToken(projectAuthToken)
 	assert.Equal(t, http.StatusFound, errCode)
-	_, err := TaskSession.AddSession([]uint64{project.ID}, timestamp-60, 0, 0, 0, 1, 1)
+	_, err := TaskSession.AddSession([]int64{project.ID}, timestamp-60, 0, 0, 0, 1, 1)
 	assert.Nil(t, err)
 
 	return responseMap["event_id"].(string)

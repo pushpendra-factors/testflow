@@ -27,7 +27,7 @@ func GetProjectSettingHandler(c *gin.Context) {
 		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
 	})
 
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		logCtx.Error("Get project_settings failed. Failed to get project_id.")
 		c.AbortWithStatus(http.StatusBadRequest)
@@ -59,7 +59,7 @@ func UpdateProjectSettingsHandler(c *gin.Context) {
 		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
 	})
 
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		logCtx.Error("Update project_settings failed. Failed to get project_id.")
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid project id."})
@@ -113,7 +113,7 @@ func UpdateWeeklyInsightsHandler(c *gin.Context) {
 		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
 	})
 
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		logCtx.Error("Update project_settings for weekly insights failed. Failed to get project_id.")
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid project id."})
@@ -149,7 +149,7 @@ func UpdateExplainHandler(c *gin.Context) {
 		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
 	})
 
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		logCtx.Error("Update project_settings for explain failed. Failed to get project_id.")
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid project id."})

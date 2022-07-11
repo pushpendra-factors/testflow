@@ -11,7 +11,7 @@ const VOTE_TYPE_DOWNVOTE int = 2
 
 type Feedback struct {
 	ID        string          `gorm:"type:uuid;default:uuid_generate_v4()" json:"id"`
-	ProjectID uint64          `json:"project_id"`
+	ProjectID int64           `json:"project_id"`
 	Feature   string          `json:"feature"`
 	Property  *postgres.Jsonb `json:"property"`
 	//1 for upvote 2 for downvote

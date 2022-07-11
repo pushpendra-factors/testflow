@@ -14,7 +14,7 @@ import (
 
 const contentGroupsLimt = 3
 
-func (store *MemSQL) DeleteContentGroup(id string, projectID uint64) (int, string) {
+func (store *MemSQL) DeleteContentGroup(id string, projectID int64) (int, string) {
 	logFields := log.Fields{
 		"id":         id,
 		"project_id": projectID,
@@ -37,7 +37,7 @@ func (store *MemSQL) DeleteContentGroup(id string, projectID uint64) (int, strin
 	return http.StatusAccepted, ""
 }
 
-func (store *MemSQL) GetContentGroupById(id string, projectID uint64) (model.ContentGroup, int) {
+func (store *MemSQL) GetContentGroupById(id string, projectID int64) (model.ContentGroup, int) {
 	logFields := log.Fields{
 		"id":         id,
 		"project_id": projectID,
@@ -62,7 +62,7 @@ func (store *MemSQL) GetContentGroupById(id string, projectID uint64) (model.Con
 	return contentGroup, http.StatusFound
 }
 
-func (store *MemSQL) GetAllContentGroups(projectID uint64) ([]model.ContentGroup, int) {
+func (store *MemSQL) GetAllContentGroups(projectID int64) ([]model.ContentGroup, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
@@ -81,7 +81,7 @@ func (store *MemSQL) GetAllContentGroups(projectID uint64) ([]model.ContentGroup
 	return contentGroups, http.StatusFound
 }
 
-func (store *MemSQL) CreateContentGroup(projectID uint64, contentGroup model.ContentGroup) (model.ContentGroup, int, string) {
+func (store *MemSQL) CreateContentGroup(projectID int64, contentGroup model.ContentGroup) (model.ContentGroup, int, string) {
 	logFields := log.Fields{
 		"project_id":    projectID,
 		"content_group": contentGroup,
@@ -136,7 +136,7 @@ func (store *MemSQL) CreateContentGroup(projectID uint64, contentGroup model.Con
 	return contentGroupRecord, http.StatusCreated, ""
 }
 
-func (store *MemSQL) IsDuplicateNameCheck(projectID uint64, name string) bool {
+func (store *MemSQL) IsDuplicateNameCheck(projectID int64, name string) bool {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"name":       name,
@@ -206,7 +206,7 @@ func (store *MemSQL) IsValidRule(contentGroup model.ContentGroup) (bool, string)
 	return true, ""
 }
 
-func (store *MemSQL) ContentGroupLimitCheck(projectID uint64) bool {
+func (store *MemSQL) ContentGroupLimitCheck(projectID int64) bool {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
@@ -218,7 +218,7 @@ func (store *MemSQL) ContentGroupLimitCheck(projectID uint64) bool {
 	return false
 }
 
-func (store *MemSQL) UpdateContentGroup(id string, projectID uint64, contentGroup model.ContentGroup) (model.ContentGroup, int, string) {
+func (store *MemSQL) UpdateContentGroup(id string, projectID int64, contentGroup model.ContentGroup) (model.ContentGroup, int, string) {
 	logFields := log.Fields{
 		"id":            id,
 		"project_id":    projectID,
@@ -257,7 +257,7 @@ func (store *MemSQL) UpdateContentGroup(id string, projectID uint64, contentGrou
 	return contentGroup, http.StatusAccepted, ""
 }
 
-func (store *MemSQL) CheckURLContentGroupValue(pageUrl string, projectID uint64) map[string]string {
+func (store *MemSQL) CheckURLContentGroupValue(pageUrl string, projectID int64) map[string]string {
 	logFields := log.Fields{
 		"page_url":   pageUrl,
 		"project_id": projectID,

@@ -4,16 +4,17 @@ import (
 	"factors/model/model"
 	"net/http"
 	"time"
+
 	log "github.com/sirupsen/logrus"
 )
 
-func (store *MemSQL) GetKPIConfigsForFacebook(projectID uint64, reqID string) (map[string]interface{}, int) {
+func (store *MemSQL) GetKPIConfigsForFacebook(projectID int64, reqID string) (map[string]interface{}, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
-		"req_id": reqID,
+		"req_id":     reqID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	_, settings, errCode := store.GetFacebookEnabledIDsAndProjectSettingsForProject([]uint64{projectID})
+	_, settings, errCode := store.GetFacebookEnabledIDsAndProjectSettingsForProject([]int64{projectID})
 	if errCode != http.StatusOK {
 		return nil, http.StatusOK
 	}

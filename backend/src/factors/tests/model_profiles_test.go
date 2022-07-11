@@ -2,6 +2,7 @@ package tests
 
 import (
 	"encoding/json"
+	C "factors/config"
 	"factors/model/model"
 	"factors/model/store"
 	U "factors/util"
@@ -20,7 +21,6 @@ func TestProfiles(t *testing.T) {
 	assert.NotNil(t, project)
 	assert.NotNil(t, agent)
 	projectID := project.ID
-	// agentID := agent.UUID
 
 	rCustomerUserId := U.RandomLowerAphaNumString(15)
 	properties1 := postgres.Jsonb{RawMessage: json.RawMessage([]byte(`{"country": "india", "age": 30, "paid": true}`))}
@@ -53,7 +53,7 @@ func TestProfiles(t *testing.T) {
 			From:           joinTime - 100,
 			To:             nextUserJoinTime + 100,
 		}
-		result, statusCode := store.GetStore().RunProfilesGroupQuery(queryGroup.Queries, projectID)
+		result, statusCode := store.GetStore().RunProfilesGroupQuery(queryGroup.Queries, projectID, C.EnableOptimisedFilterOnProfileQuery())
 		assert.Equal(t, http.StatusOK, statusCode)
 		assert.Equal(t, float64(2), result.Results[0].Rows[0][1])
 		assert.Equal(t, int(0), result.Results[0].Rows[0][0])
@@ -80,7 +80,7 @@ func TestProfiles(t *testing.T) {
 			From:           joinTime - 100,
 			To:             nextUserJoinTime + 100,
 		}
-		result, statusCode := store.GetStore().RunProfilesGroupQuery(queryGroup.Queries, projectID)
+		result, statusCode := store.GetStore().RunProfilesGroupQuery(queryGroup.Queries, projectID, C.EnableOptimisedFilterOnProfileQuery())
 		assert.Equal(t, http.StatusOK, statusCode)
 		assert.Equal(t, float64(1), result.Results[0].Rows[0][1])
 		assert.Equal(t, int(0), result.Results[0].Rows[0][0])
@@ -105,7 +105,7 @@ func TestProfiles(t *testing.T) {
 			From:           joinTime - 100,
 			To:             joinTime + 100,
 		}
-		result, statusCode := store.GetStore().RunProfilesGroupQuery(queryGroup.Queries, projectID)
+		result, statusCode := store.GetStore().RunProfilesGroupQuery(queryGroup.Queries, projectID, C.EnableOptimisedFilterOnProfileQuery())
 		assert.Equal(t, http.StatusOK, statusCode)
 		assert.Equal(t, float64(1), result.Results[0].Rows[0][1])
 		assert.Equal(t, int(0), result.Results[0].Rows[0][0])
@@ -130,17 +130,20 @@ func TestProfiles(t *testing.T) {
 			From:           joinTime - 100,
 			To:             nextUserJoinTime + 100,
 		}
-		result, statusCode := store.GetStore().RunProfilesGroupQuery(queryGroup.Queries, projectID)
+		result, statusCode := store.GetStore().RunProfilesGroupQuery(queryGroup.Queries, projectID, C.EnableOptimisedFilterOnProfileQuery())
 		assert.Equal(t, http.StatusOK, statusCode)
-		assert.Equal(t, float64(1), result.Results[0].Rows[0][1])
-		assert.Equal(t, int(0), result.Results[0].Rows[0][0])
-		assert.Equal(t, "india", result.Results[0].Rows[0][2])
-		assert.Equal(t, float64(1), result.Results[0].Rows[1][1])
-		assert.Equal(t, int(0), result.Results[0].Rows[1][0])
-		assert.Equal(t, "us", result.Results[0].Rows[1][2])
 		assert.Equal(t, "query_index", result.Results[0].Headers[0])
+		assert.Equal(t, int(0), result.Results[0].Rows[0][0])
+		assert.Equal(t, int(0), result.Results[0].Rows[1][0])
+
+		assert.Equal(t, float64(1), result.Results[0].Rows[0][1])
+		assert.Equal(t, float64(1), result.Results[0].Rows[1][1])
 		assert.Equal(t, model.AliasAggr, result.Results[0].Headers[1])
+
 		assert.Equal(t, "country", result.Results[0].Headers[2])
+		assert.True(t, result.Results[0].Rows[0][2] == "india" || result.Results[0].Rows[0][2] == "us")
+		assert.True(t, result.Results[0].Rows[1][2] == "india" || result.Results[0].Rows[1][2] == "us")
+
 	})
 
 	t.Run("No filter, 1 group by bucketed", func(t *testing.T) {
@@ -160,7 +163,7 @@ func TestProfiles(t *testing.T) {
 			From:           joinTime - 100,
 			To:             nextUserJoinTime + 100,
 		}
-		result, statusCode := store.GetStore().RunProfilesGroupQuery(queryGroup.Queries, projectID)
+		result, statusCode := store.GetStore().RunProfilesGroupQuery(queryGroup.Queries, projectID, C.EnableOptimisedFilterOnProfileQuery())
 		assert.Equal(t, http.StatusOK, statusCode)
 		assert.Equal(t, float64(1), result.Results[0].Rows[0][1])
 		assert.Equal(t, int(0), result.Results[0].Rows[0][0])
@@ -204,7 +207,7 @@ func TestProfilesDateRangeQuery(t *testing.T) {
 			GroupAnalysis: "users",
 		}
 
-		result, errCode, _ := store.GetStore().ExecuteProfilesQuery(project.ID, query)
+		result, errCode, _ := store.GetStore().ExecuteProfilesQuery(project.ID, query, C.EnableOptimisedFilterOnProfileQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, float64(11), result.Rows[0][0])
@@ -243,7 +246,7 @@ func TestProfilesDateRangeQuery(t *testing.T) {
 			GroupAnalysis: "users",
 		}
 
-		result2, errCode, _ := store.GetStore().ExecuteProfilesQuery(project.ID, query2)
+		result2, errCode, _ := store.GetStore().ExecuteProfilesQuery(project.ID, query2, C.EnableOptimisedFilterOnProfileQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result2)
 		assert.Equal(t, model.AliasAggr, result2.Headers[0])
@@ -278,7 +281,7 @@ func TestProfilesDateRangeQuery(t *testing.T) {
 			GroupAnalysis: "users",
 		}
 
-		result3, errCode, _ := store.GetStore().ExecuteProfilesQuery(project.ID, query3)
+		result3, errCode, _ := store.GetStore().ExecuteProfilesQuery(project.ID, query3, C.EnableOptimisedFilterOnProfileQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result3)
 		var createdUsers = make(map[string]bool)
@@ -339,7 +342,7 @@ func TestProfilesUserSourceQuery(t *testing.T) {
 			GroupAnalysis: "users",
 		}
 
-		result, errCode, _ := store.GetStore().ExecuteProfilesQuery(project.ID, query)
+		result, errCode, _ := store.GetStore().ExecuteProfilesQuery(project.ID, query, C.EnableOptimisedFilterOnProfileQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, model.AliasAggr, result.Headers[0])
@@ -386,7 +389,7 @@ func TestProfilesUserSourceQuery(t *testing.T) {
 			GroupAnalysis: "users",
 		}
 
-		result2, errCode, _ := store.GetStore().ExecuteProfilesQuery(project.ID, query2)
+		result2, errCode, _ := store.GetStore().ExecuteProfilesQuery(project.ID, query2, C.EnableOptimisedFilterOnProfileQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result2)
 		assert.Equal(t, model.AliasAggr, result2.Headers[0])
@@ -433,7 +436,7 @@ func TestProfilesUserSourceQuery(t *testing.T) {
 			GroupAnalysis: "users",
 		}
 
-		result3, errCode, _ := store.GetStore().ExecuteProfilesQuery(project.ID, query3)
+		result3, errCode, _ := store.GetStore().ExecuteProfilesQuery(project.ID, query3, C.EnableOptimisedFilterOnProfileQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result3)
 		assert.Equal(t, model.AliasAggr, result3.Headers[0])
@@ -492,7 +495,7 @@ func TestProfilesGroupSupport(t *testing.T) {
 			GroupAnalysis: model.GROUP_NAME_HUBSPOT_COMPANY,
 		}
 
-		result, errCode, _ := store.GetStore().ExecuteProfilesQuery(project.ID, query)
+		result, errCode, _ := store.GetStore().ExecuteProfilesQuery(project.ID, query, C.EnableOptimisedFilterOnProfileQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, model.AliasAggr, result.Headers[0])
@@ -541,7 +544,7 @@ func TestProfilesGroupSupport(t *testing.T) {
 			GroupAnalysis: model.GROUP_NAME_SALESFORCE_OPPORTUNITY,
 		}
 
-		result2, errCode, _ := store.GetStore().ExecuteProfilesQuery(project.ID, query2)
+		result2, errCode, _ := store.GetStore().ExecuteProfilesQuery(project.ID, query2, C.EnableOptimisedFilterOnProfileQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result2)
 		assert.Equal(t, model.AliasAggr, result2.Headers[0])
@@ -590,7 +593,7 @@ func TestProfilesGroupSupport(t *testing.T) {
 			GroupAnalysis: model.GROUP_NAME_HUBSPOT_DEAL,
 		}
 
-		result3, errCode, _ := store.GetStore().ExecuteProfilesQuery(project.ID, query3)
+		result3, errCode, _ := store.GetStore().ExecuteProfilesQuery(project.ID, query3, C.EnableOptimisedFilterOnProfileQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result3)
 		assert.Equal(t, model.AliasAggr, result3.Headers[0])
@@ -639,7 +642,7 @@ func TestProfilesGroupSupport(t *testing.T) {
 			GroupAnalysis: model.GROUP_NAME_SALESFORCE_ACCOUNT,
 		}
 
-		result4, errCode, _ := store.GetStore().ExecuteProfilesQuery(project.ID, query4)
+		result4, errCode, _ := store.GetStore().ExecuteProfilesQuery(project.ID, query4, C.EnableOptimisedFilterOnProfileQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result4)
 		assert.Equal(t, model.AliasAggr, result4.Headers[0])

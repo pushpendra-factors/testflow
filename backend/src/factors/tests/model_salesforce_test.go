@@ -957,7 +957,7 @@ func TestSalesforceEventUserPropertiesState(t *testing.T) {
 	assert.Equal(t, float64(1), result.Rows[1][1])
 }
 
-func sendGetCRMObjectValuesByPropertyNameReq(r *gin.Engine, projectID uint64, agent *model.Agent, objectSource, objectType, propertyName string) *httptest.ResponseRecorder {
+func sendGetCRMObjectValuesByPropertyNameReq(r *gin.Engine, projectID int64, agent *model.Agent, objectSource, objectType, propertyName string) *httptest.ResponseRecorder {
 
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
@@ -1307,7 +1307,7 @@ func TestSalesforceIdentification(t *testing.T) {
 		model.SalesforceDocumentTypeNameOpportunity: {"Mobile__c"},
 	}
 
-	SalesforceProjectIdentificationFieldStore := map[uint64]map[string][]string{
+	SalesforceProjectIdentificationFieldStore := map[int64]map[string][]string{
 		project.ID: testIndentificationField,
 	}
 
@@ -1441,7 +1441,7 @@ func TestSalesforceIdentification(t *testing.T) {
 	assert.Equal(t, emailLead, EventUserIDMap[U.EVENT_NAME_SALESFORCE_LEAD_CREATED])
 }
 
-func createDummySalesforceDocument(projectID uint64, value interface{}, doctTypeAlias string) error {
+func createDummySalesforceDocument(projectID int64, value interface{}, doctTypeAlias string) error {
 	jsonData, err := json.Marshal(value)
 	if err != nil {
 		return err
@@ -2894,7 +2894,7 @@ func TestSalesforceOfflineTouchPointDecode(t *testing.T) {
 	}
 }
 
-func querySingleEventWithBreakdownByUserProperty(projectID uint64, eventName string, propertyName string, from, to int64) (map[string]interface{}, int) {
+func querySingleEventWithBreakdownByUserProperty(projectID int64, eventName string, propertyName string, from, to int64) (map[string]interface{}, int) {
 	query := model.Query{
 		Class: model.QueryClassEvents,
 		From:  from,

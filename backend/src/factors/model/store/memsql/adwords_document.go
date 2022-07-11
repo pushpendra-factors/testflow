@@ -208,55 +208,55 @@ var adwordsInternalMetricsToAllRep = map[string]metricsAndRelated{
 		externalOperation:        "sum",
 	},
 	model.SearchClickShare: {
-		higherOrderExpression:    fmt.Sprintf(shareHigherOrderExpression, model.SearchClickShare, model.Impressions, model.SearchClickShare, model.TotalSearchClick),
+		higherOrderExpression:    fmt.Sprintf(shareHigherOrderExpressionWithZeroCheck, model.SearchClickShare, model.SearchClickShare, model.Impressions, model.SearchClickShare, model.TotalSearchClick),
 		nonHigherOrderExpression: fmt.Sprintf(sumOfFloatExp, model.TotalSearchClick),
 		externalValue:            model.SearchClickShare,
 		externalOperation:        "sum",
 	},
 	model.SearchTopImpressionShare: {
-		higherOrderExpression:    fmt.Sprintf(shareHigherOrderExpression, model.SearchTopImpressionShare, model.Impressions, model.SearchTopImpressionShare, model.TotalSearchTopImpression),
+		higherOrderExpression:    fmt.Sprintf(shareHigherOrderExpressionWithZeroCheck, model.SearchTopImpressionShare, model.SearchTopImpressionShare, model.TopImpressions, model.SearchTopImpressionShare, model.TotalTopImpressions),
 		nonHigherOrderExpression: fmt.Sprintf(sumOfFloatExp, model.TotalSearchTopImpression),
 		externalValue:            model.SearchTopImpressionShare,
 		externalOperation:        "sum",
 	},
 	model.SearchAbsoluteTopImpressionShare: {
-		higherOrderExpression:    fmt.Sprintf(shareHigherOrderExpression, model.SearchAbsoluteTopImpressionShare, model.Impressions, model.SearchAbsoluteTopImpressionShare, model.TotalSearchAbsoluteTopImpression),
+		higherOrderExpression:    fmt.Sprintf(shareHigherOrderExpressionWithZeroCheck, model.SearchAbsoluteTopImpressionShare, model.SearchAbsoluteTopImpressionShare, model.AbsoluteTopImpressions, model.SearchAbsoluteTopImpressionShare, model.TotalTopImpressions),
 		nonHigherOrderExpression: fmt.Sprintf(sumOfFloatExp, model.TotalSearchAbsoluteTopImpression),
 		externalValue:            model.SearchAbsoluteTopImpressionShare,
 		externalOperation:        "sum",
 	},
 	model.SearchBudgetLostAbsoluteTopImpressionShare: {
-		higherOrderExpression:    fmt.Sprintf(shareHigherOrderExpression, model.SearchBudgetLostAbsoluteTopImpressionShare, model.Impressions, model.SearchBudgetLostAbsoluteTopImpressionShare, model.TotalSearchBudgetLostAbsoluteTopImpression),
+		higherOrderExpression:    fmt.Sprintf(shareHigherOrderExpressionWithZeroCheck, model.SearchBudgetLostAbsoluteTopImpressionShare, model.SearchBudgetLostAbsoluteTopImpressionShare, model.AbsoluteTopImpressionLostDueToBudget, model.SearchBudgetLostAbsoluteTopImpressionShare, model.TotalTopImpressions),
 		nonHigherOrderExpression: fmt.Sprintf(sumOfFloatExp, model.TotalSearchBudgetLostAbsoluteTopImpression),
 		externalValue:            model.SearchBudgetLostAbsoluteTopImpressionShare,
 		externalOperation:        "sum",
 	},
 	model.SearchBudgetLostImpressionShare: {
-		higherOrderExpression:    fmt.Sprintf(shareHigherOrderExpression, model.SearchBudgetLostImpressionShare, model.Impressions, model.SearchBudgetLostImpressionShare, model.TotalSearchBudgetLostImpression),
+		higherOrderExpression:    fmt.Sprintf(shareHigherOrderExpressionWithZeroCheck, model.SearchBudgetLostImpressionShare, model.SearchBudgetLostImpressionShare, model.ImpressionLostDueToBudget, model.SearchBudgetLostImpressionShare, model.TotalSearchImpression),
 		nonHigherOrderExpression: fmt.Sprintf(sumOfFloatExp, model.TotalSearchBudgetLostImpression),
 		externalValue:            model.SearchBudgetLostImpressionShare,
 		externalOperation:        "sum",
 	},
 	model.SearchBudgetLostTopImpressionShare: {
-		higherOrderExpression:    fmt.Sprintf(shareHigherOrderExpression, model.SearchBudgetLostTopImpressionShare, model.Impressions, model.SearchBudgetLostTopImpressionShare, model.TotalSearchBudgetLostTopImpression),
+		higherOrderExpression:    fmt.Sprintf(shareHigherOrderExpressionWithZeroCheck, model.SearchBudgetLostTopImpressionShare, model.SearchBudgetLostTopImpressionShare, model.TopImpressionLostDueToBudget, model.SearchBudgetLostTopImpressionShare, model.TotalTopImpressions),
 		nonHigherOrderExpression: fmt.Sprintf(sumOfFloatExp, model.TotalSearchBudgetLostTopImpression),
 		externalValue:            model.SearchBudgetLostTopImpressionShare,
 		externalOperation:        "sum",
 	},
 	model.SearchRankLostAbsoluteTopImpressionShare: {
-		higherOrderExpression:    fmt.Sprintf(shareHigherOrderExpression, model.SearchRankLostAbsoluteTopImpressionShare, model.Impressions, model.SearchRankLostAbsoluteTopImpressionShare, model.TotalSearchRankLostAbsoluteTopImpression),
+		higherOrderExpression:    fmt.Sprintf(shareHigherOrderExpressionWithZeroCheck, model.SearchRankLostAbsoluteTopImpressionShare, model.SearchRankLostAbsoluteTopImpressionShare, model.AbsoluteTopImpressionLostDueToRank, model.SearchRankLostAbsoluteTopImpressionShare, model.TotalTopImpressions),
 		nonHigherOrderExpression: fmt.Sprintf(sumOfFloatExp, model.TotalSearchRankLostAbsoluteTopImpression),
 		externalValue:            model.SearchRankLostAbsoluteTopImpressionShare,
 		externalOperation:        "sum",
 	},
 	model.SearchRankLostImpressionShare: {
-		higherOrderExpression:    fmt.Sprintf(shareHigherOrderExpression, model.SearchRankLostImpressionShare, model.Impressions, model.SearchRankLostImpressionShare, model.TotalSearchRankLostImpression),
+		higherOrderExpression:    fmt.Sprintf(shareHigherOrderExpressionWithZeroCheck, model.SearchRankLostImpressionShare, model.SearchRankLostImpressionShare, model.ImpressionLostDueToRank, model.SearchRankLostImpressionShare, model.TotalSearchImpression),
 		nonHigherOrderExpression: fmt.Sprintf(sumOfFloatExp, model.TotalSearchRankLostImpression),
 		externalValue:            model.SearchRankLostImpressionShare,
 		externalOperation:        "sum",
 	},
 	model.SearchRankLostTopImpressionShare: {
-		higherOrderExpression:    fmt.Sprintf(shareHigherOrderExpression, model.SearchRankLostTopImpressionShare, model.Impressions, model.SearchRankLostTopImpressionShare, model.TotalSearchRankLostTopImpression),
+		higherOrderExpression:    fmt.Sprintf(shareHigherOrderExpressionWithZeroCheck, model.SearchRankLostTopImpressionShare, model.SearchRankLostTopImpressionShare, model.TopImpressionLostDueToRank, model.SearchRankLostTopImpressionShare, model.TotalTopImpressions),
 		nonHigherOrderExpression: fmt.Sprintf(sumOfFloatExp, model.TotalSearchRankLostTopImpression),
 		externalValue:            model.SearchRankLostTopImpressionShare,
 		externalOperation:        "sum",
@@ -610,7 +610,7 @@ func getDocumentTypeAliasByType() map[int]string {
 	return documentTypeMap
 }
 
-func (store *MemSQL) GetAdwordsLastSyncInfoForProject(projectID uint64) ([]model.AdwordsLastSyncInfo, int) {
+func (store *MemSQL) GetAdwordsLastSyncInfoForProject(projectID int64) ([]model.AdwordsLastSyncInfo, int) {
 	logFields := log.Fields{"project_id": projectID}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	params := []interface{}{projectID}
@@ -681,11 +681,11 @@ func (store *MemSQL) sanitizedLastSyncInfos(adwordsLastSyncInfos []model.Adwords
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
-	adwordsSettingsByProjectAndCustomerAccount := make(map[uint64]map[string]*model.AdwordsProjectSettings, 0)
-	projectIDs := make([]uint64, 0, 0)
+	adwordsSettingsByProjectAndCustomerAccount := make(map[int64]map[string]*model.AdwordsProjectSettings, 0)
+	projectIDs := make([]int64, 0, 0)
 
 	// Forming MapOfProjectToCustomerAccToManagerAcc
-	projectToCustomerAccToManagerAccMap := make(map[uint64]map[string]string)
+	projectToCustomerAccToManagerAccMap := make(map[int64]map[string]string)
 	for i := range adwordsSettings {
 		customerAccToManagerAccMap := make(map[string]string)
 		if adwordsSettings[i].IntAdwordsClientManagerMap != nil {
@@ -727,7 +727,7 @@ func (store *MemSQL) sanitizedLastSyncInfos(adwordsLastSyncInfos []model.Adwords
 	documentTypeAliasByType := getDocumentTypeAliasByType()
 
 	// add settings for project_id existing on adwords documents.
-	existingProjectAndCustomerAccountWithTypes := make(map[uint64]map[string]map[string]bool, 0)
+	existingProjectAndCustomerAccountWithTypes := make(map[int64]map[string]map[string]bool, 0)
 	selectedLastSyncInfos := make([]model.AdwordsLastSyncInfo, 0, 0)
 
 	for i := range adwordsLastSyncInfos {
@@ -819,7 +819,7 @@ func (store *MemSQL) sanitizedLastSyncInfos(adwordsLastSyncInfos []model.Adwords
 }
 
 // PullGCLIDReport - It returns GCLID based campaign info ( Adgroup, Campaign and Ad) for given time range and adwords account
-func (store *MemSQL) PullGCLIDReport(projectID uint64, from, to int64, adwordsAccountIDs string,
+func (store *MemSQL) PullGCLIDReport(projectID int64, from, to int64, adwordsAccountIDs string,
 	campaignIDReport, adgroupIDReport, keywordIDReport map[string]model.MarketingData, timeZone string) (map[string]model.MarketingData, error) {
 	logFields := log.Fields{
 		"project_id":           projectID,
@@ -965,7 +965,7 @@ func (store *MemSQL) PullGCLIDReport(projectID uint64, from, to int64, adwordsAc
 }
 
 // @TODO Kark v1
-func (store *MemSQL) buildAdwordsChannelConfig(projectID uint64) *model.ChannelConfigResult {
+func (store *MemSQL) buildAdwordsChannelConfig(projectID int64) *model.ChannelConfigResult {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
@@ -979,7 +979,7 @@ func (store *MemSQL) buildAdwordsChannelConfig(projectID uint64) *model.ChannelC
 	}
 }
 
-func (store *MemSQL) buildObjectAndPropertiesForAdwords(projectID uint64, objects []string) []model.ChannelObjectAndProperties {
+func (store *MemSQL) buildObjectAndPropertiesForAdwords(projectID int64, objects []string) []model.ChannelObjectAndProperties {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"objects":    objects,
@@ -1012,7 +1012,7 @@ type LatestTimestamp struct {
 }
 
 // GetAdwordsFilterValues - @TODO Kark v1
-func (store *MemSQL) GetAdwordsFilterValues(projectID uint64, requestFilterObject string, requestFilterProperty string, reqID string) ([]interface{}, int) {
+func (store *MemSQL) GetAdwordsFilterValues(projectID int64, requestFilterObject string, requestFilterProperty string, reqID string) ([]interface{}, int) {
 	logFields := log.Fields{
 		"project_id":              projectID,
 		"request_filter_object":   requestFilterObject,
@@ -1039,7 +1039,7 @@ func (store *MemSQL) GetAdwordsFilterValues(projectID uint64, requestFilterObjec
 
 	return filterValues, http.StatusFound
 }
-func (store *MemSQL) getSmartPropertyFilterValues(projectID uint64, requestFilterObject string, requestFilterProperty string, source string, reqID string) ([]interface{}, int) {
+func (store *MemSQL) getSmartPropertyFilterValues(projectID int64, requestFilterObject string, requestFilterProperty string, source string, reqID string) ([]interface{}, int) {
 	logFields := log.Fields{
 		"project_id":              projectID,
 		"request_filter_object":   requestFilterObject,
@@ -1081,7 +1081,7 @@ func (store *MemSQL) getSmartPropertyFilterValues(projectID uint64, requestFilte
 	return filterValues, http.StatusFound
 }
 
-func (store *MemSQL) IsAdwordsIntegrationAvailable(projectID uint64) bool {
+func (store *MemSQL) IsAdwordsIntegrationAvailable(projectID int64) bool {
 	projectSetting, errCode := store.GetProjectSetting(projectID)
 	if errCode != http.StatusFound {
 		return false
@@ -1095,7 +1095,7 @@ func (store *MemSQL) IsAdwordsIntegrationAvailable(projectID uint64) bool {
 
 // GetAdwordsSQLQueryAndParametersForFilterValues - @TODO Kark v1
 // Currently, properties in object dont vary with Object.
-func (store *MemSQL) GetAdwordsSQLQueryAndParametersForFilterValues(projectID uint64,
+func (store *MemSQL) GetAdwordsSQLQueryAndParametersForFilterValues(projectID int64,
 	requestFilterObject string, requestFilterProperty string, reqID string) (string, []interface{}, int) {
 	logFields := log.Fields{
 		"project_id":              projectID,
@@ -1156,7 +1156,7 @@ func getFilterRelatedInformationForAdwords(requestFilterObject string, requestFi
 
 // @TODO Kark v1
 // Not considering timezone since the impact is going to be very less.
-func (store *MemSQL) getAdwordsFilterValuesByType(projectID uint64, docType int, property string, reqID string) ([]interface{}, int) {
+func (store *MemSQL) getAdwordsFilterValuesByType(projectID int64, docType int, property string, reqID string) ([]interface{}, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"doc_type":   docType,
@@ -1216,7 +1216,7 @@ func getAdwordsDocumentTypeForFilterKeyV1(filterObject string) int {
 // ExecuteAdwordsmodel.ChannelQueryV1 - @TODO Kark v1.
 // Job represents the meta data associated with particular object type. Reports represent data with metrics and few filters.
 // TODO - Duplicate code/flow in facebook and adwords.
-func (store *MemSQL) ExecuteAdwordsChannelQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string) ([]string, [][]interface{}, int) {
+func (store *MemSQL) ExecuteAdwordsChannelQueryV1(projectID int64, query *model.ChannelQueryV1, reqID string) ([]string, [][]interface{}, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"query":      query,
@@ -1289,7 +1289,7 @@ func (store *MemSQL) ExecuteAdwordsChannelQueryV1(projectID uint64, query *model
 
 // GetSQLQueryAndParametersForAdwordsQueryV1 - @Kark TODO v1
 // TODO Understand null cases.
-func (store *MemSQL) GetSQLQueryAndParametersForAdwordsQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string, int) {
+func (store *MemSQL) GetSQLQueryAndParametersForAdwordsQueryV1(projectID int64, query *model.ChannelQueryV1, reqID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string, int) {
 	logFields := log.Fields{
 		"project_id":                    projectID,
 		"query":                         query,
@@ -1336,7 +1336,7 @@ func (store *MemSQL) GetSQLQueryAndParametersForAdwordsQueryV1(projectID uint64,
 }
 
 // @Kark TODO v1
-func (store *MemSQL) transFormRequestFieldsAndFetchRequiredFieldsForAdwords(projectID uint64, query model.ChannelQueryV1, reqID string) (*model.ChannelQueryV1, *string, error) {
+func (store *MemSQL) transFormRequestFieldsAndFetchRequiredFieldsForAdwords(projectID int64, query model.ChannelQueryV1, reqID string) (*model.ChannelQueryV1, *string, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"query":      query,
@@ -1517,7 +1517,7 @@ AND JSON_EXTRACT_STRING(value, 'campaign_name') RLIKE '%Brand - BLR - New_Aug_De
 ORDER BY impressions DESC, clicks DESC LIMIT 2500 ;
 */
 // - For reference of complex joins, PR which removed older/QueryV1 adwords is 1437.
-func buildAdwordsSimpleQueryV2(query *model.ChannelQueryV1, projectID uint64, customerAccountID string, reqID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string) {
+func buildAdwordsSimpleQueryV2(query *model.ChannelQueryV1, projectID int64, customerAccountID string, reqID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string) {
 	logFields := log.Fields{
 		"query":                         query,
 		"project_id":                    projectID,
@@ -1534,7 +1534,7 @@ func buildAdwordsSimpleQueryV2(query *model.ChannelQueryV1, projectID uint64, cu
 	return getSQLAndParamsForAdwordsV2(query, projectID, query.From, query.To, customerAccountID, model.AdwordsDocumentTypeAlias[lowestHierarchyReportLevel], fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT)
 }
 
-func buildAdwordsSimpleQueryWithSmartPropertyV2(query *model.ChannelQueryV1, projectID uint64, customerAccountID string, reqID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string) {
+func buildAdwordsSimpleQueryWithSmartPropertyV2(query *model.ChannelQueryV1, projectID int64, customerAccountID string, reqID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string) {
 	logFields := log.Fields{
 		"query":                         query,
 		"project_id":                    projectID,
@@ -1550,7 +1550,7 @@ func buildAdwordsSimpleQueryWithSmartPropertyV2(query *model.ChannelQueryV1, pro
 	lowestHierarchyReportLevel := lowestHierarchyLevel + "_performance_report"
 	return getSQLAndParamsForAdwordsWithSmartPropertyV2(query, projectID, query.From, query.To, customerAccountID, model.AdwordsDocumentTypeAlias[lowestHierarchyReportLevel], fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT)
 }
-func getSQLAndParamsForAdwordsWithSmartPropertyV2(query *model.ChannelQueryV1, projectID uint64, from, to int64, customerAccountID string,
+func getSQLAndParamsForAdwordsWithSmartPropertyV2(query *model.ChannelQueryV1, projectID int64, from, to int64, customerAccountID string,
 	docType int, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string) {
 	logFields := log.Fields{
 		"query":                         query,
@@ -1775,7 +1775,7 @@ func getAdwordsFromStatementWithJoins(filters []model.ChannelFilterV1, groupBys 
 	return fromStatement
 }
 
-func getSQLAndParamsForAdwordsV2(query *model.ChannelQueryV1, projectID uint64, from, to int64, customerAccountID string,
+func getSQLAndParamsForAdwordsV2(query *model.ChannelQueryV1, projectID int64, from, to int64, customerAccountID string,
 	docType int, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string) {
 	logFields := log.Fields{
 		"query":                         query,
@@ -2047,7 +2047,7 @@ func getNotNullFilterStatementForSmartPropertyGroupBys(groupBys []model.ChannelG
 }
 
 // @TODO Kark v0
-func (store *MemSQL) GetAdwordsChannelResultMeta(projectID uint64, customerAccountID string,
+func (store *MemSQL) GetAdwordsChannelResultMeta(projectID int64, customerAccountID string,
 	query *model.ChannelQuery) (*model.ChannelQueryResultMeta, error) {
 	logFields := log.Fields{
 		"query":               query,
@@ -2090,7 +2090,7 @@ func (store *MemSQL) GetAdwordsChannelResultMeta(projectID uint64, customerAccou
 }
 
 // ExecuteAdwordsChannelQuery - @TODO Kark v0
-func (store *MemSQL) ExecuteAdwordsChannelQuery(projectID uint64, query *model.ChannelQuery) (*model.ChannelQueryResult, int) {
+func (store *MemSQL) ExecuteAdwordsChannelQuery(projectID int64, query *model.ChannelQuery) (*model.ChannelQueryResult, int) {
 	logFields := log.Fields{
 		"query":      query,
 		"project_id": projectID,
@@ -2180,7 +2180,7 @@ func GetAdwordsFilterPropertyKeyByType(docType int) (string, error) {
 }
 
 // GetAdwordsFilterValuesByType - @TODO Kark v0
-func (store *MemSQL) GetAdwordsFilterValuesByType(projectID uint64, docType int) ([]string, int) {
+func (store *MemSQL) GetAdwordsFilterValuesByType(projectID int64, docType int) ([]string, int) {
 	logFields := log.Fields{
 		"doc_type":   docType,
 		"project_id": projectID,
@@ -2263,7 +2263,7 @@ SUM(JSON_EXTRACT_STRING(value, 'all_conversions')) as all_conversions FROM adwor
 WHERE type='5' AND timestamp BETWEEN '20191122' and '20191129' AND JSON_EXTRACT_STRING(value, 'campaign_name')='Desktop Only'
 GROUP BY (JSON_EXTRACT_STRING(value,'criteria';
 */
-func (store *MemSQL) getAdwordsMetricsQuery(projectID uint64, customerAccountID string, query *model.ChannelQuery,
+func (store *MemSQL) getAdwordsMetricsQuery(projectID int64, customerAccountID string, query *model.ChannelQuery,
 	withBreakdown bool) (string, []interface{}, error) {
 	logFields := log.Fields{
 		"query":               query,
@@ -2353,7 +2353,7 @@ func (store *MemSQL) getAdwordsMetricsQuery(projectID uint64, customerAccountID 
 }
 
 // @TODO Kark v0
-func (store *MemSQL) getAdwordsMetrics(projectID uint64, customerAccountID string,
+func (store *MemSQL) getAdwordsMetrics(projectID int64, customerAccountID string,
 	query *model.ChannelQuery) (*map[string]interface{}, error) {
 	logFields := log.Fields{
 		"query":               query,
@@ -2395,7 +2395,7 @@ func (store *MemSQL) getAdwordsMetrics(projectID uint64, customerAccountID strin
 }
 
 // @TODO Kark v0
-func (store *MemSQL) getAdwordsMetricsBreakdown(projectID uint64, customerAccountID string,
+func (store *MemSQL) getAdwordsMetricsBreakdown(projectID int64, customerAccountID string,
 	query *model.ChannelQuery) (*model.ChannelBreakdownResult, error) {
 	logFields := log.Fields{
 		"query":               query,
@@ -2443,7 +2443,7 @@ func (store *MemSQL) getAdwordsMetricsBreakdown(projectID uint64, customerAccoun
 	return &model.ChannelBreakdownResult{Headers: resultHeaders, Rows: resultRows}, nil
 }
 
-func (store *MemSQL) GetLatestMetaForAdwordsForGivenDays(projectID uint64, days int) ([]model.ChannelDocumentsWithFields, []model.ChannelDocumentsWithFields) {
+func (store *MemSQL) GetLatestMetaForAdwordsForGivenDays(projectID int64, days int) ([]model.ChannelDocumentsWithFields, []model.ChannelDocumentsWithFields) {
 	logFields := log.Fields{
 		"days":       days,
 		"project_id": projectID,
@@ -2520,7 +2520,7 @@ func (store *MemSQL) GetLatestMetaForAdwordsForGivenDays(projectID uint64, days 
 	return channelDocumentsCampaign, channelDocumentsAdGroup
 }
 
-func (store *MemSQL) ExecuteAdwordsSEMChecklistQuery(projectID uint64, query model.TemplateQuery, reqID string) (model.TemplateResponse, int) {
+func (store *MemSQL) ExecuteAdwordsSEMChecklistQuery(projectID int64, query model.TemplateQuery, reqID string) (model.TemplateResponse, int) {
 	logFields := log.Fields{
 		"query":      query,
 		"project_id": projectID,
@@ -2541,7 +2541,7 @@ func (store *MemSQL) ExecuteAdwordsSEMChecklistQuery(projectID uint64, query mod
 	}
 	return templateQueryResponse, http.StatusOK
 }
-func (store *MemSQL) validateIntegratonAndMetricsForAdwordsSEMChecklist(projectID uint64, query model.TemplateQuery, reqID string) (*string, error) {
+func (store *MemSQL) validateIntegratonAndMetricsForAdwordsSEMChecklist(projectID int64, query model.TemplateQuery, reqID string) (*string, error) {
 	logFields := log.Fields{
 		"query":      query,
 		"project_id": projectID,
@@ -2579,7 +2579,7 @@ func buildSelectStmnForKeywordTemplates() string {
 	selectStmnt += fixedSelectForBreakdownAnalysisKeyword
 	return selectStmnt
 }
-func (store *MemSQL) getKeywordLevelDataForTemplates(projectID uint64, customerAccountID []string, query model.TemplateQuery) ([]model.KeywordAnalysis, error) {
+func (store *MemSQL) getKeywordLevelDataForTemplates(projectID int64, customerAccountID []string, query model.TemplateQuery) ([]model.KeywordAnalysis, error) {
 	logFields := log.Fields{
 		"query":               query,
 		"project_id":          projectID,
@@ -2654,7 +2654,7 @@ func (store *MemSQL) getKeywordLevelDataForTemplates(projectID uint64, customerA
 	})
 	return cleanKeywordAnalysisResult, nil
 }
-func (store *MemSQL) getCampaignLevelDataForTemplates(projectID uint64, customerAccountID []string, campaignArray []string, query model.TemplateQuery) ([]model.CampaignAnalysis, error) {
+func (store *MemSQL) getCampaignLevelDataForTemplates(projectID int64, customerAccountID []string, campaignArray []string, query model.TemplateQuery) ([]model.CampaignAnalysis, error) {
 	logFields := log.Fields{
 		"query":               query,
 		"project_id":          projectID,
@@ -2704,7 +2704,7 @@ func (store *MemSQL) getCampaignLevelDataForTemplates(projectID uint64, customer
 	return cleanCampaignAnalysisResult, nil
 }
 
-func (store *MemSQL) getOverallChangesDataForTemplates(projectID uint64, customerAccountID []string, query model.TemplateQuery) ([]model.OverallChanges, error) {
+func (store *MemSQL) getOverallChangesDataForTemplates(projectID int64, customerAccountID []string, query model.TemplateQuery) ([]model.OverallChanges, error) {
 	logFields := log.Fields{
 		"query":               query,
 		"project_id":          projectID,
@@ -2775,7 +2775,7 @@ func (store *MemSQL) getOverallChangesDataForTemplates(projectID uint64, custome
 	return overallChangesResult, nil
 }
 
-func (store *MemSQL) getAdwordsSEMChecklistQueryData(query model.TemplateQuery, projectID uint64, customerAccountID []string,
+func (store *MemSQL) getAdwordsSEMChecklistQueryData(query model.TemplateQuery, projectID int64, customerAccountID []string,
 	reqID string) (model.TemplateResponse, error) {
 	logFields := log.Fields{
 		"query":               query,
@@ -2836,7 +2836,7 @@ func (store *MemSQL) getAdwordsSEMChecklistQueryData(query model.TemplateQuery, 
 	}
 	return result, nil
 }
-func (store *MemSQL) DeleteAdwordsIntegration(projectID uint64) (int, error) {
+func (store *MemSQL) DeleteAdwordsIntegration(projectID int64) (int, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
@@ -2865,4 +2865,39 @@ func (store *MemSQL) DeleteAdwordsIntegration(projectID uint64) (int, error) {
 		return http.StatusInternalServerError, err
 	}
 	return http.StatusOK, nil
+}
+
+// PullAdwordsRows - Function to pull adwords campaign data
+// Selecting VALUE, TIMESTAMP, TYPE from adwords_documents and PROPERTIES, OBJECT_TYPE from smart_properties
+// Left join smart_properties filtered by project_id and source=adwords
+// where adwords_documents.value["campaign_id"] = smart_properties.object_id (when smart_properties.object_type = 1)
+//	 or adwords_documents.value["ad_group_id"] = smart_properties.object_id (when smart_properties.object_type = 2)
+// [make sure there aren't multiple smart_properties rows for a particular object,
+// or weekly insights for adwords would show incorrect data.]
+// TODO(anshul) : [all channels]take the id value directly from id column instead of taking from value after making sure the id columns are filled for all (all channels)
+// TODO(anshul) : [all channels]check for index support for faster query
+func (store *MemSQL) PullAdwordsRows(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"start_time": startTime,
+		"end_time":   endTime,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	year, month, date := time.Unix(startTime, 0).Date()
+	start := year*10000 + int(month)*100 + date + 1
+
+	year, month, date = time.Unix(endTime, 0).Date()
+	end := year*10000 + int(month)*100 + date
+
+	rawQuery := fmt.Sprintf("SELECT adwDocs.id, adwDocs.value, adwDocs.timestamp, adwDocs.type, sp.properties FROM adwords_documents adwDocs "+
+		"LEFT JOIN smart_properties sp ON sp.project_id = %d AND sp.source = '%s' AND "+
+		"((COALESCE(sp.object_type,1) = 1 AND (sp.object_id = JSON_EXTRACT_STRING(adwDocs.value, 'campaign_id') OR sp.object_id = JSON_EXTRACT_STRING(adwDocs.value, 'base_campaign_id'))) OR "+
+		"(COALESCE(sp.object_type,2) = 2 AND (sp.object_id = JSON_EXTRACT_STRING(adwDocs.value, 'ad_group_id') OR sp.object_id = JSON_EXTRACT_STRING(adwDocs.value, 'base_ad_group_id')))) "+
+		"WHERE adwDocs.project_id = %d AND adwDocs.timestamp BETWEEN %d AND %d "+
+		"ORDER BY adwDocs.type, adwDocs.timestamp LIMIT %d",
+		projectID, model.ChannelAdwords, projectID, start, end, model.AdwordsPullLimit+1)
+
+	rows, tx, err, _ := store.ExecQueryWithContext(rawQuery, []interface{}{})
+	return rows, tx, err
 }

@@ -14,7 +14,7 @@ type DashboardUnit struct {
 	// Composite primary key, id + project_id.
 	ID int64 `gorm:"primary_key:true" json:"id"`
 	// Foreign key dashboard_units(project_id) ref projects(id).
-	ProjectID    uint64    `gorm:"primary_key:true" json:"project_id"`
+	ProjectID    int64     `gorm:"primary_key:true" json:"project_id"`
 	DashboardId  int64     `gorm:"primary_key:true" json:"dashboard_id"`
 	Description  string    `json:"description"`
 	Presentation string    `gorm:"type:varchar(5);not null" json:"presentation"`
@@ -28,7 +28,7 @@ type DashboardUnitString struct {
 	// Composite primary key, id + project_id.
 	ID string `gorm:"primary_key:true" json:"id"`
 	// Foreign key dashboard_units(project_id) ref projects(id).
-	ProjectID    uint64    `gorm:"primary_key:true" json:"project_id"`
+	ProjectID    int64     `gorm:"primary_key:true" json:"project_id"`
 	DashboardId  string    `gorm:"primary_key:true" json:"dashboard_id"`
 	Description  string    `json:"description"`
 	Presentation string    `gorm:"type:varchar(5);not null" json:"presentation"`
@@ -77,10 +77,10 @@ const QueryNotFoundError = "Failed to fetch query from query_id"
 
 type CachingUnitReport struct {
 	UnitType     int // CachingUnitNormal=1 or CachingUnitWebAnalytics=1
-	ProjectId    uint64
+	ProjectId    int64
 	DashboardID  int64
 	UnitID       int64
-	QueryID      uint64
+	QueryID      int64
 	QueryClass   string
 	Query        interface{}
 	From, To     int64
@@ -96,7 +96,7 @@ func GetCachingUnitReportUniqueKey(report CachingUnitReport) string {
 }
 
 type CachingProjectReport struct {
-	ProjectId    uint64
+	ProjectId    int64
 	ProjectName  string
 	TotalRuntime string
 }
@@ -108,7 +108,7 @@ type FailedDashboardUnitReport struct {
 	QueryRange  string
 }
 
-func getDashboardUnitQueryResultCacheKey(projectID uint64, dashboardID, unitID int64, from, to int64, timezoneString U.TimeZoneString) (*cacheRedis.Key, error) {
+func getDashboardUnitQueryResultCacheKey(projectID int64, dashboardID, unitID int64, from, to int64, timezoneString U.TimeZoneString) (*cacheRedis.Key, error) {
 	prefix := "dashboard:query"
 	var suffix string
 	if U.IsStartOfTodaysRangeIn(from, timezoneString) {
@@ -120,7 +120,7 @@ func getDashboardUnitQueryResultCacheKey(projectID uint64, dashboardID, unitID i
 	return cacheRedis.NewKey(projectID, prefix, suffix)
 }
 
-func getDashboardCacheAnalyticsCacheKey(projectID uint64, dashboardID, unitID int64, from, to int64, timezoneString U.TimeZoneString, preset string) (*cacheRedis.Key, error) {
+func getDashboardCacheAnalyticsCacheKey(projectID int64, dashboardID, unitID int64, from, to int64, timezoneString U.TimeZoneString, preset string) (*cacheRedis.Key, error) {
 	prefix := "dashboard:analytics"
 	var suffix string
 	if U.IsStartOfTodaysRangeIn(from, timezoneString) {
@@ -213,7 +213,7 @@ func GetTotalFailedComputedNotComputed(cacheReports []CachingUnitReport) (int, i
 	return statusFailed, statusPassed, statusNotComputed
 }
 
-func GetFailedUnitsByProject(cacheReports []CachingUnitReport) map[uint64][]FailedDashboardUnitReport {
+func GetFailedUnitsByProject(cacheReports []CachingUnitReport) map[int64][]FailedDashboardUnitReport {
 
 	var units []CachingUnitReport
 	U.DeepCopy(&cacheReports, &units)
@@ -222,7 +222,7 @@ func GetFailedUnitsByProject(cacheReports []CachingUnitReport) map[uint64][]Fail
 		return units[i].TimeTaken > units[j].TimeTaken
 	})
 
-	projectFailedUnits := make(map[uint64][]FailedDashboardUnitReport)
+	projectFailedUnits := make(map[int64][]FailedDashboardUnitReport)
 	for _, unit := range cacheReports {
 		if unit.Status == CachingUnitStatusFailed {
 			failedUnit := FailedDashboardUnitReport{
@@ -242,7 +242,7 @@ func GetFailedUnitsByProject(cacheReports []CachingUnitReport) map[uint64][]Fail
 	return projectFailedUnits
 }
 
-func GetTimedOutUnitsByProject(cacheReports []CachingUnitReport) map[uint64][]FailedDashboardUnitReport {
+func GetTimedOutUnitsByProject(cacheReports []CachingUnitReport) map[int64][]FailedDashboardUnitReport {
 
 	var units []CachingUnitReport
 	U.DeepCopy(&cacheReports, &units)
@@ -251,7 +251,7 @@ func GetTimedOutUnitsByProject(cacheReports []CachingUnitReport) map[uint64][]Fa
 		return units[i].TimeTaken > units[j].TimeTaken
 	})
 
-	projectTimedOutUnits := make(map[uint64][]FailedDashboardUnitReport)
+	projectTimedOutUnits := make(map[int64][]FailedDashboardUnitReport)
 	for _, unit := range cacheReports {
 		if unit.Status == CachingUnitStatusTimeout {
 			timedOutUnit := FailedDashboardUnitReport{
@@ -280,7 +280,7 @@ func GetNSlowestProjects(cacheReports []CachingUnitReport, n int) []CachingProje
 		return units[i].TimeTaken > units[j].TimeTaken
 	})
 
-	projectTotalTime := make(map[uint64]int64)
+	projectTotalTime := make(map[int64]int64)
 	for _, unit := range cacheReports {
 		projectTotalTime[unit.ProjectId] = projectTotalTime[unit.ProjectId] + unit.TimeTaken
 	}

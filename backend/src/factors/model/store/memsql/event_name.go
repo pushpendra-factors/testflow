@@ -128,7 +128,7 @@ func (store *MemSQL) CreateOrGetFilterEventName(eventName *model.EventName) (*mo
 	return store.CreateOrGetEventName(eventName)
 }
 
-func (store *MemSQL) checkDuplicateSmartEventFilter(projectID uint64, inFilterExpr *model.SmartCRMEventFilter) (*model.EventName, bool) {
+func (store *MemSQL) checkDuplicateSmartEventFilter(projectID int64, inFilterExpr *model.SmartCRMEventFilter) (*model.EventName, bool) {
 	logFields := log.Fields{
 		"project_id":     projectID,
 		"in_filter_expr": inFilterExpr,
@@ -158,7 +158,7 @@ func (store *MemSQL) checkDuplicateSmartEventFilter(projectID uint64, inFilterEx
 
 // CreateOrGetCRMSmartEventFilterEventName creates a new CRM smart event filter.
 // Deleted event_name will be enabled if conflict found
-func (store *MemSQL) CreateOrGetCRMSmartEventFilterEventName(projectID uint64, eventName *model.EventName,
+func (store *MemSQL) CreateOrGetCRMSmartEventFilterEventName(projectID int64, eventName *model.EventName,
 	filterExpr *model.SmartCRMEventFilter) (*model.EventName, int) {
 	logFields := log.Fields{
 		"project_id":  projectID,
@@ -228,7 +228,7 @@ func (store *MemSQL) GetSmartEventEventName(eventName *model.EventName) (*model.
 	return store.GetSmartEventEventNameByNameANDType(eventName.ProjectId, eventName.Name, eventName.Type)
 }
 
-func (store *MemSQL) GetSmartEventEventNameByNameANDType(projectID uint64, name, typ string) (*model.EventName, int) {
+func (store *MemSQL) GetSmartEventEventNameByNameANDType(projectID int64, name, typ string) (*model.EventName, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"name":       name,
@@ -256,7 +256,7 @@ func (store *MemSQL) GetSmartEventEventNameByNameANDType(projectID uint64, name,
 	return &eventNames[0], http.StatusFound
 }
 
-func (store *MemSQL) CreateOrGetSessionEventName(projectId uint64) (*model.EventName, int) {
+func (store *MemSQL) CreateOrGetSessionEventName(projectId int64) (*model.EventName, int) {
 	logFields := log.Fields{
 		"project_id": projectId,
 	}
@@ -265,7 +265,7 @@ func (store *MemSQL) CreateOrGetSessionEventName(projectId uint64) (*model.Event
 		Type: model.TYPE_INTERNAL_EVENT_NAME})
 }
 
-func (store *MemSQL) CreateOrGetOfflineTouchPointEventName(projectId uint64) (*model.EventName, int) {
+func (store *MemSQL) CreateOrGetOfflineTouchPointEventName(projectId int64) (*model.EventName, int) {
 	logFields := log.Fields{
 		"project_id": projectId,
 	}
@@ -274,7 +274,7 @@ func (store *MemSQL) CreateOrGetOfflineTouchPointEventName(projectId uint64) (*m
 		Type: model.TYPE_INTERNAL_EVENT_NAME})
 }
 
-func (store *MemSQL) GetSessionEventName(projectId uint64) (*model.EventName, int) {
+func (store *MemSQL) GetSessionEventName(projectId int64) (*model.EventName, int) {
 	logFields := log.Fields{
 		"project_id": projectId,
 	}
@@ -342,7 +342,7 @@ func isValidName(name string, typ string) bool {
 	return !strings.HasPrefix(name, U.NAME_PREFIX)
 }
 
-func (store *MemSQL) GetEventName(name string, projectId uint64) (*model.EventName, int) {
+func (store *MemSQL) GetEventName(name string, projectId int64) (*model.EventName, int) {
 	logFields := log.Fields{
 		"project_id": projectId,
 		"name":       name,
@@ -369,7 +369,7 @@ func (store *MemSQL) GetEventName(name string, projectId uint64) (*model.EventNa
 	return &eventName, http.StatusFound
 }
 
-func (store *MemSQL) GetEventNames(projectId uint64) ([]model.EventName, int) {
+func (store *MemSQL) GetEventNames(projectId int64) ([]model.EventName, int) {
 	logFields := log.Fields{
 		"project_id": projectId,
 	}
@@ -393,7 +393,7 @@ func (store *MemSQL) GetEventNames(projectId uint64) ([]model.EventName, int) {
 
 // GetOrderedEventNamesFromDb - Get 'limit' events from DB sort by occurence for a given time period
 func (store *MemSQL) GetOrderedEventNamesFromDb(
-	projectID uint64, startTimestamp int64, endTimestamp int64, limit int) ([]model.EventNameWithAggregation, error) {
+	projectID int64, startTimestamp int64, endTimestamp int64, limit int) ([]model.EventNameWithAggregation, error) {
 	logFields := log.Fields{
 		"project_id":      projectID,
 		"start_timestamp": startTimestamp,
@@ -450,7 +450,7 @@ func (store *MemSQL) GetOrderedEventNamesFromDb(
 // GetPropertyValuesByEventProperty (Part of event_name and properties caching) This method iterates for
 // last n days to get all the top 'limit' property values for the given property/event
 // Picks all last 24 hours values and sorts the remaining by occurence and returns top 'limit' values
-func (store *MemSQL) GetPropertyValuesByEventProperty(projectID uint64, eventName string,
+func (store *MemSQL) GetPropertyValuesByEventProperty(projectID int64, eventName string,
 	propertyName string, limit int, lastNDays int) ([]string, error) {
 	logFields := log.Fields{
 		"project_id":    projectID,
@@ -499,7 +499,7 @@ func (store *MemSQL) GetPropertyValuesByEventProperty(projectID uint64, eventNam
 	return valueStrings, nil
 }
 
-func getPropertyValuesByEventPropertyFromCache(projectID uint64, eventName string, propertyName string, dateKey string) (U.CachePropertyValueWithTimestamp, error) {
+func getPropertyValuesByEventPropertyFromCache(projectID int64, eventName string, propertyName string, dateKey string) (U.CachePropertyValueWithTimestamp, error) {
 	logFields := log.Fields{
 		"project_id":    projectID,
 		"event_name":    eventName,
@@ -554,7 +554,7 @@ func getPropertyValuesByEventPropertyFromCache(projectID uint64, eventName strin
 // GetPropertiesByEvent (Part of event_name and properties caching) This method iterates for last n days to get all the
 // top 'limit' properties for the given event. Picks all last 24 hours properties and sorts the remaining by occurence
 // and returns top 'limit' properties
-func (store *MemSQL) GetPropertiesByEvent(projectID uint64, eventName string, limit int, lastNDays int) (map[string][]string, error) {
+func (store *MemSQL) GetPropertiesByEvent(projectID int64, eventName string, limit int, lastNDays int) (map[string][]string, error) {
 	logFields := log.Fields{
 		"project_id":  projectID,
 		"event_name":  eventName,
@@ -609,7 +609,7 @@ func (store *MemSQL) GetPropertiesByEvent(projectID uint64, eventName string, li
 	return properties, nil
 }
 
-func getPropertiesByEventFromCache(projectID uint64, eventName string, dateKey string) (U.CachePropertyWithTimestamp, error) {
+func getPropertiesByEventFromCache(projectID int64, eventName string, dateKey string) (U.CachePropertyWithTimestamp, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"event_name": eventName,
@@ -688,7 +688,7 @@ func aggregateEventsAcrossDate(events []model.CacheEventNamesWithTimestamp) []U.
 }
 
 // Hacked solution - to fetch a type of EventNames.
-func (store *MemSQL) GetMostFrequentlyEventNamesByType(projectID uint64, limit int, lastNDays int, typeOfEvent string) ([]string, error) {
+func (store *MemSQL) GetMostFrequentlyEventNamesByType(projectID int64, limit int, lastNDays int, typeOfEvent string) ([]string, error) {
 	logFields := log.Fields{
 		"project_id":    projectID,
 		"type_of_event": typeOfEvent,
@@ -753,7 +753,7 @@ func (store *MemSQL) GetMostFrequentlyEventNamesByType(projectID uint64, limit i
 // GetEventNamesOrderedByOccurenceAndRecency (Part of event_name and properties caching) This method iterates for last n days to
 // get all the top 'limit' events for the given project. Picks all last 24 hours events and sorts the remaining by
 // occurence and returns top 'limit' events
-func (store *MemSQL) GetEventNamesOrderedByOccurenceAndRecency(projectID uint64, limit int, lastNDays int) (map[string][]string, error) {
+func (store *MemSQL) GetEventNamesOrderedByOccurenceAndRecency(projectID int64, limit int, lastNDays int) (map[string][]string, error) {
 	logFields := log.Fields{
 		"project_id":  projectID,
 		"limit":       limit,
@@ -787,7 +787,7 @@ func (store *MemSQL) GetEventNamesOrderedByOccurenceAndRecency(projectID uint64,
 	return eventStringWithGroups, nil
 }
 
-func getEventNamesAggregatedAndSortedAcrossDate(projectID uint64, limit int, lastNDays int) ([]U.NameCountTimestampCategory, error) {
+func getEventNamesAggregatedAndSortedAcrossDate(projectID int64, limit int, lastNDays int) ([]U.NameCountTimestampCategory, error) {
 	logFields := log.Fields{
 		"project_id":  projectID,
 		"limit":       limit,
@@ -814,7 +814,7 @@ func getEventNamesAggregatedAndSortedAcrossDate(projectID uint64, limit int, las
 	return eventsSorted, nil
 }
 
-func getEventNamesOrderedByOccurenceAndRecencyFromCache(projectID uint64, dateKey string) (model.CacheEventNamesWithTimestamp, error) {
+func getEventNamesOrderedByOccurenceAndRecencyFromCache(projectID int64, dateKey string) (model.CacheEventNamesWithTimestamp, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"date_key":   dateKey,
@@ -843,7 +843,7 @@ func getEventNamesOrderedByOccurenceAndRecencyFromCache(projectID uint64, dateKe
 	return cacheEventNames, nil
 }
 
-func getNonFilterEventsByName(projectID uint64, eventName string) ([]model.EventName, int) {
+func getNonFilterEventsByName(projectID int64, eventName string) ([]model.EventName, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"event_name": eventName,
@@ -866,7 +866,7 @@ func getNonFilterEventsByName(projectID uint64, eventName string) ([]model.Event
 	return eventNames, http.StatusFound
 }
 
-func isEventNameExistByTypeAndFitlerExpr(projectID uint64, typ string, filterExpr string) int {
+func isEventNameExistByTypeAndFitlerExpr(projectID int64, typ string, filterExpr string) int {
 	logFields := log.Fields{
 		"project_id":  projectID,
 		"typ":         typ,
@@ -892,7 +892,7 @@ func isEventNameExistByTypeAndFitlerExpr(projectID uint64, typ string, filterExp
 	return http.StatusFound
 }
 
-func (store *MemSQL) GetFilterEventNames(projectId uint64) ([]model.EventName, int) {
+func (store *MemSQL) GetFilterEventNames(projectId int64) ([]model.EventName, int) {
 	logFields := log.Fields{
 		"project_id": projectId,
 	}
@@ -915,7 +915,7 @@ func (store *MemSQL) GetFilterEventNames(projectId uint64) ([]model.EventName, i
 }
 
 // GetSmartEventFilterEventNames returns a list of all smart events
-func (store *MemSQL) GetSmartEventFilterEventNames(projectID uint64, includeDeleted bool) ([]model.EventName, int) {
+func (store *MemSQL) GetSmartEventFilterEventNames(projectID int64, includeDeleted bool) ([]model.EventName, int) {
 	logFields := log.Fields{
 		"project_id":       projectID,
 		"included_deleted": includeDeleted,
@@ -944,7 +944,7 @@ func (store *MemSQL) GetSmartEventFilterEventNames(projectID uint64, includeDele
 }
 
 // GetSmartEventFilterEventNameByID returns the smart event by event_name id
-func (store *MemSQL) GetSmartEventFilterEventNameByID(projectID uint64, id string, isDeleted bool) (*model.EventName, int) {
+func (store *MemSQL) GetSmartEventFilterEventNameByID(projectID int64, id string, isDeleted bool) (*model.EventName, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"id":         id,
@@ -974,7 +974,7 @@ func (store *MemSQL) GetSmartEventFilterEventNameByID(projectID uint64, id strin
 }
 
 // GetEventNamesByNames returns list of EventNames objects for given names
-func (store *MemSQL) GetEventNamesByNames(projectId uint64, names []string) ([]model.EventName, int) {
+func (store *MemSQL) GetEventNamesByNames(projectId int64, names []string) ([]model.EventName, int) {
 	logFields := log.Fields{
 		"project_id": projectId,
 		"names":      names,
@@ -1001,7 +1001,7 @@ func (store *MemSQL) GetEventNamesByNames(projectId uint64, names []string) ([]m
 	return eventNames, http.StatusFound
 }
 
-func (store *MemSQL) GetFilterEventNamesByExprPrefix(projectId uint64, prefix string) ([]model.EventName, int) {
+func (store *MemSQL) GetFilterEventNamesByExprPrefix(projectId int64, prefix string) ([]model.EventName, int) {
 	logFields := log.Fields{
 		"project_id": projectId,
 		"prefix":     prefix,
@@ -1028,7 +1028,7 @@ func (store *MemSQL) GetFilterEventNamesByExprPrefix(projectId uint64, prefix st
 	return eventNames, http.StatusFound
 }
 
-func (store *MemSQL) UpdateEventName(projectId uint64, id string,
+func (store *MemSQL) UpdateEventName(projectId int64, id string,
 	nameType string, eventName *model.EventName) (*model.EventName, int) {
 	logFields := log.Fields{
 		"project_id": projectId,
@@ -1074,7 +1074,7 @@ func (store *MemSQL) UpdateEventName(projectId uint64, id string,
 	return &updatedEventName, http.StatusAccepted
 }
 
-func (store *MemSQL) updateCRMSmartEventFilter(projectID uint64, id string, nameType string,
+func (store *MemSQL) updateCRMSmartEventFilter(projectID int64, id string, nameType string,
 	eventName *model.EventName, filterExpr *model.SmartCRMEventFilter) (*model.EventName, int) {
 	logFields := log.Fields{
 		"project_id":  projectID,
@@ -1180,7 +1180,7 @@ func getCRMSmartEventNameType(source string) string {
 	return ""
 }
 
-func (store *MemSQL) UpdateCRMSmartEventFilter(projectID uint64, id string, eventName *model.EventName,
+func (store *MemSQL) UpdateCRMSmartEventFilter(projectID int64, id string, eventName *model.EventName,
 	filterExpr *model.SmartCRMEventFilter) (*model.EventName, int) {
 	logFields := log.Fields{
 		"project_id":  projectID,
@@ -1201,7 +1201,7 @@ func (store *MemSQL) UpdateCRMSmartEventFilter(projectID uint64, id string, even
 }
 
 // DeleteSmartEventFilter soft delete smart event name with filter expression
-func (store *MemSQL) DeleteSmartEventFilter(projectID uint64, id string) (*model.EventName, int) {
+func (store *MemSQL) DeleteSmartEventFilter(projectID int64, id string) (*model.EventName, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"id":         id,
@@ -1220,7 +1220,7 @@ func (store *MemSQL) DeleteSmartEventFilter(projectID uint64, id string) (*model
 	return eventName, status
 }
 
-func (store *MemSQL) UpdateFilterEventName(projectId uint64, id string, eventName *model.EventName) (*model.EventName, int) {
+func (store *MemSQL) UpdateFilterEventName(projectId int64, id string, eventName *model.EventName) (*model.EventName, int) {
 	logFields := log.Fields{
 		"project_id": projectId,
 		"event_name": eventName,
@@ -1230,7 +1230,7 @@ func (store *MemSQL) UpdateFilterEventName(projectId uint64, id string, eventNam
 	return store.UpdateEventName(projectId, id, model.TYPE_FILTER_EVENT_NAME, eventName)
 }
 
-func DeleteEventName(projectId uint64, id string,
+func DeleteEventName(projectId int64, id string,
 	nameType string) int {
 	logFields := log.Fields{
 		"project_id": projectId,
@@ -1264,7 +1264,7 @@ func DeleteEventName(projectId uint64, id string,
 	return http.StatusAccepted
 }
 
-func (store *MemSQL) DeleteFilterEventName(projectId uint64, id string) int {
+func (store *MemSQL) DeleteFilterEventName(projectId int64, id string) int {
 	logFields := log.Fields{
 		"project_id": projectId,
 		"id":         id,
@@ -1445,7 +1445,7 @@ func makeFilterInfos(eventNames []model.EventName) (*[]FilterInfo, error) {
 }
 
 // FilterEventNameByEventURL - Filter and return an event_name by event_url.
-func (store *MemSQL) FilterEventNameByEventURL(projectId uint64, eventURL string) (*model.EventName, int) {
+func (store *MemSQL) FilterEventNameByEventURL(projectId int64, eventURL string) (*model.EventName, int) {
 	logFields := log.Fields{
 		"project_id": projectId,
 		"event_url":  eventURL,
@@ -1487,7 +1487,7 @@ func (store *MemSQL) FilterEventNameByEventURL(projectId uint64, eventURL string
 	return filterInfo.eventName, http.StatusFound
 }
 
-func (store *MemSQL) GetEventNameFromEventNameId(eventNameId string, projectId uint64) (*model.EventName, error) {
+func (store *MemSQL) GetEventNameFromEventNameId(eventNameId string, projectId int64) (*model.EventName, error) {
 	logFields := log.Fields{
 		"project_id":    projectId,
 		"event_name_id": eventNameId,
@@ -1526,7 +1526,7 @@ func convert(eventNamesWithAggregation []model.EventNameWithAggregation) []model
 }
 
 func (store *MemSQL) GetEventTypeFromDb(
-	projectID uint64, eventNames []string, limit int64) (map[string]string, error) {
+	projectID int64, eventNames []string, limit int64) (map[string]string, error) {
 	logFields := log.Fields{
 		"project_id":  projectID,
 		"event_names": eventNames,

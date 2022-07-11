@@ -88,7 +88,7 @@ func TestKpiAnalytics(t *testing.T) {
 	w1 := sendCreateContentGroupRequest(a, contentGroupRequest, agent, project.ID)
 	assert.Equal(t, http.StatusCreated, w1.Code)
 
-	_, err := TaskSession.AddSession([]uint64{project.ID}, timestamp-60, 0, 0, 0, 1, 1)
+	_, err := TaskSession.AddSession([]int64{project.ID}, timestamp-60, 0, 0, 0, 1, 1)
 	assert.Nil(t, err)
 
 	t.Run("Query with no groupby and no filter.", func(t *testing.T) {
@@ -125,7 +125,7 @@ func TestKpiAnalytics(t *testing.T) {
 			GlobalGroupBy: []model.KPIGroupBy{},
 		}
 
-		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup)
+		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup, C.EnableOptimisedFilterOnProfileQuery())
 		assert.Equal(t, http.StatusOK, statusCode)
 		assert.Equal(t, result[0].Headers, []string{"datetime", "page_views"})
 		assert.Equal(t, len(result[0].Rows), 1)
@@ -185,7 +185,8 @@ func TestKpiAnalytics(t *testing.T) {
 			},
 		}
 
-		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup)
+		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(),
+			kpiQueryGroup, C.EnableOptimisedFilterOnProfileQuery())
 		assert.Equal(t, http.StatusOK, statusCode)
 		assert.Equal(t, result[0].Headers, []string{"datetime", "user_id", "page_views", "unique_users"})
 		assert.Equal(t, len(result[0].Rows), 1)
@@ -226,7 +227,7 @@ func TestKpiAnalytics(t *testing.T) {
 			},
 		}
 
-		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup)
+		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup, C.EnableOptimisedFilterOnProfileQuery())
 		assert.Equal(t, http.StatusOK, statusCode)
 		assert.Equal(t, result[0].Headers, []string{"datetime", "user_id", "average_initial_page_load_time"})
 		assert.Equal(t, len(result[0].Rows), 1)
@@ -266,7 +267,7 @@ func TestKpiAnalytics(t *testing.T) {
 			},
 		}
 
-		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup)
+		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup, C.EnableOptimisedFilterOnProfileQuery())
 		assert.Equal(t, http.StatusOK, statusCode)
 		log.WithField("result", result).Warn("kark3")
 
@@ -299,7 +300,7 @@ func TestKpiAnalytics(t *testing.T) {
 			GlobalGroupBy: []model.KPIGroupBy{},
 		}
 
-		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup)
+		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup, C.EnableOptimisedFilterOnProfileQuery())
 		assert.Equal(t, http.StatusOK, statusCode)
 		assert.Equal(t, result[0].Headers, []string{"datetime", "adwords_metrics_impressions"})
 		assert.Equal(t, len(result[0].Rows), 0)
@@ -367,7 +368,7 @@ func TestKpiAnalyticsForProfile(t *testing.T) {
 			GlobalFilters: []model.KPIFilter{},
 			GlobalGroupBy: []model.KPIGroupBy{},
 		}
-		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup)
+		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup, C.EnableOptimisedFilterOnProfileQuery())
 		log.WithField("result", result).Warn("kark2")
 		assert.Equal(t, http.StatusOK, statusCode)
 		assert.Equal(t, result[0].Headers, []string{"datetime", name1})
@@ -411,7 +412,7 @@ func TestKpiAnalyticsForProfile(t *testing.T) {
 			GlobalFilters: []model.KPIFilter{filter},
 			GlobalGroupBy: []model.KPIGroupBy{},
 		}
-		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup2)
+		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup2, C.EnableOptimisedFilterOnProfileQuery())
 		assert.Equal(t, http.StatusOK, statusCode)
 		assert.Equal(t, result[0].Headers, []string{"datetime", name1})
 		assert.Equal(t, len(result[0].Rows), 1)
@@ -447,7 +448,7 @@ func TestKpiAnalyticsForProfile(t *testing.T) {
 			GlobalFilters: []model.KPIFilter{},
 			GlobalGroupBy: []model.KPIGroupBy{},
 		}
-		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup)
+		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup, C.EnableOptimisedFilterOnProfileQuery())
 		assert.Equal(t, http.StatusOK, statusCode)
 		assert.Equal(t, result[0].Headers, []string{"datetime", name2})
 		assert.Equal(t, len(result[0].Rows), 1)
@@ -481,7 +482,7 @@ func TestKpiAnalyticsForProfile(t *testing.T) {
 			GlobalFilters: []model.KPIFilter{},
 			GlobalGroupBy: []model.KPIGroupBy{},
 		}
-		result2, statusCode2 := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup2)
+		result2, statusCode2 := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup2, C.EnableOptimisedFilterOnProfileQuery())
 		log.WithField("result2", result2).Warn("kark2")
 		assert.Equal(t, http.StatusOK, statusCode2)
 		assert.Equal(t, result2[0].Headers, []string{"datetime", name3})
@@ -521,7 +522,7 @@ func TestKpiAnalyticsForProfile(t *testing.T) {
 			GlobalFilters: []model.KPIFilter{},
 			GlobalGroupBy: []model.KPIGroupBy{groupBy},
 		}
-		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup1)
+		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup1, C.EnableOptimisedFilterOnProfileQuery())
 		assert.Equal(t, http.StatusOK, statusCode)
 		assert.Equal(t, result[0].Headers, []string{"datetime", groupBy.PropertyName, name2})
 		assert.Equal(t, len(result[0].Rows), 1)
@@ -557,7 +558,7 @@ func TestKpiAnalyticsForProfile(t *testing.T) {
 			GlobalFilters: []model.KPIFilter{},
 			GlobalGroupBy: []model.KPIGroupBy{groupBy},
 		}
-		result2, statusCode2 := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup2)
+		result2, statusCode2 := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup2, C.EnableOptimisedFilterOnProfileQuery())
 		log.WithField("result2", result2).Warn("kark2")
 		assert.Equal(t, http.StatusOK, statusCode2)
 		assert.Equal(t, result2[0].Headers, []string{"datetime", groupBy.PropertyName, name3})
@@ -637,7 +638,7 @@ func TestKPIProfilesForGroups(t *testing.T) {
 			GlobalFilters: []model.KPIFilter{},
 			GlobalGroupBy: []model.KPIGroupBy{},
 		}
-		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup1)
+		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup1, C.EnableOptimisedFilterOnProfileQuery())
 		log.WithField("result", result).Warn("kark1")
 		assert.Equal(t, http.StatusOK, statusCode)
 
@@ -676,7 +677,7 @@ func TestKpiAnalyticsHandler(t *testing.T) {
 	sendKPIAnalyticsQueryReq(a, project.ID, agent, kpiQueryGroup)
 }
 
-func sendKPIAnalyticsQueryReq(r *gin.Engine, projectId uint64, agent *M.Agent, kpiqueryGroup model.KPIQueryGroup) *httptest.ResponseRecorder {
+func sendKPIAnalyticsQueryReq(r *gin.Engine, projectId int64, agent *M.Agent, kpiqueryGroup model.KPIQueryGroup) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")
@@ -722,7 +723,7 @@ func TestKpiFilterValuesHandler(t *testing.T) {
 	sendKPIFilterValuesReq(a, project.ID, agent, filterValueRequest)
 }
 
-func sendKPIFilterValuesReq(r *gin.Engine, projectId uint64, agent *M.Agent, filterValueRequest v1.KPIFilterValuesRequest) *httptest.ResponseRecorder {
+func sendKPIFilterValuesReq(r *gin.Engine, projectId int64, agent *M.Agent, filterValueRequest v1.KPIFilterValuesRequest) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")
@@ -761,7 +762,7 @@ func TestEventNamesByTypeHandler(t *testing.T) {
 	sendEventNamesTypeQueryReq(a, project.ID, agent)
 }
 
-func sendEventNamesTypeQueryReq(r *gin.Engine, projectId uint64, agent *M.Agent) *httptest.ResponseRecorder {
+func sendEventNamesTypeQueryReq(r *gin.Engine, projectId int64, agent *M.Agent) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")

@@ -49,7 +49,7 @@ class ReportsFetch(BaseJob):
         {OPERAND1: "impressions", OPERAND2: "search_rank_lost_impression_share",
          RESULT_FIELD: "total_search_rank_lost_impression", OPERATION: operator.truediv},
         {OPERAND1: "impressions", OPERAND2: "search_rank_lost_top_impression_share",
-         RESULT_FIELD: "total_search_rank_lost_top_impression", OPERATION: operator.truediv}
+         RESULT_FIELD: "total_search_rank_lost_top_impression", OPERATION: operator.truediv},
     ]
 
     FIELDS_WITH_PERCENTAGES = {

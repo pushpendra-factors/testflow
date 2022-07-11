@@ -13,7 +13,7 @@ import (
 
 type Key struct {
 	// any one must be set.
-	ProjectID  uint64
+	ProjectID  int64
 	ProjectUID string
 	// Prefix - Helps better grouping and searching
 	// i.e table_name + index_name
@@ -39,7 +39,7 @@ func NewKeyWithOnlyPrefix(prefix string) (*Key, error) {
 	return &Key{Prefix: prefix}, nil
 }
 
-func NewKey(projectId uint64, prefix string, suffix string) (*Key, error) {
+func NewKey(projectId int64, prefix string, suffix string) (*Key, error) {
 	if projectId == 0 {
 		return nil, ErrorInvalidProject
 	}
@@ -51,7 +51,7 @@ func NewKey(projectId uint64, prefix string, suffix string) (*Key, error) {
 	return &Key{ProjectID: projectId, Prefix: prefix, Suffix: suffix}, nil
 }
 
-func NewKeyWithAllProjectsSupport(projectId uint64, prefix string, suffix string) (*Key, error) {
+func NewKeyWithAllProjectsSupport(projectId int64, prefix string, suffix string) (*Key, error) {
 	if prefix == "" {
 		return nil, ErrorInvalidPrefix
 	}
@@ -129,7 +129,7 @@ func KeyFromStringWithPid(key string) (*Key, error) {
 			cacheKey.Suffix = projectIDSuffix[1]
 		}
 		projectId, _ := strconv.Atoi(projectIDSuffix[0])
-		cacheKey.ProjectID = uint64(projectId)
+		cacheKey.ProjectID = int64(projectId)
 		cacheKey.Prefix = keyPidSplit[0]
 	}
 	return &cacheKey, nil

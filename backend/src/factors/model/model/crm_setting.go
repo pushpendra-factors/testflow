@@ -1,7 +1,7 @@
 package model
 
 type CRMSetting struct {
-	ProjectID                      uint64 `gorm:"primary_key:true;auto_increment:false" json:"project_id"`
+	ProjectID                      int64  `gorm:"primary_key:true;auto_increment:false" json:"project_id"`
 	HubspotEnrichHeavy             bool   `gorm:"default:false" json:"hubspot_enrich_heavy"`
 	HubspotEnrichHeavyMaxCreatedAt *int64 `gorm:"default:null" json:"hubspot_enrich_heavy_max_created_at"`
 }

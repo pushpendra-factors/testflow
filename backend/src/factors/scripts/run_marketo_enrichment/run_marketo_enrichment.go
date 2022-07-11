@@ -161,7 +161,7 @@ func main() {
 		anyFailure = true
 	}
 
-	propertySyncStatus := make(map[uint64][]enrichment.EnrichStatus)
+	propertySyncStatus := make(map[int64][]enrichment.EnrichStatus)
 	for i := range fivetranIntegrations {
 		projectID := fivetranIntegrations[i].ProjectID
 
@@ -179,7 +179,7 @@ func main() {
 		propertySyncStatus[projectID] = propertyEnrichStatus
 	}
 
-	enrichStatus := make(map[uint64][]enrichment.EnrichStatus)
+	enrichStatus := make(map[int64][]enrichment.EnrichStatus)
 	for i := range fivetranIntegrations {
 		projectID := fivetranIntegrations[i].ProjectID
 

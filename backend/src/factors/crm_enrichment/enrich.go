@@ -14,7 +14,7 @@ import (
 )
 
 type CRMSourceConfig struct {
-	projectID       uint64
+	projectID       int64
 	sourceAlias     string
 	objectTypeAlias map[int]string
 	userTypes       map[int]bool
@@ -43,7 +43,7 @@ func (c *CRMSourceConfig) GetCRMObjectTypeAlias(objectType int) (string, error) 
 	return c.objectTypeAlias[objectType], nil
 }
 
-func getCRMRecordByTypeForSync(projectID uint64, source U.CRMSource, tableName string, startTimestamp, endTimestamp int64) (interface{}, int) {
+func getCRMRecordByTypeForSync(projectID int64, source U.CRMSource, tableName string, startTimestamp, endTimestamp int64) (interface{}, int) {
 	log.WithFields(log.Fields{"project_id": projectID, "start_time": startTimestamp, "end_time": endTimestamp, "table_name": tableName}).
 		Info("Getting records for following range.")
 
@@ -134,7 +134,7 @@ func NewCRMEnrichmentConfig(sourceAlias string, sourceObjectTypeAndAlias map[int
 	return sourceConfig, nil
 }
 
-func getMinimumTimestampForSync(projectID uint64, source U.CRMSource, minTimestampForSync int64) (int64, int) {
+func getMinimumTimestampForSync(projectID int64, source U.CRMSource, minTimestampForSync int64) (int64, int) {
 	if minTimestampForSync > 0 {
 		return minTimestampForSync, http.StatusOK
 	}
@@ -203,7 +203,7 @@ func enrichAllWorker(project *model.Project, wg *sync.WaitGroup, enrichStatus *e
 	}
 }
 
-func CreateOrGetCRMEventNames(projectID uint64) int {
+func CreateOrGetCRMEventNames(projectID int64) int {
 	//TODO: move to config based creation
 	for _, eventName := range []string{U.EVENT_NAME_MARKETO_LEAD_CREATED,
 		U.EVENT_NAME_MARKETO_LEAD_UPDATED,
@@ -225,7 +225,7 @@ func CreateOrGetCRMEventNames(projectID uint64) int {
 	return http.StatusOK
 }
 
-func Enrich(projectID uint64, sourceConfig *CRMSourceConfig, batchSize int, minTimestampForSync int64) []EnrichStatus {
+func Enrich(projectID int64, sourceConfig *CRMSourceConfig, batchSize int, minTimestampForSync int64) []EnrichStatus {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "crm_source_config": sourceConfig})
 
 	if sourceConfig == nil {

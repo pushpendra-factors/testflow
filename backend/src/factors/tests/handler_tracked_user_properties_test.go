@@ -25,7 +25,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func createProjectAgentEventsTrackedUserProperty(r *gin.Engine) (uint64, *model.Agent) {
+func createProjectAgentEventsTrackedUserProperty(r *gin.Engine) (int64, *model.Agent) {
 
 	C.GetConfig().LookbackWindowForEventUserCache = 1
 
@@ -65,7 +65,7 @@ func createProjectAgentEventsTrackedUserProperty(r *gin.Engine) (uint64, *model.
 	return project.ID, agent
 }
 
-func sendCreateTrackedUserProperty(r *gin.Engine, request V1.CreateTrackeduserPropertyParams, agent *model.Agent, projectID uint64) *httptest.ResponseRecorder {
+func sendCreateTrackedUserProperty(r *gin.Engine, request V1.CreateTrackeduserPropertyParams, agent *model.Agent, projectID int64) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")
@@ -89,7 +89,7 @@ func sendCreateTrackedUserProperty(r *gin.Engine, request V1.CreateTrackeduserPr
 	return w
 }
 
-func sendGetAllTrackedUserPropertyRequest(r *gin.Engine, agent *model.Agent, projectID uint64) *httptest.ResponseRecorder {
+func sendGetAllTrackedUserPropertyRequest(r *gin.Engine, agent *model.Agent, projectID int64) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")
@@ -109,7 +109,7 @@ func sendGetAllTrackedUserPropertyRequest(r *gin.Engine, agent *model.Agent, pro
 	return w
 }
 
-func sendRemoveTrackedUserPropertyRequest(r *gin.Engine, agent *model.Agent, projectID uint64, request V1.RemoveFactorsTrackedUserPropertyParams) *httptest.ResponseRecorder {
+func sendRemoveTrackedUserPropertyRequest(r *gin.Engine, agent *model.Agent, projectID int64, request V1.RemoveFactorsTrackedUserPropertyParams) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")

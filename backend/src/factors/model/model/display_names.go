@@ -14,7 +14,7 @@ const (
 type DisplayName struct {
 	// Composite primary key with project_id, event_name_id,key .
 	ID              string    `gorm:"primary_key:true;type:uuid;default:uuid_generate_v4()" json:"id"`
-	ProjectID       uint64    `gorm:"primary_key:true;unique_index:display_names_project_id_event_name_property_name_tag_unique_idx" json:"project_id"`
+	ProjectID       int64     `gorm:"primary_key:true;unique_index:display_names_project_id_event_name_property_name_tag_unique_idx" json:"project_id"`
 	EventName       string    `gorm:"unique_index:display_names_project_id_event_name_property_name_tag_unique_idx" json:"event_name"`
 	PropertyName    string    `gorm:"unique_index:display_names_project_id_event_name_property_name_tag_unique_idx" json:"property_name"`
 	Tag             string    `gorm:"unique_index:display_names_project_id_event_name_property_name_tag_unique_idx" json:"tag"`

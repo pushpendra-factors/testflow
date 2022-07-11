@@ -7,5 +7,7 @@ RUN go build -o $GOPATH/bin/weeklyinsightsjob $GOPATH/src/factors/scripts/run_de
 # Create stripped down version without go and source code
 FROM alpine:3.7
 RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/*
+# Fixes: time.LoadLocation(ZONE_NAME) error, zoneinfo.zip no such file or directory.
+ADD https://github.com/golang/go/raw/master/lib/time/zoneinfo.zip /usr/local/go/lib/time/zoneinfo.zip
 COPY --from=builder /go/bin/weeklyinsightsjob /go/bin/weeklyinsightsjob
 ENTRYPOINT ["/go/bin/weeklyinsightsjob"]

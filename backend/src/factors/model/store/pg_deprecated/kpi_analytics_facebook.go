@@ -6,7 +6,7 @@ import (
 )
 
 func (pg *Postgres) GetKPIConfigsForFacebook(projectID uint64, reqID string) (map[string]interface{}, int) {
-	_, settings, errCode := pg.GetFacebookEnabledIDsAndProjectSettingsForProject([]uint64{projectID})
+	_, settings, errCode := pg.GetFacebookEnabledIDsAndProjectSettingsForProject([]int64{projectID})
 	if errCode != http.StatusOK {
 		return nil, http.StatusOK
 	}

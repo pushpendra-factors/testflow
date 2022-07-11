@@ -49,12 +49,12 @@ type RegisterTaskDependencyParams struct {
 }
 type AllProcessedIntervalsParams struct {
 	TaskId    uint64 `json:"task_id"`
-	ProjectId uint64 `json:"project_id"`
+	ProjectId int64  `json:"project_id"`
 	Lookback  int    `json:"lookback"`
 }
 type DeleteTaskEndRecord struct {
 	TaskId    uint64 `json:"task_id"`
-	ProjectId uint64 `json:"project_id"`
+	ProjectId int64  `json:"project_id"`
 	Delta     uint64 `json:"delta"`
 }
 
@@ -88,7 +88,7 @@ func GetAllParamsWithTaskIdProjectIdLookback(c *gin.Context) (*AllProcessedInter
 	if err != nil {
 		return nil, err
 	}
-	projectId, err := strconv.ParseUint(c.Query("project_id"), 10, 64)
+	projectId, err := strconv.ParseInt(c.Query("project_id"), 10, 64)
 	if err != nil {
 		return nil, err
 	}
@@ -126,7 +126,7 @@ func GetAllParamsWithTaskIdProjectIdDelta(c *gin.Context) (*DeleteTaskEndRecord,
 	if err != nil {
 		return nil, err
 	}
-	projectId, err := strconv.ParseUint(c.Query("project_id"), 10, 64)
+	projectId, err := strconv.ParseInt(c.Query("project_id"), 10, 64)
 	if err != nil {
 		return nil, err
 	}

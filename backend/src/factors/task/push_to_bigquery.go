@@ -39,12 +39,12 @@ func writeCloudArchiveFile(cloudManager *filestore.FileManager, tmpFileName, clo
 
 // ArchiveEvents Archives events for all the projects with archival enabled in project settings.
 func ArchiveEvents(db *gorm.DB, cloudManager *filestore.FileManager,
-	diskManger *serviceDisk.DiskDriver, maxLookbackDays int, startTime, endTime time.Time) (map[uint64][]string, []error) {
+	diskManger *serviceDisk.DiskDriver, maxLookbackDays int, startTime, endTime time.Time) (map[int64][]string, []error) {
 	pbLog := taskLog.WithFields(log.Fields{
 		"Prefix": pbTaskID + "ArchiveEvents",
 	})
 
-	allJobDetails := make(map[uint64][]string)
+	allJobDetails := make(map[int64][]string)
 	enabledProjectIDs, status := store.GetStore().GetArchiveEnabledProjectIDs()
 	if status != http.StatusFound {
 		return allJobDetails, []error{fmt.Errorf("Failed to get archive enabled projects from DB")}
@@ -65,7 +65,7 @@ func ArchiveEvents(db *gorm.DB, cloudManager *filestore.FileManager,
 
 // ArchiveEventsForProject Archives events for a particular project to cloud storage.
 func ArchiveEventsForProject(db *gorm.DB, cloudManager *filestore.FileManager, diskManger *serviceDisk.DiskDriver,
-	projectID uint64, maxLookbackDays int, startTime, endTime time.Time, bypassSettings bool) ([]string, error) {
+	projectID int64, maxLookbackDays int, startTime, endTime time.Time, bypassSettings bool) ([]string, error) {
 
 	var jobDetails []string
 	pbLog := taskLog.WithFields(log.Fields{
@@ -196,12 +196,12 @@ func ArchiveEventsForProject(db *gorm.DB, cloudManager *filestore.FileManager, d
 }
 
 // PushToBigquery For all the projects with bigquery enabled in project_settings.
-func PushToBigquery(cloudManager *filestore.FileManager, startTime, endTime time.Time) (map[uint64][]string, []error) {
+func PushToBigquery(cloudManager *filestore.FileManager, startTime, endTime time.Time) (map[int64][]string, []error) {
 	pbLog := taskLog.WithFields(log.Fields{
 		"Prefix": pbTaskID + "#PushToBigquery",
 	})
 
-	allJobDetails := make(map[uint64][]string)
+	allJobDetails := make(map[int64][]string)
 	enabledProjectIDs, status := store.GetStore().GetBigqueryEnabledProjectIDs()
 	if status != http.StatusFound {
 		return allJobDetails, []error{fmt.Errorf("Failed to get bigquery enabled projects from DB")}
@@ -221,7 +221,7 @@ func PushToBigquery(cloudManager *filestore.FileManager, startTime, endTime time
 }
 
 // PushToBigqueryForProject Pushes events to Bigquery for bigquerySetting.
-func PushToBigqueryForProject(cloudManager *filestore.FileManager, projectID uint64, startTime, endTime time.Time) ([]string, error) {
+func PushToBigqueryForProject(cloudManager *filestore.FileManager, projectID int64, startTime, endTime time.Time) ([]string, error) {
 	pbLog := taskLog.WithFields(log.Fields{
 		"Prefix":    pbTaskID + "#PushToBigqueryForProject",
 		"ProjectID": projectID,

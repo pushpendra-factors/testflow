@@ -497,7 +497,8 @@ export const ProfileMapper = {
   'All Deals': 'hubspot',
   'All Accounts': 'salesforce',
   'All Companies': 'hubspot',
-  Marketo: 'marketo'
+  Marketo: 'marketo',
+  LeadSquared: 'leadsquared'
 };
 
 export const ReverseProfileMapper = {
@@ -512,11 +513,12 @@ export const ReverseProfileMapper = {
     $salesforce_opportunity: 'All Opportunities',
     $salesforce_account: 'All Accounts'
   },
-  marketo: { users: 'Marketo' }
+  marketo: { users: 'Marketo' },
+  leadsquared: { users: 'LeadSquared' }
 };
 
 export const profileOptions = {
-  users: [['Website Visitors'], ['Hubspot Contacts'], ['Salesforce Users'], ['Marketo']],
+  users: [['Website Visitors'], ['Hubspot Contacts'], ['Salesforce Users'], ['Marketo'],['LeadSquared']],
   $salesforce_opportunity: [['All Opportunities']],
   $hubspot_deal: [['All Deals']],
   $salesforce_account: [['All Accounts']],

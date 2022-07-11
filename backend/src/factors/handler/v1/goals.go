@@ -26,7 +26,7 @@ import (
 // @Success 200 {array} model.FactorsGoal
 // @Router /{project_id}/v1/factors/goals [GET]
 func GetAllFactorsGoalsHandler(c *gin.Context) {
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
@@ -82,7 +82,7 @@ func GetcreateFactorsGoalParams(c *gin.Context) (*CreateFactorsGoalParams, error
 // @Router /{project_id}/v1/factors/goals [POST]
 func CreateFactorsGoalsHandler(c *gin.Context) {
 	loggedInAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
@@ -218,7 +218,7 @@ func getUpdateFactorsGoalParams(c *gin.Context) (*UpdateFactorsGoalParams, error
 // @Success 200 {string} json "{"id": uint64, "status": string}"
 // @Router /{project_id}/v1/factors/goals/update [PUT]
 func UpdateFactorsGoalsHandler(c *gin.Context) {
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
@@ -276,7 +276,7 @@ func getRemoveFactorsGoalParams(c *gin.Context) (*RemoveFactorsGoalParams, error
 // @Success 200 {string} json "{"id": uint64, "status": string}"
 // @Router /{project_id}/v1/factors/goals/remove [DELETE]
 func RemoveFactorsGoalsHandler(c *gin.Context) {
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
@@ -333,7 +333,7 @@ func getSearchFactorsGoalParams(c *gin.Context) (*SearchFactorsGoalParams, error
 // @Success 200 {array} model.FactorsGoal
 // @Router /{project_id}/v1/factors/goals/search [GET]
 func SearchFactorsGoalHandler(c *gin.Context) {
-	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return

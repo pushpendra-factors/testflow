@@ -16,7 +16,7 @@ import (
 )
 
 type Status struct {
-	ProjectID uint64 `json:"project_id"`
+	ProjectID int64  `json:"project_id"`
 	ErrCode   int    `json:"err_code"`
 	ErrMsg    string `json:"err_msg"`
 	Type      string `json:"type"`
@@ -27,7 +27,7 @@ const (
 	Current_day = "current_day"
 )
 
-func EnrichSmartPropertyForChangedRulesForProject(projectID uint64) int {
+func EnrichSmartPropertyForChangedRulesForProject(projectID int64) int {
 	log.Warn("Smart properties enrichment for changed rule started for project ", projectID)
 	var recordsEvaluated = 0
 	var recordsUpdated = 0
@@ -91,7 +91,7 @@ func EnrichSmartPropertyForChangedRulesForProject(projectID uint64) int {
 	return http.StatusOK
 }
 
-func EnrichSmartPropertyForCurrentDayForProject(projectID uint64) int {
+func EnrichSmartPropertyForCurrentDayForProject(projectID int64) int {
 	log.Warn("Smart properties enrichment for current day's data started for project ", projectID)
 	smartPropertyRules, errCode := store.GetStore().GetSmartPropertyRules(projectID)
 	if errCode != http.StatusFound {
@@ -137,7 +137,7 @@ func checkState(smartPropertyRule model.SmartPropertyRules) string {
 }
 
 //to do: If we intend to parallelise this at per project level, It might be better to evaluate in chunks. Can check later.
-func getUpdatedAndNonExistingInSmartPropertiesChannelDocuments(projectID uint64, campaigns []model.ChannelDocumentsWithFields,
+func getUpdatedAndNonExistingInSmartPropertiesChannelDocuments(projectID int64, campaigns []model.ChannelDocumentsWithFields,
 	adGroups []model.ChannelDocumentsWithFields, source string) ([]model.ChannelDocumentsWithFields, []model.ChannelDocumentsWithFields) {
 	smartPropertyCampaigns, errCode := store.GetStore().GetSmartPropertyByProjectIDAndSourceAndObjectType(projectID, source, 1)
 	if errCode != http.StatusFound {

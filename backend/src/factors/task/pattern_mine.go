@@ -110,7 +110,7 @@ type CampaignEventLists struct {
 	AdgroupList  []string
 }
 
-func countPatternsWorker(projectID uint64, filepath string,
+func countPatternsWorker(projectID int64, filepath string,
 	patterns []*P.Pattern, wg *sync.WaitGroup, countOccurence bool, cAlgoProps P.CountAlgoProperties) {
 	mineLog.Infof("Counting patterns from File: %s", filepath)
 	file, err := os.Open(filepath)
@@ -126,7 +126,7 @@ func countPatternsWorker(projectID uint64, filepath string,
 	wg.Done()
 }
 
-func countPatterns(projectID uint64, filepath string, patterns []*P.Pattern, numRoutines int,
+func countPatterns(projectID int64, filepath string, patterns []*P.Pattern, numRoutines int,
 	countOccurence bool, cAlgoProps P.CountAlgoProperties) {
 	var wg sync.WaitGroup
 	numPatterns := len(patterns)
@@ -143,7 +143,7 @@ func countPatterns(projectID uint64, filepath string, patterns []*P.Pattern, num
 	wg.Wait()
 }
 
-func computeAllUserPropertiesHistogram(projectID uint64, filepath string, pattern *P.Pattern, countsVersion int, hmineSupport float32) error {
+func computeAllUserPropertiesHistogram(projectID int64, filepath string, pattern *P.Pattern, countsVersion int, hmineSupport float32) error {
 	file, err := os.Open(filepath)
 	pattern.PatternVersion = countsVersion
 	if err != nil {
@@ -496,7 +496,7 @@ func InitCampaignAnalyticsPatterns(smartEvents CampaignEventLists) ([]*P.Pattern
 
 // mineAndWriteLenOnePatterns : All the len one events in the events file is counted which includes
 // standard events, URLs , campaignType events
-func mineAndWriteLenOnePatterns(projectID uint64, modelId uint64, cloudManager *filestore.FileManager,
+func mineAndWriteLenOnePatterns(projectID int64, modelId uint64, cloudManager *filestore.FileManager,
 	eventNames []string, filepathString string,
 	userAndEventsInfo *P.UserAndEventsInfo, numRoutines int,
 	chunkDir string, maxModelSize int64, cumulativePatternsSize int64,
@@ -582,7 +582,7 @@ func FilterCombinationPatterns(combinationGoalPatterns, goalPatterns []*P.Patter
 	return allPatterns
 }
 
-func mineAndWriteLenTwoPatterns(projectId uint64, modelId uint64,
+func mineAndWriteLenTwoPatterns(projectId int64, modelId uint64,
 	lenOnePatterns []*P.Pattern, filepathString string, cloudManager *filestore.FileManager,
 	userAndEventsInfo *P.UserAndEventsInfo, numRoutines int,
 	chunkDir string, maxModelSize int64, cumulativePatternsSize int64, countOccurence bool,
@@ -641,7 +641,7 @@ func mineAndWriteLenTwoPatterns(projectId uint64, modelId uint64,
 }
 
 // GetGoalPatterns get all goalPatterns from DB
-func GetGoalPatterns(projectId uint64, filteredPatterns []*P.Pattern, eventNamesWithType map[string]string, campEventsType CampaignEventLists, userAndEventsInfo *P.UserAndEventsInfo) ([]*P.Pattern, error) {
+func GetGoalPatterns(projectId int64, filteredPatterns []*P.Pattern, eventNamesWithType map[string]string, campEventsType CampaignEventLists, userAndEventsInfo *P.UserAndEventsInfo) ([]*P.Pattern, error) {
 	goalPatternsFromDB, errCode := store.GetStore().GetAllActiveFactorsTrackedEventsByProject(projectId)
 
 	if errCode != http.StatusFound {
@@ -751,7 +751,7 @@ func GenMissingJourneyPatterns(goal, journey []*P.Pattern, userAndEventsInfo *P.
 	return allMissingPatt, nil
 }
 
-func mineAndWritePatterns(projectId uint64, modelId uint64, filepath string,
+func mineAndWritePatterns(projectId int64, modelId uint64, filepath string,
 	userAndEventsInfo *P.UserAndEventsInfo, cloudManager *filestore.FileManager, eventNames []string,
 	numRoutines int, chunkDir string,
 	maxModelSize int64, countOccurence bool,
@@ -960,7 +960,7 @@ func mineAndWritePatterns(projectId uint64, modelId uint64, filepath string,
 	return nil
 }
 
-func buildPropertiesInfoFromInput(cloudManager *filestore.FileManager, projectId, modelId uint64, eventNames []string, filepath string) (*P.UserAndEventsInfo, map[string]P.PropertiesCount, error) {
+func buildPropertiesInfoFromInput(cloudManager *filestore.FileManager, projectId int64, modelId uint64, eventNames []string, filepath string) (*P.UserAndEventsInfo, map[string]P.PropertiesCount, error) {
 	userAndEventsInfo := P.NewUserAndEventsInfo()
 	eMap := *userAndEventsInfo.EventPropertiesInfoMap
 	for _, eventName := range eventNames {
@@ -1019,7 +1019,7 @@ func printFilteredPatterns(filteredPatterns []*P.Pattern, iter int) {
 
 }
 
-func writeEventInfoFile(projectId, modelId uint64, events *bytes.Reader,
+func writeEventInfoFile(projectId int64, modelId uint64, events *bytes.Reader,
 	cloudManager filestore.FileManager) error {
 
 	path, name := cloudManager.GetModelEventInfoFilePathAndName(projectId, modelId)
@@ -1266,7 +1266,7 @@ func FilterTopEvents(eventsMap map[string]int, limitCount int, eventclass string
 	return eventsList
 }
 
-func rewriteEventsFile(tmpEventsFilePath string, tmpPath string, cloudManager *filestore.FileManager, userAndEventsInfo *P.UserAndEventsInfo, projectId, modelId uint64) (CampaignEventLists, error) {
+func rewriteEventsFile(tmpEventsFilePath string, tmpPath string, cloudManager *filestore.FileManager, userAndEventsInfo *P.UserAndEventsInfo, projectId int64, modelId uint64) (CampaignEventLists, error) {
 	// read events file , filter and create properties based on userProp and eventsProp
 	// create encoded events based on $session and campaign eventName
 	var fileDir, fileName string
@@ -1483,7 +1483,7 @@ func writeEncodedEvent(eventName string, property string, propertyName string, p
 	return nil
 }
 
-func GetEventNamesAndType(tmpEventsFilePath string, cloudManager *filestore.FileManager, projectId uint64, modelId uint64, countsVersion int) ([]string, map[string]string, error) {
+func GetEventNamesAndType(tmpEventsFilePath string, cloudManager *filestore.FileManager, projectId int64, modelId uint64, countsVersion int) ([]string, map[string]string, error) {
 	scanner, err := OpenEventFileAndGetScanner(tmpEventsFilePath)
 	if err != nil {
 		return nil, nil, err
@@ -1513,7 +1513,7 @@ func GetEventNamesAndType(tmpEventsFilePath string, cloudManager *filestore.File
 
 // buildWhiteListProperties build user and event properties from db ,
 // if not available in DB, use counting logic to choose topk properties
-func buildWhiteListProperties(projectId uint64, allProperty map[string]P.PropertiesCount, numProp int) (map[string]bool, map[string]bool) {
+func buildWhiteListProperties(projectId int64, allProperty map[string]P.PropertiesCount, numProp int) (map[string]bool, map[string]bool) {
 
 	userPropertiesMap := make(map[string]int)
 	eventPropertiesMap := make(map[string]int)
@@ -1595,7 +1595,7 @@ func buildWhiteListProperties(projectId uint64, allProperty map[string]P.Propert
 	return upFilteredMap, epFilteredMap
 }
 
-func buildEventsFileOnProperties(tmpEventsFilePath string, efTmpPath string, efTmpName string, cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, projectId uint64,
+func buildEventsFileOnProperties(tmpEventsFilePath string, efTmpPath string, efTmpName string, cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, projectId int64,
 	modelId uint64, eReader io.Reader, userAndEventsInfo *P.UserAndEventsInfo, campaignLimitCount int) (CampaignEventLists, error) {
 	// Rewrites the events file restricting the properties to only whitelisted properties.
 	//  Also returns list special campaign events created during rewrite.
@@ -1650,7 +1650,7 @@ func buildEventsInfoForEncodedEvents(smartEvents CampaignEventLists, userAndEven
 
 // PatternMine Mine TOP_K Frequent patterns for every event combination (segment) at every iteration.
 func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *filestore.FileManager,
-	diskManager *serviceDisk.DiskDriver, bucketName string, numRoutines int, projectId uint64,
+	diskManager *serviceDisk.DiskDriver, bucketName string, numRoutines int, projectId int64,
 	modelId uint64, modelType string, startTime int64, endTime int64, maxModelSize int64,
 	countOccurence bool, campaignLimitCount int, beamConfig *RunBeamConfig,
 	createMetadata bool, cAlgoProps P.CountAlgoProperties) (int, error) {
@@ -2526,7 +2526,7 @@ func GenCampaignThreeLenCombinations(lenTwoPatt, goalPatterns []*P.Pattern, user
 }
 
 // GetEventNamesFromFile read unique eventNames from Event file
-func GetEventNamesFromFile_(scanner *bufio.Scanner, projectId uint64) ([]string, error) {
+func GetEventNamesFromFile_(scanner *bufio.Scanner, projectId int64) ([]string, error) {
 	logCtx := log.WithField("project_id", projectId)
 	scanner.Split(bufio.ScanLines)
 	var txtline string
@@ -2558,7 +2558,7 @@ func GetEventNamesFromFile_(scanner *bufio.Scanner, projectId uint64) ([]string,
 }
 
 // GetEventNamesFromFile read unique eventNames from Event file
-func GetEventNamesFromFile(scanner *bufio.Scanner, cloudManager *filestore.FileManager, projectId uint64, modelId uint64, countsVersion int) ([]string, error) {
+func GetEventNamesFromFile(scanner *bufio.Scanner, cloudManager *filestore.FileManager, projectId int64, modelId uint64, countsVersion int) ([]string, error) {
 	logCtx := log.WithField("project_id", projectId)
 	scanner.Split(bufio.ScanLines)
 	var txtline string

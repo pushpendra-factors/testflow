@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styles from './index.module.scss';
 
-import { Button } from 'antd';
+import { Button,Tooltip } from 'antd';
 
 import { SVG, Text } from 'factorsComponents';
 
@@ -172,15 +172,17 @@ const EventGroupBlock = ({
 
     return isGroupByDDVisible ? (
       <div className={`relative`}>
-        <Button
-          icon={
-            <SVG name={groupByEvent.prop_category} size={16} color={'purple'} />
-          }
-          type={'link'}
-          className={`fa-button--truncate fa-button--truncate-xs btn-left-round filter-buttons-margin`}
-          >
-          {propName}
-        </Button>
+        <Tooltip title={propName}>
+          <Button
+            icon={
+              <SVG name={groupByEvent.prop_category} size={16} color={'purple'} />
+            }
+            type={'link'}
+            className={`fa-button--truncate fa-button--truncate-xs btn-left-round filter-buttons-margin`}
+            >
+            {propName}
+          </Button>
+        </Tooltip>
         <div className={styles.group_block__event_selector}>
           <GroupSelect2
             groupedProperties={filterOptions}
@@ -192,16 +194,18 @@ const EventGroupBlock = ({
       </div>
     ) : (
       <>
-        <Button
-          icon={
-            <SVG name={groupByEvent.prop_category} size={16} color={'purple'} />
-          }
-          type={'link'}
-          className={`fa-button--truncate fa-button--truncate-xs btn-left-round filter-buttons-margin`}
-          onClick={() => setGroupByDDVisible(true)}
-        >
-          {propName}
-        </Button>
+        <Tooltip title={propName}>
+          <Button
+            icon={
+              <SVG name={groupByEvent.prop_category} size={16} color={'purple'} />
+            }
+            type={'link'}
+            className={`fa-button--truncate fa-button--truncate-xs btn-left-round filter-buttons-margin`}
+            onClick={() => setGroupByDDVisible(true)}
+          >
+            {propName}
+          </Button>
+        </Tooltip>
         {renderGroupPropertyOptions(groupByEvent)}
       </>
     );

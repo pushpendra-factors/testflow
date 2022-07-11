@@ -32,7 +32,6 @@ func (store *MemSQL) CreateBigquerySetting(setting *model.BigquerySetting) (*mod
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
 
-
 	if setting.ID == "" {
 		setting.ID = U.GetUUID()
 	}
@@ -62,7 +61,7 @@ func (store *MemSQL) CreateBigquerySetting(setting *model.BigquerySetting) (*mod
 // UpdateBigquerySettingLastRunAt Updates LastRunAt for a given setting. Other fields are not updated.
 func (store *MemSQL) UpdateBigquerySettingLastRunAt(settingID string, lastRunAt int64) (int64, int) {
 	logFields := log.Fields{
-		"setting_id": settingID,
+		"setting_id":  settingID,
 		"last_run_at": lastRunAt,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -81,7 +80,7 @@ func (store *MemSQL) UpdateBigquerySettingLastRunAt(settingID string, lastRunAt 
 }
 
 // GetBigquerySettingByProjectID Return bigquery setting for a given project_id of projects table.
-func (store *MemSQL) GetBigquerySettingByProjectID(projectID uint64) (*model.BigquerySetting, int) {
+func (store *MemSQL) GetBigquerySettingByProjectID(projectID int64) (*model.BigquerySetting, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}

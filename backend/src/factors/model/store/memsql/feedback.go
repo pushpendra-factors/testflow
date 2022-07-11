@@ -14,13 +14,13 @@ import (
 
 const weeklyInsights string = "weekly_insights"
 
-func (store *MemSQL) PostFeedback(ProjectID uint64, agentUUID string, Feature string, Property *postgres.Jsonb, VoteType int) (int, string) {
+func (store *MemSQL) PostFeedback(ProjectID int64, agentUUID string, Feature string, Property *postgres.Jsonb, VoteType int) (int, string) {
 	logFields := log.Fields{
 		"project_id": ProjectID,
 		"agent_uuid": agentUUID,
-		"feature": Feature,
-		"property": Property,
-		"vote_type": VoteType,
+		"feature":    Feature,
+		"property":   Property,
+		"vote_type":  VoteType,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
@@ -47,7 +47,7 @@ func (store *MemSQL) PostFeedback(ProjectID uint64, agentUUID string, Feature st
 	}
 	return http.StatusCreated, ""
 }
-func (store *MemSQL) GetRecordsFromFeedback(projectID uint64, agentUUID string) ([]model.Feedback, error) {
+func (store *MemSQL) GetRecordsFromFeedback(projectID int64, agentUUID string) ([]model.Feedback, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"agent_uuid": agentUUID,

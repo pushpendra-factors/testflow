@@ -33,7 +33,7 @@ import (
 const batch_size_beam = 1000
 
 type CPatternsBeam struct {
-	ProjectID         uint64     `json:"projectID"`
+	ProjectID         int64      `json:"projectID"`
 	ModelId           uint64     `json:"modelID"`
 	PtEnames          [][]string `json:"penames"`
 	ModEventsFilepath string     `json:"fpath"`
@@ -71,7 +71,7 @@ func InitConfBeam(config *C.Configuration) {
 	C.KillDBQueriesOnExit()
 }
 
-func countPatternsWorkerBeam(ctx context.Context, projectID uint64, filepath string,
+func countPatternsWorkerBeam(ctx context.Context, projectID int64, filepath string,
 	patterns []*P.Pattern, countOccurence bool, countsVersion int, hmineSupport float32) {
 
 	var cAlgoProps P.CountAlgoProperties
@@ -94,7 +94,7 @@ func countPatternsWorkerBeam(ctx context.Context, projectID uint64, filepath str
 	P.CountPatterns(projectID, scanner, patterns, countOccurence, cAlgoProps)
 }
 
-func ComputeHistogramWorkerBeam(ctx context.Context, projectID uint64, filepath string,
+func ComputeHistogramWorkerBeam(ctx context.Context, projectID int64, filepath string,
 	patterns []*P.Pattern, countOccurence bool, countsVersion int, hmineSupport float32) error {
 
 	var cAlgoProps P.CountAlgoProperties
@@ -111,7 +111,7 @@ func ComputeHistogramWorkerBeam(ctx context.Context, projectID uint64, filepath 
 	return nil
 }
 
-func writeFileToGCP(projectId, modelId uint64, name string, fpath string,
+func writeFileToGCP(projectId int64, modelId uint64, name string, fpath string,
 	cloudManager *filestore.FileManager, writePath string) error {
 
 	var path string
@@ -154,7 +154,7 @@ func deleteFile(path string) error {
 	return nil
 }
 
-func countPatternController(beamStruct *RunBeamConfig, projectId uint64, modelId uint64,
+func countPatternController(beamStruct *RunBeamConfig, projectId int64, modelId uint64,
 	cloudManager *filestore.FileManager,
 	filepathString string, patterns []*P.Pattern, numRoutines int,
 	userAndEventsInfo *P.UserAndEventsInfo, countOccurence bool,
@@ -294,7 +294,7 @@ func countPatternController(beamStruct *RunBeamConfig, projectId uint64, modelId
 
 }
 
-func UserPropertiesHistogramController(beamStruct *RunBeamConfig, projectId uint64, modelId uint64,
+func UserPropertiesHistogramController(beamStruct *RunBeamConfig, projectId int64, modelId uint64,
 	cloudManager *filestore.FileManager,
 	mod_events_path string, patterns []*P.Pattern, numRoutines int,
 	userAndEventsInfo *P.UserAndEventsInfo, countOccurence bool,

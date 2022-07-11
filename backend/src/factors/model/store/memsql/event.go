@@ -25,7 +25,7 @@ import (
 const eventsLimitForProperites = 50000
 const OneDayInSeconds int64 = 24 * 60 * 60
 
-func (store *MemSQL) GetHubspotFormEvents(projectID uint64, userId string, timestamps []interface{}) ([]model.Event, int) {
+func (store *MemSQL) GetHubspotFormEvents(projectID int64, userId string, timestamps []interface{}) ([]model.Event, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"user_id":    userId,
@@ -99,7 +99,7 @@ func satisfiesEventConstraints(event model.Event) int {
 	return http.StatusOK
 }
 
-func existsIDForProject(projectID uint64, userID, eventID string) bool {
+func existsIDForProject(projectID int64, userID, eventID string) bool {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"user_id":    userID,
@@ -125,7 +125,7 @@ func existsIDForProject(projectID uint64, userID, eventID string) bool {
 	return false
 }
 
-func (store *MemSQL) GetEventCountOfUserByEventName(projectId uint64, userId string, eventNameId string) (uint64, int) {
+func (store *MemSQL) GetEventCountOfUserByEventName(projectId int64, userId string, eventNameId string) (uint64, int) {
 	logFields := log.Fields{
 		"project_id":    projectId,
 		"user_id":       userId,
@@ -147,7 +147,7 @@ func (store *MemSQL) GetEventCountOfUserByEventName(projectId uint64, userId str
 }
 
 // GetEventCountOfUsersByEventName Get count of events for event_name_id for multiple users.
-func (store *MemSQL) GetEventCountOfUsersByEventName(projectID uint64, userIDs []string, eventNameID string) (uint64, int) {
+func (store *MemSQL) GetEventCountOfUsersByEventName(projectID int64, userIDs []string, eventNameID string) (uint64, int) {
 	logFields := log.Fields{
 		"project_id":    projectID,
 		"user_ids":      userIDs,
@@ -168,7 +168,7 @@ func (store *MemSQL) GetEventCountOfUsersByEventName(projectID uint64, userIDs [
 	return count, http.StatusFound
 }
 
-func (store *MemSQL) addEventDetailsToCache(projectID uint64, event *model.Event, isUpdateEventProperty bool) {
+func (store *MemSQL) addEventDetailsToCache(projectID int64, event *model.Event, isUpdateEventProperty bool) {
 	logFields := log.Fields{
 		"project_id":               projectID,
 		"event":                    event,
@@ -414,7 +414,7 @@ func (store *MemSQL) CreateEvent(event *model.Event) (*model.Event, int) {
 }
 
 // existsEventByCustomerEventID Get events by projectID and customerEventID.
-func existsEventByCustomerEventID(projectID uint64, userID, customerEventID string) bool {
+func existsEventByCustomerEventID(projectID int64, userID, customerEventID string) bool {
 	logFields := log.Fields{
 		"project_id":         projectID,
 		"user_id":            userID,
@@ -439,7 +439,7 @@ func existsEventByCustomerEventID(projectID uint64, userID, customerEventID stri
 	return false
 }
 
-func (store *MemSQL) GetEvent(projectId uint64, userId string, id string) (*model.Event, int) {
+func (store *MemSQL) GetEvent(projectId int64, userId string, id string) (*model.Event, int) {
 	logFields := log.Fields{
 		"project_id": projectId,
 		"user_id":    userId,
@@ -464,7 +464,7 @@ func (store *MemSQL) GetEvent(projectId uint64, userId string, id string) (*mode
 	return &event, http.StatusFound
 }
 
-func (store *MemSQL) GetEventById(projectId uint64, id, userID string) (*model.Event, int) {
+func (store *MemSQL) GetEventById(projectId int64, id, userID string) (*model.Event, int) {
 	logFields := log.Fields{
 		"project_id": projectId,
 		"user_id":    userID,
@@ -494,7 +494,7 @@ func (store *MemSQL) GetEventById(projectId uint64, id, userID string) (*model.E
 	return &event, http.StatusFound
 }
 
-func (store *MemSQL) GetLatestEventOfUserByEventNameId(projectId uint64, userId string, eventNameId string,
+func (store *MemSQL) GetLatestEventOfUserByEventNameId(projectId int64, userId string, eventNameId string,
 	startTimestamp int64, endTimestamp int64) (*model.Event, int) {
 	logFields := log.Fields{
 		"project_id":      projectId,
@@ -528,7 +528,7 @@ func (store *MemSQL) GetLatestEventOfUserByEventNameId(projectId uint64, userId 
 
 // GetRecentEventPropertyKeysWithLimits This method gets all the recent 'limit' property keys
 // from DB for a given project/event
-func (store *MemSQL) GetRecentEventPropertyKeysWithLimits(projectID uint64, eventName string,
+func (store *MemSQL) GetRecentEventPropertyKeysWithLimits(projectID int64, eventName string,
 	starttime int64, endtime int64, eventsLimit int) ([]U.Property, error) {
 	logFields := log.Fields{
 		"project_id":   projectID,
@@ -599,7 +599,7 @@ func (store *MemSQL) GetRecentEventPropertyKeysWithLimits(projectID uint64, even
 }
 
 // GetRecentEventPropertyValuesWithLimits This method gets all the recent 'limit' property values from DB for a given project/event/property
-func (store *MemSQL) GetRecentEventPropertyValuesWithLimits(projectID uint64, eventName string,
+func (store *MemSQL) GetRecentEventPropertyValuesWithLimits(projectID int64, eventName string,
 	property string, valuesLimit int, rowsLimit int, starttime int64,
 	endtime int64) ([]U.PropertyValue, string, error) {
 	logFields := log.Fields{
@@ -649,7 +649,7 @@ func (store *MemSQL) GetRecentEventPropertyValuesWithLimits(projectID uint64, ev
 	return values, U.GetCategoryType(property, values), nil
 }
 
-func (store *MemSQL) UpdateEventPropertiesInBatch(projectID uint64,
+func (store *MemSQL) UpdateEventPropertiesInBatch(projectID int64,
 	batchedUpdateEventPropertiesParams []model.UpdateEventPropertiesParams) bool {
 
 	logFields := log.Fields{"project_id": projectID, "batched_update_event_properties_params": batchedUpdateEventPropertiesParams}
@@ -692,14 +692,14 @@ func (store *MemSQL) UpdateEventPropertiesInBatch(projectID uint64,
 	return hasFailure
 }
 
-func (store *MemSQL) UpdateEventProperties(projectId uint64, id, userID string,
+func (store *MemSQL) UpdateEventProperties(projectId int64, id, userID string,
 	properties *U.PropertiesMap, updateTimestamp int64,
 	optionalEventUserProperties *postgres.Jsonb) int {
 	db := C.GetServices().Db
 	return store.updateEventPropertiesWithTransaction(projectId, id, userID, properties, updateTimestamp, optionalEventUserProperties, db)
 }
 
-func (store *MemSQL) updateEventPropertiesWithTransaction(projectId uint64, id, userID string,
+func (store *MemSQL) updateEventPropertiesWithTransaction(projectId int64, id, userID string,
 	properties *U.PropertiesMap, updateTimestamp int64,
 	optionalEventUserProperties *postgres.Jsonb, dbTx *gorm.DB) int {
 
@@ -783,7 +783,7 @@ func (store *MemSQL) updateEventPropertiesWithTransaction(projectId uint64, id, 
 	return http.StatusAccepted
 }
 
-func (store *MemSQL) GetUserEventsByEventNameId(projectId uint64, userId string, eventNameId string) ([]model.Event, int) {
+func (store *MemSQL) GetUserEventsByEventNameId(projectId int64, userId string, eventNameId string) ([]model.Event, int) {
 	logFields := log.Fields{
 		"project_id":    projectId,
 		"user_id":       userId,
@@ -834,7 +834,7 @@ func getPageCountAndTimeSpentFromEventsList(events []*model.Event, sessionEvent 
 	return pageCount, timeSpent
 }
 
-func getPageCountAndTimeSpentForContinuedSession(projectId uint64, userId string,
+func getPageCountAndTimeSpentForContinuedSession(projectId int64, userId string,
 	continuedSessionEvent *model.Event, events []*model.Event) (float64, float64, float64, float64, int) {
 	logFields := log.Fields{
 		"project_id":              projectId,
@@ -874,7 +874,7 @@ func getPageCountAndTimeSpentForContinuedSession(projectId uint64, userId string
 	return pageCount, spentTime, currentPageCount, currentSpentTime, http.StatusFound
 }
 
-func (store *MemSQL) OverwriteEventProperties(projectId uint64, userId string, eventId string,
+func (store *MemSQL) OverwriteEventProperties(projectId int64, userId string, eventId string,
 	newEventProperties *postgres.Jsonb) int {
 	logFields := log.Fields{
 		"project_id":           projectId,
@@ -901,7 +901,7 @@ func (store *MemSQL) OverwriteEventProperties(projectId uint64, userId string, e
 	return http.StatusAccepted
 }
 
-func (store *MemSQL) OverwriteEventPropertiesByID(projectId uint64, id string,
+func (store *MemSQL) OverwriteEventPropertiesByID(projectId int64, id string,
 	newEventProperties *postgres.Jsonb) int {
 	logFields := log.Fields{
 		"project_id":           projectId,
@@ -982,7 +982,7 @@ func filterEventsForSession(events []model.Event, endTimestamp int64) []*model.E
 	return filteredEvents
 }
 
-func (store *MemSQL) AssociateSessionByEventIdsBatchV2(projectID uint64, userID string,
+func (store *MemSQL) AssociateSessionByEventIdsBatchV2(projectID int64, userID string,
 	batchedEvents [][]*model.Event, sessionID string, sessionEventNameID string) bool {
 	logFields := log.Fields{"project_id": projectID, "session_id": sessionID,
 		"session_event_name_id": sessionEventNameID, "user_id": userID}
@@ -1020,14 +1020,14 @@ func (store *MemSQL) AssociateSessionByEventIdsBatchV2(projectID uint64, userID 
 	return hasFailure
 }
 
-func (store *MemSQL) AssociateSessionByEventIds(projectID uint64,
+func (store *MemSQL) AssociateSessionByEventIds(projectID int64,
 	userID string, events []*model.Event, sessionID string, sessionEventNameID string) int {
 	db := C.GetServices().Db
 
 	return store.associateSessionByEventIdsWithTransaction(projectID, userID, events, sessionID, sessionEventNameID, db)
 }
 
-func (store *MemSQL) associateSessionByEventIdsWithTransaction(projectId uint64,
+func (store *MemSQL) associateSessionByEventIdsWithTransaction(projectId int64,
 	userID string, events []*model.Event, sessionId string, sessionEventNameId string, dbTx *gorm.DB) int {
 	logFields := log.Fields{
 		"project_id":            projectId,
@@ -1068,7 +1068,7 @@ func (store *MemSQL) associateSessionByEventIdsWithTransaction(projectId uint64,
 	return http.StatusAccepted
 }
 
-func (store *MemSQL) associateSessionToEventsInBatch(projectId uint64, userID string, events []*model.Event,
+func (store *MemSQL) associateSessionToEventsInBatch(projectId int64, userID string, events []*model.Event,
 	sessionId string, batchSize int, sessionEventNameId string) int {
 	logFields := log.Fields{
 		"project_id":            projectId,
@@ -1107,7 +1107,7 @@ func (store *MemSQL) associateSessionToEventsInBatch(projectId uint64, userID st
 
 // AddSessionForUser - Wrapper for addSessionForUser to handle creating
 // new session for last event when new session conditions met.
-func (store *MemSQL) AddSessionForUser(projectId uint64, userId string, userEvents []model.Event,
+func (store *MemSQL) AddSessionForUser(projectId int64, userId string, userEvents []model.Event,
 	bufferTimeBeforeSessionCreateInSecs int64, sessionEventNameId string) (int, int, bool, int, int) {
 	logFields := log.Fields{
 		"project_id":  projectId,
@@ -1157,7 +1157,7 @@ e1 - t1
 e2 - t2
 e3 - t3
 */
-func (store *MemSQL) addSessionForUser(projectId uint64, userId string, userEvents []model.Event,
+func (store *MemSQL) addSessionForUser(projectId int64, userId string, userEvents []model.Event,
 	bufferTimeBeforeSessionCreateInSecs int64, sessionEventNameId string) (int, int, bool, int, bool, int) {
 	logFields := log.Fields{
 		"project_id":  projectId,
@@ -1400,6 +1400,7 @@ func (store *MemSQL) addSessionForUser(projectId uint64, userId string, userEven
 			}
 
 			eventsOfSession := events[sessionStartIndex : sessionEndIndex+1]
+			channelOfEvent := make(map[string]string)
 
 			// Update the session_id to all events between start index and end index + 1.
 			errCode := store.associateSessionToEventsInBatch(projectId, userId,
@@ -1462,7 +1463,9 @@ func (store *MemSQL) addSessionForUser(projectId uint64, userId string, userEven
 					logCtx.Error(errString)
 				} else {
 					sessionPropertiesMap[U.EP_CHANNEL] = channel
+					channelOfEvent[events[i].ID] = channel
 				}
+
 			}
 
 			sessionPropertiesMap[U.EP_SESSION_COUNT] = sessionEvent.Count
@@ -1513,6 +1516,7 @@ func (store *MemSQL) addSessionForUser(projectId uint64, userId string, userEven
 
 					SessionPageCount:     onlyThisSessionPageCount,
 					SessionPageSpentTime: onlyThisSessionPageSpentTime,
+					SessionChannel:       channelOfEvent[userPropertiesRefID],
 
 					EventUserProperties: eventsOfSession[i].UserProperties,
 				}
@@ -1568,7 +1572,7 @@ func (store *MemSQL) addSessionForUser(projectId uint64, userId string, userEven
 }
 
 // GetDatesForNextEventsArchivalBatch Get dates for events since startTime, excluding today's date.
-func (store *MemSQL) GetDatesForNextEventsArchivalBatch(projectID uint64, startTime int64) (map[string]int64, int) {
+func (store *MemSQL) GetDatesForNextEventsArchivalBatch(projectID int64, startTime int64) (map[string]int64, int) {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 	logFields := log.Fields{
 		"project_id": projectID,
@@ -1604,7 +1608,7 @@ func (store *MemSQL) GetDatesForNextEventsArchivalBatch(projectID uint64, startT
 	return countByDates, http.StatusFound
 }
 
-func (store *MemSQL) GetNextSessionEventInfoFromDB(projectID uint64, withSession bool,
+func (store *MemSQL) GetNextSessionEventInfoFromDB(projectID int64, withSession bool,
 	sessionEventNameId uint64, maxLookbackTimestamp int64) (int64, int) {
 	logFields := log.Fields{
 		"project_id":             projectID,
@@ -1662,7 +1666,7 @@ func (store *MemSQL) GetNextSessionEventInfoFromDB(projectID uint64, withSession
 	return *startTimestamp, http.StatusFound
 }
 
-func (store *MemSQL) GetLastSessionEventTimestamp(projectID uint64, sessionEventNameID uint64) (int64, int) {
+func (store *MemSQL) GetLastSessionEventTimestamp(projectID int64, sessionEventNameID uint64) (int64, int) {
 	logFields := log.Fields{
 		"project_id":            projectID,
 		"session_event_name_id": sessionEventNameID,
@@ -1705,7 +1709,7 @@ func (store *MemSQL) GetLastSessionEventTimestamp(projectID uint64, sessionEvent
 
 // GetAllEventsForSessionCreationAsUserEventsMap - Returns a map of user:[events...] withing given period,
 // excluding session event and event with session_id.
-func (store *MemSQL) GetAllEventsForSessionCreationAsUserEventsMap(projectId uint64, sessionEventNameId string,
+func (store *MemSQL) GetAllEventsForSessionCreationAsUserEventsMap(projectId int64, sessionEventNameId string,
 	startTimestamp, endTimestamp int64) (*map[string][]model.Event, int, int) {
 	logFields := log.Fields{
 		"project_id":            projectId,
@@ -1838,7 +1842,7 @@ func getPropertiesByNameAndMaxOccurrence(
 
 // GetEventsWithoutPropertiesAndWithPropertiesByName - Use for getting properties with and without values
 // and use it for updating the events which doesn't have the values. User for fixing data for YourStory.
-func (store *MemSQL) GetEventsWithoutPropertiesAndWithPropertiesByNameForYourStory(projectID uint64, from,
+func (store *MemSQL) GetEventsWithoutPropertiesAndWithPropertiesByNameForYourStory(projectID int64, from,
 	to int64, mandatoryProperties []string) ([]model.EventWithProperties, *map[string]U.PropertiesMap, int) {
 	logFields := log.Fields{
 		"project_id":           projectID,
@@ -1959,7 +1963,7 @@ func (store *MemSQL) GetEventsWithoutPropertiesAndWithPropertiesByNameForYourSto
 	return eventsWithoutProperties, propertiesByName, http.StatusFound
 }
 
-func (store *MemSQL) GetUnusedSessionIDsForJob(projectID uint64, startTimestamp, endTimestamp int64) ([]string, int) {
+func (store *MemSQL) GetUnusedSessionIDsForJob(projectID int64, startTimestamp, endTimestamp int64) ([]string, int) {
 	logFields := log.Fields{
 		"project_id":      projectID,
 		"start_timestamp": startTimestamp,
@@ -2031,7 +2035,7 @@ func (store *MemSQL) GetUnusedSessionIDsForJob(projectID uint64, startTimestamp,
 	return unusedSessions, http.StatusFound
 }
 
-func (store *MemSQL) DeleteEventsByIDsInBatchForJob(projectID uint64, eventNameID string, ids []string, batchSize int) int {
+func (store *MemSQL) DeleteEventsByIDsInBatchForJob(projectID int64, eventNameID string, ids []string, batchSize int) int {
 	logFields := log.Fields{
 		"project_id":    projectID,
 		"event_name_id": eventNameID,
@@ -2060,7 +2064,7 @@ func (store *MemSQL) DeleteEventsByIDsInBatchForJob(projectID uint64, eventNameI
 	return http.StatusAccepted
 }
 
-func (store *MemSQL) DeleteEventByIDs(projectID uint64, eventNameID string, ids []string) int {
+func (store *MemSQL) DeleteEventByIDs(projectID int64, eventNameID string, ids []string) int {
 	logFields := log.Fields{
 		"project_id":    projectID,
 		"event_name_id": eventNameID,
@@ -2084,7 +2088,7 @@ func (store *MemSQL) DeleteEventByIDs(projectID uint64, eventNameID string, ids 
 	return http.StatusAccepted
 }
 
-func (store *MemSQL) OverwriteEventUserPropertiesByID(projectID uint64, userID,
+func (store *MemSQL) OverwriteEventUserPropertiesByID(projectID int64, userID,
 	id string, userProperties *postgres.Jsonb) int {
 	logFields := log.Fields{
 		"project_id":      projectID,
@@ -2121,8 +2125,8 @@ func (store *MemSQL) OverwriteEventUserPropertiesByID(projectID uint64, userID,
 	return http.StatusAccepted
 }
 
-// PullEventRowsForBuildSequenceJob - Function to pull events for factors model building sequentially.
-func (store *MemSQL) PullEventRowsForBuildSequenceJob(projectID uint64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error) {
+// PullEventRows - Function to pull events for factors model building sequentially.
+func (store *MemSQL) PullEventRows(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"start_time": startTime,
@@ -2143,7 +2147,7 @@ func (store *MemSQL) PullEventRowsForBuildSequenceJob(projectID uint64, startTim
 }
 
 // PullEventsForArchivalJob - Function to pull events for archival.
-func (store *MemSQL) PullEventRowsForArchivalJob(projectID uint64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error) {
+func (store *MemSQL) PullEventRowsForArchivalJob(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"start_time": startTime,

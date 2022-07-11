@@ -8,7 +8,7 @@ import (
 )
 
 type FacebookDocument struct {
-	ProjectID           uint64          `gorm:"primary_key:true;auto_increment:false" json:"project_id"`
+	ProjectID           int64           `gorm:"primary_key:true;auto_increment:false" json:"project_id"`
 	CustomerAdAccountID string          `gorm:"primary_key:true;auto_increment:false" json:"customer_ad_account_id"`
 	Platform            string          `gorm:"primary_key:true;auto_increment:false" json:"platform"`
 	TypeAlias           string          `gorm:"-" json:"type_alias"`
@@ -25,7 +25,7 @@ type FacebookDocument struct {
 
 // FacebookLastSyncInfo ...
 type FacebookLastSyncInfo struct {
-	ProjectID           uint64 `json:"project_id"`
+	ProjectID           int64  `json:"project_id"`
 	CustomerAdAccountID string `json:"customer_acc_id"`
 	DocumentType        int    `json:"-"`
 	DocumentTypeAlias   string `json:"type_alias"`
@@ -34,7 +34,7 @@ type FacebookLastSyncInfo struct {
 
 // FacebookLastSyncInfoPayload ...
 type FacebookLastSyncInfoPayload struct {
-	ProjectId           uint64 `json:"project_id"`
+	ProjectId           int64  `json:"project_id"`
 	CustomerAdAccountId string `json:"account_id"`
 }
 

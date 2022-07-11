@@ -4,10 +4,11 @@ import (
 	cacheRedis "factors/cache/redis"
 	"factors/model/model"
 	U "factors/util"
-	log "github.com/sirupsen/logrus"
 	"fmt"
 	"strconv"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func (store *MemSQL) GetEventUserCountsOfAllProjects(lastNDays int) (map[string][]*model.ProjectAnalytics, error) {
@@ -17,7 +18,7 @@ func (store *MemSQL) GetEventUserCountsOfAllProjects(lastNDays int) (map[string]
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	currentDate := time.Now().UTC()
 	projects, _ := store.GetProjects()
-	projectIDNameMap := make(map[uint64]string)
+	projectIDNameMap := make(map[int64]string)
 	for _, project := range projects {
 		projectIDNameMap[project.ID] = project.Name
 	}
@@ -62,7 +63,7 @@ func (store *MemSQL) GetEventUserCountsOfAllProjects(lastNDays int) (map[string]
 			linkedinEvents, _ := GetEventsFromCacheByDocumentType(projId, "linkedin", dateKey)
 			salesforceEvents, _ := GetEventsFromCacheByDocumentType(projId, "salesforce", dateKey)
 			result[dateKey] = append(result[dateKey], &model.ProjectAnalytics{
-				ProjectID:         uint64(projIdInt),
+				ProjectID:         int64(projIdInt),
 				TotalEvents:       uint64(totalEvents),
 				TotalUniqueEvents: uint64(uniqueEvents),
 				TotalUniqueUsers:  uint64(uniqueUsers),
@@ -71,7 +72,7 @@ func (store *MemSQL) GetEventUserCountsOfAllProjects(lastNDays int) (map[string]
 				HubspotEvents:     uint64(hubspotEvents),
 				LinkedinEvents:    uint64(linkedinEvents),
 				SalesforceEvents:  uint64(salesforceEvents),
-				ProjectName:       projectIDNameMap[uint64(projIdInt)],
+				ProjectName:       projectIDNameMap[int64(projIdInt)],
 				Date:              dateKey,
 			})
 
@@ -81,10 +82,10 @@ func (store *MemSQL) GetEventUserCountsOfAllProjects(lastNDays int) (map[string]
 
 	return result, nil
 }
-func UpdateCountCacheByDocumentType(projectID uint64,time *time.Time, documentType string) (status bool) {
+func UpdateCountCacheByDocumentType(projectID int64, time *time.Time, documentType string) (status bool) {
 	logFields := log.Fields{
-		"project_id": projectID,
-		"time": time,
+		"project_id":    projectID,
+		"time":          time,
 		"document_type": documentType,
 	}
 	logCtx := log.WithFields(logFields)
@@ -108,9 +109,9 @@ func UpdateCountCacheByDocumentType(projectID uint64,time *time.Time, documentTy
 }
 func GetEventsFromCacheByDocumentType(projectID, documentType, dateKey string) (documentEvents uint64, err error) {
 	logFields := log.Fields{
-		"project_id": projectID,
+		"project_id":    projectID,
 		"document_type": documentType,
-		"date_key": dateKey,
+		"date_key":      dateKey,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	typeEvents, err := model.EventCountKeyByDocumentType(documentType, dateKey)

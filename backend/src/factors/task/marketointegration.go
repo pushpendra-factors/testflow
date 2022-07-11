@@ -13,7 +13,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func MarketoIntegration(projectId uint64, configs map[string]interface{}) (map[string]interface{}, bool) {
+func MarketoIntegration(projectId int64, configs map[string]interface{}) (map[string]interface{}, bool) {
 
 	bigQuerySetting := model.BigquerySetting{
 		BigqueryProjectID:       configs["BigqueryProjectId"].(string),
@@ -106,7 +106,7 @@ func MarketoIntegration(projectId uint64, configs map[string]interface{}) (map[s
 	return resultStatus, true
 }
 
-func InsertPropertyDataTypes(columnNamesFromMetadataDateTime map[string]bool, columnNamesFromMetadataNumerical map[string]bool, docType string, projectId uint64) (int, int) {
+func InsertPropertyDataTypes(columnNamesFromMetadataDateTime map[string]bool, columnNamesFromMetadataNumerical map[string]bool, docType string, projectId int64) (int, int) {
 	success, failures := int(0), int(0)
 	for columnName, _ := range columnNamesFromMetadataDateTime {
 		_, err := store.GetStore().CreateCRMProperties(&model.CRMProperty{
@@ -194,7 +194,7 @@ func extractMetadataColumns(metadataQueryResult [][]string) ([]string, map[strin
 	return columnNamesFromMetadata, columnNamesFromMetadataDateTime, columnNamesFromMetadataNumerical
 }
 
-func InsertIntegrationDocument(projectId uint64, docType string, queryResult [][]string, columnNamesFromMetadata []string, columnNamesFromMetadataDateTime map[string]bool, columnNamesFromMetadataNumerical map[string]bool) (int, int) {
+func InsertIntegrationDocument(projectId int64, docType string, queryResult [][]string, columnNamesFromMetadata []string, columnNamesFromMetadataDateTime map[string]bool, columnNamesFromMetadataNumerical map[string]bool) (int, int) {
 	success := 0
 	failures := 0
 	for _, line := range queryResult {
@@ -226,7 +226,7 @@ func InsertIntegrationDocument(projectId uint64, docType string, queryResult [][
 	return success, failures
 }
 
-func insertCRMActivity(projectId uint64, line []string, docType string, columnNamesFromMetadata []string, values *postgres.Jsonb) (int, error, string) {
+func insertCRMActivity(projectId int64, line []string, docType string, columnNamesFromMetadata []string, values *postgres.Jsonb) (int, error, string) {
 	insertionStatus := int(0)
 	var errCRMStatus error
 	timestamps := model.GetMarketoDocumentTimestamp(docType, line, columnNamesFromMetadata)
@@ -253,7 +253,7 @@ func insertCRMActivity(projectId uint64, line []string, docType string, columnNa
 	return insertionStatus, errCRMStatus, model.GetUniqueLogValue(docType, line, columnNamesFromMetadata)
 }
 
-func insertCRMUser(projectId uint64, line []string, docType string, columnNamesFromMetadata []string, values *postgres.Jsonb) (int, error, string) {
+func insertCRMUser(projectId int64, line []string, docType string, columnNamesFromMetadata []string, values *postgres.Jsonb) (int, error, string) {
 	insertionStatus := int(0)
 	var errCRMStatus error
 	timestamps := model.GetMarketoDocumentTimestamp(docType, line, columnNamesFromMetadata)

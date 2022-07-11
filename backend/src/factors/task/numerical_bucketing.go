@@ -17,7 +17,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func NumericalBucketing(projectId uint64, configs map[string]interface{}) (map[string]interface{}, bool) {
+func NumericalBucketing(projectId int64, configs map[string]interface{}) (map[string]interface{}, bool) {
 	//env := configs["env"].(string)
 	//db := configs["db"].(*gorm.DB)
 	cloudManager := configs["cloudManager"].(*filestore.FileManager)
@@ -293,7 +293,7 @@ func GetMasterBuckets(tmpNumBucketFilePath string) (map[string][]BucketRange, ma
 }
 
 // This method takes all the numerical properties and returns the list of values seen so that bucketing can be done.
-func GetNumericalPropertiesWithDatarange(tmpEventsFilePath string, projectID uint64) (map[string]MinMaxTuple, map[string]MinMaxTuple, error) {
+func GetNumericalPropertiesWithDatarange(tmpEventsFilePath string, projectID int64) (map[string]MinMaxTuple, map[string]MinMaxTuple, error) {
 	scanner, err := OpenEventFileAndGetScanner(tmpEventsFilePath)
 	if err != nil {
 		return nil, nil, err

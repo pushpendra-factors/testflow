@@ -19,7 +19,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func sendCreateSmartPropertyReq(r *gin.Engine, project_id uint64, agent *model.Agent, rules *postgres.Jsonb, type_alias string, name string, description string) *httptest.ResponseRecorder {
+func sendCreateSmartPropertyReq(r *gin.Engine, project_id int64, agent *model.Agent, rules *postgres.Jsonb, type_alias string, name string, description string) *httptest.ResponseRecorder {
 	payload := map[string]interface{}{
 		"project_id":  project_id,
 		"type_alias":  type_alias,
@@ -50,7 +50,7 @@ func sendCreateSmartPropertyReq(r *gin.Engine, project_id uint64, agent *model.A
 	r.ServeHTTP(w, req)
 	return w
 }
-func sendGetSmartPropertyRulesReq(r *gin.Engine, projectID uint64, agent *model.Agent) *httptest.ResponseRecorder {
+func sendGetSmartPropertyRulesReq(r *gin.Engine, projectID int64, agent *model.Agent) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error Creating cookieData")
@@ -72,7 +72,7 @@ func sendGetSmartPropertyRulesReq(r *gin.Engine, projectID uint64, agent *model.
 	r.ServeHTTP(w, req)
 	return w
 }
-func sendGetSmartPropertyRuleReq(r *gin.Engine, projectID uint64, ruleID string, agent *model.Agent) *httptest.ResponseRecorder {
+func sendGetSmartPropertyRuleReq(r *gin.Engine, projectID int64, ruleID string, agent *model.Agent) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error Creating cookieData")
@@ -94,7 +94,7 @@ func sendGetSmartPropertyRuleReq(r *gin.Engine, projectID uint64, ruleID string,
 	r.ServeHTTP(w, req)
 	return w
 }
-func sendUpdateSmartPropertyReq(r *gin.Engine, project_id uint64, ruleID string, agent *model.Agent, rules *postgres.Jsonb, type_alias string, name string, description string) *httptest.ResponseRecorder {
+func sendUpdateSmartPropertyReq(r *gin.Engine, project_id int64, ruleID string, agent *model.Agent, rules *postgres.Jsonb, type_alias string, name string, description string) *httptest.ResponseRecorder {
 	payload := map[string]interface{}{
 		"project_id":  project_id,
 		"id":          ruleID,
@@ -127,7 +127,7 @@ func sendUpdateSmartPropertyReq(r *gin.Engine, project_id uint64, ruleID string,
 	return w
 }
 
-func sendDeleteSmartPropertyRuleReq(r *gin.Engine, projectID uint64, ruleID string, agent *model.Agent) *httptest.ResponseRecorder {
+func sendDeleteSmartPropertyRuleReq(r *gin.Engine, projectID int64, ruleID string, agent *model.Agent) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error Creating cookieData")
