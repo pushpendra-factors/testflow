@@ -2,6 +2,8 @@ package model
 
 import (
 	"time"
+
+	"github.com/jinzhu/gorm/dialects/postgres"
 )
 
 // type ContactsList struct {
@@ -40,9 +42,10 @@ type GroupsInfo struct {
 }
 
 type ContactActivity struct {
-	EventName   string `json:"event_name"`
-	DisplayName string `json:"display_name"`
-	Timestamp   uint64 `json:"timestamp"`
+	EventName   string         `json:"event_name"`
+	DisplayName string         `json:"display_name"`
+	Properties  postgres.Jsonb `json:"properties"`
+	Timestamp   uint64         `json:"timestamp"`
 }
 
 type UTListPayload struct {

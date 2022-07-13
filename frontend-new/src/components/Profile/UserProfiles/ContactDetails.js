@@ -4,7 +4,6 @@ import {
   Col,
   Button,
   Avatar,
-  Radio,
   Menu,
   Dropdown,
   Popover,
@@ -12,7 +11,6 @@ import {
 } from 'antd';
 import { SVG, Text } from '../../factorsComponents';
 import FaTimeline from '../../FaTimeline';
-import { RevAvailableGroups } from '../../../utils/constants';
 import moment from 'moment';
 
 function ContactDetails({ onCancel, userDetails }) {
@@ -288,7 +286,7 @@ function ContactDetails({ onCancel, userDetails }) {
                   {userDetails?.data?.group_infos?.map((group) => {
                     return (
                       <Text type={'title'} level={7} extraClass={'m-0 mb-2'}>
-                        {RevAvailableGroups[group.group_name]}
+                        {group.group_name}
                       </Text>
                     );
                   }) || '-'}

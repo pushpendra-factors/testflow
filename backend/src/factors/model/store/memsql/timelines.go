@@ -1,6 +1,7 @@
 package memsql
 
 import (
+	"encoding/json"
 	C "factors/config"
 	"factors/model/model"
 	U "factors/util"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	"github.com/jinzhu/gorm"
+	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -145,8 +147,8 @@ func (store *MemSQL) GetProfileUserDetailsByID(projectID int64, identity string,
 		return nil, http.StatusInternalServerError
 	}
 
-	str := []string{`SELECT event_names.name AS event_name, events1.timestamp AS timestamp 
-        FROM (SELECT project_id, event_name_id, timestamp FROM events WHERE 
+	str := []string{`SELECT event_names.name AS event_name, events1.timestamp AS timestamp, events1.properties AS properties
+        FROM (SELECT project_id, event_name_id, timestamp, properties FROM events WHERE 
 			project_id=? AND timestamp <= ? AND 
 			user_id IN (SELECT id FROM users WHERE project_id=? AND`, userId, `= ?)  LIMIT 5000) AS events1
         LEFT JOIN event_names 
@@ -164,22 +166,70 @@ func (store *MemSQL) GetProfileUserDetailsByID(projectID int64, identity string,
 	_, projectDisplayNames := store.GetDisplayNamesForAllEvents(projectID)
 
 	webSessionCount := 0
+	eventNamePropertiesMap := map[string][]string{
+		U.EVENT_NAME_SESSION:                           {U.EP_PAGE_COUNT, U.EP_CHANNEL, U.EP_CAMPAIGN, U.SP_SESSION_TIME, U.EP_TIMESTAMP, U.EP_REFERRER_URL},
+		U.EVENT_NAME_FORM_SUBMITTED:                    {U.EP_FORM_NAME, U.EP_PAGE_URL, U.EP_TIMESTAMP},
+		U.EVENT_NAME_OFFLINE_TOUCH_POINT:               {U.EP_CHANNEL, U.EP_CAMPAIGN, U.EP_TIMESTAMP},
+		U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED: {U.EP_CAMPAIGN, model.EP_SFCampaignMemberStatus, U.EP_TIMESTAMP},
+		U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED: {U.EP_CAMPAIGN, model.EP_SFCampaignMemberStatus, U.EP_TIMESTAMP},
+	}
+	pageViewPropsList := []string{U.EP_PAGE_SPENT_TIME, U.EP_PAGE_SCROLL_PERCENT, U.EP_PAGE_LOAD_TIME}
 
 	for rows.Next() {
 		var contactActivity model.ContactActivity
 		if err := db.ScanRows(rows, &contactActivity); err != nil {
 			log.WithError(err).Error("Failed scanning events list")
 		}
+		log.Info("Contact Activity: ", contactActivity)
 		// Session Count workaround
 		if contactActivity.EventName == U.EVENT_NAME_SESSION {
 			webSessionCount += 1
 		}
-		if standardDisplayNames[contactActivity.EventName] != "" {
+
+		properties, err := U.DecodePostgresJsonb(&contactActivity.Properties)
+		if err != nil {
+			log.WithError(err).Error("Failed decoding event properties")
+		}
+
+		if (*properties)[U.EP_IS_PAGE_VIEW] == "true" {
+			contactActivity.DisplayName = "Page View"
+		} else if standardDisplayNames[contactActivity.EventName] != "" {
 			contactActivity.DisplayName = standardDisplayNames[contactActivity.EventName]
 		} else if projectDisplayNames[contactActivity.EventName] != "" {
 			contactActivity.DisplayName = projectDisplayNames[contactActivity.EventName]
 		} else {
 			contactActivity.DisplayName = contactActivity.EventName
+		}
+
+		// Filter Properties
+		filteredProperties := make(map[string]interface{})
+		_, eventExistsInMap := eventNamePropertiesMap[contactActivity.EventName]
+		if (*properties)[U.EP_IS_PAGE_VIEW] == "true" {
+			for _, prop := range pageViewPropsList {
+				_, propExists := (*properties)[prop]
+				if propExists {
+					filteredProperties[prop] = (*properties)[prop]
+				}
+			}
+			propertiesJSON, err := json.Marshal(filteredProperties)
+			if err != nil {
+				log.WithError(err).Error("filter properties marshal error.")
+			}
+			contactActivity.Properties = postgres.Jsonb{RawMessage: propertiesJSON}
+		} else if eventExistsInMap {
+			for _, prop := range eventNamePropertiesMap[contactActivity.EventName] {
+				_, propExists := (*properties)[prop]
+				if propExists {
+					filteredProperties[prop] = (*properties)[prop]
+				}
+			}
+			propertiesJSON, err := json.Marshal(filteredProperties)
+			if err != nil {
+				log.WithError(err).Error("filter properties marshal error.")
+			}
+			contactActivity.Properties = postgres.Jsonb{RawMessage: propertiesJSON}
+		} else {
+			contactActivity.Properties = postgres.Jsonb{RawMessage: json.RawMessage(`{}`)}
 		}
 		uniqueUser.UserActivity = append(uniqueUser.UserActivity, contactActivity)
 	}
@@ -197,7 +247,7 @@ func (store *MemSQL) GetProfileUserDetailsByID(projectID int64, identity string,
 
 	groupsMap := make(map[int]string)
 	for _, value := range groups {
-		groupsMap[value.ID] = value.Name
+		groupsMap[value.ID] = U.STANDARD_GROUP_DISPLAY_NAMES[value.Name]
 	}
 
 	if uniqueUser.Group1 {
