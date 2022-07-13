@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styles from './index.module.scss';
 import { SVG, Text } from '../factorsComponents';
-import { Input, Button } from 'antd';
+import { Input, Button,Spin } from 'antd';
 import { DISPLAY_PROP } from '../../utils/constants';
 
 const FaSelect = ({
@@ -61,8 +61,18 @@ const FaSelect = ({
   const renderOptions = () => {
     let rendOpts = [];
     let isSelected = false;
-
-    if (searchTerm?.length) {
+    if (!options.length) {
+      rendOpts.push(
+          <div className='flex justify-center items-center my-2'>
+            <Spin size='small'/>
+            <Text level={7} type={'title'} extraClass={'ml-2'} weight={'thin'} color={'grey'}>
+                Loading data...
+            </Text>
+          </div>
+      );
+    }
+    
+    else if (searchTerm?.length) {
       isSelected = isSelectedCheck([searchTerm]);
       rendOpts.push(
         <div
