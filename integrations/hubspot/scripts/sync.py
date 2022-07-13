@@ -936,6 +936,9 @@ def sync_form_submissions(project_id, api_key):
     if len(forms) == 0: 
         log.warning("No forms to sync on sync_form_submissions")
 
+    page_count = 50
+    buffer_size = page_count * get_buffer_size_by_api_count()
+    create_all_form_submissions_documents_with_buffer = get_create_all_documents_with_buffer(project_id,"form_submission",buffer_size)
     for form in forms:
         form_id = form.get("id")
         if form_id == None:
@@ -943,7 +946,7 @@ def sync_form_submissions(project_id, api_key):
             continue
 
         url = "https://api.hubapi.com/form-integrations/v1/submissions/forms/"+form_id+"?"
-        parameter_dict = { 'hapikey': api_key }
+        parameter_dict = { 'hapikey': api_key, "limit":50 }
         parameters = urllib.parse.urlencode(parameter_dict)
         get_url = url + parameters
         
@@ -952,6 +955,7 @@ def sync_form_submissions(project_id, api_key):
         r = get_with_fallback_retry(project_id, get_url)
         if not r.ok:
             log.error("Failure response %d from hubspot on sync_form_submissions", r.status_code)
+            create_all_form_submissions_documents_with_buffer([],False)
             return
         response = json.loads(r.text)
         docs = response.get("results")
@@ -962,10 +966,15 @@ def sync_form_submissions(project_id, api_key):
         # doesn't have it.
         for doc in docs: doc["formId"] = form_id
 
-        create_all_documents(project_id, 'form_submission', docs)
         count = count + len(docs)
-        log.warning("Downloaded and created %d form submisssions. total %d.", 
+        if allow_buffer_before_insert_by_project_id(project_id):
+            create_all_form_submissions_documents_with_buffer(docs,True)
+            log.warning("Downloaded %d form submissions. total %d.", len(docs), count)
+        else:
+            create_all_documents(project_id, 'form_submission', docs)
+            log.warning("Downloaded and created %d form submissions. total %d.", 
             len(docs), count)
+    create_all_form_submissions_documents_with_buffer([],False)
 
 
 def get_sync_info(sync_first_time = False):
