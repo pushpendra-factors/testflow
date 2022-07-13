@@ -30,7 +30,7 @@ func (store *MemSQL) ExecuteKPIForAttribution(projectID int64, query *model.Attr
 		U.DeepCopy(&query.KPI, &duplicatedRequest)
 		resultGroup, statusCode := store.ExecuteKPIQueryGroup(projectID, debugQueryKey,
 			duplicatedRequest, enableOptimisedFilterOnProfileQuery)
-		log.WithFields(log.Fields{"ResultGroup": resultGroup, "Status": statusCode}).Info("KPI-Attribution result received")
+		logCtx.WithFields(log.Fields{"ResultGroup": resultGroup, "Status": statusCode}).Info("KPI-Attribution result received")
 		if statusCode != http.StatusOK {
 			logCtx.Error("failed to get KPI result for attribution query")
 			if statusCode == http.StatusPartialContent {
@@ -42,7 +42,7 @@ func (store *MemSQL) ExecuteKPIForAttribution(projectID int64, query *model.Attr
 			// Skip the datetime header and the other result is of format. ex. "headers": ["$hubspot_deal_hs_object_id", "Revenue", "Pipeline", ...],
 			if res.Headers[0] == "datetime" {
 				kpiQueryResult = res
-				log.WithFields(log.Fields{"KpiQueryResult": kpiQueryResult}).Info("KPI-Attribution result set")
+				logCtx.WithFields(log.Fields{"KpiQueryResult": kpiQueryResult}).Info("KPI-Attribution result set")
 				break
 			}
 		}
@@ -55,7 +55,7 @@ func (store *MemSQL) ExecuteKPIForAttribution(projectID int64, query *model.Attr
 	}
 
 	// Pulling group ID (group user ID) for each KPI ID i.e. Deal ID or Opp ID
-	log.WithFields(log.Fields{"kpiKeys": kpiKeys}).Info("KPI-Attribution keys set")
+	logCtx.WithFields(log.Fields{"kpiKeys": kpiKeys}).Info("KPI-Attribution keys set")
 	if len(kpiKeys) == 0 {
 		return kpiData, groupUserIDToKpiID, kpiKeys, errors.New("no valid KPIs found for this query to run")
 	}
@@ -72,7 +72,7 @@ func (store *MemSQL) ExecuteKPIForAttribution(projectID int64, query *model.Attr
 	if err != nil {
 		return kpiData, groupUserIDToKpiID, kpiKeys, errors.New("no valid KPIs found for this query to run")
 	}
-	log.WithFields(log.Fields{"kpiKeyGroupUserIDList": kpiKeyGroupUserIDList}).Info("KPI-Attribution group set")
+	logCtx.WithFields(log.Fields{"kpiKeyGroupUserIDList": kpiKeyGroupUserIDList}).Info("KPI-Attribution group set")
 
 	err = store.PullKPIKeyUserGroupInfo(projectID, kpiKeyGroupUserIDList, _groupIDUserKey, &kpiData, &groupUserIDToKpiID, logCtx)
 	if err != nil {
@@ -80,13 +80,13 @@ func (store *MemSQL) ExecuteKPIForAttribution(projectID int64, query *model.Attr
 	}
 
 	logCtx.Info("done pulling group user list ids for Deal or Opportunity")
-	log.WithFields(log.Fields{"KPIAttribution": "Debug", "kpiData": kpiData, "groupUserIDToKpiID": groupUserIDToKpiID,
+	logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "kpiData": kpiData, "groupUserIDToKpiID": groupUserIDToKpiID,
 		"kpiKeys": kpiKeys}).Info("KPI-Attribution kpiData reports 1")
 	err = store.PullAllUsersByCustomerUserID(projectID, &kpiData, logCtx)
 	if err != nil {
 		return kpiData, groupUserIDToKpiID, kpiKeys, err
 	}
-	log.WithFields(log.Fields{"KPIAttribution": "Debug", "kpiData": kpiData, "groupUserIDToKpiID": groupUserIDToKpiID,
+	logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "kpiData": kpiData, "groupUserIDToKpiID": groupUserIDToKpiID,
 		"kpiKeys": kpiKeys}).Info("KPI-Attribution kpiData reports 2")
 
 	return kpiData, groupUserIDToKpiID, kpiKeys, nil
@@ -162,11 +162,11 @@ func (store *MemSQL) GetDataFromKPIResult(projectID int64, kpiQueryResult model.
 		return kpiKeys
 	}
 
-	log.WithFields(log.Fields{"kpiValueHeaders": kpiValueHeaders}).Info("KPI-Attribution headers set")
+	logCtx.WithFields(log.Fields{"kpiValueHeaders": kpiValueHeaders}).Info("KPI-Attribution headers set")
 
 	for _, row := range kpiQueryResult.Rows {
 
-		log.WithFields(log.Fields{"Row": row}).Info("KPI-Attribution KPI Row")
+		logCtx.WithFields(log.Fields{"Row": row}).Info("KPI-Attribution KPI Row")
 
 		var kpiDetail model.KPIInfo
 
@@ -308,7 +308,7 @@ func (store *MemSQL) PullKPIKeyUserGroupInfo(projectID int64, kpiKeyGroupUserIDL
 		}
 	}
 	logFields := log.Fields{"kpiData": kpiData, "project_id": projectID}
-	log.WithFields(logFields).Info("KPI-Attribution group set")
+	logCtx.WithFields(logFields).Info("KPI-Attribution group set")
 	defer U.CloseReadQuery(gULRows, tx2)
 
 	U.LogReadTimeWithQueryRequestID(startReadTime, reqID, &logFields)
@@ -364,7 +364,7 @@ func (store *MemSQL) PullAllUsersByCustomerUserID(projectID int64, kpiData *map[
 			custUserIdToUserIds[custUserID] = users
 		}
 	}
-	log.WithFields(log.Fields{"custUserIdToUserIds": custUserIdToUserIds}).
+	logCtx.WithFields(log.Fields{"custUserIdToUserIds": custUserIdToUserIds}).
 		Info("KPI-Attribution custUserIdToUserIds set")
 	U.LogReadTimeWithQueryRequestID(startReadTime, reqID, &log.Fields{})
 
