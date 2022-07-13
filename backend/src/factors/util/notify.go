@@ -93,8 +93,8 @@ func NotifyThroughSlack(source, env, message interface{}) error {
 		},
 	}
 
-	// pagerduty-high-priority Slack channel
-	url_Slack_TOPIC := "https://hooks.slack.com/services/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"
+	// Send to slack channel #panic-production
+	url_Slack_TOPIC := "https://hooks.slack.com/services/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"
 
 	if env == "staging" {
 		log.WithFields(log.Fields{"message": message, "source": source}).Info("Notification.")
@@ -108,10 +108,9 @@ func NotifyThroughSlack(source, env, message interface{}) error {
 	}
 
 	if env == "development" {
+		// Not sent to slack channel from development.
 		fmt.Println("-- Notification Template -- \n")
 		fmt.Println(string(jsonBody))
-		// panic-notification-on-slack Slack channel
-		url_Slack_TOPIC = "https://hooks.slack.com/services/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"
 	}
 
 	req, err := http.NewRequest("POST", url_Slack_TOPIC, bytes.NewBuffer(jsonBody))
@@ -159,7 +158,8 @@ func NotifyOnPanicWithError(env, appName string) {
 
 		msg := fmt.Sprintf("Panic CausedBy: %v\nStackTrace: %v\n", r, string(buf))
 		details := fmt.Sprintf("Debug stack: %s", string(debug.Stack()))
-		log.Errorf("Recovering from panic: %v, details: %v", msg, details)
+		log.WithField("message", msg).WithField("details", details).
+			Error("Panic Recovered.")
 
 		err := NotifyThroughSNS(appName, env, msg)
 		if err != nil {

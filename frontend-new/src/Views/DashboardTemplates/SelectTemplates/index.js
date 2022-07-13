@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import {Spin} from "antd";
+import React, { useState, useCallback, useEffect } from "react";
+import {Spin,Input} from "antd";
 import { useSelector, useDispatch } from "react-redux";
 import {
     Text,
@@ -9,7 +9,7 @@ import {
   } from '../../../components/factorsComponents'
 
 import TemplateCard from "./TemplateCard";
-import SearchBar from "../../../components/SearchBar";
+import { SearchOutlined } from '@ant-design/icons';
 import { ErrorBoundary } from 'react-error-boundary';
 import styles from './index.module.scss';
 import TemplateDetails from "./TemplateDetails";
@@ -33,12 +33,15 @@ function SelectTemplates({setShowTemplates,templates}){
         }
     }, [TemplateSelected]);
 
-    // const handleSearchChange = useCallback((e) => {
-    //   setSearchVal(e.target.value);
-    // }, []);
+    const handleSearchChange = useCallback((e) => {
+      setSearchVal(e.target.value);
+    }, []);
 
     const renderTemplateCards=()=>{
-        return templates.data.map(t=><TemplateCard id = {t.id} title={t.title} description={t.description} setTemplateSelected={setTemplateSelected}/>)
+        const filteredTemplates = templates.data.filter(
+            (q) => q.title.toLowerCase().indexOf(searchVal.toLowerCase()) > -1
+        );
+        return filteredTemplates.map(t=><TemplateCard id = {t.id} title={t.title} description={t.description} setTemplateSelected={setTemplateSelected}/>)
     }
     if (templates.loading) {
         return (
@@ -48,7 +51,6 @@ function SelectTemplates({setShowTemplates,templates}){
         );
       }
     
-    if (templates.data.length) {
         return(
             <div>
                 { showCardDetails && 
@@ -85,18 +87,27 @@ function SelectTemplates({setShowTemplates,templates}){
                             <Text type='paragraph' >Browse the templates from our wide range of commonly used reports.</Text>
                             <Text type='paragraph' >Curated by top marketers in the industry.</Text>
                             </div>
-                            <SearchBar />
+                            <div className={`${styles.searchBar} query-search`}>
+                                <Input
+                                onChange={handleSearchChange}
+                                value={searchVal}
+                                className={styles.searchInput}
+                                placeholder='Make widgets from saved queries'
+                                prefix={<SearchOutlined style={{ width: '1rem' }} color='#0E2647' />}
+                                />
+                            </div>
                         </div>
                     {/* </Header> */}
                     </div>
+                    {templates.data.length>0 &&(
                     <div className={'mx-32 mt-10 justify-center grid grid-cols-3 gap-12'}>
                             {renderTemplateCards()}
                             {/* </div> */}
                         {/* </Row> */}
-                    </div>
+                    </div>)
+                    }
                 </ErrorBoundary>
             </div>
         );
-    } 
 }
 export default SelectTemplates;

@@ -882,7 +882,12 @@ func (store *MemSQL) runFunnelAndInsightsUnit(projectID int64, queryOriginal mod
 }
 
 func (store *MemSQL) runAttributionUnit(projectID int64, queryOriginal *model.AttributionQuery, c chan Result) {
-	var debugQueryKey string
+	attributionQueryUnitPayload := model.AttributionQueryUnit{
+		Class: model.QueryClassAttribution,
+		Query: queryOriginal,
+	}
+	QueryKey, _ := attributionQueryUnitPayload.GetQueryCacheRedisKey(projectID)
+	debugQueryKey := model.GetStringKeyFromCacheRedisKey(QueryKey)
 	r, err := store.ExecuteAttributionQuery(projectID, queryOriginal, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery())
 	result := Result{res: r, err: err, errMsg: ""}
 	c <- result

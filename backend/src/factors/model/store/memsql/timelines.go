@@ -61,9 +61,12 @@ func (store *MemSQL) GetProfileUsersListByProjectId(projectId int64, payload mod
 	parameters = append(parameters, filterParameters...)
 	parameters = append(parameters, gorm.NowFunc())
 
+	// Get min and max updated_at for 100k after
+	// ordering as part of optimisation.
 	err := db.Raw(`SELECT MIN(updated_at) AS min_updated_at, 
 		MAX(updated_at) AS max_updated_at 
-		FROM (SELECT updated_at FROM users WHERE `+whereString+` AND updated_at < ? LIMIT 1000)`, parameters...).
+		FROM (SELECT updated_at FROM users WHERE `+whereString+` AND updated_at < ? 
+		ORDER BY updated_at DESC LIMIT 100000)`, parameters...).
 		Scan(&minMax).Error
 	if err != nil {
 		log.WithField("status", err).Error("min and max updated_at couldn't be defined.")
@@ -160,10 +163,16 @@ func (store *MemSQL) GetProfileUserDetailsByID(projectID int64, identity string,
 	standardDisplayNames := U.STANDARD_EVENTS_DISPLAY_NAMES
 	_, projectDisplayNames := store.GetDisplayNamesForAllEvents(projectID)
 
+	webSessionCount := 0
+
 	for rows.Next() {
 		var contactActivity model.ContactActivity
 		if err := db.ScanRows(rows, &contactActivity); err != nil {
 			log.WithError(err).Error("Failed scanning events list")
+		}
+		// Session Count workaround
+		if contactActivity.EventName == U.EVENT_NAME_SESSION {
+			webSessionCount += 1
 		}
 		if standardDisplayNames[contactActivity.EventName] != "" {
 			contactActivity.DisplayName = standardDisplayNames[contactActivity.EventName]
@@ -174,6 +183,8 @@ func (store *MemSQL) GetProfileUserDetailsByID(projectID int64, identity string,
 		}
 		uniqueUser.UserActivity = append(uniqueUser.UserActivity, contactActivity)
 	}
+
+	uniqueUser.WebSessionsCount = float64(webSessionCount)
 
 	groups, errCode := store.GetGroups(projectID)
 	if errCode != http.StatusFound {

@@ -204,7 +204,7 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 	assert.NotEmpty(t, response)
 	assert.Equal(t, http.StatusOK, status)
 
-	timestamp = timestamp + 10000
+	timestamp = timestamp - 10000
 	trackPayload = SDK.TrackPayload{
 		Name:          U.EVENT_NAME_FORM_SUBMITTED,
 		Timestamp:     timestamp,
@@ -216,9 +216,9 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 	assert.Empty(t, response.UserId)
 	assert.Equal(t, http.StatusOK, status)
 
-	timestamp = timestamp + 10000
+	timestamp = timestamp - 10000
 	trackPayload = SDK.TrackPayload{
-		Name:      U.EVENT_NAME_FORM_SUBMITTED,
+		Name:      U.EVENT_NAME_SESSION,
 		Timestamp: timestamp,
 		UserId:    user.ID,
 		EventProperties: U.PropertiesMap{
@@ -231,7 +231,7 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 	assert.Empty(t, response.UserId)
 	assert.Equal(t, http.StatusOK, status)
 
-	timestamp = timestamp + 10000
+	timestamp = timestamp - 10000
 	trackPayload = SDK.TrackPayload{
 		Name:          U.EVENT_NAME_FORM_SUBMITTED,
 		Timestamp:     timestamp,
@@ -265,7 +265,7 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 		assert.Equal(t, resp.Company, "Freshworks")
 		assert.Equal(t, resp.Email, customerEmail)
 		assert.Equal(t, resp.Country, "Australia")
-		assert.Equal(t, resp.WebSessionsCount, float64(8))
+		assert.Equal(t, resp.WebSessionsCount, float64(1))
 		assert.Equal(t, resp.NumberOfPageViews, float64(10))
 		assert.Equal(t, resp.TimeSpentOnSite, float64(500))
 		assert.NotNil(t, resp.GroupInfos)
@@ -276,13 +276,9 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 			if resp.UserActivity == nil {
 				return false
 			}
-			n := len(resp.UserActivity)
 			for i, activity := range resp.UserActivity {
 				assert.NotNil(t, activity.EventName)
 				assert.NotNil(t, activity.DisplayName)
-				if i < n-1 {
-					assert.Equal(t, activity.EventName, U.EVENT_NAME_FORM_SUBMITTED)
-				}
 				assert.NotNil(t, activity.Timestamp)
 				if i > 1 {
 					if resp.UserActivity[i].Timestamp > resp.UserActivity[i-1].Timestamp {
@@ -291,7 +287,6 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 				}
 
 			}
-			assert.Equal(t, resp.UserActivity[n-1].EventName, randomeEventName)
 			return true
 		})
 	})

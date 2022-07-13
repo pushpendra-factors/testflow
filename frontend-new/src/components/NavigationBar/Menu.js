@@ -211,10 +211,7 @@ function SiderMenu({
       >
         <b>Analyse</b>
       </Menu.Item>
-      {(window.document.domain === 'app.factors.ai' &&
-        whiteListedAccounts.includes(activeAgent)) ||
-      window.document.domain === 'staging-app.factors.ai' ||
-      window.document.domain === 'factors-dev.com' ? (
+      {
         // collapsed ? (
         //   <Popover
         //     overlayClassName={styles.popover}
@@ -250,7 +247,7 @@ function SiderMenu({
         >
           <b>User Profiles</b>
         </Menu.Item>
-      ) : null}
+      }
 
       <Menu.Item
         className={styles.menuitems}

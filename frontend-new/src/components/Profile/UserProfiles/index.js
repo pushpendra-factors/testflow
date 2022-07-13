@@ -28,19 +28,23 @@ function UserProfiles({
   fetchProfileUserDetails,
   getUserProperties,
 }) {
+  const headerClassStr =
+    'fai-text fai-text__color--grey-2 fai-text__size--h7 fai-text__weight--bold';
+
   const columns = [
     {
-      title: 'Identity',
+      title: <div className={headerClassStr}>Identity</div>,
       dataIndex: 'identity',
       key: 'identity',
     },
     {
-      title: 'Country',
+      title: <div className={headerClassStr}>Country</div>,
       dataIndex: 'country',
       key: 'country',
+      render: (item) => item || '-',
     },
     {
-      title: 'Last Activity',
+      title: <div className={headerClassStr}>Last Activity</div>,
       dataIndex: 'last_activity',
       key: 'last_activity',
       width: 300,

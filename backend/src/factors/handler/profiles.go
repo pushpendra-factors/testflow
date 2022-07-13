@@ -185,7 +185,7 @@ func ProfilesQueryHandler(c *gin.Context) (interface{}, int, string, string, boo
 	}*/
 
 	// Use optimised filter for profiles query if enabled using header or configuration.
-	enableOptimisedFilter := c.Request.Header.Get("Use-Filter-Opt-Profiles") == "true" ||
+	enableOptimisedFilter := c.Request.Header.Get(H.HeaderUserFilterOptForProfiles) == "true" ||
 		C.EnableOptimisedFilterOnProfileQuery()
 
 	model.SetQueryCachePlaceholder(projectID, &profileQueryGroup)

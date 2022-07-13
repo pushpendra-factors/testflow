@@ -6,14 +6,13 @@ import { ErrorBoundary } from 'react-error-boundary';
 import { Button} from 'antd';
 import NewDashboard from './NewDashboard';
 import SelectTemplates from './SelectTemplates';
-import { useDispatch, useSelector } from 'react-redux';
+import { useSelector } from 'react-redux';
 import styles from './index.module.scss';
 
 
 function DashboardTemplates() {
     const history = useHistory();
     const [AddDashboardDetailsVisible, setAddDashboardDetailsVisible] = useState(false);
-    const [AddReportsVisible, setAddReportsVisible]=useState(false);
     const [showTemplates,setShowTemplates]=useState(false);
     const {templates}  = useSelector((state) => state.dashboardTemplates);
     return (
@@ -92,9 +91,7 @@ function DashboardTemplates() {
                 </div>
                   <NewDashboard 
                     AddDashboardDetailsVisible={AddDashboardDetailsVisible}
-                    AddReportsVisible={AddReportsVisible}
                     setAddDashboardDetailsVisible={setAddDashboardDetailsVisible}
-                    setAddReportsVisible={setAddReportsVisible}
                   />
             </ErrorBoundary>
         </>

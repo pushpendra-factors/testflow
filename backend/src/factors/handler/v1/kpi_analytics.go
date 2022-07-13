@@ -225,7 +225,7 @@ func ExecuteKPIQueryHandler(c *gin.Context) (interface{}, int, string, string, b
 	H.SleepIfHeaderSet(c)
 
 	// Use JSON optimised filter for profiles query from KPI if enabled using query_param or global config.
-	enableOptimisedFilterOnProfileQuery := c.Request.Header.Get("Use-Filter-Opt-Profiles") == "true" ||
+	enableOptimisedFilterOnProfileQuery := c.Request.Header.Get(H.HeaderUserFilterOptForProfiles) == "true" ||
 		C.EnableOptimisedFilterOnProfileQuery()
 
 	var duplicatedRequest model.KPIQueryGroup

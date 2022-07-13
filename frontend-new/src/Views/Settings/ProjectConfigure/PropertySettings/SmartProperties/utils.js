@@ -32,16 +32,14 @@ export class FilterClass {
     }
 }
 export class SmartPropertyClass  {
-    id = '';
-    project_id = '';
+    id = ''; 
     name = '';
     description = '';
     type_alias = '';
     rules = [];
 
-    constructor(id, project_id, name, description, type, rules) {
+    constructor(id, name, description, type, rules) {
         this.id = id;
-        this.project_id = project_id;
         this.name = name;
         this.description = description;
         this.type_alias = type;
