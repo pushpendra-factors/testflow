@@ -6,8 +6,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const MAX_PATTERNS = 20000
-const MAX_LENGTH = 4
+const MAX_PATTERNS = 15000
+const MAX_LENGTH = 3
 
 func HmineHelper(prefix []string, htb HeadTable, fc Fmap, support_count int, fpc *FpContainer, fmain Fmap) error {
 
