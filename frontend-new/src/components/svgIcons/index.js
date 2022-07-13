@@ -2312,6 +2312,53 @@ const Times_circleSVG = ({ size = 16, extraClass, color = '#8692A3' }) => {
   );
 };
 
+const Activity_filterSVG = ({ size = 20, extraClass, color }) => {
+  return (
+    <svg
+      width={size}
+      height={size}
+      className={extraClass}
+      viewBox='0 0 21 20'
+      fill={color}
+      xmlns='http://www.w3.org/2000/svg'
+    >
+      <g clip-path='url(#clip0_2444_2360)'>
+        <path
+          fill-rule='evenodd'
+          clip-rule='evenodd'
+          d='M2.65234 4.375C2.65234 3.85723 3.07208 3.4375 3.58984 3.4375H12.9648C13.4826 3.4375 13.9023 3.85723 13.9023 4.375C13.9023 4.89277 13.4826 5.3125 12.9648 5.3125H3.58984C3.07208 5.3125 2.65234 4.89277 2.65234 4.375Z'
+          fill='#8692A3'
+        />
+        <path
+          fill-rule='evenodd'
+          clip-rule='evenodd'
+          d='M2.65234 9.0625C2.65234 8.54473 3.07208 8.125 3.58984 8.125H16.7148C17.2326 8.125 17.6523 8.54473 17.6523 9.0625C17.6523 9.58027 17.2326 10 16.7148 10H3.58984C3.07208 10 2.65234 9.58027 2.65234 9.0625Z'
+          fill='#8692A3'
+        />
+        <path
+          fill-rule='evenodd'
+          clip-rule='evenodd'
+          d='M2.65234 13.75C2.65234 13.2322 3.07208 12.8125 3.58984 12.8125H8.27734C8.79511 12.8125 9.21484 13.2322 9.21484 13.75C9.21484 14.2678 8.79511 14.6875 8.27734 14.6875H3.58984C3.07208 14.6875 2.65234 14.2678 2.65234 13.75Z'
+          fill='#8692A3'
+        />
+        <path
+          d='M17.5837 12.4489L17.0578 11.9554C16.9664 11.8482 16.7834 11.8482 16.6691 11.9554L13.445 14.9589L12.0731 13.6717C11.9587 13.5644 11.7987 13.5644 11.6844 13.6717L11.1584 14.1437C11.067 14.2509 11.067 14.4226 11.1584 14.5084L13.2392 16.4821C13.3536 16.5893 13.5136 16.5893 13.628 16.4821L17.5837 12.8136C17.6752 12.7063 17.6752 12.5347 17.5837 12.4489Z'
+          fill='#8692A3'
+        />
+      </g>
+      <defs>
+        <clipPath id='clip0_2444_2360'>
+          <rect
+            width='15'
+            height='15'
+            fill='white'
+            transform='translate(2.65234 2.5)'
+          />
+        </clipPath>
+      </defs>
+    </svg>
+  );
+};
 const AddNewSVG = ({width,height,extraClass}) => {
   return(
     <svg width={width} height={height} viewBox="0 0 49 49" className={extraClass} fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -2548,6 +2595,7 @@ export {
   Grip_linesSVG,
   User_friendsSVG,
   Times_circleSVG,
+  Activity_filterSVG,
   AddNewSVG,
   SelectFromTemplatesSVG,
   ArrowLeftSVG,

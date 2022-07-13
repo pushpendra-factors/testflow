@@ -71,8 +71,8 @@ func main() {
 	skipUserJoinInEventQueryByProjectID := flag.String("skip_user_join_in_event_query_by_project_id", "", "")
 	enableSlowDBQueryLogging := flag.Bool("log_slow_db_queries", false, "Logs queries with execution time greater than 50ms.")
 	allowProfilesGroupSupport := flag.String("allow_profiles_group_support", "", "")
-	enableOptimisedFilterOnProfileQuery := flag.Bool("enable_optimised_filter_on_profile_query",
-		false, "Enables filter optimisation logic for profiles query.")
+	enableOptimisedFilterOnProfileQuery := flag.Int("enable_optimised_filter_on_profile_query",
+		0, "Enables filter optimisation logic for profiles query.")
 
 	flag.Parse()
 
@@ -138,7 +138,7 @@ func main() {
 		OnlyKPICaching:                      *onlyKPICaching,
 		SkipKPICaching:                      *skipKPICaching,
 		EnableSlowDBQueryLogging:            *enableSlowDBQueryLogging,
-		EnableOptimisedFilterOnProfileQuery: *enableOptimisedFilterOnProfileQuery,
+		EnableOptimisedFilterOnProfileQuery: *enableOptimisedFilterOnProfileQuery != 0,
 	}
 
 	C.InitConf(config)

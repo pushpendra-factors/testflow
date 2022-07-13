@@ -51,7 +51,6 @@ function SelectTemplates({setShowTemplates,templates}){
         );
       }
     
-    if (templates.data.length) {
         return(
             <div>
                 { showCardDetails && 
@@ -100,14 +99,15 @@ function SelectTemplates({setShowTemplates,templates}){
                         </div>
                     {/* </Header> */}
                     </div>
+                    {templates.data.length>0 &&(
                     <div className={'mx-32 mt-10 justify-center grid grid-cols-3 gap-12'}>
                             {renderTemplateCards()}
                             {/* </div> */}
                         {/* </Row> */}
-                    </div>
+                    </div>)
+                    }
                 </ErrorBoundary>
             </div>
         );
-    } 
 }
 export default SelectTemplates;
