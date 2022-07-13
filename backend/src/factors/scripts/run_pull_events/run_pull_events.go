@@ -60,6 +60,7 @@ func main() {
 		"Optional: Project Id. A comma separated list of project Ids and supports '*' for all projects. ex: 1,2,6,9")
 
 	lookback := flag.Int("lookback", 30, "lookback_for_delta lookup")
+	projectsFromDB := flag.Bool("projects_from_db", false, "")
 	flag.Parse()
 
 	if *env != "development" &&
@@ -116,16 +117,27 @@ func main() {
 		fileTypesMap[fileTypes[i]] = true
 	}
 
-	allProjects, projectIdsToRun, _ := C.GetProjectsFromListWithAllProjectSupport(*projectIdFlag, "")
-	if allProjects {
-		projectIDs, errCode := store.GetStore().GetAllProjectIDs()
-		if errCode != http.StatusFound {
-			log.Fatal("Failed to get all projects and project_ids set to '*'.")
+	projectIdsToRun := make(map[int64]bool, 0)
+	if *projectsFromDB {
+		wi_projects, _ := store.GetStore().GetAllWeeklyInsightsEnabledProjects()
+		explain_projects, _ := store.GetStore().GetAllExplainEnabledProjects()
+		for _, id := range wi_projects {
+			projectIdsToRun[id] = true
+		}
+		for _, id := range explain_projects {
+			projectIdsToRun[id] = true
 		}
 
-		projectIdsToRun = make(map[int64]bool, 0)
-		for _, projectID := range projectIDs {
-			projectIdsToRun[projectID] = true
+	} else {
+		allProjects, _, _ := C.GetProjectsFromListWithAllProjectSupport(*projectIdFlag, "")
+		if allProjects {
+			projectIDs, errCode := store.GetStore().GetAllProjectIDs()
+			if errCode != http.StatusFound {
+				log.Fatal("Failed to get all projects and project_ids set to '*'.")
+			}
+			for _, projectID := range projectIDs {
+				projectIdsToRun[projectID] = true
+			}
 		}
 	}
 

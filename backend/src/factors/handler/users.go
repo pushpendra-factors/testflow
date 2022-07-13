@@ -182,6 +182,23 @@ func GetUserPropertiesHandler(c *gin.Context) {
 		for property, displayName := range displayNames {
 			displayNamesOp[property] = displayName
 		}
+		for _, props := range properties {
+			for _, prop := range props {
+				displayName := U.CreateVirtualDisplayName(prop)
+				_, exist := displayNamesOp[prop]
+				if !exist {
+					displayNamesOp[prop] = displayName
+				}
+			}
+		}
+		dupCheck := make(map[string]bool)
+		for _, name := range displayNamesOp {
+			_, exists := dupCheck[name]
+			if exists {
+				logCtx.Error(fmt.Sprintf("Duplicate display name %s", name))
+			}
+			dupCheck[name] = true
+		}
 		c.JSON(http.StatusOK, gin.H{"properties": properties, "display_names": displayNamesOp})
 		return
 	}

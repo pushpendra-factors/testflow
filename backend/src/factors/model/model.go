@@ -349,6 +349,8 @@ type Model interface {
 	EnableExplain(projectId int64) int
 	DisableWeeklyInsights(projectId int64) int
 	DisableExplain(projectId int64) int
+	GetAllWeeklyInsightsEnabledProjects() ([]int64, error)
+	GetAllExplainEnabledProjects() ([]int64, error)
 
 	// project
 	UpdateProject(projectID int64, project *model.Project) int
