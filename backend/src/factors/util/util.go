@@ -102,7 +102,7 @@ const (
 	CacheExpiryWeeklyRangeInSeconds = 6 * 7 * SECONDS_IN_A_DAY // 6 Weeks.
 	CacheExpiryDefaultInSeconds     = 62 * SECONDS_IN_A_DAY    // 62 Days.
 
-	CacheExpiryQueryMaxInSeconds            = 2 * SECONDS_IN_A_DAY
+	CacheExpiryQueryMaxInSecondsTwoDays     = 2 * SECONDS_IN_A_DAY
 	CacheExpiryQueryMaxInSecondsSevenDays   = 7 * SECONDS_IN_A_DAY
 	CacheExpiryQueryTodaysDataInSeconds     = 10 * 60      // 10 minutes.
 	CacheExpiryDashboardTodaysDataInSeconds = 12 * 60 * 60 // 12 hours.
@@ -886,9 +886,9 @@ func GetQueryCacheResultExpiryInSeconds(from, to int64, timezoneString TimeZoneS
 		return float64(CacheExpiryQueryTodaysDataInSeconds)
 	} else if nowStartOfDay > toStartOfDay && nowStartOfDay-toStartOfDay > ImmutableDataEndDateBufferInSeconds {
 		// Data can be assumed to be immutable here after buffer (2) days.
-		return float64(CacheExpiryQueryMaxInSecondsSevenDays)
+		return float64(CacheExpiryQueryMaxInSecondsTwoDays)
 	}
-	return float64(CacheExpiryQueryMaxInSecondsSevenDays)
+	return float64(CacheExpiryQueryMaxInSecondsTwoDays)
 }
 
 func GetAggrAsFloat64(aggr interface{}) (float64, error) {
