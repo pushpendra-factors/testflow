@@ -154,7 +154,7 @@ func EventsQueryHandler(c *gin.Context) (interface{}, int, string, string, bool)
 		return nil, http.StatusBadRequest, V1.INVALID_INPUT, err.Error(), true
 	}
 	var cacheResult model.ResultGroup
-	shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &requestPayload, cacheResult, isDashboardQueryRequest, reqId)
+	shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &requestPayload, cacheResult, isDashboardQueryRequest, reqId, false)
 	if shouldReturn {
 		if resCode == http.StatusOK {
 			return resMsg, resCode, "", "", false
@@ -185,9 +185,17 @@ func EventsQueryHandler(c *gin.Context) (interface{}, int, string, string, bool)
 			Result: resultGroup, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(), TimeZone: string(timezoneString)}, http.StatusOK, "", "", false
 	}
 	resultGroup.Query = requestPayload
+	resultGroup.IsShareable = isQueryShareable(requestPayload)
 	return resultGroup, http.StatusOK, "", "", false
 }
-
+func isQueryShareable(queryGroup model.QueryGroup) bool {
+	for _, query := range queryGroup.Queries {
+		if query.GroupByProperties != nil && len(query.GroupByProperties) > 0 {
+			return false
+		}
+	}
+	return true
+}
 // QueryHandler godoc
 // @Summary To run a particular query from core query or dashboards.
 // @Tags CoreQuery
@@ -311,7 +319,7 @@ func QueryHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 	}
 
 	var cacheResult model.QueryResult
-	shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &requestPayload.Query, cacheResult, isDashboardQueryRequest, reqId)
+	shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &requestPayload.Query, cacheResult, isDashboardQueryRequest, reqId, false)
 
 	if shouldReturn {
 		if resCode == http.StatusOK {

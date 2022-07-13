@@ -617,7 +617,7 @@ type Model interface {
 	GetSlackAuthToken(projectID int64, agentUUID string) (model.SlackAccessTokens, error)
 	DeleteSlackIntegration(projectID int64, agentUUID string) error
 	GetAlertById(id string, projectID int64) (model.Alert, int)
-	GetAllAlerts(projectID int64) ([]model.Alert, int)
+	GetAllAlerts(projectID int64, excludeSavedQueries bool) ([]model.Alert, int)
 	DeleteAlert(id string, projectID int64) (int, string)
 	CreateAlert(projectID int64, alert model.Alert) (model.Alert, int, string)
 	GetAlertNamesByProjectIdTypeAndName(projectID int64, nameOfQuery string) ([]string, int)

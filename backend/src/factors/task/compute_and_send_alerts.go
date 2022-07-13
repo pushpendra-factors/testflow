@@ -1,22 +1,23 @@
 package task
 
 import (
+	"encoding/json"
 	"errors"
 	C "factors/config"
+	H "factors/handler/helpers"
 	"factors/model/model"
 	"factors/model/store"
 	slack "factors/slack_bot/handler"
 	U "factors/util"
 	"fmt"
+	"github.com/jinzhu/gorm/dialects/postgres"
+	"github.com/jinzhu/now"
+	log "github.com/sirupsen/logrus"
 	"math"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/jinzhu/gorm/dialects/postgres"
-	"github.com/jinzhu/now"
-	log "github.com/sirupsen/logrus"
 )
 
 type Message struct {
@@ -42,7 +43,7 @@ type dateRanges struct {
 }
 
 func ComputeAndSendAlerts(projectID int64, configs map[string]interface{}) (map[string]interface{}, bool) {
-	allAlerts, errCode := store.GetStore().GetAllAlerts(projectID)
+	allAlerts, errCode := store.GetStore().GetAllAlerts(projectID, false)
 	if errCode != http.StatusFound {
 		log.Fatalf("Failed to get all alerts for project_id: %v", projectID)
 		return nil, false
@@ -65,7 +66,13 @@ func ComputeAndSendAlerts(projectID int64, configs map[string]interface{}) (map[
 		if err != nil {
 			continue
 		}
-
+		if alert.AlertType == 3 {
+			_, err := HandlerAlertWithQueryID(alert, configs)
+			if err != nil{
+				log.WithError(err).Error("failed to run type 3 alert with alert id ",alert.ID)
+			}
+			continue
+		}
 		if kpiQuery.Category == model.ProfileQueryClass {
 			kpiQuery.GroupByTimestamp = getGBTForKPIQuery(alertDescription.DateRange)
 		}
@@ -557,6 +564,486 @@ func getGBTForKPIQuery(dateRangeType string) string {
 	}
 	return ""
 }
+func HandlerAlertWithQueryID(alert model.Alert, configs map[string]interface{}) (bool, error) {
+	logCtx := log.WithFields(log.Fields{
+		"projectID": alert.ProjectID,
+		"alertID":   alert.ID,
+	})
+	projectID := alert.ProjectID
+	query, status := store.GetStore().GetQueryWithQueryId(projectID, alert.QueryID)
+	if status != http.StatusFound {
+		log.WithContext(logCtx.Context).Error("Query not found for id ", alert.QueryID)
+		return false, errors.New("Query not found")
+	}
+	class, errMsg := store.GetStore().GetQueryClassFromQueries(*query)
+	if errMsg != "" {
+		log.Error("Class not Found for queryID ", errMsg)
+		return false, errors.New(errMsg)
+	}
+	var alertConfiguration model.AlertConfiguration
+	err := U.DecodePostgresJsonbToStructType(alert.AlertConfiguration, &alertConfiguration)
+	if err != nil {
+		log.Errorf("failed to decode alert configuration for project_id: %v, alert_name: %s", projectID, alert.AlertName)
+		log.Error(err)
+		return false, errors.New(fmt.Sprintf("failed to decode alert configuration for project_id: %v, alert_name: %s", projectID, alert.AlertName))
+	}
+	if class == model.QueryClassEvents {
+		_, err = handleShareQueryTypeEvents(alert, query, configs)
+		if err != nil {
+			logCtx.Error(err)
+		}
+		return true, nil
+	} else if class == model.QueryClassKPI {
+		_, err = handleShareQueryTypeKPI(alert, query, configs)
+		if err != nil {
+			logCtx.Error(err)
+		}
+		return true, nil
+	}
+	return false, errors.New("query type not supported for this operation")
+}
+func handleShareQueryTypeEvents(alert model.Alert, query *model.Queries, configs map[string]interface{}) (bool, error) {
+	projectID := alert.ProjectID
+	queryGroup := model.QueryGroup{}
+	U.DecodePostgresJsonbToStructType(&query.Query, &queryGroup)
+	if len(queryGroup.Queries) == 0 {
+		log.Error("Query failed. Empty query group.")
+		return false, errors.New("Query failed. Empty query group.")
+	}
+	var alertConfiguration model.AlertConfiguration
+	err := U.DecodePostgresJsonbToStructType(alert.AlertConfiguration, &alertConfiguration)
+	if err != nil {
+		log.Errorf("failed to decode alert configuration for project_id: %v, alert_name: %s", projectID, alert.AlertName)
+		log.Error(err)
+		return false, errors.New(fmt.Sprintf("failed to decode alert configuration for project_id: %v, alert_name: %s", projectID, alert.AlertName))
+	}
+
+	var alertDescription model.AlertDescription
+	err = U.DecodePostgresJsonbToStructType(alert.AlertDescription, &alertDescription)
+	if err != nil {
+		log.Errorf("failed to decode alert description for project_id: %v, alert_name: %s", projectID, alert.AlertName)
+		log.Error(err)
+		return false, err
+	}
+
+	var timezoneString U.TimeZoneString
+	var statusCode int
+	if queryGroup.Queries[0].Timezone != "" {
+		_, errCode := time.LoadLocation(string(queryGroup.Queries[0].Timezone))
+		if errCode != nil {
+			log.Error("Query failed. Invalid timezone.")
+			return false, errors.New("Query failed. Invalid timezone.")
+		}
+		timezoneString = U.TimeZoneString(queryGroup.Queries[0].Timezone)
+	} else {
+		timezoneString, statusCode = store.GetStore().GetTimezoneForProject(projectID)
+		if statusCode != http.StatusFound {
+			log.Error("Query failed. Invalid timezone.")
+			return false, errors.New("Query failed. Invalid timezone.")
+		}
+		// logCtx.WithError(err).Error("Query failed. Invalid Timezone.")
+	}
+	queryGroup.SetTimeZone(timezoneString)
+
+	err = queryGroup.TransformDateTypeFilters()
+	if err != nil {
+		log.Error("Query failed. Error in date type filter.")
+		return false, err
+
+	}
+	var endTimeStamp time.Time
+	if configs != nil {
+		endTimestampUnix := configs["endTimestamp"].(int64)
+		if endTimestampUnix == 0 || endTimestampUnix > U.TimeNowUnix() {
+			return false, errors.New("invalid end time stamp")
+		}
+		endTimeStamp = time.Unix(endTimestampUnix, 0)
+	}
+	title := strings.Title(alert.AlertName)
+
+	var dateRange dateRanges
+
+	if alertDescription.DateRange != "" {
+		dateRange, err = getDateRange(timezoneString, alertDescription.DateRange, "", endTimeStamp)
+		for _, query := range queryGroup.Queries {
+			query.From = dateRange.from
+			query.To = dateRange.to
+		}
+	}
+	from := time.Unix(queryGroup.Queries[0].From, 0)
+	to := time.Unix(queryGroup.Queries[0].To, 0)
+	fromTime := U.ConvertTimeIn(from, timezoneString)
+	toTime := U.ConvertTimeIn(to, timezoneString)
+	fromStr := fromTime.Format("02 Jan 2006")
+	toStr := toTime.Format("02 Jan 2006")
+	newDateRange := fromStr + " - " + toStr
+
+	var cacheResult model.ResultGroup
+	// fix is Dashboard query request flag
+	shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(nil, projectID, &queryGroup, cacheResult, false, "", true)
+	if shouldReturn {
+		if resCode == http.StatusOK {
+			// trigger the alert based on resMsg
+			tempjson, _ := json.Marshal(resMsg)
+			err := json.Unmarshal(tempjson, &cacheResult)
+			if err != nil {
+				log.Error(err)
+				return false, err
+			}
+			if alertConfiguration.IsEmailEnabled || alertConfiguration.IsSlackEnabled {
+				tableRows := getEmailTemplateForSavedQuerySharing(alert, model.QueryClassEvents, cacheResult.Results)
+				if alertConfiguration.IsEmailEnabled {
+					sendEmailSavedQueryReport(title, tableRows, newDateRange, alertConfiguration.Emails)
+				}
+				if alertConfiguration.IsSlackEnabled {
+					sendSlackAlertForSavedQueries(alert, newDateRange, model.QueryClassEvents, title, cacheResult.Results, alertConfiguration.SlackChannelsAndUserGroups)
+				}
+			}
+			return true, nil
+		}
+		log.Error("Query failed. Error Processing/Fetching data from Query cache")
+		return false, errors.New("Query failed. Error Processing/Fetching data from Query cache")
+	}
+	resultGroup, errCode := store.GetStore().RunEventsGroupQuery(queryGroup.Queries, alert.ProjectID)
+	if errCode != http.StatusOK {
+		model.DeleteQueryCacheKey(alert.ProjectID, &queryGroup)
+		log.Error("Query failed. Failed to process query from DB")
+		if errCode == http.StatusPartialContent {
+			return false, errors.New("Query failed. Failed to process query from DB .")
+		}
+		return false, errors.New("Query failed. Failed to process query from DB")
+	}
+
+	if alertConfiguration.IsEmailEnabled || alertConfiguration.IsSlackEnabled {
+		tableRows := getEmailTemplateForSavedQuerySharing(alert, model.QueryClassEvents, resultGroup.Results)
+		if alertConfiguration.IsEmailEnabled {
+			sendEmailSavedQueryReport(title, tableRows, newDateRange, alertConfiguration.Emails)
+		}
+		if alertConfiguration.IsSlackEnabled {
+			sendSlackAlertForSavedQueries(alert, newDateRange, model.QueryClassEvents, title, resultGroup.Results, alertConfiguration.SlackChannelsAndUserGroups)
+		}
+	}
+	return true, nil
+}
+func handleShareQueryTypeKPI(alert model.Alert, query *model.Queries, configs map[string]interface{}) (bool, error) {
+	projectID := alert.ProjectID
+	kpiQueryGroup := model.KPIQueryGroup{}
+	U.DecodePostgresJsonbToStructType(&query.Query, &kpiQueryGroup)
+	if len(kpiQueryGroup.Queries) == 0 {
+		log.Error("Query failed. Empty query group.")
+		return false, errors.New("Query failed. Empty query group.")
+	}
+
+	var alertConfiguration model.AlertConfiguration
+	err := U.DecodePostgresJsonbToStructType(alert.AlertConfiguration, &alertConfiguration)
+	if err != nil {
+		log.Errorf("failed to decode alert configuration for project_id: %v, alert_name: %s", projectID, alert.AlertName)
+		log.Error(err)
+		return false, errors.New(fmt.Sprintf("failed to decode alert configuration for project_id: %v, alert_name: %s", projectID, alert.AlertName))
+	}
+	var alertDescription model.AlertDescription
+	err = U.DecodePostgresJsonbToStructType(alert.AlertDescription, &alertDescription)
+	if err != nil {
+		log.Errorf("failed to decode alert description for project_id: %v, alert_name: %s", projectID, alert.AlertName)
+		log.Error(err)
+		return false, err
+	}
+	var timezoneString U.TimeZoneString
+	var statusCode int
+	if kpiQueryGroup.Queries[0].Timezone != "" {
+		_, errCode := time.LoadLocation(string(kpiQueryGroup.Queries[0].Timezone))
+		if errCode != nil {
+			return false, errors.New("Query failed. Invalid Timezone provided.")
+		}
+
+		timezoneString = U.TimeZoneString(kpiQueryGroup.Queries[0].Timezone)
+	} else {
+		timezoneString, statusCode = store.GetStore().GetTimezoneForProject(projectID)
+		if statusCode != http.StatusFound {
+			log.Error("Query failed. Failed to get Timezone.")
+			return false, errors.New("Query failed. Failed to get Timezone.")
+		}
+		// logCtx.WithError(err).Error("Query failed. Invalid Timezone.")
+	}
+	kpiQueryGroup.SetTimeZone(timezoneString)
+	err = kpiQueryGroup.TransformDateTypeFilters()
+	if err != nil {
+		log.Error("Query failed. Error in date type filter.")
+		return false, err
+
+	}
+	var endTimeStamp time.Time
+	if configs != nil {
+		endTimestampUnix := configs["endTimestamp"].(int64)
+		if endTimestampUnix == 0 || endTimestampUnix > U.TimeNowUnix() {
+			return false, errors.New("invalid end time stamp")
+		}
+		endTimeStamp = time.Unix(endTimestampUnix, 0)
+	}
+	title := alert.AlertName
+
+	var dateRange dateRanges
+
+	if alertDescription.DateRange != "" {
+		dateRange, err = getDateRange(timezoneString, alertDescription.DateRange, "", endTimeStamp)
+		for _, query := range kpiQueryGroup.Queries {
+			query.From = dateRange.from
+			query.To = dateRange.to
+		}
+	}
+	from := time.Unix(kpiQueryGroup.Queries[0].From, 0)
+	to := time.Unix(kpiQueryGroup.Queries[0].To, 0)
+	fromTime := U.ConvertTimeIn(from, timezoneString)
+	toTime := U.ConvertTimeIn(to, timezoneString)
+	fromStr := fromTime.Format("02 Jan 2006")
+	toStr := toTime.Format("02 Jan 2006")
+	newDateRange := fromStr + " - " + toStr
+
+	var cacheResult []model.QueryResult
+	shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(nil, projectID, &kpiQueryGroup, cacheResult, false, "", true)
+	if shouldReturn {
+		if resCode == http.StatusOK {
+			// trigger the alert based on resMsg
+			tempjson, _ := json.Marshal(resMsg)
+			err := json.Unmarshal(tempjson, &cacheResult)
+			if err != nil {
+				log.Error(err)
+				return false, err
+			}
+			if alertConfiguration.IsEmailEnabled || alertConfiguration.IsSlackEnabled {
+				tableRows := getEmailTemplateForSavedQuerySharing(alert, model.QueryClassKPI, cacheResult)
+				if alertConfiguration.IsEmailEnabled {
+					sendEmailSavedQueryReport(title, tableRows, newDateRange, alertConfiguration.Emails)
+				}
+				if alertConfiguration.IsSlackEnabled {
+					sendSlackAlertForSavedQueries(alert, newDateRange, model.QueryClassKPI, title, cacheResult, alertConfiguration.SlackChannelsAndUserGroups)
+				}
+			}
+			return true, nil
+		}
+		log.Error("Query failed. Error Processing/Fetching data from Query cache")
+		return false, errors.New("Query failed. Error Processing/Fetching data from Query cache")
+	}
+	var duplicatedRequest model.KPIQueryGroup
+	U.DeepCopy(&kpiQueryGroup, &duplicatedRequest)
+	queryResult, statusCode := store.GetStore().ExecuteKPIQueryGroup(projectID, kpiQueryGroup.Class, duplicatedRequest, C.EnableOptimisedFilterOnProfileQuery())
+	if statusCode != http.StatusOK {
+		model.DeleteQueryCacheKey(projectID, &kpiQueryGroup)
+		log.Error("Failed to process query from DB")
+		if statusCode == http.StatusPartialContent {
+			return false, errors.New("Failed to process query from DB .")
+		}
+		return false, errors.New("Failed to process query from DB")
+	}
+
+	if alertConfiguration.IsEmailEnabled || alertConfiguration.IsSlackEnabled {
+		tableRows := getEmailTemplateForSavedQuerySharing(alert, model.QueryClassKPI, queryResult)
+		if alertConfiguration.IsEmailEnabled {
+			sendEmailSavedQueryReport(title, tableRows, newDateRange, alertConfiguration.Emails)
+		}
+		if alertConfiguration.IsSlackEnabled {
+			sendSlackAlertForSavedQueries(alert, newDateRange, model.QueryClassKPI, title, queryResult, alertConfiguration.SlackChannelsAndUserGroups)
+		}
+	}
+	return true, nil
+
+}
+func sendEmailSavedQueryReport(reportTitle, date, tableRowsemails string, emails []string) {
+	sub := "Factors Report"
+	text := ""
+	var success, fail int
+
+	html := U.GetSavedQuerySharingEmailTemplate(reportTitle, date, tableRowsemails)
+	dryRunFlag := C.GetConfig().EnableDryRunAlerts
+	if dryRunFlag {
+		log.Info("Dry run mode enabled. No emails will be sent")
+		log.Info(tableRowsemails)
+		return
+	}
+	for _, email := range emails {
+		err := C.GetServices().Mailer.SendMail(email, C.GetFactorsSenderEmail(), sub, html, text)
+		if err != nil {
+			fail++
+			log.WithError(err).Error("failed to send email alert")
+			return
+		}
+		success++
+	}
+	log.Info("sent email alert to ", success, " failed to send email alert to ", fail)
+}
+
+func getEmailTemplateForSavedQuerySharing(alert model.Alert, queryClass string, result []model.QueryResult) (tableRows string) {
+	tableRows = ""
+	if queryClass == model.QueryClassEvents {
+		for _, row := range result[1].Rows {
+			title := strings.Title(strings.ReplaceAll(row[1].(string), "_", " "))
+			var resultValue float64
+			switch row[2].(type) {
+			case float64:
+				resultValue = row[2].(float64)
+			case int64:
+				resultValue = float64(row[2].(int64))
+			case int:
+				resultValue = float64(row[2].(int))
+			case float32:
+				resultValue = float64(row[2].(float32))
+			}
+			value := strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.2f", resultValue), "0"), ".")
+			value = AddCommaToNumber(fmt.Sprint(value))
+			tableRow := getTableRowForEmailSharing(title, value)
+			tableRows += tableRow
+		}
+	} else if queryClass == model.QueryClassKPI {
+		for idx, row := range result[1].Rows[0] {
+			title := strings.Title(strings.ReplaceAll(result[1].Headers[idx], "_", " "))
+			var resultValue float64
+			switch row.(type) {
+			case float64:
+				resultValue = row.(float64)
+			case int64:
+				resultValue = float64(row.(int64))
+			case int:
+				resultValue = float64(row.(int))
+			case float32:
+				resultValue = float64(row.(float32))
+			}
+			value := strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.2f", resultValue), "0"), ".")
+			value = AddCommaToNumber(fmt.Sprint(value))
+			tableRow := getTableRowForEmailSharing(title, value)
+			tableRows += tableRow
+		}
+	}
+	return tableRows
+}
+
+func getTableRowForEmailSharing(title, result string) string {
+	title = strings.Title(title)
+	title = removeDollarSymbolFromEventNames(title)
+	tableRow := fmt.Sprintf(`%s</p><h2 class="text-center h2 text-bold float-center" align="center" style="Margin:0;Margin-bottom:10px;color:inherit;font-family:'Open Sans',sans-serif;font-size:30px;font-weight:700;line-height:1.5;margin:0;margin-bottom:10px;padding-bottom:0;padding-left:0;padding-right:0;padding-top:0;text-align:center;word-wrap:normal">%s</h2><p class="text-center h7 medium-grey float-center" align="center" style="Margin:0;Margin-bottom:10px;color:#8692A3;font-family:'Open Sans',sans-serif;font-size:14px;font-weight:400;line-height:1.5;margin:0;margin-bottom:10px;padding-bottom:0;padding-left:0;padding-right:0;padding-top:0;text-align:center"></p><table align="center" class="row float-center" style="Margin:0 auto;border-collapse:collapse;border-spacing:0;display:table;float:none;margin:0 auto;padding:0;padding-bottom:0;padding-left:0;padding-right:0;padding-top:0;position:relative;text-align:center;vertical-align:top;width:100%%"><tbody><tr style="padding-bottom:0;padding-left:0;padding-right:0;padding-top:0;text-align:left;vertical-align:top"><th class="divider-line small-12 large-4 columns first last" style="-moz-hyphens:auto;-webkit-hyphens:auto;Margin:0 auto;border-collapse:collapse!important;border-top:1px solid #E7E9ED;color:#3E516C;display:block;font-family:'Open Sans',sans-serif;font-size:16px;font-weight:400;height:1px;hyphens:auto;line-height:1.5;margin:0 auto;padding:5px 0;padding-bottom:16px;padding-left:0!important;padding-right:0!important;padding-top:0;text-align:left;vertical-align:top;width:33.33333%%;word-wrap:break-word"><table style="border-collapse:collapse;border-spacing:0;padding-bottom:0;padding-left:0;padding-right:0;padding-top:0;text-align:left;vertical-align:top;width:100%%"><tbody><tr style="padding-bottom:0;padding-left:0;padding-right:0;padding-top:0;text-align:left;vertical-align:top"><th style="-moz-hyphens:auto;-webkit-hyphens:auto;Margin:0;border-collapse:collapse!important;color:#3E516C;font-family:'Open Sans',sans-serif;font-size:16px;font-weight:400;hyphens:auto;line-height:1.5;margin:0;padding-bottom:0;padding-left:0;padding-right:0;padding-top:0;text-align:left;vertical-align:top;word-wrap:break-word"></th></tr></tbody></table></th></tr></tbody></table></center><center style="min-width:338.67px;width:100%%"><p class="text-center h7 float-center" align="center" style="Margin:0;Margin-bottom:10px;color:#3E516C;font-family:'Open Sans',sans-serif;font-size:14px;font-weight:400;line-height:1.5;margin:0;margin-bottom:10px;padding-bottom:0;padding-left:0;padding-right:0;padding-top:0;text-align:center">`, title, result)
+	return tableRow
+}
+
+func sendSlackAlertForSavedQueries(alert model.Alert, dateRange, queryClass, reportTitle string, result []model.QueryResult, config *postgres.Jsonb) {
+	logCtx := log.WithFields(log.Fields{
+		"project_id": alert.ProjectID,
+	})
+	slackChannels := make(map[string][]model.SlackChannel)
+	err := U.DecodePostgresJsonbToStructType(config, &slackChannels)
+	if err != nil {
+		log.WithError(err).Error("failed to decode slack channels")
+		return
+	}
+	var success, fail int
+	slackMsg := buildSlackTemplateForSavedQuerySharing(alert, queryClass, reportTitle, dateRange, result)
+	dryRunFlag := C.GetConfig().EnableDryRunAlerts
+	if dryRunFlag {
+		log.Info("Dry run mode enabled. No alerts will be sent")
+		log.Info(slackMsg, alert.ProjectID)
+		return
+	}
+	for _, channels := range slackChannels {
+		for _, channel := range channels {
+			status, err := slack.SendSlackAlert(alert.ProjectID, slackMsg, alert.CreatedBy, channel)
+			if err != nil || !status {
+				fail++
+				logCtx.WithError(err).Error("failed to send slack alert ", slackMsg)
+				continue
+			}
+			success++
+		}
+	}
+	logCtx.Info("sent slack alert to ", success, " failed to send slack alert to ", fail)
+
+}
+
+func buildSlackTemplateForSavedQuerySharing(alert model.Alert, queryClass, reportTitle, dateRange string, result []model.QueryResult) string {
+	slackBlocks := ""
+	if queryClass == model.QueryClassEvents {
+		for _, row := range result[1].Rows {
+			title := row[1].(string)
+			var resultValue float64
+			switch row[2].(type) {
+			case float64:
+				resultValue = row[2].(float64)
+			case int64:
+				resultValue = float64(row[2].(int64))
+			case int:
+				resultValue = float64(row[2].(int))
+			case float32:
+				resultValue = float64(row[2].(float32))
+			}
+			value := strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.2f", resultValue), "0"), ".")
+			value = AddCommaToNumber(fmt.Sprint(resultValue))
+			block := getSlackBlockForResult(title, value)
+			slackBlocks += block
+		}
+	} else if queryClass == model.QueryClassKPI {
+		for idx, row := range result[1].Rows[0] {
+			title := strings.Title(result[1].Headers[idx])
+			var resultValue float64
+			switch row.(type) {
+			case float64:
+				resultValue = row.(float64)
+			case int64:
+				resultValue = float64(row.(int64))
+			case int:
+				resultValue = float64(row.(int))
+			case float32:
+				resultValue = float64(row.(float32))
+			}
+			value := strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.2f", resultValue), "0"), ".")
+			value = AddCommaToNumber(fmt.Sprint(value))
+			block := getSlackBlockForResult(title, value)
+			slackBlocks += block
+		}
+	}
+
+	slackTemplate := fmt.Sprintf(`
+		 [
+			{
+				"type": "header",
+				"text": {
+					"type": "plain_text",
+					"text": "%s\n"
+				}
+			},
+			{
+				"type": "context",
+				"elements": [
+					{
+						"text": "*%s*  ",
+						"type": "mrkdwn"
+					}
+				]
+			}
+			%s,
+			{
+				"type": "divider"
+			}
+		]
+	`, reportTitle, dateRange, slackBlocks)
+
+	return slackTemplate
+}
+
+func getSlackBlockForResult(title, result string) string {
+	title = strings.Title(strings.ReplaceAll(title, "_", " "))
+	title = removeDollarSymbolFromEventNames(title)
+	slackBlock := fmt.Sprintf(`,
+		{
+			"type": "divider"
+		},
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "*%s*\t\t*%s*"
+			}
+		}
+		`, title, result)
+	return slackBlock
+}
+
 func filterStringbyLastWord(displayCategory string, word string) string {
 	arr := strings.Split(displayCategory, "_")
 	// check last element of array is "metrics" if yes delete that
@@ -588,4 +1075,12 @@ func AddCommaToNumber(number string) string {
 		return output
 	}
 	return output + "." + arr[1]
+}
+func removeDollarSymbolFromEventNames(title string) string {
+	if len(title) > 0 {
+		if title[0] == '$' {
+			return title[1:]
+		}
+	}
+	return title
 }

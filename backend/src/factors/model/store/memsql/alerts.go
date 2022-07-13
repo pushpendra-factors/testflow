@@ -138,7 +138,7 @@ func (store *MemSQL) GetAlertById(id string, projectID int64) (model.Alert, int)
 
 	return alert, http.StatusFound
 }
-func (store *MemSQL) GetAllAlerts(projectID int64) ([]model.Alert, int) {
+func (store *MemSQL) GetAllAlerts(projectID int64, excludeSavedQueries bool) ([]model.Alert, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
@@ -149,10 +149,18 @@ func (store *MemSQL) GetAllAlerts(projectID int64) ([]model.Alert, int) {
 		return make([]model.Alert, 0), http.StatusBadRequest
 	}
 	db := C.GetServices().Db
-	err := db.Where("project_id = ? AND is_deleted != ?", projectID, true).Find(&alerts).Error
-	if err != nil {
-		log.WithField("project_id", projectID).Warn(err)
-		return make([]model.Alert, 0), http.StatusNotFound
+	if excludeSavedQueries {
+		err := db.Where("project_id = ? AND is_deleted != ?", projectID, true).Find(&alerts).Error
+		if err != nil {
+			log.WithField("project_id", projectID).Warn(err)
+			return make([]model.Alert, 0), http.StatusNotFound
+		}
+	} else {
+		err := db.Where("project_id = ? AND alert_type = ? AND is_deleted != ?", projectID, 3, true).Find(&alerts).Error
+		if err != nil {
+			log.WithField("project_id", projectID).Warn(err)
+			return make([]model.Alert, 0), http.StatusNotFound
+		}
 	}
 	sort.Slice(alerts, func(i, j int) bool {
 		return alerts[i].CreatedAt.After(alerts[j].CreatedAt)
@@ -163,7 +171,7 @@ func (store *MemSQL) GetAllAlerts(projectID int64) ([]model.Alert, int) {
 // Note: Currently keeping the implementation specific to kpi.
 func (store *MemSQL) GetAlertNamesByProjectIdTypeAndName(projectID int64, nameOfQuery string) ([]string, int) {
 	rAlertNames := make([]string, 0)
-	alerts, statusCode := store.GetAllAlerts(projectID)
+	alerts, statusCode := store.GetAllAlerts(projectID, false)
 	if statusCode != http.StatusFound {
 		return rAlertNames, statusCode
 	}
@@ -233,6 +241,12 @@ func (store *MemSQL) CreateAlert(projectID int64, alert model.Alert) (model.Aler
 	// - Check for valid operator
 	// - Check if the KPI/Metric is valid TODO
 	// - Check if the date range is valid for both type 1 and type 2
+	// skip validations for saved query report sharing i.e type 3
+	skipValidation := false
+
+	if alert.AlertType == model.ALERT_TYPE_QUERY_SHARING {
+		skipValidation = true
+	}
 	if alertDescription.Name == "" {
 		logCtx.Error("Invalid alert name")
 		return model.Alert{}, http.StatusBadRequest, "Invalid alert name"
@@ -257,8 +271,10 @@ func (store *MemSQL) CreateAlert(projectID int64, alert model.Alert) (model.Aler
 		logCtx.Error("Slack integration is not enabled for this project")
 		return model.Alert{}, http.StatusBadRequest, "Slack integration is not enabled for this project"
 	}
-	if !store.isValidOperator(alertDescription.Operator) {
-		return model.Alert{}, http.StatusBadRequest, "Invalid Operator for Alert"
+	if !skipValidation {
+		if !store.isValidOperator(alertDescription.Operator) {
+			return model.Alert{}, http.StatusBadRequest, "Invalid Operator for Alert"
+		}
 	}
 	if alert.AlertType == model.ALERT_TYPE_SINGLE_RANGE {
 		if !store.isValidDateRange(alertDescription.DateRange) {
@@ -332,7 +348,7 @@ func (store *MemSQL) getNameForAlert(metric, operator, value string) string {
 }
 func IsEmptyPostgresJsonb(jsonb *postgres.Jsonb) bool {
 	if jsonb == nil {
-		log.Info("jsonb is nil abcd")
+		log.Info("jsonb is nil")
 		return true
 	}
 	strJson := string((*jsonb).RawMessage)

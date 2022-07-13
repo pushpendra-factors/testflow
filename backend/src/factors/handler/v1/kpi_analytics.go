@@ -211,7 +211,7 @@ func ExecuteKPIQueryHandler(c *gin.Context) (interface{}, int, string, string, b
 		return nil, http.StatusBadRequest, INVALID_INPUT, err.Error(), true
 	}
 
-	data, statusCode, errorCode, errMsg, isErr := getResultFromCacheOrDashboard(c, reqID, projectID, request, dashboardId, unitId, commonQueryFrom, commonQueryTo, hardRefresh, timezoneString, isDashboardQueryRequest, logCtx)
+	data, statusCode, errorCode, errMsg, isErr := GetResultFromCacheOrDashboard(c, reqID, projectID, request, dashboardId, unitId, commonQueryFrom, commonQueryTo, hardRefresh, timezoneString, isDashboardQueryRequest, logCtx, false)
 	if statusCode != http.StatusProcessing {
 		return data, statusCode, errorCode, errMsg, isErr
 	}
@@ -247,8 +247,16 @@ func ExecuteKPIQueryHandler(c *gin.Context) (interface{}, int, string, string, b
 		model.SetCacheResultByDashboardIdAndUnitId(queryResult, projectID, dashboardId, unitId, commonQueryFrom, commonQueryTo, request.GetTimeZone())
 		return H.DashboardQueryResponsePayload{Result: queryResult, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix()}, http.StatusOK, "", "", false
 	}
-
-	return gin.H{"result": queryResult, "query": request}, http.StatusOK, "", "", false
+	isQueryShareable := isQueryShareable(request)
+	return gin.H{"result": queryResult, "query": request, "sharable": isQueryShareable}, http.StatusOK, "", "", false
+}
+func isQueryShareable(request model.KPIQueryGroup) bool {
+	// if breakdown is not present, then it is sharable
+	if request.GlobalGroupBy == nil || len(request.GlobalGroupBy) == 0 {
+		return true
+	}
+	// if breakdown is present, then it is not sharable
+	return false
 }
 
 func getDashboardRelatedInformationFromRequest(request model.KPIQueryGroup, dashboardIdParam, unitIdParam, refreshParam, isQueryParam string) (int64, int64, int64, int64, bool, bool, bool, error) {
@@ -282,9 +290,9 @@ func getDashboardRelatedInformationFromRequest(request model.KPIQueryGroup, dash
 	return dashboardId, unitId, commonQueryFrom, commonQueryTo, hardRefresh, isDashboardQueryRequest, isQuery, err
 }
 
-func getResultFromCacheOrDashboard(c *gin.Context, reqID string, projectID int64, request model.KPIQueryGroup,
+func GetResultFromCacheOrDashboard(c *gin.Context, reqID string, projectID int64, request model.KPIQueryGroup,
 	dashboardId int64, unitId int64, commonQueryFrom int64, commonQueryTo int64, hardRefresh bool,
-	timezoneString U.TimeZoneString, isDashboardQueryRequest bool, logCtx *log.Entry) (interface{}, int, string, string, bool) {
+	timezoneString U.TimeZoneString, isDashboardQueryRequest bool, logCtx *log.Entry, skipContextVerfication bool) (interface{}, int, string, string, bool) {
 
 	// Tracking dashboard query request.
 	if isDashboardQueryRequest {
@@ -302,7 +310,7 @@ func getResultFromCacheOrDashboard(c *gin.Context, reqID string, projectID int64
 	}
 
 	var cacheResult model.ChannelResultGroupV1
-	shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectID, &request, cacheResult, isDashboardQueryRequest, reqID)
+	shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectID, &request, cacheResult, isDashboardQueryRequest, reqID, skipContextVerfication)
 	if shouldReturn {
 		if resCode == http.StatusOK {
 			return resMsg, resCode, "", "", false
