@@ -13,6 +13,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"sort"
 	"strconv"
 	"testing"
 	"time"
@@ -181,16 +182,23 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 	assert.NotNil(t, group4)
 	assert.Equal(t, http.StatusCreated, status)
 
+	// Event 1 : Page View
 	timestamp := U.UnixTimeBeforeDuration(1 * time.Hour)
-	randomeEventName := RandomURL()
+	randomURL := RandomURL()
+	pageViewProperties := map[string]interface{}{
+		U.EP_IS_PAGE_VIEW:        "true",
+		U.EP_PAGE_SPENT_TIME:     "60",
+		U.EP_PAGE_SCROLL_PERCENT: "50",
+		U.EP_PAGE_LOAD_TIME:      "10",
+	}
 	trackPayload := SDK.TrackPayload{
 		EventId:         "",
 		UserId:          createdUserID,
 		CreateUser:      false,
 		IsNewUser:       false,
-		Name:            randomeEventName,
+		Name:            randomURL,
 		CustomerEventId: new(string),
-		EventProperties: U.PropertiesMap{"$qp_utm_campaign": "campaign1"},
+		EventProperties: pageViewProperties,
 		UserProperties:  map[string]interface{}{},
 		Timestamp:       timestamp,
 		ProjectId:       project.ID,
@@ -204,39 +212,168 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 	assert.NotEmpty(t, response)
 	assert.Equal(t, http.StatusOK, status)
 
+	// Event 2 : Web Session
 	timestamp = timestamp - 10000
+	sessionProperties := map[string]interface{}{
+		U.EP_PAGE_COUNT:   "5",
+		U.EP_CHANNEL:      "ChannelName",
+		U.EP_CAMPAIGN:     "CampaignName",
+		U.SP_SESSION_TIME: "120",
+		U.EP_REFERRER_URL: RandomURL(),
+	}
 	trackPayload = SDK.TrackPayload{
-		Name:          U.EVENT_NAME_FORM_SUBMITTED,
-		Timestamp:     timestamp,
-		UserId:        user.ID,
-		RequestSource: model.UserSourceWeb,
+		EventId:         "",
+		UserId:          user.ID,
+		CreateUser:      false,
+		IsNewUser:       false,
+		Name:            U.EVENT_NAME_SESSION,
+		CustomerEventId: new(string),
+		EventProperties: sessionProperties,
+		UserProperties:  map[string]interface{}{},
+		Timestamp:       timestamp,
+		ProjectId:       0,
+		Auto:            false,
+		ClientIP:        "",
+		UserAgent:       "",
+		SmartEventType:  "",
+		RequestSource:   model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.NotNil(t, response.EventId)
 	assert.Empty(t, response.UserId)
 	assert.Equal(t, http.StatusOK, status)
 
+	// Event 3 : Form Submit
 	timestamp = timestamp - 10000
+	formSubmitProperties := map[string]interface{}{
+		U.EP_FORM_NAME: "FormName",
+		U.EP_PAGE_URL:  RandomURL(),
+	}
 	trackPayload = SDK.TrackPayload{
-		Name:      U.EVENT_NAME_SESSION,
-		Timestamp: timestamp,
-		UserId:    user.ID,
-		EventProperties: U.PropertiesMap{
-			"$qp_utm_campaign": "campaign2",
-		},
-		RequestSource: model.UserSourceWeb,
+		EventId:         "",
+		UserId:          user.ID,
+		CreateUser:      false,
+		IsNewUser:       false,
+		Name:            U.EVENT_NAME_FORM_SUBMITTED,
+		CustomerEventId: new(string),
+		EventProperties: formSubmitProperties,
+		UserProperties:  map[string]interface{}{},
+		Timestamp:       timestamp,
+		ProjectId:       0,
+		Auto:            false,
+		ClientIP:        "",
+		UserAgent:       "",
+		SmartEventType:  "",
+		RequestSource:   model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.NotNil(t, response.EventId)
 	assert.Empty(t, response.UserId)
 	assert.Equal(t, http.StatusOK, status)
 
+	// Event 4 : Offline Touchpoint
 	timestamp = timestamp - 10000
+	touchpointProperties := map[string]interface{}{
+		U.EP_CHANNEL:  "ChannelName",
+		U.EP_CAMPAIGN: "CampaignName",
+	}
 	trackPayload = SDK.TrackPayload{
-		Name:          U.EVENT_NAME_FORM_SUBMITTED,
-		Timestamp:     timestamp,
-		UserId:        user.ID,
-		RequestSource: model.UserSourceWeb,
+		EventId:         "",
+		UserId:          user.ID,
+		CreateUser:      false,
+		IsNewUser:       false,
+		Name:            U.EVENT_NAME_OFFLINE_TOUCH_POINT,
+		CustomerEventId: new(string),
+		EventProperties: touchpointProperties,
+		UserProperties:  map[string]interface{}{},
+		Timestamp:       timestamp,
+		ProjectId:       0,
+		Auto:            false,
+		ClientIP:        "",
+		UserAgent:       "",
+		SmartEventType:  "",
+		RequestSource:   model.UserSourceWeb,
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
+	assert.NotNil(t, response.EventId)
+	assert.Empty(t, response.UserId)
+	assert.Equal(t, http.StatusOK, status)
+
+	// Event 5 : Campaign Member Created
+	timestamp = timestamp - 10000
+	campCreatedProperties := map[string]interface{}{
+		U.EP_CAMPAIGN:                   "CampaignName",
+		model.EP_SFCampaignMemberStatus: "CurrentStatus",
+	}
+	trackPayload = SDK.TrackPayload{
+		EventId:         "",
+		UserId:          user.ID,
+		CreateUser:      false,
+		IsNewUser:       false,
+		Name:            U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED,
+		CustomerEventId: new(string),
+		EventProperties: campCreatedProperties,
+		UserProperties:  map[string]interface{}{},
+		Timestamp:       timestamp,
+		ProjectId:       0,
+		Auto:            false,
+		ClientIP:        "",
+		UserAgent:       "",
+		SmartEventType:  "",
+		RequestSource:   model.UserSourceSalesforce,
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
+	assert.NotNil(t, response.EventId)
+	assert.Empty(t, response.UserId)
+	assert.Equal(t, http.StatusOK, status)
+
+	// Event 6 : Campaign Member Updated
+	timestamp = timestamp - 10000
+	campUpdatedProperties := map[string]interface{}{
+		U.EP_CAMPAIGN:                   "CampaignName",
+		model.EP_SFCampaignMemberStatus: "CurrentStatus",
+	}
+	trackPayload = SDK.TrackPayload{
+		EventId:         "",
+		UserId:          user.ID,
+		CreateUser:      false,
+		IsNewUser:       false,
+		Name:            U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED,
+		CustomerEventId: new(string),
+		EventProperties: campUpdatedProperties,
+		UserProperties:  map[string]interface{}{},
+		Timestamp:       timestamp,
+		ProjectId:       0,
+		Auto:            false,
+		ClientIP:        "",
+		UserAgent:       "",
+		SmartEventType:  "",
+		RequestSource:   model.UserSourceSalesforce,
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
+	assert.NotNil(t, response.EventId)
+	assert.Empty(t, response.UserId)
+	assert.Equal(t, http.StatusOK, status)
+
+	// Event 7 : Random Event
+	timestamp = timestamp - 10000
+	randomProperties := map[string]interface{}{}
+	trackPayload = SDK.TrackPayload{
+		EventId:         "",
+		UserId:          user.ID,
+		CreateUser:      false,
+		IsNewUser:       false,
+		Name:            U.EVENT_NAME_HUBSPOT_CONTACT_CREATED,
+		CustomerEventId: new(string),
+		EventProperties: randomProperties,
+		UserProperties:  map[string]interface{}{},
+		Timestamp:       timestamp,
+		ProjectId:       0,
+		Auto:            false,
+		ClientIP:        "",
+		UserAgent:       "",
+		SmartEventType:  "",
+		RequestSource:   model.UserSourceHubspot,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.NotNil(t, response.EventId)
@@ -252,6 +389,14 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 	if isAnonymous == "true" {
 		userId = user.ID
 	}
+	eventNamePropertiesMap := map[string][]string{
+		U.EVENT_NAME_SESSION:                           {U.EP_PAGE_COUNT, U.EP_CHANNEL, U.EP_CAMPAIGN, U.SP_SESSION_TIME, U.EP_TIMESTAMP, U.EP_REFERRER_URL},
+		U.EVENT_NAME_FORM_SUBMITTED:                    {U.EP_FORM_NAME, U.EP_PAGE_URL, U.EP_TIMESTAMP},
+		U.EVENT_NAME_OFFLINE_TOUCH_POINT:               {U.EP_CHANNEL, U.EP_CAMPAIGN, U.EP_TIMESTAMP},
+		U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED: {U.EP_CAMPAIGN, model.EP_SFCampaignMemberStatus, U.EP_TIMESTAMP},
+		U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED: {U.EP_CAMPAIGN, model.EP_SFCampaignMemberStatus, U.EP_TIMESTAMP},
+	}
+	pageViewPropsList := []string{U.EP_PAGE_SPENT_TIME, U.EP_PAGE_SCROLL_PERCENT, U.EP_PAGE_LOAD_TIME}
 
 	t.Run("Success", func(t *testing.T) {
 		w := sendGetProfileUserDetailsRequest(r, project.ID, agent, userId, isAnonymous)
@@ -270,7 +415,6 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 		assert.Equal(t, resp.TimeSpentOnSite, float64(500))
 		assert.NotNil(t, resp.GroupInfos)
 		assert.Condition(t, func() bool { return len(resp.GroupInfos) <= 4 })
-		assert.Equal(t, resp.GroupInfos[0].GroupName, model.GROUP_NAME_HUBSPOT_COMPANY)
 		assert.NotNil(t, resp.UserActivity)
 		assert.Condition(t, func() bool {
 			if resp.UserActivity == nil {
@@ -279,12 +423,41 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 			for i, activity := range resp.UserActivity {
 				assert.NotNil(t, activity.EventName)
 				assert.NotNil(t, activity.DisplayName)
+				if activity.EventName == randomURL {
+					assert.Equal(t, activity.DisplayName, "Page View")
+				} else {
+					assert.Equal(t, U.STANDARD_EVENTS_DISPLAY_NAMES[activity.EventName], activity.DisplayName)
+				}
 				assert.NotNil(t, activity.Timestamp)
+				assert.Condition(t, func() bool { return activity.Timestamp <= uint64(time.Now().UTC().Unix()) })
 				if i > 1 {
 					if resp.UserActivity[i].Timestamp > resp.UserActivity[i-1].Timestamp {
 						return false
 					}
 				}
+				assert.NotNil(t, activity.Properties)
+				assert.Condition(t, func() bool {
+					properties, err := U.DecodePostgresJsonb(&activity.Properties)
+					_, eventExistsInMap := eventNamePropertiesMap[activity.EventName]
+					assert.Nil(t, err)
+					if activity.DisplayName == "Page View" {
+						for key := range *properties {
+							sort.Strings(pageViewPropsList)
+							i := sort.SearchStrings(pageViewPropsList, key)
+							assert.Condition(t, func() bool { return i < len(pageViewPropsList) })
+						}
+					} else if eventExistsInMap {
+						for key := range *properties {
+							sort.Strings(eventNamePropertiesMap[activity.EventName])
+							i := sort.SearchStrings(eventNamePropertiesMap[activity.EventName], key)
+							assert.Condition(t, func() bool { return i < len(eventNamePropertiesMap[activity.EventName]) })
+						}
+					} else {
+						assert.Equal(t, *properties, randomProperties)
+					}
+
+					return true
+				})
 
 			}
 			return true

@@ -182,7 +182,7 @@ func AttributionHandler(c *gin.Context) (interface{}, int, string, string, bool)
 		return nil, http.StatusBadRequest, V1.INVALID_INPUT, err.Error(), true
 	}
 
-	shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &attributionQueryUnitPayload, cacheResult, isDashboardQueryRequest, reqId)
+	shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &attributionQueryUnitPayload, cacheResult, isDashboardQueryRequest, reqId, false)
 	if shouldReturn {
 		if resCode == http.StatusOK {
 			return resMsg, resCode, "", "", false

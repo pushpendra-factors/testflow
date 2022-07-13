@@ -43,8 +43,8 @@
         box-shadow: 0px 6px 20px $fa-color--mono-2;
         border-radius: 5px;
         z-index: 75;
-        overflow-y: scroll;
-        overflow-x: hidden;
+        // overflow-y: scroll;
+        // overflow-x: hidden;
 
         .fa-select-group-select--options
         {

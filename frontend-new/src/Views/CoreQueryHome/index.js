@@ -60,6 +60,10 @@ import _ from 'lodash';
 import { getQueryType } from '../../utils/dataFormatter';
 import { fetchAgentInfo } from 'Reducers/agentActions';
 import factorsai from 'factorsai';
+import ShareToEmailModal from '../../components/ShareToEmailModal';
+import ShareToSlackModal from '../../components/ShareToSlackModal';
+import { createAlert, sendAlertNow, fetchSlackChannels, fetchProjectSettingsV1, enableSlackIntegration } from 'Reducers/global';
+import AppModal from '../../components/AppModal';
 
 // const whiteListedAccounts_KPI = [
 //   'jitesh@factors.ai',
@@ -161,7 +165,12 @@ function CoreQuery({
   updateSavedQuerySettings,
   setProfileQueries,
   fetchAgentInfo,
-  setAttributionMetrics
+  setAttributionMetrics,
+  createAlert,
+  sendAlertNow,
+  fetchSlackChannels,
+  fetchProjectSettingsV1,
+  enableSlackIntegration
 }) {
   const queriesState = useSelector((state) => state.queries);
   const [deleteModal, showDeleteModal] = useState(false);
@@ -173,9 +182,19 @@ function CoreQuery({
   const { config: kpiConfig } = useSelector((state) => state.kpi);
   const { metadata } = useSelector((state) => state.insights);
   const [templatesModalVisible, setTemplatesModalVisible] = useState(false);
+  const [showShareToEmailModal, setShowShareToEmailModal] = useState(false);
+  const [showShareToSlackModal, setShowShareToSlackModal] = useState(false);
   const [tableData, setTableData] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showSearch, setShowSearch] = useState(false);
+  const [channelOpts, setChannelOpts] = useState([]);
+  const [allChannels, setAllChannels] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedRow, setSelectedRow] = useState(null);
+
+  const { slack } = useSelector((state) => state.global);
+  const { projectSettingsV1 } = useSelector((state) => state.global);
+  const { agent_details } = useSelector((state) => state.agent);
 
   useEffect(() => {
     const getData = async () => {
@@ -246,6 +265,20 @@ function CoreQuery({
     event.preventDefault();
     getWeeklyIngishts(row);
     setQueryToState(getFormattedRow(row));
+  }, []);
+
+  const showEmailModal = useCallback((row, event) => {
+    event.stopPropagation();
+    event.preventDefault();
+    setShowShareToEmailModal(true);
+    setSelectedRow(row);
+  }, []);
+
+  const showSlackModal = useCallback((row, event) => {
+    event.stopPropagation();
+    event.preventDefault();
+    setShowShareToSlackModal(true);
+    setSelectedRow(row);
   }, []);
 
   const updateEventFunnelsState = useCallback(
@@ -516,7 +549,20 @@ function CoreQuery({
             View Report
           </a>
         </Menu.Item>
+        {(row.query.cl === QUERY_TYPE_EVENT || row.query.cl === QUERY_TYPE_KPI) && row.settings.chart === 'pc' ?
         <Menu.Item key="1">
+           <a onClick={showEmailModal.bind(this, row)} href="#!">
+            Email this report
+          </a>
+        </Menu.Item>
+        : null}
+        {(row.query.cl === QUERY_TYPE_EVENT || row.query.cl === QUERY_TYPE_KPI) && row.settings.chart === 'pc' ?
+        <Menu.Item key="2">
+          <a onClick={showSlackModal.bind(this, row)} href="#!">
+            Share to slack
+          </a>
+        </Menu.Item>: null}
+        <Menu.Item key="3">
           {/* <a onClick={(e) => e.stopPropagation()} href="#!">
             Copy Link
           </a>
@@ -653,6 +699,157 @@ function CoreQuery({
     setSearchTerm(term);
     setTableData(searchResults); 
   } 
+
+
+  const onConnectSlack = () => {
+    enableSlackIntegration(activeProject.id)
+    .then((r) => {
+        if (r.status == 200) {
+            window.open(r.data.redirectURL, "_blank");
+            setShowShareToSlackModal(false);
+        }
+        if (r.status >= 400) {
+            message.error('Error fetching slack redirect url');
+        }
+    })
+    .catch((err) => {
+        console.log('Slack error-->', err);
+    });
+  }
+
+
+  useEffect(() => {
+    fetchProjectSettingsV1(activeProject.id);
+    fetchSlackChannels(activeProject.id);
+  }, [activeProject, projectSettingsV1?.int_slack, showShareToSlackModal]);
+
+  useEffect(() => {
+      if (slack?.length > 0) {
+          let tempArr = [];
+          let allArr = [];
+          for (let i = 0; i < slack.length; i++) {
+              tempArr.push({label: '#' + slack[i].name, value: slack[i].id});
+              allArr.push({name: slack[i].name, id: slack[i].id, is_private: slack[i].is_private});
+          }
+          setChannelOpts(tempArr);
+          setAllChannels(allArr);
+      }
+  }, [activeProject, agent_details, slack]);
+
+  const handleEmailClick = ({data, frequency, onSuccess}) => {
+    setLoading(true);
+
+    let emails = [];
+    if (data?.emails) {
+        emails = data.emails.map((item) => {
+            return item.email;
+        })
+    }
+    if (data.email) {
+        emails.push(data.email);
+    }
+
+    let payload = {
+        "alert_name": data?.subject,
+        "alert_type": 3,
+        // "query_id": selectedRow?.key || selectedRow?.id,
+        "alert_description": {
+          "message": data?.message,
+          "date_range": frequency == 'send_now' ? '' : frequency,
+        },
+        "alert_configuration":{
+          "email_enabled": true ,
+          "slack_enabled": false,
+          "emails": emails,
+          "slack_channels_and_user_groups": {},
+        }
+    }
+
+    if(frequency === 'send_now') {
+      sendAlertNow(activeProject.id, payload, selectedRow?.key || selectedRow?.id)
+      .then((r) => {
+        notification.success({
+            message: 'Alert Sent Successfully',
+            duration: 5,
+        });
+        setLoading(false);
+        onSuccess();
+      }).catch((err) => {
+        message.error(err?.data?.error);
+        setLoading(false);
+      })
+    } else {
+      createAlert(activeProject.id, payload, selectedRow?.key || selectedRow?.id)
+      .then((r) => {
+        notification.success({
+            message: 'Alert Saved Successfully',
+            duration: 5,
+        });
+        setLoading(false);
+        onSuccess();
+      }).catch((err) => {
+        message.error(err?.data?.error);
+        setLoading(false);
+      })
+    }
+  }
+
+  const handleSlackClick = ({data, frequency, onSuccess}) => {
+    setLoading(true);
+
+    let slackChannels = {}
+    const selected = allChannels.filter((c) => c.id === data.channel);
+    const map = new Map();
+    map.set(agent_details.uuid , selected);
+    for (const [key, value] of map) {
+        slackChannels = {...slackChannels, [key]: value}
+    }
+
+    let payload = {
+        "alert_name": data?.subject,
+        "alert_type": 3,
+        // "query_id": selectedRow?.key || selectedRow?.id,
+        "alert_description": {
+          "message": data?.message,
+          "date_range": frequency == 'send_now' ? '' : frequency,
+        },
+        "alert_configuration":{
+          "email_enabled": false ,
+          "slack_enabled": true,
+          "emails": [],
+          "slack_channels_and_user_groups": slackChannels,
+        }
+    }
+
+    if(frequency === 'send_now') {
+      sendAlertNow(activeProject.id, payload, selectedRow?.key || selectedRow?.id)
+      .then((r) => {
+        notification.success({
+            message: 'Alert Sent Successfully',
+            duration: 5,
+        });
+        setLoading(false);
+        onSuccess();
+      }).catch((err) => {
+        message.error(err?.data?.error);
+        setLoading(false);
+      })
+    } else {
+      createAlert(activeProject.id, payload, selectedRow?.key || selectedRow?.id)
+      .then((r) => {
+        notification.success({
+            message: 'Alert Saved Successfully',
+            duration: 5,
+        });
+        setLoading(false);
+        onSuccess();
+      }).catch((err) => {
+        message.error(err?.data?.error);
+        setLoading(false);
+      })
+    }
+  }
+
   return (
     <>
       <ErrorBoundary
@@ -826,6 +1023,52 @@ function CoreQuery({
             </Row>
           </div>
         </div>
+
+        <ShareToEmailModal visible={showShareToEmailModal} onSubmit={handleEmailClick} isLoading={loading} setShowShareToEmailModal={setShowShareToEmailModal} />
+
+        {projectSettingsV1?.int_slack ? (
+          <ShareToSlackModal visible={showShareToSlackModal} onSubmit={handleSlackClick} channelOpts={channelOpts} isLoading={loading} setShowShareToSlackModal={setShowShareToSlackModal} />
+        ) : (
+          <AppModal
+            title={null}
+            visible={showShareToSlackModal}
+            footer={null}
+            centered={true}
+            mask={true}
+            maskClosable={false}
+            maskStyle={{backgroundColor: 'rgb(0 0 0 / 70%)'}}
+            closable={true}
+            isLoading={loading}
+            onCancel={() => setShowShareToSlackModal(false)}
+            className={`fa-modal--regular`}
+            width={'470px'}
+          >
+            <div className={'m-0 mb-2'}>
+              <Row className={'m-0'}>
+                  <Col>
+                    <SVG name={'Slack'} size={25} extraClass={'inline mr-2 -mt-2'} /><Text type={'title'} level={5} weight={'bold'} extraClass={'inline m-0'}>Slack Integration</Text>
+                  </Col>
+              </Row>
+              <Row className={'m-0 mt-4'}>
+                  <Col>
+                    <Text type={'title'} level={6} color={'grey-2'} weight={'regular'} extraClass={'m-0'}>
+                      Slack is not integrated, Do you want to integrate with your slack account now?
+                    </Text>
+                  </Col>
+              </Row>
+              <Col>
+                  <Row justify='end' className={'w-full mb-1 mt-4'}>
+                      <Col className={'mr-2'}>
+                          <Button type={'default'} onClick={() => setShowShareToSlackModal(false)}>Cancel</Button>
+                      </Col>
+                      <Col className={'mr-2'}>
+                          <Button type={'primary'} onClick={onConnectSlack}>Connect to slack</Button>
+                      </Col>
+                  </Row>
+              </Col>
+            </div>
+          </AppModal>
+        )}
       </ErrorBoundary>
     </>
   );
@@ -837,5 +1080,10 @@ const mapStateToProps = (state) => ({
 
 export default connect(mapStateToProps, {
   fetchWeeklyIngishts,
-  fetchAgentInfo
+  fetchAgentInfo,
+  createAlert,
+  sendAlertNow,
+  fetchSlackChannels,
+  fetchProjectSettingsV1,
+  enableSlackIntegration
 })(CoreQuery);

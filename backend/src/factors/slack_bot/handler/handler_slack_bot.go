@@ -10,11 +10,10 @@ import (
 	"factors/model/store"
 	U "factors/util"
 	"fmt"
-	"net/http"
-	"net/url"
-
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
+	"net/http"
+	"net/url"
 )
 
 type oauthState struct {
@@ -204,7 +203,6 @@ func DeleteSlackIntegrationHandler(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"success": "Slack integration deleted successfully"})
 }
-
 func SendSlackAlert(projectID int64, message, agentUUID string, channel model.SlackChannel) (bool, error) {
 	// get the auth token for the agent uuid and then call the POST method to send the message
 	accessTokens, err := store.GetStore().GetSlackAuthToken(projectID, agentUUID)
@@ -250,3 +248,4 @@ func SendSlackAlert(projectID int64, message, agentUUID string, channel model.Sl
 	defer resp.Body.Close()
 	return false, errors.New("Failed to send slack alert")
 }
+

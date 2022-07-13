@@ -25,11 +25,13 @@ var MarketoDocumentToQuery = map[string]string{
 		" WHERE %v order by id asc LIMIT %v OFFSET %v",
 	MARKETO_TYPE_NAME_LEAD_NO_SEGMENT: "select NULL AS segment_ids, NULL AS segment_names, NULL AS segmentation_ids, NULL AS segmentation_names, p.channel AS program_channel, p.created_at AS program_created_at, p.description AS program_description, p.end_date AS program_end_date, " +
 		" p.name AS program_name, p.sfdc_id AS program_sfdc_id, p.sfdc_name AS program_sfdc_name, p.start_date AS program_start_date, p.status AS program_status, " +
-		" p.type AS program_type, p.url AS program_url, p.workspace,l.* FROM `%s.%s.lead` AS l " +
+		" p.type AS program_type, p.url AS program_url, p.workspace, CASE WHEN adl.lead_id IS NULL THEN false ELSE true END AS is_deleted ,l.* FROM `%s.%s.lead` AS l " +
 		" left outer join " +
 		" (SELECT * FROM (SELECT *, ROW_NUMBER() OVER (PARTITION BY  id ORDER BY updated_at DESC) AS row_num " +
 		" FROM `%s.%s.program`)prog WHERE prog.row_num = 1)p " +
 		" ON l.acquisition_program_id = p.id " +
+		" LEFT OUTER JOIN `%s.%s.activity_delete_lead` AS adl " +
+		" ON l.id = adl.lead_id" +
 		" WHERE %v AND l.id > %v order by l.id asc LIMIT %v",
 }
 
@@ -66,7 +68,7 @@ func GetMarketoDocumentQuery(bigQueryProjectId string, schemaId string, baseQuer
 		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId, bigQueryProjectId, schemaId, bigQueryProjectId, schemaId, bigQueryProjectId, schemaId, GetMarketoDocumentFilterCondition(docType, true, "l", executionDate), limit, offset)
 	}
 	if docType == MARKETO_TYPE_NAME_LEAD_NO_SEGMENT {
-		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId, bigQueryProjectId, schemaId, GetMarketoDocumentFilterCondition(docType, true, "l", executionDate), lastProcessedRecord, limit)
+		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId, bigQueryProjectId, schemaId, bigQueryProjectId, schemaId, GetMarketoDocumentFilterCondition(docType, true, "l", executionDate), lastProcessedRecord, limit)
 	}
 	return ""
 }
@@ -91,7 +93,7 @@ var MarketoDataObjectColumnsInValue = map[string]map[string]int{
 		"program_type": 19, "program_url": 20, "program_workspace": 21},
 	MARKETO_TYPE_NAME_LEAD: {"segment_ids": 0, "segment_names": 1, "segmentation_ids": 2, "segmentation_names": 3, "program_channel": 4, "program_created_at": 5, "program_description": 6, "program_end_date": 7,
 		"program_name": 8, "program_sfdc_id": 9, "program_sfdc_name": 10, "program_start_date": 11, "program_status": 12,
-		"program_type": 13, "program_url": 14, "program_workspace": 15},
+		"program_type": 13, "program_url": 14, "program_workspace": 15, "is_deleted": 16},
 }
 
 var MarketoDataObjectColumnsQuery = map[string]string{

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import _ from 'lodash';
 import PropTypes from 'prop-types';
 import { SVG } from 'factorsComponents';
@@ -6,21 +6,35 @@ import { Button, Tooltip } from 'antd';
 import { BUTTON_TYPES } from '../../constants/buttons.constants';
 import ControlledComponent from '../ControlledComponent';
 import styles from './index.module.scss';
-import { QUERY_TYPE_PROFILE } from '../../utils/constants';
+import { CHART_TYPE_SPARKLINES, QUERY_TYPE_EVENT, QUERY_TYPE_KPI, QUERY_TYPE_PROFILE } from '../../utils/constants';
 import FaSelect from 'Components/FaSelect';
+import { getChartType } from '../../Views/CoreQuery/AnalysisResultsPage/analysisResultsPage.helpers';
 
 const QueryActions = ({
   queryType,
+  chartTypes,
+  breakdown,
   savedQueryId,
   handleSaveClick,
   handleEditClick,
   handleDeleteClick,
-  toggleAddToDashboardModal
+  toggleAddToDashboardModal,
+  setShowShareToEmailModal,
+  setShowShareToSlackModal,
 }) => {
   const [options, setOptions] = useState(false);
+  const [chart, setChart] = useState(null);
+
+  useEffect(() => {
+    setChart(getChartType({ queryType, chartTypes, breakdown }));
+  }, [queryType, chartTypes, breakdown]);
 
   const setActions = (opt) => {
-    if (opt[1] === 'edit') {
+    if (opt[1] === 'envelope' && opt[2] !== 'disabled') {
+      setShowShareToEmailModal(true);
+    } else if (opt[1] === 'SlackStroke' && opt[2] !== 'disabled') {
+      setShowShareToSlackModal(true);
+    } else if (opt[1] === 'edit') {
       handleEditClick();
     } else if (opt[1] === 'trash') {
       handleDeleteClick();
@@ -33,6 +47,8 @@ const QueryActions = ({
       <FaSelect
         extraClass={styles.additionalops}
         options={[
+          chart === CHART_TYPE_SPARKLINES && (queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_KPI) ? ['Email this report', 'envelope'] : ['Email this report', 'envelope', 'disabled'],
+          chart === CHART_TYPE_SPARKLINES && (queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_KPI) ? ['Share to slack', 'SlackStroke'] : ['Share to slack', 'SlackStroke', 'disabled'],
           ['Edit Details', 'edit'],
           ['Delete', 'trash']
         ]}

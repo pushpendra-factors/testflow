@@ -58,7 +58,8 @@ func ExecuteTemplateQueryHandler(c *gin.Context) (interface{}, int, string, stri
 	}
 
 	var cacheResult model.TemplateResponse
-	shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &query, cacheResult, false, reqID)
+
+	shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &query, cacheResult, false, reqID, true)
 	if shouldReturn {
 		if resCode == http.StatusOK {
 			return gin.H{"result": resMsg}, resCode, "", "", false

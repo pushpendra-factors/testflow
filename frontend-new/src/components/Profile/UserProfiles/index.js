@@ -8,7 +8,6 @@ import {
   fetchProfileUserDetails,
   fetchProfileUsers,
 } from '../../../reducers/timeline';
-import moment from 'moment';
 import { bindActionCreators } from 'redux';
 import {
   ProfileMapper,
@@ -19,6 +18,7 @@ import FaSelect from '../../FaSelect';
 import { getUserProperties } from '../../../reducers/coreQuery/middleware';
 import PropertyFilter from './PropertyFilter';
 import { operatorMap } from '../../../Views/CoreQuery/utils';
+import MomentTz from '../../MomentTz';
 
 function UserProfiles({
   activeProject,
@@ -48,7 +48,7 @@ function UserProfiles({
       dataIndex: 'last_activity',
       key: 'last_activity',
       width: 300,
-      render: (item) => moment(item).format('DD MMMM YYYY, hh:mm:ss'),
+      render: (item) => MomentTz(item).format('DD MMMM YYYY, hh:mm:ss'),
     },
   ];
   const [usersLoading, setUsersLoading] = useState(true);

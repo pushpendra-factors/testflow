@@ -621,6 +621,7 @@ type QueryResult struct {
 type ResultGroup struct {
 	Results []QueryResult `json:"result_group"`
 	Query   interface{}   `json:"query"`
+	IsShareable bool        `json:"is_shareable"`
 }
 
 // QueryCacheResult Container to save query cache result along with timestamp.

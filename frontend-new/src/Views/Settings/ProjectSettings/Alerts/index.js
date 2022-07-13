@@ -8,7 +8,7 @@ import { MoreOutlined, PlusOutlined } from '@ant-design/icons';
 import _ from 'lodash';
 import GroupSelect2 from '../../../../components/KPIComposer/GroupSelect2';
 import FaSelect from 'Components/FaSelect';
-import { createAlerts, fetchAlerts, deleteAlerts } from 'Reducers/global';
+import { createAlert, fetchAlerts, deleteAlert } from 'Reducers/global';
 import ConfirmationModal from '../../../../components/ConfirmationModal';
 import QueryBlock from './QueryBlock';
 import { deleteGroupByForEvent } from '../../../../reducers/coreQuery/middleware';
@@ -21,9 +21,9 @@ const { Option } = Select;
 const Alerts = ({
     activeProject,
     kpi,
-    createAlerts,
+    createAlert,
     fetchAlerts,
-    deleteAlerts,
+    deleteAlert,
     savedAlerts,
     agent_details,
     slack,
@@ -81,7 +81,7 @@ const Alerts = ({
 
 
     const confirmRemove = (id) => {
-        return deleteAlerts(activeProject.id, id).then(res => {
+        return deleteAlert(activeProject.id, id).then(res => {
             fetchAlerts(activeProject.id);
             notification.success({
                 message: "Success",
@@ -316,6 +316,7 @@ const Alerts = ({
               "value": Value,
               "date_range": data.date_range,
               'compared_to': data.compared_to,
+              "message": '',
             },
             "alert_configuration":{
               "email_enabled": emailEnabled ,
@@ -325,7 +326,7 @@ const Alerts = ({
             }
           }
         
-        createAlerts(activeProject.id, payload).then(res => {
+        createAlert(activeProject.id, payload, 0).then(res => {
             setLoading(false);
             fetchAlerts(activeProject.id);
             notification.success({
@@ -400,9 +401,9 @@ const Alerts = ({
     };   
 
     const DateRangeTypes =[
-        {value: 'last_week', label: 'Last week'},
-        {value: 'last_month', label: 'Last month'},
-        {value: 'last_quarter', label: 'Last quarter'},
+        {value: 'last_week', label: 'Weekly'},
+        {value: 'last_month', label: 'Monthly'},
+        {value: 'last_quarter', label: 'Quarterly'},
       ];
     
     const DateRangeTypeSelect = (
@@ -978,4 +979,4 @@ const mapStateToProps = (state) => ({
 });
 
 
-export default connect(mapStateToProps, { createAlerts, fetchAlerts, deleteAlerts, fetchSlackChannels, fetchProjectSettingsV1, enableSlackIntegration })(Alerts)
+export default connect(mapStateToProps, { createAlert, fetchAlerts, deleteAlert, fetchSlackChannels, fetchProjectSettingsV1, enableSlackIntegration })(Alerts)
