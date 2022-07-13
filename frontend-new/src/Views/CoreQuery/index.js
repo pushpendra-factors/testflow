@@ -589,9 +589,10 @@ function CoreQuery({
           queryOptions.group_analysis &&
           queryOptions.group_analysis !== 'users'
         ) {
+          const dtRange = {...durationObj, frequency: 'hour'}
           const kpiQuery = getKPIQuery(
             attrQueries,
-            durationObj,
+            dtRange,
             { event: [], global: [] },
             queryOptions,
             []
