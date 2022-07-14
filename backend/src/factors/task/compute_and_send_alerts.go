@@ -10,14 +10,15 @@ import (
 	slack "factors/slack_bot/handler"
 	U "factors/util"
 	"fmt"
-	"github.com/jinzhu/gorm/dialects/postgres"
-	"github.com/jinzhu/now"
-	log "github.com/sirupsen/logrus"
 	"math"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/jinzhu/gorm/dialects/postgres"
+	"github.com/jinzhu/now"
+	log "github.com/sirupsen/logrus"
 )
 
 type Message struct {
@@ -68,8 +69,8 @@ func ComputeAndSendAlerts(projectID int64, configs map[string]interface{}) (map[
 		}
 		if alert.AlertType == 3 {
 			_, err := HandlerAlertWithQueryID(alert, configs)
-			if err != nil{
-				log.WithError(err).Error("failed to run type 3 alert with alert id ",alert.ID)
+			if err != nil {
+				log.WithError(err).Error("failed to run type 3 alert with alert id ", alert.ID)
 			}
 			continue
 		}
@@ -143,7 +144,7 @@ func executeAlertsKPIQuery(projectID int64, alertType int, date_range dateRanges
 	kpiQuery.To = date_range.to
 	kpiQueryGroup.Queries = append(kpiQueryGroup.Queries, kpiQuery)
 	results, statusCode := store.GetStore().ExecuteKPIQueryGroup(projectID, "",
-		kpiQueryGroup, C.EnableOptimisedFilterOnProfileQuery())
+		kpiQueryGroup, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 	log.Info("query response first", results, statusCode)
 	if len(results) != 1 {
 		log.Error("empty or invalid result for ", kpiQuery)
@@ -193,7 +194,7 @@ func executeAlertsKPIQuery(projectID int64, alertType int, date_range dateRanges
 		kpiQuery.To = date_range.prev_to
 		kpiQueryGroup.Queries = append(kpiQueryGroup.Queries, kpiQuery)
 		results, statusCode = store.GetStore().ExecuteKPIQueryGroup(projectID, "",
-			kpiQueryGroup, C.EnableOptimisedFilterOnProfileQuery())
+			kpiQueryGroup, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		log.Info("query response second", results, statusCode)
 		if len(results) != 1 {
 			log.Error("empty or invalid result for comparision type alerts  ", kpiQuery)
@@ -704,7 +705,7 @@ func handleShareQueryTypeEvents(alert model.Alert, query *model.Queries, configs
 		log.Error("Query failed. Error Processing/Fetching data from Query cache")
 		return false, errors.New("Query failed. Error Processing/Fetching data from Query cache")
 	}
-	resultGroup, errCode := store.GetStore().RunEventsGroupQuery(queryGroup.Queries, alert.ProjectID)
+	resultGroup, errCode := store.GetStore().RunEventsGroupQuery(queryGroup.Queries, alert.ProjectID, C.EnableOptimisedFilterOnEventUserQuery())
 	if errCode != http.StatusOK {
 		model.DeleteQueryCacheKey(alert.ProjectID, &queryGroup)
 		log.Error("Query failed. Failed to process query from DB")
@@ -826,7 +827,7 @@ func handleShareQueryTypeKPI(alert model.Alert, query *model.Queries, configs ma
 	}
 	var duplicatedRequest model.KPIQueryGroup
 	U.DeepCopy(&kpiQueryGroup, &duplicatedRequest)
-	queryResult, statusCode := store.GetStore().ExecuteKPIQueryGroup(projectID, kpiQueryGroup.Class, duplicatedRequest, C.EnableOptimisedFilterOnProfileQuery())
+	queryResult, statusCode := store.GetStore().ExecuteKPIQueryGroup(projectID, kpiQueryGroup.Class, duplicatedRequest, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 	if statusCode != http.StatusOK {
 		model.DeleteQueryCacheKey(projectID, &kpiQueryGroup)
 		log.Error("Failed to process query from DB")

@@ -202,10 +202,14 @@ func AttributionHandler(c *gin.Context) (interface{}, int, string, string, bool)
 	enableOptimisedFilterOnProfileQuery := c.Request.Header.Get(H.HeaderUserFilterOptForProfiles) == "true" ||
 		C.EnableOptimisedFilterOnProfileQuery()
 
+	enableOptimisedFilterOnEventUserQuery := c.Request.Header.Get(H.HeaderUserFilterOptForEventsAndUsers) == "true" ||
+		C.EnableOptimisedFilterOnEventUserQuery()
+
 	H.SleepIfHeaderSet(c)
 	QueryKey, _ := attributionQueryUnitPayload.GetQueryCacheRedisKey(projectId)
 	debugQueryKey := model.GetStringKeyFromCacheRedisKey(QueryKey)
-	result, err := store.GetStore().ExecuteAttributionQuery(projectId, requestPayload.Query, debugQueryKey, enableOptimisedFilterOnProfileQuery)
+	result, err := store.GetStore().ExecuteAttributionQuery(projectId, requestPayload.Query, debugQueryKey,
+		enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
 	if err != nil {
 		model.DeleteQueryCacheKey(projectId, &attributionQueryUnitPayload)
 		logCtx.WithError(err).Error("Failed to process query from DB")

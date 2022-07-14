@@ -43,7 +43,7 @@ func TestCreatePatternEventInfoFromScanner(t *testing.T) {
 }
 
 func TestGetModelKey(t *testing.T) {
-	projectId := uint64(time.Now().Unix())
+	projectId := int64(time.Now().Unix())
 	modelId := uint64(time.Now().Unix())
 	actualK := GetModelKey(projectId, modelId)
 	expectedK := fmt.Sprintf("%d%s%d", projectId, IdSeparator, modelId)
@@ -51,7 +51,7 @@ func TestGetModelKey(t *testing.T) {
 }
 
 func TestGetChunkKey(t *testing.T) {
-	projectId := uint64(time.Now().Unix())
+	projectId := int64(time.Now().Unix())
 	modelId := uint64(time.Now().Unix())
 	chunkId := strconv.Itoa(int(time.Now().Unix()))
 	actualK := GetChunkKey(projectId, modelId, chunkId)
@@ -60,7 +60,7 @@ func TestGetChunkKey(t *testing.T) {
 }
 
 func TestGetModelEventInfoCacheKey(t *testing.T) {
-	projectId := uint64(time.Now().Unix())
+	projectId := int64(time.Now().Unix())
 	modelId := uint64(time.Now().Unix())
 	actualK := getModelEventInfoCacheKey(projectId, modelId)
 	expectedK := fmt.Sprintf("%s%s%d%s%d", "model_event_info", IdSeparator, projectId, IdSeparator, modelId)
@@ -68,7 +68,7 @@ func TestGetModelEventInfoCacheKey(t *testing.T) {
 }
 
 func TestGetModelChunkCacheKey(t *testing.T) {
-	projectId := uint64(time.Now().Unix())
+	projectId := int64(time.Now().Unix())
 	modelId := uint64(time.Now().Unix())
 	chunkId := strconv.Itoa(int(time.Now().Unix()))
 	actualK := getModelChunkCacheKey(projectId, modelId, chunkId)
@@ -104,7 +104,7 @@ func TestGetPutModelEventInfo(t *testing.T) {
 	store, err := New(5, 5, diskManager, cloudManager)
 	assert.Nil(t, err)
 
-	projectId := uint64(time.Now().Unix())
+	projectId := int64(time.Now().Unix())
 	modelId := uint64(time.Now().Unix())
 
 	// should not be present in cloud
@@ -141,7 +141,7 @@ func TestGetPutModelEventInfo(t *testing.T) {
 func TestGetPutPatterns(t *testing.T) {
 	cloudManager := serviceDisk.New(baseCloudDir)
 	diskManager := serviceDisk.New(baseDiskDir)
-	projectId := uint64(time.Now().Unix())
+	projectId := int64(time.Now().Unix())
 	modelId := uint64(time.Now().Unix())
 	chunkId := U.RandomString(8)
 

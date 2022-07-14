@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	C "factors/config"
 	H "factors/handler/helpers"
 	V1 "factors/handler/v1"
 	mid "factors/middleware"
@@ -167,7 +168,10 @@ func EventsQueryHandler(c *gin.Context) (interface{}, int, string, string, bool)
 	model.SetQueryCachePlaceholder(projectId, &requestPayload)
 	H.SleepIfHeaderSet(c)
 
-	resultGroup, errCode := store.GetStore().RunEventsGroupQuery(requestPayload.Queries, projectId)
+	enableOptimisedFilterOnEventUserQuery := c.Request.Header.Get(H.HeaderUserFilterOptForEventsAndUsers) == "true" ||
+		C.EnableOptimisedFilterOnEventUserQuery()
+
+	resultGroup, errCode := store.GetStore().RunEventsGroupQuery(requestPayload.Queries, projectId, enableOptimisedFilterOnEventUserQuery)
 	if errCode != http.StatusOK {
 		model.DeleteQueryCacheKey(projectId, &requestPayload)
 		logCtx.Error("Query failed. Failed to process query from DB")
@@ -338,7 +342,10 @@ func QueryHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 	model.SetQueryCachePlaceholder(projectId, &requestPayload.Query)
 	H.SleepIfHeaderSet(c)
 
-	result, errCode, errMsg := store.GetStore().Analyze(projectId, requestPayload.Query)
+	enableOptimisedFilterOnEventUserQuery := c.Request.Header.Get(H.HeaderUserFilterOptForEventsAndUsers) == "true" ||
+		C.EnableOptimisedFilterOnEventUserQuery()
+
+	result, errCode, errMsg := store.GetStore().Analyze(projectId, requestPayload.Query, enableOptimisedFilterOnEventUserQuery)
 	if errCode != http.StatusOK {
 		model.DeleteQueryCacheKey(projectId, &requestPayload.Query)
 		logCtx.Error("Failed to process query from DB - " + errMsg)

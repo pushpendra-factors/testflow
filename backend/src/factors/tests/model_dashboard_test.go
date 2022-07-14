@@ -187,7 +187,7 @@ func TestUpdateDashboard(t *testing.T) {
 		assert.Equal(t, http.StatusAccepted, errCode)
 		gDashboard, errCode := store.GetStore().GetDashboard(project.ID, agent.UUID, dashboard.ID)
 		assert.Equal(t, http.StatusFound, errCode)
-		var gPositions map[string]map[uint64]int
+		var gPositions map[string]map[int64]int
 		err := json.Unmarshal((gDashboard.UnitsPosition).RawMessage, &gPositions)
 		assert.Nil(t, err)
 		assert.Equal(t, positions, gPositions)
@@ -269,9 +269,9 @@ func TestGetDashboardResultFromCache(t *testing.T) {
 		OverridePeriod: true,
 	}
 
-	w := sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &model.DashboardUnitRequestPayload{Presentation: model.PresentationLine, QueryId: 1})
+	w := sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &model.DashboardUnitRequestPayloadString{Presentation: model.PresentationLine, QueryId: "1"})
 	assert.Equal(t, http.StatusCreated, w.Code)
-	w = sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &model.DashboardUnitRequestPayload{Presentation: model.PresentationLine, QueryId: 3})
+	w = sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &model.DashboardUnitRequestPayloadString{Presentation: model.PresentationLine, QueryId: "3"})
 	assert.Equal(t, http.StatusCreated, w.Code)
 
 	//For Channel query
@@ -296,8 +296,8 @@ func TestGetDashboardResultFromCache(t *testing.T) {
 		Timezone:    string(U.TimeZoneStringIST),
 	}
 
-	w = sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &model.DashboardUnitRequestPayload{
-		Presentation: "pc", QueryId: 2})
+	w = sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &model.DashboardUnitRequestPayloadString{
+		Presentation: "pc", QueryId: "2"})
 	assert.Equal(t, http.StatusCreated, w.Code)
 
 	dashboards, errCode := store.GetStore().GetDashboards(project.ID, agent.UUID)

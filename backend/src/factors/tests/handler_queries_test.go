@@ -169,7 +169,7 @@ func TestAPISearchQueryHandler(t *testing.T) {
 	w = sendSearchQueryReq(r, project.ID, "x", agent)
 	assert.Equal(t, http.StatusFound, w.Code)
 
-	var queries []model.Queries
+	var queries []model.QueriesString
 	decoder := json.NewDecoder(w.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&queries); err != nil {
@@ -447,9 +447,9 @@ func TestAPIGetQueriesHandler(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, w.Code)
 
 	w = sendGetSavedQueriesReq(r, project.ID, agent)
-	assert.Equal(t, http.StatusFound, w.Code)
+	assert.Equal(t, http.StatusOK, w.Code)
 
-	var queries []model.Queries
+	var queries []model.QueriesString
 	decoder := json.NewDecoder(w.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&queries); err != nil {

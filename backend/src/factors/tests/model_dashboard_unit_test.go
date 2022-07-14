@@ -691,8 +691,8 @@ func TestDashboardUnitEventForTimeZone(t *testing.T) {
 		EventsCondition: model.EventCondAllGivenEvent,
 	}
 
-	sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &model.DashboardUnitRequestPayload{
-		Presentation: "pl", QueryId: 4})
+	sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &model.DashboardUnitRequestPayloadString{
+		Presentation: "pl", QueryId: "4"})
 	dashboardUnits, _ := store.GetStore().GetDashboardUnits(project.ID, agent.UUID, dashboard.ID)
 
 	decChannelResult := struct {
@@ -748,8 +748,8 @@ func TestDashboardUnitChannelForTimeZone(t *testing.T) {
 		From:        1575138600,
 		To:          1575224999,
 	}
-	sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &model.DashboardUnitRequestPayload{
-		Presentation: "pc", QueryId: 5})
+	sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &model.DashboardUnitRequestPayloadString{
+		Presentation: "pc", QueryId: "5"})
 	decChannelResult := struct {
 		Cache  bool                     `json:"cache"`
 		Result model.ChannelQueryResult `json:"result"`
@@ -780,8 +780,8 @@ func TestDashboardUnitChannelForTimeZone(t *testing.T) {
 			Timezone: string(U.TimeZoneStringIST), From: 1575138600, To: 1575224999, GroupByTimestamp: "",
 			Filters: []model.ChannelFilterV1{}, GroupBy: []model.ChannelGroupBy{}}},
 	}
-	sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &model.DashboardUnitRequestPayload{
-		Presentation: "pc", QueryId: 6})
+	sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &model.DashboardUnitRequestPayloadString{
+		Presentation: "pc", QueryId: "6"})
 	decChannelResult1 := struct {
 		Cache  bool                       `json:"cache"`
 		Result model.ChannelResultGroupV1 `json:"result"`
@@ -879,7 +879,7 @@ func TestCacheDashboardUnitsForProjectID(t *testing.T) {
 	}
 	var reportCollector sync.Map
 	//dashboardUnitIDs := make([]int64, 0)
-	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitsList, dashboardQueryClassList, 1, &reportCollector)
+	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitsList, dashboardQueryClassList, 1, &reportCollector, C.EnableOptimisedFilterOnEventUserQuery())
 	assert.Equal(t, 5, updatedUnitsCount)
 
 	for rangeString, rangeFunction := range U.QueryDateRangePresets {
@@ -1001,7 +1001,7 @@ func TestCacheDashboardUnitsForProjectIDEventsGroupQuery(t *testing.T) {
 	}
 	var reportCollector sync.Map
 	//dashboardUnitIDs := make([]int64, 0)
-	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitsList, dashboardQueryClassList, 1, &reportCollector)
+	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitsList, dashboardQueryClassList, 1, &reportCollector, C.EnableOptimisedFilterOnEventUserQuery())
 	assert.Equal(t, len(dashboardQueriesStr), updatedUnitsCount)
 	for _, rangeFunction := range U.QueryDateRangePresets {
 		from, to, errCode := rangeFunction(timezoneString)
@@ -1102,7 +1102,7 @@ func TestCacheDashboardUnitsForProjectIDChannelsGroupQuery(t *testing.T) {
 
 	var reportCollector sync.Map
 	//dashboardUnitIDs := make([]int64, 0)
-	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitsList, dashboardQueryClassList, 1, &reportCollector)
+	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitsList, dashboardQueryClassList, 1, &reportCollector, C.EnableOptimisedFilterOnEventUserQuery())
 	assert.Equal(t, len(dashboardQueriesStr), updatedUnitsCount)
 	timezonestring := U.TimeZoneString(project.TimeZone)
 	for _, rangeFunction := range U.QueryDateRangePresets {
@@ -1232,7 +1232,7 @@ func TestDashboardUnitEventForDateTypeFilters(t *testing.T) {
 	dashboardQueryClassList = append(dashboardQueryClassList, query1.GetClass())
 	var reportCollector sync.Map
 	//dashboardUnitIDs := make([]int64, 0)
-	store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitsList, dashboardQueryClassList, 1, &reportCollector)
+	store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitsList, dashboardQueryClassList, 1, &reportCollector, C.EnableOptimisedFilterOnEventUserQuery())
 	result := struct {
 		Cache  bool              `json:"cache"`
 		Result model.QueryResult `json:"result"`

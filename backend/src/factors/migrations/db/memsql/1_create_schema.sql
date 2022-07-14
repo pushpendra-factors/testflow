@@ -157,7 +157,7 @@ CREATE TABLE IF NOT EXISTS agents (
     is_onboarding_flow_seen boolean,
     is_auth0_user boolean NOT NULL DEFAULT false,
     value json,
-    slack_access_tokens JSON;
+    slack_access_tokens JSON,
     last_logged_out bigint DEFAULT 0,
     SHARD KEY (uuid),
     PRIMARY KEY (uuid),
@@ -1078,5 +1078,17 @@ CREATE TABLE IF NOT EXISTS dashboard_templates(
     created_at timestamp(6) NOT NULL, 
     updated_at timestamp(6) NOT NULL,
     KEY (id) USING HASH,
-    SHARD KEY (id),
+    SHARD KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS data_availabilities (
+    project_id bigint NOT NULL,
+    integration text,
+    latest_data_timestamp bigint,
+    last_polled timestamp(6) NOT NULL, 
+    source text,
+    created_at timestamp(6) NOT NULL, 
+    updated_at timestamp(6) NOT NULL,
+    SHARD KEY (project_id),
+    UNIQUE KEY project_id_integration_unique_idx(project_id,integration) USING HASH
 );

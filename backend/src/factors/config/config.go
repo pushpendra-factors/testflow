@@ -252,6 +252,7 @@ type Configuration struct {
 	ClearbitEnabled                                 int
 	UseSalesforceV54APIByProjectID                  string
 	EnableOptimisedFilterOnProfileQuery             bool
+	EnableOptimisedFilterOnEventUserQuery           bool
 }
 
 type Services struct {
@@ -2198,4 +2199,8 @@ func AllowSalesforcev54APIByProjectID(projectID int64) bool {
 
 func EnableOptimisedFilterOnProfileQuery() bool {
 	return configuration.EnableOptimisedFilterOnProfileQuery
+}
+
+func EnableOptimisedFilterOnEventUserQuery() bool {
+	return configuration.EnableOptimisedFilterOnEventUserQuery
 }

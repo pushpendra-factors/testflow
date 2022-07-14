@@ -26,7 +26,9 @@ type ResultGroup struct {
 	Results []model.QueryResult `json:"result_group"`
 }
 
-func (store *MemSQL) RunEventsGroupQuery(queriesOriginal []model.Query, projectId int64) (model.ResultGroup, int) {
+func (store *MemSQL) RunEventsGroupQuery(queriesOriginal []model.Query,
+	projectId int64, enableFilterOpt bool) (model.ResultGroup, int) {
+
 	logFields := log.Fields{
 		"queries_original": queriesOriginal,
 		"project_id":       projectId,
@@ -44,7 +46,7 @@ func (store *MemSQL) RunEventsGroupQuery(queriesOriginal []model.Query, projectI
 	waitGroup.Add(actualRoutineLimit)
 	for index, query := range queries {
 		count++
-		go store.runSingleEventsQuery(projectId, query, &resultGroup.Results[index], &waitGroup)
+		go store.runSingleEventsQuery(projectId, query, &resultGroup.Results[index], &waitGroup, enableFilterOpt)
 		if count%actualRoutineLimit == 0 {
 			waitGroup.Wait()
 			waitGroup.Add(U.MinInt(len(queries)-count, actualRoutineLimit))
@@ -60,7 +62,7 @@ func (store *MemSQL) RunEventsGroupQuery(queriesOriginal []model.Query, projectI
 }
 
 func (store *MemSQL) runSingleEventsQuery(projectId int64, query model.Query,
-	resultHolder *model.QueryResult, waitGroup *sync.WaitGroup) {
+	resultHolder *model.QueryResult, waitGroup *sync.WaitGroup, enableFilterOpt bool) {
 	logFields := log.Fields{
 		"query":      query,
 		"project_id": projectId,
@@ -69,7 +71,7 @@ func (store *MemSQL) runSingleEventsQuery(projectId int64, query model.Query,
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	defer waitGroup.Done()
-	result, errCode, errMsg := store.ExecuteEventsQuery(projectId, query)
+	result, errCode, errMsg := store.ExecuteEventsQuery(projectId, query, enableFilterOpt)
 	if errCode != http.StatusOK {
 		errorResult := buildErrorResult(errMsg)
 		*resultHolder = *errorResult
@@ -79,7 +81,7 @@ func (store *MemSQL) runSingleEventsQuery(projectId int64, query model.Query,
 	return
 }
 
-func (store *MemSQL) ExecuteEventsQuery(projectId int64, query model.Query) (*model.QueryResult, int, string) {
+func (store *MemSQL) ExecuteEventsQuery(projectId int64, query model.Query, enableFilterOpt bool) (*model.QueryResult, int, string) {
 	logFields := log.Fields{
 		"query":      query,
 		"project_id": projectId,
@@ -89,7 +91,7 @@ func (store *MemSQL) ExecuteEventsQuery(projectId int64, query model.Query) (*mo
 	if valid, errMsg := IsValidEventsQuery(&query); !valid {
 		return nil, http.StatusBadRequest, errMsg
 	}
-	return store.RunInsightsQuery(projectId, query)
+	return store.RunInsightsQuery(projectId, query, enableFilterOpt)
 }
 
 func (store *MemSQL) fillEventNameIDs(projectID int64, query *model.Query) {
@@ -114,7 +116,7 @@ func (store *MemSQL) fillEventNameIDs(projectID int64, query *model.Query) {
 
 }
 
-func (store *MemSQL) RunInsightsQuery(projectId int64, query model.Query) (*model.QueryResult, int, string) {
+func (store *MemSQL) RunInsightsQuery(projectId int64, query model.Query, enableFilterOpt bool) (*model.QueryResult, int, string) {
 	logFields := log.Fields{
 		"query":      query,
 		"project_id": projectId,
@@ -128,7 +130,7 @@ func (store *MemSQL) RunInsightsQuery(projectId int64, query model.Query) (*mode
 		store.fillEventNameIDs(projectId, &query)
 	}
 
-	stmnt, params, err := store.BuildInsightsQuery(projectId, query)
+	stmnt, params, err := store.BuildInsightsQuery(projectId, query, enableFilterOpt)
 	if err != nil {
 		log.WithError(err).Error(model.ErrMsgQueryProcessingFailure)
 		return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
@@ -493,7 +495,7 @@ func addEventMetricsMetaToQueryResult(result *model.QueryResult) {
 }
 
 // BuildInsightsQuery - Dispatches corresponding build method for insights.
-func (store *MemSQL) BuildInsightsQuery(projectId int64, query model.Query) (string, []interface{}, error) {
+func (store *MemSQL) BuildInsightsQuery(projectId int64, query model.Query, enableFilterOpt bool) (string, []interface{}, error) {
 	logFields := log.Fields{
 		"query":      query,
 		"project_id": projectId,
@@ -503,31 +505,31 @@ func (store *MemSQL) BuildInsightsQuery(projectId int64, query model.Query) (str
 
 	if query.Type == model.QueryTypeEventsOccurrence {
 		if query.EventsCondition == model.EventCondEachGivenEvent {
-			return buildEventCountForEachGivenEventsQueryNEW(projectId, query)
+			return buildEventCountForEachGivenEventsQueryNEW(projectId, query, enableFilterOpt)
 		}
 
 		if len(query.EventsWithProperties) == 1 {
-			return buildEventsOccurrenceSingleEventQuery(projectId, query)
+			return buildEventsOccurrenceSingleEventQuery(projectId, query, enableFilterOpt)
 		}
 
-		return buildEventsOccurrenceWithGivenEventQuery(projectId, query)
+		return buildEventsOccurrenceWithGivenEventQuery(projectId, query, enableFilterOpt)
 	}
 
 	if query.Type == model.QueryTypeUniqueUsers {
 		if len(query.EventsWithProperties) == 1 {
-			return store.buildUniqueUsersSingleEventQuery(projectId, query)
+			return store.buildUniqueUsersSingleEventQuery(projectId, query, enableFilterOpt)
 		}
 
 		if query.EventsCondition == model.EventCondAnyGivenEvent {
-			return store.buildUniqueUsersWithAnyGivenEventsQuery(projectId, query)
+			return store.buildUniqueUsersWithAnyGivenEventsQuery(projectId, query, enableFilterOpt)
 		}
 
 		if query.EventsCondition == model.EventCondAllGivenEvent {
-			return store.buildUniqueUsersWithAllGivenEventsQuery(projectId, query)
+			return store.buildUniqueUsersWithAllGivenEventsQuery(projectId, query, enableFilterOpt)
 		}
 
 		if query.EventsCondition == model.EventCondEachGivenEvent {
-			return store.buildUniqueUsersWithEachGivenEventsQuery(projectId, query)
+			return store.buildUniqueUsersWithEachGivenEventsQuery(projectId, query, enableFilterOpt)
 		}
 	}
 
@@ -889,7 +891,7 @@ step1 AS (
 */
 
 func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *model.Query,
-	qStmnt *string, qParams *[]interface{}) ([]string, map[string][]string) {
+	qStmnt *string, qParams *[]interface{}, enableFilterOpt bool) ([]string, map[string][]string) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"q":          q,
@@ -913,8 +915,8 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 	if q.GetGroupByTimestamp() != "" {
 		selectTimestamp := getSelectTimestampByType(q.GetGroupByTimestamp(), q.Timezone)
 		// select and order by with datetime.
-		commonSelect = fmt.Sprintf("COALESCE(users.customer_user_id, users.id) as coal_user_id%%, %s as %s,", selectTimestamp, model.AliasDateTime) +
-			" FIRST(users.id, FROM_UNIXTIME(events.timestamp)) as event_user_id"
+		commonSelect = fmt.Sprintf("COALESCE(users.customer_user_id, events.user_id) as coal_user_id%%, %s as %s,", selectTimestamp, model.AliasDateTime) +
+			" FIRST(events.user_id, FROM_UNIXTIME(events.timestamp)) as event_user_id"
 
 		commonSelect = strings.ReplaceAll(commonSelect, "%", "%s")
 
@@ -923,8 +925,8 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 		commonGroupBy = "datetime, coal_user_id"
 	} else {
 		// default select.
-		commonSelect = "COALESCE(users.customer_user_id, users.id)" +
-			" as coal_user_id%s, FIRST(users.id, FROM_UNIXTIME(events.timestamp)) as event_user_id"
+		commonSelect = "COALESCE(users.customer_user_id, events.user_id)" +
+			" as coal_user_id%s, FIRST(events.user_id, FROM_UNIXTIME(events.timestamp)) as event_user_id"
 		commonGroupBy = "coal_user_id"
 	}
 
@@ -987,7 +989,12 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 
 		addJoinStmnt = addJoinStmnt + getUsersFilterJoinStatement(projectID, q.GlobalUserProperties)
 		stepParams = append(stepParams, projectID)
-		addFilterEventsWithPropsQuery(projectID, qStmnt, qParams, ewp, q.From, q.To,
+
+		addFilterFunc := addFilterEventsWithPropsQuery
+		if enableFilterOpt {
+			addFilterFunc = addFilterEventsWithPropsQueryV2
+		}
+		addFilterFunc(projectID, qStmnt, qParams, ewp, q.From, q.To,
 			"", refStepName, stepSelect, stepParams, addJoinStmnt, stepGroupBy, stepOrderBy, q.GlobalUserProperties)
 
 		if i < len(q.EventsWithProperties)-1 {
@@ -1175,7 +1182,8 @@ WITH
     group by group_prop1, group_prop2 order by group_prop2;
 */
 
-func buildEventsOccurrenceSingleEventQuery(projectId int64, q model.Query) (string, []interface{}, error) {
+func buildEventsOccurrenceSingleEventQuery(projectId int64,
+	q model.Query, enableFilterOpt bool) (string, []interface{}, error) {
 	logFields := log.Fields{
 		"project_id": projectId,
 		"q":          q,
@@ -1187,7 +1195,7 @@ func buildEventsOccurrenceSingleEventQuery(projectId int64, q model.Query) (stri
 
 	if hasGroupEntity(q.GroupByProperties, model.PropertyEntityUser) || isGroupByTypeWithBuckets(q.GroupByProperties) {
 		// Using any given event query, which handles groups already.
-		return buildEventsOccurrenceWithGivenEventQuery(projectId, q)
+		return buildEventsOccurrenceWithGivenEventQuery(projectId, q, enableFilterOpt)
 	}
 
 	var qStmnt string
@@ -1201,7 +1209,11 @@ func buildEventsOccurrenceSingleEventQuery(projectId int64, q model.Query) (stri
 	qSelect = appendSelectTimestampIfRequired(qSelect, q.GetGroupByTimestamp(), q.Timezone)
 	qSelect = joinWithComma(qSelect, egSelect, fmt.Sprintf("COUNT(*) AS %s", model.AliasAggr))
 
-	addFilterEventsWithPropsQuery(projectId, &qStmnt, &qParams, q.EventsWithProperties[0], q.From, q.To,
+	addFilterFunc := addFilterEventsWithPropsQuery
+	if enableFilterOpt {
+		addFilterFunc = addFilterEventsWithPropsQueryV2
+	}
+	addFilterFunc(projectId, &qStmnt, &qParams, q.EventsWithProperties[0], q.From, q.To,
 		"", "", qSelect, egSelectParams, "", "", "", q.GlobalUserProperties)
 
 	qStmnt = appendGroupByTimestampIfRequired(qStmnt, isGroupByTimestamp, egKeys)
@@ -1309,7 +1321,7 @@ COUNT(DISTINCT(event_user_id)) AS count FROM each_users_union GROUP BY event_nam
 _group_key_1, _group_key_2, _group_key_3, _group_key_4, datetime ORDER BY count DESC LIMIT 100000
 */
 func (store *MemSQL) buildUniqueUsersWithEachGivenEventsQuery(projectID int64,
-	query model.Query) (string, []interface{}, error) {
+	query model.Query, enableFilterOpt bool) (string, []interface{}, error) {
 
 	logFields := log.Fields{
 		"project_id": projectID,
@@ -1323,7 +1335,7 @@ func (store *MemSQL) buildUniqueUsersWithEachGivenEventsQuery(projectID int64,
 	qStmnt := ""
 	qParams := make([]interface{}, 0)
 
-	steps, stepsToKeysMap := store.addEventFilterStepsForUniqueUsersQuery(projectID, &query, &qStmnt, &qParams)
+	steps, stepsToKeysMap := store.addEventFilterStepsForUniqueUsersQuery(projectID, &query, &qStmnt, &qParams, enableFilterOpt)
 	totalGroupKeys := 0
 	for _, val := range stepsToKeysMap {
 		totalGroupKeys = totalGroupKeys + len(val)
@@ -1488,7 +1500,7 @@ LEFT JOIN users ON users_intersect.event_user_id=users.id GROUP BY date ORDER BY
 
 */
 func (store *MemSQL) buildUniqueUsersWithAllGivenEventsQuery(projectID int64,
-	query model.Query) (string, []interface{}, error) {
+	query model.Query, enableFilterOpt bool) (string, []interface{}, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"query":      query,
@@ -1502,7 +1514,7 @@ func (store *MemSQL) buildUniqueUsersWithAllGivenEventsQuery(projectID int64,
 	qStmnt := ""
 	qParams := make([]interface{}, 0)
 
-	steps, _ := store.addEventFilterStepsForUniqueUsersQuery(projectID, &query, &qStmnt, &qParams)
+	steps, _ := store.addEventFilterStepsForUniqueUsersQuery(projectID, &query, &qStmnt, &qParams, enableFilterOpt)
 
 	// users intersection
 	intersectSelect := fmt.Sprintf("%s.event_user_id as event_user_id, %s.coal_user_id as coal_user_id", steps[0], steps[0])
@@ -1626,7 +1638,7 @@ WITH
 	LEFT JOIN users ON users_union.event_user_id=users.id GROUP BY date ORDER BY count DESC LIMIT 100000;
 */
 func (store *MemSQL) buildUniqueUsersWithAnyGivenEventsQuery(projectID int64,
-	query model.Query) (string, []interface{}, error) {
+	query model.Query, enableFilterOpt bool) (string, []interface{}, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"query":      query,
@@ -1640,7 +1652,7 @@ func (store *MemSQL) buildUniqueUsersWithAnyGivenEventsQuery(projectID int64,
 	qStmnt := ""
 	qParams := make([]interface{}, 0)
 
-	steps, stepsToKeysMap := store.addEventFilterStepsForUniqueUsersQuery(projectID, &query, &qStmnt, &qParams)
+	steps, stepsToKeysMap := store.addEventFilterStepsForUniqueUsersQuery(projectID, &query, &qStmnt, &qParams, enableFilterOpt)
 	totalGroupKeys := 0
 	for _, val := range stepsToKeysMap {
 		totalGroupKeys = totalGroupKeys + len(val)
@@ -1707,7 +1719,7 @@ _group_key_1,  COUNT(DISTINCT(event_user_id)) AS count FROM bucketed GROUP BY _g
 ORDER BY _group_key_0_bucket LIMIT 100000
 */
 func (store *MemSQL) buildUniqueUsersSingleEventQuery(projectID int64,
-	query model.Query) (string, []interface{}, error) {
+	query model.Query, enableFilterOpt bool) (string, []interface{}, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"query":      query,
@@ -1721,7 +1733,7 @@ func (store *MemSQL) buildUniqueUsersSingleEventQuery(projectID int64,
 	qStmnt := ""
 	qParams := make([]interface{}, 0)
 
-	steps, _ := store.addEventFilterStepsForUniqueUsersQuery(projectID, &query, &qStmnt, &qParams)
+	steps, _ := store.addEventFilterStepsForUniqueUsersQuery(projectID, &query, &qStmnt, &qParams, enableFilterOpt)
 	addUniqueUsersAggregationQuery(projectID, &query, &qStmnt, &qParams, steps[0])
 	qStmnt = with(qStmnt)
 
@@ -1784,8 +1796,8 @@ _group_key_1, COALESCE(NULLIF(concat(round(min(_group_key_2::numeric), 1), ' - '
 COUNT(*) AS count FROM bucketed GROUP BY _group_key_0_bucket, _group_key_1, _group_key_2_bucket, event_name ORDER BY event_name,
 _group_key_0_bucket, _group_key_2_bucket, count DESC LIMIT 100000
 */
-func buildEventsOccurrenceWithGivenEventQuery(projectID int64,
-	q model.Query) (string, []interface{}, error) {
+func buildEventsOccurrenceWithGivenEventQuery(projectID int64, q model.Query,
+	enableFilterOpt bool) (string, []interface{}, error) {
 
 	logFields := log.Fields{
 		"project_id": projectID,
@@ -1814,7 +1826,12 @@ func buildEventsOccurrenceWithGivenEventQuery(projectID int64,
 		filterSelect := joinWithComma(filterSelect, eventNameSelect)
 		refStepName = fmt.Sprintf("step%d", i)
 		filters = append(filters, refStepName)
-		addFilterEventsWithPropsQuery(projectID, &qStmnt, &qParams, ewp, q.From, q.To, "",
+
+		addFilterFunc := addFilterEventsWithPropsQuery
+		if enableFilterOpt {
+			addFilterFunc = addFilterEventsWithPropsQueryV2
+		}
+		addFilterFunc(projectID, &qStmnt, &qParams, ewp, q.From, q.To, "",
 			refStepName, filterSelect, egParams, "", "", "", q.GlobalUserProperties)
 		if len(q.EventsWithProperties) > 1 {
 			qStmnt = qStmnt + ", "
@@ -1992,8 +2009,7 @@ SELECT datetime, event_name, _group_key_0, _group_key_1, _group_key_2, _group_ke
 COUNT(event_id) AS count FROM each_users_union GROUP BY event_name, _group_key_0, _group_key_1,
 _group_key_2, _group_key_3, _group_key_4, datetime ORDER BY count DESC LIMIT 100000
 */
-func buildEventCountForEachGivenEventsQueryNEW(projectID int64,
-	query model.Query) (string, []interface{}, error) {
+func buildEventCountForEachGivenEventsQueryNEW(projectID int64, query model.Query, enableFilterOpt bool) (string, []interface{}, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"query":      query,
@@ -2007,7 +2023,7 @@ func buildEventCountForEachGivenEventsQueryNEW(projectID int64,
 	qStmnt := ""
 	qParams := make([]interface{}, 0, 0)
 
-	steps, stepsToKeysMap, err := addEventFilterStepsForEventCountQuery(projectID, &query, &qStmnt, &qParams)
+	steps, stepsToKeysMap, err := addEventFilterStepsForEventCountQuery(projectID, &query, &qStmnt, &qParams, enableFilterOpt)
 	if err != nil {
 		return qStmnt, qParams, err
 	}
@@ -2098,8 +2114,8 @@ events.event_name_id IN (SELECT id FROM step_1_names WHERE project_id='204' AND 
 AND ( events.properties->>'$source' = 'google' AND user_properties.properties->>'$country' = 'India' )
 ORDER BY event_id, _group_key_2, events.timestamp ASC),
 */
-func addEventFilterStepsForEventCountQuery(projectID int64, q *model.Query,
-	qStmnt *string, qParams *[]interface{}) ([]string, map[string][]string, error) {
+func addEventFilterStepsForEventCountQuery(projectID int64, q *model.Query, qStmnt *string,
+	qParams *[]interface{}, enableFilterOpt bool) ([]string, map[string][]string, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"q":          q,
@@ -2173,7 +2189,12 @@ func addEventFilterStepsForEventCountQuery(projectID int64, q *model.Query,
 		}
 
 		addJoinStmnt = addJoinStmnt + getUsersFilterJoinStatement(projectID, q.GlobalUserProperties)
-		err := addFilterEventsWithPropsQuery(projectID, qStmnt, qParams, ewp, q.From, q.To,
+
+		addFilterFunc := addFilterEventsWithPropsQuery
+		if enableFilterOpt {
+			addFilterFunc = addFilterEventsWithPropsQueryV2
+		}
+		err := addFilterFunc(projectID, qStmnt, qParams, ewp, q.From, q.To,
 			"", refStepName, stepSelect, stepParams, addJoinStmnt, "", stepOrderBy, q.GlobalUserProperties)
 		if err != nil {
 			return steps, stepsToKeysMap, err

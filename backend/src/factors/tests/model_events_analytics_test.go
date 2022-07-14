@@ -86,7 +86,7 @@ func TestEventAnalyticsQuery(t *testing.T) {
 			EventsCondition: model.EventCondAnyGivenEvent,
 		}
 
-		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, "aggregate", result.Headers[0])
@@ -117,7 +117,7 @@ func TestEventAnalyticsQuery(t *testing.T) {
 			EventsCondition: model.EventCondAnyGivenEvent,
 		}
 
-		result2, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query2)
+		result2, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query2, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result2)
 		assert.Equal(t, "aggregate", result2.Headers[0])
@@ -225,7 +225,7 @@ func TestEventAnalyticsQueryWithFilterAndBreakdown(t *testing.T) {
 		}
 
 		//unique user count should return 2 for s0 to s1 with filter property1
-		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, "aggregate", result.Headers[0])
@@ -233,7 +233,7 @@ func TestEventAnalyticsQueryWithFilterAndBreakdown(t *testing.T) {
 
 		//unique user count should return 2 for s0 to s1 with filter property2
 		query.EventsWithProperties[0].Properties[0].Value = "B"
-		result, errCode, _ = store.GetStore().ExecuteEventsQuery(project.ID, query)
+		result, errCode, _ = store.GetStore().ExecuteEventsQuery(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, "aggregate", result.Headers[0])
@@ -263,7 +263,7 @@ func TestEventAnalyticsQueryWithFilterAndBreakdown(t *testing.T) {
 		}
 
 		//breakdown by user property should return property A with 1 count and property B with 2 count
-		result, errCode, _ = store.GetStore().ExecuteEventsQuery(project.ID, query)
+		result, errCode, _ = store.GetStore().ExecuteEventsQuery(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, "$initial_source", result.Headers[0])
@@ -301,14 +301,14 @@ func TestEventAnalyticsQueryWithFilterAndBreakdown(t *testing.T) {
 			EventsCondition: model.EventCondAllGivenEvent,
 		}
 
-		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, "aggregate", result.Headers[0])
 		assert.Equal(t, float64(2), result.Rows[0][0])
 
 		query.EventsWithProperties[0].Properties[0].Value = "4321"
-		result, errCode, _ = store.GetStore().ExecuteEventsQuery(project.ID, query)
+		result, errCode, _ = store.GetStore().ExecuteEventsQuery(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, "aggregate", result.Headers[0])
@@ -337,7 +337,7 @@ func TestEventAnalyticsQueryWithFilterAndBreakdown(t *testing.T) {
 			Type:            model.QueryTypeUniqueUsers,
 			EventsCondition: model.EventCondAllGivenEvent,
 		}
-		result, errCode, _ = store.GetStore().ExecuteEventsQuery(project.ID, query)
+		result, errCode, _ = store.GetStore().ExecuteEventsQuery(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, "$campaign_id", result.Headers[0])
 		expectedKeys := []string{"1234", "4321"}
 		actualKeys := []string{result.Rows[0][0].(string), result.Rows[1][0].(string)}
@@ -382,7 +382,7 @@ func TestEventAnalyticsQueryWithFilterAndBreakdown(t *testing.T) {
 			user2 -> 		 -> s1 with property1
 			user3 -> event s0 with property2 -> s1 with property2
 		*/
-		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.Equal(t, "event_name", result.Headers[0])
 		assert.Equal(t, "aggregate", result.Headers[1])
@@ -398,7 +398,7 @@ func TestEventAnalyticsQueryWithFilterAndBreakdown(t *testing.T) {
 			},
 		}
 		// property2 -> 4, property1 ->1
-		result, errCode, _ = store.GetStore().ExecuteEventsQuery(project.ID, query)
+		result, errCode, _ = store.GetStore().ExecuteEventsQuery(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.Equal(t, "event_name", result.Headers[0])
 		assert.Equal(t, "$initial_source", result.Headers[1])
@@ -419,7 +419,7 @@ func TestEventAnalyticsQueryWithFilterAndBreakdown(t *testing.T) {
 		query.EventsWithProperties[0].Properties[0].Property = "$campaign_id"
 		query.EventsWithProperties[0].Properties[0].Value = "1234"
 		query.GroupByProperties = []model.QueryGroupByProperty{}
-		result, errCode, _ = store.GetStore().ExecuteEventsQuery(project.ID, query)
+		result, errCode, _ = store.GetStore().ExecuteEventsQuery(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.Equal(t, "event_name", result.Headers[0])
 		assert.Equal(t, "aggregate", result.Headers[1])
@@ -467,7 +467,7 @@ func TestEventAnalyticsQueryWithFilterAndBreakdown(t *testing.T) {
 		}
 
 		//unique user count should return 2 for s0 to s1 with fliter property1
-		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 	})
@@ -514,7 +514,7 @@ func TestEventAnalyticsQueryWithNumericalBucketing(t *testing.T) {
 			Type:            model.QueryTypeEventsOccurrence,
 			EventsCondition: model.EventCondAllGivenEvent,
 		}
-		result, errCode, _ := store.GetStore().Analyze(project.ID, query)
+		result, errCode, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		validateNumericalBucketRanges(t, result, numPropertyRangeStart, numPropertyRangeEnd, 0)
 
@@ -532,13 +532,13 @@ func TestEventAnalyticsQueryWithNumericalBucketing(t *testing.T) {
 		w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 		assert.Equal(t, http.StatusOK, w.Code)
 
-		result, errCode, _ = store.GetStore().Analyze(project.ID, query)
+		result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		validateNumericalBucketRanges(t, result, 0, numPropertyRangeEnd, 0)
 
 		// Using group by numerical property.
 		query.GroupByProperties[0].Entity = model.PropertyEntityUser
 		query.GroupByProperties[0].Property = "numerical_property"
-		result, errCode, _ = store.GetStore().Analyze(project.ID, query)
+		result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		validateNumericalBucketRanges(t, result, numPropertyRangeStart, numPropertyRangeEnd, 1)
 	})
@@ -635,7 +635,7 @@ func TestEventAnalyticsQueryGroupSingleQueryHandler(t *testing.T) {
 			Query: &postgres.Jsonb{queryJson}})
 		assert.Equal(t, http.StatusCreated, w.Code)
 
-		var queries model.Queries
+		var queries model.QueriesString
 		decoder = json.NewDecoder(w.Body)
 		decoder.DisallowUnknownFields()
 		if err := decoder.Decode(&queries); err != nil {
@@ -925,7 +925,7 @@ func TestEventAnalyticsEachEventQueryWithFilterAndBreakdown(t *testing.T) {
 		}
 
 		//unique user count should return 2 for s0 to s1 with fliter property1
-		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, "event_index", result.Headers[0])
@@ -969,7 +969,7 @@ func TestEventAnalyticsEachEventQueryWithFilterAndBreakdown(t *testing.T) {
 			EventsCondition:  model.EventCondEachGivenEvent,
 		}
 
-		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.Equal(t, "datetime", result.Headers[0])
 		if result.Headers[1] == "s0" {
@@ -1008,7 +1008,7 @@ func TestEventAnalyticsEachEventQueryWithFilterAndBreakdown(t *testing.T) {
 		}
 
 		//unique user count should return 2 for s0 to s1 with fliter property1
-		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, "s0", result.Rows[0][1])
@@ -1040,7 +1040,7 @@ func TestEventAnalyticsEachEventQueryWithFilterAndBreakdown(t *testing.T) {
 			Type:            model.QueryTypeEventsOccurrence,
 			EventsCondition: model.EventCondEachGivenEvent,
 		}
-		result, code, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		result, code, _ := store.GetStore().ExecuteEventsQuery(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, code)
 		assert.Equal(t, len(result.Rows), 0)
 	})
@@ -1068,7 +1068,7 @@ func TestEventAnalyticsEachEventQueryWithFilterAndBreakdown(t *testing.T) {
 			Type:            model.QueryTypeEventsOccurrence,
 			EventsCondition: model.EventCondEachGivenEvent,
 		}
-		result, code, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		result, code, _ := store.GetStore().ExecuteEventsQuery(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, code)
 		log.WithField("rows", result.Rows).Warn("kark2")
 		assert.Equal(t, 1, len(result.Rows))
@@ -1252,7 +1252,7 @@ func TestCoalUniqueUsersEachEventQuery(t *testing.T) {
 		}
 
 		//unique user count should return 2 for s0 to s1 with filter property1
-		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, "event_index", result.Headers[0])
@@ -1296,7 +1296,7 @@ func TestCoalUniqueUsersEachEventQuery(t *testing.T) {
 			EventsCondition:  model.EventCondEachGivenEvent,
 		}
 
-		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.Equal(t, "datetime", result.Headers[0])
 		if result.Headers[1] == "s0" {
@@ -1476,7 +1476,7 @@ func TestCoalUniqueUsersEachEventQuerySingleUser(t *testing.T) {
 		}
 
 		//unique user count should return 2 for s0 to s1 with filter property1
-		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, "event_index", result.Headers[0])
@@ -1520,7 +1520,7 @@ func TestCoalUniqueUsersEachEventQuerySingleUser(t *testing.T) {
 			EventsCondition:  model.EventCondEachGivenEvent,
 		}
 
-		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.Equal(t, "datetime", result.Headers[0])
 		if result.Headers[1] == "s0" {
@@ -1710,7 +1710,7 @@ func TestCoalUniqueUsersEachEventQuerySingleUserMultiEvents(t *testing.T) {
 		}
 
 		//unique user count should return 2 for s0 to s1 with filter property1
-		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, "event_index", result.Headers[0])
@@ -1759,7 +1759,7 @@ func TestCoalUniqueUsersEachEventQuerySingleUserMultiEvents(t *testing.T) {
 		}
 
 		//unique user count should return 2 for s0 to s1 with filter property1
-		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, "aggregate", result.Headers[0])
@@ -1806,7 +1806,7 @@ func TestCoalUniqueUsersEachEventQuerySingleUserMultiEvents(t *testing.T) {
 		}
 
 		//unique user count should return 2 for s0 to s1 with filter property1
-		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, "aggregate", result.Headers[0])
@@ -1981,7 +1981,7 @@ func TestCoalUniqueUsersEachEventQueryMultiUserMultiEvents(t *testing.T) {
 		}
 
 		//unique user count should return 2 for s0 to s1 with filter property1
-		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, "event_index", result.Headers[0])
@@ -2025,7 +2025,7 @@ func TestCoalUniqueUsersEachEventQueryMultiUserMultiEvents(t *testing.T) {
 		}
 
 		//unique user count should return 2 for s0 to s1 with filter property1
-		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, "aggregate", result.Headers[0])
@@ -2059,7 +2059,7 @@ func TestCoalUniqueUsersEachEventQueryMultiUserMultiEvents(t *testing.T) {
 		}
 
 		//unique user count should return 2 for s0 to s1 with filter property1
-		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, "aggregate", result.Headers[0])
@@ -2236,7 +2236,7 @@ func TestCoalUniqueUsersEachEventQueryMultiUserMultiEventsWeekTimeGroup(t *testi
 		}
 
 		//unique user count should return 2 for s0 to s1 with filter property1
-		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, "datetime", result.Headers[0])
@@ -2283,7 +2283,7 @@ func TestCoalUniqueUsersEachEventQueryMultiUserMultiEventsWeekTimeGroup(t *testi
 		}
 
 		//unique user count should return 2 for s0 to s1 with filter property1
-		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, "datetime", result.Headers[0])
@@ -2472,7 +2472,7 @@ func TestCoalUniqueUsersEachEventQueryMultiUserMultiEventsQuarterTimeGroup(t *te
 		}
 
 		//unique user count should return 2 for s0 to s1 with filter property1
-		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, "datetime", result.Headers[0])
@@ -2519,7 +2519,7 @@ func TestCoalUniqueUsersEachEventQueryMultiUserMultiEventsQuarterTimeGroup(t *te
 		}
 
 		//unique user count should return 2 for s0 to s1 with filter property1
-		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, "datetime", result.Headers[0])
@@ -2560,11 +2560,13 @@ func TestGlobalFilterChanges(t *testing.T) {
 	stepTimestamp := startTimestamp
 
 	// here createdUserID1, user4_1 have same customerID, same for 2, 5_2 and 3, 6_3
-	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser1, JoinTimestamp: startTimestamp - 10,
+	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
+		CustomerUserId: customerIDUser1, JoinTimestamp: startTimestamp - 10,
 		Properties: postgres.Jsonb{RawMessage: commonUserPropertyBytes}, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotEmpty(t, createdUserID1)
-	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser2, JoinTimestamp: startTimestamp - 10,
+	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
+		CustomerUserId: customerIDUser2, JoinTimestamp: startTimestamp - 10,
 		Properties: postgres.Jsonb{RawMessage: commonUserPropertyBytes}, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotEmpty(t, createdUserID2)
@@ -2723,7 +2725,7 @@ func TestGlobalFilterChanges(t *testing.T) {
 		}
 
 		//unique user count should return 2 for s0 to s1 with filter property1
-		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, "event_index", result.Headers[0])
@@ -2779,7 +2781,7 @@ func TestGlobalFilterChanges(t *testing.T) {
 		}
 
 		//unique user count should return 2 for s0 to s1 with filter property1
-		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, "aggregate", result.Headers[0])
@@ -2822,7 +2824,7 @@ func TestGlobalFilterChanges(t *testing.T) {
 			EventsCondition: model.EventCondAllGivenEvent,
 		}
 		//unique user count should return 2 for s0 to s1 with filter property1
-		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, "aggregate", result.Headers[0])
@@ -2920,7 +2922,7 @@ func TestNoneFilterGroup1(t *testing.T) {
 		}
 
 		//unique user count should return 2 for s0 to s1 with filter property1
-		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, "event_index", result.Headers[0])
@@ -2968,7 +2970,7 @@ func TestNoneFilterGroup1(t *testing.T) {
 		}
 
 		//unique user count should return 2 for s0 to s1 with filter property1
-		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, "event_index", result.Headers[0])
@@ -3020,7 +3022,7 @@ func TestNoneFilterGroup1(t *testing.T) {
 		}
 
 		//unique user count should return 2 for s0 to s1 with filter property1
-		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, "event_index", result.Headers[0])
@@ -3119,7 +3121,7 @@ func TestNoneFilterGroup2(t *testing.T) {
 		}
 
 		//unique user count should return 2 for s0 to s1 with filter property1
-		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, "event_index", result.Headers[0])
@@ -3171,7 +3173,7 @@ func TestNoneFilterGroup2(t *testing.T) {
 		}
 
 		//unique user count should return 2 for s0 to s1 with filter property1
-		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, "event_index", result.Headers[0])
@@ -3227,7 +3229,7 @@ func TestNoneFilterGroup2(t *testing.T) {
 		}
 
 		//unique user count should return 2 for s0 to s1 with filter property1
-		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, "event_index", result.Headers[0])
@@ -3415,14 +3417,14 @@ func TestGroupByDateTimePropWeekTimeGroup(t *testing.T) {
 		}
 
 		//unique user count should return 2 for s0 to s1 with filter property1
-		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, "event_index", result.Headers[0])
 		for i := 0; i < len(result.Headers); i++ {
 			if "$custom_time" == result.Headers[i] {
 				// Grouping starts from sunday
-				assert.Equal(t, "2021-05-30 00:00:00", result.Rows[0][i].(string))
+				assert.Equal(t, "2021-05-30T00:00:00+00:00", result.Rows[0][i].(string))
 			}
 		}
 	})
@@ -3463,12 +3465,12 @@ func TestGroupByDateTimePropWeekTimeGroup(t *testing.T) {
 		}
 
 		//unique user count should return 2 for s0 to s1 with filter property1
-		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, "event_index", result.Headers[0])
 		assert.Equal(t, "$custom_time", result.Headers[2])
 		// Grouping starts from sunday
-		assert.Equal(t, "2021-05-30 00:00:00", result.Rows[0][2].(string))
+		assert.Equal(t, "2021-05-30T00:00:00+00:00", result.Rows[0][2].(string))
 	})
 }

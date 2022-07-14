@@ -92,24 +92,13 @@ func TestKpiAnalytics(t *testing.T) {
 	assert.Nil(t, err)
 
 	t.Run("Query with no groupby and no filter.", func(t *testing.T) {
-
 		query := model.KPIQuery{
-
 			Category:        "events",
 			DisplayCategory: "page_views",
 			PageUrl:         "s0",
 			//Metrics:         []string{"page_views", "unique_users"},
-			Metrics: []string{"page_views"},
-			Filters: []model.KPIFilter{
-				// {
-				// 	PropertyName:     "user_id",
-				// 	PropertyDataType: "categorical",
-				// 	Entity:           "user",
-				// 	Condition:        "equals",
-				// 	Value:            "1",
-				// 	LogicalOp:        "AND",
-				// },
-			},
+			Metrics:          []string{"page_views"},
+			Filters:          []model.KPIFilter{},
 			From:             startTimestamp,
 			To:               startTimestamp + 40,
 			GroupByTimestamp: "date",
@@ -125,7 +114,8 @@ func TestKpiAnalytics(t *testing.T) {
 			GlobalGroupBy: []model.KPIGroupBy{},
 		}
 
-		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup, C.EnableOptimisedFilterOnProfileQuery())
+		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup,
+			C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, statusCode)
 		assert.Equal(t, result[0].Headers, []string{"datetime", "page_views"})
 		assert.Equal(t, len(result[0].Rows), 1)
@@ -186,7 +176,7 @@ func TestKpiAnalytics(t *testing.T) {
 		}
 
 		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(),
-			kpiQueryGroup, C.EnableOptimisedFilterOnProfileQuery())
+			kpiQueryGroup, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, statusCode)
 		assert.Equal(t, result[0].Headers, []string{"datetime", "user_id", "page_views", "unique_users"})
 		assert.Equal(t, len(result[0].Rows), 1)
@@ -196,7 +186,6 @@ func TestKpiAnalytics(t *testing.T) {
 	})
 
 	t.Run("Query with session", func(t *testing.T) {
-
 		query1 := model.KPIQuery{
 			Category:         "events",
 			DisplayCategory:  "website_session",
@@ -227,7 +216,7 @@ func TestKpiAnalytics(t *testing.T) {
 			},
 		}
 
-		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup, C.EnableOptimisedFilterOnProfileQuery())
+		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, statusCode)
 		assert.Equal(t, result[0].Headers, []string{"datetime", "user_id", "average_initial_page_load_time"})
 		assert.Equal(t, len(result[0].Rows), 1)
@@ -267,7 +256,8 @@ func TestKpiAnalytics(t *testing.T) {
 			},
 		}
 
-		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup, C.EnableOptimisedFilterOnProfileQuery())
+		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup,
+			C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, statusCode)
 		log.WithField("result", result).Warn("kark3")
 
@@ -300,7 +290,8 @@ func TestKpiAnalytics(t *testing.T) {
 			GlobalGroupBy: []model.KPIGroupBy{},
 		}
 
-		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup, C.EnableOptimisedFilterOnProfileQuery())
+		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup,
+			C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, statusCode)
 		assert.Equal(t, result[0].Headers, []string{"datetime", "adwords_metrics_impressions"})
 		assert.Equal(t, len(result[0].Rows), 0)
@@ -348,7 +339,7 @@ func TestKpiAnalyticsForProfile(t *testing.T) {
 
 	t.Run("test hubspot contacts with no filters and no group by", func(t *testing.T) {
 		query1 := model.KPIQuery{
-			Category:         "profile",
+			Category:         model.ProfileCategory,
 			DisplayCategory:  "hubspot_contacts",
 			PageUrl:          "",
 			Metrics:          []string{name1},
@@ -368,8 +359,8 @@ func TestKpiAnalyticsForProfile(t *testing.T) {
 			GlobalFilters: []model.KPIFilter{},
 			GlobalGroupBy: []model.KPIGroupBy{},
 		}
-		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup, C.EnableOptimisedFilterOnProfileQuery())
-		log.WithField("result", result).Warn("kark2")
+		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup,
+			C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, statusCode)
 		assert.Equal(t, result[0].Headers, []string{"datetime", name1})
 		assert.Equal(t, len(result[0].Rows), 1)
@@ -382,7 +373,7 @@ func TestKpiAnalyticsForProfile(t *testing.T) {
 
 	t.Run("test hubspot contacts with filters only", func(t *testing.T) {
 		query1 := model.KPIQuery{
-			Category:         "profile",
+			Category:         model.ProfileCategory,
 			DisplayCategory:  "hubspot_contacts",
 			PageUrl:          "",
 			Metrics:          []string{name1},
@@ -412,7 +403,8 @@ func TestKpiAnalyticsForProfile(t *testing.T) {
 			GlobalFilters: []model.KPIFilter{filter},
 			GlobalGroupBy: []model.KPIGroupBy{},
 		}
-		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup2, C.EnableOptimisedFilterOnProfileQuery())
+		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup2,
+			C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, statusCode)
 		assert.Equal(t, result[0].Headers, []string{"datetime", name1})
 		assert.Equal(t, len(result[0].Rows), 1)
@@ -428,7 +420,7 @@ func TestKpiAnalyticsForProfile(t *testing.T) {
 	t.Run("test hubspot contacts with filters present in custom metric", func(t *testing.T) {
 		// Query which supports simple function - Sum or count
 		query1 := model.KPIQuery{
-			Category:         "profile",
+			Category:         model.ProfileCategory,
 			DisplayCategory:  "hubspot_contacts",
 			PageUrl:          "",
 			Metrics:          []string{name2},
@@ -448,7 +440,8 @@ func TestKpiAnalyticsForProfile(t *testing.T) {
 			GlobalFilters: []model.KPIFilter{},
 			GlobalGroupBy: []model.KPIGroupBy{},
 		}
-		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup, C.EnableOptimisedFilterOnProfileQuery())
+		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup,
+			C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, statusCode)
 		assert.Equal(t, result[0].Headers, []string{"datetime", name2})
 		assert.Equal(t, len(result[0].Rows), 1)
@@ -462,7 +455,7 @@ func TestKpiAnalyticsForProfile(t *testing.T) {
 
 		// Query which supports complex function - Average
 		query3 := model.KPIQuery{
-			Category:         "profile",
+			Category:         model.ProfileCategory,
 			DisplayCategory:  "hubspot_contacts",
 			PageUrl:          "",
 			Metrics:          []string{name3},
@@ -482,7 +475,8 @@ func TestKpiAnalyticsForProfile(t *testing.T) {
 			GlobalFilters: []model.KPIFilter{},
 			GlobalGroupBy: []model.KPIGroupBy{},
 		}
-		result2, statusCode2 := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup2, C.EnableOptimisedFilterOnProfileQuery())
+		result2, statusCode2 := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup2,
+			C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		log.WithField("result2", result2).Warn("kark2")
 		assert.Equal(t, http.StatusOK, statusCode2)
 		assert.Equal(t, result2[0].Headers, []string{"datetime", name3})
@@ -493,7 +487,7 @@ func TestKpiAnalyticsForProfile(t *testing.T) {
 	t.Run("test hubspot contacts with filter and group by", func(t *testing.T) {
 		// Query which supports simple function - Sum or count
 		query1 := model.KPIQuery{
-			Category:         "profile",
+			Category:         model.ProfileCategory,
 			DisplayCategory:  "hubspot_contacts",
 			PageUrl:          "",
 			Metrics:          []string{name2},
@@ -522,7 +516,8 @@ func TestKpiAnalyticsForProfile(t *testing.T) {
 			GlobalFilters: []model.KPIFilter{},
 			GlobalGroupBy: []model.KPIGroupBy{groupBy},
 		}
-		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup1, C.EnableOptimisedFilterOnProfileQuery())
+		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup1,
+			C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, statusCode)
 		assert.Equal(t, result[0].Headers, []string{"datetime", groupBy.PropertyName, name2})
 		assert.Equal(t, len(result[0].Rows), 1)
@@ -538,7 +533,7 @@ func TestKpiAnalyticsForProfile(t *testing.T) {
 
 		// Query which supports complex function - Average
 		query3 := model.KPIQuery{
-			Category:         "profile",
+			Category:         model.ProfileCategory,
 			DisplayCategory:  "hubspot_contacts",
 			PageUrl:          "",
 			Metrics:          []string{name3},
@@ -558,7 +553,8 @@ func TestKpiAnalyticsForProfile(t *testing.T) {
 			GlobalFilters: []model.KPIFilter{},
 			GlobalGroupBy: []model.KPIGroupBy{groupBy},
 		}
-		result2, statusCode2 := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup2, C.EnableOptimisedFilterOnProfileQuery())
+		result2, statusCode2 := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup2,
+			C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		log.WithField("result2", result2).Warn("kark2")
 		assert.Equal(t, http.StatusOK, statusCode2)
 		assert.Equal(t, result2[0].Headers, []string{"datetime", groupBy.PropertyName, name3})
@@ -618,7 +614,7 @@ func TestKPIProfilesForGroups(t *testing.T) {
 		assert.Equal(t, http.StatusOK, w.Code)
 
 		query1 := model.KPIQuery{
-			Category:         "profile",
+			Category:         model.ProfileCategory,
 			DisplayCategory:  "hubspot_companies",
 			PageUrl:          "",
 			Metrics:          []string{name2},
@@ -638,7 +634,8 @@ func TestKPIProfilesForGroups(t *testing.T) {
 			GlobalFilters: []model.KPIFilter{},
 			GlobalGroupBy: []model.KPIGroupBy{},
 		}
-		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup1, C.EnableOptimisedFilterOnProfileQuery())
+		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup1,
+			C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		log.WithField("result", result).Warn("kark1")
 		assert.Equal(t, http.StatusOK, statusCode)
 
