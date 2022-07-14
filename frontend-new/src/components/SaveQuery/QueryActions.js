@@ -44,7 +44,8 @@ const QueryActions = ({
 
   const getActionsMenu = () => {
     return options ? (
-      <FaSelect
+      (queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_KPI) ? (
+        <FaSelect
         extraClass={styles.additionalops}
         options={[
           chart === CHART_TYPE_SPARKLINES && (queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_KPI) ? ['Email this report', 'envelope'] : ['Email this report', 'envelope', 'disabled'],
@@ -55,7 +56,18 @@ const QueryActions = ({
         optionClick={(val) => setActions(val)}
         onClickOutside={() => setOptions(false)}
         posRight={true}
-      ></FaSelect>
+        ></FaSelect>) 
+        : (
+        <FaSelect
+        extraClass={styles.additionalops}
+        options={[
+          ['Edit Details', 'edit'],
+          ['Delete', 'trash']
+        ]}
+        optionClick={(val) => setActions(val)}
+        onClickOutside={() => setOptions(false)}
+        posRight={true}
+        ></FaSelect>)
     ) : null;
   };
 

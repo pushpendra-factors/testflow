@@ -7,7 +7,7 @@ import {
 } from '../../components/factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary';
 import {
-  Row, Col, Table, Avatar, Button, Dropdown, Menu, Input
+  Row, Col, Table, Avatar, Button, Dropdown, Menu, Input, notification, message
 } from 'antd';
 import { MoreOutlined } from '@ant-design/icons';
 // import SearchBar from '../../components/SearchBar';
@@ -750,7 +750,7 @@ function CoreQuery({
     }
 
     let payload = {
-        "alert_name": data?.subject,
+        "alert_name": selectedRow?.title || data?.subject,
         "alert_type": 3,
         // "query_id": selectedRow?.key || selectedRow?.id,
         "alert_description": {
@@ -770,28 +770,26 @@ function CoreQuery({
       .then((r) => {
         notification.success({
             message: 'Alert Sent Successfully',
+            description: 'Alert has been sent to the selected emails',
             duration: 5,
         });
-        setLoading(false);
-        onSuccess();
       }).catch((err) => {
         message.error(err?.data?.error);
-        setLoading(false);
       })
     } else {
       createAlert(activeProject.id, payload, selectedRow?.key || selectedRow?.id)
       .then((r) => {
         notification.success({
             message: 'Alert Saved Successfully',
+            description: 'Alert will be sent on the specified date.',
             duration: 5,
         });
-        setLoading(false);
-        onSuccess();
       }).catch((err) => {
         message.error(err?.data?.error);
-        setLoading(false);
       })
     }
+    setLoading(false);
+    onSuccess();
   }
 
   const handleSlackClick = ({data, frequency, onSuccess}) => {
@@ -806,7 +804,7 @@ function CoreQuery({
     }
 
     let payload = {
-        "alert_name": data?.subject,
+        "alert_name": selectedRow?.title || data?.subject,
         "alert_type": 3,
         // "query_id": selectedRow?.key || selectedRow?.id,
         "alert_description": {
@@ -826,28 +824,26 @@ function CoreQuery({
       .then((r) => {
         notification.success({
             message: 'Alert Sent Successfully',
+            description: 'Alert has been sent to the selected slack channels',
             duration: 5,
         });
-        setLoading(false);
-        onSuccess();
       }).catch((err) => {
         message.error(err?.data?.error);
-        setLoading(false);
       })
     } else {
       createAlert(activeProject.id, payload, selectedRow?.key || selectedRow?.id)
       .then((r) => {
         notification.success({
             message: 'Alert Saved Successfully',
+            description: 'Alert will be sent on the specified date.',
             duration: 5,
         });
-        setLoading(false);
-        onSuccess();
       }).catch((err) => {
         message.error(err?.data?.error);
-        setLoading(false);
       })
     }
+    setLoading(false);
+    onSuccess();
   }
 
   return (

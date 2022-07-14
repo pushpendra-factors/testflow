@@ -1,5 +1,5 @@
 import React, { useCallback, useContext, useEffect, useReducer, useState } from 'react';
-import { Button, Col, Modal, notification, Row } from 'antd';
+import { Button, Col, message, Modal, notification, Row } from 'antd';
 import { saveQuery, updateQuery } from 'Reducers/coreQuery/services';
 import { useSelector, useDispatch, connect } from 'react-redux';
 import { isStringLengthValid } from 'Utils/global';
@@ -375,6 +375,13 @@ function SaveQuery({
   const handleEmailClick = ({data, frequency, onSuccess}) => {
     updateLocalReducer({ type: TOGGLE_APIS_CALLED });
 
+    let queryData = undefined;
+    if (savedQueryId) {
+      queryData = savedQueries.find(
+        (elem) => elem.id === savedQueryId
+      );
+    }
+
     let emails = [];
     if (data?.emails) {
         emails = data.emails.map((item) => {
@@ -386,7 +393,7 @@ function SaveQuery({
     }
 
     let payload = {
-        "alert_name": data?.subject,
+        "alert_name": queryData?.title || data?.subject,
         "alert_type": 3,
         // "query_id": savedQueryId,
         "alert_description": {
@@ -406,33 +413,37 @@ function SaveQuery({
       .then((r) => {
         notification.success({
             message: 'Alert Sent Successfully',
+            description: 'Alert has been sent to the selected emails',
             duration: 5,
         });
-        updateLocalReducer({ type: TOGGLE_APIS_CALLED });
-        onSuccess();
       }).catch((err) => {
         message.error(err?.data?.error);
-        updateLocalReducer({ type: TOGGLE_APIS_CALLED });
       })
     } else {
       createAlert(active_project.id, payload, savedQueryId)
       .then((r) => {
         notification.success({
             message: 'Alert Saved Successfully',
+            description: 'Alert will be sent on the specified date.',
             duration: 5,
         });
-        updateLocalReducer({ type: TOGGLE_APIS_CALLED });
-        onSuccess();
       }).catch((err) => {
         message.error(err?.data?.error);
-        updateLocalReducer({ type: TOGGLE_APIS_CALLED });
       })
     }
-
+    updateLocalReducer({ type: TOGGLE_APIS_CALLED });
+    onSuccess();
   }
 
   const handleSlackClick = ({data, frequency, onSuccess}) => {
     updateLocalReducer({ type: TOGGLE_APIS_CALLED });
+
+    let queryData = undefined;
+    if (savedQueryId) {
+      queryData = savedQueries.find(
+        (elem) => elem.id === savedQueryId
+      );
+    }
 
     let slackChannels = {}
     const selected = allChannels.filter((c) => c.id === data.channel);
@@ -444,7 +455,7 @@ function SaveQuery({
 
 
     let payload = {
-        "alert_name": data?.subject,
+        "alert_name": queryData?.title || data?.subject,
         "alert_type": 3,
         // "query_id": savedQueryId,
         "alert_description": {
@@ -464,28 +475,26 @@ function SaveQuery({
       .then((r) => {
         notification.success({
             message: 'Alert Sent Successfully',
+            description: 'Alert has been sent to the selected Slack channels',
             duration: 5,
         });
-        updateLocalReducer({ type: TOGGLE_APIS_CALLED });
-        onSuccess();
       }).catch((err) => {
         message.error(err?.data?.error);
-        updateLocalReducer({ type: TOGGLE_APIS_CALLED });
       })
     } else {
       createAlert(active_project.id, payload, savedQueryId)
       .then((r) => {
         notification.success({
             message: 'Alert Saved Successfully',
+            description: 'Alert will be sent on the specified date.',
             duration: 5,
         });
-        updateLocalReducer({ type: TOGGLE_APIS_CALLED });
-        onSuccess();
       }).catch((err) => {
         message.error(err?.data?.error);
-        updateLocalReducer({ type: TOGGLE_APIS_CALLED });
       })
     }
+    updateLocalReducer({ type: TOGGLE_APIS_CALLED });
+    onSuccess();
   }
 
   return (
