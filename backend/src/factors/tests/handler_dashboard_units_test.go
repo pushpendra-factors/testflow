@@ -19,7 +19,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func sendCreateDashboardUnitReq(r *gin.Engine, projectId int64, agent *model.Agent, dashboardId int64, dashboardUnit *model.DashboardUnitRequestPayload) *httptest.ResponseRecorder {
+func sendCreateDashboardUnitReq(r *gin.Engine, projectId int64, agent *model.Agent, dashboardId int64, dashboardUnit *model.DashboardUnitRequestPayloadString) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")
@@ -133,13 +133,13 @@ func TestAPICreateDashboardUnitHandler(t *testing.T) {
 
 	t.Run("CreateDashboardUnit:WithNoQuery", func(t *testing.T) {
 
-		w := sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &model.DashboardUnitRequestPayload{Presentation: model.PresentationLine})
+		w := sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &model.DashboardUnitRequestPayloadString{Presentation: model.PresentationLine})
 		assert.Equal(t, http.StatusBadRequest, w.Code)
 	})
 
 	t.Run("CreateDashboardUnit:WithNoQuery", func(t *testing.T) {
 
-		w := sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &model.DashboardUnitRequestPayload{Presentation: model.PresentationLine})
+		w := sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &model.DashboardUnitRequestPayloadString{Presentation: model.PresentationLine})
 
 		assert.Equal(t, http.StatusBadRequest, w.Code)
 	})

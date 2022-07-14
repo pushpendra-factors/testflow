@@ -635,7 +635,7 @@ func TestEventAnalyticsQueryGroupSingleQueryHandler(t *testing.T) {
 			Query: &postgres.Jsonb{queryJson}})
 		assert.Equal(t, http.StatusCreated, w.Code)
 
-		var queries model.Queries
+		var queries model.QueriesString
 		decoder = json.NewDecoder(w.Body)
 		decoder.DisallowUnknownFields()
 		if err := decoder.Decode(&queries); err != nil {
@@ -3422,7 +3422,7 @@ func TestGroupByDateTimePropWeekTimeGroup(t *testing.T) {
 		for i := 0; i < len(result.Headers); i++ {
 			if "$custom_time" == result.Headers[i] {
 				// Grouping starts from sunday
-				assert.Equal(t, "2021-05-30 00:00:00", result.Rows[0][i].(string))
+				assert.Equal(t, "2021-05-30T00:00:00+00:00", result.Rows[0][i].(string))
 			}
 		}
 	})
@@ -3469,6 +3469,6 @@ func TestGroupByDateTimePropWeekTimeGroup(t *testing.T) {
 		assert.Equal(t, "event_index", result.Headers[0])
 		assert.Equal(t, "$custom_time", result.Headers[2])
 		// Grouping starts from sunday
-		assert.Equal(t, "2021-05-30 00:00:00", result.Rows[0][2].(string))
+		assert.Equal(t, "2021-05-30T00:00:00+00:00", result.Rows[0][2].(string))
 	})
 }
