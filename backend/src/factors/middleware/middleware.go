@@ -351,6 +351,7 @@ func CustomCors() gin.HandlerFunc {
 			corsConfig.AddAllowHeaders("Authorization")
 			corsConfig.AddAllowHeaders(model.QueryCacheRequestInvalidatedCacheHeader)
 			corsConfig.AddAllowHeaders(helpers.HeaderUserFilterOptForProfiles)
+			corsConfig.AddAllowHeaders(helpers.HeaderUserFilterOptForEventsAndUsers)
 		}
 		// Applys custom cors and proceed
 		cors.New(corsConfig)(c)

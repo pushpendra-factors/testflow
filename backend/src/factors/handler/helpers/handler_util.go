@@ -16,6 +16,7 @@ import (
 )
 
 const HeaderUserFilterOptForProfiles string = "Use-Filter-Opt-Profiles"
+const HeaderUserFilterOptForEventsAndUsers string = "Use-Filter-Opt-Events-Users"
 
 // DashboardQueryResponsePayload Query query response with cache and refreshed_at.
 type DashboardQueryResponsePayload struct {

@@ -694,6 +694,12 @@ func buildEventGroupKeysWithStep(groupProps []model.QueryGroupByProperty,
 	return groupKeys
 }
 
+func replaceTableWithViewForEventsAndUsers(stmnt, viewName string) string {
+	stmnt = strings.ReplaceAll(stmnt, "users.", viewName+".")
+	stmnt = strings.ReplaceAll(stmnt, "events.", viewName+".")
+	return stmnt
+}
+
 // addFilterEventsWithPropsQuery Adds a step of events filter with QueryEventWithProperties.
 // WITH step_0_names AS (SELECT id, project_id, name FROM event_names WHERE project_id='20426' AND name='$session') ,
 // step_0 AS (SELECT DISTINCT ON(coal_user_id) COALESCE(users.customer_user_id,events.user_id) as coal_user_id,
@@ -823,6 +829,183 @@ func addFilterEventsWithPropsQuery(projectId int64, qStmnt *string, qParams *[]i
 	}
 
 	if orderBy != "" {
+		rStmnt = fmt.Sprintf("%s ORDER BY %s", rStmnt, orderBy)
+	}
+
+	if stepName != "" {
+		rStmnt = as(stepName, rStmnt)
+	}
+
+	if !skipEventNameStep && eventNamesCacheStmnt != "" {
+		rStmnt = joinWithComma(eventNamesCacheStmnt, rStmnt)
+	}
+
+	*qStmnt = appendStatement(*qStmnt, rStmnt)
+
+	return nil
+}
+
+// addFilterEventsWithPropsQuery Adds a step of events filter with QueryEventWithProperties.
+// step_0 AS (SELECT COALESCE(step_0_event_users.customer_user_id,step_0_event_users.user_id) as coal_user_id,
+// FIRST(step_0_event_users.user_id, FROM_UNIXTIME(step_0_event_users.timestamp)) as user_id,
+// FIRST(step_0_event_users.timestamp, FROM_UNIXTIME(step_0_event_users.timestamp)) as timestamp, 1 as step_0
+// FROM (SELECT events.project_id, events.id, events.event_name_id, events.user_id, events.timestamp,
+// events.properties as event_properties, events.user_properties as event_user_properties,
+// users.customer_user_id, users.properties as global_user_properties
+// FROM events JOIN users ON events.user_id=users.id AND users.project_id = 2  WHERE events.project_id=2 AND
+// timestamp>=1656844268 AND timestamp<=1657708269 AND  ( events.event_name_id = 4862cb39-8749-40c6-988a-c0a08a2d796b )
+// LIMIT 10000000000) step_0_event_users WHERE JSON_EXTRACT_STRING(step_0_event_users.event_properties, '$source') = 'google'
+// GROUP BY coal_user_id)
+func addFilterEventsWithPropsQueryV2(projectId int64, qStmnt *string, qParams *[]interface{},
+	qep model.QueryEventWithProperties, from int64, to int64, fromStr string,
+	stepName string, addSelecStmnt string, addSelectParams []interface{},
+	addJoinStmnt string, groupBy string, orderBy string, globalUserFilter []model.QueryProperty) error {
+
+	logFields := log.Fields{
+		"project_id":         projectId,
+		"q_stmnt":            qStmnt,
+		"q_params":           qParams,
+		"que":                qep,
+		"from":               from,
+		"to":                 to,
+		"from_str":           fromStr,
+		"step_name":          stepName,
+		"add_selec_stmnt":    addSelecStmnt,
+		"add_select_params":  addSelectParams,
+		"add_joint_stmnt":    addJoinStmnt,
+		"group_by":           groupBy,
+		"order_by":           orderBy,
+		"global_user_filter": globalUserFilter,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	if (from == 0 && fromStr == "") || to == 0 {
+		return errors.New("invalid timerange on events filter")
+	}
+
+	if addSelecStmnt == "" {
+		return errors.New("invalid select on events filter")
+	}
+
+	eventsWrapSelect := "events.project_id, events.id, events.event_name_id, events.user_id, events.timestamp"
+	eventsWrapSelect = joinWithComma(eventsWrapSelect, "events.properties as event_properties, events.user_properties as event_user_properties")
+	if addJoinStmnt != "" {
+		eventsWrapSelect = joinWithComma(eventsWrapSelect, "users.customer_user_id, users.properties as global_user_properties")
+	}
+
+	eventsWrapStmnt := "SELECT " + eventsWrapSelect + " FROM events" + " " + addJoinStmnt
+
+	var fromTimestamp string
+	if from > 0 {
+		fromTimestamp = "?"
+	} else if fromStr != "" {
+		fromTimestamp = fromStr // allows from_timestamp from another step.
+	}
+	// Non-JSON where conditions except event_names.
+	eventsWrapWhereCondition := fmt.Sprintf("WHERE events.project_id=? AND timestamp>=%s AND timestamp<=?", fromTimestamp)
+
+	// Building event_names condition and appending.
+	var eventNamesCacheStmnt string
+	eventNamesRef := "event_names"
+	skipEventNameStep := C.SkipEventNameStepByProjectID(projectId)
+	if stepName != "" && !skipEventNameStep {
+		eventNamesRef = fmt.Sprintf("%s_names", stepName)
+		eventNamesCacheStmnt = as(eventNamesRef, "SELECT id, project_id, name FROM event_names WHERE project_id=? AND name=?")
+		*qParams = append(*qParams, projectId, qep.Name)
+	}
+	// select id of event_names from names step.
+	if !skipEventNameStep {
+		eventsWrapWhereCondition = eventsWrapWhereCondition + fmt.Sprintf(" "+"AND events.event_name_id IN (SELECT id FROM %s WHERE project_id=? AND name=?)", eventNamesRef)
+	} else {
+		eventNameIDsFilter := "events.event_name_id = ?"
+		if len(qep.EventNameIDs) > 1 {
+			for range qep.EventNameIDs[1:] {
+				eventNameIDsFilter += " " + "OR" + " " + "events.event_name_id = ?"
+			}
+		}
+
+		eventsWrapWhereCondition = eventsWrapWhereCondition + " " + "AND" + " " + " ( " + eventNameIDsFilter + " ) "
+	}
+	eventsWrapStmnt = appendStatement(eventsWrapStmnt, eventsWrapWhereCondition)
+
+	eventsWrapViewName := fmt.Sprintf("%s_event_users", stepName)
+	// Builds `(SELECT xxx FROM events [JOIN users] WHERE <Non-JSON filters...> LIMIT 1000000000) step_0_event_users_view`
+	eventsWrapView := fmt.Sprintf("(%s LIMIT %d) %s", eventsWrapStmnt, model.FilterOptLimit, eventsWrapViewName)
+
+	// Change properties column for the view.
+	addSelecStmnt = strings.ReplaceAll(addSelecStmnt, "users.properties", eventsWrapViewName+".global_user_properties")
+	addSelecStmnt = strings.ReplaceAll(addSelecStmnt, "events.properties", eventsWrapViewName+".event_properties")
+	addSelecStmnt = strings.ReplaceAll(addSelecStmnt, "events.user_properties", eventsWrapViewName+".event_user_properties")
+	// Use view instead of events and users table.
+	addSelecStmnt = replaceTableWithViewForEventsAndUsers(addSelecStmnt, eventsWrapViewName)
+
+	rStmnt := "SELECT " + addSelecStmnt + " FROM " + " " + eventsWrapView
+
+	// adds params in order of '?'.
+	if addSelecStmnt != "" && addSelectParams != nil {
+		*qParams = append(*qParams, addSelectParams...)
+	}
+	*qParams = append(*qParams, projectId)
+	if from > 0 {
+		*qParams = append(*qParams, from)
+	}
+
+	*qParams = append(*qParams, to)
+	if !skipEventNameStep {
+		*qParams = append(*qParams, projectId, qep.Name)
+	} else {
+		*qParams = append(*qParams, qep.EventNameIDs...)
+	}
+
+	// Applying global user filter
+	latestUserPropFilterStmnt := ""
+	var latestUserPropFilterParam []interface{}
+	var err error
+
+	isWhereAdded := false
+	hasGlobalUserProperties := globalUserFilter != nil && len(globalUserFilter) != 0
+	if hasGlobalUserProperties {
+		// add user filter
+		latestUserPropFilterStmnt, latestUserPropFilterParam, err = getFilterSQLStmtForLatestUserProperties(
+			projectId, globalUserFilter, from)
+		if err != nil {
+			return errors.New("invalid user properties for global filter")
+		}
+
+		latestUserPropFilterStmnt = strings.ReplaceAll(latestUserPropFilterStmnt,
+			"users.properties", eventsWrapViewName+".global_user_properties")
+
+		rStmnt = rStmnt + " WHERE " + latestUserPropFilterStmnt
+		isWhereAdded = true
+		*qParams = append(*qParams, latestUserPropFilterParam...)
+	}
+
+	// mergeCond for whereProperties can also be 'OR'.
+	wStmnt, wParams, err := buildWhereFromProperties(projectId, qep.Properties, from)
+	if err != nil {
+		return err
+	}
+
+	if wStmnt != "" {
+		conditionKeyword := "WHERE"
+		if isWhereAdded {
+			conditionKeyword = "AND"
+		}
+
+		wStmnt = strings.ReplaceAll(wStmnt, "events.properties", eventsWrapViewName+".event_properties")
+		wStmnt = strings.ReplaceAll(wStmnt, "events.user_properties", eventsWrapViewName+".event_user_properties")
+
+		rStmnt = rStmnt + " " + conditionKeyword + " " + fmt.Sprintf("( %s )", wStmnt)
+		*qParams = append(*qParams, wParams...)
+	}
+
+	if groupBy != "" {
+		groupBy = replaceTableWithViewForEventsAndUsers(groupBy, eventsWrapViewName)
+		rStmnt = fmt.Sprintf("%s GROUP BY %s", rStmnt, groupBy)
+	}
+
+	if orderBy != "" {
+		orderBy = replaceTableWithViewForEventsAndUsers(orderBy, eventsWrapViewName)
 		rStmnt = fmt.Sprintf("%s ORDER BY %s", rStmnt, orderBy)
 	}
 
@@ -1581,7 +1764,7 @@ func isValidFunnelQuery(query *model.Query) bool {
 	return len(query.EventsWithProperties) <= 10
 }
 
-func (store *MemSQL) Analyze(projectId int64, queryOriginal model.Query) (*model.QueryResult, int, string) {
+func (store *MemSQL) Analyze(projectId int64, queryOriginal model.Query, enableFilterOpt bool) (*model.QueryResult, int, string) {
 	logFields := log.Fields{
 		"project_id":     projectId,
 		"query_original": queryOriginal,
@@ -1595,7 +1778,7 @@ func (store *MemSQL) Analyze(projectId int64, queryOriginal model.Query) (*model
 	}
 
 	if query.Class == model.QueryClassFunnel {
-		return store.RunFunnelQuery(projectId, query)
+		return store.RunFunnelQuery(projectId, query, enableFilterOpt)
 	}
-	return store.RunInsightsQuery(projectId, query)
+	return store.RunInsightsQuery(projectId, query, enableFilterOpt)
 }

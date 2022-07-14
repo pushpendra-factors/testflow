@@ -56,6 +56,8 @@ func main() {
 	projectIdFlag := flag.String("project_id", "", "Comma separated list of project ids to run")
 	lookback := flag.Int("lookback", 30, "lookback_for_delta lookup")
 	enableDryRunAlerts := flag.Bool("dry_run_alerts", false, "")
+	enableOptimisedFilterOnEventUserQuery := flag.Int("enable_optimised_filter_on_event_user_query",
+		0, "Enables filter optimisation logic for events and users query.")
 
 	flag.Parse()
 	if *env != "development" &&
@@ -85,12 +87,13 @@ func main() {
 			Certificate: *memSQLCertificate,
 			AppName:     appName,
 		},
-		PrimaryDatastore:   *primaryDatastore,
-		AWSKey:             *awsAccessKeyId,
-		AWSSecret:          *awsSecretAccessKey,
-		AWSRegion:          *awsRegion,
-		EmailSender:        *factorsEmailSender,
-		EnableDryRunAlerts: *enableDryRunAlerts,
+		PrimaryDatastore:                      *primaryDatastore,
+		AWSKey:                                *awsAccessKeyId,
+		AWSSecret:                             *awsSecretAccessKey,
+		AWSRegion:                             *awsRegion,
+		EmailSender:                           *factorsEmailSender,
+		EnableDryRunAlerts:                    *enableDryRunAlerts,
+		EnableOptimisedFilterOnEventUserQuery: *enableOptimisedFilterOnEventUserQuery != 0,
 	}
 	C.InitConf(config)
 	C.InitSenderEmail(C.GetFactorsSenderEmail())

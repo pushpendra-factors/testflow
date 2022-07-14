@@ -228,10 +228,13 @@ func ExecuteKPIQueryHandler(c *gin.Context) (interface{}, int, string, string, b
 	enableOptimisedFilterOnProfileQuery := c.Request.Header.Get(H.HeaderUserFilterOptForProfiles) == "true" ||
 		C.EnableOptimisedFilterOnProfileQuery()
 
+	enableOptimisedFilterOnEventUserQuery := c.Request.Header.Get(H.HeaderUserFilterOptForEventsAndUsers) == "true" ||
+		C.EnableOptimisedFilterOnEventUserQuery()
+
 	var duplicatedRequest model.KPIQueryGroup
 	U.DeepCopy(&request, &duplicatedRequest)
 	queryResult, statusCode := store.GetStore().ExecuteKPIQueryGroup(projectID, reqID,
-		duplicatedRequest, enableOptimisedFilterOnProfileQuery)
+		duplicatedRequest, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
 	if statusCode != http.StatusOK {
 		model.DeleteQueryCacheKey(projectID, &request)
 		logCtx.Error("Failed to process query from DB")

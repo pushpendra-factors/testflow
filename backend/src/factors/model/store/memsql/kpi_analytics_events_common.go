@@ -12,7 +12,9 @@ import (
 )
 
 // We convert kpi Query to eventQueries by applying transformation.
-func (store *MemSQL) ExecuteKPIQueryForEvents(projectID int64, reqID string, kpiQuery model.KPIQuery) ([]model.QueryResult, int) {
+func (store *MemSQL) ExecuteKPIQueryForEvents(projectID int64, reqID string,
+	kpiQuery model.KPIQuery, enableFilterOpt bool) ([]model.QueryResult, int) {
+
 	logFields := log.Fields{
 		"project_id": projectID,
 		"req_id":     reqID,
@@ -24,11 +26,13 @@ func (store *MemSQL) ExecuteKPIQueryForEvents(projectID int64, reqID string, kpi
 	if !isValid {
 		return queryResults, http.StatusPartialContent
 	}
-	return store.transformToAndExecuteEventAnalyticsQueries(projectID, kpiQuery)
+	return store.transformToAndExecuteEventAnalyticsQueries(projectID, kpiQuery, enableFilterOpt)
 }
 
 // query is being mutated. So, waitGroup can side effects.
-func (store *MemSQL) transformToAndExecuteEventAnalyticsQueries(projectID int64, kpiQuery model.KPIQuery) ([]model.QueryResult, int) {
+func (store *MemSQL) transformToAndExecuteEventAnalyticsQueries(projectID int64,
+	kpiQuery model.KPIQuery, enableFilterOpt bool) ([]model.QueryResult, int) {
+
 	logFields := log.Fields{
 		"project_id": projectID,
 		"kpi_query":  kpiQuery,
@@ -45,7 +49,7 @@ func (store *MemSQL) transformToAndExecuteEventAnalyticsQueries(projectID int64,
 	waitGroup.Add(actualRoutineLimit)
 	for index, kpiMetric := range kpiQuery.Metrics {
 		count++
-		go store.ExecuteForSingleKPIMetric(projectID, query, kpiQuery, kpiMetric, &queryResults[index], &waitGroup)
+		go store.ExecuteForSingleKPIMetric(projectID, query, kpiQuery, kpiMetric, &queryResults[index], &waitGroup, enableFilterOpt)
 		if count%actualRoutineLimit == 0 {
 			waitGroup.Wait()
 			waitGroup.Add(U.MinInt(len(kpiQuery.Metrics)-count, actualRoutineLimit))
@@ -86,7 +90,7 @@ func (store *MemSQL) ValidateKPIQuery(projectID int64, kpiQuery model.KPIQuery) 
 
 // Each KPI Metric is mapped to array of operations containing metrics and aggregates, filters.
 func (store *MemSQL) ExecuteForSingleKPIMetric(projectID int64, query model.Query, kpiQuery model.KPIQuery,
-	kpiMetric string, result *model.QueryResult, waitGroup *sync.WaitGroup) {
+	kpiMetric string, result *model.QueryResult, waitGroup *sync.WaitGroup, enableFilterOpt bool) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"query":      query,
@@ -99,12 +103,12 @@ func (store *MemSQL) ExecuteForSingleKPIMetric(projectID int64, query model.Quer
 	defer waitGroup.Done()
 	finalResult := model.QueryResult{}
 
-	finalResult = store.wrappedExecuteForResult(projectID, query, kpiQuery, kpiMetric)
+	finalResult = store.wrappedExecuteForResult(projectID, query, kpiQuery, kpiMetric, enableFilterOpt)
 	*result = finalResult
 }
 
 func (store *MemSQL) wrappedExecuteForResult(projectID int64, query model.Query, kpiQuery model.KPIQuery,
-	kpiMetric string) model.QueryResult {
+	kpiMetric string, enableFilterOpt bool) model.QueryResult {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"query":      query,
@@ -116,11 +120,12 @@ func (store *MemSQL) wrappedExecuteForResult(projectID int64, query model.Query,
 	transformations := model.TransformationOfKPIMetricsToEventAnalyticsQuery[kpiQuery.DisplayCategory][kpiMetric]
 	currentQuery := model.BuildFiltersAndGroupByBasedOnKPIQuery(query, kpiQuery, kpiMetric)
 	currentQueries := model.SplitKPIQueryToInternalKPIQueries(currentQuery, kpiQuery, kpiMetric, transformations)
-	finalResult := store.executeForResults(projectID, currentQueries, kpiQuery, transformations)
+	finalResult := store.executeForResults(projectID, currentQueries, kpiQuery, transformations, enableFilterOpt)
 	return finalResult
 }
 
-func (store *MemSQL) executeForResults(projectID int64, queries []model.Query, kpiQuery model.KPIQuery, transformations []model.TransformQueryi) model.QueryResult {
+func (store *MemSQL) executeForResults(projectID int64, queries []model.Query, kpiQuery model.KPIQuery,
+	transformations []model.TransformQueryi, enableFilterOpt bool) model.QueryResult {
 	logFields := log.Fields{
 		"project_id":     projectID,
 		"queries":        queries,
@@ -141,7 +146,7 @@ func (store *MemSQL) executeForResults(projectID int64, queries []model.Query, k
 	}
 	if len(queries) == 1 {
 		hasAnyGroupBy := len(queries[0].GroupByProperties) != 0
-		results[0], _, _ = store.RunInsightsQuery(projectID, queries[0])
+		results[0], _, _ = store.RunInsightsQuery(projectID, queries[0], enableFilterOpt)
 		if results[0].Headers == nil || results[0].Headers[0] == model.AliasError {
 			finalResult = model.QueryResult{}
 			finalResult.Headers = results[0].Headers
@@ -151,7 +156,7 @@ func (store *MemSQL) executeForResults(projectID int64, queries []model.Query, k
 		finalResult = *results[0]
 	} else {
 		for i, query := range queries {
-			results[i], _, _ = store.RunInsightsQuery(projectID, query)
+			results[i], _, _ = store.RunInsightsQuery(projectID, query, enableFilterOpt)
 			if results[i].Headers == nil || results[i].Headers[0] == model.AliasError {
 				finalResult = model.QueryResult{}
 				finalResult.Headers = results[i].Headers

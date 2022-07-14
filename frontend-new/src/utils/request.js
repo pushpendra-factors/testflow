@@ -45,6 +45,10 @@ function request(dispatch, method, url, headers, data) {
     if (window.USE_FILTER_OPT_PROFILES && window.USE_FILTER_OPT_PROFILES != "") {
       options.headers["Use-Filter-Opt-Profiles"] = true; 
     }
+
+    if (window.USE_FILTER_OPT_EVENTS_USERS && window.USE_FILTER_OPT_EVENTS_USERS != "") {
+      options.headers["Use-Filter-Opt-Events-Users"] = true; 
+    }
   
     return fetch(url, options)
       .then((response) => {

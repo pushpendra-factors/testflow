@@ -310,7 +310,7 @@ func (f *CacheDashboardUnitDoFn) ProcessElement(ctx context.Context,
 		BaseQuery:     baseQuery,
 	}
 	startTime := U.TimeNowUnix()
-	errCode, errMsg, cachingReport := store.GetStore().CacheDashboardUnitForDateRange(cachePayload)
+	errCode, errMsg, cachingReport := store.GetStore().CacheDashboardUnitForDateRange(cachePayload, true)
 
 	timeTaken := U.TimeNowUnix() - startTime
 

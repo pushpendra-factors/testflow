@@ -62,6 +62,9 @@ const (
 
 const PropertyValueNone = "$none"
 
+// FilterOptLimit - Limit used for preloading with non-json filters as part of optimisation.
+const FilterOptLimit = 10000000000
+
 const (
 	ErrUnsupportedGroupByEventPropertyOnUserQuery = "group by event property is not supported for user query"
 	ErrMsgQueryProcessingFailure                  = "Failed processing query"
