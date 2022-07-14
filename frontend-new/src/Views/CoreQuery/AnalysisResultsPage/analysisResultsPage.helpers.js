@@ -83,7 +83,7 @@ export const getChartType = ({
 
   if (queryType === QUERY_TYPE_ATTRIBUTION) {
     const key =
-      attributionModels.length === 1
+      attributionModels?.length === 1
         ? 'single_touch_point'
         : 'dual_touch_point';
     return chartTypes[queryType][key] === CHART_TYPE_TABLE
