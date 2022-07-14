@@ -11,7 +11,7 @@ import {
 } from 'antd';
 import { SVG, Text } from '../../factorsComponents';
 import FaTimeline from '../../FaTimeline';
-import moment from 'moment';
+import humanizeDuration from 'humanize-duration';
 
 function ContactDetails({ onCancel, userDetails }) {
   const [activities, setActivities] = useState([]);
@@ -261,12 +261,10 @@ function ContactDetails({ onCancel, userDetails }) {
                     Time Spent on Site
                   </Text>
                   <Text type={'title'} level={7} extraClass={'m-0'}>
-                    {moment
-                      .duration(
-                        parseInt(userDetails?.data?.time_spent_on_site),
-                        'seconds'
-                      )
-                      .humanize() || '-'}
+                    {humanizeDuration(
+                      userDetails?.data?.time_spent_on_site * 1000,
+                      { largest: 2 }
+                    )}
                   </Text>
                 </Col>
               </Row>

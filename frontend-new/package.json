@@ -15,6 +15,7 @@
     "eventsource": "^2.0.2",
     "factorsai": "^0.2.6",
     "highcharts": "^9.0.1",
+    "humanize-duration": "^3.27.2",
     "lodash": "^4.17.21",
     "logrocket": "^1.0.14",
     "moment": "^2.29.2",
