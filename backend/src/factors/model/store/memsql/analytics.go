@@ -928,7 +928,7 @@ func addFilterEventsWithPropsQueryV2(projectId int64, qStmnt *string, qParams *[
 	}
 	eventsWrapStmnt = appendStatement(eventsWrapStmnt, eventsWrapWhereCondition)
 
-	eventsWrapViewName := fmt.Sprintf("%s_event_users", stepName)
+	eventsWrapViewName := fmt.Sprintf("%s_event_users_view", stepName)
 	// Builds `(SELECT xxx FROM events [JOIN users] WHERE <Non-JSON filters...> LIMIT 1000000000) step_0_event_users_view`
 	eventsWrapView := fmt.Sprintf("(%s LIMIT %d) %s", eventsWrapStmnt, model.FilterOptLimit, eventsWrapViewName)
 
@@ -1698,10 +1698,10 @@ func (store *MemSQL) ExecQueryWithContext(stmnt string, params []interface{}) (*
 
 	logFields := log.Fields{
 		"anaytics":       true,
-		"expanded_query": U.DBDebugPreparedStatement(stmnt, params),
+		"expanded_query": U.DBDebugPreparedStatement(C.GetConfig().Env, stmnt, params),
 		// Limit statement and params length.
-		"original_query": U.TrimQueryString(stmnt),
-		"params":         U.TrimQueryParams(params),
+		"original_query": U.TrimQueryString(C.GetConfig().Env, stmnt),
+		"params":         U.TrimQueryParams(C.GetConfig().Env, params),
 		"req_id":         reqID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
