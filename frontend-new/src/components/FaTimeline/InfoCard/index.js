@@ -1,8 +1,7 @@
 import React from 'react';
 import { Text } from 'Components/factorsComponents';
 import { Popover } from 'antd';
-import { PropTextFormat } from '../../../utils/dataFormatter';
-import humanizeDuration from 'humanize-duration';
+import { formatDurationIntoString, PropTextFormat } from '../../../utils/dataFormatter';
 import MomentTz from '../../MomentTz';
 
 function InfoCard({ title, properties = {}, trigger, children }) {
@@ -28,7 +27,7 @@ function InfoCard({ title, properties = {}, trigger, children }) {
                 {key === '$timestamp'
                   ? MomentTz(value * 1000).format('DD MMMM YYYY, hh:mm A')
                   : key.includes('_time')
-                  ? humanizeDuration(value * 1000, { largest: 2 })
+                  ? formatDurationIntoString(value)
                   : value}
               </Text>
             </div>

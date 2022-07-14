@@ -648,3 +648,36 @@ export const HighlightSearchText = ({ text = '', highlight = '' }) => {
 export const addQforQuarter = (freq) => {
   return freq === 'quarter' ? 'Q' : '';
 };
+
+export const formatDurationIntoString = (seconds) => {
+  if (seconds > 0) {
+    let timeUnits = [
+      [Math.floor(seconds / 31536000), 'years'],
+      [Math.floor((seconds % 31536000) / 2592000), 'months'],
+      [Math.floor(((seconds % 31536000) % 2592000) / 604800), 'weeks'],
+      [Math.floor((((seconds % 31536000) % 2592000) % 604800) / 86400), 'days'],
+      [Math.floor(((seconds % 31536000) % 86400) / 3600), 'hours'],
+      [Math.floor((((seconds % 31536000) % 86400) % 3600) / 60), 'minutes'],
+      [(((seconds % 31536000) % 86400) % 3600) % 60, 'seconds'],
+    ];
+    let returnString = '',
+      i = 0,
+      stringLength = 0;
+    while (i < timeUnits.length && stringLength < 4) {
+      if (timeUnits[i][0] === 0) {
+        i++;
+        continue;
+      }
+      returnString +=
+        ' ' +
+        timeUnits[i][0] +
+        ' ' +
+        (timeUnits[i][0] === 1
+          ? timeUnits[i][1].substr(0, timeUnits[i][1].length - 1)
+          : timeUnits[i][1]);
+      i++;
+      stringLength = returnString.split(' ').length;
+    }
+  } else return '0 seconds';
+  return returnString.trim();
+};
