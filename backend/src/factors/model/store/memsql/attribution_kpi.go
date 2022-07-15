@@ -51,7 +51,7 @@ func (store *MemSQL) ExecuteKPIForAttribution(projectID int64, query *model.Attr
 			return kpiData, groupUserIDToKpiID, kpiKeys, errors.New("no-valid result for KPI query")
 		}
 
-		kpiKeys = store.GetDataFromKPIResult(projectID, kpiQueryResult, &kpiData, logCtx)
+		kpiKeys = store.GetDataFromKPIResult(projectID, kpiQueryResult, &kpiData, query, logCtx)
 	}
 
 	// Pulling group ID (group user ID) for each KPI ID i.e. Deal ID or Opp ID
@@ -118,7 +118,7 @@ func getGroupKeys(query *model.AttributionQuery, groups []model.Group) (string, 
 	return _groupIDKey, _groupIDUserKey
 }
 
-func (store *MemSQL) GetDataFromKPIResult(projectID int64, kpiQueryResult model.QueryResult, kpiData *map[string]model.KPIInfo, logCtx log.Entry) []string {
+func (store *MemSQL) GetDataFromKPIResult(projectID int64, kpiQueryResult model.QueryResult, kpiData *map[string]model.KPIInfo, query *model.AttributionQuery, logCtx log.Entry) []string {
 
 	datetimeIdx := 0
 	keyIdx := 1
@@ -158,7 +158,8 @@ func (store *MemSQL) GetDataFromKPIResult(projectID int64, kpiQueryResult model.
 	}
 
 	if len(kpiValueHeaders) != len(kpiAggFunctionType) {
-		logCtx.WithField("kpiAggFunctionType", kpiAggFunctionType).WithField("kpiValueHeaders", kpiValueHeaders).Warn("failed to get function types of all of given KPI")
+		logCtx.WithField("kpiAggFunctionType", kpiAggFunctionType).WithField("kpiValueHeaders",
+			kpiValueHeaders).Warn("failed to get function types of all of given KPI")
 		return kpiKeys
 	}
 
@@ -181,6 +182,12 @@ func (store *MemSQL) GetDataFromKPIResult(projectID int64, kpiQueryResult model.
 			continue
 		}
 		kpiDetail.Timestamp = eventTime.Unix()
+
+		if kpiDetail.Timestamp > query.To || kpiDetail.Timestamp < query.From {
+			logCtx.WithFields(log.Fields{"kpi-timestamp": row[datetimeIdx]}).Info("ignoring row as KPI-time not in range, continuing")
+			continue
+		}
+
 		kpiDetail.TimeString = row[datetimeIdx].(string)
 
 		// add kpi values
@@ -208,8 +215,16 @@ func (store *MemSQL) GetDataFromKPIResult(projectID int64, kpiQueryResult model.
 		// add aggregate function type
 		kpiDetail.KpiAggFunctionTypes = kpiAggFunctionType
 
-		// map to kpi data to key - final data
-		(*kpiData)[kpiID] = kpiDetail
+		if existingDetail, exists := (*kpiData)[kpiID]; exists {
+			// for existing kpi detail, add up the values
+			for idx, val := range kpiDetail.KpiValues {
+				existingDetail.KpiValues[idx] = existingDetail.KpiValues[idx] + val
+			}
+			(*kpiData)[kpiID] = existingDetail
+		} else {
+			// map to kpi data to key - final data
+			(*kpiData)[kpiID] = kpiDetail
+		}
 	}
 	return kpiKeys
 }
