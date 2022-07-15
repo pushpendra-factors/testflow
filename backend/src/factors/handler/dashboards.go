@@ -712,8 +712,8 @@ func DashboardUnitsWebAnalyticsQueryHandler(c *gin.Context) {
 }
 
 func sanitizeWebAnalyticsResult(queryResult *model.WebAnalyticsQueryResult,
-	requestPayload model.DashboardUnitsWebAnalyticsQuery) map[uint64]model.GenericQueryResult {
-	queryResultsByUnitMap := make(map[uint64]model.GenericQueryResult)
+	requestPayload model.DashboardUnitsWebAnalyticsQuery) map[string]model.GenericQueryResult {
+	queryResultsByUnitMap := make(map[string]model.GenericQueryResult)
 
 	queryResultsByName := queryResult.QueryResult
 	for _, unit := range requestPayload.Units {
@@ -723,7 +723,7 @@ func sanitizeWebAnalyticsResult(queryResult *model.WebAnalyticsQueryResult,
 	}
 
 	for _, unit := range requestPayload.CustomGroupUnits {
-		uniqueID := fmt.Sprintf("%d", unit.UnitID)
+		uniqueID := unit.UnitID
 		if _, exists := queryResult.CustomGroupQueryResult[uniqueID]; exists {
 			queryResultsByUnitMap[unit.UnitID] = *queryResult.CustomGroupQueryResult[uniqueID]
 		}
