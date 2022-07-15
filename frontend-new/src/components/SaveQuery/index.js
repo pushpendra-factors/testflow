@@ -412,8 +412,8 @@ function SaveQuery({
       sendAlertNow(active_project.id, payload, savedQueryId)
       .then((r) => {
         notification.success({
-            message: 'Alert Sent Successfully',
-            description: 'Alert has been sent to the selected emails',
+            message: 'Report Sent Successfully',
+            description: 'Report has been sent to the selected emails',
             duration: 5,
         });
       }).catch((err) => {
@@ -423,8 +423,8 @@ function SaveQuery({
       createAlert(active_project.id, payload, savedQueryId)
       .then((r) => {
         notification.success({
-            message: 'Alert Saved Successfully',
-            description: 'Alert will be sent on the specified date.',
+            message: 'Report Saved Successfully',
+            description: 'Report will be sent on the specified date.',
             duration: 5,
         });
       }).catch((err) => {
@@ -474,8 +474,8 @@ function SaveQuery({
       sendAlertNow(active_project.id, payload, savedQueryId)
       .then((r) => {
         notification.success({
-            message: 'Alert Sent Successfully',
-            description: 'Alert has been sent to the selected Slack channels',
+            message: 'Report Sent Successfully',
+            description: 'Report has been sent to the selected Slack channels',
             duration: 5,
         });
       }).catch((err) => {
@@ -485,8 +485,8 @@ function SaveQuery({
       createAlert(active_project.id, payload, savedQueryId)
       .then((r) => {
         notification.success({
-            message: 'Alert Saved Successfully',
-            description: 'Alert will be sent on the specified date.',
+            message: 'Report Saved Successfully',
+            description: 'Report will be sent on the specified date.',
             duration: 5,
         });
       }).catch((err) => {

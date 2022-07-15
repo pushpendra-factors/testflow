@@ -769,8 +769,8 @@ function CoreQuery({
       sendAlertNow(activeProject.id, payload, selectedRow?.key || selectedRow?.id)
       .then((r) => {
         notification.success({
-            message: 'Alert Sent Successfully',
-            description: 'Alert has been sent to the selected emails',
+            message: 'Report Sent Successfully',
+            description: 'Report has been sent to the selected emails',
             duration: 5,
         });
       }).catch((err) => {
@@ -780,8 +780,8 @@ function CoreQuery({
       createAlert(activeProject.id, payload, selectedRow?.key || selectedRow?.id)
       .then((r) => {
         notification.success({
-            message: 'Alert Saved Successfully',
-            description: 'Alert will be sent on the specified date.',
+            message: 'Report Saved Successfully',
+            description: 'Report will be sent on the specified date.',
             duration: 5,
         });
       }).catch((err) => {
@@ -823,8 +823,8 @@ function CoreQuery({
       sendAlertNow(activeProject.id, payload, selectedRow?.key || selectedRow?.id)
       .then((r) => {
         notification.success({
-            message: 'Alert Sent Successfully',
-            description: 'Alert has been sent to the selected slack channels',
+            message: 'Report Sent Successfully',
+            description: 'Report has been sent to the selected slack channel',
             duration: 5,
         });
       }).catch((err) => {
@@ -834,8 +834,8 @@ function CoreQuery({
       createAlert(activeProject.id, payload, selectedRow?.key || selectedRow?.id)
       .then((r) => {
         notification.success({
-            message: 'Alert Saved Successfully',
-            description: 'Alert will be sent on the specified date.',
+            message: 'Report Saved Successfully',
+            description: 'Report will be sent on the specified date.',
             duration: 5,
         });
       }).catch((err) => {
