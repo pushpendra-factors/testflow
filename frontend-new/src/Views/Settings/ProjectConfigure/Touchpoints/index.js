@@ -160,7 +160,7 @@ const Touchpoints = ({
       }
     });
     return filters.map((filt) => (
-      <div className={`mt-2 max-w-3xl`}>
+      <div className={`mt-2 max-w-xl overflow-hidden`}>
         <FAFilterSelect
           filter={filt}
           disabled={true}
