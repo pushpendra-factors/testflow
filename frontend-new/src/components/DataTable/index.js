@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Table } from 'antd';
+import classNames from 'classnames';
 import SearchBar from './SearchBar';
 import styles from './index.module.scss';
 import { useHistory } from 'react-router-dom';
@@ -71,7 +72,7 @@ function DataTable({
   };
 
   return (
-    <div ref={componentRef} className='data-table'>
+    <div ref={componentRef} className="data-table">
       {!isDashboardWidget && renderSearch ? (
         <SearchBar
           searchText={searchText}
@@ -88,16 +89,18 @@ function DataTable({
             ? {
                 pageSize,
                 onShowSizeChange: handlePageSizeChange,
-                showSizeChanger: tableData.length > 10,
+                showSizeChanger: tableData.length > 10
               }
             : false
         }
         bordered={true}
-        rowKey='index'
+        rowKey="index"
         rowSelection={!isDashboardWidget ? rowSelection : null}
         columns={columns}
         dataSource={isDashboardWidget ? tableData.slice(0, 3) : tableData}
-        className={`${styles.table} ${className}`}
+        className={classNames(styles.table, className, {
+          [styles.dashboardTable]: isDashboardWidget
+        })}
         scroll={scroll}
       />
     </div>

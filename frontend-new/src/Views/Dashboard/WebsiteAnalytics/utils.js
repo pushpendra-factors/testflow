@@ -1,16 +1,17 @@
 import React from 'react';
-import { formatCount } from "../../../utils/dataFormatter";
-import { Number as NumFormat } from "../../../components/factorsComponents";
+import { formatCount } from '../../../utils/dataFormatter';
+import { Number as NumFormat } from '../../../components/factorsComponents';
+import NonClickableTableHeader from '../../../components/NonClickableTableHeader';
 
 export const getWebAnalyticsTableData = (tableData, searchText) => {
   const { headers, rows } = tableData;
   const columns = headers.map((header) => {
     return {
-      title: header,
+      title: <NonClickableTableHeader title={header} />,
       dataIndex: header,
       render: (d) => {
-        return isNaN(d) ? d : <NumFormat number={d} />
-      },
+        return isNaN(d) ? d : <NumFormat number={d} />;
+      }
     };
   });
 
@@ -38,23 +39,23 @@ export const getWebAnalyticsTableData = (tableData, searchText) => {
 
   return {
     columns,
-    data,
+    data
   };
 };
 
 export const getCardsDataInTableFormat = (units, data) => {
   const result = {
     columns: [],
-    tableData: [{ index: 0 }],
+    tableData: [{ index: 0 }]
   };
   units.forEach((unit) => {
     if (data[unit.id]) {
       result.columns.push({
-        title: unit.title,
+        title: <NonClickableTableHeader title={unit.title} />,
         dataIndex: unit.title,
         render: (d) => {
-          return isNaN(d) ? d : <NumFormat number={d} />
-        },
+          return isNaN(d) ? d : <NumFormat number={d} />;
+        }
       });
       try {
         result.tableData[0][unit.title] = isNaN(data[unit.id].rows[0][0])
