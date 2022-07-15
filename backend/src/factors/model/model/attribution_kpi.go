@@ -4,6 +4,7 @@ import (
 	U "factors/util"
 	log "github.com/sirupsen/logrus"
 	"strings"
+	"time"
 )
 
 // MergeDataRowsHavingSameKeyKPI merges rows having same key by adding each column value
@@ -138,5 +139,74 @@ func MergeTwoDataRowsKPI(row1 []interface{}, row2 []interface{}, keyIndex int, a
 		}
 	}
 	return row1
+}
 
+func AddKPIKeyDataInMap(kpiQueryResult QueryResult, logCtx log.Entry, keyIdx int,
+	datetimeIdx int, from int64, to int64, valIdx int, kpiValueHeaders []string,
+	kpiAggFunctionType []string, kpiData *map[string]KPIInfo) []string {
+
+	var kpiKeys []string
+
+	for _, row := range kpiQueryResult.Rows {
+
+		logCtx.WithFields(log.Fields{"Row": row}).Info("KPI-Attribution KPI Row")
+
+		var kpiDetail KPIInfo
+
+		// get ID
+		kpiID := row[keyIdx].(string)
+
+		// get time
+		eventTime, err := time.Parse(time.RFC3339, row[datetimeIdx].(string))
+		if err != nil {
+			logCtx.WithError(err).WithFields(log.Fields{"timestamp": row[datetimeIdx]}).Error("couldn't parse the timestamp for KPI query, continuing")
+			continue
+		}
+		kpiDetail.Timestamp = eventTime.Unix()
+
+		if kpiDetail.Timestamp > to || kpiDetail.Timestamp < from {
+			logCtx.WithFields(log.Fields{"kpi-timestamp": row[datetimeIdx]}).Info("ignoring row as KPI-time not in range, continuing")
+			continue
+		}
+
+		kpiDetail.TimeString = row[datetimeIdx].(string)
+
+		// add kpi values
+		var kpiVals []float64
+		for vi := valIdx; vi < len(row); vi++ {
+			val := float64(0)
+			vInt, okInt := row[vi].(int)
+			if !okInt {
+				vFloat, okFloat := row[vi].(float64)
+				if !okFloat {
+					logCtx.WithError(err).WithFields(log.Fields{"value": row[vi]}).Error("couldn't parse the value for KPI query, continuing")
+					val = 0.0
+				} else {
+					val = vFloat
+				}
+			} else {
+				val = float64(vInt)
+			}
+			kpiVals = append(kpiVals, val)
+		}
+		kpiDetail.KpiValues = kpiVals
+
+		// add headers
+		kpiDetail.KpiHeaderNames = kpiValueHeaders
+		// add aggregate function type
+		kpiDetail.KpiAggFunctionTypes = kpiAggFunctionType
+
+		if existingDetail, exists := (*kpiData)[kpiID]; exists {
+			// for existing kpi detail, add up the values
+			for idx, val := range kpiDetail.KpiValues {
+				existingDetail.KpiValues[idx] = existingDetail.KpiValues[idx] + val
+			}
+			(*kpiData)[kpiID] = existingDetail
+		} else {
+			// map to kpi data to key - final data
+			(*kpiData)[kpiID] = kpiDetail
+			kpiKeys = append(kpiKeys, kpiID)
+		}
+	}
+	return kpiKeys
 }
