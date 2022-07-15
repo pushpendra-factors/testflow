@@ -175,8 +175,8 @@ const Touchpoints = ({
       <Col>
         {obj['$type'] && obj['$type']['va'] && (
           <Row>
-            <Col span={10}>
-              <Row className={'relative justify-between'}>
+            <Col span={8}>
+              <Row className={'relative justify-between break-words'}>
                 <Text
                   level={7}
                   type={'title'}
@@ -189,7 +189,7 @@ const Touchpoints = ({
               </Row>
             </Col>
 
-            <Col className={`fa-truncate-150`}>
+            <Col className={`fa-truncate-150 break-words`}>
               <Text
                 level={7}
                 type={'title'}
@@ -204,8 +204,8 @@ const Touchpoints = ({
 
         {obj['$source'] && obj['$source']['va'] && (
           <Row>
-            <Col span={10}>
-              <Row className={'relative justify-between'}>
+            <Col span={8}>
+              <Row className={'relative justify-between break-words'}>
                 <Text
                   level={7}
                   type={'title'}
@@ -218,7 +218,7 @@ const Touchpoints = ({
               </Row>
             </Col>
 
-            <Col className={`fa-truncate-150`}>
+            <Col className={`fa-truncate-150 break-words`}>
               <Text
                 level={7}
                 type={'title'}
@@ -233,8 +233,8 @@ const Touchpoints = ({
 
         {obj['$campaign'] && obj['$campaign']['va'] && (
           <Row>
-            <Col span={10}>
-              <Row className={'relative justify-between'}>
+            <Col span={8}>
+              <Row className={'relative justify-between break-words'}>
                 <Text
                   level={7}
                   type={'title'}
@@ -247,7 +247,7 @@ const Touchpoints = ({
               </Row>
             </Col>
 
-            <Col className={`fa-truncate-150`}>
+            <Col className={`fa-truncate-150 break-words`}>
               <Text
                 level={7}
                 type={'title'}
@@ -262,8 +262,8 @@ const Touchpoints = ({
 
         {obj['$channel'] && obj['$channel']['va'] && (
           <Row>
-            <Col span={10}>
-              <Row className={'relative justify-between'}>
+            <Col span={8}>
+              <Row className={'relative justify-between break-words'}>
                 <Text
                   level={7}
                   type={'title'}
@@ -276,7 +276,7 @@ const Touchpoints = ({
               </Row>
             </Col>
 
-            <Col className={`fa-truncate-150`}>
+            <Col className={`fa-truncate-150 break-words`}>
               <Text
                 level={7}
                 type={'title'}
