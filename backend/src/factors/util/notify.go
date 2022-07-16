@@ -131,44 +131,30 @@ func NotifyThroughSlack(source, env, message interface{}) error {
 	return nil
 }
 
-func NotifyOnPanic(taskId, env string) {
+func notifyOnPanicWithErrorLog(appName, env string, recoveredFrom interface{}) {
+	buf := make([]byte, 1024)
+	runtime.Stack(buf, false)
 
-	if pe := recover(); pe != nil {
-		if ne := NotifyThroughSNS(taskId, env,
-			map[string]interface{}{"panic_error": pe, "stacktrace": string(debug.Stack())}); ne != nil {
-			log.WithField("stack_trace", string(debug.Stack())).Error(pe)
-			return
-		}
+	log.WithField("panic_message", fmt.Sprintf("%+v", recoveredFrom)).
+		WithField("stack_trace", string(buf)).
+		WithField("debug_stack", string(debug.Stack())).
+		Error("Panic Recovered.")
+
+	msgWithTrace := fmt.Sprintf("Panic CausedBy: %v\nStackTrace: %v\n", recoveredFrom, string(buf))
+	err := NotifyThroughSNS(appName, env, msgWithTrace)
+	if err != nil {
+		log.WithError(err).Error("Failed to send panic message to SNS.")
 	}
+}
 
-	if pe := recover(); pe != nil {
-		if ne := NotifyThroughSlack(taskId, env,
-			map[string]interface{}{"panic_error": pe, "stacktrace": string(debug.Stack())}); ne != nil {
-			log.WithField("stack_trace", string(debug.Stack())).Error(pe)
-			return
-		}
+func NotifyOnPanic(taskId, env string) {
+	if recoveredFrom := recover(); recoveredFrom != nil {
+		notifyOnPanicWithErrorLog(taskId, env, recoveredFrom)
 	}
 }
 
 func NotifyOnPanicWithError(env, appName string) {
-	if r := recover(); r != nil {
-
-		buf := make([]byte, 1024)
-		runtime.Stack(buf, false)
-
-		msg := fmt.Sprintf("Panic CausedBy: %v\nStackTrace: %v\n", r, string(buf))
-		details := fmt.Sprintf("Debug stack: %s", string(debug.Stack()))
-		log.WithField("message", msg).WithField("details", details).
-			Error("Panic Recovered.")
-
-		err := NotifyThroughSNS(appName, env, msg)
-		if err != nil {
-			log.WithError(err).Error("failed to send message to sns")
-		}
-
-		err = NotifyThroughSlack(appName, env, msg)
-		if err != nil {
-			log.WithError(err).Error("failed to send message to slack")
-		}
+	if recoveredFrom := recover(); recoveredFrom != nil {
+		notifyOnPanicWithErrorLog(appName, env, recoveredFrom)
 	}
 }

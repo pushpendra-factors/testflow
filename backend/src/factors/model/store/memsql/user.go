@@ -1938,7 +1938,7 @@ func validateAndLogPageCountAndPageSpentTimeDisparity(logCtx *log.Entry,
 		logCtx.WithFields(log.Fields{
 			"existing": existingPageCount,
 			"new":      newPageCount,
-		}).Error("Existing value of page_count is greater than new value")
+		}).Warn("Existing value of page_count is greater than new value")
 	}
 
 	existingTotalSpentTime, err := U.GetPropertyValueAsFloat64((*existingUserPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
@@ -1949,7 +1949,7 @@ func validateAndLogPageCountAndPageSpentTimeDisparity(logCtx *log.Entry,
 		logCtx.WithFields(log.Fields{
 			"existing": existingTotalSpentTime,
 			"new":      newTotalSpentTime,
-		}).Error("Existing value of total_spent_time greater than new value")
+		}).Warn("Existing value of total_spent_time greater than new value")
 	}
 }
 
