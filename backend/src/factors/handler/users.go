@@ -195,7 +195,7 @@ func GetUserPropertiesHandler(c *gin.Context) {
 		for _, name := range displayNamesOp {
 			_, exists := dupCheck[name]
 			if exists {
-				logCtx.Error(fmt.Sprintf("Duplicate display name %s", name))
+				logCtx.Warningf(fmt.Sprintf("Duplicate display name %s", name))
 			}
 			dupCheck[name] = true
 		}

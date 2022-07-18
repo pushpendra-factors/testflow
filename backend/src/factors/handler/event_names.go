@@ -404,7 +404,7 @@ func GetEventPropertiesHandler(c *gin.Context) {
 		for _, name := range displayNamesOp {
 			_, exists := dupCheck[name]
 			if exists {
-				logCtx.Error(fmt.Sprintf("Duplicate display name %s", name))
+				logCtx.Warning(fmt.Sprintf("Duplicate display name %s", name))
 			}
 			dupCheck[name] = true
 		}
