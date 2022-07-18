@@ -694,7 +694,7 @@ func handleShareQueryTypeEvents(alert model.Alert, query *model.Queries, configs
 			if alertConfiguration.IsEmailEnabled || alertConfiguration.IsSlackEnabled {
 				tableRows := getEmailTemplateForSavedQuerySharing(alert, model.QueryClassEvents, cacheResult.Results)
 				if alertConfiguration.IsEmailEnabled {
-					sendEmailSavedQueryReport(title, tableRows, newDateRange, alertConfiguration.Emails)
+					sendEmailSavedQueryReport(title, alertDescription.Subject, newDateRange, tableRows, alertConfiguration.Emails)
 				}
 				if alertConfiguration.IsSlackEnabled {
 					sendSlackAlertForSavedQueries(alert, newDateRange, model.QueryClassEvents, title, cacheResult.Results, alertConfiguration.SlackChannelsAndUserGroups)
@@ -718,7 +718,7 @@ func handleShareQueryTypeEvents(alert model.Alert, query *model.Queries, configs
 	if alertConfiguration.IsEmailEnabled || alertConfiguration.IsSlackEnabled {
 		tableRows := getEmailTemplateForSavedQuerySharing(alert, model.QueryClassEvents, resultGroup.Results)
 		if alertConfiguration.IsEmailEnabled {
-			sendEmailSavedQueryReport(title, tableRows, newDateRange, alertConfiguration.Emails)
+			sendEmailSavedQueryReport(title, alertDescription.Subject, newDateRange, tableRows, alertConfiguration.Emails)
 		}
 		if alertConfiguration.IsSlackEnabled {
 			sendSlackAlertForSavedQueries(alert, newDateRange, model.QueryClassEvents, title, resultGroup.Results, alertConfiguration.SlackChannelsAndUserGroups)
@@ -814,7 +814,7 @@ func handleShareQueryTypeKPI(alert model.Alert, query *model.Queries, configs ma
 			if alertConfiguration.IsEmailEnabled || alertConfiguration.IsSlackEnabled {
 				tableRows := getEmailTemplateForSavedQuerySharing(alert, model.QueryClassKPI, cacheResult)
 				if alertConfiguration.IsEmailEnabled {
-					sendEmailSavedQueryReport(title, tableRows, newDateRange, alertConfiguration.Emails)
+					sendEmailSavedQueryReport(title, alertDescription.Subject, newDateRange, tableRows, alertConfiguration.Emails)
 				}
 				if alertConfiguration.IsSlackEnabled {
 					sendSlackAlertForSavedQueries(alert, newDateRange, model.QueryClassKPI, title, cacheResult, alertConfiguration.SlackChannelsAndUserGroups)
@@ -840,7 +840,7 @@ func handleShareQueryTypeKPI(alert model.Alert, query *model.Queries, configs ma
 	if alertConfiguration.IsEmailEnabled || alertConfiguration.IsSlackEnabled {
 		tableRows := getEmailTemplateForSavedQuerySharing(alert, model.QueryClassKPI, queryResult)
 		if alertConfiguration.IsEmailEnabled {
-			sendEmailSavedQueryReport(title, tableRows, newDateRange, alertConfiguration.Emails)
+			sendEmailSavedQueryReport(title, alertDescription.Subject, newDateRange, tableRows, alertConfiguration.Emails)
 		}
 		if alertConfiguration.IsSlackEnabled {
 			sendSlackAlertForSavedQueries(alert, newDateRange, model.QueryClassKPI, title, queryResult, alertConfiguration.SlackChannelsAndUserGroups)
@@ -849,8 +849,8 @@ func handleShareQueryTypeKPI(alert model.Alert, query *model.Queries, configs ma
 	return true, nil
 
 }
-func sendEmailSavedQueryReport(reportTitle, date, tableRowsemails string, emails []string) {
-	sub := "Factors Report"
+func sendEmailSavedQueryReport(reportTitle, subject, date, tableRowsemails string, emails []string) {
+	sub := subject
 	text := ""
 	var success, fail int
 
@@ -875,9 +875,15 @@ func sendEmailSavedQueryReport(reportTitle, date, tableRowsemails string, emails
 
 func getEmailTemplateForSavedQuerySharing(alert model.Alert, queryClass string, result []model.QueryResult) (tableRows string) {
 	tableRows = ""
+	_, displayNames := store.GetStore().GetDisplayNamesForAllEvents(alert.ProjectID)
+	displayNameEvents := GetDisplayEventNamesHandler(displayNames)
 	if queryClass == model.QueryClassEvents {
 		for _, row := range result[1].Rows {
-			title := strings.Title(strings.ReplaceAll(row[1].(string), "_", " "))
+			tempTitle := row[1].(string)
+			if _, exists := displayNameEvents[tempTitle]; exists {
+				tempTitle = displayNameEvents[tempTitle]
+			}
+			title := strings.Title(strings.ReplaceAll(tempTitle, "_", " "))
 			var resultValue float64
 			switch row[2].(type) {
 			case float64:
@@ -896,7 +902,11 @@ func getEmailTemplateForSavedQuerySharing(alert model.Alert, queryClass string, 
 		}
 	} else if queryClass == model.QueryClassKPI {
 		for idx, row := range result[1].Rows[0] {
-			title := strings.Title(strings.ReplaceAll(result[1].Headers[idx], "_", " "))
+			tempTitle := result[1].Headers[idx]
+			if _, exists := displayNameEvents[tempTitle]; exists {
+				tempTitle = displayNameEvents[tempTitle]
+			}
+			title := strings.Title(strings.ReplaceAll(tempTitle, "_", " "))
 			var resultValue float64
 			switch row.(type) {
 			case float64:
@@ -959,9 +969,15 @@ func sendSlackAlertForSavedQueries(alert model.Alert, dateRange, queryClass, rep
 
 func buildSlackTemplateForSavedQuerySharing(alert model.Alert, queryClass, reportTitle, dateRange string, result []model.QueryResult) string {
 	slackBlocks := ""
+	_, displayNames := store.GetStore().GetDisplayNamesForAllEvents(alert.ProjectID)
+	displayNameEvents := GetDisplayEventNamesHandler(displayNames)
 	if queryClass == model.QueryClassEvents {
 		for _, row := range result[1].Rows {
-			title := row[1].(string)
+			tempTitle := row[1].(string)
+			if _, exists := displayNameEvents[tempTitle]; exists {
+				tempTitle = displayNameEvents[tempTitle]
+			}
+			title := strings.Title(strings.ReplaceAll(tempTitle, "_", " "))
 			var resultValue float64
 			switch row[2].(type) {
 			case float64:
@@ -980,7 +996,11 @@ func buildSlackTemplateForSavedQuerySharing(alert model.Alert, queryClass, repor
 		}
 	} else if queryClass == model.QueryClassKPI {
 		for idx, row := range result[1].Rows[0] {
-			title := strings.Title(result[1].Headers[idx])
+			tempTitle := result[1].Headers[idx]
+			if _, exists := displayNameEvents[tempTitle]; exists {
+				tempTitle = displayNameEvents[tempTitle]
+			}
+			title := strings.Title(tempTitle)
 			var resultValue float64
 			switch row.(type) {
 			case float64:
@@ -1084,4 +1104,17 @@ func removeDollarSymbolFromEventNames(title string) string {
 		}
 	}
 	return title
+}
+
+// adding it here because import wasnt allowed (import cycle)
+func GetDisplayEventNamesHandler(displayNames map[string]string) map[string]string {
+	displayNameEvents := make(map[string]string)
+	standardEvents := U.STANDARD_EVENTS_DISPLAY_NAMES
+	for event, displayName := range standardEvents {
+		displayNameEvents[event] = displayName
+	}
+	for event, displayName := range displayNames {
+		displayNameEvents[event] = displayName
+	}
+	return displayNameEvents
 }
