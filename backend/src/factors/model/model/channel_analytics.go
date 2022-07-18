@@ -296,19 +296,24 @@ func BuildErrorResultForChannelsV1(errMsg string) *ChannelQueryResultV1 {
 	return errorResult
 }
 
-// sample format :
-// {campaign_property: property_value, ad_group_property: property_value}
-func GetGroupByCombinationsForChannelAnalytics(columns []string, resultMetrics [][]interface{}) []map[string]interface{} {
-	groupByCombinations := make([]map[string]interface{}, 0)
+// Response: {campaign_property: []property_values, ad_group_property: []property_values}
+// Edge Case: When there is no data for a day, we dont want to include it i.e. value == null.
+func GetGroupByCombinationsForChannelAnalytics(columns []string, resultMetrics [][]interface{}) map[string][]interface{} {
+	groupByCombinations := make(map[string][]interface{}, 0)
 	for _, resultRow := range resultMetrics {
-		groupByCombination := make(map[string]interface{})
 		for index, column := range columns {
-			if strings.HasPrefix(column, CampaignPrefix) || strings.HasPrefix(column, AdgroupPrefix) || strings.HasPrefix(column, KeywordPrefix) {
-				groupByCombination[column] = resultRow[index]
+			if resultRow[index] != nil {
+				if strings.HasPrefix(column, CampaignPrefix) || strings.HasPrefix(column, AdgroupPrefix) || strings.HasPrefix(column, KeywordPrefix) {
+					if value, exists := groupByCombinations[column]; exists {
+						value = append(value, resultRow[index])
+						groupByCombinations[column] = value
+					} else {
+						value = make([]interface{}, 0)
+						value = append(value, resultRow[index])
+						groupByCombinations[column] = value
+					}
+				}
 			}
-		}
-		if len(groupByCombination) != 0 {
-			groupByCombinations = append(groupByCombinations, groupByCombination)
 		}
 	}
 	return groupByCombinations

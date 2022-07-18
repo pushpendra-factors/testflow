@@ -26,7 +26,7 @@ type Model interface {
 	ExecuteAdwordsChannelQueryV1(projectID int64, query *model.ChannelQueryV1, reqID string) ([]string, [][]interface{}, int)
 	ExecuteAdwordsChannelQuery(projectID int64, query *model.ChannelQuery) (*model.ChannelQueryResult, int)
 	GetAdwordsFilterValuesByType(projectID int64, docType int) ([]string, int)
-	GetSQLQueryAndParametersForAdwordsQueryV1(projectID int64, query *model.ChannelQueryV1, reqID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string, int)
+	GetSQLQueryAndParametersForAdwordsQueryV1(projectID int64, query *model.ChannelQueryV1, reqID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}) (string, []interface{}, []string, []string, int)
 	GetAdwordsChannelResultMeta(projectID int64, customerAccountID string, query *model.ChannelQuery) (*model.ChannelQueryResultMeta, error)
 
 	// agent
@@ -248,7 +248,7 @@ type Model interface {
 	ExecuteFacebookChannelQueryV1(projectID int64, query *model.ChannelQueryV1, reqID string) ([]string, [][]interface{}, int)
 	GetFacebookLastSyncInfo(projectID int64, CustomerAdAccountID string) ([]model.FacebookLastSyncInfo, int)
 	ExecuteFacebookChannelQuery(projectID int64, query *model.ChannelQuery) (*model.ChannelQueryResult, int)
-	GetSQLQueryAndParametersForFacebookQueryV1(projectID int64, query *model.ChannelQueryV1, reqID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string, int)
+	GetSQLQueryAndParametersForFacebookQueryV1(projectID int64, query *model.ChannelQueryV1, reqID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}) (string, []interface{}, []string, []string, int)
 	GetFacebookMetricBreakdown(projectID int64, customerAccountID string,
 		query *model.ChannelQuery) (*model.ChannelBreakdownResult, error)
 	GetFacebookChannelResult(projectID int64, customerAccountID string,
@@ -261,7 +261,7 @@ type Model interface {
 	GetLinkedinLastSyncInfo(projectID int64, CustomerAdAccountID string) ([]model.LinkedinLastSyncInfo, int)
 	ExecuteLinkedinChannelQuery(projectID int64, query *model.ChannelQuery) (*model.ChannelQueryResult, int)
 	GetSQLQueryAndParametersForLinkedinQueryV1(projectID int64, query *model.ChannelQueryV1, reqID string, fetchSource bool,
-		limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string, int)
+		limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}) (string, []interface{}, []string, []string, int)
 
 	//bingads document
 	GetBingadsFilterValuesSQLAndParams(projectID int64, requestFilterObject string, requestFilterProperty string, reqID string) (string, []interface{}, int)

@@ -381,6 +381,12 @@ func TestChannelQueryHandlerForAdwords(t *testing.T) {
 		{"query_group": [1]map[string]interface{}{{"channel": "google_ads", "select_metrics": []string{"clicks"},
 			"group_by": [1]map[string]interface{}{{"name": "keyword", "property": "quality_score"}},
 			"gbt":      "", "fr": 1611964800, "to": 1612310400}}, "cl": "channel_v1"},
+
+		// With gbt - Date.
+		{"query_group": [1]map[string]interface{}{{"channel": "google_ads", "select_metrics": [3]string{"clicks", "impressions", "spend"},
+			"group_by": [1]map[string]interface{}{{"name": "campaign", "property": "id"}},
+			"filters":  [0]map[string]interface{}{},
+			"gbt":      "date", "fr": 1611964800, "to": 1612310400}}, "cl": "channel_v1"},
 	}
 
 	successChannelResponse := [][]byte{
@@ -408,6 +414,8 @@ func TestChannelQueryHandlerForAdwords(t *testing.T) {
 		[]byte(`{"result":{"result_group":[{"headers":["search_click_share"],"rows":[[0]]}]}}`),
 		[]byte(`{"result":{"result_group":[{"headers":["ad_group_name","search_click_share"],"rows":[["agtest2",0],["agtest3",0],["agtest4",0],["agtest1",0.1]]}]}}`),
 		[]byte(`{"result":{"result_group":[{"headers":["keyword_quality_score","clicks"],"rows":[[0,307],["0.2",204],["0.1",101]]}]}}`),
+
+		[]byte(`{"result":{"result_group":[{"headers":["campaign_id","datetime","clicks","impressions","spend"],"rows":[[2,"2021-02-01T00:00:00+05:30",102,1002,0],[1,"2021-02-01T00:00:00+05:30",101,1001,0],[2,"2021-02-02T00:00:00+05:30",102,1002,0],[1,"2021-02-02T00:00:00+05:30",101,1001,0],[3,"2021-02-02T00:00:00+05:30",0,0,0]]]]]]}`),
 	}
 
 	if C.UseMemSQLDatabaseStore() {
@@ -420,6 +428,7 @@ func TestChannelQueryHandlerForAdwords(t *testing.T) {
 		assert.Equal(t, http.StatusOK, w.Code)
 		assertIfResponseIsEqualToExpected(t, w.Body, successChannelResponse[index], index)
 	}
+
 }
 
 func assertIfResponseIsEqualToExpected(t *testing.T, responseBody *bytes.Buffer, expectedResult []byte, index int) {
@@ -428,6 +437,7 @@ func assertIfResponseIsEqualToExpected(t *testing.T, responseBody *bytes.Buffer,
 	readBuf, _ := ioutil.ReadAll(responseBody)
 	json.Unmarshal(readBuf, &current)
 	err := json.Unmarshal([]byte(expectedResult), &expected)
+
 	// Used for debugging.
 	if err != nil {
 		log.Warn("o1", current)
