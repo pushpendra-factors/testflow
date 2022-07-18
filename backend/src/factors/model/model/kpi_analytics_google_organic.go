@@ -5,9 +5,10 @@ const (
 )
 
 func GetKPIConfigsForGoogleOrganic() map[string]interface{} {
-	return map[string]interface{}{
+	config := map[string]interface{}{
 		"category":         ChannelCategory,
 		"display_category": GoogleOrganicDisplayCategory,
-		"metrics":          SelectableMetricsForGoogleOrganic,
 	}
+	config["metrics"] = GetMetricsForDisplayCategory(GoogleOrganicDisplayCategory)
+	return config
 }
