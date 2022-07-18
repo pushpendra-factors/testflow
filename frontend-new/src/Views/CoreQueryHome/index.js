@@ -756,6 +756,7 @@ function CoreQuery({
         "alert_description": {
           "message": data?.message,
           "date_range": frequency == 'send_now' ? '' : frequency,
+          "subject": data?.subject,
         },
         "alert_configuration":{
           "email_enabled": true ,
@@ -810,6 +811,7 @@ function CoreQuery({
         "alert_description": {
           "message": data?.message,
           "date_range": frequency == 'send_now' ? '' : frequency,
+          "subject": data?.subject,
         },
         "alert_configuration":{
           "email_enabled": false ,
