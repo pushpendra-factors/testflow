@@ -144,8 +144,12 @@ func DeleteCustomMetrics(c *gin.Context) (interface{}, int, string, string, bool
 }
 
 func getPropertiesFunctionBasedOnObjectType(objectType string) func(int64, string) []map[string]string {
-	if strings.Contains(objectType, U.CRM_SOURCE_NAME_HUBSPOT) {
-		return store.GetStore().GetPropertiesForHubspot
+	if model.GetGroupNameByMetricObjectType(objectType) == model.GROUP_NAME_HUBSPOT_COMPANY {
+		return store.GetStore().GetPropertiesForHubspotCompanies
+	} else if model.GetGroupNameByMetricObjectType(objectType) == model.GROUP_NAME_HUBSPOT_DEAL {
+		return store.GetStore().GetPropertiesForHubspotDeals
+	} else if strings.Contains(objectType, U.CRM_SOURCE_NAME_HUBSPOT) {
+		return store.GetStore().GetPropertiesForHubspotContacts
 	} else if strings.Contains(objectType, U.CRM_SOURCE_NAME_SALESFORCE) {
 		return store.GetStore().GetPropertiesForSalesforce
 	} else if strings.Contains(objectType, U.CRM_SOURCE_NAME_MARKETO) {

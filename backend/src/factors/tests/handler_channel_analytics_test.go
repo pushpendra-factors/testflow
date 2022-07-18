@@ -952,7 +952,7 @@ func TestChannelsV1ToKPIMigrationTransformation(t *testing.T) {
 
 	log.WithField("kpiQueryGroup", kpiQueryGroup).Warn("testing kark1")
 	result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, "",
-		kpiQueryGroup, C.EnableOptimisedFilterOnProfileQuery())
+		kpiQueryGroup, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 	log.WithField("result", result).WithField("statusCode", statusCode).Warn("kark1")
 	assert.NotNil(t, result[0].Headers)
 	assert.NotNil(t, result[0].Rows)

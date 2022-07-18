@@ -287,6 +287,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.POST("/:project_id/slack/auth", slack.SlackAuthRedirectHandler)
 	authRouteGroup.GET("/:project_id/slack/channels", slack.GetSlackChannelsListHandler)
 	authRouteGroup.DELETE("/:project_id/slack/delete", slack.DeleteSlackIntegrationHandler)
+	authRouteGroup.POST("/:project_id/v1/alerts/send_now",V1.QuerySendNowHandler)
 
 	// Timeline
 	authRouteGroup.POST("/:project_id/v1/profiles/users", responseWrapper(V1.GetProfileUsersHandler))

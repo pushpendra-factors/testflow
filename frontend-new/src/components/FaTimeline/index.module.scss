@@ -48,11 +48,10 @@
 }
 
 .tag {
-    display: flex;
     width: fit-content;
+    max-width: 300px;
+    display: flex;
     align-items: center;
-    white-space: nowrap;
-    text-overflow: ellipsis !important;
     padding: 3px 15px;
     background: #F5F6F8;
     border-radius: 4px;

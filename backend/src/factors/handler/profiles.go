@@ -169,7 +169,7 @@ func ProfilesQueryHandler(c *gin.Context) (interface{}, int, string, string, boo
 	}
 
 	var cacheResult model.ResultGroup
-	shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectID, &profileQueryGroup, cacheResult, false, reqID)
+	shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectID, &profileQueryGroup, cacheResult, false, reqID, false)
 	if shouldReturn {
 		if resCode == http.StatusOK {
 			return gin.H{"result": resMsg}, resCode, "", "", false

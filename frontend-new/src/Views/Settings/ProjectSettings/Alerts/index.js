@@ -8,7 +8,7 @@ import { MoreOutlined, PlusOutlined } from '@ant-design/icons';
 import _ from 'lodash';
 import GroupSelect2 from '../../../../components/KPIComposer/GroupSelect2';
 import FaSelect from 'Components/FaSelect';
-import { createAlerts, fetchAlerts, deleteAlerts } from 'Reducers/global';
+import { createAlert, fetchAlerts, deleteAlert } from 'Reducers/global';
 import ConfirmationModal from '../../../../components/ConfirmationModal';
 import QueryBlock from './QueryBlock';
 import { deleteGroupByForEvent } from '../../../../reducers/coreQuery/middleware';
@@ -21,9 +21,9 @@ const { Option } = Select;
 const Alerts = ({
     activeProject,
     kpi,
-    createAlerts,
+    createAlert,
     fetchAlerts,
-    deleteAlerts,
+    deleteAlert,
     savedAlerts,
     agent_details,
     slack,
@@ -81,7 +81,7 @@ const Alerts = ({
 
 
     const confirmRemove = (id) => {
-        return deleteAlerts(activeProject.id, id).then(res => {
+        return deleteAlert(activeProject.id, id).then(res => {
             fetchAlerts(activeProject.id);
             notification.success({
                 message: "Success",
@@ -297,51 +297,59 @@ const Alerts = ({
                 slackChannels = {...slackChannels, [key]: value}
             }
         }
-
-        let payload = {
-            "alert_name": data.alert_name,
-            "alert_type": alertType,
-            "alert_description": {
-              "name" : queries[0].metric,
-              "query": {
-                'ca': queries[0].category,
-                'dc': queries[0].group,
-                'fil': getEventsWithPropertiesKPI(queries[0].filters, queries[0]?.category),
-                'me': [queries[0].metric],
-                'pgUrl': queries[0]?.pageViewVal ? queries[0]?.pageViewVal : '',
-                "tz": localStorage.getItem('project_timeZone') || 'Asia/Kolkata',
-              },
-              "query_type": "kpi",
-              "operator": operatorState,
-              "value": Value,
-              "date_range": data.date_range,
-              'compared_to': data.compared_to,
-            },
-            "alert_configuration":{
-              "email_enabled": emailEnabled ,
-              "slack_enabled": slackEnabled,
-              "emails": emails,
-              "slack_channels_and_user_groups": slackChannels,
+        if(queries.length > 0 && (emails.length > 0 || Object.keys(slackChannels).length > 0)) {
+            let payload = {
+                "alert_name": data?.alert_name,
+                "alert_type": alertType,
+                "alert_description": {
+                "name" : queries[0]?.metric,
+                "query": {
+                    'ca': queries[0]?.category,
+                    'dc': queries[0]?.group,
+                    'fil': getEventsWithPropertiesKPI(queries[0]?.filters, queries[0]?.category),
+                    'me': [queries[0]?.metric],
+                    'pgUrl': queries[0]?.pageViewVal ? queries[0]?.pageViewVal : '',
+                    "tz": localStorage.getItem('project_timeZone') || 'Asia/Kolkata',
+                },
+                "query_type": "kpi",
+                "operator": operatorState,
+                "value": Value,
+                "date_range": data?.date_range,
+                'compared_to': data?.compared_to,
+                "message": '',
+                },
+                "alert_configuration":{
+                "email_enabled": emailEnabled ,
+                "slack_enabled": slackEnabled,
+                "emails": emails,
+                "slack_channels_and_user_groups": slackChannels,
+                }
             }
-          }
-        
-        createAlerts(activeProject.id, payload).then(res => {
-            setLoading(false);
-            fetchAlerts(activeProject.id);
-            notification.success({
-                message: "Alerts Saved",
-                description: "New Alerts is created and saved successfully.",
+
+            createAlert(activeProject.id, payload, 0).then(res => {
+                setLoading(false);
+                fetchAlerts(activeProject.id);
+                notification.success({
+                    message: "Alerts Saved",
+                    description: "New Alerts is created and saved successfully.",
+                });
+                onReset();
+            }).catch(err => {
+                setLoading(false);
+                notification.error({
+                    message: "Error",
+                    description: err?.data?.error,
+                });
+                console.log('create alerts error->', err)
             });
-            onReset();
-        }).catch(err => {
+        } else {
             setLoading(false);
             notification.error({
                 message: "Error",
-                description: err?.data?.error,
+                description: "Please select KPI and atleast one delivery option to send alert.",
             });
-            console.log('create alerts error->', err)
-        });
-    };
+        };
+    }
 
     const emailView = () => {
         if (viewAlertDetails.alert_configuration.emails) {
@@ -400,9 +408,9 @@ const Alerts = ({
     };   
 
     const DateRangeTypes =[
-        {value: 'last_week', label: 'Last week'},
-        {value: 'last_month', label: 'Last month'},
-        {value: 'last_quarter', label: 'Last quarter'},
+        {value: 'last_week', label: 'Weekly'},
+        {value: 'last_month', label: 'Monthly'},
+        {value: 'last_quarter', label: 'Quarterly'},
       ];
     
     const DateRangeTypeSelect = (
@@ -513,7 +521,7 @@ const Alerts = ({
                         onFinish={onFinish}
                         className={'w-full'}
                         onChange={onChange}
-                        loading={true}
+                        loading={loading}
                     >
                         <Row>
                             <Col span={12}>
@@ -978,4 +986,4 @@ const mapStateToProps = (state) => ({
 });
 
 
-export default connect(mapStateToProps, { createAlerts, fetchAlerts, deleteAlerts, fetchSlackChannels, fetchProjectSettingsV1, enableSlackIntegration })(Alerts)
+export default connect(mapStateToProps, { createAlert, fetchAlerts, deleteAlert, fetchSlackChannels, fetchProjectSettingsV1, enableSlackIntegration })(Alerts)

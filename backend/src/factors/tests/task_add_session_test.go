@@ -1119,7 +1119,7 @@ func TestEventsConsiderationForAddingSession(t *testing.T) {
 		// No.of sessions created.
 		sessionEventName, _ := store.GetStore().GetEventName(U.EVENT_NAME_SESSION, project.ID)
 		sessionCount, _ := store.GetStore().GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
-		assert.Equal(t, int64(1), sessionCount)
+		assert.Equal(t, uint64(1), sessionCount)
 
 		// Check session association.
 		event1, _ := store.GetStore().GetEvent(project.ID, userId, eventId1)

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styles from './index.module.scss';
 import { SVG, Text } from '../factorsComponents';
-import { Input, Button } from 'antd';
+import { Input, Button,Spin } from 'antd';
 import { DISPLAY_PROP } from '../../utils/constants';
 
 const FaSelect = ({
@@ -61,8 +61,18 @@ const FaSelect = ({
   const renderOptions = () => {
     let rendOpts = [];
     let isSelected = false;
-
-    if (searchTerm?.length) {
+    if (!options.length) {
+      rendOpts.push(
+          <div className='flex justify-center items-center my-2'>
+            <Spin size='small'/>
+            <Text level={7} type={'title'} extraClass={'ml-2'} weight={'thin'} color={'grey'}>
+                Loading data...
+            </Text>
+          </div>
+      );
+    }
+    
+    else if (searchTerm?.length) {
       isSelected = isSelectedCheck([searchTerm]);
       rendOpts.push(
         <div
@@ -136,6 +146,7 @@ const FaSelect = ({
           <div
             key={index}
             title={DISPLAY_PROP[op[0]] ? DISPLAY_PROP[op[0]] : op[0]}
+            style={{color: op[2] === 'disabled' ? '#B7BEC8' : '#0E2647', cursor: op[2] === 'disabled' ? 'not-allowed' : 'pointer'}}
             className={`${
               allowSearch
                 ? 'fa-select-group-select--options'
@@ -144,7 +155,7 @@ const FaSelect = ({
             onClick={() => optClick(() => optionClick(op), op)}
           >
             {op[1] && showIcon && !multiSelect ? (
-              <SVG name={op[1]} extraClass={'self-center'}></SVG>
+              <SVG name={op[1]} color={op[2] === 'disabled' ? '#B7BEC8' : '#0E2647'} style={{cursor: op[2] === 'disabled' ? 'not-allowed' : 'pointer'}} extraClass={'self-center'}></SVG>
             ) : null}
             <span className={`ml-1 ${styles.optText}`}>
               {DISPLAY_PROP[op[0]] ? DISPLAY_PROP[op[0]] : op[0]}

@@ -11,6 +11,7 @@ import (
 const (
 	ALERT_TYPE_SINGLE_RANGE                            = 1
 	ALERT_TYPE_MULTI_RANGE                             = 2
+	ALERT_TYPE_QUERY_SHARING                           = 3
 	LAST_WEEK                                          = "last_week"
 	LAST_MONTH                                         = "last_month"
 	LAST_QUARTER                                       = "last_quarter"
@@ -37,6 +38,7 @@ var ValidOperators = []string{IS_LESS_THAN, IS_GREATER_THAN, DECREASED_BY_MORE_T
 
 type Alert struct {
 	ID                 string          `gorm:"type:uuid;default:uuid_generate_v4()" json:"id"`
+	QueryID            int64           `json:"query_id"`
 	ProjectID          int64           `json:"project_id"`
 	AlertName          string          `json:"alert_name"`
 	CreatedBy          string          `json:"created_by"`
@@ -57,6 +59,8 @@ type AlertDescription struct {
 	Operator  string          `json:"operator"`
 	Value     string          `json:"value"`
 	DateRange string          `json:"date_range"`
+	Subject   string          `json:"subject"`
+	Message   string          `json:"message"`
 	// only for type 2 (daterange a compared to daterange b )
 	ComparedTo string `json:"compared_to"`
 }

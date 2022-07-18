@@ -960,7 +960,7 @@ func TestHubspotEventUserPropertiesState(t *testing.T) {
 		EventsCondition: model.EventCondAnyGivenEvent,
 	}
 
-	result, status, _ := store.GetStore().Analyze(project.ID, query)
+	result, status, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 	assert.Equal(t, http.StatusOK, status)
 	assert.Equal(t, "city", result.Headers[0])
 	assert.Equal(t, "bangalore", result.Rows[1][0])
@@ -989,7 +989,7 @@ func TestHubspotEventUserPropertiesState(t *testing.T) {
 		EventsCondition: model.EventCondAllGivenEvent,
 	}
 
-	result, status, _ = store.GetStore().Analyze(project.ID, query)
+	result, status, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 	assert.Equal(t, http.StatusOK, status)
 	assert.Equal(t, cuID, result.Rows[1][0])
 	assert.Equal(t, float64(1), result.Rows[1][1])
@@ -1890,7 +1890,7 @@ func TestHubspotPropertyDetails(t *testing.T) {
 		EventsCondition: model.EventCondAnyGivenEvent,
 	}
 
-	result, status, _ := store.GetStore().Analyze(project.ID, query)
+	result, status, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 	assert.Equal(t, http.StatusOK, status)
 	assert.Contains(t, result.Headers, dtEnKey1, dtEnKey2, numEnKey1, numEnKey2)
 	count := 0
@@ -2108,7 +2108,7 @@ func TestHubspotCreateActionUpdatedOnCreate(t *testing.T) {
 		},
 	}
 
-	result, status := store.GetStore().RunEventsGroupQuery(query, project.ID)
+	result, status := store.GetStore().RunEventsGroupQuery(query, project.ID, C.EnableOptimisedFilterOnEventUserQuery())
 	assert.Equal(t, http.StatusOK, status)
 	assert.Equal(t, 2, len(result.Results[0].Rows))
 	for i := range result.Results { // two events, one on each
@@ -2135,7 +2135,7 @@ func TestHubspotCreateActionUpdatedOnCreate(t *testing.T) {
 		},
 	}
 
-	result, status = store.GetStore().RunEventsGroupQuery(query, project.ID)
+	result, status = store.GetStore().RunEventsGroupQuery(query, project.ID, C.EnableOptimisedFilterOnEventUserQuery())
 	assert.Equal(t, http.StatusOK, status)
 	assert.Equal(t, 1, len(result.Results[0].Rows))
 	assert.Equal(t, float64(1), result.Results[0].Rows[0][0])
@@ -2351,7 +2351,7 @@ func TestHubspotUseLastModifiedTimestampAsDefault(t *testing.T) {
 		},
 	}
 
-	result, status, _ := store.GetStore().Analyze(project.ID, query)
+	result, status, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 	assert.Equal(t, http.StatusOK, status)
 	assert.Equal(t, 3, len(result.Rows))
 	eventNameTimestamp := make(map[string]int64)
@@ -2891,7 +2891,7 @@ func TestHubspotLatestUserProperties(t *testing.T) {
 		},
 	}
 
-	result, status, _ := store.GetStore().Analyze(project.ID, query)
+	result, status, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 	assert.Equal(t, http.StatusOK, status)
 	assert.Equal(t, 1, len(result.Rows))
 	assert.Equal(t, "$hubspot_contact_created", result.Rows[0][0])
@@ -2939,7 +2939,7 @@ func TestHubspotLatestUserProperties(t *testing.T) {
 
 	IntHubspot.Sync(project.ID, 3, time.Now().Unix(), nil, "", 50)
 
-	result, status, _ = store.GetStore().Analyze(project.ID, query)
+	result, status, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 	assert.Equal(t, http.StatusOK, status)
 	assert.Equal(t, 1, len(result.Rows))
 	assert.Equal(t, "$hubspot_contact_created", result.Rows[0][0])
@@ -3097,7 +3097,7 @@ func TestHubspotCustomerUserIDChange(t *testing.T) {
 		AggregateFunction: model.DefaultAggrFunc,
 	}
 
-	result, status, _ := store.GetStore().Analyze(project.ID, query)
+	result, status, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 	assert.Equal(t, http.StatusOK, status)
 	assert.Equal(t, "aggregate", result.Headers[0])
 	assert.Equal(t, float64(1), result.Rows[0][0])
@@ -3282,7 +3282,7 @@ func TestHubspotParallelProcessingByDocumentID(t *testing.T) {
 		},
 	}
 
-	result, status := store.GetStore().RunEventsGroupQuery([]model.Query{query}, project.ID)
+	result, status := store.GetStore().RunEventsGroupQuery([]model.Query{query}, project.ID, C.EnableOptimisedFilterOnEventUserQuery())
 	assert.Equal(t, http.StatusOK, status)
 
 	rows := result.Results[0].Rows
@@ -3344,7 +3344,7 @@ func TestHubspotParallelProcessingByDocumentID(t *testing.T) {
 		EventsCondition: model.EventCondEachGivenEvent,
 		Class:           model.QueryClassEvents,
 	}
-	result, status = store.GetStore().RunEventsGroupQuery([]model.Query{query}, project.ID)
+	result, status = store.GetStore().RunEventsGroupQuery([]model.Query{query}, project.ID, C.EnableOptimisedFilterOnEventUserQuery())
 	assert.Equal(t, http.StatusOK, status)
 	count := 0
 	for i := range result.Results[0].Rows {
@@ -3377,7 +3377,7 @@ func TestHubspotParallelProcessingByDocumentID(t *testing.T) {
 		EventsCondition: model.EventCondEachGivenEvent,
 		Class:           model.QueryClassEvents,
 	}
-	result, status = store.GetStore().RunEventsGroupQuery([]model.Query{query}, project.ID)
+	result, status = store.GetStore().RunEventsGroupQuery([]model.Query{query}, project.ID, C.EnableOptimisedFilterOnEventUserQuery())
 	assert.Equal(t, http.StatusOK, status)
 	count = 0
 	for i := range result.Results[0].Rows {
@@ -3710,7 +3710,7 @@ func TestHubspotCompanyGroups(t *testing.T) {
 		EventsCondition: model.EventCondEachGivenEvent,
 	}
 
-	result, status := store.GetStore().RunEventsGroupQuery([]model.Query{query}, project.ID)
+	result, status := store.GetStore().RunEventsGroupQuery([]model.Query{query}, project.ID, C.EnableOptimisedFilterOnEventUserQuery())
 	assert.Equal(t, http.StatusOK, status)
 	assert.Equal(t, U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED, result.Results[0].Rows[0][1])
 	assert.Equal(t, "testcompany", result.Results[0].Rows[0][2])
@@ -3731,7 +3731,7 @@ func TestHubspotCompanyGroups(t *testing.T) {
 		EventsCondition: model.EventCondEachGivenEvent,
 	}
 
-	result, status = store.GetStore().RunEventsGroupQuery([]model.Query{query}, project.ID)
+	result, status = store.GetStore().RunEventsGroupQuery([]model.Query{query}, project.ID, C.EnableOptimisedFilterOnEventUserQuery())
 	assert.Equal(t, http.StatusOK, status)
 	assert.Equal(t, float64(4), result.Results[0].Rows[0][2])
 

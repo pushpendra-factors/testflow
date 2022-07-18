@@ -75,9 +75,16 @@ func TestAPIAgentSignout(t *testing.T) {
 	r := gin.Default()
 	H.InitAppRoutes(r)
 	w := httptest.NewRecorder()
+	_, agent, _ := SetupProjectWithAgentDAO()
+	authData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, time.Second*1000)
 
 	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, "/agents/signout").
-		WithHeader("Content-UnitType", "application/json")
+		WithHeader("Content-UnitType", "application/json").
+		WithCookie(&http.Cookie{
+			Name:   C.GetFactorsCookieName(),
+			Value:  authData,
+			MaxAge: 1000,
+		})
 
 	req, err := rb.Build()
 	if err != nil {

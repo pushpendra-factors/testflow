@@ -32,7 +32,7 @@ import (
 )
 
 // const prop_thresh_percent = 0.5
-const max_prop_values_per_key = 50
+const max_prop_values_per_key = 15 // number of property values per key
 
 // The number of patterns generated is bounded to max_SEGMENTS * top_K per iteration.
 // The amount of data and the time computed to generate this data is bounded
@@ -47,7 +47,8 @@ const keventsSpecial = 5
 const keventsURL = 10
 const max_PATTERN_LENGTH = 3
 
-const max_CHUNK_SIZE_IN_BYTES int64 = 200 * 1000 * 1000 // 200MB
+const max_CHUNK_SIZE_IN_BYTES int64 = 200 * 1000 * 1000  // 200MB
+const max_PATTERN_SIZE_IN_BYTES int64 = 20 * 1000 * 1000 //20MB
 
 // quota counts for URLS, user defined events,smart events ,
 // standard events, campaigns, source, referrer, medium, adgroup
@@ -1110,8 +1111,8 @@ func writePatternsAsChunks(patterns []*P.Pattern, chunksDir string, createMetada
 		pString = pString + "\n"
 		pBytes := []byte(pString)
 		pBytesLen := int64(len(pBytes))
-		if pBytesLen >= 10000000*2 {
-			// Limit is 10MB
+		if pBytesLen >= max_PATTERN_SIZE_IN_BYTES {
+			// Limit is 20MB
 			errorString := fmt.Sprintf(
 				"Too big pattern, chunksDir: %s, pattern: %s, numBytes: %d",
 				chunksDir, pattern.String(), pBytesLen)

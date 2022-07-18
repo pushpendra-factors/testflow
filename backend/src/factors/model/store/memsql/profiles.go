@@ -294,7 +294,7 @@ func buildAllUsersQueryV2(projectID int64, query model.ProfileQuery) (string, []
 	}
 
 	wrapperSelectStmnt := joinWithComma(selectKeysWithAggregate, joinWithComma(groupByKeys...))
-	wrappedSqlStmnt := fmt.Sprintf("SELECT %s FROM (%s LIMIT 10000000000) %s", wrapperSelectStmnt, stepSqlStmnt, wrapperViewName)
+	wrappedSqlStmnt := fmt.Sprintf("SELECT %s FROM (%s LIMIT %d) %s", wrapperSelectStmnt, stepSqlStmnt, model.FilterOptLimit, wrapperViewName)
 	if filterStmnt != "" {
 		wrappedSqlStmnt = wrappedSqlStmnt + " WHERE " + strings.ReplaceAll(filterStmnt, "users.", wrapperViewName+".")
 	}

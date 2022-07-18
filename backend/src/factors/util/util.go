@@ -1334,3 +1334,24 @@ func FormatProperty(property string) string {
 	}
 	return property
 }
+
+func CreateVirtualDisplayName(actualName string) string {
+	displayName := ""
+	if strings.HasPrefix(actualName, "$") {
+		actualName := strings.TrimPrefix(actualName, "$")
+		actualSplit := strings.Split(actualName, "_")
+		for _, splitString := range actualSplit {
+			if displayName == "" {
+				displayName = fmt.Sprintf("%v", CapitalizeFirstLetter(splitString))
+			} else {
+				displayName = fmt.Sprintf("%v %v", displayName, CapitalizeFirstLetter(splitString))
+			}
+		}
+		return displayName
+	}
+	return actualName
+}
+
+func CapitalizeFirstLetter(data string) string {
+	return strings.Title(strings.ToLower(data))
+}

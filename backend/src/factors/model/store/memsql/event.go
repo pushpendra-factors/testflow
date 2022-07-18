@@ -722,6 +722,11 @@ func (store *MemSQL) updateEventPropertiesWithTransaction(projectId int64, id, u
 		return http.StatusBadRequest
 	}
 
+	if value := U.SafeConvertToFloat64((*properties)[U.EP_PAGE_SCROLL_PERCENT]); value > float64(100.00) {
+		log.WithFields(logFields).Info("Scroll Percent greater than 100. Changing value to 100")
+		(*properties)[U.EP_PAGE_SCROLL_PERCENT] = 100.00
+	}
+
 	event, errCode := store.GetEventById(projectId, id, userID)
 	if errCode != http.StatusFound {
 		return errCode

@@ -199,7 +199,7 @@ func ExecuteChannelQueryHandler(c *gin.Context) (interface{}, int, string, strin
 	queryPayload.SetTimeZone(timezoneString)
 
 	var cacheResult model.ChannelResultGroupV1
-	shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &queryPayload, cacheResult, isDashboardQueryRequest, reqID)
+	shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &queryPayload, cacheResult, isDashboardQueryRequest, reqID, false)
 	if shouldReturn {
 		if resCode == http.StatusOK {
 			return resMsg, resCode, "", "", false

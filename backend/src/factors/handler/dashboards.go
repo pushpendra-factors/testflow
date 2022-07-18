@@ -635,7 +635,7 @@ func DashboardUnitsWebAnalyticsQueryHandler(c *gin.Context) {
 		// build map[unit_id]result and respond.
 
 		var cacheResult model.WebAnalyticsQueryResult
-		shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &requestPayload, cacheResult, true, reqID)
+		shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &requestPayload, cacheResult, true, reqID, false)
 		if shouldReturn && !hardRefresh {
 			if resCode == http.StatusInternalServerError {
 				c.AbortWithStatusJSON(resCode, resMsg)

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	C "factors/config"
 	H "factors/handler/helpers"
 	V1 "factors/handler/v1"
 	mid "factors/middleware"
@@ -154,7 +155,7 @@ func EventsQueryHandler(c *gin.Context) (interface{}, int, string, string, bool)
 		return nil, http.StatusBadRequest, V1.INVALID_INPUT, err.Error(), true
 	}
 	var cacheResult model.ResultGroup
-	shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &requestPayload, cacheResult, isDashboardQueryRequest, reqId)
+	shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &requestPayload, cacheResult, isDashboardQueryRequest, reqId, false)
 	if shouldReturn {
 		if resCode == http.StatusOK {
 			return resMsg, resCode, "", "", false
@@ -167,7 +168,10 @@ func EventsQueryHandler(c *gin.Context) (interface{}, int, string, string, bool)
 	model.SetQueryCachePlaceholder(projectId, &requestPayload)
 	H.SleepIfHeaderSet(c)
 
-	resultGroup, errCode := store.GetStore().RunEventsGroupQuery(requestPayload.Queries, projectId)
+	enableOptimisedFilterOnEventUserQuery := c.Request.Header.Get(H.HeaderUserFilterOptForEventsAndUsers) == "true" ||
+		C.EnableOptimisedFilterOnEventUserQuery()
+
+	resultGroup, errCode := store.GetStore().RunEventsGroupQuery(requestPayload.Queries, projectId, enableOptimisedFilterOnEventUserQuery)
 	if errCode != http.StatusOK {
 		model.DeleteQueryCacheKey(projectId, &requestPayload)
 		logCtx.Error("Query failed. Failed to process query from DB")
@@ -185,9 +189,17 @@ func EventsQueryHandler(c *gin.Context) (interface{}, int, string, string, bool)
 			Result: resultGroup, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(), TimeZone: string(timezoneString)}, http.StatusOK, "", "", false
 	}
 	resultGroup.Query = requestPayload
+	resultGroup.IsShareable = isQueryShareable(requestPayload)
 	return resultGroup, http.StatusOK, "", "", false
 }
-
+func isQueryShareable(queryGroup model.QueryGroup) bool {
+	for _, query := range queryGroup.Queries {
+		if query.GroupByProperties != nil && len(query.GroupByProperties) > 0 {
+			return false
+		}
+	}
+	return true
+}
 // QueryHandler godoc
 // @Summary To run a particular query from core query or dashboards.
 // @Tags CoreQuery
@@ -311,7 +323,7 @@ func QueryHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 	}
 
 	var cacheResult model.QueryResult
-	shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &requestPayload.Query, cacheResult, isDashboardQueryRequest, reqId)
+	shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &requestPayload.Query, cacheResult, isDashboardQueryRequest, reqId, false)
 
 	if shouldReturn {
 		if resCode == http.StatusOK {
@@ -330,7 +342,10 @@ func QueryHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 	model.SetQueryCachePlaceholder(projectId, &requestPayload.Query)
 	H.SleepIfHeaderSet(c)
 
-	result, errCode, errMsg := store.GetStore().Analyze(projectId, requestPayload.Query)
+	enableOptimisedFilterOnEventUserQuery := c.Request.Header.Get(H.HeaderUserFilterOptForEventsAndUsers) == "true" ||
+		C.EnableOptimisedFilterOnEventUserQuery()
+
+	result, errCode, errMsg := store.GetStore().Analyze(projectId, requestPayload.Query, enableOptimisedFilterOnEventUserQuery)
 	if errCode != http.StatusOK {
 		model.DeleteQueryCacheKey(projectId, &requestPayload.Query)
 		logCtx.Error("Failed to process query from DB - " + errMsg)

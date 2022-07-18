@@ -2,6 +2,7 @@ package tests
 
 import (
 	"encoding/json"
+	C "factors/config"
 	TaskSession "factors/task/session"
 	U "factors/util"
 	"net/http"
@@ -71,7 +72,7 @@ func TestAnalyticsFunnelQuery(t *testing.T) {
 			EventsCondition: model.EventCondAllGivenEvent,
 		}
 
-		result, errCode, _ := store.GetStore().Analyze(project.ID, query)
+		result, errCode, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 
@@ -132,7 +133,7 @@ func TestAnalyticsFunnelQuery(t *testing.T) {
 			EventsCondition: model.EventCondAllGivenEvent,
 		}
 
-		result, errCode, _ := store.GetStore().Analyze(project.ID, query)
+		result, errCode, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 
@@ -194,7 +195,7 @@ func TestAnalyticsFunnelQuery(t *testing.T) {
 			EventsCondition: model.EventCondAllGivenEvent,
 		}
 
-		result, errCode, _ := store.GetStore().Analyze(project.ID, query)
+		result, errCode, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 
@@ -256,7 +257,7 @@ func TestAnalyticsFunnelQuery(t *testing.T) {
 			EventsCondition: model.EventCondAllGivenEvent,
 		}
 
-		result, errCode, _ := store.GetStore().Analyze(project.ID, query)
+		result, errCode, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 
@@ -361,7 +362,7 @@ func TestAnalyticsFunnelGroupUserQuery(t *testing.T) {
 			EventsCondition: model.EventCondAllGivenEvent,
 		}
 
-		result, errCode, _ := store.GetStore().Analyze(project.ID, query)
+		result, errCode, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 
@@ -474,7 +475,7 @@ func TestAnalyticsUniqueUsersQueryWithGroupEvent(t *testing.T) {
 			EventsCondition: model.EventCondAllGivenEvent,
 		}
 
-		result, errCode, _ := store.GetStore().Analyze(project.ID, query)
+		result, errCode, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, model.AliasAggr, result.Headers[0])
@@ -555,7 +556,7 @@ func TestAnalyticsFunnelWithUserIdentification(t *testing.T) {
 		EventsCondition: model.EventCondAllGivenEvent,
 	}
 
-	result1, errCode, _ := store.GetStore().Analyze(project.ID, query)
+	result1, errCode, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 	assert.Equal(t, http.StatusOK, errCode)
 	assert.NotNil(t, result1)
 
@@ -641,7 +642,7 @@ func TestAnalyticsFunnelQueryWithFilterConditionNumericalProperty(t *testing.T) 
 		EventsCondition: model.EventCondAllGivenEvent,
 	}
 
-	result, errCode, _ := store.GetStore().Analyze(project.ID, query)
+	result, errCode, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 	assert.Equal(t, http.StatusOK, errCode)
 
 	assert.Equal(t, "aggregate", result.Headers[0])
@@ -731,7 +732,7 @@ func TestInsightsAnalyticsQueryGroupingMultipleFilters(t *testing.T) {
 		EventsCondition: model.EventCondAllGivenEvent,
 	}
 
-	result, errCode, _ := store.GetStore().Analyze(project.ID, query)
+	result, errCode, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 	assert.Equal(t, http.StatusOK, errCode)
 
 	assert.Equal(t, "aggregate", result.Headers[0])
@@ -828,7 +829,7 @@ func TestAnalyticsFunnelQueryWithFilterCondition(t *testing.T) {
 		EventsCondition: model.EventCondAllGivenEvent,
 	}
 
-	result, errCode, _ := store.GetStore().Analyze(project.ID, query)
+	result, errCode, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 	assert.Equal(t, http.StatusOK, errCode)
 	assert.Equal(t, model.StepPrefix+"0", result.Headers[0])
 	assert.Equal(t, model.StepPrefix+"1", result.Headers[1])
@@ -866,7 +867,7 @@ func TestAnalyticsFunnelQueryWithFilterCondition(t *testing.T) {
 		EventsCondition: model.EventCondAllGivenEvent,
 	}
 
-	result1, errCode, _ := store.GetStore().Analyze(project.ID, query1)
+	result1, errCode, _ := store.GetStore().Analyze(project.ID, query1, C.EnableOptimisedFilterOnEventUserQuery())
 	assert.Equal(t, http.StatusOK, errCode)
 	assert.Equal(t, model.StepPrefix+"0", result1.Headers[0])
 	assert.Equal(t, model.StepPrefix+"1", result1.Headers[1])
@@ -903,7 +904,7 @@ func TestAnalyticsFunnelQueryWithFilterCondition(t *testing.T) {
 		EventsCondition: model.EventCondAllGivenEvent,
 	}
 
-	result2, errCode, _ := store.GetStore().Analyze(project.ID, query2)
+	result2, errCode, _ := store.GetStore().Analyze(project.ID, query2, C.EnableOptimisedFilterOnEventUserQuery())
 	assert.Equal(t, http.StatusOK, errCode)
 	assert.Equal(t, model.StepPrefix+"0", result2.Headers[0])
 	assert.Equal(t, model.StepPrefix+"1", result2.Headers[1])
@@ -945,7 +946,7 @@ func TestAnalyticsFunnelQueryWithFilterCondition(t *testing.T) {
 		EventsCondition: model.EventCondAllGivenEvent,
 	}
 
-	result3, errCode, _ := store.GetStore().Analyze(project.ID, query3)
+	result3, errCode, _ := store.GetStore().Analyze(project.ID, query3, C.EnableOptimisedFilterOnEventUserQuery())
 	assert.Equal(t, http.StatusOK, errCode)
 	assert.Equal(t, model.StepPrefix+"0", result3.Headers[0])
 	assert.Equal(t, model.StepPrefix+"1", result3.Headers[1])
@@ -1008,7 +1009,7 @@ func TestAnalyticsFunnelQueryRepeatedEvents(t *testing.T) {
 		EventsCondition: model.EventCondAllGivenEvent,
 	}
 
-	result, errCode, _ := store.GetStore().Analyze(project.ID, query)
+	result, errCode, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 	assert.Equal(t, http.StatusOK, errCode)
 
 	assert.Equal(t, float64(2), result.Rows[0][0])
@@ -1048,7 +1049,7 @@ func TestAnalyticsFunnelQueryRepeatedEvents(t *testing.T) {
 		EventsCondition: model.EventCondAllGivenEvent,
 	}
 
-	result1, errCode, _ := store.GetStore().Analyze(project.ID, query1)
+	result1, errCode, _ := store.GetStore().Analyze(project.ID, query1, C.EnableOptimisedFilterOnEventUserQuery())
 	assert.Equal(t, http.StatusOK, errCode)
 
 	assert.Equal(t, float64(1), result1.Rows[0][0])
@@ -1117,7 +1118,7 @@ func TestAnalyticsFunnelQueryCRMEventsWithSameTimestamp(t *testing.T) {
 	}
 
 	// should result in 0 conversions for the same timestamp and same event name
-	result, errCode, _ := store.GetStore().Analyze(project.ID, query)
+	result, errCode, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 	assert.Equal(t, http.StatusOK, errCode)
 	assert.Equal(t, float64(2), result.Rows[0][0])
 	assert.Equal(t, float64(0), result.Rows[0][1])
@@ -1143,7 +1144,7 @@ func TestAnalyticsFunnelQueryCRMEventsWithSameTimestamp(t *testing.T) {
 	}
 
 	// should have 1 conversion as events are different but the timestamp is same
-	result1, errCode, _ := store.GetStore().Analyze(project.ID, query1)
+	result1, errCode, _ := store.GetStore().Analyze(project.ID, query1, C.EnableOptimisedFilterOnEventUserQuery())
 	assert.Equal(t, http.StatusOK, errCode)
 	assert.Equal(t, float64(2), result1.Rows[0][0])
 	assert.Equal(t, float64(1), result1.Rows[0][1])
@@ -1238,7 +1239,7 @@ func TestAnalyticsFunnelQueryWithFilterAndBreakDown(t *testing.T) {
 		EventsCondition: model.EventCondAllGivenEvent,
 	}
 
-	result, errCode, _ := store.GetStore().Analyze(project.ID, query)
+	result, errCode, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 	assert.Equal(t, http.StatusOK, errCode)
 	assert.Equal(t, "gender", result.Headers[0])
 	assert.Equal(t, model.StepPrefix+"0", result.Headers[1])
@@ -1298,7 +1299,7 @@ func TestAnalyticsFunnelQueryWithFilterAndBreakDown(t *testing.T) {
 		EventsCondition: model.EventCondAllGivenEvent,
 	}
 
-	result1, errCode, _ := store.GetStore().Analyze(project.ID, query1)
+	result1, errCode, _ := store.GetStore().Analyze(project.ID, query1, C.EnableOptimisedFilterOnEventUserQuery())
 
 	assert.Equal(t, http.StatusOK, errCode)
 	assert.Equal(t, "value", result1.Headers[0])
@@ -1354,7 +1355,7 @@ func TestAnalyticsFunnelQueryWithFilterAndBreakDown(t *testing.T) {
 		Type:            model.QueryTypeUniqueUsers,
 		EventsCondition: model.EventCondAllGivenEvent,
 	}
-	result2, errCode, _ := store.GetStore().Analyze(project.ID, query2)
+	result2, errCode, _ := store.GetStore().Analyze(project.ID, query2, C.EnableOptimisedFilterOnEventUserQuery())
 
 	assert.Equal(t, http.StatusOK, errCode)
 	assert.Equal(t, "value", result2.Headers[0])
@@ -1424,7 +1425,7 @@ func TestAnalyticsFunnelQueryWithFilterAndBreakDown(t *testing.T) {
 		Type:            model.QueryTypeUniqueUsers,
 		EventsCondition: model.EventCondAllGivenEvent,
 	}
-	result3, errCode, _ := store.GetStore().Analyze(project.ID, query3)
+	result3, errCode, _ := store.GetStore().Analyze(project.ID, query3, C.EnableOptimisedFilterOnEventUserQuery())
 
 	assert.Equal(t, http.StatusOK, errCode)
 	assert.Equal(t, "gender", result3.Headers[0])
@@ -1501,7 +1502,7 @@ func TestAnalyticsFunnelQueryWithFilterAndBreakDown(t *testing.T) {
 		Type:            model.QueryTypeUniqueUsers,
 		EventsCondition: model.EventCondAllGivenEvent,
 	}
-	result4, errCode, _ := store.GetStore().Analyze(project.ID, query4)
+	result4, errCode, _ := store.GetStore().Analyze(project.ID, query4, C.EnableOptimisedFilterOnEventUserQuery())
 
 	assert.Equal(t, http.StatusOK, errCode)
 	assert.Equal(t, "value", result4.Headers[0])
@@ -1568,7 +1569,7 @@ func TestAnalyticsFunnelQueryWithFilterAndBreakDown(t *testing.T) {
 		Type:            model.QueryTypeUniqueUsers,
 		EventsCondition: model.EventCondAllGivenEvent,
 	}
-	result5, errCode, _ := store.GetStore().Analyze(project.ID, query5)
+	result5, errCode, _ := store.GetStore().Analyze(project.ID, query5, C.EnableOptimisedFilterOnEventUserQuery())
 
 	assert.Equal(t, http.StatusOK, errCode)
 	assert.Equal(t, "gender", result5.Headers[0])
@@ -1635,7 +1636,7 @@ func TestAnalyticsFunnelQueryWithFilterAndBreakDown(t *testing.T) {
 		Type:            model.QueryTypeUniqueUsers,
 		EventsCondition: model.EventCondAllGivenEvent,
 	}
-	result6, errCode, _ := store.GetStore().Analyze(project.ID, query6)
+	result6, errCode, _ := store.GetStore().Analyze(project.ID, query6, C.EnableOptimisedFilterOnEventUserQuery())
 
 	assert.Equal(t, http.StatusOK, errCode)
 	assert.Equal(t, "gender", result6.Headers[0])
@@ -1703,7 +1704,7 @@ func TestAnalyticsFunnelQueryWithFilterAndBreakDown(t *testing.T) {
 		Type:            model.QueryTypeUniqueUsers,
 		EventsCondition: model.EventCondAllGivenEvent,
 	}
-	result7, errCode, _ := store.GetStore().Analyze(project.ID, query7)
+	result7, errCode, _ := store.GetStore().Analyze(project.ID, query7, C.EnableOptimisedFilterOnEventUserQuery())
 
 	assert.Equal(t, http.StatusOK, errCode)
 	assert.Equal(t, "gender", result7.Headers[0])
@@ -1752,7 +1753,7 @@ func TestAnalyticsFunnelQueryWithFilterAndBreakDown(t *testing.T) {
 		SessionEndEvent:   2,
 	}
 
-	result8, errCode, _ := store.GetStore().Analyze(project.ID, query8)
+	result8, errCode, _ := store.GetStore().Analyze(project.ID, query8, C.EnableOptimisedFilterOnEventUserQuery())
 	assert.Equal(t, http.StatusOK, errCode)
 	assert.Equal(t, float64(10), result8.Rows[0][0])
 	assert.Equal(t, float64(5), result8.Rows[0][1])
@@ -1790,7 +1791,7 @@ func TestAnalyticsFunnelQueryWithFilterAndBreakDown(t *testing.T) {
 		Type:            model.QueryTypeUniqueUsers,
 		EventsCondition: model.EventCondAllGivenEvent,
 	}
-	result9, errCode, _ := store.GetStore().Analyze(project.ID, query9)
+	result9, errCode, _ := store.GetStore().Analyze(project.ID, query9, C.EnableOptimisedFilterOnEventUserQuery())
 	assert.Equal(t, http.StatusOK, errCode)
 	assert.NotNil(t, result9)
 
@@ -1818,7 +1819,7 @@ func TestAnalyticsFunnelQueryWithFilterAndBreakDown(t *testing.T) {
 		SessionEndEvent:   3,
 	}
 
-	result10, errCode, _ := store.GetStore().Analyze(project.ID, query10)
+	result10, errCode, _ := store.GetStore().Analyze(project.ID, query10, C.EnableOptimisedFilterOnEventUserQuery())
 	assert.Equal(t, http.StatusOK, errCode)
 	assert.Equal(t, float64(10), result10.Rows[0][0])
 	assert.Equal(t, float64(5), result10.Rows[0][1])
@@ -1885,7 +1886,7 @@ func TestAnalyticsInsightsQuery(t *testing.T) {
 			EventsCondition: model.EventCondAnyGivenEvent,
 		}
 
-		result, errCode, _ := store.GetStore().Analyze(project.ID, query)
+		result, errCode, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, "aggregate", result.Headers[0])
@@ -1916,7 +1917,7 @@ func TestAnalyticsInsightsQuery(t *testing.T) {
 			EventsCondition: model.EventCondAnyGivenEvent,
 		}
 
-		result2, errCode, _ := store.GetStore().Analyze(project.ID, query2)
+		result2, errCode, _ := store.GetStore().Analyze(project.ID, query2, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result2)
 		assert.Equal(t, "aggregate", result2.Headers[0])
@@ -2025,7 +2026,7 @@ func TestAnalyticsInsightsQueryForAliasName(t *testing.T) {
 			EventsCondition: model.EventCondEachGivenEvent,
 		}
 
-		result, errCode, _ := store.GetStore().Analyze(project.ID, query)
+		result, errCode, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		a0_Index := 0
@@ -2072,7 +2073,7 @@ func TestAnalyticsInsightsQueryForAliasName(t *testing.T) {
 			EventsCondition: model.EventCondEachGivenEvent,
 		}
 
-		result, errCode, _ := store.GetStore().Analyze(project.ID, query)
+		result, errCode, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		pricing_Index := 0
@@ -2121,7 +2122,7 @@ func TestAnalyticsInsightsQueryForAliasName(t *testing.T) {
 			EventsCondition: model.EventCondEachGivenEvent,
 		}
 
-		result, errCode, _ := store.GetStore().Analyze(project.ID, query)
+		result, errCode, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		a0_Index := 0
@@ -2170,7 +2171,7 @@ func TestAnalyticsInsightsQueryForAliasName(t *testing.T) {
 			EventsCondition: model.EventCondEachGivenEvent,
 		}
 
-		result, errCode, _ := store.GetStore().Analyze(project.ID, query)
+		result, errCode, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		a0_Index := 0
@@ -2214,7 +2215,7 @@ func TestAnalyticsInsightsQueryForAliasName(t *testing.T) {
 			EventsCondition: model.EventCondEachGivenEvent,
 		}
 
-		result, errCode, _ := store.GetStore().Analyze(project.ID, query)
+		result, errCode, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		log.WithField("result", result).WithField("errCode", errCode).Warn("kark1")
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
@@ -2295,7 +2296,7 @@ func TestAnalyticsQueryWithAliasNameWithSomeNullResponses(t *testing.T) {
 			EventsCondition: model.EventCondEachGivenEvent,
 		}
 
-		result, errCode, _ := store.GetStore().Analyze(project.ID, query)
+		result, errCode, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		a0_Index := 0
@@ -2408,7 +2409,7 @@ func TestAnalyticsInsightsQueryWithFilterAndBreakdown(t *testing.T) {
 		}
 
 		//unique user count should return 2 for s0 to s1 with fliter property1
-		result, errCode, _ := store.GetStore().Analyze(project.ID, query)
+		result, errCode, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, "aggregate", result.Headers[0])
@@ -2416,7 +2417,7 @@ func TestAnalyticsInsightsQueryWithFilterAndBreakdown(t *testing.T) {
 
 		//unique user count should return 2 for s0 to s1 with fliter property2
 		query.EventsWithProperties[0].Properties[0].Value = "B"
-		result, errCode, _ = store.GetStore().Analyze(project.ID, query)
+		result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, "aggregate", result.Headers[0])
@@ -2446,7 +2447,7 @@ func TestAnalyticsInsightsQueryWithFilterAndBreakdown(t *testing.T) {
 		}
 
 		//breakdown by user property should return property A with 1 count and property B with 2 count
-		result, errCode, _ = store.GetStore().Analyze(project.ID, query)
+		result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, "$initial_source", result.Headers[0])
@@ -2484,14 +2485,14 @@ func TestAnalyticsInsightsQueryWithFilterAndBreakdown(t *testing.T) {
 			EventsCondition: model.EventCondAllGivenEvent,
 		}
 
-		result, errCode, _ := store.GetStore().Analyze(project.ID, query)
+		result, errCode, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, "aggregate", result.Headers[0])
 		assert.Equal(t, float64(2), result.Rows[0][0])
 
 		query.EventsWithProperties[0].Properties[0].Value = "4321"
-		result, errCode, _ = store.GetStore().Analyze(project.ID, query)
+		result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, "aggregate", result.Headers[0])
@@ -2521,7 +2522,7 @@ func TestAnalyticsInsightsQueryWithFilterAndBreakdown(t *testing.T) {
 			Type:            model.QueryTypeUniqueUsers,
 			EventsCondition: model.EventCondAllGivenEvent,
 		}
-		result, errCode, _ = store.GetStore().Analyze(project.ID, query)
+		result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, "$campaign_id", result.Headers[0])
 		expectedKeys := []string{"1234", "4321"}
 		actualKeys := []string{result.Rows[0][0].(string), result.Rows[1][0].(string)}
@@ -2566,7 +2567,7 @@ func TestAnalyticsInsightsQueryWithFilterAndBreakdown(t *testing.T) {
 			user2 -> 		 -> s1 with property1
 			user3 -> event s0 with property2 -> s1 with property2
 		*/
-		result, errCode, _ := store.GetStore().Analyze(project.ID, query)
+		result, errCode, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.Equal(t, "event_name", result.Headers[0])
 		assert.Equal(t, "aggregate", result.Headers[1])
@@ -2582,7 +2583,7 @@ func TestAnalyticsInsightsQueryWithFilterAndBreakdown(t *testing.T) {
 			},
 		}
 		// property2 -> 4, property1 ->1
-		result, errCode, _ = store.GetStore().Analyze(project.ID, query)
+		result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.Equal(t, "event_name", result.Headers[0])
 		assert.Equal(t, "$initial_source", result.Headers[1])
@@ -2603,7 +2604,7 @@ func TestAnalyticsInsightsQueryWithFilterAndBreakdown(t *testing.T) {
 		query.EventsWithProperties[0].Properties[0].Property = "$campaign_id"
 		query.EventsWithProperties[0].Properties[0].Value = "1234"
 		query.GroupByProperties = []model.QueryGroupByProperty{}
-		result, errCode, _ = store.GetStore().Analyze(project.ID, query)
+		result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.Equal(t, "event_name", result.Headers[0])
 		assert.Equal(t, "aggregate", result.Headers[1])
@@ -2651,7 +2652,7 @@ func TestAnalyticsInsightsQueryWithFilterAndBreakdown(t *testing.T) {
 		}
 
 		//unique user count should return 2 for s0 to s1 with fliter property1
-		result, errCode, _ := store.GetStore().Analyze(project.ID, query)
+		result, errCode, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 	})
@@ -2751,16 +2752,16 @@ func TestAnalyticsInsightsQueryWithNumericalBucketing(t *testing.T) {
 			Type:            model.QueryTypeEventsOccurrence,
 			EventsCondition: model.EventCondAllGivenEvent,
 		}
-		result, errCode, _ := store.GetStore().Analyze(project.ID, query1)
+		result, errCode, _ := store.GetStore().Analyze(project.ID, query1, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		validateNumericalBucketRanges(t, result, numPropertyRangeStart, numPropertyRangeEnd, 0)
 
-		result, errCode, _ = store.GetStore().Analyze(project.ID, query2)
+		result, errCode, _ = store.GetStore().Analyze(project.ID, query2, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		validateNumericalBucketRanges(t, result, numPropertyRangeStart, numPropertyRangeEnd, 0)
 
 		// Query 3 with raw values. Should have 100 rows for each $page_load_time value.
-		result, errCode, _ = store.GetStore().Analyze(project.ID, query3)
+		result, errCode, _ = store.GetStore().Analyze(project.ID, query3, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.Equal(t, 101, len(result.Rows))
 
@@ -2778,16 +2779,16 @@ func TestAnalyticsInsightsQueryWithNumericalBucketing(t *testing.T) {
 		w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 		assert.Equal(t, http.StatusOK, w.Code)
 
-		result, errCode, _ = store.GetStore().Analyze(project.ID, query1)
+		result, errCode, _ = store.GetStore().Analyze(project.ID, query1, C.EnableOptimisedFilterOnEventUserQuery())
 		validateNumericalBucketRanges(t, result, 0, numPropertyRangeEnd, 0)
 
-		result, errCode, _ = store.GetStore().Analyze(project.ID, query2)
+		result, errCode, _ = store.GetStore().Analyze(project.ID, query2, C.EnableOptimisedFilterOnEventUserQuery())
 		validateNumericalBucketRanges(t, result, 0, numPropertyRangeEnd, 0)
 
 		// Using group by numerical property.
 		query1.GroupByProperties[0].Entity = model.PropertyEntityUser
 		query1.GroupByProperties[0].Property = "numerical_property"
-		result, errCode, _ = store.GetStore().Analyze(project.ID, query1)
+		result, errCode, _ = store.GetStore().Analyze(project.ID, query1, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		validateNumericalBucketRanges(t, result, numPropertyRangeStart, numPropertyRangeEnd, 1)
 	})
@@ -2854,7 +2855,7 @@ func TestAnalyticsFunnelQueryWithNumericalBucketing(t *testing.T) {
 		}
 
 		// Expected output should be 10 equal range buckets with 2 elements
-		result, errCode, _ := store.GetStore().Analyze(project.ID, query)
+		result, errCode, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		bucketStart := numPropertyRangeStart
 		bucketEnd := lowerPercentileValue
@@ -2945,7 +2946,7 @@ func TestAnalyticsInsightsQueryWithDateTimeProperty(t *testing.T) {
 			EventsCondition: model.EventCondAllGivenEvent,
 		}
 
-		result, errCode, _ := store.GetStore().Analyze(project.ID, query)
+		result, errCode, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		var noneIndex, timestmapIndex, timestmapYesterdayIndex int
 		for index := range result.Rows {
 			if result.Rows[index][0] == "$none" {
@@ -3138,7 +3139,7 @@ func TestNumericalBucketingRegex(t *testing.T) {
 			EventsCondition: model.EventCondAllGivenEvent,
 		}
 
-		result, errCode, _ := store.GetStore().Analyze(project.ID, query)
+		result, errCode, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotEmpty(t, result)
 

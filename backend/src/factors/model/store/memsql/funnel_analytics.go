@@ -18,7 +18,7 @@ const (
 	MetaStepTimeInfo = "MetaStepTimeInfo"
 )
 
-func (store *MemSQL) RunFunnelQuery(projectId int64, query model.Query) (*model.QueryResult, int, string) {
+func (store *MemSQL) RunFunnelQuery(projectId int64, query model.Query, enableFilterOpt bool) (*model.QueryResult, int, string) {
 	logFields := log.Fields{
 		"project_id": projectId,
 		"query":      query,
@@ -47,7 +47,7 @@ func (store *MemSQL) RunFunnelQuery(projectId int64, query model.Query) (*model.
 		}
 	}
 
-	stmnt, params, err := BuildFunnelQuery(projectId, query, groupIds)
+	stmnt, params, err := BuildFunnelQuery(projectId, query, groupIds, enableFilterOpt)
 	if err != nil {
 		log.WithError(err).Error(model.ErrMsgQueryProcessingFailure)
 		return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
@@ -66,24 +66,13 @@ func (store *MemSQL) RunFunnelQuery(projectId int64, query model.Query) (*model.
 	}
 
 	startComputeTime := time.Now()
-	if projectId == 659 {
-		logCtx.WithFields(log.Fields{"result": result, "err": err}).Info("SenseHQDebugLog1")
-	}
-
 	if len(query.GroupByProperties) > 0 && len(result.Rows) > 0 {
 		// $no_group comes as the last record for MemSQL query. Put back as first.
 		noGroupRow := result.Rows[len(result.Rows)-1]
 		result.Rows = append([][]interface{}{noGroupRow}, result.Rows[0:len(result.Rows)-1]...)
 	}
-	if projectId == 659 {
-		logCtx.WithFields(log.Fields{"result": result, "err": err}).Info("SenseHQDebugLog2")
-	}
-
 	// should be done before translation of group keys
 	translateNullToZeroOnFunnelResult(result)
-	if projectId == 659 {
-		logCtx.WithFields(log.Fields{"result": result, "err": err}).Info("SenseHQDebugLog3")
-	}
 
 	if len(query.EventsWithProperties) > 1 {
 		err = addStepTimeToMeta(result, logCtx)
@@ -92,17 +81,11 @@ func (store *MemSQL) RunFunnelQuery(projectId int64, query model.Query) (*model.
 			return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
 		}
 	}
-	if projectId == 659 {
-		logCtx.WithFields(log.Fields{"result": result, "err": err}).Info("SenseHQDebugLog4")
-	}
 
 	err = addStepConversionPercentageToFunnel(result)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed adding funnel step conversion percentage.")
 		return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
-	}
-	if projectId == 659 {
-		logCtx.WithFields(log.Fields{"result": result, "err": err}).Info("SenseHQDebugLog5")
 	}
 
 	err = translateGroupKeysIntoColumnNames(result, query.GroupByProperties)
@@ -110,35 +93,16 @@ func (store *MemSQL) RunFunnelQuery(projectId int64, query model.Query) (*model.
 		logCtx.WithError(err).Error("Failed translating group keys on result.")
 		return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
 	}
-	if projectId == 659 {
-		logCtx.WithFields(log.Fields{"result": result, "err": err}).Info("SenseHQDebugLog6")
-	}
 
 	sanitizeNumericalBucketRanges(result, &query)
-	if projectId == 659 {
-		logCtx.WithFields(log.Fields{"result": result, "err": err}).Info("SenseHQDebugLog7")
-	}
 
 	if model.HasGroupByDateTypeProperties(query.GroupByProperties) {
 		model.SanitizeDateTypeRows(result, &query)
 	}
-	if projectId == 659 {
-		logCtx.WithFields(log.Fields{"result": result, "err": err}).Info("SenseHQDebugLog8")
-	}
 
 	addQueryToResultMeta(result, query)
-	if projectId == 659 {
-		logCtx.WithFields(log.Fields{"result": result, "err": err}).Info("SenseHQDebugLog9")
-	}
-
 	updatedMetaStepTimeInfoHeaders(result)
-	if projectId == 659 {
-		logCtx.WithFields(log.Fields{"result": result, "err": err}).Info("SenseHQDebugLog10")
-	}
 	model.SanitizeStringSumToNumeric(result)
-	if projectId == 659 {
-		logCtx.WithFields(log.Fields{"result": result, "err": err}).Info("SenseHQDebugLog11")
-	}
 
 	U.LogComputeTimeWithQueryRequestID(startComputeTime, reqID, &logFields)
 
@@ -233,7 +197,7 @@ func addStepTimeToMeta(result *model.QueryResult, logCtx *log.Entry) error {
 	return nil
 }
 
-func BuildFunnelQuery(projectId int64, query model.Query, groupIds []int) (string, []interface{}, error) {
+func BuildFunnelQuery(projectId int64, query model.Query, groupIds []int, enableFilterOpt bool) (string, []interface{}, error) {
 	logFields := log.Fields{
 		"project_id": projectId,
 		"query":      query,
@@ -245,7 +209,7 @@ func BuildFunnelQuery(projectId int64, query model.Query, groupIds []int) (strin
 		return "", nil, errors.New("funnel on events occurrence is not supported")
 	}
 
-	return buildUniqueUsersFunnelQuery(projectId, query, groupIds)
+	return buildUniqueUsersFunnelQuery(projectId, query, groupIds, enableFilterOpt)
 }
 
 func translateNullToZeroOnFunnelResult(result *model.QueryResult) {
@@ -650,7 +614,7 @@ funnel UNION ALL SELECT * FROM ( SELECT _group_key_0, COALESCE(NULLIF(concat(rou
 ' - ', round(max(_group_key_1::numeric), 1)), 'NaN - NaN'), '$none') AS _group_key_1, SUM(step_0) AS step_0,
 SUM(step_1) AS step_1 FROM bucketed GROUP BY _group_key_0, _group_key_1_bucket ORDER BY _group_key_1_bucket LIMIT 100 ) AS group_funnel
 */
-func buildUniqueUsersFunnelQuery(projectId int64, q model.Query, groupIds []int) (string, []interface{}, error) {
+func buildUniqueUsersFunnelQuery(projectId int64, q model.Query, groupIds []int, enableFilterOpt bool) (string, []interface{}, error) {
 	logFields := log.Fields{
 		"project_id": projectId,
 		"q":          q,
@@ -707,7 +671,12 @@ func buildUniqueUsersFunnelQuery(projectId int64, q model.Query, groupIds []int)
 		} else {
 			groupBy = "coal_user_id, timestamp"
 		}
-		addFilterEventsWithPropsQuery(projectId, &qStmnt, &qParams, q.EventsWithProperties[i], q.From, q.To,
+
+		addFilterFunc := addFilterEventsWithPropsQuery
+		if enableFilterOpt {
+			addFilterFunc = addFilterEventsWithPropsQueryV2
+		}
+		addFilterFunc(projectId, &qStmnt, &qParams, q.EventsWithProperties[i], q.From, q.To,
 			"", stepName, addSelect, addParams, addJoinStatement, groupBy, "", q.GlobalUserProperties)
 		if len(q.EventsWithProperties) > 1 && i == 0 {
 			qStmnt = qStmnt + ", "

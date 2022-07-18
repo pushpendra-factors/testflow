@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Spin, Button } from 'antd';
+import React, { useEffect, useState } from 'react';
+import { Spin } from 'antd';
 import styles from './index.module.scss';
-import moment from 'moment';
 import { SVG } from '../factorsComponents';
-import { CaretUpOutlined } from '@ant-design/icons';
+import { CaretUpOutlined, CaretRightOutlined } from '@ant-design/icons';
+import MomentTz from '../MomentTz';
+import InfoCard from './InfoCard';
 
 function FaTimeline({
   activities = [],
@@ -16,39 +17,47 @@ function FaTimeline({
 
   const groups = {
     Timestamp: (item) =>
-      moment(item.timestamp * 1000).format('DD MMMM YYYY, hh:mm:ss '),
+      MomentTz(item.timestamp * 1000).format('DD MMMM YYYY, hh:mm:ss '),
     Hourly: (item) =>
-      moment(item.timestamp * 1000)
+      MomentTz(item.timestamp * 1000)
         .startOf('hour')
         .format('hh A') +
       ' - ' +
-      moment(item.timestamp * 1000)
+      MomentTz(item.timestamp * 1000)
         .add(1, 'hour')
         .startOf('hour')
         .format('hh A') +
       ' ' +
-      moment(item.timestamp * 1000)
+      MomentTz(item.timestamp * 1000)
         .startOf('hour')
         .format('DD MMM YYYY'),
     Daily: (item) =>
-      moment(item.timestamp * 1000)
+      MomentTz(item.timestamp * 1000)
         .startOf('day')
         .format('DD MMM YYYY'),
     Weekly: (item) =>
-      moment(item.timestamp * 1000)
+      MomentTz(item.timestamp * 1000)
         .endOf('week')
         .format('DD MMM YYYY') +
       ' - ' +
-      moment(item.timestamp * 1000)
+      MomentTz(item.timestamp * 1000)
         .startOf('week')
         .format('DD MMM YYYY'),
     Monthly: (item) =>
-      moment(item.timestamp * 1000)
+      MomentTz(item.timestamp * 1000)
         .startOf('month')
         .format('MMM YYYY'),
   };
 
   const data = _.groupBy(activities, groups[granularity]);
+  const hoveEvents = [
+    'Website Session',
+    'Page View',
+    'Form Button Click',
+    'Campaign Member Created',
+    'Campaign Member Updated',
+    'Offline Touchpoint',
+  ];
 
   useEffect(() => {
     if (collapse !== undefined) {
@@ -92,7 +101,22 @@ function FaTimeline({
                     <div className={styles.timeline_events_event}>
                       {event ? (
                         <div className={`flex`}>
-                          <div className={styles.tag}>{event.display_name}</div>
+                          <InfoCard
+                            title={event.display_name}
+                            properties={event?.properties || {}}
+                            trigger={
+                              hoveEvents.includes(event.display_name)
+                                ? 'hover'
+                                : []
+                            }
+                          >
+                            <div className={`${styles.tag} truncate`}>
+                              {event.display_name}
+                              {hoveEvents.includes(event.display_name) ? (
+                                <CaretRightOutlined />
+                              ) : null}
+                            </div>
+                          </InfoCard>
                           {!showAll[index] && values.length > 1 ? (
                             <div
                               className={`${styles.num}`}

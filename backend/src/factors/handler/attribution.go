@@ -182,7 +182,7 @@ func AttributionHandler(c *gin.Context) (interface{}, int, string, string, bool)
 		return nil, http.StatusBadRequest, V1.INVALID_INPUT, err.Error(), true
 	}
 
-	shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &attributionQueryUnitPayload, cacheResult, isDashboardQueryRequest, reqId)
+	shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &attributionQueryUnitPayload, cacheResult, isDashboardQueryRequest, reqId, false)
 	if shouldReturn {
 		if resCode == http.StatusOK {
 			return resMsg, resCode, "", "", false
@@ -202,10 +202,14 @@ func AttributionHandler(c *gin.Context) (interface{}, int, string, string, bool)
 	enableOptimisedFilterOnProfileQuery := c.Request.Header.Get(H.HeaderUserFilterOptForProfiles) == "true" ||
 		C.EnableOptimisedFilterOnProfileQuery()
 
+	enableOptimisedFilterOnEventUserQuery := c.Request.Header.Get(H.HeaderUserFilterOptForEventsAndUsers) == "true" ||
+		C.EnableOptimisedFilterOnEventUserQuery()
+
 	H.SleepIfHeaderSet(c)
 	QueryKey, _ := attributionQueryUnitPayload.GetQueryCacheRedisKey(projectId)
 	debugQueryKey := model.GetStringKeyFromCacheRedisKey(QueryKey)
-	result, err := store.GetStore().ExecuteAttributionQuery(projectId, requestPayload.Query, debugQueryKey, enableOptimisedFilterOnProfileQuery)
+	result, err := store.GetStore().ExecuteAttributionQuery(projectId, requestPayload.Query, debugQueryKey,
+		enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
 	if err != nil {
 		model.DeleteQueryCacheKey(projectId, &attributionQueryUnitPayload)
 		logCtx.WithError(err).Error("Failed to process query from DB")

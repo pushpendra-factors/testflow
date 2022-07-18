@@ -12,7 +12,7 @@ import (
 // statusCode need to be clear on http.StatusOk or http.StatusAccepted or something else.
 // Below function relies on fact that each query has only one metric.
 func (store *MemSQL) ExecuteKPIQueryGroup(projectID int64, reqID string, kpiQueryGroup model.KPIQueryGroup,
-	enableOptimisedFilterOnProfileQuery bool) ([]model.QueryResult, int) {
+	enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool) ([]model.QueryResult, int) {
 
 	var queryResults []model.QueryResult
 	finalStatusCode := http.StatusOK
@@ -54,7 +54,7 @@ func (store *MemSQL) ExecuteKPIQueryGroup(projectID int64, reqID string, kpiQuer
 			if query.Category == model.ChannelCategory {
 				result, statusCode = store.ExecuteKPIQueryForChannels(projectID, reqID, query)
 			} else if query.Category == model.EventCategory {
-				result, statusCode = store.ExecuteKPIQueryForEvents(projectID, reqID, query)
+				result, statusCode = store.ExecuteKPIQueryForEvents(projectID, reqID, query, enableOptimisedFilterOnEventUserQuery)
 			}
 			if statusCode != http.StatusOK {
 				finalStatusCode = statusCode

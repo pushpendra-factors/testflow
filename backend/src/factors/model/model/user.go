@@ -80,6 +80,7 @@ const UserPropertyHubspotContactLeadGUID = "$hubspot_contact_lead_guid"
 
 // contact delete and merge hubspot user properties
 const UserPropertyHubspotContactDeleted = "$hubspot_contact_deleted"
+const UserPropertyLeadSquaredLeadDeleted = "$leadsquared_lead_is_deleted"
 const UserPropertyHubspotContactMerged = "$hubspot_contact_merged"
 const UserPropertyHubspotContactPrimaryContact = "$hubspot_contact_primary_contact"
 
@@ -90,6 +91,7 @@ var UserPropertiesToSkipOnMergeByCustomerUserID = []string{
 	UserPropertyHubspotContactMerged,
 	UserPropertyHubspotContactPrimaryContact,
 	U.UP_SESSION_COUNT,
+	UserPropertyLeadSquaredLeadDeleted,
 }
 
 var ErrDifferentEmailSeen error = errors.New("different_email_seen_for_customer_user_id")

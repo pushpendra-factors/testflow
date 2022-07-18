@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math"
+	"math/rand"
 	"os"
 	"path"
 	"path/filepath"
@@ -154,6 +155,22 @@ func deleteFile(path string) error {
 	return nil
 }
 
+func shufflePatterns(patternNames [][]string) [][]string {
+	// shuffle slice of patterns to ensure all heavey patterns are distributed across nodes while computing
+	patternEnames_ := make([][]string, 0)
+	for _, v := range patternNames {
+		patternEnames_ = append(patternEnames_, v)
+	}
+	patternEnames := make([][]string, len(patternEnames_))
+	perm := rand.Perm(len(patternEnames_))
+	for i, v := range perm {
+		patternEnames[v] = patternEnames_[i]
+	}
+
+	return patternEnames
+
+}
+
 func countPatternController(beamStruct *RunBeamConfig, projectId int64, modelId uint64,
 	cloudManager *filestore.FileManager,
 	filepathString string, patterns []*P.Pattern, numRoutines int,
@@ -173,6 +190,7 @@ func countPatternController(beamStruct *RunBeamConfig, projectId int64, modelId 
 	for _, v := range patterns {
 		patternEnames = append(patternEnames, v.EventNames)
 	}
+	patternEnames = shufflePatterns(patternEnames)
 
 	bucketName := (*cloudManager).GetBucketName()
 	modelpathDir := (*cloudManager).GetProjectModelDir(projectId, modelId)
@@ -843,7 +861,7 @@ func ReadFilterAndCompressPatternsFromFile(partFilesDir string, cloudManager *fi
 		}
 
 		scanner := bufio.NewScanner(file)
-		const maxCapacity = 10 * 1024 * 1024
+		const maxCapacity = 30 * 1024 * 1024
 		buf := make([]byte, maxCapacity)
 		scanner.Buffer(buf, maxCapacity)
 
@@ -970,6 +988,9 @@ func compressPattern(pattern *P.Pattern, maxBytesSize int64, trimMap map[int]int
 	}
 	pString := string(b)
 	patternTrimBytes := int64(len([]byte(pString)))
+	if patternTrimBytes > max_PATTERN_SIZE_IN_BYTES {
+		mineLog.Infof("pattern size exceeds max Pattern size :%v", pattern.EventNames)
+	}
 	return pattern, patternTrimBytes, nil
 }
 

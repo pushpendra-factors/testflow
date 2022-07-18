@@ -105,6 +105,7 @@ func TestMain(m *testing.M) {
 		HubspotPropertyLookBackLimit:                    1000,
 		ClearbitEnabled:                                 1,
 		EnableOptimisedFilterOnProfileQuery:             true,
+		EnableOptimisedFilterOnEventUserQuery:           true,
 	}
 	C.InitConf(config)
 

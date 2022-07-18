@@ -139,7 +139,7 @@ func ChannelQueryHandler(c *gin.Context) {
 		Query: &queryPayload,
 	}
 	channelQueryUnitPayload.SetTimeZone(timezoneString)
-	shouldReturn, resCode, _ := H.GetResponseIfCachedQuery(c, projectId, &channelQueryUnitPayload, cacheResult, isDashboardQueryRequest, reqId)
+	shouldReturn, resCode, _ := H.GetResponseIfCachedQuery(c, projectId, &channelQueryUnitPayload, cacheResult, isDashboardQueryRequest, reqId, false)
 	if shouldReturn {
 		c.AbortWithStatusJSON(resCode, gin.H{"error": "Error Processing/Fetching data from Query cache"})
 		return

@@ -263,9 +263,11 @@ func TestUpdateEventProperties(t *testing.T) {
 	_, event := createEventWithTimestampAndPrperties(t, project, user, timestamp,
 		json.RawMessage(`{"rProp1": "value1", "rProp2": 1}`))
 
+	properties := &U.PropertiesMap{
+		"$page_spent_time": 1.346, "$page_load_time": 1.594, "$page_scroll_percent": 97.54}
 	// should add properties if not exist.
-	errCode := store.GetStore().UpdateEventProperties(project.ID, event.ID, event.UserId, &U.PropertiesMap{
-		"$page_spent_time": 1.346, "$page_load_time": 1.594}, time.Now().Unix(), nil)
+	errCode := store.GetStore().UpdateEventProperties(project.ID, event.ID, event.UserId, properties, time.Now().Unix(), nil)
+
 	assert.Equal(t, http.StatusAccepted, errCode)
 	updatedEvent, errCode := store.GetStore().GetEventById(project.ID, event.ID, event.UserId)
 	assert.Equal(t, http.StatusFound, errCode)
@@ -273,15 +275,17 @@ func TestUpdateEventProperties(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Contains(t, *eventProperties, "$page_spent_time")
 	assert.Contains(t, *eventProperties, "$page_load_time")
+	assert.Contains(t, *eventProperties, "$page_scroll_percent")
 	assert.Contains(t, *eventProperties, "rProp1") // should not remove old properties.
 	// values should be unchanged.
 	assert.Equal(t, float64(1.594), (*eventProperties)["$page_load_time"])
 	assert.Equal(t, float64(1.346), (*eventProperties)["$page_spent_time"])
 	assert.Equal(t, "value1", (*eventProperties)["rProp1"])
+	assert.LessOrEqual(t, (*eventProperties)["$page_scroll_percent"], float64(100)) // value must be <= 100
 
 	// should update properties if exist.
 	errCode = store.GetStore().UpdateEventProperties(project.ID, event.ID, event.UserId, &U.PropertiesMap{
-		"$page_spent_time": 3}, time.Now().Unix(), nil)
+		"$page_spent_time": 3, "$page_scroll_percent": 150.87}, time.Now().Unix(), nil)
 	assert.Equal(t, http.StatusAccepted, errCode)
 	updatedEvent, errCode = store.GetStore().GetEventById(project.ID, event.ID, event.UserId)
 	assert.Equal(t, http.StatusFound, errCode)
@@ -293,6 +297,23 @@ func TestUpdateEventProperties(t *testing.T) {
 	assert.Equal(t, float64(3), (*eventProperties)["$page_spent_time"])
 	assert.Equal(t, float64(1.594), (*eventProperties)["$page_load_time"])
 	assert.Equal(t, "value1", (*eventProperties)["rProp1"])
+	assert.LessOrEqual(t, (*eventProperties)["$page_scroll_percent"], float64(100)) // value must be <= 100
+
+	// should update properties if exist.
+	errCode = store.GetStore().UpdateEventProperties(project.ID, event.ID, event.UserId, &U.PropertiesMap{
+		"$page_spent_time": 5, "$page_scroll_percent": "207.98"}, time.Now().Unix(), nil)
+	assert.Equal(t, http.StatusAccepted, errCode)
+	updatedEvent, errCode = store.GetStore().GetEventById(project.ID, event.ID, event.UserId)
+	assert.Equal(t, http.StatusFound, errCode)
+	eventProperties, _ = U.DecodePostgresJsonb(&updatedEvent.Properties)
+	assert.Contains(t, *eventProperties, "$page_spent_time")
+	assert.Contains(t, *eventProperties, "$page_load_time")
+	assert.Contains(t, *eventProperties, "rProp1") // should not remove old properties.
+	// should update the property alone.
+	assert.Equal(t, float64(5), (*eventProperties)["$page_spent_time"])
+	assert.Equal(t, float64(1.594), (*eventProperties)["$page_load_time"])
+	assert.Equal(t, "value1", (*eventProperties)["rProp1"])
+	assert.LessOrEqual(t, (*eventProperties)["$page_scroll_percent"], float64(100)) // value must be <= 100
 }
 
 func TestCacheEvent(t *testing.T) {

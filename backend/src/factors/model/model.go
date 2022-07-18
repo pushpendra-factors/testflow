@@ -51,14 +51,14 @@ type Model interface {
 	// analytics
 	ExecQuery(stmnt string, params []interface{}) (*model.QueryResult, error, string)
 	ExecQueryWithContext(stmnt string, params []interface{}) (*sql.Rows, *sql.Tx, error, string)
-	Analyze(projectID int64, query model.Query) (*model.QueryResult, int, string)
+	Analyze(projectID int64, query model.Query, enableFilterOpt bool) (*model.QueryResult, int, string)
 
 	// archival
 	GetNextArchivalBatches(projectID int64, startTime int64, maxLookbackDays int, hardStartTime, hardEndTime time.Time) ([]model.EventsArchivalBatch, error)
 
 	// attribution
 	ExecuteAttributionQuery(projectID int64, query *model.AttributionQuery, debugQueryKey string,
-		enableOptimisedFilterOnProfileQuery bool) (*model.QueryResult, error)
+		enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool) (*model.QueryResult, error)
 	GetCoalesceIDFromUserIDs(userIDs []string, projectID int64, logCtx log.Entry) (map[string]model.UserInfo, error)
 	GetLinkedFunnelEventUsersFilter(projectID int64, queryFrom, queryTo int64,
 		linkedEvents []model.QueryEventWithProperties, eventNameToId map[string][]interface{},
@@ -116,8 +116,9 @@ type Model interface {
 	GetKPIConfigsForLeadSquared(projectID int64, reqID string, displayCategory string) (map[string]interface{}, int)
 
 	// KPI
-	ExecuteKPIQueryGroup(projectID int64, reqID string, kpiQueryGroup model.KPIQueryGroup, enableOptimisedFilterOnProfileQuery bool) ([]model.QueryResult, int)
-	ExecuteKPIQueryForEvents(projectID int64, reqID string, kpiQuery model.KPIQuery) ([]model.QueryResult, int)
+	ExecuteKPIQueryGroup(projectID int64, reqID string, kpiQueryGroup model.KPIQueryGroup,
+		enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool) ([]model.QueryResult, int)
+	ExecuteKPIQueryForEvents(projectID int64, reqID string, kpiQuery model.KPIQuery, enableFilterOpt bool) ([]model.QueryResult, int)
 	ExecuteKPIQueryForChannels(projectID int64, reqID string, kpiQuery model.KPIQuery) ([]model.QueryResult, int)
 
 	// Custom Metrics
@@ -145,15 +146,15 @@ type Model interface {
 	DeleteDashboardUnit(projectID int64, agentUUID string, dashboardId int64, id int64) int
 	DeleteMultipleDashboardUnits(projectID int64, agentUUID string, dashboardID int64, dashboardUnitIDs []int64) (int, string)
 	UpdateDashboardUnit(projectId int64, agentUUID string, dashboardId int64, id int64, unit *model.DashboardUnit) (*model.DashboardUnit, int)
-	CacheDashboardUnitsForProjects(stringProjectsIDs, excludeProjectIDs string, numRoutines int, reportCollector *sync.Map)
-	CacheDashboardUnitsForProjectID(projectID int64, dashboardUnits []model.DashboardUnit, queryClasses []string, numRoutines int, reportCollector *sync.Map) int
-	CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitGroup *sync.WaitGroup, reportCollector *sync.Map, queryClass string)
+	CacheDashboardUnitsForProjects(stringProjectsIDs, excludeProjectIDs string, numRoutines int, reportCollector *sync.Map, enableFilterOpt bool)
+	CacheDashboardUnitsForProjectID(projectID int64, dashboardUnits []model.DashboardUnit, queryClasses []string, numRoutines int, reportCollector *sync.Map, enableFilterOpt bool) int
+	CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitGroup *sync.WaitGroup, reportCollector *sync.Map, queryClass string, enableFilterOpt bool)
 	GetQueryAndClassFromDashboardUnit(dashboardUnit *model.DashboardUnit) (queryClass string, queryInfo *model.Queries, errMsg string)
 	GetQueryClassFromQueries(query model.Queries) (queryClass, errMsg string)
 	GetQueryAndClassFromQueryIdString(queryIdString string, projectId int64) (queryClass string, queryInfo *model.Queries, errMsg string)
 	GetQueryWithQueryIdString(projectID int64, queryIDString string) (*model.Queries, int)
-	CacheDashboardUnitForDateRange(cachePayload model.DashboardUnitCachePayload) (int, string, model.CachingUnitReport)
-	CacheDashboardsForMonthlyRange(projectIDs, excludeProjectIDs string, numMonths, numRoutines int, reportCollector *sync.Map)
+	CacheDashboardUnitForDateRange(cachePayload model.DashboardUnitCachePayload, enableFilterOpt bool) (int, string, model.CachingUnitReport)
+	CacheDashboardsForMonthlyRange(projectIDs, excludeProjectIDs string, numMonths, numRoutines int, reportCollector *sync.Map, enableFilterOpt bool)
 	GetDashboardUnitNamesByProjectIdTypeAndName(projectID int64, reqID string, typeOfQuery string, nameOfQuery string) ([]string, int)
 
 	// dashboard
@@ -166,10 +167,10 @@ type Model interface {
 	DeleteDashboard(projectID int64, agentUUID string, dashboardID int64) int
 
 	// event_analytics
-	RunEventsGroupQuery(queriesOriginal []model.Query, projectId int64) (model.ResultGroup, int)
-	ExecuteEventsQuery(projectID int64, query model.Query) (*model.QueryResult, int, string)
-	RunInsightsQuery(projectID int64, query model.Query) (*model.QueryResult, int, string)
-	BuildInsightsQuery(projectID int64, query model.Query) (string, []interface{}, error)
+	RunEventsGroupQuery(queriesOriginal []model.Query, projectId int64, enableFilterOpt bool) (model.ResultGroup, int)
+	ExecuteEventsQuery(projectID int64, query model.Query, enableFilterOpt bool) (*model.QueryResult, int, string)
+	RunInsightsQuery(projectID int64, query model.Query, enableFilterOpt bool) (*model.QueryResult, int, string)
+	BuildInsightsQuery(projectID int64, query model.Query, enableFilterOpt bool) (string, []interface{}, error)
 
 	// Profile
 	RunProfilesGroupQuery(queriesOriginal []model.ProfileQuery, projectID int64, enableOptimisedFilter bool) (model.ResultGroup, int)
@@ -206,7 +207,9 @@ type Model interface {
 	GetEventNamesOrderedByOccurenceAndRecency(projectID int64, limit int, lastNDays int) (map[string][]string, error)
 	GetPropertiesByEvent(projectID int64, eventName string, limit int, lastNDays int) (map[string][]string, error)
 	GetPropertyValuesByEventProperty(projectID int64, eventName string, propertyName string, limit int, lastNDays int) ([]string, error)
-	GetPropertiesForHubspot(projectID int64, reqID string) []map[string]string
+	GetPropertiesForHubspotContacts(projectID int64, reqID string) []map[string]string
+	GetPropertiesForHubspotCompanies(projectID int64, reqID string) []map[string]string
+	GetPropertiesForHubspotDeals(projectID int64, reqID string) []map[string]string
 	GetPropertiesForSalesforce(projectID int64, reqID string) []map[string]string
 	GetPropertiesForMarketo(projectID int64, reqID string) []map[string]string
 
@@ -266,7 +269,7 @@ type Model interface {
 	GetBingadsFilterValuesSQLAndParams(projectID int64, requestFilterObject string, requestFilterProperty string, reqID string) (string, []interface{}, int)
 
 	// funnel_analytics
-	RunFunnelQuery(projectID int64, query model.Query) (*model.QueryResult, int, string)
+	RunFunnelQuery(projectID int64, query model.Query, enableFilterOpt bool) (*model.QueryResult, int, string)
 
 	// goals
 	GetAllFactorsGoals(ProjectID int64) ([]model.FactorsGoal, int)
@@ -349,6 +352,8 @@ type Model interface {
 	EnableExplain(projectId int64) int
 	DisableWeeklyInsights(projectId int64) int
 	DisableExplain(projectId int64) int
+	GetAllWeeklyInsightsEnabledProjects() ([]int64, error)
+	GetAllExplainEnabledProjects() ([]int64, error)
 
 	// project
 	UpdateProject(projectID int64, project *model.Project) int
@@ -615,7 +620,7 @@ type Model interface {
 	GetSlackAuthToken(projectID int64, agentUUID string) (model.SlackAccessTokens, error)
 	DeleteSlackIntegration(projectID int64, agentUUID string) error
 	GetAlertById(id string, projectID int64) (model.Alert, int)
-	GetAllAlerts(projectID int64) ([]model.Alert, int)
+	GetAllAlerts(projectID int64, excludeSavedQueries bool) ([]model.Alert, int)
 	DeleteAlert(id string, projectID int64) (int, string)
 	CreateAlert(projectID int64, alert model.Alert) (model.Alert, int, string)
 	GetAlertNamesByProjectIdTypeAndName(projectID int64, nameOfQuery string) ([]string, int)

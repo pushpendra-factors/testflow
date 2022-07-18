@@ -60,6 +60,7 @@ func mainRunDeltaInsights() {
 
 	isWeeklyEnabled := flag.Bool("weekly_enabled", false, "")
 	lookback := flag.Int("lookback", 30, "lookback_for_delta lookup")
+	projectsFromDB := flag.Bool("projects_from_db", false, "")
 	flag.Parse()
 
 	if *envFlag != "development" &&
@@ -112,19 +113,24 @@ func mainRunDeltaInsights() {
 	}
 	diskManager := serviceDisk.New(*localDiskTmpDirFlag)
 
-	allProjects, projectIdsToRun, _ := C.GetProjectsFromListWithAllProjectSupport(*projectIdFlag, "")
-	if allProjects {
-		projectIDs, errCode := store.GetStore().GetAllProjectIDs()
-		if errCode != http.StatusFound {
-			log.Fatal("Failed to get all projects and project_ids set to '*'.")
+	projectIdsToRun := make(map[int64]bool, 0)
+	if *projectsFromDB {
+		wi_projects, _ := store.GetStore().GetAllWeeklyInsightsEnabledProjects()
+		for _, id := range wi_projects {
+			projectIdsToRun[id] = true
 		}
-
-		projectIdsToRun = make(map[int64]bool, 0)
-		for _, projectID := range projectIDs {
-			projectIdsToRun[projectID] = true
+	} else {
+		allProjects, _, _ := C.GetProjectsFromListWithAllProjectSupport(*projectIdFlag, "")
+		if allProjects {
+			projectIDs, errCode := store.GetStore().GetAllProjectIDs()
+			if errCode != http.StatusFound {
+				log.Fatal("Failed to get all projects and project_ids set to '*'.")
+			}
+			for _, projectID := range projectIDs {
+				projectIdsToRun[projectID] = true
+			}
 		}
 	}
-
 	projectIdsArray := make([]int64, 0)
 	for projectId, _ := range projectIdsToRun {
 		projectIdsArray = append(projectIdsArray, projectId)

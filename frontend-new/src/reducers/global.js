@@ -177,7 +177,7 @@ export default function (state = defaultState, action) {
     case 'DISABLE_BINGADS_FULFILLED': {
       return {...state, bingAds: {}}
     }
-    case 'CREATE_ALERTS': {
+    case 'CREATE_ALERT': {
       const props = [...state.Alerts];
       props.push(action.payload);
       return { ...state, Alerts: props}
@@ -903,13 +903,32 @@ export function getHubspotContact(email) {
   };
 }
 
-export function createAlerts(projectId, payload) {
+export function createAlert(projectId, payload, query_id) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      post(dispatch, host + 'projects/'+ projectId +'/v1/alerts', payload)
+      post(dispatch, host + 'projects/'+ projectId +'/v1/alerts?query_id=' + query_id, payload)
         .then((r) => {
           if (r.ok) {
-            dispatch({ type: 'CREATE_ALERTS', payload: r.data});
+            dispatch({ type: 'CREATE_ALERT', payload: r.data});
+            resolve(r);
+          } else {
+            reject(r);
+          }
+        })
+        .catch((err) => {
+          reject(err);
+        });
+    });
+  };
+}
+
+export function sendAlertNow(projectId, payload, query_id) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      post(dispatch, host + 'projects/'+ projectId +'/v1/alerts/send_now?query_id=' + query_id, payload)
+        .then((r) => {
+          if (r.ok) {
+            dispatch({ type: 'SEND_ALERT', payload: r.data});
             resolve(r);
           } else {
             reject(r);
@@ -941,7 +960,7 @@ export function fetchAlerts(projectId) {
   };
 }
 
-export function deleteAlerts(projectId, id) {
+export function deleteAlert(projectId, id) {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
       del(dispatch, host + 'projects/'+ projectId +'/v1/alerts/' + id)

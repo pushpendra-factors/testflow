@@ -1259,8 +1259,8 @@ func CountUsingHmine(idxPt int, hm HmineFolders, pt *Pattern, cAlgoProps CountAl
 		log.Fatalf("number of transactions are not matching user in pattern :%d ,%d,%s", trans_size, pt.numPropsUser, treePathUser)
 	}
 
-	// pt.EventProps = make([][]string, 0)
-	// pt.UserProps = make([][]string, 0)
+	pt.EventProps = make([][]string, 0)
+	pt.UserProps = make([][]string, 0)
 	pt.PatternVersion = 3
 
 	if idxPt%100 == 0 {

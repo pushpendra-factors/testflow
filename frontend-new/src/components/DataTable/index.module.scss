@@ -183,3 +183,10 @@ th.horizontalBarTableHeader {
   align-items: center;
   padding: 0;
 }
+
+.dashboardTable {
+  :global(.ant-table-container) {
+    border-top-left-radius: 8px !important;
+    border-top-right-radius: 8px !important;
+  }
+}

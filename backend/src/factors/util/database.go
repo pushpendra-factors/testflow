@@ -79,19 +79,31 @@ func DBReadRows(rows *sql.Rows, tx *sql.Tx, queryID string) ([]string, [][]inter
 	return cols, resultRows, nil
 }
 
-func DBDebugPreparedStatement(stmnt string, params []interface{}) string {
+func DBDebugPreparedStatement(env, stmnt string, params []interface{}) string {
+	if env != "production" {
+		return fmt.Sprintf(strings.Replace(stmnt, "?", "'%v'", len(params)), params...)
+	}
+
 	// Trimming params and statement for logging.
-	limitedParams := TrimQueryParams(params)
+	limitedParams := TrimQueryParams(env, params)
 	stmntWithParams := fmt.Sprintf(strings.Replace(stmnt, "?", "'%v'", len(limitedParams)), limitedParams...)
-	return TrimQueryString(stmntWithParams)
+	return TrimQueryString(env, stmntWithParams)
 }
 
-func TrimQueryString(stmnt string) string {
+func TrimQueryString(env, stmnt string) string {
+	if env != "production" {
+		return stmnt
+	}
+
 	// Limiting statement length to 500 characters.
 	return stmnt[:int(math.Min(float64(len(stmnt)), 500))] + "..."
 }
 
-func TrimQueryParams(params []interface{}) []interface{} {
+func TrimQueryParams(env string, params []interface{}) []interface{} {
+	if env != "production" {
+		return params
+	}
+
 	// Limiting params to 100.
 	return params[:int(math.Min(float64(len(params)), 100))]
 }

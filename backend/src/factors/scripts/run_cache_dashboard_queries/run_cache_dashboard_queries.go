@@ -73,6 +73,8 @@ func main() {
 	allowProfilesGroupSupport := flag.String("allow_profiles_group_support", "", "")
 	enableOptimisedFilterOnProfileQuery := flag.Int("enable_optimised_filter_on_profile_query",
 		0, "Enables filter optimisation logic for profiles query.")
+	enableOptimisedFilterOnEventUserQuery := flag.Int("enable_optimised_filter_on_event_user_query",
+		0, "Enables filter optimisation logic for events and users query.")
 
 	flag.Parse()
 
@@ -123,22 +125,23 @@ func main() {
 			MaxIdleConnections:     *memSQLDBMaxIdleConnections,
 			UseExactConnFromConfig: true,
 		},
-		PrimaryDatastore:                    *primaryDatastore,
-		EnableFilterOptimisation:            *enableFilterOptimisation,
-		AllowProfilesGroupSupport:           *allowProfilesGroupSupport,
-		FilterPropertiesStartTimestamp:      *filterPropertiesStartTimestamp,
-		SkipAttributionDashboardCaching:     *skipAttribution,
-		OnlyAttributionDashboardCaching:     *onlyAttribution,
-		IsRunningForMemsql:                  *runningForMemsql,
-		SkipEventNameStepByProjectID:        *skipEventNameStepByProjectID,
-		SkipUserJoinInEventQueryByProjectID: *skipUserJoinInEventQueryByProjectID,
-		DebugEnabled:                        *debugEnabled,
-		ResourcePoolForAnalytics:            *resourcePoolForAnalytics,
-		UsageBasedDashboardCaching:          *enableUsageBasedDashboardCaching,
-		OnlyKPICaching:                      *onlyKPICaching,
-		SkipKPICaching:                      *skipKPICaching,
-		EnableSlowDBQueryLogging:            *enableSlowDBQueryLogging,
-		EnableOptimisedFilterOnProfileQuery: *enableOptimisedFilterOnProfileQuery != 0,
+		PrimaryDatastore:                      *primaryDatastore,
+		EnableFilterOptimisation:              *enableFilterOptimisation,
+		AllowProfilesGroupSupport:             *allowProfilesGroupSupport,
+		FilterPropertiesStartTimestamp:        *filterPropertiesStartTimestamp,
+		SkipAttributionDashboardCaching:       *skipAttribution,
+		OnlyAttributionDashboardCaching:       *onlyAttribution,
+		IsRunningForMemsql:                    *runningForMemsql,
+		SkipEventNameStepByProjectID:          *skipEventNameStepByProjectID,
+		SkipUserJoinInEventQueryByProjectID:   *skipUserJoinInEventQueryByProjectID,
+		DebugEnabled:                          *debugEnabled,
+		ResourcePoolForAnalytics:              *resourcePoolForAnalytics,
+		UsageBasedDashboardCaching:            *enableUsageBasedDashboardCaching,
+		OnlyKPICaching:                        *onlyKPICaching,
+		SkipKPICaching:                        *skipKPICaching,
+		EnableSlowDBQueryLogging:              *enableSlowDBQueryLogging,
+		EnableOptimisedFilterOnProfileQuery:   *enableOptimisedFilterOnProfileQuery != 0,
+		EnableOptimisedFilterOnEventUserQuery: *enableOptimisedFilterOnEventUserQuery != 0,
 	}
 
 	C.InitConf(config)
@@ -242,7 +245,7 @@ func cacheDashboardUnitsForProjects(projectIDs, excludeProjectIDs string, numRou
 		defer waitGroup.Done()
 	}
 	startTime := util.TimeNowUnix()
-	store.GetStore().CacheDashboardUnitsForProjects(projectIDs, excludeProjectIDs, numRoutines, reportCollector)
+	store.GetStore().CacheDashboardUnitsForProjects(projectIDs, excludeProjectIDs, numRoutines, reportCollector, C.EnableOptimisedFilterOnEventUserQuery())
 	timeTakenString := util.SecondsToHMSString(util.TimeNowUnix() - startTime)
 	reportCollector.Store("all", timeTakenString)
 }

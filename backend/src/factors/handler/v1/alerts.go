@@ -5,8 +5,10 @@ import (
 	mid "factors/middleware"
 	"factors/model/model"
 	"factors/model/store"
+	T "factors/task"
 	U "factors/util"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
@@ -19,7 +21,16 @@ func CreateAlertHandler(c *gin.Context) (interface{}, int, string, string, bool)
 	}
 
 	r := c.Request
-
+	queryIdString := c.Param("query_id")
+	var queryID int64
+	var err error
+	if queryIdString != "" {
+		queryID, err = strconv.ParseInt(queryIdString, 10, 64)
+		if err != nil {
+			log.Error("failed to parse queryID string")
+			return nil, http.StatusInternalServerError, PROCESSING_FAILED, "failed to parse queryID string", false
+		}
+	}
 	var alertPayload model.Alert
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
@@ -28,6 +39,7 @@ func CreateAlertHandler(c *gin.Context) (interface{}, int, string, string, bool)
 		return nil, http.StatusInternalServerError, PROCESSING_FAILED, "Failed to decode Json request on create alert handler.", true
 	}
 	alertPayload.CreatedBy = U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
+	alertPayload.QueryID = queryID
 	alert, errCode, errMsg := store.GetStore().CreateAlert(projectId, alertPayload)
 	if errCode != http.StatusCreated {
 		log.WithFields(log.Fields{"document": alert, "err-message": errMsg}).Error("Failed to insertalert on create create alert handler.")
@@ -43,7 +55,14 @@ func GetAlertsHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 		log.Error("Get Alerts Failed, failed to parse project ID.")
 		return nil, http.StatusUnauthorized, INVALID_PROJECT, ErrorMessages[INVALID_PROJECT], true
 	}
-	alerts, errCode := store.GetStore().GetAllAlerts(projectID)
+	excludeSavedQueriesFlag := true
+	// negation of flag to include/exlude returning saved queries i.e KPI/Events
+	includeSavedQueries := c.Query("saved_queries")
+	if includeSavedQueries == "true" {
+		excludeSavedQueriesFlag = false
+	}
+	//except sheduled shared saved reports (passing true to exclude saved queries)
+	alerts, errCode := store.GetStore().GetAllAlerts(projectID, excludeSavedQueriesFlag)
 	if errCode != http.StatusFound {
 		return nil, errCode, PROCESSING_FAILED, "Failed to get alerts", true
 	}
@@ -88,4 +107,46 @@ func DeleteAlertHandler(c *gin.Context) (interface{}, int, string, string, bool)
 		return nil, errCode, PROCESSING_FAILED, "Failed to delete alert ", true
 	}
 	return nil, http.StatusOK, "", "", false
+}
+func QuerySendNowHandler(c *gin.Context) {
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	loggedInAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
+	if loggedInAgentUUID == "" || projectID == 0 {
+		c.AbortWithStatusJSON(http.StatusBadRequest,
+			gin.H{"error": "Invalid agent id. or project id"})
+		return
+	}
+	queryIdString := c.Query("query_id")
+	var queryID int64
+	var err error
+	if queryIdString != "" {
+		queryID, err = strconv.ParseInt(queryIdString, 10, 64)
+		if err != nil {
+			log.Error("failed to parse queryID string")
+			c.AbortWithStatusJSON(http.StatusBadRequest,
+				gin.H{"error": "Failed to parse query ID"})
+			return 
+		}
+	}
+	r := c.Request
+	var alert model.Alert
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&alert); err != nil {
+		log.WithError(err).Error("Failed to decode Json request on send now handler.")
+		c.AbortWithStatusJSON(http.StatusInternalServerError,
+			gin.H{"error": "failed to decode json request on send now handler"})
+		return
+	}
+	alert.ProjectID = projectID
+	alert.CreatedBy = loggedInAgentUUID
+	alert.QueryID = queryID
+	_, err = T.HandlerAlertWithQueryID(alert, nil)
+	if err != nil {
+		log.WithError(err).Error("failed to perform send now operation for query id ", alert.QueryID)
+		c.AbortWithStatusJSON(http.StatusInternalServerError,
+			gin.H{"error": "failed to perform send now operation"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"msg": "sent report successfully"})
 }

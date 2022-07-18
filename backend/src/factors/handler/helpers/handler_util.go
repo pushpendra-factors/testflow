@@ -16,6 +16,7 @@ import (
 )
 
 const HeaderUserFilterOptForProfiles string = "Use-Filter-Opt-Profiles"
+const HeaderUserFilterOptForEventsAndUsers string = "Use-Filter-Opt-Events-Users"
 
 // DashboardQueryResponsePayload Query query response with cache and refreshed_at.
 type DashboardQueryResponsePayload struct {
@@ -25,14 +26,16 @@ type DashboardQueryResponsePayload struct {
 	TimeZone    string      `json:"timezone"`
 }
 
-func getQueryCacheResponse(c *gin.Context, cacheResult model.QueryCacheResult, forDashboard bool) (bool, int, interface{}) {
+func getQueryCacheResponse(c *gin.Context, cacheResult model.QueryCacheResult, forDashboard bool, skipContextVerfication bool) (bool, int, interface{}) {
 	if forDashboard {
 		return true, http.StatusOK, DashboardQueryResponsePayload{Result: cacheResult.Result, Cache: true, RefreshedAt: cacheResult.RefreshedAt, TimeZone: cacheResult.TimeZone}
 	}
 	// To Indicate if the result is served from cache without changing the response format.
-	c.Header(model.QueryCacheResponseFromCacheHeader, "true")
-	c.Header(model.QueryCacheResponseCacheRefreshedAt, fmt.Sprint(cacheResult.RefreshedAt))
-	c.Header(model.QueryCacheResponseCacheTimeZone, fmt.Sprint(cacheResult.TimeZone))
+	if !skipContextVerfication {
+		c.Header(model.QueryCacheResponseFromCacheHeader, "true")
+		c.Header(model.QueryCacheResponseCacheRefreshedAt, fmt.Sprint(cacheResult.RefreshedAt))
+		c.Header(model.QueryCacheResponseCacheTimeZone, fmt.Sprint(cacheResult.TimeZone))
+	}
 	return true, http.StatusOK, cacheResult.Result
 }
 
@@ -61,14 +64,16 @@ func SleepIfHeaderSet(c *gin.Context) {
 
 // GetResponseIfCachedQuery Returns response for the query is cached.
 func GetResponseIfCachedQuery(c *gin.Context, projectID int64, requestPayload model.BaseQuery,
-	resultContainer interface{}, forDashboard bool, reqID string) (bool, int, interface{}) {
+	resultContainer interface{}, forDashboard bool, reqID string, skipContextVerfication bool) (bool, int, interface{}) {
 	if C.DisableQueryCache() {
 		return false, http.StatusNotFound, nil
 	}
 
-	if c.Request.Header.Get(model.QueryCacheRequestInvalidatedCacheHeader) == "true" {
-		model.DeleteQueryCacheKey(projectID, requestPayload)
-		return false, http.StatusNotFound, nil
+	if !skipContextVerfication {
+		if c.Request.Header.Get(model.QueryCacheRequestInvalidatedCacheHeader) == "true" {
+			model.DeleteQueryCacheKey(projectID, requestPayload)
+			return false, http.StatusNotFound, nil
+		}
 	}
 
 	cacheKey, _ := requestPayload.GetQueryCacheRedisKey(projectID)
@@ -77,7 +82,7 @@ func GetResponseIfCachedQuery(c *gin.Context, projectID int64, requestPayload mo
 
 	cacheResult, errCode := model.GetQueryResultFromCache(projectID, requestPayload, &resultContainer)
 	if errCode == http.StatusFound {
-		return getQueryCacheResponse(c, cacheResult, forDashboard)
+		return getQueryCacheResponse(c, cacheResult, forDashboard, skipContextVerfication)
 	} else if errCode == http.StatusAccepted {
 		// An instance of query is in progress. Poll for result.
 		for {
@@ -90,7 +95,7 @@ func GetResponseIfCachedQuery(c *gin.Context, projectID int64, requestPayload mo
 			if errCode == http.StatusAccepted {
 				continue
 			} else if errCode == http.StatusFound {
-				return getQueryCacheResponse(c, cacheResult, forDashboard)
+				return getQueryCacheResponse(c, cacheResult, forDashboard, skipContextVerfication)
 			} else {
 				// If not in Accepted state, return with error.
 				return true, http.StatusInternalServerError, errors.New("Query Cache: Failed to fetch from cache")

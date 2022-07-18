@@ -340,7 +340,31 @@ func (store *MemSQL) getUpdatedDealAssociationDocument(projectID int64, incoming
 	return incomingDocument, http.StatusOK
 }
 
-func (store *MemSQL) getUpdatedDealAssociationDocuments(projectID int64, incomingDocuments []*model.HubspotDocument) ([]*model.HubspotDocument, int) {
+func (store *MemSQL) getExistingDocumentsForDealAssociationUpdates(projectID int64, documentIDs []string) ([]model.HubspotDocument, int) {
+	logFields := log.Fields{
+		"project_id":   projectID,
+		"document_ids": documentIDs,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+
+	if projectID == 0 || len(documentIDs) == 0 {
+		logCtx.Error("Invalid input parameters on getExistingDocumentsForDealAssociationUpdates")
+		return nil, http.StatusBadRequest
+	}
+
+	incomingDocumentActions := []int{model.HubspotDocumentActionUpdated, model.HubspotDocumentActionAssociationsUpdated}
+
+	existingDocuments, status := store.GetHubspotDocumentByTypeAndActions(projectID, documentIDs, model.HubspotDocumentTypeDeal,
+		incomingDocumentActions)
+	if status != http.StatusNotFound && status != http.StatusFound {
+		return nil, http.StatusInternalServerError
+	}
+
+	return existingDocuments, http.StatusOK
+}
+
+func (store *MemSQL) getUpdatedDealAssociationDocuments(projectID int64, incomingDocuments []*model.HubspotDocument, existingDocuments []model.HubspotDocument) ([]*model.HubspotDocument, int) {
 	logFields := log.Fields{
 		"project_id":         projectID,
 		"incoming_documents": incomingDocuments,
@@ -348,48 +372,33 @@ func (store *MemSQL) getUpdatedDealAssociationDocuments(projectID int64, incomin
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "incoming_documents": incomingDocuments})
 	if projectID <= 0 {
-		logCtx.Error("Invalid projectI on getUpdatedDealAssociationDocuments.")
+		logCtx.Error("Invalid projectID on getUpdatedDealAssociationDocuments.")
 		return nil, http.StatusBadRequest
 	}
 
-	for _, incomingDocument := range incomingDocuments {
-		if incomingDocument.Type != model.HubspotDocumentTypeDeal || incomingDocument.ID == "" {
-			logCtx.Error("Invalid record on getUpdatedDealAssociationDocuments.")
-			return nil, http.StatusBadRequest
-		}
-	}
-	var incomingDocumentIds []string
-
-	for _, incomingDocument := range incomingDocuments {
-		if incomingDocument.Action == model.HubspotDocumentActionUpdated {
-			incomingDocumentIds = append(incomingDocumentIds, incomingDocument.ID)
-		}
-	}
-
-	if len(incomingDocumentIds) == 0 {
+	if len(existingDocuments) == 0 {
 		return nil, http.StatusOK
 	}
 
-	incomingDocumentActions := []int{model.HubspotDocumentActionUpdated, model.HubspotDocumentActionAssociationsUpdated}
-
-	existingDocuments, status := store.GetHubspotDocumentByTypeAndActions(projectID, incomingDocumentIds, model.HubspotDocumentTypeDeal,
-		incomingDocumentActions)
-	if status != http.StatusNotFound && status != http.StatusFound {
-		return nil, http.StatusInternalServerError
-	}
-
 	var modifiedDocuments []*model.HubspotDocument
-	for i := 0; i < len(incomingDocumentIds); i++ {
-		var latestDocument *model.HubspotDocument
+	for i := range incomingDocuments {
+		if incomingDocuments[i].Type != model.HubspotDocumentTypeDeal || incomingDocuments[i].Action == model.HubspotDocumentActionCreated {
+			continue
+		}
 
-		for _, existingDocument := range existingDocuments {
-			if existingDocument.ID == incomingDocumentIds[i] && latestDocument == nil {
-				latestDocument = &existingDocument
-			} else if existingDocument.ID == incomingDocumentIds[i] && existingDocument.Timestamp > latestDocument.Timestamp {
-				latestDocument = &existingDocument
+		documentID := incomingDocuments[i].ID
+		var latestDocument *model.HubspotDocument
+		for j := range existingDocuments {
+			if existingDocuments[j].ID == documentID {
+				if latestDocument == nil {
+					latestDocument = &existingDocuments[j]
+				} else if existingDocuments[j].Timestamp > latestDocument.Timestamp {
+					latestDocument = &existingDocuments[j]
+				}
 			}
 		}
-		if latestDocument == nil {
+
+		if latestDocument == nil || incomingDocuments[i].Timestamp > latestDocument.Timestamp {
 			continue
 		}
 
@@ -400,14 +409,14 @@ func (store *MemSQL) getUpdatedDealAssociationDocuments(projectID int64, incomin
 			return nil, http.StatusInternalServerError
 		}
 
-		if !updateRequired || incomingDocuments[i].Timestamp != latestDocument.Timestamp {
+		if !updateRequired {
 			continue
 		}
 
-		modifiedDocument := incomingDocuments[i]
+		modifiedDocument := *incomingDocuments[i]
 		modifiedDocument.Timestamp = latestDocument.Timestamp + 1
 		modifiedDocument.Action = model.HubspotDocumentActionAssociationsUpdated
-		modifiedDocuments = append(modifiedDocuments, modifiedDocument)
+		modifiedDocuments = append(modifiedDocuments, &modifiedDocument)
 	}
 
 	return modifiedDocuments, http.StatusOK
@@ -458,7 +467,7 @@ func (store *MemSQL) createBatchedHubspotDocuments(projectID int64, documents []
 	return http.StatusCreated
 }
 
-func (store *MemSQL) getHubspotDocumentsForInsertion(projectId int64, documents []*model.HubspotDocument, existDocumentIDs map[string]bool, documentType int) ([]*model.HubspotDocument, error) {
+func (store *MemSQL) getHubspotDocumentsForInsertion(projectId int64, documents []*model.HubspotDocument, existDocumentIDs map[string]bool, documentType int, existDocuments []model.HubspotDocument) ([]*model.HubspotDocument, error) {
 	processDocuments := make([]*model.HubspotDocument, 0)
 	batchDocumentIDs := make(map[string]bool, 0)
 
@@ -512,11 +521,11 @@ func (store *MemSQL) getHubspotDocumentsForInsertion(projectId int64, documents 
 	}
 
 	if documentType == model.HubspotDocumentTypeDeal {
-		associationDocuments, errCode := store.getUpdatedDealAssociationDocuments(projectId, processDocuments)
+		associationDocuments, errCode := store.getUpdatedDealAssociationDocuments(projectId, processDocuments, existDocuments)
 		if errCode != http.StatusOK {
 			return nil, errors.New("failed to getUpdatedDealAssociationDocuments")
 		}
-		processDocuments = append(associationDocuments, processDocuments...)
+		processDocuments = append(processDocuments, associationDocuments...)
 	}
 
 	return processDocuments, nil
@@ -578,9 +587,18 @@ func (store *MemSQL) CreateHubspotDocumentInBatch(projectID int64, docType int, 
 		return errCode
 	}
 
+	var existDocuments []model.HubspotDocument
+	if docType == model.HubspotDocumentTypeDeal {
+		existDocuments, errCode = store.getExistingDocumentsForDealAssociationUpdates(projectID, documentIDs)
+		if errCode != http.StatusOK {
+			logCtx.Error("Failed to get getExistingDocumentsForDealAssociationUpdates")
+			return errCode
+		}
+	}
+
 	batchedDocuments := model.GetHubspotDocumentsListAsBatch(documents, batchSize)
 	for i := range batchedDocuments {
-		processDocuments, err := store.getHubspotDocumentsForInsertion(projectID, batchedDocuments[i], existDocumentIDs, docType)
+		processDocuments, err := store.getHubspotDocumentsForInsertion(projectID, batchedDocuments[i], existDocumentIDs, docType, existDocuments)
 		if err != nil {
 			logCtx.WithFields(log.Fields{"documents": processDocuments}).WithError(err).
 				Error("Failed to get documents for processing in batch.")
