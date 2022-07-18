@@ -48,7 +48,11 @@ func CreateCustomMetric(c *gin.Context) (interface{}, int, string, string, bool)
 	customMetric, errMsg, statusCode := store.GetStore().CreateCustomMetric(request)
 	if statusCode != http.StatusCreated {
 		logCtx.WithField("message finder", "Error during custom metric creation").Warn(errMsg)
-		return customMetric, statusCode, PROCESSING_FAILED, errMsg, true
+		if strings.Contains(errMsg, "Duplicate") {
+			return nil, http.StatusConflict, DUPLICATE_RECORD, ErrorMessages[DUPLICATE_RECORD], true
+		} else {
+			return nil, statusCode, PROCESSING_FAILED, ErrorMessages[PROCESSING_FAILED], true
+		}
 	}
 	return customMetric, http.StatusOK, "", "", false
 }
