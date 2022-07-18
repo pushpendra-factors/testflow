@@ -1252,6 +1252,107 @@ func TestDashboardUnitEventForDateTypeFilters(t *testing.T) {
 	}
 }
 
+func TestDashboardUnitDefaultGBT(t *testing.T) {
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	// project.TimeZone = string(U.TimeZoneStringIST)
+
+	dashboardName := U.RandomString(5)
+	dashboard, errCode := store.GetStore().CreateDashboard(project.ID, agent.UUID, &model.Dashboard{Name: dashboardName, Type: model.DashboardTypeProjectVisible})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.Equal(t, dashboardName, dashboard.Name)
+
+	dashboardQueriesStrWithGbtNonHourWithinDay := make(map[string]string)
+	dashboardQueriesStrWithGbtNonHourGreaterThanDay := make(map[string]string)
+	dashboardQueriesStrWithGbtHourWithinDay := make(map[string]string)
+	dashboardQueriesStrWithGbtHourGreaterThanDay := make(map[string]string)
+
+	dashboardQueriesStrWithGbtNonHourWithinDay = map[string]string{
+		model.QueryClassInsights: `{"cl": "insights", "ec": "any_given_event", "fr": 1393612200, "to": 1393698599, "ty": "events_occurrence", "tz": "", "ewp": [{"na": "$session", "pr": []}], "gbp": [], "gbt": "date"}`,
+		model.QueryClassFunnel:   `{"cl": "funnel", "ec": "any_given_event", "fr": 1393612200, "to": 1393698599, "ty": "unique_users", "tz": "", "ewp": [{"na": "$session", "pr": []}, {"na": "www.chargebee.com/schedule-a-demo", "pr": []}], "gbp": [], "gbt": "month"}`,
+		model.QueryClassChannel:  `{"cl": "channel", "meta": {"metric": "total_cost"}, "query": {"to": 1393698599, "from": 1393612200, "channel": "google_ads", "filter_key": "campaign", "filter_value": "all", "breakdown": "month"}}`,
+		model.QueryClassKPI:      `{"cl":"kpi","qG":[{"ca":"events","pgUrl":"www.acme.com/pricing","dc":"page_views","me":["page_views"],"gBy":[],"fil":[],"gbt":"week","fr":1393612200,"to":1393698599}],"gFil":[],"gGBy":[]}`,
+	}
+
+	dashboardQueriesStrWithGbtNonHourGreaterThanDay = map[string]string{
+		model.QueryClassInsights: `{"cl": "insights", "ec": "any_given_event", "fr": 1393612200, "to": 1393698600, "ty": "events_occurrence", "tz": "", "ewp": [{"na": "$session", "pr": []}], "gbp": [], "gbt": "date"}`,
+		model.QueryClassFunnel:   `{"cl": "funnel", "ec": "any_given_event", "fr": 1393612200, "to": 1393698600, "ty": "unique_users", "tz": "", "ewp": [{"na": "$session", "pr": []}, {"na": "www.chargebee.com/schedule-a-demo", "pr": []}], "gbp": [], "gbt": "month"}`,
+		model.QueryClassChannel:  `{"cl": "channel", "meta": {"metric": "total_cost"}, "query": {"to": 1393698600, "from": 1393612200, "channel": "google_ads", "filter_key": "campaign", "filter_value": "all", "breakdown": "month"}}`,
+		model.QueryClassKPI:      `{"cl":"kpi","qG":[{"ca":"events","pgUrl":"www.acme.com/pricing","dc":"page_views","me":["page_views"],"gBy":[],"fil":[],"gbt":"week","fr":1393612200,"to":1393698600}],"gFil":[],"gGBy":[]}`,
+	}
+
+	dashboardQueriesStrWithGbtHourWithinDay = map[string]string{
+		model.QueryClassInsights: `{"cl": "insights", "ec": "any_given_event", "fr": 1393612200, "to": 1393698599, "ty": "events_occurrence", "tz": "", "ewp": [{"na": "$session", "pr": []}], "gbp": [], "gbt": "hour"}`,
+		model.QueryClassFunnel:   `{"cl": "funnel", "ec": "any_given_event", "fr": 1393612200, "to": 1393698599, "ty": "unique_users", "tz": "", "ewp": [{"na": "$session", "pr": []}, {"na": "www.chargebee.com/schedule-a-demo", "pr": []}], "gbp": [], "gbt": "hour"}`,
+		model.QueryClassChannel:  `{"cl": "channel", "meta": {"metric": "total_cost"}, "query": {"to": 1393698599, "from": 1393612200, "channel": "google_ads", "filter_key": "campaign", "filter_value": "all", "breakdown" : "hour"}}`,
+		model.QueryClassKPI:      `{"cl":"kpi","qG":[{"ca":"events","pgUrl":"www.acme.com/pricing","dc":"page_views","me":["page_views"],"gBy":[],"fil":[],"gbt":"hour","fr":1393612200,"to":1393698599}],"gFil":[],"gGBy":[]}`,
+	}
+
+	dashboardQueriesStrWithGbtHourGreaterThanDay = map[string]string{
+		model.QueryClassInsights: `{"cl": "insights", "ec": "any_given_event", "fr": 1393612200, "to": 1393698600, "ty": "events_occurrence", "tz": "", "ewp": [{"na": "$session", "pr": []}], "gbp": [], "gbt": "hour"}`,
+		model.QueryClassFunnel:   `{"cl": "funnel", "ec": "any_given_event", "fr": 1393612200, "to": 1393698600, "ty": "unique_users", "tz": "", "ewp": [{"na": "$session", "pr": []}, {"na": "www.chargebee.com/schedule-a-demo", "pr": []}], "gbp": [], "gbt": "hour"}`,
+		model.QueryClassChannel:  `{"cl": "channel", "meta": {"metric": "total_cost"}, "query": {"to": 1393698600, "from": 1393612200, "channel": "google_ads", "filter_key": "campaign", "filter_value": "all", "breakdown": "hour"}}`,
+		model.QueryClassKPI:      `{"cl":"kpi","qG":[{"ca":"events","pgUrl":"www.acme.com/pricing","dc":"page_views","me":["page_views"],"gBy":[],"fil":[],"gbt":"hour","fr":1393612200,"to":1393698600}],"gFil":[],"gGBy":[]}`,
+	}
+
+	for queryClass, queryString := range dashboardQueriesStrWithGbtNonHourWithinDay {
+		queryJSON := postgres.Jsonb{json.RawMessage(queryString)}
+		baseQuery, err := model.DecodeQueryForClass(queryJSON, queryClass)
+		assert.Nil(t, err)
+
+		baseQuery.SetDefaultGroupByTimestamp()
+		timestamps := baseQuery.GetGroupByTimestamps()
+		for _, timestamp := range timestamps {
+			assert.Equal(t, timestamp, "hour")
+		}
+	}
+
+	for queryClass, queryString := range dashboardQueriesStrWithGbtNonHourGreaterThanDay {
+		queryJSON := postgres.Jsonb{json.RawMessage(queryString)}
+		baseQuery, err := model.DecodeQueryForClass(queryJSON, queryClass)
+		assert.Nil(t, err)
+
+		baseQuery.SetDefaultGroupByTimestamp()
+		timestamps := baseQuery.GetGroupByTimestamps()
+		for _, timestamp := range timestamps {
+			assert.NotEqual(t, timestamp, "hour")
+		}
+	}
+
+	for queryClass, queryString := range dashboardQueriesStrWithGbtHourWithinDay {
+		queryJSON := postgres.Jsonb{json.RawMessage(queryString)}
+		baseQuery, err := model.DecodeQueryForClass(queryJSON, queryClass)
+		assert.Nil(t, err)
+
+		baseQuery.SetDefaultGroupByTimestamp()
+		timestamps := baseQuery.GetGroupByTimestamps()
+		for _, timestamp := range timestamps {
+			assert.Equal(t, timestamp, "hour")
+		}
+	}
+
+	for queryClass, queryString := range dashboardQueriesStrWithGbtHourGreaterThanDay {
+		queryJSON := postgres.Jsonb{json.RawMessage(queryString)}
+		baseQuery, err := model.DecodeQueryForClass(queryJSON, queryClass)
+		assert.Nil(t, err)
+
+		baseQuery.SetDefaultGroupByTimestamp()
+		timestamps := baseQuery.GetGroupByTimestamps()
+		for _, timestamp := range timestamps {
+			assert.Equal(t, timestamp, "date")
+		}
+	}
+
+	attrQuery := `{"cl": "attribution", "meta": {"metrics_breakdown": true}, "query": {"ce": {"na": "$session", "pr": []}, "cm": ["Impressions", "Clicks", "Spend"], "to": 1596479399, "lbw": 1, "lfe": [], "from": 1595874600, "attribution_key": "Campaign", "attribution_methodology": "Last_Touch"}}`
+	queryJSON := postgres.Jsonb{json.RawMessage(attrQuery)}
+	baseQuery, err := model.DecodeQueryForClass(queryJSON, model.QueryClassAttribution)
+	assert.Nil(t, err)
+
+	baseQuery.SetDefaultGroupByTimestamp()
+	timestamps := baseQuery.GetGroupByTimestamps()
+	assert.Len(t, timestamps, 0)
+}
+
 func sendAttributionQueryReq(r *gin.Engine, projectID int64, agent *model.Agent, dashboardID, unitID int64, query model.AttributionQuery, refresh bool) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
