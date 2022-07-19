@@ -52,7 +52,13 @@ class ReportsFetch(BaseJob):
         response = downloader.searchanalytics().query(
             siteUrl=self._url_prefix, body=request).execute()
         if ('rows' not in response) or (len(response['rows']) == 0):
-            log.warning("search_console: response: "+str(response) + " project_id: " + str(self._project_id) +" siteUrl: " + self._url_prefix + " request: " + str(request))
+            err_string = "search_console: response: "+ str(response) + " project_id: " + str(self._project_id) +" siteUrl: " + self._url_prefix + " request: " + str(request)
+            days_difference = TimeUtil.get_difference_from_current_day(str_timestamp)
+            if days_difference <= 5:
+                self.log_status_of_job("extract", "not completed")
+                raise Exception(err_string)
+            else:
+                log.warning(err_string)
 
         # pagination 
         while 'rows' in response:
