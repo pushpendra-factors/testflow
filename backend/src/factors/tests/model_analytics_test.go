@@ -1593,7 +1593,7 @@ func TestAnalyticsFunnelQueryWithFilterAndBreakDown(t *testing.T) {
 	assert.Equal(t, "100.0", result5.Rows[noGroupIndex][4])
 
 	assert.Equal(t, "F", result5.Rows[fIndex][0])
-	assert.Equal(t, "21", result5.Rows[fIndex][1])
+	assert.Equal(t, "20", result5.Rows[fIndex][1])
 	assert.Equal(t, float64(5), result5.Rows[fIndex][2])
 	assert.Equal(t, float64(5), result5.Rows[fIndex][3])
 	assert.Equal(t, "100.0", result5.Rows[fIndex][4])
@@ -1660,7 +1660,7 @@ func TestAnalyticsFunnelQueryWithFilterAndBreakDown(t *testing.T) {
 	assert.Equal(t, "100.0", result6.Rows[noGroupIndex][4])
 
 	assert.Equal(t, "F", result6.Rows[fIndex][0])
-	assert.Equal(t, "21", result6.Rows[fIndex][1])
+	assert.Equal(t, "20", result6.Rows[fIndex][1])
 	assert.Equal(t, float64(5), result6.Rows[fIndex][2])
 	assert.Equal(t, float64(5), result6.Rows[fIndex][3])
 	assert.Equal(t, "100.0", result6.Rows[fIndex][4])

@@ -1354,9 +1354,9 @@ func ProcessQuery(query *AttributionQuery, attributionData *map[string]*Attribut
 
 func ProcessQueryKPI(query *AttributionQuery, attributionData *map[string]*AttributionData,
 	marketingReports *MarketingReports, isCompare bool, kpiData map[string]KPIInfo) *QueryResult {
-	logCtx := log.WithFields(log.Fields{"Method": "ProcessQueryKPI"})
+	logCtx := log.WithFields(log.Fields{"Method": "ProcessQueryKPI", "KPIAttribution": "Debug", "attributionData": attributionData})
+	logCtx.Info("KPI Attribution data")
 
-	log.WithFields(log.Fields{"KPIAttribution": "Debug", "attributionData": attributionData}).Info("KPI Attribution data")
 	// Add additional metrics values
 	ComputeAdditionalMetrics(attributionData)
 
@@ -1392,8 +1392,6 @@ func ProcessQueryKPI(query *AttributionQuery, attributionData *map[string]*Attri
 	AddHeadersByAttributionKey(result, query, goalEvents, goalEventAggFuncTypes)
 	result.Rows = dataRows
 
-	log.WithFields(log.Fields{"KPIAttribution": "Debug", "Result": result}).Info("Before GetUpdatedRowsByDimensions")
-
 	// Update result based on Key Dimensions
 	err := GetUpdatedRowsByDimensions(result, query, *logCtx)
 	if err != nil {
@@ -1405,8 +1403,7 @@ func ProcessQueryKPI(query *AttributionQuery, attributionData *map[string]*Attri
 	// Additional filtering based on AttributionKey.
 	result.Rows = FilterRows(result.Rows, query.AttributionKey, GetLastKeyValueIndex(result.Headers))
 
-	logCtx.Info("Done GetRowsByMaps GetUpdatedRowsByDimensions MergeDataRowsHavingSameKeyKPI FilterRows")
-	log.WithFields(log.Fields{"KPIAttribution": "Debug", "Result": result}).Info("KPI Attribution result")
+	logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "Result": result}).Info("KPI Attribution result")
 
 	// sort the rows by conversionEvent
 	conversionIndex := GetConversionIndex(result.Headers)
@@ -1425,14 +1422,14 @@ func ProcessQueryKPI(query *AttributionQuery, attributionData *map[string]*Attri
 			return v1 > v2
 
 		} else {
-			log.WithFields(log.Fields{"KPIAttribution": "Debug", "RowI": result.Rows[i], "RowJ": result.Rows[j]}).Info("Bad row in Sorting")
+			logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "RowI": result.Rows[i], "RowJ": result.Rows[j]}).Info("Bad row in Sorting")
 		}
 		return true
 	})
-	log.WithFields(log.Fields{"KPIAttribution": "Debug", "Result": result}).Info("KPI Attribution result Sorting")
+	logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "Result": result}).Info("KPI Attribution result Sorting")
 
 	result.Rows = AddGrandTotalRowKPI(result.Headers, result.Rows, GetLastKeyValueIndex(result.Headers), query.AnalyzeType, goalEventAggFuncTypes)
-	log.WithFields(log.Fields{"KPIAttribution": "Debug", "Result": result}).Info("KPI Attribution result AddGrandTotalRow")
+	logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "Result": result}).Info("KPI Attribution result AddGrandTotalRow")
 
 	return result
 }

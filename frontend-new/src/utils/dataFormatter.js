@@ -650,6 +650,9 @@ export const addQforQuarter = (freq) => {
 };
 
 export const formatDurationIntoString = (seconds) => {
+  let returnString = '',
+    i = 0,
+    stringLength = 0;
   if (seconds > 0) {
     let timeUnits = [
       [Math.floor(seconds / 31536000), 'years'],
@@ -660,9 +663,6 @@ export const formatDurationIntoString = (seconds) => {
       [Math.floor((((seconds % 31536000) % 86400) % 3600) / 60), 'minutes'],
       [(((seconds % 31536000) % 86400) % 3600) % 60, 'seconds'],
     ];
-    let returnString = '',
-      i = 0,
-      stringLength = 0;
     while (i < timeUnits.length && stringLength < 4) {
       if (timeUnits[i][0] === 0) {
         i++;

@@ -2440,3 +2440,88 @@ func TestFilterRows(t *testing.T) {
 		})
 	}
 }
+
+func TestAddKPIKeyDataInMap(t *testing.T) {
+	type args struct {
+		kpiQueryResult     model.QueryResult
+		logCtx             log.Entry
+		keyIdx             int
+		datetimeIdx        int
+		from               int64
+		to                 int64
+		valIdx             int
+		kpiValueHeaders    []string
+		kpiAggFunctionType []string
+		kpiData            *map[string]model.KPIInfo
+	}
+
+	kpiData := make(map[string]model.KPIInfo)
+
+	tests := []struct {
+		name string
+		args args
+		want []string
+	}{
+		{"test_kpi_opp",
+			args{
+				model.QueryResult{
+					Headers: []string{"datetime",
+						"$salesforce_opportunity_id",
+						"Total Pipeline",
+						"Salesforce Opportunities",
+						"Stage 4 Opps (Stage 4 Date)"},
+					Rows: [][]interface{}{{
+						"2022-01-14T10:00:00-08:00",
+						"0063m00000opRhqAAE",
+						9000,
+						1,
+						0,
+					},
+						{
+							"2022-01-16T10:00:00-08:00",
+							"0063m00000opRhqAAE",
+							0,
+							0,
+							1,
+						},
+						{
+							"2022-01-18T09:00:00-08:00",
+							"0063m00000opWnnAAE",
+							69999,
+							1,
+							0,
+						}},
+				},
+				*log.WithFields(log.Fields{"KPIAttribution": "Debug"}),
+				1,
+				0,
+				1641024000,
+				1643702399,
+				2,
+				[]string{},
+				[]string{},
+				&kpiData,
+			},
+			[]string{"0063m00000opRhqAAE", "0063m00000opWnnAAE"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			if got := model.AddKPIKeyDataInMap(tt.args.kpiQueryResult, tt.args.logCtx, tt.args.keyIdx, tt.args.datetimeIdx, tt.args.from, tt.args.to, tt.args.valIdx, tt.args.kpiValueHeaders, tt.args.kpiAggFunctionType, tt.args.kpiData); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("AddKPIKeyDataInMap() = %v, want %v", got, tt.want)
+			} else {
+				val := (*tt.args.kpiData)["0063m00000opRhqAAE"]
+				assert.Equal(t, 9000.0, val.KpiValues[0])
+				assert.Equal(t, 1.0, val.KpiValues[1])
+				assert.Equal(t, 1.0, val.KpiValues[2])
+
+				val2 := (*tt.args.kpiData)["0063m00000opWnnAAE"]
+				assert.Equal(t, 69999.0, val2.KpiValues[0])
+				assert.Equal(t, 1.0, val2.KpiValues[1])
+				assert.Equal(t, 0.0, val2.KpiValues[2])
+				log.Info("found valid keys")
+			}
+		})
+	}
+}
