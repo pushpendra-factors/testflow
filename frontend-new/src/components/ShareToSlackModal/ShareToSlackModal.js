@@ -18,7 +18,7 @@ const ShareToSlackModal = ({visible, onSubmit, isLoading, channelOpts, setShowSh
         form.resetFields();
         setFrequency('send_now');
         setShowShareToSlackModal(false);
-    }, [setShowShareToSlackModal]);
+    }, []);
 
     const handleCancel = useCallback(() => {
         if (!isLoading) {
@@ -152,7 +152,7 @@ const ShareToSlackModal = ({visible, onSubmit, isLoading, channelOpts, setShowSh
                                     <div className={'flex flex-col border-top--thin my-4 w-full'} />
                                     <Col span={23}>
                                         <div className={'w-full mb-3'}>
-                                            <Text type={'title'} level={7} extraClass={'m-0 mb-1'}>Not getting our messages? <a href='#!'>Let us now</a></Text>
+                                            <Text type={'title'} level={7} extraClass={'m-0 mb-1'}>Not getting our messages? <a href='#!'>Let us know</a></Text>
                                         </div>
                                     </Col>
                                     <Col span={24}>
@@ -160,9 +160,15 @@ const ShareToSlackModal = ({visible, onSubmit, isLoading, channelOpts, setShowSh
                                             <Col className={'mr-2'}>
                                                 <Button type={'default'} onClick={handleCancel}>Cancel</Button>
                                             </Col>
+                                            {frequency === 'send_now'?
                                             <Col className={'mr-2'}>
                                                 <Button type={'primary'} htmlType='submit'>Send to Slack</Button>
                                             </Col>
+                                            :
+                                            <Col className={'mr-2'}>
+                                                <Button type={'primary'} htmlType='submit'>Schedule</Button>
+                                            </Col>
+                                            }
                                         </Row>
                                     </Col>
                                 </Row>

@@ -3605,3 +3605,18 @@ func IsGroupEventName(eventName string) bool {
 func GetGroupNameFromGroupEventName(eventName string) string {
 	return GROUP_EVENT_NAME_TO_GROUP_NAME_MAPPING[eventName]
 }
+
+var groupPropertiesKeyPrefix = map[string]string{
+	GROUP_NAME_HUBSPOT_COMPANY: "$hubspot_company_",
+	GROUP_NAME_HUBSPOT_DEAL:    "$hubspot_deal_",
+}
+
+func GetGroupNameByPropertyName(propertyName string) (string, bool) {
+	for groupName, prefix := range groupPropertiesKeyPrefix {
+		if strings.HasPrefix(propertyName, prefix) {
+			return groupName, true
+		}
+	}
+
+	return "", false
+}

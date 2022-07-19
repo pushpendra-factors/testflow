@@ -135,6 +135,13 @@ func GetKPIFilterValuesHandler(c *gin.Context) (interface{}, int, string, string
 			return nil, http.StatusInternalServerError, PROCESSING_FAILED, "Error during fetch of KPI FilterValues Data.", true
 		}
 		resultantFilterValuesResponse = eventsFilterValues
+	} else if groupName, isGroupProperty := U.GetGroupNameByPropertyName(request.PropertyName); isGroupProperty {
+		groupFilterValues, err := storeSelected.GetPropertyValuesByGroupProperty(projectID, groupName, request.PropertyName, 2500, C.GetLookbackWindowForEventUserCache())
+		if err != nil {
+			logCtx.Warn(err)
+			return nil, http.StatusInternalServerError, PROCESSING_FAILED, "Error during fetch of KPI FilterValues Data.", true
+		}
+		resultantFilterValuesResponse = groupFilterValues
 	} else {
 		userFilterValues, err := storeSelected.GetPropertyValuesByUserProperty(projectID, request.PropertyName, model.FilterValuesOrEventNamesLimit, C.GetLookbackWindowForEventUserCache())
 		if err != nil {

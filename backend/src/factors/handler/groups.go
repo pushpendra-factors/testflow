@@ -6,6 +6,7 @@ import (
 	mid "factors/middleware"
 	"factors/model/store"
 	U "factors/util"
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -89,7 +90,23 @@ func GetGroupPropertiesHandler(c *gin.Context) {
 	for property, displayName := range displayNames {
 		displayNamesOp[property] = displayName
 	}
-
+	for _, props := range propertiesFromCache {
+		for _, prop := range props {
+			displayName := U.CreateVirtualDisplayName(prop)
+			_, exist := displayNamesOp[prop]
+			if !exist {
+				displayNamesOp[prop] = displayName
+			}
+		}
+	}
+	dupCheck := make(map[string]bool)
+	for _, name := range displayNamesOp {
+		_, exists := dupCheck[name]
+		if exists {
+			logCtx.Warning(fmt.Sprintf("Duplicate display name %s", name))
+		}
+		dupCheck[name] = true
+	}
 	response["display_names"] = displayNamesOp
 
 	c.JSON(http.StatusOK, response)

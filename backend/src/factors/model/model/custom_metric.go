@@ -29,6 +29,11 @@ var CustomMetricObjectTypeNames = []string{HubspotContactsDisplayCategory, Hubsp
 	SalesforceUsersDisplayCategory, SalesforceAccountsDisplayCategory, SalesforceOpportunitiesDisplayCategory, MarketoLeadsDisplayCategory, LeadSquaredLeadsDisplayCategory}
 var ProfileQueryType = 1
 
+var customMetricGroupNameByObjectType = map[string]string{
+	GROUP_NAME_HUBSPOT_COMPANY: HubspotCompaniesDisplayCategory,
+	GROUP_NAME_HUBSPOT_DEAL:    HubspotDealsDisplayCategory,
+}
+
 type CustomMetric struct {
 	ProjectID       int64           `gorm:"primary_key:true;auto_increment:false" json:"project_id"`
 	ID              string          `gorm:"primary_key:true;type:varchar(255)" json:"id"`
@@ -74,4 +79,13 @@ func ValidateCustomMetric(customMetric CustomMetric) (string, bool) {
 		return "Invalid Name for custom metric", false
 	}
 	return "", true
+}
+
+func GetGroupNameByMetricObjectType(objectType string) string {
+	for groupName, metricObjectType := range customMetricGroupNameByObjectType {
+		if metricObjectType == objectType {
+			return groupName
+		}
+	}
+	return ""
 }

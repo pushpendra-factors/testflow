@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Spin } from 'antd';
 import styles from './index.module.scss';
 import { SVG } from '../factorsComponents';
-import { CaretUpOutlined } from '@ant-design/icons';
+import { CaretUpOutlined, CaretRightOutlined } from '@ant-design/icons';
 import MomentTz from '../MomentTz';
 import InfoCard from './InfoCard';
 
@@ -50,7 +50,7 @@ function FaTimeline({
   };
 
   const data = _.groupBy(activities, groups[granularity]);
-  const hoverState = [
+  const hoveEvents = [
     'Website Session',
     'Page View',
     'Form Button Click',
@@ -105,13 +105,16 @@ function FaTimeline({
                             title={event.display_name}
                             properties={event?.properties || {}}
                             trigger={
-                              hoverState.includes(event.display_name)
+                              hoveEvents.includes(event.display_name)
                                 ? 'hover'
                                 : []
                             }
                           >
                             <div className={`${styles.tag} truncate`}>
                               {event.display_name}
+                              {hoveEvents.includes(event.display_name) ? (
+                                <CaretRightOutlined />
+                              ) : null}
                             </div>
                           </InfoCard>
                           {!showAll[index] && values.length > 1 ? (

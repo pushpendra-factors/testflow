@@ -116,6 +116,18 @@ func QuerySendNowHandler(c *gin.Context) {
 			gin.H{"error": "Invalid agent id. or project id"})
 		return
 	}
+	queryIdString := c.Query("query_id")
+	var queryID int64
+	var err error
+	if queryIdString != "" {
+		queryID, err = strconv.ParseInt(queryIdString, 10, 64)
+		if err != nil {
+			log.Error("failed to parse queryID string")
+			c.AbortWithStatusJSON(http.StatusBadRequest,
+				gin.H{"error": "Failed to parse query ID"})
+			return 
+		}
+	}
 	r := c.Request
 	var alert model.Alert
 	decoder := json.NewDecoder(r.Body)
@@ -128,7 +140,8 @@ func QuerySendNowHandler(c *gin.Context) {
 	}
 	alert.ProjectID = projectID
 	alert.CreatedBy = loggedInAgentUUID
-	_, err := T.HandlerAlertWithQueryID(alert, nil)
+	alert.QueryID = queryID
+	_, err = T.HandlerAlertWithQueryID(alert, nil)
 	if err != nil {
 		log.WithError(err).Error("failed to perform send now operation for query id ", alert.QueryID)
 		c.AbortWithStatusJSON(http.StatusInternalServerError,

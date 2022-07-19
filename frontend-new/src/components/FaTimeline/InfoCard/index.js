@@ -1,14 +1,15 @@
 import React from 'react';
 import { Text } from 'Components/factorsComponents';
 import { Popover } from 'antd';
-import { property } from 'lodash';
+import { formatDurationIntoString, PropTextFormat } from '../../../utils/dataFormatter';
+import MomentTz from '../../MomentTz';
 
 function InfoCard({ title, properties = {}, trigger, children }) {
   const popoverContent = () => {
     return (
       <div className='fa-popupcard'>
         <Text
-          extraClass='m-0'
+          extraClass='m-0 mb-3'
           type={'title'}
           level={6}
           weight={'bold'}
@@ -16,15 +17,21 @@ function InfoCard({ title, properties = {}, trigger, children }) {
         >
           {title}
         </Text>
-        {Object.entries(properties).forEach(([key, value]) => {
-          <div className='flex justify-between py-2'>
-            <Text mini type={'paragraph'} color={'grey'}>
-              {key}
-            </Text>
-            <Text mini type={'paragraph'} color={'grey-2'}>
-              {value}
-            </Text>
-          </div>;
+        {Object.entries(properties).map(([key, value]) => {
+          return (
+            <div className='flex justify-between py-2'>
+              <Text mini type={'paragraph'} color={'grey'}>
+                {key === '$timestamp' ? 'Date and Time' : PropTextFormat(key)}
+              </Text>
+              <Text mini type={'paragraph'} color={'grey-2'} weight={'medium'}>
+                {key === '$timestamp'
+                  ? MomentTz(value * 1000).format('DD MMMM YYYY, hh:mm A')
+                  : key.includes('_time')
+                  ? formatDurationIntoString(value)
+                  : value}
+              </Text>
+            </div>
+          );
         })}
       </div>
     );

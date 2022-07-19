@@ -169,12 +169,12 @@ type WebAnalyticsCachePayload struct {
 }
 
 type DashboardUnitWebAnalyticsQueryName struct {
-	UnitID    uint64 `json:"unit_id"`
+	UnitID    string `json:"unit_id"`
 	QueryName string `json:"query_name"`
 }
 
 type DashboardUnitWebAnalyticsCustomGroupQuery struct {
-	UnitID            uint64   `json:"unit_id"`
+	UnitID            string   `json:"unit_id"`
 	Metrics           []string `json:"metrics"`
 	GroupByProperties []string `json:"gbp"`
 }

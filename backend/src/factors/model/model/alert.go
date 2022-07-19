@@ -59,6 +59,7 @@ type AlertDescription struct {
 	Operator  string          `json:"operator"`
 	Value     string          `json:"value"`
 	DateRange string          `json:"date_range"`
+	Subject   string          `json:"subject"`
 	Message   string          `json:"message"`
 	// only for type 2 (daterange a compared to daterange b )
 	ComparedTo string `json:"compared_to"`

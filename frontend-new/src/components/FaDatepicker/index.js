@@ -1,13 +1,9 @@
 import React, { useState } from 'react';
 import { SVG } from '../factorsComponents';
-import {
-  DatePicker, Menu, Dropdown, Button
-} from 'antd';
+import { DatePicker, Menu, Dropdown, Button } from 'antd';
 import MomentTz from 'Components/MomentTz';
 // import { TimeZoneOffsetValues } from 'Utils/constants';
-import {
-  getRangeByLabel
-} from './utils';
+import { getRangeByLabel } from './utils';
 import { isEqual } from 'lodash';
 
 const { RangePicker } = DatePicker;
@@ -34,11 +30,6 @@ const FaDatepicker = ({
   const [dateString, setDateString] = useState(false);
   const [quarterDateStr, setQuarterDateStr] = useState('');
 
-  // const { active_project } = useSelector((state) => state.global);
-
-  // active_project.time_zone ? MomentTz.tz.setDefault(TimeZoneOffsetValues[active_project.time_zone]?.city): MomentTz.tz.setDefault('Asia/Kolkata');
-  // console.log('MomentTz.tz.setDefault',TimeZoneOffsetValues[active_project.time_zone]?.city, MomentTz().format())
-
   const MomentTzKey = {
     day: 'days',
     week: 'weeks',
@@ -57,7 +48,9 @@ const FaDatepicker = ({
   const onChange = (startDate, dateString) => {
     setShowDatePicker(false);
     const dateType = datePickerType;
-    let endDate = MomentTz(startDate).startOf('day').add(1, MomentTzKey[dateType]);
+    let endDate = MomentTz(startDate)
+      .startOf('day')
+      .add(1, MomentTzKey[dateType]);
 
     const newDateData = {
       ...dateData,
@@ -121,7 +114,7 @@ const FaDatepicker = ({
   };
 
   const onCustomChange = (startDate, dateString) => {
-    const startDt = MomentTz(startDate[0]).startOf('day'); 
+    const startDt = MomentTz(startDate[0]).startOf('day');
     const endDt = MomentTz(startDate[1]).endOf('day');
     const newDateData = {
       ...dateData,
@@ -371,17 +364,18 @@ const FaDatepicker = ({
   );
 
   const displayRange = (range) => {
-    console.log('🚀 ~ file: index.js ~ line 374 ~ displayRange ~ range', range);
-    console.log(isEqual(range.startDate === range.endDate));
     if (dateString === 'Now') {
       // return MomentTz(range.startDate).format('MMM DD, YYYY hh:mma')
       return 'Now';
     }
-    if (dateString === 'This Quarter' || dateString === 'Last Quarter' || datePickerType === 'quarter') {
+    if (
+      dateString === 'This Quarter' ||
+      dateString === 'Last Quarter' ||
+      datePickerType === 'quarter'
+    ) {
       return quarterDateStr;
     }
     if (dateString === 'Today' || isEqual(range.startDate === range.endDate)) {
-      console.log('yahi h');
       return MomentTz(range.startDate).format('MMM DD, YYYY');
     } else {
       return (

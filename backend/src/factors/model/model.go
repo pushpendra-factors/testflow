@@ -207,7 +207,9 @@ type Model interface {
 	GetEventNamesOrderedByOccurenceAndRecency(projectID int64, limit int, lastNDays int) (map[string][]string, error)
 	GetPropertiesByEvent(projectID int64, eventName string, limit int, lastNDays int) (map[string][]string, error)
 	GetPropertyValuesByEventProperty(projectID int64, eventName string, propertyName string, limit int, lastNDays int) ([]string, error)
-	GetPropertiesForHubspot(projectID int64, reqID string) []map[string]string
+	GetPropertiesForHubspotContacts(projectID int64, reqID string) []map[string]string
+	GetPropertiesForHubspotCompanies(projectID int64, reqID string) []map[string]string
+	GetPropertiesForHubspotDeals(projectID int64, reqID string) []map[string]string
 	GetPropertiesForSalesforce(projectID int64, reqID string) []map[string]string
 	GetPropertiesForMarketo(projectID int64, reqID string) []map[string]string
 

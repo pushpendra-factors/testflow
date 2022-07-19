@@ -17,7 +17,7 @@ const ShareToEmailModal = ({visible, onSubmit, isLoading, setShowShareToEmailMod
         form.resetFields();
         setFrequency('send_now');
         setShowShareToEmailModal(false);
-    }, [setShowShareToEmailModal]);
+    }, []);
 
     const handleCancel = useCallback(() => {
         if (!isLoading) {
@@ -247,7 +247,7 @@ const ShareToEmailModal = ({visible, onSubmit, isLoading, setShowShareToEmailMod
                                     <div className={'flex flex-col border-top--thin my-4 w-full'} />
                                     <Col span={23}>
                                         <div className={'w-full mb-3'}>
-                                            <Text type={'title'} level={7} extraClass={'m-0 mb-1'}>Not getting our emails? <a href='#!'>Let us now</a></Text>
+                                            <Text type={'title'} level={7} extraClass={'m-0 mb-1'}>Not getting our emails? <a href='#!'>Let us know</a></Text>
                                         </div>
                                     </Col>
                                     <Col span={24}>
