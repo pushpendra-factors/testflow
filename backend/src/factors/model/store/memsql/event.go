@@ -1405,7 +1405,7 @@ func (store *MemSQL) addSessionForUser(projectId int64, userId string, userEvent
 			}
 
 			eventsOfSession := events[sessionStartIndex : sessionEndIndex+1]
-			channelOfEvent := make(map[string]string)
+			channelOfSessionEvent := make(map[string]string)
 
 			// Update the session_id to all events between start index and end index + 1.
 			errCode := store.associateSessionToEventsInBatch(projectId, userId,
@@ -1468,9 +1468,12 @@ func (store *MemSQL) addSessionForUser(projectId int64, userId string, userEvent
 					logCtx.Error(errString)
 				} else {
 					sessionPropertiesMap[U.EP_CHANNEL] = channel
-					channelOfEvent[events[i].ID] = channel
-				}
 
+					// Note: All events of the session are from same channel, hence we update only session event and user properties
+					if !isSessionContinued {
+						channelOfSessionEvent[sessionEvent.ID] = channel
+					}
+				}
 			}
 
 			sessionPropertiesMap[U.EP_SESSION_COUNT] = sessionEvent.Count
@@ -1518,12 +1521,11 @@ func (store *MemSQL) addSessionForUser(projectId int64, userId string, userEvent
 				sessionUserProperties := model.SessionUserProperties{
 					UserID:                userId,
 					SessionEventTimestamp: sessionEvent.Timestamp,
-
-					SessionPageCount:     onlyThisSessionPageCount,
-					SessionPageSpentTime: onlyThisSessionPageSpentTime,
-					SessionChannel:       channelOfEvent[userPropertiesRefID],
-
-					EventUserProperties: eventsOfSession[i].UserProperties,
+					SessionPageCount:      onlyThisSessionPageCount,
+					SessionPageSpentTime:  onlyThisSessionPageSpentTime,
+					SessionChannel:        channelOfSessionEvent[userPropertiesRefID],
+					IsSessionEvent:        false,
+					EventUserProperties:   eventsOfSession[i].UserProperties,
 				}
 
 				if C.GetSessionBatchTransactionBatchSize() > 0 {
@@ -1532,6 +1534,17 @@ func (store *MemSQL) addSessionForUser(projectId int64, userId string, userEvent
 				}
 
 				sessionUserPropertiesRecordMap[userPropertiesRefID] = sessionUserProperties
+			}
+
+			// doing this only for non-continued session because initial and latest channel property would already be set and we don't need to change that
+			if !isSessionContinued {
+				sessionUserPropertiesRecordMap[sessionEvent.ID] = model.SessionUserProperties{
+					UserID:                userId,
+					SessionChannel:        channelOfSessionEvent[sessionEvent.ID],
+					EventUserProperties:   newSessionEventUserPropertiesJsonb,
+					IsSessionEvent:        true,
+					SessionEventTimestamp: sessionEvent.Timestamp,
+				}
 			}
 			sessionStartIndex = i + 1
 		}

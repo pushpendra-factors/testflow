@@ -318,6 +318,8 @@ var UP_INITIAL_REFERRER_URL string = "$initial_referrer_url"
 var UP_INITIAL_REFERRER_DOMAIN string = "$initial_referrer_domain"
 var UP_DAY_OF_FIRST_EVENT string = "$day_of_first_event"
 var UP_HOUR_OF_FIRST_EVENT string = "$hour_of_first_event"
+
+// ** INITIAL_CHANNEL is the channel of First session for the user
 var UP_INITIAL_CHANNEL string = "$initial_channel"
 
 var UP_SESSION_COUNT string = "$session_count"
@@ -348,6 +350,8 @@ var UP_LATEST_REVENUE string = "$latest_revenue"
 var UP_LATEST_REFERRER string = "$latest_referrer"
 var UP_LATEST_REFERRER_URL string = "$latest_referrer_url"
 var UP_LATEST_REFERRER_DOMAIN string = "$latest_referrer_domain"
+
+// ** LATEST_CHANNEL is the channel of last session for the user, incase of sessionUserProperties it's the channel of that session
 var UP_LATEST_CHANNEL string = "$latest_channel"
 
 // session properties
