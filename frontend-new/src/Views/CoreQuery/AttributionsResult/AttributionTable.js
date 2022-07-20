@@ -19,7 +19,12 @@ function AttributionTable({
   tableData,
   setSearchText,
   searchText,
-  metricsOptionsPopover
+  metricsOptionsPopover,
+  filters,
+  appliedFilters,
+  setAppliedFilters,
+  filtersVisible,
+  setFiltersVisibility
 }) {
   const getCSVData = () => {
     const dt = tableData;
@@ -55,8 +60,8 @@ function AttributionTable({
           result[`${key} change`] = isNaN(changePercent)
             ? '0%'
             : changePercent === 'Infinity' || changePercent === '-Infinity'
-              ? 'Infinity'
-              : changePercent + '%';
+            ? 'Infinity'
+            : changePercent + '%';
         }
       });
       return result;
@@ -96,6 +101,11 @@ function AttributionTable({
       getCSVData={getCSVData}
       ignoreDocumentClick={section === DASHBOARD_WIDGET_SECTION}
       controlsPopover={metricsOptionsPopover}
+      filters={filters}
+      appliedFilters={appliedFilters}
+      setAppliedFilters={setAppliedFilters}
+      filtersVisible={filtersVisible}
+      setFiltersVisibility={setFiltersVisibility}
     />
   );
 }

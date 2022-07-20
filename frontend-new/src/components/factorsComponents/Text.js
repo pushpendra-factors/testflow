@@ -1,8 +1,9 @@
 import React from 'react';
 import classnames from 'classnames';
-import { Typography, Tooltip } from 'antd';
-const { Title, Paragraph } = Typography;
 import _ from 'lodash';
+import { Typography, Tooltip } from 'antd';
+
+const { Title, Paragraph } = Typography;
 
 const textType = {
   title: 'title',
@@ -11,10 +12,25 @@ const textType = {
 class Text extends React.Component {
   render() {
     const {
-      type, level, size, children, weight, mini, color, lineHeight, align, textCenter, isUppercase, extraClass, truncate = false, charLimit=30, ...otherProps
+      type,
+      level,
+      size,
+      children,
+      weight,
+      mini,
+      color,
+      lineHeight,
+      align,
+      textCenter,
+      isUppercase,
+      extraClass,
+      truncate = false,
+      charLimit = 30,
+      ...otherProps
     } = this.props;
 
-    const defaultFontSize = (type === textType.paragraph) ? (mini ? 7 : 6) : level || size;
+    const defaultFontSize =
+      type === textType.paragraph ? (mini ? 7 : 6) : level || size;
 
     const classList = {
       'fai-text': true,
@@ -42,27 +58,49 @@ class Text extends React.Component {
 
     // (Number.isInteger(isSizeDefined)
     // AntD throws error for level>4
-    const isSizeDefined = level || size; 
-    
+    const isSizeDefined = level || size;
+
     //checks if truncation and is child is string. ignores if its array.
     const isTextTruncatePossible = truncate && !_.isArray(children);
-    const isOverFlow = children?.length>charLimit;
-    let truncatedText = ''; 
-    if(isTextTruncatePossible){
-      truncatedText = truncate ? `${children.slice(0, charLimit)}${isOverFlow?'...':''}` : children; 
+    const isOverFlow = children?.length > charLimit;
+    let truncatedText = '';
+    if (isTextTruncatePossible) {
+      truncatedText = truncate
+        ? `${children.slice(0, charLimit)}${isOverFlow ? '...' : ''}`
+        : children;
     }
 
     if (type === textType.title) {
       const sizeValue = isSizeDefined > 4 ? 4 : isSizeDefined;
-      if(isTextTruncatePossible && isOverFlow){ 
-      return <Tooltip placement={'top'} title={children}>
-        <Title level={sizeValue} {...otherProps} className={classnames({ ...classList })} >{truncatedText}</Title>
-      </Tooltip>;
-      }
-      else return <Title level={sizeValue} {...otherProps} className={classnames({ ...classList })} >{children}</Title> 
+      if (isTextTruncatePossible && isOverFlow) {
+        return (
+          <Tooltip placement={'top'} title={children}>
+            <Title
+              level={sizeValue}
+              {...otherProps}
+              className={classnames({ ...classList })}
+            >
+              {truncatedText}
+            </Title>
+          </Tooltip>
+        );
+      } else
+        return (
+          <Title
+            level={sizeValue}
+            {...otherProps}
+            className={classnames({ ...classList })}
+          >
+            {children}
+          </Title>
+        );
     }
     if (type === textType.paragraph) {
-      return <Paragraph {...otherProps} className={classnames({ ...classList })} >{children}</Paragraph>;
+      return (
+        <Paragraph {...otherProps} className={classnames({ ...classList })}>
+          {children}
+        </Paragraph>
+      );
     } else {
       console.error('Invalid type for Text (Factor-Components)');
       return null;

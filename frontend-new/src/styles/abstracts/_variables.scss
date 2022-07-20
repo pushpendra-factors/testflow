@@ -1,47 +1,44 @@
-
 // Functional Colors
 $fa-color--white: #fff;
 $fa-color--black: #000000;
-$fa-color--red: #EA6262;
-$fa-color--red-new: #EE3C3C;
-$fa-color--orange:#EFAA6D;
-$fa-color--green:#5ACA89;
-$fa-color--yellow:#F9C06E;
-$fa-color--blue:#4D7DB4;
+$fa-color--red: #ea6262;
+$fa-color--red-new: #ee3c3c;
+$fa-color--orange: #efaa6d;
+$fa-color--green: #5aca89;
+$fa-color--yellow: #f9c06e;
+$fa-color--blue: #4d7db4;
 
 $fa-color--danger: $fa-color--red;
 $fa-color--warning: $fa-color--orange;
-$fa-color--success:$fa-color--green;
-
+$fa-color--success: $fa-color--green;
 
 //Brand Color
-$fa-color--brand-1:#F8F8FC;
-$fa-color--brand-2:#EEEDF8;
-$fa-color--brand-3:#CDC8EB;
-$fa-color--brand-4:#ACA4DE;
-$fa-color--brand-5:#7A6DC9;
-$fa-color--brand-6:#5949BC; //base brand-color
-$fa-color--brand-7:#473A96;
-$fa-color--brand-8:#352C71;
-$fa-color--brand-9:#2C245E;
-$fa-color--brand-10:#100635;
-// $fa-color--brand-color: $fa-color--brand-6;  
-$fa-color--brand-color: #1E89FF;  
-
+$fa-color--brand-1: #f8f8fc;
+$fa-color--brand-2: #eeedf8;
+$fa-color--brand-3: #cdc8eb;
+$fa-color--brand-4: #aca4de;
+$fa-color--brand-5: #7a6dc9;
+$fa-color--brand-6: #5949bc; //base brand-color
+$fa-color--brand-7: #473a96;
+$fa-color--brand-8: #352c71;
+$fa-color--brand-9: #2c245e;
+$fa-color--brand-10: #100635;
+// $fa-color--brand-color: $fa-color--brand-6;
+$fa-color--brand-color: #1e89ff;
+$fa-color--brand-color-6: #1890ff;
 
 //Mono Colors
-$fa-color--mono-1: #F5F6F8;
-$fa-color--mono-2: #E7E9ED;
-$fa-color--mono-3: #B7BEC8;
-$fa-color--mono-4: #8692A3;
-$fa-color--mono-5: #3E516C;
-$fa-color--mono-6: #0E2647; //Base mono color
-$fa-color--mono-7: #0B1E39;
-$fa-color--mono-8: #08172B;
-$fa-color--mono-9: #08172B;
-$fa-color--mono-10: #08172B; 
+$fa-color--mono-1: #f5f6f8;
+$fa-color--mono-2: #e7e9ed;
+$fa-color--mono-3: #b7bec8;
+$fa-color--mono-4: #8692a3;
+$fa-color--mono-5: #3e516c;
+$fa-color--mono-6: #0e2647; //Base mono color
+$fa-color--mono-7: #0b1e39;
+$fa-color--mono-8: #08172b;
+$fa-color--mono-9: #08172b;
+$fa-color--mono-10: #08172b;
 $fa-color--mono-color: $fa-color--mono-6;
-
 
 // Font Size
 $font-weight--thin: 400;
@@ -49,6 +46,6 @@ $font-weight--regular: 400;
 $font-weight--medium: 500;
 $font-weight--bold: 600;
 
-//Font family 
+//Font family
 $font-family: 'Open Sans', sans-serif !important;
 // $font-family: 'Work Sans', sans-serif !important;

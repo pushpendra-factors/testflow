@@ -1,0 +1,50 @@
+@import '../../styles//abstracts//variables';
+
+.menu {
+  border-radius: 8px !important;
+}
+
+.dropdown-item {
+  padding: 12px !important;
+}
+
+.label-button {
+  background-color: $fa-color--mono-1 !important;
+  padding: 0.25rem 0.75rem !important;
+  border: none !important;
+  max-width: 200px !important;
+  h4 {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: $fa-color--brand-color-6 !important;
+  }
+  &:hover {
+    background-color: $fa-color--mono-1 !important;
+  }
+}
+
+.label-button-left-rounded {
+  border-bottom-left-radius: 2rem !important;
+  border-top-left-radius: 2rem !important;
+}
+
+.label-button-right-rounded {
+  border-bottom-right-radius: 2rem !important;
+  border-top-right-radius: 2rem !important;
+}
+
+.values-popover {
+  padding: 0 !important;
+  // max-height: 400px !important;
+  overflow: auto;
+  min-width: 350px;
+  border-radius: 0.5rem !important;
+  box-shadow: 0px 0px 20px rgba(0, 0, 0, 0.2);
+  :global(.ant-popover-arrow) {
+    display: none;
+  }
+}
+
+.add-filters-button {
+  width: fit-content !important;
+}
