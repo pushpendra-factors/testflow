@@ -74,8 +74,6 @@ function ProfileComposer({
     setQueryOptions(opts);
   };
 
-  console.log("queryOpts: ", queryOptions)
-
   const resetLabel = (group) => {
     const query = Object.assign({}, queries);
     query.label = group.toLowerCase().includes('salesforce')

@@ -46,22 +46,23 @@ const getBarLineChartSeriesKeys = ({
   currentEventIndex = 0,
   headers
 }) => {
-  console.log('groupAnalysis', groupAnalysis);
   if (
     groupAnalysis &&
     groupAnalysis !== ATTRIBUTION_GROUP_ANALYSIS_KEYS.USERS
   ) {
     const query = attrQueries[currentEventIndex];
     const result = [];
-    if (headers.includes(`${query.label} - Conversion Value`)) {
-      result.push(`${query.label} - Conversion Value`);
-    } else {
-      result.push(`${query.label} - Conversion`);
-    }
-    if (headers.includes(`${query.label} - Return on Cost`)) {
-      result.push(`${query.label} - Return on Cost`);
-    } else {
-      result.push(`${query.label} - Cost Per Conversion`);
+    if (query) {
+      if (headers.includes(`${query.label} - Conversion Value`)) {
+        result.push(`${query.label} - Conversion Value`);
+      } else {
+        result.push(`${query.label} - Conversion`);
+      }
+      if (headers.includes(`${query.label} - Return on Cost`)) {
+        result.push(`${query.label} - Return on Cost`);
+      } else {
+        result.push(`${query.label} - Cost Per Conversion`);
+      }
     }
     return result;
   }
