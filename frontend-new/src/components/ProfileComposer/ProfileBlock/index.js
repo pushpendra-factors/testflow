@@ -19,6 +19,7 @@ function ProfileBlock({
   queries,
   activeProject,
   userProperties,
+  groupProperties,
   groupAnalysis,
   queryOptions,
   setQueryOptions,
@@ -78,9 +79,15 @@ function ProfileBlock({
       return undefined;
     }
     const assignFilterProps = Object.assign({}, filterProps);
-    assignFilterProps.user = userProperties;
+    if (groupAnalysis === 'users') {
+      assignFilterProps['user'] = userProperties;
+      assignFilterProps['group'] = [];
+    } else {
+      assignFilterProps['user'] = [];
+      assignFilterProps['group'] = groupProperties[groupAnalysis];
+    }
     setFilterProperties(assignFilterProps);
-  }, [userProperties]);
+  }, [userProperties, groupProperties, groupAnalysis]);
 
   const deleteItem = () => {
     eventChange(event, index - 1, 'delete');
@@ -152,6 +159,7 @@ function ProfileBlock({
         insertFilter={insertFilters}
         closeFilter={closeFilter}
         refValue={refValue}
+        groupName={groupAnalysis}
       ></ProfileFilterWrapper>
     );
   };
@@ -394,6 +402,7 @@ const mapStateToProps = (state) => ({
   eventOptions: state.coreQuery.eventOptions,
   activeProject: state.global.active_project,
   userProperties: state.coreQuery.userProperties,
+  groupProperties: state.coreQuery.groupProperties,
   eventNames: state.coreQuery.eventNames,
 });
 

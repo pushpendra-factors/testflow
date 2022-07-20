@@ -11,6 +11,7 @@ import { DEFAULT_OPERATOR_PROPS } from 'Components/FaFilterSelect/utils';
 import {
   fetchEventPropertyValues,
   fetchUserPropertyValues,
+  fetchGroupPropertyValues,
   fetchChannelObjPropertyValues,
 } from '../../../reducers/coreQuery/services';
 import FAFilterSelect from '../../FaFilterSelect';
@@ -29,13 +30,14 @@ export default function ProfileFilterWrapper({
   event,
   filter,
   delIcon = 'remove',
-  propsConstants = ['user', 'event'],
+  propsConstants = ['user', 'group'],
   extraClass,
   delBtnClass,
   deleteFilter,
   insertFilter,
   closeFilter,
   showOr,
+  groupName
 }) {
   const [filterTypeState, setFilterTypeState] = useState('props');
   const [groupCollapseState, setGroupCollapse] = useState({});
@@ -60,8 +62,8 @@ export default function ProfileFilterWrapper({
   const [filterDropDownOptions, setFiltDD] = useState({
     props: [
       {
-        label: 'Event Properties',
-        icon: 'mouseclick',
+        label: 'Group Properties',
+        icon: 'group',
       },
       {
         label: 'User Properties',
@@ -207,6 +209,25 @@ export default function ProfileFilterWrapper({
           fetchEventPropertyValues(
             activeProject.id,
             event.label,
+            newFilterState.props[0]
+          )
+            .then((res) => {
+              const ddValues = Object.assign({}, dropDownValues);
+              ddValues[newFilterState.props[0]] = [...res.data, '$none'];
+              setDropDownValues(ddValues);
+            })
+            .catch(() => {
+              console.log(err);
+              const ddValues = Object.assign({}, dropDownValues);
+              ddValues[newFilterState.props[0]] = ['$none'];
+              setDropDownValues(ddValues);
+            });
+        }
+      } else if (newFilterState.props[2] === 'group') {
+        if (!dropDownValues[newFilterState.props[0]]) {
+          fetchGroupPropertyValues(
+            activeProject.id,
+            groupName,
             newFilterState.props[0]
           )
             .then((res) => {
@@ -621,6 +642,24 @@ export default function ProfileFilterWrapper({
       } else if (props[3] === 'event') {
         if (!dropDownValues[props[0]]) {
           fetchEventPropertyValues(activeProject.id, event.label, props[1])
+            .then((res) => {
+              const ddValues = Object.assign({}, dropDownValues);
+              ddValues[props[1]] = [...res.data, '$none'];
+              setDropDownValues(ddValues);
+            })
+            .catch((err) => {
+              const ddValues = Object.assign({}, dropDownValues);
+              ddValues[props[0]] = ['$none'];
+              setDropDownValues(ddValues);
+            });
+        }
+      } else if (props[3] === 'group') {
+        if (!dropDownValues[props[0]]) {
+          fetchGroupPropertyValues(
+            activeProject.id,
+            groupName,
+            props[1]
+          )
             .then((res) => {
               const ddValues = Object.assign({}, dropDownValues);
               ddValues[props[1]] = [...res.data, '$none'];
