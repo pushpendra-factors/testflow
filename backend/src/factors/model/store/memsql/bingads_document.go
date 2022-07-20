@@ -909,7 +909,7 @@ func (store *MemSQL) PullBingAdsRows(projectID int64, startTime, endTime int64) 
 	year, month, date = time.Unix(endTime, 0).Date()
 	end := year*10000 + int(month)*100 + date
 
-	rawQuery := fmt.Sprintf("SELECT bing.document_id, bing.value, bing.timestamp, bing.type, sp.properties FROM integration_documents bing "+
+	rawQuery := fmt.Sprintf("SELECT bing.document_id, bing.value, bing.timestamp, bing.document_type, sp.properties FROM integration_documents bing "+
 		"LEFT JOIN smart_properties sp ON sp.project_id = %d AND sp.source = '%s' AND "+
 		"((COALESCE(sp.object_type,1) = 1 AND (sp.object_id = JSON_EXTRACT_STRING(bing.value, 'campaign_id') OR sp.object_id = JSON_EXTRACT_STRING(bing.value, 'base_campaign_id'))) OR "+
 		"(COALESCE(sp.object_type,2) = 2 AND (sp.object_id = JSON_EXTRACT_STRING(bing.value, 'ad_group_id') OR sp.object_id = JSON_EXTRACT_STRING(bing.value, 'base_ad_group_id')))) "+
