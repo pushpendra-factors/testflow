@@ -244,6 +244,11 @@ type Model interface {
 	AssociateSessionByEventIds(projectID int64, userID string, events []*model.Event, sessionId string, sessionEventNameId string) int
 	GetHubspotFormEvents(projectID int64, userId string, timestamps []interface{}) ([]model.Event, int)
 
+	// clickable_elements
+	UpdateButtonClickEventById(projectID int64, request *model.SDKButtonElementAttributesPayload) (int, error)
+	CreateButtonClickEventById(projectId int64, buttonClick *model.SDKButtonElementAttributesPayload) (int, error)
+	GetButtonClickEventById(projectID int64, displayName string, elementType string) (*model.ClickableElements, int)
+
 	// facebook_document
 	CreateFacebookDocument(projectID int64, document *model.FacebookDocument) int
 	GetFacebookSQLQueryAndParametersForFilterValues(projectID int64, requestFilterObject string, requestFilterProperty string, reqID string) (string, []interface{}, int)
