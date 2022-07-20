@@ -144,8 +144,6 @@ func GetSessionNewUsers(queryEvent string, scanner *bufio.Scanner, propFilter []
 		}
 		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
-		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
-
 		//check if new user
 		if !checkNew(eventDetails) {
 			continue
@@ -273,8 +271,6 @@ func GetSessionEngagedSessions(queryEvent string, scanner *bufio.Scanner, propFi
 		}
 		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
-		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
-
 		//check if engaged
 		isEngaged := checkEngagedSession(eventDetails)
 		if !isEngaged {
@@ -316,8 +312,6 @@ func GetSessionEngagedUsers(queryEvent string, scanner *bufio.Scanner, propFilte
 			}
 			continue
 		}
-		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
-
 		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
 		//check if engaged
@@ -407,8 +401,6 @@ func GetSessionTotalTimeOnSite(queryEvent string, scanner *bufio.Scanner, propFi
 		}
 		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
-		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
-
 		if timeSpent, ok := ExistsInProps(U.SP_SPENT_TIME, eventDetails.EventProperties, eventDetails.UserProperties, "ep"); ok {
 			timeOnSite := timeSpent.(float64)
 			addValueToMapForPropsPresent(&totalSessionTime, reqMap, timeOnSite, propsToEval, eventDetails.EventProperties, eventDetails.UserProperties)
@@ -449,8 +441,6 @@ func GetSessionAvgSessionDuration(queryEvent string, scanner *bufio.Scanner, pro
 			}
 			continue
 		}
-		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
-
 		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
 		if timeSpent, ok := ExistsInProps(U.SP_SPENT_TIME, eventDetails.EventProperties, eventDetails.UserProperties, "ep"); ok {
@@ -540,8 +530,6 @@ func GetSessionAvgInitialPageLoadTime(queryEvent string, scanner *bufio.Scanner,
 			}
 			continue
 		}
-		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
-
 		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
 		if time, ok := ExistsInProps(U.SP_INITIAL_PAGE_LOAD_TIME, eventDetails.EventProperties, eventDetails.UserProperties, "ep"); ok {

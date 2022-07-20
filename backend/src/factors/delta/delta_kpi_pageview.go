@@ -71,6 +71,7 @@ func GetPageviewEntrances(queryEvent string, scanner *bufio.Scanner, propFilter 
 		if !checkEntrance(eventDetails, queryEvent) {
 			continue
 		}
+		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
 		addValueToMapForPropsPresent(&entrances, reqMap, 1, propsToEval, eventDetails.EventProperties, eventDetails.UserProperties)
 	}
@@ -105,6 +106,7 @@ func GetPageviewExits(queryEvent string, scanner *bufio.Scanner, propFilter []M.
 			}
 			continue
 		}
+		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
 		if !checkExit(eventDetails, queryEvent) {
 			continue
@@ -258,8 +260,6 @@ func GetPageviewAvgPageLoadTime(queryEvent string, scanner *bufio.Scanner, propF
 		}
 		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
-		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
-
 		if loadTime, ok := ExistsInProps(U.EP_PAGE_LOAD_TIME, eventDetails.EventProperties, eventDetails.UserProperties, "ep"); ok {
 			loadTime := loadTime.(float64)
 			addValuesToFractionForPropsPresent(&avgPageLoadTimeFrac, featInfoMap, loadTime, 1, propsToEval, eventDetails.EventProperties, eventDetails.UserProperties)
@@ -347,8 +347,6 @@ func GetPageviewAvgTimeOnPage(queryEvent string, scanner *bufio.Scanner, propFil
 		}
 		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
-		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
-
 		if time, ok := ExistsInProps(U.EP_PAGE_SPENT_TIME, eventDetails.EventProperties, eventDetails.UserProperties, "ep"); ok {
 			time := time.(float64)
 
@@ -388,8 +386,6 @@ func GetPageviewEngagedPageViews(queryEvent string, scanner *bufio.Scanner, prop
 			}
 			continue
 		}
-		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
-
 		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
 		//check if engaged

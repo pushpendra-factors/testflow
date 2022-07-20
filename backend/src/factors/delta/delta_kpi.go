@@ -25,23 +25,26 @@ func CreateKpiInsights(diskManager *serviceDisk.DiskDriver, cloudManager *filest
 
 	skipW1 := false
 	skipW2 := false
-	{
+	if skipWpi {
 		dateString := U.GetDateOnlyFromTimestampZ(periodCodesWithWeekNMinus1[0].From)
 		path, name := (*cloudManager).GetInsightsWpiFilePathAndName(projectId, dateString, queryId, 100)
 		if reader, err := (*cloudManager).Get(path, name); err == nil {
 			data, err := ioutil.ReadAll(reader)
-			if err == nil && skipWpi {
+			if err == nil {
 				err := json.Unmarshal(data, &oldInsightsList)
 				if err == nil {
 					skipW1 = true
 				}
 			}
 		}
-		dateString = U.GetDateOnlyFromTimestampZ(periodCodesWithWeekNMinus1[1].From)
-		path, name = (*cloudManager).GetInsightsWpiFilePathAndName(projectId, dateString, queryId, 100)
+	}
+
+	if skipWpi2 {
+		dateString := U.GetDateOnlyFromTimestampZ(periodCodesWithWeekNMinus1[1].From)
+		path, name := (*cloudManager).GetInsightsWpiFilePathAndName(projectId, dateString, queryId, 100)
 		if reader, err := (*cloudManager).Get(path, name); err == nil {
 			data, err := ioutil.ReadAll(reader)
-			if err == nil && skipWpi2 {
+			if err == nil {
 				err := json.Unmarshal(data, &newInsightsList)
 				if err == nil {
 					skipW2 = true
@@ -71,34 +74,39 @@ func CreateKpiInsights(diskManager *serviceDisk.DiskDriver, cloudManager *filest
 				kpiProperties = M.KPIPropertiesForFormSubmissions
 			} else if query.DisplayCategory == M.PageViewsDisplayCategory {
 				kpiProperties = M.KPIPropertiesForPageViews
-			} else if query.DisplayCategory == M.GoogleAdsDisplayCategory {
-				for category, propMap := range M.MapOfAdwordsObjectsToPropertiesAndRelated {
-					for prop, info := range propMap {
-						kpiProperties = append(kpiProperties, map[string]string{
-							"name":      M.AdwordsInternalPropertiesToReportsInternal[category+":"+prop],
-							"data_type": info.TypeOfProperty,
-							"entity":    category,
-						})
-					}
-				}
-			} else if query.DisplayCategory == M.BingAdsDisplayCategory {
-				for category, propMap := range M.MapOfBingAdsObjectsToPropertiesAndRelated {
-					for prop, info := range propMap {
-						kpiProperties = append(kpiProperties, map[string]string{
-							"name":      M.BingAdsInternalRepresentationToExternalRepresentationForReports[category+"."+prop],
-							"data_type": info.TypeOfProperty,
-							"entity":    category,
-						})
-					}
-				}
-				// } else if query.DisplayCategory == M.FacebookDisplayCategory {
-				// 	for category, propMap := range M.MapOfFacebookObjectsToPropertiesAndRelated {
-				// 		if category == M.CAFilterAdGroup {
-				// 			category = "ad_set"
+				// } else if query.DisplayCategory == M.GoogleAdsDisplayCategory {
+				// 	for category, propMap := range M.MapOfAdwordsObjectsToPropertiesAndRelated {
+				// 		for prop, info := range propMap {
+				// 			kpiProperties = append(kpiProperties, map[string]string{
+				// 				"name":      M.AdwordsInternalPropertiesToReportsInternal[category+":"+prop],
+				// 				"data_type": info.TypeOfProperty,
+				// 				"entity":    category,
+				// 			})
+				// 		}
+				// 	}
+				// } else if query.DisplayCategory == M.BingAdsDisplayCategory {
+				// 	for category, propMap := range M.MapOfBingAdsObjectsToPropertiesAndRelated {
+				// 		category2 := category
+				// 		if category != M.FilterKeyword {
+				// 			category2 = category + "s"
 				// 		}
 				// 		for prop, info := range propMap {
 				// 			kpiProperties = append(kpiProperties, map[string]string{
-				// 				"name":      M.ObjectToValueInFacebookJobsMapping[category+":"+prop],
+				// 				"name":      M.BingAdsInternalRepresentationToExternalRepresentationForReports[category2+"."+prop],
+				// 				"data_type": info.TypeOfProperty,
+				// 				"entity":    category,
+				// 			})
+				// 		}
+				// 	}
+				// } else if query.DisplayCategory == M.FacebookDisplayCategory {
+				// 	for category, propMap := range M.MapOfFacebookObjectsToPropertiesAndRelated {
+				// 		category2 := category
+				// 		if category == M.CAFilterAdGroup {
+				// 			category2 = "ad_set"
+				// 		}
+				// 		for prop, info := range propMap {
+				// 			kpiProperties = append(kpiProperties, map[string]string{
+				// 				"name":      M.ObjectToValueInFacebookJobsMapping[category2+":"+prop],
 				// 				"data_type": info.TypeOfProperty,
 				// 				"entity":    category,
 				// 			})
@@ -109,12 +117,12 @@ func CreateKpiInsights(diskManager *serviceDisk.DiskDriver, cloudManager *filest
 				// 		kpiProperties = append(kpiProperties, map[string]string{
 				// 			"name":      M.LinkedinCampaignGroup + "_" + prop,
 				// 			"data_type": U.PropertyTypeCategorical,
-				// 			"entity":    M.LinkedinCampaignGroup,
+				// 			"entity":    M.CAFilterCampaign,
 				// 		})
 				// 		kpiProperties = append(kpiProperties, map[string]string{
 				// 			"name":      M.LinkedinCampaign + "_" + prop,
 				// 			"data_type": U.PropertyTypeCategorical,
-				// 			"entity":    M.LinkedinCampaign,
+				// 			"entity":    M.CAFilterAdGroup,
 				// 		})
 				// 	}
 				// } else if query.DisplayCategory == M.GoogleOrganicDisplayCategory {
@@ -123,18 +131,22 @@ func CreateKpiInsights(diskManager *serviceDisk.DiskDriver, cloudManager *filest
 				// 			kpiProperties = append(kpiProperties, map[string]string{
 				// 				"name":      prop,
 				// 				"data_type": info.TypeOfProperty,
-				// 				"entity":    "combined",
+				// 				"entity":    M.CAFilterCampaign,
 				// 			})
 				// 		}
 				// 	}
-				// 	for _, propMap := range M.MapOfObjectsToPropertiesAndRelatedGoogleOrganic {
-				// 		for prop, info := range propMap {
-				// 			kpiProperties = append(kpiProperties, map[string]string{
-				// 				"name":      prop,
-				// 				"data_type": info.TypeOfProperty,
-				// 				"entity":    "page",
-				// 			})
-				// 		}
+				// } else if query.DisplayCategory == M.AllChannelsDisplayCategory {
+				// 	for _, prop := range []string{"id", "name"} {
+				// 		kpiProperties = append(kpiProperties, map[string]string{
+				// 			"name":      M.CAFilterCampaign + "_" + prop,
+				// 			"data_type": U.PropertyTypeCategorical,
+				// 			"entity":    M.CAFilterCampaign,
+				// 		})
+				// 		kpiProperties = append(kpiProperties, map[string]string{
+				// 			"name":      M.CAFilterAdGroup + "_" + prop,
+				// 			"data_type": U.PropertyTypeCategorical,
+				// 			"entity":    M.CAFilterAdGroup,
+				// 		})
 				// 	}
 			} else {
 				log.Errorf("no kpi Insights for category: %s", query.DisplayCategory)
@@ -356,57 +368,67 @@ func GetMetricsEvaluated(category string, metricNames []string, queryEvent strin
 	diskManager *serviceDisk.DiskDriver, insightGranularity string) (*WithinPeriodInsightsKpi, error) {
 
 	var insights *WithinPeriodInsightsKpi
-	var scanner *bufio.Scanner
 	var err error
 	var spectrum string
+	var scanner *bufio.Scanner
 	var GetMetrics func(metricNames []string, queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*WithinPeriodInsightsKpi, error)
-	if category == M.WebsiteSessionDisplayCategory {
-		GetMetrics = GetSessionMetrics
-		spectrum = "events"
-	} else if category == M.FormSubmissionsDisplayCategory {
-		GetMetrics = GetFormSubmitMetrics
-		spectrum = "events"
-	} else if category == M.PageViewsDisplayCategory {
-		GetMetrics = GetPageViewMetrics
-		spectrum = "events"
-	} else if category == M.GoogleAdsDisplayCategory {
-		GetMetrics = GetCampaignMetricsInfo
-		queryEvent = M.ADWORDS
-		spectrum = "campaign"
-	} else if category == M.BingAdsDisplayCategory {
-		GetMetrics = GetCampaignMetricsInfo
-		queryEvent = M.BINGADS
-		spectrum = "campaign"
-		// } else if category == M.FacebookDisplayCategory {
-		// 	GetMetrics = GetCampaignMetricsInfo
-		// 	queryEvent = M.FACEBOOK
-		// 	spectrum = "campaign"
-		// } else if category == M.LinkedinDisplayCategory {
-		// 	GetMetrics = GetCampaignMetricsInfo
-		// 	queryEvent = M.LINKEDIN
-		// 	spectrum = "campaign"
-		// } else if category == M.GoogleOrganicDisplayCategory {
-		// 	GetMetrics = GetCampaignMetricsInfo
-		// 	queryEvent = M.GOOGLE_ORGANIC
-		// 	spectrum = "campaign"
-	} else {
+
+	if category == M.AllChannelsDisplayCategory {
+		// insights, err = GetAllChannelMetricsInfo(metricNames, "all_ads", propFilter, propsToEval, projectId, periodCode, cloudManager, diskManager, insightGranularity)
+		// spectrum = "campaign"
 		err := fmt.Errorf("no kpi Insights for category: %s", category)
 		log.WithError(err).Error("not computing insights for this category")
 		return insights, err
+	} else {
+		if category == M.WebsiteSessionDisplayCategory {
+			GetMetrics = GetSessionMetrics
+			spectrum = "events"
+		} else if category == M.FormSubmissionsDisplayCategory {
+			GetMetrics = GetFormSubmitMetrics
+			spectrum = "events"
+		} else if category == M.PageViewsDisplayCategory {
+			GetMetrics = GetPageViewMetrics
+			spectrum = "events"
+			// } else if category == M.GoogleAdsDisplayCategory {
+			// 	GetMetrics = GetCampaignMetricsInfo
+			// 	queryEvent = M.ADWORDS
+			// 	spectrum = "campaign"
+			// } else if category == M.BingAdsDisplayCategory {
+			// 	GetMetrics = GetCampaignMetricsInfo
+			// 	queryEvent = M.BINGADS
+			// 	spectrum = "campaign"
+			// } else if category == M.FacebookDisplayCategory {
+			// 	GetMetrics = GetCampaignMetricsInfo
+			// 	queryEvent = M.FACEBOOK
+			// 	spectrum = "campaign"
+			// } else if category == M.LinkedinDisplayCategory {
+			// 	GetMetrics = GetCampaignMetricsInfo
+			// 	queryEvent = M.LINKEDIN
+			// 	spectrum = "campaign"
+			// } else if category == M.GoogleOrganicDisplayCategory {
+			// 	GetMetrics = GetCampaignMetricsInfo
+			// 	queryEvent = M.GOOGLE_ORGANIC
+			// 	spectrum = "campaign"
+		} else {
+			err := fmt.Errorf("no kpi Insights for category: %s", category)
+			log.WithError(err).Error("not computing insights for this category")
+			return insights, err
+		}
+
+		if spectrum == "events" {
+			if scanner, err = GetEventFileScanner(projectId, periodCode, cloudManager, diskManager, insightGranularity, true); err != nil {
+				log.WithError(err).Error("failed getting event file scanner")
+				return nil, err
+			}
+		} else if spectrum == "campaign" {
+			if scanner, err = GetChannelFileScanner(queryEvent, projectId, periodCode, cloudManager, diskManager, insightGranularity, true); err != nil {
+				log.WithError(err).Error("failed getting " + queryEvent + " file scanner")
+				return nil, err
+			}
+		}
+		insights, err = GetMetrics(metricNames, queryEvent, scanner, propFilter, propsToEval)
 	}
 
-	if spectrum == "events" {
-		if scanner, err = GetEventFileScanner(projectId, periodCode, cloudManager, diskManager, insightGranularity, true); err != nil {
-			log.WithError(err).Error("failed getting event file scanner")
-			return nil, err
-		}
-	} else if spectrum == "campaign" {
-		if scanner, err = GetChannelFileScanner(queryEvent, projectId, periodCode, cloudManager, diskManager, insightGranularity, true); err != nil {
-			log.WithError(err).Error("failed getting adwords file scanner")
-			return nil, err
-		}
-	}
-	insights, err = GetMetrics(metricNames, queryEvent, scanner, propFilter, propsToEval)
 	insights.Category = spectrum
 	return insights, err
 }
@@ -461,78 +483,12 @@ func eventSatisfiesConstraints(eventDetails P.CounterEventFormat, propFilter []M
 			eventVal = val
 		}
 
-		if filter.PropertyDataType == U.PropertyTypeCategorical {
-			eventVal := eventVal.(string)
-			if filter.Condition == M.EqualsOpStr {
-				if eventVal != filter.Value {
-					return false, nil
-				}
-			} else if filter.Condition == M.NotEqualOpStr {
-				if eventVal == filter.Value {
-					return false, nil
-				}
-			} else if filter.Condition == M.ContainsOpStr {
-				if !strings.Contains(eventVal, filter.Value) {
-					return false, nil
-				}
-			} else if filter.Condition == M.NotContainsOpStr {
-				if strings.Contains(eventVal, filter.Value) {
-					return false, nil
-				}
-			} else {
-				return false, fmt.Errorf("")
-			}
-		} else if filter.PropertyDataType == U.PropertyTypeNumerical {
-			eventVal := eventVal.(float64)
-			filterVal, err := strconv.ParseFloat(filter.Value, 64)
-			if err != nil {
-				log.WithError(err).Error("error Decoding Float64 filter value")
-				return false, err
-			}
-			if filter.Condition == M.EqualsOp {
-				if eventVal != filterVal {
-					return false, nil
-				}
-			} else if filter.Condition == M.NotEqualOp {
-				if eventVal == filterVal {
-					return false, nil
-				}
-			} else if filter.Condition == M.LesserThanOpStr {
-				if eventVal >= filterVal {
-					return false, nil
-				}
-			} else if filter.Condition == M.LesserThanOrEqualOpStr {
-				if eventVal > filterVal {
-					return false, nil
-				}
-			} else if filter.Condition == M.GreaterThanOpStr {
-				if eventVal <= filterVal {
-					return false, nil
-				}
-			} else if filter.Condition == M.GreaterThanOrEqualOpStr {
-				if eventVal < filterVal {
-					return false, nil
-				}
-			} else {
-				return false, fmt.Errorf("")
-			}
-		} else if filter.PropertyDataType == U.PropertyTypeDateTime {
-			eventVal := eventVal.(float64)
-
-			dateTimeFilter, err := M.DecodeDateTimePropertyValue(filter.Value)
-			if err != nil {
-				log.WithError(err).Error("error Decoding filter value")
-				return false, err
-			}
-			propVal := fmt.Sprintf("%v", int64(eventVal))
-			propertyValue, _ := strconv.ParseInt(propVal, 10, 64)
-			if !(propertyValue >= dateTimeFilter.From && propertyValue <= dateTimeFilter.To) {
-				return false, nil
-			}
-		} else if filter.PropertyDataType == U.PropertyTypeUnknown {
-			return false, fmt.Errorf("property type unknown for %s", propName)
-		} else {
-			return false, fmt.Errorf("strange property type: %s", filter.PropertyDataType)
+		ok, err := checkValSatisfiesFilterCondition(filter, eventVal)
+		if err != nil {
+			return false, err
+		}
+		if !ok {
+			return false, nil
 		}
 	}
 	return true, nil
@@ -551,78 +507,12 @@ func campaignSatisfiesConstraints(campaignDetails CounterCampaignFormat, propFil
 			eventVal = val
 		}
 
-		if filter.PropertyDataType == U.PropertyTypeCategorical {
-			eventVal := eventVal.(string)
-			if filter.Condition == M.EqualsOpStr {
-				if eventVal != filter.Value {
-					return false, nil
-				}
-			} else if filter.Condition == M.NotEqualOpStr {
-				if eventVal == filter.Value {
-					return false, nil
-				}
-			} else if filter.Condition == M.ContainsOpStr {
-				if !strings.Contains(eventVal, filter.Value) {
-					return false, nil
-				}
-			} else if filter.Condition == M.NotContainsOpStr {
-				if strings.Contains(eventVal, filter.Value) {
-					return false, nil
-				}
-			} else {
-				return false, fmt.Errorf("")
-			}
-		} else if filter.PropertyDataType == U.PropertyTypeNumerical {
-			eventVal := eventVal.(float64)
-			filterVal, err := strconv.ParseFloat(filter.Value, 64)
-			if err != nil {
-				log.WithError(err).Error("error Decoding Float64 filter value")
-				return false, err
-			}
-			if filter.Condition == M.EqualsOp {
-				if eventVal != filterVal {
-					return false, nil
-				}
-			} else if filter.Condition == M.NotEqualOp {
-				if eventVal == filterVal {
-					return false, nil
-				}
-			} else if filter.Condition == M.LesserThanOpStr {
-				if eventVal >= filterVal {
-					return false, nil
-				}
-			} else if filter.Condition == M.LesserThanOrEqualOpStr {
-				if eventVal > filterVal {
-					return false, nil
-				}
-			} else if filter.Condition == M.GreaterThanOpStr {
-				if eventVal <= filterVal {
-					return false, nil
-				}
-			} else if filter.Condition == M.GreaterThanOrEqualOpStr {
-				if eventVal < filterVal {
-					return false, nil
-				}
-			} else {
-				return false, fmt.Errorf("")
-			}
-		} else if filter.PropertyDataType == U.PropertyTypeDateTime {
-			eventVal := eventVal.(float64)
-
-			dateTimeFilter, err := M.DecodeDateTimePropertyValue(filter.Value)
-			if err != nil {
-				log.WithError(err).Error("error Decoding filter value")
-				return false, err
-			}
-			propVal := fmt.Sprintf("%v", int64(eventVal))
-			propertyValue, _ := strconv.ParseInt(propVal, 10, 64)
-			if !(propertyValue >= dateTimeFilter.From && propertyValue <= dateTimeFilter.To) {
-				return false, nil
-			}
-		} else if filter.PropertyDataType == U.PropertyTypeUnknown {
-			return false, fmt.Errorf("property type unknown for %s", propName)
-		} else {
-			return false, fmt.Errorf("strange property type: %s", filter.PropertyDataType)
+		ok, err := checkValSatisfiesFilterCondition(filter, eventVal)
+		if err != nil {
+			return false, err
+		}
+		if !ok {
+			return false, nil
 		}
 	}
 	return true, nil
@@ -698,7 +588,7 @@ func addValueToMapForPropsPresent(globalVal *float64, featMap map[string]map[str
 			pt = "either"
 		}
 		if val, ok := ExistsInProps(prop, propMap1, propMap2, pt); ok {
-			val := fmt.Sprintf("%s", val)
+			val, _ := getStringValueFromInterface(val)
 			if _, ok := featMap[propWithType]; !ok {
 				featMap[propWithType] = make(map[string]float64)
 			}
@@ -718,13 +608,19 @@ func addValueToMapForPropsPresentUser(globalVal *float64, featMap map[string]map
 		prop := propTypeName[1]
 		propType := propTypeName[0]
 		if val, ok := ExistsInProps(prop, eventDetails.EventProperties, eventDetails.UserProperties, propType); ok {
-			val := fmt.Sprintf("%s", val)
+			val, _ := getStringValueFromInterface(val)
 			propWithVal := strings.Join([]string{prop, val}, ":")
 			if _, ok := uniqueUsersFeat[propWithVal]; !ok {
 				uniqueUsersFeat[propWithVal] = make(map[string]bool)
 			}
 			if _, ok := uniqueUsersFeat[propWithVal][uid]; !ok {
 				uniqueUsersFeat[propWithVal][uid] = true
+				if _, ok := featMap[propWithType]; !ok {
+					featMap[propWithType] = make(map[string]float64)
+				}
+				featMap[propWithType][val] += valueToBeAdded
+			} else if valueToBeAdded == -1 {
+				delete(uniqueUsersFeat[propWithVal], uid)
 				if _, ok := featMap[propWithType]; !ok {
 					featMap[propWithType] = make(map[string]float64)
 				}
@@ -748,7 +644,7 @@ func addValuesToFractionForPropsPresent(globalVal *Fraction, featMap map[string]
 			pt = "either"
 		}
 		if val, ok := ExistsInProps(prop, firstMap, secondMap, pt); ok {
-			val := fmt.Sprintf("%s", val)
+			val, _ := getStringValueFromInterface(val)
 			if _, ok := featMap[propWithType]; !ok {
 				featMap[propWithType] = make(map[string]Fraction)
 			}
@@ -775,7 +671,7 @@ func addValuesToFractionForPropsPresentUser(globalVal *Fraction, featMap map[str
 		prop := propTypeName[1]
 		propType := propTypeName[0]
 		if val, ok := ExistsInProps(prop, eventDetails.EventProperties, eventDetails.UserProperties, propType); ok {
-			val := fmt.Sprintf("%s", val)
+			val, _ := getStringValueFromInterface(val)
 			if _, ok := featMap[propWithType]; !ok {
 				featMap[propWithType] = make(map[string]Fraction)
 			}
@@ -833,4 +729,81 @@ func addToScale(globalScale *float64, scaleMap map[string]map[string]float64, pr
 			scaleMap[propWithType][val] += 1
 		}
 	}
+}
+
+func checkValSatisfiesFilterCondition(filter M.KPIFilter, eventVal interface{}) (bool, error) {
+	if filter.PropertyDataType == U.PropertyTypeCategorical {
+		eventVal := eventVal.(string)
+		if filter.Condition == M.EqualsOpStr {
+			if eventVal != filter.Value {
+				return false, nil
+			}
+		} else if filter.Condition == M.NotEqualOpStr {
+			if eventVal == filter.Value {
+				return false, nil
+			}
+		} else if filter.Condition == M.ContainsOpStr {
+			if !strings.Contains(eventVal, filter.Value) {
+				return false, nil
+			}
+		} else if filter.Condition == M.NotContainsOpStr {
+			if strings.Contains(eventVal, filter.Value) {
+				return false, nil
+			}
+		} else {
+			return false, fmt.Errorf("unknown filter condition - %s", filter.Condition)
+		}
+	} else if filter.PropertyDataType == U.PropertyTypeNumerical {
+		eventVal := eventVal.(float64)
+		filterVal, err := strconv.ParseFloat(filter.Value, 64)
+		if err != nil {
+			log.WithError(err).Error("error Decoding Float64 filter value")
+			return false, err
+		}
+		if filter.Condition == M.EqualsOp {
+			if eventVal != filterVal {
+				return false, nil
+			}
+		} else if filter.Condition == M.NotEqualOp {
+			if eventVal == filterVal {
+				return false, nil
+			}
+		} else if filter.Condition == M.LesserThanOpStr {
+			if eventVal >= filterVal {
+				return false, nil
+			}
+		} else if filter.Condition == M.LesserThanOrEqualOpStr {
+			if eventVal > filterVal {
+				return false, nil
+			}
+		} else if filter.Condition == M.GreaterThanOpStr {
+			if eventVal <= filterVal {
+				return false, nil
+			}
+		} else if filter.Condition == M.GreaterThanOrEqualOpStr {
+			if eventVal < filterVal {
+				return false, nil
+			}
+		} else {
+			return false, fmt.Errorf("unknown filter condition - %s", filter.Condition)
+		}
+	} else if filter.PropertyDataType == U.PropertyTypeDateTime {
+		eventVal := eventVal.(float64)
+
+		dateTimeFilter, err := M.DecodeDateTimePropertyValue(filter.Value)
+		if err != nil {
+			log.WithError(err).Error("error Decoding filter value")
+			return false, err
+		}
+		propVal := fmt.Sprintf("%v", int64(eventVal))
+		propertyValue, _ := strconv.ParseInt(propVal, 10, 64)
+		if !(propertyValue >= dateTimeFilter.From && propertyValue <= dateTimeFilter.To) {
+			return false, nil
+		}
+	} else if filter.PropertyDataType == U.PropertyTypeUnknown {
+		return false, fmt.Errorf("property type unknown for %s", filter.PropertyName)
+	} else {
+		return false, fmt.Errorf("strange property type: %s", filter.PropertyDataType)
+	}
+	return true, nil
 }

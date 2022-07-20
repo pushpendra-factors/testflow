@@ -58,6 +58,7 @@ func GetFormSubmitCount(queryEvent string, scanner *bufio.Scanner, propFilter []
 			}
 			continue
 		}
+		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
 		addValueToMapForPropsPresent(&count, reqMap, 1, propsToEval, eventDetails.EventProperties, eventDetails.UserProperties)
 	}
@@ -94,6 +95,7 @@ func GetFormSubmitUniqueUsers(queryEvent string, scanner *bufio.Scanner, propFil
 			}
 			continue
 		}
+		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
 		addValueToMapForPropsPresentUser(&unique, reqMap, 1, propsToEval, eventDetails, uniqueUsers, uniqueUsersFeat)
 	}
@@ -131,6 +133,7 @@ func GetFormSubmitCountPerUser(queryEvent string, scanner *bufio.Scanner, propFi
 			}
 			continue
 		}
+		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
 		addValuesToFractionForPropsPresentUser(&countPerUserFrac, featInfoMap, 1, 1, propsToEval, eventDetails, uniqueUsers, uniqueUsersFeat)
 	}

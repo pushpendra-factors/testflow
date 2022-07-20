@@ -3,22 +3,70 @@ package delta
 import (
 	M "factors/model/model"
 	"factors/model/store/memsql"
+	"fmt"
+	"strings"
 )
 
 var bingadsRequiredDocumentTypes = []int{1, 2, 3, 4, 5, 6} //Refer M.BingadsDocumentTypeAlias for clarity
 
 var bingadsMetricToCalcInfo = map[string]MetricCalculationInfo{
-	M.Impressions: {Props: []PropInfo{{Name: M.Impressions}}, Operation: "sum"},
-	M.Clicks:      {Props: []PropInfo{{Name: M.Clicks}}, Operation: "sum"},
-	"spend":       {Props: []PropInfo{{Name: "spend"}}, Operation: "sum"},
-	M.Conversions: {Props: []PropInfo{{Name: M.Conversions}}, Operation: "sum"},
+	M.Impressions: {
+		Props:     []PropInfo{{Name: M.Impressions}},
+		Operation: "sum",
+	},
+	M.Clicks: {
+		Props:     []PropInfo{{Name: M.Clicks}},
+		Operation: "sum",
+	},
+	"spend": {
+		Props:     []PropInfo{{Name: "spend"}},
+		Operation: "sum",
+	},
+	M.Conversions: {
+		Props:     []PropInfo{{Name: M.Conversions}},
+		Operation: "sum",
+	},
 }
 
 var bingadsConstantInfo = map[string]string{
 	memsql.CAFilterCampaign: M.FilterCampaign,
 	memsql.CAFilterAdGroup:  M.FilterAdGroup,
 	memsql.CAFilterKeyword:  M.FilterKeyword,
-	"campaign_id":           M.BingadsCampaignID,
-	"ad_group_id":           M.BingadsAdgroupID,
-	"keyword_id":            M.BingadsKeywordID,
+	// "campaign_id":           M.BingadsCampaignID,
+	// "ad_group_id":           M.BingadsAdgroupID,
+	// "keyword_id":            M.BingadsKeywordID,
+}
+
+func getBingadsFilterPropertyReportName(propName string, objectType string) (string, error) {
+	propNameTrimmed := strings.TrimPrefix(propName, objectType+"_")
+
+	if _, ok := bingadsConstantInfo[objectType]; !ok {
+		return "", fmt.Errorf("unknown object type: %s", objectType)
+	}
+	if name, ok := M.BingAdsInternalRepresentationToExternalRepresentationForReports[fmt.Sprintf("%s.%s", bingadsConstantInfo[objectType], propNameTrimmed)]; ok {
+		return name, nil
+	}
+	return "", fmt.Errorf("filter property report name not found for %s", propName)
+}
+
+func getBingadsPropertyFilterName(prop string) (string, error) {
+	propWithType := strings.SplitN(prop, "#", 2)
+	objType := propWithType[0]
+	name := propWithType[1]
+
+	if _, ok := bingadsConstantInfo[objType]; !ok {
+		return prop, fmt.Errorf("unknown object type: %s", objType)
+	}
+
+	for k, v := range M.BingAdsInternalRepresentationToExternalRepresentationForReports {
+		if v == name {
+			tmpProp := strings.SplitN(k, ".", 2)
+			if tmpProp[0] == bingadsConstantInfo[objType] {
+				reqName := strings.Join([]string{objType, objType + "_" + tmpProp[1]}, "#")
+				return reqName, nil
+			}
+		}
+	}
+
+	return prop, fmt.Errorf("property filter name not found for %s", prop)
 }
