@@ -147,6 +147,19 @@ func (store *MemSQL) GetProfileUserDetailsByID(projectID int64, identity string,
 		return nil, http.StatusInternalServerError
 	}
 
+	activities, sessionCount := store.GetUserActivitiesAndSessionCount(projectID, identity, userId)
+	uniqueUser.UserActivity = activities
+	uniqueUser.WebSessionsCount = sessionCount
+	uniqueUser.GroupInfos = store.GetGroupsForUserTimeline(projectID, uniqueUser)
+
+	return &uniqueUser, http.StatusFound
+}
+
+func (store *MemSQL) GetUserActivitiesAndSessionCount(projectID int64, identity string, userId string) ([]model.ContactActivity, float64) {
+	var userActivity []model.ContactActivity
+	webSessionCount := 0
+
+	db := C.GetServices().Db
 	str := []string{`SELECT event_names.name AS event_name, events1.timestamp AS timestamp, events1.properties AS properties
         FROM (SELECT project_id, event_name_id, timestamp, properties FROM events WHERE 
 			project_id=? AND timestamp <= ? AND 
@@ -159,28 +172,15 @@ func (store *MemSQL) GetProfileUserDetailsByID(projectID int64, identity string,
 	rows, err := db.Raw(eventsQuery, projectID, gorm.NowFunc().Unix(), projectID, identity, projectID).Rows()
 	if err != nil {
 		log.WithError(err).Error("Failed to get events")
-		return nil, http.StatusNotFound
+		return []model.ContactActivity{}, float64(webSessionCount)
 	}
-
-	standardDisplayNames := U.STANDARD_EVENTS_DISPLAY_NAMES
-	_, projectDisplayNames := store.GetDisplayNamesForAllEvents(projectID)
-
-	webSessionCount := 0
-	eventNamePropertiesMap := map[string][]string{
-		U.EVENT_NAME_SESSION:                           {U.EP_PAGE_COUNT, U.EP_CHANNEL, U.EP_CAMPAIGN, U.SP_SESSION_TIME, U.EP_TIMESTAMP, U.EP_REFERRER_URL},
-		U.EVENT_NAME_FORM_SUBMITTED:                    {U.EP_FORM_NAME, U.EP_PAGE_URL, U.EP_TIMESTAMP},
-		U.EVENT_NAME_OFFLINE_TOUCH_POINT:               {U.EP_CHANNEL, U.EP_CAMPAIGN, U.EP_TIMESTAMP},
-		U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED: {U.EP_CAMPAIGN, model.EP_SFCampaignMemberStatus, U.EP_TIMESTAMP},
-		U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED: {U.EP_CAMPAIGN, model.EP_SFCampaignMemberStatus, U.EP_TIMESTAMP},
-	}
-	pageViewPropsList := []string{U.EP_PAGE_SPENT_TIME, U.EP_PAGE_SCROLL_PERCENT, U.EP_PAGE_LOAD_TIME}
-
+	// User Activity
 	for rows.Next() {
 		var contactActivity model.ContactActivity
 		if err := db.ScanRows(rows, &contactActivity); err != nil {
 			log.WithError(err).Error("Failed scanning events list")
+			return []model.ContactActivity{}, float64(webSessionCount)
 		}
-		log.Info("Contact Activity: ", contactActivity)
 		// Session Count workaround
 		if contactActivity.EventName == U.EVENT_NAME_SESSION {
 			webSessionCount += 1
@@ -189,60 +189,26 @@ func (store *MemSQL) GetProfileUserDetailsByID(projectID int64, identity string,
 		properties, err := U.DecodePostgresJsonb(&contactActivity.Properties)
 		if err != nil {
 			log.WithError(err).Error("Failed decoding event properties")
-		}
-
-		if (*properties)[U.EP_IS_PAGE_VIEW] == "true" {
-			contactActivity.DisplayName = "Page View"
-		} else if standardDisplayNames[contactActivity.EventName] != "" {
-			contactActivity.DisplayName = standardDisplayNames[contactActivity.EventName]
-		} else if projectDisplayNames[contactActivity.EventName] != "" {
-			contactActivity.DisplayName = projectDisplayNames[contactActivity.EventName]
 		} else {
-			contactActivity.DisplayName = contactActivity.EventName
+			// Display Names
+			contactActivity.DisplayName = store.GetDisplayNameForTimelineEvents(projectID, contactActivity.EventName, properties)
+			// Filtered Properties
+			contactActivity.Properties = GetFilteredProperties(contactActivity.EventName, properties)
 		}
-
-		// Filter Properties
-		filteredProperties := make(map[string]interface{})
-		_, eventExistsInMap := eventNamePropertiesMap[contactActivity.EventName]
-		if (*properties)[U.EP_IS_PAGE_VIEW] == "true" {
-			for _, prop := range pageViewPropsList {
-				_, propExists := (*properties)[prop]
-				if propExists {
-					filteredProperties[prop] = (*properties)[prop]
-				}
-			}
-			propertiesJSON, err := json.Marshal(filteredProperties)
-			if err != nil {
-				log.WithError(err).Error("filter properties marshal error.")
-			}
-			contactActivity.Properties = postgres.Jsonb{RawMessage: propertiesJSON}
-		} else if eventExistsInMap {
-			for _, prop := range eventNamePropertiesMap[contactActivity.EventName] {
-				_, propExists := (*properties)[prop]
-				if propExists {
-					filteredProperties[prop] = (*properties)[prop]
-				}
-			}
-			propertiesJSON, err := json.Marshal(filteredProperties)
-			if err != nil {
-				log.WithError(err).Error("filter properties marshal error.")
-			}
-			contactActivity.Properties = postgres.Jsonb{RawMessage: propertiesJSON}
-		} else {
-			contactActivity.Properties = postgres.Jsonb{RawMessage: json.RawMessage(`{}`)}
-		}
-		uniqueUser.UserActivity = append(uniqueUser.UserActivity, contactActivity)
+		userActivity = append(userActivity, contactActivity)
 	}
+	return userActivity, float64(webSessionCount)
+}
 
-	uniqueUser.WebSessionsCount = float64(webSessionCount)
-
+func (store *MemSQL) GetGroupsForUserTimeline(projectID int64, userDetails model.ContactDetails) []model.GroupsInfo {
+	var groupsInfo []model.GroupsInfo
 	groups, errCode := store.GetGroups(projectID)
 	if errCode != http.StatusFound {
 		log.WithField("status", errCode).Error("Failed to get groups while adding group info.")
-		return &uniqueUser, http.StatusFound
+		return []model.GroupsInfo{}
 	}
 	if errCode == http.StatusFound && len(groups) == 0 {
-		return &uniqueUser, http.StatusFound
+		return []model.GroupsInfo{}
 	}
 
 	groupsMap := make(map[int]string)
@@ -250,18 +216,75 @@ func (store *MemSQL) GetProfileUserDetailsByID(projectID int64, identity string,
 		groupsMap[value.ID] = U.STANDARD_GROUP_DISPLAY_NAMES[value.Name]
 	}
 
-	if uniqueUser.Group1 {
-		uniqueUser.GroupInfos = append(uniqueUser.GroupInfos, model.GroupsInfo{GroupName: groupsMap[1]})
+	if userDetails.Group1 {
+		groupsInfo = append(groupsInfo, model.GroupsInfo{GroupName: groupsMap[1]})
 	}
-	if uniqueUser.Group2 {
-		uniqueUser.GroupInfos = append(uniqueUser.GroupInfos, model.GroupsInfo{GroupName: groupsMap[2]})
+	if userDetails.Group2 {
+		groupsInfo = append(groupsInfo, model.GroupsInfo{GroupName: groupsMap[2]})
 	}
-	if uniqueUser.Group3 {
-		uniqueUser.GroupInfos = append(uniqueUser.GroupInfos, model.GroupsInfo{GroupName: groupsMap[3]})
+	if userDetails.Group3 {
+		groupsInfo = append(groupsInfo, model.GroupsInfo{GroupName: groupsMap[3]})
 	}
-	if uniqueUser.Group4 {
-		uniqueUser.GroupInfos = append(uniqueUser.GroupInfos, model.GroupsInfo{GroupName: groupsMap[4]})
+	if userDetails.Group4 {
+		groupsInfo = append(groupsInfo, model.GroupsInfo{GroupName: groupsMap[4]})
 	}
+	return groupsInfo
+}
 
-	return &uniqueUser, http.StatusFound
+func (store *MemSQL) GetDisplayNameForTimelineEvents(projectId int64, eventName string, properties *map[string]interface{}) string {
+	var displayName string
+	standardDisplayNames := U.STANDARD_EVENTS_DISPLAY_NAMES
+	_, projectDisplayNames := store.GetDisplayNamesForAllEvents(projectId)
+	if (*properties)[U.EP_IS_PAGE_VIEW] == true {
+		displayName = "Page View"
+	} else if standardDisplayNames[eventName] != "" {
+		displayName = standardDisplayNames[eventName]
+	} else if projectDisplayNames[eventName] != "" {
+		displayName = projectDisplayNames[eventName]
+	} else {
+		displayName = eventName
+	}
+	return displayName
+}
+
+func GetFilteredProperties(eventName string, properties *map[string]interface{}) postgres.Jsonb {
+	var returnProperties postgres.Jsonb
+	eventNamePropertiesMap := map[string][]string{
+		U.EVENT_NAME_SESSION:                           {U.EP_PAGE_COUNT, U.EP_CHANNEL, U.EP_CAMPAIGN, U.SP_SESSION_TIME, U.EP_TIMESTAMP, U.EP_REFERRER_URL},
+		U.EVENT_NAME_FORM_SUBMITTED:                    {U.EP_FORM_NAME, U.EP_PAGE_URL, U.EP_TIMESTAMP},
+		U.EVENT_NAME_OFFLINE_TOUCH_POINT:               {U.EP_CHANNEL, U.EP_CAMPAIGN, U.EP_TIMESTAMP},
+		U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED: {"$salesforce_campaign_name", model.EP_SFCampaignMemberStatus, U.EP_TIMESTAMP},
+		U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED: {"$salesforce_campaign_name", model.EP_SFCampaignMemberStatus, U.EP_TIMESTAMP},
+	}
+	pageViewPropsList := []string{U.EP_IS_PAGE_VIEW, U.EP_PAGE_SPENT_TIME, U.EP_PAGE_SCROLL_PERCENT, U.EP_PAGE_LOAD_TIME}
+	filteredProperties := make(map[string]interface{})
+	_, eventExistsInMap := eventNamePropertiesMap[eventName]
+	if (*properties)[U.EP_IS_PAGE_VIEW] == true {
+		for _, prop := range pageViewPropsList {
+			_, propExists := (*properties)[prop]
+			if propExists {
+				filteredProperties[prop] = (*properties)[prop]
+			}
+		}
+		propertiesJSON, err := json.Marshal(filteredProperties)
+		if err != nil {
+			log.WithError(err).Error("filter properties marshal error.")
+		}
+		returnProperties = postgres.Jsonb{RawMessage: propertiesJSON}
+	} else if eventExistsInMap {
+		for _, prop := range eventNamePropertiesMap[eventName] {
+			_, propExists := (*properties)[prop]
+			if propExists {
+				filteredProperties[prop] = (*properties)[prop]
+			}
+		}
+		propertiesJSON, err := json.Marshal(filteredProperties)
+		if err != nil {
+			log.WithError(err).Error("filter properties marshal error.")
+		}
+		returnProperties = postgres.Jsonb{RawMessage: propertiesJSON}
+	} else {
+		returnProperties = postgres.Jsonb{RawMessage: json.RawMessage(`{}`)}
+	}
+	return returnProperties
 }

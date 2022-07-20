@@ -185,12 +185,6 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 	// Event 1 : Page View
 	timestamp := U.UnixTimeBeforeDuration(1 * time.Hour)
 	randomURL := RandomURL()
-	pageViewProperties := map[string]interface{}{
-		U.EP_IS_PAGE_VIEW:        "true",
-		U.EP_PAGE_SPENT_TIME:     "60",
-		U.EP_PAGE_SCROLL_PERCENT: "50",
-		U.EP_PAGE_LOAD_TIME:      "10",
-	}
 	trackPayload := SDK.TrackPayload{
 		EventId:         "",
 		UserId:          createdUserID,
@@ -198,11 +192,11 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 		IsNewUser:       false,
 		Name:            randomURL,
 		CustomerEventId: new(string),
-		EventProperties: pageViewProperties,
+		EventProperties: map[string]interface{}{},
 		UserProperties:  map[string]interface{}{},
 		Timestamp:       timestamp,
 		ProjectId:       project.ID,
-		Auto:            false,
+		Auto:            true,
 		ClientIP:        "",
 		UserAgent:       "",
 		SmartEventType:  "",
@@ -302,7 +296,7 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 	// Event 5 : Campaign Member Created
 	timestamp = timestamp - 10000
 	campCreatedProperties := map[string]interface{}{
-		U.EP_CAMPAIGN:                   "CampaignName",
+		"$salesforce_campaign_name":     "Campaign Name",
 		model.EP_SFCampaignMemberStatus: "CurrentStatus",
 	}
 	trackPayload = SDK.TrackPayload{
@@ -330,7 +324,7 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 	// Event 6 : Campaign Member Updated
 	timestamp = timestamp - 10000
 	campUpdatedProperties := map[string]interface{}{
-		U.EP_CAMPAIGN:                   "CampaignName",
+		"$salesforce_campaign_name":     "Campaign Name",
 		model.EP_SFCampaignMemberStatus: "CurrentStatus",
 	}
 	trackPayload = SDK.TrackPayload{
@@ -393,10 +387,10 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 		U.EVENT_NAME_SESSION:                           {U.EP_PAGE_COUNT, U.EP_CHANNEL, U.EP_CAMPAIGN, U.SP_SESSION_TIME, U.EP_TIMESTAMP, U.EP_REFERRER_URL},
 		U.EVENT_NAME_FORM_SUBMITTED:                    {U.EP_FORM_NAME, U.EP_PAGE_URL, U.EP_TIMESTAMP},
 		U.EVENT_NAME_OFFLINE_TOUCH_POINT:               {U.EP_CHANNEL, U.EP_CAMPAIGN, U.EP_TIMESTAMP},
-		U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED: {U.EP_CAMPAIGN, model.EP_SFCampaignMemberStatus, U.EP_TIMESTAMP},
-		U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED: {U.EP_CAMPAIGN, model.EP_SFCampaignMemberStatus, U.EP_TIMESTAMP},
+		U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED: {"$salesforce_campaign_name", model.EP_SFCampaignMemberStatus, U.EP_TIMESTAMP},
+		U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED: {"$salesforce_campaign_name", model.EP_SFCampaignMemberStatus, U.EP_TIMESTAMP},
 	}
-	pageViewPropsList := []string{U.EP_PAGE_SPENT_TIME, U.EP_PAGE_SCROLL_PERCENT, U.EP_PAGE_LOAD_TIME}
+	pageViewPropsList := []string{U.EP_IS_PAGE_VIEW, U.EP_PAGE_SPENT_TIME, U.EP_PAGE_SCROLL_PERCENT, U.EP_PAGE_LOAD_TIME}
 
 	t.Run("Success", func(t *testing.T) {
 		w := sendGetProfileUserDetailsRequest(r, project.ID, agent, userId, isAnonymous)

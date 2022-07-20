@@ -15905,6 +15905,7 @@ video {
 
 .break-words {
   overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .break-all {
@@ -16007,6 +16008,10 @@ video {
 
 .w-2\/3 {
   width: 66.666667%;
+}
+
+.max-w-2\/3 {
+  max-width: 66.666667%;
 }
 
 .w-1\/4 {

@@ -90,7 +90,7 @@ function ContactDetails({ onCancel, userDetails }) {
             .filter(
               (value, index, self) =>
                 index ===
-                self.findIndex((t) => t.event_name === value.event_name)
+                self.findIndex((t) => t.display_name === value.display_name)
             )
             .map((option) => {
               return (
@@ -105,7 +105,7 @@ function ContactDetails({ onCancel, userDetails }) {
                     />
                   </div>
                   <Text mini extraClass='mb-0 truncate' type='paragraph'>
-                    {option.display_name || option.event_name}
+                    {option.display_name}
                   </Text>
                 </div>
               );
