@@ -1642,10 +1642,16 @@ func TestSmartCRMFilterAnyChange(t *testing.T) {
 
 	currentProperties := make(map[string]interface{})
 	prevProperties := make(map[string]interface{})
+	currentProperties["page_spent_time"] = ""
+	prevProperties["page_spent_time"] = nil
+
+	smartEvent, rPrevProperties, ok := IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
+	assert.Equal(t, false, ok)
+
 	currentProperties["page_spent_time"] = 7
 	prevProperties["page_spent_time"] = 2
 
-	smartEvent, rPrevProperties, ok := IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
+	smartEvent, rPrevProperties, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
 	assert.Equal(t, true, ok)
 	assert.Equal(t, prevProperties, *rPrevProperties)
 	assert.Contains(t, smartEvent.Properties, "$curr_salesforce_contact_page_spent_time")
