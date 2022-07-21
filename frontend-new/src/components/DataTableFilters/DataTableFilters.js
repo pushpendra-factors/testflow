@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { Fragment, useCallback, useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import { noop } from 'lodash';
 import cx from 'classnames';
@@ -7,13 +7,17 @@ import { Text, SVG } from '../factorsComponents';
 import { BUTTON_SIZES, BUTTON_TYPES } from '../../constants/buttons.constants';
 import styles from './dataTableFilters.module.scss';
 import ValuesMenu from './components/ValuesMenu';
-import { EQUALITY_OPERATOR_MENU } from './dataTableFilters.constants';
+import {
+  EQUALITY_OPERATOR_MENU,
+  CATEGORY_COMBINATION_OPERATOR_MENU
+} from './dataTableFilters.constants';
 import {
   getUpdatedFiltersOnCategoryChange,
   getUpdatedFiltersOnEqualityOperatorChange,
   getUpdatedFiltersOnCategoryDelete,
   getUpdatedFiltersOnValueChange
 } from './dataTableFilters.helpers';
+import ControlledComponent from '../ControlledComponent/ControlledComponent';
 
 const DataTableFilters = ({
   filters,
@@ -70,6 +74,15 @@ const DataTableFilters = ({
     });
   }, []);
 
+  const handleCategoryCombinationOperatorChange = useCallback((option) => {
+    setSelectedFilters((currentFilters) => {
+      return {
+        ...currentFilters,
+        categoryCombinationOperator: option.key
+      };
+    });
+  }, []);
+
   const handleFiltersApply = useCallback(() => {
     setAppliedFilters(selectedFilters);
   }, [selectedFilters, setAppliedFilters]);
@@ -94,10 +107,30 @@ const DataTableFilters = ({
     );
   };
 
+  const getCategoryCombinationOperatorMenu = () => {
+    return (
+      <Menu className={styles.menu}>
+        {CATEGORY_COMBINATION_OPERATOR_MENU.map((option) => {
+          return (
+            <Menu.Item
+              className={styles['dropdown-item']}
+              key={option.key}
+              onClick={handleCategoryCombinationOperatorChange}
+            >
+              <Text type="title" level={7} color="grey-6">
+                {option.title}
+              </Text>
+            </Menu.Item>
+          );
+        })}
+      </Menu>
+    );
+  };
+
   const getEqualityOperatorMenu = (categoryIndex) => {
     return (
       <Menu className={styles.menu}>
-        {EQUALITY_OPERATOR_MENU.map((option, index) => {
+        {EQUALITY_OPERATOR_MENU.map((option) => {
           return (
             <Menu.Item
               className={styles['dropdown-item']}
@@ -159,6 +192,54 @@ const DataTableFilters = ({
     );
   };
 
+  const renderCategoryCombinationDropdown = (index) => {
+    return (
+      <Fragment>
+        <ControlledComponent
+          controller={
+            selectedFilters.categories != null &&
+            selectedFilters.categories.length > 1 &&
+            index === 0
+          }
+        >
+          <Dropdown
+            overlayClassName="rounded-lg w-20"
+            trigger="click"
+            overlay={getCategoryCombinationOperatorMenu()}
+          >
+            <Button
+              className="flex items-center"
+              disabled
+              type={BUTTON_TYPES.PLAIN}
+            >
+              <Text type="title" level={7}>
+                {selectedFilters.categoryCombinationOperator}
+              </Text>
+              <SVG size={14} name="chevronDown" />
+            </Button>
+          </Dropdown>
+        </ControlledComponent>
+        <ControlledComponent
+          controller={
+            selectedFilters.categories != null &&
+            selectedFilters.categories.length > 1 &&
+            index > 0
+          }
+        >
+          <Button
+            className={styles['disabled-button']}
+            disabled
+            type={BUTTON_TYPES.PLAIN}
+          >
+            <Text type="title" level={7}>
+              {selectedFilters.categoryCombinationOperator}
+            </Text>
+          </Button>
+        </ControlledComponent>
+      </Fragment>
+    );
+  };
+
   const renderSelectedFilters = () => {
     if (selectedFilters.categories == null) {
       return null;
@@ -177,40 +258,43 @@ const DataTableFilters = ({
           const selectedOptions = category.values;
 
           return (
-            <div key={category.key} className="flex col-gap-px items-center">
-              <Dropdown
-                overlayClassName="rounded-lg"
-                trigger="click"
-                overlay={getCategoryMenu(index)}
-              >
-                {renderLabelButton({ label, leftRounded: true })}
-              </Dropdown>
-              <Dropdown
-                overlayClassName="rounded-lg"
-                trigger="click"
-                overlay={getEqualityOperatorMenu(index)}
-              >
-                {renderLabelButton({ label: equalityOperator })}
-              </Dropdown>
-              <Popover
-                overlayClassName={styles['values-popover']}
-                trigger="click"
-                placement="bottomRight"
-                content={categoryValuesMenu.bind(
-                  null,
-                  options,
-                  selectedOptions,
-                  index
-                )}
-              >
-                {renderLabelButton({
-                  label:
-                    selectedOptions.length === 0
-                      ? 'Select values'
-                      : selectedOptions.join(', ')
-                })}
-              </Popover>
-              {renderCrossIcon(index)}
+            <div className="flex col-gap-1 items-center">
+              <div key={category.key} className="flex col-gap-px items-center">
+                <Dropdown
+                  overlayClassName="rounded-lg"
+                  trigger="click"
+                  overlay={getCategoryMenu(index)}
+                >
+                  {renderLabelButton({ label, leftRounded: true })}
+                </Dropdown>
+                <Dropdown
+                  overlayClassName="rounded-lg"
+                  trigger="click"
+                  overlay={getEqualityOperatorMenu(index)}
+                >
+                  {renderLabelButton({ label: equalityOperator })}
+                </Dropdown>
+                <Popover
+                  overlayClassName={styles['values-popover']}
+                  trigger="click"
+                  placement="bottomRight"
+                  content={categoryValuesMenu.bind(
+                    null,
+                    options,
+                    selectedOptions,
+                    index
+                  )}
+                >
+                  {renderLabelButton({
+                    label:
+                      selectedOptions.length === 0
+                        ? 'Select values'
+                        : selectedOptions.join(', ')
+                  })}
+                </Popover>
+                {renderCrossIcon(index)}
+              </div>
+              {renderCategoryCombinationDropdown(index)}
             </div>
           );
         })}

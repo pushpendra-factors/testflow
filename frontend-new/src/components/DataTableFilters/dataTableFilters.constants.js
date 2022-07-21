@@ -17,24 +17,27 @@ export const EQUALITY_OPERATOR_MENU = [
   }
 ];
 
+export const CATEGORY_COMBINATION_OPERATOR_MENU = [
+  {
+    title: 'AND',
+    key: 'AND'
+  },
+  {
+    title: 'OR',
+    key: 'OR'
+  }
+];
+
 export const DEFAULT_CATEGORY_VALUE = {
   values: [],
   equalityOperator: 'equal'
 };
 
-
 export const TEST_FILTER_OPTIONS = [
   {
     title: 'Campaign Name',
     key: 'Campaign_Name',
-    options: [
-      'option1',
-      'option2',
-      'option3',
-      'option4',
-      'option5',
-      'option6'
-    ]
+    options: ['option1', 'option2', 'option3', 'option4', 'option5', 'option6']
   },
   {
     title: 'AdGroup Name',
