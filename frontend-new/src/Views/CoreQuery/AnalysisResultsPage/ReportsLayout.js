@@ -54,7 +54,6 @@ function ReportsLayout({
   campaignState,
   composerFunctions,
   updateChartTypes,
-  queryOptions,
   ...rest
 }) {
   const dispatch = useDispatch();
@@ -67,6 +66,24 @@ function ReportsLayout({
   const {
     setNavigatedFromDashboard,
     coreQueryState: { chartTypes },
+    queriesA,
+    runQuery,
+    queryChange,
+    queryOptions,
+    setExtraOptions,
+    runFunnelQuery,
+    runKPIQuery,
+    activeKey,
+    showResult,
+    selectedMainCategory,
+    setSelectedMainCategory,
+    setQueries,
+    KPIConfigProps,
+    runAttributionQuery,
+    runProfileQuery,
+    profileQueryChange,
+    profileQueries,
+    setProfileQueries
   } = useContext(CoreQueryContext);
 
   const renderedCompRef = useRef(null);
@@ -106,15 +123,15 @@ function ReportsLayout({
     if (queryType === QUERY_TYPE_FUNNEL || queryType === QUERY_TYPE_EVENT) {
       return (
         <QueryComposer
-          queries={composerFunctions.queries}
-          runQuery={composerFunctions.runQuery}
-          eventChange={composerFunctions.queryChange}
+          queries={queriesA}
+          runQuery={runQuery}
+          eventChange={queryChange}
           queryType={queryType}
           queryOptions={queryOptions}
-          setQueryOptions={composerFunctions.setExtraOptions}
-          runFunnelQuery={composerFunctions.runFunnelQuery}
-          activeKey={composerFunctions.activeKey}
-          collapse={composerFunctions.showResult}
+          setQueryOptions={setExtraOptions}
+          runFunnelQuery={runFunnelQuery}
+          activeKey={activeKey}
+          collapse={showResult}
           setCollapse={() => setQueryOpen(false)}
         />
       );
@@ -123,10 +140,10 @@ function ReportsLayout({
     if (queryType === QUERY_TYPE_ATTRIBUTION) {
       return (
         <AttrQueryComposer
-          runAttributionQuery={composerFunctions.runAttributionQuery}
-          collapse={composerFunctions.showResult}
-          queryOptions={composerFunctions.queryOptions}
-          setQueryOptions={composerFunctions.setExtraOptions}
+          runAttributionQuery={runAttributionQuery}
+          collapse={showResult}
+          queryOptions={queryOptions}
+          setQueryOptions={setExtraOptions}
           setCollapse={() => setQueryOpen(false)}
         />
       );
@@ -135,19 +152,19 @@ function ReportsLayout({
     if (queryType === QUERY_TYPE_KPI) {
       return (
         <KPIComposer
-          queries={composerFunctions.queries}
-          setQueryOptions={composerFunctions.setExtraOptions}
-          eventChange={composerFunctions.queryChange}
+          queries={queriesA}
+          setQueryOptions={setExtraOptions}
+          eventChange={queryChange}
           queryType={queryType}
-          activeKey={composerFunctions.activeKey}
-          collapse={composerFunctions.showResult}
+          activeKey={activeKey}
+          collapse={showResult}
           setCollapse={() => setQueryOpen(false)}
-          handleRunQuery={composerFunctions.runKPIQuery}
-          setQueries={composerFunctions.setQueries}
-          queryOptions={composerFunctions.queryOptions}
-          selectedMainCategory={composerFunctions.selectedMainCategory}
-          setSelectedMainCategory={composerFunctions.setSelectedMainCategory}
-          KPIConfigProps={composerFunctions.KPIConfigProps}
+          handleRunQuery={runKPIQuery}
+          setQueries={setQueries}
+          queryOptions={queryOptions}
+          selectedMainCategory={selectedMainCategory}
+          setSelectedMainCategory={setSelectedMainCategory}
+          KPIConfigProps={KPIConfigProps}
         />
       );
     }
@@ -155,14 +172,14 @@ function ReportsLayout({
     if (queryType === QUERY_TYPE_PROFILE) {
       return (
         <ProfileComposer
-          queries={composerFunctions.profileQueries}
-          setQueries={composerFunctions.setProfileQueries}
-          runProfileQuery={composerFunctions.runProfileQuery}
-          eventChange={composerFunctions.profileQueryChange}
+          queries={profileQueries}
+          setQueries={setProfileQueries}
+          runProfileQuery={runProfileQuery}
+          eventChange={profileQueryChange}
           queryType={queryType}
           queryOptions={queryOptions}
-          setQueryOptions={composerFunctions.setExtraOptions}
-          collapse={composerFunctions.showResult}
+          setQueryOptions={setExtraOptions}
+          collapse={showResult}
           setCollapse={() => setQueryOpen(false)}
         />
       );
