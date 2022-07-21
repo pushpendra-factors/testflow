@@ -1506,7 +1506,7 @@ func GetChannelFileScanner(channel string, projectId int64, periodCode Period, c
 	if err != nil {
 		localFile = false
 		deltaComputeLog.WithFields(log.Fields{"err": err,
-			"channelFilePath": channelFilePath}).Error("Failed opening event file and getting scanner.")
+			"channelFilePath": channelFilePath}).Error("Failed opening " + channel + " file and getting scanner.")
 	}
 	if !isDownloaded || !localFile {
 		cfCloudPath, cfCloudName := (*cloudManager).GetModelChannelFilePathAndName(channel, projectId, periodCode.From, insightGranularity)
@@ -1528,7 +1528,7 @@ func GetChannelFileScanner(channel string, projectId int64, periodCode Period, c
 	scanner, err := T.OpenEventFileAndGetScanner(channelFilePath)
 	if err != nil {
 		deltaComputeLog.WithFields(log.Fields{"err": err,
-			"channelFilePath": channelFilePath}).Error("Failed opening event file and getting scanner.")
+			"channelFilePath": channelFilePath}).Error("Failed opening " + channel + " file and getting scanner.")
 	}
 
 	return scanner, err

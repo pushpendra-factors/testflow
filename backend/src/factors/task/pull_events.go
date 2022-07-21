@@ -416,17 +416,17 @@ func PullAllData(projectId int64, configs map[string]interface{}) (map[string]in
 
 	// EVENTS
 	if fileTypes[fileType["events"]] {
-		pull := true
-
+		exists := false
 		if !*hardPull {
 			if ok, _ := checkEventFileExists(cloudManager, diskManager, projectId, startTimestamp, modelType); ok {
 				status["events-info"] = "File already exists"
-				pull = false
+				exists = true
 			}
 		}
 
-		var errMsg string = "data not available for "
-		if pull {
+		if !exists {
+			pull := true
+			var errMsg string = "data not available for "
 			for _, channel := range []string{M.HUBSPOT, M.SALESFORCE} {
 				if !integrations[channel] {
 					status[channel+"-info"] = "Not Integrated"
@@ -437,15 +437,17 @@ func PullAllData(projectId int64, configs map[string]interface{}) (map[string]in
 					}
 				}
 			}
-		}
-		if pull {
-			if _, ok := PullEventsData(projectId, cloudManager, diskManager, startTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone, modelType, status, logCtx); !ok {
-				return status, false
+
+			if pull {
+				if _, ok := PullEventsData(projectId, cloudManager, diskManager, startTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone, modelType, status, logCtx); !ok {
+					return status, false
+				}
+			} else {
+				success = false
+				status["events-error"] = errMsg
 			}
-		} else {
-			success = false
-			status["events-error"] = errMsg
 		}
+
 	}
 
 	// CAMPAIGN REPORTS

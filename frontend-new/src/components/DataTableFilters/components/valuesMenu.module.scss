@@ -1,0 +1,36 @@
+@import '../../../styles/abstracts//variables';
+
+.input-search-box {
+  border: 1px solid #d9d9d9 !important;
+  border-radius: 12px !important;
+  box-shadow: 0px 0px 2px rgba(0, 0, 0, 0.3) !important;
+  padding: 0.75rem !important;
+}
+
+.values-menu {
+  border-right: 0 !important;
+  max-height: 250px;
+  overflow: auto;
+}
+
+.values-menu-item {
+  margin: 0 !important;
+  border-radius: 0.25rem !important;
+  color: $fa-color--mono-6 !important;
+
+  &.values-menu-item-selected {
+    background-color: $fa-color--mono-2 !important;
+  }
+
+  &:hover {
+    color: $fa-color--mono-6 !important;
+    background-color: $fa-color--mono-2 !important;
+  }
+
+  :global(.ant-menu-title-content) {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    align-items: center;
+  }
+}

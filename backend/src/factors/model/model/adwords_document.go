@@ -236,15 +236,15 @@ var AdwordsInternalPropertiesToJobsInternal = map[string]string{
 }
 
 var AdwordsInternalPropertiesToReportsInternal = map[string]string{
-	"campaign:id":                       "campaign_id",
+	"campaign:id":                       "(campaign_id :> text)",
 	"campaign:name":                     "campaign_name",
 	"campaign:status":                   "campaign_status",
 	"campaign:advertising_channel_type": AdvertisingChannelType,
-	"ad_group:id":                       "ad_group_id",
+	"ad_group:id":                       "(ad_group_id :> text)",
 	"ad_group:name":                     "ad_group_name",
 	"ad_group:status":                   "ad_group_status",
-	"ad:id":                             "ad_id",
-	"keyword:id":                        "keyword_id",
+	"ad:id":                             "(ad_id :> text)",
+	"keyword:id":                        "(keyword_id :> text)",
 	"keyword:name":                      "criteria",
 	"keyword:status":                    "status",
 	"keyword:approval_status":           ApprovalStatus,
@@ -256,18 +256,9 @@ var AdwordsInternalPropertiesToReportsInternal = map[string]string{
 	"keyword:quality_score":             QualityScore,
 }
 
-func GetFilterStringAndFilterKeyForAdwordsGBT(dimension string, prefix string, dimensionType string, smartPropertiesFilterString string) (string, string) {
-	filterStringAdwords := "adwords_documents.value"
-	filterKey := ""
-	filterString := ""
-	key := fmt.Sprintf(`%s:%s`, dimensionType, strings.TrimPrefix(dimension, prefix))
-	currentFilterKey, isPresent := AdwordsInternalPropertiesToReportsInternal[key]
-	if isPresent {
-		filterString = filterStringAdwords
-		filterKey = currentFilterKey
-	} else {
-		filterString = smartPropertiesFilterString
-		filterKey = strings.TrimPrefix(dimension, prefix)
-	}
-	return filterString, filterKey
+// Input: objectType - campaign, dimension - , prefix - . TODO
+func GetReportPropertyIfPresentForAdwords(objectType, dimension, prefix string) (string, bool) {
+	key := fmt.Sprintf(`%s:%s`, objectType, strings.TrimPrefix(dimension, prefix))
+	reportProperty, isPresent := AdwordsInternalPropertiesToReportsInternal[key]
+	return reportProperty, isPresent
 }

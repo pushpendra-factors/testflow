@@ -76,3 +76,9 @@ class TimeUtil:
     def convert_timestamp_to_gsc_date_parameter(dt):
         return datetime.strftime(datetime.strptime(str(dt), "%Y%m%d"), "%Y-%m-%d")
 
+    @staticmethod
+    def get_difference_from_current_day(dt):
+        input_date_obj = datetime.strptime(dt, "%Y-%m-%d")
+        current_date_obj = datetime.now()
+        return ((current_date_obj-input_date_obj).days)
+

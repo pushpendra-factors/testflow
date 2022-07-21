@@ -3,37 +3,179 @@ package delta
 import (
 	M "factors/model/model"
 	"factors/model/store/memsql"
+	"fmt"
+	"strings"
 )
 
 var adwordsRequiredDocumentTypes = []int{1, 3, 5, 8, 10} //Refer M.AdwordsDocumentTypeAlias for clarity
 
 var adwordsMetricToCalcInfo = map[string]MetricCalculationInfo{
-	M.Impressions:                      {Props: []PropInfo{{Name: M.Impressions}}, Operation: "sum"},
-	M.Clicks:                           {Props: []PropInfo{{Name: M.Clicks}}, Operation: "sum"},
-	"cost":                             {Props: []PropInfo{{Name: "cost"}}, Operation: "sum", Constants: map[string]float64{"product": 100}},
-	M.Conversion:                       {Props: []PropInfo{{Name: M.Conversion}}, Operation: "sum"},
-	M.ClickThroughRate:                 {Props: []PropInfo{{Name: M.Clicks}, {Name: M.Impressions}}, Operation: "sum", Constants: map[string]float64{"product": 100}},
-	M.ConversionRate:                   {Props: []PropInfo{{Name: M.Conversion}, {Name: M.Clicks}}, Operation: "sum", Constants: map[string]float64{"product": 100}},
-	M.CostPerClick:                     {Props: []PropInfo{{Name: "cost"}, {Name: M.Clicks}}, Operation: "sum", Constants: map[string]float64{"quotient": 1000000}},
-	M.CostPerConversion:                {Props: []PropInfo{{Name: "cost"}, {Name: M.Conversion}}, Operation: "sum", Constants: map[string]float64{"quotient": 1000000}},
-	M.SearchImpressionShare:            {Props: []PropInfo{{Name: M.Impressions, Dependent: M.SearchImpressionShare}, {Name: M.TotalSearchImpression, Dependent: M.SearchImpressionShare}}, Operation: "sum"},
-	M.SearchClickShare:                 {Props: []PropInfo{{Name: M.Impressions, Dependent: M.SearchClickShare}, {Name: M.TotalSearchClick, Dependent: M.SearchClickShare}}, Operation: "sum"},
-	M.SearchTopImpressionShare:         {Props: []PropInfo{{Name: M.Impressions, Dependent: M.SearchTopImpressionShare}, {Name: M.TotalSearchTopImpression, Dependent: M.SearchTopImpressionShare}}, Operation: "sum"},
-	M.SearchAbsoluteTopImpressionShare: {Props: []PropInfo{{Name: M.Impressions, Dependent: M.SearchAbsoluteTopImpressionShare}, {Name: M.TotalSearchAbsoluteTopImpression, Dependent: M.SearchAbsoluteTopImpressionShare}}, Operation: "sum"},
-	M.SearchBudgetLostAbsoluteTopImpressionShare: {Props: []PropInfo{{Name: M.Impressions, Dependent: M.SearchBudgetLostAbsoluteTopImpressionShare}, {Name: M.TotalSearchBudgetLostAbsoluteTopImpression, Dependent: M.SearchBudgetLostAbsoluteTopImpressionShare}}, Operation: "sum"},
-	M.SearchBudgetLostImpressionShare:            {Props: []PropInfo{{Name: M.Impressions, Dependent: M.SearchBudgetLostImpressionShare}, {Name: M.TotalSearchBudgetLostImpression, Dependent: M.SearchBudgetLostImpressionShare}}, Operation: "sum"},
-	M.SearchBudgetLostTopImpressionShare:         {Props: []PropInfo{{Name: M.Impressions, Dependent: M.SearchBudgetLostTopImpressionShare}, {Name: M.TotalSearchBudgetLostTopImpression, Dependent: M.SearchBudgetLostTopImpressionShare}}, Operation: "sum"},
-	M.SearchRankLostAbsoluteTopImpressionShare:   {Props: []PropInfo{{Name: M.Impressions, Dependent: M.SearchRankLostAbsoluteTopImpressionShare}, {Name: M.TotalSearchRankLostAbsoluteTopImpression, Dependent: M.SearchRankLostAbsoluteTopImpressionShare}}, Operation: "sum"},
-	M.SearchRankLostImpressionShare:              {Props: []PropInfo{{Name: M.Impressions, Dependent: M.SearchRankLostImpressionShare}, {Name: M.TotalSearchRankLostImpression, Dependent: M.SearchRankLostImpressionShare}}, Operation: "sum"},
-	M.SearchRankLostTopImpressionShare:           {Props: []PropInfo{{Name: M.Impressions, Dependent: M.SearchRankLostTopImpressionShare}, {Name: M.TotalSearchRankLostTopImpression, Dependent: M.SearchRankLostTopImpressionShare}}, Operation: "sum"},
-	M.ConversionValue:                            {Props: []PropInfo{{Name: M.ConversionValue}}, Operation: "sum"},
+	M.Impressions: {
+		Props:     []PropInfo{{Name: M.Impressions}},
+		Operation: "sum",
+	},
+	M.Clicks: {
+		Props:     []PropInfo{{Name: M.Clicks}},
+		Operation: "sum",
+	},
+	"cost": {
+		Props:     []PropInfo{{Name: "cost"}},
+		Operation: "sum",
+		Constants: map[string]float64{"quotient": 1000000},
+	},
+	M.Conversions: {
+		Props: []PropInfo{
+			{Name: M.Conversions},
+		},
+		Operation: "sum",
+	},
+	M.ClickThroughRate: {
+		Props: []PropInfo{
+			{Name: M.Clicks},
+			{Name: M.Impressions, ReplaceValue: map[float64]float64{0: 100000}},
+		},
+		Operation: "sum",
+		Constants: map[string]float64{"product": 100},
+	},
+	M.ConversionRate: {
+		Props: []PropInfo{
+			{Name: M.Conversions},
+			{Name: M.Clicks, ReplaceValue: map[float64]float64{0: 100000}},
+		},
+		Operation: "quotient",
+		Constants: map[string]float64{"product": 100},
+	},
+	M.CostPerClick: {
+		Props: []PropInfo{
+			{Name: "cost"},
+			{Name: M.Clicks, ReplaceValue: map[float64]float64{0: 100000}},
+		},
+		Operation: "quotient",
+		Constants: map[string]float64{"quotient": 1000000},
+	},
+	M.CostPerConversion: {
+		Props: []PropInfo{
+			{Name: "cost"},
+			{Name: M.Conversions, ReplaceValue: map[float64]float64{0: 100000}},
+		},
+		Operation: "quotient",
+		Constants: map[string]float64{"quotient": 1000000},
+	},
+	M.SearchImpressionShare: {
+		Props: []PropInfo{
+			{Name: M.Impressions, DependentKey: M.SearchImpressionShare, DependentValue: 0, DependentOperation: "!="},
+			{Name: M.TotalSearchImpression, DependentKey: M.SearchImpressionShare},
+		},
+		Operation: "quotient",
+	},
+	M.SearchClickShare: {
+		Props: []PropInfo{
+			{Name: M.Impressions, DependentKey: M.SearchClickShare, DependentValue: 0, DependentOperation: "!="},
+			{Name: M.TotalSearchClick, DependentKey: M.SearchClickShare},
+		},
+		Operation: "quotient",
+	},
+	M.SearchTopImpressionShare: {
+		Props: []PropInfo{
+			{Name: M.TopImpressions, DependentKey: M.SearchTopImpressionShare, DependentValue: 0, DependentOperation: "!="},
+			{Name: M.TotalTopImpressions, DependentKey: M.SearchTopImpressionShare},
+		},
+		Operation: "quotient",
+	},
+	M.SearchAbsoluteTopImpressionShare: {
+		Props: []PropInfo{
+			{Name: M.AbsoluteTopImpressions, DependentKey: M.SearchAbsoluteTopImpressionShare, DependentValue: 0, DependentOperation: "!="},
+			{Name: M.TotalTopImpressions, DependentKey: M.SearchAbsoluteTopImpressionShare},
+		},
+		Operation: "quotient",
+	},
+	M.SearchBudgetLostAbsoluteTopImpressionShare: {
+		Props: []PropInfo{
+			{Name: M.AbsoluteTopImpressionLostDueToBudget, DependentKey: M.SearchBudgetLostAbsoluteTopImpressionShare, DependentValue: 0, DependentOperation: "!="},
+			{Name: M.TotalTopImpressions, DependentKey: M.SearchBudgetLostAbsoluteTopImpressionShare},
+		},
+		Operation: "quotient",
+	},
+	M.SearchBudgetLostImpressionShare: {
+		Props: []PropInfo{
+			{Name: M.ImpressionLostDueToBudget, DependentKey: M.SearchBudgetLostImpressionShare, DependentValue: 0, DependentOperation: "!="},
+			{Name: M.TotalSearchImpression, DependentKey: M.SearchBudgetLostImpressionShare},
+		},
+		Operation: "quotient",
+	},
+	M.SearchBudgetLostTopImpressionShare: {
+		Props: []PropInfo{
+			{Name: M.TopImpressionLostDueToBudget, DependentKey: M.SearchBudgetLostTopImpressionShare, DependentValue: 0, DependentOperation: "!="},
+			{Name: M.TotalTopImpressions, DependentKey: M.SearchBudgetLostTopImpressionShare},
+		},
+		Operation: "quotient",
+	},
+	M.SearchRankLostAbsoluteTopImpressionShare: {
+		Props: []PropInfo{
+			{Name: M.AbsoluteTopImpressionLostDueToRank, DependentKey: M.SearchRankLostAbsoluteTopImpressionShare, DependentValue: 0, DependentOperation: "!="},
+			{Name: M.TotalTopImpressions, DependentKey: M.SearchRankLostAbsoluteTopImpressionShare},
+		},
+		Operation: "quotient",
+	},
+	M.SearchRankLostImpressionShare: {
+		Props: []PropInfo{
+			{Name: M.ImpressionLostDueToRank, DependentKey: M.SearchRankLostImpressionShare, DependentValue: 0, DependentOperation: "!="},
+			{Name: M.TotalSearchImpression, DependentKey: M.SearchRankLostImpressionShare},
+		},
+		Operation: "quotient",
+	},
+	M.SearchRankLostTopImpressionShare: {
+		Props: []PropInfo{
+			{Name: M.TopImpressionLostDueToRank, DependentKey: M.SearchRankLostTopImpressionShare, DependentValue: 0, DependentOperation: "!="},
+			{Name: M.TotalTopImpressions, DependentKey: M.SearchRankLostTopImpressionShare},
+		},
+		Operation: "quotient",
+	},
+	M.ConversionValue: {
+		Props:     []PropInfo{{Name: M.ConversionValue}},
+		Operation: "sum",
+	},
 }
 
 var adwordsConstantInfo = map[string]string{
 	memsql.CAFilterCampaign: M.AdwordsCampaign,
 	memsql.CAFilterAdGroup:  M.AdwordsAdGroup,
 	memsql.CAFilterKeyword:  M.AdwordsKeyword,
-	"campaign_id":           M.AdwordsCampaignID,
-	"ad_group_id":           M.AdwordsAdgroupID,
-	"keyword_id":            M.AdwordsKeywordID,
+	// "campaign_id":           M.AdwordsCampaignID,
+	// "ad_group_id":           M.AdwordsAdgroupID,
+	// "keyword_id":            M.AdwordsKeywordID,
+}
+
+func getAdwordsFilterPropertyReportName(propName string, objectType string) (string, error) {
+	propNameTrimmed := strings.TrimPrefix(propName, objectType+"_")
+
+	if _, ok := adwordsConstantInfo[objectType]; !ok {
+		return "", fmt.Errorf("unknown object type: %s", objectType)
+	}
+	if name, ok := M.AdwordsInternalPropertiesToReportsInternal[fmt.Sprintf("%s:%s", adwordsConstantInfo[objectType], propNameTrimmed)]; ok {
+		return name, nil
+	}
+	return "", fmt.Errorf("filter property report name not found for %s", propName)
+}
+
+func getAdwordsPropertyFilterName(prop string) (string, error) {
+	propWithType := strings.SplitN(prop, "#", 2)
+	objType := propWithType[0]
+	name := propWithType[1]
+
+	if _, ok := adwordsConstantInfo[objType]; !ok {
+		return prop, fmt.Errorf("unknown object type: %s", objType)
+	}
+
+	for k, v := range M.AdwordsInternalPropertiesToReportsInternal {
+		if v == name {
+			tmpProp := strings.SplitN(k, ":", 2)
+			if tmpProp[0] == adwordsConstantInfo[objType] {
+				reqName := strings.Join([]string{objType, objType + "_" + tmpProp[1]}, "#")
+				return reqName, nil
+			}
+		}
+	}
+
+	return prop, fmt.Errorf("property filter name not found for %s", prop)
 }

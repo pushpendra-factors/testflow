@@ -193,6 +193,17 @@ func (query *ChannelQueryUnit) CheckIfNameIsPresent(nameOfQuery string) bool {
 	return false
 }
 
+func (query *ChannelQueryUnit) SetDefaultGroupByTimestamp() {
+	defaultGroupByTimestamp := GetDefaultGroupByTimestampForQueries(query.Query.From, query.Query.To, query.Query.Breakdown)
+	if defaultGroupByTimestamp != "" {
+		query.Query.Breakdown = defaultGroupByTimestamp
+	}
+}
+
+func (query *ChannelQueryUnit) GetGroupByTimestamps() []string {
+	return []string{query.Query.Breakdown}
+}
+
 // ChannelGroupQueryV1 - @TODO Kark v1
 type ChannelGroupQueryV1 struct {
 	Class   string           `json:"cl"`
@@ -274,6 +285,23 @@ func (query *ChannelGroupQueryV1) CheckIfNameIsPresent(nameOfQuery string) bool 
 	return false
 }
 
+func (query *ChannelGroupQueryV1) SetDefaultGroupByTimestamp() {
+	for index, _ := range query.Queries {
+		defaultGroupByTimestamp := GetDefaultGroupByTimestampForQueries(query.Queries[index].From, query.Queries[index].To, query.Queries[index].GetGroupByTimestamp())
+		if defaultGroupByTimestamp != "" {
+			query.Queries[index].GroupByTimestamp = defaultGroupByTimestamp
+		}
+	}
+}
+
+func (query *ChannelGroupQueryV1) GetGroupByTimestamps() []string {
+	queryResultString := make([]string, 0)
+	for _, intQuery := range query.Queries {
+		queryResultString = append(queryResultString, intQuery.GetGroupByTimestamp())
+	}
+	return queryResultString
+}
+
 var ChannelNameProperty = ChannelObjectAndProperties{
 	Name: Channel,
 	Properties: []ChannelProperty{
@@ -296,19 +324,24 @@ func BuildErrorResultForChannelsV1(errMsg string) *ChannelQueryResultV1 {
 	return errorResult
 }
 
-// sample format :
-// {campaign_property: property_value, ad_group_property: property_value}
-func GetGroupByCombinationsForChannelAnalytics(columns []string, resultMetrics [][]interface{}) []map[string]interface{} {
-	groupByCombinations := make([]map[string]interface{}, 0)
+// Response: {campaign_property: []property_values, ad_group_property: []property_values}
+// Edge Case: When there is no data for a day, we dont want to include it i.e. value == null.
+func GetGroupByCombinationsForChannelAnalytics(columns []string, resultMetrics [][]interface{}) map[string][]interface{} {
+	groupByCombinations := make(map[string][]interface{}, 0)
 	for _, resultRow := range resultMetrics {
-		groupByCombination := make(map[string]interface{})
 		for index, column := range columns {
-			if strings.HasPrefix(column, CampaignPrefix) || strings.HasPrefix(column, AdgroupPrefix) || strings.HasPrefix(column, KeywordPrefix) {
-				groupByCombination[column] = resultRow[index]
+			if resultRow[index] != nil {
+				if strings.HasPrefix(column, CampaignPrefix) || strings.HasPrefix(column, AdgroupPrefix) || strings.HasPrefix(column, KeywordPrefix) {
+					if value, exists := groupByCombinations[column]; exists {
+						value = append(value, resultRow[index])
+						groupByCombinations[column] = value
+					} else {
+						value = make([]interface{}, 0)
+						value = append(value, resultRow[index])
+						groupByCombinations[column] = value
+					}
+				}
 			}
-		}
-		if len(groupByCombination) != 0 {
-			groupByCombinations = append(groupByCombinations, groupByCombination)
 		}
 	}
 	return groupByCombinations

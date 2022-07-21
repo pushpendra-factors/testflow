@@ -120,7 +120,8 @@ func mainRunDeltaInsights() {
 			projectIdsToRun[id] = true
 		}
 	} else {
-		allProjects, _, _ := C.GetProjectsFromListWithAllProjectSupport(*projectIdFlag, "")
+		var allProjects bool
+		allProjects, projectIdsToRun, _ := C.GetProjectsFromListWithAllProjectSupport(*projectIdFlag, "")
 		if allProjects {
 			projectIDs, errCode := store.GetStore().GetAllProjectIDs()
 			if errCode != http.StatusFound {

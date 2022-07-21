@@ -299,7 +299,7 @@ func (store *MemSQL) GetDashboardUnitNamesByProjectIdTypeAndName(projectID int64
 
 			isPresent := baseQuery.CheckIfNameIsPresent(nameOfQuery)
 			if isPresent {
-				rDashboardUnitNames = append(rDashboardUnitNames, dashboardUnit.Description)
+				rDashboardUnitNames = append(rDashboardUnitNames, queryInfo.Title)
 			}
 		}
 	}
@@ -700,6 +700,7 @@ func (store *MemSQL) CacheDashboardUnit(dashboardUnit model.DashboardUnit,
 
 		baseQuery.SetQueryDateRange(from, to)
 		baseQuery.SetTimeZone(timezoneString)
+		baseQuery.SetDefaultGroupByTimestamp()
 		err = baseQuery.TransformDateTypeFilters()
 		if err != nil {
 			errMsg := fmt.Sprintf("Error decoding query Value, query_id %d", dashboardUnit.QueryId)

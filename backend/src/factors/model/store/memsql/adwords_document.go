@@ -1227,9 +1227,6 @@ func (store *MemSQL) ExecuteAdwordsChannelQueryV1(projectID int64, query *model.
 	fetchSource := false
 	logCtx := log.WithFields(logFields)
 	if query.GroupByTimestamp == "" {
-		if projectID == 559 {
-			log.WithField("query", *query).WithField("reqID", reqID).Warn("Inside ExecuteAdwordsChannelQueryV1 and no gbt - memsql caching test.")
-		}
 		sql, params, selectKeys, selectMetrics, errCode := store.GetSQLQueryAndParametersForAdwordsQueryV1(
 			projectID, query, reqID, fetchSource, " LIMIT 10000", false, nil)
 		if errCode == http.StatusNotFound {
@@ -1248,11 +1245,8 @@ func (store *MemSQL) ExecuteAdwordsChannelQueryV1(projectID int64, query *model.
 		}
 		return columns, resultMetrics, http.StatusOK
 	} else {
-		if projectID == 559 {
-			log.WithField("query", *query).WithField("reqID", reqID).Warn("Inside ExecuteAdwordsChannelQueryV1 and gbt1 - memsql caching test.")
-		}
 		sql, params, selectKeys, selectMetrics, errCode := store.GetSQLQueryAndParametersForAdwordsQueryV1(
-			projectID, query, reqID, fetchSource, " LIMIT 100", false, nil)
+			projectID, query, reqID, fetchSource, " LIMIT 1000", false, nil)
 		if errCode == http.StatusNotFound {
 			headers := model.GetHeadersFromQuery(*query)
 			return headers, make([][]interface{}, 0, 0), http.StatusOK
@@ -1266,9 +1260,6 @@ func (store *MemSQL) ExecuteAdwordsChannelQueryV1(projectID int64, query *model.
 		if err != nil {
 			logCtx.WithError(err).WithField("query", sql).WithField("params", params).Error(model.AdwordsSpecificError)
 			return make([]string, 0, 0), make([][]interface{}, 0, 0), http.StatusInternalServerError
-		}
-		if projectID == 559 {
-			log.WithField("query", *query).WithField("reqID", reqID).Warn("Inside ExecuteAdwordsChannelQueryV1 and gbt1 - memsql caching test.")
 		}
 		groupByCombinations := model.GetGroupByCombinationsForChannelAnalytics(columns, resultMetrics)
 		sql, params, selectKeys, selectMetrics, errCode = store.GetSQLQueryAndParametersForAdwordsQueryV1(
@@ -1289,7 +1280,8 @@ func (store *MemSQL) ExecuteAdwordsChannelQueryV1(projectID int64, query *model.
 
 // GetSQLQueryAndParametersForAdwordsQueryV1 - @Kark TODO v1
 // TODO Understand null cases.
-func (store *MemSQL) GetSQLQueryAndParametersForAdwordsQueryV1(projectID int64, query *model.ChannelQueryV1, reqID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string, int) {
+func (store *MemSQL) GetSQLQueryAndParametersForAdwordsQueryV1(projectID int64, query *model.ChannelQueryV1, reqID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}) (string, []interface{}, []string, []string, int) {
+	// NOTE: This contains 1000 rows. Should we remove from log group_by_combinations_for_gbt.
 	logFields := log.Fields{
 		"project_id":                    projectID,
 		"query":                         query,
@@ -1305,13 +1297,7 @@ func (store *MemSQL) GetSQLQueryAndParametersForAdwordsQueryV1(projectID int64, 
 	var sql string
 	var params []interface{}
 	logCtx := log.WithFields(logFields)
-	if projectID == 559 {
-		log.WithField("query", *query).WithField("reqID", reqID).Warn("Inside GetSQLQueryAndParametersForAdwordsQueryV1 1 - memsql caching test.")
-	}
 	transformedQuery, customerAccountID, err := store.transFormRequestFieldsAndFetchRequiredFieldsForAdwords(projectID, *query, reqID)
-	if projectID == 559 {
-		log.WithField("query", *query).WithField("reqID", reqID).WithField("transformedQuery", transformedQuery).Warn("Inside GetSQLQueryAndParametersForAdwordsQueryV1 2 - memsql caching test.")
-	}
 	if err != nil && err.Error() == integrationNotAvailable {
 		logCtx.WithError(err).Info(model.AdwordsSpecificError)
 		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusNotFound
@@ -1321,15 +1307,9 @@ func (store *MemSQL) GetSQLQueryAndParametersForAdwordsQueryV1(projectID int64, 
 		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusBadRequest
 	}
 	isSmartPropertyPresent := checkSmartProperty(query.Filters, query.GroupBy)
-	if projectID == 559 {
-		log.WithField("query", *query).WithField("reqID", reqID).WithField("isSmartPropertyPresent", isSmartPropertyPresent).WithField("query.Filters", query.Filters).WithField("query.GroupBy", query.GroupBy).Warn("Inside GetSQLQueryAndParametersForAdwordsQueryV1 3 - memsql caching test.")
-	}
 	if isSmartPropertyPresent {
 		sql, params, selectKeys, selectMetrics = buildAdwordsSimpleQueryWithSmartPropertyV2(transformedQuery, projectID, *customerAccountID, reqID, fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT)
 		return sql, params, selectKeys, selectMetrics, http.StatusOK
-	}
-	if projectID == 559 {
-		log.WithField("query", *query).WithField("reqID", reqID).Warn("Inside GetSQLQueryAndParametersForAdwordsQueryV1 4 - memsql caching test.")
 	}
 	sql, params, selectKeys, selectMetrics = buildAdwordsSimpleQueryV2(transformedQuery, projectID, *customerAccountID, reqID, fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT)
 	return sql, params, selectKeys, selectMetrics, http.StatusOK
@@ -1517,7 +1497,7 @@ AND JSON_EXTRACT_STRING(value, 'campaign_name') RLIKE '%Brand - BLR - New_Aug_De
 ORDER BY impressions DESC, clicks DESC LIMIT 2500 ;
 */
 // - For reference of complex joins, PR which removed older/QueryV1 adwords is 1437.
-func buildAdwordsSimpleQueryV2(query *model.ChannelQueryV1, projectID int64, customerAccountID string, reqID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string) {
+func buildAdwordsSimpleQueryV2(query *model.ChannelQueryV1, projectID int64, customerAccountID string, reqID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}) (string, []interface{}, []string, []string) {
 	logFields := log.Fields{
 		"query":                         query,
 		"project_id":                    projectID,
@@ -1534,7 +1514,7 @@ func buildAdwordsSimpleQueryV2(query *model.ChannelQueryV1, projectID int64, cus
 	return getSQLAndParamsForAdwordsV2(query, projectID, query.From, query.To, customerAccountID, model.AdwordsDocumentTypeAlias[lowestHierarchyReportLevel], fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT)
 }
 
-func buildAdwordsSimpleQueryWithSmartPropertyV2(query *model.ChannelQueryV1, projectID int64, customerAccountID string, reqID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string) {
+func buildAdwordsSimpleQueryWithSmartPropertyV2(query *model.ChannelQueryV1, projectID int64, customerAccountID string, reqID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}) (string, []interface{}, []string, []string) {
 	logFields := log.Fields{
 		"query":                         query,
 		"project_id":                    projectID,
@@ -1551,7 +1531,7 @@ func buildAdwordsSimpleQueryWithSmartPropertyV2(query *model.ChannelQueryV1, pro
 	return getSQLAndParamsForAdwordsWithSmartPropertyV2(query, projectID, query.From, query.To, customerAccountID, model.AdwordsDocumentTypeAlias[lowestHierarchyReportLevel], fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT)
 }
 func getSQLAndParamsForAdwordsWithSmartPropertyV2(query *model.ChannelQueryV1, projectID int64, from, to int64, customerAccountID string,
-	docType int, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string) {
+	docType int, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}) (string, []interface{}, []string, []string) {
 	logFields := log.Fields{
 		"query":                         query,
 		"project_id":                    projectID,
@@ -1675,7 +1655,7 @@ func getSQLAndParamsForAdwordsWithSmartPropertyV2(query *model.ChannelQueryV1, p
 	finalParams = append(finalParams, filterParams...)
 	if len(groupByCombinationsForGBT) != 0 {
 		whereConditionForGBT, whereParams := buildWhereConditionForGBTForAdwords(groupByCombinationsForGBT)
-		finalWhereStatement += (" AND (" + whereConditionForGBT + ")")
+		finalWhereStatement += whereConditionForGBT
 		finalParams = append(finalParams, whereParams...)
 	}
 	finalGroupByKeys = dimensions.values
@@ -1704,60 +1684,69 @@ func getSQLAndParamsForAdwordsWithSmartPropertyV2(query *model.ChannelQueryV1, p
 
 	return resultantSQLStatement, finalParams, dimensions.values, metrics.values
 }
-func buildWhereConditionForGBTForAdwords(groupByCombinations []map[string]interface{}) (string, []interface{}) {
+
+func buildWhereConditionForGBTForAdwords(groupByCombinations map[string][]interface{}) (string, []interface{}) {
 	logFields := log.Fields{
 		"group_by_combinations": groupByCombinations,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	whereConditionForGBT := ""
+	resultantWhereCondition := ""
+	resultantInClauses := make([]string, 0)
 	params := make([]interface{}, 0)
-	filterStringAdwords := "adwords_documents.value"
-	filterStringSmartPropertiesCampaign := "campaign.properties"
-	filterStringSmartPropertiesAdGroup := "ad_group.properties"
-	for _, groupByCombination := range groupByCombinations {
-		whereConditionForEachCombination := ""
-		for dimension, value := range groupByCombination {
-			filterKey := ""
-			filterString := ""
-			if strings.HasPrefix(dimension, model.CampaignPrefix) {
-				filterString, filterKey = model.GetFilterStringAndFilterKeyForAdwordsGBT(dimension, model.CampaignPrefix, "campaign", filterStringSmartPropertiesCampaign)
-			} else if strings.HasPrefix(dimension, model.AdgroupPrefix) {
-				filterString, filterKey = model.GetFilterStringAndFilterKeyForAdwordsGBT(dimension, model.AdgroupPrefix, "ad_group", filterStringSmartPropertiesAdGroup)
-			} else {
-				key := fmt.Sprintf(`%s:%s`, "keyword", strings.TrimPrefix(dimension, model.KeywordPrefix))
-				filterString = filterStringAdwords
-				currentFilterKey := model.AdwordsInternalPropertiesToReportsInternal[key]
-				filterKey = currentFilterKey
-			}
-			if whereConditionForEachCombination == "" {
-				if value != nil {
-					whereConditionForEachCombination = fmt.Sprintf("JSON_EXTRACT_STRING(%s, '%s') = ? ", filterString, filterKey)
-					params = append(params, value)
-				} else {
-					whereConditionForEachCombination = fmt.Sprintf("JSON_EXTRACT_STRING(%s, '%s') is null ", filterString, filterKey)
-				}
-			} else {
-				if value != nil {
-					whereConditionForEachCombination += fmt.Sprintf(" AND JSON_EXTRACT_STRING(%s, '%s') = ? ", filterString, filterKey)
-					params = append(params, value)
-				} else {
-					whereConditionForEachCombination += fmt.Sprintf(" AND JSON_EXTRACT_STRING(%s, '%s') is null ", filterString, filterKey)
-				}
-			}
+
+	for dimension, values := range groupByCombinations {
+		currentInClause := ""
+
+		jsonObjectAndColumn, jsonExtractKey := GetFilterObjectAndExtractPropertyKeyForChannelAdwords(dimension)
+
+		valuesInString := make([]string, 0)
+		for _, value := range values {
+			valuesInString = append(valuesInString, "?")
+			params = append(params, value)
 		}
-		if whereConditionForGBT == "" {
-			if whereConditionForEachCombination != "" {
-				whereConditionForGBT = "(" + whereConditionForEachCombination + ")"
-			}
-		} else {
-			if whereConditionForEachCombination != "" {
-				whereConditionForGBT += (" OR (" + whereConditionForEachCombination + ")")
-			}
-		}
+		currentInClause = joinWithComma(valuesInString...)
+
+		resultantInClauses = append(resultantInClauses, fmt.Sprintf("JSON_EXTRACT_STRING(%s, '%s') IN (", jsonObjectAndColumn, jsonExtractKey)+currentInClause+") ")
 	}
 
-	return whereConditionForGBT, params
+	resultantWhereCondition = joinWithWordInBetween("AND", resultantInClauses...)
+
+	return resultantWhereCondition, params
 }
+
+// request has dimension - campaign_name.
+// response has adwords_documents.value, 'campaign_name'.
+func GetFilterObjectAndExtractPropertyKeyForChannelAdwords(dimension string) (string, string) {
+	filterObjectAdwords := "adwords_documents.value"
+	filterObjectForSmartPropertiesCampaign := "campaign.properties"
+	filterObjectForSmartPropertiesAdGroup := "ad_group.properties"
+
+	filterObject := ""
+	filterProperty := ""
+	isNotSmartProperty := false
+	if strings.HasPrefix(dimension, model.CampaignPrefix) {
+		filterProperty, isNotSmartProperty = model.GetReportPropertyIfPresentForAdwords("campaign", dimension, model.CampaignPrefix)
+		if isNotSmartProperty {
+			filterObject = filterObjectAdwords
+		} else {
+			filterObject = filterObjectForSmartPropertiesCampaign
+			filterProperty = strings.TrimPrefix(dimension, model.CampaignPrefix)
+		}
+	} else if strings.HasPrefix(dimension, model.AdgroupPrefix) {
+		filterProperty, isNotSmartProperty = model.GetReportPropertyIfPresentForAdwords("ad_group", dimension, model.AdgroupPrefix)
+		if isNotSmartProperty {
+			filterObject = filterObjectAdwords
+		} else {
+			filterObject = filterObjectForSmartPropertiesAdGroup
+			filterProperty = strings.TrimPrefix(dimension, model.CampaignPrefix)
+		}
+	} else {
+		filterObject = filterObjectAdwords
+		filterProperty, _ = model.GetReportPropertyIfPresentForAdwords("keyword", dimension, model.KeywordPrefix)
+	}
+	return filterObject, filterProperty
+}
+
 func getAdwordsFromStatementWithJoins(filters []model.ChannelFilterV1, groupBys []model.ChannelGroupBy) string {
 	logFields := log.Fields{
 		"filters":   filters,
@@ -1776,7 +1765,7 @@ func getAdwordsFromStatementWithJoins(filters []model.ChannelFilterV1, groupBys 
 }
 
 func getSQLAndParamsForAdwordsV2(query *model.ChannelQueryV1, projectID int64, from, to int64, customerAccountID string,
-	docType int, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string) {
+	docType int, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}) (string, []interface{}, []string, []string) {
 	logFields := log.Fields{
 		"query":                         query,
 		"project_id":                    projectID,

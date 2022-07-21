@@ -120,6 +120,21 @@
     border-color: $fa-color--mono-2;
   }
 
+  &.ant-btn-plain {
+    background-color: unset;
+    padding: 0;
+    box-shadow: none !important;
+    &:focus,
+    &:hover,
+    &:active,
+    &:visited {
+      background: transparent !important;
+      border-color: transparent !important;
+      outline: transparent !important;
+      box-shadow: none !important;
+    }
+  }
+
   //Dashed Button
   &.ant-btn-dashed {
     border-style: dashed;

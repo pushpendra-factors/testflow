@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { memo, useContext, useEffect, useState } from 'react';
 import _ from 'lodash';
 import PropTypes from 'prop-types';
 import { SVG } from 'factorsComponents';
@@ -6,29 +6,35 @@ import { Button, Tooltip } from 'antd';
 import { BUTTON_TYPES } from '../../constants/buttons.constants';
 import ControlledComponent from '../ControlledComponent';
 import styles from './index.module.scss';
-import { CHART_TYPE_SPARKLINES, QUERY_TYPE_EVENT, QUERY_TYPE_KPI, QUERY_TYPE_PROFILE } from '../../utils/constants';
+import {
+  CHART_TYPE_SPARKLINES,
+  QUERY_TYPE_EVENT,
+  QUERY_TYPE_KPI,
+  QUERY_TYPE_PROFILE
+} from '../../utils/constants';
 import FaSelect from 'Components/FaSelect';
 import { getChartType } from '../../Views/CoreQuery/AnalysisResultsPage/analysisResultsPage.helpers';
-
-const QueryActions = ({
+import { CoreQueryContext } from '../../contexts/CoreQueryContext';
+const QueryActionsComponent = ({
   queryType,
-  chartTypes,
   breakdown,
+  chartTypes,
   savedQueryId,
+  attributionModels,
   handleSaveClick,
   handleEditClick,
   handleDeleteClick,
   toggleAddToDashboardModal,
   setShowShareToEmailModal,
-  setShowShareToSlackModal,
+  setShowShareToSlackModal
 }) => {
   const [options, setOptions] = useState(false);
   const [chart, setChart] = useState(null);
-
   useEffect(() => {
-    setChart(getChartType({ queryType, chartTypes, breakdown }));
-  }, [queryType, chartTypes, breakdown]);
-
+    setChart(
+      getChartType({ queryType, chartTypes, breakdown, attributionModels })
+    );
+  }, [queryType, chartTypes, breakdown, attributionModels]);
   const setActions = (opt) => {
     if (opt[1] === 'envelope' && opt[2] !== 'disabled') {
       setShowShareToEmailModal(true);
@@ -41,36 +47,41 @@ const QueryActions = ({
     }
     setOptions(false);
   };
-
   const getActionsMenu = () => {
     return options ? (
-      (queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_KPI) ? (
+      queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_KPI ? (
         <FaSelect
-        extraClass={styles.additionalops}
-        options={[
-          chart === CHART_TYPE_SPARKLINES && (queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_KPI) ? ['Email this report', 'envelope'] : ['Email this report', 'envelope', 'disabled'],
-          chart === CHART_TYPE_SPARKLINES && (queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_KPI) ? ['Share to slack', 'SlackStroke'] : ['Share to slack', 'SlackStroke', 'disabled'],
-          ['Edit Details', 'edit'],
-          ['Delete', 'trash']
-        ]}
-        optionClick={(val) => setActions(val)}
-        onClickOutside={() => setOptions(false)}
-        posRight={true}
-        ></FaSelect>) 
-        : (
+          extraClass={styles.additionalops}
+          options={[
+            chart === CHART_TYPE_SPARKLINES &&
+            (queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_KPI)
+              ? ['Email this report', 'envelope']
+              : ['Email this report', 'envelope', 'disabled'],
+            chart === CHART_TYPE_SPARKLINES &&
+            (queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_KPI)
+              ? ['Share to slack', 'SlackStroke']
+              : ['Share to slack', 'SlackStroke', 'disabled'],
+            ['Edit Details', 'edit'],
+            ['Delete', 'trash']
+          ]}
+          optionClick={(val) => setActions(val)}
+          onClickOutside={() => setOptions(false)}
+          posRight={true}
+        ></FaSelect>
+      ) : (
         <FaSelect
-        extraClass={styles.additionalops}
-        options={[
-          ['Edit Details', 'edit'],
-          ['Delete', 'trash']
-        ]}
-        optionClick={(val) => setActions(val)}
-        onClickOutside={() => setOptions(false)}
-        posRight={true}
-        ></FaSelect>)
+          extraClass={styles.additionalops}
+          options={[
+            ['Edit Details', 'edit'],
+            ['Delete', 'trash']
+          ]}
+          optionClick={(val) => setActions(val)}
+          onClickOutside={() => setOptions(false)}
+          posRight={true}
+        ></FaSelect>
+      )
     ) : null;
   };
-
   return (
     <div className="flex gap-x-2 items-center">
       <ControlledComponent controller={!savedQueryId}>
@@ -83,27 +94,7 @@ const QueryActions = ({
           {'Save'}
         </Button>
       </ControlledComponent>
-
       <ControlledComponent controller={!!savedQueryId}>
-        {/* <Popover
-          placement='bottom'
-          visible={showSavedQueryPopover}
-          content={
-            <SavedQueryPopoverContent
-              onCancel={toggleSavedQueryPopover}
-              onOk={handlePopoverOkClick}
-            />
-          }
-        >
-          <Button
-            onClick={toggleSavedQueryPopover}
-            type={BUTTON_TYPES.SECONDARY}
-            size={'large'}
-            icon={<SVG name={'save'} size={20} color={'#8692A3'} />}
-          >
-            {'Save'}
-          </Button>
-        </Popover> */}
         <Tooltip placement="bottom" title="Save as New">
           <Button
             onClick={handleSaveClick}
@@ -135,24 +126,34 @@ const QueryActions = ({
     </div>
   );
 };
-
+const QueryActionsMemoized = memo(QueryActionsComponent);
+const QueryActions = (props) => {
+  const {
+    coreQueryState: { chartTypes }
+  } = useContext(CoreQueryContext);
+  return <QueryActionsMemoized chartTypes={chartTypes} {...props} />;
+};
 export default QueryActions;
-
 QueryActions.propTypes = {
-  savedQueryId: PropTypes.oneOfType([
-    PropTypes.number,
-    PropTypes.instanceOf(null)
-  ]),
+  queryType: PropTypes.string.isRequired,
+  savedQueryId: PropTypes.string,
+  breakdown: PropTypes.array,
+  attributionModels: PropTypes.array,
   handleSaveClick: PropTypes.func,
   handleEditClick: PropTypes.func,
-  handleDeleteReport: PropTypes.func,
-  toggleAddToDashboardModal: PropTypes.func
+  handleDeleteClick: PropTypes.func,
+  toggleAddToDashboardModal: PropTypes.func,
+  setShowShareToEmailModal: PropTypes.func,
+  setShowShareToSlackModal: PropTypes.func
 };
-
 QueryActions.defaultProps = {
   savedQueryId: null,
+  breakdown: [],
+  attributionModels: [],
   handleSaveClick: _.noop,
   handleEditClick: _.noop,
-  handleDeleteReport: _.noop,
-  toggleAddToDashboardModal: _.noop
+  handleDeleteClick: _.noop,
+  toggleAddToDashboardModal: _.noop,
+  setShowShareToEmailModal: _.noop,
+  setShowShareToSlackModal: _.noop
 };

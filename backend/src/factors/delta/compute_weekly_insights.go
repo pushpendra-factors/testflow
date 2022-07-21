@@ -102,7 +102,7 @@ const (
 
 const DistributionChangePer float64 = 5 // x of overall to be comapared with distrubution W1
 
-func getInsightImportance(valWithDetails ValueWithDetails) float64 {
+func getInsightImportance(valWithDetails ValueWithDetails, keysUsedInInsights map[string]bool) float64 {
 	var cons float64
 	w1 := valWithDetails.ActualValues.W1
 	w2 := valWithDetails.ActualValues.W2
@@ -116,6 +116,7 @@ func getInsightImportance(valWithDetails ValueWithDetails) float64 {
 	} else {
 		cons = 1
 	}
+	keysUsedInInsights[valWithDetails.Key] = true
 	return math.Abs(w2-w1) * cons / (w2 + w1)
 }
 
@@ -131,6 +132,7 @@ func GetInsightsKpi(file CrossPeriodInsightsKpi, numberOfRecords int, QueryClass
 	var ActualValuearr []ActualMetrics
 	cpiInfo := file.Target
 	scaleInfo := file.ScaleInfo
+	var numIncreased, numDecreased int
 
 	//get scale
 	var globalScaleW1, globalScaleW2 float64
@@ -231,14 +233,20 @@ func GetInsightsKpi(file CrossPeriodInsightsKpi, numberOfRecords int, QueryClass
 				tmp.Category = "kpi_" + file.Category
 			}
 
-			if !(CheckPercentageChange(globalScaleW1, featScaleW1) || CheckPercentageChange(globalScaleW2, featScaleW2)) && math.Abs(tmp.ActualValues.Per) > 5 {
+			if !(CheckPercentageChange(globalScaleW1, featScaleW1) || CheckPercentageChange(globalScaleW2, featScaleW2)) && !(CheckPercentageChange(globalW1, featW1) || CheckPercentageChange(globalW2, featW2)) {
 				valWithDetailsArr = append(valWithDetailsArr, tmp)
+				if tmp.ActualValues.Per > 0 {
+					numIncreased += 1
+				} else {
+					numDecreased += 1
+				}
 			}
 		}
 	}
+	var keysUsedInInsights = make(map[string]bool)
 	sort.Slice(valWithDetailsArr, func(i, j int) bool {
 		if valWithDetailsArr[i].ActualValues.JSDivergence == valWithDetailsArr[j].ActualValues.JSDivergence {
-			return getInsightImportance(valWithDetailsArr[i]) > getInsightImportance(valWithDetailsArr[j])
+			return getInsightImportance(valWithDetailsArr[i], keysUsedInInsights) > getInsightImportance(valWithDetailsArr[j], keysUsedInInsights)
 		}
 		return valWithDetailsArr[i].ActualValues.JSDivergence > valWithDetailsArr[j].ActualValues.JSDivergence
 	})
@@ -254,12 +262,24 @@ func GetInsightsKpi(file CrossPeriodInsightsKpi, numberOfRecords int, QueryClass
 		increasedRecords = numberOfRecords - increasedRecords
 	}
 
-	keysUsedInInsights := make(map[string]bool)
+	if increasedRecords > numIncreased {
+		decreasedRecords = decreasedRecords + increasedRecords - numIncreased
+		increasedRecords = numIncreased
+	}
+	if decreasedRecords > numDecreased {
+		increasedRecords = increasedRecords + decreasedRecords - numDecreased
+		decreasedRecords = numDecreased
+	}
+
+	noOfInsightsRemainingPerKey := make(map[string]int)
+	for k, _ := range keysUsedInInsights {
+		noOfInsightsRemainingPerKey[k] = 1 + (numberOfRecords / len(keysUsedInInsights))
+	}
+
 	for _, data := range valWithDetailsArr {
-		if data.Category == "kpi_campaign" && keysUsedInInsights[data.Key] {
+		if data.Category == "kpi_campaign" && noOfInsightsRemainingPerKey[data.Key] == 0 {
 			continue
 		}
-		keysUsedInInsights[data.Key] = true
 		var tempActualValue = ActualMetrics{
 			ActualValues: Base{
 				W1:          data.ActualValues.W1,
@@ -276,14 +296,24 @@ func GetInsightsKpi(file CrossPeriodInsightsKpi, numberOfRecords int, QueryClass
 		tempActualValue.Entity = data.Entity
 		tempActualValue.VoteStatus = data.VoteStatus
 		tempActualValue.Type = data.Type
+
+		appended := false
 		if tempActualValue.ActualValues.IsIncreased && increasedRecords > 0 {
 			ActualValuearr = append(ActualValuearr, tempActualValue)
+			appended = true
 			increasedRecords -= 1
 		} else if !tempActualValue.ActualValues.IsIncreased && decreasedRecords > 0 {
 			ActualValuearr = append(ActualValuearr, tempActualValue)
+			appended = true
 			decreasedRecords -= 1
 		}
+		if appended {
+			noOfInsightsRemainingPerKey[data.Key] -= 1
+		}
 	}
+	sort.Slice(ActualValuearr, func(i, j int) bool {
+		return ActualValuearr[i].ActualValues.W1+ActualValuearr[i].ActualValues.W2 > ActualValuearr[j].ActualValues.W1+ActualValuearr[j].ActualValues.W2
+	})
 
 	insights.Insights = append(insights.Insights, ActualValuearr...)
 	return insights

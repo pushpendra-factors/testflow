@@ -442,59 +442,66 @@ func (store *MemSQL) ExecuteGoogleOrganicChannelQueryV1(projectID int64, query *
 		return columns, resultMetrics, http.StatusOK
 	}
 }
-func getGroupByCombinationsForSearchConsole(columns []string, resultMetrics [][]interface{}) []map[string]interface{} {
+
+// Edge Case: When there is no data for a day, we dont want to include it i.e. value == null.
+func getGroupByCombinationsForSearchConsole(columns []string, resultMetrics [][]interface{}) map[string][]interface{} {
 	logFields := log.Fields{
 		"columns":        columns,
 		"result_metrics": resultMetrics,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	groupByCombinations := make([]map[string]interface{}, 0)
+
+	groupByCombinations := make(map[string][]interface{}, 0)
+
 	for _, resultRow := range resultMetrics {
-		groupByCombination := make(map[string]interface{})
 		for index, column := range columns {
-			if strings.HasPrefix(column, "organic_property_") {
-				dimension := strings.TrimPrefix(column, "organic_property_")
-				groupByCombination[dimension] = resultRow[index]
+			if resultRow[index] != nil {
+				if strings.HasPrefix(column, "organic_property_") {
+					propertyWithoutOrganicPrefix := strings.TrimPrefix(column, "organic_property_")
+					if value, exists := groupByCombinations[propertyWithoutOrganicPrefix]; exists {
+						value = append(value, resultRow[index])
+						groupByCombinations[propertyWithoutOrganicPrefix] = value
+					} else {
+						value = make([]interface{}, 0)
+						value = append(value, resultRow[index])
+						groupByCombinations[propertyWithoutOrganicPrefix] = value
+					}
+				}
 			}
 		}
-		groupByCombinations = append(groupByCombinations, groupByCombination)
 	}
+
 	return groupByCombinations
 }
-func buildWhereConditionForGBTForSearchConsole(groupByCombinations []map[string]interface{}) (string, []interface{}) {
+
+func buildWhereConditionForGBTForSearchConsole(groupByCombinations map[string][]interface{}) (string, []interface{}) {
 	logFields := log.Fields{
 		"group_by_combinations": groupByCombinations,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	whereConditionForGBT := ""
+	resultantWhereCondition := ""
+	resultantInClauses := make([]string, 0)
 	params := make([]interface{}, 0)
-	for _, groupByCombination := range groupByCombinations {
-		whereConditionForEachCombination := ""
-		for dimension, value := range groupByCombination {
-			if whereConditionForEachCombination == "" {
-				whereConditionForEachCombination = fmt.Sprintf("JSON_EXTRACT_STRING(value, '%s') = ? ", dimension)
-				params = append(params, value)
-			} else {
-				whereConditionForEachCombination += fmt.Sprintf(" AND JSON_EXTRACT_STRING(value, '%s') = ? ", dimension)
-				params = append(params, value)
-			}
+	for dimension, values := range groupByCombinations {
+		currentInClause := ""
+		valuesInString := make([]string, 0)
+
+		for _, value := range values {
+			valuesInString = append(valuesInString, "?")
+			params = append(params, value)
 		}
-		if whereConditionForGBT == "" {
-			if whereConditionForEachCombination != "" {
-				whereConditionForGBT = "(" + whereConditionForEachCombination + ")"
-			}
-		} else {
-			if whereConditionForEachCombination != "" {
-				whereConditionForGBT += (" OR (" + whereConditionForEachCombination + ")")
-			}
-		}
+
+		currentInClause = joinWithComma(valuesInString...)
+		resultantInClauses = append(resultantInClauses, fmt.Sprintf("JSON_EXTRACT_STRING(value, '%s') IN (", dimension)+currentInClause+") ")
 	}
 
-	return whereConditionForGBT, params
+	resultantWhereCondition = joinWithWordInBetween("AND", resultantInClauses...)
+
+	return resultantWhereCondition, params
 }
 
 // GetSQLQueryAndParametersForGoogleOrganicQueryV1 ...
-func (store *MemSQL) GetSQLQueryAndParametersForGoogleOrganicQueryV1(projectID int64, query *model.ChannelQueryV1, reqID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string, int) {
+func (store *MemSQL) GetSQLQueryAndParametersForGoogleOrganicQueryV1(projectID int64, query *model.ChannelQueryV1, reqID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}) (string, []interface{}, []string, []string, int) {
 	logFields := log.Fields{
 		"project_id":                    projectID,
 		"query":                         query,
@@ -566,7 +573,7 @@ func checkIfOnlyPageExistsInFiltersAndGroupBys(filters []model.ChannelFilterV1, 
 	return true
 }
 
-func buildGoogleOrganicQueryV1(query *model.ChannelQueryV1, projectID int64, urlPrefixes string, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string) {
+func buildGoogleOrganicQueryV1(query *model.ChannelQueryV1, projectID int64, urlPrefixes string, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}) (string, []interface{}, []string, []string) {
 	logFields := log.Fields{
 		"project_id":                    projectID,
 		"query":                         query,

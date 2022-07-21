@@ -12,26 +12,27 @@ import { compareFilters, groupFilters } from '../../../utils/global';
 const GLobalFilter = ({
   filters = [],
   setGlobalFilters,
-  onFiltersLoad = [],
+  groupName
 }) => {
   const userProperties = useSelector((state) => state.coreQuery.userProperties);
+  const groupProperties = useSelector((state) => state.coreQuery.groupProperties);
   const activeProject = useSelector((state) => state.global.active_project);
-
   const [filterProps, setFilterProperties] = useState({});
   const [filterDD, setFilterDD] = useState(false);
   const [orFilterIndex, setOrFilterIndex] = useState(-1);
 
   useEffect(() => {
     const props = Object.assign({}, filterProps);
-    props["user"] = userProperties;
-    setFilterProperties(props);
-  }, [userProperties]);
-
-  useEffect(() => {
-    if (onFiltersLoad.length) {
-      onFiltersLoad.forEach((fn) => fn());
+    if (groupName === 'users') {
+      props['user'] = userProperties;
+      props['group'] = [];
+    } else {
+      props['user'] = [];
+      props['group'] = groupProperties[groupName];
     }
-  }, [filters]);
+
+    setFilterProperties(props);
+  }, [userProperties, groupProperties, groupName]);
 
   const delFilter = (index) => {
     const filtersSorted = [...filters];
@@ -86,6 +87,7 @@ const GLobalFilter = ({
                 filterProps={filterProps}
                 propsConstants={['user']}
                 refValue={refValue}
+                groupName={groupName}
               ></GlobalFilterBlock>
             </div>
            {index !== orFilterIndex && (
@@ -108,6 +110,7 @@ const GLobalFilter = ({
                 closeFilter={closeFilter}
                 refValue={refValue}
                 showOr = {true}
+                groupName={groupName}
               ></GlobalFilterBlock>
               </div>              
             )}  
@@ -129,8 +132,9 @@ const GLobalFilter = ({
                 insertFilter={(val,index) => editFilter(index, val)}
                 closeFilter={closeFilter}
                 filterProps={filterProps}
-                propsConstants={['user']}
+                propsConstants={['user', 'group']}
                 refValue={refValue}
+                groupName={groupName}
               ></GlobalFilterBlock>
             </div>
           <div key={index+1} className={`mt-2`}>
@@ -145,9 +149,10 @@ const GLobalFilter = ({
                 insertFilter={(val,index) => editFilter(index, val)}
                 closeFilter={closeFilter}
                 filterProps={filterProps}
-                propsConstants={['user']}
+                propsConstants={['user', 'group']}
                 refValue={refValue}
                 showOr = {true}
+                groupName={groupName}
               ></GlobalFilterBlock>
           </div>
         </div>
@@ -170,7 +175,8 @@ const GLobalFilter = ({
             insertFilter={addFilter}
             deleteFilter={() => closeFilter()}
             closeFilter={closeFilter}
-            refValue={lastRef+1}
+            refValue={lastRef + 1}
+            groupName={groupName}
           ></GlobalFilterBlock>
         </div>
       );
@@ -183,8 +189,7 @@ const GLobalFilter = ({
             onClick={() => setFilterDD(true)}
             icon={<SVG name='plus' />}
           >
-            {' '}
-            Add new{' '}
+            Add new
           </Button>
         </div>
       );

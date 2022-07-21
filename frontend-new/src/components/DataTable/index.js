@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Table } from 'antd';
-import classNames from 'classnames';
+import cx from 'classnames';
 import SearchBar from './SearchBar';
 import styles from './index.module.scss';
 import { useHistory } from 'react-router-dom';
 import useToggle from '../../hooks/useToggle';
+import ControlledComponent from '../ControlledComponent/ControlledComponent';
 
 function DataTable({
   tableData,
@@ -20,29 +21,28 @@ function DataTable({
   renderSearch = true,
   isPaginationEnabled = true,
   defaultPageSize = 10,
-  controlsPopover
+  controlsPopover,
+  filtersVisible,
+  setFiltersVisibility,
+  filters,
+  appliedFilters,
+  setAppliedFilters
 }) {
   const componentRef = useRef(null);
   const downloadBtnRef = useRef(null);
   const [pageSize, setPageSize] = useState(defaultPageSize);
-
   const [searchBar, toggleSearchBar] = useToggle(false);
-
   const history = useHistory();
-
   let isDashboardWidget = !isWidgetModal;
-
   if (history.location.pathname === '/analyse') {
     isDashboardWidget = false;
   }
-
   const handleSearchTextChange = useCallback(
     (value) => {
       setSearchText(value);
     },
     [setSearchText]
   );
-
   const handleDocumentClick = useCallback(
     (e) => {
       if (ignoreDocumentClick) {
@@ -59,21 +59,18 @@ function DataTable({
     },
     [handleSearchTextChange, searchBar]
   );
-
   useEffect(() => {
     document.addEventListener('mousedown', handleDocumentClick);
     return () => {
       document.removeEventListener('mousedown', handleDocumentClick);
     };
   }, [handleDocumentClick]);
-
   const handlePageSizeChange = (...args) => {
     setPageSize(args[1]);
   };
-
   return (
     <div ref={componentRef} className="data-table">
-      {!isDashboardWidget && renderSearch ? (
+      <ControlledComponent controller={!isDashboardWidget && renderSearch}>
         <SearchBar
           searchText={searchText}
           handleSearchTextChange={handleSearchTextChange}
@@ -81,8 +78,13 @@ function DataTable({
           getCSVData={getCSVData}
           toggleSearchBar={toggleSearchBar}
           controlsPopover={controlsPopover}
+          filters={filters}
+          appliedFilters={appliedFilters}
+          setAppliedFilters={setAppliedFilters}
+          filtersVisible={filtersVisible}
+          setFiltersVisibility={setFiltersVisibility}
         />
-      ) : null}
+      </ControlledComponent>
       <Table
         pagination={
           !isDashboardWidget && isPaginationEnabled
@@ -98,7 +100,7 @@ function DataTable({
         rowSelection={!isDashboardWidget ? rowSelection : null}
         columns={columns}
         dataSource={isDashboardWidget ? tableData.slice(0, 3) : tableData}
-        className={classNames(styles.table, className, {
+        className={cx(styles.table, className, {
           [styles.dashboardTable]: isDashboardWidget
         })}
         scroll={scroll}
@@ -106,5 +108,4 @@ function DataTable({
     </div>
   );
 }
-
 export default DataTable;

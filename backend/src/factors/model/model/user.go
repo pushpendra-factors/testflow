@@ -57,7 +57,8 @@ type LatestUserPropertiesFromSession struct {
 	TotalSpentTime float64
 	SessionCount   uint64
 	Timestamp      int64
-	Channel        string
+	InitialChannel string
+	LatestChannel  string
 }
 
 type SessionUserProperties struct {
@@ -73,6 +74,11 @@ type SessionUserProperties struct {
 	SessionPageCount     float64
 	SessionPageSpentTime float64
 	SessionChannel       string
+	IsSessionEvent       bool
+}
+type ChannelUserProperty struct {
+	InitialChannel string
+	LatestChannel  string
 }
 
 // indexed hubspot user property.

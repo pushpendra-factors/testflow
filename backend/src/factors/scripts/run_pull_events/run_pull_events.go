@@ -54,7 +54,7 @@ func main() {
 
 	hardPull := flag.Bool("hard_pull", false, "replace the files already present")
 
-	fileTypesFlag := flag.String("file_types", "",
+	fileTypesFlag := flag.String("file_types", "*",
 		"Optional: file type. A comma separated list of file types and supports '*' for all files. ex: 1,2,6,9") //refer to T.fileType map
 	projectIdFlag := flag.String("project_ids", "",
 		"Optional: Project Id. A comma separated list of project Ids and supports '*' for all projects. ex: 1,2,6,9")
@@ -129,7 +129,8 @@ func main() {
 		}
 
 	} else {
-		allProjects, _, _ := C.GetProjectsFromListWithAllProjectSupport(*projectIdFlag, "")
+		var allProjects bool
+		allProjects, projectIdsToRun, _ = C.GetProjectsFromListWithAllProjectSupport(*projectIdFlag, "")
 		if allProjects {
 			projectIDs, errCode := store.GetStore().GetAllProjectIDs()
 			if errCode != http.StatusFound {

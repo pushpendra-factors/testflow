@@ -26,7 +26,7 @@ const { Option } = Select;
 const { Panel } = Collapse;
 
 function QueryComposer({
-  queries,
+  queries = [],
   runQuery,
   eventChange,
   queryType,
@@ -44,6 +44,7 @@ function QueryComposer({
   const [analyticsSeqOpen, setAnalyticsSeqVisible] = useState(false);
   const [calendarLabel, setCalendarLabel] = useState('Pick Dates');
   const [criteriaTabOpen, setCriteriaTabOpen] = useState(false);
+  const [eventBlockOpen, setEventBlockOpen] = useState(true);
 
   useEffect(() => {
     if (activeProject && activeProject.id) {
@@ -66,7 +67,7 @@ function QueryComposer({
 
   const queryList = () => {
     const blockList = [];
-
+    console.log(queries);
     queries.forEach((event, index) => {
       blockList.push(
         <div key={index} className={styles.composer_body__query_block}>
@@ -434,7 +435,6 @@ function QueryComposer({
   };
 
   const renderQueryList = () => {
-    const [eventBlockOpen, setEventBlockOpen] = useState(true);
     try {
       return (
         <ComposerBlock

@@ -1320,7 +1320,7 @@ func TestTrackHandlerWithFormSubmit(t *testing.T) {
 
 	// track form submit event.
 	w := ServePostRequestWithHeaders(r, uri,
-		[]byte(fmt.Sprintf(`{"event_name": "%s", "event_properties": {"$email": "xxx@example.com", "$company": "Example Inc"}}`,
+		[]byte(fmt.Sprintf(`{"event_name": "%s", "event_properties": {"$email": "विक्रमसिंह7698@gmail.com", "$company": "Example Inc"}}`,
 			U.EVENT_NAME_FORM_SUBMITTED)), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 	responseMap := DecodeJSONResponseToMap(w.Body)
