@@ -456,7 +456,7 @@ def sync_contacts(project_id, api_key,last_sync_timestamp, sync_all=False):
     create_all_contact_documents_with_buffer = get_create_all_documents_with_buffer(project_id,"contact",buffer_size)
     has_more = True
     count = 0
-    parameter_dict = { 'hapikey': api_key, 'count': PAGE_SIZE }
+    parameter_dict = { 'hapikey': api_key, 'count': PAGE_SIZE, 'formSubmissionMode': 'all' }
     properties, ok = get_all_properties_by_doc_type(project_id,"contacts", api_key)
     if not ok:
         log.error("Failure loading properties for project_id %d on sync_contacts", project_id)

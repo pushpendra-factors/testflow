@@ -247,7 +247,7 @@ func (store *MemSQL) CreateAlert(projectID int64, alert model.Alert) (model.Aler
 	if alert.AlertType == model.ALERT_TYPE_QUERY_SHARING {
 		skipValidation = true
 	}
-	if alertDescription.Name == "" {
+	if alertDescription.Name == "" && alert.AlertType != model.ALERT_TYPE_QUERY_SHARING {
 		logCtx.Error("Invalid alert name")
 		return model.Alert{}, http.StatusBadRequest, "Invalid alert name"
 	}
@@ -285,7 +285,9 @@ func (store *MemSQL) CreateAlert(projectID int64, alert model.Alert) (model.Aler
 			return model.Alert{}, http.StatusBadRequest, "Invalid Date Range"
 		}
 	} else {
-		return model.Alert{}, http.StatusBadRequest, "Invalid Alert Type"
+		if alert.AlertType != model.ALERT_TYPE_QUERY_SHARING {
+			return model.Alert{}, http.StatusBadRequest, "Invalid Alert Type"
+		}
 	}
 	alertRecord := model.Alert{
 		ID:                 U.GetUUID(),
