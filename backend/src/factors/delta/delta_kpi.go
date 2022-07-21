@@ -74,80 +74,80 @@ func CreateKpiInsights(diskManager *serviceDisk.DiskDriver, cloudManager *filest
 				kpiProperties = M.KPIPropertiesForFormSubmissions
 			} else if query.DisplayCategory == M.PageViewsDisplayCategory {
 				kpiProperties = M.KPIPropertiesForPageViews
-				// } else if query.DisplayCategory == M.GoogleAdsDisplayCategory {
-				// 	for category, propMap := range M.MapOfAdwordsObjectsToPropertiesAndRelated {
-				// 		for prop, info := range propMap {
-				// 			kpiProperties = append(kpiProperties, map[string]string{
-				// 				"name":      M.AdwordsInternalPropertiesToReportsInternal[category+":"+prop],
-				// 				"data_type": info.TypeOfProperty,
-				// 				"entity":    category,
-				// 			})
-				// 		}
-				// 	}
-				// } else if query.DisplayCategory == M.BingAdsDisplayCategory {
-				// 	for category, propMap := range M.MapOfBingAdsObjectsToPropertiesAndRelated {
-				// 		category2 := category
-				// 		if category != M.FilterKeyword {
-				// 			category2 = category + "s"
-				// 		}
-				// 		for prop, info := range propMap {
-				// 			kpiProperties = append(kpiProperties, map[string]string{
-				// 				"name":      M.BingAdsInternalRepresentationToExternalRepresentationForReports[category2+"."+prop],
-				// 				"data_type": info.TypeOfProperty,
-				// 				"entity":    category,
-				// 			})
-				// 		}
-				// 	}
-				// } else if query.DisplayCategory == M.FacebookDisplayCategory {
-				// 	for category, propMap := range M.MapOfFacebookObjectsToPropertiesAndRelated {
-				// 		category2 := category
-				// 		if category == M.CAFilterAdGroup {
-				// 			category2 = "ad_set"
-				// 		}
-				// 		for prop, info := range propMap {
-				// 			kpiProperties = append(kpiProperties, map[string]string{
-				// 				"name":      M.ObjectToValueInFacebookJobsMapping[category2+":"+prop],
-				// 				"data_type": info.TypeOfProperty,
-				// 				"entity":    category,
-				// 			})
-				// 		}
-				// 	}
-				// } else if query.DisplayCategory == M.LinkedinDisplayCategory {
-				// 	for _, prop := range []string{"id", "name"} {
-				// 		kpiProperties = append(kpiProperties, map[string]string{
-				// 			"name":      M.LinkedinCampaignGroup + "_" + prop,
-				// 			"data_type": U.PropertyTypeCategorical,
-				// 			"entity":    M.CAFilterCampaign,
-				// 		})
-				// 		kpiProperties = append(kpiProperties, map[string]string{
-				// 			"name":      M.LinkedinCampaign + "_" + prop,
-				// 			"data_type": U.PropertyTypeCategorical,
-				// 			"entity":    M.CAFilterAdGroup,
-				// 		})
-				// 	}
-				// } else if query.DisplayCategory == M.GoogleOrganicDisplayCategory {
-				// 	for _, propMap := range M.MapOfObjectsToPropertiesAndRelatedGoogleOrganic {
-				// 		for prop, info := range propMap {
-				// 			kpiProperties = append(kpiProperties, map[string]string{
-				// 				"name":      prop,
-				// 				"data_type": info.TypeOfProperty,
-				// 				"entity":    M.CAFilterCampaign,
-				// 			})
-				// 		}
-				// 	}
-				// } else if query.DisplayCategory == M.AllChannelsDisplayCategory {
-				// 	for _, prop := range []string{"id", "name"} {
-				// 		kpiProperties = append(kpiProperties, map[string]string{
-				// 			"name":      M.CAFilterCampaign + "_" + prop,
-				// 			"data_type": U.PropertyTypeCategorical,
-				// 			"entity":    M.CAFilterCampaign,
-				// 		})
-				// 		kpiProperties = append(kpiProperties, map[string]string{
-				// 			"name":      M.CAFilterAdGroup + "_" + prop,
-				// 			"data_type": U.PropertyTypeCategorical,
-				// 			"entity":    M.CAFilterAdGroup,
-				// 		})
-				// 	}
+			} else if query.DisplayCategory == M.GoogleAdsDisplayCategory {
+				for category, propMap := range M.MapOfAdwordsObjectsToPropertiesAndRelated {
+					for prop, info := range propMap {
+						kpiProperties = append(kpiProperties, map[string]string{
+							"name":      M.AdwordsInternalPropertiesToReportsInternal[category+":"+prop],
+							"data_type": info.TypeOfProperty,
+							"entity":    category,
+						})
+					}
+				}
+			} else if query.DisplayCategory == M.BingAdsDisplayCategory {
+				for category, propMap := range M.MapOfBingAdsObjectsToPropertiesAndRelated {
+					category2 := category
+					if category != M.FilterKeyword {
+						category2 = category + "s"
+					}
+					for prop, info := range propMap {
+						kpiProperties = append(kpiProperties, map[string]string{
+							"name":      M.BingAdsInternalRepresentationToExternalRepresentationForReports[category2+"."+prop],
+							"data_type": info.TypeOfProperty,
+							"entity":    category,
+						})
+					}
+				}
+			} else if query.DisplayCategory == M.FacebookDisplayCategory {
+				for category, propMap := range M.MapOfFacebookObjectsToPropertiesAndRelated {
+					category2 := category
+					if category == M.CAFilterAdGroup {
+						category2 = "ad_set"
+					}
+					for prop, info := range propMap {
+						kpiProperties = append(kpiProperties, map[string]string{
+							"name":      M.ObjectToValueInFacebookJobsMapping[category2+":"+prop],
+							"data_type": info.TypeOfProperty,
+							"entity":    category,
+						})
+					}
+				}
+			} else if query.DisplayCategory == M.LinkedinDisplayCategory {
+				for _, prop := range []string{"id", "name"} {
+					kpiProperties = append(kpiProperties, map[string]string{
+						"name":      M.LinkedinCampaignGroup + "_" + prop,
+						"data_type": U.PropertyTypeCategorical,
+						"entity":    M.CAFilterCampaign,
+					})
+					kpiProperties = append(kpiProperties, map[string]string{
+						"name":      M.LinkedinCampaign + "_" + prop,
+						"data_type": U.PropertyTypeCategorical,
+						"entity":    M.CAFilterAdGroup,
+					})
+				}
+			} else if query.DisplayCategory == M.GoogleOrganicDisplayCategory {
+				for _, propMap := range M.MapOfObjectsToPropertiesAndRelatedGoogleOrganic {
+					for prop, info := range propMap {
+						kpiProperties = append(kpiProperties, map[string]string{
+							"name":      prop,
+							"data_type": info.TypeOfProperty,
+							"entity":    M.CAFilterCampaign,
+						})
+					}
+				}
+			} else if query.DisplayCategory == M.AllChannelsDisplayCategory {
+				for _, prop := range []string{"id", "name"} {
+					kpiProperties = append(kpiProperties, map[string]string{
+						"name":      M.CAFilterCampaign + "_" + prop,
+						"data_type": U.PropertyTypeCategorical,
+						"entity":    M.CAFilterCampaign,
+					})
+					kpiProperties = append(kpiProperties, map[string]string{
+						"name":      M.CAFilterAdGroup + "_" + prop,
+						"data_type": U.PropertyTypeCategorical,
+						"entity":    M.CAFilterAdGroup,
+					})
+				}
 			} else {
 				log.Errorf("no kpi Insights for category: %s", query.DisplayCategory)
 				continue
@@ -374,11 +374,8 @@ func GetMetricsEvaluated(category string, metricNames []string, queryEvent strin
 	var GetMetrics func(metricNames []string, queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*WithinPeriodInsightsKpi, error)
 
 	if category == M.AllChannelsDisplayCategory {
-		// insights, err = GetAllChannelMetricsInfo(metricNames, "all_ads", propFilter, propsToEval, projectId, periodCode, cloudManager, diskManager, insightGranularity)
-		// spectrum = "campaign"
-		err := fmt.Errorf("no kpi Insights for category: %s", category)
-		log.WithError(err).Error("not computing insights for this category")
-		return insights, err
+		insights, err = GetAllChannelMetricsInfo(metricNames, "all_ads", propFilter, propsToEval, projectId, periodCode, cloudManager, diskManager, insightGranularity)
+		spectrum = "campaign"
 	} else {
 		if category == M.WebsiteSessionDisplayCategory {
 			GetMetrics = GetSessionMetrics
@@ -389,26 +386,26 @@ func GetMetricsEvaluated(category string, metricNames []string, queryEvent strin
 		} else if category == M.PageViewsDisplayCategory {
 			GetMetrics = GetPageViewMetrics
 			spectrum = "events"
-			// } else if category == M.GoogleAdsDisplayCategory {
-			// 	GetMetrics = GetCampaignMetricsInfo
-			// 	queryEvent = M.ADWORDS
-			// 	spectrum = "campaign"
-			// } else if category == M.BingAdsDisplayCategory {
-			// 	GetMetrics = GetCampaignMetricsInfo
-			// 	queryEvent = M.BINGADS
-			// 	spectrum = "campaign"
-			// } else if category == M.FacebookDisplayCategory {
-			// 	GetMetrics = GetCampaignMetricsInfo
-			// 	queryEvent = M.FACEBOOK
-			// 	spectrum = "campaign"
-			// } else if category == M.LinkedinDisplayCategory {
-			// 	GetMetrics = GetCampaignMetricsInfo
-			// 	queryEvent = M.LINKEDIN
-			// 	spectrum = "campaign"
-			// } else if category == M.GoogleOrganicDisplayCategory {
-			// 	GetMetrics = GetCampaignMetricsInfo
-			// 	queryEvent = M.GOOGLE_ORGANIC
-			// 	spectrum = "campaign"
+		} else if category == M.GoogleAdsDisplayCategory {
+			GetMetrics = GetCampaignMetricsInfo
+			queryEvent = M.ADWORDS
+			spectrum = "campaign"
+		} else if category == M.BingAdsDisplayCategory {
+			GetMetrics = GetCampaignMetricsInfo
+			queryEvent = M.BINGADS
+			spectrum = "campaign"
+		} else if category == M.FacebookDisplayCategory {
+			GetMetrics = GetCampaignMetricsInfo
+			queryEvent = M.FACEBOOK
+			spectrum = "campaign"
+		} else if category == M.LinkedinDisplayCategory {
+			GetMetrics = GetCampaignMetricsInfo
+			queryEvent = M.LINKEDIN
+			spectrum = "campaign"
+		} else if category == M.GoogleOrganicDisplayCategory {
+			GetMetrics = GetCampaignMetricsInfo
+			queryEvent = M.GOOGLE_ORGANIC
+			spectrum = "campaign"
 		} else {
 			err := fmt.Errorf("no kpi Insights for category: %s", category)
 			log.WithError(err).Error("not computing insights for this category")
@@ -588,7 +585,10 @@ func addValueToMapForPropsPresent(globalVal *float64, featMap map[string]map[str
 			pt = "either"
 		}
 		if val, ok := ExistsInProps(prop, propMap1, propMap2, pt); ok {
-			val, _ := getStringValueFromInterface(val)
+			val, err := getStringValueFromInterface(val)
+			if err != nil {
+				log.WithError(err).Errorf("error getStringValueFromInterface for key %s and val %s", prop, val)
+			}
 			if _, ok := featMap[propWithType]; !ok {
 				featMap[propWithType] = make(map[string]float64)
 			}
@@ -608,19 +608,16 @@ func addValueToMapForPropsPresentUser(globalVal *float64, featMap map[string]map
 		prop := propTypeName[1]
 		propType := propTypeName[0]
 		if val, ok := ExistsInProps(prop, eventDetails.EventProperties, eventDetails.UserProperties, propType); ok {
-			val, _ := getStringValueFromInterface(val)
+			val, err := getStringValueFromInterface(val)
+			if err != nil {
+				log.WithError(err).Errorf("error getStringValueFromInterface for key %s and val %s", prop, val)
+			}
 			propWithVal := strings.Join([]string{prop, val}, ":")
 			if _, ok := uniqueUsersFeat[propWithVal]; !ok {
 				uniqueUsersFeat[propWithVal] = make(map[string]bool)
 			}
 			if _, ok := uniqueUsersFeat[propWithVal][uid]; !ok {
 				uniqueUsersFeat[propWithVal][uid] = true
-				if _, ok := featMap[propWithType]; !ok {
-					featMap[propWithType] = make(map[string]float64)
-				}
-				featMap[propWithType][val] += valueToBeAdded
-			} else if valueToBeAdded == -1 {
-				delete(uniqueUsersFeat[propWithVal], uid)
 				if _, ok := featMap[propWithType]; !ok {
 					featMap[propWithType] = make(map[string]float64)
 				}
@@ -644,7 +641,10 @@ func addValuesToFractionForPropsPresent(globalVal *Fraction, featMap map[string]
 			pt = "either"
 		}
 		if val, ok := ExistsInProps(prop, firstMap, secondMap, pt); ok {
-			val, _ := getStringValueFromInterface(val)
+			val, err := getStringValueFromInterface(val)
+			if err != nil {
+				log.WithError(err).Errorf("error getStringValueFromInterface for key %s and val %s", prop, val)
+			}
 			if _, ok := featMap[propWithType]; !ok {
 				featMap[propWithType] = make(map[string]Fraction)
 			}
@@ -671,7 +671,10 @@ func addValuesToFractionForPropsPresentUser(globalVal *Fraction, featMap map[str
 		prop := propTypeName[1]
 		propType := propTypeName[0]
 		if val, ok := ExistsInProps(prop, eventDetails.EventProperties, eventDetails.UserProperties, propType); ok {
-			val, _ := getStringValueFromInterface(val)
+			val, err := getStringValueFromInterface(val)
+			if err != nil {
+				log.WithError(err).Errorf("error getStringValueFromInterface for key %s and val %s", prop, val)
+			}
 			if _, ok := featMap[propWithType]; !ok {
 				featMap[propWithType] = make(map[string]Fraction)
 			}
@@ -706,6 +709,26 @@ func getFractionValue(globalFrac *Fraction, featInfoMap map[string]map[string]Fr
 		for val, info := range valMap {
 			if !(info.Denominator == 0 || info.Numerator == 0) {
 				reqMap[prop][val] = info.Numerator / info.Denominator
+			}
+		}
+		if len(reqMap[prop]) == 0 {
+			delete(reqMap, prop)
+		}
+	}
+	return globalVal, reqMap
+}
+
+func getFractionValueForRate(globalFrac *Fraction, featInfoMap map[string]map[string]Fraction) (float64, map[string]map[string]float64) {
+	var globalVal float64
+	if globalFrac.Denominator != 0 {
+		globalVal = globalFrac.Numerator * 100 / globalFrac.Denominator
+	}
+	reqMap := make(map[string]map[string]float64)
+	for prop, valMap := range featInfoMap {
+		reqMap[prop] = make(map[string]float64)
+		for val, info := range valMap {
+			if !(info.Denominator == 0 || info.Numerator == 0) {
+				reqMap[prop][val] = info.Numerator * 100 / info.Denominator
 			}
 		}
 		if len(reqMap[prop]) == 0 {

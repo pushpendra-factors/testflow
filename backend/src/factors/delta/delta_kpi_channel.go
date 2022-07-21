@@ -624,7 +624,7 @@ func GetAllChannelMetricsInfo(metricNames []string, channel string, propFilter [
 		var newPropFilter []M.KPIFilter
 		for _, filter := range propFilter {
 			if filter.ObjectType == "channel" {
-				if ok, _ := checkValSatisfiesFilterCondition(filter, channel); !ok {
+				if ok, _ := checkValSatisfiesFilterCondition(filter, ChannelValueFilterName[channel]); !ok {
 					passFilter = false
 				}
 			} else {
@@ -684,6 +684,6 @@ func addMetricInfoStructForSource(source string, baseInfo *MetricInfo, info2add 
 	if _, ok := info.Features["channel#channel_name"]; !ok {
 		info.Features["channel#channel_name"] = make(map[string]float64)
 	}
-	info.Features["channel#channel_name"][source] = info2add.Global
+	info.Features["channel#channel_name"][ChannelValueFilterName[source]] = info2add.Global
 	return &info
 }

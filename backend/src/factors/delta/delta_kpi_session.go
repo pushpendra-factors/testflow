@@ -187,14 +187,12 @@ func GetSessionRepeatUsers(queryEvent string, scanner *bufio.Scanner, propFilter
 		}
 		addToScale(&globalScale, scaleMap, propsToEval, eventDetails)
 
-		addValueToMapForPropsPresentUser(&repeat, reqMap, 1, propsToEval, eventDetails, uniqueUsers, uniqueUsersFeat)
-
 		//check if new user
-		if !checkNew(eventDetails) {
+		if checkNew(eventDetails) {
 			continue
 		}
 
-		addValueToMapForPropsPresent(&repeat, reqMap, -1, propsToEval, eventDetails.EventProperties, eventDetails.UserProperties)
+		addValueToMapForPropsPresentUser(&repeat, reqMap, 1, propsToEval, eventDetails, uniqueUsers, uniqueUsersFeat)
 	}
 
 	deleteEntriesWithZeroFreq(reqMap)
@@ -591,7 +589,7 @@ func GetSessionBounceRate(queryEvent string, scanner *bufio.Scanner, propFilter 
 	}
 
 	// get bounce rate
-	bounceRate, reqMap = getFractionValue(&bounceRateFrac, featInfoMap)
+	bounceRate, reqMap = getFractionValueForRate(&bounceRateFrac, featInfoMap)
 
 	scale = MetricInfo{Global: globalScale, Features: scaleMap}
 	info = MetricInfo{Global: bounceRate, Features: reqMap}
@@ -638,7 +636,7 @@ func GetSessionEngagementRate(queryEvent string, scanner *bufio.Scanner, propFil
 	}
 
 	// get engagement rate
-	engagementRate, reqMap = getFractionValue(&engagementRateFrac, featInfoMap)
+	engagementRate, reqMap = getFractionValueForRate(&engagementRateFrac, featInfoMap)
 
 	scale = MetricInfo{Global: globalScale, Features: scaleMap}
 	info = MetricInfo{Global: engagementRate, Features: reqMap}
@@ -665,7 +663,7 @@ func checkEngagedSession(eventDetails P.CounterEventFormat) bool {
 
 func checkNew(eventDetails P.CounterEventFormat) bool {
 	var new bool
-	if first, ok := eventDetails.EventProperties[U.SP_IS_FIRST_SESSION]; ok {
+	if first, ok := ExistsInProps(U.SP_IS_FIRST_SESSION, eventDetails.EventProperties, eventDetails.UserProperties, "ep"); ok {
 		new = first.(bool)
 	}
 	return new
