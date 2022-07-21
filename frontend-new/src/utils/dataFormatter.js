@@ -670,7 +670,7 @@ export const formatDurationIntoString = (seconds) => {
       }
       returnString +=
         ' ' +
-        timeUnits[i][0] +
+        parseInt(timeUnits[i][0]) +
         ' ' +
         (timeUnits[i][0] === 1
           ? timeUnits[i][1].substr(0, timeUnits[i][1].length - 1)

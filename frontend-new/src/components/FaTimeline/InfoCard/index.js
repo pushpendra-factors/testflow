@@ -1,10 +1,13 @@
 import React from 'react';
 import { Text } from 'Components/factorsComponents';
 import { Popover } from 'antd';
-import { formatDurationIntoString, PropTextFormat } from '../../../utils/dataFormatter';
+import {
+  formatDurationIntoString,
+  PropTextFormat,
+} from '../../../utils/dataFormatter';
 import MomentTz from '../../MomentTz';
 
-function InfoCard({ title, properties = {}, trigger, children }) {
+function InfoCard({ title, event_name, properties = {}, trigger, children }) {
   const popoverContent = () => {
     return (
       <div className='fa-popupcard'>
@@ -18,20 +21,55 @@ function InfoCard({ title, properties = {}, trigger, children }) {
           {title}
         </Text>
         {Object.entries(properties).map(([key, value]) => {
-          return (
-            <div className='flex justify-between py-2'>
-              <Text mini type={'paragraph'} color={'grey'}>
-                {key === '$timestamp' ? 'Date and Time' : PropTextFormat(key)}
-              </Text>
-              <Text mini type={'paragraph'} color={'grey-2'} weight={'medium'}>
-                {key === '$timestamp'
-                  ? MomentTz(value * 1000).format('DD MMMM YYYY, hh:mm A')
-                  : key.includes('_time')
-                  ? formatDurationIntoString(value)
-                  : value}
-              </Text>
-            </div>
-          );
+          if (key === '$is_page_view' && value === true)
+            return (
+              <div className='flex justify-between py-2'>
+                <Text
+                  mini
+                  type={'paragraph'}
+                  color={'grey'}
+                  extraClass={'max-w-2/3 break-words mr-2'}
+                >
+                  Page URL
+                </Text>
+
+                <Text
+                  mini
+                  type={'paragraph'}
+                  color={'grey-2'}
+                  weight={'medium'}
+                  extraClass={'break-words text-right'}
+                >
+                  {event_name}
+                </Text>
+              </div>
+            );
+          else
+            return (
+              <div className='flex justify-between py-2'>
+                <Text
+                  mini
+                  type={'paragraph'}
+                  color={'grey'}
+                  extraClass={'max-w-2/3 truncate mr-2'}
+                >
+                  {key === '$timestamp' ? 'Date and Time' : PropTextFormat(key)}
+                </Text>
+                <Text
+                  mini
+                  type={'paragraph'}
+                  color={'grey-2'}
+                  weight={'medium'}
+                  extraClass={'break-words text-right'}
+                >
+                  {key === '$timestamp'
+                    ? MomentTz(value * 1000).format('DD MMMM YYYY, hh:mm A')
+                    : key.includes('_time')
+                    ? formatDurationIntoString(value)
+                    : value}
+                </Text>
+              </div>
+            );
         })}
       </div>
     );

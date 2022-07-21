@@ -50,7 +50,7 @@ function FaTimeline({
   };
 
   const data = _.groupBy(activities, groups[granularity]);
-  const hoveEvents = [
+  const hoverEvents = [
     'Website Session',
     'Page View',
     'Form Button Click',
@@ -103,16 +103,19 @@ function FaTimeline({
                         <div className={`flex`}>
                           <InfoCard
                             title={event.display_name}
+                            event_name={event.event_name}
                             properties={event?.properties || {}}
                             trigger={
-                              hoveEvents.includes(event.display_name)
+                              hoverEvents.includes(event.display_name)
                                 ? 'hover'
                                 : []
                             }
                           >
                             <div className={`${styles.tag} truncate`}>
-                              {event.display_name}
-                              {hoveEvents.includes(event.display_name) ? (
+                              {event.display_name === 'Page View'
+                                ? event.event_name
+                                : event.display_name}
+                              {hoverEvents.includes(event.display_name) ? (
                                 <CaretRightOutlined />
                               ) : null}
                             </div>
