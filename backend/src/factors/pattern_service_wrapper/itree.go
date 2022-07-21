@@ -1208,10 +1208,13 @@ func BuildNewItree(reqId,
 	if err != nil {
 		return nil, err
 	}
-	allActiveUsersPattern = patternWrapper.GetPattern(reqId, []string{U.SEN_ALL_ACTIVE_USERS})
+	rootPattern := U.EVENT_NAME_SESSION
+	log.Infof("setting root node pattern :%s", rootPattern)
+	allActiveUsersPattern = patternWrapper.GetPattern(reqId, []string{rootPattern})
 	if allActiveUsersPattern == nil {
 		return nil, fmt.Errorf("all active users pattern not found")
 	}
+	log.Infof("all active user pattern :%v", allActiveUsersPattern.EventNames)
 
 	for _, p := range candidatePatterns {
 		pLen := len(p.EventNames)
@@ -1306,7 +1309,7 @@ func BuildNewItreeV1(reqId string,
 	candidatePatterns, err := patternWrapper.GetAllPatterns(reqId, startEvent, endEvent)
 	endTime := time.Now().Unix()
 	log.WithFields(log.Fields{
-		"time_taken": endTime - startTime}).Error("GetAllPatterns Time taken.")
+		"time_taken": endTime - startTime}).Error("GetAllPatterns Time taken .")
 	log.WithFields(log.Fields{
 		"time_taken": endTime - startTime}).Error("explain_debug_GetAllPatterns")
 	debugCounts["total_patterns"] = len(candidatePatterns)
@@ -1337,11 +1340,13 @@ func BuildNewItreeV1(reqId string,
 	// if allActiveUsersPattern == nil {
 	// 	return nil, fmt.Errorf("all active users pattern not found"), nil
 	// }
-
-	allActiveUsersPattern = patternWrapper.GetPattern(reqId, []string{U.SEN_ALL_ACTIVE_USERS})
+	rootPattern := U.EVENT_NAME_SESSION
+	log.Infof("Setting root pattern:%s", rootPattern)
+	allActiveUsersPattern = patternWrapper.GetPattern(reqId, []string{rootPattern})
 	if allActiveUsersPattern == nil {
 		return nil, fmt.Errorf("all active users pattern not found"), nil
 	}
+	log.Infof("all active users root pattern:%v", allActiveUsersPattern.EventNames)
 
 	for _, p := range candidatePatterns {
 		pLen := len(p.EventNames)
