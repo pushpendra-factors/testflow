@@ -19,6 +19,7 @@ const (
 	OldGoogleAds   = "google_ads"
 	OldFacebookAds = "facebook_ads"
 	OldLinkedinAds = "linkedin_ads"
+	NewBingAds     = "Bing Ads"
 )
 
 type ChannelConfigResult struct {
@@ -447,7 +448,7 @@ func GetRequiredChannels(filters []ChannelFilterV1) (bool, bool, bool, bool, int
 	isAdwordsReq = checkIfChannelReq(GoogleAds, filters) || checkIfChannelReq(OldGoogleAds, filters)
 	isFacebookReq = checkIfChannelReq(FacebookAds, filters) || checkIfChannelReq(OldFacebookAds, filters)
 	isLinkedinReq = checkIfChannelReq(LinkedinAds, filters) || checkIfChannelReq(OldLinkedinAds, filters)
-	isBingAdsReq = checkIfChannelReq(ChannelBingAds, filters)
+	isBingAdsReq = checkIfChannelReq(ChannelBingAds, filters) || checkIfChannelReq(NewBingAds, filters)
 	return isAdwordsReq, isFacebookReq, isLinkedinReq, isBingAdsReq, http.StatusOK
 }
 

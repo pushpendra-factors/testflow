@@ -301,7 +301,7 @@ func (store *MemSQL) GetAllChannelFilterValues(projectID int64, filterObject, fi
 	if filterObject == CAFilterChannel && filterProperty == "name" {
 		integrations := []interface{}{model.GoogleAds, model.FacebookAds, model.LinkedinAds}
 		if isBingAdsAvailable {
-			integrations = append(integrations, model.BingAdsIntegration)
+			integrations = append(integrations, model.NewBingAds)
 		}
 		return integrations, http.StatusFound
 	}
