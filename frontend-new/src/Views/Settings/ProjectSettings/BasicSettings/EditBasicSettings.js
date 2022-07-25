@@ -6,48 +6,38 @@ import { Text } from 'factorsComponents';
 import { UserOutlined } from '@ant-design/icons';
 import { connect } from 'react-redux';
 import { udpateProjectDetails } from 'Reducers/global';
-import { TimeZoneOffsetValues } from 'Utils/constants';  
+import { TimeZoneOffsetValueArr, getTimeZoneNameFromCity } from 'Utils/constants';
 import sanitizeInputString from 'Utils/sanitizeInputString';
 
-const getKeyByValue = (obj, value) =>  Object.keys(obj).find(key => obj[key]?.city === value);
-
-const TimeZoneName = 
-{
-  "IST":'IST',
-  "PT" :'PT (Pacific Time)',
-  "CT" :'CT (Central Time)',
-  "ET" :'ET (Eastern Time)',
-  "GMT" :'GMT',
-  "AEST" :'AEST (Australia Eastern Standard Time)', 
-}
 const { Option } = Select;
+
 
 function EditBasicSettings({ activeProject, setEditMode, udpateProjectDetails, agent }) {
   const [dataLoading, setDataLoading] = useState(true);
-  const [imageUrl, setImageUrl] = useState('');
+  const [imageUrl, setImageUrl] = useState(''); 
   const [form] = Form.useForm();
 
   useEffect(() => {
     setTimeout(() => {
       setDataLoading(false);
-    }, 200);
+    }, 200); 
   }, []);
 
-  const onFinish = values => { 
+  const onFinish = values => {
     let projectName = sanitizeInputString(values?.name);
     let projectData = {
       ...values,
       name: projectName,
       profile_picture: imageUrl,
-      time_zone: TimeZoneOffsetValues[values.time_zone]?.city
-    }; 
+      time_zone: values?.time_zone
+    };
 
     udpateProjectDetails(activeProject.id, projectData).then(() => {
-      message.success('Project details updated!'); 
+      message.success('Project details updated!');
       setEditMode(false);
     }).catch((err) => {
       console.log('err->', err);
-      message.error(err.data.error); 
+      message.error(err.data.error);
     });
   };
 
@@ -57,7 +47,7 @@ function EditBasicSettings({ activeProject, setEditMode, udpateProjectDetails, a
     reader.addEventListener('load', () => callback(reader.result));
     reader.readAsDataURL(img);
   }
-  
+
   function beforeUpload(file) {
     const isJpgOrPng = file.type === 'image/jpeg' || file.type === 'image/png';
     if (!isJpgOrPng) {
@@ -76,13 +66,13 @@ function EditBasicSettings({ activeProject, setEditMode, udpateProjectDetails, a
     //   return;
     // }
     // if (info.file.status === 'done') {
-      // Get this url from response in real world.
-      getBase64(info.file.originFileObj, imageUrl => {
-        setImageUrl(imageUrl);
-        // setLoading(false);
-      });
+    // Get this url from response in real world.
+    getBase64(info.file.originFileObj, imageUrl => {
+      setImageUrl(imageUrl);
+      // setLoading(false);
+    });
     // }
-  }; 
+  };
 
   return (
     <>
@@ -96,7 +86,7 @@ function EditBasicSettings({ activeProject, setEditMode, udpateProjectDetails, a
             project_uri: activeProject?.project_uri,
             date_format: activeProject?.date_format,
             time_format: activeProject?.time_format,
-            time_zone: TimeZoneName[getKeyByValue(TimeZoneOffsetValues,activeProject?.time_zone)]
+            time_zone: `${getTimeZoneNameFromCity(activeProject?.time_zone)?.name} (UTC ${getTimeZoneNameFromCity(activeProject?.time_zone)?.offset})`
           }}
         >
 
@@ -116,15 +106,15 @@ function EditBasicSettings({ activeProject, setEditMode, udpateProjectDetails, a
           <Row className={'mt-2'}>
             <Col>
               <Upload
-                  name="avatar"
-                  accept={''}
-                  showUploadList={false}
-                  beforeUpload={beforeUpload}
-                  onChange={handleChange}
+                name="avatar"
+                accept={''}
+                showUploadList={false}
+                beforeUpload={beforeUpload}
+                onChange={handleChange}
               >
-              {dataLoading ? <Skeleton.Avatar active={true} size={104} shape={'square'} />
-                : imageUrl ? <img src={imageUrl} alt="avatar" style={{width:'105px'}} /> : activeProject?.profile_picture ? <img src={activeProject?.profile_picture} alt="avatar" style={{width:'105px'}} /> : <Avatar size={104} shape={'square'} icon={<UserOutlined />} />
-              }
+                {dataLoading ? <Skeleton.Avatar active={true} size={104} shape={'square'} />
+                  : imageUrl ? <img src={imageUrl} alt="avatar" style={{ width: '105px' }} /> : activeProject?.profile_picture ? <img src={activeProject?.profile_picture} alt="avatar" style={{ width: '105px' }} /> : <Avatar size={104} shape={'square'} icon={<UserOutlined />} />
+                }
               </Upload>
               <Text type={'paragraph'} mini extraClass={'m-0 mt-1'} color={'grey'} >A logo helps personalise your Project</Text>
             </Col>
@@ -184,30 +174,32 @@ function EditBasicSettings({ activeProject, setEditMode, udpateProjectDetails, a
             </Col>
           </Row>
 
-          {agent?.email=='solutions@factors.ai' ? <Row className={'mt-6'}>
+          {(agent?.email == 'solutions@factors.ai' || agent?.email == 'baliga@factors.ai') ? <Row className={'mt-6'}>
+
             <Col span={24}>
               <Text type={'title'} level={7} extraClass={'m-0'}>Time Zone</Text>
               <Form.Item
                 name="time_zone"
                 className={'m-0'}
-                rules={[{ required: true, message: 'Please choose an option' }]} 
+                rules={[{ required: true, message: 'Please choose an option' }]}
               >
                 <Select className={'fa-select w-full'} placeholder={'Time Zone'} size={'large'}>
-                   { Object.keys(TimeZoneName).map((item)=>{
-                    return  <Option value={item}>{TimeZoneName[item]}</Option> 
-                  })} 
-                </Select> 
-                </Form.Item>
+                  {TimeZoneOffsetValueArr?.map((item) => {
+                    return <Option value={item?.city}>{`${item?.name} (UTC ${item?.offset})`}</Option>
+                  })}
+                </Select>
+              </Form.Item>
             </Col>
+
           </Row>
-                : <Row className={'mt-6'}> 
-                    <Col span={24}>
-                      <Text type={'title'} level={7} extraClass={'m-0'}>Time Zone</Text>
-                      <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>{(activeProject?.time_zone) ? TimeZoneName[getKeyByValue(TimeZoneOffsetValues,activeProject.time_zone)] : '---'}</Text>
-                    </Col>
-              </Row>
-                }
-              
+            : <Row className={'mt-6'}>
+              <Col span={24}>
+                <Text type={'title'} level={7} extraClass={'m-0'}>Time Zone</Text>
+                <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>{(activeProject?.time_zone) ? `${getTimeZoneNameFromCity(activeProject?.time_zone)?.name} (UTC ${getTimeZoneNameFromCity(activeProject?.time_zone)?.offset})` : '---'}</Text>
+              </Col>
+            </Row>
+          }
+
         </Form>
       </div>
 
