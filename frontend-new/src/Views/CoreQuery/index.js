@@ -1734,6 +1734,7 @@ function CoreQuery({
               setExtraOptions,
               runFunnelQuery,
               runKPIQuery,
+              runProfileQuery,
               activeKey,
               showResult,
               KPIConfigProps,
