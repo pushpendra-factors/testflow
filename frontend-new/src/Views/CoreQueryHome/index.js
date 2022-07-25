@@ -79,6 +79,7 @@ import {
   enableSlackIntegration
 } from 'Reducers/global';
 import AppModal from '../../components/AppModal';
+import { useHistory } from 'react-router-dom';
 
 // const whiteListedAccounts_KPI = [
 //   'jitesh@factors.ai',
@@ -210,6 +211,8 @@ function CoreQuery({
   const { slack } = useSelector((state) => state.global);
   const { projectSettingsV1 } = useSelector((state) => state.global);
   const { agent_details } = useSelector((state) => state.agent);
+
+  const history = useHistory();
 
   useEffect(() => {
     const getData = async () => {
@@ -438,11 +441,11 @@ function CoreQuery({
     (record, navigatedFromDashboard) => {
       try {
         if(record?.type?.props?.name === 'events_cq' ) {
-          window.location.replace("/analyse/event/" + record.id_text);
+          history.push('/analyse/event/' + record.id_text);
           return null;
         }
         else if (record?.type?.props?.name === 'funnels_cq') {
-          window.location.replace("/analyse/funnel/" + record.id_text);
+          history.push('/analyse/funnel/' + record.id_text);
           return null;
 
         } 

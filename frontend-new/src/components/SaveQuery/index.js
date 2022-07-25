@@ -49,6 +49,7 @@ import {
 } from '../../reducers/global';
 import AppModal from '../AppModal';
 import { SVG, Text } from '../factorsComponents';
+import { useHistory } from 'react-router-dom';
 
 function SaveQuery({
   requestQuery,
@@ -67,6 +68,8 @@ function SaveQuery({
   sendAlertNow
 }) {
   const dispatch = useDispatch();
+
+  const history = useHistory();
 
   const [showShareToEmailModal, setShowShareToEmailModal] = useState(false);
   const [showShareToSlackModal, setShowShareToSlackModal] = useState(false);
@@ -271,18 +274,17 @@ function SaveQuery({
             type,
             querySettings
           );
-          
 
-          if(QUERY_TYPE_EVENT && res?.data?.id_text) {
-            window.location.replace("/analyse/event/" + res.data.id_text);
-          } else if(QUERY_TYPE_FUNNEL && res?.data?.id_text) {
-            window.location.replace("/analyse/funnel/" + res.data.id_text);
-          } else {
-            dispatch({ type: QUERY_CREATED, payload: res.data });
-            setQuerySaved({ name: title, id: res.data.id });
+          dispatch({ type: QUERY_CREATED, payload: res.data });
+          setQuerySaved({ name: title, id: res.data.id });
+
+          if(queryType === QUERY_TYPE_EVENT && res?.data?.id_text) {
+            history.push('/analyse/event/' + res.data.id_text);
           }
 
-          
+          if(queryType === QUERY_TYPE_FUNNEL && res?.data?.id_text) {
+            history.push('/analyse/funnel/' + res.data.id_text);
+          }
           
         } else {
           const queryGettingUpdated = savedQueries.find(
