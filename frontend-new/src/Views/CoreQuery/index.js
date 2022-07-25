@@ -1698,7 +1698,7 @@ function CoreQuery({
 
         {!showResult && drawerVisible && checkIfnewComposer()
           ? renderCreateQFlow()
-          : !showResult && (
+          : !showResult && !resultState.loading && (
               <CoreQueryHome
                 setQueryType={setQueryType}
                 setDrawerVisible={closeResultPage}
@@ -1718,7 +1718,7 @@ function CoreQuery({
 
         
 
-        {showResult ? (
+        {showResult && !resultState.loading ? (
           <CoreQueryContext.Provider
             value={{
               coreQueryState,
