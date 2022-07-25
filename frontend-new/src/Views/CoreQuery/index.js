@@ -16,6 +16,7 @@ import factorsai from 'factorsai';
 
 import { EMPTY_ARRAY } from 'Utils/global';
 import KPIComposer from 'Components/KPIComposer';
+import PageSuspenseLoader from "Components/SuspenseLoaders/PageSuspenseLoader";
 import QueryComposer from '../../components/QueryComposer';
 import AttrQueryComposer from '../../components/AttrQueryComposer';
 import CampQueryComposer from '../../components/CampQueryComposer';
@@ -1693,6 +1694,8 @@ function CoreQuery({
           </div>
         ) : null}
 
+        {!showResult && resultState.loading? (<PageSuspenseLoader />) : null}
+
         {!showResult && drawerVisible && checkIfnewComposer()
           ? renderCreateQFlow()
           : !showResult && (
@@ -1712,6 +1715,8 @@ function CoreQuery({
                 setAttributionMetrics={setAttributionMetrics}
               />
           )}
+
+        
 
         {showResult ? (
           <CoreQueryContext.Provider

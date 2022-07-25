@@ -36,7 +36,7 @@ import DeleteQueryModal from '../DeleteQueryModal';
 import { getErrorMessage } from '../../utils/dataFormatter';
 import { deleteReport } from '../../reducers/coreQuery/services';
 import { getChartType } from '../../Views/CoreQuery/AnalysisResultsPage/analysisResultsPage.helpers';
-import { apiChartAnnotations } from '../../utils/constants';
+import { apiChartAnnotations, QUERY_TYPE_EVENT, QUERY_TYPE_FUNNEL } from '../../utils/constants';
 import { isPivotSupported } from '../../utils/chart.helpers';
 import ShareToEmailModal from '../ShareToEmailModal';
 import ShareToSlackModal from '../ShareToSlackModal';
@@ -271,8 +271,19 @@ function SaveQuery({
             type,
             querySettings
           );
-          dispatch({ type: QUERY_CREATED, payload: res.data });
-          setQuerySaved({ name: title, id: res.data.id });
+          
+
+          if(QUERY_TYPE_EVENT && res?.data?.id_text) {
+            window.location.replace("/analyse/event/" + res.data.id_text);
+          } else if(QUERY_TYPE_FUNNEL && res?.data?.id_text) {
+            window.location.replace("/analyse/funnel/" + res.data.id_text);
+          } else {
+            dispatch({ type: QUERY_CREATED, payload: res.data });
+            setQuerySaved({ name: title, id: res.data.id });
+          }
+
+          
+          
         } else {
           const queryGettingUpdated = savedQueries.find(
             (elem) => elem.id === savedQueryId
