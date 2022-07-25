@@ -67,7 +67,6 @@ function QueryComposer({
 
   const queryList = () => {
     const blockList = [];
-    console.log(queries);
     queries.forEach((event, index) => {
       blockList.push(
         <div key={index} className={styles.composer_body__query_block}>

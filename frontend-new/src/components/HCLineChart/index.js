@@ -65,6 +65,13 @@ function LineChart({
         min: 0,
         title: {
           enabled: false
+        },
+        labels: {
+          formatter() {
+            return (
+              addQforQuarter(frequency) + moment(this.value).format(dateFormat)
+            );
+          }
         }
       },
       credits: {

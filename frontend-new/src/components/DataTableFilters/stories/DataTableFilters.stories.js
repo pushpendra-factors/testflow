@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
 import DataTableFilters from '../DataTableFilters';
-import { TEST_FILTER_OPTIONS } from '../dataTableFilters.constants';
+import {
+  CATEGORY_COMBINATION_OPERATOR_KEYS,
+  EQUALITY_OPERATOR_KEYS,
+  TEST_FILTER_OPTIONS
+} from '../dataTableFilters.constants';
 
 export default {
   title: 'Components/DataTableFilters',
@@ -23,11 +27,11 @@ export const NoFiltersSelected = () => {
 
 export const WithFiltersSelected = () => {
   const [selectedFilters, setSelectedFilters] = useState({
-    categoryCombinationOperator: 'AND',
+    categoryCombinationOperator: CATEGORY_COMBINATION_OPERATOR_KEYS.AND,
     categories: [
       {
         values: [],
-        equalityOperator: 'equal',
+        equalityOperator: EQUALITY_OPERATOR_KEYS.EQUAL,
         field: 'Campaign_Name',
         key: 1657998866521
       }
