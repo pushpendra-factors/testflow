@@ -282,7 +282,7 @@ function CoreQuery({
         const queryLabels = queryToAdd?.query?.query_group[0].ewp.map((ev) => ev.an ? ev.an : ev.na);
         const equivalentQuery = getStateQueryFromRequestQuery(queryToAdd?.query?.query_group[0]);
         setQueryType(QUERY_TYPE_EVENT);
-        setQuerySaved(true);
+        setQuerySaved({name: queryToAdd.title, id: queryToAdd.id});
         updateRequestQuery(queryToAdd?.query?.query_group);
         dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
         // localDispatch({
@@ -316,7 +316,7 @@ function CoreQuery({
       updateRequestQuery(queryToAdd?.query);
       dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
       setShowResult(true);
-      setQuerySaved(true);
+      setQuerySaved({name: queryToAdd.title, id: queryToAdd.id});
       setAppliedQueries(queryLabels);
       setQueries(equivalentQuery.events);
       updateAppliedBreakdown();
