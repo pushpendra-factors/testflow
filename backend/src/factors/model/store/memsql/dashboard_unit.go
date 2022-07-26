@@ -700,7 +700,6 @@ func (store *MemSQL) CacheDashboardUnit(dashboardUnit model.DashboardUnit,
 
 		baseQuery.SetQueryDateRange(from, to)
 		baseQuery.SetTimeZone(timezoneString)
-		baseQuery.SetDefaultGroupByTimestamp()
 		err = baseQuery.TransformDateTypeFilters()
 		if err != nil {
 			errMsg := fmt.Sprintf("Error decoding query Value, query_id %d", dashboardUnit.QueryId)

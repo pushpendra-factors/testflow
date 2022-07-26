@@ -128,14 +128,6 @@ func Is30MinutesTimeRange(from, to int64) bool {
 	return (to - from) == 30*60
 }
 
-func IsLessThanTimeRange(from, to int64, maxTimeDuration int64) bool {
-	return (to - from) < maxTimeDuration
-}
-
-func IsGreaterThanEqualTimeRange(from, to int64, minTimeDuration int64) bool {
-	return (to - from) >= minTimeDuration
-}
-
 // GetEndOfDayTimestampIn Get's end of the day timestamp in given timezone.
 func GetEndOfDayTimestampIn(timestamp int64, timezoneString TimeZoneString) int64 {
 	location, _ := time.LoadLocation(string(timezoneString))
