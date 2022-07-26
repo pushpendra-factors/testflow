@@ -36,12 +36,11 @@ export const getEventsData = (
   projectId,
   query_group,
   dashboard,
-  isQuery = false,
-  query_id = null,
+  isQuery = false
 ) => {
   let url;
   if (!dashboard) {
-    url = host + 'projects/' + projectId + '/v1/query' + ((query_id)? '?&query_id=' + query_id: '');
+    url = host + 'projects/' + projectId + '/v1/query';
   } else {
     url =
       host +
@@ -52,9 +51,9 @@ export const getEventsData = (
       '&dashboard_unit_id=' +
       dashboard.unit_id +
       '&is_query=' +
-      isQuery + ((query_id)? '&query_id=' + query_id: '');
+      isQuery;
   }
-  return post(null, url, query_group && { query_group });
+  return post(null, url, { query_group });
 };
 
 export function fetchEventProperties(projectId, eventName) {
@@ -124,10 +123,10 @@ export function fetchUserProperties(projectId, queryType) {
   return get(null, url);
 }
 
-export const getFunnelData = (projectId, query, dashboard, isQuery = false, query_id = null) => {
+export const getFunnelData = (projectId, query, dashboard, isQuery = false) => {
   let url;
   if (!dashboard) {
-    url = host + 'projects/' + projectId + '/query' + ((query_id)? '?&query_id=' + query_id: '');
+    url = host + 'projects/' + projectId + '/query';
   } else {
     url =
       host +
@@ -138,7 +137,7 @@ export const getFunnelData = (projectId, query, dashboard, isQuery = false, quer
       '&dashboard_unit_id=' +
       dashboard.unit_id +
       '&is_query=' +
-      isQuery + ((query_id)? '&query_id=' + query_id: '');
+      isQuery;
   }
   return post(null, url, { query });
 };

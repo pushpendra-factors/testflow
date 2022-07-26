@@ -79,7 +79,6 @@ import {
   enableSlackIntegration
 } from 'Reducers/global';
 import AppModal from '../../components/AppModal';
-import { useHistory } from 'react-router-dom';
 
 // const whiteListedAccounts_KPI = [
 //   'jitesh@factors.ai',
@@ -212,8 +211,6 @@ function CoreQuery({
   const { projectSettingsV1 } = useSelector((state) => state.global);
   const { agent_details } = useSelector((state) => state.agent);
 
-  const history = useHistory();
-
   useEffect(() => {
     const getData = async () => {
       await fetchAgentInfo();
@@ -241,7 +238,6 @@ function CoreQuery({
 
     return {
       key: q.id,
-      id_text: q.id_text,
       type: <SVG name={svgName} size={24} />,
       title: q.title,
       author: q.created_by_name,
@@ -440,19 +436,6 @@ function CoreQuery({
   const setQueryToState = useCallback(
     (record, navigatedFromDashboard) => {
       try {
-        if(record?.type?.props?.name === 'events_cq' ) {
-          history.push('/analyse/event/' + record.id_text);
-          return null;
-        }
-        else if (record?.type?.props?.name === 'funnels_cq') {
-          history.push('/analyse/funnel/' + record.id_text);
-          return null;
-
-        } 
-        // else if (record?.type?.props?.name === 'attributions_cq') {
-        //   window.location.replace("/analyse/attributions/" + record.id_text);
-        //   return null;
-        // }
         let equivalentQuery;
         if (record.query.query_group) {
           if (record.query.cl && record.query.cl === QUERY_TYPE_CAMPAIGN) {
