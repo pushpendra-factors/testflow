@@ -29,7 +29,7 @@ func TestCustomMetricsPostHandler(t *testing.T) {
 	name1 := U.RandomString(8)
 	description1 := U.RandomString(8)
 	t.Run("CreateCustomMetricsSuccess", func(t *testing.T) {
-		transformations := &postgres.Jsonb{json.RawMessage(`{"agFn": "SUM", "agPr": "$hubspot_amount", "agPrTy": "categorical", "fil": [], "daFie": "$hubspot_datefield1"}`)}
+		transformations := &postgres.Jsonb{json.RawMessage(`{"agFn": "sum", "agPr": "$hubspot_amount", "agPrTy": "categorical", "fil": [], "daFie": "$hubspot_datefield1"}`)}
 		w := sendCreateCustomMetric(r, project.ID, agent, transformations, name1, description1, "hubspot_contacts")
 		assert.Equal(t, http.StatusOK, w.Code)
 		var result model.CustomMetric
@@ -37,6 +37,19 @@ func TestCustomMetricsPostHandler(t *testing.T) {
 		if err := decoder.Decode(&result); err != nil {
 			assert.NotNil(t, nil, err)
 		}
+	})
+
+	t.Run("CreateCustomMetricFailure", func(t *testing.T) {
+		transformations := &postgres.Jsonb{json.RawMessage(`{"agFn": "sum", "agPr": "$hubspot_amount", "agPrTy": "categorical", "fil": [], "daFie": "$hubspot_datefield2"}`)}
+		w := sendCreateCustomMetric(r, project.ID, agent, transformations, name1, description1, "salesforce_users")
+		assert.Equal(t, http.StatusConflict, w.Code)
+		// result := make(map[string]interface{})
+		// decoder := json.NewDecoder(w.Body)
+		// decoder.Decode(&result)
+		// log.WithField("result", result).Warn("kark4-1")
+		// innerErrorResult := result["err"].(map[string]interface{})
+		// log.WithField("innerErrorResult", innerErrorResult).Warn("kark4")
+		// assert.Equal(t, innerErrorResult["display_name"].(string), "Duplicate record insertion in db")
 	})
 
 }

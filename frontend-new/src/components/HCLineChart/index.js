@@ -65,7 +65,7 @@ function LineChart({
         min: 0,
         title: {
           enabled: false
-        }
+        },
       },
       credits: {
         enabled: false

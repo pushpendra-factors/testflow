@@ -254,13 +254,6 @@ func IsPostgresUnsupportedUnicodeError(err error) bool {
 func GormCleanupCallback(scope *gorm.Scope) {
 	for _, field := range scope.Fields() {
 		switch field.Field.Type().String() {
-		case "string":
-			fieldValue := field.Field.Interface().(string)
-			err := field.Set(SanitizeStringValueForUnicode(fieldValue))
-			if err != nil {
-				log.WithError(err).Error("Failed to cleanup string field value.")
-				return
-			}
 		case "postgres.Jsonb":
 			fieldValue := field.Field.Interface().(postgres.Jsonb)
 			fieldValue.RawMessage = CleanupUnsupportedCharOnStringBytes(fieldValue.RawMessage)
@@ -288,7 +281,7 @@ func GormCleanupCallback(scope *gorm.Scope) {
 
 func CleanupUnsupportedCharOnStringBytes(stringBytes []byte) []byte {
 	nullRemovedBytes := RemoveNullCharacterBytes(stringBytes)
-	return []byte(SanitizeStringValueForUnicode(string(nullRemovedBytes)))
+	return nullRemovedBytes
 }
 
 // https://stackoverflow.com/a/34863211/2341189

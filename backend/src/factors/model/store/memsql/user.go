@@ -1964,6 +1964,9 @@ func (store *MemSQL) updateUserPropertiesForSessionV2(projectID int64,
 
 	hasFailure := false
 	for eventID, sessionUserProperties := range *sessionUserPropertiesRecordMap {
+		if sessionUserProperties.IsSessionEvent {
+			continue
+		}
 		logCtx.WithField("event_id", eventID)
 
 		userProperties := sessionUserProperties.EventUserProperties
@@ -2005,10 +2008,6 @@ func (store *MemSQL) updateUserPropertiesForSessionV2(projectID int64,
 
 		(*userPropertiesMap)[U.UP_PAGE_COUNT] = newPageCount
 		(*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME] = newTotalSpentTime
-		if _, exists := (*userPropertiesMap)[U.UP_INITIAL_CHANNEL]; !exists {
-			(*userPropertiesMap)[U.UP_INITIAL_CHANNEL] = sessionUserProperties.SessionChannel
-		}
-		(*userPropertiesMap)[U.UP_LATEST_CHANNEL] = sessionUserProperties.SessionChannel
 
 		userPropertiesJsonb, err := U.EncodeToPostgresJsonb(userPropertiesMap)
 		if err != nil {
@@ -2033,7 +2032,6 @@ func (store *MemSQL) updateUserPropertiesForSessionV2(projectID int64,
 			TotalSpentTime: newTotalSpentTime,
 			SessionCount:   newSessionCount,
 			Timestamp:      sessionUserProperties.SessionEventTimestamp,
-			Channel:        sessionUserProperties.SessionChannel,
 		}
 		if _, exists := latestSessionUserPropertiesByUserID[sessionUserProperties.UserID]; !exists {
 			latestSessionUserPropertiesByUserID[sessionUserProperties.UserID] = latestUserProperties
@@ -2047,6 +2045,8 @@ func (store *MemSQL) updateUserPropertiesForSessionV2(projectID int64,
 		sessionUpdateUserIDs[sessionUserProperties.UserID] = true
 	}
 
+	store.updateSessionEventUserProperties(projectID, sessionUserPropertiesRecordMap, &latestSessionUserPropertiesByUserID)
+
 	errCode := store.updateLatestUserPropertiesForSessionIfNotUpdatedV2(
 		projectID,
 		sessionUpdateUserIDs,
@@ -2059,6 +2059,82 @@ func (store *MemSQL) updateUserPropertiesForSessionV2(projectID int64,
 	}
 
 	return http.StatusAccepted
+}
+
+func (store *MemSQL) updateSessionEventUserProperties(projectID int64, sessionUserPropertiesRecordMap *map[string]model.SessionUserProperties,
+	latestSessionUserPropertiesByUserID *map[string]model.LatestUserPropertiesFromSession) {
+
+	logFields := log.Fields{"project_id": projectID}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+	userIDToChannelProperty := store.getIntitialAndLatestChannelMap(sessionUserPropertiesRecordMap)
+
+	for eventID, sessionUserProperties := range *sessionUserPropertiesRecordMap {
+		if !sessionUserProperties.IsSessionEvent {
+			continue
+		}
+		logCtx.WithField("event_id", eventID)
+
+		userProperties := sessionUserProperties.EventUserProperties
+		isEmptyUserProperties := userProperties == nil || U.IsEmptyPostgresJsonb(userProperties)
+		if isEmptyUserProperties {
+			logCtx.WithField("user_properties", userProperties).Error("Empty user properties on event.")
+			continue
+		}
+
+		userPropertiesMap, err := U.DecodePostgresJsonb(userProperties)
+		if err != nil {
+			logCtx.WithError(err).
+				Error("Failed to decode event user properties on UpdateUserPropertiesForSession.")
+			continue
+		}
+
+		if channel, exists := (*userPropertiesMap)[U.UP_INITIAL_CHANNEL]; !exists || channel == "" {
+			(*userPropertiesMap)[U.UP_INITIAL_CHANNEL] = userIDToChannelProperty[sessionUserProperties.UserID].InitialChannel
+		}
+		(*userPropertiesMap)[U.UP_LATEST_CHANNEL] = sessionUserProperties.SessionChannel
+
+		latestUserProperties := (*latestSessionUserPropertiesByUserID)[sessionUserProperties.UserID]
+		latestUserProperties.InitialChannel = userIDToChannelProperty[sessionUserProperties.UserID].InitialChannel
+		latestUserProperties.LatestChannel = userIDToChannelProperty[sessionUserProperties.UserID].LatestChannel
+		(*latestSessionUserPropertiesByUserID)[sessionUserProperties.UserID] = latestUserProperties
+
+		userPropertiesJsonb, err := U.EncodeToPostgresJsonb(userPropertiesMap)
+		if err != nil {
+			logCtx.WithError(err).
+				Error("Failed to encode user properties json after adding new session count.")
+			continue
+		}
+
+		errCode := store.OverwriteEventUserPropertiesByID(projectID,
+			sessionUserProperties.UserID, eventID, userPropertiesJsonb)
+		if errCode != http.StatusAccepted {
+			logCtx.WithField("err_code", errCode).Error("Failed to overwrite event user properties.")
+			continue
+		}
+	}
+}
+
+func (store *MemSQL) getIntitialAndLatestChannelMap(sessionUserPropertiesRecordMap *map[string]model.SessionUserProperties) map[string]model.ChannelUserProperty {
+	userIDToChannelProperties := make(map[string]model.ChannelUserProperty)
+	userIDToSessionUserPropertiesMap := make(map[string][]model.SessionUserProperties)
+	for _, sessionUserProperties := range *sessionUserPropertiesRecordMap {
+		if !sessionUserProperties.IsSessionEvent {
+			continue
+		}
+		userIDToSessionUserPropertiesMap[sessionUserProperties.UserID] = append(userIDToSessionUserPropertiesMap[sessionUserProperties.UserID], sessionUserProperties)
+	}
+	for userID, sessionUserPropertiesArr := range userIDToSessionUserPropertiesMap {
+		sort.Slice(sessionUserPropertiesArr[:], func(i, j int) bool {
+			return sessionUserPropertiesArr[i].SessionEventTimestamp < sessionUserPropertiesArr[j].SessionEventTimestamp
+		})
+		userIDToChannelProperties[userID] = model.ChannelUserProperty{
+			InitialChannel: sessionUserPropertiesArr[0].SessionChannel,
+			LatestChannel:  sessionUserPropertiesArr[len(sessionUserPropertiesArr)-1].SessionChannel,
+		}
+	}
+	return userIDToChannelProperties
 }
 
 func (store *MemSQL) updateLatestUserPropertiesForSessionIfNotUpdatedV2(
@@ -2105,12 +2181,13 @@ func (store *MemSQL) updateLatestUserPropertiesForSessionIfNotUpdatedV2(
 				Error("Failed to decode existing user properites.")
 			hasFailure = true
 			continue
-		} else {
-			if _, exists := (*existingUserPropertiesMap)[U.UP_INITIAL_CHANNEL]; !exists {
-				newUserProperties[U.UP_INITIAL_CHANNEL] = sessionUserProperties.Channel
+		} else if sessionUserProperties.InitialChannel != "" {
+			if channel, exists := (*existingUserPropertiesMap)[U.UP_INITIAL_CHANNEL]; !exists || channel == "" {
+				newUserProperties[U.UP_INITIAL_CHANNEL] = sessionUserProperties.InitialChannel
 			}
-			newUserProperties[U.UP_LATEST_CHANNEL] = sessionUserProperties.Channel
+			newUserProperties[U.UP_LATEST_CHANNEL] = sessionUserProperties.LatestChannel
 		}
+
 		userPropertiesJsonb, err := U.AddToPostgresJsonb(existingUserProperties, newUserProperties, true)
 		if err != nil {
 			logCtx.WithError(err).

@@ -325,6 +325,13 @@ var MapOfMetricsToData = map[string]map[string]map[string]string{
 	BingAdsDisplayCategory: {
 		Conversions: {"display_name": "Conversions", "type": ""},
 	},
+	GoogleOrganicDisplayCategory: {
+		Impressions:                        {"display_name": "Impressions", "type": ""},
+		Clicks:                             {"display_name": "Clicks", "type": ""},
+		ClickThroughRate:                   {"display_name": "Click through rate", "type": ""},
+		"postition_avg":                    {"display_name": "Position Avg", "type": ""},
+		"position_impression_weighted_avg": {"display_name": "Position Impression weighted Avg", "type": ""},
+	},
 }
 
 type TransformQueryi struct {

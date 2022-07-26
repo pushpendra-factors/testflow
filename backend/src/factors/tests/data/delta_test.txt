@@ -1,0 +1,12 @@
+{"id":"1", "source":"adwords","type":1,"timestamp":20220611,"value":{"prop1":"val11","prop3":"31", "numProp3":1},"sp":{"prop6":"val61"}}
+{"id":"2", "source":"adwords","type":1,"timestamp":20220617,"value":{"prop1":"val11","numProp3":2},"sp":{"prop5":"val51","prop6":"val61"}}
+{"id":"3", "source":"adwords","type":2,"timestamp":20220612,"value":{"prop1":"val11","prop3":"31","numProp3":3},"sp":{"prop5":"val51","prop6":"val61"}}
+{"id":"4", "source":"adwords","type":2,"timestamp":20220612,"value":{"prop1":"val11","prop3":"31","numProp3":4},"sp":{"prop5":"val51","prop6":"val61"}}
+{"id":"5", "source":"adwords","type":3,"timestamp":20220612,"value":{"prop1":"val11","prop3":"31","numProp3":5},"sp":{"prop5":"val51","prop6":"val61"}}
+{"id":"6", "source":"adwords","type":3,"timestamp":20220612,"value":{"prop1":"val11","prop3":"31","numProp3":6},"sp":{"prop5":"val51","prop6":"val61"}}
+{"id":"1", "source":"adwords","type":4,"timestamp":20220613,"value":{"prop1":"val11","numProp1":70,"numProp2":1},"sp":{"prop6":"val61"}}
+{"id":"7", "source":"adwords","type":4,"timestamp":20220614,"value":{"prop1":"val11","numProp1":80,"prop3":"32","numProp2":2, "numProp3":2},"sp":{"prop5":"val51","prop6":"val61"}}
+{"id":"3", "source":"adwords","type":5,"timestamp":20220615,"value":{"prop1":"val11","numProp1":90,"prop3":"31","numProp2":3},"sp":{"prop5":"val51","prop6":"val61"}}
+{"id":"8", "source":"adwords","type":5,"timestamp":20220616,"value":{"prop1":"val11","numProp1":100,"prop3":"31","numProp2":4},"sp":{"prop5":"val51","prop6":"val61"}}
+{"id":"5", "source":"adwords","type":6,"timestamp":20220617,"value":{"prop1":"val11","numProp1":110,"prop3":"31","numProp2":5},"sp":{"prop5":"val51","prop6":"val61"}}
+{"id":"9", "source":"adwords","type":6,"timestamp":20220617,"value":{"prop1":"val11","numProp1":120,"prop3":"31","numProp2":6},"sp":{"prop5":"val51","prop6":"val61"}}

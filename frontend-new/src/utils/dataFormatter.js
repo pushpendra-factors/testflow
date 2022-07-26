@@ -213,8 +213,8 @@ export const getClickableTitleSorter = (
     verticalAlignment === 'start'
       ? 'items-start'
       : verticalAlignment === 'end'
-        ? 'items-end'
-        : 'items-center';
+      ? 'items-end'
+      : 'items-center';
 
   return (
     <div
@@ -314,8 +314,8 @@ export const getQueryType = (query) => {
   const cl = query.cl
     ? query.cl
     : Array.isArray(query.query_group) && query.query_group.length
-      ? query.query_group[0].cl
-      : QUERY_TYPE_EVENT;
+    ? query.query_group[0].cl
+    : QUERY_TYPE_EVENT;
   return cl;
 };
 
@@ -661,7 +661,7 @@ export const formatDurationIntoString = (seconds) => {
       [Math.floor((((seconds % 31536000) % 2592000) % 604800) / 86400), 'days'],
       [Math.floor(((seconds % 31536000) % 86400) / 3600), 'hours'],
       [Math.floor((((seconds % 31536000) % 86400) % 3600) / 60), 'minutes'],
-      [(((seconds % 31536000) % 86400) % 3600) % 60, 'seconds'],
+      [(((seconds % 31536000) % 86400) % 3600) % 60, 'seconds']
     ];
     while (i < timeUnits.length && stringLength < 4) {
       if (timeUnits[i][0] === 0) {
@@ -680,4 +680,12 @@ export const formatDurationIntoString = (seconds) => {
     }
   } else return '0 seconds';
   return returnString.trim();
+};
+
+export const abbreviateNumber = (n) => {
+  if (n < 1e3) return n;
+  if (n >= 1e3 && n < 1e6) return +(n / 1e3).toFixed(1) + 'K';
+  if (n >= 1e6 && n < 1e9) return +(n / 1e6).toFixed(1) + 'M';
+  if (n >= 1e9 && n < 1e12) return +(n / 1e9).toFixed(1) + 'B';
+  if (n >= 1e12) return +(n / 1e12).toFixed(1) + 'T';
 };

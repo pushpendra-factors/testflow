@@ -357,7 +357,7 @@ func CRMFilterEvaluator(projectID int64, currProperty, prevProperty *map[string]
 
 		// avoid same value in previous and current properties
 		if compareState == CompareStateBoth {
-			diffPropertyValue := (*currProperty)[filterProperty.Name] != (*prevProperty)[filterProperty.Name]
+			diffPropertyValue := U.GetPropertyValueAsString((*currProperty)[filterProperty.Name]) != U.GetPropertyValueAsString((*prevProperty)[filterProperty.Name])
 			if !diffPropertyValue {
 				if !filterSkipable {
 					return false

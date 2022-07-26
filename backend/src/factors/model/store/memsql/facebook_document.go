@@ -558,7 +558,7 @@ func (store *MemSQL) ExecuteFacebookChannelQueryV1(projectID int64, query *model
 		return columns, resultMetrics, http.StatusOK
 	} else {
 		sql, params, selectKeys, selectMetrics, errCode := store.GetSQLQueryAndParametersForFacebookQueryV1(
-			projectID, query, reqID, fetchSource, " LIMIT 100", false, nil)
+			projectID, query, reqID, fetchSource, " LIMIT 1000", false, nil)
 		if errCode == http.StatusNotFound {
 			headers := model.GetHeadersFromQuery(*query)
 			return headers, make([][]interface{}, 0, 0), http.StatusOK
@@ -592,7 +592,7 @@ func (store *MemSQL) ExecuteFacebookChannelQueryV1(projectID int64, query *model
 
 // GetSQLQueryAndParametersForFacebookQueryV1 ...
 func (store *MemSQL) GetSQLQueryAndParametersForFacebookQueryV1(projectID int64, query *model.ChannelQueryV1, reqID string, fetchSource bool,
-	limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string, int) {
+	limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}) (string, []interface{}, []string, []string, int) {
 	logFields := log.Fields{
 		"project_id":                    projectID,
 		"query":                         query,
@@ -746,7 +746,7 @@ func getFacebookSpecificGroupBy(requestGroupBys []model.ChannelGroupBy) ([]model
 	return resultGroupBys, nil
 }
 
-func buildFacebookQueryV1(query *model.ChannelQueryV1, projectID int64, customerAccountID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string, error) {
+func buildFacebookQueryV1(query *model.ChannelQueryV1, projectID int64, customerAccountID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}) (string, []interface{}, []string, []string, error) {
 	logFields := log.Fields{
 		"project_id":                    projectID,
 		"query":                         query,
@@ -763,7 +763,7 @@ func buildFacebookQueryV1(query *model.ChannelQueryV1, projectID int64, customer
 		fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT)
 	return sql, params, selectKeys, selectMetrics, nil
 }
-func buildFacebookQueryWithSmartPropertyV1(query *model.ChannelQueryV1, projectID int64, customerAccountID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string, error) {
+func buildFacebookQueryWithSmartPropertyV1(query *model.ChannelQueryV1, projectID int64, customerAccountID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}) (string, []interface{}, []string, []string, error) {
 	logFields := log.Fields{
 		"project_id":                    projectID,
 		"query":                         query,
@@ -782,7 +782,7 @@ func buildFacebookQueryWithSmartPropertyV1(query *model.ChannelQueryV1, projectI
 }
 
 func getSQLAndParamsFromFacebookReportsWithSmartProperty(query *model.ChannelQueryV1, projectID int64, from, to int64, facebookAccountIDs string,
-	docType int, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string) {
+	docType int, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}) (string, []interface{}, []string, []string) {
 	logFields := log.Fields{
 		"project_id":                    projectID,
 		"query":                         query,
@@ -903,7 +903,7 @@ func getFacebookFromStatementWithJoins(filters []model.ChannelFilterV1, groupBys
 	return fromStatement
 }
 func getSQLAndParamsFromFacebookReports(query *model.ChannelQueryV1, projectID int64, from, to int64, facebookAccountIDs string,
-	docType int, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string) {
+	docType int, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}) (string, []interface{}, []string, []string) {
 	logFields := log.Fields{
 		"project_id":                    projectID,
 		"query":                         query,
@@ -1014,68 +1014,64 @@ func getFacebookFiltersWhereStatement(filters []model.ChannelFilterV1) string {
 	}
 	return resultStatement
 }
-func buildWhereConditionForGBTForFacebook(groupByCombinations []map[string]interface{}) (string, []interface{}) {
+
+func buildWhereConditionForGBTForFacebook(groupByCombinations map[string][]interface{}) (string, []interface{}) {
 	logFields := log.Fields{
 		"group_by_combinations": groupByCombinations,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	whereConditionForGBT := ""
+	resultantWhereCondition := ""
+	resultantInClauses := make([]string, 0)
 	params := make([]interface{}, 0)
-	filterStringSmartPropertiesCampaign := "campaign.properties"
-	filterStringSmartPropertiesAdGroup := "ad_group.properties"
-	for _, groupByCombination := range groupByCombinations {
-		whereConditionForEachCombination := ""
-		for dimension, value := range groupByCombination {
-			filterString := ""
-			if strings.HasPrefix(dimension, model.CampaignPrefix) {
-				key := fmt.Sprintf(`%s:%s`, "campaign", strings.TrimPrefix(dimension, model.CampaignPrefix))
-				currentFilterKey, isPresent := objectToValueInFacebookFiltersMappingWithFacebookDocuments[key]
-				if isPresent {
-					filterString = currentFilterKey
-				} else {
-					filterString = fmt.Sprintf("JSON_EXTRACT_STRING(%s,'%s')", filterStringSmartPropertiesCampaign, strings.TrimPrefix(dimension, model.CampaignPrefix))
-				}
-			} else if strings.HasPrefix(dimension, model.AdgroupPrefix) {
-				key := fmt.Sprintf(`%s:%s`, "ad_set", strings.TrimPrefix(dimension, model.AdgroupPrefix))
-				currentFilterKey, isPresent := objectToValueInFacebookFiltersMappingWithFacebookDocuments[key]
-				if isPresent {
-					filterString = currentFilterKey
-				} else {
-					filterString = fmt.Sprintf("JSON_EXTRACT_STRING(%s,'%s')", filterStringSmartPropertiesAdGroup, strings.TrimPrefix(dimension, model.AdgroupPrefix))
-				}
-			} else {
-				key := fmt.Sprintf(`%s:%s`, "ad", strings.TrimPrefix(dimension, model.KeywordPrefix))
-				currentFilterKey := objectToValueInFacebookFiltersMappingWithFacebookDocuments[key]
-				filterString = currentFilterKey
-			}
-			if whereConditionForEachCombination == "" {
-				if value != nil {
-					whereConditionForEachCombination = fmt.Sprintf("%s = ? ", filterString)
-					params = append(params, value)
-				} else {
-					whereConditionForEachCombination = fmt.Sprintf("%s is null ", filterString)
-				}
-			} else {
-				if value != nil {
-					whereConditionForEachCombination += fmt.Sprintf(" AND %s = ? ", filterString)
-					params = append(params, value)
-				} else {
-					whereConditionForEachCombination += fmt.Sprintf(" AND %s is null ", filterString)
-				}
-			}
-		}
-		if whereConditionForGBT == "" {
-			if whereConditionForEachCombination != "" {
-				whereConditionForGBT = "(" + whereConditionForEachCombination + ")"
-			}
-		} else {
-			if whereConditionForEachCombination != "" {
-				whereConditionForGBT += (" OR (" + whereConditionForEachCombination + ")")
-			}
-		}
-	}
 
-	return whereConditionForGBT, params
+	for dimension, values := range groupByCombinations {
+		currentInClause := ""
+
+		jsonExtractExpression := GetFilterObjectExpressionForChannelFacebook(dimension)
+
+		valuesInString := make([]string, 0)
+		for _, value := range values {
+			valuesInString = append(valuesInString, "?")
+			params = append(params, value)
+		}
+		currentInClause = joinWithComma(valuesInString...)
+
+		resultantInClauses = append(resultantInClauses, jsonExtractExpression+" IN ("+currentInClause+") ")
+	}
+	resultantWhereCondition = joinWithWordInBetween("AND", resultantInClauses...)
+
+	return resultantWhereCondition, params
+}
+
+// request has dimension - campaign_name.
+// response has string with JSON_EXTRACT(adwords_documents.value, 'campaign_name')
+func GetFilterObjectExpressionForChannelFacebook(dimension string) string {
+	filterObjectForSmartPropertiesCampaign := "campaign.properties"
+	filterObjectForSmartPropertiesAdGroup := "ad_group.properties"
+
+	filterExpression := ""
+	isNotSmartProperty := false
+	if strings.HasPrefix(dimension, model.CampaignPrefix) {
+		filterExpression, isNotSmartProperty = GetFilterExpressionIfPresentForFacebook("campaign", dimension, model.CampaignPrefix)
+		if !isNotSmartProperty {
+			filterExpression = fmt.Sprintf("JSON_EXTRACT_STRING(%s,'%s')", filterObjectForSmartPropertiesCampaign, strings.TrimPrefix(dimension, model.CampaignPrefix))
+		}
+	} else if strings.HasPrefix(dimension, model.AdgroupPrefix) {
+		filterExpression, isNotSmartProperty = GetFilterExpressionIfPresentForFacebook("ad_set", dimension, model.AdgroupPrefix)
+		if !isNotSmartProperty {
+			filterExpression = fmt.Sprintf("JSON_EXTRACT_STRING(%s,'%s')", filterObjectForSmartPropertiesAdGroup, strings.TrimPrefix(dimension, model.AdgroupPrefix))
+		}
+	} else {
+		filterExpression, _ = GetFilterExpressionIfPresentForFacebook("ad", dimension, model.KeywordPrefix)
+	}
+	return filterExpression
+}
+
+// Input: objectType - campaign, dimension - , prefix - . TODO
+func GetFilterExpressionIfPresentForFacebook(objectType, dimension, prefix string) (string, bool) {
+	key := fmt.Sprintf(`%s:%s`, objectType, strings.TrimPrefix(dimension, prefix))
+	reportProperty, isPresent := objectToValueInFacebookFiltersMappingWithFacebookDocuments[key]
+	return reportProperty, isPresent
 }
 
 func getFacebookFiltersWhereStatementWithSmartProperty(filters []model.ChannelFilterV1) string {

@@ -41,6 +41,10 @@ const nodata = (
   </div>
 );
 
+function onlyUnique(value, index, self) {
+  return self.indexOf(value) === index;
+}
+
 const AttributionsChart = forwardRef(
   (
     {
@@ -78,6 +82,9 @@ const AttributionsChart = forwardRef(
     });
     const [dualTouchpointChartData, setDualTouchpointChartData] = useState([]);
     const [searchText, setSearchText] = useState('');
+    const [filters, setFilters] = useState([]);
+    const [appliedFilters, setAppliedFilters] = useState({});
+    const [filtersVisible, setFiltersVisibility] = useState(false);
     const [columns, setColumns] = useState([]);
     const [tableData, setTableData] = useState([]);
     const [sorter, setSorter] = useState(
@@ -147,6 +154,11 @@ const AttributionsChart = forwardRef(
       );
     }, [displayedAttributionMetrics, handleMetricsVisibilityChange]);
 
+    const handleApplyFilters = useCallback((filters) => {
+      setAppliedFilters(filters);
+      setFiltersVisibility(false);
+    }, []);
+
     useEffect(() => {
       setColumns(
         getTableColumns(
@@ -203,7 +215,8 @@ const AttributionsChart = forwardRef(
         content_groups,
         comparison_data.data,
         queryOptions,
-        attrQueries
+        attrQueries,
+        appliedFilters
       );
       setTableData(tableData);
       setVisibleIndices(
@@ -230,7 +243,8 @@ const AttributionsChart = forwardRef(
       touchpoint,
       comparison_data.data,
       queryOptions,
-      attrQueries
+      attrQueries,
+      appliedFilters
     ]);
 
     useEffect(() => {
@@ -248,25 +262,25 @@ const AttributionsChart = forwardRef(
           );
           setDualTouchpointChartData(chartData);
         }
-      } else {
-        if (tableData.length && visibleIndices.length) {
-          const chartData = getSingleTouchPointChartData(
-            tableData,
-            visibleIndices,
-            attr_dimensions,
-            content_groups,
-            touchpoint,
-            !!comparison_data.data,
-            attrQueries,
-            get(
-              queryOptions,
-              'group_analysis',
-              ATTRIBUTION_GROUP_ANALYSIS_KEYS.USERS
-            ),
-            currMetricsValue
-          );
-          setAggregateData(chartData);
-        }
+        return;
+      }
+      if (tableData.length && visibleIndices.length) {
+        const chartData = getSingleTouchPointChartData(
+          tableData,
+          visibleIndices,
+          attr_dimensions,
+          content_groups,
+          touchpoint,
+          !!comparison_data.data,
+          attrQueries,
+          get(
+            queryOptions,
+            'group_analysis',
+            ATTRIBUTION_GROUP_ANALYSIS_KEYS.USERS
+          ),
+          currMetricsValue
+        );
+        setAggregateData(chartData);
       }
     }, [
       tableData,
@@ -281,6 +295,28 @@ const AttributionsChart = forwardRef(
       attrQueries,
       queryOptions
     ]);
+
+    useEffect(() => {
+      if (tableData.length && !filters.length) {
+        const listDimensions =
+          touchpoint === 'LandingPage'
+            ? [...content_groups]
+            : [...attr_dimensions];
+        const enabledDimensions = listDimensions.filter(
+          (d) => d.touchPoint === touchpoint && d.enabled
+        );
+        if (enabledDimensions.length) {
+          const availableFilters = enabledDimensions.map((d) => {
+            return {
+              title: d.title,
+              key: d.title,
+              options: tableData.map((data) => data[d.title]).filter(onlyUnique)
+            };
+          });
+          setFilters(availableFilters);
+        }
+      }
+    }, [content_groups, attr_dimensions, touchpoint, tableData, filters]);
 
     let chart = null;
 
@@ -364,6 +400,11 @@ const AttributionsChart = forwardRef(
             searchText={searchText}
             setSearchText={setSearchText}
             metricsOptionsPopover={metricsOptionsPopover}
+            filters={filters}
+            filtersVisible={filtersVisible}
+            appliedFilters={appliedFilters}
+            setAppliedFilters={handleApplyFilters}
+            setFiltersVisibility={setFiltersVisibility}
           />
         </div>
       </div>

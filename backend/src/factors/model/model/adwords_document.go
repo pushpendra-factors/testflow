@@ -256,18 +256,9 @@ var AdwordsInternalPropertiesToReportsInternal = map[string]string{
 	"keyword:quality_score":             QualityScore,
 }
 
-func GetFilterStringAndFilterKeyForAdwordsGBT(dimension string, prefix string, dimensionType string, smartPropertiesFilterString string) (string, string) {
-	filterStringAdwords := "adwords_documents.value"
-	filterKey := ""
-	filterString := ""
-	key := fmt.Sprintf(`%s:%s`, dimensionType, strings.TrimPrefix(dimension, prefix))
-	currentFilterKey, isPresent := AdwordsInternalPropertiesToReportsInternal[key]
-	if isPresent {
-		filterString = filterStringAdwords
-		filterKey = currentFilterKey
-	} else {
-		filterString = smartPropertiesFilterString
-		filterKey = strings.TrimPrefix(dimension, prefix)
-	}
-	return filterString, filterKey
+// Input: objectType - campaign, dimension - , prefix - . TODO
+func GetReportPropertyIfPresentForAdwords(objectType, dimension, prefix string) (string, bool) {
+	key := fmt.Sprintf(`%s:%s`, objectType, strings.TrimPrefix(dimension, prefix))
+	reportProperty, isPresent := AdwordsInternalPropertiesToReportsInternal[key]
+	return reportProperty, isPresent
 }

@@ -5,3 +5,9 @@ export const BUTTON_TYPES = {
   PLAIN: 'plain',
   TEXT: 'text'
 };
+
+export const BUTTON_SIZES = {
+  SMALL: 'small',
+  MEDIUM: 'medium',
+  LARGE: 'large'
+};

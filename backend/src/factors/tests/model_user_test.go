@@ -1649,7 +1649,23 @@ func clearbitAnalysisTestDBClearBit(t *testing.T) {
 		case <-time.After(1 / 10 * time.Second):
 			fmt.Println("time Out :(")
 		}
-		//fmt.Println("Main function exited!")
 	}
+}
 
+func TestUserCreationWithDifferentLanguageCharacterEmails(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+	projectId := project.ID
+
+	// Test successful create user.
+	createUserID, errCode := store.GetStore().CreateUser(&model.User{
+		ProjectId:      projectId,
+		Source:         model.GetRequestSourcePointer(model.UserSourceWeb),
+		CustomerUserId: "विक्रमसिंह7698@gmail.com",
+	})
+	assert.Equal(t, http.StatusCreated, errCode)
+	user, errCode := store.GetStore().GetUser(projectId, createUserID)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Equal(t, "विक्रमसिंह7698@gmail.com", user.CustomerUserId)
 }

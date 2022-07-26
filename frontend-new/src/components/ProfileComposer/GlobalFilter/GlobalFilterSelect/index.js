@@ -50,7 +50,7 @@ const GlobalFilterSelect = ({
 
   const [updateState, updateStateApply] = useState(false);
 
-  const { userPropNames, eventPropNames } = useSelector(
+  const { userPropNames, groupPropNames, eventPropNames } = useSelector(
     (state) => state.coreQuery
   );
   const [dateOptionSelectOpen,setDateOptionSelectOpen]=useState(false);
@@ -147,6 +147,11 @@ const GlobalFilterSelect = ({
 
   const renderDisplayName = (propState) => {
     let propertyName = '';
+    if (propState.name && propState.icon === 'group') {
+      propertyName = groupPropNames[propState.name]
+        ? groupPropNames[propState.name]
+        : propState.name;
+    }
     if (
       propState.name &&
       (propState.icon === 'user' || propState.icon === 'user_g')
@@ -160,6 +165,7 @@ const GlobalFilterSelect = ({
         ? eventPropNames[propState.name]
         : propState.name;
     }
+
     if (!propState.name) {
       propertyName = 'Select Property';
     }

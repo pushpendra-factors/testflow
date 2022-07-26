@@ -245,7 +245,7 @@ func (store *MemSQL) ExecuteBingAdsChannelQueryV1(projectID int64, query *model.
 
 // modify acc to sample data
 func (store *MemSQL) GetSQLQueryAndParametersForBingAdsQueryV1(projectID int64, query *model.ChannelQueryV1, reqID string, fetchSource bool,
-	limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string, int) {
+	limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}) (string, []interface{}, []string, []string, int) {
 	logFields := log.Fields{
 		"project_id":                    projectID,
 		"query":                         query,
@@ -392,7 +392,7 @@ func getBingAdsSpecificGroupBy(requestGroupBys []model.ChannelGroupBy) ([]model.
 }
 
 func buildBingAdsQueryV1(query *model.ChannelQueryV1, projectID int64, customerAccountID string, fetchSource bool,
-	limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string, error) {
+	limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}) (string, []interface{}, []string, []string, error) {
 	logFields := log.Fields{
 		"project_id":                    projectID,
 		"query":                         query,
@@ -410,7 +410,7 @@ func buildBingAdsQueryV1(query *model.ChannelQueryV1, projectID int64, customerA
 }
 
 func buildBingAdsQueryWithSmartProperty(query *model.ChannelQueryV1, projectID int64, customerAccountID string, fetchSource bool,
-	limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string, error) {
+	limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}) (string, []interface{}, []string, []string, error) {
 	logFields := log.Fields{
 		"project_id":                    projectID,
 		"query":                         query,
@@ -463,7 +463,7 @@ func getLowestHierarchyLevelForBingAds(query *model.ChannelQueryV1) string {
 	return bingadsCampaign
 }
 func getSQLAndParamsFromBingAdsReports(query *model.ChannelQueryV1, projectID int64, from, to int64, docType int,
-	fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}, customerAccountID string) (string, []interface{}, []string, []string) {
+	fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}, customerAccountID string) (string, []interface{}, []string, []string) {
 	logFields := log.Fields{
 		"project_id":                    projectID,
 		"query":                         query,
@@ -563,7 +563,7 @@ func getBingAdsFromStatementWithJoins(filters []model.ChannelFilterV1, groupBys 
 }
 
 func getSQLAndParamsFromBingAdsReportsWithSmartProperty(query *model.ChannelQueryV1, projectID int64, from, to int64, docType int,
-	fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}, customerAccountID string) (string, []interface{}, []string, []string) {
+	fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}, customerAccountID string) (string, []interface{}, []string, []string) {
 	logFields := log.Fields{
 		"project_id":                    projectID,
 		"query":                         query,
@@ -749,71 +749,66 @@ func getBingAdsFiltersWhereStatementWithSmartProperty(filters []model.ChannelFil
 	return resultStatement
 }
 
-func buildWhereConditionForGBTForBingAds(groupByCombinations []map[string]interface{}) (string, []interface{}) {
+func buildWhereConditionForGBTForBingAds(groupByCombinations map[string][]interface{}) (string, []interface{}) {
 	logFields := log.Fields{
 		"group_by_combinations": groupByCombinations,
 	}
+
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	whereConditionForGBT := ""
+	resultantWhereCondition := ""
+	resultantInClauses := make([]string, 0)
 	params := make([]interface{}, 0)
-	filterStringSmartPropertiesCampaign := "campaign.properties"
-	filterStringSmartPropertiesAdGroup := "ad_group.properties"
-	for _, groupByCombination := range groupByCombinations {
-		whereConditionForEachCombination := ""
-		for dimension, value := range groupByCombination {
-			filterString := ""
-			if strings.HasPrefix(dimension, model.CampaignPrefix) {
-				key := fmt.Sprintf(`%s.%s`, "campaigns", strings.TrimPrefix(dimension, model.CampaignPrefix))
-				currentFilterKey, isPresent := objectAndPropertyToValueInBingAdsReportsMapping[key]
-				if isPresent {
-					filterString = currentFilterKey
-				} else {
-					filterString = fmt.Sprintf("JSON_EXTRACT_STRING(%s,'%s')", filterStringSmartPropertiesCampaign, strings.TrimPrefix(dimension, model.CampaignPrefix))
-				}
 
-			} else if strings.HasPrefix(dimension, model.AdgroupPrefix) {
-				key := fmt.Sprintf(`%s.%s`, "ad_groups", strings.TrimPrefix(dimension, model.AdgroupPrefix))
-				currentFilterKey, isPresent := objectAndPropertyToValueInBingAdsReportsMapping[key]
-				if isPresent {
-					filterString = currentFilterKey
-				} else {
-					filterString = fmt.Sprintf("JSON_EXTRACT_STRING(%s,'%s')", filterStringSmartPropertiesAdGroup, strings.TrimPrefix(dimension, model.AdgroupPrefix))
-				}
-			} else {
-				key := fmt.Sprintf(`%s.%s`, "keyword", strings.TrimPrefix(dimension, model.KeywordPrefix))
-				currentFilterKey := objectAndPropertyToValueInBingAdsReportsMapping[key]
-				filterString = currentFilterKey
-			}
-			if whereConditionForEachCombination == "" {
-				if value != nil {
-					whereConditionForEachCombination = fmt.Sprintf("%s = ? ", filterString)
-					params = append(params, value)
-				} else {
-					whereConditionForEachCombination = fmt.Sprintf("%s is null ", filterString)
-				}
-			} else {
-				if value != nil {
-					whereConditionForEachCombination += fmt.Sprintf(" AND %s = ? ", filterString)
-					params = append(params, value)
-				} else {
-					whereConditionForEachCombination += fmt.Sprintf(" AND %s is null ", filterString)
-				}
-			}
+	for dimension, values := range groupByCombinations {
+		currentInClause := ""
+
+		jsonExtractExpression := GetFilterObjectExpressionForChannelBingAds(dimension)
+
+		valuesInString := make([]string, 0)
+		for _, value := range values {
+			valuesInString = append(valuesInString, "?")
+			params = append(params, value)
 		}
-		if whereConditionForGBT == "" {
-			if whereConditionForEachCombination != "" {
-				whereConditionForGBT = "(" + whereConditionForEachCombination + ")"
-			}
-		} else {
-			if whereConditionForEachCombination != "" {
-				whereConditionForGBT += (" OR (" + whereConditionForEachCombination + ")")
-			}
-		}
+		currentInClause = joinWithComma(valuesInString...)
+
+		resultantInClauses = append(resultantInClauses, jsonExtractExpression+" IN ("+currentInClause+") ")
 	}
+	resultantWhereCondition = joinWithWordInBetween("AND", resultantInClauses...)
 
-	return whereConditionForGBT, params
+	return resultantWhereCondition, params
+
 }
 
+// request has dimension - campaign_name.
+// response has string with JSON_EXTRACT(adwords_documents.value, 'campaign_name')
+func GetFilterObjectExpressionForChannelBingAds(dimension string) string {
+	filterObjectForSmartPropertiesCampaign := "campaign.properties"
+	filterObjectForSmartPropertiesAdGroup := "ad_group.properties"
+
+	filterExpression := ""
+	isNotSmartProperty := false
+	if strings.HasPrefix(dimension, model.CampaignPrefix) {
+		filterExpression, isNotSmartProperty = GetFilterExpressionIfPresentForBingAds("campaigns", dimension, model.CampaignPrefix)
+		if !isNotSmartProperty {
+			filterExpression = fmt.Sprintf("JSON_EXTRACT_STRING(%s,'%s')", filterObjectForSmartPropertiesCampaign, strings.TrimPrefix(dimension, model.CampaignPrefix))
+		}
+	} else if strings.HasPrefix(dimension, model.AdgroupPrefix) {
+		filterExpression, isNotSmartProperty = GetFilterExpressionIfPresentForBingAds("ad_groups", dimension, model.AdgroupPrefix)
+		if !isNotSmartProperty {
+			filterExpression = fmt.Sprintf("JSON_EXTRACT_STRING(%s,'%s')", filterObjectForSmartPropertiesAdGroup, strings.TrimPrefix(dimension, model.AdgroupPrefix))
+		}
+	} else {
+		filterExpression, _ = GetFilterExpressionIfPresentForBingAds("keyword", dimension, model.KeywordPrefix)
+	}
+	return filterExpression
+}
+
+// Input: objectType - campaign, dimension - , prefix - . TODO
+func GetFilterExpressionIfPresentForBingAds(objectType, dimension, prefix string) (string, bool) {
+	key := fmt.Sprintf(`%s:%s`, objectType, strings.TrimPrefix(dimension, prefix))
+	reportProperty, isPresent := objectAndPropertyToValueInBingAdsReportsMapping[key]
+	return reportProperty, isPresent
+}
 func (store *MemSQL) GetLatestMetaForBingAdsForGivenDays(projectID int64, days int) ([]model.ChannelDocumentsWithFields, []model.ChannelDocumentsWithFields) {
 	logFields := log.Fields{
 		"project_id": projectID,
@@ -914,7 +909,7 @@ func (store *MemSQL) PullBingAdsRows(projectID int64, startTime, endTime int64) 
 	year, month, date = time.Unix(endTime, 0).Date()
 	end := year*10000 + int(month)*100 + date
 
-	rawQuery := fmt.Sprintf("SELECT bing.document_id, bing.value, bing.timestamp, bing.type, sp.properties FROM integration_documents bing "+
+	rawQuery := fmt.Sprintf("SELECT bing.document_id, bing.value, bing.timestamp, bing.document_type, sp.properties FROM integration_documents bing "+
 		"LEFT JOIN smart_properties sp ON sp.project_id = %d AND sp.source = '%s' AND "+
 		"((COALESCE(sp.object_type,1) = 1 AND (sp.object_id = JSON_EXTRACT_STRING(bing.value, 'campaign_id') OR sp.object_id = JSON_EXTRACT_STRING(bing.value, 'base_campaign_id'))) OR "+
 		"(COALESCE(sp.object_type,2) = 2 AND (sp.object_id = JSON_EXTRACT_STRING(bing.value, 'ad_group_id') OR sp.object_id = JSON_EXTRACT_STRING(bing.value, 'base_ad_group_id')))) "+

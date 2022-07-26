@@ -11,6 +11,7 @@ import ComposerBlock from '../QueryCommons/ComposerBlock';
 import {
   fetchEventNames,
   getUserProperties,
+  getGroupProperties,
 } from 'Reducers/coreQuery/middleware';
 import GLobalFilter from './GlobalFilter';
 import MomentTz from 'Components/MomentTz';
@@ -27,6 +28,7 @@ function ProfileComposer({
   queryType,
   fetchEventNames,
   getUserProperties,
+  getGroupProperties,
   activeProject,
   queryOptions,
   setQueryOptions,
@@ -58,6 +60,7 @@ function ProfileComposer({
   }, [activeProject, fetchEventNames]);
 
   const setGroupAnalysis = (group) => {
+    getGroupProperties(activeProject.id, group);
     const opts = Object.assign({}, queryOptions);
     opts.group_analysis = group;
     opts.globalFilters = [];
@@ -229,11 +232,7 @@ function ProfileComposer({
             <GLobalFilter
               filters={queryOptions.globalFilters}
               setGlobalFilters={setGlobalFiltersOption}
-              onFiltersLoad={[
-                () => {
-                  getUserProperties(activeProject.id, queryType);
-                },
-              ]}
+              groupName={queryOptions.group_analysis}
             ></GLobalFilter>
           </div>
         </ComposerBlock>
@@ -258,7 +257,7 @@ function ProfileComposer({
           extraClass={`no-padding-l no-padding-r`}
         >
           <div key={0} className={'fa--query_block borderless no-padding '}>
-            <GroupBlock queryType={queryType} events={queries}></GroupBlock>
+            <GroupBlock groupName={queryOptions.group_analysis}/>
           </div>
         </ComposerBlock>
       );
@@ -389,6 +388,7 @@ const mapDispatchToProps = (dispatch) =>
     {
       fetchEventNames,
       getUserProperties,
+      getGroupProperties,
     },
     dispatch
   );

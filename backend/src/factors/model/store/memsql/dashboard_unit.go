@@ -299,7 +299,7 @@ func (store *MemSQL) GetDashboardUnitNamesByProjectIdTypeAndName(projectID int64
 
 			isPresent := baseQuery.CheckIfNameIsPresent(nameOfQuery)
 			if isPresent {
-				rDashboardUnitNames = append(rDashboardUnitNames, dashboardUnit.Description)
+				rDashboardUnitNames = append(rDashboardUnitNames, queryInfo.Title)
 			}
 		}
 	}

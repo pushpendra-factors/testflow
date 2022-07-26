@@ -14,7 +14,7 @@ func TransformChannelsPropertiesConfigToKpiPropertiesConfig(channelsWithProperti
 		for _, property := range channelAndProperties.Properties {
 			tempPropertyConfig = map[string]string{
 				"name":         channelAndProperties.Name + "_" + property.Name,
-				"display_name": channelAndProperties.Name + "_" + property.Name,
+				"display_name": strings.Replace(channelAndProperties.Name+"_"+property.Name, "_", " ", -1),
 				"data_type":    property.Type,
 				"object_type":  channelAndProperties.Name,
 				"entity":       EventEntity,

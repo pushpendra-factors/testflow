@@ -15,8 +15,10 @@ function GroupBlock({
   setGroupBy,
   delGroupBy,
   userProperties,
+  groupProperties,
   userPropNames,
-  eventPropNames,
+  groupPropNames,
+  groupName
 }) {
   const [isDDVisible, setDDVisible] = useState([false]);
   const [isValueDDVisible, setValueDDVisible] = useState([false]);
@@ -27,13 +29,24 @@ function GroupBlock({
       icon: 'user',
       values: [],
     },
+    {
+      label: 'Group Properties',
+      icon: 'group',
+      values: [],
+    },
   ]);
 
   useEffect(() => {
     const filterOpts = [...filterOptions];
-    filterOpts[0].values = userProperties;
+    if (groupName === 'users') {
+      filterOpts[0].values = userProperties;
+      filterOpts[1].values = [];
+    } else {
+      filterOpts[1].values = groupProperties[groupName];
+      filterOpts[0].values = [];
+    }
     setFilterOptions(filterOpts);
-  }, [userProperties]);
+  }, [userProperties, groupProperties, groupName]);
 
   const delOption = (index) => {
     delGroupBy('global', groupByState.global[index], index);
@@ -65,7 +78,6 @@ function GroupBlock({
     if (newGroupByState.prop_type === 'datetime') {
       newGroupByState.grn = 'day';
     }
-
     setGroupBy('global', newGroupByState, index);
     const ddVis = [...isDDVisible];
     ddVis[index] = false;
@@ -175,9 +187,9 @@ function GroupBlock({
         ? userPropNames[opt.property]
         : opt.property;
     }
-    if (opt.property && opt.prop_category === 'event') {
-      propertyName = eventPropNames[opt.property]
-        ? eventPropNames[opt.property]
+    if (opt.property && opt.prop_category === 'group') {
+      propertyName = groupPropNames[opt.property]
+        ? groupPropNames[opt.property]
         : opt.property;
     }
     if (!opt.property) {
@@ -244,9 +256,9 @@ function GroupBlock({
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   userProperties: state.coreQuery.userProperties,
-  eventProperties: state.coreQuery.eventProperties,
+  groupProperties: state.coreQuery.groupProperties,
   userPropNames: state.coreQuery.userPropNames,
-  eventPropNames: state.coreQuery.eventPropNames,
+  groupPropNames: state.coreQuery.groupPropNames,
   groupByState: state.coreQuery.groupBy,
 });
 

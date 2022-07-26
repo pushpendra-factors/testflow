@@ -9,6 +9,7 @@ import MomentTz from 'Components/MomentTz';
 import {
   fetchEventPropertyValues,
   fetchUserPropertyValues,
+  fetchGroupPropertyValues,
   fetchChannelObjPropertyValues,
 } from 'Reducers/coreQuery/services';
 import GlobalFilterSelect from '../GlobalFilterSelect';
@@ -28,13 +29,14 @@ export default function GlobalFilterBlock({
   event,
   filter,
   delIcon = 'remove',
-  propsConstants = ['user', 'event'],
+  propsConstants = ['user', 'group'],
   extraClass,
   delBtnClass,
   deleteFilter,
   insertFilter,
   closeFilter,
   showOr,
+  groupName
 }) {
   const [filterTypeState, setFilterTypeState] = useState('props');
   const [groupCollapseState, setGroupCollapse] = useState({});
@@ -65,6 +67,10 @@ export default function GlobalFilterBlock({
       {
         label: 'User Properties',
         icon: 'user',
+      },
+      {
+        label: 'Group Properties',
+        icon: 'group',
       },
     ],
     operator: operatorProps,
@@ -204,6 +210,25 @@ export default function GlobalFilterBlock({
           fetchEventPropertyValues(
             activeProject.id,
             event.label,
+            newFilterState.props[0]
+          )
+            .then((res) => {
+              const ddValues = Object.assign({}, dropDownValues);
+              ddValues[newFilterState.props[0]] = [...res.data, '$none'];
+              setDropDownValues(ddValues);
+            })
+            .catch(() => {
+              console.log(err);
+              const ddValues = Object.assign({}, dropDownValues);
+              ddValues[newFilterState.props[0]] = ['$none'];
+              setDropDownValues(ddValues);
+            });
+        }
+      }  else if (newFilterState.props[2] === 'group') {
+        if (!dropDownValues[newFilterState.props[0]]) {
+          fetchGroupPropertyValues(
+            activeProject.id,
+            groupName,
             newFilterState.props[0]
           )
             .then((res) => {
@@ -656,6 +681,24 @@ export default function GlobalFilterBlock({
             .catch((err) => {
               const ddValues = Object.assign({}, dropDownValues);
               ddValues[propOpByPayload(props, 0)] = ['$none'];
+              setDropDownValues(ddValues);
+            });
+        }
+      } else if (propOpByPayload(props, 2) === 'group') {
+        if (!dropDownValues[props[0]]) {
+          fetchGroupPropertyValues(
+            activeProject.id,
+            groupName,
+            props[1]
+          )
+            .then((res) => {
+              const ddValues = Object.assign({}, dropDownValues);
+              ddValues[props[1]] = [...res.data, '$none'];
+              setDropDownValues(ddValues);
+            })
+            .catch((err) => {
+              const ddValues = Object.assign({}, dropDownValues);
+              ddValues[props[0]] = ['$none'];
               setDropDownValues(ddValues);
             });
         }
