@@ -236,15 +236,15 @@ var AdwordsInternalPropertiesToJobsInternal = map[string]string{
 }
 
 var AdwordsInternalPropertiesToReportsInternal = map[string]string{
-	"campaign:id":                       "(campaign_id :> text)",
+	"campaign:id":                       "campaign_id",
 	"campaign:name":                     "campaign_name",
 	"campaign:status":                   "campaign_status",
 	"campaign:advertising_channel_type": AdvertisingChannelType,
-	"ad_group:id":                       "(ad_group_id :> text)",
+	"ad_group:id":                       "ad_group_id",
 	"ad_group:name":                     "ad_group_name",
 	"ad_group:status":                   "ad_group_status",
-	"ad:id":                             "(ad_id :> text)",
-	"keyword:id":                        "(keyword_id :> text)",
+	"ad:id":                             "ad_id",
+	"keyword:id":                        "keyword_id",
 	"keyword:name":                      "criteria",
 	"keyword:status":                    "status",
 	"keyword:approval_status":           ApprovalStatus,
