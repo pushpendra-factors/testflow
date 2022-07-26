@@ -287,14 +287,6 @@ func (query *AttributionQueryUnit) CheckIfNameIsPresent(nameOfQuery string) bool
 	return false
 }
 
-// TODO Check
-func (query *AttributionQueryUnit) SetDefaultGroupByTimestamp() {
-}
-
-func (query *AttributionQueryUnit) GetGroupByTimestamps() []string {
-	return []string{}
-}
-
 type MarketingReports struct {
 	AdwordsGCLIDData       map[string]MarketingData
 	AdwordsCampaignIDData  map[string]MarketingData
