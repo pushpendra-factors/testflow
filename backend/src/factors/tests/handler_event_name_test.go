@@ -15,6 +15,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -530,6 +531,18 @@ func TestGetEventNamesHandler(t *testing.T) {
 	assert.Equal(t, properties.DisplayNames["$joinTime"], "Test3")
 	assert.Equal(t, properties.DisplayNames["Dummy"], "Test6-1")
 	assert.Equal(t, properties.DisplayNames["$hubspot_contact_createdddate"], "Hubspot Contact Created Date1")
+
+	t.Run("DisplayNames title-case check", func(t *testing.T) {
+		assert := assert.New(t)
+		for _, value := range eventNamesWithDisplayNames.DisplayNames {
+			temp := strings.Title(value)
+			assert.Equal(value, temp)
+		}
+		for _, value := range properties.DisplayNames {
+			temp := strings.Title(value)
+			assert.Equal(value, temp)
+		}
+	})
 }
 
 func TestEnableEventLevelProperties(t *testing.T) {

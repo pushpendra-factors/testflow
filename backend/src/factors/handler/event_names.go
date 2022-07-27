@@ -42,10 +42,10 @@ func GetDisplayEventNamesHandler(displayNames map[string]string) map[string]stri
 	displayNameEvents := make(map[string]string)
 	standardEvents := U.STANDARD_EVENTS_DISPLAY_NAMES
 	for event, displayName := range standardEvents {
-		displayNameEvents[event] = displayName
+		displayNameEvents[event] = strings.Title(displayName)
 	}
 	for event, displayName := range displayNames {
-		displayNameEvents[event] = displayName
+		displayNameEvents[event] = strings.Title(displayName)
 	}
 	return displayNameEvents
 }
@@ -375,21 +375,21 @@ func GetEventPropertiesHandler(c *gin.Context) {
 		standardPropertiesAllEvent := U.STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES
 		displayNamesOp := make(map[string]string)
 		for property, displayName := range standardPropertiesAllEvent {
-			displayNamesOp[property] = displayName
+			displayNamesOp[property] = strings.Title(displayName)
 		}
 		if eventName == U.EVENT_NAME_SESSION {
 			standardPropertiesSession := U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES
 			for property, displayName := range standardPropertiesSession {
-				displayNamesOp[property] = displayName
+				displayNamesOp[property] = strings.Title(displayName)
 			}
 		}
 		for property, displayName := range displayNames {
-			displayNamesOp[property] = displayName
+			displayNamesOp[property] = strings.Title(displayName)
 		}
 
 		_, displayNames = store.GetStore().GetDisplayNamesForObjectEntities(projectId)
 		for property, displayName := range displayNames {
-			displayNamesOp[property] = displayName
+			displayNamesOp[property] = strings.Title(displayName)
 		}
 		for _, props := range properties {
 			for _, prop := range props {
