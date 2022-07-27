@@ -816,11 +816,6 @@ const applyAdvancedFilters = (
   index = 0,
   filteredResults = []
 ) => {
-  console.log(
-    '🚀 ~ file: utils.js ~ line 812 ~ applyAdvancedFilters ~ filters',
-    filters
-  );
-  console.log(data);
   if (filters == null || filters.categories == null) {
     return data;
   }

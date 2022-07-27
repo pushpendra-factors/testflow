@@ -128,8 +128,7 @@ function CoreQuery({
 }) {
   const { query_id, query_type } = useParams();
 
-
-  const queriesState = useSelector((state) => state.queries); 
+  const queriesState = useSelector((state) => state.queries);
   const savedQueries = useSelector((state) =>
     _.get(state, 'queries.data', EMPTY_ARRAY)
   );
@@ -238,24 +237,24 @@ function CoreQuery({
   const handleTour = () => {
     history.push('/');
     userflow.start('c162ed75-0983-41f3-ae56-8aedd7dbbfbd');
-  }
+  };
 
   useEffect(() => {
     closeDrawer();
     if (query_type === 'event') {
       updateResultState({ ...initialState, loading: true });
       runEventsQueryFromUrl();
-    }
-    else if (query_type === 'funnel') {
+    } else if (query_type === 'funnel') {
       updateResultState({ ...initialState, loading: true });
       runFunnelsQueryFromUrl();
     }
-
   }, [query_id, query_type, queriesState]);
 
   const getQueryFromHashId = () => {
-    return queriesState.data.find(function (quer) { return quer.id_text === query_id });
-  }
+    return queriesState.data.find(function (quer) {
+      return quer.id_text === query_id;
+    });
+  };
 
   const getQueryOptionsFromEquivalentQuery = (currOpts, equivalentQuery) => {
     return {
@@ -270,68 +269,82 @@ function CoreQuery({
         ...equivalentQuery.breakdown.global,
         ...equivalentQuery.breakdown.event
       ],
-      globalFilters: equivalentQuery.globalFilters,
-    }
-  }
+      globalFilters: equivalentQuery.globalFilters
+    };
+  };
 
   const runEventsQueryFromUrl = () => {
     const queryToAdd = getQueryFromHashId();
     if (queryToAdd) {
       // updateResultState({ ...initialState, loading: true });
-      getEventsData(activeProject.id, null, null, false, query_id).then((res) => {
-        const queryLabels = queryToAdd?.query?.query_group[0].ewp.map((ev) => ev.an ? ev.an : ev.na);
-        const equivalentQuery = getStateQueryFromRequestQuery(queryToAdd?.query?.query_group[0]);
-        setQueryType(QUERY_TYPE_EVENT);
-        setQuerySaved(true);
-        updateRequestQuery(queryToAdd?.query?.query_group);
-        dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
-        // localDispatch({
-        //   type: SET_COMPARISON_SUPPORTED,
-        //   payload: isComparisonEnabled(queryType, queriesA, groupBy, models),
-        // });
-        setShowResult(true);
-        setAppliedQueries(queryLabels);
-        setQueries(equivalentQuery.events);
-        setQueryOptions((currOpts) => getQueryOptionsFromEquivalentQuery(currOpts, equivalentQuery));
-        updateAppliedBreakdown();
-        updatePivotConfig({ ...DEFAULT_PIVOT_CONFIG });
-        updateSavedQuerySettings(EMPTY_OBJECT);
-        updateResultFromSavedQuery(res);
-        
-      }, err => {
-        console.log(err);
-      });
+      getEventsData(activeProject.id, null, null, false, query_id).then(
+        (res) => {
+          const queryLabels = queryToAdd?.query?.query_group[0].ewp.map((ev) =>
+            ev.an ? ev.an : ev.na
+          );
+          const equivalentQuery = getStateQueryFromRequestQuery(
+            queryToAdd?.query?.query_group[0]
+          );
+          setQueryType(QUERY_TYPE_EVENT);
+          setQuerySaved(true);
+          updateRequestQuery(queryToAdd?.query?.query_group);
+          dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
+          // localDispatch({
+          //   type: SET_COMPARISON_SUPPORTED,
+          //   payload: isComparisonEnabled(queryType, queriesA, groupBy, models),
+          // });
+          setShowResult(true);
+          setAppliedQueries(queryLabels);
+          setQueries(equivalentQuery.events);
+          setQueryOptions((currOpts) =>
+            getQueryOptionsFromEquivalentQuery(currOpts, equivalentQuery)
+          );
+          updateAppliedBreakdown();
+          updatePivotConfig({ ...DEFAULT_PIVOT_CONFIG });
+          updateSavedQuerySettings(EMPTY_OBJECT);
+          updateResultFromSavedQuery(res);
+        },
+        (err) => {
+          console.log(err);
+        }
+      );
     }
-      
-  }
+  };
 
   const runFunnelsQueryFromUrl = () => {
     const queryToAdd = getQueryFromHashId();
     updateResultState({ ...initialState, loading: true });
-    getFunnelData(activeProject.id, null, null, false, query_id ).then((res) => {
-      const queryLabels = queryToAdd?.query?.ewp.map((ev) => ev.an ? ev.an : ev.na);
-      const equivalentQuery = getStateQueryFromRequestQuery(queryToAdd?.query);
-      setQueryType(QUERY_TYPE_FUNNEL);
-      closeDrawer();
-      updateRequestQuery(queryToAdd?.query);
-      dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
-      setShowResult(true);
-      setQuerySaved(true);
-      setAppliedQueries(queryLabels);
-      setQueries(equivalentQuery.events);
-      updateAppliedBreakdown();
-      updateResultState({
-        ...initialState,
-        data: res.data.result || res.data,
-      });
-    }, err => {
-      console.log(err);
-    })
-  }
+    getFunnelData(activeProject.id, null, null, false, query_id).then(
+      (res) => {
+        const queryLabels = queryToAdd?.query?.ewp.map((ev) =>
+          ev.an ? ev.an : ev.na
+        );
+        const equivalentQuery = getStateQueryFromRequestQuery(
+          queryToAdd?.query
+        );
+        setQueryType(QUERY_TYPE_FUNNEL);
+        closeDrawer();
+        updateRequestQuery(queryToAdd?.query);
+        dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
+        setShowResult(true);
+        setQuerySaved(true);
+        setAppliedQueries(queryLabels);
+        setQueries(equivalentQuery.events);
+        updateAppliedBreakdown();
+        updateResultState({
+          ...initialState,
+          data: res.data.result || res.data
+        });
+      },
+      (err) => {
+        console.log(err);
+      }
+    );
+  };
 
   const runAttributionQueryFromUrl = () => {
     //
-  }
+  };
 
   useEffect(() => {
     if (activeProject && activeProject.id) {
@@ -494,18 +507,18 @@ function CoreQuery({
     if (result_criteria === TOTAL_EVENTS_CRITERIA) {
       updateResultState({
         ...initialState,
-        data: formatApiData(data.result_group[0], data.result_group[1]),
+        data: formatApiData(data.result_group[0], data.result_group[1])
       });
     } else if (result_criteria === TOTAL_USERS_CRITERIA) {
       if (user_type === EACH_USER_TYPE) {
         updateResultState({
           ...initialState,
-          data: formatApiData(data.result_group[0], data.result_group[1]),
+          data: formatApiData(data.result_group[0], data.result_group[1])
         });
       } else {
         updateResultState({
           ...initialState,
-          data: data.result_group[0],
+          data: data.result_group[0]
         });
       }
     } else if (result_criteria === ACTIVE_USERS_CRITERIA) {
@@ -514,11 +527,10 @@ function CoreQuery({
         data.result_group[1]
       );
       const sessionsData = data.result_group[2];
-      const activeUsersData = calculateActiveUsersData(
-        userData,
-        sessionsData,
-        [...groupBy.global, ...groupBy.event]
-      );
+      const activeUsersData = calculateActiveUsersData(userData, sessionsData, [
+        ...groupBy.global,
+        ...groupBy.event
+      ]);
       updateResultState({ ...initialState, data: activeUsersData });
     } else if (result_criteria === FREQUENCY_CRITERIA) {
       const eventData = formatApiData(
@@ -531,12 +543,11 @@ function CoreQuery({
       );
       const frequencyData = calculateFrequencyData(eventData, userData, [
         ...groupBy.global,
-        ...groupBy.event,
+        ...groupBy.event
       ]);
       updateResultState({ ...initialState, data: frequencyData });
-
     }
-  }
+  };
 
   const runQuery = useCallback(
     async (
@@ -739,7 +750,7 @@ function CoreQuery({
           queryOptions.group_analysis &&
           queryOptions.group_analysis !== 'users'
         ) {
-          const dtRange = {...durationObj, frequency: 'hour'}
+          const dtRange = { ...durationObj, frequency: 'hour' };
           const kpiQuery = getKPIQuery(
             attrQueries,
             dtRange,
@@ -1157,10 +1168,10 @@ function CoreQuery({
         localDispatch({
           type: SET_COMPARE_DURATION,
           payload: {
+            ...dates,
             from,
             to,
-            frequency,
-            dateType
+            frequency
           }
         });
       }
@@ -1589,8 +1600,8 @@ function CoreQuery({
         selGroup?.category === 'channels'
           ? item.object_type
           : item.entity
-            ? item.entity
-            : item.object_type;
+          ? item.entity
+          : item.object_type;
       return [ddName, item.name, item.data_type, ddtype];
     });
     return DDvalues;
@@ -1656,7 +1667,9 @@ function CoreQuery({
                 ) : (
                   <Text type={'title'} level={7} extraClass={'m-0'}>
                     To jump back into your Factors project, click on your
-                    account card on the <span className={'font-bold'}>top right</span> of the screen.
+                    account card on the{' '}
+                    <span className={'font-bold'}>top right</span> of the
+                    screen.
                   </Text>
                 )}
               </Col>
@@ -1686,7 +1699,13 @@ function CoreQuery({
                   className={'m-0 mr-2'}
                   onClick={() => handleTour()}
                 >
-                  Take the tour <SVG name={'Arrowright'} size={16} extraClass={'ml-1'} color={'blue'} />
+                  Take the tour{' '}
+                  <SVG
+                    name={'Arrowright'}
+                    size={16}
+                    extraClass={'ml-1'}
+                    color={'blue'}
+                  />
                 </Button>
               </Col>
             </Row>
@@ -1711,7 +1730,7 @@ function CoreQuery({
                 updateSavedQuerySettings={updateSavedQuerySettings}
                 setAttributionMetrics={setAttributionMetrics}
               />
-          )}
+            )}
 
         {showResult ? (
           <CoreQueryContext.Provider
@@ -1775,9 +1794,9 @@ function CoreQuery({
         ) : null}
         {/* create project modal */}
         <NewProject
-            visible={showProjectModal}
-            handleCancel={() => setShowProjectModal(false)}
-          />
+          visible={showProjectModal}
+          handleCancel={() => setShowProjectModal(false)}
+        />
       </ErrorBoundary>
     </>
   );
@@ -1795,7 +1814,7 @@ const mapDispatchToProps = (dispatch) =>
       deleteGroupByForEvent,
       getCampaignConfigData,
       fetchDemoProject,
-      getHubspotContact,
+      getHubspotContact
     },
     dispatch
   );
