@@ -30,7 +30,6 @@ const ValuesMenu = ({
   const isSearchTextSelected = selectedOptions.indexOf(searchText) > -1;
 
   const searchTextSelectionAllowed =
-    filteredOptions.length === 0 &&
     searchText.length > 0 &&
     equalityOperator !== EQUALITY_OPERATOR_KEYS.EQUAL &&
     equalityOperator !== EQUALITY_OPERATOR_KEYS.NOT_EQUAL;
@@ -79,7 +78,7 @@ const ValuesMenu = ({
             })}
           >
             <Text type="title" color="grey-6" level={7}>
-              {!isSearchTextSelected ? 'Select' : ''} {searchText}
+              {!isSearchTextSelected ? 'Select:' : ''} {searchText}
             </Text>
             <ControlledComponent controller={isSearchTextSelected}>
               <SVG name="checkmark" />
