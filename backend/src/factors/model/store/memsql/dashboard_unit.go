@@ -826,10 +826,6 @@ func (store *MemSQL) CacheDashboardUnitForDateRange(cachePayload model.Dashboard
 			logCtx.WithFields(log.Fields{"Query": attributionQuery.Query, "ErrCode": "UnitRunTimeOut"}).Info("Timeout for the attribution unit")
 		}
 
-	} else if baseQuery.GetClass() == model.QueryClassChannel {
-		channelQuery := baseQuery.(*model.ChannelQueryUnit)
-		unitReport.Query = channelQuery
-		result, errCode = store.ExecuteChannelQuery(projectID, channelQuery.Query)
 	} else if baseQuery.GetClass() == model.QueryClassChannelV1 {
 		groupQuery := baseQuery.(*model.ChannelGroupQueryV1)
 		unitReport.Query = groupQuery
