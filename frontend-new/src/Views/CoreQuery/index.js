@@ -110,11 +110,12 @@ import {
 import { getChartChangedKey } from './AnalysisResultsPage/analysisResultsPage.helpers';
 import { EMPTY_OBJECT } from '../../utils/global';
 import moment from 'moment';
-import { fetchDemoProject, getHubspotContact } from 'Reducers/global';
+import { fetchDemoProject, getHubspotContact, fetchProjectSettingsV1, fetchProjectSettings, fetchMarketoIntegration, fetchBingAdsIntegration } from 'Reducers/global';
 import { meetLink } from '../../utils/hubspot';
 import NewProject from '../Settings/SetupAssist/Modals/NewProject';
 import userflow from 'userflow.js';
 import { useHistory } from 'react-router-dom';
+import AnalyseBeforeIntegration from './AnalyseBeforeIntegration';
 
 function CoreQuery({
   activeProject,
@@ -124,14 +125,23 @@ function CoreQuery({
   KPI_config,
   fetchDemoProject,
   getHubspotContact,
+  fetchProjectSettingsV1,
+  fetchProjectSettings,
+  fetchMarketoIntegration,
+  fetchBingAdsIntegration,
   existingQueries
 }) {
   const { query_id, query_type } = useParams();
 
-  const queriesState = useSelector((state) => state.queries);
+
+  const queriesState = useSelector((state) => state.queries); 
   const savedQueries = useSelector((state) =>
     _.get(state, 'queries.data', EMPTY_ARRAY)
   );
+
+  const integration = useSelector((state) => state.global.currentProjectSettings);
+  const integrationV1 = useSelector((state) => state.global.projectSettingsV1);
+  const { bingAds, marketo } = useSelector((state) => state.global);
 
   const [coreQueryState, localDispatch] = useReducer(
     CoreQueryReducer,
@@ -153,7 +163,6 @@ function CoreQuery({
   const [KPIConfigProps, setKPIConfigProps] = useState([]);
 
   const [demoProjectId, setDemoProjectId] = useState(null);
-  const [ownerID, setOwnerID] = useState();
   const [showProjectModal, setShowProjectModal] = useState(false);
   const { projects } = useSelector((state) => state.global);
   const currentAgent = useSelector((state) => state.agent.agent_details);
@@ -237,24 +246,47 @@ function CoreQuery({
   const handleTour = () => {
     history.push('/');
     userflow.start('c162ed75-0983-41f3-ae56-8aedd7dbbfbd');
-  };
+  }
+
+
+  useEffect(() => {
+    fetchProjectSettingsV1(activeProject.id);
+    fetchProjectSettings(activeProject.id);
+    fetchBingAdsIntegration(activeProject.id);
+    fetchMarketoIntegration(activeProject.id);
+  }, [activeProject]);
+
+
+  const isIntegrationEnabled =
+  integration?.int_segment ||
+  integration?.int_adwords_enabled_agent_uuid ||
+  integration?.int_linkedin_agent_uuid ||
+  integration?.int_facebook_user_id ||
+  integration?.int_hubspot ||
+  integration?.int_salesforce_enabled_agent_uuid ||
+  integration?.int_drift ||
+  integration?.int_google_organic_enabled_agent_uuid ||
+  integration?.int_clear_bit ||
+  integrationV1?.int_completed ||
+  bingAds?.accounts ||
+  marketo?.status || integrationV1?.int_slack;
 
   useEffect(() => {
     closeDrawer();
     if (query_type === 'event') {
       updateResultState({ ...initialState, loading: true });
       runEventsQueryFromUrl();
-    } else if (query_type === 'funnel') {
+    }
+    else if (query_type === 'funnel') {
       updateResultState({ ...initialState, loading: true });
       runFunnelsQueryFromUrl();
     }
+
   }, [query_id, query_type, queriesState]);
 
   const getQueryFromHashId = () => {
-    return queriesState.data.find(function (quer) {
-      return quer.id_text === query_id;
-    });
-  };
+    return queriesState.data.find(function (quer) { return quer.id_text === query_id });
+  }
 
   const getQueryOptionsFromEquivalentQuery = (currOpts, equivalentQuery) => {
     return {
@@ -269,82 +301,68 @@ function CoreQuery({
         ...equivalentQuery.breakdown.global,
         ...equivalentQuery.breakdown.event
       ],
-      globalFilters: equivalentQuery.globalFilters
-    };
-  };
+      globalFilters: equivalentQuery.globalFilters,
+    }
+  }
 
   const runEventsQueryFromUrl = () => {
     const queryToAdd = getQueryFromHashId();
     if (queryToAdd) {
       // updateResultState({ ...initialState, loading: true });
-      getEventsData(activeProject.id, null, null, false, query_id).then(
-        (res) => {
-          const queryLabels = queryToAdd?.query?.query_group[0].ewp.map((ev) =>
-            ev.an ? ev.an : ev.na
-          );
-          const equivalentQuery = getStateQueryFromRequestQuery(
-            queryToAdd?.query?.query_group[0]
-          );
-          setQueryType(QUERY_TYPE_EVENT);
-          setQuerySaved(true);
-          updateRequestQuery(queryToAdd?.query?.query_group);
-          dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
-          // localDispatch({
-          //   type: SET_COMPARISON_SUPPORTED,
-          //   payload: isComparisonEnabled(queryType, queriesA, groupBy, models),
-          // });
-          setShowResult(true);
-          setAppliedQueries(queryLabels);
-          setQueries(equivalentQuery.events);
-          setQueryOptions((currOpts) =>
-            getQueryOptionsFromEquivalentQuery(currOpts, equivalentQuery)
-          );
-          updateAppliedBreakdown();
-          updatePivotConfig({ ...DEFAULT_PIVOT_CONFIG });
-          updateSavedQuerySettings(EMPTY_OBJECT);
-          updateResultFromSavedQuery(res);
-        },
-        (err) => {
-          console.log(err);
-        }
-      );
+      getEventsData(activeProject.id, null, null, false, query_id).then((res) => {
+        const queryLabels = queryToAdd?.query?.query_group[0].ewp.map((ev) => ev.an ? ev.an : ev.na);
+        const equivalentQuery = getStateQueryFromRequestQuery(queryToAdd?.query?.query_group[0]);
+        setQueryType(QUERY_TYPE_EVENT);
+        setQuerySaved(true);
+        updateRequestQuery(queryToAdd?.query?.query_group);
+        dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
+        // localDispatch({
+        //   type: SET_COMPARISON_SUPPORTED,
+        //   payload: isComparisonEnabled(queryType, queriesA, groupBy, models),
+        // });
+        setShowResult(true);
+        setAppliedQueries(queryLabels);
+        setQueries(equivalentQuery.events);
+        setQueryOptions((currOpts) => getQueryOptionsFromEquivalentQuery(currOpts, equivalentQuery));
+        updateAppliedBreakdown();
+        updatePivotConfig({ ...DEFAULT_PIVOT_CONFIG });
+        updateSavedQuerySettings(EMPTY_OBJECT);
+        updateResultFromSavedQuery(res);
+        
+      }, err => {
+        console.log(err);
+      });
     }
-  };
+      
+  }
 
   const runFunnelsQueryFromUrl = () => {
     const queryToAdd = getQueryFromHashId();
     updateResultState({ ...initialState, loading: true });
-    getFunnelData(activeProject.id, null, null, false, query_id).then(
-      (res) => {
-        const queryLabels = queryToAdd?.query?.ewp.map((ev) =>
-          ev.an ? ev.an : ev.na
-        );
-        const equivalentQuery = getStateQueryFromRequestQuery(
-          queryToAdd?.query
-        );
-        setQueryType(QUERY_TYPE_FUNNEL);
-        closeDrawer();
-        updateRequestQuery(queryToAdd?.query);
-        dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
-        setShowResult(true);
-        setQuerySaved(true);
-        setAppliedQueries(queryLabels);
-        setQueries(equivalentQuery.events);
-        updateAppliedBreakdown();
-        updateResultState({
-          ...initialState,
-          data: res.data.result || res.data
-        });
-      },
-      (err) => {
-        console.log(err);
-      }
-    );
-  };
+    getFunnelData(activeProject.id, null, null, false, query_id ).then((res) => {
+      const queryLabels = queryToAdd?.query?.ewp.map((ev) => ev.an ? ev.an : ev.na);
+      const equivalentQuery = getStateQueryFromRequestQuery(queryToAdd?.query);
+      setQueryType(QUERY_TYPE_FUNNEL);
+      closeDrawer();
+      updateRequestQuery(queryToAdd?.query);
+      dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
+      setShowResult(true);
+      setQuerySaved(true);
+      setAppliedQueries(queryLabels);
+      setQueries(equivalentQuery.events);
+      updateAppliedBreakdown();
+      updateResultState({
+        ...initialState,
+        data: res.data.result || res.data,
+      });
+    }, err => {
+      console.log(err);
+    })
+  }
 
   const runAttributionQueryFromUrl = () => {
     //
-  };
+  }
 
   useEffect(() => {
     if (activeProject && activeProject.id) {
@@ -507,18 +525,18 @@ function CoreQuery({
     if (result_criteria === TOTAL_EVENTS_CRITERIA) {
       updateResultState({
         ...initialState,
-        data: formatApiData(data.result_group[0], data.result_group[1])
+        data: formatApiData(data.result_group[0], data.result_group[1]),
       });
     } else if (result_criteria === TOTAL_USERS_CRITERIA) {
       if (user_type === EACH_USER_TYPE) {
         updateResultState({
           ...initialState,
-          data: formatApiData(data.result_group[0], data.result_group[1])
+          data: formatApiData(data.result_group[0], data.result_group[1]),
         });
       } else {
         updateResultState({
           ...initialState,
-          data: data.result_group[0]
+          data: data.result_group[0],
         });
       }
     } else if (result_criteria === ACTIVE_USERS_CRITERIA) {
@@ -527,10 +545,11 @@ function CoreQuery({
         data.result_group[1]
       );
       const sessionsData = data.result_group[2];
-      const activeUsersData = calculateActiveUsersData(userData, sessionsData, [
-        ...groupBy.global,
-        ...groupBy.event
-      ]);
+      const activeUsersData = calculateActiveUsersData(
+        userData,
+        sessionsData,
+        [...groupBy.global, ...groupBy.event]
+      );
       updateResultState({ ...initialState, data: activeUsersData });
     } else if (result_criteria === FREQUENCY_CRITERIA) {
       const eventData = formatApiData(
@@ -543,11 +562,12 @@ function CoreQuery({
       );
       const frequencyData = calculateFrequencyData(eventData, userData, [
         ...groupBy.global,
-        ...groupBy.event
+        ...groupBy.event,
       ]);
       updateResultState({ ...initialState, data: frequencyData });
+
     }
-  };
+  }
 
   const runQuery = useCallback(
     async (
@@ -750,7 +770,7 @@ function CoreQuery({
           queryOptions.group_analysis &&
           queryOptions.group_analysis !== 'users'
         ) {
-          const dtRange = { ...durationObj, frequency: 'hour' };
+          const dtRange = {...durationObj, frequency: 'hour'}
           const kpiQuery = getKPIQuery(
             attrQueries,
             dtRange,
@@ -1168,10 +1188,10 @@ function CoreQuery({
         localDispatch({
           type: SET_COMPARE_DURATION,
           payload: {
-            ...dates,
             from,
             to,
-            frequency
+            frequency,
+            dateType
           }
         });
       }
@@ -1600,121 +1620,114 @@ function CoreQuery({
         selGroup?.category === 'channels'
           ? item.object_type
           : item.entity
-          ? item.entity
-          : item.object_type;
+            ? item.entity
+            : item.object_type;
       return [ddName, item.name, item.data_type, ddtype];
     });
     return DDvalues;
   };
 
-  return (
-    <>
-      <ErrorBoundary
-        fallback={
-          <FaErrorComp
-            size={'medium'}
-            title={'Analyse Error'}
-            subtitle={
-              'We are facing trouble loading Analyse. Drop us a message on the in-app chat.'
-            }
-          />
-        }
-        onError={FaErrorLog}
-      >
-        {
-          <Drawer
-            title={title()}
-            placement="left"
-            closable={false}
-            visible={drawerVisible && !checkIfnewComposer()}
-            onClose={closeDrawer}
-            getContainer={false}
-            width={'650px'}
-            className={'fa-drawer'}
-          >
-            <ErrorBoundary
-              fallback={
-                <FaErrorComp subtitle={'Facing issues with Query Builder'} />
+  if (isIntegrationEnabled || activeProject.id === demoProjectId) {
+    return (
+      <>
+        <ErrorBoundary
+          fallback={
+            <FaErrorComp
+              size={'medium'}
+              title={'Analyse Error'}
+              subtitle={
+                'We are facing trouble loading Analyse. Drop us a message on the in-app chat.'
               }
-              onError={FaErrorLog}
+            />
+          }
+          onError={FaErrorLog}
+        >
+          {
+            <Drawer
+              title={title()}
+              placement="left"
+              closable={false}
+              visible={drawerVisible && !checkIfnewComposer()}
+              onClose={closeDrawer}
+              getContainer={false}
+              width={'650px'}
+              className={'fa-drawer'}
             >
-              {renderQueryComposer()}
-            </ErrorBoundary>
-          </Drawer>
-        }
+              <ErrorBoundary
+                fallback={
+                  <FaErrorComp subtitle={'Facing issues with Query Builder'} />
+                }
+                onError={FaErrorLog}
+              >
+                {renderQueryComposer()}
+              </ErrorBoundary>
+            </Drawer>
+          }
 
-        {activeProject.id === demoProjectId ? (
-          <div className={'rounded-lg border-2 h-20 mt-20 -mb-20 mx-20'}>
-            <Row justify={'space-between'} className={'m-0 p-3'}>
-              <Col span={projects.length === 1 ? 12 : 18}>
-                <img
-                  src="assets/icons/welcome.svg"
-                  style={{ float: 'left', marginRight: '20px' }}
-                />
-                <Text
-                  type={'title'}
-                  level={6}
-                  weight={'bold'}
-                  extraClass={'m-0'}
-                >
-                  Welcome! You just entered a Factors demo project
-                </Text>
-                {projects.length === 1 ? (
-                  <Text type={'title'} level={7} extraClass={'m-0'}>
-                    These reports have been built with a sample dataset. Use
-                    this to start exploring!
+          {activeProject.id === demoProjectId ? (
+            <div className={'rounded-lg border-2 h-20 mt-20 -mb-20 mx-20'}>
+              <Row justify={'space-between'} className={'m-0 p-3'}>
+                <Col span={projects.length === 1 ? 12 : 18}>
+                  <img
+                    src="assets/icons/welcome.svg"
+                    style={{ float: 'left', marginRight: '20px' }}
+                  />
+                  <Text
+                    type={'title'}
+                    level={6}
+                    weight={'bold'}
+                    extraClass={'m-0'}
+                  >
+                    Welcome! You just entered a Factors demo project
                   </Text>
-                ) : (
-                  <Text type={'title'} level={7} extraClass={'m-0'}>
-                    To jump back into your Factors project, click on your
-                    account card on the{' '}
-                    <span className={'font-bold'}>top right</span> of the
-                    screen.
-                  </Text>
-                )}
-              </Col>
-              <Col className={'mr-2 mt-2'}>
-                {projects.length === 1 ? (
+                  {projects.length === 1 ? (
+                    <Text type={'title'} level={7} extraClass={'m-0'}>
+                      These reports have been built with a sample dataset. Use
+                      this to start exploring!
+                    </Text>
+                  ) : (
+                    <Text type={'title'} level={7} extraClass={'m-0'}>
+                      To jump back into your Factors project, click on your
+                      account card on the <span className={'font-bold'}>top right</span> of the screen.
+                    </Text>
+                  )}
+                </Col>
+                <Col className={'mr-2 mt-2'}>
+                  {projects.length === 1 ? (
+                    <Button
+                      type={'default'}
+                      style={{
+                        background: 'white',
+                        border: '1px solid #E7E9ED',
+                        height: '40px'
+                      }}
+                      className={'m-0 mr-2'}
+                      onClick={() => setShowProjectModal(true)}
+                    >
+                      Set up my own Factors project
+                    </Button>
+                  ) : null}
+
                   <Button
-                    type={'default'}
+                    type={'link'}
                     style={{
                       background: 'white',
-                      border: '1px solid #E7E9ED',
+                      // border: '1px solid #E7E9ED',
                       height: '40px'
                     }}
                     className={'m-0 mr-2'}
-                    onClick={() => setShowProjectModal(true)}
+                    onClick={() => handleTour()}
                   >
-                    Set up my own Factors project
+                    Take the tour <SVG name={'Arrowright'} size={16} extraClass={'ml-1'} color={'blue'} />
                   </Button>
-                ) : null}
+                </Col>
+              </Row>
+            </div>
+          ) : null}
 
-                <Button
-                  type={'link'}
-                  style={{
-                    background: 'white',
-                    // border: '1px solid #E7E9ED',
-                    height: '40px'
-                  }}
-                  className={'m-0 mr-2'}
-                  onClick={() => handleTour()}
-                >
-                  Take the tour{' '}
-                  <SVG
-                    name={'Arrowright'}
-                    size={16}
-                    extraClass={'ml-1'}
-                    color={'blue'}
-                  />
-                </Button>
-              </Col>
-            </Row>
-          </div>
-        ) : null}
-
-        {!showResult && drawerVisible && checkIfnewComposer()
-          ? renderCreateQFlow()
-          : !showResult && (
+          {!showResult && drawerVisible && checkIfnewComposer()
+            ? renderCreateQFlow()
+            : !showResult && (
               <CoreQueryHome
                 setQueryType={setQueryType}
                 setDrawerVisible={closeResultPage}
@@ -1794,12 +1807,19 @@ function CoreQuery({
         ) : null}
         {/* create project modal */}
         <NewProject
-          visible={showProjectModal}
-          handleCancel={() => setShowProjectModal(false)}
-        />
-      </ErrorBoundary>
-    </>
-  );
+            visible={showProjectModal}
+            handleCancel={() => setShowProjectModal(false)}
+          />
+        </ErrorBoundary>
+      </>
+    );
+  } else {
+    return (
+      <>
+        <AnalyseBeforeIntegration />
+      </>
+    );
+  }
 }
 
 const mapStateToProps = (state) => ({
@@ -1814,7 +1834,11 @@ const mapDispatchToProps = (dispatch) =>
       deleteGroupByForEvent,
       getCampaignConfigData,
       fetchDemoProject,
-      getHubspotContact
+      getHubspotContact,
+      fetchProjectSettingsV1,
+      fetchProjectSettings,
+      fetchMarketoIntegration,
+      fetchBingAdsIntegration
     },
     dispatch
   );

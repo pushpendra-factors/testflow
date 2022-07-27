@@ -104,7 +104,7 @@ function TemplateDetails({setShowCardDetails,templates,setTemplateSelected,setSh
                     <div className="flex flex-row">
                         <div className="flex flex-col w-3/5 mr-2 ml-24 mt-24 p-8">
                             <div className="flex flex-row">
-                                <img alt='template' src='assets/images/template-icon-1.png' width="100%" className=""/>
+                                <img alt='template' src='https://s3.amazonaws.com/www.factors.ai/assets/img/product/template-icon-1.png' width="100%" className=""/>
                             </div>
                             <div className="flex flex-row">
                                 {rendersimilarDashboards()}

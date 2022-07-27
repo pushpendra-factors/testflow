@@ -1,34 +1,21 @@
 .first {
-    width: 49%;
-    border: 1px solid #B7BEC8;
-    box-sizing: border-box;
-    backdrop-filter: blur(31px);
+    margin-top: 20px;
+    width: 248px;
+    height: 335px;
     border-radius: 8px;
-}
-
-.second {
-    background: linear-gradient(180deg, #2478C7 0%, #072960 100%);
-    box-sizing: border-box;
-    backdrop-filter: blur(31px);
-    border-radius: 8px;
+    background: #F5F6F8;
+    &:hover {
+        cursor: pointer;
+    }
 }
 
 .img {
-    position: absolute;
-    width: 100px;
-    height: 65px;
-    right: 5px;
-    bottom: 3px;
-    z-index: -5;
-}
-
-.callimg {
-    position: absolute;
-    width: 180px;
-    height: 180px;
-    right: 4.79%;
-    bottom: -16.3%;
-    z-index: -5;
+    // position: absolute;
+    width: 109px;
+    height: 109px;
+    left: 80px;
+    top: 79.9px;
+    // z-index: -5;
 }
 
 .video_responsive {
