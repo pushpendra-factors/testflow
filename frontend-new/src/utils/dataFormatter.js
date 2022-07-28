@@ -291,14 +291,18 @@ export const getErrorMessage = (err) => {
   return 'Something went wrong!';
 };
 
-export const getValidGranularityOptions = ({ from, to }) => {
-  const startDate = moment(from).startOf('day').utc().unix() * 1000;
-  const endDate = moment(to).endOf('day').utc().unix() * 1000 + 1000;
-  const daysDiff = moment(endDate).diff(startDate, 'days');
+export const getValidGranularityOptionsFromDaysDiff = ({ daysDiff }) => {
   if (daysDiff > 1) {
     return ['date', 'week', 'month', 'quarter'];
   }
   return ['hour'];
+};
+
+export const getValidGranularityOptions = ({ from, to }) => {
+  const startDate = moment(from).startOf('day').utc().unix() * 1000;
+  const endDate = moment(to).endOf('day').utc().unix() * 1000 + 1000;
+  const daysDiff = moment(endDate).diff(startDate, 'days');
+  return getValidGranularityOptionsFromDaysDiff({ daysDiff });
 };
 
 export const isSeriesChart = (chartType) => {

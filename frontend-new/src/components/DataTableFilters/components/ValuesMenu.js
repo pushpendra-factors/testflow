@@ -13,7 +13,7 @@ const ValuesMenu = ({ options, selectedOptions, onChange }) => {
   };
 
   const filteredOptions = options.filter((option) =>
-    option.toLowerCase().includes(searchText)
+    option.toLowerCase().includes(searchText.toLowerCase())
   );
 
   const handleItemClick = (option) => {
@@ -35,12 +35,9 @@ const ValuesMenu = ({ options, selectedOptions, onChange }) => {
           return (
             <Menu.Item
               key={option}
-              className={cx(
-                styles['values-menu-item'],
-                {
-                  [styles['values-menu-item-selected']]: isSelected
-                }
-              )}
+              className={cx(styles['values-menu-item'], {
+                [styles['values-menu-item-selected']]: isSelected
+              })}
               onClick={handleItemClick.bind(null, option)}
             >
               <Text type="title" color="grey-6" level={7}>
