@@ -30,6 +30,7 @@ type TemplateQuery struct {
 	Class      string            `json:"cl"`
 	Timezone   string            `json:"time_zone"`
 }
+
 type RequestThresholds struct {
 	PercentageChange float64 `json:"percentage_change"`
 	AbsoluteChange   float64 `json:"absolute_change"`
@@ -94,6 +95,13 @@ func (q *TemplateQuery) ConvertAllDatesFromTimezone1ToTimezone2(currentTimezone,
 
 func (query *TemplateQuery) CheckIfNameIsPresent(nameOfQuery string) bool {
 	return false
+}
+
+func (query *TemplateQuery) SetDefaultGroupByTimestamp() {
+}
+
+func (query *TemplateQuery) GetGroupByTimestamps() []string {
+	return []string{}
 }
 
 var DefaultThresholds = RequestThresholds{
