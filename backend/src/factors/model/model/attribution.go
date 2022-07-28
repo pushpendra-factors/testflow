@@ -2921,7 +2921,6 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, reports *Marketin
 		marketingValues := MarketingData{Channel: PropertyValueNone, CampaignID: campaignID, CampaignName: campaignName, AdgroupID: adgroupID,
 			AdgroupName: adgroupName, KeywordName: keywordName, KeywordMatchType: keywordMatchType, Source: sourceName, ChannelGroup: channelGroup,
 			LandingPageUrl: landingPageUrl, ContentGroupValuesMap: contentGroupValuesMap}
-		gclIDEnrichSuccess := 0
 		// Override GCLID based campaign info if presents
 		if gclID != PropertyValueNone && !(query.AttributionKey == AttributionKeyKeyword && !IsASearchSlotKeyword(&(*reports).AdwordsGCLIDData, gclID)) {
 			countEnrichedGclid++
@@ -2932,7 +2931,6 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, reports *Marketin
 			// fallback is attributionId
 			if U.IsNonEmptyKey(attributionIdBasedOnGclID) {
 				attributionKeyName = attributionIdBasedOnGclID
-				gclIDEnrichSuccess = 1
 			} else {
 				missingIDs = append(missingIDs, MissingCollection{AttributionKey: query.AttributionKey, GCLID: gclID})
 			}
