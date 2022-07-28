@@ -29,7 +29,7 @@ function TemplateDetails({setShowCardDetails,templates,setTemplateSelected,setSh
             {
             tags.map((tag)=>{
                 return(
-                    <Tag className="">{tag}</Tag>
+                    <Tag className="p-12">{tag}</Tag>
                 );
             })}
             </div>
@@ -46,9 +46,9 @@ function TemplateDetails({setShowCardDetails,templates,setTemplateSelected,setSh
                     Included Reports
                 </Text>  
                 {
-                    units.map(unit=>{
+                    units.map((unit,id)=>{
                         return(
-                            <Text type={'title'} level={7} color={'grey'} weight={'bold'} extraClass={'m-2'}>{unit.title}</Text>
+                            <Text type={'title'} level={7} color={'grey'} weight={'bold'} extraClass={'m-2'}>{id+1}. {unit.title}</Text>
                         );
                     })
                 }
@@ -66,7 +66,7 @@ function TemplateDetails({setShowCardDetails,templates,setTemplateSelected,setSh
         return(
             <div>
             <Text type={'title'} level={5} weight={'bold'} color={'grey-2'} extraClass={'mt-8 mb-4'}>
-                SimilarDashboards
+                Similar Dashboards
             </Text>  
                 <div className='justify-evenly grid grid-cols-3 gap-4'>
                 {
@@ -95,12 +95,20 @@ function TemplateDetails({setShowCardDetails,templates,setTemplateSelected,setSh
                 }
                 onError={FaErrorLog}>
                 <div className="flex flex-col">
-                    <div onClick={()=>{setShowCardDetails(false);setShowTemplates(false)}} className={styles.close}>
-                            <SVG name='times' extraClass={"h-6 w-6"}></SVG>
-                    </div>
-                    <div onClick={()=>setShowCardDetails(false)} className={styles.arrow}>
-                            <SVG name='arrowLeft' extraClass={"h-6 w-6"}></SVG>
-                    </div>
+                    <Button
+                    size={'large'}
+                    type='text'
+                    icon={<SVG size={20} name={'times'} />}
+                    onClick={()=>{setShowCardDetails(false);setShowTemplates(false);setTemplateSelected(-1)}} 
+                    className={styles.close}
+                    />
+                    <Button
+                    size={'large'}
+                    type='text'
+                    icon={<SVG size={20} name={'arrowLeft'} />}
+                    onClick={()=>{setShowCardDetails(false);setTemplateSelected(-1)}}
+                    className={styles.arrow}
+                    />
                     <div className="flex flex-row">
                         <div className="flex flex-col w-3/5 mr-2 ml-24 mt-24 p-8">
                             <div className="flex flex-row">

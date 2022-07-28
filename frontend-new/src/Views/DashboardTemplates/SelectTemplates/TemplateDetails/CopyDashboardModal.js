@@ -44,7 +44,7 @@ function CopyDashboardModal({showCopyDashBoardModal,setShowCopyDashBoardModal}){
                         <Text type='title' level={4} weight={'bold'}>Do you want to create a copy?</Text>
                     </Col>
                     <Col >
-                        <Text type='paragraph' level={7} color={'grey'} weight={'bold'}>Creating a copy will replicate the dashboard into your Project</Text>
+                        <Text type='paragraph' level={7} color={'grey'} weight={'bold'}>Creating a copy will replicate this dashboard into your Project</Text>
                     </Col>
                 </Row>
             </Modal>
