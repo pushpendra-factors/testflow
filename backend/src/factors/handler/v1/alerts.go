@@ -21,7 +21,7 @@ func CreateAlertHandler(c *gin.Context) (interface{}, int, string, string, bool)
 	}
 
 	r := c.Request
-	queryIdString := c.Param("query_id")
+	queryIdString := c.Query("query_id")
 	var queryID int64
 	var err error
 	if queryIdString != "" {

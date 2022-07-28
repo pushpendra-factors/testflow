@@ -96,13 +96,6 @@ func (query *ProfileQueryGroup) CheckIfNameIsPresent(nameOfQuery string) bool {
 	return false
 }
 
-func (query *ProfileQueryGroup) SetDefaultGroupByTimestamp() {
-}
-
-func (query *ProfileQueryGroup) GetGroupByTimestamps() []string {
-	return []string{}
-}
-
 type ProfileQuery struct {
 	Type          string                 `json:"ty"` // all_users, hubspot_events, etc
 	Filters       []QueryProperty        `json:"pr"`

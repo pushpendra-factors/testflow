@@ -26,6 +26,7 @@ type Message struct {
 	AlertType     int
 	Operator      string
 	Category      string
+	CategoryType  string
 	ActualValue   float64
 	ComparedValue float64
 	PageURL       string
@@ -44,7 +45,7 @@ type dateRanges struct {
 }
 
 func ComputeAndSendAlerts(projectID int64, configs map[string]interface{}) (map[string]interface{}, bool) {
-	allAlerts, errCode := store.GetStore().GetAllAlerts(projectID, false)
+	allAlerts, errCode := store.GetStore().GetAllAlerts(projectID, true)
 	if errCode != http.StatusFound {
 		log.Fatalf("Failed to get all alerts for project_id: %v", projectID)
 		return nil, false
@@ -63,15 +64,15 @@ func ComputeAndSendAlerts(projectID int64, configs map[string]interface{}) (map[
 		var kpiQuery model.KPIQuery
 		alert.LastRunTime = time.Now()
 		var err error
-		alertDescription, alertConfiguration, kpiQuery, err = model.DecodeAndFetchAlertRelatedStructs(projectID, alert)
-		if err != nil {
-			continue
-		}
 		if alert.AlertType == 3 {
 			_, err := HandlerAlertWithQueryID(alert, configs)
 			if err != nil {
 				log.WithError(err).Error("failed to run type 3 alert with alert id ", alert.ID)
 			}
+			continue
+		}
+		alertDescription, alertConfiguration, kpiQuery, err = model.DecodeAndFetchAlertRelatedStructs(projectID, alert)
+		if err != nil {
 			continue
 		}
 		if kpiQuery.Category == model.ProfileQueryClass {
@@ -105,6 +106,7 @@ func ComputeAndSendAlerts(projectID int64, configs map[string]interface{}) (map[
 				AlertType:     alert.AlertType,
 				Operator:      alertDescription.Operator,
 				Category:      strings.Title(filterStringbyLastWord(kpiQuery.DisplayCategory, "metrics")),
+				CategoryType:  model.MapOfMetricsToData[kpiQuery.DisplayCategory][alertDescription.Name]["type"],
 				ActualValue:   actualValue,
 				ComparedValue: comparedValue,
 				PageURL:       kpiQuery.PageUrl,
@@ -383,14 +385,23 @@ func sendEmailAlert(projectID int64, msg Message, dateRange dateRanges, timezone
 			msg.Operator = model.DECREASED_BY_MORE_THAN
 		}
 	}
-
-	actualValue := strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.2f", msg.ActualValue), "0"), ".")
-	actualValue = AddCommaToNumber(actualValue)
+	var actualValue string
+	if msg.CategoryType == model.MetricsDateType {
+		actualValue = convertTimeFromSeconds(msg.ActualValue)
+	} else {
+		actualValue = strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.2f", msg.ActualValue), "0"), ".")
+		actualValue = AddCommaToNumber(actualValue)
+	}
 
 	var comparedValue, comparedToStatement string
 	if msg.AlertType == 2 {
-		comparedValue = strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.2f", msg.ComparedValue), "0"), ".")
-		comparedValue = "(" + AddCommaToNumber(comparedValue) + ")"
+		if msg.CategoryType == model.MetricsDateType {
+			comparedValue = convertTimeFromSeconds(msg.ComparedValue)
+			comparedValue = "(" + comparedValue + ")"
+		} else {
+			comparedValue = strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.2f", msg.ComparedValue), "0"), ".")
+			comparedValue = "(" + AddCommaToNumber(comparedValue) + ")"
+		}
 		previousPeriod := ""
 		switch msg.DateRange {
 		case model.LAST_WEEK:
@@ -493,15 +504,24 @@ func getSlackMessage(msg Message, dateRange dateRanges, timezone U.TimeZoneStrin
 		}
 	}
 	emoji := getEmojiForSlackByOperator(msg.Operator)
-	actualValue := strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.2f", msg.ActualValue), "0"), ".")
-	actualValue = AddCommaToNumber(actualValue)
+	var actualValue string
+	if msg.CategoryType == model.MetricsDateType {
+		actualValue = convertTimeFromSeconds(msg.ActualValue)
+	} else {
+		actualValue = strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.2f", msg.ActualValue), "0"), ".")
+		actualValue = AddCommaToNumber(actualValue)
+	}
 	var slackMsg string
 	comparedToStatement := ""
 	ComparedValue := ""
 	if msg.AlertType == 2 {
 		comparedToStatement = "compared to previous period "
-		ComparedValue = strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.2f", msg.ComparedValue), "0"), ".")
-		ComparedValue = AddCommaToNumber(ComparedValue)
+		if msg.CategoryType == model.MetricsDateType {
+			ComparedValue = convertTimeFromSeconds(msg.ComparedValue)
+		} else {
+			ComparedValue = strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.2f", msg.ComparedValue), "0"), ".")
+			ComparedValue = AddCommaToNumber(ComparedValue)
+		}
 		ComparedValue = " (" + ComparedValue + ") "
 	}
 	slackMsg = fmt.Sprintf(`
@@ -1104,6 +1124,36 @@ func removeDollarSymbolFromEventNames(title string) string {
 		}
 	}
 	return title
+}
+func convertTimeFromSeconds(value float64) string {
+	secondsInt := uint64(value)
+	days := secondsInt / (24 * 3600)
+	secondsInt = secondsInt % (24 * 3600)
+
+	hours := secondsInt / 3600
+	secondsInt = secondsInt % 3600
+
+	minutes := secondsInt / 60
+	secondsInt = secondsInt % 60
+
+	seconds := secondsInt
+
+	var daysStr, hoursStr, minstr, secstr string
+	if days > 0 {
+		daysStr = fmt.Sprintf("%d d ", days)
+	}
+	if hours > 0 {
+		hoursStr = fmt.Sprintf("%d h ", hours)
+	}
+	if minutes > 0 {
+		minstr = fmt.Sprintf("%d m ", minutes)
+	}
+	if seconds > 0 {
+		secstr = fmt.Sprintf("%d s ", seconds)
+	}
+
+	return daysStr + hoursStr + minstr + secstr
+
 }
 
 // adding it here because import wasnt allowed (import cycle)

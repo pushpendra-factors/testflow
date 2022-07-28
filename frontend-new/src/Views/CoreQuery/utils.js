@@ -1075,7 +1075,7 @@ export const formatApiData = (data, metrics) => {
 };
 
 export const getStateQueryFromRequestQuery = (requestQuery) => {
-  const events = requestQuery?.ewp.map((e) => {
+  const events = requestQuery.ewp.map((e) => {
     const filters = [];
     let ref = -1,
       lastProp = '',
