@@ -197,6 +197,8 @@ type BaseQuery interface {
 	TransformDateTypeFilters() error
 	ConvertAllDatesFromTimezone1ToTimezone2(currentTimezone, nextTimezone string) error
 	CheckIfNameIsPresent(nameOfQuery string) bool
+	SetDefaultGroupByTimestamp()
+	GetGroupByTimestamps() []string
 }
 
 type Query struct {
@@ -295,6 +297,10 @@ func (query *Query) GetGroupByTimestamp() string {
 	}
 }
 
+func (query *Query) GetGroupByTimestamps() []string {
+	return []string{query.GetGroupByTimestamp()}
+}
+
 func (query *Query) GetAggregateFunction() string {
 	if query.AggregateFunction == "" {
 		return strings.ToUpper(DefaultAggrFunc)
@@ -331,6 +337,13 @@ func (query *Query) ConvertAllDatesFromTimezone1ToTimezone2(currentTimezone, nex
 
 func (query *Query) CheckIfNameIsPresent(nameOfQuery string) bool {
 	return false
+}
+
+func (query *Query) SetDefaultGroupByTimestamp() {
+	defaultGroupByTimestamp := GetDefaultGroupByTimestampForQueries(query.From, query.To, query.GetGroupByTimestamp())
+	if defaultGroupByTimestamp != "" {
+		query.GroupByTimestamp = defaultGroupByTimestamp
+	}
 }
 
 type QueryProperty struct {
@@ -562,6 +575,23 @@ func (q *QueryGroup) ConvertAllDatesFromTimezone1ToTimezone2(currentTimezone, ne
 	return nil
 }
 
+func (query *QueryGroup) SetDefaultGroupByTimestamp() {
+	for index, _ := range query.Queries {
+		defaultGroupByTimestamp := GetDefaultGroupByTimestampForQueries(query.Queries[index].From, query.Queries[index].To, query.Queries[index].GetGroupByTimestamp())
+		if defaultGroupByTimestamp != "" {
+			query.Queries[index].GroupByTimestamp = defaultGroupByTimestamp
+		}
+	}
+}
+
+func (query *QueryGroup) GetGroupByTimestamps() []string {
+	queryResultString := make([]string, 0)
+	for _, intQuery := range query.Queries {
+		queryResultString = append(queryResultString, intQuery.GetGroupByTimestamp())
+	}
+	return queryResultString
+}
+
 type DateTimePropertyValue struct {
 	From           int64  `json:"fr"`
 	To             int64  `json:"to"`
@@ -622,9 +652,9 @@ type QueryResult struct {
 }
 
 type ResultGroup struct {
-	Results []QueryResult `json:"result_group"`
-	Query   interface{}   `json:"query"`
-	IsShareable bool        `json:"is_shareable"`
+	Results     []QueryResult `json:"result_group"`
+	Query       interface{}   `json:"query"`
+	IsShareable bool          `json:"is_shareable"`
 }
 
 // QueryCacheResult Container to save query cache result along with timestamp.
@@ -996,4 +1026,15 @@ func sanitizeDateTypeForSpecificIndex(query *Query, rows [][]interface{}, indexT
 		currentValueInTimeFormat, _ := time.Parse(U.DATETIME_FORMAT_DB, row[indexToSanitize].(string))
 		row[indexToSanitize] = U.GetTimestampAsStrWithTimezone(currentValueInTimeFormat, query.Timezone)
 	}
+}
+
+// Logic which uses from, to and current query Timestamp to set the default GroupByTimestamp.
+func GetDefaultGroupByTimestampForQueries(from, to int64, currentGroupByTimestamp string) string {
+	if currentGroupByTimestamp != "" && U.IsLessThanTimeRange(from, to, U.SECONDS_IN_A_DAY) {
+		return GroupByTimestampHour
+	} else if currentGroupByTimestamp == GroupByTimestampHour && U.IsGreaterThanEqualTimeRange(from, to, U.SECONDS_IN_A_DAY) {
+		return GroupByTimestampDate
+	}
+
+	return ""
 }
