@@ -33,7 +33,13 @@ spec:
             - hubspot_sync_first
             - --healthcheck_ping_id
             - e8644320-8c94-4b5c-b8c8-5ea225ef518a
+            - --hubspot_app_id
+            - $(HUBSPOT_APP_ID)
+            - --hubspot_app_secret
+            - $(HUBSPOT_APP_SECRET)
             envFrom:
             - configMapRef:
                 name: config-env
+            - secretRef:
+                name: secret-hubspot
           restartPolicy: OnFailure

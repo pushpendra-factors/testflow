@@ -404,6 +404,7 @@ CREATE TABLE IF NOT EXISTS project_settings (
     int_adwords_client_manager_map json,
     int_hubspot boolean NOT NULL DEFAULT FALSE,
     int_hubspot_api_key text,
+    int_hubspot_refresh_token text,
     int_hubspot_sync_info json,
     int_hubspot_portal_id int,
     int_hubspot_first_time_synced boolean NOT NULL DEFAULT FALSE,

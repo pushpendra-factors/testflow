@@ -31,7 +31,13 @@ spec:
             - --first_sync
             - --app_name
             - "hubspot_sync_first"
+            - --hubspot_app_id
+            - $(HUBSPOT_APP_ID)
+            - --hubspot_app_secret
+            - $(HUBSPOT_APP_SECRET)
             envFrom:
             - configMapRef:
                 name: config-env
+            - secretRef:
+                name: secret-hubspot
           restartPolicy: OnFailure

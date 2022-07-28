@@ -16,6 +16,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	C "factors/config"
+	IntHubspot "factors/integration/hubspot"
 	IntSalesforce "factors/integration/salesforce"
 	IntSegment "factors/integration/segment"
 	IntShopify "factors/integration/shopify"
@@ -1193,4 +1194,135 @@ func IntDeleteHandler(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"msg": "Successfully deleted the integration"})
+}
+
+type HubspotAuthRequestPayload struct {
+	ProjectID string `json:"project_id"`
+}
+
+// HubspotOAuthState represent the state parameter for hubspot oAuth flow
+type HubspotOAuthState struct {
+	ProjectID int64  `json:"project_id"`
+	AgentUUID string `json:"agent_uuid"`
+}
+
+// HubspotCallbackRoute holds oauth redirect route
+const HubspotCallbackRoute = "/hubspot/auth/callback"
+
+// GetHubspotRedirectURL return the redirect URL based on environment
+func GetHubspotRedirectURL() string {
+	return C.GetProtocol() + C.GetAPIDomain() + ROUTE_INTEGRATIONS_ROOT + HubspotCallbackRoute
+}
+
+// HubspotAuthRedirectHandler redirects to hubspot oauth page
+// HubspotAuthRedirectHandler godoc
+// @Summary For hubspot authentication. Redirects to hubspot oauth page.
+// @Tags Integrations
+// @Accept  json
+// @Produce json
+// @Param request body HubspotAuthRequestPayload true "Request payload"
+// @Success 307 {string} json "{"redirect_url": redirectURL}"
+// @Router /integrations/hubspot/auth [post]
+func HubspotAuthRedirectHandler(c *gin.Context) {
+	r := c.Request
+	var requestPayload HubspotAuthRequestPayload
+
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&requestPayload); err != nil {
+		log.WithError(err).Error("Failed to decode request payload for hubspot auth.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid request payload."})
+		return
+	}
+
+	if requestPayload.ProjectID == "" {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid project."})
+		return
+	}
+
+	projectID, err := strconv.ParseInt(requestPayload.ProjectID, 10, 64)
+	if err != nil {
+		log.WithError(err).Error("Failed to convert project_id as int64 for hubspot auth redirect url .")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid project."})
+		return
+	}
+
+	currentAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "agent_uuid": currentAgentUUID})
+
+	OAuthState := &HubspotOAuthState{
+		ProjectID: projectID,
+		AgentUUID: currentAgentUUID,
+	}
+
+	enOAuthState, err := json.Marshal(OAuthState)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to marshal state for hubspot auth.")
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "failed to generate auth state."})
+		return
+	}
+
+	redirectURL := IntHubspot.GetHubspotAuthorizationURL(C.GetHubspotAppID(), GetHubspotRedirectURL(), string(enOAuthState))
+	c.JSON(http.StatusTemporaryRedirect, gin.H{"redirect_url": redirectURL})
+}
+
+// HubspotCallbackHandler handles the callback url from hubspot auth redirect url and requests access token
+// HubspotCallbackHandler godoc
+// @Summary Handles the callback url from hubspot auth redirect url and requests access token.
+// @Tags Integrations
+// @Accept  json
+// @Produce json
+// @Param code query string true "Code"
+// @Param state query string true "State"
+// @Success 308 {string} json "redirectURL"
+// @Router /integrations/hubspot/auth/callback [get]
+func HubspotCallbackHandler(c *gin.Context) {
+	var oauthState HubspotOAuthState
+	accessCode := c.Query("code")
+	state := c.Query("state")
+	err := json.Unmarshal([]byte(state), &oauthState)
+	if err != nil || oauthState.ProjectID == 0 || oauthState.AgentUUID == "" {
+		log.WithFields(log.Fields{"state": state}).Error("Invalid auth state on hubspot auth callback handler.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid auth state."})
+		return
+	}
+
+	logCtx := log.WithFields(log.Fields{"project_id": oauthState.ProjectID, "agent_uuid": oauthState.AgentUUID})
+
+	_, errCode := store.GetStore().GetProjectAgentMapping(oauthState.ProjectID, oauthState.AgentUUID)
+	if errCode != http.StatusFound {
+		logCtx.Error("Failed to get project agent mapping for requested hubspot auth user.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid project agent."})
+		return
+	}
+
+	credentials, err := IntHubspot.GetHubspotOAuthUserCredentials(C.GetHubspotAppID(), C.GetHubspotAppSecret(), GetHubspotRedirectURL(), accessCode)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get refresh token from hubspot auth token.")
+		c.AbortWithStatusJSON(http.StatusInternalServerError,
+			gin.H{"error": "failed to get hubspot user credentials."})
+		return
+	}
+
+	if credentials.RefreshToken == "" {
+		logCtx.WithError(err).Error("Empty refresh token on hubspot auth token response.")
+		c.AbortWithStatusJSON(http.StatusInternalServerError,
+			gin.H{"error": "invalid refresh token."})
+		return
+	}
+
+	intHubspot := true
+	_, errCode = store.GetStore().UpdateProjectSettings(oauthState.ProjectID,
+		&model.ProjectSetting{IntHubspotRefreshToken: credentials.RefreshToken, IntHubspot: &intHubspot},
+	)
+
+	if errCode != http.StatusAccepted {
+		logCtx.Error("Failed to update project settings for hubspot auth refresh token.")
+		c.AbortWithStatusJSON(http.StatusInternalServerError,
+			gin.H{"error": "failed updating hubspot auth project settings."})
+		return
+	}
+
+	redirectURL := C.GetProtocol() + C.GetAPPDomain() + "/settings/integration"
+	c.Redirect(http.StatusPermanentRedirect, redirectURL)
 }

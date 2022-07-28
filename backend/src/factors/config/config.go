@@ -252,6 +252,8 @@ type Configuration struct {
 	ClearbitEnabled                                 int
 	UseSalesforceV54APIByProjectID                  string
 	EnableOptimisedFilterOnProfileQuery             bool
+	HubspotAppID                                    string
+	HubspotAppSecret                                string
 	EnableOptimisedFilterOnEventUserQuery           bool
 }
 
@@ -2201,6 +2203,15 @@ func EnableOptimisedFilterOnProfileQuery() bool {
 	return configuration.EnableOptimisedFilterOnProfileQuery
 }
 
+func GetHubspotAppSecret() string {
+	return configuration.HubspotAppSecret
+}
+
+func GetHubspotAppID() string {
+	return configuration.HubspotAppID
+}
+
 func EnableOptimisedFilterOnEventUserQuery() bool {
 	return configuration.EnableOptimisedFilterOnEventUserQuery
+
 }

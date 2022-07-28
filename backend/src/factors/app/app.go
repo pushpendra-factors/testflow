@@ -165,8 +165,11 @@ func main() {
 	slackAppClientSecret := flag.String("slack_app_client_secret", "", "")
 
 	dataAvailabilityExpiry := flag.Int("data_availability_expiry", 30, "")
+
 	enableOptimisedFilterOnProfileQuery := flag.Int("enable_optimised_filter_on_profile_query",
 		0, "Enables filter optimisation logic for profiles query.")
+	hubspotAppID := flag.String("hubspot_app_id", "", "Hubspot app id for oauth integration")
+	hubspotAppSecret := flag.String("hubspot_app_secret", "", "Hubspot app secret for oauth integration")
 	enableOptimisedFilterOnEventUserQuery := flag.Int("enable_optimised_filter_on_event_user_query",
 		0, "Enables filter optimisation logic for events and users query.")
 
@@ -286,6 +289,8 @@ func main() {
 		SlackAppClientSecret:                           *slackAppClientSecret,
 		DataAvailabilityExpiry:                         *dataAvailabilityExpiry,
 		EnableOptimisedFilterOnProfileQuery:            *enableOptimisedFilterOnProfileQuery != 0,
+		HubspotAppID:                                   *hubspotAppID,
+		HubspotAppSecret:                               *hubspotAppSecret,
 		EnableOptimisedFilterOnEventUserQuery:          *enableOptimisedFilterOnEventUserQuery != 0,
 	}
 	C.InitConf(config)

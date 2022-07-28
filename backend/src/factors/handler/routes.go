@@ -377,6 +377,14 @@ func InitIntRoutes(r *gin.Engine) {
 	intRouteGroup.GET(SalesforceCallbackRoute,
 		SalesforceCallbackHandler)
 
+	intRouteGroup.POST("/hubspot/auth",
+		mid.SetLoggedInAgent(),
+		mid.SetAuthorizedProjectsByLoggedInAgent(),
+		HubspotAuthRedirectHandler)
+
+	intRouteGroup.GET(HubspotCallbackRoute,
+		HubspotCallbackHandler)
+
 	intRouteGroup.DELETE("/:project_id/:channel_name",
 		mid.SetLoggedInAgent(),
 		mid.SetAuthorizedProjectsByLoggedInAgent(),

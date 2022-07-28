@@ -53,6 +53,10 @@ spec:
             - $(GCP_PROJECT_LOCATION)
             - --primary_datastore
             - "memsql"
+            - --hubspot_app_id
+            - $(HUBSPOT_APP_ID)
+            - --hubspot_app_secret
+            - $(HUBSPOT_APP_SECRET)
             envFrom:
             - configMapRef:
                 name: config-env
@@ -66,4 +70,6 @@ spec:
                 name: secret-sentry
             - configMapRef:
                 name: config-persistent-redis
+            - secretRef:
+                name: secret-hubspot
           restartPolicy: OnFailure
