@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import styles from './index.module.scss';
 import { SVG, Text } from 'factorsComponents';
-import { Button, InputNumber, Tooltip, Select, DatePicker } from 'antd';
+import { Button, InputNumber, Tooltip, Select, DatePicker, Input } from 'antd';
 import GroupSelect2 from 'Components/QueryComposer/GroupSelect2';
 import FaDatepicker from 'Components/FaDatepicker';
 import FaSelect from 'Components/FaSelect';
@@ -46,6 +46,7 @@ const GlobalFilterSelect = ({
   const [valuesSelectionOpen, setValuesSelectionOpen] = useState(false);
   const [grnSelectOpen, setGrnSelectOpen] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [containButton, setContainButton] = useState(true);
 
   const [updateState, updateStateApply] = useState(false);
 
@@ -212,7 +213,7 @@ const GlobalFilterSelect = ({
   const setNumericalValue = (ev) => {
     // onNumericalSelect(ev);
 
-    setValuesState(String(ev).toString());
+    setValuesState(String(ev.target.value).toString());
   };
 
   const parseDateRangeFilter = (fr, to, value) => {
@@ -538,11 +539,28 @@ const GlobalFilterSelect = ({
 
     if (propState.type === 'numerical') {
       selectionComponent = (
-        <InputNumber
+        <div>
+        {containButton && (
+          <Button
+          className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
+          type='link'
+          onClick={() => setContainButton(false)}
+        >
+          {valuesState ? valuesState : 'Enter Value'}
+        </Button>)}
+        {!containButton &&
+        (<Input
+          type="number"
           value={valuesState}
-          onBlur={emitFilter}
+          placeholder={'Enter Value'}
+          onPressEnter={()=>{
+            emitFilter()
+            setContainButton(true)}}
           onChange={setNumericalValue}
-        ></InputNumber>
+          className={`input-value filter-buttons-radius filter-buttons-margin`}
+        ></Input>)
+        }
+        </div>
       );
     }
     if (!operatorState || !propState?.name) return null;
