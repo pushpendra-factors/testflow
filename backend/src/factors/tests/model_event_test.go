@@ -23,8 +23,7 @@ func TestDBCreateAndGetEvent(t *testing.T) {
 
 	start := time.Now()
 
-	// Test successful CreateEvent with Special character on payload.
-	// Added as part of testing singlestore's support.
+	// Test successful CreateEvent.
 	newEvent := &model.Event{EventNameId: eventNameId, ProjectId: projectId,
 		UserId: userId, Timestamp: start.Unix(),
 		Properties: postgres.Jsonb{RawMessage: []byte(`{"value": "The Impact of Using Emojis 😄 😍 💗 in Push Notifications"}`)}}

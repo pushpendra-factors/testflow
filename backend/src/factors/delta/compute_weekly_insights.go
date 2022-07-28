@@ -259,14 +259,13 @@ func GetInsightsKpi(file CrossPeriodInsightsKpi, numberOfRecords int, QueryClass
 	} else {
 		floatValue := float64(0.7) * float64(numberOfRecords)
 		decreasedRecords = int(floatValue)
-		increasedRecords = numberOfRecords - increasedRecords
+		increasedRecords = numberOfRecords - decreasedRecords
 	}
 
 	if increasedRecords > numIncreased {
 		decreasedRecords = decreasedRecords + increasedRecords - numIncreased
 		increasedRecords = numIncreased
-	}
-	if decreasedRecords > numDecreased {
+	} else if decreasedRecords > numDecreased {
 		increasedRecords = increasedRecords + decreasedRecords - numDecreased
 		decreasedRecords = numDecreased
 	}
@@ -277,8 +276,10 @@ func GetInsightsKpi(file CrossPeriodInsightsKpi, numberOfRecords int, QueryClass
 	}
 
 	for _, data := range valWithDetailsArr {
-		if data.Category == "kpi_campaign" && noOfInsightsRemainingPerKey[data.Key] == 0 {
-			continue
+		if data.Category == "kpi_campaign" {
+			if num, ok := noOfInsightsRemainingPerKey[data.Key]; ok && num == 0 {
+				continue
+			}
 		}
 		var tempActualValue = ActualMetrics{
 			ActualValues: Base{
@@ -308,11 +309,13 @@ func GetInsightsKpi(file CrossPeriodInsightsKpi, numberOfRecords int, QueryClass
 			decreasedRecords -= 1
 		}
 		if appended {
-			noOfInsightsRemainingPerKey[data.Key] -= 1
+			if _, ok := noOfInsightsRemainingPerKey[data.Key]; ok {
+				noOfInsightsRemainingPerKey[data.Key] -= 1
+			}
 		}
 	}
 	sort.Slice(ActualValuearr, func(i, j int) bool {
-		return ActualValuearr[i].ActualValues.W1+ActualValuearr[i].ActualValues.W2 > ActualValuearr[j].ActualValues.W1+ActualValuearr[j].ActualValues.W2
+		return math.Abs(ActualValuearr[i].ActualValues.W1-ActualValuearr[i].ActualValues.W2) > math.Abs(ActualValuearr[j].ActualValues.W1-ActualValuearr[j].ActualValues.W2)
 	})
 
 	insights.Insights = append(insights.Insights, ActualValuearr...)

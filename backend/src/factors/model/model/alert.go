@@ -59,6 +59,7 @@ type AlertDescription struct {
 	Operator  string          `json:"operator"`
 	Value     string          `json:"value"`
 	DateRange string          `json:"date_range"`
+	//below 2 only for reports sharing into slack and email.
 	Subject   string          `json:"subject"`
 	Message   string          `json:"message"`
 	// only for type 2 (daterange a compared to daterange b )

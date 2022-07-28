@@ -596,7 +596,7 @@ func (store *MemSQL) PullSmartProperties(projectID int64, campaignIDPlaceHolder 
 			ID:      _campaignID,
 			Channel: sourceChannelPlaceHolder,
 		}
-		key := model.GetKeyForCustomDimensions(_campaignID, _campaignName, _adgroupID, _adgroupName, attributionKey)
+		key := model.GetKeyForCustomDimensionsName(_campaignID, _campaignName, _adgroupID, _adgroupName, attributionKey)
 		if key == "" {
 			continue
 		}
