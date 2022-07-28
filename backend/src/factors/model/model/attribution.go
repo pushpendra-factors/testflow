@@ -625,6 +625,7 @@ func EnrichUsingMarketingID(attributionKey string, sessionUTMMarketingValue Mark
 			sessionUTMMarketingValue.CampaignName = v.CampaignName
 			return v.AdgroupName, sessionUTMMarketingValue
 		}
+
 	default:
 		// No enrichment for other types using ID
 		return PropertyValueNone, sessionUTMMarketingValue
@@ -2936,8 +2937,9 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, reports *Marketin
 				missingIDs = append(missingIDs, MissingCollection{AttributionKey: query.AttributionKey, GCLID: gclID})
 			}
 		}
-		if ((query.AttributionKey == AttributionKeyCampaign && U.IsNonEmptyKey(campaignID)) ||
-			(query.AttributionKey == AttributionKeyAdgroup && U.IsNonEmptyKey(adgroupID))) && gclIDEnrichSuccess == 0 {
+		// Even after the data is enriched gclid, for latest name, enrich it using campaign/adgroup report
+		if (query.AttributionKey == AttributionKeyCampaign && U.IsNonEmptyKey(campaignID)) ||
+			(query.AttributionKey == AttributionKeyAdgroup && U.IsNonEmptyKey(adgroupID)) {
 			// enrich for campaign/adgroup based session having campaign_id/adgroup_id
 			countEnrichedMarketingId++
 			var attributionIdBasedOnEnrichment string
