@@ -2,14 +2,16 @@ import React, { Fragment, useCallback, useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import { noop } from 'lodash';
 import cx from 'classnames';
-import { Button, Dropdown, Menu, Popover } from 'antd';
+import { Button, Dropdown, Menu, Popover, Tooltip } from 'antd';
 import { Text, SVG } from '../factorsComponents';
 import { BUTTON_SIZES, BUTTON_TYPES } from '../../constants/buttons.constants';
 import styles from './dataTableFilters.module.scss';
 import ValuesMenu from './components/ValuesMenu';
 import {
   EQUALITY_OPERATOR_MENU,
-  CATEGORY_COMBINATION_OPERATOR_MENU
+  CATEGORY_COMBINATION_OPERATOR_MENU,
+  EQUALITY_OPERATOR_KEYS,
+  CATEGORY_COMBINATION_OPERATOR_KEYS
 } from './dataTableFilters.constants';
 import {
   getUpdatedFiltersOnCategoryChange,
@@ -182,26 +184,37 @@ const DataTableFilters = ({
     );
   };
 
-  const categoryValuesMenu = (options, selectedOptions, categoryIndex) => {
+  const getCategoryValuesMenu = (
+    options,
+    selectedOptions,
+    equalityOperator,
+    categoryIndex
+  ) => {
     return (
       <ValuesMenu
         options={options}
         selectedOptions={selectedOptions}
         onChange={handleValueChange.bind(null, categoryIndex)}
+        equalityOperator={equalityOperator}
       />
     );
   };
 
   const renderCategoryCombinationDropdown = (index) => {
+    const showDropdown =
+      selectedFilters.categories != null &&
+      selectedFilters.categories.length > 1 &&
+      index === 0;
+
+    const showPlainText =
+      selectedFilters.categories != null &&
+      selectedFilters.categories.length > 1 &&
+      index > 0 &&
+      index < selectedFilters.categories.length - 1;
+
     return (
       <Fragment>
-        <ControlledComponent
-          controller={
-            selectedFilters.categories != null &&
-            selectedFilters.categories.length > 1 &&
-            index === 0
-          }
-        >
+        <ControlledComponent controller={showDropdown}>
           <Dropdown
             overlayClassName="rounded-lg w-20"
             trigger="click"
@@ -219,13 +232,7 @@ const DataTableFilters = ({
             </Button>
           </Dropdown>
         </ControlledComponent>
-        <ControlledComponent
-          controller={
-            selectedFilters.categories != null &&
-            selectedFilters.categories.length > 1 &&
-            index > 0
-          }
-        >
+        <ControlledComponent controller={showPlainText}>
           <Button
             className={styles['disabled-button']}
             disabled
@@ -257,6 +264,11 @@ const DataTableFilters = ({
           const options = filterDetail.options;
           const selectedOptions = category.values;
 
+          const valuesLabel =
+            selectedOptions.length === 0
+              ? 'Select values'
+              : selectedOptions.join(', ');
+
           return (
             <div className="flex col-gap-1 items-center">
               <div key={category.key} className="flex col-gap-px items-center">
@@ -278,19 +290,19 @@ const DataTableFilters = ({
                   overlayClassName={styles['values-popover']}
                   trigger="click"
                   placement="bottomRight"
-                  content={categoryValuesMenu.bind(
+                  content={getCategoryValuesMenu.bind(
                     null,
                     options,
                     selectedOptions,
+                    category.equalityOperator,
                     index
                   )}
                 >
-                  {renderLabelButton({
-                    label:
-                      selectedOptions.length === 0
-                        ? 'Select values'
-                        : selectedOptions.join(', ')
-                  })}
+                  <Tooltip title={valuesLabel}>
+                    {renderLabelButton({
+                      label: valuesLabel
+                    })}
+                  </Tooltip>
                 </Popover>
                 {renderCrossIcon(index)}
               </div>
@@ -360,17 +372,16 @@ DataTableFilters.propTypes = {
     categories: PropTypes.arrayOf(
       PropTypes.shape({
         values: PropTypes.arrayOf(PropTypes.string),
-        equalityOperator: PropTypes.oneOf([
-          'equal',
-          'not-equal',
-          'contains',
-          'does-not-contain'
-        ]),
+        equalityOperator: PropTypes.oneOf(
+          Object.values(EQUALITY_OPERATOR_KEYS)
+        ),
         field: PropTypes.string,
         key: PropTypes.number
       })
     ),
-    categoryCombinationOperator: PropTypes.oneOf(['AND', 'OR'])
+    categoryCombinationOperator: PropTypes.oneOf(
+      Object.values(CATEGORY_COMBINATION_OPERATOR_KEYS)
+    )
   }),
   setAppliedFilters: PropTypes.func,
   setFiltersVisibility: PropTypes.func

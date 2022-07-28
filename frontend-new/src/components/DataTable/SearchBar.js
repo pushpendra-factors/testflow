@@ -104,7 +104,7 @@ function SearchBar({
       visible={filtersVisible}
     >
       <Button
-        onClick={setFiltersVisibility.bind(null, true)}
+        onClick={setFiltersVisibility?.bind(null, true)}
         size={'large'}
         icon={<SVG name={'filter'} />}
         type="text"
@@ -139,8 +139,10 @@ function SearchBar({
           ) : (
             <div className="flex items-center">{searchBtn}</div>
           )}
-
-          <div className="flex items-center">{filtersBtn}</div>
+          
+          <ControlledComponent controller={!!filters}>
+            <div className="flex items-center">{filtersBtn}</div>
+          </ControlledComponent>
 
           <ControlledComponent controller={!!controlsPopover}>
             <div className="flex items-center">{controlsBtn}</div>

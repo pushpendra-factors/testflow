@@ -215,20 +215,18 @@ func GenerateDashboardFromTemplateHandler(c *gin.Context) {
 		dashUnits = append(dashUnits, *_dUnit)
 	}
 
-	q, _ := json.Marshal(unitsArray)
-
-	_dashboardDetails.UnitsPosition = &postgres.Jsonb{json.RawMessage(q)}
 	_dashboardDetails.Name = dashboardTemplate.Title
 	_dashboardDetails.AgentUUID = agentUUID
 	_dashboardDetails.Description = dashboardTemplate.Description
 	_dashboardDetails.IsDeleted = false
 	_dashboardDetails.ProjectId = projectID
+
 	_unitPosition := make(map[string]map[int64]int, 0)
 	_unitPosition["position"] = make(map[int64]int, 0)
 	_unitPosition["size"] = make(map[int64]int, 0)
 	for idx, unit := range dashUnits {
 		pos := unitsArray[idx].Position
-		size := unitsArray[idx].Position
+		size := unitsArray[idx].Size
 		_unitPosition["position"][unit.ID] = pos
 		_unitPosition["size"][unit.ID] = size
 	}

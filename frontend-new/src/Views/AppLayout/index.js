@@ -199,13 +199,8 @@ function AppLayout({
                       name='componentsLib'
                       component={componentsLib}
                     />
-                    <Route
-                      path="/analyse/:query_type/:query_id"
-                      name="Home"
-                      component={CoreQuery}
-                    />
                     <Route path='/analyse' name='Home' component={CoreQuery} />
-                    
+
                     <Route
                       exact
                       path='/explain'

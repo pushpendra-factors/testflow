@@ -1,36 +1,48 @@
+export const EQUALITY_OPERATOR_KEYS = {
+  EQUAL: 'equal',
+  NOT_EQUAL: 'not-equal',
+  CONTAINS: 'contains',
+  DOES_NOT_CONTAIN: 'does-not-contain'
+};
+
 export const EQUALITY_OPERATOR_MENU = [
   {
     title: '=',
-    key: 'equal'
+    key: EQUALITY_OPERATOR_KEYS.EQUAL
   },
   {
     title: '!=',
-    key: 'not-equal'
+    key: EQUALITY_OPERATOR_KEYS.NOT_EQUAL
   },
   {
     title: 'contains',
-    key: 'contains'
+    key: EQUALITY_OPERATOR_KEYS.CONTAINS
   },
   {
     title: 'does not contain',
-    key: 'does-not-contain'
+    key: EQUALITY_OPERATOR_KEYS.DOES_NOT_CONTAIN
   }
 ];
+
+export const CATEGORY_COMBINATION_OPERATOR_KEYS = {
+  AND: 'AND',
+  OR: 'OR'
+};
 
 export const CATEGORY_COMBINATION_OPERATOR_MENU = [
   {
     title: 'AND',
-    key: 'AND'
+    key: CATEGORY_COMBINATION_OPERATOR_KEYS.AND
   },
   {
     title: 'OR',
-    key: 'OR'
+    key: CATEGORY_COMBINATION_OPERATOR_KEYS.OR
   }
 ];
 
 export const DEFAULT_CATEGORY_VALUE = {
   values: [],
-  equalityOperator: 'equal'
+  equalityOperator: EQUALITY_OPERATOR_KEYS.EQUAL
 };
 
 export const TEST_FILTER_OPTIONS = [

@@ -853,10 +853,16 @@ const applyAdvancedFilters = (
       return currentFilter.values.indexOf(fieldValue) === -1;
     }
     if (currentFilter.equalityOperator === 'does-not-contain') {
-      return !currentFilter.values.includes(fieldValue);
+      const doesExist = currentFilter.values.filter((value) => {
+        return fieldValue.toLowerCase().includes(value.toLowerCase());
+      });
+      return doesExist.length === 0;
     }
     if (currentFilter.equalityOperator === 'contains') {
-      return currentFilter.values.includes(fieldValue);
+      const doesExist = currentFilter.values.filter((value) => {
+        return fieldValue.toLowerCase().includes(value.toLowerCase());
+      });
+      return doesExist.length > 0;
     }
     return currentFilter.values.indexOf(fieldValue) > -1;
   });
