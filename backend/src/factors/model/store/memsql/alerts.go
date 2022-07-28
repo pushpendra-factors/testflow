@@ -171,7 +171,7 @@ func (store *MemSQL) GetAllAlerts(projectID int64, excludeSavedQueries bool) ([]
 // Note: Currently keeping the implementation specific to kpi.
 func (store *MemSQL) GetAlertNamesByProjectIdTypeAndName(projectID int64, nameOfQuery string) ([]string, int) {
 	rAlertNames := make([]string, 0)
-	alerts, statusCode := store.GetAllAlerts(projectID, false)
+	alerts, statusCode := store.GetAllAlerts(projectID, true)
 	if statusCode != http.StatusFound {
 		return rAlertNames, statusCode
 	}
