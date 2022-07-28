@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from "react";
-import {Spin,Input} from "antd";
+import {Spin,Input, Button} from "antd";
 import { useSelector, useDispatch } from "react-redux";
 import {
     Text,
@@ -78,21 +78,25 @@ function SelectTemplates({setShowTemplates,templates}){
                     
                     <div className='flex flex-col h-full'>
                     {/* <Header> */}
-                        <div onClick={()=>setShowTemplates(false)} className={styles.close}>
-                            <SVG name='times' extraClass={"h-6 w-6"}></SVG>
-                        </div>
+                        <Button
+                            size={'large'}
+                            type='text'
+                            icon={<SVG size={20} name={'times'} />}
+                            onClick={()=>setShowTemplates(false)} 
+                            className={styles.close}
+                        />
                         <div className='w-full h-full py-4 flex flex-col justify-center items-center mt-24'>
                             <div className="w-full h-full flex flex-col justify-center items-center mb-3">
                             <Text type='title' level={4} weight={'bold'} >Pick From Dashboard Templates</Text>
                             <Text type='paragraph' >Browse the templates from our wide range of commonly used reports.</Text>
                             <Text type='paragraph' >Curated by top marketers in the industry.</Text>
                             </div>
-                            <div className={`${styles.searchBar} query-search`}>
+                            <div className={`query-search flex flex-col`}>
                                 <Input
                                 onChange={handleSearchChange}
                                 value={searchVal}
-                                className={styles.searchInput}
-                                placeholder='Make widgets from saved queries'
+                                className={'fa-global-search--input btn-total-round'}
+                                placeholder='Search all templates'
                                 prefix={<SearchOutlined style={{ width: '1rem' }} color='#0E2647' />}
                                 />
                             </div>

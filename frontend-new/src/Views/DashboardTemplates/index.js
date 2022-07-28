@@ -37,7 +37,7 @@ function DashboardTemplates() {
                 {/* <Header> */}
                     <div className={'rounded-lg border-2 border-gray-200 w-4/5 mx-auto my-16'}>
                             <div className='w-20 float-left mt-2 ml-4 mr-4 mb-1'>
-                                <img src='assets/images/NoData.png'/>
+                                <img src='https://s3.amazonaws.com/www.factors.ai/assets/img/product/NoData.png'/>
                             </div>
                             <div className={'mt-4 mb-4'}>
                                 <Text type={'title'} level={4} color={'grey-2'} weight={'bold'} extraClass={'m-0 mt-2 mb-1'}>
@@ -53,7 +53,7 @@ function DashboardTemplates() {
                     </div>
                 {/* </Header> */}
                 <div className={`flex justify-center flex-col items-center m-auto ${styles.contentClass}`} >
-                    <img alt='no-data' src='assets/images/Group 880.png' className={'mb-2 opacity-0.8'} />
+                    <img alt='no-data' src='https://s3.amazonaws.com/www.factors.ai/assets/img/product/bar-chart-1.png' className={'mb-2 opacity-0.8'} />
                     <Text type={'title'} level={6} weight={'bold'} color={'grey-2'} extraClass={'m-0'}>
                         Create a dashboard to moniter your metrics in one place.
                     </Text>

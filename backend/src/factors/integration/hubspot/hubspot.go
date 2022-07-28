@@ -277,70 +277,6 @@ func syncContactFormSubmissions(project *model.Project, userId string, document 
 	}
 }
 
-const URL_PORTAL_INFO = "https://api.hubapi.com/integrations/v1/me"
-
-type AccountInfo struct {
-	PortalID              int              `json:"portalId"`
-	TimeZone              U.TimeZoneString `json:"timeZone"`
-	Currency              string           `json:"currency"`
-	UTCOffsetMilliseconds int              `json:"utcOffsetMilliseconds"`
-	UTCOffset             string           `json:"utcOffset"`
-}
-
-func getHubspotAccountInfo(projectID int64, apiKey string) (*AccountInfo, error) {
-	url := URL_PORTAL_INFO + "?" + "hapikey=" + apiKey
-
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	client := &http.Client{
-		Timeout: 1 * time.Minute,
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		var errBody interface{}
-		err := json.NewDecoder(resp.Body).Decode(&errBody)
-		if err != nil {
-			return nil, err
-		}
-		return nil, fmt.Errorf("error while getting account info  %+v", errBody)
-	}
-
-	var accountInfo AccountInfo
-	err = json.NewDecoder(resp.Body).Decode(&accountInfo)
-	if err != nil {
-		return nil, err
-	}
-
-	return &accountInfo, nil
-}
-
-func GetHubspotAccountTimezone(projectID int64, apiKey string) (U.TimeZoneString, error) {
-	logCtx := log.WithFields(log.Fields{"project_id": projectID})
-	account, err := getHubspotAccountInfo(projectID, apiKey)
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to get hubspot account info for timezone.")
-		return "", err
-	}
-
-	_, err = time.LoadLocation(string(account.TimeZone))
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to load timezone from account.")
-		return "", err
-	}
-
-	return account.TimeZone, nil
-}
-
 func fillDatePropertiesAndTimeZone(documents []model.HubspotDocument, dateProperties *map[string]bool, timeZone U.TimeZoneString) {
 	for i := range documents {
 		documents[i].SetDateProperties(dateProperties)
@@ -348,10 +284,10 @@ func fillDatePropertiesAndTimeZone(documents []model.HubspotDocument, dateProper
 	}
 }
 
-func GetHubspotPropertiesByDataType(projectId int64, docTypeAPIObjects *map[string]string, apiKey, dataType string) (map[int]*map[string]bool, error) {
+func GetHubspotPropertiesByDataType(projectId int64, docTypeAPIObjects *map[string]string, apiKey, refreshToken, dataType string) (map[int]*map[string]bool, error) {
 	propertiesByObjectType := make(map[int]*map[string]bool)
 	for typeAlias, apiObjectName := range *docTypeAPIObjects {
-		propertiesMeta, err := GetHubspotPropertiesMeta(apiObjectName, apiKey)
+		propertiesMeta, err := GetHubspotPropertiesMeta(apiObjectName, apiKey, refreshToken)
 		if err != nil {
 			log.WithFields(log.Fields{"project_id": projectId, "api_object_name": apiObjectName, "doc_Type": typeAlias}).
 				WithError(err).Error("Failed to get hubspot properties meta.")
@@ -649,21 +585,27 @@ func TrackHubspotSmartEvent(projectID int64, hubspotSmartEventName *HubspotSmart
 	return prevProperties
 }
 
-func GetHubspotPropertiesMeta(objectType string, apiKey string) ([]PropertyDetail, error) {
-	if objectType == "" || apiKey == "" {
+func GetHubspotPropertiesMeta(objectType string, apiKey, refreshToken string) ([]PropertyDetail, error) {
+	if objectType == "" {
 		return nil, errors.New("invalid parameters")
 	}
 
-	url := "https://" + "api.hubapi.com" + "/properties/v1/" + objectType + "/properties?hapikey=" + apiKey
+	if apiKey == "" && refreshToken == "" {
+		return nil, errors.New("missing api key and refresh token")
+	}
 
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, err
+	var accessToken string
+	var err error
+	if refreshToken != "" {
+		accessToken, err = model.GetHubspotAccessToken(refreshToken, C.GetHubspotAppID(), C.GetHubspotAppSecret())
+		if err != nil {
+			return nil, err
+		}
+		apiKey = ""
 	}
-	client := &http.Client{
-		Timeout: 10 * time.Minute,
-	}
-	resp, err := client.Do(req)
+
+	url := "https://" + "api.hubapi.com" + "/properties/v1/" + objectType + "/properties?"
+	resp, err := model.ActionHubspotRequestHandler("GET", url, apiKey, accessToken, "")
 	if err != nil {
 		return nil, err
 	}
@@ -672,6 +614,7 @@ func GetHubspotPropertiesMeta(objectType string, apiKey string) ([]PropertyDetai
 	if resp.StatusCode != http.StatusOK {
 		var body interface{}
 		json.NewDecoder(resp.Body).Decode(&body)
+		log.WithFields(log.Fields{"resp_body": body}).Error("Failed to GetHubspotPropertiesMeta.")
 		return nil, fmt.Errorf("error while query data %s ", body)
 	}
 
@@ -769,12 +712,17 @@ func syncHubspotPropertyByType(projectID int64, doctTypeAlias string, fieldName,
 }
 
 // SyncDatetimeAndNumericalProperties sync datetime and numerical properties to the property_details table
-func SyncDatetimeAndNumericalProperties(projectID int64, apiKey string) (bool, []Status) {
+func SyncDatetimeAndNumericalProperties(projectID int64, apiKey, refreshToken string) (bool, []Status) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID})
 
-	if projectID == 0 || apiKey == "" {
-		logCtx.Error("Missing required field.")
-		return false, nil
+	if projectID == 0 {
+		logCtx.Error("Missing project_id.")
+		return true, nil
+	}
+
+	if apiKey == "" && refreshToken == "" {
+		logCtx.Error("Missing api key and refresh token.")
+		return true, nil
 	}
 
 	status := CreateOrGetHubspotEventName(projectID)
@@ -786,7 +734,7 @@ func SyncDatetimeAndNumericalProperties(projectID int64, apiKey string) (bool, [
 	var allStatus []Status
 	anyFailures := false
 	for docType, objectType := range *model.GetHubspotAllowedObjects(projectID) {
-		propertiesMeta, err := GetHubspotPropertiesMeta(objectType, apiKey)
+		propertiesMeta, err := GetHubspotPropertiesMeta(objectType, apiKey, refreshToken)
 		if err != nil {
 			logCtx.WithFields(log.Fields{"object_type": objectType}).WithError(err).Error("Failed to sync datetime and numerical properties.")
 			continue

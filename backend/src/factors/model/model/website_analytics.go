@@ -254,6 +254,13 @@ func (query *DashboardUnitsWebAnalyticsQuery) CheckIfNameIsPresent(nameOfQuery s
 	return false
 }
 
+func (query *DashboardUnitsWebAnalyticsQuery) SetDefaultGroupByTimestamp() {
+}
+
+func (query *DashboardUnitsWebAnalyticsQuery) GetGroupByTimestamps() []string {
+	return []string{}
+}
+
 func GetCacheResultForWebAnalyticsDashboard(projectID int64, dashboardID int64,
 	from, to int64, timezoneString U.TimeZoneString) (WebAnalyticsCacheResult, int) {
 

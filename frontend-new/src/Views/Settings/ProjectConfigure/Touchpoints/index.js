@@ -486,6 +486,22 @@ const Touchpoints = ({
           </Row>
           <Row className={'mt-4'}>
             <Col span={24}>
+              <Text
+                type={'title'}
+                level={7}
+                color={'grey-2'}
+                extraClass={'m-0'}
+              >
+                Touchpoints helps you map the UTMs and other parameters you use across your marketing to a standardised set.
+              </Text>
+              <Text
+                type={'title'}
+                level={7}
+                color={'grey-2'}
+                extraClass={'m-0 mt-2'}
+              >
+                This lets you query and filter by the different parameter values recorded across your systems inside Factors. It's super easy!
+              </Text>
               <div className={'mt-6'}>{renderTouchPointContent()}</div>
             </Col>
           </Row>

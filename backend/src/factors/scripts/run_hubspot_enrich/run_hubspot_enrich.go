@@ -68,6 +68,8 @@ func main() {
 	clearbitEnabled := flag.Int("clearbit_enabled", 0, "To enable clearbit enrichment")
 	recordProcessLimit := flag.Int("record_process_limit", 50000, "Number of records to process per project.")
 	disableNonMarketingContactByProjectID := flag.String("disable_non_marketing_contact_by_project_id", "", "Disable hubspot non marketing contacts from processing")
+	hubspotAppID := flag.String("hubspot_app_id", "", "Hubspot app id for oauth integration")
+	hubspotAppSecret := flag.String("hubspot_app_secret", "", "Hubspot app secret for oauth integration")
 
 	flag.Parse()
 	if *env != "development" && *env != "staging" && *env != "production" {
@@ -118,6 +120,8 @@ func main() {
 		EnableHubspotFormsEventsByProjectID:           *enableHubspotFormEventsByProjectID,
 		ClearbitEnabled:                               *clearbitEnabled,
 		DisableHubspotNonMarketingContactsByProjectID: *disableNonMarketingContactByProjectID,
+		HubspotAppID:                                  *hubspotAppID,
+		HubspotAppSecret:                              *hubspotAppSecret,
 	}
 
 	C.InitConf(config)

@@ -1,4 +1,10 @@
-import React, { useRef, useEffect, useCallback, useState, useMemo } from 'react';
+import React, {
+  useRef,
+  useEffect,
+  useCallback,
+  useState,
+  useMemo
+} from 'react';
 import _ from 'lodash';
 import { connect, useDispatch, useSelector } from 'react-redux';
 import { Button, Dropdown, Menu, Tooltip } from 'antd';
@@ -10,10 +16,14 @@ import {
   formatApiData,
   calculateActiveUsersData,
   calculateFrequencyData,
-  getStateQueryFromRequestQuery,
+  getStateQueryFromRequestQuery
 } from '../CoreQuery/utils';
 import { cardClassNames } from '../../reducers/dashboard/utils';
-import { getDataFromServer, getSavedAttributionMetrics } from './utils';
+import {
+  getDataFromServer,
+  getSavedAttributionMetrics,
+  getValidGranularityForSavedQueryWithSavedGranularity
+} from './utils';
 import {
   QUERY_TYPE_EVENT,
   QUERY_TYPE_FUNNEL,
@@ -22,7 +32,7 @@ import {
   QUERY_TYPE_WEB,
   ATTRIBUTION_METRICS,
   QUERY_TYPE_PROFILE,
-  QUERY_TYPE_KPI,
+  QUERY_TYPE_KPI
 } from '../../utils/constants';
 import { DashboardContext } from '../../contexts/DashboardContext';
 import { useHistory, useLocation } from 'react-router-dom';
@@ -37,20 +47,22 @@ function WidgetCard({
   durationObj,
   refreshClicked,
   setRefreshClicked,
-  fetchWeeklyIngishts,
+  fetchWeeklyIngishts
 }) {
   const hasComponentUnmounted = useRef(false);
   const cardRef = useRef(null);
   const history = useHistory();
   const location = useLocation();
   const [resultState, setResultState] = useState(initialState);
-  const { active_project } = useSelector((state) => state.global);
+  const { active_project: activeProject } = useSelector(
+    (state) => state.global
+  );
   const { activeDashboardUnits } = useSelector((state) => state.dashboard);
   const { metadata } = useSelector((state) => state.insights);
   const { data: savedQueries } = useSelector((state) => state.queries);
   const dispatch = useDispatch();
   const [attributionMetrics, setAttributionMetrics] = useState([
-    ...ATTRIBUTION_METRICS,
+    ...ATTRIBUTION_METRICS
   ]);
 
   const savedQuery = useMemo(() => {
@@ -59,19 +71,32 @@ function WidgetCard({
 
   const durationWithSavedFrequency = useMemo(() => {
     if (_.get(savedQuery, 'query.query_group', null)) {
+      const savedFrequency = _.get(
+        savedQuery,
+        'query.query_group.0.gbt',
+        'date'
+      );
+      const frequency = getValidGranularityForSavedQueryWithSavedGranularity({
+        durationObj,
+        savedFrequency
+      });
       return {
         ...durationObj,
-        frequency: _.get(savedQuery, 'query.query_group.0.gbt','date'),
+        frequency
       };
     } else if (_.get(savedQuery, 'query.cl', null) === QUERY_TYPE_KPI) {
+      const savedFrequency = _.get(savedQuery, 'query.qG.1.gbt', 'date');
+      const frequency = getValidGranularityForSavedQueryWithSavedGranularity({
+        durationObj,
+        savedFrequency
+      });
       return {
         ...durationObj,
-        frequency: _.get(savedQuery, 'query.qG.1.gbt', 'date'),
+        frequency
       };
     }
     return durationObj;
   }, [durationObj, savedQuery]);
-
 
   useEffect(() => {
     if (
@@ -81,7 +106,7 @@ function WidgetCard({
     ) {
       window.scrollTo({
         top: cardRef.current.getBoundingClientRect().top - 180,
-        behavior: 'smooth',
+        behavior: 'smooth'
       });
       location.state = undefined;
       window.history.replaceState(null, '');
@@ -94,14 +119,14 @@ function WidgetCard({
         hasComponentUnmounted.current = false;
         setResultState({
           ...initialState,
-          loading: true,
+          loading: true
         });
 
-        let queryType,
-          apiCallStatus = {
-            required: true,
-            message: null,
-          };
+        let queryType;
+        let apiCallStatus = {
+          required: true,
+          message: null
+        };
 
         if (unit.query.query.query_group) {
           if (
@@ -141,7 +166,7 @@ function WidgetCard({
             unit.dashboard_id,
             durationWithSavedFrequency,
             refresh,
-            active_project.id
+            activeProject.id
           );
           if (
             queryType === QUERY_TYPE_FUNNEL &&
@@ -149,7 +174,7 @@ function WidgetCard({
           ) {
             setResultState({
               ...initialState,
-              data: res.data.result,
+              data: res.data.result
             });
           } else if (
             queryType === QUERY_TYPE_PROFILE &&
@@ -157,7 +182,7 @@ function WidgetCard({
           ) {
             setResultState({
               ...initialState,
-              data: res.data.result,
+              data: res.data.result
             });
           } else if (
             queryType === QUERY_TYPE_ATTRIBUTION &&
@@ -166,7 +191,7 @@ function WidgetCard({
             setResultState({
               ...initialState,
               data: res.data.result,
-              apiCallStatus,
+              apiCallStatus
             });
           } else if (
             queryType === QUERY_TYPE_CAMPAIGN &&
@@ -174,7 +199,7 @@ function WidgetCard({
           ) {
             setResultState({
               ...initialState,
-              data: res.data.result,
+              data: res.data.result
             });
           } else if (
             queryType === QUERY_TYPE_KPI &&
@@ -182,30 +207,27 @@ function WidgetCard({
           ) {
             setResultState({
               ...initialState,
-              data: res.data.result || res.data,
+              data: res.data.result || res.data
             });
           } else {
             if (!hasComponentUnmounted.current) {
-              const result_group = res.data.result.result_group;
+              const resultGroup = res.data.result.result_group;
               const equivalentQuery = getStateQueryFromRequestQuery(
                 unit.query.query.query_group[0]
               );
               const appliedBreakdown = [
                 ...equivalentQuery.breakdown.event,
-                ...equivalentQuery.breakdown.global,
+                ...equivalentQuery.breakdown.global
               ];
 
               if (unit.query.query.query_group.length === 1) {
                 setResultState({
                   ...initialState,
-                  data: result_group[0],
+                  data: resultGroup[0]
                 });
               } else if (unit.query.query.query_group.length === 3) {
-                const userData = formatApiData(
-                  result_group[0],
-                  result_group[1]
-                );
-                const sessionsData = result_group[2];
+                const userData = formatApiData(resultGroup[0], resultGroup[1]);
+                const sessionsData = resultGroup[2];
                 const activeUsersData = calculateActiveUsersData(
                   userData,
                   sessionsData,
@@ -213,17 +235,14 @@ function WidgetCard({
                 );
                 setResultState({
                   ...initialState,
-                  data: activeUsersData,
+                  data: activeUsersData
                 });
               } else if (unit.query.query.query_group.length === 4) {
                 const eventsData = formatApiData(
-                  result_group[0],
-                  result_group[1]
+                  resultGroup[0],
+                  resultGroup[1]
                 );
-                const userData = formatApiData(
-                  result_group[2],
-                  result_group[3]
-                );
+                const userData = formatApiData(resultGroup[2], resultGroup[3]);
                 const frequencyData = calculateFrequencyData(
                   eventsData,
                   userData,
@@ -231,12 +250,12 @@ function WidgetCard({
                 );
                 setResultState({
                   ...initialState,
-                  data: frequencyData,
+                  data: frequencyData
                 });
               } else {
                 setResultState({
                   ...initialState,
-                  data: formatApiData(result_group[0], result_group[1]),
+                  data: formatApiData(resultGroup[0], resultGroup[1])
                 });
               }
             }
@@ -244,7 +263,7 @@ function WidgetCard({
         } else {
           setResultState({
             ...initialState,
-            apiCallStatus,
+            apiCallStatus
           });
         }
         setRefreshClicked(false);
@@ -254,17 +273,17 @@ function WidgetCard({
         setRefreshClicked(false);
         setResultState({
           ...initialState,
-          error: true,
+          error: true
         });
       }
     },
     [
-      active_project.id,
+      activeProject.id,
       unit.query,
       unit.id,
       unit.dashboard_id,
       durationWithSavedFrequency,
-      setRefreshClicked,
+      setRefreshClicked
     ]
   );
 
@@ -302,8 +321,8 @@ function WidgetCard({
   const getMenu = () => {
     return (
       <Menu>
-        <Menu.Item key='0'>
-          <a onClick={handleDelete} href='#!'>
+        <Menu.Item key="0">
+          <a onClick={handleDelete} href="#!">
             Delete Widget
           </a>
         </Menu.Item>
@@ -319,12 +338,12 @@ function WidgetCard({
       const updatedUnit = {
         ...unit,
         className: cardClassNames[cardSize],
-        cardSize,
+        cardSize
       };
       const newState = [
         ...activeDashboardUnits.data.slice(0, unitIndex),
         updatedUnit,
-        ...activeDashboardUnits.data.slice(unitIndex + 1),
+        ...activeDashboardUnits.data.slice(unitIndex + 1)
       ];
       onDrop(newState);
     },
@@ -340,8 +359,8 @@ function WidgetCard({
           payload: {
             id: unit?.id,
             isDashboard: true,
-            ...insightsItem,
-          },
+            ...insightsItem
+          }
         });
       } else {
         dispatch({ type: 'SET_ACTIVE_INSIGHT', payload: false });
@@ -349,10 +368,10 @@ function WidgetCard({
 
       if (insightsItem?.Enabled) {
         if (!_.isEmpty(insightsItem?.InsightsRange)) {
-          let insightsLen =
+          const insightsLen =
             Object.keys(insightsItem?.InsightsRange)?.length || 0;
           fetchWeeklyIngishts(
-            active_project.id,
+            activeProject.id,
             unit.id,
             Object.keys(insightsItem.InsightsRange)[insightsLen - 1],
             insightsItem.InsightsRange[
@@ -374,16 +393,16 @@ function WidgetCard({
       state: {
         query: { ...unit.query, settings: unit.query.settings },
         global_search: true,
-        navigatedFromDashboard: unit,
-      },
+        navigatedFromDashboard: unit
+      }
     });
   }, [
     history,
     unit,
-    active_project.id,
+    activeProject.id,
     dispatch,
     fetchWeeklyIngishts,
-    metadata?.DashboardUnitWiseResult,
+    metadata?.DashboardUnitWiseResult
   ]);
 
   return (
@@ -403,9 +422,9 @@ function WidgetCard({
               className={`${styles.widgetCard} flex items-center justify-between px-6 pb-4`}
             >
               <Tooltip title={unit?.query?.title} mouseEnterDelay={0.2}>
-                <div className='flex flex-col truncate'>
+                <div className="flex flex-col truncate">
                   <div
-                    className='flex cursor-pointer items-center'
+                    className="flex cursor-pointer items-center"
                     onClick={handleEditQuery}
                   >
                     <Text
@@ -419,13 +438,13 @@ function WidgetCard({
                       <SVG
                         extraClass={`${styles.expand_icon} ml-1`}
                         size={20}
-                        name='expand'
+                        name="expand"
                       />
                     </Text>
                   </div>
                 </div>
               </Tooltip>
-              <div className='flex items-center'>
+              <div className="flex items-center">
                 {resultState.apiCallStatus &&
                 resultState.apiCallStatus.required &&
                 resultState.apiCallStatus.message ? (
@@ -433,15 +452,19 @@ function WidgetCard({
                     mouseEnterDelay={0.2}
                     title={resultState.apiCallStatus.message}
                   >
-                    <div className='cursor-pointer'>
-                      <SVG color='#dea069' name={'warning'} />
+                    <div className="cursor-pointer">
+                      <SVG color="#dea069" name={'warning'} />
                     </div>
                   </Tooltip>
                 ) : null}
-                <Dropdown placement='bottomRight' overlay={getMenu()} trigger={['hover']}>
+                <Dropdown
+                  placement="bottomRight"
+                  overlay={getMenu()}
+                  trigger={['hover']}
+                >
                   <Button
-                    type='text'
-                    icon={<SVG size={20} name={'threedot'} color='#8692A3' />}
+                    type="text"
+                    icon={<SVG size={20} name={'threedot'} color="#8692A3" />}
                   />
                 </Dropdown>
               </div>
@@ -450,7 +473,7 @@ function WidgetCard({
               value={{
                 attributionMetrics,
                 setAttributionMetrics,
-                handleEditQuery,
+                handleEditQuery
               }}
             >
               <CardContent
@@ -469,21 +492,21 @@ function WidgetCard({
         <span className={'fa-widget-card--resize-contents'}>
           {unit.cardSize === 0 ? (
             <>
-              <a href='#!' onClick={changeCardSize.bind(this, 1)}>
+              <a href="#!" onClick={changeCardSize.bind(this, 1)}>
                 <RightOutlined />
               </a>
-              <a href='#!' onClick={changeCardSize.bind(this, 2)}>
+              <a href="#!" onClick={changeCardSize.bind(this, 2)}>
                 <LeftOutlined />
               </a>
             </>
           ) : null}
           {unit.cardSize === 1 ? (
-            <a href='#!' onClick={changeCardSize.bind(this, 0)}>
+            <a href="#!" onClick={changeCardSize.bind(this, 0)}>
               <LeftOutlined />
             </a>
           ) : null}
           {unit.cardSize === 2 ? (
-            <a href='#!' onClick={changeCardSize.bind(this, 0)}>
+            <a href="#!" onClick={changeCardSize.bind(this, 0)}>
               <RightOutlined />
             </a>
           ) : null}

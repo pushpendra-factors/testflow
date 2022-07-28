@@ -1,0 +1,25 @@
+.first {
+    width: 49%;
+    border: 1px solid #B7BEC8;
+    box-sizing: border-box;
+    backdrop-filter: blur(31px);
+    border-radius: 8px;
+}
+
+.second {
+    background: linear-gradient(180deg, #2478C7 0%, #072960 100%);
+    box-sizing: border-box;
+    backdrop-filter: blur(31px);
+    border-radius: 8px;
+}
+
+.img {
+    position: absolute;
+    width: 64px;
+    height: 64px;
+    // left: 260.87px;
+    right: 20px;
+    top: 60px;
+    z-index: -5;
+}
+

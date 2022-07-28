@@ -52,6 +52,7 @@ const  FAFilterSelect = ({
   const [updateState, updateStateApply] = useState(false);
   const [eventFilterInfo, seteventFilterInfo] = useState(null);
   const [dateOptionSelectOpen,setDateOptionSelectOpen]=useState(false);
+  const [containButton, setContainButton] = useState(true);
 
   const { userPropNames, eventPropNames } = useSelector(
     (state) => state.coreQuery
@@ -163,7 +164,7 @@ const  FAFilterSelect = ({
   const setNumericalValue = (ev) => {
     // onNumericalSelect(ev);
 
-    setValuesState(String(ev).toString());
+    setValuesState(String(ev.target.value).toString());
   };
 
   const parseDateRangeFilter = (fr, to, value) => {
@@ -497,11 +498,28 @@ const  FAFilterSelect = ({
 
     if (propState.type === 'numerical') {
       selectionComponent = (
-        <InputNumber
+        <div>
+        {containButton && (
+          <Button
+          className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
+          type='link'
+          onClick={() => setContainButton(false)}
+        >
+          {valuesState ? valuesState : 'Enter Value'}
+        </Button>)}
+        {!containButton &&
+        (<Input
+          type="number"
           value={valuesState}
-          onBlur={emitFilter}
+          placeholder={'Enter Value'}
+          onPressEnter={()=>{
+            emitFilter()
+            setContainButton(true)}}
           onChange={setNumericalValue}
-        ></InputNumber>
+          className={`input-value filter-buttons-radius filter-buttons-margin`}
+        ></Input>)
+        }
+        </div>
       );
     }
 

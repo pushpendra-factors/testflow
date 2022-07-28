@@ -5250,3 +5250,42 @@ func TestHubspotDisableGroupUserPropertiesFromUserPropertiesCache(t *testing.T) 
 	assert.Contains(t, userProperties, "$hubspot_company_id")
 	assert.Contains(t, userProperties, "$hubspot_deal_id")
 }
+
+func TestHubspotIntegration(t *testing.T) {
+	project, _, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	projectSetting, status := store.GetStore().GetProjectSetting(project.ID)
+	assert.Equal(t, http.StatusFound, status)
+
+	assert.Equal(t, false, *projectSetting.IntHubspot)
+	assert.Equal(t, "", projectSetting.IntHubspotApiKey)
+	assert.Equal(t, "", projectSetting.IntHubspotRefreshToken)
+	// only enable api key based integration
+	intHubspot := true
+	_, status = store.GetStore().UpdateProjectSettings(project.ID,
+		&model.ProjectSetting{IntHubspotApiKey: "12-34", IntHubspot: &intHubspot},
+	)
+	assert.Equal(t, http.StatusAccepted, status)
+	projectSetting2, status := store.GetStore().GetProjectSetting(project.ID)
+	assert.Equal(t, http.StatusFound, status)
+	// only required field should be updated
+	portalID := 0
+	projectSetting.IntHubspot = &intHubspot
+	projectSetting.IntHubspotApiKey = "12-34"
+	projectSetting.IntHubspotPortalID = &portalID
+	projectSetting.UpdatedAt = projectSetting2.UpdatedAt
+	assert.Equal(t, projectSetting, projectSetting2)
+
+	// add refresh token to integration
+	refreshToken := U.RandomString(5)
+	_, status = store.GetStore().UpdateProjectSettings(project.ID,
+		&model.ProjectSetting{IntHubspotRefreshToken: refreshToken, IntHubspot: &intHubspot},
+	)
+	assert.Equal(t, http.StatusAccepted, status)
+	projectSetting2, status = store.GetStore().GetProjectSetting(project.ID)
+	assert.Equal(t, http.StatusFound, status)
+	// only required field should be updated including previous
+	projectSetting.IntHubspotRefreshToken = refreshToken
+	projectSetting.UpdatedAt = projectSetting2.UpdatedAt
+	assert.Equal(t, projectSetting, projectSetting2)
+}

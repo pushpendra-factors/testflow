@@ -127,6 +127,23 @@ func (q *KPIQueryGroup) ConvertAllDatesFromTimezone1ToTimezone2(currentTimezone,
 	return nil
 }
 
+func (query *KPIQueryGroup) SetDefaultGroupByTimestamp() {
+	for index, _ := range query.Queries {
+		defaultGroupByTimestamp := GetDefaultGroupByTimestampForQueries(query.Queries[index].From, query.Queries[index].To, query.Queries[index].GroupByTimestamp)
+		if defaultGroupByTimestamp != "" {
+			query.Queries[index].GroupByTimestamp = defaultGroupByTimestamp
+		}
+	}
+}
+
+func (query *KPIQueryGroup) GetGroupByTimestamps() []string {
+	queryResultString := make([]string, 0)
+	for _, intQuery := range query.Queries {
+		queryResultString = append(queryResultString, intQuery.GroupByTimestamp)
+	}
+	return queryResultString
+}
+
 func transformDateTypeFiltersForKPIFilters(filters []KPIFilter, timezoneString U.TimeZoneString) error {
 	for i := range filters {
 		err := filters[i].TransformDateTypeFilters(timezoneString)

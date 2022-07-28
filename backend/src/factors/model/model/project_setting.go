@@ -32,6 +32,7 @@ type ProjectSetting struct {
 	// Hubspot integration settings.
 	IntHubspot                *bool           `gorm:"not null;default:false" json:"int_hubspot,omitempty"`
 	IntHubspotApiKey          string          `json:"int_hubspot_api_key,omitempty"`
+	IntHubspotRefreshToken    string          `json:"int_hubspot_refresh_token,omitempty"`
 	IntHubspotFirstTimeSynced bool            `json:"int_hubspot_first_time_synced,omitempty"`
 	IntHubspotPortalID        *int            `json:"int_hubspot_portal_id,omitempty"`
 	IntHubspotSyncInfo        *postgres.Jsonb `json:"int_hubspot_sync_info,omitempty" `
@@ -112,6 +113,7 @@ type GoogleOrganicProjectSettings struct {
 type HubspotProjectSettings struct {
 	ProjectId         int64           `json:"-"`
 	APIKey            string          `json:"api_key"`
+	RefreshToken      string          `json:"refresh_token"`
 	IsFirstTimeSynced bool            `json:"is_first_time_synced"`
 	SyncInfo          *postgres.Jsonb `json:"sync_info"`
 }

@@ -25,15 +25,16 @@ import { useHistory } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar';
 import FaHeader from '../../components/FaHeader';
 import NavigationBar from '../../components/NavigationBar';
-import { fetchDemoProject, getHubspotContact } from '../../reducers/global';
+import { fetchDemoProject, getHubspotContact, fetchProjectSettingsV1, fetchProjectSettings, fetchMarketoIntegration, fetchBingAdsIntegration } from '../../reducers/global';
 import NewProject from '../Settings/SetupAssist/Modals/NewProject';
 import { meetLink } from '../../utils/hubspot';
 import userflow from 'userflow.js';
+import ExplainBeforeIntegration from './ExplainBeforeIntegration';
 
 const ExplainTypeList = [
   {
     title: 'Conversions Explorer',
-    desc: 'How can I improve conversions from Pricing Page to SignUp?',
+    desc: 'How can I improve conversions between any two milestones of a user journey?',
     icon: 'organisation',
     active: true,
   },
@@ -65,6 +66,10 @@ const Factors = ({
   getUserProperties,
   fetchDemoProject,
   getHubspotContact,
+  fetchProjectSettingsV1,
+  fetchProjectSettings,
+  fetchMarketoIntegration,
+  fetchBingAdsIntegration
 }) => {
   const [loadingTable, SetLoadingTable] = useState(true);
   const [fetchingIngishts, SetfetchingIngishts] = useState(false);
@@ -78,6 +83,9 @@ const Factors = ({
   const [showProjectModal, setShowProjectModal] = useState(false);
   const { projects } = useSelector((state) => state.global);
   const currentAgent = useSelector((state) => state.agent.agent_details);
+  const integration = useSelector((state) => state.global.currentProjectSettings);
+  const integrationV1 = useSelector((state) => state.global.projectSettingsV1);
+  const { bingAds, marketo } = useSelector((state) => state.global);
 
   useEffect(() => {
     fetchDemoProject()
@@ -93,6 +101,28 @@ const Factors = ({
     history.push('/');
     userflow.start('c162ed75-0983-41f3-ae56-8aedd7dbbfbd');
   }
+
+  useEffect(() => {
+    fetchProjectSettingsV1(activeProject.id);
+    fetchProjectSettings(activeProject.id);
+    fetchBingAdsIntegration(activeProject.id);
+    fetchMarketoIntegration(activeProject.id);
+  }, [activeProject]);
+
+
+  const isIntegrationEnabled =
+  integration?.int_segment ||
+  integration?.int_adwords_enabled_agent_uuid ||
+  integration?.int_linkedin_agent_uuid ||
+  integration?.int_facebook_user_id ||
+  integration?.int_hubspot ||
+  integration?.int_salesforce_enabled_agent_uuid ||
+  integration?.int_drift ||
+  integration?.int_google_organic_enabled_agent_uuid ||
+  integration?.int_clear_bit ||
+  integrationV1?.int_completed ||
+  bingAds?.accounts ||
+  marketo?.status || integrationV1?.int_slack;
 
   useEffect(() => {
     const getData1 = async () => {
@@ -111,192 +141,200 @@ const Factors = ({
     setConfigureDPModal(false);
   };
 
-  return (
-    <>
-      <ErrorBoundary
-        fallback={
-          <FaErrorComp
-            size={'medium'}
-            title={'Explain Error '}
-            subtitle={
-              'We are facing trouble loading Explain. Drop us a message on the in-app chat.'
-            }
-          />
-        }
-        onError={FaErrorLog}
-      >
+  if (isIntegrationEnabled || activeProject.id === demoProjectId) {
+    return (
+      <>
+        <ErrorBoundary
+          fallback={
+            <FaErrorComp
+              size={'medium'}
+              title={'Explain Error '}
+              subtitle={
+                'We are facing trouble loading Explain. Drop us a message on the in-app chat.'
+              }
+            />
+          }
+          onError={FaErrorLog}
+        >
 
-        {activeProject.id === demoProjectId ? (
-          <div className={'rounded-lg border-2 h-20 mt-20 -mb-20 mx-20'}>
-            <Row justify={'space-between'} className={'m-0 p-3'}>
-              <Col span={projects.length === 1 ? 12 : 18}>
-                <img
-                  src="assets/icons/welcome.svg"
-                  style={{ float: 'left', marginRight: '20px' }}
-                />
-                <Text
-                  type={'title'}
-                  level={6}
-                  weight={'bold'}
-                  extraClass={'m-0'}
-                >
-                  Welcome! You just entered a Factors demo project
-                </Text>
-                {projects.length === 1 ? (
-                  <Text type={'title'} level={7} extraClass={'m-0'}>
-                    These reports have been built with a sample dataset. Use
-                    this to start exploring!
+          {activeProject.id === demoProjectId ? (
+            <div className={'rounded-lg border-2 h-20 mt-20 -mb-20 mx-20'}>
+              <Row justify={'space-between'} className={'m-0 p-3'}>
+                <Col span={projects.length === 1 ? 12 : 18}>
+                  <img
+                    src="assets/icons/welcome.svg"
+                    style={{ float: 'left', marginRight: '20px' }}
+                  />
+                  <Text
+                    type={'title'}
+                    level={6}
+                    weight={'bold'}
+                    extraClass={'m-0'}
+                  >
+                    Welcome! You just entered a Factors demo project
                   </Text>
-                ) : (
-                  <Text type={'title'} level={7} extraClass={'m-0'}>
-                    To jump back into your Factors project, click on your
-                    account card on the <span className={'font-bold'}>top right</span> of the screen.
-                  </Text>
-                )}
-              </Col>
-              <Col className={'mr-2 mt-2'}>
-                {projects.length === 1 ? (
+                  {projects.length === 1 ? (
+                    <Text type={'title'} level={7} extraClass={'m-0'}>
+                      These reports have been built with a sample dataset. Use
+                      this to start exploring!
+                    </Text>
+                  ) : (
+                    <Text type={'title'} level={7} extraClass={'m-0'}>
+                      To jump back into your Factors project, click on your
+                      account card on the <span className={'font-bold'}>top right</span> of the screen.
+                    </Text>
+                  )}
+                </Col>
+                <Col className={'mr-2 mt-2'}>
+                  {projects.length === 1 ? (
+                    <Button
+                      type={'default'}
+                      style={{
+                        background: 'white',
+                        border: '1px solid #E7E9ED',
+                        height: '40px'
+                      }}
+                      className={'m-0 mr-2'}
+                      onClick={() => setShowProjectModal(true)}
+                    >
+                      Set up my own Factors project
+                    </Button>
+                  ) : null}
+
                   <Button
-                    type={'default'}
+                    type={'link'}
                     style={{
                       background: 'white',
-                      border: '1px solid #E7E9ED',
+                      // border: '1px solid #E7E9ED',
                       height: '40px'
                     }}
                     className={'m-0 mr-2'}
-                    onClick={() => setShowProjectModal(true)}
+                    onClick={() => handleTour()}
                   >
-                    Set up my own Factors project
+                    Take the tour <SVG name={'Arrowright'} size={16} extraClass={'ml-1'} color={'blue'} />
                   </Button>
-                ) : null}
-
-                <Button
-                  type={'link'}
-                  style={{
-                    background: 'white',
-                    // border: '1px solid #E7E9ED',
-                    height: '40px'
-                  }}
-                  className={'m-0 mr-2'}
-                  onClick={() => handleTour()}
-                >
-                  Take the tour <SVG name={'Arrowright'} size={16} extraClass={'ml-1'} color={'blue'} />
-                </Button>
-              </Col>
-            </Row>
-          </div>
-        ) : null}
-
-        {fetchingIngishts ? (
-          <Spin size={'large'} className={'fa-page-loader'} />
-        ) : (
-          <>
-            {/* <FaHeader>
-              <SearchBar />
-            </FaHeader> */}
-
-            <div className={'fa-container mt-24 mb-12 min-h-screen'}>
-              <Row gutter={[24, 24]} justify='center'>
-                <Col span={20}>
-                  <Row gutter={[24, 24]}>
-                    <Col span={24}>
-                      <Text
-                        type={'title'}
-                        level={3}
-                        weight={'bold'}
-                        extraClass={'m-0'}
-                      >
-                        Explain
-                      </Text>
-                      <Text
-                        type={'title'}
-                        level={6}
-                        extraClass={'m-0 mt-2'}
-                        color={'grey'}
-                      >
-                        Investigate the impact of various user segments and
-                        their behaviors on your marketing efforts.
-                      </Text>
-                    </Col>
-                    <Col span={24}>
-                      <div className={`flex items-stretch justify-between mb-6`}>
-                        {ExplainTypeList?.map((item) => {
-                          return (
-                            <div
-                              onClick={
-                                item.active
-                                  ? () => {
-                                      history.push('/explain/insights');
-                                    }
-                                  : null
-                              }
-                              // style={{ width: '320px' }}
-                              className={`relative inline-flex items-stretch justify-start border-radius--sm border--thin-2 cursor-pointer mr-6 ${
-                                item.active
-                                  ? 'cursor-pointer'
-                                  : 'fa-template--card cursor-not-allowed'
-                              }`}
-                            >
-                              <div className='px-6 py-4 flex flex-col items-center justify-center background-color--brand-color-1'>
-                                <SVG
-                                  name={item?.icon ? item.icon : 'organisation'}
-                                  size={32}
-                                  color={'grey'}
-                                  extraClass={'mr-2'}
-                                />
-                              </div>
-                              <div className='px-4 py-4 flex flex-col items-start justify-start'>
-                                {!item.active && (
-                                  <Tag
-                                    color='red'
-                                    className={'fai--custom-card--badge'}
-                                  >
-                                    {' '}
-                                    Coming Soon{' '}
-                                  </Tag>
-                                )}
-                                <Text
-                                  type={'title'}
-                                  level={7}
-                                  weight={'bold'}
-                                  extraClass={'m-0'}
-                                >
-                                  {item.title}
-                                </Text>
-                                <Text
-                                  type={'title'}
-                                  level={8}
-                                  color={'grey'}
-                                  extraClass={'m-0 mb-2'}
-                                >
-                                  {item.desc}
-                                </Text>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </Col>
-                  </Row>
-                  <Row gutter={[24, 24]}>
-                    <Col span={24}>
-                      <SavedGoals SetfetchingIngishts={SetfetchingIngishts} />
-                    </Col>
-                  </Row>
                 </Col>
               </Row>
             </div>
-          </>
-        )}
+          ) : null}
 
-        {/* create project modal */}
-        <NewProject
-          visible={showProjectModal}
-          handleCancel={() => setShowProjectModal(false)}
-        />
-      </ErrorBoundary>
-    </>
-  );
+          {fetchingIngishts ? (
+            <Spin size={'large'} className={'fa-page-loader'} />
+          ) : (
+            <>
+              {/* <FaHeader>
+                <SearchBar />
+              </FaHeader> */}
+
+              <div className={'fa-container mt-24 mb-12 min-h-screen'}>
+                <Row gutter={[24, 24]} justify='center'>
+                  <Col span={20}>
+                    <Row gutter={[24, 24]}>
+                      <Col span={24}>
+                        <Text
+                          type={'title'}
+                          level={3}
+                          weight={'bold'}
+                          extraClass={'m-0'}
+                        >
+                          Explain
+                        </Text>
+                        <Text
+                          type={'title'}
+                          level={6}
+                          extraClass={'m-0 mt-2'}
+                          color={'grey'}
+                        >
+                          Investigate the impact of various user segments and
+                          their behaviors on your marketing efforts.
+                        </Text>
+                      </Col>
+                      <Col span={24}>
+                        <div className={`flex items-stretch justify-between mb-6`}>
+                          {ExplainTypeList?.map((item) => {
+                            return (
+                              <div
+                                onClick={
+                                  item.active
+                                    ? () => {
+                                        history.push('/explain/insights');
+                                      }
+                                    : null
+                                }
+                                // style={{ width: '320px' }}
+                                className={`relative inline-flex items-stretch justify-start border-radius--sm border--thin-2 cursor-pointer mr-6 ${
+                                  item.active
+                                    ? 'cursor-pointer'
+                                    : 'fa-template--card cursor-not-allowed'
+                                }`}
+                              >
+                                <div className='px-6 py-4 flex flex-col items-center justify-center background-color--brand-color-1'>
+                                  <SVG
+                                    name={item?.icon ? item.icon : 'organisation'}
+                                    size={32}
+                                    color={'grey'}
+                                    extraClass={'mr-2'}
+                                  />
+                                </div>
+                                <div className='px-4 py-4 flex flex-col items-start justify-start'>
+                                  {!item.active && (
+                                    <Tag
+                                      color='red'
+                                      className={'fai--custom-card--badge'}
+                                    >
+                                      {' '}
+                                      Coming Soon{' '}
+                                    </Tag>
+                                  )}
+                                  <Text
+                                    type={'title'}
+                                    level={7}
+                                    weight={'bold'}
+                                    extraClass={'m-0'}
+                                  >
+                                    {item.title}
+                                  </Text>
+                                  <Text
+                                    type={'title'}
+                                    level={8}
+                                    color={'grey'}
+                                    extraClass={'m-0 mb-2'}
+                                  >
+                                    {item.desc}
+                                  </Text>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </Col>
+                    </Row>
+                    <Row gutter={[24, 24]}>
+                      <Col span={24}>
+                        <SavedGoals SetfetchingIngishts={SetfetchingIngishts} />
+                      </Col>
+                    </Row>
+                  </Col>
+                </Row>
+              </div>
+            </>
+          )}
+
+          {/* create project modal */}
+          <NewProject
+            visible={showProjectModal}
+            handleCancel={() => setShowProjectModal(false)}
+          />
+        </ErrorBoundary>
+      </>
+    );
+  } else {
+    return (
+      <>
+        <ExplainBeforeIntegration />
+      </>
+    );
+  }
 };
 const mapStateToProps = (state) => {
   return {
@@ -318,4 +356,8 @@ export default connect(mapStateToProps, {
   getUserProperties,
   fetchDemoProject,
   getHubspotContact,
+  fetchProjectSettingsV1,
+  fetchProjectSettings,
+  fetchMarketoIntegration,
+  fetchBingAdsIntegration
 })(Factors);

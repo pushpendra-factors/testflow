@@ -19,7 +19,7 @@ const ValuesMenu = ({
   };
 
   const filteredOptions = options.filter((option) =>
-    option.toLowerCase().includes(searchText)
+    option.toLowerCase().includes(searchText.toLowerCase())
   );
 
   const handleItemClick = (option) => {

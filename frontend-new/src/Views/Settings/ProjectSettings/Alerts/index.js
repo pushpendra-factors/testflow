@@ -491,7 +491,23 @@ const Alerts = ({
                     </Row>
                     <Row className={'m-0'}>
                         <Col span={24}>
-                            <div className={'m-0'}>
+                            <div className={'m-0 mt-8'}>
+                            <Text
+                                type={'title'}
+                                level={7}
+                                color={'grey-2'}
+                                extraClass={'m-0'}
+                            >
+                                Find yourself frequently monitoring how your KPIs change? Set up signals that are relevant to your team. Receive notifications via Email or Slack that motivate the right behavior in minutes
+                            </Text>
+                            <Text
+                                type={'title'}
+                                level={7}
+                                color={'grey-2'}
+                                extraClass={'m-0 mt-2'}
+                            >
+                                Currently, alerts only fire for KPIs that you track
+                            </Text>
                                 <Table className="fa-table--basic mt-8"
                                     onRow={(record, rowIndex) => {
                                         return {

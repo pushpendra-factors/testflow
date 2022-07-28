@@ -25,6 +25,7 @@ import {
   DefaultDateRangeFormat
 } from '../CoreQuery/utils';
 import { DASHBOARD_KEYS } from '../../constants/localStorage.constants';
+import { getValidGranularityOptionsFromDaysDiff } from '../../utils/dataFormatter';
 
 const formatFilters = (pr) => {
   return pr.map((p) => {
@@ -36,6 +37,22 @@ const formatFilters = (pr) => {
     }
     return p;
   });
+};
+
+export const getValidGranularityForSavedQueryWithSavedGranularity = ({ durationObj, savedFrequency }) => {
+  // its possible that user may have saved gbt as hour but if the duration selected is more than 1 day we should not use gbt as hour
+  if (!savedFrequency) {
+    return 'date';
+  }
+  if (durationObj.from && durationObj.to) {
+    const fr = MomentTz(durationObj.from).startOf('day').utc().unix();
+    const to = MomentTz(durationObj.to).endOf('day').utc().unix();
+    const daysDiff = MomentTz(to * 1000).diff(fr * 1000, 'days');
+    const validGranularityOptions = getValidGranularityOptionsFromDaysDiff({ daysDiff });
+    const gbt = validGranularityOptions.indexOf(savedFrequency) > -1 ? savedFrequency : validGranularityOptions[0];
+    return gbt;
+  }
+  return 'date';
 };
 
 export const getDataFromServer = (
@@ -50,50 +67,25 @@ export const getDataFromServer = (
     const isCampaignQuery =
       query.query.cl && query.query.cl === QUERY_TYPE_CAMPAIGN;
     let queryGroup = query.query.query_group;
-    if (durationObj.from && durationObj.to) {
-      queryGroup = queryGroup.map((elem) => {
-        const obj = {
-          ...elem,
-          fr: MomentTz(durationObj.from).startOf('day').utc().unix(),
-          to: MomentTz(durationObj.to).endOf('day').utc().unix(),
-          gbt: elem.gbt ? elem.gbt : ''
-        };
-        if (!isCampaignQuery) {
-          obj.ewp = obj.ewp.map((e) => {
-            const pr = formatFilters(e.pr || []);
-            return {
-              ...e,
-              pr
-            };
-          });
-          obj.gup = formatFilters(obj.gup || []);
-        }
-        return obj;
-      });
-    } else {
-      queryGroup = queryGroup.map((elem) => {
-        const obj = {
-          ...elem,
-          fr: MomentTz().startOf('week').utc().unix(),
-          to:
-            MomentTz().format('dddd') !== 'Sunday'
-              ? MomentTz().subtract(1, 'day').endOf('day').utc().unix()
-              : MomentTz().utc().unix(),
-          gbt: elem.gbt ? elem.gbt : ''
-        };
-        if (!isCampaignQuery) {
-          obj.ewp = obj.ewp.map((e) => {
-            const pr = formatFilters(e.pr || []);
-            return {
-              ...e,
-              pr
-            };
-          });
-          obj.gup = formatFilters(obj.gup || []);
-        }
-        return obj;
-      });
-    }
+    queryGroup = queryGroup.map((elem) => {
+      const obj = {
+        ...elem,
+        fr: MomentTz(durationObj.from).startOf('day').utc().unix(),
+        to: MomentTz(durationObj.to).endOf('day').utc().unix(),
+        gbt: elem.gbt ? durationObj.frequency : ''
+      };
+      if (!isCampaignQuery) {
+        obj.ewp = obj.ewp.map((e) => {
+          const pr = formatFilters(e.pr || []);
+          return {
+            ...e,
+            pr
+          };
+        });
+        obj.gup = formatFilters(obj.gup || []);
+      }
+      return obj;
+    });
     if (isCampaignQuery) {
       return getCampaignsData(
         activeProjectId,
@@ -118,25 +110,17 @@ export const getDataFromServer = (
       );
     }
   } else if (query.query.cl && query.query.cl === QUERY_TYPE_KPI) {
-    let fr;
-    let to;
-    if (durationObj.from && durationObj.to) {
-      fr = MomentTz(durationObj.from).startOf('day').utc().unix();
-      to = MomentTz(durationObj.to).endOf('day').utc().unix();
-    } else {
-      fr = MomentTz().startOf('week').utc().unix();
-      to =
-        MomentTz().format('dddd') !== 'Sunday'
-          ? MomentTz().subtract(1, 'day').endOf('day').utc().unix()
-          : MomentTz().utc().unix();
-    }
+    const fr = MomentTz(durationObj.from).startOf('day').utc().unix();
+    const to = MomentTz(durationObj.to).endOf('day').utc().unix();
+
     const KPIQuery = {
       ...query.query,
       qG: query.query.qG.map((q) => {
         return {
           ...q,
           fr,
-          to
+          to,
+          gbt: q.gbt ? durationObj.frequency : ''
         };
       })
     };

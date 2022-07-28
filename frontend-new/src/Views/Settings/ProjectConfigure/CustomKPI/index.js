@@ -398,10 +398,15 @@ const matchEventName = (item) => {
                         color={'grey-2'}
                         extraClass={'m-0'}
                       >
-                        Define Custom KPIs using the Website and CRM data. Add
-                        filters and set the date field to be used for the
-                        horizontal axes of the KPI.
-                        {/* Learn <a href='#'>more</a> */}
+                        Have a specific KPI that you measure based on the values of a CRM object's fields? Say no more — it's easy to set this up, so you can measure them over time.
+                      </Text>
+                      <Text
+                        type={'title'}
+                        level={7}
+                        color={'grey-2'}
+                        extraClass={'m-0 mt-2'}
+                      >
+                        All it takes is filtering for the CRM objects, adding your custom conditions over it, and you should be good to go!
                       </Text>
 
                       <Table

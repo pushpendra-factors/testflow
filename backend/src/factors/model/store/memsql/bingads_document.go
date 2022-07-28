@@ -499,7 +499,7 @@ func getSQLAndParamsFromBingAdsReports(query *model.ChannelQueryV1, projectID in
 	for _, groupBy := range query.GroupBy {
 		key := groupBy.Object + "." + groupBy.Property
 		if groupBy.Object == CAFilterChannel {
-			value := fmt.Sprintf("'bingads' as %s", model.BingAdsInternalRepresentationToExternalRepresentationForReports[key])
+			value := fmt.Sprintf("'Bing Ads' as %s", model.BingAdsInternalRepresentationToExternalRepresentationForReports[key])
 			selectKeys = append(selectKeys, value)
 			responseSelectKeys = append(responseSelectKeys, model.BingAdsInternalRepresentationToExternalRepresentationForReports[key])
 		} else {
@@ -914,7 +914,7 @@ func (store *MemSQL) PullBingAdsRows(projectID int64, startTime, endTime int64) 
 		"((COALESCE(sp.object_type,1) = 1 AND (sp.object_id = JSON_EXTRACT_STRING(bing.value, 'campaign_id') OR sp.object_id = JSON_EXTRACT_STRING(bing.value, 'base_campaign_id'))) OR "+
 		"(COALESCE(sp.object_type,2) = 2 AND (sp.object_id = JSON_EXTRACT_STRING(bing.value, 'ad_group_id') OR sp.object_id = JSON_EXTRACT_STRING(bing.value, 'base_ad_group_id')))) "+
 		"WHERE bing.project_id = %d AND bing.timestamp BETWEEN %d AND %d "+
-		"ORDER BY bing.type, bing.timestamp LIMIT %d",
+		"ORDER BY bing.document_type, bing.timestamp LIMIT %d",
 		projectID, model.ChannelBingAds, projectID, start, end, model.BingPullLimit+1)
 
 	rows, tx, err, _ := store.ExecQueryWithContext(rawQuery, []interface{}{})

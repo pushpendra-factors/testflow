@@ -1,0 +1,41 @@
+@import '../../styles/abstracts/variables';
+
+.label {
+  margin: 0 !important;
+  line-height: 1 !important;
+}
+
+.noHoverEffect {
+  &:hover {
+    background: unset !important;
+  }
+}
+
+.selectCustomDateListItem {
+  padding: 8px 0 !important;
+}
+
+.customDateListItemWrapper {
+  border: 1px solid $fa-color--mono-3;
+  padding: 0.25rem 0.75rem !important;
+  border-radius: 6px;
+
+  h4 {
+    margin: 0 !important;
+    line-height: 1.5 !important;
+  }
+}
+
+.custom-range-radio-group {
+  :global(.ant-radio-inner) {
+    border-color: $fa-color--mono-5 !important;
+    &::after {
+      // in storybook uncomment next 4 lines as the radio is working fine without these four styles in the main app however its breaking in storybook. will figure out why it is happening so.
+      // top: 9px;
+      // left: 9px;
+      // width: 12px;
+      // height: 12px;
+      background-color: $fa-color--mono-5 !important;
+    }
+  }
+}
