@@ -233,6 +233,8 @@ var EP_SESSION_COUNT string = "$session_count"
 var EP_TERM string = "$term"
 var EP_CHANNEL string = "$channel" // added at runtime.
 var EP_TYPE string = "$type"
+var EP_HUBSPOT_ENGAGEMENT_THREAD_ID string = "$hubspot_engagement_thread_id"
+var EP_OTP_RULE_ID string = "$otp_rule_id"
 
 // Event Form meta attributes properties
 var EP_FORM_ID string = "$form_id"
@@ -450,6 +452,8 @@ var SDK_ALLOWED_EVENT_PROPERTIES = [...]string{
 	// event properties part of offline touch points
 	EP_CHANNEL,
 	EP_TYPE,
+	EP_HUBSPOT_ENGAGEMENT_THREAD_ID,
+	EP_OTP_RULE_ID,
 
 	// user_properties captured on event. i.e form_submit.
 	UP_EMAIL,

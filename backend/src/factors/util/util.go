@@ -45,6 +45,12 @@ const TimeoutOneSecond = 1 * time.Second
 const TimeoutTwoSecond = 2 * time.Second
 const TimeoutFiveSecond = 5 * time.Second
 
+const (
+	DayInSecs   = 24 * 60 * 60
+	WeekInSecs  = 7 * DayInSecs
+	MonthInSecs = 31 * DayInSecs
+)
+
 type TimeZoneString string
 
 const (

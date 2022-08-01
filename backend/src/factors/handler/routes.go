@@ -120,6 +120,13 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id/user/event_names", GetEventNamesByUserHandler)
 	authRouteGroup.GET(":project_id/groups/:group_name/event_names", GetEventNamesByGroupHandler)
 
+	// Offline Touch Point rules
+	authRouteGroup.GET("/:project_id/otp_rules", responseWrapper(GetOTPRuleHandler))
+	authRouteGroup.POST("/:project_id/otp_rules", responseWrapper(CreateOTPRuleHandler))
+	authRouteGroup.PUT("/:project_id/otp_rules/:rule_id", responseWrapper(UpdateOTPRuleHandler))
+	authRouteGroup.GET("/:project_id/otp_rules/:rule_id", responseWrapper(SearchOTPRuleHandler))
+	authRouteGroup.DELETE("/:project_id/otp_rules/:rule_id", responseWrapper(DeleteOTPRuleHandler))
+
 	// Dashboard templates
 	authCommonRouteGroup := r.Group(routePrefix + ROUTE_COMMON_ROOT)
 	authCommonRouteGroup.GET("/dashboard_templates/:id/search", SearchTemplateHandler)

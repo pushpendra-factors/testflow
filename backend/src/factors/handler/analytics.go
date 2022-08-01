@@ -200,6 +200,7 @@ func isQueryShareable(queryGroup model.QueryGroup) bool {
 	}
 	return true
 }
+
 // QueryHandler godoc
 // @Summary To run a particular query from core query or dashboards.
 // @Tags CoreQuery

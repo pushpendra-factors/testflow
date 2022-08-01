@@ -4054,10 +4054,13 @@ func TestHubspotOfflineTouchPoint(t *testing.T) {
 	rulePropertyMap["$campaign"] = model.TouchPointPropertyValue{Type: model.TouchPointPropertyValueAsProperty, Value: "$hubspot_campaign_name"}
 	rulePropertyMap["$channel"] = model.TouchPointPropertyValue{Type: model.TouchPointPropertyValueAsConstant, Value: "Other"}
 
-	rule := model.HSTouchPointRule{
-		Filters:           []model.TouchPointFilter{filter1},
+	f, _ := json.Marshal([]model.TouchPointFilter{filter1})
+	rPM, _ := json.Marshal(rulePropertyMap)
+
+	rule := model.OTPRule{
+		Filters:           postgres.Jsonb{json.RawMessage(f)},
 		TouchPointTimeRef: model.LastModifiedTimeRef,
-		PropertiesMap:     rulePropertyMap,
+		PropertiesMap:     postgres.Jsonb{json.RawMessage(rPM)},
 	}
 
 	var defaultSmartEventTimestamp int64
@@ -4082,7 +4085,7 @@ func TestHubspotOfflineTouchPoint(t *testing.T) {
 
 func TestHubspotOfflineTouchPointDecode(t *testing.T) {
 
-	project, _, err := SetupProjectWithAgentDAO()
+	_, _, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
 
 	filter1 := model.TouchPointFilter{
@@ -4096,34 +4099,16 @@ func TestHubspotOfflineTouchPointDecode(t *testing.T) {
 	rulePropertyMap["$campaign"] = model.TouchPointPropertyValue{Type: model.TouchPointPropertyValueAsProperty, Value: "$hubspot_campaign_type"}
 	rulePropertyMap["$channel"] = model.TouchPointPropertyValue{Type: model.TouchPointPropertyValueAsConstant, Value: "Other"}
 
-	rule := model.HSTouchPointRule{
-		Filters:           []model.TouchPointFilter{filter1},
+	f, _ := json.Marshal([]model.TouchPointFilter{filter1})
+	rPM, _ := json.Marshal(rulePropertyMap)
+
+	rule := model.OTPRule{
+		Filters:           postgres.Jsonb{json.RawMessage(f)},
 		TouchPointTimeRef: model.LastModifiedTimeRef,
-		PropertiesMap:     rulePropertyMap,
+		PropertiesMap:     postgres.Jsonb{json.RawMessage(rPM)},
 	}
+	fmt.Println(rule)
 
-	// creating manual rule
-	touchPointRules := make(map[string][]model.HSTouchPointRule)
-	touchPointRules["hs_touch_point_rules"] = []model.HSTouchPointRule{rule}
-
-	// adding json rule
-	project.HubspotTouchPoints = postgres.Jsonb{RawMessage: json.RawMessage(`{"hs_touch_point_rules":[{"filters":[{"pr":"$hubspot_campaign_type","op":"equals","va":"Field Events","lop":"AND"},{"pr":"$hubspot_campaign_name","op":"contains","va":"Sendoso","lop":"AND"}],"touch_point_time_ref":"LAST_MODIFIED_TIME_REF","properties_map":{"$campaign_name":{"type":"property","value":"$hubspot_campaign_name"},"$source":{"type":"constant","value":"Source1"},"$channel":{"type":"constant","value":"CRM"},"$type":{"type":"constant","value":"Offer"}}}]}`)}
-	store.GetStore().UpdateProject(project.ID, project)
-
-	project, errCode := store.GetStore().GetProject(project.ID)
-	if errCode != http.StatusFound {
-		return
-	}
-	if &project.HubspotTouchPoints != nil && !U.IsEmptyPostgresJsonb(&project.HubspotTouchPoints) {
-
-		var touchPointRules map[string][]model.HSTouchPointRule
-		err := U.DecodePostgresJsonbToStructType(&project.HubspotTouchPoints, &touchPointRules)
-		assert.Nil(t, err)
-
-		rules := touchPointRules["hs_touch_point_rules"]
-
-		assert.Equal(t, len(rules), 1)
-	}
 }
 
 func getEventTimestamp(timestamp int64) int64 {

@@ -215,6 +215,7 @@ type Model interface {
 	GetEvent(projectID int64, userId string, id string) (*model.Event, int)
 	GetEventById(projectID int64, id, userID string) (*model.Event, int)
 	GetLatestEventOfUserByEventNameId(projectID int64, userId string, eventNameId string, startTimestamp int64, endTimestamp int64) (*model.Event, int)
+	GetEventsByEventNameId(projectID int64, eventNameId string, startTimestamp int64, endTimestamp int64) ([]model.Event, int)
 	GetRecentEventPropertyKeysWithLimits(projectID int64, eventName string, starttime int64, endtime int64, eventsLimit int) ([]U.Property, error)
 	GetRecentEventPropertyValuesWithLimits(projectID int64, eventName string, property string, valuesLimit int, rowsLimit int, starttime int64, endtime int64) ([]U.PropertyValue, string, error)
 	UpdateEventProperties(projectID int64, id, userID string, properties *U.PropertiesMap, updateTimestamp int64, optionalEventUserProperties *postgres.Jsonb) int
@@ -384,6 +385,15 @@ type Model interface {
 	DeleteTemplate(templateId string) int
 	SearchTemplateWithTemplateID(templateId string) (model.DashboardTemplate, int)
 	GetAllTemplates() ([]model.DashboardTemplate, int)
+
+	// offline touchpoints
+	CreateOTPRule(projectId int64, rule *model.OTPRule) (*model.OTPRule, int, string)
+	GetALLOTPRuleWithProjectId(projectID int64) ([]model.OTPRule, int)
+	GetAllRulesDeletedNotDeleted(projectID int64) ([]model.OTPRule, int)
+	GetOTPRuleWithRuleId(projectID int64, ruleID string) (*model.OTPRule, int)
+	GetAnyOTPRuleWithRuleId(projectID int64, ruleID string) (*model.OTPRule, int)
+	DeleteOTPRule(projectID int64, ruleID string) (int, string)
+	UpdateOTPRule(projectID int64, ruleID string, rule *model.OTPRule) (*model.OTPRule, int)
 
 	// salesforce_document
 	GetSalesforceSyncInfo() (model.SalesforceSyncInfo, int)

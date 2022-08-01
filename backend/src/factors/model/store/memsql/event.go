@@ -1858,6 +1858,39 @@ func getPropertiesByNameAndMaxOccurrence(
 	return &propertiesByName
 }
 
+// GetEventsByEventNameId return all events in given time frame for the event name.
+// CAUTION: Predict no. of events this can pull for given range and then use this method.
+func (store *MemSQL) GetEventsByEventNameId(projectId int64, eventNameId string,
+	startTimestamp int64, endTimestamp int64) ([]model.Event, int) {
+	logFields := log.Fields{
+		"project_id":      projectId,
+		"event_name_id":   eventNameId,
+		"start_timestamp": startTimestamp,
+		"end_timestamp":   endTimestamp,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	if startTimestamp == 0 || endTimestamp == 0 {
+		return nil, http.StatusBadRequest
+	}
+
+	var events []model.Event
+
+	db := C.GetServices().Db
+	if err := db.Limit(1).Order("timestamp desc").Where(
+		"project_id = ? AND event_name_id = ? AND timestamp > ? AND timestamp <= ?",
+		projectId, eventNameId, startTimestamp, endTimestamp).Find(&events).Error; err != nil {
+
+		return nil, http.StatusInternalServerError
+	}
+
+	if len(events) == 0 {
+		return nil, http.StatusNotFound
+	}
+
+	return events, http.StatusFound
+}
+
 // GetEventsWithoutPropertiesAndWithPropertiesByName - Use for getting properties with and without values
 // and use it for updating the events which doesn't have the values. User for fixing data for YourStory.
 func (store *MemSQL) GetEventsWithoutPropertiesAndWithPropertiesByNameForYourStory(projectID int64, from,

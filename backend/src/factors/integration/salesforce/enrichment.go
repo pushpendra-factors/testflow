@@ -1339,7 +1339,7 @@ func getCampaignMemberIDsFromCampaign(document *model.SalesforceDocument) ([]str
 	return campaignMemberIDs, nil
 }
 
-func enrichCampaignToAllCampaignMembers(project *model.Project, document *model.SalesforceDocument, endTimestamp int64) int {
+func enrichCampaignToAllCampaignMembers(project *model.Project, otpRules *[]model.OTPRule, document *model.SalesforceDocument, endTimestamp int64) int {
 	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "document_id": document.ID, "end_timestamp": endTimestamp})
 	if document.Type != model.SalesforceDocumentTypeCampaign {
 		return http.StatusBadRequest
@@ -1432,7 +1432,7 @@ func enrichCampaignToAllCampaignMembers(project *model.Project, document *model.
 		}
 
 		if memberDocuments[i].Synced == false {
-			err = ApplySFOfflineTouchPointRule(project, &finalTrackPayload, &memberDocuments[i], endTimestamp)
+			err = ApplySFOfflineTouchPointRule(project, otpRules, &finalTrackPayload, &memberDocuments[i], endTimestamp)
 			if err != nil {
 				// log and continue
 				logCtx.WithField("EventID", eventID).WithField("userID", eventID).WithField("userID", eventID).Info("failed creating SF offline touch point")
@@ -1485,7 +1485,7 @@ func getExistingCampaignMemberUserIDFromProperties(projectID int64, properties *
 	return existingUserID
 }
 
-func enrichCampaignMember(project *model.Project, document *model.SalesforceDocument, endTimestamp int64) int {
+func enrichCampaignMember(project *model.Project, otpRules *[]model.OTPRule, document *model.SalesforceDocument, endTimestamp int64) int {
 	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "document_id": document.ID})
 	if document.Type != model.SalesforceDocumentTypeCampaignMember {
 		return http.StatusBadRequest
@@ -1557,7 +1557,7 @@ func enrichCampaignMember(project *model.Project, document *model.SalesforceDocu
 		return http.StatusInternalServerError
 	}
 
-	err = ApplySFOfflineTouchPointRule(project, &finalTrackPayload, document, endTimestamp)
+	err = ApplySFOfflineTouchPointRule(project, otpRules, &finalTrackPayload, document, endTimestamp)
 	if err != nil {
 		// log and continue
 		logCtx.WithField("EventID", eventID).WithField("userID", eventID).WithField("userID", eventID).Info("Create SF offline touch point")
@@ -1571,92 +1571,84 @@ func enrichCampaignMember(project *model.Project, document *model.SalesforceDocu
 	return http.StatusOK
 }
 
-func ApplySFOfflineTouchPointRule(project *model.Project, trackPayload *SDK.TrackPayload, document *model.SalesforceDocument, endTimestamp int64) error {
+func ApplySFOfflineTouchPointRule(project *model.Project, otpRules *[]model.OTPRule, trackPayload *SDK.TrackPayload, document *model.SalesforceDocument, endTimestamp int64) error {
 
 	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "ApplySFOfflineTouchPointRule",
 		"document_id": document.ID, "document_action": document.Action, "document": document})
 
-	if &project.SalesforceTouchPoints != nil && !U.IsEmptyPostgresJsonb(&project.SalesforceTouchPoints) {
+	if otpRules == nil || project == nil || trackPayload == nil || document == nil {
+		return nil
+	}
 
-		var touchPointRules map[string][]model.SFTouchPointRule
-		err := U.DecodePostgresJsonbToStructType(&project.SalesforceTouchPoints, &touchPointRules)
-		if err != nil {
-			// logging and continuing.
-			logCtx.WithField("Document", trackPayload).WithError(err).Error("Failed to decode/fetch offline touch point rules for salesforce document.")
-			return err
+	var campaignMemberDocuments []model.SalesforceDocument
+	var status int
+	fistRespondedRuleApplicable := true
+	// Checking if the EP_SFCampaignMemberResponded has already been set as true for same customer id
+	if document.Action == model.SalesforceDocumentUpdated {
+
+		campaignMemberDocuments, status = store.GetStore().GetSyncedSalesforceDocumentByType(project.ID,
+			[]string{util.GetPropertyValueAsString(document.ID)}, model.SalesforceDocumentTypeCampaignMember, false)
+		if status != http.StatusFound {
+			campaignMemberDocuments = nil
 		}
+		// Ignore responded event for "Created event" based rule.
+		if campaignMemberDocuments != nil || len(campaignMemberDocuments) != 0 {
 
-		rules := touchPointRules["sf_touch_point_rules"]
-		var campaignMemberDocuments []model.SalesforceDocument
-		var status int
-		fistRespondedRuleApplicable := true
-		// Checking if the EP_SFCampaignMemberResponded has already been set as true for same customer id
-		if document.Action == model.SalesforceDocumentUpdated {
+			logCtx.WithField("Total_Documents", len(campaignMemberDocuments)).
+				WithField("Document[size-1]", campaignMemberDocuments[len(campaignMemberDocuments)-1]).
+				Info("Found existing campaign member document")
 
-			campaignMemberDocuments, status = store.GetStore().GetSyncedSalesforceDocumentByType(project.ID,
-				[]string{util.GetPropertyValueAsString(document.ID)}, model.SalesforceDocumentTypeCampaignMember, false)
-			if status != http.StatusFound {
-				campaignMemberDocuments = nil
-			}
-			// Ignore responded event for "Created event" based rule.
-			if campaignMemberDocuments != nil || len(campaignMemberDocuments) != 0 {
+			// len(campaignMemberDocuments) > 0 && timestamp sorted desc
+			enCampaignMemberProperties, _, err := GetSalesforceDocumentProperties(project.ID, &campaignMemberDocuments[len(campaignMemberDocuments)-1])
 
-				logCtx.WithField("Total_Documents", len(campaignMemberDocuments)).
-					WithField("Document[size-1]", campaignMemberDocuments[len(campaignMemberDocuments)-1]).
-					Info("Found existing campaign member document")
-
-				// len(campaignMemberDocuments) > 0 && timestamp sorted desc
-				enCampaignMemberProperties, _, err := GetSalesforceDocumentProperties(project.ID, &campaignMemberDocuments[len(campaignMemberDocuments)-1])
-
-				if err == nil {
-					// ignore to create a new touch point if last updated doc has EP_SFCampaignMemberResponded=true
-					if val, exists := (*enCampaignMemberProperties)[model.EP_SFCampaignMemberResponded]; exists {
-						if val.(bool) == true {
-							logCtx.Info("found EP_SFCampaignMemberResponded=true for the document, skipping creating OTP.")
-							fistRespondedRuleApplicable = false
-						}
-					}
-				} else {
-					logCtx.WithError(err).Error("Failed to get properties for salesforce campaign member, continuing")
-				}
-
-			}
-		}
-		for _, rule := range rules {
-
-			// check if rule is applicable
-			if !filterCheck(rule, trackPayload, logCtx) {
-				continue
-			}
-
-			// Run for create document rule
-			if rule.TouchPointTimeRef == model.SFCampaignMemberCreated && document.Action == model.SalesforceDocumentCreated {
-				_, err = CreateTouchPointEvent(project, trackPayload, document, rule)
-				if err != nil {
-					logCtx.WithError(err).Error("failed to create touch point for salesforce campaign member document. trying for responded rule")
-				}
-			}
-
-			// Run for only first responded rules & documents where first responded is not set.
-			if rule.TouchPointTimeRef == model.SFCampaignMemberResponded && fistRespondedRuleApplicable {
-
-				logCtx.Info("Found existing salesforce campaign member document")
-				if val, exists := trackPayload.EventProperties[model.EP_SFCampaignMemberResponded]; exists {
+			if err == nil {
+				// ignore to create a new touch point if last updated doc has EP_SFCampaignMemberResponded=true
+				if val, exists := (*enCampaignMemberProperties)[model.EP_SFCampaignMemberResponded]; exists {
 					if val.(bool) == true {
-						_, err = CreateTouchPointEvent(project, trackPayload, document, rule)
-						if err != nil {
-							logCtx.WithError(err).Error("failed to create touch point for salesforce campaign member document.")
-						}
+						logCtx.Info("found EP_SFCampaignMemberResponded=true for the document, skipping creating OTP.")
+						fistRespondedRuleApplicable = false
+					}
+				}
+			} else {
+				logCtx.WithError(err).Error("Failed to get properties for salesforce campaign member, continuing")
+			}
+
+		}
+	}
+
+	for _, rule := range *otpRules {
+
+		// check if rule is applicable
+		if !filterCheck(rule, trackPayload, logCtx) {
+			continue
+		}
+
+		// Run for create document rule
+		if rule.TouchPointTimeRef == model.SFCampaignMemberCreated && document.Action == model.SalesforceDocumentCreated {
+			_, err := CreateTouchPointEvent(project, trackPayload, document, rule)
+			if err != nil {
+				logCtx.WithError(err).Error("failed to create touch point for salesforce campaign member document. trying for responded rule")
+			}
+		}
+
+		// Run for only first responded rules & documents where first responded is not set.
+		if rule.TouchPointTimeRef == model.SFCampaignMemberResponded && fistRespondedRuleApplicable {
+
+			logCtx.Info("Found existing salesforce campaign member document")
+			if val, exists := trackPayload.EventProperties[model.EP_SFCampaignMemberResponded]; exists {
+				if val.(bool) == true {
+					_, err := CreateTouchPointEvent(project, trackPayload, document, rule)
+					if err != nil {
+						logCtx.WithError(err).Error("failed to create touch point for salesforce campaign member document.")
 					}
 				}
 			}
-
 		}
 	}
 	return nil
 }
 
-func CreateTouchPointEvent(project *model.Project, trackPayload *SDK.TrackPayload, document *model.SalesforceDocument, rule model.SFTouchPointRule) (*SDK.TrackResponse, error) {
+func CreateTouchPointEvent(project *model.Project, trackPayload *SDK.TrackPayload, document *model.SalesforceDocument, rule model.OTPRule) (*SDK.TrackResponse, error) {
 
 	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "CreateTouchPointEvent", "document_id": document.ID, "document_action": document.Action})
 	logCtx.WithField("document", document).WithField("trackPayload", trackPayload).Info("CreateTouchPointEvent: creating salesforce document")
@@ -1690,7 +1682,14 @@ func CreateTouchPointEvent(project *model.Project, trackPayload *SDK.TrackPayloa
 	}
 
 	// Mapping touch point properties:
-	for key, value := range rule.PropertiesMap {
+	var rulePropertiesMap map[string]model.TouchPointPropertyValue
+	err = U.DecodePostgresJsonbToStructType(&rule.PropertiesMap, &rulePropertiesMap)
+	if err != nil {
+		logCtx.WithField("Document", trackPayload).WithError(err).Error("Failed to decode/fetch offline touch point rule PROPERTIES for salesforce document.")
+		return trackResponse, errors.New(fmt.Sprintf("create salesforce touchpoint event track failed for doc type %d, message %s", document.Type, trackResponse.Error))
+	}
+
+	for key, value := range rulePropertiesMap {
 
 		if value.Type == model.TouchPointPropertyValueAsConstant {
 			payload.EventProperties[key] = value.Value
@@ -1703,6 +1702,8 @@ func CreateTouchPointEvent(project *model.Project, trackPayload *SDK.TrackPayloa
 			}
 		}
 	}
+	// Adding mandatory properties
+	payload.EventProperties[U.EP_OTP_RULE_ID] = rule.ID
 
 	status, trackResponse := SDK.Track(project.ID, payload, true, SDK.SourceSalesforce, "")
 	if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
@@ -1726,10 +1727,17 @@ func canCreateSFTouchPoint(touchPointTimeRef string, documentActionType model.Sa
 	return true
 }
 
-func filterCheck(rule model.SFTouchPointRule, trackPayload *SDK.TrackPayload, logCtx *log.Entry) bool {
+func filterCheck(rule model.OTPRule, trackPayload *SDK.TrackPayload, logCtx *log.Entry) bool {
+
+	var ruleFilters []model.TouchPointFilter
+	err := U.DecodePostgresJsonbToStructType(&rule.Filters, &ruleFilters)
+	if err != nil {
+		logCtx.WithField("Document", trackPayload).WithError(err).Error("Failed to decode/fetch offline touch point rule FILTERS for salesforce document.")
+		return false
+	}
 
 	filtersPassed := 0
-	for _, filter := range rule.Filters {
+	for _, filter := range ruleFilters {
 		switch filter.Operator {
 		case model.EqualsOpStr:
 			if _, exists := trackPayload.EventProperties[filter.Property]; exists {
@@ -1754,7 +1762,7 @@ func filterCheck(rule model.SFTouchPointRule, trackPayload *SDK.TrackPayload, lo
 			continue
 		}
 	}
-	return filtersPassed != 0 && filtersPassed == len(rule.Filters)
+	return filtersPassed != 0 && filtersPassed == len(ruleFilters)
 }
 
 /*
@@ -1779,23 +1787,23 @@ func filterCheck(rule model.SFTouchPointRule, trackPayload *SDK.TrackPayload, lo
 		ContactID:
 	}
 */
-func enrichCampaign(project *model.Project, document *model.SalesforceDocument, endTimestamp int64) int {
+func enrichCampaign(project *model.Project, otpRules *[]model.OTPRule, document *model.SalesforceDocument, endTimestamp int64) int {
 	if project.ID == 0 || document == nil {
 		return http.StatusBadRequest
 	}
 
 	if document.Type == model.SalesforceDocumentTypeCampaign {
-		return enrichCampaignToAllCampaignMembers(project, document, endTimestamp)
+		return enrichCampaignToAllCampaignMembers(project, otpRules, document, endTimestamp)
 	}
 
 	if document.Type == model.SalesforceDocumentTypeCampaignMember {
-		return enrichCampaignMember(project, document, endTimestamp)
+		return enrichCampaignMember(project, otpRules, document, endTimestamp)
 	}
 
 	return http.StatusBadRequest
 }
 
-func enrichAll(project *model.Project, documents []model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName,
+func enrichAll(project *model.Project, otpRules *[]model.OTPRule, documents []model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName,
 	pendingOpportunityGroupAssociations map[string]map[string]string, endTimestamp int64) int {
 	if project.ID == 0 {
 		return http.StatusBadRequest
@@ -1816,7 +1824,7 @@ func enrichAll(project *model.Project, documents []model.SalesforceDocument, sal
 		case model.SalesforceDocumentTypeOpportunity:
 			errCode = enrichOpportunities(project.ID, &documents[i], salesforceSmartEventNames)
 		case model.SalesforceDocumentTypeCampaign, model.SalesforceDocumentTypeCampaignMember:
-			errCode = enrichCampaign(project, &documents[i], endTimestamp)
+			errCode = enrichCampaign(project, otpRules, &documents[i], endTimestamp)
 		case model.SalesforceDocumentTypeOpportunityContactRole:
 			errCode = enrichOpportunityContactRoles(project.ID, &documents[i])
 		default:
@@ -1998,7 +2006,7 @@ func associateGroupUserOpportunitytoUser(projectID int64, oppLeadIds, oppContact
 
 			createdDocument := documets[0]
 			if createdDocument.Synced == false {
-				// only the first occurance of associations
+				// only the first occurrence of associations
 				if _, exist := pendingSyncRecords[docTypeAlias]; !exist {
 					pendingSyncRecords[docTypeAlias] = make(map[string]string)
 				}
@@ -2060,10 +2068,10 @@ type enrichWorkerStatus struct {
 	Lock       sync.Mutex
 }
 
-func enrichAllWorker(project *model.Project, wg *sync.WaitGroup, enrichStatus *enrichWorkerStatus,
+func enrichAllWorker(project *model.Project, wg *sync.WaitGroup, enrichStatus *enrichWorkerStatus, otpRules *[]model.OTPRule,
 	documents []model.SalesforceDocument, smartEventNames []SalesforceSmartEventName, pendingOpportunityGroupAssociations map[string]map[string]string, timeRange int64) {
 	defer wg.Done()
-	errCode := enrichAll(project, documents, smartEventNames, pendingOpportunityGroupAssociations, timeRange)
+	errCode := enrichAll(project, otpRules, documents, smartEventNames, pendingOpportunityGroupAssociations, timeRange)
 
 	enrichStatus.Lock.Lock()
 	defer enrichStatus.Lock.Unlock()
@@ -2105,6 +2113,14 @@ func Enrich(projectID int64, workerPerProject int, dataPropertiesByType map[int]
 	_, status = store.GetStore().CreateOrGetOfflineTouchPointEventName(projectID)
 	if status != http.StatusFound && status != http.StatusConflict && status != http.StatusCreated {
 		logCtx.Error("failed to create event name on SF for offline touch point")
+		return statusByProjectAndType, true
+	}
+
+	otpRules, errCode := store.GetStore().GetALLOTPRuleWithProjectId(projectID)
+	if errCode != http.StatusFound && errCode != http.StatusNotFound {
+		logCtx.WithField("err_code", errCode).Error("Failed to get otp Rules for Project")
+		statusByProjectAndType = append(statusByProjectAndType, Status{ProjectID: projectID,
+			Status: "Failed to get OTP rules"})
 		return statusByProjectAndType, true
 	}
 
@@ -2196,7 +2212,7 @@ func Enrich(projectID int64, workerPerProject int, dataPropertiesByType map[int]
 				for docID := range batch {
 					logCtx.WithFields(log.Fields{"worker": workerIndex, "doc_id": docID, "type": docTypeAlias}).Info("Processing Batch by doc_id")
 					wg.Add(1)
-					go enrichAllWorker(project, &wg, &enrichStatus, batch[docID], (*salesforceSmartEventNames)[docTypeAlias], pendingOpportunityGroupAssociations, timeRange[1])
+					go enrichAllWorker(project, &wg, &enrichStatus, &otpRules, batch[docID], (*salesforceSmartEventNames)[docTypeAlias], pendingOpportunityGroupAssociations, timeRange[1])
 					workerIndex++
 				}
 				wg.Wait()

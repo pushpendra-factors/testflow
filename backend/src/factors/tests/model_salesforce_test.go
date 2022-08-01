@@ -2833,10 +2833,17 @@ func TestSalesforceOfflineTouchPoint(t *testing.T) {
 		LogicalOp: "AND",
 	}
 
-	rule := model.SFTouchPointRule{
-		Filters:           []model.TouchPointFilter{filter1},
+	rulePropertyMap := make(map[string]model.TouchPointPropertyValue)
+	rulePropertyMap["$campaign"] = model.TouchPointPropertyValue{Type: model.TouchPointPropertyValueAsProperty, Value: "$salesforce_campaignmember_campaignname"}
+	rulePropertyMap["$channel"] = model.TouchPointPropertyValue{Type: model.TouchPointPropertyValueAsConstant, Value: "Other"}
+
+	f, _ := json.Marshal([]model.TouchPointFilter{filter1})
+	rPM, _ := json.Marshal(rulePropertyMap)
+
+	rule := model.OTPRule{
+		Filters:           postgres.Jsonb{json.RawMessage(f)},
 		TouchPointTimeRef: model.SFCampaignMemberCreated, // SFCampaignMemberResponded
-		PropertiesMap:     map[string]model.TouchPointPropertyValue{"$campaign": model.TouchPointPropertyValue{Type: model.TouchPointPropertyValueAsProperty, Value: "$salesforce_campaignmember_campaignname"}},
+		PropertiesMap:     postgres.Jsonb{json.RawMessage(rPM)},
 	}
 
 	trackResponse, err := IntSalesforce.CreateTouchPointEvent(project, trackPayload, &campaignMemberDocuments[0], rule)
@@ -2849,49 +2856,35 @@ func TestSalesforceOfflineTouchPoint(t *testing.T) {
 	eventPropertiesBytes, err := event.Properties.Value()
 	var eventPropertiesMap map[string]interface{}
 	_ = json.Unmarshal(eventPropertiesBytes.([]byte), &eventPropertiesMap)
-	assert.Equal(t, eventPropertiesMap["$campaign"], campaign1Name)
+	assert.Equal(t, campaign1Name, eventPropertiesMap["$campaign"])
 }
 
 func TestSalesforceOfflineTouchPointDecode(t *testing.T) {
 
-	project, _, err := SetupProjectWithAgentDAO()
+	_, _, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
 
 	filter1 := model.TouchPointFilter{
-		Property:  "$salesforce_campaign_name",
+		Property:  "$hubspot_campaign_name",
 		Operator:  "contains",
 		Value:     "Webinar",
 		LogicalOp: "AND",
 	}
 
-	rule := model.SFTouchPointRule{
-		Filters:           []model.TouchPointFilter{filter1},
+	rulePropertyMap := make(map[string]model.TouchPointPropertyValue)
+	rulePropertyMap["$campaign"] = model.TouchPointPropertyValue{Type: model.TouchPointPropertyValueAsProperty, Value: "$salesforce_campaign_type"}
+	rulePropertyMap["$channel"] = model.TouchPointPropertyValue{Type: model.TouchPointPropertyValueAsConstant, Value: "Other"}
+
+	f, _ := json.Marshal([]model.TouchPointFilter{filter1})
+	rPM, _ := json.Marshal(rulePropertyMap)
+
+	rule := model.OTPRule{
+		Filters:           postgres.Jsonb{json.RawMessage(f)},
 		TouchPointTimeRef: model.SFCampaignMemberCreated, // SFCampaignMemberResponded
-		PropertiesMap:     map[string]model.TouchPointPropertyValue{"$campaign": model.TouchPointPropertyValue{Type: model.TouchPointPropertyValueAsConstant, Value: "$salesforce_campaignmember_campaignname"}},
+		PropertiesMap:     postgres.Jsonb{json.RawMessage(rPM)},
 	}
+	fmt.Println(rule)
 
-	// creating manual rule
-	touchPointRules := make(map[string][]model.SFTouchPointRule)
-	touchPointRules["sf_touch_point_rules"] = []model.SFTouchPointRule{rule}
-
-	// adding json rule
-	project.SalesforceTouchPoints = postgres.Jsonb{RawMessage: json.RawMessage(`{"sf_touch_point_rules":[{"filters":[{"pr":"$salesforce_campaign_type","op":"equals","va":"Field Events","lop":"AND"},{"pr":"$salesforce_campaign_name","op":"contains","va":"Sendoso","lop":"AND"}],"touch_point_time_ref":"campaign_member_created_date","properties_map":{"$campaign":{"ty":"Property","va":"$salesforce_campaign_name"},"$source":{"ty":"Property","va":"$salesforce_campaign_type"},"$campaign_id":{"ty":"Property","va":"$salesforce_campaign_id"}}},{"filters":[{"pr":"$salesforce_campaign_type","op":"equals","va":"Others","lop":"AND"}],"touch_point_time_ref":"campaign_member_created_date","properties_map":{"$campaign":{"ty":"Property","va":"$salesforce_campaign_name"},"$source":{"ty":"Property","va":"$salesforce_campaign_type"},"$campaign_id":{"ty":"Property","va":"$salesforce_campaign_id"}}},{"filters":[{"pr":"$salesforce_campaign_type","op":"equals","va":"Nurture","lop":"AND"}],"touch_point_time_ref":"campaign_member_first_responded_date","properties_map":{"$campaign":{"ty":"Property","va":"$salesforce_campaign_name"},"$source":{"ty":"Property","va":"$salesforce_campaign_type"},"$campaign_id":{"ty":"Property","va":"$salesforce_campaign_id"}}}]}`)}
-	store.GetStore().UpdateProject(project.ID, project)
-
-	project, errCode := store.GetStore().GetProject(project.ID)
-	if errCode != http.StatusFound {
-		return
-	}
-	if &project.SalesforceTouchPoints != nil && !U.IsEmptyPostgresJsonb(&project.SalesforceTouchPoints) {
-
-		var touchPointRules map[string][]model.SFTouchPointRule
-		err := U.DecodePostgresJsonbToStructType(&project.SalesforceTouchPoints, &touchPointRules)
-		assert.Nil(t, err)
-
-		rules := touchPointRules["sf_touch_point_rules"]
-
-		assert.Equal(t, len(rules), 3)
-	}
 }
 
 func querySingleEventWithBreakdownByUserProperty(projectID int64, eventName string, propertyName string, from, to int64) (map[string]interface{}, int) {

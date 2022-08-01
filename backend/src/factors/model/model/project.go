@@ -60,14 +60,14 @@ type ProjectString struct {
 const (
 	JobsMetadataKeyNextSessionStartTimestamp = "next_session_start_timestamp"
 	JobsMetadataColumnName                   = "jobs_metadata"
-	LastModifiedTimeRef                      = "LAST_MODIFIED_TIME_REF"
+	/*LastModifiedTimeRef                      = "LAST_MODIFIED_TIME_REF"
 	TouchPointPropertyValueAsProperty        = "Property"
 	TouchPointPropertyValueAsConstant        = "Constant"
 
 	TouchPointRuleTypeEmails   = "Emails"
 	TouchPointRuleTypeMeetings = "Meetings"
 	TouchPointRuleTypeCalls    = "Calls"
-	TouchPointRuleTypeForms    = "Form_Submissions"
+	TouchPointRuleTypeForms    = "Form_Submissions"*/
 )
 
 const DefaultProjectName = "My Project"
@@ -76,7 +76,7 @@ type InteractionSettings struct {
 	UTMMappings map[string][]string `json:"utm_mapping"`
 }
 
-type SalesforceTouchPoints struct {
+/*type SalesforceTouchPoints struct {
 	TouchPointRules map[string][]SFTouchPointRule `json:"sf_touch_point_rules"`
 }
 
@@ -127,7 +127,7 @@ func DefaultHubspotTouchPointsRules() HubspotTouchPoints {
 	rules := HubspotTouchPoints{}
 	rules.TouchPointRules = make(map[string][]HSTouchPointRule)
 	return rules
-}
+}*/
 
 // DefaultMarketingPropertiesMap returns default query params and order (utm then qp) for various event properties.
 func DefaultMarketingPropertiesMap() InteractionSettings {
