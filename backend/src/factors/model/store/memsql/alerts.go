@@ -295,6 +295,7 @@ func (store *MemSQL) CreateAlert(projectID int64, alert model.Alert) (model.Aler
 		AlertName:          alert.AlertName,
 		CreatedBy:          alert.CreatedBy,
 		AlertType:          alert.AlertType,
+		QueryID:            alert.QueryID,
 		AlertDescription:   alert.AlertDescription,
 		AlertConfiguration: alert.AlertConfiguration,
 		IsDeleted:          false,
