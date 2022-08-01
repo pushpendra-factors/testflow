@@ -135,6 +135,7 @@ function NoBreakdownCharts({
         dateSorter={dateSorter}
         setDateSorter={setDateSorter}
         responseData={resultState.data}
+        section={section}
       />
     );
   } else {
