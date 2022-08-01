@@ -184,7 +184,7 @@ func main() {
 			} else {
 				trackStatus := ""
 				for _, record := range resp.Values {
-					eventProperties, userProperties, timestamp, errTransform := model.TransformAndGenerateTrackPayload(record, leadgenSetting.ProjectID, model.SourceAliasMapping[leadgenSetting.Source])
+					eventProperties, userProperties, timestamp, errTransform := model.TransformAndGenerateTrackPayload(record, leadgenSetting.ProjectID, model.SourceAliasMapping[leadgenSetting.Source], leadgenSetting.Timezone)
 					if errTransform != nil {
 						log.WithFields(log.Fields{"record": record, "document": leadgenSetting}).Error(errTransform)
 						trackStatus = "failed"

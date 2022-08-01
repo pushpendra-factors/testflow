@@ -837,6 +837,7 @@ CREATE ROWSTORE TABLE IF NOT EXISTS leadgen_settings (
     spreadsheet_id text,
     sheet_name text,
     row_read bigint,
+    timezone text,
     created_at timestamp(6),
     updated_at timestamp(6),
     SHARD KEY (project_id),
