@@ -141,7 +141,7 @@ function TemplateDetails({setShowCardDetails,templates,setTemplateSelected,setSh
                         </div>
                     </div>
                 </div>
-                <CopyDashboardModal showCopyDashBoardModal={showCopyDashBoardModal} setShowCopyDashBoardModal={setShowCopyDashBoardModal}/>
+                <CopyDashboardModal showCopyDashBoardModal={showCopyDashBoardModal} setShowCopyDashBoardModal={setShowCopyDashBoardModal} setShowTemplates={setShowTemplates}/>
             </ErrorBoundary>
         </>
     );
