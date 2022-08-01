@@ -10,5 +10,5 @@ CREATE TABLE IF NOT EXISTS dashboard_templates(
     created_at timestamp(6) NOT NULL, 
     updated_at timestamp(6) NOT NULL,
     KEY (id) USING HASH,
-    SHARD KEY (id),
+    SHARD KEY (id)
 );

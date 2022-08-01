@@ -1,14 +1,14 @@
-CREATE TABLE IF NOT EXISTS dashboard_templates(
+CREATE TABLE IF NOT EXISTS otp_rules(
     id text NOT NULL,
-    title text,
-    description text,
-    dashboard json,
-    units json,
+    project_id bigint NOT NULL,
+    rule_type text,
+    touch_point_time_ref text,
+    filters json,
+    properties_map json,
     is_deleted boolean DEFAULT false,
-    similar_template_ids json,
-    tags json,
-    created_at timestamp(6) NOT NULL, 
+    created_by text,
+    created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
     KEY (id) USING HASH,
-    SHARD KEY (id),
+    SHARD KEY (id)
 );
