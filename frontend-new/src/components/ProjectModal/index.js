@@ -43,7 +43,7 @@ function ProjectModal(props) {
     history.push('/');
     notification.success({
       message: 'Project Changed!',
-      description: `You are currently viewing data from ${selectedProject.name}`,
+      description: `You are currently viewing data from ${selectedProject?.name}`,
     });
   };
 
@@ -150,7 +150,7 @@ function ProjectModal(props) {
           </Button>
         </div>
 
-        {props.projects.length > 6 ? (
+        {props.projects?.length > 6 ? (
           <input
             onChange={(e) => searchProject(e)}
             value={searchProjectName}
@@ -161,7 +161,7 @@ function ProjectModal(props) {
         <div className={'flex flex-col items-start fa-project-list--wrapper'}>
           {props.projects
             .filter((project) =>
-              project.name
+              project?.name
                 .toLowerCase()
                 .includes(searchProjectName.toLowerCase())
             )
@@ -170,10 +170,10 @@ function ProjectModal(props) {
                 <div
                   key={index}
                   className={`flex justify-between items-center project-item mx-2 ${
-                    props.active_project.id === project.id ? 'active' : null
+                    props.active_project?.id === project?.id ? 'active' : null
                   }`}
                   onClick={() => {
-                    if (props.active_project.id !== project.id) {
+                    if (props.active_project?.id !== project?.id) {
                       setShowPopOver(false);
                       setchangeProjectModal(true);
                       setselectedProject(project);
@@ -192,9 +192,9 @@ function ProjectModal(props) {
                         borderRadius: '4px',
                       }}
                     >{`${project?.name?.charAt(0)}`}</Avatar>
-                    <span className='font-bold ml-3'>{project.name}</span>
+                    <span className='font-bold ml-3'>{project?.name}</span>
                   </div>
-                  {props.active_project.id === project.id ? (
+                  {props.active_project?.id === project?.id ? (
                     <SVG name='check_circle' />
                   ) : null}
                 </div>
