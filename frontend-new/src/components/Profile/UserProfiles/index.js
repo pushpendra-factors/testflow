@@ -62,6 +62,7 @@ function UserProfiles({
   const [isDDVisible, setDDVisible] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [demoProjectId, setDemoProjectId] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   const [filterPayload, setFilterPayload] = useState({
     source: 'web',
@@ -107,6 +108,12 @@ function UserProfiles({
 
   useEffect(() => {
     getUserProperties(activeProject.id);
+  }, [activeProject]);
+
+  useEffect(() => {
+    setTimeout(() => {
+      setLoading(false);
+    }, 1000);
   }, [activeProject]);
 
   const showModal = () => {
@@ -199,6 +206,14 @@ function UserProfiles({
       </div>
     );
   };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center w-full h-64">
+        <Spin size="large" />
+      </div>
+    );
+  }
 
   if (isIntegrationEnabled || activeProject.id === demoProjectId) {
     return (

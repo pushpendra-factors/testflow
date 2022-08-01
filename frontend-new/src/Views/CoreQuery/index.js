@@ -9,7 +9,7 @@ import MomentTz from 'Components/MomentTz';
 import { bindActionCreators } from 'redux';
 import { connect, useSelector, useDispatch } from 'react-redux';
 import { ErrorBoundary } from 'react-error-boundary';
-import { Drawer, Button, Modal, Row, Col } from 'antd';
+import { Drawer, Button, Modal, Row, Col, Spin } from 'antd';
 import _ from 'lodash';
 import factorsai from 'factorsai';
 
@@ -154,6 +154,7 @@ function CoreQuery({
   const [queries, setQueries] = useState([]);
   const [selectedMainCategory, setSelectedMainCategory] = useState(false);
   const [KPIConfigProps, setKPIConfigProps] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const [demoProjectId, setDemoProjectId] = useState(null);
   const [showProjectModal, setShowProjectModal] = useState(false);
@@ -241,6 +242,11 @@ function CoreQuery({
     userflow.start('c162ed75-0983-41f3-ae56-8aedd7dbbfbd');
   }
 
+  useEffect(() => {
+    setTimeout(() => {
+      setLoading(false);
+    }, 1000);
+  }, [activeProject]);
 
   useEffect(() => {
     fetchProjectSettingsV1(activeProject.id);
@@ -1498,6 +1504,14 @@ function CoreQuery({
     });
     return DDvalues;
   };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center w-full h-64">
+        <Spin size="large" />
+      </div>
+    );
+  }
 
   if (isIntegrationEnabled || activeProject.id === demoProjectId) {
     return (
