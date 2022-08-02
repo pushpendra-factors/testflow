@@ -87,7 +87,7 @@ function GroupedBarChart({
                   >
                     {attributionMethodsMapper[method1]}
                   </Text>
-                  <Text color='grey2' type='title' extraClass='mb-0'>
+                  <Text color='grey-2' type='title' extraClass='mb-0'>
                     <NumFormat number={data[method1]} />
                   </Text>
                 </div>
@@ -101,7 +101,7 @@ function GroupedBarChart({
                   >
                     {attributionMethodsMapper[method2]}
                   </Text>
-                  <Text color='grey2' type='title' extraClass='mb-0'>
+                  <Text color='grey-2' type='title' extraClass='mb-0'>
                     <NumFormat number={data[method2]} />
                   </Text>
                 </div>
@@ -109,7 +109,7 @@ function GroupedBarChart({
               <div className='pt-3'>
                 <div className='flex justify-between'>
                   <Text
-                    color='grey2'
+                    color='grey-2'
                     type='title'
                     extraClass='mb-0 leading-4'
                     level={8}
@@ -117,7 +117,7 @@ function GroupedBarChart({
                     Impressions
                   </Text>
                   <Text
-                    color='grey2'
+                    color='grey-2'
                     type='title'
                     extraClass='mb-0 leading-4'
                     level={8}
@@ -127,7 +127,7 @@ function GroupedBarChart({
                 </div>
                 <div className='flex justify-between mt-2'>
                   <Text
-                    color='grey2'
+                    color='grey-2'
                     type='title'
                     extraClass='mb-0 leading-4'
                     level={8}
@@ -135,7 +135,7 @@ function GroupedBarChart({
                     Clicks
                   </Text>
                   <Text
-                    color='grey2'
+                    color='grey-2'
                     type='title'
                     extraClass='mb-0 leading-4'
                     level={8}
@@ -145,7 +145,7 @@ function GroupedBarChart({
                 </div>
                 <div className='flex justify-between mt-2'>
                   <Text
-                    color='grey2'
+                    color='grey-2'
                     type='title'
                     extraClass='mb-0 leading-4'
                     level={8}
@@ -153,7 +153,7 @@ function GroupedBarChart({
                     Spend
                   </Text>
                   <Text
-                    color='grey2'
+                    color='grey-2'
                     type='title'
                     extraClass='mb-0 leading-4'
                     level={8}
@@ -163,7 +163,7 @@ function GroupedBarChart({
                 </div>
                 <div className='flex justify-between mt-2'>
                   <Text
-                    color='grey2'
+                    color='grey-2'
                     type='title'
                     extraClass='mb-0 leading-4'
                     level={8}
@@ -171,7 +171,7 @@ function GroupedBarChart({
                     Sessions
                   </Text>
                   <Text
-                    color='grey2'
+                    color='grey-2'
                     type='title'
                     extraClass='mb-0 leading-4'
                     level={8}

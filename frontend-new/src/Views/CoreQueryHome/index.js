@@ -79,6 +79,8 @@ import {
   enableSlackIntegration
 } from 'Reducers/global';
 import AppModal from '../../components/AppModal';
+import userflow from 'userflow.js';
+import {USERFLOW_CONFIG_ID} from 'Utils/userflowConfig'
 
 // const whiteListedAccounts_KPI = [
 //   'jitesh@factors.ai',
@@ -95,27 +97,27 @@ const coreQueryoptions = [
   {
     title: 'KPIs',
     icon: 'KPI_cq',
-    desc: 'Access your key marketing metrics'
+    desc: 'Measure performance over time for your main objectives'
   },
   {
     title: 'Funnels',
     icon: 'funnels_cq',
-    desc: 'Find how users are navigating a defined path'
+    desc: 'Track how users navigate across their buying journey'
   },
   {
     title: 'Attribution',
     icon: 'attributions_cq',
-    desc: 'Analyse Multi Touch Attributions'
+    desc: 'Identify the channels that contribute to conversion goals'
   },
   {
     title: 'Profiles',
     icon: 'profiles_cq',
-    desc: 'Explore all Profiles with filters and breakdowns'
+    desc: 'Slice and dice your visitors and users as you wish'
   },
   {
     title: 'Events',
     icon: 'events_cq',
-    desc: 'Create charts from events and related properties'
+    desc: 'Track and chart events and related properties'
   },
   // {
   //   title: 'Campaigns',
@@ -125,7 +127,7 @@ const coreQueryoptions = [
   {
     title: 'Templates',
     icon: 'templates_cq',
-    desc: 'A list of advanced queries crafted by experts'
+    desc: 'Access pre-defined and elegant reports to quickly get started'
   }
 ];
 
@@ -925,6 +927,10 @@ function CoreQuery({
               <Col span={20}>
                 <Row gutter={[24, 24]}>
                   <Col span={24}>
+                    <div className='flex space-between w-full items-center'>
+
+                    <div className='flex flex-col w-full'>
+
                     <Text
                       type={'title'}
                       level={3}
@@ -940,9 +946,18 @@ function CoreQuery({
                       color={'grey'}
                       extraClass={'m-0'}
                     >
-                      Use these techniques to Analyse and get a deeper
-                      understanding of User Behaviors and Marketing Funnels
+                      Here's where all the action happens. Use these modules to get a deeper understanding of your marketing and revenue activities. <a href='#!'>Learn more</a>
                     </Text>
+                    </div>
+                    <div className='flex justify-end'>
+                      <Button 
+                      type='link'
+                      icon={<SVG name={`Handshake`} size={24} color={'blue'}/>}
+                      onClick={()=>{ 
+                        userflow.start(USERFLOW_CONFIG_ID?.AnalysePage)
+                      }}>Walk me through</Button>
+                    </div>
+                    </div>
                   </Col>
                   <Col span={24}>
                     <div className={'flex justify-between mt-4'}>

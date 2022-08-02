@@ -549,36 +549,142 @@ func GetHubspotDocumentCreatedTimestamp(document *HubspotDocument) (int64, error
 
 // HubspotIntegrationAccount account specific data for the hubspot api key
 type HubspotIntegrationAccount struct {
-	PortalID  int    `json:"portalId"`
-	TimeZone  string `json:"timeZone"`
-	Currency  string `json:"currency"`
-	UtcOffset string `json:"utcOffset"`
+	PortalID              int              `json:"portalId"`
+	TimeZone              U.TimeZoneString `json:"timeZone"`
+	Currency              string           `json:"currency"`
+	UTCOffsetMilliseconds int              `json:"utcOffsetMilliseconds"`
+	UtcOffset             string           `json:"utcOffset"`
 }
 
-// GetHubspotIntegrationAccount gets hubspot integration account using access token
-func GetHubspotIntegrationAccount(apiKey string) (*HubspotIntegrationAccount, error) {
-	var hubspotIntegrationAccount HubspotIntegrationAccount
+type HubspotOAuthUserCredentials struct {
+	RefreshToken string `json:"refresh_token"`
+	AccessToken  string `json:"access_token"`
+	TokenType    string `json:"token_type"`
+	ExpiresIn    int    `json:"expires_in"`
+}
 
-	if apiKey == "" {
-		return &hubspotIntegrationAccount, errors.New("missing hubspot api key")
+func GetHubspotAccessToken(refreshToken, appID, appSecret string) (string, error) {
+	url := "https://api.hubapi.com/oauth/v1/token?"
+	parameters := fmt.Sprintf("grant_type=%s&client_id=%s&client_secret=%s&refresh_token=%s", "refresh_token", appID, appSecret, refreshToken)
+	url = url + parameters
+
+	resp, err := ActionHubspotRequestHandler("POST", url, "", "", "application/x-www-form-urlencoded;charset=utf-8")
+	if err != nil {
+		return "", err
+	}
+	if resp.StatusCode != http.StatusOK {
+		var body interface{}
+		json.NewDecoder(resp.Body).Decode(&body)
+		log.WithFields(log.Fields{"response_body": body}).Error("Failed to get hubspot access token")
+		return "", fmt.Errorf("failed to get hubspot access token")
 	}
 
-	url := "https://api.hubapi.com/integrations/v1/me?hapikey=" + apiKey
-
-	resp, err := http.Get(url)
+	var userCredentials HubspotOAuthUserCredentials
+	err = json.NewDecoder(resp.Body).Decode(&userCredentials)
 	if err != nil {
-		return &hubspotIntegrationAccount, err
+		return "", err
+	}
+
+	return userCredentials.AccessToken, nil
+}
+
+func ActionHubspotRequestHandler(method, url, apiKey, accessToken, contentType string) (*http.Response, error) {
+
+	if apiKey != "" {
+		url = url + "hapikey=" + apiKey
+	}
+
+	req, err := http.NewRequest(method, url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if accessToken != "" {
+		req.Header["Authorization"] = []string{"Bearer " + accessToken}
+	}
+
+	if contentType != "" {
+		req.Header["Content-Type"] = []string{contentType}
+	}
+
+	client := &http.Client{
+		Timeout: 10 * time.Minute,
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp, nil
+}
+
+// GetHubspotIntegrationAccount gets hubspot integration account using api key or access token. appID and appSecret is used only in refresh token
+func GetHubspotIntegrationAccount(projectID int64, apiKey, refreshToken, appID, appSecret string) (*HubspotIntegrationAccount, error) {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID})
+	var hubspotIntegrationAccount HubspotIntegrationAccount
+
+	if apiKey == "" && refreshToken == "" {
+		logCtx.Error("Failed to get hubspot api key and refresh token")
+		return &hubspotIntegrationAccount, errors.New("missing api key and refresh token")
+	}
+
+	url := "https://api.hubapi.com/integrations/v1/me?"
+
+	var resp *http.Response
+	var err error
+	if refreshToken != "" {
+		accessToken, err := GetHubspotAccessToken(refreshToken, appID, appSecret)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to get hubspot access token.")
+			return &hubspotIntegrationAccount, err
+		}
+
+		resp, err = ActionHubspotRequestHandler("GET", url, "", accessToken, "")
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to request for hubspot account info using access token.")
+			return &hubspotIntegrationAccount, err
+		}
+
+	} else {
+		resp, err = ActionHubspotRequestHandler("GET", url, apiKey, "", "")
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to request for hubspot account info using api key.")
+			return &hubspotIntegrationAccount, err
+		}
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return &hubspotIntegrationAccount, fmt.Errorf("error getting integration account using hubspot access token")
+		var body interface{}
+		json.NewDecoder(resp.Body).Decode(&body)
+		logCtx.WithFields(log.Fields{"respone_body": body}).WithError(err).Error("Failed to get hubspot account info ")
+		return &hubspotIntegrationAccount, fmt.Errorf("error getting integration account")
 	}
 
 	err = json.NewDecoder(resp.Body).Decode(&hubspotIntegrationAccount)
 	if err != nil {
+		logCtx.WithError(err).Error("Failed to decode hubspot account info.")
 		return &hubspotIntegrationAccount, err
 	}
+
 	return &hubspotIntegrationAccount, nil
+}
+
+func GetHubspotAccountTimezone(projectID int64, apiKey, refreshToken, appID, appSecret string) (U.TimeZoneString, error) {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID})
+	account, err := GetHubspotIntegrationAccount(projectID, apiKey, refreshToken, appID, appSecret)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get hubspot account info for timezone.")
+		return "", err
+	}
+
+	_, err = time.LoadLocation(string(account.TimeZone))
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to load timezone from account.")
+		return "", err
+	}
+
+	return account.TimeZone, nil
 }
 
 // GetHubspotDecodedSyncInfo decode sync info from project settings to map

@@ -10,11 +10,17 @@ import {
   CHART_TYPE_SPARKLINES,
   QUERY_TYPE_EVENT,
   QUERY_TYPE_KPI,
-  QUERY_TYPE_PROFILE
+  QUERY_TYPE_PROFILE,
+  QUERY_TYPE_ATTRIBUTION,
+  QUERY_TYPE_FUNNEL
 } from '../../utils/constants';
 import FaSelect from 'Components/FaSelect';
 import { getChartType } from '../../Views/CoreQuery/AnalysisResultsPage/analysisResultsPage.helpers';
 import { CoreQueryContext } from '../../contexts/CoreQueryContext';
+import userflow from 'userflow.js';
+import {USERFLOW_CONFIG_ID} from 'Utils/userflowConfig'
+
+
 const QueryActionsComponent = ({
   queryType,
   breakdown,
@@ -82,6 +88,20 @@ const QueryActionsComponent = ({
       )
     ) : null;
   };
+
+  const triggerUserFlow  = () =>{
+
+    if(queryType == QUERY_TYPE_ATTRIBUTION || queryType == QUERY_TYPE_FUNNEL || queryType == QUERY_TYPE_KPI){
+
+      let flowID = "";
+      if(queryType == QUERY_TYPE_ATTRIBUTION) {flowID = USERFLOW_CONFIG_ID?.AttributionQueryBuilder};
+      if(queryType == QUERY_TYPE_FUNNEL){flowID = USERFLOW_CONFIG_ID?.FunnelSQueryBuilder};
+      if(queryType == QUERY_TYPE_KPI){flowID = USERFLOW_CONFIG_ID?.KPIQueryBuilder};
+
+      userflow.start(flowID)
+  }
+  }
+
   return (
     <div className="flex gap-x-2 items-center">
       <ControlledComponent controller={!savedQueryId}>
@@ -94,6 +114,19 @@ const QueryActionsComponent = ({
           {'Save'}
         </Button>
       </ControlledComponent>
+
+      {(queryType == QUERY_TYPE_ATTRIBUTION || queryType == QUERY_TYPE_FUNNEL || queryType == QUERY_TYPE_KPI) && <>
+        <Tooltip placement="bottom" title="Walk me through">
+          <Button
+            onClick={triggerUserFlow} 
+            size="large"
+            type="text"
+            icon={<SVG name={'Handshake'} size={24} color={'grey'} />}
+          /> 
+        </Tooltip>
+        </>
+        }
+
       <ControlledComponent controller={!!savedQueryId}>
         <Tooltip placement="bottom" title="Save as New">
           <Button

@@ -148,6 +148,22 @@ function Events({
                 <Row className={'mt-4'}>
                   <Col span={24}>
                     <div className={'mt-6'}>
+                        <Text
+                          type={'title'}
+                          level={7}
+                          color={'grey-2'}
+                          extraClass={'m-0'}
+                        >
+                          Set up custom events that get logged based on transitions and state changes inside your CRM. Use this new event you define across your funnel and attribution queries.
+                        </Text>
+                        <Text
+                          type={'title'}
+                          level={7}
+                          color={'grey-2'}
+                          extraClass={'m-0 mt-2'}
+                        >
+                          For example, logging a contact’s stage inside your CRM as ‘Demo Done’ is an important milestone. Factors lets you monitor and track this event natively inside the platform.
+                        </Text>
                       <Tabs defaultActiveKey='1'>
                         <TabPane tab='Custom Events' key='1'>
                           <Table

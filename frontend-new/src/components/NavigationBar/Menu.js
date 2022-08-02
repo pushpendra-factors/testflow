@@ -155,11 +155,11 @@ function SiderMenu({
     const getData = async () => {
       await fetchAgentInfo();
       await fetchProjects();
-      await fetchProjectAgents(activeProject.id);
+      await fetchProjectAgents(activeProject?.id);
     };
     getData();
     if (location.pathname === '/configure/events') {
-      fetchSmartEvents(activeProject.id);
+      fetchSmartEvents(activeProject?.id);
     }
   }, [location.pathname, activeProject]);
 

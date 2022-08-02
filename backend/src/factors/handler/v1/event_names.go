@@ -7,6 +7,7 @@ import (
 	U "factors/util"
 	"fmt"
 	"net/http"
+	"strings"
 
 	C "factors/config"
 
@@ -91,10 +92,10 @@ func GetEventNamesHandler(c *gin.Context) {
 		displayNameEvents := make(map[string]string)
 		standardEvents := U.STANDARD_EVENTS_DISPLAY_NAMES
 		for event, displayName := range standardEvents {
-			displayNameEvents[event] = displayName
+			displayNameEvents[event] = strings.Title(displayName)
 		}
 		for event, displayName := range displayNames {
-			displayNameEvents[event] = displayName
+			displayNameEvents[event] = strings.Title(displayName)
 		}
 		// TODO: Janani Removing the IsExact property from output since its anyway backward compat with UI
 		// Will remove exact/approx logic in UI as well

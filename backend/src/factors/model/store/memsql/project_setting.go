@@ -458,14 +458,16 @@ func (store *MemSQL) UpdateProjectSettings(projectId int64, settings *model.Proj
 		return nil, http.StatusInternalServerError
 	}
 
-	if settings.IntHubspotApiKey != "" {
+	if settings.IntHubspotApiKey != "" || settings.IntHubspotRefreshToken != "" {
 		existingSettings, status := store.GetProjectSetting(projectId)
 		if status != http.StatusFound {
 			return nil, http.StatusInternalServerError
 		}
 
-		if existingSettings.IntHubspotApiKey != settings.IntHubspotApiKey {
-			hubspotIntegrationAccount, err := model.GetHubspotIntegrationAccount(settings.IntHubspotApiKey)
+		if (settings.IntHubspotApiKey != "" && existingSettings.IntHubspotApiKey != settings.IntHubspotApiKey) ||
+			(settings.IntHubspotRefreshToken != "" && existingSettings.IntHubspotRefreshToken != settings.IntHubspotRefreshToken) {
+			hubspotIntegrationAccount, err := model.GetHubspotIntegrationAccount(projectId, settings.IntHubspotApiKey,
+				settings.IntHubspotRefreshToken, C.GetHubspotAppID(), C.GetHubspotAppSecret())
 			if err != nil {
 				log.WithFields(log.Fields{"project_id": projectId}).WithError(
 					err).Error("Failed to fetch hubspot account details on integration.") // log error but still allow integration
@@ -480,7 +482,6 @@ func (store *MemSQL) UpdateProjectSettings(projectId int64, settings *model.Proj
 				}
 			} else {
 				settings.IntHubspotPortalID = &hubspotIntegrationAccount.PortalID
-				settings.IntHubspotSyncInfo = nil
 			}
 
 		}
@@ -699,9 +700,9 @@ func (store *MemSQL) GetAllHubspotProjectSettings() ([]model.HubspotProjectSetti
 
 	db := C.GetServices().Db
 	err := db.Table("project_settings").Where(
-		"int_hubspot=true AND int_hubspot_api_key IS NOT NULL ").Select(
+		"int_hubspot=true AND ( int_hubspot_api_key IS NOT NULL OR int_hubspot_refresh_token is not NULL )").Select(
 		"project_id, int_hubspot_api_key as api_key, int_hubspot_first_time_synced as is_first_time_synced," +
-			"int_hubspot_sync_info as sync_info").
+			"int_hubspot_sync_info as sync_info, int_hubspot_refresh_token as refresh_token").
 		Find(&hubspotProjectSettings).Error
 	if err != nil {
 		log.WithError(err).Error("Failed to get hubspot project_settings.")
@@ -733,9 +734,9 @@ func (store *MemSQL) GetAllHubspotProjectSettingsForProjectID(projectID int64) (
 
 	db := C.GetServices().Db
 	err := db.Table("project_settings").Where(
-		"int_hubspot=true AND int_hubspot_api_key IS NOT NULL AND project_id IN (?)", projectID).Select(
+		"int_hubspot=true AND ( int_hubspot_api_key IS NOT NULL OR int_hubspot_refresh_token is not NULL ) AND project_id IN (?)", projectID).Select(
 		"project_id, int_hubspot_api_key as api_key, int_hubspot_first_time_synced as is_first_time_synced," +
-			"int_hubspot_sync_info as sync_info").
+			"int_hubspot_sync_info as sync_info, int_hubspot_refresh_token as refresh_token").
 		Find(&hubspotProjectSettings).Error
 	if err != nil {
 		log.WithError(err).Error("Failed to get hubspot project_settings.")

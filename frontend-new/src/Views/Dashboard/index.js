@@ -8,7 +8,8 @@ import {
   fetchProjectSettingsV1,
   fetchDemoProject,
   fetchBingAdsIntegration,
-  fetchMarketoIntegration
+  fetchMarketoIntegration,
+  fetchProjectSettings
 } from 'Reducers/global';
 
 import AddDashboard from './AddDashboard';
@@ -20,11 +21,13 @@ import EmptyDashboard from './EmptyDashboard';
 import DashboardAfterIntegration from './EmptyDashboard/DashboardAfterIntegration';
 import ProjectDropdown from './ProjectDropdown';
 import { DASHBOARD_KEYS } from '../../constants/localStorage.constants';
+import DashboardBeforeIntegration from './DashboardBeforeIntegration';
 
 function Dashboard({
   fetchProjectSettingsV1,
   fetchBingAdsIntegration,
-  fetchMarketoIntegration
+  fetchMarketoIntegration,
+  fetchProjectSettings
 }) {
   const [addDashboardModal, setaddDashboardModal] = useState(false);
   const [editDashboard, setEditDashboard] = useState(null);
@@ -41,18 +44,19 @@ function Dashboard({
   const history = useHistory();
 
   useEffect(() => {
-    fetchProjectSettingsV1(activeProject.id)
-      .then((res) => {
-        setSdkCheck(res.data.int_completed);
-      })
-      .catch((err) => {
-        console.log(err);
-        history.push('/');
-      });
+    fetchProjectSettingsV1(activeProject?.id)
+    .then((res) => {
+      setSdkCheck(res?.data?.int_completed);
+    })
+    .catch((err) => {
+      console.log(err);
+    });
+
+    fetchProjectSettings(activeProject?.id);
 
     if (dashboards?.data?.length == 0) {
-      fetchBingAdsIntegration(activeProject.id);
-      fetchMarketoIntegration(activeProject.id);
+      fetchBingAdsIntegration(activeProject?.id);
+      fetchMarketoIntegration(activeProject?.id);
     }
   }, [activeProject, sdkCheck]);
 
@@ -168,7 +172,8 @@ function Dashboard({
             />
           </>
         ) : (
-          <EmptyDashboard />
+          // <EmptyDashboard />
+          <DashboardBeforeIntegration />
         )}
       </>
     );
@@ -179,5 +184,6 @@ export default connect(null, {
   fetchProjectSettingsV1,
   fetchDemoProject,
   fetchBingAdsIntegration,
-  fetchMarketoIntegration
+  fetchMarketoIntegration,
+  fetchProjectSettings
 })(Dashboard);

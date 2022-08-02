@@ -9,7 +9,7 @@ import MomentTz from 'Components/MomentTz';
 import { bindActionCreators } from 'redux';
 import { connect, useSelector, useDispatch } from 'react-redux';
 import { ErrorBoundary } from 'react-error-boundary';
-import { Drawer, Button, Modal, Row, Col } from 'antd';
+import { Drawer, Button, Modal, Row, Col, Spin } from 'antd';
 import _ from 'lodash';
 import factorsai from 'factorsai';
 
@@ -107,11 +107,12 @@ import {
 import { getChartChangedKey } from './AnalysisResultsPage/analysisResultsPage.helpers';
 import { EMPTY_OBJECT } from '../../utils/global';
 import moment from 'moment';
-import { fetchDemoProject, getHubspotContact } from 'Reducers/global';
+import { fetchDemoProject, getHubspotContact, fetchProjectSettingsV1, fetchProjectSettings, fetchMarketoIntegration, fetchBingAdsIntegration } from 'Reducers/global';
 import { meetLink } from '../../utils/hubspot';
 import NewProject from '../Settings/SetupAssist/Modals/NewProject';
 import userflow from 'userflow.js';
 import { useHistory } from 'react-router-dom';
+import AnalyseBeforeIntegration from './AnalyseBeforeIntegration';
 
 function CoreQuery({
   activeProject,
@@ -121,10 +122,19 @@ function CoreQuery({
   KPI_config,
   fetchDemoProject,
   getHubspotContact,
+  fetchProjectSettingsV1,
+  fetchProjectSettings,
+  fetchMarketoIntegration,
+  fetchBingAdsIntegration,
+  existingQueries
 }) {
   const savedQueries = useSelector((state) =>
     _.get(state, 'queries.data', EMPTY_ARRAY)
   );
+
+  const integration = useSelector((state) => state.global.currentProjectSettings);
+  const integrationV1 = useSelector((state) => state.global.projectSettingsV1);
+  const { bingAds, marketo } = useSelector((state) => state.global);
 
   const [coreQueryState, localDispatch] = useReducer(
     CoreQueryReducer,
@@ -144,9 +154,9 @@ function CoreQuery({
   const [queries, setQueries] = useState([]);
   const [selectedMainCategory, setSelectedMainCategory] = useState(false);
   const [KPIConfigProps, setKPIConfigProps] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const [demoProjectId, setDemoProjectId] = useState(null);
-  const [ownerID, setOwnerID] = useState();
   const [showProjectModal, setShowProjectModal] = useState(false);
   const { projects } = useSelector((state) => state.global);
   const currentAgent = useSelector((state) => state.agent.agent_details);
@@ -231,6 +241,34 @@ function CoreQuery({
     history.push('/');
     userflow.start('c162ed75-0983-41f3-ae56-8aedd7dbbfbd');
   }
+
+  useEffect(() => {
+    setTimeout(() => {
+      setLoading(false);
+    }, 1000);
+  }, [activeProject]);
+
+  useEffect(() => {
+    fetchProjectSettingsV1(activeProject.id);
+    fetchProjectSettings(activeProject.id);
+    fetchBingAdsIntegration(activeProject.id);
+    fetchMarketoIntegration(activeProject.id);
+  }, [activeProject]);
+
+
+  const isIntegrationEnabled =
+  integration?.int_segment ||
+  integration?.int_adwords_enabled_agent_uuid ||
+  integration?.int_linkedin_agent_uuid ||
+  integration?.int_facebook_user_id ||
+  integration?.int_hubspot ||
+  integration?.int_salesforce_enabled_agent_uuid ||
+  integration?.int_drift ||
+  integration?.int_google_organic_enabled_agent_uuid ||
+  integration?.int_clear_bit ||
+  integrationV1?.int_completed ||
+  bingAds?.accounts ||
+  marketo?.status || integrationV1?.int_slack;
 
   useEffect(() => {
     if (activeProject && activeProject.id) {
@@ -1467,106 +1505,115 @@ function CoreQuery({
     return DDvalues;
   };
 
-  return (
-    <>
-      <ErrorBoundary
-        fallback={
-          <FaErrorComp
-            size={'medium'}
-            title={'Analyse Error'}
-            subtitle={
-              'We are facing trouble loading Analyse. Drop us a message on the in-app chat.'
-            }
-          />
-        }
-        onError={FaErrorLog}
-      >
-        {
-          <Drawer
-            title={title()}
-            placement="left"
-            closable={false}
-            visible={drawerVisible && !checkIfnewComposer()}
-            onClose={closeDrawer}
-            getContainer={false}
-            width={'650px'}
-            className={'fa-drawer'}
-          >
-            <ErrorBoundary
-              fallback={
-                <FaErrorComp subtitle={'Facing issues with Query Builder'} />
-              }
-              onError={FaErrorLog}
-            >
-              {renderQueryComposer()}
-            </ErrorBoundary>
-          </Drawer>
-        }
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center w-full h-64">
+        <Spin size="large" />
+      </div>
+    );
+  }
 
-        {activeProject.id === demoProjectId ? (
-          <div className={'rounded-lg border-2 h-20 mt-20 -mb-20 mx-20'}>
-            <Row justify={'space-between'} className={'m-0 p-3'}>
-              <Col span={projects.length === 1 ? 12 : 18}>
-                <img
-                  src="assets/icons/welcome.svg"
-                  style={{ float: 'left', marginRight: '20px' }}
-                />
-                <Text
-                  type={'title'}
-                  level={6}
-                  weight={'bold'}
-                  extraClass={'m-0'}
-                >
-                  Welcome! You just entered a Factors demo project
-                </Text>
-                {projects.length === 1 ? (
-                  <Text type={'title'} level={7} extraClass={'m-0'}>
-                    These reports have been built with a sample dataset. Use
-                    this to start exploring!
+  if (isIntegrationEnabled || activeProject.id === demoProjectId) {
+    return (
+      <>
+        <ErrorBoundary
+          fallback={
+            <FaErrorComp
+              size={'medium'}
+              title={'Analyse Error'}
+              subtitle={
+                'We are facing trouble loading Analyse. Drop us a message on the in-app chat.'
+              }
+            />
+          }
+          onError={FaErrorLog}
+        >
+          {
+            <Drawer
+              title={title()}
+              placement="left"
+              closable={false}
+              visible={drawerVisible && !checkIfnewComposer()}
+              onClose={closeDrawer}
+              getContainer={false}
+              width={'650px'}
+              className={'fa-drawer'}
+            >
+              <ErrorBoundary
+                fallback={
+                  <FaErrorComp subtitle={'Facing issues with Query Builder'} />
+                }
+                onError={FaErrorLog}
+              >
+                {renderQueryComposer()}
+              </ErrorBoundary>
+            </Drawer>
+          }
+
+          {activeProject.id === demoProjectId ? (
+            <div className={'rounded-lg border-2 h-20 mt-20 -mb-20 mx-20'}>
+              <Row justify={'space-between'} className={'m-0 p-3'}>
+                <Col span={projects.length === 1 ? 12 : 18}>
+                  <img
+                    src="assets/icons/welcome.svg"
+                    style={{ float: 'left', marginRight: '20px' }}
+                  />
+                  <Text
+                    type={'title'}
+                    level={6}
+                    weight={'bold'}
+                    extraClass={'m-0'}
+                  >
+                    Welcome! You just entered a Factors demo project
                   </Text>
-                ) : (
-                  <Text type={'title'} level={7} extraClass={'m-0'}>
-                    To jump back into your Factors project, click on your
-                    account card on the <span className={'font-bold'}>top right</span> of the screen.
-                  </Text>
-                )}
-              </Col>
-              <Col className={'mr-2 mt-2'}>
-                {projects.length === 1 ? (
+                  {projects.length === 1 ? (
+                    <Text type={'title'} level={7} extraClass={'m-0'}>
+                      These reports have been built with a sample dataset. Use
+                      this to start exploring!
+                    </Text>
+                  ) : (
+                    <Text type={'title'} level={7} extraClass={'m-0'}>
+                      To jump back into your Factors project, click on your
+                      account card on the <span className={'font-bold'}>top right</span> of the screen.
+                    </Text>
+                  )}
+                </Col>
+                <Col className={'mr-2 mt-2'}>
+                  {projects.length === 1 ? (
+                    <Button
+                      type={'default'}
+                      style={{
+                        background: 'white',
+                        border: '1px solid #E7E9ED',
+                        height: '40px'
+                      }}
+                      className={'m-0 mr-2'}
+                      onClick={() => setShowProjectModal(true)}
+                    >
+                      Set up my own Factors project
+                    </Button>
+                  ) : null}
+
                   <Button
-                    type={'default'}
+                    type={'link'}
                     style={{
                       background: 'white',
-                      border: '1px solid #E7E9ED',
+                      // border: '1px solid #E7E9ED',
                       height: '40px'
                     }}
                     className={'m-0 mr-2'}
-                    onClick={() => setShowProjectModal(true)}
+                    onClick={() => handleTour()}
                   >
-                    Set up my own Factors project
+                    Take the tour <SVG name={'Arrowright'} size={16} extraClass={'ml-1'} color={'blue'} />
                   </Button>
-                ) : null}
+                </Col>
+              </Row>
+            </div>
+          ) : null}
 
-                <Button
-                  type={'link'}
-                  style={{
-                    background: 'white',
-                    // border: '1px solid #E7E9ED',
-                    height: '40px'
-                  }}
-                  className={'m-0 mr-2'}
-                  onClick={() => handleTour()}
-                >
-                  Take the tour <SVG name={'Arrowright'} size={16} extraClass={'ml-1'} color={'blue'} />
-                </Button>
-              </Col>
-            </Row>
-          </div>
-        ) : null}
-
-        {!showResult && drawerVisible && checkIfnewComposer()
-          ? renderCreateQFlow()
-          : !showResult && (
+          {!showResult && drawerVisible && checkIfnewComposer()
+            ? renderCreateQFlow()
+            : !showResult && (
               <CoreQueryHome
                 setQueryType={setQueryType}
                 setDrawerVisible={closeResultPage}
@@ -1582,7 +1629,7 @@ function CoreQuery({
                 updateSavedQuerySettings={updateSavedQuerySettings}
                 setAttributionMetrics={setAttributionMetrics}
               />
-          )}
+            )}
 
         {showResult ? (
           <CoreQueryContext.Provider
@@ -1633,9 +1680,16 @@ function CoreQuery({
             visible={showProjectModal}
             handleCancel={() => setShowProjectModal(false)}
           />
-      </ErrorBoundary>
-    </>
-  );
+        </ErrorBoundary>
+      </>
+    );
+  } else {
+    return (
+      <>
+        <AnalyseBeforeIntegration />
+      </>
+    );
+  }
 }
 
 const mapStateToProps = (state) => ({
@@ -1650,6 +1704,10 @@ const mapDispatchToProps = (dispatch) =>
       getCampaignConfigData,
       fetchDemoProject,
       getHubspotContact,
+      fetchProjectSettingsV1,
+      fetchProjectSettings,
+      fetchMarketoIntegration,
+      fetchBingAdsIntegration
     },
     dispatch
   );

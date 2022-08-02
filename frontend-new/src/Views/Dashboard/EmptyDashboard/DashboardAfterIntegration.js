@@ -8,7 +8,7 @@ import Header from '../../AppLayout/Header';
 import { connect } from 'react-redux';
 import { getHubspotContact, setActiveProject, fetchDemoProject } from 'Reducers/global';
 import { meetLink } from '../../../utils/hubspot';
-
+import DashboardTemplates from '../../DashboardTemplates'
 function DashboardAfterIntegration({setaddDashboardModal, getHubspotContact, currentAgent, setActiveProject, fetchDemoProject, projects}) {
     const [dataLoading, setdataLoading] = useState(true);
     const [ownerID, setownerID] = useState();
@@ -17,14 +17,14 @@ function DashboardAfterIntegration({setaddDashboardModal, getHubspotContact, cur
     const switchProject = () => {
         fetchDemoProject().then((res) => {
             let id = res.data[0];
-            let selectedProject = projects.filter(project => project.id === id);
+            let selectedProject = projects.filter(project => project?.id === id);
             selectedProject = selectedProject[0];
             localStorage.setItem('activeProject', selectedProject?.id);
             setActiveProject(selectedProject);
             history.push('/?userflow=c162ed75-0983-41f3-ae56-8aedd7dbbfbd');
             notification.success({
               message: 'Project Changed!',
-              description: `You are currently viewing data from ${selectedProject.name}`
+              description: `You are currently viewing data from demo project`
             });
         });
       };
@@ -60,19 +60,19 @@ function DashboardAfterIntegration({setaddDashboardModal, getHubspotContact, cur
                             </div>
                             <div className={'mt-4 mb-4'}>
                                 <Text type={'title'} level={4} color={'grey-2'} weight={'bold'} extraClass={'m-0 mt-2 mb-1'}>
-                                    Complete Project Setup
+                                    Have you brought in the data that matters to you?
                                 </Text>
                                 <Text type={'title'} level={7} color={'grey'} extraClass={'m-0 mb-1'}>
-                                    Are you done connecting to all your data sources?
+                                    {currentAgent?.first_name}, Factors is best when connected to all the data that you want to track
                                 </Text>
                             </div>
                             <div className={'float-right -mt-20 pt-2 mr-8'}>
-                                <Button type={'link'} style={{backgroundColor:'white'}} className={'mt-2'} onClick={()=> history.push('/welcome')}>Setup Assist<SVG name={'Arrowright'} size={16} extraClass={'ml-1'} color={'blue'} /></Button>
+                                <Button type={'link'} style={{backgroundColor:'white'}} className={'mt-2'} onClick={()=> history.push('/welcome')}>Finish Setup<SVG name={'Arrowright'} size={16} extraClass={'ml-1'} color={'blue'} /></Button>
                             </div>
                     </div>
                 </div>
-
-                <div
+                <DashboardTemplates setaddDashboardModal={setaddDashboardModal}/>
+                {/* <div
                     style={{marginTop:'10em'}}
                     className={
                     'flex justify-center flex-col items-center fa-dashboard--no-data-container'
@@ -94,7 +94,7 @@ function DashboardAfterIntegration({setaddDashboardModal, getHubspotContact, cur
                         <Button type={'text'} color={'grey-2'} className={'mb-2'} onClick={()=> switchProject()}>Explore our Demo Project<SVG name={'Arrowright'} size={16} extraClass={'ml-1'} color={'grey'} /></Button>
                     </div>
                     : */}
-                    <div className={'mt-6'}>
+                    {/* <div className={'mt-6'}>
                         <Button type={'primary'} size={'large'} className={'w-full'} onClick={() => setaddDashboardModal(true)}>Create your first dashboard</Button>
                         <Text type={'title'} level={7} weight={'bold'} color={'grey'} extraClass={'m-0 mt-2 mb-2'}>
                             or
@@ -102,7 +102,7 @@ function DashboardAfterIntegration({setaddDashboardModal, getHubspotContact, cur
                         <a href={meetLink(ownerID)} target='_blank' ><Button type={'default'} size={'large'} className={'w-full'}>Need Help?</Button></a>
                     </div>
                     {/* } */}
-                </div>
+                {/* </div> */}
                 
             </ErrorBoundary>
         </>

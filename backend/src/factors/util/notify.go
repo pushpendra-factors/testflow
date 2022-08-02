@@ -131,13 +131,14 @@ func NotifyThroughSlack(source, env, message interface{}) error {
 	return nil
 }
 
-func notifyOnPanicWithErrorLog(appName, env string, recoveredFrom interface{}) {
+func NotifyOnPanicWithErrorLog(appName, env string, recoveredFrom interface{}, additionalFields *log.Fields) {
 	buf := make([]byte, 1024)
 	runtime.Stack(buf, false)
 
 	log.WithField("panic_message", fmt.Sprintf("%+v", recoveredFrom)).
 		WithField("stack_trace", string(buf)).
 		WithField("debug_stack", string(debug.Stack())).
+		WithFields(*additionalFields).
 		Error("Panic Recovered.")
 
 	msgWithTrace := fmt.Sprintf("Panic CausedBy: %v\nStackTrace: %v\n", recoveredFrom, string(buf))
@@ -149,12 +150,12 @@ func notifyOnPanicWithErrorLog(appName, env string, recoveredFrom interface{}) {
 
 func NotifyOnPanic(taskId, env string) {
 	if recoveredFrom := recover(); recoveredFrom != nil {
-		notifyOnPanicWithErrorLog(taskId, env, recoveredFrom)
+		NotifyOnPanicWithErrorLog(taskId, env, recoveredFrom, nil)
 	}
 }
 
 func NotifyOnPanicWithError(env, appName string) {
 	if recoveredFrom := recover(); recoveredFrom != nil {
-		notifyOnPanicWithErrorLog(appName, env, recoveredFrom)
+		NotifyOnPanicWithErrorLog(appName, env, recoveredFrom, nil)
 	}
 }

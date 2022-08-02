@@ -95,8 +95,6 @@ func InitAppRoutes(r *gin.Engine) {
 	shareRouteGroup.POST("/:project_id/query", responseWrapper(QueryHandler))
 	shareRouteGroup.POST("/:project_id/attribution/query", responseWrapper(AttributionHandler))
 	shareRouteGroup.POST("/:project_id/profiles/query", responseWrapper(ProfilesQueryHandler))
-	shareRouteGroup.POST("/:project_id/channels/query", ChannelQueryHandler)
-	shareRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/channels/query", responseWrapper(V1.ExecuteChannelQueryHandler))
 	shareRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/kpi/query", responseWrapper(V1.ExecuteKPIQueryHandler))
 
 	// Auth route group with authentication an authorization middleware.
@@ -163,8 +161,6 @@ func InitAppRoutes(r *gin.Engine) {
 	// authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/channels/query", responseWrapper(V1.ExecuteChannelQueryHandler))
 	// authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/kpi/query", responseWrapper(V1.ExecuteKPIQueryHandler))
 
-	authRouteGroup.GET("/:project_id/channels/filter_values", GetChannelFilterValuesHandler)
-
 	// shareable url endpoints
 	authRouteGroup.GET("/:project_id/shareable_url", GetShareableURLsHandler)
 	authRouteGroup.POST("/:project_id/shareable_url", CreateShareableURLHandler)
@@ -176,10 +172,6 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/dashboards/queries/:dashboard_id/units", stringifyWrapper(CreateDashboardUnitsForMultipleQueriesHandler))
 	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/dashboards/:dashboard_id/units/multi/:unit_ids", DeleteMultiDashboardUnitHandler)
 	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/dashboards/:dashboard_id", DeleteDashboardHandler)
-
-	// v1 Channel endpoints
-	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/channels/config", V1.GetChannelConfigHandler)
-	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/channels/filter_values", V1.GetChannelFilterValuesHandler)
 
 	// v1 KPI endpoints
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/kpi/config", responseWrapper(V1.GetKPIConfigHandler))
@@ -287,7 +279,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.POST("/:project_id/slack/auth", slack.SlackAuthRedirectHandler)
 	authRouteGroup.GET("/:project_id/slack/channels", slack.GetSlackChannelsListHandler)
 	authRouteGroup.DELETE("/:project_id/slack/delete", slack.DeleteSlackIntegrationHandler)
-	authRouteGroup.POST("/:project_id/v1/alerts/send_now",V1.QuerySendNowHandler)
+	authRouteGroup.POST("/:project_id/v1/alerts/send_now", V1.QuerySendNowHandler)
 
 	// Timeline
 	authRouteGroup.POST("/:project_id/v1/profiles/users", responseWrapper(V1.GetProfileUsersHandler))
@@ -384,6 +376,14 @@ func InitIntRoutes(r *gin.Engine) {
 		SalesforceAuthRedirectHandler)
 	intRouteGroup.GET(SalesforceCallbackRoute,
 		SalesforceCallbackHandler)
+
+	intRouteGroup.POST("/hubspot/auth",
+		mid.SetLoggedInAgent(),
+		mid.SetAuthorizedProjectsByLoggedInAgent(),
+		HubspotAuthRedirectHandler)
+
+	intRouteGroup.GET(HubspotCallbackRoute,
+		HubspotCallbackHandler)
 
 	intRouteGroup.DELETE("/:project_id/:channel_name",
 		mid.SetLoggedInAgent(),

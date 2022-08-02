@@ -66,7 +66,7 @@ function AddDashboard({
   const confirmDelete = useCallback(async () => {
     try {
       setDeleteApiCalled(true);
-      await deleteDashboard(active_project.id, editDashboard.id);
+      await deleteDashboard(active_project?.id, editDashboard?.id);
       setDeleteApiCalled(false);
       dispatch({ type: DASHBOARD_DELETED, payload: editDashboard });
       showDeleteModal(false);
@@ -75,7 +75,7 @@ function AddDashboard({
       console.log(err);
       setDeleteApiCalled(false);
     }
-  }, [editDashboard, dispatch, resetState, active_project.id]);
+  }, [editDashboard, dispatch, resetState, active_project?.id]);
 
   const handleCancel = useCallback(() => {
     if (!apisCalled) {
@@ -112,14 +112,14 @@ function AddDashboard({
   const createNewDashboard = useCallback(async () => {
     try {
       setApisCalled(true);
-      const res = await createDashboard(active_project.id, {
+      const res = await createDashboard(active_project?.id, {
         name: title,
         description,
         type: dashboardType,
       });
       if (selectedQueries.length) {
         const reqBody = getUnitsAssignRequestBody();
-        await assignUnitsToDashboard(active_project.id, res.data.id, reqBody);
+        await assignUnitsToDashboard(active_project?.id, res.data.id, reqBody);
       }
       dispatch({ type: DASHBOARD_CREATED, payload: res.data });
       resetState();
@@ -129,7 +129,7 @@ function AddDashboard({
       setApisCalled(false);
     }
   }, [
-    active_project.id,
+    active_project?.id,
     dashboardType,
     description,
     dispatch,
@@ -155,8 +155,8 @@ function AddDashboard({
           };
         });
         await assignUnitsToDashboard(
-          active_project.id,
-          editDashboard.id,
+          active_project?.id,
+          editDashboard?.id,
           reqBody
         );
       }
@@ -168,8 +168,8 @@ function AddDashboard({
         //just delete the deleted widgets
         const deletePromises = deletedUnits.map((q) => {
           return DeleteUnitFromDashboard(
-            active_project.id,
-            editDashboard.id,
+            active_project?.id,
+            editDashboard?.id,
             q.id
           );
         });
@@ -178,7 +178,7 @@ function AddDashboard({
           dispatch({ type: WIDGET_DELETED, payload: unit.id });
         });
       }
-      await updateDashboard(active_project.id, editDashboard.id, {
+      await updateDashboard(active_project?.id, editDashboard.id, {
         name: title,
         description,
         type: dashboardType,
@@ -195,7 +195,7 @@ function AddDashboard({
 
       if (newAddedUnits.length) {
         dispatch(
-          fetchActiveDashboardUnits(active_project.id, editDashboard.id)
+          fetchActiveDashboardUnits(active_project?.id, editDashboard.id)
         );
       }
 
@@ -216,7 +216,7 @@ function AddDashboard({
     activeDashboardUnits,
     dashboardType,
     selectedQueries,
-    active_project.id,
+    active_project?.id,
     description,
     dispatch,
     editDashboard,

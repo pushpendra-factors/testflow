@@ -19,6 +19,7 @@ const (
 	OldGoogleAds   = "google_ads"
 	OldFacebookAds = "facebook_ads"
 	OldLinkedinAds = "linkedin_ads"
+	NewBingAds     = "Bing Ads"
 )
 
 type ChannelConfigResult struct {
@@ -193,6 +194,17 @@ func (query *ChannelQueryUnit) CheckIfNameIsPresent(nameOfQuery string) bool {
 	return false
 }
 
+func (query *ChannelQueryUnit) SetDefaultGroupByTimestamp() {
+	defaultGroupByTimestamp := GetDefaultGroupByTimestampForQueries(query.Query.From, query.Query.To, query.Query.Breakdown)
+	if defaultGroupByTimestamp != "" {
+		query.Query.Breakdown = defaultGroupByTimestamp
+	}
+}
+
+func (query *ChannelQueryUnit) GetGroupByTimestamps() []string {
+	return []string{query.Query.Breakdown}
+}
+
 // ChannelGroupQueryV1 - @TODO Kark v1
 type ChannelGroupQueryV1 struct {
 	Class   string           `json:"cl"`
@@ -272,6 +284,23 @@ func (q *ChannelGroupQueryV1) ConvertAllDatesFromTimezone1ToTimezone2(currentTim
 
 func (query *ChannelGroupQueryV1) CheckIfNameIsPresent(nameOfQuery string) bool {
 	return false
+}
+
+func (query *ChannelGroupQueryV1) SetDefaultGroupByTimestamp() {
+	for index, _ := range query.Queries {
+		defaultGroupByTimestamp := GetDefaultGroupByTimestampForQueries(query.Queries[index].From, query.Queries[index].To, query.Queries[index].GetGroupByTimestamp())
+		if defaultGroupByTimestamp != "" {
+			query.Queries[index].GroupByTimestamp = defaultGroupByTimestamp
+		}
+	}
+}
+
+func (query *ChannelGroupQueryV1) GetGroupByTimestamps() []string {
+	queryResultString := make([]string, 0)
+	for _, intQuery := range query.Queries {
+		queryResultString = append(queryResultString, intQuery.GetGroupByTimestamp())
+	}
+	return queryResultString
 }
 
 var ChannelNameProperty = ChannelObjectAndProperties{
@@ -419,7 +448,7 @@ func GetRequiredChannels(filters []ChannelFilterV1) (bool, bool, bool, bool, int
 	isAdwordsReq = checkIfChannelReq(GoogleAds, filters) || checkIfChannelReq(OldGoogleAds, filters)
 	isFacebookReq = checkIfChannelReq(FacebookAds, filters) || checkIfChannelReq(OldFacebookAds, filters)
 	isLinkedinReq = checkIfChannelReq(LinkedinAds, filters) || checkIfChannelReq(OldLinkedinAds, filters)
-	isBingAdsReq = checkIfChannelReq(ChannelBingAds, filters)
+	isBingAdsReq = checkIfChannelReq(ChannelBingAds, filters) || checkIfChannelReq(NewBingAds, filters)
 	return isAdwordsReq, isFacebookReq, isLinkedinReq, isBingAdsReq, http.StatusOK
 }
 

@@ -132,21 +132,21 @@ function AppLayout({
   }, [projects]);
 
   useEffect(() => {
-    if (active_project && active_project.id) {
-      dispatch(fetchDashboards(active_project.id));
-      dispatch(fetchQueries(active_project.id));
-      dispatch(fetchGroups(active_project.id));
-      dispatch(fetchKPIConfig(active_project.id));
-      dispatch(fetchPageUrls(active_project.id));
+    if (active_project && active_project?.id) {
+      dispatch(fetchDashboards(active_project?.id));
+      dispatch(fetchQueries(active_project?.id));
+      dispatch(fetchGroups(active_project?.id));
+      dispatch(fetchKPIConfig(active_project?.id));
+      dispatch(fetchPageUrls(active_project?.id));
       // dispatch(deleteQueryTest())
-      fetchEventNames(active_project.id);
-      getUserProperties(active_project.id);
-      getGroupProperties(active_project.id);
-      dispatch(fetchSmartPropertyRules(active_project.id));
-      fetchWeeklyIngishtsMetaData(active_project.id);
-      dispatch(fetchAttrContentGroups(active_project.id));
+      fetchEventNames(active_project?.id);
+      getUserProperties(active_project?.id);
+      getGroupProperties(active_project?.id);
+      dispatch(fetchSmartPropertyRules(active_project?.id));
+      fetchWeeklyIngishtsMetaData(active_project?.id);
+      dispatch(fetchAttrContentGroups(active_project?.id));
       dispatch(
-        fetchProfileUsers(active_project.id, { source: 'web', filters: [] })
+        fetchProfileUsers(active_project?.id, { source: 'web', filters: [] })
       );
       dispatch(fetchTemplates());
     }
@@ -265,19 +265,19 @@ function AppLayout({
                     {/* profiles */}
                     <Route path='/profiles/people' component={UserProfiles} />
 
-                    {!(demoProjectId.includes(active_project.id)) ? (
+                    {!(demoProjectId.includes(active_project?.id)) ? (
                       <Route path='/project-setup' component={SetupAssist} />
                     ) : (
                       <Redirect to='/' />
                     )}
 
-                    {!(demoProjectId.includes(active_project.id)) ? (
+                    {!(demoProjectId.includes(active_project?.id)) ? (
                       <Route path='/settings/sdk' component={SDKSettings} />
                     ) : (
                       <Redirect to='/' />
                     )}
 
-                    {!(demoProjectId.includes(active_project.id)) ? (
+                    {!(demoProjectId.includes(active_project?.id)) ? (
                       <Route
                         path='/settings/integration'
                         component={IntegrationSettings}

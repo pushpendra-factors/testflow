@@ -33,6 +33,8 @@ parser.add_option("--disabled_project_ids", dest="disabled_project_ids", help="D
 parser.add_option("--disable_non_marketing_contacts_project_id", dest="disable_non_marketing_contacts_project_id", help="Projects to only pick marketing contacts", default="")
 parser.add_option("--buffer_size_by_api_count", dest="buffer_size_by_api_count", help="Buffer size by number of api counts before performing insertion", default=1)
 parser.add_option("--enable_buffer_before_insert_by_project_id", dest="enable_buffer_before_insert_by_project_id", help="Enable buffer before inserting by project id", default="")
+parser.add_option("--hubspot_app_id", dest="hubspot_app_id", help="App id for hubspot access token", default="")
+parser.add_option("--hubspot_app_secret", dest="hubspot_app_secret", help="App secret for hubspot access token", default="")
 
 APP_NAME = "hubspot_sync"
 PAGE_SIZE = 100
@@ -201,12 +203,10 @@ def build_properties_param_str(properties=[]):
         param_str = param_str + 'properties=' + prop
     return param_str
 
-def get_all_properties_by_doc_type(project_id,doc_type, api_key):
+def get_all_properties_by_doc_type(project_id,doc_type, hubspot_request_handler):
     url = "https://api.hubapi.com/properties/v1/"+doc_type+"/properties?"
-    parameter_dict = { 'hapikey': api_key }
-    parameters = urllib.parse.urlencode(parameter_dict)
-    get_url = url + parameters
-    r = get_with_fallback_retry(project_id, get_url)
+    get_url = url
+    r = hubspot_request_handler(project_id, get_url)
     if not r.ok:
         log.error("Failure response %d from hubspot on get_properties_by_doc_type for doc type %s", r.status_code, doc_type)
         return [], r.ok
@@ -217,19 +217,62 @@ def get_all_properties_by_doc_type(project_id,doc_type, api_key):
         properties.append(contact_property["name"])
     return properties, r.ok
 
-def get_with_fallback_retry(project_id, get_url, request = requests.get, json=None):
+def get_hubspot_access_token_and_expiry_time(project_id, client_id, client_secret, refresh_token):
+    access_token_url = "https://api.hubapi.com/oauth/v1/token?"
+    parameter_dict = {"grant_type":"refresh_token","client_id":client_id,"client_secret":client_secret,"refresh_token":refresh_token}
+    parameters = urllib.parse.urlencode(parameter_dict)
+    url = access_token_url + parameters
+    headers = {"Content-Type" : "application/x-www-form-urlencoded;charset=utf-8"}
+    r = get_with_fallback_retry(project_id, url, requests.post, headers=headers)
+    if not r.ok:
+        raise Exception("Failed to get access token for project_id "+str(project_id)+" "+str(r.text))
+    data = json.loads(r.text)
+    access_token = data["access_token"]
+    expires_in_sec = data["expires_in"]
+    expire_time = time.time() + expires_in_sec
+    return access_token, expire_time
+
+
+def get_hubspot_request_handler(project_id, refresh_token, api_key):
+    client_id, client_secret = get_hubspot_app_credentials()
+    access_token = ""
+    access_token_expire_time = None
+    def hubspot_request_handler(project_id, url, request = requests.get, json=None, headers = None):
+        if refresh_token == "" and api_key =="":
+            raise Exception("Missing api key and refresh token")
+
+        if refresh_token == "":
+            log.warning("Using api key for project_id %d",project_id)
+            parameter_dict = {'hapikey': api_key}
+            parameters = urllib.parse.urlencode(parameter_dict)
+            request_url = url +"&"+ parameters
+            return get_with_fallback_retry(project_id, request_url, request, json, headers)
+
+        if client_id =="" or client_secret =="":
+            raise Exception("Missing app credentials")
+        nonlocal access_token
+        nonlocal access_token_expire_time
+        log.warning("Using access token for project_id %d",project_id)
+        if access_token == "" or access_token_expire_time == None or access_token_expire_time - time.time() < 10:
+            access_token, access_token_expire_time = get_hubspot_access_token_and_expiry_time(project_id, client_id, client_secret, refresh_token)
+
+        headers = {"Authorization": "Bearer " + access_token}
+        return get_with_fallback_retry(project_id, url, request, json, headers)
+    return hubspot_request_handler
+
+def get_with_fallback_retry(project_id, get_url, request = requests.get, json=None, headers = None):
     retries = 0
     start_time  = time.time()
     try:
         while True:
             try:
-                r = request(url=get_url, headers = {}, json=json, timeout=REQUEST_TIMEOUT)
+                r = request(url=get_url, headers = headers, json=json, timeout=REQUEST_TIMEOUT)
                 if r.status_code != 429:
                     if not r.ok:
                         if r.status_code== 414 or r.status_code == 404:
                             return r
                         if retries < RETRY_LIMIT:
-                            log.error("Failed to get data from hubspot %d.Retries %d. Retrying in 2 seconds",r.status_code,retries)
+                            log.error("Failed to get data from hubspot %d.Retries %d. Retrying in 2 seconds %s",r.status_code,retries, r.text)
                             time.sleep(2)
                             retries += 1
                             continue
@@ -312,11 +355,11 @@ def should_continue_contact_historical_data(project_id, object_dict, last_sync_t
 
     return False, False
 
-def get_contacts_with_properties_by_id(project_id,api_key,get_url):
+def get_contacts_with_properties_by_id(project_id,get_url, hubspot_request_handler):
     batch_contact_url = "https://api.hubapi.com/contacts/v1/contact/vids/batch?"
 
     log.warning("Downloading contacts without properties list "+get_url)
-    r = get_with_fallback_retry(project_id,get_url)
+    r = hubspot_request_handler(project_id,get_url)
     if not r.ok:
         return {},{}, r
     response_dict,unmodified_dict = json.loads(r.text),json.loads(r.text)
@@ -330,9 +373,9 @@ def get_contacts_with_properties_by_id(project_id,api_key,get_url):
             continue
         contact_ids.append(contact["vid"])
     contact_ids_str = "&".join([ "vid="+str(id) for id in contact_ids ])
-    batch_url = batch_contact_url +"hapikey="+ api_key + "&" + contact_ids_str
+    batch_url = batch_contact_url + "&" + contact_ids_str
     log.warning("Downloading batch contact from url "+batch_url)
-    r = get_with_fallback_retry(project_id,batch_url)
+    r = hubspot_request_handler(project_id,batch_url)
     if not r.ok:
         log.error("Failure getting batch contacts for project_id %d on sync_contacts", project_id)
         return {},{},r
@@ -356,9 +399,9 @@ def get_contacts_with_properties_by_id(project_id,api_key,get_url):
 
     return response_dict, unmodified_dict, r
 
-def add_contactId(api_key, email, project_id, engagement):
-    get_url = "https://api.hubapi.com/contacts/v1/contact/email/" + email + "/profile?hapikey=" + api_key
-    r  = get_with_fallback_retry(project_id, get_url)
+def add_contactId( email, project_id, engagement, hubspot_request_handler):
+    get_url = "https://api.hubapi.com/contacts/v1/contact/email/" + email + "/profile?"
+    r  = hubspot_request_handler(project_id, get_url)
     if not r.ok:
         log.error("Failure response %d from hubspot on contactID", r.status_code)
         return
@@ -369,19 +412,20 @@ def add_contactId(api_key, email, project_id, engagement):
         engagement["metadata"]["from"]["contactId"] = response["vid"]
     elif engagements["type"] == "EMAIL":
         engagement["metadata"]["to"][0]["contactId"] = response["vid"]
-        
-def sync_engagements(project_id, api_key, last_sync_timestamp=0):
+
+def sync_engagements(project_id, refresh_token, api_key, last_sync_timestamp=0):
     page_count = 100
-    get_url = "https://api.hubapi.com/engagements/v1/engagements/recent/modified?hapikey=" + api_key + "&count="+str(page_count)+"&since="+str(last_sync_timestamp)
+    get_url = "https://api.hubapi.com/engagements/v1/engagements/recent/modified?"+"count="+str(page_count)+"&since="+str(last_sync_timestamp)
     final_url = get_url
     has_more = True
     engagement_api_calls = 0
     latest_timestamp = None
     buffer_size = page_count * get_buffer_size_by_api_count()
     create_all_engagement_documents_with_buffer = get_create_all_documents_with_buffer(project_id, 'engagement', buffer_size)
+    hubspot_request_handler = get_hubspot_request_handler(project_id, refresh_token, api_key)
     while has_more:
         log.warning("Downloading engagements for project_id %d from url %s.", project_id, final_url)
-        r = get_with_fallback_retry(project_id, final_url)
+        r = hubspot_request_handler(project_id, final_url)
         if not r.ok:
             log.error("Failure response %d from hubspot on sync_engagements", r.status_code)
             break
@@ -402,11 +446,11 @@ def sync_engagements(project_id, api_key, last_sync_timestamp=0):
                     filter_engagements.append(engagement)
                 elif engagements["type"] == "INCOMING_EMAIL":
                     if "metadata" in engagement and "from" in engagement["metadata"] and "email" in engagement["metadata"]["from"]:
-                        add_contactId(api_key, engagement["metadata"]["from"]["email"], project_id, engagement)
+                        add_contactId( engagement["metadata"]["from"]["email"], project_id, engagement, hubspot_request_handler)
                     filter_engagements.append(engagement)
                 elif engagements["type"] == "EMAIL":
                     if "metadata" in engagement and "to" in engagement["metadata"] and len(engagement["metadata"]["to"])>0 and "email" in engagement["metadata"]["to"][0]:
-                        add_contactId(api_key, engagement["metadata"]["to"][0]["email"], project_id, engagement)
+                        add_contactId( engagement["metadata"]["to"][0]["email"], project_id, engagement, hubspot_request_handler)
                     filter_engagements.append(engagement)
         response = json.loads(r.text)
         if 'hasMore' in response and 'offset' in response:
@@ -442,7 +486,7 @@ def get_filtered_contacts_project_id(project_id, docs):
         return marketing_docs
     return docs
 
-def sync_contacts(project_id, api_key,last_sync_timestamp, sync_all=False):
+def sync_contacts(project_id, refresh_token, api_key, last_sync_timestamp, sync_all=False):
     if sync_all:
         # init sync all contacts.
         url = "https://api.hubapi.com/contacts/v1/lists/all/contacts/all?"
@@ -456,8 +500,9 @@ def sync_contacts(project_id, api_key,last_sync_timestamp, sync_all=False):
     create_all_contact_documents_with_buffer = get_create_all_documents_with_buffer(project_id,"contact",buffer_size)
     has_more = True
     count = 0
-    parameter_dict = { 'hapikey': api_key, 'count': PAGE_SIZE, 'formSubmissionMode': 'all' }
-    properties, ok = get_all_properties_by_doc_type(project_id,"contacts", api_key)
+    hubspot_request_handler = get_hubspot_request_handler(project_id, refresh_token, api_key)
+    parameter_dict = {'count': PAGE_SIZE }
+    properties, ok = get_all_properties_by_doc_type(project_id,"contacts", hubspot_request_handler)
     if not ok:
         log.error("Failure loading properties for project_id %d on sync_contacts", project_id)
         return 0, 0
@@ -478,7 +523,7 @@ def sync_contacts(project_id, api_key,last_sync_timestamp, sync_all=False):
         response_dict = {}
         unmodified_response_dict={}
         if err_url_too_long == False:
-            r = get_with_fallback_retry(project_id,get_url_with_properties)
+            r = hubspot_request_handler(project_id,get_url_with_properties)
             if not r.ok:
                 if r.status_code == 414:
                     log.error("Failure response %d from hubspot on sync_contacts, using fallback logic", r.status_code)
@@ -490,7 +535,7 @@ def sync_contacts(project_id, api_key,last_sync_timestamp, sync_all=False):
                 response_dict = json.loads(r.text)
 
         if err_url_too_long == True:
-            contact_dict,unmodified_response_dict, r = get_contacts_with_properties_by_id(project_id,api_key,get_url)
+            contact_dict,unmodified_response_dict, r = get_contacts_with_properties_by_id(project_id,api_key,get_url, hubspot_request_handler)
             if not r.ok:
                 log.error("Failure response %d from hubspot on batch sync_contacts", r.status_code)
                 break
@@ -529,11 +574,11 @@ def sync_contacts(project_id, api_key,last_sync_timestamp, sync_all=False):
     create_all_contact_documents_with_buffer([],False) ## flush any remainig docs in memory
     return contact_api_calls, max_timestamp
 
-def add_paginated_associations(project_id, to_object_ids, next_page_url, api_key):
+def add_paginated_associations(project_id, to_object_ids, next_page_url, hubspot_request_handler):
     while True:
-        url = next_page_url+"&"+"hapikey="+api_key
+        url = next_page_url
         log.warning("Downloading paginated associations for project_id %d url %s", project_id,next_page_url)
-        r  = get_with_fallback_retry(project_id, url)
+        r  = hubspot_request_handler(project_id, url)
         if not r.ok:
             raise Exception("failed to get next page on paginated associations "+str(r.text))
         data = json.loads(r.text)
@@ -561,18 +606,18 @@ def validate_association_errors(association_response):
             raise Exception("Unknown error occured in association erros "+str(error))
     return True
 
-def fill_contacts_for_companies(project_id,api_key, docs):
+def fill_contacts_for_companies(project_id, docs, hubspot_request_handler):
     if use_company_contact_association_v2_by_project_id(project_id):
-        return fill_contacts_for_companies_v2(project_id,api_key, docs )
-    return fill_contacts_for_companies_v1(project_id, api_key, docs )
+        return fill_contacts_for_companies_v2(project_id, docs, hubspot_request_handler)
+    return fill_contacts_for_companies_v1(project_id, docs, hubspot_request_handler)
 
 
-def fill_contacts_for_companies_v2(project_id, api_key, companies):
+def fill_contacts_for_companies_v2(project_id, companies, hubspot_request_handler):
     companies_ids = []
     for company in companies:
         companies_ids.append(company["companyId"])
     
-    associations, api_calls = get_associations(project_id, api_key, "company", companies_ids, "contact")
+    associations, api_calls = get_associations(project_id, "company", companies_ids, "contact", hubspot_request_handler)
     for i in range(len(companies)):
         company_id = str(companies[i]["companyId"])
         if company_id in associations:
@@ -582,16 +627,16 @@ def fill_contacts_for_companies_v2(project_id, api_key, companies):
             companies[i]["contactIds"] = contact_ids
     return companies, api_calls
 
-def get_associations(project_id, api_key, from_object_name, from_object_ids, to_object_name):
+def get_associations(project_id, from_object_name, from_object_ids, to_object_name, hubspot_request_handler):
     url = "https://api.hubapi.com/crm/v3/associations/"+from_object_name+"/"+to_object_name+"/batch/read"
-    get_url = url +"?"+"hapikey="+api_key
+    get_url = url +"?"
     ids_payload = []
     for id in from_object_ids:
         ids_payload.append({"id":id})
     payload = {"inputs":ids_payload}
     api_count = 0
     log.warning("Downloading %s %s using association for project_id %d url %s", from_object_name, to_object_name, project_id, url)
-    r = get_with_fallback_retry(project_id, get_url, requests.post, json=payload)
+    r = hubspot_request_handler(project_id, get_url, requests.post, json=payload)
     if not r.ok:
         log.warning("Failed to get %s %s id using associations for project_id %d %s",from_object_name, to_object_name, project_id, str(r.text))
         raise Exception("Failed to get "+from_object_name+" "+to_object_name+" using association")
@@ -639,7 +684,7 @@ def get_associations(project_id, api_key, from_object_name, from_object_ids, to_
             pagination = association["paging"]["next"]
             if "link" in pagination and pagination["link"]!= "":
                 to_object_ids, paginated_associated_ids = add_paginated_associations(project_id, 
-                    to_object_ids, pagination["link"], api_key)
+                    to_object_ids, pagination["link"], hubspot_request_handler)
                 total_associated_ids += paginated_associated_ids
                 api_count+=1
         associations[from_object_id] = to_object_ids
@@ -647,16 +692,17 @@ def get_associations(project_id, api_key, from_object_name, from_object_ids, to_
 
     return associations, api_count
 
-def get_deleted_contacts(project_id, api_key):
+def get_deleted_contacts(project_id, refresh_token,  api_key):
     url = "https://api.hubapi.com/crm/v3/objects/contacts/?"
-    parameter_dict = {'archived': "true", 'hapikey': api_key,"limit":100}
+    parameter_dict = {'archived': "true","limit":100}
     parameters = urllib.parse.urlencode(parameter_dict)
     final_url = url + parameters    
     has_more = True
     count_api_calls = 0
+    hubspot_request_handler = get_hubspot_request_handler(project_id, refresh_token, api_key)
     while has_more:
         log.warning("Downloading deleted contacts from url: %s", final_url)
-        res = get_with_fallback_retry(project_id, final_url)
+        res = hubspot_request_handler(project_id, final_url)
         if not res.ok:
             raise Exception('Failed to get deleted contacts: ' + str(res.status_code))
 
@@ -674,12 +720,12 @@ def get_deleted_contacts(project_id, api_key):
             next_link = next_property.get('link')
             if not next_link:
                 raise Exception('Found empty link value to fetch deleted contacts')
-            final_url = next_link + "&" + "hapikey=" + api_key
+            final_url = next_link
     return count_api_calls
 
 
 ## https://community.hubspot.com/t5/APIs-Integrations/Deals-Endpoint-Returning-414/m-p/320468/highlight/true#M30810
-def get_deals_with_properties(project_id,get_url):
+def get_deals_with_properties(project_id, get_url, hubspot_request_handler):
     param_dict_include_all_properties = {
         "includeAllProperties" : True,
         "allPropertiesFetchMode" : "latest_version",
@@ -688,10 +734,10 @@ def get_deals_with_properties(project_id,get_url):
     parameters = urllib.parse.urlencode(param_dict_include_all_properties)
     url = get_url + "&" + parameters
 
-    return get_with_fallback_retry(project_id, url)
+    return hubspot_request_handler(project_id, url)
 
 
-def sync_deals(project_id, api_key, sync_all=False):
+def sync_deals(project_id, refresh_token, api_key, sync_all=False):
     page_count_key = ""
     page_count = 0
     if sync_all:
@@ -710,16 +756,17 @@ def sync_deals(project_id, api_key, sync_all=False):
 
     buffer_size = page_count * get_buffer_size_by_api_count()
     create_all_deal_documents_with_buffer = get_create_all_documents_with_buffer(project_id,"deal",buffer_size)
+    hubspot_request_handler = get_hubspot_request_handler(project_id, refresh_token, api_key)
     deal_api_calls = 0
     err_url_too_long = False
     for url in urls:
         count = 0
-        parameter_dict = {'hapikey': api_key, page_count_key: page_count}
+        parameter_dict = {page_count_key: page_count}
 
         # mandatory property needed on response, returns no properties if not given.
         properties = []
         if sync_all:
-            properties, ok = get_all_properties_by_doc_type(project_id,"deals", api_key)
+            properties, ok = get_all_properties_by_doc_type(project_id,"deals", hubspot_request_handler)
             if not ok:
                 log.error("Failure loading properties for project_id %d on sync_deals", project_id)
                 break
@@ -739,7 +786,7 @@ def sync_deals(project_id, api_key, sync_all=False):
             log.warning("Downloading deals for project_id %d from url %s.", project_id, get_url_with_properties)
             response_dict = {}
             if err_url_too_long == False:
-                r = get_with_fallback_retry(project_id, get_url_with_properties)
+                r = hubspot_request_handler(project_id, get_url_with_properties)
                 if not r.ok:
                     if r.status_code == 414:
                         log.error("Failure response %d from hubspot on sync_deals, using fallback logic", r.status_code)
@@ -751,7 +798,7 @@ def sync_deals(project_id, api_key, sync_all=False):
                     response_dict = json.loads(r.text)
 
             if err_url_too_long == True:
-                r = get_deals_with_properties(project_id,get_url)
+                r = get_deals_with_properties(project_id, get_url, hubspot_request_handler)
                 if not r.ok:
                    log.error("Failure response %d from hubspot on sync deals using fallback logic", r.status_code)
                    break
@@ -782,17 +829,15 @@ def sync_deals(project_id, api_key, sync_all=False):
     return deal_api_calls
 
 
-def get_company_contacts(project_id, api_key, company_id):
-    if api_key == "" or not company_id:
+def get_company_contacts(project_id, company_id, hubspot_request_handler):
+    if hubspot_request_handler == None or not company_id:
         raise Exception("invalid api_key or company_id")
     
     contacts = []
     url = "https://api.hubapi.com/companies/v2/companies/"+str(company_id)+"/contacts?"
-    parameter_dict = { 'hapikey': api_key }
-    parameters = urllib.parse.urlencode(parameter_dict)
-    get_url = url + parameters
+    get_url = url
     log.warning("Downloading company contacts from url %s.", get_url)
-    r = get_with_fallback_retry(project_id, get_url)
+    r = hubspot_request_handler(project_id, get_url)
     if r.status_code == 429: 
         log.error("Hubspot API rate limit exceeded for project "+str(project_id))
         return contacts
@@ -808,11 +853,11 @@ def get_company_contacts(project_id, api_key, company_id):
     return response.get("contacts")
 
 # Fills contacts for each company on docs.
-def fill_contacts_for_companies_v1(project_id, api_key, docs):
+def fill_contacts_for_companies_v1(project_id, docs, hubspot_request_handler):
     company_contacts_api_calls = 0
     for doc in docs:
         company_id = doc.get("companyId")
-        contacts = get_company_contacts(project_id, api_key, company_id)
+        contacts = get_company_contacts(project_id, company_id, hubspot_request_handler)
         company_contacts_api_calls +=1
         contactIds = []
 
@@ -826,7 +871,7 @@ def fill_contacts_for_companies_v1(project_id, api_key, docs):
         doc["contactIds"] = contactIds
     return docs, company_contacts_api_calls
 
-def sync_companies(project_id, api_key,last_sync_timestamp, sync_all=False):
+def sync_companies(project_id, refresh_token, api_key,last_sync_timestamp, sync_all=False):
     limit_key = ""
     if sync_all:
         urls = [ "https://api.hubapi.com/companies/v2/companies/paged?" ]
@@ -840,16 +885,18 @@ def sync_companies(project_id, api_key,last_sync_timestamp, sync_all=False):
     buffer_size = PAGE_SIZE * get_buffer_size_by_api_count()
     create_all_company_documents_with_buffer = get_create_all_documents_with_buffer(project_id,"company",buffer_size)
 
+    hubspot_request_handler = get_hubspot_request_handler(project_id, refresh_token, api_key)
+
     companies_api_calls = 0
     companies_contacts_api_calls = 0
     max_timestamp = 0
     for url in urls:
         count = 0
-        parameter_dict = {'hapikey': api_key, limit_key: PAGE_SIZE}
+        parameter_dict = {limit_key: PAGE_SIZE}
 
         properties = []
         if sync_all:
-            properties, ok = get_all_properties_by_doc_type(project_id,"companies", api_key)
+            properties, ok = get_all_properties_by_doc_type(project_id,"companies", hubspot_request_handler)
             if not ok:
                 log.error("Failure loading properties for project_id %d on sync_companies", project_id)
                 return 0, 0,0
@@ -866,7 +913,7 @@ def sync_companies(project_id, api_key,last_sync_timestamp, sync_all=False):
                 get_url = get_url + "&since=" + str(last_sync_timestamp)
 
             log.warning("Downloading companies for project_id %d from url %s.", project_id, get_url)
-            r = get_with_fallback_retry(project_id, get_url)
+            r = hubspot_request_handler(project_id, get_url)
             if not r.ok:
                 log.error("Failure response %d from hubspot on sync_companies", r.status_code)
                 break
@@ -886,7 +933,7 @@ def sync_companies(project_id, api_key,last_sync_timestamp, sync_all=False):
             parameter_dict['offset']= response_dict['offset']
             max_timestamp = get_batch_documents_max_timestamp(project_id, docs, "companies", max_timestamp)
             # fills contact ids for each comapany under 'contactIds'.
-            _, api_calls = fill_contacts_for_companies(project_id, api_key, docs)
+            _, api_calls = fill_contacts_for_companies(project_id, docs, hubspot_request_handler)
             companies_contacts_api_calls += api_calls
             count = count + len(docs)
             if allow_buffer_before_insert_by_project_id(project_id):
@@ -898,15 +945,15 @@ def sync_companies(project_id, api_key,last_sync_timestamp, sync_all=False):
     create_all_company_documents_with_buffer([],False) ## flush any remaining docs in memory
     return companies_api_calls, companies_contacts_api_calls, max_timestamp
 
-def sync_forms(project_id, api_key):
+def sync_forms(project_id, refresh_token, api_key):
     url = "https://api.hubapi.com/forms/v2/forms?"
-    parameter_dict = {'hapikey': api_key }
-    parameters = urllib.parse.urlencode(parameter_dict)
-    get_url = url + parameters
+    get_url = url
+
+    hubspot_request_handler = get_hubspot_request_handler(project_id, refresh_token, api_key)
 
     count = 0
     log.warning("Downloading forms for project_id %d from url %s.", project_id, get_url)
-    r = get_with_fallback_retry(project_id, get_url)
+    r = hubspot_request_handler(project_id, get_url)
     if not r.ok:
         log.error("Failure response %d from hubspot on sync_forms", r.status_code)
         return
@@ -930,11 +977,13 @@ def get_forms(project_id):
 
 
 # sync form_submission for all forms.
-def sync_form_submissions(project_id, api_key):
+def sync_form_submissions(project_id, refresh_token, api_key):
     forms = get_forms(project_id)
 
     if len(forms) == 0: 
         log.warning("No forms to sync on sync_form_submissions")
+
+    hubspot_request_handler = get_hubspot_request_handler(project_id, refresh_token, api_key)
 
     page_count = 50
     buffer_size = page_count * get_buffer_size_by_api_count()
@@ -946,13 +995,13 @@ def sync_form_submissions(project_id, api_key):
             continue
 
         url = "https://api.hubapi.com/form-integrations/v1/submissions/forms/"+form_id+"?"
-        parameter_dict = { 'hapikey': api_key, "limit":50 }
+        parameter_dict = {"limit":50 }
         parameters = urllib.parse.urlencode(parameter_dict)
         get_url = url + parameters
-        
+
         count = 0
         log.warning("Downloading form submissions for project_id %d from url %s.", project_id, get_url)
-        r = get_with_fallback_retry(project_id, get_url)
+        r = hubspot_request_handler(project_id, get_url)
         if not r.ok:
             log.error("Failure response %d from hubspot on sync_form_submissions", r.status_code)
             create_all_form_submissions_documents_with_buffer([],False)
@@ -1040,6 +1089,9 @@ def allow_sync_by_project_id(project_id):
 
     return True
 
+def get_hubspot_app_credentials():
+    return options.hubspot_app_id, options.hubspot_app_secret
+
 def disable_non_marketing_contacts_by_project_id(project_id):
     all_projects, allowed_projects, _ = get_allowed_list_with_all_element_support(options.disable_non_marketing_contacts_project_id)
 
@@ -1100,10 +1152,11 @@ def get_next_sync_info(project_settings, last_sync_info, first_time_sync = False
             continue
 
         api_key = settings.get("api_key")
-        if api_key == None:
-            log.error("No api_key on project_settings of project %d", project_id)
+        refresh_token = settings.get("refresh_token")
+        if api_key == None and refresh_token == None:
+            log.error("No api_key and refresh_token on project_settings of project %d", project_id)
             continue
-        
+
         sync_info = last_sync_info.get(project_id)
         if sync_info == None:
             log.error("Last sync info missing for project %d", project_id)
@@ -1117,6 +1170,7 @@ def get_next_sync_info(project_settings, last_sync_info, first_time_sync = False
             next_sync["project_id"] = int(project_id)
             next_sync["api_key"] = api_key
             next_sync["doc_type"] = doc_type
+            next_sync["refresh_token"] = refresh_token if refresh_token is not None else ""
             # sync all, if last sync timestamp is 0.
             next_sync["sync_all"] = first_time_sync
             next_sync["last_sync_timestamp"] = sync_info[doc_type]
@@ -1125,7 +1179,7 @@ def get_next_sync_info(project_settings, last_sync_info, first_time_sync = False
     return next_sync_info 
 
 
-def sync(project_id, api_key, doc_type, sync_all, last_sync_timestamp):
+def sync(project_id, refresh_token, api_key, doc_type, sync_all, last_sync_timestamp):
     response = {}
     response["project_id"] = project_id
     response["doc_type"] = doc_type
@@ -1137,19 +1191,19 @@ def sync(project_id, api_key, doc_type, sync_all, last_sync_timestamp):
             raise Exception("invalid params on sync, project_id "+str(project_id)+", api_key "+str(api_key)+", doc_type "+str(doc_type)+", sync_all "+str(sync_all))            
 
         if doc_type == "contact":
-            response["contact_api_calls"],max_timestamp = sync_contacts(project_id, api_key, last_sync_timestamp, sync_all)
+            response["contact_api_calls"],max_timestamp = sync_contacts(project_id, refresh_token, api_key, last_sync_timestamp, sync_all)
         elif doc_type == "company":        
-            response["companies_api_calls"], response["companies_contacts_api_calls"],max_timestamp = sync_companies(project_id, api_key, last_sync_timestamp, sync_all)
+            response["companies_api_calls"], response["companies_contacts_api_calls"],max_timestamp = sync_companies(project_id, refresh_token, api_key, last_sync_timestamp, sync_all)
         elif doc_type == "deal":
-            response["deal_api_calls"] = sync_deals(project_id, api_key, sync_all)
+            response["deal_api_calls"] = sync_deals(project_id, refresh_token, api_key, sync_all)
         elif doc_type == "form":
-            sync_forms(project_id, api_key)
+            sync_forms(project_id, refresh_token, api_key)
         elif doc_type == "form_submission":
-            sync_form_submissions(project_id, api_key)
+            sync_form_submissions(project_id, refresh_token, api_key)
         elif doc_type == "deleted_contacts":
-            response["deleted_contacts_api_calls"] = get_deleted_contacts(project_id, api_key)
+            response["deleted_contacts_api_calls"] = get_deleted_contacts(project_id, refresh_token, api_key)
         elif doc_type == "engagement":
-            response["engagement_api_calls"],max_timestamp = sync_engagements(project_id, api_key, last_sync_timestamp)
+            response["engagement_api_calls"],max_timestamp = sync_engagements(project_id, refresh_token, api_key, last_sync_timestamp)
         else:
             raise Exception("invalid doc_type "+ doc_type)
 
@@ -1280,7 +1334,7 @@ def hubspot_sync(configs):
         log.warning("Current processing sync_info: "+str(info))
         notification_payload = {}
         try:
-            response = sync(info.get("project_id"), info.get("api_key"),
+            response = sync(info.get("project_id"), info.get("refresh_token"), info.get("api_key"),
                     info.get("doc_type"), info.get("sync_all"), info.get("last_sync_timestamp"))
             if response["status"] == "failed":
                 next_sync_failures.append(response)

@@ -70,6 +70,10 @@ spec:
             - "*"
             - --project_distributer_app_name
             - "hubspot_project_distributer"
+            - --hubspot_app_id
+            - $(HUBSPOT_APP_ID)
+            - --hubspot_app_secret
+            - $(HUBSPOT_APP_SECRET)
             envFrom:
             - configMapRef:
                 name: config-env
@@ -83,4 +87,6 @@ spec:
                 name: config-redis
             - configMapRef:
                 name: config-persistent-redis
+            - secretRef:
+                name: secret-hubspot
           restartPolicy: OnFailure

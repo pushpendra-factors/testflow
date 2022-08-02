@@ -17,7 +17,6 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"os"
-	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -781,18 +780,8 @@ func Recovery() gin.HandlerFunc {
 		defer func() {
 			if r := recover(); r != nil {
 				httprequest, _ := httputil.DumpRequest(c.Request, false)
-
-				buf := make([]byte, 1024)
-				runtime.Stack(buf, false)
-
-				msg := fmt.Sprintf("Panic CausedBy: %v\nStackTrace: %v\nHttpReq: %v\n", r, string(buf), string(httprequest))
-
-				log.Errorf("Recovering from panic: %v", msg)
-
-				err := U.NotifyThroughSNS("APIPanicRecoveryMid", C.GetConfig().Env, msg)
-				if err != nil {
-					log.WithError(err).Error("failed to send message to sns")
-				}
+				logFields := log.Fields{"http_request": string(httprequest)}
+				U.NotifyOnPanicWithErrorLog("APIPanicRecoveryMid", C.GetConfig().Env, r, &logFields)
 
 				c.AbortWithStatus(http.StatusInternalServerError)
 			}

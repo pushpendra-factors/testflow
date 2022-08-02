@@ -8,6 +8,7 @@ import (
 	U "factors/util"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
@@ -83,12 +84,12 @@ func GetGroupPropertiesHandler(c *gin.Context) {
 	displayNamesOp := make(map[string]string)
 	_, displayNames := store.GetStore().GetDisplayNamesForAllUserProperties(projectId)
 	for property, displayName := range displayNames {
-		displayNamesOp[property] = displayName
+		displayNamesOp[property] = strings.Title(displayName)
 	}
 
 	_, displayNames = store.GetStore().GetDisplayNamesForObjectEntities(projectId)
 	for property, displayName := range displayNames {
-		displayNamesOp[property] = displayName
+		displayNamesOp[property] = strings.Title(displayName)
 	}
 	for _, props := range propertiesFromCache {
 		for _, prop := range props {

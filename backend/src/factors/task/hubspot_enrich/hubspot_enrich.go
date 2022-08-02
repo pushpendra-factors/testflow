@@ -59,7 +59,7 @@ func (s *SyncStatus) AddSyncStatus(status []IntHubspot.Status, hasFailure bool) 
 
 func syncWorker(projectID int64, wg *sync.WaitGroup, numDocRoutines int, syncStatus *SyncStatus, recordsMaxCreatedAt int64, hubspotProjectSettings *model.HubspotProjectSettings, recordsProcessLimit int) {
 	defer wg.Done()
-	datePropertiesByObjectType, err := IntHubspot.GetHubspotPropertiesByDataType(projectID, model.GetHubspotAllowedObjects(projectID), hubspotProjectSettings.APIKey, model.HubspotDataTypeDate)
+	datePropertiesByObjectType, err := IntHubspot.GetHubspotPropertiesByDataType(projectID, model.GetHubspotAllowedObjects(projectID), hubspotProjectSettings.APIKey, hubspotProjectSettings.RefreshToken, model.HubspotDataTypeDate)
 	if err != nil {
 		log.WithFields(log.Fields{"project_id": projectID}).WithError(err).Error("Failed to get date properties.")
 
@@ -67,7 +67,7 @@ func syncWorker(projectID int64, wg *sync.WaitGroup, numDocRoutines int, syncSta
 		return
 	}
 
-	timeZone, err := IntHubspot.GetHubspotAccountTimezone(projectID, hubspotProjectSettings.APIKey)
+	timeZone, err := model.GetHubspotAccountTimezone(projectID, hubspotProjectSettings.APIKey, hubspotProjectSettings.RefreshToken, C.GetHubspotAppID(), C.GetHubspotAppSecret())
 	if err != nil {
 		log.WithFields(log.Fields{"project_id": projectID}).WithError(err).Error("Failed to get timezone for enrichment.")
 		syncStatus.AddSyncStatus([]IntHubspot.Status{{ProjectId: projectID, Message: err.Error(), Status: U.CRM_SYNC_STATUS_FAILURES}}, true)
@@ -167,7 +167,7 @@ func RunHubspotEnrich(configs map[string]interface{}) (map[string]interface{}, b
 	projectIDs := make([]int64, 0, 0)
 	projectsMaxCreatedAt := make(map[int64]int64)
 	hubspotProjectSettingsMap := make(map[int64]*model.HubspotProjectSettings, 0)
-	for _, settings := range hubspotEnabledProjectSettings {
+	for i, settings := range hubspotEnabledProjectSettings {
 		if exists := disabledProjects[settings.ProjectId]; exists {
 			continue
 		}
@@ -188,7 +188,7 @@ func RunHubspotEnrich(configs map[string]interface{}) (map[string]interface{}, b
 		if C.IsEnabledPropertyDetailByProjectID(settings.ProjectId) {
 			log.Info(fmt.Sprintf("Starting sync property details for project %d", settings.ProjectId))
 
-			failure, propertyDetailStatus := IntHubspot.SyncDatetimeAndNumericalProperties(settings.ProjectId, settings.APIKey)
+			failure, propertyDetailStatus := IntHubspot.SyncDatetimeAndNumericalProperties(settings.ProjectId, settings.APIKey, settings.RefreshToken)
 			propertyDetailSyncStatus = append(propertyDetailSyncStatus, propertyDetailStatus...)
 			if failure {
 				anyFailure = true
@@ -198,7 +198,7 @@ func RunHubspotEnrich(configs map[string]interface{}) (map[string]interface{}, b
 		}
 
 		projectIDs = append(projectIDs, settings.ProjectId)
-		hubspotProjectSettingsMap[settings.ProjectId] = &settings
+		hubspotProjectSettingsMap[settings.ProjectId] = &hubspotEnabledProjectSettings[i]
 	}
 
 	// Runs enrichment for list of project_ids as batch using go routines.

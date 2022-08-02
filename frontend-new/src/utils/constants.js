@@ -472,14 +472,25 @@ export const PREDEFINED_DATES = {
   YESTERDAY: 'yesterday'
 };
 
-export const TimeZoneOffsetValues = {
-  IST: { offset: '+05:30', city: 'Asia/Kolkata' },
-  PT: { offset: '−08:00', city: 'America/Vancouver' },
-  CT: { offset: '−06:00', city: 'America/Costa_Rica' },
-  ET: { offset: '−05:00', city: 'America/Chicago' },
-  GMT: { offset: '+00:00', city: 'UTC' },
-  AEST: { offset: '+10:00', city: 'Australia/Sydney' }
-};
+export const TimeZoneOffsetValueArr = [
+  { abbr: 'GMT', name: 'GMT', offset: '+00:00', city: 'UTC' },
+  { abbr: 'IST', name: 'Indian Standard Time', offset: '+05:30', city: 'Asia/Kolkata' },
+  { abbr: 'PT', name: 'Pacific Time', offset: '−08:00', city: 'America/Vancouver' },
+  { abbr: 'CT', name: 'Central Time', offset: '−06:00', city: 'America/Costa_Rica' },
+  { abbr: 'ET', name: 'Eastern Time', offset: '−05:00', city: 'America/Chicago' },
+  { abbr: 'AEST', name: 'Australia Eastern Standard Time', offset: '+10:00', city: 'Australia/Sydney' },
+  { abbr: 'SGT', name: 'Singapore Time', offset: '+08:00', city: 'Asia/Singapore' },
+  { abbr: 'CEST', name: 'Central European Standard Time', offset: '+01:00', city: 'Europe/Dublin' },
+  { abbr: 'CEST', name: 'Central European Standard Time', offset: '+02:00', city: 'Europe/Budapest' },
+  { abbr: 'NZST', name: 'New Zealand Standard Time', offset: '+12:00', city: 'Pacific/Auckland' },
+  { abbr: 'KST', name: 'Korean Standard Time', offset: '+09:00', city: 'Asia/Seoul' },
+  { abbr: 'GST', name: 'Gulf Standard Time', offset: '+04:00', city: 'Asia/Dubai' },
+  { abbr: 'EET', name: 'Eastern European Standard Time', offset: '+02:00', city: 'Europe/Berlin' },
+  { abbr: 'EEST', name: 'Easter European Summer Time ', offset: '+03:00', city: 'Europe/Athens' },
+  { abbr: 'JST', name: 'Japan Standard Time', offset: '+09:00', city: 'Asia/Tokyo' },
+];
+
+export const getTimeZoneNameFromCity = (name) => TimeZoneOffsetValueArr.find(item => item?.city === name);
 
 export const DATE_FORMATS = {
   quarter: 'Q-YYYY',
@@ -518,7 +529,7 @@ export const ReverseProfileMapper = {
 };
 
 export const profileOptions = {
-  users: [['Website Visitors'], ['Hubspot Contacts'], ['Salesforce Users'], ['Marketo'],['LeadSquared']],
+  users: [['Website Visitors'], ['Hubspot Contacts'], ['Salesforce Users'], ['Marketo'], ['LeadSquared']],
   $salesforce_opportunity: [['All Opportunities']],
   $hubspot_deal: [['All Deals']],
   $salesforce_account: [['All Accounts']],

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
@@ -172,15 +173,15 @@ func GetUserPropertiesHandler(c *gin.Context) {
 		standardProperties := U.STANDARD_USER_PROPERTIES_DISPLAY_NAMES
 		displayNamesOp := make(map[string]string)
 		for property, displayName := range standardProperties {
-			displayNamesOp[property] = displayName
+			displayNamesOp[property] = strings.Title(displayName)
 		}
 		for property, displayName := range displayNames {
-			displayNamesOp[property] = displayName
+			displayNamesOp[property] = strings.Title(displayName)
 		}
 
 		_, displayNames = store.GetStore().GetDisplayNamesForObjectEntities(projectId)
 		for property, displayName := range displayNames {
-			displayNamesOp[property] = displayName
+			displayNamesOp[property] = strings.Title(displayName)
 		}
 		for _, props := range properties {
 			for _, prop := range props {

@@ -550,3 +550,15 @@ $cq-card-transition: transform 0.2s ease-in-out;
 .breakdown-margin {
   margin-right: 22px;
 }
+
+.input-value {
+  font-family: $font-family;
+  border-radius: 4px;
+  border-color: transparent;
+  background: $fa-color--mono-1;
+  color: $fa-color--mono-5;
+  margin-right:4px;
+}
+.input-value:hover:active:focus {
+  border-color: $fa-color--brand-color;
+}

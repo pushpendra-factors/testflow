@@ -157,7 +157,7 @@ function Sidebar(props) {
     history.push('/');
     notification.success({
       message: 'Project Changed!',
-      description: `You are currently viewing data from ${selectedProject.name}`
+      description: `You are currently viewing data from ${selectedProject?.name}`
     });
   }; 
 

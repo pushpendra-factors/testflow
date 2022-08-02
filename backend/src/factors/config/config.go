@@ -252,6 +252,8 @@ type Configuration struct {
 	ClearbitEnabled                                 int
 	UseSalesforceV54APIByProjectID                  string
 	EnableOptimisedFilterOnProfileQuery             bool
+	HubspotAppID                                    string
+	HubspotAppSecret                                string
 	EnableOptimisedFilterOnEventUserQuery           bool
 }
 
@@ -1900,18 +1902,18 @@ func PingHealthcheckForFailure(healthcheckID string, message interface{}) {
 
 // PingHealthcheckForPanic To capture panics in crons and send an alert to healthcheck and SNS.
 func PingHealthcheckForPanic(taskID, env, healthcheckID string) {
-	if pe := recover(); pe != nil {
+	if recoveredFrom := recover(); recoveredFrom != nil {
 		if configuration == nil {
 			// In case panic happens before conf is initialized.
 			InitConf(&Configuration{Env: env})
 		}
-		panicMessage := map[string]interface{}{"panic_error": pe, "stacktrace": string(debug.Stack())}
+		panicMessage := map[string]interface{}{
+			"panic_error": recoveredFrom,
+			"stacktrace":  string(debug.Stack()),
+		}
 		PingHealthcheckForFailure(healthcheckID, panicMessage)
 
-		if ne := U.NotifyThroughSNS(taskID, env, panicMessage); ne != nil {
-			log.Fatal(ne, pe) // using fatal to avoid panic loop.
-		}
-		log.Fatal(pe) // using fatal to avoid panic loop.
+		U.NotifyOnPanicWithErrorLog(taskID, env, recoveredFrom, &log.Fields{})
 	}
 }
 
@@ -2201,6 +2203,15 @@ func EnableOptimisedFilterOnProfileQuery() bool {
 	return configuration.EnableOptimisedFilterOnProfileQuery
 }
 
+func GetHubspotAppSecret() string {
+	return configuration.HubspotAppSecret
+}
+
+func GetHubspotAppID() string {
+	return configuration.HubspotAppID
+}
+
 func EnableOptimisedFilterOnEventUserQuery() bool {
 	return configuration.EnableOptimisedFilterOnEventUserQuery
+
 }

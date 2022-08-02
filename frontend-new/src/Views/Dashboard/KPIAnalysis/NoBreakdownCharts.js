@@ -128,7 +128,7 @@ const NoBreakdownCharts = ({
           <div className={unit.cardSize === 1 ? 'w-3/4' : 'w-full'}>
             <SparkChart
               frequency={durationObj.frequency}
-              page="campaigns"
+              page="kpi"
               event={aggregateData[0].name}
               chartData={aggregateData[0].dataOverTime}
               chartColor="#4D7DB4"

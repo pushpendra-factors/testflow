@@ -1,21 +1,57 @@
-import React from "react";
+import React, { useEffect} from "react";
 import { Row, Col, Modal} from "antd";
 import {Text } from '../../../../components/factorsComponents';
-import { useSelector } from 'react-redux';
+import { useSelector,useDispatch } from 'react-redux';
 import { useHistory } from 'react-router-dom';
 
 import {createDashboardFromTemplate} from '../../../../reducers/dashboard_templates/services'
+import { fetchDashboards}from '../../../../reducers/dashboard/services';
+import { fetchWeeklyIngishtsMetaData } from 'Reducers/insights';
+import { fetchKPIConfig, fetchPageUrls } from '../../../../reducers/kpi';
+import {
+    fetchAttrContentGroups,
+    fetchGroups,
+    fetchQueries,
+    fetchSmartPropertyRules,
+  } from '../../../../reducers/coreQuery/services';
+  import {
+    getUserProperties,
+    fetchEventNames,
+    getGroupProperties,
+  } from '../../../../reducers/coreQuery/middleware';
 
-
-function CopyDashboardModal({showCopyDashBoardModal,setShowCopyDashBoardModal}){
+function CopyDashboardModal({showCopyDashBoardModal,setShowCopyDashBoardModal,setShowTemplates}){
     const history = useHistory();
     const { active_project } = useSelector((state) => state.global);
     const { activeTemplate } = useSelector((state)=>state.dashboardTemplates);
+    const {dashboards} = useSelector((state)=>state.dashboard);
+    const dispatch = useDispatch();
+    // console.log('r',state);
+
+    useEffect(()=>{
+        history.push('/');
+    },[dashboards])
+
+    const fetchDashboardItems = ()=>{
+        dispatch(fetchDashboards(active_project.id));
+        dispatch(fetchQueries(active_project.id));
+        dispatch(fetchGroups(active_project.id));
+        dispatch(fetchKPIConfig(active_project.id));
+        dispatch(fetchPageUrls(active_project.id));
+        // dispatch(deleteQueryTest())
+        fetchEventNames(active_project.id);
+        getUserProperties(active_project.id);
+        getGroupProperties(active_project.id);
+        dispatch(fetchSmartPropertyRules(active_project.id));
+        fetchWeeklyIngishtsMetaData(active_project.id);
+        dispatch(fetchAttrContentGroups(active_project.id));
+    }
     const handleOk = async()=>{
         try{
             const res = await createDashboardFromTemplate(active_project.id,activeTemplate.id);
-            history.push('/');
-
+            console.log('Dashboards Created');
+            setShowTemplates(false);
+            fetchDashboardItems();
         }catch (err){
             console.log(err.response);
         }
@@ -44,7 +80,7 @@ function CopyDashboardModal({showCopyDashBoardModal,setShowCopyDashBoardModal}){
                         <Text type='title' level={4} weight={'bold'}>Do you want to create a copy?</Text>
                     </Col>
                     <Col >
-                        <Text type='paragraph' level={7} color={'grey'} weight={'bold'}>Creating a copy will replicate the dashboard into your Project</Text>
+                        <Text type='paragraph' level={7} color={'grey'} weight={'bold'}>Creating a copy will replicate this dashboard into your Project</Text>
                     </Col>
                 </Row>
             </Modal>

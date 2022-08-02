@@ -187,17 +187,7 @@ function ContentGroups({
                         color={'grey-2'}
                         extraClass={'m-0'}
                       >
-                        A content group refers to a collection of logically
-                        related URLs that makes up your overall website’s
-                        content. For example a collection of blog articles
-                        written with a specific intend on your blog. By defining
-                        a content group to identify all such pages on the site,
-                        you can analyse common traits across many such pages at
-                        one go.
-                        <span className={'font-bold'}>
-                          You can define upto 3 content groups
-                        </span>
-                        . Learn <a href='#'>more</a>
+                        A content group refers to a collection of logically related URLs that are a part of your overall website’s content. This could be a collection of blog articles written with a specific intent — say 'how tos'.
                       </Text>
                       <Text
                         type={'title'}
@@ -205,18 +195,15 @@ function ContentGroups({
                         color={'grey-2'}
                         extraClass={'m-0 mt-4'}
                       >
-                        Currently, content groups can be used to drill down the
-                        factors default event
-                        <span
-                          style={{
-                            background: '#F5F6F8',
-                            color: '#0E2647',
-                            padding: '2px',
-                            marginLeft: '4px',
-                          }}
-                        >
-                          Website Session
-                        </span>
+                        By defining a content group to identify all such pages on your site, you can analyse common traits across this content group at one go. You can define <span className='font-bold'>upto 3</span> content groups. <a href='https://help.factors.ai/en/articles/6280971-content-groups' target={'_blank'}>Learn more</a>
+                      </Text>
+                      <Text
+                        type={'title'}
+                        level={7}
+                        color={'grey-2'}
+                        extraClass={'m-0 mt-4'}
+                      >
+                        Currently, content groups can be used to drill down the factors default event <span className='font-bold'>'Website Session'</span>
                       </Text>
 
                       <Table

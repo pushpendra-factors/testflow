@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import styles from './index.module.scss';
 import { SVG, Text } from '../factorsComponents';
-import { Button, Input, InputNumber, Tooltip, DatePicker, Select } from 'antd';
+import { Button, Input, InputNumber, Tooltip, DatePicker, Select} from 'antd';
 import GroupSelect2 from '../QueryComposer/GroupSelect2';
 import FaDatepicker from '../FaDatepicker';
 import FaSelect from '../FaSelect';
@@ -48,6 +48,8 @@ const FAFilterSelect = ({
   const [grnSelectOpen, setGrnSelectOpen] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [dateOptionSelectOpen,setDateOptionSelectOpen]=useState(false);
+  const [containButton, setContainButton] = useState(true);
+
 
   const [updateState, updateStateApply] = useState(false);
 
@@ -191,7 +193,7 @@ const FAFilterSelect = ({
   const setNumericalValue = (ev) => {
     // onNumericalSelect(ev);
 
-    setValuesState(String(ev).toString());
+    setValuesState(String(ev.target.value).toString());
   };
 
   const parseDateRangeFilter = (fr, to, value) => {
@@ -544,12 +546,30 @@ const FAFilterSelect = ({
 
     if (propState.type === 'numerical') {
       selectionComponent = (
-        <InputNumber
+        <div>
+        {containButton && (
+          <Button
+          disabled={disabled}
+          className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
+          type='link'
+          onClick={() => setContainButton(false)}
+        >
+          {valuesState ? valuesState : 'Enter Value'}
+        </Button>)}
+        {!containButton &&
+        (<Input
+          type="number"
           value={valuesState}
-          onBlur={emitFilter}
+          placeholder={'Enter Value'}
+          onPressEnter={()=>{
+            emitFilter()
+            setContainButton(true)}}
           onChange={setNumericalValue}
           disabled={disabled}
-        ></InputNumber>
+          className={`input-value filter-buttons-radius filter-buttons-margin`}
+        ></Input>)
+        }
+        </div>
       );
     }
 
