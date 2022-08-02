@@ -185,6 +185,9 @@ export default function (state = defaultState, action) {
     case 'FETCH_ALERTS': {
       return { ...state, Alerts: action.payload };
     }
+    case 'FETCH_SHARED_ALERTS': {
+      return { ...state, sharedAlerts: action.payload };
+    }
     case 'FETCH_MARKETO_FULFILLED': {
       return { ...state, marketo: action.payload };
     }
@@ -948,6 +951,25 @@ export function fetchAlerts(projectId) {
         .then((r) => {
           if (r.ok) {
             dispatch({ type: 'FETCH_ALERTS', payload: r.data});
+            resolve(r);
+          } else {
+            reject(r);
+          }
+        })
+        .catch((err) => {
+          reject(err);
+        });
+    });
+  };
+}
+
+export function fetchSharedAlerts(projectId) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      get(dispatch, host + 'projects/'+ projectId +'/v1/alerts?saved_queries=true', {})
+        .then((r) => {
+          if (r.ok) {
+            dispatch({ type: 'FETCH_SHARED_ALERTS', payload: r.data});
             resolve(r);
           } else {
             reject(r);

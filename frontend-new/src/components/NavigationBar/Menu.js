@@ -39,6 +39,7 @@ const MenuItems = {
   Pages: 'Pages',
   Alerts: 'Alerts',
   Insights: 'Build Insights',
+  Sharing: 'Sharing',
 };
 
 const MapNametToLocation = {
@@ -110,7 +111,7 @@ function SiderMenu({
         </div>
       );
     } else if (title === 'settings') {
-      const items = ['general', 'User', 'Attribution', 'SDK', 'Integration', 'Insights'];
+      const items = ['general', 'User', 'Attribution', 'SDK', 'Integration', 'Insights', 'Sharing'];
       return (
         <div className={styles.popover_content}>
           {items.map((item) => {
@@ -359,6 +360,12 @@ function SiderMenu({
             key={`/settings/integration`}
           >
             {MenuItems.Integration}
+          </Menu.Item>
+          <Menu.Item
+            className={styles.menuitems_sub}
+            key={`/settings/sharing`}
+          >
+            {MenuItems.Sharing}
           </Menu.Item>
         </SubMenu>
       )}

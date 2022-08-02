@@ -52,6 +52,7 @@ import InsightsSettings from '../Settings/ProjectSettings/InsightsSettings';
 import { fetchProfileUsers } from '../../reducers/timeline';
 import DashboardTemplates from "../DashboardTemplates";
 import { fetchTemplates } from "../../reducers/dashboard_templates/services";
+import Sharing from '../Settings/ProjectSettings/Sharing';
 
 const FactorsInsights = lazyWithRetry(() =>
   import('../Factors/FactorsInsightsNew')
@@ -234,6 +235,10 @@ function AppLayout({
                     <Route
                       path='/settings/integration'
                       component={IntegrationSettings}
+                    />
+                    <Route
+                      path='/settings/sharing'
+                      component={Sharing}
                     />
                     <Route
                       path='/settings/insights'
