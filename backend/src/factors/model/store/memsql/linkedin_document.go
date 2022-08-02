@@ -810,7 +810,7 @@ func getSQLAndParamsFromLinkedinWithSmartPropertyReports(query *model.ChannelQue
 	finalParams = append(finalParams, staticWhereParams...)
 	if len(groupByCombinationsForGBT) != 0 {
 		whereConditionForGBT, whereParams := buildWhereConditionForGBTForLinkedin(groupByCombinationsForGBT)
-		finalFilterStatement += (" AND (" + whereConditionForGBT + ")")
+		finalFilterStatement += " AND (" + whereConditionForGBT + ") "
 		finalParams = append(finalParams, whereParams...)
 	}
 	resultSQLStatement := selectQuery + fromStatement + finalFilterStatement
@@ -913,7 +913,7 @@ func getSQLAndParamsFromLinkedinReports(query *model.ChannelQueryV1, projectID i
 	finalParams = append(finalParams, staticWhereParams...)
 	if len(groupByCombinationsForGBT) != 0 {
 		whereConditionForGBT, whereParams := buildWhereConditionForGBTForLinkedin(groupByCombinationsForGBT)
-		finalFilterStatement += (" AND (" + whereConditionForGBT + ")")
+		finalFilterStatement += " AND (" + whereConditionForGBT + ") "
 		finalParams = append(finalParams, whereParams...)
 	}
 

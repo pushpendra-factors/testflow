@@ -1655,7 +1655,7 @@ func getSQLAndParamsForAdwordsWithSmartPropertyV2(query *model.ChannelQueryV1, p
 	finalParams = append(finalParams, filterParams...)
 	if len(groupByCombinationsForGBT) != 0 {
 		whereConditionForGBT, whereParams := buildWhereConditionForGBTForAdwords(groupByCombinationsForGBT)
-		finalWhereStatement += whereConditionForGBT
+		finalWhereStatement += " AND (" + whereConditionForGBT + ") "
 		finalParams = append(finalParams, whereParams...)
 	}
 	finalGroupByKeys = dimensions.values
@@ -1869,7 +1869,7 @@ func getSQLAndParamsForAdwordsV2(query *model.ChannelQueryV1, projectID int64, f
 	finalParams = append(finalParams, filterParams...)
 	if groupByCombinationsForGBT != nil && len(groupByCombinationsForGBT) != 0 {
 		whereConditionForGBT, whereParams := buildWhereConditionForGBTForAdwords(groupByCombinationsForGBT)
-		finalWhereStatement += (" AND (" + whereConditionForGBT + ")")
+		finalWhereStatement += " AND (" + whereConditionForGBT + ") "
 		finalParams = append(finalParams, whereParams...)
 	}
 
