@@ -46,6 +46,8 @@ func main() {
 	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
 	memSQLCertificate := flag.String("memsql_cert", "", "")
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypePostgres, "Primary datastore type as memsql or postgres")
+	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
+	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
 	awsRegion := flag.String("aws_region", "us-east-1", "")
 	awsAccessKeyId := flag.String("aws_key", "dummy", "")
 	awsSecretAccessKey := flag.String("aws_secret", "dummy", "")
@@ -93,11 +95,14 @@ func main() {
 		AWSRegion:                             *awsRegion,
 		EmailSender:                           *factorsEmailSender,
 		EnableDryRunAlerts:                    *enableDryRunAlerts,
+		RedisHostPersistent:                   *redisHostPersistent,
+		RedisPortPersistent:                   *redisPortPersistent,
 		EnableOptimisedFilterOnEventUserQuery: *enableOptimisedFilterOnEventUserQuery != 0,
 	}
 	C.InitConf(config)
 	C.InitSenderEmail(C.GetFactorsSenderEmail())
 	C.InitMailClient(config.AWSKey, config.AWSSecret, config.AWSRegion)
+	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
 	err := C.InitDB(*config)
 	if err != nil {
 		log.Fatal("Init failed.")
