@@ -816,6 +816,9 @@ func AddHeadersByAttributionKey(result *QueryResult, query *AttributionQuery, go
 				result.Headers = append(result.Headers, fmt.Sprintf("%s - UserConversionRate(", event.Name)+"%)")
 			}
 		}
+
+		// add up key
+		result.Headers = append(result.Headers, "key")
 	} else if query.AnalyzeType == AnalyzeTypeHSDeals || query.AnalyzeType == AnalyzeTypeSFOpportunities {
 
 		// Add up for Added Keys {Campaign, Adgroup, Keyword}
@@ -872,6 +875,9 @@ func AddHeadersByAttributionKey(result *QueryResult, query *AttributionQuery, go
 				result.Headers = append(result.Headers, fmt.Sprintf("%s - UserConversionRate(", event.Name)+"%)")
 			}
 		}
+
+		// add up key
+		result.Headers = append(result.Headers, "key")
 	}
 }
 
@@ -1066,8 +1072,11 @@ func GetRowsByMaps(attributionKey string, dimensions []string, attributionData *
 	for i := 0; i < len(linkedEvents); i++ {
 		nonMatchingRow = append(nonMatchingRow, float64(0), float64(0), float64(0))
 	}
+	// Add up for key
+	nonMatchingRow = append(nonMatchingRow, "none")
+
 	rows := make([][]interface{}, 0)
-	for _, data := range *attributionData {
+	for key, data := range *attributionData {
 		attributionIdName := ""
 		switch attributionKey {
 		case AttributionKeyCampaign:
@@ -1179,6 +1188,8 @@ func GetRowsByMaps(attributionKey string, dimensions []string, attributionData *
 			}
 			// for linked event considering the data.ConversionEventCount[0] only
 			row = append(row, getLinkedEventColumnAsInterfaceList(float64(data.ConversionEventCount[0]), data.Spend, data.LinkedEventsCount, len(linkedEvents))...)
+			// Add up key
+			row = append(row, key)
 			rows = append(rows, row)
 		}
 	}
@@ -1321,7 +1332,7 @@ func ProcessQuery(query *AttributionQuery, attributionData *map[string]*Attribut
 	result := &QueryResult{}
 	AddHeadersByAttributionKey(result, query, nil, nil)
 	result.Rows = dataRows
-
+	logCtx.WithFields(log.Fields{"Headers": result.Headers}).Info("logs to check headers")
 	// get the headers for KPI
 	var goalEventAggFuncTypes []string
 	for _, value := range *attributionData {
@@ -1525,7 +1536,7 @@ func MergeTwoDataRows(row1 []interface{}, row2 []interface{}, keyIndex int, attr
 		}
 
 		// Remaining linked funnel events & CPCs
-		for i := keyIndex + 9; i < len(row1); i += 2 {
+		for i := keyIndex + 9; i < len(row1)-1; i += 2 {
 			row1[i] = row1[i].(float64) + row2[i].(float64)
 			// Funnel - User Conversion Rate (%)
 			if row1[keyIndex+5].(float64) > 0 {
@@ -1696,7 +1707,7 @@ func MergeTwoDataRows(row1 []interface{}, row2 []interface{}, keyIndex int, attr
 		}
 
 		// Remaining linked funnel events & CPCs
-		for i := keyIndex + 18; i < len(row1); i += 3 {
+		for i := keyIndex + 18; i < len(row1)-1; i += 3 {
 			row1[i] = row1[i].(float64) + row2[i].(float64)
 			if row1[i].(float64) > 0 && i < len(row1) {
 				row1[i+1], _ = U.FloatRoundOffWithPrecision(spend/row1[i].(float64), U.DefaultPrecision) // Funnel - Conversion - CPC. spend/conversion
@@ -1807,7 +1818,7 @@ func AddGrandTotalRow(headers []string, rows [][]interface{}, keyIndex int, anal
 	grandTotalRow = append(grandTotalRow, defaultMatchingRow...)
 
 	// Remaining linked funnel events & CPCs
-	for i := keyIndex + 18; i < len(headers); i++ {
+	for i := keyIndex + 18; i < len(headers)-1; i++ {
 		grandTotalRow = append(grandTotalRow, float64(0))
 	}
 
@@ -1831,7 +1842,7 @@ func AddGrandTotalRow(headers []string, rows [][]interface{}, keyIndex int, anal
 
 	var spendFunnelConversionCPC []float64      //linked funnel events
 	var conversionFunnelConversionCPC []float64 //linked funnel events
-	for i := keyIndex + 18; i < len(headers); i += 3 {
+	for i := keyIndex + 18; i < len(headers)-1; i += 3 {
 		spendFunnelConversionCPC = append(spendFunnelConversionCPC, float64(0))
 		conversionFunnelConversionCPC = append(conversionFunnelConversionCPC, float64(0))
 	}
@@ -1886,7 +1897,7 @@ func AddGrandTotalRow(headers []string, rows [][]interface{}, keyIndex int, anal
 
 		// Remaining linked funnel events & CPCs
 		j := 0
-		for i := keyIndex + 18; i < len(grandTotalRow); i += 3 {
+		for i := keyIndex + 18; i < len(grandTotalRow)-1; i += 3 {
 			grandTotalRow[i] = grandTotalRow[i].(float64) + row[i].(float64)
 			if spend > 0 && i < len(grandTotalRow) && j < len(spendFunnelConversionCPC) {
 				spendFunnelConversionCPC[j], _ = U.FloatRoundOffWithPrecision(spendFunnelConversionCPC[j]+spend, U.DefaultPrecision)
@@ -1958,7 +1969,7 @@ func AddGrandTotalRow(headers []string, rows [][]interface{}, keyIndex int, anal
 
 	// Remaining linked funnel events & CPCs
 	k := 0
-	for i := keyIndex + 18; i < len(grandTotalRow); i += 3 {
+	for i := keyIndex + 18; i < len(grandTotalRow)-1; i += 3 {
 		if conversionFunnelConversionCPC[k] > 0 && i < len(grandTotalRow) && k < len(spendFunnelConversionCPC) {
 			grandTotalRow[i+1], _ = U.FloatRoundOffWithPrecision(spendFunnelConversionCPC[k]/conversionFunnelConversionCPC[k], U.DefaultPrecision) // Funnel - Conversion - CPC.
 		} else {
@@ -1966,6 +1977,9 @@ func AddGrandTotalRow(headers []string, rows [][]interface{}, keyIndex int, anal
 		}
 		k += 1
 	}
+
+	// concatenated key
+	grandTotalRow = append(grandTotalRow, "Grand Total")
 
 	rows = append([][]interface{}{grandTotalRow}, rows...)
 
