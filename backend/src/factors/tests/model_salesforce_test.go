@@ -29,6 +29,79 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestSalesforceCreateDocument(t *testing.T) {
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	refreshToken := U.RandomLowerAphaNumString(5)
+	instanceURL := U.RandomLowerAphaNumString(5)
+	errCode := store.GetStore().UpdateAgentIntSalesforce(agent.UUID,
+		refreshToken,
+		instanceURL,
+	)
+	assert.Equal(t, http.StatusAccepted, errCode)
+
+	_, errCode = store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{
+		IntSalesforceEnabledAgentUUID: &agent.UUID,
+	})
+	assert.Equal(t, http.StatusAccepted, errCode)
+
+	// should return list of supported doc type with timestamp 0.
+	syncInfo, errCode := store.GetStore().GetSalesforceSyncInfo()
+	assert.Equal(t, http.StatusFound, errCode)
+
+	assert.Equal(t, refreshToken, syncInfo.ProjectSettings[project.ID].RefreshToken)
+	assert.Equal(t, instanceURL, syncInfo.ProjectSettings[project.ID].InstanceURL)
+
+	assert.Contains(t, syncInfo.LastSyncInfo[project.ID], model.SalesforceDocumentTypeNameContact)
+	assert.Equal(t, int64(0), syncInfo.LastSyncInfo[project.ID][model.SalesforceDocumentTypeNameContact])
+	assert.Contains(t, syncInfo.LastSyncInfo[project.ID], model.SalesforceDocumentTypeNameAccount)
+	assert.Equal(t, int64(0), syncInfo.LastSyncInfo[project.ID][model.SalesforceDocumentTypeNameAccount])
+	assert.Contains(t, syncInfo.LastSyncInfo[project.ID], model.SalesforceDocumentTypeNameLead)
+	assert.Equal(t, int64(0), syncInfo.LastSyncInfo[project.ID][model.SalesforceDocumentTypeNameLead])
+
+	// should contain opportunity by default.
+	assert.Contains(t, syncInfo.LastSyncInfo[project.ID], model.SalesforceDocumentTypeNameOpportunity)
+
+	accountID := "acc_" + getRandomName()
+	name := U.RandomLowerAphaNumString(5)
+
+	createdDate := time.Now()
+
+	// salesforce record with created == updated.
+	jsonData := fmt.Sprintf(`{"Id":"%s", "name":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, accountID, name, createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout), createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout))
+	salesforceDocument := &model.SalesforceDocument{
+		ProjectID: project.ID,
+		TypeAlias: model.SalesforceDocumentTypeNameAccount,
+		Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonData))},
+	}
+
+	errCode = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
+	assert.Equal(t, http.StatusOK, errCode)
+
+	syncInfo, errCode = store.GetStore().GetSalesforceSyncInfo()
+	assert.Equal(t, http.StatusFound, errCode)
+	// should return the latest timestamp from the database.
+	assert.Equal(t, createdDate.Unix(), syncInfo.LastSyncInfo[project.ID][model.SalesforceDocumentTypeNameAccount])
+
+	// should return error on duplicate.
+	errCode = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
+	assert.Equal(t, http.StatusOK, errCode)
+
+	// enrich job, create account created and account updated event.
+	enrichStatus, _ := IntSalesforce.Enrich(project.ID, 2, nil)
+	assert.Len(t, enrichStatus, 1)
+	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
+	assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[0].Status)
+
+	documents, status := store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{accountID}, model.SalesforceDocumentTypeAccount, false)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Len(t, documents, 1)
+
+	// Verify event and user properties without empty value
+	_, status = store.GetStore().GetEventById(project.ID, documents[0].SyncID, documents[0].UserID)
+	assert.Equal(t, http.StatusFound, status)
+}
+
 func TestSalesforceCreateSalesforceDocument(t *testing.T) {
 	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
@@ -1312,13 +1385,10 @@ func TestSalesforceIdentification(t *testing.T) {
 	}
 
 	/*
-		Email Identification
+	   Email Identification
 	*/
 	// Should return standard email field
-	emailFields := model.GetSalesforceEmailFieldByProjectIDAndObjectName(project.ID, model.SalesforceDocumentTypeNameAccount, &SalesforceProjectIdentificationFieldStore)
-	assert.Equal(t, 1, len(emailFields))
-	assert.Equal(t, "PersonEmail", emailFields[0])
-	emailFields = model.GetSalesforceEmailFieldByProjectIDAndObjectName(project.ID, model.SalesforceDocumentTypeNameContact, &SalesforceProjectIdentificationFieldStore)
+	emailFields := model.GetSalesforceEmailFieldByProjectIDAndObjectName(project.ID, model.SalesforceDocumentTypeNameContact, &SalesforceProjectIdentificationFieldStore)
 	assert.Equal(t, 1, len(emailFields))
 	assert.Equal(t, "Email", emailFields[0])
 
@@ -1332,14 +1402,10 @@ func TestSalesforceIdentification(t *testing.T) {
 	assert.Equal(t, "Mobile__c", emailFields[0])
 
 	/*
-		Phone Identification
+	   Phone Identification
 	*/
-	// Should return standard email field
-	phoneFields := model.GetSalesforcePhoneFieldByProjectIDAndObjectName(project.ID, model.SalesforceDocumentTypeNameAccount, &SalesforceProjectIdentificationFieldStore)
-	assert.Equal(t, 2, len(phoneFields))
-	assert.Equal(t, "Phone", phoneFields[0])
-	assert.Equal(t, "PersonMobilePhone", phoneFields[1])
-	phoneFields = model.GetSalesforcePhoneFieldByProjectIDAndObjectName(project.ID, model.SalesforceDocumentTypeNameContact, &SalesforceProjectIdentificationFieldStore)
+	// Should return standard phone field
+	phoneFields := model.GetSalesforcePhoneFieldByProjectIDAndObjectName(project.ID, model.SalesforceDocumentTypeNameContact, &SalesforceProjectIdentificationFieldStore)
 	assert.Equal(t, "Phone", phoneFields[0])
 	assert.Equal(t, "MobilePhone", phoneFields[1])
 
@@ -1360,33 +1426,34 @@ func TestSalesforceIdentification(t *testing.T) {
 	emailOpportunity := getRandomEmail()
 	createdDate := time.Now()
 	number := U.RandomUint64()
+
 	// Use default field
-	jsonDataAccount := fmt.Sprintf(`{"Id":"%s","PersonEmail":"%s","Phone":%d,"CreatedDate":"%s", "LastModifiedDate":"%s"}`, documentID, emailAccount, number, createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout), createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout))
+	jsonDataAccount := fmt.Sprintf(`{"Id":"%s","Email":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, documentID, emailAccount, createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout), createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout))
 	salesforceDocument := &model.SalesforceDocument{
 		ProjectID: project.ID,
 		TypeAlias: model.SalesforceDocumentTypeNameAccount,
 		Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonDataAccount))},
 	}
-
 	status := store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
 	assert.Equal(t, http.StatusOK, status)
+
 	jsonDataContact := fmt.Sprintf(`{"Id":"%s","Email":"%s","MobilePhone":%d,"CreatedDate":"%s", "LastModifiedDate":"%s"}`, documentID, emailContact, number, createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout), createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout))
 	salesforceDocument = &model.SalesforceDocument{
 		ProjectID: project.ID,
 		TypeAlias: model.SalesforceDocumentTypeNameContact,
 		Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonDataContact))},
 	}
-
 	status = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
 	assert.Equal(t, http.StatusOK, status)
+
 	jsonDataLead := fmt.Sprintf(`{"Id":"%s","Email":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, documentID, emailLead, createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout), createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout))
 	salesforceDocument = &model.SalesforceDocument{
 		ProjectID: project.ID,
 		TypeAlias: model.SalesforceDocumentTypeNameLead,
 		Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonDataLead))},
 	}
-
 	status = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
+	assert.Equal(t, http.StatusOK, status)
 
 	// No identification as not standard field
 	jsonDataOpportunity := fmt.Sprintf(`{"Id":"%s","Email__c":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, documentID, emailOpportunity, createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout), createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout))
@@ -1412,8 +1479,6 @@ func TestSalesforceIdentification(t *testing.T) {
 			}, {
 				Name: U.EVENT_NAME_SALESFORCE_LEAD_CREATED,
 			}, {
-				Name: U.EVENT_NAME_SALESFORCE_ACCOUNT_CREATED,
-			}, {
 				Name: U.EVENT_NAME_SALESFORCE_OPPORTUNITY_CREATED,
 			},
 		},
@@ -1437,7 +1502,6 @@ func TestSalesforceIdentification(t *testing.T) {
 
 	assert.Equal(t, "$none", EventUserIDMap[U.EVENT_NAME_SALESFORCE_OPPORTUNITY_CREATED])
 	assert.Equal(t, emailContact, EventUserIDMap[U.EVENT_NAME_SALESFORCE_CONTACT_CREATED])
-	assert.Equal(t, emailAccount, EventUserIDMap[U.EVENT_NAME_SALESFORCE_ACCOUNT_CREATED])
 	assert.Equal(t, emailLead, EventUserIDMap[U.EVENT_NAME_SALESFORCE_LEAD_CREATED])
 }
 
@@ -1641,7 +1705,6 @@ func TestSalesforceCampaignTest(t *testing.T) {
 	assert.Nil(t, err)
 
 	/*
-
 		###Campaigns
 			Campaign1:
 				ID: campaign1ID
@@ -1651,7 +1714,6 @@ func TestSalesforceCampaignTest(t *testing.T) {
 						ID: campaignMember1ID
 					CampaignMember2:
 						ID:campaignMember2ID
-
 			Campaign2:
 				ID: campaign2ID
 				Name: campaign2Name
@@ -1660,7 +1722,6 @@ func TestSalesforceCampaignTest(t *testing.T) {
 							ID: campaignMember3ID
 						CampaignMember4:
 							ID:campaignMember4ID
-
 		###CampaignMembers:
 			CampaignMember1:
 				LeadID: campaignMember1LeadID
@@ -1910,7 +1971,6 @@ func TestSalesforceCampaignTest(t *testing.T) {
 		Campaign1:
 		Lead Name :- Campaign1lead
 		Contact Name :- Campaign1Contact
-
 		Campaign2:
 		Lead Name :- Campaign2lead
 		Contact Name :- Campaign2Contact
@@ -2703,8 +2763,8 @@ func TestSalesforceOpportunitySkipOnUnsyncedLead(t *testing.T) {
 
 	assert.Equal(t, U.EVENT_NAME_SALESFORCE_OPPORTUNITY_CREATED, analyzeResult.Rows[1][0])
 	assert.Equal(t, float64(1), analyzeResult.Rows[1][1])
-
 }
+
 func TestSalesforceGetDocumentsByTypeForSyncWithTimeRange(t *testing.T) {
 	project, _, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
@@ -3106,14 +3166,13 @@ func TestSalesforceGroups(t *testing.T) {
 	}
 	enrichStatus, _ := IntSalesforce.Enrich(project.ID, 2, nil)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
-	assert.Len(t, enrichStatus, 7) // group account status, contact roles and group opportunity status
+	assert.Len(t, enrichStatus, 6) // group account status, contact roles and group opportunity status
 	assert.Equal(t, "success", enrichStatus[0].Status)
 	assert.Equal(t, "success", enrichStatus[1].Status)
 	assert.Equal(t, "success", enrichStatus[2].Status)
 	assert.Equal(t, "success", enrichStatus[3].Status)
 	assert.Equal(t, "success", enrichStatus[4].Status)
 	assert.Equal(t, "success", enrichStatus[5].Status)
-	assert.Equal(t, "success", enrichStatus[6].Status)
 
 	account1GroupUserId := ""
 	account2GroupUserId := ""
@@ -3127,10 +3186,7 @@ func TestSalesforceGroups(t *testing.T) {
 		docType := model.GetSalesforceDocTypeByAlias(processRecordsType[i])
 		documents, status := store.GetStore().GetLatestSalesforceDocumentByID(project.ID, []string{util.GetPropertyValueAsString(processRecords[i]["Id"])}, docType, 0)
 		assert.Equal(t, http.StatusFound, status)
-		assert.NotEmpty(t, documents[0].UserID)
 		if documents[0].Type == model.SalesforceDocumentTypeAccount || documents[0].Type == model.SalesforceDocumentTypeOpportunity {
-			assert.NotEqual(t, "", documents[0].GroupUserID)
-			assert.NotEqual(t, "", documents[0].UserID)
 			groupUser, _ := store.GetStore().GetUser(project.ID, documents[0].GroupUserID)
 			assert.Equal(t, model.UserSourceSalesforce, *groupUser.Source)
 			if documents[0].Type == model.SalesforceDocumentTypeOpportunity {
@@ -3146,6 +3202,8 @@ func TestSalesforceGroups(t *testing.T) {
 					opportunity4GroupUserId = groupUser.ID
 				}
 			} else {
+				assert.NotEqual(t, "", documents[0].GroupUserID)
+				assert.Equal(t, "", documents[0].UserID)
 				if documents[0].ID == accountID1 {
 					assert.Equal(t, accountID1, groupUser.Group1ID)
 					account1GroupUserId = groupUser.ID
@@ -3154,7 +3212,6 @@ func TestSalesforceGroups(t *testing.T) {
 					account2GroupUserId = groupUser.ID
 				}
 			}
-
 		} else if documents[0].Type == model.SalesforceDocumentTypeOpportunityContactRole {
 			if documents[0].ID == opportunityID4ContactRole1 {
 				assert.Equal(t, opportunityID4ContactRole1ContactUserID, documents[0].UserID)
@@ -3196,20 +3253,6 @@ func TestSalesforceGroups(t *testing.T) {
 	assert.Len(t, result, 3)
 	assert.Equal(t, float64(2), result[leadID1])
 	assert.Equal(t, float64(2), result[leadID2])
-
-	result, status = querySingleEventWithBreakdownByUserProperty(project.ID, U.EVENT_NAME_SALESFORCE_ACCOUNT_CREATED,
-		"$salesforce_account_id", createdDate.Unix()-500, createdDate.Add(30*time.Second).Unix()+500)
-	assert.Equal(t, http.StatusOK, status)
-	assert.Len(t, result, 2)
-	assert.Equal(t, float64(1), result[accountID1])
-	assert.Equal(t, float64(1), result[accountID2])
-
-	result, status = querySingleEventWithBreakdownByUserProperty(project.ID, U.EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED,
-		"$salesforce_account_id", createdDate.Unix()-500, createdDate.Add(30*time.Second).Unix()+500)
-	assert.Equal(t, http.StatusOK, status)
-	assert.Len(t, result, 2)
-	assert.Equal(t, float64(2), result[accountID1])
-	assert.Equal(t, float64(2), result[accountID2])
 
 	result, status = querySingleEventWithBreakdownByUserProperty(project.ID, U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_CREATED,
 		"$salesforce_account_id", createdDate.Unix()-500, createdDate.Add(30*time.Second).Unix()+500)
@@ -3279,9 +3322,8 @@ func TestSalesforceGroups(t *testing.T) {
 
 	enrichStatus, _ = IntSalesforce.Enrich(project.ID, 2, nil)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
-	assert.Len(t, enrichStatus, 2) // includes group account status
+	assert.Len(t, enrichStatus, 1)
 	assert.Equal(t, "success", enrichStatus[0].Status)
-	assert.Equal(t, "success", enrichStatus[1].Status)
 
 	result, status = querySingleEventWithBreakdownByUserProperty(project.ID, U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED,
 		"$salesforce_account_id", createdDate.AddDate(0, 0, 1).Unix(), createdDate.AddDate(0, 0, 1).Unix()+10)
@@ -3855,6 +3897,7 @@ func GetGroupID(user *model.User) string {
 	}
 	return user.Group4ID
 }
+
 func TestSalesforceOpportunityLateIdentification(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)

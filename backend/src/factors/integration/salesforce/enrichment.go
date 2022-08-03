@@ -33,7 +33,6 @@ var salesforceEnrichOrderByType = [...]int{
 	model.SalesforceDocumentTypeContact,
 	model.SalesforceDocumentTypeOpportunity,
 	model.SalesforceDocumentTypeCampaignMember,
-	model.SalesforceDocumentTypeAccount,
 }
 
 // CampaignChildRelationship campaign parent to child relationship
@@ -379,7 +378,7 @@ func getAccountGroupID(enProperties *map[string]interface{}, document *model.Sal
 	return accountID
 }
 
-func enrichGroupAcccount(projectID int64, document *model.SalesforceDocument) int {
+func enrichGroupAccount(projectID int64, document *model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName) int {
 	logCtx := log.WithField("project_id", projectID).
 		WithFields(log.Fields{"doc_id": document.ID, "doc_action": document.Action, "doc_timestamp": document.Timestamp})
 
@@ -387,11 +386,11 @@ func enrichGroupAcccount(projectID int64, document *model.SalesforceDocument) in
 		return http.StatusBadRequest
 	}
 
-	if document.Type != model.SalesforceDocumentTypeAccount || document.GroupUserID != "" {
+	if (document.Type != model.SalesforceDocumentTypeAccount && document.Type != model.SalesforceDocumentTypeGroupAccount) || document.GroupUserID != "" {
 		return http.StatusInternalServerError
 	}
 
-	enProperties, _, err := GetSalesforceDocumentProperties(projectID, document)
+	enProperties, properties, err := GetSalesforceDocumentProperties(projectID, document)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properties")
 		return http.StatusInternalServerError
@@ -399,15 +398,33 @@ func enrichGroupAcccount(projectID int64, document *model.SalesforceDocument) in
 
 	accountID := getAccountGroupID(enProperties, document)
 
-	groupAccountUserID, status := createOrUpdateSalesforceGroupsProperties(projectID, document, model.GROUP_NAME_SALESFORCE_ACCOUNT, accountID)
+	groupAccountUserID, status, eventID := createOrUpdateSalesforceGroupsProperties(projectID, document, model.GROUP_NAME_SALESFORCE_ACCOUNT, accountID)
 	if status != http.StatusOK {
+		logCtx.Error("Failed to create or update salesforce groups properties.")
 		return status
 	}
 
 	document.GroupUserID = groupAccountUserID
-	return status
+
+	// Always use lastmodified timestamp for updated properties. Error handling already done during event creation
+	lastModifiedTimestamp, _ := model.GetSalesforceDocumentTimestampByAction(document, model.SalesforceDocumentUpdated)
+
+	var prevProperties *map[string]interface{}
+	for _, smartEventName := range salesforceSmartEventNames {
+		prevProperties = TrackSalesforceSmartEvent(projectID, &smartEventName, eventID, document.ID, groupAccountUserID, document.Type,
+			properties, prevProperties, lastModifiedTimestamp)
+	}
+
+	errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(projectID, document, eventID, "", groupAccountUserID, true)
+	if errCode != http.StatusAccepted {
+		logCtx.Error("Failed to update salesforce account document as synced.")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusOK
 }
 
+/*
 func enrichAccount(projectID int64, document *model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName) int {
 	if projectID == 0 || document == nil {
 		return http.StatusBadRequest
@@ -461,6 +478,7 @@ func enrichAccount(projectID int64, document *model.SalesforceDocument, salesfor
 
 	return http.StatusOK
 }
+*/
 
 // SalesforceSmartEventName struct for holding event_name and filter expression
 type SalesforceSmartEventName struct {
@@ -805,37 +823,37 @@ func isValidGroupName(documentType int, groupName string) bool {
 	}
 	return false
 }
-func createOrUpdateSalesforceGroupsProperties(projectID int64, document *model.SalesforceDocument, groupName, groupID string) (string, int) {
 
+func createOrUpdateSalesforceGroupsProperties(projectID int64, document *model.SalesforceDocument, groupName, groupID string) (string, int, string) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "doc_type": document.Type, "document": document, "group_name": groupName,
 		"group_id": groupID})
 
 	if projectID == 0 || document == nil {
 		logCtx.Error("Invalid parameters")
-		return "", http.StatusBadRequest
+		return "", http.StatusBadRequest, ""
 	}
 
 	if !isValidGroupName(document.Type, groupName) {
 		logCtx.Error("Invalid group name")
-		return "", http.StatusBadRequest
+		return "", http.StatusBadRequest, ""
 	}
 
 	enProperties, _, err := GetSalesforceDocumentProperties(projectID, document)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properties")
-		return "", http.StatusInternalServerError
+		return "", http.StatusInternalServerError, ""
 	}
 
 	createdTimestamp, err := model.GetSalesforceDocumentTimestampByAction(document, model.SalesforceDocumentCreated)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get created timestamp.")
-		return "", http.StatusInternalServerError
+		return "", http.StatusInternalServerError, ""
 	}
 
 	lastModifiedTimestamp, err := model.GetSalesforceDocumentTimestampByAction(document, model.SalesforceDocumentUpdated)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get last modified timestamp.")
-		return "", http.StatusInternalServerError
+		return "", http.StatusInternalServerError, ""
 	}
 
 	createdEventName, updatedEventName := getGroupEventName(document.Type)
@@ -848,13 +866,13 @@ func createOrUpdateSalesforceGroupsProperties(projectID int64, document *model.S
 			enProperties, createdTimestamp, lastModifiedTimestamp, model.SmartCRMEventSourceSalesforce)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to update salesforce group.")
-			return "", http.StatusInternalServerError
+			return "", http.StatusInternalServerError, ""
 		}
 
 		errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(projectID, document, "", "", groupUserID, false)
 		if errCode != http.StatusAccepted {
 			logCtx.Error("Failed to set group_user_id in salesforce created document.")
-			return "", http.StatusInternalServerError
+			return "", http.StatusInternalServerError, ""
 		}
 
 		processEventNames = append(processEventNames, createdEventName, updatedEventName)
@@ -869,7 +887,7 @@ func createOrUpdateSalesforceGroupsProperties(projectID int64, document *model.S
 	if document.Action == model.SalesforceDocumentUpdated {
 		documents, status := store.GetStore().GetSyncedSalesforceDocumentByType(projectID, []string{document.ID}, document.Type, true)
 		if status != http.StatusFound {
-			return "", http.StatusInternalServerError
+			return "", http.StatusInternalServerError, ""
 		}
 
 		createdDocument := documents[0]
@@ -878,29 +896,29 @@ func createOrUpdateSalesforceGroupsProperties(projectID int64, document *model.S
 			enProperties, createdTimestamp, lastModifiedTimestamp, model.SmartCRMEventSourceSalesforce)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to update salesforce group properties.")
-			return "", http.StatusInternalServerError
+			return "", http.StatusInternalServerError, ""
 		}
 
 		if createdDocument.GroupUserID == "" {
 			errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(projectID, &createdDocument, "", "", groupUserID, false)
 			if errCode != http.StatusAccepted {
 				logCtx.Error("Failed to update group_user_id in salesforce created document.")
-				return "", http.StatusInternalServerError
+				return "", http.StatusInternalServerError, ""
 			}
 		}
 
 		errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(projectID, document, "", "", groupUserID, false)
 		if errCode != http.StatusAccepted {
 			logCtx.Error("Failed to update group_user_id in salesforce updated document.")
-			return "", http.StatusInternalServerError
+			return "", http.StatusInternalServerError, ""
 		}
 
 		processEventNames = append(processEventNames, updatedEventName)
 		processEventTimestamps = append(processEventTimestamps, lastModifiedTimestamp)
 	}
 
+	var eventID string
 	for i := range processEventNames {
-
 		trackPayload := &SDK.TrackPayload{
 			Name:          processEventNames[i],
 			ProjectId:     projectID,
@@ -913,11 +931,13 @@ func createOrUpdateSalesforceGroupsProperties(projectID int64, document *model.S
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
 			logCtx.WithFields(log.Fields{"status": status, "track_response": response, "event_name": processEventNames[i],
 				"event_timestamp": processEventTimestamps[i]}).Error("Failed to track salesforce group event.")
-			return "", http.StatusInternalServerError
+			return "", http.StatusInternalServerError, ""
 		}
+
+		eventID = response.EventId
 	}
 
-	return groupUserID, http.StatusOK
+	return groupUserID, http.StatusOK, eventID
 }
 
 func enrichGroupOpportunity(projectID int64, document *model.SalesforceDocument) (map[string]map[string]string, int) {
@@ -939,8 +959,9 @@ func enrichGroupOpportunity(projectID int64, document *model.SalesforceDocument)
 		return nil, http.StatusOK
 	}
 
-	groupUserID, status := createOrUpdateSalesforceGroupsProperties(projectID, document, model.GROUP_NAME_SALESFORCE_OPPORTUNITY, document.ID)
+	groupUserID, status, _ := createOrUpdateSalesforceGroupsProperties(projectID, document, model.GROUP_NAME_SALESFORCE_OPPORTUNITY, document.ID)
 	if status != http.StatusOK {
+		logCtx.Error("Failed to create or update salesforce groups properties.")
 		return nil, status
 	}
 
@@ -1220,10 +1241,10 @@ func updateSalesforceUserAccountGroups(projectID int64, accountID, userID string
 	groupUserID := documents[0].GroupUserID
 	if groupUserID == "" {
 		// update old record group status
-		status := enrichGroupAcccount(projectID, &documents[0])
+		status := enrichGroupAccount(projectID, &documents[0], nil)
 		if status != http.StatusOK || documents[0].GroupUserID == "" {
 			log.WithFields(log.Fields{"project_id": projectID, "account_id": accountID}).
-				Error("Failed to create group user on exsting sync record.")
+				Error("Failed to create group user on existing sync record.")
 			return status
 		}
 
@@ -1373,7 +1394,6 @@ func enrichCampaignToAllCampaignMembers(project *model.Project, otpRules *[]mode
 	/*
 		NOTE: IF member document is not available for this time range, mark it as synced.
 		This can only happened on the first time of this campaign pull where campaign is created on day 1 and member on day 2
-
 		When CAMPAIGN MEMBER is picked up for processing then, it will refer this document as for last campaign update.
 		Refer enrichCampaignMember function for opposite case
 	*/
@@ -1505,7 +1525,6 @@ func enrichCampaignMember(project *model.Project, otpRules *[]model.OTPRule, doc
 
 	/*
 		NOTE: IF campaign document is not available for this time range don't mark it as synced and continue.
-
 		When CAMPAIGN is picked up for processing then, it will refer this document as for last campaign member.
 		Refer enrichCampaignToAllCampaignMembers function for opposite case
 	*/
@@ -1779,7 +1798,6 @@ func filterCheck(rule model.OTPRule, trackPayload *SDK.TrackPayload, logCtx *log
 			]
 		}
 	}
-
 	CampaignMember{
 		ID:
 		CampaignID:
@@ -1815,8 +1833,6 @@ func enrichAll(project *model.Project, otpRules *[]model.OTPRule, documents []mo
 	for i := range documents {
 		startTime := time.Now().Unix()
 		switch documents[i].Type {
-		case model.SalesforceDocumentTypeAccount:
-			errCode = enrichAccount(project.ID, &documents[i], salesforceSmartEventNames)
 		case model.SalesforceDocumentTypeContact:
 			errCode = enrichContact(project.ID, &documents[i], salesforceSmartEventNames, pendingOpportunityGroupAssociations[model.SalesforceDocumentTypeNameContact])
 		case model.SalesforceDocumentTypeLead:
@@ -1924,7 +1940,7 @@ func updateGroupWorkerStatus(errCode int, pendingSyncRecords map[string]map[stri
 	}
 }
 
-func enrichAllGroup(projectID int64, wg *sync.WaitGroup, docType int, documents []model.SalesforceDocument, status *enrichGroupWorkerStatus) {
+func enrichAllGroup(projectID int64, wg *sync.WaitGroup, docType int, smartEventNames []SalesforceSmartEventName, documents []model.SalesforceDocument, status *enrichGroupWorkerStatus) {
 	defer wg.Done()
 	for i := range documents {
 		startTime := time.Now().Unix()
@@ -1932,8 +1948,8 @@ func enrichAllGroup(projectID int64, wg *sync.WaitGroup, docType int, documents 
 		var errCode int
 		var pendingSyncRecords map[string]map[string]string
 		switch documents[i].Type {
-		case model.SalesforceDocumentTypeAccount:
-			errCode = enrichGroupAcccount(projectID, &documents[i])
+		case model.SalesforceDocumentTypeAccount, model.SalesforceDocumentTypeGroupAccount:
+			errCode = enrichGroupAccount(projectID, &documents[i], smartEventNames)
 		case model.SalesforceDocumentTypeOpportunity:
 			pendingSyncRecords, errCode = enrichGroupOpportunity(projectID, &documents[i])
 		}
@@ -1945,7 +1961,7 @@ func enrichAllGroup(projectID int64, wg *sync.WaitGroup, docType int, documents 
 	}
 }
 
-func enrichGroup(projectID int64, workerPerProject int) (map[string]bool, map[string]map[string]string, int) {
+func enrichGroup(projectID int64, workerPerProject int, salesforceSmartEventNames *map[string][]SalesforceSmartEventName) (map[string]bool, map[string]map[string]string, int) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID})
 
 	if projectID == 0 {
@@ -1979,7 +1995,7 @@ func enrichGroup(projectID int64, workerPerProject int) (map[string]bool, map[st
 			for docID := range batch {
 				logCtx.WithFields(log.Fields{"worker": workerIndex, "doc_id": docID, "type": docTypeAlias, "is_group": true}).Info("Processing Batch by doc_id")
 				wg.Add(1)
-				go enrichAllGroup(projectID, &wg, docType, batch[docID], &status)
+				go enrichAllGroup(projectID, &wg, docType, (*salesforceSmartEventNames)[docTypeAlias], batch[docID], &status)
 				workerIndex++
 			}
 			wg.Wait()
@@ -2157,7 +2173,7 @@ func Enrich(projectID int64, workerPerProject int, dataPropertiesByType map[int]
 	enrichOrderByType := salesforceEnrichOrderByType[:]
 	if C.IsAllowedSalesforceGroupsByProjectID(projectID) {
 		var syncStatus map[string]bool
-		syncStatus, pendingOpportunityGroupAssociations, status = enrichGroup(projectID, workerPerProject)
+		syncStatus, pendingOpportunityGroupAssociations, status = enrichGroup(projectID, workerPerProject, salesforceSmartEventNames)
 		if status != http.StatusOK {
 			overAllSyncStatus["groups"] = true
 		}
