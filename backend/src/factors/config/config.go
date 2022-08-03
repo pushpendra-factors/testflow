@@ -848,7 +848,7 @@ func InitMemSQLDBWithMaxIdleAndMaxOpenConn(dbConf DBConf, maxOpenConns, maxIdleC
 	dbConf.UseSSL = IsStaging() || IsProduction()
 	memSQLDB, err := gorm.Open("mysql", GetMemSQLDSNString(&dbConf))
 	if err != nil {
-		log.WithError(err).Fatal("Failed connecting to memsql.")
+		log.WithError(err).Error("Failed connecting to memsql.")
 	}
 	memSQLDB.LogMode(IsDevelopment())
 

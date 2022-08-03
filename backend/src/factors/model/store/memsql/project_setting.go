@@ -326,7 +326,6 @@ func delCacheProjectSetting(tokenKey, tokenValue string) int {
 }
 
 func getProjectSettingDefault() *model.ProjectSetting {
-
 	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 	enabled := true
 	disabled := false
@@ -338,6 +337,8 @@ func getProjectSettingDefault() *model.ProjectSetting {
 		IntSegment:           &enabled,
 		IntDrift:             &disabled,
 		IntClearBit:          &disabled,
+
+		AutoClickCapture: &model.AutoClickCaptureDefault,
 	}
 }
 

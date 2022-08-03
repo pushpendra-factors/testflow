@@ -397,6 +397,7 @@ CREATE TABLE IF NOT EXISTS project_settings (
     auto_track boolean NOT NULL DEFAULT FALSE,
     auto_track_spa_page_view boolean NOT NULL DEFAULT FALSE,
     auto_form_capture boolean NOT NULL DEFAULT FALSE,
+    auto_click_capture boolean NOT NULL DEFAULT FALSE,
     exclude_bot boolean NOT NULL DEFAULT FALSE,
     int_segment boolean NOT NULL DEFAULT FALSE,
     int_adwords_enabled_agent_uuid text,
@@ -1096,7 +1097,6 @@ CREATE TABLE IF NOT EXISTS data_availabilities (
     UNIQUE KEY project_id_integration_unique_idx(project_id,integration) USING HASH
 );
 
--- create clickable_elements table
 CREATE TABLE IF NOT EXISTS clickable_elements (
     project_id bigint NOT NULL,
     id text NOT NULL,
@@ -1107,8 +1107,11 @@ CREATE TABLE IF NOT EXISTS clickable_elements (
     enabled boolean DEFAULT false,
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
-    PRIMARY KEY(project_id, id)
+    SHARD KEY (project_id, display_name, element_type),
+    KEY (project_id, display_name, element_type) USING CLUSTERED COLUMNSTORE,
+    UNIQUE KEY(project_id, display_name, element_type) USING HASH
 );
+
 
 CREATE TABLE IF NOT EXISTS otp_rules(
     id text NOT NULL,
@@ -1123,4 +1126,4 @@ CREATE TABLE IF NOT EXISTS otp_rules(
     updated_at timestamp(6) NOT NULL,
     KEY (id) USING HASH,
     SHARD KEY (id)
-    );
+);

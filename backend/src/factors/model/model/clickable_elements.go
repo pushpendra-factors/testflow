@@ -1,30 +1,12 @@
 package model
 
 import (
+	U "factors/util"
 	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
+	log "github.com/sirupsen/logrus"
 )
-
-type SDKButtonElementAttributes struct {
-	DisplayText string `json:"display_text"`
-	Class       string `json:"class"`
-	Id          string `json:"id"`
-	Rel         string `json:"rel"`
-	Role        string `json:"role"`
-	Target      string `json:"target"`
-	Href        string `json:"href"`
-	Media       string `json:"media"`
-	Type        string `json:"type"`
-	Name        string `json:"name"`
-	Timestamp   int64  `json:"timestamp"`
-}
-
-type SDKButtonElementAttributesPayload struct {
-	DisplayName       string                     `json:"display_name"`
-	ElementType       string                     `json:"element_type"`
-	ElementAttributes SDKButtonElementAttributes `json:"element_attributes"`
-}
 
 type ClickableElements struct {
 	ProjectID         int64           `gorm:"primary_key:true;auto_increment:false" json:"project_id"`
@@ -38,7 +20,60 @@ type ClickableElements struct {
 	UpdatedAt         time.Time       `json:"updated_at"`
 }
 
-type SDKButtonElementAttributesResponse struct {
+type CaptureClickResponse struct {
 	Message string `json:"message,omitempty"`
 	Error   string `json:"error,omitempty"`
+
+	// EventID - ID of event created after enabling.
+	EventID string `json:"event_id,omitempty"`
+}
+
+type CaptureClickPayload struct {
+	// Click Payload.
+	DisplayName       string          `json:"display_name"`
+	ElementType       string          `json:"element_type"`
+	ElementAttributes U.PropertiesMap `json:"element_attributes"`
+
+	// Track Payload.
+	UserID          string          `json:"user_id"`
+	EventProperties U.PropertiesMap `json:"event_properties"`
+	UserProperties  U.PropertiesMap `json:"user_properties"`
+	Timestamp       int64           `json:"timestamp"`
+}
+
+func AddAllowedElementAttributes(projectID int64,
+	receivedAttributes U.PropertiesMap, addToMap *U.PropertiesMap) {
+
+	logCtx := log.WithField("project_id", projectID).
+		WithField("received_attributes", receivedAttributes).
+		WithField("add_to", addToMap)
+
+	// Note: Not adding $prefix as these are event properties
+	// added to event created by us, conflicts are not possible.
+	var allowedAttributesAsProperties = map[string]bool{
+		"display_text": true,
+		"element_type": true,
+		"class":        true,
+		"id":           true,
+		"rel":          true,
+		"role":         true,
+		"target":       true,
+		"href":         true,
+		"media":        true,
+		"type":         true,
+		"name":         true,
+	}
+
+	isUnsupportedAttributeSeen := false
+	for key := range receivedAttributes {
+		if _, exists := allowedAttributesAsProperties[key]; exists {
+			(*addToMap)[key] = receivedAttributes[key]
+		} else {
+			isUnsupportedAttributeSeen = true
+		}
+	}
+
+	if isUnsupportedAttributeSeen {
+		logCtx.Error("Received unsupported on click capture.")
+	}
 }

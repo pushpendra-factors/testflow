@@ -1,0 +1,1 @@
+ALTER TABLE project_settings ADD COLUMN auto_click_capture boolean NOT NULL DEFAULT FALSE;

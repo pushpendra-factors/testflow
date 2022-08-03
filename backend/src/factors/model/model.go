@@ -241,9 +241,10 @@ type Model interface {
 	GetHubspotFormEvents(projectID int64, userId string, timestamps []interface{}) ([]model.Event, int)
 
 	// clickable_elements
-	UpdateButtonClickEventById(projectID int64, request *model.SDKButtonElementAttributesPayload) (int, error)
-	CreateButtonClickEventById(projectId int64, buttonClick *model.SDKButtonElementAttributesPayload) (int, error)
-	GetButtonClickEventById(projectID int64, displayName string, elementType string) (*model.ClickableElements, int)
+	UpsertCountAndCheckEnabledClickableElement(projectID int64, payload *model.CaptureClickPayload) (isEnabled bool, status int, err error)
+	CreateClickableElementById(projectId int64, payload *model.CaptureClickPayload) (int, error)
+	GetClickableElementById(projectID int64, displayName string, elementType string) (*model.ClickableElements, int)
+	ToggleEnabledClickableElement(projectId int64, displayName string, elementType string) int
 
 	// facebook_document
 	CreateFacebookDocument(projectID int64, document *model.FacebookDocument) int

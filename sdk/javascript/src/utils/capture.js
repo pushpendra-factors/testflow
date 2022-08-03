@@ -1,6 +1,7 @@
 const logger = require("./logger");
 
 const FACTORS_BIND_ATTRIBUTE = 'data-factors-bind';
+const FACTORS_CLICK_BIND_ATTRIBUTE = 'data-factors-click-bind';
 
 function isEmail(email) {
     // ref: https://stackoverflow.com/questions/46155/how-to-validate-an-email-address-in-javascript
@@ -185,5 +186,115 @@ function startBackgroundFormBinder(appInstance, processCallback) {
     stopBackgroundFormBinderTaskLater();
 }
 
+function bindAllClickableElements(appInstance, processCallback) {
+    var buttons = document.querySelectorAll('button,input[type="button"],input[type="submit"]');
+    for (var i=0; i<buttons.length; i++) {
+        // TODO: Do we have to exclude click capture for submit buttons of form?
+        if (!buttons[i].getAttribute(FACTORS_CLICK_BIND_ATTRIBUTE)) {
+
+            buttons[i].addEventListener('click', function(e) {
+                logger.debug("Executing callback on click of button as part of click capture.", false);
+                var _appInstance = appInstance;
+                processCallback(_appInstance, e.target);
+            });
+            
+            buttons[i].setAttribute(FACTORS_CLICK_BIND_ATTRIBUTE, true);
+        }
+    }
+
+    var anchors = document.querySelectorAll('a');
+    for (var i=0; i<anchors.length; i++) {
+        if (!anchors[i].getAttribute(FACTORS_CLICK_BIND_ATTRIBUTE)) {
+            anchors[i].addEventListener('click', function(e) {
+                logger.debug("Executing callback on click of anchor as part of click capture.", false);
+
+                var anchor = null;
+                if (e.target && e.target.nodeName == 'A')
+                    anchor = e.target;
+                else if (e.path) {
+                    // Any element can be encapsulated by anchor, on click of the 
+                    // element the target received will be the internal element 
+                    // rather than anchor. Anchor will available on the node path stack.
+                    for(var p=0; p<e.path; p++) {
+                        if (e.path[p].nodeName == 'A') {
+                            anchor = e.path[p];
+                            break;
+                        }
+                    }
+                } else 
+                    logger.errorLine("Unable to get anchor element on click.")
+                
+                if (anchor) {
+                    var _appInstance = appInstance;
+                    processCallback(_appInstance, anchor);
+                }
+            });
+            
+            anchors[i].setAttribute(FACTORS_CLICK_BIND_ATTRIBUTE, true);
+        }
+    }
+}
+
+function startBackgroundClickBinder(appInstance, processCallback) {
+    logger.debug("Scanning for unbound clickable elements.", false);
+
+    // Look for new buttons and bind, every 2 seconds.
+    window.setInterval(function() {
+        var _appInstance = appInstance;
+        bindAllClickableElements(_appInstance, processCallback);
+    }, 2000);
+}
+
+function addElementAttributeIfExists(element, key, attributes) {
+    var value = element.getAttribute(key);
+    if (!value) return;
+
+    value = value.trim();
+    attributes[key] = value;
+}
+
+function getClickCapturePayloadFromElement(element) {
+    var payload = {};
+
+    var displayName = element.textContent;
+    if (!displayName) displayName = element.value;
+    if (displayName != "") displayName = displayName.trim();
+
+    // Possibilities A, BUTTON, INPUT[type=button].
+    var elementType = element.nodeName; 
+
+    var nodeName = element.nodeName;
+    if (nodeName && nodeName != "") 
+        nodeName = nodeName.trim().toLowerCase();
+
+    // Defines the node type by the name of allowed list.
+    if (nodeName == "a") elementType = "ANCHOR";
+    else if (nodeName == "button") elementType = "BUTTON";
+    // For "input" node with type button.
+    if (element.getAttribute("type") == "button") 
+        elementType = "BUTTON";
+
+    var attributes = {};
+    attributes.display_text = displayName;
+    attributes.element_type = elementType;
+
+    addElementAttributeIfExists(element, "class", attributes);
+    addElementAttributeIfExists(element, "id", attributes);
+    addElementAttributeIfExists(element, "name", attributes);
+    addElementAttributeIfExists(element, "rel", attributes);
+    addElementAttributeIfExists(element, "role", attributes);
+    addElementAttributeIfExists(element, "target", attributes);
+    addElementAttributeIfExists(element, "href", attributes);
+    addElementAttributeIfExists(element, "media", attributes);
+    addElementAttributeIfExists(element, "type", attributes);
+
+    payload.display_name = displayName;
+    payload.element_type = elementType;
+    payload.element_attributes = attributes;
+
+    return payload
+}
+
 module.exports = exports =  { isEmail, isPhone, isFieldByMatch, isPartOfForm,
-    bindAllFormsOnSubmit, bindAllNonFormButtonOnClick, startBackgroundFormBinder };
+    bindAllFormsOnSubmit, bindAllNonFormButtonOnClick, startBackgroundFormBinder,
+    startBackgroundClickBinder, getClickCapturePayloadFromElement };

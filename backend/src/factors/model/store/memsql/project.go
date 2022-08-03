@@ -239,8 +239,15 @@ func (store *MemSQL) createProjectDependencies(projectID int64, agentUUID string
 	defaultExcludebotState := true
 	defaultDriftIntegrationState := false
 	defaultClearBitIntegrationState := false
-	_, errCode := store.createProjectSetting(&model.ProjectSetting{ProjectId: projectID,
-		AutoTrack: &defaultAutoTrackState, ExcludeBot: &defaultExcludebotState, IntDrift: &defaultDriftIntegrationState, IntClearBit: &defaultClearBitIntegrationState})
+	_, errCode := store.createProjectSetting(&model.ProjectSetting{
+		ProjectId:   projectID,
+		AutoTrack:   &defaultAutoTrackState,
+		ExcludeBot:  &defaultExcludebotState,
+		IntDrift:    &defaultDriftIntegrationState,
+		IntClearBit: &defaultClearBitIntegrationState,
+
+		AutoClickCapture: &model.AutoClickCaptureDefault,
+	})
 	if errCode != http.StatusCreated {
 		logCtx.Error("Create project settings failed on create project dependencies.")
 		return errCode

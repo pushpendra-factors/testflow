@@ -17,6 +17,7 @@ type ProjectSetting struct {
 	AutoTrack            *bool `gorm:"not null;default:false" json:"auto_track,omitempty"`
 	AutoTrackSPAPageView *bool `gorm:"not null;default:false" json:"auto_track_spa_page_view"`
 	AutoFormCapture      *bool `gorm:"not null;default:false" json:"auto_form_capture,omitempty"`
+	AutoClickCapture     *bool `gorm:"not null;default:false" json:"auto_click_capture,omitempty"`
 	ExcludeBot           *bool `gorm:"not null;default:false" json:"exclude_bot,omitempty"`
 	// Segment integration settings.
 	IntSegment *bool `gorm:"not null;default:false" json:"int_segment,omitempty"`
@@ -90,6 +91,8 @@ type LeadSquaredConfig struct {
 
 const ProjectSettingKeyToken = "token"
 const ProjectSettingKeyPrivateToken = "private_token"
+
+var AutoClickCaptureDefault = false
 
 var projectSettingKeys = [...]string{
 	ProjectSettingKeyToken,
