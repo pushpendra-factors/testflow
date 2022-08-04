@@ -236,15 +236,17 @@ func (store *MemSQL) createProjectDependencies(projectID int64, agentUUID string
 
 	// Associated project setting creation with default state.
 	defaultAutoTrackState := true
+	defaultAutoFormCapture := true
 	defaultExcludebotState := true
 	defaultDriftIntegrationState := false
 	defaultClearBitIntegrationState := false
 	_, errCode := store.createProjectSetting(&model.ProjectSetting{
-		ProjectId:   projectID,
-		AutoTrack:   &defaultAutoTrackState,
-		ExcludeBot:  &defaultExcludebotState,
-		IntDrift:    &defaultDriftIntegrationState,
-		IntClearBit: &defaultClearBitIntegrationState,
+		ProjectId:       projectID,
+		AutoTrack:       &defaultAutoTrackState,
+		AutoFormCapture: &defaultAutoFormCapture,
+		ExcludeBot:      &defaultExcludebotState,
+		IntDrift:        &defaultDriftIntegrationState,
+		IntClearBit:     &defaultClearBitIntegrationState,
 
 		AutoClickCapture: &model.AutoClickCaptureDefault,
 	})
