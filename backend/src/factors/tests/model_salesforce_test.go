@@ -2822,7 +2822,7 @@ func TestSalesforceGetDocumentsByTypeForSyncWithTimeRange(t *testing.T) {
 	assert.Len(t, documents, 2)
 }
 
-func TestSalesforceOfflineTouchPoint(t *testing.T) {
+/*func TestSalesforceOfflineTouchPoint(t *testing.T) {
 
 	project, _, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
@@ -2946,7 +2946,7 @@ func TestSalesforceOfflineTouchPointDecode(t *testing.T) {
 	fmt.Println(rule)
 
 }
-
+*/
 func querySingleEventWithBreakdownByUserProperty(projectID int64, eventName string, propertyName string, from, to int64) (map[string]interface{}, int) {
 	query := model.Query{
 		Class: model.QueryClassEvents,

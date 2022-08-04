@@ -22,87 +22,11 @@ import (
 	U "factors/util"
 )
 
-// Version definition
-type Version struct {
-	Name      string `json:"version"`
-	Value     string `json:"value"`
-	Timestamp int64  `json:"timestamp"`
-}
-
-// Property definition
-type Property struct {
-	Value     string    `json:"value"`
-	Versions  []Version `json:"versions"`
-	Timestamp int64     `json:"timestamp"`
-}
-
-// Associations struct for deal associations
-type Associations struct {
-	AssociatedContactIds []int64 `json:"associatedVids"`
-	AssociatedCompanyIds []int64 `json:"associatedCompanyIds"`
-	AssociatedDealIds    []int64 `json:"associatedDealIds"`
-}
-
-// ContactIdentity struct for contact profile
-type ContactIdentity struct {
-	Type      string      `json:"type"`
-	Value     interface{} `json:"value"`
-	IsPrimary bool        `json:"is-primary"`
-}
-
-// ContactIdentityProfile for contact
-type ContactIdentityProfile struct {
-	Identities []ContactIdentity `json:"identities"`
-}
-type Engagements struct {
-	Engagement   map[string]interface{}   `json:"engagement"`
-	Associations map[string][]interface{} `json:"associations"`
-	Metadata     map[string]interface{}   `json:"metadata"`
-}
-
-// Contact definition
-type Contact struct {
-	Vid              int64                    `json:"vid"`
-	Properties       map[string]Property      `json:"properties"`
-	IdentityProfiles []ContactIdentityProfile `json:"identity-profiles"`
-	FormSubmissions  []map[string]interface{} `json:"form-submissions"`
-}
-
-// Deal definition
-type Deal struct {
-	DealId       int64               `json:"dealId"`
-	Properties   map[string]Property `json:"properties"`
-	Associations Associations        `json:"associations"`
-}
-
-// Company definition
-type Company struct {
-	CompanyId int64 `json:"companyId"`
-	// not part of hubspot response. added to company on download.
-	ContactIds []int64             `json:"contactIds"`
-	Properties map[string]Property `json:"properties"`
-}
-
-// PropertyDetail definition for hubspot properties api
-type PropertyDetail struct {
-	Name      string `json:"name"`
-	Label     string `json:"label"`
-	Type      string `json:"type"`
-	FieldType string `json:"fieldType"`
-}
-
-var syncOrderByType = [...]int{
-	model.HubspotDocumentTypeContact,
-	model.HubspotDocumentTypeCompany,
-	model.HubspotDocumentTypeDeal,
-	model.HubspotDocumentTypeEngagement,
-}
-
-func GetHubspotObjectTypeForSync() []int {
+func GetHubspotObjectTypeForSyncV1() []int {
 	return syncOrderByType[:]
 }
 
-func GetDecodedValue(encodedValue string, limit int) string {
+func GetDecodedValueV1(encodedValue string, limit int) string {
 	prevValue := encodedValue
 	for i := 0; i <= limit; i++ {
 		curr_value, err := url.QueryUnescape(prevValue)
@@ -122,7 +46,7 @@ func GetDecodedValue(encodedValue string, limit int) string {
 	return prevValue
 }
 
-func GetURLParameterAsMap(pageUrl string) map[string]interface{} {
+func GetURLParameterAsMapV1(pageUrl string) map[string]interface{} {
 	u, err := url.Parse(pageUrl)
 	if err != nil {
 		log.Error(err)
@@ -141,7 +65,7 @@ func GetURLParameterAsMap(pageUrl string) map[string]interface{} {
 	return urlParameters
 }
 
-func extractingFormSubmissionDetails(projectId int64, contact Contact, properties map[string]interface{}) []map[string]interface{} {
+func extractingFormSubmissionDetailsV1(projectId int64, contact Contact, properties map[string]interface{}) []map[string]interface{} {
 	form := make([]map[string]interface{}, 0)
 	keyArr := []string{"conversion-id", "form-id", "form-type", "page-title", "page-url", "portal-id", "timestamp", "title"}
 
@@ -178,7 +102,7 @@ func extractingFormSubmissionDetails(projectId int64, contact Contact, propertie
 	return form
 }
 
-func syncContactFormSubmissions(project *model.Project, userId string, document *model.HubspotDocument) {
+func syncContactFormSubmissionsV1(project *model.Project, otpRules *[]model.OTPRule, userId string, document *model.HubspotDocument) {
 	logFields := log.Fields{
 		"project":  project,
 		"user_id":  userId,
@@ -232,7 +156,7 @@ func syncContactFormSubmissions(project *model.Project, userId string, document 
 				propertiesMap := make(map[string]interface{})
 				err := json.Unmarshal(events[i].Properties.RawMessage, &propertiesMap)
 				if err != nil {
-					log.Error("Error occured during unmarshal of hubspot document")
+					log.Error("Error occurred during unmarshal of hubspot document")
 					return
 				}
 
@@ -268,23 +192,28 @@ func syncContactFormSubmissions(project *model.Project, userId string, document 
 			Timestamp:       eventTimestamp,
 		}
 
-		status, _ := sdk.Track(project.ID, payload, true, SDK.SourceHubspot, "")
+		status, trackResponse := sdk.Track(project.ID, payload, true, SDK.SourceHubspot, "")
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
 			logCtx.Error("Failed to create hubspot form-submission event")
 			return
 		}
 
+		err = ApplyHSOfflineTouchPointRuleForFormsV1(project, otpRules, payload, document, eventTimestamp)
+		if err != nil {
+			// log and continue
+			logCtx.WithField("EventID", trackResponse.EventId).WithField("userID", trackResponse.UserId).Info("failed creating hubspot offline touch point for form submission")
+		}
 	}
 }
 
-func fillDatePropertiesAndTimeZone(documents []model.HubspotDocument, dateProperties *map[string]bool, timeZone U.TimeZoneString) {
+func fillDatePropertiesAndTimeZoneV1(documents []model.HubspotDocument, dateProperties *map[string]bool, timeZone U.TimeZoneString) {
 	for i := range documents {
 		documents[i].SetDateProperties(dateProperties)
 		documents[i].SetTimeZone(timeZone)
 	}
 }
 
-func GetHubspotPropertiesByDataType(projectId int64, docTypeAPIObjects *map[string]string, apiKey, refreshToken, dataType string) (map[int]*map[string]bool, error) {
+func GetHubspotPropertiesByDataTypeV1(projectId int64, docTypeAPIObjects *map[string]string, apiKey, refreshToken, dataType string) (map[int]*map[string]bool, error) {
 	propertiesByObjectType := make(map[int]*map[string]bool)
 	for typeAlias, apiObjectName := range *docTypeAPIObjects {
 		propertiesMeta, err := GetHubspotPropertiesMeta(apiObjectName, apiKey, refreshToken)
@@ -311,7 +240,7 @@ func GetHubspotPropertiesByDataType(projectId int64, docTypeAPIObjects *map[stri
 	return propertiesByObjectType, nil
 }
 
-func GetContactProperties(projectID int64, document *model.HubspotDocument) (*map[string]interface{}, *map[string]interface{}, error) {
+func GetContactPropertiesV1(projectID int64, document *model.HubspotDocument) (*map[string]interface{}, *map[string]interface{}, error) {
 	if document.Type != model.HubspotDocumentTypeContact {
 		return nil, nil, errors.New("invalid type")
 	}
@@ -367,7 +296,7 @@ func GetContactProperties(projectID int64, document *model.HubspotDocument) (*ma
 	return &enrichedProperties, &properties, nil
 }
 
-func getCustomerUserIDFromProperties(projectID int64, properties map[string]interface{}) (string, string) {
+func getCustomerUserIDFromPropertiesV1(projectID int64, properties map[string]interface{}) (string, string) {
 	// identify using email if exist on properties.
 	emailInt, emailExists := properties[model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot,
 		model.HubspotDocumentTypeNameContact, "email")]
@@ -405,7 +334,7 @@ func getCustomerUserIDFromProperties(projectID int64, properties map[string]inte
 	return "", ""
 }
 
-func getEventTimestamp(timestamp int64) int64 {
+func getEventTimestampV1(timestamp int64) int64 {
 	if timestamp == 0 {
 		return 0
 	}
@@ -419,7 +348,7 @@ WITHOUT PREVIOUS PROPERTY :- A query will be made for previous synced record whi
 will require docID and doctType
 WITH PREVIOUS PROPERTY := docID and doctType won't be used
 */
-func GetHubspotSmartEventPayload(projectID int64, eventName, docID string,
+func GetHubspotSmartEventPayloadV1(projectID int64, eventName, docID string,
 	docType int, currentProperties, prevProperties *map[string]interface{},
 	filter *model.SmartCRMEventFilter) (*model.CRMSmartEvent, *map[string]interface{}, bool) {
 
@@ -481,7 +410,7 @@ func GetHubspotSmartEventPayload(projectID int64, eventName, docID string,
 	return &crmSmartEvent, prevProperties, true
 }
 
-func getTimestampFromField(projectID int64, propertyName string, properties *map[string]interface{}) (int64, error) {
+func getTimestampFromFieldV1(projectID int64, propertyName string, properties *map[string]interface{}) (int64, error) {
 	if timestampInt, exists := (*properties)[propertyName]; exists {
 
 		if C.IsEnabledPropertyDetailFromDB() && C.IsEnabledPropertyDetailByProjectID(projectID) {
@@ -508,7 +437,7 @@ func getTimestampFromField(projectID int64, propertyName string, properties *map
 }
 
 // TrackHubspotSmartEvent validates hubspot current properties with CRM smart filter and creates a event
-func TrackHubspotSmartEvent(projectID int64, hubspotSmartEventName *HubspotSmartEventName, eventID, docID, userID string, docType int,
+func TrackHubspotSmartEventV1(projectID int64, hubspotSmartEventName *HubspotSmartEventName, eventID, docID, userID string, docType int,
 	currentProperties, prevProperties *map[string]interface{}, defaultTimestamp int64, usingFallbackUserID bool) *map[string]interface{} {
 	var valid bool
 	var smartEventPayload *model.CRMSmartEvent
@@ -585,7 +514,7 @@ func TrackHubspotSmartEvent(projectID int64, hubspotSmartEventName *HubspotSmart
 	return prevProperties
 }
 
-func GetHubspotPropertiesMeta(objectType string, apiKey, refreshToken string) ([]PropertyDetail, error) {
+func GetHubspotPropertiesMetaV1(objectType string, apiKey, refreshToken string) ([]PropertyDetail, error) {
 	if objectType == "" {
 		return nil, errors.New("invalid parameters")
 	}
@@ -629,7 +558,7 @@ func GetHubspotPropertiesMeta(objectType string, apiKey, refreshToken string) ([
 }
 
 // CreateOrGetHubspotEventName makes sure event name exist
-func CreateOrGetHubspotEventName(projectID int64) int {
+func CreateOrGetHubspotEventNameV1(projectID int64) int {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID})
 
 	for i := range model.AllowedEventNamesForHubspot {
@@ -661,7 +590,7 @@ func CreateOrGetHubspotEventName(projectID int64) int {
 	return http.StatusOK
 }
 
-func syncHubspotPropertyByType(projectID int64, doctTypeAlias string, fieldName, fieldType string) error {
+func syncHubspotPropertyByTypeV1(projectID int64, doctTypeAlias string, fieldName, fieldType string) error {
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "doct_type_alias": doctTypeAlias, "field_name": fieldName, "field_type": fieldType})
 
@@ -712,7 +641,7 @@ func syncHubspotPropertyByType(projectID int64, doctTypeAlias string, fieldName,
 }
 
 // SyncDatetimeAndNumericalProperties sync datetime and numerical properties to the property_details table
-func SyncDatetimeAndNumericalProperties(projectID int64, apiKey, refreshToken string) (bool, []Status) {
+func SyncDatetimeAndNumericalPropertiesV1(projectID int64, apiKey, refreshToken string) (bool, []Status) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID})
 
 	if projectID == 0 {
@@ -792,7 +721,7 @@ func SyncDatetimeAndNumericalProperties(projectID int64, apiKey, refreshToken st
 	return anyFailures, allStatus
 }
 
-func syncContact(project *model.Project, document *model.HubspotDocument, hubspotSmartEventNames []HubspotSmartEventName) int {
+func syncContactV1(project *model.Project, otpRules *[]model.OTPRule, document *model.HubspotDocument, hubspotSmartEventNames []HubspotSmartEventName) int {
 	logCtx := log.WithField("project_id", project.ID).WithField("document_id", document.ID)
 
 	if document.Type != model.HubspotDocumentTypeContact {
@@ -1049,7 +978,7 @@ func syncContact(project *model.Project, document *model.HubspotDocument, hubspo
 	}
 
 	if document.Action == model.HubspotDocumentActionUpdated {
-		err = ApplyHSOfflineTouchPointRule(project, trackPayload, document, defaultSmartEventTimestamp)
+		err = ApplyHSOfflineTouchPointRuleV1(project, otpRules, trackPayload, document, defaultSmartEventTimestamp)
 		if err != nil {
 			// log and continue
 			logCtx.WithField("EventID", eventID).WithField("userID", eventID).WithField("userID", eventID).Info("failed creating hubspot offline touch point")
@@ -1058,12 +987,12 @@ func syncContact(project *model.Project, document *model.HubspotDocument, hubspo
 
 	var prevProperties *map[string]interface{}
 	for i := range hubspotSmartEventNames {
-		prevProperties = TrackHubspotSmartEvent(project.ID, &hubspotSmartEventNames[i], eventID, document.ID, userID, document.Type,
+		prevProperties = TrackHubspotSmartEventV1(project.ID, &hubspotSmartEventNames[i], eventID, document.ID, userID, document.Type,
 			properties, prevProperties, defaultSmartEventTimestamp, false)
 	}
 
 	if C.EnableHubspotFormsEventsByProjectID(project.ID) {
-		syncContactFormSubmissions(project, userID, document)
+		syncContactFormSubmissionsV1(project, otpRules, userID, document)
 	}
 
 	errCode := store.GetStore().UpdateHubspotDocumentAsSynced(
@@ -1076,89 +1005,100 @@ func syncContact(project *model.Project, document *model.HubspotDocument, hubspo
 	return http.StatusOK
 }
 
-func ApplyHSOfflineTouchPointRule(project *model.Project, trackPayload *SDK.TrackPayload, document *model.HubspotDocument, lastModifiedTimeStamp int64) error {
+func ApplyHSOfflineTouchPointRuleV1(project *model.Project, otpRules *[]model.OTPRule, trackPayload *SDK.TrackPayload, document *model.HubspotDocument, lastModifiedTimeStamp int64) error {
 
 	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "ApplyHSOfflineTouchPointRule",
 		"document_id": document.ID, "document_action": document.Action, "document": document})
 
+	if otpRules == nil || project == nil || trackPayload == nil || document == nil {
+		return nil
+	}
+
 	lastModifiedTimeStamp = U.CheckAndGetStandardTimestamp(lastModifiedTimeStamp)
 
-	if &project.HubspotTouchPoints != nil && !U.IsEmptyPostgresJsonb(&project.HubspotTouchPoints) {
+	// Get the last sync doc for the current update doc.
+	prevDoc, status := store.GetStore().GetLastSyncedHubspotUpdateDocumentByID(document.ProjectId, document.ID, document.Type)
+	if status != http.StatusFound {
+		// In case no prev properties
+		prevDoc = nil
+	}
 
-		var touchPointRules map[string][]model.HSTouchPointRule
-		err := U.DecodePostgresJsonbToStructType(&project.HubspotTouchPoints, &touchPointRules)
+	for _, rule := range *otpRules {
+
+		// Check if rule is applicable & the record has changed property w.r.t filters
+		if !canCreateHSTouchPointV1(document.Action) || !filterCheckV1(rule, trackPayload, document, prevDoc, logCtx) {
+			continue
+		}
+
+		_, err := CreateTouchPointEventV1(project, trackPayload, document, rule, lastModifiedTimeStamp)
 		if err != nil {
-			// logging and continuing.
-			logCtx.WithField("Document", trackPayload).WithError(err).Error("Failed to fetch " +
-				"offline touch point rules for hubspot document.")
-			return err
+			logCtx.WithError(err).Error("failed to create touch point for hubspot contact updated document.")
+			continue
 		}
 
-		// Get the last sync doc for the current update doc.
-		prevDoc, status := store.GetStore().GetLastSyncedHubspotUpdateDocumentByID(document.ProjectId, document.ID, document.Type)
-		if status != http.StatusFound {
-			// In case no prev properties
-			prevDoc = nil
-		}
-
-		rules := touchPointRules["hs_touch_point_rules"]
-		for _, rule := range rules {
-
-			// Check if rule is applicable & the record has changed property w.r.t filters
-			if !canCreateHSTouchPoint(document.Action) || !filterCheck(rule, trackPayload, document, prevDoc, logCtx) {
-				continue
-			}
-
-			_, err = CreateTouchPointEvent(project, trackPayload, document, rule, lastModifiedTimeStamp)
-			if err != nil {
-				logCtx.WithError(err).Error("failed to create touch point for hubspot contact updated document.")
-				continue
-			}
-
-		}
 	}
 	return nil
 }
 
-func ApplyHSOfflineTouchPointRuleForEngagement(project *model.Project, trackPayload *SDK.TrackPayload,
-	document *model.HubspotDocument, engagementType string) error {
+func ApplyHSOfflineTouchPointRuleForFormsV1(project *model.Project, otpRules *[]model.OTPRule, trackPayload *SDK.TrackPayload, document *model.HubspotDocument, formTimestamp int64) error {
+
+	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "ApplyHSOfflineTouchPointRule",
+		"document_id": document.ID, "document_action": document.Action, "document": document})
+
+	if otpRules == nil || project == nil || trackPayload == nil || document == nil {
+		return nil
+	}
+
+	formTimestamp = U.CheckAndGetStandardTimestamp(formTimestamp)
+
+	for _, rule := range *otpRules {
+
+		if rule.RuleType != model.TouchPointRuleTypeForms {
+			continue
+		}
+		// Check if rule is applicable & the record has changed property w.r.t filters
+		if !filterCheckGeneralV1(rule, trackPayload, logCtx) {
+			continue
+		}
+
+		_, err := CreateTouchPointEventV1(project, trackPayload, document, rule, formTimestamp)
+		if err != nil {
+			logCtx.WithError(err).Error("failed to create touch point for hubspot contact updated document.")
+			continue
+		}
+
+	}
+	return nil
+}
+
+func ApplyHSOfflineTouchPointRuleForEngagementV1(project *model.Project, otpRules *[]model.OTPRule, trackPayload *SDK.TrackPayload,
+	document *model.HubspotDocument, engagement Engagements, engagementType string) error {
 
 	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "ApplyHSOfflineTouchPointRuleForEngagement",
 		"document_id": document.ID, "document_action": document.Action, "document": document})
 
-	if &project.HubspotTouchPoints != nil && !U.IsEmptyPostgresJsonb(&project.HubspotTouchPoints) {
+	if otpRules == nil || project == nil || trackPayload == nil || document == nil {
+		return nil
+	}
+	for _, rule := range *otpRules {
 
-		var touchPointRules map[string][]model.HSTouchPointRule
-		err := U.DecodePostgresJsonbToStructType(&project.HubspotTouchPoints, &touchPointRules)
-		if err != nil {
-			// logging and continuing.
-			logCtx.WithField("Document", trackPayload).WithError(err).Error("Failed to fetch " +
-				"offline touch point rules for hubspot document.")
-			return err
+		// Check if rule is applicable & the record has changed property w.r.t filters
+		if !canCreateHSEngagementTouchPoint(engagementType, rule.RuleType) || !filterCheckGeneralV1(rule, trackPayload, logCtx) {
+			continue
 		}
 
-		rules := touchPointRules["hs_touch_point_rules"]
-		for _, rule := range rules {
-
-			// Check if rule is applicable & the record has changed property w.r.t filters
-			if !canCreateHSEngagementTouchPoint(engagementType, rule.RuleType) || !filterCheckEngagement(rule, trackPayload, logCtx) {
-				continue
-			}
-
-			_, err = CreateTouchPointEventForEngagement(project, trackPayload, document, rule, engagementType)
-			if err != nil {
-				logCtx.WithError(err).Error("failed to create touch point for hubspot contact updated document.")
-				continue
-			}
-
+		_, err := CreateTouchPointEventForEngagementV1(project, trackPayload, document, rule, engagement, engagementType)
+		if err != nil {
+			logCtx.WithError(err).Error("failed to create touch point for hubspot contact updated document.")
+			continue
 		}
 	}
 	return nil
 }
 
 // CreateTouchPointEvent - Creates offline touchpoint for HS create/update events with given rule
-func CreateTouchPointEvent(project *model.Project, trackPayload *SDK.TrackPayload, document *model.HubspotDocument,
-	rule model.HSTouchPointRule, lastModifiedTimeStamp int64) (*SDK.TrackResponse, error) {
+func CreateTouchPointEventV1(project *model.Project, trackPayload *SDK.TrackPayload, document *model.HubspotDocument,
+	rule model.OTPRule, lastModifiedTimeStamp int64) (*SDK.TrackResponse, error) {
 
 	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "CreateTouchPointEvent",
 		"document_id": document.ID, "document_action": document.Action})
@@ -1177,8 +1117,10 @@ func CreateTouchPointEvent(project *model.Project, trackPayload *SDK.TrackPayloa
 
 	var timestamp int64
 	if rule.TouchPointTimeRef == model.LastModifiedTimeRef {
+		// if given LastModifiedTimeRef as time pointer, use that
 		timestamp = lastModifiedTimeStamp
 	} else {
+		// use the '$some_timestamp' property for timestamp enrichment
 		timeValue, exists := (trackPayload.EventProperties)[rule.TouchPointTimeRef]
 		if !exists {
 			logCtx.Error("couldn't get the timestamp on hubspot contact properties using "+
@@ -1196,10 +1138,19 @@ func CreateTouchPointEvent(project *model.Project, trackPayload *SDK.TrackPayloa
 		}
 	}
 
+	// Adding mandatory properties
+	payload.EventProperties[U.EP_OTP_RULE_ID] = rule.ID
 	payload.Timestamp = timestamp
 
 	// Mapping touch point properties:
-	for key, value := range rule.PropertiesMap {
+	var rulePropertiesMap map[string]model.TouchPointPropertyValue
+	err = U.DecodePostgresJsonbToStructType(&rule.PropertiesMap, &rulePropertiesMap)
+	if err != nil {
+		logCtx.WithField("Document", trackPayload).WithError(err).Error("Failed to decode/fetch offline touch point rule PROPERTIES for hubspot document.")
+		return trackResponse, errors.New(fmt.Sprintf("create hubspot touchpoint event track failed for doc type %d, message %s", document.Type, trackResponse.Error))
+	}
+
+	for key, value := range rulePropertiesMap {
 
 		if value.Type == model.TouchPointPropertyValueAsConstant {
 			payload.EventProperties[key] = value.Value
@@ -1224,12 +1175,47 @@ func CreateTouchPointEvent(project *model.Project, trackPayload *SDK.TrackPayloa
 	return trackResponse, nil
 }
 
+func isEmailEngagementAlreadyTrackedV1(projectID int64, ruleID string, threadID string, engagement Engagements, logCtx *log.Entry) (bool, error) {
+
+	en, status := store.GetStore().CreateOrGetOfflineTouchPointEventName(projectID)
+	if status != http.StatusFound && status != http.StatusConflict && status != http.StatusCreated {
+		logCtx.Error("failed to create event name on SF for offline touch point")
+		return false, errors.New(fmt.Sprintf("failed to create event name on SF for offline touch point"))
+	}
+
+	last30DaysOTPEvents, err := store.GetStore().GetEventsByEventNameId(projectID, en.ID, time.Now().Unix()-U.MonthInSecs, time.Now().Unix())
+	if err != http.StatusFound && err != http.StatusNotFound {
+		logCtx.Info("no events found for engagement, continuing")
+	} else {
+
+		for _, event := range last30DaysOTPEvents {
+			propertiesMap := make(map[string]interface{})
+			err := json.Unmarshal(event.Properties.RawMessage, &propertiesMap)
+			if err != nil {
+				log.Error("Error occurred during unmarshal of otp event properties, continuing")
+				continue
+			}
+			threadIDTracked, threadExists := propertiesMap[U.EP_HUBSPOT_ENGAGEMENT_THREAD_ID]
+			if threadExists && threadID == threadIDTracked {
+				ruleIDTracked, ruleExists := propertiesMap[U.EP_OTP_RULE_ID]
+				if ruleExists && ruleIDTracked == ruleID {
+					logCtx.Info("OTP already created for the rule and email engagement, skipping this thread")
+					return true, nil
+				}
+			}
+		}
+	}
+
+	return false, nil
+}
+
 // CreateTouchPointEventForEngagement - Creates offline touchpoint for HS engagements (calls, meetings, forms, emails) with give rule
-func CreateTouchPointEventForEngagement(project *model.Project, trackPayload *SDK.TrackPayload, document *model.HubspotDocument,
-	rule model.HSTouchPointRule, engagementType string) (*SDK.TrackResponse, error) {
+func CreateTouchPointEventForEngagementV1(project *model.Project, trackPayload *SDK.TrackPayload, document *model.HubspotDocument,
+	rule model.OTPRule, engagement Engagements, engagementType string) (*SDK.TrackResponse, error) {
 
 	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "CreateTouchPointEvent",
-		"document_id": document.ID, "document_action": document.Action})
+		"document_id": document.ID, "document_action": document.Action, "engagement": engagement})
+
 	logCtx.WithField("document", document).WithField("trackPayload", trackPayload).
 		Info("CreateTouchPointEvent: creating hubspot offline touch point document")
 	var trackResponse *SDK.TrackResponse
@@ -1245,11 +1231,23 @@ func CreateTouchPointEventForEngagement(project *model.Project, trackPayload *SD
 	}
 
 	var timestamp int64
-
 	switch engagementType {
 	case EngagementTypeEmail:
 	case EngagementTypeIncomingEmail:
 		{
+			threadID, isPresent := engagement.Metadata["threadId"]
+			if !isPresent {
+				logCtx.WithField("threadID", threadID).
+					Error("couldn't get the threadID on hubspot email engagement, logging and continuing")
+			} else {
+				found, errT := isEmailEngagementAlreadyTrackedV1(project.ID, rule.ID, threadID.(string), engagement, logCtx)
+				if found || errT != nil {
+					return trackResponse, errT
+				}
+			}
+
+			payload.EventProperties[U.EP_HUBSPOT_ENGAGEMENT_THREAD_ID] = threadID
+
 			timeValue, exists := (trackPayload.EventProperties)[rule.TouchPointTimeRef]
 			if !exists {
 				logCtx.WithField("TouchPointTimeRef", rule.TouchPointTimeRef).
@@ -1266,16 +1264,22 @@ func CreateTouchPointEventForEngagement(project *model.Project, trackPayload *SD
 				timestamp = val
 			}
 		}
-
 	default:
 		logCtx.Error("engagement type not supported yet for rule creation")
-
 	}
 
+	// Adding mandatory properties
+	payload.EventProperties[U.EP_OTP_RULE_ID] = rule.ID
 	payload.Timestamp = timestamp
 
 	// Mapping touch point properties:
-	for key, value := range rule.PropertiesMap {
+	var rulePropertiesMap map[string]model.TouchPointPropertyValue
+	err = U.DecodePostgresJsonbToStructType(&rule.PropertiesMap, &rulePropertiesMap)
+	if err != nil {
+		logCtx.WithField("Document", trackPayload).WithError(err).Error("Failed to decode/fetch offline touch point rule PROPERTIES for hubspot document.")
+		return trackResponse, errors.New(fmt.Sprintf("create hubspot touchpoint event track failed for doc type %d, message %s", document.Type, trackResponse.Error))
+	}
+	for key, value := range rulePropertiesMap {
 
 		if value.Type == model.TouchPointPropertyValueAsConstant {
 			payload.EventProperties[key] = value.Value
@@ -1300,7 +1304,7 @@ func CreateTouchPointEventForEngagement(project *model.Project, trackPayload *SD
 	return trackResponse, nil
 }
 
-func canCreateHSEngagementTouchPoint(engagementType string, ruleType string) bool {
+func canCreateHSEngagementTouchPointV1(engagementType string, ruleType string) bool {
 
 	switch engagementType {
 	case EngagementTypeEmail:
@@ -1314,7 +1318,7 @@ func canCreateHSEngagementTouchPoint(engagementType string, ruleType string) boo
 	return false
 }
 
-func canCreateHSTouchPoint(documentActionType int) bool {
+func canCreateHSTouchPointV1(documentActionType int) bool {
 	// Ignore doc types other than HubspotDocumentActionUpdated
 	if documentActionType != model.HubspotDocumentActionUpdated {
 		return false
@@ -1322,10 +1326,17 @@ func canCreateHSTouchPoint(documentActionType int) bool {
 	return true
 }
 
-func filterCheck(rule model.HSTouchPointRule, trackPayload *SDK.TrackPayload, document *model.HubspotDocument, prevDoc *model.HubspotDocument, logCtx *log.Entry) bool {
+func filterCheckV1(rule model.OTPRule, trackPayload *SDK.TrackPayload, document *model.HubspotDocument, prevDoc *model.HubspotDocument, logCtx *log.Entry) bool {
+
+	var ruleFilters []model.TouchPointFilter
+	err := U.DecodePostgresJsonbToStructType(&rule.Filters, &ruleFilters)
+	if err != nil {
+		logCtx.WithField("Document", trackPayload).WithError(err).Error("Failed to decode/fetch offline touch point rule FILTERS for Hubspot document.")
+		return false
+	}
 
 	filtersPassed := 0
-	for _, filter := range rule.Filters {
+	for _, filter := range ruleFilters {
 		switch filter.Operator {
 		case model.EqualsOpStr:
 			if _, exists := trackPayload.EventProperties[filter.Property]; exists {
@@ -1356,7 +1367,7 @@ func filterCheck(rule model.HSTouchPointRule, trackPayload *SDK.TrackPayload, do
 	}
 
 	// Once filters passed, now check for the existing properties
-	if filtersPassed != 0 && filtersPassed == len(rule.Filters) {
+	if filtersPassed != 0 && filtersPassed == len(ruleFilters) {
 		if prevDoc == nil {
 			// In case no prev properties exist continue creating OTP
 			return true
@@ -1382,7 +1393,7 @@ func filterCheck(rule model.HSTouchPointRule, trackPayload *SDK.TrackPayload, do
 		}
 
 		samePropertyMatchingScore := 0
-		for _, filter := range rule.Filters {
+		for _, filter := range ruleFilters {
 			if val1, exists1 := trackPayload.EventProperties[filter.Property]; exists1 {
 				if val2, exists2 := (*prevProperties)[filter.Property]; exists2 {
 					if val1 == val2 {
@@ -1392,7 +1403,7 @@ func filterCheck(rule model.HSTouchPointRule, trackPayload *SDK.TrackPayload, do
 			}
 		}
 		// If all filter properties matches with that of the previous found properties, skip and fail
-		if samePropertyMatchingScore == len(rule.Filters) {
+		if samePropertyMatchingScore == len(ruleFilters) {
 			return false
 		} else {
 			return true
@@ -1402,10 +1413,17 @@ func filterCheck(rule model.HSTouchPointRule, trackPayload *SDK.TrackPayload, do
 	return false
 }
 
-func filterCheckEngagement(rule model.HSTouchPointRule, trackPayload *SDK.TrackPayload, logCtx *log.Entry) bool {
+func filterCheckGeneralV1(rule model.OTPRule, trackPayload *SDK.TrackPayload, logCtx *log.Entry) bool {
+
+	var ruleFilters []model.TouchPointFilter
+	err := U.DecodePostgresJsonbToStructType(&rule.Filters, &ruleFilters)
+	if err != nil {
+		logCtx.WithField("Document", trackPayload).WithError(err).Error("Failed to decode/fetch offline touch point rule FILTERS for salesforce document.")
+		return false
+	}
 
 	filtersPassed := 0
-	for _, filter := range rule.Filters {
+	for _, filter := range ruleFilters {
 		switch filter.Operator {
 		case model.EqualsOpStr:
 			if _, exists := trackPayload.EventProperties[filter.Property]; exists {
@@ -1436,14 +1454,14 @@ func filterCheckEngagement(rule model.HSTouchPointRule, trackPayload *SDK.TrackP
 	}
 
 	// return true if all the filters passed
-	if filtersPassed != 0 && filtersPassed == len(rule.Filters) {
+	if filtersPassed != 0 && filtersPassed == len(ruleFilters) {
 		return true
 	}
 	// When neither filters matched nor (filters matched but values are same)
 	return false
 }
 
-func getDealUserID(projectID int64, deal *Deal) string {
+func getDealUserIDV1(projectID int64, deal *Deal) string {
 	logCtx := log.WithField("project_id", projectID)
 
 	contactIds := make([]string, 0, 0)
@@ -1529,15 +1547,8 @@ func getDealUserID(projectID int64, deal *Deal) string {
 	return event.UserId
 }
 
-// HubspotSmartEventName holds event_name and filter expression
-type HubspotSmartEventName struct {
-	EventName string
-	Filter    *model.SmartCRMEventFilter
-	Type      string
-}
-
 // GetHubspotSmartEventNames returns all the smart_event for hubspot by object_type
-func GetHubspotSmartEventNames(projectID int64) *map[string][]HubspotSmartEventName {
+func GetHubspotSmartEventNamesV1(projectID int64) *map[string][]HubspotSmartEventName {
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectID})
 
@@ -1582,7 +1593,7 @@ func GetHubspotSmartEventNames(projectID int64) *map[string][]HubspotSmartEventN
 	return &hubspotSmartEventNames
 }
 
-func getCompanyNameAndDomainName(document *model.HubspotDocument) (string, string, error) {
+func getCompanyNameAndDomainNameV1(document *model.HubspotDocument) (string, string, error) {
 	if document.Type != model.HubspotDocumentTypeCompany {
 		return "", "", errors.New("invalid document type")
 	}
@@ -1598,7 +1609,7 @@ func getCompanyNameAndDomainName(document *model.HubspotDocument) (string, strin
 	return companyName, domainName, nil
 }
 
-func getCompanyGroupID(document *model.HubspotDocument, companyName, domainName string) string {
+func getCompanyGroupIDV1(document *model.HubspotDocument, companyName, domainName string) string {
 	if document.ID != "" {
 		return document.ID
 	}
@@ -1608,7 +1619,7 @@ func getCompanyGroupID(document *model.HubspotDocument, companyName, domainName 
 	return domainName
 }
 
-func getCompanyProperties(projectID int64, document *model.HubspotDocument) (map[string]interface{}, error) {
+func getCompanyPropertiesV1(projectID int64, document *model.HubspotDocument) (map[string]interface{}, error) {
 	if projectID < 1 || document == nil {
 		return nil, errors.New("invalid parameters")
 	}
@@ -1647,7 +1658,7 @@ func getCompanyProperties(projectID int64, document *model.HubspotDocument) (map
 	return userProperties, nil
 }
 
-func syncCompany(projectID int64, document *model.HubspotDocument) int {
+func syncCompanyV1(projectID int64, document *model.HubspotDocument) int {
 	if document.Type != model.HubspotDocumentTypeCompany {
 		return http.StatusInternalServerError
 	}
@@ -1757,7 +1768,7 @@ func syncCompany(projectID int64, document *model.HubspotDocument) int {
 	return http.StatusOK
 }
 
-func getHubspotDateTimestampAsMidnightTimeZoneTimestamp(dateUTCMS interface{}, timeZone string) (int64, error) {
+func getHubspotDateTimestampAsMidnightTimeZoneTimestampV1(dateUTCMS interface{}, timeZone string) (int64, error) {
 	timestamp, err := model.ReadHubspotTimestamp(dateUTCMS)
 	if err != nil {
 		return 0, err
@@ -1773,7 +1784,7 @@ func getHubspotDateTimestampAsMidnightTimeZoneTimestamp(dateUTCMS interface{}, t
 	return timeInLoc.Unix(), nil
 }
 
-func getHubspotMappedDataTypeValue(projectID int64, eventName, enKey string, value interface{}, typ int, dateProperties *map[string]bool, timeZone string) (interface{}, error) {
+func getHubspotMappedDataTypeValueV1(projectID int64, eventName, enKey string, value interface{}, typ int, dateProperties *map[string]bool, timeZone string) (interface{}, error) {
 	if value == nil || value == "" {
 		return "", nil
 	}
@@ -1832,7 +1843,7 @@ func getHubspotMappedDataTypeValue(projectID int64, eventName, enKey string, val
 	return value, nil
 }
 
-func getDealProperties(projectID int64, document *model.HubspotDocument) (*map[string]interface{}, *map[string]interface{}, error) {
+func getDealPropertiesV1(projectID int64, document *model.HubspotDocument) (*map[string]interface{}, *map[string]interface{}, error) {
 
 	if document.Type != model.HubspotDocumentTypeDeal {
 		return nil, nil, errors.New("invalid type")
@@ -1865,7 +1876,7 @@ func getDealProperties(projectID int64, document *model.HubspotDocument) (*map[s
 	return &enProperties, &properties, nil
 }
 
-func isValidGroupName(documentType int, groupName string) bool {
+func isValidGroupNameV1(documentType int, groupName string) bool {
 	if documentType == model.HubspotDocumentTypeCompany && groupName == model.GROUP_NAME_HUBSPOT_COMPANY {
 		return true
 	}
@@ -1877,7 +1888,7 @@ func isValidGroupName(documentType int, groupName string) bool {
 	return false
 }
 
-func getGroupEventName(docType int) (string, string) {
+func getGroupEventNameV1(docType int) (string, string) {
 	if docType == model.HubspotDocumentTypeCompany {
 		return util.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED, util.GROUP_EVENT_NAME_HUBSPOT_COMPANY_UPDATED
 	}
@@ -1889,7 +1900,7 @@ func getGroupEventName(docType int) (string, string) {
 	return "", ""
 }
 
-func updateCreatedDocument(createdDocument *model.HubspotDocument) bool {
+func updateCreatedDocumentV1(createdDocument *model.HubspotDocument) bool {
 	if createdDocument.Type == model.HubspotDocumentTypeCompany {
 		if createdDocument.GroupUserId == "" && createdDocument.UserId == "" {
 			return true
@@ -1905,7 +1916,7 @@ func updateCreatedDocument(createdDocument *model.HubspotDocument) bool {
 	return false
 }
 
-func getGroupUserID(createdDocument *model.HubspotDocument) string {
+func getGroupUserIDV1(createdDocument *model.HubspotDocument) string {
 	if createdDocument.GroupUserId != "" {
 		return createdDocument.GroupUserId
 	}
@@ -1913,7 +1924,7 @@ func getGroupUserID(createdDocument *model.HubspotDocument) string {
 	return ""
 }
 
-func createOrUpdateHubspotGroupsProperties(projectID int64, document *model.HubspotDocument,
+func createOrUpdateHubspotGroupsPropertiesV1(projectID int64, document *model.HubspotDocument,
 	enProperties *map[string]interface{}, groupName, groupID string) (string, string, int) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "doc_type": document.Type, "document": document,
 		"group_name": groupName, "group_id": groupID})
@@ -2031,7 +2042,7 @@ func createOrUpdateHubspotGroupsProperties(projectID int64, document *model.Hubs
 	return groupUserID, eventId, http.StatusOK
 }
 
-func getDealAssociatedIDs(projectID int64, document *model.HubspotDocument) ([]string, []string, error) {
+func getDealAssociatedIDsV1(projectID int64, document *model.HubspotDocument) ([]string, []string, error) {
 	if document.Type != model.HubspotDocumentTypeDeal {
 		return nil, nil, errors.New("invalid document type")
 	}
@@ -2059,7 +2070,7 @@ func getDealAssociatedIDs(projectID int64, document *model.HubspotDocument) ([]s
 	return contactIDs, companyIDs, nil
 }
 
-func syncGroupCompany(projectID int64, document *model.HubspotDocument, enProperties *map[string]interface{}) (string, string, error) {
+func syncGroupCompanyV1(projectID int64, document *model.HubspotDocument, enProperties *map[string]interface{}) (string, string, error) {
 	companyName, domainName, err := getCompanyNameAndDomainName(document)
 	if err != nil {
 		return "", "", err
@@ -2074,7 +2085,7 @@ func syncGroupCompany(projectID int64, document *model.HubspotDocument, enProper
 	return companyUserID, companyGroupID, nil
 }
 
-func syncGroupDeal(projectID int64, enProperties *map[string]interface{}, document *model.HubspotDocument) (string, string, int) {
+func syncGroupDealV1(projectID int64, enProperties *map[string]interface{}, document *model.HubspotDocument) (string, string, int) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "document": document.ID, "doc_type": document.Type})
 	if document.Type != model.HubspotDocumentTypeDeal {
 		logCtx.Error("Invalid document type on syncGroupDeal.")
@@ -2184,7 +2195,7 @@ func syncGroupDeal(projectID int64, enProperties *map[string]interface{}, docume
 	return dealGroupUserID, eventId, http.StatusOK
 }
 
-func syncDeal(projectID int64, document *model.HubspotDocument, hubspotSmartEventNames []HubspotSmartEventName) int {
+func syncDealV1(projectID int64, document *model.HubspotDocument, hubspotSmartEventNames []HubspotSmartEventName) int {
 	if document.Type != model.HubspotDocumentTypeDeal {
 		return http.StatusInternalServerError
 	}
@@ -2240,23 +2251,7 @@ func syncDeal(projectID int64, document *model.HubspotDocument, hubspotSmartEven
 	return http.StatusOK
 }
 
-var keyArrEngagementMeeting = []string{"id", "timestamp", "type", "source", "active"}
-var keyArrMetaMeeting = []string{"startTime", "endTime", "title", "meetingOutcome"}
-var keyArrEngagementCall = []string{"id", "timestamp", "type", "source", "activityType"}
-var keyArrMetaCall = []string{"durationMilliseconds", "disposition", "status", "title"}
-var keyArrEngagementEmail = []string{"id", "createdAt", "lastUpdated", "type", "teamId", "ownerId", "active", "timestamp", "source"}
-var keyArrMetaEmail = []string{"from", "to", "subject", "sentVia"}
-
-const (
-	EngagementTypeCall          = "CALL"
-	EngagementTypeEmail         = "EMAIL"
-	EngagementTypeIncomingEmail = "INCOMING_EMAIL"
-	EngagementTypeMeeting       = "MEETING"
-
-	HSEngagementTimestampProperty = "$hubspot_engagement_timestamp"
-)
-
-func extractionOfPropertiesWithOutEmailOrContact(engagement Engagements, engagementType string) map[string]interface{} {
+func extractionOfPropertiesWithOutEmailOrContactV1(engagement Engagements, engagementType string) map[string]interface{} {
 	logCtx := log.WithField("engagement_type", engagementType).WithField("engagement", engagement)
 	properties := make(map[string]interface{})
 	var engagementArray []string
@@ -2318,7 +2313,7 @@ func extractionOfPropertiesWithOutEmailOrContact(engagement Engagements, engagem
 	return properties
 }
 
-func getEngagementContactIds(engagementTypeStr string, engagement Engagements) ([]string, int) {
+func getEngagementContactIdsV1(engagementTypeStr string, engagement Engagements) ([]string, int) {
 	logCtx := log.WithField("engagement_type_str", engagementTypeStr).WithField("engagement", engagement)
 	contactIds := make([]string, 0, 0)
 	if engagementTypeStr == EngagementTypeCall || engagementTypeStr == EngagementTypeMeeting {
@@ -2390,7 +2385,7 @@ func getEngagementContactIds(engagementTypeStr string, engagement Engagements) (
 	return contactIds, http.StatusOK
 }
 
-func syncEngagements(project *model.Project, document *model.HubspotDocument) int {
+func syncEngagementsV1(project *model.Project, otpRules *[]model.OTPRule, document *model.HubspotDocument) int {
 	logCtx := log.WithField("project_id", project.ID).WithField("document_id", document.ID)
 	if document.Type != model.HubspotDocumentTypeEngagement {
 		logCtx.Error("It is not a type of engagement")
@@ -2531,7 +2526,7 @@ func syncEngagements(project *model.Project, document *model.HubspotDocument) in
 			return http.StatusInternalServerError
 		}
 
-		err = ApplyHSOfflineTouchPointRuleForEngagement(project, payload, document, engagementTypeStr)
+		err = ApplyHSOfflineTouchPointRuleForEngagementV1(project, otpRules, payload, document, engagement, engagementTypeStr)
 		if err != nil {
 			// log and continue
 			logCtx.WithField("TrackPayload", payload).WithField("userID", userId).Info("failed " +
@@ -2547,7 +2542,7 @@ func syncEngagements(project *model.Project, document *model.HubspotDocument) in
 	return http.StatusOK
 }
 
-func getEventNameByDocumentTypeAndAction(Type string, action int) string {
+func getEventNameByDocumentTypeAndActionV1(Type string, action int) string {
 	if Type == EngagementTypeIncomingEmail || Type == EngagementTypeEmail {
 		return U.EVENT_NAME_HUBSPOT_ENGAGEMENT_EMAIL
 	}
@@ -2565,7 +2560,7 @@ func getEventNameByDocumentTypeAndAction(Type string, action int) string {
 }
 
 // GetBatchedOrderedDocumentsByID return list of document in batches. Order is maintained on document id.
-func GetBatchedOrderedDocumentsByID(documents []model.HubspotDocument, batchSize int) []map[string][]model.HubspotDocument {
+func GetBatchedOrderedDocumentsByIDV1(documents []model.HubspotDocument, batchSize int) []map[string][]model.HubspotDocument {
 
 	if len(documents) < 0 {
 		return nil
@@ -2600,7 +2595,7 @@ func GetBatchedOrderedDocumentsByID(documents []model.HubspotDocument, batchSize
 	return batchedDocumentsByID
 }
 
-func syncAll(project *model.Project, documents []model.HubspotDocument, hubspotSmartEventNames []HubspotSmartEventName) int {
+func syncAllV1(project *model.Project, otpRules *[]model.OTPRule, documents []model.HubspotDocument, hubspotSmartEventNames []HubspotSmartEventName) int {
 	logCtx := log.WithField("project_id", project.ID)
 	var seenFailures bool
 	for i := range documents {
@@ -2609,22 +2604,22 @@ func syncAll(project *model.Project, documents []model.HubspotDocument, hubspotS
 		switch documents[i].Type {
 
 		case model.HubspotDocumentTypeContact:
-			errCode := syncContact(project, &documents[i], hubspotSmartEventNames)
+			errCode := syncContactV1(project, otpRules, &documents[i], hubspotSmartEventNames)
 			if errCode != http.StatusOK {
 				seenFailures = true
 			}
 		case model.HubspotDocumentTypeCompany:
-			errCode := syncCompany(project.ID, &documents[i])
+			errCode := syncCompanyV1(project.ID, &documents[i])
 			if errCode != http.StatusOK {
 				seenFailures = true
 			}
 		case model.HubspotDocumentTypeDeal:
-			errCode := syncDeal(project.ID, &documents[i], hubspotSmartEventNames)
+			errCode := syncDealV1(project.ID, &documents[i], hubspotSmartEventNames)
 			if errCode != http.StatusOK {
 				seenFailures = true
 			}
 		case model.HubspotDocumentTypeEngagement:
-			errCode := syncEngagements(project, &documents[i])
+			errCode := syncEngagementsV1(project, otpRules, &documents[i])
 			if errCode != http.StatusOK {
 				seenFailures = true
 			}
@@ -2641,27 +2636,11 @@ func syncAll(project *model.Project, documents []model.HubspotDocument, hubspotS
 	return http.StatusOK
 }
 
-// Status definition
-type Status struct {
-	ProjectId              int64  `json:"project_id"`
-	Type                   string `json:"type"`
-	Status                 string `json:"status"`
-	Count                  int    `json:"count"`
-	TotalTime              string `json:"total_time`
-	Message                string `json:"message,omiempty"`
-	IsProcessLimitExceeded bool   `json:"process_limit_exceeded"`
-}
-
-type syncWorkerStatus struct {
-	HasFailure bool
-	Lock       sync.Mutex
-}
-
 // syncAllWorker is a wrapper over syncAll function for providing concurrency
-func syncAllWorker(project *model.Project, wg *sync.WaitGroup, syncStatus *syncWorkerStatus, documents []model.HubspotDocument, hubspotSmartEventNames []HubspotSmartEventName) {
+func syncAllWorkerV1(project *model.Project, wg *sync.WaitGroup, syncStatus *syncWorkerStatus, otpRules *[]model.OTPRule, documents []model.HubspotDocument, hubspotSmartEventNames []HubspotSmartEventName) {
 	defer wg.Done()
 
-	errCode := syncAll(project, documents, hubspotSmartEventNames)
+	errCode := syncAllV1(project, otpRules, documents, hubspotSmartEventNames)
 
 	syncStatus.Lock.Lock()
 	defer syncStatus.Lock.Unlock()
@@ -2670,7 +2649,7 @@ func syncAllWorker(project *model.Project, wg *sync.WaitGroup, syncStatus *syncW
 	}
 }
 
-func syncByOrderedTimeSeries(project *model.Project, orderedTimeSeries [][]int64, workersPerProject int, recordsMaxCreatedAtSec int64, datePropertiesByObjectType map[int]*map[string]bool, timeZone U.TimeZoneString, recordsProcessLimit int,
+func syncByOrderedTimeSeriesV1(project *model.Project, otpRules *[]model.OTPRule, orderedTimeSeries [][]int64, workersPerProject int, recordsMaxCreatedAtSec int64, datePropertiesByObjectType map[int]*map[string]bool, timeZone U.TimeZoneString, recordsProcessLimit int,
 	hubspotSmartEventNames *map[string][]HubspotSmartEventName) (map[string]bool, map[string]int64, map[string]int, bool) {
 	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "worker_per_project": workersPerProject,
 		"record_max_created_at": recordsMaxCreatedAtSec, "record_process_limit": recordsProcessLimit})
@@ -2721,7 +2700,7 @@ func syncByOrderedTimeSeries(project *model.Project, orderedTimeSeries [][]int64
 					logCtx.WithFields(log.Fields{"worker": workerIndex, "doc_id": docID, "type": syncOrderByType[i]}).Info("Processing Batch by doc_id")
 					workerIndex++
 					wg.Add(1)
-					go syncAllWorker(project, &wg, &syncStatus, batch[docID], (*hubspotSmartEventNames)[docTypeAlias])
+					go syncAllWorkerV1(project, &wg, &syncStatus, otpRules, batch[docID], (*hubspotSmartEventNames)[docTypeAlias])
 				}
 				wg.Wait()
 				if processedCount > recordsProcessLimit {
@@ -2752,7 +2731,7 @@ func syncByOrderedTimeSeries(project *model.Project, orderedTimeSeries [][]int64
 }
 
 // Sync - Syncs hubspot documents in an order of type.
-func Sync(projectID int64, workersPerProject int, recordsMaxCreatedAtSec int64, datePropertiesByObjectType map[int]*map[string]bool, timeZone U.TimeZoneString, recordsProcessLimit int) ([]Status, bool) {
+func SyncV1(projectID int64, workersPerProject int, recordsMaxCreatedAtSec int64, datePropertiesByObjectType map[int]*map[string]bool, timeZone U.TimeZoneString, recordsProcessLimit int) ([]Status, bool) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "workers_per_project": workersPerProject, "record_max_created_at": recordsMaxCreatedAtSec})
 	logCtx.Info("Running sync for project.")
 
@@ -2762,6 +2741,14 @@ func Sync(projectID int64, workersPerProject int, recordsMaxCreatedAtSec int64, 
 	if status != http.StatusOK {
 		statusByProjectAndType = append(statusByProjectAndType, Status{ProjectId: projectID,
 			Status: "Failed to create event names"})
+		return statusByProjectAndType, true
+	}
+
+	otpRules, errCode := store.GetStore().GetALLOTPRuleWithProjectId(projectID)
+	if errCode != http.StatusFound && errCode != http.StatusNotFound {
+		logCtx.WithField("err_code", errCode).Error("Failed to get otp Rules for Project")
+		statusByProjectAndType = append(statusByProjectAndType, Status{ProjectId: projectID,
+			Status: "Failed to get OTP rules"})
 		return statusByProjectAndType, true
 	}
 
@@ -2801,7 +2788,7 @@ func Sync(projectID int64, workersPerProject int, recordsMaxCreatedAtSec int64, 
 	}
 
 	anyFailure := false
-	overAllSyncStatus, overallExecutionTime, overallProcessedCount, isProcessLimitExceeded := syncByOrderedTimeSeries(project, orderedTimeSeries, workersPerProject,
+	overAllSyncStatus, overallExecutionTime, overallProcessedCount, isProcessLimitExceeded := syncByOrderedTimeSeriesV1(project, &otpRules, orderedTimeSeries, workersPerProject,
 		recordsMaxCreatedAtSec, datePropertiesByObjectType, timeZone, recordsProcessLimit, hubspotSmartEventNames)
 
 	for docTypeAlias, failure := range overAllSyncStatus {

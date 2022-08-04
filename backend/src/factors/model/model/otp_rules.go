@@ -1,9 +1,8 @@
 package model
 
 import (
-	"time"
-
 	"github.com/jinzhu/gorm/dialects/postgres"
+	"time"
 )
 
 type OTPRule struct {

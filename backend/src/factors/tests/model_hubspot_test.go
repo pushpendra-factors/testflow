@@ -3971,7 +3971,7 @@ func TestHubspotCompanyGroups(t *testing.T) {
 	assert.True(t, assertUserGroupValueByColumnName(user, "group_2_user_id", deal3GroupUserID))
 }
 
-func TestHubspotOfflineTouchPoint(t *testing.T) {
+/*func TestHubspotOfflineTouchPoint(t *testing.T) {
 
 	project, _, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
@@ -4110,7 +4110,7 @@ func TestHubspotOfflineTouchPointDecode(t *testing.T) {
 	fmt.Println(rule)
 
 }
-
+*/
 func getEventTimestamp(timestamp int64) int64 {
 	if timestamp == 0 {
 		return 0

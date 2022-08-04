@@ -20,49 +20,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// Status represents current sync status for a doc type
-type Status struct {
-	ProjectID int64  `json:"project_id"`
-	Type      string `json:"type"`
-	Status    string `json:"status"`
-	Message   string `json:"message,omitempty"`
-}
-
-var salesforceEnrichOrderByType = [...]int{
-	model.SalesforceDocumentTypeLead,
-	model.SalesforceDocumentTypeContact,
-	model.SalesforceDocumentTypeOpportunity,
-	model.SalesforceDocumentTypeCampaignMember,
-}
-
-// CampaignChildRelationship campaign parent to child relationship
-type CampaignChildRelationship struct {
-	CampaignMembers RelationshipCampaignMember `json:"CampaignMembers"`
-}
-
-// RelationshipCampaignMemberRecord  child campaignmember required field
-type RelationshipCampaignMemberRecord struct {
-	ID        string `json:"Id"`
-	IsDeleted bool   `json:"IsDeleted"`
-	LeadID    string `json:"LeadId"`
-	ContactID string `json:"ContactId"`
-}
-
-// RelationshipCampaignMember campaign members of a campaign
-type RelationshipCampaignMember struct {
-	TotalSize int                                `json:"totalSize"`
-	Done      bool                               `json:"done"`
-	Records   []RelationshipCampaignMemberRecord `json:"records"`
-}
-
-var opportunityMappingOrder = []string{
-	model.SalesforceDocumentTypeNameLead,
-	model.SalesforceChildRelationshipNameOpportunityContactRoles,
-}
-
-var allowedCampaignFields = map[string]bool{}
-
-func getSalesforceMappedDataTypeValue(projectID int64, eventName, enKey string, value interface{}, typeAlias string, dateProperties *map[string]bool, timeZoneStr U.TimeZoneString) (interface{}, error) {
+func getSalesforceMappedDataTypeValueV1(projectID int64, eventName, enKey string, value interface{}, typeAlias string, dateProperties *map[string]bool, timeZoneStr U.TimeZoneString) (interface{}, error) {
 	if value == nil || value == "" {
 		return "", nil
 	}
@@ -106,7 +64,7 @@ func getSalesforceMappedDataTypeValue(projectID int64, eventName, enKey string, 
 }
 
 // GetSalesforceDocumentProperties return map of enriched properties
-func GetSalesforceDocumentProperties(projectID int64, document *model.SalesforceDocument) (*map[string]interface{}, *map[string]interface{}, error) {
+func GetSalesforceDocumentPropertiesV1(projectID int64, document *model.SalesforceDocument) (*map[string]interface{}, *map[string]interface{}, error) {
 
 	var enProperties map[string]interface{}
 	err := json.Unmarshal(document.Value.RawMessage, &enProperties)
@@ -145,7 +103,7 @@ func GetSalesforceDocumentProperties(projectID int64, document *model.Salesforce
 	return &enrichedProperties, &properties, nil
 }
 
-func filterPropertyFieldsByProjectID(projectID int64, properties *map[string]interface{}, docType int) {
+func filterPropertyFieldsByProjectIDV1(projectID int64, properties *map[string]interface{}, docType int) {
 
 	if projectID == 0 {
 		return
@@ -167,7 +125,7 @@ func filterPropertyFieldsByProjectID(projectID int64, properties *map[string]int
 	delete(*properties, OpportunityMultipleLeadID)
 }
 
-func getSalesforceAccountID(document *model.SalesforceDocument) (string, error) {
+func getSalesforceAccountIDV1(document *model.SalesforceDocument) (string, error) {
 	if document == nil {
 		return "", errors.New("invalid document")
 	}
@@ -191,7 +149,7 @@ func getSalesforceAccountID(document *model.SalesforceDocument) (string, error) 
 	return accountID, nil
 }
 
-func getCustomerUserIDFromProperties(projectID int64, properties map[string]interface{}, docTypeAlias string, salesforceProjectIdentificationFieldStore *map[int64]map[string][]string) (string, string) {
+func getCustomerUserIDFromPropertiesV1(projectID int64, properties map[string]interface{}, docTypeAlias string, salesforceProjectIdentificationFieldStore *map[int64]map[string][]string) (string, string) {
 
 	identifiers := model.GetIdentifierPrecendenceOrderByProjectID(projectID)
 	for _, indentityType := range identifiers {
@@ -233,7 +191,7 @@ TrackSalesforceEventByDocumentType tracks salesforce events by action
 	for action created -> create both created and updated events with date created timestamp
 	for action updated -> create on updated event with last modified timestamp
 */
-func TrackSalesforceEventByDocumentType(projectID int64, trackPayload *SDK.TrackPayload, document *model.SalesforceDocument, customerUserID string, objectType string) (string, string, SDK.TrackPayload, error) {
+func TrackSalesforceEventByDocumentTypeV1(projectID int64, trackPayload *SDK.TrackPayload, document *model.SalesforceDocument, customerUserID string, objectType string) (string, string, SDK.TrackPayload, error) {
 
 	var finalPayload SDK.TrackPayload
 	if projectID == 0 {
@@ -355,7 +313,7 @@ func TrackSalesforceEventByDocumentType(projectID int64, trackPayload *SDK.Track
 	return eventID, userID, finalPayload, nil
 }
 
-func getAccountGroupID(enProperties *map[string]interface{}, document *model.SalesforceDocument) string {
+func getAccountGroupIDV1(enProperties *map[string]interface{}, document *model.SalesforceDocument) string {
 
 	if document.ID != "" {
 		return document.ID
@@ -378,7 +336,7 @@ func getAccountGroupID(enProperties *map[string]interface{}, document *model.Sal
 	return accountID
 }
 
-func enrichGroupAccount(projectID int64, document *model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName) int {
+func enrichGroupAcccountV1(projectID int64, document *model.SalesforceDocument) int {
 	logCtx := log.WithField("project_id", projectID).
 		WithFields(log.Fields{"doc_id": document.ID, "doc_action": document.Action, "doc_timestamp": document.Timestamp})
 
@@ -386,11 +344,11 @@ func enrichGroupAccount(projectID int64, document *model.SalesforceDocument, sal
 		return http.StatusBadRequest
 	}
 
-	if (document.Type != model.SalesforceDocumentTypeAccount && document.Type != model.SalesforceDocumentTypeGroupAccount) || document.GroupUserID != "" {
+	if document.Type != model.SalesforceDocumentTypeAccount || document.GroupUserID != "" {
 		return http.StatusInternalServerError
 	}
 
-	enProperties, properties, err := GetSalesforceDocumentProperties(projectID, document)
+	enProperties, _, err := GetSalesforceDocumentProperties(projectID, document)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properties")
 		return http.StatusInternalServerError
@@ -398,34 +356,16 @@ func enrichGroupAccount(projectID int64, document *model.SalesforceDocument, sal
 
 	accountID := getAccountGroupID(enProperties, document)
 
-	groupAccountUserID, status, eventID := createOrUpdateSalesforceGroupsProperties(projectID, document, model.GROUP_NAME_SALESFORCE_ACCOUNT, accountID)
+	groupAccountUserID, status := createOrUpdateSalesforceGroupsProperties(projectID, document, model.GROUP_NAME_SALESFORCE_ACCOUNT, accountID)
 	if status != http.StatusOK {
-		logCtx.Error("Failed to create or update salesforce groups properties.")
 		return status
 	}
 
 	document.GroupUserID = groupAccountUserID
-
-	// Always use lastmodified timestamp for updated properties. Error handling already done during event creation
-	lastModifiedTimestamp, _ := model.GetSalesforceDocumentTimestampByAction(document, model.SalesforceDocumentUpdated)
-
-	var prevProperties *map[string]interface{}
-	for _, smartEventName := range salesforceSmartEventNames {
-		prevProperties = TrackSalesforceSmartEvent(projectID, &smartEventName, eventID, document.ID, groupAccountUserID, document.Type,
-			properties, prevProperties, lastModifiedTimestamp)
-	}
-
-	errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(projectID, document, eventID, "", groupAccountUserID, true)
-	if errCode != http.StatusAccepted {
-		logCtx.Error("Failed to update salesforce account document as synced.")
-		return http.StatusInternalServerError
-	}
-
-	return http.StatusOK
+	return status
 }
 
-/*
-func enrichAccount(projectID int64, document *model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName) int {
+func enrichAccountV1(projectID int64, document *model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName) int {
 	if projectID == 0 || document == nil {
 		return http.StatusBadRequest
 	}
@@ -466,7 +406,7 @@ func enrichAccount(projectID int64, document *model.SalesforceDocument, salesfor
 
 	var prevProperties *map[string]interface{}
 	for _, smartEventName := range salesforceSmartEventNames {
-		prevProperties = TrackSalesforceSmartEvent(projectID, &smartEventName, eventID, document.ID, userID, document.Type,
+		prevProperties = TrackSalesforceSmartEventV1(projectID, &smartEventName, eventID, document.ID, userID, document.Type,
 			properties, prevProperties, lastModifiedTimestamp)
 	}
 
@@ -478,16 +418,8 @@ func enrichAccount(projectID int64, document *model.SalesforceDocument, salesfor
 
 	return http.StatusOK
 }
-*/
 
-// SalesforceSmartEventName struct for holding event_name and filter expression
-type SalesforceSmartEventName struct {
-	EventName string
-	Filter    *model.SmartCRMEventFilter
-	Type      string
-}
-
-func getTimestampFromField(propertyName string, properties *map[string]interface{}) (int64, error) {
+func getTimestampFromFieldV1(propertyName string, properties *map[string]interface{}) (int64, error) {
 	if timestamp, exists := (*properties)[propertyName]; exists {
 		if unixTimestamp, ok := timestamp.(int64); ok {
 			return unixTimestamp, nil
@@ -504,7 +436,7 @@ func getTimestampFromField(propertyName string, properties *map[string]interface
 	return 0, errors.New("field missing")
 }
 
-func enrichContact(projectID int64, document *model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName, pendingOpportunityAssociatedRecords map[string]string) int {
+func enrichContactV1(projectID int64, document *model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName, pendingOpportunityAssociatedRecords map[string]string) int {
 	if projectID == 0 || document == nil {
 		return http.StatusBadRequest
 	}
@@ -580,7 +512,7 @@ WITHOUT PREVIOUS PROPERTY :- A query will be made for previous synced record whi
 will require userID or customerUserID and doctType
 WITH PREVIOUS PROPERTY := userID, customerUserID and doctType won't be used
 */
-func GetSalesforceSmartEventPayload(projectID int64, eventName, documentID, userID string, docType int,
+func GetSalesforceSmartEventPayloadV1(projectID int64, eventName, documentID, userID string, docType int,
 	currentProperties, prevProperties *map[string]interface{}, filter *model.SmartCRMEventFilter) (*model.CRMSmartEvent, *map[string]interface{}, bool) {
 
 	var crmSmartEvent model.CRMSmartEvent
@@ -641,7 +573,7 @@ func GetSalesforceSmartEventPayload(projectID int64, eventName, documentID, user
 }
 
 // TrackSalesforceSmartEvent valids current properties with CRM smart filter and creates a event
-func TrackSalesforceSmartEvent(projectID int64, salesforceSmartEventName *SalesforceSmartEventName, eventID, documentID, userID string, docType int,
+func TrackSalesforceSmartEventV1(projectID int64, salesforceSmartEventName *SalesforceSmartEventName, eventID, documentID, userID string, docType int,
 	currentProperties, prevProperties *map[string]interface{}, lastModifiedTimestamp int64) *map[string]interface{} {
 	var valid bool
 	var smartEventPayload *model.CRMSmartEvent
@@ -705,27 +637,7 @@ func TrackSalesforceSmartEvent(projectID int64, salesforceSmartEventName *Salesf
 	return prevProperties
 }
 
-type OpportunityContactRoleRecord struct {
-	ID            string `json:"Id"` // only required field
-	IsPrimary     bool   `json:"IsPrimary"`
-	ContactID     string `json:"ContactId"`
-	Role          string `json:"Role"`
-	OpportunityID string `json:"OpportunityId"`
-}
-
-type RelationshipOpportunityContactRole struct {
-	Records []OpportunityContactRoleRecord `json:"records"`
-}
-
-type OpportunityChildRelationship struct {
-	OpportunityContactRole    RelationshipOpportunityContactRole `json:"OpportunityContactRoles"`
-	OppLeadID                 string                             `json:"opportunity_to_lead"`
-	OpportunityMultipleLeadID map[string]bool                    `json:"opportunity_to_multiple_lead"`
-}
-
-var errMissingOpportunityLeadAndContact = errors.New("missing lead and contact record for opportunity link")
-
-func getOpportuntityLeadAndContactID(document *model.SalesforceDocument) ([]string, []string, string, string, error) {
+func getOpportuntityLeadAndContactIDV1(document *model.SalesforceDocument) ([]string, []string, string, string, error) {
 	logCtx := log.WithFields(log.Fields{"project_id": document.ProjectID, "doc_id": document.ID, "doc_type": document.Type})
 	var opportunityChildRelationship OpportunityChildRelationship
 	err := json.Unmarshal(document.Value.RawMessage, &opportunityChildRelationship)
@@ -771,7 +683,7 @@ func getOpportuntityLeadAndContactID(document *model.SalesforceDocument) ([]stri
 	return oppLeadIDs, oppContactIDs, oppLeadID, oppContactID, nil
 }
 
-func getOpportunityLinkedLeadOrContactDocument(projectID int64, document *model.SalesforceDocument) (*model.SalesforceDocument, error) {
+func getOpportunityLinkedLeadOrContactDocumentV1(projectID int64, document *model.SalesforceDocument) (*model.SalesforceDocument, error) {
 
 	_, _, oppLeadID, oppContactID, err := getOpportuntityLeadAndContactID(document)
 	if err != nil {
@@ -803,7 +715,7 @@ func getOpportunityLinkedLeadOrContactDocument(projectID int64, document *model.
 	return nil, errors.New("no object associated with opportunity")
 }
 
-func getGroupEventName(docType int) (string, string) {
+func getGroupEventNameV1(docType int) (string, string) {
 	if docType == model.SalesforceDocumentTypeAccount {
 		return util.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_CREATED, util.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED
 	}
@@ -813,7 +725,7 @@ func getGroupEventName(docType int) (string, string) {
 	return "", ""
 }
 
-func isValidGroupName(documentType int, groupName string) bool {
+func isValidGroupNameV1(documentType int, groupName string) bool {
 	if documentType == model.SalesforceDocumentTypeAccount && groupName == model.GROUP_NAME_SALESFORCE_ACCOUNT {
 		return true
 	}
@@ -823,37 +735,37 @@ func isValidGroupName(documentType int, groupName string) bool {
 	}
 	return false
 }
+func createOrUpdateSalesforceGroupsPropertiesV1(projectID int64, document *model.SalesforceDocument, groupName, groupID string) (string, int) {
 
-func createOrUpdateSalesforceGroupsProperties(projectID int64, document *model.SalesforceDocument, groupName, groupID string) (string, int, string) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "doc_type": document.Type, "document": document, "group_name": groupName,
 		"group_id": groupID})
 
 	if projectID == 0 || document == nil {
 		logCtx.Error("Invalid parameters")
-		return "", http.StatusBadRequest, ""
+		return "", http.StatusBadRequest
 	}
 
 	if !isValidGroupName(document.Type, groupName) {
 		logCtx.Error("Invalid group name")
-		return "", http.StatusBadRequest, ""
+		return "", http.StatusBadRequest
 	}
 
 	enProperties, _, err := GetSalesforceDocumentProperties(projectID, document)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properties")
-		return "", http.StatusInternalServerError, ""
+		return "", http.StatusInternalServerError
 	}
 
 	createdTimestamp, err := model.GetSalesforceDocumentTimestampByAction(document, model.SalesforceDocumentCreated)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get created timestamp.")
-		return "", http.StatusInternalServerError, ""
+		return "", http.StatusInternalServerError
 	}
 
 	lastModifiedTimestamp, err := model.GetSalesforceDocumentTimestampByAction(document, model.SalesforceDocumentUpdated)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get last modified timestamp.")
-		return "", http.StatusInternalServerError, ""
+		return "", http.StatusInternalServerError
 	}
 
 	createdEventName, updatedEventName := getGroupEventName(document.Type)
@@ -866,13 +778,13 @@ func createOrUpdateSalesforceGroupsProperties(projectID int64, document *model.S
 			enProperties, createdTimestamp, lastModifiedTimestamp, model.SmartCRMEventSourceSalesforce)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to update salesforce group.")
-			return "", http.StatusInternalServerError, ""
+			return "", http.StatusInternalServerError
 		}
 
 		errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(projectID, document, "", "", groupUserID, false)
 		if errCode != http.StatusAccepted {
 			logCtx.Error("Failed to set group_user_id in salesforce created document.")
-			return "", http.StatusInternalServerError, ""
+			return "", http.StatusInternalServerError
 		}
 
 		processEventNames = append(processEventNames, createdEventName, updatedEventName)
@@ -887,7 +799,7 @@ func createOrUpdateSalesforceGroupsProperties(projectID int64, document *model.S
 	if document.Action == model.SalesforceDocumentUpdated {
 		documents, status := store.GetStore().GetSyncedSalesforceDocumentByType(projectID, []string{document.ID}, document.Type, true)
 		if status != http.StatusFound {
-			return "", http.StatusInternalServerError, ""
+			return "", http.StatusInternalServerError
 		}
 
 		createdDocument := documents[0]
@@ -896,29 +808,29 @@ func createOrUpdateSalesforceGroupsProperties(projectID int64, document *model.S
 			enProperties, createdTimestamp, lastModifiedTimestamp, model.SmartCRMEventSourceSalesforce)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to update salesforce group properties.")
-			return "", http.StatusInternalServerError, ""
+			return "", http.StatusInternalServerError
 		}
 
 		if createdDocument.GroupUserID == "" {
 			errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(projectID, &createdDocument, "", "", groupUserID, false)
 			if errCode != http.StatusAccepted {
 				logCtx.Error("Failed to update group_user_id in salesforce created document.")
-				return "", http.StatusInternalServerError, ""
+				return "", http.StatusInternalServerError
 			}
 		}
 
 		errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(projectID, document, "", "", groupUserID, false)
 		if errCode != http.StatusAccepted {
 			logCtx.Error("Failed to update group_user_id in salesforce updated document.")
-			return "", http.StatusInternalServerError, ""
+			return "", http.StatusInternalServerError
 		}
 
 		processEventNames = append(processEventNames, updatedEventName)
 		processEventTimestamps = append(processEventTimestamps, lastModifiedTimestamp)
 	}
 
-	var eventID string
 	for i := range processEventNames {
+
 		trackPayload := &SDK.TrackPayload{
 			Name:          processEventNames[i],
 			ProjectId:     projectID,
@@ -931,16 +843,14 @@ func createOrUpdateSalesforceGroupsProperties(projectID int64, document *model.S
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
 			logCtx.WithFields(log.Fields{"status": status, "track_response": response, "event_name": processEventNames[i],
 				"event_timestamp": processEventTimestamps[i]}).Error("Failed to track salesforce group event.")
-			return "", http.StatusInternalServerError, ""
+			return "", http.StatusInternalServerError
 		}
-
-		eventID = response.EventId
 	}
 
-	return groupUserID, http.StatusOK, eventID
+	return groupUserID, http.StatusOK
 }
 
-func enrichGroupOpportunity(projectID int64, document *model.SalesforceDocument) (map[string]map[string]string, int) {
+func enrichGroupOpportunityV1(projectID int64, document *model.SalesforceDocument) (map[string]map[string]string, int) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "document": document})
 	if projectID == 0 || document == nil {
 		logCtx.Error("Invalid project_id or document_id")
@@ -959,9 +869,8 @@ func enrichGroupOpportunity(projectID int64, document *model.SalesforceDocument)
 		return nil, http.StatusOK
 	}
 
-	groupUserID, status, _ := createOrUpdateSalesforceGroupsProperties(projectID, document, model.GROUP_NAME_SALESFORCE_OPPORTUNITY, document.ID)
+	groupUserID, status := createOrUpdateSalesforceGroupsProperties(projectID, document, model.GROUP_NAME_SALESFORCE_OPPORTUNITY, document.ID)
 	if status != http.StatusOK {
-		logCtx.Error("Failed to create or update salesforce groups properties.")
 		return nil, status
 	}
 
@@ -995,7 +904,7 @@ func enrichGroupOpportunity(projectID int64, document *model.SalesforceDocument)
 }
 
 // CreateSalesforceGroupRelationship create two way group relationship in group relationship table
-func CreateSalesforceGroupRelationship(projectID int64, leftGroupName, leftgroupUserID, rightGroupName, rightDocID string, rightDocTyp int) error {
+func CreateSalesforceGroupRelationshipV1(projectID int64, leftGroupName, leftgroupUserID, rightGroupName, rightDocID string, rightDocTyp int) error {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "left_group_user_id": leftgroupUserID, "right_document_id": rightDocID})
 	if projectID == 0 || leftgroupUserID == "" || rightDocID == "" {
 		logCtx.Error("Missing required fields")
@@ -1029,7 +938,7 @@ func CreateSalesforceGroupRelationship(projectID int64, leftGroupName, leftgroup
 	return nil
 }
 
-func enrichOpportunityContactRoles(projectID int64, document *model.SalesforceDocument) int {
+func enrichOpportunityContactRolesV1(projectID int64, document *model.SalesforceDocument) int {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "document": document})
 	if projectID == 0 || document == nil {
 		return http.StatusBadRequest
@@ -1101,7 +1010,7 @@ func enrichOpportunityContactRoles(projectID int64, document *model.SalesforceDo
 
 	return http.StatusOK
 }
-func enrichOpportunities(projectID int64, document *model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName) int {
+func enrichOpportunitiesV1(projectID int64, document *model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName) int {
 	if projectID == 0 || document == nil {
 		return http.StatusBadRequest
 	}
@@ -1228,7 +1137,7 @@ func enrichOpportunities(projectID int64, document *model.SalesforceDocument, sa
 	return http.StatusOK
 }
 
-func updateSalesforceUserAccountGroups(projectID int64, accountID, userID string) int {
+func updateSalesforceUserAccountGroupsV1(projectID int64, accountID, userID string) int {
 	documents, status := store.GetStore().GetSyncedSalesforceDocumentByType(projectID, []string{accountID},
 		model.SalesforceDocumentTypeAccount, true)
 	if status != http.StatusFound {
@@ -1241,10 +1150,10 @@ func updateSalesforceUserAccountGroups(projectID int64, accountID, userID string
 	groupUserID := documents[0].GroupUserID
 	if groupUserID == "" {
 		// update old record group status
-		status := enrichGroupAccount(projectID, &documents[0], nil)
+		status := enrichGroupAcccount(projectID, &documents[0])
 		if status != http.StatusOK || documents[0].GroupUserID == "" {
 			log.WithFields(log.Fields{"project_id": projectID, "account_id": accountID}).
-				Error("Failed to create group user on existing sync record.")
+				Error("Failed to create group user on exsting sync record.")
 			return status
 		}
 
@@ -1272,7 +1181,7 @@ func updateSalesforceUserAccountGroups(projectID int64, accountID, userID string
 	return http.StatusOK
 }
 
-func enrichLeads(projectID int64, document *model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName, pendingOpportunityAssociatedRecords map[string]string) int {
+func enrichLeadsV1(projectID int64, document *model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName, pendingOpportunityAssociatedRecords map[string]string) int {
 	if projectID == 0 || document == nil {
 		return http.StatusBadRequest
 	}
@@ -1343,7 +1252,7 @@ func enrichLeads(projectID int64, document *model.SalesforceDocument, salesforce
 	return http.StatusOK
 }
 
-func getCampaignMemberIDsFromCampaign(document *model.SalesforceDocument) ([]string, error) {
+func getCampaignMemberIDsFromCampaignV1(document *model.SalesforceDocument) ([]string, error) {
 
 	var campaignChildRelationship CampaignChildRelationship
 	err := json.Unmarshal(document.Value.RawMessage, &campaignChildRelationship)
@@ -1360,7 +1269,7 @@ func getCampaignMemberIDsFromCampaign(document *model.SalesforceDocument) ([]str
 	return campaignMemberIDs, nil
 }
 
-func enrichCampaignToAllCampaignMembers(project *model.Project, document *model.SalesforceDocument, endTimestamp int64) int {
+func enrichCampaignToAllCampaignMembersV1(project *model.Project, otpRules *[]model.OTPRule, document *model.SalesforceDocument, endTimestamp int64) int {
 	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "document_id": document.ID, "end_timestamp": endTimestamp})
 	if document.Type != model.SalesforceDocumentTypeCampaign {
 		return http.StatusBadRequest
@@ -1394,6 +1303,7 @@ func enrichCampaignToAllCampaignMembers(project *model.Project, document *model.
 	/*
 		NOTE: IF member document is not available for this time range, mark it as synced.
 		This can only happened on the first time of this campaign pull where campaign is created on day 1 and member on day 2
+
 		When CAMPAIGN MEMBER is picked up for processing then, it will refer this document as for last campaign update.
 		Refer enrichCampaignMember function for opposite case
 	*/
@@ -1452,7 +1362,7 @@ func enrichCampaignToAllCampaignMembers(project *model.Project, document *model.
 		}
 
 		if memberDocuments[i].Synced == false {
-			err = ApplySFOfflineTouchPointRule(project, &finalTrackPayload, &memberDocuments[i], endTimestamp)
+			err = ApplySFOfflineTouchPointRuleV1(project, otpRules, &finalTrackPayload, &memberDocuments[i], endTimestamp)
 			if err != nil {
 				// log and continue
 				logCtx.WithField("EventID", eventID).WithField("userID", eventID).WithField("userID", eventID).Info("failed creating SF offline touch point")
@@ -1478,7 +1388,7 @@ func enrichCampaignToAllCampaignMembers(project *model.Project, document *model.
 }
 
 // Get existing lead or contact user ID from campaign members data
-func getExistingCampaignMemberUserIDFromProperties(projectID int64, properties *map[string]interface{}) string {
+func getExistingCampaignMemberUserIDFromPropertiesV1(projectID int64, properties *map[string]interface{}) string {
 	existingUserID := ""
 	existingContactMemberID := (*properties)[model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceSalesforce, model.SalesforceDocumentTypeNameCampaignMember, "ContactId")]
 	existingLeadMemberID := (*properties)[model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceSalesforce, model.SalesforceDocumentTypeNameCampaignMember, "LeadId")]
@@ -1505,7 +1415,7 @@ func getExistingCampaignMemberUserIDFromProperties(projectID int64, properties *
 	return existingUserID
 }
 
-func enrichCampaignMember(project *model.Project, document *model.SalesforceDocument, endTimestamp int64) int {
+func enrichCampaignMemberV1(project *model.Project, otpRules *[]model.OTPRule, document *model.SalesforceDocument, endTimestamp int64) int {
 	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "document_id": document.ID})
 	if document.Type != model.SalesforceDocumentTypeCampaignMember {
 		return http.StatusBadRequest
@@ -1525,6 +1435,7 @@ func enrichCampaignMember(project *model.Project, document *model.SalesforceDocu
 
 	/*
 		NOTE: IF campaign document is not available for this time range don't mark it as synced and continue.
+
 		When CAMPAIGN is picked up for processing then, it will refer this document as for last campaign member.
 		Refer enrichCampaignToAllCampaignMembers function for opposite case
 	*/
@@ -1576,7 +1487,7 @@ func enrichCampaignMember(project *model.Project, document *model.SalesforceDocu
 		return http.StatusInternalServerError
 	}
 
-	err = ApplySFOfflineTouchPointRule(project, &finalTrackPayload, document, endTimestamp)
+	err = ApplySFOfflineTouchPointRuleV1(project, otpRules, &finalTrackPayload, document, endTimestamp)
 	if err != nil {
 		// log and continue
 		logCtx.WithField("EventID", eventID).WithField("userID", eventID).WithField("userID", eventID).Info("Create SF offline touch point")
@@ -1590,92 +1501,84 @@ func enrichCampaignMember(project *model.Project, document *model.SalesforceDocu
 	return http.StatusOK
 }
 
-func ApplySFOfflineTouchPointRule(project *model.Project, trackPayload *SDK.TrackPayload, document *model.SalesforceDocument, endTimestamp int64) error {
+func ApplySFOfflineTouchPointRuleV1(project *model.Project, otpRules *[]model.OTPRule, trackPayload *SDK.TrackPayload, document *model.SalesforceDocument, endTimestamp int64) error {
 
 	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "ApplySFOfflineTouchPointRule",
 		"document_id": document.ID, "document_action": document.Action, "document": document})
 
-	if &project.SalesforceTouchPoints != nil && !U.IsEmptyPostgresJsonb(&project.SalesforceTouchPoints) {
+	if otpRules == nil || project == nil || trackPayload == nil || document == nil {
+		return nil
+	}
 
-		var touchPointRules map[string][]model.SFTouchPointRule
-		err := U.DecodePostgresJsonbToStructType(&project.SalesforceTouchPoints, &touchPointRules)
-		if err != nil {
-			// logging and continuing.
-			logCtx.WithField("Document", trackPayload).WithError(err).Error("Failed to decode/fetch offline touch point rules for salesforce document.")
-			return err
+	var campaignMemberDocuments []model.SalesforceDocument
+	var status int
+	fistRespondedRuleApplicable := true
+	// Checking if the EP_SFCampaignMemberResponded has already been set as true for same customer id
+	if document.Action == model.SalesforceDocumentUpdated {
+
+		campaignMemberDocuments, status = store.GetStore().GetSyncedSalesforceDocumentByType(project.ID,
+			[]string{util.GetPropertyValueAsString(document.ID)}, model.SalesforceDocumentTypeCampaignMember, false)
+		if status != http.StatusFound {
+			campaignMemberDocuments = nil
 		}
+		// Ignore responded event for "Created event" based rule.
+		if campaignMemberDocuments != nil || len(campaignMemberDocuments) != 0 {
 
-		rules := touchPointRules["sf_touch_point_rules"]
-		var campaignMemberDocuments []model.SalesforceDocument
-		var status int
-		fistRespondedRuleApplicable := true
-		// Checking if the EP_SFCampaignMemberResponded has already been set as true for same customer id
-		if document.Action == model.SalesforceDocumentUpdated {
+			logCtx.WithField("Total_Documents", len(campaignMemberDocuments)).
+				WithField("Document[size-1]", campaignMemberDocuments[len(campaignMemberDocuments)-1]).
+				Info("Found existing campaign member document")
 
-			campaignMemberDocuments, status = store.GetStore().GetSyncedSalesforceDocumentByType(project.ID,
-				[]string{util.GetPropertyValueAsString(document.ID)}, model.SalesforceDocumentTypeCampaignMember, false)
-			if status != http.StatusFound {
-				campaignMemberDocuments = nil
-			}
-			// Ignore responded event for "Created event" based rule.
-			if campaignMemberDocuments != nil || len(campaignMemberDocuments) != 0 {
+			// len(campaignMemberDocuments) > 0 && timestamp sorted desc
+			enCampaignMemberProperties, _, err := GetSalesforceDocumentProperties(project.ID, &campaignMemberDocuments[len(campaignMemberDocuments)-1])
 
-				logCtx.WithField("Total_Documents", len(campaignMemberDocuments)).
-					WithField("Document[size-1]", campaignMemberDocuments[len(campaignMemberDocuments)-1]).
-					Info("Found existing campaign member document")
-
-				// len(campaignMemberDocuments) > 0 && timestamp sorted desc
-				enCampaignMemberProperties, _, err := GetSalesforceDocumentProperties(project.ID, &campaignMemberDocuments[len(campaignMemberDocuments)-1])
-
-				if err == nil {
-					// ignore to create a new touch point if last updated doc has EP_SFCampaignMemberResponded=true
-					if val, exists := (*enCampaignMemberProperties)[model.EP_SFCampaignMemberResponded]; exists {
-						if val.(bool) == true {
-							logCtx.Info("found EP_SFCampaignMemberResponded=true for the document, skipping creating OTP.")
-							fistRespondedRuleApplicable = false
-						}
-					}
-				} else {
-					logCtx.WithError(err).Error("Failed to get properties for salesforce campaign member, continuing")
-				}
-
-			}
-		}
-		for _, rule := range rules {
-
-			// check if rule is applicable
-			if !filterCheck(rule, trackPayload, logCtx) {
-				continue
-			}
-
-			// Run for create document rule
-			if rule.TouchPointTimeRef == model.SFCampaignMemberCreated && document.Action == model.SalesforceDocumentCreated {
-				_, err = CreateTouchPointEvent(project, trackPayload, document, rule)
-				if err != nil {
-					logCtx.WithError(err).Error("failed to create touch point for salesforce campaign member document. trying for responded rule")
-				}
-			}
-
-			// Run for only first responded rules & documents where first responded is not set.
-			if rule.TouchPointTimeRef == model.SFCampaignMemberResponded && fistRespondedRuleApplicable {
-
-				logCtx.Info("Found existing salesforce campaign member document")
-				if val, exists := trackPayload.EventProperties[model.EP_SFCampaignMemberResponded]; exists {
+			if err == nil {
+				// ignore to create a new touch point if last updated doc has EP_SFCampaignMemberResponded=true
+				if val, exists := (*enCampaignMemberProperties)[model.EP_SFCampaignMemberResponded]; exists {
 					if val.(bool) == true {
-						_, err = CreateTouchPointEvent(project, trackPayload, document, rule)
-						if err != nil {
-							logCtx.WithError(err).Error("failed to create touch point for salesforce campaign member document.")
-						}
+						logCtx.Info("found EP_SFCampaignMemberResponded=true for the document, skipping creating OTP.")
+						fistRespondedRuleApplicable = false
+					}
+				}
+			} else {
+				logCtx.WithError(err).Error("Failed to get properties for salesforce campaign member, continuing")
+			}
+
+		}
+	}
+
+	for _, rule := range *otpRules {
+
+		// check if rule is applicable
+		if !filterCheckV1(rule, trackPayload, logCtx) {
+			continue
+		}
+
+		// Run for create document rule
+		if rule.TouchPointTimeRef == model.SFCampaignMemberCreated && document.Action == model.SalesforceDocumentCreated {
+			_, err := CreateTouchPointEventV1(project, trackPayload, document, rule)
+			if err != nil {
+				logCtx.WithError(err).Error("failed to create touch point for salesforce campaign member document. trying for responded rule")
+			}
+		}
+
+		// Run for only first responded rules & documents where first responded is not set.
+		if rule.TouchPointTimeRef == model.SFCampaignMemberResponded && fistRespondedRuleApplicable {
+
+			logCtx.Info("Found existing salesforce campaign member document")
+			if val, exists := trackPayload.EventProperties[model.EP_SFCampaignMemberResponded]; exists {
+				if val.(bool) == true {
+					_, err := CreateTouchPointEventV1(project, trackPayload, document, rule)
+					if err != nil {
+						logCtx.WithError(err).Error("failed to create touch point for salesforce campaign member document.")
 					}
 				}
 			}
-
 		}
 	}
 	return nil
 }
 
-func CreateTouchPointEvent(project *model.Project, trackPayload *SDK.TrackPayload, document *model.SalesforceDocument, rule model.SFTouchPointRule) (*SDK.TrackResponse, error) {
+func CreateTouchPointEventV1(project *model.Project, trackPayload *SDK.TrackPayload, document *model.SalesforceDocument, rule model.OTPRule) (*SDK.TrackResponse, error) {
 
 	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "CreateTouchPointEvent", "document_id": document.ID, "document_action": document.Action})
 	logCtx.WithField("document", document).WithField("trackPayload", trackPayload).Info("CreateTouchPointEvent: creating salesforce document")
@@ -1709,7 +1612,14 @@ func CreateTouchPointEvent(project *model.Project, trackPayload *SDK.TrackPayloa
 	}
 
 	// Mapping touch point properties:
-	for key, value := range rule.PropertiesMap {
+	var rulePropertiesMap map[string]model.TouchPointPropertyValue
+	err = U.DecodePostgresJsonbToStructType(&rule.PropertiesMap, &rulePropertiesMap)
+	if err != nil {
+		logCtx.WithField("Document", trackPayload).WithError(err).Error("Failed to decode/fetch offline touch point rule PROPERTIES for salesforce document.")
+		return trackResponse, errors.New(fmt.Sprintf("create salesforce touchpoint event track failed for doc type %d, message %s", document.Type, trackResponse.Error))
+	}
+
+	for key, value := range rulePropertiesMap {
 
 		if value.Type == model.TouchPointPropertyValueAsConstant {
 			payload.EventProperties[key] = value.Value
@@ -1722,6 +1632,8 @@ func CreateTouchPointEvent(project *model.Project, trackPayload *SDK.TrackPayloa
 			}
 		}
 	}
+	// Adding mandatory properties
+	payload.EventProperties[U.EP_OTP_RULE_ID] = rule.ID
 
 	status, trackResponse := SDK.Track(project.ID, payload, true, SDK.SourceSalesforce, "")
 	if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
@@ -1732,7 +1644,7 @@ func CreateTouchPointEvent(project *model.Project, trackPayload *SDK.TrackPayloa
 	return trackResponse, nil
 }
 
-func canCreateSFTouchPoint(touchPointTimeRef string, documentActionType model.SalesforceAction) bool {
+func canCreateSFTouchPointV1(touchPointTimeRef string, documentActionType model.SalesforceAction) bool {
 	// Ignore created event for "first responded" based rule.
 	if touchPointTimeRef == model.SFCampaignMemberResponded && documentActionType == model.SalesforceDocumentCreated {
 		return false
@@ -1745,10 +1657,17 @@ func canCreateSFTouchPoint(touchPointTimeRef string, documentActionType model.Sa
 	return true
 }
 
-func filterCheck(rule model.SFTouchPointRule, trackPayload *SDK.TrackPayload, logCtx *log.Entry) bool {
+func filterCheckV1(rule model.OTPRule, trackPayload *SDK.TrackPayload, logCtx *log.Entry) bool {
+
+	var ruleFilters []model.TouchPointFilter
+	err := U.DecodePostgresJsonbToStructType(&rule.Filters, &ruleFilters)
+	if err != nil {
+		logCtx.WithField("Document", trackPayload).WithError(err).Error("Failed to decode/fetch offline touch point rule FILTERS for salesforce document.")
+		return false
+	}
 
 	filtersPassed := 0
-	for _, filter := range rule.Filters {
+	for _, filter := range ruleFilters {
 		switch filter.Operator {
 		case model.EqualsOpStr:
 			if _, exists := trackPayload.EventProperties[filter.Property]; exists {
@@ -1773,7 +1692,7 @@ func filterCheck(rule model.SFTouchPointRule, trackPayload *SDK.TrackPayload, lo
 			continue
 		}
 	}
-	return filtersPassed != 0 && filtersPassed == len(rule.Filters)
+	return filtersPassed != 0 && filtersPassed == len(ruleFilters)
 }
 
 /*
@@ -1790,6 +1709,7 @@ func filterCheck(rule model.SFTouchPointRule, trackPayload *SDK.TrackPayload, lo
 			]
 		}
 	}
+
 	CampaignMember{
 		ID:
 		CampaignID:
@@ -1797,23 +1717,23 @@ func filterCheck(rule model.SFTouchPointRule, trackPayload *SDK.TrackPayload, lo
 		ContactID:
 	}
 */
-func enrichCampaign(project *model.Project, document *model.SalesforceDocument, endTimestamp int64) int {
+func enrichCampaignV1(project *model.Project, otpRules *[]model.OTPRule, document *model.SalesforceDocument, endTimestamp int64) int {
 	if project.ID == 0 || document == nil {
 		return http.StatusBadRequest
 	}
 
 	if document.Type == model.SalesforceDocumentTypeCampaign {
-		return enrichCampaignToAllCampaignMembers(project, document, endTimestamp)
+		return enrichCampaignToAllCampaignMembersV1(project, otpRules, document, endTimestamp)
 	}
 
 	if document.Type == model.SalesforceDocumentTypeCampaignMember {
-		return enrichCampaignMember(project, document, endTimestamp)
+		return enrichCampaignMemberV1(project, otpRules, document, endTimestamp)
 	}
 
 	return http.StatusBadRequest
 }
 
-func enrichAll(project *model.Project, documents []model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName,
+func enrichAllV1(project *model.Project, otpRules *[]model.OTPRule, documents []model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName,
 	pendingOpportunityGroupAssociations map[string]map[string]string, endTimestamp int64) int {
 	if project.ID == 0 {
 		return http.StatusBadRequest
@@ -1825,6 +1745,8 @@ func enrichAll(project *model.Project, documents []model.SalesforceDocument, sal
 	for i := range documents {
 		startTime := time.Now().Unix()
 		switch documents[i].Type {
+		case model.SalesforceDocumentTypeAccount:
+			errCode = enrichAccount(project.ID, &documents[i], salesforceSmartEventNames)
 		case model.SalesforceDocumentTypeContact:
 			errCode = enrichContact(project.ID, &documents[i], salesforceSmartEventNames, pendingOpportunityGroupAssociations[model.SalesforceDocumentTypeNameContact])
 		case model.SalesforceDocumentTypeLead:
@@ -1832,7 +1754,7 @@ func enrichAll(project *model.Project, documents []model.SalesforceDocument, sal
 		case model.SalesforceDocumentTypeOpportunity:
 			errCode = enrichOpportunities(project.ID, &documents[i], salesforceSmartEventNames)
 		case model.SalesforceDocumentTypeCampaign, model.SalesforceDocumentTypeCampaignMember:
-			errCode = enrichCampaign(project, &documents[i], endTimestamp)
+			errCode = enrichCampaignV1(project, otpRules, &documents[i], endTimestamp)
 		case model.SalesforceDocumentTypeOpportunityContactRole:
 			errCode = enrichOpportunityContactRoles(project.ID, &documents[i])
 		default:
@@ -1856,7 +1778,7 @@ func enrichAll(project *model.Project, documents []model.SalesforceDocument, sal
 }
 
 // GetSalesforceSmartEventNames returns all the smart_event for salesforce by object_type
-func GetSalesforceSmartEventNames(projectID int64) *map[string][]SalesforceSmartEventName {
+func GetSalesforceSmartEventNamesV1(projectID int64) *map[string][]SalesforceSmartEventName {
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectID})
 
@@ -1901,13 +1823,7 @@ func GetSalesforceSmartEventNames(projectID int64) *map[string][]SalesforceSmart
 	return &salesforceSmartEventNames
 }
 
-type enrichGroupWorkerStatus struct {
-	HasFailure                bool
-	OverAllPendingSyncRecords map[string]map[string]string
-	Lock                      sync.Mutex
-}
-
-func updateGroupWorkerStatus(errCode int, pendingSyncRecords map[string]map[string]string, status *enrichGroupWorkerStatus) {
+func updateGroupWorkerStatusV1(errCode int, pendingSyncRecords map[string]map[string]string, status *enrichGroupWorkerStatus) {
 	status.Lock.Lock()
 	defer status.Lock.Unlock()
 	if errCode != http.StatusOK {
@@ -1932,7 +1848,7 @@ func updateGroupWorkerStatus(errCode int, pendingSyncRecords map[string]map[stri
 	}
 }
 
-func enrichAllGroup(projectID int64, wg *sync.WaitGroup, docType int, smartEventNames []SalesforceSmartEventName, documents []model.SalesforceDocument, status *enrichGroupWorkerStatus) {
+func enrichAllGroupV1(projectID int64, wg *sync.WaitGroup, docType int, documents []model.SalesforceDocument, status *enrichGroupWorkerStatus) {
 	defer wg.Done()
 	for i := range documents {
 		startTime := time.Now().Unix()
@@ -1940,8 +1856,8 @@ func enrichAllGroup(projectID int64, wg *sync.WaitGroup, docType int, smartEvent
 		var errCode int
 		var pendingSyncRecords map[string]map[string]string
 		switch documents[i].Type {
-		case model.SalesforceDocumentTypeAccount, model.SalesforceDocumentTypeGroupAccount:
-			errCode = enrichGroupAccount(projectID, &documents[i], smartEventNames)
+		case model.SalesforceDocumentTypeAccount:
+			errCode = enrichGroupAcccount(projectID, &documents[i])
 		case model.SalesforceDocumentTypeOpportunity:
 			pendingSyncRecords, errCode = enrichGroupOpportunity(projectID, &documents[i])
 		}
@@ -1953,7 +1869,7 @@ func enrichAllGroup(projectID int64, wg *sync.WaitGroup, docType int, smartEvent
 	}
 }
 
-func enrichGroup(projectID int64, workerPerProject int, salesforceSmartEventNames *map[string][]SalesforceSmartEventName) (map[string]bool, map[string]map[string]string, int) {
+func enrichGroupV1(projectID int64, workerPerProject int) (map[string]bool, map[string]map[string]string, int) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID})
 
 	if projectID == 0 {
@@ -1987,7 +1903,7 @@ func enrichGroup(projectID int64, workerPerProject int, salesforceSmartEventName
 			for docID := range batch {
 				logCtx.WithFields(log.Fields{"worker": workerIndex, "doc_id": docID, "type": docTypeAlias, "is_group": true}).Info("Processing Batch by doc_id")
 				wg.Add(1)
-				go enrichAllGroup(projectID, &wg, docType, (*salesforceSmartEventNames)[docTypeAlias], batch[docID], &status)
+				go enrichAllGroup(projectID, &wg, docType, batch[docID], &status)
 				workerIndex++
 			}
 			wg.Wait()
@@ -2000,7 +1916,7 @@ func enrichGroup(projectID int64, workerPerProject int, salesforceSmartEventName
 	return overAllSyncStatus, overAllPendingSyncRecords, http.StatusOK
 }
 
-func associateGroupUserOpportunitytoUser(projectID int64, oppLeadIds, oppContactIds []string, OpportunityGroupUserID string) map[string]map[string]string {
+func associateGroupUserOpportunitytoUserV1(projectID int64, oppLeadIds, oppContactIds []string, OpportunityGroupUserID string) map[string]map[string]string {
 	pendingSyncRecords := make(map[string]map[string]string)
 	for docTypeAlias, docIDs := range map[string][]string{model.SalesforceDocumentTypeNameLead: oppLeadIds, model.SalesforceDocumentTypeNameContact: oppContactIds} {
 		docType := model.GetSalesforceDocTypeByAlias(docTypeAlias)
@@ -2014,7 +1930,7 @@ func associateGroupUserOpportunitytoUser(projectID int64, oppLeadIds, oppContact
 
 			createdDocument := documets[0]
 			if createdDocument.Synced == false {
-				// only the first occurance of associations
+				// only the first occurrence of associations
 				if _, exist := pendingSyncRecords[docTypeAlias]; !exist {
 					pendingSyncRecords[docTypeAlias] = make(map[string]string)
 				}
@@ -2036,7 +1952,7 @@ func associateGroupUserOpportunitytoUser(projectID int64, oppLeadIds, oppContact
 }
 
 // GetBatchedOrderedDocumentsByID return list of document in batches. Order is maintained on document id.
-func GetBatchedOrderedDocumentsByID(documents []model.SalesforceDocument, batchSize int) []map[string][]model.SalesforceDocument {
+func GetBatchedOrderedDocumentsByIDV1(documents []model.SalesforceDocument, batchSize int) []map[string][]model.SalesforceDocument {
 
 	if len(documents) < 0 {
 		return nil
@@ -2071,15 +1987,10 @@ func GetBatchedOrderedDocumentsByID(documents []model.SalesforceDocument, batchS
 	return batchedDocumentsByID
 }
 
-type enrichWorkerStatus struct {
-	HasFailure bool
-	Lock       sync.Mutex
-}
-
-func enrichAllWorker(project *model.Project, wg *sync.WaitGroup, enrichStatus *enrichWorkerStatus,
+func enrichAllWorkerV1(project *model.Project, wg *sync.WaitGroup, enrichStatus *enrichWorkerStatus, otpRules *[]model.OTPRule,
 	documents []model.SalesforceDocument, smartEventNames []SalesforceSmartEventName, pendingOpportunityGroupAssociations map[string]map[string]string, timeRange int64) {
 	defer wg.Done()
-	errCode := enrichAll(project, documents, smartEventNames, pendingOpportunityGroupAssociations, timeRange)
+	errCode := enrichAllV1(project, otpRules, documents, smartEventNames, pendingOpportunityGroupAssociations, timeRange)
 
 	enrichStatus.Lock.Lock()
 	defer enrichStatus.Lock.Unlock()
@@ -2088,7 +1999,7 @@ func enrichAllWorker(project *model.Project, wg *sync.WaitGroup, enrichStatus *e
 	}
 }
 
-func fillTimeZoneAndDateProperty(documents []model.SalesforceDocument, TimeZoneStr U.TimeZoneString, dateProperties *map[string]bool) error {
+func fillTimeZoneAndDatePropertyV1(documents []model.SalesforceDocument, TimeZoneStr U.TimeZoneString, dateProperties *map[string]bool) error {
 	if dateProperties == nil || TimeZoneStr == "" {
 		return errors.New("missing date properties")
 	}
@@ -2101,7 +2012,7 @@ func fillTimeZoneAndDateProperty(documents []model.SalesforceDocument, TimeZoneS
 }
 
 // Enrich sync salesforce documents to events
-func Enrich(projectID int64, workerPerProject int, dataPropertiesByType map[int]*map[string]bool) ([]Status, bool) {
+func EnrichV1(projectID int64, workerPerProject int, dataPropertiesByType map[int]*map[string]bool) ([]Status, bool) {
 
 	logCtx := log.WithField("project_id", projectID)
 
@@ -2124,9 +2035,17 @@ func Enrich(projectID int64, workerPerProject int, dataPropertiesByType map[int]
 		return statusByProjectAndType, true
 	}
 
+	otpRules, errCode := store.GetStore().GetALLOTPRuleWithProjectId(projectID)
+	if errCode != http.StatusFound && errCode != http.StatusNotFound {
+		logCtx.WithField("err_code", errCode).Error("Failed to get otp Rules for Project")
+		statusByProjectAndType = append(statusByProjectAndType, Status{ProjectID: projectID,
+			Status: "Failed to get OTP rules"})
+		return statusByProjectAndType, true
+	}
+
 	allowedDocTypes := model.GetSalesforceDocumentTypeAlias(projectID)
 
-	salesforceSmartEventNames := GetSalesforceSmartEventNames(projectID)
+	salesforceSmartEventNames := GetSalesforceSmartEventNamesV1(projectID)
 
 	docMinTimestamp, minTimestamp, errCode := store.GetStore().GetSalesforceDocumentBeginingTimestampByDocumentTypeForSync(projectID)
 	if errCode != http.StatusFound {
@@ -2157,7 +2076,7 @@ func Enrich(projectID int64, workerPerProject int, dataPropertiesByType map[int]
 	enrichOrderByType := salesforceEnrichOrderByType[:]
 	if C.IsAllowedSalesforceGroupsByProjectID(projectID) {
 		var syncStatus map[string]bool
-		syncStatus, pendingOpportunityGroupAssociations, status = enrichGroup(projectID, workerPerProject, salesforceSmartEventNames)
+		syncStatus, pendingOpportunityGroupAssociations, status = enrichGroup(projectID, workerPerProject)
 		if status != http.StatusOK {
 			overAllSyncStatus["groups"] = true
 		}
@@ -2212,7 +2131,7 @@ func Enrich(projectID int64, workerPerProject int, dataPropertiesByType map[int]
 				for docID := range batch {
 					logCtx.WithFields(log.Fields{"worker": workerIndex, "doc_id": docID, "type": docTypeAlias}).Info("Processing Batch by doc_id")
 					wg.Add(1)
-					go enrichAllWorker(project, &wg, &enrichStatus, batch[docID], (*salesforceSmartEventNames)[docTypeAlias], pendingOpportunityGroupAssociations, timeRange[1])
+					go enrichAllWorkerV1(project, &wg, &enrichStatus, &otpRules, batch[docID], (*salesforceSmartEventNames)[docTypeAlias], pendingOpportunityGroupAssociations, timeRange[1])
 					workerIndex++
 				}
 				wg.Wait()
