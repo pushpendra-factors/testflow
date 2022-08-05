@@ -28,7 +28,7 @@ const (
 )
 
 // last quarter, last month to be added
-var ValidDateRanges = []string{LAST_WEEK}
+var ValidDateRanges = []string{LAST_WEEK, LAST_MONTH, LAST_QUARTER}
 var ValidDateRangeComparisions = []string{
 	PREVIOUS_PERIOD, SAME_PERIOD_LAST_YEAR,
 }

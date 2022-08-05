@@ -302,6 +302,7 @@ const (
 	HealthcheckLeadSquaredIntegrationSyncPingID = "9b0c317c-ea4f-4113-afe4-a2de84f6c33f"
 	HealthcheckLeadSquaredPullEventsPingID      = "5766cfd3-1108-4633-b9e7-5a818748d1bf"
 	HealthcheckLeadSquaredEnrichPingID          = "83fdec06-a2a0-4fdb-ba9e-97c9bb730e23"
+	HealthcheckComputeAndSendAlertsPingID       = "8345e798-1622-4881-942e-99fdd638ddf0"
 
 	// Other services ping IDs. Only reported when alert conditions are met, not periodically.
 	// Once an alert is triggered, ping manually from Healthchecks UI after fixing.
