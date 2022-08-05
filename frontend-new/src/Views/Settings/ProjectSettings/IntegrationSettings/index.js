@@ -160,7 +160,7 @@ const IntegrationCard = ({ item, index, defaultOpen }) => {
         );
       case 'Clearbit Reveal':
         return (
-          <RevealIntegration active={isActive} setIsActive={setIsActive} />
+          <RevealIntegration kbLink={item.kbLink} setIsActive={setIsActive} />
         );
       default:
         return (
