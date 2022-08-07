@@ -2728,11 +2728,30 @@ func GetMarketingDataKey(attributionKey string, data MarketingData) string {
 	return key
 }
 
-func GetKeyMapToData(attributionKey string, allRows []MarketingData) map[string]MarketingData {
+func GetKeyMapToData(attributionKey string, allRows []MarketingData, reports *MarketingReports) map[string]MarketingData {
 
 	keyToData := make(map[string]MarketingData)
-	for _, v := range allRows {
+	for i, v := range allRows {
+		switch attributionKey {
+		case AttributionKeyCampaign:
+			v.CampaignName = reports.AdwordsCampaignIDData[v.ID].CampaignName
+			v.Name = v.CampaignName
+			allRows[i] = v
+		case AttributionKeyAdgroup:
+			v.AdgroupName = reports.AdwordsAdgroupIDData[v.ID].AdgroupName
+			v.Name = v.AdgroupName
+			allRows[i] = v
+		case AttributionKeyKeyword:
+			v.KeywordName = reports.AdwordsKeywordIDData[v.ID].KeywordName
+			v.Name = v.KeywordName
+			allRows[i] = v
+		}
+
 		key := GetMarketingDataKey(attributionKey, v)
+		if _, ok := keyToData[key]; ok {
+			v = mergeMarketingData(keyToData[key], v)
+		}
+		keyToData[key] = v
 		val := MarketingData{}
 		U.DeepCopy(&v, &val)
 		val.Key = key
@@ -3055,15 +3074,13 @@ func ProcessRow(rows *sql.Rows, reportName string, logCtx *log.Entry,
 			continue
 		}
 		data.Channel = channel
+		allRows = append(allRows, data)
 		if _, ok := marketingDataIDMap[ID]; ok {
 			data = mergeMarketingData(marketingDataIDMap[ID], data)
 		}
 		marketingDataIDMap[ID] = data
 	}
 	U.LogReadTimeWithQueryRequestID(startReadTime, queryID, &log.Fields{})
-	for _, data := range marketingDataIDMap {
-		allRows = append(allRows, data)
-	}
 	return marketingDataIDMap, allRows
 }
 
