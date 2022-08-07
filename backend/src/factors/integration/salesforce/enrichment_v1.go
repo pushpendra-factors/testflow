@@ -356,7 +356,7 @@ func enrichGroupAcccountV1(projectID int64, document *model.SalesforceDocument) 
 
 	accountID := getAccountGroupID(enProperties, document)
 
-	groupAccountUserID, status := createOrUpdateSalesforceGroupsProperties(projectID, document, model.GROUP_NAME_SALESFORCE_ACCOUNT, accountID)
+	groupAccountUserID, status := createOrUpdateSalesforceGroupsPropertiesV1(projectID, document, model.GROUP_NAME_SALESFORCE_ACCOUNT, accountID)
 	if status != http.StatusOK {
 		return status
 	}
@@ -869,7 +869,7 @@ func enrichGroupOpportunityV1(projectID int64, document *model.SalesforceDocumen
 		return nil, http.StatusOK
 	}
 
-	groupUserID, status := createOrUpdateSalesforceGroupsProperties(projectID, document, model.GROUP_NAME_SALESFORCE_OPPORTUNITY, document.ID)
+	groupUserID, status := createOrUpdateSalesforceGroupsPropertiesV1(projectID, document, model.GROUP_NAME_SALESFORCE_OPPORTUNITY, document.ID)
 	if status != http.StatusOK {
 		return nil, status
 	}
@@ -1150,7 +1150,7 @@ func updateSalesforceUserAccountGroupsV1(projectID int64, accountID, userID stri
 	groupUserID := documents[0].GroupUserID
 	if groupUserID == "" {
 		// update old record group status
-		status := enrichGroupAcccount(projectID, &documents[0])
+		status := enrichGroupAcccountV1(projectID, &documents[0])
 		if status != http.StatusOK || documents[0].GroupUserID == "" {
 			log.WithFields(log.Fields{"project_id": projectID, "account_id": accountID}).
 				Error("Failed to create group user on exsting sync record.")
@@ -1746,7 +1746,7 @@ func enrichAllV1(project *model.Project, otpRules *[]model.OTPRule, documents []
 		startTime := time.Now().Unix()
 		switch documents[i].Type {
 		case model.SalesforceDocumentTypeAccount:
-			errCode = enrichAccount(project.ID, &documents[i], salesforceSmartEventNames)
+			errCode = enrichAccountV1(project.ID, &documents[i], salesforceSmartEventNames)
 		case model.SalesforceDocumentTypeContact:
 			errCode = enrichContact(project.ID, &documents[i], salesforceSmartEventNames, pendingOpportunityGroupAssociations[model.SalesforceDocumentTypeNameContact])
 		case model.SalesforceDocumentTypeLead:
@@ -1857,7 +1857,7 @@ func enrichAllGroupV1(projectID int64, wg *sync.WaitGroup, docType int, document
 		var pendingSyncRecords map[string]map[string]string
 		switch documents[i].Type {
 		case model.SalesforceDocumentTypeAccount:
-			errCode = enrichGroupAcccount(projectID, &documents[i])
+			errCode = enrichGroupAcccountV1(projectID, &documents[i])
 		case model.SalesforceDocumentTypeOpportunity:
 			pendingSyncRecords, errCode = enrichGroupOpportunity(projectID, &documents[i])
 		}
@@ -1903,7 +1903,7 @@ func enrichGroupV1(projectID int64, workerPerProject int) (map[string]bool, map[
 			for docID := range batch {
 				logCtx.WithFields(log.Fields{"worker": workerIndex, "doc_id": docID, "type": docTypeAlias, "is_group": true}).Info("Processing Batch by doc_id")
 				wg.Add(1)
-				go enrichAllGroup(projectID, &wg, docType, batch[docID], &status)
+				go enrichAllGroupV1(projectID, &wg, docType, batch[docID], &status)
 				workerIndex++
 			}
 			wg.Wait()
@@ -2076,7 +2076,7 @@ func EnrichV1(projectID int64, workerPerProject int, dataPropertiesByType map[in
 	enrichOrderByType := salesforceEnrichOrderByType[:]
 	if C.IsAllowedSalesforceGroupsByProjectID(projectID) {
 		var syncStatus map[string]bool
-		syncStatus, pendingOpportunityGroupAssociations, status = enrichGroup(projectID, workerPerProject)
+		syncStatus, pendingOpportunityGroupAssociations, status = enrichGroupV1(projectID, workerPerProject)
 		if status != http.StatusOK {
 			overAllSyncStatus["groups"] = true
 		}
