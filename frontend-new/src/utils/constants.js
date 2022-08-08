@@ -209,16 +209,6 @@ export const ATTRIBUTION_METRICS = [
     enabled: true
   },
   {
-    title: 'Sessions',
-    header: 'Sessions OR Website Visitors',
-    enabled: true
-  },
-  {
-    title: 'Users',
-    header: 'Users',
-    enabled: true
-  },
-  {
     title: 'Average CPC',
     header: 'Average CPC',
     enabled: false
@@ -243,16 +233,6 @@ export const ATTRIBUTION_METRICS = [
   {
     title: 'Click Conversion Rate (%)',
     header: 'ConversionRate(%) OR ClickConversionRate(%)',
-    enabled: false
-  },
-  {
-    title: 'Avg Session Time (in sec)',
-    header: 'Average Session Time',
-    enabled: false
-  },
-  {
-    title: 'Page Views',
-    header: 'PageViews',
     enabled: false
   },
   {
