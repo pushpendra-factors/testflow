@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-    Row, Col, Modal, Button
+    Row, Col, Modal, Button, notification
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
 import { connect } from 'react-redux';
@@ -20,14 +20,14 @@ const AnalyseBeforeIntegration = ({currentAgent, setActiveProject, fetchDemoProj
         setLoading(true);
         fetchDemoProject().then((res) => {
             let id = res.data[0];
-            let selectedProject = projects.filter(project => project.id === id);
+            let selectedProject = projects.filter(project => project?.id === id);
             selectedProject = selectedProject[0];
             localStorage.setItem('activeProject', selectedProject?.id);
             setActiveProject(selectedProject);
             history.push('/');
             notification.success({
                 message: 'Project Changed!',
-                description: `You are currently viewing data from ${selectedProject.name}`
+                description: `You are currently viewing data from demo project`
             });
         });
         setLoading(false);

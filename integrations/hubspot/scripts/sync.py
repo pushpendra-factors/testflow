@@ -535,7 +535,7 @@ def sync_contacts(project_id, refresh_token, api_key, last_sync_timestamp, sync_
                 response_dict = json.loads(r.text)
 
         if err_url_too_long == True:
-            contact_dict,unmodified_response_dict, r = get_contacts_with_properties_by_id(project_id,api_key,get_url, hubspot_request_handler)
+            contact_dict,unmodified_response_dict, r = get_contacts_with_properties_by_id(project_id,get_url, hubspot_request_handler)
             if not r.ok:
                 log.error("Failure response %d from hubspot on batch sync_contacts", r.status_code)
                 break

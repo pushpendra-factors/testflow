@@ -871,7 +871,7 @@ func getSQLAndParamsFromFacebookReportsWithSmartProperty(query *model.ChannelQue
 	finalParams = append(finalParams, staticWhereParams...)
 	if len(groupByCombinationsForGBT) != 0 {
 		whereConditionForGBT, whereParams := buildWhereConditionForGBTForFacebook(groupByCombinationsForGBT)
-		finalFilterStatement += (" AND (" + whereConditionForGBT + ")")
+		finalFilterStatement += " AND (" + whereConditionForGBT + ") "
 		finalParams = append(finalParams, whereParams...)
 	}
 
@@ -975,7 +975,7 @@ func getSQLAndParamsFromFacebookReports(query *model.ChannelQueryV1, projectID i
 	finalParams = append(finalParams, staticWhereParams...)
 	if len(groupByCombinationsForGBT) != 0 {
 		whereConditionForGBT, whereParams := buildWhereConditionForGBTForFacebook(groupByCombinationsForGBT)
-		whereConditionForFilters += (" AND (" + whereConditionForGBT + ")")
+		whereConditionForFilters += " AND (" + whereConditionForGBT + ") "
 		finalParams = append(finalParams, whereParams...)
 	}
 

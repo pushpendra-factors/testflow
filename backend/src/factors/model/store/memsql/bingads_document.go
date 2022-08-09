@@ -533,7 +533,7 @@ func getSQLAndParamsFromBingAdsReports(query *model.ChannelQueryV1, projectID in
 	finalParams = append(finalParams, staticWhereParams...)
 	if len(groupByCombinationsForGBT) != 0 {
 		whereConditionForGBT, whereParams := buildWhereConditionForGBTForBingAds(groupByCombinationsForGBT)
-		whereConditionForFilters += (" AND (" + whereConditionForGBT + ")")
+		whereConditionForFilters += " AND (" + whereConditionForGBT + ") "
 		finalParams = append(finalParams, whereParams...)
 	}
 
@@ -652,7 +652,7 @@ func getSQLAndParamsFromBingAdsReportsWithSmartProperty(query *model.ChannelQuer
 	finalParams = append(finalParams, staticWhereParams...)
 	if len(groupByCombinationsForGBT) != 0 {
 		whereConditionForGBT, whereParams := buildWhereConditionForGBTForBingAds(groupByCombinationsForGBT)
-		whereConditionForFilters += (" AND (" + whereConditionForGBT + ")")
+		whereConditionForFilters += " AND (" + whereConditionForGBT + ") "
 		finalParams = append(finalParams, whereParams...)
 	}
 

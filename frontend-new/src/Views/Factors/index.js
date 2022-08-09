@@ -77,6 +77,7 @@ const Factors = ({
   const [showGoalDrawer, setGoalDrawer] = useState(false);
   const [dataSource, setdataSource] = useState(null);
   const history = useHistory();
+  const [loading, setLoading] = useState(true);
 
   const [demoProjectId, setDemoProjectId] = useState(null);
   const [ownerID, setOwnerID] = useState();
@@ -95,6 +96,12 @@ const Factors = ({
       .catch((err) => {
         console.log(err.data.error);
       });
+  }, [activeProject]);
+
+  useEffect(() => {
+    setTimeout(() => {
+      setLoading(false);
+    }, 1000);
   }, [activeProject]);
 
   const handleTour = () => {
@@ -140,6 +147,14 @@ const Factors = ({
   const handleCancel = () => {
     setConfigureDPModal(false);
   };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center w-full h-64">
+        <Spin size="large" />
+      </div>
+    );
+  }
 
   if (isIntegrationEnabled || activeProject.id === demoProjectId) {
     return (

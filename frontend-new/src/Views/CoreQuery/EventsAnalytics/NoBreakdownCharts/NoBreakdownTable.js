@@ -7,7 +7,7 @@ import {
   getDateBasedColumns,
   getNoGroupingTablularDatesBasedData
 } from './utils';
-import { CHART_TYPE_SPARKLINES } from '../../../../utils/constants';
+import { CHART_TYPE_SPARKLINES, DASHBOARD_WIDGET_SECTION } from '../../../../utils/constants';
 import { useSelector } from 'react-redux';
 import {
   addQforQuarter,
@@ -29,7 +29,8 @@ function NoBreakdownTable({
   setSorter,
   dateSorter,
   setDateSorter,
-  responseData
+  responseData,
+  section
 }) {
   const [searchText, setSearchText] = useState('');
   const { eventNames } = useSelector((state) => state.coreQuery);
@@ -58,7 +59,10 @@ function NoBreakdownTable({
   let onSelectionChange;
   let selectedRowKeys;
 
-  if (chartType === CHART_TYPE_SPARKLINES) {
+  if (
+    chartType === CHART_TYPE_SPARKLINES ||
+    section === DASHBOARD_WIDGET_SECTION
+  ) {
     columns = getColumns(
       events,
       arrayMapper,
@@ -112,9 +116,7 @@ function NoBreakdownTable({
   const getCSVData = useCallback(() => {
     return {
       fileName: `${reportTitle}.csv`,
-      data: tableData.map(({
-        index, date, event, ...rest
-      }) => {
+      data: tableData.map(({ index, date, event, ...rest }) => {
         if (chartType === CHART_TYPE_SPARKLINES) {
           let format = 'MMM D, YYYY';
           if (durationObj.frequency === 'hour') {
