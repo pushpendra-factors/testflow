@@ -1697,8 +1697,6 @@ func buildWhereConditionForGBTForAdwords(groupByCombinations map[string][]interf
 	for dimension, values := range groupByCombinations {
 		currentInClause := ""
 
-		jsonObjectAndColumn, jsonExtractKey := GetFilterObjectAndExtractPropertyKeyForChannelAdwords(dimension)
-
 		valuesInString := make([]string, 0)
 		for _, value := range values {
 			valuesInString = append(valuesInString, "?")
@@ -1706,7 +1704,7 @@ func buildWhereConditionForGBTForAdwords(groupByCombinations map[string][]interf
 		}
 		currentInClause = joinWithComma(valuesInString...)
 
-		resultantInClauses = append(resultantInClauses, fmt.Sprintf("JSON_EXTRACT_STRING(%s, '%s') IN (", jsonObjectAndColumn, jsonExtractKey)+currentInClause+") ")
+		resultantInClauses = append(resultantInClauses, fmt.Sprintf("%s IN (", dimension)+currentInClause+") ")
 	}
 
 	resultantWhereCondition = joinWithWordInBetween("AND", resultantInClauses...)
