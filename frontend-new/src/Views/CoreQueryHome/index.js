@@ -79,6 +79,8 @@ import {
   enableSlackIntegration
 } from 'Reducers/global';
 import AppModal from '../../components/AppModal';
+import userflow from 'userflow.js';
+import {USERFLOW_CONFIG_ID} from 'Utils/userflowConfig'
 
 // const whiteListedAccounts_KPI = [
 //   'jitesh@factors.ai',
@@ -925,6 +927,10 @@ function CoreQuery({
               <Col span={20}>
                 <Row gutter={[24, 24]}>
                   <Col span={24}>
+                    <div className='flex space-between w-full items-center'>
+
+                    <div className='flex flex-col w-full'>
+
                     <Text
                       type={'title'}
                       level={3}
@@ -942,6 +948,16 @@ function CoreQuery({
                     >
                       Here's where all the action happens. Use these modules to get a deeper understanding of your marketing and revenue activities. <a href='#!'>Learn more</a>
                     </Text>
+                    </div>
+                    <div className='flex justify-end'>
+                      <Button 
+                      type='link'
+                      icon={<SVG name={`Handshake`} size={24} color={'blue'}/>}
+                      onClick={()=>{ 
+                        userflow.start(USERFLOW_CONFIG_ID?.AnalysePage)
+                      }}>Walk me through</Button>
+                    </div>
+                    </div>
                   </Col>
                   <Col span={24}>
                     <div className={'flex justify-between mt-4'}>

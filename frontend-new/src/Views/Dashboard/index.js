@@ -44,20 +44,19 @@ function Dashboard({
   const history = useHistory();
 
   useEffect(() => {
-    fetchProjectSettingsV1(activeProject.id)
+    fetchProjectSettingsV1(activeProject?.id)
     .then((res) => {
-      setSdkCheck(res.data.int_completed);
+      setSdkCheck(res?.data?.int_completed);
     })
     .catch((err) => {
       console.log(err);
-      history.push('/');
     });
 
-    fetchProjectSettings(activeProject.id);
+    fetchProjectSettings(activeProject?.id);
 
     if (dashboards?.data?.length == 0) {
-      fetchBingAdsIntegration(activeProject.id);
-      fetchMarketoIntegration(activeProject.id);
+      fetchBingAdsIntegration(activeProject?.id);
+      fetchMarketoIntegration(activeProject?.id);
     }
   }, [activeProject, sdkCheck]);
 

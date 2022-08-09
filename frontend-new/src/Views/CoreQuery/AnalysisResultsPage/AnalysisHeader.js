@@ -12,10 +12,12 @@ import { Button, Tabs } from 'antd';
 import { useSelector } from 'react-redux';
 import { useHistory } from 'react-router-dom';
 import { SVG, Text } from 'factorsComponents';
-import { EVENT_BREADCRUMB } from 'Utils/constants';
+import { EVENT_BREADCRUMB, QUERY_TYPE_ATTRIBUTION, QUERY_TYPE_FUNNEL, QUERY_TYPE_KPI } from 'Utils/constants';
 import SaveQuery from '../../../components/SaveQuery';
 import { addShadowToHeader } from './analysisResultsPage.helpers';
 import { CoreQueryContext } from '../../../contexts/CoreQueryContext';
+import userflow from 'userflow.js';
+import {USERFLOW_CONFIG_ID} from 'Utils/userflowConfig'
 
 const { TabPane } = Tabs;
 
@@ -40,8 +42,8 @@ function AnalysisHeader({
     (!_.isEmpty(metadata?.QueryWiseResult) &&
       !_.isEmpty(metadata?.DashboardUnitWiseResult));
 
-  const showReportTabs = requestQuery && isInsightsEnabled;
-
+  const showReportTabs = requestQuery && isInsightsEnabled; 
+  
   useEffect(() => {
     document.addEventListener('scroll', addShadowToHeader);
     return () => {
@@ -110,7 +112,23 @@ function AnalysisHeader({
   };
 
   const renderSaveQueryComp = () => {
-    if (!requestQuery) return null;
+    if (!requestQuery){
+      if(queryType == QUERY_TYPE_ATTRIBUTION || queryType == QUERY_TYPE_FUNNEL || queryType == QUERY_TYPE_KPI){ 
+
+        let flowID = "";
+        if(queryType == QUERY_TYPE_ATTRIBUTION) {flowID = USERFLOW_CONFIG_ID?.AttributionQueryBuilder};
+        if(queryType == QUERY_TYPE_FUNNEL){flowID = USERFLOW_CONFIG_ID?.FunnelSQueryBuilder};
+        if(queryType == QUERY_TYPE_KPI){flowID = USERFLOW_CONFIG_ID?.KPIQueryBuilder};
+
+        return <Button 
+        type='link'
+        icon={<SVG name={`Handshake`} size={16} color={'blue'} />}
+        onClick={()=>{ 
+          userflow.start(flowID)
+        }}>Walk me through</Button> 
+      }
+      else return null
+    }
     return (
       <SaveQuery
         queryType={queryType}
@@ -125,7 +143,7 @@ function AnalysisHeader({
     if (!showReportTabs) return null;
     if (!active_insight?.Enabled) return null;
     return (
-      <div className={'items-center flex justify-center w-full'}>
+      <div className={'items-center flex justify-center w-full -mt-2'}>
         <Tabs
           defaultActiveKey={activeTab}
           onChange={changeTab}
@@ -142,13 +160,11 @@ function AnalysisHeader({
     <div
       id='app-header'
       className={cx(
-        'bg-white z-50 flex-col pt-3 px-8 w-11/12 w-full',
-        { fixed: requestQuery },
-        { 'pb-0': showReportTabs },
-        { 'pb-3': !showReportTabs }
+        'bg-white z-50 flex-col  px-8 w-11/12 w-full',
+        { fixed: requestQuery }, 
       )}
     >
-      <div className={'items-center flex justify-between w-full'}>
+      <div className={'items-center flex justify-between w-full pt-3 pb-3'}>
         <div
           role='button'
           tabIndex={0}

@@ -639,7 +639,7 @@ func buildGoogleOrganicQueryV1(query *model.ChannelQueryV1, projectID int64, url
 	if groupByCombinationsForGBT != nil && len(groupByCombinationsForGBT) != 0 {
 		whereConditionForGBT, whereParams = buildWhereConditionForGBTForSearchConsole(groupByCombinationsForGBT)
 		if whereConditionForGBT != "" {
-			resultSQLStatement += (" AND (" + whereConditionForGBT + ") ")
+			resultSQLStatement += " AND (" + whereConditionForGBT + ") "
 		}
 	}
 	if len(groupByStatement) != 0 {

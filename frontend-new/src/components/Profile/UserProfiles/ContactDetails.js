@@ -57,7 +57,7 @@ function ContactDetails({ onCancel, userDetails }) {
   const handleChange = (option) => {
     setActivities((currActivities) => {
       const newState = currActivities.map((activity) => {
-        if (activity.event_name === option.event_name) {
+        if (activity.display_name === option.display_name) {
           return {
             ...activity,
             enabled: !activity.enabled,

@@ -1,7 +1,7 @@
 import React, { Fragment, memo, useState } from 'react';
 import PropTypes from 'prop-types';
 import { DatePicker, Menu, Dropdown, Button, Radio } from 'antd';
-import { noop, values } from 'lodash';
+import { noop } from 'lodash';
 import classNames from 'classnames';
 import MomentTz from '../MomentTz';
 import ControlledComponent from '../ControlledComponent';
@@ -48,9 +48,9 @@ function ComparisonDatePicker({
       return null;
     }
 
-    const rangeText = `${MomentTz(value.startDate).format(
+    const rangeText = `${MomentTz(value.from).format(
       'MMM DD, YYYY'
-    )} - ${MomentTz(value.endDate).format('MMM DD, YYYY')}`;
+    )} - ${MomentTz(value.to).format('MMM DD, YYYY')}`;
 
     return (
       <Text type="title" level={6} color="grey-2">

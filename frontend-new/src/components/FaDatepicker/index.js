@@ -353,13 +353,13 @@ const FaDatepicker = ({
 
       {comparisonSupported && <Menu.Divider />}
 
-      {comparisonSupported && (
+      {/* {comparisonSupported && (
         <Menu.Item key="compare">
           <a target="_blank" onClick={handleCompareWithClick}>
             Compare with...
           </a>
         </Menu.Item>
-      )}
+      )} */}
     </Menu>
   );
 

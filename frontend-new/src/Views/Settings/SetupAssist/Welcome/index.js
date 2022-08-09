@@ -21,25 +21,25 @@ const Welcome = ({currentAgent, activeProject, getHubspotContact, fetchDemoProje
     }
 
     useEffect(() => {
-        let email = currentAgent.email;
+        let email = currentAgent?.email;
         getHubspotContact(email).then((res) => {
-            setownerID(res.data.hubspot_owner_id)
+            setownerID(res?.data?.hubspot_owner_id)
         }).catch((err) => {
-            console.log(err.data.error)
+            console.log(err?.data?.error)
         });
     }, []);
 
     const switchProject = () => {
       fetchDemoProject().then((res) => {
           let id = res.data[0];
-          let selectedProject = projects.filter(project => project.id === id);
+          let selectedProject = projects.filter(project => project?.id === id);
           selectedProject = selectedProject[0];
           localStorage.setItem('activeProject', selectedProject?.id);
           setActiveProject(selectedProject);
           history.push('/');
           notification.success({
               message: 'Project Changed!',
-              description: `You are currently viewing data from ${selectedProject.name}`
+              description: `You are currently viewing data from demo project`
           });
       });
     };
