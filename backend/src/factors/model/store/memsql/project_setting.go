@@ -1184,6 +1184,39 @@ func (store *MemSQL) UpdateLeadSquaredFirstTimeSyncStatus(projectId int64) int {
 	return http.StatusOK
 }
 
+func (store *MemSQL) UpdateLeadSquaredConfig(projectId int64, accessKey string, host string, secretkey string) int {
+	db := C.GetServices().Db
+	var projectSetting model.ProjectSetting
+	if err := db.Where("project_id = ?", projectId).First(&projectSetting).Error; err != nil {
+		log.WithError(err).Error("Getting Project setting failed")
+		if gorm.IsRecordNotFoundError(err) {
+			return http.StatusNotFound
+		}
+		return http.StatusInternalServerError
+	}
+	var leadSquaredConfig model.LeadSquaredConfig
+	if projectSetting.LeadSquaredConfig != nil {
+		err := U.DecodePostgresJsonbToStructType(projectSetting.LeadSquaredConfig, &leadSquaredConfig)
+		if err != nil {
+			log.WithError(err).Error("decoding postgres json failed")
+			return http.StatusInternalServerError
+		}
+	}
+	leadSquaredConfig.FirstTimeSync = false
+	leadSquaredConfig.AccessKey = accessKey
+	leadSquaredConfig.SecretKey = secretkey
+	leadSquaredConfig.Host = host
+	leadSquaredConfig.BigqueryDataset = fmt.Sprintf("%v_%v_%v", "lead_squared", projectId, U.TimeNowUnix())
+	leadSquaredConfigJsonb, _ := U.EncodeStructTypeToPostgresJsonb(leadSquaredConfig)
+	if err := db.Model(&model.ProjectSetting{}).
+		Where("project_id = ?", projectId).
+		Update("lead_squared_config", leadSquaredConfigJsonb).Error; err != nil {
+		log.WithError(err).Error("Updating leadsquared config failed")
+		return http.StatusInternalServerError
+	}
+	return http.StatusOK
+}
+
 func (store *MemSQL) GetAllWeeklyInsightsEnabledProjects() ([]int64, error) {
 
 	db := C.GetServices().Db
