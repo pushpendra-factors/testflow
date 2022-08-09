@@ -1550,7 +1550,7 @@ function CoreQuery({
             </Drawer>
           }
 
-          {activeProject.id === demoProjectId ? (
+          {!showResult && activeProject.id === demoProjectId ? (
             <div className={'rounded-lg border-2 h-20 mt-20 -mb-20 mx-20'}>
               <Row justify={'space-between'} className={'m-0 p-3'}>
                 <Col span={projects.length === 1 ? 12 : 18}>

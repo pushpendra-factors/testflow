@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-    Row, Col, Modal, Button
+    Row, Col, Modal, Button, notification
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
 import { connect } from 'react-redux';
