@@ -407,13 +407,13 @@ func (store *MemSQL) FetchMarketingReports(projectID int64, q model.AttributionQ
 	data.LinkedinAdgroupKeyData = model.GetKeyMapToData(model.AttributionKeyAdgroup, linkedinAdgroupAllRows, data.LinkedinAdgroupIDData)
 
 	data.CustomAdsCampaignIDData = customadsCampaignIDData
-	data.CustomAdsCampaignKeyData = model.GetKeyMapToData(model.AttributionKeyCampaign, customadsCampaignAllRows)
+	data.CustomAdsCampaignKeyData = model.GetKeyMapToData(model.AttributionKeyCampaign, customadsCampaignAllRows, data.CustomAdsCampaignIDData)
 
 	data.CustomAdsAdgroupIDData = customadsAdgroupIDData
-	data.CustomAdsAdgroupKeyData = model.GetKeyMapToData(model.AttributionKeyAdgroup, customadsAdgroupAllRows)
+	data.CustomAdsAdgroupKeyData = model.GetKeyMapToData(model.AttributionKeyAdgroup, customadsAdgroupAllRows, data.CustomAdsAdgroupIDData)
 
 	data.CustomAdsKeywordIDData = customadsKeywordIDData
-	data.CustomAdsKeywordKeyData = model.GetKeyMapToData(model.AttributionKeyKeyword, customadsKeywordAllRows)
+	data.CustomAdsKeywordKeyData = model.GetKeyMapToData(model.AttributionKeyKeyword, customadsKeywordAllRows, data.CustomAdsKeywordIDData)
 
 	return data, err
 }
