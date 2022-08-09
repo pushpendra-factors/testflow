@@ -3197,7 +3197,7 @@ func AddCustomDimensions(attributionData *map[string]*AttributionData, query *At
 	if query.AttributionKey == AttributionKeyCampaign {
 		enrichDimensionsWithName(attributionData, query.AttributionKeyCustomDimension, reports.AdwordsCampaignDimensions, reports.FacebookCampaignDimensions, reports.LinkedinCampaignDimensions, reports.BingadsCampaignDimensions, query.AttributionKey)
 	} else if query.AttributionKey == AttributionKeyAdgroup {
-		enrichDimensionsWithName(attributionData, query.AttributionKeyCustomDimension, reports.AdwordsAdgroupDimensions, reports.FacebookAdgroupDimensions, reports.LinkedinAdgroupDimensions, query.AttributionKey)
+		enrichDimensionsWithName(attributionData, query.AttributionKeyCustomDimension, reports.AdwordsAdgroupDimensions, reports.FacebookAdgroupDimensions, reports.LinkedinAdgroupDimensions, reports.BingadsAdgroupDimensions, query.AttributionKey)
 	}
 }
 
@@ -3246,13 +3246,6 @@ func enrichDimensionsWithName(attributionData *map[string]*AttributionData, dime
 				}
 				break
 			case ChannelBingAds:
-				if d, exists := bingadsData[customDimKey]; exists {
-					if val, found := d.CustomDimensions[dim]; found {
-						(*attributionData)[k].CustomDimensions[dim] = val
-					}
-				}
-				break
-			case ChannelBingads:
 				if d, exists := bingadsData[customDimKey]; exists {
 					if val, found := d.CustomDimensions[dim]; found {
 						(*attributionData)[k].CustomDimensions[dim] = val
