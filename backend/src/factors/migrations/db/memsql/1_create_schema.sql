@@ -417,6 +417,7 @@ CREATE TABLE IF NOT EXISTS project_settings (
     int_facebook_token_expiry bigint,
     int_linkedin_ad_account text,
     int_linkedin_access_token text,
+    cache_settings json,
     int_linkedin_access_token_expiry bigint,
     int_linkedin_refresh_token text,
     int_linkedin_refresh_token_expiry bigint,

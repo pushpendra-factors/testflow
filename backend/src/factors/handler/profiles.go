@@ -160,7 +160,7 @@ func ProfilesQueryHandler(c *gin.Context) (interface{}, int, string, string, boo
 
 	if isDashboardQueryRequest && !H.ShouldAllowHardRefresh(0, 0, timezoneString, hardRefresh) {
 		shouldReturn, resCode, resMsg := H.GetResponseIfCachedDashboardQuery(
-			reqID, projectID, dashboardId, unitId, 0, 0, timezoneString)
+			reqID, projectID, dashboardId, unitId, "", 0, 0, timezoneString)
 		if shouldReturn {
 			if resCode == http.StatusOK {
 				return resMsg, resCode, "", "", false
