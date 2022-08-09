@@ -295,34 +295,34 @@ func (store *MemSQL) FetchMarketingReports(projectID int64, q model.AttributionQ
 	}
 	data.AdwordsGCLIDData = adwordsGCLIDData
 	data.AdwordsCampaignIDData = adwordsCampaignIDData
-	data.AdwordsCampaignKeyData = model.GetKeyMapToData(model.AttributionKeyCampaign, adwordsCampaignAllRows, data)
+	data.AdwordsCampaignKeyData = model.GetKeyMapToData(model.AttributionKeyCampaign, adwordsCampaignAllRows, data.AdwordsCampaignIDData)
 
 	data.AdwordsAdgroupIDData = adwordsAdgroupIDData
-	data.AdwordsAdgroupKeyData = model.GetKeyMapToData(model.AttributionKeyAdgroup, adwordsAdgroupAllRows, data)
+	data.AdwordsAdgroupKeyData = model.GetKeyMapToData(model.AttributionKeyAdgroup, adwordsAdgroupAllRows, data.AdwordsAdgroupIDData)
 
 	data.AdwordsKeywordIDData = adwordsKeywordIDData
-	data.AdwordsKeywordKeyData = model.GetKeyMapToData(model.AttributionKeyKeyword, adwordsKeywordAllRows, data)
+	data.AdwordsKeywordKeyData = model.GetKeyMapToData(model.AttributionKeyKeyword, adwordsKeywordAllRows, data.AdwordsKeywordIDData)
 
 	data.BingAdsCampaignIDData = bingadsCampaignIDData
-	data.BingAdsCampaignKeyData = model.GetKeyMapToData(model.AttributionKeyCampaign, bingadsCampaignAllRows, data)
+	data.BingAdsCampaignKeyData = model.GetKeyMapToData(model.AttributionKeyCampaign, bingadsCampaignAllRows, data.BingAdsCampaignIDData)
 
 	data.BingAdsAdgroupIDData = bingadsAdgroupIDData
-	data.BingAdsAdgroupKeyData = model.GetKeyMapToData(model.AttributionKeyAdgroup, bingadsAdgroupAllRows, data)
+	data.BingAdsAdgroupKeyData = model.GetKeyMapToData(model.AttributionKeyAdgroup, bingadsAdgroupAllRows, data.BingAdsAdgroupIDData)
 
 	data.BingAdsKeywordIDData = bingadsKeywordIDData
-	data.BingAdsKeywordKeyData = model.GetKeyMapToData(model.AttributionKeyKeyword, bingadsKeywordAllRows, data)
+	data.BingAdsKeywordKeyData = model.GetKeyMapToData(model.AttributionKeyKeyword, bingadsKeywordAllRows, data.BingAdsKeywordIDData)
 
 	data.FacebookCampaignIDData = facebookCampaignIDData
-	data.FacebookCampaignKeyData = model.GetKeyMapToData(model.AttributionKeyCampaign, facebookCampaignAllRows, data)
+	data.FacebookCampaignKeyData = model.GetKeyMapToData(model.AttributionKeyCampaign, facebookCampaignAllRows, data.FacebookCampaignIDData)
 
 	data.FacebookAdgroupIDData = facebookAdgroupIDData
-	data.FacebookAdgroupKeyData = model.GetKeyMapToData(model.AttributionKeyAdgroup, facebookAdgroupAllRows, data)
+	data.FacebookAdgroupKeyData = model.GetKeyMapToData(model.AttributionKeyAdgroup, facebookAdgroupAllRows, data.FacebookAdgroupIDData)
 
 	data.LinkedinCampaignIDData = linkedinCampaignIDData
-	data.LinkedinCampaignKeyData = model.GetKeyMapToData(model.AttributionKeyCampaign, linkedinCampaignAllRows, data)
+	data.LinkedinCampaignKeyData = model.GetKeyMapToData(model.AttributionKeyCampaign, linkedinCampaignAllRows, data.LinkedinCampaignIDData)
 
 	data.LinkedinAdgroupIDData = linkedinAdgroupIDData
-	data.LinkedinAdgroupKeyData = model.GetKeyMapToData(model.AttributionKeyAdgroup, linkedinAdgroupAllRows, data)
+	data.LinkedinAdgroupKeyData = model.GetKeyMapToData(model.AttributionKeyAdgroup, linkedinAdgroupAllRows, data.LinkedinAdgroupIDData)
 
 	return data, err
 }

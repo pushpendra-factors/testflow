@@ -2728,21 +2728,21 @@ func GetMarketingDataKey(attributionKey string, data MarketingData) string {
 	return key
 }
 
-func GetKeyMapToData(attributionKey string, allRows []MarketingData, reports *MarketingReports) map[string]MarketingData {
+func GetKeyMapToData(attributionKey string, allRows []MarketingData, idMarketingDataMap map[string]MarketingData) map[string]MarketingData {
 
 	keyToData := make(map[string]MarketingData)
 	for i, v := range allRows {
 		switch attributionKey {
 		case AttributionKeyCampaign:
-			v.CampaignName = reports.AdwordsCampaignIDData[v.ID].CampaignName
+			v.CampaignName = idMarketingDataMap[v.ID].CampaignName
 			v.Name = v.CampaignName
 			allRows[i] = v
 		case AttributionKeyAdgroup:
-			v.AdgroupName = reports.AdwordsAdgroupIDData[v.ID].AdgroupName
+			v.AdgroupName = idMarketingDataMap[v.ID].AdgroupName
 			v.Name = v.AdgroupName
 			allRows[i] = v
 		case AttributionKeyKeyword:
-			v.KeywordName = reports.AdwordsKeywordIDData[v.ID].KeywordName
+			v.KeywordName = idMarketingDataMap[v.ID].KeywordName
 			v.Name = v.KeywordName
 			allRows[i] = v
 		}
