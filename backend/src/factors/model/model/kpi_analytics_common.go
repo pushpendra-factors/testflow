@@ -349,6 +349,7 @@ var MapOfMetricsToData = map[string]map[string]map[string]string{
 		"postition_avg":                    {"display_name": "Position Avg", "type": ""},
 		"position_impression_weighted_avg": {"display_name": "Position Impression weighted Avg", "type": ""},
 	},
+	CustomAdsDisplayCategory: {},
 }
 
 type TransformQueryi struct {

@@ -1113,6 +1113,15 @@ CREATE TABLE IF NOT EXISTS clickable_elements (
 );
 
 
+CREATE TABLE IF NOT EXISTS ads_import (
+    project_id bigint NOT NULL,
+    id text NOT NULL,
+    status boolean,
+    last_processed_index json,
+    created_at timestamp(6) NOT NULL,
+    updated_at timestamp(6) NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS otp_rules(
     id text NOT NULL,
     project_id bigint NOT NULL,

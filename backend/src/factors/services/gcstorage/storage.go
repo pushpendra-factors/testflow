@@ -227,3 +227,12 @@ func (gcsd *GCSDriver) GetKPIFilePathAndName(projectId int64, dateString string,
 	path := gcsd.GetWeeklyKPIModelDir(projectId, dateString, queryId)
 	return path, "kpi.txt"
 }
+
+func (gcsd *GCSDriver) GetAdsDataDir(projectId int64) string {
+	return fmt.Sprintf("projects/%v/AdsImport/", projectId)
+}
+
+func (gcsd *GCSDriver) GetAdsDataFilePathAndName(projectId int64, report string, chunkNo int) (string, string) {
+	path := gcsd.GetAdsDataDir(projectId)
+	return path, fmt.Sprintf("%v-%v-%v.csv", report, projectId, chunkNo)
+}

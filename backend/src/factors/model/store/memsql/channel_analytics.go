@@ -37,6 +37,7 @@ const (
 	CAFilterQuery                          = "query"
 	CAFilterAdset                          = "adset"
 	CAChannelBingAds                       = "bing_ads"
+	CACustomAds                            = "custom_ads"
 	CAChannelGoogleAds                     = "google_ads"
 	CAChannelFacebookAds                   = "facebook_ads"
 	CAChannelLinkedinAds                   = "linkedin_ads"
@@ -71,6 +72,7 @@ var CAChannels = []string{
 	CAChannelLinkedinAds,
 	CAAllChannelAds,
 	CAChannelBingAds,
+	CACustomAds,
 }
 
 var channelMetricsToOperation = map[string]string{
@@ -115,7 +117,8 @@ func (store *MemSQL) GetChannelConfig(projectID int64, channel string, reqID str
 		"req_id":     reqID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	if !(isValidChannel(channel)) {
+	sources := make([]string, 0)
+	if !(isValidChannel(channel, sources)) {
 		return &model.ChannelConfigResult{}, http.StatusBadRequest
 	}
 
@@ -153,7 +156,7 @@ func isValidFilterKey(filter string) bool {
 }
 
 // @TODO Kark v1
-func isValidChannel(channel string) bool {
+func isValidChannel(channel string, sources []string) bool {
 	logFields := log.Fields{
 		"channel": channel,
 	}
@@ -163,7 +166,11 @@ func isValidChannel(channel string) bool {
 			return true
 		}
 	}
-
+	for _, source := range sources {
+		if source == channel {
+			return true
+		}
+	}
 	return channel == CAChannelSearchConsole
 }
 
@@ -250,7 +257,8 @@ func (store *MemSQL) GetChannelFilterValuesV1(projectID int64, channel, filterOb
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	var channelFilterValues model.ChannelFilterValues
-	if !isValidChannel(channel) || !isValidFilterKey(filterObject) {
+	sources := make([]string, 0)
+	if !isValidChannel(channel, sources) || !isValidFilterKey(filterObject) {
 		return channelFilterValues, http.StatusBadRequest
 	}
 
@@ -258,7 +266,7 @@ func (store *MemSQL) GetChannelFilterValuesV1(projectID int64, channel, filterOb
 	var errCode int
 	switch channel {
 	case CAAllChannelAds:
-		filterValues, errCode = store.GetAllChannelFilterValues(projectID, filterObject, filterProperty, reqID)
+		filterValues, errCode = store.GetAllChannelFilterValues(projectID, filterObject, filterProperty, channel, reqID)
 	case CAChannelFacebookAds:
 		filterValues, errCode = store.GetFacebookFilterValues(projectID, filterObject, filterProperty, reqID)
 	case CAChannelGoogleAds:
@@ -279,8 +287,40 @@ func (store *MemSQL) GetChannelFilterValuesV1(projectID int64, channel, filterOb
 	return channelFilterValues, http.StatusFound
 }
 
+func (store *MemSQL) GetCustomChannelFilterValuesV1(projectID int64, source, channel, filterObject,
+	filterProperty string, reqID string) (model.ChannelFilterValues, int) {
+
+	logFields := log.Fields{
+		"project_id":      projectID,
+		"channel":         channel,
+		"filter_property": filterObject,
+		"req_id":          reqID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	var channelFilterValues model.ChannelFilterValues
+	sources := make([]string, 0)
+	if !isValidChannel(channel, sources) || !isValidFilterKey(filterObject) {
+		return channelFilterValues, http.StatusBadRequest
+	}
+
+	var filterValues []interface{}
+	var errCode int
+	switch channel {
+	case CACustomAds:
+		filterValues, errCode = store.GetCustomAdsFilterValues(projectID, filterObject, filterProperty, source, reqID)
+	}
+
+	if errCode != http.StatusFound {
+		return channelFilterValues, http.StatusInternalServerError
+	}
+	channelFilterValues.FilterValues = filterValues
+
+	return channelFilterValues, http.StatusFound
+}
+
 // GetAllChannelFilterValues - @Kark TODO v1
-func (store *MemSQL) GetAllChannelFilterValues(projectID int64, filterObject, filterProperty string, reqID string) ([]interface{}, int) {
+func (store *MemSQL) GetAllChannelFilterValues(projectID int64, filterObject, filterProperty string, source string, reqID string) ([]interface{}, int) {
 	logFields := log.Fields{
 		"project_id":      projectID,
 		"filter_object":   filterObject,
@@ -298,10 +338,17 @@ func (store *MemSQL) GetAllChannelFilterValues(projectID int64, filterObject, fi
 		return filterValues, http.StatusFound
 	}
 	isBingAdsAvailable := store.IsBingIntegrationAvailable(projectID)
+	IsCustomAdsAvailable := store.IsCustomAdsAvailable(projectID)
 	if filterObject == CAFilterChannel && filterProperty == "name" {
 		integrations := []interface{}{model.GoogleAds, model.FacebookAds, model.LinkedinAds}
 		if isBingAdsAvailable {
 			integrations = append(integrations, model.NewBingAds)
+		}
+		if IsCustomAdsAvailable {
+			sources, _ := store.GetCustomAdsSourcesByProject(projectID)
+			for _, source := range sources {
+				integrations = append(integrations, source)
+			}
 		}
 		return integrations, http.StatusFound
 	}
@@ -329,6 +376,16 @@ func (store *MemSQL) GetAllChannelFilterValues(projectID int64, filterObject, fi
 		}
 		finalSQLs = U.AppendNonNullValues(adwordsSQL, facebookSQL, linkedinSQL, bingAdsinSQL)
 		finalParams = append(finalParams, bingAdsParams...)
+	}
+	if IsCustomAdsAvailable {
+		customAdsinSQL, customAdsParams, customAdsErr := store.GetCustomadsFilterValuesSQLAndParams(projectID, filterObject, filterProperty, source, reqID)
+
+		if customAdsErr != http.StatusFound && customAdsErr != http.StatusNotFound {
+			return []interface{}{}, customAdsErr
+		}
+
+		finalSQLs = U.AppendNonNullValuesList(finalSQLs, customAdsinSQL)
+		finalParams = append(finalParams, customAdsParams...)
 	}
 	finalQuery := fmt.Sprintf(CAUnionFilterQuery, joinWithWordInBetween("UNION", finalSQLs...))
 	_, resultRows, _ := store.ExecuteSQL(finalQuery, finalParams, logCtx)
@@ -412,12 +469,14 @@ func (store *MemSQL) ExecuteChannelQueryV1(projectID int64, query *model.Channel
 	var resultMetrics [][]interface{}
 	status := http.StatusOK
 	var err int
-	if !(isValidChannel(query.Channel)) {
+	sources, _ := store.GetCustomAdsSourcesByProject(projectID)
+	if !(isValidChannel(query.Channel, sources)) {
 		return queryResult, http.StatusBadRequest
 	}
 	if projectID == 559 {
 		log.WithField("query", *query).WithField("reqID", reqID).Warn("Inside ExecuteChannelQueryV1 - memsql caching test.")
 	}
+
 	switch query.Channel {
 	case CAAllChannelAds:
 		columns, resultMetrics, err = store.executeAllChannelsQueryV1(projectID, query, reqID)
@@ -431,6 +490,11 @@ func (store *MemSQL) ExecuteChannelQueryV1(projectID int64, query *model.Channel
 		columns, resultMetrics, err = store.ExecuteLinkedinChannelQueryV1(projectID, query, reqID)
 	case CAChannelSearchConsole:
 		columns, resultMetrics, err = store.ExecuteGoogleOrganicChannelQueryV1(projectID, query, reqID)
+	}
+	for _, source := range sources {
+		if source == query.Channel {
+			columns, resultMetrics, err = store.ExecuteCustomAdsChannelQueryV1(projectID, query, reqID)
+		}
 	}
 	if err != http.StatusOK {
 		logCtx.Warn(query)
@@ -472,18 +536,24 @@ func (store *MemSQL) executeAllChannelsQueryV1(projectID int64, query *model.Cha
 		customerAccountID = ftMapping.Accounts
 	}
 	projectSetting, errCode := store.GetProjectSetting(projectID)
+	customAdsInt := store.IsCustomAdsAvailable(projectID)
+	customAdsAccounts := make([]string, 0)
+	sources := make([]string, 0)
+	if customAdsInt {
+		sources, _ = store.GetCustomAdsSourcesByProject(projectID)
+		customAdsAccounts, _ = store.GetCustomAdsAccountsByProject(projectID, sources)
+	}
 	if errCode != http.StatusFound {
 		headers := model.GetHeadersFromQuery(*query)
 		return headers, make([][]interface{}, 0, 0), http.StatusNotFound
 	} else if (projectSetting.IntAdwordsCustomerAccountId == nil || *projectSetting.IntAdwordsCustomerAccountId == "") &&
-		(projectSetting.IntFacebookAdAccount == "") && (projectSetting.IntLinkedinAdAccount == "") && customerAccountID == "" {
+		(projectSetting.IntFacebookAdAccount == "") && (projectSetting.IntLinkedinAdAccount == "") && customerAccountID == "" && len(customAdsAccounts) < 0 {
 		log.Warn("Integration not present for channels.")
 		headers := model.GetHeadersFromQuery(*query)
 		return headers, make([][]interface{}, 0, 0), http.StatusOK
 	}
-
 	if (query.GroupBy == nil || len(query.GroupBy) == 0) && (query.GroupByTimestamp == nil || len(query.GroupByTimestamp.(string)) == 0) {
-		adwordsSQL, adwordsParams, commonKeys, commonMetrics, facebookSQL, facebookParams, linkedinSQL, linkedinParams, bingAdsSQL, bingAdsParams, err := store.getIndividualChannelsSQLAndParametersV1(projectID, query, reqID, false)
+		adwordsSQL, adwordsParams, commonKeys, commonMetrics, facebookSQL, facebookParams, linkedinSQL, linkedinParams, bingAdsSQL, bingAdsParams, customAdsSQL, customAdsParams, err := store.getIndividualChannelsSQLAndParametersV1(projectID, query, reqID, false, sources)
 		if err == http.StatusNotFound {
 			headers := model.GetHeadersFromQuery(*query)
 			return headers, make([][]interface{}, 0, 0), http.StatusOK
@@ -493,9 +563,15 @@ func (store *MemSQL) executeAllChannelsQueryV1(projectID int64, query *model.Cha
 			return headers, make([][]interface{}, 0, 0), err
 		}
 		finalSQLs := U.AppendNonNullValues(adwordsSQL, facebookSQL, linkedinSQL, bingAdsSQL)
+		for _, adsSql := range customAdsSQL {
+			finalSQLs = append(finalSQLs, adsSql)
+		}
 		finalParams = append(adwordsParams, facebookParams...)
 		finalParams = append(finalParams, linkedinParams...)
 		finalParams = append(finalParams, bingAdsParams...)
+		for _, customAdsParam := range customAdsParams {
+			finalParams = append(finalParams, customAdsParam...)
+		}
 
 		for _, metric := range commonMetrics {
 			value := fmt.Sprintf("%s(%s) as %s", channelMetricsToOperation[metric], metric, metric)
@@ -505,7 +581,7 @@ func (store *MemSQL) executeAllChannelsQueryV1(projectID int64, query *model.Cha
 			getOrderByClause(isGroupByTimestamp, commonMetrics), channeAnalyticsLimit)
 		columns = append(commonKeys, commonMetrics...)
 	} else if (query.GroupBy == nil || len(query.GroupBy) == 0) && (!(query.GroupByTimestamp == nil || len(query.GroupByTimestamp.(string)) == 0)) {
-		adwordsSQL, adwordsParams, commonKeys, commonMetrics, facebookSQL, facebookParams, linkedinSQL, linkedinParams, bingAdsSQL, bingAdsParams, err := store.getIndividualChannelsSQLAndParametersV1(projectID, query, reqID, false)
+		adwordsSQL, adwordsParams, commonKeys, commonMetrics, facebookSQL, facebookParams, linkedinSQL, linkedinParams, bingAdsSQL, bingAdsParams, customAdsSQL, customAdsParams, err := store.getIndividualChannelsSQLAndParametersV1(projectID, query, reqID, false, sources)
 		if err == http.StatusNotFound {
 			headers := model.GetHeadersFromQuery(*query)
 			return headers, make([][]interface{}, 0, 0), http.StatusOK
@@ -515,9 +591,15 @@ func (store *MemSQL) executeAllChannelsQueryV1(projectID int64, query *model.Cha
 			return headers, make([][]interface{}, 0, 0), err
 		}
 		finalSQLs := U.AppendNonNullValues(adwordsSQL, facebookSQL, linkedinSQL, bingAdsSQL)
+		for _, adsSql := range customAdsSQL {
+			finalSQLs = append(finalSQLs, adsSql)
+		}
 		finalParams = append(adwordsParams, facebookParams...)
 		finalParams = append(finalParams, linkedinParams...)
 		finalParams = append(finalParams, bingAdsParams...)
+		for _, customAdsParam := range customAdsParams {
+			finalParams = append(finalParams, customAdsParam...)
+		}
 
 		selectMetrics = append(selectMetrics, model.AliasDateTime)
 		for _, metric := range commonMetrics {
@@ -528,7 +610,7 @@ func (store *MemSQL) executeAllChannelsQueryV1(projectID int64, query *model.Cha
 			model.AliasDateTime, getOrderByClause(isGroupByTimestamp, commonMetrics), channeAnalyticsLimit)
 		columns = append(commonKeys, commonMetrics...)
 	} else {
-		adwordsSQL, adwordsParams, commonKeys, commonMetrics, facebookSQL, facebookParams, linkedinSQL, linkedinParams, bingAdsSQL, bingAdsParams, err := store.getIndividualChannelsSQLAndParametersV1(projectID, query, reqID, true)
+		adwordsSQL, adwordsParams, commonKeys, commonMetrics, facebookSQL, facebookParams, linkedinSQL, linkedinParams, bingAdsSQL, bingAdsParams, customAdsSQL, customAdsParams, err := store.getIndividualChannelsSQLAndParametersV1(projectID, query, reqID, true, sources)
 		if err == http.StatusNotFound {
 			headers := model.GetHeadersFromQuery(*query)
 			return headers, make([][]interface{}, 0, 0), http.StatusOK
@@ -538,9 +620,16 @@ func (store *MemSQL) executeAllChannelsQueryV1(projectID int64, query *model.Cha
 			return headers, make([][]interface{}, 0, 0), err
 		}
 		finalSQLs := U.AppendNonNullValues(adwordsSQL, facebookSQL, linkedinSQL, bingAdsSQL)
+		for _, adsSql := range customAdsSQL {
+			finalSQLs = append(finalSQLs, adsSql)
+		}
 		finalParams = append(adwordsParams, facebookParams...)
 		finalParams = append(finalParams, linkedinParams...)
 		finalParams = append(finalParams, bingAdsParams...)
+		for _, customAdsParam := range customAdsParams {
+			finalParams = append(finalParams, customAdsParam...)
+		}
+
 		selectMetrics = append(selectMetrics, commonKeys...)
 		for _, metric := range commonMetrics {
 			value := fmt.Sprintf("%s(%s) as %s", channelMetricsToOperation[metric], metric, metric)
@@ -559,7 +648,7 @@ func (store *MemSQL) executeAllChannelsQueryV1(projectID int64, query *model.Cha
 	return columns, resultMetrics, http.StatusOK
 }
 
-func (store *MemSQL) getIndividualChannelsSQLAndParametersV1(projectID int64, query *model.ChannelQueryV1, reqID string, fetchSource bool) (string, []interface{}, []string, []string, string, []interface{}, string, []interface{}, string, []interface{}, int) {
+func (store *MemSQL) getIndividualChannelsSQLAndParametersV1(projectID int64, query *model.ChannelQueryV1, reqID string, fetchSource bool, customSources []string) (string, []interface{}, []string, []string, string, []interface{}, string, []interface{}, string, []interface{}, []string, [][]interface{}, int) {
 	logFields := log.Fields{
 		"project_id":   projectID,
 		"query":        query,
@@ -570,25 +659,27 @@ func (store *MemSQL) getIndividualChannelsSQLAndParametersV1(projectID int64, qu
 	isGroupBytimestamp := query.GetGroupByTimestamp() != ""
 	genericFilters, channelBreakdownFilters := model.GetDecoupledFiltersForChannelBreakdownFilters(query.Filters)
 	query.Filters = genericFilters
-	isAdwordsReq, isFacebookReq, isLinkedinReq, isBingAdsReq, errCode := model.GetRequiredChannels(channelBreakdownFilters)
+	isAdwordsReq, isFacebookReq, isLinkedinReq, isBingAdsReq, isCustomAdsReq, errCode := model.GetRequiredChannels(channelBreakdownFilters, customSources)
 	projectSetting, _ := store.GetProjectSetting(projectID)
 	bingAdsInt := store.IsBingIntegrationAvailable(projectID)
+	customAdsInt := store.IsCustomAdsAvailable(projectID)
 	isAdwordsReq = isAdwordsReq && (projectSetting.IntAdwordsCustomerAccountId != nil && *projectSetting.IntAdwordsCustomerAccountId != "")
 	isFacebookReq = isFacebookReq && (projectSetting.IntFacebookAdAccount != "")
 	isLinkedinReq = (isLinkedinReq && projectSetting.IntLinkedinAdAccount != "")
 	isBingAdsReq = isBingAdsReq && (bingAdsInt == true)
+	isCustomAdsReq = isCustomAdsReq && (customAdsInt == true)
 	if errCode != http.StatusOK {
-		return "", []interface{}{}, make([]string, 0, 0), make([]string, 0, 0), "", []interface{}{}, "", []interface{}{}, "", []interface{}{}, errCode
+		return "", []interface{}{}, make([]string, 0, 0), make([]string, 0, 0), "", []interface{}{}, "", []interface{}{}, "", []interface{}{}, make([]string, 0), make([][]interface{}, 0), errCode
 	}
 
-	finAdwordsSQL, finAdwordsParams, finFacebookSQL, finFacebookParams, finLinkedinSQL, finLinkedinParams, finBingAdsSQL, finBingAdsParams := "", make([]interface{}, 0), "", make([]interface{}, 0), "", make([]interface{}, 0), "", make([]interface{}, 0)
+	finAdwordsSQL, finAdwordsParams, finFacebookSQL, finFacebookParams, finLinkedinSQL, finLinkedinParams, finBingAdsSQL, finBingAdsParams, finCustomAdsSQL, finCustomAdsParams := "", make([]interface{}, 0), "", make([]interface{}, 0), "", make([]interface{}, 0), "", make([]interface{}, 0), make([]string, 0), make([][]interface{}, 0)
 
 	finalKeys := make([]string, 0, 0)
 	finalMetrics := make([]string, 0, 0)
 	if isAdwordsReq {
 		adwordsSQL, adwordsParams, adwordsSelectKeys, adwordsMetrics, adwordsErr := store.GetSQLQueryAndParametersForAdwordsQueryV1(projectID, query, reqID, fetchSource, " LIMIT 10000", isGroupBytimestamp, nil)
 		if adwordsErr != http.StatusOK && adwordsErr != http.StatusNotFound {
-			return "", []interface{}{}, make([]string, 0, 0), make([]string, 0, 0), "", []interface{}{}, "", []interface{}{}, "", []interface{}{}, adwordsErr
+			return "", []interface{}{}, make([]string, 0, 0), make([]string, 0, 0), "", []interface{}{}, "", []interface{}{}, "", []interface{}{}, make([]string, 0), make([][]interface{}, 0), adwordsErr
 		}
 		if len(adwordsSQL) > 0 {
 			finalKeys = adwordsSelectKeys
@@ -600,7 +691,7 @@ func (store *MemSQL) getIndividualChannelsSQLAndParametersV1(projectID int64, qu
 	if isFacebookReq {
 		facebookSQL, facebookParams, facebookSelectKeys, facebookMetrics, facebookErr := store.GetSQLQueryAndParametersForFacebookQueryV1(projectID, query, reqID, fetchSource, " LIMIT 10000", isGroupBytimestamp, nil)
 		if facebookErr != http.StatusOK && facebookErr != http.StatusNotFound {
-			return "", []interface{}{}, make([]string, 0, 0), make([]string, 0, 0), "", []interface{}{}, "", []interface{}{}, "", []interface{}{}, facebookErr
+			return "", []interface{}{}, make([]string, 0, 0), make([]string, 0, 0), "", []interface{}{}, "", []interface{}{}, "", []interface{}{}, make([]string, 0), make([][]interface{}, 0), facebookErr
 		}
 		if len(facebookSQL) > 0 {
 			finalKeys = facebookSelectKeys
@@ -612,7 +703,7 @@ func (store *MemSQL) getIndividualChannelsSQLAndParametersV1(projectID int64, qu
 	if isLinkedinReq {
 		linkedinSQL, linkedinParams, linkedinSelectKeys, linkedinMetrics, linkedinErr := store.GetSQLQueryAndParametersForLinkedinQueryV1(projectID, query, reqID, fetchSource, " LIMIT 10000", isGroupBytimestamp, nil)
 		if linkedinErr != http.StatusOK && linkedinErr != http.StatusNotFound {
-			return "", []interface{}{}, make([]string, 0, 0), make([]string, 0, 0), "", []interface{}{}, "", []interface{}{}, "", []interface{}{}, linkedinErr
+			return "", []interface{}{}, make([]string, 0, 0), make([]string, 0, 0), "", []interface{}{}, "", []interface{}{}, "", []interface{}{}, make([]string, 0), make([][]interface{}, 0), linkedinErr
 		}
 		if len(linkedinSQL) > 0 {
 			finalKeys = linkedinSelectKeys
@@ -624,7 +715,7 @@ func (store *MemSQL) getIndividualChannelsSQLAndParametersV1(projectID int64, qu
 	if isBingAdsReq {
 		bingAdsSQL, bingAdsParams, bingAdsSelectKeys, bingAdsMetrics, bingAdsErr := store.GetSQLQueryAndParametersForBingAdsQueryV1(projectID, query, reqID, fetchSource, " LIMIT 10000", isGroupBytimestamp, nil)
 		if bingAdsErr != http.StatusOK && bingAdsErr != http.StatusNotFound {
-			return "", []interface{}{}, make([]string, 0, 0), make([]string, 0, 0), "", []interface{}{}, "", []interface{}{}, "", []interface{}{}, bingAdsErr
+			return "", []interface{}{}, make([]string, 0, 0), make([]string, 0, 0), "", []interface{}{}, "", []interface{}{}, "", []interface{}{}, make([]string, 0), make([][]interface{}, 0), bingAdsErr
 		}
 		if len(bingAdsSQL) > 0 {
 			finalKeys = bingAdsSelectKeys
@@ -634,10 +725,30 @@ func (store *MemSQL) getIndividualChannelsSQLAndParametersV1(projectID int64, qu
 		finBingAdsSQL, finBingAdsParams = bingAdsSQL, bingAdsParams
 
 	}
-	if !isAdwordsReq && !isFacebookReq && !isLinkedinReq && !isBingAdsReq {
-		return "", []interface{}{}, make([]string, 0, 0), make([]string, 0, 0), "", []interface{}{}, "", []interface{}{}, "", []interface{}{}, http.StatusNotFound
+	if isCustomAdsReq {
+		sources, _ := store.GetCustomAdsSourcesByProject(projectID)
+		for _, source := range sources {
+			var queryCopy *model.ChannelQueryV1
+			U.DeepCopy(query, &queryCopy)
+			queryCopy.Channel = source
+			customAdsSQL, customAdsParams, customAdsSelectKeys, customAdsMetrics, customAdsErr := store.GetSQLQueryAndParametersForCustomAdsQueryV1(projectID, queryCopy, reqID, fetchSource, " LIMIT 10000", isGroupBytimestamp, nil)
+			if customAdsErr != http.StatusOK && customAdsErr != http.StatusNotFound {
+				return "", []interface{}{}, make([]string, 0, 0), make([]string, 0, 0), "", []interface{}{}, "", []interface{}{}, "", []interface{}{}, make([]string, 0), make([][]interface{}, 0), customAdsErr
+			}
+			if len(customAdsSQL) > 0 {
+				finalKeys = customAdsSelectKeys
+				finalMetrics = customAdsMetrics
+				customAdsSQL = fmt.Sprintf("( %s )", customAdsSQL[:len(customAdsSQL)-2])
+			}
+			finCustomAdsSQL = append(finCustomAdsSQL, customAdsSQL)
+			finCustomAdsParams = append(finCustomAdsParams, customAdsParams)
+		}
+
 	}
-	return finAdwordsSQL, finAdwordsParams, finalKeys, finalMetrics, finFacebookSQL, finFacebookParams, finLinkedinSQL, finLinkedinParams, finBingAdsSQL, finBingAdsParams, http.StatusOK
+	if !isAdwordsReq && !isFacebookReq && !isLinkedinReq && !isBingAdsReq && !isCustomAdsReq {
+		return "", []interface{}{}, make([]string, 0, 0), make([]string, 0, 0), "", []interface{}{}, "", []interface{}{}, "", []interface{}{}, make([]string, 0), make([][]interface{}, 0), http.StatusNotFound
+	}
+	return finAdwordsSQL, finAdwordsParams, finalKeys, finalMetrics, finFacebookSQL, finFacebookParams, finLinkedinSQL, finLinkedinParams, finBingAdsSQL, finBingAdsParams, finCustomAdsSQL, finCustomAdsParams, http.StatusOK
 }
 
 // Common Methods for facebook and adwords starts here.

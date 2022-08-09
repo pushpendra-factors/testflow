@@ -31,7 +31,7 @@ func (req *KPIFilterValuesRequest) isValid() bool {
 	if req == nil {
 		return false
 	}
-	if req.Category == "" || !U.ContainsStringInArray([]string{model.ChannelCategory, model.EventCategory, model.ProfileCategory}, req.Category) ||
+	if req.Category == "" || !U.ContainsStringInArray([]string{model.ChannelCategory, model.CustomChannelCategory, model.EventCategory, model.ProfileCategory}, req.Category) ||
 		req.Entity == "" || !U.ContainsStringInArray([]string{model.EventEntity, model.UserEntity}, req.Entity) ||
 		req.ObjectType == "" || req.PropertyName == "" {
 		return false
@@ -74,6 +74,9 @@ func GetKPIConfigHandler(c *gin.Context) (interface{}, int, string, string, bool
 		storeSelected.GetKPIConfigsForAllChannels, storeSelected.GetKPIConfigsForBingAds, storeSelected.GetKPIConfigsForMarketoLeads,
 		storeSelected.GetKPIConfigsForLeadSquaredLeads,
 	}
+	configFunctionsForCustomAds := []func(int64, string) ([]map[string]interface{}, int){
+		storeSelected.GetKPIConfigsForCustomAds,
+	}
 	resultantResultConfigs := make([]map[string]interface{}, 0)
 	for _, configFunction := range configFunctions {
 		currentConfig, errCode := configFunction(projectID, reqID)
@@ -82,6 +85,15 @@ func GetKPIConfigHandler(c *gin.Context) (interface{}, int, string, string, bool
 		}
 		if currentConfig != nil {
 			resultantResultConfigs = append(resultantResultConfigs, currentConfig)
+		}
+	}
+	for _, configFunction := range configFunctionsForCustomAds {
+		currentConfig, errCode := configFunction(projectID, reqID)
+		if errCode != http.StatusOK {
+			return nil, http.StatusInternalServerError, PROCESSING_FAILED, "Error during fetch of KPI Custom Config Data.", true
+		}
+		if len(currentConfig) > 0 {
+			resultantResultConfigs = append(resultantResultConfigs, currentConfig...)
 		}
 	}
 	return resultantResultConfigs, http.StatusOK, "", "", false
@@ -116,12 +128,23 @@ func GetKPIFilterValuesHandler(c *gin.Context) (interface{}, int, string, string
 	logCtx = logCtx.WithField("request", request)
 
 	if request.Category == model.ChannelCategory {
-		currentChannel, err := model.GetChannelFromKPIQuery(request.DisplayCategory)
+		currentChannel, err := model.GetChannelFromKPIQuery(request.DisplayCategory, request.Category)
 		if err != nil {
 			return nil, http.StatusBadRequest, PROCESSING_FAILED, "Input display category is wrong", true
 		}
 		request.DisplayCategory = currentChannel
 		channelsFilterValues, errCode := storeSelected.GetChannelFilterValuesV1(projectID, request.DisplayCategory, request.ObjectType,
+			strings.TrimPrefix(request.PropertyName, request.ObjectType+"_"), reqID)
+		if errCode != http.StatusOK && errCode != http.StatusFound {
+			return nil, http.StatusInternalServerError, PROCESSING_FAILED, "Error during fetch of KPI FilterValues Data.", true
+		}
+		resultantFilterValuesResponse = channelsFilterValues.FilterValues
+	} else if request.Category == model.CustomChannelCategory {
+		currentChannel, err := model.GetCustomChannelFromKPIQuery()
+		if err != nil {
+			return nil, http.StatusBadRequest, PROCESSING_FAILED, "Input display category is wrong", true
+		}
+		channelsFilterValues, errCode := storeSelected.GetCustomChannelFilterValuesV1(projectID, request.DisplayCategory, currentChannel, request.ObjectType,
 			strings.TrimPrefix(request.PropertyName, request.ObjectType+"_"), reqID)
 		if errCode != http.StatusOK && errCode != http.StatusFound {
 			return nil, http.StatusInternalServerError, PROCESSING_FAILED, "Error during fetch of KPI FilterValues Data.", true

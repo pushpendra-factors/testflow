@@ -82,7 +82,7 @@ type Model interface {
 
 	// channel_analytics
 	GetChannelFilterValuesV1(projectID int64, channel, filterObject, filterProperty string, reqID string) (model.ChannelFilterValues, int)
-	GetAllChannelFilterValues(projectID int64, filterObject, filterProperty string, reqID string) ([]interface{}, int)
+	GetAllChannelFilterValues(projectID int64, filterObject, filterProperty string, source string, reqID string) ([]interface{}, int)
 	RunChannelGroupQuery(projectID int64, queries []model.ChannelQueryV1, reqID string) (model.ChannelResultGroupV1, int)
 	ExecuteChannelQueryV1(projectID int64, query *model.ChannelQueryV1, reqID string) (*model.ChannelQueryResultV1, int)
 	ExecuteSQL(sqlStatement string, params []interface{}, logCtx *log.Entry) ([]string, [][]interface{}, error)
@@ -504,6 +504,7 @@ type Model interface {
 	GetLatestMetaForFacebookForGivenDays(projectID int64, days int) ([]model.ChannelDocumentsWithFields, []model.ChannelDocumentsWithFields)
 	GetLatestMetaForLinkedinForGivenDays(projectID int64, days int) ([]model.ChannelDocumentsWithFields, []model.ChannelDocumentsWithFields)
 	GetLatestMetaForBingAdsForGivenDays(projectID int64, days int) ([]model.ChannelDocumentsWithFields, []model.ChannelDocumentsWithFields)
+	GetLatestMetaForCustomAdsForGivenDays(projectID int64, source string, days int) ([]model.ChannelDocumentsWithFields, []model.ChannelDocumentsWithFields)
 	BuildAndCreateSmartPropertyFromChannelDocumentAndRule(smartPropertyRule *model.SmartPropertyRules, rule model.Rule,
 		channelDocument model.ChannelDocumentsWithFields, source string) int
 	DeleteSmartPropertyByRuleID(projectID int64, ruleID string) (int, int, int)
@@ -687,4 +688,15 @@ type Model interface {
 	GetDisplayNameForTimelineEvents(projectId int64, eventName string, properties *map[string]interface{}) string
 	GetGroupsForUserTimeline(projectID int64, userDetails model.ContactDetails) []model.GroupsInfo
 	GetUserActivitiesAndSessionCount(projectID int64, identity string, userId string) ([]model.ContactActivity, float64)
+
+	// Ads import
+	GetAllAdsImportEnabledProjects() (map[int64]map[string]model.LastProcessedAdsImport, error)
+	UpdateLastProcessedAdsData(updatedFields map[string]model.LastProcessedAdsImport, projectId int64) int
+	GetCustomAdsSourcesByProject(projectID int64) ([]string, int)
+	IsCustomAdsAvailable(projectID int64) bool
+
+	// custom ads
+	GetKPIConfigsForCustomAds(projectID int64, reqID string) ([]map[string]interface{}, int)
+	GetKPIConfigsForCustomAdsFromDB(projectID int64) []map[string]interface{}
+	GetCustomChannelFilterValuesV1(projectID int64, source, channel, filterObject, filterProperty string, reqID string) (model.ChannelFilterValues, int)
 }

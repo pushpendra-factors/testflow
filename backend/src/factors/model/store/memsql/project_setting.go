@@ -1069,6 +1069,94 @@ func (store *MemSQL) GetAllLeadSquaredEnabledProjects() (map[int64]model.LeadSqu
 	return result, nil
 }
 
+func (store *MemSQL) GetAllAdsImportEnabledProjects() (map[int64]map[string]model.LastProcessedAdsImport, error) {
+	db := C.GetServices().Db
+	result := make(map[int64]map[string]model.LastProcessedAdsImport)
+	adsImport := make([]model.AdsImport, 0, 0)
+	err := db.Table("ads_import").Where("status = true").Find(&adsImport).Error
+	if err != nil {
+		log.WithError(err).Error("Failed to get ads_import data")
+		return result, err
+	}
+	for _, data := range adsImport {
+		var lastProcessed map[string]model.LastProcessedAdsImport
+		err = U.DecodePostgresJsonbToStructType(data.LastProcessedIndex, &lastProcessed)
+		if err != nil {
+			log.WithError(err).Error("Decode failed")
+			return nil, errors.New("failed to decode jsonb to last processed")
+		}
+		result[data.ProjectID] = lastProcessed
+	}
+	return result, nil
+}
+
+func (store *MemSQL) UpdateLastProcessedAdsData(updatedFields map[string]model.LastProcessedAdsImport, projectId int64) int {
+	db := C.GetServices().Db
+	updateFieldsJson, _ := U.EncodeStructTypeToPostgresJsonb(updatedFields)
+	if err := db.Table("ads_import").
+		Where("project_id = ?", projectId).
+		Update("last_processed_index", updateFieldsJson).Error; err != nil {
+		log.WithError(err).Error("Updating last processed index config failed")
+		return http.StatusInternalServerError
+	}
+	return http.StatusOK
+}
+
+func (store *MemSQL) GetCustomAdsSourcesByProject(projectID int64) ([]string, int) {
+	db := C.GetServices().Db
+	adsImport := make([]string, 0, 0)
+	rows, err := db.Raw("SELECT DISTINCT source FROM integration_documents where project_id = ?", projectID).Rows()
+	if err != nil {
+		log.WithError(err).Error("Failed to get all sources.")
+		return adsImport, http.StatusInternalServerError
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var source string
+		if err = rows.Scan(&source); err != nil {
+			log.WithError(err).Error("Failed to get source. Scanning failed.")
+			return adsImport, http.StatusInternalServerError
+		}
+		adsImport = append(adsImport, source)
+	}
+	return adsImport, http.StatusOK
+}
+
+func (store *MemSQL) GetCustomAdsAccountsByProject(projectID int64, source []string) ([]string, int) {
+	db := C.GetServices().Db
+	adsImport := make([]string, 0, 0)
+	rows, err := db.Raw("SELECT DISTINCT customer_account_id FROM integration_documents where project_id = ? AND source IN (?)", projectID, source).Rows()
+	if err != nil {
+		log.WithError(err).Error("Failed to get all sources.")
+		return adsImport, http.StatusInternalServerError
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var account string
+		if err = rows.Scan(&account); err != nil {
+			log.WithError(err).Error("Failed to get source. Scanning failed.")
+			return adsImport, http.StatusInternalServerError
+		}
+		adsImport = append(adsImport, account)
+	}
+	return adsImport, http.StatusOK
+}
+
+func (store *MemSQL) IsCustomAdsAvailable(projectID int64) bool {
+	db := C.GetServices().Db
+	adsImport := make([]model.AdsImport, 0, 0)
+	err := db.Table("ads_import").Where("status = true AND project_id = ?", projectID).Find(&adsImport).Error
+	if err != nil {
+		return false
+	}
+	if len(adsImport) > 0 {
+		return true
+	}
+	return false
+}
+
 func (store *MemSQL) UpdateLeadSquaredFirstTimeSyncStatus(projectId int64) int {
 	db := C.GetServices().Db
 	var projectSetting model.ProjectSetting

@@ -65,7 +65,9 @@ func (store *MemSQL) GetSmartPropertyRulesConfig(projectID int64, objectType str
 	if !isExists {
 		return result, http.StatusBadRequest
 	}
-	for _, sourceName := range smartPropertySources {
+	customSources, _ := store.GetCustomAdsSourcesByProject(projectID)
+	smartPropertySourcesCombined := append(smartPropertySources, customSources...)
+	for _, sourceName := range smartPropertySourcesCombined {
 		objectsAndProperties := make([]model.ChannelObjectAndProperties, 0)
 		for objectName, property := range objectAndProperty {
 			currentProperties := buildProperties(property)
@@ -115,7 +117,7 @@ func (store *MemSQL) checkIfRuleNameAlreadyPresentWhileUpdate(projectID int64, n
 	}
 	return http.StatusFound
 }
-func validateSmartPropertyRules(projectID int64, smartPropertyRulesDoc *model.SmartPropertyRules) (string, bool) {
+func validateSmartPropertyRules(projectID int64, smartPropertyRulesDoc *model.SmartPropertyRules, customSources []string) (string, bool) {
 	logFields := log.Fields{
 		"project_id":               projectID,
 		"smart_property_rules_doc": smartPropertyRulesDoc,
@@ -135,7 +137,7 @@ func validateSmartPropertyRules(projectID int64, smartPropertyRulesDoc *model.Sm
 		return "Space in property name is not allowed.", false
 	}
 
-	isValidRules := validationRules(smartPropertyRulesDoc.Rules)
+	isValidRules := validationRules(smartPropertyRulesDoc.Rules, customSources)
 	if !isValidRules {
 		return "Invalid rule conditions or empty rules object.", false
 	}
@@ -150,7 +152,8 @@ func (store *MemSQL) CreateSmartPropertyRules(projectID int64, smartPropertyRule
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
 
-	errMsg, isValidRule := validateSmartPropertyRules(projectID, smartPropertyRulesDoc)
+	customSources, _ := store.GetCustomAdsSourcesByProject(projectID)
+	errMsg, isValidRule := validateSmartPropertyRules(projectID, smartPropertyRulesDoc, customSources)
 	if !isValidRule {
 		logCtx.WithField("rule", smartPropertyRulesDoc).Warn(errMsg)
 		return &model.SmartPropertyRules{}, errMsg, http.StatusBadRequest
@@ -211,7 +214,8 @@ func (store *MemSQL) UpdateSmartPropertyRules(projectID int64, ruleID string, sm
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
 
-	errMsg, isValidRule := validateSmartPropertyRules(projectID, &smartPropertyRulesDoc)
+	customSources, _ := store.GetCustomAdsSourcesByProject(projectID)
+	errMsg, isValidRule := validateSmartPropertyRules(projectID, &smartPropertyRulesDoc, customSources)
 	if !isValidRule {
 		logCtx.WithField("rule", smartPropertyRulesDoc).Warn(errMsg)
 		return model.SmartPropertyRules{}, errMsg, http.StatusBadRequest
@@ -255,7 +259,7 @@ func (store *MemSQL) UpdateSmartPropertyRules(projectID int64, ruleID string, sm
 	return smartPropertyRule, "", http.StatusAccepted
 }
 
-func validationRules(rulesJsonb *postgres.Jsonb) bool {
+func validationRules(rulesJsonb *postgres.Jsonb, customSources []string) bool {
 	logFields := log.Fields{
 		"rules_jsonb": rulesJsonb,
 	}
@@ -273,7 +277,13 @@ func validationRules(rulesJsonb *postgres.Jsonb) bool {
 			return false
 		}
 		_, existsSource := sourceSmartProperty[rule.Source]
-		if !existsSource {
+		var existCustom bool
+		for _, customSource := range customSources {
+			if customSource == rule.Source {
+				existCustom = true
+			}
+		}
+		if !existsSource && !existCustom {
 			return false
 		}
 		if len(rule.Filters) == 0 {

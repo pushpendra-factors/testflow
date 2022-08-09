@@ -109,6 +109,15 @@ const (
 	LinkedinAdgroupID   = "campaign_id"
 	LinkedinAdgroupName = "campaign_name"
 
+	CustomadsCampaignID   = "campaign_id"
+	CustomadsCampaignName = "campaign_name"
+
+	CustomadsAdgroupID   = "ad_group_id"
+	CustomadsAdgroupName = "ad_group_name"
+
+	CustomadsKeywordID   = "keyword_id"
+	CustomadsKeywordName = "keyword_name"
+
 	KeyDelimiter = ":-:"
 
 	ChannelAdwords    = "adwords"
@@ -117,6 +126,7 @@ const (
 	ChannelLinkedin   = "linkedin"
 	ChannelGoogleAds  = "google_ads"
 	ChannelBingAds    = "bingads"
+	ChannelCustomAds  = "custom_ads"
 	SessionChannelOTP = "OfflineTouchPoint"
 
 	FieldChannelName      = "channel_name"
@@ -327,6 +337,15 @@ type MarketingReports struct {
 	LinkedinAdgroupIDData  map[string]MarketingData
 	LinkedinAdgroupKeyData map[string]MarketingData
 
+	CustomAdsCampaignIDData  map[string]MarketingData
+	CustomAdsCampaignKeyData map[string]MarketingData
+
+	CustomAdsAdgroupIDData  map[string]MarketingData
+	CustomAdsAdgroupKeyData map[string]MarketingData
+
+	CustomAdsKeywordIDData  map[string]MarketingData
+	CustomAdsKeywordKeyData map[string]MarketingData
+
 	// id = campaignID + KeyDelimiter + campaignName
 	AdwordsCampaignDimensions map[string]MarketingData
 	// id = campaignID + KeyDelimiter + campaignName + KeyDelimiter + adgroupID + KeyDelimiter + adgroupName
@@ -346,6 +365,11 @@ type MarketingReports struct {
 	LinkedinCampaignDimensions map[string]MarketingData
 	// id = campaignID + KeyDelimiter + campaignName  + KeyDelimiter + adgroupID + KeyDelimiter + adgroupName
 	LinkedinAdgroupDimensions map[string]MarketingData
+
+	// id = campaignID + KeyDelimiter + campaignName
+	CustomAdsCampaignDimensions map[string]MarketingData
+	// id = campaignID + KeyDelimiter + campaignName + KeyDelimiter + adgroupID + KeyDelimiter + adgroupName
+	CustomAdsAdgroupDimensions map[string]MarketingData
 }
 
 type MarketingData struct {
@@ -592,6 +616,14 @@ func EnrichUsingMarketingID(attributionKey string, sessionUTMMarketingValue Mark
 			return v.CampaignName, sessionUTMMarketingValue
 		}
 
+		report = reports.CustomAdsCampaignIDData
+		if v, ok := report[ID]; ok {
+			sessionUTMMarketingValue.CampaignName = v.CampaignName
+			sessionUTMMarketingValue.Name = v.CampaignName
+			sessionUTMMarketingValue.Channel = v.Channel
+			return v.CampaignName, sessionUTMMarketingValue
+		}
+
 	case AttributionKeyAdgroup:
 		ID := sessionUTMMarketingValue.AdgroupID
 		report := reports.AdwordsAdgroupIDData
@@ -634,6 +666,15 @@ func EnrichUsingMarketingID(attributionKey string, sessionUTMMarketingValue Mark
 			return v.AdgroupName, sessionUTMMarketingValue
 		}
 
+		report = reports.CustomAdsAdgroupIDData
+		if v, ok := report[ID]; ok {
+			sessionUTMMarketingValue.AdgroupName = v.AdgroupName
+			sessionUTMMarketingValue.Name = v.AdgroupName
+			sessionUTMMarketingValue.Channel = v.Channel
+			sessionUTMMarketingValue.CampaignID = v.CampaignID
+			sessionUTMMarketingValue.CampaignName = v.CampaignName
+			return v.AdgroupName, sessionUTMMarketingValue
+		}
 	default:
 		// No enrichment for other types using ID
 		return PropertyValueNone, sessionUTMMarketingValue
@@ -2381,6 +2422,14 @@ func DoesBingAdsReportExist(attributionKey string) bool {
 	}
 	return false
 }
+func DoesCustomAdsReportExist(attributionKey string) bool {
+	// only campaign, adgroup, keyword reports available
+	if attributionKey == AttributionKeyCampaign || attributionKey == AttributionKeyAdgroup ||
+		attributionKey == AttributionKeyKeyword {
+		return true
+	}
+	return false
+}
 func DoesFBReportExist(attributionKey string) bool {
 	// only campaign, adgroup reports available
 	if attributionKey == AttributionKeyCampaign || attributionKey == AttributionKeyAdgroup {
@@ -2542,6 +2591,7 @@ func AddPerformanceData(attributionData *map[string]*AttributionData, attributio
 	AddFacebookPerformanceReportInfo(attributionData, attributionKey, marketingData, noOfConversionEvents)
 	AddLinkedinPerformanceReportInfo(attributionData, attributionKey, marketingData, noOfConversionEvents)
 	AddBingAdsPerformanceReportInfo(attributionData, attributionKey, marketingData, noOfConversionEvents)
+	AddCustomAdsPerformanceReportInfo(attributionData, attributionKey, marketingData, noOfConversionEvents)
 }
 
 func AddAdwordsPerformanceReportInfo(attributionData *map[string]*AttributionData, attributionKey string, marketingData *MarketingReports, noOfConversionEvents int) {
@@ -2568,6 +2618,20 @@ func AddBingAdsPerformanceReportInfo(attributionData *map[string]*AttributionDat
 		addMetricsFromReport(attributionData, marketingData.BingAdsAdgroupKeyData, attributionKey, ChannelBingAds, noOfConversionEvents)
 	case AttributionKeyKeyword:
 		addMetricsFromReport(attributionData, marketingData.BingAdsKeywordKeyData, attributionKey, ChannelBingAds, noOfConversionEvents)
+	default:
+		return
+	}
+}
+
+func AddCustomAdsPerformanceReportInfo(attributionData *map[string]*AttributionData, attributionKey string, marketingData *MarketingReports, noOfConversionEvents int) {
+
+	switch attributionKey {
+	case AttributionKeyCampaign:
+		addMetricsFromReport(attributionData, marketingData.CustomAdsCampaignKeyData, attributionKey, ChannelCustomAds, noOfConversionEvents)
+	case AttributionKeyAdgroup:
+		addMetricsFromReport(attributionData, marketingData.CustomAdsAdgroupKeyData, attributionKey, ChannelCustomAds, noOfConversionEvents)
+	case AttributionKeyKeyword:
+		addMetricsFromReport(attributionData, marketingData.CustomAdsKeywordKeyData, attributionKey, ChannelCustomAds, noOfConversionEvents)
 	default:
 		return
 	}
@@ -2652,7 +2716,11 @@ func addMetricsFromReport(attributionData *map[string]*AttributionData, reportKe
 		if (*attributionData)[key].CustomDimensions == nil {
 			(*attributionData)[key].CustomDimensions = make(map[string]interface{})
 		}
-		(*attributionData)[key].Channel = channel
+		if channel == ChannelCustomAds {
+			(*attributionData)[key].Channel = reportKeyData[key].Channel
+		} else {
+			(*attributionData)[key].Channel = channel
+		}
 		(*attributionData)[key].Impressions = value.Impressions
 		(*attributionData)[key].Clicks = value.Clicks
 		(*attributionData)[key].Spend = value.Spend
@@ -3027,10 +3095,19 @@ func ProcessRow(rows *sql.Rows, reportName string, logCtx *log.Entry,
 		var impressionsNull sql.NullFloat64
 		var clicksNull sql.NullFloat64
 		var spendNull sql.NullFloat64
-		if err := rows.Scan(&campaignIDNull, &adgroupIDNull, &keywordIDNull, &adIDNull, &keyIDNull, &keyNameNull, &extraValue1Null,
-			&impressionsNull, &clicksNull, &spendNull); err != nil {
-			logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
-			continue
+		var sourceNull sql.NullString
+		if channel == CustomAdsIntegration {
+			if err := rows.Scan(&campaignIDNull, &adgroupIDNull, &keywordIDNull, &adIDNull, &keyIDNull, &keyNameNull, &extraValue1Null,
+				&impressionsNull, &clicksNull, &spendNull, &sourceNull); err != nil {
+				logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
+				continue
+			}
+		} else {
+			if err := rows.Scan(&campaignIDNull, &adgroupIDNull, &keywordIDNull, &adIDNull, &keyIDNull, &keyNameNull, &extraValue1Null,
+				&impressionsNull, &clicksNull, &spendNull); err != nil {
+				logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
+				continue
+			}
 		}
 		if !keyNameNull.Valid || !keyIDNull.Valid {
 			continue
@@ -3040,7 +3117,11 @@ func ProcessRow(rows *sql.Rows, reportName string, logCtx *log.Entry,
 		if ID == "" {
 			continue
 		}
-		data.Channel = channel
+		if channel == CustomAdsIntegration {
+			data.Channel = U.IfThenElse(sourceNull.String != "", sourceNull.String, PropertyValueNone).(string)
+		} else {
+			data.Channel = channel
+		}
 		if _, ok := marketingDataIDMap[ID]; ok {
 			data = mergeMarketingData(marketingDataIDMap[ID], data)
 		}
@@ -3164,13 +3245,13 @@ func AddCustomDimensions(attributionData *map[string]*AttributionData, query *At
 	}
 
 	if query.AttributionKey == AttributionKeyCampaign {
-		enrichDimensionsWithName(attributionData, query.AttributionKeyCustomDimension, reports.AdwordsCampaignDimensions, reports.FacebookCampaignDimensions, reports.LinkedinCampaignDimensions, query.AttributionKey)
+		enrichDimensionsWithName(attributionData, query.AttributionKeyCustomDimension, reports.AdwordsCampaignDimensions, reports.FacebookCampaignDimensions, reports.LinkedinCampaignDimensions, reports.BingadsCampaignDimensions, reports.CustomAdsCampaignDimensions, query.AttributionKey)
 	} else if query.AttributionKey == AttributionKeyAdgroup {
-		enrichDimensionsWithName(attributionData, query.AttributionKeyCustomDimension, reports.AdwordsAdgroupDimensions, reports.FacebookAdgroupDimensions, reports.LinkedinAdgroupDimensions, query.AttributionKey)
+		enrichDimensionsWithName(attributionData, query.AttributionKeyCustomDimension, reports.AdwordsAdgroupDimensions, reports.FacebookAdgroupDimensions, reports.LinkedinAdgroupDimensions, reports.BingadsAdgroupDimensions, reports.CustomAdsAdgroupDimensions, query.AttributionKey)
 	}
 }
 
-func enrichDimensionsWithName(attributionData *map[string]*AttributionData, dimensions []string, adwordsData, fbData, linkedinData map[string]MarketingData, attributionKey string) {
+func enrichDimensionsWithName(attributionData *map[string]*AttributionData, dimensions []string, adwordsData, fbData, linkedinData, bingadsData, customAdsData map[string]MarketingData, attributionKey string) {
 
 	for k, v := range *attributionData {
 
@@ -3209,6 +3290,20 @@ func enrichDimensionsWithName(attributionData *map[string]*AttributionData, dime
 				break
 			case ChannelLinkedin:
 				if d, exists := linkedinData[customDimKey]; exists {
+					if val, found := d.CustomDimensions[dim]; found {
+						(*attributionData)[k].CustomDimensions[dim] = val
+					}
+				}
+				break
+			case ChannelBingAds:
+				if d, exists := bingadsData[customDimKey]; exists {
+					if val, found := d.CustomDimensions[dim]; found {
+						(*attributionData)[k].CustomDimensions[dim] = val
+					}
+				}
+				break
+			case ChannelCustomAds:
+				if d, exists := customAdsData[customDimKey]; exists {
 					if val, found := d.CustomDimensions[dim]; found {
 						(*attributionData)[k].CustomDimensions[dim] = val
 					}

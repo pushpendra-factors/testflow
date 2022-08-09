@@ -1117,7 +1117,7 @@ func (store *MemSQL) GetAdwordsSQLQueryAndParametersForFilterValues(projectID in
 	customerAccountID := projectSetting.IntAdwordsCustomerAccountId
 	if customerAccountID == nil || len(*customerAccountID) == 0 {
 		logCtx.Info(integrationNotAvailable)
-		return "", []interface{}{}, http.StatusInternalServerError
+		return "", []interface{}{}, http.StatusNotFound
 	}
 	customerAccountIDs := strings.Split(*customerAccountID, ",")
 	from, to := model.GetFromAndToDatesForFilterValues()

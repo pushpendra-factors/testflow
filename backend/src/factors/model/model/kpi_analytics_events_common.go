@@ -58,9 +58,10 @@ const (
 	CountOfOpportunitiesCreated = "count_of_opportunities_created"
 	CountOfOpportunitiesUpdated = "count_of_opportunities_updated"
 
-	EventCategory   = "events"
-	ChannelCategory = "channels"
-	ProfileCategory = "profiles"
+	EventCategory         = "events"
+	ChannelCategory       = "channels"
+	ProfileCategory       = "profiles"
+	CustomChannelCategory = "custom_channels"
 
 	EventEntity = "event"
 	UserEntity  = "user"
