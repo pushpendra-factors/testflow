@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from 'react';
-// import sampleAccounts from './sampleAccounts.json';
-// import sampleTL from './sampleAccTimeline.json'
 import { Table, Button, Modal, Spin } from 'antd';
 import { Text, SVG } from '../../factorsComponents';
 import MomentTz from '../../MomentTz';
@@ -215,7 +213,7 @@ function AccountProfiles({
             onRow={(user) => {
               return {
                 onClick: () => {
-                  fetchProfileAccountDetails(activeProject.id, user.id);
+                  fetchProfileAccountDetails(activeProject.id, user.identity);
                   showModal();
                 },
               };
