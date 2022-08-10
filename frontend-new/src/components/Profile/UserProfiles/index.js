@@ -288,7 +288,6 @@ function UserProfiles({
       <Modal
         title={null}
         visible={isModalVisible}
-        onCancel={handleCancel}
         className={'fa-modal--full-width'}
         footer={null}
         closable={null}

@@ -48,6 +48,7 @@ import Touchpoints from '../Settings/ProjectConfigure/Touchpoints';
 import CustomKPI from '../Settings/ProjectConfigure/CustomKPI';
 import { EMPTY_ARRAY } from '../../utils/global';
 import UserProfiles from '../../components/Profile/UserProfiles';
+import AccountProfiles from '../../components/Profile/AccountProfiles';
 import InsightsSettings from '../Settings/ProjectSettings/InsightsSettings';
 import { fetchProfileUsers } from '../../reducers/timeline';
 import DashboardTemplates from "../DashboardTemplates";
@@ -274,6 +275,12 @@ function AppLayout({
 
                     {/* profiles */}
                     <Route path='/profiles/people' component={UserProfiles} />
+                    {(window.document.domain === 'app.factors.ai' &&
+                      whiteListedAccounts.includes(activeAgent)) ||
+                    window.document.domain === 'staging-app.factors.ai' ||
+                    window.document.domain === 'factors-dev.com' ? (
+                      <Route path='/profiles/accounts' component={AccountProfiles} />
+                      ) : null}
 
                     {!(demoProjectId.includes(active_project?.id)) ? (
                       <Route path='/project-setup' component={SetupAssist} />
