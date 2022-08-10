@@ -1056,6 +1056,27 @@ export function disableSlackIntegration(projectId) {
   };
 }
 
+export function enableHubspotIntegration(projectId) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      let payload = { project_id: projectId.toString() };
+      post(dispatch, host + 'integrations/hubspot/auth', payload)
+        .then((r) => {
+          if (r.ok) {
+            dispatch({ type: 'ENABLE_HUBSPOT_FULFILLED', payload: r.data });
+            resolve(r);
+          } else {
+            dispatch({ type: 'ENABLE_HUBSPOT_REJECTED' });
+            reject(r);
+          }
+        })
+        .catch((err) => {
+          dispatch({ type: 'ENABLE_HUBSPOT_REJECTED', payload: err });
+          reject(err);
+        });
+    });
+  };
+}
 
 export function enableLeadSquaredIntegration(projectId, payload) {
   return function (dispatch) {
@@ -1070,6 +1091,7 @@ export function enableLeadSquaredIntegration(projectId, payload) {
           }
         })
         .catch((err) => {
+          dispatch({ type: 'ENABLE_LEADSQUARED_REJECTED', payload: err });
           reject(err);
         });
     });
