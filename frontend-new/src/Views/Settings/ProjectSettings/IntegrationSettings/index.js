@@ -27,8 +27,9 @@ import RevealIntegration from './Reveal';
 import BingIntegration from './Bing';
 import MarketoIntegration from './Marketo';
 import SlackIntegration from './Slack';
+import LeadSquaredIntegration from './LeadSquared';
 
-import {ADWORDS_INTERNAL_REDIRECT_URI} from './util';
+import { ADWORDS_INTERNAL_REDIRECT_URI } from './util';
 
 const IntegrationProviderData = [
   {
@@ -103,6 +104,12 @@ const IntegrationProviderData = [
     icon: 'ClearbitLogo',
     kbLink: false,
   },
+  {
+    name: 'LeadSquared',
+    desc: 'Leadsquared is a leader in marketing automation. Using our Leadsquared source, we will ingest your Program, Campaign, Person and List records into Factors.',
+    icon: 'LeadSquared',
+    kbLink: false,
+  },
 ];
 
 const IntegrationCard = ({ item, index, defaultOpen }) => {
@@ -162,6 +169,10 @@ const IntegrationCard = ({ item, index, defaultOpen }) => {
         return (
           <RevealIntegration kbLink={item.kbLink} setIsActive={setIsActive} />
         );
+      case 'LeadSquared':
+        return (
+          <LeadSquaredIntegration kbLink={item.kbLink} setIsActive={setIsActive} />
+        );
       default:
         return (
           <>
@@ -177,9 +188,9 @@ const IntegrationCard = ({ item, index, defaultOpen }) => {
   };
 
   useEffect(() => {
-    setToggle(!(isActive || isStatus === 'Active')); 
+    setToggle(!(isActive || isStatus === 'Active'));
 
-    if(defaultOpen){
+    if (defaultOpen) {
       setToggle(true)
     }
   }, [isActive, isStatus]);
@@ -294,29 +305,29 @@ function IntegrationSettings({
   }, [activeProject]);
 
   useEffect(() => {
-      if (window.location.href.indexOf("?error=") > -1) {
-        var searchParams = new URLSearchParams(window.location.search);
-        if (searchParams) {
-          let error = searchParams.get("error");
-          let str = error.replace("_", " ");
-          let finalmsg = str.toLocaleLowerCase();
-          if(finalmsg) {
-            message.error(finalmsg);
-          }
+    if (window.location.href.indexOf("?error=") > -1) {
+      var searchParams = new URLSearchParams(window.location.search);
+      if (searchParams) {
+        let error = searchParams.get("error");
+        let str = error.replace("_", " ");
+        let finalmsg = str.toLocaleLowerCase();
+        if (finalmsg) {
+          message.error(finalmsg);
         }
       }
+    }
 
-      if (window.location.href.indexOf("status=") > -1) {
-        var searchParams = new URLSearchParams(window.location.search);
-        if (searchParams) {
-          let error = searchParams.get("status");
-          let str = error.replace("_", " ");
-          let finalmsg = str.toLocaleLowerCase();
-          if(finalmsg) {
-            message.error(`Error: ${finalmsg}. Sorry! That doesn’t seem right. Please try again`);
-          }
+    if (window.location.href.indexOf("status=") > -1) {
+      var searchParams = new URLSearchParams(window.location.search);
+      if (searchParams) {
+        let error = searchParams.get("status");
+        let str = error.replace("_", " ");
+        let finalmsg = str.toLocaleLowerCase();
+        if (finalmsg) {
+          message.error(`Error: ${finalmsg}. Sorry! That doesn’t seem right. Please try again`);
         }
       }
+    }
   }, []);
 
   return (
@@ -356,7 +367,7 @@ function IntegrationSettings({
                     ) : (
                       IntegrationProviderData.map((item, index) => {
                         let defaultOpen = false;
-                        if (window.location.href.indexOf(ADWORDS_INTERNAL_REDIRECT_URI) > -1) { 
+                        if (window.location.href.indexOf(ADWORDS_INTERNAL_REDIRECT_URI) > -1) {
                           defaultOpen = true;
                         }
                         return (

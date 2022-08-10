@@ -291,7 +291,7 @@ function CoreQuery({
   integration?.int_clear_bit ||
   integrationV1?.int_completed ||
   bingAds?.accounts ||
-  marketo?.status || integrationV1?.int_slack;
+  marketo?.status || integrationV1?.int_slack || integration?.lead_squared_config !== null;
     
 
   const getQueryFromHashId = () => {

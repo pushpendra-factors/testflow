@@ -1055,3 +1055,23 @@ export function disableSlackIntegration(projectId) {
     });
   };
 }
+
+
+export function enableLeadSquaredIntegration(projectId, payload) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      put(dispatch, host + 'projects/'+ projectId +'/leadsquaredsettings', payload)
+        .then((r) => {
+          if (r.ok) {
+            dispatch({ type: 'ENABLE_LEADSQUARED_INTEGRATION', payload: r.data});
+            resolve(r);
+          } else {
+            reject(r);
+          }
+        })
+        .catch((err) => {
+          reject(err);
+        });
+    });
+  };
+}
