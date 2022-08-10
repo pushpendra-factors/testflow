@@ -314,6 +314,17 @@ const AttributionsChart = forwardRef(
             };
           });
           setFilters(availableFilters);
+        } else {
+          const availableFilters = [
+            {
+              title: touchpoint,
+              key: touchpoint,
+              options: tableData
+                .map((data) => data[touchpoint])
+                .filter(onlyUnique)
+            }
+          ];
+          setFilters(availableFilters);
         }
       }
     }, [content_groups, attr_dimensions, touchpoint, tableData, filters]);
