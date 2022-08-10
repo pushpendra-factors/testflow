@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, memo } from 'react';
+import cx from 'classnames';
 import ReactDOMServer from 'react-dom/server';
 import moment from 'moment';
 import Highcharts from 'highcharts';
@@ -10,7 +11,7 @@ import TopLegends from '../GroupedBarChart/TopLegends';
 import { addQforQuarter, generateColors } from '../../utils/dataFormatter';
 import { getDateFormatForTimeSeriesChart } from '../../utils/chart.helpers';
 import styles from './styles.module.scss';
-import { get } from 'lodash';
+import { get, has } from 'lodash';
 import { getFormattedKpiValue } from '../../Views/CoreQuery/KPIAnalysis/kpiAnalysis.helpers';
 
 function LineChart({
@@ -22,7 +23,9 @@ function LineChart({
   cardSize = 1,
   spacing = high_charts_default_spacing,
   chartId = 'lineChartContainer',
-  showAllLegends = false
+  showAllLegends = false,
+  comparisonApplied = false,
+  compareCategories
 }) {
   const dateFormat = getDateFormatForTimeSeriesChart({ frequency });
   const metricTypes = data.reduce((result, d) => {
@@ -31,7 +34,10 @@ function LineChart({
       [d.name]: get(d, 'metricType', null)
     };
   }, {});
-  const colors = generateColors(data.length);
+
+  const colors = generateColors(
+    data.filter((d) => !has(d, 'compareIndex')).length
+  );
 
   const drawChart = useCallback(() => {
     Highcharts.chart(chartId, {
@@ -65,7 +71,7 @@ function LineChart({
         min: 0,
         title: {
           enabled: false
-        },
+        }
       },
       credits: {
         enabled: false
@@ -77,9 +83,46 @@ function LineChart({
         useHTML: true,
         formatter() {
           const metricType = get(metricTypes, this.point.series.name, null);
+          const value = this.point.y;
+          let timestamp = this.point.category;
+          if (
+            comparisonApplied &&
+            has(this.point.series.userOptions, 'compareIndex')
+          ) {
+            timestamp = compareCategories[this.point.index];
+          }
           return ReactDOMServer.renderToString(
             <>
-              <Text
+              <div className="flex flex-col row-gap-2">
+                <Text type="title" level={7} color="grey-2">
+                  {this.point.series.name}
+                </Text>
+                <div className={cx('flex flex-col')}>
+                  <Text type="title" color="grey" level={7}>
+                    {addQforQuarter(frequency) +
+                      moment(timestamp).format(dateFormat)}
+                  </Text>
+                  <div className="flex items-center col-gap-1">
+                    <Text weight="bold" type="title" color="grey-6" level={5}>
+                      {metricType != null
+                        ? getFormattedKpiValue({
+                            value,
+                            metricType
+                          })
+                        : numberWithCommas(formatCount(value, 1))}
+                    </Text>
+                    {/* {comparisonApplied && (
+                      <>
+                        {changeIcon}
+                        <Text level={7} type="title" color="grey">
+                          <NumFormat number={Math.abs(10)} />%
+                        </Text>
+                      </>
+                    )} */}
+                  </div>
+                </div>
+              </div>
+              {/* <Text
                 color="grey-8"
                 weight="bold"
                 type="title"
@@ -114,7 +157,7 @@ function LineChart({
                     <NumFormat className="number" number={this.point.y} />
                   )}
                 </Text>
-              </span>
+              </span> */}
             </>
           );
         }
@@ -126,10 +169,14 @@ function LineChart({
           }
         }
       },
-      series: data.map((d, index) => {
+      series: data.map((d, index, dataSet) => {
+        const isCompareLine = has(d, 'compareIndex');
+        const compareIndex = isCompareLine
+          ? dataSet.findIndex((s) => s.index === d.compareIndex)
+          : null;
         return {
           ...d,
-          color: colors[index]
+          color: !isCompareLine ? colors[index] : colors[compareIndex]
         };
       })
     });
@@ -155,16 +202,20 @@ function LineChart({
       {legendsPosition === 'top' ? (
         <TopLegends
           cardSize={cardSize}
-          legends={data.map((d) => d.name)}
           colors={colors}
           showAllLegends={showAllLegends}
+          legends={data
+            .filter((d) => !has(d, 'compareIndex'))
+            .map((d) => d.name)}
         />
       ) : null}
       <div className={styles.areaChart} id={chartId}></div>
       {legendsPosition === 'bottom' ? (
         <TopLegends
           cardSize={cardSize}
-          legends={data.map((d) => d.name)}
+          legends={data
+            .filter((d) => !has(d, 'compareIndex'))
+            .map((d) => d.name)}
           colors={colors}
           showAllLegends={showAllLegends}
         />

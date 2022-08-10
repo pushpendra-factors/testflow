@@ -14,7 +14,7 @@ import {
 } from './constants';
 import { Text } from '../components/factorsComponents';
 
-const visualizationColors = [
+export const visualizationColors = [
   '#4D7DB4',
   '#4C9FC8',
   '#4CBCBD',

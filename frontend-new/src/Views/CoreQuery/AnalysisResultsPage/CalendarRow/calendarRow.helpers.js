@@ -17,7 +17,8 @@ export const getCompareRange = ({
         ),
         endDate: parseInt(
           MomentTz(durationObj.to).subtract(1, 'day').format('x')
-        )
+        ),
+        selectedOption: selectedValue
       };
     }
     if (selectedValue === COMPARISON_DATE_SELECTABLE_OPTIONS.PREVIOUS_7_DAYS) {
@@ -28,7 +29,8 @@ export const getCompareRange = ({
         ),
         endDate: parseInt(
           MomentTz(durationObj.to).subtract(7, 'days').format('x')
-        )
+        ),
+        selectedOption: selectedValue
       };
     }
     if (selectedValue === COMPARISON_DATE_SELECTABLE_OPTIONS.PREVIOUS_30_DAYS) {
@@ -39,7 +41,8 @@ export const getCompareRange = ({
         ),
         endDate: parseInt(
           MomentTz(durationObj.to).subtract(30, 'days').format('x')
-        )
+        ),
+        selectedOption: selectedValue
       };
     }
     if (selectedValue === COMPARISON_DATE_SELECTABLE_OPTIONS.PREVIOUS_90_DAYS) {
@@ -50,7 +53,8 @@ export const getCompareRange = ({
         ),
         endDate: parseInt(
           MomentTz(durationObj.to).subtract(90, 'days').format('x')
-        )
+        ),
+        selectedOption: selectedValue
       };
     }
     if (
@@ -63,7 +67,8 @@ export const getCompareRange = ({
         ),
         endDate: parseInt(
           MomentTz(durationObj.to).subtract(365, 'days').format('x')
-        )
+        ),
+        selectedOption: selectedValue
       };
     }
   }
@@ -79,14 +84,16 @@ export const getCompareRange = ({
     return {
       ...durationObj,
       startDate: selectedValue,
-      endDate
+      endDate,
+      selectedOption: 'custom'
     };
   }
   if (customRangeType === COMPARISON_DATE_RANGE_TYPE.END_DATE) {
     return {
       ...durationObj,
       startDate: MomentTz(selectedValue).subtract(daysDiff, 'days'),
-      endDate: selectedValue
+      endDate: selectedValue,
+      selectedOption: 'custom'
     };
   }
 };
