@@ -621,6 +621,7 @@ func (store *MemSQL) PullCustomDimensionData(projectID int64, attributionKey str
 		return nil
 	}
 	enableBingAdsAttribution := C.GetConfig().EnableBingAdsAttribution
+	isCustomAdsIntegrationDone := store.IsCustomAdsAvailable(projectID)
 	sources, _ := store.GetCustomAdsSourcesByProject(projectID)
 
 	var err error
@@ -645,9 +646,11 @@ func (store *MemSQL) PullCustomDimensionData(projectID int64, attributionKey str
 				return err
 			}
 		}
-		marketingReport.CustomAdsCampaignDimensions, err = store.PullSmartProperties(projectID, model.SmartPropertyCampaignID, model.SmartPropertyCampaignName, model.SmartPropertyAdGroupID, model.SmartPropertyAdGroupName, sources, 1, attributionKey, logCtx)
-		if err != nil {
-			return err
+		if isCustomAdsIntegrationDone {
+			marketingReport.CustomAdsCampaignDimensions, err = store.PullSmartProperties(projectID, model.SmartPropertyCampaignID, model.SmartPropertyCampaignName, model.SmartPropertyAdGroupID, model.SmartPropertyAdGroupName, sources, 1, attributionKey, logCtx)
+			if err != nil {
+				return err
+			}
 		}
 	case model.FieldAdgroupName:
 		marketingReport.AdwordsAdgroupDimensions, err = store.PullSmartProperties(projectID, model.SmartPropertyCampaignID, model.SmartPropertyCampaignName, model.SmartPropertyAdGroupID, model.SmartPropertyAdGroupName, []string{model.ChannelAdwords}, 2, attributionKey, logCtx)
@@ -668,9 +671,11 @@ func (store *MemSQL) PullCustomDimensionData(projectID int64, attributionKey str
 				return err
 			}
 		}
-		marketingReport.CustomAdsAdgroupDimensions, err = store.PullSmartProperties(projectID, model.SmartPropertyCampaignID, model.SmartPropertyCampaignName, model.SmartPropertyAdGroupID, model.SmartPropertyAdGroupName, sources, 2, attributionKey, logCtx)
-		if err != nil {
-			return err
+		if isCustomAdsIntegrationDone {
+			marketingReport.CustomAdsAdgroupDimensions, err = store.PullSmartProperties(projectID, model.SmartPropertyCampaignID, model.SmartPropertyCampaignName, model.SmartPropertyAdGroupID, model.SmartPropertyAdGroupName, sources, 2, attributionKey, logCtx)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
