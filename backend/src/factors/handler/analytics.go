@@ -191,7 +191,7 @@ func EventsQueryHandler(c *gin.Context) (interface{}, int, string, string, bool)
 		}
 		return nil, errCode, V1.PROCESSING_FAILED, "Failed to process query from DB", true
 	}
-	model.SetQueryCacheResult(projectId, &requestPayload, resultGroup)
+
 	meta := H.CacheMeta{
 		Timezone:       string(timezoneString),
 		From:           commonQueryFrom,
@@ -200,6 +200,11 @@ func EventsQueryHandler(c *gin.Context) (interface{}, int, string, string, bool)
 		LastComputedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(),
 		Preset:         preset,
 	}
+	for i, _ := range resultGroup.Results {
+		resultGroup.Results[i].CacheMeta = meta
+	}
+	resultGroup.CacheMeta = meta
+	model.SetQueryCacheResult(projectId, &requestPayload, resultGroup)
 	// if it is a dashboard query, cache it
 	if isDashboardQueryRequest {
 
@@ -383,8 +388,6 @@ func QueryHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 		logCtx.Error(" Result is nil - " + errMsg)
 		return nil, errCode, V1.PROCESSING_FAILED, "Result is nil - " + errMsg, true
 	}
-
-	model.SetQueryCacheResult(projectId, &requestPayload.Query, result)
 	meta := H.CacheMeta{
 		Timezone:       string(timezoneString),
 		From:           requestPayload.Query.From,
@@ -393,6 +396,9 @@ func QueryHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 		LastComputedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(),
 		Preset:         preset,
 	}
+	result.CacheMeta = meta
+	model.SetQueryCacheResult(projectId, &requestPayload.Query, result)
+
 	if isDashboardQueryRequest {
 		model.SetCacheResultByDashboardIdAndUnitId(result, projectId, dashboardId, unitId, preset, requestPayload.Query.From, requestPayload.Query.To, timezoneString, meta)
 		return H.DashboardQueryResponsePayload{Result: result, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(), TimeZone: string(timezoneString), CacheMeta: meta}, http.StatusOK, "", "", false
