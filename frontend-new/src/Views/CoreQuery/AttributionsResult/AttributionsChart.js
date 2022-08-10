@@ -36,7 +36,7 @@ import NoDataChart from '../../../components/NoDataChart';
 import { ATTRIBUTION_GROUP_ANALYSIS_KEYS } from './attributionsResult.constants';
 
 const nodata = (
-  <div className="mt-4 flex justify-center items-center w-full h-full">
+  <div className="flex justify-center items-center w-full h-full pt-4 pb-4">
     <NoDataChart />
   </div>
 );

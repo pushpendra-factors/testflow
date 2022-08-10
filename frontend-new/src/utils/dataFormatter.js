@@ -221,7 +221,7 @@ export const getClickableTitleSorter = (
       role="button"
       tabIndex={0}
       onClick={() => handleSorting(sorterProp)}
-      className={`flex ${verticalAlignmentClass} ${justifyAlignment} cursor-pointer h-full p-4 ${containerClassName}`}
+      className={`flex ${verticalAlignmentClass} ${justifyAlignment} cursor-pointer h-full px-4 py-2 ${containerClassName}`}
     >
       <div className="flex gap-x-1 items-center">
         {alignment === 'left' ? (

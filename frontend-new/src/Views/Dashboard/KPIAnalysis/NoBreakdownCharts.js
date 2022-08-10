@@ -75,7 +75,7 @@ const NoBreakdownCharts = ({
 
   if (!aggregateData.length) {
     return (
-      <div className="mt-4 flex justify-center items-center w-full h-64 ">
+      <div className="flex justify-center items-center w-full h-full pt-4 pb-4">
         <NoDataChart />
       </div>
     );
@@ -85,15 +85,15 @@ const NoBreakdownCharts = ({
   let chartContent = null;
 
   if (chartType === CHART_TYPE_TABLE) {
-    tableContent = (
-      <div
-        onClick={handleEditQuery}
-        style={{ color: '#5949BC' }}
-        className="mt-3 font-medium text-base cursor-pointer flex justify-end item-center"
-      >
-        Show More &rarr;
-      </div>
-    );
+    // tableContent = (
+    //   <div
+    //     onClick={handleEditQuery}
+    //     style={{ color: '#5949BC' }}
+    //     className="mt-3 font-medium text-base cursor-pointer flex justify-end item-center"
+    //   >
+    //     Show More &rarr;
+    //   </div>
+    // );
     chartContent = (
       <NoBreakdownTable
         data={aggregateData}
@@ -264,7 +264,7 @@ const NoBreakdownCharts = ({
   }
 
   return (
-    <div className={'w-full px-6 flex flex-1 flex-col  justify-center'}>
+    <div className={'w-full'}>
       {chartContent}
       {tableContent}
     </div>
