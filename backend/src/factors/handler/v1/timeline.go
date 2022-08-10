@@ -10,57 +10,145 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	log "github.com/sirupsen/logrus"
 )
 
 func GetProfileUsersHandler(c *gin.Context) (interface{}, int, string, string, bool) {
+
 	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	logCtx := log.WithFields(log.Fields{
+		"projectId": projectId,
+	})
 	if projectId == 0 {
-		c.AbortWithStatus(http.StatusBadRequest)
+		logCtx.Error("Invalid project_id.")
 		return "", http.StatusBadRequest, "", "invalid project_id", true
 	}
 
 	r := c.Request
-	var payload model.UTListPayload
+	var payload model.TimelinePayload
+	logCtx = log.WithFields(log.Fields{
+		"projectId": projectId,
+		"payload":   payload,
+	})
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&payload); err != nil {
-		c.AbortWithStatus(http.StatusBadRequest)
+		logCtx.Error("Json decode failed.")
 		message := fmt.Sprintf("Query failed. Invalid user source provided : %s", payload.Source)
 		return nil, http.StatusBadRequest, "", message, true
 	}
 
-	profileUsersList, errCode := store.GetStore().GetProfileUsersListByProjectId(projectId, payload)
+	profileUsersList, errCode := store.GetStore().GetProfilesListByProjectId(projectId, payload, model.PROFILE_TYPE_USER)
 
 	if errCode != http.StatusFound {
-		c.AbortWithStatus(errCode)
-		return "", http.StatusNotFound, "", "", true
+		logCtx.Error("User profiles not found.")
+		return nil, errCode, "", "", true
 	}
 
 	return profileUsersList, http.StatusOK, "", "", false
 }
 
 func GetProfileUserDetailsHandler(c *gin.Context) (interface{}, int, string, string, bool) {
+
 	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	logCtx := log.WithFields(log.Fields{
+		"projectId": projectId,
+	})
 	if projectId == 0 {
-		c.AbortWithStatus(http.StatusBadRequest)
-		return "", http.StatusBadRequest, "", "", true
+		logCtx.Error("Invalid project_id.")
+		return "", http.StatusBadRequest, "", "invalid project_id", true
 	}
+
 	identity := c.Params.ByName("id")
+	logCtx = log.WithFields(log.Fields{
+		"projectId": projectId,
+		"userId":    identity,
+	})
 	if identity == "" {
-		c.AbortWithStatus(http.StatusBadRequest)
-		return nil, http.StatusBadRequest, INVALID_INPUT, "", true
+		logCtx.Error("Invalid userId.")
+		return nil, http.StatusBadRequest, INVALID_INPUT, "invalid userId", true
 	}
 
 	isAnonymous := c.Query("is_anonymous")
-
+	logCtx = log.WithFields(log.Fields{
+		"projectId":   projectId,
+		"userId":      identity,
+		"isAnonymous": isAnonymous,
+	})
 	if isAnonymous == "" {
+		logCtx.Error("Anonymity status not valid.")
 		return nil, http.StatusBadRequest, INVALID_INPUT, "", true
 	}
 
 	userDetails, errCode := store.GetStore().GetProfileUserDetailsByID(projectId, identity, isAnonymous)
 	if errCode != http.StatusFound {
+		logCtx.Error("User details not found.")
 		return nil, errCode, PROCESSING_FAILED, "Failed to get user details", true
 	}
 
 	return userDetails, http.StatusOK, "", "", false
+}
+
+func GetProfileAccountsHandler(c *gin.Context) (interface{}, int, string, string, bool) {
+
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	logCtx := log.WithFields(log.Fields{
+		"projectId": projectId,
+	})
+	if projectId == 0 {
+		logCtx.Error("Invalid project_id.")
+		return "", http.StatusBadRequest, "", "invalid project_id", true
+	}
+
+	r := c.Request
+	var payload model.TimelinePayload
+	logCtx = log.WithFields(log.Fields{
+		"projectId": projectId,
+		"payload":   payload,
+	})
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&payload); err != nil {
+		logCtx.Error("Json decode failed.")
+		message := fmt.Sprintf("Query failed. Invalid source provided : %s", payload.Source)
+		return nil, http.StatusBadRequest, "", message, true
+	}
+
+	profileAccountsList, errCode := store.GetStore().GetProfilesListByProjectId(projectId, payload, model.PROFILE_TYPE_ACCOUNT)
+	if errCode != http.StatusFound {
+		logCtx.Error("Account profiles not found.")
+		return "", errCode, "", "", true
+	}
+
+	return profileAccountsList, http.StatusOK, "", "", false
+}
+
+func GetProfileAccountDetailsHandler(c *gin.Context) (interface{}, int, string, string, bool) {
+
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	logCtx := log.WithFields(log.Fields{
+		"projectId": projectId,
+	})
+	if projectId == 0 {
+		logCtx.Error("Invalid project_id.")
+		return "", http.StatusBadRequest, "", "invalid project_id", true
+	}
+
+	id := c.Params.ByName("id")
+	logCtx = log.WithFields(log.Fields{
+		"projectId": projectId,
+		"userId":    id,
+	})
+	if id == "" {
+		logCtx.Error("Invalid userId.")
+		return nil, http.StatusBadRequest, INVALID_INPUT, "invalid userId", true
+	}
+
+	accountDetails, errCode := store.GetStore().GetProfileAccountDetailsByID(projectId, id)
+	if errCode != http.StatusFound {
+		logCtx.Error("Account details not found.")
+		return nil, errCode, PROCESSING_FAILED, "Failed to get account details", true
+	}
+
+	return accountDetails, http.StatusOK, "", "", false
 }

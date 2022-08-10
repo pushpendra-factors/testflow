@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
+import { useSelector } from 'react-redux';
 import {
   formatData,
   getDefaultSortProp,
@@ -27,6 +28,7 @@ function EventBreakdownCharts({
   const [visibleProperties, setVisibleProperties] = useState([]);
   const { handleEditQuery } = useContext(DashboardContext);
   const [sorter, setSorter] = useState(getDefaultSortProp());
+  const { eventNames } = useSelector((state) => state.coreQuery);
 
   useEffect(() => {
     const formattedData = formatData(resultState.data);
@@ -64,6 +66,7 @@ function EventBreakdownCharts({
         total={resultState.data.rows[0]}
         query={'Count'}
         bgColor='#4D7DB4'
+        eventNames={eventNames}
       />
     );
   } else {

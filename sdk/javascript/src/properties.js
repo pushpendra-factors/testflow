@@ -1,7 +1,7 @@
 "use strict";
 
 const util = require("./utils/util");
-const FormCapture = require("./utils/form_capture");
+const Capture = require("./utils/capture");
 const logger = require("./utils/logger");
 
 const PLATFORM_WEB = "web";
@@ -307,7 +307,7 @@ function getPropertiesFromAllNonFormInputs() {
         //exldude disabled types
         if(DISABLED_INPUT_TYPES.indexOf(inputs[i].type) >= 0) continue;
 
-        if (!FormCapture.isPartOfForm(inputs[i])) {
+        if (!Capture.isPartOfForm(inputs[i])) {
             nonFormInputs.push(inputs[i]);
 
             var formElement = inputs[i].form? inputs[i].form : null
@@ -338,18 +338,18 @@ function getPropertiesFromInputs(inputs) {
         if (inputs[i].value == "") continue;
 
         // any input field with a valid email catuptured as email.
-        if (FormCapture.isEmail(value) && !properties[EMAIL]) // captures only first email input.
+        if (Capture.isEmail(value) && !properties[EMAIL]) // captures only first email input.
             properties[EMAIL] = value;
 
-        if (inputs[i].type == 'tel' && !properties[PHONE] && FormCapture.isPhone(value)) 
+        if (inputs[i].type == 'tel' && !properties[PHONE] && Capture.isPhone(value)) 
             properties[PHONE] = value;
 
         if (!properties[COMPANY] && 
-            (FormCapture.isFieldByMatch(inputs[i], 'company') || FormCapture.isFieldByMatch(inputs[i], 'org')))
+            (Capture.isFieldByMatch(inputs[i], 'company') || Capture.isFieldByMatch(inputs[i], 'org')))
             properties[COMPANY] = value;
 
         // name or placeholder as first and name tokens.
-        if (FormCapture.isFieldByMatch(inputs[i], 'first', 'name')) {
+        if (Capture.isFieldByMatch(inputs[i], 'first', 'name')) {
             if (!properties[FIRST_NAME]) properties[FIRST_NAME] = value;
 
             if (!properties[NAME]) properties[NAME] = '';
@@ -358,7 +358,7 @@ function getPropertiesFromInputs(inputs) {
         }
 
         // name or placeholder as last and name tokens.
-        if (FormCapture.isFieldByMatch(inputs[i], 'last', 'name')) {
+        if (Capture.isFieldByMatch(inputs[i], 'last', 'name')) {
             if (!properties[LAST_NAME]) properties[LAST_NAME] = value;
 
             if (!properties[NAME] || properties[NAME] == '') properties[NAME] = value;
@@ -366,7 +366,7 @@ function getPropertiesFromInputs(inputs) {
         }
 
         // only name.
-        if (FormCapture.isFieldByMatch(inputs[i], 'name')) {
+        if (Capture.isFieldByMatch(inputs[i], 'name')) {
             // add only if it is not filled by first and last name already.
             if (!properties[NAME]) properties[NAME] = value;
         }

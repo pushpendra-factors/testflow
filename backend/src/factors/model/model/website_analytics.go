@@ -55,6 +55,7 @@ type WebAnalyticsCacheResult struct {
 	To          int64                    `json:"tom"`
 	Timezone    string                   `json:"timezone"`
 	RefreshedAt int64                    `json:"refreshed_at"`
+	CacheMeta   interface{}              `json:"cache_meta"`
 }
 
 // Named queries for website
@@ -316,7 +317,7 @@ func shouldSkipWindow(from, to int64) bool {
 }
 
 func SetCacheResultForWebAnalyticsDashboard(result *WebAnalyticsQueryResult,
-	projectID int64, dashboardID int64, from, to int64, timezoneString U.TimeZoneString) {
+	projectID int64, dashboardID int64, from, to int64, timezoneString U.TimeZoneString, meta interface{}) {
 
 	if shouldSkipWindow(from, to) {
 		return
@@ -336,12 +337,24 @@ func SetCacheResultForWebAnalyticsDashboard(result *WebAnalyticsQueryResult,
 	if err != nil {
 		logCtx.WithError(err).Error("Error getting cache key for web analytics dashboard")
 	}
+
+	if meta == nil {
+
+		meta = CacheMeta{
+			From:           from,
+			To:             to,
+			RefreshedAt:    U.TimeNowIn(timezoneString).Unix(),
+			LastComputedAt: U.TimeNowIn(timezoneString).Unix(),
+			Timezone:       string(timezoneString),
+		}
+	}
 	dashboardCacheResult := WebAnalyticsCacheResult{
 		Result:      result,
 		From:        from,
 		To:          to,
 		Timezone:    string(timezoneString),
 		RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(),
+		CacheMeta:   meta,
 	}
 
 	dashboardCacheResultJSON, err := json.Marshal(&dashboardCacheResult)

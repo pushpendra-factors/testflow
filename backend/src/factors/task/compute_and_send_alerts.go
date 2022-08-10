@@ -50,17 +50,70 @@ func ComputeAndSendAlerts(projectID int64, configs map[string]interface{}) (map[
 		log.Fatalf("Failed to get all alerts for project_id: %v", projectID)
 		return nil, false
 	}
+	status := make(map[string]interface{})
+	var alertsToBeProcessed []model.Alert
+	if configs["modelType"] == ModelTypeWeek {
+		for _, alert := range allAlerts {
+			var alertDescription model.AlertDescription
+			err := U.DecodePostgresJsonbToStructType(alert.AlertDescription, &alertDescription)
+			if err != nil {
+				log.Errorf("failed to decode alert description for project_id: %v, alert_name: %s", projectID, alert.AlertName)
+				log.Error(err)
+				status["error"] = err
+				return status, false
+			}
+			if alertDescription.DateRange == model.LAST_WEEK {
+				alertsToBeProcessed = append(alertsToBeProcessed, alert)
+			}
+
+		}
+	} else if configs["modelType"] == ModelTypeMonth {
+		for _, alert := range allAlerts {
+			var alertDescription model.AlertDescription
+			err := U.DecodePostgresJsonbToStructType(alert.AlertDescription, &alertDescription)
+			if err != nil {
+				log.Errorf("failed to decode alert description for project_id: %v, alert_name: %s", projectID, alert.AlertName)
+				log.Error(err)
+				status["error"] = err
+				return status, false
+			}
+			if alertDescription.DateRange == model.LAST_QUARTER {
+				alertsToBeProcessed = append(alertsToBeProcessed, alert)
+			}
+
+		}
+
+	} else if configs["modelType"] == ModelTypeQuarter {
+		for _, alert := range allAlerts {
+			var alertDescription model.AlertDescription
+			err := U.DecodePostgresJsonbToStructType(alert.AlertDescription, &alertDescription)
+			if err != nil {
+				log.Errorf("failed to decode alert description for project_id: %v, alert_name: %s", projectID, alert.AlertName)
+				log.Error(err)
+				status["error"] = err
+				return status, false
+			}
+			if alertDescription.DateRange == model.LAST_QUARTER {
+				alertsToBeProcessed = append(alertsToBeProcessed, alert)
+			}
+
+		}
+
+	} else {
+		status["error"] = "invalid model type"
+		return status, false
+	}
 	var alertDescription model.AlertDescription
 	var alertConfiguration model.AlertConfiguration
 	var dateRange dateRanges
-	status := make(map[string]interface{})
+
 	endTimestampUnix := configs["endTimestamp"].(int64)
 	if endTimestampUnix == 0 || endTimestampUnix > U.TimeNowUnix() {
 		status["error"] = "invalid end timestamp"
 		return status, false
 	}
 	endTimestamp := time.Unix(endTimestampUnix, 0)
-	for _, alert := range allAlerts {
+	for _, alert := range alertsToBeProcessed {
 		var kpiQuery model.KPIQuery
 		alert.LastRunTime = time.Now()
 		var err error

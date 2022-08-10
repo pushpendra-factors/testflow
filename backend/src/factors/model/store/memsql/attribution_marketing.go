@@ -293,6 +293,88 @@ func (store *MemSQL) FetchMarketingReports(projectID int64, q model.AttributionQ
 			}
 		}
 	}
+
+	// CustomAds
+	var customadsCampaignIDData, customadsAdgroupIDData, customadsKeywordIDData map[string]model.MarketingData
+	var customadsCampaignAllRows, customadsAdgroupAllRows, customadsKeywordAllRows []model.MarketingData
+	isCustomAdsIntegrationDone := store.IsCustomAdsAvailable(projectID)
+	sources, _ := store.GetCustomAdsSourcesByProject(projectID)
+	if isCustomAdsIntegrationDone && model.DoesCustomAdsReportExist(q.AttributionKey) {
+		customAdsAccountID, _ := store.GetCustomAdsAccountsByProject(projectID, sources)
+
+		reportType = model.CustomadsDocumentTypeAlias[model.CampaignPerformanceReport] // 4
+		customadsCampaignIDData, customadsCampaignAllRows, err = store.PullCustomAdsMarketingData(projectID, effectiveFrom,
+			effectiveTo, customAdsAccountID, model.CustomadsCampaignID, model.CustomadsCampaignName, model.PropertyValueNone, reportType, model.ReportCampaign, q.Timezone)
+		if err != nil {
+			return data, err
+		}
+		for id, v := range customadsCampaignIDData {
+			v.CampaignName = U.IfThenElse(U.IsNonEmptyKey(v.CampaignName), v.CampaignName, v.Name).(string)
+			customadsCampaignIDData[id] = v
+		}
+		for i, _ := range customadsCampaignAllRows {
+			customadsCampaignAllRows[i].CampaignName = U.IfThenElse(U.IsNonEmptyKey(customadsCampaignAllRows[i].CampaignName), customadsCampaignAllRows[i].CampaignName, customadsCampaignAllRows[i].Name).(string)
+		}
+
+		reportType = model.CustomadsDocumentTypeAlias[model.AdGroupPerformanceReport] // 5
+		customadsAdgroupIDData, customadsAdgroupAllRows, err = store.PullCustomAdsMarketingData(projectID, effectiveFrom,
+			effectiveTo, customAdsAccountID, model.CustomadsAdgroupID, model.CustomadsAdgroupName, model.PropertyValueNone, reportType, model.ReportAdGroup, q.Timezone)
+		if err != nil {
+			return data, err
+		}
+		for id, value := range customadsAdgroupIDData {
+			value.AdgroupName = U.IfThenElse(U.IsNonEmptyKey(value.AdgroupName), value.AdgroupName, value.Name).(string)
+			campID := value.CampaignID
+			if U.IsNonEmptyKey(campID) {
+				value.CampaignName = U.IfThenElse(U.IsNonEmptyKey(value.CampaignName), value.CampaignName, customadsCampaignIDData[campID].Name).(string)
+				customadsAdgroupIDData[id] = value
+			}
+		}
+		for i, _ := range customadsAdgroupAllRows {
+			customadsAdgroupAllRows[i].AdgroupName = U.IfThenElse(U.IsNonEmptyKey(customadsAdgroupAllRows[i].AdgroupName), customadsAdgroupAllRows[i].AdgroupName, customadsAdgroupAllRows[i].Name).(string)
+			campID := customadsAdgroupAllRows[i].CampaignID
+			if U.IsNonEmptyKey(campID) {
+				customadsAdgroupAllRows[i].CampaignName = U.IfThenElse(U.IsNonEmptyKey(customadsAdgroupAllRows[i].CampaignName), customadsAdgroupAllRows[i].CampaignName, customadsCampaignIDData[campID].Name).(string)
+			}
+		}
+
+		reportType = model.CustomadsDocumentTypeAlias[model.KeywordPerformanceReport] // 6
+		customadsKeywordIDData, customadsKeywordAllRows, err = store.PullCustomAdsMarketingData(projectID, effectiveFrom,
+			effectiveTo, customAdsAccountID, model.CustomadsKeywordID, model.CustomadsKeywordName, model.PropertyValueNone, reportType, model.ReportKeyword, q.Timezone)
+		if err != nil {
+			return data, err
+		}
+		for id, value := range customadsKeywordIDData {
+			value.KeywordName = U.IfThenElse(U.IsNonEmptyKey(value.KeywordName), value.KeywordName, value.Name).(string)
+			campID := value.CampaignID
+			if U.IsNonEmptyKey(campID) {
+				value.CampaignName = U.IfThenElse(U.IsNonEmptyKey(value.CampaignName), value.CampaignName, customadsCampaignIDData[campID].Name).(string)
+				customadsKeywordIDData[id] = value
+			}
+		}
+
+		for i, _ := range customadsKeywordAllRows {
+			customadsKeywordAllRows[i].KeywordName = U.IfThenElse(U.IsNonEmptyKey(customadsKeywordAllRows[i].KeywordName), customadsKeywordAllRows[i].KeywordName, customadsKeywordAllRows[i].Name).(string)
+			campID := customadsKeywordAllRows[i].CampaignID
+			if U.IsNonEmptyKey(campID) {
+				customadsKeywordAllRows[i].CampaignName = U.IfThenElse(U.IsNonEmptyKey(customadsKeywordAllRows[i].CampaignName), customadsKeywordAllRows[i].CampaignName, customadsCampaignIDData[campID].Name).(string)
+			}
+		}
+		for id, value := range customadsKeywordIDData {
+			adgroupID := value.AdgroupID
+			if U.IsNonEmptyKey(adgroupID) {
+				value.AdgroupName = U.IfThenElse(U.IsNonEmptyKey(value.AdgroupName), value.AdgroupName, customadsAdgroupIDData[adgroupID].Name).(string)
+				customadsKeywordIDData[id] = value
+			}
+		}
+		for i, _ := range customadsKeywordAllRows {
+			adgroupID := customadsKeywordAllRows[i].AdgroupID
+			if U.IsNonEmptyKey(adgroupID) {
+				customadsKeywordAllRows[i].AdgroupName = U.IfThenElse(U.IsNonEmptyKey(customadsKeywordAllRows[i].AdgroupName), customadsKeywordAllRows[i].AdgroupName, customadsAdgroupIDData[adgroupID].Name).(string)
+			}
+		}
+	}
+
 	data.AdwordsGCLIDData = adwordsGCLIDData
 	data.AdwordsCampaignIDData = adwordsCampaignIDData
 	data.AdwordsCampaignKeyData = model.GetKeyMapToData(model.AttributionKeyCampaign, adwordsCampaignAllRows, data.AdwordsCampaignIDData)
@@ -323,6 +405,15 @@ func (store *MemSQL) FetchMarketingReports(projectID int64, q model.AttributionQ
 
 	data.LinkedinAdgroupIDData = linkedinAdgroupIDData
 	data.LinkedinAdgroupKeyData = model.GetKeyMapToData(model.AttributionKeyAdgroup, linkedinAdgroupAllRows, data.LinkedinAdgroupIDData)
+
+	data.CustomAdsCampaignIDData = customadsCampaignIDData
+	data.CustomAdsCampaignKeyData = model.GetKeyMapToData(model.AttributionKeyCampaign, customadsCampaignAllRows, data.CustomAdsCampaignIDData)
+
+	data.CustomAdsAdgroupIDData = customadsAdgroupIDData
+	data.CustomAdsAdgroupKeyData = model.GetKeyMapToData(model.AttributionKeyAdgroup, customadsAdgroupAllRows, data.CustomAdsAdgroupIDData)
+
+	data.CustomAdsKeywordIDData = customadsKeywordIDData
+	data.CustomAdsKeywordKeyData = model.GetKeyMapToData(model.AttributionKeyKeyword, customadsKeywordAllRows, data.CustomAdsKeywordIDData)
 
 	return data, err
 }
@@ -485,6 +576,44 @@ func (store *MemSQL) PullBingAdsMarketingData(projectID int64, from, to int64, c
 	marketingDataIDMap, allRows := model.ProcessRow(rows, reportName, logCtx, model.BingAdsIntegration, reqID)
 	return marketingDataIDMap, allRows, nil
 }
+
+func (store *MemSQL) PullCustomAdsMarketingData(projectID int64, from, to int64, customerAccountID []string, keyID string,
+	keyName string, extraValue1 string, reportType int, reportName string, timeZone string) (map[string]model.MarketingData, []model.MarketingData, error) {
+	logFields := log.Fields{
+		"project_id":   projectID,
+		"from":         from,
+		"to":           to,
+		"account_id":   customerAccountID,
+		"key_id":       keyID,
+		"key_name":     keyName,
+		"extra_value1": extraValue1,
+		"report_name":  reportName,
+		"time_zone":    timeZone,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+	performanceQuery := "SELECT JSON_EXTRACT_STRING(value, 'campaign_id')  as campaignID, JSON_EXTRACT_STRING(value, 'ad_group_id') as adgroupID, JSON_EXTRACT_STRING(value, 'keyword_id') as keywordID, " +
+		"'$none' as adId, JSON_EXTRACT_STRING(value, ?) AS key_id, JSON_EXTRACT_STRING(value, ?) AS key_name, JSON_EXTRACT_STRING(value, ?) AS extra_value1, " +
+		"SUM(JSON_EXTRACT_STRING(value, 'impressions')) AS impressions, SUM(JSON_EXTRACT_STRING(value, 'clicks')) AS clicks, " +
+		"SUM(JSON_EXTRACT_STRING(value, 'spend')) AS total_spend, source FROM integration_documents " +
+		"where project_id = ? AND source IN (?) AND customer_account_id IN (?) AND document_type = ? AND timestamp between ? AND ? " +
+		"group by campaignID, adgroupID, keywordID, key_id, key_name, extra_value1, source"
+
+	sources, _ := store.GetCustomAdsSourcesByProject(projectID)
+	params := []interface{}{keyID, keyName, extraValue1, projectID, sources, customerAccountID, reportType,
+		U.GetDateAsStringIn(from, U.TimeZoneString(timeZone)), U.GetDateAsStringIn(to, U.TimeZoneString(timeZone))}
+	rows, tx, err, reqID := store.ExecQueryWithContext(performanceQuery, params)
+	if err != nil {
+		logCtx.WithError(err).Error("SQL Query failed")
+		return nil, nil, err
+	}
+	defer U.CloseReadQuery(rows, tx)
+
+	marketingDataIDMap, allRows := model.ProcessRow(rows, reportName, logCtx, model.CustomAdsIntegration, reqID)
+	return marketingDataIDMap, allRows, nil
+}
+
 func (store *MemSQL) PullCustomDimensionData(projectID int64, attributionKey string, marketingReport *model.MarketingReports, logCtx log.Entry) error {
 
 	// Custom Dimensions are support only for Campaign and Adgroup currently
@@ -492,44 +621,58 @@ func (store *MemSQL) PullCustomDimensionData(projectID int64, attributionKey str
 		return nil
 	}
 	enableBingAdsAttribution := C.GetConfig().EnableBingAdsAttribution
+	isCustomAdsIntegrationDone := store.IsCustomAdsAvailable(projectID)
+	sources, _ := store.GetCustomAdsSourcesByProject(projectID)
 
 	var err error
 	switch attributionKey {
 	case model.AttributionKeyCampaign:
 
-		marketingReport.AdwordsCampaignDimensions, err = store.PullSmartProperties(projectID, model.SmartPropertyCampaignID, model.SmartPropertyCampaignName, model.SmartPropertyAdGroupID, model.SmartPropertyAdGroupName, model.ChannelAdwords, 1, attributionKey, logCtx)
+		marketingReport.AdwordsCampaignDimensions, err = store.PullSmartProperties(projectID, model.SmartPropertyCampaignID, model.SmartPropertyCampaignName, model.SmartPropertyAdGroupID, model.SmartPropertyAdGroupName, []string{model.ChannelAdwords}, 1, attributionKey, logCtx)
 		if err != nil {
 			return err
 		}
-		marketingReport.FacebookCampaignDimensions, err = store.PullSmartProperties(projectID, model.SmartPropertyCampaignID, model.SmartPropertyCampaignName, model.SmartPropertyAdGroupID, model.SmartPropertyAdGroupName, model.ChannelFacebook, 1, attributionKey, logCtx)
+		marketingReport.FacebookCampaignDimensions, err = store.PullSmartProperties(projectID, model.SmartPropertyCampaignID, model.SmartPropertyCampaignName, model.SmartPropertyAdGroupID, model.SmartPropertyAdGroupName, []string{model.ChannelFacebook}, 1, attributionKey, logCtx)
 		if err != nil {
 			return err
 		}
-		marketingReport.LinkedinCampaignDimensions, err = store.PullSmartProperties(projectID, model.SmartPropertyCampaignID, model.SmartPropertyCampaignName, model.SmartPropertyAdGroupID, model.SmartPropertyAdGroupName, model.ChannelLinkedin, 1, attributionKey, logCtx)
+		marketingReport.LinkedinCampaignDimensions, err = store.PullSmartProperties(projectID, model.SmartPropertyCampaignID, model.SmartPropertyCampaignName, model.SmartPropertyAdGroupID, model.SmartPropertyAdGroupName, []string{model.ChannelLinkedin}, 1, attributionKey, logCtx)
 		if err != nil {
 			return err
 		}
 		if enableBingAdsAttribution {
-			marketingReport.BingadsCampaignDimensions, err = store.PullSmartProperties(projectID, model.SmartPropertyCampaignID, model.SmartPropertyCampaignName, model.SmartPropertyAdGroupID, model.SmartPropertyAdGroupName, model.ChannelBingads, 1, attributionKey, logCtx)
+			marketingReport.BingadsCampaignDimensions, err = store.PullSmartProperties(projectID, model.SmartPropertyCampaignID, model.SmartPropertyCampaignName, model.SmartPropertyAdGroupID, model.SmartPropertyAdGroupName, []string{model.ChannelBingads}, 1, attributionKey, logCtx)
+			if err != nil {
+				return err
+			}
+		}
+		if isCustomAdsIntegrationDone {
+			marketingReport.CustomAdsCampaignDimensions, err = store.PullSmartProperties(projectID, model.SmartPropertyCampaignID, model.SmartPropertyCampaignName, model.SmartPropertyAdGroupID, model.SmartPropertyAdGroupName, sources, 1, attributionKey, logCtx)
 			if err != nil {
 				return err
 			}
 		}
 	case model.FieldAdgroupName:
-		marketingReport.AdwordsAdgroupDimensions, err = store.PullSmartProperties(projectID, model.SmartPropertyCampaignID, model.SmartPropertyCampaignName, model.SmartPropertyAdGroupID, model.SmartPropertyAdGroupName, model.ChannelAdwords, 2, attributionKey, logCtx)
+		marketingReport.AdwordsAdgroupDimensions, err = store.PullSmartProperties(projectID, model.SmartPropertyCampaignID, model.SmartPropertyCampaignName, model.SmartPropertyAdGroupID, model.SmartPropertyAdGroupName, []string{model.ChannelAdwords}, 2, attributionKey, logCtx)
 		if err != nil {
 			return err
 		}
-		marketingReport.FacebookAdgroupDimensions, err = store.PullSmartProperties(projectID, model.SmartPropertyCampaignID, model.SmartPropertyCampaignName, model.SmartPropertyAdGroupID, model.SmartPropertyAdGroupName, model.ChannelFacebook, 2, attributionKey, logCtx)
+		marketingReport.FacebookAdgroupDimensions, err = store.PullSmartProperties(projectID, model.SmartPropertyCampaignID, model.SmartPropertyCampaignName, model.SmartPropertyAdGroupID, model.SmartPropertyAdGroupName, []string{model.ChannelFacebook}, 2, attributionKey, logCtx)
 		if err != nil {
 			return err
 		}
-		marketingReport.LinkedinAdgroupDimensions, err = store.PullSmartProperties(projectID, model.SmartPropertyCampaignID, model.SmartPropertyCampaignName, model.SmartPropertyAdGroupID, model.SmartPropertyAdGroupName, model.ChannelLinkedin, 2, attributionKey, logCtx)
+		marketingReport.LinkedinAdgroupDimensions, err = store.PullSmartProperties(projectID, model.SmartPropertyCampaignID, model.SmartPropertyCampaignName, model.SmartPropertyAdGroupID, model.SmartPropertyAdGroupName, []string{model.ChannelLinkedin}, 2, attributionKey, logCtx)
 		if err != nil {
 			return err
 		}
 		if enableBingAdsAttribution {
-			marketingReport.BingadsAdgroupDimensions, err = store.PullSmartProperties(projectID, model.SmartPropertyCampaignID, model.SmartPropertyCampaignName, model.SmartPropertyAdGroupID, model.SmartPropertyAdGroupName, model.ChannelBingads, 2, attributionKey, logCtx)
+			marketingReport.BingadsAdgroupDimensions, err = store.PullSmartProperties(projectID, model.SmartPropertyCampaignID, model.SmartPropertyCampaignName, model.SmartPropertyAdGroupID, model.SmartPropertyAdGroupName, []string{model.ChannelBingads}, 2, attributionKey, logCtx)
+			if err != nil {
+				return err
+			}
+		}
+		if isCustomAdsIntegrationDone {
+			marketingReport.CustomAdsAdgroupDimensions, err = store.PullSmartProperties(projectID, model.SmartPropertyCampaignID, model.SmartPropertyCampaignName, model.SmartPropertyAdGroupID, model.SmartPropertyAdGroupName, sources, 2, attributionKey, logCtx)
 			if err != nil {
 				return err
 			}
@@ -539,7 +682,7 @@ func (store *MemSQL) PullCustomDimensionData(projectID int64, attributionKey str
 }
 
 // PullSmartProperties Pulls Smart Properties
-func (store *MemSQL) PullSmartProperties(projectID int64, campaignIDPlaceHolder string, campaignNamePlaceHolder string, adgroupIDPlaceHolder string, adgroupNamePlaceHolder string, sourceChannelPlaceHolder string, objectType int, attributionKey string, logCtx log.Entry) (map[string]model.MarketingData, error) {
+func (store *MemSQL) PullSmartProperties(projectID int64, campaignIDPlaceHolder string, campaignNamePlaceHolder string, adgroupIDPlaceHolder string, adgroupNamePlaceHolder string, sourceChannelPlaceHolder []string, objectType int, attributionKey string, logCtx log.Entry) (map[string]model.MarketingData, error) {
 	logFields := log.Fields{
 		"campaign_id_place_holder":    campaignIDPlaceHolder,
 		"campaign_name_place_holder":  campaignNamePlaceHolder,
@@ -555,7 +698,7 @@ func (store *MemSQL) PullSmartProperties(projectID int64, campaignIDPlaceHolder 
 	stmt := "SELECT JSON_EXTRACT_STRING(object_property, ?) AS campaignID,  JSON_EXTRACT_STRING(object_property, ?) AS campaignName, " +
 		"JSON_EXTRACT_STRING(object_property, ?) AS adgroupID,  JSON_EXTRACT_STRING(object_property, ?) AS adgroupName, " +
 		"properties FROM smart_properties " +
-		"where project_id = ? AND source = ? AND object_type = ?"
+		"where project_id = ? AND source IN (?) AND object_type = ?"
 
 	params := []interface{}{campaignIDPlaceHolder, campaignNamePlaceHolder, adgroupIDPlaceHolder, adgroupNamePlaceHolder, projectID, sourceChannelPlaceHolder, objectType}
 	rows, tx, err, reqID := store.ExecQueryWithContext(stmt, params)
@@ -591,18 +734,10 @@ func (store *MemSQL) PullSmartProperties(projectID int64, campaignIDPlaceHolder 
 			logCtx1.WithError(err).Error("Failed to decode smart properties. Ignoring row and continuing")
 			continue
 		}
-		marketData := model.MarketingData{
-			Name:    _campaignName,
-			ID:      _campaignID,
-			Channel: sourceChannelPlaceHolder,
-		}
 		key := model.GetKeyForCustomDimensionsName(_campaignID, _campaignName, _adgroupID, _adgroupName, attributionKey)
+
 		if key == "" {
 			continue
-		}
-		if objectType == model.SmartPropertyRulesTypeAliasToType["ad_group"] { // 1: "campaign", 2: "ad_group"
-			marketData.Name = _adgroupName
-			marketData.ID = _adgroupID
 		}
 		// added custom dimensions
 		(*propertiesMap)["campaign_id"] = _campaignID
@@ -621,7 +756,7 @@ func (store *MemSQL) PullSmartProperties(projectID int64, campaignIDPlaceHolder 
 
 	}
 	logCtx1.WithFields(log.Fields{"CustomDebug": "True", "ProjectId": projectID,
-		"UnitType": objectType, "Source": sourceChannelPlaceHolder}).
+		"Source": sourceChannelPlaceHolder}).
 		Info("Pull Smart Properties")
 	U.LogReadTimeWithQueryRequestID(startReadTime, reqID, &logFields)
 

@@ -103,7 +103,7 @@ function UserProfiles({
   integration?.int_clear_bit ||
   integrationV1?.int_completed ||
   bingAds?.accounts ||
-  marketo?.status || integrationV1?.int_slack;
+  marketo?.status || integrationV1?.int_slack || integration?.lead_squared_config !== null;
 
 
   useEffect(() => {
@@ -288,7 +288,6 @@ function UserProfiles({
       <Modal
         title={null}
         visible={isModalVisible}
-        onCancel={handleCancel}
         className={'fa-modal--full-width'}
         footer={null}
         closable={null}

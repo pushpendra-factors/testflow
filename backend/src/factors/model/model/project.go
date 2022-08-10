@@ -60,14 +60,14 @@ type ProjectString struct {
 const (
 	JobsMetadataKeyNextSessionStartTimestamp = "next_session_start_timestamp"
 	JobsMetadataColumnName                   = "jobs_metadata"
-	LastModifiedTimeRef                      = "LAST_MODIFIED_TIME_REF"
+	/*LastModifiedTimeRef                      = "LAST_MODIFIED_TIME_REF"
 	TouchPointPropertyValueAsProperty        = "Property"
 	TouchPointPropertyValueAsConstant        = "Constant"
 
 	TouchPointRuleTypeEmails   = "Emails"
 	TouchPointRuleTypeMeetings = "Meetings"
 	TouchPointRuleTypeCalls    = "Calls"
-	TouchPointRuleTypeForms    = "Form_Submissions"
+	TouchPointRuleTypeForms    = "Form_Submissions"*/
 )
 
 const DefaultProjectName = "My Project"
@@ -86,7 +86,7 @@ type SFTouchPointRule struct {
 	PropertiesMap     map[string]TouchPointPropertyValue `json:"properties_map"`
 }
 
-type TouchPointFilter struct {
+/*type TouchPointFilter struct {
 	Property string `json:"pr"`
 	// Entity: user or event.
 	Entity string `json:"en"`
@@ -95,7 +95,7 @@ type TouchPointFilter struct {
 	Operator  string `json:"op"`
 	Value     string `json:"va"`
 	LogicalOp string `json:"lop"`
-}
+}*/
 
 // DefaultSalesforceTouchPointsRules returns default query params and order (utm then qp) for various event properties.
 func DefaultSalesforceTouchPointsRules() SalesforceTouchPoints {
@@ -116,10 +116,10 @@ type HSTouchPointRule struct {
 	PropertiesMap     map[string]TouchPointPropertyValue `json:"properties_map"`
 }
 
-type TouchPointPropertyValue struct {
+/*type TouchPointPropertyValue struct {
 	Type  string `json:"ty"`
 	Value string `json:"va"`
-}
+}*/
 
 // DefaultHubspotTouchPointsRules returns default query params and order (utm then qp) for various event properties.
 func DefaultHubspotTouchPointsRules() HubspotTouchPoints {

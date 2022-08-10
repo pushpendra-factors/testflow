@@ -120,6 +120,13 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id/user/event_names", GetEventNamesByUserHandler)
 	authRouteGroup.GET(":project_id/groups/:group_name/event_names", GetEventNamesByGroupHandler)
 
+	// Offline Touch Point rules
+	authRouteGroup.GET("/:project_id/otp_rules", responseWrapper(GetOTPRuleHandler))
+	authRouteGroup.POST("/:project_id/otp_rules", responseWrapper(CreateOTPRuleHandler))
+	authRouteGroup.PUT("/:project_id/otp_rules/:rule_id", responseWrapper(UpdateOTPRuleHandler))
+	authRouteGroup.GET("/:project_id/otp_rules/:rule_id", responseWrapper(SearchOTPRuleHandler))
+	authRouteGroup.DELETE("/:project_id/otp_rules/:rule_id", responseWrapper(DeleteOTPRuleHandler))
+
 	// Dashboard templates
 	authCommonRouteGroup := r.Group(routePrefix + ROUTE_COMMON_ROOT)
 	authCommonRouteGroup.GET("/dashboard_templates/:id/search", SearchTemplateHandler)
@@ -218,6 +225,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id/settings", GetProjectSettingHandler)
 	authRouteGroup.GET("/:project_id/v1/settings", V1.GetProjectSettingHandler)
 	authRouteGroup.PUT("/:project_id/settings", UpdateProjectSettingsHandler)
+	authRouteGroup.PUT("/:project_id/leadsquaredsettings", UpdateLeadSquaredConfigHandler)
 
 	// V1 Routes
 	authRouteGroup.GET("/:project_id/v1/event_names", V1.GetEventNamesHandler)
@@ -284,6 +292,8 @@ func InitAppRoutes(r *gin.Engine) {
 	// Timeline
 	authRouteGroup.POST("/:project_id/v1/profiles/users", responseWrapper(V1.GetProfileUsersHandler))
 	authRouteGroup.GET("/:project_id/v1/profiles/users/:id", responseWrapper(V1.GetProfileUserDetailsHandler))
+	authRouteGroup.POST("/:project_id/v1/profiles/accounts", responseWrapper(V1.GetProfileAccountsHandler))
+	authRouteGroup.GET("/:project_id/v1/profiles/accounts/:id", responseWrapper(V1.GetProfileAccountDetailsHandler))
 
 	// weekly insights, explain
 	authRouteGroup.PUT("/:project_id/v1/weeklyinsights", mid.SetLoggedInAgentInternalOnly(), UpdateWeeklyInsightsHandler)
@@ -315,7 +325,7 @@ func InitSDKServiceRoutes(r *gin.Engine) {
 	sdkRouteGroup.POST("/user/identify", SDKIdentifyHandler)
 	sdkRouteGroup.POST("/user/add_properties", SDKAddUserPropertiesHandler)
 	sdkRouteGroup.POST("/adwords/documents/add", IH.DataServiceAdwordsAddDocumentHandler)
-	sdkRouteGroup.POST("/capture_click", SDKCaptureButtonClickAsEventHandler)
+	sdkRouteGroup.POST("/capture_click", SDKCaptureClickHandler)
 
 	ampSdkRouteGroup := r.Group(ROUTE_SDK_AMP_ROOT)
 	ampSdkRouteGroup.POST("/event/track", SDKAMPTrackHandler)

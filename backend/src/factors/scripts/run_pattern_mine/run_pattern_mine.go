@@ -47,6 +47,8 @@ func main() {
 		"--local_disk_tmp_dir=/usr/local/var/factors/local_disk/tmp pass directory")
 	bucketName := flag.String("bucket_name", "/usr/local/var/factors/cloud_storage", "")
 	numRoutinesFlag := flag.Int("num_routines", 3, "No of routines")
+	numWorkersFlag := flag.Int("num_beam_workers", 100, "Num of beam workers")
+
 	projectIdFlag := flag.String("project_ids", "",
 		"Optional: Project Id. A comma separated list of project Ids and supports '*' for all projects. ex: 1,2,6,9")
 	projectIdsToSkipFlag := flag.String("project_ids_to_skip", "", "Optional: Comma separated values of projects to skip")
@@ -107,6 +109,7 @@ func main() {
 		beamConfig.Ctx = context.Background()
 		beamConfig.Pipe = beam.NewPipeline()
 		beamConfig.Scp = beamConfig.Pipe.Root()
+		beamConfig.NumWorker = *numWorkersFlag
 		if beam.Initialized() == true {
 			log.Info("Initalized all Beam Inits")
 		} else {

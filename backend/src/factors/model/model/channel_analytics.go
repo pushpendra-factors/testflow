@@ -20,6 +20,7 @@ const (
 	OldFacebookAds = "facebook_ads"
 	OldLinkedinAds = "linkedin_ads"
 	NewBingAds     = "Bing Ads"
+	CustomAds      = "custom_ads"
 )
 
 type ChannelConfigResult struct {
@@ -440,16 +441,19 @@ func checkIfChannelReq(channelName string, filters []ChannelFilterV1) bool {
 	return isChannelReq
 }
 
-func GetRequiredChannels(filters []ChannelFilterV1) (bool, bool, bool, bool, int) {
-	isAdwordsReq, isFacebookReq, isLinkedinReq, isBingAdsReq := false, false, false, false
+func GetRequiredChannels(filters []ChannelFilterV1, customSources []string) (bool, bool, bool, bool, bool, int) {
+	isAdwordsReq, isFacebookReq, isLinkedinReq, isBingAdsReq, isCustomAdsReq := false, false, false, false, false
 	if len(filters) == 0 {
-		return true, true, true, true, http.StatusOK
+		return true, true, true, true, true, http.StatusOK
 	}
 	isAdwordsReq = checkIfChannelReq(GoogleAds, filters) || checkIfChannelReq(OldGoogleAds, filters)
 	isFacebookReq = checkIfChannelReq(FacebookAds, filters) || checkIfChannelReq(OldFacebookAds, filters)
 	isLinkedinReq = checkIfChannelReq(LinkedinAds, filters) || checkIfChannelReq(OldLinkedinAds, filters)
 	isBingAdsReq = checkIfChannelReq(ChannelBingAds, filters) || checkIfChannelReq(NewBingAds, filters)
-	return isAdwordsReq, isFacebookReq, isLinkedinReq, isBingAdsReq, http.StatusOK
+	for _, source := range customSources {
+		isCustomAdsReq = isCustomAdsReq || checkIfChannelReq(source, filters)
+	}
+	return isAdwordsReq, isFacebookReq, isLinkedinReq, isBingAdsReq, isCustomAdsReq, http.StatusOK
 }
 
 // Migration of Channel to KPI specific.

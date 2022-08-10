@@ -178,3 +178,52 @@ func UpdateExplainHandler(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, resp)
 }
+
+type updateLeadSquaredConfigParams struct {
+	AccessKey string `json:"access_key"`
+	SecretKey string `json:"secret_key"`
+	Host      string `json:"host"`
+}
+
+func getUpdateLeadSquaredConfigParams(c *gin.Context) (*updateLeadSquaredConfigParams, error) {
+	params := updateLeadSquaredConfigParams{}
+	err := c.BindJSON(&params)
+	if err != nil {
+		return nil, err
+	}
+	return &params, nil
+}
+
+func UpdateLeadSquaredConfigHandler(c *gin.Context) {
+
+	logCtx := log.WithFields(log.Fields{
+		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
+	})
+
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
+		logCtx.Error("Update project_settings for explain failed. Failed to get project_id.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid project id."})
+		return
+	}
+
+	params, err := getUpdateLeadSquaredConfigParams(c)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to parse UpdateLeadSquaredConfigParams")
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	errCode := store.GetStore().UpdateLeadSquaredConfig(projectId, params.AccessKey, params.Host, params.SecretKey)
+
+	if errCode != http.StatusOK {
+		c.AbortWithStatusJSON(http.StatusInternalServerError,
+			gin.H{"error": "Project setting update for lead squared config failed for explain"})
+		return
+	}
+
+	resp := map[string]string{
+		"status": "success",
+	}
+	c.JSON(http.StatusOK, resp)
+}

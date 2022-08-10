@@ -399,6 +399,13 @@ func checkSmartPropertyWithTypeAndSource(filters []model.ChannelFilterV1, groupB
 				if filter.Object == "ad_groups" {
 					adGroupProperty = true
 				}
+			case "customads":
+				if filter.Object == "campaigns" {
+					campaignProperty = true
+				}
+				if filter.Object == "ad_groups" {
+					adGroupProperty = true
+				}
 			}
 		}
 	}
@@ -434,7 +441,15 @@ func checkSmartPropertyWithTypeAndSource(filters []model.ChannelFilterV1, groupB
 				if groupBy.Object == "ad_groups" {
 					adGroupProperty = true
 				}
+			case "customads":
+				if groupBy.Object == "campaigns" {
+					campaignProperty = true
+				}
+				if groupBy.Object == "ad_groups" {
+					adGroupProperty = true
+				}
 			}
+
 		}
 	}
 	return campaignProperty, adGroupProperty

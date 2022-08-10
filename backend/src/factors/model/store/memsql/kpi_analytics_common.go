@@ -51,7 +51,7 @@ func (store *MemSQL) ExecuteKPIQueryGroup(projectID int64, reqID string, kpiQuer
 		} else {
 			var result []model.QueryResult
 			var statusCode int
-			if query.Category == model.ChannelCategory {
+			if query.Category == model.ChannelCategory || query.Category == model.CustomChannelCategory {
 				result, statusCode = store.ExecuteKPIQueryForChannels(projectID, reqID, query)
 			} else if query.Category == model.EventCategory {
 				result, statusCode = store.ExecuteKPIQueryForEvents(projectID, reqID, query, enableOptimisedFilterOnEventUserQuery)

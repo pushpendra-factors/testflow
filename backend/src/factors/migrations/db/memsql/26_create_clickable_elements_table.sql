@@ -1,4 +1,3 @@
--- create clickable_elements table
 CREATE TABLE IF NOT EXISTS clickable_elements (
     project_id bigint NOT NULL,
     id text NOT NULL,
@@ -9,5 +8,7 @@ CREATE TABLE IF NOT EXISTS clickable_elements (
     enabled boolean DEFAULT false,
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
-    PRIMARY KEY(project_id, id)
+    SHARD KEY (project_id, display_name, element_type),
+    KEY (project_id, display_name, element_type) USING CLUSTERED COLUMNSTORE,
+    UNIQUE KEY(project_id, display_name, element_type) USING HASH
 );

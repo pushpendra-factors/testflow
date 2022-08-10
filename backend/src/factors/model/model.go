@@ -82,7 +82,7 @@ type Model interface {
 
 	// channel_analytics
 	GetChannelFilterValuesV1(projectID int64, channel, filterObject, filterProperty string, reqID string) (model.ChannelFilterValues, int)
-	GetAllChannelFilterValues(projectID int64, filterObject, filterProperty string, reqID string) ([]interface{}, int)
+	GetAllChannelFilterValues(projectID int64, filterObject, filterProperty string, source string, reqID string) ([]interface{}, int)
 	RunChannelGroupQuery(projectID int64, queries []model.ChannelQueryV1, reqID string) (model.ChannelResultGroupV1, int)
 	ExecuteChannelQueryV1(projectID int64, query *model.ChannelQueryV1, reqID string) (*model.ChannelQueryResultV1, int)
 	ExecuteSQL(sqlStatement string, params []interface{}, logCtx *log.Entry) ([]string, [][]interface{}, error)
@@ -215,6 +215,7 @@ type Model interface {
 	GetEvent(projectID int64, userId string, id string) (*model.Event, int)
 	GetEventById(projectID int64, id, userID string) (*model.Event, int)
 	GetLatestEventOfUserByEventNameId(projectID int64, userId string, eventNameId string, startTimestamp int64, endTimestamp int64) (*model.Event, int)
+	GetEventsByEventNameId(projectID int64, eventNameId string, startTimestamp int64, endTimestamp int64) ([]model.Event, int)
 	GetRecentEventPropertyKeysWithLimits(projectID int64, eventName string, starttime int64, endtime int64, eventsLimit int) ([]U.Property, error)
 	GetRecentEventPropertyValuesWithLimits(projectID int64, eventName string, property string, valuesLimit int, rowsLimit int, starttime int64, endtime int64) ([]U.PropertyValue, string, error)
 	UpdateEventProperties(projectID int64, id, userID string, properties *U.PropertiesMap, updateTimestamp int64, optionalEventUserProperties *postgres.Jsonb) int
@@ -240,9 +241,10 @@ type Model interface {
 	GetHubspotFormEvents(projectID int64, userId string, timestamps []interface{}) ([]model.Event, int)
 
 	// clickable_elements
-	UpdateButtonClickEventById(projectID int64, request *model.SDKButtonElementAttributesPayload) (int, error)
-	CreateButtonClickEventById(projectId int64, buttonClick *model.SDKButtonElementAttributesPayload) (int, error)
-	GetButtonClickEventById(projectID int64, displayName string, elementType string) (*model.ClickableElements, int)
+	UpsertCountAndCheckEnabledClickableElement(projectID int64, payload *model.CaptureClickPayload) (isEnabled bool, status int, err error)
+	CreateClickableElementById(projectId int64, payload *model.CaptureClickPayload) (int, error)
+	GetClickableElementById(projectID int64, displayName string, elementType string) (*model.ClickableElements, int)
+	ToggleEnabledClickableElement(projectId int64, displayName string, elementType string) int
 
 	// facebook_document
 	CreateFacebookDocument(projectID int64, document *model.FacebookDocument) int
@@ -342,6 +344,7 @@ type Model interface {
 	IsBingIntegrationAvailable(projectID int64) bool
 	GetAllLeadSquaredEnabledProjects() (map[int64]model.LeadSquaredConfig, error)
 	UpdateLeadSquaredFirstTimeSyncStatus(projectId int64) int
+	UpdateLeadSquaredConfig(projectId int64, accessKey string, host string, secretkey string) int
 	EnableWeeklyInsights(projectId int64) int
 	EnableExplain(projectId int64) int
 	DisableWeeklyInsights(projectId int64) int
@@ -384,6 +387,15 @@ type Model interface {
 	DeleteTemplate(templateId string) int
 	SearchTemplateWithTemplateID(templateId string) (model.DashboardTemplate, int)
 	GetAllTemplates() ([]model.DashboardTemplate, int)
+
+	// offline touchpoints
+	CreateOTPRule(projectId int64, rule *model.OTPRule) (*model.OTPRule, int, string)
+	GetALLOTPRuleWithProjectId(projectID int64) ([]model.OTPRule, int)
+	GetAllRulesDeletedNotDeleted(projectID int64) ([]model.OTPRule, int)
+	GetOTPRuleWithRuleId(projectID int64, ruleID string) (*model.OTPRule, int)
+	GetAnyOTPRuleWithRuleId(projectID int64, ruleID string) (*model.OTPRule, int)
+	DeleteOTPRule(projectID int64, ruleID string) (int, string)
+	UpdateOTPRule(projectID int64, ruleID string, rule *model.OTPRule) (*model.OTPRule, int)
 
 	// salesforce_document
 	GetSalesforceSyncInfo() (model.SalesforceSyncInfo, int)
@@ -493,6 +505,7 @@ type Model interface {
 	GetLatestMetaForFacebookForGivenDays(projectID int64, days int) ([]model.ChannelDocumentsWithFields, []model.ChannelDocumentsWithFields)
 	GetLatestMetaForLinkedinForGivenDays(projectID int64, days int) ([]model.ChannelDocumentsWithFields, []model.ChannelDocumentsWithFields)
 	GetLatestMetaForBingAdsForGivenDays(projectID int64, days int) ([]model.ChannelDocumentsWithFields, []model.ChannelDocumentsWithFields)
+	GetLatestMetaForCustomAdsForGivenDays(projectID int64, source string, days int) ([]model.ChannelDocumentsWithFields, []model.ChannelDocumentsWithFields)
 	BuildAndCreateSmartPropertyFromChannelDocumentAndRule(smartPropertyRule *model.SmartPropertyRules, rule model.Rule,
 		channelDocument model.ChannelDocumentsWithFields, source string) int
 	DeleteSmartPropertyByRuleID(projectID int64, ruleID string) (int, int, int)
@@ -671,9 +684,21 @@ type Model interface {
 	IsMarketoIntegrationAvailable(projectID int64) bool
 
 	// Timeline
-	GetProfileUsersListByProjectId(projectID int64, payload model.UTListPayload) ([]model.Contact, int)
+	GetProfilesListByProjectId(projectID int64, payload model.TimelinePayload, profileType string) ([]model.Profile, int)
 	GetProfileUserDetailsByID(projectID int64, identity string, isAnonymous string) (*model.ContactDetails, int)
 	GetDisplayNameForTimelineEvents(projectId int64, eventName string, properties *map[string]interface{}) string
 	GetGroupsForUserTimeline(projectID int64, userDetails model.ContactDetails) []model.GroupsInfo
-	GetUserActivitiesAndSessionCount(projectID int64, identity string, userId string) ([]model.ContactActivity, float64)
+	GetUserActivitiesAndSessionCount(projectID int64, identity string, userId string) ([]model.UserActivity, float64)
+	GetProfileAccountDetailsByID(projectID int64, id string) (*model.AccountDetails, int)
+
+	// Ads import
+	GetAllAdsImportEnabledProjects() (map[int64]map[string]model.LastProcessedAdsImport, error)
+	UpdateLastProcessedAdsData(updatedFields map[string]model.LastProcessedAdsImport, projectId int64) int
+	GetCustomAdsSourcesByProject(projectID int64) ([]string, int)
+	IsCustomAdsAvailable(projectID int64) bool
+
+	// custom ads
+	GetKPIConfigsForCustomAds(projectID int64, reqID string) ([]map[string]interface{}, int)
+	GetKPIConfigsForCustomAdsFromDB(projectID int64) []map[string]interface{}
+	GetCustomChannelFilterValuesV1(projectID int64, source, channel, filterObject, filterProperty string, reqID string) (model.ChannelFilterValues, int)
 }

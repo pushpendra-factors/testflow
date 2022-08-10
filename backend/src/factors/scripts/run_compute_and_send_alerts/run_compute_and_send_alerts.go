@@ -58,6 +58,7 @@ func main() {
 	projectIdFlag := flag.String("project_id", "", "Comma separated list of project ids to run")
 	lookback := flag.Int("lookback", 30, "lookback_for_delta lookup")
 	enableDryRunAlerts := flag.Bool("dry_run_alerts", false, "")
+	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
 	enableOptimisedFilterOnEventUserQuery := flag.Int("enable_optimised_filter_on_event_user_query",
 		0, "Enables filter optimisation logic for events and users query.")
 
@@ -99,6 +100,8 @@ func main() {
 		RedisPortPersistent:                   *redisPortPersistent,
 		EnableOptimisedFilterOnEventUserQuery: *enableOptimisedFilterOnEventUserQuery != 0,
 	}
+	defaultHealthcheckPingID := C.HealthcheckComputeAndSendAlertsPingID
+	healthcheckPingID := C.GetHealthcheckPingID(defaultHealthcheckPingID, *overrideHealthcheckPingID)
 	C.InitConf(config)
 	C.InitSenderEmail(C.GetFactorsSenderEmail())
 	C.InitMailClient(config.AWSKey, config.AWSSecret, config.AWSRegion)
@@ -137,18 +140,30 @@ func main() {
 		configs["modelType"] = T.ModelTypeWeek
 		status := taskWrapper.TaskFuncWithProjectId("ComputeAndSendAlertWeekly", *lookback, projectIdsArray, T.ComputeAndSendAlerts, configs)
 		log.Info(status)
+		if status["err"] != nil {
+			C.PingHealthcheckForFailure(healthcheckPingID, status)
+		}
+		C.PingHealthcheckForSuccess(healthcheckPingID, status)
 	}
 
 	if *isMonthlyEnabled {
 		configs["modelType"] = T.ModelTypeMonth
 		status := taskWrapper.TaskFuncWithProjectId("ComputeAndSendAlertMonthly", *lookback, projectIdsArray, T.ComputeAndSendAlerts, configs)
 		log.Info(status)
+		if status["err"] != nil {
+			C.PingHealthcheckForFailure(healthcheckPingID, status)
+		}
+		C.PingHealthcheckForSuccess(healthcheckPingID, status)
 	}
 
 	if *isQuarterlyEnabled {
 		configs["modelType"] = T.ModelTypeQuarter
 		status := taskWrapper.TaskFuncWithProjectId("ComputeAndSendAlertQuarterly", *lookback, projectIdsArray, T.ComputeAndSendAlerts, configs)
 		log.Info(status)
+		if status["err"] != nil {
+			C.PingHealthcheckForFailure(healthcheckPingID, status)
+		}
+		C.PingHealthcheckForSuccess(healthcheckPingID, status)
 	}
 
 }
