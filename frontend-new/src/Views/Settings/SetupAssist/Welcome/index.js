@@ -21,11 +21,11 @@ const Welcome = ({currentAgent, activeProject, getHubspotContact, fetchDemoProje
     }
 
     useEffect(() => {
-        let email = currentAgent.email;
+        let email = currentAgent?.email;
         getHubspotContact(email).then((res) => {
-            setownerID(res.data.hubspot_owner_id)
+            setownerID(res?.data?.hubspot_owner_id)
         }).catch((err) => {
-            console.log(err.data.error)
+            console.log(err?.data?.error)
         });
     }, []);
 

@@ -89,6 +89,7 @@ const ConfigureDP = (props) => {
 
   useEffect(() => {
     fetchFactorsTrackedEvents(activeProject.id);
+    fetchFactorsTrackedUserProperties(activeProject.id); 
   }, [activeProject]);
 
   const onChangeEventDD = (grp, value) => {
