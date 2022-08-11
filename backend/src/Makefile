@@ -140,6 +140,13 @@ upload-add-session: export IMAGE_NAME=add-session-job
 upload-add-session: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/add-session-job:$(TAG)
 
+pack-import-ads:
+	docker build -t us.gcr.io/factors-$(ENV)/import-ads-job:$(TAG) -f Dockerfile.import_ads_job .
+
+upload-import-ads: export IMAGE_NAME=import-ads-job
+upload-import-ads: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/import-ads-job:$(TAG)
+
 pack-delete-dangling-sessions:
 	docker build -t us.gcr.io/factors-$(ENV)/delete-dangling-sessions-job:$(TAG) -f Dockerfile.delete_dangling_sessions_job .
 

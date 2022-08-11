@@ -1194,6 +1194,15 @@ func (store *MemSQL) UpdateLeadSquaredConfig(projectId int64, accessKey string, 
 		}
 		return http.StatusInternalServerError
 	}
+	if accessKey == "" || host == "" || secretkey == "" {
+		if err := db.Model(&model.ProjectSetting{}).
+			Where("project_id = ?", projectId).
+			Update("lead_squared_config", nil).Error; err != nil {
+			log.WithError(err).Error("Updating leadsquared config failed")
+			return http.StatusInternalServerError
+		}
+		return http.StatusOK
+	}
 	var leadSquaredConfig model.LeadSquaredConfig
 	if projectSetting.LeadSquaredConfig != nil {
 		err := U.DecodePostgresJsonbToStructType(projectSetting.LeadSquaredConfig, &leadSquaredConfig)

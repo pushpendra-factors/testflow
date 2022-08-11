@@ -226,6 +226,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id/v1/settings", V1.GetProjectSettingHandler)
 	authRouteGroup.PUT("/:project_id/settings", UpdateProjectSettingsHandler)
 	authRouteGroup.PUT("/:project_id/leadsquaredsettings", UpdateLeadSquaredConfigHandler)
+	authRouteGroup.DELETE("/:project_id/leadsquaredsettings/remove", RemoveLeadSquaredConfigHandler)
 
 	// V1 Routes
 	authRouteGroup.GET("/:project_id/v1/event_names", V1.GetEventNamesHandler)
