@@ -29,7 +29,10 @@ import {
 import { BREAKDOWN_TYPES } from '../../constants';
 
 export const defaultSortProp = ({ breakdown }) => {
-  const dateTimeBreakdownIndex = findIndex(breakdown, b => b.prop_type === BREAKDOWN_TYPES.DATETIME);
+  const dateTimeBreakdownIndex = findIndex(
+    breakdown,
+    (b) => b.prop_type === BREAKDOWN_TYPES.DATETIME
+  );
   if (dateTimeBreakdownIndex > -1) {
     return [
       {
@@ -142,7 +145,13 @@ export const getTableColumns = (
       ),
       dataIndex: `${e.property} - ${index}`,
       fixed: !index ? 'left' : '',
-      width: 200
+      width: 200,
+      render: (d) => {
+        if (e.prop_type === 'numerical') {
+          return <NumFormat number={d} />;
+        }
+        return d;
+      }
     };
   });
 
@@ -150,7 +159,9 @@ export const getTableColumns = (
 
   const countColumn = {
     title: getClickableTitleSorter(
-      <div className="break-all">${title}: ${labelsObj[page]}</div>,
+      <div className="break-all">
+        ${title}: ${labelsObj[page]}
+      </div>,
       { key: EVENT_COUNT_KEY, type: 'numerical', subtype: null },
       currentSorter,
       handleSorting,

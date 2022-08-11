@@ -30,7 +30,10 @@ import { getKpiLabel, getFormattedKpiValue } from '../kpiAnalysis.helpers';
 import { BREAKDOWN_TYPES } from '../../constants';
 
 export const getDefaultSortProp = ({ kpis, breakdown }) => {
-  const dateTimeBreakdownIndex = findIndex(breakdown, b => b.prop_type === BREAKDOWN_TYPES.DATETIME);
+  const dateTimeBreakdownIndex = findIndex(
+    breakdown,
+    (b) => b.prop_type === BREAKDOWN_TYPES.DATETIME
+  );
   if (dateTimeBreakdownIndex > -1) {
     return [
       {
@@ -404,6 +407,17 @@ export const formatDataInSeriesFormat = (
       resultantData[bIdx].data[idx] = kpiVals[currentEventIndex];
     }
   });
+
+  if (resultantData.length > 1000) {
+    const resultsWithAtLeastWithOneDataPoint = resultantData.filter((d) =>
+      d.data.some((item) => item !== 0)
+    );
+    return {
+      categories: differentDates,
+      data: resultsWithAtLeastWithOneDataPoint
+    };
+  }
+
   return {
     categories: differentDates,
     data: resultantData
