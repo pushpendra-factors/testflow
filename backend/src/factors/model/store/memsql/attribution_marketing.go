@@ -396,7 +396,7 @@ func (store *MemSQL) PullFacebookMarketingData(projectID int64, from, to int64, 
 		"SUM(JSON_EXTRACT_STRING(value, 'impressions')) AS impressions, SUM(JSON_EXTRACT_STRING(value, 'inline_link_clicks')) AS clicks, " +
 		"SUM(JSON_EXTRACT_STRING(value, 'spend')) AS total_cost FROM facebook_documents " +
 		"where project_id = ? AND customer_ad_account_id IN (?) AND type = ? AND timestamp between ? AND ? " +
-		"group by campaignID, adgroupID, keywordID, adID, key_id, key_name, extra_value1"
+		"group by campaignID, adgroupID, keywordID, adID, key_id, key_name, extra_value1 " + "order by timestamp"
 
 	params := []interface{}{keyID, keyName, extraValue1, projectID, customerAccountIDs, reportType,
 		U.GetDateAsStringIn(from, U.TimeZoneString(timeZone)), U.GetDateAsStringIn(to, U.TimeZoneString(timeZone))}
@@ -435,7 +435,7 @@ func (store *MemSQL) PullLinkedinMarketingData(projectID int64, from, to int64, 
 		"SUM(JSON_EXTRACT_STRING(value, 'impressions')) AS impressions, SUM(JSON_EXTRACT_STRING(value, 'clicks')) AS clicks, " +
 		"SUM(JSON_EXTRACT_STRING(value, 'costInLocalCurrency')) AS total_spend FROM linkedin_documents " +
 		"where project_id = ? AND customer_ad_account_id IN (?) AND type = ? AND timestamp between ? AND ? " +
-		"group by campaignID, adgroupID, keywordID, adID, key_id, key_name, extra_value1"
+		"group by campaignID, adgroupID, keywordID, adID, key_id, key_name, extra_value1 " + "order by timestamp"
 
 	params := []interface{}{keyID, keyName, extraValue1, projectID, customerAccountIDs, reportType,
 		U.GetDateAsStringIn(from, U.TimeZoneString(timeZone)), U.GetDateAsStringIn(to, U.TimeZoneString(timeZone))}
@@ -471,7 +471,7 @@ func (store *MemSQL) PullBingAdsMarketingData(projectID int64, from, to int64, c
 		"SUM(JSON_EXTRACT_STRING(value, 'impressions')) AS impressions, SUM(JSON_EXTRACT_STRING(value, 'clicks')) AS clicks, " +
 		"SUM(JSON_EXTRACT_STRING(value, 'spend')) AS total_spend FROM integration_documents " +
 		"where project_id = ? AND source = ? AND customer_account_id IN (?) AND document_type = ? AND timestamp between ? AND ? " +
-		"group by campaignID, adgroupID, keywordID, key_id, key_name, extra_value1"
+		"group by campaignID, adgroupID, keywordID, key_id, key_name, extra_value1 " + "order by timestamp"
 
 	params := []interface{}{keyID, keyName, extraValue1, projectID, model.BingAdsIntegration, customerAccountIDs, reportType,
 		U.GetDateAsStringIn(from, U.TimeZoneString(timeZone)), U.GetDateAsStringIn(to, U.TimeZoneString(timeZone))}
