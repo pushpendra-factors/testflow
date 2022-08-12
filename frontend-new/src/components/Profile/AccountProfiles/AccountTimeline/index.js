@@ -1,7 +1,7 @@
 import { Spin } from 'antd';
 import React, { useEffect, useMemo } from 'react';
 import InfoCard from '../../../FaTimeline/InfoCard';
-import { groups, hoverEvents } from '../../utils';
+import { groups, hoverEvents, getLoopLength } from '../../utils';
 import { CaretUpOutlined, CaretRightOutlined } from '@ant-design/icons';
 
 function AccountTimeline({
@@ -44,51 +44,89 @@ function AccountTimeline({
           </tr>
         </thead>
         <tbody>
-          {Object.entries(formattedData).map(([timestamp, allEvents]) => {
-            return (
-              <tr>
-                <td>
-                  <div className='py-4'>{timestamp}</div>
-                </td>
-                {timeline.map((data) => {
-                  if (!allEvents[data.user_id]) return <td></td>;
-                  return (
-                    <td>
-                      <div className='timeline-events'>
-                        {allEvents[data.user_id].map((event) => {
-                          return (
-                            <div className='timeline-events--event'>
-                              <InfoCard
-                                title={event.display_name}
-                                event_name={event.event_name}
-                                properties={event?.properties || {}}
-                                trigger={
-                                  hoverEvents.includes(event.display_name)
-                                    ? 'hover'
-                                    : []
-                                }
-                              >
-                                <div className='timeline-events--event--tag truncate'>
-                                  {event.display_name === 'Page View'
-                                    ? event.event_name
-                                    : event.display_name}
-                                  {hoverEvents.includes(event.display_name) ? (
-                                    <CaretRightOutlined />
-                                  ) : null}
-                                </div>
-                              </InfoCard>
+          {Object.entries(formattedData).map(
+            ([timestamp, allEvents], index) => {
+              return (
+                <tr>
+                  <td>
+                    <div className='py-4'>{timestamp}</div>
+                  </td>
+                  {timeline.map((data) => {
+                    const loopLength = getLoopLength(allEvents);
+                    let evList = [];
 
+                    if (!allEvents[data.user_id]) {
+                      for (let i = 0; i < loopLength; i++) {
+                        evList.push(
+                          <div className='timeline-events--event'>
+                            <div
+                              className='timeline-events--event--tag'
+                              style={{ visibility: 'hidden' }}
+                            />
+                            {index ==
+                              Object.entries(formattedData).length - 1 &&
+                            i === loopLength - 1 ? null : (
                               <div className='timeline-events--event--tail' />
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </td>
-                  );
-                })}
-              </tr>
-            );
-          })}
+                            )}
+                          </div>
+                        );
+                      }
+                    } else {
+                      allEvents[data.user_id].forEach((event, evIndex) => {
+                        evList.push(
+                          <div className='timeline-events--event'>
+                            <InfoCard
+                              title={event.display_name}
+                              event_name={event.event_name}
+                              properties={event?.properties || {}}
+                              trigger={
+                                hoverEvents.includes(event.display_name)
+                                  ? 'hover'
+                                  : []
+                              }
+                            >
+                              <div className='timeline-events--event--tag truncate'>
+                                {event.display_name === 'Page View'
+                                  ? event.event_name
+                                  : event.display_name}
+                                {hoverEvents.includes(event.display_name) ? (
+                                  <CaretRightOutlined />
+                                ) : null}
+                              </div>
+                            </InfoCard>
+                            {index ==
+                              Object.entries(formattedData).length - 1 &&
+                            evIndex === loopLength - 1 ? null : (
+                              <div className='timeline-events--event--tail' />
+                            )}
+                          </div>
+                        );
+                      });
+                      while (
+                        evList.length < loopLength &&
+                        index !== Object.entries(formattedData).length - 1
+                      ) {
+                        evList.push(
+                          <div className='timeline-events--event'>
+                            <div
+                              className='timeline-events--event--tag'
+                              style={{ visibility: 'hidden' }}
+                            />
+                            <div className='timeline-events--event--tail' />
+                          </div>
+                        );
+                      }
+                    }
+                    return (
+                      <td>
+                        <div className='timeline-events'>{evList}</div>
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            }
+          )}
         </tbody>
       </table>
     </div>

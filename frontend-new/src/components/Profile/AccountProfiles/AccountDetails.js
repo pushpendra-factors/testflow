@@ -61,7 +61,6 @@ function AccountDetails({ onCancel, accountDetails }) {
                       alignItems: 'center',
                     }}
                   >
-                    W
                     <SVG name='user' size={40} />
                   </Avatar>
                 </Col>
@@ -74,7 +73,7 @@ function AccountDetails({ onCancel, accountDetails }) {
                     extraClass={'m-0'}
                     weight={'bold'}
                   >
-                    {accountDetails?.data?.industry}
+                    {accountDetails?.data?.name}
                   </Text>
                 </Col>
               </Row>
