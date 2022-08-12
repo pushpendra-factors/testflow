@@ -86,10 +86,10 @@
     border-color: $fa-color--mono-6;
   }
 
-  // :global(tr.ant-table-row-selected > td),
-  // :global(.ant-table-tbody > tr.ant-table-row:hover > td) {
-  //   background: $fa-color--white;
-  // }
+  :global(tr.ant-table-row-selected > td),
+  :global(.ant-table-tbody > tr.ant-table-row:hover > td) {
+    background: $fa-color--white;
+  }
 
   :global(.ant-table-selection) {
     display: none;
