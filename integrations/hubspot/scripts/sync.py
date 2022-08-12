@@ -501,7 +501,7 @@ def sync_contacts(project_id, refresh_token, api_key, last_sync_timestamp, sync_
     has_more = True
     count = 0
     hubspot_request_handler = get_hubspot_request_handler(project_id, refresh_token, api_key)
-    parameter_dict = {'count': PAGE_SIZE }
+    parameter_dict = {'count': PAGE_SIZE, 'formSubmissionMode': 'all' }
     properties, ok = get_all_properties_by_doc_type(project_id,"contacts", hubspot_request_handler)
     if not ok:
         log.error("Failure loading properties for project_id %d on sync_contacts", project_id)
