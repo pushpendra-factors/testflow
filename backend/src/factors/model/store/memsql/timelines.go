@@ -38,7 +38,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	if projectID == 0 {
 		return nil, http.StatusBadRequest
 	}
-
+	var selectString string
 	var isGroupUserString string
 	var sourceString string
 
@@ -63,16 +63,33 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 			log.Error("Failed to get a group user.")
 			return nil, http.StatusBadRequest
 		}
-		// Where Strings
+
+		// Strings
 		isGroupUserString = "(is_group_user=1 OR is_group_user IS NOT NULL)"
 		if payload.Source == "All" && hubspotExists && salesforceExists {
+			selectString = fmt.Sprintf(`id AS identity, 
+				COALESCE(JSON_EXTRACT_STRING(properties, '%s'), JSON_EXTRACT_STRING(properties, '%s'), JSON_EXTRACT_STRING(properties, '%s')) AS name,
+				COALESCE(JSON_EXTRACT_STRING(properties, '%s'), JSON_EXTRACT_STRING(properties, '%s')) as country, 
+				updated_at AS last_activity`,
+				U.UP_COMPANY, U.GP_HUBSPOT_COMPANY_NAME, U.GP_SALESFORCE_ACCOUNT_NAME, U.GP_HUBSPOT_COMPANY_COUNTRY, U.GP_SALESFORCE_ACCOUNT_BILLINGCOUNTRY)
 			sourceString = fmt.Sprintf(" AND (group_%d_id IS NOT NULL OR group_%d_id IS NOT NULL)", groupNameIDMap[model.GROUP_NAME_HUBSPOT_COMPANY], groupNameIDMap[model.GROUP_NAME_SALESFORCE_ACCOUNT])
 		} else if (payload.Source == "All" || payload.Source == model.GROUP_NAME_HUBSPOT_COMPANY) && hubspotExists {
+			selectString = fmt.Sprintf(`id AS identity, 
+				COALESCE(JSON_EXTRACT_STRING(properties, '%s'), JSON_EXTRACT_STRING(properties, '%s')) AS name,
+				JSON_EXTRACT_STRING(properties, '%s') as country, 
+				updated_at AS last_activity`,
+				U.UP_COMPANY, U.GP_HUBSPOT_COMPANY_NAME, U.GP_HUBSPOT_COMPANY_COUNTRY)
 			sourceString = fmt.Sprintf(" AND group_%d_id IS NOT NULL", groupNameIDMap[model.GROUP_NAME_HUBSPOT_COMPANY])
 		} else if (payload.Source == "All" || payload.Source == model.GROUP_NAME_SALESFORCE_ACCOUNT) && salesforceExists {
+			selectString = fmt.Sprintf(`id AS identity, 
+				COALESCE(JSON_EXTRACT_STRING(properties, '%s'), JSON_EXTRACT_STRING(properties, '%s')) AS name, 
+				JSON_EXTRACT_STRING(properties, '%s') as country, 
+				updated_at AS last_activity`,
+				U.UP_COMPANY, U.GP_SALESFORCE_ACCOUNT_NAME, U.GP_SALESFORCE_ACCOUNT_BILLINGCOUNTRY)
 			sourceString = fmt.Sprintf(" AND group_%d_id IS NOT NULL", groupNameIDMap[model.GROUP_NAME_SALESFORCE_ACCOUNT])
 		}
 	} else if profileType == model.PROFILE_TYPE_USER {
+		selectString = fmt.Sprintf("COALESCE(customer_user_id, id) AS identity, ISNULL(customer_user_id) AS is_anonymous, JSON_EXTRACT_STRING(properties, '%s') AS country, MAX(updated_at) AS last_activity", U.UP_COUNTRY)
 		isGroupUserString = "(is_group_user=0 OR is_group_user IS NULL)"
 		if model.UserSourceMap[payload.Source] == model.UserSourceWeb {
 			sourceString = "AND (source=" + strconv.Itoa(model.UserSourceMap[payload.Source]) + " OR source IS NULL)"
@@ -89,7 +106,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	if len(payload.Filters) > 0 {
 		filterString, filterParams, err := buildWhereFromProperties(projectID, payload.Filters, 0)
 		if filterString != "" {
-			filterString = " AND " + filterString
+			filterString = " AND (" + filterString + ")"
 		}
 		if err != nil {
 			return nil, http.StatusBadRequest
@@ -121,13 +138,6 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	var profiles []model.Profile
 	parameters = parameters[:len(parameters)-1]
 	parameters = append(parameters, minMax.MinUpdatedAt, minMax.MaxUpdatedAt)
-
-	var selectString string
-	if profileType == model.PROFILE_TYPE_ACCOUNT {
-		selectString = fmt.Sprintf("id AS identity, JSON_EXTRACT_STRING(properties, '%s') AS name, updated_at AS last_activity", U.UP_COMPANY)
-	} else if profileType == model.PROFILE_TYPE_USER {
-		selectString = fmt.Sprintf("COALESCE(customer_user_id, id) AS identity, ISNULL(customer_user_id) AS is_anonymous, JSON_EXTRACT_STRING(properties, '%s') AS country, MAX(updated_at) AS last_activity", U.UP_COUNTRY)
-	}
 
 	err = db.Table("users").Select(selectString).Where(whereString+` AND updated_at BETWEEN ? AND ?`, parameters...).Group("identity").Order("last_activity DESC").Limit(1000).Find(&profiles).Error
 	if err != nil {
@@ -345,31 +355,53 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string) (*
 		return nil, http.StatusBadRequest
 	}
 
-	db := C.GetServices().Db
-	var accountDetails model.AccountDetails
-	err := db.Table("users").Select("JSON_EXTRACT_STRING(properties, ?) AS name, JSON_EXTRACT_STRING(properties, ?) AS country", U.UP_COMPANY, U.UP_COUNTRY).
-		Where("project_id=? AND id=?", projectID, id).
-		Order("updated_at desc").
-		Limit(1).
-		Find(&accountDetails).Error
-	if err != nil {
-		log.WithField("status", err).Error("Failed to get account properties.")
-		return nil, http.StatusInternalServerError
-	}
-
 	groups, errCode := store.GetGroups(projectID)
 	if errCode != http.StatusFound {
 		log.WithField("status", errCode).Error("Failed to get groups.")
 	}
 	var groupUserString string
+	groupNameIDMap := make(map[string]int)
 	if len(groups) > 0 {
 		for index, group := range groups {
+			if group.Name == model.GROUP_NAME_HUBSPOT_COMPANY || group.Name == model.GROUP_NAME_SALESFORCE_ACCOUNT {
+				groupNameIDMap[group.Name] = group.ID
+			}
 			if index == 0 {
 				groupUserString = fmt.Sprintf("group_%d_user_id='%s' ", group.ID, id)
 			} else {
 				groupUserString = groupUserString + fmt.Sprintf(" OR group_%d_user_id='%s' ", group.ID, id)
 			}
 		}
+	}
+	_, hubspotExists := groupNameIDMap[model.GROUP_NAME_HUBSPOT_COMPANY]
+	_, salesforceExists := groupNameIDMap[model.GROUP_NAME_SALESFORCE_ACCOUNT]
+
+	var selectString string
+	if hubspotExists && salesforceExists {
+		selectString = fmt.Sprintf(`COALESCE(JSON_EXTRACT_STRING(properties, '%s'), JSON_EXTRACT_STRING(properties, '%s'), JSON_EXTRACT_STRING(properties, '%s')) AS name,
+			COALESCE(JSON_EXTRACT_STRING(properties, '%s'), JSON_EXTRACT_STRING(properties, '%s')) as industry,
+			COALESCE(JSON_EXTRACT_STRING(properties, '%s'), JSON_EXTRACT_STRING(properties, '%s')) as number_of_employees,
+			COALESCE(JSON_EXTRACT_STRING(properties, '%s'), JSON_EXTRACT_STRING(properties, '%s')) as country`,
+			U.UP_COMPANY, U.GP_HUBSPOT_COMPANY_NAME, U.GP_SALESFORCE_ACCOUNT_NAME, U.GP_HUBSPOT_COMPANY_INDUSTRY, U.GP_SALESFORCE_ACCOUNT_INDUSTRY, U.GP_HUBSPOT_COMPANY_NUMBEROFEMPLOYEES, U.GP_SALESFORCE_ACCOUNT_NUMBEROFEMPLOYEES, U.GP_HUBSPOT_COMPANY_COUNTRY, U.GP_SALESFORCE_ACCOUNT_BILLINGCOUNTRY)
+	} else if hubspotExists {
+		selectString = fmt.Sprintf(`COALESCE(JSON_EXTRACT_STRING(properties, '%s'), JSON_EXTRACT_STRING(properties, '%s')) AS name,
+			JSON_EXTRACT_STRING(properties, '%s') as industry,
+			JSON_EXTRACT_STRING(properties, '%s') as number_of_employees,
+			JSON_EXTRACT_STRING(properties, '%s') AS country`,
+			U.UP_COMPANY, U.GP_HUBSPOT_COMPANY_NAME, U.GP_HUBSPOT_COMPANY_INDUSTRY, U.GP_HUBSPOT_COMPANY_NUMBEROFEMPLOYEES, U.GP_HUBSPOT_COMPANY_COUNTRY)
+	} else if salesforceExists {
+		selectString = fmt.Sprintf(`COALESCE(JSON_EXTRACT_STRING(properties, '%s'), JSON_EXTRACT_STRING(properties, '%s')) AS name,
+			JSON_EXTRACT_STRING(properties, '%s') as industry,
+			JSON_EXTRACT_STRING(properties, '%s') as number_of_employees,
+			JSON_EXTRACT_STRING(properties, '%s') AS country`,
+			U.UP_COMPANY, U.GP_SALESFORCE_ACCOUNT_NAME, U.GP_SALESFORCE_ACCOUNT_INDUSTRY, U.GP_SALESFORCE_ACCOUNT_NUMBEROFEMPLOYEES, U.GP_SALESFORCE_ACCOUNT_BILLINGCOUNTRY)
+	}
+	db := C.GetServices().Db
+	var accountDetails model.AccountDetails
+	err := db.Table("users").Select(selectString).Where("project_id=? AND id=?", projectID, id).Order("updated_at desc").Limit(1).Find(&accountDetails).Error
+	if err != nil {
+		log.WithField("status", err).Error("Failed to get account properties.")
+		return nil, http.StatusInternalServerError
 	}
 
 	queryStr := []string{"SELECT JSON_EXTRACT_STRING(properties, ?) AS user_name, id AS user_id FROM users WHERE project_id = ? AND", groupUserString}

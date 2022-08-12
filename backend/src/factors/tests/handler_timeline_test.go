@@ -496,7 +496,18 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 	companies := []string{"FactorsAI", "Accenture", "Talentica", "Honeywell", "Meesho"}
 	countries := []string{"India", "Ireland", "India", "US", "India"}
 	for i := 0; i < numUsers; i++ {
-		m := map[string]string{"$company": companies[i], "$country": countries[i]}
+		var m map[string]string
+		if i%2 == 0 {
+			m = map[string]string{
+				U.GP_SALESFORCE_ACCOUNT_NAME:           companies[i],
+				U.GP_SALESFORCE_ACCOUNT_BILLINGCOUNTRY: countries[i],
+			}
+		} else {
+			m = map[string]string{
+				U.GP_HUBSPOT_COMPANY_NAME:    companies[i],
+				U.GP_HUBSPOT_COMPANY_COUNTRY: countries[i],
+			}
+		}
 		propertiesJSON, err := json.Marshal(m)
 		if err != nil {
 			log.WithError(err).Fatal("Marshal error.")
@@ -543,10 +554,19 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 	filters := model.QueryProperty{
 		Entity:    "user_g",
 		Type:      "categorical",
-		Property:  "$country",
+		Property:  U.GP_SALESFORCE_ACCOUNT_BILLINGCOUNTRY,
 		Operator:  "equals",
 		Value:     "India",
 		LogicalOp: "AND",
+	}
+	payload.Filters = append(payload.Filters, filters)
+	filters = model.QueryProperty{
+		Entity:    "user_g",
+		Type:      "categorical",
+		Property:  U.GP_HUBSPOT_COMPANY_COUNTRY,
+		Operator:  "equals",
+		Value:     "US",
+		LogicalOp: "OR",
 	}
 	payload.Filters = append(payload.Filters, filters)
 
@@ -557,13 +577,19 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 		resp := make([]model.Profile, 0)
 		err := json.Unmarshal(jsonResponse, &resp)
 		assert.Nil(t, err)
-		assert.Equal(t, len(resp), 3)
+		assert.Equal(t, len(resp), 4)
 		assert.Condition(t, func() bool {
-			for _, user := range resp {
+			for index, user := range resp {
 				sort.Strings(companies)
 				i := sort.SearchStrings(companies, user.Name)
 				assert.Condition(t, func() bool { return i < len(companies) })
+				sort.Strings(countries)
+				j := sort.SearchStrings(countries, user.Country)
+				assert.Condition(t, func() bool { return j < len(countries) })
 				assert.NotNil(t, user.LastActivity)
+				if index > 0 {
+					assert.Condition(t, func() bool { return resp[index].LastActivity.Unix() <= resp[index-1].LastActivity.Unix() })
+				}
 			}
 			return true
 		})
@@ -600,9 +626,16 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 	assert.NotNil(t, agent)
 	assert.Nil(t, err)
 
-	props := map[string]string{
-		"$company": "Freshworks",
-		"$country": "India",
+	props := map[string]interface{}{
+		"$company":                                "Freshworks",
+		U.GP_HUBSPOT_COMPANY_NAME:                 "Freshworks-HS",
+		U.GP_SALESFORCE_ACCOUNT_NAME:              "Freshworks-SF",
+		U.GP_HUBSPOT_COMPANY_COUNTRY:              "India",
+		U.GP_SALESFORCE_ACCOUNT_BILLINGCOUNTRY:    "India",
+		U.GP_HUBSPOT_COMPANY_INDUSTRY:             "Freshworks-HS",
+		U.GP_SALESFORCE_ACCOUNT_INDUSTRY:          "Freshworks-SF",
+		U.GP_HUBSPOT_COMPANY_NUMBEROFEMPLOYEES:    5000,
+		U.GP_SALESFORCE_ACCOUNT_NUMBEROFEMPLOYEES: 5000,
 	}
 	propertiesJSON, err := json.Marshal(props)
 	if err != nil {
@@ -630,7 +663,7 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, status)
 	assert.NotNil(t, group1)
 
-	// 10 Associated Users
+	// 5 Associated Users
 	m := map[string]string{"$name": "Some Name"}
 	userProps, err := json.Marshal(m)
 	if err != nil {
@@ -640,7 +673,7 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 	customerEmail = "@example.com"
 	boolTrue = false
 	users := make([]model.User, 0)
-	numUsers := 10
+	numUsers := 5
 	for i := 1; i <= numUsers; i++ {
 		associatedUserId, _ := store.GetStore().CreateUser(&model.User{
 			ProjectId:      projectID,
@@ -813,6 +846,8 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Contains(t, resp.Name, "Freshworks")
 		assert.Equal(t, resp.Country, "India")
+		assert.Equal(t, resp.Industry, "Freshworks-HS")
+		assert.Equal(t, resp.NumberOfEmployees, uint64(5000))
 		assert.Condition(t, func() bool {
 			assert.Condition(t, func() bool { return len(resp.AccountTimeline) > 0 })
 			for _, userTimeline := range resp.AccountTimeline {
