@@ -229,15 +229,12 @@ function SparkChart({
                   {addQforQuarter(frequency) + moment(d.date).format(format)}
                 </Text>
                 <div className="flex items-center col-gap-1">
-                  <Text
-                    weight="bold"
-                    type="title"
-                    color="grey-6"
-                    level={5}
-                  >
-                    {metricType != null
-                      ? getFormattedKpiValue({ value: d[event], metricType })
-                      : numberWithCommas(formatCount(d[event], 1))}
+                  <Text weight="bold" type="title" color="grey-6" level={5}>
+                    {metricType != null && metricType !== '' ? (
+                      getFormattedKpiValue({ value: d[event], metricType })
+                    ) : (
+                      <NumFormat number={d[event]} />
+                    )}
                   </Text>
                   {comparisonEnabled && (
                     <>
@@ -262,12 +259,14 @@ function SparkChart({
                     color="grey-6"
                     level={5}
                   >
-                    {metricType != null
-                      ? getFormattedKpiValue({
-                          value: d['compareValue'],
-                          metricType
-                        })
-                      : numberWithCommas(formatCount(d['compareValue'], 1))}
+                    {metricType != null && metricType !== '' ? (
+                      getFormattedKpiValue({
+                        value: d['compareValue'],
+                        metricType
+                      })
+                    ) : (
+                      <NumFormat number={d['compareValue']} />
+                    )}
                   </Text>
                 </div>
               )}

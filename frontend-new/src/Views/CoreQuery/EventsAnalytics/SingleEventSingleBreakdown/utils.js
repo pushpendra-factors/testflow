@@ -90,7 +90,7 @@ export const getTableColumns = (
       width: '50%',
       fixed: 'left',
       render: (d) => {
-        if (e.prop_type === 'numerical') {
+        if (e.prop_type === 'numerical' && !isNaN(d)) {
           return <NumFormat number={d} />;
         }
         return d;
@@ -226,7 +226,13 @@ export const getDateBasedColumns = (
       ),
       dataIndex: e.property,
       width: 200,
-      fixed: 'left'
+      fixed: 'left',
+      render: (d) => {
+        if (e.prop_type === 'numerical' && !isNaN(d)) {
+          return <NumFormat number={d} />;
+        }
+        return d;
+      }
     };
   });
 

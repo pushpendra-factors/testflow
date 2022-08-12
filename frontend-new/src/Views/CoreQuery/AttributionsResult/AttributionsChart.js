@@ -317,7 +317,7 @@ const AttributionsChart = forwardRef(
         } else {
           const availableFilters = [
             {
-              title: touchpoint,
+              title: touchpoint === 'ChannelGroup' ? 'Channel' : touchpoint,
               key: touchpoint,
               options: tableData
                 .map((data) => data[touchpoint])

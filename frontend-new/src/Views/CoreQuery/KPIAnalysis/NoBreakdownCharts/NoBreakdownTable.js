@@ -117,7 +117,7 @@ const NoBreakdownTable = ({
     const format = DATE_FORMATS[frequency] || DATE_FORMATS.date;
     return {
       fileName: 'KPI.csv',
-      data: activeTableData.map(({ index, label, date, ...rest }) => {
+      data: activeTableData.map(({ index, label, date, compareDate, ...rest }) => {
         if (chartType === CHART_TYPE_SPARKLINES) {
           for (const key in rest) {
             const metricType = get(
@@ -134,7 +134,8 @@ const NoBreakdownTable = ({
           }
           return {
             ...rest,
-            date: addQforQuarter(frequency) + moment(date).format(format)
+            date: addQforQuarter(frequency) + moment(date).format(format),
+            compareDate: addQforQuarter(frequency) + moment(compareDate).format(format)
           };
         }
         const metricType = get(

@@ -195,7 +195,7 @@ export const getTableColumns = (
       dataIndex: `${b.property} - ${index}`,
       width: 200,
       render: (d) => {
-        if (b.prop_type === 'numerical') {
+        if (b.prop_type === 'numerical' && !isNaN(d)) {
           return <NumFormat number={d} />;
         }
         return d;
@@ -261,7 +261,13 @@ export const getDateBasedColumns = (
         handleSorting
       ),
       dataIndex: `${b.property} - ${index}`,
-      width: 200
+      width: 200,
+      render: (d) => {
+        if (b.prop_type === 'numerical' && !isNaN(d)) {
+          return <NumFormat number={d} />;
+        }
+        return d;
+      }
     };
   });
   const format = DATE_FORMATS[frequency] || DATE_FORMATS.date;
