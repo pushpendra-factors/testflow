@@ -178,6 +178,14 @@ func GetDecodedSmartEventFilterExp(enFilterExp string) (*SmartCRMEventFilter, er
 	return &smartCRMEventFilter, nil
 }
 
+func GetCurrPropertyName(pName, source, objectType string) string {
+	return getCurrPropertyName(pName, source, objectType)
+}
+
+func GetPrevPropertyName(pName, source, objectType string) string {
+	return getPrevPropertyName(pName, source, objectType)
+}
+
 func getPrevPropertyName(pName, source, objectType string) string {
 	if pName == "" || source == "" || objectType == "" {
 		return ""

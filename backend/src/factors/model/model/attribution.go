@@ -3276,9 +3276,9 @@ func AddCustomDimensions(attributionData *map[string]*AttributionData, query *At
 	}
 
 	if query.AttributionKey == AttributionKeyCampaign {
-		enrichDimensionsWithName(attributionData, query.AttributionKeyCustomDimension, reports.AdwordsCampaignDimensions, reports.FacebookCampaignDimensions, reports.LinkedinCampaignDimensions, reports.BingadsCampaignDimensions, reports.CustomAdsCampaignDimensions, query.AttributionKey)
+		enrichDimensionsWithoutChannel(attributionData, query.AttributionKeyCustomDimension, reports.AdwordsCampaignDimensions, reports.FacebookCampaignDimensions, reports.LinkedinCampaignDimensions, reports.BingadsCampaignDimensions, query.AttributionKey)
 	} else if query.AttributionKey == AttributionKeyAdgroup {
-		enrichDimensionsWithName(attributionData, query.AttributionKeyCustomDimension, reports.AdwordsAdgroupDimensions, reports.FacebookAdgroupDimensions, reports.LinkedinAdgroupDimensions, reports.BingadsAdgroupDimensions, reports.CustomAdsAdgroupDimensions, query.AttributionKey)
+		enrichDimensionsWithoutChannel(attributionData, query.AttributionKeyCustomDimension, reports.AdwordsAdgroupDimensions, reports.FacebookAdgroupDimensions, reports.LinkedinAdgroupDimensions, reports.BingadsAdgroupDimensions, query.AttributionKey)
 	}
 }
 
@@ -3343,6 +3343,58 @@ func enrichDimensionsWithName(attributionData *map[string]*AttributionData, dime
 			default:
 				break
 			}
+		}
+	}
+}
+func enrichDimensionsWithoutChannel(attributionData *map[string]*AttributionData, dimensions []string, adwordsData, fbData, linkedinData, bingadsData map[string]MarketingData, attributionKey string) {
+
+	for _, dim := range dimensions {
+		for k, v := range *attributionData {
+
+			if (*attributionData)[k].CustomDimensions == nil {
+				(*attributionData)[k].CustomDimensions = make(map[string]interface{})
+			}
+			(*attributionData)[k].CustomDimensions[dim] = PropertyValueNone
+
+			customDimKey := GetKeyForCustomDimensionsName(v.MarketingInfo.CampaignID, v.MarketingInfo.CampaignName, v.MarketingInfo.AdgroupID, v.MarketingInfo.AdgroupName, attributionKey)
+			if customDimKey == "" {
+				continue
+			}
+			foundInAdwords := "NotFound"
+			if _, exists := adwordsData[customDimKey]; exists {
+				foundInAdwords = "Found"
+			}
+			log.WithFields(log.Fields{"CustomDebug": "True1", "CustomDimKey": customDimKey, "Found": foundInAdwords, "AttributionDataKey": k, "AttributionDataValue": v, "Channel": (*attributionData)[k].Channel}).Info("Enrich Custom Dimension")
+
+			if d, exists := adwordsData[customDimKey]; exists {
+				if val, found := d.CustomDimensions[dim]; found {
+					log.WithFields(log.Fields{"CustomDebug": "True2", "CustomDimKey": customDimKey, "data": adwordsData[customDimKey], "Val": val, "Found": foundInAdwords, "AttributionDataKey": k, "AttributionDataValue": v, "Channel": (*attributionData)[k].Channel}).Info("Enrich Adwords Custom Dimension")
+					(*attributionData)[k].CustomDimensions[dim] = val
+					continue
+				}
+			}
+
+			if d, exists := fbData[customDimKey]; exists {
+				if val, found := d.CustomDimensions[dim]; found {
+					(*attributionData)[k].CustomDimensions[dim] = val
+					continue
+				}
+			}
+
+			if d, exists := linkedinData[customDimKey]; exists {
+				if val, found := d.CustomDimensions[dim]; found {
+					(*attributionData)[k].CustomDimensions[dim] = val
+					continue
+				}
+			}
+
+			if d, exists := bingadsData[customDimKey]; exists {
+				if val, found := d.CustomDimensions[dim]; found {
+					(*attributionData)[k].CustomDimensions[dim] = val
+					continue
+				}
+			}
+
 		}
 	}
 }
