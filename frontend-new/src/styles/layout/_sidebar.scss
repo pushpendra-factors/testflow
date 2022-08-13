@@ -239,7 +239,7 @@
         width: 100%;
 
         th {
-            min-width: 250px;
+            min-width: 175px;
             max-width: 300px;
             padding: 9px 18px;
             border-bottom: 1px dashed #E7E9ED;
@@ -251,8 +251,6 @@
             z-index: 9;
 
             &:first-child {
-                min-width: 175px;
-                max-width: 175px;
                 left: 0;
                 border-right: 2px solid #E7E9ED;
                 z-index: 10;
@@ -272,6 +270,9 @@
                     position: -webkit-sticky;
                     position: sticky;
                     z-index: 8;
+                    div {
+                        width: 96px !important;
+                    }
                 }
 
                 .timeline-events {
@@ -285,6 +286,7 @@
                         &--tag {
                             width: fit-content;
                             max-width: 300px;
+                            min-height: 32px;
                             display: flex;
                             align-items: center;
                             padding: 3px 15px;
@@ -295,7 +297,7 @@
                         &--tail {
                             position: absolute;
                             left: 16px;
-                            height: 52px;
+                            height: 80px;
                             border-left: 2px solid #BAE7FF;
                         }
                     }

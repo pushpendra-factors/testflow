@@ -4,7 +4,6 @@ import { Text, SVG } from '../../factorsComponents';
 import AccountTimeline from './AccountTimeline';
 
 function AccountDetails({ onCancel, accountDetails }) {
-
   const [granularity, setGranularity] = useState('Hourly');
   const [collapse, setCollapse] = useState(true);
   const options = ['Timestamp', 'Hourly', 'Daily', 'Weekly', 'Monthly'];
@@ -62,7 +61,6 @@ function AccountDetails({ onCancel, accountDetails }) {
                       alignItems: 'center',
                     }}
                   >
-                    W
                     <SVG name='user' size={40} />
                   </Avatar>
                 </Col>
@@ -75,7 +73,7 @@ function AccountDetails({ onCancel, accountDetails }) {
                     extraClass={'m-0'}
                     weight={'bold'}
                   >
-                    {accountDetails?.industry}
+                    {accountDetails?.data?.name}
                   </Text>
                 </Col>
               </Row>
@@ -91,7 +89,7 @@ function AccountDetails({ onCancel, accountDetails }) {
                   </Text>
 
                   <Text type={'title'} level={7} extraClass={'m-0'}>
-                    {accountDetails?.industry}
+                    {accountDetails?.data?.industry}
                   </Text>
                 </Col>
               </Row>
@@ -106,7 +104,7 @@ function AccountDetails({ onCancel, accountDetails }) {
                     Country
                   </Text>
                   <Text type={'title'} level={7} extraClass={'m-0'}>
-                    {accountDetails?.country}
+                    {accountDetails?.data?.country}
                   </Text>
                 </Col>
               </Row>
@@ -121,7 +119,7 @@ function AccountDetails({ onCancel, accountDetails }) {
                     Employee Size
                   </Text>
                   <Text type={'title'} level={7} extraClass={'m-0'}>
-                    {accountDetails?.employee_count}
+                    {accountDetails?.data?.employee_count}
                   </Text>
                 </Col>
               </Row>
@@ -136,7 +134,7 @@ function AccountDetails({ onCancel, accountDetails }) {
                     Number of Users
                   </Text>
                   <Text type={'title'} level={7} extraClass={'m-0'}>
-                    {accountDetails?.active_users}
+                    {accountDetails?.data?.active_users}
                   </Text>
                 </Col>
               </Row>
@@ -152,8 +150,8 @@ function AccountDetails({ onCancel, accountDetails }) {
                     </Text>
                   </div>
                   <div className='flex justify-between'>
-                    <div className='flex justify-between'>
-                      <Button
+                    {/* <div className='flex justify-between'> */}
+                    {/* <Button
                         className='fa-dd--custom-btn'
                         type='text'
                         onClick={() => setCollapse(false)}
@@ -183,7 +181,7 @@ function AccountDetails({ onCancel, accountDetails }) {
                           <SVG name={'activity_filter'} />
                         </Button>
                       </Popover>
-                    </div>
+                    </div> */}
                     <div>
                       <Dropdown overlay={menu} placement='bottomRight'>
                         <Button
@@ -198,10 +196,11 @@ function AccountDetails({ onCancel, accountDetails }) {
                 </Col>
                 <Col span={24}>
                   <AccountTimeline
-                    timeline={accountDetails?.timeline}
+                    timeline={accountDetails?.data?.account_timeline || []}
                     collapse={collapse}
                     setCollapse={setCollapse}
                     granularity={granularity}
+                    loading={accountDetails?.isLoading}
                   />
                 </Col>
               </Col>

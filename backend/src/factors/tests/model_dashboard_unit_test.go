@@ -1181,6 +1181,7 @@ func TestCacheDashboardUnitsForProjectIDEventsGroupQuery(t *testing.T) {
 		assert.NotNil(t, dashboardQuery)
 
 		dashboardUnit, errCode, _ := store.GetStore().CreateDashboardUnit(project.ID, agent.UUID, &model.DashboardUnit{
+			ProjectID:    project.ID,
 			DashboardId:  dashboard.ID,
 			Presentation: model.PresentationCard,
 			QueryId:      dashboardQuery.ID,
@@ -1229,10 +1230,200 @@ func TestCacheDashboardUnitsForProjectIDEventsGroupQuery(t *testing.T) {
 				assert.True(t, result["cache"].(bool))
 			} else {
 				// Cache must be true in response.
-				assert.True(t, result["cache"].(bool))
+				assert.False(t, result["cache"].(bool))
+
 			}
 		}
 	}
+}
+
+func TestCacheDashboardUnitsForHardRefresh(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	project.TimeZone = string(U.TimeZoneStringIST)
+	store.GetStore().UpdateProject(project.ID, project)
+
+	_, errCode := store.GetStore().CreateOrGetUserCreatedEventName(&model.EventName{ProjectId: project.ID, Name: "$session"})
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	customerAccountID := U.RandomLowerAphaNumString(5)
+	_, errCode = store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{
+		IntAdwordsCustomerAccountId: &customerAccountID,
+	})
+
+	timezonestring := U.TimeZoneString(project.TimeZone)
+	dashboardName := U.RandomString(5)
+	dashboard, errCode := store.GetStore().CreateDashboard(project.ID, agent.UUID, &model.Dashboard{Name: dashboardName, Type: model.DashboardTypeProjectVisible})
+	assert.NotNil(t, dashboard)
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.Equal(t, dashboardName, dashboard.Name)
+
+	dashboardUnitQueriesMap := make(map[int64]map[string]interface{})
+	var dashboardQueriesStr = map[string]string{
+		model.QueryClassInsights:    `{"cl": "insights", "ec": "any_given_event", "fr": 1393612200, "to": 1396290599, "ty": "events_occurrence", "tz": "", "ewp": [{"na": "$session", "pr": []}], "gbp": [], "gbt": ""}`,
+		model.QueryClassFunnel:      `{"cl": "funnel", "ec": "any_given_event", "fr": 1594492200, "to": 1594578599, "ty": "unique_users", "tz": "", "ewp": [{"na": "$session", "pr": []}, {"na": "www.chargebee.com/schedule-a-demo", "pr": []}], "gbp": [], "gbt": ""}`,
+		model.QueryClassAttribution: `{"cl": "attribution", "meta": {"metrics_breakdown": true}, "query": {"ce": {"na": "$session", "pr": []}, "cm": ["Impressions", "Clicks", "Spend"], "to": 1596479399, "lbw": 1, "lfe": [], "from": 1595874600, "attribution_key": "Campaign", "attribution_methodology": "Last_Touch"}}`,
+		model.QueryClassKPI:         `{"cl":"kpi","qG":[{"ca":"events","pgUrl":"www.acme.com/pricing","dc":"page_views","me":["page_views"],"gBy":[],"fil":[],"gbt":"","fr":1633233600,"to":1633579199}],"gFil":[],"gGBy":[]}`,
+	}
+	var dashboardQueryClassList []string
+	var dashboardUnitsList []model.DashboardUnit
+	for queryClass, queryString := range dashboardQueriesStr {
+		dashboardQueryClassList = append(dashboardQueryClassList, queryClass)
+		queryJSON := postgres.Jsonb{json.RawMessage(queryString)}
+		baseQuery, err := model.DecodeQueryForClass(queryJSON, queryClass)
+		assert.Nil(t, err)
+
+		dashboardQuery, errCode, errMsg := store.GetStore().CreateQuery(project.ID, &model.Queries{
+			ProjectID: project.ID,
+			Type:      model.QueryTypeDashboardQuery,
+			Query:     postgres.Jsonb{json.RawMessage(queryString)},
+		})
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.Empty(t, errMsg)
+		assert.NotNil(t, dashboardQuery)
+
+		dashboardUnit, errCode, _ := store.GetStore().CreateDashboardUnit(project.ID, agent.UUID, &model.DashboardUnit{
+			DashboardId:  dashboard.ID,
+			Presentation: model.PresentationCard,
+			QueryId:      dashboardQuery.ID,
+		})
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.NotNil(t, dashboardUnit)
+		dashboardUnitsList = append(dashboardUnitsList, *dashboardUnit)
+		dashboardUnitQueriesMap[dashboardUnit.ID] = make(map[string]interface{})
+		dashboardUnitQueriesMap[dashboardUnit.ID]["class"] = queryClass
+		dashboardUnitQueriesMap[dashboardUnit.ID]["query"] = baseQuery
+	}
+	var reportCollector sync.Map
+	//dashboardUnitIDs := make([]uint64, 0)
+	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitsList, dashboardQueryClassList, 1, &reportCollector, C.EnableOptimisedFilterOnEventUserQuery())
+	assert.Equal(t, 4, updatedUnitsCount)
+
+	for rangeString, rangeFunction := range U.QueryDateRangePresets {
+
+		from, to, errCode := rangeFunction(timezonestring)
+		assert.Nil(t, errCode)
+		for unitID, queryMap := range dashboardUnitQueriesMap {
+			queryClass := queryMap["class"].(string)
+			query := queryMap["query"].(model.BaseQuery)
+			if queryClass == model.QueryClassAttribution {
+				f, _ := model.GetEffectiveTimeRangeForDashboardUnitAttributionQuery(from, to)
+				if f == 0 {
+					continue
+					assert.Nil(t, errCode)
+				}
+			}
+			assertMsg := fmt.Sprintf("Failed for class:%s:range:%s", queryClass, rangeString)
+
+			query.SetQueryDateRange(from, to)
+			// Refresh is sent as false.
+			w := sendAnalyticsQueryReq(r, queryClass, project.ID, agent, dashboard.ID, unitID, "", query, false, true)
+			assert.NotNil(t, w)
+			assert.Equal(t, http.StatusOK, w.Code, assertMsg)
+
+			var result map[string]interface{}
+			json.Unmarshal([]byte(w.Body.String()), &result)
+			// Cache must be true in response.
+			assert.True(t, result["cache"].(bool))
+
+			// Refresh is sent as true. Must return all recomputed presets.
+			w = sendAnalyticsQueryReq(r, queryClass, project.ID, agent, dashboard.ID, unitID, rangeString, query, true, true)
+			assert.NotNil(t, w)
+			assert.Equal(t, http.StatusOK, w.Code, assertMsg)
+
+			result = nil
+			json.Unmarshal([]byte(w.Body.String()), &result)
+
+			// Cache must be FALSE in response.
+			assert.False(t, result["cache"].(bool), assertMsg)
+		}
+	}
+}
+
+func TestCacheDashboardUnitsForLastComputed(t *testing.T) {
+
+	type args struct {
+		preset string
+		from   int64
+		to     int64
+	}
+
+	today1start, now, _ := U.GetQueryRangePresetTodayIn("")
+	thisWeekStart, thisWeekEnd, _ := U.GetCurrentWeekRange("")
+
+	prev1Start, prev30End, _ := U.GetQueryRangePresetLastMonthIn("")
+	prev1End := U.GetEndOfDayTimestampIn(prev1Start, "")
+	prev2End := prev1End + U.SECONDS_IN_A_DAY
+	prev3End := prev2End + U.SECONDS_IN_A_DAY
+
+	sundayStart, saturdayEnd, _ := U.GetQueryRangePresetLastWeekIn("")
+	sundayEnd := U.GetEndOfDayTimestampIn(sundayStart, "")
+	mondayEnd := sundayEnd + U.SECONDS_IN_A_DAY
+	tuesdayEnd := mondayEnd + U.SECONDS_IN_A_DAY
+
+	cache := []struct {
+		name      string
+		args      args
+		ProjectId int64
+	}{
+		{"cachePresetToday", args{preset: U.DateRangePresetToday, from: prev1Start, to: prev1End}, 100},
+		{"cachePresetYesterday", args{preset: U.DateRangePresetYesterday, from: prev1Start, to: prev1End}, 101},
+		{"cachePresetToday1", args{preset: U.DateRangePresetToday, from: prev1Start, to: prev1End - U.SECONDS_IN_A_DAY/2}, 101},
+		{"cachePresetToday2", args{preset: U.DateRangePresetToday, from: prev1Start, to: prev1End - U.SECONDS_IN_A_DAY/3}, 101},
+
+		{"cacheDatePresetCurrentMonth1", args{preset: U.DateRangePresetCurrentMonth, from: prev1Start, to: prev1End}, 100},
+		{"cacheDatePresetCurrentMonth2", args{preset: U.DateRangePresetCurrentMonth, from: prev1Start, to: prev2End}, 100},
+		{"cacheDatePresetCurrentMonth3", args{preset: U.DateRangePresetCurrentMonth, from: prev1Start, to: prev3End}, 100},
+
+		{"cacheDatePresetCurrentWeek1", args{preset: U.DateRangePresetCurrentWeek, from: sundayStart, to: sundayEnd}, 100},
+		{"cacheDatePresetCurrentWeek2", args{preset: U.DateRangePresetCurrentWeek, from: sundayStart, to: mondayEnd}, 100},
+		{"cacheDatePresetCurrentWeek3", args{preset: U.DateRangePresetCurrentWeek, from: sundayStart, to: tuesdayEnd}, 100},
+		{"cacheDatePresetCurrentWeek4", args{preset: U.DateRangePresetCurrentWeek, from: thisWeekStart, to: thisWeekEnd}, 100},
+	}
+	var key *redis.Key
+	for _, tt := range cache {
+		prefix := fmt.Sprintf("dashboard:query")
+		suffix := fmt.Sprintf("did:%d:duid:%d:preset:%s:from:%d:to:%d", 100, 100, tt.args.preset, tt.args.from, tt.args.to)
+
+		key = &redis.Key{
+			ProjectID: tt.ProjectId,
+			Prefix:    prefix,
+			Suffix:    suffix,
+		}
+
+		redis.SetPersistent(key, "1", 8400)
+	}
+
+	tests := []struct {
+		name      string
+		args      args
+		ProjectId int64
+		want      int64
+	}{
+		{"TestPresetLastMonth", args{preset: U.DateRangePresetLastMonth, from: prev1Start, to: prev30End}, 100, prev3End},
+		{"TestPresetYesterday", args{preset: U.DateRangePresetYesterday, from: prev1Start, to: prev1End}, 101, prev1End},
+		{"TestPresetThisMonth", args{preset: U.DateRangePresetCurrentMonth, from: prev1Start, to: prev30End}, 100, prev3End},
+		{"TestPresetLastWeek", args{preset: U.DateRangePresetLastWeek, from: sundayStart, to: saturdayEnd}, 100, tuesdayEnd},
+		{"TestPresetThisWeek", args{preset: U.DateRangePresetCurrentWeek, from: thisWeekStart, to: thisWeekEnd}, 100, thisWeekEnd},
+		{"TestPresetToday", args{preset: U.DateRangePresetToday, from: today1start, to: now}, 100, 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			key, _ := model.GetDashboardUnitQueryLastComputedResultCacheKey(tt.ProjectId, 100, 100, tt.args.preset, tt.args.from, tt.args.to, "")
+
+			assert.NotNil(t, key)
+			stringKey, _ := key.Key()
+			LatestTo := strings.Split(stringKey, ":to:")
+			got, _ := strconv.ParseInt(LatestTo[1], 10, 64)
+			if got != tt.want {
+				t.Errorf("GetDashboardUnitQueryLastComputedResultCacheKey() got = %d, want %d", got, tt.want)
+			}
+		})
+	}
+
 }
 
 func TestCacheDashboardUnitsForProjectIDChannelsGroupQuery(t *testing.T) {

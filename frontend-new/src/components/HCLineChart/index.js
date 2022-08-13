@@ -104,12 +104,14 @@ function LineChart({
                   </Text>
                   <div className="flex items-center col-gap-1">
                     <Text weight="bold" type="title" color="grey-6" level={5}>
-                      {metricType != null
-                        ? getFormattedKpiValue({
-                            value,
-                            metricType
-                          })
-                        : numberWithCommas(formatCount(value, 1))}
+                      {metricType != null && metricType !== '' ? (
+                        getFormattedKpiValue({
+                          value,
+                          metricType
+                        })
+                      ) : (
+                        <NumFormat number={value} />
+                      )}
                     </Text>
                     {/* {comparisonApplied && (
                       <>

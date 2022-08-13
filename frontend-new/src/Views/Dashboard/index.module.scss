@@ -1,3 +1,4 @@
+$fa-color--mono-2: #e7e9ed;
 .fullModal {
   border: 1px solid black;
   width: 100% !important;
@@ -60,13 +61,7 @@
 }
 
 .widgetCard {
-  border-bottom: 2px solid rgb(231, 233, 237);
-  &_text:hover {
-    text-decoration: underline;
-    .expand_icon {
-      visibility: visible;
-    }
-  }
+  border-bottom: thin solid $fa-color--mono-2; 
 }
 
 .dropdownbtn {

@@ -227,3 +227,30 @@ func UpdateLeadSquaredConfigHandler(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, resp)
 }
+
+func RemoveLeadSquaredConfigHandler(c *gin.Context) {
+
+	logCtx := log.WithFields(log.Fields{
+		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
+	})
+
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
+		logCtx.Error("Update project_settings for explain failed. Failed to get project_id.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid project id."})
+		return
+	}
+
+	errCode := store.GetStore().UpdateLeadSquaredConfig(projectId, "", "", "")
+
+	if errCode != http.StatusOK {
+		c.AbortWithStatusJSON(http.StatusInternalServerError,
+			gin.H{"error": "Project setting update for lead squared config failed for explain"})
+		return
+	}
+
+	resp := map[string]string{
+		"status": "success",
+	}
+	c.JSON(http.StatusOK, resp)
+}

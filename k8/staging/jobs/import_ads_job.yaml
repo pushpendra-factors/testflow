@@ -1,0 +1,54 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  labels:
+    nodePool: factors-staging-node-pool
+  name: import-ads-job
+spec:
+  schedule: "1 2 3 4 5" # every 30 minutes
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            layer: jobs
+            nodePool: factors-staging-node-pool
+        spec:
+          nodeSelector:
+            cloud.google.com/gke-nodepool: factors-staging-node-pool
+          containers:
+          - name: import-ads-job
+            image: us.gcr.io/factors-staging/import-ads-job:859291fb0-1542
+            imagePullPolicy: IfNotPresent
+            args:
+            - --env
+            - $(ENV)
+            - --bucket_name
+            - $(BUCKET_NAME)
+            - --local_disk_tmp_dir
+            - /tmp
+            - --memsql_host
+            - $(MEMSQL_HOST)
+            - --memsql_port
+            - $(MEMSQL_PORT)
+            - --memsql_name
+            - $(MEMSQL_DB)
+            - --memsql_user
+            - $(MEMSQL_HEAVY_USER)
+            - --memsql_pass
+            - $(MEMSQL_PASSWORD)
+            - --memsql_cert
+            - $(MEMSQL_CERTIFICATE)
+            envFrom:
+             - configMapRef:
+                name: config-env
+            - configMapRef:
+                name: config-bucket
+            - configMapRef:
+                name: config-memsql
+            - secretRef:
+                name: secret-memsql
+          restartPolicy: OnFailure

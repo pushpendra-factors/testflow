@@ -1,0 +1,59 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  labels:
+    nodePool: default-pool
+  name: remove-empty-smart-events
+spec:
+  schedule: "1 2 3 4 5" # In UTC
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            layer: jobs
+            nodePool: default-pool
+        spec:
+          nodeSelector:
+            cloud.google.com/gke-nodepool: default-pool
+          containers:
+          - name: remove-empty-smart-events
+            image: us.gcr.io/factors-staging/remove-empty-smart-events:9cde06c-1766
+            imagePullPolicy: IfNotPresent
+            args:
+            - --env
+            - $(ENV)
+            - --memsql_host
+            - $(MEMSQL_HOST)
+            - --memsql_port
+            - $(MEMSQL_PORT)
+            - --memsql_name
+            - $(MEMSQL_DB)
+            - --memsql_user
+            - $(MEMSQL_HEAVY_USER)
+            - --memsql_pass
+            - $(MEMSQL_PASSWORD)
+            - --memsql_cert
+            - $(MEMSQL_CERTIFICATE)
+            - --sentry_dsn
+            - $(SENTRY_DSN)
+            - --project_id
+            - ""
+            - --event_name_ids
+            - ""
+            - --start_timestamp
+            - "0"
+            - --end_timestamp
+            - "0"
+            envFrom:
+            - configMapRef:
+                name: config-env
+            - configMapRef:
+                name: config-memsql
+            - secretRef:
+                name: secret-memsql
+            - secretRef:
+                name: secret-sentry
+          restartPolicy: OnFailure

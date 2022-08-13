@@ -274,7 +274,6 @@ func ExecuteKPIQueryHandler(c *gin.Context) (interface{}, int, string, string, b
 		}
 		return nil, statusCode, PROCESSING_FAILED, "Failed to process query from DB", true
 	}
-	model.SetQueryCacheResult(projectID, &request, queryResult)
 	meta := H.CacheMeta{
 		Timezone:       string(timezoneString),
 		From:           commonQueryFrom,
@@ -283,6 +282,12 @@ func ExecuteKPIQueryHandler(c *gin.Context) (interface{}, int, string, string, b
 		LastComputedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(),
 		Preset:         preset,
 	}
+	for i, _ := range queryResult {
+		queryResult[i].CacheMeta = meta
+	}
+
+	model.SetQueryCacheResult(projectID, &request, queryResult)
+
 	// if it is a dashboard query, cache it
 	if isDashboardQueryRequest {
 		model.SetCacheResultByDashboardIdAndUnitId(queryResult, projectID, dashboardId, unitId, preset, commonQueryFrom, commonQueryTo, request.GetTimeZone(), meta)

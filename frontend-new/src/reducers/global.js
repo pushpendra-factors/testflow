@@ -1097,3 +1097,21 @@ export function enableLeadSquaredIntegration(projectId, payload) {
     });
   };
 }
+
+export function disableLeadSquaredIntegration(projectId) {
+  return (dispatch) => {
+    return new Promise((resolve, reject) => {
+      del(dispatch, host + 'projects/'+ projectId +'/leadsquaredsettings/remove', {})
+      .then((res) => {
+          if(res.ok) {
+            dispatch({ type: 'DISABLE_LEADSQUARED_FULFILLED', payload: res.data});
+            resolve(res);
+          } else {
+            reject(res);
+          }
+        }).catch((err) => {
+            reject(err);
+        });
+    });
+  };
+}

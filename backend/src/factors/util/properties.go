@@ -141,6 +141,16 @@ var GROUP_EVENT_NAME_TO_GROUP_NAME_MAPPING = map[string]string{
 	GROUP_EVENT_NAME_SALESFORCE_OPPORTUNITY_UPDATED: GROUP_NAME_SALESFORCE_OPPORTUNITY,
 }
 
+// Group/CRM Properties Constants
+var GP_HUBSPOT_COMPANY_NAME string = "$hubspot_company_name"
+var GP_SALESFORCE_ACCOUNT_NAME string = "$salesforce_account_name"
+var GP_HUBSPOT_COMPANY_COUNTRY string = "$hubspot_company_country"
+var GP_SALESFORCE_ACCOUNT_BILLINGCOUNTRY string = "$salesforce_account_billingcountry"
+var GP_HUBSPOT_COMPANY_INDUSTRY string = "$hubspot_company_industry"
+var GP_SALESFORCE_ACCOUNT_INDUSTRY string = "$salesforce_account_industry"
+var GP_HUBSPOT_COMPANY_NUMBEROFEMPLOYEES string = "$hubspot_company_numberofemployees"
+var GP_SALESFORCE_ACCOUNT_NUMBEROFEMPLOYEES string = "$salesforce_account_numberOfEmployees"
+
 // Factors API constants
 const UserCreated string = "UC"
 const AutoTracked string = "AT"

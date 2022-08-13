@@ -36,7 +36,7 @@ import NoDataChart from '../../../components/NoDataChart';
 import { ATTRIBUTION_GROUP_ANALYSIS_KEYS } from './attributionsResult.constants';
 
 const nodata = (
-  <div className="mt-4 flex justify-center items-center w-full h-full">
+  <div className="flex justify-center items-center w-full h-full pt-4 pb-4">
     <NoDataChart />
   </div>
 );
@@ -317,7 +317,7 @@ const AttributionsChart = forwardRef(
         } else {
           const availableFilters = [
             {
-              title: touchpoint,
+              title: touchpoint === 'ChannelGroup' ? 'Channel' : touchpoint,
               key: touchpoint,
               options: tableData
                 .map((data) => data[touchpoint])

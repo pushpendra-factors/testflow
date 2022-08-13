@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from 'react';
-// import sampleAccounts from './sampleAccounts.json';
-// import sampleTL from './sampleAccTimeline.json'
 import { Table, Button, Modal, Spin } from 'antd';
 import { Text, SVG } from '../../factorsComponents';
 import MomentTz from '../../MomentTz';
@@ -51,8 +49,9 @@ function AccountProfiles({
   const columns = [
     {
       title: <div className={headerClassStr}>Company Name</div>,
-      dataIndex: 'company',
-      key: 'company',
+      dataIndex: 'name',
+      key: 'name',
+      render: (item) => item || '-',
     },
     {
       title: <div className={headerClassStr}>Associated Contacts</div>,
@@ -156,7 +155,11 @@ function AccountProfiles({
       <div className='absolute top-0'>
         {isDDVisible ? (
           <FaSelect
-            options={[['All Accounts'], ['Hubspot Companies'], ['Salesforce Accounts']]}
+            options={[
+              ['All Accounts'],
+              ['Hubspot Companies'],
+              ['Salesforce Accounts'],
+            ]}
             onClickOutside={() => setDDVisible(false)}
             optionClick={(val) => onChange(val)}
           ></FaSelect>
@@ -168,7 +171,7 @@ function AccountProfiles({
   return (
     <div className={'fa-container mt-24 mb-12 min-h-screen'}>
       <Text type={'title'} level={3} weight={'bold'}>
-        User Profiles
+        Account Profiles
       </Text>
       <div className='flex justify-between items-start my-4'>
         <div className='flex items-start'>
@@ -215,7 +218,7 @@ function AccountProfiles({
             onRow={(user) => {
               return {
                 onClick: () => {
-                  fetchProfileAccountDetails(activeProject.id, user.id);
+                  fetchProfileAccountDetails(activeProject.id, user.identity);
                   showModal();
                 },
               };

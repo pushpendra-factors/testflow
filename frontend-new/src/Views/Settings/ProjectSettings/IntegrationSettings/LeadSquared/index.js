@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useEffect } from 'react';
 import { connect } from 'react-redux';
-import { fetchProjectSettings, udpateProjectSettings, enableLeadSquaredIntegration } from 'Reducers/global';
+import { fetchProjectSettings, udpateProjectSettings, enableLeadSquaredIntegration, disableLeadSquaredIntegration } from 'Reducers/global';
 import {
     Row, Col, Modal, Input, Form, Button, notification, message, Avatar
 } from 'antd';
@@ -19,7 +19,8 @@ const LeadSquaredIntegration = ({
     setIsActive,
     kbLink = false,
     currentAgent,
-    enableLeadSquaredIntegration
+    enableLeadSquaredIntegration,
+    disableLeadSquaredIntegration
 }) => {
     const [form] = Form.useForm();
     const [errorInfo, seterrorInfo] = useState(null);
@@ -45,6 +46,7 @@ const LeadSquaredIntegration = ({
                 "host": values.host,
             }).then(() => {
                 setLoading(false);
+                fetchProjectSettings(activeProject.id);
                 setShowForm(false);
                 setTimeout(() => {
                     message.success('LeadSquared integration successful');
@@ -61,21 +63,19 @@ const LeadSquaredIntegration = ({
 
     const onDisconnect = () => {
         setLoading(true);
-        udpateProjectSettings(activeProject.id,
-            {
-                "lead_squared_config": null,
-            }).then(() => {
-                setLoading(false);
-                setShowForm(false);
-                setTimeout(() => {
-                    message.success('LeadSquared integration disconnected!');
-                }, 500);
-                setIsActive(false);
-            }).catch((err) => {
-                message.error(`${err?.data?.error}`);
-                setShowForm(false);
-                setLoading(false);
-            });
+        disableLeadSquaredIntegration(activeProject.id).then(() => {
+            setLoading(false);
+            fetchProjectSettings(activeProject.id);
+            setShowForm(false);
+            setTimeout(() => {
+                message.success('LeadSquared integration disconnected!');
+            }, 500);
+            setIsActive(false);
+        }).catch((err) => {
+            message.error(`${err?.data?.error}`);
+            setShowForm(false);
+            setLoading(false);
+        });
     }
 
 
@@ -219,4 +219,4 @@ const mapStateToProps = (state) => ({
     currentAgent: state.agent.agent_details,
 });
 
-export default connect(mapStateToProps, { fetchProjectSettings, udpateProjectSettings, enableLeadSquaredIntegration })(LeadSquaredIntegration)
+export default connect(mapStateToProps, { fetchProjectSettings, udpateProjectSettings, enableLeadSquaredIntegration, disableLeadSquaredIntegration })(LeadSquaredIntegration)

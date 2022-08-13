@@ -34,9 +34,9 @@ export const getEventsWithPropertiesKPI = (filters, category) => {
             co: operatorMap[fil.operator],
             lOp: !index ? 'AND' : 'OR',
             en:
-              category == 'channels' ? '' : fil?.extra ? fil?.extra[3] : 'event',
+              (category == 'channels' || category == 'custom_channels') ? '' : fil?.extra ? fil?.extra[3] : 'event',
             objTy:
-              category == 'channels'
+              (category == 'channels' || category == 'custom_channels')
                 ? fil?.extra
                   ? fil?.extra[3]
                   : 'event'
@@ -50,9 +50,9 @@ export const getEventsWithPropertiesKPI = (filters, category) => {
           prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
           co: operatorMap[fil.operator],
           lOp: 'AND',
-          en: category == 'channels' ? '' : fil?.extra ? fil?.extra[3] : 'event',
+          en: (category == 'channels' || category == 'custom_channels') ? '' : fil?.extra ? fil?.extra[3] : 'event',
           objTy:
-            category == 'channels' ? (fil?.extra ? fil?.extra[3] : 'event') : '',
+            (category == 'channels' || category == 'custom_channels') ? (fil?.extra ? fil?.extra[3] : 'event') : '',
           va:
             fil.props[1] === 'datetime'
               ? formatFilterDate(fil.values)

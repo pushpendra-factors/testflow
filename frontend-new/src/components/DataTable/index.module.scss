@@ -65,7 +65,7 @@
       background-color: $fa-color--white;
     }
     &:hover {
-      background-color: $fa-color--mono-2;
+      background-color: darken($fa-color--mono-1,2%);
     }
   }
 
@@ -185,9 +185,8 @@ th.horizontalBarTableHeader {
 }
 
 .dashboardTable {
-  :global(.ant-table-container) {
-    border-top-left-radius: 8px !important;
-    border-top-right-radius: 8px !important;
+  :global(.ant-table-container) { 
+    border: 0px !important;
   }
 }
 

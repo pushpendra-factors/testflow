@@ -59,7 +59,7 @@ const GroupedChart = forwardRef(
 
     if (!visibleProperties.length) {
       return (
-        <div className='mt-4 flex justify-center items-center w-full h-full'>
+        <div className="flex justify-center items-center w-full h-full pt-4 pb-4">
           <NoDataChart />
         </div>
       );
