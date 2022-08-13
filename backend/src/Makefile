@@ -224,6 +224,13 @@ upload-backfill-salesforce-datetime-job: export IMAGE_NAME=backfill-salesforce-d
 upload-backfill-salesforce-datetime-job: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/backfill-salesforce-datetime-job:$(TAG)
 
+pack-remove-empty-smart-events:
+	docker build -t us.gcr.io/factors-$(ENV)/remove-empty-smart-events:$(TAG) -f Dockerfile.remove_empty_smart_events_job .
+
+upload-remove-empty-smart-events: export IMAGE_NAME=remove-empty-smart-events
+upload-remove-empty-smart-events: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/remove-empty-smart-events:$(TAG)
+
 pack-hubspot-smart-event-validator-job:
 	docker build -t us.gcr.io/factors-$(ENV)/hubspot-smart-event-validator-job:$(TAG) -f Dockerfile.hubspot_smart_event_validator_job .
 
