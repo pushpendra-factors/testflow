@@ -262,6 +262,7 @@ function CoreQuery({
     }
     else if (query_type === 'funnel') {
       updateResultState({ ...initialState, loading: true });
+      setLoading(true);
       runFunnelsQueryFromUrl();
     }
 
@@ -363,6 +364,7 @@ function CoreQuery({
       const equivalentQuery = getStateQueryFromRequestQuery(queryToAdd?.query);
       setQueryType(QUERY_TYPE_FUNNEL);
       closeDrawer();
+      setLoading(false);
       updateRequestQuery(queryToAdd?.query);
       dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
       setShowResult(true);
@@ -1675,10 +1677,22 @@ function CoreQuery({
     return DDvalues;
   };
 
+  const closePage = () => {
+    history.replace('/analyse');
+  }
+
   if (loading) {
     return (
-      <div className="flex justify-center items-center w-full h-64">
-        <Spin size="large" />
+      <div className="flex justify-center flex-col items-center w-full">
+        <div className="w-full flex justify-end">
+          <Button size={'large'} type="text" onClick={() => closePage()}>
+            <SVG name="times"></SVG>
+          </Button>
+        </div>
+        <div>
+          <Spin size="large" />
+        </div>
+        
       </div>
     );
   }
