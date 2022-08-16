@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
-import { Row, Col, Button, Avatar, Dropdown, Popover, Menu } from 'antd';
+import { Row, Col, Button, Avatar, Dropdown, Menu } from 'antd';
 import { Text, SVG } from '../../factorsComponents';
 import AccountTimeline from './AccountTimeline';
+import { granularityOptions } from '../utils';
 
 function AccountDetails({ onCancel, accountDetails }) {
   const [granularity, setGranularity] = useState('Hourly');
   const [collapse, setCollapse] = useState(true);
-  const options = ['Timestamp', 'Hourly', 'Daily', 'Weekly', 'Monthly'];
-  const menu = (
+  const granularityMenu = (
     <Menu>
-      {options.map((option) => {
+      {granularityOptions.map((option) => {
         return (
           <Menu.Item key={option} onClick={(key) => setGranularity(key.key)}>
             <div className={'flex items-center'}>
@@ -20,6 +20,7 @@ function AccountDetails({ onCancel, accountDetails }) {
       })}
     </Menu>
   );
+
   return (
     <>
       <div
@@ -28,7 +29,16 @@ function AccountDetails({ onCancel, accountDetails }) {
       >
         <Row justify={'space-between'} className={'my-3 m-0'}>
           <Col className='flex items-center'>
-            <SVG name={'brand'} size={36} />
+            <Button
+              style={{ padding: '0' }}
+              type='text'
+              icon={<SVG name={'brand'} size={36} />}
+              size={'large'}
+              onClick={() => {
+                setGranularity('Hourly');
+                onCancel();
+              }}
+            />
             <Text type={'title'} level={4} weight={'bold'} extraClass={'m-0'}>
               Account Details
             </Text>
@@ -38,6 +48,7 @@ function AccountDetails({ onCancel, accountDetails }) {
               size={'large'}
               type='text'
               onClick={() => {
+                setGranularity('Hourly');
                 onCancel();
               }}
               icon={<SVG name='times'></SVG>}
@@ -119,7 +130,7 @@ function AccountDetails({ onCancel, accountDetails }) {
                     Employee Size
                   </Text>
                   <Text type={'title'} level={7} extraClass={'m-0'}>
-                    {accountDetails?.data?.employee_count}
+                    {accountDetails?.data?.number_of_employees}
                   </Text>
                 </Col>
               </Row>
@@ -134,7 +145,7 @@ function AccountDetails({ onCancel, accountDetails }) {
                     Number of Users
                   </Text>
                   <Text type={'title'} level={7} extraClass={'m-0'}>
-                    {accountDetails?.data?.active_users}
+                    {accountDetails?.data?.number_of_users}
                   </Text>
                 </Col>
               </Row>
@@ -183,7 +194,10 @@ function AccountDetails({ onCancel, accountDetails }) {
                       </Popover>
                     </div> */}
                     <div>
-                      <Dropdown overlay={menu} placement='bottomRight'>
+                      <Dropdown
+                        overlay={granularityMenu}
+                        placement='bottomRight'
+                      >
                         <Button
                           className={`ant-dropdown-link flex items-center`}
                         >

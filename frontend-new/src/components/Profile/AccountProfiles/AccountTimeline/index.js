@@ -1,8 +1,8 @@
 import { Spin } from 'antd';
-import React, { useEffect, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import InfoCard from '../../../FaTimeline/InfoCard';
 import { groups, hoverEvents, getLoopLength } from '../../utils';
-import { CaretUpOutlined, CaretRightOutlined } from '@ant-design/icons';
+import { CaretRightOutlined } from '@ant-design/icons';
 
 function AccountTimeline({
   timeline = [],
@@ -11,6 +11,16 @@ function AccountTimeline({
   setCollapse,
   loading = false,
 }) {
+  const compareObjTimestampsDesc = (a, b) => {
+    if (a.timestamp > b.timestamp) {
+      return -1;
+    }
+    if (a.timestamp < b.timestamp) {
+      return 1;
+    }
+    return 0;
+  };
+
   const formattedData = useMemo(() => {
     const groupByTimestamp = [];
     timeline.forEach((user) => {
@@ -19,6 +29,7 @@ function AccountTimeline({
       });
       groupByTimestamp.push(...newOpts);
     });
+    groupByTimestamp.sort(compareObjTimestampsDesc);
     const data = _.groupBy(groupByTimestamp, groups[granularity]);
     let retData = {};
     Object.entries(data).forEach(([key, value]) => {
@@ -53,8 +64,7 @@ function AccountTimeline({
                   </td>
                   {timeline.map((data) => {
                     const loopLength = getLoopLength(allEvents);
-                    let evList = [];
-
+                    const evList = [];
                     if (!allEvents[data.user_id]) {
                       for (let i = 0; i < loopLength; i++) {
                         evList.push(

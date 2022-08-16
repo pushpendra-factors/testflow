@@ -12,6 +12,7 @@ import {
 } from '../../../reducers/timeline';
 import { getUserProperties } from '../../../reducers/coreQuery/middleware';
 import FaSelect from '../../FaSelect';
+import { formatFiltersForPayload } from '../utils';
 
 function AccountProfiles({
   activeProject,
@@ -22,7 +23,6 @@ function AccountProfiles({
   getUserProperties,
 }) {
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [usersLoading, setUsersLoading] = useState(true);
   const [isDDVisible, setDDVisible] = useState(false);
   const [filterPayload, setFilterPayload] = useState({
     source: 'All',
@@ -53,12 +53,12 @@ function AccountProfiles({
       key: 'name',
       render: (item) => item || '-',
     },
-    {
-      title: <div className={headerClassStr}>Associated Contacts</div>,
-      dataIndex: 'contacts_associated',
-      key: 'contacts_associated',
-      render: (item) => item || '-',
-    },
+    // {
+    //   title: <div className={headerClassStr}>Associated Contacts</div>,
+    //   dataIndex: 'contacts_associated',
+    //   key: 'contacts_associated',
+    //   render: (item) => item || '-',
+    // },
     {
       title: <div className={headerClassStr}>Region</div>,
       dataIndex: 'region',
@@ -83,7 +83,6 @@ function AccountProfiles({
 
   const onChange = (val) => {
     if ((filterOpts[val[0]] || val[0]) !== filterPayload.source) {
-      setUsersLoading(true);
       const opts = Object.assign({}, filterPayload);
       opts.source = filterOpts[val[0]] || val[0];
       setFilterPayload(opts);
@@ -92,62 +91,21 @@ function AccountProfiles({
   };
 
   const setFilters = (filters) => {
-    setUsersLoading(true);
     const opts = Object.assign({}, filterPayload);
     opts.filters = filters;
     setFilterPayload(opts);
   };
 
   const clearFilters = () => {
-    setUsersLoading(true);
     const opts = Object.assign({}, filterPayload);
     opts.filters = [];
     setFilterPayload(opts);
   };
 
-  const formatFiltersForPayload = (filters = []) => {
-    const filterProps = [];
-    filters.forEach((fil) => {
-      if (Array.isArray(fil.values)) {
-        fil.values.forEach((val, index) => {
-          filterProps.push({
-            en: 'user_g',
-            lop: !index ? 'AND' : 'OR',
-            op: operatorMap[fil.operator],
-            pr: fil.props[0],
-            ty: fil.props[1],
-            va: fil.props[1] === 'datetime' ? val : val,
-          });
-        });
-      } else {
-        filterProps.push({
-          en: 'user_g',
-          lop: 'AND',
-          op: operatorMap[fil.operator],
-          pr: fil.props[0],
-          ty: fil.props[1],
-          va: fil.props[1] === 'datetime' ? fil.values : fil.values,
-        });
-      }
-    });
-    return filterProps;
-  };
-
   useEffect(() => {
-    (async () => {
-      const opts = Object.assign({}, filterPayload);
-      opts.filters = formatFiltersForPayload(filterPayload.filters);
-      try {
-        await fetchProfileAccounts(activeProject.id, opts);
-        setUsersLoading(false);
-      } catch (err) {
-        notification.error({
-          message: 'Error loading users.',
-          description: getErrorMessage(err),
-          duration: 3,
-        });
-      }
-    })();
+    const opts = Object.assign({}, filterPayload);
+    opts.filters = formatFiltersForPayload(filterPayload.filters);
+    fetchProfileAccounts(activeProject.id, opts);
   }, [activeProject, filterPayload]);
 
   const selectUsers = () => {
@@ -210,7 +168,7 @@ function AccountProfiles({
           </div>
         ) : null}
       </div>
-      {usersLoading ? (
+      {accounts.isLoading ? (
         <Spin size={'large'} className={'fa-page-loader'} />
       ) : (
         <div>
@@ -224,7 +182,7 @@ function AccountProfiles({
               };
             }}
             className='fa-table--basic'
-            dataSource={accounts}
+            dataSource={accounts.data}
             columns={columns}
             rowClassName='cursor-pointer'
             pagination={{ position: ['bottom', 'left'] }}
@@ -238,7 +196,10 @@ function AccountProfiles({
         footer={null}
         closable={null}
       >
-        <AccountDetails onCancel={handleCancel} accountDetails={accountDetails} />
+        <AccountDetails
+          onCancel={handleCancel}
+          accountDetails={accountDetails}
+        />
       </Modal>
     </div>
   );
