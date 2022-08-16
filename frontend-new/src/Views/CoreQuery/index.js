@@ -1681,13 +1681,72 @@ function CoreQuery({
     history.goBack();
   }
 
+  const handleCloseDashboardQuery = () => {
+    history.push({
+      pathname: '/',
+      state: { dashboardWidgetId: coreQueryState.navigatedFromDashboard.id },
+    });
+    handleBreadCrumbClick()
+  }
+
+  const handleCloseToAnalyse = () => {
+    history.push({
+      pathname: '/analyse',
+    });
+    handleBreadCrumbClick()
+  }
+
   if (loading) {
     return (
       <div className="flex justify-center flex-col items-center w-full">
-        <div className="w-full flex justify-end">
-          <Button size={'large'} type="text" onClick={() => closePage()}>
-            <SVG name="times"></SVG>
-          </Button>
+        <div className="w-full flex center">
+        <div
+      id='app-header'
+      className=
+        'bg-white z-50 flex-col  px-8 w-11/12 w-full'
+    >
+      <div className={'items-center flex justify-between w-full pt-3 pb-3'}>
+        <div
+          role='button'
+          tabIndex={0}
+          className='flex items-center cursor-pointer'
+        >
+          <Button
+        size={'large'}
+        type='text'
+        icon={<SVG size={32} name='Brand' />}
+      />
+          <Text
+        type={'title'}
+        level={5}
+        weight={`bold`}
+        extraClass={'m-0 mt-1'}
+        lineHeight={'small'}
+      >
+        {querySaved
+          ? `Reports / ${queryType} / ${querySaved.name}`
+          : `Reports / ${queryType} / Untitled Analysis${' '}
+            ${moment().format('DD/MM/YYYY')}`}
+      </Text>
+        </div>
+
+        <div className='flex items-center gap-x-2'>
+          <Button
+        size={'large'}
+        type='text'
+        icon={<SVG size={20} name={'close'} />}
+        onClick={
+          coreQueryState.navigatedFromDashboard
+            ? handleCloseDashboardQuery
+            : handleCloseToAnalyse
+        }
+      />
+        </div>
+      </div>
+
+      {/* {renderReportTabs()} */}
+    </div>
+        
         </div>
         <div className='w-full h-64 flex items-center justify-center'>
           <Spin size="large" />
@@ -1801,7 +1860,8 @@ function CoreQuery({
         {!showResult && resultState.loading ? (<PageSuspenseLoader />) : null}
 
         {!showResult && drawerVisible && checkIfnewComposer()
-          ? renderCreateQFlow()
+        
+           ? renderCreateQFlow() 
           : !showResult && !resultState.loading && (
               <CoreQueryHome
                 setQueryType={setQueryType}
@@ -1891,7 +1951,8 @@ function CoreQuery({
         </ErrorBoundary>
       </>
     );
-  } else {
+  }
+   else {
     return (
       <>
         <AnalyseBeforeIntegration />
