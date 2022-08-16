@@ -1678,7 +1678,7 @@ function CoreQuery({
   };
 
   const closePage = () => {
-    history.replace('/analyse');
+    history.goBack();
   }
 
   if (loading) {
@@ -1689,7 +1689,7 @@ function CoreQuery({
             <SVG name="times"></SVG>
           </Button>
         </div>
-        <div>
+        <div className='w-full h-64 flex items-center justify-center'>
           <Spin size="large" />
         </div>
         
