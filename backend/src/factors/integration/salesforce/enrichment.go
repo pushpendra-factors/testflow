@@ -31,7 +31,6 @@ type Status struct {
 var salesforceEnrichOrderByType = [...]int{
 	model.SalesforceDocumentTypeLead,
 	model.SalesforceDocumentTypeContact,
-	model.SalesforceDocumentTypeOpportunity,
 	model.SalesforceDocumentTypeCampaignMember,
 }
 
@@ -423,62 +422,6 @@ func enrichGroupAccount(projectID int64, document *model.SalesforceDocument, sal
 
 	return http.StatusOK
 }
-
-/*
-func enrichAccount(projectID int64, document *model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName) int {
-	if projectID == 0 || document == nil {
-		return http.StatusBadRequest
-	}
-
-	if document.Type != model.SalesforceDocumentTypeAccount {
-		return http.StatusInternalServerError
-	}
-
-	logCtx := log.WithField("project_id", projectID).WithField("document_id", document.ID)
-
-	enProperties, properties, err := GetSalesforceDocumentProperties(projectID, document)
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to get properties")
-		return http.StatusInternalServerError
-	}
-
-	trackPayload := &SDK.TrackPayload{
-		ProjectId:       projectID,
-		EventProperties: *enProperties,
-		UserProperties:  *enProperties,
-		RequestSource:   model.UserSourceSalesforce,
-	}
-
-	customerUserID, _ := getCustomerUserIDFromProperties(projectID, *enProperties, model.GetSalesforceAliasByDocType(document.Type), &model.SalesforceProjectIdentificationFieldStore)
-	if customerUserID == "" {
-		logCtx.Warn("Skipping user identification on salesforce account sync. No customer_user_id on properties.")
-	}
-
-	eventID, userID, _, err := TrackSalesforceEventByDocumentType(projectID, trackPayload, document, customerUserID, model.SalesforceDocumentTypeNameAccount)
-	if err != nil {
-		logCtx.WithError(err).Error(
-			"Failed to track salesforce account event.")
-		return http.StatusInternalServerError
-	}
-
-	// Always use lastmodified timestamp for updated properties. Error handling already done during event creation
-	lastModifiedTimestamp, _ := model.GetSalesforceDocumentTimestampByAction(document, model.SalesforceDocumentUpdated)
-
-	var prevProperties *map[string]interface{}
-	for _, smartEventName := range salesforceSmartEventNames {
-		prevProperties = TrackSalesforceSmartEvent(projectID, &smartEventName, eventID, document.ID, userID, document.Type,
-			properties, prevProperties, lastModifiedTimestamp)
-	}
-
-	errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(projectID, document, eventID, userID, "", true)
-	if errCode != http.StatusAccepted {
-		logCtx.Error("Failed to update salesforce account document as synced.")
-		return http.StatusInternalServerError
-	}
-
-	return http.StatusOK
-}
-*/
 
 // SalesforceSmartEventName struct for holding event_name and filter expression
 type SalesforceSmartEventName struct {
@@ -940,7 +883,7 @@ func createOrUpdateSalesforceGroupsProperties(projectID int64, document *model.S
 	return groupUserID, http.StatusOK, eventID
 }
 
-func enrichGroupOpportunity(projectID int64, document *model.SalesforceDocument) (map[string]map[string]string, int) {
+func enrichGroupOpportunity(projectID int64, document *model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName) (map[string]map[string]string, int) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "document": document})
 	if projectID == 0 || document == nil {
 		logCtx.Error("Invalid project_id or document_id")
@@ -959,13 +902,13 @@ func enrichGroupOpportunity(projectID int64, document *model.SalesforceDocument)
 		return nil, http.StatusOK
 	}
 
-	groupUserID, status, _ := createOrUpdateSalesforceGroupsProperties(projectID, document, model.GROUP_NAME_SALESFORCE_OPPORTUNITY, document.ID)
+	groupUserID, status, eventID := createOrUpdateSalesforceGroupsProperties(projectID, document, model.GROUP_NAME_SALESFORCE_OPPORTUNITY, document.ID)
 	if status != http.StatusOK {
 		logCtx.Error("Failed to create or update salesforce groups properties.")
 		return nil, status
 	}
 
-	enProperties, _, err := GetSalesforceDocumentProperties(projectID, document)
+	enProperties, properties, err := GetSalesforceDocumentProperties(projectID, document)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properties")
 		return nil, http.StatusInternalServerError
@@ -990,6 +933,23 @@ func enrichGroupOpportunity(projectID int64, document *model.SalesforceDocument)
 	}
 
 	pendingSyncRecords := associateGroupUserOpportunitytoUser(projectID, oppLeadIds, oppContactIds, groupUserID)
+
+	document.GroupUserID = groupUserID
+
+	// Always use lastmodified timestamp for updated properties. Error handling already done during event creation
+	lastModifiedTimestamp, _ := model.GetSalesforceDocumentTimestampByAction(document, model.SalesforceDocumentUpdated)
+
+	var prevProperties *map[string]interface{}
+	for _, smartEventName := range salesforceSmartEventNames {
+		prevProperties = TrackSalesforceSmartEvent(projectID, &smartEventName, eventID, document.ID, groupUserID,
+			document.Type, properties, prevProperties, lastModifiedTimestamp)
+	}
+
+	errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(projectID, document, eventID, "", groupUserID, true)
+	if errCode != http.StatusAccepted {
+		logCtx.Error("Failed to update salesforce opportunity document as synced.")
+		return nil, http.StatusInternalServerError
+	}
 
 	return pendingSyncRecords, http.StatusOK
 }
@@ -1095,132 +1055,6 @@ func enrichOpportunityContactRoles(projectID int64, document *model.SalesforceDo
 
 	status = store.GetStore().UpdateSalesforceDocumentBySyncStatus(projectID, document, "", associatedUserID, groupUserID, true)
 	if status != http.StatusAccepted {
-		logCtx.Error("Failed to update salesforce opportunity document as synced.")
-		return http.StatusInternalServerError
-	}
-
-	return http.StatusOK
-}
-func enrichOpportunities(projectID int64, document *model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName) int {
-	if projectID == 0 || document == nil {
-		return http.StatusBadRequest
-	}
-
-	if document.Type != model.SalesforceDocumentTypeOpportunity {
-		return http.StatusInternalServerError
-	}
-
-	logCtx := log.WithField("project_id", projectID).WithField("document_id", document.ID)
-	enProperties, properties, err := GetSalesforceDocumentProperties(projectID, document)
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to get properties")
-		return http.StatusInternalServerError
-	}
-
-	trackPayload := &SDK.TrackPayload{
-		ProjectId:       projectID,
-		EventProperties: *enProperties,
-		UserProperties:  *enProperties,
-		RequestSource:   model.UserSourceSalesforce,
-	}
-
-	var eventID string
-	var eventUserID string
-	var customerUserID, userID string
-	var assocationPresent bool
-	if C.UseOpportunityAssociationByProjectID(projectID) {
-		linkedDocument, err := getOpportunityLinkedLeadOrContactDocument(projectID, document)
-		if err != nil {
-			if err == errMissingOpportunityLeadAndContact {
-				// record may not be processed. Should be made success on next call
-				logCtx.WithError(err).Error("Failed to get linked document for opportunity.")
-				return http.StatusOK
-			}
-		} else {
-			assocationPresent = true
-			if linkedDocument.Synced == true && (linkedDocument.UserID != "" || linkedDocument.SyncID != "") {
-
-				linkedDocumentUserID := ""
-				if linkedDocument.UserID != "" {
-					linkedDocumentUserID = linkedDocument.UserID
-				} else {
-					event, status := store.GetStore().GetEventById(projectID, linkedDocument.SyncID, "")
-					if status != http.StatusFound {
-						logCtx.WithFields(log.Fields{"linked_document_id": linkedDocument.ID}).WithError(err).
-							Error("Failed to get user by linked document event for opportunity.")
-						return http.StatusInternalServerError
-					}
-
-					// update the user_id column for later reference
-					errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(projectID, linkedDocument,
-						event.ID, event.UserId, "", true)
-					if errCode != http.StatusAccepted {
-						logCtx.WithFields(log.Fields{"linked_document_id": linkedDocument.ID}).
-							Error("Failed to update user id in linked document.")
-					}
-
-					linkedDocumentUserID = event.UserId
-				}
-
-				user, status := store.GetStore().GetUser(projectID, linkedDocumentUserID)
-				if status != http.StatusFound {
-					logCtx.WithError(err).Error("Failed to get opportunity associated document user.")
-					return http.StatusInternalServerError
-				}
-				customerUserID = user.CustomerUserId
-				userID = user.ID
-
-			} else {
-				/*
-					Document associated is not processed yet.
-					Skip processing or opportunities event user properties won't have the lead data.
-				*/
-				logCtx.WithError(err).Error("Failed to process linked document for opportunity.")
-				return http.StatusOK
-			}
-
-		}
-	}
-
-	if userID == "" && customerUserID == "" && !assocationPresent {
-		customerUserID, _ = getCustomerUserIDFromProperties(projectID, *enProperties, model.GetSalesforceAliasByDocType(document.Type), &model.SalesforceProjectIdentificationFieldStore)
-	}
-
-	if customerUserID != "" || userID != "" {
-		trackPayload.UserId = userID // user id will be used on the first document and customer user_id will used on any update. Updated document will use the created document user_id
-		eventID, eventUserID, _, err = TrackSalesforceEventByDocumentType(projectID, trackPayload, document, customerUserID, model.SalesforceDocumentTypeNameOpportunity)
-
-		if err != nil {
-			logCtx.WithError(err).Error(
-				"Failed to track salesforce opportunity event.")
-			return http.StatusInternalServerError
-		}
-	} else {
-		eventID, eventUserID, _, err = TrackSalesforceEventByDocumentType(projectID, trackPayload, document, "", model.SalesforceDocumentTypeNameOpportunity)
-		if err != nil {
-			logCtx.WithError(err).Error(
-				"Failed to track salesforce opportunity event.")
-			return http.StatusInternalServerError
-		}
-
-		logCtx.Warn("Skipped user identification on salesforce opportunity sync. No customer_user_id on properties.")
-	}
-
-	if eventUserID != "" && userID != eventUserID {
-		userID = eventUserID
-	}
-
-	// Always use lastmodified timestamp for updated properties. Error handling already done during event creation
-	lastModifiedTimestamp, _ := model.GetSalesforceDocumentTimestampByAction(document, model.SalesforceDocumentUpdated)
-
-	var prevProperties *map[string]interface{}
-	for _, smartEventName := range salesforceSmartEventNames {
-		prevProperties = TrackSalesforceSmartEvent(projectID, &smartEventName, eventID, document.ID, userID,
-			document.Type, properties, prevProperties, lastModifiedTimestamp)
-	}
-
-	errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(projectID, document, eventID, userID, "", true)
-	if errCode != http.StatusAccepted {
 		logCtx.Error("Failed to update salesforce opportunity document as synced.")
 		return http.StatusInternalServerError
 	}
@@ -1829,8 +1663,6 @@ func enrichAll(project *model.Project, documents []model.SalesforceDocument, sal
 			errCode = enrichContact(project.ID, &documents[i], salesforceSmartEventNames, pendingOpportunityGroupAssociations[model.SalesforceDocumentTypeNameContact])
 		case model.SalesforceDocumentTypeLead:
 			errCode = enrichLeads(project.ID, &documents[i], salesforceSmartEventNames, pendingOpportunityGroupAssociations[model.SalesforceDocumentTypeNameLead])
-		case model.SalesforceDocumentTypeOpportunity:
-			errCode = enrichOpportunities(project.ID, &documents[i], salesforceSmartEventNames)
 		case model.SalesforceDocumentTypeCampaign, model.SalesforceDocumentTypeCampaignMember:
 			errCode = enrichCampaign(project, &documents[i], endTimestamp)
 		case model.SalesforceDocumentTypeOpportunityContactRole:
@@ -1943,7 +1775,7 @@ func enrichAllGroup(projectID int64, wg *sync.WaitGroup, docType int, smartEvent
 		case model.SalesforceDocumentTypeAccount, model.SalesforceDocumentTypeGroupAccount:
 			errCode = enrichGroupAccount(projectID, &documents[i], smartEventNames)
 		case model.SalesforceDocumentTypeOpportunity:
-			pendingSyncRecords, errCode = enrichGroupOpportunity(projectID, &documents[i])
+			pendingSyncRecords, errCode = enrichGroupOpportunity(projectID, &documents[i], smartEventNames)
 		}
 
 		updateGroupWorkerStatus(errCode, pendingSyncRecords, status)

@@ -1752,7 +1752,7 @@ func enrichAllV1(project *model.Project, otpRules *[]model.OTPRule, documents []
 		case model.SalesforceDocumentTypeLead:
 			errCode = enrichLeads(project.ID, &documents[i], salesforceSmartEventNames, pendingOpportunityGroupAssociations[model.SalesforceDocumentTypeNameLead])
 		case model.SalesforceDocumentTypeOpportunity:
-			errCode = enrichOpportunities(project.ID, &documents[i], salesforceSmartEventNames)
+			errCode = enrichOpportunitiesV1(project.ID, &documents[i], salesforceSmartEventNames)
 		case model.SalesforceDocumentTypeCampaign, model.SalesforceDocumentTypeCampaignMember:
 			errCode = enrichCampaignV1(project, otpRules, &documents[i], endTimestamp)
 		case model.SalesforceDocumentTypeOpportunityContactRole:
@@ -1859,7 +1859,7 @@ func enrichAllGroupV1(projectID int64, wg *sync.WaitGroup, docType int, document
 		case model.SalesforceDocumentTypeAccount:
 			errCode = enrichGroupAcccountV1(projectID, &documents[i])
 		case model.SalesforceDocumentTypeOpportunity:
-			pendingSyncRecords, errCode = enrichGroupOpportunity(projectID, &documents[i])
+			pendingSyncRecords, errCode = enrichGroupOpportunityV1(projectID, &documents[i])
 		}
 
 		updateGroupWorkerStatus(errCode, pendingSyncRecords, status)
