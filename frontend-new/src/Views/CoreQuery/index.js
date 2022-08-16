@@ -1678,7 +1678,7 @@ function CoreQuery({
   };
 
   const closePage = () => {
-    history.replace('/analyse');
+    history.goBack();
   }
 
   if (loading) {
