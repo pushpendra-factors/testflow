@@ -1550,7 +1550,7 @@ func (store *MemSQL) CacheWebsiteAnalyticsForDateRange(cachePayload model.WebAna
 		QueryRange:  U.SecondsToHMSString(to - from),
 	}
 
-	if !model.ShouldRefreshDashboardUnit(projectID, dashboardID, 0, from, to, "", timezoneString, true) {
+	if !model.ShouldRefreshDashboardUnit(projectID, dashboardID, 0, from, to, timezoneString, true) {
 		return http.StatusOK, unitReport
 	}
 
@@ -1574,14 +1574,8 @@ func (store *MemSQL) CacheWebsiteAnalyticsForDateRange(cachePayload model.WebAna
 	timeTaken := time.Now().Unix() - startTime
 	timeTakenString := U.SecondsToHMSString(timeTaken)
 	logCtx.WithFields(log.Fields{"TimeTaken": timeTaken, "TimeTakenString": timeTakenString}).Info("Completed website analytics query.")
-	meta := model.CacheMeta{
-		From:           from,
-		To:             to,
-		RefreshedAt:    U.TimeNowIn(timezoneString).Unix(),
-		LastComputedAt: U.TimeNowIn(timezoneString).Unix(),
-		Timezone:       string(timezoneString),
-	}
-	model.SetCacheResultForWebAnalyticsDashboard(queryResult, projectID, dashboardID, from, to, timezoneString, meta)
+
+	model.SetCacheResultForWebAnalyticsDashboard(queryResult, projectID, dashboardID, from, to, timezoneString)
 	unitReport.Status = model.CachingUnitStatusPassed
 	unitReport.TimeTaken = timeTaken
 	unitReport.TimeTakenStr = timeTakenString

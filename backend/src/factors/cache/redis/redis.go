@@ -230,7 +230,6 @@ func MGet(keys ...*Key) ([]string, error) {
 
 // MGet Function to get multiple keys from redis. Returns slice of result strings.
 func mGet(persistent bool, keys ...*Key) ([]string, error) {
-
 	var cKeys []interface{}
 	var cValues []string
 	for _, key := range keys {

@@ -95,14 +95,9 @@ func EventsQueryHandler(c *gin.Context) (interface{}, int, string, string, bool)
 	var unitId int64
 	var err error
 	hardRefresh := false
-	preset := ""
 	dashboardIdParam := c.Query("dashboard_id")
 	unitIdParam := c.Query("dashboard_unit_id")
 	refreshParam := c.Query("refresh")
-	presetParam := c.Query("preset")
-	if U.PresetLookup[presetParam] != "" {
-		preset = presetParam
-	}
 	var timezoneString U.TimeZoneString
 	var statusCode int
 
@@ -112,7 +107,6 @@ func EventsQueryHandler(c *gin.Context) (interface{}, int, string, string, bool)
 
 	isDashboardQueryRequest := dashboardIdParam != "" && unitIdParam != ""
 	if isDashboardQueryRequest {
-
 		dashboardId, err = strconv.ParseInt(dashboardIdParam, 10, 64)
 		if err != nil || dashboardId == 0 {
 			logCtx.WithError(err).Error("Query failed. Invalid DashboardID.")
@@ -143,14 +137,11 @@ func EventsQueryHandler(c *gin.Context) (interface{}, int, string, string, bool)
 
 	// Tracking dashboard query request.
 	if isDashboardQueryRequest {
-		if preset == "" {
-			preset = U.GetPresetNameByFromAndTo(commonQueryFrom, commonQueryTo, timezoneString)
-		}
 		model.SetDashboardCacheAnalytics(projectId, dashboardId, unitId, commonQueryFrom, commonQueryTo, timezoneString)
 	}
 	// If refresh is passed, refresh only is Query.From is of todays beginning.
-	if !hardRefresh && isDashboardQueryRequest && !H.ShouldAllowHardRefresh(commonQueryFrom, commonQueryTo, timezoneString, hardRefresh) {
-		shouldReturn, resCode, resMsg := H.GetResponseIfCachedDashboardQuery(reqId, projectId, dashboardId, unitId, preset, commonQueryFrom, commonQueryTo, timezoneString)
+	if isDashboardQueryRequest && !H.ShouldAllowHardRefresh(commonQueryFrom, commonQueryTo, timezoneString, hardRefresh) {
+		shouldReturn, resCode, resMsg := H.GetResponseIfCachedDashboardQuery(reqId, projectId, dashboardId, unitId, commonQueryFrom, commonQueryTo, timezoneString)
 
 		if shouldReturn {
 			if resCode == http.StatusOK {
@@ -164,15 +155,13 @@ func EventsQueryHandler(c *gin.Context) (interface{}, int, string, string, bool)
 		return nil, http.StatusBadRequest, V1.INVALID_INPUT, err.Error(), true
 	}
 	var cacheResult model.ResultGroup
-	if !hardRefresh {
-		shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &requestPayload, cacheResult, isDashboardQueryRequest, reqId, false)
-		if shouldReturn {
-			if resCode == http.StatusOK {
-				return resMsg, resCode, "", "", false
-			}
-			logCtx.Error("Query failed. Error Processing/Fetching data from Query cache")
-			return nil, resCode, V1.PROCESSING_FAILED, "Error Processing/Fetching data from Query cache", true
+	shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &requestPayload, cacheResult, isDashboardQueryRequest, reqId, false)
+	if shouldReturn {
+		if resCode == http.StatusOK {
+			return resMsg, resCode, "", "", false
 		}
+		logCtx.Error("Query failed. Error Processing/Fetching data from Query cache")
+		return nil, resCode, V1.PROCESSING_FAILED, "Error Processing/Fetching data from Query cache", true
 	}
 
 	// If not found, set a placeholder for the query hash key that it has been running to avoid running again.
@@ -191,26 +180,13 @@ func EventsQueryHandler(c *gin.Context) (interface{}, int, string, string, bool)
 		}
 		return nil, errCode, V1.PROCESSING_FAILED, "Failed to process query from DB", true
 	}
-
-	meta := H.CacheMeta{
-		Timezone:       string(timezoneString),
-		From:           commonQueryFrom,
-		To:             commonQueryFrom,
-		RefreshedAt:    U.TimeNowIn(U.TimeZoneStringIST).Unix(),
-		LastComputedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(),
-		Preset:         preset,
-	}
-	for i, _ := range resultGroup.Results {
-		resultGroup.Results[i].CacheMeta = meta
-	}
-	resultGroup.CacheMeta = meta
 	model.SetQueryCacheResult(projectId, &requestPayload, resultGroup)
+
 	// if it is a dashboard query, cache it
 	if isDashboardQueryRequest {
-
-		model.SetCacheResultByDashboardIdAndUnitId(resultGroup, projectId, dashboardId, unitId, preset, commonQueryFrom, commonQueryFrom, timezoneString, meta)
+		model.SetCacheResultByDashboardIdAndUnitId(resultGroup, projectId, dashboardId, unitId, commonQueryFrom, commonQueryTo, timezoneString)
 		return H.DashboardQueryResponsePayload{
-			Result: resultGroup, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(), TimeZone: string(timezoneString), CacheMeta: meta}, http.StatusOK, "", "", false
+			Result: resultGroup, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(), TimeZone: string(timezoneString)}, http.StatusOK, "", "", false
 	}
 	resultGroup.Query = requestPayload
 	resultGroup.IsShareable = isQueryShareable(requestPayload)
@@ -257,16 +233,12 @@ func QueryHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 	var err error
 	var result *model.QueryResult
 	hardRefresh := false
-	preset := ""
 	dashboardIdParam := c.Query("dashboard_id")
 	unitIdParam := c.Query("dashboard_unit_id")
 	refreshParam := c.Query("refresh")
-	presetParam := c.Query("preset")
 	var timezoneString U.TimeZoneString
 	var statusCode int
-	if U.PresetLookup[presetParam] != "" {
-		preset = presetParam
-	}
+
 	if refreshParam != "" {
 		hardRefresh, _ = strconv.ParseBool(refreshParam)
 	}
@@ -332,17 +304,14 @@ func QueryHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 
 	// Tracking dashboard query request.
 	if isDashboardQueryRequest {
-		if preset == "" {
-			preset = U.GetPresetNameByFromAndTo(requestPayload.Query.From, requestPayload.Query.To, timezoneString)
-		}
 		model.SetDashboardCacheAnalytics(projectId, dashboardId, unitId, requestPayload.Query.From, requestPayload.Query.To, timezoneString)
 	}
 
 	// If refresh is passed, refresh only is Query.From is of today's beginning.
 	if isDashboardQueryRequest && !H.ShouldAllowHardRefresh(requestPayload.Query.From, requestPayload.Query.To, timezoneString, hardRefresh) {
 		shouldReturn, resCode, resMsg := H.GetResponseIfCachedDashboardQuery(
-			reqId, projectId, dashboardId, unitId, preset, requestPayload.Query.From, requestPayload.Query.To, timezoneString)
-		if shouldReturn && !hardRefresh {
+			reqId, projectId, dashboardId, unitId, requestPayload.Query.From, requestPayload.Query.To, timezoneString)
+		if shouldReturn {
 			if resCode == http.StatusOK {
 				return resMsg, resCode, "", "", false
 			}
@@ -357,7 +326,7 @@ func QueryHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 	var cacheResult model.QueryResult
 	shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &requestPayload.Query, cacheResult, isDashboardQueryRequest, reqId, false)
 
-	if shouldReturn && !hardRefresh {
+	if shouldReturn {
 		if resCode == http.StatusOK {
 			return resMsg, resCode, "", "", false
 		}
@@ -388,20 +357,11 @@ func QueryHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 		logCtx.Error(" Result is nil - " + errMsg)
 		return nil, errCode, V1.PROCESSING_FAILED, "Result is nil - " + errMsg, true
 	}
-	meta := H.CacheMeta{
-		Timezone:       string(timezoneString),
-		From:           requestPayload.Query.From,
-		To:             requestPayload.Query.To,
-		RefreshedAt:    U.TimeNowIn(U.TimeZoneStringIST).Unix(),
-		LastComputedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(),
-		Preset:         preset,
-	}
-	result.CacheMeta = meta
 	model.SetQueryCacheResult(projectId, &requestPayload.Query, result)
 
 	if isDashboardQueryRequest {
-		model.SetCacheResultByDashboardIdAndUnitId(result, projectId, dashboardId, unitId, preset, requestPayload.Query.From, requestPayload.Query.To, timezoneString, meta)
-		return H.DashboardQueryResponsePayload{Result: result, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(), TimeZone: string(timezoneString), CacheMeta: meta}, http.StatusOK, "", "", false
+		model.SetCacheResultByDashboardIdAndUnitId(result, projectId, dashboardId, unitId, requestPayload.Query.From, requestPayload.Query.To, timezoneString)
+		return H.DashboardQueryResponsePayload{Result: result, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(), TimeZone: string(timezoneString)}, http.StatusOK, "", "", false
 	}
 	result.Query = requestPayload.Query
 	return result, http.StatusOK, "", "", false

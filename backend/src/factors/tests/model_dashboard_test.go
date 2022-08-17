@@ -320,7 +320,7 @@ func TestGetDashboardResultFromCache(t *testing.T) {
 	}{}
 
 	//Cache should be empty
-	result, errCode, errMsg := model.GetCacheResultByDashboardIdAndUnitId("", project.ID, dashboardUnits[0].DashboardId, dashboardUnits[0].ID, "", from, to, U.TimeZoneString(project.TimeZone))
+	result, errCode, errMsg := model.GetCacheResultByDashboardIdAndUnitId("", project.ID, dashboardUnits[0].DashboardId, dashboardUnits[0].ID, from, to, U.TimeZoneString(project.TimeZone))
 	assert.Equal(t, http.StatusNotFound, errCode)
 	assert.Nil(t, result)
 
@@ -345,15 +345,15 @@ func TestGetDashboardResultFromCache(t *testing.T) {
 	assert.Equal(t, false, decChannelResult.Cache)
 
 	// Cache should be set
-	result, errCode, errMsg = model.GetCacheResultByDashboardIdAndUnitId("", project.ID, dashboardUnits[0].DashboardId, dashboardUnits[0].ID, "", from, to, U.TimeZoneString(project.TimeZone))
+	result, errCode, errMsg = model.GetCacheResultByDashboardIdAndUnitId("", project.ID, dashboardUnits[0].DashboardId, dashboardUnits[0].ID, from, to, U.TimeZoneString(project.TimeZone))
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Nil(t, errMsg)
 	assert.Equal(t, float64(query1.To), result.Result.(map[string]interface{})["meta"].(map[string]interface{})["query"].(map[string]interface{})["to"])
-	result, errCode, errMsg = model.GetCacheResultByDashboardIdAndUnitId("", project.ID, dashboardUnits[1].DashboardId, dashboardUnits[1].ID, "", from+500, to+500, U.TimeZoneString(project.TimeZone))
+	result, errCode, errMsg = model.GetCacheResultByDashboardIdAndUnitId("", project.ID, dashboardUnits[1].DashboardId, dashboardUnits[1].ID, from+500, to+500, U.TimeZoneString(project.TimeZone))
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Nil(t, errMsg)
 	assert.Equal(t, float64(query2.To), result.Result.(map[string]interface{})["meta"].(map[string]interface{})["query"].(map[string]interface{})["to"])
-	resultChannel, errCode, errMsg := model.GetCacheResultByDashboardIdAndUnitId("", project.ID, dashboardUnits[2].DashboardId, dashboardUnits[2].ID, "", query3.From, query3.To, U.TimeZoneString(project.TimeZone))
+	resultChannel, errCode, errMsg := model.GetCacheResultByDashboardIdAndUnitId("", project.ID, dashboardUnits[2].DashboardId, dashboardUnits[2].ID, query3.From, query3.To, U.TimeZoneString(project.TimeZone))
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Nil(t, errMsg)
 	assert.Equal(t, float64(989), resultChannel.Result.(map[string]interface{})["metrics"].(map[string]interface{})["clicks"])
@@ -432,29 +432,29 @@ func TestShouldRefreshDashboardUnit(t *testing.T) {
 	timezoneString := U.TimeZoneString(project.TimeZone)
 	// 30mins range. Should allow.
 	from, to, _ := U.WebAnalyticsQueryDateRangePresets[U.DateRangePreset30Minutes](timezoneString)
-	assert.True(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, 0, from, to, "", timezoneString, true))
+	assert.True(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, 0, from, to, timezoneString, true))
 
 	// Todays range. Should allow.
 	from, to, _ = U.QueryDateRangePresets[U.DateRangePresetToday](timezoneString)
-	assert.True(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, 0, from, to, "", timezoneString, true))
-	assert.True(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, dashboardUnit.ID, from, to, U.DateRangePresetToday, timezoneString, false))
+	assert.True(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, 0, from, to, timezoneString, true))
+	assert.True(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, dashboardUnit.ID, from, to, timezoneString, false))
 
 	// Yesterday's range. Should allow first time.
 	from, to, _ = U.QueryDateRangePresets[U.DateRangePresetYesterday](timezoneString)
-	assert.True(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, 0, from, to, "", timezoneString, true))
-	assert.True(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, dashboardUnit.ID, from, to, U.DateRangePresetYesterday, timezoneString, false))
+	assert.True(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, 0, from, to, timezoneString, true))
+	assert.True(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, dashboardUnit.ID, from, to, timezoneString, false))
 
 	// Yesterday's range. Should not allow again on same day once cache is set.
 	from, to, _ = U.QueryDateRangePresets[U.DateRangePresetYesterday](timezoneString)
-	model.SetCacheResultForWebAnalyticsDashboard(&model.WebAnalyticsQueryResult{}, project.ID, dashboard.ID, from, to, timezoneString, nil)
-	assert.False(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, 0, from, to, "", timezoneString, true))
-	model.SetCacheResultByDashboardIdAndUnitId("{}", project.ID, dashboard.ID, dashboardUnit.ID, U.DateRangePresetYesterday, from, to, timezoneString, nil)
-	assert.False(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, dashboardUnit.ID, from, to, U.DateRangePresetYesterday, timezoneString, false))
+	model.SetCacheResultForWebAnalyticsDashboard(&model.WebAnalyticsQueryResult{}, project.ID, dashboard.ID, from, to, timezoneString)
+	assert.False(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, 0, from, to, timezoneString, true))
+	model.SetCacheResultByDashboardIdAndUnitId("{}", project.ID, dashboard.ID, dashboardUnit.ID, from, to, timezoneString)
+	assert.False(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, dashboardUnit.ID, from, to, timezoneString, false))
 
 	// More than 2 days old range. Should allow.
 	from, to, _ = U.QueryDateRangePresets[U.DateRangePresetYesterday](timezoneString)
 	from = from - 30*U.SECONDS_IN_A_DAY
 	to = to - 2*U.SECONDS_IN_A_DAY
-	assert.True(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, 0, from, to, "", timezoneString, true))
-	assert.True(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, dashboardUnit.ID, from, to, "", timezoneString, false))
+	assert.True(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, 0, from, to, timezoneString, true))
+	assert.True(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, dashboardUnit.ID, from, to, timezoneString, false))
 }
