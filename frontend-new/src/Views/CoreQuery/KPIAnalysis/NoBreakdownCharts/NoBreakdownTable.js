@@ -1,6 +1,4 @@
-import React, {
-  useState, useEffect, memo, useCallback
-} from 'react';
+import React, { useState, useEffect, memo, useCallback } from 'react';
 import moment from 'moment';
 import { find, get } from 'lodash';
 import {
@@ -28,7 +26,9 @@ const NoBreakdownTable = ({
   handleSorting,
   dateSorter,
   handleDateSorting,
-  frequency = 'date'
+  frequency = 'date',
+  comparisonApplied = false,
+  compareCategories
 }) => {
   const [searchText, setSearchText] = useState('');
   const [columns, setColumns] = useState([]);
@@ -42,14 +42,31 @@ const NoBreakdownTable = ({
         kpis,
         currentSorter: sorter,
         handleSorting,
-        frequency
+        frequency,
+        comparisonApplied
       })
     );
-  }, [kpis, sorter, handleSorting, frequency]);
+  }, [kpis, sorter, handleSorting, frequency, comparisonApplied]);
 
   useEffect(() => {
-    setTableData(getDataInTableFormat(seriesData, categories, kpis, sorter));
-  }, [seriesData, categories, kpis, sorter]);
+    setTableData(
+      getDataInTableFormat(
+        seriesData,
+        categories,
+        kpis,
+        sorter,
+        comparisonApplied,
+        compareCategories
+      )
+    );
+  }, [
+    seriesData,
+    categories,
+    kpis,
+    sorter,
+    comparisonApplied,
+    compareCategories
+  ]);
 
   useEffect(() => {
     setDateBasedColumns(
@@ -58,10 +75,19 @@ const NoBreakdownTable = ({
         categories,
         currentSorter: dateSorter,
         handleSorting: handleDateSorting,
-        frequency
+        frequency,
+        comparisonApplied,
+        compareCategories
       })
     );
-  }, [kpis, categories, dateSorter, handleDateSorting, frequency]);
+  }, [
+    kpis,
+    categories,
+    dateSorter,
+    handleDateSorting,
+    frequency,
+    compareCategories
+  ]);
 
   useEffect(() => {
     setDateBasedTableData(
@@ -70,10 +96,20 @@ const NoBreakdownTable = ({
         categories,
         searchText,
         dateSorter,
-        frequency
+        frequency,
+        comparisonApplied,
+        compareCategories
       )
     );
-  }, [seriesData, searchText, dateSorter]);
+  }, [
+    seriesData,
+    searchText,
+    categories,
+    dateSorter,
+    frequency,
+    comparisonApplied,
+    compareCategories
+  ]);
 
   const getCSVData = useCallback(() => {
     const activeTableData =
@@ -81,9 +117,7 @@ const NoBreakdownTable = ({
     const format = DATE_FORMATS[frequency] || DATE_FORMATS.date;
     return {
       fileName: 'KPI.csv',
-      data: activeTableData.map(({
-        index, label, date, ...rest
-      }) => {
+      data: activeTableData.map(({ index, label, date, compareDate, ...rest }) => {
         if (chartType === CHART_TYPE_SPARKLINES) {
           for (const key in rest) {
             const metricType = get(
@@ -100,7 +134,8 @@ const NoBreakdownTable = ({
           }
           return {
             ...rest,
-            date: addQforQuarter(frequency) + moment(date).format(format)
+            date: addQforQuarter(frequency) + moment(date).format(format),
+            compareDate: addQforQuarter(frequency) + moment(compareDate).format(format)
           };
         }
         const metricType = get(

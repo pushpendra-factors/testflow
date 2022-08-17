@@ -45,6 +45,12 @@ const TimeoutOneSecond = 1 * time.Second
 const TimeoutTwoSecond = 2 * time.Second
 const TimeoutFiveSecond = 5 * time.Second
 
+const (
+	DayInSecs   = 24 * 60 * 60
+	WeekInSecs  = 7 * DayInSecs
+	MonthInSecs = 31 * DayInSecs
+)
+
 type TimeZoneString string
 
 const (
@@ -72,12 +78,21 @@ var spaceBytes = []byte{0x20}
 
 // TODO Handle all errors for location on all functions later.
 var QueryDateRangePresets = map[string]func(TimeZoneString) (int64, int64, error){
-	DateRangePresetLastMonth:    GetQueryRangePresetLastMonthIn,
+	DateRangePresetToday:        GetQueryRangePresetTodayIn,
+	DateRangePresetYesterday:    GetQueryRangePresetYesterdayIn,
+	DateRangePresetCurrentWeek:  GetQueryRangePresetCurrentWeekIn,
 	DateRangePresetLastWeek:     GetQueryRangePresetLastWeekIn,
 	DateRangePresetCurrentMonth: GetQueryRangePresetCurrentMonthIn,
-	DateRangePresetCurrentWeek:  GetQueryRangePresetCurrentWeekIn,
-	DateRangePresetYesterday:    GetQueryRangePresetYesterdayIn,
-	DateRangePresetToday:        GetQueryRangePresetTodayIn,
+	DateRangePresetLastMonth:    GetQueryRangePresetLastMonthIn,
+}
+
+var PresetLookup = map[string]string{
+	"LAST_MONTH":    DateRangePresetLastMonth,
+	"LAST_WEEK":     DateRangePresetLastWeek,
+	"CURRENT_MONTH": DateRangePresetCurrentMonth,
+	"CURRENT_WEEK":  DateRangePresetCurrentWeek,
+	"YESTERDAY":     DateRangePresetYesterday,
+	"TODAY":         DateRangePresetToday,
 }
 
 // WebAnalyticsQueryDateRangePresets Date range presets for website analytics.

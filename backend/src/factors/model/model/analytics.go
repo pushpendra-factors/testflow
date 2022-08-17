@@ -647,14 +647,16 @@ type QueryResult struct {
 	Rows    [][]interface{} `json:"rows"`
 	// Todo(Dinesh): Use Generic query result
 	// for meta as interface{}.
-	Meta  QueryResultMeta `json:"meta"`
-	Query interface{}     `json:"query"`
+	Meta      QueryResultMeta `json:"meta"`
+	Query     interface{}     `json:"query"`
+	CacheMeta interface{}     `json:"cache_meta"`
 }
 
 type ResultGroup struct {
 	Results     []QueryResult `json:"result_group"`
 	Query       interface{}   `json:"query"`
 	IsShareable bool          `json:"is_shareable"`
+	CacheMeta   interface{}   `json:"cache_meta"`
 }
 
 // QueryCacheResult Container to save query cache result along with timestamp.
@@ -662,6 +664,7 @@ type QueryCacheResult struct {
 	Result      interface{}
 	RefreshedAt int64
 	TimeZone    string
+	CacheMeta   interface{}
 }
 
 // GenericQueryResult - Common query result
@@ -783,17 +786,34 @@ func SetQueryCachePlaceholder(projectID int64, query BaseQuery) {
 	cacheRedis.SetPersistent(cacheKey, QueryCacheInProgressPlaceholder, QueryCachePlaceholderExpirySeconds)
 }
 
+type CacheMeta struct {
+	From           int64  `json:"from"`
+	To             int64  `json:"to"`
+	RefreshedAt    int64  `json:"refreshed_at"`
+	Preset         string `json:"preset"`
+	LastComputedAt int64  `json:"last_computed_at"`
+	Timezone       string `json:"timezone"`
+}
+
 // SetQueryCacheResult Sets the query cache result key in redis.
 func SetQueryCacheResult(projectID int64, query BaseQuery, queryResult interface{}) {
 	cacheKey, err := query.GetQueryCacheRedisKey(projectID)
 	if err != nil {
 		return
 	}
-
+	from, to := query.GetQueryDateRange()
+	meta := CacheMeta{
+		From:           from,
+		To:             to,
+		RefreshedAt:    U.TimeNowIn(U.TimeZoneStringIST).Unix(),
+		Timezone:       string(query.GetTimeZone()),
+		LastComputedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(),
+	}
 	queryCache := QueryCacheResult{
 		Result:      queryResult,
 		RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(),
 		TimeZone:    string(query.GetTimeZone()),
+		CacheMeta:   meta,
 	}
 
 	queryResultString, err := json.Marshal(queryCache)

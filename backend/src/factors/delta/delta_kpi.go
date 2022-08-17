@@ -253,6 +253,13 @@ func ComputeCrossPeriodKpiInsights(periodPair PeriodPair, newInsightsList, oldIn
 		oldInfo := *(*oldInsights).MetricInfo
 		newInfo := *(*newInsights).MetricInfo
 
+		if newInfo.Features == nil {
+			newInfo.Features = make(map[string]map[string]float64)
+		}
+		if oldInfo.Features == nil {
+			oldInfo.Features = make(map[string]map[string]float64)
+		}
+
 		//get union of props
 		var allProps = make(map[string]map[string]bool)
 		for key, valMap := range oldInfo.Features {

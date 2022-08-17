@@ -17,6 +17,28 @@
 
         border: thin solid $fa-color--brand-color;
         box-shadow: 0px 0px 8px $fa-color--mono-2;
+        .widget-card--expand-icon{
+            visibility: visible; 
+        }
+       
+    }
+    .widget-card--title-container
+    {
+        &:hover{
+            .widget-card--title{
+                text-decoration: underline !important;
+            }
+            .widget-card--expand-icon{
+                transform: scale(1.2); 
+            }
+        }
+    }
+    .widget-card--expand-icon{
+        visibility: hidden;
+        transition: all 0.3s;
+        &:hover{
+            transform: scale(1.2);
+        }
     }
 
     .fa-widget-card--legend {
@@ -106,7 +128,8 @@
 }
 
 .widget-card-top-div {
-    height: 386px;
+    // min-height: 200px;
+    max-height: 370px;
     &:hover {
         .fa-widget-card--resize-container {
             visibility: visible;

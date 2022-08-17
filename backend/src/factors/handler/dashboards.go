@@ -548,6 +548,14 @@ func DeleteMultiDashboardUnitHandler(c *gin.Context) {
 	c.JSON(http.StatusAccepted, gin.H{"message": "Successfully deleted."})
 }
 
+type CacheMeta struct {
+	From           int64
+	To             int64
+	RefreshedAt    int64
+	LastComputedAt int64
+	Timezone       string
+}
+
 // DashboardUnitsWebAnalyticsQueryHandler godoc
 // @Summary To fetch result for website analytics dashboard queries.
 // @Tags DashboardUnit
@@ -625,6 +633,13 @@ func DashboardUnitsWebAnalyticsQueryHandler(c *gin.Context) {
 
 	cacheResult, errCode := model.GetCacheResultForWebAnalyticsDashboard(projectId, dashboardId,
 		requestPayload.From, requestPayload.To, timezoneString)
+	meta := CacheMeta{
+		From:           requestPayload.From,
+		To:             requestPayload.To,
+		RefreshedAt:    U.TimeNowIn(timezoneString).Unix(),
+		LastComputedAt: U.TimeNowIn(timezoneString).Unix(),
+		Timezone:       string(timezoneString),
+	}
 	if errCode == http.StatusFound && !H.ShouldAllowHardRefresh(requestPayload.From, requestPayload.To, timezoneString, hardRefresh) {
 		queryResult = cacheResult.Result
 		fromCache = true
@@ -702,13 +717,13 @@ func DashboardUnitsWebAnalyticsQueryHandler(c *gin.Context) {
 		model.SetQueryCacheResult(projectId, &requestPayload, queryResult)
 
 		model.SetCacheResultForWebAnalyticsDashboard(queryResult, projectId,
-			dashboardId, requestPayload.From, requestPayload.To, timezoneString)
+			dashboardId, requestPayload.From, requestPayload.To, timezoneString, meta)
 		lastRefreshedAt = U.TimeNowIn(U.TimeZoneStringIST).Unix()
 	}
 
 	webAnalyticsResult := sanitizeWebAnalyticsResult(queryResult, requestPayload)
 	c.JSON(http.StatusOK, H.DashboardQueryResponsePayload{
-		Result: webAnalyticsResult, Cache: fromCache, RefreshedAt: lastRefreshedAt, TimeZone: string(timezoneString)})
+		Result: webAnalyticsResult, Cache: fromCache, RefreshedAt: lastRefreshedAt, TimeZone: string(timezoneString), CacheMeta: meta})
 }
 
 func sanitizeWebAnalyticsResult(queryResult *model.WebAnalyticsQueryResult,

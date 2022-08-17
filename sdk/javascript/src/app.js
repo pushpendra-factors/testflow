@@ -2,7 +2,7 @@
 
 var Cookie = require("./utils/cookie");
 const logger = require("./utils/logger");
-const FormCapture = require("./utils/form_capture");
+const Capture = require("./utils/capture");
 const util = require("./utils/util");
 var APIClient = require("./api-client");
 const constant = require("./constant");
@@ -10,7 +10,6 @@ const Properties = require("./properties");
 const Cache = require("./cache");
 
 const SDK_NOT_INIT_ERROR = new Error("Factors SDK is not initialized.");
-
 
 function isAllowedEventName(eventName) {
     // whitelisted $ event_name.
@@ -206,10 +205,14 @@ App.prototype.init = function(token, opts={}, afterPageTrackCallback) {
             var enableTrackSPA = Cache.getFactorsCache(Cache.trackPageOnSPA) || _this.getConfig("auto_track_spa_page_view");
             Cache.setFactorsCache(Cache.trackPageOnSPA, enableTrackSPA);
             // Auto-track current page on init, if not disabled.
-            return trackOnInit ? _this.autoTrack(_this.getConfig("auto_track"), false, afterPageTrackCallback, true) : triggerFactorsStartQueu();
+            return trackOnInit ? _this.autoTrack(_this.getConfig("auto_track"), 
+                false, afterPageTrackCallback, true) : triggerFactorsStartQueu();
         })
         .then(function() {
             return _this.autoFormCapture(_this.getConfig("auto_form_capture"));
+        })
+        .then(function() {
+            return _this.autoClickCapture(_this.getConfig("auto_click_capture"));
         })
         .then(function() {
             return _this.autoDriftEventsCapture(_this, _this.getConfig("int_drift"));
@@ -223,16 +226,7 @@ App.prototype.init = function(token, opts={}, afterPageTrackCallback) {
         });
 }
 
-App.prototype.track = function(eventName, eventProperties, auto=false, afterCallback) {
-    if (!this.isInitialized()) return Promise.reject(SDK_NOT_INIT_ERROR);
-
-    eventName = util.validatedStringArg("event_name", eventName) // Clean event name.
-    if (!isAllowedEventName(eventName)) 
-        return Promise.reject(new Error("FactorsError: Invalid event name."));
-
-    // The original page URL is added to cache for tracking referrer etc.,
-    var originalPageURL = window.location.href;
-        
+function getEventProperties(eventProperties={}) {
     // Other property validations done on backend.
     eventProperties = Properties.getTypeValidated(eventProperties);
 
@@ -243,12 +237,26 @@ App.prototype.track = function(eventName, eventProperties, auto=false, afterCall
         referrer = currentPageOriginalURL;
 
     // Merge default properties.
-    eventProperties = Object.assign(eventProperties, Properties.getEventDefault(referrer))
+    eventProperties = Object.assign(eventProperties, Properties.getEventDefault(referrer));
 
+
+    return eventProperties;
+}
+
+App.prototype.track = function(eventName, eventProperties, auto=false, afterCallback) {
+    if (!this.isInitialized()) return Promise.reject(SDK_NOT_INIT_ERROR);
+
+    eventName = util.validatedStringArg("event_name", eventName) // Clean event name.
+    if (!isAllowedEventName(eventName)) 
+        return Promise.reject(new Error("FactorsError: Invalid event name."));
+
+    // The original page URL is added to cache for tracking referrer etc.,
+    var originalPageURL = window.location.href;
+        
     let payload = {};
     updatePayloadWithUserIdFromCookie(payload);
     payload.event_name = eventName;
-    payload.event_properties = eventProperties;
+    payload.event_properties = getEventProperties(eventProperties);
     payload.user_properties = Properties.getUserDefault();
     payload.auto = auto;
 
@@ -489,7 +497,7 @@ App.prototype.autoDriftEventsCapture = function(appInstance, enabled) {
     if (!enabled) return false; // not enabled.
     waitForGlobalKey("drift", function() {
         window.drift.on('phoneCapture', function (e) {
-            if(!FormCapture.isPhone(e.phone)) return null;
+            if(!Capture.isPhone(e.phone)) return null;
             var props = {}
             props[Properties.PHONE] = e.phone;
             props[Properties.SOURCE] = 'drift';
@@ -497,7 +505,7 @@ App.prototype.autoDriftEventsCapture = function(appInstance, enabled) {
         });
 
         window.drift.on('emailCapture', function (e) {
-            if((!e.data || !e.data.email) || !FormCapture.isEmail(e.data.email)) return null;
+            if((!e.data || !e.data.email) || !Capture.isEmail(e.data.email)) return null;
             var props = {}
             props[Properties.EMAIL] = e.data.email;
             props[Properties.SOURCE] = 'drift';
@@ -637,15 +645,36 @@ App.prototype.autoFormCapture = function(enabled=false) {
 
     // Captures properties from ideal forms which has a submit button. 
     // The fields sumbmitted are processed on callback onSubmit of form.
-    FormCapture.startBackgroundFormBinder(this, this.captureAndTrackFormSubmit)
+    Capture.startBackgroundFormBinder(this, this.captureAndTrackFormSubmit)
 
     // Captures properties from input fields, which are not part of any form
     // on click of any button on the page, which is not a submit button of any form.
     // Note: submit button which is not inside a form is also bound.
-    FormCapture.bindAllNonFormButtonOnClick(this, this.captureAndTrackNonFormInput)
+    Capture.bindAllNonFormButtonOnClick(this, this.captureAndTrackNonFormInput)
 
 
     return true;
+}
+
+App.prototype.captureClick = function(appInstance, element) {
+    if (!element) logger.debug("Element is undefined on capture click.");
+
+    var payload = Capture.getClickCapturePayloadFromElement(element);
+
+    // Add event and user_properties for tracking after enabling.
+    payload.event_properties = getEventProperties();
+    payload.user_properties = Properties.getUserDefault();
+
+    // Add user_id to payload.
+    updatePayloadWithUserIdFromCookie(payload);
+
+    return appInstance.client.captureClick(payload);
+}
+
+App.prototype.autoClickCapture = function(enabled=false) {
+    if (!enabled) return false; // not enabled.
+
+    Capture.startBackgroundClickBinder(this, this.captureClick)
 }
 
 App.prototype.page = function(afterCallback, force=false) {

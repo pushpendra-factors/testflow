@@ -196,13 +196,13 @@ const matchEventName = (item) => {
             co: operatorMap[fil.operator],
             lOp: !index ? 'AND' : 'OR',
             en:
-              category == 'channels'
+              (category == 'channels' || category == 'custom_channels')
                 ? ''
                 : fil?.extra
                 ? fil?.extra[3]
                 : 'event',
             objTy:
-              category == 'channels'
+              (category == 'channels' || category == 'custom_channels')
                 ? fil?.extra
                   ? fil?.extra[3]
                   : 'event'
@@ -217,9 +217,9 @@ const matchEventName = (item) => {
           co: operatorMap[fil.operator],
           lOp: 'AND',
           en:
-            category == 'channels' ? '' : fil?.extra ? fil?.extra[3] : 'event',
+            (category == 'channels' || category == 'custom_channels') ? '' : fil?.extra ? fil?.extra[3] : 'event',
           objTy:
-            category == 'channels'
+            (category == 'channels' || category == 'custom_channels')
               ? fil?.extra
                 ? fil?.extra[3]
                 : 'event'

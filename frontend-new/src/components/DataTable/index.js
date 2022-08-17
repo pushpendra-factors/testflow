@@ -67,7 +67,7 @@ function DataTable({
   }, [handleDocumentClick]);
   const handlePageSizeChange = (...args) => {
     setPageSize(args[1]);
-  };
+  }; 
   return (
     <div ref={componentRef} className="data-table">
       <ControlledComponent controller={!isDashboardWidget && renderSearch}>
@@ -91,7 +91,8 @@ function DataTable({
             ? {
                 pageSize,
                 onShowSizeChange: handlePageSizeChange,
-                showSizeChanger: tableData.length > 10
+                showSizeChanger: tableData.length > 10,
+                size: 'default'
               }
             : false
         }
@@ -99,11 +100,13 @@ function DataTable({
         rowKey="index"
         rowSelection={!isDashboardWidget ? rowSelection : null}
         columns={columns}
-        dataSource={isDashboardWidget ? tableData.slice(0, 3) : tableData}
+        dataSource={isDashboardWidget ? tableData.slice(0, 6) : tableData}
         className={cx(styles.table, className, {
           [styles.dashboardTable]: isDashboardWidget
         })}
         scroll={scroll}
+        // size={isDashboardWidget ? 'middle' : ''}
+        size={'middle'}
       />
     </div>
   );

@@ -4,7 +4,11 @@ import (
 	cacheRedis "factors/cache/redis"
 	U "factors/util"
 	"fmt"
+	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 	"sort"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -41,7 +45,7 @@ type DashboardUnitString struct {
 type DashboardUnitRequestPayload struct {
 	Description  string `json:"description"`
 	Presentation string `json:"presentation"`
-	QueryId      int64  `json:"query_id"`
+	QueryId      int64  `json:"query_id,string"`
 }
 
 type DashboardUnitRequestPayloadString struct {
@@ -54,6 +58,7 @@ type DashboardUnitRequestPayloadString struct {
 type DashboardUnitCachePayload struct {
 	DashboardUnit DashboardUnit
 	BaseQuery     BaseQuery
+	Preset        string
 }
 
 type BeamDashboardUnitCachePayload struct {
@@ -108,19 +113,29 @@ type FailedDashboardUnitReport struct {
 	QueryRange  string
 }
 
-func getDashboardUnitQueryResultCacheKey(projectID int64, dashboardID, unitID int64, from, to int64, timezoneString U.TimeZoneString) (*cacheRedis.Key, error) {
+func GetDashboardUnitQueryResultCacheKey(projectID int64, dashboardID, unitID int64, preset string, from, to int64, timezoneString U.TimeZoneString) (*cacheRedis.Key, error) {
 	prefix := "dashboard:query"
+
 	var suffix string
+
 	if U.IsStartOfTodaysRangeIn(from, timezoneString) {
 		// Query for today's dashboard. Use to as 'now'.
 		suffix = fmt.Sprintf("did:%d:duid:%d:from:%d:to:now", dashboardID, unitID, from)
 	} else {
 		suffix = fmt.Sprintf("did:%d:duid:%d:from:%d:to:%d", dashboardID, unitID, from, to)
 	}
+	if preset != "" {
+		s1 := strings.Split(suffix, ":from")
+		a := fmt.Sprintf(":preset:%s:from", preset)
+		if len(s1) < 2 {
+			return nil, errors.New("invalid cache key")
+		}
+		suffix = s1[0] + a + s1[1]
+	}
 	return cacheRedis.NewKey(projectID, prefix, suffix)
 }
 
-func getDashboardCacheAnalyticsCacheKey(projectID int64, dashboardID, unitID int64, from, to int64, timezoneString U.TimeZoneString, preset string) (*cacheRedis.Key, error) {
+func GetDashboardCacheAnalyticsCacheKey(projectID int64, dashboardID, unitID int64, from, to int64, timezoneString U.TimeZoneString, preset string) (*cacheRedis.Key, error) {
 	prefix := "dashboard:analytics"
 	var suffix string
 	if U.IsStartOfTodaysRangeIn(from, timezoneString) {
@@ -130,6 +145,64 @@ func getDashboardCacheAnalyticsCacheKey(projectID int64, dashboardID, unitID int
 		suffix = fmt.Sprintf("did:%d:duid:%d:from:%d:to:%d:preset:%v", dashboardID, unitID, from, to, preset)
 	}
 	return cacheRedis.NewKey(projectID, prefix, suffix)
+}
+
+var SearchKeyPreset = map[string][]string{
+	"CURRENT_WEEK":  {"CURRENT_WEEK"},
+	"LAST_WEEK":     {"LAST_WEEK", "CURRENT_WEEK"},
+	"CURRENT_MONTH": {"CURRENT_MONTH"},
+	"LAST_MONTH":    {"LAST_MONTH", "CURRENT_MONTH"},
+	"YESTERDAY":     {"YESTERDAY", "TODAY"},
+	"TODAY":         {"TODAY"},
+}
+
+// GetDashboardUnitQueryLastComputedResultCacheKey return last computed cachekey
+func GetDashboardUnitQueryLastComputedResultCacheKey(projectID int64, dashboardID, unitID int64, preset string, from, to int64, timezoneString U.TimeZoneString) (*cacheRedis.Key, error) {
+
+	var cacheKeys []*cacheRedis.Key
+	var err error
+
+	for _, pre := range SearchKeyPreset[preset] {
+		pattern := fmt.Sprintf("dashboard:query:pid:%d:did:%d:duid:%d:preset:%s:from:%d:to:*", projectID, dashboardID, unitID, pre, from)
+		cacheKey, err := cacheRedis.ScanPersistent(pattern, 35, 35)
+		cacheKeys = append(cacheKeys, cacheKey...)
+		if err != nil {
+			log.WithError(err).Error("Failed to get cache key")
+
+		}
+	}
+
+	var latestComputedAt int64 = 0
+	var latestComputedKey *cacheRedis.Key
+
+	for _, key := range cacheKeys {
+		//get latest
+		stringKey, _ := key.Key()
+		LatestTo := strings.Split(stringKey, ":to:")
+		latestTo, err := strconv.ParseInt(LatestTo[1], 10, 64)
+
+		if err != nil {
+			continue
+		}
+		_, limit, _ := U.QueryDateRangePresets[preset](timezoneString)
+		if latestTo > limit {
+			continue
+		}
+		if latestComputedAt < latestTo {
+			latestComputedAt = latestTo
+			latestComputedKey = key
+		}
+
+	}
+	log.WithFields(log.Fields{"latest_key": latestComputedKey, "len_cacheKeys": len(cacheKeys)}).Info("Last computed cache key")
+
+	if latestComputedKey == nil {
+		cacheKey, err := GetDashboardUnitQueryResultCacheKey(projectID, dashboardID, unitID, preset, from, to, timezoneString)
+		log.WithFields(log.Fields{"preset": preset}).Info("Failed to find cache key")
+		return cacheKey, err
+	}
+
+	return latestComputedKey, err
 }
 
 var DashboardUnitPresentations = [...]string{
@@ -298,7 +371,7 @@ func GetNSlowestProjects(cacheReports []CachingUnitReport, n int) []CachingProje
 
 }
 
-func ShouldCacheUnitForTimeRange(queryClass, preset string, from, to int64, onlyAttribution, skipAttribution int) (bool, int64, int64) {
+func ShouldCacheUnitForTimeRange(queryClass, preset string, from, to int64, onlyAttribution, skipAttribution int, skipPreset bool) (bool, int64, int64) {
 
 	if queryClass == QueryClassAttribution {
 		// Rule 1: Skip attribution class queries if skipAttribution = 1
@@ -320,7 +393,11 @@ func ShouldCacheUnitForTimeRange(queryClass, preset string, from, to int64, only
 			return false, 0, 0
 		}
 
-		if preset == U.DateRangePresetLastWeek || preset == U.DateRangePresetLastMonth {
+		if preset == U.DateRangePresetYesterday && !skipPreset {
+			return true, from, to
+		}
+
+		if (preset == U.DateRangePresetLastWeek || preset == U.DateRangePresetLastMonth) && !skipPreset {
 			// Rule 2': If last week/last month is well before one day in past, compute for entire range
 			now := time.Now().Unix()
 			if (to + U.SECONDS_IN_A_DAY) <= (now - epsilonSeconds) {

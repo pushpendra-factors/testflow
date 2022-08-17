@@ -7,7 +7,7 @@ import { SVG, Text } from 'factorsComponents';
 import { DEFAULT_DATE_RANGE } from 'Components/QueryComposer/DateRangeSelector/utils';
 import MomentTz from 'Components/MomentTz';
 
-import GlobalFilterSelect from '../GlobalFilterSelect';
+import GlobalFilterSelect from '../GlobalFilterSelect'; 
 import { DEFAULT_OPERATOR_PROPS } from '../../../FaFilterSelect/utils';
 import { fetchKPIFilterValues } from 'Reducers/kpi';
 
@@ -70,13 +70,13 @@ function GlobalFilterBlock({
       setValuesByProps(filter.props);
       setNewFilterState(filter);
 
-      if (filter && filter?.extra) {
+      if (filter && filter?.extra) { 
         let filterData = {}; 
-        if (selectedMainCategory?.category == 'channels') {
+        if (selectedMainCategory?.category == 'channels' || selectedMainCategory?.category == 'custom_channels') {
           filterData = {
             category: selectedMainCategory?.category,
             // object_type: filter?.extra[3],
-            object_type: filter?.extra[3],
+            object_type: filter?.extra[3] ? filter?.extra[3] : selectedMainCategory?.group,
             property_name: filter?.extra[1],
             display_category: selectedMainCategory?.group,
             entity: 'event',
@@ -128,7 +128,7 @@ function GlobalFilterBlock({
       ' - ' +
       MomentTz(to).format('MMM DD, YYYY')
     );
-  };
+  }; 
 
   const renderFilterContent = () => {
     return (
@@ -581,7 +581,7 @@ function GlobalFilterBlock({
     if (props) {
       let filterData = {}; 
 
-      if (selectedMainCategory?.category == 'channels') {
+      if (selectedMainCategory?.category == 'channels' || selectedMainCategory?.category == 'custom_channels') {
         filterData = {
           category: selectedMainCategory?.category,
           object_type: props[3] ? props[3] : selectedMainCategory?.group,

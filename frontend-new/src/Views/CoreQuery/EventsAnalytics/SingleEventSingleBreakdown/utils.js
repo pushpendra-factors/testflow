@@ -22,7 +22,10 @@ import { EVENT_COUNT_KEY } from '../eventsAnalytics.constants';
 import { BREAKDOWN_TYPES } from '../../constants';
 
 export const defaultSortProp = ({ breakdown }) => {
-  const dateTimeBreakdownIndex = findIndex(breakdown, b => b.prop_type === BREAKDOWN_TYPES.DATETIME);
+  const dateTimeBreakdownIndex = findIndex(
+    breakdown,
+    (b) => b.prop_type === BREAKDOWN_TYPES.DATETIME
+  );
   if (dateTimeBreakdownIndex > -1) {
     return [
       {
@@ -74,8 +77,8 @@ export const getTableColumns = (
       e.prop_category === 'user'
         ? userPropNames[e.property] || e.property
         : e.prop_category === 'event'
-          ? eventPropNames[e.property] || e.property
-          : e.property;
+        ? eventPropNames[e.property] || e.property
+        : e.property;
     return {
       title: getClickableTitleSorter(
         displayTitle,
@@ -85,7 +88,13 @@ export const getTableColumns = (
       ),
       dataIndex: e.property,
       width: '50%',
-      fixed: 'left'
+      fixed: 'left',
+      render: (d) => {
+        if (e.prop_type === 'numerical' && !isNaN(d)) {
+          return <NumFormat number={d} />;
+        }
+        return d;
+      }
     };
   });
 
@@ -205,8 +214,8 @@ export const getDateBasedColumns = (
       e.prop_category === 'user'
         ? userPropNames[e.property] || e.property
         : e.prop_category === 'event'
-          ? eventPropNames[e.property] || e.property
-          : e.property;
+        ? eventPropNames[e.property] || e.property
+        : e.property;
 
     return {
       title: getClickableTitleSorter(
@@ -217,7 +226,13 @@ export const getDateBasedColumns = (
       ),
       dataIndex: e.property,
       width: 200,
-      fixed: 'left'
+      fixed: 'left',
+      render: (d) => {
+        if (e.prop_type === 'numerical' && !isNaN(d)) {
+          return <NumFormat number={d} />;
+        }
+        return d;
+      }
     };
   });
 

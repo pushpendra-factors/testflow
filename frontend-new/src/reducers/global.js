@@ -185,6 +185,9 @@ export default function (state = defaultState, action) {
     case 'FETCH_ALERTS': {
       return { ...state, Alerts: action.payload };
     }
+    case 'FETCH_SHARED_ALERTS': {
+      return { ...state, sharedAlerts: action.payload };
+    }
     case 'FETCH_MARKETO_FULFILLED': {
       return { ...state, marketo: action.payload };
     }
@@ -960,6 +963,25 @@ export function fetchAlerts(projectId) {
   };
 }
 
+export function fetchSharedAlerts(projectId) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      get(dispatch, host + 'projects/'+ projectId +'/v1/alerts?saved_queries=true', {})
+        .then((r) => {
+          if (r.ok) {
+            dispatch({ type: 'FETCH_SHARED_ALERTS', payload: r.data});
+            resolve(r);
+          } else {
+            reject(r);
+          }
+        })
+        .catch((err) => {
+          reject(err);
+        });
+    });
+  };
+}
+
 export function deleteAlert(projectId, id) {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
@@ -1023,6 +1045,66 @@ export function disableSlackIntegration(projectId) {
       .then((res) => {
           if(res.ok) {
             dispatch({ type: 'DISABLE_SLACK_FULFILLED', payload: res.data});
+            resolve(res);
+          } else {
+            reject(res);
+          }
+        }).catch((err) => {
+            reject(err);
+        });
+    });
+  };
+}
+
+export function enableHubspotIntegration(projectId) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      let payload = { project_id: projectId.toString() };
+      post(dispatch, host + 'integrations/hubspot/auth', payload)
+        .then((r) => {
+          if (r.ok) {
+            dispatch({ type: 'ENABLE_HUBSPOT_FULFILLED', payload: r.data });
+            resolve(r);
+          } else {
+            dispatch({ type: 'ENABLE_HUBSPOT_REJECTED' });
+            reject(r);
+          }
+        })
+        .catch((err) => {
+          dispatch({ type: 'ENABLE_HUBSPOT_REJECTED', payload: err });
+          reject(err);
+        });
+    });
+  };
+}
+
+export function enableLeadSquaredIntegration(projectId, payload) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      put(dispatch, host + 'projects/'+ projectId +'/leadsquaredsettings', payload)
+        .then((r) => {
+          if (r.ok) {
+            dispatch({ type: 'ENABLE_LEADSQUARED_INTEGRATION', payload: r.data});
+            resolve(r);
+          } else {
+            reject(r);
+          }
+        })
+        .catch((err) => {
+          dispatch({ type: 'ENABLE_LEADSQUARED_REJECTED', payload: err });
+          reject(err);
+        });
+    });
+  };
+}
+
+export function disableLeadSquaredIntegration(projectId) {
+  return (dispatch) => {
+    return new Promise((resolve, reject) => {
+      del(dispatch, host + 'projects/'+ projectId +'/leadsquaredsettings/remove', {})
+      .then((res) => {
+          if(res.ok) {
+            dispatch({ type: 'DISABLE_LEADSQUARED_FULFILLED', payload: res.data});
             resolve(res);
           } else {
             reject(res);

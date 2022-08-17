@@ -91,7 +91,7 @@ const BreakdownCharts = ({
 
   if (!aggregateData.length) {
     return (
-      <div className="mt-4 flex justify-center items-center w-full h-64 ">
+      <div className="flex justify-center items-center w-full h-full pt-4 pb-4">
         <NoDataChart />
       </div>
     );
@@ -100,17 +100,17 @@ const BreakdownCharts = ({
   let chartContent = null;
   let tableContent = null;
 
-  if (chartType === CHART_TYPE_TABLE || chartType === CHART_TYPE_PIVOT_CHART) {
-    tableContent = (
-      <div
-        onClick={handleEditQuery}
-        style={{ color: '#5949BC' }}
-        className="mt-3 font-medium text-base cursor-pointer flex justify-end item-center"
-      >
-        Show More &rarr;
-      </div>
-    );
-  }
+  // if (chartType === CHART_TYPE_TABLE || chartType === CHART_TYPE_PIVOT_CHART) {
+  //   tableContent = (
+  //     <div
+  //       onClick={handleEditQuery}
+  //       style={{ color: '#5949BC' }}
+  //       className="mt-3 font-medium text-base cursor-pointer flex justify-end item-center"
+  //     >
+  //       Show More &rarr;
+  //     </div>
+  //   );
+  // }
 
   if (chartType === CHART_TYPE_TABLE || chartType === CHART_TYPE_PIVOT_CHART) {
     chartContent = (
@@ -193,7 +193,7 @@ const BreakdownCharts = ({
   }
 
   return (
-    <div className={'w-full px-6 flex flex-1 flex-col justify-center'}>
+    <div className={'w-full'}>
       {chartContent}
       {tableContent}
     </div>
