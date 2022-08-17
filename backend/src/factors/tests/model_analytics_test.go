@@ -3048,7 +3048,7 @@ func TestQueryCaching(t *testing.T) {
 
 		// Another immediate query. Should return from cache after polling.
 		time.Sleep(50 * time.Millisecond)
-		w := sendAnalyticsQueryReq(r, queryClass, project.ID, agent, dashboardID, unitID, "", baseQuery, false, false)
+		w := sendAnalyticsQueryReq(r, queryClass, project.ID, agent, dashboardID, unitID, baseQuery, false, false)
 		assert.NotEmpty(t, w)
 		assert.Equal(t, http.StatusOK, w.Code)
 		if queryClass != model.QueryClassWeb {
@@ -3086,7 +3086,7 @@ func TestQueryCachingFailedCondition(t *testing.T) {
 
 		// First query should will fail because of wrong query class. This query should return error after polling.
 		time.Sleep(50 * time.Millisecond)
-		w := sendAnalyticsQueryReq(r, queryClass, project.ID, agent, 0, 0, "", baseQuery, false, false)
+		w := sendAnalyticsQueryReq(r, queryClass, project.ID, agent, 0, 0, baseQuery, false, false)
 		assert.NotEmpty(t, w)
 		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		type errorObj struct {
@@ -3193,7 +3193,7 @@ func TestExpandArrayWithIndividualValues(t *testing.T) {
 func sendAnalyticsQueryFromRoutine(r *gin.Engine, queryClass string, projectID int64, agent *model.Agent, dashboardID,
 	unitID int64, baseQuery model.BaseQuery, refresh bool, withDashboardParams bool, queryWaitSeconds int, waitGroup *sync.WaitGroup) {
 	defer waitGroup.Done()
-	sendAnalyticsQueryReqWithHeader(r, queryClass, projectID, agent, dashboardID, unitID, "",
+	sendAnalyticsQueryReqWithHeader(r, queryClass, projectID, agent, dashboardID, unitID,
 		baseQuery, false, false, map[string]string{model.QueryCacheRequestSleepHeader: fmt.Sprint(queryWaitSeconds)})
 }
 

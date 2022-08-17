@@ -126,10 +126,10 @@ func LeadSquaredPull(projectId int64, configs map[string]interface{}) (map[strin
 		}
 		log.Info("Getting Table Reference")
 		tableRef := client.Dataset(datasetID).Table(tableID)
-		log.Info("Getting Table CacheMeta Reference")
+		log.Info("Getting Table Metadata Reference")
 		meta, err := client.Dataset(datasetID).Table(tableID).Metadata(ctx)
 		if err != nil {
-			log.WithError(err).Error("Error Fetching CacheMeta")
+			log.WithError(err).Error("Error Fetching Metadata")
 			resultStatus["error"] = err.Error()
 			return resultStatus, false
 		}

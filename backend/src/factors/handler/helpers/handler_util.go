@@ -10,6 +10,7 @@ import (
 
 	C "factors/config"
 	U "factors/util"
+
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 )
@@ -23,21 +24,11 @@ type DashboardQueryResponsePayload struct {
 	Cache       bool        `json:"cache"`
 	RefreshedAt int64       `json:"refreshed_at"`
 	TimeZone    string      `json:"timezone"`
-	CacheMeta   interface{} `json:"cache_meta"`
-}
-
-type CacheMeta struct {
-	From           int64  `json:"from"`
-	To             int64  `json:"to"`
-	RefreshedAt    int64  `json:"refreshed_at"`
-	LastComputedAt int64  `json:"last_computed_at"`
-	Timezone       string `json:"timezone"`
-	Preset         string `json:"preset"`
 }
 
 func getQueryCacheResponse(c *gin.Context, cacheResult model.QueryCacheResult, forDashboard bool, skipContextVerfication bool) (bool, int, interface{}) {
 	if forDashboard {
-		return true, http.StatusOK, DashboardQueryResponsePayload{Result: cacheResult.Result, Cache: true, RefreshedAt: cacheResult.RefreshedAt, TimeZone: cacheResult.TimeZone, CacheMeta: cacheResult.CacheMeta}
+		return true, http.StatusOK, DashboardQueryResponsePayload{Result: cacheResult.Result, Cache: true, RefreshedAt: cacheResult.RefreshedAt, TimeZone: cacheResult.TimeZone}
 	}
 	// To Indicate if the result is served from cache without changing the response format.
 	if !skipContextVerfication {
@@ -115,10 +106,10 @@ func GetResponseIfCachedQuery(c *gin.Context, projectID int64, requestPayload mo
 }
 
 // GetResponseIfCachedDashboardQuery Common function to fetch result from cache if present for dashboard query.
-func GetResponseIfCachedDashboardQuery(reqId string, projectID int64, dashboardID, unitID int64, preset string, from, to int64, timezoneString U.TimeZoneString) (bool, int, interface{}) {
-	cacheResult, errCode, err := model.GetCacheResultByDashboardIdAndUnitId(reqId, projectID, dashboardID, unitID, preset, from, to, timezoneString)
+func GetResponseIfCachedDashboardQuery(reqId string, projectID int64, dashboardID, unitID int64, from, to int64, timezoneString U.TimeZoneString) (bool, int, interface{}) {
+	cacheResult, errCode, err := model.GetCacheResultByDashboardIdAndUnitId(reqId, projectID, dashboardID, unitID, from, to, timezoneString)
 	if errCode == http.StatusFound && cacheResult != nil {
-		return true, http.StatusOK, DashboardQueryResponsePayload{Result: cacheResult.Result, Cache: true, RefreshedAt: cacheResult.RefreshedAt, TimeZone: string(timezoneString), CacheMeta: cacheResult.CacheMeta}
+		return true, http.StatusOK, DashboardQueryResponsePayload{Result: cacheResult.Result, Cache: true, RefreshedAt: cacheResult.RefreshedAt, TimeZone: string(timezoneString)}
 	}
 	return false, errCode, err
 }

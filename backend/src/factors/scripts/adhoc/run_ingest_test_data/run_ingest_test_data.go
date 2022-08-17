@@ -2,25 +2,25 @@ package main
 
 import (
 	"bufio"
-	"cloud.google.com/go/storage"
 	"context"
+	"fmt"
+	"io"
 	"encoding/json"
 	"errors"
 	C "factors/config"
 	M "factors/model/model"
 	"flag"
-	"fmt"
-	"github.com/google/uuid"
-	"github.com/jinzhu/gorm"
-	"github.com/jinzhu/gorm/dialects/postgres"
-	log "github.com/sirupsen/logrus"
-	"io"
 	"os"
 	"strconv"
 	"strings"
+	"cloud.google.com/go/storage"
+	"github.com/google/uuid"
+	"github.com/jinzhu/gorm"
+	log "github.com/sirupsen/logrus"
 	"time"
-)
+	"github.com/jinzhu/gorm/dialects/postgres"
 
+)
 // temp structs just for this script
 type Event struct {
 	// Composite primary key with project_id and uuid.
@@ -60,7 +60,6 @@ type EventName struct {
 	CreatedAt  time.Time `json:"created_at"`
 	UpdatedAt  time.Time `json:"updated_at"`
 }
-
 var jobMap = map[string][]string{
 	"dashboard_caching":          []string{"event_names", "users", "events", "dashboards", "dashboard_units"},
 	"add_session":                []string{"event_names", "users", "events"},
@@ -69,7 +68,7 @@ var jobMap = map[string][]string{
 	"web_analytics_dashboard":    []string{"event_names", "users", "events"},
 	"explain_feature_testing_ui": []string{"event_names", "users", "events"},
 	"attribution":                []string{"event_names", "users", "events", "project_settings", "adwords_documents", "facebook_documents", "linkedin_documents", "smart_property_rules", "smart_properties"},
-	"test":                       []string{"adwords_documents", "facebook_documents", "linkedin_documents"},
+	"test": []string{"adwords_documents","facebook_documents","linkedin_documents"},
 }
 var projectIdStaging *uint64
 var folderName *string
