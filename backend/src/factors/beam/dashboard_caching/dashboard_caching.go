@@ -2,7 +2,6 @@ package dashboard_caching
 
 import (
 	"context"
-	"encoding/json"
 	FB "factors/beam"
 	C "factors/config"
 	"factors/model/model"
@@ -218,19 +217,11 @@ func (f *GetDashboardUnitCachePayloadsFn) ProcessElement(ctx context.Context, pr
 
 	projectIDs := store.GetStore().GetProjectsToRunForIncludeExcludeString(stringProjectIDs, excludeProjectIDs)
 	for _, projectID := range projectIDs {
-
-		projectSettingsJSON, _ := store.GetStore().GetProjectSetting(projectID)
-		var cacheSettings model.CacheSettings
-		err := json.Unmarshal(projectSettingsJSON.CacheSettings.RawMessage, &cacheSettings)
-		if err != nil {
-			continue
-		}
 		timezoneString, statusCode := store.GetStore().GetTimezoneForProject(projectID)
 		if statusCode != http.StatusFound {
 			log.Errorf("Failed to get project Timezone for %d", projectID)
 			continue
 		}
-
 		dashboardUnits, errCode := store.GetStore().GetDashboardUnitsForProjectID(int64(projectID))
 		if errCode != http.StatusFound {
 			continue
@@ -238,17 +229,14 @@ func (f *GetDashboardUnitCachePayloadsFn) ProcessElement(ctx context.Context, pr
 		for _, dashboardUnit := range dashboardUnits {
 			queryClass, queryInfo, errMsg := store.GetStore().GetQueryAndClassFromDashboardUnit(&dashboardUnit)
 			if errMsg == "" && queryClass != model.QueryClassWeb {
-
 				for preset, rangeFunction := range U.QueryDateRangePresets {
 					fr, t, errCode := rangeFunction(timezoneString)
 					if errCode != nil {
 						log.Errorf("Failed to get proper project Timezone for %d", projectID)
 						continue
 					}
-
 					// Filtering queries on type and range for attribution query
-					allowedPreset := cacheSettings.AttributionCachePresets
-					shouldCache, from, to := model.ShouldCacheUnitForTimeRange(queryClass, preset, fr, t, f.JobProps.OnlyAttribution, f.JobProps.SkipAttribution, allowedPreset[preset])
+					shouldCache, from, to := model.ShouldCacheUnitForTimeRange(queryClass, preset, fr, t, f.JobProps.OnlyAttribution, f.JobProps.SkipAttribution)
 					if !shouldCache {
 						continue
 					}

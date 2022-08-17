@@ -84,3 +84,13 @@ spec:
         backend:
           serviceName: intercom-help
           servicePort: 80
+  - http:
+      paths:
+      - path: /sdk
+        backend:
+          serviceName: sdkserver-service
+          servicePort: 80
+      - path: /sdk/*
+        backend:
+          serviceName: sdkserver-service
+          servicePort: 80

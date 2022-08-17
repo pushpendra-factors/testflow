@@ -248,3 +248,4 @@ func SendSlackAlert(projectID int64, message, agentUUID string, channel model.Sl
 	defer resp.Body.Close()
 	return false, errors.New("Failed to send slack alert")
 }
+

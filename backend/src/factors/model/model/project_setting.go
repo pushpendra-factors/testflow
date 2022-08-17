@@ -51,8 +51,6 @@ type ProjectSetting struct {
 	BigqueryEnabled *bool `gorm:"default:false" json:"bigquery_enabled"`
 	//Salesforce settings
 	IntSalesforceEnabledAgentUUID *string `json:"int_salesforce_enabled_agent_uuid,omitempty"`
-	//Cache settings preset
-	CacheSettings *postgres.Jsonb `json:"cache_settings"`
 	//Linkedin related fields
 	IntLinkedinAdAccount          string          `json:"int_linkedin_ad_account"`
 	IntLinkedinAccessToken        string          `json:"int_linkedin_access_token"`
@@ -147,10 +145,6 @@ type SalesforceProjectSettings struct {
 	ProjectID    int64  `json:"-"`
 	RefreshToken string `json:"refresh_token"`
 	InstanceURL  string `json:"instance_url"`
-}
-
-type CacheSettings struct {
-	AttributionCachePresets map[string]bool `json:"attribution_cache_presets"`
 }
 
 // Identification types
