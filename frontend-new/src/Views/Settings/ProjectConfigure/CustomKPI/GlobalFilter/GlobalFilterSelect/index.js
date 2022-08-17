@@ -537,6 +537,9 @@ const GlobalFilterSelect = ({
           type="number"
           value={valuesState}
           placeholder={'Enter Value'}
+          onBlur={() => {
+            emitFilter()
+            setContainButton(true)}}
           onPressEnter={()=>{
             emitFilter()
             setContainButton(true)}}
