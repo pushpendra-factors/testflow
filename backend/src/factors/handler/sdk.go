@@ -15,6 +15,7 @@ import (
 	mid "factors/middleware"
 	"factors/model/model"
 	"factors/model/store"
+	"factors/sdk"
 	SDK "factors/sdk"
 	"factors/util"
 	U "factors/util"
@@ -250,6 +251,7 @@ type sdkSettingsResponse struct {
 	AutoTrack            *bool `json:"auto_track"`
 	AutoTrackSPAPageView *bool `json:"auto_track_spa_page_view"`
 	AutoFormCapture      *bool `json:"auto_form_capture"`
+	AutoClickCapture     *bool `json:"auto_click_capture"`
 	ExcludeBot           *bool `json:"exclude_bot"`
 	IntDrift             *bool `json:"int_drift"`
 	IntClearBit          *bool `json:"int_clear_bit"`
@@ -278,6 +280,7 @@ func SDKGetProjectSettingsHandler(c *gin.Context) {
 		AutoTrack:            projectSetting.AutoTrack,
 		AutoTrackSPAPageView: projectSetting.AutoTrackSPAPageView,
 		AutoFormCapture:      projectSetting.AutoFormCapture,
+		AutoClickCapture:     projectSetting.AutoClickCapture,
 		ExcludeBot:           projectSetting.ExcludeBot,
 		IntDrift:             projectSetting.IntDrift,
 		IntClearBit:          projectSetting.IntClearBit,
@@ -624,4 +627,95 @@ func SDKErrorHandler(c *gin.Context) {
 
 	c.AbortWithStatus(http.StatusOK)
 	return
+}
+
+// SDKCaptureClickAsEvent godoc
+// @Summary To capture clicks as events.
+// @Tags SDK
+// @Accept  json
+// @Produce json
+// @Param request body CaptureClickPayload true "Capture click payload"
+// @Success 200 {object} sdk.CaptureClickResponse
+// @Router /sdk/capture_click [post]
+func SDKCaptureClickHandler(c *gin.Context) {
+	/* Behaviour: Clicks recorded on clickable_elements. Queued for tracking events once enabled.
+	* Clicks discovery (collecting clickable_elements) does not use queue. Non-critical data. Queue
+	will be bloated, if there is spurious click event, which is more likely.
+	* If a clickable_element is enabled, then a custom track call will be queued with existing
+	queue logic.
+	* If database is down: the enabled/disabled data can be fetched from redis and custom track
+	queue will keep working. This requires caching and refreshing cache on change of
+	clickable_elements state. */
+
+	r := c.Request
+	logCtx := log.WithField("reqId", U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID))
+
+	if r.Body == nil {
+		logCtx.Error("Invalid request. Request body unavailable.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, &model.CaptureClickResponse{
+			Error: "Updating click failed. Missing request body."})
+		return
+	}
+
+	var request model.CaptureClickPayload
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&request); err != nil {
+		logCtx.WithError(err).Error("Updating click failed. JSON Decoding failed.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, &model.CaptureClickResponse{
+			Error: "Updating click failed. Invalid payload."})
+		return
+	}
+
+	// TODO: Move clickable_elements to use project_token and implement
+	// cache based config to make the flow working when the db is down.
+	projectToken := U.GetScopeByKeyAsString(c, mid.SCOPE_PROJECT_TOKEN)
+	projectID, errCode := store.GetStore().GetProjectIDByToken(projectToken)
+	if errCode == http.StatusNotFound {
+		if SDK.IsValidTokenString(projectToken) {
+			logCtx.Error("Failed to get project from sdk project token.")
+		} else {
+			logCtx.WithField("token", projectToken).Warn("Invalid token on sdk payload.")
+		}
+
+		c.AbortWithStatusJSON(http.StatusUnauthorized,
+			&model.CaptureClickResponse{Error: "Update click failed. Invalid Token."})
+		return
+	}
+
+	if errCode != http.StatusFound {
+		c.AbortWithStatusJSON(errCode, &model.CaptureClickResponse{Error: "Update click failed."})
+		return
+	}
+
+	var response *model.CaptureClickResponse
+	isEnabled, status, err := store.GetStore().UpsertCountAndCheckEnabledClickableElement(projectID, &request)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to capture click.")
+		response = &model.CaptureClickResponse{Error: "Failed to capture click."}
+		c.AbortWithStatusJSON(status, response)
+		return
+	}
+
+	if !isEnabled {
+		c.JSON(status, &model.CaptureClickResponse{Message: "Captured click successfully."})
+		return
+	}
+
+	model.AddAllowedElementAttributes(projectID,
+		request.ElementAttributes, &request.EventProperties)
+
+	payload := sdk.TrackPayload{
+		UserId:          request.UserID,
+		Name:            strings.TrimSpace(request.DisplayName),
+		EventProperties: request.EventProperties,
+		UserProperties:  request.UserProperties,
+		Auto:            false,
+		RequestSource:   model.UserSourceWeb,
+		Timestamp:       util.TimeNowUnix(),
+	}
+
+	trackStatus, trackResponse := sdk.TrackWithQueue(projectToken, &payload,
+		C.GetSDKRequestQueueAllowedTokens())
+	trackResponse.Message = "Tracked click as event."
+	c.JSON(trackStatus, trackResponse)
 }

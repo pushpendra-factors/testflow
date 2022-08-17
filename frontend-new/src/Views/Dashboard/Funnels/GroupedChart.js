@@ -45,7 +45,7 @@ function GroupedChart({
 
   if (!groups.length) {
     return (
-      <div className='mt-4 flex justify-center items-center w-full h-full '>
+      <div className="flex justify-center items-center w-full h-full pt-4 pb-4">
         <NoDataChart />
       </div>
     );
@@ -100,20 +100,20 @@ function GroupedChart({
 
   let tableContent = null;
 
-  if (chartType === 'table') {
-    tableContent = (
-      <div
-        onClick={handleEditQuery}
-        style={{ color: '#5949BC' }}
-        className='mt-3 font-medium text-base cursor-pointer flex justify-end item-center'
-      >
-        Show More &rarr;
-      </div>
-    );
-  }
+  // if (chartType === 'table') {
+  //   tableContent = (
+  //     <div
+  //       onClick={handleEditQuery}
+  //       style={{ color: '#5949BC' }}
+  //       className='mt-3 font-medium text-base cursor-pointer flex justify-end item-center'
+  //     >
+  //       Show More &rarr;
+  //     </div>
+  //   );
+  // }
 
   return (
-    <div className={`w-full px-6 flex flex-1 flex-col  justify-center`}>
+    <div className={`w-full`}>
       {chartContent}
       {tableContent}
     </div>

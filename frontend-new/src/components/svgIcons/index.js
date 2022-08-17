@@ -2494,6 +2494,16 @@ const HandshakeSVG = ({ size = 16, extraClass, color }) => {
   )
 }
 
+const LeadSquaredSVG = ({ size = 16, extraClass, color }) => {
+  return (
+    <svg width={size} height={size} viewBox="0 0 50 50" className={extraClass} fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="6" y="6.77518" width="36.5474" height="36.4496" rx="1" fill="#329AFB"/>
+      <rect x="6" y="25" width="18.2737" height="18.2248" rx="0.5" fill="white"/>
+      <path d="M6.4 43.2248H23.3062C23.6628 43.2248 23.8411 42.7934 23.5886 42.5416L6.68246 25.6806C6.43032 25.4292 6 25.6078 6 25.9639V42.8248C6 43.0457 6.17909 43.2248 6.4 43.2248Z" fill="#09283D"/>
+    </svg>
+  )
+}
+
 export {
   BrandSVG,
   DeleteSVG,
@@ -2657,5 +2667,6 @@ export {
   ArrowLeftSVG,
   CopySVG,
   RemoveOutlinedSVG,
+  LeadSquaredSVG,
   HandshakeSVG
 };

@@ -216,7 +216,16 @@ func (dd *DiskDriver) GetWeeklyKPIModelDir(projectId int64, dateString string, q
 	return fmt.Sprintf("%v/projects/%v/weeklyKPI/%v/q-%v/", dd.baseDir, projectId, dateString, queryId)
 }
 
+func (dd *DiskDriver) GetAdsDataDir(projectId int64) string {
+	return fmt.Sprintf("%v/projects/%v/AdsImport/", dd.baseDir, projectId)
+}
+
 func (dd *DiskDriver) GetKPIFilePathAndName(projectId int64, dateString string, queryId int64) (string, string) {
 	path := dd.GetWeeklyKPIModelDir(projectId, dateString, queryId)
 	return path, "kpi.txt"
+}
+
+func (dd *DiskDriver) GetAdsDataFilePathAndName(projectId int64, report string, chunkNo int) (string, string) {
+	path := dd.GetAdsDataDir(projectId)
+	return path, fmt.Sprintf("%v-%v-%v.csv", report, projectId, chunkNo)
 }

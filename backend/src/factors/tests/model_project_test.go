@@ -39,7 +39,7 @@ func TestDBCreateAndGetProject(t *testing.T) {
 	interactionSettings.UTMMappings["Hello"] = []string{"World"}
 	val1, _ := U.EncodeStructTypeToPostgresJsonb(interactionSettings)
 
-	salesforceTouchPoint := model.SalesforceTouchPoints{}
+	/*salesforceTouchPoint := model.SalesforceTouchPoints{}
 	salesforceTouchPoint.TouchPointRules = make(map[string][]model.SFTouchPointRule)
 	salesforceTouchPoint.TouchPointRules["Sales"] = []model.SFTouchPointRule{model.SFTouchPointRule{TouchPointTimeRef: "Force"}}
 	val2, _ := U.EncodeStructTypeToPostgresJsonb(salesforceTouchPoint)
@@ -47,10 +47,10 @@ func TestDBCreateAndGetProject(t *testing.T) {
 	hubspotTouchPoint := model.HubspotTouchPoints{}
 	hubspotTouchPoint.TouchPointRules = make(map[string][]model.HSTouchPointRule)
 	hubspotTouchPoint.TouchPointRules["Hub"] = []model.HSTouchPointRule{model.HSTouchPointRule{TouchPointTimeRef: "Spot"}}
-	val3, _ := U.EncodeStructTypeToPostgresJsonb(hubspotTouchPoint)
+	val3, _ := U.EncodeStructTypeToPostgresJsonb(hubspotTouchPoint)*/
 
 	errCode = store.GetStore().UpdateProject(project.ID,
-		&model.Project{InteractionSettings: *val1, SalesforceTouchPoints: *val2, HubspotTouchPoints: *val3})
+		&model.Project{InteractionSettings: *val1})
 
 	assert.Equal(t, errCode, 0)
 	getProject, errCode := store.GetStore().GetProject(project.ID)
@@ -60,13 +60,13 @@ func TestDBCreateAndGetProject(t *testing.T) {
 	_ = U.DecodePostgresJsonbToStructType(&getProject.InteractionSettings, &valUpdated1)
 	assert.Equal(t, valUpdated1.UTMMappings["Hello"], []string{"World"})
 
-	valUpdated2 := model.SalesforceTouchPoints{}
+	/*valUpdated2 := model.SalesforceTouchPoints{}
 	_ = U.DecodePostgresJsonbToStructType(&getProject.SalesforceTouchPoints, &valUpdated2)
 	assert.Equal(t, valUpdated2.TouchPointRules["Sales"], []model.SFTouchPointRule{model.SFTouchPointRule{TouchPointTimeRef: "Force"}})
 
 	valUpdated3 := model.HubspotTouchPoints{}
 	_ = U.DecodePostgresJsonbToStructType(&getProject.HubspotTouchPoints, &valUpdated3)
-	assert.Equal(t, valUpdated3.TouchPointRules["Hub"], []model.HSTouchPointRule{model.HSTouchPointRule{TouchPointTimeRef: "Spot"}})
+	assert.Equal(t, valUpdated3.TouchPointRules["Hub"], []model.HSTouchPointRule{model.HSTouchPointRule{TouchPointTimeRef: "Spot"}})*/
 
 	// Test token is overwritten and cannot be provided.
 	previousProjectId := project.ID

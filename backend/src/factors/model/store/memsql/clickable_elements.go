@@ -13,7 +13,18 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (store *MemSQL) UpdateButtonClickEventById(projectId int64, reqPayload *model.SDKButtonElementAttributesPayload) (int, error) {
+var allowedElementTypes = map[string]bool{
+	"BUTTON": true,
+	"ANCHOR": true,
+}
+
+func isAllowedElementType(elementType string) bool {
+	_, isAllowed := allowedElementTypes[elementType]
+	return isAllowed
+}
+
+func (store *MemSQL) UpsertCountAndCheckEnabledClickableElement(projectId int64,
+	reqPayload *model.CaptureClickPayload) (isEnabled bool, status int, err error) {
 	logCtx := log.WithField("project_id", projectId).WithField("request_payload", reqPayload)
 
 	logFields := log.Fields{
@@ -22,83 +33,77 @@ func (store *MemSQL) UpdateButtonClickEventById(projectId int64, reqPayload *mod
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
-	if projectId == 0 || reqPayload.DisplayName == "" || reqPayload.ElementType == "" {
+	if projectId == 0 || reqPayload.DisplayName == "" || !isAllowedElementType(reqPayload.ElementType) {
 		logCtx.Error("Invalid parameters.")
-		return http.StatusBadRequest, errors.New("Invalid parameters.")
+		return false, http.StatusBadRequest, errors.New("Invalid parameters.")
 	}
 
-	if reqPayload.ElementAttributes.Timestamp == 0 {
-		reqPayload.ElementAttributes.Timestamp = time.Now().Unix()
-	}
+	allowedAttributes := U.PropertiesMap{}
+	model.AddAllowedElementAttributes(projectId, reqPayload.ElementAttributes, &allowedAttributes)
+	reqPayload.ElementAttributes = allowedAttributes
 
-	event, err := store.GetButtonClickEventById(projectId, reqPayload.DisplayName, reqPayload.ElementType)
-	if err == http.StatusNotFound {
-		return GetStore().CreateButtonClickEventById(projectId, reqPayload)
-	} else if err == http.StatusBadRequest {
+	element, getErr := store.GetClickableElementById(projectId, reqPayload.DisplayName, reqPayload.ElementType)
+	if getErr == http.StatusNotFound {
+		status, err := GetStore().CreateClickableElementById(projectId, reqPayload)
+		return false, status, err
+	} else if getErr == http.StatusBadRequest {
 		logCtx.Error("Invalid parameters.")
-		return http.StatusBadRequest, errors.New("Update button click failed. Invalid parameters.")
-	} else if err == http.StatusInternalServerError {
-		logCtx.Error("Getting button click failed.")
-		return http.StatusInternalServerError, errors.New("Update button click failed. Getting button click failed.")
+		return false, http.StatusBadRequest, errors.New("Update click failed. Invalid parameters.")
+	} else if getErr == http.StatusInternalServerError {
+		logCtx.Error("Gettingclick failed.")
+		return false, http.StatusInternalServerError,
+			errors.New("Updateclick failed. Getting click failed.")
 	}
 
 	db := C.GetServices().Db
+	if err := db.Model(&model.ClickableElements{}).
+		Where("project_id = ? AND display_name = ? AND element_type = ?", projectId, reqPayload.DisplayName, reqPayload.ElementType).
+		Update(map[string]interface{}{"click_count": element.ClickCount + 1}).
+		Error; err != nil {
 
-	event.ClickCount += 1
-	event.UpdatedAt = time.Unix(reqPayload.ElementAttributes.Timestamp, 0)
-	if err := db.Save(&event).Error; err != nil {
-		logCtx.WithField("err", err).Error("Failed in updating button click.")
-		return http.StatusInternalServerError, errors.New("Update button click failed. Failed to update button click.")
+		logCtx.WithField("err", err).Error("Failed to increment click.")
+
+		// If enabled log and return positive, to avoid confusion.
+		//click increment is secondary for enabled elements.
+		if element.Enabled {
+			return element.Enabled, http.StatusAccepted, nil
+		}
+
+		return element.Enabled, http.StatusInternalServerError,
+			errors.New("Updateclick failed. Failed to update click.")
 	}
 
-	return http.StatusAccepted, nil
+	return element.Enabled, http.StatusAccepted, nil
 }
 
-func (store *MemSQL) CreateButtonClickEventById(projectId int64, buttonClick *model.SDKButtonElementAttributesPayload) (int, error) {
+func (store *MemSQL) CreateClickableElementById(projectId int64, click *model.CaptureClickPayload) (int, error) {
 	logFields := log.Fields{
-		"project_id":   projectId,
-		"button_click": buttonClick,
+		"project_id": projectId,
+		"click":      click,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
 
-	if projectId == 0 || buttonClick.DisplayName == "" || buttonClick.ElementType == "" {
+	if projectId == 0 || click.DisplayName == "" || click.ElementType == "" {
 		logCtx.Error("Invalid parameters.")
-		return http.StatusBadRequest, errors.New("Failed to create a button click event. Invalid parameters.")
+		return http.StatusBadRequest, errors.New("Failed to create aclick event. Invalid parameters.")
 	}
 
-	if buttonClick.ElementAttributes.Timestamp == 0 {
-		buttonClick.ElementAttributes.Timestamp = time.Now().Unix()
-	}
-
-	_, error := store.GetButtonClickEventById(projectId, buttonClick.DisplayName, buttonClick.ElementType)
-	if error == http.StatusFound {
-		logCtx.Error("Duplicate.")
-		return http.StatusConflict, errors.New("Failed to create a button click event. Duplicate.")
-	} else if error == http.StatusBadRequest {
-		logCtx.Error("Invalid parameters.")
-		return http.StatusBadRequest, errors.New("Failed to create a button click event. Invalid parameters.")
-	} else if error == http.StatusInternalServerError {
-		logCtx.Error("Getting button click failed.")
-		return http.StatusInternalServerError, errors.New("Failed to create a button click event. Getting button click failed.")
-	}
-
-	elementAttributes, err := U.EncodeStructTypeToPostgresJsonb(buttonClick.ElementAttributes)
+	elementAttributes, err := U.EncodeStructTypeToPostgresJsonb(click.ElementAttributes)
 	if err != nil {
 		logCtx.Error("Cannot convert struct to json.")
-		return http.StatusInternalServerError, errors.New("Failed to create a button click event. Cannot convert struct to json.")
+		return http.StatusInternalServerError,
+			errors.New("Failed to create aclick event. Cannot convert struct to json.")
 	}
 
 	event := model.ClickableElements{
 		ProjectID:         projectId,
 		Id:                U.GetUUID(),
-		DisplayName:       buttonClick.DisplayName,
-		ElementType:       buttonClick.ElementType,
+		DisplayName:       click.DisplayName,
+		ElementType:       click.ElementType,
 		ElementAttributes: elementAttributes,
 		ClickCount:        1,
 		Enabled:           false,
-		CreatedAt:         time.Unix(buttonClick.ElementAttributes.Timestamp, 0),
-		UpdatedAt:         time.Unix(buttonClick.ElementAttributes.Timestamp, 0),
 	}
 
 	db := C.GetServices().Db
@@ -106,16 +111,18 @@ func (store *MemSQL) CreateButtonClickEventById(projectId int64, buttonClick *mo
 	if dbx.Error != nil {
 		if IsDuplicateRecordError(dbx.Error) {
 			logCtx.WithError(dbx.Error).Error("Duplicate.")
-			return http.StatusConflict, errors.New("Failed to create a button click event. Duplicate.")
+			return http.StatusConflict, errors.New("Failed to create a click event. Duplicate.")
 		}
-		logCtx.WithError(dbx.Error).Error("Failed to create a button click event.")
-		return http.StatusInternalServerError, errors.New("Failed to create a button click event")
+		logCtx.WithError(dbx.Error).Error("Failed to create a click event.")
+		return http.StatusInternalServerError, errors.New("Failed to create aclick event")
 	}
 
 	return http.StatusCreated, nil
 }
 
-func (store *MemSQL) GetButtonClickEventById(projectId int64, displayName string, elementType string) (*model.ClickableElements, int) {
+func (store *MemSQL) GetClickableElementById(projectId int64, displayName string,
+	elementType string) (*model.ClickableElements, int) {
+
 	logFields := log.Fields{
 		"project_id":   projectId,
 		"display_name": displayName,
@@ -133,7 +140,9 @@ func (store *MemSQL) GetButtonClickEventById(projectId int64, displayName string
 	var event model.ClickableElements
 
 	db := C.GetServices().Db
-	dbx := db.Limit(1).Where("project_id = ? AND display_name = ? AND element_type = ?", projectId, displayName, elementType)
+	dbx := db.Limit(1).
+		Where("project_id = ? AND display_name = ? AND element_type = ?",
+			projectId, displayName, elementType)
 
 	if err := dbx.Find(&event).Error; err != nil {
 		if gorm.IsRecordNotFoundError(err) {
@@ -141,10 +150,34 @@ func (store *MemSQL) GetButtonClickEventById(projectId int64, displayName string
 			return nil, http.StatusNotFound
 		}
 
-		log.WithFields(log.Fields{"project_id": projectId, "display_name": displayName, "element_type": elementType}).WithError(err).Error(
-			"Getting button click failed on GetButtonClickById.")
+		log.WithFields(log.Fields{"project_id": projectId, "display_name": displayName, "element_type": elementType}).
+			WithError(err).
+			Error("Getting click failed on GetClickById.")
 		return nil, http.StatusInternalServerError
 	}
 
 	return &event, http.StatusFound
+}
+
+func (store *MemSQL) ToggleEnabledClickableElement(projectId int64,
+	displayName string, elementType string) int {
+
+	logCtx := log.WithField("project_id", projectId)
+
+	element, status := store.GetClickableElementById(projectId, displayName, elementType)
+	if status != http.StatusFound {
+		return status
+	}
+
+	db := C.GetServices().Db
+	err := db.Model(&model.ClickableElements{}).
+		Where("project_id = ? AND display_name = ? AND element_type = ?", projectId, displayName, elementType).
+		Update(map[string]interface{}{"enabled": !element.Enabled}).
+		Error
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to toggle enabled clickable elements")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusAccepted
 }

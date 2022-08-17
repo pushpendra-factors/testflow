@@ -12,6 +12,7 @@ import {
 import { SVG, Text } from '../../factorsComponents';
 import FaTimeline from '../../FaTimeline';
 import { formatDurationIntoString } from '../../../utils/dataFormatter';
+import { granularityOptions } from '../utils';
 
 function ContactDetails({ onCancel, userDetails }) {
   const [activities, setActivities] = useState([]);
@@ -39,10 +40,9 @@ function ContactDetails({ onCancel, userDetails }) {
 
   const [granularity, setGranularity] = useState('Hourly');
   const [collapse, setCollapse] = useState(true);
-  const options = ['Timestamp', 'Hourly', 'Daily', 'Weekly', 'Monthly'];
-  const menu = (
+  const granularityMenu = (
     <Menu>
-      {options.map((option) => {
+      {granularityOptions.map((option) => {
         return (
           <Menu.Item key={option} onClick={(key) => setGranularity(key.key)}>
             <div className={'flex items-center'}>
@@ -125,7 +125,18 @@ function ContactDetails({ onCancel, userDetails }) {
       >
         <Row justify={'space-between'} className={'my-3 m-0'}>
           <Col className='flex items-center'>
-            <SVG name={'brand'} size={36} />
+            <Button
+              style={{ padding: '0' }}
+              type='text'
+              icon={<SVG name={'brand'} size={36} />}
+              size={'large'}
+              onClick={() => {
+                setActivities([]);
+                setCollapse(true);
+                setGranularity('Hourly');
+                onCancel();
+              }}
+            />
             <Text type={'title'} level={4} weight={'bold'} extraClass={'m-0'}>
               Contact Details
             </Text>
@@ -337,7 +348,10 @@ function ContactDetails({ onCancel, userDetails }) {
                       </Popover>
                     </div>
                     <div>
-                      <Dropdown overlay={menu} placement='bottomRight'>
+                      <Dropdown
+                        overlay={granularityMenu}
+                        placement='bottomRight'
+                      >
                         <Button
                           className={`ant-dropdown-link flex items-center`}
                         >

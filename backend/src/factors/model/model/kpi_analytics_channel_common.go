@@ -39,7 +39,7 @@ func TransformKPIQueryToChannelsV1Query(kpiQuery KPIQuery) (ChannelQueryV1, erro
 	}
 	channelQueryV1.GroupBy = transformGroupByKPIToChannelsV1(kpiQuery.GroupBy)
 	channelQueryV1.Filters = transformFiltersKPIToChannelsV1(kpiQuery.Filters)
-	currentChannel, err = GetChannelFromKPIQuery(kpiQuery.DisplayCategory)
+	currentChannel, err = GetChannelFromKPIQuery(kpiQuery.DisplayCategory, kpiQuery.Category)
 	if err != nil {
 		return ChannelQueryV1{}, err
 	}
@@ -76,13 +76,20 @@ func transformFiltersKPIToChannelsV1(kpiFilters []KPIFilter) []ChannelFilterV1 {
 	return resultChannelFilters
 }
 
-func GetChannelFromKPIQuery(displayCategory string) (string, error) {
+func GetChannelFromKPIQuery(displayCategory string, category string) (string, error) {
 	var currentChannel string
 	var exists bool
+	if category == CustomChannelCategory {
+		return displayCategory, nil
+	}
 	if currentChannel, exists = MapOfCategoryToChannel[displayCategory]; !exists {
 		return "", errors.New("wrong Display Category given for channels")
 	}
 	return currentChannel, nil
+}
+
+func GetCustomChannelFromKPIQuery() (string, error) {
+	return "custom_ads", nil
 }
 
 func GetTransformedHeadersForChannels(headers []string, hasAnyGroupByTimestamp bool, hasAnyGroupBy bool) []string {

@@ -17,10 +17,10 @@ import {
 import FaSelect from '../../FaSelect';
 import { getUserProperties } from '../../../reducers/coreQuery/middleware';
 import PropertyFilter from './PropertyFilter';
-import { operatorMap } from '../../../Views/CoreQuery/utils';
 import MomentTz from '../../MomentTz';
 import { fetchDemoProject, fetchProjectSettingsV1, fetchProjectSettings, fetchMarketoIntegration, fetchBingAdsIntegration } from '../../../reducers/global';
 import ProfileBeforeIntegration from '../ProfileBeforeIntegration';
+import { formatFiltersForPayload } from '../utils';
 
 function UserProfiles({
   activeProject,
@@ -103,7 +103,7 @@ function UserProfiles({
   integration?.int_clear_bit ||
   integrationV1?.int_completed ||
   bingAds?.accounts ||
-  marketo?.status || integrationV1?.int_slack;
+  marketo?.status || integrationV1?.int_slack || integration?.lead_squared_config !== null;
 
 
   useEffect(() => {
@@ -146,34 +146,6 @@ function UserProfiles({
     const opts = Object.assign({}, filterPayload);
     opts.filters = [];
     setFilterPayload(opts);
-  };
-
-  const formatFiltersForPayload = (filters = []) => {
-    const filterProps = [];
-    filters.forEach((fil) => {
-      if (Array.isArray(fil.values)) {
-        fil.values.forEach((val, index) => {
-          filterProps.push({
-            en: 'user_g',
-            lop: !index ? 'AND' : 'OR',
-            op: operatorMap[fil.operator],
-            pr: fil.props[0],
-            ty: fil.props[1],
-            va: fil.props[1] === 'datetime' ? val : val,
-          });
-        });
-      } else {
-        filterProps.push({
-          en: 'user_g',
-          lop: 'AND',
-          op: operatorMap[fil.operator],
-          pr: fil.props[0],
-          ty: fil.props[1],
-          va: fil.props[1] === 'datetime' ? fil.values : fil.values,
-        });
-      }
-    });
-    return filterProps;
   };
 
   useEffect(() => {
@@ -288,7 +260,6 @@ function UserProfiles({
       <Modal
         title={null}
         visible={isModalVisible}
-        onCancel={handleCancel}
         className={'fa-modal--full-width'}
         footer={null}
         closable={null}

@@ -14,7 +14,7 @@ import {
 } from './constants';
 import { Text } from '../components/factorsComponents';
 
-const visualizationColors = [
+export const visualizationColors = [
   '#4D7DB4',
   '#4C9FC8',
   '#4CBCBD',
@@ -221,7 +221,7 @@ export const getClickableTitleSorter = (
       role="button"
       tabIndex={0}
       onClick={() => handleSorting(sorterProp)}
-      className={`flex ${verticalAlignmentClass} ${justifyAlignment} cursor-pointer h-full p-4 ${containerClassName}`}
+      className={`flex ${verticalAlignmentClass} ${justifyAlignment} cursor-pointer h-full px-4 py-2 ${containerClassName}`}
     >
       <div className="flex gap-x-1 items-center">
         {alignment === 'left' ? (

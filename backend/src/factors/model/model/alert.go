@@ -28,7 +28,7 @@ const (
 )
 
 // last quarter, last month to be added
-var ValidDateRanges = []string{LAST_WEEK}
+var ValidDateRanges = []string{LAST_WEEK, LAST_MONTH, LAST_QUARTER}
 var ValidDateRangeComparisions = []string{
 	PREVIOUS_PERIOD, SAME_PERIOD_LAST_YEAR,
 }
@@ -60,8 +60,8 @@ type AlertDescription struct {
 	Value     string          `json:"value"`
 	DateRange string          `json:"date_range"`
 	//below 2 only for reports sharing into slack and email.
-	Subject   string          `json:"subject"`
-	Message   string          `json:"message"`
+	Subject string `json:"subject"`
+	Message string `json:"message"`
 	// only for type 2 (daterange a compared to daterange b )
 	ComparedTo string `json:"compared_to"`
 }

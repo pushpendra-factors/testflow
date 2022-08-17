@@ -91,7 +91,7 @@ function BreakdownCharts({
 
   if (!chartData.length) {
     return (
-      <div className='mt-4 flex justify-center items-center w-full h-64 '>
+      <div className="flex justify-center items-center w-full h-full pt-4 pb-4">
         <NoDataChart />
       </div>
     );

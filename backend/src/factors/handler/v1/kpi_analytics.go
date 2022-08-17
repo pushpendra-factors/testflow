@@ -31,7 +31,7 @@ func (req *KPIFilterValuesRequest) isValid() bool {
 	if req == nil {
 		return false
 	}
-	if req.Category == "" || !U.ContainsStringInArray([]string{model.ChannelCategory, model.EventCategory, model.ProfileCategory}, req.Category) ||
+	if req.Category == "" || !U.ContainsStringInArray([]string{model.ChannelCategory, model.CustomChannelCategory, model.EventCategory, model.ProfileCategory}, req.Category) ||
 		req.Entity == "" || !U.ContainsStringInArray([]string{model.EventEntity, model.UserEntity}, req.Entity) ||
 		req.ObjectType == "" || req.PropertyName == "" {
 		return false
@@ -74,6 +74,9 @@ func GetKPIConfigHandler(c *gin.Context) (interface{}, int, string, string, bool
 		storeSelected.GetKPIConfigsForAllChannels, storeSelected.GetKPIConfigsForBingAds, storeSelected.GetKPIConfigsForMarketoLeads,
 		storeSelected.GetKPIConfigsForLeadSquaredLeads,
 	}
+	configFunctionsForCustomAds := []func(int64, string) ([]map[string]interface{}, int){
+		storeSelected.GetKPIConfigsForCustomAds,
+	}
 	resultantResultConfigs := make([]map[string]interface{}, 0)
 	for _, configFunction := range configFunctions {
 		currentConfig, errCode := configFunction(projectID, reqID)
@@ -82,6 +85,15 @@ func GetKPIConfigHandler(c *gin.Context) (interface{}, int, string, string, bool
 		}
 		if currentConfig != nil {
 			resultantResultConfigs = append(resultantResultConfigs, currentConfig)
+		}
+	}
+	for _, configFunction := range configFunctionsForCustomAds {
+		currentConfig, errCode := configFunction(projectID, reqID)
+		if errCode != http.StatusOK {
+			return nil, http.StatusInternalServerError, PROCESSING_FAILED, "Error during fetch of KPI Custom Config Data.", true
+		}
+		if len(currentConfig) > 0 {
+			resultantResultConfigs = append(resultantResultConfigs, currentConfig...)
 		}
 	}
 	return resultantResultConfigs, http.StatusOK, "", "", false
@@ -116,12 +128,23 @@ func GetKPIFilterValuesHandler(c *gin.Context) (interface{}, int, string, string
 	logCtx = logCtx.WithField("request", request)
 
 	if request.Category == model.ChannelCategory {
-		currentChannel, err := model.GetChannelFromKPIQuery(request.DisplayCategory)
+		currentChannel, err := model.GetChannelFromKPIQuery(request.DisplayCategory, request.Category)
 		if err != nil {
 			return nil, http.StatusBadRequest, PROCESSING_FAILED, "Input display category is wrong", true
 		}
 		request.DisplayCategory = currentChannel
 		channelsFilterValues, errCode := storeSelected.GetChannelFilterValuesV1(projectID, request.DisplayCategory, request.ObjectType,
+			strings.TrimPrefix(request.PropertyName, request.ObjectType+"_"), reqID)
+		if errCode != http.StatusOK && errCode != http.StatusFound {
+			return nil, http.StatusInternalServerError, PROCESSING_FAILED, "Error during fetch of KPI FilterValues Data.", true
+		}
+		resultantFilterValuesResponse = channelsFilterValues.FilterValues
+	} else if request.Category == model.CustomChannelCategory {
+		currentChannel, err := model.GetCustomChannelFromKPIQuery()
+		if err != nil {
+			return nil, http.StatusBadRequest, PROCESSING_FAILED, "Input display category is wrong", true
+		}
+		channelsFilterValues, errCode := storeSelected.GetCustomChannelFilterValuesV1(projectID, request.DisplayCategory, currentChannel, request.ObjectType,
 			strings.TrimPrefix(request.PropertyName, request.ObjectType+"_"), reqID)
 		if errCode != http.StatusOK && errCode != http.StatusFound {
 			return nil, http.StatusInternalServerError, PROCESSING_FAILED, "Error during fetch of KPI FilterValues Data.", true
@@ -190,8 +213,8 @@ func ExecuteKPIQueryHandler(c *gin.Context) (interface{}, int, string, string, b
 		U.DecodePostgresJsonbToStructType(&query.Query, &request)
 	}
 
-	dashboardId, unitId, commonQueryFrom, commonQueryTo, hardRefresh, isDashboardQueryRequest, _, err := getDashboardRelatedInformationFromRequest(request,
-		c.Query("dashboard_id"), c.Query("dashboard_unit_id"), c.Query("refresh"), c.Query("is_query"))
+	dashboardId, unitId, preset, commonQueryFrom, commonQueryTo, hardRefresh, isDashboardQueryRequest, _, err := getDashboardRelatedInformationFromRequest(request,
+		c.Query("dashboard_id"), c.Query("dashboard_unit_id"), c.Query("preset"), c.Query("refresh"), c.Query("is_query"))
 	if err != nil {
 		return nil, http.StatusBadRequest, INVALID_INPUT, err.Error(), true
 	}
@@ -217,10 +240,11 @@ func ExecuteKPIQueryHandler(c *gin.Context) (interface{}, int, string, string, b
 	if err != nil {
 		return nil, http.StatusBadRequest, INVALID_INPUT, err.Error(), true
 	}
-
-	data, statusCode, errorCode, errMsg, isErr := GetResultFromCacheOrDashboard(c, reqID, projectID, request, dashboardId, unitId, commonQueryFrom, commonQueryTo, hardRefresh, timezoneString, isDashboardQueryRequest, logCtx, false)
-	if statusCode != http.StatusProcessing {
-		return data, statusCode, errorCode, errMsg, isErr
+	if !hardRefresh {
+		data, statusCode, errorCode, errMsg, isErr := GetResultFromCacheOrDashboard(c, reqID, projectID, request, dashboardId, unitId, preset, commonQueryFrom, commonQueryTo, hardRefresh, timezoneString, isDashboardQueryRequest, logCtx, false)
+		if statusCode != http.StatusProcessing {
+			return data, statusCode, errorCode, errMsg, isErr
+		}
 	}
 
 	/*if isDashboardQueryRequest && C.DisableDashboardQueryDBExecution() && !isQuery {
@@ -250,12 +274,24 @@ func ExecuteKPIQueryHandler(c *gin.Context) (interface{}, int, string, string, b
 		}
 		return nil, statusCode, PROCESSING_FAILED, "Failed to process query from DB", true
 	}
+	meta := H.CacheMeta{
+		Timezone:       string(timezoneString),
+		From:           commonQueryFrom,
+		To:             commonQueryTo,
+		RefreshedAt:    U.TimeNowIn(U.TimeZoneStringIST).Unix(),
+		LastComputedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(),
+		Preset:         preset,
+	}
+	for i, _ := range queryResult {
+		queryResult[i].CacheMeta = meta
+	}
+
 	model.SetQueryCacheResult(projectID, &request, queryResult)
 
 	// if it is a dashboard query, cache it
 	if isDashboardQueryRequest {
-		model.SetCacheResultByDashboardIdAndUnitId(queryResult, projectID, dashboardId, unitId, commonQueryFrom, commonQueryTo, request.GetTimeZone())
-		return H.DashboardQueryResponsePayload{Result: queryResult, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix()}, http.StatusOK, "", "", false
+		model.SetCacheResultByDashboardIdAndUnitId(queryResult, projectID, dashboardId, unitId, preset, commonQueryFrom, commonQueryTo, request.GetTimeZone(), meta)
+		return H.DashboardQueryResponsePayload{Result: queryResult, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(), CacheMeta: meta}, http.StatusOK, "", "", false
 	}
 	isQueryShareable := isQueryShareable(request)
 	return gin.H{"result": queryResult, "query": request, "sharable": isQueryShareable}, http.StatusOK, "", "", false
@@ -269,14 +305,20 @@ func isQueryShareable(request model.KPIQueryGroup) bool {
 	return false
 }
 
-func getDashboardRelatedInformationFromRequest(request model.KPIQueryGroup, dashboardIdParam, unitIdParam, refreshParam, isQueryParam string) (int64, int64, int64, int64, bool, bool, bool, error) {
+func getDashboardRelatedInformationFromRequest(request model.KPIQueryGroup, dashboardIdParam, unitIdParam, presetParam, refreshParam, isQueryParam string) (int64, int64, string, int64, int64, bool, bool, bool, error) {
 	var dashboardId int64
 	var unitId int64
 	var err error
 	hardRefresh := false
+	preset := ""
 
 	commonQueryFrom := request.Queries[0].From
 	commonQueryTo := request.Queries[0].To
+	timeZoneString := request.Queries[0].Timezone
+	if U.PresetLookup[presetParam] != "" {
+		preset = presetParam
+	}
+
 	if refreshParam != "" {
 		hardRefresh, _ = strconv.ParseBool(refreshParam)
 	}
@@ -287,7 +329,10 @@ func getDashboardRelatedInformationFromRequest(request model.KPIQueryGroup, dash
 
 	isDashboardQueryRequest := dashboardIdParam != "" && unitIdParam != ""
 	if !isDashboardQueryRequest {
-		return dashboardId, unitId, commonQueryFrom, commonQueryTo, hardRefresh, isDashboardQueryRequest, isQuery, err
+		return dashboardId, unitId, preset, commonQueryFrom, commonQueryTo, hardRefresh, isDashboardQueryRequest, isQuery, err
+	}
+	if preset == "" {
+		preset = U.GetPresetNameByFromAndTo(commonQueryFrom, commonQueryTo, U.TimeZoneString(timeZoneString))
 	}
 	dashboardId, err = strconv.ParseInt(dashboardIdParam, 10, 64)
 	unitId, err = strconv.ParseInt(unitIdParam, 10, 64)
@@ -297,21 +342,24 @@ func getDashboardRelatedInformationFromRequest(request model.KPIQueryGroup, dash
 	if err != nil || unitId == 0 {
 		err = errors.New("Query failed. Invalid DashboardUnitID.")
 	}
-	return dashboardId, unitId, commonQueryFrom, commonQueryTo, hardRefresh, isDashboardQueryRequest, isQuery, err
+	return dashboardId, unitId, preset, commonQueryFrom, commonQueryTo, hardRefresh, isDashboardQueryRequest, isQuery, err
 }
 
 func GetResultFromCacheOrDashboard(c *gin.Context, reqID string, projectID int64, request model.KPIQueryGroup,
-	dashboardId int64, unitId int64, commonQueryFrom int64, commonQueryTo int64, hardRefresh bool,
+	dashboardId int64, unitId int64, preset string, commonQueryFrom int64, commonQueryTo int64, hardRefresh bool,
 	timezoneString U.TimeZoneString, isDashboardQueryRequest bool, logCtx *log.Entry, skipContextVerfication bool) (interface{}, int, string, string, bool) {
 
 	// Tracking dashboard query request.
 	if isDashboardQueryRequest {
+		if preset == "" {
+			preset = U.GetPresetNameByFromAndTo(commonQueryFrom, commonQueryTo, timezoneString)
+		}
 		model.SetDashboardCacheAnalytics(projectID, dashboardId, unitId, commonQueryFrom, commonQueryTo, timezoneString)
 	}
 
 	// If refresh is passed, refresh only is Query.From is of todays beginning.
 	if isDashboardQueryRequest && !H.ShouldAllowHardRefresh(commonQueryFrom, commonQueryTo, request.GetTimeZone(), hardRefresh) {
-		shouldReturn, resCode, resMsg := H.GetResponseIfCachedDashboardQuery(reqID, projectID, dashboardId, unitId, commonQueryFrom, commonQueryTo, timezoneString)
+		shouldReturn, resCode, resMsg := H.GetResponseIfCachedDashboardQuery(reqID, projectID, dashboardId, unitId, preset, commonQueryFrom, commonQueryTo, timezoneString)
 		if shouldReturn {
 			if resCode == http.StatusOK {
 				return resMsg, resCode, "", "", false

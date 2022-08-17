@@ -61,20 +61,20 @@ function UngroupedChart({
 
   let tableContent = null;
 
-  if (chartType === CHART_TYPE_TABLE) {
-    tableContent = (
-      <div
-        onClick={handleEditQuery}
-        style={{ color: '#5949BC' }}
-        className='mt-3 font-medium text-base cursor-pointer flex justify-end item-center'
-      >
-        Show More &rarr;
-      </div>
-    );
-  }
+  // if (chartType === CHART_TYPE_TABLE) {
+  //   tableContent = (
+  //     <div
+  //       onClick={handleEditQuery}
+  //       style={{ color: '#5949BC' }}
+  //       className='mt-3 font-medium text-base cursor-pointer flex justify-end item-center'
+  //     >
+  //       Show More &rarr;
+  //     </div>
+  //   );
+  // }
 
   return (
-    <div className={`w-full px-6 flex flex-1 flex-col  justify-center`}>
+    <div className={`w-full`}>
       {chartContent}
       {tableContent}
     </div>

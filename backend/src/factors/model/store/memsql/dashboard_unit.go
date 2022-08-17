@@ -691,9 +691,20 @@ func (store *MemSQL) CacheDashboardUnit(dashboardUnit model.DashboardUnit,
 			return
 		}
 
+		projectSettingsJSON, _ := store.GetProjectSetting(dashboardUnit.ProjectID)
+		var cacheSettings model.CacheSettings
+		if projectSettingsJSON.CacheSettings != nil && !U.IsEmptyPostgresJsonb(projectSettingsJSON.CacheSettings) {
+			err = json.Unmarshal(projectSettingsJSON.CacheSettings.RawMessage, &cacheSettings)
+		}
+
+		if err != nil {
+			continue
+		}
+
 		// Filtering queries on type and range for attribution query
+		allowedPreset := cacheSettings.AttributionCachePresets
 		shouldCache, from, to := model.ShouldCacheUnitForTimeRange(queryClass, preset, fr, t,
-			C.GetOnlyAttributionDashboardCaching(), C.GetSkipAttributionDashboardCaching())
+			C.GetOnlyAttributionDashboardCaching(), C.GetSkipAttributionDashboardCaching(), allowedPreset[preset])
 		if !shouldCache {
 			continue
 		}
@@ -710,6 +721,7 @@ func (store *MemSQL) CacheDashboardUnit(dashboardUnit model.DashboardUnit,
 		cachePayload := model.DashboardUnitCachePayload{
 			DashboardUnit: dashboardUnit,
 			BaseQuery:     baseQuery,
+			Preset:        preset,
 		}
 		if C.GetIsRunningForMemsql() == 0 {
 			unitWaitGroup.Add(1)
@@ -741,6 +753,10 @@ func (store *MemSQL) CacheDashboardUnitForDateRange(cachePayload model.Dashboard
 	dashboardUnitID := dashboardUnit.ID
 	from, to := baseQuery.GetQueryDateRange()
 	timezoneString := baseQuery.GetTimeZone()
+	preset := cachePayload.Preset
+	if preset == "" {
+		preset = U.GetPresetNameByFromAndTo(from, to, timezoneString)
+	}
 
 	unitReport := model.CachingUnitReport{
 		UnitType:    model.CachingUnitNormal,
@@ -755,7 +771,7 @@ func (store *MemSQL) CacheDashboardUnitForDateRange(cachePayload model.Dashboard
 	}
 
 	logCtx := log.WithFields(logFields).WithFields(log.Fields{"PreUnitReport": unitReport})
-	if !model.ShouldRefreshDashboardUnit(projectID, dashboardID, dashboardUnitID, from, to, timezoneString, false) {
+	if !model.ShouldRefreshDashboardUnit(projectID, dashboardID, dashboardUnitID, from, to, preset, timezoneString, false) {
 		return http.StatusOK, "", unitReport
 	}
 	logCtx.Info("Starting to cache unit for date range")
@@ -860,7 +876,7 @@ func (store *MemSQL) CacheDashboardUnitForDateRange(cachePayload model.Dashboard
 	timeTaken := U.TimeNowUnix() - startTime
 	timeTakenString := U.SecondsToHMSString(timeTaken)
 	logCtx.WithFields(log.Fields{"TimeTaken": timeTaken, "TimeTakenString": timeTakenString}).Info("Done caching unit for range")
-	model.SetCacheResultByDashboardIdAndUnitId(result, projectID, dashboardID, dashboardUnitID, from, to, timezoneString)
+	model.SetCacheResultByDashboardIdAndUnitId(result, projectID, dashboardID, dashboardUnitID, preset, from, to, timezoneString, nil)
 
 	// Set in query cache result as well in case someone runs the same query from query handler.
 	model.SetQueryCacheResult(projectID, baseQuery, result)
@@ -871,15 +887,16 @@ func (store *MemSQL) CacheDashboardUnitForDateRange(cachePayload model.Dashboard
 }
 
 type Result struct {
-	res     *model.QueryResult
-	err     error
-	errCode int
-	errMsg  string
+	res            *model.QueryResult
+	err            error
+	errCode        int
+	errMsg         string
+	lastComputedAt int64
 }
 
 func (store *MemSQL) runFunnelAndInsightsUnit(projectID int64, queryOriginal model.Query, c chan Result, enableFilterOpt bool) {
 	r, eCode, eMsg := store.Analyze(projectID, queryOriginal, enableFilterOpt)
-	result := Result{res: r, errCode: eCode, errMsg: eMsg}
+	result := Result{res: r, errCode: eCode, errMsg: eMsg, lastComputedAt: U.TimeNowUnix()}
 	c <- result
 }
 
@@ -892,7 +909,7 @@ func (store *MemSQL) runAttributionUnit(projectID int64, queryOriginal *model.At
 	debugQueryKey := model.GetStringKeyFromCacheRedisKey(QueryKey)
 	r, err := store.ExecuteAttributionQuery(projectID, queryOriginal, debugQueryKey,
 		C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
-	result := Result{res: r, err: err, errMsg: ""}
+	result := Result{res: r, err: err, errMsg: "", lastComputedAt: U.TimeNowUnix()}
 	c <- result
 }
 

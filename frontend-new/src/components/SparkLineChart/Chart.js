@@ -1,7 +1,9 @@
 import React, { useRef, useEffect, useCallback } from 'react';
+import cx from 'classnames';
+import ReactDOMServer from 'react-dom/server';
+import PropTypes from 'prop-types';
 import * as d3 from 'd3';
 import moment from 'moment';
-import styles from './index.module.scss';
 import {
   numberWithCommas,
   formatCount,
@@ -9,6 +11,9 @@ import {
 } from '../../utils/dataFormatter';
 import { getDateFormatForTimeSeriesChart } from '../../utils/chart.helpers';
 import { getFormattedKpiValue } from '../../Views/CoreQuery/KPIAnalysis/kpiAnalysis.helpers';
+import { METRIC_TYPES } from '../../utils/constants';
+import { Number as NumFormat, SVG, Text } from '../factorsComponents';
+import styles from './index.module.scss';
 
 function SparkChart({
   chartData,
@@ -17,8 +22,9 @@ function SparkChart({
   event,
   frequency,
   height: widgetHeight,
-  title = 'chart',
-  metricType = null
+  title,
+  metricType,
+  comparisonEnabled
 }) {
   const chartRef = useRef(null);
 
@@ -188,15 +194,84 @@ function SparkChart({
       );
       tooltip.style('display', 'block');
       const format = getDateFormatForTimeSeriesChart({ frequency });
+
+      const percentChange = comparisonEnabled
+        ? ((d[event] - d.compareValue) / d.compareValue) * 100
+        : 0;
+
+      const changeIcon = comparisonEnabled ? (
+        <SVG
+          color={percentChange > 0 ? '#5ACA89' : '#FF0000'}
+          name={percentChange > 0 ? 'arrowLift' : 'arrowDown'}
+          size={16}
+        />
+      ) : null;
+
       tooltip
         .html(
-          `<div class="font-semibold">${
-            addQforQuarter(frequency) + moment(d.date).format(format)
-          }</div><div class="font-normal mt-1">${
-            metricType
-              ? getFormattedKpiValue({ value: d[event], metricType })
-              : numberWithCommas(formatCount(d[event], 1))
-          }</div>`
+          ReactDOMServer.renderToString(
+            <div className="flex flex-col row-gap-2">
+              <Text type="title" level={7} color="grey-2">
+                {event}
+              </Text>
+              <div
+                className={cx('flex flex-col')}
+                style={
+                  comparisonEnabled
+                    ? {
+                        borderLeft: `3px solid ${chartColor}`,
+                        paddingLeft: '9px'
+                      }
+                    : {}
+                }
+              >
+                <Text type="title" color="grey" level={7}>
+                  {addQforQuarter(frequency) + moment(d.date).format(format)}
+                </Text>
+                <div className="flex items-center col-gap-1">
+                  <Text weight="bold" type="title" color="grey-6" level={5}>
+                    {metricType != null && metricType !== '' ? (
+                      getFormattedKpiValue({ value: d[event], metricType })
+                    ) : (
+                      <NumFormat number={d[event]} />
+                    )}
+                  </Text>
+                  {comparisonEnabled && (
+                    <>
+                      {changeIcon}
+                      <Text level={7} type="title" color="grey">
+                        <NumFormat number={Math.abs(percentChange)} />%
+                      </Text>
+                    </>
+                  )}
+                </div>
+              </div>
+              {comparisonEnabled && (
+                <div className="flex flex-col pl-3">
+                  <Text type="title" color="grey" level={7}>
+                    {addQforQuarter(frequency) +
+                      moment(d.compareDate).format(format)}
+                  </Text>
+                  <Text
+                    weight="bold"
+                    className="mt-0"
+                    type="title"
+                    color="grey-6"
+                    level={5}
+                  >
+                    {metricType != null && metricType !== '' ? (
+                      getFormattedKpiValue({
+                        value: d['compareValue'],
+                        metricType
+                      })
+                    ) : (
+                      <NumFormat number={d['compareValue']} />
+                    )}
+                  </Text>
+                </div>
+              )}
+            </div>
+          )
         )
         .style('left', left + 'px')
         .style('top', d3.event.pageY - 40 + 'px');
@@ -220,3 +295,34 @@ function SparkChart({
 }
 
 export default SparkChart;
+
+SparkChart.propTypes = {
+  title: PropTypes.string,
+  chartColor: PropTypes.string,
+  event: PropTypes.string,
+  frequency: PropTypes.string,
+  height: PropTypes.number,
+  metricType: PropTypes.oneOf([
+    METRIC_TYPES.dateType,
+    METRIC_TYPES.percentType
+  ]),
+  page: PropTypes.string,
+  chartData: PropTypes.arrayOf(
+    PropTypes.shape({
+      date: PropTypes.instanceOf(Date)
+    })
+  ),
+  comparisonEnabled: PropTypes.bool
+};
+
+SparkChart.defaultProps = {
+  title: 'Chart',
+  chartColor: '#4D7DB4',
+  event: 'event',
+  frequency: 'date',
+  height: 180,
+  metricType: undefined,
+  page: 'KPI',
+  chartData: [],
+  comparisonEnabled: false
+};

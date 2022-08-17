@@ -174,7 +174,6 @@ function GroupBlock({
   };
 
   const renderGroupDisplayName = (opt, index) => {
-    console.log('renderGroupDisplayName-->>',opt)
     let propertyName = ''; 
     if (opt?.property) {
       propertyName = opt?.display_name ? _.startCase(opt.display_name) : _.startCase(opt.property);

@@ -3,7 +3,6 @@ package tests
 import (
 	"net/http"
 	"testing"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -11,6 +10,7 @@ import (
 	H "factors/handler"
 	"factors/model/model"
 	"factors/model/store"
+	U "factors/util"
 )
 
 func TestCreateButtonClickHandler(t *testing.T) {
@@ -24,41 +24,38 @@ func TestCreateButtonClickHandler(t *testing.T) {
 }
 
 func createButtonClick(t *testing.T, project *model.Project) {
-	buttonClick := &model.SDKButtonElementAttributesPayload{
+	buttonClick := &model.CaptureClickPayload{
 		DisplayName: "Submit-1",
 		ElementType: "Button",
-		ElementAttributes: model.SDKButtonElementAttributes{
-			DisplayText: "Submit-1",
-			Timestamp:   time.Now().Unix(), // request timestamp.
+		ElementAttributes: U.PropertiesMap{
+			"display_text": "Submit-1",
 		},
 	}
-	status, err := store.GetStore().CreateButtonClickEventById(0, buttonClick)
+	status, err := store.GetStore().CreateClickableElementById(0, buttonClick)
 	assert.Equal(t, http.StatusBadRequest, status)
 	assert.NotNil(t, err)
 
-	buttonClick = &model.SDKButtonElementAttributesPayload{
-		ElementAttributes: model.SDKButtonElementAttributes{
-			DisplayText: "Submit-1",
-			Timestamp:   time.Now().Unix(), // request timestamp.
+	buttonClick = &model.CaptureClickPayload{
+		ElementAttributes: U.PropertiesMap{
+			"display_text": "Submit-1",
 		},
 	}
-	status, err = store.GetStore().CreateButtonClickEventById(project.ID, buttonClick)
+	status, err = store.GetStore().CreateClickableElementById(project.ID, buttonClick)
 	assert.Equal(t, http.StatusBadRequest, status)
 	assert.NotNil(t, err)
 
-	buttonClick = &model.SDKButtonElementAttributesPayload{
+	buttonClick = &model.CaptureClickPayload{
 		DisplayName: "Submit-1",
 		ElementType: "Button",
-		ElementAttributes: model.SDKButtonElementAttributes{
-			DisplayText: "Submit-1",
-			Timestamp:   time.Now().Unix(), // request timestamp.
+		ElementAttributes: U.PropertiesMap{
+			"display_text": "Submit-1",
 		},
 	}
-	status, err = store.GetStore().CreateButtonClickEventById(project.ID, buttonClick)
+	status, err = store.GetStore().CreateClickableElementById(project.ID, buttonClick)
 	assert.Equal(t, http.StatusCreated, status)
 	assert.Nil(t, err)
 
-	status, err = store.GetStore().CreateButtonClickEventById(project.ID, buttonClick)
+	status, err = store.GetStore().CreateClickableElementById(project.ID, buttonClick)
 	assert.Equal(t, http.StatusConflict, status)
 	assert.NotNil(t, err)
 }

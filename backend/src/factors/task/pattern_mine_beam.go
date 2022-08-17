@@ -31,8 +31,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const batch_size_beam = 1000
-
 type CPatternsBeam struct {
 	ProjectID         int64      `json:"projectID"`
 	ModelId           uint64     `json:"modelID"`
@@ -54,6 +52,7 @@ type RunBeamConfig struct {
 	Pipe         *beam.Pipeline   `json:"pipeLine"`
 	Env          string           `json:"Env"`
 	DriverConfig *C.Configuration `json:"driverconfig"`
+	NumWorker    int              `json:"nw"`
 }
 
 func InitConfBeam(config *C.Configuration) {
@@ -182,8 +181,7 @@ func countPatternController(beamStruct *RunBeamConfig, projectId int64, modelId 
 	var hmineSupport float32 = cAlgoProps.Hmine_support
 	numPatterns := len(patterns)
 	mineLog.Info(fmt.Sprintf("Num patterns to count Range: %d - %d", 0, numPatterns-1))
-	batchSize := batch_size_beam //600 too long , will have issue in len three stage
-
+	batchSize := beamStruct.NumWorker
 	numRoutines = int(math.Ceil(float64(numPatterns) / float64(batchSize)))
 
 	patternEnames := make([][]string, 0)
@@ -323,8 +321,7 @@ func UserPropertiesHistogramController(beamStruct *RunBeamConfig, projectId int6
 	var hmineSupport float32 = cAlgoProps.Hmine_support
 	numPatterns := len(patterns)
 	mineLog.Info(fmt.Sprintf("Num patterns to count Range: %d - %d", 0, numPatterns-1))
-	batchSize := batch_size_beam //600 too long , will have issue in len three stage
-
+	batchSize := beamStruct.NumWorker
 	numRoutines = int(math.Ceil(float64(numPatterns) / float64(batchSize)))
 
 	patternEnames := make([][]string, 0)

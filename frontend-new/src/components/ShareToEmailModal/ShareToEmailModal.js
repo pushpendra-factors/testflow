@@ -55,7 +55,7 @@ const ShareToEmailModal = ({visible, onSubmit, isLoading, setShowShareToEmailMod
                 <div className={'m-0 mb-2'}>
                     <Row className={'m-0'}>
                         <Col>
-                            <Text type={'title'} level={5} weight={'bold'} color={'grey-2'} extraClass={'m-0'}>Email this dashboard</Text>
+                            <Text type={'title'} level={5} weight={'bold'} color={'grey-2'} extraClass={'m-0'}>Email this Report</Text>
                         </Col>
                     </Row>
                     <div className={'m-3'}>

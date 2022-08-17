@@ -169,7 +169,7 @@ function ComparisonDatePicker({
                     <div className="px-3 flex flex-col row-gap-2">
                       <Text
                         type="title"
-                        weight="semi-bold"
+                        weight="bold"
                         level={6}
                         color="grey-2"
                       >
