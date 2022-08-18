@@ -61,8 +61,8 @@ function AccountProfiles({
     // },
     {
       title: <div className={headerClassStr}>Region</div>,
-      dataIndex: 'region',
-      key: 'region',
+      dataIndex: 'country',
+      key: 'country',
       render: (item) => item || '-',
     },
     {

@@ -3,6 +3,7 @@ import React, { useMemo } from 'react';
 import InfoCard from '../../../FaTimeline/InfoCard';
 import { groups, hoverEvents, getLoopLength } from '../../utils';
 import { CaretRightOutlined } from '@ant-design/icons';
+import { SVG } from '../../../factorsComponents';
 
 function AccountTimeline({
   timeline = [],
@@ -43,6 +44,13 @@ function AccountTimeline({
 
   return loading ? (
     <Spin size={'large'} className={'fa-page-loader'} />
+  ) : timeline.length == 0 ? (
+    <div class='ant-empty ant-empty-normal'>
+      <div class='ant-empty-image'>
+        <SVG name='nodata' />
+      </div>
+      <div class='ant-empty-description'>No Associated Users</div>
+    </div>
   ) : (
     <div className='table-scroll'>
       <table>
@@ -50,7 +58,7 @@ function AccountTimeline({
           <tr>
             <th scope='col'>Date and Time</th>
             {timeline.map((data) => {
-              return <th scope='col'>{data.user_name || data.user_id}</th>;
+              return <th scope='col'>{data.user_name}</th>;
             })}
           </tr>
         </thead>

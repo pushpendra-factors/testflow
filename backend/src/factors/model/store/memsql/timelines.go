@@ -38,11 +38,15 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	if projectID == 0 {
 		return nil, http.StatusBadRequest
 	}
+
+	// String Declarations
 	var selectString string
 	var isGroupUserString string
 	var sourceString string
+	var nameIsNotNullString string
 
 	if profileType == model.PROFILE_TYPE_ACCOUNT {
+		nameIsNotNullString = " AND name IS NOT NULL"
 		// Check for Enabled Groups
 		groups, errCode := store.GetGroups(projectID)
 		if errCode != http.StatusFound {
@@ -65,7 +69,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		}
 
 		// Strings
-		isGroupUserString = "(is_group_user=1 OR is_group_user IS NOT NULL)"
+		isGroupUserString = "is_group_user=1"
 		if payload.Source == "All" && hubspotExists && salesforceExists {
 			selectString = fmt.Sprintf(`id AS identity, 
 				COALESCE(JSON_EXTRACT_STRING(properties, '%s'), JSON_EXTRACT_STRING(properties, '%s'), JSON_EXTRACT_STRING(properties, '%s')) AS name,
@@ -89,6 +93,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 			sourceString = fmt.Sprintf(" AND group_%d_id IS NOT NULL", groupNameIDMap[model.GROUP_NAME_SALESFORCE_ACCOUNT])
 		}
 	} else if profileType == model.PROFILE_TYPE_USER {
+		nameIsNotNullString = ""
 		selectString = fmt.Sprintf("COALESCE(customer_user_id, id) AS identity, ISNULL(customer_user_id) AS is_anonymous, JSON_EXTRACT_STRING(properties, '%s') AS country, MAX(updated_at) AS last_activity", U.UP_COUNTRY)
 		isGroupUserString = "(is_group_user=0 OR is_group_user IS NULL)"
 		if model.UserSourceMap[payload.Source] == model.UserSourceWeb {
@@ -139,7 +144,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	parameters = parameters[:len(parameters)-1]
 	parameters = append(parameters, minMax.MinUpdatedAt, minMax.MaxUpdatedAt)
 
-	err = db.Table("users").Select(selectString).Where(whereString+` AND updated_at BETWEEN ? AND ?`, parameters...).Group("identity").Order("last_activity DESC").Limit(1000).Find(&profiles).Error
+	err = db.Table("users").Select(selectString).Where(whereString+nameIsNotNullString+` AND updated_at BETWEEN ? AND ?`, parameters...).Group("identity").Order("last_activity DESC").Limit(1000).Find(&profiles).Error
 	if err != nil {
 		log.WithField("status", err).Error("Failed to get profile users.")
 		return nil, http.StatusInternalServerError
@@ -404,7 +409,8 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string) (*
 		return nil, http.StatusInternalServerError
 	}
 
-	queryStr := []string{"SELECT JSON_EXTRACT_STRING(properties, ?) AS user_name, id AS user_id FROM users WHERE project_id = ? AND", groupUserString}
+	//Timeline Query
+	queryStr := []string{"SELECT COALESCE(JSON_EXTRACT_STRING(properties, ?), customer_user_id, id) AS user_name, id AS user_id FROM users WHERE project_id = ? AND (", groupUserString, ")", "ORDER BY updated_at DESC"}
 	query := strings.Join(queryStr, " ")
 	rows, err := db.Raw(query, U.UP_NAME, projectID).Rows()
 	if err != nil {
