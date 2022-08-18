@@ -52,7 +52,7 @@ const EventGroupBlock = ({
       if (item == null) return;
       let ddName = item.display_name ? item.display_name : item.name;
       let ddtype =
-        selGroup?.category == 'channels'
+        (selGroup?.category == 'channels' || selGroup?.category == 'custom_channels')
           ? item.object_type
           : item.entity
           ? item.entity

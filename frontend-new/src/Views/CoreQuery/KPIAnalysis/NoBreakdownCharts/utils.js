@@ -1,9 +1,15 @@
 import React from 'react';
 import get from 'lodash/get';
 import moment from 'moment';
+import { has } from 'lodash';
+import cx from 'classnames';
 
 import { DATE_FORMATS } from '../../../../utils/constants';
-import { Number as NumFormat } from '../../../../components/factorsComponents';
+import {
+  Number as NumFormat,
+  SVG,
+  Text
+} from '../../../../components/factorsComponents';
 import {
   addQforQuarter,
   getClickableTitleSorter,
@@ -34,7 +40,7 @@ export const getDefaultDateSortProp = () => {
   ];
 };
 
-export const formatData = (data, kpis) => {
+export const formatData = (data, kpis, comparisonData) => {
   try {
     const result = kpis.map((kpi, index) => {
       const kpiLabel = getKpiLabel(kpi);
@@ -50,18 +56,32 @@ export const formatData = (data, kpis) => {
           (h) => h === 'datetime'
         );
         const kpiIndex = index + 1;
-        return {
+        const kpiData = {
           ...obj,
           total: data[totalIndex].rows.length
             ? data[totalIndex].rows[0][index]
             : 0,
-          dataOverTime: data[dateSplitIndex].rows.map((row) => {
-            return {
+          dataOverTime: data[dateSplitIndex].rows.map((row, rowIdx) => {
+            const dataObj = {
               date: new Date(row[dateIndex]),
               [kpiLabel]: row[kpiIndex]
             };
+            if (comparisonData != null) {
+              dataObj.compareDate = new Date(
+                comparisonData[dateSplitIndex]?.rows[rowIdx]?.[dateIndex]
+              );
+              dataObj.compareValue =
+                comparisonData[dateSplitIndex]?.rows[rowIdx]?.[kpiIndex];
+            }
+            return dataObj;
           })
         };
+        if (comparisonData != null) {
+          kpiData.compareTotal = comparisonData[totalIndex].rows.length
+            ? comparisonData[totalIndex].rows[0][index]
+            : 0;
+        }
+        return kpiData;
       } else {
         return {
           ...obj,
@@ -76,15 +96,22 @@ export const formatData = (data, kpis) => {
   }
 };
 
-export const formatDataInSeriesFormat = (aggData) => {
+export const formatDataInSeriesFormat = (aggData, comparisonApplied) => {
   try {
     const differentDates = new Set();
+    const differentComparisonDates = new Set();
     aggData.forEach((d) => {
       d.dataOverTime.forEach((elem) => {
         differentDates.add(new Date(elem.date).getTime());
+        if (comparisonApplied) {
+          differentComparisonDates.add(new Date(elem.compareDate).getTime());
+        }
       });
     });
+
     const categories = Array.from(differentDates);
+    const compareCategories = Array.from(differentComparisonDates);
+
     const initializedDatesData = categories.map(() => {
       return 0;
     });
@@ -100,6 +127,24 @@ export const formatDataInSeriesFormat = (aggData) => {
         total: m.total
       };
     });
+
+    const compareData = comparisonApplied
+      ? aggData.map((m) => {
+          return {
+            index: m.index,
+            name: m.name,
+            data: [...initializedDatesData],
+            marker: {
+              enabled: false
+            },
+            dashStyle: 'dash',
+            metricType: get(m, 'metricType', null),
+            total: m.compareTotal,
+            compareIndex: m.index
+          };
+        })
+      : [];
+
     aggData.forEach((m, index) => {
       categories.forEach((cat, catIndex) => {
         const dateIndex = m.dataOverTime.findIndex(
@@ -107,17 +152,24 @@ export const formatDataInSeriesFormat = (aggData) => {
         );
         if (dateIndex > -1) {
           data[index].data[catIndex] = m.dataOverTime[dateIndex][m.name];
+          if (comparisonApplied) {
+            compareData[index].data[catIndex] =
+              m.dataOverTime[dateIndex].compareValue;
+          }
         }
       });
     });
     return {
       categories,
-      data
+      compareCategories,
+      data: comparisonApplied ? [...data, ...compareData] : data
     };
   } catch (err) {
+    console.error(err);
     return {
       categories: [],
-      data: []
+      data: [],
+      compareCategories: []
     };
   }
 };
@@ -126,7 +178,8 @@ export const getTableColumns = ({
   kpis,
   currentSorter,
   handleSorting,
-  frequency
+  frequency,
+  comparisonApplied
 }) => {
   const format = DATE_FORMATS[frequency] || DATE_FORMATS.date;
   const result = [
@@ -138,8 +191,21 @@ export const getTableColumns = ({
         handleSorting
       ),
       dataIndex: 'date',
-      render: (d) => {
-        return addQforQuarter(frequency) + moment(d).format(format);
+      render: (d, row) => {
+        return (
+          <div className="flex flex-col">
+            <Text type="title" level={7} color="grey-6">
+              {addQforQuarter(frequency) + moment(d).format(format)}
+            </Text>
+            {comparisonApplied && (
+              <Text type="title" level={7} color="grey">
+                Vs{' '}
+                {addQforQuarter(frequency) +
+                  moment(row.compareDate).format(format)}
+              </Text>
+            )}
+          </div>
+        );
       }
     }
   ];
@@ -159,11 +225,61 @@ export const getTableColumns = ({
       ),
       className: 'text-right',
       dataIndex: `${kpiLabel} - ${idx}`,
-      render: (d) => {
-        if (e.metricType) {
-          return getFormattedKpiValue({ value: d, metricType: e.metricType });
-        }
-        return <NumFormat number={d} />;
+      render: (d, row) => {
+        return (
+          <div className="flex flex-col">
+            <Text type="title" level={7} color="grey-6">
+              {e.metricType ? (
+                getFormattedKpiValue({ value: d, metricType: e.metricType })
+              ) : (
+                <NumFormat number={d} />
+              )}
+            </Text>
+            {comparisonApplied && (
+              <>
+                <Text type="title" level={7} color="grey">
+                  {e.metricType ? (
+                    getFormattedKpiValue({
+                      value: row[`${kpiLabel} - ${idx} - compareValue`],
+                      metricType: e.metricType
+                    })
+                  ) : (
+                    <NumFormat
+                      number={row[`${kpiLabel} - ${idx} - compareValue`]}
+                    />
+                  )}
+                </Text>
+                <div className="flex col-gap-1 items-center justify-end">
+                  <SVG
+                    color={
+                      row[`${kpiLabel} - ${idx} - change`] > 0
+                        ? '#5ACA89'
+                        : '#FF0000'
+                    }
+                    name={
+                      row[`${kpiLabel} - ${idx} - change`] > 0
+                        ? 'arrowLift'
+                        : 'arrowDown'
+                    }
+                    size={16}
+                  />
+                  <Text
+                    level={7}
+                    type="title"
+                    color={
+                      row[`${kpiLabel} - ${idx} - change`] < 0 ? 'red' : 'green'
+                    }
+                  >
+                    <NumFormat
+                      number={Math.abs(row[`${kpiLabel} - ${idx} - change`])}
+                    />
+                    %
+                  </Text>
+                </div>
+              </>
+            )}
+          </div>
+        );
       }
     };
   });
@@ -173,17 +289,35 @@ export const getTableColumns = ({
 export const getDataInTableFormat = (
   data,
   categories,
-  queries,
-  currentSorter
+  kpis,
+  currentSorter,
+  comparisonApplied,
+  compareCategories
 ) => {
+  const compareRows = {};
   const result = categories.map((cat, catIndex) => {
     const obj = {
       index: catIndex,
       date: cat
     };
-    queries.forEach((q, qIndex) => {
+    if (comparisonApplied) {
+      obj.compareDate = compareCategories[catIndex];
+    }
+    kpis.forEach((q, qIndex) => {
       const kpiLabel = getKpiLabel(q);
       obj[`${kpiLabel} - ${qIndex}`] = data[qIndex].data[catIndex];
+      if (comparisonApplied) {
+        if (compareRows[`${kpiLabel} - ${qIndex}`] == null) {
+          compareRows[`${kpiLabel} - ${qIndex}`] = data.find(
+            (elem) => elem.compareIndex === data[qIndex].index
+          );
+        }
+        const val1 = data[qIndex].data[catIndex];
+        const val2 = compareRows[`${kpiLabel} - ${qIndex}`]?.data[catIndex];
+        obj[`${kpiLabel} - ${qIndex} - compareValue`] = val2;
+        obj[`${kpiLabel} - ${qIndex} - change`] =
+          val1 && val2 ? ((val1 - val2) / val2) * 100 : 0;
+      }
     });
     return obj;
   });
@@ -195,28 +329,30 @@ export const getDateBasedColumns = ({
   categories,
   currentSorter,
   handleSorting,
-  frequency
+  frequency,
+  comparisonApplied,
+  compareCategories
 }) => {
-  const OverallColumn = {
-    title: getClickableTitleSorter(
-      'Overall',
-      { key: 'Overall', type: 'numerical', subtype: null },
-      currentSorter,
-      handleSorting,
-      'right'
-    ),
-    className: 'text-right',
-    dataIndex: 'Overall',
-    width: 150,
-    render: (d, _, index) => {
-      const metricType = get(kpis[index], 'metricType', null);
-      return metricType ? (
-        getFormattedKpiValue({ value: d, metricType })
-      ) : (
-        <NumFormat number={d} />
-      );
-    }
-  };
+  // const OverallColumn = {
+  //   title: getClickableTitleSorter(
+  //     'Overall',
+  //     { key: 'Overall', type: 'numerical', subtype: null },
+  //     currentSorter,
+  //     handleSorting,
+  //     'right'
+  //   ),
+  //   className: 'text-right',
+  //   dataIndex: 'Overall',
+  //   width: 150,
+  //   render: (d, _, index) => {
+  //     const metricType = get(kpis[index], 'metricType', null);
+  //     return metricType ? (
+  //       getFormattedKpiValue({ value: d, metricType })
+  //     ) : (
+  //       <NumFormat number={d} />
+  //     );
+  //   }
+  // };
   const result = [
     {
       title: getClickableTitleSorter(
@@ -238,8 +374,9 @@ export const getDateBasedColumns = ({
     }
   ];
   const format = DATE_FORMATS[frequency] || DATE_FORMATS.date;
-  const dateColumns = categories.map((cat) => {
-    return {
+  const dateColumns = [];
+  categories.forEach((cat, catIndex) => {
+    dateColumns.push({
       title: getClickableTitleSorter(
         addQforQuarter(frequency) + moment(cat).format(format),
         {
@@ -251,7 +388,7 @@ export const getDateBasedColumns = ({
         handleSorting,
         'right'
       ),
-      className: 'text-right',
+      className: cx('text-right', { 'border-none': comparisonApplied }),
       width: frequency === 'hour' ? 200 : 150,
       dataIndex: addQforQuarter(frequency) + moment(cat).format(format),
       render: (d, _, index) => {
@@ -262,9 +399,79 @@ export const getDateBasedColumns = ({
           <NumFormat number={d} />
         );
       }
-    };
+    });
+    if (comparisonApplied) {
+      dateColumns.push({
+        title: getClickableTitleSorter(
+          addQforQuarter(frequency) +
+            moment(compareCategories[catIndex]).format(format),
+          {
+            key:
+              addQforQuarter(frequency) +
+              moment(compareCategories[catIndex]).format(format),
+            type: 'numerical',
+            subtype: null
+          },
+          currentSorter,
+          handleSorting,
+          'right'
+        ),
+        className: 'text-right border-none',
+        width: frequency === 'hour' ? 200 : 150,
+        dataIndex:
+          addQforQuarter(frequency) +
+          moment(compareCategories[catIndex]).format(format),
+        render: (d, _, index) => {
+          const metricType = get(kpis[index], 'metricType', null);
+          return metricType ? (
+            getFormattedKpiValue({ value: d, metricType })
+          ) : (
+            <NumFormat number={d} />
+          );
+        }
+      });
+      dateColumns.push({
+        title: getClickableTitleSorter(
+          'Change',
+          {
+            key:
+              addQforQuarter(frequency) +
+              moment(compareCategories[catIndex]).format(format) +
+              ' - Change',
+            type: 'percent',
+            subtype: null
+          },
+          currentSorter,
+          handleSorting,
+          'right'
+        ),
+        className: 'text-right',
+        width: frequency === 'hour' ? 200 : 150,
+        dataIndex:
+          addQforQuarter(frequency) +
+          moment(compareCategories[catIndex]).format(format) +
+          ' - Change',
+        render: (d) => {
+          const changeIcon = (
+            <SVG
+              color={d > 0 ? '#5ACA89' : '#FF0000'}
+              name={d > 0 ? 'arrowLift' : 'arrowDown'}
+              size={16}
+            />
+          );
+          return (
+            <div className="flex col-gap-1 items-center justify-end">
+              {changeIcon}
+              <Text level={7} type="title" color={d < 0 ? 'red' : 'green'}>
+                <NumFormat number={Math.abs(d)} />%
+              </Text>
+            </div>
+          );
+        }
+      });
+    }
   });
-  return [...result, ...dateColumns, OverallColumn];
+  return [...result, ...dateColumns];
 };
 
 export const getDateBasedTableData = (
@@ -272,25 +479,46 @@ export const getDateBasedTableData = (
   categories,
   searchText,
   currentSorter,
-  frequency
+  frequency,
+  comparisonApplied,
+  compareCategories
 ) => {
   const format = DATE_FORMATS[frequency] || DATE_FORMATS.date;
-  const result = seriesData.map((sd, index) => {
-    const obj = {
-      index,
-      event: sd.name,
-      Overall: sd.total
-    };
-    const dateData = {};
-    categories.forEach((cat, catIndex) => {
-      dateData[addQforQuarter(frequency) + moment(cat).format(format)] =
-        sd.data[catIndex];
+  const result = seriesData
+    .filter((s) => !has(s, 'compareIndex'))
+    .map((sd, index) => {
+      const obj = {
+        index,
+        event: sd.name,
+        Overall: sd.total
+      };
+      const compareRow = seriesData.find(
+        (elem) => elem.compareIndex === sd.index
+      );
+      const dateData = {};
+      categories.forEach((cat, catIndex) => {
+        dateData[addQforQuarter(frequency) + moment(cat).format(format)] =
+          sd.data[catIndex];
+        if (comparisonApplied && compareRow != null) {
+          const val1 = sd.data[catIndex];
+          const val2 = compareRow.data[catIndex];
+          dateData[
+            addQforQuarter(frequency) +
+              moment(compareCategories[catIndex]).format(format)
+          ] = val2;
+          dateData[
+            `${
+              addQforQuarter(frequency) +
+              moment(compareCategories[catIndex]).format(format)
+            } - Change`
+          ] = ((val1 - val2) / val2) * 100;
+        }
+      });
+      return {
+        ...obj,
+        ...dateData
+      };
     });
-    return {
-      ...obj,
-      ...dateData
-    };
-  });
   const filteredResult = result.filter(
     (elem) => elem.event.toLowerCase().indexOf(searchText.toLowerCase()) > -1
   );

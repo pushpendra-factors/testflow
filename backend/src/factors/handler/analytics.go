@@ -200,6 +200,7 @@ func isQueryShareable(queryGroup model.QueryGroup) bool {
 	}
 	return true
 }
+
 // QueryHandler godoc
 // @Summary To run a particular query from core query or dashboards.
 // @Tags CoreQuery
@@ -356,7 +357,6 @@ func QueryHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 		logCtx.Error(" Result is nil - " + errMsg)
 		return nil, errCode, V1.PROCESSING_FAILED, "Result is nil - " + errMsg, true
 	}
-
 	model.SetQueryCacheResult(projectId, &requestPayload.Query, result)
 
 	if isDashboardQueryRequest {

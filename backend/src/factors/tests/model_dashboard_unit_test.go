@@ -987,6 +987,7 @@ func TestCacheDashboardUnitsForProjectIDEventsGroupQuery(t *testing.T) {
 		assert.NotNil(t, dashboardQuery)
 
 		dashboardUnit, errCode, _ := store.GetStore().CreateDashboardUnit(project.ID, agent.UUID, &model.DashboardUnit{
+			ProjectID:    project.ID,
 			DashboardId:  dashboard.ID,
 			Presentation: model.PresentationCard,
 			QueryId:      dashboardQuery.ID,
@@ -1035,7 +1036,8 @@ func TestCacheDashboardUnitsForProjectIDEventsGroupQuery(t *testing.T) {
 				assert.True(t, result["cache"].(bool))
 			} else {
 				// Cache must be true in response.
-				assert.True(t, result["cache"].(bool))
+				assert.False(t, result["cache"].(bool))
+
 			}
 		}
 	}

@@ -141,6 +141,16 @@ var GROUP_EVENT_NAME_TO_GROUP_NAME_MAPPING = map[string]string{
 	GROUP_EVENT_NAME_SALESFORCE_OPPORTUNITY_UPDATED: GROUP_NAME_SALESFORCE_OPPORTUNITY,
 }
 
+// Group/CRM Properties Constants
+var GP_HUBSPOT_COMPANY_NAME string = "$hubspot_company_name"
+var GP_SALESFORCE_ACCOUNT_NAME string = "$salesforce_account_name"
+var GP_HUBSPOT_COMPANY_COUNTRY string = "$hubspot_company_country"
+var GP_SALESFORCE_ACCOUNT_BILLINGCOUNTRY string = "$salesforce_account_billingcountry"
+var GP_HUBSPOT_COMPANY_INDUSTRY string = "$hubspot_company_industry"
+var GP_SALESFORCE_ACCOUNT_INDUSTRY string = "$salesforce_account_industry"
+var GP_HUBSPOT_COMPANY_NUMBEROFEMPLOYEES string = "$hubspot_company_numberofemployees"
+var GP_SALESFORCE_ACCOUNT_NUMBEROFEMPLOYEES string = "$salesforce_account_numberOfEmployees"
+
 // Factors API constants
 const UserCreated string = "UC"
 const AutoTracked string = "AT"
@@ -233,6 +243,8 @@ var EP_SESSION_COUNT string = "$session_count"
 var EP_TERM string = "$term"
 var EP_CHANNEL string = "$channel" // added at runtime.
 var EP_TYPE string = "$type"
+var EP_HUBSPOT_ENGAGEMENT_THREAD_ID string = "$hubspot_engagement_thread_id"
+var EP_OTP_RULE_ID string = "$otp_rule_id"
 
 // Event Form meta attributes properties
 var EP_FORM_ID string = "$form_id"
@@ -450,6 +462,8 @@ var SDK_ALLOWED_EVENT_PROPERTIES = [...]string{
 	// event properties part of offline touch points
 	EP_CHANNEL,
 	EP_TYPE,
+	EP_HUBSPOT_ENGAGEMENT_THREAD_ID,
+	EP_OTP_RULE_ID,
 
 	// user_properties captured on event. i.e form_submit.
 	UP_EMAIL,

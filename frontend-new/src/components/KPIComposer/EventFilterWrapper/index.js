@@ -83,9 +83,8 @@ function EventFilterWrapper({
 
 
       if (filter && filter?.extra) {
-
         let filterData = {};
-        if (selectedMainCategory?.category == 'channels') {
+        if (event?.category == 'channels' || event?.category == 'custom_channels') {
           filterData = {
             category: event?.category, //use event instead of selectedMainCategory since it is in induvidual level
             object_type: filter?.extra[3],
@@ -136,7 +135,7 @@ function EventFilterWrapper({
       if (item == null) return;
       let ddName = item.display_name ? item.display_name : item.name;
       let ddtype =
-        selGroup?.category == 'channels'
+        (selGroup?.category == 'channels'|| selGroup?.category == 'custom_channels')
           ? item.object_type
           : item.entity
             ? item.entity
@@ -168,9 +167,8 @@ function EventFilterWrapper({
 
   const setValuesByProps = (props) => {
     if (props && props[3]) {
-      let filterData = {};
-
-      if (event?.category == 'channels') { //use event instead of selectedMainCategory since it is in induvidual level
+      let filterData = {}; 
+      if (event?.category == 'channels' || event?.category == 'custom_channels') { //use event instead of selectedMainCategory since it is in induvidual level
         filterData = {
           category: event?.category, //use event instead of selectedMainCategory since it is in induvidual level
           object_type: props[3] ? props[3] : event?.group,

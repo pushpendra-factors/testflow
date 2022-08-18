@@ -17,6 +17,7 @@ type ProjectSetting struct {
 	AutoTrack            *bool `gorm:"not null;default:false" json:"auto_track,omitempty"`
 	AutoTrackSPAPageView *bool `gorm:"not null;default:false" json:"auto_track_spa_page_view"`
 	AutoFormCapture      *bool `gorm:"not null;default:false" json:"auto_form_capture,omitempty"`
+	AutoClickCapture     *bool `gorm:"not null;default:false" json:"auto_click_capture,omitempty"`
 	ExcludeBot           *bool `gorm:"not null;default:false" json:"exclude_bot,omitempty"`
 	// Segment integration settings.
 	IntSegment *bool `gorm:"not null;default:false" json:"int_segment,omitempty"`
@@ -59,6 +60,7 @@ type ProjectSetting struct {
 	IntLinkedinAgentUUID          *string         `json:"int_linkedin_agent_uuid"`
 	IntDrift                      *bool           `gorm:"not null;default:false" json:"int_drift,omitempty"`
 	IntGoogleIngestionTimezone    string          `json:"int_google_ingestion_timezone"`
+	IntFacebookIngestionTimezone  string          `json:"int_facebook_ingestion_timezone"`
 	IntClearBit                   *bool           `gorm:"not null;default:false" json:"int_clear_bit,omitempty"`
 	IntAdwordsClientManagerMap    *postgres.Jsonb `json:"int_adwords_client_manager_map"`
 	ClearbitKey                   string          `json:"clearbit_key"`
@@ -90,6 +92,8 @@ type LeadSquaredConfig struct {
 const ProjectSettingKeyToken = "token"
 const ProjectSettingKeyPrivateToken = "private_token"
 
+var AutoClickCaptureDefault = false
+
 var projectSettingKeys = [...]string{
 	ProjectSettingKeyToken,
 	ProjectSettingKeyPrivateToken,
@@ -120,7 +124,7 @@ type HubspotProjectSettings struct {
 
 type FacebookProjectSettings struct {
 	ProjectId              int64  `json:"project_id"`
-	Timezone               string `json:"timezone" gorm:"column:int_google_ingestion_timezone"`
+	Timezone               string `json:"timezone" gorm:"column:int_facebook_ingestion_timezone"`
 	IntFacebookUserId      string `json:"int_facebook_user_id"`
 	IntFacebookAccessToken string `json:"int_facebook_access_token"`
 	IntFacebookAdAccount   string `json:"int_facebook_ad_account"`

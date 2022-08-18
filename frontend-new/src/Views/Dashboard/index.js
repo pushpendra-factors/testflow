@@ -72,7 +72,7 @@ function Dashboard({
     integration?.int_clear_bit ||
     sdkCheck ||
     bingAds?.accounts ||
-    marketo?.status || integrationV1?.int_slack;
+    marketo?.status || integrationV1?.int_slack || integration?.lead_squared_config !== null;
 
   const handleEditClick = useCallback((dashboard) => {
     setaddDashboardModal(true);

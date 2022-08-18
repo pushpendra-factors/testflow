@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
+import { useSelector } from 'react-redux';
 import {
   formatData,
   getDefaultSortProp,
@@ -27,6 +28,7 @@ function EventBreakdownCharts({
   const [visibleProperties, setVisibleProperties] = useState([]);
   const { handleEditQuery } = useContext(DashboardContext);
   const [sorter, setSorter] = useState(getDefaultSortProp());
+  const { eventNames } = useSelector((state) => state.coreQuery);
 
   useEffect(() => {
     const formattedData = formatData(resultState.data);
@@ -38,7 +40,7 @@ function EventBreakdownCharts({
 
   if (!chartsData.length) {
     return (
-      <div className='mt-4 flex justify-center items-center w-full h-64 '>
+      <div className="flex justify-center items-center w-full h-full pt-4 pb-4">
         <NoDataChart />
       </div>
     );
@@ -64,6 +66,7 @@ function EventBreakdownCharts({
         total={resultState.data.rows[0]}
         query={'Count'}
         bgColor='#4D7DB4'
+        eventNames={eventNames}
       />
     );
   } else {
@@ -79,20 +82,20 @@ function EventBreakdownCharts({
     );
   }
 
-  if (chartType === CHART_TYPE_TABLE) {
-    tableContent = (
-      <div
-        onClick={handleEditQuery}
-        style={{ color: '#5949BC' }}
-        className='mt-3 font-medium text-base cursor-pointer flex justify-end item-center'
-      >
-        Show More &rarr;
-      </div>
-    );
-  }
+  // if (chartType === CHART_TYPE_TABLE) {
+  //   tableContent = (
+  //     <div
+  //       onClick={handleEditQuery}
+  //       style={{ color: '#5949BC' }}
+  //       className='mt-3 font-medium text-base cursor-pointer flex justify-end item-center'
+  //     >
+  //       Show More &rarr;
+  //     </div>
+  //   );
+  // }
 
   return (
-    <div className={`w-full px-6 flex flex-1 flex-col  justify-center`}>
+    <div className={`w-full`}>
       {chartContent}
       {tableContent}
     </div>

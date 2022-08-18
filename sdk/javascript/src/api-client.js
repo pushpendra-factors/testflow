@@ -6,6 +6,7 @@ const URI_IDENTIFY = "/sdk/user/identify";
 const URI_ADD_USER_PROPERTIES = "/sdk/user/add_properties";
 const URI_UPDATE_EVENT_PROPERTIES = "/sdk/event/update_properties";
 const URI_ADD_PROJECT_SETTINGS = "/sdk/project/get_settings";
+const URI_CAPTURE_CLICK = "/sdk/capture_click";
 const URI_SERVICE_ERROR = "/sdk/service/error";
 
 function APIClient(token, host="") {
@@ -73,6 +74,24 @@ APIClient.prototype.updateEventProperties = function(payload) {
 
     return Request.post(
         this.getURL(URI_UPDATE_EVENT_PROPERTIES),
+        payload,
+        this.getHeaders()
+    );
+}
+
+APIClient.prototype.captureClick = function(payload) {
+    // Mandaotry field check.
+    if (!payload || 
+        !payload.display_name || 
+        !payload.element_type || 
+        !payload.element_attributes ||
+        !payload.user_id ||
+        !payload.event_properties ||
+        !payload.user_properties)
+        return Promise.reject("Capture click failed. Invalid payload.");
+
+    return Request.post(
+        this.getURL(URI_CAPTURE_CLICK),
         payload,
         this.getHeaders()
     );

@@ -35,6 +35,18 @@ func AppendNonNullValues(args ...string) []string {
 	return result
 }
 
+func AppendNonNullValuesList(args []string, arg string) []string {
+	result := make([]string, 0, 0)
+
+	for _, argValue := range args {
+		if len(argValue) != 0 {
+			result = append(result, argValue)
+		}
+	}
+	result = append(result, arg)
+	return result
+}
+
 // ConvertInternalToExternal ...
 // Standardising the external API response for metrics. This is used to convert the internal metrics to external API.
 func ConvertInternalToExternal(internalMetrics [][]interface{}) [][]interface{} {

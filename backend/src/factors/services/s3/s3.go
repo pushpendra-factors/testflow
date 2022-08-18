@@ -191,3 +191,12 @@ func (sd *S3Driver) GetKPIFilePathAndName(projectId int64, dateString string, qu
 	path := sd.GetWeeklyKPIModelDir(projectId, dateString, queryId)
 	return path, "kpi.txt"
 }
+
+func (sd *S3Driver) GetAdsDataDir(projectId int64) string {
+	return fmt.Sprintf("projects/%v/AdsImport/", projectId)
+}
+
+func (sd *S3Driver) GetAdsDataFilePathAndName(projectId int64, report string, chunkNo int) (string, string) {
+	path := sd.GetAdsDataDir(projectId)
+	return path, fmt.Sprintf("%v-%v-%v.csv", report, projectId, chunkNo)
+}

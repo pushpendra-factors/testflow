@@ -125,7 +125,7 @@ func QuerySendNowHandler(c *gin.Context) {
 			log.Error("failed to parse queryID string")
 			c.AbortWithStatusJSON(http.StatusBadRequest,
 				gin.H{"error": "Failed to parse query ID"})
-			return 
+			return
 		}
 	}
 	r := c.Request

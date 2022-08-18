@@ -3,8 +3,9 @@ import React, {
   useEffect,
   forwardRef,
   useContext,
-  useImperativeHandle,
+  useImperativeHandle
 } from 'react';
+import { useSelector } from 'react-redux';
 import { formatData, getDefaultSortProp, getVisibleData } from './utils';
 import BarChart from '../../../../components/BarChart';
 import EventBreakdownTable from './EventBreakdownTable';
@@ -13,7 +14,7 @@ import { CoreQueryContext } from '../../../../contexts/CoreQueryContext';
 
 const EventBreakdownCharts = forwardRef(({ data, breakdown, section }, ref) => {
   const {
-    coreQueryState: { savedQuerySettings },
+    coreQueryState: { savedQuerySettings }
   } = useContext(CoreQueryContext);
 
   const [chartsData, setChartsData] = useState([]);
@@ -21,6 +22,7 @@ const EventBreakdownCharts = forwardRef(({ data, breakdown, section }, ref) => {
   const [sorter, setSorter] = useState(
     savedQuerySettings.sorter || getDefaultSortProp()
   );
+  const { eventNames } = useSelector((state) => state.coreQuery);
 
   useEffect(() => {
     const formattedData = formatData(data);
@@ -33,13 +35,13 @@ const EventBreakdownCharts = forwardRef(({ data, breakdown, section }, ref) => {
 
   useImperativeHandle(ref, () => {
     return {
-      currentSorter: { sorter },
+      currentSorter: { sorter }
     };
   });
 
   if (!chartsData.length) {
     return (
-      <div className='h-64 flex items-center justify-center w-full'>
+      <div className="h-64 flex items-center justify-center w-full">
         No Data Found!
       </div>
     );
@@ -48,7 +50,7 @@ const EventBreakdownCharts = forwardRef(({ data, breakdown, section }, ref) => {
   let chart = null;
 
   const table = (
-    <div className='mt-12 w-full'>
+    <div className="mt-12 w-full">
       <EventBreakdownTable
         data={chartsData}
         breakdown={breakdown}
@@ -64,12 +66,17 @@ const EventBreakdownCharts = forwardRef(({ data, breakdown, section }, ref) => {
     chart = <BarChart section={section} chartData={visibleProperties} />;
   } else {
     chart = (
-      <ChartHeader total={data.rows[0]} query={'Count'} bgColor='#4D7DB4' />
+      <ChartHeader
+        eventNames={eventNames}
+        total={data.rows[0]}
+        query={'Count'}
+        bgColor="#4D7DB4"
+      />
     );
   }
 
   return (
-    <div className='flex items-center justify-center flex-col'>
+    <div className="flex items-center justify-center flex-col">
       {chart}
       {table}
     </div>

@@ -1,10 +1,11 @@
 import React from 'react';
+import { values } from 'lodash';
+import { useSelector } from 'react-redux';
 import ChartHeader from './ChartHeader';
 import SparkChart from './Chart';
 import { DASHBOARD_WIDGET_SECTION } from '../../utils/constants';
 import TopLegends from '../GroupedBarChart/TopLegends';
 import { Text, Number as NumFormat } from '../factorsComponents';
-import { values } from 'lodash';
 
 function SparkLineChart({
   queries,
@@ -19,6 +20,8 @@ function SparkLineChart({
   section,
   title = 'chart'
 }) {
+  const { eventNames } = useSelector((state) => state.coreQuery);
+
   if (queries.length > 1) {
     const count = section === DASHBOARD_WIDGET_SECTION ? 3 : queries.length;
     const colors = {};
@@ -99,6 +102,7 @@ function SparkLineChart({
                         ?.displayName
                     }
                     bgColor={appliedColors[index]}
+                    eventNames={eventNames}
                   />
                   <div className="mt-8">
                     <SparkChart
@@ -130,6 +134,7 @@ function SparkLineChart({
                     }
                     bgColor={appliedColors[index]}
                     smallFont={true}
+                    eventNames={eventNames}
                   />
                 </div>
               </div>
@@ -150,7 +155,12 @@ function SparkLineChart({
         }`}
       >
         <div className={cardSize === 1 ? 'w-1/4' : 'w-full'}>
-          <ChartHeader bgColor="#4D7DB4" query={queries[0]} total={total} />
+          <ChartHeader
+            bgColor="#4D7DB4"
+            query={queries[0]}
+            total={total}
+            eventNames={eventNames}
+          />
         </div>
         <div className={cardSize === 1 ? 'w-3/4' : 'w-full'}>
           <SparkChart

@@ -48,7 +48,7 @@
                     this.q.push(callMap);
                     window.dispatchEvent(factorsQueuedEvent);
                 }
-                this.init("${projectToken}", {'opt': 'value'}, function(){console.log("Init callback")});
+                this.init("token", {host: "http://factors-dev.com:8085"}, function(){console.log("Init callback")});
                 return this;
             })();
 
@@ -95,6 +95,8 @@
             <input type="button" value="Non-Submit Input Button">
         </form>
 
+        <a id="id1" name="sample" rel="rel">Sample Anchor</a>
+        <button id="id1" name="sample" class="style" role="role">Sample Button</button>
 
         <h2>Form Within an Iframe</h2>
             <iframe src="http://localhost:3000/login">

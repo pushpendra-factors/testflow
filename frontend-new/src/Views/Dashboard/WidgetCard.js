@@ -416,34 +416,33 @@ function WidgetCard({
         ref={cardRef}
         className={'fa-dashboard--widget-card h-full w-full flex'}
       >
-        <div className={'py-5 flex justify-between items-start w-full'}>
+        <div className={'flex justify-between items-start w-full'}>
           <div className={'w-full flex flex-1 flex-col h-full'}>
             <div
-              className={`${styles.widgetCard} flex items-center justify-between px-6 pb-4`}
+              className={`${styles.widgetCard} flex items-center justify-between px-4`}
             >
-              <Tooltip title={unit?.query?.title} mouseEnterDelay={0.2}>
-                <div className="flex flex-col truncate">
+                <div className="widget-card--title-container py-3 flex truncate cursor-pointer items-center w-full mr-2" onClick={handleEditQuery}>
                   <div
-                    className="flex cursor-pointer items-center"
-                    onClick={handleEditQuery}
+                    className="flex  items-center" 
                   >
+                  <Tooltip title={unit?.query?.title} mouseEnterDelay={0.2}>
                     <Text
                       ellipsis
                       type={'title'}
                       level={6}
                       weight={'bold'}
-                      extraClass={`${styles.widgetCard_text} m-0 mr-1 flex`}
+                      extraClass={`widget-card--title m-0 mr-1 flex`}
                     >
-                      {unit?.query?.title}
-                      <SVG
-                        extraClass={`${styles.expand_icon} ml-1`}
+                      {unit?.query?.title} 
+                    </Text>
+                  </Tooltip>
+                  </div>
+                  <SVG
+                        extraClass={`widget-card--expand-icon ml-1`}
                         size={20}
                         name="expand"
                       />
-                    </Text>
-                  </div>
                 </div>
-              </Tooltip>
               <div className="flex items-center">
                 {resultState.apiCallStatus &&
                 resultState.apiCallStatus.required &&

@@ -39,6 +39,7 @@ const MenuItems = {
   Pages: 'Pages',
   Alerts: 'Alerts',
   Insights: 'Build Insights',
+  Sharing: 'Sharing',
 };
 
 const MapNametToLocation = {
@@ -110,7 +111,7 @@ function SiderMenu({
         </div>
       );
     } else if (title === 'settings') {
-      const items = ['general', 'User', 'Attribution', 'SDK', 'Integration', 'Insights'];
+      const items = ['general', 'User', 'Attribution', 'SDK', 'Integration', 'Insights', 'Sharing'];
       return (
         <div className={styles.popover_content}>
           {items.map((item) => {
@@ -131,7 +132,7 @@ function SiderMenu({
         </div>
       );
     } else if (title === 'profile') {
-      const items = ['People'];
+      const items = ['People', 'Accounts'];
       return (
         <div className={styles.popover_content}>
           {items.map((item) => {
@@ -211,35 +212,45 @@ function SiderMenu({
       >
         <b>Analyse</b>
       </Menu.Item>
-      {
-        // collapsed ? (
-        //   <Popover
-        //     overlayClassName={styles.popover}
-        //     title={false}
-        //     visible={ShowPopOverProfiles}
-        //     content={renderSubmenu('profile')}
-        //     placement={'rightTop'}
-        //     onVisibleChange={(visible) => {
-        //       setShowPopOverProfiles(visible);
-        //     }}
-        //     trigger='hover'
-        //   >
-        //     <Menu.Item
-        //       className={styles.menuitems}
-        //       key='sub3'
-        //       icon={setIcon('profile')}
-        //     ></Menu.Item>
-        //   </Popover>
-        // ) : (
-        //   <SubMenu key='sub1' icon={setIcon('profile')} title={<b>Profiles</b>}>
-        //     <Menu.Item
-        //       className={styles.menuitems_sub}
-        //       key={`/profiles/people`}
-        //     >
-        //       {MenuItems.People}
-        //     </Menu.Item>
-        //   </SubMenu>
-        // )
+      {(window.document.domain === 'app.factors.ai' &&
+        whiteListedAccounts.includes(activeAgent)) ||
+      window.document.domain === 'staging-app.factors.ai' ||
+      window.document.domain === 'factors-dev.com' ? (
+        collapsed ? (
+          <Popover
+            overlayClassName={styles.popover}
+            title={false}
+            visible={ShowPopOverProfiles}
+            content={renderSubmenu('profile')}
+            placement={'rightTop'}
+            onVisibleChange={(visible) => {
+              setShowPopOverProfiles(visible);
+            }}
+            trigger='hover'
+          >
+            <Menu.Item
+              className={styles.menuitems}
+              key='sub3'
+              icon={setIcon('profile')}
+            ></Menu.Item>
+          </Popover>
+        ) : (
+          <SubMenu key='sub1' icon={setIcon('profile')} title={<b>Profiles</b>}>
+            <Menu.Item
+              className={styles.menuitems_sub}
+              key={`/profiles/people`}
+            >
+              {MenuItems.People}
+            </Menu.Item>
+            <Menu.Item
+              className={styles.menuitems_sub}
+              key={`/profiles/accounts`}
+            >
+              {MenuItems.Accounts}
+            </Menu.Item>
+          </SubMenu>
+        )
+      ) : (
         <Menu.Item
           className={styles.menuitems}
           key={`/profiles/people`}
@@ -247,7 +258,7 @@ function SiderMenu({
         >
           <b>User Profiles</b>
         </Menu.Item>
-      }
+      )}
 
       <Menu.Item
         className={styles.menuitems}
@@ -359,6 +370,12 @@ function SiderMenu({
             key={`/settings/integration`}
           >
             {MenuItems.Integration}
+          </Menu.Item>
+          <Menu.Item
+            className={styles.menuitems_sub}
+            key={`/settings/sharing`}
+          >
+            {MenuItems.Sharing}
           </Menu.Item>
         </SubMenu>
       )}

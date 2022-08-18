@@ -657,7 +657,13 @@ func TestIntSegmentHandlePageEventWithFilterExpression(t *testing.T) {
 	enable := true
 	// disable := false
 	_, errCode := store.GetStore().UpdateProjectSettings(project.ID,
-		&model.ProjectSetting{IntSegment: &enable, AutoTrack: &enable})
+		&model.ProjectSetting{
+			IntSegment:           &enable,
+			AutoTrack:            &enable,
+			AutoTrackSPAPageView: &enable,
+			AutoFormCapture:      &enable,
+			AutoClickCapture:     &enable,
+		})
 	assert.Equal(t, http.StatusAccepted, errCode)
 
 	// Filter.

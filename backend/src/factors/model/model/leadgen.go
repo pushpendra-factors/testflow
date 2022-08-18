@@ -17,6 +17,7 @@ type LeadgenSettings struct {
 	SheetName      string    `json:"sheet_name"`
 	RowRead        int64     `json:"row_read"`
 	SourceProperty string    `json:"source_property"`
+	Timezone       string    `json:"timezone"`
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`
 }
@@ -60,7 +61,7 @@ type LeadgenDataPayload struct {
 	CreatedTime  int64  `json:"Created Time"`
 }
 
-func TransformAndGenerateTrackPayload(record []interface{}, projectID int64, source string) (map[string]interface{}, map[string]interface{}, int64, error) {
+func TransformAndGenerateTrackPayload(record []interface{}, projectID int64, source string, timezone string) (map[string]interface{}, map[string]interface{}, int64, error) {
 	if projectID == 0 {
 		return nil, nil, 0, errors.New("incorrect project id")
 	}
@@ -71,7 +72,7 @@ func TransformAndGenerateTrackPayload(record []interface{}, projectID int64, sou
 		return nil, nil, 0, errors.New("incorrect data in records sent")
 	}
 	var finalLeadgenPayload *LeadgenDataPayload
-	leadgenPayload, err := TransformDataArrayToLeadgenDataPayload(record, LeadgenCols)
+	leadgenPayload, err := TransformDataArrayToLeadgenDataPayload(record, LeadgenCols, source, timezone)
 	if err != nil {
 		return nil, nil, 0, err
 	}
@@ -80,7 +81,7 @@ func TransformAndGenerateTrackPayload(record []interface{}, projectID int64, sou
 	eventProperties, userProperties, timestamp, err := TransformLeadgenPayloadToPropertiesMap(*finalLeadgenPayload, source)
 	return eventProperties, userProperties, timestamp, err
 }
-func TransformDataArrayToLeadgenDataPayload(record []interface{}, colsList []string) (*LeadgenDataPayload, error) {
+func TransformDataArrayToLeadgenDataPayload(record []interface{}, colsList []string, source string, timezone string) (*LeadgenDataPayload, error) {
 	arrayToStruct := make(map[string]interface{})
 	if record == nil || len(record) != 10 {
 		return nil, errors.New("Empty or Invalid record")
@@ -92,7 +93,17 @@ func TransformDataArrayToLeadgenDataPayload(record []interface{}, colsList []str
 		if colsList[i] == "Created Time" {
 			layout := "2006-01-02 15:04:05"
 			str := record[i].(string)
-			timestamp, err := time.Parse(layout, str)
+			var err error
+			var timestamp time.Time
+			if source == "Facebook" {
+				loc, errLoc := time.LoadLocation(timezone)
+				if errLoc != nil {
+					return nil, errLoc
+				}
+				timestamp, err = time.ParseInLocation(layout, str, loc)
+			} else {
+				timestamp, err = time.Parse(layout, str)
+			}
 			if err != nil {
 				return nil, err
 			}

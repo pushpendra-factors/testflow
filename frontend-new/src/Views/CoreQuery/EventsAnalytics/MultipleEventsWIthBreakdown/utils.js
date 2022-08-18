@@ -21,7 +21,10 @@ import { getBreakdownDisplayName } from '../eventsAnalytics.helpers';
 import { BREAKDOWN_TYPES } from '../../constants';
 
 export const defaultSortProp = ({ breakdown }) => {
-  const dateTimeBreakdownIndex = findIndex(breakdown, b => b.prop_type === BREAKDOWN_TYPES.DATETIME);
+  const dateTimeBreakdownIndex = findIndex(
+    breakdown,
+    (b) => b.prop_type === BREAKDOWN_TYPES.DATETIME
+  );
   if (dateTimeBreakdownIndex > -1) {
     return [
       {
@@ -190,7 +193,13 @@ export const getTableColumns = (
         handleSorting
       ),
       dataIndex: `${b.property} - ${index}`,
-      width: 200
+      width: 200,
+      render: (d) => {
+        if (b.prop_type === 'numerical' && !isNaN(d)) {
+          return <NumFormat number={d} />;
+        }
+        return d;
+      }
     });
   });
   result.push({
@@ -252,7 +261,13 @@ export const getDateBasedColumns = (
         handleSorting
       ),
       dataIndex: `${b.property} - ${index}`,
-      width: 200
+      width: 200,
+      render: (d) => {
+        if (b.prop_type === 'numerical' && !isNaN(d)) {
+          return <NumFormat number={d} />;
+        }
+        return d;
+      }
     };
   });
   const format = DATE_FORMATS[frequency] || DATE_FORMATS.date;

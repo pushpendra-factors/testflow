@@ -12,6 +12,7 @@ import { ErrorBoundary } from 'react-error-boundary';
 import Attributions from './Attributions';
 import ExplainDP from './ExplainDataPoints';
 import Alerts from './Alerts';
+import Sharing from './Sharing';
 
 const MenuTabs = {
   generalSettings: 'General Settings',
@@ -23,6 +24,7 @@ const MenuTabs = {
   CustomKPI: 'Custom KPIs',
   ExplainDP: 'Top Events and Properties',
   Alerts: 'Alerts',
+  Sharing: 'Sharing',
 };
 
 function ProjectSettings({ activeProject, fetchSmartEvents, setKey }) {
@@ -118,6 +120,9 @@ function ProjectSettings({ activeProject, fetchSmartEvents, setKey }) {
                 <Menu.Item key={MenuTabs.Alerts}>
                   {MenuTabs.Alerts}
                 </Menu.Item>
+                <Menu.Item key={MenuTabs.Sharing}>
+                  {MenuTabs.Sharing}
+                </Menu.Item>
               </Menu>
             </Col>
             <Col span={15}>
@@ -135,6 +140,7 @@ function ProjectSettings({ activeProject, fetchSmartEvents, setKey }) {
               {selectedMenu === MenuTabs.CustomKPI && <CustomKPI />}
               {selectedMenu === MenuTabs.ExplainDP && <ExplainDP />}
               {selectedMenu === MenuTabs.Alerts && <Alerts />}
+              {selectedMenu === MenuTabs.Sharing && <Sharing />}
             </Col>
           </Row>
         </div>

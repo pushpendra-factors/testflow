@@ -8,10 +8,10 @@ USE factors;
 CREATE TABLE IF NOT EXISTS events (
     id text NOT NULL,
     project_id bigint NOT NULL,
-    customer_event_id text, 
+    customer_event_id text,
     user_id text,
-    user_properties_id text, 
-    event_name_id text, 
+    user_properties_id text,
+    event_name_id text,
     count bigint,
     properties JSON COLLATE utf8_bin OPTION 'SeekableLZ4',
     user_properties JSON COLLATE utf8_bin OPTION 'SeekableLZ4',
@@ -39,8 +39,8 @@ CREATE TABLE IF NOT EXISTS events (
 ALTER TABLE events AUTOSTATS_SAMPLING = OFF;
 
 CREATE TABLE IF NOT EXISTS users (
-    id text NOT NULL, 
-    project_id bigint NOT NULL, 
+    id text NOT NULL,
+    project_id bigint NOT NULL,
     customer_user_id text,
     segment_anonymous_id text,
     amp_user_id text,
@@ -125,7 +125,7 @@ CREATE TABLE IF NOT EXISTS adwords_documents (
     SHARD KEY (project_id),
     KEY (updated_at) USING HASH,
     KEY (project_id, customer_account_id, timestamp) USING CLUSTERED COLUMNSTORE
-    
+
     -- Required constraints.
     -- Unique (project_id, customer_account_id, timestamp, id)
     -- Ref (project_id) -> projects(id)
@@ -176,7 +176,7 @@ CREATE TABLE IF NOT EXISTS bigquery_settings (
     bq_dataset_name text,
     bq_credentials_json text,
     last_run_at bigint,
-    created_at timestamp(6) NOT NULL, 
+    created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
     SHARD KEY (project_id),
     KEY (updated_at),
@@ -195,7 +195,7 @@ CREATE TABLE IF NOT EXISTS billing_accounts (
     billing_address text,
     pincode text,
     phone_no text,
-    created_at timestamp(6) NOT NULL, 
+    created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
     KEY (updated_at),
     PRIMARY KEY (agent_uuid, id)
@@ -212,7 +212,7 @@ CREATE TABLE IF NOT EXISTS dashboard_units (
     presentation varchar(5),
     query_id bigint,
     is_deleted boolean NOT NULL DEFAULT FALSE,
-    created_at timestamp(6) NOT NULL, 
+    created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
     KEY (updated_at),
     SHARD KEY (project_id),
@@ -259,7 +259,7 @@ CREATE TABLE IF NOT EXISTS facebook_documents (
     campaign_id text,
     ad_set_id text,
     ad_id text,
-    created_at timestamp(6) NOT NULL, 
+    created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
     KEY (updated_at) USING HASH,
     SHARD KEY (project_id),
@@ -280,7 +280,7 @@ CREATE TABLE IF NOT EXISTS factors_goals (
     created_by text,
     last_tracked_at timestamp(6),
     is_active boolean,
-    created_at timestamp(6) NOT NULL, 
+    created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
     KEY (updated_at),
     SHARD KEY (project_id),
@@ -298,9 +298,9 @@ CREATE TABLE IF NOT EXISTS factors_tracked_events (
     event_name_id text,
     type varchar(2),
     created_by text,
-    last_tracked_at timestamp(6), 
+    last_tracked_at timestamp(6),
     is_active boolean,
-    created_at timestamp(6) NOT NULL, 
+    created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
     KEY (updated_at),
     SHARD KEY (project_id),
@@ -319,9 +319,9 @@ CREATE TABLE IF NOT EXISTS factors_tracked_user_properties (
     user_property_name text,
     type varchar(2),
     created_by text,
-    last_tracked_at timestamp(6), 
+    last_tracked_at timestamp(6),
     is_active boolean,
-    created_at timestamp(6) NOT NULL, 
+    created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
     KEY (updated_at),
     SHARD KEY (project_id),
@@ -344,7 +344,7 @@ CREATE TABLE IF NOT EXISTS hubspot_documents (
     sync_id text,
     user_id text,
     group_user_id text,
-    created_at timestamp(6) NOT NULL, 
+    created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
     KEY (updated_at) USING HASH,
     SHARD KEY (project_id, type, id),
@@ -365,7 +365,7 @@ CREATE TABLE IF NOT EXISTS project_agent_mappings (
     agent_uuid text,
     role bigint,
     invited_by text,
-    created_at timestamp(6) NOT NULL, 
+    created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
     KEY (updated_at),
     SHARD KEY (project_id),
@@ -380,7 +380,7 @@ CREATE TABLE IF NOT EXISTS project_agent_mappings (
 CREATE TABLE IF NOT EXISTS project_billing_account_mappings (
     project_id bigint,
     billing_account_id text,
-    created_at timestamp(6) NOT NULL, 
+    created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
     KEY (updated_at),
     SHARD KEY (project_id),
@@ -394,9 +394,10 @@ CREATE TABLE IF NOT EXISTS project_billing_account_mappings (
 CREATE TABLE IF NOT EXISTS project_settings (
     project_id bigint,
     attribution_config json,
-    auto_track boolean NOT NULL DEFAULT FALSE, 
+    auto_track boolean NOT NULL DEFAULT FALSE,
     auto_track_spa_page_view boolean NOT NULL DEFAULT FALSE,
     auto_form_capture boolean NOT NULL DEFAULT FALSE,
+    auto_click_capture boolean NOT NULL DEFAULT FALSE,
     exclude_bot boolean NOT NULL DEFAULT FALSE,
     int_segment boolean NOT NULL DEFAULT FALSE,
     int_adwords_enabled_agent_uuid text,
@@ -423,10 +424,11 @@ CREATE TABLE IF NOT EXISTS project_settings (
     archive_enabled boolean NOT NULL DEFAULT FALSE,
     bigquery_enabled boolean NOT NULL DEFAULT FALSE,
     int_salesforce_enabled_agent_uuid text,
-    int_drift boolean NOT NULL DEFAULT FALSE, 
+    int_drift boolean NOT NULL DEFAULT FALSE,
     int_google_organic_enabled_agent_uuid text,
     int_google_organic_url_prefixes text,
     int_google_ingestion_timezone text,
+    int_facebook_ingestion_timezone text,
     int_clear_bit boolean NOT NULL DEFAULT FALSE,
     clearbit_key text,
     created_at timestamp(6) NOT NULL,
@@ -437,7 +439,7 @@ CREATE TABLE IF NOT EXISTS project_settings (
     KEY (updated_at),
     SHARD KEY (project_id),
     PRIMARY KEY (project_id)
-    
+
 
     -- Required constraints.
     -- Ref (project_id) -> projects(id)
@@ -451,7 +453,7 @@ CREATE TABLE IF NOT EXISTS project_settings (
 CREATE TABLE IF NOT EXISTS projects (
     id bigint AUTO_INCREMENT,
     name text,
-    token varchar(32), 
+    token varchar(32),
     private_token varchar(32),
     project_uri text,
     time_format text,
@@ -484,7 +486,7 @@ CREATE TABLE IF NOT EXISTS queries (
     type int,
     is_deleted boolean NOT NULL DEFAULT FALSE,
     created_by text,
-    created_at timestamp(6) NOT NULL, 
+    created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
     id_text text,
     converted boolean,
@@ -506,10 +508,10 @@ CREATE TABLE IF NOT EXISTS salesforce_documents (
     timestamp bigint,
     value JSON COLLATE utf8_bin OPTION 'SeekableLZ4',
     synced boolean NOT NULL DEFAULT FALSE,
-    sync_id text, 
+    sync_id text,
     user_id text,
     group_user_id text,
-    created_at timestamp(6) NOT NULL, 
+    created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
     KEY (updated_at) USING HASH,
     SHARD KEY (project_id, type, id),
@@ -534,7 +536,7 @@ CREATE TABLE IF NOT EXISTS scheduled_tasks (
     task_start_time bigint,
     task_end_time bigint,
     task_details json,
-    created_at timestamp(6) NOT NULL, 
+    created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
     KEY (updated_at),
     SHARD KEY (project_id),
@@ -660,7 +662,7 @@ CREATE TABLE IF NOT EXISTS project_model_metadata
     project_id bigint NOT NULL,
     model_id bigint NOT NULL,
     model_type text NOT NULL,
-    start_time  bigint NOT NULL, 
+    start_time  bigint NOT NULL,
     end_time bigint NOT NULL,
     chunks text NOT NULL,
     created_at timestamp(6) NOT NULL,
@@ -683,7 +685,7 @@ CREATE TABLE IF NOT EXISTS task_details
     frequency_interval integer, -- There are 4 types hourly/daily/weekly/stateless
     skip_start_index integer,
     skip_end_index integer,
-    offset_start_minutes integer, 
+    offset_start_minutes integer,
     recurrence boolean,
     metadata json,
     is_project_enabled boolean,
@@ -731,9 +733,9 @@ CREATE TABLE IF NOT EXISTS weekly_insights_metadata
     project_id bigint NOT NULL,
     query_id bigint NOT NULL,
     insight_type text NOT NULL,
-    base_start_time  bigint NOT NULL, 
+    base_start_time  bigint NOT NULL,
     base_end_time bigint NOT NULL,
-    comparison_start_time  bigint NOT NULL, 
+    comparison_start_time  bigint NOT NULL,
     comparison_end_time bigint NOT NULL,
     insight_id bigint NOT NULL,
     created_at timestamp(6) NOT NULL,
@@ -769,7 +771,7 @@ CREATE TABLE IF NOT EXISTS feedbacks(
     KEY (updated_at),
     PRIMARY KEY (id,project_id),
     SHARD KEY (project_id)
-    
+
 );
 
 CREATE ROWSTORE TABLE IF NOT EXISTS groups(
@@ -836,6 +838,7 @@ CREATE ROWSTORE TABLE IF NOT EXISTS leadgen_settings (
     spreadsheet_id text,
     sheet_name text,
     row_read bigint,
+    timezone text,
     created_at timestamp(6),
     updated_at timestamp(6),
     SHARD KEY (project_id),
@@ -939,7 +942,7 @@ CREATE TABLE IF NOT EXISTS crm_users (
     synced boolean NOT NULL DEFAULT FALSE,
     sync_id text,
     user_id text,
-    created_at timestamp(6) NOT NULL, 
+    created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
     KEY (updated_at) USING HASH,
     SHARD KEY (project_id, source, type, id),
@@ -964,9 +967,9 @@ CREATE TABLE IF NOT EXISTS crm_groups (
     metadata JSON COLLATE utf8_bin OPTION 'SeekableLZ4',
     properties JSON COLLATE utf8_bin OPTION 'SeekableLZ4' NOT NULL,
     synced boolean NOT NULL DEFAULT FALSE,
-    sync_id text, 
+    sync_id text,
     user_id text,
-    created_at timestamp(6) NOT NULL, 
+    created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
     KEY (updated_at) USING HASH,
     SHARD KEY (project_id, source, type, id),
@@ -977,7 +980,7 @@ CREATE TABLE IF NOT EXISTS crm_groups (
     -- Ref (project_id) -> projects(id)
     -- Unique (project_id,source, id, type, action, timestamp)
     -- Ref (project_id, user_id) -> users(project_id, id)
-); 
+);
 
 
 -- create new crm_relationships table
@@ -995,7 +998,7 @@ CREATE TABLE IF NOT EXISTS crm_relationships (
     properties JSON COLLATE utf8_bin OPTION 'SeekableLZ4',
     skip_process  boolean NOT NULL DEFAULT FALSE,
     synced boolean NOT NULL DEFAULT FALSE,
-    created_at timestamp(6) NOT NULL, 
+    created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
     KEY (updated_at) USING HASH,
     SHARD KEY (project_id, source, from_type,from_id),
@@ -1022,7 +1025,7 @@ CREATE TABLE IF NOT EXISTS crm_activities (
     synced boolean NOT NULL DEFAULT FALSE,
     sync_id text,
     user_id text,
-    created_at timestamp(6) NOT NULL, 
+    created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
     KEY (updated_at) USING HASH,
     SHARD KEY (project_id, source, type, id),
@@ -1076,7 +1079,7 @@ CREATE TABLE IF NOT EXISTS dashboard_templates(
     is_deleted boolean DEFAULT false,
     similar_template_ids json,
     tags json,
-    created_at timestamp(6) NOT NULL, 
+    created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
     KEY (id) USING HASH,
     SHARD KEY (id)
@@ -1086,15 +1089,14 @@ CREATE TABLE IF NOT EXISTS data_availabilities (
     project_id bigint NOT NULL,
     integration text,
     latest_data_timestamp bigint,
-    last_polled timestamp(6) NOT NULL, 
+    last_polled timestamp(6) NOT NULL,
     source text,
-    created_at timestamp(6) NOT NULL, 
+    created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
     SHARD KEY (project_id),
     UNIQUE KEY project_id_integration_unique_idx(project_id,integration) USING HASH
 );
 
--- create clickable_elements table
 CREATE TABLE IF NOT EXISTS clickable_elements (
     project_id bigint NOT NULL,
     id text NOT NULL,
@@ -1105,5 +1107,32 @@ CREATE TABLE IF NOT EXISTS clickable_elements (
     enabled boolean DEFAULT false,
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
-    PRIMARY KEY(project_id, id)
+    SHARD KEY (project_id, display_name, element_type),
+    KEY (project_id, display_name, element_type) USING CLUSTERED COLUMNSTORE,
+    UNIQUE KEY(project_id, display_name, element_type) USING HASH
+);
+
+
+CREATE TABLE IF NOT EXISTS ads_import (
+    project_id bigint NOT NULL,
+    id text NOT NULL,
+    status boolean,
+    last_processed_index json,
+    created_at timestamp(6) NOT NULL,
+    updated_at timestamp(6) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS otp_rules(
+    id text NOT NULL,
+    project_id bigint NOT NULL,
+    rule_type text,
+    touch_point_time_ref text,
+    filters json,
+    properties_map json,
+    is_deleted boolean DEFAULT false,
+    created_by text,
+    created_at timestamp(6) NOT NULL,
+    updated_at timestamp(6) NOT NULL,
+    KEY (id) USING HASH,
+    SHARD KEY (id)
 );

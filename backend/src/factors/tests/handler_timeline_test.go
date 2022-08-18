@@ -73,7 +73,7 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 	}
 	assert.Equal(t, len(users), numUsers)
 
-	var payload model.UTListPayload
+	var payload model.TimelinePayload
 	payload.Source = "web"
 
 	filters := model.QueryProperty{
@@ -90,7 +90,7 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 		w := sendGetProfileUserRequest(r, project.ID, agent, payload)
 		assert.Equal(t, http.StatusOK, w.Code)
 		jsonResponse, _ := ioutil.ReadAll(w.Body)
-		resp := make([]model.Contact, 0)
+		resp := make([]model.Profile, 0)
 		err := json.Unmarshal(jsonResponse, &resp)
 		assert.Nil(t, err)
 		assert.Equal(t, len(resp), 5)
@@ -110,7 +110,7 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 	})
 }
 
-func sendGetProfileUserRequest(r *gin.Engine, projectId int64, agent *model.Agent, payload model.UTListPayload) *httptest.ResponseRecorder {
+func sendGetProfileUserRequest(r *gin.Engine, projectId int64, agent *model.Agent, payload model.TimelinePayload) *httptest.ResponseRecorder {
 
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
@@ -465,6 +465,443 @@ func sendGetProfileUserDetailsRequest(r *gin.Engine, projectId int64, agent *mod
 		log.WithError(err).Error("Error Creating cookieData")
 	}
 	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, fmt.Sprintf("/projects/%d/v1/profiles/users/%s?is_anonymous=%s", projectId, userId, isAnonymous)).
+		WithCookie(&http.Cookie{
+			Name:   C.GetFactorsCookieName(),
+			Value:  cookieData,
+			MaxAge: 1000,
+		})
+
+	w := httptest.NewRecorder()
+	req, err := rb.Build()
+	if err != nil {
+		log.WithError(err).Error("Error Creating getProjectSetting Req")
+	}
+	r.ServeHTTP(w, req)
+	return w
+}
+
+func TestAPIGetProfileAccountHandler(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	customerEmail := "@example.com"
+
+	// Create 5 Users with Properties.
+	accounts := make([]model.User, 0)
+	numUsers := 5
+	groupUser := true
+
+	companies := []string{"FactorsAI", "Accenture", "Talentica", "Honeywell", "Meesho"}
+	countries := []string{"India", "Ireland", "India", "US", "India"}
+	for i := 0; i < numUsers; i++ {
+		var m map[string]string
+		if i%2 == 0 {
+			m = map[string]string{
+				U.GP_SALESFORCE_ACCOUNT_NAME:           companies[i],
+				U.GP_SALESFORCE_ACCOUNT_BILLINGCOUNTRY: countries[i],
+			}
+		} else {
+			m = map[string]string{
+				U.GP_HUBSPOT_COMPANY_NAME:    companies[i],
+				U.GP_HUBSPOT_COMPANY_COUNTRY: countries[i],
+			}
+		}
+		propertiesJSON, err := json.Marshal(m)
+		if err != nil {
+			log.WithError(err).Fatal("Marshal error.")
+		}
+		properties := postgres.Jsonb{RawMessage: propertiesJSON}
+		var source *int
+		var gr1 string
+		var gr2 string
+		if i%2 == 0 {
+			source = model.GetRequestSourcePointer(model.UserSourceSalesforce)
+			gr1 = ""
+			gr2 = "2"
+		} else {
+			source = model.GetRequestSourcePointer(model.UserSourceHubspot)
+			gr1 = "1"
+			gr2 = ""
+		}
+
+		createdUserID, _ := store.GetStore().CreateUser(&model.User{
+			ProjectId:      project.ID,
+			Source:         source,
+			Group1ID:       gr1,
+			Group2ID:       gr2,
+			CustomerUserId: "user" + strconv.Itoa(i) + customerEmail,
+			Properties:     properties,
+			IsGroupUser:    &groupUser,
+		})
+		account, errCode := store.GetStore().GetUser(project.ID, createdUserID)
+		assert.Equal(t, http.StatusFound, errCode)
+		accounts = append(accounts, *account)
+	}
+	assert.Equal(t, len(accounts), numUsers)
+
+	group1, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_HUBSPOT_COMPANY, model.AllowedGroupNames)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.NotNil(t, group1)
+	group2, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_SALESFORCE_ACCOUNT, model.AllowedGroupNames)
+	assert.NotNil(t, group2)
+	assert.Equal(t, http.StatusCreated, status)
+
+	var payload model.TimelinePayload
+	payload.Source = "All"
+
+	filters := model.QueryProperty{
+		Entity:    "user_g",
+		Type:      "categorical",
+		Property:  U.GP_SALESFORCE_ACCOUNT_BILLINGCOUNTRY,
+		Operator:  "equals",
+		Value:     "India",
+		LogicalOp: "AND",
+	}
+	payload.Filters = append(payload.Filters, filters)
+	filters = model.QueryProperty{
+		Entity:    "user_g",
+		Type:      "categorical",
+		Property:  U.GP_HUBSPOT_COMPANY_COUNTRY,
+		Operator:  "equals",
+		Value:     "US",
+		LogicalOp: "OR",
+	}
+	payload.Filters = append(payload.Filters, filters)
+
+	t.Run("Success", func(t *testing.T) {
+		w := sendGetProfileAccountRequest(r, project.ID, agent, payload)
+		assert.Equal(t, http.StatusOK, w.Code)
+		jsonResponse, _ := ioutil.ReadAll(w.Body)
+		resp := make([]model.Profile, 0)
+		err := json.Unmarshal(jsonResponse, &resp)
+		assert.Nil(t, err)
+		assert.Equal(t, len(resp), 4)
+		assert.Condition(t, func() bool {
+			for index, user := range resp {
+				sort.Strings(companies)
+				i := sort.SearchStrings(companies, user.Name)
+				assert.Condition(t, func() bool { return i < len(companies) })
+				sort.Strings(countries)
+				j := sort.SearchStrings(countries, user.Country)
+				assert.Condition(t, func() bool { return j < len(countries) })
+				assert.NotNil(t, user.LastActivity)
+				if index > 0 {
+					assert.Condition(t, func() bool { return resp[index].LastActivity.Unix() <= resp[index-1].LastActivity.Unix() })
+				}
+			}
+			return true
+		})
+	})
+}
+
+func sendGetProfileAccountRequest(r *gin.Engine, projectId int64, agent *model.Agent, payload model.TimelinePayload) *httptest.ResponseRecorder {
+
+	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
+	if err != nil {
+		log.WithError(err).Error("Error Creating cookieData")
+	}
+	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, fmt.Sprintf("/projects/%d/v1/profiles/accounts", projectId)).
+		WithPostParams(payload).
+		WithCookie(&http.Cookie{
+			Name:   C.GetFactorsCookieName(),
+			Value:  cookieData,
+			MaxAge: 1000,
+		})
+
+	w := httptest.NewRecorder()
+	req, err := rb.Build()
+	if err != nil {
+		log.WithError(err).Error("Error Creating getProjectSetting Req")
+	}
+	r.ServeHTTP(w, req)
+	return w
+}
+
+func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.NotNil(t, agent)
+	assert.Nil(t, err)
+
+	props := map[string]interface{}{
+		"$company":                                "Freshworks",
+		U.GP_HUBSPOT_COMPANY_NAME:                 "Freshworks-HS",
+		U.GP_SALESFORCE_ACCOUNT_NAME:              "Freshworks-SF",
+		U.GP_HUBSPOT_COMPANY_COUNTRY:              "India",
+		U.GP_SALESFORCE_ACCOUNT_BILLINGCOUNTRY:    "India",
+		U.GP_HUBSPOT_COMPANY_INDUSTRY:             "Freshworks-HS",
+		U.GP_SALESFORCE_ACCOUNT_INDUSTRY:          "Freshworks-SF",
+		U.GP_HUBSPOT_COMPANY_NUMBEROFEMPLOYEES:    5000,
+		U.GP_SALESFORCE_ACCOUNT_NUMBEROFEMPLOYEES: 5000,
+	}
+	propertiesJSON, err := json.Marshal(props)
+	if err != nil {
+		log.WithError(err).Fatal("Marshal error.")
+	}
+	properties := postgres.Jsonb{RawMessage: propertiesJSON}
+
+	boolTrue := true
+	customerEmail := "abc@example.com"
+
+	createdUserID, _ := store.GetStore().CreateUser(&model.User{
+		ProjectId:      project.ID,
+		Source:         model.GetRequestSourcePointer(model.UserSourceHubspot),
+		Group1ID:       "1",
+		CustomerUserId: customerEmail,
+		Properties:     properties,
+		IsGroupUser:    &boolTrue,
+	})
+	projectID := project.ID
+	accountID := createdUserID
+	user, errCode := store.GetStore().GetUser(projectID, accountID)
+	assert.Equal(t, user.ID, accountID)
+	assert.Equal(t, http.StatusFound, errCode)
+	group1, status := store.GetStore().CreateGroup(projectID, model.GROUP_NAME_HUBSPOT_COMPANY, model.AllowedGroupNames)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.NotNil(t, group1)
+
+	// 5 Associated Users
+	m := map[string]string{"$name": "Some Name"}
+	userProps, err := json.Marshal(m)
+	if err != nil {
+		log.WithError(err).Fatal("Marshal error.")
+	}
+	properties = postgres.Jsonb{RawMessage: userProps}
+	customerEmail = "@example.com"
+	boolTrue = false
+	users := make([]model.User, 0)
+	numUsers := 5
+	for i := 1; i <= numUsers; i++ {
+		associatedUserId, _ := store.GetStore().CreateUser(&model.User{
+			ProjectId:      projectID,
+			Properties:     properties,
+			IsGroupUser:    &boolTrue,
+			Group1ID:       "1",
+			Group1UserID:   accountID,
+			CustomerUserId: "user" + strconv.Itoa(i) + customerEmail,
+			Source:         model.GetRequestSourcePointer(model.UserSourceHubspot),
+		})
+		user, errCode := store.GetStore().GetUser(project.ID, associatedUserId)
+		assert.Equal(t, http.StatusFound, errCode)
+		users = append(users, *user)
+		// Event 1 : Page View
+		timestamp := U.UnixTimeBeforeDuration(1 * time.Hour)
+		randomURL := RandomURL()
+		trackPayload := SDK.TrackPayload{
+			EventId:         "",
+			UserId:          associatedUserId,
+			CreateUser:      false,
+			IsNewUser:       false,
+			Name:            randomURL,
+			CustomerEventId: new(string),
+			EventProperties: map[string]interface{}{},
+			UserProperties:  map[string]interface{}{},
+			Timestamp:       timestamp,
+			ProjectId:       project.ID,
+			Auto:            true,
+			ClientIP:        "",
+			UserAgent:       "",
+			SmartEventType:  "",
+			RequestSource:   model.UserSourceWeb,
+		}
+		status, response := SDK.Track(projectID, &trackPayload, false, SDK.SourceJSSDK, "")
+		assert.NotEmpty(t, response)
+		assert.Equal(t, http.StatusOK, status)
+
+		// Event 2 : Web Session
+		timestamp = timestamp - 10000
+		sessionProperties := map[string]interface{}{
+			U.EP_PAGE_COUNT:   "5",
+			U.EP_CHANNEL:      "ChannelName",
+			U.EP_CAMPAIGN:     "CampaignName",
+			U.SP_SESSION_TIME: "120",
+			U.EP_REFERRER_URL: RandomURL(),
+		}
+		trackPayload = SDK.TrackPayload{
+			EventId:         "",
+			UserId:          user.ID,
+			CreateUser:      false,
+			IsNewUser:       false,
+			Name:            U.EVENT_NAME_SESSION,
+			CustomerEventId: new(string),
+			EventProperties: sessionProperties,
+			UserProperties:  map[string]interface{}{},
+			Timestamp:       timestamp,
+			ProjectId:       0,
+			Auto:            false,
+			ClientIP:        "",
+			UserAgent:       "",
+			SmartEventType:  "",
+			RequestSource:   model.UserSourceWeb,
+		}
+		status, response = SDK.Track(projectID, &trackPayload, false, SDK.SourceJSSDK, "")
+		assert.NotNil(t, response.EventId)
+		assert.Empty(t, response.UserId)
+		assert.Equal(t, http.StatusOK, status)
+
+		// Event 3 : Form Submit
+		timestamp = timestamp - 10000
+		formSubmitProperties := map[string]interface{}{
+			U.EP_FORM_NAME: "FormName",
+			U.EP_PAGE_URL:  RandomURL(),
+		}
+		trackPayload = SDK.TrackPayload{
+			EventId:         "",
+			UserId:          user.ID,
+			CreateUser:      false,
+			IsNewUser:       false,
+			Name:            U.EVENT_NAME_FORM_SUBMITTED,
+			CustomerEventId: new(string),
+			EventProperties: formSubmitProperties,
+			UserProperties:  map[string]interface{}{},
+			Timestamp:       timestamp,
+			ProjectId:       0,
+			Auto:            false,
+			ClientIP:        "",
+			UserAgent:       "",
+			SmartEventType:  "",
+			RequestSource:   model.UserSourceWeb,
+		}
+		status, response = SDK.Track(projectID, &trackPayload, false, SDK.SourceJSSDK, "")
+		assert.NotNil(t, response.EventId)
+		assert.Empty(t, response.UserId)
+		assert.Equal(t, http.StatusOK, status)
+
+		// Event 4 : Offline Touchpoint
+		timestamp = timestamp - 10000
+		touchpointProperties := map[string]interface{}{
+			U.EP_CHANNEL:  "ChannelName",
+			U.EP_CAMPAIGN: "CampaignName",
+		}
+		trackPayload = SDK.TrackPayload{
+			EventId:         "",
+			UserId:          user.ID,
+			CreateUser:      false,
+			IsNewUser:       false,
+			Name:            U.EVENT_NAME_OFFLINE_TOUCH_POINT,
+			CustomerEventId: new(string),
+			EventProperties: touchpointProperties,
+			UserProperties:  map[string]interface{}{},
+			Timestamp:       timestamp,
+			ProjectId:       0,
+			Auto:            false,
+			ClientIP:        "",
+			UserAgent:       "",
+			SmartEventType:  "",
+			RequestSource:   model.UserSourceWeb,
+		}
+		status, response = SDK.Track(projectID, &trackPayload, false, SDK.SourceJSSDK, "")
+		assert.NotNil(t, response.EventId)
+		assert.Empty(t, response.UserId)
+		assert.Equal(t, http.StatusOK, status)
+
+		// Event 5 : Campaign Member Created
+		timestamp = timestamp - 10000
+		campCreatedProperties := map[string]interface{}{
+			"$salesforce_campaign_name":     "Campaign Name",
+			model.EP_SFCampaignMemberStatus: "CurrentStatus",
+		}
+		trackPayload = SDK.TrackPayload{
+			EventId:         "",
+			UserId:          user.ID,
+			CreateUser:      false,
+			IsNewUser:       false,
+			Name:            U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED,
+			CustomerEventId: new(string),
+			EventProperties: campCreatedProperties,
+			UserProperties:  map[string]interface{}{},
+			Timestamp:       timestamp,
+			ProjectId:       0,
+			Auto:            false,
+			ClientIP:        "",
+			UserAgent:       "",
+			SmartEventType:  "",
+			RequestSource:   model.UserSourceSalesforce,
+		}
+		status, response = SDK.Track(projectID, &trackPayload, false, SDK.SourceJSSDK, "")
+		assert.NotNil(t, response.EventId)
+		assert.Empty(t, response.UserId)
+		assert.Equal(t, http.StatusOK, status)
+
+	}
+	assert.Equal(t, len(users), numUsers)
+	eventNamePropertiesMap := map[string][]string{
+		U.EVENT_NAME_SESSION:                           {U.EP_PAGE_COUNT, U.EP_CHANNEL, U.EP_CAMPAIGN, U.SP_SESSION_TIME, U.EP_TIMESTAMP, U.EP_REFERRER_URL},
+		U.EVENT_NAME_FORM_SUBMITTED:                    {U.EP_FORM_NAME, U.EP_PAGE_URL, U.EP_TIMESTAMP},
+		U.EVENT_NAME_OFFLINE_TOUCH_POINT:               {U.EP_CHANNEL, U.EP_CAMPAIGN, U.EP_TIMESTAMP},
+		U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED: {"$salesforce_campaign_name", model.EP_SFCampaignMemberStatus, U.EP_TIMESTAMP},
+		U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED: {"$salesforce_campaign_name", model.EP_SFCampaignMemberStatus, U.EP_TIMESTAMP},
+	}
+	pageViewPropsList := []string{U.EP_IS_PAGE_VIEW, U.EP_PAGE_SPENT_TIME, U.EP_PAGE_SCROLL_PERCENT, U.EP_PAGE_LOAD_TIME}
+
+	t.Run("Success", func(t *testing.T) {
+		w := sendGetProfileAccountDetailsRequest(r, projectID, agent, accountID)
+		assert.Equal(t, http.StatusOK, w.Code)
+		jsonResponse, _ := ioutil.ReadAll(w.Body)
+		resp := &model.AccountDetails{}
+		err := json.Unmarshal(jsonResponse, &resp)
+		assert.Nil(t, err)
+		assert.Contains(t, resp.Name, "Freshworks")
+		assert.Equal(t, resp.Country, "India")
+		assert.Equal(t, resp.Industry, "Freshworks-HS")
+		assert.Equal(t, resp.NumberOfEmployees, uint64(5000))
+		assert.Condition(t, func() bool {
+			assert.Condition(t, func() bool { return len(resp.AccountTimeline) > 0 })
+			for _, userTimeline := range resp.AccountTimeline {
+				assert.Condition(t, func() bool {
+					assert.NotNil(t, userTimeline.UserId)
+					assert.NotNil(t, userTimeline.UserName)
+					for i, activity := range userTimeline.UserActivities {
+						assert.NotNil(t, activity.EventName)
+						assert.NotNil(t, activity.DisplayName)
+						assert.NotNil(t, activity.Timestamp)
+						assert.Condition(t, func() bool { return activity.Timestamp <= uint64(time.Now().UTC().Unix()) })
+						if i > 1 {
+							if userTimeline.UserActivities[i].Timestamp > userTimeline.UserActivities[i-1].Timestamp {
+								return false
+							}
+						}
+						assert.NotNil(t, activity.Properties)
+						assert.Condition(t, func() bool {
+							properties, err := U.DecodePostgresJsonb(&activity.Properties)
+							_, eventExistsInMap := eventNamePropertiesMap[activity.EventName]
+							assert.Nil(t, err)
+							if activity.DisplayName == "Page View" {
+								for key := range *properties {
+									sort.Strings(pageViewPropsList)
+									i := sort.SearchStrings(pageViewPropsList, key)
+									assert.Condition(t, func() bool { return i < len(pageViewPropsList) })
+								}
+							} else if eventExistsInMap {
+								for key := range *properties {
+									sort.Strings(eventNamePropertiesMap[activity.EventName])
+									i := sort.SearchStrings(eventNamePropertiesMap[activity.EventName], key)
+									assert.Condition(t, func() bool { return i < len(eventNamePropertiesMap[activity.EventName]) })
+								}
+							}
+							return true
+						})
+
+					}
+					return true
+				})
+			}
+			return true
+		})
+
+	})
+}
+
+func sendGetProfileAccountDetailsRequest(r *gin.Engine, projectId int64, agent *model.Agent, id string) *httptest.ResponseRecorder {
+
+	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
+	if err != nil {
+		log.WithError(err).Error("Error Creating cookieData")
+	}
+	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, fmt.Sprintf("/projects/%d/v1/profiles/accounts/%s", projectId, id)).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
 			Value:  cookieData,
