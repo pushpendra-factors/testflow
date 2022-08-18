@@ -3276,9 +3276,9 @@ func AddCustomDimensions(attributionData *map[string]*AttributionData, query *At
 	}
 
 	if query.AttributionKey == AttributionKeyCampaign {
-		enrichDimensionsWithoutChannel(attributionData, query.AttributionKeyCustomDimension, reports.AdwordsCampaignDimensions, reports.FacebookCampaignDimensions, reports.LinkedinCampaignDimensions, reports.BingadsCampaignDimensions, query.AttributionKey)
+		enrichDimensionsWithoutChannel(attributionData, query.AttributionKeyCustomDimension, reports.AdwordsCampaignDimensions, reports.FacebookCampaignDimensions, reports.LinkedinCampaignDimensions, reports.BingadsCampaignDimensions, reports.CustomAdsCampaignDimensions, query.AttributionKey)
 	} else if query.AttributionKey == AttributionKeyAdgroup {
-		enrichDimensionsWithoutChannel(attributionData, query.AttributionKeyCustomDimension, reports.AdwordsAdgroupDimensions, reports.FacebookAdgroupDimensions, reports.LinkedinAdgroupDimensions, reports.BingadsAdgroupDimensions, query.AttributionKey)
+		enrichDimensionsWithoutChannel(attributionData, query.AttributionKeyCustomDimension, reports.AdwordsAdgroupDimensions, reports.FacebookAdgroupDimensions, reports.LinkedinAdgroupDimensions, reports.BingadsAdgroupDimensions, reports.CustomAdsAdgroupDimensions, query.AttributionKey)
 	}
 }
 
@@ -3346,7 +3346,7 @@ func enrichDimensionsWithName(attributionData *map[string]*AttributionData, dime
 		}
 	}
 }
-func enrichDimensionsWithoutChannel(attributionData *map[string]*AttributionData, dimensions []string, adwordsData, fbData, linkedinData, bingadsData map[string]MarketingData, attributionKey string) {
+func enrichDimensionsWithoutChannel(attributionData *map[string]*AttributionData, dimensions []string, adwordsData, fbData, linkedinData, bingadsData, customAdsData map[string]MarketingData, attributionKey string) {
 
 	for _, dim := range dimensions {
 		for k, v := range *attributionData {
@@ -3389,6 +3389,13 @@ func enrichDimensionsWithoutChannel(attributionData *map[string]*AttributionData
 			}
 
 			if d, exists := bingadsData[customDimKey]; exists {
+				if val, found := d.CustomDimensions[dim]; found {
+					(*attributionData)[k].CustomDimensions[dim] = val
+					continue
+				}
+			}
+
+			if d, exists := customAdsData[customDimKey]; exists {
 				if val, found := d.CustomDimensions[dim]; found {
 					(*attributionData)[k].CustomDimensions[dim] = val
 					continue

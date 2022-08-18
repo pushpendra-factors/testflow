@@ -549,7 +549,7 @@ func (pg *Postgres) CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitGr
 		}
 
 		// Filtering queries on type and range for attribution query
-		shouldCache, from, to := model.ShouldCacheUnitForTimeRange(queryClass, preset, fr, t, C.GetOnlyAttributionDashboardCaching(), skipYesterday, C.GetSkipAttributionDashboardCaching())
+		shouldCache, from, to := model.ShouldCacheUnitForTimeRange(queryClass, preset, fr, t, C.GetOnlyAttributionDashboardCaching(), C.GetSkipAttributionDashboardCaching())
 		if !shouldCache {
 			continue
 		}

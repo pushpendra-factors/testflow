@@ -269,6 +269,7 @@ function CoreQuery({
       runEventsQueryFromUrl();
     } else if (query_type === 'funnel') {
       updateResultState({ ...initialState, loading: true });
+      setLoading(true);
       runFunnelsQueryFromUrl();
     }
   }, [query_id, query_type, queriesState]);
@@ -373,52 +374,40 @@ function CoreQuery({
     }
   };
 
+
   const runFunnelsQueryFromUrl = () => {
     const queryToAdd = getQueryFromHashId();
     updateResultState({ ...initialState, loading: true });
-    getFunnelData(activeProject.id, null, null, false, query_id).then(
-      (res) => {
-        const queryLabels = queryToAdd?.query?.ewp.map((ev) =>
-          ev.an ? ev.an : ev.na
-        );
-        const equivalentQuery = getStateQueryFromRequestQuery(
-          queryToAdd?.query
-        );
-        setQueryType(QUERY_TYPE_FUNNEL);
-        closeDrawer();
-        updateRequestQuery(queryToAdd?.query);
-        dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
-        setShowResult(true);
-        setQuerySaved({ name: queryToAdd.title, id: queryToAdd.id });
-        dispatch({
-          type: INITIALIZE_GROUPBY,
-          payload: equivalentQuery.breakdown
-        });
-        setQueries(equivalentQuery.events);
-        setAppliedQueries(
-          equivalentQuery.events.map((elem) =>
-            elem.alias ? elem.alias : elem.label
-          )
-        );
-        setQueryOptions((currOpts) =>
-          getQueryOptionsFromEquivalentQuery(currOpts, equivalentQuery)
-        );
-        const newAppliedBreakdown = [
-          ...equivalentQuery.breakdown.event,
-          ...equivalentQuery.breakdown.global
-        ];
-        setAppliedBreakdown(newAppliedBreakdown);
-        // updateAppliedBreakdown();
-        updateResultState({
-          ...initialState,
-          data: res.data.result || res.data
-        });
-      },
-      (err) => {
-        console.log(err);
-      }
-    );
-  };
+    getFunnelData(activeProject.id, null, null, false, query_id ).then((res) => {
+      const queryLabels = queryToAdd?.query?.ewp.map((ev) => ev.an ? ev.an : ev.na);
+      const equivalentQuery = getStateQueryFromRequestQuery(queryToAdd?.query);
+      setQueryType(QUERY_TYPE_FUNNEL);
+      closeDrawer();
+      setLoading(false);
+      updateRequestQuery(queryToAdd?.query);
+      dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
+      setShowResult(true);
+      setQuerySaved({name: queryToAdd.title, id: queryToAdd.id});
+      dispatch({
+        type: INITIALIZE_GROUPBY,
+        payload: equivalentQuery.breakdown
+      });
+      setQueries(equivalentQuery.events);
+      setAppliedQueries(
+        equivalentQuery.events.map((elem) => (elem.alias ? elem.alias : elem.label))
+      );
+      setQueryOptions((currOpts) => getQueryOptionsFromEquivalentQuery(currOpts, equivalentQuery));
+      const newAppliedBreakdown = [...equivalentQuery.breakdown.event, ...equivalentQuery.breakdown.global];
+      setAppliedBreakdown(newAppliedBreakdown);
+      // updateAppliedBreakdown();
+      updateResultState({
+        ...initialState,
+        data: res.data.result || res.data,
+      });
+    }, err => {
+      console.log(err);
+    })
+  }
 
   const runAttributionQueryFromUrl = () => {
     //
@@ -1723,10 +1712,22 @@ function CoreQuery({
     return DDvalues;
   };
 
+  const closePage = () => {
+    history.goBack();
+  }
+
   if (loading) {
     return (
-      <div className="flex justify-center items-center w-full h-64">
-        <Spin size="large" />
+      <div className="flex justify-center flex-col items-center w-full">
+        <div className="w-full flex justify-end">
+          <Button size={'large'} type="text" onClick={() => closePage()}>
+            <SVG name="times"></SVG>
+          </Button>
+        </div>
+        <div className='w-full h-64 flex items-center justify-center'>
+          <Spin size="large" />
+        </div>
+        
       </div>
     );
   }

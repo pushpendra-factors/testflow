@@ -1,4 +1,13 @@
 import MomentTz from '../MomentTz';
+import { operatorMap } from '../../Views/CoreQuery/utils';
+
+export const granularityOptions = [
+  'Timestamp',
+  'Hourly',
+  'Daily',
+  'Weekly',
+  'Monthly',
+];
 
 export const groups = {
   Timestamp: (item) =>
@@ -49,4 +58,32 @@ export const getLoopLength = (allEvents) => {
     if (maxLength < events.length) maxLength = events.length;
   });
   return maxLength;
+};
+
+export const formatFiltersForPayload = (filters = []) => {
+  const filterProps = [];
+  filters.forEach((fil) => {
+    if (Array.isArray(fil.values)) {
+      fil.values.forEach((val, index) => {
+        filterProps.push({
+          en: 'user_g',
+          lop: !index ? 'AND' : 'OR',
+          op: operatorMap[fil.operator],
+          pr: fil.props[0],
+          ty: fil.props[1],
+          va: fil.props[1] === 'datetime' ? val : val,
+        });
+      });
+    } else {
+      filterProps.push({
+        en: 'user_g',
+        lop: 'AND',
+        op: operatorMap[fil.operator],
+        pr: fil.props[0],
+        ty: fil.props[1],
+        va: fil.props[1] === 'datetime' ? fil.values : fil.values,
+      });
+    }
+  });
+  return filterProps;
 };
