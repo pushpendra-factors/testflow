@@ -473,6 +473,7 @@ const GlobalFilterSelect = ({
         onClickOutside={() => setValuesSelectionOpen(false)}
         selectedOpts={valuesState ? valuesState : []}
         allowSearch={true}
+        isSingleSelect={((isArray(operatorState) ? operatorState[0] : operatorState) === '!=' || (isArray(operatorState) ? operatorState[0] : operatorState) === 'does not contain') ? true : false}
       ></FaSelect>
     );
 

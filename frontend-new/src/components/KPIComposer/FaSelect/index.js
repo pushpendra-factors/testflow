@@ -19,6 +19,7 @@ const FaSelect = ({
   extraClass = '',
   disabled = false,
   showIcon = true,
+  isSingleSelect = false,
 }) => {
   const [optClickArr, setOptClickArr] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -36,16 +37,28 @@ const FaSelect = ({
     if (!multiSelect) {
       clickFunc();
     } else {
-      const stringedOpt = JSON.stringify(option);
-      const clckInd = optClickArr.findIndex((opt) => opt === stringedOpt);
-      let opts;
-      if (clckInd < 0) {
-        opts = [...optClickArr];
-        opts.push(stringedOpt);
+      if(isSingleSelect){
+        const stringedOpt = JSON.stringify(option);
+        const clckInd = optClickArr.findIndex((opt) => opt === stringedOpt);
+        let opts;
+        if (clckInd < 0) {
+          opts = [stringedOpt];
+        } else {
+          opts = [];
+        }
+        setOptClickArr(opts);
       } else {
-        opts = [...optClickArr.filter((op, i) => i !== clckInd)];
+        const stringedOpt = JSON.stringify(option);
+        const clckInd = optClickArr.findIndex((opt) => opt === stringedOpt);
+        let opts;
+        if (clckInd < 0) {
+          opts = [...optClickArr];
+          opts.push(stringedOpt);
+        } else {
+          opts = [...optClickArr.filter((op, i) => i !== clckInd)];
+        }
+        setOptClickArr(opts);
       }
-      setOptClickArr(opts);
     }
   };
 
