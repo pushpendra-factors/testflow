@@ -1780,11 +1780,11 @@ function CoreQuery({
       </div>
 
       {/* {renderReportTabs()} */}
-      <div
+      {showResult? <div
           className={'query_card_cont query_card_close'}
         >
           {renderQueryComposer()}
-        </div>
+        </div>: null}
     </div>
         
         </div>
