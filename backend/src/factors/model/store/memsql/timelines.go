@@ -158,6 +158,8 @@ func (store *MemSQL) GetProfileUserDetailsByID(projectID int64, identity string,
 		"id":           identity,
 		"is_anonymous": isAnonymous,
 	}
+
+	startTimeForQuery := time.Now()
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if projectID == 0 {
 		log.Error("Invalid project ID.")
@@ -177,6 +179,7 @@ func (store *MemSQL) GetProfileUserDetailsByID(projectID int64, identity string,
 		userId = "id"
 	}
 
+	startTimeUserDetails := time.Now()
 	db := C.GetServices().Db
 	var uniqueUser model.ContactDetails
 	err := db.Table("users").Select(`COALESCE(customer_user_id,id) AS user_id,
@@ -202,12 +205,19 @@ func (store *MemSQL) GetProfileUserDetailsByID(projectID int64, identity string,
 		log.WithField("status", err).Error("Failed to get contact details.")
 		return nil, http.StatusInternalServerError
 	}
+	log.WithFields(logFields).WithField("time_taken", time.Since(startTimeUserDetails).Milliseconds()).Info("Time taken for user_details.")
 
+	startTimeForTimeline := time.Now()
 	activities, sessionCount := store.GetUserActivitiesAndSessionCount(projectID, identity, userId)
 	uniqueUser.UserActivity = activities
 	uniqueUser.WebSessionsCount = sessionCount
-	uniqueUser.GroupInfos = store.GetGroupsForUserTimeline(projectID, uniqueUser)
+	log.WithFields(logFields).WithField("time_taken", time.Since(startTimeForTimeline).Milliseconds()).Info("Time taken for timeline.")
 
+	startTimeForGroups := time.Now()
+	uniqueUser.GroupInfos = store.GetGroupsForUserTimeline(projectID, uniqueUser)
+	log.WithFields(logFields).WithField("time_taken", time.Since(startTimeForGroups).Milliseconds()).Info("Time taken for groups.")
+
+	log.WithFields(logFields).WithField("time_taken", time.Since(startTimeForQuery).Milliseconds()).Info("Total time taken for Users Timeline.")
 	return &uniqueUser, http.StatusFound
 }
 
