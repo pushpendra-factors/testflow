@@ -4629,3 +4629,106 @@ func TestSalesforceDatePropertyEnrichment(t *testing.T) {
 	)
 	assert.Equal(t, float64(1643443200), properties[dateKey])
 }
+
+func TestSalesforceDisableGroupUserPropertiesFromUserPropertiesCache(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	userID, status := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, JoinTimestamp: time.Now().Unix() - 1000, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, status, http.StatusCreated)
+	H.InitSDKServiceRoutes(r)
+	uri := "/sdk/event/track"
+
+	createdDate := time.Now()
+	configs := make(map[string]interface{})
+	configs["rollupLookback"] = 1
+
+	/*
+		Opportunities
+	*/
+	w := ServePostRequestWithHeaders(r, uri,
+		[]byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "%s", "auto": %t}`, userID, "Event 1", true)),
+		map[string]string{
+			"Authorization": project.Token,
+			"User-Agent":    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36",
+		})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	jsonData := fmt.Sprintf(`{"name":"%s", "$salesforce_opportunity_id":"%s", "CreatedDate":"%s", "LastModifiedDate":"%s"}`, "user1", "opp_iut87", createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout), createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout))
+	updateProperties := &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonData))}
+	_, status = store.GetStore().UpdateUserProperties(project.ID, userID, updateProperties, time.Now().Unix())
+	assert.Equal(t, status, http.StatusAccepted)
+
+	// execute DoRollUpSortedSet
+	event_user_cache.DoRollUpSortedSet(configs)
+
+	w = sendGetUserProperties(project.ID, agent, r)
+	assert.Equal(t, http.StatusOK, w.Code)
+	var responsePayload struct {
+		Properties map[string][]string `json:"properties"`
+	}
+
+	jsonResponse, _ := ioutil.ReadAll(w.Body)
+	err = json.Unmarshal(jsonResponse, &responsePayload)
+	assert.Nil(t, err)
+
+	categoryProperties := responsePayload.Properties
+	assert.Contains(t, categoryProperties["categorical"], "name")
+	assert.Contains(t, categoryProperties["categorical"], "CreatedDate")
+	assert.Contains(t, categoryProperties["categorical"], "LastModifiedDate")
+	// group properties should not be present in response of user properties
+	for _, properties := range categoryProperties {
+		assert.NotContains(t, properties, "$salesforce_opportunity_id")
+	}
+
+	user, status := store.GetStore().GetUser(project.ID, userID)
+	assert.Equal(t, http.StatusFound, status)
+	userProperties := make(map[string]interface{})
+	err = json.Unmarshal(user.Properties.RawMessage, &userProperties)
+	assert.Nil(t, err)
+	assert.Contains(t, userProperties, "$salesforce_opportunity_id")
+
+	/*
+		Account
+	*/
+	w = ServePostRequestWithHeaders(r, uri,
+		[]byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "%s", "auto": %t}`, userID, "Event 1", true)),
+		map[string]string{
+			"Authorization": project.Token,
+			"User-Agent":    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36",
+		})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	jsonData = fmt.Sprintf(`{"name":"%s", "$salesforce_account_id":"%s", "CreatedDate":"%s", "LastModifiedDate":"%s"}`, "user1", "acc_12345", createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout), createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout))
+	updateProperties = &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonData))}
+	_, status = store.GetStore().UpdateUserProperties(project.ID, userID, updateProperties, time.Now().Unix())
+	assert.Equal(t, status, http.StatusAccepted)
+
+	// execute DoRollUpSortedSet
+	event_user_cache.DoRollUpSortedSet(configs)
+
+	w = sendGetUserProperties(project.ID, agent, r)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	err = json.Unmarshal(jsonResponse, &responsePayload)
+	assert.Nil(t, err)
+
+	categoryProperties = responsePayload.Properties
+	assert.Contains(t, categoryProperties["categorical"], "name")
+	assert.Contains(t, categoryProperties["categorical"], "CreatedDate")
+	assert.Contains(t, categoryProperties["categorical"], "LastModifiedDate")
+	// group properties should not be present in response of user properties
+	for _, properties := range categoryProperties {
+		assert.NotContains(t, properties, "$salesforce_account_id")
+	}
+
+	user, status = store.GetStore().GetUser(project.ID, userID)
+	assert.Equal(t, http.StatusFound, status)
+	userProperties = make(map[string]interface{})
+	err = json.Unmarshal(user.Properties.RawMessage, &userProperties)
+	assert.Nil(t, err)
+	assert.Contains(t, userProperties, "$salesforce_account_id")
+}

@@ -154,8 +154,12 @@ func getPropertiesFunctionBasedOnObjectType(objectType string) func(int64, strin
 		return store.GetStore().GetPropertiesForHubspotDeals
 	} else if strings.Contains(objectType, U.CRM_SOURCE_NAME_HUBSPOT) {
 		return store.GetStore().GetPropertiesForHubspotContacts
+	} else if model.GetGroupNameByMetricObjectType(objectType) == model.GROUP_NAME_SALESFORCE_OPPORTUNITY {
+		return store.GetStore().GetPropertiesForSalesforceOpportunities
+	} else if model.GetGroupNameByMetricObjectType(objectType) == model.GROUP_NAME_SALESFORCE_ACCOUNT {
+		return store.GetStore().GetPropertiesForSalesforceAccounts
 	} else if strings.Contains(objectType, U.CRM_SOURCE_NAME_SALESFORCE) {
-		return store.GetStore().GetPropertiesForSalesforce
+		return store.GetStore().GetPropertiesForSalesforceUsers
 	} else if strings.Contains(objectType, U.CRM_SOURCE_NAME_MARKETO) {
 		return store.GetStore().GetPropertiesForMarketo
 	} else if strings.Contains(objectType, U.CRM_SOURCE_NAME_LEADSQUARED) {

@@ -205,7 +205,9 @@ type Model interface {
 	GetPropertiesForHubspotContacts(projectID int64, reqID string) []map[string]string
 	GetPropertiesForHubspotCompanies(projectID int64, reqID string) []map[string]string
 	GetPropertiesForHubspotDeals(projectID int64, reqID string) []map[string]string
-	GetPropertiesForSalesforce(projectID int64, reqID string) []map[string]string
+	GetPropertiesForSalesforceAccounts(projectID int64, reqID string) []map[string]string
+	GetPropertiesForSalesforceOpportunities(projectID int64, reqID string) []map[string]string
+	GetPropertiesForSalesforceUsers(projectID int64, reqID string) []map[string]string
 	GetPropertiesForMarketo(projectID int64, reqID string) []map[string]string
 
 	// events

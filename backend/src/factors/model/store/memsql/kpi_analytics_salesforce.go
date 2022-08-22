@@ -86,11 +86,27 @@ func (store *MemSQL) getConfigForSpecificSalesforceCategory(projectID int64, req
 		"category":         model.ProfileCategory,
 		"display_category": displayCategory,
 		"metrics":          rCustomMetrics,
-		"properties":       store.GetPropertiesForSalesforce(projectID, reqID),
+		"properties":       store.getPropertiesForSalesforceByDisplayCategory(projectID, reqID, displayCategory),
 	}
 }
 
-func (store *MemSQL) GetPropertiesForSalesforce(projectID int64, reqID string) []map[string]string {
+func (store *MemSQL) getPropertiesForSalesforceByDisplayCategory(projectID int64, reqID, displayCategory string) []map[string]string {
+	switch displayCategory {
+	case model.SalesforceOpportunitiesDisplayCategory:
+		return store.GetPropertiesForSalesforceOpportunities(projectID, reqID)
+	case model.SalesforceAccountsDisplayCategory:
+		return store.GetPropertiesForSalesforceAccounts(projectID, reqID)
+	case model.SalesforceUsersDisplayCategory:
+		return store.GetPropertiesForSalesforceUsers(projectID, reqID)
+	default:
+		log.WithFields(log.Fields{"project_id": projectID, "req_id": reqID, "display_category": displayCategory}).
+			Error("Invalid category on GetPropertiesForSalesforceByDisplayCategory.")
+		return []map[string]string{}
+
+	}
+}
+
+func (store *MemSQL) GetPropertiesForSalesforceUsers(projectID int64, reqID string) []map[string]string {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"req_id":     reqID,
@@ -105,4 +121,80 @@ func (store *MemSQL) GetPropertiesForSalesforce(projectID int64, reqID string) [
 
 	// transforming to kpi structure.
 	return model.TransformCRMPropertiesToKPIConfigProperties(properties, propertiesToDisplayNames, "$salesforce")
+}
+
+func (store *MemSQL) GetPropertiesForSalesforceOpportunities(projectID int64, reqID string) []map[string]string {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"req_id":     reqID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+
+	groupProperties, status := store.GetPropertiesByGroup(projectID, model.GetGroupNameByMetricObjectType(model.SalesforceOpportunitiesDisplayCategory), 2500,
+		C.GetLookbackWindowForEventUserCache())
+	if status != http.StatusFound {
+		logCtx.Error("Failed to get salesforce opportunities properties. Internal error")
+		return make([]map[string]string, 0)
+	}
+
+	displayNamesOp := make(map[string]string)
+	_, displayNames := store.GetDisplayNamesForAllUserProperties(projectID)
+	for _, properties := range groupProperties {
+		for _, property := range properties {
+			if _, exist := displayNames[property]; exist {
+				displayNamesOp[property] = displayNames[property]
+			}
+		}
+	}
+
+	_, displayNames = store.GetDisplayNamesForObjectEntities(projectID)
+	for _, properties := range groupProperties {
+		for _, property := range properties {
+			if _, exist := displayNames[property]; exist {
+				displayNamesOp[property] = displayNames[property]
+			}
+		}
+	}
+
+	// transforming to kpi structure.
+	return model.TransformCRMPropertiesToKPIConfigProperties(groupProperties, displayNamesOp, "$salesforce")
+}
+
+func (store *MemSQL) GetPropertiesForSalesforceAccounts(projectID int64, reqID string) []map[string]string {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"req_id":     reqID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+
+	groupProperties, status := store.GetPropertiesByGroup(projectID, model.GetGroupNameByMetricObjectType(model.SalesforceAccountsDisplayCategory), 2500,
+		C.GetLookbackWindowForEventUserCache())
+	if status != http.StatusFound {
+		logCtx.Error("Failed to get salesforce account properties. Internal error")
+		return make([]map[string]string, 0)
+	}
+
+	displayNamesOp := make(map[string]string)
+	_, displayNames := store.GetDisplayNamesForAllUserProperties(projectID)
+	for _, properties := range groupProperties {
+		for _, property := range properties {
+			if _, exist := displayNames[property]; exist {
+				displayNamesOp[property] = displayNames[property]
+			}
+		}
+	}
+
+	_, displayNames = store.GetDisplayNamesForObjectEntities(projectID)
+	for _, properties := range groupProperties {
+		for _, property := range properties {
+			if _, exist := displayNames[property]; exist {
+				displayNamesOp[property] = displayNames[property]
+			}
+		}
+	}
+
+	// transforming to kpi structure.
+	return model.TransformCRMPropertiesToKPIConfigProperties(groupProperties, displayNamesOp, "$salesforce")
 }

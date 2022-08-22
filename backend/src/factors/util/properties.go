@@ -2699,6 +2699,8 @@ var CUSTOM_BLACKLIST_DELTA = []string{
 var disableGroupUserPropertiesByKeyPrefix = []string{
 	"$hubspot_company_",
 	"$hubspot_deal_",
+	"$salesforce_opportunity_",
+	"$salesforce_account_",
 }
 
 const SamplePropertyValuesLimit = 100
@@ -3637,8 +3639,10 @@ func GetGroupNameFromGroupEventName(eventName string) string {
 }
 
 var groupPropertiesKeyPrefix = map[string]string{
-	GROUP_NAME_HUBSPOT_COMPANY: "$hubspot_company_",
-	GROUP_NAME_HUBSPOT_DEAL:    "$hubspot_deal_",
+	GROUP_NAME_HUBSPOT_COMPANY:        "$hubspot_company_",
+	GROUP_NAME_HUBSPOT_DEAL:           "$hubspot_deal_",
+	GROUP_NAME_SALESFORCE_OPPORTUNITY: "$salesforce_opportunity_",
+	GROUP_NAME_SALESFORCE_ACCOUNT:     "$salesforce_account_",
 }
 
 func GetGroupNameByPropertyName(propertyName string) (string, bool) {
