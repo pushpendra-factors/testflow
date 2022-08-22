@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from 'antd';
 import { SVG } from '../../../../factorsComponents';
-import { fetchUserPropertyValues } from 'Reducers/coreQuery/services';
+import {
+  fetchUserPropertyValues,
+  fetchGroupPropertyValues,
+} from 'Reducers/coreQuery/services';
 import { DEFAULT_OPERATOR_PROPS } from '../../../../FaFilterSelect/utils';
 import FAFilterSelect from '../../../../FaFilterSelect';
 
@@ -26,6 +29,10 @@ export default function PropFilterBlock({
       {
         label: 'User Properties',
         icon: 'user',
+      },
+      {
+        label: 'Group Properties',
+        icon: 'group',
       },
     ],
     operator: operatorProps,
@@ -81,6 +88,30 @@ export default function PropFilterBlock({
               setDropDownValues(ddValues);
             });
         }
+      } else if (newFilterState.props[2] === 'group') {
+        let source;
+        if (newFilterState.props[0].includes('hubspot'))
+          source = '$hubspot_company';
+        else if (newFilterState.props[0].includes('salesforce'))
+          source = '$salesforce_account';
+        if (!dropDownValues[newFilterState.props[0]]) {
+          fetchGroupPropertyValues(
+            activeProject.id,
+            source,
+            newFilterState.props[0]
+          )
+            .then((res) => {
+              const ddValues = Object.assign({}, dropDownValues);
+              ddValues[newFilterState.props[0]] = [...res.data, '$none'];
+              setDropDownValues(ddValues);
+            })
+            .catch(() => {
+              console.log(err);
+              const ddValues = Object.assign({}, dropDownValues);
+              ddValues[newFilterState.props[0]] = ['$none'];
+              setDropDownValues(ddValues);
+            });
+        }
       }
     }
   }, [newFilterState]);
@@ -118,6 +149,31 @@ export default function PropFilterBlock({
               setDropDownValues(ddValues);
             })
             .catch(() => {
+              const ddValues = Object.assign({}, dropDownValues);
+              ddValues[propOpByPayload(props, 0)] = ['$none'];
+              setDropDownValues(ddValues);
+            });
+        }
+      } else if (propOpByPayload(props, 2) === 'group') {
+        let source;
+        if (propOpByPayload(props, 0).includes('hubspot'))
+          source = '$hubspot_company';
+        else if (propOpByPayload(props, 0).includes('salesforce'))
+          source = '$salesforce_account';
+
+        if (!dropDownValues[propOpByPayload(props, 0)]) {
+          fetchGroupPropertyValues(
+            activeProject.id,
+            source,
+            propOpByPayload(props, 0)
+          )
+            .then((res) => {
+              const ddValues = Object.assign({}, dropDownValues);
+              ddValues[propOpByPayload(props, 0)] = [...res.data, '$none'];
+              setDropDownValues(ddValues);
+            })
+            .catch(() => {
+              console.log(err);
               const ddValues = Object.assign({}, dropDownValues);
               ddValues[propOpByPayload(props, 0)] = ['$none'];
               setDropDownValues(ddValues);

@@ -26,7 +26,7 @@ function AccountTimeline({
     const groupByTimestamp = [];
     timeline.forEach((user) => {
       const newOpts = user.user_activities.map((data) => {
-        return { ...data, user: user.user_id };
+        return { ...data, user: user.user_name };
       });
       groupByTimestamp.push(...newOpts);
     });
@@ -73,7 +73,7 @@ function AccountTimeline({
                   {timeline.map((data) => {
                     const loopLength = getLoopLength(allEvents);
                     const evList = [];
-                    if (!allEvents[data.user_id]) {
+                    if (!allEvents[data.user_name]) {
                       for (let i = 0; i < loopLength; i++) {
                         evList.push(
                           <div className='timeline-events--event'>
@@ -90,7 +90,7 @@ function AccountTimeline({
                         );
                       }
                     } else {
-                      allEvents[data.user_id].forEach((event, evIndex) => {
+                      allEvents[data.user_name].forEach((event, evIndex) => {
                         evList.push(
                           <div className='timeline-events--event'>
                             <InfoCard

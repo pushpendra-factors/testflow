@@ -228,14 +228,16 @@ func (store *MemSQL) GetUserActivitiesAndSessionCount(projectID int64, identity 
 	db := C.GetServices().Db
 	str := []string{`SELECT event_names.name AS event_name, events1.timestamp AS timestamp, events1.properties AS properties
         FROM (SELECT project_id, event_name_id, timestamp, properties FROM events WHERE 
-			project_id=? AND timestamp <= ? AND 
-			user_id IN (SELECT id FROM users WHERE project_id=? AND`, userId, `= ?)  LIMIT 5000) AS events1
+			project_id=? AND timestamp <= ? AND
+			user_id IN (SELECT id FROM users WHERE project_id=? AND`, userId, `= ?) AND
+			event_name_id NOT IN (
+				SELECT id FROM event_names WHERE project_id=? AND name IN ('$hubspot_contact_updated', '$sf_contact_updated')
+			) LIMIT 5000) AS events1
         LEFT JOIN event_names 
-        ON events1.event_name_id=event_names.id 
-        WHERE events1.project_id=? 
+        ON events1.event_name_id=event_names.id AND event_names.project_id=? 
 		ORDER BY timestamp DESC;`}
 	eventsQuery := strings.Join(str, " ")
-	rows, err := db.Raw(eventsQuery, projectID, gorm.NowFunc().Unix(), projectID, identity, projectID).Rows()
+	rows, err := db.Raw(eventsQuery, projectID, gorm.NowFunc().Unix(), projectID, identity, projectID, projectID).Rows()
 	if err != nil {
 		log.WithError(err).Error("Failed to get events")
 		return []model.UserActivity{}, float64(webSessionCount)
@@ -420,7 +422,12 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string) (*
 	}
 
 	//Timeline Query
-	queryStr := []string{"SELECT COALESCE(JSON_EXTRACT_STRING(properties, ?), customer_user_id, id) AS user_name, id AS user_id FROM users WHERE project_id = ? AND (", groupUserString, ")", "ORDER BY updated_at DESC"}
+	queryStr := []string{
+		`SELECT COALESCE(JSON_EXTRACT_STRING(properties, ?), customer_user_id, id) AS user_name, COALESCE(customer_user_id, id) AS user_id, ISNULL(customer_user_id) AS is_anonymous 
+		FROM users 
+		WHERE project_id = ? AND (`, groupUserString, ")",
+		"ORDER BY updated_at DESC",
+	}
 	query := strings.Join(queryStr, " ")
 	rows, err := db.Raw(query, U.UP_NAME, projectID).Rows()
 	if err != nil {
@@ -434,7 +441,13 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string) (*
 			log.WithError(err).Error("Error scanning associated users list")
 			return nil, http.StatusInternalServerError
 		}
-		activities, _ := store.GetUserActivitiesAndSessionCount(projectID, userTimeline.UserId, "id")
+		var userIDStr string
+		if userTimeline.IsAnonymous {
+			userIDStr = "id"
+		} else {
+			userIDStr = "customer_user_id"
+		}
+		activities, _ := store.GetUserActivitiesAndSessionCount(projectID, userTimeline.UserId, userIDStr)
 		userTimeline.UserActivities = activities
 		accountTimeline = append(accountTimeline, userTimeline)
 	}

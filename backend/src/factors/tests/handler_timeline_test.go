@@ -357,7 +357,7 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 		UserId:          user.ID,
 		CreateUser:      false,
 		IsNewUser:       false,
-		Name:            U.EVENT_NAME_HUBSPOT_CONTACT_CREATED,
+		Name:            U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED,
 		CustomerEventId: new(string),
 		EventProperties: randomProperties,
 		UserProperties:  map[string]interface{}{},
@@ -829,6 +829,31 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 			RequestSource:   model.UserSourceSalesforce,
 		}
 		status, response = SDK.Track(projectID, &trackPayload, false, SDK.SourceJSSDK, "")
+		assert.NotNil(t, response.EventId)
+		assert.Empty(t, response.UserId)
+		assert.Equal(t, http.StatusOK, status)
+
+		// Event 6 : Random Event
+		timestamp = timestamp - 10000
+		randomProperties := map[string]interface{}{}
+		trackPayload = SDK.TrackPayload{
+			EventId:         "",
+			UserId:          user.ID,
+			CreateUser:      false,
+			IsNewUser:       false,
+			Name:            U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED,
+			CustomerEventId: new(string),
+			EventProperties: randomProperties,
+			UserProperties:  map[string]interface{}{},
+			Timestamp:       timestamp,
+			ProjectId:       0,
+			Auto:            false,
+			ClientIP:        "",
+			UserAgent:       "",
+			SmartEventType:  "",
+			RequestSource:   model.UserSourceHubspot,
+		}
+		status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 		assert.NotNil(t, response.EventId)
 		assert.Empty(t, response.UserId)
 		assert.Equal(t, http.StatusOK, status)
