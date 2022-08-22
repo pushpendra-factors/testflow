@@ -417,7 +417,7 @@ function WidgetCard({
         className={'fa-dashboard--widget-card h-full w-full flex'}
       >
         <div className={'flex justify-between items-start w-full'}>
-          <div className={'w-full flex flex-1 flex-col h-full'}>
+          <div className={'w-full flex flex-1 flex-col h-full justify-between'}>
             <div
               className={`${styles.widgetCard} flex items-center justify-between px-4`}
             >
@@ -440,7 +440,8 @@ function WidgetCard({
                   <SVG
                         extraClass={`widget-card--expand-icon ml-1`}
                         size={20}
-                        name="expand"
+                        color={'grey'}
+                        name="arrowright"
                       />
                 </div>
               <div className="flex items-center">
@@ -463,7 +464,7 @@ function WidgetCard({
                 >
                   <Button
                     type="text"
-                    icon={<SVG size={20} name={'threedot'} color="#8692A3" />}
+                    icon={<SVG size={20} name={'threedot'} color={'grey'} />}
                   />
                 </Dropdown>
               </div>

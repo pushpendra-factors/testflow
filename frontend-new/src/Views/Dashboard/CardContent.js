@@ -171,7 +171,7 @@ function CardContent({ unit, resultState, durationObj }) {
 
   if (resultState.loading) {
     content = (
-      <div className="flex justify-center items-center w-full h-full" style={{'height':'120px'}}>
+      <div className="flex justify-center items-center w-full h-full">
         <Spin size="small" />
       </div>
     );
