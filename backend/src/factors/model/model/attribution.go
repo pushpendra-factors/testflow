@@ -1121,7 +1121,7 @@ func GetRowsByMaps(attributionKey string, dimensions []string, attributionData *
 		attributionIdName := ""
 		switch attributionKey {
 		case AttributionKeyCampaign:
-			attributionIdName = data.MarketingInfo.Name
+			attributionIdName = data.MarketingInfo.CampaignName
 		case AttributionKeyAdgroup:
 			attributionIdName = data.MarketingInfo.AdgroupName
 		case AttributionKeyKeyword:
@@ -2738,6 +2738,10 @@ func addMetricsFromReport(attributionData *map[string]*AttributionData, reportKe
 		(*attributionData)[key].Impressions = value.Impressions
 		(*attributionData)[key].Clicks = value.Clicks
 		(*attributionData)[key].Spend = value.Spend
+
+		// replacing the marketing info on key match
+		(*attributionData)[key].MarketingInfo = value
+
 	}
 }
 
