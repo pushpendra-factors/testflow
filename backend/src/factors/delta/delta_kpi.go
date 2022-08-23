@@ -67,90 +67,9 @@ func CreateKpiInsights(diskManager *serviceDisk.DiskDriver, cloudManager *filest
 
 		{
 			//get proper props based on category
-			var kpiProperties []map[string]string
-			if query.DisplayCategory == M.WebsiteSessionDisplayCategory {
-				kpiProperties = M.KPIPropertiesForWebsiteSessions
-			} else if query.DisplayCategory == M.FormSubmissionsDisplayCategory {
-				kpiProperties = M.KPIPropertiesForFormSubmissions
-			} else if query.DisplayCategory == M.PageViewsDisplayCategory {
-				kpiProperties = M.KPIPropertiesForPageViews
-			} else if query.DisplayCategory == M.GoogleAdsDisplayCategory {
-				for category, propMap := range M.MapOfAdwordsObjectsToPropertiesAndRelated {
-					for prop, info := range propMap {
-						kpiProperties = append(kpiProperties, map[string]string{
-							"name":      M.AdwordsInternalPropertiesToReportsInternal[category+":"+prop],
-							"data_type": info.TypeOfProperty,
-							"entity":    category,
-						})
-					}
-				}
-			} else if query.DisplayCategory == M.BingAdsDisplayCategory {
-				for category, propMap := range M.MapOfBingAdsObjectsToPropertiesAndRelated {
-					category2 := category
-					if category != M.FilterKeyword {
-						category2 = category + "s"
-					}
-					for prop, info := range propMap {
-						kpiProperties = append(kpiProperties, map[string]string{
-							"name":      M.BingAdsInternalRepresentationToExternalRepresentationForReports[category2+"."+prop],
-							"data_type": info.TypeOfProperty,
-							"entity":    category,
-						})
-					}
-				}
-			} else if query.DisplayCategory == M.FacebookDisplayCategory {
-				for category, propMap := range M.MapOfFacebookObjectsToPropertiesAndRelated {
-					category2 := category
-					if category == M.CAFilterAdGroup {
-						category2 = "ad_set"
-					}
-					for prop, info := range propMap {
-						kpiProperties = append(kpiProperties, map[string]string{
-							"name":      M.ObjectToValueInFacebookJobsMapping[category2+":"+prop],
-							"data_type": info.TypeOfProperty,
-							"entity":    category,
-						})
-					}
-				}
-			} else if query.DisplayCategory == M.LinkedinDisplayCategory {
-				for _, prop := range []string{"id", "name"} {
-					kpiProperties = append(kpiProperties, map[string]string{
-						"name":      M.LinkedinCampaignGroup + "_" + prop,
-						"data_type": U.PropertyTypeCategorical,
-						"entity":    M.CAFilterCampaign,
-					})
-					kpiProperties = append(kpiProperties, map[string]string{
-						"name":      M.LinkedinCampaign + "_" + prop,
-						"data_type": U.PropertyTypeCategorical,
-						"entity":    M.CAFilterAdGroup,
-					})
-				}
-			} else if query.DisplayCategory == M.GoogleOrganicDisplayCategory {
-				for _, propMap := range M.MapOfObjectsToPropertiesAndRelatedGoogleOrganic {
-					for prop, info := range propMap {
-						kpiProperties = append(kpiProperties, map[string]string{
-							"name":      prop,
-							"data_type": info.TypeOfProperty,
-							"entity":    M.CAFilterCampaign,
-						})
-					}
-				}
-			} else if query.DisplayCategory == M.AllChannelsDisplayCategory {
-				for _, prop := range []string{"id", "name"} {
-					kpiProperties = append(kpiProperties, map[string]string{
-						"name":      M.CAFilterCampaign + "_" + prop,
-						"data_type": U.PropertyTypeCategorical,
-						"entity":    M.CAFilterCampaign,
-					})
-					kpiProperties = append(kpiProperties, map[string]string{
-						"name":      M.CAFilterAdGroup + "_" + prop,
-						"data_type": U.PropertyTypeCategorical,
-						"entity":    M.CAFilterAdGroup,
-					})
-				}
-			} else {
-				log.Errorf("no kpi Insights for category: %s", query.DisplayCategory)
-				continue
+			kpiProperties, err := getPropertiesToEvaluate(projectId, query.DisplayCategory)
+			if err != nil {
+				return err
 			}
 
 			//get proper format
@@ -381,7 +300,7 @@ func GetMetricsEvaluated(category string, metricNames []string, queryEvent strin
 	var GetMetrics func(metricNames []string, queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*WithinPeriodInsightsKpi, error)
 
 	if category == M.AllChannelsDisplayCategory {
-		insights, err = GetAllChannelMetricsInfo(metricNames, "all_ads", propFilter, propsToEval, projectId, periodCode, cloudManager, diskManager, insightGranularity)
+		insights, err = GetAllChannelMetricsInfo(metricNames, propFilter, propsToEval, projectId, periodCode, cloudManager, diskManager, insightGranularity)
 		spectrum = "campaign"
 	} else {
 		if category == M.WebsiteSessionDisplayCategory {
@@ -836,4 +755,94 @@ func checkValSatisfiesFilterCondition(filter M.KPIFilter, eventVal interface{}) 
 		return false, fmt.Errorf("strange property type: %s", filter.PropertyDataType)
 	}
 	return true, nil
+}
+
+func getPropertiesToEvaluate(projectID int64, displayCategory string) ([]map[string]string, error) {
+	var kpiProperties []map[string]string
+	if displayCategory == M.WebsiteSessionDisplayCategory {
+		kpiProperties = M.KPIPropertiesForWebsiteSessions
+	} else if displayCategory == M.FormSubmissionsDisplayCategory {
+		kpiProperties = M.KPIPropertiesForFormSubmissions
+	} else if displayCategory == M.PageViewsDisplayCategory {
+		kpiProperties = M.KPIPropertiesForPageViews
+	} else if displayCategory == M.GoogleAdsDisplayCategory {
+		for category, propMap := range M.MapOfAdwordsObjectsToPropertiesAndRelated {
+			for prop, info := range propMap {
+				kpiProperties = append(kpiProperties, map[string]string{
+					"name":      M.AdwordsInternalPropertiesToReportsInternal[category+":"+prop],
+					"data_type": info.TypeOfProperty,
+					"entity":    category,
+				})
+			}
+		}
+	} else if displayCategory == M.BingAdsDisplayCategory {
+		for category, propMap := range M.MapOfBingAdsObjectsToPropertiesAndRelated {
+			category2 := category
+			if category != M.FilterKeyword {
+				category2 = category + "s"
+			}
+			for prop, info := range propMap {
+				kpiProperties = append(kpiProperties, map[string]string{
+					"name":      M.BingAdsInternalRepresentationToExternalRepresentationForReports[category2+"."+prop],
+					"data_type": info.TypeOfProperty,
+					"entity":    category,
+				})
+			}
+		}
+	} else if displayCategory == M.FacebookDisplayCategory {
+		for category, propMap := range M.MapOfFacebookObjectsToPropertiesAndRelated {
+			category2 := category
+			if category == M.CAFilterAdGroup {
+				category2 = "ad_set"
+			}
+			for prop, info := range propMap {
+				kpiProperties = append(kpiProperties, map[string]string{
+					"name":      M.ObjectToValueInFacebookJobsMapping[category2+":"+prop],
+					"data_type": info.TypeOfProperty,
+					"entity":    category,
+				})
+			}
+		}
+	} else if displayCategory == M.LinkedinDisplayCategory {
+		for _, prop := range []string{"id", "name"} {
+			kpiProperties = append(kpiProperties, map[string]string{
+				"name":      M.LinkedinCampaignGroup + "_" + prop,
+				"data_type": U.PropertyTypeCategorical,
+				"entity":    M.CAFilterCampaign,
+			})
+			kpiProperties = append(kpiProperties, map[string]string{
+				"name":      M.LinkedinCampaign + "_" + prop,
+				"data_type": U.PropertyTypeCategorical,
+				"entity":    M.CAFilterAdGroup,
+			})
+		}
+	} else if displayCategory == M.GoogleOrganicDisplayCategory {
+		for categ, propMap := range M.MapOfObjectsToPropertiesAndRelatedGoogleOrganic {
+			for prop, info := range propMap {
+				kpiProperties = append(kpiProperties, map[string]string{
+					"name":      prop,
+					"data_type": info.TypeOfProperty,
+					"entity":    categ,
+				})
+			}
+		}
+	} else if displayCategory == M.AllChannelsDisplayCategory {
+		for _, prop := range []string{"id", "name"} {
+			kpiProperties = append(kpiProperties, map[string]string{
+				"name":      M.CAFilterCampaign + "_" + prop,
+				"data_type": U.PropertyTypeCategorical,
+				"entity":    M.CAFilterCampaign,
+			})
+			kpiProperties = append(kpiProperties, map[string]string{
+				"name":      M.CAFilterAdGroup + "_" + prop,
+				"data_type": U.PropertyTypeCategorical,
+				"entity":    M.CAFilterAdGroup,
+			})
+		}
+	} else {
+		err := fmt.Errorf("no properties to evaluate for category: %s", displayCategory)
+		log.WithError(err).Error("unknown category")
+		return nil, err
+	}
+	return kpiProperties, nil
 }

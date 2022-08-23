@@ -46,6 +46,7 @@ var ChannelValueFilterName = map[string]string{
 }
 
 var levelStrToIntAlias = map[string]int{
+	"organic_property":      3,
 	memsql.CAFilterCampaign: 3,
 	memsql.CAFilterAdGroup:  2,
 	memsql.CAFilterKeyword:  1,
@@ -138,8 +139,6 @@ func getQueryLevel(propFilter []M.KPIFilter) (int, error) {
 			if tmp < level {
 				level = tmp
 			}
-		} else if filter.ObjectType == "organic_property" {
-			return 3, nil
 		} else {
 			return 0, fmt.Errorf("error getQueryLevel: unknown filter object type - %s", filter.ObjectType)
 		}
@@ -612,7 +611,7 @@ func performOperation(operation string, val1 float64, val2 float64) (float64, er
 	return reqVal, nil
 }
 
-func GetAllChannelMetricsInfo(metricNames []string, channel string, propFilter []M.KPIFilter, propsToEval []string, projectId int64, periodCode Period, cloudManager *filestore.FileManager,
+func GetAllChannelMetricsInfo(metricNames []string, propFilter []M.KPIFilter, propsToEval []string, projectId int64, periodCode Period, cloudManager *filestore.FileManager,
 	diskManager *serviceDisk.DiskDriver, insightGranularity string) (*WithinPeriodInsightsKpi, error) {
 	var wpi WithinPeriodInsightsKpi
 	wpi.MetricInfo = &MetricInfo{}
@@ -672,7 +671,9 @@ func addMetricInfoStructForSource(source string, baseInfo *MetricInfo, info2add 
 	}
 	info := *baseInfo
 	info.Global += info2add.Global
-	info.Features = make(map[string]map[string]float64)
+	if info.Features == nil {
+		info.Features = make(map[string]map[string]float64)
+	}
 	for key, valMap := range info2add.Features {
 		if _, ok := info.Features[key]; !ok {
 			info.Features[key] = make(map[string]float64)
@@ -687,3 +688,39 @@ func addMetricInfoStructForSource(source string, baseInfo *MetricInfo, info2add 
 	info.Features["channel#channel_name"][ChannelValueFilterName[source]] = info2add.Global
 	return &info
 }
+
+// func getAllChannelPropsToEvalForChannel(channel string, propsToEval []string) ([]string, error) {
+// 	newPropsToEval := make([]string, 0)
+// 	for _, prop := range propsToEval {
+// 		var newName string
+// 		propArr := strings.SplitN(prop, "#", 2)
+// 		propType, propName := propArr[0], propArr[1]
+// 		name := strings.TrimPrefix(propName, propType+"_")
+// 		switch channel {
+// 		case M.ADWORDS:
+// 			newName = M.AdwordsInternalPropertiesToReportsInternal[propType+":"+name]
+// 		case M.BINGADS:
+// 			var propTypeTmp string
+// 			if propType != M.FilterKeyword {
+// 				propTypeTmp = propType + "s"
+// 			}
+// 			newName = M.BingAdsInternalRepresentationToExternalRepresentationForReports[propTypeTmp+"."+name]
+// 		case M.FACEBOOK:
+// 			var propTypeTmp string
+// 			if propType == M.CAFilterAdGroup {
+// 				propTypeTmp = "ad_set"
+// 			}
+// 			newName = M.ObjectToValueInFacebookJobsMapping[propTypeTmp+":"+name]
+// 		case M.LINKEDIN:
+// 			if propType == M.CAFilterCampaign {
+// 				newName = M.LinkedinCampaignGroup + "_" + prop
+// 			} else if propType == M.CAFilterAdGroup {
+// 				newName = M.LinkedinCampaign + "_" + prop
+// 			}
+// 		case M.GOOGLE_ORGANIC:
+// 			continue
+// 		}
+// 		newPropsToEval = append(newPropsToEval, propType+"#"+newName)
+// 	}
+// 	return newPropsToEval, nil
+// }
