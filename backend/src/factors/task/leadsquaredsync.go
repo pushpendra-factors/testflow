@@ -72,6 +72,9 @@ func LeadSquaredIntegration(projectId int64, configs map[string]interface{}) (ma
 			"accessKey": leadSquaredConfig.AccessKey,
 			"secretKey": leadSquaredConfig.SecretKey,
 		}
+		if docType == model.LEADSQUARED_SALES_ACTIVITY {
+			leadSquaredUrlParams["code"] = "30"
+		}
 		propertyMetadataList, errorStatus, msg := getMetadataDetails(docType, leadSquaredConfig.Host, leadSquaredUrlParams)
 		if errorStatus != false {
 			resultStatus["error"] = msg
@@ -203,8 +206,11 @@ func InsertIntegrationDocumentLeadSquared(projectId int64, docType string, query
 		insertionStatus := int(0)
 		var errCRMStatus error
 		var logIndex string
-		if model.DocTypeIntegrationObjectMap[docType] == "user" {
+		if model.LeadSquaredDocTypeIntegrationObjectMap[docType] == "user" {
 			insertionStatus, errCRMStatus, logIndex = insertCRMUserLeadSquared(projectId, line, docType, columnNamesFromMetadata, valuesBlob)
+		}
+		if model.LeadSquaredDocTypeIntegrationObjectMap[docType] == "activity" {
+			insertionStatus, errCRMStatus, logIndex = insertCRMActivityLeadSquared(projectId, line, docType, columnNamesFromMetadata, valuesBlob)
 		}
 		if errCRMStatus != nil || insertionStatus != http.StatusCreated {
 			log.WithError(errCRMStatus).WithFields(log.Fields{
@@ -260,4 +266,29 @@ func insertCRMUserLeadSquared(projectId int64, line []string, docType string, co
 		insertionStatus, errCRMStatus = store.GetStore().CreateCRMUser(&intDocument3)
 	}
 	return insertionStatus, errCRMStatus, ""
+}
+
+func insertCRMActivityLeadSquared(projectId int64, line []string, docType string, columnNamesFromMetadata []string, values *postgres.Jsonb) (int, error, string) {
+	insertionStatus := int(0)
+	var errCRMStatus error
+	timestamps := model.GetLeadSquaredDocumentTimestamp(docType, line, columnNamesFromMetadata)
+	intDocument := model.CRMActivity{
+		ProjectID:          projectId,
+		ExternalActivityID: model.GetLeadSquaredDocumentProgramId(docType, line, columnNamesFromMetadata),
+		Source:             U.CRM_SOURCE_LEADSQUARED,
+		Name:               "sales_activity_created",
+		Type:               model.GetLeadSquaredDocumentDocumentType(docType),
+		ActorType:          model.GetLeadSquaredActorType(docType),
+		ActorID:            model.GetLeadSquaredDocumentActorId(docType, line, columnNamesFromMetadata),
+		Timestamp:          timestamps[0],
+		Properties:         values,
+	}
+
+	insertionStatus, errCRMStatus = store.GetStore().CreateCRMActivity(&intDocument)
+	if insertionStatus == http.StatusConflict {
+		intDocument.Name = "sales_activity_updated"
+		intDocument.Timestamp = timestamps[1]
+		insertionStatus, errCRMStatus = store.GetStore().CreateCRMActivity(&intDocument)
+	}
+	return insertionStatus, errCRMStatus, model.GetUniqueLogValue(docType, line, columnNamesFromMetadata)
 }

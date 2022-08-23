@@ -5,19 +5,24 @@ import (
 )
 
 const (
-	LEADSQUARED_LEAD = "lead"
+	LEADSQUARED_LEAD           = "lead"
+	LEADSQUARED_SALES_ACTIVITY = "sales_activity"
 )
 
 var LeadSquaredDocumentToQuery = map[string]string{
 	LEADSQUARED_LEAD: "select * FROM `%s.%s.lead`" +
 		" WHERE %v AND ProspectAutoId > %v order by ProspectAutoId asc LIMIT %v OFFSET 0",
+	LEADSQUARED_SALES_ACTIVITY: "select * FROM `%s.%s.sales_activity`" +
+		" WHERE %v AND CreatedOnUnix > %v order by CreatedOnUnix asc LIMIT %v OFFSET 0", // fix this
 }
 var LeadSquaredDocumentEndpoint = map[string]string{
-	LEADSQUARED_LEAD: "/v2/LeadManagement.svc/Leads.RecentlyModified",
+	LEADSQUARED_LEAD:           "/v2/LeadManagement.svc/Leads.RecentlyModified",
+	LEADSQUARED_SALES_ACTIVITY: "/v2/ProspectActivity.svc/CustomActivity/RetrieveByActivityEvent",
 }
 
 var LeadSquaredMetadataEndpoint = map[string]string{
-	LEADSQUARED_LEAD: "/v2/LeadManagement.svc/LeadsMetaData.Get",
+	LEADSQUARED_LEAD:           "/v2/LeadManagement.svc/LeadsMetaData.Get",
+	LEADSQUARED_SALES_ACTIVITY: "/v2/ProspectActivity.svc/CustomActivity/GetActivitySetting",
 }
 
 var LeadSquaredHistoricalSyncEndpoint = map[string]string{
@@ -25,15 +30,18 @@ var LeadSquaredHistoricalSyncEndpoint = map[string]string{
 }
 
 var LeadSquaredTableName = map[string]string{
-	LEADSQUARED_LEAD: "lead",
+	LEADSQUARED_LEAD:           "lead",
+	LEADSQUARED_SALES_ACTIVITY: "sales_activity",
 }
 
 var LeadSquaredDataObjectColumnsQuery = map[string]string{
-	LEADSQUARED_LEAD: "SELECT * FROM `%s.%s.INFORMATION_SCHEMA.COLUMNS` WHERE table_name = 'lead' ORDER by ordinal_position",
+	LEADSQUARED_LEAD:           "SELECT * FROM `%s.%s.INFORMATION_SCHEMA.COLUMNS` WHERE table_name = 'lead' ORDER by ordinal_position",
+	LEADSQUARED_SALES_ACTIVITY: "SELECT * FROM `%s.%s.INFORMATION_SCHEMA.COLUMNS` WHERE table_name = 'sales_activity' ORDER by ordinal_position",
 }
 
 var LeadSquaredDocTypeIntegrationObjectMap = map[string]string{
-	LEADSQUARED_LEAD: "user",
+	LEADSQUARED_LEAD:           "user",
+	LEADSQUARED_SALES_ACTIVITY: "activity",
 }
 
 var LeadSquaredUserIdMapping = map[string]string{
@@ -41,7 +49,8 @@ var LeadSquaredUserIdMapping = map[string]string{
 }
 
 var LeadSquaredUserAutoIdMapping = map[string]string{
-	LEADSQUARED_LEAD: "ProspectAutoId",
+	LEADSQUARED_LEAD:           "ProspectAutoId",
+	LEADSQUARED_SALES_ACTIVITY: "CreatedOnUnix",
 }
 
 var LeadSquaredEmailMapping = map[string]string{
@@ -53,19 +62,35 @@ var LeadSquaredPhoneMapping = map[string]string{
 }
 
 var LeadSquaredDocumentTypeAlias = map[string]int{
-	LEADSQUARED_LEAD: 1,
+	LEADSQUARED_LEAD:           1,
+	LEADSQUARED_SALES_ACTIVITY: 2,
 }
 
 var LeadSquaredDataObjectFilters = map[string]string{
-	LEADSQUARED_LEAD: "DATE(%v) = '%v'",
+	LEADSQUARED_LEAD:           "DATE(%v) = '%v'",
+	LEADSQUARED_SALES_ACTIVITY: "DATE(%v) = '%v'",
 }
 
 var LeadSquaredDataObjectFiltersColumn = map[string]string{
-	LEADSQUARED_LEAD: "synced_at",
+	LEADSQUARED_LEAD:           "synced_at",
+	LEADSQUARED_SALES_ACTIVITY: "synced_at",
 }
 
 var LeadSquaredTimestampMapping = map[string][]string{
-	LEADSQUARED_LEAD: []string{"CreatedOn", "CreatedOn", "ModifiedOn"},
+	LEADSQUARED_LEAD:           []string{"CreatedOn", "CreatedOn", "ModifiedOn"},
+	LEADSQUARED_SALES_ACTIVITY: []string{"CreatedOn", "ModifiedOn"},
+}
+
+var LeadSquaredProgramIdMapping = map[string]string{
+	LEADSQUARED_SALES_ACTIVITY: "ProspectActivityId",
+}
+
+var LeadSquaredActorTypeMapping = map[string]string{
+	LEADSQUARED_SALES_ACTIVITY: LEADSQUARED_LEAD,
+}
+
+var LeadSquaredActorIdMapping = map[string]string{
+	LEADSQUARED_SALES_ACTIVITY: "RelatedProspectId",
 }
 
 func GetLeadSquaredTypeToAliasMap(aliasType map[string]int) map[int]string {
@@ -79,6 +104,26 @@ func GetLeadSquaredTypeToAliasMap(aliasType map[string]int) map[int]string {
 func GetLeadSquaredDocumentQuery(bigQueryProjectId string, schemaId string, baseQuery string, executionDate string, docType string, limit int, lastProcessedId int) string {
 	if docType == LEADSQUARED_LEAD {
 		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId, GetLeadSquaredDocumentFilterCondition(docType, false, "", executionDate), lastProcessedId, limit)
+	}
+	if docType == LEADSQUARED_SALES_ACTIVITY {
+		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId, GetLeadSquaredDocumentFilterCondition(docType, false, "", executionDate), lastProcessedId, limit)
+	}
+	return ""
+}
+
+func GetLeadSquaredDocumentActorId(documentType string, data []string, metadataColumns []string) string {
+	actorId, exists := LeadSquaredActorIdMapping[documentType]
+	if exists {
+		dataObjectColumns := GetObjectDataColumns(documentType, metadataColumns)
+		index, exists_index := dataObjectColumns[actorId]
+		if exists_index {
+			if data[index] == "<nil>" {
+				return ""
+			} else {
+				return data[index]
+			}
+		}
+		return ""
 	}
 	return ""
 }
@@ -97,6 +142,9 @@ func GetLeadSquaredDocumentFilterCondition(docType string, addPrefix bool, prefi
 
 func GetLeadSquaredDocumentMetadataQuery(docType string, bigQueryProjectId string, schemaId string, baseQuery string) (string, bool) {
 	if docType == LEADSQUARED_LEAD {
+		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId), true
+	}
+	if docType == LEADSQUARED_SALES_ACTIVITY {
 		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId), true
 	}
 	return "", false
@@ -118,6 +166,18 @@ func GetLeadSquaredObjectDataColumns(docType string, metadataColumns []string) m
 		}
 	}
 	return dataObjectColumns
+}
+
+func GetLeadSquaredActorType(documentTypeString string) int {
+	actorType, exists := LeadSquaredActorTypeMapping[documentTypeString]
+	if exists {
+		actorTypeId, exists_actor := LeadSquaredDocumentTypeAlias[actorType]
+		if exists_actor {
+			return actorTypeId
+		}
+		return 0
+	}
+	return 0
 }
 
 func GetLeadSquaredDocumentValues(docType string, data []string, metadataColumns []string, metadataColumnDateTimeType map[string]bool, metadataColumnNumericalType map[string]bool) map[string]interface{} {
@@ -246,6 +306,23 @@ func GetLeadSquaredDocumentTimestamp(documentType string, data []string, metadat
 	return result
 }
 
+func GetLeadSquaredDocumentProgramId(documentType string, data []string, metadataColumns []string) string {
+	activtyNameId, exists := LeadSquaredProgramIdMapping[documentType]
+	if exists {
+		dataObjectColumns := GetObjectDataColumns(documentType, metadataColumns)
+		index, exists_index := dataObjectColumns[activtyNameId]
+		if exists_index {
+			if data[index] == "<nil>" {
+				return ""
+			} else {
+				return data[index]
+			}
+		}
+		return ""
+	}
+	return ""
+}
+
 type LeadsByDateRangeRequest struct {
 	Parameter ParameterObj `json:"Parameter"`
 	Columns   ColumnsObj   `json:"Columns"`
@@ -261,6 +338,13 @@ type LeadSearchParameterObj struct {
 	LookupName  string `json:"LookupName"`
 	LookupValue string `json:"LookupValue"`
 	SqlOperator string `json:"SqlOperator"`
+}
+
+type SalesActivitySearchParameterObj struct {
+	FromDate         string `json:"FromDate"`
+	ToDate           string `json:"ToDate"`
+	ActivityEvent    int    `json:"ActivityEvent"`
+	RemoveEmptyValue bool   `json:"RemoveEmptyValue"`
 }
 
 type ColumnsObj struct {
@@ -296,4 +380,10 @@ type SearchLeadsByCriteriaRequest struct {
 	Paging    PagingObj              `json:"Paging"`
 	Sorting   SortingObj             `json:"Sorting"`
 	Parameter LeadSearchParameterObj `json:"Parameter"`
+}
+
+type SearchSalesActivityByCriteriaRequest struct {
+	Paging    PagingObj                       `json:"Paging"`
+	Sorting   SortingObj                      `json:"Sorting"`
+	Parameter SalesActivitySearchParameterObj `json:"Parameter"`
 }

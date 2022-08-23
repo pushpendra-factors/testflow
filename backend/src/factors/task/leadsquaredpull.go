@@ -37,9 +37,21 @@ type PropertyMetadataObjectLeadSquared struct {
 	DisplayName string
 }
 
+type SalesActivityMetadataObjectLeadSquared struct {
+	ID          string
+	Name        string
+	DisplayName string
+	Fields      []PropertyMetadataObjectLeadSquared
+}
+
 type IncrementalSyncResponse struct {
 	RecordCount int
 	Leads       []IncrementalSyncLeadResponse
+}
+
+type IncrementalSyncResponseSalesActivity struct {
+	RecordCount int
+	List        []interface{}
 }
 
 type IncrementalSyncLeadResponse struct {
@@ -92,8 +104,12 @@ func LeadSquaredPull(projectId int64, configs map[string]interface{}) (map[strin
 		"secretKey": leadSquaredConfig.SecretKey,
 	}
 	datasetID := leadSquaredConfig.BigqueryDataset
-	for documentType, _ := range model.LeadSquaredHistoricalSyncEndpoint {
+	for documentType, _ := range model.LeadSquaredMetadataEndpoint {
+		log.Info(fmt.Sprintf("Starting for %v", documentType))
 		tableID := model.LeadSquaredTableName[documentType]
+		if documentType == model.LEADSQUARED_SALES_ACTIVITY {
+			leadSquaredUrlParams["code"] = "30"
+		}
 		propertyMetadataList, errorStatus, msg := getMetadataDetails(documentType, leadSquaredConfig.Host, leadSquaredUrlParams)
 		if errorStatus != false {
 			resultStatus["error"] = msg
@@ -108,12 +124,17 @@ func LeadSquaredPull(projectId int64, configs map[string]interface{}) (map[strin
 			4. Check if there is any update needed for the schema
 			5. If yes, update it
 		*/
+		log.Info(fmt.Sprintf("First Time Sync status - %v", leadSquaredConfig.FirstTimeSync))
 		if leadSquaredConfig.FirstTimeSync == false {
 			log.Info("Creating Dataset")
 			if err := client.Dataset(datasetID).Create(ctx, nil); err != nil {
-				log.WithError(err).Error("Error Creating Dataset")
-				resultStatus["error"] = err.Error()
-				return resultStatus, false
+				if ifDuplicateSchema(err.Error()) {
+					log.WithError(err).Error("Error Creating Dataset - already exist but skipping the error")
+				} else {
+					log.WithError(err).Error("Error Creating Dataset")
+					resultStatus["error"] = err.Error()
+					return resultStatus, false
+				}
 			}
 			log.Info("Creating Table")
 			tableRef := client.Dataset(datasetID).Table(tableID)
@@ -164,30 +185,37 @@ func LeadSquaredPull(projectId int64, configs map[string]interface{}) (map[strin
 			})
 		}
 		if leadSquaredConfig.FirstTimeSync == false {
-			result, errorStatus, msg := DoHistoricalSync(leadSquaredConfig.Host, model.LeadSquaredHistoricalSyncEndpoint[documentType], leadSquaredUrlParams, columnsToBeExtracted, PAGESIZE, executionDate, LOOKBACK, datasetID, tableID, client, metadataWithOrder, ctx)
-			if errorStatus == true {
-				log.Error(msg)
-				resultStatus["error"] = msg
-				return resultStatus, false
+			if documentType == model.LEADSQUARED_LEAD {
+				result, errorStatus, msg := DoHistoricalSync(leadSquaredConfig.Host, model.LeadSquaredHistoricalSyncEndpoint[documentType], leadSquaredUrlParams, columnsToBeExtracted, PAGESIZE, executionDate, LOOKBACK, datasetID, tableID, client, metadataWithOrder, ctx)
+				if errorStatus == true {
+					log.Error(msg)
+					resultStatus["error"] = msg
+					return resultStatus, false
+				}
+				for key, value := range result {
+					resultStatus[key] = value
+				}
 			}
-			errCode := store.GetStore().UpdateLeadSquaredFirstTimeSyncStatus(projectId)
-			if errCode != http.StatusOK {
-				log.Error("Failed to update first sync status in db")
-				resultStatus["error"] = "Failed to update first sync status in db"
-				return resultStatus, false
-			}
-			return result, true
 		} else {
-			result, errorStatus, msg := DoIncrementalSync(leadSquaredConfig.Host, model.LeadSquaredHistoricalSyncEndpoint[documentType], model.LeadSquaredDocumentEndpoint[documentType], leadSquaredUrlParams, columnsToBeExtracted, PAGESIZE, executionDate, LOOKBACK, datasetID, tableID, client, metadataWithOrder, ctx)
+			result, errorStatus, msg := DoIncrementalSync(documentType, leadSquaredConfig.Host, model.LeadSquaredHistoricalSyncEndpoint[documentType], model.LeadSquaredDocumentEndpoint[documentType], leadSquaredUrlParams, columnsToBeExtracted, PAGESIZE, executionDate, LOOKBACK, datasetID, tableID, client, metadataWithOrder, ctx)
 			if errorStatus == true {
 				log.Error(msg)
 				resultStatus["error"] = msg
 				return resultStatus, false
 			}
-			return result, true
+			for key, value := range result {
+				resultStatus[key] = value
+			}
 		}
 	}
-
+	if leadSquaredConfig.FirstTimeSync == false {
+		errCode := store.GetStore().UpdateLeadSquaredFirstTimeSyncStatus(projectId)
+		if errCode != http.StatusOK {
+			log.Error("Failed to update first sync status in db")
+			resultStatus["error"] = "Failed to update first sync status in db"
+			return resultStatus, false
+		}
+	}
 	return resultStatus, true
 }
 
@@ -196,7 +224,7 @@ func addNewColumnToSchema(existingSchema bigquery.Schema, column PropertyMetadat
 		existingSchema = append(existingSchema,
 			&bigquery.FieldSchema{Name: column.SchemaName, Type: bigquery.FloatFieldType},
 		)
-	} else if column.DataType == "Date" {
+	} else if column.DataType == "Date" || column.DataType == "DateTime" {
 		existingSchema = append(existingSchema,
 			&bigquery.FieldSchema{Name: column.SchemaName, Type: bigquery.DateTimeFieldType},
 		)
@@ -217,7 +245,10 @@ func extractValue(value interface{}, dataType interface{}) interface{} {
 		dataValueNumber, _ := strconv.Atoi(dataValueString)
 		return dataValueNumber
 	} else if dataType == bigquery.DateTimeFieldType {
-		dataValueTime, _ := time.Parse("2006-01-02 15:04:05.000", dataValueString)
+		dataValueTime, err := time.Parse("2006-01-02 15:04:05.000", dataValueString)
+		if err != nil {
+			dataValueTime, _ = time.Parse("2006-01-02 15:04:05", dataValueString)
+		}
 		return civil.DateTimeOf(dataValueTime)
 	} else {
 		return value
@@ -234,14 +265,44 @@ func getMetadataDetails(documentType string, host string, leadSquaredUrlParams m
 	if err != nil {
 		return nil, true, err.Error()
 	}
-	propertyMetadataList := make([]PropertyMetadataObjectLeadSquared, 0)
-	err = json.Unmarshal(byteSliceMetadata, &propertyMetadataList)
-	if err != nil {
-		return nil, true, err.Error()
+	propertyMetadata := make([]PropertyMetadataObjectLeadSquared, 0)
+	if documentType == model.LEADSQUARED_LEAD {
+		propertyMetadataList := make([]PropertyMetadataObjectLeadSquared, 0)
+		err = json.Unmarshal(byteSliceMetadata, &propertyMetadataList)
+		if err != nil {
+			return nil, true, err.Error()
+		}
+		propertyMetadata = propertyMetadataList
 	}
-	return propertyMetadataList, false, ""
+	if documentType == model.LEADSQUARED_SALES_ACTIVITY {
+		var salesActivityMetadata SalesActivityMetadataObjectLeadSquared
+		err = json.Unmarshal(byteSliceMetadata, &salesActivityMetadata)
+		if err != nil {
+			return nil, true, err.Error()
+		}
+		propertyMetadata = salesActivityMetadata.Fields
+		propertyMetadata = addConstantFieldsForSalesActivity(propertyMetadata)
+	}
+	return propertyMetadata, false, ""
 }
 
+func addConstantFieldsForSalesActivity(property []PropertyMetadataObjectLeadSquared) []PropertyMetadataObjectLeadSquared {
+	property = append(property, PropertyMetadataObjectLeadSquared{SchemaName: "ProspectActivityId", DataType: "String", DisplayName: "ProspectActivityId"})
+	property = append(property, PropertyMetadataObjectLeadSquared{SchemaName: "RelatedProspectId", DataType: "String", DisplayName: "RelatedProspectId"})
+	property = append(property, PropertyMetadataObjectLeadSquared{SchemaName: "ActivityType", DataType: "String", DisplayName: "ActivityType"})
+	property = append(property, PropertyMetadataObjectLeadSquared{SchemaName: "ActivityEvent", DataType: "String", DisplayName: "ActivityEvent"})
+	property = append(property, PropertyMetadataObjectLeadSquared{SchemaName: "ActivityEvent_Note", DataType: "String", DisplayName: "ActivityEvent_Note"})
+	property = append(property, PropertyMetadataObjectLeadSquared{SchemaName: "CreatedOn", DataType: "DateTime", DisplayName: "CreatedOn"})
+	property = append(property, PropertyMetadataObjectLeadSquared{SchemaName: "CreatedBy", DataType: "String", DisplayName: "CreatedBy"})
+	property = append(property, PropertyMetadataObjectLeadSquared{SchemaName: "CreatedByEmailAddress", DataType: "String", DisplayName: "CreatedByEmailAddress"})
+	property = append(property, PropertyMetadataObjectLeadSquared{SchemaName: "CreatedByName", DataType: "String", DisplayName: "CreatedByName"})
+	property = append(property, PropertyMetadataObjectLeadSquared{SchemaName: "ModifiedOn", DataType: "DateTime", DisplayName: "ModifiedOn"})
+	property = append(property, PropertyMetadataObjectLeadSquared{SchemaName: "ModifiedBy", DataType: "String", DisplayName: "ModifiedBy"})
+	property = append(property, PropertyMetadataObjectLeadSquared{SchemaName: "ModifiedByEmailAddress", DataType: "String", DisplayName: "ModifiedByEmailAddress"})
+	property = append(property, PropertyMetadataObjectLeadSquared{SchemaName: "ModifiedByName", DataType: "String", DisplayName: "ModifiedByName"})
+	property = append(property, PropertyMetadataObjectLeadSquared{SchemaName: "CreatedOnUnix", DataType: "Number", DisplayName: "CreatedOnUnix"})
+	return property
+}
 func getColumnsToBeAdded(existingSchema bigquery.Schema, propertyMetadataList []PropertyMetadataObjectLeadSquared) (bigquery.Schema, bool) {
 	needUpdate := false
 	existingColumns := make(map[string]bool)
@@ -310,11 +371,13 @@ func DoHistoricalSync(host string, endpoint string, urlParams map[string]string,
 		if errorStatus != false {
 			return nil, true, msg
 		}
+		log.Info("Insert done")
 		index++
 		if len(histSyncData) < pageSize {
 			break
 		}
 	}
+	log.Info("Done historical sync for all records created after the lookback")
 	return nil, false, ""
 }
 
@@ -347,26 +410,48 @@ func insertBigQueryRow(datasetID string, tableID string, client *bigquery.Client
 	return false, ""
 }
 
-func DoIncrementalSync(host string, histSyncEndpoint string, endpoint string, urlParams map[string]string, columns string, pageSize int, executionTimestamp int64, lookback int, datasetID string, tableId string, client *bigquery.Client, propertyMetadataList []SchemaPropertyMetadataMapping, ctx context.Context) (map[string]interface{}, bool, string) {
+func DoIncrementalSync(documentType string, host string, histSyncEndpoint string, endpoint string, urlParams map[string]string, columns string, pageSize int, executionTimestamp int64, lookback int, datasetID string, tableId string, client *bigquery.Client, propertyMetadataList []SchemaPropertyMetadataMapping, ctx context.Context) (map[string]interface{}, bool, string) {
 	log.Info("Starting Incremental Sync")
 	index := 1
 	totalRecordCountModifiedOn := 0
+	totalRecordCountCreatedOn := 0
 	startDateinLeadSquaredFormat := fmt.Sprintf("%v", time.Unix(int64(executionTimestamp), 0).Format("2006-01-02 15:04:05"))
 	endDateinLeadSquaredFormat := fmt.Sprintf("%v", time.Unix(int64(executionTimestamp)+U.SECONDS_IN_A_DAY, 0).Format("2006-01-02 15:04:05"))
 	log.Info(fmt.Sprintf("Starting Incremental Sync with date > %v < %v ", startDateinLeadSquaredFormat, endDateinLeadSquaredFormat))
 	for {
-		request := model.LeadsByDateRangeRequest{
-			Parameter: model.ParameterObj{
-				FromDate: startDateinLeadSquaredFormat,
-				ToDate:   endDateinLeadSquaredFormat,
-			},
-			Paging: model.PagingObj{
-				PageIndex: index,
-				PageSize:  pageSize,
-			},
-			Columns: model.ColumnsObj{
-				IncludeCSV: columns,
-			},
+		var request interface{}
+		if documentType == model.LEADSQUARED_LEAD {
+			request = model.LeadsByDateRangeRequest{
+				Parameter: model.ParameterObj{
+					FromDate: startDateinLeadSquaredFormat,
+					ToDate:   endDateinLeadSquaredFormat,
+				},
+				Paging: model.PagingObj{
+					PageIndex: index,
+					PageSize:  pageSize,
+				},
+				Columns: model.ColumnsObj{
+					IncludeCSV: columns,
+				},
+			}
+		}
+		if documentType == model.LEADSQUARED_SALES_ACTIVITY {
+			request = model.SearchSalesActivityByCriteriaRequest{
+				Parameter: model.SalesActivitySearchParameterObj{
+					FromDate:         startDateinLeadSquaredFormat,
+					ToDate:           endDateinLeadSquaredFormat,
+					ActivityEvent:    30,
+					RemoveEmptyValue: false,
+				},
+				Paging: model.PagingObj{
+					PageIndex: index,
+					PageSize:  pageSize,
+				},
+				Sorting: model.SortingObj{
+					ColumnName: "CreatedOn",
+					Direction:  "1",
+				},
+			}
 		}
 		headers := map[string]string{
 			"Content-Type": "application/json",
@@ -379,18 +464,34 @@ func DoIncrementalSync(host string, histSyncEndpoint string, endpoint string, ur
 		if err != nil {
 			return nil, true, err.Error()
 		}
-		var incrSyncData IncrementalSyncResponse
-		err = json.Unmarshal(byteSliceIncrSync, &incrSyncData)
-		if err != nil {
-			return nil, true, err.Error()
-		}
 		dataForInsertion := make([]interface{}, 0)
-		for _, lead := range incrSyncData.Leads {
-			propertiesMap := make(map[string]interface{})
-			for _, property := range lead.LeadPropertyList {
-				propertiesMap[property.Attribute] = property.Value
+		if documentType == model.LEADSQUARED_LEAD {
+			var incrSyncData IncrementalSyncResponse
+			err = json.Unmarshal(byteSliceIncrSync, &incrSyncData)
+			if err != nil {
+				return nil, true, err.Error()
 			}
-			dataForInsertion = append(dataForInsertion, propertiesMap)
+			for _, lead := range incrSyncData.Leads {
+				propertiesMap := make(map[string]interface{})
+				for _, property := range lead.LeadPropertyList {
+					propertiesMap[property.Attribute] = property.Value
+				}
+				dataForInsertion = append(dataForInsertion, propertiesMap)
+			}
+		}
+		if documentType == model.LEADSQUARED_SALES_ACTIVITY {
+			var incrSyncData IncrementalSyncResponseSalesActivity
+			err = json.Unmarshal(byteSliceIncrSync, &incrSyncData)
+			if err != nil {
+				return nil, true, err.Error()
+			}
+			for _, sa := range incrSyncData.List {
+				propertiesMap := sa.(map[string]interface{})
+				t, _ := time.Parse(U.DATETIME_FORMAT_DB, propertiesMap["CreatedOn"].(string))
+				createdOnUnix := t.Unix()
+				propertiesMap["CreatedOnUnix"] = fmt.Sprintf("%v", createdOnUnix)
+				dataForInsertion = append(dataForInsertion, propertiesMap)
+			}
 		}
 		log.Info(fmt.Sprintf("IncrementalSync - Inserting %v rows with index %v no of records %v", pageSize, index, len(dataForInsertion)))
 		errorStatus, msg := insertBigQueryRow(datasetID, tableId, client, dataForInsertion, propertyMetadataList, ctx)
@@ -403,55 +504,56 @@ func DoIncrementalSync(host string, histSyncEndpoint string, endpoint string, ur
 			break
 		}
 	}
-	index = 1
-	totalRecordCountCreatedOn := 0
-	log.Info("Starting for all records created after the lookback")
-	StartDateinLeadSquaredFormat := fmt.Sprintf("%v", time.Unix(int64(executionTimestamp), 0).Format("2006-01-02 15:04:05"))
-	log.Info(fmt.Sprintf("Starting Historical Sync with date > %v", StartDateinLeadSquaredFormat))
-	for {
-		request := model.SearchLeadsByCriteriaRequest{
-			Parameter: model.LeadSearchParameterObj{
-				LookupName:  "CreatedOn",
-				LookupValue: StartDateinLeadSquaredFormat,
-				SqlOperator: ">",
-			},
-			Paging: model.PagingObj{
-				PageIndex: index,
-				PageSize:  pageSize,
-			},
-			Columns: model.ColumnsObj{
-				IncludeCSV: columns,
-			},
-			Sorting: model.SortingObj{
-				ColumnName: "CreatedOn",
-				Direction:  "1",
-			},
-		}
-		headers := map[string]string{
-			"Content-Type": "application/json",
-		}
-		statusCode, responseHistSyncData, errorObj := L.HttpRequestWrapper(fmt.Sprintf("https://%s", host), histSyncEndpoint, headers, request, "POST", urlParams)
-		if statusCode != http.StatusOK || errorObj != nil {
-			return nil, true, errorObj.Error()
-		}
-		byteSliceHistSync, err := json.Marshal(responseHistSyncData)
-		if err != nil {
-			return nil, true, err.Error()
-		}
-		histSyncData := make([]interface{}, 0)
-		err = json.Unmarshal(byteSliceHistSync, &histSyncData)
-		if err != nil {
-			return nil, true, err.Error()
-		}
-		log.Info(fmt.Sprintf("ModifiedOn - Inserting %v rows with index %v no of records %v", pageSize, index, len(histSyncData)))
-		errorStatus, msg := insertBigQueryRow(datasetID, tableId, client, histSyncData, propertyMetadataList, ctx)
-		if errorStatus != false {
-			return nil, true, msg
-		}
-		index++
-		totalRecordCountCreatedOn = totalRecordCountCreatedOn + len(histSyncData)
-		if len(histSyncData) < pageSize {
-			break
+	if documentType == model.LEADSQUARED_LEAD {
+		index = 1
+		log.Info("Starting for all records created after the lookback")
+		StartDateinLeadSquaredFormat := fmt.Sprintf("%v", time.Unix(int64(executionTimestamp), 0).Format("2006-01-02 15:04:05"))
+		log.Info(fmt.Sprintf("Starting Historical Sync with date > %v", StartDateinLeadSquaredFormat))
+		for {
+			request := model.SearchLeadsByCriteriaRequest{
+				Parameter: model.LeadSearchParameterObj{
+					LookupName:  "CreatedOn",
+					LookupValue: StartDateinLeadSquaredFormat,
+					SqlOperator: ">",
+				},
+				Paging: model.PagingObj{
+					PageIndex: index,
+					PageSize:  pageSize,
+				},
+				Columns: model.ColumnsObj{
+					IncludeCSV: columns,
+				},
+				Sorting: model.SortingObj{
+					ColumnName: "CreatedOn",
+					Direction:  "1",
+				},
+			}
+			headers := map[string]string{
+				"Content-Type": "application/json",
+			}
+			statusCode, responseHistSyncData, errorObj := L.HttpRequestWrapper(fmt.Sprintf("https://%s", host), histSyncEndpoint, headers, request, "POST", urlParams)
+			if statusCode != http.StatusOK || errorObj != nil {
+				return nil, true, errorObj.Error()
+			}
+			byteSliceHistSync, err := json.Marshal(responseHistSyncData)
+			if err != nil {
+				return nil, true, err.Error()
+			}
+			histSyncData := make([]interface{}, 0)
+			err = json.Unmarshal(byteSliceHistSync, &histSyncData)
+			if err != nil {
+				return nil, true, err.Error()
+			}
+			log.Info(fmt.Sprintf("ModifiedOn - Inserting %v rows with index %v no of records %v", pageSize, index, len(histSyncData)))
+			errorStatus, msg := insertBigQueryRow(datasetID, tableId, client, histSyncData, propertyMetadataList, ctx)
+			if errorStatus != false {
+				return nil, true, msg
+			}
+			index++
+			totalRecordCountCreatedOn = totalRecordCountCreatedOn + len(histSyncData)
+			if len(histSyncData) < pageSize {
+				break
+			}
 		}
 	}
 	resultStatus := make(map[string]interface{})
