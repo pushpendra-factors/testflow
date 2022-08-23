@@ -45,11 +45,11 @@ function AccountTimeline({
   return loading ? (
     <Spin size={'large'} className={'fa-page-loader'} />
   ) : timeline.length == 0 ? (
-    <div class='ant-empty ant-empty-normal'>
-      <div class='ant-empty-image'>
+    <div className='ant-empty ant-empty-normal'>
+      <div className='ant-empty-image'>
         <SVG name='nodata' />
       </div>
-      <div class='ant-empty-description'>No Associated Users</div>
+      <div className='ant-empty-description'>No Associated Users</div>
     </div>
   ) : (
     <div className='table-scroll'>

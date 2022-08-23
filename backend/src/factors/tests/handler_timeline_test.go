@@ -584,7 +584,7 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 		resp := make([]model.Profile, 0)
 		err := json.Unmarshal(jsonResponse, &resp)
 		assert.Nil(t, err)
-		assert.Equal(t, len(resp), 4)
+		assert.Equal(t, len(resp), 5)
 		assert.Condition(t, func() bool {
 			for index, user := range resp {
 				sort.Strings(companies)

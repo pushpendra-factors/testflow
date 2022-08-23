@@ -36,7 +36,7 @@ const PropertyFilter = ({
       } else props.group = groupProperties[source];
     } else if (profileType === 'user') props.user = userProperties;
     setFilterProperties(props);
-  }, [userProperties, groupProperties]);
+  }, [userProperties, groupProperties, source]);
 
   useEffect(() => {
     if (onFiltersLoad.length) {
