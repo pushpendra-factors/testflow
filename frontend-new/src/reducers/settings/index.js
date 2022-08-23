@@ -1,8 +1,9 @@
-import { CREATE_SMART_PROPERTY, FETCH_PROPERTY_CONFIG, FETCH_SMART_PROPERTIES, UPDATE_SMART_PROPERTY } from "./actions";
+import { CREATE_SMART_PROPERTY, FETCH_CLICKABLE_ELEMENTS, FETCH_PROPERTY_CONFIG, FETCH_SMART_PROPERTIES, TOGGLE_CLICKABLE_ELEMENT, UPDATE_SMART_PROPERTY } from "./actions";
 
 const defaultState = {
     smartProperties: [],
-    propertyConfig: {}
+    propertyConfig: {},
+    clickableElements: [],
 }
 
 export default function (state = defaultState, action) { 
@@ -24,6 +25,16 @@ export default function (state = defaultState, action) {
                 }
             })];
             return { ...state, propertyConfig: propsToUpdate}
+        case FETCH_CLICKABLE_ELEMENTS:
+            return { ...state, clickableElements: action.payload }
+        case TOGGLE_CLICKABLE_ELEMENT:
+            let nextState = { ...state };
+            for (let i=0; i < nextState.clickableElements.length; i++) {
+                if (nextState.clickableElements[i].id == action.payload.id) {
+                    nextState.clickableElements[i].enabled = action.payload.enabled;
+                }
+            }
+            return nextState;
         default:
             return state;
     }

@@ -2,13 +2,20 @@ package tests
 
 import (
 	"encoding/json"
+	"fmt"
+	"io/ioutil"
 	"net/http"
+	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 
+	C "factors/config"
 	H "factors/handler"
+	"factors/handler/helpers"
 	"factors/model/model"
 	"factors/model/store"
 	U "factors/util"
@@ -70,7 +77,7 @@ func TestSDKCaptureButtonClickAsEventHandler(t *testing.T) {
 	assert.NotNil(t, responseMap["message"])
 
 	// Check if button click created.
-	event, status := store.GetStore().GetClickableElementById(project.ID, payload.DisplayName, payload.ElementType)
+	event, status := store.GetStore().GetClickableElement(project.ID, payload.DisplayName, payload.ElementType)
 	assert.Equal(t, http.StatusFound, status)
 	assert.NotNil(t, event)
 
@@ -128,7 +135,7 @@ func TestSDKCaptureButtonClickAsEventHandler(t *testing.T) {
 	assert.NotNil(t, responseMap["message"])
 
 	// Check if button click updated.
-	event, status = store.GetStore().GetClickableElementById(project.ID, payload.DisplayName, payload.ElementType)
+	event, status = store.GetStore().GetClickableElement(project.ID, payload.DisplayName, payload.ElementType)
 	assert.Equal(t, http.StatusFound, status)
 	assert.NotNil(t, event)
 
@@ -158,7 +165,7 @@ func TestSDKCaptureButtonClickAsEventHandler(t *testing.T) {
 	assert.False(t, event.UpdatedAt.IsZero())
 
 	// Enable element for capturing.
-	status = store.GetStore().ToggleEnabledClickableElement(project.ID, event.DisplayName, event.ElementType)
+	status = store.GetStore().ToggleEnabledClickableElement(project.ID, event.Id)
 	assert.Equal(t, http.StatusAccepted, status)
 
 	// Test button click_capture after enabling. Track.
@@ -223,4 +230,143 @@ func TestSDKCaptureButtonClickAsEventHandler(t *testing.T) {
 	eventName, err := store.GetStore().GetEventNameFromEventNameId(clickEvent.EventNameId, project.ID)
 	assert.Nil(t, err)
 	assert.Equal(t, payload.DisplayName, eventName.Name)
+}
+
+func sendGetClickableElementsRequest(r *gin.Engine, projectId int64, agent *model.Agent) *httptest.ResponseRecorder {
+	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
+	if err != nil {
+		log.WithError(err).Error("Error creating cookie data.")
+	}
+
+	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, fmt.Sprintf("/projects/%d/clickable_elements", projectId)).
+		WithCookie(&http.Cookie{
+			Name:   C.GetFactorsCookieName(),
+			Value:  cookieData,
+			MaxAge: 1000,
+		})
+
+	req, err := rb.Build()
+	if err != nil {
+		log.WithError(err).Error("Error getting clickable elements.")
+		return nil
+	}
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	return w
+}
+
+func sendToggleClickableElementRequest(r *gin.Engine, projectId int64, id string, agent *model.Agent) *httptest.ResponseRecorder {
+	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
+	if err != nil {
+		log.WithError(err).Error("Error creating cookie data.")
+	}
+
+	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, fmt.Sprintf("/projects/%d/clickable_elements/%s/toggle", projectId, id)).
+		WithCookie(&http.Cookie{
+			Name:   C.GetFactorsCookieName(),
+			Value:  cookieData,
+			MaxAge: 1000,
+		})
+
+	req, err := rb.Build()
+	if err != nil {
+		log.WithError(err).Error("Failed to toggle the clickable element.")
+	}
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	return w
+}
+
+func TestClickableElementsSettingsUIHandlers(t *testing.T) {
+	// Initialize routes and dependent data.
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+	H.InitAppRoutes(r)
+	uri := "/sdk/capture_click"
+
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+	assert.NotNil(t, agent)
+
+	// Element 1
+	payload := &model.CaptureClickPayload{
+		DisplayName: "Submit-1",
+		ElementType: "BUTTON",
+		ElementAttributes: U.PropertiesMap{
+			"display_text": "Submit-1",
+			"element_type": "BUTTON",
+			"class":        "style-1",
+			"id":           "id1",
+			"rel":          "rel1",
+			"role":         "role1",
+			"target":       "target1",
+			"href":         "http://href1.com",
+			"media":        "media1",
+			"type":         "type1",
+			"name":         "name1",
+
+			"not_allowed": "not_allowed1",
+		},
+	}
+	payloadBytes, err := json.Marshal(payload)
+	assert.Nil(t, err)
+	w := ServePostRequestWithHeaders(r, uri, payloadBytes, map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusCreated, w.Code)
+
+	// Element 2
+	payload1 := &model.CaptureClickPayload{
+		DisplayName: "Submit-2",
+		ElementType: "BUTTON",
+		ElementAttributes: U.PropertiesMap{
+			"display_text": "Submit-2",
+			"element_type": "BUTTON",
+			"class":        "style-1",
+			"id":           "id1",
+			"rel":          "rel1",
+			"role":         "role1",
+			"target":       "target1",
+			"href":         "http://href1.com",
+			"media":        "media1",
+			"type":         "type1",
+			"name":         "name1",
+
+			"not_allowed": "not_allowed1",
+		},
+	}
+	payloadBytes, err = json.Marshal(payload1)
+	assert.Nil(t, err)
+	w = ServePostRequestWithHeaders(r, uri, payloadBytes, map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusCreated, w.Code)
+
+	// Send get clickable elements API request.
+	w = sendGetClickableElementsRequest(r, project.ID, agent)
+	assert.Equal(t, http.StatusFound, w.Code)
+	var elements []model.ClickableElements
+	jsonResponse, _ := ioutil.ReadAll(w.Body)
+	err = json.Unmarshal(jsonResponse, &elements)
+	assert.Nil(t, err)
+	assert.Len(t, elements, 2)
+
+	// Send toggle clickable elements API request for enabling.
+	assert.False(t, elements[0].Enabled)
+	assert.False(t, elements[1].Enabled)
+
+	w = sendToggleClickableElementRequest(r, project.ID, elements[0].Id, agent)
+	assert.Equal(t, http.StatusAccepted, w.Code)
+	w = sendToggleClickableElementRequest(r, project.ID, elements[1].Id, agent)
+	assert.Equal(t, http.StatusAccepted, w.Code)
+
+	w = sendGetClickableElementsRequest(r, project.ID, agent)
+	assert.Equal(t, http.StatusFound, w.Code)
+	var elements1 []model.ClickableElements
+	jsonResponse1, _ := ioutil.ReadAll(w.Body)
+	err = json.Unmarshal(jsonResponse1, &elements1)
+	assert.Nil(t, err)
+	assert.Len(t, elements1, 2)
+
+	assert.True(t, elements1[0].Enabled)
+	assert.True(t, elements1[1].Enabled)
 }
