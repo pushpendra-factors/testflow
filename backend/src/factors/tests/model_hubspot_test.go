@@ -554,6 +554,7 @@ func TestHubspotContactFormSubmission(t *testing.T) {
 	assert.Equal(t, urlParameters["utm_medium"], propertyValues["utm_medium"])
 	assert.Equal(t, (float64)(1647393874), propertyValues["$hubspot_form_submission_timestamp"])
 	assert.Equal(t, " Webinar 20th Jan 2021", propertyValues["$hubspot_form_submission_title"])
+	assert.Equal(t, "https://www.adb.com/ad/portal/500811370/leadgen/view/5371576", propertyValues["$hubspot_form_submission_page-url-no-qp"])
 
 	propertyValues = make(map[string]interface{})
 	err = json.Unmarshal(events[0].Properties.RawMessage, &propertyValues)
@@ -563,13 +564,14 @@ func TestHubspotContactFormSubmission(t *testing.T) {
 	assert.Equal(t, "k61337ec-9102-441d-a7af-cf9eaa2d0774", propertyValues["$hubspot_form_submission_form-id"])
 	assert.Equal(t, "FACEBOOK_LEAD_AD", propertyValues["$hubspot_form_submission_form-type"])
 	assert.Equal(t, "LinkedIn Lead Generation Ad", propertyValues["$hubspot_form_submission_page-title"])
-	pageURL = "https://www.adb.com/ad/portal/500811370/leadgen/view/5371576?hsa_acc=500811370&hsa_cam=619271286&hsa_grp=175608976&hsa_ad=157523466&hsa_src=&utm_campaign=US%257CTravel%2526HospitalityWebinar%257C20thJan2021%257CInmail%257COpen&hsa_la=true&hsa_ol=false&hsa_net=linkedin&hsa_ver=3&utm_source=linkedin&utm_medium=paid"
+	pageURL = "https://www.abc.com/ad/portal/500811370/leadgen/view/5371576?hsa_acc=500811370&hsa_cam=619271286&hsa_grp=175608976&hsa_ad=157523466&hsa_src=&utm_campaign=US%257CTravel%2526HospitalityWebinar%257C20thJan2021%257CInmail%257COpen&hsa_la=true&hsa_ol=false&hsa_net=linkedin&hsa_ver=3&utm_source=linkedin&utm_medium=paid"
 	urlParameters = IntHubspot.GetURLParameterAsMap(pageURL)
 	assert.Equal(t, urlParameters["utm_source"], propertyValues["utm_source"])
 	assert.Equal(t, urlParameters["utm_medium"], propertyValues["utm_medium"])
 	assert.Equal(t, (float64)(2361873), propertyValues["$hubspot_form_submission_portal-id"])
 	assert.Equal(t, (float64)(1647393874), propertyValues["$hubspot_form_submission_timestamp"])
 	assert.Equal(t, " Webinar 20th Jan 2021", propertyValues["$hubspot_form_submission_title"])
+	assert.Equal(t, "https://www.abc.com/ad/portal/500811370/leadgen/view/5371576", propertyValues["$hubspot_form_submission_page-url-no-qp"])
 
 	decodedString := IntHubspot.GetDecodedValue("Danny%2520%2526%2520Co", 2)
 	assert.Equal(t, "Danny & Co", decodedString)
