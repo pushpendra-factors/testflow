@@ -100,12 +100,7 @@ const JSConfig = ({ currentProjectSettings, activeProject, udpateProjectSettings
   useEffect(() => {
     setEnableEdit(false);
     agents && currentAgent && agents.map((agent) => {
-      console.log(agent,currentAgent);
-      if (agent.uuid === currentAgent.uuid) {
-        if (agent.role === 1) {
-          setEnableEdit(true);
-        }
-      }
+      if (agent.uuid === currentAgent.uuid && agent.role === 1) setEnableEdit(true);
     }); 
   }, [activeProject, agents, currentAgent]);
 
@@ -185,7 +180,7 @@ const JSConfig = ({ currentProjectSettings, activeProject, udpateProjectSettings
     </Col>
     <Col span={24}>
       <div span={24} className={'flex flex-start items-center mt-8'}>
-        <span style={{ width: '50px' }}><Switch checkedChildren="On" unCheckedChildren="OFF" onChange={toggleClickCapture} defaultChecked={currentProjectSettings.auto_click_capture} /></span> <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-2'}>Auto Click Capture</Text>
+        <span style={{ width: '50px' }}><Switch checkedChildren="On" disabled={enableEdit} unCheckedChildren="OFF" onChange={toggleClickCapture} defaultChecked={currentProjectSettings.auto_click_capture} /></span> <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-2'}>Auto Click Capture</Text>
       </div>
     </Col>
     <Col span={24} className={'flex flex-start items-center'}>
@@ -197,11 +192,20 @@ const JSConfig = ({ currentProjectSettings, activeProject, udpateProjectSettings
 
 const ClickTrackConfiguration = ({ 
   activeProject, 
-  currentProjectSettings, 
-  fetchClickableElements, 
+  agents,
+  currentAgent,
   clickableElements, 
-  toggleClickableElement 
+  toggleClickableElement,
 }) => {
+
+  const [enableEdit, setEnableEdit] = useState(false);
+
+  useEffect(() => {
+    setEnableEdit(false);
+    agents && currentAgent && agents.map((agent) => {
+      if (agent.uuid === currentAgent.uuid && agent.role === 1) setEnableEdit(true);
+    });
+  }, [activeProject, agents, currentAgent]);
 
   var columns = [
     {
@@ -220,7 +224,7 @@ const ClickTrackConfiguration = ({
       dataIndex: 'tracking',
       key: 'tracking',
       render: (p) => (
-        <Switch checkedChildren="On" unCheckedChildren="OFF" defaultChecked={p.enabled} onChange={p.toggler}/>
+        <Switch checkedChildren="On" unCheckedChildren="OFF" disabled={enableEdit} defaultChecked={p.enabled} onChange={p.toggler}/>
       ),
       align: 'right',
     }
@@ -240,7 +244,10 @@ const ClickTrackConfiguration = ({
   }
 
   return (
-      <Row className={'mt-8'}>
+      <Row className={'mt-1'}>
+        <Col span={24} className={'mb-4'}>
+        <Text type={'title'} level={7}  color={'grey'}>*Only Admin(s) can change configurations.</Text>
+        </Col>
         <Col span={24}>
           <Table
             className={'fa-table--basic'}
@@ -308,7 +315,9 @@ function JavascriptSDK({
     <TabPane tab="Click Tracking Configuration" key="4">
       <ClickTrackConfiguration 
         activeProject={activeProject} 
-        currentProjectSettings={currentProjectSettings} 
+        agents={agents}
+        currentAgent={currentAgent}
+        currentProjectSettings={currentProjectSettings}
         clickableElements={clickableElements}
         toggleClickableElement={toggleClickableElement}
       />
@@ -348,7 +357,7 @@ const mapStateToProps = (state) => {
   return {
     currentProjectSettings: state.global.currentProjectSettings,
     activeProject: state.global.active_project,
-    agents: state.agent.agents, 
+    agents: state.agent.agents,
     currentAgent: state.agent.agent_details,
     clickableElements: state.settings.clickableElements,
   };
