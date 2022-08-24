@@ -1550,7 +1550,7 @@ func (store *MemSQL) CacheWebsiteAnalyticsForDateRange(cachePayload model.WebAna
 		QueryRange:  U.SecondsToHMSString(to - from),
 	}
 
-	if !model.ShouldRefreshDashboardUnit(projectID, dashboardID, 0, from, to, timezoneString, true) {
+	if !model.ShouldRefreshDashboardUnit(projectID, dashboardID, 0, from, to, "", timezoneString, true) {
 		return http.StatusOK, unitReport
 	}
 

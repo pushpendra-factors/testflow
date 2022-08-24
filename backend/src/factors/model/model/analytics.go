@@ -647,10 +647,10 @@ type QueryResult struct {
 	Rows    [][]interface{} `json:"rows"`
 	// Todo(Dinesh): Use Generic query result
 	// for meta as interface{}.
-	Meta  QueryResultMeta `json:"meta"`
-	Query interface{}     `json:"query"`
+	Meta      QueryResultMeta `json:"meta"`
+	Query     interface{}     `json:"query"`
+	CacheMeta interface{}     `json:"cache_meta"`
 }
-
 type ResultGroup struct {
 	Results     []QueryResult `json:"result_group"`
 	Query       interface{}   `json:"query"`
@@ -663,6 +663,7 @@ type QueryCacheResult struct {
 	Result      interface{}
 	RefreshedAt int64
 	TimeZone    string
+	CacheMeta   interface{} `json:"cache_meta"`
 }
 
 // GenericQueryResult - Common query result
@@ -782,6 +783,15 @@ func SetQueryCachePlaceholder(projectID int64, query BaseQuery) {
 	}
 
 	cacheRedis.SetPersistent(cacheKey, QueryCacheInProgressPlaceholder, QueryCachePlaceholderExpirySeconds)
+}
+
+type CacheMeta struct {
+	From           int64  `json:"from"`
+	To             int64  `json:"to"`
+	RefreshedAt    int64  `json:"refreshed_at"`
+	Preset         string `json:"preset"`
+	LastComputedAt int64  `json:"last_computed_at"`
+	Timezone       string `json:"timezone"`
 }
 
 // SetQueryCacheResult Sets the query cache result key in redis.

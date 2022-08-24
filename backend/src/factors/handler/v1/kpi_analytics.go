@@ -213,8 +213,8 @@ func ExecuteKPIQueryHandler(c *gin.Context) (interface{}, int, string, string, b
 		U.DecodePostgresJsonbToStructType(&query.Query, &request)
 	}
 
-	dashboardId, unitId, commonQueryFrom, commonQueryTo, hardRefresh, isDashboardQueryRequest, _, err := getDashboardRelatedInformationFromRequest(request,
-		c.Query("dashboard_id"), c.Query("dashboard_unit_id"), c.Query("refresh"), c.Query("is_query"))
+	dashboardId, unitId, preset, commonQueryFrom, commonQueryTo, hardRefresh, isDashboardQueryRequest, _, err := getDashboardRelatedInformationFromRequest(request, projectID,
+		c.Query("dashboard_id"), c.Query("dashboard_unit_id"), c.Query("preset"), c.Query("refresh"), c.Query("is_query"))
 	if err != nil {
 		return nil, http.StatusBadRequest, INVALID_INPUT, err.Error(), true
 	}
@@ -240,10 +240,11 @@ func ExecuteKPIQueryHandler(c *gin.Context) (interface{}, int, string, string, b
 	if err != nil {
 		return nil, http.StatusBadRequest, INVALID_INPUT, err.Error(), true
 	}
-
-	data, statusCode, errorCode, errMsg, isErr := GetResultFromCacheOrDashboard(c, reqID, projectID, request, dashboardId, unitId, commonQueryFrom, commonQueryTo, hardRefresh, timezoneString, isDashboardQueryRequest, logCtx, false)
-	if statusCode != http.StatusProcessing {
-		return data, statusCode, errorCode, errMsg, isErr
+	if !hardRefresh {
+		data, statusCode, errorCode, errMsg, isErr := GetResultFromCacheOrDashboard(c, reqID, projectID, request, dashboardId, unitId, preset, commonQueryFrom, commonQueryTo, hardRefresh, timezoneString, isDashboardQueryRequest, logCtx, false)
+		if statusCode != http.StatusProcessing {
+			return data, statusCode, errorCode, errMsg, isErr
+		}
 	}
 
 	/*if isDashboardQueryRequest && C.DisableDashboardQueryDBExecution() && !isQuery {
@@ -273,12 +274,30 @@ func ExecuteKPIQueryHandler(c *gin.Context) (interface{}, int, string, string, b
 		}
 		return nil, statusCode, PROCESSING_FAILED, "Failed to process query from DB", true
 	}
+	meta := model.CacheMeta{
+		Timezone:       string(timezoneString),
+		From:           commonQueryFrom,
+		To:             commonQueryTo,
+		RefreshedAt:    U.TimeNowIn(U.TimeZoneStringIST).Unix(),
+		LastComputedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(),
+		Preset:         preset,
+	}
+	for i, _ := range queryResult {
+		queryResult[i].CacheMeta = meta
+	}
+
 	model.SetQueryCacheResult(projectID, &request, queryResult)
 
 	// if it is a dashboard query, cache it
 	if isDashboardQueryRequest {
-		model.SetCacheResultByDashboardIdAndUnitId(queryResult, projectID, dashboardId, unitId, commonQueryFrom, commonQueryTo, request.GetTimeZone())
-		return H.DashboardQueryResponsePayload{Result: queryResult, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix()}, http.StatusOK, "", "", false
+		if C.IsLastComputedWhitelisted(projectID) {
+			model.SetCacheResultByDashboardIdAndUnitIdWithPreset(queryResult, projectID, dashboardId, unitId, preset,
+				commonQueryFrom, commonQueryTo, timezoneString, meta)
+		} else {
+			model.SetCacheResultByDashboardIdAndUnitId(queryResult, projectID, dashboardId, unitId,
+				commonQueryFrom, commonQueryTo, timezoneString, meta)
+		}
+		return H.DashboardQueryResponsePayload{Result: queryResult, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(), CacheMeta: meta}, http.StatusOK, "", "", false
 	}
 	isQueryShareable := isQueryShareable(request)
 	return gin.H{"result": queryResult, "query": request, "sharable": isQueryShareable}, http.StatusOK, "", "", false
@@ -292,14 +311,20 @@ func isQueryShareable(request model.KPIQueryGroup) bool {
 	return false
 }
 
-func getDashboardRelatedInformationFromRequest(request model.KPIQueryGroup, dashboardIdParam, unitIdParam, refreshParam, isQueryParam string) (int64, int64, int64, int64, bool, bool, bool, error) {
+func getDashboardRelatedInformationFromRequest(request model.KPIQueryGroup, projectID int64, dashboardIdParam, unitIdParam, presetParam, refreshParam, isQueryParam string) (int64, int64, string, int64, int64, bool, bool, bool, error) {
 	var dashboardId int64
 	var unitId int64
 	var err error
 	hardRefresh := false
+	preset := ""
 
 	commonQueryFrom := request.Queries[0].From
 	commonQueryTo := request.Queries[0].To
+	timeZoneString := request.Queries[0].Timezone
+	if U.PresetLookup[presetParam] != "" && C.IsLastComputedWhitelisted(projectID) {
+		preset = presetParam
+	}
+
 	if refreshParam != "" {
 		hardRefresh, _ = strconv.ParseBool(refreshParam)
 	}
@@ -310,7 +335,10 @@ func getDashboardRelatedInformationFromRequest(request model.KPIQueryGroup, dash
 
 	isDashboardQueryRequest := dashboardIdParam != "" && unitIdParam != ""
 	if !isDashboardQueryRequest {
-		return dashboardId, unitId, commonQueryFrom, commonQueryTo, hardRefresh, isDashboardQueryRequest, isQuery, err
+		return dashboardId, unitId, preset, commonQueryFrom, commonQueryTo, hardRefresh, isDashboardQueryRequest, isQuery, err
+	}
+	if preset == "" {
+		preset = U.GetPresetNameByFromAndTo(commonQueryFrom, commonQueryTo, U.TimeZoneString(timeZoneString))
 	}
 	dashboardId, err = strconv.ParseInt(dashboardIdParam, 10, 64)
 	unitId, err = strconv.ParseInt(unitIdParam, 10, 64)
@@ -320,21 +348,31 @@ func getDashboardRelatedInformationFromRequest(request model.KPIQueryGroup, dash
 	if err != nil || unitId == 0 {
 		err = errors.New("Query failed. Invalid DashboardUnitID.")
 	}
-	return dashboardId, unitId, commonQueryFrom, commonQueryTo, hardRefresh, isDashboardQueryRequest, isQuery, err
+	return dashboardId, unitId, preset, commonQueryFrom, commonQueryTo, hardRefresh, isDashboardQueryRequest, isQuery, err
 }
 
 func GetResultFromCacheOrDashboard(c *gin.Context, reqID string, projectID int64, request model.KPIQueryGroup,
-	dashboardId int64, unitId int64, commonQueryFrom int64, commonQueryTo int64, hardRefresh bool,
+	dashboardId int64, unitId int64, preset string, commonQueryFrom int64, commonQueryTo int64, hardRefresh bool,
 	timezoneString U.TimeZoneString, isDashboardQueryRequest bool, logCtx *log.Entry, skipContextVerfication bool) (interface{}, int, string, string, bool) {
 
 	// Tracking dashboard query request.
 	if isDashboardQueryRequest {
+		if preset == "" && C.IsLastComputedWhitelisted(projectID) {
+			preset = U.GetPresetNameByFromAndTo(commonQueryFrom, commonQueryTo, timezoneString)
+		}
 		model.SetDashboardCacheAnalytics(projectID, dashboardId, unitId, commonQueryFrom, commonQueryTo, timezoneString)
 	}
 
 	// If refresh is passed, refresh only is Query.From is of todays beginning.
 	if isDashboardQueryRequest && !H.ShouldAllowHardRefresh(commonQueryFrom, commonQueryTo, request.GetTimeZone(), hardRefresh) {
-		shouldReturn, resCode, resMsg := H.GetResponseIfCachedDashboardQuery(reqID, projectID, dashboardId, unitId, commonQueryFrom, commonQueryTo, timezoneString)
+		var shouldReturn bool
+		var resCode int
+		var resMsg interface{}
+		if C.IsLastComputedWhitelisted(projectID) {
+			shouldReturn, resCode, resMsg = H.GetResponseIfCachedDashboardQueryWithPreset(reqID, projectID, dashboardId, unitId, preset, commonQueryFrom, commonQueryTo, timezoneString)
+		} else {
+			shouldReturn, resCode, resMsg = H.GetResponseIfCachedDashboardQuery(reqID, projectID, dashboardId, unitId, commonQueryFrom, commonQueryTo, timezoneString)
+		}
 		if shouldReturn {
 			if resCode == http.StatusOK {
 				return resMsg, resCode, "", "", false

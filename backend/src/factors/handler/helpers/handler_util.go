@@ -10,7 +10,6 @@ import (
 
 	C "factors/config"
 	U "factors/util"
-
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 )
@@ -24,11 +23,12 @@ type DashboardQueryResponsePayload struct {
 	Cache       bool        `json:"cache"`
 	RefreshedAt int64       `json:"refreshed_at"`
 	TimeZone    string      `json:"timezone"`
+	CacheMeta   interface{} `json:"cache_meta"`
 }
 
 func getQueryCacheResponse(c *gin.Context, cacheResult model.QueryCacheResult, forDashboard bool, skipContextVerfication bool) (bool, int, interface{}) {
 	if forDashboard {
-		return true, http.StatusOK, DashboardQueryResponsePayload{Result: cacheResult.Result, Cache: true, RefreshedAt: cacheResult.RefreshedAt, TimeZone: cacheResult.TimeZone}
+		return true, http.StatusOK, DashboardQueryResponsePayload{Result: cacheResult.Result, Cache: true, RefreshedAt: cacheResult.RefreshedAt, TimeZone: cacheResult.TimeZone, CacheMeta: cacheResult.CacheMeta}
 	}
 	// To Indicate if the result is served from cache without changing the response format.
 	if !skipContextVerfication {
@@ -109,7 +109,15 @@ func GetResponseIfCachedQuery(c *gin.Context, projectID int64, requestPayload mo
 func GetResponseIfCachedDashboardQuery(reqId string, projectID int64, dashboardID, unitID int64, from, to int64, timezoneString U.TimeZoneString) (bool, int, interface{}) {
 	cacheResult, errCode, err := model.GetCacheResultByDashboardIdAndUnitId(reqId, projectID, dashboardID, unitID, from, to, timezoneString)
 	if errCode == http.StatusFound && cacheResult != nil {
-		return true, http.StatusOK, DashboardQueryResponsePayload{Result: cacheResult.Result, Cache: true, RefreshedAt: cacheResult.RefreshedAt, TimeZone: string(timezoneString)}
+		return true, http.StatusOK, DashboardQueryResponsePayload{Result: cacheResult.Result, Cache: true, RefreshedAt: cacheResult.RefreshedAt, TimeZone: string(timezoneString), CacheMeta: cacheResult.CacheMeta}
+	}
+	return false, errCode, err
+}
+
+func GetResponseIfCachedDashboardQueryWithPreset(reqId string, projectID int64, dashboardID, unitID int64, preset string, from, to int64, timezoneString U.TimeZoneString) (bool, int, interface{}) {
+	cacheResult, errCode, err := model.GetCacheResultByDashboardIdAndUnitIdWithPreset(reqId, projectID, dashboardID, unitID, preset, from, to, timezoneString)
+	if errCode == http.StatusFound && cacheResult != nil {
+		return true, http.StatusOK, DashboardQueryResponsePayload{Result: cacheResult.Result, Cache: true, RefreshedAt: cacheResult.RefreshedAt, TimeZone: string(timezoneString), CacheMeta: cacheResult.CacheMeta}
 	}
 	return false, errCode, err
 }
