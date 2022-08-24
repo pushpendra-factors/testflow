@@ -23,11 +23,11 @@ func TestCustomMetricsPostHandler(t *testing.T) {
 	r := gin.Default()
 	H.InitAppRoutes(r)
 
-	project, agent, _ := SetupProjectWithAgentDAO()
-	assert.NotNil(t, project)
-
 	name1 := U.RandomString(8)
 	description1 := U.RandomString(8)
+
+	project, agent, _ := SetupProjectWithAgentDAO()
+	assert.NotNil(t, project)
 	t.Run("CreateCustomMetricsSuccess", func(t *testing.T) {
 		transformations := &postgres.Jsonb{json.RawMessage(`{"agFn": "sum", "agPr": "$hubspot_amount", "agPrTy": "categorical", "fil": [], "daFie": "$hubspot_datefield1"}`)}
 		w := sendCreateCustomMetric(r, project.ID, agent, transformations, name1, description1, "hubspot_contacts")
@@ -52,6 +52,24 @@ func TestCustomMetricsPostHandler(t *testing.T) {
 		// assert.Equal(t, innerErrorResult["display_name"].(string), "Duplicate record insertion in db")
 	})
 
+	project, agent, _ = SetupProjectWithAgentDAO()
+	assert.NotNil(t, project)
+	t.Run("CreateCustomMetricsSuccess", func(t *testing.T) {
+		transformations := &postgres.Jsonb{json.RawMessage(`{"agFn": "sum", "agPr": "$salesforce_id", "agPrTy": "categorical", "fil": [], "daFie": "$salesforce_datefield1"}`)}
+		w := sendCreateCustomMetric(r, project.ID, agent, transformations, name1, description1, "salesforce_opportunities")
+		assert.Equal(t, http.StatusOK, w.Code)
+		var result model.CustomMetric
+		decoder := json.NewDecoder(w.Body)
+		if err := decoder.Decode(&result); err != nil {
+			assert.NotNil(t, nil, err)
+		}
+	})
+
+	t.Run("CreateCustomMetricsFailure", func(t *testing.T) {
+		transformations := &postgres.Jsonb{json.RawMessage(`{"agFn": "sum", "agPr": "$salesforce_id", "agPrTy": "categorical", "fil": [], "daFie": "$salesforce_datefield1"}`)}
+		w := sendCreateCustomMetric(r, project.ID, agent, transformations, name1, description1, "salesforce_accounts")
+		assert.Equal(t, http.StatusConflict, w.Code)
+	})
 }
 
 func TestCustomMetricsGetHandler(t *testing.T) {
@@ -64,7 +82,7 @@ func TestCustomMetricsGetHandler(t *testing.T) {
 	name1 := U.RandomString(8)
 	description1 := U.RandomString(8)
 	t.Run("GetCustomMetricsSuccess", func(t *testing.T) {
-		transformations := &postgres.Jsonb{json.RawMessage(`{"agFn": "SUM", "agPr": "$hubspot_amount", "agPrTy": "categorical", "fil": [], "daFie": "$hubspot_datefield1"}`)}
+		transformations := &postgres.Jsonb{json.RawMessage(`{"agFn": "sum", "agPr": "$hubspot_amount", "agPrTy": "categorical", "fil": [], "daFie": "$hubspot_datefield1"}`)}
 		w := sendCreateCustomMetric(r, project.ID, agent, transformations, name1, description1, "hubspot_contacts")
 		assert.Equal(t, http.StatusOK, w.Code)
 		w1 := sendGetCustomMetrics(r, project.ID, agent)
@@ -76,7 +94,23 @@ func TestCustomMetricsGetHandler(t *testing.T) {
 		}
 		assert.Equal(t, http.StatusOK, w1.Code)
 		assert.Equal(t, len(result), 1)
+	})
 
+	project, agent, _ = SetupProjectWithAgentDAO()
+	assert.NotNil(t, project)
+	t.Run("GetCustomMetricsSuccess", func(t *testing.T) {
+		transformations := &postgres.Jsonb{json.RawMessage(`{"agFn": "sum", "agPr": "$salesforce_id", "agPrTy": "categorical", "fil": [], "daFie": "$salesforce_datefield1"}`)}
+		w := sendCreateCustomMetric(r, project.ID, agent, transformations, name1, description1, "salesforce_accounts")
+		assert.Equal(t, http.StatusOK, w.Code)
+		w1 := sendGetCustomMetrics(r, project.ID, agent)
+		assert.Equal(t, http.StatusOK, w1.Code)
+		var result []model.CustomMetric
+		decoder := json.NewDecoder(w1.Body)
+		if err := decoder.Decode(&result); err != nil {
+			assert.NotNil(t, nil, err)
+		}
+		assert.Equal(t, http.StatusOK, w1.Code)
+		assert.Equal(t, len(result), 1)
 	})
 }
 

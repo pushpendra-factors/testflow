@@ -63,12 +63,12 @@ const FaSelect = ({
     let isSelected = false;
     if (!options.length) {
       rendOpts.push(
-          <div className='flex justify-center items-center my-2'>
-            <Spin size='small'/>
-            <Text level={7} type={'title'} extraClass={'ml-2'} weight={'thin'} color={'grey'}>
-                Loading data...
-            </Text>
-          </div>
+        <div className='flex justify-center items-center my-2'>
+          <Spin size='small' />
+          <Text level={7} type={'title'} extraClass={'ml-2'} weight={'thin'} color={'grey'}>
+            Loading data...
+          </Text>
+        </div>
       );
     }
 
@@ -77,11 +77,10 @@ const FaSelect = ({
       rendOpts.push(
         <div
           key={'custom_value'}
-          className={`${
-            allowSearch
+          className={`${allowSearch
               ? 'fa-select-group-select--options'
               : 'fa-select--options'
-          } ${isSelectedCheck([searchTerm]) ? styles.fa_selected : null}`}
+            } ${isSelectedCheck([searchTerm]) ? styles.fa_selected : null}`}
           onClick={() =>
             optClick(() => optionClick([searchTerm]), [searchTerm])
           }
@@ -108,11 +107,10 @@ const FaSelect = ({
             <div
               key={index}
               title={DISPLAY_PROP[op[0]] ? DISPLAY_PROP[op[0]] : op[0]}
-              className={`${
-                allowSearch
+              className={`${allowSearch
                   ? 'fa-select-group-select--options'
                   : 'fa-select--options'
-              } ${isSelected ? styles.fa_selected : null}`}
+                } ${isSelected ? styles.fa_selected : null}`}
               onClick={() => optClick(() => optionClick(op), op)}
             >
               {op[1] && showIcon && !multiSelect ? (
@@ -140,11 +138,10 @@ const FaSelect = ({
           <div
             key={index}
             title={DISPLAY_PROP[op[0]] ? DISPLAY_PROP[op[0]] : op[0]}
-            className={`${
-              allowSearch
+            className={`${allowSearch
                 ? 'fa-select-group-select--options'
                 : 'fa-select--options'
-            } ${isSelected ? styles.fa_selected : null}`}
+              } ${isSelected ? styles.fa_selected : null}`}
             onClick={() => optClick(() => optionClick(op), op)}
           >
             {op[1] && showIcon && !multiSelect ? (
@@ -170,11 +167,10 @@ const FaSelect = ({
       rendOpts.push(
         <div
           key={'del_opt'}
-          className={`${
-            allowSearch
+          className={`${allowSearch
               ? 'fa-select-group-select--options'
               : 'fa-select--options'
-          } ${styles.dropdown__del_opt}`}
+            } ${styles.dropdown__del_opt}`}
           onClick={delOptionClick}
         >
           <SVG name={'remove'} extraClass={'self-center'}></SVG>
@@ -188,11 +184,10 @@ const FaSelect = ({
         rendOpts.push(
           <div
             key={'empty_opt'}
-            className={`${
-              allowSearch
+            className={`${allowSearch
                 ? 'fa-select-group-select--options'
                 : 'fa-select--options'
-            } ${styles.dropdown__empty_opt}`}
+              } ${styles.dropdown__empty_opt}`}
           ></div>
         );
       }
@@ -231,15 +226,12 @@ const FaSelect = ({
   return (
     <>
       <div
-        className={`${extraClass} ${
-          posRight ? styles.dropdown__select_rt : styles.dropdown__select_lt
-        } fa-select ${
-          posRight ? `fa-select--group-select-sm` : `fa-select--group-select`
-        } ${
-          allowSearch
+        className={`${extraClass} ${posRight ? styles.dropdown__select_rt : styles.dropdown__select_lt
+          } fa-select ${posRight ? `fa-select--group-select-sm` : `fa-select--group-select`
+          } ${allowSearch
             ? `fa-select--group-select-sm`
             : `fa-select--group-select-mini`
-        }`}
+          }`}
       >
         {allowSearch && renderSearchInput()}
         <div

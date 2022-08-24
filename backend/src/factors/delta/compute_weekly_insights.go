@@ -756,7 +756,7 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 	return insights
 }
 
-func GetWeeklyInsights(projectId int64, agentUUID string, queryId int64, baseStartTime *time.Time, compStartTime *time.Time, insightsType string, numberOfRecords int) (interface{}, error) {
+func GetWeeklyInsights(projectId int64, agentUUID string, queryId int64, baseStartTime *time.Time, compStartTime *time.Time, insightsType string, numberOfRecords int, kpiIndex int) (interface{}, error) {
 	k := make(map[int64]int)
 	k[399] = 100
 	k[594] = 100
@@ -837,8 +837,8 @@ func GetWeeklyInsights(projectId int64, agentUUID string, queryId int64, baseSta
 	var insightsKpi CrossPeriodInsightsKpi
 	if class == model.QueryClassKPI {
 		err = json.Unmarshal(data, &insightsKpiList)
-		if len(insightsKpiList) > 0 {
-			insightsKpi = insightsKpiList[0]
+		if len(insightsKpiList) >= kpiIndex {
+			insightsKpi = insightsKpiList[kpiIndex-1]
 		}
 	} else {
 		err = json.Unmarshal(data, &insights)

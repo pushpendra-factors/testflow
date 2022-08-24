@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import cx from 'classnames';
 import { METRIC_TYPES } from '../../utils/constants';
 import SparkChart from '../SparkLineChart/Chart';
-import ChartHeader from '../SparkLineChart/ChartHeader';
+import ChartHeader from './ChartHeader';
 
 const SparkChartWithCount = ({
   total,
@@ -11,10 +11,10 @@ const SparkChartWithCount = ({
   event,
   metricType,
   chartColor,
-  eventNames,
   comparisonEnabled,
   smallFont,
   alignment,
+  headerTitle,
   ...rest
 }) => {
   return (
@@ -31,13 +31,12 @@ const SparkChartWithCount = ({
       >
         <ChartHeader
           bgColor={chartColor}
-          query={event}
           total={total}
           metricType={metricType}
-          eventNames={eventNames}
           compareTotal={compareTotal}
           comparisonEnabled={comparisonEnabled}
           smallFont={smallFont}
+          headerTitle={headerTitle}
         />
       </div>
       <div
@@ -63,8 +62,8 @@ export default SparkChartWithCount;
 SparkChartWithCount.propTypes = {
   total: PropTypes.number,
   compareTotal: PropTypes.number,
-  eventNames: PropTypes.object,
   title: PropTypes.string,
+  headerTitle: PropTypes.string,
   chartColor: PropTypes.string,
   event: PropTypes.string,
   frequency: PropTypes.string,
@@ -87,7 +86,7 @@ SparkChartWithCount.propTypes = {
 SparkChartWithCount.defaultProps = {
   total: 0,
   compareTotal: 0,
-  eventNames: {},
+  headerTitle: '',
   title: 'Chart',
   chartColor: '#4D7DB4',
   event: 'event',

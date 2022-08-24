@@ -21,3 +21,12 @@ export const modifySmartProperty = (dispatch, projectId, smartProperty) => {
 export const removeSmartProperty = (dispatch, projectId, id) => {
   return del(dispatch, host + "projects/" + projectId + "/v1/smart_properties/rules/" + id);
 }
+
+export const getClickableElements = (dispatch, projectId) => {
+  return get(dispatch, host + "projects/" + projectId + "/clickable_elements", {});
+}
+
+export const enableOrDisableClickableElement = (dispatch, projectId, id) => {
+  return get(dispatch, host + "projects/" + projectId + "/clickable_elements/"+ id +"/toggle", {});
+}
+

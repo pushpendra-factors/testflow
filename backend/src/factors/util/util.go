@@ -86,6 +86,15 @@ var QueryDateRangePresets = map[string]func(TimeZoneString) (int64, int64, error
 	DateRangePresetToday:        GetQueryRangePresetTodayIn,
 }
 
+var PresetLookup = map[string]string{
+	"LAST_MONTH":    DateRangePresetLastMonth,
+	"LAST_WEEK":     DateRangePresetLastWeek,
+	"CURRENT_MONTH": DateRangePresetCurrentMonth,
+	"CURRENT_WEEK":  DateRangePresetCurrentWeek,
+	"YESTERDAY":     DateRangePresetYesterday,
+	"TODAY":         DateRangePresetToday,
+}
+
 // WebAnalyticsQueryDateRangePresets Date range presets for website analytics.
 var WebAnalyticsQueryDateRangePresets = map[string]func(TimeZoneString) (int64, int64, error){
 	DateRangePresetLastMonth:    GetQueryRangePresetLastMonthIn,

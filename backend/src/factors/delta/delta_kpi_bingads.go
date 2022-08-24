@@ -43,7 +43,8 @@ func getBingadsFilterPropertyReportName(propName string, objectType string) (str
 	if _, ok := bingadsConstantInfo[objectType]; !ok {
 		return "", fmt.Errorf("unknown object type: %s", objectType)
 	}
-	if name, ok := M.BingAdsInternalRepresentationToExternalRepresentationForReports[fmt.Sprintf("%s.%s", bingadsConstantInfo[objectType], propNameTrimmed)]; ok {
+	objectTypeTmp := bingadsConstantInfo[objectType] + "s"
+	if name, ok := M.BingAdsInternalRepresentationToExternalRepresentationForReports[fmt.Sprintf("%s.%s", objectTypeTmp, propNameTrimmed)]; ok {
 		return name, nil
 	}
 	return "", fmt.Errorf("filter property report name not found for %s", propName)
@@ -61,7 +62,7 @@ func getBingadsPropertyFilterName(prop string) (string, error) {
 	for k, v := range M.BingAdsInternalRepresentationToExternalRepresentationForReports {
 		if v == name {
 			tmpProp := strings.SplitN(k, ".", 2)
-			if tmpProp[0] == bingadsConstantInfo[objType] {
+			if strings.Contains(tmpProp[0], bingadsConstantInfo[objType]) {
 				reqName := strings.Join([]string{objType, objType + "_" + tmpProp[1]}, "#")
 				return reqName, nil
 			}

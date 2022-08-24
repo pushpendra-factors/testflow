@@ -30,8 +30,10 @@ var CustomMetricObjectTypeNames = []string{HubspotContactsDisplayCategory, Hubsp
 var ProfileQueryType = 1
 
 var customMetricGroupNameByObjectType = map[string]string{
-	GROUP_NAME_HUBSPOT_COMPANY: HubspotCompaniesDisplayCategory,
-	GROUP_NAME_HUBSPOT_DEAL:    HubspotDealsDisplayCategory,
+	GROUP_NAME_HUBSPOT_COMPANY:        HubspotCompaniesDisplayCategory,
+	GROUP_NAME_HUBSPOT_DEAL:           HubspotDealsDisplayCategory,
+	GROUP_NAME_SALESFORCE_OPPORTUNITY: SalesforceOpportunitiesDisplayCategory,
+	GROUP_NAME_SALESFORCE_ACCOUNT:     SalesforceAccountsDisplayCategory,
 }
 
 type CustomMetric struct {

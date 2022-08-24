@@ -22,11 +22,13 @@ import {
 } from '../../../../utils/dataFormatter';
 import {
   CHART_TYPE_SPARKLINES,
-  CHART_TYPE_LINECHART
+  CHART_TYPE_LINECHART,
+  QUERY_TYPE_KPI
 } from '../../../../utils/constants';
 import LineChart from '../../../../components/HCLineChart';
 import NoBreakdownTable from './NoBreakdownTable';
 import SparkChartWithCount from '../../../../components/SparkChartWithCount/SparkChartWithCount';
+import { getEventDisplayName } from '../../EventsAnalytics/eventsAnalytics.helpers';
 
 const NoBreakdownChartsComponent = forwardRef(
   (
@@ -126,7 +128,6 @@ const NoBreakdownChartsComponent = forwardRef(
           <div className="flex items-center justify-center w-full">
             <SparkChartWithCount
               total={aggregateData[0].total}
-              eventNames={eventNames}
               event={aggregateData[0].name}
               frequency={durationObj.frequency}
               metricType={aggregateData[0].metricType}
@@ -136,6 +137,12 @@ const NoBreakdownChartsComponent = forwardRef(
                 aggregateData[0].compareTotal != null &&
                 aggregateData[0].compareTotal > 0
               }
+              headerTitle={getEventDisplayName({
+                eventNames,
+                event: aggregateData[0].name,
+                kpi: kpis[0],
+                queryType: QUERY_TYPE_KPI
+              })}
             />
           </div>
         );
@@ -143,6 +150,9 @@ const NoBreakdownChartsComponent = forwardRef(
 
       if (aggregateData.length > 1) {
         const appliedColors = generateColors(aggregateData.length);
+        const kpisWithData = kpis.filter(
+          (_, index) => aggregateData[index].total
+        );
         chart = (
           <div className="flex items-center flex-wrap justify-center w-full">
             {aggregateData
@@ -156,7 +166,6 @@ const NoBreakdownChartsComponent = forwardRef(
                   >
                     <SparkChartWithCount
                       total={chartData.total}
-                      eventNames={eventNames}
                       event={chartData.name}
                       frequency={durationObj.frequency}
                       metricType={chartData.metricType}
@@ -168,6 +177,12 @@ const NoBreakdownChartsComponent = forwardRef(
                         chartData.compareTotal != null &&
                         chartData.compareTotal > 0
                       }
+                      headerTitle={getEventDisplayName({
+                        eventNames,
+                        event: chartData.name,
+                        kpi: kpisWithData[index],
+                        queryType: QUERY_TYPE_KPI
+                      })}
                     />
                   </div>
                 );
