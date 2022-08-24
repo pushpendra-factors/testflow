@@ -130,6 +130,7 @@ const GoogleIntegration = ({
         setShowURLModal(true); 
       }
     }
+    renderSettingInfo();
 
   }, [activeProject, agent_details, currentProjectSettings]);
 
@@ -284,8 +285,8 @@ const GoogleIntegration = ({
           setLoadingData(false);
         });
     }
-  }; 
-
+  };
+  
   useEffect(()=>{ 
     let mapManagerAccount = {}
     if(customerAccounts){
