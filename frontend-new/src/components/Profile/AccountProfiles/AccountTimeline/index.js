@@ -3,6 +3,7 @@ import React, { useMemo } from 'react';
 import InfoCard from '../../../FaTimeline/InfoCard';
 import { groups, hoverEvents, getLoopLength } from '../../utils';
 import { CaretRightOutlined } from '@ant-design/icons';
+import { SVG } from '../../../factorsComponents';
 
 function AccountTimeline({
   timeline = [],
@@ -25,7 +26,7 @@ function AccountTimeline({
     const groupByTimestamp = [];
     timeline.forEach((user) => {
       const newOpts = user.user_activities.map((data) => {
-        return { ...data, user: user.user_id };
+        return { ...data, user: user.user_name };
       });
       groupByTimestamp.push(...newOpts);
     });
@@ -43,6 +44,13 @@ function AccountTimeline({
 
   return loading ? (
     <Spin size={'large'} className={'fa-page-loader'} />
+  ) : timeline.length == 0 ? (
+    <div className='ant-empty ant-empty-normal'>
+      <div className='ant-empty-image'>
+        <SVG name='nodata' />
+      </div>
+      <div className='ant-empty-description'>No Associated Users</div>
+    </div>
   ) : (
     <div className='table-scroll'>
       <table>
@@ -50,7 +58,7 @@ function AccountTimeline({
           <tr>
             <th scope='col'>Date and Time</th>
             {timeline.map((data) => {
-              return <th scope='col'>{data.user_name || data.user_id}</th>;
+              return <th scope='col'>{data.user_name}</th>;
             })}
           </tr>
         </thead>
@@ -65,7 +73,7 @@ function AccountTimeline({
                   {timeline.map((data) => {
                     const loopLength = getLoopLength(allEvents);
                     const evList = [];
-                    if (!allEvents[data.user_id]) {
+                    if (!allEvents[data.user_name]) {
                       for (let i = 0; i < loopLength; i++) {
                         evList.push(
                           <div className='timeline-events--event'>
@@ -82,7 +90,7 @@ function AccountTimeline({
                         );
                       }
                     } else {
-                      allEvents[data.user_id].forEach((event, evIndex) => {
+                      allEvents[data.user_name].forEach((event, evIndex) => {
                         evList.push(
                           <div className='timeline-events--event'>
                             <InfoCard

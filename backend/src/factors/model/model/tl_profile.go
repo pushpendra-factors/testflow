@@ -60,7 +60,8 @@ type AccountDetails struct {
 }
 
 type UserTimeline struct {
-	UserId         string         `json:"user_id"`
+	UserId         string         `json:"-"`
+	IsAnonymous    bool           `json:"-"`
 	UserName       string         `json:"user_name"`
 	UserActivities []UserActivity `json:"user_activities,omitempty"`
 }

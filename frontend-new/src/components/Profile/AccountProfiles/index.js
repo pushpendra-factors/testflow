@@ -10,7 +10,7 @@ import {
   fetchProfileAccountDetails,
   fetchProfileAccounts,
 } from '../../../reducers/timeline';
-import { getUserProperties } from '../../../reducers/coreQuery/middleware';
+import { getGroupProperties } from '../../../reducers/coreQuery/middleware';
 import FaSelect from '../../FaSelect';
 import { formatFiltersForPayload } from '../utils';
 
@@ -20,7 +20,7 @@ function AccountProfiles({
   accountDetails,
   fetchProfileAccounts,
   fetchProfileAccountDetails,
-  getUserProperties,
+  getGroupProperties,
 }) {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isDDVisible, setDDVisible] = useState(false);
@@ -41,8 +41,9 @@ function AccountProfiles({
   };
 
   useEffect(() => {
-    getUserProperties(activeProject.id);
-  }, [activeProject]);
+    getGroupProperties(activeProject.id, '$hubspot_company');
+    getGroupProperties(activeProject.id, '$salesforce_account');
+  }, [activeProject.id]);
 
   const headerClassStr =
     'fai-text fai-text__color--grey-2 fai-text__size--h7 fai-text__weight--bold';
@@ -61,8 +62,8 @@ function AccountProfiles({
     // },
     {
       title: <div className={headerClassStr}>Region</div>,
-      dataIndex: 'region',
-      key: 'region',
+      dataIndex: 'country',
+      key: 'country',
       render: (item) => item || '-',
     },
     {
@@ -149,10 +150,11 @@ function AccountProfiles({
           </div>
           <div key={0} className='max-w-3xl'>
             <PropertyFilter
+              profileType={'account'}
+              source={filterPayload.source}
               filters={filterPayload.filters}
               setFilters={setFilters}
-              onFiltersLoad={[() => getUserProperties(activeProject.id)]}
-            ></PropertyFilter>
+            />
           </div>
         </div>
         {filterPayload.filters.length ? (
@@ -215,7 +217,7 @@ const mapDispatchToProps = (dispatch) =>
     {
       fetchProfileAccounts,
       fetchProfileAccountDetails,
-      getUserProperties,
+      getGroupProperties,
     },
     dispatch
   );

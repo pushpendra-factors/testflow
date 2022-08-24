@@ -33,9 +33,13 @@ func (store *MemSQL) UpsertCountAndCheckEnabledClickableElement(projectId int64,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
-	if projectId == 0 || reqPayload.DisplayName == "" || !isAllowedElementType(reqPayload.ElementType) {
+	if projectId == 0 || reqPayload.DisplayName == "" {
 		logCtx.Error("Invalid parameters.")
 		return false, http.StatusBadRequest, errors.New("Invalid parameters.")
+	}
+
+	if !isAllowedElementType(reqPayload.ElementType) {
+		logCtx.Warn("Captured element type which is not part of allowed list.")
 	}
 
 	allowedAttributes := U.PropertiesMap{}

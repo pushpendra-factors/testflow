@@ -211,10 +211,12 @@ function UserProfiles({
             </div>
             <div key={0} className='max-w-3xl'>
               <PropertyFilter
+                profileType={'user'}
+                source={filterPayload.source}
                 filters={filterPayload.filters}
                 setFilters={setFilters}
                 onFiltersLoad={[() => getUserProperties(activeProject.id)]}
-              ></PropertyFilter>
+              />
             </div>
           </div>
           {filterPayload.filters.length ? (
@@ -254,20 +256,19 @@ function UserProfiles({
               pagination={{ position: ['bottom', 'left'] }}
             />
           </div>
-        )
-      }
+        )}
 
-      <Modal
-        title={null}
-        visible={isModalVisible}
-        className={'fa-modal--full-width'}
-        footer={null}
-        closable={null}
-      >
-        <ContactDetails onCancel={handleCancel} userDetails={userDetails} />
-      </Modal>
-    </div>
-  );
+        <Modal
+          title={null}
+          visible={isModalVisible}
+          className={'fa-modal--full-width'}
+          footer={null}
+          closable={null}
+        >
+          <ContactDetails onCancel={handleCancel} userDetails={userDetails} />
+        </Modal>
+      </div>
+    );
   } else {
     return (
       <>

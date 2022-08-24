@@ -38,6 +38,8 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	if projectID == 0 {
 		return nil, http.StatusBadRequest
 	}
+
+	// String Declarations
 	var selectString string
 	var isGroupUserString string
 	var sourceString string
@@ -65,20 +67,20 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		}
 
 		// Strings
-		isGroupUserString = "(is_group_user=1 OR is_group_user IS NOT NULL)"
+		isGroupUserString = "is_group_user=1"
 		if payload.Source == "All" && hubspotExists && salesforceExists {
 			selectString = fmt.Sprintf(`id AS identity, 
-				COALESCE(JSON_EXTRACT_STRING(properties, '%s'), JSON_EXTRACT_STRING(properties, '%s'), JSON_EXTRACT_STRING(properties, '%s')) AS name,
+				COALESCE(JSON_EXTRACT_STRING(properties, '%s'), JSON_EXTRACT_STRING(properties, '%s'), JSON_EXTRACT_STRING(properties, '%s'), JSON_EXTRACT_STRING(properties, '%s') ) AS name,
 				COALESCE(JSON_EXTRACT_STRING(properties, '%s'), JSON_EXTRACT_STRING(properties, '%s')) as country, 
 				updated_at AS last_activity`,
-				U.UP_COMPANY, U.GP_HUBSPOT_COMPANY_NAME, U.GP_SALESFORCE_ACCOUNT_NAME, U.GP_HUBSPOT_COMPANY_COUNTRY, U.GP_SALESFORCE_ACCOUNT_BILLINGCOUNTRY)
+				U.UP_COMPANY, U.GP_HUBSPOT_COMPANY_NAME, U.GP_SALESFORCE_ACCOUNT_NAME, U.GP_HUBSPOT_COMPANY_DOMAIN, U.GP_HUBSPOT_COMPANY_COUNTRY, U.GP_SALESFORCE_ACCOUNT_BILLINGCOUNTRY)
 			sourceString = fmt.Sprintf(" AND (group_%d_id IS NOT NULL OR group_%d_id IS NOT NULL)", groupNameIDMap[model.GROUP_NAME_HUBSPOT_COMPANY], groupNameIDMap[model.GROUP_NAME_SALESFORCE_ACCOUNT])
 		} else if (payload.Source == "All" || payload.Source == model.GROUP_NAME_HUBSPOT_COMPANY) && hubspotExists {
 			selectString = fmt.Sprintf(`id AS identity, 
-				COALESCE(JSON_EXTRACT_STRING(properties, '%s'), JSON_EXTRACT_STRING(properties, '%s')) AS name,
+				COALESCE(JSON_EXTRACT_STRING(properties, '%s'),JSON_EXTRACT_STRING(properties, '%s'), JSON_EXTRACT_STRING(properties, '%s')) AS name,
 				JSON_EXTRACT_STRING(properties, '%s') as country, 
 				updated_at AS last_activity`,
-				U.UP_COMPANY, U.GP_HUBSPOT_COMPANY_NAME, U.GP_HUBSPOT_COMPANY_COUNTRY)
+				U.UP_COMPANY, U.GP_HUBSPOT_COMPANY_NAME, U.GP_HUBSPOT_COMPANY_DOMAIN, U.GP_HUBSPOT_COMPANY_COUNTRY)
 			sourceString = fmt.Sprintf(" AND group_%d_id IS NOT NULL", groupNameIDMap[model.GROUP_NAME_HUBSPOT_COMPANY])
 		} else if (payload.Source == "All" || payload.Source == model.GROUP_NAME_SALESFORCE_ACCOUNT) && salesforceExists {
 			selectString = fmt.Sprintf(`id AS identity, 
@@ -139,7 +141,12 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	parameters = parameters[:len(parameters)-1]
 	parameters = append(parameters, minMax.MinUpdatedAt, minMax.MaxUpdatedAt)
 
-	err = db.Table("users").Select(selectString).Where(whereString+` AND updated_at BETWEEN ? AND ?`, parameters...).Group("identity").Order("last_activity DESC").Limit(1000).Find(&profiles).Error
+	dbx := db.Table("users").Select(selectString).Where(whereString+` AND updated_at BETWEEN ? AND ?`, parameters...)
+	if profileType == model.PROFILE_TYPE_USER {
+		dbx = dbx.Group("identity")
+	}
+
+	err = dbx.Order("last_activity DESC").Limit(1000).Find(&profiles).Error
 	if err != nil {
 		log.WithField("status", err).Error("Failed to get profile users.")
 		return nil, http.StatusInternalServerError
@@ -153,6 +160,7 @@ func (store *MemSQL) GetProfileUserDetailsByID(projectID int64, identity string,
 		"id":           identity,
 		"is_anonymous": isAnonymous,
 	}
+
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if projectID == 0 {
 		log.Error("Invalid project ID.")
@@ -198,34 +206,55 @@ func (store *MemSQL) GetProfileUserDetailsByID(projectID int64, identity string,
 		return nil, http.StatusInternalServerError
 	}
 
+	startTimeForTimeline := time.Now()
 	activities, sessionCount := store.GetUserActivitiesAndSessionCount(projectID, identity, userId)
 	uniqueUser.UserActivity = activities
 	uniqueUser.WebSessionsCount = sessionCount
+	log.WithFields(logFields).WithField("time_taken", time.Since(startTimeForTimeline).Milliseconds()).Info("Time taken for timeline.")
+
 	uniqueUser.GroupInfos = store.GetGroupsForUserTimeline(projectID, uniqueUser)
 
 	return &uniqueUser, http.StatusFound
 }
 
 func (store *MemSQL) GetUserActivitiesAndSessionCount(projectID int64, identity string, userId string) ([]model.UserActivity, float64) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"id":         identity,
+	}
+
 	var userActivities []model.UserActivity
 	webSessionCount := 0
 
+	startTimeForQuery := time.Now()
 	db := C.GetServices().Db
 	str := []string{`SELECT event_names.name AS event_name, events1.timestamp AS timestamp, events1.properties AS properties
         FROM (SELECT project_id, event_name_id, timestamp, properties FROM events WHERE 
-			project_id=? AND timestamp <= ? AND 
-			user_id IN (SELECT id FROM users WHERE project_id=? AND`, userId, `= ?)  LIMIT 5000) AS events1
+			project_id=? AND timestamp <= ? AND
+			user_id IN (SELECT id FROM users WHERE project_id=? AND`, userId, `= ?) AND
+			event_name_id NOT IN (
+				SELECT id FROM event_names WHERE project_id=? AND name IN ('$hubspot_contact_updated', '$sf_contact_updated')
+			) LIMIT 5000) AS events1
         LEFT JOIN event_names 
-        ON events1.event_name_id=event_names.id 
-        WHERE events1.project_id=? 
+        ON events1.event_name_id=event_names.id AND event_names.project_id=? 
 		ORDER BY timestamp DESC;`}
 	eventsQuery := strings.Join(str, " ")
-	rows, err := db.Raw(eventsQuery, projectID, gorm.NowFunc().Unix(), projectID, identity, projectID).Rows()
+	rows, err := db.Raw(eventsQuery, projectID, gorm.NowFunc().Unix(), projectID, identity, projectID, projectID).Rows()
+	log.WithFields(logFields).WithField("time_taken", time.Since(startTimeForQuery).Milliseconds()).Info("Time taken for timeline query.")
+
 	if err != nil {
 		log.WithError(err).Error("Failed to get events")
 		return []model.UserActivity{}, float64(webSessionCount)
 	}
+
 	// User Activity
+	standardDisplayNames := U.STANDARD_EVENTS_DISPLAY_NAMES
+	errCode, projectDisplayNames := store.GetDisplayNamesForAllEvents(projectID)
+	if errCode != http.StatusFound {
+		log.WithError(err).WithField("project_id", projectID).Error("Error fetching display names for the project")
+	}
+
+	startTimeForProcessing := time.Now()
 	for rows.Next() {
 		var userActivity model.UserActivity
 		if err := db.ScanRows(rows, &userActivity); err != nil {
@@ -242,12 +271,22 @@ func (store *MemSQL) GetUserActivitiesAndSessionCount(projectID int64, identity 
 			log.WithError(err).Error("Failed decoding event properties")
 		} else {
 			// Display Names
-			userActivity.DisplayName = store.GetDisplayNameForTimelineEvents(projectID, userActivity.EventName, properties)
+			if (*properties)[U.EP_IS_PAGE_VIEW] == true {
+				userActivity.DisplayName = "Page View"
+			} else if standardDisplayNames[userActivity.EventName] != "" {
+				userActivity.DisplayName = standardDisplayNames[userActivity.EventName]
+			} else if projectDisplayNames[userActivity.EventName] != "" {
+				userActivity.DisplayName = projectDisplayNames[userActivity.EventName]
+			} else {
+				userActivity.DisplayName = userActivity.EventName
+			}
 			// Filtered Properties
 			userActivity.Properties = GetFilteredProperties(userActivity.EventName, properties)
 		}
 		userActivities = append(userActivities, userActivity)
 	}
+	log.WithFields(logFields).WithField("time_taken", time.Since(startTimeForProcessing).Milliseconds()).Info("Time taken for processing timeline query.")
+
 	return userActivities, float64(webSessionCount)
 }
 
@@ -280,22 +319,6 @@ func (store *MemSQL) GetGroupsForUserTimeline(projectID int64, userDetails model
 		groupsInfo = append(groupsInfo, model.GroupsInfo{GroupName: groupsMap[4]})
 	}
 	return groupsInfo
-}
-
-func (store *MemSQL) GetDisplayNameForTimelineEvents(projectId int64, eventName string, properties *map[string]interface{}) string {
-	var displayName string
-	standardDisplayNames := U.STANDARD_EVENTS_DISPLAY_NAMES
-	_, projectDisplayNames := store.GetDisplayNamesForAllEvents(projectId)
-	if (*properties)[U.EP_IS_PAGE_VIEW] == true {
-		displayName = "Page View"
-	} else if standardDisplayNames[eventName] != "" {
-		displayName = standardDisplayNames[eventName]
-	} else if projectDisplayNames[eventName] != "" {
-		displayName = projectDisplayNames[eventName]
-	} else {
-		displayName = eventName
-	}
-	return displayName
 }
 
 func GetFilteredProperties(eventName string, properties *map[string]interface{}) postgres.Jsonb {
@@ -404,7 +427,13 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string) (*
 		return nil, http.StatusInternalServerError
 	}
 
-	queryStr := []string{"SELECT JSON_EXTRACT_STRING(properties, ?) AS user_name, id AS user_id FROM users WHERE project_id = ? AND", groupUserString}
+	//Timeline Query
+	queryStr := []string{
+		`SELECT COALESCE(JSON_EXTRACT_STRING(properties, ?), customer_user_id, id) AS user_name, COALESCE(customer_user_id, id) AS user_id, ISNULL(customer_user_id) AS is_anonymous 
+		FROM users 
+		WHERE project_id = ? AND (`, groupUserString, ")",
+		"ORDER BY updated_at DESC",
+	}
 	query := strings.Join(queryStr, " ")
 	rows, err := db.Raw(query, U.UP_NAME, projectID).Rows()
 	if err != nil {
@@ -418,7 +447,13 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string) (*
 			log.WithError(err).Error("Error scanning associated users list")
 			return nil, http.StatusInternalServerError
 		}
-		activities, _ := store.GetUserActivitiesAndSessionCount(projectID, userTimeline.UserId, "id")
+		var userIDStr string
+		if userTimeline.IsAnonymous {
+			userIDStr = "id"
+		} else {
+			userIDStr = "customer_user_id"
+		}
+		activities, _ := store.GetUserActivitiesAndSessionCount(projectID, userTimeline.UserId, userIDStr)
 		userTimeline.UserActivities = activities
 		accountTimeline = append(accountTimeline, userTimeline)
 	}
