@@ -717,7 +717,7 @@ func DashboardUnitsWebAnalyticsQueryHandler(c *gin.Context) {
 		model.SetQueryCacheResult(projectId, &requestPayload, queryResult)
 
 		model.SetCacheResultForWebAnalyticsDashboard(queryResult, projectId,
-			dashboardId, requestPayload.From, requestPayload.To, timezoneString, meta)
+			dashboardId, requestPayload.From, requestPayload.To, timezoneString)
 		lastRefreshedAt = U.TimeNowIn(U.TimeZoneStringIST).Unix()
 	}
 
