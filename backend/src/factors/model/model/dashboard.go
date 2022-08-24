@@ -356,7 +356,7 @@ func ShouldRefreshDashboardUnit(projectID int64, dashboardID, dashboardUnitID in
 		}
 		refreshedAt = result.RefreshedAt
 	} else {
-		result, errCode, _ := GetCacheResultByDashboardIdAndUnitId("", projectID, dashboardID, dashboardUnitID, preset, from, to, timezoneString)
+		result, errCode, _ := GetCacheResultByDashboardIdAndUnitId("", projectID, dashboardID, dashboardUnitID, from, to, timezoneString)
 		if errCode != http.StatusFound || result == nil {
 			return true
 		}

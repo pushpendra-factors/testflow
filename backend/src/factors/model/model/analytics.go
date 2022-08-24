@@ -800,11 +800,19 @@ func SetQueryCacheResult(projectID int64, query BaseQuery, queryResult interface
 	if err != nil {
 		return
 	}
-
+	from, to := query.GetQueryDateRange()
+	meta := CacheMeta{
+		From:           from,
+		To:             to,
+		RefreshedAt:    U.TimeNowIn(U.TimeZoneStringIST).Unix(),
+		Timezone:       string(query.GetTimeZone()),
+		LastComputedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(),
+	}
 	queryCache := QueryCacheResult{
 		Result:      queryResult,
 		RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(),
 		TimeZone:    string(query.GetTimeZone()),
+		CacheMeta:   meta,
 	}
 
 	queryResultString, err := json.Marshal(queryCache)
