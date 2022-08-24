@@ -29,7 +29,7 @@
                 text-decoration: underline !important;
             }
             .widget-card--expand-icon{
-                transform: scale(1.2); 
+                transform: scale(1.1); 
             }
         }
     }
@@ -37,7 +37,7 @@
         visibility: hidden;
         transition: all 0.3s;
         &:hover{
-            transform: scale(1.2);
+            transform: scale(1.1);
         }
     }
 
@@ -128,8 +128,9 @@
 }
 
 .widget-card-top-div {
-    // min-height: 200px;
+    min-height: 370px;
     max-height: 370px;
+    height: 370px;
     &:hover {
         .fa-widget-card--resize-container {
             visibility: visible;

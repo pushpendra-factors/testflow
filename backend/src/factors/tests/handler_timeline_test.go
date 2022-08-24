@@ -357,7 +357,7 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 		UserId:          user.ID,
 		CreateUser:      false,
 		IsNewUser:       false,
-		Name:            U.EVENT_NAME_HUBSPOT_CONTACT_CREATED,
+		Name:            U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED,
 		CustomerEventId: new(string),
 		EventProperties: randomProperties,
 		UserProperties:  map[string]interface{}{},
@@ -490,11 +490,11 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 
 	// Create 5 Users with Properties.
 	accounts := make([]model.User, 0)
-	numUsers := 5
+	numUsers := 6
 	groupUser := true
 
 	companies := []string{"FactorsAI", "Accenture", "Talentica", "Honeywell", "Meesho"}
-	countries := []string{"India", "Ireland", "India", "US", "India"}
+	countries := []string{"India", "Ireland", "India", "US", "India", "US"}
 	for i := 0; i < numUsers; i++ {
 		var m map[string]string
 		if i%2 == 0 {
@@ -503,10 +503,17 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 				U.GP_SALESFORCE_ACCOUNT_BILLINGCOUNTRY: countries[i],
 			}
 		} else {
-			m = map[string]string{
-				U.GP_HUBSPOT_COMPANY_NAME:    companies[i],
-				U.GP_HUBSPOT_COMPANY_COUNTRY: countries[i],
+			if i == 5 {
+				m = map[string]string{
+					U.GP_HUBSPOT_COMPANY_COUNTRY: countries[i],
+				}
+			} else {
+				m = map[string]string{
+					U.GP_HUBSPOT_COMPANY_NAME:    companies[i],
+					U.GP_HUBSPOT_COMPANY_COUNTRY: countries[i],
+				}
 			}
+
 		}
 		propertiesJSON, err := json.Marshal(m)
 		if err != nil {
@@ -577,7 +584,7 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 		resp := make([]model.Profile, 0)
 		err := json.Unmarshal(jsonResponse, &resp)
 		assert.Nil(t, err)
-		assert.Equal(t, len(resp), 4)
+		assert.Equal(t, len(resp), 5)
 		assert.Condition(t, func() bool {
 			for index, user := range resp {
 				sort.Strings(companies)
@@ -822,6 +829,31 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 			RequestSource:   model.UserSourceSalesforce,
 		}
 		status, response = SDK.Track(projectID, &trackPayload, false, SDK.SourceJSSDK, "")
+		assert.NotNil(t, response.EventId)
+		assert.Empty(t, response.UserId)
+		assert.Equal(t, http.StatusOK, status)
+
+		// Event 6 : Random Event
+		timestamp = timestamp - 10000
+		randomProperties := map[string]interface{}{}
+		trackPayload = SDK.TrackPayload{
+			EventId:         "",
+			UserId:          user.ID,
+			CreateUser:      false,
+			IsNewUser:       false,
+			Name:            U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED,
+			CustomerEventId: new(string),
+			EventProperties: randomProperties,
+			UserProperties:  map[string]interface{}{},
+			Timestamp:       timestamp,
+			ProjectId:       0,
+			Auto:            false,
+			ClientIP:        "",
+			UserAgent:       "",
+			SmartEventType:  "",
+			RequestSource:   model.UserSourceHubspot,
+		}
+		status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 		assert.NotNil(t, response.EventId)
 		assert.Empty(t, response.UserId)
 		assert.Equal(t, http.StatusOK, status)

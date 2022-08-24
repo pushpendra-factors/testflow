@@ -308,8 +308,18 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID int64, queryOriginal *mod
 		// Add the Added keys
 		model.AddTheAddedKeysAndMetrics(attributionData, query, groupSessions, noOfConversionEvents)
 
+		if C.GetAttributionDebug() == 1 && projectID == 641 {
+			logCtx.WithFields(log.Fields{"AttributionDebug": "true",
+				"attributionData": attributionData}).Info("revenue attr debug. AttributionData before addPerformance.")
+		}
+
 		// Add the performance information
 		model.AddPerformanceData(attributionData, query.AttributionKey, marketingReports, noOfConversionEvents)
+
+		if C.GetAttributionDebug() == 1 && projectID == 641 {
+			logCtx.WithFields(log.Fields{"AttributionDebug": "true",
+				"attributionData": attributionData}).Info("revenue attr debug. AttributionData after addPerformance.")
+		}
 
 		for key := range *attributionData {
 			(*attributionData)[key].ConvAggFunctionType = convAggFunctionType
@@ -330,11 +340,17 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID int64, queryOriginal *mod
 		queryStartTime = time.Now().UTC().Unix()
 
 	} else if query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities {
+		if C.GetAttributionDebug() == 1 && projectID == 641 {
+			logCtx.WithFields(log.Fields{"AttributionDebug": "true",
+				"AdwordsCampaignIDData":  marketingReports.AdwordsCampaignIDData,
+				"AdwordsCampaignKeyData": marketingReports.AdwordsCampaignKeyData}).Info("revenue attr debug")
+		}
 		// execution similar to the normal run - still keeping it separate for better understanding
 		result = model.ProcessQueryKPI(query, attributionData, marketingReports, isCompare, kpiData)
 		logCtx.WithFields(log.Fields{"result": result}).Info(fmt.Sprintf("KPI-Attribution result"))
 		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Process Query KPI took time")
 		queryStartTime = time.Now().UTC().Unix()
+
 	} else {
 		result = model.ProcessQuery(query, attributionData, marketingReports, isCompare, projectID, *logCtx)
 		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Process Query Normal took time")

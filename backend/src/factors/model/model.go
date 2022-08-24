@@ -689,7 +689,6 @@ type Model interface {
 	// Timeline
 	GetProfilesListByProjectId(projectID int64, payload model.TimelinePayload, profileType string) ([]model.Profile, int)
 	GetProfileUserDetailsByID(projectID int64, identity string, isAnonymous string) (*model.ContactDetails, int)
-	GetDisplayNameForTimelineEvents(projectId int64, eventName string, properties *map[string]interface{}) string
 	GetGroupsForUserTimeline(projectID int64, userDetails model.ContactDetails) []model.GroupsInfo
 	GetUserActivitiesAndSessionCount(projectID int64, identity string, userId string) ([]model.UserActivity, float64)
 	GetProfileAccountDetailsByID(projectID int64, id string) (*model.AccountDetails, int)

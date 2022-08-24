@@ -36,11 +36,11 @@ function FaTimeline({
   const renderTimeline = (data) => {
     if (!Object.entries(data).length)
       return (
-        <div class='ant-empty ant-empty-normal'>
-          <div class='ant-empty-image'>
+        <div className='ant-empty ant-empty-normal'>
+          <div className='ant-empty-image'>
             <SVG name='nodata' />
           </div>
-          <div class='ant-empty-description'>No Activity</div>
+          <div className='ant-empty-description'>No Activity</div>
         </div>
       );
     const timeline = [];
