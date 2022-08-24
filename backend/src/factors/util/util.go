@@ -78,12 +78,12 @@ var spaceBytes = []byte{0x20}
 
 // TODO Handle all errors for location on all functions later.
 var QueryDateRangePresets = map[string]func(TimeZoneString) (int64, int64, error){
-	DateRangePresetLastMonth:    GetQueryRangePresetLastMonthIn,
+	DateRangePresetToday:        GetQueryRangePresetTodayIn,
+	DateRangePresetYesterday:    GetQueryRangePresetYesterdayIn,
+	DateRangePresetCurrentWeek:  GetQueryRangePresetCurrentWeekIn,
 	DateRangePresetLastWeek:     GetQueryRangePresetLastWeekIn,
 	DateRangePresetCurrentMonth: GetQueryRangePresetCurrentMonthIn,
-	DateRangePresetCurrentWeek:  GetQueryRangePresetCurrentWeekIn,
-	DateRangePresetYesterday:    GetQueryRangePresetYesterdayIn,
-	DateRangePresetToday:        GetQueryRangePresetTodayIn,
+	DateRangePresetLastMonth:    GetQueryRangePresetLastMonthIn,
 }
 
 var PresetLookup = map[string]string{
