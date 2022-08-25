@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -54,6 +55,45 @@ func CreateCustomMetric(c *gin.Context) (interface{}, int, string, string, bool)
 			return nil, statusCode, PROCESSING_FAILED, ErrorMessages[PROCESSING_FAILED], true
 		}
 	}
+	return customMetric, http.StatusOK, "", "", false
+}
+
+type KPIQueryGroupTemp struct {
+	Class         string             `json:"cl"`
+	Queries       []model.KPIQuery   `json:"qG"`
+	GlobalFilters []model.KPIFilter  `json:"gFil"`
+	GlobalGroupBy []model.KPIGroupBy `json:"gGBy"`
+	Formula       string             `json:"for"`
+}
+
+// temporary - derived kpi
+func CreateDerivedKPI(c *gin.Context) (interface{}, int, string, string, bool) {
+	reqID, projectID := getReqIDAndProjectID(c)
+	logCtx := log.WithField("reqID", reqID).WithField("projectID", projectID)
+	if projectID == 0 {
+		return nil, http.StatusBadRequest, INVALID_INPUT, "", true
+	}
+	request := model.CustomMetric{}
+	err := c.BindJSON(&request)
+	if err != nil {
+		var requestAsMap map[string]interface{}
+		c.BindJSON(&requestAsMap)
+		logCtx.Warnf("Decode failed on request to profiles struct. %v", requestAsMap)
+		return nil, http.StatusBadRequest, INVALID_INPUT, "Error during decode of custom metrics.", true
+	}
+	if request.TypeOfQuery != model.DerivedQueryType {
+		return nil, http.StatusBadRequest, INVALID_INPUT, "Wrong type of query sent", true
+	}
+
+	var derivedMetricTransformation KPIQueryGroupTemp
+	err = U.DecodePostgresJsonbToStructType(request.Transformations, &derivedMetricTransformation)
+	if err != nil {
+		return nil, http.StatusBadRequest, INVALID_INPUT, "Error during decode of custom metrics transformations.", true
+	}
+	request.ProjectID = projectID
+	request.ID = uuid.New().String()
+	customMetric := &request
+
 	return customMetric, http.StatusOK, "", "", false
 }
 

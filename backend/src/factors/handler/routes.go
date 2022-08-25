@@ -190,6 +190,9 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics", responseWrapper(V1.GetCustomMetrics))
 	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics/:id", responseWrapper(V1.DeleteCustomMetrics))
 
+	// v1 derived kpi temp
+	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/test/derived_kpi", responseWrapper(V1.CreateDerivedKPI))
+
 	// v1 CRM And Smart Event endpoints
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/smart_event", GetSmartEventFiltersHandler)
 	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/smart_event", CreateSmartEventFilterHandler)
