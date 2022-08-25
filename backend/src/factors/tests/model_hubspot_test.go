@@ -554,7 +554,7 @@ func TestHubspotContactFormSubmission(t *testing.T) {
 	assert.Equal(t, urlParameters["utm_medium"], propertyValues["utm_medium"])
 	assert.Equal(t, (float64)(1647393874), propertyValues["$hubspot_form_submission_timestamp"])
 	assert.Equal(t, " Webinar 20th Jan 2021", propertyValues["$hubspot_form_submission_title"])
-	assert.Equal(t, "https://www.adb.com/ad/portal/500811370/leadgen/view/5371576", propertyValues["$hubspot_form_submission_page-url-no-qp"])
+	assert.Equal(t, "www.adb.com/ad/portal/500811370/leadgen/view/5371576", propertyValues["$hubspot_form_submission_page-url-no-qp"])
 
 	propertyValues = make(map[string]interface{})
 	err = json.Unmarshal(events[0].Properties.RawMessage, &propertyValues)
@@ -571,7 +571,7 @@ func TestHubspotContactFormSubmission(t *testing.T) {
 	assert.Equal(t, (float64)(2361873), propertyValues["$hubspot_form_submission_portal-id"])
 	assert.Equal(t, (float64)(1647393874), propertyValues["$hubspot_form_submission_timestamp"])
 	assert.Equal(t, " Webinar 20th Jan 2021", propertyValues["$hubspot_form_submission_title"])
-	assert.Equal(t, "https://www.abc.com/ad/portal/500811370/leadgen/view/5371576", propertyValues["$hubspot_form_submission_page-url-no-qp"])
+	assert.Equal(t, "www.abc.com/ad/portal/500811370/leadgen/view/5371576", propertyValues["$hubspot_form_submission_page-url-no-qp"])
 
 	decodedString := IntHubspot.GetDecodedValue("Danny%2520%2526%2520Co", 2)
 	assert.Equal(t, "Danny & Co", decodedString)
