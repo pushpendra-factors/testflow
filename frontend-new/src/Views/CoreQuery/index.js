@@ -20,6 +20,7 @@ import PageSuspenseLoader from 'Components/SuspenseLoaders/PageSuspenseLoader';
 import QueryComposer from '../../components/QueryComposer';
 import AttrQueryComposer from '../../components/AttrQueryComposer';
 import CampQueryComposer from '../../components/CampQueryComposer';
+import CalendarRow from './AnalysisResultsPage/CalendarRow/CalendarRow';
 import CoreQueryHome from '../CoreQueryHome';
 import {
   Text,
@@ -234,7 +235,7 @@ function CoreQuery({
 
   const [activeTab, setActiveTab] = useState(1);
 
-  const [queryOpen, setQueryOpen] = useState(true);
+  const [queryOpen, setQueryOpen] = useState(false);
 
   const [dataResp, setDataResp] = useState(null);
 
@@ -1749,6 +1750,7 @@ function CoreQuery({
           <Button
         size={'large'}
         type='text'
+        onClick={() => { history.push('/') }}
         icon={<SVG size={32} name='Brand' />}
       />
           <Text
@@ -1780,11 +1782,17 @@ function CoreQuery({
       </div>
 
       {/* {renderReportTabs()} */}
-      {showResult? <div
-          className={'query_card_cont query_card_close'}
+      {showResult? (<div
+          className={`query_card_cont ${
+            queryOpen? `query_card_open` : `query_card_close`
+          }`}
+          onClick={(e) => !queryOpen && setQueryOpen(true)}
         >
           {renderQueryComposer()}
-        </div>: null}
+          <Button size={'large'} className={`query_card_expand`}>
+            <SVG name={'expand'} size={20}></SVG>Expand
+          </Button>
+        </div>): null}
     </div>
         
         </div>
