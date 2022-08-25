@@ -20,7 +20,6 @@ import PageSuspenseLoader from 'Components/SuspenseLoaders/PageSuspenseLoader';
 import QueryComposer from '../../components/QueryComposer';
 import AttrQueryComposer from '../../components/AttrQueryComposer';
 import CampQueryComposer from '../../components/CampQueryComposer';
-import CalendarRow from './AnalysisResultsPage/CalendarRow/CalendarRow';
 import CoreQueryHome from '../CoreQueryHome';
 import {
   Text,
