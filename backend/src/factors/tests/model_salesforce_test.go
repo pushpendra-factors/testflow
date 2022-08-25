@@ -4488,3 +4488,94 @@ func TestSalesforceDatePropertyEnrichment(t *testing.T) {
 	)
 	assert.Equal(t, float64(1643443200), properties[dateKey])
 }
+
+func TestSalesforceSkipCampaignMemberIfAssociationNotProcessed(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	createdTime := time.Now().AddDate(0, 0, -10)
+	lastModifiedTime := createdTime.Add(2 * time.Minute)
+
+	campaign := map[string]interface{}{
+		"Id":   "campaign1",
+		"Name": "campaign 1",
+		"CampaignMembers": IntSalesforce.RelationshipCampaignMember{
+			Records: []IntSalesforce.RelationshipCampaignMemberRecord{
+				{
+					ID: "member1",
+				},
+			},
+		},
+		"CreatedDate":      createdTime.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": lastModifiedTime.Format(model.SalesforceDocumentDateTimeLayout),
+	}
+
+	err = store.GetStore().BuildAndUpsertDocumentInBatch(project.ID, model.SalesforceDocumentTypeNameCampaign, []model.SalesforceRecord{campaign})
+	assert.Nil(t, err)
+
+	campaignMember := map[string]interface{}{
+		"Id":               "member1",
+		"CampaignId":       "campaign1",
+		"ContactId":        "contact1",
+		"CreatedDate":      lastModifiedTime.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": lastModifiedTime.Format(model.SalesforceDocumentDateTimeLayout),
+	}
+	err = store.GetStore().BuildAndUpsertDocumentInBatch(project.ID, model.SalesforceDocumentTypeNameCampaignMember, []model.SalesforceRecord{campaignMember})
+	assert.Nil(t, err)
+
+	contact := map[string]interface{}{
+		"Id":               "contact1",
+		"Name":             "ContactUser",
+		"Email":            getRandomEmail(),
+		"Stage":            "",
+		"Workflow":         nil,
+		"CreatedDate":      lastModifiedTime.AddDate(0, 0, 3).Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": lastModifiedTime.AddDate(0, 0, 3).Format(model.SalesforceDocumentDateTimeLayout),
+	}
+	err = store.GetStore().BuildAndUpsertDocumentInBatch(project.ID, model.SalesforceDocumentTypeNameContact, []model.SalesforceRecord{contact})
+	assert.Nil(t, err)
+
+	// campaign member should not be processed, since contact record processing is ahead in time
+	enrichStatus, failure := IntSalesforce.Enrich(project.ID, 2, nil)
+	assert.Equal(t, false, failure)
+	for i := range enrichStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
+	}
+
+	// contact processed
+	documents, status := store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{"contact1"}, model.SalesforceDocumentTypeContact, true)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Len(t, documents, 1)
+	assert.True(t, documents[0].Synced)
+	assert.NotEmpty(t, documents[0].UserID)
+	contactUserID := documents[0].UserID
+
+	// campaign member should not be processed
+	documents, status = store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{"member1"}, model.SalesforceDocumentTypeCampaignMember, true)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Len(t, documents, 1)
+	assert.False(t, documents[0].Synced)
+
+	result, status := querySingleEventWithBreakdownByUserProperty(project.ID, U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED,
+		"$salesforce_contact_id", createdTime.Unix()-500, time.Now().Unix()+500)
+	assert.Equal(t, http.StatusOK, status)
+	assert.Len(t, result, 0)
+
+	// campaign member should get processed now
+	enrichStatus, failure = IntSalesforce.Enrich(project.ID, 2, nil)
+	assert.Equal(t, false, failure)
+	for i := range enrichStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
+	}
+	documents, status = store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{"member1"}, model.SalesforceDocumentTypeCampaignMember, true)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Len(t, documents, 1)
+	assert.True(t, documents[0].Synced)
+	assert.Equal(t, contactUserID, documents[0].UserID)
+
+	result, status = querySingleEventWithBreakdownByUserProperty(project.ID, U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED,
+		"$salesforce_contact_id", createdTime.Unix()-500, time.Now().Unix()+500)
+	assert.Equal(t, http.StatusOK, status)
+	assert.Len(t, result, 1)
+	assert.Equal(t, float64(1), result["contact1"])
+}
