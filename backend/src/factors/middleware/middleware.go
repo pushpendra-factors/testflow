@@ -431,20 +431,47 @@ func validateAuthData(authDataStr string, cookieExpiry int64) (*model.Agent, str
 	return agent, "", http.StatusOK
 }
 
-func isAdminTokenLogin(token string) bool {
-	configAdminEmail := C.GetConfig().AdminLoginEmail
-	configAdminToken := C.GetConfig().AdminLoginToken
-	token = strings.TrimSpace(token)
+// // Function checking for black-listed IP Addresses
+func IsBlockedIP(c *gin.Context) bool {
+	checkString0 := c.Request.RemoteAddr // Checks for IP-Address-like sub-string in http-request
+	checkString1 := c.ClientIP()         // Checks for IP Address similarity
+	checkList := C.GetConfig().BlockedIPList
+	BadRequest := false
+	for _, blockedIP := range checkList {
+		if strings.Contains(checkString0, blockedIP) ||
+			strings.Contains(checkString1, blockedIP) {
+			BadRequest = true
+			return BadRequest
+		}
+	}
+	return BadRequest
+}
 
-	return configAdminEmail != "" && configAdminToken != "" && token != "" &&
-		// login token for admin would be <token>:<project_id>.
-		strings.HasPrefix(token, configAdminToken+ADMIN_LOGIN_TOKEN_SEP)
+func IsBlockedEmail(c *gin.Context) bool {
+
+	cookieStr, _ := c.Cookie(C.GetFactorsCookieName())
+
+	agent, errMsg, errCode := validateAuthData(cookieStr, helpers.SecondsInOneMonth)
+	if errCode != http.StatusOK {
+		c.AbortWithStatusJSON(errCode, gin.H{"error": errMsg})
+		return true
+	}
+
+	email := agent.Email
+	checkList := C.GetConfig().BlockedEmailList
+	for _, blockedEmail := range checkList {
+		if strings.Contains(email, blockedEmail) {
+			c.AbortWithStatus(http.StatusBadRequest)
+			return true
+		}
+	}
+
+	return false
 }
 
 func SetLoggedInAgent() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if strings.Contains(c.Request.RemoteAddr, "122.170.241.5") ||
-			strings.Contains(c.ClientIP(), "122.170.241.5") {
+		if C.EnableIPBlocking() && IsBlockedIP(c) {
 			c.AbortWithStatus(http.StatusBadGateway)
 			return
 		}
@@ -453,29 +480,17 @@ func SetLoggedInAgent() gin.HandlerFunc {
 		loginAuthToken := c.Request.Header.Get("Authorization")
 		loginAuthToken = strings.TrimSpace(loginAuthToken)
 		if loginAuthToken != "" {
-			// Admin token login.
-			if isAdminTokenLogin(loginAuthToken) {
-				agent, errCode := store.GetStore().GetAgentByEmail(C.GetConfig().AdminLoginEmail)
-				if errCode != http.StatusFound {
-					c.AbortWithStatus(errCode)
-					return
-				}
-
-				loginAgent = agent
-			} else {
-				// Agent token login.
-				agentLoginTokenMap := C.GetConfig().LoginTokenMap
-				for token, email := range agentLoginTokenMap {
-					if loginAuthToken == token {
-						agent, errCode := store.GetStore().GetAgentByEmail(email)
-						if errCode != http.StatusFound {
-							c.AbortWithStatusJSON(errCode, gin.H{"error": "invalid token"})
-							return
-						}
-
-						loginAgent = agent
-						break
+			agentLoginTokenMap := C.GetConfig().LoginTokenMap
+			for token, email := range agentLoginTokenMap {
+				if loginAuthToken == token {
+					agent, errCode := store.GetStore().GetAgentByEmail(email)
+					if errCode != http.StatusFound {
+						c.AbortWithStatusJSON(errCode, gin.H{"error": "invalid token"})
+						return
 					}
+
+					loginAgent = agent
+					break
 				}
 			}
 		} else {
@@ -499,9 +514,9 @@ func SetLoggedInAgent() gin.HandlerFunc {
 				return
 			}
 
-			// Block flowminer temporary emails.
-			if strings.Contains(agent.Email, "flowminer.com") {
-				c.AbortWithStatus(http.StatusUnauthorized)
+			// Block temporary and blocked emails.
+			if C.EnableEmailDomainBlocking() && IsBlockedEmail(c) {
+				c.AbortWithStatusJSON(errCode, gin.H{"error": errMsg})
 				return
 			}
 
@@ -604,39 +619,16 @@ func SetAuthorizedProjectsByLoggedInAgent() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		loggedInAgentUUID := U.GetScopeByKeyAsString(c, SCOPE_LOGGEDIN_AGENT_UUID)
 
-		loginAdminToken := c.Request.Header.Get("Authorization")
-		loginAdminToken = strings.TrimSpace(loginAdminToken)
-
 		var projectIds []int64
 
-		if isAdminTokenLogin(loginAdminToken) {
-			// Set project with admin token.
-			// Login token for admin would be like, <token>:<project_id>.
-			splitToken := strings.Split(loginAdminToken, ADMIN_LOGIN_TOKEN_SEP)
-			if len(splitToken) != 2 {
-				c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid token."})
-				return
-			}
+		projectAgentMappings, errCode := store.GetStore().GetProjectAgentMappingsByAgentUUID(loggedInAgentUUID)
+		if errCode == http.StatusInternalServerError {
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Failed to get projects."})
+			return
+		}
 
-			tokenProjectId := strings.TrimSpace(splitToken[1])
-			projectId, err := strconv.ParseInt(tokenProjectId, 10, 64)
-			if err != nil {
-				c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid token and project_id."})
-				return
-			}
-			projectIds = append(projectIds, projectId)
-		} else {
-			// Set project with project agent mapping.
-
-			projectAgentMappings, errCode := store.GetStore().GetProjectAgentMappingsByAgentUUID(loggedInAgentUUID)
-			if errCode == http.StatusInternalServerError {
-				c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Failed to get projects."})
-				return
-			}
-
-			for _, pam := range projectAgentMappings {
-				projectIds = append(projectIds, pam.ProjectID)
-			}
+		for _, pam := range projectAgentMappings {
+			projectIds = append(projectIds, pam.ProjectID)
 		}
 
 		U.SetScope(c, SCOPE_AUTHORIZED_PROJECTS, projectIds)
