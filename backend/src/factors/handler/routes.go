@@ -336,9 +336,13 @@ func InitSDKServiceRoutes(r *gin.Engine) {
 	ampSdkRouteGroup.POST("/user/identify", SDKAMPIdentifyHandler)
 
 	intRouteGroup := r.Group(ROUTE_INTEGRATIONS_ROOT)
-	intRouteGroup.POST("/segment", mid.SetScopeProjectPrivateToken(), IntSegmentHandler)
 	intRouteGroup.POST("/segment_platform",
 		mid.SetScopeProjectPrivateTokenUsingBasicAuth(), IntSegmentPlatformHandler)
+	intRouteGroup.POST("/rudderstack_platform",
+		mid.SetScopeProjectPrivateTokenUsingBasicAuth(), IntSegmentPlatformHandler)
+
+	// Note: /segment is the old segment API Hook which was used directly.
+	intRouteGroup.POST("/segment", mid.SetScopeProjectPrivateToken(), IntSegmentHandler)
 }
 
 func InitIntRoutes(r *gin.Engine) {
