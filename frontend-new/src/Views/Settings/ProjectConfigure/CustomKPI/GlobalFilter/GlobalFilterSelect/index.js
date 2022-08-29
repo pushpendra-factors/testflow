@@ -538,6 +538,7 @@ const GlobalFilterSelect = ({
           type="number"
           value={valuesState}
           placeholder={'Enter Value'}
+          autoFocus={true}
           onBlur={() => {
             emitFilter()
             setContainButton(true)}}
