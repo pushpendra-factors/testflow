@@ -12,6 +12,8 @@ import (
 	"strconv"
 	"strings"
 
+	"factors/model/model"
+
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 )
@@ -368,7 +370,9 @@ func GetEventPropertiesHandler(c *gin.Context) {
 			return
 		}
 	}
-	U.FilterDisabledCoreEventProperties(&properties)
+
+	_, overrides := store.GetStore().GetPropertyOverridesByType(projectId, U.PROPERTY_OVERRIDE_BLACKLIST, model.GetEntity(false))
+	U.FilterDisabledCoreEventProperties(overrides, &properties)
 
 	if isDisplayNameEnabled == "true" {
 		_, displayNames := store.GetStore().GetDisplayNamesForAllEventProperties(projectId, eventName)

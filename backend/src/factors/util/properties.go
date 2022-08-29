@@ -660,6 +660,10 @@ const (
 	SMART_EVENT_HUBSPOT_CURR_PROPERTY    = "$curr_hubspot_"
 )
 
+const (
+	PROPERTY_OVERRIDE_BLACKLIST = 1
+)
+
 // Platforms
 const PLATFORM_WEB = "web"
 
@@ -3317,12 +3321,28 @@ func FillFirstEventUserPropertiesIfNotExist(existingUserProperties *map[string]i
 }
 
 // FilterDisabledCoreUserProperties Filters out less important properties from the list.
-func FilterDisabledCoreUserProperties(propertiesByType *map[string][]string) {
-	for propertyType, properties := range *propertiesByType {
-		(*propertiesByType)[propertyType] = StringSliceDiff(properties, DISABLED_CORE_QUERY_USER_PROPERTIES[:])
+func FilterDisabledCoreUserProperties(overrides []string, propertiesByType *map[string][]string) {
+	overideMap := make(map[string]bool)
+	for _, overide := range overrides {
+		overideMap[overide] = true
+	}
+	DISABLED_CORE_QUERY_USER_PROPERTIES_Override := make([]string, 0)
+	for _, property := range DISABLED_CORE_QUERY_USER_PROPERTIES {
+		if !overideMap[property] {
+			DISABLED_CORE_QUERY_USER_PROPERTIES_Override = append(DISABLED_CORE_QUERY_USER_PROPERTIES_Override, property)
+		}
+	}
+	DISABLED_USER_PROPERTIES_UI_Override := make([]string, 0)
+	for _, property := range DISABLED_USER_PROPERTIES_UI {
+		if !overideMap[property] {
+			DISABLED_USER_PROPERTIES_UI_Override = append(DISABLED_USER_PROPERTIES_UI_Override, property)
+		}
 	}
 	for propertyType, properties := range *propertiesByType {
-		(*propertiesByType)[propertyType] = StringSliceDiff(properties, DISABLED_USER_PROPERTIES_UI[:])
+		(*propertiesByType)[propertyType] = StringSliceDiff(properties, DISABLED_CORE_QUERY_USER_PROPERTIES_Override[:])
+	}
+	for propertyType, properties := range *propertiesByType {
+		(*propertiesByType)[propertyType] = StringSliceDiff(properties, DISABLED_USER_PROPERTIES_UI_Override[:])
 	}
 	for propertyType, properties := range *propertiesByType {
 		(*propertiesByType)[propertyType] = FilterGroupUserPropertiesKeysByPrefix(properties)
@@ -3330,12 +3350,28 @@ func FilterDisabledCoreUserProperties(propertiesByType *map[string][]string) {
 }
 
 // FilterDisabledCoreEventProperties Filters out less important properties from the list.
-func FilterDisabledCoreEventProperties(propertiesByType *map[string][]string) {
-	for propertyType, properties := range *propertiesByType {
-		(*propertiesByType)[propertyType] = StringSliceDiff(properties, DISABLED_CORE_QUERY_EVENT_PROPERTIES[:])
+func FilterDisabledCoreEventProperties(overrides []string, propertiesByType *map[string][]string) {
+	overideMap := make(map[string]bool)
+	for _, overide := range overrides {
+		overideMap[overide] = true
+	}
+	DISABLED_CORE_QUERY_EVENT_PROPERTIES_Override := make([]string, 0)
+	for _, property := range DISABLED_CORE_QUERY_EVENT_PROPERTIES {
+		if !overideMap[property] {
+			DISABLED_CORE_QUERY_EVENT_PROPERTIES_Override = append(DISABLED_CORE_QUERY_EVENT_PROPERTIES_Override, property)
+		}
+	}
+	DISABLED_EVENT_PROPERTIES_UI_Override := make([]string, 0)
+	for _, property := range DISABLED_EVENT_PROPERTIES_UI {
+		if !overideMap[property] {
+			DISABLED_EVENT_PROPERTIES_UI_Override = append(DISABLED_EVENT_PROPERTIES_UI_Override, property)
+		}
 	}
 	for propertyType, properties := range *propertiesByType {
-		(*propertiesByType)[propertyType] = StringSliceDiff(properties, DISABLED_EVENT_PROPERTIES_UI[:])
+		(*propertiesByType)[propertyType] = StringSliceDiff(properties, DISABLED_CORE_QUERY_EVENT_PROPERTIES_Override[:])
+	}
+	for propertyType, properties := range *propertiesByType {
+		(*propertiesByType)[propertyType] = StringSliceDiff(properties, DISABLED_EVENT_PROPERTIES_UI_Override[:])
 	}
 }
 
