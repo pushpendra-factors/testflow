@@ -46,9 +46,9 @@ func (store *MemSQL) UpsertCountAndCheckEnabledClickableElement(projectId int64,
 	model.AddAllowedElementAttributes(projectId, reqPayload.ElementAttributes, &allowedAttributes)
 	reqPayload.ElementAttributes = allowedAttributes
 
-	element, getErr := store.GetClickableElementById(projectId, reqPayload.DisplayName, reqPayload.ElementType)
+	element, getErr := store.GetClickableElement(projectId, reqPayload.DisplayName, reqPayload.ElementType)
 	if getErr == http.StatusNotFound {
-		status, err := GetStore().CreateClickableElementById(projectId, reqPayload)
+		status, err := GetStore().CreateClickableElement(projectId, reqPayload)
 		return false, status, err
 	} else if getErr == http.StatusBadRequest {
 		logCtx.Error("Invalid parameters.")
@@ -80,7 +80,7 @@ func (store *MemSQL) UpsertCountAndCheckEnabledClickableElement(projectId int64,
 	return element.Enabled, http.StatusAccepted, nil
 }
 
-func (store *MemSQL) CreateClickableElementById(projectId int64, click *model.CaptureClickPayload) (int, error) {
+func (store *MemSQL) CreateClickableElement(projectId int64, click *model.CaptureClickPayload) (int, error) {
 	logFields := log.Fields{
 		"project_id": projectId,
 		"click":      click,
@@ -124,7 +124,7 @@ func (store *MemSQL) CreateClickableElementById(projectId int64, click *model.Ca
 	return http.StatusCreated, nil
 }
 
-func (store *MemSQL) GetClickableElementById(projectId int64, displayName string,
+func (store *MemSQL) GetClickableElement(projectId int64, displayName string,
 	elementType string) (*model.ClickableElements, int) {
 
 	logFields := log.Fields{
@@ -150,38 +150,55 @@ func (store *MemSQL) GetClickableElementById(projectId int64, displayName string
 
 	if err := dbx.Find(&event).Error; err != nil {
 		if gorm.IsRecordNotFoundError(err) {
-			// Do not log error. Log on caller, if needed.
 			return nil, http.StatusNotFound
 		}
 
 		log.WithFields(log.Fields{"project_id": projectId, "display_name": displayName, "element_type": elementType}).
 			WithError(err).
-			Error("Getting click failed on GetClickById.")
+			Error("Getting click failed on get clickable element.")
 		return nil, http.StatusInternalServerError
 	}
 
 	return &event, http.StatusFound
 }
 
-func (store *MemSQL) ToggleEnabledClickableElement(projectId int64,
-	displayName string, elementType string) int {
+func (store *MemSQL) ToggleEnabledClickableElement(projectId int64, id string) int {
+	logCtx := log.WithField("project_id", projectId).WithField("id", id)
 
-	logCtx := log.WithField("project_id", projectId)
-
-	element, status := store.GetClickableElementById(projectId, displayName, elementType)
-	if status != http.StatusFound {
-		return status
+	if projectId == 0 || id == "" {
+		return http.StatusBadRequest
 	}
 
 	db := C.GetServices().Db
-	err := db.Model(&model.ClickableElements{}).
-		Where("project_id = ? AND display_name = ? AND element_type = ?", projectId, displayName, elementType).
-		Update(map[string]interface{}{"enabled": !element.Enabled}).
-		Error
+	err := db.Exec("UPDATE clickable_elements SET enabled = NOT enabled WHERE project_id = ? AND id = ?", projectId, id).Error
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to toggle enabled clickable elements")
 		return http.StatusInternalServerError
 	}
 
 	return http.StatusAccepted
+}
+
+func (store *MemSQL) GetAllClickableElements(projectId int64) ([]model.ClickableElements, int) {
+	logCtx := log.WithField("project_id", projectId)
+
+	var clickableElements []model.ClickableElements
+
+	db := C.GetServices().Db
+	err := db.Model(&model.ClickableElements{}).Order("click_count DESC").
+		Where("project_id = ?", projectId).Find(&clickableElements).Error
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return clickableElements, http.StatusNotFound
+		}
+
+		logCtx.WithError(err).Error("Failed to get clickable elements")
+		return clickableElements, http.StatusInternalServerError
+	}
+
+	if len(clickableElements) == 0 {
+		return clickableElements, http.StatusNotFound
+	}
+
+	return clickableElements, http.StatusFound
 }

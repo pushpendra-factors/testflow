@@ -190,6 +190,9 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics", responseWrapper(V1.GetCustomMetrics))
 	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics/:id", responseWrapper(V1.DeleteCustomMetrics))
 
+	// v1 derived kpi temp
+	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/test/derived_kpi", responseWrapper(V1.CreateDerivedKPI))
+
 	// v1 CRM And Smart Event endpoints
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/smart_event", GetSmartEventFiltersHandler)
 	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/smart_event", CreateSmartEventFilterHandler)
@@ -225,6 +228,8 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id/settings", GetProjectSettingHandler)
 	authRouteGroup.GET("/:project_id/v1/settings", V1.GetProjectSettingHandler)
 	authRouteGroup.PUT("/:project_id/settings", UpdateProjectSettingsHandler)
+	authRouteGroup.GET("/:project_id/clickable_elements", GetClickableElementsHandler)
+	authRouteGroup.GET("/:project_id/clickable_elements/:id/toggle", ToggleClickableElementHandler)
 	authRouteGroup.PUT("/:project_id/leadsquaredsettings", UpdateLeadSquaredConfigHandler)
 	authRouteGroup.DELETE("/:project_id/leadsquaredsettings/remove", RemoveLeadSquaredConfigHandler)
 

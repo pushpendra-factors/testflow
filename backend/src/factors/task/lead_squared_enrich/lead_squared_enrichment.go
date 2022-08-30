@@ -23,7 +23,11 @@ func RunLeadSquaredEnrich(projectID int64, config map[string]interface{}) (map[s
 		model.LeadSquaredDocumentTypeAlias[model.LEADSQUARED_LEAD]: true,
 	}
 
-	sourceConfig, err := enrichment.NewCRMEnrichmentConfig(U.CRM_SOURCE_NAME_LEADSQUARED, sourceObjectTypeAndAlias, userTypes, nil, nil)
+	activityTypes := map[int]bool{
+		model.LeadSquaredDocumentTypeAlias[model.LEADSQUARED_SALES_ACTIVITY]: true,
+	}
+
+	sourceConfig, err := enrichment.NewCRMEnrichmentConfig(U.CRM_SOURCE_NAME_LEADSQUARED, sourceObjectTypeAndAlias, userTypes, nil, activityTypes)
 	if err != nil {
 		log.WithError(err).Error("Failed to create new crm enrichment config for leadsquared.")
 		return nil, false

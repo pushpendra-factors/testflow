@@ -31,6 +31,8 @@ type ProjectSetting struct {
 	IntGoogleOrganicEnabledAgentUUID *string `json:"int_google_organic_enabled_agent_uuid,omitempty"`
 	IntGoogleOrganicURLPrefixes      *string `json:"int_google_organic_url_prefixes,omitempty"`
 	// Hubspot integration settings.
+	//Cache settings preset
+	CacheSettings             *postgres.Jsonb `json:"cache_settings"`
 	IntHubspot                *bool           `gorm:"not null;default:false" json:"int_hubspot,omitempty"`
 	IntHubspotApiKey          string          `json:"int_hubspot_api_key,omitempty"`
 	IntHubspotRefreshToken    string          `json:"int_hubspot_refresh_token,omitempty"`
@@ -145,6 +147,10 @@ type SalesforceProjectSettings struct {
 	ProjectID    int64  `json:"-"`
 	RefreshToken string `json:"refresh_token"`
 	InstanceURL  string `json:"instance_url"`
+}
+
+type CacheSettings struct {
+	AttributionCachePresets map[string]bool `json:"attribution_cache_presets"`
 }
 
 // Identification types

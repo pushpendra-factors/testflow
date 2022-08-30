@@ -31,7 +31,7 @@ func createButtonClick(t *testing.T, project *model.Project) {
 			"display_text": "Submit-1",
 		},
 	}
-	status, err := store.GetStore().CreateClickableElementById(0, buttonClick)
+	status, err := store.GetStore().CreateClickableElement(0, buttonClick)
 	assert.Equal(t, http.StatusBadRequest, status)
 	assert.NotNil(t, err)
 
@@ -40,7 +40,7 @@ func createButtonClick(t *testing.T, project *model.Project) {
 			"display_text": "Submit-1",
 		},
 	}
-	status, err = store.GetStore().CreateClickableElementById(project.ID, buttonClick)
+	status, err = store.GetStore().CreateClickableElement(project.ID, buttonClick)
 	assert.Equal(t, http.StatusBadRequest, status)
 	assert.NotNil(t, err)
 
@@ -51,11 +51,11 @@ func createButtonClick(t *testing.T, project *model.Project) {
 			"display_text": "Submit-1",
 		},
 	}
-	status, err = store.GetStore().CreateClickableElementById(project.ID, buttonClick)
+	status, err = store.GetStore().CreateClickableElement(project.ID, buttonClick)
 	assert.Equal(t, http.StatusCreated, status)
 	assert.Nil(t, err)
 
-	status, err = store.GetStore().CreateClickableElementById(project.ID, buttonClick)
+	status, err = store.GetStore().CreateClickableElement(project.ID, buttonClick)
 	assert.Equal(t, http.StatusConflict, status)
 	assert.NotNil(t, err)
 }
