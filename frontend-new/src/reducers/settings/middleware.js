@@ -1,8 +1,19 @@
 
-import { fetchSmartPropertiesAction, fetchSmartPropertyConfigAction } from './actions';
-import {getSmartProperties, getSmartPropertiesConfig, 
-    createSmartProperty, modifySmartProperty, 
-    removeSmartProperty} from './services';
+import {  
+    fetchSmartPropertiesAction, 
+    fetchSmartPropertyConfigAction, 
+    fetchClickableElementsAction, 
+    toggleClickableElementAction,
+} from './actions';
+import {
+    getSmartProperties, 
+    getSmartPropertiesConfig, 
+    createSmartProperty, 
+    modifySmartProperty, 
+    removeSmartProperty,
+    getClickableElements,
+    enableOrDisableClickableElement,
+} from './services';
 
 
 export const fetchSmartProperties = (projectId) => {
@@ -66,5 +77,30 @@ export const deleteSmartProperty = (projectId, id) => {
                 reject(err);
             })
         })
+    }
+}
+
+export const fetchClickableElements = (projectId) => {
+    return (dispatch) => {
+        return new Promise((resolve, reject) => {
+            getClickableElements(dispatch, projectId).then((res) => {
+                resolve(dispatch(fetchClickableElementsAction(res.data)));
+            }).catch((err) => {
+                resolve(dispatch(fetchClickableElementsAction([])));
+            });
+        });
+    }
+}
+
+export const toggleClickableElement = (projectId, id, currentState) => {
+    return (dispatch) => {
+        return new Promise((resolve, reject) => {
+            enableOrDisableClickableElement(dispatch, projectId, id).then(() => {
+                // Set toggled state if toggle API is successful
+                resolve(dispatch(toggleClickableElementAction({projectId: projectId, id: id, enabled: !currentState})));
+            }).catch(() => {
+                resolve(dispatch(toggleClickableElementAction({projectId: projectId, id: id, enabled: currentState})));
+            });
+        });
     }
 }

@@ -163,21 +163,32 @@ func main() {
 	configs["diskManager"] = diskManager
 	configs["cloudManager"] = &cloudManager
 	configs["hardPull"] = hardPull
-	configs["fileTypes"] = fileTypesMap
+
+	fileTypesMapOnlyEvents := make(map[int64]bool)
+	fileTypesMapOnlyEvents[1] = true
+	if *isWeeklyEnabled {
+		configs["fileTypes"] = fileTypesMapOnlyEvents
+		configs["modelType"] = T.ModelTypeWeek
+		status := taskWrapper.TaskFuncWithProjectId("PullEventsWeeklyOnlyEvents", *lookback, projectIdsArray, T.PullAllData, configs)
+		log.Info(status)
+	}
 
 	if *isWeeklyEnabled {
+		configs["fileTypes"] = fileTypesMap
 		configs["modelType"] = T.ModelTypeWeek
 		status := taskWrapper.TaskFuncWithProjectId("PullEventsWeekly", *lookback, projectIdsArray, T.PullAllData, configs)
 		log.Info(status)
 	}
 
 	if *isMonthlyEnabled {
+		configs["fileTypes"] = fileTypesMapOnlyEvents
 		configs["modelType"] = T.ModelTypeMonth
 		status := taskWrapper.TaskFuncWithProjectId("PullEventsMonthly", *lookback, projectIdsArray, T.PullAllData, configs)
 		log.Info(status)
 	}
 
 	if *isQuarterlyEnabled {
+		configs["fileTypes"] = fileTypesMapOnlyEvents
 		configs["modelType"] = T.ModelTypeQuarter
 		status := taskWrapper.TaskFuncWithProjectId("PullEventsQuarterly", *lookback, projectIdsArray, T.PullAllData, configs)
 		log.Info(status)

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Row, Col, Skeleton, Tabs, Switch, message
+  Row, Col, Skeleton, Tabs, Switch, message, Table, Button
 } from 'antd';
 import { Text } from 'factorsComponents';
 import { fetchProjectSettings, udpateProjectSettings } from 'Reducers/global';
+import { fetchClickableElements, toggleClickableElement } from '../../../../reducers/settings/middleware';
 import { connect } from 'react-redux';
 const { TabPane } = Tabs;
 
@@ -11,7 +12,6 @@ const ViewSetup = ({ activeProject }) => {
   const projectToken = activeProject.token;
   // eslint-disable-next-line
   const assetURL = BUILD_CONFIG.sdk_asset_url;
-
 
   return (
     <Row>
@@ -100,12 +100,7 @@ const JSConfig = ({ currentProjectSettings, activeProject, udpateProjectSettings
   useEffect(() => {
     setEnableEdit(false);
     agents && currentAgent && agents.map((agent) => {
-      console.log(agent,currentAgent);
-      if (agent.uuid === currentAgent.uuid) {
-        if (agent.role === 1) {
-          setEnableEdit(true);
-        }
-      }
+      if (agent.uuid === currentAgent.uuid && agent.role === 1) setEnableEdit(true);
     }); 
   }, [activeProject, agents, currentAgent]);
 
@@ -133,6 +128,13 @@ const JSConfig = ({ currentProjectSettings, activeProject, udpateProjectSettings
  
   const toggleAutoTrackSPAPageView = (checked) => { 
     udpateProjectSettings(currentProjectId, { auto_track_spa_page_view: checked }).catch((err) => {
+      console.log('Oops! something went wrong-->', err);
+      message.error('Oops! something went wrong.');
+    }); 
+  };
+
+  const toggleClickCapture = (checked) => { 
+    udpateProjectSettings(currentProjectId, { auto_click_capture: checked }).catch((err) => {
       console.log('Oops! something went wrong-->', err);
       message.error('Oops! something went wrong.');
     }); 
@@ -176,26 +178,154 @@ const JSConfig = ({ currentProjectSettings, activeProject, udpateProjectSettings
     <Col span={24} className={'flex flex-start items-center'}>
       <Text type={'paragraph'} mini extraClass={'m-0 mt-2'} color={'grey'}>Automatically track personal identification information such as email and phone number from Form Submissions</Text>
     </Col>
+    <Col span={24}>
+      <div span={24} className={'flex flex-start items-center mt-8'}>
+        <span style={{ width: '50px' }}><Switch checkedChildren="On" disabled={enableEdit} unCheckedChildren="OFF" onChange={toggleClickCapture} defaultChecked={currentProjectSettings.auto_click_capture} /></span> <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-2'}>Auto Click Capture</Text>
+      </div>
+    </Col>
+    <Col span={24} className={'flex flex-start items-center'}>
+      <Text type={'paragraph'} mini extraClass={'m-0 mt-2'} color={'grey'}>Starts discovering available buttons and anchors on the website. After discovery, it will be listed under Click Tracking Configurations and can be enabled for tracking as events.</Text>
+    </Col>
     </Row>
   );
 };
 
-function EditUserDetails({
-  activeProject, fetchProjectSettings, currentProjectSettings, udpateProjectSettings, agents, currentAgent
+const ClickTrackConfiguration = ({ 
+  activeProject, 
+  agents,
+  currentAgent,
+  clickableElements, 
+  toggleClickableElement,
+}) => {
+
+  const [enableEdit, setEnableEdit] = useState(false);
+
+  useEffect(() => {
+    setEnableEdit(false);
+    agents && currentAgent && agents.map((agent) => {
+      if (agent.uuid === currentAgent.uuid && agent.role === 1) setEnableEdit(true);
+    });
+  }, [activeProject, agents, currentAgent]);
+
+  var columns = [
+    {
+      title: 'Display Name',
+      dataIndex: 'displayName',
+      key: 'displayName',
+      width: 300,
+    },
+    {
+      title: 'Type',
+      dataIndex: 'type',
+      key: 'type',
+    },
+    {
+      title: 'Tracking',
+      dataIndex: 'tracking',
+      key: 'tracking',
+      render: (p) => (
+        <Switch checkedChildren="On" unCheckedChildren="OFF" disabled={enableEdit} defaultChecked={p.enabled} onChange={p.toggler}/>
+      ),
+      align: 'right',
+    }
+  ];
+
+  var dataSource = [];
+  for (let i=0; i<clickableElements.length; i++) {
+    dataSource.push({
+      index: clickableElements[i].id,
+      displayName: clickableElements[i].display_name,
+      type: (clickableElements[i].element_type),
+      tracking: { 
+        enabled: clickableElements[i].enabled, 
+        toggler: () => toggleClickableElement(activeProject.id, clickableElements[i].id, clickableElements[i].enabled) 
+      }
+    });
+  }
+
+  return (
+      <Row className={'mt-1'}>
+        <Col span={24} className={'mb-4'}>
+        <Text type={'title'} level={7}  color={'grey'}>*Only Admin(s) can change configurations.</Text>
+        </Col>
+        <Col span={24}>
+          <Table
+            className={'fa-table--basic'}
+            columns={columns}
+            dataSource={dataSource}
+            pagination={false}
+          />
+        </Col>
+      </Row>
+  );
+}
+
+function JavascriptSDK({
+  activeProject, 
+  fetchProjectSettings, 
+  currentProjectSettings, 
+  udpateProjectSettings, 
+  agents, 
+  currentAgent, 
+  fetchClickableElements,
+  toggleClickableElement,
+  clickableElements
 }) {
   const [dataLoading, setDataLoading] = useState(true);
 
   useEffect(() => {
     fetchProjectSettings(activeProject.id).then(() => {
       setDataLoading(false);
+    })
+
+    fetchClickableElements(activeProject.id).then(() => {
+      setDataLoading(false);
     });
+
   }, [activeProject]);
+  
 
   const callback = (key) => {
     console.log(key);
   };
 
   currentProjectSettings = currentProjectSettings?.project_settings || currentProjectSettings;
+
+  const renderTabs = () => {
+    let tabs = [
+      <TabPane tab="GTM Setup" key="1">
+      <GTMSetup currentProjectSettings={currentProjectSettings} activeProject={activeProject} />
+    </TabPane>,
+    <TabPane tab="Manual Setup" key="2">
+      <ViewSetup currentProjectSettings={currentProjectSettings} activeProject={activeProject} />
+    </TabPane>,
+    <TabPane tab="General Configuration" key="3">
+      <JSConfig 
+      udpateProjectSettings={udpateProjectSettings} 
+      currentProjectSettings={currentProjectSettings} 
+      activeProject={activeProject}
+      agents={agents}
+      currentAgent={currentAgent}
+       />
+    </TabPane>
+    ]
+
+   if (currentProjectSettings.auto_click_capture)
+    tabs.push(
+    <TabPane tab="Click Tracking Configuration" key="4">
+      <ClickTrackConfiguration 
+        activeProject={activeProject} 
+        agents={agents}
+        currentAgent={currentAgent}
+        currentProjectSettings={currentProjectSettings}
+        clickableElements={clickableElements}
+        toggleClickableElement={toggleClickableElement}
+      />
+    </TabPane>
+    );
+
+   return tabs;
+  }
 
   return (
     <>
@@ -213,25 +343,7 @@ function EditUserDetails({
         </Row>
         <Row className={'mt-2'}>
           <Col span={24}>
-            { dataLoading ? <Skeleton active paragraph={{ rows: 4 }}/>
-              : <Tabs defaultActiveKey="1" onChange={callback}>
-                <TabPane tab="GTM Setup" key="1">
-                  <GTMSetup currentProjectSettings={currentProjectSettings} activeProject={activeProject} />
-                </TabPane>
-                <TabPane tab="Manual Setup" key="2">
-                  <ViewSetup currentProjectSettings={currentProjectSettings} activeProject={activeProject} />
-                </TabPane>
-                <TabPane tab="Configuration" key="3">
-                  <JSConfig 
-                  udpateProjectSettings={udpateProjectSettings} 
-                  currentProjectSettings={currentProjectSettings} 
-                  activeProject={activeProject}
-                  agents={agents}
-                  currentAgent={currentAgent}
-                   />
-                </TabPane>
-              </Tabs>
-            }
+            { dataLoading ? <Skeleton active paragraph={{ rows: 4 }}/> : <Tabs defaultActiveKey="1" onChange={callback}>{renderTabs()} </Tabs> }
           </Col>
         </Row>
       </div>
@@ -240,12 +352,15 @@ function EditUserDetails({
 
   );
 }
+
 const mapStateToProps = (state) => {
   return {
     currentProjectSettings: state.global.currentProjectSettings,
     activeProject: state.global.active_project,
-    agents: state.agent.agents, 
-    currentAgent: state.agent.agent_details
+    agents: state.agent.agents,
+    currentAgent: state.agent.agent_details,
+    clickableElements: state.settings.clickableElements,
   };
 };
-export default connect(mapStateToProps, { fetchProjectSettings, udpateProjectSettings })(EditUserDetails);
+export default connect(mapStateToProps, { fetchProjectSettings, udpateProjectSettings, 
+  fetchClickableElements, toggleClickableElement })(JavascriptSDK);

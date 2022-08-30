@@ -62,10 +62,13 @@ func TestSalesforceCreateDocument(t *testing.T) {
 	// should contain opportunity by default.
 	assert.Contains(t, syncInfo.LastSyncInfo[project.ID], model.SalesforceDocumentTypeNameOpportunity)
 
+	createdDate := time.Now()
+
+	/*
+		Account
+	*/
 	accountID := "acc_" + getRandomName()
 	name := U.RandomLowerAphaNumString(5)
-
-	createdDate := time.Now()
 
 	// salesforce record with created == updated.
 	jsonData := fmt.Sprintf(`{"Id":"%s", "name":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, accountID, name, createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout), createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout))
@@ -94,6 +97,46 @@ func TestSalesforceCreateDocument(t *testing.T) {
 	assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[0].Status)
 
 	documents, status := store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{accountID}, model.SalesforceDocumentTypeAccount, false)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Len(t, documents, 1)
+
+	// Verify event and user properties without empty value
+	_, status = store.GetStore().GetEventById(project.ID, documents[0].SyncID, documents[0].UserID)
+	assert.Equal(t, http.StatusFound, status)
+
+	/*
+		Opportunity
+	*/
+	opportunityID := "opp_" + getRandomName()
+	name = U.RandomLowerAphaNumString(5)
+
+	// salesforce record with created == updated.
+	jsonData = fmt.Sprintf(`{"Id":"%s", "name":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, opportunityID, name, createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout), createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout))
+	salesforceDocument = &model.SalesforceDocument{
+		ProjectID: project.ID,
+		TypeAlias: model.SalesforceDocumentTypeNameOpportunity,
+		Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonData))},
+	}
+
+	errCode = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
+	assert.Equal(t, http.StatusOK, errCode)
+
+	syncInfo, errCode = store.GetStore().GetSalesforceSyncInfo()
+	assert.Equal(t, http.StatusFound, errCode)
+	// should return the latest timestamp from the database.
+	assert.Equal(t, createdDate.Unix(), syncInfo.LastSyncInfo[project.ID][model.SalesforceDocumentTypeNameOpportunity])
+
+	// should return error on duplicate.
+	errCode = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
+	assert.Equal(t, http.StatusOK, errCode)
+
+	// enrich job, create opportunity created and opportunity updated event.
+	enrichStatus, _ = IntSalesforce.Enrich(project.ID, 2, nil)
+	assert.Len(t, enrichStatus, 1)
+	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
+	assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[0].Status)
+
+	documents, status = store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{opportunityID}, model.SalesforceDocumentTypeOpportunity, false)
 	assert.Equal(t, http.StatusFound, status)
 	assert.Len(t, documents, 1)
 
@@ -1479,7 +1522,7 @@ func TestSalesforceIdentification(t *testing.T) {
 			}, {
 				Name: U.EVENT_NAME_SALESFORCE_LEAD_CREATED,
 			}, {
-				Name: U.EVENT_NAME_SALESFORCE_OPPORTUNITY_CREATED,
+				Name: U.GROUP_EVENT_NAME_SALESFORCE_OPPORTUNITY_CREATED,
 			},
 		},
 		GroupByProperties: []model.QueryGroupByProperty{
@@ -1500,7 +1543,7 @@ func TestSalesforceIdentification(t *testing.T) {
 		assert.Equal(t, float64(1), result.Rows[i][2])
 	}
 
-	assert.Equal(t, "$none", EventUserIDMap[U.EVENT_NAME_SALESFORCE_OPPORTUNITY_CREATED])
+	assert.Equal(t, "$none", EventUserIDMap[U.GROUP_EVENT_NAME_SALESFORCE_OPPORTUNITY_CREATED])
 	assert.Equal(t, emailContact, EventUserIDMap[U.EVENT_NAME_SALESFORCE_CONTACT_CREATED])
 	assert.Equal(t, emailLead, EventUserIDMap[U.EVENT_NAME_SALESFORCE_LEAD_CREATED])
 }
@@ -1697,6 +1740,104 @@ func TestSalesforceSmartEventPropertyDetails(t *testing.T) {
 
 	result, _, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 	assert.Equal(t, fmt.Sprintf("%d", createdDate.Add(2*time.Second).Unix()), result.Rows[0][0])
+	assert.Equal(t, float64(1), result.Rows[0][1])
+}
+
+func TestSalesforceSmartEventOpportunity(t *testing.T) {
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	r := gin.Default()
+	H.InitAppRoutes(r)
+
+	filter := model.SmartCRMEventFilter{
+		Source:               model.SmartCRMEventSourceSalesforce,
+		ObjectType:           "opportunity",
+		Description:          "salesforce opportunity created",
+		FilterEvaluationType: model.FilterEvaluationTypeSpecific,
+		Filters: []model.PropertyFilter{
+			{
+				Name: "text",
+				Rules: []model.CRMFilterRule{
+					{
+						PropertyState: model.CurrentState,
+						Value:         U.PROPERTY_VALUE_ANY,
+						Operator:      model.COMPARE_EQUAL,
+					},
+					{
+						PropertyState: model.PreviousState,
+						Value:         U.PROPERTY_VALUE_ANY,
+						Operator:      model.COMPARE_NOT_EQUAL,
+					},
+				},
+				LogicalOp: model.LOGICAL_OP_AND,
+			},
+		},
+		LogicalOp:               model.LOGICAL_OP_AND,
+		TimestampReferenceField: model.TimestampReferenceTypeDocument,
+	}
+
+	smartEventName := "Event 1"
+	requestPayload := make(map[string]interface{})
+	requestPayload["name"] = smartEventName
+	requestPayload["expr"] = filter
+
+	w := sendCreateSmartEventFilterReq(r, project.ID, agent, &requestPayload)
+	assert.Equal(t, http.StatusCreated, w.Code)
+
+	documentID := U.RandomLowerAphaNumString(4)
+	text := U.RandomString(10)
+	createdDate := time.Now()
+
+	jsonData := fmt.Sprintf(`{"Id":"%s", "CreatedDate":"%s", "LastModifiedDate":"%s"}`, documentID, createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout), createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout))
+	salesforceDocument := &model.SalesforceDocument{
+		ProjectID: project.ID,
+		TypeAlias: model.SalesforceDocumentTypeNameOpportunity,
+		Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonData))},
+	}
+
+	status := store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
+	assert.Equal(t, http.StatusOK, status)
+
+	jsonData = fmt.Sprintf(`{"Id":"%s", "text":"%s", "CreatedDate":"%s", "LastModifiedDate":"%s"}`, documentID, text, createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout), createdDate.Add(10*time.Minute).UTC().Format(model.SalesforceDocumentDateTimeLayout))
+	salesforceDocument = &model.SalesforceDocument{
+		ProjectID: project.ID,
+		TypeAlias: model.SalesforceDocumentTypeNameOpportunity,
+		Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonData))},
+	}
+
+	status = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
+	assert.Equal(t, http.StatusOK, status)
+
+	enrichStatus, _ := IntSalesforce.Enrich(project.ID, 2, nil)
+	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
+	assert.Len(t, enrichStatus, 1)
+	assert.Equal(t, "success", enrichStatus[0].Status)
+
+	configs := make(map[string]interface{})
+	configs["rollupLookback"] = 1
+	event_user_cache.DoRollUpSortedSet(configs)
+
+	query := model.Query{
+		From: createdDate.Unix() - 500,
+		To:   createdDate.Unix() + 5000,
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name: smartEventName,
+			},
+		},
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Entity:   model.PropertyEntityEvent,
+				Property: "$curr_salesforce_opportunity_text",
+			},
+		},
+		Class:           model.QueryClassEvents,
+		Type:            model.QueryTypeEventsOccurrence,
+		EventsCondition: model.EventCondAnyGivenEvent,
+	}
+
+	result, _, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
+	assert.Equal(t, text, result.Rows[0][0])
 	assert.Equal(t, float64(1), result.Rows[0][1])
 }
 
@@ -2172,6 +2313,7 @@ func TestSalesforceOpportunityAssociations(t *testing.T) {
 	contact1Created := map[string]interface{}{
 		"Id":               contactID1,
 		"Name":             "contact1",
+		"Email":            "abc@gmail.com",
 		"City":             "City1",
 		"CreatedDate":      contact1CreatedDate.Format(model.SalesforceDocumentDateTimeLayout),
 		"LastModifiedDate": contact1LastModifiedDate.Format(model.SalesforceDocumentDateTimeLayout),
@@ -2184,6 +2326,7 @@ func TestSalesforceOpportunityAssociations(t *testing.T) {
 	contact2Created := map[string]interface{}{
 		"Id":               contactID2,
 		"Name":             "contact2",
+		"Email":            "pqr@gmail.com",
 		"City":             "City2",
 		"CreatedDate":      contact2CreatedDate.Format(model.SalesforceDocumentDateTimeLayout),
 		"LastModifiedDate": contact2LastModifiedDate.Format(model.SalesforceDocumentDateTimeLayout),
@@ -2196,6 +2339,7 @@ func TestSalesforceOpportunityAssociations(t *testing.T) {
 	contact3Created := map[string]interface{}{
 		"Id":               contactID3,
 		"Name":             "contact3",
+		"Email":            "xyz@gmail.com",
 		"City":             "City3",
 		"CreatedDate":      contact3CreatedDate.Format(model.SalesforceDocumentDateTimeLayout),
 		"LastModifiedDate": contact3LastModifiedDate.Format(model.SalesforceDocumentDateTimeLayout),
@@ -2241,7 +2385,7 @@ func TestSalesforceOpportunityAssociations(t *testing.T) {
 
 	enrichStatus, _ := IntSalesforce.Enrich(project.ID, 2, nil)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
-	assert.Len(t, enrichStatus, 3)
+	assert.Len(t, enrichStatus, 2)
 	assert.Equal(t, "success", enrichStatus[0].Status)
 	assert.Equal(t, "success", enrichStatus[1].Status)
 
@@ -2254,7 +2398,7 @@ func TestSalesforceOpportunityAssociations(t *testing.T) {
 				Properties: []model.QueryProperty{},
 			},
 			{
-				Name:       util.EVENT_NAME_SALESFORCE_OPPORTUNITY_CREATED,
+				Name:       util.GROUP_EVENT_NAME_SALESFORCE_OPPORTUNITY_CREATED,
 				Properties: []model.QueryProperty{},
 			},
 		},
@@ -2267,7 +2411,7 @@ func TestSalesforceOpportunityAssociations(t *testing.T) {
 	result, errCode, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 	assert.Equal(t, http.StatusOK, errCode)
 	assert.Equal(t, float64(3), result.Rows[0][0])
-	assert.Equal(t, float64(1), result.Rows[0][1])
+	assert.Equal(t, float64(3), result.Rows[0][1])
 
 	query.GroupByProperties = []model.QueryGroupByProperty{
 		{
@@ -2327,6 +2471,7 @@ func TestSalesforceOpportunityAssociations(t *testing.T) {
 	lead1Created := map[string]interface{}{
 		"Id":               leadID1,
 		"Name":             "lead1",
+		"Email":            "ijk@gmail.com",
 		"City":             "City5",
 		"CreatedDate":      lead1CreatedDate.Format(model.SalesforceDocumentDateTimeLayout),
 		"LastModifiedDate": lead1LastModifiedDate.Format(model.SalesforceDocumentDateTimeLayout),
@@ -2336,7 +2481,7 @@ func TestSalesforceOpportunityAssociations(t *testing.T) {
 
 	enrichStatus, _ = IntSalesforce.Enrich(project.ID, 2, nil)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
-	assert.Len(t, enrichStatus, 3)
+	assert.Len(t, enrichStatus, 2)
 	assert.Equal(t, "success", enrichStatus[0].Status)
 	assert.Equal(t, "success", enrichStatus[1].Status)
 
@@ -2349,7 +2494,7 @@ func TestSalesforceOpportunityAssociations(t *testing.T) {
 				Properties: []model.QueryProperty{},
 			},
 			{
-				Name:       util.EVENT_NAME_SALESFORCE_OPPORTUNITY_CREATED,
+				Name:       util.GROUP_EVENT_NAME_SALESFORCE_OPPORTUNITY_CREATED,
 				Properties: []model.QueryProperty{},
 			},
 		},
@@ -2717,10 +2862,9 @@ func TestSalesforceOpportunitySkipOnUnsyncedLead(t *testing.T) {
 
 	enrichStatus, _ := IntSalesforce.Enrich(project.ID, 2, nil)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
-	assert.Len(t, enrichStatus, 3)
+	assert.Len(t, enrichStatus, 2)
 	assert.Equal(t, "success", enrichStatus[0].Status)
 	assert.Equal(t, "success", enrichStatus[1].Status)
-	assert.Equal(t, "success", enrichStatus[2].Status)
 
 	query := model.Query{
 		From: leadCreatedDate.AddDate(0, 0, -1).Unix(),
@@ -2730,7 +2874,7 @@ func TestSalesforceOpportunitySkipOnUnsyncedLead(t *testing.T) {
 				Name: U.EVENT_NAME_SALESFORCE_LEAD_CREATED,
 			},
 			{
-				Name: U.EVENT_NAME_SALESFORCE_OPPORTUNITY_CREATED,
+				Name: U.GROUP_EVENT_NAME_SALESFORCE_OPPORTUNITY_CREATED,
 			},
 		},
 		Class:           model.QueryClassEvents,
@@ -2751,9 +2895,8 @@ func TestSalesforceOpportunitySkipOnUnsyncedLead(t *testing.T) {
 	// failed opportunity should be process now
 	enrichStatus, _ = IntSalesforce.Enrich(project.ID, 2, nil)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
-	assert.Len(t, enrichStatus, 2)
+	assert.Len(t, enrichStatus, 1)
 	assert.Equal(t, "success", enrichStatus[0].Status)
-	assert.Equal(t, "success", enrichStatus[1].Status)
 
 	analyzeResult, status, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 	assert.Equal(t, http.StatusOK, status)
@@ -2761,7 +2904,7 @@ func TestSalesforceOpportunitySkipOnUnsyncedLead(t *testing.T) {
 	assert.Equal(t, U.EVENT_NAME_SALESFORCE_LEAD_CREATED, analyzeResult.Rows[0][0])
 	assert.Equal(t, float64(1), analyzeResult.Rows[0][1])
 
-	assert.Equal(t, U.EVENT_NAME_SALESFORCE_OPPORTUNITY_CREATED, analyzeResult.Rows[1][0])
+	assert.Equal(t, U.GROUP_EVENT_NAME_SALESFORCE_OPPORTUNITY_CREATED, analyzeResult.Rows[1][0])
 	assert.Equal(t, float64(1), analyzeResult.Rows[1][1])
 }
 
@@ -3166,13 +3309,12 @@ func TestSalesforceGroups(t *testing.T) {
 	}
 	enrichStatus, _ := IntSalesforce.Enrich(project.ID, 2, nil)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
-	assert.Len(t, enrichStatus, 6) // group account status, contact roles and group opportunity status
+	assert.Len(t, enrichStatus, 5) // group account status, contact roles and group opportunity status
 	assert.Equal(t, "success", enrichStatus[0].Status)
 	assert.Equal(t, "success", enrichStatus[1].Status)
 	assert.Equal(t, "success", enrichStatus[2].Status)
 	assert.Equal(t, "success", enrichStatus[3].Status)
 	assert.Equal(t, "success", enrichStatus[4].Status)
-	assert.Equal(t, "success", enrichStatus[5].Status)
 
 	account1GroupUserId := ""
 	account2GroupUserId := ""
@@ -3916,19 +4058,17 @@ func TestSalesforceOpportunityLateIdentification(t *testing.T) {
 
 	enrichStatus, _ := IntSalesforce.Enrich(project.ID, 2, nil)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
-	assert.Len(t, enrichStatus, 2)
+	assert.Len(t, enrichStatus, 1)
 	assert.Equal(t, "success", enrichStatus[0].Status)
-	assert.Equal(t, "success", enrichStatus[0].Status) // groups opportunity
 
 	documents, status := store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{opportunityID}, model.SalesforceDocumentTypeOpportunity, false)
 	assert.Equal(t, http.StatusFound, status)
 	assert.Len(t, documents, 1)
-	assert.NotEqual(t, "", documents[0].UserID)
+	assert.Equal(t, "", documents[0].UserID)
 	assert.NotEqual(t, "", documents[0].GroupUserID)
 
-	opportunityUserdID := documents[0].UserID
-	opportunityGroupUserdID := documents[0].GroupUserID
-	user, status := store.GetStore().GetUser(project.ID, opportunityUserdID)
+	opportunityGroupUserID := documents[0].GroupUserID
+	user, status := store.GetStore().GetUser(project.ID, opportunityGroupUserID)
 	assert.Equal(t, http.StatusFound, status)
 	assert.Equal(t, "", user.CustomerUserId)
 
@@ -3966,20 +4106,21 @@ func TestSalesforceOpportunityLateIdentification(t *testing.T) {
 
 	enrichStatus, _ = IntSalesforce.Enrich(project.ID, 2, nil)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
-	assert.Len(t, enrichStatus, 3)
+	assert.Len(t, enrichStatus, 2)
 	assert.Equal(t, "success", enrichStatus[0].Status)
-	assert.Equal(t, "success", enrichStatus[0].Status) // groups opportunity
 	assert.Equal(t, "success", enrichStatus[0].Status)
 
 	documents, status = store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{opportunityID}, model.SalesforceDocumentTypeOpportunity, false)
 	assert.Equal(t, http.StatusFound, status)
 	assert.Len(t, documents, 2)
-	assert.Equal(t, opportunityUserdID, documents[0].UserID)
-	assert.Equal(t, opportunityGroupUserdID, documents[0].GroupUserID)
+	assert.Equal(t, "", documents[0].UserID)
+	assert.Equal(t, opportunityGroupUserID, documents[0].GroupUserID)
+	assert.Equal(t, "", documents[1].UserID)
+	assert.Equal(t, opportunityGroupUserID, documents[1].GroupUserID)
 
-	user, status = store.GetStore().GetUser(project.ID, opportunityUserdID)
+	user, status = store.GetStore().GetUser(project.ID, opportunityGroupUserID)
 	assert.Equal(t, http.StatusFound, status)
-	assert.Equal(t, contactEmail, user.CustomerUserId)
+	assert.Equal(t, "", user.CustomerUserId)
 }
 
 func TestSalesforceCampaignMemberCampaignAssociation(t *testing.T) {
@@ -4578,4 +4719,107 @@ func TestSalesforceSkipCampaignMemberIfAssociationNotProcessed(t *testing.T) {
 	assert.Equal(t, http.StatusOK, status)
 	assert.Len(t, result, 1)
 	assert.Equal(t, float64(1), result["contact1"])
+}
+
+func TestSalesforceDisableGroupUserPropertiesFromUserPropertiesCache(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	userID, status := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, JoinTimestamp: time.Now().Unix() - 1000, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, status, http.StatusCreated)
+	H.InitSDKServiceRoutes(r)
+	uri := "/sdk/event/track"
+
+	createdDate := time.Now()
+	configs := make(map[string]interface{})
+	configs["rollupLookback"] = 1
+
+	/*
+		Opportunities
+	*/
+	w := ServePostRequestWithHeaders(r, uri,
+		[]byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "%s", "auto": %t}`, userID, "Event 1", true)),
+		map[string]string{
+			"Authorization": project.Token,
+			"User-Agent":    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36",
+		})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	jsonData := fmt.Sprintf(`{"name":"%s", "$salesforce_opportunity_id":"%s", "CreatedDate":"%s", "LastModifiedDate":"%s"}`, "user1", "opp_iut87", createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout), createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout))
+	updateProperties := &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonData))}
+	_, status = store.GetStore().UpdateUserProperties(project.ID, userID, updateProperties, time.Now().Unix())
+	assert.Equal(t, status, http.StatusAccepted)
+
+	// execute DoRollUpSortedSet
+	event_user_cache.DoRollUpSortedSet(configs)
+
+	w = sendGetUserProperties(project.ID, agent, r)
+	assert.Equal(t, http.StatusOK, w.Code)
+	var responsePayload struct {
+		Properties map[string][]string `json:"properties"`
+	}
+
+	jsonResponse, _ := ioutil.ReadAll(w.Body)
+	err = json.Unmarshal(jsonResponse, &responsePayload)
+	assert.Nil(t, err)
+
+	categoryProperties := responsePayload.Properties
+	assert.Contains(t, categoryProperties["categorical"], "name")
+	assert.Contains(t, categoryProperties["categorical"], "CreatedDate")
+	assert.Contains(t, categoryProperties["categorical"], "LastModifiedDate")
+	// group properties should not be present in response of user properties
+	for _, properties := range categoryProperties {
+		assert.NotContains(t, properties, "$salesforce_opportunity_id")
+	}
+
+	user, status := store.GetStore().GetUser(project.ID, userID)
+	assert.Equal(t, http.StatusFound, status)
+	userProperties := make(map[string]interface{})
+	err = json.Unmarshal(user.Properties.RawMessage, &userProperties)
+	assert.Nil(t, err)
+	assert.Contains(t, userProperties, "$salesforce_opportunity_id")
+
+	/*
+		Account
+	*/
+	w = ServePostRequestWithHeaders(r, uri,
+		[]byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "%s", "auto": %t}`, userID, "Event 1", true)),
+		map[string]string{
+			"Authorization": project.Token,
+			"User-Agent":    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36",
+		})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	jsonData = fmt.Sprintf(`{"name":"%s", "$salesforce_account_id":"%s", "CreatedDate":"%s", "LastModifiedDate":"%s"}`, "user1", "acc_12345", createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout), createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout))
+	updateProperties = &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonData))}
+	_, status = store.GetStore().UpdateUserProperties(project.ID, userID, updateProperties, time.Now().Unix())
+	assert.Equal(t, status, http.StatusAccepted)
+
+	// execute DoRollUpSortedSet
+	event_user_cache.DoRollUpSortedSet(configs)
+
+	w = sendGetUserProperties(project.ID, agent, r)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	err = json.Unmarshal(jsonResponse, &responsePayload)
+	assert.Nil(t, err)
+
+	categoryProperties = responsePayload.Properties
+	assert.Contains(t, categoryProperties["categorical"], "name")
+	assert.Contains(t, categoryProperties["categorical"], "CreatedDate")
+	assert.Contains(t, categoryProperties["categorical"], "LastModifiedDate")
+	// group properties should not be present in response of user properties
+	for _, properties := range categoryProperties {
+		assert.NotContains(t, properties, "$salesforce_account_id")
+	}
+
+	user, status = store.GetStore().GetUser(project.ID, userID)
+	assert.Equal(t, http.StatusFound, status)
+	userProperties = make(map[string]interface{})
+	err = json.Unmarshal(user.Properties.RawMessage, &userProperties)
+	assert.Nil(t, err)
+	assert.Contains(t, userProperties, "$salesforce_account_id")
 }

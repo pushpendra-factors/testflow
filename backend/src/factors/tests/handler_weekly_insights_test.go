@@ -55,7 +55,7 @@ func TestWeeklyInsights(t *testing.T) {
 	data.NumberOfRecords = 2
 	err := createPathAndAddCpiFile(data.ProjectID, data.BaseStartTime, data.QueryId)
 	assert.Nil(t, err)
-	response, err := delta.GetWeeklyInsights(data.ProjectID, "", data.QueryId, &data.BaseStartTime, &data.CompStartTime, data.InsightsType, data.NumberOfRecords)
+	response, err := delta.GetWeeklyInsights(data.ProjectID, "", data.QueryId, &data.BaseStartTime, &data.CompStartTime, data.InsightsType, data.NumberOfRecords, 0)
 	assert.NotNil(t, response)
 
 	outputObj := response.(delta.WeeklyInsights)
@@ -154,7 +154,7 @@ func TestWeeklyInsights(t *testing.T) {
 	propertyObj := CreateWIPropertyObj(data.QueryId, "Browser", "Chrome", "distribution", "ep", 4, false)
 	feedbackObj, errMsg := PostFeedback(projectObj.ID, 2, propertyObj)
 	assert.Equal(t, "success", errMsg)
-	response, err = delta.GetWeeklyInsights(data.ProjectID, feedbackObj.CreatedBy, data.QueryId, &data.BaseStartTime, &data.CompStartTime, data.InsightsType, data.NumberOfRecords) // testing again after blacklisting
+	response, err = delta.GetWeeklyInsights(data.ProjectID, feedbackObj.CreatedBy, data.QueryId, &data.BaseStartTime, &data.CompStartTime, data.InsightsType, data.NumberOfRecords, 0) // testing again after blacklisting
 	assert.NotNil(t, response)
 
 	outputObj = response.(delta.WeeklyInsights)

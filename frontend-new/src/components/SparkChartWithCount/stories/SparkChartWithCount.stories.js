@@ -264,7 +264,7 @@ export const DefaultChart = () => {
         (total, elem) => total + elem.$form_submitted,
         0
       )}
-      eventNames={eventNames}
+      headerTitle="Form Submitted"
     />
   );
 };
@@ -287,6 +287,7 @@ export const WithComparisonEnabled = () => {
       )}
       eventNames={eventNames}
       smallFont={true}
+      headerTitle="Form Submitted"
     />
   );
 };
@@ -310,6 +311,7 @@ export const WithVerticalAlignment = () => {
       eventNames={eventNames}
       smallFont={false}
       alignment="vertical"
+      headerTitle="Form Submitted"
     />
   );
 };

@@ -54,13 +54,20 @@ func AttributionHandler(c *gin.Context) (interface{}, int, string, string, bool)
 	var unitId int64
 	var timezoneString U.TimeZoneString
 	var statusCode int
+	preset := ""
 	hardRefresh := false
 	dashboardIdParam := c.Query("dashboard_id")
 	unitIdParam := c.Query("dashboard_unit_id")
 	refreshParam := c.Query("refresh")
+	presetParam := c.Query("preset") // check preset
+
+	if U.PresetLookup[presetParam] != "" && C.IsLastComputedWhitelisted(projectId) {
+		preset = presetParam
+	}
 	if refreshParam != "" {
 		hardRefresh, _ = strconv.ParseBool(refreshParam)
 	}
+
 	/*isQuery := false
 	isQueryParam := c.Query("is_query")
 	if isQueryParam != "" {
@@ -102,7 +109,7 @@ func AttributionHandler(c *gin.Context) (interface{}, int, string, string, bool)
 	}
 
 	if requestPayload.Query.Timezone != "" {
-		_, errCode := time.LoadLocation(string(requestPayload.Query.Timezone))
+		_, errCode := time.LoadLocation(requestPayload.Query.Timezone)
 		if errCode != nil {
 			return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Invalid Timezone provided.", true
 		}
@@ -154,16 +161,26 @@ func AttributionHandler(c *gin.Context) (interface{}, int, string, string, bool)
 	// Tracking dashboard query request.
 	if isDashboardQueryRequest {
 		model.SetDashboardCacheAnalytics(projectId, dashboardId, unitId, requestPayload.Query.From, requestPayload.Query.To, timezoneString)
+		if preset == "" && C.IsLastComputedWhitelisted(projectId) {
+			preset = U.GetPresetNameByFromAndTo(requestPayload.Query.From, requestPayload.Query.To, timezoneString)
+		}
 	}
 
 	// If refresh is passed, refresh only is Query.From is of today's beginning.
-	if isDashboardQueryRequest && !H.ShouldAllowHardRefresh(requestPayload.Query.From, requestPayload.Query.To, timezoneString, hardRefresh) {
+	if !hardRefresh && isDashboardQueryRequest && !H.ShouldAllowHardRefresh(requestPayload.Query.From, requestPayload.Query.To, timezoneString, hardRefresh) {
 
 		effectiveFrom, effectiveTo := model.GetEffectiveTimeRangeForDashboardUnitAttributionQuery(requestPayload.Query.From, requestPayload.Query.To)
 		if effectiveFrom == 0 || effectiveTo == 0 {
 			return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query time range is not valid for attribution.", true
 		}
-		shouldReturn, resCode, resMsg := H.GetResponseIfCachedDashboardQuery(reqId, projectId, dashboardId, unitId, effectiveFrom, effectiveTo, timezoneString)
+		var shouldReturn bool
+		var resCode int
+		var resMsg interface{}
+		if C.IsLastComputedWhitelisted(projectId) {
+			shouldReturn, resCode, resMsg = H.GetResponseIfCachedDashboardQueryWithPreset(reqId, projectId, dashboardId, unitId, preset, effectiveFrom, effectiveTo, timezoneString)
+		} else {
+			shouldReturn, resCode, resMsg = H.GetResponseIfCachedDashboardQuery(reqId, projectId, dashboardId, unitId, effectiveFrom, effectiveTo, timezoneString)
+		}
 		if shouldReturn {
 			if resCode == http.StatusOK {
 				return resMsg, resCode, "", "", false
@@ -181,16 +198,16 @@ func AttributionHandler(c *gin.Context) (interface{}, int, string, string, bool)
 	if err != nil {
 		return nil, http.StatusBadRequest, V1.INVALID_INPUT, err.Error(), true
 	}
-
-	shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &attributionQueryUnitPayload, cacheResult, isDashboardQueryRequest, reqId, false)
-	if shouldReturn {
-		if resCode == http.StatusOK {
-			return resMsg, resCode, "", "", false
+	if !hardRefresh {
+		shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &attributionQueryUnitPayload, cacheResult, isDashboardQueryRequest, reqId, false)
+		if shouldReturn {
+			if resCode == http.StatusOK {
+				return resMsg, resCode, "", "", false
+			}
+			logCtx.WithError(err).Error("Query failed. Error Processing/Fetching data from Query cache")
+			return nil, resCode, V1.PROCESSING_FAILED, "Error Processing/Fetching data from Query cache", true
 		}
-		logCtx.WithError(err).Error("Query failed. Error Processing/Fetching data from Query cache")
-		return nil, resCode, V1.PROCESSING_FAILED, "Error Processing/Fetching data from Query cache", true
 	}
-
 	/*if isDashboardQueryRequest && C.DisableDashboardQueryDBExecution() && !isQuery {
 		logCtx.WithField("request_payload", requestPayload).Warn("Skip hitting db for queries from dashboard, if not found on cache.")
 		return nil, resCode, V1.PROCESSING_FAILED, "Not found in cache. Execution suspended temporarily.", true
@@ -220,13 +237,26 @@ func AttributionHandler(c *gin.Context) (interface{}, int, string, string, bool)
 		logCtx.WithError(err).Error(" Result is nil")
 		return nil, http.StatusInternalServerError, V1.PROCESSING_FAILED, "Result is nil " + err.Error(), true
 	}
-
+	meta := model.CacheMeta{
+		Timezone:       string(timezoneString),
+		From:           requestPayload.Query.From,
+		To:             requestPayload.Query.To,
+		RefreshedAt:    U.TimeNowIn(U.TimeZoneStringIST).Unix(),
+		LastComputedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(),
+		Preset:         preset,
+	}
+	result.CacheMeta = meta
 	model.SetQueryCacheResult(projectId, &attributionQueryUnitPayload, result)
-
 	if isDashboardQueryRequest {
-		model.SetCacheResultByDashboardIdAndUnitId(result, projectId, dashboardId, unitId,
-			requestPayload.Query.From, requestPayload.Query.To, timezoneString)
-		return H.DashboardQueryResponsePayload{Result: result, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix()}, http.StatusOK, "", "", false
+		if C.IsLastComputedWhitelisted(projectId) {
+			model.SetCacheResultByDashboardIdAndUnitIdWithPreset(result, projectId, dashboardId, unitId, preset,
+				requestPayload.Query.From, requestPayload.Query.To, timezoneString, meta)
+		} else {
+			model.SetCacheResultByDashboardIdAndUnitId(result, projectId, dashboardId, unitId,
+				requestPayload.Query.From, requestPayload.Query.To, timezoneString, meta)
+		}
+
+		return H.DashboardQueryResponsePayload{Result: result, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(), CacheMeta: meta}, http.StatusOK, "", "", false
 	}
 	result.Query = requestPayload.Query
 	return result, http.StatusOK, "", "", false

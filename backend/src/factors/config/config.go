@@ -179,6 +179,7 @@ type Configuration struct {
 	CacheSortedSet                         bool
 	ProjectAnalyticsWhitelistedUUIds       []string
 	CustomerEnabledProjectsWeeklyInsights  []int64
+	CustomerEnabledProjectsLastComputed    []int64
 	DemoProjectIds                         []string
 	PrimaryDatastore                       string
 	// Flag for enabling only the /mql routes for secondary env testing.
@@ -1977,6 +1978,15 @@ func IsWeeklyInsightsWhitelisted(loggedInUUID string, projectId int64) bool {
 			return true
 		}
 	}
+	return false
+}
+func IsLastComputedWhitelisted(projectId int64) bool {
+	for _, id := range configuration.CustomerEnabledProjectsLastComputed {
+		if id == projectId {
+			return true
+		}
+	}
+
 	return false
 }
 

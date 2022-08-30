@@ -205,7 +205,9 @@ type Model interface {
 	GetPropertiesForHubspotContacts(projectID int64, reqID string) []map[string]string
 	GetPropertiesForHubspotCompanies(projectID int64, reqID string) []map[string]string
 	GetPropertiesForHubspotDeals(projectID int64, reqID string) []map[string]string
-	GetPropertiesForSalesforce(projectID int64, reqID string) []map[string]string
+	GetPropertiesForSalesforceAccounts(projectID int64, reqID string) []map[string]string
+	GetPropertiesForSalesforceOpportunities(projectID int64, reqID string) []map[string]string
+	GetPropertiesForSalesforceUsers(projectID int64, reqID string) []map[string]string
 	GetPropertiesForMarketo(projectID int64, reqID string) []map[string]string
 
 	// events
@@ -242,9 +244,10 @@ type Model interface {
 
 	// clickable_elements
 	UpsertCountAndCheckEnabledClickableElement(projectID int64, payload *model.CaptureClickPayload) (isEnabled bool, status int, err error)
-	CreateClickableElementById(projectId int64, payload *model.CaptureClickPayload) (int, error)
-	GetClickableElementById(projectID int64, displayName string, elementType string) (*model.ClickableElements, int)
-	ToggleEnabledClickableElement(projectId int64, displayName string, elementType string) int
+	CreateClickableElement(projectId int64, payload *model.CaptureClickPayload) (int, error)
+	GetClickableElement(projectID int64, displayName string, elementType string) (*model.ClickableElements, int)
+	ToggleEnabledClickableElement(projectId int64, id string) int
+	GetAllClickableElements(projectId int64) ([]model.ClickableElements, int)
 
 	// facebook_document
 	CreateFacebookDocument(projectID int64, document *model.FacebookDocument) int
