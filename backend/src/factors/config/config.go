@@ -261,6 +261,7 @@ type Configuration struct {
 	BlockedEmailList                                []string
 	BlockedIPList                                   []string
 	BlockedEmailDomainList                          []string
+	DBMaxAllowedPacket                              int64
 }
 
 type Services struct {
@@ -2239,4 +2240,8 @@ func EnableEmailDomainBlocking() bool {
 
 func EnableIPBlocking() bool {
 	return configuration.EnableIPBlockingFlag
+}
+
+func GetDBMaxAllowedPacket() int64 {
+	return configuration.DBMaxAllowedPacket
 }
