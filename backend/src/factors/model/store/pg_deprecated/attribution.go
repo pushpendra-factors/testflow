@@ -144,9 +144,6 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 			(*attributionData)[key].ConvAggFunctionType = convAggFunctionType
 		}
 
-		// Add the Added keys with no of conversion event = 1
-		model.AddTheAddedKeysAndMetrics(attributionData, query, sessions, 1)
-
 		// Add the performance information no of conversion event = 1
 		model.AddPerformanceData(attributionData, query.AttributionKey, marketingReports, 1)
 		for key, _ := range *attributionData {
@@ -287,9 +284,6 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 		for key, _ := range *attributionData {
 			(*attributionData)[key].ConvAggFunctionType = convAggFunctionType
 		}
-
-		// Add the Added keys
-		model.AddTheAddedKeysAndMetrics(attributionData, query, groupSessions, noOfConversionEvents)
 
 		// Add the performance information
 		model.AddPerformanceData(attributionData, query.AttributionKey, marketingReports, noOfConversionEvents)

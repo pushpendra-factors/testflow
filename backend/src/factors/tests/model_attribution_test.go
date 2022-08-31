@@ -2231,27 +2231,21 @@ func TestMergeDataRowsHavingSameKey(t *testing.T) {
 	row1 := []interface{}{"Campaign1", int64(2), int64(2), float64(2),
 		// (CTR, AvgCPC, CPM, ClickConversionRate)
 		float64(2), float64(2), float64(2), float64(2),
-		// Sessions, (users), (AvgSessionTime), (pageViews),  ConversionEventCount,
-		int64(2), int64(2), float64(2), int64(2),
 		// ConversionEventCount, CostPerConversion, ConversionEventCompareCount, CostPerConversionCompareCount
-		float64(2), float64(2), float64(2), float64(2), float64(2), float64(2)}
+		float64(2), float64(2), float64(2), float64(2)}
 	row2 := []interface{}{"Campaign1", int64(3), int64(3), float64(3),
 		// (CTR, AvgCPC, CPM, ClickConversionRate)
 		float64(3), float64(3), float64(3), float64(3),
-		// Sessions, (users), (AvgSessionTime), (pageViews),  ConversionEventCount,
-		int64(3), int64(3), float64(3), int64(3),
 		// ConversionEventCount, CostPerConversion, ConversionEventCompareCount, CostPerConversionCompareCount
-		float64(3), float64(3), float64(3), float64(3), float64(3), float64(3)}
+		float64(3), float64(3), float64(3), float64(3)}
 	rows = append(rows, row1, row2)
 
 	mergedRows := make([][]interface{}, 0)
 	row3 := []interface{}{"Campaign1", int64(5), int64(5), float64(5),
 		// (CTR, AvgCPC, CPM, ClickConversionRate)
 		float64(100), float64(1), float64(1000), float64(100),
-		// Sessions, (users), (AvgSessionTime), (pageViews),
-		int64(5), int64(5), float64(2.6), int64(5),
 		// ConversionEventCount, CostPerConversion, ConversionEventCompareCount, CostPerConversionCompareCount
-		float64(5), float64(1), float64(100), float64(5), float64(1), float64(100)}
+		float64(5), float64(1), float64(5), float64(1)}
 
 	logCtx := log.Entry{}
 	mergedRows = append(mergedRows, row3)
@@ -2283,33 +2277,26 @@ func TestMergeDataRowsHavingSameKey(t *testing.T) {
 func TestAddGrandTotalRow(t *testing.T) {
 	headers := []string{"Campaign", "Impressions", "Clicks", "Spend",
 		"CTR(%)", "Average CPC", "CPM", "ClickConversionRate(%)",
-		"Sessions", "Users", "Average Session Time", "PageViews",
-		"$session - Users", "Cost Per Conversion", "UserConversionRate(%)", "Compare - Users", "Compare Cost Per Conversion", "Compare UserConversionRate(%)", "Key"}
+		"$session - Users", "Cost Per Conversion", "Compare - Users", "Compare Cost Per Conversion", "Key"}
 	rows := make([][]interface{}, 0)
 	// Name, impression, clicks, spend
 	row1 := []interface{}{"Campaign1", int64(2), int64(2), float64(2),
 		// (CTR, AvgCPC, CPM, ClickConversionRate)
 		float64(2), float64(2), float64(2), float64(2),
-		// Sessions, (users), (AvgSessionTime), (pageViews),
-		int64(2), int64(2), float64(2), int64(2),
 		// ConversionEventCount, CostPerConversion, ConversionEventCompareCount, CostPerConversionCompareCount
-		float64(2), float64(2), float64(2), float64(2), float64(2), float64(2), "key1"}
+		float64(2), float64(2), float64(2), float64(2), "key1"}
 	row2 := []interface{}{"Campaign2", int64(3), int64(3), float64(3),
 		// (4_CTR, 5_AvgCPC, 6_CPM, 7_ClickConversionRate)
 		float64(3), float64(3), float64(3), float64(3),
-		// 8_Sessions, 9_(users), 10_(AvgSessionTime), 11_(pageViews)
-		int64(3), int64(3), float64(3), int64(3),
-		// 12_ConversionEventCount, 13_CostPerConversion, 14_ConvUserRate, 15_ConversionEventCompareCount, 16_CostPerConversionCompareCount, 17_compareConvUserRate
-		float64(3), float64(3), float64(3), float64(3), float64(3), float64(3), "key2"}
+		// 12_ConversionEventCount, 13_CostPerConversion, 15_ConversionEventCompareCount, 16_CostPerConversionCompareCount
+		float64(3), float64(3), float64(3), float64(3), "key2"}
 	rows = append(rows, row1, row2)
 
 	row3 := []interface{}{"Grand Total", int64(5), int64(5), float64(5),
 		// (CTR, AvgCPC, CPM, ClickConversionRate)
 		float64(100), float64(1), float64(1000), float64(100),
-		// Sessions, (users), (AvgSessionTime), (pageViews),
-		int64(5), int64(5), float64(2.6), int64(5),
 		// ConversionEventCount, CostPerConversion, ConversionEventCompareCount, CostPerConversionCompareCount
-		float64(5), float64(1), float64(100), float64(5), float64(1), float64(100), "Grand Total"}
+		float64(5), float64(1), float64(5), float64(1), "Grand Total"}
 
 	resultWant := append([][]interface{}{row3}, rows...)
 	type args struct {
