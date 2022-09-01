@@ -35,22 +35,23 @@ function Dashboard({
   const [refreshClicked, setRefreshClicked] = useState(false);
   const [sdkCheck, setSdkCheck] = useState(false);
   const { dashboards } = useSelector((state) => state.dashboard);
-  const integration = useSelector((state) => state.global.currentProjectSettings);
+  const integration = useSelector(
+    (state) => state.global.currentProjectSettings
+  );
   const integrationV1 = useSelector((state) => state.global.projectSettingsV1);
   const activeProject = useSelector((state) => state.global.active_project);
   const { bingAds, marketo } = useSelector((state) => state.global);
-  const currentAgent = useSelector((state) => state.agent.agent_details);
+  const [oldestRefreshTime, setOldestRefreshTime] = useState({});
   const dispatch = useDispatch();
-  const history = useHistory();
 
   useEffect(() => {
     fetchProjectSettingsV1(activeProject?.id)
-    .then((res) => {
-      setSdkCheck(res?.data?.int_completed);
-    })
-    .catch((err) => {
-      console.log(err);
-    });
+      .then((res) => {
+        setSdkCheck(res?.data?.int_completed);
+      })
+      .catch((err) => {
+        console.log(err);
+      });
 
     fetchProjectSettings(activeProject?.id);
 
@@ -72,7 +73,9 @@ function Dashboard({
     integration?.int_clear_bit ||
     sdkCheck ||
     bingAds?.accounts ||
-    marketo?.status || integrationV1?.int_slack || integration?.lead_squared_config !== null;
+    marketo?.status ||
+    integrationV1?.int_slack ||
+    integration?.lead_squared_config !== null;
 
   const handleEditClick = useCallback((dashboard) => {
     setaddDashboardModal(true);
@@ -133,9 +136,6 @@ function Dashboard({
           }
           onError={FaErrorLog}
         >
-          {/* <FaHeader>
-            <SearchBar />
-          </FaHeader> */}
           <div className="mt-20 flex-1 flex flex-col">
             <ProjectDropdown
               handleEditClick={handleEditClick}
@@ -144,6 +144,8 @@ function Dashboard({
               handleDurationChange={handleDurationChange}
               refreshClicked={refreshClicked}
               setRefreshClicked={setRefreshClicked}
+              oldestRefreshTime={oldestRefreshTime}
+              setOldestRefreshTime={setOldestRefreshTime}
             />
           </div>
 
@@ -156,28 +158,27 @@ function Dashboard({
         </ErrorBoundary>
       </>
     );
-  } else {
-    return (
-      <>
-        {checkIntegration ? (
-          <>
-            <DashboardAfterIntegration
-              setaddDashboardModal={setaddDashboardModal}
-            />
-            <AddDashboard
-              setEditDashboard={setEditDashboard}
-              editDashboard={editDashboard}
-              addDashboardModal={addDashboardModal}
-              setaddDashboardModal={setaddDashboardModal}
-            />
-          </>
-        ) : (
-          // <EmptyDashboard />
-          <DashboardBeforeIntegration />
-        )}
-      </>
-    );
   }
+  return (
+    <>
+      {checkIntegration ? (
+        <>
+          <DashboardAfterIntegration
+            setaddDashboardModal={setaddDashboardModal}
+          />
+          <AddDashboard
+            setEditDashboard={setEditDashboard}
+            editDashboard={editDashboard}
+            addDashboardModal={addDashboardModal}
+            setaddDashboardModal={setaddDashboardModal}
+          />
+        </>
+      ) : (
+        // <EmptyDashboard />
+        <DashboardBeforeIntegration />
+      )}
+    </>
+  );
 }
 
 export default connect(null, {
