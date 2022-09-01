@@ -4,11 +4,7 @@ import ReactDOMServer from 'react-dom/server';
 import PropTypes from 'prop-types';
 import * as d3 from 'd3';
 import moment from 'moment';
-import {
-  numberWithCommas,
-  formatCount,
-  addQforQuarter
-} from '../../utils/dataFormatter';
+import { addQforQuarter } from '../../utils/dataFormatter';
 import { getDateFormatForTimeSeriesChart } from '../../utils/chart.helpers';
 import { getFormattedKpiValue } from '../../Views/CoreQuery/KPIAnalysis/kpiAnalysis.helpers';
 import { METRIC_TYPES } from '../../utils/constants';
@@ -24,7 +20,9 @@ function SparkChart({
   height: widgetHeight,
   title,
   metricType,
-  comparisonEnabled
+  comparisonApplied,
+  eventTitle,
+  compareKey
 }) {
   const chartRef = useRef(null);
 
@@ -195,11 +193,11 @@ function SparkChart({
       tooltip.style('display', 'block');
       const format = getDateFormatForTimeSeriesChart({ frequency });
 
-      const percentChange = comparisonEnabled
-        ? ((d[event] - d.compareValue) / d.compareValue) * 100
+      const percentChange = comparisonApplied
+        ? ((d[event] - d[compareKey]) / d[compareKey]) * 100
         : 0;
 
-      const changeIcon = comparisonEnabled ? (
+      const changeIcon = comparisonApplied ? (
         <SVG
           color={percentChange > 0 ? '#5ACA89' : '#FF0000'}
           name={percentChange > 0 ? 'arrowLift' : 'arrowDown'}
@@ -212,12 +210,12 @@ function SparkChart({
           ReactDOMServer.renderToString(
             <div className="flex flex-col row-gap-2">
               <Text type="title" level={7} color="grey-2">
-                {event}
+                {eventTitle}
               </Text>
               <div
                 className={cx('flex flex-col')}
                 style={
-                  comparisonEnabled
+                  comparisonApplied
                     ? {
                         borderLeft: `3px solid ${chartColor}`,
                         paddingLeft: '9px'
@@ -236,7 +234,7 @@ function SparkChart({
                       <NumFormat number={d[event]} />
                     )}
                   </Text>
-                  {comparisonEnabled && (
+                  {comparisonApplied && (
                     <>
                       {changeIcon}
                       <Text level={7} type="title" color="grey">
@@ -246,7 +244,7 @@ function SparkChart({
                   )}
                 </div>
               </div>
-              {comparisonEnabled && (
+              {comparisonApplied && (
                 <div className="flex flex-col pl-3">
                   <Text type="title" color="grey" level={7}>
                     {addQforQuarter(frequency) +
@@ -261,11 +259,11 @@ function SparkChart({
                   >
                     {metricType != null && metricType !== '' ? (
                       getFormattedKpiValue({
-                        value: d['compareValue'],
+                        value: d[compareKey],
                         metricType
                       })
                     ) : (
-                      <NumFormat number={d['compareValue']} />
+                      <NumFormat number={d[compareKey]} />
                     )}
                   </Text>
                 </div>
@@ -312,7 +310,9 @@ SparkChart.propTypes = {
       date: PropTypes.instanceOf(Date)
     })
   ),
-  comparisonEnabled: PropTypes.bool
+  comparisonApplied: PropTypes.bool,
+  eventTitle: PropTypes.string,
+  compareKey: PropTypes.string
 };
 
 SparkChart.defaultProps = {
@@ -324,5 +324,7 @@ SparkChart.defaultProps = {
   metricType: undefined,
   page: 'KPI',
   chartData: [],
-  comparisonEnabled: false
+  comparisonApplied: false,
+  eventTitle: 'Chart',
+  compareKey: 'compareValue'
 };

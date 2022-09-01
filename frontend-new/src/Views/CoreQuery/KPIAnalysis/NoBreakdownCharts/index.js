@@ -133,7 +133,7 @@ const NoBreakdownChartsComponent = forwardRef(
               metricType={aggregateData[0].metricType}
               chartData={aggregateData[0].dataOverTime}
               compareTotal={aggregateData[0].compareTotal}
-              comparisonEnabled={
+              comparisonApplied={
                 aggregateData[0].compareTotal != null &&
                 aggregateData[0].compareTotal > 0
               }
@@ -173,7 +173,7 @@ const NoBreakdownChartsComponent = forwardRef(
                       chartColor={appliedColors[index]}
                       alignment="vertical"
                       compareTotal={chartData.compareTotal}
-                      comparisonEnabled={
+                      comparisonApplied={
                         chartData.compareTotal != null &&
                         chartData.compareTotal > 0
                       }

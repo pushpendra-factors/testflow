@@ -276,7 +276,7 @@ export const WithComparisonEnabled = () => {
       chartColor={visualizationColors[7]}
       chartData={SPARK_CHART_SAMPLE_KPI_DATA_WITH_COMPARISON_DATA}
       event="$form_submitted"
-      comparisonEnabled={true}
+      comparisonApplied={true}
       total={SPARK_CHART_SAMPLE_KPI_DATA.reduce(
         (total, elem) => total + elem.$form_submitted,
         0
@@ -299,7 +299,7 @@ export const WithVerticalAlignment = () => {
       chartColor={visualizationColors[4]}
       chartData={SPARK_CHART_SAMPLE_KPI_DATA_WITH_COMPARISON_DATA}
       event="$form_submitted"
-      comparisonEnabled={true}
+      comparisonApplied={true}
       total={SPARK_CHART_SAMPLE_KPI_DATA.reduce(
         (total, elem) => total + elem.$form_submitted,
         0

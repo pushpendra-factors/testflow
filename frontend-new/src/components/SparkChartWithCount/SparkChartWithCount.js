@@ -11,10 +11,11 @@ const SparkChartWithCount = ({
   event,
   metricType,
   chartColor,
-  comparisonEnabled,
+  comparisonApplied,
   smallFont,
   alignment,
   headerTitle,
+  compareKey,
   ...rest
 }) => {
   return (
@@ -34,25 +35,29 @@ const SparkChartWithCount = ({
           total={total}
           metricType={metricType}
           compareTotal={compareTotal}
-          comparisonEnabled={comparisonEnabled}
+          comparisonApplied={comparisonApplied}
           smallFont={smallFont}
           headerTitle={headerTitle}
         />
       </div>
-      <div
-        className={cx(
-          { 'w-3/4': alignment === 'horizontal' },
-          { 'w-full': alignment === 'vertical' }
-        )}
-      >
-        <SparkChart
-          event={event}
-          chartColor={chartColor}
-          metricType={metricType}
-          comparisonEnabled={comparisonEnabled}
-          {...rest}
-        />
-      </div>
+      {total > 0 && (
+        <div
+          className={cx(
+            { 'w-3/4': alignment === 'horizontal' },
+            { 'w-full': alignment === 'vertical' }
+          )}
+        >
+          <SparkChart
+            event={event}
+            chartColor={chartColor}
+            metricType={metricType}
+            comparisonApplied={comparisonApplied}
+            eventTitle={headerTitle}
+            compareKey={compareKey}
+            {...rest}
+          />
+        </div>
+      )}
     </div>
   );
 };
@@ -63,6 +68,7 @@ SparkChartWithCount.propTypes = {
   total: PropTypes.number,
   compareTotal: PropTypes.number,
   title: PropTypes.string,
+  compareKey: PropTypes.string,
   headerTitle: PropTypes.string,
   chartColor: PropTypes.string,
   event: PropTypes.string,
@@ -78,7 +84,7 @@ SparkChartWithCount.propTypes = {
       date: PropTypes.instanceOf(Date)
     })
   ),
-  comparisonEnabled: PropTypes.bool,
+  comparisonApplied: PropTypes.bool,
   smallFont: PropTypes.bool,
   alignment: PropTypes.oneOf(['horizontal', 'vertical'])
 };
@@ -88,6 +94,7 @@ SparkChartWithCount.defaultProps = {
   compareTotal: 0,
   headerTitle: '',
   title: 'Chart',
+  compareKey: 'compareValue',
   chartColor: '#4D7DB4',
   event: 'event',
   frequency: 'date',
@@ -95,7 +102,7 @@ SparkChartWithCount.defaultProps = {
   metricType: undefined,
   page: 'KPI',
   chartData: [],
-  comparisonEnabled: false,
+  comparisonApplied: false,
   smallFont: false,
   alignment: 'horizontal'
 };
