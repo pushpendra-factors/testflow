@@ -22,13 +22,12 @@ import {
 } from '../../../../utils/dataFormatter';
 import {
   CHART_TYPE_SPARKLINES,
-  CHART_TYPE_LINECHART,
-  QUERY_TYPE_KPI
+  CHART_TYPE_LINECHART
 } from '../../../../utils/constants';
 import LineChart from '../../../../components/HCLineChart';
 import NoBreakdownTable from './NoBreakdownTable';
 import SparkChartWithCount from '../../../../components/SparkChartWithCount/SparkChartWithCount';
-import { getEventDisplayName } from '../../EventsAnalytics/eventsAnalytics.helpers';
+import { getKpiLabel } from '../kpiAnalysis.helpers';
 
 const NoBreakdownChartsComponent = forwardRef(
   (
@@ -137,12 +136,7 @@ const NoBreakdownChartsComponent = forwardRef(
                 aggregateData[0].compareTotal != null &&
                 aggregateData[0].compareTotal > 0
               }
-              headerTitle={getEventDisplayName({
-                eventNames,
-                event: aggregateData[0].name,
-                kpi: kpis[0],
-                queryType: QUERY_TYPE_KPI
-              })}
+              headerTitle={getKpiLabel(kpis[0])}
             />
           </div>
         );
@@ -177,12 +171,7 @@ const NoBreakdownChartsComponent = forwardRef(
                         chartData.compareTotal != null &&
                         chartData.compareTotal > 0
                       }
-                      headerTitle={getEventDisplayName({
-                        eventNames,
-                        event: chartData.name,
-                        kpi: kpisWithData[index],
-                        queryType: QUERY_TYPE_KPI
-                      })}
+                      headerTitle={getKpiLabel(kpisWithData[index])}
                     />
                   </div>
                 );
