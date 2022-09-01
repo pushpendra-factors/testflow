@@ -5,11 +5,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { UNITS_ORDER_CHANGED } from '../../reducers/types';
 import { updateDashboard } from '../../reducers/dashboard/services';
 import { getRequestForNewState } from '../../reducers/dashboard/utils';
-import {
-  QUERY_TYPE_EVENT,
-  QUERY_TYPE_KPI,
-  QUERY_TYPE_WEB,
-} from '../../utils/constants';
+import { QUERY_TYPE_WEB } from '../../utils/constants';
 import WebsiteAnalytics from './WebsiteAnalytics';
 import { Text } from '../../components/factorsComponents';
 
@@ -19,6 +15,7 @@ function SortableCards({
   showDeleteWidgetModal,
   refreshClicked,
   setRefreshClicked,
+  setOldestRefreshTime
 }) {
   const dispatch = useDispatch();
   const timerRef = useRef(null);
@@ -36,7 +33,11 @@ function SortableCards({
           'flex flex-col justify-center fa-dashboard--no-data-container items-center'
         }
       >
-        <img alt='no-data' src='https://s3.amazonaws.com/www.factors.ai/assets/img/product/no-data.png' className={'mb-8'} />
+        <img
+          alt="no-data"
+          src="https://s3.amazonaws.com/www.factors.ai/assets/img/product/no-data.png"
+          className={'mb-8'}
+        />
         <Text type={'title'} level={5} weight={'bold'} extraClass={'m-0'}>
           Add widgets to start monitoring.
         </Text>
@@ -53,12 +54,12 @@ function SortableCards({
       dispatch({
         type: UNITS_ORDER_CHANGED,
         payload: newState,
-        units_position: body,
+        units_position: body
       });
       clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => {
         updateDashboard(active_project.id, activeDashboard.id, {
-          units_position: body,
+          units_position: body
         });
       }, 300);
     },
@@ -90,7 +91,7 @@ function SortableCards({
           return {
             ...elem,
             title: query.title,
-            query: { ...query.query },
+            query: { ...query.query }
           };
         }),
     [activeDashboardUnits, savedQueries]
@@ -99,7 +100,7 @@ function SortableCards({
   if (activeUnits.length) {
     return (
       <ReactSortable
-        className='flex flex-wrap'
+        className="flex flex-wrap"
         list={activeUnits}
         setList={onDrop}
       >
@@ -115,6 +116,7 @@ function SortableCards({
               showDeleteWidgetModal={showDeleteWidgetModal}
               refreshClicked={refreshClicked}
               setRefreshClicked={setRefreshClicked}
+              setOldestRefreshTime={setOldestRefreshTime}
             />
           );
         })}

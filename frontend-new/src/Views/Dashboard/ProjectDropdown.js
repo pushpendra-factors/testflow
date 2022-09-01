@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import {
-  Button, Col, Row, Spin
-} from 'antd';
+import { Button, Col, Row, Spin } from 'antd';
 import { useSelector, useDispatch, connect } from 'react-redux';
 import {
   fetchActiveDashboardUnits,
@@ -31,10 +29,9 @@ import GroupSelect2 from '../../components/QueryComposer/GroupSelect2';
 import factorsai from 'factorsai';
 import { fetchDemoProject, getHubspotContact } from 'Reducers/global';
 import NewProject from '../Settings/SetupAssist/Modals/NewProject';
-import { meetLink } from '../../utils/hubspot';
 import { setItemToLocalStorage } from '../../utils/localStorage.helpers';
 import { DASHBOARD_KEYS } from '../../constants/localStorage.constants';
-import userflow from 'userflow.js'
+import userflow from 'userflow.js';
 
 function ProjectDropdown({
   setaddDashboardModal,
@@ -45,7 +42,8 @@ function ProjectDropdown({
   setRefreshClicked,
   isPinned = false,
   fetchDemoProject,
-  getHubspotContact
+  oldestRefreshTime,
+  setOldestRefreshTime
 }) {
   const [moreOptions, setMoreOptions] = useState(false);
   const [widgetModal, setwidgetModal] = useState(false);
@@ -56,7 +54,6 @@ function ProjectDropdown({
   const { dashboards, activeDashboard, activeDashboardUnits } = useSelector(
     (state) => state.dashboard
   );
-  const currentAgent = useSelector((state) => state.agent.agent_details);
   const { projects } = useSelector((state) => state.global);
   const [selectVisible, setSelectVisible] = useState(false);
   const [showDashboardName, setDashboardName] = useState('');
@@ -64,7 +61,6 @@ function ProjectDropdown({
   const [deleteDashboardModal, showDeleteDashboardModal] = useState(false);
   const [dashboardDeleteApi, setDashboardDeleteApi] = useState(false);
   const [demoProjectId, setDemoProjectId] = useState(null);
-  const [ownerID, setOwnerID] = useState();
   const [showProjectModal, setShowProjectModal] = useState(false);
 
   const dispatch = useDispatch();
@@ -78,7 +74,6 @@ function ProjectDropdown({
         console.log(err.data.error);
       });
   }, [active_project]);
-
 
   const changeActiveDashboard = useCallback(
     (val) => {
@@ -264,7 +259,7 @@ function ProjectDropdown({
 
   const handleTour = () => {
     userflow.start('c162ed75-0983-41f3-ae56-8aedd7dbbfbd');
-  }
+  };
 
   const generateDBList = () => {
     const dashboardList = [
@@ -350,7 +345,9 @@ function ProjectDropdown({
                   ) : (
                     <Text type={'title'} level={7} extraClass={'m-0'}>
                       To jump back into your Factors project, click on your
-                      account card on the <span className={'font-bold'}>top right</span> of the screen.
+                      account card on the{' '}
+                      <span className={'font-bold'}>top right</span> of the
+                      screen.
                     </Text>
                   )}
                 </Col>
@@ -380,7 +377,13 @@ function ProjectDropdown({
                     className={'m-0 mr-2'}
                     onClick={() => handleTour()}
                   >
-                    Take the tour <SVG name={'Arrowright'} size={16} extraClass={'ml-1'} color={'blue'} />
+                    Take the tour{' '}
+                    <SVG
+                      name={'Arrowright'}
+                      size={16}
+                      extraClass={'ml-1'}
+                      color={'blue'}
+                    />
                   </Button>
                 </Col>
               </Row>
@@ -422,6 +425,7 @@ function ProjectDropdown({
               handleEditClick={handleEditClick}
               refreshClicked={refreshClicked}
               setRefreshClicked={setRefreshClicked}
+              oldestRefreshTime={oldestRefreshTime[activeDashboard.id]}
             />
             <SortableCards
               durationObj={durationObj}
@@ -429,6 +433,7 @@ function ProjectDropdown({
               showDeleteWidgetModal={showDeleteWidgetModal}
               refreshClicked={refreshClicked}
               setRefreshClicked={setRefreshClicked}
+              setOldestRefreshTime={setOldestRefreshTime}
             />
           </div>
 

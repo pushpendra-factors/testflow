@@ -1207,8 +1207,8 @@ func GetRowsByMapsLandingPage(contentGroupNamesList []string, attributionData *m
 
 	var defaultMatchingRow []interface{}
 
-	//ConversionEventCount, ConvUserRate, ConversionEventCompareCount, compareConvUserRate
-	defaultMatchingRow = append(defaultMatchingRow, float64(0), float64(0), float64(0), float64(0))
+	//ConversionEventCount, ConversionEventCompareCount
+	defaultMatchingRow = append(defaultMatchingRow, float64(0), float64(0))
 
 	var contentGroups []interface{}
 	for i := 0; i < len(contentGroupNamesList); i++ {
@@ -1245,20 +1245,12 @@ func GetRowsByMapsLandingPage(contentGroupNamesList []string, attributionData *m
 			}
 			// Append fixed Metrics & ConversionEventCount[0] as only one goal event exists for landing page
 			row = append(row, data.ConversionEventCount[0])
-			var userConvRate []float64
-
-			var compareUserConvRate []float64
-
-			userConvRate = append(userConvRate, float64(0))
 
 			if isCompare {
-				compareUserConvRate = append(compareUserConvRate, float64(0))
 
-				row = append(row, userConvRate[0])
 				row = append(row, data.ConversionEventCompareCount[0])
-				row = append(row, compareUserConvRate[0])
 			} else {
-				row = append(row, userConvRate[0], float64(0), float64(0))
+				row = append(row, float64(0))
 			}
 			row = append(row, getLinkedEventColumnAsInterfaceListLandingPage(data.ConversionEventCount[0], data.LinkedEventsCount, len(linkedEvents))...)
 			rows = append(rows, row)

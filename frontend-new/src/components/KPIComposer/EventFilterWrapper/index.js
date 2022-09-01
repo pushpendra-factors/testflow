@@ -111,6 +111,12 @@ function EventFilterWrapper({
             ddValues[filter?.extra[0]] = ['$none'];
             setDropDownValues(ddValues);
           });
+      } else if(!filter?.extra) {
+        // filter.extra getiing set null after running query once and after 2nd time it showing loading
+        // added here temporary fix for the above
+          const ddValues = Object.assign({}, dropDownValues);
+          ddValues[filter?.props[0]] = ['$none'];
+          setDropDownValues(ddValues);
       }
 
 

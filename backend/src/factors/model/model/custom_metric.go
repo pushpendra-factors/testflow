@@ -28,6 +28,7 @@ var CustomMetricAggregateFunctions = []string{SumAggregateFunction, UniqueAggreg
 var CustomMetricObjectTypeNames = []string{HubspotContactsDisplayCategory, HubspotCompaniesDisplayCategory, HubspotDealsDisplayCategory,
 	SalesforceUsersDisplayCategory, SalesforceAccountsDisplayCategory, SalesforceOpportunitiesDisplayCategory, MarketoLeadsDisplayCategory, LeadSquaredLeadsDisplayCategory}
 var ProfileQueryType = 1
+var DerivedQueryType = 2
 
 var customMetricGroupNameByObjectType = map[string]string{
 	GROUP_NAME_HUBSPOT_COMPANY:        HubspotCompaniesDisplayCategory,
