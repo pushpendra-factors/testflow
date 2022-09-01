@@ -258,7 +258,7 @@ func SetCacheResultByDashboardIdAndUnitId(result interface{}, projectId int64, d
 func GetDashboardCacheAnalyticsValidityMap() (map[int64]map[int64]bool, int64, error) {
 	logCtx := log.WithFields(log.Fields{"method": "GetDashboardCacheAnalyticsValidityMap"})
 
-	cacheKeys, err := cacheRedis.ScanPersistent("dashboard:analytics:*", MaxNumberOfDashboardUnitCacheAccessedIn14Days, MaxNumberOfDashboardUnitCacheAccessedIn14Days)
+	cacheKeys, err := cacheRedis.Scan("dashboard:analytics:*", MaxNumberOfDashboardUnitCacheAccessedIn14Days, MaxNumberOfDashboardUnitCacheAccessedIn14Days)
 
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get cache key")
