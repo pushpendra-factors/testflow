@@ -75,7 +75,7 @@ func main() {
 	mode := flag.String("mode", "ingest", "")
 	customStartTime := flag.Int64("start_time", 0, "")
 	customEndTime := flag.Int64("end_time", 0, "")
-	projectIdFlag := flag.Uint64("project_id", 0, "Project Id.")
+	projectIdFlag := flag.Int64("project_id", 0, "Project Id.")
 	CountOccurence := flag.Bool("count_occurence", false, "Count occurence of Patterns")
 
 	shouldCountOccurence := *CountOccurence
@@ -309,7 +309,7 @@ func eventToDb(event denEvent, project *model.Project) int {
 	return http.StatusOK
 }
 
-func testData(startTime int64, endTime int64, projectId uint64, shouldCountOccurence bool, file *os.File) error {
+func testData(startTime int64, endTime int64, projectId int64, shouldCountOccurence bool, file *os.File) error {
 
 	patterns, err := getPatterns(projectId, file, shouldCountOccurence)
 	if err != nil {
@@ -335,7 +335,7 @@ func testData(startTime int64, endTime int64, projectId uint64, shouldCountOccur
 	if err != nil {
 		return errors.New("failed to unmarshal")
 	}
-	result, errCode, _ := store.GetStore().Analyze(projectId, query)
+	result, errCode, _ := store.GetStore().Analyze(projectId, query, true)
 	if errCode != http.StatusOK {
 		return errors.New("failed to analyze query")
 	}
@@ -351,7 +351,7 @@ func testData(startTime int64, endTime int64, projectId uint64, shouldCountOccur
 	if err != nil {
 		return errors.New("failed to unmarshal")
 	}
-	result, errCode, _ = store.GetStore().Analyze(projectId, query)
+	result, errCode, _ = store.GetStore().Analyze(projectId, query, true)
 	if errCode != http.StatusOK {
 		return errors.New("failed to analyze query")
 	}
@@ -367,7 +367,7 @@ func testData(startTime int64, endTime int64, projectId uint64, shouldCountOccur
 	if err != nil {
 		return errors.New("failed to unmarshal")
 	}
-	result, errCode, _ = store.GetStore().Analyze(projectId, query)
+	result, errCode, _ = store.GetStore().Analyze(projectId, query, true)
 	if errCode != http.StatusOK {
 		return errors.New("failed to analyze query")
 	}
@@ -386,7 +386,7 @@ func testData(startTime int64, endTime int64, projectId uint64, shouldCountOccur
 	if err != nil {
 		return errors.New("failed to unmarshal")
 	}
-	result, errCode, _ = store.GetStore().Analyze(projectId, query)
+	result, errCode, _ = store.GetStore().Analyze(projectId, query, true)
 	if errCode != http.StatusOK {
 		return errors.New("failed to analyze query")
 	}
@@ -410,7 +410,7 @@ func testData(startTime int64, endTime int64, projectId uint64, shouldCountOccur
 	if err != nil {
 		return errors.New("failed to unmarshal")
 	}
-	result, errCode, _ = store.GetStore().Analyze(projectId, query)
+	result, errCode, _ = store.GetStore().Analyze(projectId, query, true)
 	if errCode != http.StatusOK {
 		return errors.New("failed to analyze query")
 	}
@@ -428,7 +428,7 @@ func testData(startTime int64, endTime int64, projectId uint64, shouldCountOccur
 	return nil
 }
 
-func getPatterns(projectID uint64, file *os.File, countOccurence bool) ([]*P.Pattern, error) {
+func getPatterns(projectID int64, file *os.File, countOccurence bool) ([]*P.Pattern, error) {
 
 	// A -> $session , B -> Fund Project , C -> View Project
 
@@ -481,7 +481,7 @@ func getPatterns(projectID uint64, file *os.File, countOccurence bool) ([]*P.Pat
 	return patterns, nil
 }
 
-func testWithEventConstraints(startTime int64, endTime int64, projectId uint64, shouldCountOccurence bool, file *os.File) error {
+func testWithEventConstraints(startTime int64, endTime int64, projectId int64, shouldCountOccurence bool, file *os.File) error {
 	//Test with event constraints
 	patterns, err := getPatterns(projectId, file, shouldCountOccurence)
 	if err != nil {
@@ -520,7 +520,7 @@ func testWithEventConstraints(startTime int64, endTime int64, projectId uint64, 
 	if err != nil {
 		return errors.New("failed to unmarshal")
 	}
-	result, _, _ := store.GetStore().Analyze(projectId, query)
+	result, _, _ := store.GetStore().Analyze(projectId, query, true)
 	log.Info(fmt.Sprintf("PATTERN RESULT \nperUserCount:%d\n", perUserCount))
 	log.Info(fmt.Sprintf("\nQuery Result\nperUserCount:%d\n", result.Rows[0][0]))
 
@@ -547,7 +547,7 @@ func testWithEventConstraints(startTime int64, endTime int64, projectId uint64, 
 	if err != nil {
 		return errors.New("failed to unmarshal")
 	}
-	result, _, _ = store.GetStore().Analyze(projectId, query)
+	result, _, _ = store.GetStore().Analyze(projectId, query, true)
 	log.Info(fmt.Sprintf("PATTERN RESULT \nperUserCount:%d\n", perUserCount))
 	log.Info(fmt.Sprintf("\nQuery Result\nnperUserCount:%d\n", result.Rows[0][3]))
 	return nil
