@@ -175,9 +175,13 @@ var SearchKeyPreset = map[string][]string{
 // GetDashboardUnitQueryLastComputedResultCacheKey return last computed cachekey
 func GetDashboardUnitQueryLastComputedResultCacheKey(projectID int64, dashboardID, unitID int64, preset string, from, to int64, timezoneString U.TimeZoneString) (*cacheRedis.Key, error) {
 
+	logCtx := log.WithFields(log.Fields{
+		"CacheKey": fmt.Sprintf("PID:%d:DID:%d:DUID:%d:PRESET:%s", projectID, dashboardID, unitID, preset),
+	})
+	logCtx.Info("fetching Last computed")
 	var cacheKeys []*cacheRedis.Key
 	var err error
-
+	queryStartTime := time.Now().UTC().Unix()
 	for _, pre := range SearchKeyPreset[preset] {
 		pattern := fmt.Sprintf("dashboard:query:pid:%d:did:%d:duid:%d:preset:%s:from:%d:to:*", projectID, dashboardID, unitID, pre, from)
 		cacheKey, err := cacheRedis.ScanPersistent(pattern, 35, 35)
@@ -188,6 +192,8 @@ func GetDashboardUnitQueryLastComputedResultCacheKey(projectID int64, dashboardI
 		}
 	}
 
+	logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("195-Fetch all keys took time")
+	queryStartTime = time.Now().UTC().Unix()
 	var latestComputedAt int64 = 0
 	var latestComputedKey *cacheRedis.Key
 
@@ -210,11 +216,16 @@ func GetDashboardUnitQueryLastComputedResultCacheKey(projectID int64, dashboardI
 		}
 
 	}
+	logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("218-find latest key took time")
+
 	log.WithFields(log.Fields{"latest_key": latestComputedKey, "len_cacheKeys": len(cacheKeys)}).Info("Last computed cache key")
 
 	if latestComputedKey == nil {
+		queryStartTime := time.Now().UTC().Unix()
 		cacheKey, err := GetDashboardUnitQueryResultCacheKeyWithPreset(projectID, dashboardID, unitID, preset, from, to, timezoneString)
 		log.WithFields(log.Fields{"preset": preset}).Info("Failed to find cache key")
+		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("218-find latest key took time")
+
 		return cacheKey, err
 	}
 
