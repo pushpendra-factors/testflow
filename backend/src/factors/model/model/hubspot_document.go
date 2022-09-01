@@ -840,3 +840,34 @@ func GetHubspotDocumentsListAsBatch(list []*HubspotDocument, batchSize int) [][]
 
 	return batchList
 }
+
+func GetHubspotDocumentsListAsBatchById(list []*HubspotDocument, batchSize int) [][]*HubspotDocument {
+	uniqueDocList := make(map[string][]*HubspotDocument)
+	for i := range list {
+		if _, exist := uniqueDocList[list[i].ID]; !exist {
+			uniqueDocList[list[i].ID] = make([]*HubspotDocument, 0)
+		}
+		uniqueDocList[list[i].ID] = append(uniqueDocList[list[i].ID], list[i])
+	}
+
+	batchList := make([][]*HubspotDocument, 0)
+	visitedID := make(map[string]bool)
+	for i := range list {
+		if visitedID[list[i].ID] {
+			continue
+		}
+
+		listLen := len(batchList)
+		docs := uniqueDocList[list[i].ID]
+		if listLen == 0 ||
+			len(batchList[listLen-1])+len(docs) > batchSize {
+			batchList = append(batchList, make([]*HubspotDocument, 0))
+			listLen++
+		}
+
+		batchList[listLen-1] = append(batchList[listLen-1], docs...)
+		visitedID[list[i].ID] = true
+	}
+
+	return batchList
+}

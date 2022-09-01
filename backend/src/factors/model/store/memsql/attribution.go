@@ -162,7 +162,7 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID int64, queryOriginal *mod
 		for key, _ := range *attributionData {
 			(*attributionData)[key].ConvAggFunctionType = convAggFunctionType
 		}
-		logCtx.Info("Done AddTheAddedKeysAndMetrics, AddPerformanceData")
+		logCtx.Info("Done, AddPerformanceData")
 
 	} else {
 		// This thread is for query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities.
@@ -305,13 +305,13 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID int64, queryOriginal *mod
 			(*attributionData)[key].ConvAggFunctionType = convAggFunctionType
 		}
 
-		// Add the Added keys
-		model.AddTheAddedKeysAndMetrics(attributionData, query, groupSessions, noOfConversionEvents)
-
 		if C.GetAttributionDebug() == 1 && projectID == 641 {
 			logCtx.WithFields(log.Fields{"AttributionDebug": "true",
 				"attributionData": attributionData}).Info("revenue attr debug. AttributionData before addPerformance.")
 		}
+
+		// Add the Added keys
+		model.AddTheAddedKeysAndMetrics(attributionData, query, groupSessions, noOfConversionEvents)
 
 		// Add the performance information
 		model.AddPerformanceData(attributionData, query.AttributionKey, marketingReports, noOfConversionEvents)
@@ -696,8 +696,6 @@ func (store *MemSQL) getAllTheSessions(projectId int64, sessionEventNameId strin
 		" WHEN JSON_EXTRACT_STRING(sessions.properties, ?) = '' THEN ? ELSE JSON_EXTRACT_STRING(sessions.properties, ?) END"
 
 	queryUserSessionTimeRange := "SELECT sessions.user_id, " +
-		caseSelectStmt + " AS sessionTimeSpent, " +
-		caseSelectStmt + " AS pageCount, " +
 		caseSelectStmt + " AS campaignID, " +
 		caseSelectStmt + " AS campaignName, " +
 		caseSelectStmt + " AS adgroupID, " +
@@ -713,8 +711,6 @@ func (store *MemSQL) getAllTheSessions(projectId int64, sessionEventNameId strin
 	var qParams []interface{}
 
 	qParams = append(qParams,
-		U.SP_SPENT_TIME, 0, U.SP_SPENT_TIME, 0, U.SP_SPENT_TIME,
-		U.SP_PAGE_COUNT, 0, U.SP_PAGE_COUNT, 0, U.SP_PAGE_COUNT,
 		U.EP_CAMPAIGN_ID, model.PropertyValueNone, U.EP_CAMPAIGN_ID, model.PropertyValueNone, U.EP_CAMPAIGN_ID,
 		U.EP_CAMPAIGN, model.PropertyValueNone, U.EP_CAMPAIGN, model.PropertyValueNone, U.EP_CAMPAIGN,
 		U.EP_ADGROUP_ID, model.PropertyValueNone, U.EP_ADGROUP_ID, model.PropertyValueNone, U.EP_ADGROUP_ID,

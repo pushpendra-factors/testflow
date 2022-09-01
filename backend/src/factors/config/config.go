@@ -256,6 +256,12 @@ type Configuration struct {
 	HubspotAppID                                    string
 	HubspotAppSecret                                string
 	EnableOptimisedFilterOnEventUserQuery           bool
+	EnableEmailBlockingFlag                         bool
+	EnableIPBlockingFlag                            bool
+	BlockedEmailList                                []string
+	BlockedIPList                                   []string
+	BlockedEmailDomainList                          []string
+	DBMaxAllowedPacket                              int64
 }
 
 type Services struct {
@@ -2226,4 +2232,16 @@ func GetHubspotAppID() string {
 func EnableOptimisedFilterOnEventUserQuery() bool {
 	return configuration.EnableOptimisedFilterOnEventUserQuery
 
+}
+
+func EnableEmailDomainBlocking() bool {
+	return configuration.EnableEmailBlockingFlag
+}
+
+func EnableIPBlocking() bool {
+	return configuration.EnableIPBlockingFlag
+}
+
+func GetDBMaxAllowedPacket() int64 {
+	return configuration.DBMaxAllowedPacket
 }

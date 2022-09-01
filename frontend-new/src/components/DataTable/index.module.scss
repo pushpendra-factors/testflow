@@ -41,7 +41,7 @@
     line-height: 16px;
     color: $fa-color--mono-5;
     min-height: 3rem !important;
-    padding: 1rem;
+    padding: 1rem !important;
   }
 
   :global(td.ant-table-cell:not(:last-child):not(.border-none)),

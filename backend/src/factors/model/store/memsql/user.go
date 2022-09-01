@@ -869,7 +869,8 @@ func (store *MemSQL) GetRequiredUserPropertiesByProject(projectID int64, limit i
 	// add mandatory properties And remove unnecessary properties.
 	properties = U.ClassifyDateTimePropertyKeys(&properties)
 	U.FillMandatoryDefaultUserProperties(&properties)
-	U.FilterDisabledCoreUserProperties(&properties)
+	_, overrides := store.GetPropertyOverridesByType(projectID, U.PROPERTY_OVERRIDE_BLACKLIST, model.GetEntity(true))
+	U.FilterDisabledCoreUserProperties(overrides, &properties)
 
 	// Adding Property To Displayname Hash.
 	resultantPropertyToDisplayName := make(map[string]string)

@@ -703,4 +703,7 @@ type Model interface {
 	GetKPIConfigsForCustomAds(projectID int64, reqID string) ([]map[string]interface{}, int)
 	GetKPIConfigsForCustomAdsFromDB(projectID int64) []map[string]interface{}
 	GetCustomChannelFilterValuesV1(projectID int64, source, channel, filterObject, filterProperty string, reqID string) (model.ChannelFilterValues, int)
+
+	// property overides
+	GetPropertyOverridesByType(projectID int64, typeConstant int, entity int) (int, []string)
 }

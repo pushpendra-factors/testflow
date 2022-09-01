@@ -4,7 +4,7 @@ import { METRIC_TYPES } from '../../../utils/constants';
 
 export const getKpiLabel = (kpi) => {
   const label = kpi.alias || kpi.label;
-  if (kpi.category !== 'channels' || kpi.category !== 'custom_channels') {
+  if (kpi.category !== 'channels' && kpi.category !== 'custom_channels') {
     return label;
   }
   const labelWithGroupName = startCase(kpi.group) + ' ' + label;
