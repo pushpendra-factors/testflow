@@ -69,6 +69,7 @@ type DashboardCacheResult struct {
 const DashboardCachingDurationInSeconds = 32 * 24 * 60 * 60              // 32 days.
 const DashboardCacheInvalidationDuration14DaysInSecs = 14 * 24 * 60 * 60 // 14 days.
 const MaxNumberOfDashboardUnitCacheAccessedIn14Days = 50000
+const MaxNumberPerScanCount = 50000
 
 const (
 	DashboardTypePrivate        = "pr"

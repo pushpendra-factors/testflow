@@ -184,7 +184,7 @@ func GetDashboardUnitQueryLastComputedResultCacheKey(projectID int64, dashboardI
 	queryStartTime := time.Now().UTC().Unix()
 	for _, pre := range SearchKeyPreset[preset] {
 		pattern := fmt.Sprintf("dashboard:query:pid:%d:did:%d:duid:%d:preset:%s:from:%d:to:*", projectID, dashboardID, unitID, pre, from)
-		cacheKey, err := cacheRedis.ScanPersistent(pattern, 35, 35)
+		cacheKey, err := cacheRedis.Scan(pattern, MaxNumberPerScanCount, MaxNumberPerScanCount)
 		cacheKeys = append(cacheKeys, cacheKey...)
 		if err != nil {
 			log.WithError(err).Error("Failed to get cache key")
