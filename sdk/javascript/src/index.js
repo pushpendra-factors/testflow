@@ -2,7 +2,6 @@
 
 const logger = require("./utils/logger");
 var App = require("./app");
-const { factors } = require("../npm_package");
 
 // Global reference.
 var app = new App();
