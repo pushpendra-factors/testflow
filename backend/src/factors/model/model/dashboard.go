@@ -134,9 +134,8 @@ func GetCacheResultByDashboardIdAndUnitIdWithPreset(reqId string, projectId int6
 	if projectId == 0 || dashboardId == 0 || unitId == 0 {
 		return cacheResult, http.StatusBadRequest, errors.New("invalid scope ids")
 	}
-	queryStartTime := time.Now().UTC().Unix()
+
 	cacheKey, err := GetDashboardUnitQueryLastComputedResultCacheKey(projectId, dashboardId, unitId, preset, from, to, timezoneString)
-	logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("137-GetDashboardUnitQueryLastComputedResultCacheKey took time")
 	if err != nil {
 		return cacheResult, http.StatusInternalServerError, errors.New("Dashboard Cache: Failed to fetch cache key - " + err.Error())
 	}
@@ -171,9 +170,8 @@ func SetCacheResultByDashboardIdAndUnitIdWithPreset(result interface{}, projectI
 		logCtx.Error("Invalid scope ids.")
 		return
 	}
-	queryStartTime := time.Now().UTC().Unix()
+
 	cacheKey, err := GetDashboardUnitQueryResultCacheKeyWithPreset(projectId, dashboardId, unitId, preset, from, to, timezoneString)
-	logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("173-GetDashboardUnitQueryResultCacheKeyWithPresettook time")
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get cache key")
 		return
