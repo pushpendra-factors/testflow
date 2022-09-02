@@ -1498,7 +1498,7 @@ func MergeTwoDataRows(row1 []interface{}, row2 []interface{}, keyIndex int, attr
 		row1[keyIndex+2] = row1[keyIndex+2].(float64) + row2[keyIndex+2].(float64) // Compare Conversion.
 
 		// Remaining linked funnel events & CPCs
-		for i := keyIndex + 3; i < len(row1); i += 2 {
+		for i := keyIndex + 3; i < len(row1)-1; i += 2 {
 			row1[i] = row1[i].(float64) + row2[i].(float64)
 		}
 
@@ -1615,7 +1615,7 @@ func MergeTwoDataRows(row1 []interface{}, row2 []interface{}, keyIndex int, attr
 		}
 
 		// Remaining linked funnel events & CPCs
-		for i := keyIndex + 12; i < len(row1); i += 3 {
+		for i := keyIndex + 12; i < len(row1)-1; i += 3 {
 			row1[i] = row1[i].(float64) + row2[i].(float64)
 			if row1[i].(float64) > 0 && i < len(row1) {
 				row1[i+1], _ = U.FloatRoundOffWithPrecision(spend/row1[i].(float64), U.DefaultPrecision) // Funnel - Conversion - CPC. spend/conversion
@@ -1738,7 +1738,7 @@ func AddGrandTotalRow(headers []string, rows [][]interface{}, keyIndex int, anal
 	var spendFunnelConversionCPC []float64      //linked funnel events
 	var conversionFunnelConversionCPC []float64 //linked funnel events
 
-	for i := keyIndex + 12; i < len(headers); i += 3 {
+	for i := keyIndex + 12; i < len(headers)-1; i += 3 {
 		spendFunnelConversionCPC = append(spendFunnelConversionCPC, float64(0))
 		conversionFunnelConversionCPC = append(conversionFunnelConversionCPC, float64(0))
 	}
@@ -1783,7 +1783,7 @@ func AddGrandTotalRow(headers []string, rows [][]interface{}, keyIndex int, anal
 
 		// Remaining linked funnel events & CPCs
 		j := 0
-		for i := keyIndex + 12; i < len(grandTotalRow); i += 3 {
+		for i := keyIndex + 12; i < len(grandTotalRow)-1; i += 3 {
 			grandTotalRow[i] = grandTotalRow[i].(float64) + row[i].(float64)
 			if spend > 0 && i < len(grandTotalRow) && j < len(spendFunnelConversionCPC) && len(spendFunnelConversionCPC) > 0 && len(conversionFunnelConversionCPC) > 0 {
 				spendFunnelConversionCPC[j], _ = U.FloatRoundOffWithPrecision(spendFunnelConversionCPC[j]+spend, U.DefaultPrecision)
@@ -1838,7 +1838,7 @@ func AddGrandTotalRow(headers []string, rows [][]interface{}, keyIndex int, anal
 
 	// Remaining linked funnel events & CPCs
 	k := 0
-	for i := keyIndex + 12; i < len(grandTotalRow); i += 3 {
+	for i := keyIndex + 12; i < len(grandTotalRow)-1; i += 3 {
 		if i < len(grandTotalRow) && k < len(spendFunnelConversionCPC) && len(spendFunnelConversionCPC) > 0 && len(conversionFunnelConversionCPC) > 0 && conversionFunnelConversionCPC[k] > 0 {
 			// Funnel - Conversion - CPC.
 			grandTotalRow[i+1], _ = U.FloatRoundOffWithPrecision(spendFunnelConversionCPC[k]/conversionFunnelConversionCPC[k], U.DefaultPrecision)
