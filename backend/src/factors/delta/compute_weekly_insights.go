@@ -106,6 +106,7 @@ func getInsightImportance(valWithDetails ValueWithDetails, keysUsedInInsights ma
 	var cons float64
 	w1 := valWithDetails.ActualValues.W1
 	w2 := valWithDetails.ActualValues.W2
+	boost := valWithDetails.ActualValues.DeltaRatio //deltaratio alias as boosting factor
 	dist1 := valWithDetails.ChangeInScale.W1[1]
 	dist2 := valWithDetails.ChangeInScale.W2[1]
 	if w2 == 0 || w1 == 0 {
@@ -117,7 +118,7 @@ func getInsightImportance(valWithDetails ValueWithDetails, keysUsedInInsights ma
 		cons = 1
 	}
 	keysUsedInInsights[valWithDetails.Key] = true
-	return math.Abs(w2-w1) * cons / (w2 + w1)
+	return (math.Abs(w2-w1) * cons / (w2 + w1)) * boost
 }
 
 func GetInsightsKpi(file CrossPeriodInsightsKpi, numberOfRecords int, QueryClass, KpiType string, isEventWebsite bool) WeeklyInsights {
@@ -133,6 +134,7 @@ func GetInsightsKpi(file CrossPeriodInsightsKpi, numberOfRecords int, QueryClass
 	cpiInfo := file.Target
 	scaleInfo := file.ScaleInfo
 	var numIncreased, numDecreased int
+	var keysUsedInInsights = make(map[string]bool)
 
 	//get scale
 	var globalScaleW1, globalScaleW2 float64
@@ -157,20 +159,19 @@ func GetInsightsKpi(file CrossPeriodInsightsKpi, numberOfRecords int, QueryClass
 	insights.Goal = tmpGlobal
 
 	for key, valMap := range cpiInfo.FeatureMetrics {
-		var tmp ValueWithDetails
-		var temp BaseTargetMetrics
 
 		keyNameType := strings.SplitN(key, "#", 2)
 		keyType, keyName := keyNameType[0], keyNameType[1]
 
 		for val, diff := range valMap {
+
 			if val == "" { // omitting "" values
 				continue
 			}
-			if KeyMapForDistribution[val] {
+			if BlackListedKeys[keyName] {
 				continue
 			}
-			if BlackListedKeys[keyName] {
+			if KeyMapForDistribution[val] {
 				continue
 			}
 			KeyMapForDistribution[val] = true
@@ -183,57 +184,59 @@ func GetInsightsKpi(file CrossPeriodInsightsKpi, numberOfRecords int, QueryClass
 
 			featW1 := diff.First.(float64)
 			featW2 := diff.Second.(float64)
-			tmp.Key = keyName
-			tmp.Value = val
-			tmp.Entity = keyType
-			temp.W1 = featW1
-			temp.W2 = featW2
-			temp.Per = diff.PercentChange
-
-			if _, exists := file.JSDivergence.Target[key][val]; exists {
-				temp.JSDivergence = file.JSDivergence.Target[key][val] * temp.W1
-				if _, exists := PriorityKeysDistribution[tmp.Key]; exists {
-					temp.JSDivergence = 4
-				} else {
-					if WhiteListedKeys[tmp.Key] {
-						temp.JSDivergence = 3
-						tmp.VoteStatus = Upvoted
-					} else if WhiteListedKeysOtherQuery[tmp.Key] {
-						temp.JSDivergence = 2
-						tmp.VoteStatus = UpvotedForOtherQuery
-					} else if DecreaseBoostKeys[tmp.Key] {
-						temp.JSDivergence = 0
-						tmp.VoteStatus = DownvotedForOtherQuery
-					} else {
-						temp.JSDivergence = 1
-					}
-				}
-			}
-			tmp.ActualValues = temp
-
-			tmp.ChangeInScale.W1[0] = featScaleW1
-			if globalScaleW1 != 0 {
-				tmp.ChangeInScale.W1[1] = featScaleW1 * 100 / globalScaleW1
-			}
-			tmp.ChangeInScale.W2[0] = featScaleW2
-			if globalScaleW2 != 0 {
-				tmp.ChangeInScale.W2[1] = featScaleW2 * 100 / globalScaleW2
-			}
-			tmp.ChangeInScale.IsIncreased[0] = tmp.ChangeInScale.W1[0] < tmp.ChangeInScale.W2[0]
-			tmp.ChangeInScale.IsIncreased[1] = tmp.ChangeInScale.W1[1] < tmp.ChangeInScale.W2[1]
-			if tmp.ChangeInScale.W1[0] != 0 {
-				tmp.ChangeInScale.Percentage[0] = (tmp.ChangeInScale.W2[0] - tmp.ChangeInScale.W1[0]) * 100 / tmp.ChangeInScale.W1[0]
-			}
-			tmp.ChangeInScale.Percentage[1] = tmp.ChangeInScale.W2[1] - tmp.ChangeInScale.W1[1]
-
-			tmp.Type = "distribution"
-			if file.Category == "" { //for older models built without category
-				tmp.Category = "kpi_events"
-			} else {
-				tmp.Category = "kpi_" + file.Category
-			}
 
 			if !(CheckPercentageChange(globalScaleW1, featScaleW1) || CheckPercentageChange(globalScaleW2, featScaleW2)) && !(CheckPercentageChange(globalW1, featW1) || CheckPercentageChange(globalW2, featW2)) {
+				var tmp ValueWithDetails
+				tmp.Key = keyName
+				tmp.Value = val
+				tmp.Entity = keyType
+
+				var temp BaseTargetMetrics
+				temp.W1 = featW1
+				temp.W2 = featW2
+				temp.Per = diff.PercentChange
+
+				// DeltaRatio alias for boosting factor here (used in getInsightImportance)
+				temp.DeltaRatio = 1
+				if factor, exists := PriorityKeysDistribution[tmp.Key]; exists {
+					temp.DeltaRatio = factor
+				} else {
+					if WhiteListedKeys[tmp.Key] {
+						temp.DeltaRatio = 2
+						tmp.VoteStatus = Upvoted
+					} else if WhiteListedKeysOtherQuery[tmp.Key] {
+						temp.DeltaRatio = 2
+						tmp.VoteStatus = UpvotedForOtherQuery
+					} else if DecreaseBoostKeys[tmp.Key] {
+						temp.DeltaRatio = 0.5
+						tmp.VoteStatus = DownvotedForOtherQuery
+					}
+				}
+				tmp.ActualValues = temp
+
+				tmp.ChangeInScale.W1[0] = featScaleW1
+				if globalScaleW1 != 0 {
+					tmp.ChangeInScale.W1[1] = featScaleW1 * 100 / globalScaleW1
+				}
+				tmp.ChangeInScale.W2[0] = featScaleW2
+				if globalScaleW2 != 0 {
+					tmp.ChangeInScale.W2[1] = featScaleW2 * 100 / globalScaleW2
+				}
+				tmp.ChangeInScale.IsIncreased[0] = tmp.ChangeInScale.W1[0] < tmp.ChangeInScale.W2[0]
+				tmp.ChangeInScale.IsIncreased[1] = tmp.ChangeInScale.W1[1] < tmp.ChangeInScale.W2[1]
+				if tmp.ChangeInScale.W1[0] != 0 {
+					tmp.ChangeInScale.Percentage[0] = (tmp.ChangeInScale.W2[0] - tmp.ChangeInScale.W1[0]) * 100 / tmp.ChangeInScale.W1[0]
+				}
+				tmp.ChangeInScale.Percentage[1] = tmp.ChangeInScale.W2[1] - tmp.ChangeInScale.W1[1]
+
+				tmp.Type = "distribution"
+				if file.Category == "" { //for older models built without category
+					tmp.Category = "kpi_events"
+				} else {
+					tmp.Category = "kpi_" + file.Category
+				}
+
+				tmp.ActualValues.JSDivergence = getInsightImportance(tmp, keysUsedInInsights)
 				valWithDetailsArr = append(valWithDetailsArr, tmp)
 				if tmp.ActualValues.Per > 0 {
 					numIncreased += 1
@@ -243,11 +246,8 @@ func GetInsightsKpi(file CrossPeriodInsightsKpi, numberOfRecords int, QueryClass
 			}
 		}
 	}
-	var keysUsedInInsights = make(map[string]bool)
+
 	sort.Slice(valWithDetailsArr, func(i, j int) bool {
-		if valWithDetailsArr[i].ActualValues.JSDivergence == valWithDetailsArr[j].ActualValues.JSDivergence {
-			return getInsightImportance(valWithDetailsArr[i], keysUsedInInsights) > getInsightImportance(valWithDetailsArr[j], keysUsedInInsights)
-		}
 		return valWithDetailsArr[i].ActualValues.JSDivergence > valWithDetailsArr[j].ActualValues.JSDivergence
 	})
 
@@ -271,7 +271,7 @@ func GetInsightsKpi(file CrossPeriodInsightsKpi, numberOfRecords int, QueryClass
 	}
 
 	noOfInsightsRemainingPerKey := make(map[string]int)
-	for k, _ := range keysUsedInInsights {
+	for k := range keysUsedInInsights {
 		noOfInsightsRemainingPerKey[k] = 1 + (numberOfRecords / len(keysUsedInInsights))
 	}
 
@@ -309,8 +309,9 @@ func GetInsightsKpi(file CrossPeriodInsightsKpi, numberOfRecords int, QueryClass
 			decreasedRecords -= 1
 		}
 		if appended {
-			if _, ok := noOfInsightsRemainingPerKey[data.Key]; ok {
-				noOfInsightsRemainingPerKey[data.Key] -= 1
+			if num, ok := noOfInsightsRemainingPerKey[data.Key]; ok {
+				num -= 1
+				noOfInsightsRemainingPerKey[data.Key] = num
 			}
 		}
 	}
