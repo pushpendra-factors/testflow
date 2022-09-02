@@ -26,6 +26,10 @@ var HubspotAuthAppRequiredScopes = []string{
 	"e-commerce",
 	"sales-email-read",
 	"forms",
+	"content",
+	"business-intelligence",
+	"crm.lists.read",
+	"crm.objects.owners.read",
 }
 
 // GetHubspotAuthorizationURL return the auth URL for granting access

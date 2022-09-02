@@ -1260,6 +1260,7 @@ func enrichCampaignToAllCampaignMembers(project *model.Project, document *model.
 			existingUserID = getExistingCampaignMemberUserIDFromProperties(project.ID, enMemberProperties)
 			if existingUserID == "" {
 				logCtx.WithField("member_id", referenceDocument.ID).Error("Missing lead or contact record for a campaign.")
+				return http.StatusOK
 			}
 		} else {
 			referenceDocument.Action = model.SalesforceDocumentUpdated
@@ -1313,30 +1314,45 @@ func enrichCampaignToAllCampaignMembers(project *model.Project, document *model.
 
 // Get existing lead or contact user ID from campaign members data
 func getExistingCampaignMemberUserIDFromProperties(projectID int64, properties *map[string]interface{}) string {
-	existingUserID := ""
 	existingContactMemberID := (*properties)[model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceSalesforce, model.SalesforceDocumentTypeNameCampaignMember, "ContactId")]
 	existingLeadMemberID := (*properties)[model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceSalesforce, model.SalesforceDocumentTypeNameCampaignMember, "LeadId")]
 
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "contact_id": existingContactMemberID, "lead_id": existingLeadMemberID, "properties": properties})
 	// use contact Id associated user id. Once user converts from lead to contact, salesforce prioritize contact based identification
 	if existingContactMemberID != "" {
 		existingMember, status := store.GetStore().GetSyncedSalesforceDocumentByType(projectID, []string{util.GetPropertyValueAsString(existingContactMemberID)}, model.SalesforceDocumentTypeContact, false)
+		if status != http.StatusFound && status != http.StatusNotFound {
+			logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to get salesforce contact for campaign member enrichment")
+			return ""
+		}
+
 		if status == http.StatusFound {
-			if existingMember[0].UserID != "" {
-				existingUserID = existingMember[0].UserID
+			if existingMember[0].Synced == false || existingMember[0].UserID == "" {
+				logCtx.Warning("Contact record not processed yet for campaign member.")
+				return ""
 			}
+
+			return existingMember[0].UserID
 		}
 	}
 
-	if existingUserID == "" { // use lead Id if available
-		existingMember, status := store.GetStore().GetSyncedSalesforceDocumentByType(projectID, []string{util.GetPropertyValueAsString(existingLeadMemberID)}, model.SalesforceDocumentTypeLead, false)
-		if status == http.StatusFound {
-			if existingMember[0].UserID != "" {
-				existingUserID = existingMember[0].UserID
-			}
-		}
+	existingMember, status := store.GetStore().GetSyncedSalesforceDocumentByType(projectID, []string{util.GetPropertyValueAsString(existingLeadMemberID)}, model.SalesforceDocumentTypeLead, false)
+	if status != http.StatusFound && status != http.StatusNotFound {
+		logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to get salesforce lead for campaign member enrichment")
+		return ""
 	}
 
-	return existingUserID
+	if status == http.StatusFound {
+		if existingMember[0].Synced == false || existingMember[0].UserID == "" {
+			logCtx.Warning("Lead record not processed yet for campaign member.")
+			return ""
+		}
+		return existingMember[0].UserID
+	}
+
+	logCtx.Error("Failed to get campaign member associated lead and contact record.")
+
+	return ""
 }
 
 func enrichCampaignMember(project *model.Project, document *model.SalesforceDocument, endTimestamp int64) int {
@@ -1395,6 +1411,9 @@ func enrichCampaignMember(project *model.Project, document *model.SalesforceDocu
 	// use user_id from lead or contact id
 	if document.Action == model.SalesforceDocumentCreated {
 		existingUserID = getExistingCampaignMemberUserIDFromProperties(project.ID, enCampaignMemberProperties)
+		if existingUserID == "" {
+			return http.StatusOK
+		}
 	}
 
 	trackPayload := &SDK.TrackPayload{

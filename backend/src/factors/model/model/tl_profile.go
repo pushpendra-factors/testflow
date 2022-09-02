@@ -54,7 +54,7 @@ type AccountDetails struct {
 	Name              string         `json:"name"`
 	Industry          string         `json:"industry"`
 	Country           string         `json:"country"`
-	NumberOfEmployees uint64         `json:"number_of_employees"`
+	NumberOfEmployees interface{}    `json:"number_of_employees"`
 	NumberOfUsers     uint64         `json:"number_of_users"`
 	AccountTimeline   []UserTimeline `json:"account_timeline"`
 }
