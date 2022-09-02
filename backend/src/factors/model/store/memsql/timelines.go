@@ -233,17 +233,28 @@ func (store *MemSQL) GetUserActivitiesAndSessionCount(projectID int64, identity 
 			project_id=? AND timestamp <= ? AND
 			user_id IN (SELECT id FROM users WHERE project_id=? AND`, userId, `= ?) AND
 			event_name_id NOT IN (
-				SELECT id FROM event_names WHERE project_id=? AND name IN ('$hubspot_contact_updated', '$sf_contact_updated')
+				SELECT id FROM event_names WHERE project_id=? AND name IN (?,?,?,?,?)
 			) LIMIT 5000) AS events1
         LEFT JOIN event_names 
         ON events1.event_name_id=event_names.id AND event_names.project_id=? 
 		ORDER BY timestamp DESC;`}
 	eventsQuery := strings.Join(str, " ")
-	rows, err := db.Raw(eventsQuery, projectID, gorm.NowFunc().Unix(), projectID, identity, projectID, projectID).Rows()
+	rows, err := db.Raw(eventsQuery,
+		projectID,
+		gorm.NowFunc().Unix(),
+		projectID,
+		identity,
+		projectID,
+		U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED,
+		U.EVENT_NAME_SALESFORCE_CONTACT_UPDATED,
+		U.EVENT_NAME_SALESFORCE_LEAD_UPDATED,
+		U.EVENT_NAME_LEAD_SQUARED_LEAD_UPDATED,
+		U.EVENT_NAME_MARKETO_LEAD_UPDATED,
+		projectID).Rows()
 	log.WithFields(logFields).WithField("time_taken", time.Since(startTimeForQuery).Milliseconds()).Info("Time taken for timeline query.")
 
-	if err != nil {
-		log.WithError(err).Error("Failed to get events")
+	if err != nil || rows.Err() != nil {
+		log.WithError(err).WithError(rows.Err()).Error("Failed to get events")
 		return []model.UserActivity{}, float64(webSessionCount)
 	}
 
@@ -421,7 +432,7 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string) (*
 	}
 	db := C.GetServices().Db
 	var accountDetails model.AccountDetails
-	err := db.Table("users").Select(selectString).Where("project_id=? AND id=?", projectID, id).Order("updated_at desc").Limit(1).Find(&accountDetails).Error
+	err := db.Table("users").Select(selectString).Where("project_id=? AND id=?", projectID, id).Order("updated_at DESC").Limit(1).Find(&accountDetails).Error
 	if err != nil {
 		log.WithField("status", err).Error("Failed to get account properties.")
 		return nil, http.StatusInternalServerError
@@ -432,16 +443,19 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string) (*
 		`SELECT COALESCE(JSON_EXTRACT_STRING(properties, ?), customer_user_id, id) AS user_name, COALESCE(customer_user_id, id) AS user_id, ISNULL(customer_user_id) AS is_anonymous 
 		FROM users 
 		WHERE project_id = ? AND (`, groupUserString, ")",
-		"ORDER BY updated_at DESC",
+		"GROUP BY user_id ORDER BY updated_at DESC;",
 	}
 	query := strings.Join(queryStr, " ")
 	rows, err := db.Raw(query, U.UP_NAME, projectID).Rows()
-	if err != nil {
-		log.WithError(err).Error("Failed to get associated users")
+	if err != nil || rows.Err() != nil {
+		log.WithError(err).WithError(rows.Err()).Error("Failed to get associated users")
 		return nil, http.StatusInternalServerError
 	}
+
 	var accountTimeline []model.UserTimeline
+	usersCount := 0
 	for rows.Next() {
+		usersCount += 1
 		var userTimeline model.UserTimeline
 		if err := db.ScanRows(rows, &userTimeline); err != nil {
 			log.WithError(err).Error("Error scanning associated users list")
@@ -457,6 +471,7 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string) (*
 		userTimeline.UserActivities = activities
 		accountTimeline = append(accountTimeline, userTimeline)
 	}
+	accountDetails.NumberOfUsers = uint64(usersCount)
 	accountDetails.AccountTimeline = accountTimeline
 	return &accountDetails, http.StatusFound
 }

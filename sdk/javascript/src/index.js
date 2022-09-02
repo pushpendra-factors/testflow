@@ -128,7 +128,7 @@ function processQueue() {
                 logger.debug("Processing Queue", false);
                 switch(factors.q[0].k) {
                     case 'track': {
-                        track(factors.q[0].a[0], factors.q[0].a[1]);
+                        track(factors.q[0].a[0], factors.q[0].a[1], factors.q[0].a[2]);
                         factors.q.shift();
                         break;
                     }

@@ -670,7 +670,7 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, status)
 	assert.NotNil(t, group1)
 
-	// 5 Associated Users
+	// 6  Associated Users
 	m := map[string]string{"$name": "Some Name"}
 	userProps, err := json.Marshal(m)
 	if err != nil {
@@ -680,17 +680,26 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 	customerEmail = "@example.com"
 	boolTrue = false
 	users := make([]model.User, 0)
-	numUsers := 5
+	numUsers := 10
 	for i := 1; i <= numUsers; i++ {
+		var customerUserID string
+		if i < 6 {
+			customerUserID = "user" + strconv.Itoa(i) + customerEmail
+		}
+		if i == 6 {
+			customerUserID = "user5" + customerEmail
+		}
+
 		associatedUserId, _ := store.GetStore().CreateUser(&model.User{
 			ProjectId:      projectID,
 			Properties:     properties,
 			IsGroupUser:    &boolTrue,
 			Group1ID:       "1",
 			Group1UserID:   accountID,
-			CustomerUserId: "user" + strconv.Itoa(i) + customerEmail,
+			CustomerUserId: customerUserID,
 			Source:         model.GetRequestSourcePointer(model.UserSourceHubspot),
 		})
+
 		user, errCode := store.GetStore().GetUser(project.ID, associatedUserId)
 		assert.Equal(t, http.StatusFound, errCode)
 		users = append(users, *user)
@@ -879,7 +888,8 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		assert.Contains(t, resp.Name, "Freshworks")
 		assert.Equal(t, resp.Country, "India")
 		assert.Equal(t, resp.Industry, "Freshworks-HS")
-		assert.Equal(t, resp.NumberOfEmployees, uint64(5000))
+		assert.Equal(t, resp.NumberOfUsers, uint64(9))
+		// assert.Equal(t, resp.NumberOfEmployees, uint64(5000))
 		assert.Condition(t, func() bool {
 			assert.Condition(t, func() bool { return len(resp.AccountTimeline) > 0 })
 			for _, userTimeline := range resp.AccountTimeline {
