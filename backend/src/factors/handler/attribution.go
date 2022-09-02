@@ -178,13 +178,12 @@ func AttributionHandler(c *gin.Context) (interface{}, int, string, string, bool)
 		var resMsg interface{}
 
 		if C.IsLastComputedWhitelisted(projectId) {
-			queryStartTime := time.Now().UTC().Unix()
+
 			shouldReturn, resCode, resMsg = H.GetResponseIfCachedDashboardQueryWithPreset(reqId, projectId, dashboardId, unitId, preset, effectiveFrom, effectiveTo, timezoneString)
-			logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60, "preset": preset}).Info("GetResponseIfCachedDashboardQueryWithPreset took time")
+
 		} else {
-			queryStartTime := time.Now().UTC().Unix()
+
 			shouldReturn, resCode, resMsg = H.GetResponseIfCachedDashboardQuery(reqId, projectId, dashboardId, unitId, effectiveFrom, effectiveTo, timezoneString)
-			logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("GetResponseIfCachedDashboardQuery took time")
 
 		}
 		if shouldReturn {
@@ -231,10 +230,8 @@ func AttributionHandler(c *gin.Context) (interface{}, int, string, string, bool)
 	H.SleepIfHeaderSet(c)
 	QueryKey, _ := attributionQueryUnitPayload.GetQueryCacheRedisKey(projectId)
 	debugQueryKey := model.GetStringKeyFromCacheRedisKey(QueryKey)
-	queryStartTime := time.Now().UTC().Unix()
 	result, err := store.GetStore().ExecuteAttributionQuery(projectId, requestPayload.Query, debugQueryKey,
 		enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
-	logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60, "preset": preset}).Info("ExecuteAttributionQuery took time")
 
 	if err != nil {
 		model.DeleteQueryCacheKey(projectId, &attributionQueryUnitPayload)
