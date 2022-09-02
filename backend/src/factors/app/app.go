@@ -174,6 +174,11 @@ func main() {
 	hubspotAppSecret := flag.String("hubspot_app_secret", "", "Hubspot app secret for oauth integration")
 	enableOptimisedFilterOnEventUserQuery := flag.Int("enable_optimised_filter_on_event_user_query",
 		0, "Enables filter optimisation logic for events and users query.")
+	enableEmailBlocking := flag.Bool("enable_email_blocking", true, "Blocks signup from emails in the blocked_email_list")
+	enableIPBlocking := flag.Bool("enable_IP_blocking", true, "Blocks access from IPs in the blocked_IP_list")
+	blockedEmailList := flag.String("blocked_email_list", "", "List containing all the blocked emails")
+	blockedIPList := flag.String("blocked_IP_list", "", "List containing all the blocked IP address")
+	blockedEmailDomainList := flag.String("blocked_email_domain_list", "", "List containing all blocked email domains")
 
 	flag.Parse()
 
@@ -295,6 +300,11 @@ func main() {
 		HubspotAppID:                                   *hubspotAppID,
 		HubspotAppSecret:                               *hubspotAppSecret,
 		EnableOptimisedFilterOnEventUserQuery:          *enableOptimisedFilterOnEventUserQuery != 0,
+		EnableEmailBlockingFlag:                        *enableEmailBlocking,
+		EnableIPBlockingFlag:                           *enableIPBlocking,
+		BlockedEmailList:                               C.GetBlockedEmailFromStringListAsString(*blockedEmailList),
+		BlockedIPList:                                  C.GetBlockedIPFromStringListAsString(*blockedIPList),
+		BlockedEmailDomainList:                         C.GetBlockedEmailDomainFromStringListAsString(*blockedEmailDomainList),
 	}
 	C.InitConf(config)
 

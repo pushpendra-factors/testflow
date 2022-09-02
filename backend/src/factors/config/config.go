@@ -2245,3 +2245,48 @@ func EnableIPBlocking() bool {
 func GetDBMaxAllowedPacket() int64 {
 	return configuration.DBMaxAllowedPacket
 }
+
+func GetBlockedEmailFromStringListAsString(stringList string) []string {
+	emailStringList := make([]string, 0, 0)
+
+	if stringList == "" {
+		return emailStringList
+	}
+
+	emails := strings.Split(stringList, ",")
+	for _, email := range emails {
+		emailStringList = append(emailStringList, strings.TrimSpace(email))
+	}
+
+	return emailStringList
+}
+
+func GetBlockedIPFromStringListAsString(stringList string) []string {
+	IPStringList := make([]string, 0, 0)
+
+	if stringList == "" {
+		return IPStringList
+	}
+
+	ips := strings.Split(stringList, ",")
+	for _, ip := range ips {
+		IPStringList = append(IPStringList, strings.TrimSpace(ip))
+	}
+
+	return IPStringList
+}
+
+func GetBlockedEmailDomainFromStringListAsString(stringList string) []string {
+	domStringList := make([]string, 0, 0)
+
+	if stringList == "" {
+		return domStringList
+	}
+
+	domains := strings.Split(stringList, ",")
+	for _, dom := range domains {
+		domStringList = append(domStringList, strings.TrimSpace(dom))
+	}
+
+	return domStringList
+}
