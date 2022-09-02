@@ -69,6 +69,7 @@ type DashboardCacheResult struct {
 const DashboardCachingDurationInSeconds = 32 * 24 * 60 * 60              // 32 days.
 const DashboardCacheInvalidationDuration14DaysInSecs = 14 * 24 * 60 * 60 // 14 days.
 const MaxNumberOfDashboardUnitCacheAccessedIn14Days = 50000
+const MaxNumberPerScanCount = 50000
 
 const (
 	DashboardTypePrivate        = "pr"
@@ -105,7 +106,7 @@ func GetCacheResultByDashboardIdAndUnitId(reqId string, projectId int64, dashboa
 		if err != nil {
 			return cacheResult, http.StatusInternalServerError, errors.New("Dashboard Cache: Failed to get data from cache - " + err.Error())
 		}
-		log.WithError(err).Error("failed get cache key")
+
 		return cacheResult, http.StatusNotFound, nil
 	}
 	err = json.Unmarshal([]byte(result), &cacheResult)
@@ -125,16 +126,16 @@ func GetCacheResultByDashboardIdAndUnitIdWithPreset(reqId string, projectId int6
 	var cacheResult *DashboardCacheResult
 
 	logCtx := log.WithFields(log.Fields{
-		"reqId":    reqId,
-		"Method":   "GetCacheResultByDashboardIdAndUnitId",
-		"CacheKey": fmt.Sprintf("PID:%d:DID:%d:DUID:%d", projectId, dashboardId, unitId),
+		"reqId":  reqId,
+		"Method": "GetCacheResultByDashboardIdAndUnitId",
+		"preset": preset, "from": from, "to": to,
+		"CacheKey": fmt.Sprintf("PID:%d:DID:%d:DUID:%d:PRESET:%s", projectId, dashboardId, unitId, preset),
 	})
 	if projectId == 0 || dashboardId == 0 || unitId == 0 {
 		return cacheResult, http.StatusBadRequest, errors.New("invalid scope ids")
 	}
 
 	cacheKey, err := GetDashboardUnitQueryLastComputedResultCacheKey(projectId, dashboardId, unitId, preset, from, to, timezoneString)
-
 	if err != nil {
 		return cacheResult, http.StatusInternalServerError, errors.New("Dashboard Cache: Failed to fetch cache key - " + err.Error())
 	}
@@ -143,7 +144,7 @@ func GetCacheResultByDashboardIdAndUnitIdWithPreset(reqId string, projectId int6
 		if err != nil {
 			return cacheResult, http.StatusInternalServerError, errors.New("Dashboard Cache: Failed to get data from cache - " + err.Error())
 		}
-		log.WithError(err).Error("failed get cache key")
+
 		return cacheResult, http.StatusNotFound, nil
 	}
 	err = json.Unmarshal([]byte(result), &cacheResult)
@@ -162,6 +163,7 @@ func GetCacheResultByDashboardIdAndUnitIdWithPreset(reqId string, projectId int6
 func SetCacheResultByDashboardIdAndUnitIdWithPreset(result interface{}, projectId int64, dashboardId int64, unitId int64, preset string, from, to int64, timezoneString U.TimeZoneString, meta interface{}) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectId,
 		"dashboard_id": dashboardId, "dashboard_unit_id": unitId,
+		"preset": preset, "from": from, "to": to,
 	})
 
 	if projectId == 0 || dashboardId == 0 || unitId == 0 {

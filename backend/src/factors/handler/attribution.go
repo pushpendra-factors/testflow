@@ -176,10 +176,15 @@ func AttributionHandler(c *gin.Context) (interface{}, int, string, string, bool)
 		var shouldReturn bool
 		var resCode int
 		var resMsg interface{}
+
 		if C.IsLastComputedWhitelisted(projectId) {
+
 			shouldReturn, resCode, resMsg = H.GetResponseIfCachedDashboardQueryWithPreset(reqId, projectId, dashboardId, unitId, preset, effectiveFrom, effectiveTo, timezoneString)
+
 		} else {
+
 			shouldReturn, resCode, resMsg = H.GetResponseIfCachedDashboardQuery(reqId, projectId, dashboardId, unitId, effectiveFrom, effectiveTo, timezoneString)
+
 		}
 		if shouldReturn {
 			if resCode == http.StatusOK {
@@ -227,6 +232,7 @@ func AttributionHandler(c *gin.Context) (interface{}, int, string, string, bool)
 	debugQueryKey := model.GetStringKeyFromCacheRedisKey(QueryKey)
 	result, err := store.GetStore().ExecuteAttributionQuery(projectId, requestPayload.Query, debugQueryKey,
 		enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
+
 	if err != nil {
 		model.DeleteQueryCacheKey(projectId, &attributionQueryUnitPayload)
 		logCtx.WithError(err).Error("Failed to process query from DB")

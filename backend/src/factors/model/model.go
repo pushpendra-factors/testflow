@@ -409,6 +409,7 @@ type Model interface {
 	BuildAndUpsertDocumentInBatch(projectID int64, objectName string, values []model.SalesforceRecord) error
 	CreateSalesforceDocument(projectID int64, document *model.SalesforceDocument) int
 	CreateSalesforceDocumentByAction(projectID int64, document *model.SalesforceDocument, action model.SalesforceAction) int
+	GetSalesforceDocumentsByTypeAndAction(projectID int64, docType int, action model.SalesforceAction, from int64, to int64) ([]model.SalesforceDocument, int)
 	GetSyncedSalesforceDocumentByType(projectID int64, ids []string, docType int, includeUnSynced bool) ([]model.SalesforceDocument, int)
 	GetSalesforceObjectValuesByPropertyName(ProjectID int64, objectType string, propertyName string) []interface{}
 	GetSalesforceDocumentsByTypeForSync(projectID int64, typ int, from, to int64) ([]model.SalesforceDocument, int)

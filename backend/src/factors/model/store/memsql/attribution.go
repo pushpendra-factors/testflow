@@ -162,7 +162,7 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID int64, queryOriginal *mod
 		for key, _ := range *attributionData {
 			(*attributionData)[key].ConvAggFunctionType = convAggFunctionType
 		}
-		logCtx.Info("Done, AddPerformanceData")
+		logCtx.Info("Done AddTheAddedKeysAndMetrics, AddPerformanceData")
 
 	} else {
 		// This thread is for query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities.
@@ -305,21 +305,11 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID int64, queryOriginal *mod
 			(*attributionData)[key].ConvAggFunctionType = convAggFunctionType
 		}
 
-		if C.GetAttributionDebug() == 1 && projectID == 641 {
-			logCtx.WithFields(log.Fields{"AttributionDebug": "true",
-				"attributionData": attributionData}).Info("revenue attr debug. AttributionData before addPerformance.")
-		}
-
 		// Add the Added keys
 		model.AddTheAddedKeysAndMetrics(attributionData, query, groupSessions, noOfConversionEvents)
 
 		// Add the performance information
 		model.AddPerformanceData(attributionData, query.AttributionKey, marketingReports, noOfConversionEvents)
-
-		if C.GetAttributionDebug() == 1 && projectID == 641 {
-			logCtx.WithFields(log.Fields{"AttributionDebug": "true",
-				"attributionData": attributionData}).Info("revenue attr debug. AttributionData after addPerformance.")
-		}
 
 		for key := range *attributionData {
 			(*attributionData)[key].ConvAggFunctionType = convAggFunctionType
@@ -340,11 +330,6 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID int64, queryOriginal *mod
 		queryStartTime = time.Now().UTC().Unix()
 
 	} else if query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities {
-		if C.GetAttributionDebug() == 1 && projectID == 641 {
-			logCtx.WithFields(log.Fields{"AttributionDebug": "true",
-				"AdwordsCampaignIDData":  marketingReports.AdwordsCampaignIDData,
-				"AdwordsCampaignKeyData": marketingReports.AdwordsCampaignKeyData}).Info("revenue attr debug")
-		}
 		// execution similar to the normal run - still keeping it separate for better understanding
 		result = model.ProcessQueryKPI(query, attributionData, marketingReports, isCompare, kpiData)
 		logCtx.WithFields(log.Fields{"result": result}).Info(fmt.Sprintf("KPI-Attribution result"))

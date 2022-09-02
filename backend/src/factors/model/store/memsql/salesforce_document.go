@@ -465,6 +465,45 @@ func (store *MemSQL) CreateSalesforceDocumentByAction(projectID int64, document 
 	return http.StatusOK
 }
 
+// GetSalesforceDocumentsByTypeAndAction returns list of salesforce_document by doc type and action
+func (store *MemSQL) GetSalesforceDocumentsByTypeAndAction(projectID int64, docType int, action model.SalesforceAction, from int64, to int64) ([]model.SalesforceDocument, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"action":     action,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+
+	var documents []model.SalesforceDocument
+	if projectID == 0 || docType == 0 || action == 0 {
+		logCtx.Error("Failed to get salesforce documents by type and action. Invalid project_id or type or action.")
+		return documents, http.StatusBadRequest
+	}
+
+	whereStmnt := "project_id = ? AND type = ? AND action = ?"
+	whereParams := []interface{}{projectID, docType, action}
+	if from > 0 && to > 0 {
+		whereStmnt = whereStmnt + " AND " + "timestamp BETWEEN ? AND ?"
+		whereParams = append(whereParams, from, to)
+	}
+
+	db := C.GetServices().Db
+	err := db.Order("timestamp, created_at ASC").Where(whereStmnt, whereParams...).Find(&documents).Error
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
+		logCtx.WithError(err).Error("Failed to get salesforce documents by type and action.")
+		return nil, http.StatusInternalServerError
+	}
+
+	if len(documents) == 0 {
+		return documents, http.StatusNotFound
+	}
+
+	return documents, http.StatusFound
+}
+
 func getSalesforceDocumentPropertiesByCategory(salesforceDocument []model.SalesforceDocument) ([]string, []string) {
 	logFields := log.Fields{
 		"sales_force_document": salesforceDocument,

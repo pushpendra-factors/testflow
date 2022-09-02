@@ -38,15 +38,12 @@ func isEmailValid(email string, c *gin.Context) bool {
 
 	for _, domain := range blockedDomains {
 		if strings.Contains(email, domain) {
-			isValid = false
-			return isValid
+			return false
 		}
 	}
 
-	isBlocked := mid.IsBlockedEmail(c)
-
 	isValid = U.IsEmail(email)
-	return isValid && isBlocked
+	return isValid
 }
 
 // curl -X POST -d '{"email":"value1", "password":"value1"}' http://localhost:8080/agents/signin -v
