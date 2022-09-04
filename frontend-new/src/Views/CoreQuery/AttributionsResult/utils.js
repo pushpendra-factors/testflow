@@ -611,9 +611,9 @@ export const getTableColumns = (
         .map((hd) => {
           let title = hd.split(' - ')[1];
           let attrMetod = attribution_method;
-          if (hd.search('UserConversionRate') >= 0) {
-            title = title.replace('UserConversionRate', 'Conversion Rate');
-          }
+          // if (hd.search('UserConversionRate') >= 0) {
+          //   title = title.replace('UserConversionRate', 'Conversion Rate');
+          // }
 
           if (hd.search('compare') >= 0) {
             attrMetod = attribution_method_compare;
@@ -679,14 +679,14 @@ export const getTableColumns = (
       );
     }
     if (showCR) {
-      eventColumns.push(
-        getEventColumnConfig({
-          title: 'Conversion Rate',
-          key: 'Conversion Rate',
-          method: attribution_method,
-          hasBorder: true
-        })
-      );
+      // eventColumns.push(
+      //   getEventColumnConfig({
+      //     title: 'Conversion Rate',
+      //     key: 'Conversion Rate',
+      //     method: attribution_method,
+      //     hasBorder: true
+      //   })
+      // );
     }
 
     if (attribution_method_compare) {
@@ -709,14 +709,14 @@ export const getTableColumns = (
         );
       }
       if (showCR) {
-        eventColumns.push(
-          getEventColumnConfig({
-            title: 'Conversion Rate',
-            key: 'conversion_rate_compare',
-            method: attribution_method_compare,
-            hasBorder: true
-          })
-        );
+        // eventColumns.push(
+        //   getEventColumnConfig({
+        //     title: 'Conversion Rate',
+        //     key: 'conversion_rate_compare',
+        //     method: attribution_method_compare,
+        //     hasBorder: true
+        //   })
+        // );
       }
     }
   }
@@ -741,13 +741,13 @@ export const getTableColumns = (
         );
       }
       if (showCR) {
-        linkedEventsChildren.push(
-          getEventColumnConfig({
-            title: 'Conversion Rate',
-            key: 'Linked Event - ' + le.label + ' - Conversion Rate',
-            hasBorder: true
-          })
-        );
+        // linkedEventsChildren.push(
+        //   getEventColumnConfig({
+        //     title: 'Conversion Rate',
+        //     key: 'Linked Event - ' + le.label + ' - Conversion Rate',
+        //     hasBorder: true
+        //   })
+        // );
       }
       return {
         title: eventNames[le.label] || le.label,
@@ -1010,14 +1010,14 @@ export const getTableData = (
                   ? formatCount(equivalent_compare_row[costIdx], 1)
                   : 0
               },
-          'Conversion Rate': !comparison_data
-            ? formatCount(row[conversionRateIdx], 1)
-            : {
-                value: formatCount(row[conversionRateIdx], 1),
-                compare_value: equivalent_compare_row
-                  ? formatCount(equivalent_compare_row[conversionRateIdx], 1)
-                  : 0
-              }
+          // 'Conversion Rate': !comparison_data
+          //   ? formatCount(row[conversionRateIdx], 1)
+          //   : {
+          //       value: formatCount(row[conversionRateIdx], 1),
+          //       compare_value: equivalent_compare_row
+          //         ? formatCount(equivalent_compare_row[conversionRateIdx], 1)
+          //         : 0
+          //     }
         };
       }
       if (linkedEvents.length) {
@@ -1043,15 +1043,15 @@ export const getTableData = (
                   ? formatCount(equivalent_compare_row[eventCPCIdx], 1)
                   : 0
               };
-          resultantRow[`Linked Event - ${le.label} - Conversion Rate`] =
-            !comparison_data
-              ? formatCount(row[eventConvRateIdx], 1)
-              : {
-                  value: formatCount(row[eventConvRateIdx], 1),
-                  compare_value: equivalent_compare_row
-                    ? formatCount(equivalent_compare_row[eventConvRateIdx], 1)
-                    : 0
-                };
+          // resultantRow[`Linked Event - ${le.label} - Conversion Rate`] =
+          //   !comparison_data
+          //     ? formatCount(row[eventConvRateIdx], 1)
+          //     : {
+          //         value: formatCount(row[eventConvRateIdx], 1),
+          //         compare_value: equivalent_compare_row
+          //           ? formatCount(equivalent_compare_row[eventConvRateIdx], 1)
+          //           : 0
+          //       };
         });
       }
       if (attribution_method_compare) {
@@ -1175,15 +1175,15 @@ export const getAxisMetricOptions = (
     value: 'Cost Per Conversion'
   });
 
-  result.push({
-    title: attribution_method_compare
-      ? `Conversion Rate - ${
-          ATTRIBUTION_METHODOLOGY.find((m) => m.value === attribution_method)
-            .text
-        }`
-      : 'Conversion Rate',
-    value: 'Conversion Rate'
-  });
+  // result.push({
+  //   title: attribution_method_compare
+  //     ? `Conversion Rate - ${
+  //         ATTRIBUTION_METHODOLOGY.find((m) => m.value === attribution_method)
+  //           .text
+  //       }`
+  //     : 'Conversion Rate',
+  //   value: 'Conversion Rate'
+  // });
 
   if (attribution_method_compare) {
     result.push({
@@ -1204,14 +1204,14 @@ export const getAxisMetricOptions = (
       value: 'cost_compare'
     });
 
-    result.push({
-      title: `Conversion Rate - ${
-        ATTRIBUTION_METHODOLOGY.find(
-          (m) => m.value === attribution_method_compare
-        ).text
-      }`,
-      value: 'conversion_rate_compare'
-    });
+    // result.push({
+    //   title: `Conversion Rate - ${
+    //     ATTRIBUTION_METHODOLOGY.find(
+    //       (m) => m.value === attribution_method_compare
+    //     ).text
+    //   }`,
+    //   value: 'conversion_rate_compare'
+    // });
   }
 
   linkedEvents.map((le) => {
@@ -1225,10 +1225,10 @@ export const getAxisMetricOptions = (
       value: `Linked Event - ${le.label} - CPC`
     });
 
-    result.push({
-      title: `Conversion Rate - ${eventNames[le.label] || le.label}`,
-      value: `Linked Event - ${le.label} - Conversion Rate`
-    });
+    // result.push({
+    //   title: `Conversion Rate - ${eventNames[le.label] || le.label}`,
+    //   value: `Linked Event - ${le.label} - Conversion Rate`
+    // });
   });
 
   return result;
