@@ -177,15 +177,17 @@ func (store *MemSQL) GetAlertNamesByProjectIdTypeAndName(projectID int64, nameOf
 	}
 
 	for _, alert := range alerts {
-		_, _, kpiQuery, err := model.DecodeAndFetchAlertRelatedStructs(projectID, alert)
-		if err != nil {
-			log.WithField("kpiQuery", kpiQuery).WithField("alert", alert).Warn("Failed to decode and fetch alert - GetAlertNamesByProjectIdTypeAndName")
-			return rAlertNames, http.StatusInternalServerError
-		}
+		if alert.AlertType == model.ALERT_TYPE_SINGLE_RANGE || alert.AlertType == model.ALERT_TYPE_MULTI_RANGE {
+			_, _, kpiQuery, err := model.DecodeAndFetchAlertRelatedStructs(projectID, alert)
+			if err != nil {
+				log.WithField("kpiQuery", kpiQuery).WithField("alert", alert).Warn("Failed to decode and fetch alert - GetAlertNamesByProjectIdTypeAndName")
+				return rAlertNames, http.StatusInternalServerError
+			}
 
-		for _, metric := range kpiQuery.Metrics {
-			if metric == nameOfQuery {
-				rAlertNames = append(rAlertNames, alert.AlertName)
+			for _, metric := range kpiQuery.Metrics {
+				if metric == nameOfQuery {
+					rAlertNames = append(rAlertNames, alert.AlertName)
+				}
 			}
 		}
 	}
