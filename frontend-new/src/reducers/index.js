@@ -12,7 +12,7 @@ import templates from './templates';
 import insights from './insights';
 import kpi from './kpi';
 import groups from './groups';
-import timeline from './timeline';
+import timelines from './timelines';
 import dashboardTemplateReducer from './dashboard_templates';
 
 const rootReducer = combineReducers({
@@ -29,7 +29,7 @@ const rootReducer = combineReducers({
   insights,
   kpi,
   groups,
-  timeline,
+  timelines,
   dashboardTemplates: dashboardTemplateReducer,
 });
 

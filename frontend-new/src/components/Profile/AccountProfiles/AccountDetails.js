@@ -1,12 +1,90 @@
-import React, { useState } from 'react';
-import { Row, Col, Button, Avatar, Dropdown, Menu } from 'antd';
+import React, { useState, useEffect } from 'react';
+import {
+  Row,
+  Col,
+  Button,
+  Avatar,
+  Dropdown,
+  Menu,
+  Popover,
+  Checkbox,
+} from 'antd';
 import { Text, SVG } from '../../factorsComponents';
 import AccountTimeline from './AccountTimeline';
 import { granularityOptions } from '../utils';
 
 function AccountDetails({ onCancel, accountDetails }) {
-  const [granularity, setGranularity] = useState('Hourly');
-  const [collapse, setCollapse] = useState(true);
+  const [granularity, setGranularity] = useState('Monthly');
+  const [collapseAll, setCollapseAll] = useState(true);
+  const [activities, setActivities] = useState([]);
+
+  useEffect(() => {
+    setActivities(accountDetails.data?.account_events);
+  }, [accountDetails]);
+
+  const handleChange = (option) => {
+    setActivities((currActivities) => {
+      const newState = currActivities.map((activity) => {
+        if (activity.display_name === option.display_name) {
+          return {
+            ...activity,
+            enabled: !activity.enabled,
+          };
+        }
+        return activity;
+      });
+      return newState;
+    });
+  };
+
+  const controlsPopover = () => {
+    return (
+      <div className='fa-filter-popupcard'>
+        <div className='fa-header'>
+          <Text
+            type='title'
+            level={7}
+            weight='bold'
+            color='grey'
+            extraClass='px-2 pt-2'
+          >
+            Filter Activities
+          </Text>
+          <div className={'fa-divider'} />
+        </div>
+
+        {activities?.length ? (
+          activities
+            .filter(
+              (value, index, self) =>
+                index ===
+                self.findIndex((t) => t.display_name === value.display_name)
+            )
+            .map((option) => {
+              return (
+                <div
+                  key={option.event_name}
+                  className='flex justify-start items-center px-4 py-2'
+                >
+                  <div className='mr-2'>
+                    <Checkbox
+                      checked={option.enabled}
+                      onChange={handleChange.bind(this, option)}
+                    />
+                  </div>
+                  <Text mini extraClass='mb-0 truncate' type='paragraph'>
+                    {option.display_name}
+                  </Text>
+                </div>
+              );
+            })
+        ) : (
+          <div className='text-center p-2 italic'>No Activity</div>
+        )}
+      </div>
+    );
+  };
+
   const granularityMenu = (
     <Menu>
       {granularityOptions.map((option) => {
@@ -161,18 +239,18 @@ function AccountDetails({ onCancel, accountDetails }) {
                     </Text>
                   </div>
                   <div className='flex justify-between'>
-                    {/* <div className='flex justify-between'> */}
-                    {/* <Button
+                    <div className='flex justify-between'>
+                      <Button
                         className='fa-dd--custom-btn'
                         type='text'
-                        onClick={() => setCollapse(false)}
+                        onClick={() => setCollapseAll(false)}
                       >
                         <SVG name='line_height' size={22} />
                       </Button>
                       <Button
                         className='fa-dd--custom-btn'
                         type='text'
-                        onClick={() => setCollapse(true)}
+                        onClick={() => setCollapseAll(true)}
                       >
                         <SVG name='grip_lines' size={22} />
                       </Button>
@@ -182,7 +260,7 @@ function AccountDetails({ onCancel, accountDetails }) {
                         overlayClassName='fa-activity--filter'
                         placement='bottomLeft'
                         trigger='hover'
-                        // content={controlsPopover}
+                        content={controlsPopover}
                       >
                         <Button
                           size='large'
@@ -192,7 +270,7 @@ function AccountDetails({ onCancel, accountDetails }) {
                           <SVG name={'activity_filter'} />
                         </Button>
                       </Popover>
-                    </div> */}
+                    </div>
                     <div>
                       <Dropdown
                         overlay={granularityMenu}
@@ -210,9 +288,14 @@ function AccountDetails({ onCancel, accountDetails }) {
                 </Col>
                 <Col span={24}>
                   <AccountTimeline
-                    timeline={accountDetails?.data?.account_timeline || []}
-                    collapse={collapse}
-                    setCollapse={setCollapse}
+                    timelineEvents={
+                      activities?.filter(
+                        (activity) => activity.enabled === true
+                      ) || []
+                    }
+                    timelineUsers={accountDetails.data?.account_users || []}
+                    collapseAll={collapseAll}
+                    setCollapseAll={setCollapseAll}
                     granularity={granularity}
                     loading={accountDetails?.isLoading}
                   />

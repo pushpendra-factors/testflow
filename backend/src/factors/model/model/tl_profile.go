@@ -39,10 +39,10 @@ type GroupsInfo struct {
 }
 
 type UserActivity struct {
-	EventName   string         `json:"event_name"`
-	DisplayName string         `json:"display_name"`
-	Properties  postgres.Jsonb `json:"properties,omitempty"`
-	Timestamp   uint64         `json:"timestamp"`
+	EventName   string          `json:"event_name"`
+	DisplayName string          `json:"display_name"`
+	Properties  *postgres.Jsonb `json:"properties,omitempty"`
+	Timestamp   uint64          `json:"timestamp"`
 }
 
 type TimelinePayload struct {

@@ -7,7 +7,7 @@ import { connect, useSelector } from 'react-redux';
 import {
   fetchProfileUserDetails,
   fetchProfileUsers,
-} from '../../../reducers/timeline';
+} from '../../../reducers/timelines';
 import { bindActionCreators } from 'redux';
 import {
   ProfileMapper,

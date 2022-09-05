@@ -50,7 +50,7 @@ import { EMPTY_ARRAY } from '../../utils/global';
 import UserProfiles from '../../components/Profile/UserProfiles';
 import AccountProfiles from '../../components/Profile/AccountProfiles';
 import InsightsSettings from '../Settings/ProjectSettings/InsightsSettings';
-import { fetchProfileUsers } from '../../reducers/timeline';
+import { fetchProfileUsers } from '../../reducers/timelines';
 import DashboardTemplates from "../DashboardTemplates";
 import { fetchTemplates } from "../../reducers/dashboard_templates/services";
 import Sharing from '../Settings/ProjectSettings/Sharing';

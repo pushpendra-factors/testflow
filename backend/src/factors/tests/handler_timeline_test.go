@@ -357,7 +357,7 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 		UserId:          user.ID,
 		CreateUser:      false,
 		IsNewUser:       false,
-		Name:            U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED,
+		Name:            U.EVENT_NAME_HUBSPOT_CONTACT_CREATED,
 		CustomerEventId: new(string),
 		EventProperties: randomProperties,
 		UserProperties:  map[string]interface{}{},
@@ -431,7 +431,7 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 				}
 				assert.NotNil(t, activity.Properties)
 				assert.Condition(t, func() bool {
-					properties, err := U.DecodePostgresJsonb(&activity.Properties)
+					properties, err := U.DecodePostgresJsonb(activity.Properties)
 					_, eventExistsInMap := eventNamePropertiesMap[activity.EventName]
 					assert.Nil(t, err)
 					if activity.DisplayName == "Page View" {
@@ -908,7 +908,7 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 						}
 						assert.NotNil(t, activity.Properties)
 						assert.Condition(t, func() bool {
-							properties, err := U.DecodePostgresJsonb(&activity.Properties)
+							properties, err := U.DecodePostgresJsonb(activity.Properties)
 							_, eventExistsInMap := eventNamePropertiesMap[activity.EventName]
 							assert.Nil(t, err)
 							if activity.DisplayName == "Page View" {
