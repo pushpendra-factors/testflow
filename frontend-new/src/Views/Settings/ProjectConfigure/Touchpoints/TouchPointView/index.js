@@ -73,6 +73,9 @@ const TouchpointView = ({ activeProject, tchType = '2', getEventProperties, even
     useEffect(() => {
         if (rule) {
             const filterState = getStateFromFilters(rule.filters);
+            filterState?.forEach((filt) => {
+                setValuesByProps(filt.props);
+            });
             setNewFilterStates(filterState);
             setPropertyMap(rule.properties_map);
             if (rule.touchPointPropRef === 'LAST_MODIFIED_TIME_REF') {
@@ -101,9 +104,12 @@ const TouchpointView = ({ activeProject, tchType = '2', getEventProperties, even
     const setValuesByProps = (props) => {
         const eventToCall = tchType === '2' ?
             getEventToCall() : timestampRef === 'campaign_member_created_date' ? '$sf_campaign_member_created' : '$sf_campaign_member_updated';
-        fetchEventPropertyValues(activeProject.id, eventToCall, props[1]).then(res => {
+        if(dropDownValues[props[0]]?.length >= 1) {
+            return null;
+        }
+        fetchEventPropertyValues(activeProject.id, eventToCall, props[0]).then(res => {
             const ddValues = Object.assign({}, dropDownValues);
-            ddValues[props[1]] = [...res.data, '$none'];
+            ddValues[props[0]] = [...res.data, '$none'];
             setDropDownValues(ddValues);
         }).catch(err => {
             const ddValues = Object.assign({}, dropDownValues);
