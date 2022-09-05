@@ -95,7 +95,7 @@ function EventBreakdownCharts({
   // }
 
   return (
-    <div className={`w-full`}>
+    <div className={`w-full flex-1`}>
       {chartContent}
       {tableContent}
     </div>

@@ -80,6 +80,7 @@ function ProjectDropdown({
       if (val === activeDashboard?.id) {
         return false;
       }
+      setOldestRefreshTime(null);
       const selectedDashboard = dashboards.data.find((d) => d.id === val);
       dispatch({
         type: ACTIVE_DASHBOARD_CHANGE,
@@ -425,7 +426,7 @@ function ProjectDropdown({
               handleEditClick={handleEditClick}
               refreshClicked={refreshClicked}
               setRefreshClicked={setRefreshClicked}
-              oldestRefreshTime={oldestRefreshTime[activeDashboard.id]}
+              oldestRefreshTime={oldestRefreshTime}
             />
             <SortableCards
               durationObj={durationObj}

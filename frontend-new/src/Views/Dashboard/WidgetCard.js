@@ -178,7 +178,7 @@ function WidgetCard({
           ) {
             lastRefreshedAt = _.get(
               res,
-              'data.result.cache_meta.last_computed_at',
+              'data.cache_meta.last_computed_at',
               null
             );
             setResultState({
@@ -191,7 +191,7 @@ function WidgetCard({
           ) {
             lastRefreshedAt = _.get(
               res,
-              'data.result.cache_meta.last_computed_at',
+              'data.cache_meta.last_computed_at',
               null
             );
             setResultState({
@@ -204,7 +204,7 @@ function WidgetCard({
           ) {
             lastRefreshedAt = _.get(
               res,
-              'data.result.cache_meta.last_computed_at',
+              'data.cache_meta.last_computed_at',
               null
             );
             setResultState({
@@ -218,7 +218,7 @@ function WidgetCard({
           ) {
             lastRefreshedAt = _.get(
               res,
-              'data.result.cache_meta.last_computed_at',
+              'data.cache_meta.last_computed_at',
               null
             );
             setResultState({
@@ -231,7 +231,7 @@ function WidgetCard({
           ) {
             lastRefreshedAt = _.get(
               res,
-              'data.result.cache_meta.last_computed_at',
+              'data.cache_meta.last_computed_at',
               null
             );
             setResultState({
@@ -242,7 +242,7 @@ function WidgetCard({
             if (!hasComponentUnmounted.current) {
               lastRefreshedAt = _.get(
                 res,
-                'data.result.cache_meta.last_computed_at',
+                'data.cache_meta.last_computed_at',
                 null
               );
               const resultGroup = res.data.result.result_group;
@@ -295,18 +295,11 @@ function WidgetCard({
             }
           }
           if (lastRefreshedAt != null) {
-            setOldestRefreshTime((curr) => {
-              let value;
-              const currValue = curr[activeDashboard.id];
+            setOldestRefreshTime((currValue) => {
               if (currValue == null || lastRefreshedAt < currValue) {
-                value = lastRefreshedAt;
-              } else {
-                value = currValue;
+                return lastRefreshedAt;
               }
-              return {
-                ...curr,
-                [activeDashboard.id]: value
-              };
+              return currValue;
             });
           }
         } else {
@@ -332,8 +325,7 @@ function WidgetCard({
       unit.id,
       unit.dashboard_id,
       durationWithSavedFrequency,
-      setRefreshClicked,
-      activeDashboard
+      setRefreshClicked
     ]
   );
 
