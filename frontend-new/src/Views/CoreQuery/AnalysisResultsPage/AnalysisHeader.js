@@ -106,6 +106,7 @@ function AnalysisHeader({
       <Button
         size={'large'}
         type='text'
+        onClick={() => {history.push('/')}}
         icon={<SVG size={32} name='Brand' />}
       />
     );
