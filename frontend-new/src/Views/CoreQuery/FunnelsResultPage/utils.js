@@ -333,33 +333,33 @@ export const getTableColumns = (
     ]
     : [];
 
-  const conversionRateColumn = {
-    title: isBreakdownApplied ? (
-      getClickableTitleSorter(
-        'Conversion Rate',
-        {
-          key: 'Conversion',
-          type: 'numerical',
-          subtype: null
-        },
-        currentSorter,
-        handleSorting,
-        'right',
-        'end',
-        'pb-3'
-      )
-    ) : (
-      <NonClickableTableHeader
-        verticalAlignment="end"
-        alignment="right"
-        title="Conversion Rate"
-      />
-    ),
-    dataIndex: 'Conversion',
-    className: 'text-right border-none',
-    width: 150,
-    render: (d) => RenderTotalConversion(d, breakdown, isComparisonApplied)
-  };
+  // const conversionRateColumn = {
+  //   title: isBreakdownApplied ? (
+  //     getClickableTitleSorter(
+  //       'Conversion Rate',
+  //       {
+  //         key: 'Conversion',
+  //         type: 'numerical',
+  //         subtype: null
+  //       },
+  //       currentSorter,
+  //       handleSorting,
+  //       'right',
+  //       'end',
+  //       'pb-3'
+  //     )
+  //   ) : (
+  //     <NonClickableTableHeader
+  //       verticalAlignment="end"
+  //       alignment="right"
+  //       title="Conversion Rate"
+  //     />
+  //   ),
+  //   dataIndex: 'Conversion',
+  //   className: 'text-right border-none',
+  //   width: 150,
+  //   render: (d) => RenderTotalConversion(d, breakdown, isComparisonApplied)
+  // };
 
   const conversionTimeColumn = {
     title: isBreakdownApplied ? (
