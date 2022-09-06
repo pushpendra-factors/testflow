@@ -277,7 +277,7 @@ func (store *MemSQL) GetUserActivitiesAndSessionCount(projectID int64, identity 
 			webSessionCount += 1
 		}
 
-		properties, err := U.DecodePostgresJsonb(&userActivity.Properties)
+		properties, err := U.DecodePostgresJsonb(userActivity.Properties)
 		if err != nil {
 			log.WithError(err).Error("Failed decoding event properties")
 		} else {
@@ -332,8 +332,8 @@ func (store *MemSQL) GetGroupsForUserTimeline(projectID int64, userDetails model
 	return groupsInfo
 }
 
-func GetFilteredProperties(eventName string, properties *map[string]interface{}) postgres.Jsonb {
-	var returnProperties postgres.Jsonb
+func GetFilteredProperties(eventName string, properties *map[string]interface{}) *postgres.Jsonb {
+	var returnProperties *postgres.Jsonb
 	eventNamePropertiesMap := map[string][]string{
 		U.EVENT_NAME_SESSION:                           {U.EP_PAGE_COUNT, U.EP_CHANNEL, U.EP_CAMPAIGN, U.SP_SESSION_TIME, U.EP_TIMESTAMP, U.EP_REFERRER_URL},
 		U.EVENT_NAME_FORM_SUBMITTED:                    {U.EP_FORM_NAME, U.EP_PAGE_URL, U.EP_TIMESTAMP},
@@ -355,7 +355,7 @@ func GetFilteredProperties(eventName string, properties *map[string]interface{})
 		if err != nil {
 			log.WithError(err).Error("filter properties marshal error.")
 		}
-		returnProperties = postgres.Jsonb{RawMessage: propertiesJSON}
+		returnProperties = &postgres.Jsonb{RawMessage: propertiesJSON}
 	} else if eventExistsInMap {
 		for _, prop := range eventNamePropertiesMap[eventName] {
 			_, propExists := (*properties)[prop]
@@ -367,9 +367,9 @@ func GetFilteredProperties(eventName string, properties *map[string]interface{})
 		if err != nil {
 			log.WithError(err).Error("filter properties marshal error.")
 		}
-		returnProperties = postgres.Jsonb{RawMessage: propertiesJSON}
+		returnProperties = &postgres.Jsonb{RawMessage: propertiesJSON}
 	} else {
-		returnProperties = postgres.Jsonb{RawMessage: json.RawMessage(`{}`)}
+		returnProperties = nil
 	}
 	return returnProperties
 }
@@ -414,21 +414,41 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string) (*
 	if hubspotExists && salesforceExists {
 		selectString = fmt.Sprintf(`COALESCE(JSON_EXTRACT_STRING(properties, '%s'), JSON_EXTRACT_STRING(properties, '%s'), JSON_EXTRACT_STRING(properties, '%s')) AS name,
 			COALESCE(JSON_EXTRACT_STRING(properties, '%s'), JSON_EXTRACT_STRING(properties, '%s')) as industry,
-			COALESCE(JSON_EXTRACT_STRING(properties, '%s'), JSON_EXTRACT_STRING(properties, '%s')) as number_of_employees,
+			CASE WHEN COALESCE(JSON_EXTRACT_STRING(properties, '%s'), JSON_EXTRACT_STRING(properties, '%s'))="" THEN 0 ELSE COALESCE(JSON_EXTRACT_STRING(properties, '%s'), JSON_EXTRACT_STRING(properties, '%s')) END AS number_of_employees,
 			COALESCE(JSON_EXTRACT_STRING(properties, '%s'), JSON_EXTRACT_STRING(properties, '%s')) as country`,
-			U.UP_COMPANY, U.GP_HUBSPOT_COMPANY_NAME, U.GP_SALESFORCE_ACCOUNT_NAME, U.GP_HUBSPOT_COMPANY_INDUSTRY, U.GP_SALESFORCE_ACCOUNT_INDUSTRY, U.GP_HUBSPOT_COMPANY_NUMBEROFEMPLOYEES, U.GP_SALESFORCE_ACCOUNT_NUMBEROFEMPLOYEES, U.GP_HUBSPOT_COMPANY_COUNTRY, U.GP_SALESFORCE_ACCOUNT_BILLINGCOUNTRY)
+			U.UP_COMPANY,
+			U.GP_HUBSPOT_COMPANY_NAME,
+			U.GP_SALESFORCE_ACCOUNT_NAME,
+			U.GP_HUBSPOT_COMPANY_INDUSTRY,
+			U.GP_SALESFORCE_ACCOUNT_INDUSTRY,
+			U.GP_HUBSPOT_COMPANY_NUMBEROFEMPLOYEES,
+			U.GP_SALESFORCE_ACCOUNT_NUMBEROFEMPLOYEES,
+			U.GP_HUBSPOT_COMPANY_NUMBEROFEMPLOYEES,
+			U.GP_SALESFORCE_ACCOUNT_NUMBEROFEMPLOYEES,
+			U.GP_HUBSPOT_COMPANY_COUNTRY,
+			U.GP_SALESFORCE_ACCOUNT_BILLINGCOUNTRY)
 	} else if hubspotExists {
 		selectString = fmt.Sprintf(`COALESCE(JSON_EXTRACT_STRING(properties, '%s'), JSON_EXTRACT_STRING(properties, '%s')) AS name,
 			JSON_EXTRACT_STRING(properties, '%s') as industry,
-			JSON_EXTRACT_STRING(properties, '%s') as number_of_employees,
+			CASE WHEN JSON_EXTRACT_STRING(properties, '%s')="" THEN 0 ELSE JSON_EXTRACT_STRING(properties, '%s') END AS number_of_employees,
 			JSON_EXTRACT_STRING(properties, '%s') AS country`,
-			U.UP_COMPANY, U.GP_HUBSPOT_COMPANY_NAME, U.GP_HUBSPOT_COMPANY_INDUSTRY, U.GP_HUBSPOT_COMPANY_NUMBEROFEMPLOYEES, U.GP_HUBSPOT_COMPANY_COUNTRY)
+			U.UP_COMPANY,
+			U.GP_HUBSPOT_COMPANY_NAME,
+			U.GP_HUBSPOT_COMPANY_INDUSTRY,
+			U.GP_HUBSPOT_COMPANY_NUMBEROFEMPLOYEES,
+			U.GP_HUBSPOT_COMPANY_NUMBEROFEMPLOYEES,
+			U.GP_HUBSPOT_COMPANY_COUNTRY)
 	} else if salesforceExists {
 		selectString = fmt.Sprintf(`COALESCE(JSON_EXTRACT_STRING(properties, '%s'), JSON_EXTRACT_STRING(properties, '%s')) AS name,
 			JSON_EXTRACT_STRING(properties, '%s') as industry,
-			JSON_EXTRACT_STRING(properties, '%s') as number_of_employees,
+			CASE WHEN JSON_EXTRACT_STRING(properties, '%s')="" THEN 0 ELSE JSON_EXTRACT_STRING(properties, '%s') END AS number_of_employees,
 			JSON_EXTRACT_STRING(properties, '%s') AS country`,
-			U.UP_COMPANY, U.GP_SALESFORCE_ACCOUNT_NAME, U.GP_SALESFORCE_ACCOUNT_INDUSTRY, U.GP_SALESFORCE_ACCOUNT_NUMBEROFEMPLOYEES, U.GP_SALESFORCE_ACCOUNT_BILLINGCOUNTRY)
+			U.UP_COMPANY,
+			U.GP_SALESFORCE_ACCOUNT_NAME,
+			U.GP_SALESFORCE_ACCOUNT_INDUSTRY,
+			U.GP_SALESFORCE_ACCOUNT_NUMBEROFEMPLOYEES,
+			U.GP_SALESFORCE_ACCOUNT_NUMBEROFEMPLOYEES,
+			U.GP_SALESFORCE_ACCOUNT_BILLINGCOUNTRY)
 	}
 	db := C.GetServices().Db
 	var accountDetails model.AccountDetails

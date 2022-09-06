@@ -39,10 +39,10 @@ type GroupsInfo struct {
 }
 
 type UserActivity struct {
-	EventName   string         `json:"event_name"`
-	DisplayName string         `json:"display_name"`
-	Properties  postgres.Jsonb `json:"properties,omitempty"`
-	Timestamp   uint64         `json:"timestamp"`
+	EventName   string          `json:"event_name"`
+	DisplayName string          `json:"display_name"`
+	Properties  *postgres.Jsonb `json:"properties,omitempty"`
+	Timestamp   uint64          `json:"timestamp"`
 }
 
 type TimelinePayload struct {
@@ -54,7 +54,7 @@ type AccountDetails struct {
 	Name              string         `json:"name"`
 	Industry          string         `json:"industry"`
 	Country           string         `json:"country"`
-	NumberOfEmployees interface{}    `json:"number_of_employees"`
+	NumberOfEmployees uint64         `json:"number_of_employees"`
 	NumberOfUsers     uint64         `json:"number_of_users"`
 	AccountTimeline   []UserTimeline `json:"account_timeline"`
 }

@@ -1,4 +1,4 @@
-import { get, getHostUrl, post } from '../utils/request';
+import { get, getHostUrl, post } from '../../utils/request';
 
 var host = getHostUrl();
 host = host[host.length - 1] === '/' ? host : host + '/';
@@ -104,19 +104,6 @@ export const fetchProfileAccounts = (projectId, reqBody) => {
 };
 
 export const fetchProfileAccountDetails = (projectId, id) => {
-  return async (dispatch) => {
-    try {
-      dispatch({ type: 'FETCH_PROFILE_ACCOUNT_DETAILS_LOADING' });
-      const url =
-        host + 'projects/' + projectId + '/v1/profiles/accounts/' + id;
-      const response = await get(null, url);
-      dispatch({
-        type: 'FETCH_PROFILE_ACCOUNT_DETAILS_FULFILLED',
-        payload: response.data,
-      });
-    } catch (err) {
-      console.log(err);
-      dispatch({ type: 'FETCH_PROFILE_ACCOUNT_DETAILS_FAILED' });
-    }
-  };
+  const url = host + 'projects/' + projectId + '/v1/profiles/accounts/' + id;
+  return get(null, url);
 };

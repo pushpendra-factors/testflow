@@ -41,7 +41,7 @@ function Dashboard({
   const integrationV1 = useSelector((state) => state.global.projectSettingsV1);
   const activeProject = useSelector((state) => state.global.active_project);
   const { bingAds, marketo } = useSelector((state) => state.global);
-  const [oldestRefreshTime, setOldestRefreshTime] = useState({});
+  const [oldestRefreshTime, setOldestRefreshTime] = useState(null);
   const dispatch = useDispatch();
 
   useEffect(() => {

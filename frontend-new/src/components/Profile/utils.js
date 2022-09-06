@@ -87,3 +87,36 @@ export const formatFiltersForPayload = (filters = []) => {
   });
   return filterProps;
 };
+
+export const eventsFormattedForGranularity = (
+  events,
+  granularity,
+  collapse
+) => {
+  const data = _.groupBy(events, groups[granularity]);
+  let retData = {};
+  Object.entries(data).forEach(([timestamp, events]) => {
+    const groupByUser = _.groupBy(events, (item) => item.user);
+    let formattedObj = {};
+    Object.entries(groupByUser).forEach(([key, values]) => {
+      const obj = new Object();
+      obj[key] = { events: values, collapsed: collapse };
+      formattedObj = { ...formattedObj, ...obj };
+    });
+    const obj = new Object();
+    obj[timestamp] = formattedObj;
+    retData = { ...retData, ...obj };
+  });
+  return retData;
+};
+
+export const toggleCellCollapse = (
+  formattedData,
+  timestamp,
+  username,
+  collapseState
+) => {
+  const data = Object.assign({}, formattedData);
+  data[timestamp][username].collapsed = collapseState;
+  return data;
+};

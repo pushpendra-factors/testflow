@@ -234,7 +234,7 @@ function CoreQuery({
 
   const [activeTab, setActiveTab] = useState(1);
 
-  const [queryOpen, setQueryOpen] = useState(true);
+  const [queryOpen, setQueryOpen] = useState(false);
 
   const [dataResp, setDataResp] = useState(null);
 
@@ -1738,30 +1738,33 @@ function CoreQuery({
     return (
       <div className="flex justify-center flex-col items-center w-full">
         <div className="w-full flex center">
-          <div id="app-header" className="bg-white z-50 flex-col px-8 w-full">
-            <div
-              className={'items-center flex justify-between w-full pt-3 pb-3'}
-            >
-              <div
-                role="button"
-                tabIndex={0}
-                className="flex items-center cursor-pointer"
-              >
-                <Button
-                  size={'large'}
-                  type="text"
-                  icon={<SVG size={32} name="Brand" />}
-                />
-                <Text
-                  type={'title'}
-                  level={5}
-                  weight={`bold`}
-                  extraClass={'m-0 mt-1'}
-                  lineHeight={'small'}
-                >
-                  {querySaved
-                    ? `Reports / ${queryType} / ${querySaved.name}`
-                    : `Reports / ${queryType} / Untitled Analysis${' '}
+        <div
+      id='app-header'
+      className=
+        'bg-white z-50 flex-col  px-8 w-11/12 w-full'
+    >
+      <div className={'items-center flex justify-between w-full pt-3 pb-3'}>
+        <div
+          role='button'
+          tabIndex={0}
+          className='flex items-center cursor-pointer'
+        >
+          <Button
+        size={'large'}
+        type='text'
+        onClick={() => { history.push('/') }}
+        icon={<SVG size={32} name='Brand' />}
+      />
+          <Text
+        type={'title'}
+        level={5}
+        weight={`bold`}
+        extraClass={'m-0 mt-1'}
+        lineHeight={'small'}
+      >
+        {querySaved
+          ? `Reports / ${queryType} / ${querySaved.name}`
+          : `Reports / ${queryType} / Untitled Analysis${' '}
             ${moment().format('DD/MM/YYYY')}`}
                 </Text>
               </div>
@@ -1780,13 +1783,20 @@ function CoreQuery({
               </div>
             </div>
 
-            {/* {renderReportTabs()} */}
-            {showResult ? (
-              <div className={'query_card_cont query_card_close'}>
-                {renderQueryComposer()}
-              </div>
-            ) : null}
-          </div>
+      {/* {renderReportTabs()} */}
+      {showResult? (<div
+          className={`query_card_cont ${
+            queryOpen? `query_card_open` : `query_card_close`
+          }`}
+          onClick={(e) => !queryOpen && setQueryOpen(true)}
+        >
+          {renderQueryComposer()}
+          <Button size={'large'} className={`query_card_expand`}>
+            <SVG name={'expand'} size={20}></SVG>Expand
+          </Button>
+        </div>): null}
+    </div>
+        
         </div>
         <div className="w-full h-64 flex items-center justify-center">
           <Spin size="large" />

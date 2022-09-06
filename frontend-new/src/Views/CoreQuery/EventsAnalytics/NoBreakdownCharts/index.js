@@ -140,16 +140,18 @@ const NoBreakdownChartsComponent = forwardRef(
       if (queries.length > 1) {
         const appliedColors = generateColors(queries.length);
         chart = (
-          <div className="flex items-center flex-wrap justify-center w-full">
+          <div className="flex items-start flex-wrap justify-center w-full">
             {queries.map((_, index) => {
+              const rows = get(resultState, 'data.metrics.rows', []);
+              const row = rows.find((elem) => elem[0] === index);
               return (
                 <div
                   style={{ minWidth: '300px' }}
                   key={arrayMapper[index].mapper}
-                  className="w-1/3 mt-4 px-4"
+                  className="w-1/3 px-4"
                 >
                   <SparkChartWithCount
-                    total={get(resultState, `data.metrics.rows.${index}.2`, 0)}
+                    total={get(row, '2', 0)}
                     compareTotal={get(
                       comparisonData,
                       `data.metrics.rows.${index}.2`,

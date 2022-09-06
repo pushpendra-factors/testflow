@@ -262,6 +262,7 @@
                 border-bottom: 1px dashed #E7E9ED;
                 vertical-align: top;
                 background-color: #fff;
+                background: linear-gradient(90deg, rgba(255, 255, 255, 1) 56px, rgba(186, 231, 255, 1) 56px, rgba(255, 255, 255, 1) 60px);
 
                 &:first-child {
                     left: 0;
@@ -269,36 +270,42 @@
                     position: -webkit-sticky;
                     position: sticky;
                     z-index: 8;
+                    background: #fff;
+
                     div {
+                        position: -webkit-sticky;
+                        position: sticky;
+                        top: 40px;
                         width: 96px !important;
                     }
                 }
 
                 .timeline-events {
-                    padding: 16px 20px 0;
-                    align-items: center;
-
                     &--event {
-                        position: relative;
-                        padding-bottom: 24px;
+                        font-size: 14px;
+                        color: #3E516C;
+                        width: fit-content;
+                        max-width: 300px;
+                        background: #F5F6F8;
+                        border-radius: 4px;
+                        padding: 3px 8px;
+                        margin: 20px;
+                        margin-right: 0;
+                    }
 
-                        &--tag {
-                            width: fit-content;
-                            max-width: 300px;
-                            min-height: 32px;
-                            display: flex;
-                            align-items: center;
-                            padding: 3px 15px;
-                            background: #F5F6F8;
-                            border-radius: 4px;
-                        }
-
-                        &--tail {
-                            position: absolute;
-                            left: 16px;
-                            height: 80px;
-                            border-left: 2px solid #BAE7FF;
-                        }
+                    &--num {
+                        display: flex;
+                        align-items: center;
+                        font-size: 14px;
+                        color: #3E516C;
+                        width: fit-content;
+                        max-width: 300px;
+                        background: #F5F6F8;
+                        border-radius: 4px;
+                        padding: 3px 8px;
+                        padding: 3px 10px;
+                        color: #1890FF;
+                        cursor: pointer;
                     }
                 }
             }

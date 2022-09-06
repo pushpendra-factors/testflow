@@ -836,7 +836,7 @@ func (store *MemSQL) CacheDashboardUnitForDateRange(cachePayload model.Dashboard
 				logCtx.WithFields(log.Fields{"Query": attributionQuery.Query, "ErrCode": "UnitRunTimeOut"}).Info("Success for the attribution unit")
 				errCode = http.StatusOK
 			}
-		case <-time.After(30 * 60 * time.Second):
+		case <-time.After(60 * 60 * time.Second):
 			queryTimedOut = true
 			errCode = http.StatusInternalServerError
 			logCtx.WithFields(log.Fields{"Query": attributionQuery.Query, "ErrCode": "UnitRunTimeOut"}).Info("Timeout for the attribution unit")

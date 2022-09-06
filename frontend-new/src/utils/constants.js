@@ -241,12 +241,12 @@ export const ATTRIBUTION_METRICS = [
     enabled: true,
     isEventMetric: true
   },
-  {
-    title: 'All Conv Rate (%)',
-    header: 'ALL CR',
-    enabled: false,
-    isEventMetric: true
-  }
+  // {
+  //   title: 'All Conv Rate (%)',
+  //   header: 'ALL CR',
+  //   enabled: false,
+  //   isEventMetric: true
+  // }
 ];
 
 export const KEY_TOUCH_POINT_DIMENSIONS = [

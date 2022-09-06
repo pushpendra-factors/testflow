@@ -6,20 +6,18 @@ import AccountDetails from './AccountDetails';
 import PropertyFilter from '../UserProfiles/PropertyFilter';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
-import {
-  fetchProfileAccountDetails,
-  fetchProfileAccounts,
-} from '../../../reducers/timeline';
+import { fetchProfileAccounts } from '../../../reducers/timelines';
 import { getGroupProperties } from '../../../reducers/coreQuery/middleware';
 import FaSelect from '../../FaSelect';
 import { formatFiltersForPayload } from '../utils';
+import { getProfileAccountDetails } from '../../../reducers/timelines/middleware';
 
 function AccountProfiles({
   activeProject,
   accounts,
   accountDetails,
   fetchProfileAccounts,
-  fetchProfileAccountDetails,
+  getProfileAccountDetails,
   getGroupProperties,
 }) {
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -178,7 +176,7 @@ function AccountProfiles({
             onRow={(user) => {
               return {
                 onClick: () => {
-                  fetchProfileAccountDetails(activeProject.id, user.identity);
+                  getProfileAccountDetails(activeProject.id, user.identity);
                   showModal();
                 },
               };
@@ -208,15 +206,15 @@ function AccountProfiles({
 }
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
-  accounts: state.timeline.accounts,
-  accountDetails: state.timeline.accountDetails,
+  accounts: state.timelines.accounts,
+  accountDetails: state.timelines.accountDetails,
 });
 
 const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
     {
       fetchProfileAccounts,
-      fetchProfileAccountDetails,
+      getProfileAccountDetails,
       getGroupProperties,
     },
     dispatch

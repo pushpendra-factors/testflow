@@ -1,50 +1,72 @@
 import { Spin } from 'antd';
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import InfoCard from '../../../FaTimeline/InfoCard';
-import { groups, hoverEvents, getLoopLength } from '../../utils';
-import { CaretRightOutlined } from '@ant-design/icons';
+import {
+  eventsFormattedForGranularity,
+  hoverEvents,
+  toggleCellCollapse,
+} from '../../utils';
+import { CaretRightOutlined, CaretUpOutlined } from '@ant-design/icons';
 import { SVG } from '../../../factorsComponents';
+import { PropTextFormat } from '../../../../utils/dataFormatter';
 
 function AccountTimeline({
-  timeline = [],
+  timelineEvents = [],
+  timelineUsers = [],
   granularity,
-  collapse,
-  setCollapse,
+  collapseAll,
   loading = false,
 }) {
-  const compareObjTimestampsDesc = (a, b) => {
-    if (a.timestamp > b.timestamp) {
-      return -1;
-    }
-    if (a.timestamp < b.timestamp) {
-      return 1;
-    }
-    return 0;
+  const [formattedData, setFormattedData] = useState({});
+
+  useEffect(() => {
+    const data = eventsFormattedForGranularity(
+      timelineEvents,
+      granularity,
+      collapseAll
+    );
+    setFormattedData(data);
+  }, [timelineEvents, granularity, collapseAll]);
+
+  const renderInfoCard = (event) => {
+    return (
+      <InfoCard
+        title={event?.display_name}
+        event_name={event?.event_name}
+        properties={event?.properties || {}}
+        trigger={hoverEvents.includes(event.display_name) ? 'hover' : []}
+      >
+        <div className={`flex items-center font-medium`}>
+          <span className='truncate mx-1'>
+            {event?.display_name === 'Page View'
+              ? event?.event_name
+              : PropTextFormat(event?.display_name)}
+          </span>
+          {hoverEvents.includes(event?.display_name) ? (
+            <CaretRightOutlined />
+          ) : null}
+        </div>
+      </InfoCard>
+    );
   };
 
-  const formattedData = useMemo(() => {
-    const groupByTimestamp = [];
-    timeline.forEach((user) => {
-      const newOpts = user.user_activities.map((data) => {
-        return { ...data, user: user.user_name };
-      });
-      groupByTimestamp.push(...newOpts);
-    });
-    groupByTimestamp.sort(compareObjTimestampsDesc);
-    const data = _.groupBy(groupByTimestamp, groups[granularity]);
-    let retData = {};
-    Object.entries(data).forEach(([key, value]) => {
-      const ret = _.groupBy(value, (item) => item.user);
-      const obj = new Object();
-      obj[key] = ret;
-      retData = { ...retData, ...obj };
-    });
-    return retData;
-  }, [timeline, granularity]);
+  const renderAdditionalDiv = (events_count, collapseState, onClick) => {
+    return events_count > 1 ? (
+      collapseState ? (
+        <div className='timeline-events--num ml-1' onClick={onClick}>
+          {'+' + Number(events_count - 1)}
+        </div>
+      ) : (
+        <div className='timeline-events--num m-5' onClick={onClick}>
+          <CaretUpOutlined /> Show Less
+        </div>
+      )
+    ) : null;
+  };
 
   return loading ? (
     <Spin size={'large'} className={'fa-page-loader'} />
-  ) : timeline.length == 0 ? (
+  ) : timelineUsers.length == 0 ? (
     <div className='ant-empty ant-empty-normal'>
       <div className='ant-empty-image'>
         <SVG name='nodata' />
@@ -57,87 +79,58 @@ function AccountTimeline({
         <thead>
           <tr>
             <th scope='col'>Date and Time</th>
-            {timeline.map((data) => {
-              return <th scope='col'>{data.user_name}</th>;
+            {timelineUsers.map((name) => {
+              return (
+                <th scope='col' className='truncate'>
+                  {name}
+                </th>
+              );
             })}
           </tr>
         </thead>
         <tbody>
           {Object.entries(formattedData).map(
-            ([timestamp, allEvents], index) => {
+            ([timestamp, allEvents], rowIndex) => {
               return (
                 <tr>
                   <td>
                     <div className='py-4'>{timestamp}</div>
                   </td>
-                  {timeline.map((data) => {
-                    const loopLength = getLoopLength(allEvents);
-                    const evList = [];
-                    if (!allEvents[data.user_name]) {
-                      for (let i = 0; i < loopLength; i++) {
-                        evList.push(
-                          <div className='timeline-events--event'>
-                            <div
-                              className='timeline-events--event--tag'
-                              style={{ visibility: 'hidden' }}
-                            />
-                            {index ==
-                              Object.entries(formattedData).length - 1 &&
-                            i === loopLength - 1 ? null : (
-                              <div className='timeline-events--event--tail' />
-                            )}
-                          </div>
-                        );
-                      }
-                    } else {
-                      allEvents[data.user_name].forEach((event, evIndex) => {
-                        evList.push(
-                          <div className='timeline-events--event'>
-                            <InfoCard
-                              title={event.display_name}
-                              event_name={event.event_name}
-                              properties={event?.properties || {}}
-                              trigger={
-                                hoverEvents.includes(event.display_name)
-                                  ? 'hover'
-                                  : []
-                              }
-                            >
-                              <div className='timeline-events--event--tag truncate'>
-                                {event.display_name === 'Page View'
-                                  ? event.event_name
-                                  : event.display_name}
-                                {hoverEvents.includes(event.display_name) ? (
-                                  <CaretRightOutlined />
-                                ) : null}
-                              </div>
-                            </InfoCard>
-                            {index ==
-                              Object.entries(formattedData).length - 1 &&
-                            evIndex === loopLength - 1 ? null : (
-                              <div className='timeline-events--event--tail' />
-                            )}
-                          </div>
-                        );
-                      });
-                      while (
-                        evList.length < loopLength &&
-                        index !== Object.entries(formattedData).length - 1
-                      ) {
-                        evList.push(
-                          <div className='timeline-events--event'>
-                            <div
-                              className='timeline-events--event--tag'
-                              style={{ visibility: 'hidden' }}
-                            />
-                            <div className='timeline-events--event--tail' />
-                          </div>
-                        );
-                      }
-                    }
+                  {timelineUsers.map((username, columnIndex) => {
+                    if (!allEvents[username]) return <td></td>;
+                    let eventsList = allEvents[username].collapsed
+                      ? allEvents[username].events.slice(0, 1)
+                      : allEvents[username].events;
                     return (
                       <td>
-                        <div className='timeline-events'>{evList}</div>
+                        <div
+                          className={`timeline-events ${
+                            allEvents[username].collapsed
+                              ? 'flex items-center'
+                              : ''
+                          }`}
+                        >
+                          {eventsList?.map((event) => {
+                            return (
+                              <div className='timeline-events--event'>
+                                {renderInfoCard(event)}
+                              </div>
+                            );
+                          })}
+                          {renderAdditionalDiv(
+                            allEvents[username].events.length,
+                            allEvents[username].collapsed,
+                            () =>
+                              setFormattedData(
+                                toggleCellCollapse(
+                                  formattedData,
+                                  timestamp,
+                                  username,
+                                  !allEvents[username].collapsed
+                                )
+                              )
+                          )}
+                        </div>
                       </td>
                     );
                   })}
