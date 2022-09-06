@@ -14,7 +14,7 @@ import AccountTimeline from './AccountTimeline';
 import { granularityOptions } from '../utils';
 
 function AccountDetails({ onCancel, accountDetails }) {
-  const [granularity, setGranularity] = useState('Monthly');
+  const [granularity, setGranularity] = useState('Hourly');
   const [collapseAll, setCollapseAll] = useState(true);
   const [activities, setActivities] = useState([]);
 
