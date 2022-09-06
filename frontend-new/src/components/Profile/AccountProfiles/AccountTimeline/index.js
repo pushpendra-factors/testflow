@@ -3,8 +3,8 @@ import React, { useMemo, useState, useEffect } from 'react';
 import InfoCard from '../../../FaTimeline/InfoCard';
 import {
   eventsFormattedForGranularity,
-  groups,
   hoverEvents,
+  toggleCellCollapse,
 } from '../../utils';
 import { CaretRightOutlined, CaretUpOutlined } from '@ant-design/icons';
 import { SVG } from '../../../factorsComponents';
@@ -15,15 +15,17 @@ function AccountTimeline({
   timelineUsers = [],
   granularity,
   collapseAll,
-  setCollapseAll,
   loading = false,
 }) {
-  const formattedData = useMemo(() => {
-    return eventsFormattedForGranularity(
+  const [formattedData, setFormattedData] = useState({});
+
+  useEffect(() => {
+    const data = eventsFormattedForGranularity(
       timelineEvents,
       granularity,
       collapseAll
     );
+    setFormattedData(data);
   }, [timelineEvents, granularity, collapseAll]);
 
   const renderInfoCard = (event) => {
@@ -55,7 +57,7 @@ function AccountTimeline({
           {'+' + Number(events_count - 1)}
         </div>
       ) : (
-        <div className='timeline-events--num m-5'>
+        <div className='timeline-events--num m-5' onClick={onClick}>
           <CaretUpOutlined /> Show Less
         </div>
       )
@@ -96,14 +98,16 @@ function AccountTimeline({
                   </td>
                   {timelineUsers.map((username, columnIndex) => {
                     if (!allEvents[username]) return <td></td>;
-                    let eventsList = collapseAll
-                      ? allEvents[username].slice(0, 1)
-                      : allEvents[username];
+                    let eventsList = allEvents[username].collapsed
+                      ? allEvents[username].events.slice(0, 1)
+                      : allEvents[username].events;
                     return (
                       <td>
                         <div
                           className={`timeline-events ${
-                            collapseAll ? 'flex items-center' : ''
+                            allEvents[username].collapsed
+                              ? 'flex items-center'
+                              : ''
                           }`}
                         >
                           {eventsList?.map((event) => {
@@ -114,9 +118,17 @@ function AccountTimeline({
                             );
                           })}
                           {renderAdditionalDiv(
-                            allEvents[username].length,
-                            collapseAll,
-                            () => console.log('Clicked')
+                            allEvents[username].events.length,
+                            allEvents[username].collapsed,
+                            () =>
+                              setFormattedData(
+                                toggleCellCollapse(
+                                  formattedData,
+                                  timestamp,
+                                  username,
+                                  !allEvents[username].collapsed
+                                )
+                              )
                           )}
                         </div>
                       </td>

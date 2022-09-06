@@ -39,14 +39,14 @@ var KEYWORD_PERF_REPORT = 6
 var ACCOUNT = 7
 
 type CampaignPerformanceValues struct {
-	AccountId      string `json:"account_id"`
-	CampaignType   string `json:"campaign_type"`
-	CampaignId     string `json:"campaign_id"`
-	CampaignName   string `json:"campaign_name"`
-	CampaignStatus string `json:"campaign_status"`
-	Impressions    int64  `json:"impressions"`
-	Clicks         int64  `json:"clicks"`
-	Spend          int64  `json:"spend"`
+	AccountId      string  `json:"account_id"`
+	CampaignType   string  `json:"campaign_type"`
+	CampaignId     string  `json:"campaign_id"`
+	CampaignName   string  `json:"campaign_name"`
+	CampaignStatus string  `json:"campaign_status"`
+	Impressions    int64   `json:"impressions"`
+	Clicks         int64   `json:"clicks"`
+	Spend          float64 `json:"spend"`
 }
 
 type CampaignMetadata struct {
@@ -58,18 +58,18 @@ type CampaignMetadata struct {
 }
 
 type AdGroupPerformanceValues struct {
-	AccountId      string `json:"account_id"`
-	CampaignType   string `json:"campaign_type"`
-	CampaignId     string `json:"campaign_id"`
-	CampaignName   string `json:"campaign_name"`
-	CampaignStatus string `json:"campaign_status"`
-	AdGroupType    string `json:"ad_group_type"`
-	AdGroupId      string `json:"ad_group_id"`
-	AdGroupName    string `json:"ad_group_name"`
-	AdGroupStatus  string `json:"ad_group_status"`
-	Impressions    int64  `json:"impressions"`
-	Clicks         int64  `json:"clicks"`
-	Spend          int64  `json:"spend"`
+	AccountId      string  `json:"account_id"`
+	CampaignType   string  `json:"campaign_type"`
+	CampaignId     string  `json:"campaign_id"`
+	CampaignName   string  `json:"campaign_name"`
+	CampaignStatus string  `json:"campaign_status"`
+	AdGroupType    string  `json:"ad_group_type"`
+	AdGroupId      string  `json:"ad_group_id"`
+	AdGroupName    string  `json:"ad_group_name"`
+	AdGroupStatus  string  `json:"ad_group_status"`
+	Impressions    int64   `json:"impressions"`
+	Clicks         int64   `json:"clicks"`
+	Spend          float64 `json:"spend"`
 }
 
 type AdGroupMetadata struct {
@@ -85,22 +85,22 @@ type AdGroupMetadata struct {
 }
 
 type KeywordPerformanceValues struct {
-	AccountId      string `json:"account_id"`
-	CampaignType   string `json:"campaign_type"`
-	CampaignId     string `json:"campaign_id"`
-	CampaignName   string `json:"campaign_name"`
-	CampaignStatus string `json:"campaign_status"`
-	AdGroupType    string `json:"ad_group_type"`
-	AdGroupId      string `json:"ad_group_id"`
-	AdGroupName    string `json:"ad_group_name"`
-	AdGroupStatus  string `json:"ad_group_status"`
-	KeywordType    string `json:"keyword_match_type"`
-	KeywordId      string `json:"keyword_id"`
-	KeywordName    string `json:"keyword_name"`
-	KeywordStatus  string `json:"keyword_status"`
-	Impressions    int64  `json:"impressions"`
-	Clicks         int64  `json:"clicks"`
-	Spend          int64  `json:"spend"`
+	AccountId      string  `json:"account_id"`
+	CampaignType   string  `json:"campaign_type"`
+	CampaignId     string  `json:"campaign_id"`
+	CampaignName   string  `json:"campaign_name"`
+	CampaignStatus string  `json:"campaign_status"`
+	AdGroupType    string  `json:"ad_group_type"`
+	AdGroupId      string  `json:"ad_group_id"`
+	AdGroupName    string  `json:"ad_group_name"`
+	AdGroupStatus  string  `json:"ad_group_status"`
+	KeywordType    string  `json:"keyword_match_type"`
+	KeywordId      string  `json:"keyword_id"`
+	KeywordName    string  `json:"keyword_name"`
+	KeywordStatus  string  `json:"keyword_status"`
+	Impressions    int64   `json:"impressions"`
+	Clicks         int64   `json:"clicks"`
+	Spend          float64 `json:"spend"`
 }
 
 type KeywordMetadata struct {
@@ -277,11 +277,11 @@ func ParseCampaignData(projectId int64, data string) bool {
 	timestamp, _ := strconv.Atoi(dataSplit[9])
 	impression, _ := strconv.Atoi(dataSplit[6])
 	click, _ := strconv.Atoi(dataSplit[7])
-	spend, _ := strconv.Atoi(dataSplit[8])
+	spend, _ := strconv.ParseFloat(dataSplit[8], 64)
 	campaignPerfValues := CampaignPerformanceValues{
 		Impressions:    int64(impression),
 		Clicks:         int64(click),
-		Spend:          int64(spend),
+		Spend:          spend,
 		AccountId:      dataSplit[1],
 		CampaignId:     dataSplit[3],
 		CampaignStatus: dataSplit[5],
@@ -367,11 +367,11 @@ func ParseAdGroupData(projectId int64, data string) bool {
 	timestamp, _ := strconv.Atoi(dataSplit[13])
 	impression, _ := strconv.Atoi(dataSplit[10])
 	click, _ := strconv.Atoi(dataSplit[11])
-	spend, _ := strconv.Atoi(dataSplit[12])
+	spend, _ := strconv.ParseFloat(dataSplit[12], 64)
 	adGroupPerfValues := AdGroupPerformanceValues{
 		Impressions:    int64(impression),
 		Clicks:         int64(click),
-		Spend:          int64(spend),
+		Spend:          spend,
 		AccountId:      dataSplit[1],
 		CampaignId:     dataSplit[6],
 		CampaignStatus: dataSplit[9],
@@ -465,11 +465,11 @@ func ParseKeywordData(projectId int64, data string) bool {
 	timestamp, _ := strconv.Atoi(dataSplit[17])
 	impression, _ := strconv.Atoi(dataSplit[14])
 	click, _ := strconv.Atoi(dataSplit[15])
-	spend, _ := strconv.Atoi(dataSplit[16])
+	spend, _ := strconv.ParseFloat(dataSplit[16], 64)
 	keywordPerfValues := KeywordPerformanceValues{
 		Impressions:    int64(impression),
 		Clicks:         int64(click),
-		Spend:          int64(spend),
+		Spend:          spend,
 		AccountId:      dataSplit[1],
 		CampaignId:     dataSplit[10],
 		CampaignStatus: dataSplit[13],
