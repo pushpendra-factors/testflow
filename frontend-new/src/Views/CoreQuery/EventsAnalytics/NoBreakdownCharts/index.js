@@ -4,26 +4,28 @@ import React, {
   forwardRef,
   useContext,
   useImperativeHandle,
+  memo
 } from 'react';
+import { useSelector } from 'react-redux';
+import { get } from 'lodash';
 import {
   formatData,
   getDataInLineChartFormat,
   getDefaultSortProp,
-  getDefaultDateSortProp,
+  getDefaultDateSortProp
 } from './utils';
 import NoBreakdownTable from './NoBreakdownTable';
-import SparkLineChart from '../../../../components/SparkLineChart';
 import LineChart from '../../../../components/HCLineChart';
 import { generateColors } from '../../../../utils/dataFormatter';
 import {
   DASHBOARD_MODAL,
   CHART_TYPE_SPARKLINES,
-  CHART_TYPE_LINECHART,
+  CHART_TYPE_LINECHART
 } from '../../../../utils/constants';
-import { useSelector } from 'react-redux';
 import { CoreQueryContext } from '../../../../contexts/CoreQueryContext';
+import SparkChartWithCount from '../../../../components/SparkChartWithCount/SparkChartWithCount';
 
-const NoBreakdownCharts = forwardRef(
+const NoBreakdownChartsComponent = forwardRef(
   (
     {
       queries,
@@ -33,13 +35,11 @@ const NoBreakdownCharts = forwardRef(
       durationObj,
       arrayMapper,
       section,
+      savedQuerySettings,
+      comparisonData
     },
     ref
   ) => {
-    const {
-      coreQueryState: { savedQuerySettings },
-    } = useContext(CoreQueryContext);
-
     const [sorter, setSorter] = useState(
       savedQuerySettings.sorter && Array.isArray(savedQuerySettings.sorter)
         ? savedQuerySettings.sorter
@@ -55,7 +55,7 @@ const NoBreakdownCharts = forwardRef(
 
     useImperativeHandle(ref, () => {
       return {
-        currentSorter: { sorter, dateSorter },
+        currentSorter: { sorter, dateSorter }
       };
     });
 
@@ -66,16 +66,17 @@ const NoBreakdownCharts = forwardRef(
     }, [queries]);
 
     const chartsData = useMemo(() => {
-      return formatData(resultState.data, arrayMapper, queries.length);
-    }, [resultState.data, arrayMapper, queries.length]);
+      return formatData(resultState.data, arrayMapper, comparisonData.data);
+    }, [resultState.data, arrayMapper, comparisonData.data]);
 
-    const { categories, data } = useMemo(() => {
+    const { categories, data, compareCategories } = useMemo(() => {
       return getDataInLineChartFormat(
         resultState.data,
         arrayMapper,
-        eventNames
+        eventNames,
+        comparisonData.data
       );
-    }, [resultState.data, arrayMapper, eventNames]);
+    }, [resultState.data, arrayMapper, eventNames, comparisonData.data]);
 
     const visibleSeriesData = useMemo(() => {
       return data
@@ -86,7 +87,7 @@ const NoBreakdownCharts = forwardRef(
           const color = appliedColors[index];
           return {
             ...elem,
-            color,
+            color
           };
         });
     }, [data, hiddenEvents, appliedColors]);
@@ -98,7 +99,7 @@ const NoBreakdownCharts = forwardRef(
     let chart = null;
 
     const table = (
-      <div className='mt-12 w-full'>
+      <div className="mt-12 w-full">
         <NoBreakdownTable
           isWidgetModal={section === DASHBOARD_MODAL}
           data={chartsData}
@@ -113,42 +114,101 @@ const NoBreakdownCharts = forwardRef(
           dateSorter={dateSorter}
           setDateSorter={setDateSorter}
           responseData={resultState.data}
+          comparisonApplied={!!comparisonData.data}
         />
       </div>
     );
 
     if (chartType === CHART_TYPE_SPARKLINES) {
-      chart = (
-        <SparkLineChart
-          frequency={durationObj.frequency}
-          queries={queries}
-          chartsData={chartsData}
-          appliedColors={appliedColors}
-          arrayMapper={arrayMapper}
-          page={page}
-          resultState={resultState}
-          section={section}
-        />
-      );
+      if (queries.length === 1) {
+        chart = (
+          <div className="flex items-center justify-center w-full">
+            <SparkChartWithCount
+              total={get(resultState, 'data.metrics.rows.0.2', 0)}
+              compareTotal={get(comparisonData, 'data.metrics.rows.0.2', 0)}
+              event={arrayMapper[0].mapper}
+              compareKey={`${arrayMapper[0].mapper} - compareValue`}
+              frequency={durationObj.frequency}
+              chartData={chartsData}
+              comparisonApplied={!!comparisonData.data}
+              headerTitle={arrayMapper[0].displayName}
+            />
+          </div>
+        );
+      }
+
+      if (queries.length > 1) {
+        const appliedColors = generateColors(queries.length);
+        chart = (
+          <div className="flex items-start flex-wrap justify-center w-full">
+            {queries.map((_, index) => {
+              const rows = get(resultState, 'data.metrics.rows', []);
+              const row = rows.find((elem) => elem[0] === index);
+              return (
+                <div
+                  style={{ minWidth: '300px' }}
+                  key={arrayMapper[index].mapper}
+                  className="w-1/3 px-4"
+                >
+                  <SparkChartWithCount
+                    total={get(row, '2', 0)}
+                    compareTotal={get(
+                      comparisonData,
+                      `data.metrics.rows.${index}.2`,
+                      0
+                    )}
+                    event={arrayMapper[index].mapper}
+                    compareKey={`${arrayMapper[index].mapper} - compareValue`}
+                    frequency={durationObj.frequency}
+                    chartData={chartsData}
+                    chartColor={appliedColors[index]}
+                    alignment="vertical"
+                    comparisonApplied={!!comparisonData.data}
+                    headerTitle={arrayMapper[index].displayName}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        );
+      }
     } else if (chartType === CHART_TYPE_LINECHART) {
       chart = (
-        <div className='w-full'>
+        <div className="w-full">
           <LineChart
             frequency={durationObj.frequency}
             categories={categories}
             data={visibleSeriesData}
+            comparisonApplied={!!comparisonData.data}
+            compareCategories={compareCategories}
           />
         </div>
       );
     }
 
     return (
-      <div className='flex items-center justify-center flex-col'>
+      <div className="flex items-center justify-center flex-col">
         {chart}
         {table}
       </div>
     );
   }
 );
+
+const NoBreakdownChartsMemoized = memo(NoBreakdownChartsComponent);
+
+const NoBreakdownCharts = (props) => {
+  const {
+    coreQueryState: { savedQuerySettings, comparison_data: comparisonData }
+  } = useContext(CoreQueryContext);
+
+  return (
+    <NoBreakdownChartsMemoized
+      savedQuerySettings={savedQuerySettings}
+      comparisonData={comparisonData}
+      {...props}
+    />
+  );
+};
 
 export default NoBreakdownCharts;

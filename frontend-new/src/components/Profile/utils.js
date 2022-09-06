@@ -87,3 +87,19 @@ export const formatFiltersForPayload = (filters = []) => {
   });
   return filterProps;
 };
+
+export const eventsFormattedForGranularity = (
+  events,
+  granularity,
+  collapse
+) => {
+  const data = _.groupBy(events, groups[granularity]);
+  let retData = {};
+  Object.entries(data).forEach(([timestamp, events]) => {
+    const groupByUser = _.groupBy(events, (item) => item.user);
+    const obj = new Object();
+    obj[timestamp] = groupByUser;
+    retData = { ...retData, ...obj };
+  });
+  return retData;
+};

@@ -2226,6 +2226,26 @@ func TestIntSegmentHandlerWithPayloadFromSegmentPlatform(t *testing.T) {
 			map[string]string{"Authorization": basicAuthToken})
 		assert.Equal(t, http.StatusOK, w.Code)
 	})
+
+	// Test rudderstack_platform handler.
+	uri = "/integrations/rudderstack_platform"
+	t.Run("PlatformTestPage:AnonymousUserNavigationToSignupPagePayload", func(t *testing.T) {
+		payload := `
+		{
+			"anonymousId": "anonymous-1",
+			"type": "page",
+			"timestamp": "2019-06-24T15:32:33Z",
+			"name": "Signup",
+			"properties": {
+				"url": "https://segment.com/signup" 
+			}
+		}
+		`
+
+		w := ServePostRequestWithHeaders(r, uri, []byte(payload),
+			map[string]string{"Authorization": basicAuthToken})
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
 }
 
 func TestIntSegmentHandlerWithTimestamp(t *testing.T) {

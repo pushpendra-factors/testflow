@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"net/http"
 	"strconv"
 	"time"
@@ -433,7 +434,7 @@ func (store *MemSQL) createBatchedHubspotDocuments(projectID int64, documents []
 	log.Info("Using hubspot batch insert.")
 
 	batchedArguments := make([]interface{}, 0)
-	insertColumns := "INSERT INTO hubspot_documents(project_id,id, type, action, timestamp, value, created_at, updated_at)"
+	insertColumns := "INSERT INTO hubspot_documents(project_id, id, type, action, timestamp, value, created_at, updated_at)"
 	placeHolders := ""
 	createdTime := gorm.NowFunc()
 	for i := range documents {
@@ -462,6 +463,48 @@ func (store *MemSQL) createBatchedHubspotDocuments(projectID int64, documents []
 	if err != nil {
 		log.WithError(err).Error("Failed to batch insert hubspot documents.")
 		return http.StatusInternalServerError
+	}
+
+	return http.StatusCreated
+}
+
+func (store *MemSQL) modifyAndCreateBatchedHubspotDocuments(projectID int64, documents []*model.HubspotDocument) int {
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &log.Fields{"project_id": projectID})
+
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "documents": len(documents)})
+	if len(documents) <= 0 {
+		logCtx.Error("Empty batch for hubspot batch insert.")
+		return http.StatusBadRequest
+	}
+	log.Info("Modifying hubspot batch size while insertion.")
+
+	memsqlMaxSize := float64(C.GetDBMaxAllowedPacket())
+	maxByteSize := float64(0)
+	noOfColumns := float64(8)
+
+	for i := range documents {
+		value, err := documents[i].Value.RawMessage.MarshalJSON()
+		if err != nil {
+			logCtx.WithField("document", documents[i]).Error(err)
+			continue
+		}
+		maxByteSize = math.Max(maxByteSize, float64(len(value)))
+	}
+
+	modifiedBatchSize := int(math.Min(float64(len(documents)), (memsqlMaxSize / maxByteSize / noOfColumns)))
+
+	batchedDocuments := model.GetHubspotDocumentsListAsBatchById(documents, modifiedBatchSize)
+	for i := range batchedDocuments {
+		if len(batchedDocuments[i]) == 0 {
+			continue
+		}
+
+		status := store.createBatchedHubspotDocuments(projectID, batchedDocuments[i])
+		if status != http.StatusCreated {
+			logCtx.WithFields(log.Fields{"documents": batchedDocuments[i], "err_code": status}).
+				Error("Failed to insert hubspot documents after modifying batchsize.")
+			return status
+		}
 	}
 
 	return http.StatusCreated
@@ -610,7 +653,7 @@ func (store *MemSQL) CreateHubspotDocumentInBatch(projectID int64, docType int, 
 			continue
 		}
 
-		status := store.createBatchedHubspotDocuments(projectID, processDocuments)
+		status := store.modifyAndCreateBatchedHubspotDocuments(projectID, processDocuments)
 		if status != http.StatusCreated {
 			logCtx.WithFields(log.Fields{"documents": processDocuments, "err_code": status}).
 				WithError(err).Error("Failed to insert batched hubspot documents.")

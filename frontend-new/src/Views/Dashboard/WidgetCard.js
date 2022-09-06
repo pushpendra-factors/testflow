@@ -47,7 +47,8 @@ function WidgetCard({
   durationObj,
   refreshClicked,
   setRefreshClicked,
-  fetchWeeklyIngishts
+  fetchWeeklyIngishts,
+  setOldestRefreshTime
 }) {
   const hasComponentUnmounted = useRef(false);
   const cardRef = useRef(null);
@@ -57,7 +58,9 @@ function WidgetCard({
   const { active_project: activeProject } = useSelector(
     (state) => state.global
   );
-  const { activeDashboardUnits } = useSelector((state) => state.dashboard);
+  const { activeDashboardUnits, activeDashboard } = useSelector(
+    (state) => state.dashboard
+  );
   const { metadata } = useSelector((state) => state.insights);
   const { data: savedQueries } = useSelector((state) => state.queries);
   const dispatch = useDispatch();
@@ -159,6 +162,7 @@ function WidgetCard({
           queryType = QUERY_TYPE_FUNNEL;
         }
 
+        let lastRefreshedAt = null;
         if (apiCallStatus.required) {
           const res = await getDataFromServer(
             unit.query,
@@ -172,6 +176,11 @@ function WidgetCard({
             queryType === QUERY_TYPE_FUNNEL &&
             !hasComponentUnmounted.current
           ) {
+            lastRefreshedAt = _.get(
+              res,
+              'data.cache_meta.last_computed_at',
+              null
+            );
             setResultState({
               ...initialState,
               data: res.data.result
@@ -180,6 +189,11 @@ function WidgetCard({
             queryType === QUERY_TYPE_PROFILE &&
             !hasComponentUnmounted.current
           ) {
+            lastRefreshedAt = _.get(
+              res,
+              'data.cache_meta.last_computed_at',
+              null
+            );
             setResultState({
               ...initialState,
               data: res.data.result
@@ -188,6 +202,11 @@ function WidgetCard({
             queryType === QUERY_TYPE_ATTRIBUTION &&
             !hasComponentUnmounted.current
           ) {
+            lastRefreshedAt = _.get(
+              res,
+              'data.cache_meta.last_computed_at',
+              null
+            );
             setResultState({
               ...initialState,
               data: res.data.result,
@@ -197,6 +216,11 @@ function WidgetCard({
             queryType === QUERY_TYPE_CAMPAIGN &&
             !hasComponentUnmounted.current
           ) {
+            lastRefreshedAt = _.get(
+              res,
+              'data.cache_meta.last_computed_at',
+              null
+            );
             setResultState({
               ...initialState,
               data: res.data.result
@@ -205,12 +229,22 @@ function WidgetCard({
             queryType === QUERY_TYPE_KPI &&
             !hasComponentUnmounted.current
           ) {
+            lastRefreshedAt = _.get(
+              res,
+              'data.cache_meta.last_computed_at',
+              null
+            );
             setResultState({
               ...initialState,
               data: res.data.result || res.data
             });
           } else {
             if (!hasComponentUnmounted.current) {
+              lastRefreshedAt = _.get(
+                res,
+                'data.cache_meta.last_computed_at',
+                null
+              );
               const resultGroup = res.data.result.result_group;
               const equivalentQuery = getStateQueryFromRequestQuery(
                 unit.query.query.query_group[0]
@@ -259,6 +293,14 @@ function WidgetCard({
                 });
               }
             }
+          }
+          if (lastRefreshedAt != null) {
+            setOldestRefreshTime((currValue) => {
+              if (currValue == null || lastRefreshedAt < currValue) {
+                return lastRefreshedAt;
+              }
+              return currValue;
+            });
           }
         } else {
           setResultState({
@@ -421,10 +463,11 @@ function WidgetCard({
             <div
               className={`${styles.widgetCard} flex items-center justify-between px-4`}
             >
-                <div className="widget-card--title-container py-3 flex truncate cursor-pointer items-center w-full mr-2" onClick={handleEditQuery}>
-                  <div
-                    className="flex  items-center" 
-                  >
+              <div
+                className="widget-card--title-container py-3 flex truncate cursor-pointer items-center w-full mr-2"
+                onClick={handleEditQuery}
+              >
+                <div className="flex  items-center">
                   <Tooltip title={unit?.query?.title} mouseEnterDelay={0.2}>
                     <Text
                       ellipsis
@@ -433,17 +476,17 @@ function WidgetCard({
                       weight={'bold'}
                       extraClass={`widget-card--title m-0 mr-1 flex`}
                     >
-                      {unit?.query?.title} 
+                      {unit?.query?.title}
                     </Text>
                   </Tooltip>
-                  </div>
-                  <SVG
-                        extraClass={`widget-card--expand-icon ml-1`}
-                        size={20}
-                        color={'grey'}
-                        name="arrowright"
-                      />
                 </div>
+                <SVG
+                  extraClass={`widget-card--expand-icon ml-1`}
+                  size={20}
+                  color={'grey'}
+                  name="arrowright"
+                />
+              </div>
               <div className="flex items-center">
                 {resultState.apiCallStatus &&
                 resultState.apiCallStatus.required &&

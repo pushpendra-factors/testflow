@@ -15,6 +15,83 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestAttributionModelCompareSingle(t *testing.T) {
+	// Initialize routes and dependent data.
+	r := gin.Default()
+	H.InitAppRoutes(r)
+
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+	customerAccountId := U.RandomLowerAphaNumString(5)
+
+	_, errCode := store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{
+		IntAdwordsCustomerAccountId: &customerAccountId,
+	})
+
+	assert.Equal(t, http.StatusAccepted, errCode)
+	value := []byte(`{"cost": "0","clicks": "0","campaign_id":"123456","impressions": "0", "campaign_name": "test"}`)
+	document := &model.AdwordsDocument{
+		ProjectID:         project.ID,
+		CustomerAccountID: customerAccountId,
+		TypeAlias:         "campaign_performance_report",
+		Timestamp:         20200510,
+		Value:             &postgres.Jsonb{RawMessage: value},
+	}
+
+	status := store.GetStore().CreateAdwordsDocument(document)
+	assert.Equal(t, http.StatusCreated, status)
+
+	/*
+		timestamp(t)
+		t				user1 ->first session + event initial_campaign -> 123456
+		t+3day			user2 ->first session + event initial_campaign -> 54321
+		t+3day			user3 ->first session initial_campaign -> 54321
+		t+5day			user1 ->session + event latest_campaign -> 1234567
+		t+5day			user2 ->session + event latest_campaign -> 123456
+	*/
+	timestamp := int64(1589068800)
+
+	// Creating 3 users
+	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
+		JoinTimestamp: timestamp, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.NotEmpty(t, createdUserID1)
+	assert.Equal(t, http.StatusCreated, errCode)
+	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
+		JoinTimestamp: timestamp, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.NotEmpty(t, createdUserID2)
+	assert.Equal(t, http.StatusCreated, errCode)
+	createdUserID3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
+		JoinTimestamp: timestamp, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.NotEmpty(t, createdUserID3)
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	// Events with +1 Days
+	errCode = createEventWithSession(project.ID, "event1", createdUserID1,
+		timestamp+1*U.SECONDS_IN_A_DAY, "111111", "", "", "", "", "")
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	t.Run("AttributionQueryCompareTimestampRangeNoLookBack", func(t *testing.T) {
+		query := &model.AttributionQuery{
+			From:                          timestamp - 2*U.SECONDS_IN_A_DAY,
+			To:                            timestamp + 3*U.SECONDS_IN_A_DAY,
+			LookbackDays:                  10,
+			AttributionKey:                model.AttributionKeyCampaign,
+			AttributionKeyFilter:          []model.AttributionKeyFilter{},
+			LinkedEvents:                  []model.QueryEventWithProperties{},
+			AttributionMethodology:        model.AttributionMethodFirstTouch,
+			AttributionMethodologyCompare: model.AttributionMethodLastTouch,
+			ConversionEvent:               model.QueryEventWithProperties{Name: "event1"},
+			ConversionEventCompare:        model.QueryEventWithProperties{},
+			QueryType:                     model.AttributionQueryTypeEngagementBased,
+		}
+		var debugQueryKey string
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		assert.Nil(t, err)
+		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "111111"))
+		assert.Equal(t, float64(1), getCompareConversionUserCount(query.AttributionKey, result, "111111"))
+	})
+}
+
 func TestAttributionModelCompare(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()

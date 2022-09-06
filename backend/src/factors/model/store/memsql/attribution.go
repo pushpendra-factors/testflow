@@ -681,8 +681,6 @@ func (store *MemSQL) getAllTheSessions(projectId int64, sessionEventNameId strin
 		" WHEN JSON_EXTRACT_STRING(sessions.properties, ?) = '' THEN ? ELSE JSON_EXTRACT_STRING(sessions.properties, ?) END"
 
 	queryUserSessionTimeRange := "SELECT sessions.user_id, " +
-		caseSelectStmt + " AS sessionTimeSpent, " +
-		caseSelectStmt + " AS pageCount, " +
 		caseSelectStmt + " AS campaignID, " +
 		caseSelectStmt + " AS campaignName, " +
 		caseSelectStmt + " AS adgroupID, " +
@@ -698,8 +696,6 @@ func (store *MemSQL) getAllTheSessions(projectId int64, sessionEventNameId strin
 	var qParams []interface{}
 
 	qParams = append(qParams,
-		U.SP_SPENT_TIME, 0, U.SP_SPENT_TIME, 0, U.SP_SPENT_TIME,
-		U.SP_PAGE_COUNT, 0, U.SP_PAGE_COUNT, 0, U.SP_PAGE_COUNT,
 		U.EP_CAMPAIGN_ID, model.PropertyValueNone, U.EP_CAMPAIGN_ID, model.PropertyValueNone, U.EP_CAMPAIGN_ID,
 		U.EP_CAMPAIGN, model.PropertyValueNone, U.EP_CAMPAIGN, model.PropertyValueNone, U.EP_CAMPAIGN,
 		U.EP_ADGROUP_ID, model.PropertyValueNone, U.EP_ADGROUP_ID, model.PropertyValueNone, U.EP_ADGROUP_ID,

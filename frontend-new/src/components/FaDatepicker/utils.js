@@ -91,7 +91,7 @@ const QuarterMap = (month, lastXNo = 0) => {
     }
     rng.endDate = rng.endDate.set({ 'date': rng.endDate.daysInMonth() });
   }
-  else if (mnth <= 7) {
+  else if (mnth <= 8) {
     rng = {
       startDate: MomentTz().set({ 'date': 1, 'month': 6, 'year': year }).startOf('day'),
       endDate: MomentTz().set({ 'month': 8, 'year': year }).endOf('day').endOf('month'),

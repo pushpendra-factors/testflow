@@ -255,7 +255,7 @@ export const ChartWithComparisonData = () => {
       chartColor={visualizationColors[9]}
       chartData={SPARK_CHART_SAMPLE_KPI_DATA_WITH_COMPARISON_DATA}
       event="Engaged Users who tested"
-      comparisonEnabled={true}
+      comparisonApplied={true}
     />
   );
 };

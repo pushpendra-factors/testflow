@@ -277,7 +277,7 @@ func (store *MemSQL) GetUserActivitiesAndSessionCount(projectID int64, identity 
 			webSessionCount += 1
 		}
 
-		properties, err := U.DecodePostgresJsonb(&userActivity.Properties)
+		properties, err := U.DecodePostgresJsonb(userActivity.Properties)
 		if err != nil {
 			log.WithError(err).Error("Failed decoding event properties")
 		} else {
@@ -332,8 +332,8 @@ func (store *MemSQL) GetGroupsForUserTimeline(projectID int64, userDetails model
 	return groupsInfo
 }
 
-func GetFilteredProperties(eventName string, properties *map[string]interface{}) postgres.Jsonb {
-	var returnProperties postgres.Jsonb
+func GetFilteredProperties(eventName string, properties *map[string]interface{}) *postgres.Jsonb {
+	var returnProperties *postgres.Jsonb
 	eventNamePropertiesMap := map[string][]string{
 		U.EVENT_NAME_SESSION:                           {U.EP_PAGE_COUNT, U.EP_CHANNEL, U.EP_CAMPAIGN, U.SP_SESSION_TIME, U.EP_TIMESTAMP, U.EP_REFERRER_URL},
 		U.EVENT_NAME_FORM_SUBMITTED:                    {U.EP_FORM_NAME, U.EP_PAGE_URL, U.EP_TIMESTAMP},
@@ -355,7 +355,7 @@ func GetFilteredProperties(eventName string, properties *map[string]interface{})
 		if err != nil {
 			log.WithError(err).Error("filter properties marshal error.")
 		}
-		returnProperties = postgres.Jsonb{RawMessage: propertiesJSON}
+		returnProperties = &postgres.Jsonb{RawMessage: propertiesJSON}
 	} else if eventExistsInMap {
 		for _, prop := range eventNamePropertiesMap[eventName] {
 			_, propExists := (*properties)[prop]
@@ -367,9 +367,9 @@ func GetFilteredProperties(eventName string, properties *map[string]interface{})
 		if err != nil {
 			log.WithError(err).Error("filter properties marshal error.")
 		}
-		returnProperties = postgres.Jsonb{RawMessage: propertiesJSON}
+		returnProperties = &postgres.Jsonb{RawMessage: propertiesJSON}
 	} else {
-		returnProperties = postgres.Jsonb{RawMessage: json.RawMessage(`{}`)}
+		returnProperties = nil
 	}
 	return returnProperties
 }

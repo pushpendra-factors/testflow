@@ -13,14 +13,14 @@ function ChartHeader({
   smallFont = false,
   metricType = null,
   compareTotal,
-  comparisonEnabled,
+  comparisonApplied,
   headerTitle
 }) {
-  const percentChange = comparisonEnabled
+  const percentChange = comparisonApplied
     ? ((total - compareTotal) / compareTotal) * 100
     : 0;
 
-  const changeIcon = comparisonEnabled ? (
+  const changeIcon = comparisonApplied ? (
     <SVG
       color={percentChange > 0 ? '#5ACA89' : '#FF0000'}
       name={percentChange > 0 ? 'arrowLift' : 'arrowDown'}
@@ -61,7 +61,7 @@ function ChartHeader({
         </Text>
       </ControlledComponent>
 
-      {comparisonEnabled && (
+      {comparisonApplied && (
         <div className="flex flex-col row-gap-1 items-center">
           <div className="flex col-gap-1 items-center">
             {changeIcon}

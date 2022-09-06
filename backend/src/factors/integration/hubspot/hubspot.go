@@ -255,6 +255,14 @@ func syncContactFormSubmissions(project *model.Project, userId string, document 
 				for k, v := range urlParameters {
 					encodeProperties[k] = v
 				}
+
+				url, err := util.ParseURLStable(util.GetPropertyValueAsString(val))
+				if err != nil {
+					log.WithField("val", val).Error("Error occured while ParseURLStable.")
+					continue
+				}
+				enkey := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameFormSubmission, "page-url-no-qp")
+				encodeProperties[enkey] = util.GetURLHostAndPath(url)
 			}
 			enkey := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameFormSubmission, key)
 			encodeProperties[enkey] = val

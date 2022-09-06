@@ -1,13 +1,16 @@
 import React, { useState, useCallback } from 'react';
-import moment from 'moment';
+import MomentTz from 'Components/MomentTz';
 import DataTable from '../../../../components/DataTable';
 import {
-  getNoGroupingTableData,
+  getTableData,
   getColumns,
   getDateBasedColumns,
-  getNoGroupingTablularDatesBasedData
+  getDateBasedTableData
 } from './utils';
-import { CHART_TYPE_SPARKLINES, DASHBOARD_WIDGET_SECTION } from '../../../../utils/constants';
+import {
+  CHART_TYPE_SPARKLINES,
+  DASHBOARD_WIDGET_SECTION
+} from '../../../../utils/constants';
 import { useSelector } from 'react-redux';
 import {
   addQforQuarter,
@@ -30,7 +33,8 @@ function NoBreakdownTable({
   dateSorter,
   setDateSorter,
   responseData,
-  section
+  section,
+  comparisonApplied = false
 }) {
   const [searchText, setSearchText] = useState('');
   const { eventNames } = useSelector((state) => state.coreQuery);
@@ -69,24 +73,27 @@ function NoBreakdownTable({
       durationObj.frequency,
       sorter,
       handleSorting,
-      eventNames
+      eventNames,
+      comparisonApplied
     );
-    tableData = getNoGroupingTableData(data, arrayMapper, sorter);
+    tableData = getTableData({ data, currentSorter: sorter });
   } else {
     columns = getDateBasedColumns(
       data,
       dateSorter,
       handleDateSorting,
       durationObj.frequency,
-      eventNames
+      eventNames,
+      comparisonApplied
     );
-    tableData = getNoGroupingTablularDatesBasedData(
+    tableData = getDateBasedTableData(
       data,
       dateSorter,
       searchText,
       arrayMapper,
       durationObj.frequency,
-      responseData.metrics
+      responseData.metrics,
+      comparisonApplied
     );
 
     onSelectionChange = (_, selectedRows) => {
@@ -137,7 +144,7 @@ function NoBreakdownTable({
           return {
             date:
               addQforQuarter(durationObj.frequency) +
-              moment(date).format(format),
+              MomentTz(date).format(format),
             ...eventsData
           };
         } else {

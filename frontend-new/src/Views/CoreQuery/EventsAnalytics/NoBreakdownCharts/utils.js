@@ -1,14 +1,21 @@
 import React from 'react';
+import cx from 'classnames';
+import get from 'lodash/get';
 import MomentTz from 'Components/MomentTz';
 import {
   addQforQuarter,
+  formatCount,
   getClickableTitleSorter,
   SortResults
 } from '../../../../utils/dataFormatter';
-import { Number as NumFormat } from '../../../../components/factorsComponents';
+import {
+  Number as NumFormat,
+  SVG,
+  Text
+} from '../../../../components/factorsComponents';
 import { DATE_FORMATS } from '../../../../utils/constants';
 
-export const getNoGroupingTableData = (data, arrayMapper, currentSorter) => {
+export const getTableData = ({ data, currentSorter }) => {
   const clonedData = data.map((elem) => {
     const element = { ...elem };
     return element;
@@ -16,9 +23,8 @@ export const getNoGroupingTableData = (data, arrayMapper, currentSorter) => {
 
   const result = clonedData.map((elem, index) => {
     return {
-      index,
       ...elem,
-      date: elem.date
+      index
     };
   });
 
@@ -53,31 +59,44 @@ export const getColumns = (
   frequency,
   currentSorter,
   handleSorting,
-  eventNames
+  eventNames,
+  comparisonApplied
 ) => {
   const format = DATE_FORMATS[frequency] || DATE_FORMATS.date;
 
-  const result = [
-    {
-      title: getClickableTitleSorter(
-        'Date',
-        { key: 'date', type: 'datetime', subtype: 'date' },
-        currentSorter,
-        handleSorting
-      ),
-      dataIndex: 'date',
-      render: (d) => {
-        return addQforQuarter(frequency) + MomentTz(d).format(format);
-      }
+  const dateColumn = {
+    title: getClickableTitleSorter(
+      'Date',
+      { key: 'date', type: 'datetime', subtype: 'date' },
+      currentSorter,
+      handleSorting
+    ),
+    dataIndex: 'date',
+    render: (d, row) => {
+      return (
+        <div className="flex flex-col">
+          <Text type="title" level={7} color="grey-6">
+            {addQforQuarter(frequency) + MomentTz(d).format(format)}
+          </Text>
+          {comparisonApplied && (
+            <Text type="title" level={7} color="grey">
+              Vs{' '}
+              {addQforQuarter(frequency) +
+                MomentTz(row.compareDate).format(format)}
+            </Text>
+          )}
+        </div>
+      );
     }
-  ];
+  };
 
   const eventColumns = events.map((e, idx) => {
+    const mapperKey = arrayMapper.find((elem) => elem.index === idx).mapper;
     return {
       title: getClickableTitleSorter(
         eventNames[e] || e,
         {
-          key: arrayMapper.find((elem) => elem.index === idx).mapper,
+          key: mapperKey,
           type: 'numerical',
           subtype: null
         },
@@ -86,24 +105,52 @@ export const getColumns = (
         'right'
       ),
       className: 'text-right',
-      dataIndex: arrayMapper.find((elem) => elem.index === idx).mapper,
-      render: (d) => {
-        return <NumFormat number={d} />;
+      dataIndex: mapperKey,
+      render: (d, row) => {
+        return (
+          <div className="flex flex-col">
+            <Text type="title" level={7} color="grey-6">
+              <NumFormat number={d} />
+            </Text>
+            {comparisonApplied && (
+              <>
+                <Text type="title" level={7} color="grey">
+                  <NumFormat number={row[`${mapperKey} - compareValue`]} />
+                </Text>
+                <div className="flex col-gap-1 items-center justify-end">
+                  <SVG
+                    color={
+                      row[`${mapperKey} - change`] > 0 ? '#5ACA89' : '#FF0000'
+                    }
+                    name={
+                      row[`${mapperKey} - change`] > 0
+                        ? 'arrowLift'
+                        : 'arrowDown'
+                    }
+                    size={16}
+                  />
+                  <Text
+                    level={7}
+                    type="title"
+                    color={row[`${mapperKey} - change`] < 0 ? 'red' : 'green'}
+                  >
+                    <NumFormat
+                      number={Math.abs(row[`${mapperKey} - change`])}
+                    />
+                    %
+                  </Text>
+                </div>
+              </>
+            )}
+          </div>
+        );
       }
     };
   });
-  return [...result, ...eventColumns];
+  return [dateColumn, ...eventColumns];
 };
 
-export const formatData = (response, arrayMapper, noOfQueries) => {
-  if (noOfQueries > 1) {
-    return formatMultiEventsAnalyticsData(response, arrayMapper);
-  } else {
-    return formatSingleEventAnalyticsData(response, arrayMapper);
-  }
-};
-
-export const formatSingleEventAnalyticsData = (response, arrayMapper) => {
+export const formatData = (response, arrayMapper, comparisonData) => {
   if (
     !response.headers ||
     !response.headers.length ||
@@ -112,35 +159,50 @@ export const formatSingleEventAnalyticsData = (response, arrayMapper) => {
   ) {
     return [];
   }
-  const { headers } = response;
-  const dateIndex = headers.findIndex((h) => h === 'datetime');
-  const result = response.rows.map((row) => {
-    const key = arrayMapper[0].mapper;
-    return {
-      date: new Date(row[dateIndex]),
-      [key]: row[dateIndex + 1]
-    };
-  });
-  return result;
-};
-
-export const formatMultiEventsAnalyticsData = (response, arrayMapper) => {
   const result = [];
-  response.rows.forEach((r) => {
+  const { headers, rows } = response;
+  const dateIndex = headers.findIndex((header) => header === 'datetime');
+  rows.forEach((row, rowIdx) => {
     const eventsData = {};
-    response.headers.slice(1).forEach((_, index) => {
+    headers.slice(dateIndex + 1).forEach((_, index) => {
       const key = arrayMapper.find((m) => m.index === index).mapper;
-      eventsData[key] = r[index + 1];
+      eventsData[key] = row[dateIndex + index + 1];
+
+      if (comparisonData != null) {
+        const comparisonKey = `${key} - compareValue`;
+        eventsData[comparisonKey] = get(
+          comparisonData,
+          `rows.${rowIdx}.${dateIndex + index + 1}`,
+          0
+        );
+        const changeKey = `${key} - change`;
+        if (eventsData[comparisonKey]) {
+          eventsData[changeKey] =
+            ((eventsData[key] - eventsData[comparisonKey]) /
+              eventsData[comparisonKey]) *
+            100;
+        } else {
+          eventsData[changeKey] = 0;
+        }
+      }
     });
     result.push({
-      date: new Date(r[0]),
+      date: new Date(row[dateIndex]),
+      compareDate: new Date(
+        get(comparisonData, `rows.${rowIdx}.${dateIndex}`, new Date())
+      ),
       ...eventsData
     });
   });
   return result;
 };
 
-export const getDataInLineChartFormat = (data, arrayMapper, eventNames) => {
+export const getDataInLineChartFormat = (
+  data,
+  arrayMapper,
+  eventNames,
+  comparisonData
+) => {
   if (
     !data.headers ||
     !data.headers.length ||
@@ -152,21 +214,28 @@ export const getDataInLineChartFormat = (data, arrayMapper, eventNames) => {
       data: []
     };
   }
-  const { headers } = data;
+  const { headers, rows } = data;
   const dateIndex = headers.findIndex((h) => h === 'datetime');
-  let differentDates = new Set();
-  data.rows.forEach((row) => {
+  const differentDates = new Set();
+  const differentComparisonDates = new Set();
+  rows.forEach((row, rowIndex) => {
     differentDates.add(row[dateIndex]);
+    if (comparisonData && comparisonData.rows.length > 0) {
+      const compareDate = get(comparisonData, `rows.${rowIndex}.${dateIndex}`);
+      differentComparisonDates.add(compareDate);
+    }
   });
-  differentDates = Array.from(differentDates);
+
+  const categories = Array.from(differentDates);
+  const compareCategories = Array.from(differentComparisonDates);
+
   const initializedDatesData = differentDates.map(() => {
     return 0;
   });
+
   const resultantData = arrayMapper.map((m) => {
     return {
-      name: m.displayName
-        ? m.displayName
-        : eventNames[m.eventName] || m.eventName,
+      name: m.displayName || eventNames[m.eventName] || m.eventName,
       data: [...initializedDatesData],
       index: m.index,
       marker: {
@@ -175,15 +244,41 @@ export const getDataInLineChartFormat = (data, arrayMapper, eventNames) => {
     };
   });
 
-  data.rows.forEach((row) => {
-    const idx = differentDates.indexOf(row[dateIndex]);
+  const comparisonResultantData = arrayMapper.map((m) => {
+    return {
+      name: m.displayName || eventNames[m.eventName] || m.eventName,
+      data: [...initializedDatesData],
+      index: m.index,
+      marker: {
+        enabled: false
+      },
+      dashStyle: 'dash',
+      compareIndex: m.index
+    };
+  });
+
+  data.rows.forEach((row, rowIndex) => {
+    const idx = categories.indexOf(row[dateIndex]);
     arrayMapper.forEach((_, index) => {
       resultantData[index].data[idx] = row[dateIndex + index + 1];
+      if (comparisonData != null) {
+        const compareValue = get(
+          comparisonData,
+          `rows.${rowIndex}.${dateIndex + index + 1}`,
+          0
+        );
+        comparisonResultantData[index].data[idx] = compareValue;
+      }
     });
   });
+
   return {
-    categories: differentDates,
-    data: resultantData
+    categories,
+    compareCategories,
+    data:
+      comparisonData != null
+        ? [...resultantData, ...comparisonResultantData]
+        : resultantData
   };
 };
 
@@ -192,45 +287,45 @@ export const getDateBasedColumns = (
   currentSorter,
   handleSorting,
   frequency,
-  eventNames
+  eventNames,
+  comparisonApplied
 ) => {
-  const OverallColumn = {
-    title: getClickableTitleSorter(
-      'Overall',
-      { key: 'Overall', type: 'numerical', subtype: null },
-      currentSorter,
-      handleSorting,
-      'right'
-    ),
-    dataIndex: 'Overall',
-    className: 'text-right',
-    width: 150
-  };
+  // const OverallColumn = {
+  //   title: getClickableTitleSorter(
+  //     'Overall',
+  //     { key: 'Overall', type: 'numerical', subtype: null },
+  //     currentSorter,
+  //     handleSorting,
+  //     'right'
+  //   ),
+  //   dataIndex: 'Overall',
+  //   className: 'text-right',
+  //   width: 150
+  // };
 
-  const result = [
-    {
-      title: getClickableTitleSorter(
-        'Event',
-        {
-          key: 'event',
-          type: 'categorical',
-          subtype: null
-        },
-        currentSorter,
-        handleSorting
-      ),
-      dataIndex: 'event',
-      fixed: 'left',
-      width: 200,
-      render: (d) => {
-        return eventNames[d] || d;
-      }
+  const eventColumn = {
+    title: getClickableTitleSorter(
+      'Event',
+      {
+        key: 'event',
+        type: 'categorical',
+        subtype: null
+      },
+      currentSorter,
+      handleSorting
+    ),
+    dataIndex: 'event',
+    fixed: 'left',
+    width: 200,
+    render: (d) => {
+      return eventNames[d] || d;
     }
-  ];
+  };
   const format = DATE_FORMATS[frequency] || DATE_FORMATS.date;
 
-  const dateColumns = data.map((elem) => {
-    return {
+  const dateColumns = [];
+  data.forEach((elem) => {
+    dateColumns.push({
       title: getClickableTitleSorter(
         addQforQuarter(frequency) + MomentTz(elem.date).format(format),
         {
@@ -244,22 +339,86 @@ export const getDateBasedColumns = (
       ),
       width: frequency === 'hour' ? 200 : 150,
       dataIndex: addQforQuarter(frequency) + MomentTz(elem.date).format(format),
-      className: 'text-right',
+      className: cx('text-right', { 'border-none': comparisonApplied }),
       render: (d) => {
         return <NumFormat number={d} />;
       }
-    };
+    });
+    if (comparisonApplied) {
+      dateColumns.push({
+        title: getClickableTitleSorter(
+          addQforQuarter(frequency) + MomentTz(elem.compareDate).format(format),
+          {
+            key:
+              addQforQuarter(frequency) +
+              MomentTz(elem.compareDate).format(format),
+            type: 'numerical',
+            subtype: null
+          },
+          currentSorter,
+          handleSorting,
+          'right'
+        ),
+        className: 'text-right border-none',
+        width: frequency === 'hour' ? 200 : 150,
+        dataIndex:
+          addQforQuarter(frequency) + MomentTz(elem.compareDate).format(format),
+        render: (d, row) => {
+          return <NumFormat number={d} />;
+        }
+      });
+      dateColumns.push({
+        title: getClickableTitleSorter(
+          'Change',
+          {
+            key:
+              addQforQuarter(frequency) +
+              MomentTz(elem.compareDate).format(format) +
+              ' - Change',
+            type: 'percent',
+            subtype: null
+          },
+          currentSorter,
+          handleSorting,
+          'right'
+        ),
+        className: 'text-right',
+        width: frequency === 'hour' ? 200 : 150,
+        dataIndex:
+          addQforQuarter(frequency) +
+          MomentTz(elem.compareDate).format(format) +
+          ' - Change',
+        render: (d) => {
+          const changeIcon = (
+            <SVG
+              color={d > 0 ? '#5ACA89' : '#FF0000'}
+              name={d > 0 ? 'arrowLift' : 'arrowDown'}
+              size={16}
+            />
+          );
+          return (
+            <div className="flex col-gap-1 items-center justify-end">
+              {changeIcon}
+              <Text level={7} type="title" color={d < 0 ? 'red' : 'green'}>
+                <NumFormat number={Math.abs(d)} />%
+              </Text>
+            </div>
+          );
+        }
+      });
+    }
   });
-  return [...result, ...dateColumns, OverallColumn];
+  return [eventColumn, ...dateColumns];
 };
 
-export const getNoGroupingTablularDatesBasedData = (
+export const getDateBasedTableData = (
   data,
   currentSorter,
   searchText,
   arrayMapper,
   frequency,
-  metrics
+  metrics,
+  comparisonApplied
 ) => {
   const filteredMapper = arrayMapper.filter((elem) =>
     elem.eventName.toLowerCase().includes(searchText.toLowerCase())
@@ -268,6 +427,12 @@ export const getNoGroupingTablularDatesBasedData = (
   const dates = data.map(
     (elem) => addQforQuarter(frequency) + MomentTz(elem.date).format(format)
   );
+  const comparisonDates = comparisonApplied
+    ? data.map(
+        (elem) =>
+          addQforQuarter(frequency) + MomentTz(elem.compareDate).format(format)
+      )
+    : [];
   const result = filteredMapper.map((elem, index) => {
     let total = 0;
     if (
@@ -291,11 +456,24 @@ export const getNoGroupingTablularDatesBasedData = (
       total = metricRow ? metricRow[countIdx] : 0;
     }
     const eventsData = {};
-    dates.forEach((date) => {
-      eventsData[date] = data.find(
+    dates.forEach((date, dateIndex) => {
+      const val1 = data.find(
         (d) =>
           addQforQuarter(frequency) + MomentTz(d.date).format(format) === date
       )[elem.mapper];
+      eventsData[date] = val1;
+      if (comparisonApplied) {
+        const val2 = data.find(
+          (d) =>
+            addQforQuarter(frequency) +
+              MomentTz(d.compareDate).format(format) ===
+            comparisonDates[dateIndex]
+        )[`${elem.mapper} - compareValue`];
+        eventsData[comparisonDates[dateIndex]] = val2;
+        eventsData[`${comparisonDates[dateIndex]} - Change`] = val2
+          ? formatCount(((val1 - val2) / val2) * 100)
+          : 0;
+      }
     });
     return {
       index,

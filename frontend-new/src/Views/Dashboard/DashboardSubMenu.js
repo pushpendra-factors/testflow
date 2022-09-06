@@ -9,21 +9,20 @@ import { DASHBOARD_TYPES } from '../../utils/constants';
 
 function DashboardSubMenu({
   dashboard,
-  handleEditClick,
   durationObj,
   handleDurationChange,
   refreshClicked,
   setRefreshClicked,
-  activeDashboard,
+  oldestRefreshTime
 }) {
   let btn = null;
-  const [showRefreshBtn, setShowRefreshBtn] = useState(false);
+  // const [showRefreshBtn, setShowRefreshBtn] = useState(false);
 
   if (dashboard?.type === 'pr') {
     btn = (
       <Tooltip
         overlayStyle={{ maxWidth: '160px' }}
-        placement='bottom'
+        placement="bottom"
         title={'This dashboard is visible only to you.'}
         mouseEnterDelay={0.2}
       >
@@ -40,7 +39,7 @@ function DashboardSubMenu({
     btn = (
       <Tooltip
         overlayStyle={{ maxWidth: '160px' }}
-        placement='bottom'
+        placement="bottom"
         title={'This dashboard is visible to everyone.'}
         mouseEnterDelay={0.2}
       >
@@ -54,11 +53,11 @@ function DashboardSubMenu({
       </Tooltip>
     );
   }
-  useEffect(() => {
-    let isRefresh =
-      durationObj?.dateType === 'today' || durationObj?.dateType === 'now';
-    setShowRefreshBtn(isRefresh);
-  }, [durationObj, dashboard, activeDashboard]);
+  // useEffect(() => {
+  //   let isRefresh =
+  //     durationObj?.dateType === 'today' || durationObj?.dateType === 'now';
+  //   setShowRefreshBtn(isRefresh);
+  // }, [durationObj, dashboard, activeDashboard]);
 
   return (
     <div className={'flex justify-between items-center px-0 mb-5'}>
@@ -73,9 +72,9 @@ function DashboardSubMenu({
           quarterPicker
           range={{
             startDate: durationObj.from,
-            endDate: durationObj.to,
+            endDate: durationObj.to
           }}
-          placement='bottomLeft'
+          placement="bottomLeft"
           onSelect={handleDurationChange}
           buttonSize={'default'}
           className={'datepicker-minWidth'}
@@ -93,26 +92,31 @@ function DashboardSubMenu({
         ) : null} */}
       </div>
       <div className={'flex justify-between items-center'}>
-        {showRefreshBtn && (
-          <Tooltip
-            placement='bottom'
-            title={'Refresh data now'}
-            mouseEnterDelay={0.2}
+        <div className="border-right--thin-3 px-3">
+          {!!oldestRefreshTime && (
+            <Text type={'title'} level={7} extraClass={'m-0'}>
+              {moment.unix(oldestRefreshTime).fromNow()}
+            </Text>
+          )}
+        </div>
+
+        <Tooltip
+          placement="bottom"
+          title={'Refresh data now'}
+          mouseEnterDelay={0.2}
+        >
+          <Button
+            type={'text'}
+            onClick={setRefreshClicked.bind(this, true)}
+            icon={refreshClicked ? null : <SVG name={'syncAlt'} />}
+            loading={refreshClicked}
+            style={{ minWidth: '125px' }}
+            className={'fa-button-ghost p-0 py-2'}
           >
-            <Button
-              type={'text'}
-              onClick={setRefreshClicked.bind(this, true)}
-              icon={refreshClicked ? null : <SVG name={'syncAlt'} />}
-              loading={refreshClicked}
-              style={{ minWidth: '142px' }}
-              className={'fa-button-ghost p-0 py-2'}
-            >
-              {activeDashboard?.refreshed_at
-                ? moment.unix(activeDashboard.refreshed_at).fromNow()
-                : 'Refresh Data'}
-            </Button>
-          </Tooltip>
-        )}
+            {' '}
+            {'Refresh now'}
+          </Button>
+        </Tooltip>
 
         {/* <Button style={{ display: 'flex' }} size={'large'} className={'items-center m-0 fa-button-ghost p-0 py-2'}><UserAddOutlined /></Button>
         <Button style={{ display: 'flex' }} size={'large'} className={'items-center m-0 fa-button-ghost p-0 py-2'}><MoreOutlined /></Button> */}
@@ -123,7 +127,7 @@ function DashboardSubMenu({
 
 const mapStateToProps = (state) => {
   return {
-    activeDashboard: state.dashboard.activeDashboard,
+    activeDashboard: state.dashboard.activeDashboard
   };
 };
 

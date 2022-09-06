@@ -302,64 +302,64 @@ export const getTableColumns = (
 
   const eventBreakdownColumns = isBreakdownApplied
     ? breakdown
-      .filter((e) => e.eni)
-      .map((e, index) => {
-        return getBreakdownColConfig(e, index);
-      })
+        .filter((e) => e.eni)
+        .map((e, index) => {
+          return getBreakdownColConfig(e, index);
+        })
     : [];
 
   const globalBreakdownColumns = isBreakdownApplied
     ? breakdown
-      .filter((e) => !e.eni)
-      .map((e, index) => {
-        return {
-          ...getBreakdownColConfig(e),
-          fixed: !index && !eventBreakdownColumns.length ? 'left' : ''
-        };
-      })
+        .filter((e) => !e.eni)
+        .map((e, index) => {
+          return {
+            ...getBreakdownColConfig(e),
+            fixed: !index && !eventBreakdownColumns.length ? 'left' : ''
+          };
+        })
     : [];
 
   const UserCol = !isBreakdownApplied
     ? [
-      {
-        title: <NonClickableTableHeader title="Users" />,
-        dataIndex: 'Grouping',
-        fixed: 'left',
-        width: isComparisonApplied ? 300 : 150,
-        className: isComparisonApplied ? styles.usersColumn : '',
-        render: (d) =>
-          NoBreakdownUsersColumn(d, breakdown, isComparisonApplied)
-      }
-    ]
+        {
+          title: <NonClickableTableHeader title="Users" />,
+          dataIndex: 'Grouping',
+          fixed: 'left',
+          width: isComparisonApplied ? 300 : 150,
+          className: isComparisonApplied ? styles.usersColumn : '',
+          render: (d) =>
+            NoBreakdownUsersColumn(d, breakdown, isComparisonApplied)
+        }
+      ]
     : [];
 
-  const conversionRateColumn = {
-    title: isBreakdownApplied ? (
-      getClickableTitleSorter(
-        'Conversion Rate',
-        {
-          key: 'Conversion',
-          type: 'numerical',
-          subtype: null
-        },
-        currentSorter,
-        handleSorting,
-        'right',
-        'end',
-        'pb-3'
-      )
-    ) : (
-      <NonClickableTableHeader
-        verticalAlignment="end"
-        alignment="right"
-        title="Conversion Rate"
-      />
-    ),
-    dataIndex: 'Conversion',
-    className: 'text-right border-none',
-    width: 150,
-    render: (d) => RenderTotalConversion(d, breakdown, isComparisonApplied)
-  };
+  // const conversionRateColumn = {
+  //   title: isBreakdownApplied ? (
+  //     getClickableTitleSorter(
+  //       'Conversion Rate',
+  //       {
+  //         key: 'Conversion',
+  //         type: 'numerical',
+  //         subtype: null
+  //       },
+  //       currentSorter,
+  //       handleSorting,
+  //       'right',
+  //       'end',
+  //       'pb-3'
+  //     )
+  //   ) : (
+  //     <NonClickableTableHeader
+  //       verticalAlignment="end"
+  //       alignment="right"
+  //       title="Conversion Rate"
+  //     />
+  //   ),
+  //   dataIndex: 'Conversion',
+  //   className: 'text-right border-none',
+  //   width: 150,
+  //   render: (d) => RenderTotalConversion(d, breakdown, isComparisonApplied)
+  // };
 
   const conversionTimeColumn = {
     title: isBreakdownApplied ? (
@@ -516,7 +516,6 @@ export const getTableColumns = (
     ...eventBreakdownColumns,
     ...globalBreakdownColumns,
     ...UserCol,
-    conversionRateColumn,
     conversionTimeColumn,
     ...eventColumns
   ];
@@ -554,9 +553,9 @@ export const getTableData = (
         ? !index
           ? 100
           : calculatePercentage(
-            comparisonChartData[index].netCount,
-            comparisonChartData[index - 1].netCount
-          )
+              comparisonChartData[index].netCount,
+              comparisonChartData[index - 1].netCount
+            )
         : null;
       const count = data[index].netCount;
       const compare_count =
@@ -564,16 +563,16 @@ export const getTableData = (
       queryData[`${arrayMapper[index].displayName}-${index}-percent`] =
         comparisonChartData
           ? {
-            percent,
-            compare_percent
-          }
+              percent,
+              compare_percent
+            }
           : percent;
       queryData[`${arrayMapper[index].displayName}-${index}-count`] =
         comparisonChartData
           ? {
-            count,
-            compare_count
-          }
+              count,
+              compare_count
+            }
           : count;
       if (index < queries.length - 1) {
         const time = getStepDuration(durations, index, index + 1);
@@ -582,9 +581,9 @@ export const getTableData = (
           getStepDuration(comparisonChartDurations, index, index + 1);
         queryData[`time[${index}-${index + 1}]`] = comparisonChartData
           ? {
-            time,
-            compare_time
-          }
+              time,
+              compare_time
+            }
           : time;
       }
     });
@@ -618,9 +617,9 @@ export const getTableData = (
               !currentIndex
                 ? 100
                 : calculatePercentage(
-                  group[`${currentItem.displayName}-${currentIndex}-count`],
-                  group[`${prevItem.displayName}-${currentIndex - 1}-count`]
-                )
+                    group[`${currentItem.displayName}-${currentIndex}-count`],
+                    group[`${prevItem.displayName}-${currentIndex - 1}-count`]
+                  )
           };
         },
         {}

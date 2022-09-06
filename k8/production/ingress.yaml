@@ -58,6 +58,10 @@ spec:
         backend:
           serviceName: sdkserver-service
           servicePort: 80
+      - path: /integrations/rudderstack_platform
+        backend:
+          serviceName: sdkserver-service
+          servicePort: 80
       - path: /*
         backend:
           serviceName: appserver-service

@@ -106,6 +106,7 @@ func TestMain(m *testing.M) {
 		ClearbitEnabled:                                 1,
 		EnableOptimisedFilterOnProfileQuery:             true,
 		EnableOptimisedFilterOnEventUserQuery:           true,
+		DBMaxAllowedPacket:                              1048576000,
 	}
 	C.InitConf(config)
 

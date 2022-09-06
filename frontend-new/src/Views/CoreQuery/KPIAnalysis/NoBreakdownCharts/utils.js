@@ -1,8 +1,8 @@
 import React from 'react';
 import get from 'lodash/get';
-import moment from 'moment';
 import { has } from 'lodash';
 import cx from 'classnames';
+import MomentTz from 'Components/MomentTz';
 
 import { DATE_FORMATS } from '../../../../utils/constants';
 import {
@@ -12,6 +12,7 @@ import {
 } from '../../../../components/factorsComponents';
 import {
   addQforQuarter,
+  formatCount,
   getClickableTitleSorter,
   SortResults
 } from '../../../../utils/dataFormatter';
@@ -32,8 +33,8 @@ export const getDefaultSortProp = () => {
 export const getDefaultDateSortProp = () => {
   return [
     {
-      key: 'Overall',
-      type: 'numerical',
+      key: 'event',
+      type: 'categorical',
       subtype: null,
       order: 'descend'
     }
@@ -195,13 +196,13 @@ export const getTableColumns = ({
         return (
           <div className="flex flex-col">
             <Text type="title" level={7} color="grey-6">
-              {addQforQuarter(frequency) + moment(d).format(format)}
+              {addQforQuarter(frequency) + MomentTz(d).format(format)}
             </Text>
             {comparisonApplied && (
               <Text type="title" level={7} color="grey">
                 Vs{' '}
                 {addQforQuarter(frequency) +
-                  moment(row.compareDate).format(format)}
+                  MomentTz(row.compareDate).format(format)}
               </Text>
             )}
           </div>
@@ -375,12 +376,13 @@ export const getDateBasedColumns = ({
   ];
   const format = DATE_FORMATS[frequency] || DATE_FORMATS.date;
   const dateColumns = [];
+  const metricTypes = {};
   categories.forEach((cat, catIndex) => {
     dateColumns.push({
       title: getClickableTitleSorter(
-        addQforQuarter(frequency) + moment(cat).format(format),
+        addQforQuarter(frequency) + MomentTz(cat).format(format),
         {
-          key: addQforQuarter(frequency) + moment(cat).format(format),
+          key: addQforQuarter(frequency) + MomentTz(cat).format(format),
           type: 'numerical',
           subtype: null
         },
@@ -390,9 +392,15 @@ export const getDateBasedColumns = ({
       ),
       className: cx('text-right', { 'border-none': comparisonApplied }),
       width: frequency === 'hour' ? 200 : 150,
-      dataIndex: addQforQuarter(frequency) + moment(cat).format(format),
-      render: (d, _, index) => {
-        const metricType = get(kpis[index], 'metricType', null);
+      dataIndex: addQforQuarter(frequency) + MomentTz(cat).format(format),
+      render: (d, row) => {
+        let metricType;
+        if (metricTypes[row.event] != null) {
+          metricType = metricTypes[row.event];
+        } else {
+          metricType = kpis.find((kpi) => kpi.label === row.event)?.metricType;
+          metricTypes[row.event] = metricType;
+        }
         return metricType ? (
           getFormattedKpiValue({ value: d, metricType })
         ) : (
@@ -404,11 +412,11 @@ export const getDateBasedColumns = ({
       dateColumns.push({
         title: getClickableTitleSorter(
           addQforQuarter(frequency) +
-            moment(compareCategories[catIndex]).format(format),
+            MomentTz(compareCategories[catIndex]).format(format),
           {
             key:
               addQforQuarter(frequency) +
-              moment(compareCategories[catIndex]).format(format),
+              MomentTz(compareCategories[catIndex]).format(format),
             type: 'numerical',
             subtype: null
           },
@@ -420,9 +428,17 @@ export const getDateBasedColumns = ({
         width: frequency === 'hour' ? 200 : 150,
         dataIndex:
           addQforQuarter(frequency) +
-          moment(compareCategories[catIndex]).format(format),
-        render: (d, _, index) => {
-          const metricType = get(kpis[index], 'metricType', null);
+          MomentTz(compareCategories[catIndex]).format(format),
+        render: (d, row) => {
+          let metricType;
+          if (metricTypes[row.event] != null) {
+            metricType = metricTypes[row.event];
+          } else {
+            metricType = kpis.find(
+              (kpi) => kpi.label === row.event
+            )?.metricType;
+            metricTypes[row.event] = metricType;
+          }
           return metricType ? (
             getFormattedKpiValue({ value: d, metricType })
           ) : (
@@ -436,7 +452,7 @@ export const getDateBasedColumns = ({
           {
             key:
               addQforQuarter(frequency) +
-              moment(compareCategories[catIndex]).format(format) +
+              MomentTz(compareCategories[catIndex]).format(format) +
               ' - Change',
             type: 'percent',
             subtype: null
@@ -449,7 +465,7 @@ export const getDateBasedColumns = ({
         width: frequency === 'hour' ? 200 : 150,
         dataIndex:
           addQforQuarter(frequency) +
-          moment(compareCategories[catIndex]).format(format) +
+          MomentTz(compareCategories[catIndex]).format(format) +
           ' - Change',
         render: (d) => {
           const changeIcon = (
@@ -497,21 +513,21 @@ export const getDateBasedTableData = (
       );
       const dateData = {};
       categories.forEach((cat, catIndex) => {
-        dateData[addQforQuarter(frequency) + moment(cat).format(format)] =
+        dateData[addQforQuarter(frequency) + MomentTz(cat).format(format)] =
           sd.data[catIndex];
         if (comparisonApplied && compareRow != null) {
           const val1 = sd.data[catIndex];
           const val2 = compareRow.data[catIndex];
           dateData[
             addQforQuarter(frequency) +
-              moment(compareCategories[catIndex]).format(format)
+              MomentTz(compareCategories[catIndex]).format(format)
           ] = val2;
           dateData[
             `${
               addQforQuarter(frequency) +
-              moment(compareCategories[catIndex]).format(format)
+              MomentTz(compareCategories[catIndex]).format(format)
             } - Change`
-          ] = ((val1 - val2) / val2) * 100;
+          ] = formatCount(((val1 - val2) / val2) * 100);
         }
       });
       return {

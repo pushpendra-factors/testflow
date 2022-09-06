@@ -54,6 +54,23 @@ func TestAPIAgentSignin(t *testing.T) {
 		assert.Equal(t, http.StatusNotFound, w.Code)
 	})
 
+	t.Run("SiginEmailCheck", func(t *testing.T) {
+		emailString := U.RandomLowerAphaNumString(6)
+		wrongEmail := []string{
+			emailString + "@gmail.com",      // Contains blocked domain
+			emailString + "@flowminer.com",  // Contains disposable domain and blocked email list
+			emailString + "@@@random.local", // Doesn't conform to acceptable email address structure
+			emailString + "  @random.local", // Doesn't conform to acceptable email address structure
+		}
+
+		idxEmail := U.RandomIntInRange(0, len(wrongEmail))
+		email := wrongEmail[idxEmail]
+		pass := U.RandomLowerAphaNumString(6)
+
+		w := sendSignInRequest(email, pass, r)
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
 	t.Run("SigninSuccess", func(t *testing.T) {
 		email := getRandomEmail()
 		agent, errCode := SetupAgentReturnDAO(email, "+93214356")
@@ -672,12 +689,35 @@ func TestAPIAgentSetPassword(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, w.Code)
 	})
 
+	t.Run("PasswordCheck", func(t *testing.T) {
+		email := getRandomEmail()
+		agent, errCode := SetupAgentReturnDAO(email, "+32478243")
+		assert.Equal(t, http.StatusCreated, errCode)
+
+		var wrongPassword = []string{
+			"Qwert0#",  // Must have 8 characters
+			"qwerty0#", // Must have one upper-case character
+			"QWERTY0#", // Must have one lower-case character
+			"Qwerty##", // Must have one numerical character
+			"Qwerty00", // Must have one special character
+		}
+
+		idxPassword := U.RandomIntInRange(0, len(wrongPassword))
+		password := wrongPassword[idxPassword]
+
+		authData, err := helpers.GetAuthData(email, agent.UUID, agent.Salt, helpers.SecondsInFifteenDays*time.Second)
+		assert.Nil(t, err)
+
+		w := sendAgentSetPasswordRequest(r, authData, password)
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
 	t.Run("Success", func(t *testing.T) {
 		email := getRandomEmail()
 		agent, errCode := SetupAgentReturnDAO(email, "+224443")
 		assert.Equal(t, http.StatusCreated, errCode)
 
-		password := U.RandomLowerAphaNumString(8)
+		password := U.RandomLowerAphaNumString(6) + "A@"
 
 		authData, err := helpers.GetAuthData(email, agent.UUID, agent.Salt, helpers.SecondsInFifteenDays*time.Second)
 		assert.Nil(t, err)

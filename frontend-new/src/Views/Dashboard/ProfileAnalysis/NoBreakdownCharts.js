@@ -5,7 +5,7 @@ import { getNewSorterState } from '../../../utils/dataFormatter';
 import HorizontalBarChartTable from '../../CoreQuery/ProfilesResultPage/NoBreakdownCharts/HorizontalBarChartTable';
 import {
   CHART_TYPE_HORIZONTAL_BAR_CHART,
-  CHART_TYPE_TABLE,
+  CHART_TYPE_TABLE
 } from '../../../utils/constants';
 import { DashboardContext } from '../../../contexts/DashboardContext';
 
@@ -59,7 +59,7 @@ const NoBreakdownCharts = ({ chartType, data, unit, section, queries }) => {
   }
 
   return (
-    <div className={`w-full`}>
+    <div className={`w-full flex-1`}>
       {chartContent}
       {tableContent}
     </div>

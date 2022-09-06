@@ -1,11 +1,10 @@
 import React, { useState, useMemo, useContext } from 'react';
 import { useSelector } from 'react-redux';
 import {
-  formatSingleEventAnalyticsData,
-  formatMultiEventsAnalyticsData,
+  formatData,
   getDataInLineChartFormat,
   getDefaultSortProp,
-  getDefaultDateSortProp,
+  getDefaultDateSortProp
 } from '../../CoreQuery/EventsAnalytics/NoBreakdownCharts/utils';
 import NoBreakdownTable from '../../CoreQuery/EventsAnalytics/NoBreakdownCharts/NoBreakdownTable';
 import SparkLineChart from '../../../components/SparkLineChart';
@@ -15,7 +14,7 @@ import {
   CHART_TYPE_TABLE,
   CHART_TYPE_SPARKLINES,
   DASHBOARD_WIDGET_AREA_CHART_HEIGHT,
-  CHART_TYPE_LINECHART,
+  CHART_TYPE_LINECHART
 } from '../../../utils/constants';
 import NoDataChart from '../../../components/NoDataChart';
 import { DashboardContext } from '../../../contexts/DashboardContext';
@@ -28,7 +27,7 @@ function NoBreakdownCharts({
   durationObj,
   arrayMapper,
   unit,
-  section,
+  section
 }) {
   const [hiddenEvents, setHiddenEvents] = useState([]);
   const { eventNames } = useSelector((state) => state.coreQuery);
@@ -42,17 +41,7 @@ function NoBreakdownCharts({
   if (resultState.data && !resultState.data.metrics.rows.length) {
     chartsData = [];
   } else {
-    if (queries.length === 1) {
-      chartsData = formatSingleEventAnalyticsData(
-        resultState.data,
-        arrayMapper
-      );
-    } else {
-      chartsData = formatMultiEventsAnalyticsData(
-        resultState.data,
-        arrayMapper
-      );
-    }
+    chartsData = formatData(resultState.data, arrayMapper);
   }
 
   const { categories, data } = useMemo(() => {
@@ -65,7 +54,7 @@ function NoBreakdownCharts({
     }
     return {
       categories: [],
-      data: [],
+      data: []
     };
   }, [resultState.data, arrayMapper, eventNames, chartType]);
 
@@ -74,7 +63,7 @@ function NoBreakdownCharts({
       const color = appliedColors[index];
       return {
         ...elem,
-        color,
+        color
       };
     });
   }, [data, appliedColors]);
@@ -145,7 +134,7 @@ function NoBreakdownCharts({
         categories={categories}
         data={visibleSeriesData}
         height={DASHBOARD_WIDGET_AREA_CHART_HEIGHT}
-        legendsPosition='top'
+        legendsPosition="top"
         cardSize={unit.cardSize}
         chartId={`line-${unit.id}`}
       />
@@ -153,7 +142,7 @@ function NoBreakdownCharts({
   }
 
   return (
-    <div className={`w-full`}>
+    <div className={`w-full flex-1`}>
       {chartContent}
       {tableContent}
     </div>

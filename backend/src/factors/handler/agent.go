@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
@@ -31,6 +32,20 @@ func getSignInParams(c *gin.Context) (*signInParams, error) {
 	return &params, nil
 }
 
+func isEmailValid(email string, c *gin.Context) bool {
+	var isValid bool
+	blockedDomains := C.GetConfig().BlockedEmailDomainList
+
+	for _, domain := range blockedDomains {
+		if strings.Contains(email, domain) {
+			return false
+		}
+	}
+
+	isValid = U.IsEmail(email)
+	return isValid
+}
+
 // curl -X POST -d '{"email":"value1", "password":"value1"}' http://localhost:8080/agents/signin -v
 func Signin(c *gin.Context) {
 
@@ -49,7 +64,7 @@ func Signin(c *gin.Context) {
 	password := params.Password
 
 	// Basic email sanity check.
-	if !U.IsEmail(strings.TrimSpace(email)) {
+	if !isEmailValid(strings.TrimSpace(email), c) {
 		logCtx.WithError(err).Error("Invalid email provided.")
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
@@ -602,6 +617,32 @@ func getAgentVerifyParams(c *gin.Context) (*agentVerifyParams, error) {
 	return &params, nil
 }
 
+func isPasswordValid(pass string) bool {
+	var (
+		hasMinLen  = false // Minimum length of the password is set to 8 characters
+		hasUpper   = false // Must have atleast one Upper-case character
+		hasLower   = false // Must have atleast one lower-case character
+		hasNumber  = false // Must have atleast one numerical character
+		hasSpecial = false // Must have one special character
+	)
+	if len(pass) >= 8 {
+		hasMinLen = true
+	}
+	for _, char := range pass {
+		switch {
+		case unicode.IsUpper(char):
+			hasUpper = true
+		case unicode.IsLower(char):
+			hasLower = true
+		case unicode.IsNumber(char):
+			hasNumber = true
+		case unicode.IsPunct(char) || unicode.IsSymbol(char):
+			hasSpecial = true
+		}
+	}
+	return hasMinLen && hasUpper && hasLower && hasNumber && hasSpecial
+}
+
 // curl -X POST -d '{"first_name":"value1", "last_name":"value1", "password":"value"}' http://localhost:8080/agents/activate?token=value -v
 func AgentActivate(c *gin.Context) {
 	logCtx := log.WithFields(log.Fields{
@@ -609,11 +650,19 @@ func AgentActivate(c *gin.Context) {
 	})
 
 	params, err := getAgentVerifyParams(c)
+
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to parse AgentVerifyParams")
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
+
+	if !isPasswordValid(params.Password) {
+		logCtx.Error("Password requirements not fulfilled.")
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
 	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 	var skipProject bool
 	skip_project := c.Query("skip_project")
@@ -750,6 +799,12 @@ func AgentSetPassword(c *gin.Context) {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
+	if !isPasswordValid(params.Password) {
+		logCtx.Error("Requirements not fulfilled.")
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
 	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 	ts := time.Now().UTC()
 
@@ -1028,6 +1083,9 @@ func UpdateAgentPassword(c *gin.Context) {
 		logCtx.WithError(err).Error("Failed to parse UpdateAgentPassword params")
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
+	}
+	if !isPasswordValid(params.NewPassword) {
+		log.Error("UpdateAgentPassword failed. Requirements not fulfilled.")
 	}
 
 	agent, errCode := store.GetStore().GetAgentByUUID(loggedInAgentUUID)

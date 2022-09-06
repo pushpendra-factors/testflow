@@ -5,13 +5,13 @@ import React, {
   useMemo,
   useReducer
 } from 'react';
-import MomentTz from 'Components/MomentTz';
+import get from 'lodash/get';
 import { bindActionCreators } from 'redux';
-import { connect, useSelector, useDispatch } from 'react-redux';
 import { useParams } from 'react-router';
+import { connect, useSelector, useDispatch } from 'react-redux';
 import { ErrorBoundary } from 'react-error-boundary';
 import { Drawer, Button, Modal, Row, Col, Spin } from 'antd';
-import _ from 'lodash';
+import MomentTz from 'Components/MomentTz';
 import factorsai from 'factorsai';
 
 import { EMPTY_ARRAY } from 'Utils/global';
@@ -144,7 +144,7 @@ function CoreQuery({
 
   const queriesState = useSelector((state) => state.queries);
   const savedQueries = useSelector((state) =>
-    _.get(state, 'queries.data', EMPTY_ARRAY)
+    get(state, 'queries.data', EMPTY_ARRAY)
   );
 
   const integration = useSelector(
@@ -285,19 +285,20 @@ function CoreQuery({
   }, [activeProject]);
 
   const isIntegrationEnabled =
-  integration?.int_segment ||
-  integration?.int_adwords_enabled_agent_uuid ||
-  integration?.int_linkedin_agent_uuid ||
-  integration?.int_facebook_user_id ||
-  integration?.int_hubspot ||
-  integration?.int_salesforce_enabled_agent_uuid ||
-  integration?.int_drift ||
-  integration?.int_google_organic_enabled_agent_uuid ||
-  integration?.int_clear_bit ||
-  integrationV1?.int_completed ||
-  bingAds?.accounts ||
-  marketo?.status || integrationV1?.int_slack || integration?.lead_squared_config !== null;
-    
+    integration?.int_segment ||
+    integration?.int_adwords_enabled_agent_uuid ||
+    integration?.int_linkedin_agent_uuid ||
+    integration?.int_facebook_user_id ||
+    integration?.int_hubspot ||
+    integration?.int_salesforce_enabled_agent_uuid ||
+    integration?.int_drift ||
+    integration?.int_google_organic_enabled_agent_uuid ||
+    integration?.int_clear_bit ||
+    integrationV1?.int_completed ||
+    bingAds?.accounts ||
+    marketo?.status ||
+    integrationV1?.int_slack ||
+    integration?.lead_squared_config !== null;
 
   const getQueryFromHashId = () => {
     return queriesState.data.find(function (quer) {
@@ -338,10 +339,10 @@ function CoreQuery({
           setQuerySaved({ name: queryToAdd.title, id: queryToAdd.id });
           updateRequestQuery(queryToAdd?.query?.query_group);
           dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
-          // localDispatch({
-          //   type: SET_COMPARISON_SUPPORTED,
-          //   payload: isComparisonEnabled(queryType, queriesA, groupBy, models),
-          // });
+          localDispatch({
+            type: SET_COMPARISON_SUPPORTED,
+            payload: isComparisonEnabled(queryType, queriesA, groupBy, models)
+          });
           setShowResult(true);
           setLoading(false);
           dispatch({
@@ -374,43 +375,52 @@ function CoreQuery({
     }
   };
 
-
   const runFunnelsQueryFromUrl = () => {
     const queryToAdd = getQueryFromHashId();
     updateResultState({ ...initialState, loading: true });
-    getFunnelData(activeProject.id, null, null, false, query_id ).then((res) => {
-      const queryLabels = queryToAdd?.query?.ewp.map((ev) => ev.an ? ev.an : ev.na);
-      const equivalentQuery = getStateQueryFromRequestQuery(queryToAdd?.query);
-      setQueryType(QUERY_TYPE_FUNNEL);
-      closeDrawer();
-      setLoading(false);
-      updateRequestQuery(queryToAdd?.query);
-      dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
-      setShowResult(true);
-      setQuerySaved({name: queryToAdd.title, id: queryToAdd.id});
-      dispatch({
-        type: INITIALIZE_GROUPBY,
-        payload: equivalentQuery.breakdown
-      });
-      setQueries(equivalentQuery.events);
-      setAppliedQueries(
-        equivalentQuery.events.map((elem) => (elem.alias ? elem.alias : elem.label))
-      );
-      setQueryOptions((currOpts) => getQueryOptionsFromEquivalentQuery(currOpts, equivalentQuery));
-      const newAppliedBreakdown = [...equivalentQuery.breakdown.event, ...equivalentQuery.breakdown.global];
-      setAppliedBreakdown(newAppliedBreakdown);
-      // updateAppliedBreakdown();
-      updateResultState({
-        ...initialState,
-        data: res.data.result || res.data,
-      });
-    }, err => {
-      console.log(err);
-    })
-  }
-
-  const runAttributionQueryFromUrl = () => {
-    //
+    getFunnelData(activeProject.id, null, null, false, query_id).then(
+      (res) => {
+        const queryLabels = queryToAdd?.query?.ewp.map((ev) =>
+          ev.an ? ev.an : ev.na
+        );
+        const equivalentQuery = getStateQueryFromRequestQuery(
+          queryToAdd?.query
+        );
+        setQueryType(QUERY_TYPE_FUNNEL);
+        closeDrawer();
+        setLoading(false);
+        updateRequestQuery(queryToAdd?.query);
+        dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
+        setShowResult(true);
+        setQuerySaved({ name: queryToAdd.title, id: queryToAdd.id });
+        dispatch({
+          type: INITIALIZE_GROUPBY,
+          payload: equivalentQuery.breakdown
+        });
+        setQueries(equivalentQuery.events);
+        setAppliedQueries(
+          equivalentQuery.events.map((elem) =>
+            elem.alias ? elem.alias : elem.label
+          )
+        );
+        setQueryOptions((currOpts) =>
+          getQueryOptionsFromEquivalentQuery(currOpts, equivalentQuery)
+        );
+        const newAppliedBreakdown = [
+          ...equivalentQuery.breakdown.event,
+          ...equivalentQuery.breakdown.global
+        ];
+        setAppliedBreakdown(newAppliedBreakdown);
+        // updateAppliedBreakdown();
+        updateResultState({
+          ...initialState,
+          data: res.data.result || res.data
+        });
+      },
+      (err) => {
+        console.log(err);
+      }
+    );
   };
 
   useEffect(() => {
@@ -495,7 +505,7 @@ function CoreQuery({
           updatePivotConfig(pivotConfig);
 
           // update the chart type to the saved chart type
-          const savedChartType = _.get(
+          const savedChartType = get(
             selectedReport,
             'settings.chart',
             apiChartAnnotations[CHART_TYPE_TABLE]
@@ -644,17 +654,17 @@ function CoreQuery({
             project_name: activeProject?.name
           });
         }
-        setLoading(true);
-        setShowResult(true);
         if (!isCompareQuery) {
+          setShowResult(true);
+          setLoading(true);
           configActionsOnRunningQuery(isQuerySaved);
           setBreakdownType(user_type);
           updateRequestQuery(query);
           updateResultState({ ...initialState, loading: true });
+          resetComparisonData();
         } else {
           updateLocalReducer(COMPARISON_DATA_LOADING);
         }
-        updateResultState({ ...initialState, loading: true });
         const res = await getEventsData(
           activeProject.id,
           query,
@@ -662,26 +672,20 @@ function CoreQuery({
           true
         );
         const data = res.data.result || res.data;
-        setLoading(false);
+        let resultantData = null;
         if (result_criteria === TOTAL_EVENTS_CRITERIA) {
-          updateResultState({
-            ...initialState,
-            loading: false,
-            data: formatApiData(data.result_group[0], data.result_group[1])
-          });
+          resultantData = formatApiData(
+            data.result_group[0],
+            data.result_group[1]
+          );
         } else if (result_criteria === TOTAL_USERS_CRITERIA) {
           if (user_type === EACH_USER_TYPE) {
-            updateResultState({
-              ...initialState,
-              loading: false,
-              data: formatApiData(data.result_group[0], data.result_group[1])
-            });
+            resultantData = formatApiData(
+              data.result_group[0],
+              data.result_group[1]
+            );
           } else {
-            updateResultState({
-              ...initialState,
-              loading: false,
-              data: data.result_group[0]
-            });
+            resultantData = data.result_group[0];
           }
         } else if (result_criteria === ACTIVE_USERS_CRITERIA) {
           const userData = formatApiData(
@@ -689,16 +693,10 @@ function CoreQuery({
             data.result_group[1]
           );
           const sessionsData = data.result_group[2];
-          const activeUsersData = calculateActiveUsersData(
-            userData,
-            sessionsData,
-            [...groupBy.global, ...groupBy.event]
-          );
-          updateResultState({
-            ...initialState,
-            loading: false,
-            data: activeUsersData
-          });
+          resultantData = calculateActiveUsersData(userData, sessionsData, [
+            ...groupBy.global,
+            ...groupBy.event
+          ]);
         } else if (result_criteria === FREQUENCY_CRITERIA) {
           const eventData = formatApiData(
             data.result_group[0],
@@ -708,14 +706,18 @@ function CoreQuery({
             data.result_group[2],
             data.result_group[3]
           );
-          const frequencyData = calculateFrequencyData(eventData, userData, [
+          resultantData = calculateFrequencyData(eventData, userData, [
             ...groupBy.global,
             ...groupBy.event
           ]);
+        }
+        if (isCompareQuery) {
+          updateLocalReducer(COMPARISON_DATA_FETCHED, resultantData);
+        } else {
+          setLoading(false);
           updateResultState({
             ...initialState,
-            loading: false,
-            data: frequencyData
+            data: resultantData
           });
         }
       } catch (err) {
@@ -976,7 +978,6 @@ function CoreQuery({
       try {
         if (!durationObj) {
           durationObj = dateRange;
-          resetComparisonData();
         }
         const KPIquery = getKPIQuery(
           queriesA,
@@ -999,6 +1000,7 @@ function CoreQuery({
           configActionsOnRunningQuery(isQuerySaved);
           updateResultState({ ...initialState, loading: true });
           updateRequestQuery(KPIquery);
+          resetComparisonData();
         } else {
           updateLocalReducer(COMPARISON_DATA_LOADING);
         }
@@ -1295,7 +1297,7 @@ function CoreQuery({
       }
 
       if (queryType === QUERY_TYPE_EVENT) {
-        runQuery(querySaved, appliedDateRange);
+        runQuery(querySaved, appliedDateRange, false, isCompareDate);
       }
       if (queryType === QUERY_TYPE_KPI) {
         runKPIQuery(querySaved, appliedDateRange, false, isCompareDate);
@@ -1702,7 +1704,8 @@ function CoreQuery({
       if (item == null) return;
       const ddName = item.display_name ? item.display_name : item.name;
       const ddtype =
-        (selGroup?.category === 'channels' || selGroup?.category === 'custom_channels')
+        selGroup?.category === 'channels' ||
+        selGroup?.category === 'custom_channels'
           ? item.object_type
           : item.entity
           ? item.entity
@@ -1714,22 +1717,22 @@ function CoreQuery({
 
   const closePage = () => {
     history.goBack();
-  }
+  };
 
   const handleCloseDashboardQuery = () => {
     history.push({
       pathname: '/',
-      state: { dashboardWidgetId: coreQueryState.navigatedFromDashboard.id },
+      state: { dashboardWidgetId: coreQueryState.navigatedFromDashboard.id }
     });
-    handleBreadCrumbClick()
-  }
+    handleBreadCrumbClick();
+  };
 
   const handleCloseToAnalyse = () => {
     history.push({
-      pathname: '/analyse',
+      pathname: '/analyse'
     });
-    handleBreadCrumbClick()
-  }
+    handleBreadCrumbClick();
+  };
 
   if (loading) {
     return (
@@ -1763,22 +1766,22 @@ function CoreQuery({
           ? `Reports / ${queryType} / ${querySaved.name}`
           : `Reports / ${queryType} / Untitled Analysis${' '}
             ${moment().format('DD/MM/YYYY')}`}
-      </Text>
-        </div>
+                </Text>
+              </div>
 
-        <div className='flex items-center gap-x-2'>
-          <Button
-        size={'large'}
-        type='text'
-        icon={<SVG size={20} name={'close'} />}
-        onClick={
-          coreQueryState.navigatedFromDashboard
-            ? handleCloseDashboardQuery
-            : handleCloseToAnalyse
-        }
-      />
-        </div>
-      </div>
+              <div className="flex items-center gap-x-2">
+                <Button
+                  size={'large'}
+                  type="text"
+                  icon={<SVG size={20} name={'close'} />}
+                  onClick={
+                    coreQueryState.navigatedFromDashboard
+                      ? handleCloseDashboardQuery
+                      : handleCloseToAnalyse
+                  }
+                />
+              </div>
+            </div>
 
       {/* {renderReportTabs()} */}
       {showResult? (<div
@@ -1795,10 +1798,9 @@ function CoreQuery({
     </div>
         
         </div>
-        <div className='w-full h-64 flex items-center justify-center'>
+        <div className="w-full h-64 flex items-center justify-center">
           <Spin size="large" />
         </div>
-        
       </div>
     );
   }
@@ -2004,8 +2006,7 @@ function CoreQuery({
         </ErrorBoundary>
       </>
     );
-  }
-   else {
+  } else {
     return (
       <>
         <AnalyseBeforeIntegration />

@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 
+	"factors/model/model"
+
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 )
@@ -166,7 +168,8 @@ func GetUserPropertiesHandler(c *gin.Context) {
 	}
 	properties = U.ClassifyDateTimePropertyKeys(&properties)
 	U.FillMandatoryDefaultUserProperties(&properties)
-	U.FilterDisabledCoreUserProperties(&properties)
+	_, overrides := store.GetStore().GetPropertyOverridesByType(projectId, U.PROPERTY_OVERRIDE_BLACKLIST, model.GetEntity(true))
+	U.FilterDisabledCoreUserProperties(overrides, &properties)
 
 	if isDisplayNameEnabled == "true" {
 		_, displayNames := store.GetStore().GetDisplayNamesForAllUserProperties(projectId)
