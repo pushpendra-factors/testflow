@@ -281,8 +281,8 @@ function UserProfiles({
 
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
-  contacts: state.timeline.contacts,
-  userDetails: state.timeline.contactDetails,
+  contacts: state.timelines.contacts,
+  userDetails: state.timelines.contactDetails,
 });
 
 const mapDispatchToProps = (dispatch) =>
