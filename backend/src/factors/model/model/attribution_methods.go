@@ -62,6 +62,10 @@ func ApplyAttributionKPI(attributionType string,
 			attributionKeys = getTimeDecay(attributionType, userSessions, conversionTime,
 				lookbackPeriod, campaignFrom, campaignTo)
 			break
+		case AttributionMethodInfluence:
+			attributionKeys = getInfluence(attributionType, userSessions, conversionTime,
+				lookbackPeriod, campaignFrom, campaignTo)
+			break
 
 		default:
 			break
@@ -123,6 +127,11 @@ func ApplyAttribution(attributionType string, method string, conversionEvent str
 			break
 		case AttributionMethodTimeDecay:
 			attributionKeys = getTimeDecay(attributionType, userSessions, conversionTime,
+				lookbackPeriod, campaignFrom, campaignTo)
+			break
+
+		case AttributionMethodInfluence:
+			attributionKeys = getInfluence(attributionType, userSessions, conversionTime,
 				lookbackPeriod, campaignFrom, campaignTo)
 			break
 
@@ -203,6 +212,36 @@ func getLinearTouch(attributionType string, attributionTimerange map[string]User
 	}
 	for i := range keys {
 		keys[i].Weight = 1 / float64(len(keys))
+	}
+
+	return keys
+}
+
+func getInfluence(attributionType string, attributionTimerange map[string]UserSessionData,
+	conversionTime, lookbackPeriod, from, to int64) []AttributionKeyWeight {
+
+	var keys []AttributionKeyWeight
+	interactions := getMergedInteractions(attributionTimerange)
+
+	switch attributionType {
+	case AttributionQueryTypeConversionBased:
+		for _, interaction := range interactions {
+			if isAdTouchWithinLookback(interaction.InteractionTime, conversionTime, lookbackPeriod) {
+				keys = append(keys, AttributionKeyWeight{Key: interaction.AttributionKey, Weight: 0})
+			}
+		}
+
+	case AttributionQueryTypeEngagementBased:
+		for _, interaction := range interactions {
+			if isAdTouchWithinLookback(interaction.InteractionTime, conversionTime,
+				lookbackPeriod) && isAdTouchWithinCampaignOrQueryPeriod(interaction.InteractionTime, from, to) {
+				keys = append(keys, AttributionKeyWeight{Key: interaction.AttributionKey, Weight: 0})
+			}
+		}
+
+	}
+	for i := range keys {
+		keys[i].Weight = 1
 	}
 
 	return keys
