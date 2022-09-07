@@ -15,17 +15,20 @@ function AccountTimeline({
   timelineUsers = [],
   granularity,
   collapseAll,
+  setCollapseAll,
   loading = false,
 }) {
   const [formattedData, setFormattedData] = useState({});
 
   useEffect(() => {
-    const data = eventsFormattedForGranularity(
-      timelineEvents,
-      granularity,
-      collapseAll
-    );
-    setFormattedData(data);
+    if (collapseAll !== undefined) {
+      const data = eventsFormattedForGranularity(
+        timelineEvents,
+        granularity,
+        collapseAll
+      );
+      setFormattedData(data);
+    }
   }, [timelineEvents, granularity, collapseAll]);
 
   const renderInfoCard = (event) => {
@@ -120,7 +123,7 @@ function AccountTimeline({
                           {renderAdditionalDiv(
                             allEvents[username].events.length,
                             allEvents[username].collapsed,
-                            () =>
+                            () => {
                               setFormattedData(
                                 toggleCellCollapse(
                                   formattedData,
@@ -128,7 +131,9 @@ function AccountTimeline({
                                   username,
                                   !allEvents[username].collapsed
                                 )
-                              )
+                              );
+                              setCollapseAll(undefined);
+                            }
                           )}
                         </div>
                       </td>
