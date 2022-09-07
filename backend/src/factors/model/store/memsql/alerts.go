@@ -189,6 +189,32 @@ func (store *MemSQL) GetAlertNamesByProjectIdTypeAndName(projectID int64, nameOf
 					rAlertNames = append(rAlertNames, alert.AlertName)
 				}
 			}
+		} else if alert.AlertType == model.ALERT_TYPE_QUERY_SHARING {
+			query, status := store.GetQueryWithQueryId(alert.ProjectID, alert.QueryID)
+			if status != http.StatusFound {
+				log.Error("Query not found for id ", alert.QueryID)
+				continue
+			}
+			class, errMsg := store.GetQueryClassFromQueries(*query)
+			if errMsg != "" {
+				log.Error("Class not Found for queryID ", errMsg)
+				continue
+			}
+			if class == model.QueryClassKPI {
+				kpiQueryGroup := model.KPIQueryGroup{}
+				U.DecodePostgresJsonbToStructType(&query.Query, &kpiQueryGroup)
+				if len(kpiQueryGroup.Queries) == 0 {
+					log.Error("Query failed. Empty query group.")
+					continue
+				}
+				for _, kpiQuery := range kpiQueryGroup.Queries {
+					for _, metric := range kpiQuery.Metrics {
+						if metric == nameOfQuery {
+							rAlertNames = append(rAlertNames, alert.AlertName)
+						}
+					}
+				}
+			}
 		}
 	}
 
