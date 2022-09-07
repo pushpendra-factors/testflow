@@ -1,7 +1,7 @@
 .fa-dashboard--widget-card {
     background-color: $fa-color--white;
     border-radius: 8px;
-    overflow: scroll;
+    overflow: auto;
     border: thin solid $fa-color--mono-2;
     transition: all 0.3s;
 
@@ -69,6 +69,22 @@
         }
     }
 }
+
+.fa-dashboard--widget-card::-webkit-scrollbar{
+    width: 7px;
+    height: 8px;
+}
+
+.fa-dashboard--widget-card::-webkit-scrollbar-track{
+    background-color: transparent;
+}
+
+.fa-dashboard--widget-card::-webkit-scrollbar-thumb{
+    background-color: #7c7c7c;
+    border-radius: 8px;
+}
+
+
 
 .fa-dasboard-privacy--card {
     border: thin solid $fa-color--mono-1;
