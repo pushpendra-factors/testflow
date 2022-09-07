@@ -10,7 +10,7 @@ import (
 
 const TimestampHeader = "datetime"
 
-var mapOfKPIToProfileType = map[string]string{
+var MapOfKPIToProfileType = map[string]string{
 	HubspotContactsDisplayCategory:         UserSourceHubspotString,
 	HubspotCompaniesDisplayCategory:        UserSourceHubspotString,
 	HubspotDealsDisplayCategory:            UserSourceHubspotString,
@@ -21,7 +21,7 @@ var mapOfKPIToProfileType = map[string]string{
 	LeadSquaredLeadsDisplayCategory:        UserSourceLeadSquared,
 }
 
-var mapOfKPICategoryToProfileGroupAnalysis = map[string]string{
+var MapOfKPICategoryToProfileGroupAnalysis = map[string]string{
 	HubspotContactsDisplayCategory:         USERS,
 	HubspotCompaniesDisplayCategory:        GROUP_NAME_HUBSPOT_COMPANY,
 	HubspotDealsDisplayCategory:            GROUP_NAME_HUBSPOT_DEAL,
@@ -41,7 +41,7 @@ func GetDirectDerivableProfileQueryFromKPI(kpiQuery KPIQuery) ProfileQueryGroup 
 	profileQueryGroup.Timezone = kpiQuery.Timezone
 	profileQueryGroup.GlobalFilters = transformFiltersKPIToProfiles(kpiQuery.Filters)
 	profileQueryGroup.GlobalGroupBys = transformGroupByKPIToProfiles(kpiQuery.GroupBy)
-	profileQueryGroup.GroupAnalysis = mapOfKPICategoryToProfileGroupAnalysis[kpiQuery.DisplayCategory]
+	profileQueryGroup.GroupAnalysis = MapOfKPICategoryToProfileGroupAnalysis[kpiQuery.DisplayCategory]
 	return profileQueryGroup
 }
 
@@ -102,7 +102,7 @@ func GetProfileQueriesOnCustomMetric(profileQueryGroup ProfileQueryGroup, transf
 	aggregateFunction string, AggregateProperty string, AggregatePropertyType string, kpiQuery KPIQuery, Operator string) ProfileQuery {
 	profileQuery := ProfileQuery{}
 
-	profileCategory, exists := mapOfKPIToProfileType[kpiQuery.DisplayCategory]
+	profileCategory, exists := MapOfKPIToProfileType[kpiQuery.DisplayCategory]
 	if !exists {
 		profileCategory = ""
 	}

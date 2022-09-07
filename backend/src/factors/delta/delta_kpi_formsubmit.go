@@ -6,6 +6,7 @@ import (
 	M "factors/model/model"
 	P "factors/pattern"
 	U "factors/util"
+	"fmt"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -16,22 +17,20 @@ var formSubmitMetricToFunc = map[string]func(queryEvent string, scanner *bufio.S
 	M.CountPerUser: GetFormSubmitCountPerUser,
 }
 
-func GetFormSubmitMetrics(metricNames []string, queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*WithinPeriodInsightsKpi, error) {
+func GetFormSubmitMetrics(metric string, queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*WithinPeriodInsightsKpi, error) {
 	var wpi WithinPeriodInsightsKpi
-	for i, metric := range metricNames {
-		if i == 1 {
-			break
-		}
-		if _, ok := formSubmitMetricToFunc[metric]; !ok {
-			continue
-		}
-		if info, scale, err := formSubmitMetricToFunc[metric](queryEvent, scanner, propFilter, propsToEval); err != nil {
-			log.WithError(err).Error("error getFormSubmitMetrics")
-		} else {
-			wpi.MetricInfo = info
-			wpi.ScaleInfo = scale
-		}
+	if _, ok := formSubmitMetricToFunc[metric]; !ok {
+		err := fmt.Errorf("unknown form submit metric: %s", metric)
+		log.WithError(err).Error("error GetFormSubmitMetrics")
+		return &wpi, err
 	}
+	if info, scale, err := formSubmitMetricToFunc[metric](queryEvent, scanner, propFilter, propsToEval); err != nil {
+		log.WithError(err).Error("error GetFormSubmitMetrics")
+	} else {
+		wpi.MetricInfo = info
+		wpi.ScaleInfo = scale
+	}
+
 	return &wpi, nil
 }
 

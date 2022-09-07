@@ -108,13 +108,13 @@ func main() {
 	fileTypesList := strings.TrimSpace(*fileTypesFlag)
 	var fileTypes []int64
 	if fileTypesList == "*" {
-		fileTypes = []int64{1, 2, 3, 4, 5, 6}
+		fileTypes = []int64{1, 2, 3, 4, 5, 6, 7}
 	} else {
 		fileTypes = C.GetTokensFromStringListAsUint64(fileTypesList)
 	}
 	fileTypesMap := make(map[int64]bool)
-	for i := range fileTypes {
-		fileTypesMap[fileTypes[i]] = true
+	for _, i := range fileTypes {
+		fileTypesMap[i] = true
 	}
 
 	projectIdsToRun := make(map[int64]bool, 0)

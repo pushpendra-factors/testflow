@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"factors/filestore"
 	M "factors/model/model"
+	"factors/model/store"
 	P "factors/pattern"
 	serviceDisk "factors/services/disk"
 	U "factors/util"
@@ -17,7 +18,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func CreateKpiInsights(diskManager *serviceDisk.DiskDriver, cloudManager *filestore.FileManager, periodCodesWithWeekNMinus1 []Period, projectId int64, queryId int64, queryGroup M.KPIQueryGroup, insightGranularity string, skipWpi, skipWpi2 bool) error {
+func CreateKpiInsights(diskManager *serviceDisk.DiskDriver, cloudManager *filestore.FileManager, periodCodesWithWeekNMinus1 []Period, projectId int64, queryId int64, queryGroup M.KPIQueryGroup, insightGranularity string, topK int, skipWpi, skipWpi2 bool) error {
 	// readEvents := true
 	var err error
 	var newInsightsList = make([]*WithinPeriodInsightsKpi, 0)
@@ -27,7 +28,7 @@ func CreateKpiInsights(diskManager *serviceDisk.DiskDriver, cloudManager *filest
 	skipW2 := false
 	if skipWpi {
 		dateString := U.GetDateOnlyFromTimestampZ(periodCodesWithWeekNMinus1[0].From)
-		path, name := (*cloudManager).GetInsightsWpiFilePathAndName(projectId, dateString, queryId, 100)
+		path, name := (*cloudManager).GetInsightsWpiFilePathAndName(projectId, dateString, queryId, topK)
 		if reader, err := (*cloudManager).Get(path, name); err == nil {
 			data, err := ioutil.ReadAll(reader)
 			if err == nil {
@@ -41,7 +42,7 @@ func CreateKpiInsights(diskManager *serviceDisk.DiskDriver, cloudManager *filest
 
 	if skipWpi2 {
 		dateString := U.GetDateOnlyFromTimestampZ(periodCodesWithWeekNMinus1[1].From)
-		path, name := (*cloudManager).GetInsightsWpiFilePathAndName(projectId, dateString, queryId, 100)
+		path, name := (*cloudManager).GetInsightsWpiFilePathAndName(projectId, dateString, queryId, topK)
 		if reader, err := (*cloudManager).Get(path, name); err == nil {
 			data, err := ioutil.ReadAll(reader)
 			if err == nil {
@@ -54,25 +55,42 @@ func CreateKpiInsights(diskManager *serviceDisk.DiskDriver, cloudManager *filest
 	}
 
 	for i, query := range queryGroup.Queries {
+
+		//no within period calculations
+		if skipW1 && skipW2 {
+			break
+		}
+
 		//every query occurs twice so
 		if i%2 == 0 {
 			continue
 		}
 
+		metric := query.Metrics[0]
+
 		//get global + local constraints
 		propFilter := append(queryGroup.GlobalFilters, query.Filters...)
 
+		var pageOrChannel string
+		var spectrum string
 		//get features for insights as a map
-		propsToEval := make([]string, 0)
+		var propsToEval = make([]string, 0)
 
 		{
 			//get proper props based on category
-			kpiProperties, err := getPropertiesToEvaluate(projectId, query.DisplayCategory)
+			var kpiProperties []map[string]string
+			var channel string
+			kpiProperties, spectrum, channel, err = getPropertiesToEvaluateAndInfo(projectId, query.DisplayCategory)
 			if err != nil {
 				return err
 			}
+			if spectrum == "custom" {
+				kpiProperties, err = getFilteredKpiPropertiesForCustomMetric(kpiProperties, metric, projectId, periodCodesWithWeekNMinus1, cloudManager, diskManager, topK, insightGranularity)
+				if err != nil {
+					return err
+				}
+			}
 
-			//get proper format
 			for _, propMap := range kpiProperties {
 				if propMap["data_type"] == U.PropertyTypeCategorical {
 					var propType string
@@ -89,34 +107,43 @@ func CreateKpiInsights(diskManager *serviceDisk.DiskDriver, cloudManager *filest
 					propsToEval = append(propsToEval, propName)
 				}
 			}
+
+			if spectrum == "campaign" {
+				pageOrChannel = channel
+			} else {
+				pageOrChannel = query.PageUrl
+			}
 		}
 
 		//get week 2 metrics by reading file
 		if !skipW2 {
-			if wpi, err := GetMetricsEvaluated(query.DisplayCategory, query.Metrics, query.PageUrl, propFilter, propsToEval, projectId, periodCodesWithWeekNMinus1[1], cloudManager, diskManager, insightGranularity); err != nil {
+			if wpi, err := GetMetricEvaluated(spectrum, query.DisplayCategory, metric, pageOrChannel, propFilter, propsToEval, projectId, periodCodesWithWeekNMinus1[1], cloudManager, diskManager, insightGranularity); err != nil {
 				return err
 			} else {
+				wpi.Category = spectrum
 				newInsightsList = append(newInsightsList, wpi)
 			}
 		}
 
 		//get week 1 metrics by reading file
 		if !skipW1 {
-			if wpi, err := GetMetricsEvaluated(query.DisplayCategory, query.Metrics, query.PageUrl, propFilter, propsToEval, projectId, periodCodesWithWeekNMinus1[0], cloudManager, diskManager, insightGranularity); err != nil {
+			if wpi, err := GetMetricEvaluated(spectrum, query.DisplayCategory, metric, pageOrChannel, propFilter, propsToEval, projectId, periodCodesWithWeekNMinus1[0], cloudManager, diskManager, insightGranularity); err != nil {
 				return err
 			} else {
+				wpi.Category = spectrum
 				oldInsightsList = append(oldInsightsList, wpi)
 			}
 		}
 	}
+
 	if !skipW2 {
 		wpiBytes, err := json.Marshal(newInsightsList)
 		if err != nil {
-			log.WithFields(log.Fields{"err": err}).Error("failed to marshal wpi2 Info.")
+			log.WithError(err).Error("failed to marshal wpi2 Info.")
 			return err
 		}
 
-		err = WriteWpiPath(projectId, Period(periodCodesWithWeekNMinus1[1]), queryId, 100, bytes.NewReader(wpiBytes), *cloudManager)
+		err = WriteWpiPath(projectId, Period(periodCodesWithWeekNMinus1[1]), queryId, topK, bytes.NewReader(wpiBytes), *cloudManager)
 		if err != nil {
 			log.WithError(err).Error("write WPI error - ", err)
 			return err
@@ -125,10 +152,10 @@ func CreateKpiInsights(diskManager *serviceDisk.DiskDriver, cloudManager *filest
 	if !skipW1 {
 		wpiBytes, err := json.Marshal(oldInsightsList)
 		if err != nil {
-			log.WithFields(log.Fields{"err": err}).Error("failed to marshal wpi1 Info.")
+			log.WithError(err).Error("failed to marshal wpi1 Info.")
 			return err
 		}
-		err = WriteWpiPath(projectId, Period(periodCodesWithWeekNMinus1[0]), queryId, 100, bytes.NewReader(wpiBytes), *cloudManager)
+		err = WriteWpiPath(projectId, Period(periodCodesWithWeekNMinus1[0]), queryId, topK, bytes.NewReader(wpiBytes), *cloudManager)
 		if err != nil {
 			log.WithError(err).Error("write WPI error - ", err)
 			return err
@@ -153,7 +180,7 @@ func CreateKpiInsights(diskManager *serviceDisk.DiskDriver, cloudManager *filest
 			log.WithFields(log.Fields{"err": err}).Error("failed to unmarshal cpi Info.")
 			return err
 		}
-		err = WriteCpiPath(projectId, periodPair.Second, queryId, 100, bytes.NewReader(crossPeriodInsightsBytes), *cloudManager)
+		err = WriteCpiPath(projectId, periodPair.Second, queryId, topK, bytes.NewReader(crossPeriodInsightsBytes), *cloudManager)
 		if err != nil {
 			log.WithFields(log.Fields{"err": err}).Error("failed to write cpi files to cloud")
 			return err
@@ -290,69 +317,43 @@ func ComputeCrossPeriodKpiInsights(periodPair PeriodPair, newInsightsList, oldIn
 	return crossPeriodInsightsList, nil
 }
 
-func GetMetricsEvaluated(category string, metricNames []string, queryEvent string, propFilter []M.KPIFilter, propsToEval []string, projectId int64, periodCode Period, cloudManager *filestore.FileManager,
+//(queryEvent works as channel or page depending on spectrum)
+func GetMetricEvaluated(spectrum, category string, metric string, pageOrChannel string, propFilter []M.KPIFilter, propsToEval []string, projectId int64, periodCode Period, cloudManager *filestore.FileManager,
 	diskManager *serviceDisk.DiskDriver, insightGranularity string) (*WithinPeriodInsightsKpi, error) {
 
 	var insights *WithinPeriodInsightsKpi
 	var err error
-	var spectrum string
 	var scanner *bufio.Scanner
-	var GetMetrics func(metricNames []string, queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*WithinPeriodInsightsKpi, error)
-
-	if category == M.AllChannelsDisplayCategory {
-		insights, err = GetAllChannelMetricsInfo(metricNames, propFilter, propsToEval, projectId, periodCode, cloudManager, diskManager, insightGranularity)
-		spectrum = "campaign"
-	} else {
+	if spectrum == "events" {
+		if scanner, err = GetEventFileScanner(projectId, periodCode, cloudManager, diskManager, insightGranularity, true); err != nil {
+			log.WithError(err).Error("failed getting event file scanner")
+			return nil, err
+		}
+		var GetMetrics func(metric string, queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*WithinPeriodInsightsKpi, error)
 		if category == M.WebsiteSessionDisplayCategory {
 			GetMetrics = GetSessionMetrics
-			spectrum = "events"
 		} else if category == M.FormSubmissionsDisplayCategory {
 			GetMetrics = GetFormSubmitMetrics
-			spectrum = "events"
 		} else if category == M.PageViewsDisplayCategory {
 			GetMetrics = GetPageViewMetrics
-			spectrum = "events"
-		} else if category == M.GoogleAdsDisplayCategory {
-			GetMetrics = GetCampaignMetricsInfo
-			queryEvent = M.ADWORDS
-			spectrum = "campaign"
-		} else if category == M.BingAdsDisplayCategory {
-			GetMetrics = GetCampaignMetricsInfo
-			queryEvent = M.BINGADS
-			spectrum = "campaign"
-		} else if category == M.FacebookDisplayCategory {
-			GetMetrics = GetCampaignMetricsInfo
-			queryEvent = M.FACEBOOK
-			spectrum = "campaign"
-		} else if category == M.LinkedinDisplayCategory {
-			GetMetrics = GetCampaignMetricsInfo
-			queryEvent = M.LINKEDIN
-			spectrum = "campaign"
-		} else if category == M.GoogleOrganicDisplayCategory {
-			GetMetrics = GetCampaignMetricsInfo
-			queryEvent = M.GOOGLE_ORGANIC
-			spectrum = "campaign"
+		}
+		insights, err = GetMetrics(metric, pageOrChannel, scanner, propFilter, propsToEval)
+	} else if spectrum == "campaign" {
+		if category == M.AllChannelsDisplayCategory {
+			insights, err = GetAllChannelMetricsInfo(metric, propFilter, propsToEval, projectId, periodCode, cloudManager, diskManager, insightGranularity)
 		} else {
-			err := fmt.Errorf("no kpi Insights for category: %s", category)
-			log.WithError(err).Error("not computing insights for this category")
-			return insights, err
-		}
-
-		if spectrum == "events" {
-			if scanner, err = GetEventFileScanner(projectId, periodCode, cloudManager, diskManager, insightGranularity, true); err != nil {
-				log.WithError(err).Error("failed getting event file scanner")
+			if scanner, err = GetChannelFileScanner(pageOrChannel, projectId, periodCode, cloudManager, diskManager, insightGranularity, true); err != nil {
+				log.WithError(err).Error("failed getting " + pageOrChannel + " file scanner")
 				return nil, err
 			}
-		} else if spectrum == "campaign" {
-			if scanner, err = GetChannelFileScanner(queryEvent, projectId, periodCode, cloudManager, diskManager, insightGranularity, true); err != nil {
-				log.WithError(err).Error("failed getting " + queryEvent + " file scanner")
-				return nil, err
-			}
+			insights, err = GetCampaignMetricsInfo(metric, pageOrChannel, scanner, propFilter, propsToEval)
 		}
-		insights, err = GetMetrics(metricNames, queryEvent, scanner, propFilter, propsToEval)
+	} else if spectrum == "custom" {
+		insights, err = GetCustomMetricsInfo(metric, propFilter, propsToEval, projectId, periodCode, cloudManager, diskManager, insightGranularity)
+	} else {
+		err = fmt.Errorf("unknown spectrum: %s", spectrum)
 	}
 
-	insights.Category = spectrum
 	return insights, err
 }
 
@@ -372,12 +373,12 @@ func MultipleJSDivergenceKpi(metricInfo1, metricInfo2 *MetricInfo, allProps map[
 
 //check if prop exists in props based on entity and returns the value
 func ExistsInProps(prop string, firstMap map[string]interface{}, secondMap map[string]interface{}, entity string) (interface{}, bool) {
-	if entity == "ep" || entity == "either" {
+	if firstMap != nil && (entity == "ep" || entity == "either") {
 		if val, ok := firstMap[prop]; ok {
 			return val, true
 		}
 	}
-	if entity == "up" || entity == "either" {
+	if secondMap != nil && (entity == "up" || entity == "either") {
 		if val, ok := secondMap[prop]; ok {
 			return val, true
 		}
@@ -441,6 +442,29 @@ func campaignSatisfiesConstraints(campaignDetails CounterCampaignFormat, propFil
 	return true, nil
 }
 
+func userSatisfiesConstraints(userDetails CounterUserFormat, propFilter []M.KPIFilter) (bool, error) {
+
+	for _, filter := range propFilter {
+		var eventVal interface{}
+		propName := filter.PropertyName
+
+		if val, ok := ExistsInProps(propName, userDetails.Properties, nil, "either"); !ok {
+			return false, nil
+		} else {
+			eventVal = val
+		}
+
+		ok, err := checkValSatisfiesFilterCondition(filter, eventVal)
+		if err != nil {
+			return false, err
+		}
+		if !ok {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
 //check if event name is correct and contains all required properties(satisfies constraints)
 func isEventToBeCounted(eventDetails P.CounterEventFormat, nameFilter string, propFilter []M.KPIFilter) (bool, error) {
 	eventNameString := eventDetails.EventName
@@ -476,6 +500,19 @@ func isCampaignToBeCounted(campaignDetails CounterCampaignFormat, propFilter []M
 
 	//check if event contains all requiredProps(constraint)
 	if ok, err := campaignSatisfiesConstraints(campaignDetails, propFilter); err != nil {
+		return false, err
+	} else if ok {
+		return true, nil
+	}
+
+	return false, nil
+}
+
+//check user properties contains all required properties(satisfies constraints)
+func isUserToBeCounted(userDetails CounterUserFormat, propFilter []M.KPIFilter) (bool, error) {
+
+	//check if event contains all requiredProps(constraint)
+	if ok, err := userSatisfiesConstraints(userDetails, propFilter); err != nil {
 		return false, err
 	} else if ok {
 		return true, nil
@@ -680,6 +717,22 @@ func addToScale(globalScale *float64, scaleMap map[string]map[string]float64, pr
 	}
 }
 
+func addToScaleUser(globalScale *float64, scaleMap map[string]map[string]float64, propsToEval []string, userDetails CounterUserFormat) {
+	(*globalScale)++
+	for _, propWithType := range propsToEval {
+		propTypeName := strings.SplitN(propWithType, "#", 2)
+		prop := propTypeName[1]
+		propType := propTypeName[0]
+		if val, ok := ExistsInProps(prop, userDetails.Properties, userDetails.Properties, propType); ok {
+			val := fmt.Sprintf("%s", val)
+			if _, ok := scaleMap[propWithType]; !ok {
+				scaleMap[propWithType] = make(map[string]float64)
+			}
+			scaleMap[propWithType][val] += 1
+		}
+	}
+}
+
 func checkValSatisfiesFilterCondition(filter M.KPIFilter, eventVal interface{}) (bool, error) {
 	if filter.PropertyDataType == U.PropertyTypeCategorical {
 		eventVal := eventVal.(string)
@@ -757,14 +810,19 @@ func checkValSatisfiesFilterCondition(filter M.KPIFilter, eventVal interface{}) 
 	return true, nil
 }
 
-func getPropertiesToEvaluate(projectID int64, displayCategory string) ([]map[string]string, error) {
+func getPropertiesToEvaluateAndInfo(projectID int64, displayCategory string) ([]map[string]string, string, string, error) {
 	var kpiProperties []map[string]string
+	var spectrum string
+	var channel string
 	if displayCategory == M.WebsiteSessionDisplayCategory {
 		kpiProperties = M.KPIPropertiesForWebsiteSessions
+		spectrum = "events"
 	} else if displayCategory == M.FormSubmissionsDisplayCategory {
 		kpiProperties = M.KPIPropertiesForFormSubmissions
+		spectrum = "events"
 	} else if displayCategory == M.PageViewsDisplayCategory {
 		kpiProperties = M.KPIPropertiesForPageViews
+		spectrum = "events"
 	} else if displayCategory == M.GoogleAdsDisplayCategory {
 		for category, propMap := range M.MapOfAdwordsObjectsToPropertiesAndRelated {
 			for prop, info := range propMap {
@@ -775,6 +833,8 @@ func getPropertiesToEvaluate(projectID int64, displayCategory string) ([]map[str
 				})
 			}
 		}
+		spectrum = "campaign"
+		channel = M.ADWORDS
 	} else if displayCategory == M.BingAdsDisplayCategory {
 		for category, propMap := range M.MapOfBingAdsObjectsToPropertiesAndRelated {
 			category2 := category
@@ -789,6 +849,8 @@ func getPropertiesToEvaluate(projectID int64, displayCategory string) ([]map[str
 				})
 			}
 		}
+		spectrum = "campaign"
+		channel = M.BINGADS
 	} else if displayCategory == M.FacebookDisplayCategory {
 		for category, propMap := range M.MapOfFacebookObjectsToPropertiesAndRelated {
 			category2 := category
@@ -803,6 +865,8 @@ func getPropertiesToEvaluate(projectID int64, displayCategory string) ([]map[str
 				})
 			}
 		}
+		spectrum = "campaign"
+		channel = M.FACEBOOK
 	} else if displayCategory == M.LinkedinDisplayCategory {
 		for _, prop := range []string{"id", "name"} {
 			kpiProperties = append(kpiProperties, map[string]string{
@@ -816,6 +880,8 @@ func getPropertiesToEvaluate(projectID int64, displayCategory string) ([]map[str
 				"entity":    M.CAFilterAdGroup,
 			})
 		}
+		spectrum = "campaign"
+		channel = M.LINKEDIN
 	} else if displayCategory == M.GoogleOrganicDisplayCategory {
 		for categ, propMap := range M.MapOfObjectsToPropertiesAndRelatedGoogleOrganic {
 			for prop, info := range propMap {
@@ -826,6 +892,8 @@ func getPropertiesToEvaluate(projectID int64, displayCategory string) ([]map[str
 				})
 			}
 		}
+		spectrum = "campaign"
+		channel = M.GOOGLE_ORGANIC
 	} else if displayCategory == M.AllChannelsDisplayCategory {
 		for _, prop := range []string{"id", "name"} {
 			kpiProperties = append(kpiProperties, map[string]string{
@@ -839,10 +907,32 @@ func getPropertiesToEvaluate(projectID int64, displayCategory string) ([]map[str
 				"entity":    M.CAFilterAdGroup,
 			})
 		}
+		spectrum = "campaign"
+		channel = "all_ads"
 	} else {
-		err := fmt.Errorf("no properties to evaluate for category: %s", displayCategory)
-		log.WithError(err).Error("unknown category")
-		return nil, err
+		switch displayCategory {
+		case M.HubspotDealsDisplayCategory:
+			kpiProperties = store.GetStore().GetPropertiesForHubspotDeals(projectID, "")
+		case M.HubspotCompaniesDisplayCategory:
+			kpiProperties = store.GetStore().GetPropertiesForHubspotCompanies(projectID, "")
+		case M.HubspotContactsDisplayCategory:
+			kpiProperties = store.GetStore().GetPropertiesForHubspotContacts(projectID, "")
+		case M.SalesforceUsersDisplayCategory:
+			kpiProperties = store.GetStore().GetPropertiesForSalesforceUsers(projectID, "")
+		case M.SalesforceAccountsDisplayCategory:
+			kpiProperties = store.GetStore().GetPropertiesForSalesforceAccounts(projectID, "")
+		case M.SalesforceOpportunitiesDisplayCategory:
+			kpiProperties = store.GetStore().GetPropertiesForSalesforceOpportunities(projectID, "")
+		case M.MarketoLeadsDisplayCategory:
+			kpiProperties = store.GetStore().GetPropertiesForMarketo(projectID, "")
+		case M.LeadSquaredLeadsDisplayCategory:
+			kpiProperties = store.GetStore().GetPropertiesForLeadSquared(projectID, "")
+		default:
+			err := fmt.Errorf("no properties to evaluate for category: %s", displayCategory)
+			log.WithError(err).Error("unknown category")
+			return nil, "", "", err
+		}
+		spectrum = "custom"
 	}
-	return kpiProperties, nil
+	return kpiProperties, spectrum, channel, nil
 }

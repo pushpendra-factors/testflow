@@ -230,10 +230,10 @@ func GetInsightsKpi(file CrossPeriodInsightsKpi, numberOfRecords int, QueryClass
 				tmp.ChangeInScale.Percentage[1] = tmp.ChangeInScale.W2[1] - tmp.ChangeInScale.W1[1]
 
 				tmp.Type = "distribution"
-				if file.Category == "" { //for older models built without category
+				if file.Category == "" || file.Category == "events" || file.Category == "custom" { //for older models built without category
 					tmp.Category = "kpi_events"
-				} else {
-					tmp.Category = "kpi_" + file.Category
+				} else if file.Category == "campaign" {
+					tmp.Category = "kpi_campaign"
 				}
 
 				tmp.ActualValues.JSDivergence = getInsightImportance(tmp, keysUsedInInsights)

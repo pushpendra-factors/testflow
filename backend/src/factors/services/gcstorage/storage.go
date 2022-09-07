@@ -134,6 +134,16 @@ func (gcsd *GCSDriver) GetModelChannelFilePathAndName(channel string, projectId 
 	return path, channel + ".txt"
 }
 
+func (gcsd *GCSDriver) GetModelUsersFilePathAndName(dateField string, projectId int64, startTimestamp int64, modelType string) (string, string) {
+	path := gcsd.GetModelUsersDir(dateField, projectId, startTimestamp, modelType)
+	return path, dateField + ".txt"
+}
+
+func (gcsd *GCSDriver) GetModelUsersDir(dateField string, projectId int64, startTimestamp int64, modelType string) string {
+	path := gcsd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
+	return fmt.Sprintf("%susers/", path)
+}
+
 func (gcsd *GCSDriver) GetModelEventsBucketingFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string) {
 	path := gcsd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
 	return path, "events_bucketed.txt"

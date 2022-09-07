@@ -235,6 +235,7 @@ type Model interface {
 	PullBingAdsRows(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error)
 	PullLinkedInRows(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error)
 	PullGoogleOrganicRows(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error)
+	PullUsersRowsForWI(projectID int64, startTime, endTime int64, dateField string, source int, group int) (*sql.Rows, *sql.Tx, error)
 	PullEventRowsForArchivalJob(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error)
 	GetUnusedSessionIDsForJob(projectID int64, startTimestamp, endTimestamp int64) ([]string, int)
 	DeleteEventsByIDsInBatchForJob(projectID int64, eventNameID string, ids []string, batchSize int) int

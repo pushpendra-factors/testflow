@@ -6,6 +6,7 @@ import (
 	M "factors/model/model"
 	P "factors/pattern"
 	U "factors/util"
+	"fmt"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -24,21 +25,18 @@ var pageViewMetricToFunc = map[string]func(queryEvent string, scanner *bufio.Sca
 	M.EngagementRate:           GetPageviewEngagementRate,
 }
 
-func GetPageViewMetrics(metricNames []string, queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*WithinPeriodInsightsKpi, error) {
+func GetPageViewMetrics(metric string, queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*WithinPeriodInsightsKpi, error) {
 	var wpi WithinPeriodInsightsKpi
-	for i, metric := range metricNames {
-		if i == 1 {
-			break
-		}
-		if _, ok := pageViewMetricToFunc[metric]; !ok {
-			continue
-		}
-		if info, scale, err := pageViewMetricToFunc[metric](queryEvent, scanner, propFilter, propsToEval); err != nil {
-			log.WithError(err).Error("error getPageViewMetrics")
-		} else {
-			wpi.MetricInfo = info
-			wpi.ScaleInfo = scale
-		}
+	if _, ok := pageViewMetricToFunc[metric]; !ok {
+		err := fmt.Errorf("unknown pageView metric: %s", metric)
+		log.WithError(err).Error("error GetPageViewMetrics")
+		return &wpi, err
+	}
+	if info, scale, err := pageViewMetricToFunc[metric](queryEvent, scanner, propFilter, propsToEval); err != nil {
+		log.WithError(err).Error("error GetPageViewMetrics")
+	} else {
+		wpi.MetricInfo = info
+		wpi.ScaleInfo = scale
 	}
 	return &wpi, nil
 }
