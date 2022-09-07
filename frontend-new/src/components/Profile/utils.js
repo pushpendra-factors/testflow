@@ -93,21 +93,17 @@ export const eventsFormattedForGranularity = (
   granularity,
   collapse
 ) => {
-  const data = _.groupBy(events, groups[granularity]);
-  let retData = {};
-  Object.entries(data).forEach(([timestamp, events]) => {
-    const groupByUser = _.groupBy(events, (item) => item.user);
-    let formattedObj = {};
-    Object.entries(groupByUser).forEach(([key, values]) => {
-      const obj = new Object();
-      obj[key] = { events: values, collapsed: collapse };
-      formattedObj = { ...formattedObj, ...obj };
+  const output = events.reduce((result, item) => {
+    const byTimestamp = (result[groups[granularity](item)] =
+      result[groups[granularity](item)] || {});
+    const byUser = (byTimestamp[item.user] = byTimestamp[item.user] || {
+      events: [],
+      collapsed: collapse,
     });
-    const obj = new Object();
-    obj[timestamp] = formattedObj;
-    retData = { ...retData, ...obj };
-  });
-  return retData;
+    byUser.events.push(item);
+    return result;
+  }, {});
+  return output;
 };
 
 export const toggleCellCollapse = (

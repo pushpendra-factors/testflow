@@ -1001,6 +1001,16 @@ func GetConversionIndex(headers []string) int {
 	return -1
 }
 
+func GetConversionIndexKPI(headers []string) int {
+	for index, val := range headers {
+		// matches the first conversion
+		if strings.Contains(val, "ClickConversionRate") {
+			return index + 1
+		}
+	}
+	return -1
+}
+
 func GetLastKeyValueIndex(headers []string) int {
 	for index, val := range headers {
 		if val == "Impressions" {
@@ -1432,7 +1442,7 @@ func ProcessQueryKPI(query *AttributionQuery, attributionData *map[string]*Attri
 	logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "Result": result}).Info("KPI Attribution result")
 
 	// sort the rows by conversionEvent
-	conversionIndex := GetConversionIndex(result.Headers)
+	conversionIndex := GetConversionIndexKPI(result.Headers)
 	sort.Slice(result.Rows, func(i, j int) bool {
 		if len(result.Rows[i]) < conversionIndex || len(result.Rows[j]) < conversionIndex {
 			logCtx.WithFields(log.Fields{"row1": result.Rows[i], "row2": result.Rows[j]}).Info("final results are rows len mismatch. Ignoring row and continuing.")
@@ -1531,7 +1541,7 @@ func MergeTwoDataRows(row1 []interface{}, row2 []interface{}, keyIndex int, attr
 		row1[keyIndex+3] = row1[keyIndex+3].(float64) + row2[keyIndex+3].(float64) // Spend.
 
 		for idx, _ := range conversionFunTypes {
-			nextConPosition := idx * 6
+			nextConPosition := idx * 4
 			row1[keyIndex+8+nextConPosition] = row1[keyIndex+8+nextConPosition].(float64) + row2[keyIndex+8+nextConPosition].(float64)    // Conversion.
 			row1[keyIndex+9+nextConPosition] = row1[keyIndex+9+nextConPosition].(float64) + row2[keyIndex+9+nextConPosition].(float64)    // Conversion Influence
 			row1[keyIndex+11+nextConPosition] = row1[keyIndex+11+nextConPosition].(float64) + row2[keyIndex+11+nextConPosition].(float64) // Compare Conversion.
@@ -1557,7 +1567,7 @@ func MergeTwoDataRows(row1 []interface{}, row2 []interface{}, keyIndex int, attr
 		}
 
 		for idx, funcType := range conversionFunTypes {
-			nextConPosition := idx * 6
+			nextConPosition := idx * 4
 			// Normal conversion [8, 9] = [Conversion, CPC]
 			// Compare conversion [10, 11]  = [Conversion, CPC, Rate+nextConPosition]
 			if strings.ToLower(funcType) == "sum" {
@@ -1745,7 +1755,7 @@ func AddGrandTotalRow(headers []string, rows [][]interface{}, keyIndex int, anal
 		float64(0), float64(0), float64(0), float64(0), float64(0), float64(0)}
 
 	grandTotalRow = append(grandTotalRow, defaultMatchingRow...)
-
+	// Todo check Roshan
 	// Remaining linked funnel events & CPCs
 	for i := keyIndex + 14; i < len(headers)-1; i++ {
 		grandTotalRow = append(grandTotalRow, float64(0))
@@ -1768,8 +1778,8 @@ func AddGrandTotalRow(headers []string, rows [][]interface{}, keyIndex int, anal
 
 	var spendFunnelConversionCPC []float64      //linked funnel events
 	var conversionFunnelConversionCPC []float64 //linked funnel events
-
-	for i := keyIndex + 14; i < len(headers)-1; i += 3 {
+	// Todo check Roshan
+	for i := keyIndex + 14; i < len(headers)-1; i += 2 {
 
 		spendFunnelConversionCPC = append(spendFunnelConversionCPC, float64(0))
 		conversionFunnelConversionCPC = append(conversionFunnelConversionCPC, float64(0))
@@ -1822,7 +1832,8 @@ func AddGrandTotalRow(headers []string, rows [][]interface{}, keyIndex int, anal
 
 		// Remaining linked funnel events & CPCs
 		j := 0
-		for i := keyIndex + 14; i < len(grandTotalRow)-1; i += 3 {
+		// Todo check Roshan
+		for i := keyIndex + 14; i < len(grandTotalRow)-1; i += 2 {
 			grandTotalRow[i] = grandTotalRow[i].(float64) + row[i].(float64)
 			if spend > 0 && i < len(grandTotalRow) && j < len(spendFunnelConversionCPC) && len(spendFunnelConversionCPC) > 0 && len(conversionFunnelConversionCPC) > 0 {
 				spendFunnelConversionCPC[j], _ = U.FloatRoundOffWithPrecision(spendFunnelConversionCPC[j]+spend, U.DefaultPrecision)
@@ -1877,7 +1888,8 @@ func AddGrandTotalRow(headers []string, rows [][]interface{}, keyIndex int, anal
 
 	// Remaining linked funnel events & CPCs
 	k := 0
-	for i := keyIndex + 14; i < len(grandTotalRow)-1; i += 3 {
+	// Todo check Roshan
+	for i := keyIndex + 14; i < len(grandTotalRow)-1; i += 2 {
 		if i < len(grandTotalRow) && k < len(spendFunnelConversionCPC) && len(spendFunnelConversionCPC) > 0 && len(conversionFunnelConversionCPC) > 0 && conversionFunnelConversionCPC[k] > 0 {
 			// Funnel - Conversion - CPC.
 			grandTotalRow[i+1], _ = U.FloatRoundOffWithPrecision(spendFunnelConversionCPC[k]/conversionFunnelConversionCPC[k], U.DefaultPrecision)

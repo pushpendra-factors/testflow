@@ -131,10 +131,10 @@ function ContactDetails({ onCancel, userDetails }) {
               icon={<SVG name={'brand'} size={36} />}
               size={'large'}
               onClick={() => {
+                onCancel();
                 setActivities([]);
                 setCollapse(true);
                 setGranularity('Hourly');
-                onCancel();
               }}
             />
             <Text type={'title'} level={4} weight={'bold'} extraClass={'m-0'}>
@@ -146,10 +146,10 @@ function ContactDetails({ onCancel, userDetails }) {
               size={'large'}
               type='text'
               onClick={() => {
+                onCancel();
                 setActivities([]);
                 setCollapse(true);
                 setGranularity('Hourly');
-                onCancel();
               }}
               icon={<SVG name='times'></SVG>}
             ></Button>

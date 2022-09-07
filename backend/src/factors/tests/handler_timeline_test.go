@@ -680,10 +680,10 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 	customerEmail = "@example.com"
 	boolTrue = false
 	users := make([]model.User, 0)
-	numUsers := 10
+	numUsers := 30
 	for i := 1; i <= numUsers; i++ {
 		var customerUserID string
-		if i < 6 {
+		if i < 6 || i > 10 {
 			customerUserID = "user" + strconv.Itoa(i) + customerEmail
 		}
 		if i == 6 {
@@ -888,8 +888,9 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		assert.Contains(t, resp.Name, "Freshworks")
 		assert.Equal(t, resp.Country, "India")
 		assert.Equal(t, resp.Industry, "Freshworks-HS")
-		assert.Equal(t, resp.NumberOfUsers, uint64(9))
+		assert.Equal(t, resp.NumberOfUsers, uint64(26))
 		// assert.Equal(t, resp.NumberOfEmployees, uint64(5000))
+		assert.Equal(t, len(resp.AccountTimeline), 25)
 		assert.Condition(t, func() bool {
 			assert.Condition(t, func() bool { return len(resp.AccountTimeline) > 0 })
 			for _, userTimeline := range resp.AccountTimeline {

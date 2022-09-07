@@ -113,8 +113,10 @@ function AccountDetails({ onCancel, accountDetails }) {
               icon={<SVG name={'brand'} size={36} />}
               size={'large'}
               onClick={() => {
-                setGranularity('Hourly');
                 onCancel();
+                setGranularity('Hourly');
+                setActivities([]);
+                setCollapse(true);
               }}
             />
             <Text type={'title'} level={4} weight={'bold'} extraClass={'m-0'}>
@@ -126,8 +128,10 @@ function AccountDetails({ onCancel, accountDetails }) {
               size={'large'}
               type='text'
               onClick={() => {
-                setGranularity('Hourly');
                 onCancel();
+                setGranularity('Hourly');
+                setActivities([]);
+                setCollapse(true);
               }}
               icon={<SVG name='times'></SVG>}
             ></Button>
@@ -223,7 +227,9 @@ function AccountDetails({ onCancel, accountDetails }) {
                     Number of Users
                   </Text>
                   <Text type={'title'} level={7} extraClass={'m-0'}>
-                    {accountDetails?.data?.number_of_users}
+                    {parseInt(accountDetails?.data?.number_of_users) > 25
+                      ? '25+'
+                      : accountDetails?.data?.number_of_users}
                   </Text>
                 </Col>
               </Row>
