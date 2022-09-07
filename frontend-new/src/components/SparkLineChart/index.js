@@ -45,9 +45,10 @@ function SparkLineChart({
           />
         ) : null}
         {queries.slice(0, count).map((q, index) => {
-          const mapper = arrayMapper.find(
+          const m = arrayMapper.find(
             (elem) => elem.eventName === q && elem.index === index
-          ).mapper;
+          );
+          const { mapper, eventName } = m;
           let total = 0;
           const data = chartsData.map((elem) => {
             return {
@@ -83,6 +84,7 @@ function SparkLineChart({
                     chartColor={appliedColors[index]}
                     height={40}
                     title={title}
+                    eventTitle={eventName}
                   />
                 </div>
               </div>
@@ -113,6 +115,7 @@ function SparkLineChart({
                       chartColor={appliedColors[index]}
                       height={height}
                       title={title}
+                      eventTitle={eventName}
                     />
                   </div>
                 </div>
@@ -148,6 +151,9 @@ function SparkLineChart({
       (elem) => elem[0] === 0
     )[2];
 
+    const m = arrayMapper.find((elem) => elem.eventName === queries[0]);
+    const { mapper, eventName } = m;
+
     return (
       <div
         className={`flex items-center justify-center w-full ${
@@ -166,13 +172,12 @@ function SparkLineChart({
           <SparkChart
             frequency={frequency}
             page={page}
-            event={
-              arrayMapper.find((elem) => elem.eventName === queries[0]).mapper
-            }
+            event={mapper}
             chartData={chartsData}
             chartColor="#4D7DB4"
             height={height}
             title={title}
+            eventTitle={eventName}
           />
         </div>
       </div>
