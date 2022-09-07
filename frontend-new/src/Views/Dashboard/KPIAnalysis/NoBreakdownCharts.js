@@ -7,6 +7,7 @@ import React, {
 } from 'react';
 import { useSelector } from 'react-redux';
 import { values } from 'lodash';
+import cx from 'classnames';
 import { DashboardContext } from '../../../contexts/DashboardContext';
 import {
   getDefaultDateSortProp,
@@ -34,6 +35,7 @@ import {
 } from '../../../components/factorsComponents';
 import NoBreakdownTable from '../../CoreQuery/KPIAnalysis/NoBreakdownCharts/NoBreakdownTable';
 import TopLegends from '../../../components/GroupedBarChart/TopLegends';
+import { getKpiLabel } from '../../CoreQuery/KPIAnalysis/kpiAnalysis.helpers';
 
 const NoBreakdownCharts = ({
   kpis,
@@ -81,19 +83,9 @@ const NoBreakdownCharts = ({
     );
   }
 
-  let tableContent = null;
   let chartContent = null;
 
   if (chartType === CHART_TYPE_TABLE) {
-    // tableContent = (
-    //   <div
-    //     onClick={handleEditQuery}
-    //     style={{ color: '#5949BC' }}
-    //     className="mt-3 font-medium text-base cursor-pointer flex justify-end item-center"
-    //   >
-    //     Show More &rarr;
-    //   </div>
-    // );
     chartContent = (
       <NoBreakdownTable
         data={aggregateData}
@@ -132,12 +124,13 @@ const NoBreakdownCharts = ({
             <SparkChart
               frequency={durationObj.frequency}
               page="kpi"
-              event={aggregateData[0].name}
+              event={getKpiLabel(kpis[0])}
               chartData={aggregateData[0].dataOverTime}
               chartColor="#4D7DB4"
-              height={unit.cardSize === 1 ? 180 : 100}
+              height={unit.cardSize === 1 ? 220 : 100}
               title={unit.id}
               metricType={aggregateData[0].metricType}
+              eventTitle={getKpiLabel(kpis[0])}
             />
           </div>
         </div>
@@ -191,6 +184,7 @@ const NoBreakdownCharts = ({
                         height={40}
                         title={unit.id}
                         metricType={chartData.metricType}
+                        eventTitle={chartData.name}
                       />
                     </div>
                   </div>
@@ -220,6 +214,7 @@ const NoBreakdownCharts = ({
                           height={100}
                           title={unit.id}
                           metricType={chartData.metricType}
+                          eventTitle={chartData.name}
                         />
                       </div>
                     </div>
@@ -249,7 +244,9 @@ const NoBreakdownCharts = ({
         </div>
       );
     }
-  } else if (chartType === CHART_TYPE_LINECHART) {
+  }
+
+  if (chartType === CHART_TYPE_LINECHART) {
     chartContent = (
       <LineChart
         frequency={durationObj.frequency}
@@ -264,9 +261,12 @@ const NoBreakdownCharts = ({
   }
 
   return (
-    <div className={'w-full'}>
+    <div
+      className={cx('w-full flex-1', {
+        'p-2': chartType !== CHART_TYPE_TABLE
+      })}
+    >
       {chartContent}
-      {tableContent}
     </div>
   );
 };

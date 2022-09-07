@@ -206,11 +206,9 @@ func (store *MemSQL) GetProfileUserDetailsByID(projectID int64, identity string,
 		return nil, http.StatusInternalServerError
 	}
 
-	startTimeForTimeline := time.Now()
 	activities, sessionCount := store.GetUserActivitiesAndSessionCount(projectID, identity, userId)
 	uniqueUser.UserActivity = activities
 	uniqueUser.WebSessionsCount = sessionCount
-	log.WithFields(logFields).WithField("time_taken", time.Since(startTimeForTimeline).Milliseconds()).Info("Time taken for timeline.")
 
 	uniqueUser.GroupInfos = store.GetGroupsForUserTimeline(projectID, uniqueUser)
 
@@ -226,7 +224,6 @@ func (store *MemSQL) GetUserActivitiesAndSessionCount(projectID int64, identity 
 	var userActivities []model.UserActivity
 	webSessionCount := 0
 
-	startTimeForQuery := time.Now()
 	db := C.GetServices().Db
 	str := []string{`SELECT event_names.name AS event_name, events1.timestamp AS timestamp, events1.properties AS properties
         FROM (SELECT project_id, event_name_id, timestamp, properties FROM events WHERE 
@@ -251,10 +248,9 @@ func (store *MemSQL) GetUserActivitiesAndSessionCount(projectID int64, identity 
 		U.EVENT_NAME_LEAD_SQUARED_LEAD_UPDATED,
 		U.EVENT_NAME_MARKETO_LEAD_UPDATED,
 		projectID).Rows()
-	log.WithFields(logFields).WithField("time_taken", time.Since(startTimeForQuery).Milliseconds()).Info("Time taken for timeline query.")
 
 	if err != nil || rows.Err() != nil {
-		log.WithError(err).WithError(rows.Err()).Error("Failed to get events")
+		log.WithFields(logFields).WithError(err).WithError(rows.Err()).Error("Failed to get events")
 		return []model.UserActivity{}, float64(webSessionCount)
 	}
 
@@ -265,7 +261,6 @@ func (store *MemSQL) GetUserActivitiesAndSessionCount(projectID int64, identity 
 		log.WithError(err).WithField("project_id", projectID).Error("Error fetching display names for the project")
 	}
 
-	startTimeForProcessing := time.Now()
 	for rows.Next() {
 		var userActivity model.UserActivity
 		if err := db.ScanRows(rows, &userActivity); err != nil {
@@ -296,7 +291,6 @@ func (store *MemSQL) GetUserActivitiesAndSessionCount(projectID int64, identity 
 		}
 		userActivities = append(userActivities, userActivity)
 	}
-	log.WithFields(logFields).WithField("time_taken", time.Since(startTimeForProcessing).Milliseconds()).Info("Time taken for processing timeline query.")
 
 	return userActivities, float64(webSessionCount)
 }
@@ -458,24 +452,31 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string) (*
 		return nil, http.StatusInternalServerError
 	}
 
-	//Timeline Query
+	// Timeline Query
 	queryStr := []string{
 		`SELECT COALESCE(JSON_EXTRACT_STRING(properties, ?), customer_user_id, id) AS user_name, COALESCE(customer_user_id, id) AS user_id, ISNULL(customer_user_id) AS is_anonymous 
 		FROM users 
 		WHERE project_id = ? AND (`, groupUserString, ")",
-		"GROUP BY user_id ORDER BY updated_at DESC;",
+		"GROUP BY user_id ORDER BY updated_at DESC LIMIT 26;",
 	}
 	query := strings.Join(queryStr, " ")
+
+	// Get Timeline for <=25 users
 	rows, err := db.Raw(query, U.UP_NAME, projectID).Rows()
 	if err != nil || rows.Err() != nil {
 		log.WithError(err).WithError(rows.Err()).Error("Failed to get associated users")
 		return nil, http.StatusInternalServerError
 	}
-
+	defer U.CloseReadQuery(rows, nil)
 	var accountTimeline []model.UserTimeline
 	usersCount := 0
 	for rows.Next() {
 		usersCount += 1
+		// Error log for Count of Users
+		if usersCount == 26 {
+			log.Error("Number of users greater than 25")
+			break
+		}
 		var userTimeline model.UserTimeline
 		if err := db.ScanRows(rows, &userTimeline); err != nil {
 			log.WithError(err).Error("Error scanning associated users list")
