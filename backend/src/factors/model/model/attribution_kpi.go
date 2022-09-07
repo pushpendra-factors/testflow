@@ -54,7 +54,7 @@ func MergeTwoDataRowsKPI(row1 []interface{}, row2 []interface{}, keyIndex int, a
 	row1[keyIndex+3] = row1[keyIndex+3].(float64) + row2[keyIndex+3].(float64) // Spend.
 
 	for idx, _ := range conversionFunTypes {
-		nextConPosition := idx * 6
+		nextConPosition := idx * 4
 		row1[keyIndex+8+nextConPosition] = row1[keyIndex+8+nextConPosition].(float64) + row2[keyIndex+8+nextConPosition].(float64)    // Conversion.
 		row1[keyIndex+10+nextConPosition] = row1[keyIndex+10+nextConPosition].(float64) + row2[keyIndex+10+nextConPosition].(float64) // Compare Conversion.
 	}
@@ -78,7 +78,7 @@ func MergeTwoDataRowsKPI(row1 []interface{}, row2 []interface{}, keyIndex int, a
 	}
 
 	for idx, funcType := range conversionFunTypes {
-		nextConPosition := idx * 6
+		nextConPosition := idx * 4
 		// Normal conversion [8, 9] = [Conversion, CPC]
 		// Compare conversion [10, 11]  = [Conversion, CPC, Rate+nextConPosition]
 		if strings.ToLower(funcType) == "sum" {
@@ -125,7 +125,7 @@ func AddKPIKeyDataInMap(kpiQueryResult QueryResult, logCtx log.Entry, keyIdx int
 
 	for _, row := range kpiQueryResult.Rows {
 
-		logCtx.WithFields(log.Fields{"Row": row}).Info("KPI-Attribution KPI Row")
+		// logCtx.WithFields(log.Fields{"Row": row}).Info("KPI-Attribution KPI Row")
 
 		var kpiDetail KPIInfo
 

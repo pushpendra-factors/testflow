@@ -989,6 +989,16 @@ func GetConversionIndex(headers []string) int {
 	return -1
 }
 
+func GetConversionIndexKPI(headers []string) int {
+	for index, val := range headers {
+		// matches the first conversion
+		if strings.Contains(val, "ClickConversionRate") {
+			return index + 1
+		}
+	}
+	return -1
+}
+
 func GetLastKeyValueIndex(headers []string) int {
 	for index, val := range headers {
 		if val == "Impressions" {
@@ -1413,7 +1423,7 @@ func ProcessQueryKPI(query *AttributionQuery, attributionData *map[string]*Attri
 	logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "Result": result}).Info("KPI Attribution result")
 
 	// sort the rows by conversionEvent
-	conversionIndex := GetConversionIndex(result.Headers)
+	conversionIndex := GetConversionIndexKPI(result.Headers)
 	sort.Slice(result.Rows, func(i, j int) bool {
 		if len(result.Rows[i]) < conversionIndex || len(result.Rows[j]) < conversionIndex {
 			logCtx.WithFields(log.Fields{"row1": result.Rows[i], "row2": result.Rows[j]}).Info("final results are rows len mismatch. Ignoring row and continuing.")
@@ -1510,7 +1520,7 @@ func MergeTwoDataRows(row1 []interface{}, row2 []interface{}, keyIndex int, attr
 		row1[keyIndex+3] = row1[keyIndex+3].(float64) + row2[keyIndex+3].(float64) // Spend.
 
 		for idx, _ := range conversionFunTypes {
-			nextConPosition := idx * 6
+			nextConPosition := idx * 4
 			row1[keyIndex+8+nextConPosition] = row1[keyIndex+8+nextConPosition].(float64) + row2[keyIndex+8+nextConPosition].(float64)    // Conversion.
 			row1[keyIndex+10+nextConPosition] = row1[keyIndex+10+nextConPosition].(float64) + row2[keyIndex+10+nextConPosition].(float64) // Compare Conversion.
 		}
@@ -1534,7 +1544,7 @@ func MergeTwoDataRows(row1 []interface{}, row2 []interface{}, keyIndex int, attr
 		}
 
 		for idx, funcType := range conversionFunTypes {
-			nextConPosition := idx * 6
+			nextConPosition := idx * 4
 			// Normal conversion [8, 9] = [Conversion, CPC]
 			// Compare conversion [10, 11]  = [Conversion, CPC, Rate+nextConPosition]
 			if strings.ToLower(funcType) == "sum" {
