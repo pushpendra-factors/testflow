@@ -560,7 +560,7 @@ func ValidateKPIQueryMetricsForAnyEventType(kpiQueryMetrics []string, mapOfMetri
 func ValidateKPIQueryFiltersForAnyEventType(kpiQueryFilters []KPIFilter, configPropertiesData []map[string]string) bool {
 	mapOfPropertyName := make(map[string]struct{})
 	for _, propertyData := range configPropertiesData {
-		mapOfPropertyName[propertyData["name"]] = {}
+		mapOfPropertyName[propertyData["name"]] = struct{}{}
 	}
 	for _, filter := range kpiQueryFilters {
 		if _, exists := mapOfPropertyName[filter.PropertyName]; !exists {
@@ -574,7 +574,7 @@ func ValidateKPIQueryFiltersForAnyEventType(kpiQueryFilters []KPIFilter, configP
 func ValidateKPIQueryGroupByForAnyEventType(kpiQueryGroupBys []KPIGroupBy, configPropertiesData []map[string]string) bool {
 	mapOfPropertyName := make(map[string]struct{})
 	for _, propertyData := range configPropertiesData {
-		mapOfPropertyName[propertyData["name"]] = {}
+		mapOfPropertyName[propertyData["name"]] = struct{}{}
 	}
 	for _, groupBy := range kpiQueryGroupBys {
 		if _, exists := mapOfPropertyName[groupBy.PropertyName]; !exists {
