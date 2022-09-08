@@ -138,6 +138,16 @@ func (dd *DiskDriver) GetModelChannelFilePathAndName(channel string, projectId i
 	return path, channel + ".txt"
 }
 
+func (dd *DiskDriver) GetModelUsersFilePathAndName(dateField string, projectId int64, startTimestamp int64, modelType string) (string, string) {
+	path := dd.GetModelUsersDir(dateField, projectId, startTimestamp, modelType)
+	return path, dateField + ".txt"
+}
+
+func (dd *DiskDriver) GetModelUsersDir(dateField string, projectId int64, startTimestamp int64, modelType string) string {
+	path := dd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
+	return fmt.Sprintf("%susers/", path)
+}
+
 func (dd *DiskDriver) GetModelEventsBucketingFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string) {
 	path := dd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
 	return path, "events_bucketed.txt"

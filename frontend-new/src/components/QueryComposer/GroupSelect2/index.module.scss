@@ -8,7 +8,7 @@
     flex-direction: column;
 
     &__content {
-      overflow: scroll;
+      overflow: auto;
       scrollbar-width: none;
     }
 
@@ -85,4 +85,8 @@
     display: block;
     z-index: 10;
   }
+}
+
+.dropdown__filter_select__content::-webkit-scrollbar{
+  display: none;
 }

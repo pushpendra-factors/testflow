@@ -4,13 +4,12 @@ const (
 	FacebookDisplayCategory = "facebook_metrics"
 )
 
-func GetKPIConfigsForFacebook() map[string]interface{} {
-	config := map[string]interface{}{
-		"category":         ChannelCategory,
-		"display_category": FacebookDisplayCategory,
-		"metrics":          SelectableMetricsForFacebook,
-	}
-	allChannelMetrics := GetMetricsForDisplayCategory(AllChannelsDisplayCategory)
-	config["metrics"] = append(allChannelMetrics, GetMetricsForDisplayCategory(FacebookDisplayCategory)...)
-	return config
+var KpiFacebookConfig = map[string]interface{}{
+	"category":         ChannelCategory,
+	"display_category": FacebookDisplayCategory,
+}
+
+func GetKPIMetricsForFacebook() []map[string]string {
+	allChannelMetrics := GetStaticallyDefinedMetricsForDisplayCategory(AllChannelsDisplayCategory)
+	return append(allChannelMetrics, GetStaticallyDefinedMetricsForDisplayCategory(FacebookDisplayCategory)...)
 }

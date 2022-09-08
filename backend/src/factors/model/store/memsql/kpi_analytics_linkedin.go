@@ -9,7 +9,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (store *MemSQL) GetKPIConfigsForLinkedin(projectID int64, reqID string) (map[string]interface{}, int) {
+func (store *MemSQL) GetKPIConfigsForLinkedin(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"req_id":     reqID,
@@ -24,8 +24,13 @@ func (store *MemSQL) GetKPIConfigsForLinkedin(projectID int64, reqID string) (ma
 		log.WithField("projectId", projectIDInString).Warn("Linkedin integration not available.")
 		return nil, http.StatusOK
 	}
-	config := model.GetKPIConfigsForLinkedin()
+	config := model.KpiLinkedinConfig
 	linkedinObjectsAndProperties := store.buildObjectAndPropertiesForLinkedin(projectID, model.ObjectsForLinkedin)
 	config["properties"] = model.TransformChannelsPropertiesConfigToKpiPropertiesConfig(linkedinObjectsAndProperties)
+
+	rMetrics := model.GetKPIMetricsForLinkedin()
+	rMetrics = append(rMetrics, store.GetDerivedKPIMetricsByProjectIdAndDisplayCategory(projectID, model.LinkedinDisplayCategory, includeDerivedKPIs)...)
+
+	config["metrics"] = rMetrics
 	return config, http.StatusOK
 }

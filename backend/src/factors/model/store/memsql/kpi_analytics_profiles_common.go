@@ -72,7 +72,7 @@ func (store *MemSQL) wrappedExecuteForResultProfile(projectID int64, profileQuer
 	}
 
 	var transformation model.CustomMetricTransformation
-	customMetric, err, statusCode := store.GetCustomMetricsByName(projectID, kpiMetric)
+	customMetric, err, statusCode := store.GetKpiRelatedCustomMetricsByName(projectID, kpiMetric)
 	if statusCode != http.StatusFound {
 		finalResult.Headers = append(finalResult.Headers, model.AliasError)
 		return finalResult

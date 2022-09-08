@@ -7,13 +7,13 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (store *MemSQL) GetKPIConfigsForCustomAds(projectID int64, reqID string) ([]map[string]interface{}, int) {
+func (store *MemSQL) GetKPIConfigsForCustomAds(projectID int64, reqID string, includeDerivedKPIs bool) ([]map[string]interface{}, int) {
 	isCustomAdsAvailable := store.IsCustomAdsAvailable(projectID)
 	if !isCustomAdsAvailable {
 		log.WithField("projectId", projectID).Warn("custom ads integration not available.")
 		return nil, http.StatusOK
 	}
-	configs := store.GetKPIConfigsForCustomAdsFromDB(projectID)
+	configs := store.GetKPIConfigsForCustomAdsFromDB(projectID, includeDerivedKPIs)
 	for _, config := range configs {
 		CustomadsObjectsAndProperties := store.buildObjectAndPropertiesForCustomAds(projectID, config["display_category"].(string), model.ObjectsForCustomAds)
 		properties := model.TransformChannelsPropertiesConfigToKpiPropertiesConfig(CustomadsObjectsAndProperties)
@@ -22,7 +22,7 @@ func (store *MemSQL) GetKPIConfigsForCustomAds(projectID int64, reqID string) ([
 	return configs, http.StatusOK
 }
 
-func (store *MemSQL) GetKPIConfigsForCustomAdsFromDB(projectID int64) []map[string]interface{} {
+func (store *MemSQL) GetKPIConfigsForCustomAdsFromDB(projectID int64, includeDerivedKPIs bool) []map[string]interface{} {
 	configs := make([]map[string]interface{}, 0)
 	adsImportList, _ := store.GetCustomAdsSourcesByProject(projectID)
 	for _, source := range adsImportList {
@@ -30,8 +30,12 @@ func (store *MemSQL) GetKPIConfigsForCustomAdsFromDB(projectID int64) []map[stri
 			"category":         model.CustomChannelCategory,
 			"display_category": source,
 		}
-		allChannelMetrics := model.GetMetricsForDisplayCategory(model.AllChannelsDisplayCategory)
-		config["metrics"] = append(allChannelMetrics, model.GetMetricsForDisplayCategory(model.CustomAdsDisplayCategory)...)
+		allChannelMetrics := model.GetStaticallyDefinedMetricsForDisplayCategory(model.AllChannelsDisplayCategory)
+
+		rMetrics := append(allChannelMetrics, model.GetStaticallyDefinedMetricsForDisplayCategory(model.CustomAdsDisplayCategory)...)
+		rMetrics = append(rMetrics, store.GetDerivedKPIMetricsByProjectIdAndDisplayCategory(projectID, source, includeDerivedKPIs)...)
+
+		config["metrics"] = rMetrics
 		configs = append(configs, config)
 	}
 	return configs

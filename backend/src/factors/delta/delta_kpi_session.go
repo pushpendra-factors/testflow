@@ -6,6 +6,7 @@ import (
 	M "factors/model/model"
 	P "factors/pattern"
 	U "factors/util"
+	"fmt"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -27,23 +28,22 @@ var sessionMetricToFunc = map[string]func(queryEvent string, scanner *bufio.Scan
 	M.EngagementRate:         GetSessionEngagementRate,
 }
 
-func GetSessionMetrics(metricNames []string, queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*WithinPeriodInsightsKpi, error) {
+func GetSessionMetrics(metric string, queryEvent string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*WithinPeriodInsightsKpi, error) {
 	var wpi WithinPeriodInsightsKpi
-	for i, metric := range metricNames {
-		if i == 1 {
-			break
-		}
-		if _, ok := sessionMetricToFunc[metric]; !ok {
-			continue
-		}
-		if info, scale, err := sessionMetricToFunc[metric](queryEvent, scanner, propFilter, propsToEval); err != nil {
-			log.WithError(err).Error("error getSessionMetrics")
-			return nil, err
-		} else {
-			wpi.MetricInfo = info
-			wpi.ScaleInfo = scale
-		}
+
+	if _, ok := sessionMetricToFunc[metric]; !ok {
+		err := fmt.Errorf("unknown session metric: %s", metric)
+		log.WithError(err).Error("error GetSessionMetrics")
+		return &wpi, err
 	}
+	if info, scale, err := sessionMetricToFunc[metric](queryEvent, scanner, propFilter, propsToEval); err != nil {
+		log.WithError(err).Error("error GetSessionMetrics")
+		return nil, err
+	} else {
+		wpi.MetricInfo = info
+		wpi.ScaleInfo = scale
+	}
+
 	return &wpi, nil
 }
 

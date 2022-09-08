@@ -58,10 +58,20 @@ func GetKPIConfigHandler(c *gin.Context) (interface{}, int, string, string, bool
 	if projectID == 0 {
 		return nil, http.StatusBadRequest, INVALID_INPUT, "", true
 	}
+
+	includeDerivedKPIsString := c.Query("include_derived_kpis")
+	log.WithField("includeDerivedKPIsString", includeDerivedKPIsString).Warn("QueryParam")
+	includeDerivedKPIs := false
+
+	if includeDerivedKPIsString != "" {
+		includeDerivedKPIs, _ = strconv.ParseBool(includeDerivedKPIsString)
+	}
+
 	storeSelected := store.GetStore()
-	configFunctions := []func(int64, string) (map[string]interface{}, int){
+	resultantResultConfigFunctions := make([]func(int64, string, bool) (map[string]interface{}, int), 0)
+	resultantConfigs := make([]map[string]interface{}, 0)
+	configForStaticSubSectionsFunctions := []func(int64, string, bool) (map[string]interface{}, int){
 		storeSelected.GetKPIConfigsForWebsiteSessions,
-		storeSelected.GetKPIConfigsForPageViews,
 		storeSelected.GetKPIConfigsForFormSubmissions,
 		storeSelected.GetKPIConfigsForHubspotContacts,
 		storeSelected.GetKPIConfigsForHubspotCompanies,
@@ -74,29 +84,47 @@ func GetKPIConfigHandler(c *gin.Context) (interface{}, int, string, string, bool
 		storeSelected.GetKPIConfigsForAllChannels, storeSelected.GetKPIConfigsForBingAds, storeSelected.GetKPIConfigsForMarketoLeads,
 		storeSelected.GetKPIConfigsForLeadSquaredLeads,
 	}
-	configFunctionsForCustomAds := []func(int64, string) ([]map[string]interface{}, int){
+	configFunctionsForCustomAds := []func(int64, string, bool) ([]map[string]interface{}, int){
 		storeSelected.GetKPIConfigsForCustomAds,
 	}
-	resultantResultConfigs := make([]map[string]interface{}, 0)
-	for _, configFunction := range configFunctions {
-		currentConfig, errCode := configFunction(projectID, reqID)
+
+	resultantResultConfigFunctions = append(resultantResultConfigFunctions, configForStaticSubSectionsFunctions...)
+
+	if includeDerivedKPIs == false {
+		resultantResultConfigFunctions = append(resultantResultConfigFunctions, storeSelected.GetKPIConfigsForPageViews)
+	}
+
+	for _, configFunction := range resultantResultConfigFunctions {
+		currentConfig, errCode := configFunction(projectID, reqID, includeDerivedKPIs)
 		if errCode != http.StatusOK {
 			return nil, http.StatusInternalServerError, PROCESSING_FAILED, "Error during fetch of KPI Config Data.", true
 		}
 		if currentConfig != nil {
-			resultantResultConfigs = append(resultantResultConfigs, currentConfig)
+			resultantConfigs = append(resultantConfigs, currentConfig)
 		}
 	}
+
 	for _, configFunction := range configFunctionsForCustomAds {
-		currentConfig, errCode := configFunction(projectID, reqID)
+		currentConfigs, errCode := configFunction(projectID, reqID, includeDerivedKPIs)
 		if errCode != http.StatusOK {
 			return nil, http.StatusInternalServerError, PROCESSING_FAILED, "Error during fetch of KPI Custom Config Data.", true
 		}
-		if len(currentConfig) > 0 {
-			resultantResultConfigs = append(resultantResultConfigs, currentConfig...)
+		if len(currentConfigs) > 0 {
+			resultantConfigs = append(resultantConfigs, currentConfigs...)
 		}
 	}
-	return resultantResultConfigs, http.StatusOK, "", "", false
+
+	if includeDerivedKPIs == true {
+		currentConfig, errCode := storeSelected.GetKPIConfigsForOthers(projectID, model.OthersDisplayCategory, includeDerivedKPIs)
+		if errCode != http.StatusOK {
+			return nil, http.StatusInternalServerError, PROCESSING_FAILED, "Error during fetch of KPI Custom Config Data.", true
+		}
+		if currentConfig != nil {
+			resultantConfigs = append(resultantConfigs, currentConfig)
+		}
+	}
+
+	return resultantConfigs, http.StatusOK, "", "", false
 }
 
 // GetKPIFilterValuesHandler godoc

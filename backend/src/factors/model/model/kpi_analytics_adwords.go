@@ -5,14 +5,14 @@ const (
 	GoogleAdsDisplayCategory = "google_ads_metrics"
 )
 
-func GetKPIConfigsForAdwords() map[string]interface{} {
-	config := map[string]interface{}{
-		"category":         ChannelCategory,
-		"display_category": GoogleAdsDisplayCategory,
-	}
-	allChannelMetrics := GetMetricsForDisplayCategory(AllChannelsDisplayCategory)
-	config["metrics"] = append(allChannelMetrics, GetMetricsForDisplayCategory(GoogleAdsDisplayCategory)...)
-	return config
+var KpiAdwordsConfig = map[string]interface{}{
+	"category":         ChannelCategory,
+	"display_category": GoogleAdsDisplayCategory,
+}
+
+func GetKPIMetricsForAdwords() []map[string]string {
+	allChannelMetrics := GetStaticallyDefinedMetricsForDisplayCategory(AllChannelsDisplayCategory)
+	return append(allChannelMetrics, GetStaticallyDefinedMetricsForDisplayCategory(GoogleAdsDisplayCategory)...)
 }
 
 // TODO: Move to constants declared in model.

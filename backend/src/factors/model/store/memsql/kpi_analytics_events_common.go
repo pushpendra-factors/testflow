@@ -65,7 +65,6 @@ func (store *MemSQL) transformToAndExecuteEventAnalyticsQueries(projectID int64,
 	return queryResults, http.StatusOK
 }
 
-// To Change.
 func (store *MemSQL) ValidateKPIQuery(projectID int64, kpiQuery model.KPIQuery) bool {
 	if kpiQuery.DisplayCategory == model.WebsiteSessionDisplayCategory {
 		return store.ValidateKPISessions(projectID, kpiQuery)
@@ -73,16 +72,6 @@ func (store *MemSQL) ValidateKPIQuery(projectID int64, kpiQuery model.KPIQuery) 
 		return model.ValidateKPIPageView(kpiQuery)
 	} else if kpiQuery.DisplayCategory == model.FormSubmissionsDisplayCategory {
 		return model.ValidateKPIFormSubmissions(kpiQuery)
-		// } else if kpiQuery.DisplayCategory == HubspotContactsDisplayCategory {
-		// 	return ValidateKPIHubspotContacts(kpiQuery)
-		// } else if kpiQuery.DisplayCategory == HubspotCompaniesDisplayCategory {
-		// 	return ValidateKPIHubspotCompanies(kpiQuery)
-		// } else if kpiQuery.DisplayCategory == SalesforceUsersDisplayCategory {
-		// 	return ValidateKPISalesforceUsers(kpiQuery)
-		// } else if kpiQuery.DisplayCategory == SalesforceAccountsDisplayCategory {
-		// 	return ValidateKPISalesforceAccounts(kpiQuery)
-		// } else if kpiQuery.DisplayCategory == SalesforceOpportunitiesDisplayCategory {
-		// 	return ValidateKPISalesforceOpportunities(kpiQuery)
 	} else {
 		return false
 	}
@@ -124,6 +113,7 @@ func (store *MemSQL) wrappedExecuteForResult(projectID int64, query model.Query,
 	return finalResult
 }
 
+// Kark current.
 func (store *MemSQL) executeForResults(projectID int64, queries []model.Query, kpiQuery model.KPIQuery,
 	transformations []model.TransformQueryi, enableFilterOpt bool) model.QueryResult {
 	logFields := log.Fields{
@@ -165,7 +155,11 @@ func (store *MemSQL) executeForResults(projectID int64, queries []model.Query, k
 		}
 		hasAnyGroupBy := len(queries[0].GroupByProperties) != 0
 		results = model.TransformResultsToKPIResults(results, hasGroupByTimestamp, hasAnyGroupBy, displayCategory, kpiQuery.Timezone)
-		finalResult = model.HandlingEventResultsByApplyingOperations(results, transformations, kpiQuery.Timezone, isTimezoneEnabled)
+		operations := make([]string, 0)
+		for _, transformation := range transformations {
+			operations = append(operations, transformation.Metrics.Operator)
+		}
+		finalResult = model.HandlingEventResultsByApplyingOperations(results, operations, kpiQuery.Timezone, isTimezoneEnabled)
 	}
 	return finalResult
 }

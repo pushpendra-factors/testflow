@@ -103,7 +103,7 @@ export const DASHBOARD_WIDGET_ATTRIBUTION_DUAL_TOUCHPOINT_BAR_CHART_HEIGHT = 225
 
 export const BAR_CHART_XAXIS_TICK_LENGTH = {
   0: 10,
-  1: 15,
+  1: 11,
   2: 5
 };
 
@@ -139,7 +139,7 @@ export const charts_legend_length = {
 
 export const high_charts_default_spacing = [20, 10, 15, 10];
 export const HIGH_CHARTS_BARLINE_DEFAULT_SPACING = [20, 0, 15, 0];
-export const HIGH_CHARTS_SCATTER_PLOT_DEFAULT_SPACING = [20, 0, 15, 0];
+export const HIGH_CHARTS_SCATTER_PLOT_DEFAULT_SPACING = [20, 10, 15, 10];
 
 export const presentationObj = {
   pb: CHART_TYPE_BARCHART,

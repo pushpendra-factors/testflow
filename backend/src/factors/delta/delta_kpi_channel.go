@@ -146,7 +146,7 @@ func getQueryLevel(propFilter []M.KPIFilter) (int, error) {
 	return level, nil
 }
 
-func GetCampaignMetricsInfo(metricNames []string, channel string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*WithinPeriodInsightsKpi, error) {
+func GetCampaignMetricsInfo(metric string, channel string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string) (*WithinPeriodInsightsKpi, error) {
 	var wpi WithinPeriodInsightsKpi
 	wpi.MetricInfo = &MetricInfo{}
 	wpi.ScaleInfo = &MetricInfo{}
@@ -180,39 +180,36 @@ func GetCampaignMetricsInfo(metricNames []string, channel string, scanner *bufio
 	docTypeAlias := documentTypeAlias[channel]
 	requiredDocTypes := *requiredDocumentTypes[channel]
 
-	for i, metric := range metricNames {
-		if i == 1 {
-			break
-		}
-		if channel == M.ADWORDS {
-			if metricInt, ok := M.AdwordsExtToInternal[metric]; ok {
-				metric = metricInt
-			}
-		}
-		var GetCampaignMetric func(metric string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string, queryLevel int, metricCalcInfo MetricCalculationInfo, docTypeAlias map[string]int, requiredDocTypes []int, infoMap map[string]string) (*MetricInfo, *MetricInfo, error)
-		if info, ok := metricToCalcinfo[metric]; ok {
-			if info.Operation == "sum" {
-				GetCampaignMetric = GetCampaignMetricSimple
-			} else {
-				GetCampaignMetric = GetCampaignMetricComplex
-			}
-		} else {
-			log.Error("error metric calculation info not available for " + metric)
-			continue
-		}
-		if info, scale, err := GetCampaignMetric(metric, scanner, newPropFilter, propsToEvalPerQuery, queryLevel, metricToCalcinfo[metric], docTypeAlias, requiredDocTypes, infoMap); err != nil {
-			log.WithError(err).Error("error GetCampaignMetric for kpi " + metric)
-			return nil, err
-		} else {
-			for key, valMap := range info.Features {
-				newKey, _ := getPropertyFilterName[channel](key)
-				delete(info.Features, key)
-				info.Features[newKey] = valMap
-			}
-			wpi.MetricInfo = info
-			wpi.ScaleInfo = scale
+	if channel == M.ADWORDS {
+		if metricInt, ok := M.AdwordsExtToInternal[metric]; ok {
+			metric = metricInt
 		}
 	}
+	var GetCampaignMetric func(metric string, scanner *bufio.Scanner, propFilter []M.KPIFilter, propsToEval []string, queryLevel int, metricCalcInfo MetricCalculationInfo, docTypeAlias map[string]int, requiredDocTypes []int, infoMap map[string]string) (*MetricInfo, *MetricInfo, error)
+	if info, ok := metricToCalcinfo[metric]; ok {
+		if info.Operation == "sum" {
+			GetCampaignMetric = GetCampaignMetricSimple
+		} else {
+			GetCampaignMetric = GetCampaignMetricComplex
+		}
+	} else {
+		err := fmt.Errorf("error metric calculation info not available for %s", metric)
+		log.WithError(err).Error("error GetCampaignMetricsInfo")
+		return nil, err
+	}
+	if info, scale, err := GetCampaignMetric(metric, scanner, newPropFilter, propsToEvalPerQuery, queryLevel, metricToCalcinfo[metric], docTypeAlias, requiredDocTypes, infoMap); err != nil {
+		log.WithError(err).Error("error GetCampaignMetricsInfo for kpi " + metric)
+		return nil, err
+	} else {
+		for key, valMap := range info.Features {
+			newKey, _ := getPropertyFilterName[channel](key)
+			delete(info.Features, key)
+			info.Features[newKey] = valMap
+		}
+		wpi.MetricInfo = info
+		wpi.ScaleInfo = scale
+	}
+
 	return &wpi, nil
 }
 
@@ -611,7 +608,7 @@ func performOperation(operation string, val1 float64, val2 float64) (float64, er
 	return reqVal, nil
 }
 
-func GetAllChannelMetricsInfo(metricNames []string, propFilter []M.KPIFilter, propsToEval []string, projectId int64, periodCode Period, cloudManager *filestore.FileManager,
+func GetAllChannelMetricsInfo(metric string, propFilter []M.KPIFilter, propsToEval []string, projectId int64, periodCode Period, cloudManager *filestore.FileManager,
 	diskManager *serviceDisk.DiskDriver, insightGranularity string) (*WithinPeriodInsightsKpi, error) {
 	var wpi WithinPeriodInsightsKpi
 	wpi.MetricInfo = &MetricInfo{}
@@ -653,7 +650,7 @@ func GetAllChannelMetricsInfo(metricNames []string, propFilter []M.KPIFilter, pr
 			newName := strings.Join([]string{objType, name}, "#")
 			newPropsToEval = append(newPropsToEval, newName)
 		}
-		wpiTmp, err := GetCampaignMetricsInfo(metricNames, channel, scanner, newPropFilter, newPropsToEval)
+		wpiTmp, err := GetCampaignMetricsInfo(metric, channel, scanner, newPropFilter, newPropsToEval)
 		if err != nil {
 			log.WithError(err).Error("error GetCampaignMetricInfo for all channel kpi for source " + channel)
 			continue

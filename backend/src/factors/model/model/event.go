@@ -75,6 +75,7 @@ const FacebookPullLimit = 100000000
 const BingPullLimit = 100000000
 const LinkedInPullLimit = 100000000
 const GoggleOrganicPullLimit = 100000000
+const UsersPullLimit = 100000000
 
 func SetCacheUserLastEvent(projectId int64, userId string, cacheEvent *CacheEvent) error {
 	logCtx := log.WithField("project_id", projectId).WithField("user_id", userId)

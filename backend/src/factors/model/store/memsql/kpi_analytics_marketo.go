@@ -26,16 +26,16 @@ func (store *MemSQL) GetPropertiesForMarketo(projectID int64, reqID string) []ma
 	return model.TransformCRMPropertiesToKPIConfigProperties(properties, propertiesToDisplayNames, "$marketo")
 }
 
-func (store *MemSQL) GetKPIConfigsForMarketoLeads(projectID int64, reqID string) (map[string]interface{}, int) {
+func (store *MemSQL) GetKPIConfigsForMarketoLeads(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"req_id":     reqID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	return store.GetKPIConfigsForMarketo(projectID, reqID, model.MarketoLeadsDisplayCategory)
+	return store.GetKPIConfigsForMarketo(projectID, reqID, model.MarketoLeadsDisplayCategory, includeDerivedKPIs)
 }
 
-func (store *MemSQL) GetKPIConfigsForMarketo(projectID int64, reqID string, displayCategory string) (map[string]interface{}, int) {
+func (store *MemSQL) GetKPIConfigsForMarketo(projectID int64, reqID string, displayCategory string, includeDerivedKPIs bool) (map[string]interface{}, int) {
 	logFields := log.Fields{
 		"project_id":       projectID,
 		"req_id":           reqID,
@@ -48,10 +48,10 @@ func (store *MemSQL) GetKPIConfigsForMarketo(projectID int64, reqID string, disp
 		return nil, http.StatusOK
 	}
 
-	return store.getConfigForSpecificMarketoCategory(projectID, reqID, displayCategory), http.StatusOK
+	return store.getConfigForSpecificMarketoCategory(projectID, reqID, displayCategory, includeDerivedKPIs), http.StatusOK
 }
 
-func (store *MemSQL) getConfigForSpecificMarketoCategory(projectID int64, reqID string, displayCategory string) map[string]interface{} {
+func (store *MemSQL) getConfigForSpecificMarketoCategory(projectID int64, reqID string, displayCategory string, includeDerivedKPIs bool) map[string]interface{} {
 	logFields := log.Fields{
 		"project_id":       projectID,
 		"req_id":           reqID,
@@ -59,20 +59,12 @@ func (store *MemSQL) getConfigForSpecificMarketoCategory(projectID int64, reqID 
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
-	logCtx := log.WithField("req_id", reqID).WithField("project_id", projectID)
-	customMetrics, err, statusCode := store.GetCustomMetricByProjectIdAndObjectType(projectID, model.ProfileQueryType, displayCategory)
-	if statusCode != http.StatusFound {
-		logCtx.WithField("err", err).WithField("displayCategory", displayCategory).Warn("Failed to get the custom Metric by object type")
-	}
-	customMetricNames := make([]string, 0)
-	for _, customMetric := range customMetrics {
-		customMetricNames = append(customMetricNames, customMetric.Name)
-	}
+	rMetrics := store.GetCustomMetricAndDerivedMetricByProjectIdAndDisplayCategory(projectID, displayCategory, includeDerivedKPIs)
 
 	return map[string]interface{}{
 		"category":         model.ProfileCategory,
 		"display_category": displayCategory,
-		"metrics":          customMetricNames,
+		"metrics":          rMetrics,
 		"properties":       store.GetPropertiesForMarketo(projectID, reqID),
 	}
 }
