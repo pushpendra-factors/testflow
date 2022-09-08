@@ -25,7 +25,7 @@ type CounterUserFormat struct {
 func GetCustomMetricsInfo(metric string, propFilter []M.KPIFilter, propsToEval []string, projectId int64, periodCode Period, cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, insightGranularity string) (*WithinPeriodInsightsKpi, error) {
 	var wpi WithinPeriodInsightsKpi
 	var transformation M.CustomMetricTransformation
-	customMetric, errStr, getStatus := store.GetStore().GetCustomMetricsByName(projectId, metric)
+	customMetric, errStr, getStatus := store.GetStore().GetKpiRelatedCustomMetricsByName(projectId, metric)
 	if getStatus != http.StatusFound {
 		log.WithField("error", errStr).Error("Get custom metrics failed.")
 		return nil, fmt.Errorf("%s", errStr)
@@ -155,7 +155,7 @@ func getPropKeysToEvalForCustomMetric(metric string, projectId int64, periodCode
 	var datefield string
 	{
 		var transformation M.CustomMetricTransformation
-		customMetric, errStr, getStatus := store.GetStore().GetCustomMetricsByName(projectId, metric)
+		customMetric, errStr, getStatus := store.GetStore().GetKpiRelatedCustomMetricsByName(projectId, metric)
 		if getStatus != http.StatusFound {
 			log.WithField("error", errStr).Error("Get custom metrics failed.")
 			return nil, fmt.Errorf("%s", errStr)
