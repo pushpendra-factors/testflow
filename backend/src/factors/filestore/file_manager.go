@@ -39,4 +39,7 @@ type FileManager interface {
 
 	GetAdsDataDir(projectId int64) string
 	GetAdsDataFilePathAndName(projectId int64, report string, chunkNo int) (string, string)
+
+	GetWIPropertiesDir(projectId int64) string
+	GetWIPropertiesPathAndName(projectId int64) (string, string)
 }

@@ -23,6 +23,7 @@ type WeeklyInsightsParams struct {
 	InsightsType    string    `json:"insights_type"`
 	NumberOfRecords int       `json:"number_of_records"`
 	KpiIndex        int       `json:"kpi_index"`
+	Version         int       `json:"version"`
 }
 
 func GetWeeklyInsightsParams(c *gin.Context) (*WeeklyInsightsParams, error) {
@@ -79,6 +80,13 @@ func GetWeeklyInsightsParams(c *gin.Context) (*WeeklyInsightsParams, error) {
 	} else {
 		kpi_index = 1 // default
 	}
+	version := c.Query("version")
+	var insights_version int64
+	if version != "" {
+		insights_version, _ = strconv.ParseInt(n, 10, 64)
+	} else {
+		insights_version = 1 // default
+	}
 	params.ProjectID = projectID
 	params.QueryId = QueryId
 	params.BaseStartTime = BaseStartTime
@@ -86,6 +94,7 @@ func GetWeeklyInsightsParams(c *gin.Context) (*WeeklyInsightsParams, error) {
 	params.InsightsType = insightsType
 	params.NumberOfRecords = int(NumberOfRecords)
 	params.KpiIndex = int(kpi_index)
+	params.Version = int(insights_version)
 
 	return &params, nil
 
@@ -110,7 +119,7 @@ func GetWeeklyInsightsHandler(c *gin.Context) (interface{}, int, string, string,
 	if params.ProjectID == 0 || params.QueryId == 0 {
 		return nil, http.StatusBadRequest, INVALID_INPUT, "invalid projectId or QueryId", true
 	}
-	response, err := delta.GetWeeklyInsights(params.ProjectID, agentUUID, params.QueryId, &params.BaseStartTime, &params.CompStartTime, params.InsightsType, params.NumberOfRecords, params.KpiIndex)
+	response, err := delta.GetWeeklyInsights(params.ProjectID, agentUUID, params.QueryId, &params.BaseStartTime, &params.CompStartTime, params.InsightsType, params.NumberOfRecords, params.KpiIndex, params.Version)
 	if err != nil {
 		log.Error(err)
 		return err, http.StatusInternalServerError, "", "", true

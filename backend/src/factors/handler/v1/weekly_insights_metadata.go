@@ -62,7 +62,7 @@ func GetWeeklyInsightsMetadata(c *gin.Context) (interface{}, int, string, string
 	}
 
 	for _, unit := range dashboardUnits {
-		_, _, _, enabled, _, _ := delta.IsDashboardUnitWIEnabled(unit)
+		_, _, _, enabled, _, _, _ := delta.IsDashboardUnitWIEnabled(unit)
 		weeklyInsightsByDashboard[unit.ID] = WeeklyInsights{
 			Enabled:       enabled,
 			InsightsRange: make(map[int64][]int64),

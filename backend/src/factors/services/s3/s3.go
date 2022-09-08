@@ -210,3 +210,12 @@ func (sd *S3Driver) GetAdsDataFilePathAndName(projectId int64, report string, ch
 	path := sd.GetAdsDataDir(projectId)
 	return path, fmt.Sprintf("%v-%v-%v.csv", report, projectId, chunkNo)
 }
+
+func (sd *S3Driver) GetWIPropertiesPathAndName(projectId int64) (string, string) {
+	path := sd.GetWIPropertiesDir(projectId)
+	return path, "properties.txt"
+}
+
+func (sd *S3Driver) GetWIPropertiesDir(projectId int64) string {
+	return fmt.Sprintf("projects/%v/weeklyinsights/", projectId)
+}
