@@ -14,6 +14,7 @@ import {
   Collapse,
   notification,
 } from 'antd';
+import styles from './index.module.scss';
 import { Text, SVG } from 'factorsComponents';
 import { MoreOutlined } from '@ant-design/icons';
 import {
@@ -30,8 +31,13 @@ import {
   reverseOperatorMap,
   reverseDateOperatorMap,
   convertDateTimeObjectValuesToMilliSeconds,
-} from '../../../../Views/CoreQuery/utils';
+  getKPIQuery,
+  DefaultDateRangeFormat,
+} from './utils';
 import { FILTER_TYPES } from '../../../CoreQuery/constants';
+import QueryBlock from './QueryBlock';
+import { deleteGroupByForEvent } from '../../../../reducers/coreQuery/middleware';
+import { INITIAL_SESSION_ANALYTICS_SEQ, QUERY_OPTIONS_DEFAULT_VALUE } from '../../../../utils/constants';
 
 const { Panel } = Collapse;
 const { Option, OptGroup } = Select; 
@@ -54,6 +60,7 @@ const CustomKPI = ({
   const [errorInfo, seterrorInfo] = useState(null);
   const [loading, setLoading] = useState(false);
   const [selKPICategory, setKPICategory] = useState(false);
+  const [selKPIType, setKPIType] = useState('default');
   const [KPIPropertyDetails, setKPIPropertyDetails] = useState({});
   const [filterDDValues, setFilterDDValues] = useState();
   const [filterValues, setFilterValues] = useState([]);
@@ -63,7 +70,20 @@ const CustomKPI = ({
 
   const [form] = Form.useForm();
 
-  const [queryOptions, setQueryOptions] = useState({});
+  // const [queryOptions, setQueryOptions] = useState({});
+
+    // KPI SELECTION
+    const [queryType, setQueryType] = useState('kpi');
+    const [queries, setQueries] = useState([]);
+    const [selectedMainCategory, setSelectedMainCategory] = useState(false);
+    const [KPIConfigProps, setKPIConfigProps] = useState([]);
+    const [queryOptions, setQueryOptions] = useState({
+      ...QUERY_OPTIONS_DEFAULT_VALUE,
+      session_analytics_seq: INITIAL_SESSION_ANALYTICS_SEQ,
+      date_range: { ...DefaultDateRangeFormat },
+    });
+
+    const { groupBy } = useSelector((state) => state.coreQuery);
 
  
 
@@ -124,13 +144,11 @@ const matchEventName = (item) => {
       // width: 200,
     },
     {
-      title: 'Aggregate Function',
-      dataIndex: 'transformations',
-      key: 'transformations',
+      title: 'Type',
+      dataIndex: 'type',
+      key: 'type',
       render: (item) => (
-        <Text type={'title'} level={7} truncate={true} charLimit={35}>{`${
-          item.agFn
-        }(${item.agPr ? matchEventName(item.agPr) : item.daFie ? matchEventName(item.daFie) : ''})`}</Text>
+        <Text type={'title'} level={7} truncate={true} charLimit={35}>{item}</Text>
       ),
       width: 'auto',
     },
@@ -234,21 +252,116 @@ const matchEventName = (item) => {
     return filterProps;
   };
 
+  const queryChange = (newEvent, index, changeType = 'add', flag = null) => {
+    const queryupdated = [...queries];
+    if (queryupdated[index]) {
+      if (changeType === 'add') {
+        if (JSON.stringify(queryupdated[index]) !== JSON.stringify(newEvent)) {
+          deleteGroupByForEvent(newEvent, index);
+        }
+        queryupdated[index] = newEvent;
+      } else {
+        if (changeType === 'filters_updated') {
+          // dont remove group by if filter is changed
+          queryupdated[index] = newEvent;
+        } else {
+          deleteGroupByForEvent(newEvent, index);
+          queryupdated.splice(index, 1);
+        }
+      }
+    } else {
+      if (flag) {
+        Object.assign(newEvent, { pageViewVal: flag });
+      }
+      queryupdated.push(newEvent);
+    }
+    setQueries(queryupdated);
+  };
+
+  useEffect(() => {
+    setSelectedMainCategory(queries[0]);
+  }, [queries]);
+
+  const handleEventChange = (...props) => {
+    queryChange(...props);
+  };
+
+  const queryList = () => {
+    const blockList = [];
+
+    queries.forEach((event, index) => {
+      blockList.push(
+        <div key={index} className={styles.composer_body__query_block}>
+          <QueryBlock
+            index={index + 1}
+            queryType={queryType}
+            event={event}
+            queries={queries}
+            eventChange={handleEventChange}
+            selectedMainCategory={selectedMainCategory}
+            setSelectedMainCategory={setSelectedMainCategory}
+            KPIConfigProps={KPIConfigProps}
+          />
+        </div>
+      );
+    });
+
+    if (queries.length < 6) {
+      blockList.push(
+        <div key={'init'} className={styles.composer_body__query_block}>
+          <QueryBlock
+            queryType={queryType}
+            index={queries.length + 1}
+            queries={queries}
+            eventChange={handleEventChange}
+            groupBy={queryOptions.groupBy}
+            selectedMainCategory={selectedMainCategory}
+            setSelectedMainCategory={setSelectedMainCategory}
+            KPIConfigProps={KPIConfigProps}
+          />
+        </div>
+      );
+    }
+
+    return blockList;
+  };
+
   const onFinish = (data) => {
-    let payload = {
-      name: data.name,
-      description: data.description,
-      objTy: data.kpi_category,
-      transformations: {
-        agFn: data.kpi_function,
-        agPr: KPIPropertyDetails?.name,
-        agPrTy: KPIPropertyDetails?.data_type,
-        fil: filterValues?.globalFilters
-          ? getEventsWithPropertiesKPI(filterValues?.globalFilters)
-          : [],
-        daFie: data.kpi_dateField,
-      },
-    };
+    let payload;
+    if(selKPIType === 'default') {
+      payload = {
+        name: data?.name,
+        description: data?.description,
+        type_of_query: 1,
+        objTy: data.kpi_category,
+        transformations: {
+          agFn: data.kpi_function,
+          agPr: KPIPropertyDetails?.name,
+          agPrTy: KPIPropertyDetails?.data_type,
+          fil: filterValues?.globalFilters
+            ? getEventsWithPropertiesKPI(filterValues?.globalFilters)
+            : [],
+          daFie: data.kpi_dateField,
+        },
+      }; 
+    } else {
+      const KPIquery = getKPIQuery(
+        queries,
+        queryOptions.date_range,
+        groupBy,
+        queryOptions,
+        data?.for
+      );
+
+      payload = {
+        name: data?.name,
+        description: data?.description,
+        type_of_query: 2,
+        transformations: {
+          ...KPIquery
+        },
+      }; 
+    }
     setLoading(true);
     addNewCustomKPI(activeProject.id, payload)
       .then(() => {
@@ -318,6 +431,10 @@ const matchEventName = (item) => {
     setKPICategory(value);
   };
 
+  const onKPITypeChange = (value) => {
+    setKPIType(value);
+  };
+
   useEffect(() => {
     if (savedCustomKPI) {
       let savedArr = [];
@@ -326,7 +443,7 @@ const matchEventName = (item) => {
           key: index,
           name: item.name,
           desc: item.description,
-          transformations: item.transformations,
+          type: item.type_of_query === 1 ? 'Default': 'Derived',
           actions: item,
         });
       });
@@ -514,9 +631,45 @@ const matchEventName = (item) => {
 
                   <Row className={'mt-8'}>
                     <Col span={18}>
-                      <div className={'border-top--thin-2 pt-5 mt-5'} />
                       <Text type={'title'} level={7} extraClass={'m-0'}>
-                        KPI Category
+                        KPI Type
+                      </Text>
+                      <Form.Item
+                        name='kpi_type'
+                        className={'m-0'}
+                        rules={[
+                          {
+                            required: true,
+                            message: 'Please select KPI Type',
+                          },
+                        ]}
+                      >
+                        <Select
+                          className={'fa-select w-full'}
+                          size={'large'}
+                          onChange={(value) => onKPITypeChange(value)}
+                          placeholder='KPI Type'
+                          defaultValue={'default'}
+                        >
+                          <Option value='default'>Default</Option>
+                          <Option value='derived_kpi'>Derived KPI</Option>
+                        </Select>
+                      </Form.Item>
+                    </Col>
+                  </Row>
+                  
+                  {selKPIType === 'default' ?
+                  <div>
+                  <Row className={'mt-6'}>
+                    <Col span={24}>
+                      <div className={'border-top--thin-2 pt-3 mt-3'} />
+                    </Col>
+                  </Row>
+                  <Row className={'m-0'}>
+                    <Col span={18}>
+                      {/* <div className={'border-top--thin-2 pt-3 mt-3'} /> */}
+                      <Text type={'title'} level={7} extraClass={'m-0'}>
+                        Category
                       </Text>
                       <Form.Item
                         name='kpi_category'
@@ -748,6 +901,62 @@ const matchEventName = (item) => {
                       </Row>
                     </>
                   )}
+                  </div>
+                  :
+                  <>
+                    <Row className={'mt-6'}>
+                      <Col span={24}>
+                        <div className={'border-top--thin-2 pt-3 mt-3'} />
+                        <Text type={'title'} level={6} extraClass={'m-0'}>
+                          Select KPIs and Formula
+                        </Text>
+                      </Col>
+                    </Row>
+                    <div className={'mt-4 border rounded-lg'}>
+                      <Row className={'m-0 ml-4 my-2'}>
+                          <Col span={18}>
+                              <Form.Item
+                                  name="query_type"
+                                  className={'m-0'}
+                              >
+                                  {queryList()}
+                              </Form.Item>
+                          </Col>
+                      </Row>
+                      <Row className={'m-0'}>
+                        <Col span={24}>
+                          <div className={'border-top--thin-2 pt-3 mt-3'} />
+                        </Col>
+                      </Row>
+                      <Row className={'m-0 ml-4 my-3'}>
+                          <Col>
+                            <Text type={'title'} level={7} color={'grey'} extraClass={'m-0 pt-2 mr-3'}>
+                              Formula:
+                            </Text>
+                          </Col>
+                          <Col span={14}>
+                          <Form.Item
+                            name='for'
+                            rules={[
+                              {
+                                required: true,
+                                message: 'Please enter formula',
+                              },
+                            ]}
+                          >
+                            <Input
+                              // disabled={loading}
+                              size='large'
+                              // className={'fa-input w-full'}
+                              placeholder='Type your formula.  Eg (A/B)'
+                              bordered={false}
+                            />
+                          </Form.Item>
+                          </Col>
+                      </Row>
+                    </div>
+                  </>
+                  }
                 </Form>
               </>
             )}
@@ -810,86 +1019,202 @@ const matchEventName = (item) => {
                 <Row>
                   <Col span={18}>
                     <Text type={'title'} level={7} extraClass={'m-0 mt-6'}>
-                      KPI Category
+                      KPI Type
                     </Text>
                     <Input
                       disabled={true}
                       size='large'
-                      value={viewKPIDetails?.objTy}
+                      value={viewKPIDetails?.type_of_query === 1 ? 'Default' : 'Derived'}
                       className={'fa-input w-full'}
                       placeholder='Display Name'
                     />
                   </Col>
                 </Row>
-                <Row>
-                  <Col span={18}>
-                    <Text type={'title'} level={7} extraClass={'m-0 mt-6'}>
-                      Function
-                    </Text>
-                    <Input
-                      disabled={true}
-                      size='large'
-                      value={viewKPIDetails?.transformations?.agFn}
-                      className={'fa-input w-full'}
-                      placeholder='Display Name'
-                    />
-                  </Col>
-                </Row>
-                {!_.isEmpty(viewKPIDetails?.transformations?.agPr) && (
-                <Row>
-                  <Col span={18}>
-                    <Text type={'title'} level={7} extraClass={'m-0 mt-6'}>
-                      Property
-                    </Text>
-                    <Input
-                      disabled={true}
-                      size='large'
-                      value={matchEventName(viewKPIDetails?.transformations?.agPr)}
-                      className={'fa-input w-full'}
-                      placeholder='Display Name'
-                    />
-                  </Col>
-                </Row>
-                )}
-                {!_.isEmpty(viewKPIDetails?.transformations?.fil) && (
+                {viewKPIDetails?.type_of_query === 1 ?
+                <div>
                   <Row>
                     <Col span={18}>
                       <Text type={'title'} level={7} extraClass={'m-0 mt-6'}>
-                        Filter
+                        Category
                       </Text>
-                      {/* {getGlobalFilters(viewKPIDetails?.transformations?.fil)} */}
-                      <GLobalFilter
-                        filters={getStateFromFilters(
-                          viewKPIDetails?.transformations?.fil
-                        )}
-                        onFiltersLoad={[
-                          () => {
-                            getUserProperties(activeProject.id, null);
-                          },
-                        ]}
-                        setGlobalFilters={setGlobalFiltersOption}
-                        selKPICategory={selKPICategory}
-                        DDKPIValues={filterDDValues}
-                        delFilter={false}
-                        viewMode={true}
+                      <Input
+                        disabled={true}
+                        size='large'
+                        value={viewKPIDetails?.obj_ty}
+                        className={'fa-input w-full'}
+                        placeholder='Display Name'
                       />
                     </Col>
                   </Row>
-                )}
-                <Row>
-                  <Col span={18}>
-                    <Text type={'title'} level={7} extraClass={'m-0 mt-6'}>
-                      Set time to
-                    </Text>
-                    <Input
-                      disabled={true}
-                      size='large'
-                      value={matchEventName(viewKPIDetails?.transformations?.daFie)}
-                      className={'fa-input w-full'}
-                      placeholder='Display Name'
-                    />
-                  </Col>
-                </Row>
+                  <Row>
+                    <Col span={18}>
+                      <Text type={'title'} level={7} extraClass={'m-0 mt-6'}>
+                        Function
+                      </Text>
+                      <Input
+                        disabled={true}
+                        size='large'
+                        value={viewKPIDetails?.transformations?.agFn}
+                        className={'fa-input w-full'}
+                        placeholder='Display Name'
+                      />
+                    </Col>
+                  </Row>
+                  {!_.isEmpty(viewKPIDetails?.transformations?.agPr) && (
+                  <Row>
+                    <Col span={18}>
+                      <Text type={'title'} level={7} extraClass={'m-0 mt-6'}>
+                        Property
+                      </Text>
+                      <Input
+                        disabled={true}
+                        size='large'
+                        value={matchEventName(viewKPIDetails?.transformations?.agPr)}
+                        className={'fa-input w-full'}
+                        placeholder='Display Name'
+                      />
+                    </Col>
+                  </Row>
+                  )}
+                  {!_.isEmpty(viewKPIDetails?.transformations?.fil) && (
+                    <Row>
+                      <Col span={18}>
+                        <Text type={'title'} level={7} extraClass={'m-0 mt-6'}>
+                          Filter
+                        </Text>
+                        {/* {getGlobalFilters(viewKPIDetails?.transformations?.fil)} */}
+                        <GLobalFilter
+                          filters={getStateFromFilters(
+                            viewKPIDetails?.transformations?.fil
+                          )}
+                          onFiltersLoad={[
+                            () => {
+                              getUserProperties(activeProject.id, null);
+                            },
+                          ]}
+                          setGlobalFilters={setGlobalFiltersOption}
+                          selKPICategory={selKPICategory}
+                          DDKPIValues={filterDDValues}
+                          delFilter={false}
+                          viewMode={true}
+                        />
+                      </Col>
+                    </Row>
+                  )}
+                  <Row>
+                    <Col span={18}>
+                      <Text type={'title'} level={7} extraClass={'m-0 mt-6'}>
+                        Set time to
+                      </Text>
+                      <Input
+                        disabled={true}
+                        size='large'
+                        value={matchEventName(viewKPIDetails?.transformations?.daFie)}
+                        className={'fa-input w-full'}
+                        placeholder='Display Name'
+                      />
+                    </Col>
+                  </Row>
+                </div>
+                :
+                <>
+                    <Row className={'mt-6'}>
+                      <Col span={24}>
+                        <div className={'border-top--thin-2 pt-3 mt-3'} />
+                        <Text type={'title'} level={6} extraClass={'m-0'}>
+                          KPIs and Formula
+                        </Text>
+                      </Col>
+                    </Row>
+                    <div className={'mt-4 border rounded-lg'}>
+                    {viewKPIDetails?.transformations?.qG.map((item) => (
+                      <>
+                      <div className={'py-4'}>
+                      <Row className={'m-0 mt-2 ml-4'}>
+                          <Col>
+                              <Button
+                              className={`mr-2`}
+                              type='link'
+                              disabled={true}
+                              >
+                                  {item?.me[0]}
+                              </Button>
+                          </Col>
+                          <Col>
+                              {item?.pgUrl && (
+                                  <div>
+                                      <span className={'mr-2'}>from</span>
+                                      <Button
+                                      className={`mr-2`}
+                                      type='link'
+                                      disabled={true}
+                                      >
+                                          {item?.pgUrl}
+                                      </Button>
+                                  </div>
+                              )}
+                          </Col>
+                      </Row>
+                      {item?.fil?.length > 0 && (
+                        <Row className={'mt-2 ml-4'}>
+                            <Col span={18}>
+                                <Text type={'title'} level={7} color={'grey'} extraClass={'m-0 ml-1 my-1'}>Filters</Text>
+                                {getStateFromFilters(item.fil).map((filter, index) => (
+                                    <div key={index} className={'mt-1'}>
+                                        <Button
+                                        className={`mr-2`}
+                                        type='link'
+                                        disabled={true}
+                                        >
+                                            {filter.extra[0]}
+                                        </Button>
+                                        <Button
+                                        className={`mr-2`}
+                                        type='link'
+                                        disabled={true}
+                                        >
+                                            {filter.operator}
+                                        </Button>
+                                        <Button
+                                        className={`mr-2`}
+                                        type='link'
+                                        disabled={true}
+                                        >
+                                            {filter.values[0]}
+                                        </Button>
+                                    </div>
+                                ))}
+                            </Col>
+                        </Row>
+                      )}
+                      </div>
+                      </>
+                    ))}
+                      <Row className={'m-0'}>
+                        <Col span={24}>
+                          <div className={'border-top--thin-2 pt-3 mt-3'} />
+                        </Col>
+                      </Row>
+                      <Row className={'m-0 ml-4 my-3'}>
+                          <Col>
+                            <Text type={'title'} level={7} color={'grey'} extraClass={'m-0 pt-2 mr-3'}>
+                              Formula:
+                            </Text>
+                          </Col>
+                          <Col span={14}>
+                            <Input
+                              disabled={true}
+                              size='large'
+                              value={viewKPIDetails?.transformations?.for}
+                              // className={'fa-input w-full'}
+                              placeholder='Type your formula.  Eg (A/B)'
+                              bordered={false}
+                            />
+                          </Col>
+                      </Row>
+                    </div>
+                  </>
+                }
               </>
             )}
           </div>
