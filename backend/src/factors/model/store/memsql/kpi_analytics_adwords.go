@@ -8,7 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (store *MemSQL) GetKPIConfigsForAdwords(projectID int64, reqID string) (map[string]interface{}, int) {
+func (store *MemSQL) GetKPIConfigsForAdwords(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"req_id":     reqID,
@@ -21,8 +21,13 @@ func (store *MemSQL) GetKPIConfigsForAdwords(projectID int64, reqID string) (map
 	if len(adwordsSettings) == 0 {
 		return nil, http.StatusOK
 	}
-	config := model.GetKPIConfigsForAdwords()
+	config := model.KpiAdwordsConfig
 	adwordsObjectsAndProperties := store.buildObjectAndPropertiesForAdwords(projectID, model.ObjectsForAdwords)
 	config["properties"] = model.TransformChannelsPropertiesConfigToKpiPropertiesConfig(adwordsObjectsAndProperties)
+
+	rMetrics := model.GetKPIMetricsForAdwords()
+	rMetrics = append(rMetrics, store.GetDerivedKPIMetricsByProjectIdAndDisplayCategory(projectID, model.GoogleAdsDisplayCategory, includeDerivedKPIs)...)
+
+	config["metrics"] = rMetrics
 	return config, http.StatusOK
 }

@@ -8,13 +8,15 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (store *MemSQL) GetKPIConfigsForPageViews(projectID int64, reqID string) (map[string]interface{}, int) {
+func (store *MemSQL) GetKPIConfigsForPageViews(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"req_id":     reqID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	config := model.KPIConfigForPageViews
-	config["metrics"] = model.GetMetricsForDisplayCategory(model.PageViewsDisplayCategory)
+	rMetrics := model.GetStaticallyDefinedMetricsForDisplayCategory(model.PageViewsDisplayCategory)
+
+	config["metrics"] = rMetrics
 	return config, http.StatusOK
 }

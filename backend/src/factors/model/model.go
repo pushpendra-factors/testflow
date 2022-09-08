@@ -89,28 +89,28 @@ type Model interface {
 	GetChannelConfig(projectID int64, channel string, reqID string) (*model.ChannelConfigResult, int)
 
 	// KPI Related but in different modules
-	GetKPIConfigsForWebsiteSessions(projectID int64, reqID string) (map[string]interface{}, int)
-	GetKPIConfigsForPageViews(projectID int64, reqID string) (map[string]interface{}, int)
-	GetKPIConfigsForFormSubmissions(projectID int64, reqID string) (map[string]interface{}, int)
-	GetKPIConfigsForHubspotContacts(projectID int64, reqID string) (map[string]interface{}, int)
-	GetKPIConfigsForHubspotCompanies(projectID int64, reqID string) (map[string]interface{}, int)
-	GetKPIConfigsForHubspotDeals(projectID int64, reqID string) (map[string]interface{}, int)
-	GetKPIConfigsForSalesforceUsers(projectID int64, reqID string) (map[string]interface{}, int)
-	GetKPIConfigsForSalesforceAccounts(projectID int64, reqID string) (map[string]interface{}, int)
-	GetKPIConfigsForSalesforceOpportunities(projectID int64, reqID string) (map[string]interface{}, int)
-	GetKPIConfigsForAdwords(projectID int64, reqID string) (map[string]interface{}, int)
-	GetKPIConfigsForBingAds(projectID int64, reqID string) (map[string]interface{}, int)
-	GetKPIConfigsForGoogleOrganic(projectID int64, reqID string) (map[string]interface{}, int)
-	GetKPIConfigsForFacebook(projectID int64, reqID string) (map[string]interface{}, int)
-	GetKPIConfigsForLinkedin(projectID int64, reqID string) (map[string]interface{}, int)
-	GetKPIConfigsForAllChannels(projectID int64, reqID string) (map[string]interface{}, int)
-	GetKPIConfigsForMarketoLeads(projectID int64, reqID string) (map[string]interface{}, int)
-	GetKPIConfigsForMarketo(projectID int64, reqID string, displayCategory string) (map[string]interface{}, int)
+	GetKPIConfigsForWebsiteSessions(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int)
+	GetKPIConfigsForPageViews(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int)
+	GetKPIConfigsForFormSubmissions(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int)
+	GetKPIConfigsForHubspotContacts(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int)
+	GetKPIConfigsForHubspotCompanies(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int)
+	GetKPIConfigsForHubspotDeals(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int)
+	GetKPIConfigsForSalesforceUsers(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int)
+	GetKPIConfigsForSalesforceAccounts(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int)
+	GetKPIConfigsForSalesforceOpportunities(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int)
+	GetKPIConfigsForAdwords(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int)
+	GetKPIConfigsForBingAds(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int)
+	GetKPIConfigsForGoogleOrganic(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int)
+	GetKPIConfigsForFacebook(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int)
+	GetKPIConfigsForLinkedin(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int)
+	GetKPIConfigsForAllChannels(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int)
+	GetKPIConfigsForMarketoLeads(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int)
+	GetKPIConfigsForMarketo(projectID int64, reqID string, displayCategory string, includeDerivedKPIs bool) (map[string]interface{}, int)
 	GetPropertiesForLeadSquared(projectID int64, reqID string) []map[string]string
-	GetKPIConfigsForLeadSquaredLeads(projectID int64, reqID string) (map[string]interface{}, int)
-	GetKPIConfigsForLeadSquared(projectID int64, reqID string, displayCategory string) (map[string]interface{}, int)
+	GetKPIConfigsForLeadSquaredLeads(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int)
+	GetKPIConfigsForLeadSquared(projectID int64, reqID string, displayCategory string, includeDerivedKPIs bool) (map[string]interface{}, int)
+	GetKPIConfigsForOthers(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int)
 
-	// KPI
 	ExecuteKPIQueryGroup(projectID int64, reqID string, kpiQueryGroup model.KPIQueryGroup,
 		enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool) ([]model.QueryResult, int)
 	ExecuteKPIQueryForEvents(projectID int64, reqID string, kpiQuery model.KPIQuery, enableFilterOpt bool) ([]model.QueryResult, int)
@@ -119,10 +119,15 @@ type Model interface {
 	// Custom Metrics
 	CreateCustomMetric(customMetric model.CustomMetric) (*model.CustomMetric, string, int)
 	GetCustomMetricsByProjectId(projectID int64) ([]model.CustomMetric, string, int)
-	GetCustomMetricByProjectIdAndObjectType(projectID int64, queryType int, objectType string) ([]model.CustomMetric, string, int)
-	GetCustomMetricsByName(projectID int64, name string) (model.CustomMetric, string, int)
+	GetCustomMetricByProjectIdQueryTypeAndObjectType(projectID int64, queryType int, objectType string) ([]model.CustomMetric, string, int)
+	GetCustomKPIMetricsByProjectIdAndDisplayCategory(projectID int64, displayCategory string) []map[string]string
+	GetKpiRelatedCustomMetricsByName(projectID int64, name string) (model.CustomMetric, string, int)
 	GetCustomMetricsByID(projectID int64, id string) (model.CustomMetric, string, int)
 	DeleteCustomMetricByID(projectID int64, id string) int
+	GetDerivedMetricsByName(projectID int64, name string) (model.CustomMetric, string, int)
+	GetDerivedKPIsHavingNameInInternalQueries(projectID int64, customMetricName string) []string
+	GetDerivedKPIMetricsByProjectIdAndDisplayCategory(projectID int64, displayCategory string, includeDerivedKPIs bool) []map[string]string
+	GetCustomMetricAndDerivedMetricByProjectIdAndDisplayCategory(projectID int64, displayCategory string, includeDerivedKPIs bool) []map[string]string
 
 	//templates
 	RunTemplateQuery(projectID int64, query model.TemplateQuery, reqID string) (model.TemplateResponse, int)
@@ -643,8 +648,8 @@ type Model interface {
 	GetAllShareableURLsWithProjectIDAndAgentID(projectID int64, agentUUID string) ([]*model.ShareableURL, int)
 	GetShareableURLWithShareStringAndAgentID(projectID int64, shareId, agentUUID string) (*model.ShareableURL, int)
 	GetShareableURLWithShareStringWithLargestScope(projectID int64, shareId string, entityType int) (*model.ShareableURL, int)
-	// GetShareableURLWithID(projectID uint64, shareId string) (*model.ShareableURL, int)
-	// UpdateShareableURLShareTypeWithShareIDandCreatedBy(projectID uint64, shareId, createdBy string, shareType int, allowedUsers string) int
+	// GetShareableURLWithID(projectID int64, shareId string) (*model.ShareableURL, int)
+	// UpdateShareableURLShareTypeWithShareIDandCreatedBy(projectID int64, shareId, createdBy string, shareType int, allowedUsers string) int
 	DeleteShareableURLWithShareIDandAgentID(projectID int64, shareId, createdBy string) int
 	DeleteShareableURLWithEntityIDandType(projectID int64, entityID int64, entityType int) int
 	RevokeShareableURLsWithShareString(projectId int64, shareString string) (int, string)
@@ -702,8 +707,8 @@ type Model interface {
 	IsCustomAdsAvailable(projectID int64) bool
 
 	// custom ads
-	GetKPIConfigsForCustomAds(projectID int64, reqID string) ([]map[string]interface{}, int)
-	GetKPIConfigsForCustomAdsFromDB(projectID int64) []map[string]interface{}
+	GetKPIConfigsForCustomAds(projectID int64, reqID string, includeDerivedKPIs bool) ([]map[string]interface{}, int)
+	GetKPIConfigsForCustomAdsFromDB(projectID int64, includeDerivedKPIs bool) []map[string]interface{}
 	GetCustomChannelFilterValuesV1(projectID int64, source, channel, filterObject, filterProperty string, reqID string) (model.ChannelFilterValues, int)
 
 	// property overides

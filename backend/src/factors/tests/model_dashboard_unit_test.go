@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+
 	//"strconv"
 	//"strings"
 	"sync"
@@ -1158,7 +1159,7 @@ func TestCacheDashboardUnitsForHardRefresh(t *testing.T) {
 	}
 }
 
-func TestCacheDashboardUnitsForLastComputed(t *testing.T) {
+func TestCacheDashboardUnitsForLastComputed1(t *testing.T) {
 
 	type args struct {
 		preset string

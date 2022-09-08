@@ -9,6 +9,10 @@ func GetKPIConfigsForAllChannels() map[string]interface{} {
 		"category":         ChannelCategory,
 		"display_category": AllChannelsDisplayCategory,
 	}
-	config["metrics"] = GetMetricsForDisplayCategory(AllChannelsDisplayCategory)
+	config["metrics"] = GetStaticallyDefinedMetricsForDisplayCategory(AllChannelsDisplayCategory)
 	return config
+}
+
+func GetKPIMetricsForAllChannels() []map[string]string {
+	return GetStaticallyDefinedMetricsForDisplayCategory(AllChannelsDisplayCategory)
 }

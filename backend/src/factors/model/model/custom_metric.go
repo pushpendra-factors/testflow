@@ -8,6 +8,11 @@ import (
 	"github.com/jinzhu/gorm/dialects/postgres"
 )
 
+type CustomKPI interface {
+	ContainsNameInInternalTransformation(input string) bool
+	ValidateFilterAndGroupBy() bool
+}
+
 type CustomMetricConfig struct {
 	AggregateFunctions      []string                              `json:"agFn"`
 	ObjectTypeAndProperties []CustomMetricObjectTypeAndProperties `json:"objTyAndProp"`
@@ -22,13 +27,17 @@ const (
 	SumAggregateFunction     = "sum"
 	UniqueAggregateFunction  = "unique"
 	AverageAggregateFunction = "average"
+	Derived                  = "derived"
+	DerivedMetrics           = "derived_metrics"
 )
 
-var CustomMetricAggregateFunctions = []string{SumAggregateFunction, UniqueAggregateFunction, AverageAggregateFunction}
-var CustomMetricObjectTypeNames = []string{HubspotContactsDisplayCategory, HubspotCompaniesDisplayCategory, HubspotDealsDisplayCategory,
-	SalesforceUsersDisplayCategory, SalesforceAccountsDisplayCategory, SalesforceOpportunitiesDisplayCategory, MarketoLeadsDisplayCategory, LeadSquaredLeadsDisplayCategory}
-var ProfileQueryType = 1
-var DerivedQueryType = 2
+var (
+	CustomMetricAggregateFunctions = []string{SumAggregateFunction, UniqueAggregateFunction, AverageAggregateFunction}
+	CustomMetricObjectTypeNames    = []string{HubspotContactsDisplayCategory, HubspotCompaniesDisplayCategory, HubspotDealsDisplayCategory,
+		SalesforceUsersDisplayCategory, SalesforceAccountsDisplayCategory, SalesforceOpportunitiesDisplayCategory, MarketoLeadsDisplayCategory, LeadSquaredLeadsDisplayCategory}
+	ProfileQueryType = 1
+	DerivedQueryType = 2
+)
 
 var customMetricGroupNameByObjectType = map[string]string{
 	GROUP_NAME_HUBSPOT_COMPANY:        HubspotCompaniesDisplayCategory,
@@ -44,9 +53,81 @@ type CustomMetric struct {
 	Description     string          `json:"description"`
 	TypeOfQuery     int             `json:"type_of_query"`
 	Transformations *postgres.Jsonb `json:"transformations"`
-	ObjectType      string          `json:"objTy"`
+	ObjectType      string          `json:"obj_ty"`
 	CreatedAt       time.Time       `json:"created_at"`
 	UpdatedAt       time.Time       `json:"updated_at"`
+}
+
+var KpiDerivedMetricsConfig = map[string]interface{}{
+	"category":         Derived,
+	"display_category": DerivedMetrics,
+}
+
+func (customMetric *CustomMetric) GetKPIConfig() map[string]string {
+	currentMetric := make(map[string]string)
+	currentMetric["name"] = customMetric.Name
+	currentMetric["display_name"] = customMetric.Name
+	currentMetric["type"] = ""
+	return currentMetric
+}
+
+func GetKPIConfig(customMetrics []CustomMetric) []map[string]string {
+	rCustomMetrics := make([]map[string]string, 0)
+
+	for _, customMetric := range customMetrics {
+		rCustomMetrics = append(rCustomMetrics, customMetric.GetKPIConfig())
+	}
+	return rCustomMetrics
+}
+
+func (customMetric *CustomMetric) IsValid() (bool, string) {
+	if customMetric.TypeOfQuery == ProfileQueryType {
+
+		var customMetricTransformation CustomMetricTransformation
+		err := U.DecodePostgresJsonbToStructType(customMetric.Transformations, &customMetricTransformation)
+		if err != nil {
+			return false, "Error during decode of custom metrics transformations - custom_metrics handler."
+		}
+		if !customMetricTransformation.IsValid() {
+			return false, "Error with values passed in transformations - custom_metrics handler."
+		}
+		return true, ""
+
+	} else if customMetric.TypeOfQuery == DerivedQueryType {
+
+		var derivedMetricTransformation KPIQueryGroup
+		err := U.DecodePostgresJsonbToStructType(customMetric.Transformations, &derivedMetricTransformation)
+		if err != nil {
+			return false, "Error during decode of derived metrics transformations - custom_metrics handler."
+		}
+		if !derivedMetricTransformation.IsValidDerivedKPI() {
+			return false, "Error with values passed in transformations - custom_metrics handler."
+		}
+		if strings.Contains(derivedMetricTransformation.Formula, " ") {
+			return false, "No empty space allowed in formula field - custom_metrics handler."
+		}
+		return true, ""
+	} else {
+		return false, "Wrong query type is forwarded"
+	}
+
+}
+
+func (customMetric *CustomMetric) SetDefaultGroupIfRequired() {
+	if customMetric.TypeOfQuery == DerivedQueryType {
+		var derivedMetricTransformation KPIQueryGroup
+		U.DecodePostgresJsonbToStructType(customMetric.Transformations, &derivedMetricTransformation)
+		previousDisplayCategory := ""
+		for _, kpiQuery := range derivedMetricTransformation.Queries {
+			if previousDisplayCategory == "" {
+				previousDisplayCategory = kpiQuery.DisplayCategory
+			} else if kpiQuery.DisplayCategory != previousDisplayCategory {
+				previousDisplayCategory = OthersDisplayCategory
+				break
+			}
+		}
+		customMetric.ObjectType = previousDisplayCategory
+	}
 }
 
 type CustomMetricTransformation struct {
@@ -55,6 +136,14 @@ type CustomMetricTransformation struct {
 	AggregatePropertyType string      `json:"agPrTy"`
 	Filters               []KPIFilter `json:"fil"`
 	DateField             string      `json:"daFie"`
+}
+
+func (c *CustomMetricTransformation) ContainsNameInInternalTransformation(input string) bool {
+	return false
+}
+
+func (transformation *CustomMetricTransformation) ValidateFilterAndGroupBy() bool {
+	return true
 }
 
 // Check if filter is being passed with objectType in create Custom metric.
@@ -91,4 +180,18 @@ func GetGroupNameByMetricObjectType(objectType string) string {
 		}
 	}
 	return ""
+}
+
+// TODO handle errors
+func DecodeCustomMetricsTransformation(customMetric CustomMetric) CustomKPI {
+	if customMetric.TypeOfQuery == ProfileQueryType {
+		var customMetricTransformation CustomMetricTransformation
+		_ = U.DecodePostgresJsonbToStructType(customMetric.Transformations, &customMetricTransformation)
+		return &customMetricTransformation
+	} else if customMetric.TypeOfQuery == DerivedQueryType {
+		var derivedMetricTransformation KPIQueryGroup
+		_ = U.DecodePostgresJsonbToStructType(customMetric.Transformations, &derivedMetricTransformation)
+		return &derivedMetricTransformation
+	}
+	return nil
 }

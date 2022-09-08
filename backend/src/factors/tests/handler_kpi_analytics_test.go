@@ -322,19 +322,19 @@ func TestKpiAnalyticsForProfile(t *testing.T) {
 	name1 := U.RandomString(8)
 	description1 := U.RandomString(8)
 	transformations1 := &postgres.Jsonb{json.RawMessage(`{"agFn": "sum", "agPr": "$hubspot_amount", "agPrTy": "categorical", "fil": [], "daFie": "$hubspot_datefield1"}`)}
-	w := sendCreateCustomMetric(a, project.ID, agent, transformations1, name1, description1, "hubspot_contacts")
+	w := sendCreateCustomMetric(a, project.ID, agent, transformations1, name1, description1, "hubspot_contacts", 1)
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	name2 := U.RandomString(8)
 	description2 := U.RandomString(8)
 	transformations2 := &postgres.Jsonb{json.RawMessage(`{"agFn": "sum", "agPr": "$hubspot_amount", "agPrTy": "categorical", "fil": [{"objTy": "", "prNa": "country", "prDaTy": "categorical", "en": "user", "co": "equals", "va": "india", "lOp": "AND"}], "daFie": "$hubspot_datefield1"}`)}
-	w = sendCreateCustomMetric(a, project.ID, agent, transformations2, name2, description2, "hubspot_contacts")
+	w = sendCreateCustomMetric(a, project.ID, agent, transformations2, name2, description2, "hubspot_contacts", 1)
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	name3 := U.RandomString(8)
 	description3 := U.RandomString(8)
 	transformations3 := &postgres.Jsonb{json.RawMessage(`{"agFn": "average", "agPr": "$hubspot_amount", "agPrTy": "categorical", "fil": [{"objTy": "", "prNa": "country", "prDaTy": "categorical", "en": "user", "co": "equals", "va": "india", "lOp": "AND"}], "daFie": "$hubspot_datefield1"}`)}
-	w = sendCreateCustomMetric(a, project.ID, agent, transformations3, name3, description3, "hubspot_contacts")
+	w = sendCreateCustomMetric(a, project.ID, agent, transformations3, name3, description3, "hubspot_contacts", 1)
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	t.Run("test hubspot contacts with no filters and no group by", func(t *testing.T) {
@@ -610,7 +610,7 @@ func TestKPIProfilesForGroups(t *testing.T) {
 		name2 := U.RandomString(8)
 		description2 := U.RandomString(8)
 		transformations2 := &postgres.Jsonb{json.RawMessage(`{"agFn": "unique", "agPr": "", "agPrTy": "categorical", "fil": [], "daFie": "$hubspot_datefield1"}`)}
-		w := sendCreateCustomMetric(a, project.ID, agent, transformations2, name2, description2, "hubspot_companies")
+		w := sendCreateCustomMetric(a, project.ID, agent, transformations2, name2, description2, "hubspot_companies", 1)
 		assert.Equal(t, http.StatusOK, w.Code)
 
 		query1 := model.KPIQuery{
@@ -642,6 +642,136 @@ func TestKPIProfilesForGroups(t *testing.T) {
 		assert.Equal(t, float64(10), result[0].Rows[0][1])
 		assert.Equal(t, float64(10), result[1].Rows[0][0])
 	})
+}
+
+func TestDerivedKPIChannels(t *testing.T) {
+	r := gin.Default()
+	H.InitDataServiceRoutes(r)
+	model.SetSmartPropertiesReservedNames()
+
+	a := gin.Default()
+	H.InitAppRoutes(a)
+
+	project, customerAccountID, agent, statusCode := createProjectAndAddAdwordsDocument(t, r)
+	if statusCode != http.StatusAccepted {
+		assert.Equal(t, false, true)
+		return
+	}
+
+	adwordsDocuments := []M.AdwordsDocument{
+		{ID: "1", Timestamp: 20220802, ProjectID: project.ID, CustomerAccountID: customerAccountID, TypeAlias: "campaign_performance_report",
+			Value: &postgres.Jsonb{json.RawMessage(`{"cost": "11","clicks": "100","campaign_id":"1","impressions": "1000", "campaign_name": "test1"}`)}},
+		{ID: "2", Timestamp: 20220802, ProjectID: project.ID, CustomerAccountID: customerAccountID, TypeAlias: "campaign_performance_report",
+			Value: &postgres.Jsonb{json.RawMessage(`{"cost": "12","clicks": "200","campaign_id":"2","impressions": "500", "campaign_name": "test2"}`)}},
+	}
+	for _, adwordsDocument := range adwordsDocuments {
+		status := store.GetStore().CreateAdwordsDocument(&adwordsDocument)
+		assert.Equal(t, http.StatusCreated, status)
+	}
+
+	name1 := U.RandomString(8)
+	name2 := U.RandomString(8)
+	description1 := U.RandomString(8)
+	transformations1 := &postgres.Jsonb{json.RawMessage(`{"cl":"kpi","for":"a/b","qG":[{"ca":"channels","dc":"google_ads_metrics","fil":[],"gBy":[],"me":["impressions"],"na":"a","pgUrl":"","tz":"Australia/Sydney"},{"ca":"channels","dc":"google_ads_metrics","fil":[],"gBy":[],"me":["clicks"],"na":"b","pgUrl":"","tz":"Australia/Sydney"}]}`)}
+	w := sendCreateCustomMetric(a, project.ID, agent, transformations1, name1, description1, "google_ads_metrics", 2)
+	assert.Equal(t, http.StatusOK, w.Code)
+	query := model.KPIQuery{
+		Category:        "channels",
+		DisplayCategory: "google_ads_metrics",
+		PageUrl:         "",
+		Metrics:         []string{name1},
+		GroupBy:         []M.KPIGroupBy{},
+		From:            1659312000,
+		To:              1659657600,
+	}
+	kpiQueryGroup := model.KPIQueryGroup{
+		Class:         "kpi",
+		Queries:       []model.KPIQuery{query},
+		GlobalFilters: []model.KPIFilter{},
+		GlobalGroupBy: []model.KPIGroupBy{},
+	}
+
+	result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup,
+		C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+	assert.Equal(t, http.StatusCreated, statusCode)
+	assert.Equal(t, result[0].Headers, []string{name1})
+	assert.Equal(t, len(result[0].Rows), 1)
+	assert.Equal(t, result[0].Rows[0][0], float64(50))
+
+	query = model.KPIQuery{
+		Category:         "channels",
+		DisplayCategory:  "google_ads_metrics",
+		PageUrl:          "",
+		Metrics:          []string{name1},
+		GroupBy:          []M.KPIGroupBy{},
+		From:             1659312000,
+		To:               1659657600,
+		GroupByTimestamp: "date",
+	}
+	kpiQueryGroup = model.KPIQueryGroup{
+		Class:         "kpi",
+		Queries:       []model.KPIQuery{query},
+		GlobalFilters: []model.KPIFilter{},
+		GlobalGroupBy: []model.KPIGroupBy{},
+	}
+
+	result, statusCode = store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup,
+		C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+	assert.Equal(t, http.StatusCreated, statusCode)
+	assert.Equal(t, result[0].Headers, []string{"datetime", name1})
+	assert.Equal(t, len(result[0].Rows), 1)
+	assert.Equal(t, result[0].Rows[0][1], float64(50))
+
+	query = model.KPIQuery{
+		Category:         "channels",
+		DisplayCategory:  "google_ads_metrics",
+		PageUrl:          "",
+		Metrics:          []string{name1},
+		GroupBy:          []M.KPIGroupBy{},
+		From:             1659312000,
+		To:               1659657600,
+		GroupByTimestamp: "",
+	}
+	kpiQueryGroup = model.KPIQueryGroup{
+		Class:         "kpi",
+		Queries:       []model.KPIQuery{query},
+		GlobalFilters: []model.KPIFilter{},
+		GlobalGroupBy: []model.KPIGroupBy{
+			{
+				ObjectType:       "campaign",
+				PropertyName:     "campaign_name",
+				PropertyDataType: "categorical",
+				Entity:           "",
+			},
+		},
+	}
+
+	result, statusCode = store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup,
+		C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+	assert.Equal(t, http.StatusCreated, statusCode)
+	assert.Equal(t, result[0].Headers, []string{"campaign_name", name1})
+	assert.Equal(t, len(result[0].Rows), 2)
+
+	query = model.KPIQuery{
+		Category:         "channels",
+		DisplayCategory:  "google_ads_metrics",
+		PageUrl:          "",
+		Metrics:          []string{name2},
+		GroupBy:          []M.KPIGroupBy{},
+		From:             1659312000,
+		To:               1659657600,
+		GroupByTimestamp: "date",
+	}
+	kpiQueryGroup = model.KPIQueryGroup{
+		Class:         "kpi",
+		Queries:       []model.KPIQuery{query},
+		GlobalFilters: []model.KPIFilter{},
+		GlobalGroupBy: []model.KPIGroupBy{},
+	}
+
+	result, statusCode = store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup,
+		C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+	assert.Equal(t, http.StatusBadRequest, statusCode)
 }
 
 func TestKpiAnalyticsHandler(t *testing.T) {

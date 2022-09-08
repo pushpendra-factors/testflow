@@ -9,7 +9,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (store *MemSQL) GetKPIConfigsForWebsiteSessions(projectID int64, reqID string) (map[string]interface{}, int) {
+func (store *MemSQL) GetKPIConfigsForWebsiteSessions(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"req_id":     reqID,
@@ -18,7 +18,10 @@ func (store *MemSQL) GetKPIConfigsForWebsiteSessions(projectID int64, reqID stri
 	config := model.KPIConfigForWebsiteSessions
 	kpiPropertiesFromContentGroup := store.getWebsiteRelatedContentGroupPropertiesForKPI(projectID)
 	config["properties"] = append(model.KPIPropertiesForWebsiteSessions, kpiPropertiesFromContentGroup...)
-	config["metrics"] = model.GetMetricsForDisplayCategory(model.WebsiteSessionDisplayCategory)
+	rMetrics := model.GetStaticallyDefinedMetricsForDisplayCategory(model.WebsiteSessionDisplayCategory)
+	rMetrics = append(rMetrics, store.GetDerivedKPIMetricsByProjectIdAndDisplayCategory(projectID, model.WebsiteSessionDisplayCategory, includeDerivedKPIs)...)
+
+	config["metrics"] = rMetrics
 	return config, http.StatusOK
 }
 

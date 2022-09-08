@@ -35,6 +35,17 @@ func AppendNonNullValues(args ...string) []string {
 	return result
 }
 
+func ContainsDuplicate(args ...interface{}) bool {
+	presentAlready := make(map[interface{}]struct{})
+	for _, arg := range args {
+		if _, exists := presentAlready[arg]; exists {
+			return true
+		} else {
+			presentAlready[arg] = struct{}{}
+		}
+	}
+	return false
+}
 func AppendNonNullValuesList(args []string, arg string) []string {
 	result := make([]string, 0, 0)
 
