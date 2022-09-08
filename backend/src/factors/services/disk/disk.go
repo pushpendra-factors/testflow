@@ -239,3 +239,12 @@ func (dd *DiskDriver) GetAdsDataFilePathAndName(projectId int64, report string, 
 	path := dd.GetAdsDataDir(projectId)
 	return path, fmt.Sprintf("%v-%v-%v.csv", report, projectId, chunkNo)
 }
+
+func (dd *DiskDriver) GetWIPropertiesPathAndName(projectId int64) (string, string) {
+	path := dd.GetWIPropertiesDir(projectId)
+	return path, "properties.txt"
+}
+
+func (dd *DiskDriver) GetWIPropertiesDir(projectId int64) string {
+	return fmt.Sprintf("%v/projects/%v/weeklyinsights/", dd.baseDir, projectId)
+}

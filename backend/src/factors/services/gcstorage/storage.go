@@ -225,6 +225,15 @@ func (gcsd *GCSDriver) GetInsightsCpiFilePathAndName(projectId int64, dateString
 	return path, "cpi.txt"
 }
 
+func (gcsd *GCSDriver) GetWIPropertiesPathAndName(projectId int64) (string, string) {
+	path := gcsd.GetWIPropertiesDir(projectId)
+	return path, "properties.txt"
+}
+
+func (gcsd *GCSDriver) GetWIPropertiesDir(projectId int64) string {
+	return fmt.Sprintf("projects/%v/weeklyinsights/", projectId)
+}
+
 func (gcsd *GCSDriver) GetWeeklyInsightsModelDir(projectId int64, dateString string, queryId int64, k int) string {
 	return fmt.Sprintf("projects/%v/weeklyinsights/%v/q-%v/k-%v/", projectId, dateString, queryId, k)
 }

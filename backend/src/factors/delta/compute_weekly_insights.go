@@ -757,7 +757,7 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 	return insights
 }
 
-func GetWeeklyInsights(projectId int64, agentUUID string, queryId int64, baseStartTime *time.Time, compStartTime *time.Time, insightsType string, numberOfRecords int, kpiIndex int) (interface{}, error) {
+func GetWeeklyInsights(projectId int64, agentUUID string, queryId int64, baseStartTime *time.Time, compStartTime *time.Time, insightsType string, numberOfRecords int, kpiIndex int, version int) (interface{}, error) {
 	k := make(map[int64]int)
 	k[399] = 100
 	k[594] = 100
@@ -849,11 +849,11 @@ func GetWeeklyInsights(projectId int64, agentUUID string, queryId int64, baseSta
 		return nil, err
 	}
 	var insightsObj WeeklyInsights
-	PriorityKeysDistribution = GetPriorityKeysMapDistribution()
+	PriorityKeysDistribution = GetPriorityKeysMapDistribution(projectId, version)
 	WhiteListedKeys = make(map[string]bool)
 	WhiteListedKeysOtherQuery = make(map[string]bool)
 	BlackListedKeys = GetBlackListedKeys()
-	PriorityKeysConversion = GetPriorityKeysMapConversion()
+	PriorityKeysConversion = GetPriorityKeysMapConversion(projectId, version)
 	CaptureBlackListedAndWhiteListedKeys(projectId, agentUUID, queryId)
 	if class == model.QueryClassKPI {
 		insightsObj = GetInsightsKpi(insightsKpi, numberOfRecords, class, EventType, isEventWebsite)
@@ -1260,4 +1260,24 @@ func CheckPercentageChange(overall, week float64) bool {
 	//filtering  if week1 data is less than x % of overall w1 data
 	actual := (DistributionChangePer / 100) * overall
 	return week < actual
+}
+
+func GetPropertiesFromFile(project_id int64) map[string]bool {
+	propertiesFromFile := make(map[string]bool)
+	path, file := C.GetCloudManager().GetWIPropertiesPathAndName(project_id)
+	fmt.Println("path/file:", path, file)
+	reader, err := C.GetCloudManager().Get(path, file)
+	if err != nil {
+		fmt.Println(err.Error())
+		log.WithError(err).Error("Error reading file")
+		return propertiesFromFile
+	}
+	data, err := ioutil.ReadAll(reader)
+	if err != nil {
+		fmt.Println(err.Error())
+		log.WithError(err).Error("Error reading file")
+		return propertiesFromFile
+	}
+	err = json.Unmarshal(data, &propertiesFromFile)
+	return propertiesFromFile
 }
