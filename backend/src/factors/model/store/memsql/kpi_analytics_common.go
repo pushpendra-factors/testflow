@@ -29,9 +29,10 @@ func (store *MemSQL) ExecuteKPIQueryGroup(projectID int64, reqID string, kpiQuer
 	for _, query := range kpiQueryGroup.Queries {
 		if query.Category == model.ProfileCategory {
 			if query.GroupByTimestamp != "" {
+				log.Info("---- profile query for pipeline ",query)
 				result, statusCode := store.ExecuteKPIQueryForProfiles(projectID, reqID,
 					query, enableOptimisedFilterOnProfileQuery)
-
+				log.Info("---- profile query pipeline result ", result)
 				if statusCode != http.StatusOK {
 					finalStatusCode = statusCode
 				}
