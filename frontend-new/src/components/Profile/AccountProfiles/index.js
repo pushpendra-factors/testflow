@@ -4,7 +4,7 @@ import { Text, SVG } from '../../factorsComponents';
 import MomentTz from '../../MomentTz';
 import AccountDetails from './AccountDetails';
 import PropertyFilter from '../UserProfiles/PropertyFilter';
-import { connect } from 'react-redux';
+import { connect, useSelector } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { fetchProfileAccounts } from '../../../reducers/timelines';
 import { getGroupProperties } from '../../../reducers/coreQuery/middleware';
@@ -26,16 +26,26 @@ function AccountProfiles({
     source: 'All',
     filters: [],
   });
+  const groupState = useSelector((state) => state.groups);
+  const groupOpts = groupState?.data;
 
-  const filterOpts = {
-    'All Accounts': 'All',
-    'Hubspot Companies': '$hubspot_company',
-    'Salesforce Accounts': '$salesforce_account',
-  };
-  const revFilterOpts = {
+  const displayFilterOpts = {
     All: 'All Accounts',
     $hubspot_company: 'Hubspot Companies',
     $salesforce_account: 'Salesforce Accounts',
+  };
+
+  const enabledGroups = () => {
+    let groups = [['All Accounts', 'All']];
+    groupOpts?.forEach((elem) => {
+      if (
+        elem.name === '$hubspot_company' ||
+        elem.name === '$salesforce_account'
+      ) {
+        groups.push([displayFilterOpts[elem.name], elem.name]);
+      }
+    });
+    return groups;
   };
 
   useEffect(() => {
@@ -81,9 +91,9 @@ function AccountProfiles({
   };
 
   const onChange = (val) => {
-    if ((filterOpts[val[0]] || val[0]) !== filterPayload.source) {
+    if (val !== filterPayload.source) {
       const opts = Object.assign({}, filterPayload);
-      opts.source = filterOpts[val[0]] || val[0];
+      opts.source = val;
       setFilterPayload(opts);
     }
     setDDVisible(false);
@@ -112,13 +122,9 @@ function AccountProfiles({
       <div className='absolute top-0'>
         {isDDVisible ? (
           <FaSelect
-            options={[
-              ['All Accounts'],
-              ['Hubspot Companies'],
-              ['Salesforce Accounts'],
-            ]}
+            options={enabledGroups()}
             onClickOutside={() => setDDVisible(false)}
-            optionClick={(val) => onChange(val)}
+            optionClick={(val) => onChange(val[1])}
           ></FaSelect>
         ) : null}
       </div>
@@ -140,7 +146,7 @@ function AccountProfiles({
                 icon={<SVG name='user_friends' size={16} />}
                 onClick={() => setDDVisible(!isDDVisible)}
               >
-                {revFilterOpts[filterPayload.source] || 'All'}
+                {displayFilterOpts[filterPayload.source]}
                 <SVG name='caretDown' size={16} />
               </Button>
             }
