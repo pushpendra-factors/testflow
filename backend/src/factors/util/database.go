@@ -293,10 +293,11 @@ func CleanupUnsupportedCharOnStringBytes(stringBytes []byte) []byte {
 
 // https://stackoverflow.com/a/34863211/2341189
 // https://docs.singlestore.com/v7.3/guides/use-memsql/physical-schema-design/using-json/using-json/#unicode-support
+// https://go.dev/ref/spec#Conversions_to_and_from_a_string_type
 func SanitizeStringValueForUnicode(s string) string {
 	runes := make([]rune, 0, 0)
 	for _, r := range s {
-		if len(string(r)) != utf8.RuneCountInString(string(r)) || !utf8.ValidRune(r) {
+		if !utf8.ValidRune(r) {
 			continue
 		} else if r > 65536 {
 			// Memsql supports only till 65536. Convert to unicode point text.
