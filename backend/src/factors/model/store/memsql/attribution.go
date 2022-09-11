@@ -322,6 +322,7 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID int64, queryOriginal *mod
 	queryStartTime = time.Now().UTC().Unix()
 
 	result := &model.QueryResult{}
+	logCtx.WithFields(log.Fields{"attributionData": attributionData}).Info("325-influence debug/check count")
 
 	if query.AttributionKey == model.AttributionKeyLandingPage {
 
