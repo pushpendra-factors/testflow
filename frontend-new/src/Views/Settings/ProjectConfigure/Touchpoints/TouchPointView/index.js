@@ -117,10 +117,8 @@ const TouchpointView = ({ activeProject, tchType = '2', getEventProperties, even
     }
 
     const setPropData = (propToCall, data) => {
-        console.log("in>")
-        console.log(propToCall);
         const ddValues = Object.assign({}, dropDownValues);
-        ddValues[propToCall] = [data, '$none'];
+        ddValues[propToCall] = [...data, '$none'];
         setDropDownValues(ddValues);
     }
     
@@ -128,7 +126,7 @@ const TouchpointView = ({ activeProject, tchType = '2', getEventProperties, even
     const setValuesByProps = (props) => {
         const eventToCall = returnEventToCall();
         const propToCall = props.length > 3? props[1] : props[0];
-        if(dropDownValues[props[0]]?.length >= 1) {
+        if(dropDownValues[propToCall]?.length >= 1) {
             return null;
         }
         fetchEventPropertyValues(activeProject.id, eventToCall, propToCall).then(res => {
