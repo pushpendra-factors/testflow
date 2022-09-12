@@ -46,10 +46,12 @@ const TimeoutTwoSecond = 2 * time.Second
 const TimeoutFiveSecond = 5 * time.Second
 
 const (
-	DayInSecs   = 24 * 60 * 60
-	WeekInSecs  = 7 * DayInSecs
-	MonthInSecs = 31 * DayInSecs
-	Alpha       = "abcdefghijklmnopqrstuvwxyz"
+	DayInSecs                        = 24 * 60 * 60
+	WeekInSecs                       = 7 * DayInSecs
+	MonthInSecs                      = 31 * DayInSecs
+	Alpha                            = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	AllowedDerivedMetricSpecialChars = "*/+-()"
+	AllowedDerivedMetricOperator     = "*/+-"
 )
 
 type TimeZoneString string
@@ -1374,6 +1376,22 @@ func CapitalizeFirstLetter(data string) string {
 func ValidateArithmeticFormula(formula string) bool {
 	var valueStack []string
 	var operatorStack []string
+	for i, c := range formula {
+		if i == 0 {
+			continue
+		}
+		currCh := string(c)
+		prevCh := string(formula[i-1])
+		if !strings.Contains(Alpha, strings.ToLower(currCh)) && !strings.Contains(AllowedDerivedMetricSpecialChars, strings.ToLower(currCh)) {
+			return false
+		}
+		if strings.Contains(Alpha, strings.ToLower(currCh)) && (strings.Contains(Alpha, strings.ToLower(prevCh)) || !strings.Contains(AllowedDerivedMetricSpecialChars, strings.ToLower(prevCh))) {
+			return false
+		}
+		if strings.Contains(AllowedDerivedMetricOperator, strings.ToLower(currCh)) && strings.Contains(AllowedDerivedMetricOperator, strings.ToLower(prevCh)) {
+			return false
+		}
+	}
 
 	for _, c := range formula {
 		ch := string(c)
