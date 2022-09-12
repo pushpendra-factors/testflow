@@ -28,7 +28,6 @@ func (store *MemSQL) ExecuteKPIQueryGroup(projectID int64, reqID string, kpiQuer
 		kpiQueryGroup.Queries[index].Filters = append(query.Filters, kpiQueryGroup.GlobalFilters...)
 		kpiQueryGroup.Queries[index].GroupBy = kpiQueryGroup.GlobalGroupBy
 	}
-
 	for _, query := range kpiQueryGroup.Queries {
 		var result []model.QueryResult
 		var statusCode int
@@ -53,7 +52,6 @@ func (store *MemSQL) ExecuteKPIQueryGroup(projectID int64, reqID string, kpiQuer
 				if hashCode != "" {
 					hashMapOfQueryToResult[hashCode] = result
 				}
-				queryResults = append(queryResults, result...)
 			}
 		}
 		queryResults = append(queryResults, result...)
