@@ -73,7 +73,7 @@ const TouchpointView = ({ activeProject, tchType = '2', getEventProperties, even
     useEffect(() => {
         if (rule) {
             const filterState = getStateFromFilters(rule.filters);
-            chainEventPropertyValues(filterState)
+            chainEventPropertyValues(filterState);
             setNewFilterStates(filterState);
             setPropertyMap(rule.properties_map);
             if (rule.touchPointPropRef === 'LAST_MODIFIED_TIME_REF') {
