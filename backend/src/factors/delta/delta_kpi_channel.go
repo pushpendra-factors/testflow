@@ -110,7 +110,7 @@ func getLevelAndtypeOfDoc(docType int, documentTypeAlias map[string]int, infoMap
 
 			//level
 			for levelStr, levelInt := range levelStrToIntAlias {
-				if strings.HasPrefix(k, infoMap[levelStr]) {
+				if tmpStr, ok := infoMap[levelStr]; ok && strings.HasPrefix(k, tmpStr) {
 					if levelInt > level {
 						level = levelInt
 					}
@@ -641,17 +641,19 @@ func GetAllChannelMetricsInfo(metricNames []string, propFilter []M.KPIFilter, pr
 		}
 
 		var newPropsToEval []string
-		for _, prop := range propsToEval {
-			propWithType := strings.SplitN(prop, "#", 2)
-			objType := propWithType[0]
-			propName := propWithType[1]
-			name, err := getFilterPropertyReportName[channel](propName, objType)
-			if err != nil {
-				log.WithError(err).Error("error getting property name for channel " + channel + " for all channel kpi")
-				continue
+		if channel != M.GOOGLE_ORGANIC {
+			for _, prop := range propsToEval {
+				propWithType := strings.SplitN(prop, "#", 2)
+				objType := propWithType[0]
+				propName := propWithType[1]
+				name, err := getFilterPropertyReportName[channel](propName, objType)
+				if err != nil {
+					log.WithError(err).Error("error getting property name for channel " + channel + " for all channel kpi")
+					continue
+				}
+				newName := strings.Join([]string{objType, name}, "#")
+				newPropsToEval = append(newPropsToEval, newName)
 			}
-			newName := strings.Join([]string{objType, name}, "#")
-			newPropsToEval = append(newPropsToEval, newName)
 		}
 		wpiTmp, err := GetCampaignMetricsInfo(metricNames, channel, scanner, newPropFilter, newPropsToEval)
 		if err != nil {
@@ -682,6 +684,7 @@ func addMetricInfoStructForSource(source string, baseInfo *MetricInfo, info2add 
 			info.Features[key][val] += cnt
 		}
 	}
+
 	if _, ok := info.Features["channel#channel_name"]; !ok {
 		info.Features["channel#channel_name"] = make(map[string]float64)
 	}
