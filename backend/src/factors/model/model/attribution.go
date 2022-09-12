@@ -1066,7 +1066,7 @@ func GetRowsByMaps(attributionKey string, dimensions []string, attributionData *
 	if *attributionData != nil {
 		for _, data := range *attributionData {
 			for idx := 0; idx < len(data.ConversionEventCount); idx++ {
-				log.WithFields(log.Fields{"attributionData": data, "idx": idx}).Info("1069-influence debug/check attributionData")
+
 				noOfGoalEvents++
 				// one for each - ConversionEventCount, ConversionEventCountInfluence, CostPerConversion, ConversionEventCompareCount, ConversionEvenCompareCountInfluence, CostPerConversionCompareCount
 				defaultMatchingRow = append(defaultMatchingRow, float64(0), float64(0), float64(0), float64(0), float64(0), float64(0))
@@ -1172,7 +1172,6 @@ func GetRowsByMaps(attributionKey string, dimensions []string, attributionData *
 			for len(data.ConversionEventCountInfluence) < noOfGoalEvents {
 				data.ConversionEventCountInfluence = append(data.ConversionEventCountInfluence, float64(0))
 			}
-			log.WithFields(log.Fields{"conversion": data}).Info("1174-influence debug")
 
 			for len(data.ConversionEventCompareCount) < noOfGoalEvents {
 				data.ConversionEventCompareCount = append(data.ConversionEventCompareCount, float64(0))
@@ -1180,16 +1179,14 @@ func GetRowsByMaps(attributionKey string, dimensions []string, attributionData *
 			for len(data.ConversionEventCompareCountInfluence) < noOfGoalEvents {
 				data.ConversionEventCompareCountInfluence = append(data.ConversionEventCompareCountInfluence, float64(0))
 			}
-			log.WithFields(log.Fields{"cmpconversion": data}).Info("1180-influence debug")
 
 			for idx := 0; idx < len(data.ConversionEventCount); idx++ {
 
 				functionType := data.ConvAggFunctionType[idx]
-				log.WithFields(log.Fields{"row": row, "idx": idx}).Info("1185-influence debug/row")
+
 				row = append(row, float64(data.ConversionEventCount[idx]))
-				log.WithFields(log.Fields{"row": row, "idx": idx}).Info("1187-influence debug/row")
+
 				row = append(row, float64(data.ConversionEventCountInfluence[idx]))
-				log.WithFields(log.Fields{"row": row, "idx": idx}).Info("1189-influence debug/row")
 
 				cpc = append(cpc, float64(0))
 
@@ -1223,7 +1220,7 @@ func GetRowsByMaps(attributionKey string, dimensions []string, attributionData *
 				} else {
 					row = append(row, cpc[idx], float64(0), float64(0), float64(0))
 				}
-				log.WithFields(log.Fields{"row": row}).Info("influence debug")
+
 			}
 			// for linked event considering the data.ConversionEventCount[0] only
 			row = append(row, getLinkedEventColumnAsInterfaceList(float64(data.ConversionEventCount[0]), data.Spend, data.LinkedEventsCount, len(linkedEvents))...)
