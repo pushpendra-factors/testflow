@@ -152,7 +152,7 @@ const JSConfig = ({ currentProjectSettings, activeProject, udpateProjectSettings
       </div>
     </Col>
     <Col span={24} className={'flex flex-start items-center'}>
-      <Text type={'paragraph'} mini extraClass={'m-0 mt-2'} color={'grey'}>Track standard events such as page_view, page_load time, page_spent_time and button clicks for each user</Text>
+      <Text type={'paragraph'} mini extraClass={'m-0 mt-2'} color={'grey'}>Track standard events such as page_view, page_load time, page_spent_time and more for each user</Text>
     </Col>
     <Col span={24}>
       <div span={24} className={'flex flex-start items-center mt-8'}>

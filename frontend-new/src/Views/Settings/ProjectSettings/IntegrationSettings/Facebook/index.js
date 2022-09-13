@@ -207,7 +207,7 @@ const FacebookIntegration = ({
     else {
       if (currentProjectSettings?.int_facebook_ad_account !== "" || currentProjectSettings?.int_facebook_ad_account !== undefined) {
         return (
-          <div className={'mt-4 flex flex-col border-top--thin py-4 mt-2 w-full'}>
+          <div className={'mt-4 flex flex-col border-top--thin py-4 mt-2'}>
             <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0'}>Connected Account</Text>
             <Text type={'title'} level={7} color={'grey'} extraClass={'m-0 mt-2'}>Selected Facebook Ad Account</Text>
             <Input size="large" disabled={true} value={currentProjectSettings?.int_facebook_ad_account} style={{ width: '400px' }} />

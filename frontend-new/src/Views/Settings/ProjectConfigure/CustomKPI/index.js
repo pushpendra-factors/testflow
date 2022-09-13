@@ -637,12 +637,12 @@ const matchEventName = (item) => {
                       <Form.Item
                         name='kpi_type'
                         className={'m-0'}
-                        rules={[
-                          {
-                            required: true,
-                            message: 'Please select KPI Type',
-                          },
-                        ]}
+                        // rules={[
+                        //   {
+                        //     required: true,
+                        //     message: 'Please select KPI Type',
+                        //   },
+                        // ]}
                       >
                         <Select
                           className={'fa-select w-full'}
@@ -948,7 +948,7 @@ const matchEventName = (item) => {
                               // disabled={loading}
                               size='large'
                               // className={'fa-input w-full'}
-                              placeholder='Type your formula.  Eg (A/B)'
+                              placeholder='Type your formula.  Eg A/B, A+B, A-B, A*B'
                               bordered={false}
                             />
                           </Form.Item>
@@ -1129,15 +1129,15 @@ const matchEventName = (item) => {
                     <div className={'mt-4 border rounded-lg'}>
                     {viewKPIDetails?.transformations?.qG.map((item) => (
                       <>
-                      <div className={'py-4'}>
-                      <Row className={'m-0 mt-2 ml-4'}>
+                      <div className={'py-2'}>
+                      <Row className={'m-0 mt-1 ml-4'}>
                           <Col>
                               <Button
                               className={`mr-2`}
                               type='link'
                               disabled={true}
                               >
-                                  {item?.me[0]}
+                                  {(item?.me[0]).replace(/_/g, ' ')}
                               </Button>
                           </Col>
                           <Col>
@@ -1207,7 +1207,7 @@ const matchEventName = (item) => {
                               size='large'
                               value={viewKPIDetails?.transformations?.for}
                               // className={'fa-input w-full'}
-                              placeholder='Type your formula.  Eg (A/B)'
+                              placeholder='Type your formula.  Eg A/B, A+B, A-B, A*B'
                               bordered={false}
                             />
                           </Col>

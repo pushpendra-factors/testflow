@@ -177,11 +177,6 @@ export default function (state = defaultState, action) {
     case 'DISABLE_BINGADS_FULFILLED': {
       return {...state, bingAds: {}}
     }
-    case 'CREATE_ALERT': {
-      const props = [...state.Alerts];
-      props.push(action.payload);
-      return { ...state, Alerts: props}
-    }
     case 'FETCH_ALERTS': {
       return { ...state, Alerts: action.payload };
     }
@@ -911,12 +906,8 @@ export function createAlert(projectId, payload, query_id) {
     return new Promise((resolve, reject) => {
       post(dispatch, host + 'projects/'+ projectId +'/v1/alerts?query_id=' + query_id, payload)
         .then((r) => {
-          if (r.ok) {
             dispatch({ type: 'CREATE_ALERT', payload: r.data});
             resolve(r);
-          } else {
-            reject(r);
-          }
         })
         .catch((err) => {
           reject(err);

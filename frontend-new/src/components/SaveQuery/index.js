@@ -577,6 +577,7 @@ function SaveQuery({
         onSubmit={handleEmailClick}
         isLoading={apisCalled}
         setShowShareToEmailModal={setShowShareToEmailModal}
+        queryTitle={queryTitle}
       />
 
       {projectSettingsV1?.int_slack ? (
@@ -586,6 +587,7 @@ function SaveQuery({
           channelOpts={channelOpts}
           isLoading={apisCalled}
           setShowShareToSlackModal={setShowShareToSlackModal}
+          queryTitle={queryTitle}
         />
       ) : (
         <AppModal

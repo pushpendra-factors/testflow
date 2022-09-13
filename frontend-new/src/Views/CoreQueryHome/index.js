@@ -1110,6 +1110,7 @@ function CoreQuery({
           onSubmit={handleEmailClick}
           isLoading={loading}
           setShowShareToEmailModal={setShowShareToEmailModal}
+          queryTitle={selectedRow?.title}
         />
 
         {projectSettingsV1?.int_slack ? (
@@ -1119,6 +1120,7 @@ function CoreQuery({
             channelOpts={channelOpts}
             isLoading={loading}
             setShowShareToSlackModal={setShowShareToSlackModal}
+            queryTitle={selectedRow?.title}
           />
         ) : (
           <AppModal
