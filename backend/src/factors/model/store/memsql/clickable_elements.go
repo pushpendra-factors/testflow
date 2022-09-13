@@ -48,15 +48,15 @@ func (store *MemSQL) UpsertCountAndCheckEnabledClickableElement(projectId int64,
 
 	element, getErr := store.GetClickableElement(projectId, reqPayload.DisplayName, reqPayload.ElementType)
 	if getErr == http.StatusNotFound {
-		status, err := GetStore().CreateClickableElement(projectId, reqPayload)
+		status, err := store.CreateClickableElement(projectId, reqPayload)
 		return false, status, err
 	} else if getErr == http.StatusBadRequest {
 		logCtx.Error("Invalid parameters.")
 		return false, http.StatusBadRequest, errors.New("Update click failed. Invalid parameters.")
 	} else if getErr == http.StatusInternalServerError {
-		logCtx.Error("Gettingclick failed.")
+		logCtx.Error("Getting clickable element failed.")
 		return false, http.StatusInternalServerError,
-			errors.New("Updateclick failed. Getting click failed.")
+			errors.New("Update clickable element failed. Getting clickable element failed.")
 	}
 
 	db := C.GetServices().Db
@@ -74,7 +74,7 @@ func (store *MemSQL) UpsertCountAndCheckEnabledClickableElement(projectId int64,
 		}
 
 		return element.Enabled, http.StatusInternalServerError,
-			errors.New("Updateclick failed. Failed to update click.")
+			errors.New("Update click failed. Failed to update click.")
 	}
 
 	return element.Enabled, http.StatusAccepted, nil
@@ -90,14 +90,14 @@ func (store *MemSQL) CreateClickableElement(projectId int64, click *model.Captur
 
 	if projectId == 0 || click.DisplayName == "" || click.ElementType == "" {
 		logCtx.Error("Invalid parameters.")
-		return http.StatusBadRequest, errors.New("Failed to create aclick event. Invalid parameters.")
+		return http.StatusBadRequest, errors.New("Failed to create a clickable element. Invalid parameters.")
 	}
 
 	elementAttributes, err := U.EncodeStructTypeToPostgresJsonb(click.ElementAttributes)
 	if err != nil {
 		logCtx.Error("Cannot convert struct to json.")
 		return http.StatusInternalServerError,
-			errors.New("Failed to create aclick event. Cannot convert struct to json.")
+			errors.New("Failed to create a clickable element. Cannot convert struct to json.")
 	}
 
 	event := model.ClickableElements{
@@ -112,13 +112,10 @@ func (store *MemSQL) CreateClickableElement(projectId int64, click *model.Captur
 
 	db := C.GetServices().Db
 	dbx := db.Create(&event)
-	if dbx.Error != nil {
-		if IsDuplicateRecordError(dbx.Error) {
-			logCtx.WithError(dbx.Error).Error("Duplicate.")
-			return http.StatusConflict, errors.New("Failed to create a click event. Duplicate.")
-		}
-		logCtx.WithError(dbx.Error).Error("Failed to create a click event.")
-		return http.StatusInternalServerError, errors.New("Failed to create aclick event")
+	// Duplicates gracefully handled and allowed further.
+	if dbx.Error != nil && !IsDuplicateRecordError(dbx.Error) {
+		logCtx.WithError(dbx.Error).Error("Failed to create a clickable element.")
+		return http.StatusInternalServerError, errors.New("Failed to create a clickable element")
 	}
 
 	return http.StatusCreated, nil
