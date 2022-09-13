@@ -333,7 +333,7 @@ const matchEventName = (item) => {
         name: data?.name,
         description: data?.description,
         type_of_query: 1,
-        objTy: data.kpi_category,
+        obj_ty: data.kpi_category,
         transformations: {
           agFn: data.kpi_function,
           agPr: KPIPropertyDetails?.name,
