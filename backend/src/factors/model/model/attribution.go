@@ -60,6 +60,7 @@ const (
 	AttributionMethodUShaped             = "U_Shaped"
 	AttributionMethodTimeDecay           = "Time_Decay"
 	AttributionMethodInfluence           = "Influence"
+	AttributionMethodWShaped             = "W_Shaped"
 
 	AttributionKeyCampaign    = "Campaign"
 	AttributionKeySource      = "Source"
@@ -1755,7 +1756,6 @@ func AddGrandTotalRow(headers []string, rows [][]interface{}, keyIndex int, anal
 		float64(0), float64(0), float64(0), float64(0), float64(0), float64(0)}
 
 	grandTotalRow = append(grandTotalRow, defaultMatchingRow...)
-	// Todo check Roshan
 	// Remaining linked funnel events & CPCs
 	for i := keyIndex + 14; i < len(headers)-1; i++ {
 		grandTotalRow = append(grandTotalRow, float64(0))
@@ -1778,7 +1778,6 @@ func AddGrandTotalRow(headers []string, rows [][]interface{}, keyIndex int, anal
 
 	var spendFunnelConversionCPC []float64      //linked funnel events
 	var conversionFunnelConversionCPC []float64 //linked funnel events
-	// Todo check Roshan
 	for i := keyIndex + 14; i < len(headers)-1; i += 2 {
 
 		spendFunnelConversionCPC = append(spendFunnelConversionCPC, float64(0))
@@ -1832,7 +1831,6 @@ func AddGrandTotalRow(headers []string, rows [][]interface{}, keyIndex int, anal
 
 		// Remaining linked funnel events & CPCs
 		j := 0
-		// Todo check Roshan
 		for i := keyIndex + 14; i < len(grandTotalRow)-1; i += 2 {
 			grandTotalRow[i] = grandTotalRow[i].(float64) + row[i].(float64)
 			if spend > 0 && i < len(grandTotalRow) && j < len(spendFunnelConversionCPC) && len(spendFunnelConversionCPC) > 0 && len(conversionFunnelConversionCPC) > 0 {
@@ -1888,7 +1886,6 @@ func AddGrandTotalRow(headers []string, rows [][]interface{}, keyIndex int, anal
 
 	// Remaining linked funnel events & CPCs
 	k := 0
-	// Todo check Roshan
 	for i := keyIndex + 14; i < len(grandTotalRow)-1; i += 2 {
 		if i < len(grandTotalRow) && k < len(spendFunnelConversionCPC) && len(spendFunnelConversionCPC) > 0 && len(conversionFunnelConversionCPC) > 0 && conversionFunnelConversionCPC[k] > 0 {
 			// Funnel - Conversion - CPC.
