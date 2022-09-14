@@ -10,7 +10,7 @@ func (pg *Postgres) GetKPIConfigsForWebsiteSessions(projectID uint64, reqID stri
 	config := model.KPIConfigForWebsiteSessions
 	kpiPropertiesFromContentGroup := pg.getWebsiteRelatedContentGroupPropertiesForKPI(projectID)
 	config["properties"] = append(model.KPIPropertiesForWebsiteSessions, kpiPropertiesFromContentGroup...)
-	config["metrics"] = model.GetMetricsForDisplayCategory(model.WebsiteSessionDisplayCategory)
+	config["metrics"] = model.GetStaticallyDefinedMetricsForDisplayCategory(model.WebsiteSessionDisplayCategory)
 	return config, http.StatusOK
 }
 

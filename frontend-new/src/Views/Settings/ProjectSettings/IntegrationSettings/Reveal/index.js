@@ -156,7 +156,7 @@ const RevealIntegration = ({
                 <Col span={24}>
                   <div className={'flex justify-end'}>
                     {/* <Button disabled={loading} size={'large'} onClick={onReset} className={'mr-2'}> Cancel </Button>  */}
-                    <Button loading={loading} type="primary" size={'large'} htmlType="submit"> Connect Now </Button>
+                    <Button loading={loading} type="primary" size={'large'} htmlType="submit"> Connect Now</Button>
                   </div>
                 </Col>
               </Row>
@@ -171,7 +171,7 @@ const RevealIntegration = ({
           </div>
         }
         <div className={'mt-4 flex'} data-tour='step-11'>
-          {currentProjectSettings?.int_clear_bit ? <Button loading={loading} onClick={() => onDisconnect()}>Disconnect</Button> : <Button type={'primary'} loading={loading} onClick={() => setShowForm(!showForm)}>Connect</Button>
+          {currentProjectSettings?.int_clear_bit ? <Button loading={loading} onClick={() => onDisconnect()}>Disconnect</Button> : <Button type={'primary'} loading={loading} onClick={() => setShowForm(!showForm)}>Connect Now</Button>
           }
           {kbLink && <a className={'ant-btn ml-2 '} target={"_blank"} href={kbLink}>View documentation</a>}
         </div>

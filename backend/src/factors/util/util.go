@@ -46,9 +46,12 @@ const TimeoutTwoSecond = 2 * time.Second
 const TimeoutFiveSecond = 5 * time.Second
 
 const (
-	DayInSecs   = 24 * 60 * 60
-	WeekInSecs  = 7 * DayInSecs
-	MonthInSecs = 31 * DayInSecs
+	DayInSecs                        = 24 * 60 * 60
+	WeekInSecs                       = 7 * DayInSecs
+	MonthInSecs                      = 31 * DayInSecs
+	Alpha                            = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	AllowedDerivedMetricSpecialChars = "*/+-()"
+	AllowedDerivedMetricOperator     = "*/+-"
 )
 
 type TimeZoneString string
@@ -1324,7 +1327,7 @@ func HasMaliciousContent(reqPayload string) (bool, error) {
 	return false, nil
 }
 
-// The string should contain alphabets(upper/lower case), number, hyphen, underscore, space
+// The string should contain Alphabets(upper/lower case), number, hyphen, underscore, space
 func IsUserOrProjectNameValid(actualString string) bool {
 	isValid, _ := regexp.MatchString(
 		"^[A-Za-z0-9-_ ]*$",
@@ -1369,4 +1372,93 @@ func CreateVirtualDisplayName(actualName string) string {
 
 func CapitalizeFirstLetter(data string) string {
 	return strings.Title(strings.ToLower(data))
+}
+func ValidateArithmeticFormula(formula string) bool {
+	var valueStack []string
+	var operatorStack []string
+	for i, c := range formula {
+		if i == 0 {
+			continue
+		}
+		currCh := string(c)
+		prevCh := string(formula[i-1])
+		if !strings.Contains(Alpha, strings.ToLower(currCh)) && !strings.Contains(AllowedDerivedMetricSpecialChars, strings.ToLower(currCh)) {
+			return false
+		}
+		if strings.Contains(Alpha, strings.ToLower(currCh)) && (strings.Contains(Alpha, strings.ToLower(prevCh)) || !strings.Contains(AllowedDerivedMetricSpecialChars, strings.ToLower(prevCh))) {
+			return false
+		}
+		if strings.Contains(AllowedDerivedMetricOperator, strings.ToLower(currCh)) && strings.Contains(AllowedDerivedMetricOperator, strings.ToLower(prevCh)) {
+			return false
+		}
+	}
+
+	for _, c := range formula {
+		ch := string(c)
+		if ch == "(" {
+			operatorStack = append(operatorStack, ch)
+		} else if strings.Contains(Alpha, strings.ToLower(ch)) {
+			valueStack = append(valueStack, ch)
+		} else if ch == ")" {
+			for len(operatorStack) != 0 && operatorStack[len(operatorStack)-1] != "(" {
+				if len(valueStack) < 2 {
+					return false
+				}
+				valueStack = valueStack[:len(valueStack)-1]
+				operatorStack = operatorStack[:len(operatorStack)-1]
+			}
+			if len(operatorStack) != 0 {
+				operatorStack = operatorStack[:len(operatorStack)-1]
+			}
+		} else {
+			for len(operatorStack) != 0 && Precedence(operatorStack[len(operatorStack)-1]) >= Precedence(ch) {
+				if len(valueStack) < 2 {
+					return false
+				}
+				valueStack = valueStack[:len(valueStack)-1]
+				operatorStack = operatorStack[:len(operatorStack)-1]
+			}
+			operatorStack = append(operatorStack, ch)
+		}
+	}
+	for len(operatorStack) != 0 {
+		if len(valueStack) < 2 {
+			return false
+		}
+		valueStack = valueStack[:len(valueStack)-1]
+		operatorStack = operatorStack[:len(operatorStack)-1]
+	}
+	if len(valueStack) == 1 && len(operatorStack) == 0 {
+		return true
+	} else {
+		return false
+	}
+}
+
+func Precedence(op string) int {
+	if op == "+" || op == "-" {
+		return 1
+	}
+	if op == "*" || op == "/" || op == "%" {
+		return 2
+	}
+	return 0
+}
+
+func ApplyOp(a, b float64, op string) float64 {
+	switch op {
+	case "+":
+		return a + b
+	case "-":
+		return a - b
+	case "*":
+		return a * b
+	case "/":
+		if b == float64(0) {
+			return 0
+		}
+		return a / b
+	default:
+		return 0
+	}
 }

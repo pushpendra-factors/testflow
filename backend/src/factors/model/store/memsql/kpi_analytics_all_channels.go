@@ -8,7 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (store *MemSQL) GetKPIConfigsForAllChannels(projectID int64, reqID string) (map[string]interface{}, int) {
+func (store *MemSQL) GetKPIConfigsForAllChannels(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"req_id":     reqID,
@@ -18,5 +18,10 @@ func (store *MemSQL) GetKPIConfigsForAllChannels(projectID int64, reqID string) 
 	config := model.GetKPIConfigsForAllChannels()
 	objectsAndProperties := store.buildObjectAndPropertiesForAllChannel(projectID, ObjectsForAllChannels)
 	config["properties"] = model.TransformChannelsPropertiesConfigToKpiPropertiesConfig(objectsAndProperties)
+
+	rMetrics := model.GetKPIMetricsForAllChannels()
+	rMetrics = append(rMetrics, store.GetDerivedKPIMetricsByProjectIdAndDisplayCategory(projectID, model.AllChannelsDisplayCategory, includeDerivedKPIs)...)
+
+	config["metrics"] = rMetrics
 	return config, http.StatusOK
 }

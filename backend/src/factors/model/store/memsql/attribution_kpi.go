@@ -456,10 +456,12 @@ func (store *MemSQL) RunAttributionForMethodologyComparisonKpi(projectID int64,
 
 			for len(attributionDataCompare[key].ConversionEventCount) < len(attributionData[key].ConversionEventCount) {
 				attributionDataCompare[key].ConversionEventCount = append(attributionDataCompare[key].ConversionEventCount, float64(0))
+				attributionDataCompare[key].ConversionEventCountInfluence = append(attributionDataCompare[key].ConversionEventCountInfluence, float64(0))
 			}
 
 			for idx := 0; idx < len(attributionDataCompare[key].ConversionEventCount); idx++ {
 				attributionData[key].ConversionEventCompareCount = append(attributionData[key].ConversionEventCompareCount, attributionDataCompare[key].ConversionEventCount[idx])
+				attributionData[key].ConversionEventCompareCountInfluence = append(attributionData[key].ConversionEventCompareCountInfluence, attributionDataCompare[key].ConversionEventCountInfluence[idx])
 			}
 		}
 	}
@@ -468,8 +470,10 @@ func (store *MemSQL) RunAttributionForMethodologyComparisonKpi(projectID int64,
 		if _, exists := attributionData[missingKey]; !exists {
 			attributionData[missingKey] = &model.AttributionData{}
 			attributionData[missingKey].ConversionEventCompareCount = attributionDataCompare[missingKey].ConversionEventCount
+			attributionData[missingKey].ConversionEventCompareCountInfluence = attributionDataCompare[missingKey].ConversionEventCountInfluence
 			for idx := 0; idx < len(attributionDataCompare[missingKey].ConversionEventCount); idx++ {
 				attributionData[missingKey].ConversionEventCompareCount = append(attributionData[missingKey].ConversionEventCompareCount, float64(0))
+				attributionData[missingKey].ConversionEventCompareCountInfluence = append(attributionData[missingKey].ConversionEventCompareCountInfluence, float64(0))
 			}
 		}
 	}

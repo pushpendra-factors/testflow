@@ -138,6 +138,16 @@ func (dd *DiskDriver) GetModelChannelFilePathAndName(channel string, projectId i
 	return path, channel + ".txt"
 }
 
+func (dd *DiskDriver) GetModelUsersFilePathAndName(dateField string, projectId int64, startTimestamp int64, modelType string) (string, string) {
+	path := dd.GetModelUsersDir(dateField, projectId, startTimestamp, modelType)
+	return path, dateField + ".txt"
+}
+
+func (dd *DiskDriver) GetModelUsersDir(dateField string, projectId int64, startTimestamp int64, modelType string) string {
+	path := dd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
+	return fmt.Sprintf("%susers/", path)
+}
+
 func (dd *DiskDriver) GetModelEventsBucketingFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string) {
 	path := dd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
 	return path, "events_bucketed.txt"
@@ -228,4 +238,13 @@ func (dd *DiskDriver) GetKPIFilePathAndName(projectId int64, dateString string, 
 func (dd *DiskDriver) GetAdsDataFilePathAndName(projectId int64, report string, chunkNo int) (string, string) {
 	path := dd.GetAdsDataDir(projectId)
 	return path, fmt.Sprintf("%v-%v-%v.csv", report, projectId, chunkNo)
+}
+
+func (dd *DiskDriver) GetWIPropertiesPathAndName(projectId int64) (string, string) {
+	path := dd.GetWIPropertiesDir(projectId)
+	return path, "properties.txt"
+}
+
+func (dd *DiskDriver) GetWIPropertiesDir(projectId int64) string {
+	return fmt.Sprintf("%v/projects/%v/weeklyinsights/", dd.baseDir, projectId)
 }

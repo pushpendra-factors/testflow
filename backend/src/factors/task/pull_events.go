@@ -3,13 +3,16 @@ package task
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"factors/filestore"
+	"factors/model/model"
 	M "factors/model/model"
 	"factors/model/store"
 	P "factors/pattern"
 	serviceDisk "factors/services/disk"
 	U "factors/util"
 	"fmt"
+	"net/http"
 	"os"
 	"time"
 
@@ -26,6 +29,13 @@ type CounterCampaignFormat struct {
 	SmartProps map[string]interface{} `json:"sp"`
 }
 
+type CounterUserFormat struct {
+	Id            string
+	Properties    map[string]interface{}
+	Is_Anonymous  bool
+	JoinTimestamp int64
+}
+
 var fileType = map[string]int64{
 	"events":         1,
 	M.ADWORDS:        2,
@@ -33,6 +43,7 @@ var fileType = map[string]int64{
 	M.BINGADS:        4,
 	M.LINKEDIN:       5,
 	M.GOOGLE_ORGANIC: 6,
+	"users":          7,
 }
 
 var channelToPullMap = map[string]func(int64, int64, int64) (*sql.Rows, *sql.Tx, error){
@@ -253,6 +264,78 @@ func pullChannelData(channel string, projectID int64, startTime, endTime int64, 
 	return rowCount, eventsFilePath, nil
 }
 
+//Pull Users Data
+func pullUsersData(dateField string, source int, group int, projectID int64, startTime, endTime int64, eventsFilePath string) (int, string, error) {
+
+	rows, tx, err := store.GetStore().PullUsersRowsForWI(projectID, startTime, endTime, dateField, source, group)
+	if err != nil {
+		peLog.WithError(err).Error("SQL Query failed.")
+		return 0, "", err
+	}
+	defer U.CloseReadQuery(rows, tx)
+
+	file, err := os.Create(eventsFilePath)
+	if err != nil {
+		peLog.WithFields(log.Fields{"file": eventsFilePath, "err": err}).Error("Unable to create file.")
+		return 0, "", err
+	}
+	defer file.Close()
+
+	rowCount := 0
+	for rows.Next() {
+		var id string
+		var properties *postgres.Jsonb
+		var is_anonymous bool
+		var join_timestamp int64
+		if err = rows.Scan(&id, &properties, &is_anonymous, &join_timestamp); err != nil {
+			peLog.WithFields(log.Fields{"err": err}).Error("SQL Parse failed.")
+			return 0, "", err
+		}
+
+		var propsMap map[string]interface{}
+		if properties != nil {
+			propsBytes, err := properties.Value()
+			if err != nil {
+				peLog.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal properties")
+				return 0, "", err
+			}
+			err = json.Unmarshal(propsBytes.([]byte), &propsMap)
+			if err != nil {
+				peLog.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal properties")
+				return 0, "", err
+			}
+		} else {
+			peLog.WithFields(log.Fields{"err": err, "project_id": projectID}).Error("Nil properties")
+		}
+
+		user := CounterUserFormat{
+			Id:            id,
+			Properties:    propsMap,
+			Is_Anonymous:  is_anonymous,
+			JoinTimestamp: join_timestamp,
+		}
+
+		lineBytes, err := json.Marshal(user)
+		if err != nil {
+			peLog.WithFields(log.Fields{"err": err}).Error("Unable to marshal user.")
+			return 0, "", err
+		}
+		line := string(lineBytes)
+		if _, err := file.WriteString(fmt.Sprintf("%s\n", line)); err != nil {
+			peLog.WithFields(log.Fields{"line": line, "err": err}).Error("Unable to write to file.")
+			return 0, "", err
+		}
+		rowCount++
+	}
+
+	if rowCount > M.EventsPullLimit {
+		// Todo(Dinesh): notify
+		return rowCount, eventsFilePath, fmt.Errorf("events count has exceeded the %d limit", M.EventsPullLimit)
+	}
+
+	return rowCount, eventsFilePath, nil
+}
+
 //pull Events for Archive
 func PullEventsForArchive(projectID int64, eventsFilePath, usersFilePath string,
 	startTime, endTime int64) (int, string, string, error) {
@@ -418,7 +501,7 @@ func PullAllData(projectId int64, configs map[string]interface{}) (map[string]in
 	if fileTypes[fileType["events"]] {
 		exists := false
 		if !*hardPull {
-			if ok, _ := checkEventFileExists(cloudManager, diskManager, projectId, startTimestamp, modelType); ok {
+			if ok, _ := checkEventFileExists(cloudManager, projectId, startTimestamp, modelType); ok {
 				status["events-info"] = "File already exists"
 				exists = true
 			}
@@ -453,27 +536,31 @@ func PullAllData(projectId int64, configs map[string]interface{}) (map[string]in
 	// CAMPAIGN REPORTS
 	for _, channel := range []string{M.ADWORDS, M.BINGADS, M.FACEBOOK, M.GOOGLE_ORGANIC, M.LINKEDIN} {
 		if fileTypes[fileType[channel]] {
-			pull := true
 			if !*hardPull {
-				if ok, _ := checkChannelFileExists(channel, cloudManager, diskManager, projectId, startTimestamp, modelType); ok {
-					status[channel+"-error"] = "File already exists"
-					pull = false
+				if ok, _ := checkChannelFileExists(channel, cloudManager, projectId, startTimestamp, modelType); ok {
+					status[channel+"-info"] = "File already exists"
+					continue
 				}
 			}
-			if pull {
-				if !integrations[channel] {
-					status[channel+"-info"] = "Not Integrated"
-				} else {
-					if store.GetStore().IsDataAvailable(projectId, channel, uint64(endTimestampInProjectTimezone)) {
-						if _, ok := PullDataForChannel(channel, projectId, cloudManager, diskManager, startTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone, modelType, status, logCtx); !ok {
-							return status, false
-						}
-					} else {
-						success = false
-						status[channel+"-error"] = "Data not available"
+			if !integrations[channel] {
+				status[channel+"-info"] = "Not Integrated"
+			} else {
+				if store.GetStore().IsDataAvailable(projectId, channel, uint64(endTimestampInProjectTimezone)) {
+					if _, ok := PullDataForChannel(channel, projectId, cloudManager, diskManager, startTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone, modelType, status, logCtx); !ok {
+						return status, false
 					}
+				} else {
+					success = false
+					status[channel+"-error"] = "Data not available"
 				}
 			}
+		}
+	}
+
+	//USERS
+	if fileTypes[fileType["users"]] {
+		if _, ok := PullUsersDataForCustomMetrics(projectId, cloudManager, diskManager, startTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone, modelType, hardPull, status, logCtx); !ok {
+			return status, false
 		}
 	}
 
@@ -582,22 +669,164 @@ func PullDataForChannel(channel string, projectId int64, cloudManager *filestore
 	return nil, true
 }
 
-func checkEventFileExists(cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, projectId int64, startTimestamp int64, modelType string) (bool, error) {
-	path, name := (*cloudManager).GetModelEventsFilePathAndName(projectId, startTimestamp, modelType)
-	if _, err := (*cloudManager).Get(path, name); err != nil {
-		log.WithFields(log.Fields{"err": err, "filePath": path,
-			"fileName": name}).Error("Failed to write to fetch from cloud path")
-		return false, err
-	} else {
-		return true, nil
+func PullUsersDataForCustomMetrics(projectId int64, cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, startTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone int64,
+	modelType string, hardPull *bool, status map[string]interface{}, logCtx *log.Entry) (error, bool) {
+
+	filesCreated := 0
+	totalRowsCount := 0
+	var totalTimeTaken int64 = 0
+
+	logCtx.Infof("Pulling users")
+
+	groupsMap := make(map[string]int)
+	{
+		groups, errCode := store.GetStore().GetGroups(projectId)
+		if errCode != http.StatusFound {
+			status["users-error"] = "failed to get groups for project"
+			return errors.New("failed to get groups for project"), false
+		}
+
+		for _, group := range groups {
+			groupsMap[group.Name] = group.ID
+		}
+		if _, ok := groupsMap[model.USERS]; !ok {
+			groupsMap[model.USERS] = 0
+		}
 	}
+
+	// get unique datefields
+	uniqueDateFileds := make(map[string]string)
+	{
+		customMetrics, errStr, getStatus := store.GetStore().GetCustomMetricsByProjectId(projectId)
+		if getStatus != http.StatusFound {
+			logCtx.WithField("error", errStr).Error("Pull users failed. get custom metrics failed.")
+			status["users-error"] = errStr
+			return fmt.Errorf("%s", errStr), false
+		}
+		for _, customMetric := range customMetrics {
+			var customMetricTransformation model.CustomMetricTransformation
+			err := U.DecodePostgresJsonbToStructType(customMetric.Transformations, &customMetricTransformation)
+			if err != nil {
+				status["users-error"] = "Error during decode of custom metrics transformations"
+				return err, false
+			}
+			if _, ok := uniqueDateFileds[customMetricTransformation.DateField]; !ok {
+				uniqueDateFileds[customMetricTransformation.DateField] = customMetric.ObjectType
+			}
+		}
+	}
+
+	for dateField, objectType := range uniqueDateFileds {
+		if !*hardPull {
+			if ok, _ := checkUsersFileExists(dateField, cloudManager, projectId, startTimestamp, modelType); ok {
+				status["users-"+dateField+"-info"] = "File already exists"
+				continue
+			}
+		}
+		var group int
+		if groupStr, ok := M.MapOfKPICategoryToProfileGroupAnalysis[objectType]; ok {
+			if _, ok := groupsMap[groupStr]; ok {
+				group = groupsMap[groupStr]
+			}
+		} else {
+			status["users-"+dateField+"-error"] = "Unknown object type"
+			continue
+		}
+
+		var source int
+		if sourceStr, ok := M.MapOfKPIToProfileType[objectType]; ok {
+			source = M.UserSourceMap[sourceStr]
+		} else {
+			status["users-"+dateField+"-error"] = "Unknown object type"
+			continue
+		}
+		if err, ok := PullDataForUsers(projectId, cloudManager, diskManager, startTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone, modelType, dateField, source, group, status, logCtx); !ok {
+			return err, false
+		} else {
+			totalRowsCount += status["users-RowsCount"].(int)
+			totalTimeTaken += status["users-TimeTakenToPull"].(int64)
+			filesCreated += 1
+			delete(status, "users-RowsCount")
+			delete(status, "users-TimeTakenToPull")
+		}
+	}
+
+	status["users-NumberOfDatefieldsProcessed"] = filesCreated
+	status["users-TotalRowsCount"] = totalRowsCount
+	status["users-TotalTimeTakenToPull"] = totalTimeTaken
+	logCtx.WithFields(log.Fields{
+		"users-NumberOfDatefieldsProcessed": filesCreated,
+		"users-TotalRowsCount":              totalRowsCount,
+		"users-TotalTimeTakenToPull":        totalTimeTaken,
+	}).Info("Successfully pulled users data and written to files.")
+	return nil, true
 }
 
-func checkChannelFileExists(channel string, cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, projectId int64, startTimestamp int64, modelType string) (bool, error) {
+func PullDataForUsers(projectId int64, cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, startTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone int64,
+	modelType string, dateField string, source int, group int, status map[string]interface{}, logCtx *log.Entry) (error, bool) {
+
+	logCtx.Infof("Pulling users for %s", dateField)
+	cDir, cName := (*cloudManager).GetModelUsersFilePathAndName(dateField, projectId, startTimestamp, modelType)
+
+	// Writing users data to tmp file before upload.
+	fPath, fName := diskManager.GetModelUsersFilePathAndName(dateField, projectId, startTimestamp, modelType)
+	serviceDisk.MkdirAll(fPath) // create dir if not exist.
+	tmpEventsFile := fPath + fName
+	startAt := time.Now().UnixNano()
+
+	count, _, err := pullUsersData(dateField, source, group, projectId, startTimestampInProjectTimezone, endTimestampInProjectTimezone, tmpEventsFile)
+	if err != nil {
+		logCtx.WithField("error", err).Error("Pull users failed for" + dateField + ". Pull and write failed.")
+		status["users-"+dateField+"-error"] = err.Error()
+		return err, false
+	}
+	timeTaken := (time.Now().UnixNano() - startAt) / 1000000
+
+	status["users-RowsCount"] = count
+	status["users-TimeTakenToPull"] = timeTaken
+	// Zero events. Returns eventCount as 0.
+	if count == 0 {
+		logCtx.Info("No users data found for " + dateField)
+		status["users-"+dateField+"-info"] = "No users data found."
+		return err, true
+	}
+
+	tmpOutputFile, err := os.Open(tmpEventsFile)
+	if err != nil {
+		logCtx.WithField("error", err).Error("Failed to pull users. Write to tmp failed.")
+		status["users-"+dateField+"-error"] = "Failed to pull users. Write to tmp failed."
+		return err, false
+	}
+
+	err = (*cloudManager).Create(cDir, cName, tmpOutputFile)
+	if err != nil {
+		logCtx.WithField("error", err).Error("Failed to pull users. Upload failed.")
+		status["users-"+dateField+"-error"] = "Failed to pull users. Upload failed."
+		return err, false
+	}
+
+	return nil, true
+}
+
+func checkEventFileExists(cloudManager *filestore.FileManager, projectId int64, startTimestamp int64, modelType string) (bool, error) {
+	path, name := (*cloudManager).GetModelEventsFilePathAndName(projectId, startTimestamp, modelType)
+	return checkFileExists(cloudManager, path, name)
+}
+
+func checkChannelFileExists(channel string, cloudManager *filestore.FileManager, projectId int64, startTimestamp int64, modelType string) (bool, error) {
 	path, name := (*cloudManager).GetModelChannelFilePathAndName(channel, projectId, startTimestamp, modelType)
+	return checkFileExists(cloudManager, path, name)
+}
+
+func checkUsersFileExists(dateField string, cloudManager *filestore.FileManager, projectId int64, startTimestamp int64, modelType string) (bool, error) {
+	path, name := (*cloudManager).GetModelUsersFilePathAndName(dateField, projectId, startTimestamp, modelType)
+	return checkFileExists(cloudManager, path, name)
+}
+
+func checkFileExists(cloudManager *filestore.FileManager, path, name string) (bool, error) {
 	if _, err := (*cloudManager).Get(path, name); err != nil {
 		log.WithFields(log.Fields{"err": err, "filePath": path,
-			"fileName": name}).Error("Failed to write to fetch from cloud path")
+			"fileName": name}).Error("Failed to fetch from cloud path")
 		return false, err
 	} else {
 		return true, nil

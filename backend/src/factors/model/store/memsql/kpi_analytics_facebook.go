@@ -8,7 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (store *MemSQL) GetKPIConfigsForFacebook(projectID int64, reqID string) (map[string]interface{}, int) {
+func (store *MemSQL) GetKPIConfigsForFacebook(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"req_id":     reqID,
@@ -21,8 +21,13 @@ func (store *MemSQL) GetKPIConfigsForFacebook(projectID int64, reqID string) (ma
 	if len(settings) == 0 {
 		return nil, http.StatusOK
 	}
-	config := model.GetKPIConfigsForFacebook()
+	config := model.KpiFacebookConfig
 	facebookObjectsAndProperties := store.buildObjectAndPropertiesForFacebook(projectID, model.ObjectsForFacebook)
 	config["properties"] = model.TransformChannelsPropertiesConfigToKpiPropertiesConfig(facebookObjectsAndProperties)
+
+	rMetrics := model.GetKPIMetricsForFacebook()
+	rMetrics = append(rMetrics, store.GetDerivedKPIMetricsByProjectIdAndDisplayCategory(projectID, model.FacebookDisplayCategory, includeDerivedKPIs)...)
+
+	config["metrics"] = rMetrics
 	return config, http.StatusOK
 }

@@ -67,6 +67,8 @@ const (
 	UserEntity  = "user"
 )
 
+var KpiCategories = []string{EventCategory, ChannelCategory, ProfileCategory}
+
 // Each Property could belong to event or user entity based on type of event we consider. Eg - session has os property in event. Mostly used in EventsCategory.
 var MapOfKPIPropertyNameToData = map[string]map[string]map[string]string{
 	// Session only -  Event Properties.
@@ -555,7 +557,7 @@ func TransformDateTypeValueForEventsKPI(headers []string, rows [][]interface{}, 
 // Each KPI metric is internally converted to event analytics.
 // Considering all rows to be equal in size because of analytics response.
 // resultAsMap - key with groupByColumns, value as row.
-func HandlingEventResultsByApplyingOperations(results []*QueryResult, transformations []TransformQueryi, timezone string, isTimezoneEnabled bool) QueryResult {
+func HandlingEventResultsByApplyingOperations(results []*QueryResult, operations []string, timezone string, isTimezoneEnabled bool) QueryResult {
 	resultKeys := getAllKeysFromResults(results)
 	var finalResult QueryResult
 	finalResultRows := make([][]interface{}, 0)
@@ -567,7 +569,7 @@ func HandlingEventResultsByApplyingOperations(results []*QueryResult, transforma
 				key := U.GetkeyFromRow(row)
 				value1 := resultKeys[key]
 				value2 := row[len(row)-1]
-				operator := transformations[index-1].Metrics.Operator
+				operator := operations[index-1]
 				result := getValueFromValuesAndOperator(value1, value2, operator)
 				resultKeys[key] = result
 			}
@@ -619,13 +621,19 @@ func getValueFromValuesAndOperator(value1 interface{}, value2 interface{}, opera
 	var result float64
 	value1InFloat := U.SafeConvertToFloat64(value1)
 	value2InFloat := U.SafeConvertToFloat64(value2)
-	if operator == "Division" {
+	if operator == "Division" || operator == "/" {
 		if value2InFloat == 0 {
 			result = 0
 		} else {
 			result = value1InFloat / value2InFloat
 		}
-	} else if operator == "Percentage" {
+	} else if operator == "Multiply" || operator == "*" {
+		result = value1InFloat * value2InFloat
+	} else if operator == "Addition" || operator == "+" {
+		result = value1InFloat + value2InFloat
+	} else if operator == "Substract" || operator == "-" {
+		result = value1InFloat - value2InFloat
+	} else if operator == "Percentage" || operator == "%" {
 		if value2InFloat == 0 {
 			result = 0
 		} else {

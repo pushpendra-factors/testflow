@@ -8,7 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (store *MemSQL) GetKPIConfigsForGoogleOrganic(projectID int64, reqID string) (map[string]interface{}, int) {
+func (store *MemSQL) GetKPIConfigsForGoogleOrganic(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"req_id":     reqID,
@@ -21,8 +21,13 @@ func (store *MemSQL) GetKPIConfigsForGoogleOrganic(projectID int64, reqID string
 	if len(settings) == 0 {
 		return nil, http.StatusOK
 	}
-	config := model.GetKPIConfigsForGoogleOrganic()
+	config := model.KpiGoogleOrganicConfig
 	organicObjectsAndProperties := store.buildObjectAndPropertiesForGoogleOrganic(model.ObjectsForGoogleOrganic)
 	config["properties"] = model.TransformChannelsPropertiesConfigToKpiPropertiesConfig(organicObjectsAndProperties)
+
+	rMetrics := model.GetKPIMetricsForGoogleOrganic()
+	rMetrics = append(rMetrics, store.GetDerivedKPIMetricsByProjectIdAndDisplayCategory(projectID, model.GoogleOrganicDisplayCategory, includeDerivedKPIs)...)
+
+	config["metrics"] = rMetrics
 	return config, http.StatusOK
 }

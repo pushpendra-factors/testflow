@@ -13,7 +13,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// CreateCustomMetric godoc
+// TODO @kark We are using custom Metrics convention everywhere. But we intended the below to be used for custom KPI convention. This needs change.
+// TODO @kark Think how we are going to transition customMetric model to customKPI interface based.
+
+// CreateCustomMetric godoc.
 // @Summary To create custom metric.
 // @Tags CustomMetric
 // @Accept json
@@ -37,14 +40,12 @@ func CreateCustomMetric(c *gin.Context) (interface{}, int, string, string, bool)
 		return nil, http.StatusBadRequest, INVALID_INPUT, "Error during decode of custom metrics.", true
 	}
 
-	var customMetricTransformation model.CustomMetricTransformation
-	err = U.DecodePostgresJsonbToStructType(request.Transformations, &customMetricTransformation)
-	if err != nil {
-		return nil, http.StatusBadRequest, INVALID_INPUT, "Error during decode of custom metrics transformations.", true
+	isValid, errMsg := request.IsValid()
+	if isValid == false {
+		return nil, http.StatusBadRequest, INVALID_INPUT, errMsg, true
 	}
-	if !customMetricTransformation.IsValid() {
-		return nil, http.StatusBadRequest, INVALID_INPUT, "Error with values passed in transformations.", true
-	}
+
+	request.SetDefaultGroupIfRequired()
 	request.ProjectID = projectID
 	customMetric, errMsg, statusCode := store.GetStore().CreateCustomMetric(request)
 	if statusCode != http.StatusCreated {
@@ -174,6 +175,11 @@ func DeleteCustomMetrics(c *gin.Context) (interface{}, int, string, string, bool
 		return nil, http.StatusInternalServerError, PROCESSING_FAILED, "Error Processing/Fetching GetAlertNamesByProjectIdTypeAndName", true
 	}
 
+	customMetricNames := make([]string, 0)
+	if customMetric.TypeOfQuery == model.ProfileQueryType {
+		customMetricNames = store.GetStore().GetDerivedKPIsHavingNameInInternalQueries(projectID, customMetric.Name)
+	}
+
 	if len(dashboardUnitNames) == 0 && len(alertNames) == 0 {
 		statusCode = store.GetStore().DeleteCustomMetricByID(projectID, customMetricsID)
 		if statusCode != http.StatusAccepted {
@@ -181,9 +187,8 @@ func DeleteCustomMetrics(c *gin.Context) (interface{}, int, string, string, bool
 		} else {
 			return nil, http.StatusOK, "", "", false
 		}
-
 	} else {
-		return gin.H{"dashboardUnitNames": dashboardUnitNames, "alertNames": alertNames}, http.StatusBadRequest, DEPENDENT_RECORD_PRESENT, "", false
+		return gin.H{"dashboardUnitNames": dashboardUnitNames, "alertNames": alertNames, "customMetricNames": customMetricNames}, http.StatusBadRequest, DEPENDENT_RECORD_PRESENT, "", false
 	}
 }
 

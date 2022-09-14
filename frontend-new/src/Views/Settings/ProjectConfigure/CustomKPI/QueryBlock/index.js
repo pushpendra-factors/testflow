@@ -1,29 +1,26 @@
 /* eslint-disable */
 import React, { useState, useEffect } from 'react';
-import { SVG, Text } from '../../factorsComponents';
+import { SVG, Text } from 'factorsComponents';
 import styles from './index.module.scss';
 import { Button, Tooltip } from 'antd';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 
-import { setGroupBy, delGroupBy } from '../../../reducers/coreQuery/middleware';
-
-import FilterBlock from '../FilterBlock';
-import EventFilterWrapper from '../EventFilterWrapper';
-
-import GroupSelect2 from '../GroupSelect2';
-import EventGroupBlock from '../EventGroupBlock';
-import { QUERY_TYPE_FUNNEL } from '../../../utils/constants';
+import { setGroupBy, delGroupBy } from '../../../../../reducers/coreQuery/middleware';
 
 import FaSelect from 'Components/FaSelect';
-import AliasModal from '../AliasModal';
-import ORButton from '../../ORButton';
-import { getNormalizedKpi } from '../../../utils/kpiQueryComposer.helpers';
+import ORButton from '../../../../../components/ORButton';
 import { get } from 'lodash';
-import { compareFilters, groupFilters } from '../../../utils/global';
+import { compareFilters, groupFilters } from '../../../../../utils/global';
+import { getNormalizedKpi } from '../../../../../utils/kpiQueryComposer.helpers';
+import AliasModal from '../../../../../components/KPIComposer/AliasModal';
+import { QUERY_TYPE_FUNNEL } from '../../../../../utils/constants';
+import EventGroupBlock from '../../../../../components/KPIComposer/EventGroupBlock';
+import GroupSelect2 from '../../../../../components/KPIComposer/GroupSelect2';
+import EventFilterWrapper from '../../../../../components/KPIComposer/EventFilterWrapper';
 
 function QueryBlock({
-  index,
+  index, 
   event,
   eventChange,
   queries,
@@ -77,19 +74,11 @@ function QueryBlock({
   };
 
   const onChange = (value, group, category, type) => {
-    let qt;
-    for(let item of kpi?.config) {
-      for(let it of item.metrics) {
-        if(it?.name === value[1])
-          qt = it?.kpi_query_type;
-      }
-    }
     const newEvent = { alias: '', label: '', filters: [], group: '' };
     newEvent.label = value[0];
     newEvent.metric = value[1];
     newEvent.metricType = get(value, '2', '');
     newEvent.group = group;
-    newEvent.qt = qt;
     if (category) {
       newEvent.category = category;
     }
@@ -477,7 +466,7 @@ function QueryBlock({
               onClick={triggerDropDown}
               icon={<SVG name={'plus'} color={'grey'} />}
             >
-              {ifQueries ? 'Add another KPI' : 'Add a KPI'}
+              {ifQueries ? 'Add another KPI' : 'Add KPI'}
             </Button>
           }
           {selectEvents()}

@@ -77,7 +77,7 @@ func ComputeAndSendAlerts(projectID int64, configs map[string]interface{}) (map[
 				status["error"] = err
 				return status, false
 			}
-			if alertDescription.DateRange == model.LAST_QUARTER {
+			if alertDescription.DateRange == model.LAST_MONTH {
 				alertsToBeProcessed = append(alertsToBeProcessed, alert)
 			}
 
@@ -299,10 +299,6 @@ func executeAlertsKPIQuery(projectID int64, alertType int, date_range dateRanges
 }
 
 func getDateRange(timezone U.TimeZoneString, dateRange string, prevDateRange string, endTimeStamp time.Time) (dateRanges, error) {
-
-	if dateRange == model.LAST_MONTH || dateRange == model.LAST_QUARTER {
-		return dateRanges{}, errors.New("invalid date range")
-	}
 	var from, to, prev_from, prev_to time.Time
 	var err error
 	endTimeStamp = U.ConvertTimeIn(endTimeStamp, timezone)

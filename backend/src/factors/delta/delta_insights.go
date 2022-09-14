@@ -52,12 +52,13 @@ func ComputeDeltaInsights(projectId int64, configs map[string]interface{}) (map[
 	computedQueries := make(map[int64]bool)
 	dashboardUnits, _ := store.GetStore().GetDashboardUnitsForProjectID(projectId)
 	isDownloaded = false
+	totalProperties := make(map[string]bool)
 	for _, dashboardUnit := range dashboardUnits {
 		if !(whitelistedDashboardUnits["*"] || whitelistedDashboardUnits[fmt.Sprintf("%v", dashboardUnit.ID)]) {
 			continue
 		}
 		queryIdString := fmt.Sprintf("%v", dashboardUnit.QueryId)
-		deltaQuery, multiStepQuery, kpiQuery, isEnabled, isEventOccurence, isMultiStep := IsDashboardUnitWIEnabled(dashboardUnit)
+		deltaQuery, multiStepQuery, kpiQuery, isEnabled, isEventOccurence, isMultiStep, properties := IsDashboardUnitWIEnabled(dashboardUnit)
 		// Check if this is a valid query with valid filters
 		if !isEnabled || computedQueries[dashboardUnit.QueryId] {
 			continue
@@ -69,7 +70,7 @@ func ComputeDeltaInsights(projectId int64, configs map[string]interface{}) (map[
 
 		if len(kpiQuery.Queries) > 0 {
 			if err := CreateKpiInsights(diskManager, cloudManager, periodCodesWithWeekNMinus1, projectId,
-				dashboardUnit.QueryId, kpiQuery, insightGranularity, skipWpi, skipWpi2); err != nil {
+				dashboardUnit.QueryId, kpiQuery, insightGranularity, k, skipWpi, skipWpi2); err != nil {
 				log.WithError(err).Error("KPI insights error query: ", dashboardUnit.QueryId)
 				status["error-kpi-pass-"+queryIdString] = err
 				continue
@@ -128,7 +129,11 @@ func ComputeDeltaInsights(projectId int64, configs map[string]interface{}) (map[
 			status["error"] = errMsg
 			return status, false
 		}
+		for property, _ := range properties {
+			totalProperties[property] = true
+		}
 	}
+	WritePropertiesPath(projectId, totalProperties, *cloudManager)
 	status["InsightId"] = insightId
 	return status, true
 }
@@ -309,17 +314,46 @@ func WriteCpiPath(projectId int64, periodCode Period, queryId int64, k int, even
 	return err
 }
 
-func IsDashboardUnitWIEnabled(dashboardUnit M.DashboardUnit) (Query, MultiFunnelQuery, M.KPIQueryGroup, bool, bool, bool) {
+func WritePropertiesPath(projectId int64, properties map[string]bool, cloudManager filestore.FileManager) error {
+	path, name := cloudManager.GetWIPropertiesPathAndName(projectId)
+	propertiesJson, err := json.Marshal(properties)
+	if err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("failed to unmarshal properties Info.")
+		return err
+	}
+	err = cloudManager.Create(path, name, bytes.NewReader(propertiesJson))
+	if err != nil {
+		log.WithError(err).Error("writeEventInfoFile Failed to write to cloud")
+		return err
+	}
+	return err
+}
+
+func IsDashboardUnitWIEnabled(dashboardUnit M.DashboardUnit) (Query, MultiFunnelQuery, M.KPIQueryGroup, bool, bool, bool, map[string]bool) {
+	properties := make(map[string]bool)
 	var deltaQuery Query
 	queryClass, queryInfo, errMsg := store.GetStore().GetQueryAndClassFromDashboardUnit(&dashboardUnit)
 	if errMsg != "" {
 		log.Info("errMsg: ", errMsg)
-		return Query{}, MultiFunnelQuery{}, M.KPIQueryGroup{}, false, false, false
+		return Query{}, MultiFunnelQuery{}, M.KPIQueryGroup{}, false, false, false, properties
 	}
 
 	if queryClass == M.QueryClassEvents {
 		var queryGroup M.QueryGroup
 		U.DecodePostgresJsonbToStructType(&queryInfo.Query, &queryGroup)
+		for _, query := range queryGroup.Queries {
+			for _, qwp := range query.EventsWithProperties {
+				for _, qp := range qwp.Properties {
+					properties[qp.Property] = true
+				}
+			}
+			for _, qp := range query.GlobalUserProperties {
+				properties[qp.Property] = true
+			}
+			for _, qp := range query.GroupByProperties {
+				properties[qp.Property] = true
+			}
+		}
 		query := queryGroup.Queries[0]
 		if query.Type == M.QueryTypeUniqueUsers || query.Type == M.QueryTypeEventsOccurrence {
 			isEventOccurence := query.Type == M.QueryTypeEventsOccurrence
@@ -361,13 +395,24 @@ func IsDashboardUnitWIEnabled(dashboardUnit M.DashboardUnit) (Query, MultiFunnel
 						})
 					}
 				}
-				return deltaQuery, MultiFunnelQuery{}, M.KPIQueryGroup{}, true, isEventOccurence, false
+				return deltaQuery, MultiFunnelQuery{}, M.KPIQueryGroup{}, true, isEventOccurence, false, properties
 			}
 		}
 	}
 	if queryClass == M.QueryClassFunnel {
 		var query M.Query
 		U.DecodePostgresJsonbToStructType(&queryInfo.Query, &query)
+		for _, qwp := range query.EventsWithProperties {
+			for _, qp := range qwp.Properties {
+				properties[qp.Property] = true
+			}
+		}
+		for _, qp := range query.GlobalUserProperties {
+			properties[qp.Property] = true
+		}
+		for _, qp := range query.GroupByProperties {
+			properties[qp.Property] = true
+		}
 		if query.Type == M.QueryTypeUniqueUsers {
 			if query.EventsCondition == M.EventCondAnyGivenEvent {
 				if len(query.EventsWithProperties) == 2 {
@@ -387,7 +432,7 @@ func IsDashboardUnitWIEnabled(dashboardUnit M.DashboardUnit) (Query, MultiFunnel
 								FilterCriterionList: MapFilterProperties(append(query.EventsWithProperties[1].Properties, query.GlobalUserProperties...)),
 							}},
 						}}
-					return deltaQuery, MultiFunnelQuery{}, M.KPIQueryGroup{}, true, false, false
+					return deltaQuery, MultiFunnelQuery{}, M.KPIQueryGroup{}, true, false, false, properties
 				} else {
 					multiStepFunnel := MultiFunnelQuery{Id: dashboardUnit.QueryId,
 						Base: EventsCriteria{
@@ -417,7 +462,7 @@ func IsDashboardUnitWIEnabled(dashboardUnit M.DashboardUnit) (Query, MultiFunnel
 						}
 						multiStepFunnel.Intermediate = append(multiStepFunnel.Intermediate, criteria)
 					}
-					return Query{}, multiStepFunnel, M.KPIQueryGroup{}, true, false, true
+					return Query{}, multiStepFunnel, M.KPIQueryGroup{}, true, false, true, properties
 				}
 
 			}
@@ -427,15 +472,29 @@ func IsDashboardUnitWIEnabled(dashboardUnit M.DashboardUnit) (Query, MultiFunnel
 	if queryClass == M.QueryClassKPI {
 		var kpiQuery M.KPIQueryGroup
 		err := json.Unmarshal(queryInfo.Query.RawMessage, &kpiQuery)
+		for _, query := range kpiQuery.Queries {
+			for _, filter := range query.Filters {
+				properties[filter.PropertyName] = true
+			}
+			for _, gbp := range query.GroupBy {
+				properties[gbp.PropertyName] = true
+			}
+		}
+		for _, filter := range kpiQuery.GlobalFilters {
+			properties[filter.PropertyName] = true
+		}
+		for _, gbp := range kpiQuery.GlobalGroupBy {
+			properties[gbp.PropertyName] = true
+		}
 		if err == nil {
-			return deltaQuery, MultiFunnelQuery{}, kpiQuery, true, false, false
+			return deltaQuery, MultiFunnelQuery{}, kpiQuery, true, false, false, properties
 		} else {
 			log.WithError(err).Error("error getting kpiQuery")
 		}
 		// query := queryGroup.Queries[0]
 		// log.Infof("query: %v", query)
 	}
-	return deltaQuery, MultiFunnelQuery{}, M.KPIQueryGroup{}, false, false, false
+	return deltaQuery, MultiFunnelQuery{}, M.KPIQueryGroup{}, false, false, false, properties
 }
 
 func MapFilterProperties(qp []M.QueryProperty) []EventFilterCriterion {

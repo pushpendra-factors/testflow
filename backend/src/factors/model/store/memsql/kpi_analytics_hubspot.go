@@ -9,35 +9,35 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (store *MemSQL) GetKPIConfigsForHubspotContacts(projectID int64, reqID string) (map[string]interface{}, int) {
+func (store *MemSQL) GetKPIConfigsForHubspotContacts(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"req_id":     reqID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	return store.GetKPIConfigsForHubspot(projectID, reqID, model.HubspotContactsDisplayCategory)
+	return store.GetKPIConfigsForHubspot(projectID, reqID, model.HubspotContactsDisplayCategory, includeDerivedKPIs)
 }
 
-func (store *MemSQL) GetKPIConfigsForHubspotCompanies(projectID int64, reqID string) (map[string]interface{}, int) {
+func (store *MemSQL) GetKPIConfigsForHubspotCompanies(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"req_id":     reqID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	return store.GetKPIConfigsForHubspot(projectID, reqID, model.HubspotCompaniesDisplayCategory)
+	return store.GetKPIConfigsForHubspot(projectID, reqID, model.HubspotCompaniesDisplayCategory, includeDerivedKPIs)
 }
 
-func (store *MemSQL) GetKPIConfigsForHubspotDeals(projectID int64, reqID string) (map[string]interface{}, int) {
+func (store *MemSQL) GetKPIConfigsForHubspotDeals(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"req_id":     reqID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	return store.GetKPIConfigsForHubspot(projectID, reqID, model.HubspotDealsDisplayCategory)
+	return store.GetKPIConfigsForHubspot(projectID, reqID, model.HubspotDealsDisplayCategory, includeDerivedKPIs)
 }
 
 // Removed constants for hubspot and salesforce kpi metrics in PR - pull/3984.
-func (store *MemSQL) GetKPIConfigsForHubspot(projectID int64, reqID string, displayCategory string) (map[string]interface{}, int) {
+func (store *MemSQL) GetKPIConfigsForHubspot(projectID int64, reqID string, displayCategory string, includeDerivedKPIs bool) (map[string]interface{}, int) {
 	logFields := log.Fields{
 		"project_id":       projectID,
 		"req_id":           reqID,
@@ -54,12 +54,12 @@ func (store *MemSQL) GetKPIConfigsForHubspot(projectID int64, reqID string, disp
 		return nil, http.StatusOK
 	}
 
-	return store.getConfigForSpecificHubspotCategory(projectID, reqID, displayCategory), http.StatusOK
+	return store.getConfigForSpecificHubspotCategory(projectID, reqID, displayCategory, includeDerivedKPIs), http.StatusOK
 }
 
 // Removed constants for hubspot and salesforce kpi metrics in PR - pull/3984.
 // Only considering hubspot_contacts and salesforce_users for now.
-func (store *MemSQL) getConfigForSpecificHubspotCategory(projectID int64, reqID string, displayCategory string) map[string]interface{} {
+func (store *MemSQL) getConfigForSpecificHubspotCategory(projectID int64, reqID string, displayCategory string, includeDerivedKPIs bool) map[string]interface{} {
 	logFields := log.Fields{
 		"project_id":       projectID,
 		"req_id":           reqID,
@@ -67,25 +67,12 @@ func (store *MemSQL) getConfigForSpecificHubspotCategory(projectID int64, reqID 
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
-	logCtx := log.WithField("req_id", reqID).WithField("project_id", projectID)
-	customMetrics, err, statusCode := store.GetCustomMetricByProjectIdAndObjectType(projectID, model.ProfileQueryType, displayCategory)
-	if statusCode != http.StatusFound {
-		logCtx.WithField("err", err).WithField("displayCategory", displayCategory).Warn("Failed to get the custom Metric by object type")
-	}
-	rCustomMetrics := make([]map[string]string, 0)
-
-	for _, customMetric := range customMetrics {
-		currentMetric := make(map[string]string)
-		currentMetric["name"] = customMetric.Name
-		currentMetric["display_name"] = customMetric.Name
-		currentMetric["type"] = ""
-		rCustomMetrics = append(rCustomMetrics, currentMetric)
-	}
+	rMetrics := store.GetCustomMetricAndDerivedMetricByProjectIdAndDisplayCategory(projectID, displayCategory, includeDerivedKPIs)
 
 	return map[string]interface{}{
 		"category":         model.ProfileCategory,
 		"display_category": displayCategory,
-		"metrics":          rCustomMetrics,
+		"metrics":          rMetrics,
 		"properties":       store.getPropertiesForHubspotByDisplayCategory(projectID, reqID, displayCategory),
 	}
 }

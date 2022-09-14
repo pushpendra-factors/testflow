@@ -117,6 +117,16 @@ func (sd *S3Driver) GetModelChannelFilePathAndName(channel string, projectId int
 	return path, channel + ".txt"
 }
 
+func (sd *S3Driver) GetModelUsersFilePathAndName(dateField string, projectId int64, startTimestamp int64, modelType string) (string, string) {
+	path := sd.GetModelUsersDir(dateField, projectId, startTimestamp, modelType)
+	return path, dateField + ".txt"
+}
+
+func (sd *S3Driver) GetModelUsersDir(dateField string, projectId int64, startTimestamp int64, modelType string) string {
+	path := sd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
+	return fmt.Sprintf("%susers/", path)
+}
+
 func (sd *S3Driver) GetModelEventsBucketingFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string) {
 	path := sd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
 	return path, "events_bucketed.txt"
@@ -199,4 +209,13 @@ func (sd *S3Driver) GetAdsDataDir(projectId int64) string {
 func (sd *S3Driver) GetAdsDataFilePathAndName(projectId int64, report string, chunkNo int) (string, string) {
 	path := sd.GetAdsDataDir(projectId)
 	return path, fmt.Sprintf("%v-%v-%v.csv", report, projectId, chunkNo)
+}
+
+func (sd *S3Driver) GetWIPropertiesPathAndName(projectId int64) (string, string) {
+	path := sd.GetWIPropertiesDir(projectId)
+	return path, "properties.txt"
+}
+
+func (sd *S3Driver) GetWIPropertiesDir(projectId int64) string {
+	return fmt.Sprintf("projects/%v/weeklyinsights/", projectId)
 }

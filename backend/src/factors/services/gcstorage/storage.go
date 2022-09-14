@@ -134,6 +134,16 @@ func (gcsd *GCSDriver) GetModelChannelFilePathAndName(channel string, projectId 
 	return path, channel + ".txt"
 }
 
+func (gcsd *GCSDriver) GetModelUsersFilePathAndName(dateField string, projectId int64, startTimestamp int64, modelType string) (string, string) {
+	path := gcsd.GetModelUsersDir(dateField, projectId, startTimestamp, modelType)
+	return path, dateField + ".txt"
+}
+
+func (gcsd *GCSDriver) GetModelUsersDir(dateField string, projectId int64, startTimestamp int64, modelType string) string {
+	path := gcsd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
+	return fmt.Sprintf("%susers/", path)
+}
+
 func (gcsd *GCSDriver) GetModelEventsBucketingFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string) {
 	path := gcsd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
 	return path, "events_bucketed.txt"
@@ -213,6 +223,15 @@ func (gcsd *GCSDriver) GetInsightsWpiFilePathAndName(projectId int64, dateString
 func (gcsd *GCSDriver) GetInsightsCpiFilePathAndName(projectId int64, dateString string, queryId int64, k int) (string, string) {
 	path := gcsd.GetWeeklyInsightsModelDir(projectId, dateString, queryId, k)
 	return path, "cpi.txt"
+}
+
+func (gcsd *GCSDriver) GetWIPropertiesPathAndName(projectId int64) (string, string) {
+	path := gcsd.GetWIPropertiesDir(projectId)
+	return path, "properties.txt"
+}
+
+func (gcsd *GCSDriver) GetWIPropertiesDir(projectId int64) string {
+	return fmt.Sprintf("projects/%v/weeklyinsights/", projectId)
 }
 
 func (gcsd *GCSDriver) GetWeeklyInsightsModelDir(projectId int64, dateString string, queryId int64, k int) string {

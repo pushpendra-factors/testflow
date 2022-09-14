@@ -58,6 +58,14 @@ func mainRunDeltaInsights() {
 	memSQLCertificate := flag.String("memsql_cert", "", "")
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypeMemSQL, "Primary datastore type as memsql or postgres")
 
+	redisHost := flag.String("redis_host", "localhost", "")
+	redisPort := flag.Int("redis_port", 6379, "")
+	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
+	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
+
+	lookbackWindowForEventUserCache := flag.Int("lookback_window_event_user_cache",
+		30, "look back window in cache for event/user cache(to get props for custom kpis")
+
 	isWeeklyEnabled := flag.Bool("weekly_enabled", false, "")
 	lookback := flag.Int("lookback", 30, "lookback_for_delta lookup")
 	projectsFromDB := flag.Bool("projects_from_db", false, "")
@@ -92,13 +100,27 @@ func mainRunDeltaInsights() {
 			Certificate: *memSQLCertificate,
 			AppName:     "compute_delta_insights",
 		},
-		PrimaryDatastore: *primaryDatastore,
+		PrimaryDatastore:                *primaryDatastore,
+		RedisHost:                       *redisHost,
+		RedisPort:                       *redisPort,
+		RedisHostPersistent:             *redisHostPersistent,
+		RedisPortPersistent:             *redisPortPersistent,
+		LookbackWindowForEventUserCache: *lookbackWindowForEventUserCache,
 	}
+
 	C.InitConf(config)
 	err := C.InitDB(*config)
 	if err != nil {
 		log.WithError(err).Fatal("Failed to initialize DB")
 	}
+
+	C.InitRedis(config.RedisHost, config.RedisPort)
+	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
+	log.WithFields(log.Fields{
+		"Env":             *envFlag,
+		"localDiskTmpDir": *localDiskTmpDirFlag,
+		"Bucket":          *bucketName,
+	}).Infoln("Initialising")
 
 	var cloudManager filestore.FileManager
 	if *envFlag == "development" {
@@ -143,7 +165,7 @@ func mainRunDeltaInsights() {
 
 	allDashboard, allDashboards, _ := C.GetProjectsFromListWithAllProjectSupport(*whitelistedDashboardIds, "")
 	whitelistedIds := make(map[string]bool)
-	if allDashboard == true {
+	if allDashboard {
 		whitelistedIds["*"] = true
 	} else {
 		for id, _ := range allDashboards {

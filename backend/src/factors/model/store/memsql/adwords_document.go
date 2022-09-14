@@ -2464,7 +2464,6 @@ func (store *MemSQL) DeleteAdwordsIntegration(projectID int64) (int, error) {
 //	 or adwords_documents.value["ad_group_id"] = smart_properties.object_id (when smart_properties.object_type = 2)
 // [make sure there aren't multiple smart_properties rows for a particular object,
 // or weekly insights for adwords would show incorrect data.]
-// TODO(anshul) : [all channels]take the id value directly from id column instead of taking from value after making sure the id columns are filled for all (all channels)
 // TODO(anshul) : [all channels]check for index support for faster query
 func (store *MemSQL) PullAdwordsRows(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error) {
 	logFields := log.Fields{

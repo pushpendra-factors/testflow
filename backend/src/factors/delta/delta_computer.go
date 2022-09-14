@@ -1533,3 +1533,46 @@ func GetChannelFileScanner(channel string, projectId int64, periodCode Period, c
 
 	return scanner, err
 }
+
+// GetFileScanner Return handle to file scanner
+func GetUserFileScanner(name string, projectId int64, periodCode Period, cloudManager *filestore.FileManager,
+	diskManager *serviceDisk.DiskDriver, insightGranularity string, isDownloaded bool) (*bufio.Scanner, error) {
+	var err error
+	localFile := true
+	cfTmpPath, cfTmpName := diskManager.GetModelUsersFilePathAndName(name, projectId, periodCode.From, insightGranularity)
+	// TODO: Change this to cfTmpPath and cfTmpName and write the code to download an channel file from cloud to local.
+	// We already have the logic to dump an channel file from DB to local and from local to cloud, but not from cloud to local.
+	// The following channelFilePath will run fine if the cloud_path is a local one. But not if it's an actual remote cloud path.
+	filePath := cfTmpPath + cfTmpName
+	fmt.Println(filePath)
+	_, err = T.OpenEventFileAndGetScanner(filePath)
+	if err != nil {
+		localFile = false
+		deltaComputeLog.WithFields(log.Fields{"err": err,
+			"filePath": filePath}).Error("Failed opening " + name + " file and getting scanner.")
+	}
+	if !isDownloaded || !localFile {
+		cfCloudPath, cfCloudName := (*cloudManager).GetModelUsersFilePathAndName(name, projectId, periodCode.From, insightGranularity)
+		deltaComputeLog.WithFields(log.Fields{"eventFileCloudPath": cfCloudPath,
+			"fileCloudName": cfCloudName}).Info("Downloading " + name + " file from cloud.")
+		eReader, err := (*cloudManager).Get(cfCloudPath, cfCloudName)
+		if err != nil {
+			deltaComputeLog.WithFields(log.Fields{"err": err, "eventFilePath": cfCloudPath,
+				"fileName": cfCloudName}).Error("Failed downloading " + name + " file from cloud.")
+			return nil, err
+		}
+		err = diskManager.Create(cfTmpPath, cfTmpName, eReader)
+		if err != nil {
+			deltaComputeLog.WithFields(log.Fields{"err": err, "eventFilePath": cfCloudPath,
+				"efileName": cfCloudName}).Error("Failed downloading " + name + " file from cloud.")
+			return nil, err
+		}
+	}
+	scanner, err := T.OpenEventFileAndGetScanner(filePath)
+	if err != nil {
+		deltaComputeLog.WithFields(log.Fields{"err": err,
+			"filePath": filePath}).Error("Failed opening " + name + " file and getting scanner.")
+	}
+
+	return scanner, err
+}

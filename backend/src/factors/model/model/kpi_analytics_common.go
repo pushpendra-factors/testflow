@@ -16,6 +16,10 @@ import (
 const (
 	MetricsDateType       = "date_type"
 	MetricsPercentageType = "percentage_type"
+	alpha                 = "abcdefghijklmnopqrstuvwxyz"
+	KpiStaticQueryType    = "static"
+	KpiCustomQueryType    = "custom"
+	KpiDerivedQueryType   = "derived"
 )
 
 type KPIQueryGroup struct {
@@ -23,6 +27,7 @@ type KPIQueryGroup struct {
 	Queries       []KPIQuery   `json:"qG"`
 	GlobalFilters []KPIFilter  `json:"gFil"`
 	GlobalGroupBy []KPIGroupBy `json:"gGBy"`
+	Formula       string       `json:"for"`
 }
 
 func (q *KPIQueryGroup) GetClass() string {
@@ -127,6 +132,44 @@ func (q *KPIQueryGroup) ConvertAllDatesFromTimezone1ToTimezone2(currentTimezone,
 	return nil
 }
 
+func (q *KPIQueryGroup) IsValid() bool {
+	for _, query := range q.Queries {
+		if !query.IsValid() {
+			return false
+		}
+	}
+	return true
+}
+
+func (q *KPIQueryGroup) IsValidDerivedKPI() bool {
+	isValidFormula := U.ValidateArithmeticFormula(q.Formula)
+	if !isValidFormula {
+		return false
+	}
+	countOfUniqueFormulaVariables := getCountOfUniqueFormulaVariables(q.Formula)
+	if countOfUniqueFormulaVariables <= 1 || countOfUniqueFormulaVariables != len(q.Queries) {
+		return false
+	}
+	for _, query := range q.Queries {
+		if !query.IsValid() {
+			return false
+		}
+		if len(query.GroupBy) != 0 || query.GroupByTimestamp != "" {
+			return false
+		}
+	}
+	return true
+}
+func getCountOfUniqueFormulaVariables(expression string) int {
+	mapOfFormulaVars := make(map[string]bool)
+	for _, c := range expression {
+		ch := string(c)
+		if strings.Contains(U.Alpha, strings.ToLower(ch)) {
+			mapOfFormulaVars[ch] = true
+		}
+	}
+	return len(mapOfFormulaVars)
+}
 func (query *KPIQueryGroup) SetDefaultGroupByTimestamp() {
 	for index, _ := range query.Queries {
 		defaultGroupByTimestamp := GetDefaultGroupByTimestampForQueries(query.Queries[index].From, query.Queries[index].To, query.Queries[index].GroupByTimestamp)
@@ -142,6 +185,47 @@ func (query *KPIQueryGroup) GetGroupByTimestamps() []string {
 		queryResultString = append(queryResultString, intQuery.GroupByTimestamp)
 	}
 	return queryResultString
+}
+
+func (customKPI *KPIQueryGroup) ContainsNameInInternalTransformation(input string) bool {
+	for _, query := range customKPI.Queries {
+		for _, metric := range query.Metrics {
+			if input == metric {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (customKPI *KPIQueryGroup) ValidateFilterAndGroupBy() bool {
+	if len(customKPI.GlobalFilters) != 0 || len(customKPI.GlobalGroupBy) != 0 {
+		return false
+	}
+	return true
+}
+
+func (customKPI *KPIQueryGroup) ValidateQueries() bool {
+	for _, query := range customKPI.Queries {
+		if !U.ContainsStringInArray(KpiCategories, query.Category) {
+			return false
+		}
+
+		// if _, exists := KPIDisplayCategories[query.DisplayCategory]; !exists {
+		// 	return false
+		// }
+
+	}
+	allMetrics := make([]string, 0)
+
+	for _, query := range customKPI.Queries {
+		allMetrics = append(allMetrics, query.Metrics...)
+	}
+	if U.ContainsDuplicate(allMetrics) {
+		return false
+	}
+
+	return true
 }
 
 func transformDateTypeFiltersForKPIFilters(filters []KPIFilter, timezoneString U.TimeZoneString) error {
@@ -165,6 +249,9 @@ type KPIQuery struct {
 	Timezone         string       `json:"tz"`
 	From             int64        `json:"fr"`
 	To               int64        `json:"to"`
+	Operator         string       `json:"op"`
+	QueryType        string       `json:"qt"`
+	Name             string       `json:"na"`
 }
 
 func (q *KPIQuery) GetQueryCacheHashString() (string, error) {
@@ -187,6 +274,22 @@ func (query *KPIQuery) CheckIfNameIsPresent(nameOfQuery string) bool {
 		}
 	}
 	return false
+}
+
+func (query *KPIQuery) IsValid() bool {
+	for _, filter := range query.Filters {
+		if !filter.IsValid() {
+			return false
+		}
+	}
+
+	for _, groupBy := range query.GroupBy {
+		if !groupBy.IsValid() {
+			return false
+		}
+	}
+
+	return true
 }
 
 type KPIFilter struct {
@@ -260,6 +363,34 @@ type KPIGroupBy struct {
 	GroupByType      string `json:"gbty"`
 	Entity           string `json:"en"`
 	Granularity      string `json:"grn"`
+}
+
+func (kpiGroupBy *KPIGroupBy) IsValid() bool {
+	return !(strings.Contains(kpiGroupBy.Entity, " ") || strings.Contains(kpiGroupBy.ObjectType, " ") || strings.Contains(kpiGroupBy.PropertyName, " "))
+}
+
+// TODO add check later.
+var KPIDisplayCategories = map[string]struct{}{
+	WebsiteSessionDisplayCategory:  {},
+	PageViewsDisplayCategory:       {},
+	FormSubmissionsDisplayCategory: {},
+
+	AllChannelsDisplayCategory:   {},
+	GoogleAdsDisplayCategory:     {},
+	FacebookDisplayCategory:      {},
+	LinkedinDisplayCategory:      {},
+	BingAdsDisplayCategory:       {},
+	GoogleOrganicDisplayCategory: {},
+
+	HubspotContactsDisplayCategory:  {},
+	HubspotCompaniesDisplayCategory: {},
+	HubspotDealsDisplayCategory:     {},
+
+	SalesforceUsersDisplayCategory:         {},
+	SalesforceAccountsDisplayCategory:      {},
+	SalesforceOpportunitiesDisplayCategory: {},
+
+	MarketoLeadsDisplayCategory: {},
 }
 
 var MapOfMetricsToData = map[string]map[string]map[string]string{
@@ -366,7 +497,7 @@ type KpiToEventMetricRepr struct {
 }
 
 // Util/Common Methods.
-func GetMetricsForDisplayCategory(category string) []map[string]string {
+func GetStaticallyDefinedMetricsForDisplayCategory(category string) []map[string]string {
 	resultMetrics := []map[string]string{}
 	mapOfMetricsToData := MapOfMetricsToData[category]
 	for metricName, data := range mapOfMetricsToData {
@@ -374,6 +505,7 @@ func GetMetricsForDisplayCategory(category string) []map[string]string {
 		currentMetrics["name"] = metricName
 		currentMetrics["display_name"] = data["display_name"]
 		currentMetrics["type"] = data["type"]
+		currentMetrics["kpi_query_type"] = KpiStaticQueryType
 		resultMetrics = append(resultMetrics, currentMetrics)
 	}
 	return resultMetrics
