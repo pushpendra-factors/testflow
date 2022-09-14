@@ -1,7 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useDispatch, useSelector, connect } from 'react-redux';
 import { ErrorBoundary } from 'react-error-boundary';
-import { useHistory } from 'react-router-dom';
 import { Spin } from 'antd';
 
 import {
@@ -17,7 +16,6 @@ import { DASHBOARD_UNMOUNTED } from '../../reducers/types';
 import { FaErrorComp, FaErrorLog } from '../../components/factorsComponents';
 import { setItemToLocalStorage } from '../../utils/localStorage.helpers';
 import { getDashboardDateRange } from './utils';
-import EmptyDashboard from './EmptyDashboard';
 import DashboardAfterIntegration from './EmptyDashboard/DashboardAfterIntegration';
 import ProjectDropdown from './ProjectDropdown';
 import { DASHBOARD_KEYS } from '../../constants/localStorage.constants';
@@ -84,6 +82,7 @@ function Dashboard({
 
   const handleDurationChange = useCallback((dates) => {
     let from, to;
+    setOldestRefreshTime(null);
     if (Array.isArray(dates.startDate)) {
       from = dates.startDate[0];
       to = dates.startDate[1];
