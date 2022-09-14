@@ -164,7 +164,7 @@ func (store *MemSQL) ExecuteDerivedKPIQuery(projectID int64, reqID string, baseQ
 	if finalStatusCode != http.StatusOK {
 		return make([]model.QueryResult, 0), finalStatusCode, errMsg
 	} else {
-		result := EvaluateKPIExpressionWithBraces(mapOfFormulaVariableToQueryResult, kpiQueryGroup.Queries[0].Timezone, kpiQueryGroup.Formula)
+		result := EvaluateKPIExpressionWithBraces(mapOfFormulaVariableToQueryResult, kpiQueryGroup.Queries[0].Timezone, strings.ToLower(kpiQueryGroup.Formula))
 		queryResults = append(queryResults, result)
 		return queryResults, http.StatusOK, ""
 	}
