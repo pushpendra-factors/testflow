@@ -52,7 +52,8 @@ const CustomKPI = ({
   addNewCustomKPI,
   eventPropNames,
   userPropNames,
-  removeCustomKPI
+  removeCustomKPI,
+  currentAgent
 }) => {
   const [showForm, setShowForm] = useState(false);
   const [tableData, setTableData] = useState([]);
@@ -326,6 +327,20 @@ const matchEventName = (item) => {
     return blockList;
   };
 
+  const onReset = () => {
+    form.resetFields();
+    setShowForm(false);
+    setFilterValues([]);
+    setKPICategory(false);
+    setKPIType('default');
+    setQueries([])
+  }
+
+  const whiteListedAccounts = [
+    'junaid@factors.ai',
+    'solutions@factors.ai',
+  ];               
+
   const onFinish = (data) => {
     let payload;
     if(selKPIType === 'default') {
@@ -372,9 +387,7 @@ const matchEventName = (item) => {
           description:
             'New KPI is created and saved successfully. You can start using it across the product shortly.',
         });
-        form.resetFields();
-        setShowForm(false);
-        setFilterValues([]);
+        onReset();
       })
       .catch((err) => {
         setLoading(false);
@@ -565,8 +578,7 @@ const matchEventName = (item) => {
                           size={'large'}
                           disabled={loading}
                           onClick={() => {
-                            setShowForm(false);
-                            form.resetFields();
+                            onReset();
                           }}
                         >
                           Cancel
@@ -629,6 +641,7 @@ const matchEventName = (item) => {
                     </Col>
                   </Row>
 
+                  { whiteListedAccounts.includes(currentAgent?.email) &&
                   <Row className={'mt-8'}>
                     <Col span={18}>
                       <Text type={'title'} level={7} extraClass={'m-0'}>
@@ -637,12 +650,6 @@ const matchEventName = (item) => {
                       <Form.Item
                         name='kpi_type'
                         className={'m-0'}
-                        // rules={[
-                        //   {
-                        //     required: true,
-                        //     message: 'Please select KPI Type',
-                        //   },
-                        // ]}
                       >
                         <Select
                           className={'fa-select w-full'}
@@ -657,6 +664,7 @@ const matchEventName = (item) => {
                       </Form.Item>
                     </Col>
                   </Row>
+                  }
                   
                   {selKPIType === 'default' ?
                   <div>
@@ -1230,6 +1238,7 @@ const mapStateToProps = (state) => ({
   savedCustomKPI: state.kpi?.saved_custom_kpi,
   userPropNames: state.coreQuery?.userPropNames,
   eventPropNames: state.coreQuery?.eventPropNames, 
+  currentAgent: state.agent.agent_details,
 });
 
 export default connect(mapStateToProps, {
