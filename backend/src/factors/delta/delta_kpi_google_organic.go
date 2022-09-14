@@ -2,11 +2,10 @@ package delta
 
 import (
 	M "factors/model/model"
-	"factors/model/store/memsql"
 	"strings"
 )
 
-var googleOrganicRequiredDocumentTypes = []int{1, 2} // 1:combined_performance_report, 2:page_performance_report
+var googleOrganicRequiredDocumentTypes = []int{2} // 1:combined_performance_report, 2:page_performance_report
 
 var googleOrganicMetricToCalcInfo = map[string]MetricCalculationInfo{
 	M.Impressions: {
@@ -39,9 +38,7 @@ var googleOrganicMetricToCalcInfo = map[string]MetricCalculationInfo{
 }
 
 var googleOrganicConstantInfo = map[string]string{
-	memsql.CAFilterCampaign: "combined",
-	memsql.CAFilterAdGroup:  "page",
-	memsql.CAFilterKeyword:  "",
+	"organic_property": "page",
 	// "campaign_id":           "id",
 	// "ad_group_id":           "id",
 	// "keyword_id":            "",

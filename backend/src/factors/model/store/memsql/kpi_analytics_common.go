@@ -99,9 +99,10 @@ func (store *MemSQL) ExecuteNonDerivedQuery(projectID int64, reqID string,
 	if query.Category == model.ProfileCategory {
 		if query.GroupByTimestamp != "" {
 			var err error
+			log.Info("---- profile query for pipeline ", query)
 			result, statusCode = store.ExecuteKPIQueryForProfiles(projectID, reqID,
 				query, enableOptimisedFilterOnProfileQuery)
-
+			log.Info("---- profile query pipeline result ", result)
 			query.GroupByTimestamp = ""
 			hashCode, err = query.GetQueryCacheHashString()
 			if err != nil {

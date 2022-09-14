@@ -501,8 +501,14 @@ func (store *MemSQL) modifyAndCreateBatchedHubspotDocuments(projectID int64, doc
 
 		status := store.createBatchedHubspotDocuments(projectID, batchedDocuments[i])
 		if status != http.StatusCreated {
-			logCtx.WithFields(log.Fields{"documents": batchedDocuments[i], "err_code": status}).
-				Error("Failed to insert hubspot documents after modifying batchsize.")
+			logCtx.WithFields(log.Fields{
+				"DBMaxAllowedPacket":  memsqlMaxSize,
+				"maxByteSize":         maxByteSize,
+				"original_batch_size": len(documents),
+				"modified_batch_size": modifiedBatchSize,
+				"documents":           len(batchedDocuments),
+				"err_code":            status,
+			}).Error("Failed to insert hubspot documents after modifying batchsize.")
 			return status
 		}
 	}

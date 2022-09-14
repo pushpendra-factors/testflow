@@ -341,7 +341,7 @@ function CoreQuery({
           dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
           localDispatch({
             type: SET_COMPARISON_SUPPORTED,
-            payload: isComparisonEnabled(queryType, queriesA, groupBy, models)
+            payload: isComparisonEnabled(queryType, queriesA, equivalentQuery.breakdown, models)
           });
           setShowResult(true);
           setLoading(false);

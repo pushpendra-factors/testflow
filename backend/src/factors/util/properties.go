@@ -155,6 +155,7 @@ var GP_SALESFORCE_ACCOUNT_INDUSTRY string = "$salesforce_account_industry"
 var GP_HUBSPOT_COMPANY_NUMBEROFEMPLOYEES string = "$hubspot_company_numberofemployees"
 var GP_SALESFORCE_ACCOUNT_NUMBEROFEMPLOYEES string = "$salesforce_account_numberOfEmployees"
 var GP_HUBSPOT_COMPANY_DOMAIN string = "$hubspot_company_domain"
+var GP_HUBSPOT_COMPANY_NUM_ASSOCIATED_CONTACTS string = "$hubspot_company_num_associated_contacts"
 
 // Factors API constants
 const UserCreated string = "UC"
