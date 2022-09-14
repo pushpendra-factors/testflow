@@ -253,6 +253,11 @@ function addElementAttributeIfExists(element, key, attributes) {
     attributes[key] = value;
 }
 
+function cleanupString(s) {
+    // Allows only letters, numbers, punctuation, whitespace, symbols.
+    return s.replace(/[^\p{L}\p{N}\p{P}\p{Z}^$\n]/gu, '').trim();
+}
+
 function getClickCapturePayloadFromElement(element) {
     var payload = {};
 
@@ -275,7 +280,7 @@ function getClickCapturePayloadFromElement(element) {
         elementType = "BUTTON";
 
     var attributes = {};
-    attributes.display_text = displayName;
+    attributes.display_text = cleanupString(displayName);
     attributes.element_type = elementType;
 
     addElementAttributeIfExists(element, "class", attributes);
@@ -288,7 +293,7 @@ function getClickCapturePayloadFromElement(element) {
     addElementAttributeIfExists(element, "media", attributes);
     addElementAttributeIfExists(element, "type", attributes);
 
-    payload.display_name = displayName;
+    payload.display_name = cleanupString(displayName);
     payload.element_type = elementType;
     payload.element_attributes = attributes;
 

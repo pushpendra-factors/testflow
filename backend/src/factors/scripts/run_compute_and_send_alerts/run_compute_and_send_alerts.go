@@ -59,6 +59,9 @@ func main() {
 	lookback := flag.Int("lookback", 30, "lookback_for_delta lookup")
 	enableDryRunAlerts := flag.Bool("dry_run_alerts", false, "")
 	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
+	allowProfilesGroupSupport := flag.String("allow_profiles_group_support", "", "")
+	enableOptimisedFilterOnProfileQuery := flag.Int("enable_optimised_filter_on_profile_query",
+		0, "Enables filter optimisation logic for profiles query.")
 	enableOptimisedFilterOnEventUserQuery := flag.Int("enable_optimised_filter_on_event_user_query",
 		0, "Enables filter optimisation logic for events and users query.")
 
@@ -98,6 +101,8 @@ func main() {
 		EnableDryRunAlerts:                    *enableDryRunAlerts,
 		RedisHostPersistent:                   *redisHostPersistent,
 		RedisPortPersistent:                   *redisPortPersistent,
+		AllowProfilesGroupSupport:             *allowProfilesGroupSupport,
+		EnableOptimisedFilterOnProfileQuery:   *enableOptimisedFilterOnProfileQuery != 0,
 		EnableOptimisedFilterOnEventUserQuery: *enableOptimisedFilterOnEventUserQuery != 0,
 	}
 	defaultHealthcheckPingID := C.HealthcheckComputeAndSendAlertsPingID

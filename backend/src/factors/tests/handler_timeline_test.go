@@ -140,13 +140,13 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 	assert.NotNil(t, agent)
 	assert.Nil(t, err)
 
-	props := map[string]string{
+	props := map[string]interface{}{
 		"$name":               "Cameron Williomson",
 		"$company":            "Freshworks",
 		"$country":            "Australia",
-		"$session_count":      "8",
-		"$session_spent_time": "500",
-		"$page_count":         "10",
+		"$session_count":      8,
+		"$session_spent_time": 500,
+		"$page_count":         10,
 	}
 	propertiesJSON, err := json.Marshal(props)
 	if err != nil {
@@ -404,9 +404,9 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 		assert.Equal(t, resp.Company, "Freshworks")
 		assert.Equal(t, resp.Email, customerEmail)
 		assert.Equal(t, resp.Country, "Australia")
-		assert.Equal(t, resp.WebSessionsCount, float64(1))
-		assert.Equal(t, resp.NumberOfPageViews, float64(10))
-		assert.Equal(t, resp.TimeSpentOnSite, float64(500))
+		assert.Equal(t, resp.WebSessionsCount, uint64(1))
+		assert.Equal(t, resp.NumberOfPageViews, uint64(10))
+		assert.Equal(t, resp.TimeSpentOnSite, uint64(500))
 		assert.NotNil(t, resp.GroupInfos)
 		assert.Condition(t, func() bool { return len(resp.GroupInfos) <= 4 })
 		assert.NotNil(t, resp.UserActivity)
@@ -429,27 +429,27 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 						return false
 					}
 				}
-				assert.NotNil(t, activity.Properties)
 				assert.Condition(t, func() bool {
-					properties, err := U.DecodePostgresJsonb(activity.Properties)
 					_, eventExistsInMap := eventNamePropertiesMap[activity.EventName]
-					assert.Nil(t, err)
 					if activity.DisplayName == "Page View" {
+						assert.NotNil(t, activity.Properties)
+						properties, err := U.DecodePostgresJsonb(activity.Properties)
+						assert.Nil(t, err)
 						for key := range *properties {
 							sort.Strings(pageViewPropsList)
 							i := sort.SearchStrings(pageViewPropsList, key)
 							assert.Condition(t, func() bool { return i < len(pageViewPropsList) })
 						}
 					} else if eventExistsInMap {
+						assert.NotNil(t, activity.Properties)
+						properties, err := U.DecodePostgresJsonb(activity.Properties)
+						assert.Nil(t, err)
 						for key := range *properties {
 							sort.Strings(eventNamePropertiesMap[activity.EventName])
 							i := sort.SearchStrings(eventNamePropertiesMap[activity.EventName], key)
 							assert.Condition(t, func() bool { return i < len(eventNamePropertiesMap[activity.EventName]) })
 						}
-					} else {
-						assert.Equal(t, *properties, randomProperties)
 					}
-
 					return true
 				})
 
@@ -493,29 +493,31 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 	numUsers := 6
 	groupUser := true
 
-	companies := []string{"FactorsAI", "Accenture", "Talentica", "Honeywell", "Meesho"}
+	companies := []string{"FactorsAI", "Accenture", "Talentica", "Honeywell", "Meesho", ""}
 	countries := []string{"India", "Ireland", "India", "US", "India", "US"}
 	for i := 0; i < numUsers; i++ {
-		var m map[string]string
+		var propertiesMap map[string]interface{}
 		if i%2 == 0 {
-			m = map[string]string{
+			propertiesMap = map[string]interface{}{
 				U.GP_SALESFORCE_ACCOUNT_NAME:           companies[i],
 				U.GP_SALESFORCE_ACCOUNT_BILLINGCOUNTRY: countries[i],
 			}
 		} else {
 			if i == 5 {
-				m = map[string]string{
-					U.GP_HUBSPOT_COMPANY_COUNTRY: countries[i],
+				propertiesMap = map[string]interface{}{
+					U.GP_HUBSPOT_COMPANY_COUNTRY:                 countries[i],
+					U.GP_HUBSPOT_COMPANY_NUM_ASSOCIATED_CONTACTS: i * 2,
 				}
 			} else {
-				m = map[string]string{
-					U.GP_HUBSPOT_COMPANY_NAME:    companies[i],
-					U.GP_HUBSPOT_COMPANY_COUNTRY: countries[i],
+				propertiesMap = map[string]interface{}{
+					U.GP_HUBSPOT_COMPANY_NAME:                    companies[i],
+					U.GP_HUBSPOT_COMPANY_COUNTRY:                 countries[i],
+					U.GP_HUBSPOT_COMPANY_NUM_ASSOCIATED_CONTACTS: i * 2,
 				}
 			}
 
 		}
-		propertiesJSON, err := json.Marshal(m)
+		propertiesJSON, err := json.Marshal(propertiesMap)
 		if err != nil {
 			log.WithError(err).Fatal("Marshal error.")
 		}

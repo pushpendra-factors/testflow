@@ -1,11 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Button, Tooltip } from 'antd';
 import { Text, SVG } from '../../components/factorsComponents';
 import { LockOutlined, UnlockOutlined } from '@ant-design/icons';
 import FaDatepicker from '../../components/FaDatepicker';
 import moment from 'moment';
 import { connect } from 'react-redux';
-import { DASHBOARD_TYPES } from '../../utils/constants';
 
 function DashboardSubMenu({
   dashboard,
@@ -13,10 +12,15 @@ function DashboardSubMenu({
   handleDurationChange,
   refreshClicked,
   setRefreshClicked,
-  oldestRefreshTime
+  oldestRefreshTime,
+  setOldestRefreshTime
 }) {
   let btn = null;
-  // const [showRefreshBtn, setShowRefreshBtn] = useState(false);
+
+  const handleRefreshClick = () => {
+    setOldestRefreshTime(null);
+    setRefreshClicked(true);
+  };
 
   if (dashboard?.type === 'pr') {
     btn = (
@@ -53,11 +57,6 @@ function DashboardSubMenu({
       </Tooltip>
     );
   }
-  // useEffect(() => {
-  //   let isRefresh =
-  //     durationObj?.dateType === 'today' || durationObj?.dateType === 'now';
-  //   setShowRefreshBtn(isRefresh);
-  // }, [durationObj, dashboard, activeDashboard]);
 
   return (
     <div className={'flex justify-between items-center px-0 mb-5'}>
@@ -80,16 +79,6 @@ function DashboardSubMenu({
           className={'datepicker-minWidth'}
         />
         {btn}
-        {/* {dashboard?.class === DASHBOARD_TYPES.USER_CREATED ? (
-          <Button
-            onClick={handleEditClick.bind(this, dashboard)}
-            type={'text'}
-            className={'m-0 fa-button-ghost'}
-            icon={<SVG name={'edit'} />}
-          >
-            Edit
-          </Button>
-        ) : null} */}
       </div>
       <div className={'flex justify-between items-center'}>
         <div className="border-right--thin-3 px-3">
@@ -107,7 +96,7 @@ function DashboardSubMenu({
         >
           <Button
             type={'text'}
-            onClick={setRefreshClicked.bind(this, true)}
+            onClick={handleRefreshClick}
             icon={refreshClicked ? null : <SVG name={'syncAlt'} />}
             loading={refreshClicked}
             style={{ minWidth: '125px' }}
@@ -117,9 +106,6 @@ function DashboardSubMenu({
             {'Refresh now'}
           </Button>
         </Tooltip>
-
-        {/* <Button style={{ display: 'flex' }} size={'large'} className={'items-center m-0 fa-button-ghost p-0 py-2'}><UserAddOutlined /></Button>
-        <Button style={{ display: 'flex' }} size={'large'} className={'items-center m-0 fa-button-ghost p-0 py-2'}><MoreOutlined /></Button> */}
       </div>
     </div>
   );
