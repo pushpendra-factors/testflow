@@ -73,9 +73,7 @@ const TouchpointView = ({ activeProject, tchType = '2', getEventProperties, even
     useEffect(() => {
         if (rule) {
             const filterState = getStateFromFilters(rule.filters);
-            filterState?.forEach((filt) => {
-                setValuesByProps(filt.props);
-            });
+            chainEventPropertyValues(filterState);
             setNewFilterStates(filterState);
             setPropertyMap(rule.properties_map);
             if (rule.touchPointPropRef === 'LAST_MODIFIED_TIME_REF') {
@@ -100,20 +98,42 @@ const TouchpointView = ({ activeProject, tchType = '2', getEventProperties, even
         }
     }, [tchRuleType])
 
+    const chainEventPropertyValues = (filters) => {
+        const eventToCall = returnEventToCall();
+        filters.forEach((filt) => {
+            const prop = filt.props;
+            const propToCall = prop.length > 3? prop[1] : prop[0];
+            const propCallBack = (data) => setPropData(propToCall, data);
+            console.log(propToCall);
+            fetchEventPropertyValues(activeProject.id, eventToCall, propToCall).then(res => {
+                propCallBack(res.data)
+            });
+        });   
+    }
+
+    const returnEventToCall = () => {
+        return tchType === '2' ?
+        getEventToCall() : timestampRef === 'campaign_member_created_date' ? '$sf_campaign_member_created' : '$sf_campaign_member_updated';
+    }
+
+    const setPropData = (propToCall, data) => {
+        const ddValues = Object.assign({}, dropDownValues);
+        ddValues[propToCall] = [...data, '$none'];
+        setDropDownValues(ddValues);
+    }
+    
 
     const setValuesByProps = (props) => {
-        const eventToCall = tchType === '2' ?
-            getEventToCall() : timestampRef === 'campaign_member_created_date' ? '$sf_campaign_member_created' : '$sf_campaign_member_updated';
-        if(dropDownValues[props[0]]?.length >= 1) {
+        const eventToCall = returnEventToCall();
+        const propToCall = props.length > 3? props[1] : props[0];
+        if(dropDownValues[propToCall]?.length >= 1) {
             return null;
         }
-        fetchEventPropertyValues(activeProject.id, eventToCall, props[0]).then(res => {
-            const ddValues = Object.assign({}, dropDownValues);
-            ddValues[props[0]] = [...res.data, '$none'];
-            setDropDownValues(ddValues);
+        fetchEventPropertyValues(activeProject.id, eventToCall, propToCall).then(res => {
+            setPropData(propToCall, res.data);
         }).catch(err => {
             const ddValues = Object.assign({}, dropDownValues);
-            ddValues[props[0]] = ['$none'];
+            ddValues[propToCall] = ['$none'];
             setDropDownValues(ddValues);
         });
     }
@@ -152,17 +172,6 @@ const TouchpointView = ({ activeProject, tchType = '2', getEventProperties, even
         });
 
         const dateTypepoperties = [];
-        // eventProperties[eventToCall]?.forEach((prop) => { if (prop[2] === 'datetime') { 
-        //     if(tchType === '2') {
-        //         if(prop[1]?.startsWith('$hubspot_contact')) {
-        //             dateTypepoperties.push(prop);
-        //         }
-        //     } else if(tchType === '2') {
-        //         if(prop[1]?.startsWith('$salesforce_campaignmember')) {
-        //             dateTypepoperties.push(prop);
-        //         }
-        //     }
-        // } });
         eventProps.forEach((prop) => { if (prop[2] === 'datetime') { dateTypepoperties.push(prop) } });
         tchUserProps.forEach((prop) => { if (prop[2] === 'datetime') { dateTypepoperties.push(prop) } });
         setDateTypeProps(dateTypepoperties);

@@ -58,37 +58,30 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 				}
 			}
 		}
-		_, hubspotExists := groupNameIDMap[model.GROUP_NAME_HUBSPOT_COMPANY]
-		_, salesforceExists := groupNameIDMap[model.GROUP_NAME_SALESFORCE_ACCOUNT]
+		hubspotID, hubspotExists := groupNameIDMap[model.GROUP_NAME_HUBSPOT_COMPANY]
+		salesforceID, salesforceExists := groupNameIDMap[model.GROUP_NAME_SALESFORCE_ACCOUNT]
 
 		if !hubspotExists && !salesforceExists {
-			log.Error("Failed to get a group user.")
+			log.WithFields(logFields).Error("No CRMs Enabled for this project.")
 			return nil, http.StatusBadRequest
 		}
-
+		if payload.Source == model.GROUP_NAME_HUBSPOT_COMPANY && !hubspotExists {
+			log.WithFields(logFields).Error("Hubspot Not Enabled for this project.")
+			return nil, http.StatusBadRequest
+		}
+		if payload.Source == model.GROUP_NAME_SALESFORCE_ACCOUNT && !salesforceExists {
+			log.WithFields(logFields).Error("Salesforce Not Enabled for this project.")
+			return nil, http.StatusBadRequest
+		}
 		// Strings
+		selectString = "id AS identity, properties, updated_at AS last_activity"
 		isGroupUserString = "is_group_user=1"
 		if payload.Source == "All" && hubspotExists && salesforceExists {
-			selectString = fmt.Sprintf(`id AS identity, 
-				COALESCE(JSON_EXTRACT_STRING(properties, '%s'), JSON_EXTRACT_STRING(properties, '%s'), JSON_EXTRACT_STRING(properties, '%s'), JSON_EXTRACT_STRING(properties, '%s') ) AS name,
-				COALESCE(JSON_EXTRACT_STRING(properties, '%s'), JSON_EXTRACT_STRING(properties, '%s')) as country, 
-				updated_at AS last_activity`,
-				U.UP_COMPANY, U.GP_HUBSPOT_COMPANY_NAME, U.GP_SALESFORCE_ACCOUNT_NAME, U.GP_HUBSPOT_COMPANY_DOMAIN, U.GP_HUBSPOT_COMPANY_COUNTRY, U.GP_SALESFORCE_ACCOUNT_BILLINGCOUNTRY)
-			sourceString = fmt.Sprintf(" AND (group_%d_id IS NOT NULL OR group_%d_id IS NOT NULL)", groupNameIDMap[model.GROUP_NAME_HUBSPOT_COMPANY], groupNameIDMap[model.GROUP_NAME_SALESFORCE_ACCOUNT])
+			sourceString = fmt.Sprintf(" AND (group_%d_id IS NOT NULL OR group_%d_id IS NOT NULL)", hubspotID, salesforceID)
 		} else if (payload.Source == "All" || payload.Source == model.GROUP_NAME_HUBSPOT_COMPANY) && hubspotExists {
-			selectString = fmt.Sprintf(`id AS identity, 
-				COALESCE(JSON_EXTRACT_STRING(properties, '%s'),JSON_EXTRACT_STRING(properties, '%s'), JSON_EXTRACT_STRING(properties, '%s')) AS name,
-				JSON_EXTRACT_STRING(properties, '%s') as country, 
-				updated_at AS last_activity`,
-				U.UP_COMPANY, U.GP_HUBSPOT_COMPANY_NAME, U.GP_HUBSPOT_COMPANY_DOMAIN, U.GP_HUBSPOT_COMPANY_COUNTRY)
-			sourceString = fmt.Sprintf(" AND group_%d_id IS NOT NULL", groupNameIDMap[model.GROUP_NAME_HUBSPOT_COMPANY])
+			sourceString = fmt.Sprintf(" AND group_%d_id IS NOT NULL", hubspotID)
 		} else if (payload.Source == "All" || payload.Source == model.GROUP_NAME_SALESFORCE_ACCOUNT) && salesforceExists {
-			selectString = fmt.Sprintf(`id AS identity, 
-				COALESCE(JSON_EXTRACT_STRING(properties, '%s'), JSON_EXTRACT_STRING(properties, '%s')) AS name, 
-				JSON_EXTRACT_STRING(properties, '%s') as country, 
-				updated_at AS last_activity`,
-				U.UP_COMPANY, U.GP_SALESFORCE_ACCOUNT_NAME, U.GP_SALESFORCE_ACCOUNT_BILLINGCOUNTRY)
-			sourceString = fmt.Sprintf(" AND group_%d_id IS NOT NULL", groupNameIDMap[model.GROUP_NAME_SALESFORCE_ACCOUNT])
+			sourceString = fmt.Sprintf(" AND group_%d_id IS NOT NULL", salesforceID)
 		}
 	} else if profileType == model.PROFILE_TYPE_USER {
 		selectString = fmt.Sprintf("COALESCE(customer_user_id, id) AS identity, ISNULL(customer_user_id) AS is_anonymous, JSON_EXTRACT_STRING(properties, '%s') AS country, MAX(updated_at) AS last_activity", U.UP_COUNTRY)
@@ -151,6 +144,39 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		log.WithField("status", err).Error("Failed to get profile users.")
 		return nil, http.StatusInternalServerError
 	}
+
+	// Filter Account Properties
+	if profileType == model.PROFILE_TYPE_ACCOUNT {
+		companyNameProps := []string{U.UP_COMPANY, U.GP_HUBSPOT_COMPANY_NAME, U.GP_HUBSPOT_COMPANY_DOMAIN, U.GP_SALESFORCE_ACCOUNT_NAME}
+		companyCountryProps := []string{U.GP_HUBSPOT_COMPANY_COUNTRY, U.GP_SALESFORCE_ACCOUNT_BILLINGCOUNTRY}
+		for index, profile := range profiles {
+			properties, err := U.DecodePostgresJsonb(profile.Properties)
+			if err != nil {
+				log.WithFields(logFields).WithFields(log.Fields{"identity": profile.Identity}).WithError(err).Error("Failed decoding account properties.")
+				continue
+			}
+			if value, exists := (*properties)[U.GP_HUBSPOT_COMPANY_NUM_ASSOCIATED_CONTACTS]; exists {
+				profiles[index].AssociatedContacts = uint64(value.(float64))
+			}
+			for _, prop := range companyNameProps {
+				if profiles[index].Name != "" {
+					break
+				}
+				if name, exists := (*properties)[prop]; exists {
+					profiles[index].Name = fmt.Sprintf("%s", name)
+				}
+			}
+			for _, prop := range companyCountryProps {
+				if profiles[index].Country != "" {
+					break
+				}
+				if country, exists := (*properties)[prop]; exists {
+					profiles[index].Country = fmt.Sprintf("%s", country)
+				}
+			}
+
+		}
+	}
 	return profiles, http.StatusFound
 }
 
@@ -184,18 +210,11 @@ func (store *MemSQL) GetProfileUserDetailsByID(projectID int64, identity string,
 	var uniqueUser model.ContactDetails
 	err := db.Table("users").Select(`COALESCE(customer_user_id,id) AS user_id,
 		ISNULL(customer_user_id) AS is_anonymous,
-		JSON_EXTRACT_STRING(properties, ?) AS name,
-		JSON_EXTRACT_STRING(properties, ?) AS company,
-		JSON_EXTRACT_STRING(properties, ?) AS email,
-		JSON_EXTRACT_STRING(properties, ?) AS country,
-		MAX(JSON_EXTRACT_STRING(properties, ?)) AS web_sessions_count,
-		MAX(JSON_EXTRACT_STRING(properties, ?)) AS time_spent_on_site,
-		MAX(JSON_EXTRACT_STRING(properties, ?)) AS number_of_page_views,
+		properties,
 		GROUP_CONCAT(group_1_id) IS NOT NULL AS group_1,
 		GROUP_CONCAT(group_2_id) IS NOT NULL AS group_2,
 		GROUP_CONCAT(group_3_id) IS NOT NULL AS group_3,
-		GROUP_CONCAT(group_4_id) IS NOT NULL AS group_4`,
-		U.UP_NAME, U.UP_COMPANY, U.UP_EMAIL, U.UP_COUNTRY, U.UP_SESSION_COUNT, U.UP_TOTAL_SPENT_TIME, U.UP_PAGE_COUNT).
+		GROUP_CONCAT(group_4_id) IS NOT NULL AS group_4`).
 		Where("project_id=? AND "+userId+"=?", projectID, identity).
 		Group("user_id").
 		Order("updated_at desc").
@@ -206,6 +225,30 @@ func (store *MemSQL) GetProfileUserDetailsByID(projectID int64, identity string,
 		return nil, http.StatusInternalServerError
 	}
 
+	// Filter Properties
+	properties, err := U.DecodePostgresJsonb(uniqueUser.Properties)
+	if err != nil {
+		log.WithFields(logFields).WithError(err).Error("Failed decoding user properties.")
+	}
+
+	if name, exists := (*properties)[U.UP_NAME]; exists {
+		uniqueUser.Name = fmt.Sprintf("%s", name)
+	}
+	if company, exists := (*properties)[U.UP_COMPANY]; exists {
+		uniqueUser.Company = fmt.Sprintf("%s", company)
+	}
+	if email, exists := (*properties)[U.UP_EMAIL]; exists {
+		uniqueUser.Email = fmt.Sprintf("%s", email)
+	}
+	if country, exists := (*properties)[U.UP_COUNTRY]; exists {
+		uniqueUser.Country = fmt.Sprintf("%s", country)
+	}
+	if time_spent_on_site, exists := (*properties)[U.UP_TOTAL_SPENT_TIME]; exists {
+		uniqueUser.TimeSpentOnSite = uint64(time_spent_on_site.(float64))
+	}
+	if number_of_page_views, exists := (*properties)[U.UP_PAGE_COUNT]; exists {
+		uniqueUser.NumberOfPageViews = uint64(number_of_page_views.(float64))
+	}
 	activities, sessionCount := store.GetUserActivitiesAndSessionCount(projectID, identity, userId)
 	uniqueUser.UserActivity = activities
 	uniqueUser.WebSessionsCount = sessionCount
@@ -215,7 +258,7 @@ func (store *MemSQL) GetProfileUserDetailsByID(projectID int64, identity string,
 	return &uniqueUser, http.StatusFound
 }
 
-func (store *MemSQL) GetUserActivitiesAndSessionCount(projectID int64, identity string, userId string) ([]model.UserActivity, float64) {
+func (store *MemSQL) GetUserActivitiesAndSessionCount(projectID int64, identity string, userId string) ([]model.UserActivity, uint64) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"id":         identity,
@@ -251,7 +294,7 @@ func (store *MemSQL) GetUserActivitiesAndSessionCount(projectID int64, identity 
 
 	if err != nil || rows.Err() != nil {
 		log.WithFields(logFields).WithError(err).WithError(rows.Err()).Error("Failed to get events")
-		return []model.UserActivity{}, float64(webSessionCount)
+		return []model.UserActivity{}, uint64(webSessionCount)
 	}
 
 	// User Activity
@@ -265,7 +308,7 @@ func (store *MemSQL) GetUserActivitiesAndSessionCount(projectID int64, identity 
 		var userActivity model.UserActivity
 		if err := db.ScanRows(rows, &userActivity); err != nil {
 			log.WithError(err).Error("Failed scanning events list")
-			return []model.UserActivity{}, float64(webSessionCount)
+			return []model.UserActivity{}, uint64(webSessionCount)
 		}
 		// Session Count workaround
 		if userActivity.EventName == U.EVENT_NAME_SESSION {
@@ -292,7 +335,7 @@ func (store *MemSQL) GetUserActivitiesAndSessionCount(projectID int64, identity 
 		userActivities = append(userActivities, userActivity)
 	}
 
-	return userActivities, float64(webSessionCount)
+	return userActivities, uint64(webSessionCount)
 }
 
 func (store *MemSQL) GetGroupsForUserTimeline(projectID int64, userDetails model.ContactDetails) []model.GroupsInfo {
@@ -340,9 +383,8 @@ func GetFilteredProperties(eventName string, properties *map[string]interface{})
 	_, eventExistsInMap := eventNamePropertiesMap[eventName]
 	if (*properties)[U.EP_IS_PAGE_VIEW] == true {
 		for _, prop := range pageViewPropsList {
-			_, propExists := (*properties)[prop]
-			if propExists {
-				filteredProperties[prop] = (*properties)[prop]
+			if value, propExists := (*properties)[prop]; propExists {
+				filteredProperties[prop] = value
 			}
 		}
 		propertiesJSON, err := json.Marshal(filteredProperties)
@@ -352,9 +394,8 @@ func GetFilteredProperties(eventName string, properties *map[string]interface{})
 		returnProperties = &postgres.Jsonb{RawMessage: propertiesJSON}
 	} else if eventExistsInMap {
 		for _, prop := range eventNamePropertiesMap[eventName] {
-			_, propExists := (*properties)[prop]
-			if propExists {
-				filteredProperties[prop] = (*properties)[prop]
+			if value, propExists := (*properties)[prop]; propExists {
+				filteredProperties[prop] = value
 			}
 		}
 		propertiesJSON, err := json.Marshal(filteredProperties)
@@ -401,55 +442,59 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string) (*
 			}
 		}
 	}
-	_, hubspotExists := groupNameIDMap[model.GROUP_NAME_HUBSPOT_COMPANY]
-	_, salesforceExists := groupNameIDMap[model.GROUP_NAME_SALESFORCE_ACCOUNT]
 
-	var selectString string
-	if hubspotExists && salesforceExists {
-		selectString = fmt.Sprintf(`COALESCE(JSON_EXTRACT_STRING(properties, '%s'), JSON_EXTRACT_STRING(properties, '%s'), JSON_EXTRACT_STRING(properties, '%s')) AS name,
-			COALESCE(JSON_EXTRACT_STRING(properties, '%s'), JSON_EXTRACT_STRING(properties, '%s')) as industry,
-			CASE WHEN COALESCE(JSON_EXTRACT_STRING(properties, '%s'), JSON_EXTRACT_STRING(properties, '%s'))="" THEN 0 ELSE COALESCE(JSON_EXTRACT_STRING(properties, '%s'), JSON_EXTRACT_STRING(properties, '%s')) END AS number_of_employees,
-			COALESCE(JSON_EXTRACT_STRING(properties, '%s'), JSON_EXTRACT_STRING(properties, '%s')) as country`,
-			U.UP_COMPANY,
-			U.GP_HUBSPOT_COMPANY_NAME,
-			U.GP_SALESFORCE_ACCOUNT_NAME,
-			U.GP_HUBSPOT_COMPANY_INDUSTRY,
-			U.GP_SALESFORCE_ACCOUNT_INDUSTRY,
-			U.GP_HUBSPOT_COMPANY_NUMBEROFEMPLOYEES,
-			U.GP_SALESFORCE_ACCOUNT_NUMBEROFEMPLOYEES,
-			U.GP_HUBSPOT_COMPANY_NUMBEROFEMPLOYEES,
-			U.GP_SALESFORCE_ACCOUNT_NUMBEROFEMPLOYEES,
-			U.GP_HUBSPOT_COMPANY_COUNTRY,
-			U.GP_SALESFORCE_ACCOUNT_BILLINGCOUNTRY)
-	} else if hubspotExists {
-		selectString = fmt.Sprintf(`COALESCE(JSON_EXTRACT_STRING(properties, '%s'), JSON_EXTRACT_STRING(properties, '%s')) AS name,
-			JSON_EXTRACT_STRING(properties, '%s') as industry,
-			CASE WHEN JSON_EXTRACT_STRING(properties, '%s')="" THEN 0 ELSE JSON_EXTRACT_STRING(properties, '%s') END AS number_of_employees,
-			JSON_EXTRACT_STRING(properties, '%s') AS country`,
-			U.UP_COMPANY,
-			U.GP_HUBSPOT_COMPANY_NAME,
-			U.GP_HUBSPOT_COMPANY_INDUSTRY,
-			U.GP_HUBSPOT_COMPANY_NUMBEROFEMPLOYEES,
-			U.GP_HUBSPOT_COMPANY_NUMBEROFEMPLOYEES,
-			U.GP_HUBSPOT_COMPANY_COUNTRY)
-	} else if salesforceExists {
-		selectString = fmt.Sprintf(`COALESCE(JSON_EXTRACT_STRING(properties, '%s'), JSON_EXTRACT_STRING(properties, '%s')) AS name,
-			JSON_EXTRACT_STRING(properties, '%s') as industry,
-			CASE WHEN JSON_EXTRACT_STRING(properties, '%s')="" THEN 0 ELSE JSON_EXTRACT_STRING(properties, '%s') END AS number_of_employees,
-			JSON_EXTRACT_STRING(properties, '%s') AS country`,
-			U.UP_COMPANY,
-			U.GP_SALESFORCE_ACCOUNT_NAME,
-			U.GP_SALESFORCE_ACCOUNT_INDUSTRY,
-			U.GP_SALESFORCE_ACCOUNT_NUMBEROFEMPLOYEES,
-			U.GP_SALESFORCE_ACCOUNT_NUMBEROFEMPLOYEES,
-			U.GP_SALESFORCE_ACCOUNT_BILLINGCOUNTRY)
-	}
 	db := C.GetServices().Db
 	var accountDetails model.AccountDetails
-	err := db.Table("users").Select(selectString).Where("project_id=? AND id=?", projectID, id).Order("updated_at DESC").Limit(1).Find(&accountDetails).Error
+	err := db.Table("users").Select("properties").Where("project_id=? AND id=?", projectID, id).Limit(1).Find(&accountDetails).Error
 	if err != nil {
 		log.WithField("status", err).Error("Failed to get account properties.")
 		return nil, http.StatusInternalServerError
+	}
+
+	// Filter Properties
+	nameProps := []string{U.UP_COMPANY, U.GP_HUBSPOT_COMPANY_NAME, U.GP_SALESFORCE_ACCOUNT_NAME}
+	industryProps := []string{U.GP_HUBSPOT_COMPANY_INDUSTRY, U.GP_SALESFORCE_ACCOUNT_INDUSTRY}
+	countryProps := []string{U.GP_HUBSPOT_COMPANY_COUNTRY, U.GP_SALESFORCE_ACCOUNT_BILLINGCOUNTRY}
+	employeeCountProps := []string{U.GP_HUBSPOT_COMPANY_NUMBEROFEMPLOYEES, U.GP_SALESFORCE_ACCOUNT_NUMBEROFEMPLOYEES}
+	properties, err := U.DecodePostgresJsonb(accountDetails.Properties)
+	if err != nil {
+		log.WithFields(logFields).WithError(err).Error("Failed decoding account properties.")
+	}
+	for _, prop := range nameProps {
+		if accountDetails.Name != "" {
+			break
+		}
+		if name, exists := (*properties)[prop]; exists {
+			accountDetails.Name = fmt.Sprintf("%s", name)
+		}
+	}
+	for _, prop := range industryProps {
+		if accountDetails.Industry != "" {
+			break
+		}
+		if industry, exists := (*properties)[prop]; exists {
+			accountDetails.Industry = fmt.Sprintf("%s", industry)
+		}
+	}
+	for _, prop := range countryProps {
+		if accountDetails.Country != "" {
+			break
+		}
+		if country, exists := (*properties)[prop]; exists {
+			accountDetails.Country = fmt.Sprintf("%s", country)
+		}
+	}
+	for _, prop := range employeeCountProps {
+		if accountDetails.NumberOfEmployees != 0 {
+			break
+		}
+		if number_of_employees, exists := (*properties)[prop]; exists {
+			if number_of_employees == "" {
+				accountDetails.NumberOfEmployees = 0
+			} else {
+				accountDetails.NumberOfEmployees = uint64(number_of_employees.(float64))
+			}
+		}
 	}
 
 	// Timeline Query

@@ -9,7 +9,7 @@ import { PlusOutlined } from '@ant-design/icons';
 import PropTypes from 'prop-types';
 import AppModal from '../AppModal';
 
-const ShareToEmailModal = ({visible, onSubmit, isLoading, setShowShareToEmailModal}) => {
+const ShareToEmailModal = ({visible, onSubmit, isLoading, setShowShareToEmailModal, queryTitle}) => {
     const [form] = Form.useForm();
     const [frequency, setFrequency] = useState('send_now');
 
@@ -75,6 +75,7 @@ const ShareToEmailModal = ({visible, onSubmit, isLoading, setShowShareToEmailMod
                                             <Form.Item 
                                                 label={null}
                                                 name="subject"
+                                                initialValue={queryTitle}
                                                 rules={[{ required: true, message: 'Please enter subject' }]}
                                                 >
                                                 <Input className={'fa-input w-full'}
@@ -149,7 +150,7 @@ const ShareToEmailModal = ({visible, onSubmit, isLoading, setShowShareToEmailMod
                                             <Form.Item 
                                                 label={null}
                                                 name="message"
-                                                rules={[{ required: true, message: 'Please enter message' }]}
+                                                // rules={[{ required: true, message: 'Please enter message' }]}
                                                 >
                                                 <Input className={'fa-input w-full'}
                                                 placeholder="Your message"

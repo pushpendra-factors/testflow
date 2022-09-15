@@ -28,7 +28,6 @@ func (store *MemSQL) ExecuteKPIQueryGroup(projectID int64, reqID string, kpiQuer
 		kpiQueryGroup.Queries[index].Filters = append(query.Filters, kpiQueryGroup.GlobalFilters...)
 		kpiQueryGroup.Queries[index].GroupBy = kpiQueryGroup.GlobalGroupBy
 	}
-
 	for _, query := range kpiQueryGroup.Queries {
 		var result []model.QueryResult
 		var statusCode int
@@ -53,7 +52,6 @@ func (store *MemSQL) ExecuteKPIQueryGroup(projectID int64, reqID string, kpiQuer
 				if hashCode != "" {
 					hashMapOfQueryToResult[hashCode] = result
 				}
-				queryResults = append(queryResults, result...)
 			}
 		}
 		queryResults = append(queryResults, result...)
@@ -101,9 +99,10 @@ func (store *MemSQL) ExecuteNonDerivedQuery(projectID int64, reqID string,
 	if query.Category == model.ProfileCategory {
 		if query.GroupByTimestamp != "" {
 			var err error
+			log.Info("---- profile query for pipeline ", query)
 			result, statusCode = store.ExecuteKPIQueryForProfiles(projectID, reqID,
 				query, enableOptimisedFilterOnProfileQuery)
-
+			log.Info("---- profile query pipeline result ", result)
 			query.GroupByTimestamp = ""
 			hashCode, err = query.GetQueryCacheHashString()
 			if err != nil {
@@ -166,7 +165,7 @@ func (store *MemSQL) ExecuteDerivedKPIQuery(projectID int64, reqID string, baseQ
 	if finalStatusCode != http.StatusOK {
 		return make([]model.QueryResult, 0), finalStatusCode, errMsg
 	} else {
-		result := EvaluateKPIExpressionWithBraces(mapOfFormulaVariableToQueryResult, kpiQueryGroup.Queries[0].Timezone, kpiQueryGroup.Formula)
+		result := EvaluateKPIExpressionWithBraces(mapOfFormulaVariableToQueryResult, kpiQueryGroup.Queries[0].Timezone, strings.ToLower(kpiQueryGroup.Formula))
 		queryResults = append(queryResults, result)
 		return queryResults, http.StatusOK, ""
 	}

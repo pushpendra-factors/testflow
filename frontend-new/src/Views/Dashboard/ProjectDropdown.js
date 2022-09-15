@@ -427,6 +427,7 @@ function ProjectDropdown({
               refreshClicked={refreshClicked}
               setRefreshClicked={setRefreshClicked}
               oldestRefreshTime={oldestRefreshTime}
+              setOldestRefreshTime={setOldestRefreshTime}
             />
             <SortableCards
               durationObj={durationObj}

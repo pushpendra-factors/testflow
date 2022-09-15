@@ -150,7 +150,7 @@ func (store *MemSQL) GetAllAlerts(projectID int64, excludeSavedQueries bool) ([]
 	}
 	db := C.GetServices().Db
 	if excludeSavedQueries {
-		err := db.Where("project_id = ? AND is_deleted != ?", projectID, true).Find(&alerts).Error
+		err := db.Where("project_id = ? AND alert_type != ? AND is_deleted != ?", projectID, 3, true).Find(&alerts).Error
 		if err != nil {
 			log.WithField("project_id", projectID).Warn(err)
 			return make([]model.Alert, 0), http.StatusNotFound

@@ -118,7 +118,7 @@ func (store *MemSQL) ExecuteAllUsersProfilesQuery(projectID int64, query model.P
 		logCtx.Error("Failed generating SQL query from analytics query.")
 		return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
 	}
-
+	log.Info("--- Profile Query For Pipleine ",statement,params)
 	result, err, reqID := store.ExecQuery(statement, params)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed executing SQL query generated.")

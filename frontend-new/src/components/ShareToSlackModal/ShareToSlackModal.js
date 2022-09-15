@@ -9,7 +9,7 @@ import PropTypes from 'prop-types';
 import AppModal from '../AppModal';
 const { Option } = Select;
 
-const ShareToSlackModal = ({visible, onSubmit, isLoading, channelOpts, setShowShareToSlackModal}) => {
+const ShareToSlackModal = ({visible, onSubmit, isLoading, channelOpts, setShowShareToSlackModal, queryTitle}) => {
     const [form] = Form.useForm();
     const [frequency, setFrequency] = useState('send_now');
 
@@ -89,6 +89,7 @@ const ShareToSlackModal = ({visible, onSubmit, isLoading, channelOpts, setShowSh
                                             <Form.Item 
                                                 label={null}
                                                 name="subject"
+                                                initialValue={queryTitle}
                                                 rules={[{ required: true, message: 'Please enter subject' }]}
                                                 >
                                                 <Input className={'fa-input w-full'}
@@ -115,7 +116,7 @@ const ShareToSlackModal = ({visible, onSubmit, isLoading, channelOpts, setShowSh
                                             <Form.Item 
                                                 label={null}
                                                 name="message"
-                                                rules={[{ required: true, message: 'Please enter message' }]}
+                                                // rules={[{ required: true, message: 'Please enter message' }]}
                                                 >
                                                 <Input className={'fa-input w-full'}
                                                 placeholder="Your message"

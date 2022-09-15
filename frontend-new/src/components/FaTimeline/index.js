@@ -69,10 +69,12 @@ function FaTimeline({
                                 : []
                             }
                           >
-                            <div className={`${styles.tag} truncate`}>
-                              {event.display_name === 'Page View'
-                                ? event.event_name
-                                : event.display_name}
+                            <div className={`${styles.tag}`}>
+                              <span className='truncate'>
+                                {event.display_name === 'Page View'
+                                  ? event.event_name
+                                  : event.display_name}
+                              </span>
                               {hoverEvents.includes(event.display_name) ? (
                                 <CaretRightOutlined />
                               ) : null}

@@ -52,7 +52,8 @@ const CustomKPI = ({
   addNewCustomKPI,
   eventPropNames,
   userPropNames,
-  removeCustomKPI
+  removeCustomKPI,
+  currentAgent
 }) => {
   const [showForm, setShowForm] = useState(false);
   const [tableData, setTableData] = useState([]);
@@ -326,6 +327,20 @@ const matchEventName = (item) => {
     return blockList;
   };
 
+  const onReset = () => {
+    form.resetFields();
+    setShowForm(false);
+    setFilterValues([]);
+    setKPICategory(false);
+    setKPIType('default');
+    setQueries([])
+  }
+
+  const whiteListedAccounts = [
+    'junaid@factors.ai',
+    'solutions@factors.ai',
+  ];               
+
   const onFinish = (data) => {
     let payload;
     if(selKPIType === 'default') {
@@ -333,7 +348,7 @@ const matchEventName = (item) => {
         name: data?.name,
         description: data?.description,
         type_of_query: 1,
-        objTy: data.kpi_category,
+        obj_ty: data.kpi_category,
         transformations: {
           agFn: data.kpi_function,
           agPr: KPIPropertyDetails?.name,
@@ -372,9 +387,7 @@ const matchEventName = (item) => {
           description:
             'New KPI is created and saved successfully. You can start using it across the product shortly.',
         });
-        form.resetFields();
-        setShowForm(false);
-        setFilterValues([]);
+        onReset();
       })
       .catch((err) => {
         setLoading(false);
@@ -565,8 +578,7 @@ const matchEventName = (item) => {
                           size={'large'}
                           disabled={loading}
                           onClick={() => {
-                            setShowForm(false);
-                            form.resetFields();
+                            onReset();
                           }}
                         >
                           Cancel
@@ -629,6 +641,7 @@ const matchEventName = (item) => {
                     </Col>
                   </Row>
 
+                  { whiteListedAccounts.includes(currentAgent?.email) &&
                   <Row className={'mt-8'}>
                     <Col span={18}>
                       <Text type={'title'} level={7} extraClass={'m-0'}>
@@ -637,12 +650,6 @@ const matchEventName = (item) => {
                       <Form.Item
                         name='kpi_type'
                         className={'m-0'}
-                        rules={[
-                          {
-                            required: true,
-                            message: 'Please select KPI Type',
-                          },
-                        ]}
                       >
                         <Select
                           className={'fa-select w-full'}
@@ -657,6 +664,7 @@ const matchEventName = (item) => {
                       </Form.Item>
                     </Col>
                   </Row>
+                  }
                   
                   {selKPIType === 'default' ?
                   <div>
@@ -948,7 +956,7 @@ const matchEventName = (item) => {
                               // disabled={loading}
                               size='large'
                               // className={'fa-input w-full'}
-                              placeholder='Type your formula.  Eg (A/B)'
+                              placeholder='Type your formula.  Eg A/B, A+B, A-B, A*B'
                               bordered={false}
                             />
                           </Form.Item>
@@ -1129,15 +1137,15 @@ const matchEventName = (item) => {
                     <div className={'mt-4 border rounded-lg'}>
                     {viewKPIDetails?.transformations?.qG.map((item) => (
                       <>
-                      <div className={'py-4'}>
-                      <Row className={'m-0 mt-2 ml-4'}>
+                      <div className={'py-2'}>
+                      <Row className={'m-0 mt-1 ml-4'}>
                           <Col>
                               <Button
                               className={`mr-2`}
                               type='link'
                               disabled={true}
                               >
-                                  {item?.me[0]}
+                                  {(item?.me[0]).replace(/_/g, ' ')}
                               </Button>
                           </Col>
                           <Col>
@@ -1207,7 +1215,7 @@ const matchEventName = (item) => {
                               size='large'
                               value={viewKPIDetails?.transformations?.for}
                               // className={'fa-input w-full'}
-                              placeholder='Type your formula.  Eg (A/B)'
+                              placeholder='Type your formula.  Eg A/B, A+B, A-B, A*B'
                               bordered={false}
                             />
                           </Col>
@@ -1230,6 +1238,7 @@ const mapStateToProps = (state) => ({
   savedCustomKPI: state.kpi?.saved_custom_kpi,
   userPropNames: state.coreQuery?.userPropNames,
   eventPropNames: state.coreQuery?.eventPropNames, 
+  currentAgent: state.agent.agent_details,
 });
 
 export default connect(mapStateToProps, {

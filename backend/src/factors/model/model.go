@@ -697,7 +697,7 @@ type Model interface {
 	GetProfilesListByProjectId(projectID int64, payload model.TimelinePayload, profileType string) ([]model.Profile, int)
 	GetProfileUserDetailsByID(projectID int64, identity string, isAnonymous string) (*model.ContactDetails, int)
 	GetGroupsForUserTimeline(projectID int64, userDetails model.ContactDetails) []model.GroupsInfo
-	GetUserActivitiesAndSessionCount(projectID int64, identity string, userId string) ([]model.UserActivity, float64)
+	GetUserActivitiesAndSessionCount(projectID int64, identity string, userId string) ([]model.UserActivity, uint64)
 	GetProfileAccountDetailsByID(projectID int64, id string) (*model.AccountDetails, int)
 
 	// Ads import

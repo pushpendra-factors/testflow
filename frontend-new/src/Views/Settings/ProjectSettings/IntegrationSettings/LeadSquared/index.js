@@ -52,7 +52,7 @@ const LeadSquaredIntegration = ({
                     message.success('LeadSquared integration successful');
                 }, 500);
                 setIsActive(true);
-                sendSlackNotification(currentAgent.email, activeProject.name, 'Hubspot');
+                sendSlackNotification(currentAgent.email, activeProject.name, 'Leadsquared');
             }).catch((err) => {
                 setShowForm(false);
                 setLoading(false);

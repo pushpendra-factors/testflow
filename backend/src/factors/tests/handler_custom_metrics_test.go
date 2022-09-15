@@ -103,28 +103,9 @@ func TestCreateDerivedKPIPostHandler(t *testing.T) {
 		assert.NotEqual(t, http.StatusOK, w.Code)
 	})
 	t.Run("CreateCustomMetricsFailureGroupByPresent", func(t *testing.T) {
-		transformations := &postgres.Jsonb{json.RawMessage(`{"cl":"kpi","for":"(a/b)*d/c","qG":[{"ca":"channels","dc":"google_ads_metrics","fil":[],"gBy":[{dpNa: "campaign name", en: "", gr: "", objTy: "campaign", prDaTy: "categorical", prNa: "campaign_name"}],"me":["impressions"],"na":"a","pgUrl":"","tz":"Australia/Sydney"},{"ca":"channels","dc":"google_ads_metrics","fil":[],"gBy":[],"me":["clicks"],"na":"b","pgUrl":"","tz":"Australia/Sydney"},{"ca":"channels","dc":"google_ads_metrics","fil":[],"gBy":[],"me":["spend"],"na":"c","pgUrl":"","tz":"Australia/Sydney"}]}`)}
+		transformations := &postgres.Jsonb{json.RawMessage(`{"cl":"kpi","for":"(a/b)*d/c","qG":[{"ca":"channels","dc":"google_ads_metrics","fil":[],"gBy":[{"dpNa": "campaign name", "en": "", "gr": "", "objTy": "campaign", "prDaTy": "categorical", "prNa": "campaign_name"}],"me":["impressions"],"na":"a","pgUrl":"","tz":"Australia/Sydney"},{"ca":"channels","dc":"google_ads_metrics","fil":[],"gBy":[],"me":["clicks"],"na":"b","pgUrl":"","tz":"Australia/Sydney"},{"ca":"channels","dc":"google_ads_metrics","fil":[],"gBy":[],"me":["spend"],"na":"c","pgUrl":"","tz":"Australia/Sydney"}]}`)}
 		w := sendCreateCustomMetric(r, project.ID, agent, transformations, name1, description1, "google_ads_metrics", 2)
 		assert.NotEqual(t, http.StatusOK, w.Code)
-	})
-
-	project, agent, _ = SetupProjectWithAgentDAO()
-	assert.NotNil(t, project)
-	t.Run("CreateCustomMetricsSuccess", func(t *testing.T) {
-		transformations := &postgres.Jsonb{json.RawMessage(`{"agFn": "sum", "agPr": "$salesforce_id", "agPrTy": "categorical", "fil": [], "daFie": "$salesforce_datefield1"}`)}
-		w := sendCreateCustomMetric(r, project.ID, agent, transformations, name1, description1, "salesforce_opportunities", 0)
-		assert.Equal(t, http.StatusOK, w.Code)
-		var result model.CustomMetric
-		decoder := json.NewDecoder(w.Body)
-		if err := decoder.Decode(&result); err != nil {
-			assert.NotNil(t, nil, err)
-		}
-	})
-
-	t.Run("CreateCustomMetricsFailure", func(t *testing.T) {
-		transformations := &postgres.Jsonb{json.RawMessage(`{"agFn": "sum", "agPr": "$salesforce_id", "agPrTy": "categorical", "fil": [], "daFie": "$salesforce_datefield1"}`)}
-		w := sendCreateCustomMetric(r, project.ID, agent, transformations, name1, description1, "salesforce_accounts", 0)
-		assert.Equal(t, http.StatusConflict, w.Code)
 	})
 }
 
@@ -156,7 +137,7 @@ func TestCustomMetricsGetHandler(t *testing.T) {
 	assert.NotNil(t, project)
 	t.Run("GetCustomMetricsSuccess", func(t *testing.T) {
 		transformations := &postgres.Jsonb{json.RawMessage(`{"agFn": "sum", "agPr": "$salesforce_id", "agPrTy": "categorical", "fil": [], "daFie": "$salesforce_datefield1"}`)}
-		w := sendCreateCustomMetric(r, project.ID, agent, transformations, name1, description1, "salesforce_accounts", 0)
+		w := sendCreateCustomMetric(r, project.ID, agent, transformations, name1, description1, "salesforce_accounts", 1)
 		assert.Equal(t, http.StatusOK, w.Code)
 		w1 := sendGetCustomMetrics(r, project.ID, agent)
 		assert.Equal(t, http.StatusOK, w1.Code)

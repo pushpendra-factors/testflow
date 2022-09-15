@@ -1063,9 +1063,11 @@ func GetRowsByMaps(attributionKey string, dimensions []string, attributionData *
 
 	doneAddingDefault := false // doing it one time
 	noOfGoalEvents := 0
+
 	if *attributionData != nil {
 		for _, data := range *attributionData {
 			for idx := 0; idx < len(data.ConversionEventCount); idx++ {
+
 				noOfGoalEvents++
 				// one for each - ConversionEventCount, ConversionEventCountInfluence, CostPerConversion, ConversionEventCompareCount, ConversionEvenCompareCountInfluence, CostPerConversionCompareCount
 				defaultMatchingRow = append(defaultMatchingRow, float64(0), float64(0), float64(0), float64(0), float64(0), float64(0))
@@ -1167,12 +1169,15 @@ func GetRowsByMaps(attributionKey string, dimensions []string, attributionData *
 
 			for len(data.ConversionEventCount) < noOfGoalEvents {
 				data.ConversionEventCount = append(data.ConversionEventCount, float64(0))
+			}
+			for len(data.ConversionEventCountInfluence) < noOfGoalEvents {
 				data.ConversionEventCountInfluence = append(data.ConversionEventCountInfluence, float64(0))
-
 			}
 
 			for len(data.ConversionEventCompareCount) < noOfGoalEvents {
 				data.ConversionEventCompareCount = append(data.ConversionEventCompareCount, float64(0))
+			}
+			for len(data.ConversionEventCompareCountInfluence) < noOfGoalEvents {
 				data.ConversionEventCompareCountInfluence = append(data.ConversionEventCompareCountInfluence, float64(0))
 			}
 
@@ -1181,6 +1186,7 @@ func GetRowsByMaps(attributionKey string, dimensions []string, attributionData *
 				functionType := data.ConvAggFunctionType[idx]
 
 				row = append(row, float64(data.ConversionEventCount[idx]))
+
 				row = append(row, float64(data.ConversionEventCountInfluence[idx]))
 
 				cpc = append(cpc, float64(0))
@@ -1215,6 +1221,7 @@ func GetRowsByMaps(attributionKey string, dimensions []string, attributionData *
 				} else {
 					row = append(row, cpc[idx], float64(0), float64(0), float64(0))
 				}
+
 			}
 			// for linked event considering the data.ConversionEventCount[0] only
 			row = append(row, getLinkedEventColumnAsInterfaceList(float64(data.ConversionEventCount[0]), data.Spend, data.LinkedEventsCount, len(linkedEvents))...)
@@ -2138,8 +2145,12 @@ func AddUpConversionEventCount(usersIdAttributionIdMap map[string][]AttributionK
 				// filling additional data if ConversionEventCount is empty
 				if len(attributionData[keyWeight.Key].ConversionEventCount) < idx+1 {
 					attributionData[keyWeight.Key].ConversionEventCount = append(attributionData[keyWeight.Key].ConversionEventCount, float64(0))
+				}
+
+				if len(attributionData[keyWeight.Key].ConversionEventCountInfluence) < idx+1 {
 					attributionData[keyWeight.Key].ConversionEventCountInfluence = append(attributionData[keyWeight.Key].ConversionEventCountInfluence, float64(0))
 				}
+
 				weightedValue := keyWeight.Weight * userIDWeightsForEachGoalEvent[idx]
 				attributionData[keyWeight.Key].ConversionEventCount[idx] = float64(attributionData[keyWeight.Key].ConversionEventCount[idx] + weightedValue)
 				attributionData[keyWeight.Key].ConversionEventCountInfluence[idx] = float64(attributionData[keyWeight.Key].ConversionEventCountInfluence[idx] + (weightedValue / float64(len(attributionKeys))))

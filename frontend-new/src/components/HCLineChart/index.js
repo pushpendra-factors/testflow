@@ -94,7 +94,12 @@ function LineChart({
           return ReactDOMServer.renderToString(
             <>
               <div className="flex flex-col row-gap-2">
-                <Text type="title" level={7} color="grey-2">
+                <Text
+                  extraClass={styles.infoText}
+                  type="title"
+                  level={7}
+                  color="grey-2"
+                >
                   {this.point.series.name}
                 </Text>
                 <div className={cx('flex flex-col')}>
