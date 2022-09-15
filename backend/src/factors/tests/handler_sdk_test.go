@@ -2876,3 +2876,176 @@ func TestIsValidTokenString(t *testing.T) {
 	assert.False(t, SDK.IsValidTokenString("we0jyjxcs0ix4ggnkptymjh48ur8y7q7;"))
 	assert.False(t, SDK.IsValidTokenString("we0jyjxc-s0ix4ggnkptymjh48ur8y7q7"))
 }
+
+func TestSDKPageURL(t *testing.T) {
+	// Initialize routes and dependent data.
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	// Query parameters in $page_raw_url
+	timestamp := U.UnixTimeBeforeDuration(1 * time.Hour)
+	randomeEventName := RandomURL()
+	trackPayload := SDK.TrackPayload{
+		Name:      randomeEventName,
+		Timestamp: timestamp,
+		EventProperties: U.PropertiesMap{
+			"$mobile":          "true",
+			"$page_url":        "https://example.com/xyz/",
+			"$page_raw_url":    "https://example.com/xyz?utm_campaign=google",
+			"$page_domain":     "example.com",
+			"$referrer_domain": "gartner.com",
+			"$referrer_url":    "https://gartner.com/product_of_the_month/",
+			"$referrer":        "https://gartner.com/product_of_the_month/",
+			"$page_load_time":  100,
+			"$page_spent_time": 120,
+		},
+		UserProperties: U.PropertiesMap{
+			"$os": "Mac OS",
+		},
+		RequestSource: model.UserSourceWeb,
+	}
+	status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
+	assert.NotNil(t, response.EventId)
+	assert.NotNil(t, response.UserId)
+	assert.Equal(t, http.StatusOK, status)
+
+	rUser, errCode := store.GetStore().GetUser(project.ID, response.UserId)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.NotNil(t, rUser)
+	userPropertiesBytes, err := rUser.Properties.Value()
+	assert.Nil(t, err)
+
+	var userProperties1 map[string]interface{}
+	json.Unmarshal(userPropertiesBytes.([]byte), &userProperties1)
+
+	assert.NotNil(t, userProperties1[U.UP_INITIAL_PAGE_URL])
+	assert.NotNil(t, userProperties1[U.UP_LATEST_PAGE_URL])
+
+	// Query parameters listed separately in EventProperties
+	timestamp = U.UnixTimeBeforeDuration(2 * time.Hour)
+	randomeEventName = RandomURL()
+	trackPayload = SDK.TrackPayload{
+		Name:      randomeEventName,
+		Timestamp: timestamp,
+		EventProperties: U.PropertiesMap{
+			"$mobile":            "true",
+			"$page_url":          "https://example.com/xyz/",
+			"$page_raw_url":      "https://example.com/xyz/",
+			"$page_domain":       "example.com",
+			"$referrer_domain":   "gartner.com",
+			"$referrer_url":      "https://gartner.com/product_of_the_month/",
+			"$referrer":          "https://gartner.com/product_of_the_month/",
+			"$page_load_time":    100,
+			"$page_spent_time":   120,
+			"$qp_utm_campaign":   "google",
+			"$qp_utm_campaignid": "12345",
+			"$qp_utm_source":     "google",
+			"$qp_utm_term":       "analytics",
+			"$qp_utm_medium":     "email",
+			"$qp_utm_keyword":    "analytics",
+			"$qp_utm_matchtype":  "exact",
+			"$qp_utm_content":    "analytics",
+			"$qp_utm_adgroup":    "ad-xxx",
+			"$qp_utm_adgroup_id": "xyz123",
+			"$qp_utm_creativeid": "creative-xxx",
+			"$qp_gclid":          "xxx123",
+			"$qp_fbclid":         "zzz123",
+		},
+		UserProperties: U.PropertiesMap{
+			"$os": "Mac OS",
+		},
+		RequestSource: model.UserSourceWeb,
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
+	assert.NotNil(t, response.EventId)
+	assert.NotNil(t, response.UserId)
+	assert.Equal(t, http.StatusOK, status)
+
+	rUser, errCode = store.GetStore().GetUser(project.ID, response.UserId)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.NotNil(t, rUser)
+	userPropertiesBytes, err = rUser.Properties.Value()
+	assert.Nil(t, err)
+
+	var userProperties2 map[string]interface{}
+	json.Unmarshal(userPropertiesBytes.([]byte), &userProperties2)
+
+	assert.NotNil(t, userProperties2[U.UP_INITIAL_PAGE_URL])
+	assert.NotNil(t, userProperties2[U.UP_LATEST_PAGE_URL])
+
+	// Query parameters neither in $page_raw_url nor listed separately
+	timestamp = U.UnixTimeBeforeDuration(3 * time.Hour)
+	randomeEventName = RandomURL()
+	trackPayload = SDK.TrackPayload{
+		Name:      randomeEventName,
+		Timestamp: timestamp,
+		EventProperties: U.PropertiesMap{
+			"$mobile":          "true",
+			"$page_url":        "https://example.com/xyz/",
+			"$page_raw_url":    "https://example.com/xyz/",
+			"$page_domain":     "example.com",
+			"$referrer_domain": "gartner.com",
+			"$referrer_url":    "https://gartner.com/product_of_the_month/",
+			"$referrer":        "https://gartner.com/product_of_the_month/",
+			"$page_load_time":  100,
+			"$page_spent_time": 120,
+		},
+		UserProperties: U.PropertiesMap{
+			"$os": "Mac OS",
+		},
+		RequestSource: model.UserSourceWeb,
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
+	assert.NotNil(t, response.EventId)
+	assert.NotNil(t, response.UserId)
+	assert.Equal(t, http.StatusOK, status)
+
+	rUser, errCode = store.GetStore().GetUser(project.ID, response.UserId)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.NotNil(t, rUser)
+	userPropertiesBytes, err = rUser.Properties.Value()
+	assert.Nil(t, err)
+
+	var userProperties3 map[string]interface{}
+	json.Unmarshal(userPropertiesBytes.([]byte), &userProperties3)
+
+	assert.NotNil(t, userProperties3[U.UP_INITIAL_PAGE_URL])
+	assert.NotNil(t, userProperties3[U.UP_LATEST_PAGE_URL])
+}
+
+func TestSDKTrackHandlerForPageURL(t *testing.T) {
+	// Initialize routes and dependent data.
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+	uri := "/sdk/event/track"
+
+	project, user, err := SetupProjectUserReturnDAO()
+	assert.Nil(t, err)
+
+	pageTitle := U.RandomString(15)
+
+	botState := false
+	store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{ExcludeBot: &botState})
+	w := ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"auto":true, "user_id": "%s", "event_name": "www.example.com/", "event_properties": {"$page_domain": "www.example.com", "$page_raw_url": "https://www.example.com/", "$page_title": "%s", "$page_url": "www.example.com/", "$referrer": "", "$referrer_domain": "", "$referrer_url": ""}, "user_properties": {"$platform": "web", "$screen_height": 900, "$screen_width": 1440}}`, user.ID, pageTitle)),
+		map[string]string{
+			"Authorization": project.Token,
+			"User-Agent":    "Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2272.96 Mobile Safari/537.36 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+		})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	userPropertiesJsonb, errCode := store.GetStore().GetUserPropertiesByUserID(project.ID, user.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+	userPropertiesBytes, err := userPropertiesJsonb.Value()
+	assert.Nil(t, err)
+	var userProperties map[string]interface{}
+	err = json.Unmarshal(userPropertiesBytes.([]byte), &userProperties)
+	assert.Nil(t, err)
+
+	assert.NotNil(t, userProperties["$initial_page_raw_url"])
+	assert.NotNil(t, userProperties["$initial_page_url"])
+	assert.NotNil(t, userProperties["$latest_page_raw_url"])
+	assert.NotNil(t, userProperties["$latest_page_url"])
+}

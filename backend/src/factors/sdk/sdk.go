@@ -686,6 +686,8 @@ func Track(projectId int64, request *TrackPayload,
 	}
 
 	_ = model.FillLocationUserProperties(userProperties, clientIP)
+	// Add latest user properties without UTM parameters.
+	U.FillLatestPageUserProperties(userProperties, eventProperties)
 	// Add latest touch user properties.
 	if hasDefinedMarketingProperty {
 		U.FillLatestTouchUserProperties(userProperties, eventProperties)

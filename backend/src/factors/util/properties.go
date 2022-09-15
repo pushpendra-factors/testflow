@@ -751,7 +751,7 @@ var EVENT_TO_USER_INITIAL_PROPERTIES = map[string]string{
 	EP_REVENUE:             UP_INITIAL_REVENUE,
 }
 
-var EVENT_TO_USER_LATEST_PROPERTIES = map[string]string{
+var EVENT_TO_USER_LATEST_PAGE_PROPERTIES = map[string]string{
 	EP_PAGE_URL:            UP_LATEST_PAGE_URL,
 	EP_PAGE_RAW_URL:        UP_LATEST_PAGE_RAW_URL,
 	EP_PAGE_DOMAIN:         UP_LATEST_PAGE_DOMAIN,
@@ -761,20 +761,23 @@ var EVENT_TO_USER_LATEST_PROPERTIES = map[string]string{
 	EP_PAGE_LOAD_TIME:      UP_LATEST_PAGE_LOAD_TIME,
 	EP_PAGE_SPENT_TIME:     UP_LATEST_PAGE_SPENT_TIME,
 	EP_PAGE_SCROLL_PERCENT: UP_LATEST_PAGE_SCROLL_PERCENT,
-	EP_CAMPAIGN:            UP_LATEST_CAMPAIGN,
-	EP_CAMPAIGN_ID:         UP_LATEST_CAMPAIGN_ID,
-	EP_SOURCE:              UP_LATEST_SOURCE,
-	EP_MEDIUM:              UP_LATEST_MEDIUM,
-	EP_KEYWORD:             UP_LATEST_KEYWORD,
-	EP_KEYWORD_MATCH_TYPE:  UP_LATEST_KEYWORD_MATCH_TYPE,
-	EP_CONTENT:             UP_LATEST_CONTENT,
-	EP_ADGROUP:             UP_LATEST_ADGROUP,
-	EP_ADGROUP_ID:          UP_LATEST_ADGROUP_ID,
-	EP_CREATIVE:            UP_LATEST_CREATIVE,
-	EP_GCLID:               UP_LATEST_GCLID,
-	EP_FBCLID:              UP_LATEST_FBCLID,
-	EP_COST:                UP_LATEST_COST,
-	EP_REVENUE:             UP_LATEST_REVENUE,
+}
+
+var EVENT_TO_USER_LATEST_PROPERTIES = map[string]string{
+	EP_CAMPAIGN:           UP_LATEST_CAMPAIGN,
+	EP_CAMPAIGN_ID:        UP_LATEST_CAMPAIGN_ID,
+	EP_SOURCE:             UP_LATEST_SOURCE,
+	EP_MEDIUM:             UP_LATEST_MEDIUM,
+	EP_KEYWORD:            UP_LATEST_KEYWORD,
+	EP_KEYWORD_MATCH_TYPE: UP_LATEST_KEYWORD_MATCH_TYPE,
+	EP_CONTENT:            UP_LATEST_CONTENT,
+	EP_ADGROUP:            UP_LATEST_ADGROUP,
+	EP_ADGROUP_ID:         UP_LATEST_ADGROUP_ID,
+	EP_CREATIVE:           UP_LATEST_CREATIVE,
+	EP_GCLID:              UP_LATEST_GCLID,
+	EP_FBCLID:             UP_LATEST_FBCLID,
+	EP_COST:               UP_LATEST_COST,
+	EP_REVENUE:            UP_LATEST_REVENUE,
 }
 
 // Uses same name as source user properties.
@@ -3222,6 +3225,14 @@ func FillMandatoryDefaultUserProperties(propertiesByType *map[string][]string) {
 					(*propertiesByType)[propType] = append((*propertiesByType)[propType], dProp)
 				}
 			}
+		}
+	}
+}
+
+func FillLatestPageUserProperties(userProperties, eventProperties *PropertiesMap) {
+	for k, v := range *eventProperties {
+		if userPropertyKey, exists := EVENT_TO_USER_LATEST_PAGE_PROPERTIES[k]; exists {
+			(*userProperties)[userPropertyKey] = v
 		}
 	}
 }
