@@ -1,8 +1,7 @@
-import React, { useEffect} from "react";
+import React from "react";
 import { Row, Col, Modal} from "antd";
 import {Text } from '../../../../components/factorsComponents';
 import { useSelector,useDispatch } from 'react-redux';
-import { useHistory } from 'react-router-dom';
 
 import {createDashboardFromTemplate} from '../../../../reducers/dashboard_templates/services'
 import { fetchDashboards}from '../../../../reducers/dashboard/services';
@@ -21,16 +20,11 @@ import {
   } from '../../../../reducers/coreQuery/middleware';
 
 function CopyDashboardModal({showCopyDashBoardModal,setShowCopyDashBoardModal,setShowTemplates}){
-    const history = useHistory();
     const { active_project } = useSelector((state) => state.global);
     const { activeTemplate } = useSelector((state)=>state.dashboardTemplates);
     const {dashboards} = useSelector((state)=>state.dashboard);
     const dispatch = useDispatch();
     // console.log('r',state);
-
-    useEffect(()=>{
-        history.push('/');
-    },[dashboards])
 
     const fetchDashboardItems = ()=>{
         dispatch(fetchDashboards(active_project.id));

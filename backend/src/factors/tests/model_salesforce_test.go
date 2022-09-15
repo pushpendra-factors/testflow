@@ -4823,3 +4823,36 @@ func TestSalesforceDisableGroupUserPropertiesFromUserPropertiesCache(t *testing.
 	assert.Nil(t, err)
 	assert.Contains(t, userProperties, "$salesforce_account_id")
 }
+
+func TestSalesforceDocumentWithSpecialCharacters(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	createdDate := time.Now()
+
+	name := make(map[string]string)
+	name["🀄因班🈸🈹㊟"] = "因班㊟"
+	name["☹️♈️♥️⚽️￿𐀁"] = "☹️♈️♥️⚽️￿"
+
+	for actualText, expectedText := range name {
+		accountID := "acc_" + getRandomName()
+		document := map[string]interface{}{
+			"Id":               accountID,
+			"Name":             actualText,
+			"CreatedDate":      createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout),
+			"LastModifiedDate": createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout),
+		}
+
+		err := createDummySalesforceDocument(project.ID, document, model.SalesforceDocumentTypeNameAccount)
+		assert.Nil(t, err)
+
+		salesforceDocument, status := store.GetStore().GetLatestSalesforceDocumentByID(project.ID, []string{accountID}, model.GetSalesforceDocTypeByAlias(model.SalesforceDocumentTypeNameAccount), 0)
+		assert.Equal(t, http.StatusFound, status)
+		assert.Equal(t, 1, len(salesforceDocument))
+
+		var value map[string]interface{}
+		err = json.Unmarshal(salesforceDocument[0].Value.RawMessage, &value)
+		assert.Nil(t, err)
+		assert.Equal(t, expectedText, value["Name"])
+	}
+}
