@@ -77,21 +77,21 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		selectString = "id AS identity, properties, updated_at AS last_activity"
 		isGroupUserString = "is_group_user=1"
 		if payload.Source == "All" && hubspotExists && salesforceExists {
-			sourceString = fmt.Sprintf("(group_%d_id IS NOT NULL OR group_%d_id IS NOT NULL)", hubspotID, salesforceID)
+			sourceString = fmt.Sprintf("AND (group_%d_id IS NOT NULL OR group_%d_id IS NOT NULL)", hubspotID, salesforceID)
 		} else if (payload.Source == "All" || payload.Source == model.GROUP_NAME_HUBSPOT_COMPANY) && hubspotExists {
-			sourceString = fmt.Sprintf("group_%d_id IS NOT NULL", hubspotID)
+			sourceString = fmt.Sprintf("AND group_%d_id IS NOT NULL", hubspotID)
 		} else if (payload.Source == "All" || payload.Source == model.GROUP_NAME_SALESFORCE_ACCOUNT) && salesforceExists {
-			sourceString = fmt.Sprintf("group_%d_id IS NOT NULL", salesforceID)
+			sourceString = fmt.Sprintf("AND group_%d_id IS NOT NULL", salesforceID)
 		}
 	} else if profileType == model.PROFILE_TYPE_USER {
 		selectString = fmt.Sprintf("COALESCE(customer_user_id, id) AS identity, ISNULL(customer_user_id) AS is_anonymous, JSON_EXTRACT_STRING(properties, '%s') AS country, MAX(updated_at) AS last_activity", U.UP_COUNTRY)
 		isGroupUserString = "(is_group_user=0 OR is_group_user IS NULL)"
 		if model.UserSourceMap[payload.Source] == model.UserSourceWeb {
-			sourceString = "(source=" + strconv.Itoa(model.UserSourceMap[payload.Source]) + " OR source IS NULL)"
+			sourceString = "AND (source=" + strconv.Itoa(model.UserSourceMap[payload.Source]) + " OR source IS NULL)"
 		} else if payload.Source == "All" {
 			sourceString = ""
 		} else {
-			sourceString = "source=" + strconv.Itoa(model.UserSourceMap[payload.Source])
+			sourceString = "AND source=" + strconv.Itoa(model.UserSourceMap[payload.Source])
 		}
 	}
 
@@ -110,8 +110,8 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	}
 	var minMax MinMaxTime
 	var runQueryString, fromStr, groupByStr, selectColumnsStr, commonStr string
-	windowSelectStr := "MIN(updated_at) AS min_updated_at, MAX(updated_at) AS max_updated_at"                      // Select Min & Max updated_at
-	commonStr = fmt.Sprintf("users WHERE project_id=%d AND %s AND %s", projectID, isGroupUserString, sourceString) // Common String for Queries
+	windowSelectStr := "MIN(updated_at) AS min_updated_at, MAX(updated_at) AS max_updated_at"                  // Select Min & Max updated_at
+	commonStr = fmt.Sprintf("users WHERE project_id=%d AND %s %s", projectID, isGroupUserString, sourceString) // Common String for Queries
 	fromStr = fmt.Sprintf("%s AND updated_at < '%s'", commonStr, FormatTimeToString(gorm.NowFunc()))
 	// Get min and max updated_at after ordering as part of optimisation.
 	limitVal := 100000

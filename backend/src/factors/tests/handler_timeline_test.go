@@ -81,7 +81,7 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 	assert.Equal(t, len(users), numUsers)
 
 	var payload model.TimelinePayload
-	payload.Source = "web"
+	payload.Source = "All"
 
 	// Without Filters
 	t.Run("Success", func(t *testing.T) {
