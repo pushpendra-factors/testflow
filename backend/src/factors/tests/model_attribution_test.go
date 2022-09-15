@@ -454,6 +454,25 @@ func TestAttributionLandingPage(t *testing.T) {
 		assert.Equal(t, int64(-1), getConversionUserCountLandingPage(query.AttributionKey, result, "lp_333333"))
 	})
 
+	t.Run("AttributionQueryWShapedLandingMultiUserSession", func(t *testing.T) {
+		query := &model.AttributionQuery{
+			From:                   timestamp,
+			To:                     timestamp + 4*U.SECONDS_IN_A_DAY,
+			AttributionKey:         model.AttributionKeyLandingPage,
+			AttributionMethodology: model.AttributionMethodWShaped,
+
+			ConversionEvent: model.QueryEventWithProperties{Name: "event1"},
+			LookbackDays:    10,
+			TacticOfferType: model.MarketingEventTypeOffer,
+		}
+		var debugQueryKey string
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		assert.Nil(t, err)
+		assert.Equal(t, float64(1), getConversionUserCountLandingPage(query.AttributionKey, result, "lp_111111"))
+		assert.Equal(t, float64(1), getConversionUserCountLandingPage(query.AttributionKey, result, "lp_222222"))
+		assert.Equal(t, int64(-1), getConversionUserCountLandingPage(query.AttributionKey, result, "lp_333333"))
+	})
+
 }
 
 func TestAttributionEngagementModel(t *testing.T) {
@@ -593,6 +612,111 @@ func TestAttributionEngagementModel(t *testing.T) {
 		// no hit for campaigns 1234567 or none
 		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "1234567"))
 	})
+}
+func TestWShapedAttributionModel(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	addMarketingData(t, project)
+
+	timestamp := int64(1589068800)
+
+	//Creating 3 users
+	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
+		JoinTimestamp: timestamp, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.NotEmpty(t, createdUserID1)
+	assert.Equal(t, http.StatusCreated, errCode)
+	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
+		JoinTimestamp: timestamp, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.NotNil(t, createdUserID2)
+	assert.Equal(t, http.StatusCreated, errCode)
+	createdUserID3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
+		JoinTimestamp: timestamp, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.NotNil(t, createdUserID3)
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	// Events with +1 Days
+	errCode = createEventWithSession(project.ID, "event1", createdUserID1,
+		timestamp+1*U.SECONDS_IN_A_DAY, "Campaign_Adwords_100",
+		"Adgroup_Adwords_200", "Keyword_Adwords_300", "Cj0KCQjwmpb0BRCBARIsAG7y4zbZArcUWztiqP5bs", "google", "")
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	errCode = createEventWithSession(project.ID, "event1",
+		createdUserID2, timestamp+1*U.SECONDS_IN_A_DAY, "Campaign_Adwords_100",
+		"Adgroup_Adwords_200", "Keyword_Adwords_300", "", "google", "")
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	errCode = createEventWithSession(project.ID, "event1",
+		createdUserID3, timestamp+1*U.SECONDS_IN_A_DAY, "Campaign_Adwords_100",
+		"Adgroup_Adwords_200", "Keyword_Adwords_300", "", "google", "")
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	t.Run("AttributionQueryWShapedCampaignMultiUserSession", func(t *testing.T) {
+		query := &model.AttributionQuery{
+			From:                    timestamp,
+			To:                      timestamp + 4*U.SECONDS_IN_A_DAY,
+			AttributionKey:          model.AttributionKeyCampaign,
+			AttributionMethodology:  model.AttributionMethodWShaped,
+			AttributionKeyDimension: []string{model.FieldChannelName, model.FieldCampaignName},
+			ConversionEvent:         model.QueryEventWithProperties{Name: "event1"},
+			LookbackDays:            10,
+		}
+		var debugQueryKey string
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		assert.Nil(t, err)
+		assert.Equal(t, float64(2), getConversionUserCount(query.AttributionKey, result, "$none"+model.KeyDelimiter+"Campaign_Adwords_100"))
+		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"))
+		assert.Equal(t, int64(1), getImpressions(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"))
+		assert.Equal(t, int64(1), getClicks(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"))
+		assert.Equal(t, float64(0.000001), getSpend(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"))
+
+	})
+
+	t.Run("AttributionQueryWShapedAdgroupMultiUserSession", func(t *testing.T) {
+		query := &model.AttributionQuery{
+			From:                    timestamp,
+			To:                      timestamp + 4*U.SECONDS_IN_A_DAY,
+			AttributionKey:          model.AttributionKeyAdgroup,
+			AttributionMethodology:  model.AttributionMethodWShaped,
+			AttributionKeyDimension: []string{model.FieldChannelName, model.FieldCampaignName, model.FieldAdgroupName},
+			ConversionEvent:         model.QueryEventWithProperties{Name: "event1"},
+			LookbackDays:            10,
+		}
+		var debugQueryKey string
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		assert.Nil(t, err)
+		assert.Equal(t, float64(2), getConversionUserCount(query.AttributionKey, result, "$none"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"))
+		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"))
+		assert.Equal(t, int64(2), getImpressions(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"))
+		assert.Equal(t, int64(2), getClicks(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"))
+		assert.Equal(t, float64(0.000002), getSpend(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"))
+	})
+
+	t.Run("AttributionQueryWShapedKeywordMultiUserSession", func(t *testing.T) {
+		query := &model.AttributionQuery{
+			From:                    timestamp,
+			To:                      timestamp + 4*U.SECONDS_IN_A_DAY,
+			AttributionKey:          model.AttributionKeyKeyword,
+			AttributionMethodology:  model.AttributionMethodWShaped,
+			AttributionKeyDimension: []string{model.FieldChannelName, model.FieldCampaignName, model.FieldAdgroupName, model.FieldKeywordMatchType, model.FieldKeyword},
+			ConversionEvent:         model.QueryEventWithProperties{Name: "event1"},
+			LookbackDays:            10,
+		}
+		var debugQueryKey string
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		assert.Nil(t, err)
+		// with "$none" match type for 2 users
+		assert.Equal(t, float64(2), getConversionUserCount(query.AttributionKey, result, "$none"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"$none"+model.KeyDelimiter+"Keyword_Adwords_300"))
+		// with 'Board' match type for 1 user1
+		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"Broad"+model.KeyDelimiter+"Keyword_Adwords_300"))
+		assert.Equal(t, int64(3), getImpressions(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"Broad"+model.KeyDelimiter+"Keyword_Adwords_300"))
+		assert.Equal(t, int64(3), getClicks(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"Broad"+model.KeyDelimiter+"Keyword_Adwords_300"))
+		assert.Equal(t, float64(0.000003), getSpend(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"Broad"+model.KeyDelimiter+"Keyword_Adwords_300"))
+	})
+
 }
 
 func TestInfluenceAttributionModel(t *testing.T) {
@@ -904,7 +1028,7 @@ func TestAttributionModelEndToEndWithEnrichment(t *testing.T) {
 	})
 }
 
-func TestAttributionForCampaignNameChange(t *testing.T) {
+func TestAttributionModelWithDifferentCampaignNames(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
 	H.InitAppRoutes(r)
@@ -945,6 +1069,68 @@ func TestAttributionForCampaignNameChange(t *testing.T) {
 		createdUserID3, timestamp+1*U.SECONDS_IN_A_DAY, "Campaign_Adwords_Old",
 		"Adgroup_Adwords_200", "Keyword_Adwords_300", "", "google", "")
 	assert.Equal(t, http.StatusCreated, errCode)
+
+	t.Run("AttributionQueryWShapedCampaignMultiUserSession", func(t *testing.T) {
+		query := &model.AttributionQuery{
+			From:                    timestamp,
+			To:                      timestamp + 4*U.SECONDS_IN_A_DAY,
+			AttributionKey:          model.AttributionKeyCampaign,
+			AttributionMethodology:  model.AttributionMethodWShaped,
+			AttributionKeyDimension: []string{model.FieldCampaignName},
+			ConversionEvent:         model.QueryEventWithProperties{Name: "event1"},
+			LookbackDays:            10,
+		}
+		var debugQueryKey string
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		assert.Nil(t, err)
+		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "Campaign_Adwords_New"))
+		assert.Equal(t, float64(2), getConversionUserCount(query.AttributionKey, result, "Campaign_Adwords_Old"))
+		assert.Equal(t, int64(2), getImpressions(query.AttributionKey, result, "Campaign_Adwords_New"))
+		assert.Equal(t, int64(2), getClicks(query.AttributionKey, result, "Campaign_Adwords_New"))
+		assert.Equal(t, float64(0.000002), getSpend(query.AttributionKey, result, "Campaign_Adwords_New"))
+
+	})
+	t.Run("AttributionQueryWShapedAdgroupMultiUserSession", func(t *testing.T) {
+		query := &model.AttributionQuery{
+			From:                    timestamp,
+			To:                      timestamp + 4*U.SECONDS_IN_A_DAY,
+			AttributionKey:          model.AttributionKeyAdgroup,
+			AttributionMethodology:  model.AttributionMethodWShaped,
+			AttributionKeyDimension: []string{model.FieldChannelName, model.FieldCampaignName, model.FieldAdgroupName},
+			ConversionEvent:         model.QueryEventWithProperties{Name: "event1"},
+			LookbackDays:            10,
+		}
+		var debugQueryKey string
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		assert.Nil(t, err)
+		assert.Equal(t, float64(2), getConversionUserCount(query.AttributionKey, result, "$none"+model.KeyDelimiter+"Campaign_Adwords_Old"+model.KeyDelimiter+"Adgroup_Adwords_200"))
+		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_New"+model.KeyDelimiter+"Adgroup_Adwords_200"))
+		assert.Equal(t, int64(2), getImpressions(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_New"+model.KeyDelimiter+"Adgroup_Adwords_200"))
+		assert.Equal(t, int64(2), getClicks(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_New"+model.KeyDelimiter+"Adgroup_Adwords_200"))
+		assert.Equal(t, float64(0.000002), getSpend(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_New"+model.KeyDelimiter+"Adgroup_Adwords_200"))
+	})
+
+	t.Run("AttributionQueryWShapedKeywordMultiUserSession", func(t *testing.T) {
+		query := &model.AttributionQuery{
+			From:                    timestamp,
+			To:                      timestamp + 4*U.SECONDS_IN_A_DAY,
+			AttributionKey:          model.AttributionKeyKeyword,
+			AttributionMethodology:  model.AttributionMethodWShaped,
+			AttributionKeyDimension: []string{model.FieldChannelName, model.FieldCampaignName, model.FieldAdgroupName, model.FieldKeywordMatchType, model.FieldKeyword},
+			ConversionEvent:         model.QueryEventWithProperties{Name: "event1"},
+			LookbackDays:            10,
+		}
+		var debugQueryKey string
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		assert.Nil(t, err)
+		// with "$none" match type for 2 users
+		assert.Equal(t, float64(2), getConversionUserCount(query.AttributionKey, result, "$none"+model.KeyDelimiter+"Campaign_Adwords_Old"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"$none"+model.KeyDelimiter+"Keyword_Adwords_300"))
+		// with 'Board' match type for 1 user1
+		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_New"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"Broad"+model.KeyDelimiter+"Keyword_Adwords_300"))
+		assert.Equal(t, int64(3), getImpressions(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_New"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"Broad"+model.KeyDelimiter+"Keyword_Adwords_300"))
+		assert.Equal(t, int64(3), getClicks(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_New"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"Broad"+model.KeyDelimiter+"Keyword_Adwords_300"))
+		assert.Equal(t, float64(0.000003), getSpend(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_New"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"Broad"+model.KeyDelimiter+"Keyword_Adwords_300"))
+	})
 
 	t.Run("AttributionQueryInfluenceCampaignMultiUserSession", func(t *testing.T) {
 		query := &model.AttributionQuery{

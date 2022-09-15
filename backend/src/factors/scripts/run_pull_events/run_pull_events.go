@@ -47,6 +47,7 @@ func main() {
 	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
 	memSQLCertificate := flag.String("memsql_cert", "", "")
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypeMemSQL, "Primary datastore type as memsql or postgres")
+	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 
 	isWeeklyEnabled := flag.Bool("weekly_enabled", false, "")
 	isMonthlyEnabled := flag.Bool("monthly_enabled", false, "")
@@ -73,6 +74,9 @@ func main() {
 	defer util.NotifyOnPanic("Task#PullEvents", *env)
 
 	appName := "pull_events_job"
+	healthcheckPingID := C.HealthcheckPullEventsPingID
+	defer C.PingHealthcheckForPanic(appName, *env, healthcheckPingID)
+
 	config := &C.Configuration{
 		AppName: appName,
 		Env:     *env,
@@ -93,9 +97,11 @@ func main() {
 			AppName:     appName,
 		},
 		PrimaryDatastore: *primaryDatastore,
+		SentryDSN:        *sentryDSN,
 	}
 
 	C.InitConf(config)
+	C.InitSentryLogging(config.SentryDSN, config.AppName)
 
 	// Initialize configs and connections and close with defer.
 	err := C.InitDB(*config)
@@ -166,11 +172,23 @@ func main() {
 
 	fileTypesMapOnlyEvents := make(map[int64]bool)
 	fileTypesMapOnlyEvents[1] = true
+	C.PingHealthcheckForStart(healthcheckPingID)
 	if *isWeeklyEnabled {
 		configs["fileTypes"] = fileTypesMapOnlyEvents
 		configs["modelType"] = T.ModelTypeWeek
 		status := taskWrapper.TaskFuncWithProjectId("PullEventsWeeklyOnlyEvents", *lookback, projectIdsArray, T.PullAllData, configs)
 		log.Info(status)
+		var isSuccess bool = true
+		for reason, message := range status {
+			if message == false {
+				C.PingHealthcheckForFailure(healthcheckPingID, reason+": pull events weekly failure")
+				isSuccess = false
+				break
+			}
+		}
+		if isSuccess {
+			C.PingHealthcheckForSuccess(healthcheckPingID, "Pull Events Weekly run success.")
+		}
 	}
 
 	if *isWeeklyEnabled {
@@ -178,6 +196,17 @@ func main() {
 		configs["modelType"] = T.ModelTypeWeek
 		status := taskWrapper.TaskFuncWithProjectId("PullEventsWeekly", *lookback, projectIdsArray, T.PullAllData, configs)
 		log.Info(status)
+		var isSuccess bool = true
+		for reason, message := range status {
+			if message == false {
+				C.PingHealthcheckForFailure(healthcheckPingID, reason+": pull events weekly run failure")
+				isSuccess = false
+				break
+			}
+		}
+		if isSuccess {
+			C.PingHealthcheckForSuccess(healthcheckPingID, "Pull Events Weekly run success.")
+		}
 	}
 
 	if *isMonthlyEnabled {
@@ -185,6 +214,17 @@ func main() {
 		configs["modelType"] = T.ModelTypeMonth
 		status := taskWrapper.TaskFuncWithProjectId("PullEventsMonthly", *lookback, projectIdsArray, T.PullAllData, configs)
 		log.Info(status)
+		var isSuccess bool = true
+		for reason, message := range status {
+			if message == false {
+				C.PingHealthcheckForFailure(healthcheckPingID, reason+": pull events monthly run failure")
+				isSuccess = false
+				break
+			}
+		}
+		if isSuccess {
+			C.PingHealthcheckForSuccess(healthcheckPingID, "Pull Events Monthly run success.")
+		}
 	}
 
 	if *isQuarterlyEnabled {
@@ -192,5 +232,16 @@ func main() {
 		configs["modelType"] = T.ModelTypeQuarter
 		status := taskWrapper.TaskFuncWithProjectId("PullEventsQuarterly", *lookback, projectIdsArray, T.PullAllData, configs)
 		log.Info(status)
+		var isSuccess bool = true
+		for reason, message := range status {
+			if message == false {
+				C.PingHealthcheckForFailure(healthcheckPingID, reason+": pull events quarterly run failure")
+				isSuccess = false
+				break
+			}
+		}
+		if isSuccess {
+			C.PingHealthcheckForSuccess(healthcheckPingID, "Pull Events quarterly run success.")
+		}
 	}
 }

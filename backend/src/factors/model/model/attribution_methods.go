@@ -66,6 +66,10 @@ func ApplyAttributionKPI(attributionType string,
 			attributionKeys = getInfluence(attributionType, userSessions, conversionTime,
 				lookbackPeriod, campaignFrom, campaignTo)
 			break
+		case AttributionMethodWShaped:
+			attributionKeys = getWShaped(attributionType, userSessions, conversionTime,
+				lookbackPeriod, campaignFrom, campaignTo)
+			break
 
 		default:
 			break
@@ -132,6 +136,10 @@ func ApplyAttribution(attributionType string, method string, conversionEvent str
 
 		case AttributionMethodInfluence:
 			attributionKeys = getInfluence(attributionType, userSessions, conversionTime,
+				lookbackPeriod, campaignFrom, campaignTo)
+			break
+		case AttributionMethodWShaped:
+			attributionKeys = getWShaped(attributionType, userSessions, conversionTime,
 				lookbackPeriod, campaignFrom, campaignTo)
 			break
 
@@ -245,6 +253,100 @@ func getInfluence(attributionType string, attributionTimerange map[string]UserSe
 	}
 
 	return keys
+}
+
+func getWShaped(attributionType string, attributionTimerange map[string]UserSessionData,
+	conversionTime, lookbackPeriod, from, to int64) []AttributionKeyWeight {
+
+	var keys []AttributionKeyWeight
+	interactions := getMergedInteractions(attributionTimerange)
+	interactions = SortInteractionTime(interactions, SortASC)
+
+	switch attributionType {
+	case AttributionQueryTypeConversionBased:
+		for _, interaction := range interactions {
+			if isAdTouchWithinLookback(interaction.InteractionTime, conversionTime, lookbackPeriod) {
+				keys = append(keys, AttributionKeyWeight{Key: interaction.AttributionKey, Weight: 0})
+			}
+		}
+
+	case AttributionQueryTypeEngagementBased:
+		for _, interaction := range interactions {
+			if isAdTouchWithinLookback(interaction.InteractionTime, conversionTime,
+				lookbackPeriod) && isAdTouchWithinCampaignOrQueryPeriod(interaction.InteractionTime, from, to) {
+				keys = append(keys, AttributionKeyWeight{Key: interaction.AttributionKey, Weight: 0})
+			}
+		}
+
+	}
+
+	switch len(keys) {
+	case 0:
+		log.Info("No Touch-points found")
+
+	case 1:
+		keys[0].Weight = float64(1)
+
+	case 2:
+		keys[0].Weight = float64(0.5)
+		keys[1].Weight = float64(0.5)
+
+	case 3:
+		keys[0].Weight = float64(0.33)
+		keys[1].Weight = float64(0.33)
+		keys[2].Weight = float64(0.33)
+
+	case 4:
+		keys[0].Weight = float64(0.325)
+		keys[1].Weight = float64(0.175)
+		keys[2].Weight = float64(0.175)
+		keys[3].Weight = float64(0.325)
+
+	default: // For length of keys greater than 4
+
+		if len(keys)%2 != 0 {
+			// Index Value for first, mid and last touch
+			firstTouch := 0
+			midTouch := len(keys) / 2
+			lastTouch := len(keys) - 1
+
+			keys[firstTouch].Weight = float64(0.3)
+			keys[midTouch].Weight = float64(0.3)
+			keys[lastTouch].Weight = float64(0.3)
+
+			remainTouch := len(keys) - 3                             // Remaining Touches other than first, mid and last
+			creditRemaintouch := float64(0.1 / float64(remainTouch)) // credit to be given to each remaining touch
+
+			for i := range keys {
+				if i != firstTouch && i != midTouch && i != lastTouch {
+					keys[i].Weight = creditRemaintouch
+				}
+			}
+
+		} else {
+			firstTouch := 0
+			midTouch1 := len(keys) / 2
+			midTouch2 := midTouch1 - 1
+			lastTouch := len(keys) - 1
+
+			keys[firstTouch].Weight = float64(0.3)
+			keys[midTouch1].Weight = float64(0.15)
+			keys[midTouch2].Weight = float64(0.15)
+			keys[lastTouch].Weight = float64(0.3)
+
+			remainTouch := len(keys) - 4                             // Remaining Touches other than first, mid and last
+			creditRemaintouch := float64(0.1 / float64(remainTouch)) // credit to be given to each remaining touch
+
+			for i := range keys {
+				if i != firstTouch && i != midTouch1 && i != midTouch2 && i != lastTouch {
+					keys[i].Weight = creditRemaintouch
+				}
+			}
+		}
+
+	}
+	return keys
+
 }
 
 // returns list of attribution keys and corresponding weights from given attributionKeyTime map using time decay attribution model.
