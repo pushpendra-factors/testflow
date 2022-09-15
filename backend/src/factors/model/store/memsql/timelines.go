@@ -16,19 +16,23 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// Sample Query Accounts Timeline:
-/* SELECT id, JSON_EXTRACT_STRING(properties, '$company') AS name, updated_at AS last_activity FROM `users`
-   WHERE (
-	   project_id = ? AND
-		(is_group_user=1 OR is_group_user IS NOT NULL) AND
-		(group_X_id IS NOT NULL OR group_Y_id IS NOT NULL) AND
-		(JSON_EXTRACT_STRING(users.properties, '$country') = ?) AND
-		updated_at BETWEEN ? AND ?
-	)
-	ORDER BY last_activity DESC LIMIT 1000
+/*Sample Timeline Listing Queries:
+
+// Users Listing Without Filters
+SELECT MIN(updated_at) AS min_updated_at, MAX(updated_at) AS max_updated_at FROM (SELECT updated_at FROM users WHERE project_id=11000005 AND (is_group_user=0 OR is_group_user IS NULL) AND (source=1 OR source IS NULL) AND updated_at < '2022-09-15 13:07:24.336972' ORDER BY updated_at DESC LIMIT 100000);
+SELECT COALESCE(customer_user_id, id) AS identity, ISNULL(customer_user_id) AS is_anonymous, JSON_EXTRACT_STRING(properties, '$country') AS country, MAX(updated_at) AS last_activity FROM users WHERE project_id=11000005 AND (is_group_user=0 OR is_group_user IS NULL) AND (source=1 OR source IS NULL) AND updated_at BETWEEN '2022-09-15 13:07:24.044412' AND '2022-09-15 13:07:24.322378'  GROUP BY identity ORDER BY last_activity DESC LIMIT 1000;
+// Users Listing With Filters
+SELECT MIN(updated_at) AS min_updated_at, MAX(updated_at) AS max_updated_at FROM (SELECT updated_at FROM users WHERE project_id=11000005 AND (is_group_user=0 OR is_group_user IS NULL) AND (source=1 OR source IS NULL) AND updated_at < '2022-09-15 14:11:44.769131' ORDER BY updated_at DESC LIMIT 500000);
+SELECT COALESCE(customer_user_id, id) AS identity, ISNULL(customer_user_id) AS is_anonymous, JSON_EXTRACT_STRING(properties, '$country') AS country, MAX(updated_at) AS last_activity FROM (SELECT id, customer_user_id, properties, updated_at FROM users WHERE project_id=11000005 AND (is_group_user=0 OR is_group_user IS NULL) AND (source=1 OR source IS NULL) AND updated_at BETWEEN '2022-09-15 13:07:24.044412' AND '2022-09-15 13:07:24.322378'  LIMIT 1000000) AS select_view WHERE ((JSON_EXTRACT_STRING(select_view.properties, '$country') = 'Ukraine')) GROUP BY identity ORDER BY last_activity DESC LIMIT 1000;
+
+// Users Listing Without Filters
+SELECT MIN(updated_at) AS min_updated_at, MAX(updated_at) AS max_updated_at FROM (SELECT updated_at FROM users WHERE project_id=11000006 AND is_group_user=1 AND (group_1_id IS NOT NULL OR group_2_id IS NOT NULL) AND updated_at < '2022-09-15 13:23:20.702165' ORDER BY updated_at DESC LIMIT 100000);
+SELECT id AS identity, properties, updated_at AS last_activity FROM users WHERE project_id=11000006 AND is_group_user=1 AND (group_1_id IS NOT NULL OR group_2_id IS NOT NULL) AND updated_at BETWEEN '2022-09-15 13:23:20.480649' AND '2022-09-15 13:23:20.615161'   ORDER BY last_activity DESC LIMIT 1000;
+// Users Listing With Filters
+SELECT MIN(updated_at) AS min_updated_at, MAX(updated_at) AS max_updated_at FROM (SELECT updated_at FROM users WHERE project_id=11000006 AND is_group_user=1 AND (group_1_id IS NOT NULL OR group_2_id IS NOT NULL) AND updated_at < '2022-09-15 13:23:20.702165' ORDER BY updated_at DESC LIMIT 500000);
+SELECT id AS identity, properties, updated_at AS last_activity FROM (SELECT id, properties, updated_at FROM users WHERE project_id=11000006 AND is_group_user=1 AND (group_1_id IS NOT NULL OR group_2_id IS NOT NULL) AND updated_at BETWEEN '2022-09-15 13:23:20.480649' AND '2022-09-15 13:23:20.615161'  LIMIT 1000000) AS select_view WHERE ((JSON_EXTRACT_STRING(select_view.properties, '$salesforce_account_billingcountry') = 'India') OR (JSON_EXTRACT_STRING(select_view.properties, '$hubspot_company_country') = 'US'))  ORDER BY last_activity DESC LIMIT 1000;
 */
 func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.TimelinePayload, profileType string) ([]model.Profile, int) {
-
 	logFields := log.Fields{
 		"project_id":   projectID,
 		"payload":      payload,
@@ -39,10 +43,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		return nil, http.StatusBadRequest
 	}
 
-	// String Declarations
-	var selectString string
-	var isGroupUserString string
-	var sourceString string
+	var selectString, isGroupUserString, sourceString string
 
 	if profileType == model.PROFILE_TYPE_ACCOUNT {
 		// Check for Enabled Groups
@@ -73,73 +74,78 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 			log.WithFields(logFields).Error("Salesforce Not Enabled for this project.")
 			return nil, http.StatusBadRequest
 		}
-		// Strings
 		selectString = "id AS identity, properties, updated_at AS last_activity"
 		isGroupUserString = "is_group_user=1"
 		if payload.Source == "All" && hubspotExists && salesforceExists {
-			sourceString = fmt.Sprintf(" AND (group_%d_id IS NOT NULL OR group_%d_id IS NOT NULL)", hubspotID, salesforceID)
+			sourceString = fmt.Sprintf("(group_%d_id IS NOT NULL OR group_%d_id IS NOT NULL)", hubspotID, salesforceID)
 		} else if (payload.Source == "All" || payload.Source == model.GROUP_NAME_HUBSPOT_COMPANY) && hubspotExists {
-			sourceString = fmt.Sprintf(" AND group_%d_id IS NOT NULL", hubspotID)
+			sourceString = fmt.Sprintf("group_%d_id IS NOT NULL", hubspotID)
 		} else if (payload.Source == "All" || payload.Source == model.GROUP_NAME_SALESFORCE_ACCOUNT) && salesforceExists {
-			sourceString = fmt.Sprintf(" AND group_%d_id IS NOT NULL", salesforceID)
+			sourceString = fmt.Sprintf("group_%d_id IS NOT NULL", salesforceID)
 		}
 	} else if profileType == model.PROFILE_TYPE_USER {
 		selectString = fmt.Sprintf("COALESCE(customer_user_id, id) AS identity, ISNULL(customer_user_id) AS is_anonymous, JSON_EXTRACT_STRING(properties, '%s') AS country, MAX(updated_at) AS last_activity", U.UP_COUNTRY)
 		isGroupUserString = "(is_group_user=0 OR is_group_user IS NULL)"
 		if model.UserSourceMap[payload.Source] == model.UserSourceWeb {
-			sourceString = "AND (source=" + strconv.Itoa(model.UserSourceMap[payload.Source]) + " OR source IS NULL)"
+			sourceString = "(source=" + strconv.Itoa(model.UserSourceMap[payload.Source]) + " OR source IS NULL)"
 		} else if payload.Source == "All" {
 			sourceString = ""
 		} else {
-			sourceString = "AND source=" + strconv.Itoa(model.UserSourceMap[payload.Source])
+			sourceString = "source=" + strconv.Itoa(model.UserSourceMap[payload.Source])
 		}
 	}
 
-	whereStr := []string{"project_id = ? AND", isGroupUserString, sourceString}
-	parameters := []interface{}{projectID}
-
-	if len(payload.Filters) > 0 {
-		filterString, filterParams, err := buildWhereFromProperties(projectID, payload.Filters, 0)
-		if filterString != "" {
-			filterString = " AND (" + filterString + ")"
-		}
-		if err != nil {
-			return nil, http.StatusBadRequest
-		}
-		whereStr = append(whereStr, filterString)
-		parameters = append(parameters, filterParams...)
+	filterString, filterParams, errCode := buildWhereFromProperties(projectID, payload.Filters, 0)
+	if filterString != "" {
+		filterString = "(" + filterString + ")"
+	}
+	if errCode != nil {
+		return nil, http.StatusBadRequest
 	}
 
-	whereString := strings.Join(whereStr, " ")
-	parameters = append(parameters, gorm.NowFunc())
-
+	// Run Queries
 	type MinMaxTime struct {
 		MinUpdatedAt time.Time `json:"min_updated_at"`
 		MaxUpdatedAt time.Time `json:"max_updated_at"`
 	}
 	var minMax MinMaxTime
-	// Get min and max updated_at for 100k after
-	// ordering as part of optimisation.
+	var runQueryString, fromStr, groupByStr, selectColumnsStr, commonStr string
+	windowSelectStr := "MIN(updated_at) AS min_updated_at, MAX(updated_at) AS max_updated_at"                      // Select Min & Max updated_at
+	commonStr = fmt.Sprintf("users WHERE project_id=%d AND %s AND %s", projectID, isGroupUserString, sourceString) // Common String for Queries
+	fromStr = fmt.Sprintf("%s AND updated_at < '%s'", commonStr, FormatTimeToString(gorm.NowFunc()))
+	// Get min and max updated_at after ordering as part of optimisation.
+	limitVal := 100000
+	if filterString != "" {
+		limitVal = 500000
+	}
+	runQueryString = fmt.Sprintf("SELECT %s FROM (SELECT updated_at FROM %s ORDER BY updated_at DESC LIMIT %d);", windowSelectStr, fromStr, limitVal)
+
 	db := C.GetServices().Db
-	err := db.Raw(`SELECT MIN(updated_at) AS min_updated_at, MAX(updated_at) AS max_updated_at 
-		FROM (SELECT updated_at FROM users WHERE `+whereString+` AND updated_at < ? 
-		ORDER BY updated_at DESC LIMIT 100000)`, parameters...).
-		Scan(&minMax).Error
+	err := db.Raw(runQueryString).Scan(&minMax).Error
 	if err != nil {
 		log.WithField("status", err).Error("min and max updated_at couldn't be defined.")
 		return nil, http.StatusInternalServerError
 	}
 
-	var profiles []model.Profile
-	parameters = parameters[:len(parameters)-1]
-	parameters = append(parameters, minMax.MinUpdatedAt, minMax.MaxUpdatedAt)
-
-	dbx := db.Table("users").Select(selectString).Where(whereString+` AND updated_at BETWEEN ? AND ?`, parameters...)
-	if profileType == model.PROFILE_TYPE_USER {
-		dbx = dbx.Group("identity")
+	if profileType == model.PROFILE_TYPE_ACCOUNT {
+		selectColumnsStr = "id, properties, updated_at"
+		groupByStr = ""
+	} else if profileType == model.PROFILE_TYPE_USER {
+		selectColumnsStr = "id, customer_user_id, properties, updated_at"
+		groupByStr = "GROUP BY identity"
 	}
+	if filterString != "" {
+		fromStr = fmt.Sprintf("(SELECT %s FROM %s AND updated_at BETWEEN '%s' AND '%s'  LIMIT 1000000) AS select_view WHERE",
+			selectColumnsStr, commonStr, FormatTimeToString(minMax.MinUpdatedAt), FormatTimeToString(minMax.MaxUpdatedAt))
+		filterString = strings.ReplaceAll(filterString, "users.", "select_view.") // Json Filters on select_view
+	} else {
+		fromStr = fmt.Sprintf("%s AND updated_at BETWEEN '%s' AND '%s'",
+			commonStr, FormatTimeToString(minMax.MinUpdatedAt), FormatTimeToString(minMax.MaxUpdatedAt))
+	}
+	runQueryString = fmt.Sprintf("SELECT %s FROM %s %s %s ORDER BY last_activity DESC LIMIT 1000;", selectString, fromStr, filterString, groupByStr)
 
-	err = dbx.Order("last_activity DESC").Limit(1000).Find(&profiles).Error
+	var profiles []model.Profile
+	err = db.Raw(runQueryString, filterParams...).Scan(&profiles).Error
 	if err != nil {
 		log.WithField("status", err).Error("Failed to get profile users.")
 		return nil, http.StatusInternalServerError
@@ -540,4 +546,8 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string) (*
 	accountDetails.NumberOfUsers = uint64(usersCount)
 	accountDetails.AccountTimeline = accountTimeline
 	return &accountDetails, http.StatusFound
+}
+
+func FormatTimeToString(time time.Time) string {
+	return time.Format("2006-01-02 15:04:05.000000")
 }

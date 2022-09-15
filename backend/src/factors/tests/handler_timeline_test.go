@@ -30,8 +30,8 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
 
-	m := map[string]string{"$country": "Ukraine"}
-	propertiesJSON, err := json.Marshal(m)
+	propsMap := map[string]string{"$country": "Ukraine"}
+	propertiesJSON, err := json.Marshal(propsMap)
 	if err != nil {
 		log.WithError(err).Fatal("Marshal error.")
 	}
@@ -39,7 +39,7 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 
 	customerEmail := "@example.com"
 
-	// Create 5 Users with Properties.
+	// Create 5 Users from Ukraine.
 	users := make([]model.User, 0)
 	numUsers := 5
 	for i := 1; i <= numUsers; i++ {
@@ -56,7 +56,13 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 		users = append(users, *user)
 	}
 	assert.Equal(t, len(users), numUsers)
-	// Create 5 Users without Properties.
+	// Create 5 Users from Russia.
+	propsMap = map[string]string{"$country": "Russia"}
+	propertiesJSON, err = json.Marshal(propsMap)
+	if err != nil {
+		log.WithError(err).Fatal("Marshal error.")
+	}
+	properties = postgres.Jsonb{RawMessage: propertiesJSON}
 	users = make([]model.User, 0)
 	numUsers = 5
 	for i := 1; i <= numUsers; i++ {
@@ -66,6 +72,7 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 			Group1ID:       "1",
 			Group2ID:       "2",
 			CustomerUserId: "user" + strconv.Itoa(i+5) + customerEmail,
+			Properties:     properties,
 		})
 		user, errCode := store.GetStore().GetUser(project.ID, createdUserID)
 		assert.Equal(t, http.StatusFound, errCode)
@@ -76,6 +83,34 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 	var payload model.TimelinePayload
 	payload.Source = "web"
 
+	// Without Filters
+	t.Run("Success", func(t *testing.T) {
+		w := sendGetProfileUserRequest(r, project.ID, agent, payload)
+		assert.Equal(t, http.StatusOK, w.Code)
+		jsonResponse, _ := ioutil.ReadAll(w.Body)
+		resp := make([]model.Profile, 0)
+		err := json.Unmarshal(jsonResponse, &resp)
+		assert.Nil(t, err)
+		assert.Equal(t, len(resp), 10)
+		assert.Condition(t, func() bool { return len(resp) <= 1000 })
+		assert.Condition(t, func() bool {
+			for i, user := range resp {
+				assert.Equal(t, user.IsAnonymous, false)
+				if i < 5 {
+					assert.Equal(t, user.Country, "Russia")
+				} else {
+					assert.Equal(t, user.Country, "Ukraine")
+				}
+				assert.NotNil(t, user.LastActivity)
+				if i > 0 {
+					assert.Condition(t, func() bool { return resp[i].LastActivity.Unix() <= resp[i-1].LastActivity.Unix() })
+				}
+			}
+			return true
+		})
+	})
+
+	// With Filters
 	filters := model.QueryProperty{
 		Entity:    "user_g",
 		Type:      "categorical",
@@ -98,12 +133,11 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 		assert.Condition(t, func() bool {
 			for i, user := range resp {
 				assert.Equal(t, user.IsAnonymous, false)
-				if i < 5 {
-					assert.Equal(t, user.Country, "Ukraine")
-				} else {
-					assert.Equal(t, user.Country, "")
-				}
+				assert.Equal(t, user.Country, "Ukraine")
 				assert.NotNil(t, user.LastActivity)
+				if i > 0 {
+					assert.Condition(t, func() bool { return resp[i].LastActivity.Unix() <= resp[i-1].LastActivity.Unix() })
+				}
 			}
 			return true
 		})
@@ -560,6 +594,33 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 	var payload model.TimelinePayload
 	payload.Source = "All"
 
+	// Without filters
+	t.Run("Success", func(t *testing.T) {
+		w := sendGetProfileAccountRequest(r, project.ID, agent, payload)
+		assert.Equal(t, http.StatusOK, w.Code)
+		jsonResponse, _ := ioutil.ReadAll(w.Body)
+		resp := make([]model.Profile, 0)
+		err := json.Unmarshal(jsonResponse, &resp)
+		assert.Nil(t, err)
+		assert.Equal(t, len(resp), 6)
+		assert.Condition(t, func() bool {
+			for index, user := range resp {
+				sort.Strings(companies)
+				i := sort.SearchStrings(companies, user.Name)
+				assert.Condition(t, func() bool { return i < len(companies) })
+				sort.Strings(countries)
+				j := sort.SearchStrings(countries, user.Country)
+				assert.Condition(t, func() bool { return j < len(countries) })
+				assert.NotNil(t, user.LastActivity)
+				if index > 0 {
+					assert.Condition(t, func() bool { return resp[index].LastActivity.Unix() <= resp[index-1].LastActivity.Unix() })
+				}
+			}
+			return true
+		})
+	})
+
+	//With filters
 	filters := model.QueryProperty{
 		Entity:    "user_g",
 		Type:      "categorical",
