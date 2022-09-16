@@ -127,7 +127,7 @@ function AddDashboard({
       dispatch({ type: DASHBOARD_CREATED, payload: res.data });
       pathname==="/template"&& history.push("/");
       resetState();
-      window.location.reload(); // temporary Fix for empty dashboard
+      // window.location.reload(); // temporary Fix for empty dashboard
     } catch (err) {
       console.log(err.response);
       setApisCalled(false);
