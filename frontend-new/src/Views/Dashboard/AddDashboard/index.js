@@ -21,7 +21,7 @@ import {
 import styles from './index.module.scss';
 import ConfirmationModal from '../../../components/ConfirmationModal';
 import factorsai from 'factorsai';
-import { Link } from 'react-router-dom';
+import { Link, useHistory, useLocation } from 'react-router-dom';
 
 function AddDashboard({
   addDashboardModal,
@@ -41,6 +41,8 @@ function AddDashboard({
   const { active_project } = useSelector((state) => state.global);
   const { activeDashboardUnits } = useSelector((state) => state.dashboard);
   const dispatch = useDispatch();
+  const history = useHistory();
+  const {pathname} = useLocation()
 
   const { TabPane } = Tabs;
 
@@ -54,6 +56,7 @@ function AddDashboard({
   }, [editDashboard, activeDashboardUnits.data]);
 
   const resetState = useCallback(() => {
+    setaddDashboardModal(false);
     setActiveKey('1');
     setTitle('');
     setDescription('');
@@ -61,7 +64,6 @@ function AddDashboard({
     setApisCalled(false);
     setSelectedQueries([]);
     setEditDashboard(null);
-    setaddDashboardModal(false);
   }, [setaddDashboardModal, setEditDashboard]);
 
   const confirmDelete = useCallback(async () => {
@@ -123,6 +125,7 @@ function AddDashboard({
         await assignUnitsToDashboard(active_project?.id, res.data.id, reqBody);
       }
       dispatch({ type: DASHBOARD_CREATED, payload: res.data });
+      pathname==="/template"&& history.push("/");
       resetState();
       window.location.reload(); // temporary Fix for empty dashboard
     } catch (err) {
