@@ -126,11 +126,8 @@ func writeFileToGCP(projectId int64, modelId uint64, name string, fpath string,
 		return fmt.Errorf("unable to open file : %s :%v", fpath, err)
 	}
 	defer f.Close()
-	//r := bufio.NewReader(f)
-	scanner := bufio.NewScanner(f)
-	buf := make([]byte, 4096)
-	scanner.Buffer(buf, 4096)
-	r := bytes.NewReader(buf)
+	r := bufio.NewReader(f)
+
 	mineLog.Infof("Writing file to GCP : %s , %s ", path, name)
 	err = (*cloudManager).Create(path, name, r)
 	if err != nil {
