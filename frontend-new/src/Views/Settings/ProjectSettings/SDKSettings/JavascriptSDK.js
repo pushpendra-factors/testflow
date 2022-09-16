@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Row, Col, Skeleton, Tabs, Switch, message, Table, Button
+  Row, Col, Skeleton, Tabs, Switch, message, Table, Button, Modal
 } from 'antd';
-import { Text } from 'factorsComponents';
+import { Text, SVG } from 'factorsComponents';
 import { fetchProjectSettings, udpateProjectSettings } from 'Reducers/global';
 import { fetchClickableElements, toggleClickableElement } from '../../../../reducers/settings/middleware';
 import { connect } from 'react-redux';
@@ -94,6 +94,11 @@ window.factors=window.factors||function(){this.q=[];var i=new CustomEvent("FACTO
 
 const JSConfig = ({ currentProjectSettings, activeProject, udpateProjectSettings, agents, currentAgent }) => {
   const [enableEdit, setEnableEdit] = useState(false);
+  const [autoTrack, setAutoTrack] = useState(false);
+  const [autoFormCapture, setAutoFormCapture] = useState(false);
+  const [autoTrackSPAPageView, setAutoTrackSPAPageView] = useState(false);
+  const [excludeBot, setExcludeBot] = useState(false);
+  const [clickCapture, setClickCapture] = useState(false);
 
   const currentProjectId = activeProject.id;
 
@@ -105,39 +110,168 @@ const JSConfig = ({ currentProjectSettings, activeProject, udpateProjectSettings
   }, [activeProject, agents, currentAgent]);
 
 
-  const toggleAutoTrack = (checked) => { 
-    udpateProjectSettings(currentProjectId, { auto_track: checked }).catch((err) => {
-      console.log('Oops! something went wrong-->', err);
-      message.error('Oops! something went wrong.');
-    }); 
-  };
+  useEffect(() => {
+    if(currentProjectSettings.auto_track) {
+      setAutoTrack(true);
+    }
+    if(currentProjectSettings.auto_track_spa_page_view) {
+      setAutoTrackSPAPageView(true);
+    }
+    if(currentProjectSettings.exclude_bot) {
+      setExcludeBot(true);
+    }
+    if(currentProjectSettings.auto_form_capture) {
+      setAutoFormCapture(true);
+    }
+    if(currentProjectSettings.auto_click_capture) {
+      setClickCapture(true);
+    }
+  }, [currentProjectSettings]);
 
-  const toggleExcludeBot = (checked) => { 
-      udpateProjectSettings(currentProjectId, { exclude_bot: checked }).catch((err) => {
+
+  const toggleAutoTrack = (checked) => { 
+    if(!checked) {
+      Modal.confirm({
+        title: 'Are you sure you want to disable this?',
+        content: 'Doing this will stop Factors from tracking standard events such as page_view, page_load time, page_spent_time and more for each user',
+        okText: 'Disable Auto Track',
+        cancelText: 'Cancel',
+        onOk: () => {
+          udpateProjectSettings(currentProjectId, { auto_track: checked })
+          .then(() => {
+            setAutoTrack(false);
+          })
+          .catch((err) => {
+          console.log('Oops! something went wrong-->', err);
+          message.error('Oops! something went wrong.');
+        });
+        },
+        onCancel: () => {
+          setAutoTrack(!checked);
+        }
+      });
+    } else {
+      udpateProjectSettings(currentProjectId, { auto_track: checked }).catch((err) => {
         console.log('Oops! something went wrong-->', err);
         message.error('Oops! something went wrong.');
       }); 
+    }
+  };
+
+  const toggleExcludeBot = (checked) => { 
+      if(!checked) {
+        Modal.confirm({
+          title: 'Are you sure you want to disable this?',
+          content: 'Doing this will stop Factors from automatically excluding bot traffic from website traffic using Factor’s proprietary algorithm',
+          okText: 'Disable Exclude Bot',
+          cancelText: 'Cancel',
+          onOk: () => {
+            udpateProjectSettings(currentProjectId, { exclude_bot: checked })
+            .then(() => {
+              setExcludeBot(false);
+            })
+            .catch((err) => {
+            console.log('Oops! something went wrong-->', err);
+            message.error('Oops! something went wrong.');
+          });
+          },
+          onCancel: () => {
+            setExcludeBot(!checked);
+          }
+        });
+      } else {
+        udpateProjectSettings(currentProjectId, { exclude_bot: checked }).catch((err) => {
+          console.log('Oops! something went wrong-->', err);
+          message.error('Oops! something went wrong.');
+        }); 
+      } 
   };
 
   const toggleAutoFormCapture = (checked) => { 
-      udpateProjectSettings(currentProjectId, { auto_form_capture: checked }).catch((err) => {
-        console.log('Oops! something went wrong-->', err);
-        message.error('Oops! something went wrong.');
-      });  
+      if(!checked) {
+        Modal.confirm({
+          title: 'Are you sure you want to disable this?',
+          content: 'Doing this will stop Factors from automatically tracking personal identification information such as email and phone number from Form Submissions',
+          okText: 'Disable Auto Form Capture',
+          cancelText: 'Cancel',
+          onOk: () => {
+            udpateProjectSettings(currentProjectId, { auto_form_capture: checked })
+            .then(() => {
+              setAutoFormCapture(false);
+            })
+            .catch((err) => {
+            console.log('Oops! something went wrong-->', err);
+            message.error('Oops! something went wrong.');
+          });
+          },
+          onCancel: () => {
+            setAutoFormCapture(!checked);
+          }
+        });
+      } else {
+        udpateProjectSettings(currentProjectId, { auto_form_capture: checked }).catch((err) => {
+          console.log('Oops! something went wrong-->', err);
+          message.error('Oops! something went wrong.');
+        }); 
+      }  
   };
  
   const toggleAutoTrackSPAPageView = (checked) => { 
-    udpateProjectSettings(currentProjectId, { auto_track_spa_page_view: checked }).catch((err) => {
-      console.log('Oops! something went wrong-->', err);
-      message.error('Oops! something went wrong.');
-    }); 
+    if(!checked) {
+      Modal.confirm({
+        title: 'Are you sure you want to disable this?',
+        content: 'Doing this will stop Factors from tracking standard events such as page_view, page_load time, page_spent_time and button clicks for each user, on Single Page Applications like React, Angular, Vue, etc,.',
+        okText: 'Disable Auto Track SPA',
+        cancelText: 'Cancel',
+        onOk: () => {
+          udpateProjectSettings(currentProjectId, { auto_track_spa_page_view: checked })
+          .then(() => {
+            setAutoTrackSPAPageView(false);
+          })
+          .catch((err) => {
+          console.log('Oops! something went wrong-->', err);
+          message.error('Oops! something went wrong.');
+        });
+        },
+        onCancel: () => {
+          setAutoTrackSPAPageView(!checked);
+        }
+      });
+    } else {
+      udpateProjectSettings(currentProjectId, { auto_track_spa_page_view: checked }).catch((err) => {
+        console.log('Oops! something went wrong-->', err);
+        message.error('Oops! something went wrong.');
+      }); 
+    } 
   };
 
   const toggleClickCapture = (checked) => { 
-    udpateProjectSettings(currentProjectId, { auto_click_capture: checked }).catch((err) => {
-      console.log('Oops! something went wrong-->', err);
-      message.error('Oops! something went wrong.');
-    }); 
+    if(!checked) {
+      Modal.confirm({
+        title: 'Are you sure you want to disable this?',
+        content: 'Doing this will stop Factors from discovering available buttons and anchors on the website.',
+        okText: 'Disable Click Capture',
+        cancelText: 'Cancel',
+        onOk: () => {
+          udpateProjectSettings(currentProjectId, { auto_click_capture: checked })
+          .then(() => {
+            setClickCapture(false);
+          })
+          .catch((err) => {
+          console.log('Oops! something went wrong-->', err);
+          message.error('Oops! something went wrong.');
+        });
+        },
+        onCancel: () => {
+          setClickCapture(!checked);
+        }
+      });
+    } else {
+      udpateProjectSettings(currentProjectId, { auto_click_capture: checked }).catch((err) => {
+        console.log('Oops! something went wrong-->', err);
+        message.error('Oops! something went wrong.');
+      }); 
+    } 
   };
 
   return (
@@ -148,7 +282,7 @@ const JSConfig = ({ currentProjectSettings, activeProject, udpateProjectSettings
       }
     <Col span={24}>
       <div span={24} className={'flex flex-start items-center mt-2'}>
-        <span style={{ width: '50px' }}><Switch checkedChildren="On"  disabled={enableEdit} unCheckedChildren="OFF" onChange={toggleAutoTrack} defaultChecked={currentProjectSettings.auto_track} /></span> <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-2'}>Auto-track</Text>
+        <span style={{ width: '50px' }}><Switch checkedChildren="On"  disabled={enableEdit} unCheckedChildren="OFF" onChange={toggleAutoTrack} checked={autoTrack} /></span> <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-2'}>Auto-track</Text>
       </div>
     </Col>
     <Col span={24} className={'flex flex-start items-center'}>
@@ -156,7 +290,7 @@ const JSConfig = ({ currentProjectSettings, activeProject, udpateProjectSettings
     </Col>
     <Col span={24}>
       <div span={24} className={'flex flex-start items-center mt-8'}>
-        <span style={{ width: '50px' }}><Switch checkedChildren="On" disabled={enableEdit} unCheckedChildren="OFF" onChange={toggleAutoTrackSPAPageView} defaultChecked={currentProjectSettings.auto_track_spa_page_view} /></span> <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-2'}>Auto-track Single Page Application</Text>
+        <span style={{ width: '50px' }}><Switch checkedChildren="On" disabled={enableEdit} unCheckedChildren="OFF" onChange={toggleAutoTrackSPAPageView} checked={autoTrackSPAPageView} /></span> <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-2'}>Auto-track Single Page Application</Text>
       </div>
     </Col>
     <Col span={24} className={'flex flex-start items-center'}>
@@ -164,7 +298,7 @@ const JSConfig = ({ currentProjectSettings, activeProject, udpateProjectSettings
     </Col>
     <Col span={24}>
       <div span={24} className={'flex flex-start items-center mt-8'}>
-        <span style={{ width: '50px' }}><Switch checkedChildren="On" disabled={enableEdit} unCheckedChildren="OFF" onChange={toggleExcludeBot} defaultChecked={currentProjectSettings.exclude_bot} /></span> <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-2'}>Exclude Bot</Text>
+        <span style={{ width: '50px' }}><Switch checkedChildren="On" disabled={enableEdit} unCheckedChildren="OFF" onChange={toggleExcludeBot} checked={excludeBot} /></span> <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-2'}>Exclude Bot</Text>
       </div>
     </Col>
     <Col span={24} className={'flex flex-start items-center'}>
@@ -172,7 +306,7 @@ const JSConfig = ({ currentProjectSettings, activeProject, udpateProjectSettings
     </Col>
     <Col span={24}>
       <div span={24} className={'flex flex-start items-center mt-8'}>
-        <span style={{ width: '50px' }}><Switch checkedChildren="On" disabled={enableEdit} unCheckedChildren="OFF" onChange={toggleAutoFormCapture} defaultChecked={currentProjectSettings.auto_form_capture} /></span> <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-2'}>Auto Form Capture</Text>
+        <span style={{ width: '50px' }}><Switch checkedChildren="On" disabled={enableEdit} unCheckedChildren="OFF" onChange={toggleAutoFormCapture} checked={autoFormCapture} /></span> <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-2'}>Auto Form Capture</Text>
       </div>
     </Col>
     <Col span={24} className={'flex flex-start items-center'}>
@@ -180,7 +314,7 @@ const JSConfig = ({ currentProjectSettings, activeProject, udpateProjectSettings
     </Col>
     <Col span={24}>
       <div span={24} className={'flex flex-start items-center mt-8'}>
-        <span style={{ width: '50px' }}><Switch checkedChildren="On" disabled={enableEdit} unCheckedChildren="OFF" onChange={toggleClickCapture} defaultChecked={currentProjectSettings.auto_click_capture} /></span> <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-2'}>Auto Click Capture</Text>
+        <span style={{ width: '50px' }}><Switch checkedChildren="On" disabled={enableEdit} unCheckedChildren="OFF" onChange={toggleClickCapture} checked={clickCapture} /></span> <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-2'}>Auto Click Capture</Text>
       </div>
     </Col>
     <Col span={24} className={'flex flex-start items-center'}>
