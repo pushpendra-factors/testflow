@@ -1653,3 +1653,27 @@ func clearbitAnalysisTestDBClearBit(t *testing.T) {
 	}
 
 }
+
+func TestUserGetUserWithoutProperties(t *testing.T) {
+	// Initialize a project for the user.
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+	projectID := project.ID
+
+	customerUserId := getRandomEmail()
+	properties := postgres.Jsonb{RawMessage: json.RawMessage([]byte(`{"country": "india", "age": 30, "paid": true}`))}
+	createUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: projectID, CustomerUserId: customerUserId, Properties: properties, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
+	user, errCode := store.GetStore().GetUser(projectID, createUserID)
+	assert.Equal(t, http.StatusFound, errCode)
+	var propertiesMap map[string]interface{}
+	err = json.Unmarshal(user.Properties.RawMessage, &propertiesMap)
+	assert.Nil(t, err)
+	assert.Equal(t, "india", propertiesMap["country"])
+	user, errCode = store.GetStore().GetUserWithoutProperties(projectID, createUserID)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Nil(t, user.Properties.RawMessage)
+	assert.Equal(t, *user.Source, model.UserSourceWeb)
+	assert.Equal(t, user.CustomerUserId, customerUserId)
+}
