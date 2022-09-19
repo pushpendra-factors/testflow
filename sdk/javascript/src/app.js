@@ -206,23 +206,13 @@ App.prototype.init = function(token, opts={}, afterPageTrackCallback) {
 }
 
 function checkCookiesConsentAndProcess(_this) {
-    if(!checkForCookies()) {
+    if(!Cookie.isEnabled()) {
+        logger.debug("Checking for cookie consent.", false);
         setTimeout(checkCookiesEverySecond, 1000)
     } else {
-        console.log("falsified");
+        logger.debug("Cookie consent is enabled. Continuing process", false);
         runPostInitProcess(_this);
     }
-}
-
-function checkForCookies() {
-    var cookieEnabled = navigator.cookieEnabled;
-    var testCookieString = 'fa-testcookie';
-    if (!cookieEnabled){ 
-        Cookie.set(testCookieString, null);
-        cookieEnabled = Cookie.isExist(testCookieString);
-        cookieEnabled && Cookie.remove(testCookieString);
-    }
-    return cookieEnabled;
 }
 
 function runPostInitProcess(_this) {
