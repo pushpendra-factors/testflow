@@ -216,9 +216,11 @@ function checkCookiesConsentAndProcess(_this) {
 
 function checkForCookies() {
     var cookieEnabled = navigator.cookieEnabled;
+    var testCookieString = 'fa-testcookie';
     if (!cookieEnabled){ 
-        document.cookie = "testcookie";
-        cookieEnabled = document.cookie.indexOf("testcookie")!=-1;
+        Cookie.set(testCookieString, null);
+        cookieEnabled = Cookie.isExist(testCookieString);
+        cookieEnabled && Cookie.remove(testCookieString);
     }
     return cookieEnabled;
 }
