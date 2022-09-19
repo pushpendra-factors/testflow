@@ -86,14 +86,12 @@ func MergeTwoDataRowsKPI(row1 []interface{}, row2 []interface{}, keyIndex int, a
 			if spend > 0 {
 				row1[keyIndex+9+nextConPosition], _ = U.FloatRoundOffWithPrecision(row1[keyIndex+8+nextConPosition].(float64)/spend, U.DefaultPrecision) // Conversion - CPC.
 			} else {
-				row1[keyIndex+8+nextConPosition] = float64(0) // Conversion
 				row1[keyIndex+9+nextConPosition] = float64(0) // Conversion - CPC.
 			}
 
 			if spend > 0 {
 				row1[keyIndex+11+nextConPosition], _ = U.FloatRoundOffWithPrecision(row1[keyIndex+10+nextConPosition].(float64)/spend, U.DefaultPrecision) // Compare Conversion - CPC.
 			} else {
-				row1[keyIndex+10+nextConPosition] = float64(0) // Compare Conversion
 				row1[keyIndex+11+nextConPosition] = float64(0) // Compare Conversion - CPC.
 			}
 
@@ -102,14 +100,12 @@ func MergeTwoDataRowsKPI(row1 []interface{}, row2 []interface{}, keyIndex int, a
 			if row1[keyIndex+8+nextConPosition].(float64) > 0 {
 				row1[keyIndex+9+nextConPosition], _ = U.FloatRoundOffWithPrecision(spend/row1[keyIndex+8+nextConPosition].(float64), U.DefaultPrecision) // Conversion - CPC.
 			} else {
-				row1[keyIndex+8+nextConPosition] = float64(0) // Conversion
 				row1[keyIndex+9+nextConPosition] = float64(0) // Conversion - CPC.
 			}
 
 			if row1[keyIndex+10+nextConPosition].(float64) > 0 {
 				row1[keyIndex+11+nextConPosition], _ = U.FloatRoundOffWithPrecision(spend/row1[keyIndex+10+nextConPosition].(float64), U.DefaultPrecision) // Compare Conversion - CPC.
 			} else {
-				row1[keyIndex+10+nextConPosition] = float64(0) // Compare Conversion
 				row1[keyIndex+11+nextConPosition] = float64(0) // Compare Conversion - CPC.
 			}
 		}
