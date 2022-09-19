@@ -208,7 +208,7 @@ App.prototype.init = function(token, opts={}, afterPageTrackCallback) {
 function checkCookiesConsentAndProcess(_this) {
     if(!Cookie.isEnabled()) {
         logger.debug("Checking for cookie consent.", false);
-        setTimeout(checkCookiesEverySecond, 1000)
+        setTimeout(checkCookiesConsentAndProcess, 1000)
     } else {
         logger.debug("Cookie consent is enabled. Continuing process", false);
         runPostInitProcess(_this);
