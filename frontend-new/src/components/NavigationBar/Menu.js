@@ -212,52 +212,36 @@ function SiderMenu({
       >
         <b>Analyse</b>
       </Menu.Item>
-      {(window.document.domain === 'app.factors.ai' &&
-        whiteListedAccounts.includes(activeAgent)) ||
-      window.document.domain === 'staging-app.factors.ai' ||
-      window.document.domain === 'factors-dev.com' ? (
-        collapsed ? (
-          <Popover
-            overlayClassName={styles.popover}
-            title={false}
-            visible={ShowPopOverProfiles}
-            content={renderSubmenu('profile')}
-            placement={'rightTop'}
-            onVisibleChange={(visible) => {
-              setShowPopOverProfiles(visible);
-            }}
-            trigger='hover'
-          >
-            <Menu.Item
-              className={styles.menuitems}
-              key='sub3'
-              icon={setIcon('profile')}
-            ></Menu.Item>
-          </Popover>
-        ) : (
-          <SubMenu key='sub1' icon={setIcon('profile')} title={<b>Profiles</b>}>
-            <Menu.Item
-              className={styles.menuitems_sub}
-              key={`/profiles/people`}
-            >
-              {MenuItems.People}
-            </Menu.Item>
-            <Menu.Item
-              className={styles.menuitems_sub}
-              key={`/profiles/accounts`}
-            >
-              {MenuItems.Accounts}
-            </Menu.Item>
-          </SubMenu>
-        )
-      ) : (
-        <Menu.Item
-          className={styles.menuitems}
-          key={`/profiles/people`}
-          icon={setIcon('profile')}
+      {collapsed ? (
+        <Popover
+          overlayClassName={styles.popover}
+          title={false}
+          visible={ShowPopOverProfiles}
+          content={renderSubmenu('profile')}
+          placement={'rightTop'}
+          onVisibleChange={(visible) => {
+            setShowPopOverProfiles(visible);
+          }}
+          trigger='hover'
         >
-          <b>User Profiles</b>
-        </Menu.Item>
+          <Menu.Item
+            className={styles.menuitems}
+            key='sub3'
+            icon={setIcon('profile')}
+          ></Menu.Item>
+        </Popover>
+      ) : (
+        <SubMenu key='sub1' icon={setIcon('profile')} title={<b>Profiles</b>}>
+          <Menu.Item className={styles.menuitems_sub} key={`/profiles/people`}>
+            {MenuItems.People}
+          </Menu.Item>
+          <Menu.Item
+            className={styles.menuitems_sub}
+            key={`/profiles/accounts`}
+          >
+            {MenuItems.Accounts}
+          </Menu.Item>
+        </SubMenu>
       )}
 
       <Menu.Item
@@ -371,10 +355,7 @@ function SiderMenu({
           >
             {MenuItems.Integration}
           </Menu.Item>
-          <Menu.Item
-            className={styles.menuitems_sub}
-            key={`/settings/sharing`}
-          >
+          <Menu.Item className={styles.menuitems_sub} key={`/settings/sharing`}>
             {MenuItems.Sharing}
           </Menu.Item>
         </SubMenu>

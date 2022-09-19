@@ -275,12 +275,7 @@ function AppLayout({
 
                     {/* profiles */}
                     <Route path='/profiles/people' component={UserProfiles} />
-                    {(window.document.domain === 'app.factors.ai' &&
-                      whiteListedAccounts.includes(activeAgent)) ||
-                    window.document.domain === 'staging-app.factors.ai' ||
-                    window.document.domain === 'factors-dev.com' ? (
-                      <Route path='/profiles/accounts' component={AccountProfiles} />
-                      ) : null}
+                    <Route path='/profiles/accounts' component={AccountProfiles} />
 
                     {!(demoProjectId.includes(active_project?.id)) ? (
                       <Route path='/project-setup' component={SetupAssist} />

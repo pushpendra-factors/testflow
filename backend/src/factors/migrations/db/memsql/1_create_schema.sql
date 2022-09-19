@@ -122,10 +122,12 @@ CREATE TABLE IF NOT EXISTS adwords_documents (
     campaign_id bigint,
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
-    SHARD KEY (project_id),
-    KEY (updated_at) USING HASH,
-    KEY (project_id, customer_account_id, timestamp) USING CLUSTERED COLUMNSTORE
-
+    SHARD KEY (project_id, id),
+    KEY (project_id, customer_account_id, type, timestamp) USING CLUSTERED COLUMNSTORE,
+    KEY (project_id) USING HASH,
+    KEY (customer_account_id) USING HASH,
+    KEY (type) USING HASH,
+    KEY (updated_at) USING HASH
     -- Required constraints.
     -- Unique (project_id, customer_account_id, timestamp, id)
     -- Ref (project_id) -> projects(id)

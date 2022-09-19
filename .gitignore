@@ -23,6 +23,7 @@ backend/src/golang.org/**
 sdk/javascript/dist
 sdk/javascript/node_modules
 sdk/javascript/npm_package/index.js
+sdk/javascript/.firebase
 
 # misc
 misc/ingest_events/pkg/**
