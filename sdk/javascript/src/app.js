@@ -199,31 +199,58 @@ App.prototype.init = function(token, opts={}, afterPageTrackCallback) {
             _this.config = response.body;
             _this.client = _client;
             return response;
+        }).then(function(){
+            checkCookiesConsentAndProcess(_this);
         })
-        .then(function() {
-            // Enable auto-track SPA page based on settings or init option.
-            var enableTrackSPA = Cache.getFactorsCache(Cache.trackPageOnSPA) || _this.getConfig("auto_track_spa_page_view");
-            Cache.setFactorsCache(Cache.trackPageOnSPA, enableTrackSPA);
-            // Auto-track current page on init, if not disabled.
-            return trackOnInit ? _this.autoTrack(_this.getConfig("auto_track"), 
-                false, afterPageTrackCallback, true) : triggerFactorsStartQueu();
-        })
-        .then(function() {
-            return _this.autoFormCapture(_this.getConfig("auto_form_capture"));
-        })
-        .then(function() {
-            return _this.autoClickCapture(_this.getConfig("auto_click_capture"));
-        })
-        .then(function() {
-            return _this.autoDriftEventsCapture(_this, _this.getConfig("int_drift"));
-        })
-        .then(function() {
-            return _this.autoClearbitRevealCapture(_this, _this.getConfig("int_clear_bit"));
-        })
-        .catch(function(err) {
-            logger.errorLine(err);
-            return Promise.reject(err.stack + " during get_settings on init.");
-        });
+        
+}
+
+function checkCookiesConsentAndProcess(_this) {
+    if(!checkForCookies()) {
+        setTimeout(checkCookiesEverySecond, 1000)
+    } else {
+        console.log("falsified");
+        runPostInitProcess(_this);
+    }
+}
+
+function checkForCookies() {
+    var cookieEnabled = navigator.cookieEnabled;
+    if (!cookieEnabled){ 
+        document.cookie = "testcookie";
+        cookieEnabled = document.cookie.indexOf("testcookie")!=-1;
+    }
+    return cookieEnabled;
+}
+
+function runPostInitProcess(_this) {
+    (function(){
+        return Promise.resolve();
+    })().then(function() {
+        // Enable auto-track SPA page based on settings or init option.
+        var enableTrackSPA = Cache.getFactorsCache(Cache.trackPageOnSPA) || _this.getConfig("auto_track_spa_page_view");
+        Cache.setFactorsCache(Cache.trackPageOnSPA, enableTrackSPA);
+        // Auto-track current page on init, if not disabled.
+        return trackOnInit ? _this.autoTrack(_this.getConfig("auto_track"), 
+            false, afterPageTrackCallback, true) : triggerFactorsStartQueu();
+    })
+    .then(function() {
+        return _this.autoFormCapture(_this.getConfig("auto_form_capture"));
+    })
+    .then(function() {
+        return _this.autoClickCapture(_this.getConfig("auto_click_capture"));
+    })
+    .then(function() {
+        return _this.autoDriftEventsCapture(_this, _this.getConfig("int_drift"));
+    })
+    .then(function() {
+        return _this.autoClearbitRevealCapture(_this, _this.getConfig("int_clear_bit"));
+    })
+    .catch(function(err) {
+        logger.errorLine(err);
+        return Promise.reject(err.stack + " during get_settings on init.");
+    });
+
 }
 
 function getEventProperties(eventProperties={}) {
