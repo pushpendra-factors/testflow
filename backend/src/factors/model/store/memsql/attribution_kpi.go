@@ -214,6 +214,12 @@ func (store *MemSQL) PullGroupUserIDs(projectID int64, kpiKeys []string, _groupI
 		kpiKeyGroupUserIDList = append(kpiKeyGroupUserIDList, groupUserID)
 
 	}
+	err = gURows.Err()
+	if err != nil {
+		// Error from DB is captured eg: timeout error
+		logCtx.WithFields(log.Fields{"err": err}).Error("Error in executing query in PullGroupUserIDs")
+		return nil, err
+	}
 	U.LogReadTimeWithQueryRequestID(startReadTime, reqID, &logFields)
 
 	defer U.CloseReadQuery(gURows, tx1)
@@ -261,6 +267,12 @@ func (store *MemSQL) PullKPIKeyUserGroupInfo(projectID int64, kpiKeyGroupUserIDL
 			v.KpiUserIds = append(v.KpiUserIds, userID)
 			(*kpiData)[kpiID] = v
 		}
+	}
+	err = gULRows.Err()
+	if err != nil {
+		// Error from DB is captured eg: timeout error
+		logCtx.WithFields(log.Fields{"err": err}).Error("Error in executing query in PullKPIKeyUserGroupInfo")
+		return err
 	}
 	logFields := log.Fields{"kpiData": kpiData, "project_id": projectID}
 	logCtx.WithFields(logFields).Info("KPI-Attribution group set")
@@ -318,6 +330,12 @@ func (store *MemSQL) PullAllUsersByCustomerUserID(projectID int64, kpiData *map[
 			users = append(users, userID)
 			custUserIdToUserIds[custUserID] = users
 		}
+	}
+	err = gULRows.Err()
+	if err != nil {
+		// Error from DB is captured eg: timeout error
+		logCtx.WithFields(log.Fields{"err": err}).Error("Error in executing query in PullAllUsersByCustomerUserID")
+		return err
 	}
 	logCtx.WithFields(log.Fields{"custUserIdToUserIds": custUserIdToUserIds}).
 		Info("KPI-Attribution custUserIdToUserIds set")

@@ -656,6 +656,12 @@ func (store *MemSQL) GetCoalesceIDFromUserIDs(userIDs []string, projectID int64,
 			}
 			userIDToCoalUserIDMap[userID] = model.UserInfo{CoalUserID: coalesceID}
 		}
+		err = rows.Err()
+		if err != nil {
+			// Error from DB is captured eg: timeout error
+			logCtx.WithFields(log.Fields{"err": err}).Error("Error in executing query in GetCoalesceIDFromUserIDs")
+			return nil, err
+		}
 		U.CloseReadQuery(rows, tx)
 		U.LogReadTimeWithQueryRequestID(startReadTime, reqID, &log.Fields{"project_id": projectID})
 	}
@@ -899,6 +905,13 @@ func (store *MemSQL) GetLinkedFunnelEventUsersFilter(projectID int64, queryFrom,
 					}
 				}
 			}
+			err = rows.Err()
+			if err != nil {
+				// Error from DB is captured eg: timeout error
+				logCtx.WithFields(log.Fields{"err": err}).Error("Error in executing query in GetLinkedFunnelEventUsersFilter")
+				return err, nil
+			}
+
 			U.CloseReadQuery(rows, tx)
 			U.LogReadTimeWithQueryRequestID(startReadTime, reqID, &log.Fields{"project_id": projectID})
 		}
@@ -996,6 +1009,12 @@ func (store *MemSQL) GetConvertedUsersWithFilter(projectID int64, goalEventName 
 			}
 		}
 	}
+	err = rows.Err()
+	if err != nil {
+		// Error from DB is captured eg: timeout error
+		logCtx.WithFields(log.Fields{"err": err}).Error("Error in executing query in GetConvertedUsersWithFilter")
+		return nil, nil, nil, err
+	}
 	U.LogReadTimeWithQueryRequestID(startReadTime, reqID, &log.Fields{"project_id": projectID})
 
 	// Get coalesced Id for converted user_ids (without filter)
@@ -1074,6 +1093,12 @@ func (store *MemSQL) GetAdwordsCurrency(projectID int64, customerAccountID strin
 			logCtx.WithError(err).Error("SQL Parse failed.")
 			return "", err
 		}
+	}
+	err = rows.Err()
+	if err != nil {
+		// Error from DB is captured eg: timeout error
+		logCtx.WithFields(log.Fields{"err": err}).Error("Error in executing query in GetAdwordsCurrency")
+		return currency, err
 	}
 	U.LogReadTimeWithQueryRequestID(startReadTime, reqID, &logFields)
 
