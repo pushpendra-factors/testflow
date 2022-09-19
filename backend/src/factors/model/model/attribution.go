@@ -2694,6 +2694,12 @@ func ProcessOTPEventRows(rows *sql.Rows, query *AttributionQuery,
 			attributedSessionsByUserId[userID][uniqueAttributionKey] = userSessionDataNew
 		}
 	}
+	err := rows.Err()
+	if err != nil {
+		// Error from DB is captured eg: timeout error
+		logCtx.WithFields(log.Fields{"err": err}).Error("Error in executing query in ProcessOTPEventRows")
+		return nil, nil, err
+	}
 	U.LogReadTimeWithQueryRequestID(startReadTime, queryID, &log.Fields{"query": query})
 
 	return attributedSessionsByUserId, userIdsWithSession, nil
@@ -2860,6 +2866,12 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, reports *Marketin
 			log.WithFields(log.Fields{"Method": "ProcessEventRows", "Count": count}).Info("Processing event rows")
 		}
 	}
+	err := rows.Err()
+	if err != nil {
+		// Error from DB is captured eg: timeout error
+		logCtx.WithFields(log.Fields{"err": err}).Error("Error in executing query in ProcessEventRows")
+		return nil, nil, err
+	}
 	logCtx.WithFields(log.Fields{"AttributionKey": query.AttributionKey}).
 		Info("no document was found in any of the reports for ID. Logging and continuing %+v",
 			missingIDs[:U.MinInt(100, len(missingIDs))])
@@ -2921,6 +2933,12 @@ func ProcessRow(rows *sql.Rows, reportName string, logCtx *log.Entry,
 			data = mergeMarketingData(marketingDataIDMap[ID], data)
 		}
 		marketingDataIDMap[ID] = data
+	}
+	err := rows.Err()
+	if err != nil {
+		// Error from DB is captured eg: timeout error
+		logCtx.WithFields(log.Fields{"err": err}).Error("Error in executing query in ProcessRow")
+		return nil, nil
 	}
 	U.LogReadTimeWithQueryRequestID(startReadTime, queryID, &log.Fields{})
 	return marketingDataIDMap, allRows
