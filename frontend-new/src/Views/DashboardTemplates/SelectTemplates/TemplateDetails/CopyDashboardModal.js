@@ -18,8 +18,10 @@ import {
     fetchEventNames,
     getGroupProperties,
   } from '../../../../reducers/coreQuery/middleware';
+import { useHistory } from "react-router-dom";
 
 function CopyDashboardModal({showCopyDashBoardModal,setShowCopyDashBoardModal,setShowTemplates}){
+    const history = useHistory();
     const { active_project } = useSelector((state) => state.global);
     const { activeTemplate } = useSelector((state)=>state.dashboardTemplates);
     const {dashboards} = useSelector((state)=>state.dashboard);
@@ -46,6 +48,9 @@ function CopyDashboardModal({showCopyDashBoardModal,setShowCopyDashBoardModal,se
             console.log('Dashboards Created');
             setShowTemplates(false);
             fetchDashboardItems();
+            if(res){
+                history.push("/")
+            }
         }catch (err){
             console.log(err.response);
         }

@@ -4,13 +4,16 @@ import { SVG, Text } from '../../components/factorsComponents';
 import SelectTemplates from './SelectTemplates';
 import { useSelector } from 'react-redux';
 import styles from './index.module.scss';
+import AddDashboard from '../Dashboard/AddDashboard';
 
 
-function DashboardTemplates({setaddDashboardModal}) {
+function DashboardTemplates() {
     const history = useHistory();
     const {state} = useLocation();
+    const [addDashboardModal, setaddDashboardModal] = useState(false);
     const [showTemplates,setShowTemplates]=useState(state?.fromSelectTemplateBtn ? true:false);
     const {templates}  = useSelector((state) => state.dashboardTemplates);
+
     return (
         <>
             {showTemplates&&
@@ -57,6 +60,10 @@ function DashboardTemplates({setaddDashboardModal}) {
                         Learn <Link>Dashboard Basics</Link>
                     </Text> */}
             </div>
+            <AddDashboard  
+            addDashboardModal={addDashboardModal}
+            setaddDashboardModal={setaddDashboardModal}
+            />
     </>
     );
 
