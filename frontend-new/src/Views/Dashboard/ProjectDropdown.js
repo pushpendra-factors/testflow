@@ -38,12 +38,14 @@ function ProjectDropdown({
   handleEditClick,
   durationObj,
   handleDurationChange,
-  refreshClicked,
-  setRefreshClicked,
   isPinned = false,
   fetchDemoProject,
   oldestRefreshTime,
-  setOldestRefreshTime
+  setOldestRefreshTime,
+  handleRefreshClick,
+  dashboardRefreshState,
+  onDataLoadSuccess,
+  resetDashboardRefreshState
 }) {
   const [moreOptions, setMoreOptions] = useState(false);
   const [widgetModal, setwidgetModal] = useState(false);
@@ -80,6 +82,7 @@ function ProjectDropdown({
       if (val === activeDashboard?.id) {
         return false;
       }
+      resetDashboardRefreshState();
       setOldestRefreshTime(null);
       const selectedDashboard = dashboards.data.find((d) => d.id === val);
       dispatch({
@@ -424,18 +427,17 @@ function ProjectDropdown({
               handleDurationChange={handleDurationChange}
               dashboard={activeDashboard}
               handleEditClick={handleEditClick}
-              refreshClicked={refreshClicked}
-              setRefreshClicked={setRefreshClicked}
+              refreshInProgress={dashboardRefreshState.inProgress}
               oldestRefreshTime={oldestRefreshTime}
-              setOldestRefreshTime={setOldestRefreshTime}
+              handleRefreshClick={handleRefreshClick}
             />
             <SortableCards
               durationObj={durationObj}
               setwidgetModal={handleToggleWidgetModal}
               showDeleteWidgetModal={showDeleteWidgetModal}
-              refreshClicked={refreshClicked}
-              setRefreshClicked={setRefreshClicked}
+              dashboardRefreshState={dashboardRefreshState}
               setOldestRefreshTime={setOldestRefreshTime}
+              onDataLoadSuccess={onDataLoadSuccess}
             />
           </div>
 
