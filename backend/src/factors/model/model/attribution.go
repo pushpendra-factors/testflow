@@ -1628,16 +1628,12 @@ func MergeTwoDataRows(row1 []interface{}, row2 []interface{}, keyIndex int, attr
 				if spend > 0 {
 					row1[keyIndex+10+nextConPosition], _ = U.FloatRoundOffWithPrecision(row1[keyIndex+8+nextConPosition].(float64)/spend, U.DefaultPrecision) // Conversion - CPC.
 				} else {
-					row1[keyIndex+8+nextConPosition] = float64(0)  // Conversion
-					row1[keyIndex+9+nextConPosition] = float64(0)  // Conversion Influence
 					row1[keyIndex+10+nextConPosition] = float64(0) // Conversion - CPC.
 				}
 
 				if spend > 0 {
 					row1[keyIndex+13+nextConPosition], _ = U.FloatRoundOffWithPrecision(row1[keyIndex+11+nextConPosition].(float64)/spend, U.DefaultPrecision) // Compare Conversion - CPC.
 				} else {
-					row1[keyIndex+11+nextConPosition] = float64(0) // Compare Conversion
-					row1[keyIndex+12+nextConPosition] = float64(0) // Compare Conversion - Influence
 					row1[keyIndex+13+nextConPosition] = float64(0) // Compare Conversion - CPC.
 				}
 
@@ -1646,16 +1642,12 @@ func MergeTwoDataRows(row1 []interface{}, row2 []interface{}, keyIndex int, attr
 				if row1[keyIndex+8+nextConPosition].(float64) > 0 {
 					row1[keyIndex+10+nextConPosition], _ = U.FloatRoundOffWithPrecision(spend/row1[keyIndex+8+nextConPosition].(float64), U.DefaultPrecision) // Conversion - CPC.
 				} else {
-					row1[keyIndex+8+nextConPosition] = float64(0)  // Conversion
-					row1[keyIndex+9+nextConPosition] = float64(0)  // Conversion Influence
 					row1[keyIndex+10+nextConPosition] = float64(0) // Conversion - CPC.
 				}
 
 				if row1[keyIndex+11+nextConPosition].(float64) > 0 {
 					row1[keyIndex+13+nextConPosition], _ = U.FloatRoundOffWithPrecision(spend/row1[keyIndex+11+nextConPosition].(float64), U.DefaultPrecision) // Compare Conversion - CPC.
 				} else {
-					row1[keyIndex+11+nextConPosition] = float64(0) // Compare Conversion
-					row1[keyIndex+12+nextConPosition] = float64(0) // Compare Conversion Influence
 					row1[keyIndex+13+nextConPosition] = float64(0) // Compare Conversion - CPC.
 				}
 			}
@@ -1694,8 +1686,6 @@ func MergeTwoDataRows(row1 []interface{}, row2 []interface{}, keyIndex int, attr
 		if row1[keyIndex+8].(float64) > 0 {
 			row1[keyIndex+10], _ = U.FloatRoundOffWithPrecision(spend/row1[keyIndex+8].(float64), U.DefaultPrecision) // Conversion - CPC.
 		} else {
-			row1[keyIndex+8] = float64(0)  //Conversion
-			row1[keyIndex+9] = float64(0)  //Conversion Influence
 			row1[keyIndex+10] = float64(0) // Conversion - CPC.
 		}
 
@@ -1703,8 +1693,6 @@ func MergeTwoDataRows(row1 []interface{}, row2 []interface{}, keyIndex int, attr
 		if row1[keyIndex+11].(float64) > 0 {
 			row1[keyIndex+13], _ = U.FloatRoundOffWithPrecision(spend/row1[keyIndex+11].(float64), U.DefaultPrecision) // Compare Conversion - CPC.
 		} else {
-			row1[keyIndex+11] = float64(0) //Compare Conversion
-			row1[keyIndex+12] = float64(0) //Compare Conversion Influence
 			row1[keyIndex+13] = float64(0) // Compare Conversion - CPC.
 		}
 
@@ -2360,14 +2348,18 @@ func AddTheAddedKeysAndMetrics(attributionData *map[string]*AttributionData, que
 
 	// Creating an empty linked events row.
 	emptyConversionEventRow := make([]float64, 0)
+	emptyConversionEventRowInfluence := make([]float64, 0)
 	for i := 0; i < noOfConversionEvents; i++ {
 		emptyConversionEventRow = append(emptyConversionEventRow, float64(0))
+		emptyConversionEventRowInfluence = append(emptyConversionEventRowInfluence, float64(0))
 	}
 
 	// Creating an empty linked events row.
 	emptyLinkedEventRow := make([]float64, 0)
+	emptyLinkedEventRowInfluence := make([]float64, 0)
 	for i := 0; i < len(query.LinkedEvents); i++ {
 		emptyLinkedEventRow = append(emptyLinkedEventRow, float64(0))
+		emptyLinkedEventRowInfluence = append(emptyLinkedEventRowInfluence, float64(0))
 	}
 	for _, attributionIDMap := range sessions {
 		for key, sessionTimestamp := range attributionIDMap {
@@ -2379,11 +2371,15 @@ func AddTheAddedKeysAndMetrics(attributionData *map[string]*AttributionData, que
 					(*attributionData)[key] = &AttributionData{}
 
 					(*attributionData)[key].ConversionEventCount = emptyConversionEventRow
+					(*attributionData)[key].ConversionEventCountInfluence = emptyConversionEventRowInfluence
 					(*attributionData)[key].ConversionEventCompareCount = emptyConversionEventRow
+					(*attributionData)[key].ConversionEventCompareCountInfluence = emptyConversionEventRowInfluence
 					if len(query.LinkedEvents) > 0 {
 						// Init the linked events with 0.0 value.
 						tempRow := emptyLinkedEventRow
+						tempRowInfluence := emptyConversionEventRowInfluence
 						(*attributionData)[key].LinkedEventsCount = tempRow
+						(*attributionData)[key].LinkedEventsCountInfluence = tempRowInfluence
 					}
 				}
 
@@ -2551,6 +2547,7 @@ func addMetricsFromReport(attributionData *map[string]*AttributionData, reportKe
 			(*attributionData)[key].ConversionEventCount = emptyConversionEventRow
 			(*attributionData)[key].ConversionEventCountInfluence = emptyConversionEventRowInfluence
 			(*attributionData)[key].ConversionEventCompareCount = emptyConversionEventRow
+			(*attributionData)[key].ConversionEventCompareCountInfluence = emptyConversionEventRowInfluence
 		}
 
 		if (*attributionData)[key].CustomDimensions == nil {
