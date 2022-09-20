@@ -16,6 +16,7 @@ import (
 //OTPRuleRequestPayload is struct for post request to create otp rule
 type OTPRuleRequestPayload struct {
 	RuleType          string          `json:"rule_type"`
+	CRMType           string          `json:"crm_type"`
 	TouchPointTimeRef string          `json:"touch_point_time_ref"`
 	Filters           *postgres.Jsonb `json:"filters"`
 	PropertiesMap     *postgres.Jsonb `json:"properties_map"`
@@ -24,6 +25,7 @@ type OTPRuleRequestPayload struct {
 // OTPRuleUpdatePayload is struct update
 type OTPRuleUpdatePayload struct {
 	RuleType          string          `json:"rule_type"`
+	CRMType           string          `json:"crm_type"`
 	TouchPointTimeRef string          `json:"touch_point_time_ref"`
 	Filters           *postgres.Jsonb `json:"filters"`
 	PropertiesMap     *postgres.Jsonb `json:"properties_map"`
@@ -78,6 +80,7 @@ func CreateOTPRuleHandler(c *gin.Context) (interface{}, int, string, string, boo
 	ruleReq := &model.OTPRule{
 		ProjectID:         projectID,
 		RuleType:          requestPayload.RuleType,
+		CRMType:           requestPayload.CRMType,
 		TouchPointTimeRef: requestPayload.TouchPointTimeRef,
 		PropertiesMap:     postgres.Jsonb{RawMessage: json.RawMessage(`{}`)},
 		Filters:           postgres.Jsonb{RawMessage: json.RawMessage(`{}`)},
@@ -107,7 +110,13 @@ func CreateOTPRuleHandler(c *gin.Context) (interface{}, int, string, string, boo
 	}
 
 	if requestPayload.RuleType == "" {
-		errMsg := "invalid RuleType exiting"
+		errMsg := "empty RuleType exiting"
+		logCtx.Error(errMsg)
+		return nil, http.StatusBadRequest, v1.INVALID_INPUT, errMsg, true
+	}
+
+	if requestPayload.CRMType == "" {
+		errMsg := "empty CRMType exiting"
 		logCtx.Error(errMsg)
 		return nil, http.StatusBadRequest, v1.INVALID_INPUT, errMsg, true
 	}
@@ -153,6 +162,7 @@ func UpdateOTPRuleHandler(c *gin.Context) (interface{}, int, string, string, boo
 
 	rule := &model.OTPRule{
 		RuleType:          requestPayload.RuleType,
+		CRMType:           requestPayload.CRMType,
 		TouchPointTimeRef: requestPayload.TouchPointTimeRef,
 		PropertiesMap:     postgres.Jsonb{RawMessage: json.RawMessage(`{}`)},
 		Filters:           postgres.Jsonb{RawMessage: json.RawMessage(`{}`)},
@@ -182,7 +192,13 @@ func UpdateOTPRuleHandler(c *gin.Context) (interface{}, int, string, string, boo
 	}
 
 	if requestPayload.RuleType == "" {
-		errMsg := "invalid RuleType exiting"
+		errMsg := "empty RuleType exiting"
+		logCtx.Error(errMsg)
+		return nil, http.StatusBadRequest, v1.INVALID_INPUT, errMsg, true
+	}
+
+	if requestPayload.CRMType == "" {
+		errMsg := "empty CRMType exiting"
 		logCtx.Error(errMsg)
 		return nil, http.StatusBadRequest, v1.INVALID_INPUT, errMsg, true
 	}

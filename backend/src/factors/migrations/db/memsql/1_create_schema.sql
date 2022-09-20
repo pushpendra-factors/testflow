@@ -1129,6 +1129,7 @@ CREATE TABLE IF NOT EXISTS otp_rules(
     id text NOT NULL,
     project_id bigint NOT NULL,
     rule_type text,
+    crm_type text,
     touch_point_time_ref text,
     filters json,
     properties_map json,
