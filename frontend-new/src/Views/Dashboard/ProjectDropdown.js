@@ -419,6 +419,19 @@ function ProjectDropdown({
             </div>
           </div>
           <div className={'ml-10 mr-4 my-6 flex-1'}>
+          <ErrorBoundary
+          fallback={
+            <FaErrorComp
+              size={'medium'}
+              title={'Dashboard Widget Error'}
+              subtitle={
+                'We are facing trouble loading dashboard widgets. Drop us a message on the in-app chat.'
+              }
+            />
+          }
+          onError={FaErrorLog}
+        > 
+        
             <DashboardSubMenu
               durationObj={durationObj}
               handleDurationChange={handleDurationChange}
@@ -429,6 +442,7 @@ function ProjectDropdown({
               oldestRefreshTime={oldestRefreshTime}
               setOldestRefreshTime={setOldestRefreshTime}
             />
+           
             <SortableCards
               durationObj={durationObj}
               setwidgetModal={handleToggleWidgetModal}
@@ -436,7 +450,8 @@ function ProjectDropdown({
               refreshClicked={refreshClicked}
               setRefreshClicked={setRefreshClicked}
               setOldestRefreshTime={setOldestRefreshTime}
-            />
+              />
+              </ErrorBoundary>
           </div>
 
           <ExpandableView
