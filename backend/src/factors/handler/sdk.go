@@ -247,36 +247,61 @@ func SDKAddUserPropertiesHandler(c *gin.Context) {
 	c.JSON(status, response)
 }
 
-type sdkSettingsResponse struct {
-	AutoTrack            *bool `json:"auto_track"`
-	AutoTrackSPAPageView *bool `json:"auto_track_spa_page_view"`
-	AutoFormCapture      *bool `json:"auto_form_capture"`
-	AutoClickCapture     *bool `json:"auto_click_capture"`
-	ExcludeBot           *bool `json:"exclude_bot"`
-	IntDrift             *bool `json:"int_drift"`
-	IntClearBit          *bool `json:"int_clear_bit"`
+type sdkGetInfoPayload struct {
+	UserID string `json:"user_id"`
+}
+
+type sdkGetInfoResponse struct {
+	AutoTrack            *bool  `json:"auto_track"`
+	AutoTrackSPAPageView *bool  `json:"auto_track_spa_page_view"`
+	AutoFormCapture      *bool  `json:"auto_form_capture"`
+	AutoClickCapture     *bool  `json:"auto_click_capture"`
+	ExcludeBot           *bool  `json:"exclude_bot"`
+	IntDrift             *bool  `json:"int_drift"`
+	IntClearBit          *bool  `json:"int_clear_bit"`
+	UserID               string `json:"user_id,omitempty"`
 }
 
 // Test command.
-// curl -i -H "Content-UnitType: application/json" -H "Authorization: YOUR_TOKEN" -X GET http://localhost:8080/sdk/project/get_settings
-// SDKGetProjectSettingsHandler godoc
-// @Summary To get project settings.
+// curl -i -H "Content-UnitType: application/json" -H "Authorization: YOUR_TOKEN" -X POST http://localhost:8080/sdk/get_info -d '{"user_id": "YOUR_USER_ID"}'
+// SDKGetSettingsAndUserIDInfoHandler godoc
+// @Summary To get project settings and user_id (if not available). Used only by JS SDK.
 // @Tags SDK
 // @Accept  json
 // @Produce json
-// @Success 200 {object} handler.sdkSettingsResponse
-// @Router /sdk/project/get_settings [get]
+// @Success 200 {object} handler.sdkGetInfoResponse
+// @Router /sdk/project/get_info [get]
 // @Security ApiKeyAuth
-func SDKGetProjectSettingsHandler(c *gin.Context) {
-	projectToken := U.GetScopeByKeyAsString(c, mid.SCOPE_PROJECT_TOKEN)
+func SDKGetInfoHandler(c *gin.Context) {
+	r := c.Request
+	logCtx := log.WithField("reqId", U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID))
 
-	projectSetting, errCode := store.GetStore().GetProjectSettingByTokenWithCacheAndDefault(projectToken)
-	if errCode != http.StatusFound {
-		c.AbortWithStatusJSON(errCode, &SDK.Response{Error: "Get project settings failed."})
+	if r.Body == nil {
+		logCtx.Error("Invalid request. Request body unavailable.")
+		c.AbortWithStatusJSON(http.StatusBadRequest,
+			&SDK.Response{Error: "Get info request failed. Missing request body."})
 		return
 	}
 
-	response := sdkSettingsResponse{
+	projectToken := U.GetScopeByKeyAsString(c, mid.SCOPE_PROJECT_TOKEN)
+	logCtx = logCtx.WithField("token", projectToken)
+
+	var request sdkGetInfoPayload
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&request); err != nil {
+		logCtx.WithError(err).Error("Failed decoding get info payload.")
+		c.AbortWithStatusJSON(http.StatusBadRequest,
+			&SDK.Response{Error: "Failed decoding get info payload. Invalid payload."})
+		return
+	}
+
+	projectSetting, errCode := store.GetStore().GetProjectSettingByTokenWithCacheAndDefault(projectToken)
+	if errCode != http.StatusFound {
+		c.AbortWithStatusJSON(errCode, &SDK.Response{Error: "Get info failed."})
+		return
+	}
+
+	response := sdkGetInfoResponse{
 		AutoTrack:            projectSetting.AutoTrack,
 		AutoTrackSPAPageView: projectSetting.AutoTrackSPAPageView,
 		AutoFormCapture:      projectSetting.AutoFormCapture,
@@ -284,6 +309,12 @@ func SDKGetProjectSettingsHandler(c *gin.Context) {
 		ExcludeBot:           projectSetting.ExcludeBot,
 		IntDrift:             projectSetting.IntDrift,
 		IntClearBit:          projectSetting.IntClearBit,
+	}
+
+	// Adds new user_id to response, if not available on the request.
+	// The responded user_id is expected to be set on all JS_SDK requests.
+	if request.UserID == "" {
+		response.UserID = U.GetUUID()
 	}
 
 	c.JSON(http.StatusOK, response)

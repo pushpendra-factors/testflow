@@ -10,6 +10,7 @@ const Properties = require("./properties");
 const Cache = require("./cache");
 
 const SDK_NOT_INIT_ERROR = new Error("Factors SDK is not initialized.");
+const SDK_NO_USER_ERROR = new Error("No user.");
 
 function isAllowedEventName(eventName) {
     // whitelisted $ event_name.
@@ -29,8 +30,12 @@ function updateCookieIfUserIdInResponse(response){
     return response; // To continue chaining.
 }
 
+function doesUserIdCookieExist() {
+    return Cookie.isExist(constant.cookie.USER_ID);
+}
+
 function updatePayloadWithUserIdFromCookie(payload) {
-    if (Cookie.isExist(constant.cookie.USER_ID))
+    if (doesUserIdCookieExist()) 
         payload.user_id = Cookie.getDecoded(constant.cookie.USER_ID);
     
     return payload;
@@ -90,7 +95,7 @@ function  waitForGlobalKey(key, callback, timer = 0, subkey = null, waitTime = 1
   }
 }
 
-function triggerFactorsStartQueu() {
+function triggerQueueInitialisedEvent() {
     window.dispatchEvent(new CustomEvent('FACTORS_INITIALISED_EVENT'));
 }
 
@@ -184,10 +189,12 @@ App.prototype.init = function(token, opts={}, afterPageTrackCallback) {
         Cache.setFactorsCache(Cache.trackPageOnSPA, true); 
     }
     
-    // Gets settings using temp client with given token, if succeeds, 
+    // Gets info using temp client with given token, if succeeds, 
     // set temp client as app client and set response as app config 
     // or else app stays unintialized.
-    return _client.getProjectSettings()
+    var payload = {};
+    updatePayloadWithUserIdFromCookie(payload);
+    return _client.getInfo(payload)
         .then(function(response) {
             if (response.status < 200 || response.status > 308) {
                 logger.errorLine("Get project settings failed with code : ", response.status); 
@@ -196,8 +203,16 @@ App.prototype.init = function(token, opts={}, afterPageTrackCallback) {
             return response;
         })
         .then(function(response) {
+            // Initialisation.
             _this.config = response.body;
             _this.client = _client;
+
+            // Add user_id from response to cookie.
+            updateCookieIfUserIdInResponse(response);
+
+            // Start queue processing.
+            triggerQueueInitialisedEvent();
+
             return response;
         })
         .then(function() {
@@ -205,8 +220,7 @@ App.prototype.init = function(token, opts={}, afterPageTrackCallback) {
             var enableTrackSPA = Cache.getFactorsCache(Cache.trackPageOnSPA) || _this.getConfig("auto_track_spa_page_view");
             Cache.setFactorsCache(Cache.trackPageOnSPA, enableTrackSPA);
             // Auto-track current page on init, if not disabled.
-            return trackOnInit ? _this.autoTrack(_this.getConfig("auto_track"), 
-                false, afterPageTrackCallback, true) : triggerFactorsStartQueu();
+            return trackOnInit ? _this.autoTrack(_this.getConfig("auto_track"), false, afterPageTrackCallback, true) : null;
         })
         .then(function() {
             return _this.autoFormCapture(_this.getConfig("auto_form_capture"));
@@ -246,6 +260,8 @@ function getEventProperties(eventProperties={}) {
 App.prototype.track = function(eventName, eventProperties, auto=false, afterCallback) {
     if (!this.isInitialized()) return Promise.reject(SDK_NOT_INIT_ERROR);
 
+    if (!doesUserIdCookieExist()) return Promise.reject(SDK_NO_USER_ERROR);
+
     eventName = util.validatedStringArg("event_name", eventName) // Clean event name.
     if (!isAllowedEventName(eventName)) 
         return Promise.reject(new Error("FactorsError: Invalid event name."));
@@ -265,7 +281,6 @@ App.prototype.track = function(eventName, eventProperties, auto=false, afterCall
         if (pageLoadTime > 0) eventProperties[Properties.PAGE_LOAD_TIME] = pageLoadTime;
     }
     return this.client.track(payload)
-        .then(updateCookieIfUserIdInResponse)
         .then(function(response) {
             if (response && response.body) {
                 if (!response.body.event_id) {
@@ -284,6 +299,8 @@ App.prototype.track = function(eventName, eventProperties, auto=false, afterCall
 App.prototype.updateEventProperties = function(eventId, properties={}) {
     if (!this.isInitialized()) return Promise.reject(SDK_NOT_INIT_ERROR);
     
+    if (!doesUserIdCookieExist()) return Promise.reject(SDK_NO_USER_ERROR)
+    
     if (!eventId || eventId == '') 
         return Promise.reject("No eventId provided for update.");
     
@@ -291,6 +308,7 @@ App.prototype.updateEventProperties = function(eventId, properties={}) {
         logger.debug("No properties given to update event.");
         
     var payload = { event_id: eventId, properties: properties };
+    
     return this.client.updateEventProperties(updatePayloadWithUserIdFromCookie(payload));
 }
 
@@ -354,23 +372,18 @@ function isPageAutoTracked() {
 }
 
 App.prototype.autoTrack = function(enabled=false, force=false, afterCallback, initFactorsQueue=false) {
-    if (!enabled) {
-        initFactorsQueue ? triggerFactorsStartQueu() : null;
-        return false;
-    } // not enabled.
+    if (!enabled) return false;
 
     if (!force && isPageAutoTracked()) {
         logger.debug('Page tracked already as per store : '+JSON.stringify(Cache.getFactorsCacheObject()))
         return false;
     }
+
+    if(!doesUserIdCookieExist()) return false;
     
     var _this = this;
 
-    this.track(getAutoTrackURL(), Properties.getFromQueryParams(window.location), true, afterCallback).then(function(){
-        if(initFactorsQueue) {
-            triggerFactorsStartQueu()
-        }
-    });
+    this.track(getAutoTrackURL(), Properties.getFromQueryParams(window.location), true, afterCallback);
 
     var lastPageProperties = {};
     var startOfPageSpentTime = util.getCurrentUnixTimestampInMs();
@@ -657,7 +670,11 @@ App.prototype.autoFormCapture = function(enabled=false) {
 }
 
 App.prototype.captureClick = function(appInstance, element) {
+    if (!this.isInitialized()) return Promise.reject(SDK_NOT_INIT_ERROR);
+
     if (!element) logger.debug("Element is undefined on capture click.");
+
+    if (!doesUserIdCookieExist()) return Promise.reject(SDK_NO_USER_ERROR);
 
     var payload = Capture.getClickCapturePayloadFromElement(element);
 
@@ -685,6 +702,8 @@ App.prototype.page = function(afterCallback, force=false) {
 
 App.prototype.identify = function(customerUserId, userProperties={}) {
     if (!this.isInitialized()) return Promise.reject(SDK_NOT_INIT_ERROR);
+
+    if (!doesUserIdCookieExist()) return Promise.reject(SDK_NO_USER_ERROR);
     
     customerUserId = util.validatedStringArg("customer_user_id", customerUserId);
     
@@ -693,13 +712,15 @@ App.prototype.identify = function(customerUserId, userProperties={}) {
     payload.c_uid = customerUserId;
     if (Object.keys(userProperties).length > 0) payload.user_properties = userProperties;
     
-    return this.client.identify(payload)
-        .then(updateCookieIfUserIdInResponse);
+    return this.client.identify(payload);
 }
 
 App.prototype.addUserProperties = function (properties={}) {
     if (!this.isInitialized()) 
         return Promise.reject(SDK_NOT_INIT_ERROR);
+    
+    if (!doesUserIdCookieExist()) return Promise.reject(SDK_NO_USER_ERROR);
+
 
     if (typeof(properties) != "object")
         return Promise.reject(new Error("FactorsArgumentError: Properties should be an Object(key/values)."));
@@ -718,8 +739,7 @@ App.prototype.addUserProperties = function (properties={}) {
     updatePayloadWithUserIdFromCookie(payload);
     payload.properties = properties
 
-    return this.client.addUserProperties(payload)
-        .then(updateCookieIfUserIdInResponse);
+    return this.client.addUserProperties(payload);
 }
 
 // Clears the state of the app.

@@ -1992,27 +1992,50 @@ func TestSDKGetProjectSettingsHandler(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
 	H.InitSDKServiceRoutes(r)
-	uri := "/sdk/project/get_settings"
+	uri := "/sdk/get_info"
 
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 	assert.NotNil(t, project)
 
-	// Test Get project settings.
-	w := ServeGetRequestWithHeaders(r, uri, map[string]string{"Authorization": project.Token})
+	// Test with user_id.
+	payload := `{"user_id": "xxx"}`
+	w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 	jsonResponse, _ := ioutil.ReadAll(w.Body)
 	var jsonResponseMap map[string]interface{}
 	json.Unmarshal(jsonResponse, &jsonResponseMap)
-	assert.NotEqual(t, 0, jsonResponseMap["id"])
 	assert.NotNil(t, jsonResponseMap["auto_track"])
+	assert.NotNil(t, jsonResponseMap["auto_track_spa_page_view"])
+	assert.NotNil(t, jsonResponseMap["auto_form_capture"])
+	assert.NotNil(t, jsonResponseMap["auto_click_capture"])
+	assert.NotNil(t, jsonResponseMap["exclude_bot"])
+	assert.NotNil(t, jsonResponseMap["int_drift"])
+	assert.NotNil(t, jsonResponseMap["int_clear_bit"])
+	assert.Nil(t, jsonResponseMap["user_id"])
+
+	// Test without user_id.
+	payload = `{}`
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	json.Unmarshal(jsonResponse, &jsonResponseMap)
+	assert.NotNil(t, jsonResponseMap["auto_track"])
+	assert.NotNil(t, jsonResponseMap["auto_track_spa_page_view"])
+	assert.NotNil(t, jsonResponseMap["auto_form_capture"])
+	assert.NotNil(t, jsonResponseMap["auto_click_capture"])
+	assert.NotNil(t, jsonResponseMap["exclude_bot"])
 	assert.NotNil(t, jsonResponseMap["int_drift"])
 	assert.NotNil(t, jsonResponseMap["int_clear_bit"])
 
-	// Test Get project settings with random token.
+	// Should return new user_id.
+	assert.NotEmpty(t, jsonResponseMap["user_id"])
+
+	// Test Get Info with random token.
 	// Returns default settings.
 	randomToken := U.RandomLowerAphaNumString(32)
-	w = ServeGetRequestWithHeaders(r, uri, map[string]string{"Authorization": randomToken})
+	payload = `{}`
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": randomToken})
 	assert.Equal(t, http.StatusOK, w.Code)
 }
 
