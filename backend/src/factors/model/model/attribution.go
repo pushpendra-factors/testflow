@@ -1716,7 +1716,7 @@ func SanitizeResult(result *QueryResult) {
 	// Populating the valid index
 	var validIdx []int
 	for idx, colName := range result.Headers {
-		if !strings.Contains(colName, "(remove)") || !strings.Contains(colName, "Influence") {
+		if !strings.Contains(colName, "(remove)") && !strings.Contains(colName, "Influence") {
 			validIdx = append(validIdx, idx)
 		}
 	}
