@@ -320,6 +320,30 @@ func SDKGetInfoHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
+// DEPRECATED: Current JS_SDK is using /get_info instead of /get_settings.
+// For backward compatibility, old NPM installations might be using /get_settings.
+func SDKGetProjectSettingsHandler(c *gin.Context) {
+	projectToken := U.GetScopeByKeyAsString(c, mid.SCOPE_PROJECT_TOKEN)
+
+	projectSetting, errCode := store.GetStore().GetProjectSettingByTokenWithCacheAndDefault(projectToken)
+	if errCode != http.StatusFound {
+		c.AbortWithStatusJSON(errCode, &SDK.Response{Error: "Get project settings failed."})
+		return
+	}
+
+	response := sdkGetInfoResponse{
+		AutoTrack:            projectSetting.AutoTrack,
+		AutoTrackSPAPageView: projectSetting.AutoTrackSPAPageView,
+		AutoFormCapture:      projectSetting.AutoFormCapture,
+		AutoClickCapture:     projectSetting.AutoClickCapture,
+		ExcludeBot:           projectSetting.ExcludeBot,
+		IntDrift:             projectSetting.IntDrift,
+		IntClearBit:          projectSetting.IntClearBit,
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
 // SDKUpdateEventPropertiesHandler godoc
 // @Summary To update event properties for an existing event.
 // @Tags SDK
