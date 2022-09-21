@@ -54,9 +54,11 @@ func MergeTwoDataRowsKPI(row1 []interface{}, row2 []interface{}, keyIndex int, a
 	row1[keyIndex+3] = row1[keyIndex+3].(float64) + row2[keyIndex+3].(float64) // Spend.
 
 	for idx, _ := range conversionFunTypes {
-		nextConPosition := idx * 4
+		nextConPosition := idx * 6
 		row1[keyIndex+8+nextConPosition] = row1[keyIndex+8+nextConPosition].(float64) + row2[keyIndex+8+nextConPosition].(float64)    // Conversion.
-		row1[keyIndex+10+nextConPosition] = row1[keyIndex+10+nextConPosition].(float64) + row2[keyIndex+10+nextConPosition].(float64) // Compare Conversion.
+		row1[keyIndex+9+nextConPosition] = row1[keyIndex+9+nextConPosition].(float64) + row2[keyIndex+9+nextConPosition].(float64)    // Conversion Influence.
+		row1[keyIndex+11+nextConPosition] = row1[keyIndex+11+nextConPosition].(float64) + row2[keyIndex+11+nextConPosition].(float64) // Compare Conversion.
+		row1[keyIndex+12+nextConPosition] = row1[keyIndex+12+nextConPosition].(float64) + row2[keyIndex+12+nextConPosition].(float64) // Compare Conversion Influence.
 	}
 	impressions := (row1[keyIndex+1]).(int64)
 	clicks := (row1[keyIndex+2]).(int64)
@@ -78,35 +80,39 @@ func MergeTwoDataRowsKPI(row1 []interface{}, row2 []interface{}, keyIndex int, a
 	}
 
 	for idx, funcType := range conversionFunTypes {
-		nextConPosition := idx * 4
-		// Normal conversion [8, 9] = [Conversion, CPC]
-		// Compare conversion [10, 11]  = [Conversion, CPC, Rate+nextConPosition]
+		nextConPosition := idx * 6
+		// Normal conversion [8, 9,10] = [Conversion, Conversion Influence, CPC]
+		// Compare conversion [11, 12,13]  = [Conversion, Conversion Influence,CPC, Rate+nextConPosition]
 		if strings.ToLower(funcType) == "sum" {
 
 			if spend > 0 {
-				row1[keyIndex+9+nextConPosition], _ = U.FloatRoundOffWithPrecision(row1[keyIndex+8+nextConPosition].(float64)/spend, U.DefaultPrecision) // Conversion - CPC.
+				row1[keyIndex+10+nextConPosition], _ = U.FloatRoundOffWithPrecision(row1[keyIndex+8+nextConPosition].(float64)/spend, U.DefaultPrecision) // Conversion - CPC.
 			} else {
-				row1[keyIndex+9+nextConPosition] = float64(0) // Conversion - CPC.
+
+				row1[keyIndex+10+nextConPosition] = float64(0) // Conversion - CPC.
 			}
 
 			if spend > 0 {
-				row1[keyIndex+11+nextConPosition], _ = U.FloatRoundOffWithPrecision(row1[keyIndex+10+nextConPosition].(float64)/spend, U.DefaultPrecision) // Compare Conversion - CPC.
+				row1[keyIndex+13+nextConPosition], _ = U.FloatRoundOffWithPrecision(row1[keyIndex+11+nextConPosition].(float64)/spend, U.DefaultPrecision) // Compare Conversion - CPC.
 			} else {
-				row1[keyIndex+11+nextConPosition] = float64(0) // Compare Conversion - CPC.
+
+				row1[keyIndex+13+nextConPosition] = float64(0) // Compare Conversion - CPC.
 			}
 
 		} else {
 
 			if row1[keyIndex+8+nextConPosition].(float64) > 0 {
-				row1[keyIndex+9+nextConPosition], _ = U.FloatRoundOffWithPrecision(spend/row1[keyIndex+8+nextConPosition].(float64), U.DefaultPrecision) // Conversion - CPC.
+				row1[keyIndex+10+nextConPosition], _ = U.FloatRoundOffWithPrecision(spend/row1[keyIndex+8+nextConPosition].(float64), U.DefaultPrecision) // Conversion - CPC.
 			} else {
-				row1[keyIndex+9+nextConPosition] = float64(0) // Conversion - CPC.
+
+				row1[keyIndex+10+nextConPosition] = float64(0) // Conversion - CPC.
 			}
 
-			if row1[keyIndex+10+nextConPosition].(float64) > 0 {
-				row1[keyIndex+11+nextConPosition], _ = U.FloatRoundOffWithPrecision(spend/row1[keyIndex+10+nextConPosition].(float64), U.DefaultPrecision) // Compare Conversion - CPC.
+			if row1[keyIndex+11+nextConPosition].(float64) > 0 {
+				row1[keyIndex+13+nextConPosition], _ = U.FloatRoundOffWithPrecision(spend/row1[keyIndex+11+nextConPosition].(float64), U.DefaultPrecision) // Compare Conversion - CPC.
 			} else {
-				row1[keyIndex+11+nextConPosition] = float64(0) // Compare Conversion - CPC.
+
+				row1[keyIndex+13+nextConPosition] = float64(0) // Compare Conversion - CPC.
 			}
 		}
 	}
