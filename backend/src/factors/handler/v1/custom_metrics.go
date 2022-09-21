@@ -188,7 +188,32 @@ func DeleteCustomMetrics(c *gin.Context) (interface{}, int, string, string, bool
 			return nil, http.StatusOK, "", "", false
 		}
 	} else {
-		return gin.H{"dashboardUnitNames": dashboardUnitNames, "alertNames": alertNames, "customMetricNames": customMetricNames}, http.StatusBadRequest, DEPENDENT_RECORD_PRESENT, "", false
+		errorMessage := "This Custom KPI is part of "
+		IsPrevious := false
+		if len(dashboardUnitNames) > 0 {
+			errorMessage = errorMessage + strings.Join(dashboardUnitNames, ", ") + " dashboard units "
+			IsPrevious = true
+		}
+		if len(alertNames) > 0 {
+			if (IsPrevious) {
+				errorMessage = errorMessage + "and "
+			}
+			errorMessage = errorMessage + strings.Join(alertNames, ", ") + " alerts "
+			IsPrevious = true
+		}
+		if len(customMetricNames) > 0 {
+			if (IsPrevious) {
+				errorMessage = errorMessage + "and "
+			}
+			errorMessage = errorMessage + strings.Join(customMetricNames, ", ") + " derived KPIs"
+		}
+
+		pronoun := "it"
+		if (len(dashboardUnitNames) + len(alertNames) + len(customMetricNames)) > 1 {
+			pronoun = "them"
+		}
+		errorMessage = errorMessage + ". Please remove " + pronoun + " first."
+		return nil, http.StatusBadRequest, DEPENDENT_RECORD_PRESENT, errorMessage, true
 	}
 }
 
