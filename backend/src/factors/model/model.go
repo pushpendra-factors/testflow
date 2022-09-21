@@ -215,6 +215,10 @@ type Model interface {
 	GetPropertiesForSalesforceUsers(projectID int64, reqID string) []map[string]string
 	GetPropertiesForMarketo(projectID int64, reqID string) []map[string]string
 
+	// form_fill
+	CreateFormFillEventById(projectId int64, formFill *model.SDKFormFillPayload) (int, error)
+	GetFormFillEventById(projectId int64, formId string, fieldId string) (*model.FormFill, int)
+
 	// events
 	GetEventCountOfUserByEventName(projectID int64, userId string, eventNameId string) (uint64, int)
 	GetEventCountOfUsersByEventName(projectID int64, userIDs []string, eventNameID string) (uint64, int)
