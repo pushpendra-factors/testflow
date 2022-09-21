@@ -8,9 +8,11 @@ export const DATE_RANGE_LABEL_LAST_MONTH = 'Last Month';
 export const DATE_RANGE_LABEL_LAST_WEEK = 'Last Week';
 export const DATE_RANGE_YESTERDAY_LABEL = 'Yesterday';
 export const DATE_RANGE_TODAY_LABEL = 'Today';
-export const DATE_RANGE_LABEL_LAST_7_DAYS = 'Last 7 Days';
 export const DATE_RANGE_LAST_2_MIN_LABEL = 'Last 2 mins';
 export const DATE_RANGE_LAST_30_MIN_LABEL = 'Last 30 mins';
+export const DATE_RANGE_LABEL_LAST_7_DAYS = 'Last 7 Days';
+export const DATE_RANGE_LABEL_LAST_14_DAYS = 'Last 14 Days';
+export const DATE_RANGE_LABEL_LAST_28_DAYS = 'Last 28 Days';
 
 
 
@@ -182,7 +184,21 @@ const DEFAULT_DATE_RANGES = [
       label: DATE_RANGE_LABEL_LAST_7_DAYS,
       range: () => ({
         startDate: MomentTz().subtract(7, 'days').startOf('day'),
-        endDate: MomentTz()
+        endDate: MomentTz().subtract(1,'days').endOf('day')
+      })
+    },
+    {
+      label: DATE_RANGE_LABEL_LAST_14_DAYS,
+      range: () => ({
+        startDate: MomentTz().subtract(14, 'days').startOf('day'),
+        endDate: MomentTz().subtract(1,'days').endOf('day')
+      })
+    },
+    {
+      label: DATE_RANGE_LABEL_LAST_28_DAYS,
+      range: () => ({
+        startDate: MomentTz().subtract(28, 'days').startOf('day'),
+        endDate: MomentTz().subtract(1,'days').endOf('day')
       })
     },
     {

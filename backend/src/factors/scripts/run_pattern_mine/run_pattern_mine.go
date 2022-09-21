@@ -80,6 +80,7 @@ func main() {
 	memSQLCertificate := flag.String("memsql_cert", "", "")
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypeMemSQL, "Primary datastore type as memsql or postgres")
 
+	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 	redisHost := flag.String("redis_host", "localhost", "")
 	redisPort := flag.Int("redis_port", 6379, "")
 	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
@@ -110,7 +111,7 @@ func main() {
 		beamConfig.Pipe = beam.NewPipeline()
 		beamConfig.Scp = beamConfig.Pipe.Root()
 		beamConfig.NumWorker = *numWorkersFlag
-		if beam.Initialized() == true {
+		if beam.Initialized() {
 			log.Info("Initalized all Beam Inits")
 		} else {
 			log.Fatal("unable to initialize runners")
@@ -122,6 +123,9 @@ func main() {
 
 	// init DB, etcd
 	appName := "pattern_mine_job"
+	healthcheckPingID := C.HealthcheckPatternMinePingID
+	defer C.PingHealthcheckForPanic(appName, *envFlag, healthcheckPingID)
+
 	config := &C.Configuration{
 		AppName:       appName,
 		Env:           *envFlag,
@@ -143,6 +147,7 @@ func main() {
 			Certificate: *memSQLCertificate,
 			AppName:     appName,
 		},
+		SentryDSN:           *sentryDSN,
 		PrimaryDatastore:    *primaryDatastore,
 		RedisHost:           *redisHost,
 		RedisPort:           *redisPort,
@@ -152,6 +157,7 @@ func main() {
 
 	C.InitConf(config)
 	beamConfig.DriverConfig = config
+	C.InitSentryLogging(config.SentryDSN, config.AppName)
 
 	// db is used by M.GetEventNames to build eventInfo.
 	err := C.InitDB(*config)
@@ -242,21 +248,56 @@ func main() {
 
 	// This job has dependency on pull_events
 	if *isWeeklyEnabled {
+		C.PingHealthcheckForStart(healthcheckPingID)
 		configs["modelType"] = T.ModelTypeWeek
 		status := taskWrapper.TaskFuncWithProjectId("PatternMineWeekly", *lookback, projectIdsArray, T.BuildSequential, configs)
 		log.Info(status)
+		var isSuccess bool = true
+		for reason, message := range status {
+			if message == false {
+				C.PingHealthcheckForFailure(healthcheckPingID, reason+": pattern mine run failure")
+				isSuccess = false
+				break
+			}
+		}
+		if isSuccess {
+			C.PingHealthcheckForSuccess(healthcheckPingID, "Pattern Mine Weekly run success.")
+		}
 	}
 
 	if *isMonthlyEnabled {
+		C.PingHealthcheckForStart(healthcheckPingID)
 		configs["modelType"] = T.ModelTypeMonth
 		status := taskWrapper.TaskFuncWithProjectId("PatternMineMonthly", *lookback, projectIdsArray, T.BuildSequential, configs)
 		log.Info(status)
+		var isSuccess bool = true
+		for reason, message := range status {
+			if message == false {
+				C.PingHealthcheckForFailure(healthcheckPingID, reason+": pattern mine run failure")
+				isSuccess = false
+				break
+			}
+		}
+		if isSuccess {
+			C.PingHealthcheckForSuccess(healthcheckPingID, "Pattern Mine Monthly run success.")
+		}
 	}
 
 	if *isQuarterlyEnabled {
+		C.PingHealthcheckForStart(healthcheckPingID)
 		configs["modelType"] = T.ModelTypeQuarter
 		status := taskWrapper.TaskFuncWithProjectId("PatternMineQuarterly", *lookback, projectIdsArray, T.BuildSequential, configs)
 		log.Info(status)
+		var isSuccess bool = true
+		for reason, message := range status {
+			if message == false {
+				C.PingHealthcheckForFailure(healthcheckPingID, reason+": pattern mine run failure")
+				isSuccess = false
+				break
+			}
+		}
+		if isSuccess {
+			C.PingHealthcheckForSuccess(healthcheckPingID, "Pattern Mine Quarterly run success.")
+		}
 	}
-
 }

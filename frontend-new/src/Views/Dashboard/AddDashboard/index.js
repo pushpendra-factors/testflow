@@ -1,9 +1,9 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Row, Col, Tabs, Modal, notification } from 'antd';
+import { Row, Col, Tabs, Modal, notification, Button } from 'antd';
 import { useSelector, useDispatch } from 'react-redux';
 import AddDashboardTab from './AddDashboardTab';
 import AddWidgetsTab from './AddWidgetsTab';
-import { Text } from '../../../components/factorsComponents';
+import { Text, SVG } from '../../../components/factorsComponents';
 import {
   createDashboard,
   assignUnitsToDashboard,
@@ -21,6 +21,7 @@ import {
 import styles from './index.module.scss';
 import ConfirmationModal from '../../../components/ConfirmationModal';
 import factorsai from 'factorsai';
+import { Link, useHistory, useLocation } from 'react-router-dom';
 
 function AddDashboard({
   addDashboardModal,
@@ -40,6 +41,8 @@ function AddDashboard({
   const { active_project } = useSelector((state) => state.global);
   const { activeDashboardUnits } = useSelector((state) => state.dashboard);
   const dispatch = useDispatch();
+  const history = useHistory();
+  const {pathname} = useLocation()
 
   const { TabPane } = Tabs;
 
@@ -53,6 +56,7 @@ function AddDashboard({
   }, [editDashboard, activeDashboardUnits.data]);
 
   const resetState = useCallback(() => {
+    setaddDashboardModal(false);
     setActiveKey('1');
     setTitle('');
     setDescription('');
@@ -60,7 +64,6 @@ function AddDashboard({
     setApisCalled(false);
     setSelectedQueries([]);
     setEditDashboard(null);
-    setaddDashboardModal(false);
   }, [setaddDashboardModal, setEditDashboard]);
 
   const confirmDelete = useCallback(async () => {
@@ -122,8 +125,9 @@ function AddDashboard({
         await assignUnitsToDashboard(active_project?.id, res.data.id, reqBody);
       }
       dispatch({ type: DASHBOARD_CREATED, payload: res.data });
+      pathname==="/template"&& history.push("/");
       resetState();
-      window.location.reload(); // temporary Fix for empty dashboard
+      // window.location.reload(); // temporary Fix for empty dashboard
     } catch (err) {
       console.log(err.response);
       setApisCalled(false);
@@ -274,16 +278,13 @@ function AddDashboard({
         centered={true}
         zIndex={1005}
         width={700}
-        onCancel={handleCancel}
-        onOk={handleOk}
         className={'fa-modal--regular p-4 fa-modal--slideInDown'}
         confirmLoading={apisCalled}
         closable={false}
         okText={getOkText()}
         transitionName=''
         maskTransitionName=''
-        okButtonProps={{ size: 'large' }}
-        cancelButtonProps={{ size: 'large' }}
+        footer={null}
       >
         <div>
           <Row>
@@ -328,6 +329,17 @@ function AddDashboard({
               </Tabs>
             </Col>
           </Row>
+           <div className='flex justify-between mt-6 items-center'>         
+            <Link to={{pathname:"/template", state:{fromSelectTemplateBtn:true}}} className='flex items-center font-semibold gap-2' style={{ color: `#1d89ff` }}>Select from Templates <SVG size={20} name="Arrowright" color={`#1d89ff`} /></Link>
+            <div className='flex gap-3'>
+              <Button type='default' size='large' onClick={()=>handleCancel()}>
+              Cancel
+              </Button>
+              <Button type='primary' size='large' onClick={()=>handleOk()}>
+              Next
+              </Button>
+            </div>
+          </div>
         </div>
       </Modal>
       <ConfirmationModal

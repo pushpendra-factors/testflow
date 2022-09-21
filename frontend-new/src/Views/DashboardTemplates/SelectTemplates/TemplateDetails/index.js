@@ -130,7 +130,7 @@ function TemplateDetails({setShowCardDetails,templates,setTemplateSelected,setSh
                                 type='primary'
                                 size={'large'}
                                 icon={<SVG name='copy' size={16} color={'white'} />}
-                                className="m-2 w-2/5"
+                                className="m-2 w-3/5"
                                 onClick={()=>setShowCopyDashBoardModal(true)}
                                 >                        
                                     Copy this dashboard
