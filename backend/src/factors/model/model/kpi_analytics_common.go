@@ -141,26 +141,27 @@ func (q *KPIQueryGroup) IsValid() bool {
 	return true
 }
 
-func (q *KPIQueryGroup) IsValidDerivedKPI() bool {
+func (q *KPIQueryGroup) IsValidDerivedKPI() (bool, string) {
 	isValidFormula := U.ValidateArithmeticFormula(q.Formula)
 	if !isValidFormula {
-		return false
+		return false, "Invalid arithmetic formula"
 	}
-	countOfUniqueFormulaVariables := getCountOfUniqueFormulaVariables(q.Formula)
-	if countOfUniqueFormulaVariables <= 1 || countOfUniqueFormulaVariables != len(q.Queries) {
-		return false
+	isValid, errMsg := validateQueryAndFormulaVariable(q.Formula, q.Queries)
+	if !isValid {
+		return false, errMsg
 	}
 	for _, query := range q.Queries {
 		if !query.IsValid() {
-			return false
+			return false, "Invalid query in query builder"
 		}
 		if len(query.GroupBy) != 0 || query.GroupByTimestamp != "" {
-			return false
+			return false, "Group by not allowed in derived kpi"
 		}
 	}
-	return true
+	return true, ""
 }
-func getCountOfUniqueFormulaVariables(expression string) int {
+
+func validateQueryAndFormulaVariable(expression string, queries []KPIQuery) (bool, string) {
 	mapOfFormulaVars := make(map[string]bool)
 	for _, c := range expression {
 		ch := string(c)
@@ -168,7 +169,26 @@ func getCountOfUniqueFormulaVariables(expression string) int {
 			mapOfFormulaVars[ch] = true
 		}
 	}
-	return len(mapOfFormulaVars)
+	mapOfQueryVars := make(map[string]bool)
+	for _, query := range queries {
+		mapOfQueryVars[query.Name] = true
+	}
+	if len(mapOfFormulaVars) != len(mapOfQueryVars) {
+		return false, "No of formula variables and queries don't match"
+	}
+
+	for key := range mapOfFormulaVars {
+		if _, exists := mapOfQueryVars[key]; !exists {
+			return false, "Please use formula starting from A"
+		}
+	}
+	for key := range mapOfQueryVars {
+		if _, exists := mapOfFormulaVars[key]; !exists {
+			return false, "Please use formula variables for all queries selected"
+		}
+	}
+
+	return true, ""
 }
 func (query *KPIQueryGroup) SetDefaultGroupByTimestamp() {
 	for index, _ := range query.Queries {
