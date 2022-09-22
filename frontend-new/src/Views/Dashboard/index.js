@@ -21,6 +21,13 @@ import ProjectDropdown from './ProjectDropdown';
 import { DASHBOARD_KEYS } from '../../constants/localStorage.constants';
 import DashboardBeforeIntegration from './DashboardBeforeIntegration';
 
+const dashboardRefreshInitialState = {
+  inProgress: false,
+  widgetIdGettingFetched: null,
+  widgetIdsLeftToBeFetched: [],
+  widgetIdsAlreadyFetched: []
+};
+
 function Dashboard({
   fetchProjectSettingsV1,
   fetchBingAdsIntegration,
@@ -30,16 +37,22 @@ function Dashboard({
   const [addDashboardModal, setaddDashboardModal] = useState(false);
   const [editDashboard, setEditDashboard] = useState(null);
   const [durationObj, setDurationObj] = useState(getDashboardDateRange());
-  const [refreshClicked, setRefreshClicked] = useState(false);
   const [sdkCheck, setSdkCheck] = useState(false);
-  const { dashboards } = useSelector((state) => state.dashboard);
+  const [oldestRefreshTime, setOldestRefreshTime] = useState(null);
+
+  const [dashboardRefreshState, setDashboardRefreshState] = useState(
+    dashboardRefreshInitialState
+  );
+
+  const { dashboards, activeDashboardUnits } = useSelector(
+    (state) => state.dashboard
+  );
   const integration = useSelector(
     (state) => state.global.currentProjectSettings
   );
   const integrationV1 = useSelector((state) => state.global.projectSettingsV1);
   const activeProject = useSelector((state) => state.global.active_project);
   const { bingAds, marketo } = useSelector((state) => state.global);
-  const [oldestRefreshTime, setOldestRefreshTime] = useState(null);
   const dispatch = useDispatch();
 
   useEffect(() => {
@@ -80,31 +93,78 @@ function Dashboard({
     setEditDashboard(dashboard);
   }, []);
 
-  const handleDurationChange = useCallback((dates) => {
-    let from, to;
-    setOldestRefreshTime(null);
-    if (Array.isArray(dates.startDate)) {
-      from = dates.startDate[0];
-      to = dates.startDate[1];
-    } else {
-      from = dates.startDate;
-      to = dates.endDate;
+  const handleRefreshClick = useCallback(() => {
+    if (
+      dashboardRefreshState.inProgress ||
+      activeDashboardUnits.data.length === 0
+    ) {
+      return false;
     }
+    setOldestRefreshTime(null);
+    setDashboardRefreshState({
+      inProgress: true,
+      widgetIdsLeftToBeFetched: activeDashboardUnits.data
+        .slice(1)
+        .map((unit) => unit.id),
+      widgetIdGettingFetched: activeDashboardUnits.data[0].id,
+      widgetIdsAlreadyFetched: []
+    });
+  }, [dashboardRefreshState.inProgress, activeDashboardUnits.data]);
 
-    setDurationObj((currState) => {
-      const newState = {
-        ...currState,
-        from,
-        to,
-        dateType: dates.dateType
-      };
-      setItemToLocalStorage(
-        DASHBOARD_KEYS.DASHBOARD_DURATION,
-        JSON.stringify(newState)
-      );
-      return newState;
+  const resetDashboardRefreshState = useCallback(() => {
+    setDashboardRefreshState(dashboardRefreshInitialState);
+  }, []);
+
+  const onDataLoadSuccess = useCallback(({ unitId }) => {
+    setDashboardRefreshState((currState) => {
+      if (currState.inProgress) {
+        return {
+          inProgress:
+            currState.widgetIdsLeftToBeFetched.length > 0 ? true : false,
+          widgetIdsAlreadyFetched: [
+            ...currState.widgetIdsAlreadyFetched,
+            unitId
+          ],
+          widgetIdGettingFetched:
+            currState.widgetIdsLeftToBeFetched.length > 0
+              ? currState.widgetIdsLeftToBeFetched[0]
+              : null,
+          widgetIdsLeftToBeFetched: currState.widgetIdsLeftToBeFetched.slice(1)
+        };
+      }
+      return dashboardRefreshInitialState;
     });
   }, []);
+
+  const handleDurationChange = useCallback(
+    (dates) => {
+      let from, to;
+      setOldestRefreshTime(null);
+      resetDashboardRefreshState();
+      if (Array.isArray(dates.startDate)) {
+        from = dates.startDate[0];
+        to = dates.startDate[1];
+      } else {
+        from = dates.startDate;
+        to = dates.endDate;
+      }
+
+      setDurationObj((currState) => {
+        const newState = {
+          ...currState,
+          from,
+          to,
+          dateType: dates.dateType
+        };
+        setItemToLocalStorage(
+          DASHBOARD_KEYS.DASHBOARD_DURATION,
+          JSON.stringify(newState)
+        );
+        return newState;
+      });
+    },
+    [resetDashboardRefreshState]
+  );
 
   useEffect(() => {
     return () => {
@@ -141,10 +201,12 @@ function Dashboard({
               setaddDashboardModal={setaddDashboardModal}
               durationObj={durationObj}
               handleDurationChange={handleDurationChange}
-              refreshClicked={refreshClicked}
-              setRefreshClicked={setRefreshClicked}
               oldestRefreshTime={oldestRefreshTime}
               setOldestRefreshTime={setOldestRefreshTime}
+              handleRefreshClick={handleRefreshClick}
+              dashboardRefreshState={dashboardRefreshState}
+              onDataLoadSuccess={onDataLoadSuccess}
+              resetDashboardRefreshState={resetDashboardRefreshState}
             />
           </div>
 

@@ -10,5 +10,5 @@ var ErrorMessages = map[string]string{
 	INVALID_PROJECT:   "Project Id is Invalid",
 	INVALID_INPUT:     "Input Params are incorrect",
 	PROCESSING_FAILED: "Processing Failed",
-	DUPLICATE_RECORD:  "Duplicate record insertion in db",
+	DUPLICATE_RECORD:  "Entity with same name exists, try a different name",
 }

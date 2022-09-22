@@ -204,7 +204,7 @@ const LeadSquaredIntegration = ({
                     </div>
                 }
                 <div className={'mt-4 flex'} data-tour='step-11'>
-                    {currentProjectSettings?.lead_squared_config !== null ? <Button loading={loading} onClick={() => onDisconnect()}>Disconnect</Button> : <Button type={'primary'} loading={loading} onClick={() => setShowForm(!showForm)}>Connect</Button>
+                    {currentProjectSettings?.lead_squared_config !== null ? <Button loading={loading} onClick={() => onDisconnect()}>Disconnect</Button> : <Button type={'primary'} loading={loading} onClick={() => setShowForm(!showForm)}>Connect Now</Button>
                     }
                     {kbLink && <a className={'ant-btn ml-2 '} target={"_blank"} href={kbLink}>View documentation</a>}
                 </div>

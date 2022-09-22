@@ -45,10 +45,10 @@ function WidgetCard({
   onDrop,
   showDeleteWidgetModal,
   durationObj,
-  refreshClicked,
-  setRefreshClicked,
   fetchWeeklyIngishts,
-  setOldestRefreshTime
+  setOldestRefreshTime,
+  dashboardRefreshState,
+  onDataLoadSuccess
 }) {
   const hasComponentUnmounted = useRef(false);
   const cardRef = useRef(null);
@@ -172,6 +172,9 @@ function WidgetCard({
             refresh,
             activeProject.id
           );
+          if (!hasComponentUnmounted.current) {
+            onDataLoadSuccess({ unitId: unit.id });
+          }
           if (
             queryType === QUERY_TYPE_FUNNEL &&
             !hasComponentUnmounted.current
@@ -294,7 +297,7 @@ function WidgetCard({
               }
             }
           }
-          if (lastRefreshedAt != null) {
+          if (lastRefreshedAt != null && !hasComponentUnmounted.current) {
             setOldestRefreshTime((currValue) => {
               if (currValue == null || lastRefreshedAt < currValue) {
                 return lastRefreshedAt;
@@ -308,11 +311,12 @@ function WidgetCard({
             apiCallStatus
           });
         }
-        setRefreshClicked(false);
       } catch (err) {
         console.log(err);
         console.log(err.response);
-        setRefreshClicked(false);
+        if (!hasComponentUnmounted.current) {
+          onDataLoadSuccess({ unitId: unit.id });
+        }
         setResultState({
           ...initialState,
           error: true
@@ -325,7 +329,7 @@ function WidgetCard({
       unit.id,
       unit.dashboard_id,
       durationWithSavedFrequency,
-      setRefreshClicked
+      onDataLoadSuccess
     ]
   );
 
@@ -337,10 +341,10 @@ function WidgetCard({
   }, [getData, durationWithSavedFrequency]);
 
   useEffect(() => {
-    if (refreshClicked) {
+    if (dashboardRefreshState.widgetIdGettingFetched === unit.id) {
       getData(true);
     }
-  }, [refreshClicked, getData]);
+  }, [dashboardRefreshState.widgetIdGettingFetched, unit.id, getData]);
 
   useEffect(() => {
     if (

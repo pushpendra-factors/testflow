@@ -67,8 +67,6 @@ func IntSegmentHandler(c *gin.Context) {
 	logDebugCtx := logCtx.WithField("token", token).WithField("tag", "segment_request_payload")
 	if err := json.Unmarshal(bodyBuffer.Bytes(), &rawRequestPayload); err != nil {
 		logDebugCtx.WithError(err).Info("Failed to decode as raw request.")
-	} else {
-		logDebugCtx.WithField("request", rawRequestPayload).Info("Raw segment request.")
 	}
 
 	status, response := IntSegment.ReceiveEventWithQueue(token, &event,

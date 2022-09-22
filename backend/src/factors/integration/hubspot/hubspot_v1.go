@@ -122,7 +122,7 @@ func syncContactFormSubmissionsV1(project *model.Project, otpRules *[]model.OTPR
 		return
 	}
 
-	enProperties, _, err := GetContactProperties(project.ID, document)
+	enProperties, _, _, _, err := GetContactProperties(project.ID, document)
 	if err != nil {
 		return
 	}
@@ -385,7 +385,7 @@ func GetHubspotSmartEventPayloadV1(projectID int64, eventName, docID string,
 		} else {
 
 			if docType == model.HubspotDocumentTypeContact {
-				_, prevProperties, err = GetContactProperties(projectID, prevDoc)
+				_, prevProperties, _, _, err = GetContactProperties(projectID, prevDoc)
 			}
 			if docType == model.HubspotDocumentTypeDeal {
 				_, prevProperties, err = getDealProperties(projectID, prevDoc)
@@ -836,7 +836,7 @@ func syncContactV1(project *model.Project, otpRules *[]model.OTPRule, document *
 		}
 	}
 
-	enProperties, properties, err := GetContactProperties(project.ID, document)
+	enProperties, properties, _, _, err := GetContactProperties(project.ID, document)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properites from hubspot contact.")
 		return http.StatusInternalServerError
@@ -1382,7 +1382,7 @@ func filterCheckV1(rule model.OTPRule, trackPayload *SDK.TrackPayload, document 
 		var prevProperties *map[string]interface{}
 
 		if document.Type == model.HubspotDocumentTypeContact {
-			prevProperties, _, err = GetContactProperties(document.ProjectId, prevDoc)
+			prevProperties, _, _, _, err = GetContactProperties(document.ProjectId, prevDoc)
 		}
 
 		if err != nil {
@@ -2478,7 +2478,7 @@ func syncEngagementsV1(project *model.Project, otpRules *[]model.OTPRule, docume
 		}
 
 		propertiesWithEmailOrContact := make(map[string]interface{})
-		enProperties, _, err := GetContactProperties(project.ID, latestContactDocument)
+		enProperties, _, _, _, err := GetContactProperties(project.ID, latestContactDocument)
 		if err != nil {
 			logCtx.WithError(err).Error("can't get contact properties")
 			return http.StatusInternalServerError

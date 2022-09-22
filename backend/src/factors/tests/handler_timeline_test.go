@@ -216,6 +216,30 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 	assert.NotNil(t, group4)
 	assert.Equal(t, http.StatusCreated, status)
 
+	// event properties map
+	eventProperties := map[string]interface{}{
+		U.EP_PAGE_COUNT:                              5,
+		U.EP_CHANNEL:                                 "ChannelName",
+		U.EP_CAMPAIGN:                                "CampaignName",
+		U.SP_SPENT_TIME:                              120,
+		U.EP_REFERRER_URL:                            RandomURL(),
+		U.EP_FORM_NAME:                               "Form Name",
+		U.EP_PAGE_URL:                                RandomURL(),
+		U.EP_SALESFORCE_CAMPAIGN_TYPE:                "Some Type",
+		U.EP_SALESFORCE_CAMPAIGNMEMBER_STATUS:        "CurrentStatus",
+		U.EP_HUBSPOT_ENGAGEMENT_SOURCE:               "Some Engagement Source",
+		U.EP_HUBSPOT_ENGAGEMENT_TYPE:                 "Some Engagement Type",
+		U.EP_HUBSPOT_ENGAGEMENT_MEETINGOUTCOME:       "Some Outcome",
+		U.EP_HUBSPOT_ENGAGEMENT_STARTTIME:            "Start time",
+		U.EP_HUBSPOT_ENGAGEMENT_DURATIONMILLISECONDS: 10000000000,
+		U.EP_HUBSPOT_FORM_SUBMISSION_FORMTYPE:        "Some HS Form Submission Type",
+		U.EP_HUBSPOT_FORM_SUBMISSION_PAGEURL:         RandomURL(),
+		U.EP_HUBSPOT_ENGAGEMENT_ENDTIME:              "End Time",
+		U.EP_SALESFORCE_CAMPAIGN_NAME:                "Some Salesforce Campaign Name",
+		U.EP_HUBSPOT_FORM_SUBMISSION_TITLE:           "Some form submission title",
+		U.EP_HUBSPOT_ENGAGEMENT_SUBJECT:              "Some Engagement Subject",
+		U.EP_HUBSPOT_ENGAGEMENT_TITLE:                "Some Engagement Title",
+	}
 	// Event 1 : Page View
 	timestamp := U.UnixTimeBeforeDuration(1 * time.Hour)
 	randomURL := RandomURL()
@@ -242,13 +266,6 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 
 	// Event 2 : Web Session
 	timestamp = timestamp - 10000
-	sessionProperties := map[string]interface{}{
-		U.EP_PAGE_COUNT:   "5",
-		U.EP_CHANNEL:      "ChannelName",
-		U.EP_CAMPAIGN:     "CampaignName",
-		U.SP_SESSION_TIME: "120",
-		U.EP_REFERRER_URL: RandomURL(),
-	}
 	trackPayload = SDK.TrackPayload{
 		EventId:         "",
 		UserId:          user.ID,
@@ -256,7 +273,7 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 		IsNewUser:       false,
 		Name:            U.EVENT_NAME_SESSION,
 		CustomerEventId: new(string),
-		EventProperties: sessionProperties,
+		EventProperties: eventProperties,
 		UserProperties:  map[string]interface{}{},
 		Timestamp:       timestamp,
 		ProjectId:       0,
@@ -273,10 +290,6 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 
 	// Event 3 : Form Submit
 	timestamp = timestamp - 10000
-	formSubmitProperties := map[string]interface{}{
-		U.EP_FORM_NAME: "FormName",
-		U.EP_PAGE_URL:  RandomURL(),
-	}
 	trackPayload = SDK.TrackPayload{
 		EventId:         "",
 		UserId:          user.ID,
@@ -284,7 +297,7 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 		IsNewUser:       false,
 		Name:            U.EVENT_NAME_FORM_SUBMITTED,
 		CustomerEventId: new(string),
-		EventProperties: formSubmitProperties,
+		EventProperties: eventProperties,
 		UserProperties:  map[string]interface{}{},
 		Timestamp:       timestamp,
 		ProjectId:       0,
@@ -301,10 +314,6 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 
 	// Event 4 : Offline Touchpoint
 	timestamp = timestamp - 10000
-	touchpointProperties := map[string]interface{}{
-		U.EP_CHANNEL:  "ChannelName",
-		U.EP_CAMPAIGN: "CampaignName",
-	}
 	trackPayload = SDK.TrackPayload{
 		EventId:         "",
 		UserId:          user.ID,
@@ -312,7 +321,7 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 		IsNewUser:       false,
 		Name:            U.EVENT_NAME_OFFLINE_TOUCH_POINT,
 		CustomerEventId: new(string),
-		EventProperties: touchpointProperties,
+		EventProperties: eventProperties,
 		UserProperties:  map[string]interface{}{},
 		Timestamp:       timestamp,
 		ProjectId:       0,
@@ -329,10 +338,6 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 
 	// Event 5 : Campaign Member Created
 	timestamp = timestamp - 10000
-	campCreatedProperties := map[string]interface{}{
-		"$salesforce_campaign_name":     "Campaign Name",
-		model.EP_SFCampaignMemberStatus: "CurrentStatus",
-	}
 	trackPayload = SDK.TrackPayload{
 		EventId:         "",
 		UserId:          user.ID,
@@ -340,7 +345,7 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 		IsNewUser:       false,
 		Name:            U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED,
 		CustomerEventId: new(string),
-		EventProperties: campCreatedProperties,
+		EventProperties: eventProperties,
 		UserProperties:  map[string]interface{}{},
 		Timestamp:       timestamp,
 		ProjectId:       0,
@@ -357,10 +362,6 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 
 	// Event 6 : Campaign Member Updated
 	timestamp = timestamp - 10000
-	campUpdatedProperties := map[string]interface{}{
-		"$salesforce_campaign_name":     "Campaign Name",
-		model.EP_SFCampaignMemberStatus: "CurrentStatus",
-	}
 	trackPayload = SDK.TrackPayload{
 		EventId:         "",
 		UserId:          user.ID,
@@ -368,7 +369,7 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 		IsNewUser:       false,
 		Name:            U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED,
 		CustomerEventId: new(string),
-		EventProperties: campUpdatedProperties,
+		EventProperties: eventProperties,
 		UserProperties:  map[string]interface{}{},
 		Timestamp:       timestamp,
 		ProjectId:       0,
@@ -383,7 +384,155 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 	assert.Empty(t, response.UserId)
 	assert.Equal(t, http.StatusOK, status)
 
-	// Event 7 : Random Event
+	// Event 7 : Hubspot Form Submission
+	timestamp = timestamp - 10000
+	eventProperties[U.EP_HUBSPOT_FORM_SUBMISSION_TIMESTAMP] = timestamp
+	trackPayload = SDK.TrackPayload{
+		EventId:         "",
+		UserId:          user.ID,
+		CreateUser:      false,
+		IsNewUser:       false,
+		Name:            U.EVENT_NAME_HUBSPOT_CONTACT_FORM_SUBMISSION,
+		CustomerEventId: new(string),
+		EventProperties: eventProperties,
+		UserProperties:  map[string]interface{}{},
+		Timestamp:       timestamp,
+		ProjectId:       0,
+		Auto:            false,
+		ClientIP:        "",
+		UserAgent:       "",
+		SmartEventType:  "",
+		RequestSource:   model.UserSourceSalesforce,
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
+	assert.NotNil(t, response.EventId)
+	assert.Empty(t, response.UserId)
+	assert.Equal(t, http.StatusOK, status)
+
+	// Event 8 : Engagement Email
+	timestamp = timestamp - 10000
+	eventProperties[U.EP_HUBSPOT_ENGAGEMENT_TIMESTAMP] = timestamp
+	trackPayload = SDK.TrackPayload{
+		EventId:         "",
+		UserId:          user.ID,
+		CreateUser:      false,
+		IsNewUser:       false,
+		Name:            U.EVENT_NAME_HUBSPOT_ENGAGEMENT_EMAIL,
+		CustomerEventId: new(string),
+		EventProperties: eventProperties,
+		UserProperties:  map[string]interface{}{},
+		Timestamp:       timestamp,
+		ProjectId:       0,
+		Auto:            false,
+		ClientIP:        "",
+		UserAgent:       "",
+		SmartEventType:  "",
+		RequestSource:   model.UserSourceSalesforce,
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
+	assert.NotNil(t, response.EventId)
+	assert.Empty(t, response.UserId)
+	assert.Equal(t, http.StatusOK, status)
+
+	// Event 9 : Engagement Meeting Created
+	timestamp = timestamp - 10000
+	trackPayload = SDK.TrackPayload{
+		EventId:         "",
+		UserId:          user.ID,
+		CreateUser:      false,
+		IsNewUser:       false,
+		Name:            U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_CREATED,
+		CustomerEventId: new(string),
+		EventProperties: eventProperties,
+		UserProperties:  map[string]interface{}{},
+		Timestamp:       timestamp,
+		ProjectId:       0,
+		Auto:            false,
+		ClientIP:        "",
+		UserAgent:       "",
+		SmartEventType:  "",
+		RequestSource:   model.UserSourceSalesforce,
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
+	assert.NotNil(t, response.EventId)
+	assert.Empty(t, response.UserId)
+	assert.Equal(t, http.StatusOK, status)
+
+	// Event 10 : Engagement Meeting Updated
+	timestamp = timestamp - 10000
+	trackPayload = SDK.TrackPayload{
+		EventId:         "",
+		UserId:          user.ID,
+		CreateUser:      false,
+		IsNewUser:       false,
+		Name:            U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_UPDATED,
+		CustomerEventId: new(string),
+		EventProperties: eventProperties,
+		UserProperties:  map[string]interface{}{},
+		Timestamp:       timestamp,
+		ProjectId:       0,
+		Auto:            false,
+		ClientIP:        "",
+		UserAgent:       "",
+		SmartEventType:  "",
+		RequestSource:   model.UserSourceSalesforce,
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
+	assert.NotNil(t, response.EventId)
+	assert.Empty(t, response.UserId)
+	assert.Equal(t, http.StatusOK, status)
+
+	// Event 11 : Engagement Call Created
+	timestamp = timestamp - 10000
+	eventProperties[U.EP_HUBSPOT_ENGAGEMENT_TIMESTAMP] = timestamp
+	trackPayload = SDK.TrackPayload{
+		EventId:         "",
+		UserId:          user.ID,
+		CreateUser:      false,
+		IsNewUser:       false,
+		Name:            U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_CREATED,
+		CustomerEventId: new(string),
+		EventProperties: eventProperties,
+		UserProperties:  map[string]interface{}{},
+		Timestamp:       timestamp,
+		ProjectId:       0,
+		Auto:            false,
+		ClientIP:        "",
+		UserAgent:       "",
+		SmartEventType:  "",
+		RequestSource:   model.UserSourceSalesforce,
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
+	assert.NotNil(t, response.EventId)
+	assert.Empty(t, response.UserId)
+	assert.Equal(t, http.StatusOK, status)
+
+	// Event 12 : Engagement Call Updated
+	timestamp = timestamp - 10000
+	eventProperties[U.EP_HUBSPOT_ENGAGEMENT_TIMESTAMP] = timestamp
+	trackPayload = SDK.TrackPayload{
+		EventId:         "",
+		UserId:          user.ID,
+		CreateUser:      false,
+		IsNewUser:       false,
+		Name:            U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_UPDATED,
+		CustomerEventId: new(string),
+		EventProperties: eventProperties,
+		UserProperties:  map[string]interface{}{},
+		Timestamp:       timestamp,
+		ProjectId:       0,
+		Auto:            false,
+		ClientIP:        "",
+		UserAgent:       "",
+		SmartEventType:  "",
+		RequestSource:   model.UserSourceSalesforce,
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
+	assert.NotNil(t, response.EventId)
+	assert.Empty(t, response.UserId)
+	assert.Equal(t, http.StatusOK, status)
+
+	// Event 13 : Random Event
 	timestamp = timestamp - 10000
 	randomProperties := map[string]interface{}{}
 	trackPayload = SDK.TrackPayload{
@@ -417,14 +566,6 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 	if isAnonymous == "true" {
 		userId = user.ID
 	}
-	eventNamePropertiesMap := map[string][]string{
-		U.EVENT_NAME_SESSION:                           {U.EP_PAGE_COUNT, U.EP_CHANNEL, U.EP_CAMPAIGN, U.SP_SESSION_TIME, U.EP_TIMESTAMP, U.EP_REFERRER_URL},
-		U.EVENT_NAME_FORM_SUBMITTED:                    {U.EP_FORM_NAME, U.EP_PAGE_URL, U.EP_TIMESTAMP},
-		U.EVENT_NAME_OFFLINE_TOUCH_POINT:               {U.EP_CHANNEL, U.EP_CAMPAIGN, U.EP_TIMESTAMP},
-		U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED: {"$salesforce_campaign_name", model.EP_SFCampaignMemberStatus, U.EP_TIMESTAMP},
-		U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED: {"$salesforce_campaign_name", model.EP_SFCampaignMemberStatus, U.EP_TIMESTAMP},
-	}
-	pageViewPropsList := []string{U.EP_IS_PAGE_VIEW, U.EP_PAGE_SPENT_TIME, U.EP_PAGE_SCROLL_PERCENT, U.EP_PAGE_LOAD_TIME}
 
 	t.Run("Success", func(t *testing.T) {
 		w := sendGetProfileUserDetailsRequest(r, project.ID, agent, userId, isAnonymous)
@@ -445,16 +586,27 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 		assert.Condition(t, func() bool { return len(resp.GroupInfos) <= 4 })
 		assert.NotNil(t, resp.UserActivity)
 		assert.Condition(t, func() bool {
-			if resp.UserActivity == nil {
-				return false
-			}
 			for i, activity := range resp.UserActivity {
 				assert.NotNil(t, activity.EventName)
 				assert.NotNil(t, activity.DisplayName)
+				eventFromMap, eventExistsInMap := model.HOVER_EVENTS_NAME_PROPERTY_MAP[activity.EventName]
 				if activity.EventName == randomURL {
 					assert.Equal(t, activity.DisplayName, "Page View")
-				} else {
-					assert.Equal(t, U.STANDARD_EVENTS_DISPLAY_NAMES[activity.EventName], activity.DisplayName)
+				} else if eventExistsInMap {
+					if activity.EventName == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED {
+						assert.Equal(t, activity.DisplayName, fmt.Sprintf("Added to %s", eventProperties[U.EP_SALESFORCE_CAMPAIGN_NAME]))
+					} else if activity.EventName == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED {
+						assert.Equal(t, activity.DisplayName, fmt.Sprintf("Interacted with %s", eventProperties[U.EP_SALESFORCE_CAMPAIGN_NAME]))
+					} else if activity.EventName == U.EVENT_NAME_HUBSPOT_CONTACT_FORM_SUBMISSION {
+						assert.Equal(t, activity.DisplayName, fmt.Sprintf("%s", eventProperties[U.EP_HUBSPOT_FORM_SUBMISSION_TITLE]))
+					} else if activity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_EMAIL {
+						assert.Equal(t, activity.DisplayName, fmt.Sprintf("%s: %s", eventProperties[U.EP_HUBSPOT_ENGAGEMENT_TYPE], eventProperties[U.EP_HUBSPOT_ENGAGEMENT_SUBJECT]))
+					} else if activity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_CREATED ||
+						activity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_UPDATED ||
+						activity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_CREATED ||
+						activity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_UPDATED {
+						assert.Equal(t, activity.DisplayName, fmt.Sprintf("%s", eventProperties[U.EP_HUBSPOT_ENGAGEMENT_TITLE]))
+					}
 				}
 				assert.NotNil(t, activity.Timestamp)
 				assert.Condition(t, func() bool { return activity.Timestamp <= uint64(time.Now().UTC().Unix()) })
@@ -464,29 +616,24 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 					}
 				}
 				assert.Condition(t, func() bool {
-					_, eventExistsInMap := eventNamePropertiesMap[activity.EventName]
-					if activity.DisplayName == "Page View" {
-						assert.NotNil(t, activity.Properties)
-						properties, err := U.DecodePostgresJsonb(activity.Properties)
-						assert.Nil(t, err)
-						for key := range *properties {
-							sort.Strings(pageViewPropsList)
-							i := sort.SearchStrings(pageViewPropsList, key)
-							assert.Condition(t, func() bool { return i < len(pageViewPropsList) })
+					if activity.DisplayName == "Page View" || eventExistsInMap {
+						var lookInProps []string
+						if activity.DisplayName == "Page View" {
+							lookInProps = model.PAGE_VIEW_HOVERPROPS_LIST
+						} else if eventExistsInMap {
+							lookInProps = eventFromMap
 						}
-					} else if eventExistsInMap {
 						assert.NotNil(t, activity.Properties)
 						properties, err := U.DecodePostgresJsonb(activity.Properties)
 						assert.Nil(t, err)
 						for key := range *properties {
-							sort.Strings(eventNamePropertiesMap[activity.EventName])
-							i := sort.SearchStrings(eventNamePropertiesMap[activity.EventName], key)
-							assert.Condition(t, func() bool { return i < len(eventNamePropertiesMap[activity.EventName]) })
+							sort.Strings(lookInProps)
+							i := sort.SearchStrings(lookInProps, key)
+							assert.Condition(t, func() bool { return i < len(lookInProps) })
 						}
 					}
 					return true
 				})
-
 			}
 			return true
 		})
@@ -733,17 +880,42 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, status)
 	assert.NotNil(t, group1)
 
-	// 6  Associated Users
+	// 10  Associated Users
 	m := map[string]string{"$name": "Some Name"}
 	userProps, err := json.Marshal(m)
 	if err != nil {
 		log.WithError(err).Fatal("Marshal error.")
 	}
 	properties = postgres.Jsonb{RawMessage: userProps}
+	// event properties map
+	eventProperties := map[string]interface{}{
+		U.EP_PAGE_COUNT:                              5,
+		U.EP_CHANNEL:                                 "ChannelName",
+		U.EP_CAMPAIGN:                                "CampaignName",
+		U.SP_SPENT_TIME:                              120,
+		U.EP_REFERRER_URL:                            RandomURL(),
+		U.EP_FORM_NAME:                               "Form Name",
+		U.EP_PAGE_URL:                                RandomURL(),
+		U.EP_SALESFORCE_CAMPAIGN_TYPE:                "Some Type",
+		U.EP_SALESFORCE_CAMPAIGNMEMBER_STATUS:        "CurrentStatus",
+		U.EP_HUBSPOT_ENGAGEMENT_SOURCE:               "Some Engagement Source",
+		U.EP_HUBSPOT_ENGAGEMENT_TYPE:                 "Some Engagement Type",
+		U.EP_HUBSPOT_ENGAGEMENT_MEETINGOUTCOME:       "Some Outcome",
+		U.EP_HUBSPOT_ENGAGEMENT_STARTTIME:            "Start time",
+		U.EP_HUBSPOT_ENGAGEMENT_DURATIONMILLISECONDS: 10000000000,
+		U.EP_HUBSPOT_FORM_SUBMISSION_FORMTYPE:        "Some HS Form Submission Type",
+		U.EP_HUBSPOT_FORM_SUBMISSION_PAGEURL:         RandomURL(),
+		U.EP_HUBSPOT_ENGAGEMENT_ENDTIME:              "End Time",
+		U.EP_SALESFORCE_CAMPAIGN_NAME:                "Some Salesforce Campaign Name",
+		U.EP_HUBSPOT_FORM_SUBMISSION_TITLE:           "Some form submission title",
+		U.EP_HUBSPOT_ENGAGEMENT_SUBJECT:              "Some Engagement Subject",
+		U.EP_HUBSPOT_ENGAGEMENT_TITLE:                "Some Engagement Title",
+	}
+	randomURL := RandomURL()
 	customerEmail = "@example.com"
 	boolTrue = false
 	users := make([]model.User, 0)
-	numUsers := 30
+	numUsers := 10
 	for i := 1; i <= numUsers; i++ {
 		var customerUserID string
 		if i < 6 || i > 10 {
@@ -766,9 +938,9 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		user, errCode := store.GetStore().GetUser(project.ID, associatedUserId)
 		assert.Equal(t, http.StatusFound, errCode)
 		users = append(users, *user)
+
 		// Event 1 : Page View
 		timestamp := U.UnixTimeBeforeDuration(1 * time.Hour)
-		randomURL := RandomURL()
 		trackPayload := SDK.TrackPayload{
 			EventId:         "",
 			UserId:          associatedUserId,
@@ -792,13 +964,6 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 
 		// Event 2 : Web Session
 		timestamp = timestamp - 10000
-		sessionProperties := map[string]interface{}{
-			U.EP_PAGE_COUNT:   "5",
-			U.EP_CHANNEL:      "ChannelName",
-			U.EP_CAMPAIGN:     "CampaignName",
-			U.SP_SESSION_TIME: "120",
-			U.EP_REFERRER_URL: RandomURL(),
-		}
 		trackPayload = SDK.TrackPayload{
 			EventId:         "",
 			UserId:          user.ID,
@@ -806,7 +971,7 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 			IsNewUser:       false,
 			Name:            U.EVENT_NAME_SESSION,
 			CustomerEventId: new(string),
-			EventProperties: sessionProperties,
+			EventProperties: eventProperties,
 			UserProperties:  map[string]interface{}{},
 			Timestamp:       timestamp,
 			ProjectId:       0,
@@ -823,10 +988,6 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 
 		// Event 3 : Form Submit
 		timestamp = timestamp - 10000
-		formSubmitProperties := map[string]interface{}{
-			U.EP_FORM_NAME: "FormName",
-			U.EP_PAGE_URL:  RandomURL(),
-		}
 		trackPayload = SDK.TrackPayload{
 			EventId:         "",
 			UserId:          user.ID,
@@ -834,7 +995,7 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 			IsNewUser:       false,
 			Name:            U.EVENT_NAME_FORM_SUBMITTED,
 			CustomerEventId: new(string),
-			EventProperties: formSubmitProperties,
+			EventProperties: eventProperties,
 			UserProperties:  map[string]interface{}{},
 			Timestamp:       timestamp,
 			ProjectId:       0,
@@ -851,10 +1012,6 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 
 		// Event 4 : Offline Touchpoint
 		timestamp = timestamp - 10000
-		touchpointProperties := map[string]interface{}{
-			U.EP_CHANNEL:  "ChannelName",
-			U.EP_CAMPAIGN: "CampaignName",
-		}
 		trackPayload = SDK.TrackPayload{
 			EventId:         "",
 			UserId:          user.ID,
@@ -862,7 +1019,7 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 			IsNewUser:       false,
 			Name:            U.EVENT_NAME_OFFLINE_TOUCH_POINT,
 			CustomerEventId: new(string),
-			EventProperties: touchpointProperties,
+			EventProperties: eventProperties,
 			UserProperties:  map[string]interface{}{},
 			Timestamp:       timestamp,
 			ProjectId:       0,
@@ -879,10 +1036,6 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 
 		// Event 5 : Campaign Member Created
 		timestamp = timestamp - 10000
-		campCreatedProperties := map[string]interface{}{
-			"$salesforce_campaign_name":     "Campaign Name",
-			model.EP_SFCampaignMemberStatus: "CurrentStatus",
-		}
 		trackPayload = SDK.TrackPayload{
 			EventId:         "",
 			UserId:          user.ID,
@@ -890,7 +1043,7 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 			IsNewUser:       false,
 			Name:            U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED,
 			CustomerEventId: new(string),
-			EventProperties: campCreatedProperties,
+			EventProperties: eventProperties,
 			UserProperties:  map[string]interface{}{},
 			Timestamp:       timestamp,
 			ProjectId:       0,
@@ -905,7 +1058,179 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		assert.Empty(t, response.UserId)
 		assert.Equal(t, http.StatusOK, status)
 
-		// Event 6 : Random Event
+		// Event 6 : Campaign Member Updated
+		timestamp = timestamp - 10000
+		trackPayload = SDK.TrackPayload{
+			EventId:         "",
+			UserId:          user.ID,
+			CreateUser:      false,
+			IsNewUser:       false,
+			Name:            U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED,
+			CustomerEventId: new(string),
+			EventProperties: eventProperties,
+			UserProperties:  map[string]interface{}{},
+			Timestamp:       timestamp,
+			ProjectId:       0,
+			Auto:            false,
+			ClientIP:        "",
+			UserAgent:       "",
+			SmartEventType:  "",
+			RequestSource:   model.UserSourceSalesforce,
+		}
+		status, response = SDK.Track(projectID, &trackPayload, false, SDK.SourceJSSDK, "")
+		assert.NotNil(t, response.EventId)
+		assert.Empty(t, response.UserId)
+		assert.Equal(t, http.StatusOK, status)
+
+		// Event 7 : Hubspot Form Submission
+		timestamp = timestamp - 10000
+		eventProperties[U.EP_HUBSPOT_FORM_SUBMISSION_TIMESTAMP] = timestamp
+		trackPayload = SDK.TrackPayload{
+			EventId:         "",
+			UserId:          user.ID,
+			CreateUser:      false,
+			IsNewUser:       false,
+			Name:            U.EVENT_NAME_HUBSPOT_CONTACT_FORM_SUBMISSION,
+			CustomerEventId: new(string),
+			EventProperties: eventProperties,
+			UserProperties:  map[string]interface{}{},
+			Timestamp:       timestamp,
+			ProjectId:       0,
+			Auto:            false,
+			ClientIP:        "",
+			UserAgent:       "",
+			SmartEventType:  "",
+			RequestSource:   model.UserSourceSalesforce,
+		}
+		status, response = SDK.Track(projectID, &trackPayload, false, SDK.SourceJSSDK, "")
+		assert.NotNil(t, response.EventId)
+		assert.Empty(t, response.UserId)
+		assert.Equal(t, http.StatusOK, status)
+
+		// Event 8 : Engagement Email
+		timestamp = timestamp - 10000
+		eventProperties[U.EP_HUBSPOT_ENGAGEMENT_TIMESTAMP] = timestamp
+		trackPayload = SDK.TrackPayload{
+			EventId:         "",
+			UserId:          user.ID,
+			CreateUser:      false,
+			IsNewUser:       false,
+			Name:            U.EVENT_NAME_HUBSPOT_ENGAGEMENT_EMAIL,
+			CustomerEventId: new(string),
+			EventProperties: eventProperties,
+			UserProperties:  map[string]interface{}{},
+			Timestamp:       timestamp,
+			ProjectId:       0,
+			Auto:            false,
+			ClientIP:        "",
+			UserAgent:       "",
+			SmartEventType:  "",
+			RequestSource:   model.UserSourceSalesforce,
+		}
+		status, response = SDK.Track(projectID, &trackPayload, false, SDK.SourceJSSDK, "")
+		assert.NotNil(t, response.EventId)
+		assert.Empty(t, response.UserId)
+		assert.Equal(t, http.StatusOK, status)
+
+		// Event 9 : Engagement Meeting Created
+		timestamp = timestamp - 10000
+		trackPayload = SDK.TrackPayload{
+			EventId:         "",
+			UserId:          user.ID,
+			CreateUser:      false,
+			IsNewUser:       false,
+			Name:            U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_CREATED,
+			CustomerEventId: new(string),
+			EventProperties: eventProperties,
+			UserProperties:  map[string]interface{}{},
+			Timestamp:       timestamp,
+			ProjectId:       0,
+			Auto:            false,
+			ClientIP:        "",
+			UserAgent:       "",
+			SmartEventType:  "",
+			RequestSource:   model.UserSourceSalesforce,
+		}
+		status, response = SDK.Track(projectID, &trackPayload, false, SDK.SourceJSSDK, "")
+		assert.NotNil(t, response.EventId)
+		assert.Empty(t, response.UserId)
+		assert.Equal(t, http.StatusOK, status)
+
+		// Event 10 : Engagement Meeting Updated
+		timestamp = timestamp - 10000
+		trackPayload = SDK.TrackPayload{
+			EventId:         "",
+			UserId:          user.ID,
+			CreateUser:      false,
+			IsNewUser:       false,
+			Name:            U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_UPDATED,
+			CustomerEventId: new(string),
+			EventProperties: eventProperties,
+			UserProperties:  map[string]interface{}{},
+			Timestamp:       timestamp,
+			ProjectId:       0,
+			Auto:            false,
+			ClientIP:        "",
+			UserAgent:       "",
+			SmartEventType:  "",
+			RequestSource:   model.UserSourceSalesforce,
+		}
+		status, response = SDK.Track(projectID, &trackPayload, false, SDK.SourceJSSDK, "")
+		assert.NotNil(t, response.EventId)
+		assert.Empty(t, response.UserId)
+		assert.Equal(t, http.StatusOK, status)
+
+		// Event 11 : Engagement Call Created
+		timestamp = timestamp - 10000
+		eventProperties[U.EP_HUBSPOT_ENGAGEMENT_TIMESTAMP] = timestamp
+		trackPayload = SDK.TrackPayload{
+			EventId:         "",
+			UserId:          user.ID,
+			CreateUser:      false,
+			IsNewUser:       false,
+			Name:            U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_CREATED,
+			CustomerEventId: new(string),
+			EventProperties: eventProperties,
+			UserProperties:  map[string]interface{}{},
+			Timestamp:       timestamp,
+			ProjectId:       0,
+			Auto:            false,
+			ClientIP:        "",
+			UserAgent:       "",
+			SmartEventType:  "",
+			RequestSource:   model.UserSourceSalesforce,
+		}
+		status, response = SDK.Track(projectID, &trackPayload, false, SDK.SourceJSSDK, "")
+		assert.NotNil(t, response.EventId)
+		assert.Empty(t, response.UserId)
+		assert.Equal(t, http.StatusOK, status)
+
+		// Event 12 : Engagement Call Updated
+		timestamp = timestamp - 10000
+		eventProperties[U.EP_HUBSPOT_ENGAGEMENT_TIMESTAMP] = timestamp
+		trackPayload = SDK.TrackPayload{
+			EventId:         "",
+			UserId:          user.ID,
+			CreateUser:      false,
+			IsNewUser:       false,
+			Name:            U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_UPDATED,
+			CustomerEventId: new(string),
+			EventProperties: eventProperties,
+			UserProperties:  map[string]interface{}{},
+			Timestamp:       timestamp,
+			ProjectId:       0,
+			Auto:            false,
+			ClientIP:        "",
+			UserAgent:       "",
+			SmartEventType:  "",
+			RequestSource:   model.UserSourceSalesforce,
+		}
+		status, response = SDK.Track(projectID, &trackPayload, false, SDK.SourceJSSDK, "")
+		assert.NotNil(t, response.EventId)
+		assert.Empty(t, response.UserId)
+		assert.Equal(t, http.StatusOK, status)
+
+		// Event 13 : Random Event
 		timestamp = timestamp - 10000
 		randomProperties := map[string]interface{}{}
 		trackPayload = SDK.TrackPayload{
@@ -913,7 +1238,7 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 			UserId:          user.ID,
 			CreateUser:      false,
 			IsNewUser:       false,
-			Name:            U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED,
+			Name:            U.EVENT_NAME_HUBSPOT_CONTACT_CREATED,
 			CustomerEventId: new(string),
 			EventProperties: randomProperties,
 			UserProperties:  map[string]interface{}{},
@@ -932,14 +1257,6 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 
 	}
 	assert.Equal(t, len(users), numUsers)
-	eventNamePropertiesMap := map[string][]string{
-		U.EVENT_NAME_SESSION:                           {U.EP_PAGE_COUNT, U.EP_CHANNEL, U.EP_CAMPAIGN, U.SP_SESSION_TIME, U.EP_TIMESTAMP, U.EP_REFERRER_URL},
-		U.EVENT_NAME_FORM_SUBMITTED:                    {U.EP_FORM_NAME, U.EP_PAGE_URL, U.EP_TIMESTAMP},
-		U.EVENT_NAME_OFFLINE_TOUCH_POINT:               {U.EP_CHANNEL, U.EP_CAMPAIGN, U.EP_TIMESTAMP},
-		U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED: {"$salesforce_campaign_name", model.EP_SFCampaignMemberStatus, U.EP_TIMESTAMP},
-		U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED: {"$salesforce_campaign_name", model.EP_SFCampaignMemberStatus, U.EP_TIMESTAMP},
-	}
-	pageViewPropsList := []string{U.EP_IS_PAGE_VIEW, U.EP_PAGE_SPENT_TIME, U.EP_PAGE_SCROLL_PERCENT, U.EP_PAGE_LOAD_TIME}
 
 	t.Run("Success", func(t *testing.T) {
 		w := sendGetProfileAccountDetailsRequest(r, projectID, agent, accountID)
@@ -951,18 +1268,37 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		assert.Contains(t, resp.Name, "Freshworks")
 		assert.Equal(t, resp.Country, "India")
 		assert.Equal(t, resp.Industry, "Freshworks-HS")
-		assert.Equal(t, resp.NumberOfUsers, uint64(26))
-		// assert.Equal(t, resp.NumberOfEmployees, uint64(5000))
-		assert.Equal(t, len(resp.AccountTimeline), 25)
+		assert.Equal(t, resp.NumberOfUsers, uint64(9))
+		assert.Equal(t, len(resp.AccountTimeline), 9)
 		assert.Condition(t, func() bool {
 			assert.Condition(t, func() bool { return len(resp.AccountTimeline) > 0 })
 			for _, userTimeline := range resp.AccountTimeline {
+
 				assert.Condition(t, func() bool {
 					assert.NotNil(t, userTimeline.UserId)
 					assert.NotNil(t, userTimeline.UserName)
 					for i, activity := range userTimeline.UserActivities {
 						assert.NotNil(t, activity.EventName)
 						assert.NotNil(t, activity.DisplayName)
+						eventFromMap, eventExistsInMap := model.HOVER_EVENTS_NAME_PROPERTY_MAP[activity.EventName]
+						if activity.EventName == randomURL {
+							assert.Equal(t, activity.DisplayName, "Page View")
+						} else if eventExistsInMap {
+							if activity.EventName == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED {
+								assert.Equal(t, activity.DisplayName, fmt.Sprintf("Added to %s", eventProperties[U.EP_SALESFORCE_CAMPAIGN_NAME]))
+							} else if activity.EventName == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED {
+								assert.Equal(t, activity.DisplayName, fmt.Sprintf("Interacted with %s", eventProperties[U.EP_SALESFORCE_CAMPAIGN_NAME]))
+							} else if activity.EventName == U.EVENT_NAME_HUBSPOT_CONTACT_FORM_SUBMISSION {
+								assert.Equal(t, activity.DisplayName, fmt.Sprintf("%s", eventProperties[U.EP_HUBSPOT_FORM_SUBMISSION_TITLE]))
+							} else if activity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_EMAIL {
+								assert.Equal(t, activity.DisplayName, fmt.Sprintf("%s: %s", eventProperties[U.EP_HUBSPOT_ENGAGEMENT_TYPE], eventProperties[U.EP_HUBSPOT_ENGAGEMENT_SUBJECT]))
+							} else if activity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_CREATED ||
+								activity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_UPDATED ||
+								activity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_CREATED ||
+								activity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_UPDATED {
+								assert.Equal(t, activity.DisplayName, fmt.Sprintf("%s", eventProperties[U.EP_HUBSPOT_ENGAGEMENT_TITLE]))
+							}
+						}
 						assert.NotNil(t, activity.Timestamp)
 						assert.Condition(t, func() bool { return activity.Timestamp <= uint64(time.Now().UTC().Unix()) })
 						if i > 1 {
@@ -970,27 +1306,25 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 								return false
 							}
 						}
-						assert.NotNil(t, activity.Properties)
 						assert.Condition(t, func() bool {
-							properties, err := U.DecodePostgresJsonb(activity.Properties)
-							_, eventExistsInMap := eventNamePropertiesMap[activity.EventName]
-							assert.Nil(t, err)
-							if activity.DisplayName == "Page View" {
-								for key := range *properties {
-									sort.Strings(pageViewPropsList)
-									i := sort.SearchStrings(pageViewPropsList, key)
-									assert.Condition(t, func() bool { return i < len(pageViewPropsList) })
+							if activity.DisplayName == "Page View" || eventExistsInMap {
+								var lookInProps []string
+								if activity.DisplayName == "Page View" {
+									lookInProps = model.PAGE_VIEW_HOVERPROPS_LIST
+								} else if eventExistsInMap {
+									lookInProps = eventFromMap
 								}
-							} else if eventExistsInMap {
+								assert.NotNil(t, activity.Properties)
+								properties, err := U.DecodePostgresJsonb(activity.Properties)
+								assert.Nil(t, err)
 								for key := range *properties {
-									sort.Strings(eventNamePropertiesMap[activity.EventName])
-									i := sort.SearchStrings(eventNamePropertiesMap[activity.EventName], key)
-									assert.Condition(t, func() bool { return i < len(eventNamePropertiesMap[activity.EventName]) })
+									sort.Strings(lookInProps)
+									i := sort.SearchStrings(lookInProps, key)
+									assert.Condition(t, func() bool { return i < len(lookInProps) })
 								}
 							}
 							return true
 						})
-
 					}
 					return true
 				})

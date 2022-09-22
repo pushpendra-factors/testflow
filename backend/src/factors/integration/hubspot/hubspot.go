@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -48,6 +49,7 @@ type ContactIdentity struct {
 	Type      string      `json:"type"`
 	Value     interface{} `json:"value"`
 	IsPrimary bool        `json:"is-primary"`
+	Timestamp int64       `json:"timestamp"`
 }
 
 // ContactIdentityProfile for contact
@@ -198,7 +200,7 @@ func syncContactFormSubmissions(project *model.Project, userId string, document 
 		return
 	}
 
-	enProperties, _, err := GetContactProperties(project.ID, document)
+	enProperties, _, _, _, err := GetContactProperties(project.ID, document)
 	if err != nil {
 		return
 	}
@@ -319,15 +321,15 @@ func GetHubspotPropertiesByDataType(projectId int64, docTypeAPIObjects *map[stri
 	return propertiesByObjectType, nil
 }
 
-func GetContactProperties(projectID int64, document *model.HubspotDocument) (*map[string]interface{}, *map[string]interface{}, error) {
+func GetContactProperties(projectID int64, document *model.HubspotDocument) (*map[string]interface{}, *map[string]interface{}, []string, string, error) {
 	if document.Type != model.HubspotDocumentTypeContact {
-		return nil, nil, errors.New("invalid type")
+		return nil, nil, nil, "", errors.New("invalid type")
 	}
 
 	var contact Contact
 	err := json.Unmarshal((document.Value).RawMessage, &contact)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, "", err
 	}
 
 	enrichedProperties := make(map[string]interface{}, 0)
@@ -341,13 +343,35 @@ func GetContactProperties(projectID int64, document *model.HubspotDocument) (*ma
 				model.HubspotDocumentTypeNameContact,
 				key,
 			)
-			if _, exists := enrichedProperties[enkey]; !exists {
-				enrichedProperties[enkey] = contact.IdentityProfiles[ipi].Identities[idi].Value
+
+			if !C.AllowIdentificationOverwriteUsingSource(projectID) {
+				if _, exists := enrichedProperties[enkey]; !exists {
+					enrichedProperties[enkey] = contact.IdentityProfiles[ipi].Identities[idi].Value
+				}
+
+				if _, exists := properties[key]; !exists {
+					properties[key] = contact.IdentityProfiles[ipi].Identities[idi].Value
+				}
+				continue
 			}
 
-			if _, exists := properties[key]; !exists {
+			if key != "EMAIL" {
+				if _, exists := enrichedProperties[enkey]; !exists {
+					enrichedProperties[enkey] = contact.IdentityProfiles[ipi].Identities[idi].Value
+				}
+
+				if _, exists := properties[key]; !exists {
+					properties[key] = contact.IdentityProfiles[ipi].Identities[idi].Value
+				}
+				continue
+			}
+
+			// store primary email in contact properties
+			if _, exists := enrichedProperties[enkey]; !exists || contact.IdentityProfiles[ipi].Identities[idi].IsPrimary {
+				enrichedProperties[enkey] = contact.IdentityProfiles[ipi].Identities[idi].Value
 				properties[key] = contact.IdentityProfiles[ipi].Identities[idi].Value
 			}
+
 		}
 	}
 
@@ -372,7 +396,43 @@ func GetContactProperties(projectID int64, document *model.HubspotDocument) (*ma
 
 	}
 
-	return &enrichedProperties, &properties, nil
+	if C.AllowIdentificationOverwriteUsingSource(projectID) {
+		allIdentities := make([]ContactIdentity, 0)
+		for ipi := range contact.IdentityProfiles {
+			allIdentities = append(allIdentities, contact.IdentityProfiles[ipi].Identities...)
+		}
+
+		sort.Slice(allIdentities, func(i, j int) bool { return allIdentities[i].Timestamp > allIdentities[j].Timestamp })
+
+		secondaryEmails := make([]string, 0)
+		primaryEmail := ""
+		for i := range allIdentities {
+			if allIdentities[i].Type != "EMAIL" {
+				continue
+			}
+
+			if allIdentities[i].IsPrimary {
+				primaryEmail = U.GetPropertyValueAsString(allIdentities[i].Value)
+				continue
+			}
+
+			secondaryEmails = append(secondaryEmails, U.GetPropertyValueAsString(allIdentities[i].Value))
+		}
+
+		emailKey := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot,
+			model.HubspotDocumentTypeNameContact, "email")
+		if primaryEmail != "" {
+			enrichedProperties[emailKey] = primaryEmail
+			properties["EMAIL"] = primaryEmail
+		} else if len(secondaryEmails) > 0 {
+			enrichedProperties[emailKey] = secondaryEmails[0]
+			properties["EMAIL"] = secondaryEmails[0]
+		}
+
+		return &enrichedProperties, &properties, secondaryEmails, primaryEmail, nil
+	}
+
+	return &enrichedProperties, &properties, nil, "", nil
 }
 
 func getCustomerUserIDFromProperties(projectID int64, properties map[string]interface{}) (string, string) {
@@ -391,11 +451,12 @@ func getCustomerUserIDFromProperties(projectID int64, properties map[string]inte
 		model.HubspotDocumentTypeNameContact, "phone")]
 	if phoneInt != nil {
 		phone := U.GetPropertyValueAsString(phoneInt)
-		identifiedPhone, _ := store.GetStore().GetUserIdentificationPhoneNumber(projectID, phone)
-		if identifiedPhone != "" {
-			return "phone", identifiedPhone
+		if U.IsValidPhone(phone) {
+			identifiedPhone, _ := store.GetStore().GetUserIdentificationPhoneNumber(projectID, phone)
+			if identifiedPhone != "" {
+				return "phone", identifiedPhone
+			}
 		}
-
 	}
 
 	// other possible phone keys.
@@ -403,9 +464,11 @@ func getCustomerUserIDFromProperties(projectID int64, properties map[string]inte
 		hasPhone := strings.Index(key, "phone")
 		if hasPhone > -1 {
 			phone := U.GetPropertyValueAsString(properties[key])
-			identifiedPhone, _ := store.GetStore().GetUserIdentificationPhoneNumber(projectID, phone)
-			if identifiedPhone != "" {
-				return "phone", identifiedPhone
+			if U.IsValidPhone(phone) {
+				identifiedPhone, _ := store.GetStore().GetUserIdentificationPhoneNumber(projectID, phone)
+				if identifiedPhone != "" {
+					return "phone", identifiedPhone
+				}
 			}
 		}
 	}
@@ -464,7 +527,7 @@ func GetHubspotSmartEventPayload(projectID int64, eventName, docID string,
 		} else {
 
 			if docType == model.HubspotDocumentTypeContact {
-				_, prevProperties, err = GetContactProperties(projectID, prevDoc)
+				_, prevProperties, _, _, err = GetContactProperties(projectID, prevDoc)
 			}
 			if docType == model.HubspotDocumentTypeDeal {
 				_, prevProperties, err = getDealProperties(projectID, prevDoc)
@@ -915,10 +978,14 @@ func syncContact(project *model.Project, document *model.HubspotDocument, hubspo
 		}
 	}
 
-	enProperties, properties, err := GetContactProperties(project.ID, document)
+	enProperties, properties, secondaryEmails, primaryEmail, err := GetContactProperties(project.ID, document)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properites from hubspot contact.")
 		return http.StatusInternalServerError
+	}
+
+	if primaryEmail == "" && len(secondaryEmails) > 0 {
+		primaryEmail = secondaryEmails[0]
 	}
 
 	leadGUID, exists := (*enProperties)[model.UserPropertyHubspotContactLeadGUID]
@@ -946,8 +1013,38 @@ func syncContact(project *model.Project, document *model.HubspotDocument, hubspo
 		model.UserPropertyHubspotContactLeadGUID, leadGUID)
 
 	_, customerUserID := getCustomerUserIDFromProperties(project.ID, *enProperties)
+
+	emails := []string{}
+	var userByCustomerUserID map[string]string
+	if C.AllowIdentificationOverwriteUsingSource(project.ID) {
+		emails = append([]string{primaryEmail}, secondaryEmails...)
+
+		var status int
+		userByCustomerUserID, status = store.GetStore().GetExistingUserByCustomerUserID(project.ID, emails, model.UserSourceWeb)
+		if status != http.StatusNotFound && status != http.StatusFound {
+			logCtx.Error("Failed to get users by customer user id.")
+			return http.StatusInternalServerError
+		}
+	}
+
 	var eventID, userID string
 	if document.Action == model.HubspotDocumentActionCreated {
+
+		if C.AllowIdentificationOverwriteUsingSource(project.ID) {
+			for i := range emails {
+				for _, existingEmail := range userByCustomerUserID {
+					if existingEmail == emails[i] {
+						customerUserID = existingEmail
+						break
+					}
+				}
+
+				if i == len(emails)-1 {
+					customerUserID = emails[0]
+				}
+			}
+
+		}
 
 		createdUserID, status := store.GetStore().CreateUser(&model.User{
 			ProjectId:      project.ID,
@@ -961,6 +1058,11 @@ func syncContact(project *model.Project, document *model.HubspotDocument, hubspo
 
 		trackPayload.Name = U.EVENT_NAME_HUBSPOT_CONTACT_CREATED
 		trackPayload.UserId = createdUserID
+
+		if C.AllowIdentificationOverwriteUsingSource(project.ID) {
+			// add this user for re-identification, in case new user was created with secondary email
+			userByCustomerUserID[userID] = customerUserID
+		}
 
 		status, response := SDK.Track(project.ID, trackPayload, true, SDK.SourceHubspot, model.HubspotDocumentTypeNameContact)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
@@ -1010,16 +1112,23 @@ func syncContact(project *model.Project, document *model.HubspotDocument, hubspo
 			userID = event.UserId
 		}
 
-		if customerUserID != "" {
-			status, _ := SDK.Identify(project.ID, &SDK.IdentifyPayload{
-				UserId: userID, CustomerUserId: customerUserID, RequestSource: model.UserSourceHubspot}, false)
-			if status != http.StatusOK {
-				logCtx.WithField("customer_user_id", customerUserID).Error(
-					"Failed to identify user on hubspot contact sync.")
-				return http.StatusInternalServerError
+		if !C.AllowIdentificationOverwriteUsingSource(project.ID) {
+			if customerUserID != "" {
+				status, _ := SDK.Identify(project.ID, &SDK.IdentifyPayload{
+					UserId: userID, CustomerUserId: customerUserID, RequestSource: model.UserSourceHubspot}, false)
+				if status != http.StatusOK {
+					logCtx.WithField("customer_user_id", customerUserID).Error(
+						"Failed to identify user on hubspot contact sync.")
+					return http.StatusInternalServerError
+				}
+			} else {
+				logCtx.Warning("Skipped user identification on hubspot contact sync. No customer_user_id on properties.")
 			}
-		} else {
-			logCtx.Warning("Skipped user identification on hubspot contact sync. No customer_user_id on properties.")
+		}
+
+		if C.AllowIdentificationOverwriteUsingSource(project.ID) {
+			// add this user for re-identification, in case new user was created with secondary email
+			userByCustomerUserID[userID] = customerUserID
 		}
 
 		trackPayload.UserId = userID
@@ -1033,6 +1142,33 @@ func syncContact(project *model.Project, document *model.HubspotDocument, hubspo
 	} else {
 		logCtx.Error("Invalid action on hubspot contact sync.")
 		return http.StatusInternalServerError
+	}
+
+	// re-identify all users from web and hubspot with primary email
+	if C.AllowIdentificationOverwriteUsingSource(project.ID) {
+
+		for userID := range userByCustomerUserID {
+			user, status := store.GetStore().GetUserWithoutProperties(project.ID, userID)
+			if status != http.StatusFound {
+				logCtx.WithFields(log.Fields{"err_code": status, "user_id": userID}).Error("Failed to get user from hubspot re-identification.")
+				continue
+			}
+
+			if user.Source != nil && *user.Source != model.UserSourceHubspot && *user.Source != model.UserSourceWeb {
+				continue
+			}
+
+			if user.CustomerUserId == primaryEmail {
+				continue
+			}
+
+			status, _ = SDK.Identify(project.ID, &SDK.IdentifyPayload{
+				UserId: userID, CustomerUserId: primaryEmail, RequestSource: model.UserSourceHubspot}, true)
+			if status != http.StatusOK {
+				logCtx.WithFields(log.Fields{"primary_email": primaryEmail, "user_id": userID}).Error(
+					"Failed to identify user with primary email.")
+			}
+		}
 	}
 
 	var defaultSmartEventTimestamp int64
@@ -1379,7 +1515,7 @@ func filterCheck(rule model.HSTouchPointRule, trackPayload *SDK.TrackPayload, do
 		var prevProperties *map[string]interface{}
 
 		if document.Type == model.HubspotDocumentTypeContact {
-			prevProperties, _, err = GetContactProperties(document.ProjectId, prevDoc)
+			prevProperties, _, _, _, err = GetContactProperties(document.ProjectId, prevDoc)
 		}
 
 		if err != nil {
@@ -2491,7 +2627,7 @@ func syncEngagements(project *model.Project, document *model.HubspotDocument) in
 		}
 
 		propertiesWithEmailOrContact := make(map[string]interface{})
-		enProperties, _, err := GetContactProperties(project.ID, latestContactDocument)
+		enProperties, _, _, _, err := GetContactProperties(project.ID, latestContactDocument)
 		if err != nil {
 			logCtx.WithError(err).Error("can't get contact properties")
 			return http.StatusInternalServerError

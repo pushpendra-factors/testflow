@@ -38,12 +38,14 @@ function ProjectDropdown({
   handleEditClick,
   durationObj,
   handleDurationChange,
-  refreshClicked,
-  setRefreshClicked,
   isPinned = false,
   fetchDemoProject,
   oldestRefreshTime,
-  setOldestRefreshTime
+  setOldestRefreshTime,
+  handleRefreshClick,
+  dashboardRefreshState,
+  onDataLoadSuccess,
+  resetDashboardRefreshState
 }) {
   const [moreOptions, setMoreOptions] = useState(false);
   const [widgetModal, setwidgetModal] = useState(false);
@@ -80,6 +82,7 @@ function ProjectDropdown({
       if (val === activeDashboard?.id) {
         return false;
       }
+      resetDashboardRefreshState();
       setOldestRefreshTime(null);
       const selectedDashboard = dashboards.data.find((d) => d.id === val);
       dispatch({
@@ -419,81 +422,79 @@ function ProjectDropdown({
             </div>
           </div>
           <div className={'ml-10 mr-4 my-6 flex-1'}>
-          <ErrorBoundary
-          fallback={
-            <FaErrorComp
-              size={'medium'}
-              title={'Dashboard Widget Error'}
-              subtitle={
-                'We are facing trouble loading dashboard widgets. Drop us a message on the in-app chat.'
+            <ErrorBoundary
+              fallback={
+                <FaErrorComp
+                  size={'medium'}
+                  title={'Dashboard Widget Error'}
+                  subtitle={
+                    'We are facing trouble loading dashboard widgets. Drop us a message on the in-app chat.'
+                  }
+                />
               }
-            />
-          }
-          onError={FaErrorLog}
-        > 
-        
-            <DashboardSubMenu
-              durationObj={durationObj}
-              handleDurationChange={handleDurationChange}
-              dashboard={activeDashboard}
-              handleEditClick={handleEditClick}
-              refreshClicked={refreshClicked}
-              setRefreshClicked={setRefreshClicked}
-              oldestRefreshTime={oldestRefreshTime}
-              setOldestRefreshTime={setOldestRefreshTime}
-            />
-           
-            <SortableCards
-              durationObj={durationObj}
-              setwidgetModal={handleToggleWidgetModal}
-              showDeleteWidgetModal={showDeleteWidgetModal}
-              refreshClicked={refreshClicked}
-              setRefreshClicked={setRefreshClicked}
-              setOldestRefreshTime={setOldestRefreshTime}
+              onError={FaErrorLog}
+            >
+
+              <DashboardSubMenu
+                durationObj={durationObj}
+                handleDurationChange={handleDurationChange}
+                dashboard={activeDashboard}
+                handleEditClick={handleEditClick}
+                refreshInProgress={dashboardRefreshState.inProgress}
+                oldestRefreshTime={oldestRefreshTime}
+                handleRefreshClick={handleRefreshClick}
               />
-              </ErrorBoundary>
+
+              <SortableCards
+                durationObj={durationObj}
+                setwidgetModal={handleToggleWidgetModal}
+                showDeleteWidgetModal={showDeleteWidgetModal}
+                dashboardRefreshState={dashboardRefreshState}
+                setOldestRefreshTime={setOldestRefreshTime}
+                onDataLoadSuccess={onDataLoadSuccess}
+              />
           </div>
 
-          <ExpandableView
-            widgetModalLoading={widgetModalLoading}
-            widgetModal={widgetModal}
-            setwidgetModal={setwidgetModal}
-            durationObj={durationObj}
-          />
+            <ExpandableView
+              widgetModalLoading={widgetModalLoading}
+              widgetModal={widgetModal}
+              setwidgetModal={setwidgetModal}
+              durationObj={durationObj}
+            />
 
-          <ConfirmationModal
-            visible={!!deleteWidgetModal}
-            confirmationText="Are you sure you want to delete this widget?"
-            onOk={confirmDeleteWidget}
-            onCancel={showDeleteWidgetModal.bind(this, false)}
-            title="Delete Widget"
-            okText="Confirm"
-            cancelText="Cancel"
-            confirmLoading={deleteApiCalled}
-          />
-          <ConfirmationModal
-            visible={deleteDashboardModal}
-            confirmationText="Are you sure you want to delete this Dashboard?"
-            onOk={confirmDeleteDashboard}
-            onCancel={showDeleteDashboardModal.bind(this, false)}
-            title={`Delete Dashboard - ${activeDashboard?.name}`}
-            okText="Confirm"
-            cancelText="Cancel"
-            confirmLoading={dashboardDeleteApi}
-          />
-          {/* create project modal */}
-          <NewProject
-            visible={showProjectModal}
-            handleCancel={() => setShowProjectModal(false)}
-          />
+            <ConfirmationModal
+              visible={!!deleteWidgetModal}
+              confirmationText="Are you sure you want to delete this widget?"
+              onOk={confirmDeleteWidget}
+              onCancel={showDeleteWidgetModal.bind(this, false)}
+              title="Delete Widget"
+              okText="Confirm"
+              cancelText="Cancel"
+              confirmLoading={deleteApiCalled}
+            />
+            <ConfirmationModal
+              visible={deleteDashboardModal}
+              confirmationText="Are you sure you want to delete this Dashboard?"
+              onOk={confirmDeleteDashboard}
+              onCancel={showDeleteDashboardModal.bind(this, false)}
+              title={`Delete Dashboard - ${activeDashboard?.name}`}
+              okText="Confirm"
+              cancelText="Cancel"
+              confirmLoading={dashboardDeleteApi}
+            />
+            {/* create project modal */}
+            <NewProject
+              visible={showProjectModal}
+              handleCancel={() => setShowProjectModal(false)}
+            />
         </ErrorBoundary>
       </>
-    );
+        );
   }
 
-  return null;
+        return null;
 }
 
-export default connect(null, { fetchDemoProject, getHubspotContact })(
-  ProjectDropdown
-);
+        export default connect(null, {fetchDemoProject, getHubspotContact})(
+        ProjectDropdown
+        );

@@ -44,12 +44,17 @@ export const groups = {
 };
 
 export const hoverEvents = [
-  'Website Session',
-  'Page View',
-  'Form Button Click',
-  'Campaign Member Created',
-  'Campaign Member Updated',
-  'Offline Touchpoint',
+  '$session',
+  '$form_submitted',
+  '$offline_touch_point',
+  '$sf_campaign_member_created',
+  '$sf_campaign_member_updated',
+  '$hubspot_form_submission',
+  '$hubspot_engagement_email',
+  '$hubspot_engagement_meeting_created',
+  '$hubspot_engagement_meeting_updated',
+  '$hubspot_engagement_call_created',
+  '$hubspot_engagement_call_updated',
 ];
 
 export const getLoopLength = (allEvents) => {
