@@ -1579,6 +1579,13 @@ var USER_PROPERTIES_MERGE_TYPE_ADD = [...]string{
 	UP_PAGE_COUNT,
 	UP_TOTAL_SPENT_TIME,
 }
+var CUSTOM_WHITELIST_DELTA = []string{
+	"$referrer",
+	"$page_url",
+	"$source",
+	"$campaign",
+	"$channel",
+}
 
 var CUSTOM_BLACKLIST_DELTA = []string{
 	"$latest_referrer",

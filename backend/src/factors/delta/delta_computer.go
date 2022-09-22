@@ -299,8 +299,9 @@ func EventMatchesCriterion(event P.CounterEventFormat, eventCriterion EventCrite
 	return filterMatchFlag
 }
 
-func updateCriteriaResult(event P.CounterEventFormat, criteria EventsCriteria, criteriaResult *PerUserCriteriaResult, isBase bool) bool {
+func updateCriteriaResult(event P.CounterEventFormat, criteria EventsCriteria, criteriaResult *PerUserCriteriaResult, isBase bool, mailerRun bool) bool {
 	customBlacklist := GetCustomBlacklist()
+	customWhitelist := GetCustomWhitelist()
 	if criteriaResult.criteriaMatchFlag && isBase { // If criteria already met, do nothing.
 		return false
 	}
@@ -308,7 +309,11 @@ func updateCriteriaResult(event P.CounterEventFormat, criteria EventsCriteria, c
 		log.Info("Criteria has empty criterion list. By default, making the user match the first event.")
 		(*criteriaResult).anyFlag = true
 		(*criteriaResult).allFlag = true
-		FilterBlacklist(&event, &customBlacklist)
+		if mailerRun == true {
+			FilterWhitelist(&event, &customWhitelist)
+		} else {
+			FilterBlacklist(&event, &customBlacklist)
+		}
 		if !(*criteriaResult).criteriaMatchFlag {
 			(*criteriaResult).firstEvent = event
 		}
@@ -321,7 +326,11 @@ func updateCriteriaResult(event P.CounterEventFormat, criteria EventsCriteria, c
 			(*criteriaResult).criterionResultList[i].matchId = (*criteriaResult).numCriterionMatched
 			(*criteriaResult).numCriterionMatched++
 			(*criteriaResult).anyFlag = true
-			FilterBlacklist(&event, &customBlacklist)
+			if mailerRun == true {
+				FilterWhitelist(&event, &customWhitelist)
+			} else {
+				FilterBlacklist(&event, &customBlacklist)
+			}
 			(*criteriaResult).mostRecentEvent = event
 			if (*criteriaResult).numCriterionMatched == len(criteria.EventCriterionList) {
 				(*criteriaResult).allFlag = true
@@ -339,13 +348,18 @@ func updateCriteriaResult(event P.CounterEventFormat, criteria EventsCriteria, c
 	return false
 }
 
-func updateCriteriaResultEventOccurence(event P.CounterEventFormat, criteria EventsCriteria, criteriaResult *PerUserCriteriaResult, isBase bool) bool {
+func updateCriteriaResultEventOccurence(event P.CounterEventFormat, criteria EventsCriteria, criteriaResult *PerUserCriteriaResult, isBase bool, mailerRun bool) bool {
 	customBlacklist := GetCustomBlacklist()
+	customWhitelist := GetCustomWhitelist()
 	if len(criteria.EventCriterionList) == 0 { // If criteria has no event criterion to match
 		log.Info("Criteria has empty criterion list. By default, making the user match the first event.")
 		(*criteriaResult).anyFlag = true
 		(*criteriaResult).allFlag = true
-		FilterBlacklist(&event, &customBlacklist)
+		if mailerRun == true {
+			FilterWhitelist(&event, &customWhitelist)
+		} else {
+			FilterBlacklist(&event, &customBlacklist)
+		}
 		if !(*criteriaResult).criteriaMatchFlag {
 			(*criteriaResult).firstEvent = event
 		}
@@ -358,7 +372,11 @@ func updateCriteriaResultEventOccurence(event P.CounterEventFormat, criteria Eve
 			(*criteriaResult).criterionResultList[i].matchId = (*criteriaResult).numCriterionMatched
 			(*criteriaResult).numCriterionMatched++
 			(*criteriaResult).anyFlag = true
-			FilterBlacklist(&event, &customBlacklist)
+			if mailerRun == true {
+				FilterWhitelist(&event, &customWhitelist)
+			} else {
+				FilterBlacklist(&event, &customBlacklist)
+			}
 			(*criteriaResult).mostRecentEvent = event
 			if (*criteriaResult).numCriterionMatched == len(criteria.EventCriterionList) {
 				(*criteriaResult).allFlag = true
@@ -376,23 +394,23 @@ func updateCriteriaResultEventOccurence(event P.CounterEventFormat, criteria Eve
 	return false
 }
 
-func QueryEvent(event P.CounterEventFormat, deltaQuery Query, perUserQueryResult *PerUserQueryResult) (bool, bool) {
-	base := updateCriteriaResult(event, deltaQuery.Base, &(*perUserQueryResult).baseResult, true)
-	target := updateCriteriaResult(event, deltaQuery.Target, &(*perUserQueryResult).targetResult, false)
+func QueryEvent(event P.CounterEventFormat, deltaQuery Query, perUserQueryResult *PerUserQueryResult, mailerRun bool) (bool, bool) {
+	base := updateCriteriaResult(event, deltaQuery.Base, &(*perUserQueryResult).baseResult, true, mailerRun)
+	target := updateCriteriaResult(event, deltaQuery.Target, &(*perUserQueryResult).targetResult, false, mailerRun)
 	return base, target
 }
 
-func QueryEventEventOccurence(event P.CounterEventFormat, deltaQuery Query, perUserQueryResult *PerUserQueryResult) bool {
-	target := updateCriteriaResultEventOccurence(event, deltaQuery.Target, &(*perUserQueryResult).targetResult, false)
+func QueryEventEventOccurence(event P.CounterEventFormat, deltaQuery Query, perUserQueryResult *PerUserQueryResult, mailerRun bool) bool {
+	target := updateCriteriaResultEventOccurence(event, deltaQuery.Target, &(*perUserQueryResult).targetResult, false, mailerRun)
 	return target
 }
 
-func QuerySessionMultiStepFunnel(session Session, multiStageFunnel MultiFunnelQuery, timestamp *map[int][]int64, index *map[int][]int, i int) {
+func QuerySessionMultiStepFunnel(session Session, multiStageFunnel MultiFunnelQuery, timestamp *map[int][]int64, index *map[int][]int, i int, mailerRun bool) {
 	it := i
 	intermediateLength := len(multiStageFunnel.Intermediate)
 	for _, event := range session.Events {
 		criteriaResult := makeCriteriaResult(multiStageFunnel.Base)
-		base := updateCriteriaResult(event, multiStageFunnel.Base, &criteriaResult, true)
+		base := updateCriteriaResult(event, multiStageFunnel.Base, &criteriaResult, true, mailerRun)
 		if (*timestamp)[0] == nil {
 			(*timestamp)[0] = make([]int64, 0)
 		}
@@ -405,7 +423,7 @@ func QuerySessionMultiStepFunnel(session Session, multiStageFunnel MultiFunnelQu
 		}
 		for iteratorIndex, intermediate := range multiStageFunnel.Intermediate {
 			criteriaResult = makeCriteriaResult(intermediate)
-			intermediate := updateCriteriaResult(event, intermediate, &criteriaResult, false)
+			intermediate := updateCriteriaResult(event, intermediate, &criteriaResult, false, mailerRun)
 			if (*timestamp)[iteratorIndex+1] == nil {
 				(*timestamp)[iteratorIndex+1] = make([]int64, 0)
 			}
@@ -418,7 +436,7 @@ func QuerySessionMultiStepFunnel(session Session, multiStageFunnel MultiFunnelQu
 			}
 		}
 		criteriaResult = makeCriteriaResult(multiStageFunnel.Target)
-		target := updateCriteriaResult(event, multiStageFunnel.Target, &criteriaResult, false)
+		target := updateCriteriaResult(event, multiStageFunnel.Target, &criteriaResult, false, mailerRun)
 		if (*timestamp)[intermediateLength+1] == nil {
 			(*timestamp)[intermediateLength+1] = make([]int64, 0)
 		}
@@ -432,10 +450,10 @@ func QuerySessionMultiStepFunnel(session Session, multiStageFunnel MultiFunnelQu
 		it++
 	}
 }
-func QuerySession(session Session, deltaQuery Query, perUserQueryResult *PerUserQueryResult, baseTimestamp *int64, targetTimestamp *int64, baseIndex *int, targetIndex *int, i int) {
+func QuerySession(session Session, deltaQuery Query, perUserQueryResult *PerUserQueryResult, baseTimestamp *int64, targetTimestamp *int64, baseIndex *int, targetIndex *int, i int, mailerRun bool) {
 	index := i
 	for _, event := range session.Events {
-		base, target := QueryEvent(event, deltaQuery, perUserQueryResult)
+		base, target := QueryEvent(event, deltaQuery, perUserQueryResult, mailerRun)
 		if base {
 			(*baseTimestamp) = event.EventTimestamp
 			(*baseIndex) = index
@@ -451,10 +469,10 @@ func QuerySession(session Session, deltaQuery Query, perUserQueryResult *PerUser
 	}
 }
 
-func QuerySessionEventOccurence(session Session, deltaQuery Query, perUserQueryResult *PerUserQueryResult, targetTimestamp *[]int64, targetIndex *[]int, i int) {
+func QuerySessionEventOccurence(session Session, deltaQuery Query, perUserQueryResult *PerUserQueryResult, targetTimestamp *[]int64, targetIndex *[]int, i int, mailerRun bool) {
 	index := i
 	for _, event := range session.Events {
-		target := QueryEventEventOccurence(event, deltaQuery, perUserQueryResult)
+		target := QueryEventEventOccurence(event, deltaQuery, perUserQueryResult, mailerRun)
 		if target {
 			(*targetTimestamp) = append((*targetTimestamp), event.EventTimestamp)
 			(*targetIndex) = append((*targetIndex), index)
@@ -486,7 +504,7 @@ type Session struct {
 	Events []P.CounterEventFormat
 }
 
-func QueryUser(preSessionEvents []P.CounterEventFormat, sessions []Session, deltaQuery Query) (PerEventProperties, error) {
+func QueryUser(preSessionEvents []P.CounterEventFormat, sessions []Session, deltaQuery Query, mailerRun bool) (PerEventProperties, error) {
 	isSessionTarget := false
 	for _, target := range deltaQuery.Target.EventCriterionList {
 		if target.Name == "$session" {
@@ -502,7 +520,7 @@ func QueryUser(preSessionEvents []P.CounterEventFormat, sessions []Session, delt
 	extendedSessions = append(extendedSessions, Session{Events: preSessionEvents})
 	extendedSessions = append(extendedSessions, sessions...)
 	for _, session := range extendedSessions {
-		QuerySession(session, deltaQuery, &userResult, &baseTimestamp, &targetTimestamp, &baseIndex, &targetIndex, i)
+		QuerySession(session, deltaQuery, &userResult, &baseTimestamp, &targetTimestamp, &baseIndex, &targetIndex, i, mailerRun)
 		if userResult.baseResult.criteriaMatchFlag && userResult.targetResult.criteriaMatchFlag && baseTimestamp <= targetTimestamp && baseIndex != targetIndex {
 			break
 		}
@@ -526,7 +544,7 @@ func QueryUser(preSessionEvents []P.CounterEventFormat, sessions []Session, delt
 	return summary, err
 }
 
-func QueryUserMultiStepFunnel(preSessionEvents []P.CounterEventFormat, sessions []Session, deltaQuery MultiFunnelQuery) (PerEventProperties, error) {
+func QueryUserMultiStepFunnel(preSessionEvents []P.CounterEventFormat, sessions []Session, deltaQuery MultiFunnelQuery, mailerRun bool) (PerEventProperties, error) {
 	isSessionTarget := false
 	for _, target := range deltaQuery.Target.EventCriterionList {
 		if target.Name == "$session" {
@@ -543,7 +561,7 @@ func QueryUserMultiStepFunnel(preSessionEvents []P.CounterEventFormat, sessions 
 	extendedSessions = append(extendedSessions, sessions...)
 	isEntireFunnelFound := false
 	for _, session := range extendedSessions {
-		QuerySessionMultiStepFunnel(session, deltaQuery, &timestamp, &index, i)
+		QuerySessionMultiStepFunnel(session, deltaQuery, &timestamp, &index, i, mailerRun)
 		if timestamp[0] == nil || len(timestamp[0]) <= 0 {
 			continue
 		}
@@ -598,7 +616,7 @@ func QueryUserMultiStepFunnel(preSessionEvents []P.CounterEventFormat, sessions 
 	}
 	return summary, err
 }
-func QueryUserEventOccurence(preSessionEvents []P.CounterEventFormat, sessions []Session, deltaQuery Query) ([]PerEventProperties, error) {
+func QueryUserEventOccurence(preSessionEvents []P.CounterEventFormat, sessions []Session, deltaQuery Query, mailerRun bool) ([]PerEventProperties, error) {
 	isSessionTarget := false
 	for _, target := range deltaQuery.Target.EventCriterionList {
 		if target.Name == "$session" {
@@ -614,7 +632,7 @@ func QueryUserEventOccurence(preSessionEvents []P.CounterEventFormat, sessions [
 	extendedSessions = append(extendedSessions, Session{Events: preSessionEvents})
 	extendedSessions = append(extendedSessions, sessions...)
 	for _, session := range extendedSessions {
-		QuerySessionEventOccurence(session, deltaQuery, &userResult, &targetTimestamp, &targetIndex, i)
+		QuerySessionEventOccurence(session, deltaQuery, &userResult, &targetTimestamp, &targetIndex, i, mailerRun)
 		i = i + len(session.Events)
 	}
 	events := make([]P.CounterEventFormat, 0)
@@ -681,7 +699,16 @@ func GetCustomBlacklist() map[string]bool {
 	return customBlacklistMap
 }
 
-func ComputeWithinPeriodInsights(scanner *bufio.Scanner, deltaQuery Query, multiStepQuery MultiFunnelQuery, k int, featSoftWhitelist map[string]map[string]bool, passId int, isEventOccurence bool, isMultistepFunnel bool) (WithinPeriodInsights, error) {
+func GetCustomWhitelist() map[string]bool {
+	// TODO: This was changed from set to map
+	customWhitelistMap := make(map[string]bool)
+	for _, featKey := range U.CUSTOM_WHITELIST_DELTA {
+		customWhitelistMap[featKey] = true
+	}
+	return customWhitelistMap
+}
+
+func ComputeWithinPeriodInsights(scanner *bufio.Scanner, deltaQuery Query, multiStepQuery MultiFunnelQuery, k int, featSoftWhitelist map[string]map[string]bool, passId int, isEventOccurence bool, isMultistepFunnel bool, mailerRun bool) (WithinPeriodInsights, error) {
 	var err error
 	var wpInsights WithinPeriodInsights
 	var prevUserId string = ""
@@ -712,7 +739,7 @@ func ComputeWithinPeriodInsights(scanner *bufio.Scanner, deltaQuery Query, multi
 			}
 		} else { // If a new user's events have started coming...
 			if isMultistepFunnel {
-				matchSummary, err = QueryUserMultiStepFunnel(preSessionEvents, sessions, multiStepQuery)
+				matchSummary, err = QueryUserMultiStepFunnel(preSessionEvents, sessions, multiStepQuery, mailerRun)
 				if err != nil {
 					return wpInsights, err
 				}
@@ -726,7 +753,7 @@ func ComputeWithinPeriodInsights(scanner *bufio.Scanner, deltaQuery Query, multi
 					matchedBaseAndTargetEvents = append(matchedBaseAndTargetEvents, matchSummary)
 				}
 			} else if !isEventOccurence {
-				matchSummary, err = QueryUser(preSessionEvents, sessions, deltaQuery)
+				matchSummary, err = QueryUser(preSessionEvents, sessions, deltaQuery, mailerRun)
 				if err != nil {
 					return wpInsights, err
 				}
@@ -740,7 +767,7 @@ func ComputeWithinPeriodInsights(scanner *bufio.Scanner, deltaQuery Query, multi
 					matchedBaseAndTargetEvents = append(matchedBaseAndTargetEvents, matchSummary)
 				}
 			} else {
-				matchSummaries, err := QueryUserEventOccurence(preSessionEvents, sessions, deltaQuery)
+				matchSummaries, err := QueryUserEventOccurence(preSessionEvents, sessions, deltaQuery, mailerRun)
 				if err != nil {
 					return wpInsights, err
 				}
@@ -858,9 +885,22 @@ func FilterBlacklist(event *P.CounterEventFormat, customBlacklist *map[string]bo
 	filterPropertiesBlacklist(&((*event).UserProperties), customBlacklist)
 }
 
+func FilterWhitelist(event *P.CounterEventFormat, customBlacklist *map[string]bool) {
+	filterPropertiesWhitelist(&((*event).EventProperties), customBlacklist)
+	filterPropertiesWhitelist(&((*event).UserProperties), customBlacklist)
+}
+
 func filterPropertiesBlacklist(properties *map[string]interface{}, customBlacklist *map[string]bool) {
 	for key := range *properties {
 		if (*customBlacklist)[key] {
+			delete((*properties), key)
+		}
+	}
+}
+
+func filterPropertiesWhitelist(properties *map[string]interface{}, customWhitelist *map[string]bool) {
+	for key := range *properties {
+		if !((*customWhitelist)[key]) {
 			delete((*properties), key)
 		}
 	}

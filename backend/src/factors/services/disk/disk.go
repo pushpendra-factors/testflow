@@ -212,18 +212,32 @@ func (dd *DiskDriver) ListFiles(path string) []string {
 	return files
 }
 
-func (dd *DiskDriver) GetInsightsWpiFilePathAndName(projectId int64, dateString string, queryId int64, k int) (string, string) {
-	path := dd.GetWeeklyInsightsModelDir(projectId, dateString, queryId, k)
+func (dd *DiskDriver) GetInsightsWpiFilePathAndName(projectId int64, dateString string, queryId int64, k int, mailerRun bool) (string, string) {
+	path := ""
+	if mailerRun == true {
+		path = dd.GetWeeklyInsightsMailerModelDir(projectId, dateString, queryId, k)
+	} else {
+		path = dd.GetWeeklyInsightsModelDir(projectId, dateString, queryId, k)
+	}
 	return path, "wpi.txt"
 }
 
-func (dd *DiskDriver) GetInsightsCpiFilePathAndName(projectId int64, dateString string, queryId int64, k int) (string, string) {
-	path := dd.GetWeeklyInsightsModelDir(projectId, dateString, queryId, k)
+func (dd *DiskDriver) GetInsightsCpiFilePathAndName(projectId int64, dateString string, queryId int64, k int, mailerRun bool) (string, string) {
+	path := ""
+	if mailerRun == true {
+		path = dd.GetWeeklyInsightsMailerModelDir(projectId, dateString, queryId, k)
+	} else {
+		path = dd.GetWeeklyInsightsModelDir(projectId, dateString, queryId, k)
+	}
 	return path, "cpi.txt"
 }
 
 func (dd *DiskDriver) GetWeeklyInsightsModelDir(projectId int64, dateString string, queryId int64, k int) string {
 	return fmt.Sprintf("%v/projects/%d/weeklyinsights/%v/q-%v/k-%v/", dd.baseDir, projectId, dateString, queryId, k)
+}
+
+func (dd *DiskDriver) GetWeeklyInsightsMailerModelDir(projectId int64, dateString string, queryId int64, k int) string {
+	return fmt.Sprintf("%v/projects/%d/weeklyinsightsmailer/%v/q-%v/k-%v/", dd.baseDir, projectId, dateString, queryId, k)
 }
 
 func (dd *DiskDriver) GetWeeklyKPIModelDir(projectId int64, dateString string, queryId int64) string {

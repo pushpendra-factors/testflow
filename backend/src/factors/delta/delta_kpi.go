@@ -18,7 +18,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func CreateKpiInsights(diskManager *serviceDisk.DiskDriver, cloudManager *filestore.FileManager, periodCodesWithWeekNMinus1 []Period, projectId int64, queryId int64, queryGroup M.KPIQueryGroup, insightGranularity string, topK int, skipWpi, skipWpi2 bool) error {
+func CreateKpiInsights(diskManager *serviceDisk.DiskDriver, cloudManager *filestore.FileManager, periodCodesWithWeekNMinus1 []Period, projectId int64, queryId int64, queryGroup M.KPIQueryGroup, insightGranularity string, topK int, skipWpi, skipWpi2 bool, mailerRun bool) error {
 	// readEvents := true
 	var err error
 	var newInsightsList = make([]*WithinPeriodInsightsKpi, 0)
@@ -28,7 +28,7 @@ func CreateKpiInsights(diskManager *serviceDisk.DiskDriver, cloudManager *filest
 	skipW2 := false
 	if skipWpi {
 		dateString := U.GetDateOnlyFromTimestampZ(periodCodesWithWeekNMinus1[0].From)
-		path, name := (*cloudManager).GetInsightsWpiFilePathAndName(projectId, dateString, queryId, topK)
+		path, name := (*cloudManager).GetInsightsWpiFilePathAndName(projectId, dateString, queryId, topK, mailerRun)
 		if reader, err := (*cloudManager).Get(path, name); err == nil {
 			data, err := ioutil.ReadAll(reader)
 			if err == nil {
@@ -42,7 +42,7 @@ func CreateKpiInsights(diskManager *serviceDisk.DiskDriver, cloudManager *filest
 
 	if skipWpi2 {
 		dateString := U.GetDateOnlyFromTimestampZ(periodCodesWithWeekNMinus1[1].From)
-		path, name := (*cloudManager).GetInsightsWpiFilePathAndName(projectId, dateString, queryId, topK)
+		path, name := (*cloudManager).GetInsightsWpiFilePathAndName(projectId, dateString, queryId, topK, mailerRun)
 		if reader, err := (*cloudManager).Get(path, name); err == nil {
 			data, err := ioutil.ReadAll(reader)
 			if err == nil {
@@ -143,7 +143,7 @@ func CreateKpiInsights(diskManager *serviceDisk.DiskDriver, cloudManager *filest
 			return err
 		}
 
-		err = WriteWpiPath(projectId, Period(periodCodesWithWeekNMinus1[1]), queryId, topK, bytes.NewReader(wpiBytes), *cloudManager)
+		err = WriteWpiPath(projectId, Period(periodCodesWithWeekNMinus1[1]), queryId, topK, bytes.NewReader(wpiBytes), *cloudManager, mailerRun)
 		if err != nil {
 			log.WithError(err).Error("write WPI error - ", err)
 			return err
@@ -155,7 +155,7 @@ func CreateKpiInsights(diskManager *serviceDisk.DiskDriver, cloudManager *filest
 			log.WithError(err).Error("failed to marshal wpi1 Info.")
 			return err
 		}
-		err = WriteWpiPath(projectId, Period(periodCodesWithWeekNMinus1[0]), queryId, topK, bytes.NewReader(wpiBytes), *cloudManager)
+		err = WriteWpiPath(projectId, Period(periodCodesWithWeekNMinus1[0]), queryId, topK, bytes.NewReader(wpiBytes), *cloudManager, mailerRun)
 		if err != nil {
 			log.WithError(err).Error("write WPI error - ", err)
 			return err
@@ -180,7 +180,7 @@ func CreateKpiInsights(diskManager *serviceDisk.DiskDriver, cloudManager *filest
 			log.WithFields(log.Fields{"err": err}).Error("failed to unmarshal cpi Info.")
 			return err
 		}
-		err = WriteCpiPath(projectId, periodPair.Second, queryId, topK, bytes.NewReader(crossPeriodInsightsBytes), *cloudManager)
+		err = WriteCpiPath(projectId, periodPair.Second, queryId, topK, bytes.NewReader(crossPeriodInsightsBytes), *cloudManager, mailerRun)
 		if err != nil {
 			log.WithFields(log.Fields{"err": err}).Error("failed to write cpi files to cloud")
 			return err

@@ -219,13 +219,23 @@ func (gcsd *GCSDriver) ListFiles(prefix string) []string {
 	return files
 }
 
-func (gcsd *GCSDriver) GetInsightsWpiFilePathAndName(projectId int64, dateString string, queryId int64, k int) (string, string) {
-	path := gcsd.GetWeeklyInsightsModelDir(projectId, dateString, queryId, k)
+func (gcsd *GCSDriver) GetInsightsWpiFilePathAndName(projectId int64, dateString string, queryId int64, k int, mailerRun bool) (string, string) {
+	path := ""
+	if mailerRun == true {
+		path = gcsd.GetWeeklyInsightsMailerModelDir(projectId, dateString, queryId, k)
+	} else {
+		path = gcsd.GetWeeklyInsightsModelDir(projectId, dateString, queryId, k)
+	}
 	return path, "wpi.txt"
 }
 
-func (gcsd *GCSDriver) GetInsightsCpiFilePathAndName(projectId int64, dateString string, queryId int64, k int) (string, string) {
-	path := gcsd.GetWeeklyInsightsModelDir(projectId, dateString, queryId, k)
+func (gcsd *GCSDriver) GetInsightsCpiFilePathAndName(projectId int64, dateString string, queryId int64, k int, mailerRun bool) (string, string) {
+	path := ""
+	if mailerRun == true {
+		path = gcsd.GetWeeklyInsightsMailerModelDir(projectId, dateString, queryId, k)
+	} else {
+		path = gcsd.GetWeeklyInsightsModelDir(projectId, dateString, queryId, k)
+	}
 	return path, "cpi.txt"
 }
 
@@ -240,6 +250,10 @@ func (gcsd *GCSDriver) GetWIPropertiesDir(projectId int64) string {
 
 func (gcsd *GCSDriver) GetWeeklyInsightsModelDir(projectId int64, dateString string, queryId int64, k int) string {
 	return fmt.Sprintf("projects/%v/weeklyinsights/%v/q-%v/k-%v/", projectId, dateString, queryId, k)
+}
+
+func (gcsd *GCSDriver) GetWeeklyInsightsMailerModelDir(projectId int64, dateString string, queryId int64, k int) string {
+	return fmt.Sprintf("projects/%v/weeklyinsightsmailer/%v/q-%v/k-%v/", projectId, dateString, queryId, k)
 }
 
 func (gcsd *GCSDriver) GetWeeklyKPIModelDir(projectId int64, dateString string, queryId int64) string {
