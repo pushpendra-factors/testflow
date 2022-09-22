@@ -279,7 +279,7 @@ func (store *MemSQL) GetUserActivitiesAndSessionCount(projectID int64, identity 
 			project_id=? AND timestamp <= ? AND
 			user_id IN (SELECT id FROM users WHERE project_id=? AND`, userId, `= ?) AND
 			event_name_id NOT IN (
-				SELECT id FROM event_names WHERE project_id=? AND name IN (?,?,?,?,?)
+				SELECT id FROM event_names WHERE project_id=? AND name IN (?,?,?,?,?,?,?)
 			) LIMIT 5000) AS events1
         LEFT JOIN event_names 
         ON events1.event_name_id=event_names.id AND event_names.project_id=? 
@@ -296,6 +296,8 @@ func (store *MemSQL) GetUserActivitiesAndSessionCount(projectID int64, identity 
 		U.EVENT_NAME_SALESFORCE_LEAD_UPDATED,
 		U.EVENT_NAME_LEAD_SQUARED_LEAD_UPDATED,
 		U.EVENT_NAME_MARKETO_LEAD_UPDATED,
+		U.EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED,
+		U.EVENT_NAME_SALESFORCE_OPPORTUNITY_UPDATED,
 		projectID).Rows()
 
 	if err != nil || rows.Err() != nil {
@@ -326,7 +328,20 @@ func (store *MemSQL) GetUserActivitiesAndSessionCount(projectID int64, identity 
 			log.WithError(err).Error("Failed decoding event properties")
 		} else {
 			// Display Names
-			if (*properties)[U.EP_IS_PAGE_VIEW] == true {
+			if userActivity.EventName == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED {
+				userActivity.DisplayName = fmt.Sprintf("Added to %s", (*properties)[U.EP_SALESFORCE_CAMPAIGN_NAME])
+			} else if userActivity.EventName == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED {
+				userActivity.DisplayName = fmt.Sprintf("Interacted with %s", (*properties)[U.EP_SALESFORCE_CAMPAIGN_NAME])
+			} else if userActivity.EventName == U.EVENT_NAME_HUBSPOT_CONTACT_FORM_SUBMISSION {
+				userActivity.DisplayName = fmt.Sprintf("%s", (*properties)[U.EP_HUBSPOT_FORM_SUBMISSION_TITLE])
+			} else if userActivity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_EMAIL {
+				userActivity.DisplayName = fmt.Sprintf("%s: %s", (*properties)[U.EP_HUBSPOT_ENGAGEMENT_TYPE], (*properties)[U.EP_HUBSPOT_ENGAGEMENT_SUBJECT])
+			} else if userActivity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_CREATED ||
+				userActivity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_UPDATED ||
+				userActivity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_CREATED ||
+				userActivity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_UPDATED {
+				userActivity.DisplayName = fmt.Sprintf("%s", (*properties)[U.EP_HUBSPOT_ENGAGEMENT_TITLE])
+			} else if (*properties)[U.EP_IS_PAGE_VIEW] == true {
 				userActivity.DisplayName = "Page View"
 			} else if standardDisplayNames[userActivity.EventName] != "" {
 				userActivity.DisplayName = standardDisplayNames[userActivity.EventName]
@@ -377,18 +392,10 @@ func (store *MemSQL) GetGroupsForUserTimeline(projectID int64, userDetails model
 
 func GetFilteredProperties(eventName string, properties *map[string]interface{}) *postgres.Jsonb {
 	var returnProperties *postgres.Jsonb
-	eventNamePropertiesMap := map[string][]string{
-		U.EVENT_NAME_SESSION:                           {U.EP_PAGE_COUNT, U.EP_CHANNEL, U.EP_CAMPAIGN, U.SP_SESSION_TIME, U.EP_TIMESTAMP, U.EP_REFERRER_URL},
-		U.EVENT_NAME_FORM_SUBMITTED:                    {U.EP_FORM_NAME, U.EP_PAGE_URL, U.EP_TIMESTAMP},
-		U.EVENT_NAME_OFFLINE_TOUCH_POINT:               {U.EP_CHANNEL, U.EP_CAMPAIGN, U.EP_TIMESTAMP},
-		U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED: {"$salesforce_campaign_name", model.EP_SFCampaignMemberStatus, U.EP_TIMESTAMP},
-		U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED: {"$salesforce_campaign_name", model.EP_SFCampaignMemberStatus, U.EP_TIMESTAMP},
-	}
-	pageViewPropsList := []string{U.EP_IS_PAGE_VIEW, U.EP_PAGE_SPENT_TIME, U.EP_PAGE_SCROLL_PERCENT, U.EP_PAGE_LOAD_TIME}
 	filteredProperties := make(map[string]interface{})
-	_, eventExistsInMap := eventNamePropertiesMap[eventName]
+	filterProps, eventExistsInMap := model.HOVER_EVENTS_NAME_PROPERTY_MAP[eventName]
 	if (*properties)[U.EP_IS_PAGE_VIEW] == true {
-		for _, prop := range pageViewPropsList {
+		for _, prop := range model.PAGE_VIEW_HOVERPROPS_LIST {
 			if value, propExists := (*properties)[prop]; propExists {
 				filteredProperties[prop] = value
 			}
@@ -399,7 +406,7 @@ func GetFilteredProperties(eventName string, properties *map[string]interface{})
 		}
 		returnProperties = &postgres.Jsonb{RawMessage: propertiesJSON}
 	} else if eventExistsInMap {
-		for _, prop := range eventNamePropertiesMap[eventName] {
+		for _, prop := range filterProps {
 			if value, propExists := (*properties)[prop]; propExists {
 				filteredProperties[prop] = value
 			}

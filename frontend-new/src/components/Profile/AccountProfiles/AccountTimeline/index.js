@@ -37,7 +37,12 @@ function AccountTimeline({
         title={event?.display_name}
         event_name={event?.event_name}
         properties={event?.properties || {}}
-        trigger={hoverEvents.includes(event.display_name) ? 'hover' : []}
+        trigger={
+          hoverEvents.includes(event.event_name) ||
+          event.display_name === 'Page View'
+            ? 'hover'
+            : []
+        }
       >
         <div className={`flex items-center font-medium`}>
           <span className='truncate mx-1'>
@@ -45,7 +50,8 @@ function AccountTimeline({
               ? event?.event_name
               : PropTextFormat(event?.display_name)}
           </span>
-          {hoverEvents.includes(event?.display_name) ? (
+          {hoverEvents.includes(event.event_name) ||
+          event.display_name === 'Page View' ? (
             <CaretRightOutlined />
           ) : null}
         </div>
