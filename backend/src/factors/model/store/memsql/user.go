@@ -95,6 +95,9 @@ func (store *MemSQL) createUserWithError(user *model.User) (*model.User, error) 
 		for k, v := range identityProperties {
 			newUserProperties[k] = v
 		}
+		if C.AllowIdentificationOverwriteUsingSource(user.ProjectId) {
+			user.CustomerUserIdSource = user.Source
+		}
 	}
 
 	// removing U.UP_SESSION_COUNT, from user properties.
@@ -417,7 +420,7 @@ func (store *MemSQL) GetUserLatestByCustomerUserId(projectId int64, customerUser
 	return &user, http.StatusFound
 }
 
-func (store *MemSQL) GetExistingCustomerUserID(projectId int64, arrayCustomerUserID []string) (map[string]string, int) {
+func (store *MemSQL) GetExistingUserByCustomerUserID(projectId int64, arrayCustomerUserID []string, source ...int) (map[string]string, int) {
 	logFields := log.Fields{
 		"project_id":             projectId,
 		"array_customer_user_id": arrayCustomerUserID,
@@ -431,7 +434,16 @@ func (store *MemSQL) GetExistingCustomerUserID(projectId int64, arrayCustomerUse
 
 	db := C.GetServices().Db
 	queryStmnt := "SELECT" + " " + "DISTINCT(customer_user_id), id" + " FROM " + "users" + " WHERE " + "project_id = ? AND customer_user_id IN ( ? )"
-	rows, err := db.Raw(queryStmnt, projectId, arrayCustomerUserID).Rows()
+	queryParams := []interface{}{projectId, arrayCustomerUserID}
+	if len(source) == 1 {
+		queryStmnt = queryStmnt + " AND " + "source = ? "
+		queryParams = append(queryParams, source[0])
+	} else if len(source) > 1 {
+		queryStmnt = queryStmnt + " AND " + "source IN (?) "
+		queryParams = append(queryParams, source)
+	}
+
+	rows, err := db.Raw(queryStmnt, queryParams...).Rows()
 	if err != nil {
 		log.WithError(err).Error("Failed to get customer_user_id.")
 		return nil, http.StatusInternalServerError
@@ -440,13 +452,13 @@ func (store *MemSQL) GetExistingCustomerUserID(projectId int64, arrayCustomerUse
 	defer rows.Close()
 
 	for rows.Next() {
-		var customerID string
+		var customerUserID string
 		var userID string
-		if err := rows.Scan(&customerID, &userID); err != nil {
+		if err := rows.Scan(&customerUserID, &userID); err != nil {
 			log.WithError(err).Error("Failed scanning rows on GetExistingCustomerUserID")
 			return nil, http.StatusInternalServerError
 		}
-		customerUserIDMap[customerID] = userID
+		customerUserIDMap[userID] = customerUserID
 	}
 
 	return customerUserIDMap, http.StatusFound
@@ -1140,11 +1152,14 @@ func (store *MemSQL) GetUserIdentificationPhoneNumber(projectID int64, phoneNo s
 	}
 
 	pPhoneNo := U.GetPossiblePhoneNumber(phoneNo)
-	existingPhoneNo, errCode := store.GetExistingCustomerUserID(projectID, pPhoneNo)
+	existingPhoneNo, errCode := store.GetExistingUserByCustomerUserID(projectID, pPhoneNo)
 	if errCode == http.StatusFound {
 		for i := range pPhoneNo {
-			if userID, exist := existingPhoneNo[pPhoneNo[i]]; exist {
-				return pPhoneNo[i], userID
+
+			for userID := range existingPhoneNo {
+				if existingPhoneNo[userID] == pPhoneNo[i] {
+					return pPhoneNo[i], userID
+				}
 			}
 		}
 	}
@@ -2307,6 +2322,11 @@ func (store *MemSQL) UpdateIdentifyOverwriteUserPropertiesMeta(projectID int64, 
 	}
 
 	(*metaObj)[customerUserID] = *customerUserIDMeta
+
+	if len(*metaObj) > 10 {
+		logCtx.WithFields(log.Fields{"meta_object": metaObj}).WithError(err).Error("Number of identification exceeded.")
+	}
+
 	return model.UpdateUserPropertiesIdentifierMetaObject(userProperties, metaObj)
 }
 
@@ -2602,6 +2622,45 @@ func (store *MemSQL) UpdateGroupUserGroupId(projectID int64, userID string,
 		return http.StatusInternalServerError
 	}
 	return http.StatusAccepted
+}
+
+// GetUserWithoutProperties Gets the user without properties
+func (store *MemSQL) GetUserWithoutProperties(projectID int64, id string) (*model.User, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"user_id":    id,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+	if projectID <= 0 || id == "" {
+		logCtx.Error("Invalid parameters.")
+		return nil, http.StatusBadRequest
+	}
+
+	var user model.User
+	db := C.GetServices().Db
+	requiredFields := []string{}
+	for _, field := range db.NewScope(&model.User{}).GetStructFields() {
+		if field.DBName != "properties" {
+			requiredFields = append(requiredFields, field.DBName)
+		}
+	}
+
+	selectColumns := strings.Join(requiredFields, ",")
+
+	if err := db.Where("project_id = ? AND id = ?", projectID, id).Select(selectColumns).
+		Find(&user).Error; err != nil {
+
+		logCtx.WithError(err).Error("Failed to get users for customer_user_id")
+		return nil, http.StatusInternalServerError
+	}
+
+	if user.ID == "" {
+		return nil, http.StatusNotFound
+	}
+
+	return &user, http.StatusFound
 }
 
 func (store *MemSQL) PullUsersRowsForWI(projectID int64, startTime, endTime int64, dateField string, source int, group int) (*sql.Rows, *sql.Tx, error) {

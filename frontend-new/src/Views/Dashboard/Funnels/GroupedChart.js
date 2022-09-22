@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useContext } from 'react';
+import cx from 'classnames';
 import { formatData } from '../../CoreQuery/FunnelsResultPage/utils';
 import Chart from '../../CoreQuery/FunnelsResultPage/GroupedChart/Chart';
 import FunnelsResultTable from '../../CoreQuery/FunnelsResultPage/FunnelsResultTable';
@@ -9,6 +10,7 @@ import {
   CHART_TYPE_SCATTER_PLOT,
   DASHBOARD_WIDGET_SECTION,
   DASHBOARD_WIDGET_SCATTERPLOT_CHART_HEIGHT,
+  CHART_TYPE_TABLE
 } from '../../../utils/constants';
 import NoDataChart from '../../../components/NoDataChart';
 import FunnelsScatterPlot from '../../CoreQuery/FunnelsResultPage/GroupedChart/FunnelsScatterPlot';
@@ -20,7 +22,7 @@ function GroupedChart({
   breakdown,
   chartType,
   unit,
-  section,
+  section
 }) {
   const [visibleProperties, setVisibleProperties] = useState([]);
   const [eventsData, setEventsData] = useState([]);
@@ -32,14 +34,14 @@ function GroupedChart({
     const { groups: appliedGroups, events } = formatData(
       {
         ...resultState.data,
-        rows: resultState.data.rows.slice(0, MAX_ALLOWED_VISIBLE_PROPERTIES),
+        rows: resultState.data.rows.slice(0, MAX_ALLOWED_VISIBLE_PROPERTIES)
       },
       arrayMapper
     );
     setGroups(appliedGroups);
     setEventsData(events);
     setVisibleProperties([
-      ...appliedGroups.slice(0, MAX_ALLOWED_VISIBLE_PROPERTIES),
+      ...appliedGroups.slice(0, MAX_ALLOWED_VISIBLE_PROPERTIES)
     ]);
   }, [resultState.data, arrayMapper]);
 
@@ -68,7 +70,7 @@ function GroupedChart({
     );
   } else if (chartType === CHART_TYPE_SCATTER_PLOT) {
     chartContent = (
-      <div className='mt-2'>
+      <div className="mt-2">
         <FunnelsScatterPlot
           visibleProperties={visibleProperties}
           arrayMapper={arrayMapper}
@@ -98,24 +100,13 @@ function GroupedChart({
     );
   }
 
-  let tableContent = null;
-
-  // if (chartType === 'table') {
-  //   tableContent = (
-  //     <div
-  //       onClick={handleEditQuery}
-  //       style={{ color: '#5949BC' }}
-  //       className='mt-3 font-medium text-base cursor-pointer flex justify-end item-center'
-  //     >
-  //       Show More &rarr;
-  //     </div>
-  //   );
-  // }
-
   return (
-    <div className={`w-full flex-1`}>
+    <div
+      className={cx('w-full flex-1', {
+        'p-2 flex items-center': chartType !== CHART_TYPE_TABLE
+      })}
+    >
       {chartContent}
-      {tableContent}
     </div>
   );
 }

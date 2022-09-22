@@ -1,25 +1,25 @@
-import React, { useEffect, useState, useCallback } from "react";
-import { getWebAnalyticsRequestBody } from "../utils";
-import { initialState } from "../../CoreQuery/utils";
-import { useSelector, useDispatch } from "react-redux";
-import { getWebAnalyticsData } from "../../../reducers/coreQuery/services";
-import { Spin } from "antd";
-import TableUnits from "./TableUnits";
-import CardUnit from "./CardUnit";
-import NoDataChart from "../../../components/NoDataChart";
-import { DASHBOARD_LAST_REFRESHED } from "../../../reducers/types";
+import React, { useEffect, useState, useCallback } from 'react';
+import { getWebAnalyticsRequestBody } from '../utils';
+import { initialState } from '../../CoreQuery/utils';
+import { useSelector, useDispatch } from 'react-redux';
+import { getWebAnalyticsData } from '../../../reducers/coreQuery/services';
+import { Spin } from 'antd';
+import TableUnits from './TableUnits';
+import CardUnit from './CardUnit';
+import NoDataChart from '../../../components/NoDataChart';
+import { DASHBOARD_LAST_REFRESHED } from '../../../reducers/types';
 
 function WebsiteAnalytics({
   webAnalyticsUnits,
   setwidgetModal,
   durationObj,
-  setRefreshClicked,
-  refreshClicked,
+  dashboardRefreshState,
+  resetDashboardRefreshState
 }) {
   const { active_project } = useSelector((state) => state.global);
   const [resultState, setResultState] = useState(initialState);
   const dispatch = useDispatch();
-  const [lastRefesh, setLastRefesh] = useState(null); 
+  const [lastRefesh, setLastRefesh] = useState(null);
   const fetchData = useCallback(
     async (refresh = false) => {
       try {
@@ -36,34 +36,41 @@ function WebsiteAnalytics({
           refresh,
           false
         );
- 
-        setResultState({ ...initialState, data: response.data.result, refreshed_at: response.data.refreshed_at });
-        setLastRefesh(response?.data?.refreshed_at)   
-        setRefreshClicked(false);
+
+        setResultState({
+          ...initialState,
+          data: response.data.result,
+          refreshed_at: response.data.refreshed_at
+        });
+        setLastRefesh(response?.data?.refreshed_at);
+        resetDashboardRefreshState();
       } catch (err) {
         console.log(err);
+        resetDashboardRefreshState();
         setResultState({ ...initialState, error: true });
-        setRefreshClicked(false);
       }
     },
-    [active_project.id, durationObj, webAnalyticsUnits, setRefreshClicked]
+    [
+      active_project.id,
+      durationObj,
+      webAnalyticsUnits,
+      resetDashboardRefreshState
+    ]
   );
 
   useEffect(() => {
-    if(refreshClicked) {
+    if (dashboardRefreshState.inProgress) {
       fetchData(true);
+    } else {
+      fetchData(false);
     }
-    else{
-      fetchData(false); 
-    }
-  }, [refreshClicked,durationObj, fetchData]);
- 
-   
-  useEffect(() => { 
-      dispatch({
-        type: DASHBOARD_LAST_REFRESHED,
-        payload: lastRefesh
-      });
+  }, [dashboardRefreshState.inProgress, durationObj, fetchData]);
+
+  useEffect(() => {
+    dispatch({
+      type: DASHBOARD_LAST_REFRESHED,
+      payload: lastRefesh
+    });
   }, [lastRefesh, dispatch]);
 
   if (resultState.loading) {
@@ -84,10 +91,10 @@ function WebsiteAnalytics({
 
   if (resultState.data) {
     const tableUnits = webAnalyticsUnits.filter(
-      (unit) => unit.presentation === "pt"
+      (unit) => unit.presentation === 'pt'
     );
     const cardUnits = webAnalyticsUnits.filter(
-      (unit) => unit.presentation === "pc"
+      (unit) => unit.presentation === 'pc'
     );
 
     return (

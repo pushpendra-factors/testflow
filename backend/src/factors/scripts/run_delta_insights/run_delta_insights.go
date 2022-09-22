@@ -67,6 +67,7 @@ func mainRunDeltaInsights() {
 		30, "look back window in cache for event/user cache(to get props for custom kpis")
 
 	isWeeklyEnabled := flag.Bool("weekly_enabled", false, "")
+	isMailerRun := flag.Bool("is_mailer_run", false, "")
 	lookback := flag.Int("lookback", 30, "lookback_for_delta lookup")
 	projectsFromDB := flag.Bool("projects_from_db", false, "")
 	flag.Parse()
@@ -181,6 +182,12 @@ func mainRunDeltaInsights() {
 	if *isWeeklyEnabled {
 		configs["insightGranularity"] = T.ModelTypeWeek
 		status := taskWrapper.TaskFuncWithProjectId("WIWeekly", *lookback, projectIdsArray, D.ComputeDeltaInsights, configs)
+		log.Info(status)
+	}
+	if *isWeeklyEnabled && *isMailerRun {
+		configs["insightGranularity"] = T.ModelTypeWeek
+		configs["run_type"] = "mailer"
+		status := taskWrapper.TaskFuncWithProjectId("WIWeeklyMailer", *lookback, projectIdsArray, D.ComputeDeltaInsights, configs)
 		log.Info(status)
 	}
 }

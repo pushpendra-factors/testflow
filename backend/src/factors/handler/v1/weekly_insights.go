@@ -76,7 +76,7 @@ func GetWeeklyInsightsParams(c *gin.Context) (*WeeklyInsightsParams, error) {
 	index := c.Query("kpi_index")
 	var kpi_index int64
 	if index != "" {
-		kpi_index, _ = strconv.ParseInt(n, 10, 64)
+		kpi_index, _ = strconv.ParseInt(index, 10, 64)
 	} else {
 		kpi_index = 1 // default
 	}

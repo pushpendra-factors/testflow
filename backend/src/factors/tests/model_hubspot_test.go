@@ -5276,3 +5276,380 @@ func TestHubspotIntegration(t *testing.T) {
 	projectSetting.UpdatedAt = projectSetting2.UpdatedAt
 	assert.Equal(t, projectSetting, projectSetting2)
 }
+
+func TestHubspotReIdentification(t *testing.T) {
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	r := gin.Default()
+	H.InitDataServiceRoutes(r)
+
+	createdAt := fmt.Sprint(time.Now().AddDate(0, 0, -10).Unix())
+
+	email1 := getRandomEmail()
+	email2 := getRandomEmail()
+	email3 := getRandomEmail()
+	userEmail1, status := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: email1, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, status)
+	user, status := store.GetStore().GetUser(project.ID, userEmail1)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, model.UserSourceWeb, *user.CustomerUserIdSource)
+	assert.Equal(t, model.UserSourceWeb, *user.Source)
+	assert.Equal(t, email1, user.CustomerUserId)
+	userEmail2, status := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: email2, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, status)
+	user, status = store.GetStore().GetUser(project.ID, userEmail2)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, model.UserSourceWeb, *user.CustomerUserIdSource)
+	assert.Equal(t, model.UserSourceWeb, *user.Source)
+	assert.Equal(t, email2, user.CustomerUserId)
+	userEmail3, status := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: email3, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, status)
+	user, status = store.GetStore().GetUser(project.ID, userEmail3)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, model.UserSourceWeb, *user.CustomerUserIdSource)
+	assert.Equal(t, model.UserSourceWeb, *user.Source)
+	assert.Equal(t, email3, user.CustomerUserId)
+
+	email1Time := time.Now().AddDate(0, 0, -7).Unix() * 1000
+	email2Time := email1Time + 100
+	email3Time := email2Time + 300
+	jsonContactMap := map[string]interface{}{
+		"vid":     1,
+		"addedAt": createdAt,
+		"properties": map[string]map[string]interface{}{
+			"createdate":       {"value": createdAt},
+			"lastmodifieddate": {"value": createdAt},
+			"lifecyclestage":   {"value": "lead"},
+		},
+		"identity-profiles": []map[string]interface{}{
+			{
+				"vid": 1,
+				"identities": []map[string]interface{}{
+					{
+						"type":       "EMAIL",
+						"value":      email2,
+						"is-primary": false,
+						"timestamp":  email2Time,
+					},
+					{
+						"type":       "EMAIL",
+						"value":      email3,
+						"is-primary": false,
+						"timestamp":  email3Time,
+					},
+					{
+						"type":       "EMAIL",
+						"value":      email1,
+						"is-primary": true, // primary email
+						"timestamp":  email1Time,
+					},
+					{
+						"type":  "LEAD_GUID",
+						"value": "123-45",
+					},
+				},
+			},
+		},
+	}
+	w := sendCreateHubspotDocumentRequest(project.ID, r, agent, model.HubspotDocumentTypeNameContact, &jsonContactMap)
+	assert.Equal(t, http.StatusCreated, w.Code)
+
+	enrichStatus, _ := IntHubspot.Sync(project.ID, 1, time.Now().Unix(), nil, "", 50)
+	for i := range enrichStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
+	}
+
+	documents, status := store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{"1"}, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated})
+	assert.Equal(t, http.StatusFound, status)
+	user, status = store.GetStore().GetUser(project.ID, documents[0].UserId)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, email1, user.CustomerUserId)
+	assert.Equal(t, model.UserSourceHubspot, *user.CustomerUserIdSource)
+
+	user, status = store.GetStore().GetUser(project.ID, userEmail1)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, email1, user.CustomerUserId)
+	assert.Equal(t, model.UserSourceWeb, *user.CustomerUserIdSource) // identification source should not change, since user was not reidentified
+
+	for _, userID := range []string{userEmail2, userEmail3} {
+		user, status := store.GetStore().GetUser(project.ID, userID)
+		assert.Equal(t, http.StatusFound, status)
+		assert.Equal(t, email1, user.CustomerUserId)
+		assert.Equal(t, model.UserSourceHubspot, *user.CustomerUserIdSource) // identification source should changed, since user was not reidentified
+	}
+
+	/*
+		Hubspot should use latest secondary email if no primary email found
+	*/
+
+	email1 = getRandomEmail()
+	email2 = getRandomEmail()
+	email3 = getRandomEmail()
+	email2Time = time.Now().AddDate(0, 0, -7).Unix() * 1000
+	email1Time = email2Time + 100
+	email3Time = email2Time + 300
+
+	// web user with one of the email from hubspot
+	userEmail2, status = store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: email2, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, status)
+
+	jsonContactMap = map[string]interface{}{
+		"vid":     2,
+		"addedAt": createdAt,
+		"properties": map[string]map[string]interface{}{
+			"createdate":       {"value": createdAt},
+			"lastmodifieddate": {"value": createdAt},
+			"lifecyclestage":   {"value": "lead"},
+		},
+		"identity-profiles": []map[string]interface{}{
+			{
+				"vid": 2,
+				"identities": []map[string]interface{}{
+					{
+						"type":       "EMAIL",
+						"value":      email2,
+						"is-primary": false,
+						"timestamp":  email2Time,
+					},
+					{
+						"type":       "EMAIL",
+						"value":      email3,
+						"is-primary": false,
+						"timestamp":  email3Time, // latest timestamp, should be set as email property
+					},
+					{
+						"type":       "EMAIL",
+						"value":      email1,
+						"is-primary": false,
+						"timestamp":  email1Time,
+					},
+					{
+						"type":  "LEAD_GUID",
+						"value": "123-45",
+					},
+				},
+			},
+		},
+	}
+	w = sendCreateHubspotDocumentRequest(project.ID, r, agent, model.HubspotDocumentTypeNameContact, &jsonContactMap)
+	assert.Equal(t, http.StatusCreated, w.Code)
+
+	enrichStatus, _ = IntHubspot.Sync(project.ID, 1, time.Now().Unix(), nil, "", 50)
+	for i := range enrichStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
+	}
+
+	documents, status = store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{"2"}, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated})
+	assert.Equal(t, http.StatusFound, status)
+	user, status = store.GetStore().GetUser(project.ID, documents[0].UserId)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, email3, user.CustomerUserId)
+	assert.Equal(t, model.UserSourceHubspot, *user.CustomerUserIdSource)
+
+	user, status = store.GetStore().GetUser(project.ID, userEmail2)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, email3, user.CustomerUserId)
+	assert.Equal(t, model.UserSourceHubspot, *user.CustomerUserIdSource)
+
+	updatedAt := fmt.Sprint(time.Now().AddDate(0, 0, -10).Unix() + 1000)
+	jsonContactMap = map[string]interface{}{
+		"vid":     2,
+		"addedAt": createdAt,
+		"properties": map[string]map[string]interface{}{
+			"createdate":       {"value": createdAt},
+			"lastmodifieddate": {"value": updatedAt},
+			"lifecyclestage":   {"value": "lead"},
+		},
+		"identity-profiles": []map[string]interface{}{
+			{
+				"vid": 2,
+				"identities": []map[string]interface{}{
+					{
+						"type":       "EMAIL",
+						"value":      email2,
+						"is-primary": false,
+						"timestamp":  email2Time,
+					},
+					{
+						"type":       "EMAIL",
+						"value":      email3,
+						"is-primary": false,
+						"timestamp":  email3Time, // latest timestamp, should be set as email property
+					},
+					{
+						"type":       "EMAIL",
+						"value":      email1,
+						"is-primary": true, // primary email
+						"timestamp":  email1Time,
+					},
+					{
+						"type":  "LEAD_GUID",
+						"value": "123-45",
+					},
+				},
+			},
+		},
+	}
+	w = sendCreateHubspotDocumentRequest(project.ID, r, agent, model.HubspotDocumentTypeNameContact, &jsonContactMap)
+	assert.Equal(t, http.StatusCreated, w.Code)
+
+	enrichStatus, _ = IntHubspot.Sync(project.ID, 1, time.Now().Unix(), nil, "", 50)
+	for i := range enrichStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
+	}
+
+	documents, status = store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{"2"}, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated})
+	assert.Equal(t, http.StatusFound, status)
+	user, status = store.GetStore().GetUser(project.ID, documents[0].UserId)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, email1, user.CustomerUserId)
+	assert.Equal(t, model.UserSourceHubspot, *user.CustomerUserIdSource)
+
+	user, status = store.GetStore().GetUser(project.ID, userEmail2)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, email1, user.CustomerUserId)
+	assert.Equal(t, model.UserSourceHubspot, *user.CustomerUserIdSource)
+
+}
+
+func TestHubspotGetContactProperties(t *testing.T) {
+	project, _, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	r := gin.Default()
+	H.InitDataServiceRoutes(r)
+
+	email1 := getRandomEmail()
+	email2 := getRandomEmail()
+	email3 := getRandomEmail()
+
+	email1Time := time.Now().AddDate(0, 0, -7).Unix() * 1000
+	email2Time := email1Time + 100
+	email3Time := email2Time + 300
+	createdAt := fmt.Sprint(time.Now().AddDate(0, 0, -10).Unix())
+
+	// When there is primary email GetContactProperties GetContactProperties should return properties with primary email, and primary email and secondary email will be available separately
+	jsonContactMap := map[string]interface{}{
+		"vid":     1,
+		"addedAt": createdAt,
+		"properties": map[string]map[string]interface{}{
+			"createdate":       {"value": createdAt},
+			"lastmodifieddate": {"value": createdAt},
+			"lifecyclestage":   {"value": "lead"},
+		},
+		"identity-profiles": []map[string]interface{}{
+			{
+				"vid": 1,
+				"identities": []map[string]interface{}{
+					{
+						"type":       "EMAIL",
+						"value":      email2,
+						"is-primary": false,
+						"timestamp":  email2Time,
+					},
+					{
+						"type":       "EMAIL",
+						"value":      email3,
+						"is-primary": false,
+						"timestamp":  email3Time,
+					},
+					{
+						"type":       "EMAIL",
+						"value":      email1,
+						"is-primary": true,
+						"timestamp":  email1Time,
+					},
+					{
+						"type":  "LEAD_GUID",
+						"value": "123-45",
+					},
+				},
+			},
+		},
+	}
+
+	enJson, err := json.Marshal(jsonContactMap)
+	assert.Nil(t, err)
+	document := &model.HubspotDocument{
+		ProjectId: project.ID,
+		Value:     &postgres.Jsonb{json.RawMessage(enJson)},
+		Type:      model.HubspotDocumentTypeContact,
+	}
+
+	enProperties, properties, secondaryEmails, primaryEmail, err := IntHubspot.GetContactProperties(document.ProjectId, document)
+	assert.Nil(t, err)
+	assert.Equal(t, email1, primaryEmail)
+	assert.NotContains(t, secondaryEmails, primaryEmail)
+	assert.NotContains(t, secondaryEmails, "123-45")
+	for _, secondaryEmail := range []string{email2, email3} {
+		assert.Contains(t, secondaryEmails, secondaryEmail)
+	}
+
+	assert.NotEmpty(t, enProperties)
+	assert.NotEmpty(t, properties)
+	assert.Equal(t, primaryEmail, (*enProperties)["$hubspot_contact_email"])
+	assert.Equal(t, "123-45", (*enProperties)["$hubspot_contact_lead_guid"])
+	assert.Equal(t, primaryEmail, (*properties)["EMAIL"])
+
+	// When there is no primary email GetContactProperties should return properties with latest secondary email, primary email will be empty and secondary email will be available separately
+	jsonContactMap = map[string]interface{}{
+		"vid":     1,
+		"addedAt": createdAt,
+		"properties": map[string]map[string]interface{}{
+			"createdate":       {"value": createdAt},
+			"lastmodifieddate": {"value": createdAt},
+			"lifecyclestage":   {"value": "lead"},
+		},
+		"identity-profiles": []map[string]interface{}{
+			{
+				"vid": 1,
+				"identities": []map[string]interface{}{
+					{
+						"type":       "EMAIL",
+						"value":      email2,
+						"is-primary": false,
+						"timestamp":  email2Time,
+					},
+					{
+						"type":       "EMAIL",
+						"value":      email3,
+						"is-primary": false,
+						"timestamp":  email3Time,
+					},
+					{
+						"type":       "EMAIL",
+						"value":      email1,
+						"is-primary": false,
+						"timestamp":  email1Time,
+					},
+					{
+						"type":  "LEAD_GUID",
+						"value": "123-45",
+					},
+				},
+			},
+		},
+	}
+
+	enJson, err = json.Marshal(jsonContactMap)
+	assert.Nil(t, err)
+	document = &model.HubspotDocument{
+		ProjectId: project.ID,
+		Value:     &postgres.Jsonb{json.RawMessage(enJson)},
+		Type:      model.HubspotDocumentTypeContact,
+	}
+
+	enProperties, properties, secondaryEmails, primaryEmail, err = IntHubspot.GetContactProperties(document.ProjectId, document)
+	assert.Nil(t, err)
+	assert.Empty(t, primaryEmail)
+	assert.NotContains(t, secondaryEmails, primaryEmail)
+	assert.NotContains(t, secondaryEmails, "123-45")
+	for _, secondaryEmail := range []string{email3, email2, email1} {
+		assert.Contains(t, secondaryEmails, secondaryEmail)
+	}
+
+	assert.NotEmpty(t, enProperties)
+	assert.NotEmpty(t, properties)
+	assert.Equal(t, email3, (*enProperties)["$hubspot_contact_email"])
+	assert.Equal(t, "123-45", (*enProperties)["$hubspot_contact_lead_guid"])
+	assert.Equal(t, email3, (*properties)["EMAIL"])
+}

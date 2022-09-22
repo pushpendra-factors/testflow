@@ -63,6 +63,10 @@ func (store *MemSQL) GetSlackAuthToken(projectID int64, agentUUID string) (model
 	}
 	var token model.SlackAuthTokens
 
+	if IsEmptyPostgresJsonb(agent.SlackAccessTokens) {
+		return model.SlackAccessTokens{}, errors.New("No slack auth token found")
+	}
+
 	err = U.DecodePostgresJsonbToStructType(agent.SlackAccessTokens, &token)
 	if err != nil && err.Error() != "Empty jsonb object" {
 		log.Error(err)

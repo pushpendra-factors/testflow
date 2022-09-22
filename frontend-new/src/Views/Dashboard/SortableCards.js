@@ -13,9 +13,9 @@ function SortableCards({
   setwidgetModal,
   durationObj,
   showDeleteWidgetModal,
-  refreshClicked,
-  setRefreshClicked,
-  setOldestRefreshTime
+  setOldestRefreshTime,
+  dashboardRefreshState,
+  onDataLoadSuccess
 }) {
   const dispatch = useDispatch();
   const timerRef = useRef(null);
@@ -114,9 +114,9 @@ function SortableCards({
               unit={{ ...item, query: savedQuery }}
               onDrop={onDrop}
               showDeleteWidgetModal={showDeleteWidgetModal}
-              refreshClicked={refreshClicked}
-              setRefreshClicked={setRefreshClicked}
               setOldestRefreshTime={setOldestRefreshTime}
+              dashboardRefreshState={dashboardRefreshState}
+              onDataLoadSuccess={onDataLoadSuccess}
             />
           );
         })}
@@ -128,8 +128,7 @@ function SortableCards({
         durationObj={durationObj}
         webAnalyticsUnits={webAnalyticsUnits}
         setwidgetModal={setwidgetModal}
-        refreshClicked={refreshClicked}
-        setRefreshClicked={setRefreshClicked}
+        dashboardRefreshState={dashboardRefreshState}
       />
     );
   } else {

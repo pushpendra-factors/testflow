@@ -111,6 +111,10 @@ func (sd *S3Driver) GetModelEventsFilePathAndName(projectId int64, startTimestam
 	path := sd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
 	return path, "events.txt"
 }
+func (sd *S3Driver) GetModelMetricsFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string) {
+	path := sd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
+	return path, "metrics.txt"
+}
 
 func (sd *S3Driver) GetModelChannelFilePathAndName(channel string, projectId int64, startTimestamp int64, modelType string) (string, string) {
 	path := sd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
@@ -179,18 +183,32 @@ func (sd *S3Driver) GetBucketName() string {
 	return ""
 }
 
-func (sd *S3Driver) GetInsightsWpiFilePathAndName(projectId int64, dateString string, queryId int64, k int) (string, string) {
-	path := sd.GetWeeklyInsightsModelDir(projectId, dateString, queryId, k)
+func (sd *S3Driver) GetInsightsWpiFilePathAndName(projectId int64, dateString string, queryId int64, k int, mailerRun bool) (string, string) {
+	path := ""
+	if mailerRun == true {
+		path = sd.GetWeeklyInsightsMailerModelDir(projectId, dateString, queryId, k)
+	} else {
+		path = sd.GetWeeklyInsightsModelDir(projectId, dateString, queryId, k)
+	}
 	return path, "wpi.txt"
 }
 
-func (sd *S3Driver) GetInsightsCpiFilePathAndName(projectId int64, dateString string, queryId int64, k int) (string, string) {
-	path := sd.GetWeeklyInsightsModelDir(projectId, dateString, queryId, k)
+func (sd *S3Driver) GetInsightsCpiFilePathAndName(projectId int64, dateString string, queryId int64, k int, mailerRun bool) (string, string) {
+	path := ""
+	if mailerRun == true {
+		path = sd.GetWeeklyInsightsMailerModelDir(projectId, dateString, queryId, k)
+	} else {
+		path = sd.GetWeeklyInsightsModelDir(projectId, dateString, queryId, k)
+	}
 	return path, "cpi.txt"
 }
 
 func (sd *S3Driver) GetWeeklyInsightsModelDir(projectId int64, dateString string, queryId int64, k int) string {
 	return fmt.Sprintf("projects/%v/weeklyinsights/%v/q-%v/k-%v/", projectId, dateString, queryId, k)
+}
+
+func (sd *S3Driver) GetWeeklyInsightsMailerModelDir(projectId int64, dateString string, queryId int64, k int) string {
+	return fmt.Sprintf("projects/%v/weeklyinsightsmailer/%v/q-%v/k-%v/", projectId, dateString, queryId, k)
 }
 
 func (sd *S3Driver) GetWeeklyKPIModelDir(projectId int64, dateString string, queryId int64) string {

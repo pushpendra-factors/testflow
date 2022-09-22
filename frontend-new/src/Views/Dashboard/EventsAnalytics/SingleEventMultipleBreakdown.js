@@ -1,6 +1,5 @@
-import React, {
-  useState, useEffect, useContext, useCallback
-} from 'react';
+import React, { useState, useEffect, useContext, useCallback } from 'react';
+import cx from 'classnames';
 import {
   formatData,
   formatDataInStackedAreaFormat,
@@ -63,10 +62,10 @@ function SingleEventMultipleBreakdown({
     const aggData = formatData(resultState.data);
     const { categories: cats, data: d } = isSeriesChart(chartType)
       ? formatDataInStackedAreaFormat(
-        resultState.data,
-        aggData,
-        durationObj.frequency
-      )
+          resultState.data,
+          aggData,
+          durationObj.frequency
+        )
       : { categories: [], data: [] };
     setAggregateData(aggData);
     setCategories(cats);
@@ -90,20 +89,6 @@ function SingleEventMultipleBreakdown({
   }
 
   let chartContent = null;
-
-  let tableContent = null;
-
-  // if (chartType === CHART_TYPE_TABLE || chartType === CHART_TYPE_PIVOT_CHART) {
-  //   tableContent = (
-  //     <div
-  //       onClick={handleEditQuery}
-  //       style={{ color: '#5949BC' }}
-  //       className="mt-3 font-medium text-base cursor-pointer flex justify-end item-center"
-  //     >
-  //       Show More &rarr;
-  //     </div>
-  //   );
-  // }
 
   if (chartType === CHART_TYPE_BARCHART) {
     chartContent = (
@@ -191,9 +176,12 @@ function SingleEventMultipleBreakdown({
   }
 
   return (
-    <div className={'w-full'}>
+    <div
+      className={cx('w-full flex-1', {
+        'p-2': chartType !== CHART_TYPE_TABLE
+      })}
+    >
       {chartContent}
-      {tableContent}
     </div>
   );
 }
