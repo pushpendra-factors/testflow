@@ -294,6 +294,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id/slack/channels", slack.GetSlackChannelsListHandler)
 	authRouteGroup.DELETE("/:project_id/slack/delete", slack.DeleteSlackIntegrationHandler)
 	authRouteGroup.POST("/:project_id/v1/alerts/send_now", V1.QuerySendNowHandler)
+	authRouteGroup.GET("/:project_id/v1/metrics", mid.SetLoggedInAgentInternalOnly(), responseWrapper(V1.GetAnalyticsMetricsFromStorage))
 
 	// Timeline
 	authRouteGroup.POST("/:project_id/v1/profiles/users", responseWrapper(V1.GetProfileUsersHandler))

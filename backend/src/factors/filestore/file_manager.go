@@ -15,6 +15,7 @@ type FileManager interface {
 	GetProjectEventFileDir(projectId int64, startTimestamp int64, modelType string) string
 	GetModelEventInfoFilePathAndName(projectId int64, modelId uint64) (string, string)
 	GetModelEventsFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string)
+	GetModelMetricsFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string)
 	GetModelChannelFilePathAndName(channel string, projectId int64, startTimestamp int64, modelType string) (string, string)
 	GetModelUsersFilePathAndName(dateField string, projectId int64, startTimestamp int64, modelType string) (string, string)
 	GetModelEventsBucketingFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string)

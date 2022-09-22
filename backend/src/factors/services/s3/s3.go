@@ -111,6 +111,10 @@ func (sd *S3Driver) GetModelEventsFilePathAndName(projectId int64, startTimestam
 	path := sd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
 	return path, "events.txt"
 }
+func (sd *S3Driver) GetModelMetricsFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string) {
+	path := sd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
+	return path, "metrics.txt"
+}
 
 func (sd *S3Driver) GetModelChannelFilePathAndName(channel string, projectId int64, startTimestamp int64, modelType string) (string, string) {
 	path := sd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
