@@ -438,6 +438,8 @@ type AttributionData struct {
 	ConversionEventCompareCountInfluence []float64
 	CostPerConversionCompareCount        []float64
 	LinkedEventsCount                    []float64
+	LinkedEventsCountInfluence           []float64
+	LinkedCostPerEvents                  []float64
 	MarketingInfo                        MarketingData
 }
 
@@ -821,6 +823,7 @@ func AddHeadersByAttributionKey(result *QueryResult, query *AttributionQuery, go
 		if len(query.LinkedEvents) > 0 {
 			for _, event := range query.LinkedEvents {
 				result.Headers = append(result.Headers, fmt.Sprintf("%s - Users", event.Name))
+				result.Headers = append(result.Headers, fmt.Sprintf("%s- Users (Influence)", event.Name))
 			}
 		}
 
@@ -855,6 +858,7 @@ func AddHeadersByAttributionKey(result *QueryResult, query *AttributionQuery, go
 		if len(query.LinkedEvents) > 0 {
 			for _, event := range query.LinkedEvents {
 				result.Headers = append(result.Headers, fmt.Sprintf("%s - Users", event.Name))
+				result.Headers = append(result.Headers, fmt.Sprintf("%s- Users (Influence)", event.Name))
 				result.Headers = append(result.Headers, fmt.Sprintf("%s - CPC", event.Name))
 			}
 		}
@@ -913,6 +917,7 @@ func AddHeadersByAttributionKey(result *QueryResult, query *AttributionQuery, go
 		if len(query.LinkedEvents) > 0 {
 			for _, event := range query.LinkedEvents {
 				result.Headers = append(result.Headers, fmt.Sprintf("%s - Users", event.Name))
+				result.Headers = append(result.Headers, fmt.Sprintf("%s- Users (Influence)", event.Name))
 				result.Headers = append(result.Headers, fmt.Sprintf("%s - CPC", event.Name))
 			}
 		}
@@ -922,14 +927,38 @@ func AddHeadersByAttributionKey(result *QueryResult, query *AttributionQuery, go
 	}
 }
 
-// getLinkedEventColumnAsInterfaceList return interface list having linked event count and CPC
+func getLinkedEventColumnAsInterfaceListv1(spend float64, data []float64, dataInfluence []float64, linkedEventCount int) []interface{} {
+
+	var list []interface{}
+	// If empty linked events, add 0s
+	if len(data) == 0 {
+		for i := 0; i < linkedEventCount; i++ {
+			list = append(list, 0.0, 0.0, 0.0)
+		}
+	} else {
+		for i := 0; i < len(data) && i < len(dataInfluence); i++ {
+			cpc := 0.0
+			if data[i] > 0.0 {
+				cpc, _ = U.FloatRoundOffWithPrecision(spend/data[i], U.DefaultPrecision)
+			}
+			list = append(list, data[i], dataInfluence[i], cpc)
+		}
+	}
+	// Each LE should have 3 values, one for conversion, 2nd for conversion Influence and 3rd for conversion cost
+	for len(list) < 3*linkedEventCount {
+		list = append(list, 0.0)
+	}
+	return list
+}
+
+// @Deprecated getLinkedEventColumnAsInterfaceList return interface list having linked event count and CPC
 func getLinkedEventColumnAsInterfaceList(convertedUsers float64, spend float64, data []float64, linkedEventCount int) []interface{} {
 
 	var list []interface{}
 	// If empty linked events, add 0s
 	if len(data) == 0 {
 		for i := 0; i < linkedEventCount; i++ {
-			list = append(list, 0.0, 0.0)
+			list = append(list, 0.0, 0.0, 0.0)
 		}
 	} else {
 		for _, val := range data {
@@ -946,16 +975,32 @@ func getLinkedEventColumnAsInterfaceList(convertedUsers float64, spend float64, 
 	}
 	return list
 }
+func getLinkedEventColumnAsInterfaceListLandingPagev1(data []float64, dataInfluence []float64, linkedEventCount int) []interface{} {
 
-// getLinkedEventColumnAsInterfaceListLandingPage return interface list having linked event count and CPC
+	var list []interface{}
+	// If empty linked events, add 0s
+	if len(data) == 0 {
+		for i := 0; i < linkedEventCount; i++ {
+			// Each LE should have 2 values, one for conversion and other for conversion Influence
+			list = append(list, 0.0, 0.0)
+		}
+	} else {
+		for i := 0; i < len(data) && i < len(dataInfluence); i++ {
+			list = append(list, data[i], dataInfluence[i])
+		}
+	}
+	return list
+}
+
+// @Deprecated getLinkedEventColumnAsInterfaceListLandingPage return interface list having linked event count and CPC
 func getLinkedEventColumnAsInterfaceListLandingPage(convertedUsers float64, data []float64, linkedEventCount int) []interface{} {
 
 	var list []interface{}
 	// If empty linked events, add 0s
 	if len(data) == 0 {
 		for i := 0; i < linkedEventCount; i++ {
-			// Each LE should have 1 values, one for conversion
-			list = append(list, 0.0)
+			// Each LE should have 2 values, one for conversion and other for conversion Influence
+			list = append(list, 0.0, 0.0)
 		}
 	} else {
 		for _, val := range data {
@@ -1107,9 +1152,9 @@ func GetRowsByMaps(attributionKey string, dimensions []string, attributionData *
 		nonMatchingRow = append(nonMatchingRow, defaultMatchingRow...)
 	}
 
-	// Add up for linkedEvents for conversion, CPC
+	// Add up for linkedEvents for conversion, conversion Influence, CPC
 	for i := 0; i < len(linkedEvents); i++ {
-		nonMatchingRow = append(nonMatchingRow, float64(0), float64(0))
+		nonMatchingRow = append(nonMatchingRow, float64(0), float64(0), float64(0))
 	}
 	// Add up for key
 	nonMatchingRow = append(nonMatchingRow, "none")
@@ -1224,7 +1269,7 @@ func GetRowsByMaps(attributionKey string, dimensions []string, attributionData *
 
 			}
 			// for linked event considering the data.ConversionEventCount[0] only
-			row = append(row, getLinkedEventColumnAsInterfaceList(float64(data.ConversionEventCount[0]), data.Spend, data.LinkedEventsCount, len(linkedEvents))...)
+			row = append(row, getLinkedEventColumnAsInterfaceListv1(data.Spend, data.LinkedEventsCount, data.LinkedEventsCountInfluence, len(linkedEvents))...)
 			// Add up key
 			row = append(row, key)
 			rows = append(rows, row)
@@ -1289,7 +1334,7 @@ func GetRowsByMapsLandingPage(contentGroupNamesList []string, attributionData *m
 			} else {
 				row = append(row, float64(0), float64(0))
 			}
-			row = append(row, getLinkedEventColumnAsInterfaceListLandingPage(data.ConversionEventCount[0], data.LinkedEventsCount, len(linkedEvents))...)
+			row = append(row, getLinkedEventColumnAsInterfaceListLandingPagev1(data.LinkedEventsCount, data.LinkedEventsCountInfluence, len(linkedEvents))...)
 			rows = append(rows, row)
 		}
 	}
@@ -1549,7 +1594,7 @@ func MergeTwoDataRows(row1 []interface{}, row2 []interface{}, keyIndex int, attr
 		row1[keyIndex+3] = row1[keyIndex+3].(float64) + row2[keyIndex+3].(float64) // Spend.
 
 		for idx, _ := range conversionFunTypes {
-			nextConPosition := idx * 4
+			nextConPosition := idx * 6
 			row1[keyIndex+8+nextConPosition] = row1[keyIndex+8+nextConPosition].(float64) + row2[keyIndex+8+nextConPosition].(float64)    // Conversion.
 			row1[keyIndex+9+nextConPosition] = row1[keyIndex+9+nextConPosition].(float64) + row2[keyIndex+9+nextConPosition].(float64)    // Conversion Influence
 			row1[keyIndex+11+nextConPosition] = row1[keyIndex+11+nextConPosition].(float64) + row2[keyIndex+11+nextConPosition].(float64) // Compare Conversion.
@@ -1575,24 +1620,20 @@ func MergeTwoDataRows(row1 []interface{}, row2 []interface{}, keyIndex int, attr
 		}
 
 		for idx, funcType := range conversionFunTypes {
-			nextConPosition := idx * 4
-			// Normal conversion [8, 9] = [Conversion, CPC]
-			// Compare conversion [10, 11]  = [Conversion, CPC, Rate+nextConPosition]
+			nextConPosition := idx * 6
+			// Normal conversion [8, 9,10] = [Conversion,Conversion Influence, CPC]
+			// Compare conversion [11, 12,13]  = [Conversion,Conversion Influence, CPC, Rate+nextConPosition]
 			if strings.ToLower(funcType) == "sum" {
 
 				if spend > 0 {
 					row1[keyIndex+10+nextConPosition], _ = U.FloatRoundOffWithPrecision(row1[keyIndex+8+nextConPosition].(float64)/spend, U.DefaultPrecision) // Conversion - CPC.
 				} else {
-					row1[keyIndex+8+nextConPosition] = float64(0)  // Conversion
-					row1[keyIndex+9+nextConPosition] = float64(0)  // Conversion Influence
 					row1[keyIndex+10+nextConPosition] = float64(0) // Conversion - CPC.
 				}
 
 				if spend > 0 {
 					row1[keyIndex+13+nextConPosition], _ = U.FloatRoundOffWithPrecision(row1[keyIndex+11+nextConPosition].(float64)/spend, U.DefaultPrecision) // Compare Conversion - CPC.
 				} else {
-					row1[keyIndex+11+nextConPosition] = float64(0) // Compare Conversion
-					row1[keyIndex+12+nextConPosition] = float64(0) // Compare Conversion - Influence
 					row1[keyIndex+13+nextConPosition] = float64(0) // Compare Conversion - CPC.
 				}
 
@@ -1601,16 +1642,12 @@ func MergeTwoDataRows(row1 []interface{}, row2 []interface{}, keyIndex int, attr
 				if row1[keyIndex+8+nextConPosition].(float64) > 0 {
 					row1[keyIndex+10+nextConPosition], _ = U.FloatRoundOffWithPrecision(spend/row1[keyIndex+8+nextConPosition].(float64), U.DefaultPrecision) // Conversion - CPC.
 				} else {
-					row1[keyIndex+8+nextConPosition] = float64(0)  // Conversion
-					row1[keyIndex+9+nextConPosition] = float64(0)  // Conversion Influence
 					row1[keyIndex+10+nextConPosition] = float64(0) // Conversion - CPC.
 				}
 
 				if row1[keyIndex+11+nextConPosition].(float64) > 0 {
 					row1[keyIndex+13+nextConPosition], _ = U.FloatRoundOffWithPrecision(spend/row1[keyIndex+11+nextConPosition].(float64), U.DefaultPrecision) // Compare Conversion - CPC.
 				} else {
-					row1[keyIndex+11+nextConPosition] = float64(0) // Compare Conversion
-					row1[keyIndex+12+nextConPosition] = float64(0) // Compare Conversion Influence
 					row1[keyIndex+13+nextConPosition] = float64(0) // Compare Conversion - CPC.
 				}
 			}
@@ -1645,21 +1682,17 @@ func MergeTwoDataRows(row1 []interface{}, row2 []interface{}, keyIndex int, attr
 			row1[keyIndex+5] = float64(0) // AvgCPC.
 			row1[keyIndex+7] = float64(0) // ClickConversionRate.
 		}
-		// Normal conversion [8, 9] = [Conversion, CPC]
+		// Normal conversion [8, 9,10] = [Conversion,Conversion Influence, CPC]
 		if row1[keyIndex+8].(float64) > 0 {
 			row1[keyIndex+10], _ = U.FloatRoundOffWithPrecision(spend/row1[keyIndex+8].(float64), U.DefaultPrecision) // Conversion - CPC.
 		} else {
-			row1[keyIndex+8] = float64(0)
-			row1[keyIndex+9] = float64(0)
 			row1[keyIndex+10] = float64(0) // Conversion - CPC.
 		}
 
-		// Compare conversion [10, 11] = [Conversion, CPC]
+		// Compare conversion [11,12,13] = [Conversion,Conversion Influence, CPC]
 		if row1[keyIndex+11].(float64) > 0 {
 			row1[keyIndex+13], _ = U.FloatRoundOffWithPrecision(spend/row1[keyIndex+11].(float64), U.DefaultPrecision) // Compare Conversion - CPC.
 		} else {
-			row1[keyIndex+11] = float64(0)
-			row1[keyIndex+12] = float64(0)
 			row1[keyIndex+13] = float64(0) // Compare Conversion - CPC.
 		}
 
@@ -1683,7 +1716,7 @@ func SanitizeResult(result *QueryResult) {
 	// Populating the valid index
 	var validIdx []int
 	for idx, colName := range result.Headers {
-		if !strings.Contains(colName, "(remove)") {
+		if !strings.Contains(colName, "(remove)") && !strings.Contains(colName, "Influence") {
 			validIdx = append(validIdx, idx)
 		}
 	}
@@ -1785,7 +1818,7 @@ func AddGrandTotalRow(headers []string, rows [][]interface{}, keyIndex int, anal
 
 	var spendFunnelConversionCPC []float64      //linked funnel events
 	var conversionFunnelConversionCPC []float64 //linked funnel events
-	for i := keyIndex + 14; i < len(headers)-1; i += 2 {
+	for i := keyIndex + 14; i < len(headers)-1; i += 3 {
 
 		spendFunnelConversionCPC = append(spendFunnelConversionCPC, float64(0))
 		conversionFunnelConversionCPC = append(conversionFunnelConversionCPC, float64(0))
@@ -1807,11 +1840,6 @@ func AddGrandTotalRow(headers []string, rows [][]interface{}, keyIndex int, anal
 		grandTotalRow[keyIndex+9] = grandTotalRow[keyIndex+9].(float64) + row[keyIndex+9].(float64)    // Conversion Influence
 		grandTotalRow[keyIndex+11] = grandTotalRow[keyIndex+11].(float64) + row[keyIndex+11].(float64) // Compare Conversion.
 		grandTotalRow[keyIndex+12] = grandTotalRow[keyIndex+12].(float64) + row[keyIndex+12].(float64) // Compare Conversion Influence
-
-		if method == AttributionMethodInfluence {
-			grandTotalRow[keyIndex+8] = grandTotalRow[keyIndex+9]
-			grandTotalRow[keyIndex+11] = grandTotalRow[keyIndex+12]
-		}
 
 		impressions := (row[keyIndex+1]).(int64)
 		clicks := (row[keyIndex+2]).(int64)
@@ -1838,13 +1866,21 @@ func AddGrandTotalRow(headers []string, rows [][]interface{}, keyIndex int, anal
 
 		// Remaining linked funnel events & CPCs
 		j := 0
-		for i := keyIndex + 14; i < len(grandTotalRow)-1; i += 2 {
-			grandTotalRow[i] = grandTotalRow[i].(float64) + row[i].(float64)
+		for i := keyIndex + 14; i < len(grandTotalRow)-1; i += 3 {
+			grandTotalRow[i] = grandTotalRow[i].(float64) + row[i].(float64)       //LFE Conversion Count
+			grandTotalRow[i+1] = grandTotalRow[i+1].(float64) + row[i+1].(float64) // LFE Conversion Influence
 			if spend > 0 && i < len(grandTotalRow) && j < len(spendFunnelConversionCPC) && len(spendFunnelConversionCPC) > 0 && len(conversionFunnelConversionCPC) > 0 {
 				spendFunnelConversionCPC[j], _ = U.FloatRoundOffWithPrecision(spendFunnelConversionCPC[j]+spend, U.DefaultPrecision)
 				conversionFunnelConversionCPC[j], _ = U.FloatRoundOffWithPrecision(conversionFunnelConversionCPC[j]+row[i].(float64), U.DefaultPrecision)
 			}
 			j += 1
+		}
+		// If attribution method is influence then replacing the value of grand total row of conversion with conversion Influence
+		if method == AttributionMethodInfluence {
+			for i := keyIndex + 8; i < len(grandTotalRow)-1; i += 3 {
+				grandTotalRow[i] = grandTotalRow[i+1]
+
+			}
 		}
 
 	}
@@ -1893,13 +1929,13 @@ func AddGrandTotalRow(headers []string, rows [][]interface{}, keyIndex int, anal
 
 	// Remaining linked funnel events & CPCs
 	k := 0
-	for i := keyIndex + 14; i < len(grandTotalRow)-1; i += 2 {
+	for i := keyIndex + 14; i < len(grandTotalRow)-1; i += 3 {
 		if i < len(grandTotalRow) && k < len(spendFunnelConversionCPC) && len(spendFunnelConversionCPC) > 0 && len(conversionFunnelConversionCPC) > 0 && conversionFunnelConversionCPC[k] > 0 {
 			// Funnel - Conversion - CPC.
-			grandTotalRow[i+1], _ = U.FloatRoundOffWithPrecision(spendFunnelConversionCPC[k]/conversionFunnelConversionCPC[k], U.DefaultPrecision)
+			grandTotalRow[i+2], _ = U.FloatRoundOffWithPrecision(spendFunnelConversionCPC[k]/conversionFunnelConversionCPC[k], U.DefaultPrecision)
 		} else {
 			// Funnel - Conversion - CPC.
-			grandTotalRow[i+1] = float64(0)
+			grandTotalRow[i+2] = float64(0)
 		}
 		k += 1
 	}
@@ -1979,7 +2015,7 @@ func AddGrandTotalRowKPI(headers []string, rows [][]interface{}, keyIndex int, a
 		}
 
 		for idx, _ := range conversionFunTypes {
-			nextConPosition := idx * 4
+			nextConPosition := idx * 6
 			grandTotalRow[keyIndex+8+nextConPosition] = grandTotalRow[keyIndex+8+nextConPosition].(float64) + row[keyIndex+8+nextConPosition].(float64)    // Conversion.
 			grandTotalRow[keyIndex+9+nextConPosition] = grandTotalRow[keyIndex+9+nextConPosition].(float64) + row[keyIndex+9+nextConPosition].(float64)    //Conversion Influence
 			grandTotalRow[keyIndex+11+nextConPosition] = grandTotalRow[keyIndex+11+nextConPosition].(float64) + row[keyIndex+11+nextConPosition].(float64) // Compare Conversion.
@@ -1990,12 +2026,12 @@ func AddGrandTotalRowKPI(headers []string, rows [][]interface{}, keyIndex int, a
 				spendCPC[idx], _ = U.FloatRoundOffWithPrecision(spendCPC[idx]+spend, U.DefaultPrecision)
 				conversionsCPC[idx], _ = U.FloatRoundOffWithPrecision(conversionsCPC[idx]+row[keyIndex+8+nextConPosition].(float64), U.DefaultPrecision)
 			}
+			if method == AttributionMethodInfluence {
+				grandTotalRow[keyIndex+8+nextConPosition] = grandTotalRow[keyIndex+9+nextConPosition]
+				grandTotalRow[keyIndex+11+nextConPosition] = grandTotalRow[keyIndex+12+nextConPosition]
+			}
 		}
 
-	}
-	if method == AttributionMethodInfluence {
-		grandTotalRow[keyIndex+8] = grandTotalRow[keyIndex+9]
-		grandTotalRow[keyIndex+11] = grandTotalRow[keyIndex+12]
 	}
 
 	if float64(impressionsCTR) > 0 {
@@ -2022,9 +2058,9 @@ func AddGrandTotalRowKPI(headers []string, rows [][]interface{}, keyIndex int, a
 	}
 
 	for idx, funcType := range conversionFunTypes {
-		nextConPosition := idx * 4
-		// Normal conversion [8, 9] = [Conversion, CPC]
-		// Compare conversion [10, 11]  = [Conversion, CPC]
+		nextConPosition := idx * 6
+		// Normal conversion [8, 9,10] = [Conversion,Conversion Influence, CPC]
+		// Compare conversion [11, 12,13]  = [Conversion, Conversion Influence,CPC]
 
 		if strings.ToLower(funcType) == "sum" {
 
@@ -2035,7 +2071,7 @@ func AddGrandTotalRowKPI(headers []string, rows [][]interface{}, keyIndex int, a
 			}
 			// Compare Conversion - CPC.
 			if grandTotalRow[keyIndex+3].(float64) > 0 {
-				grandTotalRow[keyIndex+13+nextConPosition], _ = U.FloatRoundOffWithPrecision(grandTotalRow[keyIndex+13+nextConPosition].(float64)/grandTotalRow[keyIndex+3].(float64), U.DefaultPrecision)
+				grandTotalRow[keyIndex+13+nextConPosition], _ = U.FloatRoundOffWithPrecision(grandTotalRow[keyIndex+11+nextConPosition].(float64)/grandTotalRow[keyIndex+3].(float64), U.DefaultPrecision)
 			} else {
 				grandTotalRow[keyIndex+13+nextConPosition] = float64(0)
 			}
@@ -2098,8 +2134,10 @@ func AddGrandTotalRowLandingPage(headers []string, rows [][]interface{}, keyInde
 		}
 	}
 	if method == AttributionMethodInfluence {
-		grandTotalRow[keyIndex+1] = grandTotalRow[keyIndex+2]
-		grandTotalRow[keyIndex+3] = grandTotalRow[keyIndex+4]
+		for i := keyIndex; i < len(grandTotalRow); i += 2 {
+			grandTotalRow[i+1] = grandTotalRow[i+2]
+
+		}
 	}
 
 	rows = append([][]interface{}{grandTotalRow}, rows...)
@@ -2175,6 +2213,9 @@ func AddUpLinkedFunnelEventCount(linkedEvents []QueryEventWithProperties,
 			for len(attributionRow.LinkedEventsCount) < len(linkedEvents) {
 				attributionRow.LinkedEventsCount = append(attributionRow.LinkedEventsCount, 0.0)
 			}
+			for len(attributionRow.LinkedEventsCountInfluence) < len(linkedEvents) {
+				attributionRow.LinkedEventsCountInfluence = append(attributionRow.LinkedEventsCountInfluence, 0.0)
+			}
 		}
 	}
 	// Update linked up events with event hit count.
@@ -2183,6 +2224,7 @@ func AddUpLinkedFunnelEventCount(linkedEvents []QueryEventWithProperties,
 			for _, keyWeight := range attributionKeys {
 				if attributionData[keyWeight.Key] != nil {
 					attributionData[keyWeight.Key].LinkedEventsCount[linkedEventToPositionMap[linkedEventName]] += keyWeight.Weight
+					attributionData[keyWeight.Key].LinkedEventsCountInfluence[linkedEventToPositionMap[linkedEventName]] += (keyWeight.Weight / float64(len(attributionKeys)))
 				}
 			}
 		}
@@ -2306,14 +2348,18 @@ func AddTheAddedKeysAndMetrics(attributionData *map[string]*AttributionData, que
 
 	// Creating an empty linked events row.
 	emptyConversionEventRow := make([]float64, 0)
+	emptyConversionEventRowInfluence := make([]float64, 0)
 	for i := 0; i < noOfConversionEvents; i++ {
 		emptyConversionEventRow = append(emptyConversionEventRow, float64(0))
+		emptyConversionEventRowInfluence = append(emptyConversionEventRowInfluence, float64(0))
 	}
 
 	// Creating an empty linked events row.
 	emptyLinkedEventRow := make([]float64, 0)
+	emptyLinkedEventRowInfluence := make([]float64, 0)
 	for i := 0; i < len(query.LinkedEvents); i++ {
 		emptyLinkedEventRow = append(emptyLinkedEventRow, float64(0))
+		emptyLinkedEventRowInfluence = append(emptyLinkedEventRowInfluence, float64(0))
 	}
 	for _, attributionIDMap := range sessions {
 		for key, sessionTimestamp := range attributionIDMap {
@@ -2325,11 +2371,15 @@ func AddTheAddedKeysAndMetrics(attributionData *map[string]*AttributionData, que
 					(*attributionData)[key] = &AttributionData{}
 
 					(*attributionData)[key].ConversionEventCount = emptyConversionEventRow
+					(*attributionData)[key].ConversionEventCountInfluence = emptyConversionEventRowInfluence
 					(*attributionData)[key].ConversionEventCompareCount = emptyConversionEventRow
+					(*attributionData)[key].ConversionEventCompareCountInfluence = emptyConversionEventRowInfluence
 					if len(query.LinkedEvents) > 0 {
 						// Init the linked events with 0.0 value.
 						tempRow := emptyLinkedEventRow
+						tempRowInfluence := emptyConversionEventRowInfluence
 						(*attributionData)[key].LinkedEventsCount = tempRow
+						(*attributionData)[key].LinkedEventsCountInfluence = tempRowInfluence
 					}
 				}
 
@@ -2497,6 +2547,7 @@ func addMetricsFromReport(attributionData *map[string]*AttributionData, reportKe
 			(*attributionData)[key].ConversionEventCount = emptyConversionEventRow
 			(*attributionData)[key].ConversionEventCountInfluence = emptyConversionEventRowInfluence
 			(*attributionData)[key].ConversionEventCompareCount = emptyConversionEventRow
+			(*attributionData)[key].ConversionEventCompareCountInfluence = emptyConversionEventRowInfluence
 		}
 
 		if (*attributionData)[key].CustomDimensions == nil {
@@ -2691,6 +2742,12 @@ func ProcessOTPEventRows(rows *sql.Rows, query *AttributionQuery,
 			attributedSessionsByUserId[userID][uniqueAttributionKey] = userSessionDataNew
 		}
 	}
+	err := rows.Err()
+	if err != nil {
+		// Error from DB is captured eg: timeout error
+		logCtx.WithFields(log.Fields{"err": err}).Error("Error in executing query in ProcessOTPEventRows")
+		return nil, nil, err
+	}
 	U.LogReadTimeWithQueryRequestID(startReadTime, queryID, &log.Fields{"query": query})
 
 	return attributedSessionsByUserId, userIdsWithSession, nil
@@ -2857,6 +2914,12 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, reports *Marketin
 			log.WithFields(log.Fields{"Method": "ProcessEventRows", "Count": count}).Info("Processing event rows")
 		}
 	}
+	err := rows.Err()
+	if err != nil {
+		// Error from DB is captured eg: timeout error
+		logCtx.WithFields(log.Fields{"err": err}).Error("Error in executing query in ProcessEventRows")
+		return nil, nil, err
+	}
 	logCtx.WithFields(log.Fields{"AttributionKey": query.AttributionKey}).
 		Info("no document was found in any of the reports for ID. Logging and continuing %+v",
 			missingIDs[:U.MinInt(100, len(missingIDs))])
@@ -2918,6 +2981,12 @@ func ProcessRow(rows *sql.Rows, reportName string, logCtx *log.Entry,
 			data = mergeMarketingData(marketingDataIDMap[ID], data)
 		}
 		marketingDataIDMap[ID] = data
+	}
+	err := rows.Err()
+	if err != nil {
+		// Error from DB is captured eg: timeout error
+		logCtx.WithFields(log.Fields{"err": err}).Error("Error in executing query in ProcessRow")
+		return nil, nil
 	}
 	U.LogReadTimeWithQueryRequestID(startReadTime, queryID, &log.Fields{})
 	return marketingDataIDMap, allRows

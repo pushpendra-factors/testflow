@@ -1,9 +1,9 @@
 const https = require('https');
 
-const checkSDK = () => {
+const checkSDK = (assetURL) => {
     let exitCode = 0;
     console.log("!!! Checking SDK on " + deployEnv)
-    return https.get(SDK_URL, (response) => {
+    return https.get(assetURL, (response) => {
         if(!response.statusCode === 200) {
             console.log("!!! Response was not 200 Ok. Please check the deployment of the sdk")
             exitCode = 1;
@@ -26,31 +26,33 @@ const checkSDK = () => {
     })
 }
 
-const main = () => {
+const main = (assetURL) => {
     let exitCodes = [];
     if(checkTimes && parseInt(checkTimes) && parseInt(checkTimes) > 1) {
-        checkSDK().on('response', (val) => exitCodes.push(val))
+        checkSDK(assetURL).on('response', (val) => exitCodes.push(val))
         setInterval(() => {
             if(exitCodes.length < parseInt(checkTimes)) {
-                checkSDK().on('response', (val) => exitCodes.push(val));
+                checkSDK(assetURL).on('response', (val) => exitCodes.push(val));
             } else {
                 process.exit(exitCodes[exitCodes.length -1]);
             }
 
         }, 5000)
     } else {
-        checkSDK().on('response', (val) => process.exit(val))
+        checkSDK(assetURL).on('response', (val) => process.exit(val))
     }
-
 }
 
 const deployEnv = process.argv[2];
 const checkTimes = process.argv[3] ? process.argv[3] : 1;
 
+var assetURL = process.argv[4];
+assetURL = assetURL == undefined ? '' : assetURL.trim();
+
 const SDK_URL = deployEnv === 'prod' ? 
-'https://app.factors.ai/assets/factors.js' : 'https://staging-app.factors.ai/assets/factors.js'
+'https://app.factors.ai/assets/factors.js' : 'https://staging-app.factors.ai/assets/factors.js';
+assetURL = assetURL != '' ? assetURL : SDK_URL;
 
+console.log("!!! Starting process, will check " +assetURL+ " in intervals of 5 secs X" + checkTimes + "times");
+main(assetURL);
 
-console.log("!!! Starting process, will check in intervals of 5 secs X" + checkTimes + "times");
-
-main();

@@ -324,7 +324,12 @@ func InitSDKServiceRoutes(r *gin.Engine) {
 
 	sdkRouteGroup := r.Group(ROUTE_SDK_ROOT)
 	sdkRouteGroup.Use(mid.SetScopeProjectToken())
+
+	// DEPRECATED: Kept for backward compatibility.
+	// Used on only on old npm installations. JS_SDK uses /get_info.
 	sdkRouteGroup.GET("/project/get_settings", SDKGetProjectSettingsHandler)
+
+	sdkRouteGroup.POST("/get_info", SDKGetInfoHandler)
 	sdkRouteGroup.POST("/event/track", SDKTrackHandler)
 	sdkRouteGroup.POST("/event/track/bulk", SDKBulkEventHandler)
 	sdkRouteGroup.POST("/event/update_properties", SDKUpdateEventPropertiesHandler)

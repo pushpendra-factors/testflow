@@ -895,6 +895,11 @@ func addFilterEventsWithPropsQueryV2(projectId int64, qStmnt *string, qParams *[
 	eventsWrapSelect = joinWithComma(eventsWrapSelect, "events.properties as event_properties, events.user_properties as event_user_properties")
 	if addJoinStmnt != "" {
 		eventsWrapSelect = joinWithComma(eventsWrapSelect, "users.customer_user_id, users.properties as global_user_properties")
+		// For the special case of groups join, where events.user_id
+		// cannot be used as replacement of users.id.
+		if strings.Contains(addSelecStmnt, "users.users_user_id") {
+			eventsWrapSelect = joinWithComma(eventsWrapSelect, "users.id as users_user_id")
+		}
 	}
 
 	eventsWrapStmnt := "SELECT " + eventsWrapSelect + " FROM events" + " " + addJoinStmnt

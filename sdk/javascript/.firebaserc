@@ -1,0 +1,21 @@
+{
+  "projects": {
+    "default": "factors-staging"
+  },
+  "targets": {
+    "factors-staging": {
+      "hosting": {
+        "staging": [
+          "b2mxnuvcer"
+        ]
+      }
+    },
+    "factors-production": {
+      "hosting": {
+        "production": [
+          "b3mxnuvcer"
+        ]
+      }
+    }
+  }
+}

@@ -83,7 +83,7 @@ func GetWeeklyInsightsParams(c *gin.Context) (*WeeklyInsightsParams, error) {
 	version := c.Query("version")
 	var insights_version int64
 	if version != "" {
-		insights_version, _ = strconv.ParseInt(n, 10, 64)
+		insights_version, _ = strconv.ParseInt(version, 10, 64)
 	} else {
 		insights_version = 1 // default
 	}

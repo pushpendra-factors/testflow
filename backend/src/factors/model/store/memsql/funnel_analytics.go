@@ -521,11 +521,11 @@ func buildAddSelectForGroup(stepName string, i int) string {
 		"i":         i,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	addSelect := fmt.Sprintf("COALESCE(users.customer_user_id,users.id) as coal_user_id, FIRST(users.id, FROM_UNIXTIME(events.timestamp)) as user_id,"+
+	addSelect := fmt.Sprintf("COALESCE(users.customer_user_id, users.users_user_id) as coal_user_id, FIRST(users.users_user_id, FROM_UNIXTIME(events.timestamp)) as user_id,"+
 		" FIRST(events.timestamp, FROM_UNIXTIME(events.timestamp)) as timestamp, 1 as %s", stepName)
 
 	if i > 0 {
-		addSelect = fmt.Sprintf("COALESCE(users.customer_user_id,users.id) as coal_user_id, events.user_id, events.timestamp, 1 as %s", stepName)
+		addSelect = fmt.Sprintf("COALESCE(users.customer_user_id, users.users_user_id) as coal_user_id, events.user_id, events.timestamp, 1 as %s", stepName)
 	}
 	return addSelect
 }

@@ -219,6 +219,9 @@ func (store *MemSQL) UpdateOTPRule(projectID int64, ruleID string, rule *model.O
 	if rule.RuleType != "" {
 		updateFields["rule_type"] = rule.RuleType
 	}
+	if rule.CRMType != "" {
+		updateFields["crm_type"] = rule.CRMType
+	}
 	if rule.TouchPointTimeRef != "" {
 		updateFields["touch_point_time_ref"] = rule.TouchPointTimeRef
 	}

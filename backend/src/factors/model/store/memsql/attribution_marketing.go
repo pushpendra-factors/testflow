@@ -755,6 +755,12 @@ func (store *MemSQL) PullSmartProperties(projectID int64, campaignIDPlaceHolder 
 		}
 
 	}
+	err = rows.Err()
+	if err != nil {
+		// Error from DB is captured eg: timeout error
+		logCtx.WithFields(log.Fields{"err": err}).Error("Error in executing query in PullSmartProperties")
+		return nil, err
+	}
 	logCtx1.WithFields(log.Fields{"CustomDebug": "True", "ProjectId": projectID,
 		"Source": sourceChannelPlaceHolder}).
 		Info("Pull Smart Properties")

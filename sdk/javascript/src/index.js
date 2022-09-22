@@ -196,8 +196,8 @@ window.addEventListener('FACTORS_INIT_EVENT', function(e) {
 window.addEventListener('FACTORS_INITIALISED_EVENT', function(e){
     processQueue();
     window.addEventListener('FACTORS_QUEUED_EVENT', function(e) {
-            processQueue();
-    })
+        processQueue();
+    });
 });
 
 module.exports = exports = exposed;
