@@ -164,7 +164,7 @@ func (q *KPIQueryGroup) IsValidDerivedKPI() (bool, string) {
 func validateQueryAndFormulaVariable(expression string, queries []KPIQuery) (bool, string) {
 	mapOfFormulaVars := make(map[string]bool)
 	for _, c := range expression {
-		ch := string(c)
+		ch := strings.ToLower(string(c))
 		if strings.Contains(U.Alpha, strings.ToLower(ch)) {
 			mapOfFormulaVars[ch] = true
 		}

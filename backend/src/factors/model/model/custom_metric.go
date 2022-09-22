@@ -100,12 +100,12 @@ func (customMetric *CustomMetric) IsValid() (bool, string) {
 		if err != nil {
 			return false, "Error during decode of derived metrics transformations - custom_metrics handler."
 		}
+		if strings.Contains(derivedMetricTransformation.Formula, " ") {
+			return false, "No empty space allowed in formula field"
+		}
 		isValidDerivedKPI, errMsg := derivedMetricTransformation.IsValidDerivedKPI()
 		if !isValidDerivedKPI {
 			return false, errMsg
-		}
-		if strings.Contains(derivedMetricTransformation.Formula, " ") {
-			return false, "No empty space allowed in formula field"
 		}
 		return true, ""
 	} else {
