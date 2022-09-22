@@ -254,6 +254,16 @@ type KPIQuery struct {
 	Name             string       `json:"na"`
 }
 
+func (q KPIQuery) GetHashCodeForKPI() (string, error) {
+	hashCode := ""
+	var err error
+	if q.Category == ProfileCategory && q.GroupByTimestamp != "" {
+		q.GroupByTimestamp = ""
+		hashCode, err = q.GetQueryCacheHashString()
+	}
+	return hashCode, err
+}
+
 func (q *KPIQuery) GetQueryCacheHashString() (string, error) {
 	queryMap, err := U.EncodeStructTypeToMap(q)
 	if err != nil {
