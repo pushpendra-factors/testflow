@@ -5,7 +5,7 @@ const URI_TRACK = "/sdk/event/track";
 const URI_IDENTIFY = "/sdk/user/identify";
 const URI_ADD_USER_PROPERTIES = "/sdk/user/add_properties";
 const URI_UPDATE_EVENT_PROPERTIES = "/sdk/event/update_properties";
-const URI_ADD_PROJECT_SETTINGS = "/sdk/project/get_settings";
+const URI_GET_INFO = "/sdk/get_info";
 const URI_CAPTURE_CLICK = "/sdk/capture_click";
 const URI_SERVICE_ERROR = "/sdk/service/error";
 
@@ -97,9 +97,12 @@ APIClient.prototype.captureClick = function(payload) {
     );
 }
 
-APIClient.prototype.getProjectSettings = function() {
-    return Request.get(
-        this.getURL(URI_ADD_PROJECT_SETTINGS),
+APIClient.prototype.getInfo = function(payload) {
+    if (!payload) return Promise.reject("GetInfo failed. Invalid payload.");
+
+    return Request.post(
+        this.getURL(URI_GET_INFO),
+        payload,
         this.getHeaders()
     );
 }

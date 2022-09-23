@@ -21,7 +21,8 @@ import {
   fetchCustomKPIConfig,
   fetchSavedCustomKPI,
   addNewCustomKPI,
-  removeCustomKPI
+  removeCustomKPI,
+  fetchKPIConfigWithoutDerivedKPI
 } from 'Reducers/kpi';
 import GLobalFilter from './GLobalFilter';
 import { getUserProperties } from 'Reducers/coreQuery/middleware';
@@ -53,7 +54,8 @@ const CustomKPI = ({
   eventPropNames,
   userPropNames,
   removeCustomKPI,
-  currentAgent
+  currentAgent,
+  fetchKPIConfigWithoutDerivedKPI
 }) => {
   const [showForm, setShowForm] = useState(false);
   const [tableData, setTableData] = useState([]);
@@ -424,6 +426,7 @@ const matchEventName = (item) => {
     // if (!savedCustomKPI) {
     fetchSavedCustomKPI(activeProject.id);
     // }
+    fetchKPIConfigWithoutDerivedKPI(activeProject.id);
   }, [activeProject]); 
 
   useEffect(() => {
@@ -956,7 +959,7 @@ const matchEventName = (item) => {
                               // disabled={loading}
                               size='large'
                               // className={'fa-input w-full'}
-                              placeholder='Type your formula.  Eg A/B, A+B, A-B, A*B'
+                              placeholder='please type the formula. Eg A/B, A+B, A-B, A*B'
                               bordered={false}
                             />
                           </Form.Item>
@@ -1246,5 +1249,6 @@ export default connect(mapStateToProps, {
   fetchSavedCustomKPI,
   addNewCustomKPI,
   removeCustomKPI,
+  fetchKPIConfigWithoutDerivedKPI
 
 })(CustomKPI);

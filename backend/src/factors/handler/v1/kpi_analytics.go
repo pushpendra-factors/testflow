@@ -90,7 +90,7 @@ func GetKPIConfigHandler(c *gin.Context) (interface{}, int, string, string, bool
 
 	resultantResultConfigFunctions = append(resultantResultConfigFunctions, configForStaticSubSectionsFunctions...)
 
-	if includeDerivedKPIs == false {
+	if includeDerivedKPIs {
 		resultantResultConfigFunctions = append(resultantResultConfigFunctions, storeSelected.GetKPIConfigsForPageViews)
 	}
 
@@ -114,7 +114,7 @@ func GetKPIConfigHandler(c *gin.Context) (interface{}, int, string, string, bool
 		}
 	}
 
-	if includeDerivedKPIs == true {
+	if includeDerivedKPIs {
 		currentConfig, errCode := storeSelected.GetKPIConfigsForOthers(projectID, model.OthersDisplayCategory, includeDerivedKPIs)
 		if errCode != http.StatusOK {
 			return nil, http.StatusInternalServerError, PROCESSING_FAILED, "Error during fetch of KPI Custom Config Data.", true

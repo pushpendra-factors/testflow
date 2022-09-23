@@ -35,11 +35,15 @@ func (store *MemSQL) ExecuteKPIQueryGroup(projectID int64, reqID string, kpiQuer
 		var hashCode string
 
 		if query.QueryType == model.KpiDerivedQueryType {
-			result, statusCode, errMsg = store.ExecuteDerivedKPIQuery(projectID, reqID, query, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
+			result, statusCode, hashCode, errMsg = store.ExecuteDerivedKPIQuery(projectID, reqID, query, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
 			if statusCode != http.StatusOK {
 				finalStatusCode = statusCode
 				log.WithField("kpiQueryGroup", kpiQueryGroup).WithField("query", query).WithField("queryResults", queryResults).Error(errMsg)
 				break
+			} else {
+				if hashCode != "" {
+					hashMapOfQueryToResult[hashCode] = result
+				}
 			}
 		} else {
 			result, statusCode, hashCode, errMsg = store.ExecuteNonDerivedQuery(projectID, reqID, query, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
@@ -120,20 +124,26 @@ func (store *MemSQL) ExecuteNonDerivedQuery(projectID int64, reqID string,
 }
 
 func (store *MemSQL) ExecuteDerivedKPIQuery(projectID int64, reqID string, baseQuery model.KPIQuery,
-	enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool) ([]model.QueryResult, int, string) {
+	enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool) ([]model.QueryResult, int, string, string) {
 	queryResults := make([]model.QueryResult, 0)
 	finalStatusCode := http.StatusOK
-	hashMapOfQueryToResult := make(map[string][]model.QueryResult)
 	mapOfFormulaVariableToQueryResult := make(map[string]model.QueryResult)
+	if baseQuery.Category == model.ProfileCategory && baseQuery.GroupByTimestamp == "" {
+		return make([]model.QueryResult, 1), http.StatusOK, "", ""
+	}
+	derivedQueryHashCode, err := baseQuery.GetHashCodeForKPI()
+	if err != nil {
+		return queryResults, http.StatusInternalServerError, "", err.Error()
+	}
 
 	derivedMetric, errMsg, statusCode := store.GetDerivedMetricsByName(projectID, baseQuery.Metrics[0])
 	if statusCode != http.StatusFound {
-		return queryResults, statusCode, errMsg
+		return queryResults, statusCode, "", errMsg
 	}
 	kpiQueryGroup := model.KPIQueryGroup{}
-	err := U.DecodePostgresJsonbToStructType(derivedMetric.Transformations, &kpiQueryGroup)
+	err = U.DecodePostgresJsonbToStructType(derivedMetric.Transformations, &kpiQueryGroup)
 	if err != nil {
-		return queryResults, http.StatusInternalServerError, "Failed during decode of derived kpi transformations."
+		return queryResults, http.StatusInternalServerError, "", "Failed during decode of derived kpi transformations."
 	}
 	for index, query := range kpiQueryGroup.Queries {
 		kpiQueryGroup.Queries[index].Filters = append(query.Filters, baseQuery.Filters...)
@@ -147,27 +157,22 @@ func (store *MemSQL) ExecuteDerivedKPIQuery(projectID int64, reqID string, baseQ
 	for _, query := range kpiQueryGroup.Queries {
 		var result []model.QueryResult
 		var statusCode int
-		var hashCode string
-		result, statusCode, hashCode, errMsg = store.ExecuteNonDerivedQuery(projectID, reqID, query, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
+		result, statusCode, _, errMsg = store.ExecuteNonDerivedQuery(projectID, reqID, query, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
 
 		if statusCode != http.StatusOK {
 			finalStatusCode = statusCode
 			break
-		} else {
-			if hashCode != "" {
-				hashMapOfQueryToResult[hashCode] = result
-			}
 		}
 
 		mapOfFormulaVariableToQueryResult[query.Name] = result[0]
 	}
 
 	if finalStatusCode != http.StatusOK {
-		return make([]model.QueryResult, 0), finalStatusCode, errMsg
+		return make([]model.QueryResult, 0), finalStatusCode, "", errMsg
 	} else {
 		result := EvaluateKPIExpressionWithBraces(mapOfFormulaVariableToQueryResult, kpiQueryGroup.Queries[0].Timezone, strings.ToLower(kpiQueryGroup.Formula))
 		queryResults = append(queryResults, result)
-		return queryResults, http.StatusOK, ""
+		return queryResults, http.StatusOK, derivedQueryHashCode, ""
 	}
 }
 
