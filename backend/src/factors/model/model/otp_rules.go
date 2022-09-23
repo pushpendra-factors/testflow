@@ -10,6 +10,7 @@ type OTPRule struct {
 	ID                string         `gorm:"primary_key:true;type:uuid" json:"id"`
 	ProjectID         int64          `gorm:"primary_key:true" json:"project_id"`
 	RuleType          string         `gorm:"not null" json:"rule_type"`
+	CRMType           string         `gorm:"not null" json:"crm_type"`
 	TouchPointTimeRef string         `gorm:"not null" json:"touch_point_time_ref"`
 	Filters           postgres.Jsonb `gorm:"not null" json:"filters"`
 	PropertiesMap     postgres.Jsonb `json:"properties_map"`
@@ -39,10 +40,13 @@ const (
 	LastModifiedTimeRef               = "LAST_MODIFIED_TIME_REF"
 	TouchPointPropertyValueAsProperty = "Property"
 	TouchPointPropertyValueAsConstant = "Constant"
-	TouchPointRuleTypeEmails          = "Emails"
-	TouchPointRuleTypeMeetings        = "Meetings"
-	TouchPointRuleTypeCalls           = "Calls"
-	TouchPointRuleTypeForms           = "Form_Submissions"
-	TouchPointRuleTypeHSNormal        = "HS_normal"
-	TouchPointRuleTypeSFNormal        = "SF_normal"
+	TouchPointRuleTypeEmails          = "hs_emails"
+	TouchPointRuleTypeMeetings        = "hs_meetings"
+	TouchPointRuleTypeCalls           = "hs_calls"
+	TouchPointRuleTypeForms           = "hs_form_submissions"
+	TouchPointRuleTypeHSNormal        = "hs_contact"
+	TouchPointRuleTypeSFNormal        = "sf_contact"
+
+	TouchPointCRMTypeHS = "hubspot"
+	TouchPointCRMTypeSF = "salesforce"
 )

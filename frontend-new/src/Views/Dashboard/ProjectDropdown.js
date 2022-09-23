@@ -431,6 +431,7 @@ function ProjectDropdown({
               oldestRefreshTime={oldestRefreshTime}
               handleRefreshClick={handleRefreshClick}
             />
+
             <SortableCards
               durationObj={durationObj}
               setwidgetModal={handleToggleWidgetModal}

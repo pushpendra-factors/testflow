@@ -248,6 +248,51 @@ const FaDatepicker = ({
       onSelect(newDateData);
       setQuarterDateStr(dateRng.dateStr);
     }
+    if (type === 'last_7days') {
+      const dateRng = getRangeByLabel('Last 7 Days');
+      const { startDate } = dateRng;
+      const { endDate } = dateRng;
+      const newDateData = {
+        ...dateData,
+        startDate,
+        endDate,
+        dateType: type,
+        dateString: dateRng
+      };
+      setDateString('Last 7 Days');
+      onSelect(newDateData);
+      setQuarterDateStr(dateRng.dateStr);
+    }
+    if (type === 'last_14days') {
+      const dateRng = getRangeByLabel('Last 14 Days');
+      const { startDate } = dateRng;
+      const { endDate } = dateRng;
+      const newDateData = {
+        ...dateData,
+        startDate,
+        endDate,
+        dateType: type,
+        dateString: dateRng
+      };
+      setDateString('Last 14 Days');
+      onSelect(newDateData);
+      setQuarterDateStr(dateRng.dateStr);
+    }
+    if (type === 'last_28days') {
+      const dateRng = getRangeByLabel('Last 28 Days');
+      const { startDate } = dateRng;
+      const { endDate } = dateRng;
+      const newDateData = {
+        ...dateData,
+        startDate,
+        endDate,
+        dateType: type,
+        dateString: dateRng
+      };
+      setDateString('Last 28 Days');
+      onSelect(newDateData);
+      setQuarterDateStr(dateRng.dateStr);
+    }
   };
 
   const showDatePickerFn = (type) => {
@@ -287,6 +332,23 @@ const FaDatepicker = ({
               Last Week
             </a>
           </Menu.Item>
+          <Menu.Divider />
+          <Menu.Item key="this_week">
+            <a target="_blank" onClick={() => returnPreSetDate('last_7days')}>
+              Last 7 days
+            </a>
+          </Menu.Item>
+          <Menu.Item key="this_week">
+            <a target="_blank" onClick={() => returnPreSetDate('last_14days')}>
+              Last 14 days
+            </a>
+          </Menu.Item>
+          <Menu.Item key="this_week">
+            <a target="_blank" onClick={() => returnPreSetDate('last_28days')}>
+              Last 28 days
+            </a>
+          </Menu.Item>
+          <Menu.Divider />
           <Menu.Item key="this_month">
             <a target="_blank" onClick={() => returnPreSetDate('this_month')}>
               This Month

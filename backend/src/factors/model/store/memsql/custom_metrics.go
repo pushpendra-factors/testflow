@@ -69,7 +69,7 @@ func (store *MemSQL) GetCustomKPIMetricsByProjectIdAndDisplayCategory(projectID 
 
 func (store *MemSQL) GetDerivedKPIMetricsByProjectIdAndDisplayCategory(projectID int64, displayCategory string, includeDerivedKPIs bool) []map[string]string {
 	logCtx := log.WithField("project_id", projectID)
-	if includeDerivedKPIs == true {
+	if !includeDerivedKPIs {
 		return make([]map[string]string, 0)
 	} else {
 		customMetrics, err, statusCode := store.GetCustomMetricByProjectIdQueryTypeAndObjectType(projectID, model.DerivedQueryType, displayCategory)

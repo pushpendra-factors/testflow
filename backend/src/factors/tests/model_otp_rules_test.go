@@ -20,6 +20,7 @@ func TestCreateOTPRule(t *testing.T) {
 			project.ID,
 			&model.OTPRule{
 				RuleType:          model.TouchPointRuleTypeSFNormal,
+				CRMType:           model.TouchPointCRMTypeSF,
 				TouchPointTimeRef: model.LastModifiedTimeRef,
 				PropertiesMap: postgres.Jsonb{RawMessage: json.RawMessage(`{
         "$campaign": {
@@ -68,6 +69,7 @@ func TestDeleteOTPRule(t *testing.T) {
 		project.ID,
 		&model.OTPRule{
 			RuleType:          model.TouchPointRuleTypeSFNormal,
+			CRMType:           model.TouchPointCRMTypeSF,
 			TouchPointTimeRef: model.LastModifiedTimeRef,
 			PropertiesMap: postgres.Jsonb{RawMessage: json.RawMessage(`{
         "$campaign": {
@@ -125,6 +127,7 @@ func TestGetOTPRule(t *testing.T) {
 		project.ID,
 		&model.OTPRule{
 			RuleType:          model.TouchPointRuleTypeSFNormal,
+			CRMType:           model.TouchPointCRMTypeSF,
 			TouchPointTimeRef: model.LastModifiedTimeRef,
 			PropertiesMap: postgres.Jsonb{RawMessage: json.RawMessage(`{
         "$campaign": {
