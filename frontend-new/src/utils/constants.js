@@ -34,6 +34,14 @@ export const ATTRIBUTION_METHODOLOGY = [
     value: 'U_Shaped'
   },
   {
+    text: 'W Shaped',
+    value: 'W_Shaped'
+  },
+  {
+    text: 'Influence',
+    value: 'Influence'
+  },
+  {
     text: 'Time Decay',
     value: 'Time_Decay'
   }
