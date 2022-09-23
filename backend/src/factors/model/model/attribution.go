@@ -1584,6 +1584,7 @@ func MergeTwoDataRows(row1 []interface{}, row2 []interface{}, keyIndex int, attr
 		// Remaining linked funnel events & CPCs
 		for i := keyIndex + 5; i < len(row1)-1; i += 2 {
 			row1[i] = row1[i].(float64) + row2[i].(float64)
+			row1[i+1] = row1[i+1].(float64) + row2[i+1].(float64)
 		}
 
 		return row1
@@ -1698,11 +1699,15 @@ func MergeTwoDataRows(row1 []interface{}, row2 []interface{}, keyIndex int, attr
 
 		// Remaining linked funnel events & CPCs
 		for i := keyIndex + 14; i < len(row1)-1; i += 3 {
+			// Conversion
 			row1[i] = row1[i].(float64) + row2[i].(float64)
+			// Influence
+			row1[i+1] = row1[i+1].(float64) + row2[i+1].(float64)
+
 			if row1[i].(float64) > 0 && i < len(row1) {
-				row1[i+1], _ = U.FloatRoundOffWithPrecision(spend/row1[i].(float64), U.DefaultPrecision) // Funnel - Conversion - CPC. spend/conversion
+				row1[i+2], _ = U.FloatRoundOffWithPrecision(spend/row1[i].(float64), U.DefaultPrecision) // Funnel - Conversion - CPC. spend/conversion
 			} else {
-				row1[i+1] = float64(0) // Funnel - Conversion - CPC.
+				row1[i+2] = float64(0) // Funnel - Conversion - CPC.
 			}
 		}
 		return row1
