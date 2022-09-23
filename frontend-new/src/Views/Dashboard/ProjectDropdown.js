@@ -433,7 +433,7 @@ function ProjectDropdown({
                 />
               }
               onError={FaErrorLog}
-            >
+            />
 
               <DashboardSubMenu
                 durationObj={durationObj}
