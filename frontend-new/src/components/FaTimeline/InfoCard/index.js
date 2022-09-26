@@ -8,6 +8,19 @@ import {
 import MomentTz from '../../MomentTz';
 
 function InfoCard({ title, event_name, properties = {}, trigger, children }) {
+  const popoverPropValueFormat = (key, value) => {
+    if (
+      key.includes('timestamp') ||
+      key.includes('starttime') ||
+      key.includes('endtime')
+    ) {
+      return MomentTz(value * 1000).format('DD MMMM YYYY, hh:mm A');
+    } else if (key.includes('_time')) {
+      formatDurationIntoString(value);
+    } else if (key.includes('durationmilliseconds')) {
+      formatDurationIntoString(parseInt(value / 1000));
+    } else return value;
+  };
   const popoverContent = () => {
     return (
       <div className='fa-popupcard'>
@@ -28,7 +41,7 @@ function InfoCard({ title, event_name, properties = {}, trigger, children }) {
                   mini
                   type={'paragraph'}
                   color={'grey'}
-                  extraClass={'max-w-2/3 break-words mr-2'}
+                  extraClass={'mr-2'}
                 >
                   Page URL
                 </Text>
@@ -51,7 +64,7 @@ function InfoCard({ title, event_name, properties = {}, trigger, children }) {
                   mini
                   type={'paragraph'}
                   color={'grey'}
-                  extraClass={'max-w-2/3 truncate mr-2'}
+                  extraClass={'max-w-xs mr-2'}
                 >
                   {key === '$timestamp' ? 'Date and Time' : PropTextFormat(key)}
                 </Text>
@@ -62,11 +75,7 @@ function InfoCard({ title, event_name, properties = {}, trigger, children }) {
                   weight={'medium'}
                   extraClass={'break-words text-right'}
                 >
-                  {key === '$timestamp'
-                    ? MomentTz(value * 1000).format('DD MMMM YYYY, hh:mm A')
-                    : key.includes('_time')
-                    ? formatDurationIntoString(value)
-                    : value}
+                  {popoverPropValueFormat(key, value)}
                 </Text>
               </div>
             );

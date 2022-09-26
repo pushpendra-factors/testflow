@@ -32,6 +32,10 @@ function AccountTimeline({
   }, [timelineEvents, granularity, collapseAll]);
 
   const renderInfoCard = (event) => {
+    const eventName =
+      event.display_name === 'Page View'
+        ? event.event_name
+        : event?.alias_name || event.display_name;
     return (
       <InfoCard
         title={event?.display_name}
@@ -45,11 +49,7 @@ function AccountTimeline({
         }
       >
         <div className={`flex items-center font-medium`}>
-          <span className='truncate mx-1'>
-            {event?.display_name === 'Page View'
-              ? event?.event_name
-              : PropTextFormat(event?.display_name)}
-          </span>
+          <span className='truncate mx-1'>{eventName}</span>
           {hoverEvents.includes(event.event_name) ||
           event.display_name === 'Page View' ? (
             <CaretRightOutlined />
