@@ -670,7 +670,7 @@ App.prototype.autoFormCapture = function(enabled=false) {
 }
 
 App.prototype.captureClick = function(appInstance, element) {
-    if (!this.isInitialized()) return Promise.reject(SDK_NOT_INIT_ERROR);
+    if (!appInstance.isInitialized()) return Promise.reject(SDK_NOT_INIT_ERROR);
 
     if (!element) logger.debug("Element is undefined on capture click.");
 
