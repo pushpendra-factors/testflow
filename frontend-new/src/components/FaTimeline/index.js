@@ -60,7 +60,7 @@ function FaTimeline({
                       {event ? (
                         <div className={`flex`}>
                           <InfoCard
-                            title={event.display_name}
+                            title={event?.alias_name || event.display_name}
                             event_name={event.event_name}
                             properties={event?.properties || {}}
                             trigger={

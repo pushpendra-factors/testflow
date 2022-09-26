@@ -38,7 +38,7 @@ function AccountTimeline({
         : event?.alias_name || event.display_name;
     return (
       <InfoCard
-        title={event?.display_name}
+        title={event?.alias_name || event.display_name}
         event_name={event?.event_name}
         properties={event?.properties || {}}
         trigger={
