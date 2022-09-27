@@ -685,6 +685,9 @@ App.prototype.captureClick = function(appInstance, element) {
     // Add user_id to payload.
     updatePayloadWithUserIdFromCookie(payload);
 
+    logger.debug(element, false);
+    logger.debug("Click capture payload: "+JSON.stringify(payload), false);
+
     return appInstance.client.captureClick(payload);
 }
 
