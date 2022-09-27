@@ -161,7 +161,7 @@ func main() {
 	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
 	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
 //	emailString := flag.String("emails", "", "comma separeted list of emails to which report to be sent")
-	localDiskTmpDirFlag := flag.String("local_disk_tmp_dir", "/usr/local/var/factors/local_disk/tmp", "--local_disk_tmp_dir=/usr/local/var/factors/local_disk/tmp pass directory")
+//	localDiskTmpDirFlag := flag.String("local_disk_tmp_dir", "/usr/local/var/factors/local_disk/tmp", "--local_disk_tmp_dir=/usr/local/var/factors/local_disk/tmp pass directory")
 	flag.Parse()
 	config := &C.Configuration{
 		Env:         *envFlag,
@@ -191,7 +191,7 @@ func main() {
 			panic(err)
 		}
 	}
-	diskManager := serviceDisk.New(*localDiskTmpDirFlag)
+//	diskManager := serviceDisk.New(*localDiskTmpDirFlag)
 	fmt.Println("project ids ", *projectIdFlag)
 	projectIdsList := getProjectIdsList(*projectIdFlag)
 	fromTime, err := time.Parse(U.DATETIME_FORMAT_YYYYMMDD, *fromDate)
@@ -216,21 +216,22 @@ func main() {
 	for _, project_id := range projectIdsList {
 
 		efCloudPath, efCloudName := (cloudManager).GetModelMetricsFilePathAndName(int64(project_id), fromTime.Unix(), *modelType)
-		efTmpPath, efTmpName := diskManager.GetModelMetricsFilePathAndName(int64(project_id), fromTime.Unix(), *modelType)
-		log.WithFields(log.Fields{"eventFileCloudPath": efCloudPath,
-			"eventFileCloudName": efCloudName}).Info("Downloading events file from cloud.")
-		eReader, err := (cloudManager).Get(efCloudPath, efCloudName)
-		if err != nil {
-			log.WithFields(log.Fields{"err": err, "eventFilePath": efCloudPath,
-				"eventFileName": efCloudName}).Error("Failed downloading events file from cloud.")
-		}
-		err = diskManager.Create(efTmpPath, efTmpName, eReader)
-		if err != nil {
-			log.WithFields(log.Fields{"err": err, "eventFilePath": efCloudPath,
-				"eventFileName": efCloudName}).Error("Failed creating events file in local.")
-		}
-		tmpEventsFilePath := efTmpPath + efTmpName
-		log.Info("Successfuly downloaded events file from cloud.", tmpEventsFilePath, efTmpPath, efTmpName)
+	//	efTmpPath, efTmpName := diskManager.GetModelMetricsFilePathAndName(int64(project_id), fromTime.Unix(), *modelType)
+		// log.WithFields(log.Fields{"eventFileCloudPath": efCloudPath,
+		// 	"eventFileCloudName": efCloudName}).Info("Downloading events file from cloud.")
+//		 eReader, err := (cloudManager).Get(efCloudPath, efCloudName)
+		// if err != nil {
+		// 	log.WithFields(log.Fields{"err": err, "eventFilePath": efCloudPath,
+		// 		"eventFileName": efCloudName}).Error("Failed downloading events file from cloud.")
+		// }
+	//	log.Info("---- sumit ", efTmpName, efTmpName,eReader)
+		// err = diskManager.Create(efTmpPath, efTmpName, eReader)
+		// if err != nil {
+		// 	log.WithFields(log.Fields{"err": err, "eventFilePath": efCloudPath,
+		// 		"eventFileName": efCloudName}).Error("Failed creating events file in local.")
+		// }
+		//tmpMetricsFilePath := efTmpPath + efTmpName
+		//log.Info("Successfuly downloaded events file from cloud.", tmpEventsFilePath, efTmpPath, efTmpName)
 		//scanner, err := T.OpenEventFileAndGetScanner(tmpEventsFilePath)
 		//initizalizing validator and validationMap
 		//validate := validator.New()
@@ -294,7 +295,7 @@ func main() {
 		report, _ := openFile(MetricsReportName)
 	//	detailed_report, _ := openFile(DetailedReportName)
 		log.Info("$$$$cloud path ", efCloudPath)
-		err = (cloudManager).Create(efCloudPath, MetricsReportName, report)
+		err = (cloudManager).Create(efCloudPath, efCloudName, report)
 		if err != nil {
 			//log.Fatal("Failed to upload report in cloud. error = ", err)
 			log.Info(err,"$$$$ failed to upload report in cloud")
