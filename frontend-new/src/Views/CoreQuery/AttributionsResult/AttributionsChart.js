@@ -15,7 +15,8 @@ import {
   getTableData,
   getSingleTouchPointChartData,
   getDualTouchPointChartData,
-  getResultantMetrics
+  getResultantMetrics,
+  getTableFilterOptions
 } from './utils';
 
 import AttributionTable from './AttributionTable';
@@ -40,10 +41,6 @@ const nodata = (
     <NoDataChart />
   </div>
 );
-
-function onlyUnique(value, index, self) {
-  return self.indexOf(value) === index;
-}
 
 const AttributionsChart = forwardRef(
   (
@@ -297,37 +294,36 @@ const AttributionsChart = forwardRef(
     ]);
 
     useEffect(() => {
-      if (tableData.length && !filters.length) {
-        const listDimensions =
-          touchpoint === 'LandingPage'
-            ? [...content_groups]
-            : [...attr_dimensions];
-        const enabledDimensions = listDimensions.filter(
-          (d) => d.touchPoint === touchpoint && d.enabled
-        );
-        if (enabledDimensions.length) {
-          const availableFilters = enabledDimensions.map((d) => {
-            return {
-              title: d.title,
-              key: d.title,
-              options: tableData.map((data) => data[d.title]).filter(onlyUnique)
-            };
-          });
-          setFilters(availableFilters);
-        } else {
-          const availableFilters = [
-            {
-              title: touchpoint === 'ChannelGroup' ? 'Channel' : touchpoint,
-              key: touchpoint,
-              options: tableData
-                .map((data) => data[touchpoint])
-                .filter(onlyUnique)
-            }
-          ];
-          setFilters(availableFilters);
-        }
+      const metricsNotPresentInFilters = attributionMetrics
+        .filter((m) => m.enabled)
+        .filter((m) => filters.findIndex((f) => f.key === m.title) === -1);
+
+      const metricsNotEnabledButPresentInFilters = attributionMetrics
+        .filter((m) => !m.enabled)
+        .filter((m) => filters.findIndex((f) => f.key === m.title) > -1);
+
+      if (
+        (tableData.length && !filters.length) ||
+        metricsNotPresentInFilters.length > 0 ||
+        metricsNotEnabledButPresentInFilters.length > 0
+      ) {
+        const tableFilterOptions = getTableFilterOptions({
+          content_groups,
+          attr_dimensions,
+          touchpoint,
+          tableData,
+          attributionMetrics
+        });
+        setFilters(tableFilterOptions);
       }
-    }, [content_groups, attr_dimensions, touchpoint, tableData, filters]);
+    }, [
+      content_groups,
+      attr_dimensions,
+      touchpoint,
+      tableData,
+      attributionMetrics,
+      filters
+    ]);
 
     let chart = null;
 

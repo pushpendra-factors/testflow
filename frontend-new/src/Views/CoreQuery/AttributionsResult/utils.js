@@ -18,6 +18,7 @@ import {
 import styles from './index.module.scss';
 import { keys, uniqBy } from 'lodash';
 import { ATTRIBUTION_GROUP_ANALYSIS_KEYS } from './attributionsResult.constants';
+import { EQUALITY_OPERATOR_KEYS } from '../../../components/DataTableFilters/dataTableFilters.constants';
 
 export const defaultSortProp = () => {
   return [
@@ -568,7 +569,9 @@ export const getTableColumns = (
       };
     });
 
-  const showCPC = metrics.find((elem) => elem.header === 'ALL CPC')?.enabled;
+  const showCPC = metrics.find(
+    (elem) => elem.header === 'Cost Per Conversion'
+  )?.enabled;
   const showCR = metrics.find((elem) => elem.header === 'ALL CR')?.enabled;
   const showCV = metrics.find((elem) => elem.header === 'CV')?.enabled;
   const showROC = metrics.find((elem) => elem.header === 'ROC')?.enabled;
@@ -849,16 +852,30 @@ const applyAdvancedFilters = (
   const currentFilterResults = dataToBeFiltered.filter((d) => {
     const key = currentFilter.field;
     const fieldValue = d[key];
-    if (currentFilter.equalityOperator === 'not-equal') {
+    if (currentFilter.equalityOperator === EQUALITY_OPERATOR_KEYS.NOT_EQUAL) {
       return currentFilter.values.indexOf(fieldValue) === -1;
     }
-    if (currentFilter.equalityOperator === 'does-not-contain') {
+    if (
+      currentFilter.equalityOperator ===
+      EQUALITY_OPERATOR_KEYS.GREATER_THAN_OR_EQUAL_TO
+    ) {
+      return Number(fieldValue) >= Number(currentFilter.values);
+    }
+    if (
+      currentFilter.equalityOperator ===
+      EQUALITY_OPERATOR_KEYS.LESS_THAN_OR_EQUAL_TO
+    ) {
+      return Number(fieldValue) <= Number(currentFilter.values);
+    }
+    if (
+      currentFilter.equalityOperator === EQUALITY_OPERATOR_KEYS.DOES_NOT_CONTAIN
+    ) {
       const doesExist = currentFilter.values.filter((value) => {
         return fieldValue.toLowerCase().includes(value.toLowerCase());
       });
       return doesExist.length === 0;
     }
-    if (currentFilter.equalityOperator === 'contains') {
+    if (currentFilter.equalityOperator === EQUALITY_OPERATOR_KEYS.CONTAINS) {
       const doesExist = currentFilter.values.filter((value) => {
         return fieldValue.toLowerCase().includes(value.toLowerCase());
       });
@@ -1009,7 +1026,7 @@ export const getTableData = (
                 compare_value: equivalent_compare_row
                   ? formatCount(equivalent_compare_row[costIdx], 1)
                   : 0
-              },
+              }
           // 'Conversion Rate': !comparison_data
           //   ? formatCount(row[conversionRateIdx], 1)
           //   : {
@@ -1255,4 +1272,77 @@ export const getResultantMetrics = (touchpoint, attribution_metrics) => {
           metrics.header.includes('ALL CR')
       )
     : attribution_metrics;
+};
+
+function onlyUnique(value, index, self) {
+  return self.indexOf(value) === index;
+}
+
+export const getTableFilterOptions = ({
+  content_groups,
+  attr_dimensions,
+  touchpoint,
+  tableData,
+  attributionMetrics
+}) => {
+  const metrics = getResultantMetrics(touchpoint, attributionMetrics);
+  const metricFilters = metrics
+    .filter((m) => !m.isEventMetric && m.enabled)
+    .map((m) => {
+      return {
+        title: m.title,
+        key: m.title,
+        options: [],
+        valueType: m.valueType
+      };
+    });
+
+  const eventBasedMetrics = [
+    {
+      title: 'Conversion',
+      key: 'Conversion',
+      options: [],
+      valueType: 'numerical'
+    }
+  ];
+
+  const isCostPerConversionEnabled = attributionMetrics.find(
+    (m) => m.header === 'Cost Per Conversion'
+  ).enabled;
+
+  if (isCostPerConversionEnabled) {
+    eventBasedMetrics.push({
+      title: 'Cost Per Conversion',
+      key: 'Cost Per Conversion',
+      options: [],
+      valueType: 'numerical'
+    });
+  }
+
+  const listDimensions =
+    touchpoint === 'LandingPage' ? [...content_groups] : [...attr_dimensions];
+
+  const enabledDimensions = listDimensions.filter(
+    (d) => d.touchPoint === touchpoint && d.enabled
+  );
+
+  if (enabledDimensions.length) {
+    const availableFilters = enabledDimensions.map((d) => {
+      return {
+        title: d.title,
+        key: d.title,
+        options: tableData.map((data) => data[d.title]).filter(onlyUnique)
+      };
+    });
+    return [...availableFilters, ...metricFilters, ...eventBasedMetrics];
+  } else {
+    const availableFilters = [
+      {
+        title: touchpoint === 'ChannelGroup' ? 'Channel' : touchpoint,
+        key: touchpoint,
+        options: tableData.map((data) => data[touchpoint]).filter(onlyUnique)
+      }
+    ];
+    return [...availableFilters, ...metricFilters, ...eventBasedMetrics];
+  }
 };

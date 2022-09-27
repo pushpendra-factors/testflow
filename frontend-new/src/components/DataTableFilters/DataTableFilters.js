@@ -1,6 +1,6 @@
 import React, { Fragment, useCallback, useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
-import { noop } from 'lodash';
+import { find, get, noop } from 'lodash';
 import cx from 'classnames';
 import { Button, Dropdown, Menu, Popover, Tooltip } from 'antd';
 import { Text, SVG } from '../factorsComponents';
@@ -20,6 +20,7 @@ import {
   getUpdatedFiltersOnValueChange
 } from './dataTableFilters.helpers';
 import ControlledComponent from '../ControlledComponent/ControlledComponent';
+import { isNumeric } from '../../utils/global';
 
 const DataTableFilters = ({
   filters,
@@ -65,16 +66,44 @@ const DataTableFilters = ({
     });
   };
 
-  const handleValueChange = useCallback((categoryIndex, toggledOption) => {
+  const handleValueChange = useCallback((categoryIndex, value) => {
     setSelectedFilters((currentFilters) => {
       const updatedFilters = getUpdatedFiltersOnValueChange({
         categoryIndex,
-        toggledOption,
+        value,
         currentFilters
       });
       return updatedFilters;
     });
   }, []);
+
+  const handleNumericalFilterValueChange = useCallback(
+    (categoryIndex, e) => {
+      const value = e.target.value;
+      if (!isNumeric(value) && value !== '') {
+        return false;
+      }
+      setSelectedFilters((currentFilters) => {
+        const selectedCategoryField = get(
+          selectedFilters,
+          `categories.${categoryIndex}.field`
+        );
+        const selectedCategoryFieldValueType = get(
+          find(filters, (filter) => filter.key === selectedCategoryField),
+          'valueType',
+          'numerical'
+        );
+        const updatedFilters = getUpdatedFiltersOnValueChange({
+          categoryIndex,
+          value,
+          currentFilters,
+          categoryFieldType: selectedCategoryFieldValueType
+        });
+        return updatedFilters;
+      });
+    },
+    [selectedFilters, filters]
+  );
 
   const handleCategoryCombinationOperatorChange = useCallback((option) => {
     setSelectedFilters((currentFilters) => {
@@ -130,9 +159,20 @@ const DataTableFilters = ({
   };
 
   const getEqualityOperatorMenu = (categoryIndex) => {
+    const selectedCategoryField = get(
+      selectedFilters,
+      `categories.${categoryIndex}.field`
+    );
+    const selectedCategoryFieldValueType = get(
+      find(filters, (filter) => filter.key === selectedCategoryField),
+      'valueType',
+      'categorical'
+    );
     return (
       <Menu className={styles.menu}>
-        {EQUALITY_OPERATOR_MENU.map((option) => {
+        {EQUALITY_OPERATOR_MENU.filter((option) =>
+          option.valueType.includes(selectedCategoryFieldValueType)
+        ).map((option) => {
           return (
             <Menu.Item
               className={styles['dropdown-item']}
@@ -254,6 +294,12 @@ const DataTableFilters = ({
     return (
       <div className="flex flex-col row-gap-2">
         {selectedFilters.categories.map((category, index) => {
+          const selectedCategoryField = get(category, `field`);
+          const selectedCategoryFieldValueType = get(
+            find(filters, (filter) => filter.key === selectedCategoryField),
+            'valueType',
+            'categorical'
+          );
           const filterDetail = filters.find(
             (filter) => filter.key === category.field
           );
@@ -262,16 +308,18 @@ const DataTableFilters = ({
           ).title;
           const label = filterDetail.title;
           const options = filterDetail.options;
-          const selectedOptions = category.values;
+          const filterValue = category.values;
 
           const valuesLabel =
-            selectedOptions.length === 0
+            Array.isArray(filterValue) && filterValue.length === 0
               ? 'Select values'
-              : selectedOptions.join(', ');
+              : Array.isArray(filterValue)
+              ? filterValue.join(', ')
+              : '';
 
           return (
             <div className="flex col-gap-1 items-center">
-              <div key={category.key} className="flex col-gap-px items-center">
+              <div key={category.key} className="flex col-gap-1 items-center">
                 <Dropdown
                   overlayClassName="rounded-lg"
                   trigger="click"
@@ -286,24 +334,43 @@ const DataTableFilters = ({
                 >
                   {renderLabelButton({ label: equalityOperator })}
                 </Dropdown>
-                <Popover
-                  overlayClassName={styles['values-popover']}
-                  trigger="click"
-                  placement="bottomRight"
-                  content={getCategoryValuesMenu.bind(
-                    null,
-                    options,
-                    selectedOptions,
-                    category.equalityOperator,
-                    index
-                  )}
-                >
-                  <Tooltip title={valuesLabel}>
-                    {renderLabelButton({
-                      label: valuesLabel
-                    })}
-                  </Tooltip>
-                </Popover>
+                {selectedCategoryFieldValueType === 'categorical' && (
+                  <Popover
+                    overlayClassName={styles['values-popover']}
+                    trigger="click"
+                    placement="bottomRight"
+                    content={getCategoryValuesMenu.bind(
+                      null,
+                      options,
+                      filterValue,
+                      category.equalityOperator,
+                      index
+                    )}
+                  >
+                    <Tooltip title={valuesLabel}>
+                      {renderLabelButton({
+                        label: valuesLabel
+                      })}
+                    </Tooltip>
+                  </Popover>
+                )}
+                {(selectedCategoryFieldValueType === 'numerical' ||
+                  selectedCategoryFieldValueType === 'percentage') && (
+                  <>
+                    <input
+                      onChange={handleNumericalFilterValueChange.bind(
+                        null,
+                        index
+                      )}
+                      value={filterValue}
+                      className={styles['value-input-box']}
+                      type="text"
+                    />
+                    {selectedCategoryFieldValueType === 'percentage' && (
+                      <span>%</span>
+                    )}
+                  </>
+                )}
                 {renderCrossIcon(index)}
               </div>
               {renderCategoryCombinationDropdown(index)}
