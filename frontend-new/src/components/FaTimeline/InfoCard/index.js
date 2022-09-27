@@ -6,6 +6,7 @@ import {
   PropTextFormat,
 } from '../../../utils/dataFormatter';
 import MomentTz from '../../MomentTz';
+import { TimelineHoverPropDisplayNames } from '../../Profile/utils';
 
 function InfoCard({ title, event_name, properties = {}, trigger, children }) {
   const popoverPropValueFormat = (key, value) => {
@@ -39,21 +40,25 @@ function InfoCard({ title, event_name, properties = {}, trigger, children }) {
               <div className='flex justify-between py-2'>
                 <Text
                   mini
-                  type={'paragraph'}
+                  type={'title'}
                   color={'grey'}
-                  extraClass={'mr-2'}
+                  extraClass={'whitespace-no-wrap mr-2'}
                 >
                   Page URL
                 </Text>
 
                 <Text
                   mini
-                  type={'paragraph'}
+                  type={'title'}
                   color={'grey-2'}
                   weight={'medium'}
-                  extraClass={'break-words text-right'}
+                  extraClass={`break-all text-right`}
+                  truncate={true}
+                  charLimit={40}
                 >
-                  {event_name}
+                  {
+                    'https://studio.memsql.com/cluster/eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJuYW0iOiJmYWN0b3JzLXByb2R1Y3Rpb24iLCJ1c3IiOiJhZG1pbiIsImVuZCI6InN2Yy1iZWUwMzRiOC0yYWQyLTRmNzMtODE0NC0wYzljY2IzZWI3OWItZGRsLmdjcC1vcmVnb24tMS5zdmMuc2luZ2xlc3RvcmUuY29tIiwiZW52IjoicCIsImNpZCI6ImJlZTAzNGI4LTJhZDItNGY3My04MTQ0LTBjOWNjYjNlYjc5YiJ9.ury2WAUaJg-YW2JLKYsVNepn0oK8MhVrFyInNAR-cwwdeHe_4KdEOZ8UlIym8CYnRHS3TdOAsZ8_YdrtUc--dA/editor'
+                  }
                 </Text>
               </div>
             );
@@ -62,20 +67,26 @@ function InfoCard({ title, event_name, properties = {}, trigger, children }) {
               <div className='flex justify-between py-2'>
                 <Text
                   mini
-                  type={'paragraph'}
+                  type={'title'}
                   color={'grey'}
-                  extraClass={'max-w-xs mr-2'}
+                  extraClass={`${
+                    key.length > 20 ? 'break-words' : 'whitespace-no-wrap'
+                  } max-w-xs mr-2`}
                 >
-                  {key === '$timestamp' ? 'Date and Time' : PropTextFormat(key)}
+                  {TimelineHoverPropDisplayNames[key] || PropTextFormat(key)}
                 </Text>
                 <Text
                   mini
-                  type={'paragraph'}
+                  type={'title'}
                   color={'grey-2'}
                   weight={'medium'}
-                  extraClass={'break-words text-right'}
+                  extraClass={`${
+                    value?.length > 30 ? 'break-words' : 'whitespace-no-wrap'
+                  }  text-right`}
+                  truncate={true}
+                  charLimit={40}
                 >
-                  {popoverPropValueFormat(key, value)}
+                  {popoverPropValueFormat(key, value) || '-'}
                 </Text>
               </div>
             );
