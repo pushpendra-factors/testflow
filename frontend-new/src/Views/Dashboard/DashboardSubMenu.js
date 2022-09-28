@@ -10,17 +10,11 @@ function DashboardSubMenu({
   dashboard,
   durationObj,
   handleDurationChange,
-  refreshClicked,
-  setRefreshClicked,
+  refreshInProgress,
   oldestRefreshTime,
-  setOldestRefreshTime
+  handleRefreshClick
 }) {
   let btn = null;
-
-  const handleRefreshClick = () => {
-    setOldestRefreshTime(null);
-    setRefreshClicked(true);
-  };
 
   if (dashboard?.type === 'pr') {
     btn = (
@@ -97,8 +91,8 @@ function DashboardSubMenu({
           <Button
             type={'text'}
             onClick={handleRefreshClick}
-            icon={refreshClicked ? null : <SVG name={'syncAlt'} />}
-            loading={refreshClicked}
+            icon={refreshInProgress ? null : <SVG name={'syncAlt'} />}
+            loading={refreshInProgress}
             style={{ minWidth: '125px' }}
             className={'fa-button-ghost p-0 py-2'}
           >

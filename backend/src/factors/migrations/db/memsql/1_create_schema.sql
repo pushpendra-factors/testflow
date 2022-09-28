@@ -60,6 +60,7 @@ CREATE TABLE IF NOT EXISTS users (
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
     source int,
+    customer_user_id_source int,
     -- COLUMNSTORE key is sort key, can we add an incremental numerical column to the end?
     -- Initial parts of the indices are still useful when don't use the last column which is an incremental value.
     KEY (project_id, source, join_timestamp) USING CLUSTERED COLUMNSTORE,
@@ -1139,4 +1140,19 @@ CREATE TABLE IF NOT EXISTS otp_rules(
     updated_at timestamp(6) NOT NULL,
     KEY (id) USING HASH,
     SHARD KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS form_fills(
+    project_id bigint NOT NULL,
+    id text NOT NULL,
+    form_id text NOT NULL,
+    value text,
+    field_id text NOT NULL,
+    first_updated_time bigint,
+    last_updated_time bigint,
+    time_spent_on_field bigint,
+    created_at timestamp(6),
+    updated_at timestamp(6),
+    PRIMARY KEY (project_id, form_id, id),
+    SHARD KEY (project_id, form_id)
 );

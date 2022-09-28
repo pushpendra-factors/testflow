@@ -86,7 +86,7 @@ const GLobalFilter = ({
             delBtnClass={styles.filterDelBtn}
             propsConstants={['user']}
             filterProps={filterProps}
-            propsConstants={Object.keys(filterProps)}
+            // propsConstants={Object.keys(filterProps)}
             insertFilter={addFilter}
             deleteFilter={() => closeFilter()}
             selectedMainCategory={selectedMainCategory}

@@ -5,6 +5,7 @@ import React, {
   useContext,
   memo
 } from 'react';
+import cx from 'classnames';
 import {
   formatData,
   getVisibleData,
@@ -20,8 +21,7 @@ import {
   CHART_TYPE_LINECHART,
   CHART_TYPE_STACKED_AREA,
   CHART_TYPE_STACKED_BAR,
-  CHART_TYPE_PIVOT_CHART
-  ,
+  CHART_TYPE_PIVOT_CHART,
   CHART_TYPE_TABLE,
   DASHBOARD_WIDGET_BAR_CHART_HEIGHT,
   DASHBOARD_WIDGET_AREA_CHART_HEIGHT
@@ -47,7 +47,9 @@ const BreakdownCharts = ({
   const [visibleProperties, setVisibleProperties] = useState([]);
   const [visibleSeriesData, setVisibleSeriesData] = useState([]);
   const [sorter, setSorter] = useState(getDefaultSortProp({ kpis, breakdown }));
-  const [dateSorter, setDateSorter] = useState(getDefaultSortProp({ kpis, breakdown }));
+  const [dateSorter, setDateSorter] = useState(
+    getDefaultSortProp({ kpis, breakdown })
+  );
   const [aggregateData, setAggregateData] = useState([]);
   const [categories, setCategories] = useState([]);
   const [data, setData] = useState([]);
@@ -66,15 +68,20 @@ const BreakdownCharts = ({
   }, []);
 
   useEffect(() => {
-    const aggData = formatData(responseData, kpis, breakdown, currentEventIndex);
+    const aggData = formatData(
+      responseData,
+      kpis,
+      breakdown,
+      currentEventIndex
+    );
     const { categories: cats, data: d } = isSeriesChart(chartType)
       ? formatDataInSeriesFormat(
-        responseData,
-        aggData,
-        currentEventIndex,
-        'date',
-        breakdown
-      )
+          responseData,
+          aggData,
+          currentEventIndex,
+          'date',
+          breakdown
+        )
       : { categories: [], data: [] };
     setAggregateData(aggData);
     setCategories(cats);
@@ -98,19 +105,6 @@ const BreakdownCharts = ({
   }
 
   let chartContent = null;
-  let tableContent = null;
-
-  // if (chartType === CHART_TYPE_TABLE || chartType === CHART_TYPE_PIVOT_CHART) {
-  //   tableContent = (
-  //     <div
-  //       onClick={handleEditQuery}
-  //       style={{ color: '#5949BC' }}
-  //       className="mt-3 font-medium text-base cursor-pointer flex justify-end item-center"
-  //     >
-  //       Show More &rarr;
-  //     </div>
-  //   );
-  // }
 
   if (chartType === CHART_TYPE_TABLE || chartType === CHART_TYPE_PIVOT_CHART) {
     chartContent = (
@@ -193,9 +187,12 @@ const BreakdownCharts = ({
   }
 
   return (
-    <div className={'w-full'}>
+    <div
+      className={cx('w-full flex-1', {
+        'p-2': chartType !== CHART_TYPE_TABLE
+      })}
+    >
       {chartContent}
-      {tableContent}
     </div>
   );
 };

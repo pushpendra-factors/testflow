@@ -251,6 +251,22 @@ var EP_CHANNEL string = "$channel" // added at runtime.
 var EP_TYPE string = "$type"
 var EP_HUBSPOT_ENGAGEMENT_THREAD_ID string = "$hubspot_engagement_thread_id"
 var EP_OTP_RULE_ID string = "$otp_rule_id"
+var EP_SALESFORCE_CAMPAIGN_NAME string = "$salesforce_campaign_name"
+var EP_HUBSPOT_FORM_SUBMISSION_TITLE string = "$hubspot_form_submission_title"
+var EP_HUBSPOT_FORM_SUBMISSION_FORMTYPE string = "$hubspot_form_submission_form-type"
+var EP_HUBSPOT_FORM_SUBMISSION_PAGEURL string = "$hubspot_form_submission_page-url-no-qp"
+var EP_HUBSPOT_FORM_SUBMISSION_TIMESTAMP string = "$hubspot_form_submission_timestamp"
+var EP_HUBSPOT_ENGAGEMENT_TITLE string = "$hubspot_engagement_title"
+var EP_SALESFORCE_CAMPAIGN_TYPE string = "$salesforce_campaign_type"
+var EP_SALESFORCE_CAMPAIGNMEMBER_STATUS string = "$salesforce_campaignmember_status"
+var EP_HUBSPOT_ENGAGEMENT_TYPE string = "$hubspot_engagement_type"
+var EP_HUBSPOT_ENGAGEMENT_SUBJECT string = "$hubspot_engagement_subject"
+var EP_HUBSPOT_ENGAGEMENT_MEETINGOUTCOME string = "$hubspot_engagement_meetingoutcome"
+var EP_HUBSPOT_ENGAGEMENT_STARTTIME string = "$hubspot_engagement_starttime"
+var EP_HUBSPOT_ENGAGEMENT_ENDTIME string = "$hubspot_engagement_endtime"
+var EP_HUBSPOT_ENGAGEMENT_DURATIONMILLISECONDS string = "$hubspot_engagement_durationmilliseconds"
+var EP_HUBSPOT_ENGAGEMENT_SOURCE string = "$hubspot_engagement_source"
+var EP_HUBSPOT_ENGAGEMENT_TIMESTAMP string = "$hubspot_engagement_timestamp"
 
 // Event Form meta attributes properties
 var EP_FORM_ID string = "$form_id"
@@ -751,7 +767,7 @@ var EVENT_TO_USER_INITIAL_PROPERTIES = map[string]string{
 	EP_REVENUE:             UP_INITIAL_REVENUE,
 }
 
-var EVENT_TO_USER_LATEST_PROPERTIES = map[string]string{
+var EVENT_TO_USER_LATEST_PAGE_PROPERTIES = map[string]string{
 	EP_PAGE_URL:            UP_LATEST_PAGE_URL,
 	EP_PAGE_RAW_URL:        UP_LATEST_PAGE_RAW_URL,
 	EP_PAGE_DOMAIN:         UP_LATEST_PAGE_DOMAIN,
@@ -761,20 +777,23 @@ var EVENT_TO_USER_LATEST_PROPERTIES = map[string]string{
 	EP_PAGE_LOAD_TIME:      UP_LATEST_PAGE_LOAD_TIME,
 	EP_PAGE_SPENT_TIME:     UP_LATEST_PAGE_SPENT_TIME,
 	EP_PAGE_SCROLL_PERCENT: UP_LATEST_PAGE_SCROLL_PERCENT,
-	EP_CAMPAIGN:            UP_LATEST_CAMPAIGN,
-	EP_CAMPAIGN_ID:         UP_LATEST_CAMPAIGN_ID,
-	EP_SOURCE:              UP_LATEST_SOURCE,
-	EP_MEDIUM:              UP_LATEST_MEDIUM,
-	EP_KEYWORD:             UP_LATEST_KEYWORD,
-	EP_KEYWORD_MATCH_TYPE:  UP_LATEST_KEYWORD_MATCH_TYPE,
-	EP_CONTENT:             UP_LATEST_CONTENT,
-	EP_ADGROUP:             UP_LATEST_ADGROUP,
-	EP_ADGROUP_ID:          UP_LATEST_ADGROUP_ID,
-	EP_CREATIVE:            UP_LATEST_CREATIVE,
-	EP_GCLID:               UP_LATEST_GCLID,
-	EP_FBCLID:              UP_LATEST_FBCLID,
-	EP_COST:                UP_LATEST_COST,
-	EP_REVENUE:             UP_LATEST_REVENUE,
+}
+
+var EVENT_TO_USER_LATEST_PROPERTIES = map[string]string{
+	EP_CAMPAIGN:           UP_LATEST_CAMPAIGN,
+	EP_CAMPAIGN_ID:        UP_LATEST_CAMPAIGN_ID,
+	EP_SOURCE:             UP_LATEST_SOURCE,
+	EP_MEDIUM:             UP_LATEST_MEDIUM,
+	EP_KEYWORD:            UP_LATEST_KEYWORD,
+	EP_KEYWORD_MATCH_TYPE: UP_LATEST_KEYWORD_MATCH_TYPE,
+	EP_CONTENT:            UP_LATEST_CONTENT,
+	EP_ADGROUP:            UP_LATEST_ADGROUP,
+	EP_ADGROUP_ID:         UP_LATEST_ADGROUP_ID,
+	EP_CREATIVE:           UP_LATEST_CREATIVE,
+	EP_GCLID:              UP_LATEST_GCLID,
+	EP_FBCLID:             UP_LATEST_FBCLID,
+	EP_COST:               UP_LATEST_COST,
+	EP_REVENUE:            UP_LATEST_REVENUE,
 }
 
 // Uses same name as source user properties.
@@ -1563,6 +1582,13 @@ var USER_PROPERTIES_MERGE_TYPE_INITIAL = [...]string{
 var USER_PROPERTIES_MERGE_TYPE_ADD = [...]string{
 	UP_PAGE_COUNT,
 	UP_TOTAL_SPENT_TIME,
+}
+var CUSTOM_WHITELIST_DELTA = []string{
+	"$referrer",
+	"$page_url",
+	"$source",
+	"$campaign",
+	"$channel",
 }
 
 var CUSTOM_BLACKLIST_DELTA = []string{
@@ -3226,6 +3252,14 @@ func FillMandatoryDefaultUserProperties(propertiesByType *map[string][]string) {
 					(*propertiesByType)[propType] = append((*propertiesByType)[propType], dProp)
 				}
 			}
+		}
+	}
+}
+
+func FillLatestPageUserProperties(userProperties, eventProperties *PropertiesMap) {
+	for k, v := range *eventProperties {
+		if userPropertyKey, exists := EVENT_TO_USER_LATEST_PAGE_PROPERTIES[k]; exists {
+			(*userProperties)[userPropertyKey] = v
 		}
 	}
 }

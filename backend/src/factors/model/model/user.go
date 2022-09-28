@@ -43,7 +43,8 @@ type User struct {
 	Group4UserID string `gorm:"default:null;column:group_4_user_id" json:"group_4_user_id"`
 	// UserId provided by the customer.
 	// An unique index is creatd on ProjectId+UserId.
-	CustomerUserId string `gorm:"type:varchar(255);default:null" json:"c_uid"`
+	CustomerUserId       string `gorm:"type:varchar(255);default:null" json:"c_uid"`
+	CustomerUserIdSource *int   `gorm:"default:null" json:"c_uid_source"`
 	// unix epoch timestamp in seconds.
 	JoinTimestamp int64     `json:"join_timestamp"`
 	CreatedAt     time.Time `json:"created_at"`
@@ -133,6 +134,13 @@ var UserSourceMap = map[string]int{
 	UserSourceLeadSquared:      7,
 }
 
+var UserSourceCRM = map[string]int{
+	UserSourceHubspotString:    2,
+	UserSourceSalesforceString: 3,
+	UserSourceMarketo:          6,
+	UserSourceLeadSquared:      7,
+}
+
 const USERS = "users"
 
 type OverwriteUserPropertiesByIDParams struct {
@@ -142,6 +150,24 @@ type OverwriteUserPropertiesByIDParams struct {
 	WithUpdateTimestamp bool
 	UpdateTimestamp     int64
 	Source              string
+}
+
+func IsUserSourceCRM(source int) bool {
+	for _, crmSource := range UserSourceCRM {
+		if crmSource == source {
+			return true
+		}
+	}
+	return false
+}
+
+func GetAllCRMUserSource() []int {
+	sources := make([]int, 0)
+	for i := range UserSourceCRM {
+		sources = append(sources, UserSourceCRM[i])
+	}
+
+	return sources
 }
 
 func FilterGroupPropertiesFromUserProperties(properties map[string]interface{}) map[string]interface{} {

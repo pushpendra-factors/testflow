@@ -215,6 +215,10 @@ type Model interface {
 	GetPropertiesForSalesforceUsers(projectID int64, reqID string) []map[string]string
 	GetPropertiesForMarketo(projectID int64, reqID string) []map[string]string
 
+	// form_fill
+	CreateFormFillEventById(projectId int64, formFill *model.SDKFormFillPayload) (int, error)
+	GetFormFillEventById(projectId int64, formId string, fieldId string) (*model.FormFill, int)
+
 	// events
 	GetEventCountOfUserByEventName(projectID int64, userId string, eventNameId string) (uint64, int)
 	GetEventCountOfUsersByEventName(projectID int64, userIDs []string, eventNameID string) (uint64, int)
@@ -462,7 +466,8 @@ type Model interface {
 	GetUsers(projectID int64, offset uint64, limit uint64) ([]model.User, int)
 	GetUsersByCustomerUserID(projectID int64, customerUserID string) ([]model.User, int)
 	GetUserLatestByCustomerUserId(projectID int64, customerUserId string, requestSource int) (*model.User, int)
-	GetExistingCustomerUserID(projectID int64, arrayCustomerUserID []string) (map[string]string, int)
+	GetExistingUserByCustomerUserID(projectID int64, arrayCustomerUserID []string, source ...int) (map[string]string, int)
+	GetUserWithoutProperties(projectID int64, id string) (*model.User, int)
 	GetUserBySegmentAnonymousId(projectID int64, segAnonId string) (*model.User, int)
 	GetAllUserIDByCustomerUserID(projectID int64, customerUserID string) ([]string, int)
 	GetRecentUserPropertyKeysWithLimits(projectID int64, usersLimit int, propertyLimit int, seedDate time.Time) ([]U.Property, error)
@@ -529,6 +534,7 @@ type Model interface {
 
 	// project_analytics
 	GetEventUserCountsOfAllProjects(lastNDays int) (map[string][]*model.ProjectAnalytics, error)
+	GetEventUserCountsMerged(projectIdsList []int64, lastNDays int, currentDate time.Time) (map[int64]*model.ProjectAnalytics, error)
 
 	// Property details
 	CreatePropertyDetails(projectID int64, eventName, propertyKey, propertyType string, isUserProperty bool, allowOverWrite bool) int

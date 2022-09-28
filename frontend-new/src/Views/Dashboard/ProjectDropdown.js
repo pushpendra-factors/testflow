@@ -38,12 +38,14 @@ function ProjectDropdown({
   handleEditClick,
   durationObj,
   handleDurationChange,
-  refreshClicked,
-  setRefreshClicked,
   isPinned = false,
   fetchDemoProject,
   oldestRefreshTime,
-  setOldestRefreshTime
+  setOldestRefreshTime,
+  handleRefreshClick,
+  dashboardRefreshState,
+  onDataLoadSuccess,
+  resetDashboardRefreshState
 }) {
   const [moreOptions, setMoreOptions] = useState(false);
   const [widgetModal, setwidgetModal] = useState(false);
@@ -80,6 +82,7 @@ function ProjectDropdown({
       if (val === activeDashboard?.id) {
         return false;
       }
+      resetDashboardRefreshState();
       setOldestRefreshTime(null);
       const selectedDashboard = dashboards.data.find((d) => d.id === val);
       dispatch({
@@ -419,39 +422,24 @@ function ProjectDropdown({
             </div>
           </div>
           <div className={'ml-10 mr-4 my-6 flex-1'}>
-          <ErrorBoundary
-          fallback={
-            <FaErrorComp
-              size={'medium'}
-              title={'Dashboard Widget Error'}
-              subtitle={
-                'We are facing trouble loading dashboard widgets. Drop us a message on the in-app chat.'
-              }
-            />
-          }
-          onError={FaErrorLog}
-        > 
-        
             <DashboardSubMenu
               durationObj={durationObj}
               handleDurationChange={handleDurationChange}
               dashboard={activeDashboard}
               handleEditClick={handleEditClick}
-              refreshClicked={refreshClicked}
-              setRefreshClicked={setRefreshClicked}
+              refreshInProgress={dashboardRefreshState.inProgress}
               oldestRefreshTime={oldestRefreshTime}
-              setOldestRefreshTime={setOldestRefreshTime}
+              handleRefreshClick={handleRefreshClick}
             />
-           
+
             <SortableCards
               durationObj={durationObj}
               setwidgetModal={handleToggleWidgetModal}
               showDeleteWidgetModal={showDeleteWidgetModal}
-              refreshClicked={refreshClicked}
-              setRefreshClicked={setRefreshClicked}
+              dashboardRefreshState={dashboardRefreshState}
               setOldestRefreshTime={setOldestRefreshTime}
-              />
-              </ErrorBoundary>
+              onDataLoadSuccess={onDataLoadSuccess}
+            />
           </div>
 
           <ExpandableView

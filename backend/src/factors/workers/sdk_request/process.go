@@ -64,6 +64,7 @@ func main() {
 	restrictReusingUsersByCustomerUserId := flag.String("restrict_reusing_users_by_customer_user_id", "", "")
 	mergeAmpIDAndSegmentIDWithUserIDByProjectID := flag.String("allow_amp_id_and_segment_id_with_user_id_by_project_id", "", "")
 	clearbitEnabled := flag.Int("clearbit_enabled", 0, "To enable clearbit enrichment")
+	allowIdentificationOverwriteUsingSourceByProjectID := flag.String("allow_identification_overwrite_using_source_by_project_id", "", "Allow identification overwrite based on request source.")
 
 	flag.Parse()
 
@@ -106,16 +107,17 @@ func main() {
 			Certificate: *memSQLCertificate,
 			AppName:     workerName,
 		},
-		PrimaryDatastore:                               *primaryDatastore,
-		DuplicateQueueRedisHost:                        *duplicateQueueRedisHost,
-		DuplicateQueueRedisPort:                        *duplicateQueueRedisPort,
-		EnableSDKAndIntegrationRequestQueueDuplication: *enableSDKAndIntegrationRequestQueueDuplication,
-		AllowSupportForUserPropertiesInIdentifyCall:    *allowSupportForUserPropertiesInIdentifyCall,
-		CaptureSourceInUsersTable:                      *captureSourceInUsersTable,
-		EnableOLTPQueriesMemSQLImprovements:            *enableOLTPQueriesMemSQLImprovements,
-		RestrictReusingUsersByCustomerUserId:           *restrictReusingUsersByCustomerUserId,
-		MergeAmpIDAndSegmentIDWithUserIDByProjectID:    *mergeAmpIDAndSegmentIDWithUserIDByProjectID,
-		ClearbitEnabled:                                *clearbitEnabled,
+		PrimaryDatastore:                                   *primaryDatastore,
+		DuplicateQueueRedisHost:                            *duplicateQueueRedisHost,
+		DuplicateQueueRedisPort:                            *duplicateQueueRedisPort,
+		EnableSDKAndIntegrationRequestQueueDuplication:     *enableSDKAndIntegrationRequestQueueDuplication,
+		AllowSupportForUserPropertiesInIdentifyCall:        *allowSupportForUserPropertiesInIdentifyCall,
+		CaptureSourceInUsersTable:                          *captureSourceInUsersTable,
+		EnableOLTPQueriesMemSQLImprovements:                *enableOLTPQueriesMemSQLImprovements,
+		RestrictReusingUsersByCustomerUserId:               *restrictReusingUsersByCustomerUserId,
+		MergeAmpIDAndSegmentIDWithUserIDByProjectID:        *mergeAmpIDAndSegmentIDWithUserIDByProjectID,
+		ClearbitEnabled:                                    *clearbitEnabled,
+		AllowIdentificationOverwriteUsingSourceByProjectID: *allowIdentificationOverwriteUsingSourceByProjectID,
 	}
 	C.InitConf(config)
 

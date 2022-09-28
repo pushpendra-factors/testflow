@@ -1,0 +1,1 @@
+ALTER TABLE users ADD COLUMN customer_user_id_source int DEFAULT NULL

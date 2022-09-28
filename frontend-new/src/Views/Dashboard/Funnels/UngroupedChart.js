@@ -1,11 +1,12 @@
 import React, { useContext, useMemo } from 'react';
+import cx from 'classnames';
 import { generateUngroupedChartsData } from '../../CoreQuery/FunnelsResultPage/utils';
 import Chart from '../../CoreQuery/FunnelsResultPage/UngroupedChart/Chart';
 import FunnelsResultTable from '../../CoreQuery/FunnelsResultPage/FunnelsResultTable';
 import {
   CHART_TYPE_BARCHART,
   CHART_TYPE_TABLE,
-  DASHBOARD_WIDGET_UNGROUPED_FUNNEL_CHART_HEIGHT,
+  DASHBOARD_WIDGET_UNGROUPED_FUNNEL_CHART_HEIGHT
 } from '../../../utils/constants';
 import { DashboardContext } from '../../../contexts/DashboardContext';
 
@@ -16,7 +17,7 @@ function UngroupedChart({
   unit,
   arrayMapper,
   section,
-  breakdown,
+  breakdown
 }) {
   const { handleEditQuery } = useContext(DashboardContext);
   const groups = useMemo(() => {
@@ -59,24 +60,13 @@ function UngroupedChart({
     );
   }
 
-  let tableContent = null;
-
-  // if (chartType === CHART_TYPE_TABLE) {
-  //   tableContent = (
-  //     <div
-  //       onClick={handleEditQuery}
-  //       style={{ color: '#5949BC' }}
-  //       className='mt-3 font-medium text-base cursor-pointer flex justify-end item-center'
-  //     >
-  //       Show More &rarr;
-  //     </div>
-  //   );
-  // }
-
   return (
-    <div className={`w-full flex-1`}>
+    <div
+      className={cx('w-full flex-1', {
+        'p-2 flex items-center': chartType !== CHART_TYPE_TABLE
+      })}
+    >
       {chartContent}
-      {tableContent}
     </div>
   );
 }

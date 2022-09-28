@@ -686,6 +686,8 @@ func Track(projectId int64, request *TrackPayload,
 	}
 
 	_ = model.FillLocationUserProperties(userProperties, clientIP)
+	// Add latest user properties without UTM parameters.
+	U.FillLatestPageUserProperties(userProperties, eventProperties)
 	// Add latest touch user properties.
 	if hasDefinedMarketingProperty {
 		U.FillLatestTouchUserProperties(userProperties, eventProperties)
@@ -898,6 +900,76 @@ func isUserAlreadyIdentifiedBySDKRequest(projectID int64, userID string) bool {
 	return false
 }
 
+func allowedCustomerUserIDSourceIdentificationOverwrite(incomingCustomerUseridSource, existingCustomerUseridSource int) bool {
+	if existingCustomerUseridSource == model.UserSourceWeb &&
+		incomingCustomerUseridSource == model.UserSourceWeb {
+		return true
+	}
+
+	if model.IsUserSourceCRM(existingCustomerUseridSource) && model.IsUserSourceCRM(incomingCustomerUseridSource) && incomingCustomerUseridSource == existingCustomerUseridSource {
+		return true
+	}
+
+	if existingCustomerUseridSource == model.UserSourceWeb && model.IsUserSourceCRM(incomingCustomerUseridSource) {
+		return true
+	}
+
+	return false
+}
+
+func ShouldAllowIdentificationOverwrite(projectID int64, userID string, incomingCustomerUserid string, incomingRequestSource int, incomingSource string) bool {
+	// sdk indentify source always overwrite the customer_user_id
+	if incomingSource == sdkRequestTypeUserIdentify {
+		return true
+	}
+
+	if isUserAlreadyIdentifiedBySDKRequest(projectID, userID) {
+		return false
+	}
+
+	user, status := store.GetStore().GetUserWithoutProperties(projectID, userID)
+	if status != http.StatusFound {
+		if status != http.StatusNotFound {
+			log.WithFields(log.Fields{"project_id": projectID, "user_id": userID, "customer_user_id": incomingCustomerUserid}).
+				Error("Failed to get user for identification overwrite decicision. Allowing identification overwrite.")
+		}
+		return true
+	}
+
+	if user.CustomerUserId == "" {
+		return true
+	}
+
+	if user.CustomerUserIdSource != nil &&
+		allowedCustomerUserIDSourceIdentificationOverwrite(incomingRequestSource, *user.CustomerUserIdSource) {
+		return true
+	}
+
+	// Same CustomerUserId existing on other source should block overwrite
+	_, status = store.GetStore().GetExistingUserByCustomerUserID(projectID, []string{user.CustomerUserId}, model.GetAllCRMUserSource()...)
+	if status != http.StatusFound {
+		if status != http.StatusNotFound {
+			log.WithFields(log.Fields{"project_id": projectID, "user_id": userID, "customer_user_id": incomingCustomerUserid}).
+				Error("Failed to get user by customer user id and source.")
+			return false
+		}
+		return true
+	}
+
+	return false
+}
+
+/*
+Identify :-
+If overwrite is false
+	user will be identified once and customer_user_id will be set as per source
+If overwrite is true
+	customer_user_id_source will be set/updated when user is re-identified
+		identification from sdk identfy source will always overwrite
+		if user only identified in web then it would continue to re-identify
+		if user identified in crm, web identification will be blocked
+		crm source will be allowed to overwrite in all cases
+*/
 func Identify(projectId int64, request *IdentifyPayload, overwrite bool) (int, *IdentifyResponse) {
 	// Precondition: Fails to identify if customer_user_id not present.
 	if request.CustomerUserId == "" {
@@ -964,6 +1036,10 @@ func Identify(projectId int64, request *IdentifyPayload, overwrite bool) (int, *
 			CustomerUserId: request.CustomerUserId,
 			JoinTimestamp:  request.JoinTimestamp,
 			Source:         &request.RequestSource,
+		}
+
+		if C.AllowIdentificationOverwriteUsingSource(projectId) {
+			newUser.CustomerUserIdSource = &request.RequestSource
 		}
 
 		if overwrite {
@@ -1045,11 +1121,23 @@ func Identify(projectId int64, request *IdentifyPayload, overwrite bool) (int, *
 		return http.StatusOK, &IdentifyResponse{Message: "Identified already."}
 	}
 
-	// avoid overwrite if user was identified by sdk request identify
-	if overwrite && isUserAlreadyIdentifiedBySDKRequest(projectId, request.UserId) {
-		if request.Source != sdkRequestTypeUserIdentify {
-			overwrite = false
+	if overwrite {
+		if !C.AllowIdentificationOverwriteUsingSource(projectId) {
+			// avoid overwrite if user was identified by sdk request identify
+			if isUserAlreadyIdentifiedBySDKRequest(projectId, request.UserId) {
+				if request.Source != sdkRequestTypeUserIdentify {
+					overwrite = false
+				}
+			}
+		} else {
+			// avoid overwrite if user was identified by sdk request identify or crm source
+			if !ShouldAllowIdentificationOverwrite(projectId, request.UserId, request.CustomerUserId, request.RequestSource, request.Source) {
+				logCtx.WithFields(log.Fields{"project_id": projectId, "user_id": request.UserId, "customer_user_id": request.CustomerUserId,
+					"source": request.Source, "request_source": request.RequestSource}).Info("Overwriting identification blocked.")
+				overwrite = false
+			}
 		}
+
 	}
 
 	// Precondition: user is already identified with different customer_user.
@@ -1060,6 +1148,10 @@ func Identify(projectId int64, request *IdentifyPayload, overwrite bool) (int, *
 			CustomerUserId: request.CustomerUserId,
 			JoinTimestamp:  request.JoinTimestamp,
 			Source:         &request.RequestSource,
+		}
+
+		if C.AllowIdentificationOverwriteUsingSource(projectId) {
+			newUser.CustomerUserIdSource = &request.RequestSource
 		}
 
 		// create user with given user id.
@@ -1098,6 +1190,10 @@ func Identify(projectId int64, request *IdentifyPayload, overwrite bool) (int, *
 	updateUser := &model.User{CustomerUserId: request.CustomerUserId}
 	if userProperties != nil {
 		updateUser.Properties = *userProperties
+	}
+
+	if C.AllowIdentificationOverwriteUsingSource(projectId) {
+		updateUser.CustomerUserIdSource = &request.RequestSource
 	}
 
 	_, errCode = store.GetStore().UpdateUser(projectId, request.UserId, updateUser, request.Timestamp)

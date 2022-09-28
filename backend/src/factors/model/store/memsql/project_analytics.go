@@ -82,6 +82,94 @@ func (store *MemSQL) GetEventUserCountsOfAllProjects(lastNDays int) (map[string]
 
 	return result, nil
 }
+func (store *MemSQL) GetEventUserCountsMerged(projectIdsList []int64, lastNDays int, currentDate time.Time) (map[int64]*model.ProjectAnalytics, error) {
+	logFields := log.Fields{
+		"last_n_days": lastNDays,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	//TODO: modify this date to first day of the week
+	projectIDNameMap := make(map[int64]string)
+	for _, project := range projectIdsList {
+		projectIDNameMap[project] = "" // TODO : add project name here
+	}
+	result := make(map[int64]*model.ProjectAnalytics, 0)
+	for i := 0; i < lastNDays; i++ {
+		dateKey := currentDate.AddDate(0, 0, -i).Format(U.DATETIME_FORMAT_YYYYMMDD)
+		// if result[dateKey] == nil {
+		// 	result[dateKey] = make([]*model.ProjectAnalytics, 0)
+		// }
+		totalUniqueUsersKey, err := model.UserCountAnalyticsCacheKey(dateKey)
+		if err != nil {
+			return nil, err
+		}
+		users, err := cacheRedis.ZrangeWithScoresPersistent(true, totalUniqueUsersKey)
+		if err != nil {
+			return nil, err
+		}
+		totalUniqueEventsKey, err := model.UniqueEventNamesAnalyticsCacheKey(dateKey)
+		if err != nil {
+			return nil, err
+		}
+		uniqueEvents, err := cacheRedis.ZrangeWithScoresPersistent(true, totalUniqueEventsKey)
+		if err != nil {
+			return nil, err
+		}
+		totalEventsKey, err := model.EventsCountAnalyticsCacheKey(dateKey)
+		if err != nil {
+			return nil, err
+		}
+		totalEvents, err := cacheRedis.ZrangeWithScoresPersistent(true, totalEventsKey)
+		if err != nil {
+			return nil, err
+		}
+		for projId, count := range users {
+			uniqueUsers, _ := strconv.Atoi(count)
+			totalEvents, _ := strconv.Atoi(totalEvents[projId])
+			uniqueEvents, _ := strconv.Atoi(uniqueEvents[projId])
+			projIdInt, _ := strconv.Atoi(projId)
+			adwordsEvents, _ := GetEventsFromCacheByDocumentType(projId, "adwords", dateKey)
+			facebookEvents, _ := GetEventsFromCacheByDocumentType(projId, "facebook", dateKey)
+			hubspotEvents, _ := GetEventsFromCacheByDocumentType(projId, "hubspot", dateKey)
+			linkedinEvents, _ := GetEventsFromCacheByDocumentType(projId, "linkedin", dateKey)
+			salesforceEvents, _ := GetEventsFromCacheByDocumentType(projId, "salesforce", dateKey)
+			if result[int64(projIdInt)] == nil {
+				firstEntry := model.ProjectAnalytics{
+					ProjectID:         int64(projIdInt),
+					TotalEvents:       uint64(totalEvents),
+					TotalUniqueEvents: uint64(uniqueEvents),
+					TotalUniqueUsers:  uint64(uniqueUsers),
+					AdwordsEvents:     uint64(adwordsEvents),
+					FacebookEvents:    uint64(facebookEvents),
+					HubspotEvents:     uint64(hubspotEvents),
+					LinkedinEvents:    uint64(linkedinEvents),
+					SalesforceEvents:  uint64(salesforceEvents),
+					ProjectName:       projectIDNameMap[int64(projIdInt)],
+				}
+				result[int64(projIdInt)] = &firstEntry
+			} else {
+				old := result[int64(projIdInt)]
+				new := model.ProjectAnalytics{
+					ProjectID:         int64(projIdInt),
+					TotalEvents:       old.TotalEvents + uint64(totalEvents),
+					TotalUniqueEvents: uint64(uniqueEvents),
+					TotalUniqueUsers:  uint64(uniqueUsers),
+					AdwordsEvents:     uint64(adwordsEvents),
+					FacebookEvents:    uint64(facebookEvents),
+					HubspotEvents:     uint64(hubspotEvents),
+					LinkedinEvents:    uint64(linkedinEvents),
+					SalesforceEvents:  uint64(salesforceEvents),
+					ProjectName:       projectIDNameMap[int64(projIdInt)],
+					Date:              dateKey,
+				}
+				result[int64(projIdInt)] = &new
+			}
+
+		}
+
+	}
+
+	return result, nil
+}
 func UpdateCountCacheByDocumentType(projectID int64, time *time.Time, documentType string) (status bool) {
 	logFields := log.Fields{
 		"project_id":    projectID,

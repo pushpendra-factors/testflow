@@ -200,7 +200,7 @@ func getCustomerUserIDFromProperties(projectID int64, properties map[string]inte
 			for _, phoneField := range possiblePhoneField {
 				if phoneNo, ok := properties[model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceSalesforce, docTypeAlias, phoneField)]; ok {
 					phoneStr, err := U.GetValueAsString(phoneNo)
-					if err != nil || len(phoneStr) < 5 {
+					if err != nil || !U.IsValidPhone(phoneStr) {
 						continue
 					}
 
@@ -211,9 +211,13 @@ func getCustomerUserIDFromProperties(projectID int64, properties map[string]inte
 			possibleEmailField := model.GetSalesforceEmailFieldByProjectIDAndObjectName(projectID, docTypeAlias, salesforceProjectIdentificationFieldStore)
 			for _, emailField := range possibleEmailField {
 				if email, ok := properties[model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceSalesforce, docTypeAlias, emailField)].(string); ok && email != "" && util.IsEmail(email) {
-					existingEmail, errCode := store.GetStore().GetExistingCustomerUserID(projectID, []string{email})
+					existingEmails, errCode := store.GetStore().GetExistingUserByCustomerUserID(projectID, []string{email})
 					if errCode == http.StatusFound {
-						return email, existingEmail[email]
+						for userID, existingEmail := range existingEmails {
+							if existingEmail == email {
+								return email, userID
+							}
+						}
 					}
 
 					return email, ""

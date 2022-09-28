@@ -5,8 +5,9 @@ import (
 	"encoding/json"
 	C "factors/config"
 	"factors/filestore"
+	"factors/model/model"
 	"factors/model/store"
-	P "factors/pattern"
+//	P "factors/pattern"
 	serviceDisk "factors/services/disk"
 	serviceGCS "factors/services/gcstorage"
 	U "factors/util"
@@ -14,21 +15,23 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"reflect"
+	//"reflect"
 	"sort"
 	"strconv"
-	"strings"
+	//"strings"
 	"time"
 
-	T "factors/task"
+//	T "factors/task"
 
-	"github.com/go-playground/validator/v10"
+//"github.com/go-playground/validator/v10"
 	log "github.com/sirupsen/logrus"
 )
 
 const NO_EVENT = "NoEvent"
-const ReportName = "report.txt"
+const MetricsReportName = "metrics.txt"
+//const ReportName = "report.txt"
 const DetailedReportName = "detailed_report.txt"
+const LookbackDaysForCacheData = 7
 
 var ALL_EVENTS = [...]string{
 	U.EVENT_NAME_SESSION,
@@ -44,6 +47,99 @@ type validationRule struct {
 	required bool
 	validate string
 }
+type AnalyticsData struct {
+	GlobalLevelData         GlobalLevelData         `json:"global_level_data"`
+	WebsiteAnalyticsData    WebsiteAnalyticsData    `json:"website_analytics_data"`
+	HubspotAnalyticsData    HubspotAnalyticsData    `json:"hubspot_analytics_data"`
+	SalesforceAnalyticsData SalesforceAnalyticsData `json:"salesforce_analytics_data"`
+	FacebookAnalyticsData   FacebookAnalyticsData   `json:"facebook_analytics_data"`
+	LinkedInAnalyticsData   LinkedinAnalyticsData   `json:"linkedin_analytics_data"`
+}
+type GlobalLevelData struct {
+	TotalActiveUsers      uint64 `json:"total_active_users"`
+	TotalEvents           uint64 `json:"total_events"`
+	TotalRecordsProcessed uint64 `json:"total_records_processed"`
+	IntegrationsEnabled   int64  `json:"integrations_enabled"`
+	IntegrationsDisabled  int64  `json:"integrations_disabled"`
+}
+type WebsiteAnalyticsData struct {
+	WebsiteDataActive    bool      `json:"website_data_active"`
+	TotalSessions        uint64    `json:"total_sessions"`
+	TotalPageViews       uint64    `json:"total_page_views"`
+	TotalEventsFromWeb   uint64    `json:"total_events_from_web"`
+	LastSeenPageViewTime time.Time `json:"last_seen_page_view_time"`
+	LastSeenSessionTime  time.Time `json:"last_seen_session_time"`
+}
+type AdwordsAnalyticsData struct {
+	IntegrationActive                 bool      `json:"integration_active"`
+	TotalRecordsProcessed             uint64    `json:"total_records_processed"`
+	LastSeenTimeOfRecord              time.Time `json:"last_seen_time_of_record"`
+	TotalCampaignRecords              uint64    `json:"total_campaign_records"`
+	LastSeenTimeOfCampaign            time.Time `json:"last_seen_time_of_campaign"`
+	TotalAdgroupRecords               uint64    `json:"total_adgroup_records"`
+	LastSeenTimeOfAdgroup             time.Time `json:"last_seen_time_of_adgroup"`
+	TotalClickPerfromanceRecords      uint64    `json:"total_click_perfromance_records"`
+	LastSeenTimeOfClickPerfromance    time.Time `json:"last_seen_time_of_click_perfromance"`
+	TotalAdPerformanceRecords         uint64    `json:"total_ad_performance_records"`
+	LastSeenTimeOfAdPerformance       time.Time `json:"last_seen_time_of_ad_performance"`
+	TotalAdGroupPerformanceRecords    uint64    `json:"total_ad_group_performance_records"`
+	LastSeenTimeOfAdGroupPerformance  time.Time `json:"last_seen_time_of_ad_group_performance"`
+	TotalSearchPerformanceRecords     uint64    `json:"total_search_performance_records"`
+	LastSeenTimeOfSearchPerformance   time.Time `json:"last_seen_time_of_search_performance"`
+	TotalKeywordPerformanceRecords    uint64    `json:"total_keyword_performance_records"`
+	LastSeenTimeOfKeywordPerformance  time.Time `json:"last_seen_time_of_keyword_performance"`
+	TotalCustomerPerformanceRecords   uint64    `json:"total_customer_performance_records"`
+	LastSeenTimeOfCustomerPerformance time.Time `json:"last_seen_time_of_customer_performance"`
+}
+type HubspotAnalyticsData struct {
+	HubspotAnalyticsSyncData   HubspotAnalyticsSyncData   `json:"hubspot_analytics_sync_data"`
+	HubspotEventsAnalyticsData HubspotEventsAnalyticsData `json:"hubspot_events_analytics_data"`
+}
+type HubspotAnalyticsSyncData struct {
+	IntegrationActive            bool      `json:"integration_active"`
+	TotalContactRecordsSynced    uint64    `json:"total_contact_records_synced"`
+	LastSeenTimeOfContactSync    time.Time `json:"last_seen_time_of_contact_sync"`
+	TotalCompanyRecordsSynced    uint64    `json:"total_company_records_synced"`
+	LastSeenTimeOfCompanySync    time.Time `json:"last_seen_time_of_company_sync"`
+	TotalDealRecordsSynced       uint64    `json:"total_deal_records_synced"`
+	LastSeenTimeOfDealSync       time.Time `json:"last_seen_time_of_deal_sync"`
+	TotalEngagementRecordsSynced uint64    `json:"total_engagement_records_synced"`
+	LastSeenTimeOfEngagementSync time.Time `json:"last_seen_time_of_engagement_sync"`
+}
+type HubspotEventsAnalyticsData struct {
+	TotalContactCreatedEvents    uint64    `json:"total_contact_created_events"`
+	TotalContactUpdatedEvents    uint64    `json:"total_contact_updated_events"`
+	ActiveHubspotContacts        uint64    `json:"active_hubspot_contacts"`
+	LastSeenTimeOfContactUpdated time.Time `json:"last_seen_time_of_contact_updated"`
+	TotalCompanyCreatedEvents    uint64    `json:"total_company_created_events"`
+	TotalCompanyUpdatedEvents    uint64    `json:"total_company_updated_events"`
+	ActiveHubspotCompanies       uint64    `json:"active_hubspot_companies"`
+	LastSeenTimeOfCompanyUpdated time.Time `json:"last_seen_time_of_company_updated"`
+	TotalDealCreatedEvents       uint64    `json:"total_deal_created_events"`
+	TotalDealUpdatedEvents       uint64    `json:"total_deal_updated_events"`
+	ActiveHubspotDeals           uint64    `json:"active_hubspot_deals"`
+	LastSeenTimeOfDealUpdated    time.Time `json:"last_seen_time_of_deal_updated"`
+	TotalEngagementCreatedEvents uint64    `json:"total_engagement_created_events"`
+	ActiveHubspotEngagementUsers uint64    `json:"active_hubspot_engagement_users"`
+}
+
+type SalesforceAnalyticsData struct {
+	IntegrationActive     bool      `json:"integration_active"`
+	TotalRecordsProcessed uint64    `json:"total_records_processed"`
+	LastSeenTimeOfRecord  time.Time `json:"last_seen_time_of_record"`
+}
+type FacebookAnalyticsData struct {
+	IntegrationActive     bool      `json:"integration_active"`
+	TotalRecordsProcessed uint64    `json:"total_records_processed"`
+	LastSeenTimeOfRecord  time.Time `json:"last_seen_time_of_record"`
+}
+type LinkedinAnalyticsData struct {
+	IntegrationActive     bool      `json:"integration_active"`
+	TotalRecordsProcessed uint64    `json:"total_records_processed"`
+	LastSeenTimeOfRecord  time.Time `json:"last_seen_time_of_record"`
+}
+
+type AnalyticsDataPlaceHolder map[int64]AnalyticsData
 
 var validations = make(map[string]map[string]validationRule)
 
@@ -62,8 +158,10 @@ func main() {
 	awsAccessKeyId := flag.String("aws_key", "dummy", "")
 	awsSecretAccessKey := flag.String("aws_secret", "dummy", "")
 	factorsEmailSender := flag.String("email_sender", "support-dev@factors.ai", "")
-	emailString := flag.String("emails", "", "comma separeted list of emails to which report to be sent")
-	localDiskTmpDirFlag := flag.String("local_disk_tmp_dir", "/usr/local/var/factors/local_disk/tmp", "--local_disk_tmp_dir=/usr/local/var/factors/local_disk/tmp pass directory")
+	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
+	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
+//	emailString := flag.String("emails", "", "comma separeted list of emails to which report to be sent")
+//	localDiskTmpDirFlag := flag.String("local_disk_tmp_dir", "/usr/local/var/factors/local_disk/tmp", "--local_disk_tmp_dir=/usr/local/var/factors/local_disk/tmp pass directory")
 	flag.Parse()
 	config := &C.Configuration{
 		Env:         *envFlag,
@@ -71,11 +169,15 @@ func main() {
 		AWSSecret:   *awsSecretAccessKey,
 		AWSRegion:   *awsRegion,
 		EmailSender: *factorsEmailSender,
+		RedisHostPersistent:                   *redisHostPersistent,
+		RedisPortPersistent:                   *redisPortPersistent,
 	}
 	C.InitConf(config)
 	C.InitSenderEmail(C.GetFactorsSenderEmail())
-	C.InitMailClient(config.AWSKey, config.AWSSecret, config.AWSRegion)
-	emails := strings.Split(*emailString, ",")
+	//C.InitMailClient(config.AWSKey, config.AWSSecret, config.AWSRegion)
+	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
+	C.InitFilemanager(*bucketName, *envFlag, config)
+	//emails := strings.Split(*emailString, ",")
 	flag.Parse()
 
 	var cloudManager filestore.FileManager
@@ -89,7 +191,8 @@ func main() {
 			panic(err)
 		}
 	}
-	diskManager := serviceDisk.New(*localDiskTmpDirFlag)
+//	diskManager := serviceDisk.New(*localDiskTmpDirFlag)
+	fmt.Println("project ids ", *projectIdFlag)
 	projectIdsList := getProjectIdsList(*projectIdFlag)
 	fromTime, err := time.Parse(U.DATETIME_FORMAT_YYYYMMDD, *fromDate)
 	if err != nil {
@@ -104,99 +207,110 @@ func main() {
 		*fromDate = fromTime.Format(U.DATETIME_FORMAT_YYYYMMDD)
 	}
 	toDate := fromTime.AddDate(0, 0, 6).Format(U.DATETIME_FORMAT_YYYYMMDD)
+	analyticsData, err := getAnalyticsDataForAllProjects(projectIdsList)
+	if err != nil {
+		log.WithError(err).Error("Failed to retrieve cache analytics data")
+	}
+	fmt.Println("project ids ", projectIdsList)
 
 	for _, project_id := range projectIdsList {
 
-		efCloudPath, efCloudName := (cloudManager).GetModelEventsFilePathAndName(int64(project_id), fromTime.Unix(), *modelType)
-		efTmpPath, efTmpName := diskManager.GetModelEventsFilePathAndName(int64(project_id), fromTime.Unix(), *modelType)
-		log.WithFields(log.Fields{"eventFileCloudPath": efCloudPath,
-			"eventFileCloudName": efCloudName}).Info("Downloading events file from cloud.")
-		eReader, err := (cloudManager).Get(efCloudPath, efCloudName)
-		if err != nil {
-			log.WithFields(log.Fields{"err": err, "eventFilePath": efCloudPath,
-				"eventFileName": efCloudName}).Error("Failed downloading events file from cloud.")
-		}
-		err = diskManager.Create(efTmpPath, efTmpName, eReader)
-		if err != nil {
-			log.WithFields(log.Fields{"err": err, "eventFilePath": efCloudPath,
-				"eventFileName": efCloudName}).Error("Failed creating events file in local.")
-		}
-		tmpEventsFilePath := efTmpPath + efTmpName
-		log.Info("Successfuly downloaded events file from cloud.", tmpEventsFilePath, efTmpPath, efTmpName)
-		scanner, err := T.OpenEventFileAndGetScanner(tmpEventsFilePath)
+		efCloudPath, efCloudName := (cloudManager).GetModelMetricsFilePathAndName(int64(project_id), fromTime.Unix(), *modelType)
+	//	efTmpPath, efTmpName := diskManager.GetModelMetricsFilePathAndName(int64(project_id), fromTime.Unix(), *modelType)
+		// log.WithFields(log.Fields{"eventFileCloudPath": efCloudPath,
+		// 	"eventFileCloudName": efCloudName}).Info("Downloading events file from cloud.")
+//		 eReader, err := (cloudManager).Get(efCloudPath, efCloudName)
+		// if err != nil {
+		// 	log.WithFields(log.Fields{"err": err, "eventFilePath": efCloudPath,
+		// 		"eventFileName": efCloudName}).Error("Failed downloading events file from cloud.")
+		// }
+	//	log.Info("---- sumit ", efTmpName, efTmpName,eReader)
+		// err = diskManager.Create(efTmpPath, efTmpName, eReader)
+		// if err != nil {
+		// 	log.WithFields(log.Fields{"err": err, "eventFilePath": efCloudPath,
+		// 		"eventFileName": efCloudName}).Error("Failed creating events file in local.")
+		// }
+		//tmpMetricsFilePath := efTmpPath + efTmpName
+		//log.Info("Successfuly downloaded events file from cloud.", tmpEventsFilePath, efTmpPath, efTmpName)
+		//scanner, err := T.OpenEventFileAndGetScanner(tmpEventsFilePath)
 		//initizalizing validator and validationMap
-		validate := validator.New()
-		initialize()
-		var reportMap = make(map[string]map[string]bool)
-		var daterange = make(map[string]map[string]bool)
-		var dates = make([]string, 0, 10)
+		//validate := validator.New()
+		//initialize()
+		// var reportMap = make(map[string]map[string]bool)
+		// var daterange = make(map[string]map[string]bool)
+		// var dates = make([]string, 0, 10)
 		//Scanning the file row by row
-		for scanner.Scan() {
-			row := scanner.Text()
-			var data P.CounterEventFormat
-			json.Unmarshal([]byte(row), &data)
-			eventTimestamp := time.Unix(data.EventTimestamp, 0)
-			weekday := eventTimestamp.Weekday().String()[0:3]
-			dateKey := eventTimestamp.AddDate(0, 0, 0).Format(U.DATETIME_FORMAT_YYYYMMDD)
-			mapKey := fmt.Sprintf("Date:%s, Day:%s ", dateKey, weekday)
-			if daterange[mapKey] == nil {
-				daterange[mapKey] = make(map[string]bool)
-				for _, event := range ALL_EVENTS {
-					daterange[mapKey][event] = false
-				}
-				dates = append(dates, mapKey)
-			}
-			eventName := data.EventName
+		// for scanner.Scan() {
+		// 	row := scanner.Text()
+		// 	var data P.CounterEventFormat
+		// 	json.Unmarshal([]byte(row), &data)
+		// 	eventTimestamp := time.Unix(data.EventTimestamp, 0)
+		// 	weekday := eventTimestamp.Weekday().String()[0:3]
+		// 	dateKey := eventTimestamp.AddDate(0, 0, 0).Format(U.DATETIME_FORMAT_YYYYMMDD)
+		// 	mapKey := fmt.Sprintf("Date:%s, Day:%s ", dateKey, weekday)
+		// 	if daterange[mapKey] == nil {
+		// 		daterange[mapKey] = make(map[string]bool)
+		// 		for _, event := range ALL_EVENTS {
+		// 			daterange[mapKey][event] = false
+		// 		}
+		// 		dates = append(dates, mapKey)
+		// 	}
+		// 	eventName := data.EventName
 
-			if validations[eventName] == nil {
-				eventName = NO_EVENT
-			} else {
-				daterange[mapKey][eventName] = true
-			}
+		// 	if validations[eventName] == nil {
+		// 		eventName = NO_EVENT
+		// 	} else {
+		// 		daterange[mapKey][eventName] = true
+		// 	}
 
-			//validating data
-			r := reflect.ValueOf(data)
-			for key, value := range validations[eventName] {
-				mapKey := fmt.Sprintf("%s-%s", eventName, key)
-				if reportMap[mapKey] == nil {
-					reportMap[mapKey] = make(map[string]bool)
-				}
-				var f reflect.Value
-				if value.property == "" {
-					f = reflect.Indirect(r).FieldByName(value.feild)
-				} else if value.property == "UserProperties" || value.property == "EventProperties" {
-					f = reflect.Indirect(r).FieldByName(value.property).MapIndex(reflect.ValueOf(value.feild))
-				} else {
-					log.Info("invalid property")
-					continue
-				}
-				if (!f.IsValid() && value.required) || (f.IsValid() && validate.Var(f.Interface(), value.validate) != nil) {
-					reportMap[mapKey][data.UserId] = true
-				}
-			}
-		}
+		// 	//validating data
+		// 	r := reflect.ValueOf(data)
+		// 	for key, value := range validations[eventName] {
+		// 		mapKey := fmt.Sprintf("%s-%s", eventName, key)
+		// 		if reportMap[mapKey] == nil {
+		// 			reportMap[mapKey] = make(map[string]bool)
+		// 		}
+		// 		var f reflect.Value
+		// 		if value.property == "" {
+		// 			f = reflect.Indirect(r).FieldByName(value.feild)
+		// 		} else if value.property == "UserProperties" || value.property == "EventProperties" {
+		// 			f = reflect.Indirect(r).FieldByName(value.property).MapIndex(reflect.ValueOf(value.feild))
+		// 		} else {
+		// 			log.Info("invalid property")
+		// 			continue
+		// 		}
+		// 		if (!f.IsValid() && value.required) || (f.IsValid() && validate.Var(f.Interface(), value.validate) != nil) {
+		// 			reportMap[mapKey][data.UserId] = true
+		// 		}
+		// 	}
+		// }
 		//end of data file
 
 		// Creating Reports
-		writeReport(dates, daterange, reportMap, *fromDate, toDate)
-		writeDetailedReport(reportMap, *fromDate, toDate)
+		//writeReport(dates, daterange, reportMap, *fromDate, toDate)
+		//writeDetailedReport(reportMap, *fromDate, toDate)
+		writeMetricsReport(analyticsData[project_id])
 
 		//uploading reports to cloud
-		report, _ := openFile(ReportName)
-		detailed_report, _ := openFile(DetailedReportName)
-		err = (cloudManager).Create(efCloudPath, ReportName, report)
+		report, _ := openFile(MetricsReportName)
+	//	detailed_report, _ := openFile(DetailedReportName)
+		log.Info("$$$$cloud path ", efCloudPath)
+		err = (cloudManager).Create(efCloudPath, efCloudName, report)
 		if err != nil {
-			log.Fatal("Failed to upload report in cloud. error = ", err)
+			//log.Fatal("Failed to upload report in cloud. error = ", err)
+			log.Info(err,"$$$$ failed to upload report in cloud")
+		}else{
+			log.Info("$$$$ success in uploading report to cloud")
 		}
-		err = (cloudManager).Create(efCloudPath, DetailedReportName, detailed_report)
-		if err != nil {
-			log.Fatal("Failed to upload detailed_report in cloud. error = ", err)
-		}
+		// err = (cloudManager).Create(efCloudPath, DetailedReportName, detailed_report)
+		// if err != nil {
+		// 	log.Fatal("Failed to upload detailed_report in cloud. error = ", err)
+		// }
 		_ = closeFile(report)
-		_ = closeFile(detailed_report)
+	//	_ = closeFile(detailed_report)
 		//reports uploaded and closed
 
-		sendReportviaEmail(emails, project_id)
+		//sendReportviaEmail(emails, project_id)
 		log.Info(fmt.Sprintf("Report written successfully from %s to %s.", *fromDate, toDate))
 		//sucess log
 	}
@@ -264,9 +378,31 @@ func initializeSalesforce_Updated() {
 	validations[U.EVENT_NAME_SALESFORCE_CONTACT_UPDATED]["EventTimestamp"] = validationRule{"EventTimestamp", "", true, "required,gt=0"}
 
 }
-
+func getAnalyticsDataForAllProjects(projectIdsList []int64) (AnalyticsDataPlaceHolder map[int64]AnalyticsData, err error) {
+	// data from cache
+	analytics, err := store.GetStore().GetEventUserCountsMerged(projectIdsList, LookbackDaysForCacheData, time.Now())
+	if err != nil {
+		log.WithError(err).Error("Failed to get project analytics data")
+	}
+	mergedData := make(map[int64]AnalyticsData)
+	// merging last 7 days data into one
+	for projectID, data := range analytics {
+		var analyticsData AnalyticsData
+		globalData := GlobalLevelData{
+			TotalActiveUsers:      data.TotalUniqueUsers,
+			TotalEvents:           data.TotalEvents,
+			TotalRecordsProcessed: getTotalRecordsProcessed(data),
+		}
+		analyticsData.GlobalLevelData = globalData
+		mergedData[projectID] = analyticsData
+	}
+	return mergedData, nil
+}
+func getTotalRecordsProcessed(data *model.ProjectAnalytics) uint64 {
+	return data.AdwordsEvents + data.FacebookEvents + data.HubspotEvents + data.LinkedinEvents + data.SalesforceEvents
+}
 func writeReport(dates []string, daterange, reportMap map[string]map[string]bool, from string, to string) {
-	report, _ := createFile(ReportName)
+	report, _ := createFile(MetricsReportName)
 	report.WriteString(fmt.Sprintf("Report from %s to %s.\n\n", from, to))
 	for key, value := range reportMap {
 		report.WriteString(fmt.Sprintf("Total invalid %s : %s \n", key, strconv.Itoa(int(len(value)))))
@@ -312,7 +448,15 @@ func writeReport(dates []string, daterange, reportMap map[string]map[string]bool
 	}
 	_ = closeFile(report)
 }
-
+func writeMetricsReport(analyticsData AnalyticsData){
+	report, _ := createFile(MetricsReportName)
+	analyticsDataJson, err := json.Marshal(analyticsData)
+	if err != nil {
+		log.WithError(err).Error("Failed to marshal analytics data")
+	}
+	analyticsDataString := string(analyticsDataJson)
+	report.WriteString(analyticsDataString)
+}
 func writeDetailedReport(reportMap map[string]map[string]bool, from string, to string) {
 	detailed_report, _ := createFile(DetailedReportName)
 	detailed_report.WriteString(fmt.Sprintf("Report from %s to %s.\n\n", from, to))
@@ -374,7 +518,7 @@ func createFile(fileName string) (*os.File, error) {
 
 func sendReportviaEmail(emails []string, project_id int64) {
 	var success, fail int
-	report, err := openFile(ReportName)
+	report, err := openFile(MetricsReportName)
 	if err != nil {
 		log.Error(err)
 		return

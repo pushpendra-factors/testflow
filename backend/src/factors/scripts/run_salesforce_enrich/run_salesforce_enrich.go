@@ -139,6 +139,7 @@ func main() {
 	overrideLastSyncTimestamp := flag.Int64("override_last_sync_timestamp", 0, "Override last sync timestamp")
 	clearbitEnabled := flag.Int("clearbit_enabled", 0, "To enable clearbit enrichment")
 	useSalesforceV54APIByProjectID := flag.String("use_salesforce_v54_api_by_project_id", "", "Use v54 api for query salesforce data")
+	allowIdentificationOverwriteUsingSourceByProjectID := flag.String("allow_identification_overwrite_using_source_by_project_id", "", "Allow identification overwrite based on request source.")
 
 	flag.Parse()
 	defaultAppName := "salesforce_enrich"
@@ -195,10 +196,11 @@ func main() {
 		AllowedSalesforceGroupsByProjectIDs:    *enableSalesforceGroupsByProjectIDs,
 		CaptureSourceInUsersTable:              *captureSourceInUsersTable,
 		RestrictReusingUsersByCustomerUserId:   *restrictReusingUsersByCustomerUserId,
-		DisableCRMUniquenessConstraintsCheckByProjectID: *disableCRMUniquenessConstraintsCheckByProjectID,
-		SalesforceBatchInsertBatchSize:                  *insertBatchSize,
-		ClearbitEnabled:                                 *clearbitEnabled,
-		UseSalesforceV54APIByProjectID:                  *useSalesforceV54APIByProjectID,
+		DisableCRMUniquenessConstraintsCheckByProjectID:    *disableCRMUniquenessConstraintsCheckByProjectID,
+		SalesforceBatchInsertBatchSize:                     *insertBatchSize,
+		ClearbitEnabled:                                    *clearbitEnabled,
+		UseSalesforceV54APIByProjectID:                     *useSalesforceV54APIByProjectID,
+		AllowIdentificationOverwriteUsingSourceByProjectID: *allowIdentificationOverwriteUsingSourceByProjectID,
 	}
 
 	C.InitConf(config)
