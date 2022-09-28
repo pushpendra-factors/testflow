@@ -56,9 +56,7 @@ function InfoCard({ title, event_name, properties = {}, trigger, children }) {
                   truncate={true}
                   charLimit={40}
                 >
-                  {
-                    'https://studio.memsql.com/cluster/eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJuYW0iOiJmYWN0b3JzLXByb2R1Y3Rpb24iLCJ1c3IiOiJhZG1pbiIsImVuZCI6InN2Yy1iZWUwMzRiOC0yYWQyLTRmNzMtODE0NC0wYzljY2IzZWI3OWItZGRsLmdjcC1vcmVnb24tMS5zdmMuc2luZ2xlc3RvcmUuY29tIiwiZW52IjoicCIsImNpZCI6ImJlZTAzNGI4LTJhZDItNGY3My04MTQ0LTBjOWNjYjNlYjc5YiJ9.ury2WAUaJg-YW2JLKYsVNepn0oK8MhVrFyInNAR-cwwdeHe_4KdEOZ8UlIym8CYnRHS3TdOAsZ8_YdrtUc--dA/editor'
-                  }
+                  {event_name}
                 </Text>
               </div>
             );
