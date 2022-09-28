@@ -2731,19 +2731,21 @@ func ProcessOTPEventRows(rows *sql.Rows, query *AttributionQuery,
 				userSessionData.MinTimestamp = U.Min(userSessionData.MinTimestamp, timestamp)
 				userSessionData.MaxTimestamp = U.Max(userSessionData.MaxTimestamp, timestamp)
 				userSessionData.TimeStamps = append(userSessionData.TimeStamps, timestamp)
-				userSessionData.WithinQueryPeriod = userSessionData.WithinQueryPeriod || timestamp >= query.From && timestamp <= query.To
+				userSessionData.WithinQueryPeriod = userSessionData.WithinQueryPeriod || isSessionWithinQueryPeriod(query.QueryType, query.LookbackDays, query.From, query.To, timestamp)
 				attributedSessionsByUserId[userID][uniqueAttributionKey] = userSessionData
 			} else {
 				userSessionDataNew := UserSessionData{MinTimestamp: timestamp,
 					MaxTimestamp: timestamp, TimeStamps: []int64{timestamp},
-					WithinQueryPeriod: timestamp >= query.From && timestamp <= query.To, MarketingInfo: marketingValues}
+					WithinQueryPeriod: isSessionWithinQueryPeriod(query.QueryType, query.LookbackDays, query.From, query.To, timestamp),
+					MarketingInfo:     marketingValues}
 				attributedSessionsByUserId[userID][uniqueAttributionKey] = userSessionDataNew
 			}
 		} else {
 			attributedSessionsByUserId[userID] = make(map[string]UserSessionData)
 			userSessionDataNew := UserSessionData{MinTimestamp: timestamp,
 				MaxTimestamp: timestamp, TimeStamps: []int64{timestamp},
-				WithinQueryPeriod: timestamp >= query.From && timestamp <= query.To, MarketingInfo: marketingValues}
+				WithinQueryPeriod: isSessionWithinQueryPeriod(query.QueryType, query.LookbackDays, query.From, query.To, timestamp),
+				MarketingInfo:     marketingValues}
 			attributedSessionsByUserId[userID][uniqueAttributionKey] = userSessionDataNew
 		}
 	}
@@ -2899,19 +2901,21 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, reports *Marketin
 				userSessionData.MinTimestamp = U.Min(userSessionData.MinTimestamp, timestamp)
 				userSessionData.MaxTimestamp = U.Max(userSessionData.MaxTimestamp, timestamp)
 				userSessionData.TimeStamps = append(userSessionData.TimeStamps, timestamp)
-				userSessionData.WithinQueryPeriod = userSessionData.WithinQueryPeriod || timestamp >= query.From && timestamp <= query.To
+				userSessionData.WithinQueryPeriod = userSessionData.WithinQueryPeriod || isSessionWithinQueryPeriod(query.QueryType, query.LookbackDays, query.From, query.To, timestamp)
 				attributedSessionsByUserId[userID][uniqueAttributionKey] = userSessionData
 			} else {
 				userSessionDataNew := UserSessionData{MinTimestamp: timestamp,
 					MaxTimestamp: timestamp, TimeStamps: []int64{timestamp},
-					WithinQueryPeriod: timestamp >= query.From && timestamp <= query.To, MarketingInfo: marketingValues}
+					WithinQueryPeriod: isSessionWithinQueryPeriod(query.QueryType, query.LookbackDays, query.From, query.To, timestamp),
+					MarketingInfo:     marketingValues}
 				attributedSessionsByUserId[userID][uniqueAttributionKey] = userSessionDataNew
 			}
 		} else {
 			attributedSessionsByUserId[userID] = make(map[string]UserSessionData)
 			userSessionDataNew := UserSessionData{MinTimestamp: timestamp,
 				MaxTimestamp: timestamp, TimeStamps: []int64{timestamp},
-				WithinQueryPeriod: timestamp >= query.From && timestamp <= query.To, MarketingInfo: marketingValues}
+				WithinQueryPeriod: isSessionWithinQueryPeriod(query.QueryType, query.LookbackDays, query.From, query.To, timestamp),
+				MarketingInfo:     marketingValues}
 			attributedSessionsByUserId[userID][uniqueAttributionKey] = userSessionDataNew
 		}
 		count++
@@ -3293,4 +3297,23 @@ func GetContentGroupNamesToDummyNamesMap(contentGroupNamesList []string) map[str
 		contentGroupNamesToDummyNamesMap[contentGroupName] = "contentGroup_" + fmt.Sprintf("%d", index)
 	}
 	return contentGroupNamesToDummyNamesMap
+}
+func isSessionWithinQueryPeriod(queryType string,
+	lookBackWindow int, from int64, to int64, timestamp int64) bool {
+	lookbackPeriod := int64(lookBackWindow) * SecsInADay
+	switch queryType {
+
+	case AttributionQueryTypeConversionBased:
+		if timestamp >= from-lookbackPeriod && timestamp <= to {
+			return true
+		}
+		return false
+
+	case AttributionQueryTypeEngagementBased:
+		if timestamp >= from && timestamp <= to {
+			return true
+		}
+		return false
+	}
+	return false
 }
