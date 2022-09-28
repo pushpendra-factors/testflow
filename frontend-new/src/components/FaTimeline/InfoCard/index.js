@@ -17,9 +17,9 @@ function InfoCard({ title, event_name, properties = {}, trigger, children }) {
     ) {
       return MomentTz(value * 1000).format('DD MMMM YYYY, hh:mm A');
     } else if (key.includes('_time')) {
-      formatDurationIntoString(value);
+      return formatDurationIntoString(value);
     } else if (key.includes('durationmilliseconds')) {
-      formatDurationIntoString(parseInt(value / 1000));
+      return formatDurationIntoString(parseInt(value / 1000));
     } else return value;
   };
   const popoverContent = () => {
