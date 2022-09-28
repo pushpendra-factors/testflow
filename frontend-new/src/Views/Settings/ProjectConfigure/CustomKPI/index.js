@@ -120,7 +120,7 @@ const matchEventName = (item) => {
     );
   };
 
-
+  const alphabetIndex = 'ABCDEFGHIJK';
 
 
   const columns = [
@@ -1138,10 +1138,30 @@ const matchEventName = (item) => {
                       </Col>
                     </Row>
                     <div className={'mt-4 border rounded-lg'}>
-                    {viewKPIDetails?.transformations?.qG.map((item) => (
+                    {viewKPIDetails?.transformations?.qG.map((item, index) => (
                       <>
                       <div className={'py-2'}>
                       <Row className={'m-0 mt-1 ml-4'}>
+                          <Col>
+                            <div className={'flex items-center fa--query_block_section borderless no-padding mt-1'}>
+                              <div
+                                className={
+                                  'fa--query_block--add-event active flex justify-center items-center mr-2'
+                                }
+                                >
+                                <Text
+                                  disabled={true}
+                                  type={'title'}
+                                  level={7}
+                                  weight={'bold'}
+                                  color={'white'}
+                                  extraClass={'m-0'}
+                                  >
+                                  {alphabetIndex[index]}
+                                </Text>
+                              </div>
+                            </div>
+                          </Col>
                           <Col>
                               <Button
                               className={`mr-2`}
