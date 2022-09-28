@@ -57,6 +57,18 @@ export const hoverEvents = [
   '$hubspot_engagement_call_updated',
 ];
 
+export const TimelineHoverPropDisplayNames = {
+  $timestamp: 'Date and Time',
+  '$hubspot_form_submission_form-type': 'Form Type',
+  $hubspot_form_submission_title: 'Form Title',
+  '$hubspot_form_submission_form-id': 'Form ID',
+  '$hubspot_form_submission_conversion-id': 'Conversion ID',
+  $hubspot_form_submission_email: 'Email',
+  '$hubspot_form_submission_page-url-no-qp': 'Page URL',
+  '$hubspot_form_submission_page-title': 'Page Title',
+  $hubspot_form_submission_timestamp: 'Form Submit Timestamp',
+};
+
 export const getLoopLength = (allEvents) => {
   let maxLength = -1;
   Object.entries(allEvents).forEach(([user, events]) => {

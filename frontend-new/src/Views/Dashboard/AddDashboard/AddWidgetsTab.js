@@ -59,7 +59,10 @@ function AddWidgetsTab({ queries, selectedQueries, setSelectedQueries }) {
         />
       </div>
 
-      <div className='queries-list'>
+      <div className='queries-list' style={{
+        maxHeight: '500px',
+        overflow: 'auto'
+      }}>
         {filteredQueries.map((q) => {
           const queryType = getQueryType(q.query);
           const queryTypeName = {

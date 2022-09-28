@@ -1584,6 +1584,7 @@ func MergeTwoDataRows(row1 []interface{}, row2 []interface{}, keyIndex int, attr
 		// Remaining linked funnel events & CPCs
 		for i := keyIndex + 5; i < len(row1)-1; i += 2 {
 			row1[i] = row1[i].(float64) + row2[i].(float64)
+			row1[i+1] = row1[i+1].(float64) + row2[i+1].(float64)
 		}
 
 		return row1
@@ -1698,11 +1699,15 @@ func MergeTwoDataRows(row1 []interface{}, row2 []interface{}, keyIndex int, attr
 
 		// Remaining linked funnel events & CPCs
 		for i := keyIndex + 14; i < len(row1)-1; i += 3 {
+			// Conversion
 			row1[i] = row1[i].(float64) + row2[i].(float64)
+			// Influence
+			row1[i+1] = row1[i+1].(float64) + row2[i+1].(float64)
+
 			if row1[i].(float64) > 0 && i < len(row1) {
-				row1[i+1], _ = U.FloatRoundOffWithPrecision(spend/row1[i].(float64), U.DefaultPrecision) // Funnel - Conversion - CPC. spend/conversion
+				row1[i+2], _ = U.FloatRoundOffWithPrecision(spend/row1[i].(float64), U.DefaultPrecision) // Funnel - Conversion - CPC. spend/conversion
 			} else {
-				row1[i+1] = float64(0) // Funnel - Conversion - CPC.
+				row1[i+2] = float64(0) // Funnel - Conversion - CPC.
 			}
 		}
 		return row1
@@ -2726,19 +2731,21 @@ func ProcessOTPEventRows(rows *sql.Rows, query *AttributionQuery,
 				userSessionData.MinTimestamp = U.Min(userSessionData.MinTimestamp, timestamp)
 				userSessionData.MaxTimestamp = U.Max(userSessionData.MaxTimestamp, timestamp)
 				userSessionData.TimeStamps = append(userSessionData.TimeStamps, timestamp)
-				userSessionData.WithinQueryPeriod = userSessionData.WithinQueryPeriod || timestamp >= query.From && timestamp <= query.To
+				userSessionData.WithinQueryPeriod = userSessionData.WithinQueryPeriod || isSessionWithinQueryPeriod(query.QueryType, query.LookbackDays, query.From, query.To, timestamp)
 				attributedSessionsByUserId[userID][uniqueAttributionKey] = userSessionData
 			} else {
 				userSessionDataNew := UserSessionData{MinTimestamp: timestamp,
 					MaxTimestamp: timestamp, TimeStamps: []int64{timestamp},
-					WithinQueryPeriod: timestamp >= query.From && timestamp <= query.To, MarketingInfo: marketingValues}
+					WithinQueryPeriod: isSessionWithinQueryPeriod(query.QueryType, query.LookbackDays, query.From, query.To, timestamp),
+					MarketingInfo:     marketingValues}
 				attributedSessionsByUserId[userID][uniqueAttributionKey] = userSessionDataNew
 			}
 		} else {
 			attributedSessionsByUserId[userID] = make(map[string]UserSessionData)
 			userSessionDataNew := UserSessionData{MinTimestamp: timestamp,
 				MaxTimestamp: timestamp, TimeStamps: []int64{timestamp},
-				WithinQueryPeriod: timestamp >= query.From && timestamp <= query.To, MarketingInfo: marketingValues}
+				WithinQueryPeriod: isSessionWithinQueryPeriod(query.QueryType, query.LookbackDays, query.From, query.To, timestamp),
+				MarketingInfo:     marketingValues}
 			attributedSessionsByUserId[userID][uniqueAttributionKey] = userSessionDataNew
 		}
 	}
@@ -2893,19 +2900,20 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, reports *Marketin
 				userSessionData.MinTimestamp = U.Min(userSessionData.MinTimestamp, timestamp)
 				userSessionData.MaxTimestamp = U.Max(userSessionData.MaxTimestamp, timestamp)
 				userSessionData.TimeStamps = append(userSessionData.TimeStamps, timestamp)
-				userSessionData.WithinQueryPeriod = userSessionData.WithinQueryPeriod || timestamp >= query.From && timestamp <= query.To
+				userSessionData.WithinQueryPeriod = userSessionData.WithinQueryPeriod || isSessionWithinQueryPeriod(query.QueryType, query.LookbackDays, query.From, query.To, timestamp)
 				(*attributedSessionsByUserId)[userID][uniqueAttributionKey] = userSessionData
 			} else {
 				userSessionDataNew := UserSessionData{MinTimestamp: timestamp,
 					MaxTimestamp: timestamp, TimeStamps: []int64{timestamp},
-					WithinQueryPeriod: timestamp >= query.From && timestamp <= query.To, MarketingInfo: marketingValues}
+					WithinQueryPeriod: isSessionWithinQueryPeriod(query.QueryType, query.LookbackDays, query.From, query.To, timestamp),
+					MarketingInfo:     marketingValues}
 				(*attributedSessionsByUserId)[userID][uniqueAttributionKey] = userSessionDataNew
 			}
 		} else {
 			(*attributedSessionsByUserId)[userID] = make(map[string]UserSessionData)
 			userSessionDataNew := UserSessionData{MinTimestamp: timestamp,
 				MaxTimestamp: timestamp, TimeStamps: []int64{timestamp},
-				WithinQueryPeriod: timestamp >= query.From && timestamp <= query.To, MarketingInfo: marketingValues}
+				WithinQueryPeriod: isSessionWithinQueryPeriod(query.QueryType, query.LookbackDays, query.From, query.To, timestamp), MarketingInfo: marketingValues}
 			(*attributedSessionsByUserId)[userID][uniqueAttributionKey] = userSessionDataNew
 		}
 		count++
@@ -3287,4 +3295,23 @@ func GetContentGroupNamesToDummyNamesMap(contentGroupNamesList []string) map[str
 		contentGroupNamesToDummyNamesMap[contentGroupName] = "contentGroup_" + fmt.Sprintf("%d", index)
 	}
 	return contentGroupNamesToDummyNamesMap
+}
+func isSessionWithinQueryPeriod(queryType string,
+	lookBackWindow int, from int64, to int64, timestamp int64) bool {
+	lookbackPeriod := int64(lookBackWindow) * SecsInADay
+	switch queryType {
+
+	case AttributionQueryTypeConversionBased:
+		if timestamp >= from-lookbackPeriod && timestamp <= to {
+			return true
+		}
+		return false
+
+	case AttributionQueryTypeEngagementBased:
+		if timestamp >= from && timestamp <= to {
+			return true
+		}
+		return false
+	}
+	return false
 }

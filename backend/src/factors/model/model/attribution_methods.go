@@ -292,9 +292,9 @@ func getWShaped(attributionType string, attributionTimerange map[string]UserSess
 		keys[1].Weight = float64(0.5)
 
 	case 3:
-		keys[0].Weight = float64(0.33)
-		keys[1].Weight = float64(0.33)
-		keys[2].Weight = float64(0.33)
+		keys[0].Weight = float64(1.0 / 3.0)
+		keys[1].Weight = float64(1.0 / 3.0)
+		keys[2].Weight = float64(1.0 / 3.0)
 
 	case 4:
 		keys[0].Weight = float64(0.325)

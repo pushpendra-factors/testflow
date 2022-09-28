@@ -7,7 +7,7 @@ import (
 	"factors/filestore"
 	"factors/model/model"
 	"factors/model/store"
-//	P "factors/pattern"
+	//	P "factors/pattern"
 	serviceDisk "factors/services/disk"
 	serviceGCS "factors/services/gcstorage"
 	U "factors/util"
@@ -21,14 +21,15 @@ import (
 	//"strings"
 	"time"
 
-//	T "factors/task"
+	//	T "factors/task"
 
-//"github.com/go-playground/validator/v10"
+	//"github.com/go-playground/validator/v10"
 	log "github.com/sirupsen/logrus"
 )
 
 const NO_EVENT = "NoEvent"
 const MetricsReportName = "metrics.txt"
+
 //const ReportName = "report.txt"
 const DetailedReportName = "detailed_report.txt"
 const LookbackDaysForCacheData = 7
@@ -160,17 +161,17 @@ func main() {
 	factorsEmailSender := flag.String("email_sender", "support-dev@factors.ai", "")
 	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
 	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
-//	emailString := flag.String("emails", "", "comma separeted list of emails to which report to be sent")
-	localDiskTmpDirFlag := flag.String("local_disk_tmp_dir", "/usr/local/var/factors/local_disk/tmp", "--local_disk_tmp_dir=/usr/local/var/factors/local_disk/tmp pass directory")
+	//	emailString := flag.String("emails", "", "comma separeted list of emails to which report to be sent")
+	//	localDiskTmpDirFlag := flag.String("local_disk_tmp_dir", "/usr/local/var/factors/local_disk/tmp", "--local_disk_tmp_dir=/usr/local/var/factors/local_disk/tmp pass directory")
 	flag.Parse()
 	config := &C.Configuration{
-		Env:         *envFlag,
-		AWSKey:      *awsAccessKeyId,
-		AWSSecret:   *awsSecretAccessKey,
-		AWSRegion:   *awsRegion,
-		EmailSender: *factorsEmailSender,
-		RedisHostPersistent:                   *redisHostPersistent,
-		RedisPortPersistent:                   *redisPortPersistent,
+		Env:                 *envFlag,
+		AWSKey:              *awsAccessKeyId,
+		AWSSecret:           *awsSecretAccessKey,
+		AWSRegion:           *awsRegion,
+		EmailSender:         *factorsEmailSender,
+		RedisHostPersistent: *redisHostPersistent,
+		RedisPortPersistent: *redisPortPersistent,
 	}
 	C.InitConf(config)
 	C.InitSenderEmail(C.GetFactorsSenderEmail())
@@ -191,7 +192,7 @@ func main() {
 			panic(err)
 		}
 	}
-	diskManager := serviceDisk.New(*localDiskTmpDirFlag)
+	//	diskManager := serviceDisk.New(*localDiskTmpDirFlag)
 	fmt.Println("project ids ", *projectIdFlag)
 	projectIdsList := getProjectIdsList(*projectIdFlag)
 	fromTime, err := time.Parse(U.DATETIME_FORMAT_YYYYMMDD, *fromDate)
@@ -216,21 +217,22 @@ func main() {
 	for _, project_id := range projectIdsList {
 
 		efCloudPath, efCloudName := (cloudManager).GetModelMetricsFilePathAndName(int64(project_id), fromTime.Unix(), *modelType)
-		efTmpPath, efTmpName := diskManager.GetModelMetricsFilePathAndName(int64(project_id), fromTime.Unix(), *modelType)
-		log.WithFields(log.Fields{"eventFileCloudPath": efCloudPath,
-			"eventFileCloudName": efCloudName}).Info("Downloading events file from cloud.")
-		eReader, err := (cloudManager).Get(efCloudPath, efCloudName)
-		if err != nil {
-			log.WithFields(log.Fields{"err": err, "eventFilePath": efCloudPath,
-				"eventFileName": efCloudName}).Error("Failed downloading events file from cloud.")
-		}
-		err = diskManager.Create(efTmpPath, efTmpName, eReader)
-		if err != nil {
-			log.WithFields(log.Fields{"err": err, "eventFilePath": efCloudPath,
-				"eventFileName": efCloudName}).Error("Failed creating events file in local.")
-		}
-		tmpEventsFilePath := efTmpPath + efTmpName
-		log.Info("Successfuly downloaded events file from cloud.", tmpEventsFilePath, efTmpPath, efTmpName)
+		//	efTmpPath, efTmpName := diskManager.GetModelMetricsFilePathAndName(int64(project_id), fromTime.Unix(), *modelType)
+		// log.WithFields(log.Fields{"eventFileCloudPath": efCloudPath,
+		// 	"eventFileCloudName": efCloudName}).Info("Downloading events file from cloud.")
+		//		 eReader, err := (cloudManager).Get(efCloudPath, efCloudName)
+		// if err != nil {
+		// 	log.WithFields(log.Fields{"err": err, "eventFilePath": efCloudPath,
+		// 		"eventFileName": efCloudName}).Error("Failed downloading events file from cloud.")
+		// }
+		//	log.Info("---- sumit ", efTmpName, efTmpName,eReader)
+		// err = diskManager.Create(efTmpPath, efTmpName, eReader)
+		// if err != nil {
+		// 	log.WithFields(log.Fields{"err": err, "eventFilePath": efCloudPath,
+		// 		"eventFileName": efCloudName}).Error("Failed creating events file in local.")
+		// }
+		//tmpMetricsFilePath := efTmpPath + efTmpName
+		//log.Info("Successfuly downloaded events file from cloud.", tmpEventsFilePath, efTmpPath, efTmpName)
 		//scanner, err := T.OpenEventFileAndGetScanner(tmpEventsFilePath)
 		//initizalizing validator and validationMap
 		//validate := validator.New()
@@ -292,13 +294,13 @@ func main() {
 
 		//uploading reports to cloud
 		report, _ := openFile(MetricsReportName)
-	//	detailed_report, _ := openFile(DetailedReportName)
+		//	detailed_report, _ := openFile(DetailedReportName)
 		log.Info("$$$$cloud path ", efCloudPath)
-		err = (cloudManager).Create(efCloudPath, MetricsReportName, report)
+		err = (cloudManager).Create(efCloudPath, efCloudName, report)
 		if err != nil {
 			//log.Fatal("Failed to upload report in cloud. error = ", err)
-			log.Info(err,"$$$$ failed to upload report in cloud")
-		}else{
+			log.Info(err, "$$$$ failed to upload report in cloud")
+		} else {
 			log.Info("$$$$ success in uploading report to cloud")
 		}
 		// err = (cloudManager).Create(efCloudPath, DetailedReportName, detailed_report)
@@ -306,7 +308,7 @@ func main() {
 		// 	log.Fatal("Failed to upload detailed_report in cloud. error = ", err)
 		// }
 		_ = closeFile(report)
-	//	_ = closeFile(detailed_report)
+		//	_ = closeFile(detailed_report)
 		//reports uploaded and closed
 
 		//sendReportviaEmail(emails, project_id)
@@ -447,7 +449,7 @@ func writeReport(dates []string, daterange, reportMap map[string]map[string]bool
 	}
 	_ = closeFile(report)
 }
-func writeMetricsReport(analyticsData AnalyticsData){
+func writeMetricsReport(analyticsData AnalyticsData) {
 	report, _ := createFile(MetricsReportName)
 	analyticsDataJson, err := json.Marshal(analyticsData)
 	if err != nil {

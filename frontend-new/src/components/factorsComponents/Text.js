@@ -64,10 +64,8 @@ class Text extends React.Component {
     const isTextTruncatePossible = truncate && !_.isArray(children);
     const isOverFlow = children?.length > charLimit;
     let truncatedText = '';
-    if (isTextTruncatePossible) {
-      truncatedText = truncate
-        ? `${children.slice(0, charLimit)}${isOverFlow ? '...' : ''}`
-        : children;
+    if (isTextTruncatePossible && isOverFlow) {
+      truncatedText = `${children.slice(0, charLimit)}${'...'}`;
     }
 
     if (type === textType.title) {

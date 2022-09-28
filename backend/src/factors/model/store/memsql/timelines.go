@@ -328,20 +328,7 @@ func (store *MemSQL) GetUserActivitiesAndSessionCount(projectID int64, identity 
 			log.WithError(err).Error("Failed decoding event properties")
 		} else {
 			// Display Names
-			if userActivity.EventName == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED {
-				userActivity.DisplayName = fmt.Sprintf("Added to %s", (*properties)[U.EP_SALESFORCE_CAMPAIGN_NAME])
-			} else if userActivity.EventName == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED {
-				userActivity.DisplayName = fmt.Sprintf("Interacted with %s", (*properties)[U.EP_SALESFORCE_CAMPAIGN_NAME])
-			} else if userActivity.EventName == U.EVENT_NAME_HUBSPOT_CONTACT_FORM_SUBMISSION {
-				userActivity.DisplayName = fmt.Sprintf("%s", (*properties)[U.EP_HUBSPOT_FORM_SUBMISSION_TITLE])
-			} else if userActivity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_EMAIL {
-				userActivity.DisplayName = fmt.Sprintf("%s: %s", (*properties)[U.EP_HUBSPOT_ENGAGEMENT_TYPE], (*properties)[U.EP_HUBSPOT_ENGAGEMENT_SUBJECT])
-			} else if userActivity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_CREATED ||
-				userActivity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_UPDATED ||
-				userActivity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_CREATED ||
-				userActivity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_UPDATED {
-				userActivity.DisplayName = fmt.Sprintf("%s", (*properties)[U.EP_HUBSPOT_ENGAGEMENT_TITLE])
-			} else if (*properties)[U.EP_IS_PAGE_VIEW] == true {
+			if (*properties)[U.EP_IS_PAGE_VIEW] == true {
 				userActivity.DisplayName = "Page View"
 			} else if standardDisplayNames[userActivity.EventName] != "" {
 				userActivity.DisplayName = standardDisplayNames[userActivity.EventName]
@@ -349,6 +336,21 @@ func (store *MemSQL) GetUserActivitiesAndSessionCount(projectID int64, identity 
 				userActivity.DisplayName = projectDisplayNames[userActivity.EventName]
 			} else {
 				userActivity.DisplayName = userActivity.EventName
+			}
+			// Alias Names
+			if userActivity.EventName == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED {
+				userActivity.AliasName = fmt.Sprintf("Added to %s", (*properties)[U.EP_SALESFORCE_CAMPAIGN_NAME])
+			} else if userActivity.EventName == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED {
+				userActivity.AliasName = fmt.Sprintf("Interacted with %s", (*properties)[U.EP_SALESFORCE_CAMPAIGN_NAME])
+			} else if userActivity.EventName == U.EVENT_NAME_HUBSPOT_CONTACT_FORM_SUBMISSION {
+				userActivity.AliasName = fmt.Sprintf("%s", (*properties)[U.EP_HUBSPOT_FORM_SUBMISSION_TITLE])
+			} else if userActivity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_EMAIL {
+				userActivity.AliasName = fmt.Sprintf("%s: %s", (*properties)[U.EP_HUBSPOT_ENGAGEMENT_TYPE], (*properties)[U.EP_HUBSPOT_ENGAGEMENT_SUBJECT])
+			} else if userActivity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_CREATED ||
+				userActivity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_UPDATED ||
+				userActivity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_CREATED ||
+				userActivity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_UPDATED {
+				userActivity.AliasName = fmt.Sprintf("%s", (*properties)[U.EP_HUBSPOT_ENGAGEMENT_TITLE])
 			}
 			// Filtered Properties
 			userActivity.Properties = GetFilteredProperties(userActivity.EventName, properties)

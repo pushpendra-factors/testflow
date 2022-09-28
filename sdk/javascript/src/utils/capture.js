@@ -283,6 +283,11 @@ function getClickCapturePayloadFromElement(element) {
     attributes.display_text = cleanupString(displayName);
     attributes.element_type = elementType;
 
+    // default display_name. Still display_text 
+    // attribute will be as same as in UI.
+    if (displayName == "" || displayName == undefined)
+        displayName = "button_click";
+
     addElementAttributeIfExists(element, "class", attributes);
     addElementAttributeIfExists(element, "id", attributes);
     addElementAttributeIfExists(element, "name", attributes);
