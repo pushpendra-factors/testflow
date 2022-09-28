@@ -614,41 +614,293 @@ func ValidateKPIQueryGroupByForAnyEventType(kpiQueryGroupBys []KPIGroupBy, confi
 	return true
 }
 
-// Below function relies on fact that each query has only one metric.
-func GetNonGBTResultsFromGBTResults(queryResults []QueryResult, query KPIQuery) []QueryResult {
-	finalResultantQueryResults := make([]QueryResult, 0, 0)
+func GetNonGBTResultsFromGBTResultsAndMaps(reqID string, kpiQueryGroup KPIQueryGroup, mapOfNonGBTDerivedKPIToInternalKPIToResults map[string]map[string][]QueryResult,
+	mapOfGBTDerivedKPIToInternalKPIToResults map[string]map[string][]QueryResult, mapOfNonGBTKPINormalQueryToResults map[string][]QueryResult,
+	mapOfGBTKPINormalQueryToResults map[string][]QueryResult, externalQueryToInternalQueries map[string]KPIQueryGroup) (
+	int, map[string]map[string][]QueryResult, map[string][]QueryResult) {
 
-	for _, queryResult := range queryResults {
-		resultAsMap := make(map[string][]interface{})
-		currentResultantRows := make([][]interface{}, 0, 0)
-		currentQueryResult := QueryResult{}
-
-		for _, row := range queryResult.Rows {
-			currentRow := getRowAfterDeletionOfDateTime(row, queryResult.Headers)
-			key := getKeyWithoutDateTime(currentRow)
-
-			if val, ok := resultAsMap[key]; ok {
-				totalValue, err := U.SafeAddition(val[len(currentRow)-1], currentRow[len(currentRow)-1])
+	finalStatusCode := http.StatusOK
+	logEntry := log.WithField("reqID", reqID).
+		WithField("kpiQueryGroup", kpiQueryGroup).
+		WithField("mapOfNonGBTDerivedKPIToInternalKPIToResults", mapOfNonGBTDerivedKPIToInternalKPIToResults).
+		WithField("mapOfGBTDerivedKPIToInternalKPIToResults", mapOfGBTDerivedKPIToInternalKPIToResults).
+		WithField("mapOfNonGBTKPINormalQueryToResults", mapOfNonGBTKPINormalQueryToResults).
+		WithField("mapOfGBTKPINormalQueryToResults", mapOfGBTKPINormalQueryToResults).
+		WithField("externalQueryToInternalQueries", externalQueryToInternalQueries)
+	for _, externalQuery := range kpiQueryGroup.Queries {
+		if externalQuery.QueryType == Derived {
+			if externalQuery.GroupByTimestamp == "" {
+				externalQueryHashCode, err := externalQuery.GetQueryCacheHashString()
+				logEntry = logEntry.WithField("externalQuery", externalQuery).WithField("externalQueryHashCode", externalQueryHashCode)
 				if err != nil {
-					resultAsMap = make(map[string][]interface{})
+					logEntry.Warn("Hash string not found 1:" + err.Error())
+					finalStatusCode = http.StatusInternalServerError
 					break
 				}
-				currentRow[len(currentRow)-1] = totalValue
-				resultAsMap[key] = currentRow
-			} else {
-				resultAsMap[key] = currentRow
+
+				internalKPIQuery, exists := externalQueryToInternalQueries[externalQueryHashCode]
+				if !exists {
+					logEntry.Warn("Hash code not found in hash map 1")
+					finalStatusCode = http.StatusInternalServerError
+					break
+				}
+				for _, internalQuery := range internalKPIQuery.Queries {
+					logEntry = logEntry.WithField("internalQuery", internalQuery)
+					if internalQuery.Category == ProfileCategory {
+						mapOfInternalKPIToResults, exists := mapOfGBTDerivedKPIToInternalKPIToResults[externalQueryHashCode]
+						logEntry = logEntry.WithField("mapOfInternalKPIToResults", mapOfInternalKPIToResults)
+						if !exists {
+							logEntry.Warn("Hash code not found in hash map 2")
+							finalStatusCode = http.StatusInternalServerError
+							break
+						}
+						nonGBTResults, err := GetNonGBTResultsFromGBTResults(mapOfInternalKPIToResults, internalQuery)
+						logEntry = logEntry.WithField("nonGBTResults", nonGBTResults)
+						if err != "" {
+							logEntry.Warn("Error in getting non GBT from GBT 1: " + err)
+							finalStatusCode = http.StatusInternalServerError
+							break
+						}
+
+						internalQueryHashCode, _ := internalQuery.GetQueryCacheHashString()
+						logEntry = logEntry.WithField("internalQueryHashCode", internalQueryHashCode)
+
+						mapOfNonGBTDerivedKPIToInternalKPIToResults[externalQueryHashCode][internalQueryHashCode] = nonGBTResults
+					}
+				}
+			}
+		} else {
+			if externalQuery.GroupByTimestamp == "" {
+				queryHashCode, _ := externalQuery.GetQueryCacheHashString()
+				logEntry = logEntry.WithField("externalQuery", externalQuery).WithField("queryHashCode", queryHashCode)
+				if externalQuery.Category == ProfileCategory {
+					nonGBTResults, err := GetNonGBTResultsFromGBTResults(mapOfGBTKPINormalQueryToResults, externalQuery)
+					logEntry = logEntry.WithField("nonGBTResults", nonGBTResults)
+					if err != "" {
+						logEntry.Warn("Error in getting non GBT from GBT 2: " + err)
+						finalStatusCode = http.StatusInternalServerError
+						break
+					}
+
+					mapOfNonGBTKPINormalQueryToResults[queryHashCode] = nonGBTResults
+				}
 			}
 		}
+	}
+	return finalStatusCode, mapOfNonGBTDerivedKPIToInternalKPIToResults, mapOfNonGBTKPINormalQueryToResults
+}
 
-		for _, val := range resultAsMap {
-			currentResultantRows = append(currentResultantRows, val)
-		}
-		currentQueryResult.Rows = currentResultantRows
-		currentQueryResult.Headers = U.RemoveElementFromArray(queryResult.Headers, AliasDateTime)
-		finalResultantQueryResults = append(finalResultantQueryResults, currentQueryResult)
+// Below function relies on fact that each query has only one metric.
+func GetNonGBTResultsFromGBTResults(hashMapOfQueryToResult map[string][]QueryResult, query KPIQuery) ([]QueryResult, string) {
+	finalResultantQueryResults := make([]QueryResult, 0, 0)
+
+	hashCode, err := query.GetQueryCacheHashString()
+	if err != nil {
+		return []QueryResult{{}, {}}, "Failed while generating hashString for kpi 2."
 	}
 
-	return finalResultantQueryResults
+	if resultsWithGbt, exists := hashMapOfQueryToResult[hashCode]; exists {
+		for _, queryResult := range resultsWithGbt {
+			resultAsMap := make(map[string][]interface{})
+			currentResultantRows := make([][]interface{}, 0, 0)
+			currentQueryResult := QueryResult{}
+
+			for _, row := range queryResult.Rows {
+				currentRow := getRowAfterDeletionOfDateTime(row, queryResult.Headers)
+				key := getKeyWithoutDateTime(currentRow)
+
+				if val, ok := resultAsMap[key]; ok {
+					totalValue, err := U.SafeAddition(val[len(currentRow)-1], currentRow[len(currentRow)-1])
+					if err != nil {
+						resultAsMap = make(map[string][]interface{})
+						break
+					}
+					currentRow[len(currentRow)-1] = totalValue
+					resultAsMap[key] = currentRow
+				} else {
+					resultAsMap[key] = currentRow
+				}
+			}
+
+			for _, val := range resultAsMap {
+				currentResultantRows = append(currentResultantRows, val)
+			}
+			currentQueryResult.Rows = currentResultantRows
+			currentQueryResult.Headers = U.RemoveElementFromArray(queryResult.Headers, AliasDateTime)
+			finalResultantQueryResults = append(finalResultantQueryResults, currentQueryResult)
+		}
+	} else {
+		return []QueryResult{{}, {}}, "Query group doesnt contain all the gbt and non gbt pair of query."
+	}
+	return finalResultantQueryResults, ""
+}
+
+func GetFinalResultantResultsForKPI(reqID string, kpiQueryGroup KPIQueryGroup, mapOfNonGBTDerivedKPIToInternalKPIToResults map[string]map[string][]QueryResult,
+	mapOfGBTDerivedKPIToInternalKPIToResults map[string]map[string][]QueryResult, mapOfNonGBTKPINormalQueryToResults map[string][]QueryResult,
+	mapOfGBTKPINormalQueryToResults map[string][]QueryResult, externalQueryToInternalQueries map[string]KPIQueryGroup) ([]QueryResult, int) {
+
+	finalResultantResults := make([]QueryResult, 0)
+	finalStatusCode := http.StatusOK
+	logEntry := log.WithField("reqID", reqID).
+		WithField("kpiQueryGroup", kpiQueryGroup).
+		WithField("mapOfNonGBTDerivedKPIToInternalKPIToResults", mapOfNonGBTDerivedKPIToInternalKPIToResults).
+		WithField("mapOfGBTDerivedKPIToInternalKPIToResults", mapOfGBTDerivedKPIToInternalKPIToResults).
+		WithField("mapOfNonGBTKPINormalQueryToResults", mapOfNonGBTKPINormalQueryToResults).
+		WithField("mapOfGBTKPINormalQueryToResults", mapOfGBTKPINormalQueryToResults).
+		WithField("externalQueryToInternalQueries", externalQueryToInternalQueries)
+
+	for _, externalQuery := range kpiQueryGroup.Queries {
+		results := make([]QueryResult, 0)
+		groupByTimestamp := externalQuery.GroupByTimestamp
+		externalQuery.GroupByTimestamp = ""
+		externalQueryHashCode, err := externalQuery.GetQueryCacheHashString()
+		logEntry = logEntry.WithField("externalQuery", externalQuery).WithField("externalQueryHashCode", externalQueryHashCode)
+		if err != nil {
+			logEntry.Warn("Hash string not found 3: " + err.Error())
+			finalStatusCode = http.StatusInternalServerError
+			break
+		}
+		if externalQuery.QueryType == Derived {
+
+			mapOfFormulaVariableToQueryResult := make(map[string]QueryResult)
+			internalKPIQuery, exists := externalQueryToInternalQueries[externalQueryHashCode]
+			if !exists {
+				logEntry.Warn("Hash code not found in hash map 3")
+				finalStatusCode = http.StatusInternalServerError
+				break
+			}
+
+			for _, internalQuery := range internalKPIQuery.Queries {
+				var queryResult QueryResult
+				if groupByTimestamp == "" {
+
+					internalQueryHashCode, err := internalQuery.GetQueryCacheHashString()
+					logEntry = logEntry.WithField("internalQueryHashCode", internalQueryHashCode)
+					if err != nil {
+						logEntry.Warn("Hash string found in hash map 4: " + err.Error())
+						finalStatusCode = http.StatusInternalServerError
+						break
+					}
+					nonGBTResults, exists := mapOfNonGBTDerivedKPIToInternalKPIToResults[externalQueryHashCode][internalQueryHashCode]
+					logEntry = logEntry.WithField("nonGBTResults", nonGBTResults)
+					if !exists {
+						logEntry.Warn("Hash code not found in hash map 4")
+						finalStatusCode = http.StatusInternalServerError
+						break
+					}
+					queryResult = nonGBTResults[0]
+
+				} else {
+
+					internalQuery.GroupByTimestamp = ""
+					internalQueryHashCode, err := internalQuery.GetQueryCacheHashString()
+					logEntry = logEntry.WithField("internalQueryHashCode", internalQueryHashCode)
+					if err != nil {
+						logEntry.Warn("Hash string found in hash map 5: " + err.Error())
+						finalStatusCode = http.StatusInternalServerError
+						break
+					}
+					gbTResults, exists := mapOfGBTDerivedKPIToInternalKPIToResults[externalQueryHashCode][internalQueryHashCode]
+					if !exists {
+						logEntry.Warn("Hash code found in hash map 5: " + err.Error())
+						finalStatusCode = http.StatusInternalServerError
+						break
+					}
+					queryResult = gbTResults[0]
+				}
+
+				mapOfFormulaVariableToQueryResult[internalQuery.Name] = queryResult
+			}
+
+			finalResultantResults = append(finalResultantResults, EvaluateKPIExpressionWithBraces(mapOfFormulaVariableToQueryResult, externalQuery.Timezone, strings.ToLower(internalKPIQuery.Formula)))
+
+		} else {
+			if groupByTimestamp == "" {
+				var exists bool
+				results, exists = mapOfNonGBTKPINormalQueryToResults[externalQueryHashCode]
+				if !exists {
+					logEntry.Warn("Hash code not found in hash map 6")
+					finalStatusCode = http.StatusInternalServerError
+					break
+				}
+			} else {
+				var exists bool
+				results, exists = mapOfGBTKPINormalQueryToResults[externalQueryHashCode]
+				if !exists {
+					logEntry.Warn("Hash code not found in hash map 7")
+					finalStatusCode = http.StatusInternalServerError
+					break
+				}
+			}
+			finalResultantResults = append(finalResultantResults, results...)
+		}
+	}
+
+	return finalResultantResults, finalStatusCode
+}
+
+func EvaluateKPIExpressionWithBraces(mapOfFormulaVariableToQueryResult map[string]QueryResult, timezone string, formula string) QueryResult {
+	valueStack := make([]QueryResult, 0)
+	operatorStack := make([]string, 0)
+
+	for _, currentVariable := range formula {
+		currentFormulaVariable := string(currentVariable)
+		if currentFormulaVariable == "(" {
+			operatorStack = append(operatorStack, currentFormulaVariable)
+		} else if strings.Contains(U.Alpha, strings.ToLower(currentFormulaVariable)) {
+			valueStack = append(valueStack, mapOfFormulaVariableToQueryResult[currentFormulaVariable])
+		} else if currentFormulaVariable == ")" {
+			for len(operatorStack) != 0 && operatorStack[len(operatorStack)-1] != "(" {
+				v1 := valueStack[len(valueStack)-1]
+				valueStack = valueStack[:len(valueStack)-1]
+				v2 := valueStack[len(valueStack)-1]
+				valueStack = valueStack[:len(valueStack)-1]
+				results := make([]*QueryResult, 0)
+				results = append(results, &v2)
+				results = append(results, &v1)
+				op := operatorStack[len(operatorStack)-1]
+				ops := make([]string, 0)
+				ops = append(ops, op)
+				operatorStack = operatorStack[:len(operatorStack)-1]
+				valueStack = append(valueStack, HandlingEventResultsByApplyingOperations(results, ops, timezone, true)) // apply operations and return result
+			}
+			if len(operatorStack) != 0 {
+				operatorStack = operatorStack[:len(operatorStack)-1]
+			}
+		} else {
+			for len(operatorStack) != 0 && U.Precedence(operatorStack[len(operatorStack)-1]) >= U.Precedence(currentFormulaVariable) {
+				v1 := valueStack[len(valueStack)-1]
+				valueStack = valueStack[:len(valueStack)-1]
+				v2 := valueStack[len(valueStack)-1]
+				results := make([]*QueryResult, 0)
+				results = append(results, &v2)
+				results = append(results, &v1)
+				valueStack = valueStack[:len(valueStack)-1]
+				op := operatorStack[len(operatorStack)-1]
+				ops := make([]string, 0)
+				ops = append(ops, op)
+				operatorStack = operatorStack[:len(operatorStack)-1]
+				valueStack = append(valueStack, HandlingEventResultsByApplyingOperations(results, ops, timezone, true)) // apply operations and return result
+			}
+			operatorStack = append(operatorStack, currentFormulaVariable)
+		}
+	}
+
+	for len(operatorStack) != 0 {
+		v1 := valueStack[len(valueStack)-1]
+		valueStack = valueStack[:len(valueStack)-1]
+		v2 := valueStack[len(valueStack)-1]
+		results := make([]*QueryResult, 0)
+		results = append(results, &v2)
+		results = append(results, &v1)
+		valueStack = valueStack[:len(valueStack)-1]
+		op := operatorStack[len(operatorStack)-1]
+		ops := make([]string, 0)
+		ops = append(ops, op)
+		operatorStack = operatorStack[:len(operatorStack)-1]
+		valueStack = append(valueStack, HandlingEventResultsByApplyingOperations(results, ops, timezone, true))
+	}
+	return valueStack[len(valueStack)-1]
 }
 
 func getRowAfterDeletionOfDateTime(row []interface{}, headers []string) []interface{} {
