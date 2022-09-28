@@ -166,7 +166,7 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID int64, queryOriginal *mod
 
 	} else {
 		// This thread is for query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities.
-		kpiData, _, _, err = store.ExecuteKPIForAttribution(projectID, query, debugQueryKey,
+		kpiData, err = store.ExecuteKPIForAttribution(projectID, query, debugQueryKey,
 			*logCtx, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
 		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("KPI query execution took time")
 		queryStartTime = time.Now().UTC().Unix()
@@ -742,7 +742,11 @@ func (store *MemSQL) getAllTheSessions(projectId int64, sessionEventNameId strin
 	}
 	defer U.CloseReadQuery(rows, tx)
 	logCtx.Info("Attribution before ProcessEventRows")
-	return model.ProcessEventRows(rows, query, reports, contentGroupNamesList, logCtx, reqID)
+	attributedSessionsByUserId := make(map[string]map[string]model.UserSessionData)
+	var userIdsWithSession []string
+	processErr := model.ProcessEventRows(rows, query, reports, contentGroupNamesList, &attributedSessionsByUserId, &userIdsWithSession, logCtx, reqID)
+
+	return attributedSessionsByUserId, userIdsWithSession, processErr
 }
 
 // getOfflineEventData returns  offline touch point event id

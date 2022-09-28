@@ -16,7 +16,7 @@ import (
 // ExecuteKPIForAttribution Executes the KPI sub-query for Attribution
 func (store *MemSQL) ExecuteKPIForAttribution(projectID int64, query *model.AttributionQuery, debugQueryKey string,
 	logCtx log.Entry, enableOptimisedFilterOnProfileQuery bool,
-	enableOptimisedFilterOnEventUserQuery bool) (map[string]model.KPIInfo, map[string]string, []string, error) {
+	enableOptimisedFilterOnEventUserQuery bool) (map[string]model.KPIInfo, error) {
 
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 
@@ -24,60 +24,15 @@ func (store *MemSQL) ExecuteKPIForAttribution(projectID int64, query *model.Attr
 	groupUserIDToKpiID := make(map[string]string)
 	var kpiKeys []string
 
-	var kpiQueryResult model.QueryResult
-	if query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities {
-
-		var duplicatedRequest model.KPIQueryGroup
-		U.DeepCopy(&query.KPI, &duplicatedRequest)
-		resultGroup, statusCode := store.ExecuteKPIQueryGroup(projectID, debugQueryKey,
-			duplicatedRequest, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
-		log.WithFields(log.Fields{"ResultGroup": resultGroup, "Status": statusCode}).Info("KPI-Attribution result received")
-		if statusCode != http.StatusOK {
-			logCtx.Error("failed to get KPI result for attribution query")
-			if statusCode == http.StatusPartialContent {
-				return kpiData, groupUserIDToKpiID, kpiKeys, errors.New("failed to get KPI result for attribution query - StatusPartialContent")
-			}
-			return kpiData, groupUserIDToKpiID, kpiKeys, errors.New("failed to get KPI result for attribution query")
-		}
-		for _, res := range resultGroup {
-			// Skip the datetime header and the other result is of format. ex. "headers": ["$hubspot_deal_hs_object_id", "Revenue", "Pipeline", ...],
-			if res.Headers[0] == "datetime" {
-				kpiQueryResult = res
-				logCtx.WithFields(log.Fields{"KpiQueryResult": kpiQueryResult}).Info("KPI-Attribution result set")
-				break
-			}
-		}
-		if kpiQueryResult.Headers == nil || len(kpiQueryResult.Headers) == 0 {
-			logCtx.Error("no-valid result for KPI query")
-			return kpiData, groupUserIDToKpiID, kpiKeys, errors.New("no-valid result for KPI query")
-		}
-
-		kpiKeys = store.GetDataFromKPIResult(projectID, kpiQueryResult, &kpiData, query, logCtx)
-	}
-
-	// Pulling group ID (group user ID) for each KPI ID i.e. Deal ID or Opp ID
-	logCtx.WithFields(log.Fields{"kpiKeys": kpiKeys}).Info("KPI-Attribution keys set")
-	if len(kpiKeys) == 0 {
-		return kpiData, groupUserIDToKpiID, kpiKeys, errors.New("no valid KPIs found for this query to run")
-	}
-
-	groups, errCode := store.GetGroups(projectID)
-	if errCode != http.StatusFound {
-		logCtx.Error("failed to get groups for project")
-		return kpiData, groupUserIDToKpiID, kpiKeys, errors.New("failed to get groups for project")
-	}
-
-	_groupIDKey, _groupIDUserKey := getGroupKeys(query, groups)
-
-	kpiKeyGroupUserIDList, err := store.PullGroupUserIDs(projectID, kpiKeys, _groupIDKey, &kpiData, &groupUserIDToKpiID, logCtx)
+	err := store.RunKPIGroupQuery(projectID, query, &kpiData, &kpiKeys, enableOptimisedFilterOnProfileQuery,
+		enableOptimisedFilterOnEventUserQuery, debugQueryKey, logCtx)
 	if err != nil {
-		return kpiData, groupUserIDToKpiID, kpiKeys, errors.New("no valid KPIs found for this query to run")
+		return kpiData, err
 	}
-	logCtx.WithFields(log.Fields{"kpiKeyGroupUserIDList": kpiKeyGroupUserIDList}).Info("KPI-Attribution group set")
 
-	err = store.PullKPIKeyUserGroupInfo(projectID, kpiKeyGroupUserIDList, _groupIDUserKey, &kpiData, &groupUserIDToKpiID, logCtx)
+	err = store.FillKPIGroupUserData(projectID, query, &kpiData, &kpiKeys, &groupUserIDToKpiID, logCtx)
 	if err != nil {
-		return kpiData, groupUserIDToKpiID, kpiKeys, err
+		return kpiData, err
 	}
 
 	logCtx.Info("done pulling group user list ids for Deal or Opportunity")
@@ -85,12 +40,12 @@ func (store *MemSQL) ExecuteKPIForAttribution(projectID int64, query *model.Attr
 		"kpiKeys": kpiKeys}).Info("KPI-Attribution kpiData reports 1")
 	err = store.PullAllUsersByCustomerUserID(projectID, &kpiData, logCtx)
 	if err != nil {
-		return kpiData, groupUserIDToKpiID, kpiKeys, err
+		return kpiData, err
 	}
 	logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "kpiData": kpiData, "groupUserIDToKpiID": groupUserIDToKpiID,
 		"kpiKeys": kpiKeys}).Info("KPI-Attribution kpiData reports 2")
 
-	return kpiData, groupUserIDToKpiID, kpiKeys, nil
+	return kpiData, nil
 }
 
 func getGroupKeys(query *model.AttributionQuery, groups []model.Group) (string, string) {
@@ -119,12 +74,12 @@ func getGroupKeys(query *model.AttributionQuery, groups []model.Group) (string, 
 	return _groupIDKey, _groupIDUserKey
 }
 
-func (store *MemSQL) GetDataFromKPIResult(projectID int64, kpiQueryResult model.QueryResult, kpiData *map[string]model.KPIInfo, query *model.AttributionQuery, logCtx log.Entry) []string {
+func (store *MemSQL) GetDataFromKPIResult(projectID int64, kpiQueryResult model.QueryResult, kpiData *map[string]model.KPIInfo, query *model.AttributionQuery, logCtx log.Entry) *[]string {
 
 	datetimeIdx := 0
 	keyIdx := 1
 	valIdx := 2
-	var kpiKeys []string
+	var kpiKeys *[]string
 	var kpiAggFunctionType []string
 
 	var kpiValueHeaders []string
@@ -168,8 +123,70 @@ func (store *MemSQL) GetDataFromKPIResult(projectID int64, kpiQueryResult model.
 
 	return model.AddKPIKeyDataInMap(kpiQueryResult, logCtx, keyIdx, datetimeIdx, query.From, query.To, valIdx, kpiValueHeaders, kpiAggFunctionType, kpiData)
 }
+func (store *MemSQL) RunKPIGroupQuery(projectID int64, query *model.AttributionQuery, kpiData *map[string]model.KPIInfo,
+	kpiKeys *[]string, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery bool, debugQueryKey string, logCtx log.Entry) error {
 
-func (store *MemSQL) PullGroupUserIDs(projectID int64, kpiKeys []string, _groupIDKey string,
+	var kpiQueryResult model.QueryResult
+	if query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities {
+
+		var duplicatedRequest model.KPIQueryGroup
+		U.DeepCopy(&query.KPI, &duplicatedRequest)
+		resultGroup, statusCode := store.ExecuteKPIQueryGroup(projectID, debugQueryKey,
+			duplicatedRequest, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
+		log.WithFields(log.Fields{"ResultGroup": resultGroup, "Status": statusCode}).Info("KPI-Attribution result received")
+		if statusCode != http.StatusOK {
+			logCtx.Error("failed to get KPI result for attribution query")
+			if statusCode == http.StatusPartialContent {
+				return errors.New("failed to get KPI result for attribution query - StatusPartialContent")
+			}
+			return errors.New("failed to get KPI result for attribution query")
+		}
+		for _, res := range resultGroup {
+			// Skip the datetime header and the other result is of format. ex. "headers": ["$hubspot_deal_hs_object_id", "Revenue", "Pipeline", ...],
+			if res.Headers[0] == "datetime" {
+				kpiQueryResult = res
+				logCtx.WithFields(log.Fields{"KpiQueryResult": kpiQueryResult}).Info("KPI-Attribution result set")
+				break
+			}
+		}
+		if kpiQueryResult.Headers == nil || len(kpiQueryResult.Headers) == 0 {
+			logCtx.Error("no-valid result for KPI query")
+			return errors.New("no-valid result for KPI query")
+		}
+
+		kpiKeys = store.GetDataFromKPIResult(projectID, kpiQueryResult, kpiData, query, logCtx)
+	}
+	return nil
+}
+
+func (store *MemSQL) FillKPIGroupUserData(projectID int64, query *model.AttributionQuery, kpiData *map[string]model.KPIInfo,
+	kpiKeys *[]string, groupUserIDToKpiID *map[string]string, logCtx log.Entry) error {
+
+	// Pulling group ID (group user ID) for each KPI ID i.e. Deal ID or Opp ID
+	logCtx.WithFields(log.Fields{"kpiKeys": kpiKeys}).Info("KPI-Attribution keys set")
+	if len(*kpiKeys) == 0 {
+		return errors.New("no valid KPIs found for this query to run")
+	}
+
+	_groups, errCode := store.GetGroups(projectID)
+	if errCode != http.StatusFound {
+		logCtx.Error("failed to get groups for project")
+		return errors.New("failed to get groups for project")
+	}
+
+	_groupIDKey, _groupIDUserKey := getGroupKeys(query, _groups)
+
+	kpiKeyGroupUserIDList, err := store.PullGroupUserIDs(projectID, kpiKeys, _groupIDKey, kpiData, groupUserIDToKpiID, logCtx)
+	if err != nil {
+		return errors.New("no valid KPIs found for this query to run")
+	}
+	logCtx.WithFields(log.Fields{"kpiKeyGroupUserIDList": kpiKeyGroupUserIDList}).Info("KPI-Attribution group set")
+
+	err = store.PullKPIKeyUserGroupInfo(projectID, kpiKeyGroupUserIDList, _groupIDUserKey, kpiData, groupUserIDToKpiID, logCtx)
+	return err
+}
+
+func (store *MemSQL) PullGroupUserIDs(projectID int64, kpiKeys *[]string, _groupIDKey string,
 	kpiData *map[string]model.KPIInfo, groupUserIDToKpiID *map[string]string, logCtx log.Entry) ([]string, error) {
 	logFields := log.Fields{
 		"project_id":    projectID,
@@ -177,8 +194,8 @@ func (store *MemSQL) PullGroupUserIDs(projectID int64, kpiKeys []string, _groupI
 	}
 
 	var kpiKeyGroupUserIDList []string
-	kpiKeysIdPlaceHolder := U.GetValuePlaceHolder(len(kpiKeys))
-	kpiKeysIdValue := U.GetInterfaceList(kpiKeys)
+	kpiKeysIdPlaceHolder := U.GetValuePlaceHolder(len(*kpiKeys))
+	kpiKeysIdValue := U.GetInterfaceList(*kpiKeys)
 	groupUserQuery := "Select id, " + _groupIDKey + " FROM users WHERE project_id=? AND " + _groupIDKey + " IN ( " + kpiKeysIdPlaceHolder + " ) "
 	var gUParams []interface{}
 	gUParams = append(gUParams, projectID)

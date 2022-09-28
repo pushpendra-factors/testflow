@@ -2754,13 +2754,12 @@ func ProcessOTPEventRows(rows *sql.Rows, query *AttributionQuery,
 }
 
 func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, reports *MarketingReports,
-	contentGroupNamesList []string, logCtx log.Entry, queryID string) (map[string]map[string]UserSessionData, []string, error) {
+	contentGroupNamesList []string, attributedSessionsByUserId *map[string]map[string]UserSessionData,
+	userIdsWithSession *[]string, logCtx log.Entry, queryID string) error {
 
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
-	attributedSessionsByUserId := make(map[string]map[string]UserSessionData)
-	userIdMap := make(map[string]bool)
-	var userIdsWithSession []string
 
+	userIdMap := make(map[string]bool)
 	type MissingCollection struct {
 		AttributionKey string
 		GCLID          string
@@ -2845,7 +2844,7 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, reports *Marketin
 			continue
 		}
 		if _, ok := userIdMap[userID]; !ok {
-			userIdsWithSession = append(userIdsWithSession, userID)
+			*userIdsWithSession = append(*userIdsWithSession, userID)
 			userIdMap[userID] = true
 		}
 		marketingValues := MarketingData{Channel: PropertyValueNone, CampaignID: campaignID, CampaignName: campaignName, AdgroupID: adgroupID,
@@ -2888,26 +2887,26 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, reports *Marketin
 		marketingValues.Key = GetMarketingDataKey(query.AttributionKey, marketingValues)
 		uniqueAttributionKey := marketingValues.Key
 		// add session info uniquely for user-attributionId pair
-		if _, ok := attributedSessionsByUserId[userID]; ok {
+		if _, ok := (*attributedSessionsByUserId)[userID]; ok {
 
-			if userSessionData, ok := attributedSessionsByUserId[userID][uniqueAttributionKey]; ok {
+			if userSessionData, ok := (*attributedSessionsByUserId)[userID][uniqueAttributionKey]; ok {
 				userSessionData.MinTimestamp = U.Min(userSessionData.MinTimestamp, timestamp)
 				userSessionData.MaxTimestamp = U.Max(userSessionData.MaxTimestamp, timestamp)
 				userSessionData.TimeStamps = append(userSessionData.TimeStamps, timestamp)
 				userSessionData.WithinQueryPeriod = userSessionData.WithinQueryPeriod || timestamp >= query.From && timestamp <= query.To
-				attributedSessionsByUserId[userID][uniqueAttributionKey] = userSessionData
+				(*attributedSessionsByUserId)[userID][uniqueAttributionKey] = userSessionData
 			} else {
 				userSessionDataNew := UserSessionData{MinTimestamp: timestamp,
 					MaxTimestamp: timestamp, TimeStamps: []int64{timestamp},
 					WithinQueryPeriod: timestamp >= query.From && timestamp <= query.To, MarketingInfo: marketingValues}
-				attributedSessionsByUserId[userID][uniqueAttributionKey] = userSessionDataNew
+				(*attributedSessionsByUserId)[userID][uniqueAttributionKey] = userSessionDataNew
 			}
 		} else {
-			attributedSessionsByUserId[userID] = make(map[string]UserSessionData)
+			(*attributedSessionsByUserId)[userID] = make(map[string]UserSessionData)
 			userSessionDataNew := UserSessionData{MinTimestamp: timestamp,
 				MaxTimestamp: timestamp, TimeStamps: []int64{timestamp},
 				WithinQueryPeriod: timestamp >= query.From && timestamp <= query.To, MarketingInfo: marketingValues}
-			attributedSessionsByUserId[userID][uniqueAttributionKey] = userSessionDataNew
+			(*attributedSessionsByUserId)[userID][uniqueAttributionKey] = userSessionDataNew
 		}
 		count++
 		if count%49999 == 0 {
@@ -2918,7 +2917,7 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, reports *Marketin
 	if err != nil {
 		// Error from DB is captured eg: timeout error
 		logCtx.WithFields(log.Fields{"err": err}).Error("Error in executing query in ProcessEventRows")
-		return nil, nil, err
+		return err
 	}
 	logCtx.WithFields(log.Fields{"AttributionKey": query.AttributionKey}).
 		Info("no document was found in any of the reports for ID. Logging and continuing %+v",
@@ -2927,7 +2926,7 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, reports *Marketin
 	logCtx.WithFields(log.Fields{"SessionDataCount": count,
 		"countEnrichedGclid":       countEnrichedGclid,
 		"countEnrichedMarketingId": countEnrichedMarketingId}).Info("Attribution keyword razorpay debug")
-	return attributedSessionsByUserId, userIdsWithSession, nil
+	return nil
 }
 
 func ProcessRow(rows *sql.Rows, reportName string, logCtx *log.Entry,
