@@ -999,6 +999,19 @@ func TransformColumnResultGroup(queryResults []QueryResult, queries []KPIQuery, 
 // 2. Add the values to hashMap. Here keys are contextual to kpi and will not be duplicate.
 // 3. Convert Map to 2d Array and then sort.
 func TransformRowsResultGroup(queryResults []QueryResult, timezoneString string, isTimezoneEnabled bool) [][]interface{} {
+	resultAsMap := GetResultAsMap(queryResults)
+
+	currentResultantRows := make([][]interface{}, 0, 0)
+	for key, value := range resultAsMap {
+		currentRow := SplitKeysAndGetRow(key, timezoneString, isTimezoneEnabled)
+		currentRow = append(currentRow, value...)
+		currentResultantRows = append(currentResultantRows, currentRow)
+	}
+	currentResultantRows = U.GetSorted2DArrays(currentResultantRows)
+	return currentResultantRows
+}
+
+func GetResultAsMap(queryResults []QueryResult) map[string][]interface{} {
 	resultAsMap := make(map[string][]interface{})
 	numberOfQueryResults := len(queryResults)
 
@@ -1022,25 +1035,20 @@ func TransformRowsResultGroup(queryResults []QueryResult, timezoneString string,
 			resultAsMap[key][queryIndex] = val
 		}
 	}
+	return resultAsMap
+}
 
-	// Step 3
-	currentResultantRows := make([][]interface{}, 0, 0)
-	for key, value := range resultAsMap {
-		currentRow := make([]interface{}, 0)
-		columns := strings.Split(key, ":;")
-		for _, column := range columns[:len(columns)-1] {
-			if strings.HasPrefix(column, "dat$") {
-				unixValue, _ := strconv.ParseInt(strings.TrimPrefix(column, "dat$"), 10, 64)
-				columnValue, _ := U.GetTimeFromUnixTimestampWithZone(unixValue, timezoneString, isTimezoneEnabled)
-				currentRow = append(currentRow, columnValue)
-			} else {
-				currentRow = append(currentRow, column)
-			}
+func SplitKeysAndGetRow(key string, timezoneString string, isTimezoneEnabled bool) []interface{} {
+	currentRow := make([]interface{}, 0)
+	columns := strings.Split(key, ":;")
+	for _, column := range columns[:len(columns)-1] {
+		if strings.HasPrefix(column, "dat$") {
+			unixValue, _ := strconv.ParseInt(strings.TrimPrefix(column, "dat$"), 10, 64)
+			columnValue, _ := U.GetTimeFromUnixTimestampWithZone(unixValue, timezoneString, isTimezoneEnabled)
+			currentRow = append(currentRow, columnValue)
+		} else {
+			currentRow = append(currentRow, column)
 		}
-		currentRow = append(currentRow, value...)
-
-		currentResultantRows = append(currentResultantRows, currentRow)
 	}
-	currentResultantRows = U.GetSorted2DArrays(currentResultantRows)
-	return currentResultantRows
+	return currentRow
 }
