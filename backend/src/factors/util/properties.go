@@ -1146,6 +1146,11 @@ var DISABLED_FACTORS_EVENT_PROPERTIES = [...]string{
 	EP_PAGE_RAW_URL,
 	EP_GCLID,
 	EP_FBCLID,
+	UP_EMAIL,
+	UP_JOIN_TIME,
+	UP_OS_WITH_VERSION,
+	UP_HOUR_OF_FIRST_EVENT,
+	UP_DAY_OF_FIRST_EVENT,
 }
 
 var DEFAULT_EVENT_PROPERTY_VALUES = map[string]interface{}{
@@ -2744,6 +2749,33 @@ var disableGroupUserPropertiesByKeyPrefix = []string{
 	"$salesforce_account_",
 }
 
+var explainPropertyWeights = map[string]float64{
+	// weight based on git issue : 5849
+
+	UP_INITIAL_CHANNEL:  1.5,
+	UP_INITIAL_PAGE_URL: 1.5,
+	UP_INITIAL_CAMPAIGN: 1.5,
+	UP_LATEST_CHANNEL:   1.5,
+	UP_LATEST_CAMPAIGN:  1.5,
+	UP_LATEST_SOURCE:    1.5,
+	UP_LATEST_MEDIUM:    1.5,
+	EP_CHANNEL:          1.5,
+	EP_MEDIUM:           1.5,
+	EP_SOURCE:           1.5,
+	UP_DEVICE_TYPE:      0.5,
+	UP_OS_VERSION:       0.5,
+	UP_OS:               0.5,
+	UP_BROWSER:          0.5,
+	UP_PLATFORM:         0.5,
+	UP_DEVICE_BRAND:     0.5,
+	UP_CONTINENT:        0.5,
+	EP_CREATIVE:         0.5,
+	EP_CONTENT:          0.5,
+	UP_POSTAL_CODE:      0.01,
+	EP_CAMPAIGN_ID:      0.01,
+	EP_ADGROUP_ID:       0.01,
+}
+
 const SamplePropertyValuesLimit = 100
 
 // defined property values.
@@ -3734,4 +3766,26 @@ func GetGroupNameByPropertyName(propertyName string) (string, bool) {
 	}
 
 	return "", false
+}
+
+func GetExplainPropertyWeights(propertyName string) float64 {
+
+	prefix_name := map[string]float64{
+		"$hubspot":    0.1,
+		"$salesforce": 0.1,
+		"$marketo":    0.1,
+	}
+
+	if val, ok := explainPropertyWeights[propertyName]; ok {
+		return val
+	}
+
+	for prefix_string, prefix_val := range prefix_name {
+		if strings.HasPrefix(propertyName, prefix_string) {
+			return prefix_val
+		}
+	}
+
+	return float64(1)
+
 }

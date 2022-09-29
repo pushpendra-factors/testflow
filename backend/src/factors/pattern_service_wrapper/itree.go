@@ -1449,6 +1449,7 @@ func BuildNewItreeV1(reqId string,
 		}
 		queue = queue[1:]
 	}
+
 	endTime = time.Now().Unix()
 	log.WithFields(log.Fields{
 		"time_taken": endTime - startTime}).Error("explain_debug_Building Tree Time taken")
