@@ -449,6 +449,39 @@ def update_access_token(project_id, access_token):
     
     return response
 
+def split_settings_for_multiple_ad_accounts(linkedin_settings):
+    final_linkedin_settings = []
+    failures = []
+    count = 0 # for checking if any access token is updated, if yes timeout 10 mins
+    for linkedin_int_setting in linkedin_settings:
+        if linkedin_int_setting[LINKEDIN_AD_ACCOUNT] == '':
+            failures.append({'status': 'failed', 'msg': 'empty ad account', PROJECT_ID: linkedin_int_setting[PROJECT_ID], AD_ACCOUNT: linkedin_int_setting[LINKEDIN_AD_ACCOUNT]})
+            continue
+        # validate access token
+        linkedin_int_setting[ACCESS_TOKEN], err, is_prev_token_valid = validate_or_generate_access_token_from_refresh_token(linkedin_int_setting[REFRESH_TOKEN], linkedin_int_setting[ACCESS_TOKEN])
+        if err == '':
+            if not is_prev_token_valid:
+                token_response = update_access_token(linkedin_int_setting[PROJECT_ID], linkedin_int_setting[ACCESS_TOKEN])
+                if not token_response.ok:
+                    failures.append({'status': 'failed', 'msg': 'failed to update access token', PROJECT_ID: linkedin_int_setting[PROJECT_ID], AD_ACCOUNT: linkedin_int_setting[LINKEDIN_AD_ACCOUNT]})
+                    continue
+                count += 1
+
+            # spliting 1 setting into multiple for multiple ad accounts
+            ad_accounts =  linkedin_int_setting[LINKEDIN_AD_ACCOUNT].split(',')
+            for account_id in ad_accounts:
+                new_setting = linkedin_int_setting
+                new_setting[LINKEDIN_AD_ACCOUNT] = account_id
+                final_linkedin_settings.append(new_setting)
+        else:
+            failures.append({'status': 'failed', 'msg': err, PROJECT_ID: linkedin_int_setting[PROJECT_ID], AD_ACCOUNT: linkedin_int_setting[LINKEDIN_AD_ACCOUNT]})
+    
+    if count > 0:
+        time.sleep(600)
+    
+    return final_linkedin_settings, failures
+
+
 if __name__ == '__main__':
     (options, args) = parser.parse_args()
     
@@ -460,30 +493,23 @@ if __name__ == '__main__':
     start_timestamp = options.start_timestamp
     end_timestamp = options.end_timestamp
 
+
     if(linkedin_int_settings is not None):
         failures = []
         successes = []
-        for linkedin_int_setting in linkedin_int_settings:
-            response = {}
-            linkedin_int_setting[ACCESS_TOKEN], err, is_prev_token_valid = validate_or_generate_access_token_from_refresh_token(linkedin_int_setting[REFRESH_TOKEN], linkedin_int_setting[ACCESS_TOKEN])
-            if err == '':
-                if not is_prev_token_valid:
-                    token_response = update_access_token(linkedin_int_setting[PROJECT_ID], linkedin_int_setting[ACCESS_TOKEN])
-                    if not token_response.ok:
-                        failures.append({'status': 'failed', 'msg': 'failed to update access token', PROJECT_ID: linkedin_int_setting[PROJECT_ID], AD_ACCOUNT: linkedin_int_setting[LINKEDIN_AD_ACCOUNT]})
-                    time.sleep(600)
-                if start_timestamp == None:
-                    sync_info_with_type, err = get_last_sync_info(linkedin_int_setting)
-                    if err != '':
-                        response['status'] = 'failed'
-                        response['msg'] = 'Failed to get last sync info'
-                    else:
-                        response = get_collections(linkedin_int_setting, sync_info_with_type)
+        final_linkedin_settings, failures_sanitization = split_settings_for_multiple_ad_accounts(linkedin_int_settings)
+        failures.extend(failures_sanitization)
+
+        for linkedin_int_setting in final_linkedin_settings:
+            if start_timestamp == None:
+                sync_info_with_type, err = get_last_sync_info(linkedin_int_setting)
+                if err != '':
+                    response['status'] = 'failed'
+                    response['msg'] = 'Failed to get last sync info'
                 else:
-                    response = get_collections(linkedin_int_setting, {})
+                    response = get_collections(linkedin_int_setting, sync_info_with_type)
             else:
-                response['status'] = 'failed'
-                response['msg'] = err
+                response = get_collections(linkedin_int_setting, {})
             response[PROJECT_ID] = linkedin_int_setting[PROJECT_ID]
             response[AD_ACCOUNT] = linkedin_int_setting[LINKEDIN_AD_ACCOUNT]
             if(response['status']=='failed'):

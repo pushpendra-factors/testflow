@@ -1174,8 +1174,41 @@ func rearrangeSubinsights(subInsights []*FactorsInsights, prevLevelMap map[inter
 	final = append(final, withMultiplier1...)
 	final = append(final, numerical...)
 	final = append(final, inPrev...)
-
+	reRankOnWeightsExplainProperties(final)
 	return final
+}
+
+func reRankOnWeightsExplainProperties(subInsights []*FactorsInsights) {
+
+	log.Debug("reranking properties")
+	type propertyRank struct {
+		rank    uint64
+		insight *FactorsInsights
+		count   int64
+		weight  float64
+	}
+
+	props := make([]propertyRank, 0)
+
+	if len(subInsights) > 0 {
+		for _, fi := range subInsights {
+			if len(fi.FactorsInsightsAttribute) > 0 {
+				w := U.GetExplainPropertyWeights(fi.FactorsInsightsAttribute[0].FactorsAttributeKey)
+				pr := propertyRank{fi.FactorsInsightsRank, fi, int64(fi.FactorsInsightsUsersCount), float64(int64(fi.FactorsInsightsUsersCount)) * w}
+				props = append(props, pr)
+			}
+		}
+		if len(props) > 0 {
+			sort.Slice(props, func(i, j int) bool {
+				return props[i].weight > props[j].weight
+			})
+		}
+
+		for rk, pr := range props {
+			pr.insight.FactorsInsightsRank = uint64(rk)
+		}
+	}
+
 }
 
 func isValidInsightTransition(parentType string, childType string) bool {

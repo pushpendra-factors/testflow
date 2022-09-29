@@ -719,7 +719,7 @@ func (p *Pattern) GetPerUserCount(
 				pntv.PropertyMap = PropMap
 				epf, err = p.FreqProps.GetFrequency(pntv)
 				if err != nil {
-					log.Error(p.EventNames, err)
+					// log.Error(p.EventNames, err)
 					return 0, nil
 				}
 			}
@@ -729,16 +729,19 @@ func (p *Pattern) GetPerUserCount(
 				pntv.PropertyType = "user"
 				PropMap := make(map[string]string)
 				for _, ccs := range ecs.UPCategoricalConstraints {
+
 					key := PatternPropertyKey(kIdx, ccs.PropertyName)
 					PropMap[key] = ccs.PropertyValue
+
 				}
 				pntv.PropertyMap = PropMap
 				epf, err = p.FreqProps.GetFrequency(pntv)
 				if err != nil {
-					log.Error(p.EventNames, err)
+					// log.Error(p.EventNames, err)
 					return 0, nil
 				}
 			}
+
 		}
 		num := uint(epf * upf)
 		return num / p.PerUserCount, nil //APPROXIMATION USED
@@ -753,6 +756,7 @@ func (p *Pattern) GetPerUserCount(
 		GPMapUpperBounds := make(map[string]float64)
 		GPMapLowerBounds := make(map[string]float64)
 		for i, ecs := range patternConstraints {
+
 			for _, ncs := range ecs.EPNumericConstraints {
 				if U.IsGenericEventProperty(&ncs.PropertyName) {
 					key := PatternPropertyKey(i, ncs.PropertyName)
@@ -849,8 +853,10 @@ func (p *Pattern) GetPerUserCount(
 			log.Error(errorString)
 			return 0, fmt.Errorf(errorString)
 		}
+
 		return uint(count), nil
 	}
+
 }
 
 func appendPropertyValues(existingValue string, addedValue string, operator string) string {
