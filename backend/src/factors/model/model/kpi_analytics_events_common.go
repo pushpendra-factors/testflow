@@ -2,8 +2,6 @@ package model
 
 import (
 	U "factors/util"
-	"strconv"
-	"strings"
 	"time"
 )
 
@@ -561,33 +559,31 @@ func HandlingEventResultsByApplyingOperations(results []*QueryResult, operations
 	resultKeys := getAllKeysFromResults(results)
 	var finalResult QueryResult
 	finalResultRows := make([][]interface{}, 0)
-	for index, result := range results {
-		if index == 0 {
-			resultKeys = addValuesToHashMap(resultKeys, result.Rows)
-		} else {
-			for _, row := range result.Rows {
-				key := U.GetkeyFromRow(row)
-				value1 := resultKeys[key]
-				value2 := row[len(row)-1]
+
+	// rebuilding due to type difference *QueryResult and QueryResult
+	queryResults := make([]QueryResult, 0)
+	for _, queryResult := range results {
+		queryResults = append(queryResults, *queryResult)
+	}
+
+	resultAsMap := GetResultAsMap(queryResults)
+
+	for key, value := range resultAsMap {
+		var tempResult interface{}
+		for index := range value {
+			if index == 0 {
+				tempResult = value[index]
+			} else {
 				operator := operations[index-1]
-				result := getValueFromValuesAndOperator(value1, value2, operator)
-				resultKeys[key] = result
+				result := getValueFromValuesAndOperator(tempResult, value[index], operator)
+				tempResult = result
 			}
 		}
+		resultKeys[key] = tempResult
 	}
 
 	for key, value := range resultKeys {
-		row := make([]interface{}, 0)
-		columns := strings.Split(key, ":;")
-		for _, column := range columns[:len(columns)-1] {
-			if strings.HasPrefix(column, "dat$") {
-				unixValue, _ := strconv.ParseInt(strings.TrimPrefix(column, "dat$"), 10, 64)
-				columnValue, _ := U.GetTimeFromUnixTimestampWithZone(unixValue, timezone, isTimezoneEnabled)
-				row = append(row, columnValue)
-			} else {
-				row = append(row, column)
-			}
-		}
+		row := SplitKeysAndGetRow(key, timezone, isTimezoneEnabled)
 		row = append(row, value)
 		finalResultRows = append(finalResultRows, row)
 	}
