@@ -1378,7 +1378,7 @@ func ProcessQueryLandingPageUrl(query *AttributionQuery, attributionData *map[st
 	})
 	logCtx.Info("MergeDataRowsHavingSameKey")
 
-	result.Rows = AddGrandTotalRowLandingPage(result.Headers, result.Rows, GetLastKeyValueIndexLandingPage(result.Headers), query.AttributionMethodology)
+	result.Rows = AddGrandTotalRowLandingPage(result.Headers, result.Rows, GetLastKeyValueIndexLandingPage(result.Headers), query.AttributionMethodology, query.AttributionMethodologyCompare)
 	logCtx.Info("Done AddGrandTotal")
 	return result
 
@@ -1436,7 +1436,7 @@ func ProcessQuery(query *AttributionQuery, attributionData *map[string]*Attribut
 		return v1 > v2
 	})
 
-	result.Rows = AddGrandTotalRow(result.Headers, result.Rows, GetLastKeyValueIndex(result.Headers), query.AnalyzeType, goalEventAggFuncTypes, query.AttributionMethodology)
+	result.Rows = AddGrandTotalRow(result.Headers, result.Rows, GetLastKeyValueIndex(result.Headers), query.AnalyzeType, goalEventAggFuncTypes, query.AttributionMethodology, query.AttributionMethodologyCompare)
 	logCtx.Info("Done AddGrandTotal")
 	return result
 }
@@ -1517,7 +1517,7 @@ func ProcessQueryKPI(query *AttributionQuery, attributionData *map[string]*Attri
 	})
 	logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "Result": result}).Info("KPI Attribution result Sorting")
 
-	result.Rows = AddGrandTotalRowKPI(result.Headers, result.Rows, GetLastKeyValueIndex(result.Headers), query.AnalyzeType, goalEventAggFuncTypes, query.AttributionMethodology)
+	result.Rows = AddGrandTotalRowKPI(result.Headers, result.Rows, GetLastKeyValueIndex(result.Headers), query.AnalyzeType, goalEventAggFuncTypes, query.AttributionMethodology, query.AttributionMethodologyCompare)
 	logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "Result": result}).Info("KPI Attribution result AddGrandTotalRow")
 
 	return result
@@ -1786,7 +1786,7 @@ func MergeDataRowsHavingSameKey(rows [][]interface{}, keyIndex int, attributionK
 }
 
 // AddGrandTotalRow adds a row with grand total in report
-func AddGrandTotalRow(headers []string, rows [][]interface{}, keyIndex int, analyzeType string, conversionFunTypes []string, method string) [][]interface{} {
+func AddGrandTotalRow(headers []string, rows [][]interface{}, keyIndex int, analyzeType string, conversionFunTypes []string, method string, methodCompare string) [][]interface{} {
 
 	var grandTotalRow []interface{}
 
@@ -1882,10 +1882,14 @@ func AddGrandTotalRow(headers []string, rows [][]interface{}, keyIndex int, anal
 		}
 		// If attribution method is influence then replacing the value of grand total row of conversion with conversion Influence
 		if method == AttributionMethodInfluence {
-			for i := keyIndex + 8; i < len(grandTotalRow)-1; i += 3 {
+			grandTotalRow[8] = grandTotalRow[9]
+			for i := keyIndex + 14; i < len(grandTotalRow)-1; i += 3 {
 				grandTotalRow[i] = grandTotalRow[i+1]
 
 			}
+		}
+		if methodCompare == AttributionMethodInfluence {
+			grandTotalRow[11] = grandTotalRow[12]
 		}
 
 	}
@@ -1955,7 +1959,7 @@ func AddGrandTotalRow(headers []string, rows [][]interface{}, keyIndex int, anal
 }
 
 // AddGrandTotalRowKPI adds a row with grand total in report for KPI queries
-func AddGrandTotalRowKPI(headers []string, rows [][]interface{}, keyIndex int, analyzeType string, conversionFunTypes []string, method string) [][]interface{} {
+func AddGrandTotalRowKPI(headers []string, rows [][]interface{}, keyIndex int, analyzeType string, conversionFunTypes []string, method string, methodCompare string) [][]interface{} {
 
 	var grandTotalRow []interface{}
 
@@ -2033,6 +2037,9 @@ func AddGrandTotalRowKPI(headers []string, rows [][]interface{}, keyIndex int, a
 			}
 			if method == AttributionMethodInfluence {
 				grandTotalRow[keyIndex+8+nextConPosition] = grandTotalRow[keyIndex+9+nextConPosition]
+
+			}
+			if methodCompare == AttributionMethodInfluence {
 				grandTotalRow[keyIndex+11+nextConPosition] = grandTotalRow[keyIndex+12+nextConPosition]
 			}
 		}
@@ -2103,7 +2110,7 @@ func AddGrandTotalRowKPI(headers []string, rows [][]interface{}, keyIndex int, a
 
 }
 
-func AddGrandTotalRowLandingPage(headers []string, rows [][]interface{}, keyIndex int, method string) [][]interface{} {
+func AddGrandTotalRowLandingPage(headers []string, rows [][]interface{}, keyIndex int, method string, methodCompare string) [][]interface{} {
 
 	var grandTotalRow []interface{}
 
@@ -2139,10 +2146,14 @@ func AddGrandTotalRowLandingPage(headers []string, rows [][]interface{}, keyInde
 		}
 	}
 	if method == AttributionMethodInfluence {
-		for i := keyIndex; i < len(grandTotalRow); i += 2 {
-			grandTotalRow[i+1] = grandTotalRow[i+2]
+		grandTotalRow[1] = grandTotalRow[2]
+		for i := keyIndex + 4; i < len(grandTotalRow); i += 2 {
+			grandTotalRow[i] = grandTotalRow[i+1]
 
 		}
+	}
+	if methodCompare == AttributionMethodInfluence {
+		grandTotalRow[3] = grandTotalRow[4]
 	}
 
 	rows = append([][]interface{}{grandTotalRow}, rows...)
