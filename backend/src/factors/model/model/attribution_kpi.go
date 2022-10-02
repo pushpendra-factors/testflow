@@ -121,9 +121,9 @@ func MergeTwoDataRowsKPI(row1 []interface{}, row2 []interface{}, keyIndex int, a
 
 func AddKPIKeyDataInMap(kpiQueryResult QueryResult, logCtx log.Entry, keyIdx int,
 	datetimeIdx int, from int64, to int64, valIdx int, kpiValueHeaders []string,
-	kpiAggFunctionType []string, kpiData *map[string]KPIInfo) *[]string {
+	kpiAggFunctionType []string, kpiData *map[string]KPIInfo) []string {
 
-	var kpiKeys *[]string
+	var kpiKeys []string
 
 	for _, row := range kpiQueryResult.Rows {
 
@@ -183,7 +183,7 @@ func AddKPIKeyDataInMap(kpiQueryResult QueryResult, logCtx log.Entry, keyIdx int
 		} else {
 			// map to kpi data to key - final data
 			(*kpiData)[kpiID] = kpiDetail
-			*kpiKeys = append(*kpiKeys, kpiID)
+			kpiKeys = append(kpiKeys, kpiID)
 		}
 	}
 	return kpiKeys

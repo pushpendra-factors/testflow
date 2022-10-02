@@ -23,8 +23,8 @@ func (store *MemSQL) ExecuteKPIForAttribution(projectID int64, query *model.Attr
 	kpiData := make(map[string]model.KPIInfo)
 	groupUserIDToKpiID := make(map[string]string)
 	var kpiKeys []string
-
-	err := store.RunKPIGroupQuery(projectID, query, &kpiData, &kpiKeys, enableOptimisedFilterOnProfileQuery,
+	var err error
+	err, kpiKeys = store.RunKPIGroupQuery(projectID, query, &kpiData, enableOptimisedFilterOnProfileQuery,
 		enableOptimisedFilterOnEventUserQuery, debugQueryKey, logCtx)
 	if err != nil {
 		return kpiData, err
@@ -74,12 +74,11 @@ func getGroupKeys(query *model.AttributionQuery, groups []model.Group) (string, 
 	return _groupIDKey, _groupIDUserKey
 }
 
-func (store *MemSQL) GetDataFromKPIResult(projectID int64, kpiQueryResult model.QueryResult, kpiData *map[string]model.KPIInfo, query *model.AttributionQuery, logCtx log.Entry) *[]string {
+func (store *MemSQL) GetDataFromKPIResult(projectID int64, kpiQueryResult model.QueryResult, kpiData *map[string]model.KPIInfo, query *model.AttributionQuery, logCtx log.Entry) []string {
 
 	datetimeIdx := 0
 	keyIdx := 1
 	valIdx := 2
-	var kpiKeys *[]string
 	var kpiAggFunctionType []string
 
 	var kpiValueHeaders []string
@@ -88,13 +87,13 @@ func (store *MemSQL) GetDataFromKPIResult(projectID int64, kpiQueryResult model.
 	}
 
 	if len(kpiValueHeaders) == 0 {
-		return kpiKeys
+		return nil
 	}
 
 	customMetrics, errMsg, statusCode := store.GetCustomMetricsByProjectId(projectID)
 	if statusCode != http.StatusFound {
 		logCtx.WithField("messageFinder", "Failed to get custom metrics").Error(errMsg)
-		return kpiKeys
+		return nil
 	}
 
 	mapKpiAggFunctionType := make(map[string]string)
@@ -116,7 +115,7 @@ func (store *MemSQL) GetDataFromKPIResult(projectID int64, kpiQueryResult model.
 	if len(kpiValueHeaders) != len(kpiAggFunctionType) {
 		logCtx.WithField("kpiAggFunctionType", kpiAggFunctionType).WithField("kpiValueHeaders",
 			kpiValueHeaders).Warn("failed to get function types of all of given KPI")
-		return kpiKeys
+		return nil
 	}
 
 	logCtx.WithFields(log.Fields{"kpiValueHeaders": kpiValueHeaders}).Info("KPI-Attribution headers set")
@@ -124,7 +123,7 @@ func (store *MemSQL) GetDataFromKPIResult(projectID int64, kpiQueryResult model.
 	return model.AddKPIKeyDataInMap(kpiQueryResult, logCtx, keyIdx, datetimeIdx, query.From, query.To, valIdx, kpiValueHeaders, kpiAggFunctionType, kpiData)
 }
 func (store *MemSQL) RunKPIGroupQuery(projectID int64, query *model.AttributionQuery, kpiData *map[string]model.KPIInfo,
-	kpiKeys *[]string, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery bool, debugQueryKey string, logCtx log.Entry) error {
+	enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery bool, debugQueryKey string, logCtx log.Entry) (error, []string) {
 
 	var kpiQueryResult model.QueryResult
 	if query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities {
@@ -137,9 +136,9 @@ func (store *MemSQL) RunKPIGroupQuery(projectID int64, query *model.AttributionQ
 		if statusCode != http.StatusOK {
 			logCtx.Error("failed to get KPI result for attribution query")
 			if statusCode == http.StatusPartialContent {
-				return errors.New("failed to get KPI result for attribution query - StatusPartialContent")
+				return errors.New("failed to get KPI result for attribution query - StatusPartialContent"), nil
 			}
-			return errors.New("failed to get KPI result for attribution query")
+			return errors.New("failed to get KPI result for attribution query"), nil
 		}
 		for _, res := range resultGroup {
 			// Skip the datetime header and the other result is of format. ex. "headers": ["$hubspot_deal_hs_object_id", "Revenue", "Pipeline", ...],
@@ -151,12 +150,12 @@ func (store *MemSQL) RunKPIGroupQuery(projectID int64, query *model.AttributionQ
 		}
 		if kpiQueryResult.Headers == nil || len(kpiQueryResult.Headers) == 0 {
 			logCtx.Error("no-valid result for KPI query")
-			return errors.New("no-valid result for KPI query")
+			return errors.New("no-valid result for KPI query"), nil
 		}
 
-		kpiKeys = store.GetDataFromKPIResult(projectID, kpiQueryResult, kpiData, query, logCtx)
+		return nil, store.GetDataFromKPIResult(projectID, kpiQueryResult, kpiData, query, logCtx)
 	}
-	return nil
+	return errors.New("not a valid type of query for KPI Attribution"), nil
 }
 
 func (store *MemSQL) FillKPIGroupUserData(projectID int64, query *model.AttributionQuery, kpiData *map[string]model.KPIInfo,
