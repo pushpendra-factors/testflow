@@ -3,14 +3,14 @@ package model
 import (
 	"database/sql"
 	"factors/filestore"
-	"factors/model/model"
 	U "factors/util"
-
 	"sync"
 	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
+
+	"factors/model/model"
 )
 
 // Model - Interface of all methods to be implemented by the stores.

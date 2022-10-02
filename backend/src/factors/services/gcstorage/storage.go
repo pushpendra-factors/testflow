@@ -6,6 +6,7 @@ import (
 	U "factors/util"
 	"fmt"
 	"io"
+	pb "path/filepath"
 	"strings"
 	"time"
 
@@ -272,4 +273,16 @@ func (gcsd *GCSDriver) GetAdsDataDir(projectId int64) string {
 func (gcsd *GCSDriver) GetAdsDataFilePathAndName(projectId int64, report string, chunkNo int) (string, string) {
 	path := gcsd.GetAdsDataDir(projectId)
 	return path, fmt.Sprintf("%v-%v-%v.csv", report, projectId, chunkNo)
+}
+
+func (gcsd *GCSDriver) GetModelEventsUnsortedFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string) {
+	path := gcsd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
+	return path, "events_raw.txt"
+}
+
+func (gcsd *GCSDriver) GetEventsArtificatFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string) {
+	path := gcsd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
+	path = pb.Join(path, "artifacts")
+	return path, "users_map.txt"
+
 }

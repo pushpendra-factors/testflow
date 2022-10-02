@@ -2,14 +2,14 @@ package disk
 
 import (
 	"factors/filestore"
+	U "factors/util"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
+	pb "path/filepath"
 	"strings"
 	"time"
-
-	U "factors/util"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -132,6 +132,16 @@ func (dd *DiskDriver) GetModelEventsFilePathAndName(projectId int64, startTimest
 	path := dd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
 	return path, "events.txt"
 }
+func (dd *DiskDriver) GetModelEventsUnsortedFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string) {
+	path := dd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
+	return path, "events_raw.txt"
+}
+func (dd *DiskDriver) GetEventsArtificatFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string) {
+	path := dd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
+	path = pb.Join(path, "artifacts")
+	return path, "users_map.txt"
+}
+
 func (dd *DiskDriver) GetModelMetricsFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string) {
 	path := dd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
 	return path, "metrics.txt"
