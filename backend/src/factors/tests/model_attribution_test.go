@@ -2708,7 +2708,7 @@ func TestAddGrandTotalRow(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			resultGot := model.AddGrandTotalRow(tt.args.headers, tt.args.rows, 0, model.AnalyzeTypeUsers, nil, tt.args.method)
+			resultGot := model.AddGrandTotalRow(tt.args.headers, tt.args.rows, 0, model.AnalyzeTypeUsers, nil, tt.args.method, "")
 			got := resultGot[0]
 			for colNo, _ := range got {
 				if got[colNo] != tt.want[colNo] {

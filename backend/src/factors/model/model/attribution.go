@@ -2147,7 +2147,7 @@ func AddGrandTotalRowLandingPage(headers []string, rows [][]interface{}, keyInde
 	}
 	if method == AttributionMethodInfluence {
 		grandTotalRow[1] = grandTotalRow[2]
-		for i := keyIndex + 4; i < len(grandTotalRow); i += 2 {
+		for i := keyIndex + 5; i < len(grandTotalRow); i += 2 {
 			grandTotalRow[i] = grandTotalRow[i+1]
 
 		}
