@@ -736,7 +736,7 @@ function CoreQuery({
   const searchReport = (e) => {
     let term = e.target.value;
     let searchResults = data.filter((item) => {
-      return item?.title?.includes(searchTerm);
+      return item?.title?.toLowerCase().includes(searchTerm.toLowerCase());
     });
     setSearchTerm(term);
     setTableData(searchResults);
