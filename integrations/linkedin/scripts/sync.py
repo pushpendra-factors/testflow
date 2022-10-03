@@ -4,6 +4,7 @@ import logging as log
 import csv
 import datetime
 import requests
+import copy
 from datetime import datetime
 import re
 import sys
@@ -470,7 +471,7 @@ def split_settings_for_multiple_ad_accounts(linkedin_settings):
             # spliting 1 setting into multiple for multiple ad accounts
             ad_accounts =  linkedin_int_setting[LINKEDIN_AD_ACCOUNT].split(',')
             for account_id in ad_accounts:
-                new_setting = linkedin_int_setting
+                new_setting = copy.deepcopy(linkedin_int_setting)
                 new_setting[LINKEDIN_AD_ACCOUNT] = account_id
                 final_linkedin_settings.append(new_setting)
         else:
