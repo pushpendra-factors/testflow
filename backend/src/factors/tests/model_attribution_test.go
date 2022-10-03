@@ -404,8 +404,7 @@ func TestAttributionLandingPage(t *testing.T) {
 		assert.Equal(t, int64(-1), getConversionUserCountLandingPage(query.AttributionKey, result, "lp_111111"))
 		assert.Equal(t, int64(-1), getConversionUserCountLandingPage(query.AttributionKey, result, "lp_222222"))
 		assert.Equal(t, float64(1), getConversionUserCountLandingPage(query.AttributionKey, result, "lp_333333"))
-		// no hit for landing page  lp_1234567 or none
-		assert.Equal(t, float64(0), getConversionUserCountLandingPage(query.AttributionKey, result, "lp_1234567"))
+
 	})
 
 	createdUserID4, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
