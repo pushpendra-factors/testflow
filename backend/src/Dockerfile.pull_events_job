@@ -8,4 +8,4 @@ ADD https://github.com/golang/go/raw/master/lib/time/zoneinfo.zip /usr/local/go/
 ENV GOPATH /go
 RUN apt-get update -y && apt-get install -y ca-certificates && go build -o /go/bin/pullevents /go/src/factors/scripts/run_pull_events/run_pull_events.go
 
-ENTRYPOINT ["/go/bin/pulleventsjob"]
+ENTRYPOINT ["/go/bin/pullevents"]
