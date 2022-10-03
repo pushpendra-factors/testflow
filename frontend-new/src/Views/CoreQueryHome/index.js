@@ -154,12 +154,14 @@ const columns = [
     dataIndex: 'author',
     width: 240,
     key: 'author',
-    render: (text) => (
-      <div className="flex items-center">
-        <Avatar src="assets/avatar/avatar.png" size={24} className={'mr-2'} />
-        &nbsp; {text}
-      </div>
-    )
+    render: (created_by_user) => {
+      return (
+        <div className="flex items-center">
+          <Avatar src={created_by_user.image} size={24} className={'mr-2'} />
+          &nbsp; {created_by_user.text}
+        </div>
+      )
+    }
   },
   {
     title: 'Date',
@@ -190,6 +192,9 @@ function CoreQuery({
   fetchProjectSettingsV1,
   enableSlackIntegration
 }) {
+  
+  let activeProjectProfilePicture = useSelector((state)=>state.global.active_project.profile_picture)
+  
   const queriesState = useSelector((state) => state.queries);
   const [deleteModal, showDeleteModal] = useState(false);
   const [activeRow, setActiveRow] = useState(null);
@@ -246,7 +251,7 @@ function CoreQuery({
       id_text: q.id_text,
       type: <SVG name={svgName} size={24} />,
       title: q.title,
-      author: q.created_by_name,
+      author: {image:activeProjectProfilePicture, text:q.created_by_name},
       settings: q.settings,
       date: (
         <div className="flex justify-between items-center">
@@ -628,7 +633,6 @@ function CoreQuery({
       dispatch({ type: SHOW_ANALYTICS_RESULT, payload: false });
     }
   }, [location.state, setQueryToState]);
-
   const data = queriesState.data
     .filter((q) => !(q.query && q.query.cl === QUERY_TYPE_WEB))
     .map((q) => {

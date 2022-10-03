@@ -1,6 +1,6 @@
 const CONFIG = {
   development: {
-    backend_host: 'http://factors-dev.com:8080',
+    backend_host: 'https://staging-api.factors.ai',
     sdk_service_host: 'http://factors-dev.com:8085',
     adwords_service_host: 'http://factors-dev.com:8091',
     sdk_asset_url: 'http://localhost:8090/dist/factors.prod.js',
@@ -8,7 +8,7 @@ const CONFIG = {
     factors_sdk_token: 'dummy',
     facebook_app_id: '1022017331596075',
     linkedin_client_id: '861ix78kpo39ge',
-  },
+  }, 
   staging: {
     backend_host: 'https://staging-api.factors.ai',
     sdk_asset_url: 'https://staging-app.factors.ai/assets/v1/factors.js',

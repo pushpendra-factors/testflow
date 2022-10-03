@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Button, Col, Row, Spin } from 'antd';
+import { Button, Col, Divider, Row, Spin } from 'antd';
 import { useSelector, useDispatch, connect } from 'react-redux';
 import {
   fetchActiveDashboardUnits,
@@ -193,12 +193,16 @@ function ProjectDropdown({
       <div className={styles.event_selector}>
         {selectVisible ? (
           <GroupSelect2
+            
             groupedProperties={generateDBList()}
             placeholder="Search Dashboard"
             iconColor="#3E516C"
             optionClick={handleOptChange}
             onClickOutside={() => setSelectVisible(false)}
+            style={{padding:0}}
             additionalActions={
+              <>
+              <Divider className={styles.divider_newdashboard_btn} />
               <Button
                 type="text"
                 size="large"
@@ -210,7 +214,7 @@ function ProjectDropdown({
                 }}
               >
                 New Dashboard
-              </Button>
+              </Button></>
             }
           ></GroupSelect2>
         ) : null}
