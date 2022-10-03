@@ -404,8 +404,7 @@ func TestAttributionLandingPage(t *testing.T) {
 		assert.Equal(t, int64(-1), getConversionUserCountLandingPage(query.AttributionKey, result, "lp_111111"))
 		assert.Equal(t, int64(-1), getConversionUserCountLandingPage(query.AttributionKey, result, "lp_222222"))
 		assert.Equal(t, float64(1), getConversionUserCountLandingPage(query.AttributionKey, result, "lp_333333"))
-		// no hit for landing page  lp_1234567 or none
-		assert.Equal(t, float64(0), getConversionUserCountLandingPage(query.AttributionKey, result, "lp_1234567"))
+
 	})
 
 	createdUserID4, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
@@ -2708,7 +2707,7 @@ func TestAddGrandTotalRow(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			resultGot := model.AddGrandTotalRow(tt.args.headers, tt.args.rows, 0, model.AnalyzeTypeUsers, nil, tt.args.method)
+			resultGot := model.AddGrandTotalRow(tt.args.headers, tt.args.rows, 0, model.AnalyzeTypeUsers, nil, tt.args.method, "")
 			got := resultGot[0]
 			for colNo, _ := range got {
 				if got[colNo] != tt.want[colNo] {
