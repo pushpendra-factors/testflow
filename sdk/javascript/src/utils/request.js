@@ -1,7 +1,7 @@
 var logger = require("./logger");
 
 function request(method, url, headers, data) {
-    let options = { method: method };
+    let options = { method: method, keepalive: true };
 
     if(data && data != undefined) 
         options["body"] = JSON.stringify(data);

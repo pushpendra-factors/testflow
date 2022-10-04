@@ -224,6 +224,13 @@ upload-backfill-salesforce-datetime-job: export IMAGE_NAME=backfill-salesforce-d
 upload-backfill-salesforce-datetime-job: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/backfill-salesforce-datetime-job:$(TAG)
 
+pack-backfill-salesforce-smart-event-job:
+	docker build -t us.gcr.io/factors-$(ENV)/backfill-salesforce-smart-event-job:$(TAG) -f Dockerfile.backfill_salesforce_datetime_job .
+
+upload-backfill-salesforce-smart-event-job: export IMAGE_NAME=backfill-salesforce-smart-event-job
+upload-backfill-salesforce-smart-event-job: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/backfill-salesforce-datetime-job:$(TAG)
+
 pack-fix-salesforce-identify-campaign-with-contact-and-lead-association:
 	docker build -t us.gcr.io/factors-$(ENV)/fix-salesforce-identify-campaign-with-contact-and-lead-association:$(TAG) -f Dockerfile.fix_salesforce_campaign_contact_and_lead_association_job .
 

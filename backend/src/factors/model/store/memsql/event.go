@@ -2215,3 +2215,26 @@ func (store *MemSQL) PullEventRowsForArchivalJob(projectID int64, startTime, end
 	rows, tx, err, _ := store.ExecQueryWithContext(rawQuery, []interface{}{})
 	return rows, tx, err
 }
+
+// IsSmartEventAlreadyExist verify for exisitng smart event by same reference event id and timestamp for the user id
+func (store *MemSQL) IsSmartEventAlreadyExist(projectID int64, userID, eventNameID, referenceEventID string,
+	eventTimestamp int64) (bool, error) {
+	db := C.GetServices().Db
+
+	var event model.Event
+	err := db.Where("project_id = ? AND user_id = ? and event_name_id = ? "+
+		" and timestamp = ? AND JSON_EXTRACT_STRING(properties,?) = ?",
+		projectID, userID, eventNameID, eventTimestamp, util.EP_CRM_REFERENCE_EVENT_ID, referenceEventID).
+		Select("id").Limit(1).Find(&event).Error
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	if event.ID == "" {
+		return false, nil
+	}
+
+	return true, nil
+}

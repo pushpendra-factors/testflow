@@ -1,0 +1,68 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  labels:
+    nodePool: persistent-pool
+  name: backfill-salesforce-smart-event-job
+spec:
+  schedule: "0 20 * * *" # In UTC
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            layer: jobs
+            nodePool: persistent-pool
+        spec:
+          nodeSelector:
+            cloud.google.com/gke-nodepool: default-pool
+          containers:
+          - name: backfill-salesforce-smart-event-job
+            image: us.gcr.io/factors-production/backfill-salesforce-smart-event-job:9cde06c-1766
+            imagePullPolicy: IfNotPresent
+            args:
+            - --env
+            - $(ENV)
+            - --memsql_host
+            - $(MEMSQL_HOST)
+            - --memsql_port
+            - $(MEMSQL_PORT)
+            - --memsql_name
+            - $(MEMSQL_DB)
+            - --memsql_user
+            - $(MEMSQL_HEAVY_USER)
+            - --memsql_pass
+            - $(MEMSQL_PASSWORD)
+            - --memsql_cert
+            - $(MEMSQL_CERTIFICATE)
+            - --redis_host
+            - $(REDIS_HOST)
+            - --redis_port
+            - $(REDIS_PORT)
+            - --redis_host_ps
+            - $(PERSISTENT_REDIS_HOST)
+            - --redis_port_ps
+            - $(PERSISTENT_REDIS_PORT)
+            - --sentry_dsn
+            - $(SENTRY_DSN)
+            - --property_details_cache_size
+            - "1000"
+            - --enable_property_type_from_db
+            - --whitelisted_project_ids_property_type_check_from_db
+            - "*"
+            envFrom:
+            - configMapRef:
+                name: config-redis
+            - configMapRef:
+                name: config-persistent-redis
+            - configMapRef:
+                name: config-env
+            - configMapRef:
+                name: config-memsql
+            - secretRef:
+                name: secret-memsql
+            - secretRef:
+                name: secret-sentry
+          restartPolicy: OnFailure
