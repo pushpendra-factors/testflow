@@ -4,7 +4,7 @@
 
         <script type="text/javascript" src="testCases.js" async="false"></script>
 
-        <script type="text/javascript">
+        <script type="text/javascript" async="false">
         
             window.factors = window.factors||(function(){
                 this.q = [];
@@ -53,7 +53,7 @@
                     this.q.push(callMap);
                     window.dispatchEvent(factorsQueuedEvent);
                 }
-                this.init("token", {host: "http://factors-dev.com:8085"}, function(){console.log("Init callback")});
+                this.init("token", {host: "https://api.factors.ai"}, function(){console.log("Init callback")});
                 return this;
             })();
 

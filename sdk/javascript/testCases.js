@@ -10,35 +10,22 @@ const docReady = (fn) => {
 
 const testRunner = () => {
     [testCookieConsent].every((fn) => {
-        const testResult = fn();
-        if(!testResult.success) {
-            console.log(testResult.msg);
-            return false;
-        }
-        return true;
-
+        const testResult = new Promise(fn);
+        return testResult.then((res) => {
+            console.log(res.msg)
+            return res.success;
+        })
     });
 }
 
-const testCookieConsent = () => {
-    const result = {
-        success: false,
-        msg: 'Step 0'
-    }
+const testCookieConsent = (res, rej) => {
 
-    let origCookieProp = Object.assign({}, document.cookie);
-    
     // stop accepting cookie.
-    if(!document.__defineGetter__) {
-
-        Object.defineProperty(document, 'cookie', {
-            get: function(){return ''},
-            set: function(){console.log("setter called"); return true},
-        });
-        } else {
-            document.__defineGetter__("cookie", function() { return '';} );
-            document.__defineSetter__("cookie", function() {} );
-    }
+   const cookieCodeGet = document.__lookupGetter__('cookie');
+   const cookieCodeSet = document.__lookupSetter__('cookie');
+    
+    document.__defineGetter__("cookie", function() { return '';} );
+    document.__defineSetter__("cookie", function() {} );
 
     const consentCheckElement = document.createElement('div');
 
@@ -47,16 +34,29 @@ const testCookieConsent = () => {
 
     const bodyChildElement = document.body.children[0];
     document.body.insertBefore(consentCheckElement, bodyChildElement);
-    document.getElementById('consentButtonY').addEventListener('click', function() {      
-        document.cookie = origCookieProp;
-        factors.init();
-        console.log(document.cookie);
+    document.getElementById('consentButtonY').addEventListener('click', function () {
+        const wasQueueEmpty = !window.factors?.q?.length;   
+        document.__defineGetter__("cookie", cookieCodeGet );
+        document.__defineSetter__("cookie", cookieCodeSet );
         consentCheckElement.style = "display: none;";
+        setTimeout(() => {
+            if(!wasQueueEmpty && !window.factors?.q?.length) {
+                res({
+                    success: true,
+                    msg: 'Step 0: Cookie consent && queue order: Success'
+                });
+            }
+            
+            res({
+                success: false,
+                msg: 'Step 0'
+            });
+
+        }, 10)
     })
     document.getElementById('consentButtonX').addEventListener('click', () => {      
         consentCheckElement.style = "display: none;";
     });
-    return result;
 }
 
 
