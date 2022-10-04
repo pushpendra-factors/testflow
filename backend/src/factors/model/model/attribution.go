@@ -151,6 +151,7 @@ const (
 	AnalyzeTypeUsers           = "users"
 	AnalyzeTypeSFOpportunities = "salesforce_opportunities"
 	AnalyzeTypeHSDeals         = "hubspot_deals"
+	AnalyzeTypeUserKPI         = "user_kpi"
 
 	HSDealIDProperty        = "$hubspot_deal_hs_object_id"
 	SFOpportunityIDProperty = "$salesforce_opportunity_id"
