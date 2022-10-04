@@ -251,6 +251,22 @@ var EP_CHANNEL string = "$channel" // added at runtime.
 var EP_TYPE string = "$type"
 var EP_HUBSPOT_ENGAGEMENT_THREAD_ID string = "$hubspot_engagement_thread_id"
 var EP_OTP_RULE_ID string = "$otp_rule_id"
+var EP_SALESFORCE_CAMPAIGN_NAME string = "$salesforce_campaign_name"
+var EP_HUBSPOT_FORM_SUBMISSION_TITLE string = "$hubspot_form_submission_title"
+var EP_HUBSPOT_FORM_SUBMISSION_FORMTYPE string = "$hubspot_form_submission_form-type"
+var EP_HUBSPOT_FORM_SUBMISSION_PAGEURL string = "$hubspot_form_submission_page-url-no-qp"
+var EP_HUBSPOT_FORM_SUBMISSION_TIMESTAMP string = "$hubspot_form_submission_timestamp"
+var EP_HUBSPOT_ENGAGEMENT_TITLE string = "$hubspot_engagement_title"
+var EP_SALESFORCE_CAMPAIGN_TYPE string = "$salesforce_campaign_type"
+var EP_SALESFORCE_CAMPAIGNMEMBER_STATUS string = "$salesforce_campaignmember_status"
+var EP_HUBSPOT_ENGAGEMENT_TYPE string = "$hubspot_engagement_type"
+var EP_HUBSPOT_ENGAGEMENT_SUBJECT string = "$hubspot_engagement_subject"
+var EP_HUBSPOT_ENGAGEMENT_MEETINGOUTCOME string = "$hubspot_engagement_meetingoutcome"
+var EP_HUBSPOT_ENGAGEMENT_STARTTIME string = "$hubspot_engagement_starttime"
+var EP_HUBSPOT_ENGAGEMENT_ENDTIME string = "$hubspot_engagement_endtime"
+var EP_HUBSPOT_ENGAGEMENT_DURATIONMILLISECONDS string = "$hubspot_engagement_durationmilliseconds"
+var EP_HUBSPOT_ENGAGEMENT_SOURCE string = "$hubspot_engagement_source"
+var EP_HUBSPOT_ENGAGEMENT_TIMESTAMP string = "$hubspot_engagement_timestamp"
 
 // Event Form meta attributes properties
 var EP_FORM_ID string = "$form_id"
@@ -1130,6 +1146,11 @@ var DISABLED_FACTORS_EVENT_PROPERTIES = [...]string{
 	EP_PAGE_RAW_URL,
 	EP_GCLID,
 	EP_FBCLID,
+	UP_EMAIL,
+	UP_JOIN_TIME,
+	UP_OS_WITH_VERSION,
+	UP_HOUR_OF_FIRST_EVENT,
+	UP_DAY_OF_FIRST_EVENT,
 }
 
 var DEFAULT_EVENT_PROPERTY_VALUES = map[string]interface{}{
@@ -1566,6 +1587,13 @@ var USER_PROPERTIES_MERGE_TYPE_INITIAL = [...]string{
 var USER_PROPERTIES_MERGE_TYPE_ADD = [...]string{
 	UP_PAGE_COUNT,
 	UP_TOTAL_SPENT_TIME,
+}
+var CUSTOM_WHITELIST_DELTA = []string{
+	"$referrer",
+	"$page_url",
+	"$source",
+	"$campaign",
+	"$channel",
 }
 
 var CUSTOM_BLACKLIST_DELTA = []string{
@@ -2721,6 +2749,33 @@ var disableGroupUserPropertiesByKeyPrefix = []string{
 	"$salesforce_account_",
 }
 
+var explainPropertyWeights = map[string]float64{
+	// weight based on git issue : 5849
+
+	UP_INITIAL_CHANNEL:  1.5,
+	UP_INITIAL_PAGE_URL: 1.5,
+	UP_INITIAL_CAMPAIGN: 1.5,
+	UP_LATEST_CHANNEL:   1.5,
+	UP_LATEST_CAMPAIGN:  1.5,
+	UP_LATEST_SOURCE:    1.5,
+	UP_LATEST_MEDIUM:    1.5,
+	EP_CHANNEL:          1.5,
+	EP_MEDIUM:           1.5,
+	EP_SOURCE:           1.5,
+	UP_DEVICE_TYPE:      0.5,
+	UP_OS_VERSION:       0.5,
+	UP_OS:               0.5,
+	UP_BROWSER:          0.5,
+	UP_PLATFORM:         0.5,
+	UP_DEVICE_BRAND:     0.5,
+	UP_CONTINENT:        0.5,
+	EP_CREATIVE:         0.5,
+	EP_CONTENT:          0.5,
+	UP_POSTAL_CODE:      0.01,
+	EP_CAMPAIGN_ID:      0.01,
+	EP_ADGROUP_ID:       0.01,
+}
+
 const SamplePropertyValuesLimit = 100
 
 // defined property values.
@@ -3711,4 +3766,26 @@ func GetGroupNameByPropertyName(propertyName string) (string, bool) {
 	}
 
 	return "", false
+}
+
+func GetExplainPropertyWeights(propertyName string) float64 {
+
+	prefix_name := map[string]float64{
+		"$hubspot":    0.1,
+		"$salesforce": 0.1,
+		"$marketo":    0.1,
+	}
+
+	if val, ok := explainPropertyWeights[propertyName]; ok {
+		return val
+	}
+
+	for prefix_string, prefix_val := range prefix_name {
+		if strings.HasPrefix(propertyName, prefix_string) {
+			return prefix_val
+		}
+	}
+
+	return float64(1)
+
 }

@@ -228,6 +228,7 @@ func getLinearTouch(attributionType string, attributionTimerange map[string]User
 func getInfluence(attributionType string, attributionTimerange map[string]UserSessionData,
 	conversionTime, lookbackPeriod, from, to int64) []AttributionKeyWeight {
 
+	key := make(map[string]int) //this variable has been initialized to contain the unique touchpoints and the number of times it is been interacted.
 	var keys []AttributionKeyWeight
 	interactions := getMergedInteractions(attributionTimerange)
 
@@ -235,7 +236,12 @@ func getInfluence(attributionType string, attributionTimerange map[string]UserSe
 	case AttributionQueryTypeConversionBased:
 		for _, interaction := range interactions {
 			if isAdTouchWithinLookback(interaction.InteractionTime, conversionTime, lookbackPeriod) {
-				keys = append(keys, AttributionKeyWeight{Key: interaction.AttributionKey, Weight: 0})
+				if _, exists := key[interaction.AttributionKey]; !exists {
+					key[interaction.AttributionKey] = 1
+				} else {
+					key[interaction.AttributionKey] += 1 //increasing the count if touchpoint already exists, but this is not needed.
+				}
+
 			}
 		}
 
@@ -243,16 +249,20 @@ func getInfluence(attributionType string, attributionTimerange map[string]UserSe
 		for _, interaction := range interactions {
 			if isAdTouchWithinLookback(interaction.InteractionTime, conversionTime,
 				lookbackPeriod) && isAdTouchWithinCampaignOrQueryPeriod(interaction.InteractionTime, from, to) {
-				keys = append(keys, AttributionKeyWeight{Key: interaction.AttributionKey, Weight: 0})
+
+				if _, exists := key[interaction.AttributionKey]; !exists {
+					key[interaction.AttributionKey] = 1
+				} else {
+					key[interaction.AttributionKey] += 1
+				}
 			}
 		}
-
 	}
-	for i := range keys {
-		keys[i].Weight = 1
+	for i, _ := range key {
+		keys = append(keys, AttributionKeyWeight{Key: i, Weight: 1})
 	}
-
 	return keys
+
 }
 
 func getWShaped(attributionType string, attributionTimerange map[string]UserSessionData,
@@ -292,9 +302,9 @@ func getWShaped(attributionType string, attributionTimerange map[string]UserSess
 		keys[1].Weight = float64(0.5)
 
 	case 3:
-		keys[0].Weight = float64(0.33)
-		keys[1].Weight = float64(0.33)
-		keys[2].Weight = float64(0.33)
+		keys[0].Weight = float64(1.0 / 3.0)
+		keys[1].Weight = float64(1.0 / 3.0)
+		keys[2].Weight = float64(1.0 / 3.0)
 
 	case 4:
 		keys[0].Weight = float64(0.325)

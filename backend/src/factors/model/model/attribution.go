@@ -151,6 +151,7 @@ const (
 	AnalyzeTypeUsers           = "users"
 	AnalyzeTypeSFOpportunities = "salesforce_opportunities"
 	AnalyzeTypeHSDeals         = "hubspot_deals"
+	AnalyzeTypeUserKPI         = "user_kpi"
 
 	HSDealIDProperty        = "$hubspot_deal_hs_object_id"
 	SFOpportunityIDProperty = "$salesforce_opportunity_id"
@@ -1378,7 +1379,7 @@ func ProcessQueryLandingPageUrl(query *AttributionQuery, attributionData *map[st
 	})
 	logCtx.Info("MergeDataRowsHavingSameKey")
 
-	result.Rows = AddGrandTotalRowLandingPage(result.Headers, result.Rows, GetLastKeyValueIndexLandingPage(result.Headers), query.AttributionMethodology)
+	result.Rows = AddGrandTotalRowLandingPage(result.Headers, result.Rows, GetLastKeyValueIndexLandingPage(result.Headers), query.AttributionMethodology, query.AttributionMethodologyCompare)
 	logCtx.Info("Done AddGrandTotal")
 	return result
 
@@ -1436,7 +1437,7 @@ func ProcessQuery(query *AttributionQuery, attributionData *map[string]*Attribut
 		return v1 > v2
 	})
 
-	result.Rows = AddGrandTotalRow(result.Headers, result.Rows, GetLastKeyValueIndex(result.Headers), query.AnalyzeType, goalEventAggFuncTypes, query.AttributionMethodology)
+	result.Rows = AddGrandTotalRow(result.Headers, result.Rows, GetLastKeyValueIndex(result.Headers), query.AnalyzeType, goalEventAggFuncTypes, query.AttributionMethodology, query.AttributionMethodologyCompare)
 	logCtx.Info("Done AddGrandTotal")
 	return result
 }
@@ -1517,7 +1518,7 @@ func ProcessQueryKPI(query *AttributionQuery, attributionData *map[string]*Attri
 	})
 	logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "Result": result}).Info("KPI Attribution result Sorting")
 
-	result.Rows = AddGrandTotalRowKPI(result.Headers, result.Rows, GetLastKeyValueIndex(result.Headers), query.AnalyzeType, goalEventAggFuncTypes, query.AttributionMethodology)
+	result.Rows = AddGrandTotalRowKPI(result.Headers, result.Rows, GetLastKeyValueIndex(result.Headers), query.AnalyzeType, goalEventAggFuncTypes, query.AttributionMethodology, query.AttributionMethodologyCompare)
 	logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "Result": result}).Info("KPI Attribution result AddGrandTotalRow")
 
 	return result
@@ -1584,6 +1585,7 @@ func MergeTwoDataRows(row1 []interface{}, row2 []interface{}, keyIndex int, attr
 		// Remaining linked funnel events & CPCs
 		for i := keyIndex + 5; i < len(row1)-1; i += 2 {
 			row1[i] = row1[i].(float64) + row2[i].(float64)
+			row1[i+1] = row1[i+1].(float64) + row2[i+1].(float64)
 		}
 
 		return row1
@@ -1698,11 +1700,15 @@ func MergeTwoDataRows(row1 []interface{}, row2 []interface{}, keyIndex int, attr
 
 		// Remaining linked funnel events & CPCs
 		for i := keyIndex + 14; i < len(row1)-1; i += 3 {
+			// Conversion
 			row1[i] = row1[i].(float64) + row2[i].(float64)
+			// Influence
+			row1[i+1] = row1[i+1].(float64) + row2[i+1].(float64)
+
 			if row1[i].(float64) > 0 && i < len(row1) {
-				row1[i+1], _ = U.FloatRoundOffWithPrecision(spend/row1[i].(float64), U.DefaultPrecision) // Funnel - Conversion - CPC. spend/conversion
+				row1[i+2], _ = U.FloatRoundOffWithPrecision(spend/row1[i].(float64), U.DefaultPrecision) // Funnel - Conversion - CPC. spend/conversion
 			} else {
-				row1[i+1] = float64(0) // Funnel - Conversion - CPC.
+				row1[i+2] = float64(0) // Funnel - Conversion - CPC.
 			}
 		}
 		return row1
@@ -1781,7 +1787,7 @@ func MergeDataRowsHavingSameKey(rows [][]interface{}, keyIndex int, attributionK
 }
 
 // AddGrandTotalRow adds a row with grand total in report
-func AddGrandTotalRow(headers []string, rows [][]interface{}, keyIndex int, analyzeType string, conversionFunTypes []string, method string) [][]interface{} {
+func AddGrandTotalRow(headers []string, rows [][]interface{}, keyIndex int, analyzeType string, conversionFunTypes []string, method string, methodCompare string) [][]interface{} {
 
 	var grandTotalRow []interface{}
 
@@ -1877,10 +1883,14 @@ func AddGrandTotalRow(headers []string, rows [][]interface{}, keyIndex int, anal
 		}
 		// If attribution method is influence then replacing the value of grand total row of conversion with conversion Influence
 		if method == AttributionMethodInfluence {
-			for i := keyIndex + 8; i < len(grandTotalRow)-1; i += 3 {
+			grandTotalRow[8] = grandTotalRow[9]
+			for i := keyIndex + 14; i < len(grandTotalRow)-1; i += 3 {
 				grandTotalRow[i] = grandTotalRow[i+1]
 
 			}
+		}
+		if methodCompare == AttributionMethodInfluence {
+			grandTotalRow[11] = grandTotalRow[12]
 		}
 
 	}
@@ -1950,7 +1960,7 @@ func AddGrandTotalRow(headers []string, rows [][]interface{}, keyIndex int, anal
 }
 
 // AddGrandTotalRowKPI adds a row with grand total in report for KPI queries
-func AddGrandTotalRowKPI(headers []string, rows [][]interface{}, keyIndex int, analyzeType string, conversionFunTypes []string, method string) [][]interface{} {
+func AddGrandTotalRowKPI(headers []string, rows [][]interface{}, keyIndex int, analyzeType string, conversionFunTypes []string, method string, methodCompare string) [][]interface{} {
 
 	var grandTotalRow []interface{}
 
@@ -2028,6 +2038,9 @@ func AddGrandTotalRowKPI(headers []string, rows [][]interface{}, keyIndex int, a
 			}
 			if method == AttributionMethodInfluence {
 				grandTotalRow[keyIndex+8+nextConPosition] = grandTotalRow[keyIndex+9+nextConPosition]
+
+			}
+			if methodCompare == AttributionMethodInfluence {
 				grandTotalRow[keyIndex+11+nextConPosition] = grandTotalRow[keyIndex+12+nextConPosition]
 			}
 		}
@@ -2098,7 +2111,7 @@ func AddGrandTotalRowKPI(headers []string, rows [][]interface{}, keyIndex int, a
 
 }
 
-func AddGrandTotalRowLandingPage(headers []string, rows [][]interface{}, keyIndex int, method string) [][]interface{} {
+func AddGrandTotalRowLandingPage(headers []string, rows [][]interface{}, keyIndex int, method string, methodCompare string) [][]interface{} {
 
 	var grandTotalRow []interface{}
 
@@ -2134,10 +2147,14 @@ func AddGrandTotalRowLandingPage(headers []string, rows [][]interface{}, keyInde
 		}
 	}
 	if method == AttributionMethodInfluence {
-		for i := keyIndex; i < len(grandTotalRow); i += 2 {
-			grandTotalRow[i+1] = grandTotalRow[i+2]
+		grandTotalRow[1] = grandTotalRow[2]
+		for i := keyIndex + 5; i < len(grandTotalRow); i += 2 {
+			grandTotalRow[i] = grandTotalRow[i+1]
 
 		}
+	}
+	if methodCompare == AttributionMethodInfluence {
+		grandTotalRow[3] = grandTotalRow[4]
 	}
 
 	rows = append([][]interface{}{grandTotalRow}, rows...)
@@ -2726,19 +2743,21 @@ func ProcessOTPEventRows(rows *sql.Rows, query *AttributionQuery,
 				userSessionData.MinTimestamp = U.Min(userSessionData.MinTimestamp, timestamp)
 				userSessionData.MaxTimestamp = U.Max(userSessionData.MaxTimestamp, timestamp)
 				userSessionData.TimeStamps = append(userSessionData.TimeStamps, timestamp)
-				userSessionData.WithinQueryPeriod = userSessionData.WithinQueryPeriod || timestamp >= query.From && timestamp <= query.To
+				userSessionData.WithinQueryPeriod = userSessionData.WithinQueryPeriod || isSessionWithinQueryPeriod(query.QueryType, query.LookbackDays, query.From, query.To, timestamp)
 				attributedSessionsByUserId[userID][uniqueAttributionKey] = userSessionData
 			} else {
 				userSessionDataNew := UserSessionData{MinTimestamp: timestamp,
 					MaxTimestamp: timestamp, TimeStamps: []int64{timestamp},
-					WithinQueryPeriod: timestamp >= query.From && timestamp <= query.To, MarketingInfo: marketingValues}
+					WithinQueryPeriod: isSessionWithinQueryPeriod(query.QueryType, query.LookbackDays, query.From, query.To, timestamp),
+					MarketingInfo:     marketingValues}
 				attributedSessionsByUserId[userID][uniqueAttributionKey] = userSessionDataNew
 			}
 		} else {
 			attributedSessionsByUserId[userID] = make(map[string]UserSessionData)
 			userSessionDataNew := UserSessionData{MinTimestamp: timestamp,
 				MaxTimestamp: timestamp, TimeStamps: []int64{timestamp},
-				WithinQueryPeriod: timestamp >= query.From && timestamp <= query.To, MarketingInfo: marketingValues}
+				WithinQueryPeriod: isSessionWithinQueryPeriod(query.QueryType, query.LookbackDays, query.From, query.To, timestamp),
+				MarketingInfo:     marketingValues}
 			attributedSessionsByUserId[userID][uniqueAttributionKey] = userSessionDataNew
 		}
 	}
@@ -2754,13 +2773,12 @@ func ProcessOTPEventRows(rows *sql.Rows, query *AttributionQuery,
 }
 
 func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, reports *MarketingReports,
-	contentGroupNamesList []string, logCtx log.Entry, queryID string) (map[string]map[string]UserSessionData, []string, error) {
+	contentGroupNamesList []string, attributedSessionsByUserId *map[string]map[string]UserSessionData,
+	userIdsWithSession *[]string, logCtx log.Entry, queryID string) error {
 
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
-	attributedSessionsByUserId := make(map[string]map[string]UserSessionData)
-	userIdMap := make(map[string]bool)
-	var userIdsWithSession []string
 
+	userIdMap := make(map[string]bool)
 	type MissingCollection struct {
 		AttributionKey string
 		GCLID          string
@@ -2845,7 +2863,7 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, reports *Marketin
 			continue
 		}
 		if _, ok := userIdMap[userID]; !ok {
-			userIdsWithSession = append(userIdsWithSession, userID)
+			*userIdsWithSession = append(*userIdsWithSession, userID)
 			userIdMap[userID] = true
 		}
 		marketingValues := MarketingData{Channel: PropertyValueNone, CampaignID: campaignID, CampaignName: campaignName, AdgroupID: adgroupID,
@@ -2888,26 +2906,27 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, reports *Marketin
 		marketingValues.Key = GetMarketingDataKey(query.AttributionKey, marketingValues)
 		uniqueAttributionKey := marketingValues.Key
 		// add session info uniquely for user-attributionId pair
-		if _, ok := attributedSessionsByUserId[userID]; ok {
+		if _, ok := (*attributedSessionsByUserId)[userID]; ok {
 
-			if userSessionData, ok := attributedSessionsByUserId[userID][uniqueAttributionKey]; ok {
+			if userSessionData, ok := (*attributedSessionsByUserId)[userID][uniqueAttributionKey]; ok {
 				userSessionData.MinTimestamp = U.Min(userSessionData.MinTimestamp, timestamp)
 				userSessionData.MaxTimestamp = U.Max(userSessionData.MaxTimestamp, timestamp)
 				userSessionData.TimeStamps = append(userSessionData.TimeStamps, timestamp)
-				userSessionData.WithinQueryPeriod = userSessionData.WithinQueryPeriod || timestamp >= query.From && timestamp <= query.To
-				attributedSessionsByUserId[userID][uniqueAttributionKey] = userSessionData
+				userSessionData.WithinQueryPeriod = userSessionData.WithinQueryPeriod || isSessionWithinQueryPeriod(query.QueryType, query.LookbackDays, query.From, query.To, timestamp)
+				(*attributedSessionsByUserId)[userID][uniqueAttributionKey] = userSessionData
 			} else {
 				userSessionDataNew := UserSessionData{MinTimestamp: timestamp,
 					MaxTimestamp: timestamp, TimeStamps: []int64{timestamp},
-					WithinQueryPeriod: timestamp >= query.From && timestamp <= query.To, MarketingInfo: marketingValues}
-				attributedSessionsByUserId[userID][uniqueAttributionKey] = userSessionDataNew
+					WithinQueryPeriod: isSessionWithinQueryPeriod(query.QueryType, query.LookbackDays, query.From, query.To, timestamp),
+					MarketingInfo:     marketingValues}
+				(*attributedSessionsByUserId)[userID][uniqueAttributionKey] = userSessionDataNew
 			}
 		} else {
-			attributedSessionsByUserId[userID] = make(map[string]UserSessionData)
+			(*attributedSessionsByUserId)[userID] = make(map[string]UserSessionData)
 			userSessionDataNew := UserSessionData{MinTimestamp: timestamp,
 				MaxTimestamp: timestamp, TimeStamps: []int64{timestamp},
-				WithinQueryPeriod: timestamp >= query.From && timestamp <= query.To, MarketingInfo: marketingValues}
-			attributedSessionsByUserId[userID][uniqueAttributionKey] = userSessionDataNew
+				WithinQueryPeriod: isSessionWithinQueryPeriod(query.QueryType, query.LookbackDays, query.From, query.To, timestamp), MarketingInfo: marketingValues}
+			(*attributedSessionsByUserId)[userID][uniqueAttributionKey] = userSessionDataNew
 		}
 		count++
 		if count%49999 == 0 {
@@ -2918,7 +2937,7 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, reports *Marketin
 	if err != nil {
 		// Error from DB is captured eg: timeout error
 		logCtx.WithFields(log.Fields{"err": err}).Error("Error in executing query in ProcessEventRows")
-		return nil, nil, err
+		return err
 	}
 	logCtx.WithFields(log.Fields{"AttributionKey": query.AttributionKey}).
 		Info("no document was found in any of the reports for ID. Logging and continuing %+v",
@@ -2927,7 +2946,7 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, reports *Marketin
 	logCtx.WithFields(log.Fields{"SessionDataCount": count,
 		"countEnrichedGclid":       countEnrichedGclid,
 		"countEnrichedMarketingId": countEnrichedMarketingId}).Info("Attribution keyword razorpay debug")
-	return attributedSessionsByUserId, userIdsWithSession, nil
+	return nil
 }
 
 func ProcessRow(rows *sql.Rows, reportName string, logCtx *log.Entry,
@@ -3288,4 +3307,23 @@ func GetContentGroupNamesToDummyNamesMap(contentGroupNamesList []string) map[str
 		contentGroupNamesToDummyNamesMap[contentGroupName] = "contentGroup_" + fmt.Sprintf("%d", index)
 	}
 	return contentGroupNamesToDummyNamesMap
+}
+func isSessionWithinQueryPeriod(queryType string,
+	lookBackWindow int, from int64, to int64, timestamp int64) bool {
+	lookbackPeriod := int64(lookBackWindow) * SecsInADay
+	switch queryType {
+
+	case AttributionQueryTypeConversionBased:
+		if timestamp >= from-lookbackPeriod && timestamp <= to {
+			return true
+		}
+		return false
+
+	case AttributionQueryTypeEngagementBased:
+		if timestamp >= from && timestamp <= to {
+			return true
+		}
+		return false
+	}
+	return false
 }

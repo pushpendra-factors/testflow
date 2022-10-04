@@ -6,8 +6,22 @@ import {
   PropTextFormat,
 } from '../../../utils/dataFormatter';
 import MomentTz from '../../MomentTz';
+import { TimelineHoverPropDisplayNames } from '../../Profile/utils';
 
 function InfoCard({ title, event_name, properties = {}, trigger, children }) {
+  const popoverPropValueFormat = (key, value) => {
+    if (
+      key.includes('timestamp') ||
+      key.includes('starttime') ||
+      key.includes('endtime')
+    ) {
+      return MomentTz(value * 1000).format('DD MMMM YYYY, hh:mm A');
+    } else if (key.includes('_time')) {
+      return formatDurationIntoString(value);
+    } else if (key.includes('durationmilliseconds')) {
+      return formatDurationIntoString(parseInt(value / 1000));
+    } else return value;
+  };
   const popoverContent = () => {
     return (
       <div className='fa-popupcard'>
@@ -26,19 +40,21 @@ function InfoCard({ title, event_name, properties = {}, trigger, children }) {
               <div className='flex justify-between py-2'>
                 <Text
                   mini
-                  type={'paragraph'}
+                  type={'title'}
                   color={'grey'}
-                  extraClass={'max-w-2/3 break-words mr-2'}
+                  extraClass={'whitespace-no-wrap mr-2'}
                 >
                   Page URL
                 </Text>
 
                 <Text
                   mini
-                  type={'paragraph'}
+                  type={'title'}
                   color={'grey-2'}
                   weight={'medium'}
-                  extraClass={'break-words text-right'}
+                  extraClass={`break-all text-right`}
+                  truncate={true}
+                  charLimit={40}
                 >
                   {event_name}
                 </Text>
@@ -49,24 +65,26 @@ function InfoCard({ title, event_name, properties = {}, trigger, children }) {
               <div className='flex justify-between py-2'>
                 <Text
                   mini
-                  type={'paragraph'}
+                  type={'title'}
                   color={'grey'}
-                  extraClass={'max-w-2/3 truncate mr-2'}
+                  extraClass={`${
+                    key.length > 20 ? 'break-words' : 'whitespace-no-wrap'
+                  } max-w-xs mr-2`}
                 >
-                  {key === '$timestamp' ? 'Date and Time' : PropTextFormat(key)}
+                  {TimelineHoverPropDisplayNames[key] || PropTextFormat(key)}
                 </Text>
                 <Text
                   mini
-                  type={'paragraph'}
+                  type={'title'}
                   color={'grey-2'}
                   weight={'medium'}
-                  extraClass={'break-words text-right'}
+                  extraClass={`${
+                    value?.length > 30 ? 'break-words' : 'whitespace-no-wrap'
+                  }  text-right`}
+                  truncate={true}
+                  charLimit={40}
                 >
-                  {key === '$timestamp'
-                    ? MomentTz(value * 1000).format('DD MMMM YYYY, hh:mm A')
-                    : key.includes('_time')
-                    ? formatDurationIntoString(value)
-                    : value}
+                  {popoverPropValueFormat(key, value) || '-'}
                 </Text>
               </div>
             );

@@ -12,6 +12,7 @@ import { Text, FaErrorComp, FaErrorLog } from 'factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary';
 import factorsai from 'factorsai';
 import { sendSlackNotification } from '../../../../../utils/slack';
+import _ from 'lodash';
 
 const LinkedInIntegration = ({
   fetchProjectSettings,
@@ -136,6 +137,11 @@ const LinkedInIntegration = ({
     }
   };
 
+  const convertToString = (e) => {  
+    let dataString = _.toString(e);
+    SetSelectedAdAccount(dataString) 
+  } 
+
   const handleSubmit = (e) => {
     e.preventDefault();
 
@@ -245,9 +251,11 @@ const LinkedInIntegration = ({
                       <div className='w-full'>
                         <div className='w-full pb-2'>
                           <Select
-                            className='w-full'
-                            value={SelectedAdAccount}
-                            onChange={(e) => SetSelectedAdAccount(e)}
+                            mode="multiple"
+                            allowClear
+                            className="w-full"
+                            placeholder={'Select Account'} 
+                            onChange={e => convertToString(e) }
                             options={createSelectOpts(getAdAccountsOptSrc())}
                           />
                         </div>

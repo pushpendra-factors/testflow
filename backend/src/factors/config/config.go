@@ -180,6 +180,7 @@ type Configuration struct {
 	ProjectAnalyticsWhitelistedUUIds       []string
 	CustomerEnabledProjectsWeeklyInsights  []int64
 	CustomerEnabledProjectsLastComputed    []int64
+	CustomerEnabledProjectsAttributionV1   []int64
 	DemoProjectIds                         []string
 	PrimaryDatastore                       string
 	// Flag for enabling only the /mql routes for secondary env testing.
@@ -312,6 +313,7 @@ const (
 	HealthcheckLeadSquaredEnrichPingID          = "83fdec06-a2a0-4fdb-ba9e-97c9bb730e23"
 	HealthcheckAdsImportPingID                  = "c392e3b4-4883-47ae-b5ff-63743d5d0c78"
 	HealthcheckComputeAndSendAlertsPingID       = "8345e798-1622-4881-942e-99fdd638ddf0"
+	HealthcheckMailWIPingID                     = "950b628b-d623-4666-be39-952516e543c0"
 	HealthcheckPatternMinePingID                = "04e9ba3d-5b07-4325-ad28-6ac7cf15971b"
 	HealthcheckPullEventsPingID                 = "088cc760-f350-4eb1-bbb6-c2bbde66b530"
 
@@ -1989,8 +1991,19 @@ func IsWeeklyInsightsWhitelisted(loggedInUUID string, projectId int64) bool {
 	}
 	return false
 }
+
 func IsLastComputedWhitelisted(projectId int64) bool {
 	for _, id := range configuration.CustomerEnabledProjectsLastComputed {
+		if id == projectId {
+			return true
+		}
+	}
+
+	return false
+}
+
+func IsAttributionV1Whitelisted(projectId int64) bool {
+	for _, id := range configuration.CustomerEnabledProjectsAttributionV1 {
 		if id == projectId {
 			return true
 		}

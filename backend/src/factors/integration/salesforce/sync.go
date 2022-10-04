@@ -321,6 +321,8 @@ func (s *DataClient) getRecordByObjectNameANDStartTimestamp(projectID int64, obj
 		queryURL = queryURL + "+" + "WHERE" + "+" + "LastModifiedDate" + url.QueryEscape(">"+sfFormatedTime)
 	}
 
+	queryStmnt = queryStmnt + "+" + url.QueryEscape("ORDER BY LastModifiedDate ASC")
+
 	dataClient := &DataClient{
 		ProjectID:      projectID,
 		accessToken:    s.accessToken,
@@ -1218,6 +1220,15 @@ func SyncDatetimeAndNumericalProperties(projectID int64, accessToken, instanceUR
 	return anyFailures, allStatus
 }
 
+func getStartTimestamp(docType string) int64 {
+	if docType != model.SalesforceDocumentTypeNameCampaignMember {
+		return 0 // 1 January 1970 00:00:00
+	}
+
+	currentTime := time.Now().AddDate(0, 0, -90).UTC()
+	return now.New(currentTime).BeginningOfDay().Unix() // get from last 90 days
+}
+
 // SyncDocuments syncs from salesforce to database by doc type
 func SyncDocuments(ps *model.SalesforceProjectSettings, lastSyncInfo map[string]int64, accessToken string) []ObjectStatus {
 	var allObjectStatus []ObjectStatus
@@ -1225,8 +1236,7 @@ func SyncDocuments(ps *model.SalesforceProjectSettings, lastSyncInfo map[string]
 	for docType, timestamp := range lastSyncInfo {
 		var syncAll bool
 		if timestamp == 0 {
-			currentTime := time.Now().AddDate(0, 0, -30).UTC()
-			timestamp = now.New(currentTime).BeginningOfDay().Unix() // get from last 30 days
+			timestamp = getStartTimestamp(docType)
 			syncAll = true
 		}
 

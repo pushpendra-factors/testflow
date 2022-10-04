@@ -20,6 +20,47 @@ import (
 
 var isDownloaded bool
 
+func StaticDashboardListForMailer() []M.DashboardUnit {
+	dashboardUnit := make([]M.DashboardUnit, 0)
+	dashboardUnit = append(dashboardUnit, M.DashboardUnit{
+		QueryId: 1,
+	})
+	return dashboardUnit
+}
+
+func StaticQueriesForMailer(queryId int64) (Query, MultiFunnelQuery, M.KPIQueryGroup, bool, bool, bool, map[string]bool) {
+	if queryId == 1 {
+		return Query{
+			Id: 1,
+			Base: EventsCriteria{
+				Id:       0,
+				Operator: "And",
+				EventCriterionList: []EventCriterion{
+					EventCriterion{
+						Id:                  0,
+						Name:                "$session",
+						EqualityFlag:        true,
+						FilterCriterionList: nil,
+					},
+				},
+			},
+			Target: EventsCriteria{
+				Id:       0,
+				Operator: "And",
+				EventCriterionList: []EventCriterion{
+					EventCriterion{
+						Id:                  0,
+						Name:                "$session",
+						EqualityFlag:        true,
+						FilterCriterionList: nil,
+					},
+				},
+			},
+		}, MultiFunnelQuery{}, M.KPIQueryGroup{}, true, true, false, make(map[string]bool)
+	}
+	return Query{}, MultiFunnelQuery{}, M.KPIQueryGroup{}, false, false, false, nil
+}
+
 // ComputeDeltaInsights Take details about two periods, and get delta (difference based) insights
 func ComputeDeltaInsights(projectId int64, configs map[string]interface{}) (map[string]interface{}, bool) {
 
@@ -45,12 +86,22 @@ func ComputeDeltaInsights(projectId int64, configs map[string]interface{}) (map[
 			To:   configs["endTimestamp"].(int64),
 		},
 	}
+	mailerRun := false
+	if configs["run_type"] != nil && configs["run_type"].(string) == "mailer" {
+		mailerRun = true
+	}
 	insightGranularity := configs["insightGranularity"].(string)
 	skipWpi := configs["skipWpi"].(bool)
 	skipWpi2 := configs["skipWpi2"].(bool)
 	log.Info("Reading delta query.")
 	computedQueries := make(map[int64]bool)
-	dashboardUnits, _ := store.GetStore().GetDashboardUnitsForProjectID(projectId)
+	var dashboardUnits []M.DashboardUnit
+	if mailerRun == true {
+		// Janani Add a static list
+		dashboardUnits = StaticDashboardListForMailer()
+	} else {
+		dashboardUnits, _ = store.GetStore().GetDashboardUnitsForProjectID(projectId)
+	}
 	isDownloaded = false
 	totalProperties := make(map[string]bool)
 	for _, dashboardUnit := range dashboardUnits {
@@ -58,8 +109,12 @@ func ComputeDeltaInsights(projectId int64, configs map[string]interface{}) (map[
 			continue
 		}
 		queryIdString := fmt.Sprintf("%v", dashboardUnit.QueryId)
-		deltaQuery, multiStepQuery, kpiQuery, isEnabled, isEventOccurence, isMultiStep, properties := IsDashboardUnitWIEnabled(dashboardUnit)
-		// Check if this is a valid query with valid filters
+		deltaQuery, multiStepQuery, kpiQuery, isEnabled, isEventOccurence, isMultiStep, properties := Query{}, MultiFunnelQuery{}, M.KPIQueryGroup{}, false, false, false, make(map[string]bool)
+		if mailerRun == true {
+			deltaQuery, multiStepQuery, kpiQuery, isEnabled, isEventOccurence, isMultiStep, properties = StaticQueriesForMailer(dashboardUnit.QueryId)
+		} else {
+			deltaQuery, multiStepQuery, kpiQuery, isEnabled, isEventOccurence, isMultiStep, properties = IsDashboardUnitWIEnabled(dashboardUnit)
+		} // Check if this is a valid query with valid filters
 		if !isEnabled || computedQueries[dashboardUnit.QueryId] {
 			continue
 		}
@@ -70,7 +125,7 @@ func ComputeDeltaInsights(projectId int64, configs map[string]interface{}) (map[
 
 		if len(kpiQuery.Queries) > 0 {
 			if err := CreateKpiInsights(diskManager, cloudManager, periodCodesWithWeekNMinus1, projectId,
-				dashboardUnit.QueryId, kpiQuery, insightGranularity, k, skipWpi, skipWpi2); err != nil {
+				dashboardUnit.QueryId, kpiQuery, insightGranularity, k, skipWpi, skipWpi2, mailerRun); err != nil {
 				log.WithError(err).Error("KPI insights error query: ", dashboardUnit.QueryId)
 				status["error-kpi-pass-"+queryIdString] = err
 				continue
@@ -81,7 +136,7 @@ func ComputeDeltaInsights(projectId int64, configs map[string]interface{}) (map[
 			// TODO: This was changed from set to map
 			unionOfFeatures := make(map[string]map[string]bool)
 			log.Info("1st pass: Scanning events file to get top-k base features for each period.")
-			err := processSeparatePeriods(projectId, periodCodesWithWeekNMinus1, cloudManager, diskManager, deltaQuery, multiStepQuery, k, &unionOfFeatures, 1, insightGranularity, isEventOccurence, isMultiStep, skipWpi, skipWpi2)
+			err := processSeparatePeriods(projectId, periodCodesWithWeekNMinus1, cloudManager, diskManager, deltaQuery, multiStepQuery, k, &unionOfFeatures, 1, insightGranularity, isEventOccurence, isMultiStep, skipWpi, skipWpi2, mailerRun)
 			if err != nil {
 				log.WithError(err).Error("failed to process wpi pass 1")
 				status["error-wpi-pass1-"+queryIdString] = err.Error()
@@ -89,7 +144,7 @@ func ComputeDeltaInsights(projectId int64, configs map[string]interface{}) (map[
 			}
 			isDownloaded = true
 			log.Info("2nd pass: Scanning events file again to compute counts for union of features.")
-			err = processSeparatePeriods(projectId, periodCodesWithWeekNMinus1, cloudManager, diskManager, deltaQuery, multiStepQuery, k, &unionOfFeatures, 2, insightGranularity, isEventOccurence, isMultiStep, skipWpi, skipWpi2)
+			err = processSeparatePeriods(projectId, periodCodesWithWeekNMinus1, cloudManager, diskManager, deltaQuery, multiStepQuery, k, &unionOfFeatures, 2, insightGranularity, isEventOccurence, isMultiStep, skipWpi, skipWpi2, mailerRun)
 			if err != nil {
 				log.WithError(err).Error("failed to process wpi pass 2")
 				status["error-wpi-pass2-"+queryIdString] = err.Error()
@@ -102,7 +157,7 @@ func ComputeDeltaInsights(projectId int64, configs map[string]interface{}) (map[
 			} else {
 				queryId = deltaQuery.Id
 			}
-			err = processCrossPeriods(periodCodesWithWeekNMinus1, diskManager, projectId, k, queryId, cloudManager)
+			err = processCrossPeriods(periodCodesWithWeekNMinus1, diskManager, projectId, k, queryId, cloudManager, mailerRun)
 			if err != nil {
 				log.WithError(err).Error("failed to process wpi pass 1")
 				status["error-cpi-pass1-"+queryIdString] = err.Error()
@@ -133,16 +188,18 @@ func ComputeDeltaInsights(projectId int64, configs map[string]interface{}) (map[
 			totalProperties[property] = true
 		}
 	}
-	WritePropertiesPath(projectId, totalProperties, *cloudManager)
+	if mailerRun == false {
+		WritePropertiesPath(projectId, totalProperties, *cloudManager)
+	}
 	status["InsightId"] = insightId
 	return status, true
 }
 
-func processCrossPeriods(periodCodes []Period, diskManager *serviceDisk.DiskDriver, projectId int64, k int, queryId int64, cloudManager *filestore.FileManager) error {
+func processCrossPeriods(periodCodes []Period, diskManager *serviceDisk.DiskDriver, projectId int64, k int, queryId int64, cloudManager *filestore.FileManager, mailerRun bool) error {
 	for i, periodCode1 := range periodCodes {
 		var wpi1 WithinPeriodInsights
 		dateString1 := U.GetDateOnlyFromTimestampZ(periodCode1.From)
-		efTmpPath1, efTmpName1 := diskManager.GetInsightsWpiFilePathAndName(projectId, dateString1, queryId, k)
+		efTmpPath1, efTmpName1 := diskManager.GetInsightsWpiFilePathAndName(projectId, dateString1, queryId, k, mailerRun)
 		ReadFromJSONFile(efTmpPath1+efTmpName1, &wpi1)
 		for j, periodCode2 := range periodCodes {
 			if i >= j {
@@ -150,7 +207,7 @@ func processCrossPeriods(periodCodes []Period, diskManager *serviceDisk.DiskDriv
 			}
 			var wpi2 WithinPeriodInsights
 			dateString2 := U.GetDateOnlyFromTimestampZ(periodCode2.From)
-			efTmpPath2, efTmpName2 := diskManager.GetInsightsWpiFilePathAndName(projectId, dateString2, queryId, k)
+			efTmpPath2, efTmpName2 := diskManager.GetInsightsWpiFilePathAndName(projectId, dateString2, queryId, k, mailerRun)
 
 			err := ReadFromJSONFile(efTmpPath2+efTmpName2, &wpi2)
 			if err != nil {
@@ -169,7 +226,7 @@ func processCrossPeriods(periodCodes []Period, diskManager *serviceDisk.DiskDriv
 				log.WithFields(log.Fields{"err": err}).Error("failed to unmarshal events Info.")
 				return err
 			}
-			err = WriteCpiPath(projectId, periodPair.Second, queryId, k, bytes.NewReader(crossPeriodInsightsBytes), *cloudManager)
+			err = WriteCpiPath(projectId, periodPair.Second, queryId, k, bytes.NewReader(crossPeriodInsightsBytes), *cloudManager, mailerRun)
 			if err != nil {
 				log.WithFields(log.Fields{"err": err}).Error("failed to write files to cloud")
 				return err
@@ -179,14 +236,14 @@ func processCrossPeriods(periodCodes []Period, diskManager *serviceDisk.DiskDriv
 	return nil
 }
 
-func processSeparatePeriods(projectId int64, periodCodes []Period, cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, deltaQuery Query, multiStepQuery MultiFunnelQuery, k int, unionOfFeatures *(map[string]map[string]bool), passId int, insightGranularity string, isEventOccurence bool, isMultiStep bool, skipWpi bool, skipWpi2 bool) error {
+func processSeparatePeriods(projectId int64, periodCodes []Period, cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, deltaQuery Query, multiStepQuery MultiFunnelQuery, k int, unionOfFeatures *(map[string]map[string]bool), passId int, insightGranularity string, isEventOccurence bool, isMultiStep bool, skipWpi bool, skipWpi2 bool, mailerRun bool) error {
 	earlierWeekMap := make(map[int64]bool)
 	earlierWeekMap[periodCodes[0].From] = periodCodes[0].From < periodCodes[1].From
 	earlierWeekMap[periodCodes[1].From] = periodCodes[0].From > periodCodes[1].From
 	for _, periodCode := range periodCodes {
 		fileDownloaded := false
 		if !skipWpi || (!earlierWeekMap[periodCode.From] && !skipWpi2) {
-			err := processSinglePeriodData(projectId, periodCode, cloudManager, diskManager, deltaQuery, multiStepQuery, k, unionOfFeatures, passId, insightGranularity, isEventOccurence, isMultiStep)
+			err := processSinglePeriodData(projectId, periodCode, cloudManager, diskManager, deltaQuery, multiStepQuery, k, unionOfFeatures, passId, insightGranularity, isEventOccurence, isMultiStep, mailerRun)
 			if err != nil {
 				return err
 			}
@@ -195,13 +252,13 @@ func processSeparatePeriods(projectId int64, periodCodes []Period, cloudManager 
 			if deltaQuery.Id == 0 {
 				deltaQuery.Id = multiStepQuery.Id
 			}
-			path, name := (*cloudManager).GetInsightsWpiFilePathAndName(projectId, dateString, deltaQuery.Id, k)
+			path, name := (*cloudManager).GetInsightsWpiFilePathAndName(projectId, dateString, deltaQuery.Id, k, mailerRun)
 			reader, err := (*cloudManager).Get(path, name)
 			if err != nil {
 				log.WithFields(log.Fields{"err": err, "filePath": path,
 					"eventFileName": name}).Error("Failed to write to fetch from cloud path")
 			} else {
-				efTmpPath, efTmpName := diskManager.GetInsightsWpiFilePathAndName(projectId, dateString, deltaQuery.Id, k)
+				efTmpPath, efTmpName := diskManager.GetInsightsWpiFilePathAndName(projectId, dateString, deltaQuery.Id, k, mailerRun)
 				err = diskManager.Create(efTmpPath, efTmpName, reader)
 				if err != nil {
 					log.WithFields(log.Fields{"err": err, "filePath": efTmpPath,
@@ -211,7 +268,7 @@ func processSeparatePeriods(projectId int64, periodCodes []Period, cloudManager 
 				}
 			}
 			if !fileDownloaded {
-				err := processSinglePeriodData(projectId, periodCode, cloudManager, diskManager, deltaQuery, multiStepQuery, k, unionOfFeatures, passId, insightGranularity, isEventOccurence, isMultiStep)
+				err := processSinglePeriodData(projectId, periodCode, cloudManager, diskManager, deltaQuery, multiStepQuery, k, unionOfFeatures, passId, insightGranularity, isEventOccurence, isMultiStep, mailerRun)
 				if err != nil {
 					return err
 				}
@@ -221,13 +278,13 @@ func processSeparatePeriods(projectId int64, periodCodes []Period, cloudManager 
 	return nil
 }
 
-func processSinglePeriodData(projectId int64, periodCode Period, cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, deltaQuery Query, multiStepQuery MultiFunnelQuery, k int, unionOfFeatures *(map[string]map[string]bool), passId int, insightGranularity string, isEventOccurence bool, isMultiStep bool) error {
+func processSinglePeriodData(projectId int64, periodCode Period, cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, deltaQuery Query, multiStepQuery MultiFunnelQuery, k int, unionOfFeatures *(map[string]map[string]bool), passId int, insightGranularity string, isEventOccurence bool, isMultiStep bool, mailerRun bool) error {
 	scanner, err := GetEventFileScanner(projectId, periodCode, cloudManager, diskManager, insightGranularity, isDownloaded)
 	if err != nil {
 		log.WithError(err).Error(fmt.Sprintf("Scanner initialization failed for period %v", periodCode))
 		return err
 	}
-	withinPeriodInsights, err := ComputeWithinPeriodInsights(scanner, deltaQuery, multiStepQuery, k, *unionOfFeatures, passId, isEventOccurence, isMultiStep)
+	withinPeriodInsights, err := ComputeWithinPeriodInsights(scanner, deltaQuery, multiStepQuery, k, *unionOfFeatures, passId, isEventOccurence, isMultiStep, mailerRun)
 	if err != nil {
 		log.WithError(err).Error(fmt.Sprintf("Could not mine features for period %v", periodCode))
 		return err
@@ -277,9 +334,9 @@ func processSinglePeriodData(projectId int64, periodCode Period, cloudManager *f
 		if deltaQuery.Id == 0 {
 			deltaQuery.Id = multiStepQuery.Id
 		}
-		WriteWpiPath(projectId, periodCode, deltaQuery.Id, k, bytes.NewReader(withinPeriodInsightsBytes), *cloudManager)
+		WriteWpiPath(projectId, periodCode, deltaQuery.Id, k, bytes.NewReader(withinPeriodInsightsBytes), *cloudManager, mailerRun)
 		dateString := U.GetDateOnlyFromTimestampZ(periodCode.From)
-		efTmpPath, efTmpName := diskManager.GetInsightsWpiFilePathAndName(projectId, dateString, deltaQuery.Id, k)
+		efTmpPath, efTmpName := diskManager.GetInsightsWpiFilePathAndName(projectId, dateString, deltaQuery.Id, k, mailerRun)
 		err = diskManager.Create(efTmpPath, efTmpName, bytes.NewReader(withinPeriodInsightsBytes))
 		if err != nil {
 			log.WithFields(log.Fields{"err": err, "filePath": efTmpPath,
@@ -291,9 +348,9 @@ func processSinglePeriodData(projectId int64, periodCode Period, cloudManager *f
 }
 
 func WriteWpiPath(projectId int64, periodCode Period, queryId int64, k int, events *bytes.Reader,
-	cloudManager filestore.FileManager) error {
+	cloudManager filestore.FileManager, mailerRun bool) error {
 	dateString := U.GetDateOnlyFromTimestampZ(periodCode.From)
-	path, name := cloudManager.GetInsightsWpiFilePathAndName(projectId, dateString, queryId, k)
+	path, name := cloudManager.GetInsightsWpiFilePathAndName(projectId, dateString, queryId, k, mailerRun)
 	err := cloudManager.Create(path, name, events)
 	if err != nil {
 		log.WithError(err).Error("writeEventInfoFile Failed to write to cloud")
@@ -303,9 +360,9 @@ func WriteWpiPath(projectId int64, periodCode Period, queryId int64, k int, even
 }
 
 func WriteCpiPath(projectId int64, periodCode Period, queryId int64, k int, events *bytes.Reader,
-	cloudManager filestore.FileManager) error {
+	cloudManager filestore.FileManager, mailerRun bool) error {
 	dateString := U.GetDateOnlyFromTimestampZ(periodCode.From)
-	path, name := cloudManager.GetInsightsCpiFilePathAndName(projectId, dateString, queryId, k)
+	path, name := cloudManager.GetInsightsCpiFilePathAndName(projectId, dateString, queryId, k, mailerRun)
 	err := cloudManager.Create(path, name, events)
 	if err != nil {
 		log.WithError(err).Error("writeEventInfoFile Failed to write to cloud")

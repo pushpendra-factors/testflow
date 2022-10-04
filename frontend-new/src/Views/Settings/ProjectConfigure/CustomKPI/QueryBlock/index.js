@@ -111,7 +111,7 @@ function QueryBlock({
     eventChange(event, index - 1, 'delete');
   };
 
-  const kpiEvents = kpi?.config?.map((item) => {
+  const kpiEvents = kpi?.config_without_derived_kpi?.map((item) => {
     return getNormalizedKpi({ kpi: item });
   });
 

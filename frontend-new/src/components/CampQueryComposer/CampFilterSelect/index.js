@@ -122,6 +122,12 @@ const CampFilterSelect = ({
         updateStateApply(true);
     }
 
+    const valuesSelectSingle = (val) => {
+        setValuesState(val);
+        setValuesSelectionOpen(false);
+        updateStateApply(true);
+      };
+
     const onDateSelect = (rng) => {
         let startDate;
         let endDate;
@@ -233,9 +239,10 @@ const CampFilterSelect = ({
         const values = [];
         
         selectionComponent = (<FaSelect
-                multiSelect={true}
+                multiSelect={((isArray(operatorState) ? operatorState[0] : operatorState) === '!=' || (isArray(operatorState) ? operatorState[0] : operatorState) === 'does not contain') ? false : true}
                 options={valueOpts && valueOpts[propState.name]?.length ? valueOpts[propState.name].map(op => [op]) : []}
                 applClick={(val) => valuesSelect(val)}
+                optionClick={(val) => valuesSelectSingle(val)}
                 onClickOutside={() => setValuesSelectionOpen(false)}
                 selectedOpts={valuesState ? valuesState : []}
                 allowSearch={true}

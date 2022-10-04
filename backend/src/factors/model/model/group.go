@@ -68,7 +68,7 @@ func GetPropertiesByGroupFromCache(projectID int64, groupName string, dateKey st
 		return U.CachePropertyWithTimestamp{}, errors.New("invalid project on GetPropertiesByGroupFromCache")
 	}
 
-	if groupName == "" {
+	if groupName == "" || groupName == "undefined" {
 		return U.CachePropertyWithTimestamp{}, errors.New("invalid group_name on GetPropertiesByGroupFromCache")
 	}
 
@@ -77,7 +77,7 @@ func GetPropertiesByGroupFromCache(projectID int64, groupName string, dateKey st
 		return U.CachePropertyWithTimestamp{}, err
 	}
 	groupProperties, _, err := cacheRedis.GetIfExistsPersistent(groupPropertiesKey)
-	if err != nil {
+	if err != nil || groupProperties == "" {
 		logCtx.WithField("date_key", dateKey).Info("Missing rollup cache for groups.")
 		return U.CachePropertyWithTimestamp{}, nil
 	}

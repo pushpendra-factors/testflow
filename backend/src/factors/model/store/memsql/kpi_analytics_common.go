@@ -6,78 +6,49 @@ import (
 	U "factors/util"
 	"net/http"
 	"reflect"
-	"strings"
 
 	log "github.com/sirupsen/logrus"
 )
 
 // statusCode need to be clear on http.StatusOk or http.StatusAccepted or something else.
 // Below function relies on fact that each query has only one metric.
+// Note: All of the hash functions use the query without GBT to form keys.
 func (store *MemSQL) ExecuteKPIQueryGroup(projectID int64, reqID string, kpiQueryGroup model.KPIQueryGroup,
 	enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool) ([]model.QueryResult, int) {
 
-	var queryResults []model.QueryResult
-	finalStatusCode := http.StatusOK
 	isTimezoneEnabled := false
 	kpiTimezoneString := string(kpiQueryGroup.GetTimeZone())
-	hashMapOfQueryToResult := make(map[string][]model.QueryResult)
+	var finalResultantResults []model.QueryResult
+
 	if C.IsMultipleProjectTimezoneEnabled(projectID) {
 		isTimezoneEnabled = true
 	}
+
 	for index, query := range kpiQueryGroup.Queries {
 		kpiQueryGroup.Queries[index].Filters = append(query.Filters, kpiQueryGroup.GlobalFilters...)
 		kpiQueryGroup.Queries[index].GroupBy = kpiQueryGroup.GlobalGroupBy
 	}
-	for _, query := range kpiQueryGroup.Queries {
-		var result []model.QueryResult
-		var statusCode int
-		var errMsg string
-		var hashCode string
 
-		if query.QueryType == model.KpiDerivedQueryType {
-			result, statusCode, errMsg = store.ExecuteDerivedKPIQuery(projectID, reqID, query, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
-			if statusCode != http.StatusOK {
-				finalStatusCode = statusCode
-				log.WithField("kpiQueryGroup", kpiQueryGroup).WithField("query", query).WithField("queryResults", queryResults).Error(errMsg)
-				break
-			}
-		} else {
-			result, statusCode, hashCode, errMsg = store.ExecuteNonDerivedQuery(projectID, reqID, query, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
-
-			if statusCode != http.StatusOK {
-				finalStatusCode = statusCode
-				log.WithField("kpiQueryGroup", kpiQueryGroup).WithField("query", query).WithField("queryResults", queryResults).Error(errMsg)
-				break
-			} else {
-				if hashCode != "" {
-					hashMapOfQueryToResult[hashCode] = result
-				}
-			}
-		}
-		queryResults = append(queryResults, result...)
-	}
+	finalStatusCode, mapOfNonGBTDerivedKPIToInternalKPIToResults, mapOfGBTDerivedKPIToInternalKPIToResults, mapOfNonGBTKPINormalQueryToResults,
+		mapOfGBTKPINormalQueryToResults, externalQueryToInternalQueries := store.ExecuteKPIQueriesAndGetResultsAsMap(projectID,
+		reqID, kpiQueryGroup, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
 	if finalStatusCode != http.StatusOK {
-		log.WithField("kpiQueryGroup", kpiQueryGroup).WithField("queryResults", queryResults).Error("Failed in executing following KPI Query with status Not Ok.")
 		return []model.QueryResult{{}, {}}, finalStatusCode
 	}
 
-	for index, query := range kpiQueryGroup.Queries {
-		if query.Category == model.ProfileCategory && query.GroupByTimestamp == "" {
-			hashCode, err := query.GetQueryCacheHashString()
-			if err != nil {
-				log.WithField("reqID", reqID).WithField("kpiQueryGroup", kpiQueryGroup).WithField("query", query).Error("Failed while generating hashString for kpi 2.")
-				return []model.QueryResult{{}, {}}, http.StatusBadRequest
-			}
-			if resultsWithGbt, exists := hashMapOfQueryToResult[hashCode]; exists {
-				queryResults[index] = model.GetNonGBTResultsFromGBTResults(resultsWithGbt, query)[0]
-			} else {
-				log.WithField("kpiQueryGroup", kpiQueryGroup).WithField("queryResults", queryResults).Error("Query group doesnt contain all the gbt and non gbt pair of query.")
-				return []model.QueryResult{{}, {}}, http.StatusBadRequest
-			}
-		}
+	finalStatusCode, mapOfNonGBTDerivedKPIToInternalKPIToResults, mapOfNonGBTKPINormalQueryToResults = model.GetNonGBTResultsFromGBTResultsAndMaps(reqID, kpiQueryGroup,
+		mapOfNonGBTDerivedKPIToInternalKPIToResults, mapOfGBTDerivedKPIToInternalKPIToResults, mapOfNonGBTKPINormalQueryToResults, mapOfGBTKPINormalQueryToResults, externalQueryToInternalQueries)
+	if finalStatusCode != http.StatusOK {
+		return []model.QueryResult{{}, {}}, finalStatusCode
 	}
 
-	gbtRelatedQueryResults, nonGbtRelatedQueryResults, gbtRelatedQueries, nonGbtRelatedQueries := model.SplitQueryResultsIntoGBTAndNonGBT(queryResults, kpiQueryGroup, finalStatusCode)
+	finalResultantResults, finalStatusCode = model.GetFinalResultantResultsForKPI(reqID, kpiQueryGroup, mapOfNonGBTDerivedKPIToInternalKPIToResults, mapOfGBTDerivedKPIToInternalKPIToResults,
+		mapOfNonGBTKPINormalQueryToResults, mapOfGBTKPINormalQueryToResults, externalQueryToInternalQueries)
+	if finalStatusCode != http.StatusOK {
+		return []model.QueryResult{{}, {}}, finalStatusCode
+	}
+
+	gbtRelatedQueryResults, nonGbtRelatedQueryResults, gbtRelatedQueries, nonGbtRelatedQueries := model.SplitQueryResultsIntoGBTAndNonGBT(finalResultantResults, kpiQueryGroup, finalStatusCode)
 	finalQueryResult := make([]model.QueryResult, 0)
 	gbtRelatedMergedResults := model.MergeQueryResults(gbtRelatedQueryResults, gbtRelatedQueries, kpiTimezoneString, finalStatusCode, isTimezoneEnabled)
 	nonGbtRelatedMergedResults := model.MergeQueryResults(nonGbtRelatedQueryResults, nonGbtRelatedQueries, kpiTimezoneString, finalStatusCode, isTimezoneEnabled)
@@ -90,6 +61,110 @@ func (store *MemSQL) ExecuteKPIQueryGroup(projectID int64, reqID string, kpiQuer
 	return finalQueryResult, finalStatusCode
 }
 
+func (store *MemSQL) ExecuteKPIQueriesAndGetResultsAsMap(projectID int64, reqID string, kpiQueryGroup model.KPIQueryGroup,
+	enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool) (int, map[string]map[string][]model.QueryResult,
+	map[string]map[string][]model.QueryResult, map[string][]model.QueryResult, map[string][]model.QueryResult, map[string]model.KPIQueryGroup) {
+	finalStatusCode := http.StatusOK
+
+	mapOfGBTDerivedKPIToInternalKPIToResults := make(map[string]map[string][]model.QueryResult)
+	mapOfNonGBTDerivedKPIToInternalKPIToResults := make(map[string]map[string][]model.QueryResult)
+
+	mapOfGBTKPINormalQueryToResults := make(map[string][]model.QueryResult)
+	mapOfNonGBTKPINormalQueryToResults := make(map[string][]model.QueryResult)
+	externalQueryToInternalQueries := make(map[string]model.KPIQueryGroup)
+
+	for _, query := range kpiQueryGroup.Queries {
+		var result []model.QueryResult
+		var statusCode int
+		var errMsg string
+		internalKPIQuery := model.KPIQueryGroup{}
+		internalQueryToQueryResult := make(map[string][]model.QueryResult)
+
+		if query.QueryType == model.KpiDerivedQueryType {
+			var derivedKPIHashCode string
+			internalKPIQuery, internalQueryToQueryResult, statusCode, derivedKPIHashCode, errMsg = store.ExecuteDerivedKPIQuery(projectID, reqID, query, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
+			if statusCode != http.StatusOK {
+				finalStatusCode = statusCode
+				log.WithField("reqID", reqID).WithField("kpiQueryGroup", kpiQueryGroup).WithField("query", query).Error(errMsg)
+				break
+			} else {
+				if query.GroupByTimestamp == "" {
+					mapOfNonGBTDerivedKPIToInternalKPIToResults[derivedKPIHashCode] = internalQueryToQueryResult
+				} else {
+					mapOfGBTDerivedKPIToInternalKPIToResults[derivedKPIHashCode] = internalQueryToQueryResult
+				}
+
+				externalQueryToInternalQueries[derivedKPIHashCode] = internalKPIQuery
+			}
+		} else {
+			var hashCode string
+			result, statusCode, hashCode, errMsg = store.ExecuteNonDerivedQuery(projectID, reqID, query, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
+			if statusCode != http.StatusOK {
+				finalStatusCode = statusCode
+				log.WithField("reqID", reqID).WithField("kpiQueryGroup", kpiQueryGroup).WithField("query", query).WithField("result", result).Error(errMsg)
+				break
+			} else {
+				if query.GroupByTimestamp == "" {
+					mapOfNonGBTKPINormalQueryToResults[hashCode] = result
+				} else {
+					mapOfGBTKPINormalQueryToResults[hashCode] = result
+				}
+			}
+		}
+	}
+
+	return finalStatusCode, mapOfNonGBTDerivedKPIToInternalKPIToResults, mapOfGBTDerivedKPIToInternalKPIToResults, mapOfNonGBTKPINormalQueryToResults, mapOfGBTKPINormalQueryToResults, externalQueryToInternalQueries
+}
+
+func (store *MemSQL) ExecuteDerivedKPIQuery(projectID int64, reqID string, baseQuery model.KPIQuery,
+	enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool) (model.KPIQueryGroup, map[string][]model.QueryResult, int, string, string) {
+	internalKPIQueryGroup := model.KPIQueryGroup{}
+
+	queryResults := make([]model.QueryResult, 0)
+	mapOfInternalQueryToResult := make(map[string][]model.QueryResult)
+
+	derivedMetric, errMsg, statusCode := store.GetDerivedMetricsByName(projectID, baseQuery.Metrics[0])
+	if statusCode != http.StatusFound {
+		return internalKPIQueryGroup, mapOfInternalQueryToResult, statusCode, "", errMsg
+	}
+
+	err := U.DecodePostgresJsonbToStructType(derivedMetric.Transformations, &internalKPIQueryGroup)
+	if err != nil {
+		return internalKPIQueryGroup, mapOfInternalQueryToResult, http.StatusInternalServerError, "", "Failed during decode of derived kpi transformations."
+	}
+
+	for index, query := range internalKPIQueryGroup.Queries {
+		internalKPIQueryGroup.Queries[index].Filters = append(query.Filters, baseQuery.Filters...)
+		internalKPIQueryGroup.Queries[index].GroupBy = baseQuery.GroupBy
+		internalKPIQueryGroup.Queries[index].From = baseQuery.From
+		internalKPIQueryGroup.Queries[index].To = baseQuery.To
+		internalKPIQueryGroup.Queries[index].Timezone = baseQuery.Timezone
+		internalKPIQueryGroup.Queries[index].GroupByTimestamp = baseQuery.GroupByTimestamp
+	}
+
+	for _, query := range internalKPIQueryGroup.Queries {
+		var result []model.QueryResult
+		var hashCode string
+		result, statusCode, hashCode, errMsg = store.ExecuteNonDerivedQuery(projectID, reqID, query, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
+
+		mapOfInternalQueryToResult[hashCode] = result
+
+		queryResults = append(queryResults, result...)
+	}
+
+	baseQuery.GroupByTimestamp = ""
+	derivedQueryHashCode, err := baseQuery.GetQueryCacheHashString()
+	if err != nil {
+		return internalKPIQueryGroup, mapOfInternalQueryToResult, http.StatusInternalServerError, "", "Failed while generating hashString for kpi."
+	}
+
+	for index := range internalKPIQueryGroup.Queries {
+		internalKPIQueryGroup.Queries[index].GroupByTimestamp = ""
+	}
+
+	return internalKPIQueryGroup, mapOfInternalQueryToResult, http.StatusOK, derivedQueryHashCode, ""
+}
+
 func (store *MemSQL) ExecuteNonDerivedQuery(projectID int64, reqID string,
 	query model.KPIQuery, enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool) ([]model.QueryResult, int, string, string) {
 
@@ -98,16 +173,8 @@ func (store *MemSQL) ExecuteNonDerivedQuery(projectID int64, reqID string,
 	hashCode := ""
 	if query.Category == model.ProfileCategory {
 		if query.GroupByTimestamp != "" {
-			var err error
-			log.Info("---- profile query for pipeline ", query)
 			result, statusCode = store.ExecuteKPIQueryForProfiles(projectID, reqID,
 				query, enableOptimisedFilterOnProfileQuery)
-			log.Info("---- profile query pipeline result ", result)
-			query.GroupByTimestamp = ""
-			hashCode, err = query.GetQueryCacheHashString()
-			if err != nil {
-				return result, http.StatusInternalServerError, "", "Failed while generating hashString for kpi."
-			}
 		} else {
 			result = make([]model.QueryResult, 1)
 		}
@@ -116,121 +183,9 @@ func (store *MemSQL) ExecuteNonDerivedQuery(projectID int64, reqID string,
 	} else if query.Category == model.EventCategory {
 		result, statusCode = store.ExecuteKPIQueryForEvents(projectID, reqID, query, enableOptimisedFilterOnEventUserQuery)
 	}
+
+	query.GroupByTimestamp = ""
+	hashCode, _ = query.GetQueryCacheHashString()
+
 	return result, statusCode, hashCode, ""
-}
-
-func (store *MemSQL) ExecuteDerivedKPIQuery(projectID int64, reqID string, baseQuery model.KPIQuery,
-	enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool) ([]model.QueryResult, int, string) {
-	queryResults := make([]model.QueryResult, 0)
-	finalStatusCode := http.StatusOK
-	hashMapOfQueryToResult := make(map[string][]model.QueryResult)
-	mapOfFormulaVariableToQueryResult := make(map[string]model.QueryResult)
-
-	derivedMetric, errMsg, statusCode := store.GetDerivedMetricsByName(projectID, baseQuery.Metrics[0])
-	if statusCode != http.StatusFound {
-		return queryResults, statusCode, errMsg
-	}
-	kpiQueryGroup := model.KPIQueryGroup{}
-	err := U.DecodePostgresJsonbToStructType(derivedMetric.Transformations, &kpiQueryGroup)
-	if err != nil {
-		return queryResults, http.StatusInternalServerError, "Failed during decode of derived kpi transformations."
-	}
-	for index, query := range kpiQueryGroup.Queries {
-		kpiQueryGroup.Queries[index].Filters = append(query.Filters, baseQuery.Filters...)
-		kpiQueryGroup.Queries[index].GroupBy = baseQuery.GroupBy
-		kpiQueryGroup.Queries[index].From = baseQuery.From
-		kpiQueryGroup.Queries[index].To = baseQuery.To
-		kpiQueryGroup.Queries[index].Timezone = baseQuery.Timezone
-		kpiQueryGroup.Queries[index].GroupByTimestamp = baseQuery.GroupByTimestamp
-	}
-
-	for _, query := range kpiQueryGroup.Queries {
-		var result []model.QueryResult
-		var statusCode int
-		var hashCode string
-		result, statusCode, hashCode, errMsg = store.ExecuteNonDerivedQuery(projectID, reqID, query, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
-
-		if statusCode != http.StatusOK {
-			finalStatusCode = statusCode
-			break
-		} else {
-			if hashCode != "" {
-				hashMapOfQueryToResult[hashCode] = result
-			}
-		}
-
-		mapOfFormulaVariableToQueryResult[query.Name] = result[0]
-	}
-
-	if finalStatusCode != http.StatusOK {
-		return make([]model.QueryResult, 0), finalStatusCode, errMsg
-	} else {
-		result := EvaluateKPIExpressionWithBraces(mapOfFormulaVariableToQueryResult, kpiQueryGroup.Queries[0].Timezone, strings.ToLower(kpiQueryGroup.Formula))
-		queryResults = append(queryResults, result)
-		return queryResults, http.StatusOK, ""
-	}
-}
-
-func EvaluateKPIExpressionWithBraces(mapOfFormulaVariableToQueryResult map[string]model.QueryResult, timezone string, formula string) model.QueryResult {
-	valueStack := make([]model.QueryResult, 0)
-	operatorStack := make([]string, 0)
-
-	for _, currentVariable := range formula {
-		currentFormulaVariable := string(currentVariable)
-		if currentFormulaVariable == "(" {
-			operatorStack = append(operatorStack, currentFormulaVariable)
-		} else if strings.Contains(U.Alpha, strings.ToLower(currentFormulaVariable)) {
-			valueStack = append(valueStack, mapOfFormulaVariableToQueryResult[currentFormulaVariable])
-		} else if currentFormulaVariable == ")" {
-			for len(operatorStack) != 0 && operatorStack[len(operatorStack)-1] != "(" {
-				v1 := valueStack[len(valueStack)-1]
-				valueStack = valueStack[:len(valueStack)-1]
-				v2 := valueStack[len(valueStack)-1]
-				valueStack = valueStack[:len(valueStack)-1]
-				results := make([]*model.QueryResult, 0)
-				results = append(results, &v2)
-				results = append(results, &v1)
-				op := operatorStack[len(operatorStack)-1]
-				ops := make([]string, 0)
-				ops = append(ops, op)
-				operatorStack = operatorStack[:len(operatorStack)-1]
-				valueStack = append(valueStack, model.HandlingEventResultsByApplyingOperations(results, ops, timezone, true)) // apply operations and return result
-			}
-			if len(operatorStack) != 0 {
-				operatorStack = operatorStack[:len(operatorStack)-1]
-			}
-		} else {
-			for len(operatorStack) != 0 && U.Precedence(operatorStack[len(operatorStack)-1]) >= U.Precedence(currentFormulaVariable) {
-				v1 := valueStack[len(valueStack)-1]
-				valueStack = valueStack[:len(valueStack)-1]
-				v2 := valueStack[len(valueStack)-1]
-				results := make([]*model.QueryResult, 0)
-				results = append(results, &v2)
-				results = append(results, &v1)
-				valueStack = valueStack[:len(valueStack)-1]
-				op := operatorStack[len(operatorStack)-1]
-				ops := make([]string, 0)
-				ops = append(ops, op)
-				operatorStack = operatorStack[:len(operatorStack)-1]
-				valueStack = append(valueStack, model.HandlingEventResultsByApplyingOperations(results, ops, timezone, true)) // apply operations and return result
-			}
-			operatorStack = append(operatorStack, currentFormulaVariable)
-		}
-	}
-
-	for len(operatorStack) != 0 {
-		v1 := valueStack[len(valueStack)-1]
-		valueStack = valueStack[:len(valueStack)-1]
-		v2 := valueStack[len(valueStack)-1]
-		results := make([]*model.QueryResult, 0)
-		results = append(results, &v2)
-		results = append(results, &v1)
-		valueStack = valueStack[:len(valueStack)-1]
-		op := operatorStack[len(operatorStack)-1]
-		ops := make([]string, 0)
-		ops = append(ops, op)
-		operatorStack = operatorStack[:len(operatorStack)-1]
-		valueStack = append(valueStack, model.HandlingEventResultsByApplyingOperations(results, ops, timezone, true))
-	}
-	return valueStack[len(valueStack)-1]
 }

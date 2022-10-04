@@ -44,13 +44,30 @@ export const groups = {
 };
 
 export const hoverEvents = [
-  'Website Session',
-  'Page View',
-  'Form Button Click',
-  'Campaign Member Created',
-  'Campaign Member Updated',
-  'Offline Touchpoint',
+  '$session',
+  '$form_submitted',
+  '$offline_touch_point',
+  '$sf_campaign_member_created',
+  '$sf_campaign_member_updated',
+  '$hubspot_form_submission',
+  '$hubspot_engagement_email',
+  '$hubspot_engagement_meeting_created',
+  '$hubspot_engagement_meeting_updated',
+  '$hubspot_engagement_call_created',
+  '$hubspot_engagement_call_updated',
 ];
+
+export const TimelineHoverPropDisplayNames = {
+  $timestamp: 'Date and Time',
+  '$hubspot_form_submission_form-type': 'Form Type',
+  $hubspot_form_submission_title: 'Form Title',
+  '$hubspot_form_submission_form-id': 'Form ID',
+  '$hubspot_form_submission_conversion-id': 'Conversion ID',
+  $hubspot_form_submission_email: 'Email',
+  '$hubspot_form_submission_page-url-no-qp': 'Page URL',
+  '$hubspot_form_submission_page-title': 'Page Title',
+  $hubspot_form_submission_timestamp: 'Form Submit Timestamp',
+};
 
 export const getLoopLength = (allEvents) => {
   let maxLength = -1;

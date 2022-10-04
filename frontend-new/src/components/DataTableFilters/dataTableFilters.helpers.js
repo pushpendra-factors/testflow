@@ -73,21 +73,41 @@ export const getUpdatedFiltersOnCategoryDelete = ({
 
 export const getUpdatedFiltersOnValueChange = ({
   categoryIndex,
-  toggledOption,
-  currentFilters
+  value,
+  currentFilters,
+  categoryFieldType = 'categorical'
 }) => {
+  if (categoryFieldType === 'numerical' || categoryFieldType === 'percentage') {
+    return {
+      ...currentFilters,
+      categories: currentFilters.categories.map((category, index) => {
+        if (index !== categoryIndex) {
+          return category;
+        }
+        return {
+          ...category,
+          fieldType: categoryFieldType,
+          values:
+            categoryFieldType === 'percentage' && Number(value) > 100
+              ? 100
+              : value
+        };
+      })
+    };
+  }
   return {
     ...currentFilters,
     categories: currentFilters.categories.map((category, index) => {
       if (index !== categoryIndex) {
         return category;
       }
-      const isValuePresent = category.values.indexOf(toggledOption) > -1;
+      const isValuePresent = category.values.indexOf(value) > -1;
       return {
         ...category,
+        fieldType: categoryFieldType,
         values: isValuePresent
-          ? category.values.filter((v) => v !== toggledOption)
-          : [...category.values, toggledOption]
+          ? category.values.filter((v) => v !== value)
+          : [...category.values, value]
       };
     })
   };

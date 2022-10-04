@@ -34,6 +34,14 @@ export const ATTRIBUTION_METHODOLOGY = [
     value: 'U_Shaped'
   },
   {
+    text: 'W Shaped',
+    value: 'W_Shaped'
+  },
+  {
+    text: 'Influence',
+    value: 'Influence'
+  },
+  {
     text: 'Time Decay',
     value: 'Time_Decay'
   }
@@ -191,56 +199,64 @@ export const ATTRIBUTION_METRICS = [
   {
     title: 'Impressions',
     header: 'Impressions',
-    enabled: true
+    enabled: true,
+    valueType: 'numerical'
   },
   {
     title: 'Clicks',
     header: 'Clicks',
-    enabled: true
+    enabled: true,
+    valueType: 'numerical'
   },
   {
     title: 'Spend',
     header: 'Spend',
-    enabled: true
+    enabled: true,
+    valueType: 'numerical'
   },
   {
     title: 'CTR (%)',
     header: 'CTR(%)',
-    enabled: true
+    enabled: true,
+    valueType: 'percentage'
   },
   {
     title: 'Average CPC',
     header: 'Average CPC',
-    enabled: false
+    enabled: false,
+    valueType: 'numerical'
   },
   {
     title: 'CPM',
     header: 'CPM',
-    enabled: false
-  },
-  {
-    title: 'Conversion Value',
-    header: 'CV',
-    enabled: true,
-    isEventMetric: true
-  },
-  {
-    title: 'Return on Cost',
-    header: 'ROC',
-    enabled: true,
-    isEventMetric: true
+    enabled: false,
+    valueType: 'numerical'
   },
   {
     title: 'Click Conversion Rate (%)',
     header: 'ConversionRate(%) OR ClickConversionRate(%)',
-    enabled: false
+    enabled: false,
+    valueType: 'percentage'
   },
   {
-    title: 'All Cost/Conv',
-    header: 'ALL CPC',
+    title: 'Cost Per Conversion',
+    header: 'Cost Per Conversion',
     enabled: true,
-    isEventMetric: true
-  },
+    isEventMetric: true,
+    valueType: 'numerical'
+  }
+  // {
+  //   title: 'Conversion Value',
+  //   header: 'CV',
+  //   enabled: true,
+  //   isEventMetric: true
+  // },
+  // {
+  //   title: 'Return on Cost',
+  //   header: 'ROC',
+  //   enabled: true,
+  //   isEventMetric: true
+  // },
   // {
   //   title: 'All Conv Rate (%)',
   //   header: 'ALL CR',
@@ -454,23 +470,94 @@ export const PREDEFINED_DATES = {
 
 export const TimeZoneOffsetValueArr = [
   { abbr: 'GMT', name: 'GMT', offset: '+00:00', city: 'UTC' },
-  { abbr: 'IST', name: 'Indian Standard Time', offset: '+05:30', city: 'Asia/Kolkata' },
-  { abbr: 'PT', name: 'Pacific Time', offset: '−08:00', city: 'America/Vancouver' },
-  { abbr: 'CT', name: 'Central Time', offset: '−06:00', city: 'America/Costa_Rica' },
-  { abbr: 'ET', name: 'Eastern Time', offset: '−05:00', city: 'America/Chicago' },
-  { abbr: 'AEST', name: 'Australia Eastern Standard Time', offset: '+10:00', city: 'Australia/Sydney' },
-  { abbr: 'SGT', name: 'Singapore Time', offset: '+08:00', city: 'Asia/Singapore' },
-  { abbr: 'CEST', name: 'Central European Standard Time', offset: '+01:00', city: 'Europe/Dublin' },
-  { abbr: 'CEST', name: 'Central European Standard Time', offset: '+02:00', city: 'Europe/Budapest' },
-  { abbr: 'NZST', name: 'New Zealand Standard Time', offset: '+12:00', city: 'Pacific/Auckland' },
-  { abbr: 'KST', name: 'Korean Standard Time', offset: '+09:00', city: 'Asia/Seoul' },
-  { abbr: 'GST', name: 'Gulf Standard Time', offset: '+04:00', city: 'Asia/Dubai' },
-  { abbr: 'EET', name: 'Eastern European Standard Time', offset: '+02:00', city: 'Europe/Berlin' },
-  { abbr: 'EEST', name: 'Easter European Summer Time ', offset: '+03:00', city: 'Europe/Athens' },
-  { abbr: 'JST', name: 'Japan Standard Time', offset: '+09:00', city: 'Asia/Tokyo' },
+  {
+    abbr: 'IST',
+    name: 'Indian Standard Time',
+    offset: '+05:30',
+    city: 'Asia/Kolkata'
+  },
+  {
+    abbr: 'PT',
+    name: 'Pacific Time',
+    offset: '−08:00',
+    city: 'America/Vancouver'
+  },
+  {
+    abbr: 'CT',
+    name: 'Central Time',
+    offset: '−06:00',
+    city: 'America/Costa_Rica'
+  },
+  {
+    abbr: 'ET',
+    name: 'Eastern Time',
+    offset: '−05:00',
+    city: 'America/Chicago'
+  },
+  {
+    abbr: 'AEST',
+    name: 'Australia Eastern Standard Time',
+    offset: '+10:00',
+    city: 'Australia/Sydney'
+  },
+  {
+    abbr: 'SGT',
+    name: 'Singapore Time',
+    offset: '+08:00',
+    city: 'Asia/Singapore'
+  },
+  {
+    abbr: 'CEST',
+    name: 'Central European Standard Time',
+    offset: '+01:00',
+    city: 'Europe/Dublin'
+  },
+  {
+    abbr: 'CEST',
+    name: 'Central European Standard Time',
+    offset: '+02:00',
+    city: 'Europe/Budapest'
+  },
+  {
+    abbr: 'NZST',
+    name: 'New Zealand Standard Time',
+    offset: '+12:00',
+    city: 'Pacific/Auckland'
+  },
+  {
+    abbr: 'KST',
+    name: 'Korean Standard Time',
+    offset: '+09:00',
+    city: 'Asia/Seoul'
+  },
+  {
+    abbr: 'GST',
+    name: 'Gulf Standard Time',
+    offset: '+04:00',
+    city: 'Asia/Dubai'
+  },
+  {
+    abbr: 'EET',
+    name: 'Eastern European Standard Time',
+    offset: '+02:00',
+    city: 'Europe/Berlin'
+  },
+  {
+    abbr: 'EEST',
+    name: 'Easter European Summer Time ',
+    offset: '+03:00',
+    city: 'Europe/Athens'
+  },
+  {
+    abbr: 'JST',
+    name: 'Japan Standard Time',
+    offset: '+09:00',
+    city: 'Asia/Tokyo'
+  }
 ];
 
-export const getTimeZoneNameFromCity = (name) => TimeZoneOffsetValueArr.find(item => item?.city === name);
+export const getTimeZoneNameFromCity = (name) =>
+  TimeZoneOffsetValueArr.find((item) => item?.city === name);
 
 export const DATE_FORMATS = {
   quarter: 'Q-YYYY',
@@ -509,11 +596,17 @@ export const ReverseProfileMapper = {
 };
 
 export const profileOptions = {
-  users: [['Website Visitors'], ['Hubspot Contacts'], ['Salesforce Users'], ['Marketo'], ['LeadSquared']],
+  users: [
+    ['Website Visitors'],
+    ['Hubspot Contacts'],
+    ['Salesforce Users'],
+    ['Marketo'],
+    ['LeadSquared']
+  ],
   $salesforce_opportunity: [['All Opportunities']],
   $hubspot_deal: [['All Deals']],
   $salesforce_account: [['All Accounts']],
-  $hubspot_company: [['All Companies']],
+  $hubspot_company: [['All Companies']]
 };
 
 export const DISPLAY_PROP = { $none: '(Not Set)' };
@@ -546,12 +639,12 @@ export const AvailableGroups = {
   'Hubspot Companies': '$hubspot_company',
   'Hubspot Deals': '$hubspot_deal',
   'Salesforce Accounts': '$salesforce_account',
-  'Salesforce Opportunities': '$salesforce_opportunity',
+  'Salesforce Opportunities': '$salesforce_opportunity'
 };
 
 export const RevAvailableGroups = {
   $hubspot_company: 'Hubspot Companies',
   $hubspot_deal: 'Hubspot Deals',
   $salesforce_account: 'Salesforce Accounts',
-  $salesforce_opportunity: 'Salesforce Opportunities',
+  $salesforce_opportunity: 'Salesforce Opportunities'
 };

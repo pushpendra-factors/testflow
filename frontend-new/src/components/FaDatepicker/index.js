@@ -331,8 +331,7 @@ const FaDatepicker = ({
             <a target="_blank" onClick={() => returnPreSetDate('last_week')}>
               Last Week
             </a>
-          </Menu.Item>
-          <Menu.Divider />
+          </Menu.Item> 
           <Menu.Item key="this_week">
             <a target="_blank" onClick={() => returnPreSetDate('last_7days')}>
               Last 7 days
@@ -347,8 +346,7 @@ const FaDatepicker = ({
             <a target="_blank" onClick={() => returnPreSetDate('last_28days')}>
               Last 28 days
             </a>
-          </Menu.Item>
-          <Menu.Divider />
+          </Menu.Item> 
           <Menu.Item key="this_month">
             <a target="_blank" onClick={() => returnPreSetDate('this_month')}>
               This Month

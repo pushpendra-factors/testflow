@@ -17,6 +17,7 @@ import (
 	"factors/model/model"
 	"factors/model/store"
 
+	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -415,7 +416,7 @@ func enrichGroupAccount(projectID int64, document *model.SalesforceDocument, sal
 	var prevProperties *map[string]interface{}
 	for _, smartEventName := range salesforceSmartEventNames {
 		prevProperties = TrackSalesforceSmartEvent(projectID, &smartEventName, eventID, document.ID, groupAccountUserID, document.Type,
-			properties, prevProperties, lastModifiedTimestamp)
+			properties, prevProperties, lastModifiedTimestamp, false)
 	}
 
 	errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(projectID, document, eventID, "", groupAccountUserID, true)
@@ -429,9 +430,14 @@ func enrichGroupAccount(projectID int64, document *model.SalesforceDocument, sal
 
 // SalesforceSmartEventName struct for holding event_name and filter expression
 type SalesforceSmartEventName struct {
-	EventName string
-	Filter    *model.SmartCRMEventFilter
-	Type      string
+	EventName   string
+	EventNameID string
+	Filter      *model.SmartCRMEventFilter
+	Type        string
+}
+
+func GetTimestampFromField(propertyName string, properties *map[string]interface{}) (int64, error) {
+	return getTimestampFromField(propertyName, properties)
 }
 
 func getTimestampFromField(propertyName string, properties *map[string]interface{}) (int64, error) {
@@ -491,7 +497,7 @@ func enrichContact(projectID int64, document *model.SalesforceDocument, salesfor
 	var prevProperties *map[string]interface{}
 	for _, smartEventName := range salesforceSmartEventNames {
 		prevProperties = TrackSalesforceSmartEvent(projectID, &smartEventName, eventID, document.ID, userID, document.Type,
-			properties, prevProperties, lastModifiedTimestamp)
+			properties, prevProperties, lastModifiedTimestamp, false)
 	}
 
 	errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(projectID, document, eventID, userID, "", true)
@@ -589,7 +595,7 @@ func GetSalesforceSmartEventPayload(projectID int64, eventName, documentID, user
 
 // TrackSalesforceSmartEvent valids current properties with CRM smart filter and creates a event
 func TrackSalesforceSmartEvent(projectID int64, salesforceSmartEventName *SalesforceSmartEventName, eventID, documentID, userID string, docType int,
-	currentProperties, prevProperties *map[string]interface{}, lastModifiedTimestamp int64) *map[string]interface{} {
+	currentProperties, prevProperties *map[string]interface{}, lastModifiedTimestamp int64, isPast bool) *map[string]interface{} {
 	var valid bool
 	var smartEventPayload *model.CRMSmartEvent
 
@@ -638,6 +644,11 @@ func TrackSalesforceSmartEvent(projectID int64, salesforceSmartEventName *Salesf
 		}
 	}
 
+	if isPast {
+		createSmartEventWithEmptyUserProperties(projectID, userID, salesforceSmartEventName.EventNameID, smartEventPayload.Properties, smartEventTrackPayload.Timestamp, eventID)
+		return prevProperties
+	}
+
 	if !C.IsDryRunCRMSmartEvent() {
 		status, _ := SDK.Track(projectID, smartEventTrackPayload, true, SDK.SourceSalesforce, "")
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
@@ -650,6 +661,60 @@ func TrackSalesforceSmartEvent(projectID int64, salesforceSmartEventName *Salesf
 	}
 
 	return prevProperties
+}
+
+func createSmartEventWithEmptyUserProperties(projectID int64, userID, eventNameID string, eventProperties map[string]interface{}, eventTimestamp int64, referenceEvenID string) error {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "user_id": userID, "event_name_id": eventNameID, "smart_event_properties": eventProperties, "event_timestamp": eventTimestamp, "reference_event_id": referenceEvenID})
+
+	if projectID <= 0 || userID == "" || eventNameID == "" || len(eventProperties) <= 0 || eventTimestamp <= 0 || referenceEvenID == "" {
+		logCtx.Error("Invalid paramters on createSmartEventWithEmptyUserProperties.")
+		return errors.New("invalid parameter on createSmartEventWithEmptyUserProperties")
+	}
+
+	logCtx.Info("Running in past mode.")
+
+	exist, err := store.GetStore().IsSmartEventAlreadyExist(projectID, userID, eventNameID, referenceEvenID, eventTimestamp)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to validate existing smart event.")
+		return err
+	}
+	if exist {
+		logCtx.Info("Event already exist")
+		return nil
+	}
+
+	// set skip session = true
+	eventProperties[util.EP_SKIP_SESSION] = util.PROPERTY_VALUE_TRUE
+	propertiesJsonb, err := util.EncodeToPostgresJsonb(&eventProperties)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to encode properties to jsonb.")
+		return err
+	}
+
+	// Use create event to avoid user properties getting set
+	event := &model.Event{
+		EventNameId:    eventNameID,
+		ProjectId:      projectID,
+		UserId:         userID,
+		Properties:     *propertiesJsonb,
+		Timestamp:      eventTimestamp,
+		UserProperties: &postgres.Jsonb{[]byte(`{}`)},
+	}
+
+	logCtx.Info("Salesforce smart event.")
+
+	if !C.IsDryRunCRMSmartEvent() {
+
+		createdEvent, status := store.GetStore().CreateEvent(event)
+
+		if status != http.StatusOK && status != http.StatusCreated {
+			logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to create salesforce smart event")
+		} else {
+			logCtx.WithFields(log.Fields{"created_event": createdEvent}).Info("Created salesforce smart event.")
+		}
+	}
+
+	return nil
 }
 
 type OpportunityContactRoleRecord struct {
@@ -946,7 +1011,7 @@ func enrichGroupOpportunity(projectID int64, document *model.SalesforceDocument,
 	var prevProperties *map[string]interface{}
 	for _, smartEventName := range salesforceSmartEventNames {
 		prevProperties = TrackSalesforceSmartEvent(projectID, &smartEventName, eventID, document.ID, groupUserID,
-			document.Type, properties, prevProperties, lastModifiedTimestamp)
+			document.Type, properties, prevProperties, lastModifiedTimestamp, false)
 	}
 
 	errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(projectID, document, eventID, "", groupUserID, true)
@@ -1150,7 +1215,7 @@ func enrichLeads(projectID int64, document *model.SalesforceDocument, salesforce
 	var prevProperties *map[string]interface{}
 	for _, smartEventName := range salesforceSmartEventNames {
 		prevProperties = TrackSalesforceSmartEvent(projectID, &smartEventName, eventID, document.ID, userID, document.Type,
-			properties, prevProperties, lastModifiedTimestamp)
+			properties, prevProperties, lastModifiedTimestamp, false)
 	}
 
 	errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(projectID, document, eventID, userID, "", true)
@@ -1745,6 +1810,7 @@ func GetSalesforceSmartEventNames(projectID int64) *map[string][]SalesforceSmart
 		salesforceSmartEventName.EventName = eventNames[i].Name
 		salesforceSmartEventName.Filter = decFilterExp
 		salesforceSmartEventName.Type = model.TYPE_CRM_SALESFORCE
+		salesforceSmartEventName.EventNameID = eventNames[i].ID
 
 		if _, exists := salesforceSmartEventNames[decFilterExp.ObjectType]; !exists {
 			salesforceSmartEventNames[decFilterExp.ObjectType] = []SalesforceSmartEventName{}

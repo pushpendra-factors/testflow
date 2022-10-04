@@ -60,11 +60,12 @@ function FaTimeline({
                       {event ? (
                         <div className={`flex`}>
                           <InfoCard
-                            title={event.display_name}
+                            title={event?.alias_name || event.display_name}
                             event_name={event.event_name}
                             properties={event?.properties || {}}
                             trigger={
-                              hoverEvents.includes(event.display_name)
+                              hoverEvents.includes(event.event_name) ||
+                              event.display_name === 'Page View'
                                 ? 'hover'
                                 : []
                             }
@@ -75,7 +76,8 @@ function FaTimeline({
                                   ? event.event_name
                                   : event.display_name}
                               </span>
-                              {hoverEvents.includes(event.display_name) ? (
+                              {hoverEvents.includes(event.event_name) ||
+                              event.display_name === 'Page View' ? (
                                 <CaretRightOutlined />
                               ) : null}
                             </div>

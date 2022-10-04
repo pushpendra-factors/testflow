@@ -774,3 +774,56 @@ func SDKCaptureClickHandler(c *gin.Context) {
 	trackResponse.Message = "Tracked click as event."
 	c.JSON(trackStatus, trackResponse)
 }
+
+func SDKFormFillHandler(c *gin.Context) {
+	r := c.Request
+
+	logCtx := log.WithFields(log.Fields{
+		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
+	})
+
+	if r.Body == nil {
+		logCtx.Error("Invalid request. Request body unavailable.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, &model.CaptureFormFillResponse{
+			Error: "Form fill failed. Missing request body."})
+		return
+	}
+
+	var request model.SDKFormFillPayload
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&request); err != nil {
+		logCtx.WithError(err).Error("Form fill event failed. JSON Decoding failed.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, &model.CaptureFormFillResponse{
+			Error: "Form fill event failed. Invalid payload."})
+		return
+	}
+
+	projectToken := U.GetScopeByKeyAsString(c, mid.SCOPE_PROJECT_TOKEN)
+	if !SDK.IsValidTokenString(projectToken) {
+		logCtx.Error("Form fill event failed. Token invalid")
+		c.AbortWithStatusJSON(http.StatusUnauthorized, &model.CaptureFormFillResponse{Error: "Form fill event failed, Unauthorized."})
+		return
+
+	}
+	projectID, errCode := store.GetStore().GetProjectIDByToken(projectToken)
+	if errCode == http.StatusNotFound {
+		logCtx.WithField("token", projectToken).Warn("Invalid token on sdk payload.")
+		c.AbortWithStatusJSON(http.StatusUnauthorized, &model.CaptureFormFillResponse{Error: "Form fill event failed. Invalid Token."})
+		return
+	}
+	if errCode != http.StatusFound {
+		c.AbortWithStatusJSON(errCode, &model.CaptureFormFillResponse{Error: "Form fill event failed."})
+		return
+	}
+
+	var response *model.CaptureFormFillResponse
+
+	status, err := store.GetStore().CreateFormFillEventById(projectID, &request)
+	if err != nil {
+		response = &model.CaptureFormFillResponse{Error: err.Error()}
+	} else {
+		response = &model.CaptureFormFillResponse{Message: "Form fill event successful."}
+	}
+
+	c.JSON(status, response)
+}

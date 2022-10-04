@@ -921,8 +921,15 @@ func (store *MemSQL) runAttributionUnit(projectID int64, queryOriginal *model.At
 	}
 	QueryKey, _ := attributionQueryUnitPayload.GetQueryCacheRedisKey(projectID)
 	debugQueryKey := model.GetStringKeyFromCacheRedisKey(QueryKey)
-	r, err := store.ExecuteAttributionQuery(projectID, queryOriginal, debugQueryKey,
-		C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+	var r *model.QueryResult
+	var err error
+	if C.IsAttributionV1Whitelisted(projectID) {
+		r, err = store.ExecuteAttributionQueryV1(projectID, queryOriginal, debugQueryKey,
+			C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+	} else {
+		r, err = store.ExecuteAttributionQuery(projectID, queryOriginal, debugQueryKey,
+			C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+	}
 	result := Result{res: r, err: err, errMsg: "", lastComputedAt: U.TimeNowUnix()}
 	c <- result
 }

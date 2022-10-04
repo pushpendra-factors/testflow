@@ -14,6 +14,9 @@ export default function reducer(state = inititalState, action) {
     case 'FETCH_KPI_CONFIG_FULFILLED': {
       return { ...state, config: action.payload };
     }
+    case 'FETCH_KPI_CONFIG_WITHOUT_DERIVED_KPI_FULFILLED': {
+      return { ...state, config_without_derived_kpi: action.payload}
+    }
     case 'FETCH_CUSTOM_KPI_CONFIG_FULFILLED': {
       return { ...state, custom_kpi_config: action.payload };
     }
@@ -36,7 +39,7 @@ export default function reducer(state = inititalState, action) {
 export function fetchKPIConfig(projectID) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      get(dispatch, host + 'projects/' + projectID + '/v1/kpi/config')
+      get(dispatch, host + 'projects/' + projectID + '/v1/kpi/config?include_derived_kpis=true')
         .then((response) => {
           dispatch({
             type: 'FETCH_KPI_CONFIG_FULFILLED',
@@ -46,6 +49,25 @@ export function fetchKPIConfig(projectID) {
         })
         .catch((err) => {
           dispatch({ type: 'FETCH_TEMPLATE_CONFIG_REJECTED', payload: err });
+          reject(err);
+        });
+    });
+  };
+}
+
+export function fetchKPIConfigWithoutDerivedKPI(projectID) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      get(dispatch, host + 'projects/' + projectID + '/v1/kpi/config?include_derived_kpis=false')
+        .then((response) => {
+          dispatch({
+            type: 'FETCH_KPI_CONFIG_WITHOUT_DERIVED_KPI_FULFILLED',
+            payload: response.data,
+          });
+          resolve(response);
+        })
+        .catch((err) => {
+          dispatch({ type: 'FETCH_KPI_CONFIG_WITHOUT_DERIVED_KPI_REJECTED', payload: err });
           reject(err);
         });
     });

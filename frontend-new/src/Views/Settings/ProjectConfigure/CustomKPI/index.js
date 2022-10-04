@@ -21,7 +21,8 @@ import {
   fetchCustomKPIConfig,
   fetchSavedCustomKPI,
   addNewCustomKPI,
-  removeCustomKPI
+  removeCustomKPI,
+  fetchKPIConfigWithoutDerivedKPI
 } from 'Reducers/kpi';
 import GLobalFilter from './GLobalFilter';
 import { getUserProperties } from 'Reducers/coreQuery/middleware';
@@ -53,7 +54,8 @@ const CustomKPI = ({
   eventPropNames,
   userPropNames,
   removeCustomKPI,
-  currentAgent
+  currentAgent,
+  fetchKPIConfigWithoutDerivedKPI
 }) => {
   const [showForm, setShowForm] = useState(false);
   const [tableData, setTableData] = useState([]);
@@ -118,7 +120,7 @@ const matchEventName = (item) => {
     );
   };
 
-
+  const alphabetIndex = 'ABCDEFGHIJK';
 
 
   const columns = [
@@ -424,6 +426,7 @@ const matchEventName = (item) => {
     // if (!savedCustomKPI) {
     fetchSavedCustomKPI(activeProject.id);
     // }
+    fetchKPIConfigWithoutDerivedKPI(activeProject.id);
   }, [activeProject]); 
 
   useEffect(() => {
@@ -956,7 +959,7 @@ const matchEventName = (item) => {
                               // disabled={loading}
                               size='large'
                               // className={'fa-input w-full'}
-                              placeholder='Type your formula.  Eg A/B, A+B, A-B, A*B'
+                              placeholder='please type the formula. Eg A/B, A+B, A-B, A*B'
                               bordered={false}
                             />
                           </Form.Item>
@@ -1135,10 +1138,30 @@ const matchEventName = (item) => {
                       </Col>
                     </Row>
                     <div className={'mt-4 border rounded-lg'}>
-                    {viewKPIDetails?.transformations?.qG.map((item) => (
+                    {viewKPIDetails?.transformations?.qG.map((item, index) => (
                       <>
                       <div className={'py-2'}>
                       <Row className={'m-0 mt-1 ml-4'}>
+                          <Col>
+                            <div className={'flex items-center fa--query_block_section borderless no-padding mt-1'}>
+                              <div
+                                className={
+                                  'fa--query_block--add-event active flex justify-center items-center mr-2'
+                                }
+                                >
+                                <Text
+                                  disabled={true}
+                                  type={'title'}
+                                  level={7}
+                                  weight={'bold'}
+                                  color={'white'}
+                                  extraClass={'m-0'}
+                                  >
+                                  {alphabetIndex[index]}
+                                </Text>
+                              </div>
+                            </div>
+                          </Col>
                           <Col>
                               <Button
                               className={`mr-2`}
@@ -1246,5 +1269,6 @@ export default connect(mapStateToProps, {
   fetchSavedCustomKPI,
   addNewCustomKPI,
   removeCustomKPI,
+  fetchKPIConfigWithoutDerivedKPI
 
 })(CustomKPI);

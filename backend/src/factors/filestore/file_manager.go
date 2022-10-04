@@ -15,6 +15,7 @@ type FileManager interface {
 	GetProjectEventFileDir(projectId int64, startTimestamp int64, modelType string) string
 	GetModelEventInfoFilePathAndName(projectId int64, modelId uint64) (string, string)
 	GetModelEventsFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string)
+	GetModelMetricsFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string)
 	GetModelChannelFilePathAndName(channel string, projectId int64, startTimestamp int64, modelType string) (string, string)
 	GetModelUsersFilePathAndName(dateField string, projectId int64, startTimestamp int64, modelType string) (string, string)
 	GetModelEventsBucketingFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string)
@@ -27,8 +28,9 @@ type FileManager interface {
 	GetEventArchiveFilePathAndName(projectID int64, startTime, endTime int64) (string, string)
 	GetUsersArchiveFilePathAndName(projectID int64, startTime, endTime int64) (string, string)
 	ListFiles(path string) []string
-	GetInsightsWpiFilePathAndName(projectId int64, dateString string, queryId int64, k int) (string, string)
-	GetInsightsCpiFilePathAndName(projectId int64, dateString string, queryId int64, k int) (string, string)
+	GetWeeklyInsightsMailerModelDir(projectId int64, dateString string, queryId int64, k int) string
+	GetInsightsWpiFilePathAndName(projectId int64, dateString string, queryId int64, k int, mailerRun bool) (string, string)
+	GetInsightsCpiFilePathAndName(projectId int64, dateString string, queryId int64, k int, mailerRun bool) (string, string)
 	GetWeeklyInsightsModelDir(projectId int64, dateString string, queryId int64, k int) string
 	GetModelUserPropertiesCategoricalFilePathAndName(projectId int64, modelId uint64) (string, string)
 	GetModelEventPropertiesCategoricalFilePathAndName(projectId int64, modelId uint64) (string, string)
