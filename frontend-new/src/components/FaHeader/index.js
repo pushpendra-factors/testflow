@@ -20,6 +20,7 @@ function FaHeader(props) {
           onClick={onCollapse}
           className='fa-btn--custom mr-2 ml-4'
           type='text'
+          style={{marginRight:'16px'}}
         >
           <SVG name={'bars'} />
         </Button>
