@@ -2,6 +2,8 @@
     <head> 
         <title>factors.ai</title>
 
+        <script type="text/javascript" src="testCases.js" async="false"></script>
+
         <script type="text/javascript">
         
             window.factors = window.factors||(function(){
@@ -18,6 +20,9 @@
                     this.TOKEN = at;
                     this.INIT_PARAMS = op;
                     this.INIT_CALLBACK = ac;
+                    document.cookie = 'factorsai-test=test;';
+                    console.log("Init is called");
+                    console.log(document.cookie);
                 }
                 this.reset = function() {
                     addToQueue('reset', arguments);
