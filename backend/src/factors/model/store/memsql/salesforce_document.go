@@ -1037,3 +1037,36 @@ func (store *MemSQL) GetSalesforceDocumentBeginingTimestampByDocumentTypeForSync
 
 	return docMinTimestamp, overallMinTimestamp, http.StatusFound
 }
+
+func (store *MemSQL) GetSalesforceDocumentByType(projectID int64, docType int, from, to int64) ([]model.SalesforceDocument, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"doc_type":   docType,
+		"from":       from,
+		"to":         to,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+
+	if projectID <= 0 || docType <= 0 || from <= 0 || to <= 0 {
+		logCtx.Error("Invalid parameters")
+		return nil, http.StatusBadRequest
+	}
+
+	documents := []model.SalesforceDocument{}
+	db := C.GetServices().Db
+	err := db.Where("project_id = ? AND type = ? and timestamp BETWEEN ? AND ?", projectID, docType, from, to).
+		Order("timestamp,created_at").Find(&documents).Error
+	if err != nil {
+		logCtx.WithError(err).Error(
+			"Failed to GetSalesforceDocumentByType.")
+		return nil, http.StatusInternalServerError
+	}
+
+	if len(documents) == 0 {
+		return nil, http.StatusNotFound
+	}
+
+	return documents, http.StatusFound
+
+}

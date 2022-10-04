@@ -480,7 +480,7 @@ func enrichContactV1(projectID int64, document *model.SalesforceDocument, salesf
 	var prevProperties *map[string]interface{}
 	for _, smartEventName := range salesforceSmartEventNames {
 		prevProperties = TrackSalesforceSmartEvent(projectID, &smartEventName, eventID, document.ID, userID, document.Type,
-			properties, prevProperties, lastModifiedTimestamp)
+			properties, prevProperties, lastModifiedTimestamp, false)
 	}
 
 	errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(projectID, document, eventID, userID, "", true)
@@ -1129,7 +1129,7 @@ func enrichOpportunitiesV1(projectID int64, document *model.SalesforceDocument, 
 	var prevProperties *map[string]interface{}
 	for _, smartEventName := range salesforceSmartEventNames {
 		prevProperties = TrackSalesforceSmartEvent(projectID, &smartEventName, eventID, document.ID, userID,
-			document.Type, properties, prevProperties, lastModifiedTimestamp)
+			document.Type, properties, prevProperties, lastModifiedTimestamp, false)
 	}
 
 	errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(projectID, document, eventID, userID, "", true)
@@ -1225,7 +1225,7 @@ func enrichLeadsV1(projectID int64, document *model.SalesforceDocument, salesfor
 	var prevProperties *map[string]interface{}
 	for _, smartEventName := range salesforceSmartEventNames {
 		prevProperties = TrackSalesforceSmartEvent(projectID, &smartEventName, eventID, document.ID, userID, document.Type,
-			properties, prevProperties, lastModifiedTimestamp)
+			properties, prevProperties, lastModifiedTimestamp, false)
 	}
 
 	errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(projectID, document, eventID, userID, "", true)
