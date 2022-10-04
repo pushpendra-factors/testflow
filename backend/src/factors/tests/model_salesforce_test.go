@@ -890,7 +890,7 @@ func TestSalesforceSameUserSmartEvent(t *testing.T) {
 
 	eventID2 := U.RandomLowerAphaNumString(10)
 	IntSalesforce.TrackSalesforceSmartEvent(project.ID, salesforceSmartEventName, eventID2, contactID, userID1, currentSalesforceDocument.Type,
-		&currentProperties, nil, createdDate.AddDate(0, 0, 2).Unix())
+		&currentProperties, nil, createdDate.AddDate(0, 0, 2).Unix(), false)
 
 	query := model.Query{
 		From: createdDate.Unix(),
