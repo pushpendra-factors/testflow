@@ -18,9 +18,8 @@ function FaHeader(props) {
       <div className={'flex items-center'}>
         <Button
           onClick={onCollapse}
-          className='fa-btn--custom mr-2 ml-4'
+          className={'fa-btn--custom mr-2 ml-4 '+styles.header_hamburgerbtn}
           type='text'
-          style={{marginRight:'16px'}}
         >
           <SVG name={'bars'} />
         </Button>
