@@ -15,7 +15,8 @@ import {
   getTableData,
   getSingleTouchPointChartData,
   getDualTouchPointChartData,
-  getResultantMetrics
+  getResultantMetrics,
+  getTableFilterOptions
 } from './utils';
 
 import AttributionTable from './AttributionTable';
@@ -40,10 +41,6 @@ const nodata = (
     <NoDataChart />
   </div>
 );
-
-function onlyUnique(value, index, self) {
-  return self.indexOf(value) === index;
-}
 
 const AttributionsChart = forwardRef(
   (
@@ -249,7 +246,11 @@ const AttributionsChart = forwardRef(
 
     useEffect(() => {
       if (attribution_method_compare) {
-        if (tableData.length && visibleIndices.length) {
+        if (
+          (tableData.length && visibleIndices.length) ||
+          (tableData.length === 0 &&
+            get(appliedFilters, 'categories', []).length > 0)
+        ) {
           const chartData = getDualTouchPointChartData(
             tableData,
             visibleIndices,
@@ -264,7 +265,11 @@ const AttributionsChart = forwardRef(
         }
         return;
       }
-      if (tableData.length && visibleIndices.length) {
+      if (
+        (tableData.length && visibleIndices.length) ||
+        (tableData.length === 0 &&
+          get(appliedFilters, 'categories', []).length > 0)
+      ) {
         const chartData = getSingleTouchPointChartData(
           tableData,
           visibleIndices,
@@ -297,37 +302,42 @@ const AttributionsChart = forwardRef(
     ]);
 
     useEffect(() => {
-      if (tableData.length && !filters.length) {
-        const listDimensions =
-          touchpoint === 'LandingPage'
-            ? [...content_groups]
-            : [...attr_dimensions];
-        const enabledDimensions = listDimensions.filter(
-          (d) => d.touchPoint === touchpoint && d.enabled
-        );
-        if (enabledDimensions.length) {
-          const availableFilters = enabledDimensions.map((d) => {
-            return {
-              title: d.title,
-              key: d.title,
-              options: tableData.map((data) => data[d.title]).filter(onlyUnique)
-            };
-          });
-          setFilters(availableFilters);
-        } else {
-          const availableFilters = [
-            {
-              title: touchpoint === 'ChannelGroup' ? 'Channel' : touchpoint,
-              key: touchpoint,
-              options: tableData
-                .map((data) => data[touchpoint])
-                .filter(onlyUnique)
-            }
-          ];
-          setFilters(availableFilters);
-        }
+      const metricsNotPresentInFilters =
+        touchpoint !== 'LandingPage'
+          ? attributionMetrics
+              .filter((m) => m.enabled)
+              .filter((m) => filters.findIndex((f) => f.key === m.title) === -1)
+          : [];
+      const metricsNotEnabledButPresentInFilters =
+        touchpoint !== 'LandingPage'
+          ? attributionMetrics
+              .filter((m) => !m.enabled)
+              .filter((m) => filters.findIndex((f) => f.key === m.title) > -1)
+          : [];
+
+      if (
+        tableData.length &&
+        (!filters.length ||
+          metricsNotPresentInFilters.length > 0 ||
+          metricsNotEnabledButPresentInFilters.length > 0)
+      ) {
+        const tableFilterOptions = getTableFilterOptions({
+          content_groups,
+          attr_dimensions,
+          touchpoint,
+          tableData,
+          attributionMetrics
+        });
+        setFilters(tableFilterOptions);
       }
-    }, [content_groups, attr_dimensions, touchpoint, tableData, filters]);
+    }, [
+      content_groups,
+      attr_dimensions,
+      touchpoint,
+      tableData,
+      attributionMetrics,
+      filters
+    ]);
 
     let chart = null;
 
@@ -350,41 +360,51 @@ const AttributionsChart = forwardRef(
 
     if (attribution_method_compare) {
       if (!dualTouchpointChartData.length) {
-        return nodata;
-      }
-      if (chartType === CHART_TYPE_BARCHART) {
-        chart = (
-          <DualTouchPointChart
-            attribution_method={attribution_method}
-            attribution_method_compare={attribution_method_compare}
-            currMetricsValue={currMetricsValue}
-            chartsData={dualTouchpointChartData}
-            visibleIndices={visibleIndices}
-            event={event}
-            data={tableData}
-            chartType={chartType}
-          />
-        );
+        if (get(appliedFilters, 'categories', []).length > 0) {
+          chart = null;
+        } else {
+          return nodata;
+        }
       } else {
-        chart = scatterPlotChart;
+        if (chartType === CHART_TYPE_BARCHART) {
+          chart = (
+            <DualTouchPointChart
+              attribution_method={attribution_method}
+              attribution_method_compare={attribution_method_compare}
+              currMetricsValue={currMetricsValue}
+              chartsData={dualTouchpointChartData}
+              visibleIndices={visibleIndices}
+              event={event}
+              data={tableData}
+              chartType={chartType}
+            />
+          );
+        } else {
+          chart = scatterPlotChart;
+        }
       }
     } else {
       if (!aggregateData.categories.length) {
-        return nodata;
-      }
-      if (chartType === CHART_TYPE_BARCHART) {
-        chart = (
-          <SingleTouchPointChart
-            aggregateData={aggregateData}
-            durationObj={durationObj}
-            comparison_duration={comparison_duration}
-            comparison_data={comparison_data}
-            attribution_method={attribution_method}
-            chartType={chartType}
-          />
-        );
+        if (get(appliedFilters, 'categories', []).length > 0) {
+          chart = null;
+        } else {
+          return nodata;
+        }
       } else {
-        chart = scatterPlotChart;
+        if (chartType === CHART_TYPE_BARCHART) {
+          chart = (
+            <SingleTouchPointChart
+              aggregateData={aggregateData}
+              durationObj={durationObj}
+              comparison_duration={comparison_duration}
+              comparison_data={comparison_data}
+              attribution_method={attribution_method}
+              chartType={chartType}
+            />
+          );
+        } else {
+          chart = scatterPlotChart;
+        }
       }
     }
 

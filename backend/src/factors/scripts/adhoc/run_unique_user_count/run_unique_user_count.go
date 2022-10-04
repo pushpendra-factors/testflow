@@ -115,7 +115,7 @@ func main() {
 		AttributionMethodology: *attributionMethod,
 	}
 	var debugQueryKey string
-	result, err := store.GetStore().ExecuteAttributionQuery(*projectIdFlag, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery())
+	result, err := store.GetStore().ExecuteAttributionQueryV1(int64(*projectIdFlag), query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnProfileQuery())
 	if err != nil {
 		log.Error("Failed to execute query")
 	}
