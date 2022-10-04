@@ -196,6 +196,32 @@ func (store *MemSQL) PullConvertedUsers(projectID int64, query *model.Attributio
 			usersIDsToAttribute = append(usersIDsToAttribute, id)
 		}
 		logCtx.WithFields(log.Fields{"UniqueUsers": len(usersIDsToAttribute)}).Info("Total users for the attribution query")
+	} else if query.AnalyzeType == model.AnalyzeTypeUserKPI {
+
+		var err error
+		queryStartTime := time.Now().UTC().Unix()
+		kpiData, err = store.ExecuteUserKPIForAttribution(projectID, query, debugQueryKey,
+			*logCtx, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
+		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("UserKPI query execution took time")
+		if err != nil {
+			return nil, nil, nil, nil, err
+		}
+
+		if C.GetAttributionDebug() == 1 {
+			log.WithFields(log.Fields{"UserKPIAttribution": "Debug", "kpiData": kpiData}).Info("UserKPI Attribution kpiData")
+		}
+
+		_uniqueUsers := make(map[string]int)
+		// Get user IDs for Revenue Attribution
+		for _, data := range kpiData {
+			for _, userID := range data.KpiUserIds {
+				_uniqueUsers[userID] = 1
+			}
+		}
+
+		for id, _ := range _uniqueUsers {
+			usersIDsToAttribute = append(usersIDsToAttribute, id)
+		}
 	} else {
 		// This thread is for query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities.
 		var err error
