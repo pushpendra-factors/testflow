@@ -86,6 +86,7 @@ export const getUpdatedFiltersOnValueChange = ({
         }
         return {
           ...category,
+          fieldType: categoryFieldType,
           values:
             categoryFieldType === 'percentage' && Number(value) > 100
               ? 100
@@ -103,6 +104,7 @@ export const getUpdatedFiltersOnValueChange = ({
       const isValuePresent = category.values.indexOf(value) > -1;
       return {
         ...category,
+        fieldType: categoryFieldType,
         values: isValuePresent
           ? category.values.filter((v) => v !== value)
           : [...category.values, value]

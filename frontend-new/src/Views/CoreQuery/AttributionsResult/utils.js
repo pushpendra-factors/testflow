@@ -853,6 +853,12 @@ const applyAdvancedFilters = (
     const key = currentFilter.field;
     const fieldValue = d[key];
     if (currentFilter.equalityOperator === EQUALITY_OPERATOR_KEYS.NOT_EQUAL) {
+      if (
+        currentFilter.fieldType === 'numerical' ||
+        currentFilter.fieldType === 'percentage'
+      ) {
+        return Number(currentFilter.values) !== Number(fieldValue);
+      }
       return currentFilter.values.indexOf(fieldValue) === -1;
     }
     if (
@@ -880,6 +886,12 @@ const applyAdvancedFilters = (
         return fieldValue.toLowerCase().includes(value.toLowerCase());
       });
       return doesExist.length > 0;
+    }
+    if (
+      currentFilter.fieldType === 'numerical' ||
+      currentFilter.fieldType === 'percentage'
+    ) {
+      return Number(currentFilter.values) === Number(fieldValue);
     }
     return currentFilter.values.indexOf(fieldValue) > -1;
   });
@@ -1310,7 +1322,7 @@ export const getTableFilterOptions = ({
     (m) => m.header === 'Cost Per Conversion'
   ).enabled;
 
-  if (isCostPerConversionEnabled) {
+  if (isCostPerConversionEnabled && touchpoint !== 'LandingPage') {
     eventBasedMetrics.push({
       title: 'Cost Per Conversion',
       key: 'Cost Per Conversion',
