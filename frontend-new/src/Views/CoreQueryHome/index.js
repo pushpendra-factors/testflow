@@ -157,8 +157,8 @@ const columns = [
     render: (created_by_user) => {
       return (
         <div className="flex items-center">
-          <Avatar src={created_by_user.image} size={24} className={'mr-2'} />
-          &nbsp; {created_by_user.text}
+          <Avatar src={ (!!(created_by_user?.image)) ? (created_by_user?.image) : ('assets/avatar/avatar.png') } size={24} className={'mr-2'} />
+          &nbsp; {created_by_user?.text}
         </div>
       )
     }
@@ -195,6 +195,7 @@ function CoreQuery({
   
   let activeProjectProfilePicture = useSelector((state)=>state.global.active_project.profile_picture)
   
+  console.log("ISPUSH", activeProjectProfilePicture)
   const queriesState = useSelector((state) => state.queries);
   const [deleteModal, showDeleteModal] = useState(false);
   const [activeRow, setActiveRow] = useState(null);
