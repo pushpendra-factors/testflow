@@ -534,8 +534,9 @@ const getEventsWithPropertiesKPI = (filters, category) => {
     if (filtersGr.length === 1) {
       const fil = filtersGr[0];
       if (Array.isArray(fil.values)) {
-        fil.values.forEach((val, index) => {
+        fil.values.forEach((val, index) => { 
           filterProps.push({
+            extra:fil?.extra ? fil?.extra : null,
             prNa: fil?.extra ? fil?.extra[1] : `$${lowerCase(fil?.props[0])}`,
             prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
             co: operatorMap[fil.operator],
@@ -557,6 +558,7 @@ const getEventsWithPropertiesKPI = (filters, category) => {
         });
       } else {
         filterProps.push({
+          extra:fil?.extra ? fil?.extra : null,
           prNa: fil?.extra ? fil?.extra[1] : `$${lowerCase(fil?.props[0])}`,
           prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
           co: operatorMap[fil.operator],
@@ -584,6 +586,7 @@ const getEventsWithPropertiesKPI = (filters, category) => {
       if (Array.isArray(fil.values)) {
         fil.values.forEach((val, index) => {
           filterProps.push({
+            extra:fil?.extra ? fil?.extra : null,
             prNa: fil?.extra ? fil?.extra[1] : `$${lowerCase(fil?.props[0])}`,
             prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
             co: operatorMap[fil.operator],
@@ -605,6 +608,7 @@ const getEventsWithPropertiesKPI = (filters, category) => {
         });
       } else {
         filterProps.push({
+          extra:fil?.extra ? fil?.extra : null,
           prNa: fil?.extra ? fil?.extra[1] : `$${lowerCase(fil?.props[0])}`,
           prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
           co: operatorMap[fil.operator],
@@ -631,6 +635,7 @@ const getEventsWithPropertiesKPI = (filters, category) => {
       if (Array.isArray(fil.values)) {
         fil.values.forEach((val) => {
           filterProps.push({
+            extra:fil?.extra ? fil?.extra : null,
             prNa: fil?.extra ? fil?.extra[1] : `$${lowerCase(fil?.props[0])}`,
             prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
             co: operatorMap[fil.operator],
@@ -652,6 +657,7 @@ const getEventsWithPropertiesKPI = (filters, category) => {
         });
       } else {
         filterProps.push({
+          extra:fil?.extra ? fil?.extra : null,
           prNa: fil?.extra ? fil?.extra[1] : `$${lowerCase(fil?.props[0])}`,
           prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
           co: operatorMap[fil.operator],
@@ -1964,6 +1970,7 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
     let ref = -1,
       lastProp = '',
       lastOp = '';
+      console.log('induvidual fil-->>',fil)
     fil.forEach((pr) => {
       if (pr.lOp === 'AND') {
         ref += 1;
@@ -2035,6 +2042,7 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
     lastProp = '',
     lastOp = '';
   requestQuery.gFil.forEach((pr) => {
+    console.log('requestQuery-->>',pr)
     if (pr.lOp === 'AND') {
       ref += 1;
       const val = pr.prDaTy === FILTER_TYPES.CATEGORICAL ? [pr.va] : pr.va;
