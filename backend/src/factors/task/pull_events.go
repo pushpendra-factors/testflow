@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"factors/filestore"
-	"factors/model/model"
 	M "factors/model/model"
 	"factors/model/store"
 	P "factors/pattern"
@@ -812,8 +811,8 @@ func PullUsersDataForCustomMetrics(projectId int64, cloudManager *filestore.File
 		for _, group := range groups {
 			groupsMap[group.Name] = group.ID
 		}
-		if _, ok := groupsMap[model.USERS]; !ok {
-			groupsMap[model.USERS] = 0
+		if _, ok := groupsMap[M.USERS]; !ok {
+			groupsMap[M.USERS] = 0
 		}
 	}
 
@@ -827,7 +826,7 @@ func PullUsersDataForCustomMetrics(projectId int64, cloudManager *filestore.File
 			return fmt.Errorf("%s", errStr), false
 		}
 		for _, customMetric := range customMetrics {
-			var customMetricTransformation model.CustomMetricTransformation
+			var customMetricTransformation M.CustomMetricTransformation
 			err := U.DecodePostgresJsonbToStructType(customMetric.Transformations, &customMetricTransformation)
 			if err != nil {
 				status["users-error"] = "Error during decode of custom metrics transformations"

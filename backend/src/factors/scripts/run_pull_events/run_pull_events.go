@@ -197,7 +197,7 @@ func main() {
 	}
 
 	projectIdsArray := make([]int64, 0)
-	for projectId, _ := range projectIdsToRun {
+	for projectId := range projectIdsToRun {
 		projectIdsArray = append(projectIdsArray, projectId)
 	}
 	// Init cloud manager.

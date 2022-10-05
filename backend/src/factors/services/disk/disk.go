@@ -43,9 +43,9 @@ func (dd *DiskDriver) Create(path, fileName string, reader io.Reader) error {
 		return err
 	}
 
-	if !strings.HasSuffix(path, "/") {
+	if !strings.HasSuffix(path, separator) {
 		// Append / to the end if not present.
-		path = path + "/"
+		path = path + separator
 	}
 	file, err := os.Create(path + fileName)
 	if err != nil {
@@ -64,9 +64,9 @@ func (dd *DiskDriver) Get(path, fileName string) (io.ReadCloser, error) {
 		"FileName": fileName,
 	}).Debug("DiskDriver Opening file")
 
-	if !strings.HasSuffix(path, "/") {
+	if !strings.HasSuffix(path, separator) {
 		// Append / to the end if not present.
-		path = path + "/"
+		path = path + separator
 	}
 	file, err := os.OpenFile(path+fileName, os.O_RDONLY, 0444)
 	return file, err
@@ -77,9 +77,9 @@ func (dd *DiskDriver) GetBucketName() string {
 }
 
 func (dd *DiskDriver) GetObjectSize(path, fileName string) (int64, error) {
-	if !strings.HasSuffix(path, "/") {
+	if !strings.HasSuffix(path, separator) {
 		// Append / to the end if not present.
-		path = path + "/"
+		path = path + separator
 	}
 	var objInfo os.FileInfo
 	var err error

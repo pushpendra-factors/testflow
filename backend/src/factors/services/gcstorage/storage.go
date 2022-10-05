@@ -41,25 +41,31 @@ func New(bucketName string) (*GCSDriver, error) {
 
 func (gcsd *GCSDriver) Create(dir, fileName string, reader io.Reader) error {
 	ctx := context.Background()
-	if !strings.HasSuffix(dir, "/") {
+	if !strings.HasSuffix(dir, separator) {
 		// Append / to the end if not present.
-		dir = dir + "/"
+		dir = dir + separator
 	}
 	obj := gcsd.client.Bucket(gcsd.BucketName).Object(dir + fileName)
-	w := obj.NewWriter(ctx)
-	if _, err := io.Copy(w, reader); err != nil {
+
+	writer := struct {
+		ReadFrom int // to "disable" ReadFrom method
+		*storage.Writer
+	}{0, obj.NewWriter(ctx)}
+
+	buf := make([]byte, 32*1024)
+	if _, err := io.CopyBuffer(writer, reader, buf); err != nil {
 		return err
 	}
 
-	err := w.Close()
+	err := writer.Close()
 	return err
 }
 
 func (gcsd *GCSDriver) Get(dir, fileName string) (io.ReadCloser, error) {
 	ctx := context.Background()
-	if !strings.HasSuffix(dir, "/") {
+	if !strings.HasSuffix(dir, separator) {
 		// Append / to the end if not present.
-		dir = dir + "/"
+		dir = dir + separator
 	}
 	obj := gcsd.client.Bucket(gcsd.BucketName).Object(dir + fileName)
 	rc, err := obj.NewReader(ctx)
@@ -69,9 +75,9 @@ func (gcsd *GCSDriver) Get(dir, fileName string) (io.ReadCloser, error) {
 
 func (gcsd *GCSDriver) GetObjectSize(dir, fileName string) (int64, error) {
 	ctx := context.Background()
-	if !strings.HasSuffix(dir, "/") {
+	if !strings.HasSuffix(dir, separator) {
 		// Append / to the end if not present.
-		dir = dir + "/"
+		dir = dir + separator
 	}
 	var objSize int64
 	obj := gcsd.client.Bucket(gcsd.BucketName).Object(dir + fileName)
@@ -196,8 +202,8 @@ func (gcsd *GCSDriver) GetUsersArchiveFilePathAndName(projectID int64, startTime
 // Must not have leading '/' and should have trailing '/' in prefix. Ex: archive/3/.
 func (gcsd *GCSDriver) ListFiles(prefix string) []string {
 	var files []string
-	if !strings.HasSuffix(prefix, "/") {
-		prefix = prefix + "/"
+	if !strings.HasSuffix(prefix, separator) {
+		prefix = prefix + separator
 	}
 
 	ctx := context.Background()
@@ -210,7 +216,7 @@ func (gcsd *GCSDriver) ListFiles(prefix string) []string {
 		} else if err != nil {
 			log.WithError(err).Errorf("Failed to list file. Attributes: %v\n", attributes)
 			continue
-		} else if attributes.Name == prefix || attributes.Name == (prefix+"/") {
+		} else if attributes.Name == prefix || attributes.Name == (prefix+separator) {
 			// Omit the base prefix if returned as one the objects.
 			continue
 		}
