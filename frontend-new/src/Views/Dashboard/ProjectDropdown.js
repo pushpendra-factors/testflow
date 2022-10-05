@@ -199,7 +199,6 @@ function ProjectDropdown({
             iconColor="#3E516C"
             optionClick={handleOptChange}
             onClickOutside={() => setSelectVisible(false)}
-            style={{padding:0}}
             additionalActions={
               <>
               <Divider className={styles.divider_newdashboard_btn} />
