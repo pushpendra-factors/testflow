@@ -44,7 +44,8 @@ type TrackPayload struct {
 	UserAgent       string          `json:"user_agent"`
 	SmartEventType  string          `json:"smart_event"`
 	// source of the user record (1 = WEB, 2 = HUBSPOT, 3 = SALESFORCE)
-	RequestSource int `json:"request_source"`
+	RequestSource int  `json:"request_source"`
+	IsPast        bool `json:"is_past"`
 }
 
 type TrackResponse struct {
@@ -777,6 +778,16 @@ func Track(projectId int64, request *TrackPayload,
 		return http.StatusBadRequest, &TrackResponse{Error: "Tracking failed. Invalid properties."}
 	}
 	event.Properties = postgres.Jsonb{RawMessage: eventPropsJSON}
+
+	if C.PastEventEnrichmentEnabled(projectId) && U.IsCRM(source) && request.IsPast {
+		event.IsFromPast = true
+
+		userProperties, err := U.EncodeToPostgresJsonb((*map[string]interface{})(&request.UserProperties))
+		if err != nil {
+			userProperties = &postgres.Jsonb{}
+		}
+		event.UserProperties = userProperties
+	}
 
 	createdEvent, errCode := store.GetStore().CreateEvent(event)
 	if errCode == http.StatusNotAcceptable {

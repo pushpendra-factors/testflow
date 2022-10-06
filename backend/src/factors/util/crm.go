@@ -23,6 +23,13 @@ var CRMUserPropertiesOverwritePrefixes = map[string]string{
 	CRM_SOURCE_NAME_LEADSQUARED: LEADSQUARED_PROPERTY_PREFIX,
 }
 
+var SourceCRM = map[string]int{
+	CRM_SOURCE_NAME_HUBSPOT:     1,
+	CRM_SOURCE_NAME_SALESFORCE:  2,
+	CRM_SOURCE_NAME_MARKETO:     3,
+	CRM_SOURCE_NAME_LEADSQUARED: 4,
+}
+
 func IsCRMPropertyKeyBySource(source, key string) bool {
 	prefix := CRMUserPropertiesOverwritePrefixes[source]
 	if prefix == "" {
@@ -39,5 +46,14 @@ func IsCRMPropertyKey(key string) bool {
 		}
 	}
 
+	return false
+}
+
+func IsCRM(source string) bool {
+	for crmSource, _ := range SourceCRM {
+		if crmSource == source {
+			return true
+		}
+	}
 	return false
 }

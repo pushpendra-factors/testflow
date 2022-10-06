@@ -96,6 +96,8 @@ func getHubspotDocumentId(document *model.HubspotDocument) (string, error) {
 		idKey = "formId"
 	case model.HubspotDocumentTypeEngagement:
 		idKey = "id"
+	case model.HubspotDocumentTypeContactList:
+		idKey = "listId"
 	default:
 		idKey = "guid"
 	}
@@ -1177,6 +1179,50 @@ func (store *MemSQL) GetHubspotDocumentBeginingTimestampByDocumentTypeForSync(pr
 	}
 
 	return *minTimestamp, http.StatusFound
+}
+
+// GetMinTimestampByFirstSync() returns the minimum timestamp of first sync in hubspot documents
+func (store *MemSQL) GetMinTimestampByFirstSync(projectID int64, docType int) (int64, int) {
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &log.Fields{"project_id": projectID})
+
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "doc_type": docType})
+
+	if projectID == 0 || docType == 0 {
+		logCtx.Error("Invalid parameters.")
+		return 0, http.StatusBadRequest
+	}
+
+	db := C.GetServices().Db
+	rows, err := db.Raw("SELECT MIN(updated_documents.timestamp) as timestamp"+
+		" "+"FROM hubspot_documents as created_documents"+
+		" "+"LEFT JOIN hubspot_documents as updated_documents ON created_documents.id = updated_documents.id"+
+		" "+"and created_documents.project_id = ? and updated_documents.project_id = ?"+
+		" "+"and created_documents.type = ? and updated_documents.type = ?"+
+		" "+"and created_documents.action = 1 and updated_documents.action = 2"+
+		" "+"WHERE created_documents.timestamp != updated_documents.timestamp AND created_documents.synced=true", projectID, projectID, docType, docType).Rows() // only updated documents, ignoring create document=update document for duplicates
+	if err != nil {
+		log.WithError(err).Error("Failed to get hubspot minimum timestamp for updated documents.")
+		return 0, http.StatusInternalServerError
+	}
+
+	var minTimestamp *int64
+	defer rows.Close()
+	for rows.Next() {
+		if err := rows.Scan(&minTimestamp); err != nil {
+			log.WithError(err).Error("Failed scanning rows on get hubspot minimum timestamp for sync.")
+		}
+	}
+
+	if minTimestamp == nil {
+		log.Info("Failed to get hubspot minimum timestamp for sync.")
+		return time.Now().AddDate(0, 0, -1).UnixNano() / int64(time.Millisecond), http.StatusNotFound
+	}
+
+	if *minTimestamp > 0 {
+		return *minTimestamp, http.StatusFound
+	}
+
+	return time.Now().AddDate(0, 0, -1).UnixNano() / int64(time.Millisecond), http.StatusNotFound
 }
 
 // GetHubspotDocumentCountForSync returns count for records for each project

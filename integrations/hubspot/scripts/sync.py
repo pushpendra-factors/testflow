@@ -35,10 +35,11 @@ parser.add_option("--buffer_size_by_api_count", dest="buffer_size_by_api_count",
 parser.add_option("--enable_buffer_before_insert_by_project_id", dest="enable_buffer_before_insert_by_project_id", help="Enable buffer before inserting by project id", default="")
 parser.add_option("--hubspot_app_id", dest="hubspot_app_id", help="App id for hubspot access token", default="")
 parser.add_option("--hubspot_app_secret", dest="hubspot_app_secret", help="App secret for hubspot access token", default="")
+parser.add_option("--enable_contact_list_sync_by_project_id", dest="enable_contact_list_sync_by_project_id", help="", default="")
 
 APP_NAME = "hubspot_sync"
 PAGE_SIZE = 100
-DOC_TYPES = [ "contact", "company", "deal", "form", "form_submission" ]
+DOC_TYPES = [ "contact", "company", "deal", "form", "form_submission", "contact_list" ]
 
 METRIC_TYPE_INCR = "incr"
 HEALTHCHECK_PING_ID = "87137001-b18b-474c-8bc5-63324baff2a8"
@@ -523,7 +524,7 @@ def sync_contacts(project_id, refresh_token, api_key, last_sync_timestamp, sync_
         response_dict = {}
         unmodified_response_dict={}
         if err_url_too_long == False:
-            r = hubspot_request_handler(project_id,get_url_with_properties)
+            r = hubspot_request_handler(project_id, get_url_with_properties)
             if not r.ok:
                 if r.status_code == 414:
                     log.error("Failure response %d from hubspot on sync_contacts, using fallback logic", r.status_code)
@@ -573,6 +574,114 @@ def sync_contacts(project_id, refresh_token, api_key, last_sync_timestamp, sync_
     
     create_all_contact_documents_with_buffer([],False) ## flush any remainig docs in memory
     return contact_api_calls, max_timestamp
+
+def sync_contacts_from_contact_lists(project_id, refresh_token, api_key, list_id, sync_all=False):
+    if sync_all:
+        # init sync all contacts.
+        url = "https://api.hubapi.com/contacts/v1/lists/"+str(list_id)+"/contacts/all?"
+        log.warning("Downloading all contacts for list_id : " + str(list_id) + "from project_id : "+ str(project_id) + ".")
+    else:
+        # sync recently updated and created contacts.
+        url = "https://api.hubapi.com/contacts/v1/lists/"+str(list_id)+"/contacts/recent?"
+        log.warning("Downloading recently created contacts for list_id : " + str(list_id) + "from project_id : "+ str(project_id) + ".")
+
+    has_more = True
+    count_contacts = 0
+    hubspot_request_handler = get_hubspot_request_handler(project_id, refresh_token, api_key)
+    parameter_dict = {'count': PAGE_SIZE, 'showListMemberships': True }
+
+    contact_ids, list_memberships = [], {}
+    count_contact_ids = 0
+
+    while has_more:
+        parameters = urllib.parse.urlencode(parameter_dict)
+        get_url = url + parameters
+
+        log.warning("Downloading contacts for list_id %d from url %s.", list_id, get_url)
+        response_dict = {}
+        
+        r = hubspot_request_handler(project_id, get_url)
+        if not r.ok:
+            if r.status_code == 414:
+                log.error("Failure response %d from hubspot on sync_contacts_from_contact_list", r.status_code)
+                break
+        
+        response_dict = json.loads(r.text)
+
+        has_more = response_dict['has-more']
+        contacts = response_dict['contacts']
+        
+        if sync_all:
+            parameter_dict['vidOffset'] = response_dict['vid-offset']
+        else:
+            parameter_dict['timeOffset'] = response_dict['time-offset']
+            parameter_dict['vidOffset'] = response_dict['vid-offset']
+        
+        for contact in contacts:
+            if "vid" not in contact:
+                log.error("Missing contact vid on contacts api")
+                continue
+            contact_ids.append(contact["vid"])
+            count_contact_ids += 1
+            list_memberships[contact["vid"]] = contact["list-memberships"]
+
+        count_contacts = count_contacts + len(contacts)
+        ("Downloaded %d contacts for list_id : %d. total %d.", len(contacts), list_id, count_contacts)
+    
+    return contact_ids, list_memberships
+
+def sync_contact_lists(project_id, refresh_token, api_key, sync_all=False):
+    url = "https://api.hubapi.com/contacts/v1/lists?"
+    parameter_dict = {"count":250 }
+
+    count = 0
+    has_more = True
+
+    buffer_size = PAGE_SIZE * get_buffer_size_by_api_count()
+    create_all_contact_list_documents_with_buffer = get_create_all_documents_with_buffer(project_id, "contact_list", buffer_size)
+    hubspot_request_handler = get_hubspot_request_handler(project_id, refresh_token, api_key)
+
+    while has_more:
+        parameters = urllib.parse.urlencode(parameter_dict)
+        get_url = url + parameters
+        
+        log.warning("Downloading contact lists for project_id %d from url %s.", project_id, get_url)
+        r = hubspot_request_handler(project_id, get_url)
+        if not r.ok:
+            log.error("Failure response %d from hubspot on sync_contact_lists", r.status_code)
+            return
+        response_dict = json.loads(r.text)
+        if "lists" not in response_dict:
+            raise Exception("Missing lists property key on contact_lists")
+    
+        lists = response_dict["lists"]
+        log.warning("Downloaded %d contact_lists.", len(lists))
+
+        for list in lists:
+            contact_ids, list_memberships = sync_contacts_from_contact_lists(project_id, refresh_token, api_key, list["listId"], sync_all)
+            if not r.ok:
+                log.error("Failure response %d from hubspot on get_contact_from_contact_lists in sync_contact_lists", r.status_code)
+                break
+
+            if contact_ids == []:
+                log.error("No contacts in list.")
+            list["contactIds"] = contact_ids
+            list["listMemberships"] = list_memberships
+        
+        count = count + len(lists)
+        if allow_buffer_before_insert_by_project_id(project_id):
+            create_all_contact_list_documents_with_buffer(lists, has_more)
+            log.warning("Downloaded %d contact_lists. total %d.", len(lists), count)
+        else:
+            create_all_documents(project_id, 'contact_list', lists)
+            log.warning("Downloaded and created %d contact_lists. total %d.", len(lists), count)
+        
+        has_more = response_dict['has-more']
+        if has_more:
+            parameter_dict["offset"] = response_dict['offset']
+    
+    create_all_contact_list_documents_with_buffer([], False) ## flush any remainig docs in memory
+    return
 
 def add_paginated_associations(project_id, to_object_ids, next_page_url, hubspot_request_handler):
     while True:
@@ -1138,12 +1247,20 @@ def allow_batch_insert_by_project_id(project_id):
         return True
     return str(project_id) in allowed_projects
 
+def allow_contact_list_sync_by_project_id(project_id):
+    if not options.enable_contact_list_sync_by_project_id:
+        return False
+    all_projects, allowed_projects,_ = get_allowed_list_with_all_element_support(options.enable_contact_list_sync_by_project_id)
+    if all_projects:
+        return True
+    return str(project_id) in allowed_projects
 
 def get_next_sync_info(project_settings, last_sync_info, first_time_sync = False):
     next_sync_info = []
     for project_id in project_settings:
         if not allow_sync_by_project_id(project_id):
             continue
+
         settings = project_settings[project_id]
         if first_time_sync == True and settings.get("is_first_time_synced")!=False :
             continue
@@ -1166,6 +1283,9 @@ def get_next_sync_info(project_settings, last_sync_info, first_time_sync = False
              sync_info["deleted_contacts"] = 0
 
         for doc_type in sync_info:
+            if doc_type == "contact_list" and not allow_contact_list_sync_by_project_id(project_id):
+                continue
+            
             next_sync = {}
             next_sync["project_id"] = int(project_id)
             next_sync["api_key"] = api_key
@@ -1196,6 +1316,8 @@ def sync(project_id, refresh_token, api_key, doc_type, sync_all, last_sync_times
             response["companies_api_calls"], response["companies_contacts_api_calls"],max_timestamp = sync_companies(project_id, refresh_token, api_key, last_sync_timestamp, sync_all)
         elif doc_type == "deal":
             response["deal_api_calls"] = sync_deals(project_id, refresh_token, api_key, sync_all)
+        elif doc_type == "contact_list":
+            sync_contact_lists(project_id, refresh_token, api_key, sync_all)
         elif doc_type == "form":
             sync_forms(project_id, refresh_token, api_key)
         elif doc_type == "form_submission":
