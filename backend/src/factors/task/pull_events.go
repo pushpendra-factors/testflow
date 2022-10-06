@@ -576,6 +576,8 @@ func PullAllData(projectId int64, configs map[string]interface{}) (map[string]in
 	endTimestamp := configs["endTimestamp"].(int64)
 	diskManager := configs["diskManager"].(*serviceDisk.DiskDriver)
 	cloudManager := configs["cloudManager"].(*filestore.FileManager)
+	cloudManagerTmp := configs["cloudManagertmp"].(*filestore.FileManager)
+
 	hardPull := configs["hardPull"].(*bool)
 	fileTypes := configs["fileTypes"].(map[int64]bool)
 	beamConfig := configs["beamConfig"].(*RunBeamConfig)
@@ -638,7 +640,7 @@ func PullAllData(projectId int64, configs map[string]interface{}) (map[string]in
 
 			if pull {
 				if beamConfig.RunOnBeam == true {
-					if _, ok := PullEventsDataDaily(projectId, cloudManager, diskManager, startTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone, modelType, beamConfig, status, logCtx); !ok {
+					if _, ok := PullEventsDataDaily(projectId, cloudManager, cloudManagerTmp, diskManager, startTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone, modelType, beamConfig, status, logCtx); !ok {
 						return status, false
 					}
 

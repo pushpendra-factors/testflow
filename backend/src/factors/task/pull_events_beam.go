@@ -41,7 +41,7 @@ type UidMap struct {
 	Index  int64  `json:"idx"`
 }
 
-func PullEventsDataDaily(projectId int64, cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver,
+func PullEventsDataDaily(projectId int64, cloudManager *filestore.FileManager, cloudManagerTmp *filestore.FileManager, diskManager *serviceDisk.DiskDriver,
 	startTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone int64,
 	modelType string, beamConfig *RunBeamConfig, status map[string]interface{}, logCtx *log.Entry) (error, bool) {
 
@@ -104,8 +104,8 @@ func PullEventsDataDaily(projectId int64, cloudManager *filestore.FileManager, d
 		return err, false
 	}
 
-	cDir, cName := (*cloudManager).GetModelEventsUnsortedFilePathAndName(projectId, startTimestamp, modelType)
-	err = (*cloudManager).Create(cDir, cName, tmpOutputFile)
+	cDir, cName := (*cloudManagerTmp).GetModelEventsUnsortedFilePathAndName(projectId, startTimestamp, modelType)
+	err = (*cloudManagerTmp).Create(cDir, cName, tmpOutputFile)
 	if err != nil {
 		logCtx.WithField("error", err).Error("Failed to pull events. Upload failed.")
 		status["events-error"] = "Failed to pull events. Upload failed."
@@ -122,7 +122,7 @@ func PullEventsDataDaily(projectId int64, cloudManager *filestore.FileManager, d
 
 	batch_size := beamConfig.NumWorker
 	numsortedEvents, err := pull_events_on_beam(projectId, fPath, cDir, cName, batch_size, userIdsMap,
-		beamConfig, cloudManager, diskManager, startTimestamp, modelType)
+		beamConfig, cloudManager, cloudManagerTmp, diskManager, startTimestamp, modelType)
 	if err != nil {
 		return err, false
 	}
@@ -582,20 +582,21 @@ func sortEventsWithUserIds(ctx context.Context, userIdMap map[string][]*P.Counte
 
 func pull_events_on_beam(projectId int64, local_dir string, cloud_dir, cloud_file string,
 	batchSize int, userIdMap map[string]int, beamStruct *RunBeamConfig,
-	cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver,
+	cloudManager *filestore.FileManager, cloudManagerTmp *filestore.FileManager, diskManager *serviceDisk.DiskDriver,
 	startTime int64, modelType string) (int64, error) {
 
 	peLog.Infof("sorting on beam")
 	local_events_dir := (diskManager).GetProjectEventFileDir(projectId, startTime, modelType)
 
-	cloud_events_dir, cloud_name := (*cloudManager).GetModelEventsFilePathAndName(projectId, startTime, modelType)
+	cloud_events_dir_tmp, cloud_name := (*cloudManagerTmp).GetModelEventsFilePathAndName(projectId, startTime, modelType)
+	cloud_events_dir, _ := (*cloudManager).GetModelEventsFilePathAndName(projectId, startTime, modelType)
 
-	err := pull_events_beam_controller(projectId, local_events_dir, cloud_events_dir, cloud_name, batchSize, userIdMap, beamStruct, cloudManager, diskManager, startTime, modelType)
+	err := pull_events_beam_controller(projectId, local_events_dir, cloud_events_dir_tmp, cloud_name, batchSize, userIdMap, beamStruct, cloudManagerTmp, diskManager, startTime, modelType)
 	if err != nil {
 		return 0, err
 	}
 
-	numLines, err := ReadAndMergeEventPartFiles(projectId, cloud_events_dir, local_events_dir, cloudManager, diskManager)
+	numLines, err := ReadAndMergeEventPartFiles(projectId, cloud_events_dir_tmp, local_events_dir, cloudManagerTmp, diskManager)
 	if err != nil {
 		peLog.Errorf("unable to read part files and merge :%v", err)
 		return 0, err

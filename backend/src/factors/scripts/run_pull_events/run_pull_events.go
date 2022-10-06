@@ -46,6 +46,8 @@ func registerStructs() {
 func main() {
 	env := flag.String("env", C.DEVELOPMENT, "")
 	bucketNameFlag := flag.String("bucket_name", "/usr/local/var/factors/cloud_storage", "--bucket_name=/usr/local/var/factors/cloud_storage pass bucket name")
+	tmp_bucketNameFlag := flag.String("bucket_name_tmp", "/usr/local/var/factors/cloud_storage_tmp", "--bucket_name=/usr/local/var/factors/cloud_storage pass bucket name for tmp artifacts")
+
 	localDiskTmpDirFlag := flag.String("local_disk_tmp_dir", "/usr/local/var/factors/local_disk/tmp", "--local_disk_tmp_dir=/usr/local/var/factors/local_disk/tmp pass directory.")
 
 	dbHost := flag.String("db_host", C.PostgresDefaultDBParams.Host, "")
@@ -202,12 +204,20 @@ func main() {
 	}
 	// Init cloud manager.
 	var cloudManager filestore.FileManager
+	var cloudManagerTmp filestore.FileManager
+
 	if *env == "development" {
 		cloudManager = serviceDisk.New(*bucketNameFlag)
+		cloudManagerTmp = serviceDisk.New(*tmp_bucketNameFlag)
+
 	} else {
 		cloudManager, err = serviceGCS.New(*bucketNameFlag)
 		if err != nil {
 			log.WithField("error", err).Fatal("Failed to init cloud manager.")
+		}
+		cloudManagerTmp, err = serviceGCS.New(*tmp_bucketNameFlag)
+		if err != nil {
+			log.WithField("error", err).Fatal("Failed to init cloud manager for tmp.")
 		}
 	}
 
@@ -216,6 +226,7 @@ func main() {
 	configs := make(map[string]interface{})
 	configs["diskManager"] = diskManager
 	configs["cloudManager"] = &cloudManager
+	configs["cloudManagertmp"] = &cloudManagerTmp
 	configs["hardPull"] = hardPull
 	configs["beamConfig"] = &beamConfig
 
