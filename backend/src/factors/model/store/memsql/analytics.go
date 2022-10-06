@@ -178,10 +178,18 @@ func buildWhereFromProperties(projectID int64, properties []model.QueryProperty,
 					// categorical property type.
 					var pValue string
 					pValue = p.Value
-					if p.Operator == model.ContainsOpStr || p.Operator == model.NotContainsOpStr {
+					if p.Operator == model.ContainsOpStr {
 						pStmnt = fmt.Sprintf("JSON_EXTRACT_STRING(%s, ?) %s ?", propertyEntity, propertyOp)
 						rParams = append(rParams, p.Property, pValue)
-					} else if !hasNoneFilter && len(groupedProperties[propertyKey]) == 1 && p.Operator == model.NotEqualOpStr && pValue != model.PropertyValueNone {
+					} else if !hasNoneFilter && p.Operator == model.NotContainsOpStr {
+						pStmnt1 := fmt.Sprintf(" ( JSON_EXTRACT_STRING(%s, ?) %s ? ", propertyEntity, propertyOp)
+						rParams = append(rParams, p.Property, pValue)
+						pStmnt2 := fmt.Sprintf(" OR JSON_EXTRACT_STRING(%s, ?) = '' ", propertyEntity)
+						rParams = append(rParams, p.Property)
+						pStmnt3 := fmt.Sprintf(" OR JSON_EXTRACT_STRING(%s, ?) IS NULL ) ", propertyEntity)
+						rParams = append(rParams, p.Property)
+						pStmnt = pStmnt1 + pStmnt2 + pStmnt3
+					} else if !hasNoneFilter && len(groupedProperties[propertyKey]) == 1 && p.Operator == model.NotEqualOpStr {
 						// PR: 2342 - This change is to allow empty ('') or NULL values during a filter of != value
 						// ex: JSON_EXTRACT_STRING(events.properties, '$source') != 'google' OR JSON_EXTRACT_STRING(events.properties, '$source') = '' OR JSON_EXTRACT_STRING(events.properties, '$source') IS NULL
 						pStmnt1 := fmt.Sprintf(" ( JSON_EXTRACT_STRING(%s, ?) %s ? ", propertyEntity, propertyOp)
