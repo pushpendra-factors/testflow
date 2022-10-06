@@ -3474,3 +3474,82 @@ func TestGroupByDateTimePropWeekTimeGroup(t *testing.T) {
 		assert.Equal(t, "2021-05-30T00:00:00+00:00", result.Rows[0][2].(string))
 	})
 }
+
+func TestEventAnalyticsGroupsBreakdownByLatestUserProperty(t *testing.T) {
+	// Initialize routes and dependent data.
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+	uri := "/sdk/event/track"
+
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	// get groupName
+	groupName := model.GROUP_NAME_SALESFORCE_ACCOUNT
+
+	_, status := store.GetStore().CreateGroup(project.ID, groupName, model.AllowedGroupNames)
+	assert.Equal(t, http.StatusCreated, status)
+	// create group user with random groupID
+	groupID := U.RandomLowerAphaNumString(5)
+	groupUserID1, status := store.GetStore().CreateGroupUser(&model.User{
+		ProjectId: project.ID, JoinTimestamp: U.TimeNowUnix(), Source: model.GetRequestSourcePointer(model.UserSourceSalesforce),
+	}, groupName, groupID)
+	assert.Equal(t, http.StatusCreated, status)
+
+	// create group user with random groupID
+	groupID = U.RandomLowerAphaNumString(5)
+	groupUserID2, status := store.GetStore().CreateGroupUser(&model.User{
+		ProjectId: project.ID, JoinTimestamp: U.TimeNowUnix(), Source: model.GetRequestSourcePointer(model.UserSourceSalesforce),
+	}, groupName, groupID)
+	assert.Equal(t, http.StatusCreated, status)
+
+	customerUserID1 := "abcd"
+	userID1, status := store.GetStore().CreateUser(&model.User{
+		ProjectId:      project.ID,
+		CustomerUserId: customerUserID1,
+		Source:         model.GetRequestSourcePointer(model.UserSourceWeb),
+		Properties:     postgres.Jsonb{[]byte(`{"a":1}`)},
+	})
+	assert.Equal(t, http.StatusCreated, status)
+	_, status = store.GetStore().UpdateUserGroup(project.ID, userID1, groupName, "1", groupUserID1)
+	assert.Equal(t, http.StatusAccepted, status)
+
+	_, status = store.GetStore().CreateUser(&model.User{
+		ProjectId:      project.ID,
+		CustomerUserId: customerUserID1,
+		Source:         model.GetRequestSourcePointer(model.UserSourceWeb),
+	})
+	assert.Equal(t, http.StatusCreated, status)
+
+	userID3, status := store.GetStore().CreateUser(&model.User{
+		ProjectId:      project.ID,
+		Source:         model.GetRequestSourcePointer(model.UserSourceWeb),
+		CustomerUserId: "ab",
+		Properties:     postgres.Jsonb{[]byte(`{"a":2}`)},
+	})
+	assert.Equal(t, http.StatusCreated, status)
+	_, status = store.GetStore().UpdateUserGroup(project.ID, userID3, groupName, "3", groupUserID2)
+	assert.Equal(t, http.StatusAccepted, status)
+
+	payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_CREATED, groupUserID1, time.Now().Unix(), "A", 4321)
+	w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_CREATED, groupUserID2, time.Now().Unix(), "A", 4321)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	result, status := querySingleEventWithBreakdownByGlobalUserProperty(project.ID, U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_CREATED, "a", nil, nil, nil, time.Now().Unix()-1000, time.Now().Unix()+1000)
+	assert.Equal(t, http.StatusOK, status)
+	assert.Len(t, result, 2)
+	assert.Equal(t, float64(1), result["1"])
+	assert.Equal(t, float64(1), result["2"])
+
+	userCount, status := querySingleEventTotalUserCount(project.ID, U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_CREATED, "a", nil, time.Now().Unix()-1000, time.Now().Unix()+1000)
+	assert.Equal(t, http.StatusOK, status)
+	assert.Equal(t, 2, userCount)
+}
