@@ -77,6 +77,8 @@
   height: 40px !important;
   align-items: center;
 
+  //  Moving border radius property to parent element,instead of on hover which will remove the glitch of sharped borders
+  border-radius: 8px !important;
   &_sub {
     margin-left: 12px !important;
     padding-left: 28px !important;
@@ -84,7 +86,6 @@
   }
 
   &:hover {
-    border-radius: 8px !important;
     background: #e2e4e8 !important;
   }
 }
