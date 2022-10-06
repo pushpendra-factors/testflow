@@ -1,3 +1,4 @@
+@import '~highcharts/css/highcharts';
 @import '../styles/abstracts/variables';
 
 body {
@@ -48,4 +49,54 @@ code {
 #hatch-left path {
   stroke: $fa-color--blue;
   stroke-width: 2px;
+}
+
+.highcharts-tooltip-box {
+  fill: white;
+  fill-opacity: 1;
+}
+
+.highcharts-color-0,
+.highcharts-color-1 {
+  &.highcharts-series {
+    fill: unset;
+    stroke: unset;
+  }
+  &.highcharts-point {
+    stroke: none;
+  }
+  &.highcharts-tooltip {
+    stroke: none;
+  }
+}
+
+.charts-color-class-0 {
+  fill: #4d7db4;
+}
+.charts-color-class-1 {
+  fill: #4c9fc8;
+}
+.charts-color-class-2 {
+  fill: #4cbcbd;
+}
+.charts-color-class-3 {
+  fill: #86d3a3;
+}
+.charts-color-class-4 {
+  fill: #ccc36d;
+}
+.charts-color-class-5 {
+  fill: #f9c06e;
+}
+.charts-color-class-6 {
+  fill: #e89e7b;
+}
+.charts-color-class-7 {
+  fill: #d4787d;
+}
+.charts-color-class-8 {
+  fill: #b87b7e;
+}
+.charts-color-class-9 {
+  fill: #9982b5;
 }

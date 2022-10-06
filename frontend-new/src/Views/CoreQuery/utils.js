@@ -1795,11 +1795,7 @@ export const getCampaignStateFromRequestQuery = (requestQuery) => {
 };
 
 export const isComparisonEnabled = (queryType, events, groupBy, models) => {
-  if (
-    queryType === QUERY_TYPE_FUNNEL ||
-    queryType === QUERY_TYPE_KPI ||
-    queryType === QUERY_TYPE_EVENT
-  ) {
+  if (queryType === QUERY_TYPE_FUNNEL || queryType === QUERY_TYPE_EVENT) {
     const newAppliedBreakdown = [...groupBy.event, ...groupBy.global];
     return newAppliedBreakdown.length === 0;
   }
@@ -1809,7 +1805,7 @@ export const isComparisonEnabled = (queryType, events, groupBy, models) => {
     }
   }
   if (queryType === QUERY_TYPE_KPI) {
-    return false;
+    return true;
   }
   return false;
 };

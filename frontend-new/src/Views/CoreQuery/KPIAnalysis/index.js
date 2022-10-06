@@ -21,7 +21,7 @@ function KPIAnalysis({
         breakdown={breakdown}
         currentEventIndex={currMetricsValue}
         section={section}
-        ref={renderedCompRef}
+        renderedCompRef={renderedCompRef}
         durationObj={durationObj}
       />
     );
