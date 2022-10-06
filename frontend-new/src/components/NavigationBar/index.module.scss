@@ -83,6 +83,9 @@
     margin-left: 12px !important;
     padding-left: 28px !important;
     width: 224px !important;
+
+    // Required to remove hover glitch on the submenu items
+    border-radius: 8px !important;
   }
 
   &:hover {
