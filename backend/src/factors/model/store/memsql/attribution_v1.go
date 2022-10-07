@@ -490,6 +490,11 @@ func (store *MemSQL) pullConvertedUsers(projectID,
 	if err != nil {
 		return userIDToInfoConverted, usersToBeAttributed, coalUserIdConversionTimestamp, err
 	}
+	if projectID == 568 {
+		logCtx.WithFields(log.Fields{"CleverTapUserIDToInfoConverted": userIDToInfoConverted}).Info("Printing Conversion goal userIDToInfoConverted")
+		logCtx.WithFields(log.Fields{"CleverTapCoalescedIDToInfoConverted": coalescedIDToInfoConverted}).Info("Printing Conversion goal coalescedIDToInfoConverted")
+		logCtx.WithFields(log.Fields{"CleverTapCoalUserIdConversionTimestamp": coalUserIdConversionTimestamp}).Info("Printing Conversion goal coalUserIdConversionTimestamp")
+	}
 
 	// Add users who hit conversion event
 	for key := range coalescedIDToInfoConverted {
@@ -501,8 +506,17 @@ func (store *MemSQL) pullConvertedUsers(projectID,
 	if err != nil {
 		return userIDToInfoConverted, usersToBeAttributed, coalUserIdConversionTimestamp, err
 	}
+	if projectID == 568 {
+		logCtx.WithFields(log.Fields{"CleverTapLinkedFunnelUsers": linkedFunnelEventUsers}).Info("Printing Linked Funnel Event Users")
+	}
 
 	model.MergeUsersToBeAttributed(&usersToBeAttributed, linkedFunnelEventUsers)
+
+	if projectID == 568 {
+		logCtx.WithFields(log.Fields{"CleverTapUserIDToInfoConvertedFinal": userIDToInfoConverted}).Info("Printing Final userIDToInfoConverted")
+		logCtx.WithFields(log.Fields{"CleverTapUsersToBeAttributedFinal ": usersToBeAttributed}).Info("Printing Final usersToBeAttributed")
+		logCtx.WithFields(log.Fields{"CleverTapCoalUserIdConversionTimestampFinal": coalUserIdConversionTimestamp}).Info("Printing Final coalUserIdConversionTimestamp")
+	}
 
 	return userIDToInfoConverted, usersToBeAttributed, coalUserIdConversionTimestamp, nil
 }

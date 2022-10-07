@@ -883,6 +883,10 @@ func (store *MemSQL) GetLinkedFunnelEventUsersFilter(projectID int64, queryFrom,
 			}
 
 			queryEventHits := selectEventHits + " " + eventJoinStmnt + " " + whereEventHits
+			if projectID == 568 {
+				queryEventHits1, qParams1 := model.ExpandArrayWithIndividualValues(queryEventHits, qParams)
+				logCtx.WithFields(log.Fields{"CleverTapQueryGetLinkedFunnelEventUsersFilter": U.DBDebugPreparedStatement(C.GetConfig().Env, queryEventHits1, qParams1)}).Info("Printing Query")
+			}
 
 			// fetch query results
 			rows, tx, err, reqID := store.ExecQueryWithContext(queryEventHits, qParams)
@@ -985,6 +989,10 @@ func (store *MemSQL) GetConvertedUsersWithFilter(projectID int64, goalEventName 
 	}
 
 	queryEventHits := selectEventHits + " " + eventJoinStmnt + " " + whereEventHits
+	if projectID == 568 {
+		queryEventHits1, qParams1 := model.ExpandArrayWithIndividualValues(queryEventHits, qParams)
+		logCtx.WithFields(log.Fields{"CleverTapQueryGetConvertedUsersWithFilter": U.DBDebugPreparedStatement(C.GetConfig().Env, queryEventHits1, qParams1)}).Info("Printing Query")
+	}
 
 	// fetch query results
 	rows, tx, err, reqID := store.ExecQueryWithContext(queryEventHits, qParams)
