@@ -92,7 +92,7 @@ func (store *MemSQL) ExecuteAttributionQueryV1(projectID int64, queryOriginal *m
 	// Extend the campaign window for engagement based attribution.
 	if query.QueryType == model.AttributionQueryTypeEngagementBased {
 		conversionFrom = query.From
-		conversionTo = model.LookbackAdjustedTo(query.To, query.LookbackDays)
+		conversionTo = model.LookbackAdjustedTo(query.To, query.LookbackDays, U.TimeZoneString(query.Timezone))
 	}
 
 	coalUserIdConversionTimestamp, userInfo, kpiData, usersIDsToAttribute, err3 := store.PullConvertedUsers(projectID, query, conversionFrom, conversionTo, eventNameToIDList,
