@@ -55,6 +55,7 @@ function ReportsLayout({
   campaignState,
   composerFunctions,
   updateChartTypes,
+  dateFromTo,
   ...rest
 }) {
   const dispatch = useDispatch();
@@ -287,6 +288,7 @@ function ReportsLayout({
         breakdown={breakdown}
         attributionsState={attributionsState}
         campaignState={campaignState}
+        dateFromTo={dateFromTo}
       />
       <div className='mt-24 px-8'>
         <ErrorBoundary

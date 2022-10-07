@@ -11,7 +11,11 @@ const Number = ({
   suffix = '',
   prefix = ''
 }) => {
-  const finalVal = shortHand ? abbreviateNumber(number) : number;
+  const finalVal = shortHand
+    ? abbreviateNumber(number)
+    : isArray(number)
+    ? number[0]
+    : number;
 
   return (
     <span className={className}>
@@ -20,9 +24,9 @@ const Number = ({
       ) : (
         <NumberFormat
           displayType={'text'}
-          value={isArray(finalVal) ? finalVal[0] : finalVal}
+          value={finalVal}
           thousandSeparator={true}
-          decimalScale={1}
+          decimalScale={finalVal < 10 ? 2 : 1}
           suffix={suffix}
           prefix={prefix}
         />

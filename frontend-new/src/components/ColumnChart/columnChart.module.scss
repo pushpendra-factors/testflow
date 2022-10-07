@@ -1,0 +1,43 @@
+@import '~highcharts/css/highcharts';
+
+.columnChart {
+  .infoText {
+    font-size: 14px;
+    line-height: 20px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: break-spaces;
+  }
+
+  :global(.highcharts-legend-item text) {
+    font-size: 14px !important;
+    line-height: 20px !important;
+    font-weight: 400 !important;
+    color: #3e516c !important;
+  }
+
+  :global(.highcharts-axis-labels text) {
+    font-size: 12px !important;
+    line-height: 18px !important;
+    font-weight: 400 !important;
+    color: #3e516c !important;
+    font-family: 'Work Sans', sans-serif;
+  }
+
+  :global(.highcharts-tooltip) {
+    span {
+      &:first-child {
+        width: 175px;
+      }
+    }
+  }
+}
+
+.columnChart.comparisonApplied {
+  :global(.highcharts-series-0 .highcharts-point) {
+    fill: url(#columnChartStripes);
+  }
+  :global(.highcharts-series-1 .highcharts-point) {
+    fill: #4d7db4;
+  }
+}

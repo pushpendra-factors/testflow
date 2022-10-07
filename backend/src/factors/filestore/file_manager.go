@@ -44,4 +44,7 @@ type FileManager interface {
 
 	GetWIPropertiesDir(projectId int64) string
 	GetWIPropertiesPathAndName(projectId int64) (string, string)
+
+	GetModelEventsUnsortedFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string)
+	GetEventsArtificatFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string)
 }

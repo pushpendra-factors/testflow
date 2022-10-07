@@ -116,9 +116,9 @@ func main() {
 	customerEnabledProjectsWeeklyInsights := flag.String("customer_enabled_projects_wi",
 		"", "List of projects customer enabled for Weekly Insights")
 	customerEnabledProjectsLastComputed := flag.String("customer_enabled_projects_last_computed",
-		"", "List of projects customer enabled forLast Computed")
+		"*", "List of projects customer enabled forLast Computed")
 	customerEnabledProjectsAttributionV1 := flag.String("customer_enabled_projects_attribution_v1",
-		"", "List of projects customer enabled for Attribution V1")
+		"*", "List of projects customer enabled for Attribution V1")
 	demoProjectIds := flag.String("demo_projects", "", "List of projectIds those are used for demo")
 	attributionDebug := flag.Int("attribution_debug", 0, "Enables debug logging for attribution queries")
 	enableMQLAPI := flag.Bool("enable_mql_api", false, "Enable MQL API routes.")

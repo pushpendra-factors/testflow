@@ -1,6 +1,4 @@
-import React, {
-  useState, useCallback, useEffect, memo
-} from 'react';
+import React, { useState, useCallback, useEffect, memo } from 'react';
 import { useSelector } from 'react-redux';
 import { find } from 'lodash';
 import {
@@ -36,12 +34,11 @@ const BreakdownTable = ({
   handleDateSorting,
   visibleSeriesData,
   setVisibleSeriesData,
-  frequency = 'date'
+  frequency = 'date',
+  comparisonApplied,
+  compareCategories
 }) => {
   const [searchText, setSearchText] = useState('');
-  const { userPropNames, eventPropNames } = useSelector(
-    (state) => state.coreQuery
-  );
   const [columns, setColumns] = useState([]);
   const [dateBasedColumns, setDateBasedColumns] = useState([]);
   const [tableData, setTableData] = useState([]);
@@ -49,16 +46,9 @@ const BreakdownTable = ({
 
   useEffect(() => {
     setColumns(
-      getTableColumns(
-        breakdown,
-        kpis,
-        sorter,
-        handleSorting,
-        userPropNames,
-        eventPropNames
-      )
+      getTableColumns(breakdown, kpis, sorter, handleSorting, comparisonApplied)
     );
-  }, [breakdown, sorter, handleSorting, kpis, userPropNames, eventPropNames]);
+  }, [breakdown, sorter, handleSorting, kpis, comparisonApplied]);
 
   useEffect(() => {
     setTableData(getDataInTableFormat(data, searchText, sorter));
@@ -73,8 +63,8 @@ const BreakdownTable = ({
         dateSorter,
         handleDateSorting,
         frequency,
-        userPropNames,
-        eventPropNames
+        comparisonApplied,
+        compareCategories
       )
     );
   }, [
@@ -83,22 +73,37 @@ const BreakdownTable = ({
     kpis,
     dateSorter,
     handleDateSorting,
-    userPropNames,
-    eventPropNames
+    frequency,
+    comparisonApplied,
+    compareCategories
   ]);
 
   useEffect(() => {
     setDateBasedTableData(
-      getDateBasedTableData(seriesData, searchText, dateSorter)
+      getDateBasedTableData(
+        seriesData,
+        categories,
+        searchText,
+        dateSorter,
+        frequency,
+        comparisonApplied,
+        compareCategories
+      )
     );
-  }, [seriesData, searchText, dateSorter]);
+  }, [
+    seriesData,
+    searchText,
+    categories,
+    dateSorter,
+    frequency,
+    comparisonApplied,
+    compareCategories
+  ]);
 
   const getCSVData = useCallback(() => {
     return {
       fileName: 'KPI.csv',
-      data: tableData.map(({
-        index, label, value, metricType, ...rest
-      }) => {
+      data: tableData.map(({ index, label, value, metricType, ...rest }) => {
         const result = {};
         for (const key in rest) {
           const isCurrentKeyKpi = find(
@@ -120,8 +125,6 @@ const BreakdownTable = ({
             result[
               `${getBreakdownDisplayName({
                 breakdown: isCurrentKeyForBreakdown,
-                userPropNames,
-                eventPropNames,
                 queryType: QUERY_TYPE_KPI
               })} - ${key.split(' - ')[1]}`
             ] = rest[key];

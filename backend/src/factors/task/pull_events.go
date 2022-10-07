@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"factors/filestore"
-	"factors/model/model"
 	M "factors/model/model"
 	"factors/model/store"
 	P "factors/pattern"
@@ -30,10 +29,10 @@ type CounterCampaignFormat struct {
 }
 
 type CounterUserFormat struct {
-	Id            string
-	Properties    map[string]interface{}
-	Is_Anonymous  bool
-	JoinTimestamp int64
+	Id            string                 `json:"id"`
+	Properties    map[string]interface{} `json:"pr"`
+	Is_Anonymous  bool                   `json:"ia"`
+	JoinTimestamp int64                  `json:"ts"`
 }
 
 var fileType = map[string]int64{
@@ -173,6 +172,121 @@ func pullEvents(projectID int64, startTime, endTime int64, eventsFilePath string
 		}).Info("Events time information.")
 	}
 	return rowCount, eventsFilePath, nil
+}
+
+//pull Events (with Hubspot and Salesforce)
+func pullEventsDaily(projectID int64, startTime, endTime int64, eventsFilePath string, file *os.File) (int, string, map[string]bool, error) {
+	rows, tx, err := store.GetStore().PullEventRows(projectID, startTime, endTime)
+	if err != nil {
+		peLog.WithError(err).Error("SQL Query failed.")
+		return 0, "", nil, err
+	}
+	defer U.CloseReadQuery(rows, tx)
+
+	userIdMap := make(map[string]bool)
+	var firstEvent, lastEvent *P.CounterEventFormat
+	rowCount := 0
+	nilUserProperties := 0
+	for rows.Next() {
+		var userID string
+		var eventName string
+		var eventTimestamp int64
+		var userJoinTimestamp int64
+		var eventCardinality uint
+		var eventProperties *postgres.Jsonb
+		var userProperties *postgres.Jsonb
+		if err = rows.Scan(&userID, &eventName, &eventTimestamp,
+			&eventCardinality, &eventProperties, &userJoinTimestamp, &userProperties); err != nil {
+			peLog.WithFields(log.Fields{"err": err}).Error("SQL Parse failed.")
+			return 0, "", nil, err
+		}
+
+		if _, ok := userIdMap[userID]; !ok {
+			userIdMap[userID] = true
+		}
+		var eventPropertiesMap map[string]interface{}
+		if eventProperties != nil {
+			eventPropertiesBytes, err := eventProperties.Value()
+			if err != nil {
+				peLog.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal event property.")
+				return 0, "", nil, err
+			}
+			err = json.Unmarshal(eventPropertiesBytes.([]byte), &eventPropertiesMap)
+			if err != nil {
+				peLog.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal event property.")
+				return 0, "", nil, err
+			}
+		} else {
+			peLog.WithFields(log.Fields{"err": err, "project_id": projectID}).Error("Nil event properties.")
+		}
+
+		var userPropertiesMap map[string]interface{}
+		if userProperties != nil {
+			userPropertiesBytes, err := userProperties.Value()
+			if err != nil {
+				peLog.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal user property.")
+				return 0, "", nil, err
+			}
+
+			err = json.Unmarshal(userPropertiesBytes.([]byte), &userPropertiesMap)
+			if err != nil {
+				peLog.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal user property.")
+				return 0, "", nil, err
+			}
+		} else {
+			nilUserProperties++
+		}
+
+		event := P.CounterEventFormat{
+			UserId:            userID,
+			UserJoinTimestamp: userJoinTimestamp,
+			EventName:         eventName,
+			EventTimestamp:    eventTimestamp,
+			EventCardinality:  eventCardinality,
+			EventProperties:   eventPropertiesMap,
+			UserProperties:    userPropertiesMap,
+		}
+
+		if rowCount == 0 {
+			firstEvent = &event
+		}
+
+		lineBytes, err := json.Marshal(event)
+		if err != nil {
+			peLog.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal event.")
+			return 0, "", nil, err
+		}
+		line := string(lineBytes)
+		if _, err := file.WriteString(fmt.Sprintf("%s\n", line)); err != nil {
+			peLog.WithFields(log.Fields{"line": line, "err": err}).Error("Unable to write to file.")
+			return 0, "", nil, err
+		}
+
+		lastEvent = &event
+		rowCount++
+	}
+	if nilUserProperties > 0 {
+		peLog.WithFields(log.Fields{"err": err, "project_id": projectID, "count": nilUserProperties}).Error("Nil user properties.")
+	}
+	err = rows.Err()
+	if err != nil {
+		// Error from DB is captured eg: timeout error
+		peLog.WithFields(log.Fields{"err": err, "project_id": projectID}).Error("Error in executing query")
+		return 0, "", nil, err
+	}
+
+	if rowCount > M.EventsPullLimit {
+		// Todo(Dinesh): notify
+		return rowCount, eventsFilePath, nil, fmt.Errorf("events count has exceeded the %d limit", M.EventsPullLimit)
+	}
+
+	if rowCount > 0 {
+		peLog.WithFields(log.Fields{
+			"FirstEventTimestamp": firstEvent.EventTimestamp,
+			"LastEventTimesamp":   lastEvent.EventTimestamp,
+		}).Info("Events time information.")
+	}
+	return rowCount, eventsFilePath, userIdMap, nil
 }
 
 //Pull Channel Data
@@ -462,8 +576,11 @@ func PullAllData(projectId int64, configs map[string]interface{}) (map[string]in
 	endTimestamp := configs["endTimestamp"].(int64)
 	diskManager := configs["diskManager"].(*serviceDisk.DiskDriver)
 	cloudManager := configs["cloudManager"].(*filestore.FileManager)
+	cloudManagerTmp := configs["cloudManagertmp"].(*filestore.FileManager)
+
 	hardPull := configs["hardPull"].(*bool)
 	fileTypes := configs["fileTypes"].(map[int64]bool)
+	beamConfig := configs["beamConfig"].(*RunBeamConfig)
 
 	status := make(map[string]interface{})
 	if projectId == 0 {
@@ -522,8 +639,15 @@ func PullAllData(projectId int64, configs map[string]interface{}) (map[string]in
 			}
 
 			if pull {
-				if _, ok := PullEventsData(projectId, cloudManager, diskManager, startTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone, modelType, status, logCtx); !ok {
-					return status, false
+				if beamConfig.RunOnBeam == true {
+					if _, ok := PullEventsDataDaily(projectId, cloudManager, cloudManagerTmp, diskManager, startTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone, modelType, beamConfig, status, logCtx); !ok {
+						return status, false
+					}
+
+				} else {
+					if _, ok := PullEventsData(projectId, cloudManager, diskManager, startTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone, modelType, status, logCtx); !ok {
+						return status, false
+					}
 				}
 			} else {
 				success = false
@@ -689,8 +813,8 @@ func PullUsersDataForCustomMetrics(projectId int64, cloudManager *filestore.File
 		for _, group := range groups {
 			groupsMap[group.Name] = group.ID
 		}
-		if _, ok := groupsMap[model.USERS]; !ok {
-			groupsMap[model.USERS] = 0
+		if _, ok := groupsMap[M.USERS]; !ok {
+			groupsMap[M.USERS] = 0
 		}
 	}
 
@@ -704,7 +828,7 @@ func PullUsersDataForCustomMetrics(projectId int64, cloudManager *filestore.File
 			return fmt.Errorf("%s", errStr), false
 		}
 		for _, customMetric := range customMetrics {
-			var customMetricTransformation model.CustomMetricTransformation
+			var customMetricTransformation M.CustomMetricTransformation
 			err := U.DecodePostgresJsonbToStructType(customMetric.Transformations, &customMetricTransformation)
 			if err != nil {
 				status["users-error"] = "Error during decode of custom metrics transformations"

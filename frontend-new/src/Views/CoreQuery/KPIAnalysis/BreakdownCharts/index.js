@@ -5,7 +5,8 @@ import React, {
   forwardRef,
   useImperativeHandle,
   useContext,
-  memo
+  memo,
+  useMemo
 } from 'react';
 import {
   formatData,
@@ -32,8 +33,10 @@ import HorizontalBarChartTable from './HorizontalBarChartTable';
 import StackedAreaChart from '../../../../components/StackedAreaChart';
 import StackedBarChart from '../../../../components/StackedBarChart';
 import PivotTable from '../../../../components/PivotTable';
+import ColumnChart from '../../../../components/ColumnChart/ColumnChart';
+import { has } from 'lodash';
 
-const BreakdownCharts = forwardRef(
+const BreakdownChartsComponent = forwardRef(
   (
     {
       kpis,
@@ -41,15 +44,13 @@ const BreakdownCharts = forwardRef(
       responseData,
       chartType,
       durationObj,
-      title = 'Kpi',
       section,
-      currentEventIndex
+      currentEventIndex,
+      savedQuerySettings,
+      comparison_data
     },
     ref
   ) => {
-    const {
-      coreQueryState: { savedQuerySettings }
-    } = useContext(CoreQueryContext);
     const [visibleProperties, setVisibleProperties] = useState([]);
     const [visibleSeriesData, setVisibleSeriesData] = useState([]);
     const [sorter, setSorter] = useState(
@@ -65,6 +66,7 @@ const BreakdownCharts = forwardRef(
     );
     const [aggregateData, setAggregateData] = useState([]);
     const [categories, setCategories] = useState([]);
+    const [compareCategories, setCompareCategories] = useState([]);
     const [data, setData] = useState([]);
 
     const handleSorting = useCallback((prop) => {
@@ -90,19 +92,33 @@ const BreakdownCharts = forwardRef(
         responseData,
         kpis,
         breakdown,
-        currentEventIndex
+        currentEventIndex,
+        comparison_data.data
       );
-      const { categories: cats, data: d } = formatDataInSeriesFormat(
+      const {
+        categories: cats,
+        data: d,
+        compareCategories: compCategories
+      } = formatDataInSeriesFormat(
         responseData,
         aggData,
         currentEventIndex,
         durationObj.frequency,
-        breakdown
+        breakdown,
+        comparison_data.data
       );
       setAggregateData(aggData);
       setCategories(cats);
+      setCompareCategories(compCategories);
       setData(d);
-    }, [responseData, breakdown, currentEventIndex, kpis, durationObj]);
+    }, [
+      responseData,
+      breakdown,
+      currentEventIndex,
+      kpis,
+      durationObj,
+      comparison_data.data
+    ]);
 
     useEffect(() => {
       setVisibleProperties(getVisibleData(aggregateData, sorter));
@@ -111,6 +127,29 @@ const BreakdownCharts = forwardRef(
     useEffect(() => {
       setVisibleSeriesData(getVisibleSeriesData(data, dateSorter));
     }, [data, dateSorter]);
+
+    const visibleSeriesDataWithoutComparisonData = useMemo(() => {
+      return visibleSeriesData.filter((sd) => !has(sd, 'compareIndex'));
+    }, [visibleSeriesData]);
+
+    const columnCategories = useMemo(() => {
+      return visibleProperties.map((v) => v.label);
+    }, [visibleProperties]);
+
+    const columnSeries = useMemo(() => {
+      const series = [
+        {
+          data: visibleProperties.map((v) => v.value),
+          color: '#4D7DB4'
+        }
+      ];
+      if (comparison_data.data != null) {
+        series.unshift({
+          data: visibleProperties.map((v) => v.compareValue)
+        });
+      }
+      return series;
+    }, [visibleProperties, comparison_data.data]);
 
     if (!aggregateData.length) {
       return (
@@ -140,17 +179,21 @@ const BreakdownCharts = forwardRef(
           handleDateSorting={handleDateSorting}
           visibleSeriesData={visibleSeriesData}
           setVisibleSeriesData={setVisibleSeriesData}
+          comparisonApplied={comparison_data.data != null}
+          compareCategories={compareCategories}
         />
       </div>
     );
 
     if (chartType === CHART_TYPE_BARCHART) {
       chart = (
-        <BarChart
-          section={section}
-          title={title}
-          chartData={visibleProperties}
-        />
+        <div className="w-full">
+          <ColumnChart
+            comparisonApplied={comparison_data.data != null}
+            categories={columnCategories}
+            series={columnSeries}
+          />
+        </div>
       );
     } else if (chartType === CHART_TYPE_HORIZONTAL_BAR_CHART) {
       chart = (
@@ -169,6 +212,8 @@ const BreakdownCharts = forwardRef(
             categories={categories}
             data={visibleSeriesData}
             showAllLegends={true}
+            comparisonApplied={comparison_data.data != null}
+            compareCategories={compareCategories}
           />
         </div>
       );
@@ -178,7 +223,7 @@ const BreakdownCharts = forwardRef(
           <StackedAreaChart
             frequency={durationObj.frequency}
             categories={categories}
-            data={visibleSeriesData}
+            data={visibleSeriesDataWithoutComparisonData}
             showAllLegends={true}
           />
         </div>
@@ -189,7 +234,7 @@ const BreakdownCharts = forwardRef(
           <StackedBarChart
             frequency={durationObj.frequency}
             categories={categories}
-            data={visibleSeriesData}
+            data={visibleSeriesDataWithoutComparisonData}
             showAllLegends={true}
           />
         </div>
@@ -214,5 +259,23 @@ const BreakdownCharts = forwardRef(
     );
   }
 );
+
+const BreakdownChartsMemoized = memo(BreakdownChartsComponent);
+
+const BreakdownCharts = (props) => {
+  const { renderedCompRef, ...rest } = props;
+  const {
+    coreQueryState: { savedQuerySettings, comparison_data }
+  } = useContext(CoreQueryContext);
+
+  return (
+    <BreakdownChartsMemoized
+      ref={renderedCompRef}
+      savedQuerySettings={savedQuerySettings}
+      comparison_data={comparison_data}
+      {...rest}
+    />
+  );
+};
 
 export default memo(BreakdownCharts);

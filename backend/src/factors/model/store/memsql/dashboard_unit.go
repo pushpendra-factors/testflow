@@ -924,7 +924,7 @@ func (store *MemSQL) runAttributionUnit(projectID int64, queryOriginal *model.At
 	var r *model.QueryResult
 	var err error
 	if C.IsAttributionV1Whitelisted(projectID) {
-		r, err = store.ExecuteAttributionQueryV1(projectID, queryOriginal, debugQueryKey,
+		r, err = store.ExecuteAttributionQueryV0(projectID, queryOriginal, debugQueryKey,
 			C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 	} else {
 		r, err = store.ExecuteAttributionQuery(projectID, queryOriginal, debugQueryKey,

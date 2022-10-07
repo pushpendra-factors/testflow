@@ -71,10 +71,53 @@ type ProjectSetting struct {
 	IsExplainEnabled              bool            `json:"is_explain_enabled"`
 }
 
+/* Sample Attribution Setting
+{
+  "kpis_to_attribute": {
+    "user_kpi": [
+      {
+        "u_kpi_1": "u_val_1"
+      },
+      {
+        "u_kpi_2": "u_val_2"
+      }
+    ],
+    "hs_kpi": [
+      {
+        "hs_kpi_1": "hs_val_1"
+      },
+      {
+        "hs_kpi_2": "hs_val_2"
+      }
+    ],
+    "sf_kpi": [
+      {
+        "sf_kpi_1": "sf_val_1"
+      },
+      {
+        "sf_kpi_2": "sf_val_2"
+      }
+    ]
+  },
+  "attribution_window": 100,
+  "user_kpi": true,
+  "hubspot_deals": false,
+  "salesforce_opportunities": false,
+  "hubspot_companies": true,
+  "salesforce_accounts": true,
+  "pre_compute_enabled": false
+}
+*/
+
 type AttributionConfig struct {
-	KpisToAttribute   AttributionKpis `json:"kpis_to_attribute"`
-	AttributionWindow int64           `json:"attribution_window"`
-	Enabled           *bool           `json:"enabled"`
+	KpisToAttribute                   AttributionKpis `json:"kpis_to_attribute"`
+	AttributionWindow                 int64           `json:"attribution_window"`
+	AnalyzeTypeUserKPI                *bool           `json:"user_kpi"`
+	AnalyzeTypeHSDealsEnabled         *bool           `json:"hubspot_deals"`
+	AnalyzeTypeSFOpportunitiesEnabled *bool           `json:"salesforce_opportunities"`
+	AnalyzeTypeHSCompaniesEnabled     *bool           `json:"hubspot_companies"`
+	AnalyzeTypeSFAccountsEnabled      *bool           `json:"salesforce_accounts"`
+	PreComputeEnabled                 *bool           `json:"pre_compute_enabled"`
 }
 
 type AttributionKpis struct {

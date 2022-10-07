@@ -3090,7 +3090,130 @@ func TestSalesforceOfflineTouchPointDecode(t *testing.T) {
 
 }
 */
-func querySingleEventWithBreakdownByUserProperty(projectID int64, eventName string, propertyName string, from, to int64) (map[string]interface{}, int) {
+
+func querySingleEventWithBreakdownByGlobalUserProperty(projectID int64, eventName string, propertyName string, eventPropertyFilter, eventUserPropertyEqualFilter, globalEqualFilter map[string]string, from, to int64) (map[string]interface{}, int) {
+	query := model.Query{
+		Class: model.QueryClassEvents,
+		From:  from,
+		To:    to,
+		Type:  model.QueryTypeEventsOccurrence,
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{Name: eventName},
+		},
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Property:  propertyName,
+				Entity:    model.PropertyEntityUser,
+				EventName: model.UserPropertyGroupByPresent,
+			},
+		},
+		EventsCondition: model.EventCondEachGivenEvent,
+	}
+
+	if len(globalEqualFilter) > 0 {
+		for propertyName, value := range globalEqualFilter {
+			globalUserProperties := model.QueryProperty{
+				Entity:    model.PropertyEntityUserGlobal,
+				Type:      U.PropertyTypeCategorical,
+				Property:  propertyName,
+				LogicalOp: model.LOGICAL_OP_AND,
+				Operator:  "equals",
+				Value:     value,
+			}
+			query.GlobalUserProperties = append(query.GlobalUserProperties, globalUserProperties)
+		}
+
+	}
+
+	if len(eventUserPropertyEqualFilter) > 0 {
+		for propertyName, value := range eventUserPropertyEqualFilter {
+			eventUserProperty := model.QueryProperty{
+				Entity:    model.PropertyEntityUser,
+				Type:      U.PropertyTypeCategorical,
+				Property:  propertyName,
+				LogicalOp: model.LOGICAL_OP_AND,
+				Operator:  "equals",
+				Value:     value,
+			}
+
+			query.EventsWithProperties[0].Properties = append(query.EventsWithProperties[0].Properties, eventUserProperty)
+		}
+	}
+
+	if len(eventPropertyFilter) > 0 {
+		for propertyName, value := range eventUserPropertyEqualFilter {
+			eventProperty := model.QueryProperty{
+				Entity:    model.PropertyEntityEvent,
+				Type:      U.PropertyTypeCategorical,
+				Property:  propertyName,
+				LogicalOp: model.LOGICAL_OP_AND,
+				Operator:  "equals",
+				Value:     value,
+			}
+
+			query.EventsWithProperties[0].Properties = append(query.EventsWithProperties[0].Properties, eventProperty)
+		}
+	}
+
+	results, status := store.GetStore().RunEventsGroupQuery([]model.Query{query}, projectID, C.EnableOptimisedFilterOnEventUserQuery())
+	if status != http.StatusOK {
+		return nil, status
+	}
+
+	result := results.Results[0]
+	resultMap := make(map[string]interface{}, 0)
+	for i := range result.Rows {
+		row := result.Rows[i]
+		resultMap[util.GetPropertyValueAsString(row[2])] = row[3]
+	}
+
+	return resultMap, status
+}
+
+func querySingleEventTotalUserCount(projectID int64, eventName string, propertyName string, globalEqualFilter map[string]string, from, to int64) (int, int) {
+	query := model.Query{
+		Class: model.QueryClassEvents,
+		From:  from,
+		To:    to,
+		Type:  model.QueryTypeUniqueUsers,
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{Name: eventName},
+		},
+		EventsCondition: model.EventCondEachGivenEvent,
+	}
+
+	if len(globalEqualFilter) > 0 {
+		for propertyName, value := range globalEqualFilter {
+			globalUserProperties := model.QueryProperty{
+				Entity:    model.PropertyEntityUserGlobal,
+				Type:      U.PropertyTypeCategorical,
+				Property:  propertyName,
+				LogicalOp: model.LOGICAL_OP_AND,
+				Operator:  "equals",
+				Value:     value,
+			}
+			query.GlobalUserProperties = append(query.GlobalUserProperties, globalUserProperties)
+		}
+
+	}
+
+	results, status := store.GetStore().RunEventsGroupQuery([]model.Query{query}, projectID, C.EnableOptimisedFilterOnEventUserQuery())
+	if status != http.StatusOK {
+		return 0, status
+	}
+
+	result := results.Results[0]
+	userCount := 0
+	for i := range result.Rows {
+		row := result.Rows[i]
+		count, _ := util.GetPropertyValueAsFloat64(row[2])
+		userCount = userCount + int(count)
+	}
+
+	return userCount, status
+}
+
+func querySingleEventWithBreakdownByEventUserProperty(projectID int64, eventName string, propertyName string, from, to int64) (map[string]interface{}, int) {
 	query := model.Query{
 		Class: model.QueryClassEvents,
 		From:  from,
@@ -3130,14 +3253,18 @@ func TestSalesforceGroups(t *testing.T) {
 	accountID1 := "acc1_" + getRandomName()
 	accountID2 := "acc2_" + getRandomName()
 
-	createdDate := time.Now().UTC().AddDate(0, 0, -3)
+	account1CreatedDate := time.Now().UTC().AddDate(0, 0, -3)
+	account2CreatedDate := account1CreatedDate.AddDate(0, 0, 1)
+	account3CreatedDate := account1CreatedDate.AddDate(0, 0, 1)
+
+	createdDate := account3CreatedDate
 	processRecords := make([]map[string]interface{}, 0)
 	processRecordsType := make([]string, 0)
 	document := map[string]interface{}{
 		"Id":               accountID1,
 		"Name":             "account1",
-		"CreatedDate":      createdDate.Format(model.SalesforceDocumentDateTimeLayout),
-		"LastModifiedDate": createdDate.Add(30 * time.Second).Format(model.SalesforceDocumentDateTimeLayout),
+		"CreatedDate":      account1CreatedDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": account1CreatedDate.Add(30 * time.Second).Format(model.SalesforceDocumentDateTimeLayout),
 	}
 	processRecords = append(processRecords, document)
 	processRecordsType = append(processRecordsType, model.SalesforceDocumentTypeNameAccount)
@@ -3145,8 +3272,8 @@ func TestSalesforceGroups(t *testing.T) {
 	document = map[string]interface{}{
 		"Id":               accountID2,
 		"Name":             "account2",
-		"CreatedDate":      createdDate.Format(model.SalesforceDocumentDateTimeLayout),
-		"LastModifiedDate": createdDate.Add(30 * time.Second).Format(model.SalesforceDocumentDateTimeLayout),
+		"CreatedDate":      account2CreatedDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": account2CreatedDate.Add(30 * time.Second).Format(model.SalesforceDocumentDateTimeLayout),
 	}
 	processRecords = append(processRecords, document)
 	processRecordsType = append(processRecordsType, model.SalesforceDocumentTypeNameAccount)
@@ -3382,35 +3509,91 @@ func TestSalesforceGroups(t *testing.T) {
 		}
 	}
 
-	result, status := querySingleEventWithBreakdownByUserProperty(project.ID, U.EVENT_NAME_SALESFORCE_LEAD_CREATED,
+	result, status := querySingleEventWithBreakdownByEventUserProperty(project.ID, U.EVENT_NAME_SALESFORCE_LEAD_CREATED,
 		"$salesforce_lead_id", createdDate.Unix()-500, createdDate.Add(30*time.Second).Unix()+500)
 	assert.Equal(t, http.StatusOK, status)
 	assert.Len(t, result, 3)
 	assert.Equal(t, float64(1), result[leadID1])
 	assert.Equal(t, float64(1), result[leadID2])
+	assert.Equal(t, float64(1), result[leadID2_3])
 
-	result, status = querySingleEventWithBreakdownByUserProperty(project.ID, U.EVENT_NAME_SALESFORCE_LEAD_UPDATED,
+	result, status = querySingleEventWithBreakdownByEventUserProperty(project.ID, U.EVENT_NAME_SALESFORCE_LEAD_UPDATED,
 		"$salesforce_lead_id", createdDate.Unix()-500, createdDate.Add(30*time.Second).Unix()+500)
 	assert.Equal(t, http.StatusOK, status)
 	assert.Len(t, result, 3)
 	assert.Equal(t, float64(2), result[leadID1])
 	assert.Equal(t, float64(2), result[leadID2])
+	assert.Equal(t, float64(2), result[leadID2_3])
 
-	result, status = querySingleEventWithBreakdownByUserProperty(project.ID, U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_CREATED,
-		"$salesforce_account_id", createdDate.Unix()-500, createdDate.Add(30*time.Second).Unix()+500)
+	result, status = querySingleEventWithBreakdownByEventUserProperty(project.ID, U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_CREATED,
+		"$salesforce_account_id", account1CreatedDate.Unix()-500, createdDate.Add(30*time.Second).Unix()+500)
 	assert.Equal(t, http.StatusOK, status)
 	assert.Len(t, result, 2)
 	assert.Equal(t, float64(1), result[accountID1])
 	assert.Equal(t, float64(1), result[accountID2])
 
-	result, status = querySingleEventWithBreakdownByUserProperty(project.ID, U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED,
-		"$salesforce_account_id", createdDate.Unix()-500, createdDate.Add(30*time.Second).Unix()+500)
+	result, status = querySingleEventWithBreakdownByGlobalUserProperty(project.ID, U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_CREATED,
+		"$salesforce_lead_id", nil, nil, nil, account1CreatedDate.Unix()-500, createdDate.Add(30*time.Second).Unix()+500)
+	assert.Equal(t, http.StatusOK, status)
+	assert.Len(t, result, 4) // $none=4(for contact records), none $none = 3 (lead records))
+	assert.Equal(t, float64(4), result[model.PropertyValueNone])
+	assert.Equal(t, float64(1), result[leadID1])
+	assert.Equal(t, float64(1), result[leadID2])
+	assert.Equal(t, float64(1), result[leadID2_3])
+
+	// filter with $salesforce_lead_id = 1, should return only 1 user
+	result, status = querySingleEventWithBreakdownByGlobalUserProperty(project.ID, U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_CREATED,
+		"$salesforce_lead_id", nil, nil, map[string]string{"$salesforce_lead_id": leadID1}, account1CreatedDate.Unix()-500, createdDate.Add(30*time.Second).Unix()+500)
+	assert.Equal(t, http.StatusOK, status)
+	assert.Len(t, result, 1)
+	assert.Empty(t, result[model.PropertyValueNone])
+	assert.Equal(t, float64(1), result[leadID1])
+
+	// eventUserPropertyfilter salesforce_account_id = account1 should return 1 lead  = leadID1
+	result, status = querySingleEventWithBreakdownByGlobalUserProperty(project.ID, U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_CREATED,
+		"$salesforce_lead_id", nil, map[string]string{"$salesforce_account_id": accountID1}, map[string]string{"$salesforce_lead_id": leadID1}, account1CreatedDate.Unix()-500, createdDate.Add(30*time.Second).Unix()+500)
+	assert.Equal(t, http.StatusOK, status)
+	assert.Len(t, result, 1)
+	assert.Empty(t, result[model.PropertyValueNone])
+	assert.Equal(t, float64(1), result[leadID1])
+
+	// eventPropertyfilter $timestamp = account1 created timestamp should return 1 lead  = leadID1
+	result, status = querySingleEventWithBreakdownByGlobalUserProperty(project.ID, U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_CREATED,
+		"$salesforce_lead_id", map[string]string{"$timestamp": fmt.Sprintf("%d", account1CreatedDate.Unix())}, nil, map[string]string{"$salesforce_lead_id": leadID1}, account1CreatedDate.Unix()-500, createdDate.Add(30*time.Second).Unix()+500)
+	assert.Equal(t, http.StatusOK, status)
+	assert.Len(t, result, 1)
+	assert.Empty(t, result[model.PropertyValueNone])
+	assert.Equal(t, float64(1), result[leadID1])
+
+	userCount, status := querySingleEventTotalUserCount(project.ID, U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_CREATED,
+		"$salesforce_lead_id", nil, account1CreatedDate.Unix()-500, createdDate.Add(30*time.Second).Unix()+500)
+	assert.Equal(t, http.StatusOK, status)
+	assert.Equal(t, userCount, 7)
+
+	// should return only one user
+	userCount, status = querySingleEventTotalUserCount(project.ID, U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_CREATED,
+		"$salesforce_lead_id", map[string]string{"$salesforce_lead_id": leadID1}, account1CreatedDate.Unix()-500, createdDate.Add(30*time.Second).Unix()+500)
+	assert.Equal(t, http.StatusOK, status)
+	assert.Equal(t, userCount, 1)
+
+	result, status = querySingleEventWithBreakdownByGlobalUserProperty(project.ID, U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_CREATED,
+		"$salesforce_contact_id", nil, nil, nil, account1CreatedDate.Unix()-500, createdDate.Add(30*time.Second).Unix()+500)
+	assert.Equal(t, http.StatusOK, status)
+	assert.Len(t, result, 5) // $none=3(for lead records), none $none = 4 (contact records))
+	assert.Equal(t, float64(3), result[model.PropertyValueNone])
+	assert.Equal(t, float64(1), result[contactID1])
+	assert.Equal(t, float64(1), result[contactID2])
+	assert.Equal(t, float64(1), result[opportunityID4ContactRole1ContactID])
+	assert.Equal(t, float64(1), result[opportunityID4ContactRole2ContactID])
+
+	result, status = querySingleEventWithBreakdownByEventUserProperty(project.ID, U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED,
+		"$salesforce_account_id", account1CreatedDate.Unix()-500, createdDate.Add(30*time.Second).Unix()+500)
 	assert.Equal(t, http.StatusOK, status)
 	assert.Len(t, result, 2)
 	assert.Equal(t, float64(2), result[accountID1])
 	assert.Equal(t, float64(2), result[accountID2])
 
-	result, status = querySingleEventWithBreakdownByUserProperty(project.ID, U.GROUP_EVENT_NAME_SALESFORCE_OPPORTUNITY_CREATED,
+	result, status = querySingleEventWithBreakdownByEventUserProperty(project.ID, U.GROUP_EVENT_NAME_SALESFORCE_OPPORTUNITY_CREATED,
 		"$salesforce_opportunity_id", createdDate.Unix()-500, createdDate.Add(30*time.Second).Unix()+500)
 	assert.Equal(t, http.StatusOK, status)
 	assert.Len(t, result, 4)
@@ -3419,7 +3602,7 @@ func TestSalesforceGroups(t *testing.T) {
 	assert.Equal(t, float64(1), result[opportunityID3])
 	assert.Equal(t, float64(1), result[opportunityID4])
 
-	result, status = querySingleEventWithBreakdownByUserProperty(project.ID, U.GROUP_EVENT_NAME_SALESFORCE_OPPORTUNITY_UPDATED,
+	result, status = querySingleEventWithBreakdownByEventUserProperty(project.ID, U.GROUP_EVENT_NAME_SALESFORCE_OPPORTUNITY_UPDATED,
 		"$salesforce_opportunity_id", createdDate.Unix()-500, createdDate.Add(30*time.Second).Unix()+500)
 	assert.Equal(t, http.StatusOK, status)
 	assert.Len(t, result, 4)
@@ -3435,8 +3618,8 @@ func TestSalesforceGroups(t *testing.T) {
 		"Id":               accountID1,
 		"Name":             "account1.1",
 		"city":             "A",
-		"CreatedDate":      createdDate.Format(model.SalesforceDocumentDateTimeLayout),
-		"LastModifiedDate": createdDate.AddDate(0, 0, 1).Format(model.SalesforceDocumentDateTimeLayout),
+		"CreatedDate":      account1CreatedDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": account1CreatedDate.AddDate(0, 0, 1).Format(model.SalesforceDocumentDateTimeLayout),
 	}
 	processRecords = append(processRecords, document)
 	processRecordsType = append(processRecordsType, model.SalesforceDocumentTypeNameAccount)
@@ -3445,8 +3628,8 @@ func TestSalesforceGroups(t *testing.T) {
 		"Id":               accountID2,
 		"Name":             "account2.2",
 		"City":             "B",
-		"CreatedDate":      createdDate.Format(model.SalesforceDocumentDateTimeLayout),
-		"LastModifiedDate": createdDate.AddDate(0, 0, 1).Format(model.SalesforceDocumentDateTimeLayout),
+		"CreatedDate":      account2CreatedDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": account2CreatedDate.AddDate(0, 0, 1).Format(model.SalesforceDocumentDateTimeLayout),
 	}
 	processRecords = append(processRecords, document)
 	processRecordsType = append(processRecordsType, model.SalesforceDocumentTypeNameAccount)
@@ -3457,29 +3640,30 @@ func TestSalesforceGroups(t *testing.T) {
 	}
 
 	// check before for property A
-	result, status = querySingleEventWithBreakdownByUserProperty(project.ID, U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED,
-		"$salesforce_account_city", createdDate.AddDate(0, 0, 1).Unix(), createdDate.AddDate(0, 0, 1).Unix()+10)
+	result, status = querySingleEventWithBreakdownByEventUserProperty(project.ID, U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED,
+		"$salesforce_account_city", account1CreatedDate.Unix(), createdDate.AddDate(0, 0, 1).Unix()+10)
 	assert.Equal(t, http.StatusOK, status)
-	assert.Len(t, result, 0)
+	assert.Len(t, result, 1)
+	assert.Equal(t, float64(4), result[model.PropertyValueNone])
 
 	enrichStatus, _ = IntSalesforce.Enrich(project.ID, 2, nil)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
 	assert.Len(t, enrichStatus, 1)
 	assert.Equal(t, "success", enrichStatus[0].Status)
 
-	result, status = querySingleEventWithBreakdownByUserProperty(project.ID, U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED,
-		"$salesforce_account_id", createdDate.AddDate(0, 0, 1).Unix(), createdDate.AddDate(0, 0, 1).Unix()+10)
+	result, status = querySingleEventWithBreakdownByEventUserProperty(project.ID, U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED,
+		"$salesforce_account_id", account1CreatedDate.Unix(), createdDate.AddDate(0, 0, 1).Unix()+10)
 	assert.Equal(t, http.StatusOK, status)
 	assert.Len(t, result, 2)
-	assert.Equal(t, float64(1), result[accountID1])
-	assert.Equal(t, float64(1), result[accountID2])
+	assert.Equal(t, float64(3), result[accountID1])
+	assert.Equal(t, float64(3), result[accountID2])
 
-	result, status = querySingleEventWithBreakdownByUserProperty(project.ID, U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED,
-		"$salesforce_account_city", createdDate.AddDate(0, 0, 1).Unix(), createdDate.AddDate(0, 0, 1).Unix()+10)
+	result, status = querySingleEventWithBreakdownByEventUserProperty(project.ID, U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED,
+		"$salesforce_account_city", account1CreatedDate.Unix(), createdDate.AddDate(0, 0, 1).Unix()+10)
 	assert.Equal(t, http.StatusOK, status)
 	assert.Len(t, result, 2)
-	assert.Equal(t, float64(1), result["A"])
-	assert.Equal(t, float64(1), result["B"])
+	assert.Equal(t, float64(3), result["A"])
+	assert.Equal(t, float64(3), result["B"])
 
 	for id, docType := range map[string]int{
 		leadID1:                             model.SalesforceDocumentTypeLead,
@@ -3628,8 +3812,8 @@ func TestSalesforceGroups(t *testing.T) {
 		"Name":               "lead3",
 		"ConvertedAccountId": accountID3,
 		"City":               "A",
-		"CreatedDate":        createdDate.AddDate(0, 0, -2).Format(model.SalesforceDocumentDateTimeLayout),
-		"LastModifiedDate":   createdDate.AddDate(0, 0, -2).Format(model.SalesforceDocumentDateTimeLayout),
+		"CreatedDate":        account3CreatedDate.AddDate(0, 0, -2).Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate":   account3CreatedDate.AddDate(0, 0, -2).Format(model.SalesforceDocumentDateTimeLayout),
 	}
 	err = createDummySalesforceDocument(project.ID, document, model.SalesforceDocumentTypeNameLead)
 	assert.Nil(t, err)
@@ -4697,7 +4881,7 @@ func TestSalesforceSkipCampaignMemberIfAssociationNotProcessed(t *testing.T) {
 	assert.Len(t, documents, 1)
 	assert.False(t, documents[0].Synced)
 
-	result, status := querySingleEventWithBreakdownByUserProperty(project.ID, U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED,
+	result, status := querySingleEventWithBreakdownByEventUserProperty(project.ID, U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED,
 		"$salesforce_contact_id", createdTime.Unix()-500, time.Now().Unix()+500)
 	assert.Equal(t, http.StatusOK, status)
 	assert.Len(t, result, 0)
@@ -4714,7 +4898,7 @@ func TestSalesforceSkipCampaignMemberIfAssociationNotProcessed(t *testing.T) {
 	assert.True(t, documents[0].Synced)
 	assert.Equal(t, contactUserID, documents[0].UserID)
 
-	result, status = querySingleEventWithBreakdownByUserProperty(project.ID, U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED,
+	result, status = querySingleEventWithBreakdownByEventUserProperty(project.ID, U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED,
 		"$salesforce_contact_id", createdTime.Unix()-500, time.Now().Unix()+500)
 	assert.Equal(t, http.StatusOK, status)
 	assert.Len(t, result, 1)

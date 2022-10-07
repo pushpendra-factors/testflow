@@ -1,14 +1,20 @@
 import React from 'react';
 import get from 'lodash/get';
 import has from 'lodash/has';
+import cx from 'classnames';
 import findIndex from 'lodash/findIndex';
-import moment from 'moment';
+import MomentTz from 'Components/MomentTz';
 
-import { Number as NumFormat } from '../../../../components/factorsComponents';
+import {
+  Number as NumFormat,
+  SVG,
+  Text
+} from '../../../../components/factorsComponents';
 import {
   SortResults,
   getClickableTitleSorter,
-  addQforQuarter
+  addQforQuarter,
+  formatCount
 } from '../../../../utils/dataFormatter';
 import {
   MAX_ALLOWED_VISIBLE_PROPERTIES,
@@ -66,14 +72,113 @@ export const getVisibleData = (aggregateData, sorter) => {
 };
 
 export const getVisibleSeriesData = (data, sorter) => {
-  const result = SortResults(data, sorter).slice(
+  const comparisonApplied = data.some((d) => has(d, 'compareIndex'));
+  if (!comparisonApplied) {
+    const result = SortResults(data, sorter).slice(
+      0,
+      MAX_ALLOWED_VISIBLE_PROPERTIES
+    );
+    return result;
+  }
+  const currentData = [];
+  const comparisonData = [];
+  for (const d of data) {
+    if (has(d, 'compareIndex')) {
+      comparisonData.push(d);
+      continue;
+    }
+    currentData.push(d);
+  }
+  const result = [];
+  const sortedData = SortResults(currentData, sorter).slice(
     0,
     MAX_ALLOWED_VISIBLE_PROPERTIES
   );
+  sortedData.forEach((d) => {
+    const cmpData = comparisonData.find((cd) => cd.compareIndex === d.index);
+    result.push(d, cmpData);
+  });
   return result;
 };
 
-export const formatData = (data, kpis, breakdown, currentEventIndex) => {
+const getRowLabelAndBreakdownData = ({
+  row,
+  breakdown,
+  grns,
+  bkdIndex = 0
+}) => {
+  const breakdownVals = row
+    .slice(bkdIndex, bkdIndex + breakdown.length)
+    .map((vl) => (DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl));
+
+  const breakdownData = {};
+
+  for (const i in breakdown) {
+    const bkd = breakdown[i].property;
+    breakdownData[`${bkd} - ${i}`] = parseForDateTimeLabel(
+      grns[i],
+      breakdownVals[i]
+    );
+  }
+  const rowLabel = Object.values(breakdownData).join(', ');
+  return { rowLabel, breakdownData };
+};
+
+const getEquivalentCompareIndex = ({
+  data,
+  breakdown,
+  label,
+  grns,
+  bkdIndex = 0
+}) => {
+  for (const i in data) {
+    const row = get(data, `${i}`, []);
+    const { rowLabel } = getRowLabelAndBreakdownData({
+      row,
+      breakdown,
+      grns,
+      bkdIndex
+    });
+    if (label === rowLabel) {
+      return i;
+    }
+  }
+  return -1;
+};
+
+const getKpiValues = ({
+  row,
+  kpis,
+  breakdown,
+  originalValues,
+  isCompare = false
+}) => {
+  const kpiVals = row.slice(breakdown.length);
+  const kpisData = {};
+
+  for (let j = 0; j < kpis.length; j++) {
+    const dataKey = `${getKpiLabel(kpis[j])} - ${j}${
+      isCompare ? ` - compareValue` : ''
+    }`;
+    kpisData[dataKey] = kpiVals[j];
+
+    if (isCompare) {
+      const newVal = originalValues[j];
+      const oldVal = kpiVals[j];
+      kpisData[`${getKpiLabel(kpis[j])} - ${j} - change`] =
+        ((newVal - oldVal) / oldVal) * 100;
+    }
+  }
+  return { kpisData, kpiVals };
+};
+
+export const formatData = (
+  data,
+  kpis,
+  breakdown,
+  currentEventIndex,
+  comparison_data
+) => {
   try {
     if (
       !data ||
@@ -95,24 +200,17 @@ export const formatData = (data, kpis, breakdown, currentEventIndex) => {
     const grns = getBreakDownGranularities(headerSlice, breakdown);
 
     const result = rows.map((d, index) => {
-      const breakdownVals = d
-        .slice(0, breakdown.length)
-        .map((vl) => (DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl));
-      const breakdownData = {};
-      for (let i = 0; i < breakdown.length; i++) {
-        const bkd = breakdown[i].property;
-        breakdownData[`${bkd} - ${i}`] = parseForDateTimeLabel(
-          grns[i],
-          breakdownVals[i]
-        );
-      }
-      const kpiVals = d.slice(breakdown.length);
-      const kpisData = {};
-      for (let j = 0; j < kpis.length; j++) {
-        kpisData[`${getKpiLabel(kpis[j])} - ${j}`] = kpiVals[j];
-      }
-      const grpLabel = Object.values(breakdownData).join(', ');
-      return {
+      const { rowLabel: grpLabel, breakdownData } = getRowLabelAndBreakdownData(
+        {
+          row: d,
+          breakdown,
+          grns
+        }
+      );
+
+      const { kpisData, kpiVals } = getKpiValues({ row: d, kpis, breakdown });
+
+      const obj = {
         label: grpLabel,
         value: kpiVals[currentEventIndex],
         metricType: get(kpis[currentEventIndex], 'metricType', null),
@@ -120,6 +218,35 @@ export const formatData = (data, kpis, breakdown, currentEventIndex) => {
         ...breakdownData,
         ...kpisData
       };
+
+      if (comparison_data != null) {
+        const compareDataRows = get(comparison_data, `1.rows`, []);
+
+        const compareIndex = getEquivalentCompareIndex({
+          data: compareDataRows,
+          breakdown: breakdown,
+          label: grpLabel,
+          grns
+        });
+
+        if (compareIndex > -1) {
+          const compareRow = compareDataRows[compareIndex];
+          const { kpiVals: compareKpiVals, kpisData: compareKpisData } =
+            getKpiValues({
+              row: compareRow,
+              breakdown,
+              kpis,
+              isCompare: true,
+              originalValues: kpiVals
+            });
+          return {
+            ...obj,
+            compareValue: compareKpiVals[currentEventIndex],
+            ...compareKpisData
+          };
+        }
+      }
+      return obj;
     });
     return result;
   } catch (err) {
@@ -133,14 +260,11 @@ export const getTableColumns = (
   kpis,
   currentSorter,
   handleSorting,
-  userPropNames,
-  eventPropNames
+  comparisonApplied
 ) => {
   const breakdownColumns = breakdown.map((e, index) => {
     const displayTitle = getBreakdownDisplayName({
       breakdown: e,
-      userPropNames,
-      eventPropNames,
       queryType: QUERY_TYPE_KPI
     });
     return {
@@ -173,11 +297,63 @@ export const getTableColumns = (
       className: 'text-right',
       dataIndex: `${kpiLabel} - ${index}`,
       width: 300,
-      render: (d) => {
-        if (kpi.metricType) {
-          return getFormattedKpiValue({ value: d, metricType: kpi.metricType });
-        }
-        return d ? <NumFormat number={d} /> : 0;
+      render: (d, row) => {
+        return (
+          <div className="flex flex-col">
+            <Text type="title" level={7} color="grey-6">
+              {kpi.metricType ? (
+                getFormattedKpiValue({ value: d, metricType: kpi.metricType })
+              ) : (
+                <NumFormat number={d} />
+              )}
+            </Text>
+            {comparisonApplied && (
+              <>
+                <Text type="title" level={7} color="grey">
+                  {kpi.metricType ? (
+                    getFormattedKpiValue({
+                      value: row[`${kpiLabel} - ${index} - compareValue`],
+                      metricType: kpi.metricType
+                    })
+                  ) : (
+                    <NumFormat
+                      number={row[`${kpiLabel} - ${index} - compareValue`]}
+                    />
+                  )}
+                </Text>
+                <div className="flex col-gap-1 items-center justify-end">
+                  <SVG
+                    color={
+                      row[`${kpiLabel} - ${index} - change`] > 0
+                        ? '#5ACA89'
+                        : '#FF0000'
+                    }
+                    name={
+                      row[`${kpiLabel} - ${index} - change`] > 0
+                        ? 'arrowLift'
+                        : 'arrowDown'
+                    }
+                    size={16}
+                  />
+                  <Text
+                    level={7}
+                    type="title"
+                    color={
+                      row[`${kpiLabel} - ${index} - change`] < 0
+                        ? 'red'
+                        : 'green'
+                    }
+                  >
+                    <NumFormat
+                      number={Math.abs(row[`${kpiLabel} - ${index} - change`])}
+                    />
+                    %
+                  </Text>
+                </div>
+              </>
+            )}
+          </div>
+        );
       }
     };
   });
@@ -344,7 +520,8 @@ export const formatDataInSeriesFormat = (
   aggregateData,
   currentEventIndex,
   frequency,
-  breakdown
+  breakdown,
+  comparison_data
 ) => {
   console.log('kpi with breakdown formatDataInSeriesFormat');
   const dataIndex = 0;
@@ -360,6 +537,7 @@ export const formatDataInSeriesFormat = (
   ) {
     return {
       categories: [],
+      compareCategories: [],
       data: []
     };
   }
@@ -367,6 +545,10 @@ export const formatDataInSeriesFormat = (
   const dateIndex = headers.findIndex((h) => h === 'datetime');
   const breakdownIndex = dateIndex + 1;
   const differentDates = getDifferentDates(rows, dateIndex);
+  const differentComparisonDates =
+    comparison_data != null
+      ? getDifferentDates(comparison_data[dataIndex].rows, dateIndex)
+      : [];
   const initializedDatesData = differentDates.map(() => {
     return 0;
   });
@@ -382,12 +564,43 @@ export const formatDataInSeriesFormat = (
       ...d
     };
   });
+
+  const comparisonData = aggregateData.map((d) => {
+    return {
+      name: d.label,
+      data: [...initializedDatesData],
+      marker: {
+        enabled: false
+      },
+      dashStyle: 'dash',
+      compareIndex: d.index,
+      ...d
+    };
+  });
+
   const headerSlice = headers.slice(
     breakdownIndex,
     breakdown.length + breakdownIndex
   );
   const grns = getBreakDownGranularities(headerSlice, breakdown);
   const format = DATE_FORMATS[frequency] || DATE_FORMATS.date;
+
+  const dateAndLabelRowIndexForComparisonData =
+    comparison_data != null
+      ? comparison_data[dataIndex].rows.reduce((prev, curr, currIndex) => {
+          const date = curr[dateIndex];
+          const { rowLabel } = getRowLabelAndBreakdownData({
+            row: curr,
+            breakdown,
+            grns,
+            bkdIndex: dateIndex + 1
+          });
+          return {
+            ...prev,
+            [`${date}, ${rowLabel}`]: currIndex
+          };
+        }, {})
+      : {};
 
   rows.forEach((row) => {
     const kpiVals = row.slice(breakdown.length + breakdownIndex);
@@ -397,14 +610,38 @@ export const formatDataInSeriesFormat = (
         parseForDateTimeLabel(grns[ind], DISPLAY_PROP[x] ? DISPLAY_PROP[x] : x)
       )
       .join(', ');
+
     const bIdx = labelsMapper[breakdownJoin];
     const category = row[dateIndex];
     const idx = differentDates.indexOf(category);
     if (resultantData[bIdx]) {
       resultantData[bIdx][
-        addQforQuarter(frequency) + moment(category).format(format)
+        addQforQuarter(frequency) + MomentTz(category).format(format)
       ] = kpiVals[currentEventIndex];
       resultantData[bIdx].data[idx] = kpiVals[currentEventIndex];
+    }
+
+    if (comparison_data != null) {
+      const dateIndex = differentDates.findIndex((dd) => dd === category);
+      const compareCategory = differentComparisonDates[dateIndex];
+      const compareIndex =
+        dateAndLabelRowIndexForComparisonData[
+          `${compareCategory}, ${breakdownJoin}`
+        ];
+
+      const compareRow =
+        compareIndex != null
+          ? comparison_data[dataIndex].rows[compareIndex]
+          : null;
+      if (comparisonData[bIdx] && compareRow != null) {
+        const compareKpiVals = compareRow.slice(
+          breakdown.length + breakdownIndex
+        );
+        comparisonData[bIdx][
+          addQforQuarter(frequency) + MomentTz(category).format(format)
+        ] = compareKpiVals[currentEventIndex];
+        comparisonData[bIdx].data[idx] = compareKpiVals[currentEventIndex];
+      }
     }
   });
 
@@ -414,13 +651,18 @@ export const formatDataInSeriesFormat = (
     );
     return {
       categories: differentDates,
+      compareCategories: differentComparisonDates,
       data: resultsWithAtLeastWithOneDataPoint
     };
   }
 
   return {
     categories: differentDates,
-    data: resultantData
+    data:
+      comparison_data != null
+        ? [...resultantData, ...comparisonData]
+        : resultantData,
+    compareCategories: differentComparisonDates
   };
 };
 
@@ -431,16 +673,14 @@ export const getDateBasedColumns = (
   currentSorter,
   handleSorting,
   frequency,
-  userPropNames,
-  eventPropNames
+  comparisonApplied,
+  compareCategories
 ) => {
   console.log('kpi with breakdown getDateBasedColumns');
 
   const breakdownColumns = breakdown.map((e, index) => {
     const displayTitle = getBreakdownDisplayName({
       breakdown: e,
-      userPropNames,
-      eventPropNames,
       queryType: QUERY_TYPE_KPI
     });
     return {
@@ -458,6 +698,7 @@ export const getDateBasedColumns = (
 
   const kpiColumns = kpis.map((kpi, index) => {
     const kpiLabel = getKpiLabel(kpi);
+
     return {
       title: getClickableTitleSorter(
         kpiLabel,
@@ -473,23 +714,76 @@ export const getDateBasedColumns = (
       className: 'text-right',
       dataIndex: `${kpiLabel} - ${index}`,
       width: 300,
-      render: (d) => {
-        if (kpi.metricType) {
-          return getFormattedKpiValue({ value: d, metricType: kpi.metricType });
-        }
-        return d ? <NumFormat number={d} /> : 0;
+      render: (d, row) => {
+        return (
+          <div className="flex flex-col">
+            <Text type="title" level={7} color="grey-6">
+              {kpi.metricType ? (
+                getFormattedKpiValue({ value: d, metricType: kpi.metricType })
+              ) : (
+                <NumFormat number={d} />
+              )}
+            </Text>
+            {comparisonApplied && (
+              <>
+                <Text type="title" level={7} color="grey">
+                  {kpi.metricType ? (
+                    getFormattedKpiValue({
+                      value: row[`${kpiLabel} - ${index} - compareValue`],
+                      metricType: kpi.metricType
+                    })
+                  ) : (
+                    <NumFormat
+                      number={row[`${kpiLabel} - ${index} - compareValue`]}
+                    />
+                  )}
+                </Text>
+                <div className="flex col-gap-1 items-center justify-end">
+                  <SVG
+                    color={
+                      row[`${kpiLabel} - ${index} - change`] > 0
+                        ? '#5ACA89'
+                        : '#FF0000'
+                    }
+                    name={
+                      row[`${kpiLabel} - ${index} - change`] > 0
+                        ? 'arrowLift'
+                        : 'arrowDown'
+                    }
+                    size={16}
+                  />
+                  <Text
+                    level={7}
+                    type="title"
+                    color={
+                      row[`${kpiLabel} - ${index} - change`] < 0
+                        ? 'red'
+                        : 'green'
+                    }
+                  >
+                    <NumFormat
+                      number={Math.abs(row[`${kpiLabel} - ${index} - change`])}
+                    />
+                    %
+                  </Text>
+                </div>
+              </>
+            )}
+          </div>
+        );
       }
     };
   });
 
   const format = DATE_FORMATS[frequency] || DATE_FORMATS.date;
+  const dateColumns = [];
 
-  const dateColumns = categories.map((cat) => {
-    return {
+  categories.forEach((cat, catIndex) => {
+    dateColumns.push({
       title: getClickableTitleSorter(
-        addQforQuarter(frequency) + moment(cat).format(format),
+        addQforQuarter(frequency) + MomentTz(cat).format(format),
         {
-          key: addQforQuarter(frequency) + moment(cat).format(format),
+          key: addQforQuarter(frequency) + MomentTz(cat).format(format),
           type: 'numerical',
           subtype: null
         },
@@ -497,9 +791,9 @@ export const getDateBasedColumns = (
         handleSorting,
         'right'
       ),
-      className: 'text-right',
-      width: 150,
-      dataIndex: addQforQuarter(frequency) + moment(cat).format(format),
+      className: cx('text-right', { 'border-none': comparisonApplied }),
+      width: frequency === 'hour' ? 200 : 150,
+      dataIndex: addQforQuarter(frequency) + MomentTz(cat).format(format),
       render: (d, rowDetails) => {
         const metricType = get(rowDetails, 'metricType', null);
         return d ? (
@@ -512,20 +806,129 @@ export const getDateBasedColumns = (
           0
         );
       }
-    };
+    });
+    if (comparisonApplied) {
+      dateColumns.push({
+        title: getClickableTitleSorter(
+          addQforQuarter(frequency) +
+            MomentTz(compareCategories[catIndex]).format(format),
+          {
+            key:
+              addQforQuarter(frequency) +
+              MomentTz(compareCategories[catIndex]).format(format),
+            type: 'numerical',
+            subtype: null
+          },
+          currentSorter,
+          handleSorting,
+          'right'
+        ),
+        className: 'text-right border-none',
+        width: frequency === 'hour' ? 200 : 150,
+        dataIndex:
+          addQforQuarter(frequency) +
+          MomentTz(compareCategories[catIndex]).format(format),
+        render: (d, row) => {
+          const metricType = get(row, 'metricType', null);
+          return metricType ? (
+            getFormattedKpiValue({ value: d, metricType })
+          ) : (
+            <NumFormat number={d} />
+          );
+        }
+      });
+      dateColumns.push({
+        title: getClickableTitleSorter(
+          'Change',
+          {
+            key:
+              addQforQuarter(frequency) +
+              MomentTz(compareCategories[catIndex]).format(format) +
+              ' - Change',
+            type: 'percent',
+            subtype: null
+          },
+          currentSorter,
+          handleSorting,
+          'right'
+        ),
+        className: 'text-right',
+        width: frequency === 'hour' ? 200 : 150,
+        dataIndex:
+          addQforQuarter(frequency) +
+          MomentTz(compareCategories[catIndex]).format(format) +
+          ' - Change',
+        render: (d) => {
+          const changeIcon = (
+            <SVG
+              color={d > 0 ? '#5ACA89' : '#FF0000'}
+              name={d > 0 ? 'arrowLift' : 'arrowDown'}
+              size={16}
+            />
+          );
+          return (
+            <div className="flex col-gap-1 items-center justify-end">
+              {changeIcon}
+              <Text level={7} type="title" color={d < 0 ? 'red' : 'green'}>
+                <NumFormat number={Math.abs(d)} />%
+              </Text>
+            </div>
+          );
+        }
+      });
+    }
   });
   return [...breakdownColumns, ...kpiColumns, ...dateColumns];
 };
 
 export const getDateBasedTableData = (
   seriesData,
+  categories,
   searchText,
-  currentSorter
+  currentSorter,
+  frequency,
+  comparisonApplied,
+  compareCategories
 ) => {
-  console.log('kpi with breakdown getDateBasedTableData');
-  const result = seriesData.filter((sd) =>
-    sd.name.toLowerCase().includes(searchText.toLowerCase())
+  const format = DATE_FORMATS[frequency] || DATE_FORMATS.date;
+  const result = seriesData
+    .filter((s) => !has(s, 'compareIndex'))
+    .map((sd, index) => {
+      const obj = {
+        index,
+        event: sd.name,
+        Overall: sd.total,
+        ...sd
+      };
+      const compareRow = seriesData.find(
+        (elem) => elem.compareIndex === sd.index
+      );
+      const dateData = {};
+      categories.forEach((cat, catIndex) => {
+        dateData[addQforQuarter(frequency) + MomentTz(cat).format(format)] =
+          sd.data[catIndex];
+        if (comparisonApplied && compareRow != null) {
+          const val1 = sd.data[catIndex];
+          const val2 = compareRow.data[catIndex];
+          dateData[
+            addQforQuarter(frequency) +
+              MomentTz(compareCategories[catIndex]).format(format)
+          ] = val2;
+          dateData[
+            `${
+              addQforQuarter(frequency) +
+              MomentTz(compareCategories[catIndex]).format(format)
+            } - Change`
+          ] = formatCount(((val1 - val2) / val2) * 100);
+        }
+      });
+      return {
+        ...obj,
+        ...dateData
+      };
+    });
+  const filteredResult = result.filter(
+    (elem) => elem.event.toLowerCase().indexOf(searchText.toLowerCase()) > -1
   );
-
-  return SortResults(result, currentSorter);
+  return SortResults(filteredResult, currentSorter);
 };

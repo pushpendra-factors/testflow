@@ -6,20 +6,22 @@ package main
 // go run run_pull_events.go --project_id=1 --output_dir="" --end_time=""
 
 import (
+	"context"
 	C "factors/config"
 	"factors/filestore"
 	"factors/model/store"
 	serviceDisk "factors/services/disk"
 	serviceGCS "factors/services/gcstorage"
 	T "factors/task"
+	taskWrapper "factors/task/task_wrapper"
 	"factors/util"
 	"flag"
 	"fmt"
 	"net/http"
+	"reflect"
 	"strings"
 
-	taskWrapper "factors/task/task_wrapper"
-
+	"github.com/apache/beam/sdks/go/pkg/beam"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -29,9 +31,23 @@ const (
 	WeekInSecs  = 7 * DayInSecs
 )
 
+func registerStructs() {
+	log.Info("Registering structs for beam")
+	beam.RegisterType(reflect.TypeOf((*T.CounterCampaignFormat)(nil)).Elem())
+	beam.RegisterType(reflect.TypeOf((*T.CounterUserFormat)(nil)).Elem())
+	beam.RegisterType(reflect.TypeOf((*T.RunBeamConfig)(nil)).Elem())
+	beam.RegisterType(reflect.TypeOf((*T.CUserIdsBeam)(nil)).Elem())
+	beam.RegisterType(reflect.TypeOf((*T.UidMap)(nil)).Elem())
+
+	// do fn
+	beam.RegisterType(reflect.TypeOf((*T.SortUsDoFn)(nil)).Elem())
+}
+
 func main() {
 	env := flag.String("env", C.DEVELOPMENT, "")
 	bucketNameFlag := flag.String("bucket_name", "/usr/local/var/factors/cloud_storage", "--bucket_name=/usr/local/var/factors/cloud_storage pass bucket name")
+	tmp_bucketNameFlag := flag.String("bucket_name_tmp", "/usr/local/var/factors/cloud_storage_tmp", "--bucket_name=/usr/local/var/factors/cloud_storage pass bucket name for tmp artifacts")
+
 	localDiskTmpDirFlag := flag.String("local_disk_tmp_dir", "/usr/local/var/factors/local_disk/tmp", "--local_disk_tmp_dir=/usr/local/var/factors/local_disk/tmp pass directory.")
 
 	dbHost := flag.String("db_host", C.PostgresDefaultDBParams.Host, "")
@@ -59,9 +75,16 @@ func main() {
 		"Optional: file type. A comma separated list of file types and supports '*' for all files. ex: 1,2,6,9") //refer to T.fileType map
 	projectIdFlag := flag.String("project_ids", "",
 		"Optional: Project Id. A comma separated list of project Ids and supports '*' for all projects. ex: 1,2,6,9")
-
 	lookback := flag.Int("lookback", 30, "lookback_for_delta lookup")
 	projectsFromDB := flag.Bool("projects_from_db", false, "")
+	redisHost := flag.String("redis_host", "localhost", "")
+	redisPort := flag.Int("redis_port", 6379, "")
+	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
+	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
+
+	runBeam := flag.Int("run_beam", 1, "run build seq on beam ")
+	numWorkersFlag := flag.Int("num_beam_workers", 100, "Num of beam workers")
+
 	flag.Parse()
 
 	if *env != "development" &&
@@ -69,6 +92,28 @@ func main() {
 		*env != "production" {
 		err := fmt.Errorf("env [ %s ] not recognised", *env)
 		panic(err)
+	}
+
+	//init beam
+	var beamConfig T.RunBeamConfig
+	if *runBeam == 1 {
+		log.Info("Initializing all beam constructs")
+		registerStructs()
+		beam.Init()
+		beamConfig.RunOnBeam = true
+		beamConfig.Env = *env
+		beamConfig.Ctx = context.Background()
+		beamConfig.Pipe = beam.NewPipeline()
+		beamConfig.Scp = beamConfig.Pipe.Root()
+		beamConfig.NumWorker = *numWorkersFlag
+		if beam.Initialized() {
+			log.Info("Initalized all Beam Inits")
+		} else {
+			log.Fatal("unable to initialize runners")
+
+		}
+	} else {
+		beamConfig.RunOnBeam = false
 	}
 
 	defer util.NotifyOnPanic("Task#PullEvents", *env)
@@ -96,11 +141,16 @@ func main() {
 			Certificate: *memSQLCertificate,
 			AppName:     appName,
 		},
-		PrimaryDatastore: *primaryDatastore,
-		SentryDSN:        *sentryDSN,
+		PrimaryDatastore:    *primaryDatastore,
+		SentryDSN:           *sentryDSN,
+		RedisHost:           *redisHost,
+		RedisPort:           *redisPort,
+		RedisHostPersistent: *redisHostPersistent,
+		RedisPortPersistent: *redisPortPersistent,
 	}
 
 	C.InitConf(config)
+	beamConfig.DriverConfig = config
 	C.InitSentryLogging(config.SentryDSN, config.AppName)
 
 	// Initialize configs and connections and close with defer.
@@ -149,17 +199,25 @@ func main() {
 	}
 
 	projectIdsArray := make([]int64, 0)
-	for projectId, _ := range projectIdsToRun {
+	for projectId := range projectIdsToRun {
 		projectIdsArray = append(projectIdsArray, projectId)
 	}
 	// Init cloud manager.
 	var cloudManager filestore.FileManager
+	var cloudManagerTmp filestore.FileManager
+
 	if *env == "development" {
 		cloudManager = serviceDisk.New(*bucketNameFlag)
+		cloudManagerTmp = serviceDisk.New(*tmp_bucketNameFlag)
+
 	} else {
 		cloudManager, err = serviceGCS.New(*bucketNameFlag)
 		if err != nil {
 			log.WithField("error", err).Fatal("Failed to init cloud manager.")
+		}
+		cloudManagerTmp, err = serviceGCS.New(*tmp_bucketNameFlag)
+		if err != nil {
+			log.WithField("error", err).Fatal("Failed to init cloud manager for tmp.")
 		}
 	}
 
@@ -168,7 +226,9 @@ func main() {
 	configs := make(map[string]interface{})
 	configs["diskManager"] = diskManager
 	configs["cloudManager"] = &cloudManager
+	configs["cloudManagertmp"] = &cloudManagerTmp
 	configs["hardPull"] = hardPull
+	configs["beamConfig"] = &beamConfig
 
 	fileTypesMapOnlyEvents := make(map[int64]bool)
 	fileTypesMapOnlyEvents[1] = true

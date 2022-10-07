@@ -1,6 +1,5 @@
-import React, {
-  useState, useContext, useCallback, useEffect
-} from 'react';
+import React, { useState, useContext, useCallback, useEffect } from 'react';
+import cx from 'classnames';
 import { useSelector } from 'react-redux';
 import get from 'lodash/get';
 import {
@@ -297,24 +296,13 @@ const AttributionsChart = ({
     }
   }
 
-  let tableContent = null;
-
-  // if (chartType === CHART_TYPE_TABLE) {
-  //   tableContent = (
-  //     <div
-  //       onClick={handleEditQuery}
-  //       style={{ color: '#5949BC' }}
-  //       className="mt-3 font-medium text-base cursor-pointer flex justify-end item-center"
-  //     >
-  //       Show More &rarr;
-  //     </div>
-  //   );
-  // }
-
   return (
-    <div className={'w-full'}>
+    <div
+      className={cx('w-full flex-1', {
+        'p-2 flex justify-center flex-col': chartType !== CHART_TYPE_TABLE
+      })}
+    >
       {chartContent}
-      {tableContent}
     </div>
   );
 };

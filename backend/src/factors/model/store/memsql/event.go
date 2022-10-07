@@ -337,8 +337,17 @@ func (store *MemSQL) CreateEvent(event *model.Event) (*model.Event, int) {
 		event.ID = U.GetUUID()
 	}
 
-	// Use current properties of user, if user_properties is not provided.
-	if event.UserProperties == nil {
+	if event.IsFromPast {
+		eventProperties, err := U.AddToPostgresJsonb(&event.Properties, map[string]interface{}{"$is_from_past": event.IsFromPast}, true)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to add IsPast in event properties during event creation.")
+		} else {
+			event.Properties = *eventProperties
+		}
+	}
+
+	// Use current properties of user, if user_properties is not provided and if it is not a past event.
+	if event.UserProperties == nil && !event.IsFromPast {
 		properties, errCode := store.GetUserPropertiesByUserID(event.ProjectId, event.UserId)
 		if errCode != http.StatusFound {
 			logCtx.WithField("err_code", errCode).Error("Failed to get properties of user for event creation.")

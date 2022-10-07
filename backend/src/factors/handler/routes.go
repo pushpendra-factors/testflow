@@ -93,6 +93,7 @@ func InitAppRoutes(r *gin.Engine) {
 
 	shareRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/query", responseWrapper(EventsQueryHandler))
 	shareRouteGroup.POST("/:project_id/query", responseWrapper(QueryHandler))
+	shareRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/attribution/query", responseWrapper(V1.AttributionHandlerV1))
 	shareRouteGroup.POST("/:project_id/attribution/query", responseWrapper(AttributionHandler))
 	shareRouteGroup.POST("/:project_id/profiles/query", responseWrapper(ProfilesQueryHandler))
 	shareRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/kpi/query", responseWrapper(V1.ExecuteKPIQueryHandler))
