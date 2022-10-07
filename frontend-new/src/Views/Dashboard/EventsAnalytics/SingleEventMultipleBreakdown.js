@@ -178,7 +178,8 @@ function SingleEventMultipleBreakdown({
   return (
     <div
       className={cx('w-full flex-1', {
-        'p-2': chartType !== CHART_TYPE_TABLE
+        'p-2': chartType !== CHART_TYPE_TABLE,
+        'overflow-scroll': chartType === CHART_TYPE_TABLE
       })}
     >
       {chartContent}
