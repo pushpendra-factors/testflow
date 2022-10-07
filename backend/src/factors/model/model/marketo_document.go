@@ -33,6 +33,12 @@ var MarketoDocumentToQuery = map[string]string{
 		" LEFT OUTER JOIN `%s.%s.activity_delete_lead` AS adl " +
 		" ON l.id = adl.lead_id" +
 		" WHERE %v AND l.id > %v order by l.id asc LIMIT %v",
+	MARKETO_TYPE_NAME_LEAD_NO_SEGMENT_NO_PROGRAM: "select NULL AS segment_ids, NULL AS segment_names, NULL AS segmentation_ids, NULL AS segmentation_names, \"\" AS program_channel, \"\" AS program_created_at, \"\" AS program_description, \"\" AS program_end_date, " +
+		" \"\" AS program_name, \"\" AS program_sfdc_id, \"\" AS program_sfdc_name, \"\" AS program_start_date, \"\" AS program_status, " +
+		" \"\" AS program_type, \"\" AS program_url, \"\" AS workspace, CASE WHEN adl.lead_id IS NULL THEN false ELSE true END AS is_deleted ,l.* FROM `%s.%s.lead` AS l " +
+		" LEFT OUTER JOIN `%s.%s.activity_delete_lead` AS adl " +
+		" ON l.id = adl.lead_id" +
+		" WHERE %v AND l.id > %v order by l.id asc LIMIT %v",
 }
 
 func GetMarketoDocumentFilterCondition(docType string, addPrefix bool, prefix string, executionDate string) string {
@@ -48,15 +54,17 @@ func GetMarketoDocumentFilterCondition(docType string, addPrefix bool, prefix st
 }
 
 var MarketoDataObjectFilters = map[string]string{
-	MARKETO_TYPE_NAME_PROGRAM_MEMBERSHIP: "DATE(%v) = '%v'",
-	MARKETO_TYPE_NAME_LEAD:               "DATE(%v) = '%v'",
-	MARKETO_TYPE_NAME_LEAD_NO_SEGMENT:    "DATE(%v) = '%v'",
+	MARKETO_TYPE_NAME_PROGRAM_MEMBERSHIP:         "DATE(%v) = '%v'",
+	MARKETO_TYPE_NAME_LEAD:                       "DATE(%v) = '%v'",
+	MARKETO_TYPE_NAME_LEAD_NO_SEGMENT:            "DATE(%v) = '%v'",
+	MARKETO_TYPE_NAME_LEAD_NO_SEGMENT_NO_PROGRAM: "DATE(%v) = '%v'",
 }
 
 var MarketoDataObjectFiltersColumn = map[string]string{
-	MARKETO_TYPE_NAME_PROGRAM_MEMBERSHIP: "_fivetran_synced",
-	MARKETO_TYPE_NAME_LEAD:               "_fivetran_synced",
-	MARKETO_TYPE_NAME_LEAD_NO_SEGMENT:    "_fivetran_synced",
+	MARKETO_TYPE_NAME_PROGRAM_MEMBERSHIP:         "_fivetran_synced",
+	MARKETO_TYPE_NAME_LEAD:                       "_fivetran_synced",
+	MARKETO_TYPE_NAME_LEAD_NO_SEGMENT:            "_fivetran_synced",
+	MARKETO_TYPE_NAME_LEAD_NO_SEGMENT_NO_PROGRAM: "_fivetran_synced",
 }
 
 func GetMarketoDocumentQuery(bigQueryProjectId string, schemaId string, baseQuery string, executionDate string, docType string, limit int, offset int, lastProcessedRecord int) string {
@@ -69,6 +77,9 @@ func GetMarketoDocumentQuery(bigQueryProjectId string, schemaId string, baseQuer
 	}
 	if docType == MARKETO_TYPE_NAME_LEAD_NO_SEGMENT {
 		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId, bigQueryProjectId, schemaId, bigQueryProjectId, schemaId, GetMarketoDocumentFilterCondition(docType, true, "l", executionDate), lastProcessedRecord, limit)
+	}
+	if docType == MARKETO_TYPE_NAME_LEAD_NO_SEGMENT_NO_PROGRAM {
+		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId, bigQueryProjectId, schemaId, GetMarketoDocumentFilterCondition(docType, true, "l", executionDate), lastProcessedRecord, limit)
 	}
 	return ""
 }
@@ -164,9 +175,10 @@ func GetMarketoDocumentDocumentType(documentTypeString string) int {
 }
 
 const (
-	MARKETO_TYPE_NAME_PROGRAM_MEMBERSHIP = "program_membership"
-	MARKETO_TYPE_NAME_LEAD               = "lead"
-	MARKETO_TYPE_NAME_LEAD_NO_SEGMENT    = "lead_no_segment"
+	MARKETO_TYPE_NAME_PROGRAM_MEMBERSHIP         = "program_membership"
+	MARKETO_TYPE_NAME_LEAD                       = "lead"
+	MARKETO_TYPE_NAME_LEAD_NO_SEGMENT            = "lead_no_segment"
+	MARKETO_TYPE_NAME_LEAD_NO_SEGMENT_NO_PROGRAM = "lead_no_segment_no_program"
 )
 
 var MarketoDocumentTypeAlias = map[string]int{

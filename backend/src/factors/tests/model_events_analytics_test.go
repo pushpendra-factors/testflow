@@ -1075,6 +1075,41 @@ func TestEventAnalyticsEachEventQueryWithFilterAndBreakdown(t *testing.T) {
 		assert.Equal(t, "s0", result.Rows[0][1])
 		assert.Equal(t, float64(4), result.Rows[0][2])
 	})
+
+	t.Run("TestAnalyticsQueryWithNotContainsProperty", func(t *testing.T) {
+		query := model.Query{
+			From: startTimestamp,
+			To:   startTimestamp + 40,
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
+					Name: "s0",
+					Properties: []model.QueryProperty{
+						model.QueryProperty{
+							Entity:    model.PropertyEntityUser,
+							Property:  "$intial_source",
+							Operator:  "notEqual",
+							Type:      "categorial",
+							LogicalOp: "AND",
+							Value:     "channel",
+						},
+					},
+				},
+			},
+			GroupByProperties: []model.QueryGroupByProperty{
+				{Entity: "user", EventName: "$present", Property: "$hubspot_contact_hs_analytics_source_data_2", Type: "categorical"},
+			},
+			Class:           model.QueryClassEvents,
+			Type:            model.QueryTypeEventsOccurrence,
+			EventsCondition: model.EventCondEachGivenEvent,
+		}
+		result, code, _ := store.GetStore().ExecuteEventsQuery(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
+		assert.Equal(t, http.StatusOK, code)
+		log.WithField("rows", result.Rows).Warn("kark2")
+		assert.Equal(t, 1, len(result.Rows))
+		assert.Equal(t, "s0", result.Rows[0][1])
+		assert.Equal(t, "$none", result.Rows[0][2])
+		assert.Equal(t, float64(4), result.Rows[0][3])
+	})
 }
 
 func TestCoalUniqueUsersEachEventQuery(t *testing.T) {

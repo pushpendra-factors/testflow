@@ -421,7 +421,7 @@ func (store *MemSQL) FireAttributionForKPI(projectID int64, query *model.Attribu
 	// Extend the campaign window for engagement based attribution.
 	if query.QueryType == model.AttributionQueryTypeEngagementBased {
 		conversionFrom = query.From
-		conversionTo = model.LookbackAdjustedTo(query.To, query.LookbackDays)
+		conversionTo = model.LookbackAdjustedTo(query.To, query.LookbackDays, U.TimeZoneString(query.Timezone))
 	}
 	var attributionData *map[string]*model.AttributionData
 	if query.AttributionMethodologyCompare != "" {

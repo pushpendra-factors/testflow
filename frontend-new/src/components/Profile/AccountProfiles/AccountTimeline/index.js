@@ -21,15 +21,28 @@ function AccountTimeline({
   const [formattedData, setFormattedData] = useState({});
 
   useEffect(() => {
-    if (collapseAll !== undefined) {
-      const data = eventsFormattedForGranularity(
-        timelineEvents,
-        granularity,
-        collapseAll
-      );
-      setFormattedData(data);
-    }
-  }, [timelineEvents, granularity, collapseAll]);
+    const data = eventsFormattedForGranularity(
+      timelineEvents,
+      granularity,
+      collapseAll
+    );
+    setFormattedData(data);
+  }, [timelineEvents, granularity]);
+
+  useEffect(() => {
+    const data = {};
+    Object.keys(formattedData).forEach((key) => {
+      data[key] = formattedData[key];
+      Object.keys(formattedData[key]).forEach((username) => {
+        data[key][username] = formattedData[key][username];
+        data[key][username].collapsed =
+          collapseAll === undefined
+            ? formattedData[key][username].collapsed
+            : collapseAll;
+      });
+    });
+    setFormattedData(data);
+  }, [collapseAll]);
 
   const renderInfoCard = (event) => {
     const eventName =

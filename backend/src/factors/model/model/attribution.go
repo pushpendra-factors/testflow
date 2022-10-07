@@ -483,12 +483,16 @@ func LookbackAdjustedFrom(from int64, lookbackDays int) int64 {
 }
 
 // LookbackAdjustedTo Returns the effective To timestamp considering lookback days
-func LookbackAdjustedTo(to int64, lookbackDays int) int64 {
+func LookbackAdjustedTo(to int64, lookbackDays int, timezone U.TimeZoneString) int64 {
 	lookbackDaysTimestamp := int64(lookbackDays) * SecsInADay
 	if LookbackCapInDays < lookbackDays {
 		lookbackDaysTimestamp = int64(LookbackCapInDays) * SecsInADay
 	}
 	validTo := to + lookbackDaysTimestamp
+	yesterdayTimestamp := U.GetBeginningOfDayTimestampIn(time.Now().Unix(), timezone) - 1
+	if validTo > yesterdayTimestamp {
+		validTo = yesterdayTimestamp
+	}
 	return validTo
 }
 

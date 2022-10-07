@@ -337,11 +337,7 @@ const matchEventName = (item) => {
     setKPIType('default');
     setQueries([])
   }
-
-  const whiteListedAccounts = [
-    'junaid@factors.ai',
-    'solutions@factors.ai',
-  ];               
+             
 
   const onFinish = (data) => {
     let payload;
@@ -644,7 +640,6 @@ const matchEventName = (item) => {
                     </Col>
                   </Row>
 
-                  { whiteListedAccounts.includes(currentAgent?.email) &&
                   <Row className={'mt-8'}>
                     <Col span={18}>
                       <Text type={'title'} level={7} extraClass={'m-0'}>
@@ -667,7 +662,6 @@ const matchEventName = (item) => {
                       </Form.Item>
                     </Col>
                   </Row>
-                  }
                   
                   {selKPIType === 'default' ?
                   <div>

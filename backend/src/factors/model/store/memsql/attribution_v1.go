@@ -222,7 +222,7 @@ func (store *MemSQL) ExecuteAttributionQueryV0(projectID int64, queryOriginal *m
 	// Extend the campaign window for engagement based attribution.
 	if query.QueryType == model.AttributionQueryTypeEngagementBased {
 		conversionFrom = query.From
-		conversionTo = model.LookbackAdjustedTo(query.To, query.LookbackDays)
+		conversionTo = model.LookbackAdjustedTo(query.To, query.LookbackDays, U.TimeZoneString(query.Timezone))
 	}
 
 	coalUserIdConversionTimestamp, userInfo, kpiData, usersIDsToAttribute, err3 := store.PullConvertedUsers(projectID, query, conversionFrom, conversionTo, eventNameToIDList,
@@ -614,6 +614,11 @@ func (store *MemSQL) pullConvertedUsers(projectID,
 	if err != nil {
 		return userIDToInfoConverted, usersToBeAttributed, coalUserIdConversionTimestamp, err
 	}
+	if projectID == 568 {
+		logCtx.WithFields(log.Fields{"CleverTapUserIDToInfoConverted": userIDToInfoConverted}).Info("Printing Conversion goal userIDToInfoConverted")
+		logCtx.WithFields(log.Fields{"CleverTapCoalescedIDToInfoConverted": coalescedIDToInfoConverted}).Info("Printing Conversion goal coalescedIDToInfoConverted")
+		logCtx.WithFields(log.Fields{"CleverTapCoalUserIdConversionTimestamp": coalUserIdConversionTimestamp}).Info("Printing Conversion goal coalUserIdConversionTimestamp")
+	}
 
 	// Add users who hit conversion event
 	for key := range coalescedIDToInfoConverted {
@@ -625,8 +630,17 @@ func (store *MemSQL) pullConvertedUsers(projectID,
 	if err != nil {
 		return userIDToInfoConverted, usersToBeAttributed, coalUserIdConversionTimestamp, err
 	}
+	if projectID == 568 {
+		logCtx.WithFields(log.Fields{"CleverTapLinkedFunnelUsers": linkedFunnelEventUsers}).Info("Printing Linked Funnel Event Users")
+	}
 
 	model.MergeUsersToBeAttributed(&usersToBeAttributed, linkedFunnelEventUsers)
+
+	if projectID == 568 {
+		logCtx.WithFields(log.Fields{"CleverTapUserIDToInfoConvertedFinal": userIDToInfoConverted}).Info("Printing Final userIDToInfoConverted")
+		logCtx.WithFields(log.Fields{"CleverTapUsersToBeAttributedFinal ": usersToBeAttributed}).Info("Printing Final usersToBeAttributed")
+		logCtx.WithFields(log.Fields{"CleverTapCoalUserIdConversionTimestampFinal": coalUserIdConversionTimestamp}).Info("Printing Final coalUserIdConversionTimestamp")
+	}
 
 	return userIDToInfoConverted, usersToBeAttributed, coalUserIdConversionTimestamp, nil
 }
@@ -781,7 +795,7 @@ func (store *MemSQL) getAllTheSessionsV1(projectId int64, sessionEventNameId str
 	// extend the campaign window for engagement based attribution
 	if query.QueryType == model.AttributionQueryTypeEngagementBased {
 		effectiveFrom = model.LookbackAdjustedFrom(query.From, query.LookbackDays)
-		effectiveTo = model.LookbackAdjustedTo(query.To, query.LookbackDays)
+		effectiveTo = model.LookbackAdjustedTo(query.To, query.LookbackDays, U.TimeZoneString(query.Timezone))
 	}
 	attributionEventKey, err := model.GetQuerySessionProperty(query.AttributionKey)
 	if err != nil {

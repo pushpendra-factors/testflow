@@ -1,0 +1,12 @@
+FROM golang:1.14-alpine AS builder
+
+WORKDIR /go/src/factors
+ADD /factors .
+RUN go build -o $GOPATH/bin/adhocyellowaiidentifyfix $GOPATH/src/factors/scripts/adhoc/custom/yellow_ai/run_manual_identify.go
+
+# Create stripped down version without go and source code
+FROM alpine:3.7
+RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/*
+ADD https://github.com/golang/go/raw/master/lib/time/zoneinfo.zip /usr/local/go/lib/time/zoneinfo.zip
+COPY --from=builder /go/bin/adhocyellowaiidentifyfix /go/bin/adhocyellowaiidentifyfix
+ENTRYPOINT ["/go/bin/adhocyellowaiidentifyfix"]

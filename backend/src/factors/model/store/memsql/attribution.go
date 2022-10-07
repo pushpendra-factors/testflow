@@ -392,7 +392,7 @@ func (store *MemSQL) FireAttribution(projectID int64, query *model.AttributionQu
 	// Extend the campaign window for engagement based attribution.
 	if query.QueryType == model.AttributionQueryTypeEngagementBased {
 		conversionFrom = query.From
-		conversionTo = model.LookbackAdjustedTo(query.To, query.LookbackDays)
+		conversionTo = model.LookbackAdjustedTo(query.To, query.LookbackDays, U.TimeZoneString(query.Timezone))
 	}
 	var attributionData *map[string]*model.AttributionData
 	if query.AttributionMethodologyCompare != "" {
@@ -683,7 +683,7 @@ func (store *MemSQL) getAllTheSessions(projectId int64, sessionEventNameId strin
 	// extend the campaign window for engagement based attribution
 	if query.QueryType == model.AttributionQueryTypeEngagementBased {
 		effectiveFrom = model.LookbackAdjustedFrom(query.From, query.LookbackDays)
-		effectiveTo = model.LookbackAdjustedTo(query.To, query.LookbackDays)
+		effectiveTo = model.LookbackAdjustedTo(query.To, query.LookbackDays, U.TimeZoneString(query.Timezone))
 	}
 
 	attributionEventKey, err := model.GetQuerySessionProperty(query.AttributionKey)
@@ -883,6 +883,10 @@ func (store *MemSQL) GetLinkedFunnelEventUsersFilter(projectID int64, queryFrom,
 			}
 
 			queryEventHits := selectEventHits + " " + eventJoinStmnt + " " + whereEventHits
+			if projectID == 568 {
+				queryEventHits1, qParams1 := model.ExpandArrayWithIndividualValues(queryEventHits, qParams)
+				logCtx.WithFields(log.Fields{"CleverTapQueryGetLinkedFunnelEventUsersFilter": U.DBDebugPreparedStatement(C.GetConfig().Env, queryEventHits1, qParams1)}).Info("Printing Query")
+			}
 
 			// fetch query results
 			rows, tx, err, reqID := store.ExecQueryWithContext(queryEventHits, qParams)
@@ -985,6 +989,10 @@ func (store *MemSQL) GetConvertedUsersWithFilter(projectID int64, goalEventName 
 	}
 
 	queryEventHits := selectEventHits + " " + eventJoinStmnt + " " + whereEventHits
+	if projectID == 568 {
+		queryEventHits1, qParams1 := model.ExpandArrayWithIndividualValues(queryEventHits, qParams)
+		logCtx.WithFields(log.Fields{"CleverTapQueryGetConvertedUsersWithFilter": U.DBDebugPreparedStatement(C.GetConfig().Env, queryEventHits1, qParams1)}).Info("Printing Query")
+	}
 
 	// fetch query results
 	rows, tx, err, reqID := store.ExecQueryWithContext(queryEventHits, qParams)
