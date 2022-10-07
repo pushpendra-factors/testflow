@@ -108,7 +108,7 @@ export const formatFiltersForPayload = (filters = []) => {
 export const eventsFormattedForGranularity = (
   events,
   granularity,
-  collapse
+  collapse = true
 ) => {
   const output = events.reduce((result, item) => {
     const byTimestamp = (result[groups[granularity](item)] =

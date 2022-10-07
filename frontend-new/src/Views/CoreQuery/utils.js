@@ -2032,7 +2032,8 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
       label: metric ? metric.display_name : q.me[0],
       filters: eventFilters,
       alias: '',
-      metricType: get(metric, 'type', null)
+      metricType: get(metric, 'type', null),
+      qt: q.qt
     });
   }
   // const globalFilters = [];

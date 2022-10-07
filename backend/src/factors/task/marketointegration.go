@@ -73,7 +73,11 @@ func MarketoIntegration(projectId int64, configs map[string]interface{}) (map[st
 				if existsErr == nil {
 					query = model.GetMarketoDocumentQuery(configs["BigqueryProjectId"].(string), mapping.SchemaID, model.MarketoDocumentToQuery[docType], executionDateString, docType, PAGE_SIZE, offset, 0)
 				} else {
-					query = model.GetMarketoDocumentQuery(configs["BigqueryProjectId"].(string), mapping.SchemaID, model.MarketoDocumentToQuery[model.MARKETO_TYPE_NAME_LEAD_NO_SEGMENT], executionDateString, model.MARKETO_TYPE_NAME_LEAD_NO_SEGMENT, PAGE_SIZE, offset, lastProcessedId)
+					if projectId == 602 {
+						query = model.GetMarketoDocumentQuery(configs["BigqueryProjectId"].(string), mapping.SchemaID, model.MarketoDocumentToQuery[model.MARKETO_TYPE_NAME_LEAD_NO_SEGMENT_NO_PROGRAM], executionDateString, model.MARKETO_TYPE_NAME_LEAD_NO_SEGMENT_NO_PROGRAM, PAGE_SIZE, offset, lastProcessedId)
+					} else {
+						query = model.GetMarketoDocumentQuery(configs["BigqueryProjectId"].(string), mapping.SchemaID, model.MarketoDocumentToQuery[model.MARKETO_TYPE_NAME_LEAD_NO_SEGMENT], executionDateString, model.MARKETO_TYPE_NAME_LEAD_NO_SEGMENT, PAGE_SIZE, offset, lastProcessedId)
+					}
 				}
 
 			} else {

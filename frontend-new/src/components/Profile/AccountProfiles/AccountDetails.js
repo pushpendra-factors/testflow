@@ -14,7 +14,7 @@ import AccountTimeline from './AccountTimeline';
 import { granularityOptions } from '../utils';
 
 function AccountDetails({ onCancel, accountDetails }) {
-  const [granularity, setGranularity] = useState('Hourly');
+  const [granularity, setGranularity] = useState('Daily');
   const [collapseAll, setCollapseAll] = useState(true);
   const [activities, setActivities] = useState([]);
 
@@ -114,9 +114,9 @@ function AccountDetails({ onCancel, accountDetails }) {
               size={'large'}
               onClick={() => {
                 onCancel();
-                setGranularity('Hourly');
+                setGranularity('Daily');
                 setActivities([]);
-                setCollapse(true);
+                setCollapseAll(true);
               }}
             />
             <Text type={'title'} level={4} weight={'bold'} extraClass={'m-0'}>
@@ -129,9 +129,9 @@ function AccountDetails({ onCancel, accountDetails }) {
               type='text'
               onClick={() => {
                 onCancel();
-                setGranularity('Hourly');
+                setGranularity('Daily');
                 setActivities([]);
-                setCollapse(true);
+                setCollapseAll(true);
               }}
               icon={<SVG name='times'></SVG>}
             ></Button>
