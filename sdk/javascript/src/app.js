@@ -207,56 +207,37 @@ App.prototype.init = function(token, opts={}, afterPageTrackCallback) {
             _this.config = response.body;
             _this.client = _client;
 
-            // Check if client has given cookie access
-            checkCookiesConsentAndProcess(_this);
+            // Add user_id from response to cookie.
+            updateCookieIfUserIdInResponse(response);
+
+            // Start queue processing.
+            triggerQueueInitialisedEvent();
 
             return response;
+        })
+        .then(function() {
+            // Enable auto-track SPA page based on settings or init option.
+            var enableTrackSPA = Cache.getFactorsCache(Cache.trackPageOnSPA) || _this.getConfig("auto_track_spa_page_view");
+            Cache.setFactorsCache(Cache.trackPageOnSPA, enableTrackSPA);
+            // Auto-track current page on init, if not disabled.
+            return trackOnInit ? _this.autoTrack(_this.getConfig("auto_track"), false, afterPageTrackCallback, true) : null;
+        })
+        .then(function() {
+            return _this.autoFormCapture(_this.getConfig("auto_form_capture"));
+        })
+        .then(function() {
+            return _this.autoClickCapture(_this.getConfig("auto_click_capture"));
+        })
+        .then(function() {
+            return _this.autoDriftEventsCapture(_this, _this.getConfig("int_drift"));
+        })
+        .then(function() {
+            return _this.autoClearbitRevealCapture(_this, _this.getConfig("int_clear_bit"));
+        })
+        .catch(function(err) {
+            logger.errorLine(err);
+            return Promise.reject(err.stack + " during get_settings on init.");
         });
-        
-}
-
-function checkCookiesConsentAndProcess(_this, response) {
-    if(!Cookie.isEnabled()) {
-        logger.debug("Checking for cookie consent.", false);
-        setTimeout(() => {checkCookiesConsentAndProcess(_this, response)}, 1000)
-    } else {
-        logger.debug("Cookie consent is enabled. Continuing process", false);
-        // Add user_id from response to cookie.
-        updateCookieIfUserIdInResponse(response);
-
-        // Start queue processing.
-        triggerQueueInitialisedEvent();
-        runPostInitProcess(_this);
-    }
-}
-
-function runPostInitProcess(_this) {
-    (function(){
-        return Promise.resolve();
-    })().then(function() {
-        // Enable auto-track SPA page based on settings or init option.
-        var enableTrackSPA = Cache.getFactorsCache(Cache.trackPageOnSPA) || _this.getConfig("auto_track_spa_page_view");
-        Cache.setFactorsCache(Cache.trackPageOnSPA, enableTrackSPA);
-        // Auto-track current page on init, if not disabled.
-        return _this.trackOnInit ? _this.autoTrack(_this.getConfig("auto_track"), 
-            false, afterPageTrackCallback, true) : null;
-    })
-    .then(function() {
-        return _this.autoFormCapture(_this.getConfig("auto_form_capture"));
-    })
-    .then(function() {
-        return _this.autoClickCapture(_this.getConfig("auto_click_capture"));
-    })
-    .then(function() {
-        return _this.autoDriftEventsCapture(_this, _this.getConfig("int_drift"));
-    })
-    .then(function() {
-        return _this.autoClearbitRevealCapture(_this, _this.getConfig("int_clear_bit"));
-    })
-    .catch(function(err) {
-        logger.errorLine(err);
-        return Promise.reject(err.stack + " during get_settings on init.");
-    });
 }
 
 function getEventProperties(eventProperties={}) {
