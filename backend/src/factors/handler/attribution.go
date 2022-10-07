@@ -232,7 +232,7 @@ func AttributionHandler(c *gin.Context) (interface{}, int, string, string, bool)
 	debugQueryKey := model.GetStringKeyFromCacheRedisKey(QueryKey)
 	var result *model.QueryResult
 	if C.IsAttributionV1Whitelisted(projectId) {
-		result, err = store.GetStore().ExecuteAttributionQueryV1(projectId, requestPayload.Query, debugQueryKey,
+		result, err = store.GetStore().ExecuteAttributionQueryV0(projectId, requestPayload.Query, debugQueryKey,
 			enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
 	} else {
 		result, err = store.GetStore().ExecuteAttributionQuery(projectId, requestPayload.Query, debugQueryKey,

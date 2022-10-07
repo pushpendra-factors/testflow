@@ -56,6 +56,8 @@ type Model interface {
 	// attribution
 	ExecuteAttributionQuery(projectID int64, query *model.AttributionQuery, debugQueryKey string,
 		enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool) (*model.QueryResult, error)
+	ExecuteAttributionQueryV0(projectID int64, query *model.AttributionQuery, debugQueryKey string,
+		enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool) (*model.QueryResult, error)
 	ExecuteAttributionQueryV1(projectID int64, query *model.AttributionQuery, debugQueryKey string,
 		enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool) (*model.QueryResult, error)
 	GetCoalesceIDFromUserIDs(userIDs []string, projectID int64, logCtx log.Entry) (map[string]model.UserInfo, error)

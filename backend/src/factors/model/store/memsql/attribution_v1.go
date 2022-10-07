@@ -12,14 +12,138 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// ExecuteAttributionQueryV1 Executes the Attribution using following steps:
+// ExecuteAttributionQueryV1 Todo Pre-compute's online version - add details once available to run
+func (store *MemSQL) ExecuteAttributionQueryV1(projectID int64, queryOriginal *model.AttributionQuery,
+	debugQueryKey string, enableOptimisedFilterOnProfileQuery,
+	enableOptimisedFilterOnEventUserQuery bool) (*model.QueryResult, error) {
+
+	logFields := log.Fields{
+		"project_id":        projectID,
+		"debug_query_key":   debugQueryKey,
+		"attribution_query": true,
+	}
+
+	logCtx := log.WithFields(logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
+
+	queryStartTime := time.Now().UTC().Unix()
+
+	var query *model.AttributionQuery
+	U.DeepCopy(queryOriginal, &query)
+	// supporting existing old/saved queries
+	model.AddDefaultAnalyzeType(query)
+	model.AddDefaultKeyDimensionsToAttributionQuery(query)
+	model.AddDefaultMarketingEventTypeTacticOffer(query)
+
+	if query.AttributionKey == model.AttributionKeyLandingPage && query.TacticOfferType != model.MarketingEventTypeOffer {
+		return nil, errors.New("can not get landing page level report for Tactic/TacticOffer")
+	}
+
+	// for existing queries and backward support
+	if query.QueryType == "" {
+		query.QueryType = model.AttributionQueryTypeConversionBased
+	}
+	projectSetting, errCode := store.GetProjectSetting(projectID)
+	if errCode != http.StatusFound {
+		return nil, errors.New("failed to get project Settings")
+	}
+
+	marketingReports, err := store.FetchMarketingReports(projectID, *query, *projectSetting)
+	logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Fetch marketing report took time")
+	queryStartTime = time.Now().UTC().Unix()
+
+	if err != nil {
+		return nil, err
+	}
+
+	err = store.PullCustomDimensionData(projectID, query.AttributionKey, marketingReports, *logCtx)
+	logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Pull Custom dimension data took time")
+	queryStartTime = time.Now().UTC().Unix()
+
+	if err != nil {
+		return nil, err
+	}
+
+	logCtx.Info("Done PullCustomDimensionData")
+
+	sessionEventNameID, eventNameToIDList, err := store.getEventInformation(projectID, query, *logCtx)
+	if err != nil {
+		return nil, err
+	}
+
+	var contentGroupNamesList []string
+	if query.AttributionKey == model.AttributionKeyLandingPage {
+		contentGroups, errCode := store.GetAllContentGroups(projectID)
+		if errCode != http.StatusFound {
+			return nil, errors.New("failed to get content groups")
+		}
+		for _, contentGroup := range contentGroups {
+			contentGroupNamesList = append(contentGroupNamesList, contentGroup.ContentGroupName)
+		}
+	}
+
+	var usersIDsToAttribute []string
+	var kpiData map[string]model.KPIInfo
+
+	// Default conversion for AttributionQueryTypeConversionBased.
+	conversionFrom := query.From
+	conversionTo := query.To
+	// Extend the campaign window for engagement based attribution.
+	if query.QueryType == model.AttributionQueryTypeEngagementBased {
+		conversionFrom = query.From
+		conversionTo = model.LookbackAdjustedTo(query.To, query.LookbackDays)
+	}
+
+	coalUserIdConversionTimestamp, userInfo, kpiData, usersIDsToAttribute, err3 := store.PullConvertedUsers(projectID, query, conversionFrom, conversionTo, eventNameToIDList,
+		kpiData, debugQueryKey, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery, logCtx)
+
+	if err3 != nil {
+		return nil, err3
+	}
+
+	sessions, err4 := store.PullSessionsOfConvertedUsers(projectID, query, sessionEventNameID, usersIDsToAttribute, marketingReports, contentGroupNamesList, logCtx)
+	if err4 != nil {
+		return nil, err4
+	}
+
+	// Pull Offline touch points for all the cases: "Tactic",  "Offer", "TacticOffer"
+	store.AppendOTPSessions(projectID, query, &sessions, *logCtx)
+	logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Pull Offline touch points user data took time")
+	queryStartTime = time.Now().UTC().Unix()
+
+	attributionData, isCompare, err2 := store.GetAttributionData(projectID, query, sessions, userInfo, coalUserIdConversionTimestamp, marketingReports, kpiData, logCtx)
+	if err2 != nil {
+		return nil, err2
+	}
+
+	// Filter out the key values from query (apply filter after performance enrichment)
+	model.ApplyFilter(attributionData, query)
+	logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Metrics, Performance report, filter took time")
+
+	queryStartTime = time.Now().UTC().Unix()
+
+	result := ProcessAttributionDataToResult(projectID, query, attributionData, isCompare, queryStartTime, marketingReports, kpiData, logCtx)
+	result.Meta.Currency = ""
+	if projectSetting.IntAdwordsCustomerAccountId != nil && *projectSetting.IntAdwordsCustomerAccountId != "" {
+		currency, _ := store.GetAdwordsCurrency(projectID, *projectSetting.IntAdwordsCustomerAccountId, query.From, query.To, *logCtx)
+		result.Meta.Currency = currency
+	}
+
+	logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Total query took time")
+
+	model.SanitizeResult(result)
+	return result, nil
+}
+
+// ExecuteAttributionQueryV0 Executes the Attribution using following steps:
 //	1. Get all the sessions data (userId, attributionId, timestamp) for given period by attribution key
 // 	2. Add the website visitor info using session data from step 1
 //	3. i) 	Find out users who hit conversion event applying filter
 //	  ii)	Using users from 3.i) find out users who hit linked funnel event applying filter
 //	4. Apply attribution methodology
 //	5. Add performance data by attributionId
-func (store *MemSQL) ExecuteAttributionQueryV1(projectID int64, queryOriginal *model.AttributionQuery,
+func (store *MemSQL) ExecuteAttributionQueryV0(projectID int64, queryOriginal *model.AttributionQuery,
 	debugQueryKey string, enableOptimisedFilterOnProfileQuery,
 	enableOptimisedFilterOnEventUserQuery bool) (*model.QueryResult, error) {
 
