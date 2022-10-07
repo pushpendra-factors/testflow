@@ -190,7 +190,8 @@ function CoreQuery({
   sendAlertNow,
   fetchSlackChannels,
   fetchProjectSettingsV1,
-  enableSlackIntegration
+  enableSlackIntegration,
+  dateFromTo
 }) {
   
   let activeProjectProfilePicture = useSelector((state)=>state.global.active_project.profile_picture)
@@ -215,6 +216,7 @@ function CoreQuery({
   const [allChannels, setAllChannels] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedRow, setSelectedRow] = useState(null);
+  const [overrideDate, setOverrideDate] = useState(false);
 
   const { slack } = useSelector((state) => state.global);
   const { projectSettingsV1 } = useSelector((state) => state.global);
@@ -228,6 +230,11 @@ function CoreQuery({
     };
     getData();
   }, [activeProject]);
+
+  useEffect(() => {
+    if(dateFromTo?.from != '')
+      setOverrideDate(true);
+  }, [dateFromTo])
 
   const getFormattedRow = (q) => {
     const requestQuery = q.query;
@@ -815,7 +822,9 @@ function CoreQuery({
       sendAlertNow(
         activeProject.id,
         payload,
-        selectedRow?.key || selectedRow?.id
+        selectedRow?.key || selectedRow?.id,
+        dateFromTo,
+        overrideDate
       )
         .then((r) => {
           notification.success({
@@ -880,7 +889,9 @@ function CoreQuery({
       sendAlertNow(
         activeProject.id,
         payload,
-        selectedRow?.key || selectedRow?.id
+        selectedRow?.key || selectedRow?.id,
+        dateFromTo,
+        overrideDate
       )
         .then((r) => {
           notification.success({

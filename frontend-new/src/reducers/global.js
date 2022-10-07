@@ -916,10 +916,10 @@ export function createAlert(projectId, payload, query_id) {
   };
 }
 
-export function sendAlertNow(projectId, payload, query_id) {
+export function sendAlertNow(projectId, payload, query_id, dateFromTo, overrideDate) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      post(dispatch, host + 'projects/'+ projectId +'/v1/alerts/send_now?query_id=' + query_id, payload)
+      post(dispatch, host + 'projects/'+ projectId +'/v1/alerts/send_now?query_id=' + query_id +'&override_date_range=' + overrideDate + '&from_time=' + dateFromTo.from + '&to_time=' + dateFromTo.to, payload)
         .then((r) => {
           if (r.ok) {
             dispatch({ type: 'SEND_ALERT', payload: r.data});

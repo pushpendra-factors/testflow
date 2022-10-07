@@ -238,6 +238,8 @@ function CoreQuery({
 
   const [dataResp, setDataResp] = useState(null);
 
+  const [dateFromTo, setDateFromTo] = useState({from: '', to: ''});
+
   const { show_criteria: result_criteria, performance_criteria: user_type } =
     useSelector((state) => state.analyticsQuery);
 
@@ -660,6 +662,8 @@ function CoreQuery({
           globalFilters
         );
 
+        setDateFromTo({from: query[0]?.fr, to: query[0]?.to});
+
         if (!isQuerySaved) {
           // Factors RUN_QUERY tracking
           factorsai.track('RUN-QUERY', {
@@ -999,6 +1003,8 @@ function CoreQuery({
           groupBy,
           queryOptions
         );
+
+        setDateFromTo({from: KPIquery?.qG[0]?.fr, to: KPIquery[0]?.to});
 
         if (!isQuerySaved) {
           // Factors RUN_QUERY tracking
@@ -1952,6 +1958,7 @@ function CoreQuery({
                   updateChartTypes={updateChartTypes}
                   updateSavedQuerySettings={updateSavedQuerySettings}
                   setAttributionMetrics={setAttributionMetrics}
+                  dateFromTo={dateFromTo}
                 />
               )}
 
@@ -2013,6 +2020,7 @@ function CoreQuery({
                 campaignsArrayMapper={campaignsArrayMapper}
                 handleGranularityChange={handleGranularityChange}
                 updateChartTypes={updateChartTypes}
+                dateFromTo={dateFromTo}
               />
             </CoreQueryContext.Provider>
           ) : null}
