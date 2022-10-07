@@ -118,7 +118,7 @@ func ComputeAndSendAlerts(projectID int64, configs map[string]interface{}) (map[
 		alert.LastRunTime = time.Now()
 		var err error
 		if alert.AlertType == 3 {
-			_, err := HandlerAlertWithQueryID(alert, configs)
+			_, err := HandlerAlertWithQueryID(alert, configs, false, 0, 0)
 			if err != nil {
 				log.WithError(err).Error("failed to run type 3 alert with alert id ", alert.ID)
 			}
@@ -634,7 +634,7 @@ func getGBTForKPIQuery(dateRangeType string) string {
 	}
 	return ""
 }
-func HandlerAlertWithQueryID(alert model.Alert, configs map[string]interface{}) (bool, error) {
+func HandlerAlertWithQueryID(alert model.Alert, configs map[string]interface{}, shouldOverride bool, overRideFrom, overRideTo int64) (bool, error) {
 	logCtx := log.WithFields(log.Fields{
 		"projectID": alert.ProjectID,
 		"alertID":   alert.ID,
@@ -658,13 +658,13 @@ func HandlerAlertWithQueryID(alert model.Alert, configs map[string]interface{}) 
 		return false, errors.New(fmt.Sprintf("failed to decode alert configuration for project_id: %v, alert_name: %s", projectID, alert.AlertName))
 	}
 	if class == model.QueryClassEvents {
-		_, err = handleShareQueryTypeEvents(alert, query, configs)
+		_, err = handleShareQueryTypeEvents(alert, query, configs, shouldOverride, overRideFrom, overRideTo)
 		if err != nil {
 			logCtx.Error(err)
 		}
 		return true, nil
 	} else if class == model.QueryClassKPI {
-		_, err = handleShareQueryTypeKPI(alert, query, configs)
+		_, err = handleShareQueryTypeKPI(alert, query, configs, shouldOverride, overRideFrom, overRideTo)
 		if err != nil {
 			logCtx.Error(err)
 		}
@@ -672,7 +672,7 @@ func HandlerAlertWithQueryID(alert model.Alert, configs map[string]interface{}) 
 	}
 	return false, errors.New("query type not supported for this operation")
 }
-func handleShareQueryTypeEvents(alert model.Alert, query *model.Queries, configs map[string]interface{}) (bool, error) {
+func handleShareQueryTypeEvents(alert model.Alert, query *model.Queries, configs map[string]interface{}, shouldOverride bool, overRideFrom, overRideTo int64) (bool, error) {
 	projectID := alert.ProjectID
 	queryGroup := model.QueryGroup{}
 	U.DecodePostgresJsonbToStructType(&query.Query, &queryGroup)
@@ -748,6 +748,12 @@ func handleShareQueryTypeEvents(alert model.Alert, query *model.Queries, configs
 	toStr := toTime.Format("02 Jan 2006")
 	newDateRange := fromStr + " - " + toStr
 
+	if shouldOverride {
+		for idx := range queryGroup.Queries {
+			queryGroup.Queries[idx].From = overRideFrom
+			queryGroup.Queries[idx].To = overRideTo
+		}
+	}
 	var cacheResult model.ResultGroup
 	// fix is Dashboard query request flag
 	shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(nil, projectID, &queryGroup, cacheResult, false, "", true)
@@ -795,7 +801,7 @@ func handleShareQueryTypeEvents(alert model.Alert, query *model.Queries, configs
 	}
 	return true, nil
 }
-func handleShareQueryTypeKPI(alert model.Alert, query *model.Queries, configs map[string]interface{}) (bool, error) {
+func handleShareQueryTypeKPI(alert model.Alert, query *model.Queries, configs map[string]interface{}, shouldOverride bool, overRideFrom, overRideTo int64) (bool, error) {
 	projectID := alert.ProjectID
 	kpiQueryGroup := model.KPIQueryGroup{}
 	U.DecodePostgresJsonbToStructType(&query.Query, &kpiQueryGroup)
@@ -868,6 +874,13 @@ func handleShareQueryTypeKPI(alert model.Alert, query *model.Queries, configs ma
 	fromStr := fromTime.Format("02 Jan 2006")
 	toStr := toTime.Format("02 Jan 2006")
 	newDateRange := fromStr + " - " + toStr
+
+	if shouldOverride {
+		for idx := range kpiQueryGroup.Queries {
+			kpiQueryGroup.Queries[idx].From = overRideFrom
+			kpiQueryGroup.Queries[idx].To = overRideTo
+		}
+	}
 
 	var cacheResult []model.QueryResult
 	shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(nil, projectID, &kpiQueryGroup, cacheResult, false, "", true)
