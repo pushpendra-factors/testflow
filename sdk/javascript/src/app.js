@@ -238,8 +238,8 @@ function runPostInitProcess(_this) {
         var enableTrackSPA = Cache.getFactorsCache(Cache.trackPageOnSPA) || _this.getConfig("auto_track_spa_page_view");
         Cache.setFactorsCache(Cache.trackPageOnSPA, enableTrackSPA);
         // Auto-track current page on init, if not disabled.
-        return trackOnInit ? _this.autoTrack(_this.getConfig("auto_track"), 
-            false, afterPageTrackCallback, true) : triggerFactorsStartQueu();
+        return _this.trackOnInit ? _this.autoTrack(_this.getConfig("auto_track"), 
+            false, afterPageTrackCallback, true) : null;
     })
     .then(function() {
         return _this.autoFormCapture(_this.getConfig("auto_form_capture"));
