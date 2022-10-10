@@ -30,6 +30,7 @@ func (store *MemSQL) ExecuteAttributionQueryV1(projectID int64, queryOriginal *m
 	}
 
 	logCtx := log.WithFields(logFields)
+	logCtx.Info("Hitting ExecuteAttributionQueryV1")
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 
@@ -196,6 +197,9 @@ func (store *MemSQL) PullConvertedUsers(projectID int64, query *model.Attributio
 	var usersToBeAttributed []model.UserEventInfo
 	var usersIDsToAttribute []string
 	var err error
+
+	logCtx.Info("Hitting PullConvertedUsers")
+
 	if query.AnalyzeType == model.AnalyzeTypeUsers {
 		var _userIDToInfoConverted map[string]model.UserInfo
 		_userIDToInfoConverted, usersToBeAttributed, coalUserIdConversionTimestamp, err = store.pullConvertedUsers(projectID,
@@ -534,22 +538,22 @@ func (store *MemSQL) pullConvertedUsers(projectID,
 	if projectID == 568 {
 		_convertedUserCoalID := []string{}
 		_convertedUserTimestamp := []int64{}
-		for _, v := range usersToBeAttributed {
-			_convertedUserCoalID = append(_convertedUserCoalID, v.CoalUserID)
-			_convertedUserTimestamp = append(_convertedUserTimestamp, v.Timestamp)
+		for k, v := range coalUserIdConversionTimestamp {
+			_convertedUserCoalID = append(_convertedUserCoalID, k)
+			_convertedUserTimestamp = append(_convertedUserTimestamp, v)
 		}
 		_convertedUserCoalIDInBatches := U.GetStringListAsBatch(_convertedUserCoalID, 10)
 		_convertedUserTimestampInBatches := U.GetInt64ListAsBatch(_convertedUserTimestamp, 10)
 		batch := 1
 		for _, v := range _convertedUserCoalIDInBatches {
-			logCtx.WithFields(log.Fields{"Batch": batch}).Info("Get Converted Users With Filter Coal ID")
-			logCtx.WithFields(log.Fields{"CleverTapConvertedUsersCoalIDInBatches": v}).Info("Printing Converted Users Coal ID")
+			logCtx.WithFields(log.Fields{"CleverTapBatch": batch}).Warn("Get Converted Users With Filter Coal ID")
+			logCtx.WithFields(log.Fields{"CleverTapConvertedUsersCoalIDInBatches": v}).Warn("Printing Converted Users Coal ID")
 			batch++
 		}
 		batch = 1
 		for _, v := range _convertedUserTimestampInBatches {
-			logCtx.WithFields(log.Fields{"Batch": batch}).Info("Get Converted Users With Filter Time Stamp")
-			logCtx.WithFields(log.Fields{"CleverTapConvertedUsersTimeStampInBatches": v}).Info("Printing Converted Users TimeStamp")
+			logCtx.WithFields(log.Fields{"CleverTapBatch": batch}).Warn("Get Converted Users With Filter Time Stamp")
+			logCtx.WithFields(log.Fields{"CleverTapConvertedUsersTimeStampInBatches": v}).Warn("Printing Converted Users TimeStamp")
 			batch++
 		}
 	}
@@ -576,14 +580,14 @@ func (store *MemSQL) pullConvertedUsers(projectID,
 		_lfeTimeStampInBatches := U.GetInt64ListAsBatch(_lfeTimeStamp, 10)
 		batch := 1
 		for _, v := range _lfeUsersInBatches {
-			logCtx.WithFields(log.Fields{"Batch": batch}).Info("GetLinkedFunnelEventUsersFilter coal id")
-			logCtx.WithFields(log.Fields{"CleverTapLinkedFunnelCoalId": v}).Info("Printing Linked Funnel Event Users CoalId")
+			logCtx.WithFields(log.Fields{"CleverTapBatch": batch}).Warn("GetLinkedFunnelEventUsersFilter coal id")
+			logCtx.WithFields(log.Fields{"CleverTapLinkedFunnelCoalId": v}).Warn("Printing Linked Funnel Event Users CoalId")
 			batch++
 		}
 		batch = 1
 		for _, v := range _lfeTimeStampInBatches {
-			logCtx.WithFields(log.Fields{"Batch": batch}).Info("GetLinkedFunnelEventUsersFilter timestamp")
-			logCtx.WithFields(log.Fields{"CleverTapLinkedFunnelTimeStamp": v}).Info("Printing Linked Funnel Event Users TimeStamp")
+			logCtx.WithFields(log.Fields{"CleverTapBatch": batch}).Warn("GetLinkedFunnelEventUsersFilter timestamp")
+			logCtx.WithFields(log.Fields{"CleverTapLinkedFunnelTimeStamp": v}).Warn("Printing Linked Funnel Event Users TimeStamp")
 			batch++
 		}
 	}
@@ -604,21 +608,21 @@ func (store *MemSQL) pullConvertedUsers(projectID,
 		_eventTypeInBatches := U.GetInt64ListAsBatch(_eventType, 10)
 		batch := 1
 		for _, v := range _finalUsersInBatches {
-			logCtx.WithFields(log.Fields{"Batch": batch}).Info("MergeUsersToBeAttributed users")
-			logCtx.WithFields(log.Fields{"CleverTapFinalUsersCoalID": v}).Info("Printing Final Users Coal ID")
+			logCtx.WithFields(log.Fields{"CleverTapBatch": batch}).Warn("MergeUsersToBeAttributed users")
+			logCtx.WithFields(log.Fields{"CleverTapFinalUsersCoalID": v}).Warn("Printing Final Users Coal ID")
 			batch++
 		}
 		batch = 1
 		for _, v := range _finalTimeStampInBatches {
-			logCtx.WithFields(log.Fields{"Batch": batch}).Info("MergeUsersToBeAttributed timestamp")
-			logCtx.WithFields(log.Fields{"CleverTapFinalUsersTimeStamp": v}).Info("Printing Final Users TimeStamp")
+			logCtx.WithFields(log.Fields{"CleverTapBatch": batch}).Warn("MergeUsersToBeAttributed timestamp")
+			logCtx.WithFields(log.Fields{"CleverTapFinalUsersTimeStamp": v}).Warn("Printing Final Users TimeStamp")
 			batch++
 
 		}
 		batch = 1
 		for _, v := range _eventTypeInBatches {
-			logCtx.WithFields(log.Fields{"Batch": batch}).Info("MergeUsersToBeAttributed event type")
-			logCtx.WithFields(log.Fields{"CleverTapEventType": v}).Info("Printing Event Type")
+			logCtx.WithFields(log.Fields{"CleverTapBatch": batch}).Warn("MergeUsersToBeAttributed event type")
+			logCtx.WithFields(log.Fields{"CleverTapEventType": v}).Warn("Printing Event Type")
 			batch++
 		}
 	}
