@@ -170,7 +170,7 @@ App.prototype.init = function(token, opts={}, afterPageTrackCallback) {
 
     if (!token) return Promise.reject(new Error("FactorsArgumentError: Invalid token."));
 
-    let _this = this; // Remove arrows;
+    
 
     if (!opts) opts = {};
     
@@ -181,7 +181,7 @@ App.prototype.init = function(token, opts={}, afterPageTrackCallback) {
         _client = new APIClient(token);
 
     // Turn off auto_track on init with additional opts.
-    var trackOnInit = true;
+    this.trackOnInit = true;
     if (opts.track_on_init === false) {
         trackOnInit = false;
     }
@@ -194,6 +194,8 @@ App.prototype.init = function(token, opts={}, afterPageTrackCallback) {
     // set temp client as app client and set response as app config 
     // or else app stays unintialized.
     var payload = {};
+
+    let _this = this; // Remove arrows;
     updatePayloadWithUserIdFromCookie(payload);
     return _client.getInfo(payload)
         .then(function(response) {
@@ -235,6 +237,7 @@ function runPostInitProcess(_this) {
     (function(){
         return Promise.resolve();
     })().then(function() {
+        logger.debug("Auto Track call starts", false);
         // Enable auto-track SPA page based on settings or init option.
         var enableTrackSPA = Cache.getFactorsCache(Cache.trackPageOnSPA) || _this.getConfig("auto_track_spa_page_view");
         Cache.setFactorsCache(Cache.trackPageOnSPA, enableTrackSPA);
