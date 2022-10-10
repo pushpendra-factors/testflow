@@ -82,7 +82,12 @@ if __name__ == "__main__":
 
     final_last_sync_infos = get_last_sync_infos(input_project_ids, input_exclude_project_ids, input_document_type, input_timezone)
     for last_sync in final_last_sync_infos:
-        next_sync_infos = AdwordsSyncUtil.get_next_sync_infos(last_sync, input_last_timestamp, input_to_timestamp)  
+        next_sync_infos = AdwordsSyncUtil.get_next_sync_infos(last_sync, input_last_timestamp, input_to_timestamp) 
+        # this is a solution for when the range exceeds 31 days, can be refined later   
+        if len(next_sync_infos) > 31:
+            error_message = "From and to timestamps exceed 31 days: From: " + str(input_last_timestamp) + " To: " + str(input_to_timestamp)
+            metrics_controller.update_job_stats(last_sync.get("project_id"), last_sync.get("customer_acc_id"), last_sync.get("doc_type_alias"), "failed", error_message)
+            continue
         if next_sync_infos is None:
             continue
         for next_sync in next_sync_infos:
