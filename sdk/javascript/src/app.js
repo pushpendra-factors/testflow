@@ -22,6 +22,7 @@ function isAllowedEventName(eventName) {
 }
 
 function updateCookieIfUserIdInResponse(response){
+    logger.debug("Setting Cookie with response: ", false);
     if (response && response.body && response.body.user_id) {
         let cleanUserId = response.body.user_id.trim();
         if (cleanUserId) 
@@ -208,7 +209,7 @@ App.prototype.init = function(token, opts={}, afterPageTrackCallback) {
             _this.client = _client;
 
             // Check if client has given cookie access
-            checkCookiesConsentAndProcess(_this);
+            checkCookiesConsentAndProcess(_this, response);
 
             return response;
         });
@@ -221,9 +222,9 @@ function checkCookiesConsentAndProcess(_this, response) {
         setTimeout(() => {checkCookiesConsentAndProcess(_this, response)}, 1000)
     } else {
         logger.debug("Cookie consent is enabled. Continuing process", false);
+        
         // Add user_id from response to cookie.
         updateCookieIfUserIdInResponse(response);
-
         // Start queue processing.
         triggerQueueInitialisedEvent();
         runPostInitProcess(_this);
