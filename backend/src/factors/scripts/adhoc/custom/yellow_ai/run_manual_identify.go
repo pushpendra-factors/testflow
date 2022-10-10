@@ -94,7 +94,7 @@ func main() {
 				"Starting to identify user.")
 			if *liveRun {
 				status, _ := sdk.Identify(*projectID, &sdk.IdentifyPayload{
-					UserId: userID, CustomerUserId: email, RequestSource: model.UserSourceWeb}, false)
+					UserId: userID, CustomerUserId: email, RequestSource: model.UserSourceWeb}, true)
 				if status != http.StatusOK {
 					logCtx.WithFields(log.Fields{"customer_user_id": email, "userID": userID}).Error(
 						"Failed to identify user.")
