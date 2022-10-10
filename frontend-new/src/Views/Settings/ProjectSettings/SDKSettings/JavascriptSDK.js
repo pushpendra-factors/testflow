@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
-  Row, Col, Skeleton, Tabs, Switch, message, Table, Button, Modal
+  Row, Col, Skeleton, Tabs, Switch, message, Table, Button, Modal, Input
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
 import { fetchProjectSettings, udpateProjectSettings } from 'Reducers/global';
 import { fetchClickableElements, toggleClickableElement } from '../../../../reducers/settings/middleware';
 import { connect } from 'react-redux';
+import MomentTz from '../../../../components/MomentTz';
+
 const { TabPane } = Tabs;
 
 const ViewSetup = ({ activeProject }) => {
@@ -324,75 +326,167 @@ const JSConfig = ({ currentProjectSettings, activeProject, udpateProjectSettings
   );
 };
 
-const ClickTrackConfiguration = ({ 
-  activeProject, 
+const ClickTrackConfiguration = ({
+  activeProject,
   agents,
   currentAgent,
-  clickableElements, 
+  clickableElements,
   toggleClickableElement,
 }) => {
-
   const [enableEdit, setEnableEdit] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
+  const [listData, setListData] = useState([]);
 
   useEffect(() => {
     setEnableEdit(false);
-    agents && currentAgent && agents.map((agent) => {
-      if (agent.uuid === currentAgent.uuid && agent.role === 1) setEnableEdit(true);
-    });
+    agents &&
+      currentAgent &&
+      agents.map((agent) => {
+        if (agent.uuid === currentAgent.uuid && agent.role === 1)
+          setEnableEdit(true);
+      });
   }, [activeProject, agents, currentAgent]);
+
+  const headerClassStr =
+  'fai-text fai-text__color--grey-2 fai-text__size--h8 fai-text__weight--bold';
 
   var columns = [
     {
-      title: 'Display Name',
+      title: <span className={headerClassStr}>Name</span>,
       dataIndex: 'displayName',
       key: 'displayName',
       width: 300,
     },
     {
-      title: 'Type',
+      title: <span className={headerClassStr}>Type</span>,
       dataIndex: 'type',
       key: 'type',
     },
     {
-      title: 'Tracking',
+      title: <span className={headerClassStr}>Clicks</span>,
+      dataIndex: 'clickCount',
+      key: 'clickCount',
+      sorter: (a, b) => a.clickCount - b.clickCount,
+    },
+    {
+      title: <span className={headerClassStr}>Received At</span>,
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      render: (item) => MomentTz(item).format('DD MMM YYYY, hh:mm:ss A'),
+      defaultSortOrder: 'descend',
+      sorter: {
+        compare: (a, b) => {
+          const aNew = new Date(a.createdAt);
+          const bNew = new Date(b.createdAt);
+          const aMillisecs = aNew.getTime();
+          const bMillisecs = bNew.getTime();
+          return aMillisecs - bMillisecs;
+        },
+        multiple: 1,
+      },
+    },
+    {
+      title: <span className={headerClassStr}>Tracking</span>,
       dataIndex: 'tracking',
       key: 'tracking',
-      render: (p) => (
-        <Switch checkedChildren="On" unCheckedChildren="OFF" disabled={enableEdit} defaultChecked={p.enabled} onChange={p.toggler}/>
+      defaultSortOrder: 'descend',
+      render: (e) => (
+        <Switch
+          value
+          checkedChildren='On'
+          unCheckedChildren='OFF'
+          disabled={enableEdit}
+          checked={e.enabled}
+          onChange={(checked) =>
+            toggleClickableElement(activeProject.id, e.id, checked)
+          }
+        />
       ),
+      defaultSortOrder: 'descend',
+      sorter: {
+        compare: (a, b) => a.tracking.enabled - b.tracking.enabled,
+        multiple: 2,
+      },
       align: 'right',
-    }
+    },
   ];
 
-  var dataSource = [];
-  for (let i=0; i<clickableElements.length; i++) {
-    dataSource.push({
-      index: clickableElements[i].id,
-      displayName: clickableElements[i].display_name,
-      type: (clickableElements[i].element_type),
-      tracking: { 
-        enabled: clickableElements[i].enabled, 
-        toggler: () => toggleClickableElement(activeProject.id, clickableElements[i].id, clickableElements[i].enabled) 
-      }
+  const dataSource = useMemo(() => {
+    const data = clickableElements.map((element) => {
+      return {
+        index: element.id,
+        displayName: element.display_name,
+        type: element.element_type,
+        clickCount: element.click_count,
+        createdAt: element.created_at,
+        tracking: { id: element.id, enabled: element.enabled },
+      };
     });
-  }
+    return data;
+  }, [clickableElements]);
+
+  const searchList = (e) => {
+    setSearchTerm(e.target.value);
+  };
+
+  useEffect(() => {
+    const searchResults = dataSource.filter((item) => {
+      return (
+        item?.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item?.type?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    });
+    setListData(searchResults);
+  }, [searchTerm, dataSource]);
 
   return (
-      <Row className={'mt-1'}>
-        <Col span={24} className={'mb-4'}>
-        <Text type={'title'} level={7}  color={'grey'}>*Only Admin(s) can change configurations.</Text>
-        </Col>
-        <Col span={24}>
-          <Table
-            className={'fa-table--basic'}
-            columns={columns}
-            dataSource={dataSource}
-            pagination={false}
-          />
-        </Col>
-      </Row>
+    <Row className={'mt-1'}>
+      <Col span={24}>
+        <div className={'mb-4 flex justify-between'}>
+          <Text type={'title'} level={7} color={'grey'}>
+            *Only Admin(s) can change configurations.
+          </Text>
+          <div className={'flex items-center'}>
+            {showSearch ? (
+              <Input
+                onChange={searchList}
+                className={''}
+                placeholder={'Search'}
+                style={{ width: '220px', 'border-radius': '5px' }}
+                prefix={<SVG name='search' size={16} color={'grey'} />}
+              />
+            ) : null}
+            <Button
+              type='text'
+              ghost={true}
+              className={'p-2 bg-white'}
+              onClick={() => {
+                setShowSearch(!showSearch);
+                if (showSearch) {
+                  setSearchTerm('');
+                }
+              }}
+            >
+              <SVG
+                name={!showSearch ? 'search' : 'close'}
+                size={20}
+                color={'grey'}
+              />
+            </Button>
+          </div>
+        </div>
+      </Col>
+      <Col span={24}>
+        <Table
+          columns={columns}
+          dataSource={listData}
+          pagination={false}
+        />
+      </Col>
+    </Row>
   );
-}
+};
 
 function JavascriptSDK({
   activeProject, 

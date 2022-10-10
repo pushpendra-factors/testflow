@@ -1091,7 +1091,7 @@ export const formatApiData = (data, metrics) => {
 };
 
 export const getStateQueryFromRequestQuery = (requestQuery) => {
-  const events = requestQuery?.ewp.map((e) => {
+  const events = requestQuery?.ewp?.map((e) => {
     const filters = [];
     let ref = -1,
       lastProp = '',
@@ -1179,7 +1179,7 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
   //     session_analytics_seq.end = requestQuery.see;
   //   }
   // }
-  const breakdown = requestQuery.gbp.map((opt) => {
+  const breakdown = requestQuery?.gbp?.map((opt) => {
     return {
       property: opt.pr,
       prop_category: opt.en,
@@ -1191,16 +1191,16 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
     };
   });
   const event = breakdown
-    .filter((b) => b.eventIndex)
-    .map((b, index) => {
+    ?.filter((b) => b.eventIndex)
+    ?.map((b, index) => {
       return {
         ...b,
         overAllIndex: index
       };
     });
   const global = breakdown
-    .filter((b) => !b.eventIndex)
-    .map((b, index) => {
+    ?.filter((b) => !b.eventIndex)
+    ?.map((b, index) => {
       return {
         ...b,
         overAllIndex: index

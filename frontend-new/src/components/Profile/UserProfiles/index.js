@@ -55,7 +55,7 @@ function UserProfiles({
       dataIndex: 'last_activity',
       key: 'last_activity',
       width: 300,
-      render: (item) => MomentTz(item).format('DD MMMM YYYY, hh:mm:ss'),
+      render: (item) => MomentTz(item).format('DD MMMM YYYY, hh:mm:ss A'),
     },
   ];
   const [usersLoading, setUsersLoading] = useState(true);
