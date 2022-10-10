@@ -181,7 +181,7 @@ App.prototype.init = function(token, opts={}, afterPageTrackCallback) {
         _client = new APIClient(token);
 
     // Turn off auto_track on init with additional opts.
-    this.trackOnInit = true;
+    var trackOnInit = true;
     if (opts.track_on_init === false) {
         trackOnInit = false;
     }
@@ -211,17 +211,17 @@ App.prototype.init = function(token, opts={}, afterPageTrackCallback) {
             _this.client = _client;
 
             // Check if client has given cookie access and process queue, else keep checking
-            checkCookiesConsentAndProcess(_this, response);
+            checkCookiesConsentAndProcess(_this, response, trackOnInit);
 
             return response;
         })
         
 }
 
-function checkCookiesConsentAndProcess(_this, response) {
+function checkCookiesConsentAndProcess(_this, response, trackOnInit) {
     if(!Cookie.isEnabled()) {
         logger.debug("Checking for cookie consent.", false);
-        setTimeout(() => {checkCookiesConsentAndProcess(_this, response)}, 1000)
+        setTimeout(() => {checkCookiesConsentAndProcess(_this, response, trackOnInit)}, 1000)
     } else {
         logger.debug("Cookie consent is enabled. Continuing process", false);
         
@@ -229,11 +229,11 @@ function checkCookiesConsentAndProcess(_this, response) {
         updateCookieIfUserIdInResponse(response);
         // Start queue processing.
         triggerQueueInitialisedEvent();
-        runPostInitProcess(_this);
+        runPostInitProcess(_this, trackOnInit);
     }
 }
 
-function runPostInitProcess(_this) {
+function runPostInitProcess(_this, trackOnInit) {
     (function(){
         return Promise.resolve();
     })().then(function() {
@@ -242,7 +242,7 @@ function runPostInitProcess(_this) {
         var enableTrackSPA = Cache.getFactorsCache(Cache.trackPageOnSPA) || _this.getConfig("auto_track_spa_page_view");
         Cache.setFactorsCache(Cache.trackPageOnSPA, enableTrackSPA);
         // Auto-track current page on init, if not disabled.
-        return _this.trackOnInit ? _this.autoTrack(_this.getConfig("auto_track"), 
+        return trackOnInit ? _this.autoTrack(_this.getConfig("auto_track"), 
             false, afterPageTrackCallback, true) : null;
     })
     .then(function() {
