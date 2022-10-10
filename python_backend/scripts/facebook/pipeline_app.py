@@ -69,6 +69,7 @@ def check_token_expiry(token_expiry, access_token):
 
 # TODO IMP add notification 10 days before expiry to team@factors.ai.
 # TODO: Move the expiry logic to notifications/stats itself.
+# NOTE: IMP: Now the job can ignore lookback if timestamp exceeds max_lookback
 if __name__ == "__main__":
     setup(sys.argv)
     log.basicConfig(level=log.INFO)

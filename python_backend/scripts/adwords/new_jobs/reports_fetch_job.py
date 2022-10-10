@@ -58,6 +58,8 @@ class ReportsFetch(BaseJob):
     FIELDS_WITH_RESOURCE_NAME = []
     FIELDS_TO_PERCENTAGE = []
     FIELDS_WITH_INTERACTION_TYPES = []
+    # PR: 6173 - Though this has change, customers are not using it.
+    FIELDS_WITH_APPROVAL_STATUS = []
 
 
     def __init__(self, next_info):
@@ -131,6 +133,7 @@ class ReportsFetch(BaseJob):
             fields_with_resource_name = []
             fields_to_percentage = []
             fields_with_interaction_types = []
+            fields_with_aprroval_status = []
             transform_map = []
         elif version == "##V01":
             headers = self.HEADERS_V01
@@ -143,6 +146,7 @@ class ReportsFetch(BaseJob):
             fields_with_resource_name = self.FIELDS_WITH_RESOURCE_NAME
             fields_to_percentage = self.FIELDS_TO_PERCENTAGE
             fields_with_interaction_types = self.FIELDS_WITH_INTERACTION_TYPES
+            fields_with_aprroval_status = self.FIELDS_WITH_APPROVAL_STATUS
             transform_map = self.TRANSFORM_MAP_V01
         elif version == "##V02":
             headers = self.HEADERS_V02
@@ -155,6 +159,7 @@ class ReportsFetch(BaseJob):
             fields_with_resource_name = self.FIELDS_WITH_RESOURCE_NAME
             fields_to_percentage = self.FIELDS_TO_PERCENTAGE
             fields_with_interaction_types = self.FIELDS_WITH_INTERACTION_TYPES
+            fields_with_aprroval_status = self.FIELDS_WITH_APPROVAL_STATUS
             transform_map = self.TRANSFORM_MAP_V01
         else:
             return None
@@ -169,6 +174,7 @@ class ReportsFetch(BaseJob):
                     fields_with_resource_name=fields_with_resource_name,
                     fields_to_percentage=fields_to_percentage,
                     fields_with_interaction_types=fields_with_interaction_types,
+                    fields_with_approval_status=fields_with_aprroval_status,
                     transform_map=transform_map)
 
     def transform_and_load_task(self, ran_extract):

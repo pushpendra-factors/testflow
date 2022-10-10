@@ -13,6 +13,16 @@ class FieldsMapping:
         '4' : "removed",
     }
 
+    # PR: 6173 - Though this has change, customers are not using it.
+    APPROVAL_STATUS_MAPPING = {
+        '0': 'UNSPECIFIED',
+        '1': 'UNKNOWN',
+        '2': 'APPROVED',
+        '3': 'DISAPPROVED',
+        '4': 'PENDING_REVIEW',
+        '5': 'UNDER_REVIEW'
+    }
+
     BOOLEAN_MAPPING = {
         "False" : 'false',
         "True" : 'true',
@@ -343,6 +353,10 @@ class FieldsMapping:
     @staticmethod
     def transform_status(field):
         return FieldsMapping.STATUS_MAPPING[field]
+    
+    @staticmethod
+    def transform_approval_status(field):
+        return FieldsMapping.APPROVAL_STATUS_MAPPING[field]
 
     @staticmethod
     def transform_service_status(field):

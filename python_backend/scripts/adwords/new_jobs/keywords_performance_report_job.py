@@ -178,8 +178,12 @@ class NewKeywordPerformanceReportsJob(ReportsFetch):
     FIELDS_WITH_STATUS = [
         "ad_group_status",
         "campaign_status",
-        "approval_status",
         "status",
+    ]
+
+    # PR: 6173 - Though this has change, customers are not using it.
+    FIELDS_WITH_APPROVAL_STATUS = [
+        "approval_status"
     ]
 
     FIELDS_WITH_BOOLEAN = [

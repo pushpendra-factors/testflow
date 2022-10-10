@@ -50,7 +50,7 @@ func EnrichSmartPropertyForChangedRulesForProject(projectID int64) int {
 	bingadsCampaigns, bingadsAdGroups := store.GetStore().GetLatestMetaForBingAdsForGivenDays(projectID, 30)
 	customadsCampaigns, customadsAdGroups := make([][]model.ChannelDocumentsWithFields, 0), make([][]model.ChannelDocumentsWithFields, 0)
 	for _, source := range sources {
-		customadsCampaign, customadsAdGroup := store.GetStore().GetLatestMetaForCustomAdsForGivenDays(projectID, source, 30)
+		customadsCampaign, customadsAdGroup := store.GetStore().GetLatestMetaForCustomAdsForGivenDays(projectID, source, 90)
 		customadsCampaigns = append(customadsCampaigns, customadsCampaign)
 		customadsAdGroups = append(customadsAdGroups, customadsAdGroup)
 	}
