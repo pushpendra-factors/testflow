@@ -85,7 +85,7 @@ func GetWeeklyInsightsParams(c *gin.Context) (*WeeklyInsightsParams, error) {
 	if version != "" {
 		insights_version, _ = strconv.ParseInt(version, 10, 64)
 	} else {
-		insights_version = 1 // default
+		insights_version = 2 // default
 	}
 	params.ProjectID = projectID
 	params.QueryId = QueryId

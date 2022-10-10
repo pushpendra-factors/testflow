@@ -38,7 +38,7 @@ function ContactDetails({ onCancel, userDetails }) {
     setActivities(allActivitiesEnabled);
   }, [userDetails]);
 
-  const [granularity, setGranularity] = useState('Hourly');
+  const [granularity, setGranularity] = useState('Daily');
   const [collapse, setCollapse] = useState(true);
   const granularityMenu = (
     <Menu>
@@ -134,7 +134,7 @@ function ContactDetails({ onCancel, userDetails }) {
                 onCancel();
                 setActivities([]);
                 setCollapse(true);
-                setGranularity('Hourly');
+                setGranularity('Daily');
               }}
             />
             <Text type={'title'} level={4} weight={'bold'} extraClass={'m-0'}>
@@ -149,7 +149,7 @@ function ContactDetails({ onCancel, userDetails }) {
                 onCancel();
                 setActivities([]);
                 setCollapse(true);
-                setGranularity('Hourly');
+                setGranularity('Daily');
               }}
               icon={<SVG name='times'></SVG>}
             ></Button>

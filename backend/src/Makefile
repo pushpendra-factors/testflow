@@ -564,9 +564,15 @@ pack-channels-to-kpi-migration:
 upload-channels-to-kpi-migration: export IMAGE_NAME=channels-to-kpi-migration
 upload-channels-to-kpi-migration: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/channels-to-kpi-migration:$(TAG)
+
 pack-adhoc-db-query:
 	docker build -t us.gcr.io/factors-$(ENV)/adhoc-db-query-job:$(TAG) -f Dockerfile.adhoc_db_query .
-
 upload-adhoc-db-query: export IMAGE_NAME=adhoc-db-query-job
 upload-adhoc-db-query: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/adhoc-db-query-job:$(TAG)
+
+pack-adhoc-yellowai-identify-fix:
+	docker build -t us.gcr.io/factors-$(ENV)/adhoc-yellowai-identify-fix:$(TAG) -f Dockerfile.adhoc_yellowai_identify_fix .
+upload-adhoc-yellowai-identify-fix: export IMAGE_NAME=adhoc-yellowai-identify-fix
+upload-adhoc-yellowai-identify-fix: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/adhoc-yellowai-identify-fix:$(TAG)

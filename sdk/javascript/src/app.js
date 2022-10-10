@@ -208,11 +208,11 @@ App.prototype.init = function(token, opts={}, afterPageTrackCallback) {
             _this.config = response.body;
             _this.client = _client;
 
-            // Check if client has given cookie access
+            // Check if client has given cookie access and process queue, else keep checking
             checkCookiesConsentAndProcess(_this, response);
 
             return response;
-        });
+        })
         
 }
 
