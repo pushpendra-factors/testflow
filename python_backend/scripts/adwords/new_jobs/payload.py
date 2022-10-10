@@ -75,7 +75,7 @@ class Payload:
     def __init__(self, headers, rows, 
                 fields_with_percentages=[], fields_in_0_to_1=[], fields_to_float=[],
                 fields_with_status=[], fields_with_boolean=[], fields_with_resource_name=[], 
-                fields_to_percentage=[], fields_with_interaction_types=[], transform_map={}):
+                fields_to_percentage=[], fields_with_interaction_types=[], fields_with_approval_status=[], transform_map={}):
         self.headers = headers
         self.rows = rows
         self.fields_with_percentages = fields_with_percentages
@@ -87,6 +87,7 @@ class Payload:
             {self.FIELDS: fields_with_resource_name, self.OPERATION: FieldsMapping.transform_resource_name},
             {self.FIELDS: fields_to_percentage, self.OPERATION: FieldsMapping.transform_percentage},
             {self.FIELDS: fields_with_interaction_types, self.OPERATION: FieldsMapping.transform_interaction_types},
+            {self.FIELDS: fields_with_approval_status, self.OPERATION: FieldsMapping.transform_approval_status},
         ]
         self.transform_map = transform_map
 

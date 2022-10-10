@@ -2,9 +2,7 @@
     <head> 
         <title>factors.ai</title>
 
-        <script type="text/javascript" src="testCases.js" async="false"></script>
-
-        <script type="text/javascript" async="false">
+        <script type="text/javascript">
         
             window.factors = window.factors||(function(){
                 this.q = [];
@@ -20,9 +18,6 @@
                     this.TOKEN = at;
                     this.INIT_PARAMS = op;
                     this.INIT_CALLBACK = ac;
-                    document.cookie = 'factorsai-test=test;';
-                    console.log("Init is called");
-                    console.log(document.cookie);
                 }
                 this.reset = function() {
                     addToQueue('reset', arguments);
@@ -53,7 +48,7 @@
                     this.q.push(callMap);
                     window.dispatchEvent(factorsQueuedEvent);
                 }
-                this.init("token", {host: "https://api.factors.ai"}, function(){console.log("Init callback")});
+                this.init("token", {host: "http://factors-dev.com:8085"}, function(){console.log("Init callback")});
                 return this;
             })();
 
