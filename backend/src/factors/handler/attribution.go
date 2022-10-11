@@ -231,7 +231,7 @@ func AttributionHandler(c *gin.Context) (interface{}, int, string, string, bool)
 	QueryKey, _ := attributionQueryUnitPayload.GetQueryCacheRedisKey(projectId)
 	debugQueryKey := model.GetStringKeyFromCacheRedisKey(QueryKey)
 	var result *model.QueryResult
-	result, err = store.GetStore().ExecuteAttributionQueryV1(projectId, requestPayload.Query, debugQueryKey,
+	result, err = store.GetStore().ExecuteAttributionQuery(projectId, requestPayload.Query, debugQueryKey,
 		enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
 
 	if err != nil {
