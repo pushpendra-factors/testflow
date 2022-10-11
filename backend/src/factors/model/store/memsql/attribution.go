@@ -679,8 +679,11 @@ func (store *MemSQL) GetCoalesceIDFromUserIDs(userIDs []string, projectID int64,
 		placeHolder := U.GetValuePlaceHolder(len(users))
 		value := U.GetInterfaceList(users)
 		queryUserIDCoalID := "SELECT id, COALESCE(users.customer_user_id,users.id) AS coal_user_id" + " " +
-			"FROM users WHERE id IN (" + placeHolder + ")"
-		rows, tx, err, reqID := store.ExecQueryWithContext(queryUserIDCoalID, value)
+			"FROM users WHERE project_id=? and id IN (" + placeHolder + ")"
+		var gULParams []interface{}
+		gULParams = append(gULParams, projectID)
+		gULParams = append(gULParams, value...)
+		rows, tx, err, reqID := store.ExecQueryWithContext(queryUserIDCoalID, gULParams)
 		if err != nil {
 			logCtx.WithError(err).Error("SQL Query failed for GetCoalesceIDFromUserIDs")
 			return nil, nil, err
