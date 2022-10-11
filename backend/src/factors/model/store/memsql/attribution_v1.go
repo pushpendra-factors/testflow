@@ -1,6 +1,7 @@
 package memsql
 
 import (
+	"database/sql"
 	"errors"
 	C "factors/config"
 	"factors/model/model"
@@ -294,7 +295,7 @@ func (store *MemSQL) PullSessionsOfConvertedUsers(projectID int64, query *model.
 			return nil, err
 		}
 
-		usersInfo, err := store.GetCoalesceIDFromUserIDs(sessionUsers, projectID, *logCtx)
+		usersInfo, _, err := store.GetCoalesceIDFromUserIDs(sessionUsers, projectID, *logCtx)
 		if C.GetAttributionDebug() == 1 {
 			logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Get Coalesce user data took time")
 		}
@@ -322,11 +323,9 @@ func (store *MemSQL) PullConvertedUsers(projectID int64, query *model.Attributio
 	var usersIDsToAttribute []string
 	var err error
 
-	logCtx.Info("Hitting PullConvertedUsers")
-
 	if query.AnalyzeType == model.AnalyzeTypeUsers {
 		var _userIDToInfoConverted map[string]model.UserInfo
-		_userIDToInfoConverted, usersToBeAttributed, coalUserIdConversionTimestamp, err = store.pullConvertedUsers(projectID,
+		_userIDToInfoConverted, usersToBeAttributed, coalUserIdConversionTimestamp, err = store.GetConvertedUsers(projectID,
 			conversionFrom, conversionTo, query.ConversionEvent,
 			query, eventNameToIDList, *logCtx)
 		if err != nil {
@@ -638,7 +637,7 @@ func ProcessAttributionDataToResult(projectID int64, query *model.AttributionQue
 }
 
 // pullConvertedUsers pulls converted users for the given Goal Event
-func (store *MemSQL) pullConvertedUsers(projectID,
+func (store *MemSQL) GetConvertedUsers(projectID,
 	conversionFrom, conversionTo int64, goalEvent model.QueryEventWithProperties,
 	query *model.AttributionQuery, eventNameToIDList map[string][]interface{},
 	logCtx log.Entry) (map[string]model.UserInfo, []model.UserEventInfo, map[string]int64, error) {
@@ -654,7 +653,7 @@ func (store *MemSQL) pullConvertedUsers(projectID,
 
 	var err error
 	// Fetch users who hit conversion event.
-	userIDToInfoConverted, coalescedIDToInfoConverted, coalUserIdConversionTimestamp, err = store.GetConvertedUsersWithFilter(projectID,
+	userIDToInfoConverted, coalescedIDToInfoConverted, coalUserIdConversionTimestamp, err = store.GetConvertedUsersWithFilterV1(projectID,
 		goalEventName, goalEventProperties, conversionFrom, conversionTo, eventNameToIDList, logCtx)
 	if err != nil {
 		return userIDToInfoConverted, usersToBeAttributed, coalUserIdConversionTimestamp, err
@@ -983,4 +982,240 @@ func (store *MemSQL) getAllTheSessionsV1(projectId int64, sessionEventNameId str
 	}
 
 	return attributedSessionsByUserId, userIdsWithSession, nil
+}
+
+// FetchAllUsersAndCustomerUserData returns usersIds for given list of customer_user_id (i.e. coal_id)
+func (store *MemSQL) FetchAllUsersAndCustomerUserData(projectID int64, customerUserIdList []string, logCtx log.Entry) (map[string]string, map[string][]string, error) {
+
+	if projectID == 1125899918000010 {
+		logCtx.WithFields(log.Fields{"HevoDebug": "Hevo", "customerUserIdList": customerUserIdList}).Info("Debug FetchAllUsersAndCustomerUserData")
+	}
+	if len(customerUserIdList) == 0 {
+		return nil, nil, nil
+	}
+	userIdToCoalIds := make(map[string]string)
+	custUserIdToUserIds := make(map[string][]string)
+
+	custUserIDPlaceHolder := U.GetValuePlaceHolder(len(customerUserIdList))
+	custUserIDs := U.GetInterfaceList(customerUserIdList)
+	groupUserListQuery := "Select users.id, users.customer_user_id FROM users WHERE project_id=? " +
+		" AND users.customer_user_id IN ( " + custUserIDPlaceHolder + " ) "
+	var gULParams []interface{}
+	gULParams = append(gULParams, projectID)
+	gULParams = append(gULParams, custUserIDs...)
+	gULRows, tx2, err, reqID := store.ExecQueryWithContext(groupUserListQuery, gULParams)
+	if err != nil {
+		logCtx.WithError(err).Error("SQL Query failed")
+		return nil, nil, errors.New("failed to get groupUserListQuery result for project")
+	}
+
+	startReadTime := time.Now()
+	for gULRows.Next() {
+		var userIDNull sql.NullString
+		var custUserIDNull sql.NullString
+		if err = gULRows.Scan(&userIDNull, &custUserIDNull); err != nil {
+			logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
+			continue
+		}
+
+		userID := U.IfThenElse(userIDNull.Valid, userIDNull.String, model.PropertyValueNone).(string)
+		custUserID := U.IfThenElse(custUserIDNull.Valid, custUserIDNull.String, model.PropertyValueNone).(string)
+		if userID == model.PropertyValueNone || custUserID == model.PropertyValueNone {
+			logCtx.WithError(err).Error("Values are not correct - userID & custUserID . Ignoring row. Continuing")
+			continue
+		}
+
+		// Keeping userID to CoalID
+		userIdToCoalIds[userID] = custUserID
+
+		// Keeping CoalID to userID(s). Since many user_ids can be associated with one coal_id
+		if _, exists := custUserIdToUserIds[custUserID]; exists {
+			v := custUserIdToUserIds[custUserID]
+			v = append(v, userID)
+			custUserIdToUserIds[custUserID] = v
+		} else {
+			var users []string
+			users = append(users, userID)
+			custUserIdToUserIds[custUserID] = users
+		}
+	}
+	err = gULRows.Err()
+	if err != nil {
+		// Error from DB is captured eg: timeout error
+		logCtx.WithFields(log.Fields{"err": err}).Error("Error in executing query in Fetch All Users")
+		return nil, nil, err
+	}
+
+	U.LogReadTimeWithQueryRequestID(startReadTime, reqID, &log.Fields{})
+	defer U.CloseReadQuery(gULRows, tx2)
+	if projectID == 1125899918000010 {
+		logCtx.WithFields(log.Fields{"HevoDebug": "Hevo", "userIdToCoalIds": userIdToCoalIds}).Info("Debug FetchAllUsersAndCustomerUserData")
+		logCtx.WithFields(log.Fields{"HevoDebug": "Hevo", "custUserIdToUserIds": custUserIdToUserIds}).Info("Debug FetchAllUsersAndCustomerUserData")
+	}
+	return userIdToCoalIds, custUserIdToUserIds, nil
+}
+
+// GetConvertedUsersWithFilterV1 Returns the list of eligible users who hit conversion
+// event for userProperties from events table
+func (store *MemSQL) GetConvertedUsersWithFilterV1(projectID int64, goalEventName string,
+	goalEventProperties []model.QueryProperty, conversionFrom, conversionTo int64,
+	eventNameToIdList map[string][]interface{}, logCtx log.Entry) (map[string]model.UserInfo,
+	map[string][]model.UserIDPropID, map[string]int64, error) {
+
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logCtx.Data)
+
+	conversionEventNameIDs := eventNameToIdList[goalEventName]
+	placeHolder := "?"
+	for i := 0; i < len(conversionEventNameIDs)-1; i++ {
+		placeHolder += ",?"
+	}
+
+	selectEventHits := "SELECT events.user_id, events.timestamp FROM events"
+	whereEventHits := "WHERE events.project_id=? AND timestamp >= ? AND " +
+		" timestamp <=? AND events.event_name_id IN (" + placeHolder + ") "
+	qParams := []interface{}{projectID, conversionFrom, conversionTo}
+	qParams = append(qParams, conversionEventNameIDs...)
+
+	// add event filter
+	wStmtEvent, wParamsEvent, eventJoinStmnt, err := getFilterSQLStmtForEventProperties(
+		projectID, goalEventProperties, conversionFrom) // query.ConversionEvent.Properties)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	if wStmtEvent != "" {
+		whereEventHits = whereEventHits + " AND " + fmt.Sprintf("( %s )", wStmtEvent)
+		qParams = append(qParams, wParamsEvent...)
+	}
+
+	// add user filter
+	wStmtUser, wParamsUser, eventUserJoinStmnt, err := getFilterSQLStmtForUserProperties(projectID,
+		goalEventProperties, conversionFrom) // query.ConversionEvent.Properties)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	if wStmtUser != "" {
+		whereEventHits = whereEventHits + " AND " + fmt.Sprintf("( %s )", wStmtUser)
+		qParams = append(qParams, wParamsUser...)
+	}
+
+	// JOIN events_properties_json table, if there is
+	// filter on event_properties or event_user_properties.
+	if eventJoinStmnt == "" {
+		eventJoinStmnt = eventUserJoinStmnt
+	}
+
+	queryEventHits := selectEventHits + " " + eventJoinStmnt + " " + whereEventHits
+	if projectID == 568 {
+		queryEventHits1, qParams1 := model.ExpandArrayWithIndividualValues(queryEventHits, qParams)
+		logCtx.WithFields(log.Fields{"CleverTapQueryGetConvertedUsersWithFilterV1": U.DBDebugPreparedStatement(C.GetConfig().Env, queryEventHits1, qParams1)}).Info("Printing Query")
+	}
+
+	// fetch query results
+	rows, tx, err, reqID := store.ExecQueryWithContext(queryEventHits, qParams)
+	if err != nil {
+		logCtx.WithError(err).Error("SQL Query failed for queryEventHits")
+		return nil, nil, nil, err
+	}
+	defer U.CloseReadQuery(rows, tx)
+	var userIDList []string
+	userIdHitGoalEventTimestamp := make(map[string]int64)
+	startReadTime := time.Now()
+	for rows.Next() {
+		var userID string
+		var timestamp int64
+		if err = rows.Scan(&userID, &timestamp); err != nil {
+			logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
+			continue
+		}
+		if _, ok := userIdHitGoalEventTimestamp[userID]; !ok {
+			userIDList = append(userIDList, userID)
+			userIdHitGoalEventTimestamp[userID] = timestamp
+		} else {
+			// record the fist occurrence of the event by userID
+			if timestamp < userIdHitGoalEventTimestamp[userID] {
+				userIdHitGoalEventTimestamp[userID] = timestamp
+			}
+		}
+	}
+	err = rows.Err()
+	if err != nil {
+		// Error from DB is captured eg: timeout error
+		logCtx.WithFields(log.Fields{"err": err}).Error("Error in executing query in GetConvertedUsersWithFilterV1")
+		return nil, nil, nil, err
+	}
+	U.LogReadTimeWithQueryRequestID(startReadTime, reqID, &log.Fields{"project_id": projectID})
+
+	// Get coalesced Id for converted user_ids (without filter)
+	userIDToCoalIDInfo, coalIDs, err := store.GetCoalesceIDFromUserIDs(userIDList, projectID, logCtx)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	if projectID == 1125899918000010 {
+		logCtx.WithFields(log.Fields{"HevoDebug": "Hevo", "userIDList": userIDList}).Info("Debug GetConvertedUsersWithFilterV1")
+		logCtx.WithFields(log.Fields{"HevoDebug": "Hevo", "userIDToCoalIDInfo": userIDToCoalIDInfo}).Info("Debug GetConvertedUsersWithFilterV1")
+		logCtx.WithFields(log.Fields{"HevoDebug": "Hevo", "coalIDs": coalIDs}).Info("Debug GetConvertedUsersWithFilterV1")
+	}
+	// Reverse lookup for all the converted userID's coalIDs to get the other users which are not marked 'converted'
+	_userIDToCoalID, _custUserIdToUserIds, err := store.FetchAllUsersAndCustomerUserData(projectID, coalIDs, logCtx)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	if projectID == 1125899918000010 {
+		logCtx.WithFields(log.Fields{"HevoDebug": "Hevo", "_userIDToCoalID": _userIDToCoalID}).Info("Debug GetConvertedUsersWithFilterV1")
+		logCtx.WithFields(log.Fields{"HevoDebug": "Hevo", "_custUserIdToUserIds": _custUserIdToUserIds}).Info("Debug GetConvertedUsersWithFilterV1")
+	}
+	for userID, coalID := range _userIDToCoalID {
+
+		if _, exists := userIDToCoalIDInfo[userID]; exists {
+			continue
+		}
+		// userID was not considered for conversion, let's add it with other userIDs of same user
+		sameUsers := _custUserIdToUserIds[coalID]
+		for _, uID := range sameUsers {
+			if _, exists := userIDToCoalIDInfo[uID]; exists {
+				// adding userID with one of the data from same user
+				userIDToCoalIDInfo[userID] = model.UserInfo{
+					CoalUserID: userIDToCoalIDInfo[uID].CoalUserID,
+					Timestamp:  userIDToCoalIDInfo[uID].Timestamp,
+				}
+				// add the user hit timing
+				userIdHitGoalEventTimestamp[userID] = userIdHitGoalEventTimestamp[uID]
+				break
+			}
+		}
+	}
+
+	var filteredUserIdList []string
+	for key := range userIDToCoalIDInfo {
+		filteredUserIdList = append(filteredUserIdList, key)
+	}
+
+	filteredUserIdToUserIDInfo := make(map[string]model.UserInfo)
+	filteredCoalIDToUserIDInfo := make(map[string][]model.UserIDPropID)
+	coalUserIdConversionTimestamp := make(map[string]int64)
+
+	for _, userID := range filteredUserIdList {
+
+		timestamp := userIdHitGoalEventTimestamp[userID]
+		coalUserID := userIDToCoalIDInfo[userID].CoalUserID
+
+		filteredCoalIDToUserIDInfo[coalUserID] = append(filteredCoalIDToUserIDInfo[coalUserID], model.UserIDPropID{UserID: userID, Timestamp: timestamp})
+		filteredUserIdToUserIDInfo[userID] = model.UserInfo{CoalUserID: coalUserID, Timestamp: timestamp}
+
+		if _, ok := coalUserIdConversionTimestamp[coalUserID]; ok {
+			if timestamp < coalUserIdConversionTimestamp[coalUserID] {
+				// Considering earliest conversion.
+				coalUserIdConversionTimestamp[coalUserID] = timestamp
+			}
+		} else {
+			coalUserIdConversionTimestamp[coalUserID] = timestamp
+		}
+	}
+
+	if projectID == 1125899918000010 {
+		logCtx.WithFields(log.Fields{"HevoDebug": "Hevo", "filteredUserIdToUserIDInfo": filteredUserIdToUserIDInfo}).Info("Debug GetConvertedUsersWithFilterV1")
+		logCtx.WithFields(log.Fields{"HevoDebug": "Hevo", "filteredCoalIDToUserIDInfo": filteredCoalIDToUserIDInfo}).Info("Debug GetConvertedUsersWithFilterV1")
+	}
+	return filteredUserIdToUserIDInfo, filteredCoalIDToUserIDInfo, coalUserIdConversionTimestamp, nil
 }

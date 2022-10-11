@@ -110,7 +110,7 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID int64, queryOriginal *mod
 			return nil, err
 		}
 
-		usersInfo, err := store.GetCoalesceIDFromUserIDs(sessionUsers, projectID, *logCtx)
+		usersInfo, _, err := store.GetCoalesceIDFromUserIDs(sessionUsers, projectID, *logCtx)
 		if C.GetAttributionDebug() == 1 {
 			logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Get Coalesce user data took time")
 		}
@@ -412,7 +412,7 @@ func (store *MemSQL) AppendOTPSessions(projectID int64, query *model.Attribution
 		return
 	}
 
-	usersInfoOTP, err := store.GetCoalesceIDFromUserIDs(sessionOTPUsers, projectID, logCtx)
+	usersInfoOTP, _, err := store.GetCoalesceIDFromUserIDs(sessionOTPUsers, projectID, logCtx)
 	if err != nil {
 		logCtx.Info("no users found for OTP events/sessions found. Skipping computation")
 		return
@@ -668,7 +668,7 @@ func (store *MemSQL) runAttribution(projectID int64,
 
 // GetCoalesceIDFromUserIDs returns the map of coalesce userId for given list of users
 func (store *MemSQL) GetCoalesceIDFromUserIDs(userIDs []string, projectID int64,
-	logCtx log.Entry) (map[string]model.UserInfo, error) {
+	logCtx log.Entry) (map[string]model.UserInfo, []string, error) {
 
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logCtx.Data)
 
@@ -679,11 +679,14 @@ func (store *MemSQL) GetCoalesceIDFromUserIDs(userIDs []string, projectID int64,
 		placeHolder := U.GetValuePlaceHolder(len(users))
 		value := U.GetInterfaceList(users)
 		queryUserIDCoalID := "SELECT id, COALESCE(users.customer_user_id,users.id) AS coal_user_id" + " " +
-			"FROM users WHERE id IN (" + placeHolder + ")"
-		rows, tx, err, reqID := store.ExecQueryWithContext(queryUserIDCoalID, value)
+			"FROM users WHERE project_id=? and id IN (" + placeHolder + ")"
+		var gULParams []interface{}
+		gULParams = append(gULParams, projectID)
+		gULParams = append(gULParams, value...)
+		rows, tx, err, reqID := store.ExecQueryWithContext(queryUserIDCoalID, gULParams)
 		if err != nil {
 			logCtx.WithError(err).Error("SQL Query failed for GetCoalesceIDFromUserIDs")
-			return nil, err
+			return nil, nil, err
 		}
 		if C.GetAttributionDebug() == 1 {
 			logCtx.WithFields(log.Fields{"Batch": batch}).Info("Executing GetCoalesceIDFromUserIDs")
@@ -704,7 +707,7 @@ func (store *MemSQL) GetCoalesceIDFromUserIDs(userIDs []string, projectID int64,
 		if err != nil {
 			// Error from DB is captured eg: timeout error
 			logCtx.WithFields(log.Fields{"err": err}).Error("Error in executing query in GetCoalesceIDFromUserIDs")
-			return nil, err
+			return nil, nil, err
 		}
 		U.CloseReadQuery(rows, tx)
 		U.LogReadTimeWithQueryRequestID(startReadTime, reqID, &log.Fields{"project_id": projectID})
@@ -712,7 +715,20 @@ func (store *MemSQL) GetCoalesceIDFromUserIDs(userIDs []string, projectID int64,
 	if C.GetAttributionDebug() == 1 {
 		logCtx.WithFields(log.Fields{"user_count": len(userIDToCoalUserIDMap)}).Info("GetCoalesceIDFromUserIDs 3")
 	}
-	return userIDToCoalUserIDMap, nil
+
+	// Get all CoalIDs
+	_allCoalIds := make(map[string]int)
+	var coalIDsList []string
+	// Get user IDs for Revenue Attribution
+	for _, v := range userIDToCoalUserIDMap {
+		_allCoalIds[v.CoalUserID] = 1
+	}
+
+	for id, _ := range _allCoalIds {
+		coalIDsList = append(coalIDsList, id)
+	}
+
+	return userIDToCoalUserIDMap, coalIDsList, nil
 }
 
 // Returns the all the sessions (userId,attributionId,minTimestamp,maxTimestamp) for given
@@ -974,7 +990,7 @@ func (store *MemSQL) GetLinkedFunnelEventUsersFilter(projectID int64, queryFrom,
 			U.LogReadTimeWithQueryRequestID(startReadTime, reqID, &log.Fields{"project_id": projectID})
 		}
 		// Get coalesced Id for Funnel Event user_ids
-		userIDToCoalIDInfo, err := store.GetCoalesceIDFromUserIDs(userIDList, projectID, logCtx)
+		userIDToCoalIDInfo, _, err := store.GetCoalesceIDFromUserIDs(userIDList, projectID, logCtx)
 		if err != nil {
 			return err, nil
 		}
@@ -1080,9 +1096,34 @@ func (store *MemSQL) GetConvertedUsersWithFilter(projectID int64, goalEventName 
 	U.LogReadTimeWithQueryRequestID(startReadTime, reqID, &log.Fields{"project_id": projectID})
 
 	// Get coalesced Id for converted user_ids (without filter)
-	userIDToCoalIDInfo, err := store.GetCoalesceIDFromUserIDs(userIDList, projectID, logCtx)
+	userIDToCoalIDInfo, coalIDs, err := store.GetCoalesceIDFromUserIDs(userIDList, projectID, logCtx)
 	if err != nil {
 		return nil, nil, nil, err
+	}
+
+	// Reverse lookup for all the converted userID's coalIDs to get the other users which are not marked 'converted'
+	_userIDToCoalID, _custUserIdToUserIds, err := store.FetchAllUsersAndCustomerUserData(projectID, coalIDs, logCtx)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	for userID, coalID := range _userIDToCoalID {
+
+		if _, exists := userIDToCoalIDInfo[userID]; exists {
+			continue
+		}
+		// userID was not considered for conversion, let's add it with other userIDs of same user
+		sameUsers := _custUserIdToUserIds[coalID]
+		for _, uID := range sameUsers {
+			if _, exists := userIDToCoalIDInfo[uID]; exists {
+				// adding userID with one of the data from same user
+				userIDToCoalIDInfo[userID] = model.UserInfo{
+					CoalUserID: userIDToCoalIDInfo[uID].CoalUserID,
+					Timestamp:  userIDToCoalIDInfo[uID].Timestamp,
+				}
+				break
+			}
+		}
 	}
 
 	var filteredUserIdList []string

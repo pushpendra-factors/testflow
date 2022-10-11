@@ -822,14 +822,11 @@ func (store *MemSQL) sanitizedLastSyncInfos(adwordsLastSyncInfos []model.Adwords
 func (store *MemSQL) PullGCLIDReport(projectID int64, from, to int64, adwordsAccountIDs string,
 	campaignIDReport, adgroupIDReport, keywordIDReport map[string]model.MarketingData, timeZone string) (map[string]model.MarketingData, error) {
 	logFields := log.Fields{
-		"project_id":           projectID,
-		"from":                 from,
-		"to":                   to,
-		"adwords_accounts_ids": adwordsAccountIDs,
-		"campaign_id_report":   campaignIDReport,
-		"adgroup_id_report":    adgroupIDReport,
-		"keyword_id_report":    keywordIDReport,
-		"time_zone":            timeZone,
+		"project_id": projectID,
+		"from":       from,
+		"to":         to,
+		"method":     "PullGCLIDReport",
+		"time_zone":  timeZone,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
