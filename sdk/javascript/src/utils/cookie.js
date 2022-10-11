@@ -69,4 +69,16 @@ function getDecoded(name) {
     return value;
 }
 
-module.exports = exports =  { set, get, setEncoded, getDecoded, remove, isExist };
+// Check Cookie consent
+function isEnabled() {
+    var cookieEnabled = false;
+    var testCookieString = 'fa-testcookie';
+    if (!cookieEnabled){ 
+        set(testCookieString, null);
+        cookieEnabled = isExist(testCookieString);
+        cookieEnabled && remove(testCookieString);
+    }
+    return cookieEnabled;
+}
+
+module.exports = exports =  { set, get, setEncoded, getDecoded, remove, isExist, isEnabled };
