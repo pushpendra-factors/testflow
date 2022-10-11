@@ -1354,7 +1354,7 @@ func ProcessQueryLandingPageUrl(query *AttributionQuery, attributionData *map[st
 	logFields := log.Fields{"Method": "ProcessQueryLandingPageUrl"}
 	logCtx = *logCtx.WithFields(logFields)
 	dataRows := GetRowsByMapsLandingPage(query.AttributionContentGroups, attributionData, query.LinkedEvents, isCompare)
-	logCtx.Info("Done GetRowsByMapsLandingPage")
+
 	result := &QueryResult{}
 	AddHeadersByAttributionKey(result, query, nil, nil)
 
@@ -1381,10 +1381,8 @@ func ProcessQueryLandingPageUrl(query *AttributionQuery, attributionData *map[st
 		}
 		return v1 > v2
 	})
-	logCtx.Info("MergeDataRowsHavingSameKey")
 
 	result.Rows = AddGrandTotalRowLandingPage(result.Headers, result.Rows, GetLastKeyValueIndexLandingPage(result.Headers), query.AttributionMethodology, query.AttributionMethodologyCompare)
-	logCtx.Info("Done AddGrandTotal")
 	return result
 
 }
@@ -1394,19 +1392,15 @@ func ProcessQuery(query *AttributionQuery, attributionData *map[string]*Attribut
 	logCtx = *logCtx.WithFields(logFields)
 	// Add additional metrics values
 	ComputeAdditionalMetrics(attributionData)
-	logCtx.Info("Done ComputeAdditionalMetrics")
 	// Add custom dimensions
 	AddCustomDimensions(attributionData, query, marketingReports)
 
-	logCtx.Info("Done AddCustomDimensions")
 	// Attribution data to rows
 	dataRows := GetRowsByMaps(query.AttributionKey, query.AttributionKeyCustomDimension, attributionData, query.LinkedEvents, isCompare)
 
-	logCtx.Info("Done GetRowsByMaps")
 	result := &QueryResult{}
 	AddHeadersByAttributionKey(result, query, nil, nil)
 	result.Rows = dataRows
-	logCtx.WithFields(log.Fields{"Headers": result.Headers}).Info("logs to check headers")
 	// get the headers for KPI
 	var goalEventAggFuncTypes []string
 	for _, value := range *attributionData {
@@ -1423,7 +1417,6 @@ func ProcessQuery(query *AttributionQuery, attributionData *map[string]*Attribut
 
 	// Additional filtering based on AttributionKey.
 	result.Rows = FilterRows(result.Rows, query.AttributionKey, GetLastKeyValueIndex(result.Headers))
-	logCtx.Info("Done GetRowsByMaps GetUpdatedRowsByDimensions MergeDataRowsHavingSameKey FilterRows")
 
 	// sort the rows by conversionEvent
 	conversionIndex := GetConversionIndex(result.Headers)
@@ -1442,14 +1435,13 @@ func ProcessQuery(query *AttributionQuery, attributionData *map[string]*Attribut
 	})
 
 	result.Rows = AddGrandTotalRow(result.Headers, result.Rows, GetLastKeyValueIndex(result.Headers), query.AnalyzeType, goalEventAggFuncTypes, query.AttributionMethodology, query.AttributionMethodologyCompare)
-	logCtx.Info("Done AddGrandTotal")
 	return result
 }
 
 func ProcessQueryKPI(query *AttributionQuery, attributionData *map[string]*AttributionData,
 	marketingReports *MarketingReports, isCompare bool, kpiData map[string]KPIInfo) *QueryResult {
-	logCtx := log.WithFields(log.Fields{"Method": "ProcessQueryKPI", "KPIAttribution": "Debug", "attributionData": attributionData})
-	logCtx.Info("KPI Attribution data")
+
+	logCtx := log.WithFields(log.Fields{"Method": "ProcessQueryKPI", "KPIAttribution": "Debug"})
 
 	// Add additional metrics values
 	ComputeAdditionalMetrics(attributionData)
@@ -1457,7 +1449,6 @@ func ProcessQueryKPI(query *AttributionQuery, attributionData *map[string]*Attri
 	// Add custom dimensions
 	AddCustomDimensions(attributionData, query, marketingReports)
 
-	logCtx.Info("Done AddTheAddedKeysAndMetrics AddPerformanceData ApplyFilter ComputeAdditionalMetrics AddCustomDimensions")
 	// for KPI queries, use the kpiData.KpiAggFunctionTypes as ConvAggFunctionType
 	var convAggFunctionType []string
 	for _, val := range kpiData {
@@ -1497,8 +1488,6 @@ func ProcessQueryKPI(query *AttributionQuery, attributionData *map[string]*Attri
 	// Additional filtering based on AttributionKey.
 	result.Rows = FilterRows(result.Rows, query.AttributionKey, GetLastKeyValueIndex(result.Headers))
 
-	logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "Result": result}).Info("KPI Attribution result")
-
 	// sort the rows by conversionEvent
 	conversionIndex := GetConversionIndexKPI(result.Headers)
 	sort.Slice(result.Rows, func(i, j int) bool {
@@ -1520,10 +1509,8 @@ func ProcessQueryKPI(query *AttributionQuery, attributionData *map[string]*Attri
 		}
 		return true
 	})
-	logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "Result": result}).Info("KPI Attribution result Sorting")
 
 	result.Rows = AddGrandTotalRowKPI(result.Headers, result.Rows, GetLastKeyValueIndex(result.Headers), query.AnalyzeType, goalEventAggFuncTypes, query.AttributionMethodology, query.AttributionMethodologyCompare)
-	logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "Result": result}).Info("KPI Attribution result AddGrandTotalRow")
 
 	return result
 }
@@ -1555,8 +1542,6 @@ func GetUpdatedRowsByDimensions(result *QueryResult, query *AttributionQuery, lo
 	for _, data := range result.Rows {
 		var row []interface{}
 		if len(result.Headers) > len(data) {
-			logCtx.WithFields(log.Fields{"data_row": data,
-				"header": result.Headers}).Info("length of data_row is less than header length")
 			for i := len(data); i < len(result.Headers); i++ {
 				data = append(data, float64(0))
 			}
@@ -1772,7 +1757,6 @@ func MergeDataRowsHavingSameKey(rows [][]interface{}, keyIndex int, attributionK
 			val, ok := row[j].(string)
 			// Ignore row if key is not proper
 			if !ok {
-				logCtx.Info("empty key value error. Ignoring row and continuing.")
 				continue
 			}
 			key = key + val
@@ -2790,7 +2774,6 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, reports *Marketin
 		AdgroupID      string
 	}
 	var missingIDs []MissingCollection
-	count := 0
 	countEnrichedGclid := 0
 	countEnrichedMarketingId := 0
 
@@ -2932,10 +2915,6 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, reports *Marketin
 				WithinQueryPeriod: isSessionWithinQueryPeriod(query.QueryType, query.LookbackDays, query.From, query.To, timestamp), MarketingInfo: marketingValues}
 			(*attributedSessionsByUserId)[userID][uniqueAttributionKey] = userSessionDataNew
 		}
-		count++
-		if count%49999 == 0 {
-			log.WithFields(log.Fields{"Method": "ProcessEventRows", "Count": count}).Info("Processing event rows")
-		}
 	}
 	err := rows.Err()
 	if err != nil {
@@ -2947,9 +2926,6 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, reports *Marketin
 		Info("no document was found in any of the reports for ID. Logging and continuing %+v",
 			missingIDs[:U.MinInt(100, len(missingIDs))])
 	U.LogReadTimeWithQueryRequestID(startReadTime, queryID, &log.Fields{})
-	logCtx.WithFields(log.Fields{"SessionDataCount": count,
-		"countEnrichedGclid":       countEnrichedGclid,
-		"countEnrichedMarketingId": countEnrichedMarketingId}).Info("Attribution keyword razorpay debug")
 	return nil
 }
 
@@ -3147,17 +3123,11 @@ func enrichDimensionsWithName(attributionData *map[string]*AttributionData, dime
 			if customDimKey == "" {
 				continue
 			}
-			foundInAdwords := "NotFound"
-			if _, exists := adwordsData[customDimKey]; exists {
-				foundInAdwords = "Found"
-			}
-			log.WithFields(log.Fields{"CustomDebug": "True1", "CustomDimKey": customDimKey, "Found": foundInAdwords, "AttributionDataKey": k, "AttributionDataValue": v, "Channel": (*attributionData)[k].Channel}).Info("Enrich Custom Dimension")
 
 			switch (*attributionData)[k].Channel {
 			case ChannelAdwords:
 				if d, exists := adwordsData[customDimKey]; exists {
 					if val, found := d.CustomDimensions[dim]; found {
-						log.WithFields(log.Fields{"CustomDebug": "True2", "CustomDimKey": customDimKey, "data": adwordsData[customDimKey], "Val": val, "Found": foundInAdwords, "AttributionDataKey": k, "AttributionDataValue": v, "Channel": (*attributionData)[k].Channel}).Info("Enrich Adwords Custom Dimension")
 						(*attributionData)[k].CustomDimensions[dim] = val
 					}
 				}
@@ -3210,15 +3180,9 @@ func enrichDimensionsWithoutChannel(attributionData *map[string]*AttributionData
 			if customDimKey == "" {
 				continue
 			}
-			foundInAdwords := "NotFound"
-			if _, exists := adwordsData[customDimKey]; exists {
-				foundInAdwords = "Found"
-			}
-			log.WithFields(log.Fields{"CustomDebug": "True1", "CustomDimKey": customDimKey, "Found": foundInAdwords, "AttributionDataKey": k, "AttributionDataValue": v, "Channel": (*attributionData)[k].Channel}).Info("Enrich Custom Dimension")
 
 			if d, exists := adwordsData[customDimKey]; exists {
 				if val, found := d.CustomDimensions[dim]; found {
-					log.WithFields(log.Fields{"CustomDebug": "True2", "CustomDimKey": customDimKey, "data": adwordsData[customDimKey], "Val": val, "Found": foundInAdwords, "AttributionDataKey": k, "AttributionDataValue": v, "Channel": (*attributionData)[k].Channel}).Info("Enrich Adwords Custom Dimension")
 					(*attributionData)[k].CustomDimensions[dim] = val
 					continue
 				}

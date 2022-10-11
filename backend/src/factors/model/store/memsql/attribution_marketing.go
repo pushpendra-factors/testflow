@@ -122,7 +122,6 @@ func (store *MemSQL) FetchMarketingReports(projectID int64, q model.AttributionQ
 			return data, err
 		}
 
-		log.WithFields(log.Fields{"size of adwordsGCLIDData map": len(adwordsGCLIDData)}).Info("Attribution keyword razorpay debug")
 	}
 
 	// Facebook.
@@ -761,9 +760,6 @@ func (store *MemSQL) PullSmartProperties(projectID int64, campaignIDPlaceHolder 
 		logCtx.WithFields(log.Fields{"err": err}).Error("Error in executing query in PullSmartProperties")
 		return nil, err
 	}
-	logCtx1.WithFields(log.Fields{"CustomDebug": "True", "ProjectId": projectID,
-		"Source": sourceChannelPlaceHolder}).
-		Info("Pull Smart Properties")
 	U.LogReadTimeWithQueryRequestID(startReadTime, reqID, &logFields)
 
 	return dataKeyDimensions, nil
