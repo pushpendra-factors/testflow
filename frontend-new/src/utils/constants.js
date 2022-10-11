@@ -648,3 +648,8 @@ export const RevAvailableGroups = {
   $salesforce_account: 'Salesforce Accounts',
   $salesforce_opportunity: 'Salesforce Opportunities'
 };
+
+export const DealOrOppurtunity = 'Deal / Opportunity';
+export const CompanyOrAccount = 'Company / Account';
+
+export const AttributionGroupOptions = [DealOrOppurtunity, CompanyOrAccount];

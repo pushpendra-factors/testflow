@@ -5,9 +5,13 @@ import { Row, Col, Button, Tabs, Select, message } from 'antd';
 import SelectKPIBlock from './SelectKPIBlock';
 import {
   udpateProjectSettings,
-  fetchProjectSettings,
+  fetchProjectSettings
 } from '../../../../reducers/global';
-import FaSelect from '../../../../components/FaSelect';
+import {
+  AttributionGroupOptions,
+  DealOrOppurtunity,
+  CompanyOrAccount
+} from 'Utils/constants';
 
 const { TabPane } = Tabs;
 const { Option } = Select;
@@ -16,16 +20,22 @@ const AttributionSettings = ({
   activeProject,
   currentProjectSettings,
   fetchProjectSettings,
-  udpateProjectSettings,
+  udpateProjectSettings
 }) => {
   const [attrConfig, setAttrConfig] = useState({
     kpis_to_attribute: {
       user_kpi: [],
       sf_kpi: [],
-      hs_kpi: [],
+      hs_kpi: []
     },
     attribution_window: 1,
     enabled: true,
+    user_kpi: true,
+    hubspot_deals: false,
+    salesforce_opportunities: false,
+    hubspot_companies: true,
+    salesforce_accounts: true,
+    pre_compute_enabled: false
   });
 
   useEffect(() => {
@@ -41,7 +51,7 @@ const AttributionSettings = ({
   const tabsArray = [
     ['Users', 'user_kpi'],
     ['Salesforce Opportunities', 'sf_kpi'],
-    ['Hubspot Deals', 'hs_kpi'],
+    ['Hubspot Deals', 'hs_kpi']
   ];
 
   const [tabNo, setTabNo] = useState('0');
@@ -73,7 +83,7 @@ const AttributionSettings = ({
 
   const onSave = () => {
     udpateProjectSettings(activeProject.id, {
-      attribution_config: attrConfig,
+      attribution_config: attrConfig
     })
       .then(() => {
         message.success('Project details updated!');
@@ -136,7 +146,7 @@ const AttributionSettings = ({
       <Select
         value={attrConfig?.attribution_window}
         style={{ width: 300 }}
-        placement='bottomLeft'
+        placement="bottomLeft"
         onChange={(val) => {
           onWindowChange(val);
         }}
@@ -158,7 +168,7 @@ const AttributionSettings = ({
 
   const attributionWindow = () => {
     return (
-      <div style={{ height: '32rem' }}>
+      <div>
         <Row>
           <Col span={24}>
             <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0'}>
@@ -190,7 +200,7 @@ const AttributionSettings = ({
                 style={{
                   border: '1px solid #f0f0f0',
                   padding: '20px',
-                  paddingTop: 0,
+                  paddingTop: 0
                 }}
               >
                 {kpiList(name[1])}
@@ -202,9 +212,86 @@ const AttributionSettings = ({
     );
   };
 
+  const onGroupAttributionChange = (val) => {
+    setEdit(true);
+    const updatedAttrConfig = Object.assign({}, attrConfig);
+    if (val === CompanyOrAccount) {
+      updatedAttrConfig.hubspot_companies = true;
+      updatedAttrConfig.salesforce_accounts = true;
+      updatedAttrConfig.hubspot_deals = false;
+      updatedAttrConfig.salesforce_opportunities = false;
+    } else if (val === DealOrOppurtunity) {
+      updatedAttrConfig.hubspot_companies = false;
+      updatedAttrConfig.salesforce_accounts = false;
+      updatedAttrConfig.hubspot_deals = true;
+      updatedAttrConfig.salesforce_opportunities = true;
+    }
+    setAttrConfig(updatedAttrConfig);
+  };
+
+  const getGroupAttributionValue = () => {
+    if (
+      attrConfig?.hubspot_companies === true &&
+      attrConfig?.salesforce_accounts === true
+    )
+      return CompanyOrAccount;
+    if (
+      attrConfig?.hubspot_deals === true &&
+      attrConfig?.salesforce_opportunities === true
+    )
+      return DealOrOppurtunity;
+    return null;
+  };
+
+  const selectGroupAttribution = () => {
+    return (
+      <Select
+        value={getGroupAttributionValue()}
+        style={{ width: 300 }}
+        placement="bottomLeft"
+        onChange={(val) => {
+          onGroupAttributionChange(val);
+        }}
+      >
+        {AttributionGroupOptions.map((group) => {
+          return (
+            <Option value={group} key={group}>
+              {group}
+            </Option>
+          );
+        })}
+      </Select>
+    );
+  };
+
+  const groupAttribution = () => {
+    return (
+      <div>
+        <Row>
+          <Col span={24}>
+            <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0'}>
+              Group Attribution
+            </Text>
+          </Col>
+          <Col span={18}>
+            <Text type={'title'} level={7} extraClass={'m-0'}>
+              This option allows you to attribute revenue to either all contacts
+              associated with Deals / Opportunities Or all contacts associated
+              with the Company/ Account. By default this is set to Company /
+              Account. Pick one below.
+            </Text>
+          </Col>
+          <Col span={24}>
+            <div className={'mt-4'}>{selectGroupAttribution()}</div>
+          </Col>
+        </Row>
+      </div>
+    );
+  };
+
   return (
     <div className={'fa-container mt-32 mb-12 min-h-screen'}>
-      <Row gutter={[24, 24]} justify='center'>
+      <Row gutter={[24, 24]} justify="center">
         <Col span={18}>
           <Row className={`flex items-center`}>
             <Col span={12}>
@@ -249,6 +336,11 @@ const AttributionSettings = ({
               <div className={'my-6'}>{attributionWindow()}</div>
             </Col>
           </Row>
+          <Row>
+            <Col span={24}>
+              <div className={'my-6'}>{groupAttribution()}</div>
+            </Col>
+          </Row>
         </Col>
       </Row>
     </div>
@@ -257,10 +349,10 @@ const AttributionSettings = ({
 
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
-  currentProjectSettings: state.global.currentProjectSettings,
+  currentProjectSettings: state.global.currentProjectSettings
 });
 
 export default connect(mapStateToProps, {
   fetchProjectSettings,
-  udpateProjectSettings,
+  udpateProjectSettings
 })(AttributionSettings);
