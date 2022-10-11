@@ -740,13 +740,6 @@ func handleShareQueryTypeEvents(alert model.Alert, query *model.Queries, configs
 			query.To = dateRange.to
 		}
 	}
-	from := time.Unix(queryGroup.Queries[0].From, 0)
-	to := time.Unix(queryGroup.Queries[0].To, 0)
-	fromTime := U.ConvertTimeIn(from, timezoneString)
-	toTime := U.ConvertTimeIn(to, timezoneString)
-	fromStr := fromTime.Format("02 Jan 2006")
-	toStr := toTime.Format("02 Jan 2006")
-	newDateRange := fromStr + " - " + toStr
 
 	if shouldOverride {
 		for idx := range queryGroup.Queries {
@@ -754,6 +747,14 @@ func handleShareQueryTypeEvents(alert model.Alert, query *model.Queries, configs
 			queryGroup.Queries[idx].To = overRideTo
 		}
 	}
+
+	from := time.Unix(queryGroup.Queries[0].From, 0)
+	to := time.Unix(queryGroup.Queries[0].To, 0)
+	fromTime := U.ConvertTimeIn(from, timezoneString)
+	toTime := U.ConvertTimeIn(to, timezoneString)
+	fromStr := fromTime.Format("02 Jan 2006")
+	toStr := toTime.Format("02 Jan 2006")
+	newDateRange := fromStr + " - " + toStr
 	var cacheResult model.ResultGroup
 	// fix is Dashboard query request flag
 	shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(nil, projectID, &queryGroup, cacheResult, false, "", true)
@@ -867,13 +868,6 @@ func handleShareQueryTypeKPI(alert model.Alert, query *model.Queries, configs ma
 			query.To = dateRange.to
 		}
 	}
-	from := time.Unix(kpiQueryGroup.Queries[0].From, 0)
-	to := time.Unix(kpiQueryGroup.Queries[0].To, 0)
-	fromTime := U.ConvertTimeIn(from, timezoneString)
-	toTime := U.ConvertTimeIn(to, timezoneString)
-	fromStr := fromTime.Format("02 Jan 2006")
-	toStr := toTime.Format("02 Jan 2006")
-	newDateRange := fromStr + " - " + toStr
 
 	if shouldOverride {
 		for idx := range kpiQueryGroup.Queries {
@@ -881,6 +875,13 @@ func handleShareQueryTypeKPI(alert model.Alert, query *model.Queries, configs ma
 			kpiQueryGroup.Queries[idx].To = overRideTo
 		}
 	}
+	from := time.Unix(kpiQueryGroup.Queries[0].From, 0)
+	to := time.Unix(kpiQueryGroup.Queries[0].To, 0)
+	fromTime := U.ConvertTimeIn(from, timezoneString)
+	toTime := U.ConvertTimeIn(to, timezoneString)
+	fromStr := fromTime.Format("02 Jan 2006")
+	toStr := toTime.Format("02 Jan 2006")
+	newDateRange := fromStr + " - " + toStr
 
 	var cacheResult []model.QueryResult
 	shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(nil, projectID, &kpiQueryGroup, cacheResult, false, "", true)
