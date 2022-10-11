@@ -195,7 +195,7 @@ App.prototype.init = function(token, opts={}, afterPageTrackCallback) {
     // or else app stays unintialized.
     var payload = {};
 
-    let _this = this; // Remove arrows;
+    var _this = this; // Remove arrows;
     updatePayloadWithUserIdFromCookie(payload);
     return _client.getInfo(payload)
         .then(function(response) {
