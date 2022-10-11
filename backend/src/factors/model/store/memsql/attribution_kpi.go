@@ -122,6 +122,7 @@ func (store *MemSQL) GetDataFromKPIResult(projectID int64, kpiQueryResult model.
 
 	return model.AddKPIKeyDataInMap(kpiQueryResult, logCtx, keyIdx, datetimeIdx, query.From, query.To, valIdx, kpiValueHeaders, kpiAggFunctionType, kpiData)
 }
+
 func (store *MemSQL) RunKPIGroupQuery(projectID int64, query *model.AttributionQuery, kpiData *map[string]model.KPIInfo,
 	enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery bool, debugQueryKey string, logCtx log.Entry) (error, []string) {
 
@@ -307,55 +308,10 @@ func (store *MemSQL) PullAllUsersByCustomerUserID(projectID int64, kpiData *map[
 		customerUserIdList = append(customerUserIdList, v.KpiCoalUserIds...)
 	}
 
-	custUserIdToUserIds := make(map[string][]string)
-	custUserIDPlaceHolder := U.GetValuePlaceHolder(len(customerUserIdList))
-	custUserIDs := U.GetInterfaceList(customerUserIdList)
-	groupUserListQuery := "Select users.id, users.customer_user_id FROM users WHERE project_id=? " +
-		" AND users.customer_user_id IN ( " + custUserIDPlaceHolder + " ) "
-	var gULParams []interface{}
-	gULParams = append(gULParams, projectID)
-	gULParams = append(gULParams, custUserIDs...)
-	gULRows, tx2, err, reqID := store.ExecQueryWithContext(groupUserListQuery, gULParams)
+	_, custUserIdToUserIds, err := store.FetchAllUsersAndCustomerUserData(projectID, customerUserIdList, logCtx)
 	if err != nil {
-		logCtx.WithError(err).Error("SQL Query failed")
-		return errors.New("failed to get groupUserListQuery result for project")
-	}
-
-	startReadTime := time.Now()
-	for gULRows.Next() {
-		var userIDNull sql.NullString
-		var custUserIDNull sql.NullString
-		if err = gULRows.Scan(&userIDNull, &custUserIDNull); err != nil {
-			logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
-			continue
-		}
-
-		userID := U.IfThenElse(userIDNull.Valid, userIDNull.String, model.PropertyValueNone).(string)
-		custUserID := U.IfThenElse(custUserIDNull.Valid, custUserIDNull.String, model.PropertyValueNone).(string)
-		if userID == model.PropertyValueNone || custUserID == model.PropertyValueNone {
-			logCtx.WithError(err).Error("Values are not correct - userID & custUserID . Ignoring row. Continuing")
-			continue
-		}
-
-		if _, exists := custUserIdToUserIds[custUserID]; exists {
-			v := custUserIdToUserIds[custUserID]
-			v = append(v, userID)
-			custUserIdToUserIds[custUserID] = v
-		} else {
-			var users []string
-			users = append(users, userID)
-			custUserIdToUserIds[custUserID] = users
-		}
-	}
-	err = gULRows.Err()
-	if err != nil {
-		// Error from DB is captured eg: timeout error
-		logCtx.WithFields(log.Fields{"err": err}).Error("Error in executing query in PullAllUsersByCustomerUserID")
 		return err
 	}
-	logCtx.WithFields(log.Fields{"custUserIdToUserIds": custUserIdToUserIds}).
-		Info("KPI-Attribution custUserIdToUserIds set")
-	U.LogReadTimeWithQueryRequestID(startReadTime, reqID, &log.Fields{})
 
 	for k, v := range *kpiData {
 		userIdMap := make(map[string]bool)
@@ -380,7 +336,6 @@ func (store *MemSQL) PullAllUsersByCustomerUserID(projectID int64, kpiData *map[
 		v.KpiUserIds = users
 		(*kpiData)[k] = v
 	}
-	defer U.CloseReadQuery(gULRows, tx2)
 	return nil
 }
 

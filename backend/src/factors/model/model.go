@@ -58,7 +58,26 @@ type Model interface {
 		enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool) (*model.QueryResult, error)
 	ExecuteAttributionQueryV1(projectID int64, query *model.AttributionQuery, debugQueryKey string,
 		enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool) (*model.QueryResult, error)
-	GetCoalesceIDFromUserIDs(userIDs []string, projectID int64, logCtx log.Entry) (map[string]model.UserInfo, error)
+	GetCoalesceIDFromUserIDs(userIDs []string, projectID int64, logCtx log.Entry) (map[string]model.UserInfo, []string, error)
+	PullAllUsersByCustomerUserID(projectID int64, kpiData *map[string]model.KPIInfo, logCtx log.Entry) error
+	FetchAllUsersAndCustomerUserData(projectID int64, customerUserIdList []string, logCtx log.Entry) (map[string]string, map[string][]string, error)
+	GetConvertedUsers(projectID,
+		conversionFrom, conversionTo int64, goalEvent model.QueryEventWithProperties,
+		query *model.AttributionQuery, eventNameToIDList map[string][]interface{},
+		logCtx log.Entry) (map[string]model.UserInfo, []model.UserEventInfo, map[string]int64, error)
+	PullConvertedUsers(projectID int64, query *model.AttributionQuery, conversionFrom int64, conversionTo int64,
+		eventNameToIDList map[string][]interface{}, kpiData map[string]model.KPIInfo,
+		debugQueryKey string, enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool,
+		logCtx *log.Entry) (map[string]int64, []model.UserEventInfo, map[string]model.KPIInfo, []string, error)
+	GetAttributionData(projectID int64, query *model.AttributionQuery, sessions map[string]map[string]model.UserSessionData,
+		usersToBeAttributed []model.UserEventInfo, coalUserIdConversionTimestamp map[string]int64, marketingReports *model.MarketingReports,
+		kpiData map[string]model.KPIInfo, logCtx *log.Entry) (*map[string]*model.AttributionData, bool, error)
+	PullSessionsOfConvertedUsers(projectID int64, query *model.AttributionQuery, sessionEventNameID string, usersToBeAttributed []string,
+		marketingReports *model.MarketingReports, contentGroupNamesList []string, logCtx *log.Entry) (map[string]map[string]model.UserSessionData, error)
+	ExecuteKPIForAttribution(projectID int64, query *model.AttributionQuery, debugQueryKey string,
+		logCtx log.Entry, enableOptimisedFilterOnProfileQuery bool,
+		enableOptimisedFilterOnEventUserQuery bool) (map[string]model.KPIInfo, error)
+
 	GetLinkedFunnelEventUsersFilter(projectID int64, queryFrom, queryTo int64,
 		linkedEvents []model.QueryEventWithProperties, eventNameToId map[string][]interface{},
 		userIDInfo map[string]model.UserInfo, logCtx log.Entry) (error, []model.UserEventInfo)

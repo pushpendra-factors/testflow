@@ -1,6 +1,7 @@
 package memsql
 
 import (
+	"database/sql"
 	"errors"
 	C "factors/config"
 	"factors/model/model"
@@ -170,7 +171,7 @@ func (store *MemSQL) PullSessionsOfConvertedUsers(projectID int64, query *model.
 			return nil, err
 		}
 
-		usersInfo, err := store.GetCoalesceIDFromUserIDs(sessionUsers, projectID, *logCtx)
+		usersInfo, _, err := store.GetCoalesceIDFromUserIDs(sessionUsers, projectID, *logCtx)
 		if C.GetAttributionDebug() == 1 {
 			logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Get Coalesce user data took time")
 		}
@@ -198,11 +199,9 @@ func (store *MemSQL) PullConvertedUsers(projectID int64, query *model.Attributio
 	var usersIDsToAttribute []string
 	var err error
 
-	logCtx.Info("Hitting PullConvertedUsers")
-
 	if query.AnalyzeType == model.AnalyzeTypeUsers {
 		var _userIDToInfoConverted map[string]model.UserInfo
-		_userIDToInfoConverted, usersToBeAttributed, coalUserIdConversionTimestamp, err = store.pullConvertedUsers(projectID,
+		_userIDToInfoConverted, usersToBeAttributed, coalUserIdConversionTimestamp, err = store.GetConvertedUsers(projectID,
 			conversionFrom, conversionTo, query.ConversionEvent,
 			query, eventNameToIDList, *logCtx)
 		if err != nil {
@@ -514,7 +513,7 @@ func ProcessAttributionDataToResult(projectID int64, query *model.AttributionQue
 }
 
 // pullConvertedUsers pulls converted users for the given Goal Event
-func (store *MemSQL) pullConvertedUsers(projectID,
+func (store *MemSQL) GetConvertedUsers(projectID,
 	conversionFrom, conversionTo int64, goalEvent model.QueryEventWithProperties,
 	query *model.AttributionQuery, eventNameToIDList map[string][]interface{},
 	logCtx log.Entry) (map[string]model.UserInfo, []model.UserEventInfo, map[string]int64, error) {
@@ -859,4 +858,69 @@ func (store *MemSQL) getAllTheSessionsV1(projectId int64, sessionEventNameId str
 	}
 
 	return attributedSessionsByUserId, userIdsWithSession, nil
+}
+
+// FetchAllUsersAndCustomerUserData returns usersIds for given list of customer_user_id (i.e. coal_id)
+func (store *MemSQL) FetchAllUsersAndCustomerUserData(projectID int64, customerUserIdList []string, logCtx log.Entry) (map[string]string, map[string][]string, error) {
+
+	if len(customerUserIdList) == 0 {
+		return nil, nil, nil
+	}
+	userIdToCoalIds := make(map[string]string)
+	custUserIdToUserIds := make(map[string][]string)
+
+	custUserIDPlaceHolder := U.GetValuePlaceHolder(len(customerUserIdList))
+	custUserIDs := U.GetInterfaceList(customerUserIdList)
+	groupUserListQuery := "Select users.id, users.customer_user_id FROM users WHERE project_id=? " +
+		" AND users.customer_user_id IN ( " + custUserIDPlaceHolder + " ) "
+	var gULParams []interface{}
+	gULParams = append(gULParams, projectID)
+	gULParams = append(gULParams, custUserIDs...)
+	gULRows, tx2, err, reqID := store.ExecQueryWithContext(groupUserListQuery, gULParams)
+	if err != nil {
+		logCtx.WithError(err).Error("SQL Query failed")
+		return nil, nil, errors.New("failed to get groupUserListQuery result for project")
+	}
+
+	startReadTime := time.Now()
+	for gULRows.Next() {
+		var userIDNull sql.NullString
+		var custUserIDNull sql.NullString
+		if err = gULRows.Scan(&userIDNull, &custUserIDNull); err != nil {
+			logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
+			continue
+		}
+
+		userID := U.IfThenElse(userIDNull.Valid, userIDNull.String, model.PropertyValueNone).(string)
+		custUserID := U.IfThenElse(custUserIDNull.Valid, custUserIDNull.String, model.PropertyValueNone).(string)
+		if userID == model.PropertyValueNone || custUserID == model.PropertyValueNone {
+			logCtx.WithError(err).Error("Values are not correct - userID & custUserID . Ignoring row. Continuing")
+			continue
+		}
+
+		// Keeping userID to CoalID
+		userIdToCoalIds[userID] = custUserID
+
+		// Keeping CoalID to userID(s). Since many user_ids can be associated with one coal_id
+		if _, exists := custUserIdToUserIds[custUserID]; exists {
+			v := custUserIdToUserIds[custUserID]
+			v = append(v, userID)
+			custUserIdToUserIds[custUserID] = v
+		} else {
+			var users []string
+			users = append(users, userID)
+			custUserIdToUserIds[custUserID] = users
+		}
+	}
+	err = gULRows.Err()
+	if err != nil {
+		// Error from DB is captured eg: timeout error
+		logCtx.WithFields(log.Fields{"err": err}).Error("Error in executing query in Fetch All Users")
+		return nil, nil, err
+	}
+
+	U.LogReadTimeWithQueryRequestID(startReadTime, reqID, &log.Fields{})
+	defer U.CloseReadQuery(gULRows, tx2)
+
+	return userIdToCoalIds, custUserIdToUserIds, nil
 }
