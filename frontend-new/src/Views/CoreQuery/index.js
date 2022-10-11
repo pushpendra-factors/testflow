@@ -662,7 +662,7 @@ function CoreQuery({
           globalFilters
         );
 
-        setDateFromTo({from: query[0]?.fr, to: query[0]?.to});
+        setDateFromTo({ from: query[0]?.fr, to: query[0]?.to });
 
         if (!isQuerySaved) {
           // Factors RUN_QUERY tracking
@@ -1004,7 +1004,7 @@ function CoreQuery({
           queryOptions
         );
 
-        setDateFromTo({from: KPIquery?.qG[0]?.fr, to: KPIquery[0]?.to});
+        setDateFromTo({ from: KPIquery?.qG[0]?.fr, to: KPIquery?.qG[0]?.to });
 
         if (!isQuerySaved) {
           // Factors RUN_QUERY tracking

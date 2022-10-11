@@ -232,8 +232,11 @@ function CoreQuery({
   }, [activeProject]);
 
   useEffect(() => {
-    if(dateFromTo?.from != '')
+    if(dateFromTo?.to === undefined || dateFromTo?.to === '') {
+      setOverrideDate(false);
+    } else {
       setOverrideDate(true);
+    }
   }, [dateFromTo])
 
   const getFormattedRow = (q) => {

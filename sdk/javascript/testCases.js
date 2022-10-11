@@ -65,4 +65,3 @@ const testCookieConsent = (res, rej) => {
 // check if cookie is set
 
 docReady(testRunner)
-

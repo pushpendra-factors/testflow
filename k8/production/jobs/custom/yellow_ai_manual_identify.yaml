@@ -20,7 +20,7 @@ spec:
             cloud.google.com/gke-nodepool: shared-persistent-pool
           containers:
           - name: adhoc-yellowai-identify-fix
-            image: us.gcr.io/factors-production/adhoc-yellowai-identify-fix:1.0
+            image: us.gcr.io/factors-production/adhoc-yellowai-identify-fix:1.1
             imagePullPolicy: IfNotPresent
             args:
             - --env
@@ -48,7 +48,7 @@ spec:
             - --sentry_dsn
             - $(SENTRY_DSN)
             - --live_run
-            - "false"
+            - "true"
             - --project_id
             - "2251799817000005"
             envFrom:

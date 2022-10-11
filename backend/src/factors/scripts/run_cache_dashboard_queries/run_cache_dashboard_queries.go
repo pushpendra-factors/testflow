@@ -77,8 +77,6 @@ func main() {
 		0, "Enables filter optimisation logic for events and users query.")
 	customerEnabledProjectsLastComputed := flag.String("customer_enabled_projects_last_computed",
 		"*", "List of projects customer enabled forLast Computed")
-	customerEnabledProjectsAttributionV1 := flag.String("customer_enabled_projects_attribution_v1",
-		"*", "List of projects customer enabled for Attribution V1")
 
 	flag.Parse()
 
@@ -147,7 +145,6 @@ func main() {
 		EnableOptimisedFilterOnProfileQuery:   *enableOptimisedFilterOnProfileQuery != 0,
 		EnableOptimisedFilterOnEventUserQuery: *enableOptimisedFilterOnEventUserQuery != 0,
 		CustomerEnabledProjectsLastComputed:   C.GetTokensFromStringListAsUint64(*customerEnabledProjectsLastComputed),
-		CustomerEnabledProjectsAttributionV1:  C.GetTokensFromStringListAsUint64(*customerEnabledProjectsAttributionV1),
 	}
 
 	C.InitConf(config)

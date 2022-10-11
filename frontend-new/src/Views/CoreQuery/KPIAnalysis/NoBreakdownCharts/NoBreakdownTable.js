@@ -117,44 +117,50 @@ const NoBreakdownTable = ({
     const format = DATE_FORMATS[frequency] || DATE_FORMATS.date;
     return {
       fileName: 'KPI.csv',
-      data: activeTableData.map(({ index, label, date, compareDate, ...rest }) => {
-        if (chartType === CHART_TYPE_SPARKLINES) {
-          for (const key in rest) {
-            const metricType = get(
-              find(kpis, (kpi, index) => kpi.label + ' - ' + index === key),
-              'metricType',
-              null
-            );
-            if (metricType) {
-              rest[key] = getFormattedKpiValue({
-                value: rest[key],
-                metricType
-              });
+      data: activeTableData.map(
+        ({ index, label, date, compareDate, ...rest }) => {
+          if (chartType === CHART_TYPE_SPARKLINES) {
+            for (const key in rest) {
+              const metricType = get(
+                find(kpis, (kpi, index) => kpi.label + ' - ' + index === key),
+                'metricType',
+                null
+              );
+              if (metricType) {
+                rest[key] = getFormattedKpiValue({
+                  value: rest[key],
+                  metricType
+                });
+              }
+            }
+            const row = {
+              ...rest,
+              date: addQforQuarter(frequency) + moment(date).format(format)
+            };
+            if (comparisonApplied) {
+              row.compareDate =
+                addQforQuarter(frequency) + moment(compareDate).format(format);
+            }
+            return row;
+          }
+          const metricType = get(
+            find(kpis, (kpi) => kpi.label === rest.event),
+            'metricType',
+            null
+          );
+          if (metricType) {
+            for (const key in rest) {
+              if (key !== 'event') {
+                rest[key] = getFormattedKpiValue({
+                  value: rest[key],
+                  metricType
+                });
+              }
             }
           }
-          return {
-            ...rest,
-            date: addQforQuarter(frequency) + moment(date).format(format),
-            compareDate: addQforQuarter(frequency) + moment(compareDate).format(format)
-          };
+          return { ...rest };
         }
-        const metricType = get(
-          find(kpis, (kpi) => kpi.label === rest.event),
-          'metricType',
-          null
-        );
-        if (metricType) {
-          for (const key in rest) {
-            if (key !== 'event') {
-              rest[key] = getFormattedKpiValue({
-                value: rest[key],
-                metricType
-              });
-            }
-          }
-        }
-        return { ...rest };
-      })
+      )
     };
   }, [chartType, frequency, dateBasedTableData, tableData, kpis]);
 

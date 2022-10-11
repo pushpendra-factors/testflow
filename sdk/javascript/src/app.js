@@ -22,6 +22,7 @@ function isAllowedEventName(eventName) {
 }
 
 function updateCookieIfUserIdInResponse(response){
+    logger.debug("Setting Cookie with response: ", false);
     if (response && response.body && response.body.user_id) {
         let cleanUserId = response.body.user_id.trim();
         if (cleanUserId) 
@@ -169,7 +170,7 @@ App.prototype.init = function(token, opts={}, afterPageTrackCallback) {
 
     if (!token) return Promise.reject(new Error("FactorsArgumentError: Invalid token."));
 
-    let _this = this; // Remove arrows;
+    
 
     if (!opts) opts = {};
     
@@ -193,6 +194,8 @@ App.prototype.init = function(token, opts={}, afterPageTrackCallback) {
     // set temp client as app client and set response as app config 
     // or else app stays unintialized.
     var payload = {};
+
+    var _this = this; // Remove arrows;
     updatePayloadWithUserIdFromCookie(payload);
     return _client.getInfo(payload)
         .then(function(response) {
@@ -207,38 +210,39 @@ App.prototype.init = function(token, opts={}, afterPageTrackCallback) {
             _this.config = response.body;
             _this.client = _client;
 
-            // Check if client has given cookie access
-            checkCookiesConsentAndProcess(_this);
+            // Check if client has given cookie access and process queue, else keep checking
+            checkCookiesConsentAndProcess(_this, response, trackOnInit);
 
             return response;
-        });
+        })
         
 }
 
-function checkCookiesConsentAndProcess(_this, response) {
+function checkCookiesConsentAndProcess(_this, response, trackOnInit) {
     if(!Cookie.isEnabled()) {
         logger.debug("Checking for cookie consent.", false);
-        setTimeout(() => {checkCookiesConsentAndProcess(_this, response)}, 1000)
+        setTimeout(() => {checkCookiesConsentAndProcess(_this, response, trackOnInit)}, 1000)
     } else {
         logger.debug("Cookie consent is enabled. Continuing process", false);
+        
         // Add user_id from response to cookie.
         updateCookieIfUserIdInResponse(response);
-
         // Start queue processing.
         triggerQueueInitialisedEvent();
-        runPostInitProcess(_this);
+        runPostInitProcess(_this, trackOnInit);
     }
 }
 
-function runPostInitProcess(_this) {
+function runPostInitProcess(_this, trackOnInit) {
     (function(){
         return Promise.resolve();
     })().then(function() {
+        logger.debug("Auto Track call starts", false);
         // Enable auto-track SPA page based on settings or init option.
         var enableTrackSPA = Cache.getFactorsCache(Cache.trackPageOnSPA) || _this.getConfig("auto_track_spa_page_view");
         Cache.setFactorsCache(Cache.trackPageOnSPA, enableTrackSPA);
         // Auto-track current page on init, if not disabled.
-        return _this.trackOnInit ? _this.autoTrack(_this.getConfig("auto_track"), 
+        return trackOnInit ? _this.autoTrack(_this.getConfig("auto_track"), 
             false, afterPageTrackCallback, true) : null;
     })
     .then(function() {

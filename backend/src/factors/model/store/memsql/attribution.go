@@ -58,7 +58,9 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID int64, queryOriginal *mod
 	}
 
 	marketingReports, err := store.FetchMarketingReports(projectID, *query, *projectSetting)
-	logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Fetch marketing report took time")
+	if C.GetAttributionDebug() == 1 {
+		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Fetch marketing report took time")
+	}
 	queryStartTime = time.Now().UTC().Unix()
 
 	if err != nil {
@@ -66,15 +68,17 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID int64, queryOriginal *mod
 	}
 
 	err = store.PullCustomDimensionData(projectID, query.AttributionKey, marketingReports, *logCtx)
-	logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Pull Custom dimension data took time")
+	if C.GetAttributionDebug() == 1 {
+		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Pull Custom dimension data took time")
+	}
 	queryStartTime = time.Now().UTC().Unix()
 
 	if err != nil {
 		return nil, err
 	}
-
-	logCtx.Info("Done PullCustomDimensionData")
-
+	if C.GetAttributionDebug() == 1 {
+		logCtx.Info("Done PullCustomDimensionData")
+	}
 	sessionEventNameID, eventNameToIDList, err := store.getEventInformation(projectID, query, *logCtx)
 	if err != nil {
 		return nil, err
@@ -97,28 +101,36 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID int64, queryOriginal *mod
 	if query.TacticOfferType != model.MarketingEventTypeOffer || query.AttributionKey == model.AttributionKeyLandingPage {
 		// Get all the sessions (userId, attributionId, UserSessionData) for given period by attribution key
 		_sessions, sessionUsers, err := store.getAllTheSessions(projectID, sessionEventNameID, query, marketingReports, contentGroupNamesList, *logCtx)
-		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Pull Sessions data data took time")
+		if C.GetAttributionDebug() == 1 {
+			logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Pull Sessions data data took time")
+		}
 		queryStartTime = time.Now().UTC().Unix()
 
 		if err != nil {
 			return nil, err
 		}
 
-		usersInfo, err := store.GetCoalesceIDFromUserIDs(sessionUsers, projectID, *logCtx)
-		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Get Coalesce user data took time")
+		usersInfo, _, err := store.GetCoalesceIDFromUserIDs(sessionUsers, projectID, *logCtx)
+		if C.GetAttributionDebug() == 1 {
+			logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Get Coalesce user data took time")
+		}
 		queryStartTime = time.Now().UTC().Unix()
 		if err != nil {
 			return nil, err
 		}
 
 		model.UpdateSessionsMapWithCoalesceID(_sessions, usersInfo, &sessions)
-		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Update Sessions Coalesce user data took time")
+		if C.GetAttributionDebug() == 1 {
+			logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Update Sessions Coalesce user data took time")
+		}
 		queryStartTime = time.Now().UTC().Unix()
 	}
 
 	// Pull Offline touch points for all the cases: "Tactic",  "Offer", "TacticOffer"
 	store.AppendOTPSessions(projectID, query, &sessions, *logCtx)
-	logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Pull Offline touch points user data took time")
+	if C.GetAttributionDebug() == 1 {
+		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Pull Offline touch points user data took time")
+	}
 	queryStartTime = time.Now().UTC().Unix()
 
 	isCompare := false
@@ -139,11 +151,13 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID int64, queryOriginal *mod
 		}
 
 		attributionData, isCompare, err = store.FireAttribution(projectID, query, eventNameToIDList, sessions, sessionWT, *logCtx)
-
-		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("FireAttribution took time")
+		if C.GetAttributionDebug() == 1 {
+			logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("FireAttribution took time")
+		}
 		queryStartTime = time.Now().UTC().Unix()
-
-		logCtx.Info("Done FireAttribution")
+		if C.GetAttributionDebug() == 1 {
+			logCtx.Info("Done FireAttribution")
+		}
 		if err != nil {
 			return nil, err
 		}
@@ -168,13 +182,16 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID int64, queryOriginal *mod
 		// This thread is for query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities.
 		kpiData, err = store.ExecuteKPIForAttribution(projectID, query, debugQueryKey,
 			*logCtx, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
-		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("KPI query execution took time")
+		if C.GetAttributionDebug() == 1 {
+			logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("KPI query execution took time")
+		}
 		queryStartTime = time.Now().UTC().Unix()
 		if err != nil {
 			return nil, err
 		}
-
-		log.WithFields(log.Fields{"KPIAttribution": "Debug", "kpiData": kpiData}).Info("KPI Attribution kpiData")
+		if C.GetAttributionDebug() == 1 {
+			log.WithFields(log.Fields{"KPIAttribution": "Debug", "kpiData": kpiData}).Info("KPI Attribution kpiData")
+		}
 		/*emptyMarketingValue:= model.MarketingData{Channel: model.PropertyValueNone,
 			CampaignID: model.PropertyValueNone, CampaignName: model.PropertyValueNone, AdgroupID: model.PropertyValueNone,
 			AdgroupName: model.PropertyValueNone, KeywordName: model.PropertyValueNone, KeywordMatchType: model.PropertyValueNone,
@@ -190,14 +207,18 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID int64, queryOriginal *mod
 				groupSessions[kpiID] = make(map[string]model.UserSessionData)
 			}
 			if kpiInfo.KpiCoalUserIds == nil || len(kpiInfo.KpiCoalUserIds) == 0 {
-				logCtx.WithFields(log.Fields{"KpiInfo": kpiInfo, "KPI_ID": kpiID}).Info("no user found for the KPI group, ignoring")
-				//groupSessions[kpiID][noneKey] = model.UserSessionData{}
+				if C.GetAttributionDebug() == 1 {
+					logCtx.WithFields(log.Fields{"KpiInfo": kpiInfo, "KPI_ID": kpiID}).Info("no user found for the KPI group, ignoring")
+					//groupSessions[kpiID][noneKey] = model.UserSessionData{}
+				}
 				continue
 			}
 			for _, user := range kpiInfo.KpiCoalUserIds {
 				// check if user has session/otp
 				if _, exists := sessions[user]; !exists {
-					logCtx.WithFields(log.Fields{"User": user, "KPI_ID": kpiID}).Info("user without session/otp")
+					if C.GetAttributionDebug() == 1 {
+						logCtx.WithFields(log.Fields{"User": user, "KPI_ID": kpiID}).Info("user without session/otp")
+					}
 					continue
 				}
 
@@ -223,7 +244,9 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID int64, queryOriginal *mod
 			for _, user := range kpiInfo.KpiUserIds {
 				// check if user has session/otp
 				if _, exists := sessions[user]; !exists {
-					logCtx.WithFields(log.Fields{"User": user, "KPI_ID": kpiID}).Info("user without session/otp")
+					if C.GetAttributionDebug() == 1 {
+						logCtx.WithFields(log.Fields{"User": user, "KPI_ID": kpiID}).Info("user without session/otp")
+					}
 					continue
 				}
 
@@ -245,7 +268,9 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID int64, queryOriginal *mod
 				}
 			}
 		}
-		logCtx.WithFields(log.Fields{"KPIGroupSession": groupSessions}).Info("KPI-Attribution Group session 2")
+		if C.GetAttributionDebug() == 1 {
+			logCtx.WithFields(log.Fields{"KPIGroupSession": groupSessions}).Info("KPI-Attribution Group session 2")
+		}
 
 		found := false
 		for _, data := range groupSessions {
@@ -260,7 +285,9 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID int64, queryOriginal *mod
 			}
 		}
 		if !found {
-			logCtx.Info("no user journey found (neither sessions nor offline touch points)")
+			if C.GetAttributionDebug() == 1 {
+				logCtx.Info("no user journey found (neither sessions nor offline touch points)")
+			}
 			return nil, errors.New("no user journey found (neither sessions nor offline touch points)")
 		}
 
@@ -276,14 +303,19 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID int64, queryOriginal *mod
 
 		if C.GetAttributionDebug() == 1 {
 			uniqUsers := len(groupSessions)
-			logCtx.WithFields(log.Fields{"AttributionDebug": "sessions"}).Info(fmt.Sprintf("Total users with session: %d", uniqUsers))
+			if C.GetAttributionDebug() == 1 {
+				logCtx.WithFields(log.Fields{"AttributionDebug": "sessions"}).Info(fmt.Sprintf("Total users with session: %d", uniqUsers))
+			}
 		}
 
 		attributionData, isCompare, err = store.FireAttributionForKPI(projectID, query, groupSessions, kpiData, sessionWT, *logCtx)
-		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("FireAttribution KPI took time")
+		if C.GetAttributionDebug() == 1 {
+			logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("FireAttribution KPI took time")
+		}
 		queryStartTime = time.Now().UTC().Unix()
-		logCtx.WithFields(log.Fields{"attributionData": attributionData}).Info("KPI-Attribution attributionData")
-
+		if C.GetAttributionDebug() == 1 {
+			logCtx.WithFields(log.Fields{"attributionData": attributionData}).Info("KPI-Attribution attributionData")
+		}
 		if err != nil {
 			return nil, err
 		}
@@ -318,7 +350,9 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID int64, queryOriginal *mod
 
 	// Filter out the key values from query (apply filter after performance enrichment)
 	model.ApplyFilter(attributionData, query)
-	logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Metrics, Performance report, filter took time")
+	if C.GetAttributionDebug() == 1 {
+		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Metrics, Performance report, filter took time")
+	}
 	queryStartTime = time.Now().UTC().Unix()
 
 	result := &model.QueryResult{}
@@ -326,19 +360,25 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID int64, queryOriginal *mod
 	if query.AttributionKey == model.AttributionKeyLandingPage {
 
 		result = model.ProcessQueryLandingPageUrl(query, attributionData, *logCtx, isCompare)
-		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Process Query Landing PageUrl took time")
+		if C.GetAttributionDebug() == 1 {
+			logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Process Query Landing PageUrl took time")
+		}
 		queryStartTime = time.Now().UTC().Unix()
 
 	} else if query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities {
 		// execution similar to the normal run - still keeping it separate for better understanding
 		result = model.ProcessQueryKPI(query, attributionData, marketingReports, isCompare, kpiData)
-		logCtx.WithFields(log.Fields{"result": result}).Info(fmt.Sprintf("KPI-Attribution result"))
-		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Process Query KPI took time")
+		if C.GetAttributionDebug() == 1 {
+			logCtx.WithFields(log.Fields{"result": result}).Info(fmt.Sprintf("KPI-Attribution result"))
+			logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Process Query KPI took time")
+		}
 		queryStartTime = time.Now().UTC().Unix()
 
 	} else {
 		result = model.ProcessQuery(query, attributionData, marketingReports, isCompare, projectID, *logCtx)
-		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Process Query Normal took time")
+		if C.GetAttributionDebug() == 1 {
+			logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Process Query Normal took time")
+		}
 		queryStartTime = time.Now().UTC().Unix()
 	}
 	result.Meta.Currency = ""
@@ -346,7 +386,9 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID int64, queryOriginal *mod
 		currency, _ := store.GetAdwordsCurrency(projectID, *projectSetting.IntAdwordsCustomerAccountId, query.From, query.To, *logCtx)
 		result.Meta.Currency = currency
 	}
-	logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartORG) / 60}).Info("Total query took time")
+	if C.GetAttributionDebug() == 1 {
+		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartORG) / 60}).Info("Total query took time")
+	}
 	queryStartTime = time.Now().UTC().Unix()
 
 	model.SanitizeResult(result)
@@ -370,7 +412,7 @@ func (store *MemSQL) AppendOTPSessions(projectID int64, query *model.Attribution
 		return
 	}
 
-	usersInfoOTP, err := store.GetCoalesceIDFromUserIDs(sessionOTPUsers, projectID, logCtx)
+	usersInfoOTP, _, err := store.GetCoalesceIDFromUserIDs(sessionOTPUsers, projectID, logCtx)
 	if err != nil {
 		logCtx.Info("no users found for OTP events/sessions found. Skipping computation")
 		return
@@ -626,7 +668,7 @@ func (store *MemSQL) runAttribution(projectID int64,
 
 // GetCoalesceIDFromUserIDs returns the map of coalesce userId for given list of users
 func (store *MemSQL) GetCoalesceIDFromUserIDs(userIDs []string, projectID int64,
-	logCtx log.Entry) (map[string]model.UserInfo, error) {
+	logCtx log.Entry) (map[string]model.UserInfo, []string, error) {
 
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logCtx.Data)
 
@@ -637,13 +679,18 @@ func (store *MemSQL) GetCoalesceIDFromUserIDs(userIDs []string, projectID int64,
 		placeHolder := U.GetValuePlaceHolder(len(users))
 		value := U.GetInterfaceList(users)
 		queryUserIDCoalID := "SELECT id, COALESCE(users.customer_user_id,users.id) AS coal_user_id" + " " +
-			"FROM users WHERE id IN (" + placeHolder + ")"
-		rows, tx, err, reqID := store.ExecQueryWithContext(queryUserIDCoalID, value)
+			"FROM users WHERE project_id=? and id IN (" + placeHolder + ")"
+		var gULParams []interface{}
+		gULParams = append(gULParams, projectID)
+		gULParams = append(gULParams, value...)
+		rows, tx, err, reqID := store.ExecQueryWithContext(queryUserIDCoalID, gULParams)
 		if err != nil {
 			logCtx.WithError(err).Error("SQL Query failed for GetCoalesceIDFromUserIDs")
-			return nil, err
+			return nil, nil, err
 		}
-		logCtx.WithFields(log.Fields{"Batch": batch}).Info("Executing GetCoalesceIDFromUserIDs")
+		if C.GetAttributionDebug() == 1 {
+			logCtx.WithFields(log.Fields{"Batch": batch}).Info("Executing GetCoalesceIDFromUserIDs")
+		}
 		batch++
 		startReadTime := time.Now()
 		for rows.Next() {
@@ -660,13 +707,28 @@ func (store *MemSQL) GetCoalesceIDFromUserIDs(userIDs []string, projectID int64,
 		if err != nil {
 			// Error from DB is captured eg: timeout error
 			logCtx.WithFields(log.Fields{"err": err}).Error("Error in executing query in GetCoalesceIDFromUserIDs")
-			return nil, err
+			return nil, nil, err
 		}
 		U.CloseReadQuery(rows, tx)
 		U.LogReadTimeWithQueryRequestID(startReadTime, reqID, &log.Fields{"project_id": projectID})
 	}
-	logCtx.WithFields(log.Fields{"user_count": len(userIDToCoalUserIDMap)}).Info("GetCoalesceIDFromUserIDs 3")
-	return userIDToCoalUserIDMap, nil
+	if C.GetAttributionDebug() == 1 {
+		logCtx.WithFields(log.Fields{"user_count": len(userIDToCoalUserIDMap)}).Info("GetCoalesceIDFromUserIDs 3")
+	}
+
+	// Get all CoalIDs
+	_allCoalIds := make(map[string]int)
+	var coalIDsList []string
+	// Get user IDs for Revenue Attribution
+	for _, v := range userIDToCoalUserIDMap {
+		_allCoalIds[v.CoalUserID] = 1
+	}
+
+	for id, _ := range _allCoalIds {
+		coalIDsList = append(coalIDsList, id)
+	}
+
+	return userIDToCoalUserIDMap, coalIDsList, nil
 }
 
 // Returns the all the sessions (userId,attributionId,minTimestamp,maxTimestamp) for given
@@ -741,7 +803,9 @@ func (store *MemSQL) getAllTheSessions(projectId int64, sessionEventNameId strin
 		return nil, nil, err
 	}
 	defer U.CloseReadQuery(rows, tx)
-	logCtx.Info("Attribution before ProcessEventRows")
+	if C.GetAttributionDebug() == 1 {
+		logCtx.Info("Attribution before ProcessEventRows")
+	}
 	attributedSessionsByUserId := make(map[string]map[string]model.UserSessionData)
 	var userIdsWithSession []string
 	processErr := model.ProcessEventRows(rows, query, reports, contentGroupNamesList, &attributedSessionsByUserId, &userIdsWithSession, logCtx, reqID)
@@ -760,7 +824,9 @@ func (store *MemSQL) getOfflineEventData(projectID int64, logCtx log.Entry) (mod
 
 	eventNames, errCode := store.GetEventNamesByNames(projectID, names)
 	if errCode != http.StatusFound || len(eventNames) != 1 {
-		logCtx.Info("failed to find offline touch point event names, skipping OTP attribution computation")
+		if C.GetAttributionDebug() == 1 {
+			logCtx.Info("failed to find offline touch point event names, skipping OTP attribution computation")
+		}
 		return model.EventName{}, errors.New("failed to find offline touch point event names, skipping OTP attribution computation")
 	}
 	return eventNames[0], nil
@@ -924,7 +990,7 @@ func (store *MemSQL) GetLinkedFunnelEventUsersFilter(projectID int64, queryFrom,
 			U.LogReadTimeWithQueryRequestID(startReadTime, reqID, &log.Fields{"project_id": projectID})
 		}
 		// Get coalesced Id for Funnel Event user_ids
-		userIDToCoalIDInfo, err := store.GetCoalesceIDFromUserIDs(userIDList, projectID, logCtx)
+		userIDToCoalIDInfo, _, err := store.GetCoalesceIDFromUserIDs(userIDList, projectID, logCtx)
 		if err != nil {
 			return err, nil
 		}
@@ -1030,9 +1096,34 @@ func (store *MemSQL) GetConvertedUsersWithFilter(projectID int64, goalEventName 
 	U.LogReadTimeWithQueryRequestID(startReadTime, reqID, &log.Fields{"project_id": projectID})
 
 	// Get coalesced Id for converted user_ids (without filter)
-	userIDToCoalIDInfo, err := store.GetCoalesceIDFromUserIDs(userIDList, projectID, logCtx)
+	userIDToCoalIDInfo, coalIDs, err := store.GetCoalesceIDFromUserIDs(userIDList, projectID, logCtx)
 	if err != nil {
 		return nil, nil, nil, err
+	}
+
+	// Reverse lookup for all the converted userID's coalIDs to get the other users which are not marked 'converted'
+	_userIDToCoalID, _custUserIdToUserIds, err := store.FetchAllUsersAndCustomerUserData(projectID, coalIDs, logCtx)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	for userID, coalID := range _userIDToCoalID {
+
+		if _, exists := userIDToCoalIDInfo[userID]; exists {
+			continue
+		}
+		// userID was not considered for conversion, let's add it with other userIDs of same user
+		sameUsers := _custUserIdToUserIds[coalID]
+		for _, uID := range sameUsers {
+			if _, exists := userIDToCoalIDInfo[uID]; exists {
+				// adding userID with one of the data from same user
+				userIDToCoalIDInfo[userID] = model.UserInfo{
+					CoalUserID: userIDToCoalIDInfo[uID].CoalUserID,
+					Timestamp:  userIDToCoalIDInfo[uID].Timestamp,
+				}
+				break
+			}
+		}
 	}
 
 	var filteredUserIdList []string
