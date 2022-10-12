@@ -18,6 +18,7 @@ import { addShadowToHeader } from './analysisResultsPage.helpers';
 import { CoreQueryContext } from '../../../contexts/CoreQueryContext';
 import userflow from 'userflow.js';
 import {USERFLOW_CONFIG_ID} from 'Utils/userflowConfig'
+import { InfoCircleOutlined } from '@ant-design/icons';
 
 const { TabPane } = Tabs;
 
@@ -31,7 +32,7 @@ function AnalysisHeader({
   ...rest
 }) {
 
-  let hideIntercomState = true;
+  let [hideIntercomState, setHideIntercomState] = useState(true);
 
   useEffect(()=>{
     if(window.Intercom){
@@ -201,16 +202,13 @@ function AnalysisHeader({
           var w = window;
           var ic = w.Intercom;
           if (typeof ic === "function") {
-            hideIntercomState = !hideIntercomState
-            if(hideIntercomState == false){
-              ic("update",{hide_default_launcher:false})
-            }else{
-
-              ic("update",{hide_default_launcher:true})
-            }
-            ic(hideIntercomState == true ? "hide":"show")
+            setHideIntercomState(!hideIntercomState)
+            ic("update",{hide_default_launcher:!hideIntercomState})
+            ic(!hideIntercomState === true ? "hide":"show")
           }
-        }}>Help</Button> 
+        }}>
+          <InfoCircleOutlined />
+          </Button> 
           </div>
           {renderReportCloseIcon()}
         </div>
