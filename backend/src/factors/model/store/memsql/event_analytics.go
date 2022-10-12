@@ -133,20 +133,20 @@ func (store *MemSQL) RunInsightsQuery(projectId int64, query model.Query, enable
 	stmnt, params, err := store.BuildInsightsQuery(projectId, query, enableFilterOpt)
 	if err != nil {
 		log.WithError(err).Error(model.ErrMsgQueryProcessingFailure)
-		return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
+		return &model.QueryResult{}, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
 	}
 
 	logCtx := log.WithFields(logFields)
 
 	if stmnt == "" || len(params) == 0 {
 		logCtx.Error("Failed generating SQL query from analytics query.")
-		return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
+		return &model.QueryResult{}, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
 	}
 
 	result, err, reqID := store.ExecQuery(stmnt, params)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed executing SQL query generated.")
-		return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
+		return &model.QueryResult{}, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
 	}
 
 	startComputeTime := time.Now()
@@ -154,14 +154,14 @@ func (store *MemSQL) RunInsightsQuery(projectId int64, query model.Query, enable
 	err = LimitQueryResult(result, groupPropsLen, query.GetGroupByTimestamp() != "")
 	if err != nil {
 		logCtx.WithError(err).Error("Failed processing query results for limiting.")
-		return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
+		return &model.QueryResult{}, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
 	}
 
 	model.AddMissingEventNamesInResult(result, &query, isTimezoneEnabled)
 	err = SanitizeQueryResult(result, &query, isTimezoneEnabled)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to sanitize query results.")
-		return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
+		return &model.QueryResult{}, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
 	}
 
 	// Replace the event_name with alias, if the event condition is each_given_event
@@ -179,7 +179,7 @@ func (store *MemSQL) RunInsightsQuery(projectId int64, query model.Query, enable
 
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to transform query results.")
-			return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
+			return &model.QueryResult{}, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
 		}
 	} else if query.EventsCondition == model.EventCondEachGivenEvent &&
 		!strings.Contains(strings.Join(result.Headers, ","), model.AliasEventName) {
