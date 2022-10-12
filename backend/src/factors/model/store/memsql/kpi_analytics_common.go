@@ -85,6 +85,11 @@ func (store *MemSQL) ExecuteKPIQueriesAndGetResultsAsMap(projectID int64, reqID 
 			internalKPIQuery, internalQueryToQueryResult, statusCode, derivedKPIHashCode, errMsg = store.ExecuteDerivedKPIQuery(projectID, reqID, query, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
 			if statusCode != http.StatusOK {
 				finalStatusCode = statusCode
+				mapOfGBTDerivedKPIToInternalKPIToResults = make(map[string]map[string][]model.QueryResult)
+				mapOfNonGBTDerivedKPIToInternalKPIToResults = make(map[string]map[string][]model.QueryResult)
+
+				mapOfGBTKPINormalQueryToResults = make(map[string][]model.QueryResult)
+				mapOfNonGBTKPINormalQueryToResults = make(map[string][]model.QueryResult)
 				log.WithField("reqID", reqID).WithField("kpiQueryGroup", kpiQueryGroup).WithField("query", query).Error(errMsg)
 				break
 			} else {
@@ -101,6 +106,11 @@ func (store *MemSQL) ExecuteKPIQueriesAndGetResultsAsMap(projectID int64, reqID 
 			result, statusCode, hashCode, errMsg = store.ExecuteNonDerivedQuery(projectID, reqID, query, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
 			if statusCode != http.StatusOK {
 				finalStatusCode = statusCode
+				mapOfGBTDerivedKPIToInternalKPIToResults = make(map[string]map[string][]model.QueryResult)
+				mapOfNonGBTDerivedKPIToInternalKPIToResults = make(map[string]map[string][]model.QueryResult)
+
+				mapOfGBTKPINormalQueryToResults = make(map[string][]model.QueryResult)
+				mapOfNonGBTKPINormalQueryToResults = make(map[string][]model.QueryResult)
 				log.WithField("reqID", reqID).WithField("kpiQueryGroup", kpiQueryGroup).WithField("query", query).WithField("result", result).Error(errMsg)
 				break
 			} else {
@@ -146,6 +156,11 @@ func (store *MemSQL) ExecuteDerivedKPIQuery(projectID int64, reqID string, baseQ
 		var result []model.QueryResult
 		var hashCode string
 		result, statusCode, hashCode, errMsg = store.ExecuteNonDerivedQuery(projectID, reqID, query, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
+
+		if statusCode != http.StatusOK {
+			mapOfInternalQueryToResult := make(map[string][]model.QueryResult)
+			return internalKPIQueryGroup, mapOfInternalQueryToResult, statusCode, hashCode, errMsg
+		}
 
 		mapOfInternalQueryToResult[hashCode] = result
 

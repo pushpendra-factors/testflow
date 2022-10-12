@@ -5,7 +5,6 @@ import (
 	"factors/model/model"
 	U "factors/util"
 	"net/http"
-	"sync"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -18,51 +17,27 @@ func (store *MemSQL) ExecuteKPIQueryForProfiles(projectID int64, reqID string,
 func (store *MemSQL) TransformToAndExecuteProfileAnalyticsQueries(projectID int64, kpiQuery model.KPIQuery,
 	reqID string, enableOptimisedFilter bool) ([]model.QueryResult, int) {
 	var profileQueryGroup model.ProfileQueryGroup
+	var statusCode, finalStatusCode int
 	var queryResults []model.QueryResult
 	queryResults = make([]model.QueryResult, len(kpiQuery.Metrics))
 	profileQueryGroup = model.GetDirectDerivableProfileQueryFromKPI(kpiQuery)
 
-	var waitGroup sync.WaitGroup
-	count := 0
-	actualRoutineLimit := U.MinInt(len(kpiQuery.Metrics), AllowedGoroutines)
-	waitGroup.Add(actualRoutineLimit)
 	for index, kpiMetric := range kpiQuery.Metrics {
-		count++
-		go store.transformAndExecuteForSingleKPIMetricProfile(projectID, profileQueryGroup, kpiQuery, kpiMetric, &queryResults[index], &waitGroup, enableOptimisedFilter)
-		if count%actualRoutineLimit == 0 {
-			waitGroup.Wait()
-			waitGroup.Add(U.MinInt(len(kpiQuery.Metrics)-count, actualRoutineLimit))
+		queryResults[index], statusCode = store.ExecuteForSingleKPIMetricProfile(projectID, profileQueryGroup, kpiQuery, kpiMetric, enableOptimisedFilter)
+		finalStatusCode = statusCode
+		if statusCode != http.StatusOK {
+			queryResults = make([]model.QueryResult, len(kpiQuery.Metrics))
+			return queryResults, finalStatusCode
 		}
 	}
-	waitGroup.Wait()
-	for index, result := range queryResults {
-		if result.Headers == nil || result.Headers[0] == model.AliasError {
-			log.WithField("kpiquery", kpiQuery).WithField("query result", queryResults).WithField("index", index).Warn("Failed in executing following KPI profile query.")
-			return queryResults, http.StatusPartialContent
-		}
-	}
-	return queryResults, http.StatusOK
-}
-
-func (store *MemSQL) transformAndExecuteForSingleKPIMetricProfile(projectID int64,
-	profileQueryGroup model.ProfileQueryGroup,
-	kpiQuery model.KPIQuery, kpiMetric string, result *model.QueryResult,
-	waitGroup *sync.WaitGroup, enableOptimisedFilter bool) {
-
-	defer waitGroup.Done()
-	finalResult := model.QueryResult{}
-
-	finalResult = store.wrappedExecuteForResultProfile(projectID, profileQueryGroup, kpiQuery,
-		kpiMetric, enableOptimisedFilter)
-	*result = finalResult
+	return queryResults, finalStatusCode
 }
 
 // TODO Later - Generalising the transformation of external computation to internal computations.
 // Eg - representing avg in terms of count(property)/count(*) with division operator.
-func (store *MemSQL) wrappedExecuteForResultProfile(projectID int64, profileQueryGroup model.ProfileQueryGroup,
-	kpiQuery model.KPIQuery, kpiMetric string, enableOptimisedFilter bool) model.QueryResult {
+func (store *MemSQL) ExecuteForSingleKPIMetricProfile(projectID int64, profileQueryGroup model.ProfileQueryGroup,
+	kpiQuery model.KPIQuery, kpiMetric string, enableOptimisedFilter bool) (model.QueryResult, int) {
 	// Execute Profiles Query For Single KPI.
-	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	hasGroupByTimestamp := (kpiQuery.GroupByTimestamp != "")
 	hasAnyGroupBys := (len(kpiQuery.GroupBy) > 0)
 	finalResult := model.QueryResult{}
@@ -75,27 +50,27 @@ func (store *MemSQL) wrappedExecuteForResultProfile(projectID int64, profileQuer
 	customMetric, err, statusCode := store.GetKpiRelatedCustomMetricsByName(projectID, kpiMetric)
 	if statusCode != http.StatusFound {
 		finalResult.Headers = append(finalResult.Headers, model.AliasError)
-		return finalResult
+		return finalResult, statusCode
 	}
 	err1 := U.DecodePostgresJsonbToStructType(customMetric.Transformations, &transformation)
 	if err1 != nil {
 		log.WithField("customMetric", customMetric).WithField("err", err).Warn("Failed in decoding custom Metric")
 	}
 	currentQueries := model.AddCustomMetricsTransformationsToProfileQuery(profileQueryGroup, kpiMetric, customMetric, transformation, kpiQuery)
-	resultGroup, errCode := store.RunProfilesGroupQuery(currentQueries, projectID, enableOptimisedFilter)
-	if errCode != http.StatusOK {
+	resultGroup, statusCode2 := store.RunProfilesGroupQuery(currentQueries, projectID, enableOptimisedFilter)
+	if statusCode2 != http.StatusOK {
 		// Log or not.
 		finalResult.Headers = append(finalResult.Headers, model.AliasError)
-		return finalResult
+		return finalResult, statusCode2
 	}
 	// Transformation of Profiles Results of Single KPI.
 	if len(currentQueries) == 1 {
 		results := model.TransformProfileResultsToKPIResults(resultGroup.Results, hasGroupByTimestamp, hasAnyGroupBys)
 		finalResult = results[0]
-		return finalResult
+		return finalResult, http.StatusOK
 	} else {
 		results := model.TransformProfileResultsToKPIResults(resultGroup.Results, hasGroupByTimestamp, hasAnyGroupBys)
 		finalResult = model.HandlingProfileResultsByApplyingOperations(results, currentQueries, kpiQuery.Timezone, isTimezoneEnabled)
 	}
-	return finalResult
+	return finalResult, http.StatusOK
 }

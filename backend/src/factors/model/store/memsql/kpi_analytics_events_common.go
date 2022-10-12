@@ -3,13 +3,13 @@ package memsql
 import (
 	C "factors/config"
 	"factors/model/model"
-	U "factors/util"
 	"net/http"
-	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 )
+
+// TODO: Handle cases for execution after that.
 
 // We convert kpi Query to eventQueries by applying transformation.
 func (store *MemSQL) ExecuteKPIQueryForEvents(projectID int64, reqID string,
@@ -29,7 +29,6 @@ func (store *MemSQL) ExecuteKPIQueryForEvents(projectID int64, reqID string,
 	return store.transformToAndExecuteEventAnalyticsQueries(projectID, kpiQuery, enableFilterOpt)
 }
 
-// query is being mutated. So, waitGroup can side effects.
 func (store *MemSQL) transformToAndExecuteEventAnalyticsQueries(projectID int64,
 	kpiQuery model.KPIQuery, enableFilterOpt bool) ([]model.QueryResult, int) {
 
@@ -38,31 +37,23 @@ func (store *MemSQL) transformToAndExecuteEventAnalyticsQueries(projectID int64,
 		"kpi_query":  kpiQuery,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	var statusCode, finalStatusCode int
 	var query model.Query
 	var queryResults []model.QueryResult
 	queryResults = make([]model.QueryResult, len(kpiQuery.Metrics))
 	query = model.GetDirectDerviableQueryPropsFromKPI(kpiQuery)
 
-	var waitGroup sync.WaitGroup
-	count := 0
-	actualRoutineLimit := U.MinInt(len(kpiQuery.Metrics), AllowedGoroutines)
-	waitGroup.Add(actualRoutineLimit)
 	for index, kpiMetric := range kpiQuery.Metrics {
-		count++
-		go store.ExecuteForSingleKPIMetric(projectID, query, kpiQuery, kpiMetric, &queryResults[index], &waitGroup, enableFilterOpt)
-		if count%actualRoutineLimit == 0 {
-			waitGroup.Wait()
-			waitGroup.Add(U.MinInt(len(kpiQuery.Metrics)-count, actualRoutineLimit))
+		queryResults[index], statusCode = store.ExecuteEventsForSingleKPIMetric(projectID, query, kpiQuery, kpiMetric, enableFilterOpt)
+		finalStatusCode = statusCode
+		if statusCode != http.StatusOK {
+			queryResults = make([]model.QueryResult, len(kpiQuery.Metrics))
+			return queryResults, finalStatusCode
 		}
 	}
-	waitGroup.Wait()
-	for index, result := range queryResults {
-		if result.Headers == nil || result.Headers[0] == model.AliasError {
-			log.WithField("kpiQuery", kpiQuery).WithField("queryResults", queryResults).WithField("index", index).Error("Failed in executing following KPI Query.")
-			return queryResults, http.StatusPartialContent
-		}
-	}
-	return queryResults, http.StatusOK
+
+	return queryResults, finalStatusCode
 }
 
 func (store *MemSQL) ValidateKPIQuery(projectID int64, kpiQuery model.KPIQuery) bool {
@@ -78,26 +69,8 @@ func (store *MemSQL) ValidateKPIQuery(projectID int64, kpiQuery model.KPIQuery) 
 }
 
 // Each KPI Metric is mapped to array of operations containing metrics and aggregates, filters.
-func (store *MemSQL) ExecuteForSingleKPIMetric(projectID int64, query model.Query, kpiQuery model.KPIQuery,
-	kpiMetric string, result *model.QueryResult, waitGroup *sync.WaitGroup, enableFilterOpt bool) {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"query":      query,
-		"kpi_query":  kpiQuery,
-		"kpi_metric": kpiMetric,
-		"result":     result,
-		"wait_group": waitGroup,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	defer waitGroup.Done()
-	finalResult := model.QueryResult{}
-
-	finalResult = store.wrappedExecuteForResult(projectID, query, kpiQuery, kpiMetric, enableFilterOpt)
-	*result = finalResult
-}
-
-func (store *MemSQL) wrappedExecuteForResult(projectID int64, query model.Query, kpiQuery model.KPIQuery,
-	kpiMetric string, enableFilterOpt bool) model.QueryResult {
+func (store *MemSQL) ExecuteEventsForSingleKPIMetric(projectID int64, query model.Query, kpiQuery model.KPIQuery,
+	kpiMetric string, enableFilterOpt bool) (model.QueryResult, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"query":      query,
@@ -105,17 +78,14 @@ func (store *MemSQL) wrappedExecuteForResult(projectID int64, query model.Query,
 		"kpi_metric": kpiMetric,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
-	transformations := model.TransformationOfKPIMetricsToEventAnalyticsQuery[kpiQuery.DisplayCategory][kpiMetric]
-	currentQuery := model.BuildFiltersAndGroupByBasedOnKPIQuery(query, kpiQuery, kpiMetric)
-	currentQueries := model.SplitKPIQueryToInternalKPIQueries(currentQuery, kpiQuery, kpiMetric, transformations)
-	finalResult := store.executeForResults(projectID, currentQueries, kpiQuery, transformations, enableFilterOpt)
-	return finalResult
+	currentQueries, transformations := model.ConvertKPIQueryToInternalEventQueriesAndTransformations(projectID, query, kpiQuery, kpiMetric, enableFilterOpt)
+	return store.executeForResults(projectID, currentQueries, kpiQuery, transformations, enableFilterOpt)
 }
 
 // Kark current.
+// IsMultipleProjectTimezoneEnabled tackle separately.
 func (store *MemSQL) executeForResults(projectID int64, queries []model.Query, kpiQuery model.KPIQuery,
-	transformations []model.TransformQueryi, enableFilterOpt bool) model.QueryResult {
+	transformations []model.TransformQueryi, enableFilterOpt bool) (model.QueryResult, int) {
 	logFields := log.Fields{
 		"project_id":     projectID,
 		"queries":        queries,
@@ -124,33 +94,34 @@ func (store *MemSQL) executeForResults(projectID int64, queries []model.Query, k
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	results := make([]*model.QueryResult, len(queries))
-	hasGroupByTimestamp := false
+	hasGroupByTimestamp := (kpiQuery.GroupByTimestamp != "")
 	displayCategory := kpiQuery.DisplayCategory
+	var statusCode, finalStatusCode int
 	var finalResult model.QueryResult
 	isTimezoneEnabled := false
 	if C.IsMultipleProjectTimezoneEnabled(projectID) {
 		isTimezoneEnabled = true
 	}
-	if kpiQuery.GroupByTimestamp != "" {
-		hasGroupByTimestamp = true
-	}
+
 	if len(queries) == 1 {
 		hasAnyGroupBy := len(queries[0].GroupByProperties) != 0
-		results[0], _, _ = store.RunInsightsQuery(projectID, queries[0], enableFilterOpt)
-		if results[0].Headers == nil || results[0].Headers[0] == model.AliasError {
+		results[0], statusCode, _ = store.RunInsightsQuery(projectID, queries[0], enableFilterOpt)
+		finalStatusCode = statusCode
+		if results[0].Headers == nil || results[0].Headers[0] == model.AliasError || statusCode != http.StatusOK {
 			finalResult = model.QueryResult{}
-			finalResult.Headers = results[0].Headers
-			return finalResult
+			finalResult.Headers = make([]string, 0)
+			return finalResult, finalStatusCode
 		}
 		results = model.TransformResultsToKPIResults(results, hasGroupByTimestamp, hasAnyGroupBy, displayCategory, kpiQuery.Timezone)
 		finalResult = *results[0]
 	} else {
 		for i, query := range queries {
-			results[i], _, _ = store.RunInsightsQuery(projectID, query, enableFilterOpt)
-			if results[i].Headers == nil || results[i].Headers[0] == model.AliasError {
+			results[i], statusCode, _ = store.RunInsightsQuery(projectID, query, enableFilterOpt)
+			finalStatusCode = statusCode
+			if results[i].Headers == nil || results[i].Headers[0] == model.AliasError || statusCode != http.StatusOK {
 				finalResult = model.QueryResult{}
-				finalResult.Headers = results[i].Headers
-				return finalResult
+				finalResult.Headers = make([]string, 0)
+				return finalResult, finalStatusCode
 			}
 		}
 		hasAnyGroupBy := len(queries[0].GroupByProperties) != 0
@@ -161,5 +132,5 @@ func (store *MemSQL) executeForResults(projectID int64, queries []model.Query, k
 		}
 		finalResult = model.HandlingEventResultsByApplyingOperations(results, operations, kpiQuery.Timezone, isTimezoneEnabled)
 	}
-	return finalResult
+	return finalResult, finalStatusCode
 }
