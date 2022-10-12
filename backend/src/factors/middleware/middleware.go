@@ -908,7 +908,6 @@ func SkipDemoProjectWriteAccess() gin.HandlerFunc {
 			handlerNameStrings := strings.Split(handlerName, "/")
 			handlerNameStrings = strings.Split(handlerNameStrings[len(handlerNameStrings)-1], ".")
 			handlerName = handlerNameStrings[len(handlerNameStrings)-1]
-			fmt.Println(handlerName)
 			projectId := U.GetScopeByKeyAsInt64(c, SCOPE_PROJECT_ID)
 			agentId := U.GetScopeByKeyAsString(c, SCOPE_LOGGEDIN_AGENT_UUID)
 			if blacklistedHandlerNames[handlerName] == true && !C.IsLoggedInUserWhitelistedForProjectAnalytics(agentId) && C.IsDemoProject(projectId) {
