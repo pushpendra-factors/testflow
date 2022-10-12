@@ -186,7 +186,7 @@ func LeadSquaredPull(projectId int64, configs map[string]interface{}) (map[strin
 		}
 		if leadSquaredConfig.FirstTimeSync == false {
 			if documentType == model.LEADSQUARED_LEAD {
-				result, errorStatus, msg := DoHistoricalSync(leadSquaredConfig.Host, model.LeadSquaredHistoricalSyncEndpoint[documentType], leadSquaredUrlParams, columnsToBeExtracted, PAGESIZE, executionDate, LOOKBACK, datasetID, tableID, client, metadataWithOrder, ctx)
+				result, errorStatus, msg := DoHistoricalSync(projectId, leadSquaredConfig.Host, model.LeadSquaredHistoricalSyncEndpoint[documentType], leadSquaredUrlParams, columnsToBeExtracted, PAGESIZE, executionDate, LOOKBACK, datasetID, tableID, client, metadataWithOrder, ctx)
 				if errorStatus == true {
 					log.Error(msg)
 					resultStatus["error"] = msg
@@ -197,7 +197,7 @@ func LeadSquaredPull(projectId int64, configs map[string]interface{}) (map[strin
 				}
 			}
 		} else {
-			result, errorStatus, msg := DoIncrementalSync(documentType, leadSquaredConfig.Host, model.LeadSquaredHistoricalSyncEndpoint[documentType], model.LeadSquaredDocumentEndpoint[documentType], leadSquaredUrlParams, columnsToBeExtracted, PAGESIZE, executionDate, LOOKBACK, datasetID, tableID, client, metadataWithOrder, ctx)
+			result, errorStatus, msg := DoIncrementalSync(projectId, documentType, leadSquaredConfig.Host, model.LeadSquaredHistoricalSyncEndpoint[documentType], model.LeadSquaredDocumentEndpoint[documentType], leadSquaredUrlParams, columnsToBeExtracted, PAGESIZE, executionDate, LOOKBACK, datasetID, tableID, client, metadataWithOrder, ctx)
 			if errorStatus == true {
 				log.Error(msg)
 				resultStatus["error"] = msg
@@ -325,8 +325,14 @@ func getColumnsToBeAdded(existingSchema bigquery.Schema, propertyMetadataList []
 	return existingSchema, needUpdate
 }
 
-func DoHistoricalSync(host string, endpoint string, urlParams map[string]string, columns string, pageSize int, executionTimestamp int64, lookback int, datasetID string, tableId string, client *bigquery.Client, propertyMetadataList []SchemaPropertyMetadataMapping, ctx context.Context) (map[string]interface{}, bool, string) {
-	index := 1
+func DoHistoricalSync(projectId int64, host string, endpoint string, urlParams map[string]string, columns string, pageSize int, executionTimestamp int64, lookback int, datasetID string, tableId string, client *bigquery.Client, propertyMetadataList []SchemaPropertyMetadataMapping, ctx context.Context) (map[string]interface{}, bool, string) {
+	indexNumber, _ := store.GetStore().GetLeadSquaredMarker(projectId, executionTimestamp, model.LEADSQUARED_LEAD, "historical_sync")
+	index := 0
+	if indexNumber == 0 {
+		index = 1
+	} else {
+		index = indexNumber
+	}
 	log.Info("Starting for all records created after the lookback")
 	pastTimestamp := executionTimestamp - (int64(lookback) * U.SECONDS_IN_A_DAY)
 	StartDateinLeadSquaredFormat := fmt.Sprintf("%v", time.Unix(int64(pastTimestamp), 0).Format("2006-01-02 15:04:05"))
@@ -355,20 +361,48 @@ func DoHistoricalSync(host string, endpoint string, urlParams map[string]string,
 		}
 		statusCode, responseHistSyncData, errorObj := L.HttpRequestWrapper(fmt.Sprintf("https://%s", host), endpoint, headers, request, "POST", urlParams)
 		if statusCode != http.StatusOK || errorObj != nil {
+			store.GetStore().CreateLeadSquaredMarker(model.LeadsquaredMarker{
+				ProjectID:   projectId,
+				Delta:       executionTimestamp,
+				Document:    model.LEADSQUARED_LEAD,
+				Tag:         "historical_sync",
+				IndexNumber: index,
+			})
 			return nil, true, errorObj.Error()
 		}
 		byteSliceHistSync, err := json.Marshal(responseHistSyncData)
 		if err != nil {
+			store.GetStore().CreateLeadSquaredMarker(model.LeadsquaredMarker{
+				ProjectID:   projectId,
+				Delta:       executionTimestamp,
+				Document:    model.LEADSQUARED_LEAD,
+				Tag:         "historical_sync",
+				IndexNumber: index,
+			})
 			return nil, true, err.Error()
 		}
 		histSyncData := make([]interface{}, 0)
 		err = json.Unmarshal(byteSliceHistSync, &histSyncData)
 		if err != nil {
+			store.GetStore().CreateLeadSquaredMarker(model.LeadsquaredMarker{
+				ProjectID:   projectId,
+				Delta:       executionTimestamp,
+				Document:    model.LEADSQUARED_LEAD,
+				Tag:         "historical_sync",
+				IndexNumber: index,
+			})
 			return nil, true, err.Error()
 		}
 		log.Info(fmt.Sprintf("ModifiedOn - Inserting %v rows with index %v no of records %v", pageSize, index, len(histSyncData)))
 		errorStatus, msg := insertBigQueryRow(datasetID, tableId, client, histSyncData, propertyMetadataList, ctx)
 		if errorStatus != false {
+			store.GetStore().CreateLeadSquaredMarker(model.LeadsquaredMarker{
+				ProjectID:   projectId,
+				Delta:       executionTimestamp,
+				Document:    model.LEADSQUARED_LEAD,
+				Tag:         "historical_sync",
+				IndexNumber: index,
+			})
 			return nil, true, msg
 		}
 		log.Info("Insert done")
@@ -410,9 +444,15 @@ func insertBigQueryRow(datasetID string, tableID string, client *bigquery.Client
 	return false, ""
 }
 
-func DoIncrementalSync(documentType string, host string, histSyncEndpoint string, endpoint string, urlParams map[string]string, columns string, pageSize int, executionTimestamp int64, lookback int, datasetID string, tableId string, client *bigquery.Client, propertyMetadataList []SchemaPropertyMetadataMapping, ctx context.Context) (map[string]interface{}, bool, string) {
+func DoIncrementalSync(projectId int64, documentType string, host string, histSyncEndpoint string, endpoint string, urlParams map[string]string, columns string, pageSize int, executionTimestamp int64, lookback int, datasetID string, tableId string, client *bigquery.Client, propertyMetadataList []SchemaPropertyMetadataMapping, ctx context.Context) (map[string]interface{}, bool, string) {
 	log.Info("Starting Incremental Sync")
-	index := 1
+	indexNumber, _ := store.GetStore().GetLeadSquaredMarker(projectId, executionTimestamp, documentType, "incremental_sync")
+	index := 0
+	if indexNumber == 0 {
+		index = 1
+	} else {
+		index = indexNumber
+	}
 	totalRecordCountModifiedOn := 0
 	totalRecordCountCreatedOn := 0
 	startDateinLeadSquaredFormat := fmt.Sprintf("%v", time.Unix(int64(executionTimestamp), 0).Format("2006-01-02 15:04:05"))
@@ -458,10 +498,24 @@ func DoIncrementalSync(documentType string, host string, histSyncEndpoint string
 		}
 		statusCode, responseIncrSyncData, errorObj := L.HttpRequestWrapper(fmt.Sprintf("https://%s", host), endpoint, headers, request, "POST", urlParams)
 		if statusCode != http.StatusOK || errorObj != nil {
+			store.GetStore().CreateLeadSquaredMarker(model.LeadsquaredMarker{
+				ProjectID:   projectId,
+				Delta:       executionTimestamp,
+				Document:    documentType,
+				Tag:         "incremental_sync",
+				IndexNumber: index,
+			})
 			return nil, true, errorObj.Error()
 		}
 		byteSliceIncrSync, err := json.Marshal(responseIncrSyncData)
 		if err != nil {
+			store.GetStore().CreateLeadSquaredMarker(model.LeadsquaredMarker{
+				ProjectID:   projectId,
+				Delta:       executionTimestamp,
+				Document:    documentType,
+				Tag:         "incremental_sync",
+				IndexNumber: index,
+			})
 			return nil, true, err.Error()
 		}
 		dataForInsertion := make([]interface{}, 0)
@@ -469,6 +523,13 @@ func DoIncrementalSync(documentType string, host string, histSyncEndpoint string
 			var incrSyncData IncrementalSyncResponse
 			err = json.Unmarshal(byteSliceIncrSync, &incrSyncData)
 			if err != nil {
+				store.GetStore().CreateLeadSquaredMarker(model.LeadsquaredMarker{
+					ProjectID:   projectId,
+					Delta:       executionTimestamp,
+					Document:    documentType,
+					Tag:         "incremental_sync",
+					IndexNumber: index,
+				})
 				return nil, true, err.Error()
 			}
 			for _, lead := range incrSyncData.Leads {
@@ -483,6 +544,13 @@ func DoIncrementalSync(documentType string, host string, histSyncEndpoint string
 			var incrSyncData IncrementalSyncResponseSalesActivity
 			err = json.Unmarshal(byteSliceIncrSync, &incrSyncData)
 			if err != nil {
+				store.GetStore().CreateLeadSquaredMarker(model.LeadsquaredMarker{
+					ProjectID:   projectId,
+					Delta:       executionTimestamp,
+					Document:    documentType,
+					Tag:         "incremental_sync",
+					IndexNumber: index,
+				})
 				return nil, true, err.Error()
 			}
 			for _, sa := range incrSyncData.List {
@@ -496,6 +564,13 @@ func DoIncrementalSync(documentType string, host string, histSyncEndpoint string
 		log.Info(fmt.Sprintf("IncrementalSync - Inserting %v rows with index %v no of records %v", pageSize, index, len(dataForInsertion)))
 		errorStatus, msg := insertBigQueryRow(datasetID, tableId, client, dataForInsertion, propertyMetadataList, ctx)
 		if errorStatus != false {
+			store.GetStore().CreateLeadSquaredMarker(model.LeadsquaredMarker{
+				ProjectID:   projectId,
+				Delta:       executionTimestamp,
+				Document:    documentType,
+				Tag:         "incremental_sync",
+				IndexNumber: index,
+			})
 			return nil, true, msg
 		}
 		index++
@@ -505,7 +580,13 @@ func DoIncrementalSync(documentType string, host string, histSyncEndpoint string
 		}
 	}
 	if documentType == model.LEADSQUARED_LEAD {
-		index = 1
+		indexNumber, _ := store.GetStore().GetLeadSquaredMarker(projectId, executionTimestamp, documentType, "incremental_sync_created_at")
+		index = 0
+		if indexNumber == 0 {
+			index = 1
+		} else {
+			index = indexNumber
+		}
 		log.Info("Starting for all records created after the lookback")
 		StartDateinLeadSquaredFormat := fmt.Sprintf("%v", time.Unix(int64(executionTimestamp), 0).Format("2006-01-02 15:04:05"))
 		log.Info(fmt.Sprintf("Starting Historical Sync with date > %v", StartDateinLeadSquaredFormat))
@@ -533,20 +614,48 @@ func DoIncrementalSync(documentType string, host string, histSyncEndpoint string
 			}
 			statusCode, responseHistSyncData, errorObj := L.HttpRequestWrapper(fmt.Sprintf("https://%s", host), histSyncEndpoint, headers, request, "POST", urlParams)
 			if statusCode != http.StatusOK || errorObj != nil {
+				store.GetStore().CreateLeadSquaredMarker(model.LeadsquaredMarker{
+					ProjectID:   projectId,
+					Delta:       executionTimestamp,
+					Document:    documentType,
+					Tag:         "incremental_sync_created_at",
+					IndexNumber: index,
+				})
 				return nil, true, errorObj.Error()
 			}
 			byteSliceHistSync, err := json.Marshal(responseHistSyncData)
 			if err != nil {
+				store.GetStore().CreateLeadSquaredMarker(model.LeadsquaredMarker{
+					ProjectID:   projectId,
+					Delta:       executionTimestamp,
+					Document:    documentType,
+					Tag:         "incremental_sync_created_at",
+					IndexNumber: index,
+				})
 				return nil, true, err.Error()
 			}
 			histSyncData := make([]interface{}, 0)
 			err = json.Unmarshal(byteSliceHistSync, &histSyncData)
 			if err != nil {
+				store.GetStore().CreateLeadSquaredMarker(model.LeadsquaredMarker{
+					ProjectID:   projectId,
+					Delta:       executionTimestamp,
+					Document:    documentType,
+					Tag:         "incremental_sync_created_at",
+					IndexNumber: index,
+				})
 				return nil, true, err.Error()
 			}
 			log.Info(fmt.Sprintf("ModifiedOn - Inserting %v rows with index %v no of records %v", pageSize, index, len(histSyncData)))
 			errorStatus, msg := insertBigQueryRow(datasetID, tableId, client, histSyncData, propertyMetadataList, ctx)
 			if errorStatus != false {
+				store.GetStore().CreateLeadSquaredMarker(model.LeadsquaredMarker{
+					ProjectID:   projectId,
+					Delta:       executionTimestamp,
+					Document:    documentType,
+					Tag:         "incremental_sync_created_at",
+					IndexNumber: index,
+				})
 				return nil, true, msg
 			}
 			index++

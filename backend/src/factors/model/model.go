@@ -742,4 +742,8 @@ type Model interface {
 
 	// property overides
 	GetPropertyOverridesByType(projectID int64, typeConstant int, entity int) (int, []string)
+
+	// leadsquaredmarker
+	CreateLeadSquaredMarker(marker model.LeadsquaredMarker) int
+	GetLeadSquaredMarker(ProjectID int64, Delta int64, Document string, Tag string) (int, int)
 }
