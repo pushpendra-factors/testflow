@@ -1,6 +1,7 @@
 package model
 
 import (
+	C "factors/config"
 	U "factors/util"
 	"time"
 )
@@ -119,7 +120,6 @@ var MapOfKPIPropertyNameToData = map[string]map[string]map[string]string{
 		EventEntity: {"name": U.UP_CITY, "display_name": U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES[U.UP_CITY], "data_type": U.PropertyTypeCategorical, "entity": UserEntity}},
 }
 
-// Removed constants for hubspot and salesforce kpi metrics in PR - .
 // 1 Represents agggregation equivalent to aggregateFunc(1) in sql. For eg - select count(1)
 var TransformationOfKPIMetricsToEventAnalyticsQuery = map[string]map[string][]TransformQueryi{
 	WebsiteSessionDisplayCategory: {
@@ -550,6 +550,15 @@ func TransformDateTypeValueForEventsKPI(headers []string, rows [][]interface{}, 
 		rows[index][indexForDateTime] = U.GetTimestampAsStrWithTimezone(currentValueInTimeFormat, timezoneString)
 	}
 	return rows
+}
+
+func ConvertKPIQueryToInternalEventQueriesAndTransformations(projectID int64, query Query, kpiQuery KPIQuery,
+	kpiMetric string, enableFilterOpt bool) ([]Query, []TransformQueryi) {
+	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
+	transformations := TransformationOfKPIMetricsToEventAnalyticsQuery[kpiQuery.DisplayCategory][kpiMetric]
+	currentQuery := BuildFiltersAndGroupByBasedOnKPIQuery(query, kpiQuery, kpiMetric)
+	currentQueries := SplitKPIQueryToInternalKPIQueries(currentQuery, kpiQuery, kpiMetric, transformations)
+	return currentQueries, transformations
 }
 
 // Each KPI metric is internally converted to event analytics.
