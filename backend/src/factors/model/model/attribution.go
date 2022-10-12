@@ -1074,7 +1074,13 @@ func GetLastKeyValueIndex(headers []string) int {
 }
 
 func GetLastKeyValueIndexLandingPage(headers []string) int {
-	return 0
+	for index, val := range headers {
+		// matches the first conversion
+		if strings.Contains(val, "- Users") {
+			return index
+		}
+	}
+	return -1
 }
 
 func GetImpressionsIndex(headers []string) int {
