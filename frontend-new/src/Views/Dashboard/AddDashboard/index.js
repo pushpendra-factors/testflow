@@ -336,7 +336,7 @@ function AddDashboard({
               Cancel
               </Button>
               <Button type='primary' size='large' onClick={()=>handleOk()}>
-              Next
+              {activeKey === '2' ? 'Save' : 'Next'}
               </Button>
             </div>
           </div>
