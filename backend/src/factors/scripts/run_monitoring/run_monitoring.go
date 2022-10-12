@@ -214,8 +214,14 @@ func GetHealth(apiToken string, apiUrl string) (map[string]interface{}, string, 
 	req, err := http.NewRequest("GET", apiUrl, nil)
 	req.Header.Set("Authorization", apiToken)
 	resp, err := client.Do(req)
-	if err != nil || resp.StatusCode != http.StatusOK {
-		msg = "Terminated api call with status code: " + string(resp.StatusCode)
+	if err != nil || (resp != nil && resp.StatusCode != http.StatusOK) {
+		msg = "Failed to check health api"
+		logCtx := log.WithError(err)
+		if resp != nil {
+			logCtx = log.WithField("status", resp.StatusCode)
+		}
+		logCtx.Error(msg)
+
 		return apiPayload, msg, err
 	}
 	respBytes, err := ioutil.ReadAll(resp.Body)
