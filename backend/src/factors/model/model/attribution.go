@@ -1077,7 +1077,7 @@ func GetLastKeyValueIndexLandingPage(headers []string) int {
 	for index, val := range headers {
 		// matches the first conversion
 		if strings.Contains(val, "- Users") {
-			return index
+			return index - 1
 		}
 	}
 	return -1
