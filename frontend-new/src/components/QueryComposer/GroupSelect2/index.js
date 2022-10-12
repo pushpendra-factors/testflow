@@ -90,7 +90,7 @@ function GroupSelect2({
       const groupItem = (
         <div key={group.label} className={`fa-select-group-select--content`}>
           {
-            <div className={'fa-select-group-select--option-group'}>
+            <div className={'fa-select-group-select--option-group cursor-default'}>
               <div>
                 <SVG
                   name={icon}

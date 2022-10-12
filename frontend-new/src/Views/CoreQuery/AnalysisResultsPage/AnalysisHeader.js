@@ -18,6 +18,7 @@ import { addShadowToHeader } from './analysisResultsPage.helpers';
 import { CoreQueryContext } from '../../../contexts/CoreQueryContext';
 import userflow from 'userflow.js';
 import {USERFLOW_CONFIG_ID} from 'Utils/userflowConfig'
+import { InfoCircleOutlined } from '@ant-design/icons';
 
 const { TabPane } = Tabs;
 
@@ -30,6 +31,21 @@ function AnalysisHeader({
   activeTab,
   ...rest
 }) {
+
+  let [hideIntercomState, setHideIntercomState] = useState(true);
+
+  useEffect(()=>{
+    if(window.Intercom){
+      window.Intercom("update",{"hide_default_launcher":true})
+    }
+    return ()=>{
+
+      if(window.Intercom){
+        window.Intercom("update",{"hide_default_launcher":false})
+      }
+    }
+  },[])
+  
   const history = useHistory();
   const {
     coreQueryState: { navigatedFromDashboard },
@@ -178,6 +194,22 @@ function AnalysisHeader({
 
         <div className='flex items-center gap-x-2'>
           <div className='pr-2 border-r'>{renderSaveQueryComp()}</div>
+          <div className='pr-2 '>
+          <Button 
+        type='link'
+        // icon={<SVG name={`Handshake`} size={16} color={'blue'} />}
+        onClick={()=>{ 
+          var w = window;
+          var ic = w.Intercom;
+          if (typeof ic === "function") {
+            setHideIntercomState(!hideIntercomState)
+            ic("update",{hide_default_launcher:!hideIntercomState})
+            ic(!hideIntercomState === true ? "hide":"show")
+          }
+        }}>
+          <InfoCircleOutlined />
+          </Button> 
+          </div>
           {renderReportCloseIcon()}
         </div>
       </div>
