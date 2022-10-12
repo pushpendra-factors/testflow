@@ -2880,6 +2880,18 @@ func syncContactList(projectID int64, document *model.HubspotDocument, minTimest
 			}
 
 			_, properties, _, _, _ := GetContactProperties(projectID, &doc)
+			var emailId string
+			if (*properties)["EMAIL"] != nil {
+				emailId, err = U.GetValueAsString((*properties)["EMAIL"])
+				if err != nil {
+					logCtx.Error("Failed to get emailId from contact properties.")
+					emailId = ""
+				}
+			} else {
+				logCtx.Error("No emailId in contact properties.")
+				emailId = ""
+			}
+
 			eventProperties := map[string]interface{}{
 				model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameContactList,
 					"list_name"): newContactList.ListName,
@@ -2894,7 +2906,7 @@ func syncContactList(projectID int64, document *model.HubspotDocument, minTimest
 				model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameContactList,
 					"contact_id"): contact.Vid,
 				model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameContactList,
-					"contact_email"): (*properties)["EMAIL"].(string),
+					"contact_email"): emailId,
 			}
 
 			request := &SDK.TrackPayload{
