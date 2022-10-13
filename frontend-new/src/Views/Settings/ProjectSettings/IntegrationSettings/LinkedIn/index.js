@@ -109,7 +109,7 @@ const LinkedInIntegration = ({
 
   const makeSelectOpt = (value, label) => {
     if (!label) label = value;
-    return { value: value, label: label };
+    return { value: value, label: `${label} (${value})` };
   };
 
   const createSelectOpts = (opts) => {
@@ -202,7 +202,7 @@ const LinkedInIntegration = ({
     let opts = {};
     for (let i in adAccounts) {
       let adAccount = adAccounts[i];
-      opts[adAccount.value] = adAccount.label;
+      opts[adAccount.value] = adAccount?.name;
     }
     return opts;
   };
