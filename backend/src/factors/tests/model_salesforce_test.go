@@ -5040,3 +5040,188 @@ func TestSalesforceDocumentWithSpecialCharacters(t *testing.T) {
 		assert.Equal(t, expectedText, value["Name"])
 	}
 }
+
+func TestSalesforceRespondedToCampaignEvent(t *testing.T) {
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	refreshToken := U.RandomLowerAphaNumString(5)
+	instanceURL := U.RandomLowerAphaNumString(5)
+	errCode := store.GetStore().UpdateAgentIntSalesforce(agent.UUID,
+		refreshToken,
+		instanceURL,
+	)
+	assert.Equal(t, http.StatusAccepted, errCode)
+
+	_, errCode = store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{
+		IntSalesforceEnabledAgentUUID: &agent.UUID,
+	})
+	assert.Equal(t, http.StatusAccepted, errCode)
+
+	campaignMemberID := U.RandomString(5)
+	campaignID := U.RandomString(5)
+	campaignName := U.RandomString(3)
+	campaignMemberLeadID := U.RandomString(5)
+	campaignCreatedTimestamp := time.Now().AddDate(0, 0, -1).Add(500 * time.Second)
+	campaignMemberCreatedTimestamp := campaignCreatedTimestamp.Add(10 * time.Second)
+
+	campaign := map[string]interface{}{
+		"Id":   campaignID,
+		"Name": campaignName,
+		"CampaignMembers": IntSalesforce.RelationshipCampaignMember{
+			Records: []IntSalesforce.RelationshipCampaignMemberRecord{
+				{
+					ID: campaignMemberID,
+				},
+			},
+		},
+		"CreatedDate":      campaignCreatedTimestamp.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": campaignCreatedTimestamp.Add(2 * time.Hour).Format(model.SalesforceDocumentDateTimeLayout),
+	}
+	err = createDummySalesforceDocument(project.ID, campaign, model.SalesforceDocumentTypeNameCampaign)
+	assert.Nil(t, err)
+
+	campaignLead := map[string]interface{}{
+		"Id":               campaignMemberLeadID,
+		"Name":             "Campaign2lead",
+		"CreatedDate":      time.Now().AddDate(0, 0, -2).Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": time.Now().AddDate(0, 0, -2).Add(30 * time.Second).Format(model.SalesforceDocumentDateTimeLayout),
+	}
+	err = createDummySalesforceDocument(project.ID, campaignLead, model.SalesforceDocumentTypeNameLead)
+	assert.Nil(t, err)
+
+	campaignMember := map[string]interface{}{
+		"Id":               campaignMemberID,
+		"CampaignId":       campaignID,
+		"LeadId":           campaignMemberLeadID,
+		"CreatedDate":      campaignMemberCreatedTimestamp.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": campaignMemberCreatedTimestamp.Add(2 * time.Hour).Format(model.SalesforceDocumentDateTimeLayout),
+	}
+	err = createDummySalesforceDocument(project.ID, campaignMember, model.SalesforceDocumentTypeNameCampaignMember)
+	assert.Nil(t, err)
+
+	enrichStatus, anyFailure := IntSalesforce.Enrich(project.ID, 2, nil)
+	assert.Equal(t, false, anyFailure)
+	assert.Len(t, enrichStatus, 2) // only campaign, lead
+	assert.Equal(t, util.CRM_SYNC_STATUS_SUCCESS, enrichStatus[0].Status)
+	assert.Equal(t, util.CRM_SYNC_STATUS_SUCCESS, enrichStatus[1].Status)
+
+	documents, status := store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{campaignMemberID}, model.SalesforceDocumentTypeCampaignMember, false)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Len(t, documents, 1)
+
+	documents, status = store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{campaignMemberLeadID}, model.SalesforceDocumentTypeLead, false)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Len(t, documents, 1)
+
+	_, status = store.GetStore().GetEventName(U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_RESPONDED_TO_CAMPAIGN, project.ID)
+	assert.Equal(t, http.StatusNotFound, status)
+
+	query := model.Query{
+		From: time.Now().AddDate(0, 0, -3).Unix(),
+		To:   time.Now().AddDate(0, 0, 1).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name: U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED,
+			},
+			{
+				Name: U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED,
+			},
+		},
+		Class: model.QueryClassEvents,
+
+		Type:            model.QueryTypeEventsOccurrence,
+		EventsCondition: model.EventCondAllGivenEvent,
+	}
+
+	result, errCode, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
+	assert.Equal(t, http.StatusOK, errCode)
+	for i := range result.Rows {
+		if result.Rows[i][0] == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED {
+			assert.Equal(t, float64(1), result.Rows[i][1]) // campaign_member_created
+		}
+
+		if result.Rows[i][0] == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED {
+			assert.Equal(t, float64(1), result.Rows[i][1]) // campaign_member_updated
+		}
+	}
+
+	// Update Status to Responded
+	campaignMember = map[string]interface{}{
+		"Id":                 campaignMemberID,
+		"CampaignId":         campaignID,
+		"LeadId":             campaignMemberLeadID,
+		"CreatedDate":        campaignMemberCreatedTimestamp.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate":   campaignMemberCreatedTimestamp.Add(5 * time.Hour).Format(model.SalesforceDocumentDateTimeLayout),
+		"HasResponded":       true,
+		"FirstRespondedDate": campaignMemberCreatedTimestamp.Add(5 * time.Hour).Format(model.SalesforceDocumentDateLayout),
+	}
+	err = createDummySalesforceDocument(project.ID, campaignMember, model.SalesforceDocumentTypeNameCampaignMember)
+	assert.Nil(t, err)
+
+	enrichStatus, anyFailure = IntSalesforce.Enrich(project.ID, 2, nil)
+	assert.Equal(t, false, anyFailure)
+	assert.Len(t, enrichStatus, 1) // only campaign
+
+	documents, status = store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{campaignMemberID}, model.SalesforceDocumentTypeCampaignMember, false)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Len(t, documents, 2)
+
+	_, status = store.GetStore().GetEventName(U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_RESPONDED_TO_CAMPAIGN, project.ID)
+	assert.Equal(t, http.StatusFound, status)
+
+	query = model.Query{
+		From: time.Now().AddDate(0, 0, -3).Unix(),
+		To:   time.Now().AddDate(0, 0, 1).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name: U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED,
+			},
+			{
+				Name: U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED,
+			},
+		},
+		Class: model.QueryClassEvents,
+
+		Type:            model.QueryTypeEventsOccurrence,
+		EventsCondition: model.EventCondAllGivenEvent,
+	}
+
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
+	assert.Equal(t, http.StatusOK, errCode)
+	for i := range result.Rows {
+		if result.Rows[i][0] == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED {
+			assert.Equal(t, float64(1), result.Rows[i][1]) // campaign_member_created
+		}
+
+		if result.Rows[i][0] == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED {
+			assert.Equal(t, float64(2), result.Rows[i][1]) // campaign_member_updated, campaign_member_responded
+		}
+	}
+
+	query = model.Query{
+		From: time.Now().AddDate(0, 0, -3).Unix(),
+		To:   time.Now().AddDate(0, 0, 1).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name:       U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_RESPONDED_TO_CAMPAIGN,
+				Properties: []model.QueryProperty{},
+			},
+		},
+
+		Class: model.QueryClassEvents,
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Entity:   model.PropertyEntityUser,
+				Property: "$salesforce_lead_id",
+			},
+		},
+		Type:            model.QueryTypeEventsOccurrence,
+		EventsCondition: model.EventCondAnyGivenEvent,
+	}
+
+	result, status, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
+	assert.Equal(t, http.StatusOK, status)
+	assert.Equal(t, U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_RESPONDED_TO_CAMPAIGN, result.Rows[0][0])
+	assert.Equal(t, campaignMemberLeadID, result.Rows[0][1])
+	assert.Equal(t, float64(1), result.Rows[0][2]) // campaign_member_responded
+}
