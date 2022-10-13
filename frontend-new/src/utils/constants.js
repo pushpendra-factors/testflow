@@ -245,18 +245,18 @@ export const ATTRIBUTION_METRICS = [
     isEventMetric: true,
     valueType: 'numerical'
   }
-  // {
-  //   title: 'Conversion Value',
-  //   header: 'CV',
-  //   enabled: true,
-  //   isEventMetric: true
-  // },
-  // {
-  //   title: 'Return on Cost',
-  //   header: 'ROC',
-  //   enabled: true,
-  //   isEventMetric: true
-  // },
+  {
+    title: 'Conversion Value',
+    header: 'CV',
+    enabled: true,
+    isEventMetric: true
+  },
+  {
+    title: 'Return on Cost',
+    header: 'ROC',
+    enabled: true,
+    isEventMetric: true
+  },
   // {
   //   title: 'All Conv Rate (%)',
   //   header: 'ALL CR',

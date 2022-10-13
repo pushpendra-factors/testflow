@@ -305,7 +305,7 @@ const AttributionsChart = forwardRef(
       const metricsNotPresentInFilters =
         touchpoint !== 'LandingPage'
           ? attributionMetrics
-              .filter((m) => m.enabled)
+              .filter((m) => m.enabled && !m.isEventMetric)
               .filter((m) => filters.findIndex((f) => f.key === m.title) === -1)
           : [];
       const metricsNotEnabledButPresentInFilters =
