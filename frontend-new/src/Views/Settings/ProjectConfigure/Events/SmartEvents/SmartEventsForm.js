@@ -489,7 +489,7 @@ function SmartEventsForm({smart_events, objPropertiesSource, specificPropertiesD
                                      }
                                     >
 
-                                        {objPropertiesSourceArr?.sort().map((item)=>{
+                                        {_.uniq(objPropertiesSourceArr)?.sort().map((item)=>{
                                             return <Option value={item}>{item}</Option> 
                                         })}
 

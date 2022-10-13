@@ -73,6 +73,7 @@ const (
 
 const (
 	SelectDefaultEventFilter        = "events.id as event_id, events.user_id as event_user_id"
+	SelectDefaultGroupEventFilter   = "events.id as event_id, users.users_user_id as event_user_id"
 	SelectDefaultUserFilter         = "events.user_id as event_user_id"
 	SelectDefaultEventFilterByAlias = "event_id, event_user_id, event_name"
 	SelectDefaultUserFilterByAlias  = "coal_user_id, event_user_id, event_name"
@@ -1056,4 +1057,13 @@ func GetDefaultGroupByTimestampForQueries(from, to int64, currentGroupByTimestam
 	}
 
 	return ""
+}
+
+func IsQueryGroupByLatestUserProperty(queryGroupByProperty []QueryGroupByProperty) bool {
+	for i := range queryGroupByProperty {
+		if queryGroupByProperty[i].EventName == UserPropertyGroupByPresent {
+			return true
+		}
+	}
+	return false
 }

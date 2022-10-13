@@ -117,8 +117,24 @@ func QuerySendNowHandler(c *gin.Context) {
 		return
 	}
 	queryIdString := c.Query("query_id")
-	var queryID int64
+	overrideDateRangeString := c.Query("override_date_range")
+	var shouldOverride bool
+	var overRideFrom, overRideTo int64
 	var err error
+	if overrideDateRangeString == "true" {
+		shouldOverride = true
+		overRideFrom, err = strconv.ParseInt(c.Query("from_time"), 10, 64)
+		if err != nil {
+			log.Error("Failed to parse override date range")
+			return
+		}
+		overRideTo, err = strconv.ParseInt(c.Query("to_time"), 10, 64)
+		if err != nil {
+			log.Error("Failed to parse override date range")
+			return
+		}
+	}
+	var queryID int64
 	if queryIdString != "" {
 		queryID, err = strconv.ParseInt(queryIdString, 10, 64)
 		if err != nil {
@@ -141,7 +157,7 @@ func QuerySendNowHandler(c *gin.Context) {
 	alert.ProjectID = projectID
 	alert.CreatedBy = loggedInAgentUUID
 	alert.QueryID = queryID
-	_, err = T.HandlerAlertWithQueryID(alert, nil)
+	_, err = T.HandlerAlertWithQueryID(alert, nil, shouldOverride, overRideFrom, overRideTo)
 	if err != nil {
 		log.WithError(err).Error("failed to perform send now operation for query id ", alert.QueryID)
 		c.AbortWithStatusJSON(http.StatusInternalServerError,

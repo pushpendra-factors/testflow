@@ -109,6 +109,8 @@ func TestMain(m *testing.M) {
 		AllowIdentificationOverwriteUsingSourceByProjectID: "*",
 		RestrictReusingUsersByCustomerUserId:               "*",
 		DBMaxAllowedPacket:                                 1048576000,
+		AllowHubspotPastEventsEnrichmentByProjectID:        "*",
+		AllowHubspotContactListInsertByProjectID:           "*",
 	}
 	C.InitConf(config)
 

@@ -71,6 +71,27 @@ func getGroupKeys(query *model.AttributionQuery, groups []model.Group) (string, 
 			}
 		}
 	}
+
+	if query.AnalyzeType == model.AnalyzeTypeSFAccounts {
+		for _, group := range groups {
+			if group.Name == model.GROUP_NAME_SALESFORCE_ACCOUNT {
+				//_groupIDNo = group.ID
+				_groupIDKey = "group_" + strconv.Itoa(group.ID) + "_id"
+				_groupIDUserKey = "group_" + strconv.Itoa(group.ID) + "_user_id"
+			}
+		}
+	}
+
+	if query.AnalyzeType == model.AnalyzeTypeHSCompanies {
+		for _, group := range groups {
+			if group.Name == model.GROUP_NAME_HUBSPOT_COMPANY {
+				//_groupIDNo = group.ID
+				_groupIDKey = "group_" + strconv.Itoa(group.ID) + "_id"
+				_groupIDUserKey = "group_" + strconv.Itoa(group.ID) + "_user_id"
+			}
+		}
+	}
+
 	return _groupIDKey, _groupIDUserKey
 }
 

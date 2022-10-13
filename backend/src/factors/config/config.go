@@ -180,7 +180,6 @@ type Configuration struct {
 	ProjectAnalyticsWhitelistedUUIds       []string
 	CustomerEnabledProjectsWeeklyInsights  []int64
 	CustomerEnabledProjectsLastComputed    []int64
-	CustomerEnabledProjectsAttributionV1   []int64
 	DemoProjectIds                         []string
 	PrimaryDatastore                       string
 	// Flag for enabling only the /mql routes for secondary env testing.
@@ -264,6 +263,8 @@ type Configuration struct {
 	BlockedEmailDomainList                             []string
 	DBMaxAllowedPacket                                 int64
 	AllowIdentificationOverwriteUsingSourceByProjectID string
+	AllowHubspotPastEventsEnrichmentByProjectID        string
+	AllowHubspotContactListInsertByProjectID           string
 }
 
 type Services struct {
@@ -2002,16 +2003,6 @@ func IsLastComputedWhitelisted(projectId int64) bool {
 	return false
 }
 
-func IsAttributionV1Whitelisted(projectId int64) bool {
-	for _, id := range configuration.CustomerEnabledProjectsAttributionV1 {
-		if id == projectId {
-			return true
-		}
-	}
-
-	return false
-}
-
 func IsMultipleProjectTimezoneEnabled(projectId int64) bool {
 	return true
 }
@@ -2314,4 +2305,22 @@ func GetBlockedEmailDomainFromStringListAsString(stringList string) []string {
 	}
 
 	return domStringList
+}
+
+func PastEventEnrichmentEnabled(projectId int64) bool {
+	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().AllowHubspotPastEventsEnrichmentByProjectID, "")
+	if allProjects {
+		return true
+	}
+
+	return projectIDsMap[projectId]
+}
+
+func ContactListInsertEnabled(projectId int64) bool {
+	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().AllowHubspotContactListInsertByProjectID, "")
+	if allProjects {
+		return true
+	}
+
+	return projectIDsMap[projectId]
 }

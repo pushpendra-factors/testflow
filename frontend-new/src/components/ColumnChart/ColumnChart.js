@@ -1,0 +1,134 @@
+import React, { useCallback, useEffect, memo } from 'react';
+import ReactDOMServer from 'react-dom/server';
+import cx from 'classnames';
+import Highcharts from 'highcharts';
+import PropTypes from 'prop-types';
+import styles from './columnChart.module.scss';
+import { Number as NumFormat, Text } from '../factorsComponents';
+
+function ColumnChart({ series, categories, chartId, comparisonApplied }) {
+  if (comparisonApplied) {
+    Highcharts.setOptions({
+      defs: {
+        stripes: {
+          tagName: 'pattern',
+          id: 'columnChartStripes',
+          patternUnits: 'userSpaceOnUse',
+          width: 4,
+          height: 4,
+          children: [
+            {
+              tagName: 'rect', // Solid background
+              x: 0,
+              y: 0,
+              width: 4,
+              height: 4,
+              fill: '#4D7DB4'
+            },
+            {
+              tagName: 'path',
+              d: 'M-1,1 l2,-2 M0,4 l4,-4 M3,5 l2,-2',
+              stroke: '#fff',
+              strokeWidth: '1px'
+            }
+          ]
+        }
+      }
+    });
+  }
+
+  const drawChart = useCallback(() => {
+    Highcharts.chart(chartId, {
+      chart: {
+        type: 'column',
+        animation: false,
+        styledMode: comparisonApplied
+      },
+      legend: {
+        enabled: false
+      },
+      title: {
+        text: undefined
+      },
+      yAxis: {
+        title: {
+          text: null
+        }
+      },
+      credits: {
+        enabled: false
+      },
+      xAxis: {
+        categories
+      },
+      plotOptions: {
+        column: {
+          pointPadding: 0
+        }
+      },
+      tooltip: {
+        backgroundColor: 'red',
+        borderWidth: 0,
+        borderRadius: 12,
+        borderColor: 'black',
+        useHTML: true,
+        formatter() {
+          return ReactDOMServer.renderToString(
+            <div className="flex flex-col row-gap-2 bannat">
+              <Text
+                extraClass={styles.infoText}
+                type="title"
+                level={7}
+                color="grey-2"
+              >
+                {this.point.category}
+              </Text>
+              <div className={cx('flex flex-col')}>
+                <div className="flex items-center col-gap-1">
+                  <Text weight="bold" type="title" color="grey-6" level={5}>
+                    <NumFormat number={this.point.y} />
+                  </Text>
+                </div>
+              </div>
+            </div>
+          );
+        }
+      },
+      series
+    });
+  }, [categories, series]);
+
+  useEffect(() => {
+    drawChart();
+  }, [drawChart]);
+
+  return (
+    <div
+      className={cx(styles.columnChart, {
+        [styles.comparisonApplied]: comparisonApplied
+      })}
+      id={chartId}
+    ></div>
+  );
+}
+
+export default memo(ColumnChart);
+
+ColumnChart.propTypes = {
+  categories: PropTypes.arrayOf(PropTypes.string),
+  series: PropTypes.arrayOf(
+    PropTypes.shape({
+      data: PropTypes.arrayOf(PropTypes.number),
+      color: PropTypes.string
+    })
+  ),
+  chartId: PropTypes.string,
+  comparisonApplied: PropTypes.bool
+};
+
+ColumnChart.defaultProps = {
+  categories: [],
+  series: [],
+  chartId: 'columnChartContainer',
+  comparisonApplied: false
+};

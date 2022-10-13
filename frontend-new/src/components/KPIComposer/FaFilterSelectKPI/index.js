@@ -59,10 +59,11 @@ const  FAFilterSelect = ({
   );
 
   useEffect(() => {
-    if (filter) {
+    if (filter) { 
       const prop = filter.props;
       setPropState({ icon: prop[2], name: prop[0], type: prop[1] });
       setOperatorState(filter.operator);
+      seteventFilterInfo(filter?.extra)
       // Set values state
       setValues();
       setPropSelectOpen(false);
@@ -116,7 +117,7 @@ const  FAFilterSelect = ({
   };
 
   const propSelect = (label, val, cat) => {
-    let prop = [label, ...val];
+    let prop = [label, ...val]; 
     setPropState({ icon: prop[0], name: prop[1], type: prop[3], extra: val });
     setPropSelectOpen(false);
     setOperatorState(prop[3] === 'datetime' ? 'between' : '=');

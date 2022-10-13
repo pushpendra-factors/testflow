@@ -65,7 +65,8 @@ function SaveQuery({
   fetchSlackChannels,
   enableSlackIntegration,
   createAlert,
-  sendAlertNow
+  sendAlertNow,
+  dateFromTo
 }) {
   const dispatch = useDispatch();
 
@@ -75,6 +76,7 @@ function SaveQuery({
   const [showShareToSlackModal, setShowShareToSlackModal] = useState(false);
   const [channelOpts, setChannelOpts] = useState([]);
   const [allChannels, setAllChannels] = useState([]);
+  const [overrideDate, setOverrideDate] = useState(false);
 
   const { performance_criteria: user_type } = useSelector(
     (state) => state.analyticsQuery
@@ -98,6 +100,14 @@ function SaveQuery({
     SaveQueryReducer,
     SAVE_QUERY_INITIAL_STATE
   );
+
+  useEffect(() => {
+    if(dateFromTo?.to === undefined || dateFromTo?.to === '') {
+      setOverrideDate(false);
+    } else {
+      setOverrideDate(true);
+    }
+  }, [dateFromTo])
 
   const {
     activeAction,
@@ -436,7 +446,7 @@ function SaveQuery({
     };
 
     if (frequency === 'send_now') {
-      sendAlertNow(active_project.id, payload, savedQueryId)
+      sendAlertNow(active_project.id, payload, savedQueryId, dateFromTo, overrideDate)
         .then((r) => {
           notification.success({
             message: 'Report Sent Successfully',
@@ -498,7 +508,7 @@ function SaveQuery({
     };
 
     if (frequency === 'send_now') {
-      sendAlertNow(active_project.id, payload, savedQueryId)
+      sendAlertNow(active_project.id, payload, savedQueryId, dateFromTo, overrideDate)
         .then((r) => {
           notification.success({
             message: 'Report Sent Successfully',

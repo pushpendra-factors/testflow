@@ -154,12 +154,14 @@ const columns = [
     dataIndex: 'author',
     width: 240,
     key: 'author',
-    render: (text) => (
-      <div className="flex items-center">
-        <Avatar src="assets/avatar/avatar.png" size={24} className={'mr-2'} />
-        &nbsp; {text}
-      </div>
-    )
+    render: (created_by_user) => {
+      return (
+        <div className="flex items-center">
+          <Avatar src={ (!!(created_by_user?.image)) ? (created_by_user?.image) : ('assets/avatar/avatar.png') } size={24} className={'mr-2'} />
+          &nbsp; {created_by_user?.text}
+        </div>
+      )
+    }
   },
   {
     title: 'Date',
@@ -188,8 +190,13 @@ function CoreQuery({
   sendAlertNow,
   fetchSlackChannels,
   fetchProjectSettingsV1,
-  enableSlackIntegration
+  enableSlackIntegration,
+  dateFromTo
 }) {
+  
+  let activeProjectProfilePicture = useSelector((state)=>state.global.active_project.profile_picture)
+  
+  console.log("ISPUSH", activeProjectProfilePicture)
   const queriesState = useSelector((state) => state.queries);
   const [deleteModal, showDeleteModal] = useState(false);
   const [activeRow, setActiveRow] = useState(null);
@@ -209,6 +216,7 @@ function CoreQuery({
   const [allChannels, setAllChannels] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedRow, setSelectedRow] = useState(null);
+  const [overrideDate, setOverrideDate] = useState(false);
 
   const { slack } = useSelector((state) => state.global);
   const { projectSettingsV1 } = useSelector((state) => state.global);
@@ -222,6 +230,14 @@ function CoreQuery({
     };
     getData();
   }, [activeProject]);
+
+  useEffect(() => {
+    if(dateFromTo?.to === undefined || dateFromTo?.to === '') {
+      setOverrideDate(false);
+    } else {
+      setOverrideDate(true);
+    }
+  }, [dateFromTo])
 
   const getFormattedRow = (q) => {
     const requestQuery = q.query;
@@ -246,7 +262,7 @@ function CoreQuery({
       id_text: q.id_text,
       type: <SVG name={svgName} size={24} />,
       title: q.title,
-      author: q.created_by_name,
+      author: {image:activeProjectProfilePicture, text:q.created_by_name},
       settings: q.settings,
       date: (
         <div className="flex justify-between items-center">
@@ -628,7 +644,6 @@ function CoreQuery({
       dispatch({ type: SHOW_ANALYTICS_RESULT, payload: false });
     }
   }, [location.state, setQueryToState]);
-
   const data = queriesState.data
     .filter((q) => !(q.query && q.query.cl === QUERY_TYPE_WEB))
     .map((q) => {
@@ -732,7 +747,7 @@ function CoreQuery({
   const searchReport = (e) => {
     let term = e.target.value;
     let searchResults = data.filter((item) => {
-      return item?.title?.includes(searchTerm);
+      return item?.title?.toLowerCase().includes(searchTerm.toLowerCase());
     });
     setSearchTerm(term);
     setTableData(searchResults);
@@ -810,7 +825,9 @@ function CoreQuery({
       sendAlertNow(
         activeProject.id,
         payload,
-        selectedRow?.key || selectedRow?.id
+        selectedRow?.key || selectedRow?.id,
+        dateFromTo,
+        overrideDate
       )
         .then((r) => {
           notification.success({
@@ -875,7 +892,9 @@ function CoreQuery({
       sendAlertNow(
         activeProject.id,
         payload,
-        selectedRow?.key || selectedRow?.id
+        selectedRow?.key || selectedRow?.id,
+        dateFromTo,
+        overrideDate
       )
         .then((r) => {
           notification.success({

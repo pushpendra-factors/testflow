@@ -71,6 +71,8 @@ func main() {
 	hubspotAppID := flag.String("hubspot_app_id", "", "Hubspot app id for oauth integration")
 	hubspotAppSecret := flag.String("hubspot_app_secret", "", "Hubspot app secret for oauth integration")
 	allowIdentificationOverwriteUsingSourceByProjectID := flag.String("allow_identification_overwrite_using_source_by_project_id", "", "Allow identification overwrite based on request source.")
+	allowHubspotPastEventsEnrichmentByProjectID := flag.String("allow_hubspot_past_events_enrichment_by_project_id", "", "")
+	allowHubspotContactListInsertByProjectID := flag.String("allow_hubspot_contact_list_insert_by_project_id", "", "")
 
 	flag.Parse()
 	if *env != "development" && *env != "staging" && *env != "production" {
@@ -124,6 +126,8 @@ func main() {
 		HubspotAppID:                                  *hubspotAppID,
 		HubspotAppSecret:                              *hubspotAppSecret,
 		AllowIdentificationOverwriteUsingSourceByProjectID: *allowIdentificationOverwriteUsingSourceByProjectID,
+		AllowHubspotPastEventsEnrichmentByProjectID:        *allowHubspotPastEventsEnrichmentByProjectID,
+		AllowHubspotContactListInsertByProjectID:           *allowHubspotContactListInsertByProjectID,
 	}
 
 	C.InitConf(config)

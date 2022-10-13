@@ -33,9 +33,10 @@ type Event struct {
 	Properties                 postgres.Jsonb `json:"properties,omitempty"`
 	PropertiesUpdatedTimestamp int64          `gorm:"not null;default:0" json:"properties_updated_timestamp,omitempty"`
 	// unix epoch timestamp in seconds.
-	Timestamp int64     `json:"timestamp"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	Timestamp  int64     `json:"timestamp"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
+	IsFromPast bool      `gorm:"-" json:"is_from_past"`
 }
 
 type CacheEvent struct {

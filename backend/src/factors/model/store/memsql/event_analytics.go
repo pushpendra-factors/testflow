@@ -505,7 +505,7 @@ func (store *MemSQL) BuildInsightsQuery(projectId int64, query model.Query, enab
 
 	if query.Type == model.QueryTypeEventsOccurrence {
 		if query.EventsCondition == model.EventCondEachGivenEvent {
-			return buildEventCountForEachGivenEventsQueryNEW(projectId, query, enableFilterOpt)
+			return store.buildEventCountForEachGivenEventsQueryNEW(projectId, query, enableFilterOpt)
 		}
 
 		if len(query.EventsWithProperties) == 1 {
@@ -928,11 +928,27 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 		commonSelect = "COALESCE(users.customer_user_id, events.user_id)" +
 			" as coal_user_id%s, FIRST(events.user_id, FROM_UNIXTIME(events.timestamp)) as event_user_id"
 		commonGroupBy = "coal_user_id"
+
+	}
+
+	var commonSelectArr []string
+	for i := range q.EventsWithProperties {
+		isGroupEvent := U.IsGroupEventName(q.EventsWithProperties[i].Name)
+		stepCommonSelect := ""
+		if isGroupEvent {
+			stepCommonSelect = strings.ReplaceAll(commonSelect, "events.user_id", "users.users_user_id")
+		} else {
+			stepCommonSelect = commonSelect
+		}
+
+		commonSelectArr = append(commonSelectArr, stepCommonSelect)
 	}
 
 	if q.AggregateProperty != "" && q.AggregateProperty != "1" {
-		aggregateSelect, aggregateParams = getNoneHandledGroupBySelect(projectID, aggregatePropertyDetails, aggregateKey, q.Timezone)
-		commonSelect = commonSelect + ", " + aggregateSelect
+		for i := range commonSelectArr {
+			aggregateSelect, aggregateParams = getNoneHandledGroupBySelect(projectID, aggregatePropertyDetails, aggregateKey, q.Timezone)
+			commonSelectArr[i] = commonSelectArr[i] + ", " + aggregateSelect
+		}
 		*qParams = append(*qParams, aggregateParams...)
 	}
 
@@ -953,7 +969,7 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 		stepGroupSelect, stepGroupParams, stepGroupKeys, _ = buildGroupKeyForStep(
 			projectID, &q.EventsWithProperties[i], q.GroupByProperties, i+1, q.Timezone)
 
-		eventSelect := commonSelect
+		eventSelect := commonSelectArr[i]
 		if q.EventsCondition == model.EventCondEachGivenEvent {
 			eventNameSelect := "'" + strconv.Itoa(i) + "_" + ewp.Name + "'" + " AS event_name "
 			eventSelect = joinWithComma(eventSelect, eventNameSelect)
@@ -2009,7 +2025,7 @@ SELECT datetime, event_name, _group_key_0, _group_key_1, _group_key_2, _group_ke
 COUNT(event_id) AS count FROM each_users_union GROUP BY event_name, _group_key_0, _group_key_1,
 _group_key_2, _group_key_3, _group_key_4, datetime ORDER BY count DESC LIMIT 100000
 */
-func buildEventCountForEachGivenEventsQueryNEW(projectID int64, query model.Query, enableFilterOpt bool) (string, []interface{}, error) {
+func (store *MemSQL) buildEventCountForEachGivenEventsQueryNEW(projectID int64, query model.Query, enableFilterOpt bool) (string, []interface{}, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"query":      query,
@@ -2023,7 +2039,7 @@ func buildEventCountForEachGivenEventsQueryNEW(projectID int64, query model.Quer
 	qStmnt := ""
 	qParams := make([]interface{}, 0, 0)
 
-	steps, stepsToKeysMap, err := addEventFilterStepsForEventCountQuery(projectID, &query, &qStmnt, &qParams, enableFilterOpt)
+	steps, stepsToKeysMap, err := store.addEventFilterStepsForEventCountQuery(projectID, &query, &qStmnt, &qParams, enableFilterOpt)
 	if err != nil {
 		return qStmnt, qParams, err
 	}
@@ -2114,7 +2130,7 @@ events.event_name_id IN (SELECT id FROM step_1_names WHERE project_id='204' AND 
 AND ( events.properties->>'$source' = 'google' AND user_properties.properties->>'$country' = 'India' )
 ORDER BY event_id, _group_key_2, events.timestamp ASC),
 */
-func addEventFilterStepsForEventCountQuery(projectID int64, q *model.Query, qStmnt *string,
+func (store *MemSQL) addEventFilterStepsForEventCountQuery(projectID int64, q *model.Query, qStmnt *string,
 	qParams *[]interface{}, enableFilterOpt bool) ([]string, map[string][]string, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
@@ -2132,16 +2148,29 @@ func addEventFilterStepsForEventCountQuery(projectID int64, q *model.Query, qStm
 	var aggregateParams []interface{}
 	var commonParams []interface{}
 
-	var commonSelect string
+	var commonSelectArr []string
 	var commonOrderBy string
 	stepsToKeysMap := make(map[string][]string)
 
-	commonSelect = model.SelectDefaultEventFilter
-	commonSelect = appendSelectTimestampIfRequired(commonSelect, q.GetGroupByTimestamp(), q.Timezone)
+	for i := range q.EventsWithProperties {
+		if U.IsGroupEventName(q.EventsWithProperties[i].Name) && (len(q.GlobalUserProperties) > 0 ||
+			model.IsQueryGroupByLatestUserProperty(q.GroupByProperties)) {
+			commonSelect := model.SelectDefaultGroupEventFilter
+			commonSelect = appendSelectTimestampIfRequired(commonSelect, q.GetGroupByTimestamp(), q.Timezone)
+			commonSelectArr = append(commonSelectArr, commonSelect)
+			continue
+		}
+
+		commonSelect := model.SelectDefaultEventFilter
+		commonSelect = appendSelectTimestampIfRequired(commonSelect, q.GetGroupByTimestamp(), q.Timezone)
+		commonSelectArr = append(commonSelectArr, commonSelect)
+	}
 
 	if q.AggregateProperty != "" && q.AggregateProperty != "1" {
-		aggregateSelect, aggregateParams = getNoneHandledGroupBySelect(projectID, aggregatePropertyDetails, aggregateKey, q.Timezone)
-		commonSelect = commonSelect + ", " + aggregateSelect
+		for i := range commonSelectArr {
+			aggregateSelect, aggregateParams = getNoneHandledGroupBySelect(projectID, aggregatePropertyDetails, aggregateKey, q.Timezone)
+			commonSelectArr[i] = commonSelectArr[i] + ", " + aggregateSelect
+		}
 		commonParams = aggregateParams
 	}
 
@@ -2161,7 +2190,7 @@ func addEventFilterStepsForEventCountQuery(projectID int64, q *model.Query, qStm
 		stepGroupSelect, stepGroupParams, stepGroupKeys, _ = buildGroupKeyForStep(projectID,
 			&q.EventsWithProperties[i], q.GroupByProperties, i+1, q.Timezone)
 
-		eventSelect := commonSelect
+		eventSelect := commonSelectArr[i]
 		stepParams = append(stepParams, commonParams...)
 		eventNameSelect := "'" + strconv.Itoa(i) + "_" + ewp.Name + "'" + " AS event_name "
 		eventSelect = joinWithComma(eventSelect, eventNameSelect)
@@ -2179,7 +2208,22 @@ func addEventFilterStepsForEventCountQuery(projectID int64, q *model.Query, qStm
 
 		addJoinStmnt := ""
 		if C.SkipUserJoinInEventQueryByProjectID(projectID) {
-			if len(q.GlobalUserProperties) > 0 {
+
+			if U.IsGroupEventName(q.EventsWithProperties[i].Name) && (model.IsQueryGroupByLatestUserProperty(q.GroupByProperties) || len(q.GlobalUserProperties) > 0) {
+				groupName := U.GetGroupNameFromGroupEventName(q.EventsWithProperties[i].Name)
+				group, status := store.GetGroup(projectID, groupName)
+				if status != http.StatusFound {
+					if status != http.StatusNotFound {
+						log.WithFields(log.Fields{"project_id": projectID, "group_name": groupName}).Error("Failed to get group details. Using users join.")
+					} else {
+						log.WithFields(log.Fields{"project_id": projectID, "group_name": groupName}).Error("Group not found. Using users join.")
+					}
+					addJoinStmnt = "JOIN users ON events.user_id=users.id AND users.project_id = ?"
+				} else {
+					addJoinStmnt = fmt.Sprintf("JOIN users ON events.user_id=users.group_%d_user_id AND users.project_id = ?", group.ID)
+				}
+				stepParams = append(stepParams, projectID)
+			} else if len(q.GlobalUserProperties) > 0 {
 				addJoinStmnt = "JOIN users ON events.user_id=users.id AND users.project_id = ?"
 				stepParams = append(stepParams, projectID)
 			}

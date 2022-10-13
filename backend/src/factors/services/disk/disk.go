@@ -2,14 +2,14 @@ package disk
 
 import (
 	"factors/filestore"
+	U "factors/util"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
+	pb "path/filepath"
 	"strings"
 	"time"
-
-	U "factors/util"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -43,9 +43,9 @@ func (dd *DiskDriver) Create(path, fileName string, reader io.Reader) error {
 		return err
 	}
 
-	if !strings.HasSuffix(path, "/") {
+	if !strings.HasSuffix(path, separator) {
 		// Append / to the end if not present.
-		path = path + "/"
+		path = path + separator
 	}
 	file, err := os.Create(path + fileName)
 	if err != nil {
@@ -64,9 +64,9 @@ func (dd *DiskDriver) Get(path, fileName string) (io.ReadCloser, error) {
 		"FileName": fileName,
 	}).Debug("DiskDriver Opening file")
 
-	if !strings.HasSuffix(path, "/") {
+	if !strings.HasSuffix(path, separator) {
 		// Append / to the end if not present.
-		path = path + "/"
+		path = path + separator
 	}
 	file, err := os.OpenFile(path+fileName, os.O_RDONLY, 0444)
 	return file, err
@@ -77,9 +77,9 @@ func (dd *DiskDriver) GetBucketName() string {
 }
 
 func (dd *DiskDriver) GetObjectSize(path, fileName string) (int64, error) {
-	if !strings.HasSuffix(path, "/") {
+	if !strings.HasSuffix(path, separator) {
 		// Append / to the end if not present.
-		path = path + "/"
+		path = path + separator
 	}
 	var objInfo os.FileInfo
 	var err error
@@ -132,6 +132,16 @@ func (dd *DiskDriver) GetModelEventsFilePathAndName(projectId int64, startTimest
 	path := dd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
 	return path, "events.txt"
 }
+func (dd *DiskDriver) GetModelEventsUnsortedFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string) {
+	path := dd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
+	return path, "events_raw.txt"
+}
+func (dd *DiskDriver) GetEventsArtificatFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string) {
+	path := dd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
+	path = pb.Join(path, "artifacts")
+	return path, "users_map.txt"
+}
+
 func (dd *DiskDriver) GetModelMetricsFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string) {
 	path := dd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
 	return path, "metrics.txt"

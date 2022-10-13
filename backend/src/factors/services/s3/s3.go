@@ -5,6 +5,7 @@ import (
 	U "factors/util"
 	"fmt"
 	"io"
+	pb "path/filepath"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -236,4 +237,15 @@ func (sd *S3Driver) GetWIPropertiesPathAndName(projectId int64) (string, string)
 
 func (sd *S3Driver) GetWIPropertiesDir(projectId int64) string {
 	return fmt.Sprintf("projects/%v/weeklyinsights/", projectId)
+}
+
+func (sd *S3Driver) GetModelEventsUnsortedFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string) {
+	path := sd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
+	return path, "events_raw.txt"
+}
+func (sd *S3Driver) GetEventsArtificatFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string) {
+	path := sd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
+	path = pb.Join(path, "artifacts")
+	return path, "users_map.txt"
+
 }

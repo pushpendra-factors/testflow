@@ -151,6 +151,8 @@ const (
 	AnalyzeTypeUsers           = "users"
 	AnalyzeTypeSFOpportunities = "salesforce_opportunities"
 	AnalyzeTypeHSDeals         = "hubspot_deals"
+	AnalyzeTypeSFAccounts      = "salesforce_accounts"
+	AnalyzeTypeHSCompanies     = "hubspot_companies"
 	AnalyzeTypeUserKPI         = "user_kpi"
 
 	HSDealIDProperty        = "$hubspot_deal_hs_object_id"
@@ -1072,7 +1074,13 @@ func GetLastKeyValueIndex(headers []string) int {
 }
 
 func GetLastKeyValueIndexLandingPage(headers []string) int {
-	return 0
+	for index, val := range headers {
+		// matches the first conversion
+		if strings.Contains(val, "- Users") {
+			return index - 1
+		}
+	}
+	return -1
 }
 
 func GetImpressionsIndex(headers []string) int {

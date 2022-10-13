@@ -102,7 +102,7 @@ func TestAttributionModelFile(t *testing.T) {
 	//Update user1 and user2 properties with latest campaign
 	t.Run("AttributionQueryFileBased", func(t *testing.T) {
 		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, &query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, &query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Nil(t, err)
 		for _, row := range resultRows {
 			assert.Equal(t, row.Conversion, getConversionUserCount(query.AttributionKey, result, row.AttributionKey))

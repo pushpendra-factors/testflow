@@ -1,6 +1,4 @@
-import React, {
-  memo, useCallback, useEffect, useRef
-} from 'react';
+import React, { memo, useCallback, useEffect, useRef } from 'react';
 import ReactDOMServer from 'react-dom/server';
 import Highcharts from 'highcharts';
 import get from 'lodash/get';
@@ -9,10 +7,9 @@ import { BAR_CHART_XAXIS_TICK_LENGTH } from '../../utils/constants';
 import LegendsCircle from '../../styles/components/LegendsCircle';
 import styles from './index.module.scss';
 import { getFormattedKpiValue } from '../../Views/CoreQuery/KPIAnalysis/kpiAnalysis.helpers';
+import { COLOR_CLASSNAMES } from '../../constants/charts.constants';
 
-function HorizontalBarChart({
-  series, categories, height, width, cardSize
-}) {
+function HorizontalBarChart({ series, categories, height, width, cardSize }) {
   const chartRef = useRef(null);
   const drawChart = useCallback(() => {
     Highcharts.chart(chartRef.current, {
@@ -88,9 +85,9 @@ function HorizontalBarChart({
                 >
                   {this.value.length > BAR_CHART_XAXIS_TICK_LENGTH[cardSize]
                     ? this.value.substr(
-                      0,
-                      BAR_CHART_XAXIS_TICK_LENGTH[cardSize]
-                    ) + '...'
+                        0,
+                        BAR_CHART_XAXIS_TICK_LENGTH[cardSize]
+                      ) + '...'
                     : this.value}
                 </Text>
               </>
@@ -130,7 +127,17 @@ function HorizontalBarChart({
           }
         }
       },
-      series
+      series: series.map((s) => {
+        return {
+          ...s,
+          data: s.data.map((d) => {
+            return {
+              ...d,
+              className: COLOR_CLASSNAMES[d.color]
+            };
+          })
+        };
+      })
     });
   }, [series, categories, height, width, cardSize]);
 

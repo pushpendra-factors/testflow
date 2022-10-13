@@ -58,10 +58,11 @@ const GlobalFilterSelect = ({
   const [dateOptionSelectOpen,setDateOptionSelectOpen]=useState(false);
 
   useEffect(() => {
-    if (filter) {
+    if (filter) { 
       const prop = filter.props;
       setPropState({ icon: prop[2], name: prop[0], type: prop[1] });
       setOperatorState(filter.operator);
+      seteventFilterInfo(filter?.extra)
       // Set values state
       setValues();
       setPropSelectOpen(false);
@@ -102,8 +103,8 @@ const GlobalFilterSelect = ({
         props: [propState.name, propState.type, propState.icon],
         operator: operatorState,
         values: valuesState,
-        extra: eventFilterInfo ? eventFilterInfo : null,
         ref: refValue,
+        extra: eventFilterInfo ? eventFilterInfo : null,
       });
     }
   };
