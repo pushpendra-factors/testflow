@@ -46,7 +46,7 @@ const SingleTouchPointChart = ({
               weight="bold"
               extraClass="text-sm mb-0"
             >
-              Conversions
+              {`${chartLegends[0]} (${attributionMethodsMapper[attribution_method]})`}
             </Text>
           </span>
           <span className="flex justify-between items-center mt-3">
@@ -111,7 +111,7 @@ const SingleTouchPointChart = ({
               weight="bold"
               extraClass="text-sm mb-0"
             >
-              Cost per conversion
+              {chartLegends[1]}
             </Text>
           </span>
           <span className="flex justify-between items-center mt-3">
