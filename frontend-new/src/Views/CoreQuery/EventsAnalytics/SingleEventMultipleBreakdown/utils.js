@@ -1,3 +1,4 @@
+/* eslint-disable no-plusplus */
 import React from 'react';
 import get from 'lodash/get';
 import has from 'lodash/has';
@@ -11,7 +12,11 @@ import {
   SortData
 } from '../../../../utils/dataFormatter';
 import { Number as NumFormat } from '../../../../components/factorsComponents';
-import { parseForDateTimeLabel } from '../SingleEventSingleBreakdown/utils';
+import {
+  parseForDateTimeLabel,
+  getBreakdownDisplayName,
+  getEventDisplayName
+} from '../eventsAnalytics.helpers';
 import { labelsObj } from '../../utils';
 import {
   DATE_FORMATS,
@@ -22,10 +27,6 @@ import HorizontalBarChartCell from './HorizontalBarChartCell';
 import tableStyles from '../../../../components/DataTable/index.module.scss';
 import NonClickableTableHeader from '../../../../components/NonClickableTableHeader';
 import { EVENT_COUNT_KEY } from '../eventsAnalytics.constants';
-import {
-  getBreakdownDisplayName,
-  getEventDisplayName
-} from '../eventsAnalytics.helpers';
 import { BREAKDOWN_TYPES } from '../../constants';
 
 export const defaultSortProp = ({ breakdown }) => {
@@ -59,6 +60,17 @@ export const getVisibleData = (aggregateData, sorter) => {
     MAX_ALLOWED_VISIBLE_PROPERTIES
   );
   return result;
+};
+
+export const getBreakDownGranularities = (breakDownSlice, breakdowns) => {
+  const grns = [];
+  const brks = [...breakdowns];
+  breakDownSlice.forEach((h) => {
+    const brkIndex = brks.findIndex((x) => h === (x.pr ? x.pr : x.property));
+    grns.push(brks[brkIndex]?.grn);
+    brks.splice(brkIndex, 1);
+  });
+  return grns;
 };
 
 export const formatData = (data) => {
@@ -107,17 +119,6 @@ export const formatData = (data) => {
   return result;
 };
 
-export const getBreakDownGranularities = (breakDownSlice, breakdowns) => {
-  const grns = [];
-  const brks = [...breakdowns];
-  breakDownSlice.forEach((h) => {
-    const brkIndex = brks.findIndex((x) => h === (x.pr ? x.pr : x.property));
-    grns.push(brks[brkIndex]?.grn);
-    brks.splice(brkIndex, 1);
-  });
-  return grns;
-};
-
 export const getTableColumns = (
   events,
   breakdown,
@@ -147,7 +148,7 @@ export const getTableColumns = (
       fixed: !index ? 'left' : '',
       width: 200,
       render: (d) => {
-        if (e.prop_type === 'numerical' && !isNaN(d)) {
+        if (e.prop_type === 'numerical' && !Number.isNaN(d)) {
           return <NumFormat number={d} />;
         }
         return d;
@@ -170,9 +171,7 @@ export const getTableColumns = (
     className: 'text-right',
     dataIndex: EVENT_COUNT_KEY,
     width: 200,
-    render: (d) => {
-      return <NumFormat number={d} />;
-    }
+    render: (d) => <NumFormat number={d} />
   };
 
   return [...breakdownColumns, countColumn];
@@ -226,7 +225,7 @@ export const getDateBasedColumns = (
       fixed: !index ? 'left' : '',
       width: 200,
       render: (d) => {
-        if (e.prop_type === 'numerical' && !isNaN(d)) {
+        if (e.prop_type === 'numerical' && !Number.isNaN(d)) {
           return <NumFormat number={d} />;
         }
         return d;
@@ -236,27 +235,23 @@ export const getDateBasedColumns = (
 
   const format = DATE_FORMATS[frequency] || DATE_FORMATS.date;
 
-  const dateColumns = categories.map((cat) => {
-    return {
-      title: getClickableTitleSorter(
-        addQforQuarter(frequency) + moment(cat).format(format),
-        {
-          key: addQforQuarter(frequency) + moment(cat).format(format),
-          type: 'numerical',
-          subtype: null
-        },
-        currentSorter,
-        handleSorting,
-        'right'
-      ),
-      className: 'text-right',
-      width: 150,
-      dataIndex: addQforQuarter(frequency) + moment(cat).format(format),
-      render: (d) => {
-        return <NumFormat number={d} />;
-      }
-    };
-  });
+  const dateColumns = categories.map((cat) => ({
+    title: getClickableTitleSorter(
+      addQforQuarter(frequency) + moment(cat).format(format),
+      {
+        key: addQforQuarter(frequency) + moment(cat).format(format),
+        type: 'numerical',
+        subtype: null
+      },
+      currentSorter,
+      handleSorting,
+      'right'
+    ),
+    className: 'text-right',
+    width: 150,
+    dataIndex: addQforQuarter(frequency) + moment(cat).format(format),
+    render: (d) => <NumFormat number={d} />
+  }));
   return [...breakdownColumns, ...dateColumns, OverallColumn];
 };
 
@@ -302,9 +297,7 @@ export const formatDataInStackedAreaFormat = (
     differentDates.add(row[dateIndex]);
   });
   differentDates = Array.from(differentDates);
-  const initializedDatesData = differentDates.map(() => {
-    return 0;
-  });
+  const initializedDatesData = differentDates.map(() => 0);
   const labelsMapper = {};
   const resultantData = aggregateData.map((d, index) => {
     labelsMapper[d.label] = index;
@@ -444,7 +437,8 @@ export const getDataInHorizontalBarChartFormat = (
       return [result[0]];
     }
     return result;
-  } else if (breakdown.length === 3) {
+  }
+  if (breakdown.length === 3) {
     const thirdBreakdownKey = `${breakdown[2].pr} - 2`;
     const result = [];
     uniqueFirstBreakdownValues.forEach((bValue) => {
@@ -480,6 +474,7 @@ export const getDataInHorizontalBarChartFormat = (
     }
     return result;
   }
+  return null;
 };
 
 export const getHorizontalBarChartColumns = (

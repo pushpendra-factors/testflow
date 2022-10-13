@@ -2,19 +2,16 @@ import {
   SortResults,
   getClickableTitleSorter,
 } from '../../../../utils/dataFormatter';
-import { parseForDateTimeLabel } from '../SingleEventSingleBreakdown/utils';
+import { parseForDateTimeLabel } from '../eventsAnalytics.helpers';
 import { getBreakDownGranularities } from '../SingleEventMultipleBreakdown/utils';
-import { MAX_ALLOWED_VISIBLE_PROPERTIES } from '../../../../utils/constants';
-import { DISPLAY_PROP } from '../../../../utils/constants';
+import { MAX_ALLOWED_VISIBLE_PROPERTIES , DISPLAY_PROP } from '../../../../utils/constants';
 
-export const getDefaultSortProp = () => {
-  return {
+export const getDefaultSortProp = () => ({
     key: 'User Count',
     type: 'numerical',
     subtype: null,
     order: 'descend',
-  };
-};
+  });
 
 export const getVisibleData = (aggregateData, sorter) => {
   const result = SortResults(aggregateData, sorter).slice(

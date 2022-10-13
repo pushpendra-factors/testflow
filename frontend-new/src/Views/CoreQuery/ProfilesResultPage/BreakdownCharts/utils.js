@@ -16,9 +16,8 @@ import {
   getBreakdownDataMapperWithUniqueValues,
   renderHorizontalBarChart
 } from '../../EventsAnalytics/SingleEventMultipleBreakdown/utils';
-import { getBreakdownDisplayName } from '../../EventsAnalytics/eventsAnalytics.helpers';
+import { getBreakdownDisplayName , parseForDateTimeLabel } from '../../EventsAnalytics/eventsAnalytics.helpers';
 import tableStyles from '../../../../components/DataTable/index.module.scss';
-import { parseForDateTimeLabel } from '../../EventsAnalytics/SingleEventSingleBreakdown/utils';
 import NonClickableTableHeader from '../../../../components/NonClickableTableHeader';
 import { BREAKDOWN_TYPES } from '../../constants';
 
@@ -63,7 +62,7 @@ export const getBreakdownIndices = (headers, breakdown) => {
 
 export const getDateBreakdownIndices = (data, breakdown) => {
   const result = breakdown.map((elem) => {
-    const str = elem.name + '_' + elem.property;
+    const str = `${elem.name  }_${  elem.property}`;
     const strIndex = data.result_group[0].headers.findIndex(
       (elem) => elem === str
     );
@@ -143,9 +142,7 @@ export const formatData = (data, breakdown, queries, currentEventIndex) => {
   }
 };
 
-export const getProfileQueryDisplayName = ({ query, groupAnalysis }) => {
-  return get(ReverseProfileMapper, `${query}.${groupAnalysis}`, query);
-};
+export const getProfileQueryDisplayName = ({ query, groupAnalysis }) => get(ReverseProfileMapper, `${query}.${groupAnalysis}`, query);
 
 export const getTableColumns = (
   queries,
@@ -194,9 +191,7 @@ export const getTableColumns = (
     className: 'text-right',
     dataIndex: 'value',
     width: 150,
-    render: (d) => {
-      return <NumFormat number={d} />;
-    }
+    render: (d) => <NumFormat number={d} />
   };
 
   return [...breakdownColumns, eventCol];
@@ -276,7 +271,7 @@ export const getDataInHorizontalBarChartFormat = (
       return [result[0]];
     }
     return result;
-  } else if (breakdown.length === 3) {
+  } if (breakdown.length === 3) {
     const thirdBreakdownKey = `${breakdown[2].property} - 2`;
     const result = [];
     uniqueFirstBreakdownValues.forEach((bValue) => {

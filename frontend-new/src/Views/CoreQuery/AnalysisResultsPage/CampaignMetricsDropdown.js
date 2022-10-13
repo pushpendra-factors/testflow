@@ -7,9 +7,13 @@ function CampaignMetricsDropdown({ metrics, currValue, onChange }) {
     <div className="flex items-center col-gap-2">
       <div>Show</div>
       <div>
-        <Select onChange={onChange} className={styles.singleSelectStyles} value={currValue}>
+        <Select
+          onChange={onChange}
+          className={styles.singleSelectStyles}
+          value={currValue}
+        >
           {metrics.map((d, index) => (
-            <Select.Option value={index} key={index}>
+            <Select.Option value={index} key={d}>
               {d}
             </Select.Option>
           ))}

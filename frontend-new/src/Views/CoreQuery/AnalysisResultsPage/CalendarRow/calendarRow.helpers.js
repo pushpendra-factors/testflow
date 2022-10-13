@@ -57,20 +57,16 @@ export const getCompareRange = ({
         selectedOption: selectedValue
       };
     }
-    if (
-      selectedValue === COMPARISON_DATE_SELECTABLE_OPTIONS.PREVIOUS_365_DAYS
-    ) {
-      return {
-        ...durationObj,
-        startDate: parseInt(
-          MomentTz(durationObj.from).subtract(365, 'days').format('x')
-        ),
-        endDate: parseInt(
-          MomentTz(durationObj.to).subtract(365, 'days').format('x')
-        ),
-        selectedOption: selectedValue
-      };
-    }
+    return {
+      ...durationObj,
+      startDate: parseInt(
+        MomentTz(durationObj.from).subtract(365, 'days').format('x')
+      ),
+      endDate: parseInt(
+        MomentTz(durationObj.to).subtract(365, 'days').format('x')
+      ),
+      selectedOption: selectedValue
+    };
   }
 
   const fr = MomentTz(durationObj.from).startOf('day').utc().unix();
@@ -88,12 +84,10 @@ export const getCompareRange = ({
       selectedOption: 'custom'
     };
   }
-  if (customRangeType === COMPARISON_DATE_RANGE_TYPE.END_DATE) {
-    return {
-      ...durationObj,
-      startDate: MomentTz(selectedValue).subtract(daysDiff, 'days'),
-      endDate: selectedValue,
-      selectedOption: 'custom'
-    };
-  }
+  return {
+    ...durationObj,
+    startDate: MomentTz(selectedValue).subtract(daysDiff, 'days'),
+    endDate: selectedValue,
+    selectedOption: 'custom'
+  };
 };

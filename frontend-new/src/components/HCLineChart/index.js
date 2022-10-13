@@ -1,17 +1,17 @@
+/* eslint-disable react/no-this-in-sfc */
 import React, { useCallback, useEffect, memo } from 'react';
 import cx from 'classnames';
 import ReactDOMServer from 'react-dom/server';
 import moment from 'moment';
 import Highcharts from 'highcharts';
 
+import { get, has } from 'lodash';
 import { Text, Number as NumFormat } from '../factorsComponents';
-import { high_charts_default_spacing } from '../../utils/constants';
-import LegendsCircle from '../../styles/components/LegendsCircle';
+import { high_charts_default_spacing as highChartsDefaultSpacing } from '../../utils/constants';
 import TopLegends from '../GroupedBarChart/TopLegends';
 import { addQforQuarter, generateColors } from '../../utils/dataFormatter';
 import { getDateFormatForTimeSeriesChart } from '../../utils/chart.helpers';
 import styles from './styles.module.scss';
-import { get, has } from 'lodash';
 import { getFormattedKpiValue } from '../../Views/CoreQuery/KPIAnalysis/kpiAnalysis.helpers';
 
 function LineChart({
@@ -21,19 +21,20 @@ function LineChart({
   height = null,
   legendsPosition = 'bottom',
   cardSize = 1,
-  spacing = high_charts_default_spacing,
+  spacing = highChartsDefaultSpacing,
   chartId = 'lineChartContainer',
   showAllLegends = false,
   comparisonApplied = false,
   compareCategories
 }) {
   const dateFormat = getDateFormatForTimeSeriesChart({ frequency });
-  const metricTypes = data.reduce((result, d) => {
-    return {
+  const metricTypes = data.reduce(
+    (result, d) => ({
       ...result,
       [d.name]: get(d, 'metricType', null)
-    };
-  }, {});
+    }),
+    {}
+  );
 
   const colors = generateColors(
     data.filter((d) => !has(d, 'compareIndex')).length
@@ -43,7 +44,7 @@ function LineChart({
     Highcharts.chart(chartId, {
       chart: {
         height,
-        spacing: cardSize !== 1 ? high_charts_default_spacing : spacing,
+        spacing: cardSize !== 1 ? highChartsDefaultSpacing : spacing,
         style: {
           fontFamily: "'Work Sans', sans-serif"
         }
@@ -216,7 +217,7 @@ function LineChart({
             .map((d) => d.name)}
         />
       ) : null}
-      <div className={styles.areaChart} id={chartId}></div>
+      <div className={styles.areaChart} id={chartId} />
       {legendsPosition === 'bottom' ? (
         <TopLegends
           cardSize={cardSize}

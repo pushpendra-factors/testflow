@@ -7,16 +7,26 @@ import React, {
 } from 'react';
 import get from 'lodash/get';
 import { bindActionCreators } from 'redux';
-import { useParams } from 'react-router';
+import { useParams, useHistory } from 'react-router-dom';
 import { connect, useSelector, useDispatch } from 'react-redux';
 import { ErrorBoundary } from 'react-error-boundary';
 import { Drawer, Button, Modal, Row, Col, Spin } from 'antd';
 import MomentTz from 'Components/MomentTz';
 import factorsai from 'factorsai';
 
-import { EMPTY_ARRAY } from 'Utils/global';
+import { EMPTY_ARRAY, EMPTY_OBJECT } from 'Utils/global';
 import KPIComposer from 'Components/KPIComposer';
 import PageSuspenseLoader from 'Components/SuspenseLoaders/PageSuspenseLoader';
+import moment from 'moment';
+import {
+  fetchDemoProject,
+  getHubspotContact,
+  fetchProjectSettingsV1,
+  fetchProjectSettings,
+  fetchMarketoIntegration,
+  fetchBingAdsIntegration
+} from 'Reducers/global';
+import userflow from 'userflow.js';
 import QueryComposer from '../../components/QueryComposer';
 import AttrQueryComposer from '../../components/AttrQueryComposer';
 import CampQueryComposer from '../../components/CampQueryComposer';
@@ -48,7 +58,6 @@ import {
 } from './utils';
 import {
   getEventsData,
-  getEventsDataFromId,
   getFunnelData,
   getAttributionsData,
   getCampaignsData,
@@ -110,20 +119,7 @@ import {
   getSavedPivotConfig
 } from './coreQuery.helpers';
 import { getChartChangedKey } from './AnalysisResultsPage/analysisResultsPage.helpers';
-import { EMPTY_OBJECT } from '../../utils/global';
-import moment from 'moment';
-import {
-  fetchDemoProject,
-  getHubspotContact,
-  fetchProjectSettingsV1,
-  fetchProjectSettings,
-  fetchMarketoIntegration,
-  fetchBingAdsIntegration
-} from 'Reducers/global';
-import { meetLink } from '../../utils/hubspot';
 import NewProject from '../Settings/SetupAssist/Modals/NewProject';
-import userflow from 'userflow.js';
-import { useHistory } from 'react-router-dom';
 import AnalyseBeforeIntegration from './AnalyseBeforeIntegration';
 
 function CoreQuery({
@@ -176,7 +172,6 @@ function CoreQuery({
   const [demoProjectId, setDemoProjectId] = useState(null);
   const [showProjectModal, setShowProjectModal] = useState(false);
   const { projects } = useSelector((state) => state.global);
-  const currentAgent = useSelector((state) => state.agent.agent_details);
 
   const history = useHistory();
 
@@ -236,9 +231,7 @@ function CoreQuery({
 
   const [queryOpen, setQueryOpen] = useState(false);
 
-  const [dataResp, setDataResp] = useState(null);
-
-  const [dateFromTo, setDateFromTo] = useState({from: '', to: ''});
+  const [dateFromTo, setDateFromTo] = useState({ from: '', to: '' });
 
   const { show_criteria: result_criteria, performance_criteria: user_type } =
     useSelector((state) => state.analyticsQuery);
@@ -302,28 +295,23 @@ function CoreQuery({
     integrationV1?.int_slack ||
     integration?.lead_squared_config !== null;
 
-  const getQueryFromHashId = () => {
-    return queriesState.data.find(function (quer) {
-      return quer.id_text === query_id;
-    });
-  };
+  const getQueryFromHashId = () =>
+    queriesState.data.find((quer) => quer.id_text === query_id);
 
-  const getQueryOptionsFromEquivalentQuery = (currOpts, equivalentQuery) => {
-    return {
-      ...currOpts,
-      date_range: {
-        from: MomentTz(equivalentQuery.dateRange.from),
-        to: MomentTz(equivalentQuery.dateRange.to),
-        frequency: equivalentQuery.dateRange.frequency
-      },
-      session_analytics_seq: equivalentQuery.session_analytics_seq,
-      groupBy: {
-        global: [...equivalentQuery.breakdown.global],
-        event: [...equivalentQuery.breakdown.event]
-      },
-      globalFilters: equivalentQuery.globalFilters
-    };
-  };
+  const getQueryOptionsFromEquivalentQuery = (currOpts, equivalentQuery) => ({
+    ...currOpts,
+    date_range: {
+      from: MomentTz(equivalentQuery.dateRange.from),
+      to: MomentTz(equivalentQuery.dateRange.to),
+      frequency: equivalentQuery.dateRange.frequency
+    },
+    session_analytics_seq: equivalentQuery.session_analytics_seq,
+    groupBy: {
+      global: [...equivalentQuery.breakdown.global],
+      event: [...equivalentQuery.breakdown.event]
+    },
+    globalFilters: equivalentQuery.globalFilters
+  });
 
   const runEventsQueryFromUrl = () => {
     const queryToAdd = getQueryFromHashId();
@@ -331,9 +319,6 @@ function CoreQuery({
       // updateResultState({ ...initialState, loading: true });
       getEventsData(activeProject.id, null, null, false, query_id).then(
         (res) => {
-          const queryLabels = queryToAdd?.query?.query_group[0].ewp.map((ev) =>
-            ev.an ? ev.an : ev.na
-          );
           const equivalentQuery = getStateQueryFromRequestQuery(
             queryToAdd?.query?.query_group[0]
           );
@@ -345,7 +330,7 @@ function CoreQuery({
             type: SET_COMPARISON_SUPPORTED,
             payload: isComparisonEnabled(
               queryType,
-              queriesA,
+              equivalentQuery.events,
               equivalentQuery.breakdown,
               models
             )
@@ -506,42 +491,40 @@ function CoreQuery({
         setNavigatedFromDashboard(false);
         updateSavedQuerySettings(EMPTY_OBJECT);
         setAttributionMetrics([...ATTRIBUTION_METRICS]);
-      } else {
-        if (queryType !== QUERY_TYPE_CAMPAIGN) {
-          const selectedReport = savedQueries.find(
-            (elem) => elem.id === isQuerySaved.id
-          );
+      } else if (queryType !== QUERY_TYPE_CAMPAIGN) {
+        const selectedReport = savedQueries.find(
+          (elem) => elem.id === isQuerySaved.id
+        );
 
-          // update pivot config
-          const pivotConfig = getSavedPivotConfig({
+        // update pivot config
+        const pivotConfig = getSavedPivotConfig({
+          queryType,
+          selectedReport
+        });
+
+        updatePivotConfig(pivotConfig);
+
+        // update the chart type to the saved chart type
+        const savedChartType = get(
+          selectedReport,
+          'settings.chart',
+          apiChartAnnotations[CHART_TYPE_TABLE]
+        );
+
+        // even though new queries wont have saved chart type as table but old queries can have saved chart type as table!
+        if (savedChartType !== apiChartAnnotations[CHART_TYPE_TABLE]) {
+          const changedKey = getChartChangedKey({
             queryType,
-            selectedReport
+            breakdown: [...groupBy.event, ...groupBy.global],
+            attributionModels: models
           });
-
-          updatePivotConfig(pivotConfig);
-
-          // update the chart type to the saved chart type
-          const savedChartType = get(
-            selectedReport,
-            'settings.chart',
-            apiChartAnnotations[CHART_TYPE_TABLE]
-          );
-
-          // even though new queries wont have saved chart type as table but old queries can have saved chart type as table!
-          if (savedChartType !== apiChartAnnotations[CHART_TYPE_TABLE]) {
-            const changedKey = getChartChangedKey({
-              queryType,
-              breakdown: [...groupBy.event, ...groupBy.global],
-              attributionModels: models
-            });
-            updateChartTypes({
-              ...DefaultChartTypes,
-              [queryType]: {
-                ...DefaultChartTypes[queryType],
-                [changedKey]: presentationObj[savedChartType]
-              }
-            });
-          }
+          updateChartTypes({
+            ...DefaultChartTypes,
+            [queryType]: {
+              ...DefaultChartTypes[queryType],
+              [changedKey]: presentationObj[savedChartType]
+            }
+          });
         }
       }
       localDispatch({
@@ -1208,12 +1191,10 @@ function CoreQuery({
           ...queryOptions.date_range,
           frequency
         };
-        setQueryOptions((currState) => {
-          return {
-            ...currState,
-            date_range: appliedDateRange
-          };
-        });
+        setQueryOptions((currState) => ({
+          ...currState,
+          date_range: appliedDateRange
+        }));
         if (queryType === QUERY_TYPE_EVENT) {
           runQuery(querySaved, appliedDateRange, true);
         }
@@ -1283,15 +1264,13 @@ function CoreQuery({
       };
 
       if (!isCompareDate) {
-        setQueryOptions((currState) => {
-          return {
-            ...currState,
-            date_range: {
-              ...currState.date_range,
-              ...payload
-            }
-          };
-        });
+        setQueryOptions((currState) => ({
+          ...currState,
+          date_range: {
+            ...currState.date_range,
+            ...payload
+          }
+        }));
       }
 
       if (isCompareDate) {
@@ -1398,68 +1377,75 @@ function CoreQuery({
     runProfileQuery
   ]);
 
-  useEffect(() => {
-    return () => {
+  useEffect(
+    () => () => {
       dispatch({ type: SHOW_ANALYTICS_RESULT, payload: false });
-    };
-  }, [dispatch]);
+    },
+    [dispatch]
+  );
 
-  const queryChange = (newEvent, index, changeType = 'add', flag = null) => {
-    const queryupdated = [...queriesA];
-    if (queryupdated[index]) {
-      if (changeType === 'add') {
-        if (JSON.stringify(queryupdated[index]) !== JSON.stringify(newEvent)) {
-          deleteGroupByForEvent(newEvent, index);
-        }
-        queryupdated[index] = newEvent;
-      } else {
-        if (changeType === 'filters_updated') {
+  const queryChange = useCallback(
+    (newEvent, index, changeType = 'add', flag = null) => {
+      const queryupdated = [...queriesA];
+      if (queryupdated[index]) {
+        if (changeType === 'add') {
+          if (
+            JSON.stringify(queryupdated[index]) !== JSON.stringify(newEvent)
+          ) {
+            deleteGroupByForEvent(newEvent, index);
+          }
+          queryupdated[index] = newEvent;
+        } else if (changeType === 'filters_updated') {
           // dont remove group by if filter is changed
           queryupdated[index] = newEvent;
         } else {
           deleteGroupByForEvent(newEvent, index);
           queryupdated.splice(index, 1);
         }
-      }
-    } else {
-      if (flag) {
-        Object.assign(newEvent, { pageViewVal: flag });
-      }
-      queryupdated.push(newEvent);
-    }
-    setQueries(queryupdated);
-  };
-
-  const profileQueryChange = (newEvent, index, changeType = 'add') => {
-    const queryupdated = [...profileQueries];
-    if (queryupdated[index]) {
-      if (changeType === 'add') {
-        if (JSON.stringify(queryupdated[index]) !== JSON.stringify(newEvent)) {
-          deleteGroupByForEvent(newEvent, index);
-        }
-        queryupdated[index] = newEvent;
       } else {
-        if (changeType === 'filters_updated') {
+        if (flag) {
+          Object.assign(newEvent, { pageViewVal: flag });
+        }
+        queryupdated.push(newEvent);
+      }
+      setQueries(queryupdated);
+    },
+    [queriesA]
+  );
+
+  const profileQueryChange = useCallback(
+    (newEvent, index, changeType = 'add') => {
+      const queryupdated = [...profileQueries];
+      if (queryupdated[index]) {
+        if (changeType === 'add') {
+          if (
+            JSON.stringify(queryupdated[index]) !== JSON.stringify(newEvent)
+          ) {
+            deleteGroupByForEvent(newEvent, index);
+          }
+          queryupdated[index] = newEvent;
+        } else if (changeType === 'filters_updated') {
           // dont remove group by if filter is changed
           queryupdated[index] = newEvent;
         } else {
           deleteGroupByForEvent(newEvent, index);
           queryupdated.splice(index, 1);
         }
+      } else {
+        queryupdated.push(newEvent);
       }
-    } else {
-      queryupdated.push(newEvent);
-    }
-    setProfileQueries(queryupdated);
-  };
+      setProfileQueries(queryupdated);
+    },
+    [profileQueries]
+  );
 
   const closeDrawer = () => {
     setDrawerVisible(false);
   };
 
-  const setExtraOptions = (options) => {
+  const setExtraOptions = useCallback((options) => {
     setQueryOptions(options);
-  };
+  }, []);
 
   const handleRunQuery = useCallback(() => {
     switch (queryType) {
@@ -1496,57 +1482,49 @@ function CoreQuery({
   const title = () => {
     const IconAndText = IconAndTextSwitchQueryType(queryType);
     return (
-      <div className={'flex justify-between items-center'}>
-        <div className={'flex items-center'}>
-          <SVG name={IconAndText.icon} size="24px"></SVG>
-          <Text
-            type={'title'}
-            level={4}
-            weight={'bold'}
-            extraClass={'ml-2 m-0'}
-          >
+      <div className="flex justify-between items-center">
+        <div className="flex items-center">
+          <SVG name={IconAndText.icon} size="24px" />
+          <Text type="title" level={4} weight="bold" extraClass="ml-2 m-0">
             {IconAndText.text}
           </Text>
         </div>
-        <div className={'flex justify-end items-center'}>
-          <Button size={'large'} type="text" onClick={() => closeDrawer()}>
-            <SVG name="times"></SVG>
+        <div className="flex justify-end items-center">
+          <Button size="large" type="text" onClick={() => closeDrawer()}>
+            <SVG name="times" />
           </Button>
         </div>
       </div>
     );
   };
 
-  const campaignsArrayMapper = useMemo(() => {
-    return campaignState.select_metrics.map((metric, index) => {
-      return {
+  const campaignsArrayMapper = useMemo(
+    () =>
+      campaignState.select_metrics.map((metric, index) => ({
         eventName: metric,
         index,
         mapper: `event${index + 1}`
-      };
-    });
-  }, [campaignState.select_metrics]);
+      })),
+    [campaignState.select_metrics]
+  );
 
-  const arrayMapper = useMemo(() => {
-    return appliedQueries.map((q, index) => {
-      return {
+  const arrayMapper = useMemo(
+    () =>
+      appliedQueries.map((q, index) => ({
         eventName: q,
         index,
         mapper: `event${index + 1}`,
         displayName: eventNames[q] ? eventNames[q] : q
-      };
-    });
-  }, [appliedQueries, eventNames]);
+      })),
+    [appliedQueries, eventNames]
+  );
 
-  const checkIfnewComposer = () => {
-    return (
-      queryType === QUERY_TYPE_FUNNEL ||
-      queryType === QUERY_TYPE_EVENT ||
-      queryType === QUERY_TYPE_ATTRIBUTION ||
-      queryType === QUERY_TYPE_KPI ||
-      queryType === QUERY_TYPE_PROFILE
-    );
-  };
+  const checkIfnewComposer = () =>
+    queryType === QUERY_TYPE_FUNNEL ||
+    queryType === QUERY_TYPE_EVENT ||
+    queryType === QUERY_TYPE_ATTRIBUTION ||
+    queryType === QUERY_TYPE_KPI ||
+    queryType === QUERY_TYPE_PROFILE;
 
   const renderQueryComposer = () => {
     if (queryType === QUERY_TYPE_FUNNEL || queryType === QUERY_TYPE_EVENT) {
@@ -1593,11 +1571,7 @@ function CoreQuery({
       );
     }
     if (queryType === QUERY_TYPE_CAMPAIGN) {
-      return (
-        <CampQueryComposer
-          handleRunQuery={runCampaignsQuery}
-        ></CampQueryComposer>
-      );
+      return <CampQueryComposer handleRunQuery={runCampaignsQuery} />;
     }
 
     if (queryType === QUERY_TYPE_PROFILE) {
@@ -1610,7 +1584,7 @@ function CoreQuery({
           queryType={queryType}
           queryOptions={queryOptions}
           setQueryOptions={setExtraOptions}
-        ></ProfileComposer>
+        />
       );
     }
   };
@@ -1651,59 +1625,55 @@ function CoreQuery({
     setActiveTab(key);
   }
 
-  const renderCreateQFlow = () => {
-    return (
-      <CoreQueryContext.Provider
-        value={{
-          coreQueryState,
-          attributionMetrics,
-          setAttributionMetrics,
-          setNavigatedFromDashboard,
-          resetComparisonData,
-          handleCompareWithClick
-        }}
+  const renderCreateQFlow = () => (
+    <CoreQueryContext.Provider
+      value={{
+        coreQueryState,
+        attributionMetrics,
+        setAttributionMetrics,
+        setNavigatedFromDashboard,
+        resetComparisonData,
+        handleCompareWithClick
+      }}
+    >
+      <Modal
+        title={
+          <AnalysisHeader
+            requestQuery={requestQuery}
+            onBreadCrumbClick={handleBreadCrumbClick}
+            queryType={queryType}
+            queryTitle={querySaved ? querySaved.name : null}
+            setQuerySaved={setQuerySaved}
+            breakdownType={breakdownType}
+            changeTab={changeTab}
+            activeTab={activeTab}
+            savedQueryId={querySaved ? querySaved.id : null}
+          />
+        }
+        visible={drawerVisible}
+        footer={null}
+        centered={false}
+        mask={false}
+        closable={false}
+        className="fa-modal--full-width"
       >
-        <Modal
-          title={
-            <AnalysisHeader
-              requestQuery={requestQuery}
-              onBreadCrumbClick={handleBreadCrumbClick}
-              queryType={queryType}
-              queryTitle={querySaved ? querySaved.name : null}
-              setQuerySaved={setQuerySaved}
-              breakdownType={breakdownType}
-              changeTab={changeTab}
-              activeTab={activeTab}
-              savedQueryId={querySaved ? querySaved.id : null}
-            />
-          }
-          visible={drawerVisible}
-          footer={null}
-          centered={false}
-          mask={false}
-          closable={false}
-          className={'fa-modal--full-width'}
-        >
-          <div className="px-20">
-            <ErrorBoundary
-              fallback={
-                <FaErrorComp
-                  size={'medium'}
-                  title={'Analyse Results Error'}
-                  subtitle={
-                    'We are facing trouble loading Analyse results. Drop us a message on the in-app chat.'
-                  }
-                />
-              }
-              onError={FaErrorLog}
-            >
-              {Number(activeTab) === 1 && <>{renderQueryComposerNew()}</>}
-            </ErrorBoundary>
-          </div>
-        </Modal>
-      </CoreQueryContext.Provider>
-    );
-  };
+        <div className="px-20">
+          <ErrorBoundary
+            fallback={
+              <FaErrorComp
+                size="medium"
+                title="Analyse Results Error"
+                subtitle="We are facing trouble loading Analyse results. Drop us a message on the in-app chat."
+              />
+            }
+            onError={FaErrorLog}
+          >
+            {Number(activeTab) === 1 && <>{renderQueryComposerNew()}</>}
+          </ErrorBoundary>
+        </div>
+      </Modal>
+    </CoreQueryContext.Provider>
+  );
 
   const closeResultPage = (flag = false) => {
     setQuerySaved(false);
@@ -1716,9 +1686,9 @@ function CoreQuery({
 
   const findKPIitem = (groupName) => {
     const KPIlist = KPI_config || [];
-    const selGroup = KPIlist.find((item) => {
-      return item.display_category === groupName;
-    });
+    const selGroup = KPIlist.find(
+      (item) => item.display_category === groupName
+    );
 
     const DDvalues = selGroup?.properties?.map((item) => {
       if (item == null) return;
@@ -1733,10 +1703,6 @@ function CoreQuery({
       return [ddName, item.name, item.data_type, ddtype];
     });
     return DDvalues;
-  };
-
-  const closePage = () => {
-    history.goBack();
   };
 
   const handleCloseDashboardQuery = () => {
@@ -1754,24 +1720,72 @@ function CoreQuery({
     handleBreadCrumbClick();
   };
 
+  const contextValue = useMemo(
+    () => ({
+      coreQueryState,
+      attributionMetrics,
+      queriesA,
+      profileQueries,
+      queryOptions,
+      selectedMainCategory,
+      activeKey,
+      showResult,
+      KPIConfigProps,
+      setAttributionMetrics,
+      setNavigatedFromDashboard,
+      resetComparisonData,
+      handleCompareWithClick,
+      updatePivotConfig,
+      setSelectedMainCategory,
+      runQuery,
+      queryChange,
+      profileQueryChange,
+      setExtraOptions,
+      runFunnelQuery,
+      runKPIQuery,
+      runProfileQuery,
+      setQueries,
+      setProfileQueries,
+      runAttributionQuery
+    }),
+    [
+      coreQueryState,
+      attributionMetrics,
+      queriesA,
+      profileQueries,
+      queryOptions,
+      selectedMainCategory,
+      activeKey,
+      showResult,
+      KPIConfigProps,
+      setAttributionMetrics,
+      resetComparisonData,
+      handleCompareWithClick,
+      updatePivotConfig,
+      runQuery,
+      queryChange,
+      profileQueryChange,
+      setExtraOptions,
+      runFunnelQuery,
+      runKPIQuery,
+      runProfileQuery,
+      runAttributionQuery
+    ]
+  );
+
   if (loading) {
     return (
       <div className="flex justify-center flex-col items-center w-full">
         <div className="w-full flex center">
-          <div
-            id="app-header"
-            className="bg-white z-50 flex-col  px-8 w-full"
-          >
-            <div
-              className={'items-center flex justify-between w-full pt-3 pb-3'}
-            >
+          <div id="app-header" className="bg-white z-50 flex-col  px-8 w-full">
+            <div className="items-center flex justify-between w-full pt-3 pb-3">
               <div
                 role="button"
                 tabIndex={0}
                 className="flex items-center cursor-pointer"
               >
                 <Button
-                  size={'large'}
+                  size="large"
                   type="text"
                   onClick={() => {
                     history.push('/');
@@ -1779,11 +1793,11 @@ function CoreQuery({
                   icon={<SVG size={32} name="Brand" />}
                 />
                 <Text
-                  type={'title'}
+                  type="title"
                   level={5}
-                  weight={`bold`}
-                  extraClass={'m-0 mt-1'}
-                  lineHeight={'small'}
+                  weight="bold"
+                  extraClass="m-0 mt-1"
+                  lineHeight="small"
                 >
                   {querySaved
                     ? `Reports / ${queryType} / ${querySaved.name}`
@@ -1794,9 +1808,9 @@ function CoreQuery({
 
               <div className="flex items-center gap-x-2">
                 <Button
-                  size={'large'}
+                  size="large"
                   type="text"
-                  icon={<SVG size={20} name={'close'} />}
+                  icon={<SVG size={20} name="close" />}
                   onClick={
                     coreQueryState.navigatedFromDashboard
                       ? handleCloseDashboardQuery
@@ -1815,8 +1829,9 @@ function CoreQuery({
                 onClick={(e) => !queryOpen && setQueryOpen(true)}
               >
                 {renderQueryComposer()}
-                <Button size={'large'} className={`query_card_expand`}>
-                  <SVG name={'expand'} size={20}></SVG>Expand
+                <Button size="large" className="query_card_expand">
+                  <SVG name="expand" size={20} />
+                  Expand
                 </Button>
               </div>
             ) : null}
@@ -1831,214 +1846,170 @@ function CoreQuery({
 
   if (isIntegrationEnabled || activeProject.id === demoProjectId) {
     return (
-      <>
-        <ErrorBoundary
-          fallback={
-            <FaErrorComp
-              size={'medium'}
-              title={'Analyse Error'}
-              subtitle={
-                'We are facing trouble loading Analyse. Drop us a message on the in-app chat.'
-              }
-            />
-          }
-          onError={FaErrorLog}
+      <ErrorBoundary
+        fallback={
+          <FaErrorComp
+            size="medium"
+            title="Analyse Error"
+            subtitle="We are facing trouble loading Analyse. Drop us a message on the in-app chat."
+          />
+        }
+        onError={FaErrorLog}
+      >
+        <Drawer
+          title={title()}
+          placement="left"
+          closable={false}
+          visible={drawerVisible && !checkIfnewComposer()}
+          onClose={closeDrawer}
+          getContainer={false}
+          width="650px"
+          className="fa-drawer"
         >
-          {
-            <Drawer
-              title={title()}
-              placement="left"
-              closable={false}
-              visible={drawerVisible && !checkIfnewComposer()}
-              onClose={closeDrawer}
-              getContainer={false}
-              width={'650px'}
-              className={'fa-drawer'}
-            >
-              <ErrorBoundary
-                fallback={
-                  <FaErrorComp subtitle={'Facing issues with Query Builder'} />
-                }
-                onError={FaErrorLog}
-              >
-                {renderQueryComposer()}
-              </ErrorBoundary>
-            </Drawer>
-          }
+          <ErrorBoundary
+            fallback={
+              <FaErrorComp subtitle="Facing issues with Query Builder" />
+            }
+            onError={FaErrorLog}
+          >
+            {renderQueryComposer()}
+          </ErrorBoundary>
+        </Drawer>
 
-          {!showResult &&
-          !resultState.data &&
-          !resultState.loading &&
-          activeProject.id === demoProjectId ? (
-            <div className={'rounded-lg border-2 h-20 mt-20 -mb-20 mx-20'}>
-              <Row justify={'space-between'} className={'m-0 p-3'}>
-                <Col span={projects.length === 1 ? 12 : 18}>
-                  <img
-                    src="assets/icons/welcome.svg"
-                    style={{ float: 'left', marginRight: '20px' }}
-                  />
-                  <Text
-                    type={'title'}
-                    level={6}
-                    weight={'bold'}
-                    extraClass={'m-0'}
-                  >
-                    Welcome! You just entered a Factors demo project
+        {!showResult &&
+        !resultState.data &&
+        !resultState.loading &&
+        activeProject.id === demoProjectId ? (
+          <div className="rounded-lg border-2 h-20 mt-20 -mb-20 mx-20">
+            <Row justify="space-between" className="m-0 p-3">
+              <Col span={projects.length === 1 ? 12 : 18}>
+                <img
+                  alt="Welcome"
+                  src="assets/icons/welcome.svg"
+                  style={{ float: 'left', marginRight: '20px' }}
+                />
+                <Text type="title" level={6} weight="bold" extraClass="m-0">
+                  Welcome! You just entered a Factors demo project
+                </Text>
+                {projects.length === 1 ? (
+                  <Text type="title" level={7} extraClass="m-0">
+                    These reports have been built with a sample dataset. Use
+                    this to start exploring!
                   </Text>
-                  {projects.length === 1 ? (
-                    <Text type={'title'} level={7} extraClass={'m-0'}>
-                      These reports have been built with a sample dataset. Use
-                      this to start exploring!
-                    </Text>
-                  ) : (
-                    <Text type={'title'} level={7} extraClass={'m-0'}>
-                      To jump back into your Factors project, click on your
-                      account card on the{' '}
-                      <span className={'font-bold'}>top right</span> of the
-                      screen.
-                    </Text>
-                  )}
-                </Col>
-                <Col className={'mr-2 mt-2'}>
-                  {projects.length === 1 ? (
-                    <Button
-                      type={'default'}
-                      style={{
-                        background: 'white',
-                        border: '1px solid #E7E9ED',
-                        height: '40px'
-                      }}
-                      className={'m-0 mr-2'}
-                      onClick={() => setShowProjectModal(true)}
-                    >
-                      Set up my own Factors project
-                    </Button>
-                  ) : null}
-
+                ) : (
+                  <Text type="title" level={7} extraClass="m-0">
+                    To jump back into your Factors project, click on your
+                    account card on the{' '}
+                    <span className="font-bold">top right</span> of the screen.
+                  </Text>
+                )}
+              </Col>
+              <Col className="mr-2 mt-2">
+                {projects.length === 1 ? (
                   <Button
-                    type={'link'}
+                    type="default"
                     style={{
                       background: 'white',
-                      // border: '1px solid #E7E9ED',
+                      border: '1px solid #E7E9ED',
                       height: '40px'
                     }}
-                    className={'m-0 mr-2'}
-                    onClick={() => handleTour()}
+                    className="m-0 mr-2"
+                    onClick={() => setShowProjectModal(true)}
                   >
-                    Take the tour{' '}
-                    <SVG
-                      name={'Arrowright'}
-                      size={16}
-                      extraClass={'ml-1'}
-                      color={'blue'}
-                    />
+                    Set up my own Factors project
                   </Button>
-                </Col>
-              </Row>
-            </div>
-          ) : null}
+                ) : null}
 
-          {!showResult && resultState.loading ? <PageSuspenseLoader /> : null}
+                <Button
+                  type="link"
+                  style={{
+                    background: 'white',
+                    // border: '1px solid #E7E9ED',
+                    height: '40px'
+                  }}
+                  className="m-0 mr-2"
+                  onClick={() => handleTour()}
+                >
+                  Take the tour{' '}
+                  <SVG
+                    name="Arrowright"
+                    size={16}
+                    extraClass="ml-1"
+                    color="blue"
+                  />
+                </Button>
+              </Col>
+            </Row>
+          </div>
+        ) : null}
 
-          {!showResult && drawerVisible && checkIfnewComposer()
-            ? renderCreateQFlow()
-            : !showResult &&
-              !resultState.loading && (
-                <CoreQueryHome
-                  setQueryType={setQueryType}
-                  setDrawerVisible={closeResultPage}
-                  setQueries={setQueries}
-                  setProfileQueries={setProfileQueries}
-                  setQueryOptions={setExtraOptions}
-                  setClickedSavedReport={setClickedSavedReport}
-                  location={location}
-                  setActiveKey={setActiveKey}
-                  setBreakdownType={setBreakdownType}
-                  setNavigatedFromDashboard={setNavigatedFromDashboard}
-                  updateChartTypes={updateChartTypes}
-                  updateSavedQuerySettings={updateSavedQuerySettings}
-                  setAttributionMetrics={setAttributionMetrics}
-                  dateFromTo={dateFromTo}
-                />
-              )}
+        {!showResult && resultState.loading ? <PageSuspenseLoader /> : null}
 
-          {showResult && !resultState.loading ? (
-            <CoreQueryContext.Provider
-              value={{
-                coreQueryState,
-                attributionMetrics,
-                setAttributionMetrics,
-                setNavigatedFromDashboard,
-                resetComparisonData,
-                handleCompareWithClick,
-                updatePivotConfig,
-                queriesA,
-                profileQueries,
-                queryOptions,
-                selectedMainCategory,
-                setSelectedMainCategory,
-                runQuery,
-                queryChange,
-                profileQueryChange,
-                setExtraOptions,
-                runFunnelQuery,
-                runKPIQuery,
-                runProfileQuery,
-                activeKey,
-                showResult,
-                KPIConfigProps,
-                setQueries,
-                setProfileQueries,
-                runAttributionQuery
-              }}
-            >
-              <AnalysisResultsPage
-                queryType={queryType}
-                resultState={resultState}
+        {!showResult && drawerVisible && checkIfnewComposer()
+          ? renderCreateQFlow()
+          : !showResult &&
+            !resultState.loading && (
+              <CoreQueryHome
+                setQueryType={setQueryType}
                 setDrawerVisible={closeResultPage}
-                requestQuery={requestQuery}
-                queries={appliedQueries}
-                breakdown={appliedBreakdown}
-                setShowResult={() => {
-                  setShowResult(false);
-                  updateRequestQuery(false);
-                }}
-                queryTitle={querySaved ? querySaved.name : null}
-                savedQueryId={querySaved ? querySaved.id : null}
-                setQuerySaved={setQuerySaved}
-                durationObj={queryOptions.date_range}
-                handleDurationChange={handleDurationChange}
-                arrayMapper={arrayMapper}
-                queryOptions={queryOptions}
-                attributionsState={attributionsState}
-                breakdownType={breakdownType}
-                campaignState={campaignState}
-                eventPage={result_criteria}
-                section={REPORT_SECTION}
-                runAttrCmprQuery={null}
-                cmprResultState={null}
-                campaignsArrayMapper={campaignsArrayMapper}
-                handleGranularityChange={handleGranularityChange}
+                setQueries={setQueries}
+                setProfileQueries={setProfileQueries}
+                setQueryOptions={setExtraOptions}
+                setClickedSavedReport={setClickedSavedReport}
+                location={location}
+                setActiveKey={setActiveKey}
+                setBreakdownType={setBreakdownType}
+                setNavigatedFromDashboard={setNavigatedFromDashboard}
                 updateChartTypes={updateChartTypes}
+                updateSavedQuerySettings={updateSavedQuerySettings}
+                setAttributionMetrics={setAttributionMetrics}
                 dateFromTo={dateFromTo}
               />
-            </CoreQueryContext.Provider>
-          ) : null}
-          {/* create project modal */}
-          <NewProject
-            visible={showProjectModal}
-            handleCancel={() => setShowProjectModal(false)}
-          />
-        </ErrorBoundary>
-      </>
-    );
-  } else {
-    return (
-      <>
-        <AnalyseBeforeIntegration />
-      </>
+            )}
+
+        {showResult && !resultState.loading ? (
+          <CoreQueryContext.Provider value={contextValue}>
+            <AnalysisResultsPage
+              queryType={queryType}
+              resultState={resultState}
+              setDrawerVisible={closeResultPage}
+              requestQuery={requestQuery}
+              queries={appliedQueries}
+              breakdown={appliedBreakdown}
+              setShowResult={() => {
+                setShowResult(false);
+                updateRequestQuery(false);
+              }}
+              queryTitle={querySaved ? querySaved.name : null}
+              savedQueryId={querySaved ? querySaved.id : null}
+              setQuerySaved={setQuerySaved}
+              durationObj={queryOptions.date_range}
+              handleDurationChange={handleDurationChange}
+              arrayMapper={arrayMapper}
+              queryOptions={queryOptions}
+              attributionsState={attributionsState}
+              breakdownType={breakdownType}
+              campaignState={campaignState}
+              eventPage={result_criteria}
+              section={REPORT_SECTION}
+              runAttrCmprQuery={null}
+              cmprResultState={null}
+              campaignsArrayMapper={campaignsArrayMapper}
+              handleGranularityChange={handleGranularityChange}
+              updateChartTypes={updateChartTypes}
+              dateFromTo={dateFromTo}
+            />
+          </CoreQueryContext.Provider>
+        ) : null}
+        {/* create project modal */}
+        <NewProject
+          visible={showProjectModal}
+          handleCancel={() => setShowProjectModal(false)}
+        />
+      </ErrorBoundary>
     );
   }
+  return <AnalyseBeforeIntegration />;
 }
 
 const mapStateToProps = (state) => ({
