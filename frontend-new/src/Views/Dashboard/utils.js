@@ -159,6 +159,30 @@ export const getDataFromServer = (
         }
       };
     }
+    
+    // synchronising from and to when the query has kpi query group for hubspot and salesforce group type
+    if(attributionQuery?.query?.kpi_query_group){
+      const fr = attributionQuery.query.from
+      const to = attributionQuery.query.to
+      attributionQuery = {
+        ...attributionQuery,
+        query:{
+          ...attributionQuery.query,
+          kpi_query_group: {
+            ...attributionQuery.query.kpi_query_group,
+            qG: attributionQuery.query.kpi_query_group?.qG?.map((q) => {
+              return {
+                ...q,
+                fr,
+                to,
+                gbt: q.gbt ? durationObj.frequency : ''
+              };
+            })
+          }
+        },
+      }
+    }
+
     return getAttributionsData(
       activeProjectId,
       attributionQuery,

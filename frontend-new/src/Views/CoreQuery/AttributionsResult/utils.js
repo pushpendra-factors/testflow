@@ -1309,27 +1309,27 @@ export const getTableFilterOptions = ({
       };
     });
 
-  const eventBasedMetrics = [
-    {
-      title: 'Conversion',
-      key: 'Conversion',
-      options: [],
-      valueType: 'numerical'
-    }
-  ];
+  // const eventBasedMetrics = [
+  //   {
+  //     title: 'Conversion',
+  //     key: 'Conversion',
+  //     options: [],
+  //     valueType: 'numerical'
+  //   }
+  // ];
 
-  const isCostPerConversionEnabled = attributionMetrics.find(
-    (m) => m.header === 'Cost Per Conversion'
-  ).enabled;
+  // const isCostPerConversionEnabled = attributionMetrics.find(
+  //   (m) => m.header === 'Cost Per Conversion'
+  // ).enabled;
 
-  if (isCostPerConversionEnabled && touchpoint !== 'LandingPage') {
-    eventBasedMetrics.push({
-      title: 'Cost Per Conversion',
-      key: 'Cost Per Conversion',
-      options: [],
-      valueType: 'numerical'
-    });
-  }
+  // if (isCostPerConversionEnabled && touchpoint !== 'LandingPage') {
+  //   eventBasedMetrics.push({
+  //     title: 'Cost Per Conversion',
+  //     key: 'Cost Per Conversion',
+  //     options: [],
+  //     valueType: 'numerical'
+  //   });
+  // }
 
   const listDimensions =
     touchpoint === 'LandingPage' ? [...content_groups] : [...attr_dimensions];
@@ -1346,7 +1346,8 @@ export const getTableFilterOptions = ({
         options: tableData.map((data) => data[d.title]).filter(onlyUnique)
       };
     });
-    return [...availableFilters, ...metricFilters, ...eventBasedMetrics];
+    // return [...availableFilters, ...metricFilters, ...eventBasedMetrics];
+    return [...availableFilters, ...metricFilters];
   } else {
     const availableFilters = [
       {
@@ -1355,6 +1356,7 @@ export const getTableFilterOptions = ({
         options: tableData.map((data) => data[touchpoint]).filter(onlyUnique)
       }
     ];
-    return [...availableFilters, ...metricFilters, ...eventBasedMetrics];
+    // return [...availableFilters, ...metricFilters, ...eventBasedMetrics];
+    return [...availableFilters, ...metricFilters];
   }
 };
