@@ -244,7 +244,7 @@ export const ATTRIBUTION_METRICS = [
     enabled: true,
     isEventMetric: true,
     valueType: 'numerical'
-  }
+  },
   {
     title: 'Conversion Value',
     header: 'CV',
