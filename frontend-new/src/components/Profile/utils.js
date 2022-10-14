@@ -6,41 +6,35 @@ export const granularityOptions = [
   'Hourly',
   'Daily',
   'Weekly',
-  'Monthly',
+  'Monthly'
 ];
 
 export const groups = {
   Timestamp: (item) =>
     MomentTz(item.timestamp * 1000).format('DD MMM YYYY, hh:mm:ss '),
   Hourly: (item) =>
-    MomentTz(item.timestamp * 1000)
+    `${MomentTz(item.timestamp * 1000)
       .startOf('hour')
-      .format('hh A') +
-    ' - ' +
-    MomentTz(item.timestamp * 1000)
+      .format('hh A')} - ${MomentTz(item.timestamp * 1000)
       .add(1, 'hour')
       .startOf('hour')
-      .format('hh A') +
-    ' ' +
-    MomentTz(item.timestamp * 1000)
+      .format('hh A')} ${MomentTz(item.timestamp * 1000)
       .startOf('hour')
-      .format('DD MMM YYYY'),
+      .format('DD MMM YYYY')}`,
   Daily: (item) =>
     MomentTz(item.timestamp * 1000)
       .startOf('day')
       .format('DD MMM YYYY'),
   Weekly: (item) =>
-    MomentTz(item.timestamp * 1000)
+    `${MomentTz(item.timestamp * 1000)
       .endOf('week')
-      .format('DD MMM YYYY') +
-    ' - ' +
-    MomentTz(item.timestamp * 1000)
+      .format('DD MMM YYYY')} - ${MomentTz(item.timestamp * 1000)
       .startOf('week')
-      .format('DD MMM YYYY'),
+      .format('DD MMM YYYY')}`,
   Monthly: (item) =>
     MomentTz(item.timestamp * 1000)
       .startOf('month')
-      .format('MMM YYYY'),
+      .format('MMM YYYY')
 };
 
 export const hoverEvents = [
@@ -54,7 +48,7 @@ export const hoverEvents = [
   '$hubspot_engagement_meeting_created',
   '$hubspot_engagement_meeting_updated',
   '$hubspot_engagement_call_created',
-  '$hubspot_engagement_call_updated',
+  '$hubspot_engagement_call_updated'
 ];
 
 export const TimelineHoverPropDisplayNames = {
@@ -66,15 +60,7 @@ export const TimelineHoverPropDisplayNames = {
   $hubspot_form_submission_email: 'Email',
   '$hubspot_form_submission_page-url-no-qp': 'Page URL',
   '$hubspot_form_submission_page-title': 'Page Title',
-  $hubspot_form_submission_timestamp: 'Form Submit Timestamp',
-};
-
-export const getLoopLength = (allEvents) => {
-  let maxLength = -1;
-  Object.entries(allEvents).forEach(([user, events]) => {
-    if (maxLength < events.length) maxLength = events.length;
-  });
-  return maxLength;
+  $hubspot_form_submission_timestamp: 'Form Submit Timestamp'
 };
 
 export const formatFiltersForPayload = (filters = []) => {
@@ -88,7 +74,7 @@ export const formatFiltersForPayload = (filters = []) => {
           op: operatorMap[fil.operator],
           pr: fil.props[0],
           ty: fil.props[1],
-          va: fil.props[1] === 'datetime' ? val : val,
+          va: fil.props[1] === 'datetime' ? val : val
         });
       });
     } else {
@@ -98,7 +84,7 @@ export const formatFiltersForPayload = (filters = []) => {
         op: operatorMap[fil.operator],
         pr: fil.props[0],
         ty: fil.props[1],
-        va: fil.props[1] === 'datetime' ? fil.values : fil.values,
+        va: fil.props[1] === 'datetime' ? fil.values : fil.values
       });
     }
   });
@@ -115,7 +101,7 @@ export const eventsFormattedForGranularity = (
       result[groups[granularity](item)] || {});
     const byUser = (byTimestamp[item.user] = byTimestamp[item.user] || {
       events: [],
-      collapsed: collapse,
+      collapsed: collapse
     });
     byUser.events.push(item);
     return result;
@@ -129,7 +115,22 @@ export const toggleCellCollapse = (
   username,
   collapseState
 ) => {
-  const data = Object.assign({}, formattedData);
+  const data = { ...formattedData };
   data[timestamp][username].collapsed = collapseState;
   return data;
+};
+
+const isValidHttpUrl = (string) => {
+  let url;
+  try {
+    url = new URL(string);
+  } catch (_) {
+    return false;
+  }
+  return url.protocol === 'http:' || url.protocol === 'https:';
+};
+
+export const getHost = (urlstr) => {
+  const uri = isValidHttpUrl(urlstr) ? new URL(urlstr).hostname : urlstr;
+  return uri;
 };

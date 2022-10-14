@@ -677,6 +677,7 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 	groupUser := true
 
 	companies := []string{"FactorsAI", "Accenture", "Talentica", "Honeywell", "Meesho", ""}
+	websites := []string{"factors.ai", "accenture.com", "talentica.com", "honeywell.com", "meesho.com"}
 	countries := []string{"India", "Ireland", "India", "US", "India", "US"}
 	for i := 0; i < numUsers; i++ {
 		var propertiesMap map[string]interface{}
@@ -684,6 +685,7 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 			propertiesMap = map[string]interface{}{
 				U.GP_SALESFORCE_ACCOUNT_NAME:           companies[i],
 				U.GP_SALESFORCE_ACCOUNT_BILLINGCOUNTRY: countries[i],
+				U.GP_SALESFORCE_ACCOUNT_WEBSITE:        websites[i],
 			}
 		} else {
 			if i == 5 {
@@ -695,6 +697,7 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 				propertiesMap = map[string]interface{}{
 					U.GP_HUBSPOT_COMPANY_NAME:                    companies[i],
 					U.GP_HUBSPOT_COMPANY_COUNTRY:                 countries[i],
+					U.GP_HUBSPOT_COMPANY_DOMAIN:                  websites[i],
 					U.GP_HUBSPOT_COMPANY_NUM_ASSOCIATED_CONTACTS: i * 2,
 				}
 			}
@@ -757,9 +760,12 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 				sort.Strings(companies)
 				i := sort.SearchStrings(companies, user.Name)
 				assert.Condition(t, func() bool { return i < len(companies) })
+				sort.Strings(websites)
+				i = sort.SearchStrings(websites, user.HostName)
+				assert.Condition(t, func() bool { return i < len(websites) })
 				sort.Strings(countries)
-				j := sort.SearchStrings(countries, user.Country)
-				assert.Condition(t, func() bool { return j < len(countries) })
+				i = sort.SearchStrings(countries, user.Country)
+				assert.Condition(t, func() bool { return i < len(countries) })
 				assert.NotNil(t, user.LastActivity)
 				if index > 0 {
 					assert.Condition(t, func() bool { return resp[index].LastActivity.Unix() <= resp[index-1].LastActivity.Unix() })
@@ -802,9 +808,12 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 				sort.Strings(companies)
 				i := sort.SearchStrings(companies, user.Name)
 				assert.Condition(t, func() bool { return i < len(companies) })
+				sort.Strings(websites)
+				i = sort.SearchStrings(websites, user.HostName)
+				assert.Condition(t, func() bool { return i < len(websites) })
 				sort.Strings(countries)
-				j := sort.SearchStrings(countries, user.Country)
-				assert.Condition(t, func() bool { return j < len(countries) })
+				i = sort.SearchStrings(countries, user.Country)
+				assert.Condition(t, func() bool { return i < len(countries) })
 				assert.NotNil(t, user.LastActivity)
 				if index > 0 {
 					assert.Condition(t, func() bool { return resp[index].LastActivity.Unix() <= resp[index-1].LastActivity.Unix() })
@@ -849,6 +858,8 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		"$company":                                "Freshworks",
 		U.GP_HUBSPOT_COMPANY_NAME:                 "Freshworks-HS",
 		U.GP_SALESFORCE_ACCOUNT_NAME:              "Freshworks-SF",
+		U.GP_SALESFORCE_ACCOUNT_WEBSITE:           "freshworks.com",
+		U.GP_HUBSPOT_COMPANY_DOMAIN:               "google.com",
 		U.GP_HUBSPOT_COMPANY_COUNTRY:              "India",
 		U.GP_SALESFORCE_ACCOUNT_BILLINGCOUNTRY:    "India",
 		U.GP_HUBSPOT_COMPANY_INDUSTRY:             "Freshworks-HS",
@@ -1270,6 +1281,7 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		assert.Contains(t, resp.Name, "Freshworks")
 		assert.Equal(t, resp.Country, "India")
 		assert.Equal(t, resp.Industry, "Freshworks-HS")
+		assert.Equal(t, resp.HostName, "google.com")
 		assert.Equal(t, resp.NumberOfUsers, uint64(9))
 		assert.Equal(t, len(resp.AccountTimeline), 9)
 		assert.Condition(t, func() bool {

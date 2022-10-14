@@ -11,6 +11,7 @@ type Profile struct {
 	Identity           string          `json:"identity"`
 	Properties         *postgres.Jsonb `json:"-"`
 	Name               string          `json:"name"`
+	HostName           string          `json:"host_name"`
 	IsAnonymous        bool            `json:"is_anonymous"`
 	Country            string          `json:"country"`
 	AssociatedContacts uint64          `json:"associated_contacts"`
@@ -56,6 +57,7 @@ type TimelinePayload struct {
 
 type AccountDetails struct {
 	Properties        *postgres.Jsonb `json:"-"`
+	HostName          string          `json:"host_name"`
 	Name              string          `json:"name"`
 	Industry          string          `json:"industry"`
 	Country           string          `json:"country"`
