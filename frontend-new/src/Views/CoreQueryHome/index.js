@@ -458,15 +458,15 @@ function CoreQuery({
   const setQueryToState = useCallback(
     (record, navigatedFromDashboard) => {
       try {
-        if(record?.type?.props?.name === 'events_cq' ) {
-          history.push('/analyse/event/' + record.id_text);
-          return null;
-        }
-        else if (record?.type?.props?.name === 'funnels_cq') {
-          history.push('/analyse/funnel/' + record.id_text);
-          return null;
+        // if(record?.type?.props?.name === 'events_cq' ) {
+        //   history.push('/analyse/event/' + record.id_text);
+        //   return null;
+        // }
+        // else if (record?.type?.props?.name === 'funnels_cq') {
+        //   history.push('/analyse/funnel/' + record.id_text);
+        //   return null;
 
-        } 
+        // } 
         // else if (record?.type?.props?.name === 'attributions_cq') {
         //   window.location.replace("/analyse/attributions/" + record.id_text);
         //   return null;
