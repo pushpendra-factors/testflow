@@ -18,6 +18,7 @@ type ProjectSetting struct {
 	AutoTrackSPAPageView *bool `gorm:"not null;default:false" json:"auto_track_spa_page_view"`
 	AutoFormCapture      *bool `gorm:"not null;default:false" json:"auto_form_capture,omitempty"`
 	AutoClickCapture     *bool `gorm:"not null;default:false" json:"auto_click_capture,omitempty"`
+	AutoCaptureFormFills *bool `gorm:"not null;default:false" json:"auto_capture_form_fills"`
 	ExcludeBot           *bool `gorm:"not null;default:false" json:"exclude_bot,omitempty"`
 	// Segment integration settings.
 	IntSegment *bool `gorm:"not null;default:false" json:"int_segment,omitempty"`
@@ -138,6 +139,7 @@ const ProjectSettingKeyToken = "token"
 const ProjectSettingKeyPrivateToken = "private_token"
 
 var AutoClickCaptureDefault = false
+var AutoCaptureFormFillsDefault = false
 
 var projectSettingKeys = [...]string{
 	ProjectSettingKeyToken,

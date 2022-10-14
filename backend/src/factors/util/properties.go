@@ -26,6 +26,7 @@ const SEN_ALL_EVENTS = "$AllEvents"
 const SEN_ALL_EVENTS_DISPLAY_STRING = "All Events"
 
 const EVENT_NAME_SESSION = "$session"
+const EVENT_NAME_FORM_FILL = "$form_fill"
 const EVENT_NAME_OFFLINE_TOUCH_POINT = "$offline_touch_point"
 const EVENT_NAME_FORM_SUBMITTED = "$form_submitted"
 
@@ -86,6 +87,7 @@ const EVENT_NAME_SHOPIFY_CART_UPDATED = "$shopify_cart_updated"
 
 var ALLOWED_INTERNAL_EVENT_NAMES = [...]string{
 	EVENT_NAME_SESSION,
+	EVENT_NAME_FORM_FILL,
 	EVENT_NAME_FORM_SUBMITTED,
 	EVENT_NAME_HUBSPOT_CONTACT_CREATED,
 	EVENT_NAME_HUBSPOT_CONTACT_UPDATED,
@@ -181,6 +183,9 @@ var EP_CRM_REFERENCE_EVENT_ID string = "$crm_reference_event_id"
 // lastmodifieddate properties.
 const PROPERTY_KEY_LAST_MODIFIED_DATE = "lastmodifieddate"
 const PROPERTY_KEY_LAST_MODIFIED_DATE_HS = "hs_lastmodifieddate"
+
+// time_spent_on_form event property
+const EP_TIME_SPENT_ON_FORM = "time_spent_on_form"
 
 var GENERIC_NUMERIC_EVENT_PROPERTIES = [...]string{
 	EP_FIRST_SEEN_OCCURRENCE_COUNT,

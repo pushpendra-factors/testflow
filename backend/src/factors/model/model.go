@@ -241,6 +241,8 @@ type Model interface {
 	// form_fill
 	CreateFormFillEventById(projectId int64, formFill *model.SDKFormFillPayload) (int, error)
 	GetFormFillEventById(projectId int64, formId string, fieldId string) (*model.FormFill, int)
+	GetFormFillEventsUpdatedBeforeTenMinutes(projectIds []int64) ([]model.FormFill, error)
+	DeleteFormFillProcessedRecords(projectId int64, formId string, fieldId string) (int, error)
 
 	// events
 	GetEventCountOfUserByEventName(projectID int64, userId string, eventNameId string) (uint64, int)
@@ -389,6 +391,7 @@ type Model interface {
 	DisableExplain(projectId int64) int
 	GetAllWeeklyInsightsEnabledProjects() ([]int64, error)
 	GetAllExplainEnabledProjects() ([]int64, error)
+	GetFormFillEnabledProjectIDs() ([]int64, error)
 
 	// project
 	UpdateProject(projectID int64, project *model.Project) int
