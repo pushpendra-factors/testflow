@@ -666,18 +666,9 @@ func (store *MemSQL) GetConvertedUsers(projectID,
 			_convertedUserCoalID = append(_convertedUserCoalID, k)
 			_convertedUserTimestamp = append(_convertedUserTimestamp, v)
 		}
-		_convertedUserCoalIDInBatches := U.GetStringListAsBatch(_convertedUserCoalID, 10)
-		_convertedUserTimestampInBatches := U.GetInt64ListAsBatch(_convertedUserTimestamp, 10)
-		batch := 1
-		for _, v := range _convertedUserCoalIDInBatches {
-			logCtx.WithFields(log.Fields{"CleverTapBatch": batch, "CleverTapConvertedUsersCoalIDInBatches": v}).Warn("Printing Converted Users Coal ID")
-			batch++
-		}
-		batch = 1
-		for _, v := range _convertedUserTimestampInBatches {
-			logCtx.WithFields(log.Fields{"CleverTapBatch": batch, "CleverTapConvertedUsersTimeStampInBatches": v}).Warn("Printing Converted Users TimeStamp")
-			batch++
-		}
+		logCtx.WithFields(log.Fields{"CleverTapConvertedUsersCoalIDInBatches": _convertedUserCoalID}).Warn("Printing Converted Users Coal ID")
+		logCtx.WithFields(log.Fields{"CleverTapConvertedUsersTimeStampInBatches": _convertedUserTimestamp}).Warn("Printing Converted Users TimeStamp")
+
 	}
 
 	// Add users who hit conversion event
@@ -698,18 +689,9 @@ func (store *MemSQL) GetConvertedUsers(projectID,
 			_lfeUsers = append(_lfeUsers, v.CoalUserID)
 			_lfeTimeStamp = append(_lfeTimeStamp, v.Timestamp)
 		}
-		_lfeUsersInBatches := U.GetStringListAsBatch(_lfeUsers, 10)
-		_lfeTimeStampInBatches := U.GetInt64ListAsBatch(_lfeTimeStamp, 10)
-		batch := 1
-		for _, v := range _lfeUsersInBatches {
-			logCtx.WithFields(log.Fields{"CleverTapBatch": batch, "CleverTapLinkedFunnelCoalId": v}).Warn("Printing Linked Funnel Event Users CoalId")
-			batch++
-		}
-		batch = 1
-		for _, v := range _lfeTimeStampInBatches {
-			logCtx.WithFields(log.Fields{"CleverTapBatch": batch, "CleverTapLinkedFunnelTimeStamp": v}).Warn("Printing Linked Funnel Event Users TimeStamp")
-			batch++
-		}
+		logCtx.WithFields(log.Fields{"CleverTapLinkedFunnelCoalId": _lfeUsers}).Warn("Printing Linked Funnel Event Users CoalId")
+		logCtx.WithFields(log.Fields{"CleverTapLinkedFunnelTimeStamp": _lfeTimeStamp}).Warn("Printing Linked Funnel Event Users TimeStamp")
+
 	}
 
 	model.MergeUsersToBeAttributed(&usersToBeAttributed, linkedFunnelEventUsers)
@@ -723,25 +705,10 @@ func (store *MemSQL) GetConvertedUsers(projectID,
 			_finalTimeStamp = append(_finalTimeStamp, v.Timestamp)
 			_eventType = append(_eventType, int64(v.EventType))
 		}
-		_finalUsersInBatches := U.GetStringListAsBatch(_finalUsers, 10)
-		_finalTimeStampInBatches := U.GetInt64ListAsBatch(_finalTimeStamp, 10)
-		_eventTypeInBatches := U.GetInt64ListAsBatch(_eventType, 10)
-		batch := 1
-		for _, v := range _finalUsersInBatches {
-			logCtx.WithFields(log.Fields{"CleverTapBatch": batch, "CleverTapFinalUsersCoalID": v}).Warn("Printing Final Users Coal ID")
-			batch++
-		}
-		batch = 1
-		for _, v := range _finalTimeStampInBatches {
-			logCtx.WithFields(log.Fields{"CleverTapBatch": batch, "CleverTapFinalUsersTimeStamp": v}).Warn("Printing Final Users TimeStamp")
-			batch++
+		logCtx.WithFields(log.Fields{"CleverTapFinalUsersCoalID": _finalUsers}).Warn("Printing Final Users Coal ID")
+		logCtx.WithFields(log.Fields{"CleverTapFinalUsersTimeStamp": _finalTimeStamp}).Warn("Printing Final Users TimeStamp")
+		logCtx.WithFields(log.Fields{"CleverTapEventType": _eventType}).Warn("Printing Event Type")
 
-		}
-		batch = 1
-		for _, v := range _eventTypeInBatches {
-			logCtx.WithFields(log.Fields{"CleverTapBatch": batch, "CleverTapEventType": v}).Warn("Printing Event Type")
-			batch++
-		}
 	}
 
 	return userIDToInfoConverted, usersToBeAttributed, coalUserIdConversionTimestamp, nil
@@ -814,7 +781,7 @@ func (store *MemSQL) RunAttributionForMethodologyComparisonV1(query *model.Attri
 	// Attribution based on given attribution methodology.
 	userConversionHit, _, err := model.ApplyAttribution(query.QueryType, query.AttributionMethodology,
 		query.ConversionEvent.Name, *usersToBeAttributed, sessions, *coalUserIdConversionTimestamp,
-		query.LookbackDays, query.From, query.To, query.AttributionKey)
+		query.LookbackDays, query.From, query.To, query.AttributionKey, logCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -824,7 +791,7 @@ func (store *MemSQL) RunAttributionForMethodologyComparisonV1(query *model.Attri
 	// Attribution based on given attributionMethodologyCompare methodology.
 	userConversionCompareHit, _, err := model.ApplyAttribution(query.QueryType, query.AttributionMethodologyCompare,
 		query.ConversionEvent.Name, *usersToBeAttributed, sessions, *coalUserIdConversionTimestamp,
-		query.LookbackDays, query.From, query.To, query.AttributionKey)
+		query.LookbackDays, query.From, query.To, query.AttributionKey, logCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -870,7 +837,7 @@ func (store *MemSQL) runAttributionV1(goalEvent model.QueryEventWithProperties,
 	// 4. Apply attribution based on given attribution methodology
 	userConversionHit, userLinkedFEHit, err := model.ApplyAttribution(query.QueryType, query.AttributionMethodology,
 		goalEventName, *usersToBeAttributed, sessions, *coalUserIdConversionTimestamp,
-		query.LookbackDays, query.From, query.To, query.AttributionKey)
+		query.LookbackDays, query.From, query.To, query.AttributionKey, logCtx)
 	if err != nil {
 		return nil, err
 	}

@@ -2155,7 +2155,7 @@ func TestAttributionMethodologies(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got, got1, err := model.ApplyAttribution(tt.args.queryType, tt.args.method, tt.args.conversionEvent,
 				tt.args.usersToBeAttributed, tt.args.userInitialSession, tt.args.coalUserIdConversionTimestamp,
-				tt.args.lookbackDays, int64(queryFrom), int64(queryTo), tt.args.attributionKey)
+				tt.args.lookbackDays, int64(queryFrom), int64(queryTo), tt.args.attributionKey, log.Entry{})
 			if (err != nil) != tt.wantErr {
 				t.Errorf("applyAttribution() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -2286,7 +2286,7 @@ func TestAttributionMethodologiesFirstTouchNonDirect(t *testing.T) {
 			got, got1, err := model.ApplyAttribution(tt.args.queryType, tt.args.method, tt.args.conversionEvent,
 				tt.args.usersToBeAttributed, tt.args.userInitialSession,
 				tt.args.coalUserIdConversionTimestamp, tt.args.lookbackDays,
-				int64(queryFrom), int64(queryTo), tt.args.attributionKey)
+				int64(queryFrom), int64(queryTo), tt.args.attributionKey, log.Entry{})
 			if (err != nil) != tt.wantErr {
 				t.Errorf("applyAttribution() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -2417,7 +2417,7 @@ func TestAttributionMethodologiesLastTouchNonDirect(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got, got1, err := model.ApplyAttribution(tt.args.queryType, tt.args.method, tt.args.conversionEvent,
 				tt.args.usersToBeAttributed, tt.args.userInitialSession,
-				tt.args.coalUserIdConversionTimestamp, tt.args.lookbackDays, int64(queryFrom), int64(queryTo), tt.args.attributionKey)
+				tt.args.coalUserIdConversionTimestamp, tt.args.lookbackDays, int64(queryFrom), int64(queryTo), tt.args.attributionKey, log.Entry{})
 			if (err != nil) != tt.wantErr {
 				t.Errorf("applyAttribution() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -2505,7 +2505,7 @@ func TestAttributionMethodologiesNonDirectAdgroup(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got, got1, err := model.ApplyAttribution(tt.args.queryType, tt.args.method, tt.args.conversionEvent,
 				tt.args.usersToBeAttributed, tt.args.userInitialSession, tt.args.coalUserIdConversionTimestamp, tt.args.lookbackDays,
-				int64(queryFrom), int64(queryTo), tt.args.attributionKey)
+				int64(queryFrom), int64(queryTo), tt.args.attributionKey, log.Entry{})
 			if (err != nil) != tt.wantErr {
 				t.Errorf("applyAttribution() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -2587,7 +2587,7 @@ func TestAttributionMethodologiesNonDirectKeyword(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got, got1, err := model.ApplyAttribution(tt.args.queryType, tt.args.method, tt.args.conversionEvent,
 				tt.args.usersToBeAttributed, tt.args.userInitialSession, tt.args.coalUserIdConversionTimestamp, tt.args.lookbackDays,
-				int64(queryFrom), int64(queryTo), tt.args.attributionKey)
+				int64(queryFrom), int64(queryTo), tt.args.attributionKey, log.Entry{})
 			if (err != nil) != tt.wantErr {
 				t.Errorf("applyAttribution() error = %v, wantErr %v", err, tt.wantErr)
 				return
