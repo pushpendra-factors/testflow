@@ -329,7 +329,7 @@ func (store *MemSQL) PullAllUsersByCustomerUserID(projectID int64, kpiData *map[
 		customerUserIdList = append(customerUserIdList, v.KpiCoalUserIds...)
 	}
 
-	_, custUserIdToUserIds, err := store.FetchAllUsersAndCustomerUserData(projectID, customerUserIdList, logCtx)
+	_, custUserIdToUserIds, err := store.FetchAllUsersAndCustomerUserDataInBatches(projectID, customerUserIdList, logCtx)
 	if err != nil {
 		return err
 	}

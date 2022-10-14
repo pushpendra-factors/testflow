@@ -20,6 +20,7 @@ import (
 //	  ii)	Using users from 3.i) find out users who hit linked funnel event applying filter
 //	4. Apply attribution methodology
 //	5. Add performance data by attributionId
+// @Deprecated
 func (store *MemSQL) ExecuteAttributionQuery(projectID int64, queryOriginal *model.AttributionQuery,
 	debugQueryKey string, enableOptimisedFilterOnProfileQuery,
 	enableOptimisedFilterOnEventUserQuery bool) (*model.QueryResult, error) {
@@ -1102,7 +1103,7 @@ func (store *MemSQL) GetConvertedUsersWithFilter(projectID int64, goalEventName 
 	}
 
 	// Reverse lookup for all the converted userID's coalIDs to get the other users which are not marked 'converted'
-	_userIDToCoalID, _custUserIdToUserIds, err := store.FetchAllUsersAndCustomerUserData(projectID, coalIDs, logCtx)
+	_userIDToCoalID, _custUserIdToUserIds, err := store.FetchAllUsersAndCustomerUserDataInBatches(projectID, coalIDs, logCtx)
 	if err != nil {
 		return nil, nil, nil, err
 	}

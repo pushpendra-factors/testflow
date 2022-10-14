@@ -14,6 +14,7 @@ import (
 )
 
 // ExecuteAttributionQueryV1 Todo Pre-compute's online version - add details once available to run
+// @Deprecated
 func (store *MemSQL) ExecuteAttributionQueryV1(projectID int64, queryOriginal *model.AttributionQuery,
 	debugQueryKey string, enableOptimisedFilterOnProfileQuery,
 	enableOptimisedFilterOnEventUserQuery bool) (*model.QueryResult, error) {
@@ -977,12 +978,80 @@ func (store *MemSQL) getAllTheSessionsV1(projectId int64, sessionEventNameId str
 	return attributedSessionsByUserId, userIdsWithSession, nil
 }
 
+// FetchAllUsersAndCustomerUserDataInBatches returns usersIds for given list of customer_user_id (i.e. coal_id) in batches
+func (store *MemSQL) FetchAllUsersAndCustomerUserDataInBatches(projectID int64, customerUserIdList []string, logCtx log.Entry) (map[string]string, map[string][]string, error) {
+
+	if len(customerUserIdList) == 0 {
+		return nil, nil, nil
+	}
+
+	userIdToCoalIds := make(map[string]string)
+	custUserIdToUserIds := make(map[string][]string)
+
+	coalUserIDsInBatches := U.GetStringListAsBatch(customerUserIdList, model.UserBatchSize)
+	batch := 1
+	for _, users := range coalUserIDsInBatches {
+
+		placeHolder := U.GetValuePlaceHolder(len(users))
+		value := U.GetInterfaceList(users)
+		groupUserListQuery := "Select users.id, users.customer_user_id FROM users WHERE project_id=? " +
+			" AND users.customer_user_id IN ( " + placeHolder + " ) "
+		var gULParams []interface{}
+		gULParams = append(gULParams, projectID)
+		gULParams = append(gULParams, value...)
+		gULRows, tx, err, reqID := store.ExecQueryWithContext(groupUserListQuery, gULParams)
+		if err != nil {
+			logCtx.WithError(err).Error("SQL Query failed")
+			return nil, nil, errors.New("failed to get groupUserListQuery result for project")
+		}
+		batch++
+		startReadTime := time.Now()
+		for gULRows.Next() {
+			var userIDNull sql.NullString
+			var custUserIDNull sql.NullString
+			if err = gULRows.Scan(&userIDNull, &custUserIDNull); err != nil {
+				logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
+				continue
+			}
+
+			userID := U.IfThenElse(userIDNull.Valid, userIDNull.String, model.PropertyValueNone).(string)
+			custUserID := U.IfThenElse(custUserIDNull.Valid, custUserIDNull.String, model.PropertyValueNone).(string)
+			if userID == model.PropertyValueNone || custUserID == model.PropertyValueNone {
+				logCtx.WithError(err).Error("Values are not correct - userID & custUserID . Ignoring row. Continuing")
+				continue
+			}
+
+			// Keeping userID to CoalID
+			userIdToCoalIds[userID] = custUserID
+
+			// Keeping CoalID to userID(s). Since many user_ids can be associated with one coal_id
+			if _, exists := custUserIdToUserIds[custUserID]; exists {
+				v := custUserIdToUserIds[custUserID]
+				v = append(v, userID)
+				custUserIdToUserIds[custUserID] = v
+			} else {
+				var users []string
+				users = append(users, userID)
+				custUserIdToUserIds[custUserID] = users
+			}
+		}
+
+		err = gULRows.Err()
+		if err != nil {
+			// Error from DB is captured eg: timeout error
+			logCtx.WithFields(log.Fields{"err": err, "batchNo": batch}).Error("Error in executing query in FetchAllUsersAndCustomerUserDataInBatches")
+			return nil, nil, err
+		}
+		U.CloseReadQuery(gULRows, tx)
+		U.LogReadTimeWithQueryRequestID(startReadTime, reqID, &log.Fields{"project_id": projectID})
+	}
+	return userIdToCoalIds, custUserIdToUserIds, nil
+}
+
 // FetchAllUsersAndCustomerUserData returns usersIds for given list of customer_user_id (i.e. coal_id)
+// @Deprecated
 func (store *MemSQL) FetchAllUsersAndCustomerUserData(projectID int64, customerUserIdList []string, logCtx log.Entry) (map[string]string, map[string][]string, error) {
 
-	if projectID == 1125899918000010 {
-		logCtx.WithFields(log.Fields{"HevoDebug": "Hevo", "customerUserIdList": customerUserIdList}).Info("Debug FetchAllUsersAndCustomerUserData")
-	}
 	if len(customerUserIdList) == 0 {
 		return nil, nil, nil
 	}
@@ -1041,10 +1110,6 @@ func (store *MemSQL) FetchAllUsersAndCustomerUserData(projectID int64, customerU
 
 	U.LogReadTimeWithQueryRequestID(startReadTime, reqID, &log.Fields{})
 	defer U.CloseReadQuery(gULRows, tx2)
-	if projectID == 1125899918000010 {
-		logCtx.WithFields(log.Fields{"HevoDebug": "Hevo", "userIdToCoalIds": userIdToCoalIds}).Info("Debug FetchAllUsersAndCustomerUserData")
-		logCtx.WithFields(log.Fields{"HevoDebug": "Hevo", "custUserIdToUserIds": custUserIdToUserIds}).Info("Debug FetchAllUsersAndCustomerUserData")
-	}
 	return userIdToCoalIds, custUserIdToUserIds, nil
 }
 
@@ -1144,19 +1209,10 @@ func (store *MemSQL) GetConvertedUsersWithFilterV1(projectID int64, goalEventNam
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	if projectID == 1125899918000010 {
-		logCtx.WithFields(log.Fields{"HevoDebug": "Hevo", "userIDList": userIDList}).Info("Debug GetConvertedUsersWithFilterV1")
-		logCtx.WithFields(log.Fields{"HevoDebug": "Hevo", "userIDToCoalIDInfo": userIDToCoalIDInfo}).Info("Debug GetConvertedUsersWithFilterV1")
-		logCtx.WithFields(log.Fields{"HevoDebug": "Hevo", "coalIDs": coalIDs}).Info("Debug GetConvertedUsersWithFilterV1")
-	}
 	// Reverse lookup for all the converted userID's coalIDs to get the other users which are not marked 'converted'
-	_userIDToCoalID, _custUserIdToUserIds, err := store.FetchAllUsersAndCustomerUserData(projectID, coalIDs, logCtx)
+	_userIDToCoalID, _custUserIdToUserIds, err := store.FetchAllUsersAndCustomerUserDataInBatches(projectID, coalIDs, logCtx)
 	if err != nil {
 		return nil, nil, nil, err
-	}
-	if projectID == 1125899918000010 {
-		logCtx.WithFields(log.Fields{"HevoDebug": "Hevo", "_userIDToCoalID": _userIDToCoalID}).Info("Debug GetConvertedUsersWithFilterV1")
-		logCtx.WithFields(log.Fields{"HevoDebug": "Hevo", "_custUserIdToUserIds": _custUserIdToUserIds}).Info("Debug GetConvertedUsersWithFilterV1")
 	}
 	for userID, coalID := range _userIDToCoalID {
 
