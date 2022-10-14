@@ -1,9 +1,9 @@
-name: Deploy to staging env
+name: Deploy FE to staging env
 
 on:
   push:
     branches:
-      - staging
+      - auto-deploy
     # Optionally configure to run only for specific files. For example:
     # paths:
     # - "website/**"
