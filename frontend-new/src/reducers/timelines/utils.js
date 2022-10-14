@@ -26,11 +26,18 @@ export const formattedResponseData = (data) => {
     .map((user) => user.user_name);
   const timelineArray = [];
   data.account_timeline?.forEach((user) => {
-    const newOpts = user.user_activities.map((activity) => ({
-      ...activity,
-      user: user.user_name,
-      enabled: true
-    }));
+    const newOpts = user.user_activities.map((activity) => {
+      let isEnabled = true;
+      if (
+        activity.display_name.includes('Contact Updated') ||
+        activity.display_name.includes('Campaign Member Updated') ||
+        activity.display_name.includes(`Engagement Meeting Updated`) ||
+        activity.display_name.includes('Engagement Call Updated')
+      ) {
+        isEnabled = false;
+      }
+      return { ...activity, user: user.user_name, enabled: isEnabled };
+    });
     timelineArray.push(...newOpts);
   });
   returnData.account_users = nameArrayForAllUsers;
