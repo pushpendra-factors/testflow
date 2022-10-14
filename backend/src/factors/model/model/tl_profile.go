@@ -44,6 +44,7 @@ type GroupsInfo struct {
 
 type UserActivity struct {
 	EventName   string          `json:"event_name"`
+	EventType   string          `json:"event_type"`
 	DisplayName string          `json:"display_name"`
 	AliasName   string          `json:"alias_name,omitempty"`
 	Properties  *postgres.Jsonb `json:"properties,omitempty"`
