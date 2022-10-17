@@ -905,6 +905,47 @@ func SanitizeStringSumToNumeric(result *QueryResult) {
 	}
 }
 
+func CheckIfMapHasNoneFilter(propertyToHasNoneFilter map[string]bool, p QueryProperty) bool {
+	propertyKey := p.Entity + "." + p.Property
+	hasNoneFilter := false
+	if exists := propertyToHasNoneFilter[propertyKey]; exists {
+		hasNoneFilter = true
+	}
+	return hasNoneFilter
+}
+
+func GetPropertyToHasNoneFilter(properties []QueryProperty) map[string]bool {
+	propertyToHasNoneFilter := make(map[string]bool)
+	for _, p := range properties {
+		if p.Value == PropertyValueNone {
+			propertyKey := p.Entity + "." + p.Property
+			propertyToHasNoneFilter[propertyKey] = true
+		}
+	}
+	return propertyToHasNoneFilter
+}
+
+// If UI presents filters in "(a or b) AND (c or D)" order, Request has it as "a or b AND c or D"
+// Using AND as a separation between lines and execution order to achieve the same as above.
+func GetPropertiesGrouped(properties []QueryProperty) [][]QueryProperty {
+	groupedProperties := make([][]QueryProperty, 0)
+	currentGroupedProperties := make([]QueryProperty, 0)
+	for index, p := range properties {
+		if index == 0 || p.LogicalOp != "AND" {
+			currentGroupedProperties = append(currentGroupedProperties, p)
+		} else {
+			groupedProperties = append(groupedProperties, currentGroupedProperties)
+
+			currentGroupedProperties = make([]QueryProperty, 0)
+			currentGroupedProperties = append(currentGroupedProperties, p)
+		}
+	}
+	if len(currentGroupedProperties) != 0 {
+		groupedProperties = append(groupedProperties, currentGroupedProperties)
+	}
+	return groupedProperties
+}
+
 // CheckIfHasNoneFilter Returns if set of filters has $none as a value
 func CheckIfHasNoneFilter(properties []QueryProperty) bool {
 

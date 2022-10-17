@@ -296,7 +296,11 @@ function CoreQuery({
   }, [updateChartTypes]);
 
   const confirmDelete = useCallback(() => {
-    dispatch(deleteQuery(activeRow));
+    let queryDetails = {
+      ...activeRow,
+      project_id: activeProject?.id
+    } 
+    dispatch(deleteQuery(queryDetails));
     setActiveRow(null);
     showDeleteModal(false);
   }, [activeRow]);

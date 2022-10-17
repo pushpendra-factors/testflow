@@ -64,6 +64,7 @@ type Model interface {
 	GetCoalesceIDFromUserIDs(userIDs []string, projectID int64, logCtx log.Entry) (map[string]model.UserInfo, []string, error)
 	PullAllUsersByCustomerUserID(projectID int64, kpiData *map[string]model.KPIInfo, logCtx log.Entry) error
 	FetchAllUsersAndCustomerUserData(projectID int64, customerUserIdList []string, logCtx log.Entry) (map[string]string, map[string][]string, error)
+	FetchAllUsersAndCustomerUserDataInBatches(projectID int64, customerUserIdList []string, logCtx log.Entry) (map[string]string, map[string][]string, error)
 	GetConvertedUsers(projectID,
 		conversionFrom, conversionTo int64, goalEvent model.QueryEventWithProperties,
 		query *model.AttributionQuery, eventNameToIDList map[string][]interface{},

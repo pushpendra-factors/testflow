@@ -14,6 +14,7 @@ import (
 )
 
 // ExecuteAttributionQueryV1 Todo Pre-compute's online version - add details once available to run
+// @Deprecated
 func (store *MemSQL) ExecuteAttributionQueryV1(projectID int64, queryOriginal *model.AttributionQuery,
 	debugQueryKey string, enableOptimisedFilterOnProfileQuery,
 	enableOptimisedFilterOnEventUserQuery bool) (*model.QueryResult, error) {
@@ -647,13 +648,13 @@ func (store *MemSQL) GetConvertedUsers(projectID,
 
 	// 3. Fetch users who hit conversion event
 	var userIDToInfoConverted map[string]model.UserInfo
-	var coalescedIDToInfoConverted map[string][]model.UserIDPropID
+	//var coalescedIDToInfoConverted map[string][]model.UserIDPropID
 	var coalUserIdConversionTimestamp map[string]int64
 	var usersToBeAttributed []model.UserEventInfo
 
 	var err error
 	// Fetch users who hit conversion event.
-	userIDToInfoConverted, coalescedIDToInfoConverted, coalUserIdConversionTimestamp, err = store.GetConvertedUsersWithFilterV1(projectID,
+	userIDToInfoConverted, _, coalUserIdConversionTimestamp, err = store.GetConvertedUsersWithFilterV1(projectID,
 		goalEventName, goalEventProperties, conversionFrom, conversionTo, eventNameToIDList, logCtx)
 	if err != nil {
 		return userIDToInfoConverted, usersToBeAttributed, coalUserIdConversionTimestamp, err
@@ -665,26 +666,15 @@ func (store *MemSQL) GetConvertedUsers(projectID,
 			_convertedUserCoalID = append(_convertedUserCoalID, k)
 			_convertedUserTimestamp = append(_convertedUserTimestamp, v)
 		}
-		_convertedUserCoalIDInBatches := U.GetStringListAsBatch(_convertedUserCoalID, 10)
-		_convertedUserTimestampInBatches := U.GetInt64ListAsBatch(_convertedUserTimestamp, 10)
-		batch := 1
-		for _, v := range _convertedUserCoalIDInBatches {
-			logCtx.WithFields(log.Fields{"CleverTapBatch": batch}).Warn("Get Converted Users With Filter Coal ID")
-			logCtx.WithFields(log.Fields{"CleverTapConvertedUsersCoalIDInBatches": v}).Warn("Printing Converted Users Coal ID")
-			batch++
-		}
-		batch = 1
-		for _, v := range _convertedUserTimestampInBatches {
-			logCtx.WithFields(log.Fields{"CleverTapBatch": batch}).Warn("Get Converted Users With Filter Time Stamp")
-			logCtx.WithFields(log.Fields{"CleverTapConvertedUsersTimeStampInBatches": v}).Warn("Printing Converted Users TimeStamp")
-			batch++
-		}
+		logCtx.WithFields(log.Fields{"CleverTapConvertedUsersCoalIDInBatches": _convertedUserCoalID}).Warn("Printing Converted Users Coal ID")
+		logCtx.WithFields(log.Fields{"CleverTapConvertedUsersTimeStampInBatches": _convertedUserTimestamp}).Warn("Printing Converted Users TimeStamp")
+
 	}
 
 	// Add users who hit conversion event
-	for key := range coalescedIDToInfoConverted {
+	for key, val := range coalUserIdConversionTimestamp {
 		usersToBeAttributed = append(usersToBeAttributed, model.UserEventInfo{CoalUserID: key,
-			EventName: goalEventName})
+			EventName: goalEventName, Timestamp: val, EventType: 0})
 	}
 
 	err, linkedFunnelEventUsers := store.GetLinkedFunnelEventUsersFilter(projectID, conversionFrom, conversionTo, query.LinkedEvents, eventNameToIDList, userIDToInfoConverted, logCtx)
@@ -699,20 +689,9 @@ func (store *MemSQL) GetConvertedUsers(projectID,
 			_lfeUsers = append(_lfeUsers, v.CoalUserID)
 			_lfeTimeStamp = append(_lfeTimeStamp, v.Timestamp)
 		}
-		_lfeUsersInBatches := U.GetStringListAsBatch(_lfeUsers, 10)
-		_lfeTimeStampInBatches := U.GetInt64ListAsBatch(_lfeTimeStamp, 10)
-		batch := 1
-		for _, v := range _lfeUsersInBatches {
-			logCtx.WithFields(log.Fields{"CleverTapBatch": batch}).Warn("GetLinkedFunnelEventUsersFilter coal id")
-			logCtx.WithFields(log.Fields{"CleverTapLinkedFunnelCoalId": v}).Warn("Printing Linked Funnel Event Users CoalId")
-			batch++
-		}
-		batch = 1
-		for _, v := range _lfeTimeStampInBatches {
-			logCtx.WithFields(log.Fields{"CleverTapBatch": batch}).Warn("GetLinkedFunnelEventUsersFilter timestamp")
-			logCtx.WithFields(log.Fields{"CleverTapLinkedFunnelTimeStamp": v}).Warn("Printing Linked Funnel Event Users TimeStamp")
-			batch++
-		}
+		logCtx.WithFields(log.Fields{"CleverTapLinkedFunnelCoalId": _lfeUsers}).Warn("Printing Linked Funnel Event Users CoalId")
+		logCtx.WithFields(log.Fields{"CleverTapLinkedFunnelTimeStamp": _lfeTimeStamp}).Warn("Printing Linked Funnel Event Users TimeStamp")
+
 	}
 
 	model.MergeUsersToBeAttributed(&usersToBeAttributed, linkedFunnelEventUsers)
@@ -726,28 +705,10 @@ func (store *MemSQL) GetConvertedUsers(projectID,
 			_finalTimeStamp = append(_finalTimeStamp, v.Timestamp)
 			_eventType = append(_eventType, int64(v.EventType))
 		}
-		_finalUsersInBatches := U.GetStringListAsBatch(_finalUsers, 10)
-		_finalTimeStampInBatches := U.GetInt64ListAsBatch(_finalTimeStamp, 10)
-		_eventTypeInBatches := U.GetInt64ListAsBatch(_eventType, 10)
-		batch := 1
-		for _, v := range _finalUsersInBatches {
-			logCtx.WithFields(log.Fields{"CleverTapBatch": batch}).Warn("MergeUsersToBeAttributed users")
-			logCtx.WithFields(log.Fields{"CleverTapFinalUsersCoalID": v}).Warn("Printing Final Users Coal ID")
-			batch++
-		}
-		batch = 1
-		for _, v := range _finalTimeStampInBatches {
-			logCtx.WithFields(log.Fields{"CleverTapBatch": batch}).Warn("MergeUsersToBeAttributed timestamp")
-			logCtx.WithFields(log.Fields{"CleverTapFinalUsersTimeStamp": v}).Warn("Printing Final Users TimeStamp")
-			batch++
+		logCtx.WithFields(log.Fields{"CleverTapFinalUsersCoalID": _finalUsers}).Warn("Printing Final Users Coal ID")
+		logCtx.WithFields(log.Fields{"CleverTapFinalUsersTimeStamp": _finalTimeStamp}).Warn("Printing Final Users TimeStamp")
+		logCtx.WithFields(log.Fields{"CleverTapEventType": _eventType}).Warn("Printing Event Type")
 
-		}
-		batch = 1
-		for _, v := range _eventTypeInBatches {
-			logCtx.WithFields(log.Fields{"CleverTapBatch": batch}).Warn("MergeUsersToBeAttributed event type")
-			logCtx.WithFields(log.Fields{"CleverTapEventType": v}).Warn("Printing Event Type")
-			batch++
-		}
 	}
 
 	return userIDToInfoConverted, usersToBeAttributed, coalUserIdConversionTimestamp, nil
@@ -820,7 +781,7 @@ func (store *MemSQL) RunAttributionForMethodologyComparisonV1(query *model.Attri
 	// Attribution based on given attribution methodology.
 	userConversionHit, _, err := model.ApplyAttribution(query.QueryType, query.AttributionMethodology,
 		query.ConversionEvent.Name, *usersToBeAttributed, sessions, *coalUserIdConversionTimestamp,
-		query.LookbackDays, query.From, query.To, query.AttributionKey)
+		query.LookbackDays, query.From, query.To, query.AttributionKey, logCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -830,7 +791,7 @@ func (store *MemSQL) RunAttributionForMethodologyComparisonV1(query *model.Attri
 	// Attribution based on given attributionMethodologyCompare methodology.
 	userConversionCompareHit, _, err := model.ApplyAttribution(query.QueryType, query.AttributionMethodologyCompare,
 		query.ConversionEvent.Name, *usersToBeAttributed, sessions, *coalUserIdConversionTimestamp,
-		query.LookbackDays, query.From, query.To, query.AttributionKey)
+		query.LookbackDays, query.From, query.To, query.AttributionKey, logCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -876,7 +837,7 @@ func (store *MemSQL) runAttributionV1(goalEvent model.QueryEventWithProperties,
 	// 4. Apply attribution based on given attribution methodology
 	userConversionHit, userLinkedFEHit, err := model.ApplyAttribution(query.QueryType, query.AttributionMethodology,
 		goalEventName, *usersToBeAttributed, sessions, *coalUserIdConversionTimestamp,
-		query.LookbackDays, query.From, query.To, query.AttributionKey)
+		query.LookbackDays, query.From, query.To, query.AttributionKey, logCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -984,12 +945,80 @@ func (store *MemSQL) getAllTheSessionsV1(projectId int64, sessionEventNameId str
 	return attributedSessionsByUserId, userIdsWithSession, nil
 }
 
+// FetchAllUsersAndCustomerUserDataInBatches returns usersIds for given list of customer_user_id (i.e. coal_id) in batches
+func (store *MemSQL) FetchAllUsersAndCustomerUserDataInBatches(projectID int64, customerUserIdList []string, logCtx log.Entry) (map[string]string, map[string][]string, error) {
+
+	if len(customerUserIdList) == 0 {
+		return nil, nil, nil
+	}
+
+	userIdToCoalIds := make(map[string]string)
+	custUserIdToUserIds := make(map[string][]string)
+
+	coalUserIDsInBatches := U.GetStringListAsBatch(customerUserIdList, model.UserBatchSize)
+	batch := 1
+	for _, users := range coalUserIDsInBatches {
+
+		placeHolder := U.GetValuePlaceHolder(len(users))
+		value := U.GetInterfaceList(users)
+		groupUserListQuery := "Select users.id, users.customer_user_id FROM users WHERE project_id=? " +
+			" AND users.customer_user_id IN ( " + placeHolder + " ) "
+		var gULParams []interface{}
+		gULParams = append(gULParams, projectID)
+		gULParams = append(gULParams, value...)
+		gULRows, tx, err, reqID := store.ExecQueryWithContext(groupUserListQuery, gULParams)
+		if err != nil {
+			logCtx.WithError(err).Error("SQL Query failed")
+			return nil, nil, errors.New("failed to get groupUserListQuery result for project")
+		}
+		batch++
+		startReadTime := time.Now()
+		for gULRows.Next() {
+			var userIDNull sql.NullString
+			var custUserIDNull sql.NullString
+			if err = gULRows.Scan(&userIDNull, &custUserIDNull); err != nil {
+				logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
+				continue
+			}
+
+			userID := U.IfThenElse(userIDNull.Valid, userIDNull.String, model.PropertyValueNone).(string)
+			custUserID := U.IfThenElse(custUserIDNull.Valid, custUserIDNull.String, model.PropertyValueNone).(string)
+			if userID == model.PropertyValueNone || custUserID == model.PropertyValueNone {
+				logCtx.WithError(err).Error("Values are not correct - userID & custUserID . Ignoring row. Continuing")
+				continue
+			}
+
+			// Keeping userID to CoalID
+			userIdToCoalIds[userID] = custUserID
+
+			// Keeping CoalID to userID(s). Since many user_ids can be associated with one coal_id
+			if _, exists := custUserIdToUserIds[custUserID]; exists {
+				v := custUserIdToUserIds[custUserID]
+				v = append(v, userID)
+				custUserIdToUserIds[custUserID] = v
+			} else {
+				var users []string
+				users = append(users, userID)
+				custUserIdToUserIds[custUserID] = users
+			}
+		}
+
+		err = gULRows.Err()
+		if err != nil {
+			// Error from DB is captured eg: timeout error
+			logCtx.WithFields(log.Fields{"err": err, "batchNo": batch}).Error("Error in executing query in FetchAllUsersAndCustomerUserDataInBatches")
+			return nil, nil, err
+		}
+		U.CloseReadQuery(gULRows, tx)
+		U.LogReadTimeWithQueryRequestID(startReadTime, reqID, &log.Fields{"project_id": projectID})
+	}
+	return userIdToCoalIds, custUserIdToUserIds, nil
+}
+
 // FetchAllUsersAndCustomerUserData returns usersIds for given list of customer_user_id (i.e. coal_id)
+// @Deprecated
 func (store *MemSQL) FetchAllUsersAndCustomerUserData(projectID int64, customerUserIdList []string, logCtx log.Entry) (map[string]string, map[string][]string, error) {
 
-	if projectID == 1125899918000010 {
-		logCtx.WithFields(log.Fields{"HevoDebug": "Hevo", "customerUserIdList": customerUserIdList}).Info("Debug FetchAllUsersAndCustomerUserData")
-	}
 	if len(customerUserIdList) == 0 {
 		return nil, nil, nil
 	}
@@ -1048,10 +1077,6 @@ func (store *MemSQL) FetchAllUsersAndCustomerUserData(projectID int64, customerU
 
 	U.LogReadTimeWithQueryRequestID(startReadTime, reqID, &log.Fields{})
 	defer U.CloseReadQuery(gULRows, tx2)
-	if projectID == 1125899918000010 {
-		logCtx.WithFields(log.Fields{"HevoDebug": "Hevo", "userIdToCoalIds": userIdToCoalIds}).Info("Debug FetchAllUsersAndCustomerUserData")
-		logCtx.WithFields(log.Fields{"HevoDebug": "Hevo", "custUserIdToUserIds": custUserIdToUserIds}).Info("Debug FetchAllUsersAndCustomerUserData")
-	}
 	return userIdToCoalIds, custUserIdToUserIds, nil
 }
 
@@ -1151,19 +1176,10 @@ func (store *MemSQL) GetConvertedUsersWithFilterV1(projectID int64, goalEventNam
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	if projectID == 1125899918000010 {
-		logCtx.WithFields(log.Fields{"HevoDebug": "Hevo", "userIDList": userIDList}).Info("Debug GetConvertedUsersWithFilterV1")
-		logCtx.WithFields(log.Fields{"HevoDebug": "Hevo", "userIDToCoalIDInfo": userIDToCoalIDInfo}).Info("Debug GetConvertedUsersWithFilterV1")
-		logCtx.WithFields(log.Fields{"HevoDebug": "Hevo", "coalIDs": coalIDs}).Info("Debug GetConvertedUsersWithFilterV1")
-	}
 	// Reverse lookup for all the converted userID's coalIDs to get the other users which are not marked 'converted'
-	_userIDToCoalID, _custUserIdToUserIds, err := store.FetchAllUsersAndCustomerUserData(projectID, coalIDs, logCtx)
+	_userIDToCoalID, _custUserIdToUserIds, err := store.FetchAllUsersAndCustomerUserDataInBatches(projectID, coalIDs, logCtx)
 	if err != nil {
 		return nil, nil, nil, err
-	}
-	if projectID == 1125899918000010 {
-		logCtx.WithFields(log.Fields{"HevoDebug": "Hevo", "_userIDToCoalID": _userIDToCoalID}).Info("Debug GetConvertedUsersWithFilterV1")
-		logCtx.WithFields(log.Fields{"HevoDebug": "Hevo", "_custUserIdToUserIds": _custUserIdToUserIds}).Info("Debug GetConvertedUsersWithFilterV1")
 	}
 	for userID, coalID := range _userIDToCoalID {
 

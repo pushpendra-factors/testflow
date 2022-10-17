@@ -216,10 +216,10 @@ def insert_insights(doc_type, project_id, ad_account, response, campaign_group_m
         else:
             if id in creative_meta:
                 data.update(creative_meta[id])
-            if creative_meta[id][CAMPAIGN_GROUP_ID] in campaign_group_meta:
-                data.update(campaign_group_meta[creative_meta[id][CAMPAIGN_GROUP_ID]])
-            if creative_meta[id][CAMPAIGN_ID] in campaign_meta:
-                data.update(campaign_meta[creative_meta[id][CAMPAIGN_ID]])
+                if creative_meta[id][CAMPAIGN_GROUP_ID] in campaign_group_meta:
+                    data.update(campaign_group_meta[creative_meta[id][CAMPAIGN_GROUP_ID]])
+                if creative_meta[id][CAMPAIGN_ID] in campaign_meta:
+                    data.update(campaign_meta[creative_meta[id][CAMPAIGN_ID]])
 
         add_documents_response = add_linkedin_documents(linkedin_int_setting[PROJECT_ID], linkedin_int_setting[LINKEDIN_AD_ACCOUNT], doc_type, id, data, timestamp)
         if not add_documents_response.ok:

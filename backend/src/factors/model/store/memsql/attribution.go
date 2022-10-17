@@ -20,6 +20,7 @@ import (
 //	  ii)	Using users from 3.i) find out users who hit linked funnel event applying filter
 //	4. Apply attribution methodology
 //	5. Add performance data by attributionId
+// @Deprecated
 func (store *MemSQL) ExecuteAttributionQuery(projectID int64, queryOriginal *model.AttributionQuery,
 	debugQueryKey string, enableOptimisedFilterOnProfileQuery,
 	enableOptimisedFilterOnEventUserQuery bool) (*model.QueryResult, error) {
@@ -524,7 +525,7 @@ func (store *MemSQL) RunAttributionForMethodologyComparison(projectID int64,
 	// Attribution based on given attribution methodology.
 	userConversionHit, _, err := model.ApplyAttribution(query.QueryType, query.AttributionMethodology,
 		query.ConversionEvent.Name, usersToBeAttributed, sessions, coalUserIdConversionTimestamp,
-		query.LookbackDays, query.From, query.To, query.AttributionKey)
+		query.LookbackDays, query.From, query.To, query.AttributionKey, logCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -534,7 +535,7 @@ func (store *MemSQL) RunAttributionForMethodologyComparison(projectID int64,
 	// Attribution based on given attributionMethodologyCompare methodology.
 	userConversionCompareHit, _, err := model.ApplyAttribution(query.QueryType, query.AttributionMethodologyCompare,
 		query.ConversionEvent.Name, usersToBeAttributed, sessions, coalUserIdConversionTimestamp,
-		query.LookbackDays, query.From, query.To, query.AttributionKey)
+		query.LookbackDays, query.From, query.To, query.AttributionKey, logCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -607,7 +608,7 @@ func (store *MemSQL) runAttributionKpi(projectID int64,
 	// 4. Apply attribution based on given attribution methodology
 	userConversionHit, userLinkedFEHit, err := model.ApplyAttribution(query.QueryType, query.AttributionMethodology,
 		goalEventName, usersToBeAttributed, sessions, coalUserIdConversionTimestamp,
-		query.LookbackDays, query.From, query.To, query.AttributionKey)
+		query.LookbackDays, query.From, query.To, query.AttributionKey, logCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -655,7 +656,7 @@ func (store *MemSQL) runAttribution(projectID int64,
 	// 4. Apply attribution based on given attribution methodology
 	userConversionHit, userLinkedFEHit, err := model.ApplyAttribution(query.QueryType, query.AttributionMethodology,
 		goalEventName, usersToBeAttributed, sessions, coalUserIdConversionTimestamp,
-		query.LookbackDays, query.From, query.To, query.AttributionKey)
+		query.LookbackDays, query.From, query.To, query.AttributionKey, logCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -1102,7 +1103,7 @@ func (store *MemSQL) GetConvertedUsersWithFilter(projectID int64, goalEventName 
 	}
 
 	// Reverse lookup for all the converted userID's coalIDs to get the other users which are not marked 'converted'
-	_userIDToCoalID, _custUserIdToUserIds, err := store.FetchAllUsersAndCustomerUserData(projectID, coalIDs, logCtx)
+	_userIDToCoalID, _custUserIdToUserIds, err := store.FetchAllUsersAndCustomerUserDataInBatches(projectID, coalIDs, logCtx)
 	if err != nil {
 		return nil, nil, nil, err
 	}

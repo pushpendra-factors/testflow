@@ -2962,13 +2962,13 @@ func TestSDKReIdentification(t *testing.T) {
 		User re-identification with web source
 	*/
 
-	// Create user with web source  and customer user id
-	userID, status = store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: "test@abc.com", Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	// Create user with web source  and new customer user id
+	userID, status = store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: "testweb@abc.com", Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, status)
 	user, status = store.GetStore().GetUser(project.ID, userID)
 	assert.Equal(t, http.StatusFound, status)
 	assert.Equal(t, model.UserSourceWeb, *user.CustomerUserIdSource)
-	assert.Equal(t, "test@abc.com", user.CustomerUserId)
+	assert.Equal(t, "testweb@abc.com", user.CustomerUserId)
 
 	// re-identify on web source, since crm is not added
 	status, _ = SDK.Identify(project.ID, &SDK.IdentifyPayload{UserId: userID, CustomerUserId: "test1@abc.com", RequestSource: model.UserSourceWeb}, true)

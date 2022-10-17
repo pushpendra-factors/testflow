@@ -1394,7 +1394,8 @@ func getExistingCampaignMemberUserIDFromProperties(projectID int64, properties *
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "contact_id": existingContactMemberID, "lead_id": existingLeadMemberID, "properties": properties})
 	// use contact Id associated user id. Once user converts from lead to contact, salesforce prioritize contact based identification
 	if existingContactMemberID != "" {
-		existingMember, status := store.GetStore().GetSyncedSalesforceDocumentByType(projectID, []string{util.GetPropertyValueAsString(existingContactMemberID)}, model.SalesforceDocumentTypeContact, false)
+		// pull unsynced records along with synced for silently skip processing if contact not processed
+		existingMember, status := store.GetStore().GetSyncedSalesforceDocumentByType(projectID, []string{util.GetPropertyValueAsString(existingContactMemberID)}, model.SalesforceDocumentTypeContact, true)
 		if status != http.StatusFound && status != http.StatusNotFound {
 			logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to get salesforce contact for campaign member enrichment")
 			return ""
@@ -1410,7 +1411,7 @@ func getExistingCampaignMemberUserIDFromProperties(projectID int64, properties *
 		}
 	}
 
-	existingMember, status := store.GetStore().GetSyncedSalesforceDocumentByType(projectID, []string{util.GetPropertyValueAsString(existingLeadMemberID)}, model.SalesforceDocumentTypeLead, false)
+	existingMember, status := store.GetStore().GetSyncedSalesforceDocumentByType(projectID, []string{util.GetPropertyValueAsString(existingLeadMemberID)}, model.SalesforceDocumentTypeLead, true)
 	if status != http.StatusFound && status != http.StatusNotFound {
 		logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to get salesforce lead for campaign member enrichment")
 		return ""

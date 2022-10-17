@@ -304,8 +304,8 @@ func TestKpiAnalyticsForProfile(t *testing.T) {
 
 	project, agent, _ := SetupProjectWithAgentDAO()
 	rCustomerUserId := U.RandomLowerAphaNumString(15)
-	properties1 := postgres.Jsonb{RawMessage: json.RawMessage([]byte(`{"country": "india", "age": 30, "$hubspot_amount": 300, "$hubspot_datefield1": 1640975425,  "paid": true}`))}
-	properties2 := postgres.Jsonb{RawMessage: json.RawMessage([]byte(`{"country": "us", "age": 20, "$hubspot_amount": 200, "$hubspot_datefield1": 1640975425, "paid": true}`))}
+	properties1 := postgres.Jsonb{RawMessage: json.RawMessage([]byte(`{"country": "india", "age": 30, "$hubspot_amount": 300, "$hubspot_datefield1": 1640975325,  "paid": true}`))}
+	properties2 := postgres.Jsonb{RawMessage: json.RawMessage([]byte(`{"country": "us", "age": 20, "$hubspot_amount": 200, "$hubspot_datefield1": 1640975525, "paid": true}`))}
 	// properties2 := postgres.Jsonb{RawMessage: json.RawMessage([]byte(`{"country": "us", "age": 20, "$hubspot_amount": 300, "$hubspot_datefield1": 1640975425, "paid": true}`))}
 
 	joinTime := int64(1640975425 - 100)
@@ -415,6 +415,72 @@ func TestKpiAnalyticsForProfile(t *testing.T) {
 		assert.Equal(t, result[1].Rows[0][0], float64(300))
 
 		log.WithField("result", result).Warn("kark1")
+	})
+
+	t.Run("test hubspot contacts with filters only - timerange overshoot check with $none filters", func(t *testing.T) {
+		query1 := model.KPIQuery{
+			Category:         model.ProfileCategory,
+			DisplayCategory:  "hubspot_contacts",
+			PageUrl:          "",
+			Metrics:          []string{name1},
+			GroupBy:          []M.KPIGroupBy{},
+			From:             1640975425 - 2,
+			To:               1640975425 + 2,
+			GroupByTimestamp: "date",
+		}
+
+		filter := model.KPIFilter{
+			ObjectType:       "",
+			PropertyName:     "country",
+			PropertyDataType: "categorical",
+			Entity:           "user",
+			Condition:        "equals",
+			Value:            "india",
+			LogicalOp:        "AND",
+		}
+		filter1 := model.KPIFilter{
+			ObjectType:       "",
+			PropertyName:     "age",
+			PropertyDataType: "categorical",
+			Entity:           "user",
+			Condition:        "equals",
+			Value:            "20",
+			LogicalOp:        "OR",
+		}
+		filter2 := model.KPIFilter{
+			ObjectType:       "",
+			PropertyName:     "country",
+			PropertyDataType: "categorical",
+			Entity:           "user",
+			Condition:        "notEqual",
+			Value:            "",
+			LogicalOp:        "AND",
+		}
+		filter3 := model.KPIFilter{
+			ObjectType:       "",
+			PropertyName:     "country",
+			PropertyDataType: "categorical",
+			Entity:           "user",
+			Condition:        "equals",
+			Value:            "us",
+			LogicalOp:        "AND",
+		}
+
+		query2 := model.KPIQuery{}
+		U.DeepCopy(&query1, &query2)
+		query2.GroupByTimestamp = ""
+
+		kpiQueryGroup2 := model.KPIQueryGroup{
+			Class:         "kpi",
+			Queries:       []model.KPIQuery{query1, query2},
+			GlobalFilters: []model.KPIFilter{filter, filter1, filter2, filter3},
+			GlobalGroupBy: []model.KPIGroupBy{},
+		}
+		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup2,
+			C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		assert.Equal(t, http.StatusOK, statusCode)
+		assert.Equal(t, result[0].Headers, []string{"datetime", name1})
+		assert.Equal(t, len(result[0].Rows), 0)
 	})
 
 	t.Run("test hubspot contacts with filters present in custom metric", func(t *testing.T) {

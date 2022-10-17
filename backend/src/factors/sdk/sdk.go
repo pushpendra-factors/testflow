@@ -951,6 +951,27 @@ func ShouldAllowIdentificationOverwrite(projectID int64, userID string, incoming
 		return true
 	}
 
+	if incomingRequestSource == model.UserSourceWeb {
+		// Same CustomerUserId existing on other source should block overwrite
+		_, status = store.GetStore().GetExistingUserByCustomerUserID(projectID, []string{user.CustomerUserId}, model.GetAllCRMUserSource()...)
+		if status == http.StatusFound {
+			return false
+		}
+
+		if status != http.StatusNotFound {
+			log.WithFields(log.Fields{"project_id": projectID, "user_id": userID, "customer_user_id": incomingCustomerUserid}).
+				Error("Failed to get user by customer user id and source.")
+			return false
+		}
+
+		if user.CustomerUserIdSource != nil &&
+			allowedCustomerUserIDSourceIdentificationOverwrite(incomingRequestSource, *user.CustomerUserIdSource) {
+			return true
+		}
+
+		return false
+	}
+
 	if user.CustomerUserIdSource != nil &&
 		allowedCustomerUserIDSourceIdentificationOverwrite(incomingRequestSource, *user.CustomerUserIdSource) {
 		return true
