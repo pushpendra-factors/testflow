@@ -648,13 +648,13 @@ func (store *MemSQL) GetConvertedUsers(projectID,
 
 	// 3. Fetch users who hit conversion event
 	var userIDToInfoConverted map[string]model.UserInfo
-	var coalescedIDToInfoConverted map[string][]model.UserIDPropID
+	//var coalescedIDToInfoConverted map[string][]model.UserIDPropID
 	var coalUserIdConversionTimestamp map[string]int64
 	var usersToBeAttributed []model.UserEventInfo
 
 	var err error
 	// Fetch users who hit conversion event.
-	userIDToInfoConverted, coalescedIDToInfoConverted, coalUserIdConversionTimestamp, err = store.GetConvertedUsersWithFilterV1(projectID,
+	userIDToInfoConverted, _, coalUserIdConversionTimestamp, err = store.GetConvertedUsersWithFilterV1(projectID,
 		goalEventName, goalEventProperties, conversionFrom, conversionTo, eventNameToIDList, logCtx)
 	if err != nil {
 		return userIDToInfoConverted, usersToBeAttributed, coalUserIdConversionTimestamp, err
@@ -672,9 +672,9 @@ func (store *MemSQL) GetConvertedUsers(projectID,
 	}
 
 	// Add users who hit conversion event
-	for key := range coalescedIDToInfoConverted {
+	for key, val := range coalUserIdConversionTimestamp {
 		usersToBeAttributed = append(usersToBeAttributed, model.UserEventInfo{CoalUserID: key,
-			EventName: goalEventName})
+			EventName: goalEventName, Timestamp: val, EventType: 0})
 	}
 
 	err, linkedFunnelEventUsers := store.GetLinkedFunnelEventUsersFilter(projectID, conversionFrom, conversionTo, query.LinkedEvents, eventNameToIDList, userIDToInfoConverted, logCtx)
