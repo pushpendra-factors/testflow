@@ -3249,6 +3249,7 @@ func querySingleEventWithBreakdownByEventUserProperty(projectID int64, eventName
 
 func TestSalesforceGroups(t *testing.T) {
 	project, _, err := SetupProjectWithAgentDAO()
+
 	assert.Nil(t, err)
 	accountID1 := "acc1_" + getRandomName()
 	accountID2 := "acc2_" + getRandomName()
@@ -3434,6 +3435,57 @@ func TestSalesforceGroups(t *testing.T) {
 		err = createDummySalesforceDocument(project.ID, processRecords[i], processRecordsType[i])
 		assert.Nil(t, err, fmt.Sprintf("doc_type %s", processRecordsType[i]))
 	}
+
+	// Create account smart event
+	rule := &model.SmartCRMEventFilter{
+		Source:               model.SmartCRMEventSourceSalesforce,
+		ObjectType:           "account",
+		Description:          "salesforce account",
+		FilterEvaluationType: model.FilterEvaluationTypeAny,
+		Filters: []model.PropertyFilter{
+			{
+				Name:      "Id",
+				Rules:     []model.CRMFilterRule{},
+				LogicalOp: model.LOGICAL_OP_AND,
+			},
+		},
+		LogicalOp:               model.LOGICAL_OP_AND,
+		TimestampReferenceField: "LastModifiedDate",
+	}
+
+	requestPayload := make(map[string]interface{})
+	groupAccountSmartEventName := "Account Id set"
+	requestPayload["name"] = groupAccountSmartEventName
+	requestPayload["expr"] = rule
+
+	_, status := store.GetStore().CreateOrGetCRMSmartEventFilterEventName(project.ID, &model.EventName{ProjectId: project.ID, Name: groupAccountSmartEventName}, rule)
+	assert.Equal(t, http.StatusCreated, status)
+
+	// Create account smart event
+	rule = &model.SmartCRMEventFilter{
+		Source:               model.SmartCRMEventSourceSalesforce,
+		ObjectType:           "opportunity",
+		Description:          "salesforce opportunity",
+		FilterEvaluationType: model.FilterEvaluationTypeAny,
+		Filters: []model.PropertyFilter{
+			{
+				Name:      "Id",
+				Rules:     []model.CRMFilterRule{},
+				LogicalOp: model.LOGICAL_OP_AND,
+			},
+		},
+		LogicalOp:               model.LOGICAL_OP_AND,
+		TimestampReferenceField: "LastModifiedDate",
+	}
+
+	requestPayload = make(map[string]interface{})
+	groupOpportunitySmartEventName := "Opportunity Id set"
+	requestPayload["name"] = groupOpportunitySmartEventName
+	requestPayload["expr"] = rule
+
+	_, status = store.GetStore().CreateOrGetCRMSmartEventFilterEventName(project.ID, &model.EventName{ProjectId: project.ID, Name: groupOpportunitySmartEventName}, rule)
+	assert.Equal(t, http.StatusCreated, status)
+
 	enrichStatus, _ := IntSalesforce.Enrich(project.ID, 2, nil)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
 	assert.Len(t, enrichStatus, 5) // group account status, contact roles and group opportunity status
@@ -3541,6 +3593,15 @@ func TestSalesforceGroups(t *testing.T) {
 	assert.Equal(t, float64(1), result[leadID2])
 	assert.Equal(t, float64(1), result[leadID2_3])
 
+	result, status = querySingleEventWithBreakdownByGlobalUserProperty(project.ID, groupAccountSmartEventName,
+		"$salesforce_lead_id", nil, nil, nil, account1CreatedDate.Unix()-500, createdDate.Add(30*time.Second).Unix()+500)
+	assert.Equal(t, http.StatusOK, status)
+	assert.Len(t, result, 4) // $none=4(for contact records), none $none = 3 (lead records))
+	assert.Equal(t, float64(4), result[model.PropertyValueNone])
+	assert.Equal(t, float64(1), result[leadID1])
+	assert.Equal(t, float64(1), result[leadID2])
+	assert.Equal(t, float64(1), result[leadID2_3])
+
 	// filter with $salesforce_lead_id = 1, should return only 1 user
 	result, status = querySingleEventWithBreakdownByGlobalUserProperty(project.ID, U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_CREATED,
 		"$salesforce_lead_id", nil, nil, map[string]string{"$salesforce_lead_id": leadID1}, account1CreatedDate.Unix()-500, createdDate.Add(30*time.Second).Unix()+500)
@@ -3610,6 +3671,14 @@ func TestSalesforceGroups(t *testing.T) {
 	assert.Equal(t, float64(2), result[opportunityID2])
 	assert.Equal(t, float64(2), result[opportunityID3])
 	assert.Equal(t, float64(2), result[opportunityID4])
+
+	result, status = querySingleEventWithBreakdownByGlobalUserProperty(project.ID, groupOpportunitySmartEventName,
+		"$salesforce_contact_id", nil, nil, nil, account1CreatedDate.Unix()-500, createdDate.Add(30*time.Second).Unix()+500)
+	assert.Equal(t, http.StatusOK, status)
+	assert.Len(t, result, 3)
+	assert.Equal(t, float64(3), result[model.PropertyValueNone])
+	assert.Equal(t, float64(1), result[opportunityID4ContactRole1ContactID])
+	assert.Equal(t, float64(1), result[opportunityID4ContactRole2ContactID])
 
 	// Two new update on the account. Account name will not be updated on group id
 	processRecords = []map[string]interface{}{}

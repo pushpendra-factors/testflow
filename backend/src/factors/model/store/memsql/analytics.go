@@ -1799,3 +1799,12 @@ func (store *MemSQL) Analyze(projectId int64, queryOriginal model.Query, enableF
 	}
 	return store.RunInsightsQuery(projectId, query, enableFilterOpt)
 }
+
+func (store *MemSQL) IsGroupEventNameByQueryEventWithProperties(projectID int64, ewp model.QueryEventWithProperties) (string, int) {
+	eventNameID := ""
+	if len(ewp.EventNameIDs) > 0 {
+		eventNameID = U.GetPropertyValueAsString(ewp.EventNameIDs[0])
+	}
+
+	return store.IsGroupEventName(projectID, ewp.Name, eventNameID)
+}

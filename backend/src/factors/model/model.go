@@ -49,6 +49,7 @@ type Model interface {
 	ExecQuery(stmnt string, params []interface{}) (*model.QueryResult, error, string)
 	ExecQueryWithContext(stmnt string, params []interface{}) (*sql.Rows, *sql.Tx, error, string)
 	Analyze(projectID int64, query model.Query, enableFilterOpt bool) (*model.QueryResult, int, string)
+	IsGroupEventNameByQueryEventWithProperties(projectID int64, ewp model.QueryEventWithProperties) (string, int)
 
 	// archival
 	GetNextArchivalBatches(projectID int64, startTime int64, maxLookbackDays int, hardStartTime, hardEndTime time.Time) ([]model.EventsArchivalBatch, error)
