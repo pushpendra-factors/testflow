@@ -461,6 +461,10 @@ func (store *MemSQL) GetExistingUserByCustomerUserID(projectId int64, arrayCusto
 		customerUserIDMap[userID] = customerUserID
 	}
 
+	if len(customerUserIDMap) == 0 {
+		return nil, http.StatusNotFound
+	}
+
 	return customerUserIDMap, http.StatusFound
 }
 

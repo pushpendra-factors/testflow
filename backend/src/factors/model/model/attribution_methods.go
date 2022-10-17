@@ -87,7 +87,7 @@ func ApplyAttributionKPI(attributionType string,
 
 func ApplyAttribution(attributionType string, method string, conversionEvent string, usersToBeAttributed []UserEventInfo,
 	sessions map[string]map[string]UserSessionData, coalUserIdConversionTimestamp map[string]int64,
-	lookbackDays int, campaignFrom, campaignTo int64, attributionKey string) (map[string][]AttributionKeyWeight, map[string]map[string][]AttributionKeyWeight, error) {
+	lookbackDays int, campaignFrom, campaignTo int64, attributionKey string, logCtx log.Entry) (map[string][]AttributionKeyWeight, map[string]map[string][]AttributionKeyWeight, error) {
 
 	usersAttribution := make(map[string][]AttributionKeyWeight)
 	linkedEventUserCampaign := make(map[string]map[string][]AttributionKeyWeight)
@@ -153,12 +153,17 @@ func ApplyAttribution(attributionType string, method string, conversionEvent str
 		}
 		if eventName == conversionEvent && val.EventType == EventTypeGoalEvent {
 			usersAttribution[userId] = attributionKeys
-		} else {
+
+		} else if val.EventType == EventTypeLinkedFunnelEvent {
 			if _, exist := linkedEventUserCampaign[eventName]; !exist {
 				linkedEventUserCampaign[eventName] = make(map[string][]AttributionKeyWeight)
 			}
 			linkedEventUserCampaign[eventName][userId] = attributionKeys
+		} else {
+
+			logCtx.WithFields(log.Fields{"Event Name": eventName, "User": userId, "Attribution Keys": attributionKeys}).Warn("Event Type doesn't match with EventTypeGoalEvent or EventTypeLinkedFunnelEvent ")
 		}
+
 	}
 	return usersAttribution, linkedEventUserCampaign, nil
 }
