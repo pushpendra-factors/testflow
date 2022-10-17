@@ -196,7 +196,6 @@ function CoreQuery({
   
   let activeProjectProfilePicture = useSelector((state)=>state.global.active_project.profile_picture)
   
-  console.log("ISPUSH", activeProjectProfilePicture)
   const queriesState = useSelector((state) => state.queries);
   const [deleteModal, showDeleteModal] = useState(false);
   const [activeRow, setActiveRow] = useState(null);
@@ -285,7 +284,11 @@ function CoreQuery({
   }, [updateChartTypes]);
 
   const confirmDelete = useCallback(() => {
-    dispatch(deleteQuery(activeRow));
+    let queryDetails = {
+      ...activeRow,
+      project_id: activeProject?.id
+    } 
+    dispatch(deleteQuery(queryDetails));
     setActiveRow(null);
     showDeleteModal(false);
   }, [activeRow]);
