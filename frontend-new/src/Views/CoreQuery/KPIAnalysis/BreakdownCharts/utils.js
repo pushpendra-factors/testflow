@@ -104,6 +104,17 @@ export const getVisibleSeriesData = (data, sorter) => {
   return [...sortedData, ...result];
 };
 
+const getDefaultCompareData = ({ kpis }) => {
+  const kpisData = {};
+
+  for (let j = 0; j < kpis.length; j++) {
+    const dataKey = `${getKpiLabel(kpis[j])} - ${j} - compareValue`;
+    kpisData[dataKey] = 0;
+    kpisData[`${getKpiLabel(kpis[j])} - ${j} - change`] = 0;
+  }
+  return kpisData;
+};
+
 const getRowLabelAndBreakdownData = ({
   row,
   breakdown,
@@ -125,28 +136,6 @@ const getRowLabelAndBreakdownData = ({
   }
   const rowLabel = Object.values(breakdownData).join(', ');
   return { rowLabel, breakdownData };
-};
-
-const getEquivalentCompareIndex = ({
-  data,
-  breakdown,
-  label,
-  grns,
-  bkdIndex = 0
-}) => {
-  for (let i = 0; i < data.length; i++) {
-    const row = get(data, `${i}`, []);
-    const { rowLabel } = getRowLabelAndBreakdownData({
-      row,
-      breakdown,
-      grns,
-      bkdIndex
-    });
-    if (label === rowLabel) {
-      return i;
-    }
-  }
-  return -1;
 };
 
 const getKpiValues = ({
@@ -196,11 +185,25 @@ export const formatData = (
     ) {
       return [];
     }
-    console.log('kpi breakdown format data');
     const { headers, rows } = data[1];
 
     const headerSlice = headers.slice(0, breakdown.length);
     const grns = getBreakDownGranularities(headerSlice, breakdown);
+
+    const comparisonDataLabelIndex = get(comparisonData, `1.rows`, []).reduce(
+      (prev, curr, currIndex) => {
+        const { rowLabel: compareRowLabel } = getRowLabelAndBreakdownData({
+          row: curr,
+          breakdown,
+          grns
+        });
+        return {
+          ...prev,
+          [compareRowLabel]: currIndex
+        };
+      },
+      {}
+    );
 
     const result = rows.map((d, index) => {
       const { rowLabel: grpLabel, breakdownData } = getRowLabelAndBreakdownData(
@@ -225,12 +228,10 @@ export const formatData = (
       if (comparisonData != null) {
         const compareDataRows = get(comparisonData, `1.rows`, []);
 
-        const compareIndex = getEquivalentCompareIndex({
-          data: compareDataRows,
-          breakdown,
-          label: grpLabel,
-          grns
-        });
+        const compareIndex =
+          comparisonDataLabelIndex[grpLabel] != null
+            ? comparisonDataLabelIndex[grpLabel]
+            : -1;
 
         if (compareIndex > -1) {
           const compareRow = compareDataRows[compareIndex];
@@ -248,12 +249,18 @@ export const formatData = (
             ...compareKpisData
           };
         }
+        return {
+          ...obj,
+          compareValue: 0,
+          ...getDefaultCompareData({
+            kpis
+          })
+        };
       }
       return obj;
     });
     return result;
   } catch (err) {
-    console.log(err);
     return [];
   }
 };
@@ -326,12 +333,12 @@ export const getTableColumns = (
               <div className="flex col-gap-1 items-center justify-end">
                 <SVG
                   color={
-                    row[`${kpiLabel} - ${index} - change`] > 0
+                    row[`${kpiLabel} - ${index} - change`] >= 0
                       ? '#5ACA89'
                       : '#FF0000'
                   }
                   name={
-                    row[`${kpiLabel} - ${index} - change`] > 0
+                    row[`${kpiLabel} - ${index} - change`] >= 0
                       ? 'arrowLift'
                       : 'arrowDown'
                   }
@@ -360,7 +367,6 @@ export const getTableColumns = (
 };
 
 export const getDataInTableFormat = (data, searchText, currentSorter) => {
-  console.log('kpi breakdown getDataInTableFormat');
   const filteredData = data.filter((elem) =>
     elem.label.toLowerCase().includes(searchText.toLowerCase())
   );
@@ -373,7 +379,6 @@ export const getHorizontalBarChartColumns = (
   eventPropNames,
   cardSize = 1
 ) => {
-  console.log('kpi with breakdown getHorizontalBarChartColumns');
   const result = breakdown.map((e, index) => {
     const displayTitle = getBreakdownDisplayName({
       breakdown: e,
@@ -413,7 +418,6 @@ export const getDataInHorizontalBarChartFormat = (
   cardSize = 1,
   isDashboardWidget = false
 ) => {
-  console.log('kpi with breakdown getDataInHorizontalBarChartFormat');
   const sortedData = SortResults(aggregateData, {
     key: 'value',
     order: 'descend'
@@ -523,7 +527,6 @@ export const formatDataInSeriesFormat = (
   breakdown,
   comparisonData
 ) => {
-  console.log('kpi with breakdown formatDataInSeriesFormat');
   const dataIndex = 0;
   if (
     !aggregateData.length ||
@@ -675,8 +678,6 @@ export const getDateBasedColumns = (
   comparisonApplied,
   compareCategories
 ) => {
-  console.log('kpi with breakdown getDateBasedColumns');
-
   const breakdownColumns = breakdown.map((e, index) => {
     const displayTitle = getBreakdownDisplayName({
       breakdown: e,

@@ -218,14 +218,17 @@ const SPARK_CHART_SAMPLE_KPI_DATA_WITH_COMPARISON_DATA = [
   }
 ];
 
-export const DefaultChart = () => {
+export function DefaultChart() {
   return (
     // event prop should match the key present in the chartData array. In this case, event is Engaged Users who tested
-    <SparkChart chartData={SPARK_CHART_SAMPLE_KPI_DATA} event="Engaged Users who tested" />
+    <SparkChart
+      chartData={SPARK_CHART_SAMPLE_KPI_DATA}
+      event="Engaged Users who tested"
+    />
   );
-};
+}
 
-export const ChartWithDifferentColor = () => {
+export function ChartWithDifferentColor() {
   return (
     // event prop should match the key present in the chartData array. In this case, event is Engaged Users who tested
     <SparkChart
@@ -234,9 +237,9 @@ export const ChartWithDifferentColor = () => {
       event="Engaged Users who tested"
     />
   );
-};
+}
 
-export const ChartWithHourlyFrequeny = () => {
+export function ChartWithHourlyFrequeny() {
   return (
     // event prop should match the key present in the chartData array. In this case, event is Engaged Users who tested
     <SparkChart
@@ -246,16 +249,16 @@ export const ChartWithHourlyFrequeny = () => {
       event="Engaged Users who tested"
     />
   );
-};
+}
 
-export const ChartWithComparisonData = () => {
+export function ChartWithComparisonData() {
   return (
     // event prop should match the key present in the chartData array. In this case, event is Engaged Users who tested
     <SparkChart
       chartColor={visualizationColors[9]}
       chartData={SPARK_CHART_SAMPLE_KPI_DATA_WITH_COMPARISON_DATA}
       event="Engaged Users who tested"
-      comparisonApplied={true}
+      comparisonApplied
     />
   );
-};
+}
