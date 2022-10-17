@@ -5510,6 +5510,27 @@ func TestHubspotReIdentification(t *testing.T) {
 	assert.Equal(t, email1, user.CustomerUserId)
 	assert.Equal(t, model.UserSourceHubspot, *user.CustomerUserIdSource)
 
+	//user re-identified by crm should be not allowed re-identification from web
+	status, _ = SDK.Identify(project.ID, &SDK.IdentifyPayload{UserId: userEmail2, CustomerUserId: "emailBlock@abc.com", RequestSource: model.UserSourceWeb}, true)
+	assert.Equal(t, http.StatusOK, status)
+	user, status = store.GetStore().GetUser(project.ID, userEmail2)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, email1, user.CustomerUserId)
+	assert.Equal(t, model.UserSourceHubspot, *user.CustomerUserIdSource)
+
+	// New web user with existing primary email from hubspot
+	newWebuserID, status := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: email1, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, status)
+
+	// user re-identification should be blocked for new web user with same hubspot primary email even if not re-identified from hubspot
+	status, _ = SDK.Identify(project.ID, &SDK.IdentifyPayload{UserId: newWebuserID, CustomerUserId: "emailBlock@abc.com", RequestSource: model.UserSourceWeb}, true)
+	assert.Equal(t, http.StatusOK, status)
+
+	user, status = store.GetStore().GetUser(project.ID, newWebuserID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, email1, user.CustomerUserId)
+	assert.Equal(t, model.UserSourceWeb, *user.CustomerUserIdSource)
+
 }
 
 func TestHubspotGetContactProperties(t *testing.T) {
