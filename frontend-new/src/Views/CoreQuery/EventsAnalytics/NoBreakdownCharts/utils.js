@@ -229,7 +229,7 @@ export const getDataInLineChartFormat = (
   const categories = Array.from(differentDates);
   const compareCategories = Array.from(differentComparisonDates);
 
-  const initializedDatesData = differentDates.map(() => {
+  const initializedDatesData = categories?.map(() => {
     return 0;
   });
 
