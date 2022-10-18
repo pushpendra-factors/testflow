@@ -107,11 +107,11 @@ const NoBreakdownCharts = ({
     if (aggregateData.length === 1) {
       chartContent = (
         <div
-          className={`flex items-center flex-wrap justify-center ${
+          className={`flex items-center justify-center w-full  h-full ${
             unit.cardSize !== 1 ? 'flex-col' : ''
           }`}
         >
-          <div className={unit.cardSize === 1 ? 'w-1/4' : 'w-full'}>
+          <div className={'h-full grid' + unit.cardSize === 1 ? 'w-1/4' : 'w-full'}>
             <ChartHeader
               bgColor="#4D7DB4"
               query={aggregateData[0].name}
@@ -120,7 +120,7 @@ const NoBreakdownCharts = ({
               eventNames={eventNames}
             />
           </div>
-          <div className={unit.cardSize === 1 ? 'w-3/4' : 'w-full'}>
+          <div className={'h-full ' + unit.cardSize === 1 ? 'w-3/4' : 'w-full'}>
             <SparkChart
               frequency={durationObj.frequency}
               page="kpi"
