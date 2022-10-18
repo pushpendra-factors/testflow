@@ -623,7 +623,9 @@ def sync_contacts_from_contact_lists(project_id, refresh_token, api_key, list_id
                 continue
             contact_ids.append(contact["vid"])
             count_contact_ids += 1
-            list_memberships[contact["vid"]] = contact["list-memberships"]
+            for list_membership in contact["list-memberships"]:
+                if list_membership["static-list-id"] == list_id:
+                    list_memberships[contact["vid"]] = list_membership
 
         count_contacts = count_contacts + len(contacts)
         ("Downloaded %d contacts for list_id : %d. total %d.", len(contacts), list_id, count_contacts)
