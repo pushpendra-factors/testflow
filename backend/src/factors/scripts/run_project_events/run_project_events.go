@@ -7,7 +7,7 @@ import (
 	"factors/filestore"
 	"factors/model/model"
 	"factors/model/store"
-	//	P "factors/pattern"
+	P "factors/pattern"
 	serviceDisk "factors/services/disk"
 	serviceGCS "factors/services/gcstorage"
 	U "factors/util"
@@ -15,15 +15,15 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	//"reflect"
+	//	"reflect"
 	"sort"
 	"strconv"
 	//"strings"
 	"time"
 
-	//	T "factors/task"
+	T "factors/task"
 
-	//"github.com/go-playground/validator/v10"
+	//	"github.com/go-playground/validator/v10"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -162,7 +162,7 @@ func main() {
 	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
 	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
 	//	emailString := flag.String("emails", "", "comma separeted list of emails to which report to be sent")
-	//	localDiskTmpDirFlag := flag.String("local_disk_tmp_dir", "/usr/local/var/factors/local_disk/tmp", "--local_disk_tmp_dir=/usr/local/var/factors/local_disk/tmp pass directory")
+	localDiskTmpDirFlag := flag.String("local_disk_tmp_dir", "/usr/local/var/factors/local_disk/tmp", "--local_disk_tmp_dir=/usr/local/var/factors/local_disk/tmp pass directory")
 	flag.Parse()
 	config := &C.Configuration{
 		Env:                 *envFlag,
@@ -192,8 +192,7 @@ func main() {
 			panic(err)
 		}
 	}
-	//	diskManager := serviceDisk.New(*localDiskTmpDirFlag)
-	fmt.Println("project ids ", *projectIdFlag)
+	diskManager := serviceDisk.New(*localDiskTmpDirFlag)
 	projectIdsList := getProjectIdsList(*projectIdFlag)
 	fromTime, err := time.Parse(U.DATETIME_FORMAT_YYYYMMDD, *fromDate)
 	if err != nil {
@@ -212,96 +211,110 @@ func main() {
 	if err != nil {
 		log.WithError(err).Error("Failed to retrieve cache analytics data")
 	}
-	fmt.Println("project ids ", projectIdsList)
 
 	for _, project_id := range projectIdsList {
 
-		efCloudPath, efCloudName := (cloudManager).GetModelMetricsFilePathAndName(int64(project_id), fromTime.Unix(), *modelType)
-		//	efTmpPath, efTmpName := diskManager.GetModelMetricsFilePathAndName(int64(project_id), fromTime.Unix(), *modelType)
-		// log.WithFields(log.Fields{"eventFileCloudPath": efCloudPath,
-		// 	"eventFileCloudName": efCloudName}).Info("Downloading events file from cloud.")
-		//		 eReader, err := (cloudManager).Get(efCloudPath, efCloudName)
-		// if err != nil {
-		// 	log.WithFields(log.Fields{"err": err, "eventFilePath": efCloudPath,
-		// 		"eventFileName": efCloudName}).Error("Failed downloading events file from cloud.")
-		// }
-		//	log.Info("---- sumit ", efTmpName, efTmpName,eReader)
-		// err = diskManager.Create(efTmpPath, efTmpName, eReader)
-		// if err != nil {
-		// 	log.WithFields(log.Fields{"err": err, "eventFilePath": efCloudPath,
-		// 		"eventFileName": efCloudName}).Error("Failed creating events file in local.")
-		// }
-		//tmpMetricsFilePath := efTmpPath + efTmpName
-		//log.Info("Successfuly downloaded events file from cloud.", tmpEventsFilePath, efTmpPath, efTmpName)
-		//scanner, err := T.OpenEventFileAndGetScanner(tmpEventsFilePath)
+		mfCloudPath, mfCloudName := (cloudManager).GetModelMetricsFilePathAndName(int64(project_id), fromTime.Unix(), *modelType)
+		efCloudPath, efCloudName := (cloudManager).GetModelEventsFilePathAndName(int64(project_id), fromTime.Unix(), *modelType)
+		efTmpPath, efTmpName := diskManager.GetModelEventsFilePathAndName(int64(project_id), fromTime.Unix(), *modelType)
+		log.WithFields(log.Fields{"eventFileCloudPath": efCloudPath,
+			"eventFileCloudName": efCloudName}).Info("Downloading events file from cloud.")
+		eReader, err := (cloudManager).Get(efCloudPath, efCloudName)
+		if err != nil {
+			log.WithFields(log.Fields{"err": err, "eventFilePath": efCloudPath,
+				"eventFileName": efCloudName}).Error("Failed downloading events file from cloud.")
+		}
+		log.Info("Successfuly downloaded events file from cloud.", efTmpPath, efTmpName)
+		err = diskManager.Create(efTmpPath, efTmpName, eReader)
+		if err != nil {
+			log.WithFields(log.Fields{"err": err, "eventFilePath": efCloudPath,
+				"eventFileName": efCloudName}).Error("Failed creating events file in local.")
+		}
+		tmpEventsFilePath := efTmpPath + efTmpName
+
+		scanner, err := T.OpenEventFileAndGetScanner(tmpEventsFilePath)
+		if err != nil {
+			log.WithError(err).Error("Failed to open Events File and Scanner ", tmpEventsFilePath)
+		}
 		//initizalizing validator and validationMap
-		//validate := validator.New()
-		//initialize()
+		// validate := validator.New()
+		// initialize()
 		// var reportMap = make(map[string]map[string]bool)
 		// var daterange = make(map[string]map[string]bool)
 		// var dates = make([]string, 0, 10)
-		//Scanning the file row by row
-		// for scanner.Scan() {
-		// 	row := scanner.Text()
-		// 	var data P.CounterEventFormat
-		// 	json.Unmarshal([]byte(row), &data)
-		// 	eventTimestamp := time.Unix(data.EventTimestamp, 0)
-		// 	weekday := eventTimestamp.Weekday().String()[0:3]
-		// 	dateKey := eventTimestamp.AddDate(0, 0, 0).Format(U.DATETIME_FORMAT_YYYYMMDD)
-		// 	mapKey := fmt.Sprintf("Date:%s, Day:%s ", dateKey, weekday)
-		// 	if daterange[mapKey] == nil {
-		// 		daterange[mapKey] = make(map[string]bool)
-		// 		for _, event := range ALL_EVENTS {
-		// 			daterange[mapKey][event] = false
-		// 		}
-		// 		dates = append(dates, mapKey)
-		// 	}
-		// 	eventName := data.EventName
+		//	Scanning the file row by row
+		var WebsiteData WebsiteAnalyticsData
+		for scanner.Scan() {
+			row := scanner.Text()
+			var data P.CounterEventFormat
+			err := json.Unmarshal([]byte(row), &data)
+			if err != nil {
+				log.WithError(err).Error("Failed to unmarshal event to CounterEventFormat")
+			}
+			if data.EventName == "$session" {
+				UpdateMetricsForWebsiteRelatedData(data, &WebsiteData)
+			}
 
-		// 	if validations[eventName] == nil {
-		// 		eventName = NO_EVENT
-		// 	} else {
-		// 		daterange[mapKey][eventName] = true
-		// 	}
+			// eventTimestamp := time.Unix(data.EventTimestamp, 0)
+			// weekday := eventTimestamp.Weekday().String()[0:3]
+			// dateKey := eventTimestamp.AddDate(0, 0, 0).Format(U.DATETIME_FORMAT_YYYYMMDD)
+			// mapKey := fmt.Sprintf("Date:%s, Day:%s ", dateKey, weekday)
+			// if daterange[mapKey] == nil {
+			// 	daterange[mapKey] = make(map[string]bool)
+			// 	for _, event := range ALL_EVENTS {
+			// 		daterange[mapKey][event] = false
+			// 	}
+			// 	dates = append(dates, mapKey)
+			// }
+			// eventName := data.EventName
 
-		// 	//validating data
-		// 	r := reflect.ValueOf(data)
-		// 	for key, value := range validations[eventName] {
-		// 		mapKey := fmt.Sprintf("%s-%s", eventName, key)
-		// 		if reportMap[mapKey] == nil {
-		// 			reportMap[mapKey] = make(map[string]bool)
-		// 		}
-		// 		var f reflect.Value
-		// 		if value.property == "" {
-		// 			f = reflect.Indirect(r).FieldByName(value.feild)
-		// 		} else if value.property == "UserProperties" || value.property == "EventProperties" {
-		// 			f = reflect.Indirect(r).FieldByName(value.property).MapIndex(reflect.ValueOf(value.feild))
-		// 		} else {
-		// 			log.Info("invalid property")
-		// 			continue
-		// 		}
-		// 		if (!f.IsValid() && value.required) || (f.IsValid() && validate.Var(f.Interface(), value.validate) != nil) {
-		// 			reportMap[mapKey][data.UserId] = true
-		// 		}
-		// 	}
-		// }
-		//end of data file
+			// if validations[eventName] == nil {
+			// 	eventName = NO_EVENT
+			// } else {
+			// 	daterange[mapKey][eventName] = true
+			// }
+
+			// //validating data
+			// r := reflect.ValueOf(data)
+			// for key, value := range validations[eventName] {
+			// 	mapKey := fmt.Sprintf("%s-%s", eventName, key)
+			// 	if reportMap[mapKey] == nil {
+			// 		reportMap[mapKey] = make(map[string]bool)
+			// 	}
+			// 	var f reflect.Value
+			// 	if value.property == "" {
+			// 		f = reflect.Indirect(r).FieldByName(value.feild)
+			// 	} else if value.property == "UserProperties" || value.property == "EventProperties" {
+			// 		f = reflect.Indirect(r).FieldByName(value.property).MapIndex(reflect.ValueOf(value.feild))
+			// 	} else {
+			// 		log.Info("invalid property")
+			// 		continue
+			// 	}
+			// 	if (!f.IsValid() && value.required) || (f.IsValid() && validate.Var(f.Interface(), value.validate) != nil) {
+			// 		reportMap[mapKey][data.UserId] = true
+			// 	}
+			// }
+		}
+		//	end of data file
 
 		// Creating Reports
 		//writeReport(dates, daterange, reportMap, *fromDate, toDate)
 		//writeDetailedReport(reportMap, *fromDate, toDate)
+		if anaData, exists := analyticsData[project_id]; exists {
+			anaData.WebsiteAnalyticsData = WebsiteData
+			analyticsData[project_id] = anaData
+		}
 		writeMetricsReport(analyticsData[project_id])
-
 		//uploading reports to cloud
 		report, _ := openFile(MetricsReportName)
 		//	detailed_report, _ := openFile(DetailedReportName)
-		log.Info("$$$$cloud path ", efCloudPath)
-		err = (cloudManager).Create(efCloudPath, efCloudName, report)
+		//log.Info("$$$$cloud path ", efCloudPath)
+		err = (cloudManager).Create(mfCloudPath, mfCloudName, report)
 		if err != nil {
 			//log.Fatal("Failed to upload report in cloud. error = ", err)
-			log.Info(err, "$$$$ failed to upload report in cloud")
+			log.WithError(err).Error("failed to upload report in cloud")
 		} else {
-			log.Info("$$$$ success in uploading report to cloud")
+			log.Info("success in uploading report to cloud")
 		}
 		// err = (cloudManager).Create(efCloudPath, DetailedReportName, detailed_report)
 		// if err != nil {
@@ -316,7 +329,21 @@ func main() {
 		//sucess log
 	}
 }
+func UpdateMetricsForWebsiteRelatedData(event P.CounterEventFormat, websiteData *WebsiteAnalyticsData) {
+	websiteData.WebsiteDataActive = true
+	websiteData.TotalSessions += 1
+	if _, exists := event.EventProperties[U.EP_IS_PAGE_VIEW]; exists {
+		if event.EventProperties[U.EP_IS_PAGE_VIEW] == true {
+			websiteData.TotalPageViews += 1
+		}
+	}
+	if _, exists := event.EventProperties[U.EP_SOURCE]; exists {
+		if event.EventProperties[U.EP_SOURCE] == U.PLATFORM_WEB {
+			websiteData.TotalEventsFromWeb += 1
+		}
+	}
 
+}
 func initialize() {
 	initializeSession()
 	initializeNoEvent()
