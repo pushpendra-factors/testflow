@@ -11,6 +11,7 @@ type ProjectSetting struct {
 	// Used project_id as primary key also, becase of 1-1 relationship.
 	ProjectId         int64           `gorm:"primary_key:true" json:"project_id,omitempty"`
 	AttributionConfig *postgres.Jsonb `json:"attribution_config"`
+	TimelinesConfig   TimelinesConfig `json:"timelines_config"`
 
 	// Using pointers to avoid update by default value.
 	// omit empty to avoid nil(filelds not updated) on resp json.
@@ -109,6 +110,21 @@ type ProjectSetting struct {
   "pre_compute_enabled": false
 }
 */
+
+type TimelinesConfig struct {
+	DisabledEvents []string      `json:"disabled_events"`
+	UserConfig     UserConfig    `json:"user_config"`
+	AccountConfig  AccountConfig `json:"account_config"`
+}
+
+type UserConfig struct {
+	PropsToShow []*postgres.Jsonb `json:"props_to_show"`
+}
+
+type AccountConfig struct {
+	AccountPropsToShow []*postgres.Jsonb `json:"account_props_to_show"`
+	UserPropsToShow    []*postgres.Jsonb `json:"user_props_to_show"`
+}
 
 type AttributionConfig struct {
 	KpisToAttribute                   AttributionKpis `json:"kpis_to_attribute"`
