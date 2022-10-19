@@ -14,7 +14,7 @@ class StorageDecider:
         if dry:
             gs_bucket += "-tmp"
         else:
-            gs_bucket += "-v2"
+            gs_bucket += "-v3"
         return gs_bucket
 
     def get_file_path(timestamp, project_id, customer_acc_id, doc_type):
