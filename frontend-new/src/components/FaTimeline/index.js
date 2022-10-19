@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Spin } from 'antd';
+import _ from 'lodash';
+import { CaretUpOutlined, CaretRightOutlined } from '@ant-design/icons';
 import styles from './index.module.scss';
 import { SVG } from '../factorsComponents';
-import { CaretUpOutlined, CaretRightOutlined } from '@ant-design/icons';
 import InfoCard from './InfoCard';
 import { groups, hoverEvents } from '../Profile/utils';
 
@@ -11,17 +12,17 @@ function FaTimeline({
   granularity,
   collapse,
   setCollapse,
-  loading,
+  loading
 }) {
   const [showAll, setShowAll] = useState([]);
 
-  const data = _.groupBy(activities, groups[granularity]);
+  const groupedActivities = _.groupBy(activities, groups[granularity]);
 
   useEffect(() => {
     if (collapse !== undefined) {
-      const showAllState = new Array(Object.entries(data).length).fill(
-        !collapse
-      );
+      const showAllState = new Array(
+        Object.entries(groupedActivities).length
+      ).fill(!collapse);
       setShowAll(showAllState);
     }
   }, [collapse]);
@@ -36,11 +37,11 @@ function FaTimeline({
   const renderTimeline = (data) => {
     if (!Object.entries(data).length)
       return (
-        <div className='ant-empty ant-empty-normal'>
-          <div className='ant-empty-image'>
-            <SVG name='nodata' />
+        <div className="ant-empty ant-empty-normal">
+          <div className="ant-empty-image">
+            <SVG name="nodata" />
           </div>
-          <div className='ant-empty-description'>No Activity</div>
+          <div className="ant-empty-description">No Activity</div>
         </div>
       );
     const timeline = [];
@@ -53,53 +54,51 @@ function FaTimeline({
           </div>
           <div className={styles.timeline_events}>
             {(() => {
-              values.forEach((event, eventIndex) => {
+              values.forEach((event) => {
                 arrayOpts.push(
-                  <>
-                    <div className={styles.timeline_events_event}>
-                      {event ? (
-                        <div className={`flex`}>
-                          <InfoCard
-                            title={event?.alias_name || event.display_name}
-                            event_name={event.event_name}
-                            properties={event?.properties || {}}
-                            trigger={
-                              hoverEvents.includes(event.event_name) ||
-                              event.display_name === 'Page View'
-                                ? 'hover'
-                                : []
-                            }
+                  <div className={styles.timeline_events_event}>
+                    {event ? (
+                      <div className="flex">
+                        <InfoCard
+                          title={event?.alias_name || event.display_name}
+                          event_name={event.event_name}
+                          properties={event?.properties || {}}
+                          trigger={
+                            hoverEvents.includes(event.event_name) ||
+                            event.display_name === 'Page View'
+                              ? 'hover'
+                              : []
+                          }
+                        >
+                          <div className={`${styles.tag}`}>
+                            <span className="truncate">
+                              {event.display_name === 'Page View'
+                                ? event.event_name
+                                : event?.alias_name || event.display_name}
+                            </span>
+                            {hoverEvents.includes(event.event_name) ||
+                            event.display_name === 'Page View' ? (
+                              <CaretRightOutlined />
+                            ) : null}
+                          </div>
+                        </InfoCard>
+                        {!showAll[index] && values.length > 1 ? (
+                          <div
+                            className={`${styles.num}`}
+                            onClick={() => {
+                              setShowAllIndex(index, true);
+                            }}
                           >
-                            <div className={`${styles.tag}`}>
-                              <span className='truncate'>
-                                {event.display_name === 'Page View'
-                                  ? event.event_name
-                                  : event.display_name}
-                              </span>
-                              {hoverEvents.includes(event.event_name) ||
-                              event.display_name === 'Page View' ? (
-                                <CaretRightOutlined />
-                              ) : null}
-                            </div>
-                          </InfoCard>
-                          {!showAll[index] && values.length > 1 ? (
-                            <div
-                              className={`${styles.num}`}
-                              onClick={() => {
-                                setShowAllIndex(index, true);
-                              }}
-                            >
-                              {'+' + Number(values.length - 1)}
-                            </div>
-                          ) : null}
-                        </div>
-                      ) : null}
-                      {index === Object.entries(data).length - 1 &&
-                      !showAll[index] ? null : (
-                        <div className={styles.timeline_events_event_tail} />
-                      )}
-                    </div>
-                  </>
+                            {`+${Number(values.length - 1)}`}
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
+                    {index === Object.entries(data).length - 1 &&
+                    !showAll[index] ? null : (
+                      <div className={styles.timeline_events_event_tail} />
+                    )}
+                  </div>
                 );
               });
               arrayOpts.push(
@@ -133,9 +132,9 @@ function FaTimeline({
     <>
       <div className={styles.header}>Date and Time</div>
       {loading ? (
-        <Spin size={'large'} className={'fa-page-loader'} />
+        <Spin size="large" className="fa-page-loader" />
       ) : (
-        renderTimeline(data)
+        renderTimeline(groupedActivities)
       )}
     </>
   );

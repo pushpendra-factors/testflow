@@ -2,24 +2,33 @@ import React from 'react';
 import moment from 'moment';
 import get from 'lodash/get';
 import findIndex from 'lodash/findIndex';
+import has from 'lodash/has';
 import { labelsObj } from '../../utils';
 import {
   getClickableTitleSorter,
   SortResults,
   addQforQuarter
 } from '../../../../utils/dataFormatter';
-import { Number as NumFormat } from '../../../../components/factorsComponents';
+import {
+  Number as NumFormat,
+  SVG,
+  Text
+} from '../../../../components/factorsComponents';
 import {
   DATE_FORMATS,
   MAX_ALLOWED_VISIBLE_PROPERTIES,
   DISPLAY_PROP
 } from '../../../../utils/constants';
 import { renderHorizontalBarChart } from '../SingleEventMultipleBreakdown/utils';
-import { getBreakdownDisplayName } from '../eventsAnalytics.helpers';
+import {
+  getBreakdownDisplayName,
+  parseForDateTimeLabel
+} from '../eventsAnalytics.helpers';
 import tableStyles from '../../../../components/DataTable/index.module.scss';
 import NonClickableTableHeader from '../../../../components/NonClickableTableHeader';
 import { EVENT_COUNT_KEY } from '../eventsAnalytics.constants';
 import { BREAKDOWN_TYPES } from '../../constants';
+import { getDifferentDates } from '../../coreQuery.helpers';
 
 export const defaultSortProp = ({ breakdown }) => {
   const dateTimeBreakdownIndex = findIndex(
@@ -55,11 +64,33 @@ export const getVisibleData = (aggregateData, sorter) => {
 };
 
 export const getVisibleSeriesData = (data, sorter) => {
-  const result = SortResults(data, sorter).slice(
+  const comparisonApplied = data.some((d) => has(d, 'compareIndex'));
+  if (!comparisonApplied) {
+    const result = SortResults(data, sorter).slice(
+      0,
+      MAX_ALLOWED_VISIBLE_PROPERTIES
+    );
+    return result;
+  }
+  const currentData = [];
+  const comparisonData = [];
+  data.forEach((d) => {
+    if (has(d, 'compareIndex')) {
+      comparisonData.push(d);
+      return;
+    }
+    currentData.push(d);
+  });
+  const sortedData = SortResults(currentData, sorter).slice(
     0,
     MAX_ALLOWED_VISIBLE_PROPERTIES
   );
-  return result;
+  const compareLines = [];
+  sortedData.forEach((d) => {
+    const cmpData = comparisonData.find((cd) => cd.compareIndex === d.index);
+    compareLines.push(cmpData);
+  });
+  return [...sortedData, ...compareLines];
 };
 
 export const getTableColumns = (
@@ -90,7 +121,7 @@ export const getTableColumns = (
       width: '50%',
       fixed: 'left',
       render: (d) => {
-        if (e.prop_type === 'numerical' && !isNaN(d)) {
+        if (e.prop_type === 'numerical' && !Number.isNaN(d)) {
           return <NumFormat number={d} />;
         }
         return d;
@@ -112,9 +143,34 @@ export const getTableColumns = (
     ),
     className: 'text-right',
     dataIndex: EVENT_COUNT_KEY,
-    render: (d) => {
-      return <NumFormat number={d} />;
-    }
+    render: (d, row) => (
+      <div className="flex flex-col">
+        <Text type="title" level={7} color="grey-6">
+          <NumFormat number={d} />
+        </Text>
+        {row.compareValue != null && (
+          <>
+            <Text type="title" level={7} color="grey">
+              <NumFormat number={row.compareValue} />
+            </Text>
+            <div className="flex col-gap-1 items-center justify-end">
+              <SVG
+                color={row.change > 0 ? '#5ACA89' : '#FF0000'}
+                name={row.change > 0 ? 'arrowLift' : 'arrowDown'}
+                size={16}
+              />
+              <Text
+                level={7}
+                type="title"
+                color={row.change < 0 ? 'red' : 'green'}
+              >
+                <NumFormat number={Math.abs(row.change)} />%
+              </Text>
+            </div>
+          </>
+        )}
+      </div>
+    )
   };
   return [...breakdownColumns, countColumn];
 };
@@ -126,40 +182,7 @@ export const getDataInTableFormat = (data, searchText, currentSorter) => {
   return SortResults(filteredData, currentSorter);
 };
 
-const getWeekFormat = (m) => {
-  const startDate = m.format('D-MMM-YYYY');
-  const endDate = m.endOf('week').format('D-MMM-YYYY');
-  return startDate + ' to ' + endDate;
-};
-
-export const parseForDateTimeLabel = (grn, label) => {
-  let labelValue = label;
-  if (grn && moment(label).isValid()) {
-    let dateLabel;
-    try {
-      const newDatr = new Date(label);
-      dateLabel = moment(newDatr);
-    } catch (e) {
-      return label;
-    }
-
-    if (
-      grn === 'date' ||
-      grn === 'day' ||
-      grn === 'month' ||
-      grn === 'hour' ||
-      grn === 'quarter'
-    ) {
-      labelValue = dateLabel.format(DATE_FORMATS[grn]);
-    } else if (grn === 'week') {
-      labelValue = getWeekFormat(dateLabel);
-    }
-  }
-
-  return labelValue;
-};
-
-export const formatData = (data) => {
+export const formatData = (data, comparisonData) => {
   if (
     !data ||
     !data.metrics ||
@@ -168,22 +191,55 @@ export const formatData = (data) => {
   ) {
     return [];
   }
+
+  const breakdownIndex = 2;
+  const valueIndex = 3;
+
+  const breakdowns = data?.meta?.query?.gbp;
+  const grn = data.meta?.query?.gbp[0]?.grn;
+  const comparisonRows = get(comparisonData, 'metrics.rows', []);
+  const compareDataLabelIndexMapper = comparisonRows.reduce(
+    (prev, curr, currIndex) => {
+      const labelVal = parseForDateTimeLabel(grn, curr[breakdownIndex]);
+      return {
+        ...prev,
+        [labelVal]: currIndex
+      };
+    },
+    {}
+  );
+
   const result = data.metrics.rows.map((elem, index) => {
-    const labelVal = parseForDateTimeLabel(
-      data.meta?.query?.gbp[0]?.grn,
-      elem[2]
-    );
-    const breakdowns = data.meta.query.gbp;
-    const displayLabel = DISPLAY_PROP[labelVal]
-      ? DISPLAY_PROP[labelVal]
-      : labelVal;
-    return {
+    const labelVal = parseForDateTimeLabel(grn, elem[breakdownIndex]);
+    const displayLabel = DISPLAY_PROP[labelVal] || labelVal;
+    const obj = {
       label: displayLabel,
-      value: elem[3],
+      value: elem[valueIndex],
       [breakdowns[0].pr]: displayLabel,
-      [EVENT_COUNT_KEY]: elem[3], // used for sorting, value key will be removed soon
+      [EVENT_COUNT_KEY]: elem[valueIndex], // used for sorting, value key will be removed soon
       index
     };
+    if (comparisonData != null) {
+      const equivalentComparisonDataIndex =
+        compareDataLabelIndexMapper[labelVal] > -1
+          ? compareDataLabelIndexMapper[labelVal]
+          : -1;
+      obj.compareValue =
+        equivalentComparisonDataIndex > -1
+          ? comparisonData.metrics.rows[equivalentComparisonDataIndex][
+              valueIndex
+            ]
+          : 0;
+
+      const newVal = obj.value;
+      const oldVal = obj.compareValue;
+
+      obj.change =
+        equivalentComparisonDataIndex === -1
+          ? 0
+          : ((newVal - oldVal) / oldVal) * 100;
+    }
+    return obj;
   });
   return result;
 };
@@ -228,7 +284,7 @@ export const getDateBasedColumns = (
       width: 200,
       fixed: 'left',
       render: (d) => {
-        if (e.prop_type === 'numerical' && !isNaN(d)) {
+        if (e.prop_type === 'numerical' && !Number.isNaN(d)) {
           return <NumFormat number={d} />;
         }
         return d;
@@ -238,27 +294,23 @@ export const getDateBasedColumns = (
 
   const format = DATE_FORMATS[frequency] || DATE_FORMATS.date;
 
-  const dateColumns = categories.map((cat) => {
-    return {
-      title: getClickableTitleSorter(
-        addQforQuarter(frequency) + moment(cat).format(format),
-        {
-          key: addQforQuarter(frequency) + moment(cat).format(format),
-          type: 'numerical',
-          subtype: null
-        },
-        currentSorter,
-        handleSorting,
-        'right'
-      ),
-      width: 150,
-      className: 'text-right',
-      dataIndex: addQforQuarter(frequency) + moment(cat).format(format),
-      render: (d) => {
-        return <NumFormat number={d} />;
-      }
-    };
-  });
+  const dateColumns = categories.map((cat) => ({
+    title: getClickableTitleSorter(
+      addQforQuarter(frequency) + moment(cat).format(format),
+      {
+        key: addQforQuarter(frequency) + moment(cat).format(format),
+        type: 'numerical',
+        subtype: null
+      },
+      currentSorter,
+      handleSorting,
+      'right'
+    ),
+    width: 150,
+    className: 'text-right',
+    dataIndex: addQforQuarter(frequency) + moment(cat).format(format),
+    render: (d) => <NumFormat number={d} />
+  }));
   return [...breakdownColumns, ...dateColumns, OverallColumn];
 };
 
@@ -277,7 +329,8 @@ export const getDateBasedTableData = (
 export const formatDataInStackedAreaFormat = (
   data,
   aggregateData,
-  frequency
+  frequency,
+  comparisonData
 ) => {
   if (
     !data.headers ||
@@ -288,7 +341,8 @@ export const formatDataInStackedAreaFormat = (
   ) {
     return {
       categories: [],
-      data: []
+      data: [],
+      compareCategories: []
     };
   }
   const dateIndex = data.headers.findIndex((h) => h === 'datetime');
@@ -297,14 +351,16 @@ export const formatDataInStackedAreaFormat = (
   );
   const eventIndex = data.headers.findIndex((h) => h === 'event_name');
   const breakdownIndex = eventIndex + 1;
-  let differentDates = new Set();
-  data.rows.forEach((row) => {
-    differentDates.add(row[dateIndex]);
+  const differentDates = getDifferentDates({ rows: data.rows, dateIndex });
+
+  const comparisonDataRows = get(comparisonData, `rows`, []);
+
+  const differentComparisonDates = getDifferentDates({
+    rows: comparisonDataRows,
+    dateIndex
   });
-  differentDates = Array.from(differentDates);
-  const initializedDatesData = differentDates.map(() => {
-    return 0;
-  });
+
+  const initializedDatesData = differentDates.map(() => 0);
   const labelsMapper = {};
   const resultantData = aggregateData.map((d, index) => {
     labelsMapper[d.label] = index;
@@ -319,6 +375,30 @@ export const formatDataInStackedAreaFormat = (
     };
   });
 
+  const resultantComparisonData = aggregateData.map((d) => ({
+    name: d.label,
+    data: [...initializedDatesData],
+    marker: {
+      enabled: false
+    },
+    dashStyle: 'dash',
+    compareIndex: d.index,
+    ...d
+  }));
+
+  const grn = data.meta?.query?.gbp[0]?.grn;
+
+  const dateAndLabelRowIndexForComparisonData = comparisonDataRows.reduce(
+    (prev, curr, currIndex) => {
+      const date = curr[dateIndex];
+      const labelVal = parseForDateTimeLabel(grn, curr[3]);
+      return {
+        ...prev,
+        [`${date}, ${labelVal}`]: currIndex
+      };
+    },
+    {}
+  );
   const format = DATE_FORMATS[frequency] || DATE_FORMATS.date;
 
   data.rows.forEach((row) => {
@@ -340,11 +420,35 @@ export const formatDataInStackedAreaFormat = (
       ] = row[countIndex];
       resultantData[bIdx].data[idx] = row[countIndex];
     }
+
+    if (comparisonData != null) {
+      const currentDateIndex = differentDates.findIndex(
+        (dd) => dd === category
+      );
+      const compareCategory = differentComparisonDates[currentDateIndex];
+      const compareIndex =
+        dateAndLabelRowIndexForComparisonData[
+          `${compareCategory}, ${breakdownJoin}`
+        ];
+      const compareRow =
+        compareIndex != null ? comparisonData.rows[compareIndex] : null;
+      if (resultantComparisonData[bIdx]) {
+        resultantComparisonData[bIdx][
+          addQforQuarter(frequency) + moment(category).format(format)
+        ] = compareRow != null ? compareRow[countIndex] : 0;
+        resultantComparisonData[bIdx].data[idx] =
+          compareRow != null ? compareRow[countIndex] : 0;
+      }
+    }
   });
 
   return {
     categories: differentDates,
-    data: resultantData
+    data:
+      comparisonData != null
+        ? [...resultantData, ...resultantComparisonData]
+        : resultantData,
+    compareCategories: differentComparisonDates
   };
 };
 

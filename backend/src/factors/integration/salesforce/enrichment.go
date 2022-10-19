@@ -295,7 +295,12 @@ func TrackSalesforceEventByDocumentType(projectID int64, trackPayload *SDK.Track
 		eventID = trackResponse.EventId
 	}
 
-	if document.Action == model.SalesforceDocumentCreated || document.Action == model.SalesforceDocumentUpdated {
+	var isNewCampaignMember bool
+	if document.Action == model.SalesforceDocumentCreated && document.Type == model.SalesforceDocumentTypeCampaignMember {
+		isNewCampaignMember = true
+	}
+
+	if (document.Action == model.SalesforceDocumentCreated || document.Action == model.SalesforceDocumentUpdated) && !isNewCampaignMember {
 		finalPayload = *trackPayload
 		finalPayload.Name = model.GetSalesforceEventNameByDocumentAndAction(document, model.SalesforceDocumentUpdated)
 
@@ -339,7 +344,7 @@ func TrackSalesforceEventByDocumentType(projectID int64, trackPayload *SDK.Track
 		}
 
 		eventID = trackResponse.EventId
-	} else {
+	} else if !isNewCampaignMember {
 		return "", "", finalPayload, errors.New("invalid action on salesforce document sync")
 	}
 
@@ -1425,6 +1430,96 @@ func getExistingCampaignMemberUserIDFromProperties(projectID int64, properties *
 	return ""
 }
 
+func enrichCampaignMemberResponded(project *model.Project, document *model.SalesforceDocument, userID string) int {
+	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "document_id": document.ID})
+	if document.Type != model.SalesforceDocumentTypeCampaignMember {
+		return http.StatusBadRequest
+	}
+
+	currentCampaignMemberDocumentProperties, _, err := GetSalesforceDocumentProperties(project.ID, document)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get properties for current campaign member.")
+		return http.StatusInternalServerError
+	}
+
+	var currentCampaignMemberResponded bool
+	if currentCampaignMemberDocumentProperties == nil || (*currentCampaignMemberDocumentProperties)[model.EP_SFCampaignMemberResponded] == nil {
+		logCtx.Info("FirstResponsedDate not set in current campaign member.")
+		return http.StatusOK
+	}
+
+	currentCampaignMemberResponded = (*currentCampaignMemberDocumentProperties)[model.EP_SFCampaignMemberResponded].(bool)
+
+	var currentCampaignMemberFirstRespondedDateAsTimestamp int64
+	if currentCampaignMemberResponded {
+		currentCampaignMemberFirstRespondedDate, err := time.Parse(model.SalesforceDocumentDateLayout, (*currentCampaignMemberDocumentProperties)[model.EP_SFCampaignMemberFirstRespondedDate].(string))
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to convert first_responded_date from string to time in current campaign member document.")
+			return http.StatusInternalServerError
+		}
+		currentCampaignMemberFirstRespondedDateAsTimestamp = currentCampaignMemberFirstRespondedDate.Unix()
+	} else {
+		currentCampaignMemberFirstRespondedDateAsTimestamp = 0
+	}
+
+	previousCampaignMemberDocuments, errCode := store.GetStore().GetLatestSalesforceDocumentByID(project.ID, []string{document.ID}, model.SalesforceDocumentTypeCampaignMember, document.Timestamp-1)
+	if errCode != http.StatusFound && errCode != http.StatusNotFound {
+		logCtx.Error("Failed to get previous campaign members.")
+		return http.StatusInternalServerError
+	}
+
+	var previousCampaignMemberDocumentProperties *map[string]interface{}
+	if previousCampaignMemberDocuments != nil {
+		previousCampaignMemberDocumentProperties, _, err = GetSalesforceDocumentProperties(document.ProjectID,
+			&previousCampaignMemberDocuments[len(previousCampaignMemberDocuments)-1])
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to get properties for previous campaign member.")
+			return http.StatusInternalServerError
+		}
+	}
+
+	var previousCampaignMemberResponded bool
+	if previousCampaignMemberDocumentProperties == nil || (*previousCampaignMemberDocumentProperties)[model.EP_SFCampaignMemberResponded] == nil {
+		logCtx.Info("FirstResponsedDate not set in previous campaign member.")
+		previousCampaignMemberResponded = false
+	} else {
+		previousCampaignMemberResponded = (*previousCampaignMemberDocumentProperties)[model.EP_SFCampaignMemberResponded].(bool)
+	}
+
+	var previousCampaignMemberFirstRespondedDateAsTimestamp int64
+	if previousCampaignMemberResponded {
+		previousCampaignMemberFirstRespondedDateAsTime, err := time.Parse(model.SalesforceDocumentDateLayout, (*previousCampaignMemberDocumentProperties)[model.EP_SFCampaignMemberFirstRespondedDate].(string))
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to convert first_responded_date from string to time in previous campaign member document.")
+			return http.StatusInternalServerError
+		}
+		previousCampaignMemberFirstRespondedDateAsTimestamp = previousCampaignMemberFirstRespondedDateAsTime.Unix()
+	} else {
+		previousCampaignMemberFirstRespondedDateAsTimestamp = 0
+	}
+
+	if currentCampaignMemberFirstRespondedDateAsTimestamp > 0 && previousCampaignMemberFirstRespondedDateAsTimestamp == 0 {
+		timestamp := U.GetEndOfDayTimestampIn(currentCampaignMemberFirstRespondedDateAsTimestamp, document.GetDocumentTimeZone())
+
+		trackPayload := &SDK.TrackPayload{
+			ProjectId:     project.ID,
+			Name:          U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_RESPONDED_TO_CAMPAIGN,
+			Timestamp:     timestamp,
+			RequestSource: model.UserSourceSalesforce,
+			UserId:        userID,
+		}
+
+		status, response := SDK.Track(project.ID, trackPayload, true, SDK.SourceSalesforce, "")
+		if status != http.StatusOK {
+			logCtx.WithFields(log.Fields{"status": status, "track_response": response, "event_name": U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_RESPONDED_TO_CAMPAIGN,
+				"event_timestamp": timestamp}).Error("Failed to track salesforce responded to campaign event.")
+			return http.StatusInternalServerError
+		}
+	}
+
+	return http.StatusOK
+}
+
 func enrichCampaignMember(project *model.Project, document *model.SalesforceDocument, endTimestamp int64) int {
 	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "document_id": document.ID})
 	if document.Type != model.SalesforceDocumentTypeCampaignMember {
@@ -1502,10 +1597,15 @@ func enrichCampaignMember(project *model.Project, document *model.SalesforceDocu
 	err = ApplySFOfflineTouchPointRule(project, &finalTrackPayload, document, endTimestamp)
 	if err != nil {
 		// log and continue
-		logCtx.WithField("EventID", eventID).WithField("userID", eventID).WithField("userID", eventID).Info("Create SF offline touch point")
+		logCtx.WithField("EventID", eventID).WithField("userID", userID).WithField("error", err).Info("Create SF offline touch point")
 	}
 
-	errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(project.ID, document, eventID, userID, "", true)
+	errCode := enrichCampaignMemberResponded(project, document, userID)
+	if errCode != http.StatusOK {
+		logCtx.Error("Failed to enrich Responded to Campaign event.")
+	}
+
+	errCode = store.GetStore().UpdateSalesforceDocumentBySyncStatus(project.ID, document, eventID, userID, "", true)
 	if errCode != http.StatusAccepted {
 		logCtx.Error("Failed to update salesforce lead document as synced.")
 		return http.StatusInternalServerError

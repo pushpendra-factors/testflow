@@ -933,9 +933,9 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 
 	var commonSelectArr []string
 	for i := range q.EventsWithProperties {
-		isGroupEvent := U.IsGroupEventName(q.EventsWithProperties[i].Name)
+		_, status := store.IsGroupEventNameByQueryEventWithProperties(projectID, q.EventsWithProperties[i])
 		stepCommonSelect := ""
-		if isGroupEvent {
+		if status == http.StatusFound {
 			stepCommonSelect = strings.ReplaceAll(commonSelect, "events.user_id", "users.users_user_id")
 		} else {
 			stepCommonSelect = commonSelect
@@ -992,8 +992,8 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 		addJoinStmnt := "JOIN users ON events.user_id=users.id AND users.project_id = ?"
 
 		// Join support for original users of group.
-		if U.IsGroupEventName(q.EventsWithProperties[i].Name) {
-			groupName := U.GetGroupNameFromGroupEventName(q.EventsWithProperties[i].Name)
+		groupName, status := store.IsGroupEventNameByQueryEventWithProperties(projectID, q.EventsWithProperties[i])
+		if status == http.StatusFound {
 			group, status := store.GetGroup(projectID, groupName)
 			if status == http.StatusFound {
 				addJoinStmnt = fmt.Sprintf("LEFT JOIN users ON events.user_id=users.group_%d_user_id AND users.project_id = ? ", group.ID)
@@ -2153,7 +2153,8 @@ func (store *MemSQL) addEventFilterStepsForEventCountQuery(projectID int64, q *m
 	stepsToKeysMap := make(map[string][]string)
 
 	for i := range q.EventsWithProperties {
-		if U.IsGroupEventName(q.EventsWithProperties[i].Name) && (len(q.GlobalUserProperties) > 0 ||
+		_, status := store.IsGroupEventNameByQueryEventWithProperties(projectID, q.EventsWithProperties[i])
+		if status == http.StatusFound && (len(q.GlobalUserProperties) > 0 ||
 			model.IsQueryGroupByLatestUserProperty(q.GroupByProperties)) {
 			commonSelect := model.SelectDefaultGroupEventFilter
 			commonSelect = appendSelectTimestampIfRequired(commonSelect, q.GetGroupByTimestamp(), q.Timezone)
@@ -2209,8 +2210,8 @@ func (store *MemSQL) addEventFilterStepsForEventCountQuery(projectID int64, q *m
 		addJoinStmnt := ""
 		if C.SkipUserJoinInEventQueryByProjectID(projectID) {
 
-			if U.IsGroupEventName(q.EventsWithProperties[i].Name) && (model.IsQueryGroupByLatestUserProperty(q.GroupByProperties) || len(q.GlobalUserProperties) > 0) {
-				groupName := U.GetGroupNameFromGroupEventName(q.EventsWithProperties[i].Name)
+			groupName, status := store.IsGroupEventNameByQueryEventWithProperties(projectID, q.EventsWithProperties[i])
+			if status == http.StatusFound && (model.IsQueryGroupByLatestUserProperty(q.GroupByProperties) || len(q.GlobalUserProperties) > 0) {
 				group, status := store.GetGroup(projectID, groupName)
 				if status != http.StatusFound {
 					if status != http.StatusNotFound {

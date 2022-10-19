@@ -156,11 +156,11 @@ function SparkLineChart({
 
     return (
       <div
-        className={`flex items-center justify-center w-full ${
+        className={`flex items-center justify-center w-full  h-full ${
           cardSize !== 1 ? 'flex-col' : ''
         }`}
       >
-        <div className={cardSize === 1 ? 'w-1/4' : 'w-full'}>
+        <div className={'h-full '+cardSize === 1 ? 'w-1/4' : 'w-full'}>
           <ChartHeader
             bgColor="#4D7DB4"
             query={queries[0]}
@@ -168,7 +168,7 @@ function SparkLineChart({
             eventNames={eventNames}
           />
         </div>
-        <div className={cardSize === 1 ? 'w-3/4' : 'w-full'}>
+        <div className={'h-full '+cardSize === 1 ? 'w-3/4' : 'w-full'}>
           <SparkChart
             frequency={frequency}
             page={page}

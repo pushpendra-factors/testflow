@@ -257,6 +257,7 @@ type sdkGetInfoResponse struct {
 	AutoFormCapture      *bool  `json:"auto_form_capture"`
 	AutoClickCapture     *bool  `json:"auto_click_capture"`
 	ExcludeBot           *bool  `json:"exclude_bot"`
+	AutoFormFillCapture  *bool  `json:"auto_capture_form_fills"`
 	IntDrift             *bool  `json:"int_drift"`
 	IntClearBit          *bool  `json:"int_clear_bit"`
 	UserID               string `json:"user_id,omitempty"`
@@ -336,6 +337,7 @@ func SDKGetProjectSettingsHandler(c *gin.Context) {
 		AutoTrackSPAPageView: projectSetting.AutoTrackSPAPageView,
 		AutoFormCapture:      projectSetting.AutoFormCapture,
 		AutoClickCapture:     projectSetting.AutoClickCapture,
+		AutoFormFillCapture:  projectSetting.AutoCaptureFormFills,
 		ExcludeBot:           projectSetting.ExcludeBot,
 		IntDrift:             projectSetting.IntDrift,
 		IntClearBit:          projectSetting.IntClearBit,
@@ -797,6 +799,7 @@ func SDKFormFillHandler(c *gin.Context) {
 			Error: "Form fill event failed. Invalid payload."})
 		return
 	}
+	request.TimeSpent = uint64(request.LastUpdatedTime - request.FirstUpdatedTime)
 
 	projectToken := U.GetScopeByKeyAsString(c, mid.SCOPE_PROJECT_TOKEN)
 	if !SDK.IsValidTokenString(projectToken) {
@@ -820,7 +823,8 @@ func SDKFormFillHandler(c *gin.Context) {
 
 	status, err := store.GetStore().CreateFormFillEventById(projectID, &request)
 	if err != nil {
-		response = &model.CaptureFormFillResponse{Error: err.Error()}
+		c.AbortWithStatusJSON(http.StatusBadRequest, &model.CaptureFormFillResponse{Error: "Creation of form fill event by projectId failed."})
+		return
 	} else {
 		response = &model.CaptureFormFillResponse{Message: "Form fill event successful."}
 	}

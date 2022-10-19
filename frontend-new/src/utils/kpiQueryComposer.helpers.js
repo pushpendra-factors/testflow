@@ -21,6 +21,9 @@ export const getNormalizedKpi = ({ kpi }) => {
 
 export const areKpisInSameGroup = ({ kpis }) => {
   return kpis.every(
-    (_, index) => kpis[0].group === kpis[index].group
+    (_, index) => { 
+      if (kpis[0].group == 'others') {return false}
+      else return kpis[0].group === kpis[index].group
+    }
   );
-};
+}; 

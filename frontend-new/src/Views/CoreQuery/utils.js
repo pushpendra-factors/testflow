@@ -3,7 +3,7 @@ import lowerCase from 'lodash/lowerCase';
 import startCase from 'lodash/startCase';
 
 import { EMPTY_ARRAY, groupFilters } from 'Utils/global';
-import { formatFilterDate } from 'Utils/dataFormatter';
+import { formatFilterDate, isDateInMilliSeconds } from 'Utils/dataFormatter';
 import MomentTz from 'Components/MomentTz';
 
 import {
@@ -28,7 +28,6 @@ import {
   QUERY_TYPE_PROFILE
 } from '../../utils/constants';
 import { FILTER_TYPES, INITIAL_STATE } from './constants';
-import { isDateInMilliSeconds } from '../../utils/dataFormatter';
 
 export const initialState = INITIAL_STATE;
 
@@ -259,7 +258,7 @@ const getGlobalFilters = (globalFilters = []) => {
   const filterProps = [];
   const filtersGroupedByRef = Object.values(groupFilters(globalFilters, 'ref'));
   filtersGroupedByRef.forEach((filtersGr) => {
-    if (filtersGr.length == 1) {
+    if (filtersGr.length === 1) {
       const fil = filtersGr[0];
       if (Array.isArray(fil.values)) {
         fil.values.forEach((val, index) => {
@@ -307,7 +306,7 @@ const getGlobalFilters = (globalFilters = []) => {
       }
       fil = filtersGr[1];
       if (Array.isArray(fil.values)) {
-        fil.values.forEach((val, index) => {
+        fil.values.forEach((val) => {
           filterProps.push({
             en: 'user_g',
             lop: 'OR',
@@ -336,7 +335,7 @@ const getGlobalProfileFilters = (globalFilters = []) => {
   const filterProps = [];
   const filtersGroupedByRef = Object.values(groupFilters(globalFilters, 'ref'));
   filtersGroupedByRef.forEach((filtersGr) => {
-    if (filtersGr.length == 1) {
+    if (filtersGr.length === 1) {
       const fil = filtersGr[0];
       if (Array.isArray(fil.values)) {
         fil.values.forEach((val, index) => {
@@ -384,7 +383,7 @@ const getGlobalProfileFilters = (globalFilters = []) => {
       }
       fil = filtersGr[1];
       if (Array.isArray(fil.values)) {
-        fil.values.forEach((val, index) => {
+        fil.values.forEach((val) => {
           filterProps.push({
             en: 'user',
             lop: 'OR',
@@ -534,9 +533,9 @@ const getEventsWithPropertiesKPI = (filters, category) => {
     if (filtersGr.length === 1) {
       const fil = filtersGr[0];
       if (Array.isArray(fil.values)) {
-        fil.values.forEach((val, index) => { 
+        fil.values.forEach((val, index) => {
           filterProps.push({
-            extra:fil?.extra ? fil?.extra : null,
+            extra: fil?.extra ? fil?.extra : null,
             prNa: fil?.extra ? fil?.extra[1] : `$${lowerCase(fil?.props[0])}`,
             prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
             co: operatorMap[fil.operator],
@@ -558,7 +557,7 @@ const getEventsWithPropertiesKPI = (filters, category) => {
         });
       } else {
         filterProps.push({
-          extra:fil?.extra ? fil?.extra : null,
+          extra: fil?.extra ? fil?.extra : null,
           prNa: fil?.extra ? fil?.extra[1] : `$${lowerCase(fil?.props[0])}`,
           prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
           co: operatorMap[fil.operator],
@@ -586,7 +585,7 @@ const getEventsWithPropertiesKPI = (filters, category) => {
       if (Array.isArray(fil.values)) {
         fil.values.forEach((val, index) => {
           filterProps.push({
-            extra:fil?.extra ? fil?.extra : null,
+            extra: fil?.extra ? fil?.extra : null,
             prNa: fil?.extra ? fil?.extra[1] : `$${lowerCase(fil?.props[0])}`,
             prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
             co: operatorMap[fil.operator],
@@ -608,7 +607,7 @@ const getEventsWithPropertiesKPI = (filters, category) => {
         });
       } else {
         filterProps.push({
-          extra:fil?.extra ? fil?.extra : null,
+          extra: fil?.extra ? fil?.extra : null,
           prNa: fil?.extra ? fil?.extra[1] : `$${lowerCase(fil?.props[0])}`,
           prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
           co: operatorMap[fil.operator],
@@ -635,7 +634,7 @@ const getEventsWithPropertiesKPI = (filters, category) => {
       if (Array.isArray(fil.values)) {
         fil.values.forEach((val) => {
           filterProps.push({
-            extra:fil?.extra ? fil?.extra : null,
+            extra: fil?.extra ? fil?.extra : null,
             prNa: fil?.extra ? fil?.extra[1] : `$${lowerCase(fil?.props[0])}`,
             prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
             co: operatorMap[fil.operator],
@@ -657,7 +656,7 @@ const getEventsWithPropertiesKPI = (filters, category) => {
         });
       } else {
         filterProps.push({
-          extra:fil?.extra ? fil?.extra : null,
+          extra: fil?.extra ? fil?.extra : null,
           prNa: fil?.extra ? fil?.extra[1] : `$${lowerCase(fil?.props[0])}`,
           prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
           co: operatorMap[fil.operator],
@@ -685,8 +684,8 @@ const getEventsWithPropertiesKPI = (filters, category) => {
   return filterProps;
 };
 
-const getGroupByWithPropertiesKPI = (appliedGroupBy, index, category) => {
-  return appliedGroupBy.map((opt) => {
+const getGroupByWithPropertiesKPI = (appliedGroupBy, index, category) =>
+  appliedGroupBy.map((opt) => {
     let appGbp = {};
     if (opt.eventIndex === index) {
       appGbp = {
@@ -728,7 +727,6 @@ const getGroupByWithPropertiesKPI = (appliedGroupBy, index, category) => {
     }
     return appGbp;
   });
-};
 
 const getKPIqueryGroup = (queries, eventGrpBy, period) => {
   const queryArr = [];
@@ -767,7 +765,7 @@ const getKPIqueryGroup = (queries, eventGrpBy, period) => {
 
 export const getKPIQuery = (
   queries,
-  date_range,
+  dateRange,
   groupBy,
   queryOptions
   // globalFilters = []
@@ -775,17 +773,17 @@ export const getKPIQuery = (
   const query = {};
   query.cl = QUERY_TYPE_KPI?.toLocaleLowerCase();
   const period = {};
-  if (date_range?.from && date_range?.to) {
-    period.from = MomentTz(date_range.from).startOf('day').utc().unix();
-    period.to = MomentTz(date_range.to).endOf('day').utc().unix();
-    period.frequency = date_range.frequency;
+  if (dateRange?.from && dateRange?.to) {
+    period.from = MomentTz(dateRange.from).startOf('day').utc().unix();
+    period.to = MomentTz(dateRange.to).endOf('day').utc().unix();
+    period.frequency = dateRange.frequency;
   } else {
     period.from = MomentTz().startOf('week').utc().unix();
     period.to =
       MomentTz().format('dddd') !== 'Sunday'
         ? MomentTz().subtract(1, 'day').endOf('day').utc().unix()
         : MomentTz().utc().unix();
-    period.frequency = date_range.frequency;
+    period.frequency = dateRange.frequency;
   }
 
   const eventGrpBy = [...groupBy.event];
@@ -809,16 +807,16 @@ export const getKPIQuery = (
 export const getQuery = (
   groupBy,
   queries,
-  result_criteria,
-  user_type,
+  resultCriteria,
+  userType,
   dateRange,
   globalFilters = []
 ) => {
   const query = {};
   query.cl = QUERY_TYPE_EVENT;
   query.ty =
-    result_criteria === TOTAL_EVENTS_CRITERIA ||
-    result_criteria === FREQUENCY_CRITERIA
+    resultCriteria === TOTAL_EVENTS_CRITERIA ||
+    resultCriteria === FREQUENCY_CRITERIA
       ? TYPE_EVENTS_OCCURRENCE
       : TYPE_UNIQUE_USERS;
 
@@ -839,7 +837,7 @@ export const getQuery = (
 
   query.ewp = getEventsWithProperties(queries);
   query.gup = getGlobalFilters(globalFilters);
-  query.gbt = user_type === EACH_USER_TYPE ? dateRange.frequency : '';
+  query.gbt = userType === EACH_USER_TYPE ? dateRange.frequency : '';
 
   const appliedGroupBy = [...groupBy.event, ...groupBy.global];
 
@@ -869,7 +867,7 @@ export const getQuery = (
     }
     return gbpReq;
   });
-  query.ec = constantObj[user_type];
+  query.ec = constantObj[userType];
   query.tz = localStorage.getItem('project_timeZone') || 'Asia/Kolkata';
   const sessionsQuery = {
     cl: QUERY_TYPE_EVENT,
@@ -887,9 +885,10 @@ export const getQuery = (
     ec: constantObj.each,
     tz: localStorage.getItem('project_timeZone') || 'Asia/Kolkata'
   };
-  if (result_criteria === ACTIVE_USERS_CRITERIA) {
+  if (resultCriteria === ACTIVE_USERS_CRITERIA) {
     return [query, { ...query, gbt: '' }, sessionsQuery];
-  } else if (result_criteria === FREQUENCY_CRITERIA) {
+  }
+  if (resultCriteria === FREQUENCY_CRITERIA) {
     return [
       query,
       { ...query, gbt: '' },
@@ -897,22 +896,10 @@ export const getQuery = (
       { ...query, ty: TYPE_UNIQUE_USERS, gbt: '' }
     ];
   }
-  if (user_type === ANY_USER_TYPE || user_type === ALL_USER_TYPE) {
+  if (userType === ANY_USER_TYPE || userType === ALL_USER_TYPE) {
     return [query];
   }
   return [query, { ...query, gbt: '' }];
-};
-
-export const calculateFrequencyData = (
-  eventData,
-  userData,
-  appliedBreakdown
-) => {
-  if (appliedBreakdown.length) {
-    return calculateFrequencyDataForBreakdown(eventData, userData);
-  } else {
-    return calculateFrequencyDataForNoBreakdown(eventData, userData);
-  }
 };
 
 export const calculateFrequencyDataForNoBreakdown = (eventData, userData) => {
@@ -999,18 +986,6 @@ export const calculateFrequencyDataForBreakdown = (eventData, userData) => {
   return result;
 };
 
-export const calculateActiveUsersData = (
-  userData,
-  sessionData,
-  appliedBreakdown
-) => {
-  if (appliedBreakdown.length) {
-    return calculateActiveUsersDataForBreakdown(userData, sessionData);
-  } else {
-    return calculateActiveUsersDataForNoBreakdown(userData, sessionData);
-  }
-};
-
 const calculateActiveUsersDataForNoBreakdown = (userData, sessionData) => {
   const rows = userData.rows.map((elem) => {
     const eventVals = elem.slice(1).map((e) => {
@@ -1069,6 +1044,28 @@ const calculateActiveUsersDataForBreakdown = (userData, sessionData) => {
   return result;
 };
 
+export const calculateFrequencyData = (
+  eventData,
+  userData,
+  appliedBreakdown
+) => {
+  if (appliedBreakdown.length) {
+    return calculateFrequencyDataForBreakdown(eventData, userData);
+  }
+  return calculateFrequencyDataForNoBreakdown(eventData, userData);
+};
+
+export const calculateActiveUsersData = (
+  userData,
+  sessionData,
+  appliedBreakdown
+) => {
+  if (appliedBreakdown.length) {
+    return calculateActiveUsersDataForBreakdown(userData, sessionData);
+  }
+  return calculateActiveUsersDataForNoBreakdown(userData, sessionData);
+};
+
 export const hasApiFailed = (res) => {
   if (
     res.data &&
@@ -1082,20 +1079,17 @@ export const hasApiFailed = (res) => {
   return false;
 };
 
-export const numberWithCommas = (x) => {
-  return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-};
+export const numberWithCommas = (x) =>
+  x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
-export const formatApiData = (data, metrics) => {
-  return { ...data, metrics };
-};
+export const formatApiData = (data, metrics) => ({ ...data, metrics });
 
 export const getStateQueryFromRequestQuery = (requestQuery) => {
-  const events = requestQuery?.ewp.map((e) => {
+  const events = requestQuery?.ewp?.map((e) => {
     const filters = [];
-    let ref = -1,
-      lastProp = '',
-      lastOp = '';
+    let ref = -1;
+    let lastProp = '';
+    let lastOp = '';
     e.pr.forEach((pr) => {
       if (pr.lop === 'AND') {
         ref += 1;
@@ -1136,9 +1130,9 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
   const globalFilters = [];
 
   if (requestQuery && requestQuery.gup && Array.isArray(requestQuery.gup)) {
-    let ref = -1,
-      lastProp = '',
-      lastOp = '';
+    let ref = -1;
+    let lastProp = '';
+    let lastOp = '';
     requestQuery.gup.forEach((pr) => {
       if (pr.lop === 'AND') {
         ref += 1;
@@ -1172,40 +1166,34 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
   }
 
   const queryType = requestQuery.cl;
-  const session_analytics_seq = INITIAL_SESSION_ANALYTICS_SEQ;
+  const sessionAnalyticsSeq = INITIAL_SESSION_ANALYTICS_SEQ;
   // if (requestQuery.cl && requestQuery.cl === QUERY_TYPE_FUNNEL) {
   //   if (requestQuery.sse && requestQuery.see) {
   //     session_analytics_seq.start = requestQuery.sse;
   //     session_analytics_seq.end = requestQuery.see;
   //   }
   // }
-  const breakdown = requestQuery.gbp.map((opt) => {
-    return {
-      property: opt.pr,
-      prop_category: opt.en,
-      prop_type: opt.pty,
-      eventName: opt.ena,
-      eventIndex: opt.eni ? opt.eni : 0,
-      grn: opt.grn,
-      gbty: opt.gbty
-    };
-  });
+  const breakdown = requestQuery?.gbp?.map((opt) => ({
+    property: opt.pr,
+    prop_category: opt.en,
+    prop_type: opt.pty,
+    eventName: opt.ena,
+    eventIndex: opt.eni ? opt.eni : 0,
+    grn: opt.grn,
+    gbty: opt.gbty
+  }));
   const event = breakdown
-    .filter((b) => b.eventIndex)
-    .map((b, index) => {
-      return {
-        ...b,
-        overAllIndex: index
-      };
-    });
+    ?.filter((b) => b.eventIndex)
+    ?.map((b, index) => ({
+      ...b,
+      overAllIndex: index
+    }));
   const global = breakdown
-    .filter((b) => !b.eventIndex)
-    .map((b, index) => {
-      return {
-        ...b,
-        overAllIndex: index
-      };
-    });
+    ?.filter((b) => !b.eventIndex)
+    ?.map((b, index) => ({
+      ...b,
+      overAllIndex: index
+    }));
 
   const dateRange = {
     from: requestQuery.fr * 1000,
@@ -1215,7 +1203,7 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
   const result = {
     events,
     queryType,
-    session_analytics_seq,
+    session_analytics_seq: sessionAnalyticsSeq,
     globalFilters,
     breakdown: {
       event,
@@ -1272,7 +1260,7 @@ export const getFilters = (filters) => {
   const result = [];
   const filtersGroupedByRef = Object.values(groupFilters(filters, 'ref'));
   filtersGroupedByRef.forEach((filtersGr) => {
-    if (filtersGr.length == 1) {
+    if (filtersGr.length === 1) {
       const fil = filtersGr[0];
       if (Array.isArray(fil.values)) {
         fil.values.forEach((val, index) => {
@@ -1320,7 +1308,7 @@ export const getFilters = (filters) => {
       }
       fil = filtersGr[1];
       if (Array.isArray(fil.values)) {
-        fil.values.forEach((val, index) => {
+        fil.values.forEach((val) => {
           result.push({
             en: fil.props[2] === 'group' ? 'user' : fil.props[2],
             lop: 'OR',
@@ -1379,7 +1367,7 @@ const getFiltersTouchpoints = (filters, touchpoint) => {
   const result = [];
   const filtersGroupedByRef = Object.values(groupFilters(filters, 'ref'));
   filtersGroupedByRef.forEach((filtersGr) => {
-    if (filtersGr.length == 1) {
+    if (filtersGr.length === 1) {
       const fil = filtersGr[0];
       if (Array.isArray(fil.values)) {
         fil.values.forEach((val, index) => {
@@ -1455,8 +1443,8 @@ const getFiltersTouchpoints = (filters, touchpoint) => {
 export const getAttributionQuery = (
   eventGoal = { filters: [] },
   touchpoint,
-  attr_dimensions,
-  content_groups,
+  attrDimensions,
+  contentGroups,
   touchpointFilters,
   queryType,
   models,
@@ -1518,20 +1506,20 @@ export const getAttributionQuery = (
       };
     });
   }
-  const list_dimensions =
+  const listDimensions =
     touchpoint === 'LandingPage'
-      ? content_groups.slice()
-      : attr_dimensions.slice();
+      ? contentGroups.slice()
+      : attrDimensions.slice();
 
-  const attribution_key_dimensions = list_dimensions
+  const attributionKeyDimensions = listDimensions
     .filter((d) => d.touchPoint === touchpoint && d.enabled && d.type === 'key')
     .map((d) => d.header);
-  const attribution_key_custom_dimensions = list_dimensions
+  const attributionKeyCustomDimensions = listDimensions
     .filter(
       (d) => d.touchPoint === touchpoint && d.enabled && d.type === 'custom'
     )
     .map((d) => d.header);
-  const attribution_content_groups = list_dimensions
+  const attributionContentGroups = listDimensions
     .filter(
       (d) =>
         d.touchPoint === touchpoint && d.enabled && d.type === 'content_group'
@@ -1539,10 +1527,10 @@ export const getAttributionQuery = (
     .map((d) => d.header);
 
   if (touchpoint !== MARKETING_TOUCHPOINTS.SOURCE) {
-    query.query.attribution_key_dimensions = attribution_key_dimensions;
+    query.query.attribution_key_dimensions = attributionKeyDimensions;
     query.query.attribution_key_custom_dimensions =
-      attribution_key_custom_dimensions;
-    query.query.attribution_content_groups = attribution_content_groups;
+      attributionKeyCustomDimensions;
+    query.query.attribution_content_groups = attributionContentGroups;
   }
 
   return query;
@@ -1564,9 +1552,9 @@ export const getAttributionStateFromRequestQuery = (
   }
 
   const filters = [];
-  let ref = -1,
-    lastProp = '',
-    lastOp = '';
+  let ref = -1;
+  let lastProp = '';
+  let lastOp = '';
   get(requestQuery, 'ce.pr', []).forEach((pr) => {
     if (pr.lop === 'AND') {
       ref += 1;
@@ -1602,9 +1590,9 @@ export const getAttributionStateFromRequestQuery = (
 
   const touchPointFilters = [];
   if (requestQuery.attribution_key_f) {
-    let ref = -1,
-      lastProp = '',
-      lastOp = '';
+    let ref = -1;
+    let lastProp = '';
+    let lastOp = '';
     requestQuery.attribution_key_f.forEach((pr) => {
       if (pr.lop === 'AND') {
         ref += 1;
@@ -1746,12 +1734,10 @@ export const getCampaignsQuery = (
   const query = {
     channel,
     select_metrics,
-    group_by: group_by.map((elem) => {
-      return {
-        name: elem.prop_category,
-        property: elem.property
-      };
-    }),
+    group_by: group_by.map((elem) => ({
+      name: elem.prop_category,
+      property: elem.property
+    })),
     filters: appliedFilters,
     gbt: dateRange.frequency
   };
@@ -1789,22 +1775,32 @@ export const getCampaignStateFromRequestQuery = (requestQuery) => {
     camp_channels: requestQuery.channel,
     camp_measures: requestQuery.select_metrics,
     camp_filters,
-    camp_groupBy: requestQuery.group_by.map((gb) => {
-      return {
-        prop_category: gb.name,
-        property: gb.property
-      };
-    })
+    camp_groupBy: requestQuery.group_by.map((gb) => ({
+      prop_category: gb.name,
+      property: gb.property
+    }))
   };
 
   return result;
 };
 
 export const isComparisonEnabled = (queryType, events, groupBy, models) => {
-  if (queryType === QUERY_TYPE_FUNNEL || queryType === QUERY_TYPE_EVENT) {
+  if (queryType === QUERY_TYPE_FUNNEL) {
     const newAppliedBreakdown = [...groupBy.event, ...groupBy.global];
     return newAppliedBreakdown.length === 0;
   }
+
+  if (queryType === QUERY_TYPE_EVENT) {
+    const newAppliedBreakdown = [...groupBy.event, ...groupBy.global];
+    if (newAppliedBreakdown.length === 0) {
+      return true;
+    }
+    if (events.length === 1) {
+      return true;
+    }
+    return false;
+  }
+
   if (queryType === QUERY_TYPE_ATTRIBUTION) {
     if (models.length === 1) {
       return true;
@@ -1822,9 +1818,9 @@ export const getProfileQueryFromRequestQuery = (requestQuery) => {
 
   const queries = requestQuery.queries.map((e) => {
     const evfilters = [];
-    let ref = -1,
-      lastProp = '',
-      lastOp = '';
+    let ref = -1;
+    let lastProp = '';
+    let lastOp = '';
     e.pr.forEach((pr) => {
       if (pr.lop === 'AND') {
         ref += 1;
@@ -1864,9 +1860,9 @@ export const getProfileQueryFromRequestQuery = (requestQuery) => {
 
   const filters = [];
   if (requestQuery && requestQuery.gup && Array.isArray(requestQuery.gup)) {
-    let ref = -1,
-      lastProp = '',
-      lastOp = '';
+    let ref = -1;
+    let lastProp = '';
+    let lastOp = '';
     requestQuery.gup.forEach((pr) => {
       if (pr.lop === 'AND') {
         ref += 1;
@@ -1899,25 +1895,21 @@ export const getProfileQueryFromRequestQuery = (requestQuery) => {
     });
   }
 
-  const breakdown = requestQuery.gbp.map((opt) => {
-    return {
-      property: opt.pr,
-      prop_category: opt.en,
-      prop_type: opt.pty,
-      eventName: opt.ena,
-      eventIndex: opt.eni ? opt.eni : 0,
-      grn: opt.grn,
-      gbty: opt.gbty
-    };
-  });
+  const breakdown = requestQuery.gbp.map((opt) => ({
+    property: opt.pr,
+    prop_category: opt.en,
+    prop_type: opt.pty,
+    eventName: opt.ena,
+    eventIndex: opt.eni ? opt.eni : 0,
+    grn: opt.grn,
+    gbty: opt.gbty
+  }));
   const globalBreakdown = breakdown
     .filter((b) => !b.eventIndex)
-    .map((b, index) => {
-      return {
-        ...b,
-        overAllIndex: index
-      };
-    });
+    .map((b, index) => ({
+      ...b,
+      overAllIndex: index
+    }));
 
   const groupBy = {
     global: globalBreakdown,
@@ -1952,7 +1944,7 @@ export const convertDateTimeObjectValuesToMilliSeconds = (obj) => {
 export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
   const queryType = requestQuery.cl;
   const queries = [];
-  for (let i = 0; i < requestQuery.qG.length; i = i + 2) {
+  for (let i = 0; i < requestQuery.qG.length; i += 2) {
     const q = requestQuery.qG[i];
     const config = kpiConfig.find((elem) => elem.display_category === q.dc);
     const metric = config
@@ -1963,10 +1955,9 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
     const fil = get(q, 'fil', EMPTY_ARRAY)
       ? get(q, 'fil', EMPTY_ARRAY)
       : EMPTY_ARRAY;
-    let ref = -1,
-      lastProp = '',
-      lastOp = '';
-      console.log('induvidual fil-->>',fil)
+    let ref = -1;
+    let lastProp = '';
+    let lastOp = '';
     fil.forEach((pr) => {
       if (pr.lOp === 'AND') {
         ref += 1;
@@ -2035,11 +2026,11 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
   // const globalFilters = [];
 
   const filters = [];
-  let ref = -1,
-    lastProp = '',
-    lastOp = '';
+  let ref = -1;
+  let lastProp = '';
+  let lastOp = '';
   requestQuery.gFil.forEach((pr) => {
-    console.log('requestQuery-->>',pr)
+    console.log('requestQuery-->>', pr);
     if (pr.lOp === 'AND') {
       ref += 1;
       const val = pr.prDaTy === FILTER_TYPES.CATEGORICAL ? [pr.va] : pr.va;
@@ -2118,7 +2109,7 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
     ...DefaultDateRangeFormat,
     from: requestQuery.qG[1].fr * 1000,
     to: requestQuery.qG[1].to * 1000,
-    frequency: requestQuery.qG[1].gbt ? requestQuery.qG[1].gbt : 'date' //fix on .gbt for saved channel queries migrated to kpi queries
+    frequency: requestQuery.qG[1].gbt ? requestQuery.qG[1].gbt : 'date' // fix on .gbt for saved channel queries migrated to kpi queries
   };
   const result = {
     events: queries,

@@ -644,18 +644,19 @@ func ConvertQuery(data model.Queries) model.QueriesString {
 	return model.QueriesString{
 		ID: fmt.Sprintf("%d", data.ID),
 		// Foreign key queries(project_id) ref projects(id).
-		ProjectID:     data.ProjectID,
-		Title:         data.Title,
-		Query:         data.Query,
-		Type:          data.Type,
-		IsDeleted:     data.IsDeleted,
-		CreatedBy:     data.CreatedBy,
-		CreatedByName: data.CreatedByName,
-		CreatedAt:     data.CreatedAt,
-		UpdatedAt:     data.UpdatedAt,
-		Settings:      data.Settings,
-		IdText:        data.IdText,
-		Converted:     data.Converted,
+		ProjectID:      data.ProjectID,
+		Title:          data.Title,
+		Query:          data.Query,
+		Type:           data.Type,
+		IsDeleted:      data.IsDeleted,
+		CreatedBy:      data.CreatedBy,
+		CreatedByName:  data.CreatedByName,
+		CreatedByEmail: data.CreatedByEmail,
+		CreatedAt:      data.CreatedAt,
+		UpdatedAt:      data.UpdatedAt,
+		Settings:       data.Settings,
+		IdText:         data.IdText,
+		Converted:      data.Converted,
 	}
 }
 

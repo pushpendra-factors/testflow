@@ -11,6 +11,7 @@ type Profile struct {
 	Identity           string          `json:"identity"`
 	Properties         *postgres.Jsonb `json:"-"`
 	Name               string          `json:"name"`
+	HostName           string          `json:"host_name"`
 	IsAnonymous        bool            `json:"is_anonymous"`
 	Country            string          `json:"country"`
 	AssociatedContacts uint64          `json:"associated_contacts"`
@@ -43,6 +44,7 @@ type GroupsInfo struct {
 
 type UserActivity struct {
 	EventName   string          `json:"event_name"`
+	EventType   string          `json:"event_type"`
 	DisplayName string          `json:"display_name"`
 	AliasName   string          `json:"alias_name,omitempty"`
 	Properties  *postgres.Jsonb `json:"properties,omitempty"`
@@ -56,6 +58,7 @@ type TimelinePayload struct {
 
 type AccountDetails struct {
 	Properties        *postgres.Jsonb `json:"-"`
+	HostName          string          `json:"host_name"`
 	Name              string          `json:"name"`
 	Industry          string          `json:"industry"`
 	Country           string          `json:"country"`

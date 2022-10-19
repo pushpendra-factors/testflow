@@ -49,6 +49,7 @@ type Model interface {
 	ExecQuery(stmnt string, params []interface{}) (*model.QueryResult, error, string)
 	ExecQueryWithContext(stmnt string, params []interface{}) (*sql.Rows, *sql.Tx, error, string)
 	Analyze(projectID int64, query model.Query, enableFilterOpt bool) (*model.QueryResult, int, string)
+	IsGroupEventNameByQueryEventWithProperties(projectID int64, ewp model.QueryEventWithProperties) (string, int)
 
 	// archival
 	GetNextArchivalBatches(projectID int64, startTime int64, maxLookbackDays int, hardStartTime, hardEndTime time.Time) ([]model.EventsArchivalBatch, error)
@@ -242,6 +243,8 @@ type Model interface {
 	// form_fill
 	CreateFormFillEventById(projectId int64, formFill *model.SDKFormFillPayload) (int, error)
 	GetFormFillEventById(projectId int64, formId string, fieldId string) (*model.FormFill, int)
+	GetFormFillEventsUpdatedBeforeTenMinutes(projectIds []int64) ([]model.FormFill, error)
+	DeleteFormFillProcessedRecords(projectId int64, formId string, fieldId string) (int, error)
 
 	// events
 	GetEventCountOfUserByEventName(projectID int64, userId string, eventNameId string) (uint64, int)
@@ -390,6 +393,7 @@ type Model interface {
 	DisableExplain(projectId int64) int
 	GetAllWeeklyInsightsEnabledProjects() ([]int64, error)
 	GetAllExplainEnabledProjects() ([]int64, error)
+	GetFormFillEnabledProjectIDs() ([]int64, error)
 
 	// project
 	UpdateProject(projectID int64, project *model.Project) int

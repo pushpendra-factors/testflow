@@ -10,6 +10,7 @@ import {
   CHART_TYPE_SPARKLINES,
   CHART_TYPE_TABLE,
   CHART_TYPE_PIVOT_CHART,
+  CHART_TYPE_LINECHART
 } from '../../../utils/constants';
 
 export const addShadowToHeader = () => {
@@ -31,7 +32,7 @@ export const getChartType = ({
   breakdown,
   chartTypes,
   attributionModels,
-  campaignGroupBy,
+  campaignGroupBy
 }) => {
   if (queryType === QUERY_TYPE_FUNNEL) {
     const key = breakdown.length ? 'breakdown' : 'no_breakdown';
@@ -62,11 +63,13 @@ export const getChartType = ({
       // pivot charts are not supported for 1 breakdown
       return CHART_TYPE_BARCHART;
     }
-    return chartTypes[queryType][key] === CHART_TYPE_TABLE
-      ? breakdown.length
-        ? CHART_TYPE_BARCHART
-        : CHART_TYPE_SPARKLINES
-      : chartTypes[queryType][key];
+    if (chartTypes[queryType][key] === CHART_TYPE_TABLE) {
+      if (breakdown.length) {
+        return CHART_TYPE_BARCHART;
+      }
+      return CHART_TYPE_SPARKLINES;
+    }
+    return chartTypes[queryType][key];
   }
 
   if (queryType === QUERY_TYPE_CAMPAIGN) {
@@ -90,13 +93,14 @@ export const getChartType = ({
       ? CHART_TYPE_BARCHART
       : chartTypes[queryType][key];
   }
+  return CHART_TYPE_LINECHART;
 };
 
 export const getChartChangedKey = ({
   queryType,
   breakdown,
   campaignGroupBy,
-  attributionModels,
+  attributionModels
 }) => {
   if (
     queryType === QUERY_TYPE_EVENT ||
@@ -114,4 +118,5 @@ export const getChartChangedKey = ({
       ? 'dual_touch_point'
       : 'single_touch_point';
   }
+  return 'no_breakdown';
 };

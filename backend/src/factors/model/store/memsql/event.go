@@ -661,7 +661,7 @@ func (store *MemSQL) GetRecentEventPropertyValuesWithLimits(projectID int64, eve
 func (store *MemSQL) UpdateEventPropertiesInBatch(projectID int64,
 	batchedUpdateEventPropertiesParams []model.UpdateEventPropertiesParams) bool {
 
-	logFields := log.Fields{"project_id": projectID, "batched_update_event_properties_params": batchedUpdateEventPropertiesParams}
+	logFields := log.Fields{"project_id": projectID}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	logCtx := log.WithFields(logFields)
