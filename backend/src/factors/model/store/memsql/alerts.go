@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -303,6 +304,12 @@ func (store *MemSQL) CreateAlert(projectID int64, alert model.Alert) (model.Aler
 		logCtx.Error("Slack integration is not enabled for this project")
 		return model.Alert{}, http.StatusBadRequest, "Slack integration is not enabled for this project"
 	}
+	_, err = store.checkIfDuplicateAlertNameExists(projectID, alert.AlertName)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to create alert")
+		return model.Alert{}, http.StatusBadRequest, err.Error()
+	}
+
 	if !skipValidation {
 		if !store.isValidOperator(alertDescription.Operator) {
 			return model.Alert{}, http.StatusBadRequest, "Invalid Operator for Alert"
@@ -343,6 +350,18 @@ func (store *MemSQL) CreateAlert(projectID int64, alert model.Alert) (model.Aler
 	}
 	return alertRecord, http.StatusCreated, ""
 
+}
+func (store *MemSQL) checkIfDuplicateAlertNameExists(projectID int64, alertName string) (allowed bool, err error) {
+	alerts, status := store.GetAllAlerts(projectID, true)
+	if status != http.StatusFound {
+		return false, errors.New(fmt.Sprintf("Failed to get Alerts for project ID %d", projectID))
+	}
+	for _, alert := range alerts {
+		if strings.ToLower(alert.AlertName) == strings.ToLower(alertName) {
+			return false, errors.New(fmt.Sprintf("Alert with name %s already exists ", alertName))
+		}
+	}
+	return true, nil
 }
 func (store *MemSQL) isValidOperator(operator string) bool {
 	for _, op := range model.ValidOperators {
