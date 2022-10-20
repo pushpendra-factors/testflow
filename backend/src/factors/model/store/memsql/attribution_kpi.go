@@ -29,7 +29,10 @@ func (store *MemSQL) ExecuteKPIForAttribution(projectID int64, query *model.Attr
 	if err != nil {
 		return kpiData, err
 	}
-
+	if C.GetAttributionDebug() == 1 {
+		logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "kpiData": kpiData, "groupUserIDToKpiID": groupUserIDToKpiID,
+			"kpiKeys": kpiKeys}).Info("KPI-Attribution kpiData reports after RunKPIGroupQuery")
+	}
 	err = store.FillKPIGroupUserData(projectID, query, &kpiData, &kpiKeys, &groupUserIDToKpiID, logCtx)
 	if err != nil {
 		return kpiData, err
@@ -112,9 +115,13 @@ func (store *MemSQL) GetDataFromKPIResult(projectID int64, kpiQueryResult model.
 	}
 
 	customMetrics, errMsg, statusCode := store.GetCustomMetricsByProjectId(projectID)
+
 	if statusCode != http.StatusFound {
 		logCtx.WithField("messageFinder", "Failed to get custom metrics").Error(errMsg)
 		return nil
+	}
+	if C.GetAttributionDebug() == 1 || query.AnalyzeType == model.AnalyzeTypeUserKPI {
+		logCtx.WithFields(log.Fields{"customMetrics": customMetrics}).Info("customMetrics for project in attribution query")
 	}
 
 	mapKpiAggFunctionType := make(map[string]string)

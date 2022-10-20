@@ -352,9 +352,7 @@ func (store *MemSQL) PullConvertedUsers(projectID int64, query *model.Attributio
 			return nil, nil, nil, nil, err
 		}
 
-		if C.GetAttributionDebug() == 1 {
-			log.WithFields(log.Fields{"UserKPIAttribution": "Debug", "kpiData": kpiData}).Info("UserKPI Attribution kpiData")
-		}
+		log.WithFields(log.Fields{"UserKPIAttribution": "Debug", "kpiData": kpiData}).Info("UserKPI Attribution kpiData")
 
 		_uniqueUsers := make(map[string]int)
 		// Get user IDs for Revenue Attribution
