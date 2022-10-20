@@ -95,12 +95,12 @@ type ContactListMembership struct {
 
 // ContactList definition
 type ContactList struct {
-	ListId          int64                              `json:"listId"`
-	ListName        string                             `json:"name"`
-	ListType        string                             `json:"listType"`
-	ListCreatedAt   int64                              `json:"createdAt"`
-	ContactIds      []int64                            `json:"contactIds"`
-	ListMemberships map[string][]ContactListMembership `json:"listMemberships"`
+	ListId          int64                            `json:"listId"`
+	ListName        string                           `json:"name"`
+	ListType        string                           `json:"listType"`
+	ListCreatedAt   int64                            `json:"createdAt"`
+	ContactIds      []int64                          `json:"contactIds"`
+	ListMemberships map[string]ContactListMembership `json:"listMemberships"`
 }
 
 // PropertyDetail definition for hubspot properties api
@@ -2865,68 +2865,66 @@ func syncContactList(projectID int64, document *model.HubspotDocument, minTimest
 		contactIdDocumentMap[doc.ID] = doc
 	}
 
-	for contactId, listMemberships := range newContactList.ListMemberships {
+	for contactId, listMembership := range newContactList.ListMemberships {
 		doc, ok := contactIdDocumentMap[contactId]
 		if !ok {
 			logCtx.Info("Hubspot contact document not present in contact list.")
 			continue
 		}
 
-		for _, contact := range listMemberships {
-			if contact.StaticListId != newContactList.ListId {
-				continue
-			}
+		if listMembership.StaticListId != newContactList.ListId {
+			continue
+		}
 
-			isPast := false
-			if pastEnrichmentEnabled {
-				isPast = contact.Timestamp < minTimestamp
-			}
+		isPast := false
+		if pastEnrichmentEnabled {
+			isPast = listMembership.Timestamp < minTimestamp
+		}
 
-			_, properties, _, _, _ := GetContactProperties(projectID, &doc)
-			var emailId string
-			if (*properties)["EMAIL"] != nil {
-				emailId, err = U.GetValueAsString((*properties)["EMAIL"])
-				if err != nil {
-					logCtx.Error("Failed to get emailId from contact properties.")
-					emailId = ""
-				}
-			} else {
-				logCtx.Error("No emailId in contact properties.")
+		_, properties, _, _, _ := GetContactProperties(projectID, &doc)
+		var emailId string
+		if (*properties)["EMAIL"] != nil {
+			emailId, err = U.GetValueAsString((*properties)["EMAIL"])
+			if err != nil {
+				logCtx.Error("Failed to get emailId from contact properties.")
 				emailId = ""
 			}
+		} else {
+			logCtx.Error("No emailId in contact properties.")
+			emailId = ""
+		}
 
-			eventProperties := map[string]interface{}{
-				model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameContactList,
-					"list_name"): newContactList.ListName,
-				model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameContactList,
-					"list_id"): newContactList.ListId,
-				model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameContactList,
-					"list_create_timestamp"): getEventTimestamp(newContactList.ListCreatedAt),
-				model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameContactList,
-					"timestamp"): getEventTimestamp(contact.Timestamp),
-				model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameContactList,
-					"type"): newContactList.ListType,
-				model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameContactList,
-					"contact_id"): contact.Vid,
-				model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameContactList,
-					"contact_email"): emailId,
-			}
+		eventProperties := map[string]interface{}{
+			model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameContactList,
+				"list_name"): newContactList.ListName,
+			model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameContactList,
+				"list_id"): newContactList.ListId,
+			model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameContactList,
+				"list_create_timestamp"): getEventTimestamp(newContactList.ListCreatedAt),
+			model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameContactList,
+				"timestamp"): getEventTimestamp(listMembership.Timestamp),
+			model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameContactList,
+				"type"): newContactList.ListType,
+			model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameContactList,
+				"contact_id"): listMembership.Vid,
+			model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameContactList,
+				"contact_email"): emailId,
+		}
 
-			request := &SDK.TrackPayload{
-				ProjectId:       projectID,
-				Timestamp:       getEventTimestamp(contact.Timestamp),
-				EventProperties: eventProperties,
-				RequestSource:   model.UserSourceHubspot,
-				Name:            U.EVENT_NAME_HUBSPOT_CONTACT_LIST,
-				UserId:          contactIdDocumentMap[contactId].UserId,
-				IsPast:          isPast,
-			}
+		request := &SDK.TrackPayload{
+			ProjectId:       projectID,
+			Timestamp:       getEventTimestamp(listMembership.Timestamp),
+			EventProperties: eventProperties,
+			RequestSource:   model.UserSourceHubspot,
+			Name:            U.EVENT_NAME_HUBSPOT_CONTACT_LIST,
+			UserId:          contactIdDocumentMap[contactId].UserId,
+			IsPast:          isPast,
+		}
 
-			status, response := SDK.Track(projectID, request, true, SDK.SourceHubspot, model.HubspotDocumentTypeNameContactList)
-			if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
-				logCtx.WithFields(log.Fields{"status": status, "track_response": response}).Error("Failed to track hubspot added to a list event.")
-				return http.StatusInternalServerError
-			}
+		status, response := SDK.Track(projectID, request, true, SDK.SourceHubspot, model.HubspotDocumentTypeNameContactList)
+		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
+			logCtx.WithFields(log.Fields{"status": status, "track_response": response}).Error("Failed to track hubspot added to a list event.")
+			return http.StatusInternalServerError
 		}
 	}
 
@@ -3033,7 +3031,7 @@ func syncByOrderedTimeSeries(project *model.Project, orderedTimeSeries [][]int64
 
 		// for contact-list set last 48 hrs as begenning for recent events
 		if syncOrderByType[i] == model.HubspotDocumentTypeContactList {
-			minTimestamps[syncOrderByType[i]] = U.TimeNowZ().Add(-48 * time.Hour).Unix()*1000
+			minTimestamps[syncOrderByType[i]] = U.TimeNowZ().Add(-48*time.Hour).Unix() * 1000
 			continue
 		}
 
