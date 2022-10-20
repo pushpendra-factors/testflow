@@ -94,13 +94,22 @@ type ContactListMembership struct {
 }
 
 // ContactList definition
-type ContactList struct {
+type NewContactList struct {
 	ListId          int64                            `json:"listId"`
 	ListName        string                           `json:"name"`
 	ListType        string                           `json:"listType"`
 	ListCreatedAt   int64                            `json:"createdAt"`
 	ContactIds      []int64                          `json:"contactIds"`
 	ListMemberships map[string]ContactListMembership `json:"listMemberships"`
+}
+
+type OldContactList struct {
+	ListId          int64                              `json:"listId"`
+	ListName        string                             `json:"name"`
+	ListType        string                             `json:"listType"`
+	ListCreatedAt   int64                              `json:"createdAt"`
+	ContactIds      []int64                            `json:"contactIds"`
+	ListMemberships map[string][]ContactListMembership `json:"listMemberships"`
 }
 
 // PropertyDetail definition for hubspot properties api
@@ -2796,6 +2805,13 @@ func syncContactList(projectID int64, document *model.HubspotDocument, minTimest
 		return http.StatusOK
 	}
 
+	var newContactList NewContactList
+	err := json.Unmarshal((document.Value).RawMessage, &newContactList)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to unmarshal new hubspot contact_list document.")
+		return http.StatusInternalServerError
+	}
+
 	oldContactListDocument, status := store.GetStore().GetHubspotDocumentByTypeAndActions(projectID, []string{document.ID}, model.HubspotDocumentTypeContactList, []int{model.HubspotDocumentActionCreated, model.HubspotDocumentActionUpdated})
 	if status == http.StatusBadRequest || status == http.StatusInternalServerError {
 		logCtx.Error("Failed to get old synced hubspot contact_list document.")
@@ -2809,26 +2825,40 @@ func syncContactList(projectID int64, document *model.HubspotDocument, minTimest
 		}
 	}
 
-	var prevContactList ContactList
+	var errOldContactList error
+	var errNewContactList error
+
+	var prevOldContactList OldContactList
+	var prevNewContactList OldContactList
 	if prevContactListDocument != nil {
-		err := json.Unmarshal(((*prevContactListDocument).Value).RawMessage, &prevContactList)
+		err := json.Unmarshal(((*prevContactListDocument).Value).RawMessage, &prevOldContactList)
 		if err != nil {
-			logCtx.WithError(err).Error("Failed to unmarshal old hubspot contact_list document.")
-			return http.StatusInternalServerError
+			errOldContactList = errors.New("Failed to unmarshal old hubspot contact_list document to oldContactList.")
+		}
+		err = json.Unmarshal(((*prevContactListDocument).Value).RawMessage, &prevNewContactList)
+		if err != nil {
+			errNewContactList = errors.New("Failed to unmarshal old hubspot contact_list document to newContactList.")
+		}
+		if errOldContactList != nil && errNewContactList != nil {
+			logCtx.Error("Failed to unmarshal old hubspot contact_list document to oldContactList and newContactList.")
 		}
 	}
 
-	var newContactList ContactList
-	err := json.Unmarshal((document.Value).RawMessage, &newContactList)
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to unmarshal new hubspot contact_list document.")
-		return http.StatusInternalServerError
+	contactIds := make([]string, 0, 0)
+
+	if errOldContactList != nil {
+		for i := range newContactList.ContactIds {
+			if !U.ContainsInt64InArray(prevOldContactList.ContactIds, newContactList.ContactIds[i]) {
+				contactIds = append(contactIds, strconv.FormatInt(newContactList.ContactIds[i], 10))
+			}
+		}
 	}
 
-	contactIds := make([]string, 0, 0)
-	for i := range newContactList.ContactIds {
-		if !U.ContainsInt64InArray(prevContactList.ContactIds, newContactList.ContactIds[i]) {
-			contactIds = append(contactIds, strconv.FormatInt(newContactList.ContactIds[i], 10))
+	if errNewContactList != nil {
+		for i := range newContactList.ContactIds {
+			if !U.ContainsInt64InArray(prevNewContactList.ContactIds, newContactList.ContactIds[i]) {
+				contactIds = append(contactIds, strconv.FormatInt(newContactList.ContactIds[i], 10))
+			}
 		}
 	}
 
