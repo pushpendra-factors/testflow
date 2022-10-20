@@ -548,6 +548,7 @@ func (store *MemSQL) CacheDashboardUnitsForProjectID(projectID int64, dashboardU
 		"dashboard_unit_ids": dashboardUnits,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 
 	if numRoutines == 0 {
 		numRoutines = 1
