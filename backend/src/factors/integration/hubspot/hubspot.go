@@ -2836,12 +2836,13 @@ func syncContactList(projectID int64, document *model.HubspotDocument, minTimest
 
 		if errOldContactList != nil && errNewContactList != nil {
 			logCtx.Error("Failed to unmarshal old hubspot contact_list document to oldContactList and newContactList.")
+			return http.StatusInternalServerError
 		}
 	}
 
 	contactIds := make([]string, 0, 0)
 
-	if errOldContactList != nil {
+	if errOldContactList == nil {
 		for i := range newContactList.ContactIds {
 			if !U.ContainsInt64InArray(prevOldContactList.ContactIds, newContactList.ContactIds[i]) {
 				contactIds = append(contactIds, strconv.FormatInt(newContactList.ContactIds[i], 10))
@@ -2849,7 +2850,7 @@ func syncContactList(projectID int64, document *model.HubspotDocument, minTimest
 		}
 	}
 
-	if errNewContactList != nil {
+	if errNewContactList == nil {
 		for i := range newContactList.ContactIds {
 			if !U.ContainsInt64InArray(prevNewContactList.ContactIds, newContactList.ContactIds[i]) {
 				contactIds = append(contactIds, strconv.FormatInt(newContactList.ContactIds[i], 10))
