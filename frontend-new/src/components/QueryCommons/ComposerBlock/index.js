@@ -16,6 +16,8 @@ const ComposerBlock = ({blockTitle, disabled = false, isOpen, showIcon=true, onC
     }else if(blockTitle == "CONVERSION GOAL"){
         tooltipContent = 'The primary user action which a campaign is expected to drive'
     }else if(blockTitle == "CRITERIA"){
+        tooltipContent = 'Pick an attribution model for your analysis'
+    }else if(blockTitle == "LINKED EVENTS"){
         tooltipContent = 'Select events you expect to occur after the conversion goal you defined above.'
     }
     const renderHeader = () => {

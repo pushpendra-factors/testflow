@@ -7,7 +7,7 @@ import { TOOLTIP_CONSTANTS } from '../../constants/tooltips.constans';
 import { CHART_TYPES_DROPDOWN_CONSTANTS } from '../../constants/chartTypesDropDown.constants';
 
 function ChartTypeDropdown({ menuItems, onClick, chartType }) {
-  console.log("CHART_TYPE", chartType)
+  // console.log("CHART_TYPE",  chartType)
   const menu = (
     <div
       className={`flex shadow-md rounded items-center flex-wrap bg-white p-4 text-center ${
