@@ -2831,14 +2831,9 @@ func syncContactList(projectID int64, document *model.HubspotDocument, minTimest
 	var prevOldContactList OldContactList
 	var prevNewContactList OldContactList
 	if prevContactListDocument != nil {
-		err := json.Unmarshal(((*prevContactListDocument).Value).RawMessage, &prevOldContactList)
-		if err != nil {
-			errOldContactList = errors.New("Failed to unmarshal old hubspot contact_list document to oldContactList.")
-		}
-		err = json.Unmarshal(((*prevContactListDocument).Value).RawMessage, &prevNewContactList)
-		if err != nil {
-			errNewContactList = errors.New("Failed to unmarshal old hubspot contact_list document to newContactList.")
-		}
+		errOldContactList := json.Unmarshal(((*prevContactListDocument).Value).RawMessage, &prevOldContactList)
+		errNewContactList := json.Unmarshal(((*prevContactListDocument).Value).RawMessage, &prevNewContactList)
+
 		if errOldContactList != nil && errNewContactList != nil {
 			logCtx.Error("Failed to unmarshal old hubspot contact_list document to oldContactList and newContactList.")
 		}
