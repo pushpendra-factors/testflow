@@ -92,7 +92,7 @@ function SearchBar({
 
   const controlsBtn = (
     <Popover placement="bottomLeft" trigger="click" content={controlsPopover}>
-      <Button size={'large'} icon={<SVG name={'controls'} />} type="text" />
+      <Tooltip title='Edit Table Headers'><Button size={'large'} icon={<SVG name={'controls'} />} type="text" /></Tooltip>
     </Popover>
   );
 

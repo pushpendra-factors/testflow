@@ -10,7 +10,14 @@ import { TOOLTIP_CONSTANTS } from '../../../constants/tooltips.constans';
 const {Panel} = Collapse;
 
 const ComposerBlock = ({blockTitle, disabled = false, isOpen, showIcon=true, onClick, children, extraClass}) => {
-
+    let tooltipContent = ''
+    if(blockTitle == "FILTER BY" || blockTitle == "BREAKDOWN"){
+        tooltipContent = `This global ${blockTitle == "FILTER BY" ? "filter" : "breakdown"} impacts all added events above`
+    }else if(blockTitle == "CONVERSION GOAL"){
+        tooltipContent = 'The primary user action which a campaign is expected to drive'
+    }else if(blockTitle == "CRITERIA"){
+        tooltipContent = 'Select events you expect to occur after the conversion goal you defined above.'
+    }
     const renderHeader = () => {
         return (
             <div className={`${styles.cmpBlock__title}`}>
@@ -24,10 +31,10 @@ const ComposerBlock = ({blockTitle, disabled = false, isOpen, showIcon=true, onC
                     
                   >
                     {blockTitle} 
-                    {blockTitle == "FILTER BY" || blockTitle == "BREAKDOWN" ? 
+                    {tooltipContent.length > 0? 
                         <Tooltip 
                             className='p-1' 
-                            title={`This global ${blockTitle == "FILTER BY" ? "filter" : "breakdown"} impacts all added events above`}
+                            title={tooltipContent}
                             placement='right'
                             color={TOOLTIP_CONSTANTS.DARK}
                             >
