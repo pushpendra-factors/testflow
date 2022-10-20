@@ -22,6 +22,8 @@ import { getNormalizedKpi } from '../../../utils/kpiQueryComposer.helpers';
 import { get } from 'lodash';
 import { compareFilters, groupFilters } from '../../../utils/global';
 
+import { TOOLTIP_CONSTANTS } from '../../../constants/tooltips.constans';
+
 function QueryBlock({
   index,
   event,
@@ -275,14 +277,19 @@ function QueryBlock({
     return (
       <div className={'fa--query_block--actions-cols flex'}>
         <div className={`relative`}>
-          <Button
-            type="text"
-            size={'large'}
-            onClick={() => setMoreOptions(true)}
-            className={`fa-btn--custom mr-1 btn-total-round`}
-          >
-            <SVG name="more" />
-          </Button>
+          <Tooltip 
+            title="Filter this KPI"
+            color={TOOLTIP_CONSTANTS.DARK}
+            >
+            <Button
+              type="text"
+              size={'large'}
+              onClick={() => setMoreOptions(true)}
+              className={`fa-btn--custom mr-1 btn-total-round`}
+            >
+              <SVG name="more" />
+            </Button>
+          </Tooltip>
 
           {moreOptions ? (
             <FaSelect
@@ -305,14 +312,19 @@ function QueryBlock({
             alias={event.alias}
           ></AliasModal>
         </div>
-        <Button
-          size={'large'}
-          type="text"
-          onClick={deleteItem}
-          className={`fa-btn--custom btn-total-round`}
-        >
-          <SVG name="trash" />
-        </Button>
+        <Tooltip 
+          title="Delete this KPI"
+          color={TOOLTIP_CONSTANTS.DARK}
+          >
+          <Button
+            size={'large'}
+            type="text"
+            onClick={deleteItem}
+            className={`fa-btn--custom btn-total-round`}
+          >
+            <SVG name="trash" />
+          </Button>
+        </Tooltip>
       </div>
     );
   };
@@ -500,7 +512,7 @@ function QueryBlock({
             className={
               'fa--query_block--add-event active flex justify-center items-center mr-2'
             }
-          >
+          > 
             <Text
               type={'title'}
               level={7}
@@ -534,6 +546,7 @@ function QueryBlock({
               title={
                 eventNames[event.label] ? eventNames[event.label] : event.label
               }
+              color={TOOLTIP_CONSTANTS.DARK}
             >
               <Button
                 // icon={<SVG name='mouseevent' size={16} color={'purple'} />}

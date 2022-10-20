@@ -1,11 +1,12 @@
 import React, { Fragment, useCallback } from 'react';
-import { Input, Button, Popover } from 'antd';
+import { Input, Button, Popover, Tooltip } from 'antd';
 import { CSVLink } from 'react-csv';
 import { SVG } from '../factorsComponents';
 import DataTableFilters from '../DataTableFilters/DataTableFilters';
 import ControlledComponent from '../ControlledComponent/ControlledComponent';
 import styles from './index.module.scss';
 import { TEST_FILTER_OPTIONS } from '../DataTableFilters/dataTableFilters.constants';
+import { TOOLTIP_CONSTANTS } from '../../constants/tooltips.constans';
 
 function SearchBar({
   searchText,
@@ -40,40 +41,53 @@ function SearchBar({
   };
 
   const downloadBtn = (
-    <Button
-      size={'large'}
-      icon={<SVG name={'download'} size={20} color={'grey'} />}
-      type="text"
-      onClick={handleDownloadBtnClick}
-    >
-      <CSVLink
-        id="csvLink"
-        style={{ color: '#0E2647' }}
-        onClick={() => {
-          if (!csvData.data.length) return false;
-        }}
-        filename={csvData.fileName}
-        data={csvData.data}
-      ></CSVLink>
-    </Button>
+    <Tooltip
+      title='Export to CSV'
+      color={TOOLTIP_CONSTANTS.DARK}>
+      <Button
+        size={'large'}
+        icon={<SVG name={'download'} size={20} color={'grey'} />}
+        type="text"
+        onClick={handleDownloadBtnClick}
+      >
+        <CSVLink
+          id="csvLink"
+          style={{ color: '#0E2647' }}
+          onClick={() => {
+            if (!csvData.data.length) return false;
+          }}
+          filename={csvData.fileName}
+          data={csvData.data}
+        ></CSVLink>
+      </Button>
+    </Tooltip>
   );
 
   const searchBtn = (
-    <Button
-      size={'large'}
-      onClick={toggleSearchBar}
-      icon={<SVG name={'search'} size={20} color={'grey'} />}
-      type="text"
-    />
+    <Tooltip
+      title='Search'
+      color={TOOLTIP_CONSTANTS.DARK}>   
+      <Button
+        size={'large'}
+        onClick={toggleSearchBar}
+        icon={<SVG name={'search'} size={20} color={'grey'} />}
+        type="text"
+      />
+  </Tooltip>
   );
 
   const closeBtn = (
-    <Button
-      size={'large'}
-      onClick={handleSearchBarClose}
-      icon={<SVG name={'close'} size={20} color={'grey'} />}
-      type="text"
-    />
+    <Tooltip
+      title='Close'
+      color={TOOLTIP_CONSTANTS.DARK}>   
+        <Button
+        size={'large'}
+        onClick={handleSearchBarClose}
+        icon={<SVG name={'close'} size={20} color={'grey'} />}
+        type="text"
+      />
+  </Tooltip>
+    
   );
 
   const controlsBtn = (

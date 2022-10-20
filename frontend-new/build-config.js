@@ -1,6 +1,6 @@
 const CONFIG = {
   development: {
-    backend_host: 'http://factors-dev.com:8080',
+    backend_host: 'https://staging-api.factors.ai',
     sdk_service_host: 'http://factors-dev.com:8085',
     adwords_service_host: 'http://factors-dev.com:8091',
     sdk_asset_url: 'http://localhost:8090/dist/factors.prod.js',

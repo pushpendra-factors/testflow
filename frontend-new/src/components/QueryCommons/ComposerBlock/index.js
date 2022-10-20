@@ -2,7 +2,10 @@ import React, {useState} from 'react';
 import styles from './index.module.scss';
 
 import { SVG, Text } from "../../factorsComponents";
-import {Collapse} from 'antd';
+import {Collapse, Tooltip} from 'antd';
+import { InfoCircleOutlined } from '@ant-design/icons';
+
+import { TOOLTIP_CONSTANTS } from '../../../constants/tooltips.constans';
 
 const {Panel} = Collapse;
 
@@ -20,7 +23,18 @@ const ComposerBlock = ({blockTitle, disabled = false, isOpen, showIcon=true, onC
                     extraClass={"m-0 mb-2 inline"}
                     
                   >
-                    {blockTitle}
+                    {blockTitle} 
+                    {blockTitle == "FILTER BY" || blockTitle == "BREAKDOWN" ? 
+                        <Tooltip 
+                            className='p-1' 
+                            title={`This global ${blockTitle == "FILTER BY" ? "filter" : "breakdown"} impacts all added events above`}
+                            placement='right'
+                            color={TOOLTIP_CONSTANTS.DARK}
+                            >
+                            <InfoCircleOutlined />
+                        </Tooltip> : 
+                        ''
+                    }
                   </Text>
                 </div>
                 {showIcon && <div className={`${styles.cmpBlock__title__icon}`}>

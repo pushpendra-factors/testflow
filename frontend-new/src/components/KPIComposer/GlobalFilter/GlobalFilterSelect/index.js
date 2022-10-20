@@ -14,6 +14,7 @@ import { DEFAULT_OPERATOR_PROPS,dateTimeSelect } from 'Components/FaFilterSelect
 const DISPLAY_PROP = { $none: '(Not Set)' };
 import { toCapitalCase } from '../../../../utils/global';
 
+import { TOOLTIP_CONSTANTS } from '../../../../constants/tooltips.constans';
 
 const defaultOpProps = DEFAULT_OPERATOR_PROPS;
 
@@ -217,7 +218,10 @@ const GlobalFilterSelect = ({
   const renderPropSelect = () => {
     return (
       <div className={styles.filter__propContainer}>
-        <Tooltip title={renderGroupDisplayName(propState)}>
+        <Tooltip
+          title={renderGroupDisplayName(propState)}
+          color={TOOLTIP_CONSTANTS.DARK}
+          >
           <Button
             // icon={propState && propState.icon ? <SVG name={propState.icon} size={16} color={'purple'} /> : null}
             className={`fa-button--truncate fa-button--truncate-xs btn-left-round filter-buttons-margin`}
@@ -247,13 +251,18 @@ const GlobalFilterSelect = ({
   const renderOperatorSelector = () => {
     return (
       <div className={styles.filter__propContainer}>
-        <Button
-          className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
-          type='link'
-          onClick={() => setOperSelectOpen(true)}
-        >
-          {operatorState ? operatorState : 'Select Operator'}
-        </Button>
+        <Tooltip
+          title='Select an equator to define your filter rules.'
+          color={TOOLTIP_CONSTANTS.DARK}
+          >
+          <Button
+            className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
+            type='link'
+            onClick={() => setOperSelectOpen(true)}
+          >
+            {operatorState ? operatorState : 'Select Operator'}
+          </Button>
+        </Tooltip>
 
         {operSelectOpen && (
           <FaSelect
@@ -550,6 +559,7 @@ const GlobalFilterSelect = ({
                     .join(', ')
                 : null
             }
+            color={TOOLTIP_CONSTANTS.DARK}
           >
             <Button
               className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}

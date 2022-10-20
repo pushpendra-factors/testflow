@@ -21,6 +21,7 @@ import {
 } from './dataTableFilters.helpers';
 import ControlledComponent from '../ControlledComponent/ControlledComponent';
 import { isNumeric } from '../../utils/global';
+import { TOOLTIP_CONSTANTS } from '../../constants/tooltips.constans';
 
 const DataTableFilters = ({
   filters,
@@ -351,6 +352,7 @@ const DataTableFilters = ({
                       {renderLabelButton({
                         label: valuesLabel
                       })}
+                      color={TOOLTIP_CONSTANTS.DARK}
                     </Tooltip>
                   </Popover>
                 )}
