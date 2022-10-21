@@ -692,8 +692,14 @@ func (store *MemSQL) CacheDashboardUnit(dashboardUnit model.DashboardUnit,
 			return
 		}
 
-		projectSettingsJSON, _ := store.GetProjectSetting(dashboardUnit.ProjectID)
+		projectSettingsJSON, statusCodeProjectSettings := store.GetProjectSetting(dashboardUnit.ProjectID)
 		var cacheSettings model.CacheSettings
+
+		if projectSettingsJSON == nil || statusCodeProjectSettings != http.StatusFound {
+			log.WithField("projectID", dashboardUnit.ProjectID).WithField("statusCodeProjectSettings", statusCodeProjectSettings).Warn("errored in fetching project Settings")
+			continue
+		}
+
 		if projectSettingsJSON.CacheSettings != nil && !U.IsEmptyPostgresJsonb(projectSettingsJSON.CacheSettings) {
 			err = json.Unmarshal(projectSettingsJSON.CacheSettings.RawMessage, &cacheSettings)
 		}
