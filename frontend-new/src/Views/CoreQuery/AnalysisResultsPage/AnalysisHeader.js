@@ -20,7 +20,7 @@ import {
 } from 'Utils/constants';
 import userflow from 'userflow.js';
 import { USERFLOW_CONFIG_ID } from 'Utils/userflowConfig';
-import { InfoCircleOutlined } from '@ant-design/icons';
+import { MessageOutlined } from '@ant-design/icons';
 import SaveQuery from '../../../components/SaveQuery';
 import { addShadowToHeader } from './analysisResultsPage.helpers';
 import { CoreQueryContext } from '../../../contexts/CoreQueryContext';
@@ -222,7 +222,7 @@ function AnalysisHeader({
                 }
               }}
             >
-              <InfoCircleOutlined />
+              <MessageOutlined />
             </Button>
           </div>
           {renderReportCloseIcon()}
