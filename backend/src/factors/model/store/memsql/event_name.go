@@ -1612,18 +1612,10 @@ func (store *MemSQL) IsGroupEventName(projectID int64, eventName, eventNameID st
 
 		return "", status
 	}
-
-	smartEventFilter, err := model.GetDecodedSmartEventFilterExp(smartEventName.FilterExpr)
-	if err != nil {
-		logCtx.Error("Failed to GetDecodedSmartEventFilterExp")
-		return "", http.StatusInternalServerError
+	groupName, exist := model.IsGroupSmartEventName(projectID, smartEventName)
+	if !exist {
+		return "", http.StatusNotFound
 	}
 
-	groupName = U.NAME_PREFIX + smartEventFilter.Source + U.NAME_PREFIX_ESCAPE_CHAR + smartEventFilter.ObjectType
-	if model.AllowedGroupNames[groupName] == true {
-		return groupName, http.StatusFound
-	}
-
-	return "", http.StatusNotFound
-
+	return groupName, http.StatusFound
 }

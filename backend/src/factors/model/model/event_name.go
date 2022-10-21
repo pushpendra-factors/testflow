@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type EventName struct {
@@ -929,4 +931,51 @@ func ExtractKeyDateCountFromCacheKey(keyCount string, cacheKey string) (string, 
 		LastSeenTimestamp: keyDate.Unix(),
 		Count:             int64(KeyCountNum),
 	}
+}
+
+// IsGroupSmartEventName checks if smart event is group based and also returns the group name
+func IsGroupSmartEventName(projectID int64, eventName *EventName) (string, bool) {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "event_name": eventName})
+	if projectID == 0 || eventName == nil {
+		logCtx.Error("Invalid input paramters.")
+		return "", false
+	}
+	smartEventFilter, err := GetDecodedSmartEventFilterExp(eventName.FilterExpr)
+	if err != nil {
+		logCtx.Error("Failed to GetDecodedSmartEventFilterExp")
+		return "", false
+	}
+
+	groupName := U.NAME_PREFIX + smartEventFilter.Source + U.NAME_PREFIX_ESCAPE_CHAR + smartEventFilter.ObjectType
+	if !AllowedGroupNames[groupName] == true {
+		return "", false
+	}
+	return groupName, true
+}
+
+// IsUserSmartEventName checks if smart event is user based and returns the event name.
+func IsUserSmartEventName(projectID int64, eventName *EventName) (string, bool) {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "event_name": eventName})
+	if projectID == 0 || eventName == nil {
+		logCtx.Error("Invalid input paramters.")
+		return "", false
+	}
+	smartEventFilter, err := GetDecodedSmartEventFilterExp(eventName.FilterExpr)
+	if err != nil {
+		logCtx.Error("Failed to GetDecodedSmartEventFilterExp")
+		return "", false
+	}
+
+	groupName := U.NAME_PREFIX + smartEventFilter.Source + U.NAME_PREFIX_ESCAPE_CHAR + smartEventFilter.ObjectType
+	if AllowedGroupNames[groupName] == true {
+		return "", false
+	}
+
+	for _, eventName := range U.ALLOWED_INTERNAL_EVENT_NAMES {
+		if strings.HasPrefix(eventName, groupName) {
+			return eventName, true
+		}
+	}
+
+	return "", false
 }
