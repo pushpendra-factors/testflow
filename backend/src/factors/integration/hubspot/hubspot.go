@@ -2829,7 +2829,7 @@ func syncContactList(projectID int64, document *model.HubspotDocument, minTimest
 	var errNewContactList error
 
 	var prevOldContactList OldContactList
-	var prevNewContactList OldContactList
+	var prevNewContactList NewContactList
 	if prevContactListDocument != nil {
 		errOldContactList := json.Unmarshal(((*prevContactListDocument).Value).RawMessage, &prevOldContactList)
 		errNewContactList := json.Unmarshal(((*prevContactListDocument).Value).RawMessage, &prevNewContactList)
