@@ -34,6 +34,7 @@ func (store *MemSQL) ExecuteKPIQueryForChannels(projectID int64, reqID string, k
 	return queryResults, statusCode
 }
 
+//NOTE: The following methods can be merged with methods from event_analytics later on
 func sanitizeChannelQueryResult(result *model.QueryResult, query model.KPIQuery) error {
 	logFields := log.Fields{
 		"query": query,
