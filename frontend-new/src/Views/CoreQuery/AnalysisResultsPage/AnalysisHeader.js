@@ -221,7 +221,7 @@ function AnalysisHeader({
                   ic(!hideIntercomState === true ? 'hide' : 'show');
                 }
               }}
-            
+            >
               <QuestionCircleOutlined />
             </Button>
           </div>
