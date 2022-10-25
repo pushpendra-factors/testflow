@@ -1034,15 +1034,18 @@ func syncContact(project *model.Project, document *model.HubspotDocument, hubspo
 	_, customerUserID := getCustomerUserIDFromProperties(project.ID, *enProperties)
 
 	emails := []string{}
-	var userByCustomerUserID map[string]string
+	userByCustomerUserID := make(map[string]string)
 	if C.AllowIdentificationOverwriteUsingSource(project.ID) {
 		emails = append([]string{primaryEmail}, secondaryEmails...)
 
-		var status int
-		userByCustomerUserID, status = store.GetStore().GetExistingUserByCustomerUserID(project.ID, emails, model.UserSourceWeb)
+		usersCustomerUserID, status := store.GetStore().GetExistingUserByCustomerUserID(project.ID, emails, model.UserSourceWeb)
 		if status != http.StatusNotFound && status != http.StatusFound {
 			logCtx.Error("Failed to get users by customer user id.")
 			return http.StatusInternalServerError
+		}
+
+		if status == http.StatusFound {
+			userByCustomerUserID = usersCustomerUserID
 		}
 	}
 
@@ -3025,6 +3028,12 @@ func syncByOrderedTimeSeries(project *model.Project, orderedTimeSeries [][]int64
 	minTimestamps := make(map[int]int64)
 	for i := range syncOrderByType {
 		if syncOrderByType[i] == model.HubspotDocumentTypeContactList && !C.ContactListInsertEnabled(project.ID) {
+			continue
+		}
+
+		// for contact-list set last 48 hrs as begenning for recent events
+		if syncOrderByType[i] == model.HubspotDocumentTypeContactList {
+			minTimestamps[syncOrderByType[i]] = U.TimeNowZ().Add(-48 * time.Hour).Unix()*1000
 			continue
 		}
 
