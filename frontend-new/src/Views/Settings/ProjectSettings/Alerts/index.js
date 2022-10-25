@@ -15,6 +15,7 @@ import { deleteGroupByForEvent } from '../../../../reducers/coreQuery/middleware
 import { getEventsWithPropertiesKPI, getStateFromFilters } from './utils';
 import { fetchSlackChannels, fetchProjectSettingsV1, enableSlackIntegration } from '../../../../reducers/global';
 import SelectChannels from './SelectChannels';
+import FAFilterSelect from '../../../../components/FaFilterSelect';
 
 const { Option } = Select;
 
@@ -826,29 +827,13 @@ const Alerts = ({
                         <Row className={'mt-2'}>
                             <Col span={18}>
                                 <Text type={'title'} level={7} weight={'bold'} color={'grey-2'} extraClass={'m-0 my-1'}>Filters</Text>
-                                {viewFilter.map((filter, index) => (
-                                    <div key={index} className={'mt-1'}>
-                                        <Button
-                                        className={`mr-2`}
-                                        type='link'
+                                {viewFilter.map((filt, index) => (
+                                    <div key={index} className={'mt-2'}>
+                                       <FAFilterSelect
+                                        filter={filt}
                                         disabled={true}
-                                        >
-                                            {filter.extra[0]}
-                                        </Button>
-                                        <Button
-                                        className={`mr-2`}
-                                        type='link'
-                                        disabled={true}
-                                        >
-                                            {filter.operator}
-                                        </Button>
-                                        <Button
-                                        className={`mr-2`}
-                                        type='link'
-                                        disabled={true}
-                                        >
-                                            {filter.values[0]}
-                                        </Button>
+                                        applyFilter={() => {}}
+                                        ></FAFilterSelect>
                                     </div>
                                 ))}
                             </Col>
