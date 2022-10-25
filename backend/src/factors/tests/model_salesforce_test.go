@@ -5227,6 +5227,21 @@ func TestSalesforceRespondedToCampaignEvent(t *testing.T) {
 	err = createDummySalesforceDocument(project.ID, campaignMember, model.SalesforceDocumentTypeNameCampaignMember)
 	assert.Nil(t, err)
 
+	eventNameCreated := model.GetSalesforceEventNameByAction(model.SalesforceDocumentTypeNameCampaignMember, model.SalesforceDocumentCreated)
+	eventNameUpdated := model.GetSalesforceEventNameByAction(model.SalesforceDocumentTypeNameCampaignMember, model.SalesforceDocumentUpdated)
+
+	campaignMemberFirstRespondedDate := model.GetCRMEnrichPropertyKeyByType(
+		model.SmartCRMEventSourceSalesforce,
+		model.SalesforceDocumentTypeNameCampaignMember,
+		"FirstRespondedDate",
+	)
+
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventNameCreated, campaignMemberFirstRespondedDate, U.PropertyTypeDateTime, false, false)
+	assert.Equal(t, http.StatusCreated, status)
+
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventNameUpdated, campaignMemberFirstRespondedDate, U.PropertyTypeDateTime, false, false)
+	assert.Equal(t, http.StatusCreated, status)
+
 	enrichStatus, anyFailure = IntSalesforce.Enrich(project.ID, 2, nil)
 	assert.Equal(t, false, anyFailure)
 	assert.Len(t, enrichStatus, 1) // only campaign
