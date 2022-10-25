@@ -1,0 +1,59 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  labels:
+    nodePool: shared-persistent-pool
+  name: adwords-etl-adhoc-job
+spec:
+  schedule: "0 0 * * *" # In UTC
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 5
+  backoffLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            layer: jobs
+            nodePool: shared-persistent-pool
+        spec:
+          nodeSelector:
+            cloud.google.com/gke-nodepool: shared-persistent-pool
+          containers:
+          - name: adwords-etl-adhoc-job
+            image: us.gcr.io/factors-production/adwords-etl:v0.49-4bcdb5e2-644
+            imagePullPolicy: IfNotPresent
+            args:
+            - --env
+            - $(ENV)
+            - --oauth_secret
+            - $(GOOGLE_OAUTH_SECRET)
+            - --developer_token
+            - $(GOOGLE_ADWORDS_DEVELOPER_TOKEN)
+            - --data_service_host
+            - $(DATA_SERVICE_MEMSQL_HOST_URL)
+            - --dry
+            - "False"
+            - --skip_today
+            - "False"
+            - --exclude_project_id
+            - 518,517,520,550,519
+            - --timezone            
+            - "Asia/Kolkata"
+            - --project_id
+            - "1125899918000029"
+            - --last_timestamp
+            - "20220616"
+            - --to_timestamp
+            - "20220630"
+            - --new_extract_project_id
+            - "*"
+            envFrom:
+            - configMapRef:
+                name: config-pythonappserver
+            - configMapRef:
+                name: config-env
+            - secretRef:
+                name: secret-google
+          restartPolicy: OnFailure

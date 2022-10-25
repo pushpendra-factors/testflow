@@ -27,7 +27,7 @@ class JobStorage:
         if dry:
             gs_bucket += "-tmp"
         else:
-            gs_bucket += "-v2"
+            gs_bucket += "-v3"
         return gs_bucket
 
     @classmethod

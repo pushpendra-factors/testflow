@@ -1687,6 +1687,13 @@ function CoreQuery({
     setKPIConfigProps(findKPIitem(selectedMainCategory?.group));
   }, [selectedMainCategory]);
 
+  useEffect(() => {
+    //collapsing the query composer once run query is executed
+    if (loading) {
+      setQueryOpen(false);
+    }
+  }, [loading]);
+
   const findKPIitem = (groupName) => {
     const KPIlist = KPI_config || [];
     const selGroup = KPIlist.find(

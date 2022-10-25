@@ -140,6 +140,7 @@ const AttrQueryComposer = ({ activeProject,
                     <ConversionGoalBlock eventGoal={eventGoal}
                         eventGoalChange={goalChange}
                         delEvent={goalDel}
+                        showDerivedKPI={false}
                     >
                     </ConversionGoalBlock>)
             } else {
@@ -153,6 +154,7 @@ const AttrQueryComposer = ({ activeProject,
                         eventGoalChange={(val) => setToQueries(val, index)}
                         delEvent={() => delQuery(index)}
                         group_analysis={queryOptions.group_analysis}
+                        showDerivedKPI={false}
                     >
                     </ConversionGoalBlock>);
             });
@@ -161,6 +163,7 @@ const AttrQueryComposer = ({ activeProject,
                 qs.push(<ConversionGoalBlock
                     eventGoalChange={(val) => setToQueries(val, -1)}
                     group_analysis={queryOptions.group_analysis}
+                    showDerivedKPI={false}
                 >
                 </ConversionGoalBlock>)
             }

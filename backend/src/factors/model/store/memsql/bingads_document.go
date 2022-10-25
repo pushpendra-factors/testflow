@@ -805,7 +805,7 @@ func GetFilterObjectExpressionForChannelBingAds(dimension string) string {
 
 // Input: objectType - campaign, dimension - , prefix - . TODO
 func GetFilterExpressionIfPresentForBingAds(objectType, dimension, prefix string) (string, bool) {
-	key := fmt.Sprintf(`%s:%s`, objectType, strings.TrimPrefix(dimension, prefix))
+	key := fmt.Sprintf(`%s.%s`, objectType, strings.TrimPrefix(dimension, prefix))
 	reportProperty, isPresent := objectAndPropertyToValueInBingAdsReportsMapping[key]
 	return reportProperty, isPresent
 }

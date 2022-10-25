@@ -11,6 +11,7 @@ import (
 	"factors/model/store"
 	U "factors/util"
 	"fmt"
+	"github.com/jinzhu/gorm/dialects/postgres"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -108,6 +109,8 @@ func AttributionHandler(c *gin.Context) (interface{}, int, string, string, bool)
 		requestPayload.Query = requestPayloadUnit.Query
 	}
 
+	enrichRequestUsingAttributionConfig(c, projectId, &requestPayload, logCtx)
+
 	if requestPayload.Query.Timezone != "" {
 		_, errCode := time.LoadLocation(requestPayload.Query.Timezone)
 		if errCode != nil {
@@ -122,7 +125,8 @@ func AttributionHandler(c *gin.Context) (interface{}, int, string, string, bool)
 		}
 
 		// For a KPI query, set the timezone internally for correct execution
-		if requestPayload.Query.AnalyzeType == model.AnalyzeTypeSFOpportunities || requestPayload.Query.AnalyzeType == model.AnalyzeTypeHSDeals {
+		if requestPayload.Query.AnalyzeType == model.AnalyzeTypeHSDeals || requestPayload.Query.AnalyzeType == model.AnalyzeTypeSFOpportunities ||
+			requestPayload.Query.AnalyzeType == model.AnalyzeTypeSFAccounts || requestPayload.Query.AnalyzeType == model.AnalyzeTypeHSCompanies {
 			if requestPayload.Query.KPI.Queries[0].Timezone != "" {
 				_, errCode := time.LoadLocation(string(requestPayload.Query.KPI.Queries[0].Timezone))
 				if errCode != nil {
@@ -267,6 +271,60 @@ func AttributionHandler(c *gin.Context) (interface{}, int, string, string, bool)
 	}
 	result.Query = requestPayload.Query
 	return result, http.StatusOK, "", "", false
+}
+
+func enrichRequestUsingAttributionConfig(c *gin.Context, projectID int64, requestPayload *AttributionRequestPayload, logCtx *log.Entry) {
+
+	// pulling project setting to build attribution query
+	settings, errCode := store.GetStore().GetProjectSetting(projectID)
+	if errCode != http.StatusFound {
+		c.AbortWithStatusJSON(errCode, gin.H{"error": "Failed to get project settings during attribution call."})
+	}
+
+	attributionConfig, err1 := decodeAttributionConfig(settings.AttributionConfig)
+	if err1 != nil {
+		c.AbortWithStatusJSON(errCode, gin.H{"error": "Failed to decode attribution config from project settings."})
+	}
+
+	//Todo (Anil) Add enrichment of attribution Window, handle case of 'Entire User Journey'
+
+	if requestPayload.Query.AnalyzeType == model.AnalyzeTypeHSDeals {
+
+		if &attributionConfig != nil && attributionConfig.AnalyzeTypeHSCompaniesEnabled == true {
+			requestPayload.Query.AnalyzeType = model.AnalyzeTypeHSCompanies
+		} else if &attributionConfig != nil && attributionConfig.AnalyzeTypeHSDealsEnabled == true {
+			requestPayload.Query.AnalyzeType = model.AnalyzeTypeHSDeals
+		} else {
+			logCtx.WithFields(log.Fields{"Query": requestPayload.Query, "AttributionConfig": attributionConfig}).Error("Failed to set analyze type")
+			c.AbortWithStatusJSON(errCode, gin.H{"error": "Invalid config/query. Failed to set analyze type from attribution config & project settings."})
+		}
+	}
+	if requestPayload.Query.AnalyzeType == model.AnalyzeTypeSFOpportunities {
+
+		if &attributionConfig != nil && attributionConfig.AnalyzeTypeSFAccountsEnabled == true {
+			requestPayload.Query.AnalyzeType = model.AnalyzeTypeSFAccounts
+		} else if &attributionConfig != nil && attributionConfig.AnalyzeTypeSFOpportunitiesEnabled == true {
+			requestPayload.Query.AnalyzeType = model.AnalyzeTypeSFOpportunities
+		} else {
+			logCtx.WithFields(log.Fields{"Query": requestPayload.Query, "AttributionConfig": attributionConfig}).Error("Failed to set analyze type")
+			c.AbortWithStatusJSON(errCode, gin.H{"error": "Invalid config/query. Failed to set analyze type from attribution config & project settings."})
+		}
+	}
+}
+
+// decodeAttributionConfig decode attribution config from project settings to map
+func decodeAttributionConfig(config *postgres.Jsonb) (model.AttributionConfig, error) {
+	attributionConfig := model.AttributionConfig{}
+	if config == nil {
+		return attributionConfig, nil
+	}
+
+	err := json.Unmarshal(config.RawMessage, &attributionConfig)
+	if err != nil {
+		return attributionConfig, err
+	}
+
+	return attributionConfig, nil
 }
 
 // decodeAttributionPayload decodes attribution requestPayload for 2 json formats to support old and new

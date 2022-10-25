@@ -129,18 +129,18 @@ type AccountConfig struct {
 type AttributionConfig struct {
 	KpisToAttribute                   AttributionKpis `json:"kpis_to_attribute"`
 	AttributionWindow                 int64           `json:"attribution_window"`
-	AnalyzeTypeUserKPI                *bool           `json:"user_kpi"`
-	AnalyzeTypeHSDealsEnabled         *bool           `json:"hubspot_deals"`
-	AnalyzeTypeSFOpportunitiesEnabled *bool           `json:"salesforce_opportunities"`
-	AnalyzeTypeHSCompaniesEnabled     *bool           `json:"hubspot_companies"`
-	AnalyzeTypeSFAccountsEnabled      *bool           `json:"salesforce_accounts"`
-	PreComputeEnabled                 *bool           `json:"pre_compute_enabled"`
+	AnalyzeTypeUserKPI                bool            `json:"user_kpi"`
+	AnalyzeTypeHSDealsEnabled         bool            `json:"hubspot_deals"`
+	AnalyzeTypeSFOpportunitiesEnabled bool            `json:"salesforce_opportunities"`
+	AnalyzeTypeHSCompaniesEnabled     bool            `json:"hubspot_companies"`
+	AnalyzeTypeSFAccountsEnabled      bool            `json:"salesforce_accounts"`
+	PreComputeEnabled                 bool            `json:"pre_compute_enabled"`
 }
 
 type AttributionKpis struct {
-	UserKpi []*postgres.Jsonb `json:"user_kpi"`
-	HsKpi   []*postgres.Jsonb `json:"hs_kpi"`
-	SfKpi   []*postgres.Jsonb `json:"sf_kpi"`
+	UserKpi *postgres.Jsonb `json:"user_kpi"`
+	HsKpi   *postgres.Jsonb `json:"hs_kpi"`
+	SfKpi   *postgres.Jsonb `json:"sf_kpi"`
 }
 
 type LeadSquaredConfig struct {
