@@ -852,65 +852,9 @@ func SkipAPIWritesIfDisabled() gin.HandlerFunc {
 func SkipDemoProjectWriteAccess() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if C.EnableDemoReadAccess() {
-			blacklistedHandlerNames := make(map[string]bool)
-			blacklistedHandlerNames["AgentInvite"] = true
-			blacklistedHandlerNames["AgentUpdate"] = true
-			blacklistedHandlerNames["RemoveProjectAgent"] = true
-			blacklistedHandlerNames["GetProjectAgentsHandler"] = true
-			blacklistedHandlerNames["EditProjectHandler"] = true
-			blacklistedHandlerNames["UpdateProjectSettingsHandler"] = true
-			blacklistedHandlerNames["CreateFactorsTrackedEventsHandler"] = true
-			blacklistedHandlerNames["RemoveFactorsTrackedEventsHandler"] = true
-			blacklistedHandlerNames["CreateFactorsTrackedUserPropertyHandler"] = true
-			blacklistedHandlerNames["RemoveFactorsTrackedUserPropertyHandler"] = true
-			blacklistedHandlerNames["CreateFactorsGoalsHandler"] = true
-			blacklistedHandlerNames["RemoveFactorsGoalsHandler"] = true
-			blacklistedHandlerNames["UpdateFactorsGoalsHandler"] = true
-			blacklistedHandlerNames["CreateDashboardHandler"] = true
-			blacklistedHandlerNames["UpdateDashboardHandler"] = true
-			blacklistedHandlerNames["CreateDashboardUnitHandler"] = true
-			blacklistedHandlerNames["UpdateDashboardUnitHandler"] = true
-			blacklistedHandlerNames["DeleteDashboardUnitHandler"] = true
-			blacklistedHandlerNames["CreateDashboardUnitForMultiDashboardsHandler"] = true
-			blacklistedHandlerNames["CreateDashboardUnitsForMultipleQueriesHandler"] = true
-			blacklistedHandlerNames["DeleteMultiDashboardUnitHandler"] = true
-			blacklistedHandlerNames["DeleteDashboardHandler"] = true
-			blacklistedHandlerNames["CreateDisplayNamesHandler"] = true
-			blacklistedHandlerNames["PostFeedbackHandler"] = true
-			blacklistedHandlerNames["CreateSmartEventFilterHandler"] = true
-			blacklistedHandlerNames["UpdateSmartEventFilterHandler"] = true
-			blacklistedHandlerNames["DeleteSmartEventFilterHandler"] = true
-			blacklistedHandlerNames["CreateSmartPropertyRulesHandler"] = true
-			blacklistedHandlerNames["UpdateSmartPropertyRulesHandler"] = true
-			blacklistedHandlerNames["DeleteSmartPropertyRulesHandler"] = true
-			blacklistedHandlerNames["CreateQueryHandler"] = true
-			blacklistedHandlerNames["UpdateSavedQueryHandler"] = true
-			blacklistedHandlerNames["DeleteSavedQueryHandler"] = true
-			blacklistedHandlerNames["CreateFilterHandler"] = true
-			blacklistedHandlerNames["UpdateFilterHandler"] = true
-			blacklistedHandlerNames["DeleteFilterHandler"] = true
-			blacklistedHandlerNames["UpdateTemplateConfigHandler"] = true
-			blacklistedHandlerNames["GetProjectSettingHandler"] = true
-			blacklistedHandlerNames["IntDeleteHandler"] = true
-			blacklistedHandlerNames["UpdateContentGroupHandler"] = true
-			blacklistedHandlerNames["DeleteContentGroupHandler"] = true
-			blacklistedHandlerNames["CreateContentGroupHandler"] = true
-			blacklistedHandlerNames["AgentInviteBatch"] = true
-			blacklistedHandlerNames["CreateCustomMetric"] = true
-			blacklistedHandlerNames["CreateAlertHandler"] = true
-			blacklistedHandlerNames["DeleteAlertHandler"] = true
-			blacklistedHandlerNames["SlackAuthRedirectHandler"] = true
-			blacklistedHandlerNames["GetSlackChannelsListHandler"] = true
-			blacklistedHandlerNames["DeleteSlackIntegrationHandler"] = true
-			blacklistedHandlerNames["SlackCallbackHandler"] = true
-
-			handlerName := c.HandlerName()
-			handlerNameStrings := strings.Split(handlerName, "/")
-			handlerNameStrings = strings.Split(handlerNameStrings[len(handlerNameStrings)-1], ".")
-			handlerName = handlerNameStrings[len(handlerNameStrings)-1]
 			projectId := U.GetScopeByKeyAsInt64(c, SCOPE_PROJECT_ID)
 			agentId := U.GetScopeByKeyAsString(c, SCOPE_LOGGEDIN_AGENT_UUID)
-			if blacklistedHandlerNames[handlerName] == true && !C.IsLoggedInUserWhitelistedForProjectAnalytics(agentId) && C.IsDemoProject(projectId) {
+			if !C.IsLoggedInUserWhitelistedForProjectAnalytics(agentId) && C.IsDemoProject(projectId) {
 				c.AbortWithStatusJSON(http.StatusMethodNotAllowed, gin.H{"error": "Operations disallowed for Non-Admin users"})
 				return
 			}
