@@ -65,7 +65,9 @@ function FaTimeline({
                           properties={event?.properties || {}}
                           trigger={
                             hoverEvents.includes(event.event_name) ||
-                            event.display_name === 'Page View'
+                            event.display_name === 'Page View' ||
+                            event.event_type === 'CH' ||
+                            event.event_type === 'CS'
                               ? 'hover'
                               : []
                           }
@@ -77,7 +79,9 @@ function FaTimeline({
                                 : event?.alias_name || event.display_name}
                             </span>
                             {hoverEvents.includes(event.event_name) ||
-                            event.display_name === 'Page View' ? (
+                            event.display_name === 'Page View' ||
+                            event.event_type === 'CH' ||
+                            event.event_type === 'CS' ? (
                               <CaretRightOutlined />
                             ) : null}
                           </div>
