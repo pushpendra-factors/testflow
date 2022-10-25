@@ -29,22 +29,27 @@ func (store *MemSQL) ExecuteKPIForAttribution(projectID int64, query *model.Attr
 	if err != nil {
 		return kpiData, err
 	}
-
+	if C.GetAttributionDebug() == 1 {
+		logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "kpiData": kpiData, "groupUserIDToKpiID": groupUserIDToKpiID,
+			"kpiKeys": kpiKeys}).Info("KPI-Attribution kpiData reports after RunKPIGroupQuery")
+	}
 	err = store.FillKPIGroupUserData(projectID, query, &kpiData, &kpiKeys, &groupUserIDToKpiID, logCtx)
 	if err != nil {
 		return kpiData, err
 	}
-
-	logCtx.Info("done pulling group user list ids for Deal or Opportunity")
-	logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "kpiData": kpiData, "groupUserIDToKpiID": groupUserIDToKpiID,
-		"kpiKeys": kpiKeys}).Info("KPI-Attribution kpiData reports 1")
+	if C.GetAttributionDebug() == 1 {
+		logCtx.Info("done pulling group user list ids for Deal or Opportunity")
+		logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "kpiData": kpiData, "groupUserIDToKpiID": groupUserIDToKpiID,
+			"kpiKeys": kpiKeys}).Info("KPI-Attribution kpiData reports 1")
+	}
 	err = store.PullAllUsersByCustomerUserID(projectID, &kpiData, logCtx)
 	if err != nil {
 		return kpiData, err
 	}
-	logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "kpiData": kpiData, "groupUserIDToKpiID": groupUserIDToKpiID,
-		"kpiKeys": kpiKeys}).Info("KPI-Attribution kpiData reports 2")
-
+	if C.GetAttributionDebug() == 1 {
+		logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "kpiData": kpiData, "groupUserIDToKpiID": groupUserIDToKpiID,
+			"kpiKeys": kpiKeys}).Info("KPI-Attribution kpiData reports 2")
+	}
 	return kpiData, nil
 }
 
@@ -112,9 +117,13 @@ func (store *MemSQL) GetDataFromKPIResult(projectID int64, kpiQueryResult model.
 	}
 
 	customMetrics, errMsg, statusCode := store.GetCustomMetricsByProjectId(projectID)
+
 	if statusCode != http.StatusFound {
 		logCtx.WithField("messageFinder", "Failed to get custom metrics").Error(errMsg)
 		return nil
+	}
+	if C.GetAttributionDebug() == 1 || query.AnalyzeType == model.AnalyzeTypeUserKPI {
+		logCtx.WithFields(log.Fields{"customMetrics": customMetrics}).Info("customMetrics for project in attribution query")
 	}
 
 	mapKpiAggFunctionType := make(map[string]string)
@@ -138,9 +147,9 @@ func (store *MemSQL) GetDataFromKPIResult(projectID int64, kpiQueryResult model.
 			kpiValueHeaders).Warn("failed to get function types of all of given KPI")
 		return nil
 	}
-
-	logCtx.WithFields(log.Fields{"kpiValueHeaders": kpiValueHeaders}).Info("KPI-Attribution headers set")
-
+	if C.GetAttributionDebug() == 1 {
+		logCtx.WithFields(log.Fields{"kpiValueHeaders": kpiValueHeaders}).Info("KPI-Attribution headers set")
+	}
 	return model.AddKPIKeyDataInMap(kpiQueryResult, logCtx, keyIdx, datetimeIdx, query.From, query.To, valIdx, kpiValueHeaders, kpiAggFunctionType, kpiData)
 }
 
@@ -148,7 +157,8 @@ func (store *MemSQL) RunKPIGroupQuery(projectID int64, query *model.AttributionQ
 	enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery bool, debugQueryKey string, logCtx log.Entry) (error, []string) {
 
 	var kpiQueryResult model.QueryResult
-	if query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities {
+	if query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities ||
+		query.AnalyzeType == model.AnalyzeTypeSFAccounts || query.AnalyzeType == model.AnalyzeTypeHSCompanies {
 
 		var duplicatedRequest model.KPIQueryGroup
 		U.DeepCopy(&query.KPI, &duplicatedRequest)
@@ -267,6 +277,9 @@ func (store *MemSQL) PullGroupUserIDs(projectID int64, kpiKeys *[]string, _group
 func (store *MemSQL) PullKPIKeyUserGroupInfo(projectID int64, kpiKeyGroupUserIDList []string, _groupIDUserKey string, kpiData *map[string]model.KPIInfo, groupUserIDToKpiID *map[string]string, logCtx log.Entry) error {
 	// Pulling user ID for each KPI ID i.e. associated users with each KPI ID i.e. DealID or OppID - kpiIDToCoalUsers
 
+	if kpiKeyGroupUserIDList == nil || len(kpiKeyGroupUserIDList) == 0 {
+		return errors.New("no group users found, exiting")
+	}
 	kpiKeysGroupUserIdPlaceHolder := U.GetValuePlaceHolder(len(kpiKeyGroupUserIDList))
 	kpiKeysGroupUserIdValue := U.GetInterfaceList(kpiKeyGroupUserIDList)
 	groupUserListQuery := "Select " + _groupIDUserKey + ", users.id, COALESCE(users.customer_user_id,users.id) FROM users WHERE project_id=? " +
@@ -313,7 +326,9 @@ func (store *MemSQL) PullKPIKeyUserGroupInfo(projectID int64, kpiKeyGroupUserIDL
 		return err
 	}
 	logFields := log.Fields{"kpiData": kpiData, "project_id": projectID}
-	logCtx.WithFields(logFields).Info("KPI-Attribution group set")
+	if C.GetAttributionDebug() == 1 {
+		logCtx.WithFields(logFields).Info("KPI-Attribution group set")
+	}
 	defer U.CloseReadQuery(gULRows, tx2)
 
 	U.LogReadTimeWithQueryRequestID(startReadTime, reqID, &logFields)
@@ -414,12 +429,14 @@ func (store *MemSQL) runAttributionKPI(projectID int64,
 		return nil, err
 	}
 
-	logCtx.WithFields(log.Fields{"userConversionHit": userConversionHit}).Info("KPI-Attribution userConversionHit")
-
+	if C.GetAttributionDebug() == 1 {
+		logCtx.WithFields(log.Fields{"userConversionHit": userConversionHit}).Info("KPI-Attribution userConversionHit")
+	}
 	attributionData := make(map[string]*model.AttributionData)
 	attributionData = model.AddUpConversionEventCount(userConversionHit, sessionWT)
-	logCtx.WithFields(log.Fields{"attributionData": attributionData}).Info("KPI-Attribution attributionData")
-
+	if C.GetAttributionDebug() == 1 {
+		logCtx.WithFields(log.Fields{"attributionData": attributionData}).Info("KPI-Attribution attributionData")
+	}
 	return &attributionData, nil
 }
 

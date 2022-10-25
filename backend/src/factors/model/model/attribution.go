@@ -516,7 +516,9 @@ func UpdateSessionsMapWithCoalesceID(attributedSessionsByUserID map[string]map[s
 
 	for userID, attributionIdMap := range attributedSessionsByUserID {
 		if _, exists := usersInfo[userID]; !exists {
-			log.WithFields(log.Fields{"Method": "UpdateSessionsMapWithCoalesceID", "UserID": userID}).Info("userID not found")
+			if C.GetAttributionDebug() == 1 {
+				log.WithFields(log.Fields{"Method": "UpdateSessionsMapWithCoalesceID", "UserID": userID}).Info("userID not found")
+			}
 			continue
 		}
 		userInfo := usersInfo[userID]
@@ -872,7 +874,8 @@ func AddHeadersByAttributionKey(result *QueryResult, query *AttributionQuery, go
 
 		// add up key
 		result.Headers = append(result.Headers, "key")
-	} else if query.AnalyzeType == AnalyzeTypeHSDeals || query.AnalyzeType == AnalyzeTypeSFOpportunities {
+	} else if query.AnalyzeType == AnalyzeTypeHSDeals || query.AnalyzeType == AnalyzeTypeSFOpportunities ||
+		query.AnalyzeType == AnalyzeTypeSFAccounts || query.AnalyzeType == AnalyzeTypeHSCompanies {
 
 		// Add up for Added Keys {Campaign, Adgroup, Keyword}
 		switch attributionKey {
@@ -1378,13 +1381,17 @@ func ProcessQueryLandingPageUrl(query *AttributionQuery, attributionData *map[st
 	conversionIndex := GetConversionIndex(result.Headers)
 	sort.Slice(result.Rows, func(i, j int) bool {
 		if len(result.Rows[i]) < conversionIndex || len(result.Rows[j]) < conversionIndex {
-			//logCtx.WithFields(log.Fields{"row1": result.Rows[i], "row2": result.Rows[j]}).Info("final results are rows len mismatch. Ignoring row and continuing.")
+			if C.GetAttributionDebug() == 1 {
+				logCtx.WithFields(log.Fields{"row1": result.Rows[i], "row2": result.Rows[j]}).Info("final results are rows len mismatch. Ignoring row and continuing.")
+			}
 			return true
 		}
 		v1, ok1 := result.Rows[i][conversionIndex].(float64)
 		v2, ok2 := result.Rows[j][conversionIndex].(float64)
 		if !ok1 || !ok2 {
-			//logCtx.WithFields(log.Fields{"row1": result.Rows[i], "row2": result.Rows[j]}).Info("final results cast mismatch. Ignoring row and continuing.")
+			if C.GetAttributionDebug() == 1 {
+				logCtx.WithFields(log.Fields{"row1": result.Rows[i], "row2": result.Rows[j]}).Info("final results cast mismatch. Ignoring row and continuing.")
+			}
 			return true
 		}
 		return v1 > v2
@@ -1430,13 +1437,17 @@ func ProcessQuery(query *AttributionQuery, attributionData *map[string]*Attribut
 	conversionIndex := GetConversionIndex(result.Headers)
 	sort.Slice(result.Rows, func(i, j int) bool {
 		if len(result.Rows[i]) < conversionIndex || len(result.Rows[j]) < conversionIndex {
-			logCtx.WithFields(log.Fields{"row1": result.Rows[i], "row2": result.Rows[j]}).Info("final results are rows len mismatch. Ignoring row and continuing.")
+			if C.GetAttributionDebug() == 1 {
+				logCtx.WithFields(log.Fields{"row1": result.Rows[i], "row2": result.Rows[j]}).Info("final results are rows len mismatch. Ignoring row and continuing.")
+			}
 			return true
 		}
 		v1, ok1 := result.Rows[i][conversionIndex].(float64)
 		v2, ok2 := result.Rows[j][conversionIndex].(float64)
 		if !ok1 || !ok2 {
-			logCtx.WithFields(log.Fields{"row1": result.Rows[i], "row2": result.Rows[j]}).Info("final results cast mismatch. Ignoring row and continuing.")
+			if C.GetAttributionDebug() == 1 {
+				logCtx.WithFields(log.Fields{"row1": result.Rows[i], "row2": result.Rows[j]}).Info("final results cast mismatch. Ignoring row and continuing.")
+			}
 			return true
 		}
 		return v1 > v2
@@ -1500,20 +1511,26 @@ func ProcessQueryKPI(query *AttributionQuery, attributionData *map[string]*Attri
 	conversionIndex := GetConversionIndexKPI(result.Headers)
 	sort.Slice(result.Rows, func(i, j int) bool {
 		if len(result.Rows[i]) < conversionIndex || len(result.Rows[j]) < conversionIndex {
-			logCtx.WithFields(log.Fields{"row1": result.Rows[i], "row2": result.Rows[j]}).Info("final results are rows len mismatch. Ignoring row and continuing.")
+			if C.GetAttributionDebug() == 1 {
+				logCtx.WithFields(log.Fields{"row1": result.Rows[i], "row2": result.Rows[j]}).Info("final results are rows len mismatch. Ignoring row and continuing.")
+			}
 			return true
 		}
 		if len(result.Rows[i]) > conversionIndex && len(result.Rows[j]) > conversionIndex {
 			v1, ok1 := result.Rows[i][conversionIndex].(float64)
 			v2, ok2 := result.Rows[j][conversionIndex].(float64)
 			if !ok1 || !ok2 {
-				logCtx.WithFields(log.Fields{"row1": result.Rows[i], "row2": result.Rows[j]}).Info("final results cast mismatch. Ignoring row and continuing.")
+				if C.GetAttributionDebug() == 1 {
+					logCtx.WithFields(log.Fields{"row1": result.Rows[i], "row2": result.Rows[j]}).Info("final results cast mismatch. Ignoring row and continuing.")
+				}
 				return true
 			}
 			return v1 > v2
 
 		} else {
-			logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "RowI": result.Rows[i], "RowJ": result.Rows[j]}).Info("Bad row in Sorting")
+			if C.GetAttributionDebug() == 1 {
+				logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "RowI": result.Rows[i], "RowJ": result.Rows[j]}).Info("Bad row in Sorting")
+			}
 		}
 		return true
 	})

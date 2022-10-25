@@ -24,6 +24,8 @@ func (store *MemSQL) ExecuteUserKPIForAttribution(projectID int64, query *model.
 	if err != nil {
 		return kpiData, err
 	}
+	logCtx.WithFields(log.Fields{"UserKPIAttribution": "Debug", "kpiData": kpiData,
+		"kpiKeys": kpiKeys}).Info("UserKPI-Attribution kpiData reports after RunUserKPIGroupQuery")
 	err = store.PullAllUsersByCustomerUserID(projectID, &kpiData, logCtx)
 	if err != nil {
 		return kpiData, err

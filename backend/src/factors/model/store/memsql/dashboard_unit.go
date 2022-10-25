@@ -548,6 +548,7 @@ func (store *MemSQL) CacheDashboardUnitsForProjectID(projectID int64, dashboardU
 		"dashboard_unit_ids": dashboardUnits,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 
 	if numRoutines == 0 {
 		numRoutines = 1
@@ -691,8 +692,14 @@ func (store *MemSQL) CacheDashboardUnit(dashboardUnit model.DashboardUnit,
 			return
 		}
 
-		projectSettingsJSON, _ := store.GetProjectSetting(dashboardUnit.ProjectID)
+		projectSettingsJSON, statusCodeProjectSettings := store.GetProjectSetting(dashboardUnit.ProjectID)
 		var cacheSettings model.CacheSettings
+
+		if projectSettingsJSON == nil || statusCodeProjectSettings != http.StatusFound {
+			log.WithField("projectID", dashboardUnit.ProjectID).WithField("statusCodeProjectSettings", statusCodeProjectSettings).Warn("errored in fetching project Settings")
+			continue
+		}
+
 		if projectSettingsJSON.CacheSettings != nil && !U.IsEmptyPostgresJsonb(projectSettingsJSON.CacheSettings) {
 			err = json.Unmarshal(projectSettingsJSON.CacheSettings.RawMessage, &cacheSettings)
 		}
