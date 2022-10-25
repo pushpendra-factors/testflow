@@ -347,6 +347,7 @@ const ClickTrackConfiguration = ({
       dataIndex: 'displayName',
       key: 'displayName',
       width: 300,
+      ellipsis: true,
     },
     {
       title: 'Type',
