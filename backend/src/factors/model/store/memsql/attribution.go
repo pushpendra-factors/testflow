@@ -177,10 +177,11 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID int64, queryOriginal *mod
 		for key, _ := range *attributionData {
 			(*attributionData)[key].ConvAggFunctionType = convAggFunctionType
 		}
-		logCtx.Info("Done AddTheAddedKeysAndMetrics, AddPerformanceData")
-
+		if C.GetAttributionDebug() == 1 {
+			logCtx.Info("Done AddTheAddedKeysAndMetrics, AddPerformanceData")
+		}
 	} else {
-		// This thread is for query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities.
+		// This thread is for AnalyzeTypeHSDeals, AnalyzeTypeSFOpportunities, AnalyzeTypeSFAccounts AnalyzeTypeHSCompanies
 		kpiData, err = store.ExecuteKPIForAttribution(projectID, query, debugQueryKey,
 			*logCtx, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
 		if C.GetAttributionDebug() == 1 {
@@ -366,7 +367,8 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID int64, queryOriginal *mod
 		}
 		queryStartTime = time.Now().UTC().Unix()
 
-	} else if query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities {
+	} else if query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities ||
+		query.AnalyzeType == model.AnalyzeTypeSFAccounts || query.AnalyzeType == model.AnalyzeTypeHSCompanies {
 		// execution similar to the normal run - still keeping it separate for better understanding
 		result = model.ProcessQueryKPI(query, attributionData, marketingReports, isCompare, kpiData)
 		if C.GetAttributionDebug() == 1 {
@@ -435,7 +437,7 @@ func (store *MemSQL) FireAttribution(projectID int64, query *model.AttributionQu
 	// Extend the campaign window for engagement based attribution.
 	if query.QueryType == model.AttributionQueryTypeEngagementBased {
 		conversionFrom = query.From
-		conversionTo = model.LookbackAdjustedTo(query.To, query.LookbackDays, U.TimeZoneString(query.Timezone))
+		conversionTo = model.LookbackAdjustedTo(query.To, query.LookbackDays)
 	}
 	var attributionData *map[string]*model.AttributionData
 	if query.AttributionMethodologyCompare != "" {
@@ -746,7 +748,7 @@ func (store *MemSQL) getAllTheSessions(projectId int64, sessionEventNameId strin
 	// extend the campaign window for engagement based attribution
 	if query.QueryType == model.AttributionQueryTypeEngagementBased {
 		effectiveFrom = model.LookbackAdjustedFrom(query.From, query.LookbackDays)
-		effectiveTo = model.LookbackAdjustedTo(query.To, query.LookbackDays, U.TimeZoneString(query.Timezone))
+		effectiveTo = model.LookbackAdjustedTo(query.To, query.LookbackDays)
 	}
 
 	attributionEventKey, err := model.GetQuerySessionProperty(query.AttributionKey)
@@ -950,10 +952,6 @@ func (store *MemSQL) GetLinkedFunnelEventUsersFilter(projectID int64, queryFrom,
 			}
 
 			queryEventHits := selectEventHits + " " + eventJoinStmnt + " " + whereEventHits
-			if projectID == 568 {
-				queryEventHits1, qParams1 := model.ExpandArrayWithIndividualValues(queryEventHits, qParams)
-				logCtx.WithFields(log.Fields{"CleverTapQueryGetLinkedFunnelEventUsersFilter": U.DBDebugPreparedStatement(C.GetConfig().Env, queryEventHits1, qParams1)}).Info("Printing Query")
-			}
 
 			// fetch query results
 			rows, tx, err, reqID := store.ExecQueryWithContext(queryEventHits, qParams)
@@ -1056,10 +1054,6 @@ func (store *MemSQL) GetConvertedUsersWithFilter(projectID int64, goalEventName 
 	}
 
 	queryEventHits := selectEventHits + " " + eventJoinStmnt + " " + whereEventHits
-	if projectID == 568 {
-		queryEventHits1, qParams1 := model.ExpandArrayWithIndividualValues(queryEventHits, qParams)
-		logCtx.WithFields(log.Fields{"CleverTapQueryGetConvertedUsersWithFilter": U.DBDebugPreparedStatement(C.GetConfig().Env, queryEventHits1, qParams1)}).Info("Printing Query")
-	}
 
 	// fetch query results
 	rows, tx, err, reqID := store.ExecQueryWithContext(queryEventHits, qParams)

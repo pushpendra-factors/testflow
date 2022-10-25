@@ -1269,10 +1269,10 @@ var STANDARD_EVENTS_DISPLAY_NAMES = map[string]string{
 }
 
 var STANDARD_GROUP_DISPLAY_NAMES = map[string]string{
-	"$hubspot_company":        "Hubspot Companies",
-	"$hubspot_deal":           "Hubspot Deals",
-	"$salesforce_account":     "Salesforce Accounts",
-	"$salesforce_opportunity": "Salesforce Opportunities",
+	GROUP_NAME_HUBSPOT_COMPANY:        "Hubspot Companies",
+	GROUP_NAME_HUBSPOT_DEAL:           "Hubspot Deals",
+	GROUP_NAME_SALESFORCE_ACCOUNT:     "Salesforce Accounts",
+	GROUP_NAME_SALESFORCE_OPPORTUNITY: "Salesforce Opportunities",
 }
 
 var CRM_USER_EVENT_NAME_LABELS = map[string]string{
@@ -3802,4 +3802,12 @@ func GetExplainPropertyWeights(propertyName string) float64 {
 
 	return float64(1)
 
+}
+
+func GetStandardDisplayNameGroups() map[string]string{
+	displayNameGroups:= make(map[string]string)
+	for group:= range STANDARD_GROUP_DISPLAY_NAMES{
+		displayNameGroups[STANDARD_GROUP_DISPLAY_NAMES[group]] = group
+	}
+	return displayNameGroups
 }

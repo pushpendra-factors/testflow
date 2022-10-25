@@ -441,6 +441,7 @@ CREATE TABLE IF NOT EXISTS project_settings (
     lead_squared_config json,
     is_weekly_insights_enabled boolean,
     is_explain_enabled boolean,
+    timelines_config json,
     KEY (updated_at),
     SHARD KEY (project_id),
     PRIMARY KEY (project_id)

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
@@ -127,6 +128,17 @@ func TestAPIUpdateProjectSettingsHandler(t *testing.T) {
 		json.Unmarshal(jsonResponse, &projectSettings)
 		//assert.Equal(t, int64(6), projectSettings.AttributionConfig)
 
+	})
+
+	t.Run("UpdateTimelines_config", func(t *testing.T) {
+		w := sendUpdateProjectSettingReq(r, project.ID, agent, map[string]interface{}{
+			"timelines_config": model.TimelinesConfig{UserConfig: model.UserConfig{PropsToShow: make([]*postgres.Jsonb, 6)}},
+		})
+		assert.Equal(t, http.StatusOK, w.Code)
+		jsonResponse, _ := ioutil.ReadAll(w.Body)
+		var projectSettings model.ProjectSetting
+		json.Unmarshal(jsonResponse, &projectSettings)
+		assert.Equal(t, int(6), len(projectSettings.TimelinesConfig.UserConfig.PropsToShow))
 	})
 
 	t.Run("UpdateIntDrift", func(t *testing.T) {

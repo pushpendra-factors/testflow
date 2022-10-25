@@ -1,6 +1,7 @@
 package model
 
 import (
+	C "factors/config"
 	U "factors/util"
 	log "github.com/sirupsen/logrus"
 	"strings"
@@ -23,7 +24,9 @@ func MergeDataRowsHavingSameKeyKPI(rows [][]interface{}, keyIndex int, attributi
 			val, ok := row[j].(string)
 			// Ignore row if key is not proper
 			if !ok {
-				logCtx.Info("empty key value error. Ignoring row and continuing.")
+				if C.GetAttributionDebug() == 1 {
+					logCtx.Info("empty key value error. Ignoring row and continuing.")
+				}
 				continue
 			}
 			key = key + val
@@ -44,7 +47,8 @@ func MergeDataRowsHavingSameKeyKPI(rows [][]interface{}, keyIndex int, attributi
 //MergeTwoDataRowsKPI adds values of two data rows for KPI attribution queries
 func MergeTwoDataRowsKPI(row1 []interface{}, row2 []interface{}, keyIndex int, attributionKey string, analyzeType string, conversionFunTypes []string) []interface{} {
 
-	if analyzeType != AnalyzeTypeHSDeals && analyzeType != AnalyzeTypeSFOpportunities {
+	if analyzeType != AnalyzeTypeHSDeals && analyzeType != AnalyzeTypeSFOpportunities &&
+		analyzeType != AnalyzeTypeSFAccounts && analyzeType != AnalyzeTypeHSCompanies {
 		log.WithFields(log.Fields{"AnalyzeType": analyzeType}).Error("KPI-Attribution invalid method call - analyzeType")
 		return row1
 	}
@@ -127,8 +131,9 @@ func AddKPIKeyDataInMap(kpiQueryResult QueryResult, logCtx log.Entry, keyIdx int
 
 	for _, row := range kpiQueryResult.Rows {
 
-		// logCtx.WithFields(log.Fields{"Row": row}).Info("KPI-Attribution KPI Row")
-
+		if C.GetAttributionDebug() == 1 {
+			logCtx.WithFields(log.Fields{"Row": row}).Info("KPI-Attribution KPI Row")
+		}
 		var kpiDetail KPIInfo
 
 		// get ID
@@ -143,7 +148,9 @@ func AddKPIKeyDataInMap(kpiQueryResult QueryResult, logCtx log.Entry, keyIdx int
 		kpiDetail.Timestamp = eventTime.Unix()
 
 		if kpiDetail.Timestamp > to || kpiDetail.Timestamp < from {
-			logCtx.WithFields(log.Fields{"kpi-timestamp": row[datetimeIdx]}).Info("ignoring row as KPI-time not in range, continuing")
+			if C.GetAttributionDebug() == 1 {
+				logCtx.WithFields(log.Fields{"kpi-timestamp": row[datetimeIdx]}).Info("ignoring row as KPI-time not in range, continuing")
+			}
 			continue
 		}
 

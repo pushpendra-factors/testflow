@@ -13,6 +13,9 @@ import FaSelect from 'Components/FaSelect';
 import ORButton from '../../ORButton';
 import { getNormalizedKpi } from '../../../utils/kpiQueryComposer.helpers';
 import { compareFilters, groupFilters } from '../../../utils/global';
+import {
+  fetchKPIConfigWithoutDerivedKPI
+} from 'Reducers/kpi';
 
 import { TOOLTIP_CONSTANTS } from '../../../constants/tooltips.constans';
 
@@ -26,7 +29,10 @@ const ConversionGoalBlock = ({
     eventProperties,
     userProperties,
     group_analysis = 'users',
-    KPI_config
+    KPI_config,
+    KPI_config_without_derived_kpi,
+    showDerivedKPI = false,
+    fetchKPIConfigWithoutDerivedKPI
 }) => {
 
     const [selectVisible, setSelectVisible] = useState(false);
@@ -48,6 +54,11 @@ const ConversionGoalBlock = ({
         }
         
     }, [userProperties, eventProperties, group_analysis]);
+
+    useEffect(() => {
+      if(!showDerivedKPI && !KPI_config_without_derived_kpi) fetchKPIConfigWithoutDerivedKPI(activeProject.id)
+
+    },[activeProject,showDerivedKPI,KPI_config_without_derived_kpi ])
 
 
     const setEventPropsForUserGroup = () => {
@@ -89,11 +100,12 @@ const ConversionGoalBlock = ({
     }
 
     const getKpiGroupList = (groupName) => {
-        let KPIlist = KPI_config || [];
+        let KPIlist = showDerivedKPI ? KPI_config : KPI_config_without_derived_kpi || []
         let selGroup = KPIlist.find((item) => {
           return item?.display_category == groupName;
         });
 
+       
         const group = ((selGroup) => {
           return getNormalizedKpi({ kpi: selGroup });
           })(selGroup);
@@ -419,9 +431,10 @@ const mapStateToProps = (state) => ({
     eventNameOptions: state.coreQuery.eventOptions,
     eventNames: state.coreQuery.eventNames,
     KPI_config: state.kpi?.config,
+    KPI_config_without_derived_kpi: state.kpi?.config_without_derived_kpi
 });
 
-const mapDispatchToProps = (dispatch) => bindActionCreators({}, dispatch);
+const mapDispatchToProps = (dispatch) => bindActionCreators({fetchKPIConfigWithoutDerivedKPI}, dispatch);
 
 export default connect(
   mapStateToProps,

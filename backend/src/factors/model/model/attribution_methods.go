@@ -1,6 +1,7 @@
 package model
 
 import (
+	C "factors/config"
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"math"
@@ -74,7 +75,9 @@ func ApplyAttributionKPI(attributionType string,
 		default:
 			break
 		}
-		log.WithFields(log.Fields{"KPI_ID": kpiID, "attributionKeys": attributionKeys}).Info(fmt.Sprintf("KPI-Attribution attributionKeys"))
+		if C.GetAttributionDebug() == 1 {
+			log.WithFields(log.Fields{"KPI_ID": kpiID, "attributionKeys": attributionKeys}).Info(fmt.Sprintf("KPI-Attribution attributionKeys"))
+		}
 		// In case a successful attribution could not happen, remove converted user.
 		if len(attributionKeys) == 0 {
 			delete(usersAttribution, kpiID)

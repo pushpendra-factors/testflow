@@ -94,7 +94,7 @@ func (store *MemSQL) ExecuteAttributionQueryV1(projectID int64, queryOriginal *m
 	// Extend the campaign window for engagement based attribution.
 	if query.QueryType == model.AttributionQueryTypeEngagementBased {
 		conversionFrom = query.From
-		conversionTo = model.LookbackAdjustedTo(query.To, query.LookbackDays, U.TimeZoneString(query.Timezone))
+		conversionTo = model.LookbackAdjustedTo(query.To, query.LookbackDays)
 	}
 
 	coalUserIdConversionTimestamp, userInfo, kpiData, usersIDsToAttribute, err3 := store.PullConvertedUsers(projectID, query, conversionFrom, conversionTo, eventNameToIDList,
@@ -229,7 +229,7 @@ func (store *MemSQL) ExecuteAttributionQueryV0(projectID int64, queryOriginal *m
 	// Extend the campaign window for engagement based attribution.
 	if query.QueryType == model.AttributionQueryTypeEngagementBased {
 		conversionFrom = query.From
-		conversionTo = model.LookbackAdjustedTo(query.To, query.LookbackDays, U.TimeZoneString(query.Timezone))
+		conversionTo = model.LookbackAdjustedTo(query.To, query.LookbackDays)
 	}
 
 	coalUserIdConversionTimestamp, userInfo, kpiData, usersIDsToAttribute, err3 := store.PullConvertedUsers(projectID, query, conversionFrom, conversionTo, eventNameToIDList,
@@ -352,9 +352,7 @@ func (store *MemSQL) PullConvertedUsers(projectID int64, query *model.Attributio
 			return nil, nil, nil, nil, err
 		}
 
-		if C.GetAttributionDebug() == 1 {
-			log.WithFields(log.Fields{"UserKPIAttribution": "Debug", "kpiData": kpiData}).Info("UserKPI Attribution kpiData")
-		}
+		log.WithFields(log.Fields{"UserKPIAttribution": "Debug", "kpiData": kpiData}).Info("UserKPI Attribution kpiData")
 
 		_uniqueUsers := make(map[string]int)
 		// Get user IDs for Revenue Attribution
@@ -368,7 +366,7 @@ func (store *MemSQL) PullConvertedUsers(projectID int64, query *model.Attributio
 			usersIDsToAttribute = append(usersIDsToAttribute, id)
 		}
 	} else {
-		// This thread is for query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities.
+		// This thread is for AnalyzeTypeHSDeals, AnalyzeTypeSFOpportunities, AnalyzeTypeSFAccounts AnalyzeTypeHSCompanies
 		var err error
 		queryStartTime := time.Now().UTC().Unix()
 		kpiData, err = store.ExecuteKPIForAttribution(projectID, query, debugQueryKey,
@@ -617,7 +615,8 @@ func ProcessAttributionDataToResult(projectID int64, query *model.AttributionQue
 		}
 		queryStartTime = time.Now().UTC().Unix()
 
-	} else if query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities {
+	} else if query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities ||
+		query.AnalyzeType == model.AnalyzeTypeSFAccounts || query.AnalyzeType == model.AnalyzeTypeHSCompanies {
 		// execution similar to the normal run - still keeping it separate for better understanding
 		result = model.ProcessQueryKPI(query, attributionData, marketingReports, isCompare, kpiData)
 		if C.GetAttributionDebug() == 1 {
@@ -864,7 +863,7 @@ func (store *MemSQL) getAllTheSessionsV1(projectId int64, sessionEventNameId str
 	// extend the campaign window for engagement based attribution
 	if query.QueryType == model.AttributionQueryTypeEngagementBased {
 		effectiveFrom = model.LookbackAdjustedFrom(query.From, query.LookbackDays)
-		effectiveTo = model.LookbackAdjustedTo(query.To, query.LookbackDays, U.TimeZoneString(query.Timezone))
+		effectiveTo = model.LookbackAdjustedTo(query.To, query.LookbackDays)
 	}
 	attributionEventKey, err := model.GetQuerySessionProperty(query.AttributionKey)
 	if err != nil {
@@ -948,8 +947,8 @@ func (store *MemSQL) getAllTheSessionsV1(projectId int64, sessionEventNameId str
 // FetchAllUsersAndCustomerUserDataInBatches returns usersIds for given list of customer_user_id (i.e. coal_id) in batches
 func (store *MemSQL) FetchAllUsersAndCustomerUserDataInBatches(projectID int64, customerUserIdList []string, logCtx log.Entry) (map[string]string, map[string][]string, error) {
 
-	if len(customerUserIdList) == 0 {
-		return nil, nil, nil
+	if customerUserIdList == nil || len(customerUserIdList) == 0 {
+		return nil, nil, errors.New("no customer user IDs found, exiting")
 	}
 
 	userIdToCoalIds := make(map[string]string)
@@ -1019,9 +1018,10 @@ func (store *MemSQL) FetchAllUsersAndCustomerUserDataInBatches(projectID int64, 
 // @Deprecated
 func (store *MemSQL) FetchAllUsersAndCustomerUserData(projectID int64, customerUserIdList []string, logCtx log.Entry) (map[string]string, map[string][]string, error) {
 
-	if len(customerUserIdList) == 0 {
-		return nil, nil, nil
+	if customerUserIdList == nil || len(customerUserIdList) == 0 {
+		return nil, nil, errors.New("no customer user IDs found, exiting")
 	}
+
 	userIdToCoalIds := make(map[string]string)
 	custUserIdToUserIds := make(map[string][]string)
 
@@ -1229,9 +1229,5 @@ func (store *MemSQL) GetConvertedUsersWithFilterV1(projectID int64, goalEventNam
 		}
 	}
 
-	if projectID == 1125899918000010 {
-		logCtx.WithFields(log.Fields{"HevoDebug": "Hevo", "filteredUserIdToUserIDInfo": filteredUserIdToUserIDInfo}).Info("Debug GetConvertedUsersWithFilterV1")
-		logCtx.WithFields(log.Fields{"HevoDebug": "Hevo", "filteredCoalIDToUserIDInfo": filteredCoalIDToUserIDInfo}).Info("Debug GetConvertedUsersWithFilterV1")
-	}
 	return filteredUserIdToUserIDInfo, filteredCoalIDToUserIDInfo, coalUserIdConversionTimestamp, nil
 }

@@ -16,27 +16,29 @@ import {
 const { TabPane } = Tabs;
 const { Option } = Select;
 
+const defaultAttrConfigValue = {
+  kpis_to_attribute: {
+    user_kpi: [],
+    sf_kpi: [],
+    hs_kpi: []
+  },
+  attribution_window: 1,
+  enabled: true,
+  user_kpi: true,
+  hubspot_deals: false,
+  salesforce_opportunities: false,
+  hubspot_companies: true,
+  salesforce_accounts: true,
+  pre_compute_enabled: false
+};
+
 const AttributionSettings = ({
   activeProject,
   currentProjectSettings,
   fetchProjectSettings,
   udpateProjectSettings
 }) => {
-  const [attrConfig, setAttrConfig] = useState({
-    kpis_to_attribute: {
-      user_kpi: [],
-      sf_kpi: [],
-      hs_kpi: []
-    },
-    attribution_window: 1,
-    enabled: true,
-    user_kpi: true,
-    hubspot_deals: false,
-    salesforce_opportunities: false,
-    hubspot_companies: true,
-    salesforce_accounts: true,
-    pre_compute_enabled: false
-  });
+  const [attrConfig, setAttrConfig] = useState(defaultAttrConfigValue);
 
   useEffect(() => {
     fetchProjectSettings(activeProject.id);
@@ -55,14 +57,12 @@ const AttributionSettings = ({
   ];
 
   const [tabNo, setTabNo] = useState('0');
-  const [edit, setEdit] = useState(false);
 
   function callback(key) {
     setTabNo(key);
   }
 
   const onWindowChange = (val) => {
-    setEdit(true);
     const opts = Object.assign({}, attrConfig);
     opts.attribution_window = val;
     setAttrConfig(opts);
@@ -87,19 +87,18 @@ const AttributionSettings = ({
     })
       .then(() => {
         message.success('Project details updated!');
-        setEdit(false);
       })
       .catch((err) => {
         console.log('err->', err);
         message.error(err.data.error);
       });
-    setEdit(false);
   };
 
   const onCancel = () => {
     fetchProjectSettings(activeProject.id);
-    setAttrConfig(currentProjectSettings.attribution_config);
-    setEdit(false);
+    setAttrConfig(
+      currentProjectSettings?.attribution_config || defaultAttrConfigValue
+    );
   };
 
   const kpiList = (header) => {
@@ -113,7 +112,6 @@ const AttributionSettings = ({
             header={header}
             index={index}
             ev={ev}
-            editMode={() => setEdit(true)}
             value={value}
             attrConfig={attrConfig}
             setAttrConfig={setAttrConfig}
@@ -128,7 +126,6 @@ const AttributionSettings = ({
           <SelectKPIBlock
             header={header}
             index={value.length + 1}
-            editMode={() => setEdit(true)}
             value={value}
             attrConfig={attrConfig}
             setAttrConfig={setAttrConfig}
@@ -213,7 +210,6 @@ const AttributionSettings = ({
   };
 
   const onGroupAttributionChange = (val) => {
-    setEdit(true);
     const updatedAttrConfig = Object.assign({}, attrConfig);
     if (val === CompanyOrAccount) {
       updatedAttrConfig.hubspot_companies = true;
@@ -304,7 +300,7 @@ const AttributionSettings = ({
                 Attributions Configuration
               </Text>
             </Col>
-            <Col span={12}>{edit ? renderEditActions() : null}</Col>
+            <Col span={12}>{renderEditActions()}</Col>
           </Row>
           <Row>
             <div className={'fa-warning'}>

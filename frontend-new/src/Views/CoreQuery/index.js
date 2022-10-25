@@ -189,7 +189,8 @@ function CoreQuery({
     linkedEvents: [],
     date_range: {},
     attr_dimensions: [],
-    content_groups: []
+    content_groups: [],
+    attrQueries: []
   });
 
   const [campaignState, setCampaignState] = useState({
@@ -896,7 +897,8 @@ function CoreQuery({
             attr_dimensions,
             content_groups,
             tacticOfferType,
-            date_range: { ...durationObj }
+            date_range: { ...durationObj },
+            attrQueries
           });
         } else {
           updateLocalReducer(COMPARISON_DATA_LOADING);
@@ -948,6 +950,7 @@ function CoreQuery({
       }
     },
     [
+      attrQueries,
       activeProject.id,
       eventGoal,
       linkedEvents,
@@ -1683,6 +1686,13 @@ function CoreQuery({
   useEffect(() => {
     setKPIConfigProps(findKPIitem(selectedMainCategory?.group));
   }, [selectedMainCategory]);
+
+  useEffect(() => {
+    //collapsing the query composer once run query is executed
+    if (loading) {
+      setQueryOpen(false);
+    }
+  }, [loading]);
 
   const findKPIitem = (groupName) => {
     const KPIlist = KPI_config || [];

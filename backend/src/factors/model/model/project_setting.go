@@ -11,6 +11,7 @@ type ProjectSetting struct {
 	// Used project_id as primary key also, becase of 1-1 relationship.
 	ProjectId         int64           `gorm:"primary_key:true" json:"project_id,omitempty"`
 	AttributionConfig *postgres.Jsonb `json:"attribution_config"`
+	TimelinesConfig   TimelinesConfig `json:"timelines_config"`
 
 	// Using pointers to avoid update by default value.
 	// omit empty to avoid nil(filelds not updated) on resp json.
@@ -110,21 +111,36 @@ type ProjectSetting struct {
 }
 */
 
+type TimelinesConfig struct {
+	DisabledEvents []string      `json:"disabled_events"`
+	UserConfig     UserConfig    `json:"user_config"`
+	AccountConfig  AccountConfig `json:"account_config"`
+}
+
+type UserConfig struct {
+	PropsToShow []*postgres.Jsonb `json:"props_to_show"`
+}
+
+type AccountConfig struct {
+	AccountPropsToShow []*postgres.Jsonb `json:"account_props_to_show"`
+	UserPropsToShow    []*postgres.Jsonb `json:"user_props_to_show"`
+}
+
 type AttributionConfig struct {
 	KpisToAttribute                   AttributionKpis `json:"kpis_to_attribute"`
 	AttributionWindow                 int64           `json:"attribution_window"`
-	AnalyzeTypeUserKPI                *bool           `json:"user_kpi"`
-	AnalyzeTypeHSDealsEnabled         *bool           `json:"hubspot_deals"`
-	AnalyzeTypeSFOpportunitiesEnabled *bool           `json:"salesforce_opportunities"`
-	AnalyzeTypeHSCompaniesEnabled     *bool           `json:"hubspot_companies"`
-	AnalyzeTypeSFAccountsEnabled      *bool           `json:"salesforce_accounts"`
-	PreComputeEnabled                 *bool           `json:"pre_compute_enabled"`
+	AnalyzeTypeUserKPI                bool            `json:"user_kpi"`
+	AnalyzeTypeHSDealsEnabled         bool            `json:"hubspot_deals"`
+	AnalyzeTypeSFOpportunitiesEnabled bool            `json:"salesforce_opportunities"`
+	AnalyzeTypeHSCompaniesEnabled     bool            `json:"hubspot_companies"`
+	AnalyzeTypeSFAccountsEnabled      bool            `json:"salesforce_accounts"`
+	PreComputeEnabled                 bool            `json:"pre_compute_enabled"`
 }
 
 type AttributionKpis struct {
-	UserKpi []*postgres.Jsonb `json:"user_kpi"`
-	HsKpi   []*postgres.Jsonb `json:"hs_kpi"`
-	SfKpi   []*postgres.Jsonb `json:"sf_kpi"`
+	UserKpi *postgres.Jsonb `json:"user_kpi"`
+	HsKpi   *postgres.Jsonb `json:"hs_kpi"`
+	SfKpi   *postgres.Jsonb `json:"sf_kpi"`
 }
 
 type LeadSquaredConfig struct {
