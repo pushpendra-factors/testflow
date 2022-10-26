@@ -965,6 +965,9 @@ func (store *MemSQL) GetSmartEventFilterEventNameByID(projectID int64, id string
 	var eventName model.EventName
 	if err := db.Limit(1).Where(whereStmnt,
 		projectID, []string{model.TYPE_CRM_SALESFORCE, model.TYPE_CRM_HUBSPOT}, id).Find(&eventName).Error; err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
 		log.WithFields(log.Fields{"project_id": projectID}).WithError(err).Error("Failed getting smart event filter_event_name")
 
 		return nil, http.StatusInternalServerError
