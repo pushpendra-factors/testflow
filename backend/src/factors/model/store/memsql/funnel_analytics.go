@@ -35,8 +35,9 @@ func (store *MemSQL) RunFunnelQuery(projectId int64, query model.Query, enableFi
 
 	groupIds := make([]int, 0)
 	for i := range query.EventsWithProperties {
-		if C.IsEventsFunnelsGroupSupportEnabled(projectId) && U.IsGroupEventName(query.EventsWithProperties[i].Name) {
-			groupName := U.GetGroupNameFromGroupEventName(query.EventsWithProperties[i].Name)
+		groupName, status := store.IsGroupEventNameByQueryEventWithProperties(projectId, query.EventsWithProperties[i])
+		if C.IsEventsFunnelsGroupSupportEnabled(projectId) && status == http.StatusFound {
+
 			group, status := store.GetGroup(projectId, groupName)
 			if status != http.StatusFound {
 				return nil, http.StatusBadRequest, "group with the given groupName not found in the project"

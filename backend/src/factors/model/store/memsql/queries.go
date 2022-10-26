@@ -137,14 +137,17 @@ func (store *MemSQL) addCreatedByNameInQueries(queries []model.Queries, projectI
 	}
 
 	agentUUIDsToName := make(map[string]string)
+	agentUUIDsToEmail := make(map[string]string)
 
 	for _, a := range agents {
 		agentUUIDsToName[a.UUID] = a.FirstName + " " + a.LastName
+		agentUUIDsToEmail[a.UUID] = a.Email
 	}
 
 	for i, _ := range queries {
 		if _, exists := agentUUIDsToName[queries[i].CreatedBy]; exists {
 			queries[i].CreatedByName = agentUUIDsToName[queries[i].CreatedBy]
+			queries[i].CreatedByEmail = agentUUIDsToEmail[queries[i].CreatedBy]
 		}
 	}
 	return queries, http.StatusFound

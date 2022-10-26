@@ -8,7 +8,7 @@ import React, {
   useImperativeHandle
 } from 'react';
 import get from 'lodash/get';
-
+import { useSelector } from 'react-redux';
 import {
   defaultSortProp,
   getTableColumns,
@@ -16,7 +16,8 @@ import {
   getSingleTouchPointChartData,
   getDualTouchPointChartData,
   getResultantMetrics,
-  getTableFilterOptions
+  getTableFilterOptions,
+  shouldFiltersUpdate
 } from './utils';
 
 import AttributionTable from './AttributionTable';
@@ -28,7 +29,6 @@ import {
 } from '../../../utils/constants';
 import { CoreQueryContext } from '../../../contexts/CoreQueryContext';
 import OptionsPopover from './OptionsPopover';
-import { useSelector } from 'react-redux';
 import { getNewSorterState } from '../../../utils/dataFormatter';
 import DualTouchPointChart from './DualTouchPointChart';
 import SingleTouchPointChart from './SingleTouchPointChart';
@@ -57,7 +57,8 @@ const AttributionsChart = forwardRef(
       attr_dimensions,
       content_groups,
       chartType,
-      queryOptions
+      queryOptions,
+      attrQueries = []
     },
     ref
   ) => {
@@ -71,7 +72,7 @@ const AttributionsChart = forwardRef(
       setAttributionMetrics
     } = useContext(CoreQueryContext);
 
-    const { eventNames, attrQueries } = useSelector((state) => state.coreQuery);
+    const { eventNames } = useSelector((state) => state.coreQuery);
 
     const [aggregateData, setAggregateData] = useState({
       categories: [],
@@ -91,20 +92,14 @@ const AttributionsChart = forwardRef(
     );
     const [visibleIndices, setVisibleIndices] = useState([]);
 
-    const displayedAttributionMetrics = useMemo(() => {
-      return getResultantMetrics(touchpoint, attributionMetrics);
-    }, [touchpoint, attributionMetrics]);
+    const displayedAttributionMetrics = useMemo(() => getResultantMetrics(touchpoint, attributionMetrics), [touchpoint, attributionMetrics]);
 
-    useImperativeHandle(ref, () => {
-      return {
+    useImperativeHandle(ref, () => ({
         currentSorter: { sorter }
-      };
-    });
+      }));
 
     const handleSorting = useCallback((prop) => {
-      setSorter((currentSorter) => {
-        return getNewSorterState(currentSorter, prop);
-      });
+      setSorter((currentSorter) => getNewSorterState(currentSorter, prop));
     }, []);
 
     const handleMetricsVisibilityChange = useCallback(
@@ -124,32 +119,28 @@ const AttributionsChart = forwardRef(
           );
           if (!enabledOptions.length) {
             return curMetrics;
-          } else {
+          } 
             return newState;
-          }
+          
         });
         if (option.enabled) {
           const isSortedByThisOption = sorter.find(
             (elem) => elem.key === option.title
           );
           if (isSortedByThisOption) {
-            setSorter((currentSorter) => {
-              return currentSorter.filter((elem) => elem.key !== option.title);
-            });
+            setSorter((currentSorter) => currentSorter.filter((elem) => elem.key !== option.title));
           }
         }
       },
       [setAttributionMetrics, sorter]
     );
 
-    const metricsOptionsPopover = useMemo(() => {
-      return (
+    const metricsOptionsPopover = useMemo(() => (
         <OptionsPopover
           options={displayedAttributionMetrics}
           onChange={handleMetricsVisibilityChange}
         />
-      );
-    }, [displayedAttributionMetrics, handleMetricsVisibilityChange]);
+      ), [displayedAttributionMetrics, handleMetricsVisibilityChange]);
 
     const handleApplyFilters = useCallback((filters) => {
       setAppliedFilters(filters);
@@ -302,41 +293,32 @@ const AttributionsChart = forwardRef(
     ]);
 
     useEffect(() => {
-      const metricsNotPresentInFilters =
-        touchpoint !== 'LandingPage'
-          ? attributionMetrics
-              .filter((m) => m.enabled && !m.isEventMetric)
-              .filter((m) => filters.findIndex((f) => f.key === m.title) === -1)
-          : [];
-      const metricsNotEnabledButPresentInFilters =
-        touchpoint !== 'LandingPage'
-          ? attributionMetrics
-              .filter((m) => !m.enabled)
-              .filter((m) => filters.findIndex((f) => f.key === m.title) > -1)
-          : [];
+      const computeFilterOptions = shouldFiltersUpdate({
+        touchpoint,
+        attributionMetrics,
+        filters,
+        columns
+      });
 
-      if (
-        tableData.length &&
-        (!filters.length ||
-          metricsNotPresentInFilters.length > 0 ||
-          metricsNotEnabledButPresentInFilters.length > 0)
-      ) {
+      if (tableData.length && computeFilterOptions) {
         const tableFilterOptions = getTableFilterOptions({
-          content_groups,
-          attr_dimensions,
+          contentGroups: content_groups,
+          attrDimensions: attr_dimensions,
           touchpoint,
           tableData,
-          attributionMetrics
+          attributionMetrics,
+          columns
         });
         setFilters(tableFilterOptions);
       }
     }, [
+      columns,
       content_groups,
       attr_dimensions,
       touchpoint,
       tableData,
       attributionMetrics,
-      filters
+      filters,
     ]);
 
     let chart = null;
@@ -365,8 +347,7 @@ const AttributionsChart = forwardRef(
         } else {
           return nodata;
         }
-      } else {
-        if (chartType === CHART_TYPE_BARCHART) {
+      } else if (chartType === CHART_TYPE_BARCHART) {
           chart = (
             <DualTouchPointChart
               attribution_method={attribution_method}
@@ -382,16 +363,13 @@ const AttributionsChart = forwardRef(
         } else {
           chart = scatterPlotChart;
         }
-      }
-    } else {
-      if (!aggregateData.categories.length) {
+    } else if (!aggregateData.categories.length) {
         if (get(appliedFilters, 'categories', []).length > 0) {
           chart = null;
         } else {
           return nodata;
         }
-      } else {
-        if (chartType === CHART_TYPE_BARCHART) {
+      } else if (chartType === CHART_TYPE_BARCHART) {
           chart = (
             <SingleTouchPointChart
               aggregateData={aggregateData}
@@ -405,8 +383,6 @@ const AttributionsChart = forwardRef(
         } else {
           chart = scatterPlotChart;
         }
-      }
-    }
 
     return (
       <div className="flex items-center justify-center flex-col">

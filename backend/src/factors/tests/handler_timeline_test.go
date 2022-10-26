@@ -239,25 +239,22 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 		U.EP_HUBSPOT_FORM_SUBMISSION_TITLE:           "Some form submission title",
 		U.EP_HUBSPOT_ENGAGEMENT_SUBJECT:              "Some Engagement Subject",
 		U.EP_HUBSPOT_ENGAGEMENT_TITLE:                "Some Engagement Title",
+		"$curr_prop_value":                           "Current Custom Value",
+		"$prev_prop_value":                           "Previous Custom Value",
 	}
 	// Event 1 : Page View
 	timestamp := U.UnixTimeBeforeDuration(1 * time.Hour)
 	randomURL := RandomURL()
 	trackPayload := SDK.TrackPayload{
-		EventId:         "",
 		UserId:          createdUserID,
 		CreateUser:      false,
 		IsNewUser:       false,
 		Name:            randomURL,
-		CustomerEventId: new(string),
 		EventProperties: map[string]interface{}{},
 		UserProperties:  map[string]interface{}{},
 		Timestamp:       timestamp,
 		ProjectId:       project.ID,
 		Auto:            true,
-		ClientIP:        "",
-		UserAgent:       "",
-		SmartEventType:  "",
 		RequestSource:   model.UserSourceWeb,
 	}
 	status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
@@ -267,20 +264,14 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 	// Event 2 : Web Session
 	timestamp = timestamp - 10000
 	trackPayload = SDK.TrackPayload{
-		EventId:         "",
 		UserId:          user.ID,
 		CreateUser:      false,
 		IsNewUser:       false,
 		Name:            U.EVENT_NAME_SESSION,
-		CustomerEventId: new(string),
 		EventProperties: eventProperties,
 		UserProperties:  map[string]interface{}{},
 		Timestamp:       timestamp,
-		ProjectId:       0,
 		Auto:            false,
-		ClientIP:        "",
-		UserAgent:       "",
-		SmartEventType:  "",
 		RequestSource:   model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
@@ -291,20 +282,14 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 	// Event 3 : Form Submit
 	timestamp = timestamp - 10000
 	trackPayload = SDK.TrackPayload{
-		EventId:         "",
 		UserId:          user.ID,
 		CreateUser:      false,
 		IsNewUser:       false,
 		Name:            U.EVENT_NAME_FORM_SUBMITTED,
-		CustomerEventId: new(string),
 		EventProperties: eventProperties,
 		UserProperties:  map[string]interface{}{},
 		Timestamp:       timestamp,
-		ProjectId:       0,
 		Auto:            false,
-		ClientIP:        "",
-		UserAgent:       "",
-		SmartEventType:  "",
 		RequestSource:   model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
@@ -315,20 +300,14 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 	// Event 4 : Offline Touchpoint
 	timestamp = timestamp - 10000
 	trackPayload = SDK.TrackPayload{
-		EventId:         "",
 		UserId:          user.ID,
 		CreateUser:      false,
 		IsNewUser:       false,
 		Name:            U.EVENT_NAME_OFFLINE_TOUCH_POINT,
-		CustomerEventId: new(string),
 		EventProperties: eventProperties,
 		UserProperties:  map[string]interface{}{},
 		Timestamp:       timestamp,
-		ProjectId:       0,
 		Auto:            false,
-		ClientIP:        "",
-		UserAgent:       "",
-		SmartEventType:  "",
 		RequestSource:   model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
@@ -339,20 +318,14 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 	// Event 5 : Campaign Member Created
 	timestamp = timestamp - 10000
 	trackPayload = SDK.TrackPayload{
-		EventId:         "",
 		UserId:          user.ID,
 		CreateUser:      false,
 		IsNewUser:       false,
 		Name:            U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED,
-		CustomerEventId: new(string),
 		EventProperties: eventProperties,
 		UserProperties:  map[string]interface{}{},
 		Timestamp:       timestamp,
-		ProjectId:       0,
 		Auto:            false,
-		ClientIP:        "",
-		UserAgent:       "",
-		SmartEventType:  "",
 		RequestSource:   model.UserSourceSalesforce,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
@@ -363,20 +336,14 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 	// Event 6 : Campaign Member Updated
 	timestamp = timestamp - 10000
 	trackPayload = SDK.TrackPayload{
-		EventId:         "",
 		UserId:          user.ID,
 		CreateUser:      false,
 		IsNewUser:       false,
 		Name:            U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED,
-		CustomerEventId: new(string),
 		EventProperties: eventProperties,
 		UserProperties:  map[string]interface{}{},
 		Timestamp:       timestamp,
-		ProjectId:       0,
 		Auto:            false,
-		ClientIP:        "",
-		UserAgent:       "",
-		SmartEventType:  "",
 		RequestSource:   model.UserSourceSalesforce,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
@@ -388,20 +355,14 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 	timestamp = timestamp - 10000
 	eventProperties[U.EP_HUBSPOT_FORM_SUBMISSION_TIMESTAMP] = timestamp
 	trackPayload = SDK.TrackPayload{
-		EventId:         "",
 		UserId:          user.ID,
 		CreateUser:      false,
 		IsNewUser:       false,
 		Name:            U.EVENT_NAME_HUBSPOT_CONTACT_FORM_SUBMISSION,
-		CustomerEventId: new(string),
 		EventProperties: eventProperties,
 		UserProperties:  map[string]interface{}{},
 		Timestamp:       timestamp,
-		ProjectId:       0,
 		Auto:            false,
-		ClientIP:        "",
-		UserAgent:       "",
-		SmartEventType:  "",
 		RequestSource:   model.UserSourceSalesforce,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
@@ -413,20 +374,14 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 	timestamp = timestamp - 10000
 	eventProperties[U.EP_HUBSPOT_ENGAGEMENT_TIMESTAMP] = timestamp
 	trackPayload = SDK.TrackPayload{
-		EventId:         "",
 		UserId:          user.ID,
 		CreateUser:      false,
 		IsNewUser:       false,
 		Name:            U.EVENT_NAME_HUBSPOT_ENGAGEMENT_EMAIL,
-		CustomerEventId: new(string),
 		EventProperties: eventProperties,
 		UserProperties:  map[string]interface{}{},
 		Timestamp:       timestamp,
-		ProjectId:       0,
 		Auto:            false,
-		ClientIP:        "",
-		UserAgent:       "",
-		SmartEventType:  "",
 		RequestSource:   model.UserSourceSalesforce,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
@@ -437,20 +392,14 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 	// Event 9 : Engagement Meeting Created
 	timestamp = timestamp - 10000
 	trackPayload = SDK.TrackPayload{
-		EventId:         "",
 		UserId:          user.ID,
 		CreateUser:      false,
 		IsNewUser:       false,
 		Name:            U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_CREATED,
-		CustomerEventId: new(string),
 		EventProperties: eventProperties,
 		UserProperties:  map[string]interface{}{},
 		Timestamp:       timestamp,
-		ProjectId:       0,
 		Auto:            false,
-		ClientIP:        "",
-		UserAgent:       "",
-		SmartEventType:  "",
 		RequestSource:   model.UserSourceSalesforce,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
@@ -461,20 +410,14 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 	// Event 10 : Engagement Meeting Updated
 	timestamp = timestamp - 10000
 	trackPayload = SDK.TrackPayload{
-		EventId:         "",
 		UserId:          user.ID,
 		CreateUser:      false,
 		IsNewUser:       false,
 		Name:            U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_UPDATED,
-		CustomerEventId: new(string),
 		EventProperties: eventProperties,
 		UserProperties:  map[string]interface{}{},
 		Timestamp:       timestamp,
-		ProjectId:       0,
 		Auto:            false,
-		ClientIP:        "",
-		UserAgent:       "",
-		SmartEventType:  "",
 		RequestSource:   model.UserSourceSalesforce,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
@@ -486,20 +429,14 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 	timestamp = timestamp - 10000
 	eventProperties[U.EP_HUBSPOT_ENGAGEMENT_TIMESTAMP] = timestamp
 	trackPayload = SDK.TrackPayload{
-		EventId:         "",
 		UserId:          user.ID,
 		CreateUser:      false,
 		IsNewUser:       false,
 		Name:            U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_CREATED,
-		CustomerEventId: new(string),
 		EventProperties: eventProperties,
 		UserProperties:  map[string]interface{}{},
 		Timestamp:       timestamp,
-		ProjectId:       0,
 		Auto:            false,
-		ClientIP:        "",
-		UserAgent:       "",
-		SmartEventType:  "",
 		RequestSource:   model.UserSourceSalesforce,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
@@ -511,20 +448,14 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 	timestamp = timestamp - 10000
 	eventProperties[U.EP_HUBSPOT_ENGAGEMENT_TIMESTAMP] = timestamp
 	trackPayload = SDK.TrackPayload{
-		EventId:         "",
 		UserId:          user.ID,
 		CreateUser:      false,
 		IsNewUser:       false,
 		Name:            U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_UPDATED,
-		CustomerEventId: new(string),
 		EventProperties: eventProperties,
 		UserProperties:  map[string]interface{}{},
 		Timestamp:       timestamp,
-		ProjectId:       0,
 		Auto:            false,
-		ClientIP:        "",
-		UserAgent:       "",
-		SmartEventType:  "",
 		RequestSource:   model.UserSourceSalesforce,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
@@ -536,21 +467,53 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 	timestamp = timestamp - 10000
 	randomProperties := map[string]interface{}{}
 	trackPayload = SDK.TrackPayload{
-		EventId:         "",
 		UserId:          user.ID,
 		CreateUser:      false,
 		IsNewUser:       false,
 		Name:            U.EVENT_NAME_HUBSPOT_CONTACT_CREATED,
-		CustomerEventId: new(string),
 		EventProperties: randomProperties,
 		UserProperties:  map[string]interface{}{},
 		Timestamp:       timestamp,
-		ProjectId:       0,
 		Auto:            false,
-		ClientIP:        "",
-		UserAgent:       "",
-		SmartEventType:  "",
 		RequestSource:   model.UserSourceHubspot,
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
+	assert.NotNil(t, response.EventId)
+	assert.Empty(t, response.UserId)
+	assert.Equal(t, http.StatusOK, status)
+
+	// Create Smart Events
+	filter := &model.SmartCRMEventFilter{
+		Source:               model.SmartCRMEventSourceSalesforce,
+		ObjectType:           "contact",
+		Description:          "salesforce contact",
+		FilterEvaluationType: model.FilterEvaluationTypeAny,
+		Filters: []model.PropertyFilter{
+			{
+				Name:  "page_spent_time",
+				Rules: []model.CRMFilterRule{},
+			},
+		},
+		LogicalOp:               model.LOGICAL_OP_AND,
+		TimestampReferenceField: "time",
+	}
+	filter.Filters[0].Name = "Property 0"
+	eventName, status := store.GetStore().CreateOrGetCRMSmartEventFilterEventName(project.ID,
+		&model.EventName{ProjectId: project.ID, Name: fmt.Sprintf("Smart Event Name %d", 0)}, filter)
+	assert.Equal(t, http.StatusCreated, status)
+	// Event 14: Custom CRM Event
+	timestamp = timestamp - 10000
+	trackPayload = SDK.TrackPayload{
+		UserId:          user.ID,
+		CreateUser:      false,
+		IsNewUser:       false,
+		Name:            eventName.Name,
+		EventProperties: eventProperties,
+		UserProperties:  map[string]interface{}{},
+		Timestamp:       timestamp,
+		Auto:            false,
+		SmartEventType:  eventName.Type,
+		RequestSource:   model.UserSourceSalesforce,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.NotNil(t, response.EventId)
@@ -609,6 +572,10 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 						activity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_UPDATED {
 						assert.Equal(t, activity.AliasName, fmt.Sprintf("%s", eventProperties[U.EP_HUBSPOT_ENGAGEMENT_TITLE]))
 					}
+				} else if model.IsEventNameTypeSmartEvent(activity.EventType) {
+					assert.Equal(t, activity.EventName, "Smart Event Name 0")
+					assert.Equal(t, activity.DisplayName, "Smart Event Name 0")
+					assert.NotNil(t, activity.Properties)
 				}
 				assert.NotNil(t, activity.Timestamp)
 				assert.Condition(t, func() bool { return activity.Timestamp <= uint64(time.Now().UTC().Unix()) })
@@ -677,6 +644,7 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 	groupUser := true
 
 	companies := []string{"FactorsAI", "Accenture", "Talentica", "Honeywell", "Meesho", ""}
+	websites := []string{"factors.ai", "accenture.com", "talentica.com", "honeywell.com", "meesho.com"}
 	countries := []string{"India", "Ireland", "India", "US", "India", "US"}
 	for i := 0; i < numUsers; i++ {
 		var propertiesMap map[string]interface{}
@@ -684,6 +652,7 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 			propertiesMap = map[string]interface{}{
 				U.GP_SALESFORCE_ACCOUNT_NAME:           companies[i],
 				U.GP_SALESFORCE_ACCOUNT_BILLINGCOUNTRY: countries[i],
+				U.GP_SALESFORCE_ACCOUNT_WEBSITE:        websites[i],
 			}
 		} else {
 			if i == 5 {
@@ -695,6 +664,7 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 				propertiesMap = map[string]interface{}{
 					U.GP_HUBSPOT_COMPANY_NAME:                    companies[i],
 					U.GP_HUBSPOT_COMPANY_COUNTRY:                 countries[i],
+					U.GP_HUBSPOT_COMPANY_DOMAIN:                  websites[i],
 					U.GP_HUBSPOT_COMPANY_NUM_ASSOCIATED_CONTACTS: i * 2,
 				}
 			}
@@ -757,9 +727,12 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 				sort.Strings(companies)
 				i := sort.SearchStrings(companies, user.Name)
 				assert.Condition(t, func() bool { return i < len(companies) })
+				sort.Strings(websites)
+				i = sort.SearchStrings(websites, user.HostName)
+				assert.Condition(t, func() bool { return i < len(websites) })
 				sort.Strings(countries)
-				j := sort.SearchStrings(countries, user.Country)
-				assert.Condition(t, func() bool { return j < len(countries) })
+				i = sort.SearchStrings(countries, user.Country)
+				assert.Condition(t, func() bool { return i < len(countries) })
 				assert.NotNil(t, user.LastActivity)
 				if index > 0 {
 					assert.Condition(t, func() bool { return resp[index].LastActivity.Unix() <= resp[index-1].LastActivity.Unix() })
@@ -802,9 +775,12 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 				sort.Strings(companies)
 				i := sort.SearchStrings(companies, user.Name)
 				assert.Condition(t, func() bool { return i < len(companies) })
+				sort.Strings(websites)
+				i = sort.SearchStrings(websites, user.HostName)
+				assert.Condition(t, func() bool { return i < len(websites) })
 				sort.Strings(countries)
-				j := sort.SearchStrings(countries, user.Country)
-				assert.Condition(t, func() bool { return j < len(countries) })
+				i = sort.SearchStrings(countries, user.Country)
+				assert.Condition(t, func() bool { return i < len(countries) })
 				assert.NotNil(t, user.LastActivity)
 				if index > 0 {
 					assert.Condition(t, func() bool { return resp[index].LastActivity.Unix() <= resp[index-1].LastActivity.Unix() })
@@ -849,6 +825,8 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		"$company":                                "Freshworks",
 		U.GP_HUBSPOT_COMPANY_NAME:                 "Freshworks-HS",
 		U.GP_SALESFORCE_ACCOUNT_NAME:              "Freshworks-SF",
+		U.GP_SALESFORCE_ACCOUNT_WEBSITE:           "freshworks.com",
+		U.GP_HUBSPOT_COMPANY_DOMAIN:               "google.com",
 		U.GP_HUBSPOT_COMPANY_COUNTRY:              "India",
 		U.GP_SALESFORCE_ACCOUNT_BILLINGCOUNTRY:    "India",
 		U.GP_HUBSPOT_COMPANY_INDUSTRY:             "Freshworks-HS",
@@ -944,20 +922,15 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		// Event 1 : Page View
 		timestamp := U.UnixTimeBeforeDuration(1 * time.Hour)
 		trackPayload := SDK.TrackPayload{
-			EventId:         "",
 			UserId:          associatedUserId,
 			CreateUser:      false,
 			IsNewUser:       false,
 			Name:            randomURL,
-			CustomerEventId: new(string),
 			EventProperties: map[string]interface{}{},
 			UserProperties:  map[string]interface{}{},
 			Timestamp:       timestamp,
 			ProjectId:       project.ID,
 			Auto:            true,
-			ClientIP:        "",
-			UserAgent:       "",
-			SmartEventType:  "",
 			RequestSource:   model.UserSourceWeb,
 		}
 		status, response := SDK.Track(projectID, &trackPayload, false, SDK.SourceJSSDK, "")
@@ -967,20 +940,14 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		// Event 2 : Web Session
 		timestamp = timestamp - 10000
 		trackPayload = SDK.TrackPayload{
-			EventId:         "",
 			UserId:          user.ID,
 			CreateUser:      false,
 			IsNewUser:       false,
 			Name:            U.EVENT_NAME_SESSION,
-			CustomerEventId: new(string),
 			EventProperties: eventProperties,
 			UserProperties:  map[string]interface{}{},
 			Timestamp:       timestamp,
-			ProjectId:       0,
 			Auto:            false,
-			ClientIP:        "",
-			UserAgent:       "",
-			SmartEventType:  "",
 			RequestSource:   model.UserSourceWeb,
 		}
 		status, response = SDK.Track(projectID, &trackPayload, false, SDK.SourceJSSDK, "")
@@ -991,20 +958,14 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		// Event 3 : Form Submit
 		timestamp = timestamp - 10000
 		trackPayload = SDK.TrackPayload{
-			EventId:         "",
 			UserId:          user.ID,
 			CreateUser:      false,
 			IsNewUser:       false,
 			Name:            U.EVENT_NAME_FORM_SUBMITTED,
-			CustomerEventId: new(string),
 			EventProperties: eventProperties,
 			UserProperties:  map[string]interface{}{},
 			Timestamp:       timestamp,
-			ProjectId:       0,
 			Auto:            false,
-			ClientIP:        "",
-			UserAgent:       "",
-			SmartEventType:  "",
 			RequestSource:   model.UserSourceWeb,
 		}
 		status, response = SDK.Track(projectID, &trackPayload, false, SDK.SourceJSSDK, "")
@@ -1015,20 +976,14 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		// Event 4 : Offline Touchpoint
 		timestamp = timestamp - 10000
 		trackPayload = SDK.TrackPayload{
-			EventId:         "",
 			UserId:          user.ID,
 			CreateUser:      false,
 			IsNewUser:       false,
 			Name:            U.EVENT_NAME_OFFLINE_TOUCH_POINT,
-			CustomerEventId: new(string),
 			EventProperties: eventProperties,
 			UserProperties:  map[string]interface{}{},
 			Timestamp:       timestamp,
-			ProjectId:       0,
 			Auto:            false,
-			ClientIP:        "",
-			UserAgent:       "",
-			SmartEventType:  "",
 			RequestSource:   model.UserSourceWeb,
 		}
 		status, response = SDK.Track(projectID, &trackPayload, false, SDK.SourceJSSDK, "")
@@ -1039,20 +994,14 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		// Event 5 : Campaign Member Created
 		timestamp = timestamp - 10000
 		trackPayload = SDK.TrackPayload{
-			EventId:         "",
 			UserId:          user.ID,
 			CreateUser:      false,
 			IsNewUser:       false,
 			Name:            U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED,
-			CustomerEventId: new(string),
 			EventProperties: eventProperties,
 			UserProperties:  map[string]interface{}{},
 			Timestamp:       timestamp,
-			ProjectId:       0,
 			Auto:            false,
-			ClientIP:        "",
-			UserAgent:       "",
-			SmartEventType:  "",
 			RequestSource:   model.UserSourceSalesforce,
 		}
 		status, response = SDK.Track(projectID, &trackPayload, false, SDK.SourceJSSDK, "")
@@ -1063,20 +1012,14 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		// Event 6 : Campaign Member Updated
 		timestamp = timestamp - 10000
 		trackPayload = SDK.TrackPayload{
-			EventId:         "",
 			UserId:          user.ID,
 			CreateUser:      false,
 			IsNewUser:       false,
 			Name:            U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED,
-			CustomerEventId: new(string),
 			EventProperties: eventProperties,
 			UserProperties:  map[string]interface{}{},
 			Timestamp:       timestamp,
-			ProjectId:       0,
 			Auto:            false,
-			ClientIP:        "",
-			UserAgent:       "",
-			SmartEventType:  "",
 			RequestSource:   model.UserSourceSalesforce,
 		}
 		status, response = SDK.Track(projectID, &trackPayload, false, SDK.SourceJSSDK, "")
@@ -1088,20 +1031,14 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		timestamp = timestamp - 10000
 		eventProperties[U.EP_HUBSPOT_FORM_SUBMISSION_TIMESTAMP] = timestamp
 		trackPayload = SDK.TrackPayload{
-			EventId:         "",
 			UserId:          user.ID,
 			CreateUser:      false,
 			IsNewUser:       false,
 			Name:            U.EVENT_NAME_HUBSPOT_CONTACT_FORM_SUBMISSION,
-			CustomerEventId: new(string),
 			EventProperties: eventProperties,
 			UserProperties:  map[string]interface{}{},
 			Timestamp:       timestamp,
-			ProjectId:       0,
 			Auto:            false,
-			ClientIP:        "",
-			UserAgent:       "",
-			SmartEventType:  "",
 			RequestSource:   model.UserSourceSalesforce,
 		}
 		status, response = SDK.Track(projectID, &trackPayload, false, SDK.SourceJSSDK, "")
@@ -1113,20 +1050,14 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		timestamp = timestamp - 10000
 		eventProperties[U.EP_HUBSPOT_ENGAGEMENT_TIMESTAMP] = timestamp
 		trackPayload = SDK.TrackPayload{
-			EventId:         "",
 			UserId:          user.ID,
 			CreateUser:      false,
 			IsNewUser:       false,
 			Name:            U.EVENT_NAME_HUBSPOT_ENGAGEMENT_EMAIL,
-			CustomerEventId: new(string),
 			EventProperties: eventProperties,
 			UserProperties:  map[string]interface{}{},
 			Timestamp:       timestamp,
-			ProjectId:       0,
 			Auto:            false,
-			ClientIP:        "",
-			UserAgent:       "",
-			SmartEventType:  "",
 			RequestSource:   model.UserSourceSalesforce,
 		}
 		status, response = SDK.Track(projectID, &trackPayload, false, SDK.SourceJSSDK, "")
@@ -1137,20 +1068,14 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		// Event 9 : Engagement Meeting Created
 		timestamp = timestamp - 10000
 		trackPayload = SDK.TrackPayload{
-			EventId:         "",
 			UserId:          user.ID,
 			CreateUser:      false,
 			IsNewUser:       false,
 			Name:            U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_CREATED,
-			CustomerEventId: new(string),
 			EventProperties: eventProperties,
 			UserProperties:  map[string]interface{}{},
 			Timestamp:       timestamp,
-			ProjectId:       0,
 			Auto:            false,
-			ClientIP:        "",
-			UserAgent:       "",
-			SmartEventType:  "",
 			RequestSource:   model.UserSourceSalesforce,
 		}
 		status, response = SDK.Track(projectID, &trackPayload, false, SDK.SourceJSSDK, "")
@@ -1161,20 +1086,14 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		// Event 10 : Engagement Meeting Updated
 		timestamp = timestamp - 10000
 		trackPayload = SDK.TrackPayload{
-			EventId:         "",
 			UserId:          user.ID,
 			CreateUser:      false,
 			IsNewUser:       false,
 			Name:            U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_UPDATED,
-			CustomerEventId: new(string),
 			EventProperties: eventProperties,
 			UserProperties:  map[string]interface{}{},
 			Timestamp:       timestamp,
-			ProjectId:       0,
 			Auto:            false,
-			ClientIP:        "",
-			UserAgent:       "",
-			SmartEventType:  "",
 			RequestSource:   model.UserSourceSalesforce,
 		}
 		status, response = SDK.Track(projectID, &trackPayload, false, SDK.SourceJSSDK, "")
@@ -1186,20 +1105,14 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		timestamp = timestamp - 10000
 		eventProperties[U.EP_HUBSPOT_ENGAGEMENT_TIMESTAMP] = timestamp
 		trackPayload = SDK.TrackPayload{
-			EventId:         "",
 			UserId:          user.ID,
 			CreateUser:      false,
 			IsNewUser:       false,
 			Name:            U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_CREATED,
-			CustomerEventId: new(string),
 			EventProperties: eventProperties,
 			UserProperties:  map[string]interface{}{},
 			Timestamp:       timestamp,
-			ProjectId:       0,
 			Auto:            false,
-			ClientIP:        "",
-			UserAgent:       "",
-			SmartEventType:  "",
 			RequestSource:   model.UserSourceSalesforce,
 		}
 		status, response = SDK.Track(projectID, &trackPayload, false, SDK.SourceJSSDK, "")
@@ -1211,20 +1124,14 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		timestamp = timestamp - 10000
 		eventProperties[U.EP_HUBSPOT_ENGAGEMENT_TIMESTAMP] = timestamp
 		trackPayload = SDK.TrackPayload{
-			EventId:         "",
 			UserId:          user.ID,
 			CreateUser:      false,
 			IsNewUser:       false,
 			Name:            U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_UPDATED,
-			CustomerEventId: new(string),
 			EventProperties: eventProperties,
 			UserProperties:  map[string]interface{}{},
 			Timestamp:       timestamp,
-			ProjectId:       0,
 			Auto:            false,
-			ClientIP:        "",
-			UserAgent:       "",
-			SmartEventType:  "",
 			RequestSource:   model.UserSourceSalesforce,
 		}
 		status, response = SDK.Track(projectID, &trackPayload, false, SDK.SourceJSSDK, "")
@@ -1236,20 +1143,14 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		timestamp = timestamp - 10000
 		randomProperties := map[string]interface{}{}
 		trackPayload = SDK.TrackPayload{
-			EventId:         "",
 			UserId:          user.ID,
 			CreateUser:      false,
 			IsNewUser:       false,
 			Name:            U.EVENT_NAME_HUBSPOT_CONTACT_CREATED,
-			CustomerEventId: new(string),
 			EventProperties: randomProperties,
 			UserProperties:  map[string]interface{}{},
 			Timestamp:       timestamp,
-			ProjectId:       0,
 			Auto:            false,
-			ClientIP:        "",
-			UserAgent:       "",
-			SmartEventType:  "",
 			RequestSource:   model.UserSourceHubspot,
 		}
 		status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
@@ -1270,6 +1171,7 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		assert.Contains(t, resp.Name, "Freshworks")
 		assert.Equal(t, resp.Country, "India")
 		assert.Equal(t, resp.Industry, "Freshworks-HS")
+		assert.Equal(t, resp.HostName, "google.com")
 		assert.Equal(t, resp.NumberOfUsers, uint64(9))
 		assert.Equal(t, len(resp.AccountTimeline), 9)
 		assert.Condition(t, func() bool {

@@ -117,7 +117,6 @@ func isValidLogicalOp(op string) bool {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	return op == "AND" || op == "OR"
 }
-
 func buildWhereFromProperties(projectID int64, properties []model.QueryProperty,
 	fromTimestamp int64) (rStmnt string, rParams []interface{}, err error) {
 	logFields := log.Fields{
@@ -244,6 +243,112 @@ func buildWhereFromProperties(projectID int64, properties []model.QueryProperty,
 			rStmnt = fmt.Sprintf("%s %s (%s)", rStmnt, logicalOp, groupStmnt)
 		}
 		groupIndex++
+	}
+
+	return rStmnt, rParams, nil
+}
+
+func buildWhereFromPropertiesTemp(projectID int64, properties []model.QueryProperty,
+	fromTimestamp int64) (rStmnt string, rParams []interface{}, err error) {
+	logFields := log.Fields{
+		"project_id":     projectID,
+		"properties":     properties,
+		"from_timestamp": fromTimestamp,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	pLen := len(properties)
+	if pLen == 0 {
+		return rStmnt, rParams, nil
+	}
+
+	rParams = make([]interface{}, 0, 0)
+	propertyToHasNoneFilter := model.GetPropertyToHasNoneFilter(properties)
+	groupedProperties := model.GetPropertiesGrouped(properties)
+
+	for indexOfGroup, currentGroupedProperties := range groupedProperties {
+		var currentGroupStmnt, pStmnt string
+		for indexOfProperty, p := range currentGroupedProperties {
+
+			if p.LogicalOp == "" {
+				p.LogicalOp = "AND"
+			}
+
+			if !isValidLogicalOp(p.LogicalOp) {
+				return rStmnt, rParams, errors.New("invalid logical op on where condition")
+			}
+			pStmnt = ""
+			hasNoneFilter := model.CheckIfMapHasNoneFilter(propertyToHasNoneFilter, p)
+			propertyEntity := GetPropertyEntityFieldForFilter(p.Entity, fromTimestamp)
+			propertyOp := getOp(p.Operator, p.Type)
+
+			if p.Value != model.PropertyValueNone {
+				if p.Type == U.PropertyTypeDateTime {
+					var pParams []interface{}
+					pStmnt, pParams, err = GetDateFilter(p, propertyEntity, p.Property)
+					if err != nil {
+						return pStmnt, pParams, err
+					}
+					rParams = append(rParams, pParams...)
+				} else if p.Type == U.PropertyTypeNumerical {
+					// convert to float for numerical properties.
+					pStmnt = fmt.Sprintf("CASE WHEN JSON_GET_TYPE(JSON_EXTRACT_JSON(%s, ?)) = 'double' THEN  JSON_EXTRACT_DOUBLE(%s, ?) %s ? ELSE false END", propertyEntity, propertyEntity, propertyOp)
+					rParams = append(rParams, p.Property, p.Property, p.Value)
+				} else {
+					// categorical property type.
+					pValue := p.Value
+					if p.Operator == model.ContainsOpStr {
+						pStmnt = fmt.Sprintf("JSON_EXTRACT_STRING(%s, ?) %s ?", propertyEntity, propertyOp)
+						rParams = append(rParams, p.Property, pValue)
+					} else if !hasNoneFilter && p.Operator == model.NotContainsOpStr {
+						pStmnt1 := fmt.Sprintf(" ( JSON_EXTRACT_STRING(%s, ?) %s ? ", propertyEntity, propertyOp)
+						rParams = append(rParams, p.Property, pValue)
+						pStmnt2 := fmt.Sprintf(" OR JSON_EXTRACT_STRING(%s, ?) = '' ", propertyEntity)
+						rParams = append(rParams, p.Property)
+						pStmnt3 := fmt.Sprintf(" OR JSON_EXTRACT_STRING(%s, ?) IS NULL ) ", propertyEntity)
+						rParams = append(rParams, p.Property)
+						pStmnt = pStmnt1 + pStmnt2 + pStmnt3
+					} else if !hasNoneFilter && p.Operator == model.NotEqualOpStr {
+						// PR: 2342 - This change is to allow empty ('') or NULL values during a filter of != value
+						// ex: JSON_EXTRACT_STRING(events.properties, '$source') != 'google' OR JSON_EXTRACT_STRING(events.properties, '$source') = '' OR JSON_EXTRACT_STRING(events.properties, '$source') IS NULL
+						pStmnt1 := fmt.Sprintf(" ( JSON_EXTRACT_STRING(%s, ?) %s ? ", propertyEntity, propertyOp)
+						rParams = append(rParams, p.Property, pValue)
+						pStmnt2 := fmt.Sprintf(" OR JSON_EXTRACT_STRING(%s, ?) = '' ", propertyEntity)
+						rParams = append(rParams, p.Property)
+						pStmnt3 := fmt.Sprintf(" OR JSON_EXTRACT_STRING(%s, ?) IS NULL ) ", propertyEntity)
+						rParams = append(rParams, p.Property)
+						pStmnt = pStmnt1 + pStmnt2 + pStmnt3
+					} else {
+						pStmnt = fmt.Sprintf("JSON_EXTRACT_STRING(%s, ?) %s ?", propertyEntity, propertyOp)
+						rParams = append(rParams, p.Property, pValue)
+					}
+				}
+			} else {
+				// where condition for $none value.
+				// var pStmnt string
+				if propertyOp == model.EqualsOp || propertyOp == model.RLikeOp {
+					// i.e: (NOT jsonb_exists(events.properties, 'property_name') OR events.properties->>'property_name'='')
+					pStmnt = fmt.Sprintf("(JSON_EXTRACT_STRING(%s, ?) IS NULL OR JSON_EXTRACT_STRING(%s, ?)='')", propertyEntity, propertyEntity)
+				} else if propertyOp == model.NotEqualOp || propertyOp == model.NotRLikeOp {
+					// i.e: (jsonb_exists(events.properties, 'property_name') AND events.properties->>'property_name'!='')
+					pStmnt = fmt.Sprintf("(JSON_EXTRACT_STRING(%s, ?) IS NOT NULL AND JSON_EXTRACT_STRING(%s, ?)!='')", propertyEntity, propertyEntity)
+				} else {
+					return "", nil, fmt.Errorf("unsupported opertator %s for property value none", propertyOp)
+				}
+				rParams = append(rParams, p.Property, p.Property)
+			}
+			if indexOfProperty == 0 {
+				currentGroupStmnt = pStmnt
+			} else {
+				currentGroupStmnt = fmt.Sprintf("%s %s %s", currentGroupStmnt, p.LogicalOp, pStmnt)
+			}
+		}
+		if indexOfGroup == 0 {
+			rStmnt = fmt.Sprintf("(%s)", currentGroupStmnt)
+		} else {
+			rStmnt = fmt.Sprintf("%s AND (%s)", rStmnt, currentGroupStmnt)
+		}
+
 	}
 
 	return rStmnt, rParams, nil
@@ -1798,4 +1903,13 @@ func (store *MemSQL) Analyze(projectId int64, queryOriginal model.Query, enableF
 		return store.RunFunnelQuery(projectId, query, enableFilterOpt)
 	}
 	return store.RunInsightsQuery(projectId, query, enableFilterOpt)
+}
+
+func (store *MemSQL) IsGroupEventNameByQueryEventWithProperties(projectID int64, ewp model.QueryEventWithProperties) (string, int) {
+	eventNameID := ""
+	if len(ewp.EventNameIDs) > 0 {
+		eventNameID = U.GetPropertyValueAsString(ewp.EventNameIDs[0])
+	}
+
+	return store.IsGroupEventName(projectID, ewp.Name, eventNameID)
 }

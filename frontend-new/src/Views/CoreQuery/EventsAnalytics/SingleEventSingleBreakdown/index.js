@@ -4,7 +4,9 @@ import React, {
   useCallback,
   forwardRef,
   useImperativeHandle,
-  useContext
+  useContext,
+  memo,
+  useMemo
 } from 'react';
 import {
   formatData,
@@ -13,7 +15,6 @@ import {
   getVisibleData,
   getVisibleSeriesData
 } from './utils';
-import BarChart from '../../../../components/BarChart';
 import SingleEventSingleBreakdownTable from './SingleEventSingleBreakdownTable';
 import LineChart from '../../../../components/HCLineChart';
 import {
@@ -28,8 +29,9 @@ import StackedBarChart from '../../../../components/StackedBarChart';
 import { getNewSorterState } from '../../../../utils/dataFormatter';
 import { CoreQueryContext } from '../../../../contexts/CoreQueryContext';
 import SingleEventSingleBreakdownHorizontalBarChart from './SingleEventSingleBreakdownHorizontalBarChart';
+import ColumnChart from '../../../../components/ColumnChart/ColumnChart';
 
-const SingleEventSingleBreakdown = forwardRef(
+const SingleEventSingleBreakdownComponent = forwardRef(
   (
     {
       queries,
@@ -38,14 +40,12 @@ const SingleEventSingleBreakdown = forwardRef(
       page,
       chartType,
       durationObj,
-      title,
-      section
+      section,
+      savedQuerySettings,
+      comparisonData
     },
     ref
   ) => {
-    const {
-      coreQueryState: { savedQuerySettings }
-    } = useContext(CoreQueryContext);
     const [visibleProperties, setVisibleProperties] = useState([]);
     const [visibleSeriesData, setVisibleSeriesData] = useState([]);
     const [sorter, setSorter] = useState(
@@ -61,37 +61,38 @@ const SingleEventSingleBreakdown = forwardRef(
     );
     const [aggregateData, setAggregateData] = useState([]);
     const [categories, setCategories] = useState([]);
+    const [compareCategories, setCompareCategories] = useState([]);
     const [data, setData] = useState([]);
 
     const handleSorting = useCallback((prop) => {
-      setSorter((currentSorter) => {
-        return getNewSorterState(currentSorter, prop);
-      });
+      setSorter((currentSorter) => getNewSorterState(currentSorter, prop));
     }, []);
 
     const handleDateSorting = useCallback((prop) => {
-      setDateSorter((currentSorter) => {
-        return getNewSorterState(currentSorter, prop);
-      });
+      setDateSorter((currentSorter) => getNewSorterState(currentSorter, prop));
     }, []);
 
-    useImperativeHandle(ref, () => {
-      return {
-        currentSorter: { sorter, dateSorter }
-      };
-    });
+    useImperativeHandle(ref, () => ({
+      currentSorter: { sorter, dateSorter }
+    }));
 
     useEffect(() => {
-      const aggData = formatData(resultState.data);
-      const { categories: cats, data: d } = formatDataInStackedAreaFormat(
+      const aggData = formatData(resultState.data, comparisonData.data);
+      const {
+        categories: cats,
+        data: d,
+        compareCategories: compareCats
+      } = formatDataInStackedAreaFormat(
         resultState.data,
         aggData,
-        durationObj.frequency
+        durationObj.frequency,
+        comparisonData.data
       );
       setAggregateData(aggData);
       setCategories(cats);
+      setCompareCategories(compareCats);
       setData(d);
-    }, [resultState.data, durationObj.frequency]);
+    }, [resultState.data, durationObj.frequency, comparisonData.data]);
 
     useEffect(() => {
       setVisibleSeriesData(getVisibleSeriesData(data, dateSorter));
@@ -100,6 +101,26 @@ const SingleEventSingleBreakdown = forwardRef(
     useEffect(() => {
       setVisibleProperties(getVisibleData(aggregateData, sorter));
     }, [aggregateData, sorter]);
+
+    const columnCategories = useMemo(
+      () => visibleProperties.map((v) => v.label),
+      [visibleProperties]
+    );
+
+    const columnSeries = useMemo(() => {
+      const series = [
+        {
+          data: visibleProperties.map((v) => v.value),
+          color: '#4D7DB4'
+        }
+      ];
+      if (comparisonData.data != null) {
+        series.unshift({
+          data: visibleProperties.map((v) => v.compareValue)
+        });
+      }
+      return series;
+    }, [visibleProperties, comparisonData.data]);
 
     if (!visibleProperties.length) {
       return null;
@@ -127,17 +148,20 @@ const SingleEventSingleBreakdown = forwardRef(
           handleDateSorting={handleDateSorting}
           visibleSeriesData={visibleSeriesData}
           setVisibleSeriesData={setVisibleSeriesData}
+          comparisonApplied={comparisonData.data != null}
         />
       </div>
     );
 
     if (chartType === CHART_TYPE_BARCHART) {
       chart = (
-        <BarChart
-          section={section}
-          title={title}
-          chartData={visibleProperties}
-        />
+        <div className="w-full">
+          <ColumnChart
+            comparisonApplied={comparisonData.data != null}
+            categories={columnCategories}
+            series={columnSeries}
+          />
+        </div>
       );
     } else if (chartType === CHART_TYPE_STACKED_AREA) {
       chart = (
@@ -146,7 +170,7 @@ const SingleEventSingleBreakdown = forwardRef(
             frequency={durationObj.frequency}
             categories={categories}
             data={visibleSeriesData}
-            showAllLegends={true}
+            showAllLegends
           />
         </div>
       );
@@ -157,7 +181,7 @@ const SingleEventSingleBreakdown = forwardRef(
             frequency={durationObj.frequency}
             categories={categories}
             data={visibleSeriesData}
-            showAllLegends={true}
+            showAllLegends
           />
         </div>
       );
@@ -168,7 +192,9 @@ const SingleEventSingleBreakdown = forwardRef(
             frequency={durationObj.frequency}
             categories={categories}
             data={visibleSeriesData}
-            showAllLegends={true}
+            showAllLegends
+            comparisonApplied={comparisonData.data != null}
+            compareCategories={compareCategories}
           />
         </div>
       );
@@ -191,5 +217,25 @@ const SingleEventSingleBreakdown = forwardRef(
     );
   }
 );
+
+const SingleEventSingleBreakdownMemoized = memo(
+  SingleEventSingleBreakdownComponent
+);
+
+function SingleEventSingleBreakdown(props) {
+  const { renderedCompRef, ...rest } = props;
+  const {
+    coreQueryState: { savedQuerySettings, comparison_data: comparisonData }
+  } = useContext(CoreQueryContext);
+
+  return (
+    <SingleEventSingleBreakdownMemoized
+      ref={renderedCompRef}
+      savedQuerySettings={savedQuerySettings}
+      comparisonData={comparisonData}
+      {...rest}
+    />
+  );
+}
 
 export default SingleEventSingleBreakdown;

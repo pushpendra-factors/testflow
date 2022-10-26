@@ -1,13 +1,13 @@
 import React, { useCallback } from 'react';
-import styles from './index.module.scss';
 import moment from 'moment';
 import { Button, Tooltip } from 'antd';
-import { SVG, Text } from '../../../components/factorsComponents';
 import { useSelector } from 'react-redux';
+import { SVG, Text } from '../../../components/factorsComponents';
+import styles from './index.module.scss';
 import {
   REPORT_SECTION,
   DASHBOARD_MODAL,
-  QUERY_TYPE_WEB,
+  QUERY_TYPE_WEB
 } from '../../../utils/constants';
 
 function ReportTitle({
@@ -17,7 +17,7 @@ function ReportTitle({
   section,
   onReportClose,
   queryType,
-  apiCallStatus,
+  apiCallStatus
 }) {
   // const [apiCallStatusMsgVisible, setApiCallStatusMsgVisible] = useState(true);
   const handleClick = useCallback(() => {
@@ -33,9 +33,9 @@ function ReportTitle({
 
   const displayQueryName = (q) => {
     const names = q.split(',');
-    const sanitisedNames = names.map((nam) => {
-      return eventNames[nam.trim()] ? eventNames[nam.trim()] : nam;
-    });
+    const sanitisedNames = names.map((nam) =>
+      eventNames[nam.trim()] ? eventNames[nam.trim()] : nam
+    );
     return sanitisedNames.join(', ');
   };
 
@@ -49,39 +49,43 @@ function ReportTitle({
   //   setApiCallStatusMsgVisible(true);
   // }, [apiCallStatus]);
 
+  const handleReportClose = () => {
+    onReportClose(false);
+  };
+
   return (
-    <div className='pb-2 border-bottom--thin-2'>
-      <div className='flex justify-between items-center'>
-        <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0 mt-6'}>
+    <div className="pb-2 border-bottom--thin-2">
+      <div className="flex justify-between items-center">
+        <Text type="title" level={3} weight="bold" extraClass="m-0 mt-6">
           {title || `Untitled Analysis ${moment().format('DD/MM/YYYY')}`}
         </Text>
         {section === DASHBOARD_MODAL ? (
           <Button
-            type={'text'}
-            onClick={onReportClose.bind(this, false)}
-            icon={<SVG name='Remove' />}
+            type="text"
+            onClick={handleReportClose}
+            icon={<SVG name="Remove" />}
           />
         ) : null}
       </div>
-      <div className='flex items-center justify-between'>
+      <div className="flex items-center justify-between">
         <div
-          className={'fa-title--editable flex items-center cursor-pointer '}
+          className="fa-title--editable flex items-center cursor-pointer "
           onClick={queryType !== QUERY_TYPE_WEB ? handleClick : null}
         >
-          <Text type={'title'} level={6} color={'grey'} extraClass={'m-0 mr-2'}>
+          <Text type="title" level={6} color="grey" extraClass="m-0 mr-2">
             {displayQueryName(queryDetail)}
           </Text>
-          <SVG name='edit' color={'grey'} />
+          <SVG name="edit" color="grey" />
         </div>
         {apiCallStatus && apiCallStatus.required && apiCallStatus.message ? (
           <Tooltip
             mouseEnterDelay={0.2}
             title={apiCallStatus.message}
-            placement='topLeft'
+            placement="topLeft"
             overlayClassName={`${styles.apiCallStatusMsgTooltip}`}
           >
-            <div className='cursor-pointer'>
-              <SVG color='#dea069' name={'warning'} />
+            <div className="cursor-pointer">
+              <SVG color="#dea069" name="warning" />
             </div>
           </Tooltip>
         ) : null}

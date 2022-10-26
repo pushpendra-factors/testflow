@@ -1,14 +1,15 @@
+/* eslint-disable camelcase */
 import React, {
   useCallback,
   useContext,
   useEffect,
   useState,
-  useRef,
+  useRef
 } from 'react';
 import { Button } from 'antd';
 import { ErrorBoundary } from 'react-error-boundary';
 import { connect, useDispatch, useSelector } from 'react-redux';
-import { useParams } from 'react-router';
+import { useParams } from 'react-router-dom';
 
 import {
   QUERY_TYPE_FUNNEL,
@@ -16,10 +17,11 @@ import {
   QUERY_TYPE_ATTRIBUTION,
   QUERY_TYPE_KPI,
   QUERY_TYPE_PROFILE,
-  QUERY_TYPE_CAMPAIGN,
+  apiChartAnnotations
 } from 'Utils/constants';
 import { EMPTY_ARRAY } from 'Utils/global';
 
+import { get } from 'lodash';
 import AnalysisHeader from './AnalysisHeader';
 import ReportContent from './ReportContent';
 import WeeklyInsights from '../WeeklyInsights';
@@ -27,7 +29,7 @@ import WeeklyInsights from '../WeeklyInsights';
 import {
   FaErrorComp,
   FaErrorLog,
-  SVG,
+  SVG
 } from '../../../components/factorsComponents';
 import QueryComposer from '../../../components/QueryComposer';
 import KPIComposer from '../../../components/KPIComposer';
@@ -35,8 +37,7 @@ import AttrQueryComposer from '../../../components/AttrQueryComposer';
 import { CoreQueryContext } from '../../../contexts/CoreQueryContext';
 import { fetchWeeklyIngishts } from '../../../reducers/insights';
 import ProfileComposer from '../../../components/ProfileComposer';
-import { updateQuery, getQuery } from '../../../reducers/coreQuery/services';
-import { apiChartAnnotations } from '../../../utils/constants';
+import { updateQuery } from '../../../reducers/coreQuery/services';
 import { QUERY_UPDATED } from '../../../reducers/types';
 import { getChartChangedKey } from './analysisResultsPage.helpers';
 
@@ -48,7 +49,6 @@ function ReportsLayout({
   setQuerySaved,
   breakdownType,
   activeProject,
-  fetchWeeklyIngishts,
   savedQueryId,
   breakdown,
   attributionsState,
@@ -60,10 +60,9 @@ function ReportsLayout({
 }) {
   const dispatch = useDispatch();
 
-  const { query_id, query_type } = useParams(); 
-
+  const { query_type } = useParams();
   const savedQueries = useSelector((state) =>
-    _.get(state, 'queries.data', EMPTY_ARRAY)
+    get(state, 'queries.data', EMPTY_ARRAY)
   );
   const { active_project } = useSelector((state) => state.global);
 
@@ -108,12 +107,13 @@ function ReportsLayout({
     return [];
   }, []);
 
-  useEffect(() => {
-    return () => {
+  useEffect(
+    () => () => {
       dispatch({ type: 'SET_ACTIVE_INSIGHT', payload: false });
       dispatch({ type: 'RESET_WEEKLY_INSIGHTS', payload: false });
-    };
-  }, [dispatch, activeProject]);
+    },
+    [dispatch, activeProject]
+  );
 
   useEffect(() => {
     if (requestQuery) {
@@ -188,6 +188,7 @@ function ReportsLayout({
         />
       );
     }
+    return null;
   };
 
   const renderQueryComposerNew = () => {
@@ -203,11 +204,12 @@ function ReportsLayout({
           className={`query_card_cont ${
             queryOpen ? `query_card_open` : `query_card_close`
           }`}
-          onClick={(e) => !queryOpen && setQueryOpen(true)}
+          onClick={() => !queryOpen && setQueryOpen(true)}
         >
-          <div className={`query_composer`}>{renderComposer()}</div>
-          <Button size={'large'} className={`query_card_expand`}>
-            <SVG name={'expand'} size={20}></SVG>Expand
+          <div className="query_composer">{renderComposer()}</div>
+          <Button size="large" className="query_card_expand">
+            <SVG name="expand" size={20} />
+            Expand
           </Button>
         </div>
       );
@@ -221,15 +223,15 @@ function ReportsLayout({
         queryType,
         breakdown,
         campaignGroupBy: campaignState.group_by,
-        attributionModels: attributionsState.models,
+        attributionModels: attributionsState.models
       });
 
       updateChartTypes({
         ...chartTypes,
         [queryType]: {
           ...chartTypes[queryType],
-          [changedKey]: key,
-        },
+          [changedKey]: key
+        }
       });
 
       if (savedQueryId && callUpdateService) {
@@ -239,25 +241,24 @@ function ReportsLayout({
 
         const settings = {
           ...queryGettingUpdated.settings,
-          chart: apiChartAnnotations[key],
+          chart: apiChartAnnotations[key]
         };
 
         const reqBody = {
           title: queryGettingUpdated.title,
-          settings,
+          settings
         };
 
         updateQuery(active_project.id, savedQueryId, reqBody);
 
         // #Todo Disabled for now. The query is getting rerun again. Have to figure out a way around it.
-        if(!query_type) {
+        if (!query_type) {
           dispatch({
             type: QUERY_UPDATED,
             queryId: savedQueryId,
-            payload: reqBody,
+            payload: reqBody
           });
         }
-        
       }
     },
     [
@@ -268,7 +269,7 @@ function ReportsLayout({
       campaignState.group_by,
       attributionsState.models,
       savedQueryId,
-      savedQueries,
+      savedQueries
     ]
   );
 
@@ -290,15 +291,13 @@ function ReportsLayout({
         campaignState={campaignState}
         dateFromTo={dateFromTo}
       />
-      <div className='mt-24 px-8'>
+      <div className="mt-24 px-8">
         <ErrorBoundary
           fallback={
             <FaErrorComp
-              size={'medium'}
-              title={'Analyse Results Error'}
-              subtitle={
-                'We are facing trouble loading Analyse results. Drop us a message on the in-app chat.'
-              }
+              size="medium"
+              title="Analyse Results Error"
+              subtitle="We are facing trouble loading Analyse results. Drop us a message on the in-app chat."
             />
           }
           onError={FaErrorLog}
@@ -334,7 +333,7 @@ function ReportsLayout({
 
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
-  insights: state.insights,
+  insights: state.insights
 });
 
 export default connect(mapStateToProps, { fetchWeeklyIngishts })(ReportsLayout);

@@ -1,0 +1,27 @@
+name: Deploy FE to staging env
+
+on:
+  push:
+    branches:
+      - auto-deploy
+    # Optionally configure to run only for specific files. For example:
+    # paths:
+    # - "website/**"
+
+
+env: 
+  PATH_TO_FACTORS : /home/runner/work/factors/factors/frontend-new
+
+jobs:
+  deploy_live_website:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      # Add any build steps here. For example:
+      - run: cd ${{ env.PATH_TO_FACTORS }} && npm i && npm run build-staging
+      - uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: "${{ secrets.GITHUB_TOKEN }}"
+          firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT }}"
+          projectId: auto-deploy-test
+          channelId: live

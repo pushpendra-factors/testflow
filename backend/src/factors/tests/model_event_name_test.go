@@ -2078,3 +2078,134 @@ func TestSmartEventRuleDeleteAPI(t *testing.T) {
 	w = sendUpdateSmartEventFilterReq(r, project.ID, agent, &requestPayload, eventNameID)
 	assert.Equal(t, http.StatusConflict, w.Code)
 }
+
+func TestGroupEventNames(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+	project, _, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	hubspotDealSmartEvent := "event2"
+	hubspotContactSmartEvent := "event3"
+	salesforceContactSmartEvent := "event4"
+	salesforceleadSmartEvent := "event5"
+	salesforceOpportunitySmartEvent := "event6"
+	salesforceAccountSmartEvent := "event7"
+
+	groupSmartEvents := map[string]string{
+		U.GROUP_NAME_HUBSPOT_DEAL:           hubspotDealSmartEvent,
+		U.GROUP_NAME_SALESFORCE_ACCOUNT:     salesforceAccountSmartEvent,
+		U.GROUP_NAME_SALESFORCE_OPPORTUNITY: salesforceOpportunitySmartEvent,
+	}
+
+	groupNameDocType := map[string]string{
+		U.GROUP_NAME_HUBSPOT_DEAL:           model.HubspotDocumentTypeNameDeal,
+		U.GROUP_NAME_SALESFORCE_ACCOUNT:     model.SalesforceDocumentTypeNameAccount,
+		U.GROUP_NAME_SALESFORCE_OPPORTUNITY: model.SalesforceDocumentTypeNameOpportunity,
+	}
+
+	groupSmartEventSource := map[string]string{
+		U.GROUP_NAME_HUBSPOT_DEAL:           model.SmartCRMEventSourceHubspot,
+		U.GROUP_NAME_SALESFORCE_ACCOUNT:     model.SmartCRMEventSourceSalesforce,
+		U.GROUP_NAME_SALESFORCE_OPPORTUNITY: model.SmartCRMEventSourceSalesforce,
+	}
+
+	groupType := map[string]string{
+		U.GROUP_NAME_HUBSPOT_DEAL:           model.TYPE_CRM_HUBSPOT,
+		U.GROUP_NAME_SALESFORCE_ACCOUNT:     model.TYPE_CRM_SALESFORCE,
+		U.GROUP_NAME_SALESFORCE_OPPORTUNITY: model.TYPE_CRM_SALESFORCE,
+	}
+
+	// group smart events
+	groupSmartEventsID := make(map[string]string)
+	for groupName, smartEventName := range groupSmartEvents {
+		rule := &model.SmartCRMEventFilter{
+			Source:               groupSmartEventSource[groupName],
+			ObjectType:           groupNameDocType[groupName],
+			Description:          "group smart event",
+			FilterEvaluationType: model.FilterEvaluationTypeAny,
+			Filters: []model.PropertyFilter{
+				{
+					Name:  "Id",
+					Rules: []model.CRMFilterRule{},
+				},
+			},
+			LogicalOp:               model.LOGICAL_OP_AND,
+			TimestampReferenceField: "LastModifiedDate",
+		}
+
+		_, status := store.GetStore().CreateOrGetCRMSmartEventFilterEventName(project.ID, &model.EventName{ProjectId: project.ID, Name: groupSmartEvents[groupName]}, rule)
+		assert.Equal(t, http.StatusCreated, status)
+		eventName, status := store.GetStore().GetSmartEventEventName(&model.EventName{ProjectId: project.ID, Name: groupSmartEvents[groupName], Type: groupType[groupName]})
+		assert.Equal(t, http.StatusFound, status)
+		groupSmartEventsID[smartEventName] = eventName.ID
+	}
+
+	nonGroupSmartEvents := map[string]string{
+		hubspotContactSmartEvent:    model.HubspotDocumentTypeNameContact,
+		salesforceContactSmartEvent: model.SalesforceDocumentTypeNameContact,
+		salesforceleadSmartEvent:    model.SalesforceDocumentTypeNameLead,
+	}
+
+	nonGroupSmartEventsSource := map[string]string{
+		hubspotContactSmartEvent:    model.SmartCRMEventSourceHubspot,
+		salesforceContactSmartEvent: model.SmartCRMEventSourceSalesforce,
+		salesforceleadSmartEvent:    model.SmartCRMEventSourceSalesforce,
+	}
+
+	// non group smart events
+	nonGroupSmartEventsID := make(map[string]string)
+	for smartEventName, docTypeAlias := range nonGroupSmartEvents {
+		rule := &model.SmartCRMEventFilter{
+			Source:               nonGroupSmartEventsSource[smartEventName],
+			ObjectType:           docTypeAlias,
+			Description:          "non group smart event",
+			FilterEvaluationType: model.FilterEvaluationTypeAny,
+			Filters: []model.PropertyFilter{
+				{
+					Name:  "Id",
+					Rules: []model.CRMFilterRule{},
+				},
+			},
+			LogicalOp:               model.LOGICAL_OP_AND,
+			TimestampReferenceField: "LastModifiedDate",
+		}
+
+		eventName, status := store.GetStore().CreateOrGetCRMSmartEventFilterEventName(project.ID, &model.EventName{ProjectId: project.ID, Name: smartEventName}, rule)
+		assert.Equal(t, http.StatusCreated, status)
+		nonGroupSmartEventsID[smartEventName] = eventName.ID
+	}
+
+	// standard groups check
+	for groupEventName := range U.GROUP_EVENT_NAME_TO_GROUP_NAME_MAPPING {
+		query := model.QueryEventWithProperties{
+			Name:         groupEventName,
+			EventNameIDs: []interface{}{groupSmartEventsID[groupEventName]},
+		}
+		groupName, status := store.GetStore().IsGroupEventNameByQueryEventWithProperties(project.ID, query)
+		assert.Equal(t, status, http.StatusFound)
+		assert.Equal(t, groupName, U.GROUP_EVENT_NAME_TO_GROUP_NAME_MAPPING[groupEventName])
+	}
+
+	// groups based smart event check
+	for eventName, eventNameID := range groupSmartEventsID {
+		query := model.QueryEventWithProperties{
+			Name:         eventName,
+			EventNameIDs: []interface{}{eventNameID},
+		}
+		groupName, status := store.GetStore().IsGroupEventNameByQueryEventWithProperties(project.ID, query)
+		assert.Equal(t, status, http.StatusFound)
+		assert.Equal(t, eventName, groupSmartEvents[groupName])
+	}
+
+	// non group based smart event check
+	for eventName, eventNameID := range nonGroupSmartEventsID {
+		query := model.QueryEventWithProperties{
+			Name:         eventName,
+			EventNameIDs: []interface{}{eventNameID},
+		}
+		groupName, status := store.GetStore().IsGroupEventNameByQueryEventWithProperties(project.ID, query)
+		assert.Equal(t, status, http.StatusNotFound)
+		assert.Empty(t, groupName)
+	}
+}

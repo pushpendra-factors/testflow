@@ -246,6 +246,10 @@ func IsEmail(str string) bool {
 	return regexpEmail.MatchString(str)
 }
 
+func IsBetterEmail(str string, str1 string) bool {
+	return len(str1) > len(str)
+}
+
 func IsValidPhone(str string) bool {
 	numbers := regexp.MustCompile("\\d").FindAllString(str, -1)
 	if len(numbers) < 5 {
@@ -253,6 +257,10 @@ func IsValidPhone(str string) bool {
 	}
 
 	return true
+}
+
+func IsBetterPhone(str string, str1 string) bool {
+	return len(str1) > len(str)
 }
 
 func IsPersonalEmail(str string) bool {

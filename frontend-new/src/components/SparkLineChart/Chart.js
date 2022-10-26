@@ -26,21 +26,24 @@ function SparkChart({
 }) {
   const chartRef = useRef(null);
 
-  const bisectDate = d3.bisector(function (d) {
-    return d.date;
-  }).left;
+  const bisectDate = d3.bisector((d) => d.date).left;
 
   const drawChart = useCallback(() => {
     const margin = {
       top: 10,
-      right: 10,
+      right: 0,
       bottom: 30,
-      left: 10
+      left: 0
     };
-    const width = d3
+
+    const containerWidth = d3
       .select(chartRef.current)
       .node()
-      ?.getBoundingClientRect().width;
+      ?.getBoundingClientRect()?.width
+      ? d3.select(chartRef.current).node()?.getBoundingClientRect()?.width
+      : 0;
+
+    const width = containerWidth;
     const height = widgetHeight || 180;
 
     // append the svg object to the body of the page
@@ -50,8 +53,8 @@ function SparkChart({
       .append('svg')
       .attr('width', width)
       .attr('height', height + margin.top + margin.bottom)
-      .append('g')
-      .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+      .style('overflow', 'visible')
+      .append('g');
 
     const tooltip = d3
       .select(chartRef.current)
@@ -61,26 +64,16 @@ function SparkChart({
 
     const data = chartData;
 
-    data.sort(function (a, b) {
-      return new Date(a.date) - new Date(b.date);
-    });
+    data.sort((a, b) => new Date(a.date) - new Date(b.date));
 
     const x = d3
       .scaleTime()
-      .domain(
-        d3.extent(data, function (d) {
-          return d.date;
-        })
-      )
+      .domain(d3.extent(data, (d) => d.date))
       .range([0, width]);
 
     const y = d3
       .scaleLinear()
-      .domain(
-        d3.extent(data, function (d) {
-          return +d[event];
-        })
-      )
+      .domain(d3.extent(data, (d) => +d[event]))
       .range([height, 0]);
 
     // Add the area
@@ -94,13 +87,9 @@ function SparkChart({
         'd',
         d3
           .area()
-          .x(function (d) {
-            return x(d.date);
-          })
+          .x((d) => x(d.date))
           .y0(height)
-          .y1(function (d) {
-            return y(d[event]);
-          })
+          .y1((d) => y(d[event]))
       )
       .attr(
         'fill',
@@ -119,12 +108,8 @@ function SparkChart({
         'd',
         d3
           .line()
-          .x(function (d) {
-            return x(d.date);
-          })
-          .y(function (d) {
-            return y(d[event]);
-          })
+          .x((d) => x(d.date))
+          .y((d) => y(d[event]))
       );
 
     svg
@@ -142,12 +127,8 @@ function SparkChart({
       ])
       .enter()
       .append('stop')
-      .attr('offset', function (d) {
-        return d.offset;
-      })
-      .attr('stop-color', function (d) {
-        return d.color;
-      });
+      .attr('offset', (d) => d.offset)
+      .attr('stop-color', (d) => d.color);
 
     const focus = svg
       .append('g')
@@ -161,20 +142,6 @@ function SparkChart({
       .attr('fill', '#fff')
       .attr('stroke-width', 2);
 
-    svg
-      .append('rect')
-      .attr('class', 'overlay')
-      .attr('width', width)
-      .attr('height', height)
-      .on('mouseover', function () {
-        focus.style('display', null);
-      })
-      .on('mouseout', function () {
-        tooltip.style('display', 'none');
-        focus.style('display', 'none');
-      })
-      .on('mousemove', mousemove);
-
     function mousemove() {
       const x0 = x.invert(d3.mouse(this)[0]);
       const i = bisectDate(data, x0, 1);
@@ -184,12 +151,9 @@ function SparkChart({
 
       let left = d3.event.pageX + 20;
       if (left + 146 > document.documentElement.clientWidth) {
-        left = d3.event.pageX - 166;
+        left = d3.event.pageX - 200;
       }
-      focus.attr(
-        'transform',
-        'translate(' + x(d.date) + ',' + y(d[event]) + ')'
-      );
+      focus.attr('transform', `translate(${x(d.date)},${y(d[event])})`);
       tooltip.style('display', 'block');
       const format = getDateFormatForTimeSeriesChart({ frequency });
 
@@ -213,7 +177,7 @@ function SparkChart({
                 {eventTitle}
               </Text>
               <div
-                className={cx('flex flex-col')}
+                className="flex flex-col"
                 style={
                   comparisonApplied
                     ? {
@@ -271,9 +235,23 @@ function SparkChart({
             </div>
           )
         )
-        .style('left', left + 'px')
-        .style('top', d3.event.pageY - 40 + 'px');
+        .style('left', `${left}px`)
+        .style('top', `${d3.event.pageY - 40}px`);
     }
+
+    svg
+      .append('rect')
+      .attr('class', 'overlay')
+      .attr('width', width)
+      .attr('height', height)
+      .on('mouseover', () => {
+        focus.style('display', null);
+      })
+      .on('mouseout', () => {
+        tooltip.style('display', 'none');
+        focus.style('display', 'none');
+      })
+      .on('mousemove', mousemove);
   }, [
     bisectDate,
     chartData,
@@ -289,7 +267,12 @@ function SparkChart({
     drawChart();
   }, [drawChart]);
 
-  return <div className={styles.sparkChart} ref={chartRef} />;
+  return (
+    <div
+      className={cx(styles.sparkChart, 'flex justify-center')}
+      ref={chartRef}
+    />
+  );
 }
 
 export default SparkChart;

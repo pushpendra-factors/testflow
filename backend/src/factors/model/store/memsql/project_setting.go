@@ -337,6 +337,7 @@ func getProjectSettingDefault() *model.ProjectSetting {
 		IntSegment:           &enabled,
 		IntDrift:             &disabled,
 		IntClearBit:          &disabled,
+		AutoCaptureFormFills: &model.AutoCaptureFormFillsDefault,
 
 		AutoClickCapture: &model.AutoClickCaptureDefault,
 	}
@@ -1294,4 +1295,20 @@ func (store *MemSQL) DisableExplain(projectId int64) int {
 		return http.StatusInternalServerError
 	}
 	return http.StatusOK
+}
+
+// define a db method to fetch all the rows
+func (store *MemSQL) GetFormFillEnabledProjectIDs() ([]int64, error) {
+	db := C.GetServices().Db
+	result := make([]int64, 0)
+	projectIds := make([]model.ProjectSetting, 0)
+	err := db.Table("project_settings").Select("project_id").Where("auto_capture_form_fills = true").Find(&projectIds).Error
+	if err != nil {
+		log.WithError(err).Error("fetching enabled project_id failed")
+		return result, err
+	}
+	for _, setting := range projectIds {
+		result = append(result, setting.ProjectId)
+	}
+	return result, nil
 }

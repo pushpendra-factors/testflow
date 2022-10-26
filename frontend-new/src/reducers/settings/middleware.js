@@ -93,14 +93,33 @@ export const fetchClickableElements = (projectId) => {
 }
 
 export const toggleClickableElement = (projectId, id, currentState) => {
-    return (dispatch) => {
-        return new Promise((resolve, reject) => {
-            enableOrDisableClickableElement(dispatch, projectId, id).then(() => {
-                // Set toggled state if toggle API is successful
-                resolve(dispatch(toggleClickableElementAction({projectId: projectId, id: id, enabled: !currentState})));
-            }).catch(() => {
-                resolve(dispatch(toggleClickableElementAction({projectId: projectId, id: id, enabled: currentState})));
-            });
+  return (dispatch) => {
+    return new Promise((resolve, reject) => {
+      enableOrDisableClickableElement(dispatch, projectId, id)
+        .then(() => {
+          // Set toggled state if toggle API is successful
+          resolve(
+            dispatch(
+              toggleClickableElementAction({
+                projectId: projectId,
+                id: id,
+                enabled: !currentState,
+              })
+            )
+          );
+        })
+        .then(()=>{dispatch(fetchClickableElements(projectId))})
+        .catch(() => {
+          resolve(
+            dispatch(
+              toggleClickableElementAction({
+                projectId: projectId,
+                id: id,
+                enabled: currentState,
+              })
+            )
+          );
         });
-    }
-}
+    });
+  };
+};

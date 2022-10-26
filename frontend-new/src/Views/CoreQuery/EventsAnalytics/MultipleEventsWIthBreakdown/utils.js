@@ -9,7 +9,7 @@ import {
   SortResults
 } from '../../../../utils/dataFormatter';
 import { Number as NumFormat } from '../../../../components/factorsComponents';
-import { parseForDateTimeLabel } from '../SingleEventSingleBreakdown/utils';
+import { parseForDateTimeLabel , getBreakdownDisplayName } from '../eventsAnalytics.helpers';
 import { getBreakDownGranularities } from '../SingleEventMultipleBreakdown/utils';
 import {
   DATE_FORMATS,
@@ -17,7 +17,6 @@ import {
   DISPLAY_PROP
 } from '../../../../utils/constants';
 import { EVENT_COUNT_KEY } from '../eventsAnalytics.constants';
-import { getBreakdownDisplayName } from '../eventsAnalytics.helpers';
 import { BREAKDOWN_TYPES } from '../../constants';
 
 export const defaultSortProp = ({ breakdown }) => {
@@ -102,7 +101,7 @@ export const formatData = (data, queries, colors, eventNames) => {
   console.log('mewb formatData');
   const { headers, rows } = data.metrics;
   // eslint-disable-next-line camelcase
-  const event_indexIndex = headers.findIndex((elem) => elem === 'event_index');
+  const eventIdxIndex = headers.findIndex((elem) => elem === 'event_index');
   const countIndex = headers.findIndex(
     (elem) => elem === 'count' || elem === 'aggregate'
   );
@@ -125,9 +124,9 @@ export const formatData = (data, queries, colors, eventNames) => {
       );
     }
     const eventName = eventNames[d[eventIndex]] || d[eventIndex];
-    const str = eventName + ',' + Object.values(breakdownData).join(', ');
+    const str = `${eventName  },${  Object.values(breakdownData).join(', ')}`;
     const queryIndex = queries.findIndex(
-      (_, index) => index === d[event_indexIndex]
+      (_, i) => i === d[eventIdxIndex]
     );
     return {
       label: str,
@@ -135,7 +134,7 @@ export const formatData = (data, queries, colors, eventNames) => {
       [EVENT_COUNT_KEY]: d[countIndex], // used for sorting, value key will be removed soon
       index,
       event: eventName,
-      eventIndex: d[event_indexIndex],
+      eventIndex: d[eventIdxIndex],
       color: colors[queryIndex],
       ...breakdownData
     };
@@ -145,12 +144,8 @@ export const formatData = (data, queries, colors, eventNames) => {
 };
 
 export const formatVisibleProperties = (data, queries) => {
-  const vp = data.map((d) => {
-    return { ...d, label: `${d.label}; [${d.eventIndex}]` };
-  });
-  vp.sort((a, b) => {
-    return parseInt(a.value) <= parseInt(b.value) ? 1 : -1;
-  });
+  const vp = data.map((d) => ({ ...d, label: `${d.label}; [${d.eventIndex}]` }));
+  vp.sort((a, b) => parseInt(a.value) <= parseInt(b.value) ? 1 : -1);
   vp.sort((a, b) => {
     const idx1 = queries.findIndex((_, index) => index === a.eventIndex);
     const idx2 = queries.findIndex((_, index) => index === b.eventIndex);
@@ -180,9 +175,7 @@ export const getTableColumns = (
     dataIndex: 'event',
     width: 200,
     fixed: 'left',
-    render: (d) => {
-      return eventNames[d] || d;
-    }
+    render: (d) => eventNames[d] || d
   });
   breakdown.forEach((b, index) => {
     result.push({
@@ -195,7 +188,7 @@ export const getTableColumns = (
       dataIndex: `${b.property} - ${index}`,
       width: 200,
       render: (d) => {
-        if (b.prop_type === 'numerical' && !isNaN(d)) {
+        if (b.prop_type === 'numerical' && !Number.isNaN(d)) {
           return <NumFormat number={d} />;
         }
         return d;
@@ -213,9 +206,7 @@ export const getTableColumns = (
     className: 'text-right',
     dataIndex: EVENT_COUNT_KEY,
     width: 150,
-    render: (d) => {
-      return <NumFormat number={d} />;
-    }
+    render: (d) => <NumFormat number={d} />
   });
   return result;
 };
@@ -252,8 +243,7 @@ export const getDateBasedColumns = (
     dataIndex: EVENT_COUNT_KEY,
     width: 150
   };
-  const breakdownColumns = breakdown.map((b, index) => {
-    return {
+  const breakdownColumns = breakdown.map((b, index) => ({
       title: getClickableTitleSorter(
         getBreakdownTitle(b, userPropNames, eventPropNames),
         { key: `${b.property} - ${index}`, type: b.prop_type, subtype: b.grn },
@@ -263,17 +253,15 @@ export const getDateBasedColumns = (
       dataIndex: `${b.property} - ${index}`,
       width: 200,
       render: (d) => {
-        if (b.prop_type === 'numerical' && !isNaN(d)) {
+        if (b.prop_type === 'numerical' && !Number.isNaN(d)) {
           return <NumFormat number={d} />;
         }
         return d;
       }
-    };
-  });
+    }));
   const format = DATE_FORMATS[frequency] || DATE_FORMATS.date;
 
-  const dateColumns = categories.map((cat) => {
-    return {
+  const dateColumns = categories.map((cat) => ({
       title: getClickableTitleSorter(
         addQforQuarter(frequency) + moment(cat).format(format),
         {
@@ -287,12 +275,9 @@ export const getDateBasedColumns = (
       ),
       width: 150,
       dataIndex: addQforQuarter(frequency) + moment(cat).format(format),
-      render: (d) => {
-        return <NumFormat number={d} />;
-      },
+      render: (d) => <NumFormat number={d} />,
       className: 'text-right'
-    };
-  });
+    }));
   const eventCol = {
     title: getClickableTitleSorter(
       'Event',
@@ -348,9 +333,7 @@ export const formatDataInStackedAreaFormat = (
     differentDates.add(row[dateIndex]);
   });
   differentDates = Array.from(differentDates);
-  const initializedDatesData = differentDates.map(() => {
-    return 0;
-  });
+  const initializedDatesData = differentDates.map(() => 0);
   const labelsMapper = {};
   const resultantData = aggregateData.map((d, index) => {
     labelsMapper[d.label] = index;
@@ -372,8 +355,8 @@ export const formatDataInStackedAreaFormat = (
   data.rows.forEach((row) => {
     const eventName = eventNames[row[eventIndex]] || row[eventIndex];
     const breakdownJoin =
-      eventName +
-      ',' +
+      `${eventName 
+      },${ 
       row
         .slice(eventIndex + 1, countIndex)
         .map((x, ind) =>
@@ -382,7 +365,7 @@ export const formatDataInStackedAreaFormat = (
             DISPLAY_PROP[x] ? DISPLAY_PROP[x] : x
           )
         )
-        .join(', ');
+        .join(', ')}`;
     const bIdx = labelsMapper[breakdownJoin];
     const category = row[dateIndex];
     const idx = differentDates.indexOf(category);

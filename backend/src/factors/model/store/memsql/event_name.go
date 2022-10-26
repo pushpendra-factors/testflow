@@ -1575,3 +1575,55 @@ func (store *MemSQL) GetEventTypeFromDb(
 	}
 	return EventNameType, nil
 }
+
+func (store *MemSQL) IsGroupEventName(projectID int64, eventName, eventNameID string) (string, int) {
+	logFields := log.Fields{
+		"project_id":    projectID,
+		"event_name":    eventName,
+		"event_name_id": eventNameID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+	if projectID == 0 {
+		logCtx.Error("Invaid project id.")
+		return "", http.StatusBadRequest
+	}
+
+	if eventName == "" && eventNameID == "" {
+		logCtx.Error("Invalid event name or event name id.")
+		return "", http.StatusBadRequest
+	}
+
+	groupName := U.GetGroupNameFromGroupEventName(eventName)
+	if groupName != "" {
+		return groupName, http.StatusFound
+	}
+
+	if eventNameID == "" {
+		return "", http.StatusNotFound
+	}
+
+	smartEventName, status := store.GetSmartEventFilterEventNameByID(projectID, eventNameID, false)
+	if status != http.StatusFound {
+		if status != http.StatusNotFound {
+			logCtx.Error("Failed to check for IsGroupEventName")
+		}
+
+		return "", status
+	}
+
+	smartEventFilter, err := model.GetDecodedSmartEventFilterExp(smartEventName.FilterExpr)
+	if err != nil {
+		logCtx.Error("Failed to GetDecodedSmartEventFilterExp")
+		return "", http.StatusInternalServerError
+	}
+
+	groupName = U.NAME_PREFIX + smartEventFilter.Source + U.NAME_PREFIX_ESCAPE_CHAR + smartEventFilter.ObjectType
+	if model.AllowedGroupNames[groupName] == true {
+		return groupName, http.StatusFound
+	}
+
+	return "", http.StatusNotFound
+
+}

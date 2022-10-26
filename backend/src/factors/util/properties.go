@@ -26,6 +26,7 @@ const SEN_ALL_EVENTS = "$AllEvents"
 const SEN_ALL_EVENTS_DISPLAY_STRING = "All Events"
 
 const EVENT_NAME_SESSION = "$session"
+const EVENT_NAME_FORM_FILL = "$form_fill"
 const EVENT_NAME_OFFLINE_TOUCH_POINT = "$offline_touch_point"
 const EVENT_NAME_FORM_SUBMITTED = "$form_submitted"
 
@@ -52,6 +53,7 @@ const EVENT_NAME_SALESFORCE_OPPORTUNITY_CREATED = "$sf_opportunity_created"
 const EVENT_NAME_SALESFORCE_OPPORTUNITY_UPDATED = "$sf_opportunity_updated"
 const EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED = "$sf_campaign_member_created"
 const EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED = "$sf_campaign_member_updated"
+const EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_RESPONDED_TO_CAMPAIGN = "$sf_campaign_member_responded_to_campaign"
 
 // Integration: Marketo
 const EVENT_NAME_MARKETO_LEAD_CREATED = "$marketo_lead_created"
@@ -85,6 +87,7 @@ const EVENT_NAME_SHOPIFY_CART_UPDATED = "$shopify_cart_updated"
 
 var ALLOWED_INTERNAL_EVENT_NAMES = [...]string{
 	EVENT_NAME_SESSION,
+	EVENT_NAME_FORM_FILL,
 	EVENT_NAME_FORM_SUBMITTED,
 	EVENT_NAME_HUBSPOT_CONTACT_CREATED,
 	EVENT_NAME_HUBSPOT_CONTACT_UPDATED,
@@ -118,6 +121,7 @@ var ALLOWED_INTERNAL_EVENT_NAMES = [...]string{
 	EVENT_NAME_SALESFORCE_OPPORTUNITY_UPDATED,
 	EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED,
 	EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED,
+	EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_RESPONDED_TO_CAMPAIGN,
 	GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_CREATED,
 	GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED,
 	GROUP_EVENT_NAME_SALESFORCE_OPPORTUNITY_CREATED,
@@ -158,6 +162,7 @@ var GP_SALESFORCE_ACCOUNT_INDUSTRY string = "$salesforce_account_industry"
 var GP_HUBSPOT_COMPANY_NUMBEROFEMPLOYEES string = "$hubspot_company_numberofemployees"
 var GP_SALESFORCE_ACCOUNT_NUMBEROFEMPLOYEES string = "$salesforce_account_numberOfEmployees"
 var GP_HUBSPOT_COMPANY_DOMAIN string = "$hubspot_company_domain"
+var GP_SALESFORCE_ACCOUNT_WEBSITE string = "$salesforce_account_website"
 var GP_HUBSPOT_COMPANY_NUM_ASSOCIATED_CONTACTS string = "$hubspot_company_num_associated_contacts"
 
 // Factors API constants
@@ -178,6 +183,9 @@ var EP_CRM_REFERENCE_EVENT_ID string = "$crm_reference_event_id"
 // lastmodifieddate properties.
 const PROPERTY_KEY_LAST_MODIFIED_DATE = "lastmodifieddate"
 const PROPERTY_KEY_LAST_MODIFIED_DATE_HS = "hs_lastmodifieddate"
+
+// time_spent_on_form event property
+const EP_TIME_SPENT_ON_FORM = "time_spent_on_form"
 
 var GENERIC_NUMERIC_EVENT_PROPERTIES = [...]string{
 	EP_FIRST_SEEN_OCCURRENCE_COUNT,
@@ -1225,38 +1233,39 @@ var ITREE_NUMERICAL_PROPERTIES_TO_IGNORE = map[string]bool{
 }
 
 var STANDARD_EVENTS_DISPLAY_NAMES = map[string]string{
-	"$hubspot_contact_created":            "Contact Created",
-	"$hubspot_contact_updated":            "Contact Updated",
-	"$hubspot_deal_state_changed":         "Deal State Changed",
-	"$hubspot_form_submission":            "Hubspot Form Submissions",
-	"$hubspot_engagement_email":           "Engagement Email",
-	"$hubspot_engagement_meeting_created": "Engagement Meeting Created",
-	"$hubspot_engagement_meeting_updated": "Engagement Meeting Updated",
-	"$hubspot_engagement_call_created":    "Engagement Call Created",
-	"$hubspot_engagement_call_updated":    "Engagement Call Updated",
-	"$sf_contact_created":                 "Contact Created",
-	"$sf_contact_updated":                 "Contact Updated",
-	"$sf_lead_created":                    "Lead Created",
-	"$sf_lead_updated":                    "Lead Updated",
-	"$sf_account_created":                 "Account Created",
-	"$sf_account_updated":                 "Account Updated",
-	"$sf_opportunity_created":             "Opportunity Created",
-	"$sf_opportunity_updated":             "Opportunity Updated",
-	"$sf_campaign_member_created":         "Added to Campaign",
-	"$sf_campaign_member_updated":         "Interacted with Campaign",
-	"$session":                            "Website Session",
-	"$form_submitted":                     "Form Button Click",
-	"$hubspot_company_created":            "Company Created",
-	"$hubspot_company_updated":            "Company Updated",
-	"$hubspot_deal_created":               "Deal Created",
-	"$hubspot_deal_updated":               "Deal Updated",
-	"$salesforce_account_updated":         "Salesforce Account Updated",
-	"$salesforce_opportunity_updated":     "Salesforce Opportunity Updated",
-	"$salesforce_account_created":         "Salesforce Account Created",
-	"$salesforce_opportunity_created":     "Salesforce Opportunity Created",
-	"$offline_touch_point":                "Offline Touchpoint",
-	"$leadsquared_lead_created":           "Lead Created",
-	"$leadsquared_lead_updated":           "Lead Updated",
+	"$hubspot_contact_created":                  "Contact Created",
+	"$hubspot_contact_updated":                  "Contact Updated",
+	"$hubspot_deal_state_changed":               "Deal State Changed",
+	"$hubspot_form_submission":                  "Hubspot Form Submissions",
+	"$hubspot_engagement_email":                 "Engagement Email",
+	"$hubspot_engagement_meeting_created":       "Engagement Meeting Created",
+	"$hubspot_engagement_meeting_updated":       "Engagement Meeting Updated",
+	"$hubspot_engagement_call_created":          "Engagement Call Created",
+	"$hubspot_engagement_call_updated":          "Engagement Call Updated",
+	"$sf_contact_created":                       "Contact Created",
+	"$sf_contact_updated":                       "Contact Updated",
+	"$sf_lead_created":                          "Lead Created",
+	"$sf_lead_updated":                          "Lead Updated",
+	"$sf_account_created":                       "Account Created",
+	"$sf_account_updated":                       "Account Updated",
+	"$sf_opportunity_created":                   "Opportunity Created",
+	"$sf_opportunity_updated":                   "Opportunity Updated",
+	"$sf_campaign_member_created":               "Added to Campaign",
+	"$sf_campaign_member_updated":               "Interacted with Campaign",
+	"$sf_campaign_member_responded_to_campaign": "Responded to Campaign",
+	"$session":                        "Website Session",
+	"$form_submitted":                 "Form Button Click",
+	"$hubspot_company_created":        "Company Created",
+	"$hubspot_company_updated":        "Company Updated",
+	"$hubspot_deal_created":           "Deal Created",
+	"$hubspot_deal_updated":           "Deal Updated",
+	"$salesforce_account_updated":     "Salesforce Account Updated",
+	"$salesforce_opportunity_updated": "Salesforce Opportunity Updated",
+	"$salesforce_account_created":     "Salesforce Account Created",
+	"$salesforce_opportunity_created": "Salesforce Opportunity Created",
+	"$offline_touch_point":            "Offline Touchpoint",
+	"$leadsquared_lead_created":       "Lead Created",
+	"$leadsquared_lead_updated":       "Lead Updated",
 }
 
 var STANDARD_GROUP_DISPLAY_NAMES = map[string]string{
@@ -1267,52 +1276,54 @@ var STANDARD_GROUP_DISPLAY_NAMES = map[string]string{
 }
 
 var CRM_USER_EVENT_NAME_LABELS = map[string]string{
-	"$hubspot_contact_created":            "Hubspot Contacts",
-	"$hubspot_contact_updated":            "Hubspot Contacts",
-	"$hubspot_engagement_email":           "Hubspot Contacts",
-	"$hubspot_engagement_meeting_created": "Hubspot Contacts",
-	"$hubspot_engagement_meeting_updated": "Hubspot Contacts",
-	"$hubspot_engagement_call_created":    "Hubspot Contacts",
-	"$hubspot_engagement_call_updated":    "Hubspot Contacts",
-	"$marketo_lead_created":               "Marketo Person",
-	"$marketo_lead_updated":               "Marketo Person",
-	"$leadsquared_lead_created":           "LeadSquared Person",
-	"$leadsquared_lead_updated":           "LeadSquared Person",
-	"$sf_contact_created":                 "Salesforce Users",
-	"$sf_contact_updated":                 "Salesforce Users",
-	"$sf_lead_created":                    "Salesforce Users",
-	"$sf_lead_updated":                    "Salesforce Users",
-	"$sf_campaign_member_created":         "Salesforce Users",
-	"$sf_campaign_member_updated":         "Salesforce Users",
+	"$hubspot_contact_created":                  "Hubspot Contacts",
+	"$hubspot_contact_updated":                  "Hubspot Contacts",
+	"$hubspot_engagement_email":                 "Hubspot Contacts",
+	"$hubspot_engagement_meeting_created":       "Hubspot Contacts",
+	"$hubspot_engagement_meeting_updated":       "Hubspot Contacts",
+	"$hubspot_engagement_call_created":          "Hubspot Contacts",
+	"$hubspot_engagement_call_updated":          "Hubspot Contacts",
+	"$marketo_lead_created":                     "Marketo Person",
+	"$marketo_lead_updated":                     "Marketo Person",
+	"$leadsquared_lead_created":                 "LeadSquared Person",
+	"$leadsquared_lead_updated":                 "LeadSquared Person",
+	"$sf_contact_created":                       "Salesforce Users",
+	"$sf_contact_updated":                       "Salesforce Users",
+	"$sf_lead_created":                          "Salesforce Users",
+	"$sf_lead_updated":                          "Salesforce Users",
+	"$sf_campaign_member_created":               "Salesforce Users",
+	"$sf_campaign_member_updated":               "Salesforce Users",
+	"$sf_campaign_member_responded_to_campaign": "Salesforce Users",
 }
 
 var STANDARD_EVENTS_GROUP_NAMES = map[string]string{
-	"$hubspot_contact_created":            "Hubspot",
-	"$hubspot_contact_updated":            "Hubspot",
-	"$hubspot_deal_state_changed":         "Hubspot",
-	"$hubspot_company_created":            "Hubspot",
-	"$hubspot_company_updated":            "Hubspot",
-	"$hubspot_deal_created":               "Hubspot",
-	"$hubspot_deal_updated":               "Hubspot",
-	"$hubspot_form_submission":            "Hubspot",
-	"$sf_contact_created":                 "Salesforce",
-	"$sf_contact_updated":                 "Salesforce",
-	"$sf_lead_created":                    "Salesforce",
-	"$sf_lead_updated":                    "Salesforce",
-	"$sf_account_created":                 "Salesforce",
-	"$sf_account_updated":                 "Salesforce",
-	"$sf_opportunity_created":             "Salesforce",
-	"$sf_opportunity_updated":             "Salesforce",
-	"$sf_campaign_member_created":         "Salesforce",
-	"$sf_campaign_member_updated":         "Salesforce",
-	"$salesforce_account_updated":         "Salesforce",
-	"$salesforce_opportunity_updated":     "Salesforce",
-	"$salesforce_account_created":         "Salesforce",
-	"$salesforce_opportunity_created":     "Salesforce",
-	"$leadsquared_lead_created":           "LeadSquared",
-	"$leadsquared_lead_updated":           "LeadSquared",
-	"$leadsquared_sales_activity_created": "LeadSquared",
-	"$leadsquared_sales_activity_updated": "LeadSquared",
+	"$hubspot_contact_created":                  "Hubspot",
+	"$hubspot_contact_updated":                  "Hubspot",
+	"$hubspot_deal_state_changed":               "Hubspot",
+	"$hubspot_company_created":                  "Hubspot",
+	"$hubspot_company_updated":                  "Hubspot",
+	"$hubspot_deal_created":                     "Hubspot",
+	"$hubspot_deal_updated":                     "Hubspot",
+	"$hubspot_form_submission":                  "Hubspot",
+	"$sf_contact_created":                       "Salesforce",
+	"$sf_contact_updated":                       "Salesforce",
+	"$sf_lead_created":                          "Salesforce",
+	"$sf_lead_updated":                          "Salesforce",
+	"$sf_account_created":                       "Salesforce",
+	"$sf_account_updated":                       "Salesforce",
+	"$sf_opportunity_created":                   "Salesforce",
+	"$sf_opportunity_updated":                   "Salesforce",
+	"$sf_campaign_member_created":               "Salesforce",
+	"$sf_campaign_member_updated":               "Salesforce",
+	"$sf_campaign_member_responded_to_campaign": "Salesforce",
+	"$salesforce_account_updated":               "Salesforce",
+	"$salesforce_opportunity_updated":           "Salesforce",
+	"$salesforce_account_created":               "Salesforce",
+	"$salesforce_opportunity_created":           "Salesforce",
+	"$leadsquared_lead_created":                 "LeadSquared",
+	"$leadsquared_lead_updated":                 "LeadSquared",
+	"$leadsquared_sales_activity_created":       "LeadSquared",
+	"$leadsquared_sales_activity_updated":       "LeadSquared",
 }
 
 var STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES = map[string]string{

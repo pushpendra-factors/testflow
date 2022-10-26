@@ -2,6 +2,7 @@ import React from 'react';
 import cx from 'classnames';
 import moment from 'moment';
 import { SVG, Number as NumFormat, Text } from 'factorsComponents';
+import { get, keys, uniqBy } from 'lodash';
 import {
   SortData,
   formatCount,
@@ -16,20 +17,17 @@ import {
   DISPLAY_PROP
 } from '../../../utils/constants';
 import styles from './index.module.scss';
-import { keys, uniqBy } from 'lodash';
 import { ATTRIBUTION_GROUP_ANALYSIS_KEYS } from './attributionsResult.constants';
 import { EQUALITY_OPERATOR_KEYS } from '../../../components/DataTableFilters/dataTableFilters.constants';
 
-export const defaultSortProp = () => {
-  return [
-    {
-      order: 'descend',
-      key: 'Conversion',
-      type: 'numerical',
-      subtype: null
-    }
-  ];
-};
+export const defaultSortProp = () => [
+  {
+    order: 'descend',
+    key: 'Conversion',
+    type: 'numerical',
+    subtype: null
+  }
+];
 
 export const getDifferentCampaingns = (data) => {
   const { headers } = data.result;
@@ -107,9 +105,7 @@ export const getSingleTouchPointChartData = (
 
   const categories = slicedTableData.map((d) => {
     const cat = enabledDimensions.length
-      ? enabledDimensions.map((dimension) => {
-          return d[dimension.title];
-        })
+      ? enabledDimensions.map((dimension) => d[dimension.title])
       : [d[touchPoint]];
     return cat.join(', ');
   });
@@ -199,9 +195,7 @@ export const getDualTouchPointChartData = (
   );
   const result = slicedTableData.map((d) => {
     const name = enabledDimensions.length
-      ? enabledDimensions.map((dimension) => {
-          return d[dimension.title];
-        })
+      ? enabledDimensions.map((dimension) => d[dimension.title])
       : [d[touchpoint]];
     return {
       name: name.join(', '),
@@ -257,13 +251,11 @@ export const formatData = (
       (h) =>
         h === enabledDimensions[enabledDimensions.length - 1].responseHeader
     );
-    categories = rows.map((row) => {
-      return row.slice(firstDimensionIdx, lastDimensionIdx + 1).join(', ');
-    });
+    categories = rows.map((row) =>
+      row.slice(firstDimensionIdx, lastDimensionIdx + 1).join(', ')
+    );
   } else {
-    categories = rows.map((row) => {
-      return row[touchpointIdx];
-    });
+    categories = rows.map((row) => row[touchpointIdx]);
   }
   const conversionIdx = headers.findIndex((h) => h === `${event} - Users`);
   const costIdx = headers.findIndex((h) => h === 'Cost Per Conversion');
@@ -345,13 +337,11 @@ export const formatGroupedData = (
   const compareUsersIdx = headers.indexOf(compareStr);
   let rows = data.rows.filter((_, index) => visibleIndices.indexOf(index) > -1);
   rows = SortData(rows, userIdx, 'descend');
-  const chartData = rows.map((row) => {
-    return {
-      name: row[0],
-      [attribution_method]: row[userIdx],
-      [attribution_method_compare]: row[compareUsersIdx]
-    };
-  });
+  const chartData = rows.map((row) => ({
+    name: row[0],
+    [attribution_method]: row[userIdx],
+    [attribution_method_compare]: row[compareUsersIdx]
+  }));
   return chartData;
 };
 
@@ -411,7 +401,7 @@ const renderMetric = (d, comparison_data) => {
   } else if (changePercent === 'Infinity') {
     compareText = (
       <>
-        <SVG color="#5ACA89" name={'arrowLift'} size={16}></SVG>
+        <SVG color="#5ACA89" name="arrowLift" size={16} />
         <span>&#8734; %</span>
       </>
     );
@@ -422,7 +412,7 @@ const renderMetric = (d, comparison_data) => {
           color={changePercent > 0 ? '#5ACA89' : '#FF0000'}
           name={changePercent > 0 ? 'arrowLift' : 'arrowDown'}
           size={16}
-        ></SVG>
+        />
         <NumFormat number={Math.abs(changePercent)} />%
       </>
     );
@@ -466,54 +456,48 @@ export const getTableColumns = (
   }
   const { headers } = data;
 
-  const getEventColumnConfig = ({ title, key, method, hasBorder = false }) => {
-    return {
-      title: getClickableTitleSorter(
-        <div className="flex flex-col items-start justify-center">
-          <div>{title}</div>
-          {!!method && (
-            <div
-              className={cx('w-full text-right', styles.attributionMethodLabel)}
-            >
-              {ATTRIBUTION_METHODOLOGY.find((m) => m.value === method).text}
-            </div>
-          )}
-        </div>,
-        { key, type: 'numerical', subtype: null },
-        currentSorter,
-        handleSorting,
-        'right'
-      ),
-      className: cx('text-right', { 'border-none': !hasBorder }),
-      dataIndex: key,
-      width: 200,
-      render: (d) => {
-        return renderMetric(d, comparison_data);
-      }
-    };
-  };
+  const getEventColumnConfig = ({ title, key, method, hasBorder = false }) => ({
+    title: getClickableTitleSorter(
+      <div className="flex flex-col items-start justify-center">
+        <div>{title}</div>
+        {!!method && (
+          <div
+            className={cx('w-full text-right', styles.attributionMethodLabel)}
+          >
+            {ATTRIBUTION_METHODOLOGY.find((m) => m.value === method).text}
+          </div>
+        )}
+      </div>,
+      { key, type: 'numerical', subtype: null },
+      currentSorter,
+      handleSorting,
+      'right'
+    ),
+    className: cx('text-right', { 'border-none': !hasBorder }),
+    dataIndex: key,
+    width: 200,
+    render: (d) => renderMetric(d, comparison_data)
+  });
 
-  const getDimensionsColConfig = (d, index) => {
-    return {
-      title: getClickableTitleSorter(
-        d.title,
-        { key: d.title, type: 'categorical', subtype: null },
-        currentSorter,
-        handleSorting,
-        'left',
-        'end',
-        'pb-3'
-      ),
-      dataIndex: d.title,
-      fixed: !index ? 'left' : '',
-      width: comparison_data && !index ? 300 : 200,
-      className: cx({ [styles.touchPointCol]: comparison_data && !index }),
-      render: (d) =>
-        !index
-          ? firstColumn(d, durationObj, comparison_data ? cmprDuration : null)
-          : d
-    };
-  };
+  const getDimensionsColConfig = (d, index) => ({
+    title: getClickableTitleSorter(
+      d.title,
+      { key: d.title, type: 'categorical', subtype: null },
+      currentSorter,
+      handleSorting,
+      'left',
+      'end',
+      'pb-3'
+    ),
+    dataIndex: d.title,
+    fixed: !index ? 'left' : '',
+    width: comparison_data && !index ? 300 : 200,
+    className: cx({ [styles.touchPointCol]: comparison_data && !index }),
+    render: (d) =>
+      !index
+        ? firstColumn(d, durationObj, comparison_data ? cmprDuration : null)
+        : d
+  });
 
   const listDimensions =
     touchpoint === 'LandingPage' ? [...content_groups] : [...attr_dimensions];
@@ -549,25 +533,21 @@ export const getTableColumns = (
 
   const metricsColumns = metrics
     .filter((metric) => metric.enabled && !metric.isEventMetric)
-    .map((metric) => {
-      return {
-        title: getClickableTitleSorter(
-          metric.title,
-          { key: metric.title, type: 'numerical', subtype: null },
-          currentSorter,
-          handleSorting,
-          'right',
-          'end',
-          'pb-3'
-        ),
-        dataIndex: metric.title,
-        width: 180,
-        className: 'text-right',
-        render: (d) => {
-          return renderMetric(d, comparison_data);
-        }
-      };
-    });
+    .map((metric) => ({
+      title: getClickableTitleSorter(
+        metric.title,
+        { key: metric.title, type: 'numerical', subtype: null },
+        currentSorter,
+        handleSorting,
+        'right',
+        'end',
+        'pb-3'
+      ),
+      dataIndex: metric.title,
+      width: 180,
+      className: 'text-right',
+      render: (d) => renderMetric(d, comparison_data)
+    }));
 
   const showCPC = metrics.find(
     (elem) => elem.header === 'Cost Per Conversion'
@@ -612,7 +592,7 @@ export const getTableColumns = (
           return hd;
         })
         .map((hd) => {
-          let title = hd.split(' - ')[1];
+          const title = hd.split(' - ')[1];
           let attrMetod = attribution_method;
           // if (hd.search('UserConversionRate') >= 0) {
           //   title = title.replace('UserConversionRate', 'Conversion Rate');
@@ -730,7 +710,7 @@ export const getTableColumns = (
       const linkedEventsChildren = [
         getEventColumnConfig({
           title: 'Conversion',
-          key: 'Linked Event - ' + le.label + ' - Users',
+          key: `Linked Event - ${le.label} - Users`,
           hasBorder: conversionBorderCondition
         })
       ];
@@ -738,7 +718,7 @@ export const getTableColumns = (
         linkedEventsChildren.push(
           getEventColumnConfig({
             title: 'Cost Per Conversion',
-            key: 'Linked Event - ' + le.label + ' - CPC',
+            key: `Linked Event - ${le.label} - CPC`,
             hasBorder: costBorderCondition
           })
         );
@@ -779,19 +759,18 @@ export const getTableColumns = (
   return tableColumns;
 };
 
-export const calcChangePerc = (val1, val2) => {
-  return formatCount(((val1 - val2) / val2) * 100, 1);
-};
+export const calcChangePerc = (val1, val2) =>
+  formatCount(((val1 - val2) / val2) * 100, 1);
 
 export const getEquivalentIndicesMapper = (data, comparison_data) => {
   const { headers, rows } = data;
   const firstMetricIndex = headers.indexOf(FIRST_METRIC_IN_ATTR_RESPOSE);
-  const dataStrings = rows.map((row) => {
-    return row.slice(0, firstMetricIndex).join(ARR_JOINER);
-  });
-  const compareDataStrings = comparison_data.rows.map((row) => {
-    return row.slice(0, firstMetricIndex).join(ARR_JOINER);
-  });
+  const dataStrings = rows.map((row) =>
+    row.slice(0, firstMetricIndex).join(ARR_JOINER)
+  );
+  const compareDataStrings = comparison_data.rows.map((row) =>
+    row.slice(0, firstMetricIndex).join(ARR_JOINER)
+  );
   const equivalentIndicesMapper = {};
   dataStrings.forEach((string, index) => {
     const compareIndex = compareDataStrings.indexOf(string);
@@ -803,9 +782,7 @@ export const getEquivalentIndicesMapper = (data, comparison_data) => {
 const getHeaderIndexForMetric = (headers, metric) => {
   const result = metric.header
     .split(' OR ')
-    .map((ph) => {
-      return headers.indexOf(ph);
-    })
+    .map((ph) => headers.indexOf(ph))
     .filter((d) => d > -1);
   if (result.length) {
     return result[0];
@@ -876,15 +853,15 @@ const applyAdvancedFilters = (
     if (
       currentFilter.equalityOperator === EQUALITY_OPERATOR_KEYS.DOES_NOT_CONTAIN
     ) {
-      const doesExist = currentFilter.values.filter((value) => {
-        return fieldValue.toLowerCase().includes(value.toLowerCase());
-      });
+      const doesExist = currentFilter.values.filter((value) =>
+        fieldValue.toLowerCase().includes(value.toLowerCase())
+      );
       return doesExist.length === 0;
     }
     if (currentFilter.equalityOperator === EQUALITY_OPERATOR_KEYS.CONTAINS) {
-      const doesExist = currentFilter.values.filter((value) => {
-        return fieldValue.toLowerCase().includes(value.toLowerCase());
-      });
+      const doesExist = currentFilter.values.filter((value) =>
+        fieldValue.toLowerCase().includes(value.toLowerCase())
+      );
       return doesExist.length > 0;
     }
     if (
@@ -899,9 +876,7 @@ const applyAdvancedFilters = (
   if (filters.categoryCombinationOperator === 'OR') {
     filteredResults = uniqBy(
       [...filteredResults, ...currentFilterResults],
-      (e) => {
-        return e.index;
-      }
+      (e) => e.index
     );
   }
 
@@ -1099,9 +1074,8 @@ export const getTableData = (
           row[dimension.title]?.toLowerCase().includes(searchText.toLowerCase())
         );
         return filteredRows.length > 0;
-      } else {
-        return row[touchpoint].toLowerCase().includes(searchText.toLowerCase());
       }
+      return row[touchpoint].toLowerCase().includes(searchText.toLowerCase());
     });
   const filteredResults = applyAdvancedFilters(result, appliedFilters);
   return SortResults(filteredResults, currentSorter);
@@ -1177,12 +1151,10 @@ export const getAxisMetricOptions = (
 ) => {
   const result = getResultantMetrics(selectedTouchPoint, ATTRIBUTION_METRICS)
     .filter((metric) => !metric.isEventMetric)
-    .map((metric) => {
-      return {
-        title: metric.title,
-        value: metric.title
-      };
-    });
+    .map((metric) => ({
+      title: metric.title,
+      value: metric.title
+    }));
 
   result.push({
     title: attribution_method_compare
@@ -1243,7 +1215,7 @@ export const getAxisMetricOptions = (
     // });
   }
 
-  linkedEvents.map((le) => {
+  linkedEvents.forEach((le) => {
     result.push({
       title: `Conversion - ${eventNames[le.label] || le.label}`,
       value: `Linked Event - ${le.label} - Users`
@@ -1267,14 +1239,13 @@ export const listAttributionDimensions = (
   touchpoint,
   attr_dimensions,
   content_groups
-) => {
-  return touchpoint === 'LandingPage'
+) =>
+  touchpoint === 'LandingPage'
     ? content_groups.slice()
     : attr_dimensions.slice();
-};
 
-export const getResultantMetrics = (touchpoint, attribution_metrics) => {
-  return touchpoint === 'LandingPage'
+export const getResultantMetrics = (touchpoint, attribution_metrics) =>
+  touchpoint === 'LandingPage'
     ? attribution_metrics.filter(
         (metrics) =>
           metrics.header.includes('Sessions') ||
@@ -1284,79 +1255,106 @@ export const getResultantMetrics = (touchpoint, attribution_metrics) => {
           metrics.header.includes('ALL CR')
       )
     : attribution_metrics;
-};
 
 function onlyUnique(value, index, self) {
   return self.indexOf(value) === index;
 }
 
 export const getTableFilterOptions = ({
-  content_groups,
-  attr_dimensions,
+  contentGroups,
+  attrDimensions,
   touchpoint,
   tableData,
-  attributionMetrics
+  attributionMetrics,
+  columns
 }) => {
   const metrics = getResultantMetrics(touchpoint, attributionMetrics);
   const metricFilters = metrics
     .filter((m) => !m.isEventMetric && m.enabled)
-    .map((m) => {
-      return {
-        title: m.title,
-        key: m.title,
+    .map((m) => ({
+      title: m.title,
+      key: m.title,
+      options: [],
+      valueType: m.valueType
+    }));
+
+  const eventColumns = columns.filter((col) => col.children != null);
+  const eventBasedMetrics = [];
+  eventColumns.forEach((col) => {
+    col.children.forEach((child) => {
+      eventBasedMetrics.push({
+        title: child.dataIndex,
+        key: child.dataIndex,
         options: [],
-        valueType: m.valueType
-      };
+        valueType: 'numerical',
+        isEventMetric: true
+      });
     });
-
-  // const eventBasedMetrics = [
-  //   {
-  //     title: 'Conversion',
-  //     key: 'Conversion',
-  //     options: [],
-  //     valueType: 'numerical'
-  //   }
-  // ];
-
-  // const isCostPerConversionEnabled = attributionMetrics.find(
-  //   (m) => m.header === 'Cost Per Conversion'
-  // ).enabled;
-
-  // if (isCostPerConversionEnabled && touchpoint !== 'LandingPage') {
-  //   eventBasedMetrics.push({
-  //     title: 'Cost Per Conversion',
-  //     key: 'Cost Per Conversion',
-  //     options: [],
-  //     valueType: 'numerical'
-  //   });
-  // }
+  });
 
   const listDimensions =
-    touchpoint === 'LandingPage' ? [...content_groups] : [...attr_dimensions];
+    touchpoint === 'LandingPage' ? [...contentGroups] : [...attrDimensions];
 
   const enabledDimensions = listDimensions.filter(
     (d) => d.touchPoint === touchpoint && d.enabled
   );
 
   if (enabledDimensions.length) {
-    const availableFilters = enabledDimensions.map((d) => {
-      return {
-        title: d.title,
-        key: d.title,
-        options: tableData.map((data) => data[d.title]).filter(onlyUnique)
-      };
-    });
-    // return [...availableFilters, ...metricFilters, ...eventBasedMetrics];
-    return [...availableFilters, ...metricFilters];
-  } else {
-    const availableFilters = [
-      {
-        title: touchpoint === 'ChannelGroup' ? 'Channel' : touchpoint,
-        key: touchpoint,
-        options: tableData.map((data) => data[touchpoint]).filter(onlyUnique)
-      }
-    ];
-    // return [...availableFilters, ...metricFilters, ...eventBasedMetrics];
-    return [...availableFilters, ...metricFilters];
+    const availableFilters = enabledDimensions.map((d) => ({
+      title: d.title,
+      key: d.title,
+      options: tableData.map((data) => data[d.title]).filter(onlyUnique)
+    }));
+    return [...availableFilters, ...metricFilters, ...eventBasedMetrics];
+    // return [...availableFilters, ...metricFilters];
   }
+  const availableFilters = [
+    {
+      title: touchpoint === 'ChannelGroup' ? 'Channel' : touchpoint,
+      key: touchpoint,
+      options: tableData.map((data) => data[touchpoint]).filter(onlyUnique)
+    }
+  ];
+  return [...availableFilters, ...metricFilters, ...eventBasedMetrics];
+  // return [...availableFilters, ...metricFilters];
+};
+
+export const shouldFiltersUpdate = ({
+  touchpoint,
+  attributionMetrics,
+  filters,
+  columns
+}) => {
+  if (!filters.length) {
+    return true;
+  }
+
+  const eventColumnsLength = columns.reduce(
+    (prev, col) => prev + get(col, 'children', []).length,
+    0
+  );
+
+  const eventColumnsInFilter = filters.filter((f) => f.isEventMetric);
+
+  if (eventColumnsLength !== eventColumnsInFilter.length) {
+    return true;
+  }
+
+  const metricsNotPresentInFilters =
+    touchpoint !== 'LandingPage'
+      ? attributionMetrics
+          .filter((m) => m.enabled && !m.isEventMetric)
+          .filter((m) => filters.findIndex((f) => f.key === m.title) === -1)
+      : [];
+  const metricsNotEnabledButPresentInFilters =
+    touchpoint !== 'LandingPage'
+      ? attributionMetrics
+          .filter((m) => !m.enabled && !m.isEventMetric)
+          .filter((m) => filters.findIndex((f) => f.key === m.title) > -1)
+      : [];
+
+  return (
+    metricsNotPresentInFilters.length > 0 ||
+    metricsNotEnabledButPresentInFilters.length > 0
+  );
 };

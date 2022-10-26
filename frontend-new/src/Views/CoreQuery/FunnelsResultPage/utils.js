@@ -15,13 +15,12 @@ import {
   SVG
 } from '../../../components/factorsComponents';
 import styles from './index.module.scss';
-import { parseForDateTimeLabel } from '../EventsAnalytics/SingleEventSingleBreakdown/utils';
+import { parseForDateTimeLabel , getBreakdownDisplayName } from '../EventsAnalytics/eventsAnalytics.helpers';
 import {
   GROUPED_MAX_ALLOWED_VISIBLE_PROPERTIES,
   DISPLAY_PROP
 } from '../../../utils/constants';
 import NonClickableTableHeader from '../../../components/NonClickableTableHeader';
-import { getBreakdownDisplayName } from '../EventsAnalytics/eventsAnalytics.helpers';
 
 const windowSize = {
   w: window.outerWidth,
@@ -38,14 +37,14 @@ export const getVisibleData = (data, sorter) => {
   return result;
 };
 
-const NoBreakdownUsersColumn = (d, breakdown, isComparisonApplied) => {
+function NoBreakdownUsersColumn(d, breakdown, isComparisonApplied) {
   if (breakdown.length) {
     if (d.includes('$no_group')) {
       return 'Overall';
-    } else {
+    } 
       return d;
-    }
-  } else {
+    
+  } 
     if (isComparisonApplied) {
       return (
         <div className="flex items-center">
@@ -82,11 +81,11 @@ const NoBreakdownUsersColumn = (d, breakdown, isComparisonApplied) => {
           </div>
         </div>
       );
-    } else {
+    } 
       return d;
-    }
-  }
-};
+    
+  
+}
 
 export const grnByIndex = (headersSlice, breakdowns) => {
   const grns = [];
@@ -126,13 +125,11 @@ export const formatData = (response, arrayMapper) => {
 
   const grns = grnByIndex(headers.slice(0, firstEventIdx), breakdowns);
 
-  const eventsData = arrayMapper.map((am, index) => {
-    return {
+  const eventsData = arrayMapper.map((am, index) => ({
       index: index + 1,
       name: am.mapper,
       data: {}
-    };
-  });
+    }));
 
   const result = rows.map((row, index) => {
     const breakdownData = {};
@@ -204,8 +201,7 @@ export const formatData = (response, arrayMapper) => {
   };
 };
 
-const compareSkeleton = (val1, val2) => {
-  return (
+const compareSkeleton = (val1, val2) => (
     <div className="flex flex-col">
       <Text
         type="title"
@@ -220,22 +216,21 @@ const compareSkeleton = (val1, val2) => {
       </Text>
     </div>
   );
-};
 
 const RenderTotalConversion = (d, breakdown, isComparisonApplied) => {
   if (breakdown.length || !isComparisonApplied) {
-    return d + '%';
-  } else {
-    return compareSkeleton(d.conversion + '%', d.comparsion_conversion + '%');
-  }
+    return `${d  }%`;
+  } 
+    return compareSkeleton(`${d.conversion  }%`, `${d.comparsion_conversion  }%`);
+  
 };
 
 const RenderConversionTime = (d, breakdown, isComparisonApplied) => {
   if (breakdown.length || !isComparisonApplied) {
     return d;
-  } else {
+  } 
     return compareSkeleton(d.overallDuration, d.comparisonOverallDuration);
-  }
+  
 };
 
 export const getBreakdownTitle = (breakdown, userPropNames, eventPropNames) => {
@@ -279,8 +274,7 @@ export const getTableColumns = (
   const isBreakdownApplied = unsortedBreakdown.length > 0;
   const breakdown = SortData(unsortedBreakdown, 'eni', 'ascend');
 
-  const getBreakdownColConfig = (e, index) => {
-    return {
+  const getBreakdownColConfig = (e, index) => ({
       title: getClickableTitleSorter(
         getBreakdownTitle(e, userPropNames, eventPropNames),
         {
@@ -297,26 +291,21 @@ export const getTableColumns = (
       dataIndex: `${e.pr} - ${e.eni}`,
       width: 200,
       fixed: !index ? 'left' : ''
-    };
-  };
+    });
 
   const eventBreakdownColumns = isBreakdownApplied
     ? breakdown
         .filter((e) => e.eni)
-        .map((e, index) => {
-          return getBreakdownColConfig(e, index);
-        })
+        .map((e, index) => getBreakdownColConfig(e, index))
     : [];
 
   const globalBreakdownColumns = isBreakdownApplied
     ? breakdown
         .filter((e) => !e.eni)
-        .map((e, index) => {
-          return {
+        .map((e, index) => ({
             ...getBreakdownColConfig(e),
             fixed: !index && !eventBreakdownColumns.length ? 'left' : ''
-          };
-        })
+          }))
     : [];
 
   const UserCol = !isBreakdownApplied
@@ -422,15 +411,13 @@ export const getTableColumns = (
           title={<SVG name="percentconversion" />}
         />
       ),
-      render: (d) => {
-        return isBreakdownApplied || !isComparisonApplied ? (
+      render: (d) => isBreakdownApplied || !isComparisonApplied ? (
           <>
             <NumFormat number={d} />%
           </>
         ) : (
-          compareSkeleton(d.percent + '%', d.compare_percent + '%')
-        );
-      }
+          compareSkeleton(`${d.percent  }%`, `${d.compare_percent  }%`)
+        )
     };
     const countCol = {
       width: 100,
@@ -461,16 +448,14 @@ export const getTableColumns = (
           title={<SVG name="countconversion" />}
         />
       ),
-      render: (d) => {
-        return isBreakdownApplied || !isComparisonApplied ? (
-          <NumFormat shortHand={true} number={d} />
+      render: (d) => isBreakdownApplied || !isComparisonApplied ? (
+          <NumFormat shortHand number={d} />
         ) : (
           compareSkeleton(
-            <NumFormat shortHand={true} number={d.count} />,
-            <NumFormat shortHand={true} number={d.compare_count} />
+            <NumFormat shortHand number={d.count} />,
+            <NumFormat shortHand number={d.compare_count} />
           )
-        );
-      }
+        )
     };
     const timeCol = [];
     if (index > 0) {
@@ -501,11 +486,9 @@ export const getTableColumns = (
             title={<SVG name="timeconversion" />}
           />
         ),
-        render: (d) => {
-          return isBreakdownApplied || !isComparisonApplied
+        render: (d) => isBreakdownApplied || !isComparisonApplied
             ? d
-            : compareSkeleton(d.time, d.compare_time);
-        }
+            : compareSkeleton(d.time, d.compare_time)
       });
     }
     queryColumn.children = [percentCol, ...timeCol, countCol];
@@ -607,7 +590,7 @@ export const getTableData = (
         ...queryData
       }
     ];
-  } else {
+  } 
     const appliedGroups = groups.map((group) => {
       const eventPercentages = arrayMapper.reduce(
         (agg, currentItem, currentIndex) => {
@@ -635,7 +618,7 @@ export const getTableData = (
     );
 
     return SortResults(filteredGroups, currentSorter);
-  }
+  
 };
 
 export const generateUngroupedChartsData = (response, arrayMapper) => {

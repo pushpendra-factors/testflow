@@ -1,14 +1,14 @@
 import { get, getHostUrl, post } from '../../utils/request';
 
-var host = getHostUrl();
-host = host[host.length - 1] === '/' ? host : host + '/';
+let host = getHostUrl();
+host = host[host.length - 1] === '/' ? host : `${host}/`;
 
 const initialState = {
   contacts: [],
   contactDetails: { isLoading: false, data: {} },
   accounts: { isLoading: false, data: [] },
   accountDetails: { isLoading: false, data: {} },
-  error: false,
+  error: false
 };
 
 export default function (state = initialState, action) {
@@ -22,7 +22,7 @@ export default function (state = initialState, action) {
     case 'FETCH_PROFILE_USER_DETAILS_FULFILLED':
       return {
         ...state,
-        contactDetails: { isLoading: false, data: action.payload },
+        contactDetails: { isLoading: false, data: action.payload }
       };
     case 'FETCH_PROFILE_USER_DETAILS_FAILED':
       return { ...initialState, error: true };
@@ -37,7 +37,7 @@ export default function (state = initialState, action) {
     case 'FETCH_PROFILE_ACCOUNT_DETAILS_FULFILLED':
       return {
         ...state,
-        accountDetails: { isLoading: false, data: action.payload },
+        accountDetails: { isLoading: false, data: action.payload }
       };
     case 'FETCH_PROFILE_ACCOUNT_DETAILS_FAILED':
       return { ...initialState, error: true };
@@ -46,64 +46,42 @@ export default function (state = initialState, action) {
   }
 }
 
-export const fetchProfileUsers = (projectId, reqBody) => {
-  return async (dispatch) => {
-    try {
-      const url = host + 'projects/' + projectId + '/v1/profiles/users';
-      const response = await post(null, url, reqBody);
-      dispatch({
-        type: 'FETCH_PROFILE_USERS_FULFILLED',
-        payload: response.data,
-      });
-    } catch (err) {
-      console.log(err);
-      dispatch({ type: 'FETCH_PROFILE_USERS_FAILED' });
-    }
-  };
+export const fetchProfileUsers = (projectId, reqBody) => async (dispatch) => {
+  try {
+    const url = `${host}projects/${projectId}/v1/profiles/users`;
+    const response = await post(null, url, reqBody);
+    dispatch({
+      type: 'FETCH_PROFILE_USERS_FULFILLED',
+      payload: response.data
+    });
+  } catch (err) {
+    console.log(err);
+    dispatch({ type: 'FETCH_PROFILE_USERS_FAILED' });
+  }
 };
 
-export const fetchProfileUserDetails = (projectId, id, isAnonymous) => {
-  return async (dispatch) => {
+export const fetchProfileUserDetails =
+  (projectId, id, isAnonymous) => async (dispatch) => {
     try {
       dispatch({ type: 'FETCH_PROFILE_USER_DETAILS_LOADING' });
-      const url =
-        host +
-        'projects/' +
-        projectId +
-        '/v1/profiles/users/' +
-        id +
-        '?is_anonymous=' +
-        isAnonymous;
+      const url = `${host}projects/${projectId}/v1/profiles/users/${id}?is_anonymous=${isAnonymous}`;
       const response = await get(null, url);
       dispatch({
         type: 'FETCH_PROFILE_USER_DETAILS_FULFILLED',
-        payload: response.data,
+        payload: response.data
       });
     } catch (err) {
       console.log(err);
       dispatch({ type: 'FETCH_PROFILE_USER_DETAILS_FAILED' });
     }
   };
-};
 
 export const fetchProfileAccounts = (projectId, reqBody) => {
-  return async (dispatch) => {
-    try {
-      dispatch({ type: 'FETCH_PROFILE_ACCOUNTS_LOADING' });
-      const url = host + 'projects/' + projectId + '/v1/profiles/accounts';
-      const response = await post(null, url, reqBody);
-      dispatch({
-        type: 'FETCH_PROFILE_ACCOUNTS_FULFILLED',
-        payload: response.data,
-      });
-    } catch (err) {
-      console.log(err);
-      dispatch({ type: 'FETCH_PROFILE_ACCOUNTS_FAILED' });
-    }
-  };
+  const url = `${host}projects/${projectId}/v1/profiles/accounts`;
+  return post(null, url, reqBody);
 };
 
 export const fetchProfileAccountDetails = (projectId, id) => {
-  const url = host + 'projects/' + projectId + '/v1/profiles/accounts/' + id;
+  const url = `${host}projects/${projectId}/v1/profiles/accounts/${id}`;
   return get(null, url);
 };

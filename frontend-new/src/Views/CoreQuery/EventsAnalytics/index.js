@@ -61,7 +61,7 @@ function EventsAnalytics({
             title={title}
             durationObj={durationObj}
             section={section}
-            ref={renderedCompRef}
+            renderedCompRef={renderedCompRef}
           />
         );
       }
@@ -111,7 +111,7 @@ function EventsAnalytics({
     );
   }
 
-  return <>{content}</>;
+  return content;
 }
 
 export default EventsAnalytics;

@@ -15,7 +15,7 @@ google-ads==16.0.0
 googleads
 idna==2.10
 isodate==0.6.0
-lxml==4.6.5
+lxml==4.9.1
 oauthlib==3.1.0
 packaging==20.9
 pyasn1==0.4.8

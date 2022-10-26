@@ -157,7 +157,19 @@ const columns = [
     render: (created_by_user) => {
       return (
         <div className="flex items-center">
-          <Avatar src={ (!!(created_by_user?.image)) ? (created_by_user?.image) : ('assets/avatar/avatar.png') } size={24} className={'mr-2'} />
+          <Avatar 
+             src={ 
+                 typeof(created_by_user?.email) === 'string'  && created_by_user?.email?.length != 0 && (created_by_user.email.split('@')[1] == 'factors.ai') ?
+                   'https://s3.amazonaws.com/www.factors.ai/assets/img/product/factors-icon.svg'
+                   :
+                     (!!(created_by_user?.image)) ? 
+                       (created_by_user?.image) 
+                         : 
+                       ('assets/avatar/avatar.png') 
+               } 
+             size={24} 
+             className={'mr-2'} 
+           />
           &nbsp; {created_by_user?.text}
         </div>
       )
@@ -261,7 +273,7 @@ function CoreQuery({
       id_text: q.id_text,
       type: <SVG name={svgName} size={24} />,
       title: q.title,
-      author: {image:activeProjectProfilePicture, text:q.created_by_name},
+      author: {image:activeProjectProfilePicture, text:q.created_by_name, email:q.created_by_email},
       settings: q.settings,
       date: (
         <div className="flex justify-between items-center">

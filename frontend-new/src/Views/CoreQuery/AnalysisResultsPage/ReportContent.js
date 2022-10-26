@@ -1,6 +1,4 @@
-import React, {
-  useState, useEffect, useMemo, useContext
-} from 'react';
+import React, { useState, useEffect, useMemo, useContext } from 'react';
 import { useSelector } from 'react-redux';
 import { Spin } from 'antd';
 import get from 'lodash/get';
@@ -63,7 +61,7 @@ function ReportContent({
   let queryDetail = null;
   let durationObj = {};
   let groupAnalysis = '';
-  let metricsDropdown = <div className="mr-0"></div>;
+  let metricsDropdown = <div className="mr-0" />;
 
   const {
     coreQueryState: { chartTypes }
@@ -71,21 +69,23 @@ function ReportContent({
 
   const { attrQueries } = useSelector((state) => state.coreQuery);
 
-  const chartType = useMemo(() => {
-    return getChartType({
+  const chartType = useMemo(
+    () =>
+      getChartType({
+        breakdown,
+        chartTypes,
+        queryType,
+        campaignGroupBy: campaignState.group_by,
+        attributionModels: attributionsState.models
+      }),
+    [
       breakdown,
+      campaignState.group_by,
       chartTypes,
       queryType,
-      campaignGroupBy: campaignState.group_by,
-      attributionModels: attributionsState.models
-    });
-  }, [
-    breakdown,
-    campaignState.group_by,
-    chartTypes,
-    queryType,
-    attributionsState.models
-  ]);
+      attributionsState.models
+    ]
+  );
 
   const [currMetricsValue, setCurrMetricsValue] = useState(0);
   const [chartTypeMenuItems, setChartTypeMenuItems] = useState([]);
@@ -120,7 +120,7 @@ function ReportContent({
   if (resultState.loading) {
     content = (
       <div className="h-64 flex items-center justify-center w-full">
-        <Spin size={'large'} />
+        <Spin size="large" />
       </div>
     );
   }
@@ -151,20 +151,12 @@ function ReportContent({
 
   if (queryType === QUERY_TYPE_FUNNEL || queryType === QUERY_TYPE_EVENT) {
     durationObj = queryOptions.date_range;
-    queryDetail = arrayMapper
-      .map((elem) => {
-        return elem.eventName;
-      })
-      .join(', ');
+    queryDetail = arrayMapper.map((elem) => elem.eventName).join(', ');
   }
 
   if (queryType === QUERY_TYPE_KPI) {
     durationObj = queryOptions.date_range;
-    queryDetail = arrayMapper
-      .map((elem) => {
-        return elem.eventName;
-      })
-      .join(', ');
+    queryDetail = arrayMapper.map((elem) => elem.eventName).join(', ');
   }
 
   if (queryType === QUERY_TYPE_ATTRIBUTION) {
@@ -256,7 +248,7 @@ function ReportContent({
         <WebsiteAnalyticsTable
           tableData={resultState.data}
           section={section}
-          isWidgetModal={true}
+          isWidgetModal
         />
       );
     }

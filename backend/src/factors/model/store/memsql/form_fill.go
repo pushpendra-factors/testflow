@@ -109,3 +109,39 @@ func (store *MemSQL) GetFormFillEventById(projectId int64, formId string, fieldI
 
 	return &event, http.StatusFound
 }
+
+func (store *MemSQL) GetFormFillEventsUpdatedBeforeTenMinutes(projectIds []int64) ([]model.FormFill, error) {
+	logFields := log.Fields{
+		"project_ids": projectIds,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+
+	db := C.GetServices().Db
+	var result []model.FormFill
+	var updatedTime = U.TimeNowZ().Add(-time.Minute * 10)
+	err := db.Table("form_fills").Where("project_id IN (?) AND updated_at < ?", projectIds, updatedTime).Find(&result).Error
+	if err != nil {
+		logCtx.WithFields(log.Fields{"project_ids": projectIds}).WithError(err).Error("fetching enabled project_id failed")
+		return result, err
+	}
+	return result, nil
+}
+
+func (store *MemSQL) DeleteFormFillProcessedRecords(projectId int64, formId string, fieldId string) (int, error) {
+	logFields := log.Fields{
+		"project_id": projectId,
+		"form_id":    formId,
+		"field_id":   fieldId,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+
+	db := C.GetServices().Db
+	err := db.Table("form_fills").Where("project_id = ? AND form_id = ? AND field_id = ?", projectId, formId, fieldId).Delete(&model.FormFill{}).Error
+	if err != nil {
+		logCtx.WithFields(log.Fields{"project_id": projectId, "form_id": formId, "field_id": fieldId}).WithError(err).Error("Deleting record failed")
+		return http.StatusBadRequest, err
+	}
+	return http.StatusAccepted, nil
+}

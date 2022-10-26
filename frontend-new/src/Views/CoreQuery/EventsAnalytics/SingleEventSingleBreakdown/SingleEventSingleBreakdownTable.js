@@ -36,7 +36,8 @@ function SingleEventSingleBreakdownTable({
   dateSorter,
   handleDateSorting,
   visibleSeriesData,
-  setVisibleSeriesData
+  setVisibleSeriesData,
+  comparisonApplied
 }) {
   const [searchText, setSearchText] = useState('');
   const { eventNames, userPropNames, eventPropNames } = useSelector(
@@ -53,23 +54,24 @@ function SingleEventSingleBreakdownTable({
     return {
       fileName: `${reportTitle}.csv`,
       data: activeTableData.map(
-        ({
-          index, label, value, name, marker, data, ...rest
-        }) => {
+        ({ index, label, value, name, marker, ...rest }) => {
           const result = {};
-          for (const key in rest) {
+          Object.keys(rest).forEach((key) => {
+            if (key === 'data') {
+              return;
+            }
             if (key === EVENT_COUNT_KEY) {
               result[getEventDisplayName({ eventNames, event: events[0] })] =
                 rest[EVENT_COUNT_KEY];
-              continue;
+              return;
             }
             if (key === events[0]) {
               result[getEventDisplayName({ eventNames, event: events[0] })] =
                 rest[events[0]];
-              continue;
+              return;
             }
             result[key] = rest[key];
-          }
+          });
           return result;
         }
       )
@@ -139,9 +141,7 @@ function SingleEventSingleBreakdownTable({
     );
   }, [seriesData, searchText, dateSorter]);
 
-  const selectedRowKeys = useCallback((rows) => {
-    return rows.map((vp) => vp.index);
-  }, []);
+  const selectedRowKeys = useCallback((rows) => rows.map((vp) => vp.index), []);
 
   const onSelectionChange = useCallback(
     (_, selectedRows) => {
@@ -156,6 +156,7 @@ function SingleEventSingleBreakdownTable({
         return obj;
       });
       setVisibleProperties(newVisibleProperties);
+      return null;
     },
     [setVisibleProperties, data]
   );
@@ -173,6 +174,7 @@ function SingleEventSingleBreakdownTable({
         return obj;
       });
       setVisibleSeriesData(newVisibleSeriesData);
+      return null;
     },
     [setVisibleSeriesData, seriesData]
   );

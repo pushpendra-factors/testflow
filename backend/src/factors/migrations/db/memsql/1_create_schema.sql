@@ -401,6 +401,7 @@ CREATE TABLE IF NOT EXISTS project_settings (
     auto_track_spa_page_view boolean NOT NULL DEFAULT FALSE,
     auto_form_capture boolean NOT NULL DEFAULT FALSE,
     auto_click_capture boolean NOT NULL DEFAULT FALSE,
+    auto_capture_form_fills boolean NOT NULL DEFAULT FALSE,
     exclude_bot boolean NOT NULL DEFAULT FALSE,
     int_segment boolean NOT NULL DEFAULT FALSE,
     int_adwords_enabled_agent_uuid text,
@@ -440,6 +441,7 @@ CREATE TABLE IF NOT EXISTS project_settings (
     lead_squared_config json,
     is_weekly_insights_enabled boolean,
     is_explain_enabled boolean,
+    timelines_config json,
     KEY (updated_at),
     SHARD KEY (project_id),
     PRIMARY KEY (project_id)
