@@ -7,7 +7,7 @@ import Highcharts from 'highcharts';
 
 import { get, has } from 'lodash';
 import { Text, Number as NumFormat } from '../factorsComponents';
-import { high_charts_default_spacing as highChartsDefaultSpacing } from '../../utils/constants';
+import { high_charts_default_spacing as highChartsDefaultSpacing,FONT_FAMILY } from '../../utils/constants';
 import TopLegends from '../GroupedBarChart/TopLegends';
 import { addQforQuarter, generateColors } from '../../utils/dataFormatter';
 import { getDateFormatForTimeSeriesChart } from '../../utils/chart.helpers';
@@ -46,7 +46,7 @@ function LineChart({
         height,
         spacing: cardSize !== 1 ? highChartsDefaultSpacing : spacing,
         style: {
-          fontFamily: "'Work Sans', sans-serif"
+          fontFamily: FONT_FAMILY
         }
       },
       legend: {

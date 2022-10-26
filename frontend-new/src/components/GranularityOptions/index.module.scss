@@ -1,4 +1,4 @@
-$fontFamily: 'Work Sans', sans-serif;
+@import '../../styles/abstracts/variables';
 
 .dropdownMenu {
   padding-top: 0.75rem !important;
@@ -8,7 +8,7 @@ $fontFamily: 'Work Sans', sans-serif;
 }
 
 .dropdownMenuItem {
-  font-family: $fontFamily;
+  font-family: $font-family;
   font-weight: normal;
   font-size: 14px;
   line-height: 20px;

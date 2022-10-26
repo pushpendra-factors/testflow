@@ -1,9 +1,11 @@
+@import '../../styles/abstracts/variables';
+
 .header {
     height: 40px;
     width: 100%;
     padding: 12px;
     background-color: #F5F6F8;
-    font-family: 'Inter';
+    font-family: $font-family;
     font-style: normal;
     font-weight: 500;
     font-size: 14px;

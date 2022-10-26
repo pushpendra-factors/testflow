@@ -1,3 +1,4 @@
+@import '../abstracts/variables';
 /*!
  * 
  * antd v4.5.4
@@ -46,7 +47,7 @@ input::-ms-reveal {
           box-sizing: border-box;
 }
 html {
-  font-family: sans-serif;
+  font-family: $font-family;
   line-height: 1.15;
   -webkit-text-size-adjust: 100%;
   -ms-text-size-adjust: 100%;
@@ -60,7 +61,7 @@ body {
   margin: 0;
   color: rgba(0, 0, 0, 0.65);
   font-size: 14px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+  font-family: $font-family;
   font-variant: tabular-nums;
   line-height: 1.5715;
   background-color: #fff;
@@ -190,7 +191,7 @@ code,
 kbd,
 samp {
   font-size: 1em;
-  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+  font-family: $font-family;
 }
 pre {
   margin-top: 0;
@@ -2657,7 +2658,7 @@ html {
 }
 .ant-select-multiple .ant-select-selection-search-input,
 .ant-select-multiple .ant-select-selection-search-mirror {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+  font-family: $font-family;
   line-height: 1.5715;
   -webkit-transition: all 0.3s;
   transition: all 0.3s;
@@ -19569,7 +19570,7 @@ display: inline-block;
   margin-right: 4px;
   color: #ff4d4f;
   font-size: 14px;
-  font-family: SimSun, sans-serif;
+  font-family: $font-family;
   line-height: 1;
   content: '*';
 }
@@ -20943,7 +20944,7 @@ textarea.ant-input-number {
   min-width: 32px;
   height: 32px;
   margin-right: 8px;
-  font-family: Arial;
+  font-family: $font-family;
   line-height: 30px;
   text-align: center;
   vertical-align: middle;
@@ -21061,7 +21062,7 @@ textarea.ant-input-number {
   min-width: 32px;
   height: 32px;
   color: rgba(0, 0, 0, 0.65);
-  font-family: Arial;
+  font-family: $font-family;
   line-height: 32px;
   text-align: center;
   vertical-align: middle;
@@ -23491,7 +23492,7 @@ textarea.ant-mentions {
 .ant-statistic-content {
   color: rgba(0, 0, 0, 0.85);
   font-size: 24px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+  font-family: $font-family;
 }
 .ant-statistic-content-value {
   display: inline-block;
@@ -23577,7 +23578,7 @@ textarea.ant-mentions {
   height: 32px;
   margin: 0 8px 0 0;
   font-size: 16px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+  font-family: $font-family;
   line-height: 32px;
   text-align: center;
   border: 1px solid rgba(0, 0, 0, 0.25);

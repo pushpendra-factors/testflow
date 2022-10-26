@@ -1,3 +1,5 @@
+@import '../../../styles/abstracts/variables';
+
 .tabContent {
     max-height: 400px;
 }
@@ -35,7 +37,7 @@
 
     input {
         font-size: 14px;
-        font-family: 'Work Sans', sans-serif;
+        font-family: $font-family;
         color: #0E2647;
         font-weight: 400;
     }

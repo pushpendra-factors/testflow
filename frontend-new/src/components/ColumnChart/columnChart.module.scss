@@ -1,4 +1,5 @@
 @import '~highcharts/css/highcharts';
+@import '../../styles/abstracts/variables';
 
 .columnChart {
   .infoText {
@@ -21,7 +22,7 @@
     line-height: 18px !important;
     font-weight: 400 !important;
     color: #3e516c !important;
-    font-family: 'Work Sans', sans-serif;
+    font-family: $font-family;
   }
 
   :global(.highcharts-tooltip) {
