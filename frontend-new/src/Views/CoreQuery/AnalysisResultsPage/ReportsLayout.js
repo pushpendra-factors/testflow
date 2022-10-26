@@ -56,6 +56,8 @@ function ReportsLayout({
   composerFunctions,
   updateChartTypes,
   dateFromTo,
+  getCurrentSorter,
+  renderedCompRef,
   ...rest
 }) {
   const dispatch = useDispatch();
@@ -89,8 +91,6 @@ function ReportsLayout({
     setProfileQueries
   } = useContext(CoreQueryContext);
 
-  const renderedCompRef = useRef(null);
-
   const [activeTab, setActiveTab] = useState(1);
 
   const [queryOpen, setQueryOpen] = useState(true);
@@ -99,13 +99,6 @@ function ReportsLayout({
     setShowResult(false);
     setNavigatedFromDashboard(false);
   }, [setNavigatedFromDashboard, setShowResult]);
-
-  const getCurrentSorter = useCallback(() => {
-    if (renderedCompRef.current && renderedCompRef.current.currentSorter) {
-      return renderedCompRef.current.currentSorter;
-    }
-    return [];
-  }, []);
 
   useEffect(
     () => () => {
