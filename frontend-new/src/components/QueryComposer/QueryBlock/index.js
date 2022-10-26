@@ -19,6 +19,7 @@ import AliasModal from '../AliasModal';
 import { AvailableGroups } from '../../../utils/constants';
 import ORButton from '../../ORButton';
 import { compareFilters, groupFilters } from '../../../utils/global';
+import { TOOLTIP_CONSTANTS } from '../../../constants/tooltips.constans';
 
 function QueryBlock({
   index,
@@ -220,13 +221,18 @@ function QueryBlock({
     return (
       <div className={`fa--query_block--actions-cols flex`}>
         <div className={`relative`}>
-          <Button
-            type='text'
-            onClick={() => setMoreOptions(true)}
-            className={`fa-btn--custom mr-1 btn-total-round`}
-          >
-            <SVG name='more'></SVG>
-          </Button>
+          <Tooltip 
+            title={'Filter this '+ ((queryType=="funnel" )? "funnel" : "event")}
+            color={TOOLTIP_CONSTANTS.DARK}
+            >
+            <Button
+              type='text'
+              onClick={() => setMoreOptions(true)}
+              className={`fa-btn--custom mr-1 btn-total-round`}
+            >
+              <SVG name='more'></SVG>
+            </Button>
+          </Tooltip>
 
           {moreOptions ? (
             <FaSelect
@@ -252,9 +258,14 @@ function QueryBlock({
             alias={event.alias}
           ></AliasModal>
         </div>
-        <Button type='text' onClick={deleteItem} className={`fa-btn--custom btn-total-round`}>
-          <SVG name='trash'></SVG>
-        </Button>
+        <Tooltip 
+          title={'Delete this ' + ((queryType=="funnel" )? "funnel" : "event") }
+          color={TOOLTIP_CONSTANTS.DARK}
+          >
+          <Button type='text' onClick={deleteItem} className={`fa-btn--custom btn-total-round`}>
+            <SVG name='trash'></SVG>
+          </Button>
+        </Tooltip>
       </div>
     );
   };

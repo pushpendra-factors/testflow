@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import styles from './index.module.scss';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
-import { Button, Tooltip, Radio } from 'antd';
+import { Button, Tooltip, Radio, Popover } from 'antd';
 import { SVG, Text } from '../../factorsComponents';
 import FaSelect from '../../FaSelect';
 
@@ -221,13 +221,24 @@ const AttributionOptions = ({
       return (
         <div className={`relative mr-2`}>
           {
-            <Button
-              size={'small'}
-              type='link'
-              onClick={() => setSelectVisibleWindow(!selectVisibleWindow)}
-            >
-              Add Window
-            </Button>
+            <Popover
+              title={<><b>Set your attribution window</b></>}
+              content={<>
+                This determines the earliest time prior to the occurrence of a conversion event, within which the marketing touchpoint should have happened for it to be considered in the attribution analysis
+                <br />
+                <br />
+                <a href='#'>Learn More </a>
+                </>}
+              overlayStyle={{width:'260px'}}
+              >
+              <Button
+                size={'small'}
+                type='link'
+                onClick={() => setSelectVisibleWindow(!selectVisibleWindow)}
+              >
+                Add Window
+              </Button>
+            </Popover>
           }
 
           {selectWindow()}
@@ -273,13 +284,26 @@ const AttributionOptions = ({
     if (timeline !== null && timeline !== undefined) {
       return (
         <div className={`relative`}>
-          <Button
-            size={'small'}
-            type='link'
-            onClick={() => setTimelineSelect(!timelineSelect)}
-          >
-            {timeLineMap[timeline]}
-          </Button>
+          <Popover
+            title={<><b>Set your Interaction time</b></>}
+            content={<><b>Interaction time</b> attributes conversions that happen during the month (01 to 30 June) to campaigns within that 30 day attribution window.
+              <br />
+              <br />
+              <b>Conversion time</b> considers all the marketing touchpoints which happened between this month, till the end of your sales cycle, and attributes conversions.
+              <br />
+              <br />
+              <a href='#'>Learn more</a> about the differences between the two. 
+              </>}
+            overlayStyle={{width:'260px'}}
+            >
+            <Button
+              size={'small'}
+              type='link'
+              onClick={() => setTimelineSelect(!timelineSelect)}
+            >
+              {timeLineMap[timeline]}
+            </Button>
+          </Popover>
 
           {selectTimeline()}
         </div>

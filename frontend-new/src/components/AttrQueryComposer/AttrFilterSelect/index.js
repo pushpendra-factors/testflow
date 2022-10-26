@@ -9,6 +9,7 @@ import FaSelect from '../../FaSelect';
 import MomentTz from 'Components/MomentTz';
 import { isArray } from 'lodash';
 import { DISPLAY_PROP } from '../../../utils/constants';
+import { TOOLTIP_CONSTANTS } from '../../../constants/tooltips.constans';
 
 const defaultOpProps = {
   categorical: ['=', '!=', 'contains', 'does not contain'],
@@ -176,7 +177,7 @@ const AttrFilterSelect = ({
   const renderPropSelect = () => {
     return (
       <div className={styles.filter__propContainer}>
-        <Tooltip title={renderGroupDisplayName(propState)}>
+        <Tooltip title={renderGroupDisplayName(propState)} color={TOOLTIP_CONSTANTS.DARK}>
           <Button
             icon={
               propState && propState.icon ? (
@@ -210,13 +211,17 @@ const AttrFilterSelect = ({
   const renderOperatorSelector = () => {
     return (
       <div className={styles.filter__propContainer}>
-        <Button
-          className={`filter-buttons-radius filter-buttons-margin`}
-          type='link'
-          onClick={() => setOperSelectOpen(true)}
-        >
-          {operatorState ? operatorState : 'Select Operator'}
-        </Button>
+        <Tooltip 
+          title='Select an equator to define your filter rules. '
+          color={TOOLTIP_CONSTANTS.DARK}>
+          <Button
+            className={`filter-buttons-radius filter-buttons-margin`}
+            type='link'
+            onClick={() => setOperSelectOpen(true)}
+          >
+            {operatorState ? operatorState : 'Select Operator'}
+          </Button>
+        </Tooltip>
 
         {operSelectOpen && (
           <FaSelect
@@ -297,6 +302,7 @@ const AttrFilterSelect = ({
                       .join(', ')
                   : null
               }
+              color={TOOLTIP_CONSTANTS.DARK}
             >
               <Button
                 className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}

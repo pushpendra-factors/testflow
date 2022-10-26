@@ -11,13 +11,14 @@ import {
   setTacticOfferType,
 } from '../../../reducers/coreQuery/middleware';
 
-import { Button, Radio, Row } from 'antd';
+import { Button, Popover, Radio, Row } from 'antd';
 import { SVG, Text } from '../../factorsComponents';
 import TouchPointDimensions from './TouchPointDimensions';
 import FaSelect from 'Components/FaSelect';
 
 import ORButton from '../../ORButton';
 import { compareFilters, groupFilters } from '../../../utils/global';
+import { InfoCircleOutlined } from '@ant-design/icons';
 
 
 const MarkTouchpointBlock = ({
@@ -389,6 +390,15 @@ const MarkTouchpointBlock = ({
           >
             Type
           </Text>
+            <Popover className='p-1'
+              placement='right'
+              content={<><b>Tactics</b> are methods in which you reach out to customers. <br />For e.g. Google Ads is a classic tactic. <br /><br />
+                <b>Offers</b> are content that you serve to the visitor. <br />It's the offer itself that you present. Landing pages are offers.</>} 
+              trigger='hover'
+              overlayStyle={{width:"260px"}}
+              >
+              <InfoCircleOutlined />
+            </Popover>
         </Row>
         <Row className={`mt-2 ml-2`}>
           <Radio.Group
@@ -412,6 +422,16 @@ const MarkTouchpointBlock = ({
           >
             Property
           </Text>
+            <Popover className='p-1'
+              placement='right'
+              title={<><b>There are a hierarchy of levels inside paid marketing.</b></>}
+              content={<>Select at what level you would like to run the analysis, between Source, Campaign, Adgroup, Creative, or Keyword levels.
+                </>} 
+              trigger='hover'
+              overlayStyle={{width:"260px"}}
+              >
+              <InfoCircleOutlined />
+            </Popover>
         </Row>
 
         <Row className={`ml-2`}>

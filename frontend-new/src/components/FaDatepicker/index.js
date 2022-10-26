@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { DatePicker, Menu, Dropdown, Button } from 'antd';
+import { DatePicker, Menu, Dropdown, Button, Tooltip } from 'antd';
 import { isEqual } from 'lodash';
 import MomentTz from 'Components/MomentTz';
 // import { TimeZoneOffsetValues } from 'Utils/constants';
 import { getRangeByLabel } from './utils';
 import { SVG } from '../factorsComponents';
+import { TOOLTIP_CONSTANTS } from '../../constants/tooltips.constans';
 
 const { RangePicker } = DatePicker;
 
@@ -492,6 +493,9 @@ const FaDatepicker = ({
         placement={placement}
         trigger={!showDatePicker ? ['click'] : []}
       >
+        <Tooltip 
+          title='Select a time range for your analysis' 
+          color={TOOLTIP_CONSTANTS.DARK}>
         <Button
           disabled={disabled}
           className={className}
@@ -550,6 +554,7 @@ const FaDatepicker = ({
             </span>
           )}
         </Button>
+        </Tooltip>
       </Dropdown>
     </div>
   );
