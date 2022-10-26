@@ -81,7 +81,7 @@ const QueryActionsComponent = ({
     }else if(opt[1] === 'intercom_help'){
       handleIntercomHelp();
     }else if(opt[1] === 'help_doc'){
-      window.location.href = 'https://help.factors.ai/'
+      window.open('https://help.factors.ai/','_blank')
     }
     setOptions(false);
   };
