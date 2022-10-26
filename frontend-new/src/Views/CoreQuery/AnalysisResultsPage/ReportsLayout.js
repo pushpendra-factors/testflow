@@ -276,6 +276,7 @@ function ReportsLayout({
   return (
     <>
       <AnalysisHeader
+        isFromAnalysisPage={false}
         requestQuery={requestQuery}
         onBreadCrumbClick={handleBreadCrumbClick}
         queryType={queryType}

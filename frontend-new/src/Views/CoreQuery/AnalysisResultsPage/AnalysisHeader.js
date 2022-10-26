@@ -25,9 +25,12 @@ import SaveQuery from '../../../components/SaveQuery';
 import { addShadowToHeader } from './analysisResultsPage.helpers';
 import { CoreQueryContext } from '../../../contexts/CoreQueryContext';
 
+
 const { TabPane } = Tabs;
 
 function AnalysisHeader({
+
+  isFromAnalysisPage,
   queryType,
   onBreadCrumbClick,
   requestQuery,
@@ -36,6 +39,18 @@ function AnalysisHeader({
   activeTab,
   ...rest
 }) {
+  const [hideIntercomState, setHideIntercomState] = useState(true);
+
+  useEffect(() => {
+    if (window.Intercom) {
+      window.Intercom('update', { hide_default_launcher: true });
+    }
+    return () => {
+      if (window.Intercom) {
+        window.Intercom('update', { hide_default_launcher: false });
+      }
+    };
+  }, []);
 
   const history = useHistory();
   const {
@@ -194,8 +209,33 @@ function AnalysisHeader({
           {renderReportTitle()}
         </div>
 
-        <div className="flex items-center gap-x-2">
-          <div className="pr-2 border-r">{renderSaveQueryComp()}</div>
+        <div className="flex items-center">
+          <div className="pr-2">{renderSaveQueryComp()}</div>
+          {isFromAnalysisPage ? 
+                <div className="pr-2 ">
+                <div className='relative'>
+                <Button
+                  size="large"
+                  type="text"
+                  shape='circle'
+                  // icon={<SVG name={`Handshake`} size={16} color={'blue'} />}
+                  onClick={() => {
+                    const w = window;
+                    const ic = w.Intercom;
+                    if (typeof ic === 'function') {
+                      setHideIntercomState(!hideIntercomState);
+                      ic('update', { hide_default_launcher: !hideIntercomState });
+                      ic(!hideIntercomState === true ? 'hide' : 'show');
+                    }
+                  }}
+                >
+                  <QuestionCircleOutlined />
+                </Button>
+                </div>
+              </div>
+              :
+              ''
+            }
           {renderReportCloseIcon()}
         </div>
       </div>

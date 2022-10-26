@@ -1642,6 +1642,8 @@ function CoreQuery({
       <Modal
         title={
           <AnalysisHeader
+
+            isFromAnalysisPage={true}
             requestQuery={requestQuery}
             onBreadCrumbClick={handleBreadCrumbClick}
             queryType={queryType}
