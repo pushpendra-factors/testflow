@@ -1180,7 +1180,7 @@ func GetRowsByMaps(attributionKey string, dimensions []string, attributionData *
 		attributionIdName := ""
 		switch attributionKey {
 		case AttributionKeyCampaign:
-			attributionIdName = data.MarketingInfo.Name
+			attributionIdName = data.MarketingInfo.CampaignName
 		case AttributionKeyAdgroup:
 			attributionIdName = data.MarketingInfo.AdgroupName
 		case AttributionKeyKeyword:
@@ -1410,6 +1410,11 @@ func ProcessQuery(query *AttributionQuery, attributionData *map[string]*Attribut
 	// Add custom dimensions
 	AddCustomDimensions(attributionData, query, marketingReports)
 
+	for key, data := range *attributionData {
+		if C.GetAttributionDebug() == 1 && key == "linkedin:-:Flagship EX RoW" {
+			logCtx.WithFields(log.Fields{"key": key, "data": data}).Info("Yellow.ai attribution debug")
+		}
+	}
 	// Attribution data to rows
 	dataRows := GetRowsByMaps(query.AttributionKey, query.AttributionKeyCustomDimension, attributionData, query.LinkedEvents, isCompare)
 
