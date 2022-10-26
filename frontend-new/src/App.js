@@ -29,7 +29,7 @@ const AppLayout = lazyWithRetry(() => import("./Views/AppLayout"));
 
 function App({ isAgentLoggedIn, agent_details, active_project, enableBingAdsIntegration, enableMarketoIntegration }) {
   const dispatch = useDispatch();
-   
+  
   const ssoLogin = () => {
     if (window.location.href.indexOf("?error=") > -1) {
       let searchParams = new URLSearchParams(window.location.search);
