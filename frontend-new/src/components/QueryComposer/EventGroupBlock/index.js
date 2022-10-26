@@ -1,16 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import styles from './index.module.scss';
-
-import { Button,Tooltip } from 'antd';
-
-import { SVG, Text } from 'factorsComponents';
-
+import { Button, Tooltip } from 'antd';
 import { connect } from 'react-redux';
+import { SVG, Text } from '../../factorsComponents';
+import styles from './index.module.scss';
 import GroupSelect2 from '../GroupSelect2';
 import FaSelect from '../../FaSelect';
 import { AvailableGroups } from '../../../utils/constants';
 
-const EventGroupBlock = ({
+function EventGroupBlock({
   index,
   eventIndex,
   grpIndex,
@@ -24,24 +21,24 @@ const EventGroupBlock = ({
   groupPropNames,
   setGroupState,
   delGroupState,
-  closeDropDown,
-}) => {
+  closeDropDown
+}) {
   const [filterOptions, setFilterOptions] = useState([
     {
       label: 'Event Properties',
       icon: 'event',
-      values: [],
+      values: []
     },
     {
       label: 'User Properties',
       icon: 'user',
-      values: [],
+      values: []
     },
     {
       label: 'Group Properties',
       icon: 'group',
-      values: [],
-    },
+      values: []
+    }
   ]);
 
   const [propSelVis, setSelVis] = useState(false);
@@ -61,7 +58,7 @@ const EventGroupBlock = ({
   }, [userProperties, eventProperties, groupProperties]);
 
   const onChange = (group, val, ind) => {
-    const newGroupByState = Object.assign({}, groupByEvent);
+    const newGroupByState = { ...groupByEvent };
     if (group === 'User Properties') {
       newGroupByState.prop_category = 'user';
     } else if (group === 'Group Properties') {
@@ -87,7 +84,7 @@ const EventGroupBlock = ({
   };
 
   const onGrpPropChange = (val) => {
-    const newGroupByState = Object.assign({}, groupByEvent);
+    const newGroupByState = { ...groupByEvent };
     if (newGroupByState.prop_type === 'numerical') {
       newGroupByState.gbty = val;
     }
@@ -99,39 +96,40 @@ const EventGroupBlock = ({
   };
 
   const renderGroupPropertyOptions = (opt) => {
-    if (!opt || opt.prop_type === 'categorical') return;
+    if (!opt || opt.prop_type === 'categorical') return null;
 
     const propOpts = {
       numerical: [
         ['original values', null, 'raw_values'],
-        ['bucketed values', null, 'with_buckets'],
+        ['bucketed values', null, 'with_buckets']
       ],
       datetime: [
         ['hour', null, 'hour'],
         ['date', null, 'day'],
         ['week', null, 'week'],
-        ['month', null, 'month'],
-      ],
+        ['month', null, 'month']
+      ]
     };
 
-    const getProp = (opt) => {
-      if (opt.prop_type === 'numerical') {
-        const propSel = propOpts['numerical'].filter((v) => v[2] === opt.gbty);
+    const getProp = (op) => {
+      if (op.prop_type === 'numerical') {
+        const propSel = propOpts.numerical.filter((v) => v[2] === op.gbty);
         return propSel[0] ? propSel[0][0] : 'Select options';
       }
-      if (opt.prop_type === 'datetime') {
-        const propSel = propOpts['datetime'].filter((v) => v[2] === opt.grn);
+      if (op.prop_type === 'datetime') {
+        const propSel = propOpts.datetime.filter((v) => v[2] === op.grn);
         return propSel[0] ? propSel[0][0] : 'Select options';
       }
+      return null;
     };
 
-    const setProp = (opt) => {
-      onGrpPropChange(opt[2]);
+    const setProp = (op) => {
+      onGrpPropChange(op[2]);
       setSelVis(false);
     };
 
     return (
-      <div className={`flex items-center m-0 mx-2`}>
+      <div className="flex items-center m-0 mx-2">
         show as
         <div
           className={`flex relative m-0 mx-2 ${styles.grpProps__select__opt}`}
@@ -143,7 +141,7 @@ const EventGroupBlock = ({
               options={propOpts[opt.prop_type]}
               optionClick={setProp}
               onClickOutside={() => setSelVis(false)}
-            ></FaSelect>
+            />
           )}
         </div>
       </div>
@@ -171,25 +169,25 @@ const EventGroupBlock = ({
     }
 
     return isGroupByDDVisible ? (
-      <div className={`relative`}>
+      <div className="relative">
         <Tooltip title={propName}>
           <Button
             icon={
-              <SVG name={groupByEvent.prop_category} size={16} color={'purple'} />
+              <SVG name={groupByEvent.prop_category} size={16} color="purple" />
             }
-            type={'link'}
-            className={`fa-button--truncate fa-button--truncate-xs btn-left-round filter-buttons-margin`}
-            >
+            type="link"
+            className="fa-button--truncate fa-button--truncate-xs btn-left-round filter-buttons-margin"
+          >
             {propName}
           </Button>
         </Tooltip>
         <div className={styles.group_block__event_selector}>
           <GroupSelect2
             groupedProperties={filterOptions}
-            placeholder='Select Property'
+            placeholder="Select Property"
             optionClick={(group, val) => onChange(group, val, index)}
             onClickOutside={() => setGroupByDDVisible(false)}
-          ></GroupSelect2>
+          />
         </div>
       </div>
     ) : (
@@ -197,10 +195,10 @@ const EventGroupBlock = ({
         <Tooltip title={propName}>
           <Button
             icon={
-              <SVG name={groupByEvent.prop_category} size={16} color={'purple'} />
+              <SVG name={groupByEvent.prop_category} size={16} color="purple" />
             }
-            type={'link'}
-            className={`fa-button--truncate fa-button--truncate-xs btn-left-round filter-buttons-margin`}
+            type="link"
+            className="fa-button--truncate fa-button--truncate-xs btn-left-round filter-buttons-margin"
             onClick={() => setGroupByDDVisible(true)}
           >
             {propName}
@@ -211,46 +209,49 @@ const EventGroupBlock = ({
     );
   };
 
-  const renderGroupBySelect = () => {
-    return (
-      <div className={styles.group_block__event_selector}>
-        <GroupSelect2
-          groupedProperties={filterOptions}
-          placeholder='Select Property'
-          optionClick={(group, val) => onChange(group, val)}
-          onClickOutside={() => closeDropDown()}
-        ></GroupSelect2>
-      </div>
-    );
-  };
+  const renderGroupBySelect = () => (
+    <div className={styles.group_block__event_selector}>
+      <GroupSelect2
+        groupedProperties={filterOptions}
+        placeholder="Select Property"
+        optionClick={(group, val) => onChange(group, val)}
+        onClickOutside={() => closeDropDown()}
+      />
+    </div>
+  );
 
   return (
-    <div className={`flex items-center relative ml-10`}>
-      {grpIndex >=1 ? (
-      <Text level={8} type={'title'} extraClass={'m-0 mr-16'} weight={'thin'}>
+    <div className="flex items-center relative ml-10">
+      {grpIndex >= 1 ? (
+        <Text level={8} type="title" extraClass="m-0 mr-16" weight="thin">
           and
         </Text>
-        ):(
-        <Text level={8} type={'title'} extraClass={'m-0 breakdown-margin'} weight={'thin'}>
+      ) : (
+        <Text
+          level={8}
+          type="title"
+          extraClass="m-0 breakdown-margin"
+          weight="thin"
+        >
           Breakdown
         </Text>
-        )}
+      )}
       {groupByEvent && groupByEvent.property ? (
         renderGroupContent()
       ) : (
         <>{renderGroupBySelect()}</>
       )}
       <Button
-        type='text'
+        type="text"
         onClick={() => delGroupState(groupByEvent)}
-        size={'small'}
-        className={`fa-btn--custom filter-buttons-margin btn-right-round filter-remove-button`}
-        >
-        <SVG name={'remove'} />
+        size="small"
+        className="fa-btn--custom filter-buttons-margin btn-right-round filter-remove-button"
+      >
+        <SVG name="remove" />
       </Button>
     </div>
   );
-};
+}
 
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
@@ -259,7 +260,7 @@ const mapStateToProps = (state) => ({
   eventProperties: state.coreQuery.eventProperties,
   userPropNames: state.coreQuery.userPropNames,
   eventPropNames: state.coreQuery.eventPropNames,
-  groupPropNames: state.coreQuery.groupPropNames,
+  groupPropNames: state.coreQuery.groupPropNames
 });
 
 export default connect(mapStateToProps)(EventGroupBlock);
