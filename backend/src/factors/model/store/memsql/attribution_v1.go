@@ -424,6 +424,10 @@ func (store *MemSQL) GetAttributionData(projectID int64, query *model.Attributio
 		if C.GetAttributionDebug() == 1 {
 			logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("FireAttribution took time")
 		}
+
+		if C.GetAttributionDebug() == 1 {
+			logCtx.WithFields(log.Fields{"attributionData": attributionData, "sessions": sessions}).Info("Done FireAttributionV1. Attribution debug AnalyzeTypeUsers.")
+		}
 		queryStartTime = time.Now().UTC().Unix()
 		if C.GetAttributionDebug() == 1 {
 			logCtx.Info("Done FireAttribution")
@@ -441,6 +445,9 @@ func (store *MemSQL) GetAttributionData(projectID int64, query *model.Attributio
 		// Add the Added keys with no of conversion event = 1
 		model.AddTheAddedKeysAndMetrics(attributionData, query, sessions, 1)
 
+		if C.GetAttributionDebug() == 1 {
+			logCtx.WithFields(log.Fields{"attributionData": attributionData}).Info("Done AddTheAddedKeysAndMetrics. Attribution debug AnalyzeTypeUsers.")
+		}
 		// Add the performance information no of conversion event = 1
 		model.AddPerformanceData(attributionData, query.AttributionKey, marketingReports, 1)
 		for key, _ := range *attributionData {
