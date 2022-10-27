@@ -69,6 +69,11 @@ function processAllLocalStorageBacklogRequests() {
     var requests = getAllRequestsFromLS();
     var reqKeys = Object.keys(requests);
 
+    if (reqKeys.length > 0) {
+        // Not an error. This is to measure the usage of LS based backlog processing.
+        sendErrorWithInfo("[STATUS] Processing localstorage.")
+    }
+
     for (var i=0; i<reqKeys.length; i++) {
         var key = reqKeys[i];
 
