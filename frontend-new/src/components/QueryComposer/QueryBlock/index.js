@@ -205,15 +205,20 @@ function QueryBlock({
   };
 
   const additionalActions = () => (
-    <div className="fa--query_block--actions-cols flex">
-      <div className="relative">
-        <Button
-          type="text"
-          onClick={() => setMoreOptions(true)}
-          className="fa-btn--custom mr-1 btn-total-round"
+    <div className='fa--query_block--actions-cols flex'>
+      <div className='relative'>
+        <Tooltip
+          title={`Filter this ${queryType === 'funnel' ? 'funnel' : 'event'}`}
+          color={TOOLTIP_CONSTANTS.DARK}
         >
-          <SVG name="more" />
-        </Button>
+          <Button
+            type='text'
+            onClick={() => setMoreOptions(true)}
+            className='fa-btn--custom mr-1 btn-total-round'
+          >
+            <SVG name='more' />
+          </Button>
+        </Tooltip>
 
         {moreOptions ? (
           <FaSelect
@@ -239,13 +244,18 @@ function QueryBlock({
           alias={event.alias}
         />
       </div>
-      <Button
-        type="text"
-        onClick={deleteItem}
-        className="fa-btn--custom btn-total-round"
+      <Tooltip
+        title={`Delete this ${queryType === 'funnel' ? 'funnel' : 'event'}`}
+        color={TOOLTIP_CONSTANTS.DARK}
       >
-        <SVG name="trash" />
-      </Button>
+        <Button
+          type='text'
+          onClick={deleteItem}
+          className='fa-btn--custom btn-total-round'
+        >
+          <SVG name='trash' />
+        </Button>
+      </Tooltip>
     </div>
   );
 
