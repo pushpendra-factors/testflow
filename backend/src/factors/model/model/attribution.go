@@ -165,7 +165,7 @@ var AddedKeysForCampaign = []string{"ChannelName"}
 var AddedKeysForAdgroup = []string{"ChannelName", "Campaign"}
 var AddedKeysForKeyword = []string{"ChannelName", "Campaign", "AdGroup", "MatchType"}
 var AttributionFixedHeaders = []string{"Impressions", "Clicks", "Spend", "CTR(%)", "Average CPC", "CPM", "ClickConversionRate(%)"}
-var AttributionFixedHeadersPostPostConversion = []string{"Cost Per Conversion", "Compare - Users", "Compare - Users (Influence)", "Compare Cost Per Conversion"}
+var AttributionFixedHeadersPostPostConversion = []string{"Cost Per Conversion", "Compare - Users", "Compare - Users (InfluenceRemove)", "Compare Cost Per Conversion"}
 var KeyDimensionToHeaderMap = map[string]string{
 	FieldChannelName:      "ChannelName",
 	FieldCampaignName:     "Campaign",
@@ -177,7 +177,7 @@ var KeyDimensionToHeaderMap = map[string]string{
 	FieldLandingPageUrl:   "LandingPage",
 }
 var AttributionFixedHeadersLandingPage = []string{}
-var AttributionFixedHeadersPostPostConversionLanding = []string{"Compare - Users", "Compare-Users (Influence)"}
+var AttributionFixedHeadersPostPostConversionLanding = []string{"Compare - Users", "Compare-Users (InfluenceRemove)"}
 
 // ToDo change here as well.
 func (query *AttributionQuery) TransformDateTypeFilters() error {
@@ -824,13 +824,13 @@ func AddHeadersByAttributionKey(result *QueryResult, query *AttributionQuery, go
 		result.Headers = append(result.Headers, AttributionFixedHeadersLandingPage...)
 		conversionEventUsers := fmt.Sprintf("%s - Users", query.ConversionEvent.Name)
 		result.Headers = append(result.Headers, conversionEventUsers)
-		conversionEventUsersInfluence := fmt.Sprintf("%s - Users (Influence)", query.ConversionEvent.Name)
+		conversionEventUsersInfluence := fmt.Sprintf("%s - Users (InfluenceRemove)", query.ConversionEvent.Name)
 		result.Headers = append(result.Headers, conversionEventUsersInfluence)
 		result.Headers = append(result.Headers, AttributionFixedHeadersPostPostConversionLanding...)
 		if len(query.LinkedEvents) > 0 {
 			for _, event := range query.LinkedEvents {
 				result.Headers = append(result.Headers, fmt.Sprintf("%s - Users", event.Name))
-				result.Headers = append(result.Headers, fmt.Sprintf("%s- Users (Influence)", event.Name))
+				result.Headers = append(result.Headers, fmt.Sprintf("%s- Users (InfluenceRemove)", event.Name))
 			}
 		}
 
@@ -859,13 +859,13 @@ func AddHeadersByAttributionKey(result *QueryResult, query *AttributionQuery, go
 		result.Headers = append(result.Headers, AttributionFixedHeaders...)
 		conversionEventUsers := fmt.Sprintf("%s - Users", query.ConversionEvent.Name)
 		result.Headers = append(result.Headers, conversionEventUsers)
-		conversionEventUsersInfluence := fmt.Sprintf("%s-Users (Influence)", query.ConversionEvent.Name)
+		conversionEventUsersInfluence := fmt.Sprintf("%s-Users (InfluenceRemove)", query.ConversionEvent.Name)
 		result.Headers = append(result.Headers, conversionEventUsersInfluence)
 		result.Headers = append(result.Headers, AttributionFixedHeadersPostPostConversion...)
 		if len(query.LinkedEvents) > 0 {
 			for _, event := range query.LinkedEvents {
 				result.Headers = append(result.Headers, fmt.Sprintf("%s - Users", event.Name))
-				result.Headers = append(result.Headers, fmt.Sprintf("%s- Users (Influence)", event.Name))
+				result.Headers = append(result.Headers, fmt.Sprintf("%s- Users (InfluenceRemove)", event.Name))
 				result.Headers = append(result.Headers, fmt.Sprintf("%s - CPC", event.Name))
 			}
 		}
@@ -901,22 +901,22 @@ func AddHeadersByAttributionKey(result *QueryResult, query *AttributionQuery, go
 
 			if strings.ToLower(goalEventAggFuncTypes[idx]) == "sum" {
 				conversion := fmt.Sprintf("%s - Conversion Value", goal)
-				conversionInfluence := fmt.Sprintf("%s - Conversion Value (Influence) ", goal)
+				conversionInfluence := fmt.Sprintf("%s - Conversion Value (InfluenceRemove) ", goal)
 				cpc := fmt.Sprintf("%s - Return on Cost", goal)
 				result.Headers = append(result.Headers, conversion, conversionInfluence, cpc)
 
 				conversionC := fmt.Sprintf("%s - Conversion Value(compare)", goal)
-				conversionC_influence := fmt.Sprintf("%s - Conversion Value Influence(compare)", goal)
+				conversionC_influence := fmt.Sprintf("%s - Conversion Value InfluenceRemove(compare)", goal)
 				cpcC := fmt.Sprintf("%s - Return on Cost(compare)", goal)
 				result.Headers = append(result.Headers, conversionC, conversionC_influence, cpcC)
 			} else {
 				conversion := fmt.Sprintf("%s - Conversion", goal)
-				conversionInfluence := fmt.Sprintf("%s - Conversion Value (Influence) ", goal)
+				conversionInfluence := fmt.Sprintf("%s - Conversion Value (InfluenceRemove) ", goal)
 				cpc := fmt.Sprintf("%s - Cost Per Conversion", goal)
 				result.Headers = append(result.Headers, conversion, conversionInfluence, cpc)
 
 				conversionC := fmt.Sprintf("%s - Conversion(compare)", goal)
-				conversionC_influence := fmt.Sprintf("%s - Conversion Influence(compare)", goal)
+				conversionC_influence := fmt.Sprintf("%s - Conversion InfluenceRemove(compare)", goal)
 				cpcC := fmt.Sprintf("%s - Cost Per Conversion(compare)", goal)
 				result.Headers = append(result.Headers, conversionC, conversionC_influence, cpcC)
 			}
@@ -925,7 +925,7 @@ func AddHeadersByAttributionKey(result *QueryResult, query *AttributionQuery, go
 		if len(query.LinkedEvents) > 0 {
 			for _, event := range query.LinkedEvents {
 				result.Headers = append(result.Headers, fmt.Sprintf("%s - Users", event.Name))
-				result.Headers = append(result.Headers, fmt.Sprintf("%s- Users (Influence)", event.Name))
+				result.Headers = append(result.Headers, fmt.Sprintf("%s- Users (InfluenceRemove)", event.Name))
 				result.Headers = append(result.Headers, fmt.Sprintf("%s - CPC", event.Name))
 			}
 		}
@@ -1172,7 +1172,7 @@ func GetRowsByMaps(attributionKey string, dimensions []string, attributionData *
 		attributionIdName := ""
 		switch attributionKey {
 		case AttributionKeyCampaign:
-			attributionIdName = data.MarketingInfo.Name
+			attributionIdName = data.MarketingInfo.CampaignName
 		case AttributionKeyAdgroup:
 			attributionIdName = data.MarketingInfo.AdgroupName
 		case AttributionKeyKeyword:
@@ -1405,7 +1405,11 @@ func ProcessQuery(query *AttributionQuery, attributionData *map[string]*Attribut
 	// Add custom dimensions
 	AddCustomDimensions(attributionData, query, marketingReports)
 
-	logCtx.Info("Done AddCustomDimensions")
+	for key, data := range *attributionData {
+		if C.GetAttributionDebug() == 1 && key == "linkedin:-:Flagship EX RoW" {
+			logCtx.WithFields(log.Fields{"key": key, "data": data}).Info("Yellow.ai attribution debug")
+		}
+	}
 	// Attribution data to rows
 	dataRows := GetRowsByMaps(query.AttributionKey, query.AttributionKeyCustomDimension, attributionData, query.LinkedEvents, isCompare)
 
@@ -1743,7 +1747,7 @@ func SanitizeResult(result *QueryResult) {
 	// Populating the valid index
 	var validIdx []int
 	for idx, colName := range result.Headers {
-		if !strings.Contains(colName, "(remove)") && !strings.Contains(colName, "Influence") {
+		if !strings.Contains(colName, "(remove)") && !strings.Contains(colName, "InfluenceRemove") {
 			validIdx = append(validIdx, idx)
 		}
 	}

@@ -1430,7 +1430,7 @@ func getExistingCampaignMemberUserIDFromProperties(projectID int64, properties *
 	return ""
 }
 
-func enrichCampaignMemberResponded(project *model.Project, document *model.SalesforceDocument, userID string) int {
+func enrichCampaignMemberResponded(project *model.Project, document *model.SalesforceDocument, userID string, campaignMemberProperties map[string]interface{}) int {
 	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "document_id": document.ID})
 	if document.Type != model.SalesforceDocumentTypeCampaignMember {
 		return http.StatusBadRequest
@@ -1452,14 +1452,7 @@ func enrichCampaignMemberResponded(project *model.Project, document *model.Sales
 
 	var currentCampaignMemberFirstRespondedDateAsTimestamp int64
 	if currentCampaignMemberResponded {
-		currentCampaignMemberFirstRespondedDate, err := time.Parse(model.SalesforceDocumentDateLayout, (*currentCampaignMemberDocumentProperties)[model.EP_SFCampaignMemberFirstRespondedDate].(string))
-		if err != nil {
-			logCtx.WithError(err).Error("Failed to convert first_responded_date from string to time in current campaign member document.")
-			return http.StatusInternalServerError
-		}
-		currentCampaignMemberFirstRespondedDateAsTimestamp = currentCampaignMemberFirstRespondedDate.Unix()
-	} else {
-		currentCampaignMemberFirstRespondedDateAsTimestamp = 0
+		currentCampaignMemberFirstRespondedDateAsTimestamp = (*currentCampaignMemberDocumentProperties)[model.EP_SFCampaignMemberFirstRespondedDate].(int64)
 	}
 
 	previousCampaignMemberDocuments, errCode := store.GetStore().GetLatestSalesforceDocumentByID(project.ID, []string{document.ID}, model.SalesforceDocumentTypeCampaignMember, document.Timestamp-1)
@@ -1488,25 +1481,19 @@ func enrichCampaignMemberResponded(project *model.Project, document *model.Sales
 
 	var previousCampaignMemberFirstRespondedDateAsTimestamp int64
 	if previousCampaignMemberResponded {
-		previousCampaignMemberFirstRespondedDateAsTime, err := time.Parse(model.SalesforceDocumentDateLayout, (*previousCampaignMemberDocumentProperties)[model.EP_SFCampaignMemberFirstRespondedDate].(string))
-		if err != nil {
-			logCtx.WithError(err).Error("Failed to convert first_responded_date from string to time in previous campaign member document.")
-			return http.StatusInternalServerError
-		}
-		previousCampaignMemberFirstRespondedDateAsTimestamp = previousCampaignMemberFirstRespondedDateAsTime.Unix()
-	} else {
-		previousCampaignMemberFirstRespondedDateAsTimestamp = 0
+		previousCampaignMemberFirstRespondedDateAsTimestamp = (*previousCampaignMemberDocumentProperties)[model.EP_SFCampaignMemberFirstRespondedDate].(int64)
 	}
 
 	if currentCampaignMemberFirstRespondedDateAsTimestamp > 0 && previousCampaignMemberFirstRespondedDateAsTimestamp == 0 {
 		timestamp := U.GetEndOfDayTimestampIn(currentCampaignMemberFirstRespondedDateAsTimestamp, document.GetDocumentTimeZone())
 
 		trackPayload := &SDK.TrackPayload{
-			ProjectId:     project.ID,
-			Name:          U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_RESPONDED_TO_CAMPAIGN,
-			Timestamp:     timestamp,
-			RequestSource: model.UserSourceSalesforce,
-			UserId:        userID,
+			ProjectId:       project.ID,
+			Name:            U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_RESPONDED_TO_CAMPAIGN,
+			Timestamp:       timestamp,
+			RequestSource:   model.UserSourceSalesforce,
+			UserId:          userID,
+			EventProperties: campaignMemberProperties,
 		}
 
 		status, response := SDK.Track(project.ID, trackPayload, true, SDK.SourceSalesforce, "")
@@ -1600,7 +1587,7 @@ func enrichCampaignMember(project *model.Project, document *model.SalesforceDocu
 		logCtx.WithField("EventID", eventID).WithField("userID", userID).WithField("error", err).Info("Create SF offline touch point")
 	}
 
-	errCode := enrichCampaignMemberResponded(project, document, userID)
+	errCode := enrichCampaignMemberResponded(project, document, userID, *enCampaignMemberProperties)
 	if errCode != http.StatusOK {
 		logCtx.Error("Failed to enrich Responded to Campaign event.")
 	}

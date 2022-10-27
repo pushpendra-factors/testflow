@@ -1,6 +1,5 @@
 from optparse import OptionParser
 import logging as log
-from types import TracebackType
 import requests
 import json
 import urllib
@@ -11,7 +10,7 @@ from requests import status_codes
 
 parser = OptionParser()
 parser.add_option("--env", dest="env", default="development")
-parser.add_option("--dry", dest="dry", help="", default="False")
+parser.add_option("--dry", dest="dry", action="store_true", help="", default=False)
 parser.add_option("--first_sync", dest="first_sync",action="store_true", help="", default=False)
 parser.add_option("--data_service_host", dest="data_service_host",
     help="Data service host", default="http://localhost:8089")
@@ -36,6 +35,8 @@ parser.add_option("--enable_buffer_before_insert_by_project_id", dest="enable_bu
 parser.add_option("--hubspot_app_id", dest="hubspot_app_id", help="App id for hubspot access token", default="")
 parser.add_option("--hubspot_app_secret", dest="hubspot_app_secret", help="App secret for hubspot access token", default="")
 parser.add_option("--enable_contact_list_sync_by_project_id", dest="enable_contact_list_sync_by_project_id", help="", default="")
+parser.add_option("--allowed_doc_types_sync", dest="allowed_doc_types_sync", help="", default="*")
+parser.add_option("--use_sync_contact_list_v2", dest="use_sync_contact_list_v2",action="store_true", help="", default=False)
 
 APP_NAME = "hubspot_sync"
 PAGE_SIZE = 100
@@ -68,7 +69,7 @@ def notify(env, source, message):
 def ping_healthcheck(env, healthcheck_id, message, endpoint=""):
     message = json.dumps(message, indent=1)
     log.warning("Healthcheck ping for env %s payload %s", env, message)
-    if env != "production": 
+    if env != "production" or options.dry == True:
         return
 
     try:
@@ -186,7 +187,7 @@ def get_create_all_documents_with_buffer(project_id, doc_type, buffer_size, fetc
     return create_all_documents_with_buffer
 
 def create_all_documents(project_id, doc_type, docs, fetch_deleted_contact=False):
-    if options.dry == "True":
+    if options.dry == True:
         log.warning("Dry run. Skipped document upsert.")
         return
 
@@ -632,7 +633,86 @@ def sync_contacts_from_contact_lists(project_id, refresh_token, api_key, list_id
     
     return contact_ids, list_memberships
 
+def get_all_contact_lists_info(project_id, refresh_token, api_key):
+    url = "https://api.hubapi.com/contacts/v1/lists?"
+    all_contact_lists = {}
+    get_url = url
+    hubspot_request_handler = get_hubspot_request_handler(project_id, refresh_token, api_key)
+    has_more = True
+    while has_more:
+        log.warning("Downloading contact list for project_id %d %s",project_id, get_url)
+        r = hubspot_request_handler(project_id, get_url)
+        if not r.ok:
+            log.error("Failure response %d from hubspot on sync_contact_lists", r.status_code)
+            return
+        response_dict = json.loads(r.text)
+        contact_lists = response_dict["lists"]
+        for contact_list in contact_lists:
+            all_contact_lists[contact_list["listId"]] = contact_list
+
+        has_more = response_dict.get('has-more')
+        if has_more:
+            get_url = url +"&"+"offset="+str(response_dict["offset"])
+    return all_contact_lists
+
+def get_contact_lists_contact_ids(project_id, refresh_token, api_key, sync_all=False):
+    # all contacts endpoint
+    url = "https://api.hubapi.com/contacts/v1/lists/all/contacts/all?"
+
+    parameters_dict = {"showListMemberships":"true","count":100}
+    required_properties = ["email","phone"]
+
+    url = url + urllib.parse.urlencode(parameters_dict)
+    url = url + "&"+ "&".join([ "property="+property_name for property_name in required_properties ])
+
+    hubspot_request_handler = get_hubspot_request_handler(project_id, refresh_token, api_key)
+
+    get_url = url
+    contact_api_calls = 0
+    contact_lists_contact_ids = {}
+    has_more = True
+    while has_more:
+
+        log.warning("Downloading contacts for contact lists for project_id %d from url %s.", project_id, get_url)
+        r = hubspot_request_handler(project_id, get_url)
+        if not r.ok:
+            log.error("Failure response %d from hubspot on sync_contacts", r.status_code)
+            break
+
+        response_dict = json.loads(r.text)
+        contacts = response_dict['contacts']
+        for contact in contacts:
+            contact_id = contact["vid"]
+            list_memberships = contact.get("list-memberships")
+            for membership in list_memberships:
+                listId = membership["static-list-id"]
+                if listId not in contact_lists_contact_ids:
+                    contact_lists_contact_ids[listId]=[]
+                contact_lists_contact_ids[listId].append(contact_id)
+
+        contact_api_calls +=1
+        has_more = response_dict.get('has-more')
+        if has_more:
+            vid_offset = response_dict.get("vid-offset")
+            if not vid_offset:
+                break
+            get_url = url + "&vidOffset="+ str(vid_offset)
+    return contact_lists_contact_ids
+
+def sync_all_contact_lists_v2(project_id, refresh_token, api_key, sync_all=False):
+    start_time  = time.time()
+    contact_lists_info = get_all_contact_lists_info(project_id, refresh_token, api_key)
+    contact_lists_contact_ids = get_contact_lists_contact_ids(project_id,refresh_token,api_key,sync_all)
+    end_time  = time.time()
+
+    for listId in contact_lists_contact_ids:
+        log.warning("Contact list %d count %d", listId, len(contact_lists_contact_ids[listId]))
+
+    ## merge contact_lists_contact_ids and contact list info to create records
+    log.warning("Contact list v2 total time %s",end_time-start_time)
+
 def sync_contact_lists(project_id, refresh_token, api_key, sync_all=False):
+    start_time  = time.time()
     url = "https://api.hubapi.com/contacts/v1/lists?"
     parameter_dict = {"count":250 }
 
@@ -682,6 +762,8 @@ def sync_contact_lists(project_id, refresh_token, api_key, sync_all=False):
         if has_more:
             parameter_dict["offset"] = response_dict['offset']
     
+    end_time = time.time()
+    log.warning("Contact list v1 total time %s",end_time-start_time)
     create_all_contact_list_documents_with_buffer([], False) ## flush any remainig docs in memory
     return
 
@@ -1257,6 +1339,14 @@ def allow_contact_list_sync_by_project_id(project_id):
         return True
     return str(project_id) in allowed_projects
 
+def allowed_doc_types_sync(doc_type):
+    if not options.enable_contact_list_sync_by_project_id:
+        return False
+    all_doc_typ, allowed_doc_types,_ = get_allowed_list_with_all_element_support(options.allowed_doc_types_sync)
+    if all_doc_typ:
+        return True
+    return doc_type in allowed_doc_types
+
 def get_next_sync_info(project_settings, last_sync_info, first_time_sync = False):
     next_sync_info = []
     for project_id in project_settings:
@@ -1285,6 +1375,9 @@ def get_next_sync_info(project_settings, last_sync_info, first_time_sync = False
              sync_info["deleted_contacts"] = 0
 
         for doc_type in sync_info:
+            if not allowed_doc_types_sync(doc_type):
+                continue
+
             if doc_type == "contact_list" and not allow_contact_list_sync_by_project_id(project_id):
                 continue
             
@@ -1319,7 +1412,13 @@ def sync(project_id, refresh_token, api_key, doc_type, sync_all, last_sync_times
         elif doc_type == "deal":
             response["deal_api_calls"] = sync_deals(project_id, refresh_token, api_key, sync_all)
         elif doc_type == "contact_list":
-            sync_contact_lists(project_id, refresh_token, api_key, sync_all)
+            if options.dry:
+                if options.use_sync_contact_list_v2:
+                    sync_all_contact_lists_v2(project_id, refresh_token, api_key, sync_all)
+                else:
+                    sync_contact_lists(project_id, refresh_token, api_key, sync_all)
+            else:
+                sync_contact_lists(project_id, refresh_token, api_key, sync_all)
         elif doc_type == "form":
             sync_forms(project_id, refresh_token, api_key)
         elif doc_type == "form_submission":

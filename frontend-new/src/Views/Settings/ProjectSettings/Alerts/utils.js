@@ -77,7 +77,7 @@ export const getEventsWithPropertiesKPI = (filters, category) => {
             pr.prDaTy === 'datetime'
               ? reverseDateOperatorMap[pr.co]
               : reverseOperatorMap[pr.co],
-          props: [DNa, pr.prDaTy],
+          props: [DNa, pr.prDaTy, 'filter'],
           values:
             pr.prDaTy === FILTER_TYPES.DATETIME
               ? convertDateTimeObjectValuesToMilliSeconds(val)
