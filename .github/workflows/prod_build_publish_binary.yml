@@ -21,7 +21,7 @@ env:
   DEPLOYMENT_NAME: pattern_mine_job # TODO: update to deployment name
   PATH_TO_FACTORS : /home/runner/work/factors
   IMAGE: pattern_mine
-
+  DEV_NAME: ${{ github.actor }}
 
 jobs:
   setup-build-publish-deploy:
@@ -32,8 +32,7 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v2
-      
-      
+          
     - name: Set up Go
       uses: actions/setup-go@v2
       with:
