@@ -8,6 +8,8 @@ var APIClient = require("./api-client");
 const constant = require("./constant");
 const Properties = require("./properties");
 const Cache = require("./cache");
+const { isLocalStorageAvailable } = require("./utils/util");
+const { processAllLocalStorageBacklogRequests } = require("./utils/request")
 
 const SDK_NOT_INIT_ERROR = new Error("Factors SDK is not initialized.");
 const SDK_NO_USER_ERROR = new Error("No user.");
@@ -190,6 +192,9 @@ App.prototype.init = function(token, opts={}, afterPageTrackCallback) {
     if (opts.track_page_on_spa === true) {
         Cache.setFactorsCache(Cache.trackPageOnSPA, true); 
     }
+
+    // Enable localstorage for use after checking.
+    if (isLocalStorageAvailable()) window.FACTORS_LS_AVAILABLE = true;
     
     // Gets info using temp client with given token, if succeeds, 
     // set temp client as app client and set response as app config 
@@ -213,6 +218,9 @@ App.prototype.init = function(token, opts={}, afterPageTrackCallback) {
 
             // Check if client has given cookie access and process queue, else keep checking
             checkCookiesConsentAndProcess(_this, response, trackOnInit);
+
+            // Process localstorage backlog requests.
+            processAllLocalStorageBacklogRequests();
 
             return response;
         })
