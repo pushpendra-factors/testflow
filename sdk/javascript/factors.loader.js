@@ -53,5 +53,5 @@ window.factors = window.factors||(function(){
     s.src = "${assetURL}";
     s.async = true;
     d = document.getElementsByTagName('script')[0];
-    document.head.insertBefore(s, d);
+    d.parentNode.insertBefore(s, d);
 })()
