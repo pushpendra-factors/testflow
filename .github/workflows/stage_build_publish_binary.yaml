@@ -20,6 +20,7 @@ env:
   GKE_ZONE: us-west1-b   # TODO: update to cluster zone
   DEPLOYMENT_NAME: pattern_mine_job # TODO: update to deployment name
   PATH_TO_FACTORS : /home/runner/work/factors
+  DEV_NAME: ${{ github.actor}}
   IMAGE: pattern_mine
 
 
@@ -39,6 +40,16 @@ jobs:
       with:
         go-version: 1.17
     - run: go version
+
+    - name: Show GitHub context   
+      env: 
+        GITHUB_CONTEXT: ${{ toJson(github) }}   
+      run: echo "$GITHUB_CONTEXT" ```
+
+    - name: Show GitHub context   
+      env: 
+        GITHUB_CONTEXT: ${{ toJson(github) }}   
+      run: echo "$DEV_NAME" ```
         
     # Setup gcloud CLI
     - uses: google-github-actions/setup-gcloud@v0.2.0
