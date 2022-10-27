@@ -1795,9 +1795,9 @@ export const isComparisonEnabled = (queryType, events, groupBy, models) => {
     if (newAppliedBreakdown.length === 0) {
       return true;
     }
-    if (events.length === 1) {
-      return true;
-    }
+    // if (events.length === 1) {
+    //   return true;
+    // }
     return false;
   }
 

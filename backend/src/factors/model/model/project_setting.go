@@ -11,7 +11,7 @@ type ProjectSetting struct {
 	// Used project_id as primary key also, becase of 1-1 relationship.
 	ProjectId         int64           `gorm:"primary_key:true" json:"project_id,omitempty"`
 	AttributionConfig *postgres.Jsonb `json:"attribution_config"`
-	TimelinesConfig   TimelinesConfig `json:"timelines_config"`
+	TimelinesConfig   *postgres.Jsonb `json:"timelines_config"`
 
 	// Using pointers to avoid update by default value.
 	// omit empty to avoid nil(filelds not updated) on resp json.

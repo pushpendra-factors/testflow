@@ -629,7 +629,7 @@ export const toLetters = (num) => {
 export const PropTextFormat = (prop = 'users') => {
   const formatText = prop.replace('$', '').split('_');
   formatText.forEach((word, i) => {
-    formatText[i] = formatText[i][0].toUpperCase() + formatText[i].substr(1);
+    formatText[i] = word.charAt(0).toUpperCase() + word.substring(1)
   });
   return formatText.join(' ');
 };

@@ -219,7 +219,7 @@ const FAFilterSelect = ({
 
   const renderGroupDisplayName = (propState) => {
     // propState?.name ? userPropNames[propState?.name] ? userPropNames[propState?.name] : propState?.name : 'Select Property'
-    let propertyName = '';
+    let propertyName = propState?.name;
     if (propState.name && propState.icon === 'group') {
       propertyName = groupPropNames[propState.name]
         ? groupPropNames[propState.name]

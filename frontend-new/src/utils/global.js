@@ -42,3 +42,5 @@ export function isNumeric(str) {
     !isNaN(parseFloat(str))
   ); // ...and ensure strings of whitespace fail
 }
+
+export const bindService = (dispatch, projectId, serviceClass) => new serviceClass(dispatch, projectId);
