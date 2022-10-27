@@ -47,7 +47,7 @@ func GetHubspotOAuthUserCredentials(clientID, clientSecret, redirectURL, code st
 	urlParams := fmt.Sprintf("grant_type=%s&client_id=%s&client_secret=%s&redirect_uri=%s&code=%s", "authorization_code", clientID, clientSecret, redirectURL, code)
 	tokenURL := baseURL + "?" + urlParams
 
-	resp, err := model.ActionHubspotRequestHandler("POST", tokenURL, "", "", "application/x-www-form-urlencoded;charset=utf-8")
+	resp, err := model.ActionHubspotRequestHandler("POST", tokenURL, "", "", "application/x-www-form-urlencoded;charset=utf-8", nil)
 	if err != nil {
 		log.WithError(err).Error("Failed to generate POST request for GetHubspotOAuthUserCredentials.")
 		return nil, errors.New("failed to make POST request on GetHubspotRefreshToken")

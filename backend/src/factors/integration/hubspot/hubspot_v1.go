@@ -534,7 +534,7 @@ func GetHubspotPropertiesMetaV1(objectType string, apiKey, refreshToken string) 
 	}
 
 	url := "https://" + "api.hubapi.com" + "/properties/v1/" + objectType + "/properties?"
-	resp, err := model.ActionHubspotRequestHandler("GET", url, apiKey, accessToken, "")
+	resp, err := model.ActionHubspotRequestHandler("GET", url, apiKey, accessToken, "", nil)
 	if err != nil {
 		return nil, err
 	}
