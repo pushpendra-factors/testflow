@@ -447,7 +447,7 @@ func (store *MemSQL) GetAttributionData(projectID int64, query *model.Attributio
 			(*attributionData)[key].ConvAggFunctionType = convAggFunctionType
 		}
 		if C.GetAttributionDebug() == 1 {
-			logCtx.Info("Done AddTheAddedKeysAndMetrics, AddPerformanceData")
+			logCtx.WithFields(log.Fields{"attributionData": attributionData}).Info("Done AddTheAddedKeysAndMetrics, AddPerformanceData")
 		}
 	} else {
 
@@ -579,7 +579,7 @@ func (store *MemSQL) GetAttributionData(projectID int64, query *model.Attributio
 		// for KPI queries, use the kpiData.KpiAggFunctionTypes as ConvAggFunctionType
 		var convAggFunctionType []string
 		for _, val := range kpiData {
-			if len(val.KpiAggFunctionTypes) > 0 {
+			if len(val.KpiAggFunctionTypes) > 0 && val.KpiAggFunctionTypes != nil {
 				convAggFunctionType = val.KpiAggFunctionTypes
 				break
 			}
@@ -588,15 +588,24 @@ func (store *MemSQL) GetAttributionData(projectID int64, query *model.Attributio
 			(*attributionData)[key].ConvAggFunctionType = convAggFunctionType
 		}
 
+		if C.GetAttributionDebug() == 1 {
+			logCtx.WithFields(log.Fields{"attributionData": attributionData}).Info("KPI-Attribution attributionData before merge")
+		}
+
 		// Add the Added keys
 		model.AddTheAddedKeysAndMetrics(attributionData, query, groupSessions, noOfConversionEvents)
+
+		if C.GetAttributionDebug() == 1 {
+			logCtx.WithFields(log.Fields{"attributionData": attributionData}).Info("KPI-Attribution attributionData AddTheAddedKeysAndMetrics")
+		}
 
 		// Add the performance information
 		model.AddPerformanceData(attributionData, query.AttributionKey, marketingReports, noOfConversionEvents)
 
-		for key := range *attributionData {
-			(*attributionData)[key].ConvAggFunctionType = convAggFunctionType
+		if C.GetAttributionDebug() == 1 {
+			logCtx.WithFields(log.Fields{"attributionData": attributionData}).Info("KPI-Attribution attributionData AddPerformanceData")
 		}
+
 	}
 	return attributionData, isCompare, nil
 }

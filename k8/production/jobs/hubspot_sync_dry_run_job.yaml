@@ -1,0 +1,48 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  labels:
+    nodePool: shared-persistent-pool2
+  name: hubspot-sync-dry-run-job
+spec:
+  schedule: "1 2 3 4 5" # In UTC
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            layer: jobs
+            nodePool: shared-persistent-pool2
+        spec:
+          nodeSelector:
+            cloud.google.com/gke-nodepool: shared-persistent-pool2
+          containers:
+          - name: hubspot-sync-dry-run-job
+            image: us.gcr.io/factors-production/hubspot-sync-job:v0.01
+            imagePullPolicy: IfNotPresent
+            args:
+            - --env
+            - $(ENV)
+            - --data_service_host
+            - $(DATA_SERVICE_MEMSQL_HOST_URL)
+            - --hubspot_app_id
+            - $(HUBSPOT_APP_ID)
+            - --hubspot_app_secret
+            - $(HUBSPOT_APP_SECRET)
+            - --project_ids
+            - "1125899911000001"
+            - --allowed_doc_types_sync
+            - "contact_list"
+            - --enable_contact_list_sync_by_project_id
+            - "1125899911000001"
+            - --dry
+            - --use_sync_contact_list_v2
+            envFrom:
+            - configMapRef:
+                name: config-env
+            - secretRef:
+                name: secret-hubspot
+          restartPolicy: OnFailure
