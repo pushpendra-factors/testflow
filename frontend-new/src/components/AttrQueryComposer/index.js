@@ -315,23 +315,25 @@ const AttrQueryComposer = ({ activeProject,
                         Analyse
                     </Text>{' '}
                     <div className={`${styles.groupsection}`}>
-                        <Button
-                            className={`${styles.groupsection_button}`}
-                            type='text'
-                            onClick={triggerDropDown}
-                        >
-                            <div className={`flex items-center`}>
-                                <Text
-                                    type={'title'}
-                                    level={6}
-                                    weight={'bold'}
-                                    extraClass={`m-0 mr-1`}
-                                >
-                                    {PropTextFormat(queryOptions.group_analysis)}
-                                </Text>
-                                <SVG name='caretDown' />
-                            </div>
-                        </Button>
+                        <Tooltip title='Attribute at a User, Deal, or Opportunity level'>
+                            <Button
+                                className={`${styles.groupsection_button}`}
+                                type='text'
+                                onClick={triggerDropDown}
+                            >
+                                <div className={`flex items-center`}>
+                                    <Text
+                                        type={'title'}
+                                        level={6}
+                                        weight={'bold'}
+                                        extraClass={`m-0 mr-1`}
+                                    >
+                                        {PropTextFormat(queryOptions.group_analysis)}
+                                    </Text>
+                                    <SVG name='caretDown' />
+                                </div>
+                            </Button>
+                        </Tooltip>
                         {selectGroup()}
                     </div>
                 </div>

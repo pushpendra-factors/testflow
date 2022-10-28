@@ -13,11 +13,14 @@ import {
   getProfileAccounts,
   getProfileAccountDetails
 } from '../../../reducers/timelines/middleware';
+import { fetchProjectSettings } from '../../../reducers/global';
 
 function AccountProfiles({
   activeProject,
   accounts,
   accountDetails,
+  fetchProjectSettings,
+  currentProjectSettings,
   getProfileAccounts,
   getProfileAccountDetails,
   getGroupProperties
@@ -55,6 +58,10 @@ function AccountProfiles({
     getGroupProperties(activeProject.id, '$salesforce_account');
   }, [activeProject.id]);
 
+  useEffect(() => {
+    fetchProjectSettings(activeProject.id);
+  }, [activeProject]);
+
   const headerClassStr =
     'fai-text fai-text__color--grey-2 fai-text__size--h7 fai-text__weight--bold';
   const columns = [
@@ -62,7 +69,8 @@ function AccountProfiles({
       title: <div className={headerClassStr}>Company Name</div>,
       dataIndex: 'account',
       key: 'account',
-      render: (item) => (
+      render: (item) =>
+        (
           <div className="flex items-center">
             <img
               src={`https://logo.clearbit.com/${getHost(item.host)}`}
@@ -198,7 +206,11 @@ function AccountProfiles({
           <Table
             onRow={(user) => ({
               onClick: () => {
-                getProfileAccountDetails(activeProject.id, user.identity);
+                getProfileAccountDetails(
+                  activeProject.id,
+                  user.identity,
+                  currentProjectSettings?.timelines_config
+                );
                 showModal();
               }
             })}
@@ -228,7 +240,8 @@ function AccountProfiles({
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   accounts: state.timelines.accounts,
-  accountDetails: state.timelines.accountDetails
+  accountDetails: state.timelines.accountDetails,
+  currentProjectSettings: state.global.currentProjectSettings
 });
 
 const mapDispatchToProps = (dispatch) =>
@@ -236,7 +249,8 @@ const mapDispatchToProps = (dispatch) =>
     {
       getProfileAccounts,
       getProfileAccountDetails,
-      getGroupProperties
+      getGroupProperties,
+      fetchProjectSettings
     },
     dispatch
   );

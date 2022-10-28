@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { connect, useSelector } from 'react-redux';
 import { bindActionCreators } from 'redux';
-import { Button, Collapse, Select, DatePicker } from 'antd';
+import { Button, Collapse, Select, DatePicker, Tooltip } from 'antd';
 import { SVG, Text } from '../factorsComponents';
 import styles from './index.module.scss';
 import ProfileBlock from './ProfileBlock';
@@ -19,6 +19,7 @@ import FaSelect from '../FaSelect';
 import { INITIALIZE_GROUPBY } from '../../reducers/coreQuery/actions';
 import { useDispatch } from 'react-redux';
 import { PropTextFormat } from '../../utils/dataFormatter';
+import { TOOLTIP_CONSTANTS } from '../../constants/tooltips.constans';
 
 function ProfileComposer({
   queries,
@@ -124,23 +125,28 @@ function ProfileComposer({
             Analyse
           </Text>
           <div className={`${styles.groupsection}`}>
-            <Button
-              className={`${styles.groupsection_button}`}
-              type='text'
-              onClick={triggerDropDown}
-            >
-              <div className={`flex items-center`}>
-                <Text
-                  type={'title'}
-                  level={6}
-                  weight={'bold'}
-                  extraClass={`m-0 mr-1`}
-                >
-                  {PropTextFormat(queryOptions.group_analysis)}
-                </Text>
-                <SVG name='caretDown' />
-              </div>
-            </Button>
+            <Tooltip
+              title='Select profile type to analyse'
+              color={TOOLTIP_CONSTANTS.DARK}>
+                <Button
+                className={`${styles.groupsection_button}`}
+                type='text'
+                onClick={triggerDropDown}
+              >
+                <div className={`flex items-center`}>
+                  <Text
+                    type={'title'}
+                    level={6}
+                    weight={'bold'}
+                    extraClass={`m-0 mr-1`}
+                  >
+                    {PropTextFormat(queryOptions.group_analysis)}
+                  </Text>
+                  <SVG name='caretDown' />
+                </div>
+              </Button>
+              </Tooltip>
+            
             {selectGroup()}
           </div>
         </div>

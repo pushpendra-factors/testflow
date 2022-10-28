@@ -216,6 +216,7 @@ type Configuration struct {
 	ResourcePoolForAnalytics                           string
 	RestrictReusingUsersByCustomerUserId               string
 	HubspotAPIOnboardingHAPIKey                        string
+	HubspotAPIOnboardingPrivateAccessToken             string
 	MailModoOnboardingAPIKey                           string
 	MailModoOnboardingURL1                             string
 	MailModoOnboardingURL2                             string

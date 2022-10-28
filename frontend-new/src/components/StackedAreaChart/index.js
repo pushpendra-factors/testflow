@@ -4,7 +4,7 @@ import styles from './styles.module.scss';
 import ReactDOMServer from 'react-dom/server';
 import moment from 'moment';
 import Highcharts from 'highcharts';
-import { high_charts_default_spacing } from '../../utils/constants';
+import { high_charts_default_spacing, FONT_FAMILY } from '../../utils/constants';
 import LegendsCircle from '../../styles/components/LegendsCircle';
 import {
   addQforQuarter,
@@ -33,7 +33,7 @@ function StackedAreaChart({
         height,
         spacing: cardSize !== 1 ? high_charts_default_spacing : spacing,
         style: {
-          fontFamily: "'Work Sans', sans-serif"
+          fontFamily: FONT_FAMILY
         }
       },
       legend: {

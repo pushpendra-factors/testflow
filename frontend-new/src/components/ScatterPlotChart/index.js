@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, memo } from 'react';
 import styles from './styles.module.scss';
 import Highcharts from 'highcharts';
-import { HIGH_CHARTS_SCATTER_PLOT_DEFAULT_SPACING } from '../../utils/constants';
+import { HIGH_CHARTS_SCATTER_PLOT_DEFAULT_SPACING, FONT_FAMILY } from '../../utils/constants';
 
 function ScatterPlotChart({
   series,
@@ -21,7 +21,7 @@ function ScatterPlotChart({
         spacing:
           cardSize !== 1 ? HIGH_CHARTS_SCATTER_PLOT_DEFAULT_SPACING : spacing,
         style: {
-          fontFamily: "'Work Sans', sans-serif"
+          fontFamily: FONT_FAMILY
         }
       },
       title: {

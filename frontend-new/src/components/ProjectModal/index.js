@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Avatar, Popover, Modal, Row, Col, notification } from 'antd';
+import { Button, Avatar, Popover, Modal, Row, Col, notification, Tooltip } from 'antd';
 import { Text, SVG } from '../factorsComponents';
 import { PlusOutlined, PoweroffOutlined } from '@ant-design/icons';
 import styles from './index.module.scss';
@@ -16,7 +16,7 @@ import { connect } from 'react-redux';
 import { useHistory } from 'react-router-dom';
 import factorsai from 'factorsai';
 import { fetchProjectSettings } from 'Reducers/global';
-
+import { TOOLTIP_CONSTANTS } from '../../constants/tooltips.constans';
 function ProjectModal(props) {
   const [ShowPopOver, setShowPopOver] = useState(false);
   const [searchProjectName, setsearchProjectName] = useState('');
@@ -244,33 +244,37 @@ function ProjectModal(props) {
         }}
         trigger='click'
       >
-        <Button
-          className={`${styles.button} flex items-center mr-4`}
-          type='text'
-          size='large'
-        >
-          <Avatar
-            size={36}
-            shape='square'
-            style={{
-              background: '#ff0000',
-              opacity: '0.6',
-              textTransform: 'uppercase',
-              fontWeight: '400',
-              borderRadius: '4px',
-            }}
-          >{`${props.active_project?.name?.charAt(0)}`}</Avatar>
+        <Tooltip
+          title='Access your projects, account settings, and more'
+          color={TOOLTIP_CONSTANTS.DARK}>
+          <Button
+            className={`${styles.button} flex items-center mr-4`}
+            type='text'
+            size='large'
+          >
+            <Avatar
+              size={36}
+              shape='square'
+              style={{
+                background: '#ff0000',
+                opacity: '0.6',
+                textTransform: 'uppercase',
+                fontWeight: '400',
+                borderRadius: '4px',
+              }}
+            >{`${props.active_project?.name?.charAt(0)}`}</Avatar>
 
-          <div className='flex flex-col items-start ml-2'>
-            <div className='flex items-center'>
-              <Text type={'title'} level={7} extraClass={'m-0'} weight={'bold'}>
-                {`${props.active_project?.name}`}
-              </Text>
-              <SVG name='caretDown' size={20} />
+            <div className='flex flex-col items-start ml-2'>
+              <div className='flex items-center'>
+                <Text type={'title'} level={7} extraClass={'m-0'} weight={'bold'}>
+                  {`${props.active_project?.name}`}
+                </Text>
+                <SVG name='caretDown' size={20} />
+              </div>
+              <div className={`text-xs`}>{props.currentAgent?.email}</div>
             </div>
-            <div className={`text-xs`}>{props.currentAgent?.email}</div>
-          </div>
-        </Button>
+          </Button>
+        </Tooltip>
       </Popover>
 
       <UserSettings

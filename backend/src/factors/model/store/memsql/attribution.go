@@ -437,7 +437,7 @@ func (store *MemSQL) FireAttribution(projectID int64, query *model.AttributionQu
 	// Extend the campaign window for engagement based attribution.
 	if query.QueryType == model.AttributionQueryTypeEngagementBased {
 		conversionFrom = query.From
-		conversionTo = model.LookbackAdjustedTo(query.To, query.LookbackDays, U.TimeZoneString(query.Timezone))
+		conversionTo = model.LookbackAdjustedTo(query.To, query.LookbackDays)
 	}
 	var attributionData *map[string]*model.AttributionData
 	if query.AttributionMethodologyCompare != "" {
@@ -748,7 +748,7 @@ func (store *MemSQL) getAllTheSessions(projectId int64, sessionEventNameId strin
 	// extend the campaign window for engagement based attribution
 	if query.QueryType == model.AttributionQueryTypeEngagementBased {
 		effectiveFrom = model.LookbackAdjustedFrom(query.From, query.LookbackDays)
-		effectiveTo = model.LookbackAdjustedTo(query.To, query.LookbackDays, U.TimeZoneString(query.Timezone))
+		effectiveTo = model.LookbackAdjustedTo(query.To, query.LookbackDays)
 	}
 
 	attributionEventKey, err := model.GetQuerySessionProperty(query.AttributionKey)

@@ -12,6 +12,7 @@ import { isArray } from 'lodash';
 import moment from 'moment';
 import { DEFAULT_OPERATOR_PROPS } from 'Components/FaFilterSelect/utils';
 import { DISPLAY_PROP } from '../../../../../../utils/constants';
+import { TOOLTIP_CONSTANTS } from '../../../../../../constants/tooltips.constans';
 
 const defaultOpProps = DEFAULT_OPERATOR_PROPS;
 
@@ -245,7 +246,7 @@ const GlobalFilterSelect = ({
   const renderPropSelect = () => {
     return (
       <div className={styles.filter__propContainer}>
-        <Tooltip title={renderGroupDisplayName(propState)}>
+        <Tooltip title={renderGroupDisplayName(propState)} color={TOOLTIP_CONSTANTS.DARK}>
           <Button
             icon={
               propState && propState.icon ? (
@@ -278,13 +279,17 @@ const GlobalFilterSelect = ({
   const renderOperatorSelector = () => {
     return (
       <div className={styles.filter__propContainer}>
-        <Button
-          className={`mr-2`}
-          type='link'
-          onClick={() => setOperSelectOpen(true)}
-        >
-          {operatorState ? operatorState : 'Select Operator'}
-        </Button>
+        <Tooltip
+          title='Select an equator to define your filter rules.'
+          color={TOOLTIP_CONSTANTS.DARK}>
+          <Button
+            className={`mr-2`}
+            type='link'
+            onClick={() => setOperSelectOpen(true)}
+          >
+            {operatorState ? operatorState : 'Select Operator'}
+          </Button>
+        </Tooltip>
 
         {operSelectOpen && (
           <FaSelect
@@ -571,6 +576,7 @@ const GlobalFilterSelect = ({
                     .join(', ')
                 : null
             }
+            color={TOOLTIP_CONSTANTS.DARK}
           >
             <Button
               className={`fa-button--truncate`}

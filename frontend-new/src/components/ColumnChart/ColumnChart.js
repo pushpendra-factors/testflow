@@ -5,6 +5,7 @@ import Highcharts from 'highcharts';
 import PropTypes from 'prop-types';
 import styles from './columnChart.module.scss';
 import { Number as NumFormat, Text } from '../factorsComponents';
+import { FONT_FAMILY } from '../../utils/constants';
 
 function ColumnChart({ series, categories, chartId, comparisonApplied }) {
   if (comparisonApplied) {
@@ -42,7 +43,10 @@ function ColumnChart({ series, categories, chartId, comparisonApplied }) {
       chart: {
         type: 'column',
         animation: false,
-        styledMode: comparisonApplied
+        styledMode: comparisonApplied,
+        style: {
+          fontFamily: FONT_FAMILY
+        }
       },
       legend: {
         enabled: false
@@ -64,6 +68,20 @@ function ColumnChart({ series, categories, chartId, comparisonApplied }) {
       plotOptions: {
         column: {
           pointPadding: 0
+        },
+        series: {
+          dataLabels: {
+            align: 'center',
+            enabled: true,
+            useHTML: true,
+            formatter() {
+              return ReactDOMServer.renderToString(
+                <NumFormat number={this.point.y} />
+              );
+            }
+          },
+          borderRadiusTopLeft: 5,
+          borderRadiusTopRight: 5
         }
       },
       tooltip: {

@@ -9,6 +9,7 @@ import GroupSelect2 from '../GroupSelect2';
 
 import { setGroupBy, delGroupBy } from '../../../reducers/coreQuery/middleware';
 import FaSelect from '../../FaSelect';
+import { TOOLTIP_CONSTANTS } from '../../../constants/tooltips.constans';
 
 function GroupBlock({
   groupByState,
@@ -184,7 +185,7 @@ function GroupBlock({
       propertyName = 'Select user property';
     }
     return (
-      <Tooltip title={propertyName}>
+      <Tooltip title={propertyName} color={TOOLTIP_CONSTANTS.DARK}>
         <Button
           icon={<SVG name={opt.prop_category} size={16} color={'purple'} />}
           className={`fa-button--truncate fa-button--truncate-xs btn-left-round filter-buttons-margin`}

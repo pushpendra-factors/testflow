@@ -43,11 +43,11 @@ var host = getHostUrl();
     
   
 
-export function fetchWeeklyIngishts(projectID, dashboardID, baseTime, startTime, isDashboard=true) {
+export function fetchWeeklyIngishts(projectID, dashboardID, baseTime, startTime, isDashboard=true, kpi_index = 1) {
   const queryURL = isDashboard ? 'dashboard_unit_id' : 'query_id';
   return function(dispatch) {
     return new Promise((resolve,reject) => {
-      get(dispatch, host + "projects/"+projectID+"/insights?"+queryURL+"="+dashboardID+"&base_start_time="+baseTime+"&comp_start_time="+startTime+"&insights_type=w&number_of_records=11")        
+      get(dispatch, host + "projects/"+projectID+"/insights?"+queryURL+"="+dashboardID+"&base_start_time="+baseTime+"&comp_start_time="+startTime+"&insights_type=w&number_of_records=11&kpi_index=" + kpi_index)        
         .then((response)=>{        
           dispatch({type:"FETCH_WEEKLY_INSIGHTS_FULLFILLED", payload: response.data});
           resolve(response)

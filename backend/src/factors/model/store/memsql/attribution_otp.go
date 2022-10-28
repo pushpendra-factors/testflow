@@ -18,7 +18,7 @@ func (store *MemSQL) fetchOTPSessions(projectID int64, offlineTouchPointEventNam
 	// extend the campaign window for engagement based attribution
 	if query.QueryType == model.AttributionQueryTypeEngagementBased {
 		effectiveFrom = model.LookbackAdjustedFrom(query.From, query.LookbackDays)
-		effectiveTo = model.LookbackAdjustedTo(query.To, query.LookbackDays, U.TimeZoneString(query.Timezone))
+		effectiveTo = model.LookbackAdjustedTo(query.To, query.LookbackDays)
 	}
 
 	attributionEventKey, err := model.GetAttributionKeyForOffline(query.AttributionKey)

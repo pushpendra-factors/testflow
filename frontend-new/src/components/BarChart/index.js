@@ -1,6 +1,4 @@
-import React, {
-  useRef, useCallback, useEffect, memo
-} from 'react';
+import React, { useRef, useCallback, useEffect, memo } from 'react';
 import get from 'lodash/get';
 import * as d3 from 'd3';
 import { checkForWindowSizeChange } from '../../Views/CoreQuery/FunnelsResultPage/utils';
@@ -11,7 +9,8 @@ import {
   REPORT_SECTION,
   DASHBOARD_MODAL,
   DASHBOARD_WIDGET_SECTION,
-  BAR_COUNT
+  BAR_COUNT,
+  FONT_FAMILY
 } from '../../utils/constants';
 import TopLegends from '../GroupedBarChart/TopLegends';
 import { getFormattedKpiValue } from '../../Views/CoreQuery/KPIAnalysis/kpiAnalysis.helpers';
@@ -66,10 +65,10 @@ function BarChart({
         window.pageYOffset !== undefined
           ? window.pageYOffset
           : (
-            document.documentElement ||
+              document.documentElement ||
               document.body.parentNode ||
               document.body
-          ).scrollTop;
+            ).scrollTop;
       const top = nodePosition.y + scrollTop;
       const toolTipHeight = d3
         .select('.toolTip')
@@ -83,13 +82,13 @@ function BarChart({
             <div style="color: #0E2647;" class="mt-2 leading-5 text-base">
               <span class="font-semibold">
                 ${
-  get(d, 'metricType', null)
-    ? getFormattedKpiValue({
-      value: d.value,
-      metricType: get(d, 'metricType', null)
-    })
-    : numberWithCommas(d.value)
-}
+                  get(d, 'metricType', null)
+                    ? getFormattedKpiValue({
+                        value: d.value,
+                        metricType: get(d, 'metricType', null)
+                      })
+                    : numberWithCommas(d.value)
+                }
               </span>
             </div>
           `
@@ -110,6 +109,30 @@ function BarChart({
   }, []);
 
   const drawChart = useCallback(() => {
+    const arc = (r, sign) =>
+      r
+        ? `a${r * sign[0]},${r * sign[1]} 0 0 1 ${r * sign[2]},${r * sign[3]}`
+        : '';
+
+    function roundedRect(x, y, width, height, r) {
+      const R = [
+        Math.min(r[0], height, width),
+        Math.min(r[1], height, width),
+        Math.min(r[2], height, width),
+        Math.min(r[3], height, width)
+      ];
+
+      return `M${x + R[0]},${y}h${width - R[0] - R[1]}${arc(
+        R[1],
+        [1, 1, 1, 1]
+      )}v${height - R[1] - R[2]}${arc(R[2], [1, 1, -1, 1])}h${
+        -width + R[2] + R[3]
+      }${arc(R[3], [1, 1, -1, -1])}v${-height + R[3] + R[0]}${arc(
+        R[0],
+        [1, 1, 1, -1]
+      )}z`;
+    }
+
     const availableWidth = d3
       .select(chartRef.current)
       .node()
@@ -187,34 +210,72 @@ function BarChart({
           .ticks(5)
       );
 
-    g.selectAll('.bar')
+    const bars = g
+      .selectAll('.bar')
       .data(chartData.slice(0, BAR_COUNT[cardSize]))
       .enter()
-      .append('rect')
-      .attr('class', () => {
-        return 'bar';
-      })
-      .attr('fill', (d) => {
-        return d.color ? d.color : '#4D7DB4';
-      })
-      .attr('x', (d) => xScale(d.label))
-      .attr('y', (d) => {
-        return height - yScale(d.value) > minBarHeight
-          ? yScale(d.value)
-          : height - minBarHeight;
-      })
-      .attr('width', xScale.bandwidth())
-      .attr('height', (d) => {
-        return height - yScale(d.value) > minBarHeight
-          ? height - yScale(d.value)
-          : minBarHeight;
-      })
+      .append('g')
+      .attr('class', 'bar')
       .on('mousemove', (d, i) => {
         showTooltip(d, i);
       })
       .on('mouseout', () => {
         hideTooltip();
       });
+
+    bars
+      .append('path')
+      .attr('d', (d) =>
+        roundedRect(
+          xScale(d.label),
+          height - yScale(d.value) > minBarHeight
+            ? yScale(d.value)
+            : height - minBarHeight,
+          xScale.bandwidth(),
+          yScale(0) - yScale(d.value),
+          [5, 5, 0, 0]
+        )
+      )
+      .style('fill', (d) => {
+        return d.color ? d.color : '#4D7DB4';
+      });
+    // .append('rect')
+    // .attr('class', () => {
+    //   return 'bar';
+    // })
+    // .attr('fill', (d) => {
+    //   return d.color ? d.color : '#4D7DB4';
+    // })
+    // .attr('x', (d) => xScale(d.label))
+    // .attr('y', (d) => {
+    //   return height - yScale(d.value) > minBarHeight
+    //     ? yScale(d.value)
+    //     : height - minBarHeight;
+    // })
+    // .attr('width', xScale.bandwidth())
+    // .attr('height', (d) => {
+    //   return height - yScale(d.value) > minBarHeight
+    //     ? height - yScale(d.value)
+    //     : minBarHeight;
+    // })
+
+    bars
+      .append('text')
+      .text((d) => d.value)
+      .attr('x', (d) => xScale(d.label) + xScale.bandwidth() / 2)
+      .attr('y', (d) => {
+        return (
+          (height - yScale(d.value) > minBarHeight
+            ? yScale(d.value)
+            : height - minBarHeight) - 5
+        );
+      })
+      .attr('font-family', FONT_FAMILY)
+      .attr('font-size', '11px')
+      .attr('font-weight', 600)
+      .attr('fill', 'black')
+      .attr('text-anchor', 'middle');
+
     // g.selectAll(".bar")
     //   .transition()
     //   .duration(500)
@@ -266,7 +327,7 @@ function BarChart({
   }
 
   return (
-    <div className="w-full bar-chart">
+    <div className='w-full bar-chart'>
       {queries && queries.length > 1 && section === DASHBOARD_WIDGET_SECTION ? (
         <TopLegends
           cardSize={cardSize}
@@ -280,7 +341,7 @@ function BarChart({
       {queries &&
       queries.length > 1 &&
       (section === REPORT_SECTION || section === DASHBOARD_MODAL) ? (
-        <div className="mt-4">
+        <div className='mt-4'>
           <TopLegends
             cardSize={cardSize}
             showAllLegends={true}
@@ -289,7 +350,7 @@ function BarChart({
             colors={legendColors}
           />
         </div>
-        ) : null}
+      ) : null}
     </div>
   );
 }

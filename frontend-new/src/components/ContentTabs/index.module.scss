@@ -1,6 +1,7 @@
+@import '../../styles/abstracts/variables';
+
 $inactiveTabColor: #8692A3;
 $activeTabColor: #3E516C;
-$fontFamily: 'Work Sans', sans-serif;
 
 .contentTabs {
     :global(.ant-tabs-nav-list) {
@@ -36,6 +37,6 @@ $fontFamily: 'Work Sans', sans-serif;
         color: $inactiveTabColor;
         line-height: 24px;
         letter-spacing: -0.01em;
-        font-family: $fontFamily;
+        font-family: $font-family;
     }
 }

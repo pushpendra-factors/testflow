@@ -2,12 +2,24 @@ import React, {useState} from 'react';
 import styles from './index.module.scss';
 
 import { SVG, Text } from "../../factorsComponents";
-import {Collapse} from 'antd';
+import {Collapse, Tooltip} from 'antd';
+import { InfoCircleOutlined } from '@ant-design/icons';
+
+import { TOOLTIP_CONSTANTS } from '../../../constants/tooltips.constans';
 
 const {Panel} = Collapse;
 
 const ComposerBlock = ({blockTitle, disabled = false, isOpen, showIcon=true, onClick, children, extraClass}) => {
-
+    let tooltipContent = ''
+    if(blockTitle == "FILTER BY" || blockTitle == "BREAKDOWN"){
+        tooltipContent = `This global ${blockTitle == "FILTER BY" ? "filter" : "breakdown"} impacts all added events above`
+    }else if(blockTitle == "CONVERSION GOAL"){
+        tooltipContent = 'The primary user action which a campaign is expected to drive'
+    }else if(blockTitle == "CRITERIA"){
+        tooltipContent = 'Pick an attribution model for your analysis'
+    }else if(blockTitle == "LINKED EVENTS"){
+        tooltipContent = 'Select events you expect to occur after the conversion goal you defined above.'
+    }
     const renderHeader = () => {
         return (
             <div className={`${styles.cmpBlock__title}`}>
@@ -20,7 +32,18 @@ const ComposerBlock = ({blockTitle, disabled = false, isOpen, showIcon=true, onC
                     extraClass={"m-0 mb-2 inline"}
                     
                   >
-                    {blockTitle}
+                    {blockTitle} 
+                    {tooltipContent.length > 0? 
+                        <Tooltip 
+                            className='p-1' 
+                            title={tooltipContent}
+                            placement='right'
+                            color={TOOLTIP_CONSTANTS.DARK}
+                            >
+                            <InfoCircleOutlined />
+                        </Tooltip> : 
+                        ''
+                    }
                   </Text>
                 </div>
                 {showIcon && <div className={`${styles.cmpBlock__title__icon}`}>

@@ -68,6 +68,53 @@ func RemoveGroupEventNamesOnUserEventNames(categoryToEventNames map[string][]str
 	return categoryToEventNames
 }
 
+func MoveCustomEventNamesOnUserEventNames(categoryToEventNames map[string][]string, customEventNameGroups map[string]string) map[string][]string {
+	nonCustomEventNames := make(map[string][]string)
+	for group := range categoryToEventNames {
+		if group != U.SmartEvent {
+			nonCustomEventNames[group] = categoryToEventNames[group]
+		}
+	}
+
+	customEventNames := categoryToEventNames[U.SmartEvent]
+	for i := range customEventNames {
+		name := customEventNameGroups[customEventNames[i]]
+		if groupDisplayName, exist := U.STANDARD_GROUP_DISPLAY_NAMES[name]; exist {
+			nonCustomEventNames[groupDisplayName] = append(nonCustomEventNames[groupDisplayName], customEventNames[i])
+			continue
+		}
+
+		if groupDisplayName, exist := U.CRM_USER_EVENT_NAME_LABELS[name]; exist {
+			nonCustomEventNames[groupDisplayName] = append(nonCustomEventNames[groupDisplayName], customEventNames[i])
+			continue
+		}
+
+		nonCustomEventNames[U.SmartEvent] = append(nonCustomEventNames[U.SmartEvent], customEventNames[i])
+	}
+
+	return nonCustomEventNames
+}
+
+func GetCustomEventsByGroupNameAndEventName(projectID int64, eventNames []model.EventName) map[string]string {
+	groupEventNames := make(map[string]string)
+	for i := range eventNames {
+		groupName, exist := model.IsGroupSmartEventName(projectID, &eventNames[i])
+		if exist {
+			groupEventNames[eventNames[i].Name] = groupName
+			continue
+		}
+
+		eventName, exist := model.IsUserSmartEventName(projectID, &eventNames[i])
+		if exist {
+			groupEventNames[eventNames[i].Name] = eventName
+			continue
+		}
+		log.WithFields(log.Fields{"custom_event": eventNames[i]}).Error("Failed to move custom event to display group.")
+	}
+
+	return groupEventNames
+}
+
 func RemoveLabeledEventNamesFromOtherUserEventNames(categoryToEventNames map[string][]string) map[string][]string {
 	for category, eventNames := range categoryToEventNames {
 		flag := false
@@ -148,6 +195,12 @@ func GetEventNamesHandler(c *gin.Context) {
 
 }
 
+type EventNamesByUserResponsePayload struct {
+	EventNames               map[string][]string `json:"event_names"`
+	DisplayNames             map[string]string   `json:"display_names"`
+	AllowedDisplayNameGroups map[string]string   `json:"allowed_display_name_groups"`
+}
+
 func GetEventNamesByUserHandler(c *gin.Context) {
 	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
@@ -219,7 +272,19 @@ func GetEventNamesByUserHandler(c *gin.Context) {
 		eventNames[U.FrequentlySeen] = append(eventNames[U.FrequentlySeen], fNames...)
 	}
 
-	c.JSON(http.StatusOK, gin.H{"event_names": eventNames, "display_names": displayNameEvents})
+	customEventNames, status := store.GetStore().GetSmartEventFilterEventNames(projectId, true)
+	if errCode != http.StatusFound {
+		if status != http.StatusNotFound {
+			logCtx.Error("Failed to get smart event names for event names dropdown.")
+		}
+	}
+
+	if status == http.StatusFound {
+		customEventNameGroups := GetCustomEventsByGroupNameAndEventName(projectId, customEventNames)
+		eventNames = MoveCustomEventNamesOnUserEventNames(eventNames, customEventNameGroups)
+	}
+
+	c.JSON(http.StatusOK, EventNamesByUserResponsePayload{EventNames: eventNames, DisplayNames: displayNameEvents, AllowedDisplayNameGroups: U.GetStandardDisplayNameGroups()})
 
 }
 

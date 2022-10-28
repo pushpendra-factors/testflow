@@ -87,7 +87,13 @@ func (store *MemSQL) GetALLQueriesWithProjectId(projectID int64) ([]model.Querie
 			"by name for queries")
 		return queries, http.StatusFound
 	}
-	return q, http.StatusFound
+	queriesResponse := make([]model.Queries, 0)
+	for _, query := range q {
+		exists := existsDashboardUnitForQueryID(projectID, query.ID)
+		query.IsDashboardQuery = exists
+		queriesResponse = append(queriesResponse, query)
+	}
+	return queriesResponse, http.StatusFound
 }
 
 // fetching deleted, non-deleted queries.

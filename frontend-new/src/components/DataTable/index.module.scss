@@ -124,7 +124,7 @@
   }
 
   .breakupHeading {
-    font-family: 'Work Sans', sans-serif;
+    font-family: $font-family;
     font-style: normal;
     font-weight: 600;
     font-size: 18px;
@@ -134,7 +134,7 @@
   }
 
   .downloadCSVHeading {
-    font-family: 'Work Sans', sans-serif;
+    font-family: $font-family;
     font-style: normal;
     font-weight: 600;
     font-size: 14px;
@@ -146,7 +146,7 @@
 
   .inputSearchBar {
     :global(input) {
-      font-family: 'Work Sans', sans-serif;
+      font-family: $font-family;
       font-style: normal;
       letter-spacing: -0.01em;
     }

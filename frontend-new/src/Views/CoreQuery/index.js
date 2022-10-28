@@ -3,7 +3,8 @@ import React, {
   useCallback,
   useEffect,
   useMemo,
-  useReducer
+  useReducer,
+  useRef
 } from 'react';
 import get from 'lodash/get';
 import { bindActionCreators } from 'redux';
@@ -121,6 +122,7 @@ import {
 import { getChartChangedKey } from './AnalysisResultsPage/analysisResultsPage.helpers';
 import NewProject from '../Settings/SetupAssist/Modals/NewProject';
 import AnalyseBeforeIntegration from './AnalyseBeforeIntegration';
+import SaveQuery from 'Components/SaveQuery';
 
 function CoreQuery({
   activeProject,
@@ -168,7 +170,7 @@ function CoreQuery({
   const [selectedMainCategory, setSelectedMainCategory] = useState(false);
   const [KPIConfigProps, setKPIConfigProps] = useState([]);
   const [loading, setLoading] = useState(true);
-
+  const renderedCompRef = useRef(null);
   const [demoProjectId, setDemoProjectId] = useState(null);
   const [showProjectModal, setShowProjectModal] = useState(false);
   const { projects } = useSelector((state) => state.global);
@@ -1732,6 +1734,28 @@ function CoreQuery({
     handleBreadCrumbClick();
   };
 
+  const getCurrentSorter = useCallback(() => {
+    if (renderedCompRef.current && renderedCompRef.current.currentSorter) {
+      return renderedCompRef.current.currentSorter;
+    }
+    return [];
+  }, []);
+
+  const renderSaveQueryComp = () => (
+    <SaveQuery
+      queryType={queryType}
+      requestQuery={requestQuery}
+      queryTitle={querySaved ? querySaved.name : null}
+      setQuerySaved={setQuerySaved}
+      getCurrentSorter={getCurrentSorter}
+      savedQueryId={querySaved ? querySaved.id : null}
+      breakdown={appliedBreakdown}
+      attributionsState={attributionsState}
+      campaignState={campaignState}
+      dateFromTo={dateFromTo}
+    />
+  );
+
   const contextValue = useMemo(
     () => ({
       coreQueryState,
@@ -1787,72 +1811,78 @@ function CoreQuery({
 
   if (loading) {
     return (
-      <div className="flex justify-center flex-col items-center w-full">
-        <div className="w-full flex center">
-          <div id="app-header" className="bg-white z-50 flex-col  px-8 w-full">
-            <div className="items-center flex justify-between w-full pt-3 pb-3">
-              <div
-                role="button"
-                tabIndex={0}
-                className="flex items-center cursor-pointer"
-              >
-                <Button
-                  size="large"
-                  type="text"
-                  onClick={() => {
-                    history.push('/');
-                  }}
-                  icon={<SVG size={32} name="Brand" />}
-                />
-                <Text
-                  type="title"
-                  level={5}
-                  weight="bold"
-                  extraClass="m-0 mt-1"
-                  lineHeight="small"
+      <CoreQueryContext.Provider value={contextValue}>
+        <div className="flex justify-center flex-col items-center w-full">
+          <div className="w-full flex center">
+            <div
+              id="app-header"
+              className="bg-white z-50 flex-col  px-8 w-full"
+            >
+              <div className="items-center flex justify-between w-full pt-3 pb-3">
+                <div
+                  role="button"
+                  tabIndex={0}
+                  className="flex items-center cursor-pointer"
                 >
-                  {querySaved
-                    ? `Reports / ${queryType} / ${querySaved.name}`
-                    : `Reports / ${queryType} / Untitled Analysis${' '}
+                  <Button
+                    size="large"
+                    type="text"
+                    onClick={() => {
+                      history.push('/');
+                    }}
+                    icon={<SVG size={32} name="Brand" />}
+                  />
+                  <Text
+                    type="title"
+                    level={5}
+                    weight="bold"
+                    extraClass="m-0 mt-1"
+                    lineHeight="small"
+                  >
+                    {querySaved
+                      ? `Reports / ${queryType} / ${querySaved.name}`
+                      : `Reports / ${queryType} / Untitled Analysis${' '}
             ${moment().format('DD/MM/YYYY')}`}
-                </Text>
+                  </Text>
+                </div>
+
+                <div className="flex items-center gap-x-2">
+                  <div className="pr-2 border-r">{renderSaveQueryComp()}</div>
+                  <Button
+                    size="large"
+                    type="text"
+                    icon={<SVG size={20} name="close" />}
+                    onClick={
+                      coreQueryState.navigatedFromDashboard
+                        ? handleCloseDashboardQuery
+                        : handleCloseToAnalyse
+                    }
+                  />
+                </div>
               </div>
 
-              <div className="flex items-center gap-x-2">
-                <Button
-                  size="large"
-                  type="text"
-                  icon={<SVG size={20} name="close" />}
-                  onClick={
-                    coreQueryState.navigatedFromDashboard
-                      ? handleCloseDashboardQuery
-                      : handleCloseToAnalyse
-                  }
-                />
-              </div>
+              {/* {renderReportTabs()} */}
+              {showResult ? (
+                <div
+                  className={`query_card_cont ${
+                    queryOpen ? `query_card_open` : `query_card_close`
+                  }`}
+                  onClick={(e) => !queryOpen && setQueryOpen(true)}
+                >
+                  {renderQueryComposer()}
+                  <Button size="large" className="query_card_expand">
+                    <SVG name="expand" size={20} />
+                    Expand
+                  </Button>
+                </div>
+              ) : null}
             </div>
-
-            {/* {renderReportTabs()} */}
-            {showResult ? (
-              <div
-                className={`query_card_cont ${
-                  queryOpen ? `query_card_open` : `query_card_close`
-                }`}
-                onClick={(e) => !queryOpen && setQueryOpen(true)}
-              >
-                {renderQueryComposer()}
-                <Button size="large" className="query_card_expand">
-                  <SVG name="expand" size={20} />
-                  Expand
-                </Button>
-              </div>
-            ) : null}
+          </div>
+          <div className="w-full h-64 flex items-center justify-center">
+            <Spin size="large" />
           </div>
         </div>
-        <div className="w-full h-64 flex items-center justify-center">
-          <Spin size="large" />
-        </div>
-      </div>
+      </CoreQueryContext.Provider>
     );
   }
 
@@ -2010,6 +2040,8 @@ function CoreQuery({
               handleGranularityChange={handleGranularityChange}
               updateChartTypes={updateChartTypes}
               dateFromTo={dateFromTo}
+              renderedCompRef={renderedCompRef}
+              getCurrentSorter={getCurrentSorter}
             />
           </CoreQueryContext.Provider>
         ) : null}

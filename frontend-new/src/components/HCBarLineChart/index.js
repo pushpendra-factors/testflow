@@ -1,9 +1,13 @@
 import React, { useEffect, memo, useCallback } from 'react';
+import ReactDOMServer from 'react-dom/server';
 import Highcharts from 'highcharts';
 import styles from './styles.module.scss';
+import { Number as NumFormat } from '../factorsComponents';
+
 import {
   HIGH_CHARTS_BARLINE_DEFAULT_SPACING,
-  BAR_CHART_XAXIS_TICK_LENGTH
+  BAR_CHART_XAXIS_TICK_LENGTH,
+  FONT_FAMILY
 } from '../../utils/constants';
 import { renderBigLengthTicks } from '../../utils/dataFormatter';
 import TopLegends from '../GroupedBarChart/TopLegends';
@@ -25,7 +29,7 @@ function HCBarLineChart({
         height,
         spacing: cardSize !== 1 ? HIGH_CHARTS_BARLINE_DEFAULT_SPACING : spacing,
         style: {
-          fontFamily: "'Work Sans', sans-serif"
+          fontFamily: FONT_FAMILY
         }
       },
       title: {
@@ -36,7 +40,19 @@ function HCBarLineChart({
       },
       plotOptions: {
         series: {
-          pointPadding: 0
+          pointPadding: 0,
+          dataLabels: {
+            align: 'center',
+            enabled: true,
+            useHTML: true,
+            formatter() {
+              return ReactDOMServer.renderToString(
+                <NumFormat number={this.point.y} />
+              );
+            }
+          },
+          borderRadiusTopLeft: 5,
+          borderRadiusTopRight: 5
         }
       },
       xAxis: [

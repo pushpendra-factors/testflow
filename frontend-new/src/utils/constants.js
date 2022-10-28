@@ -7,6 +7,7 @@ export const QUERY_TYPE_TEMPLATE = 'templates';
 export const QUERY_TYPE_WEB = 'web';
 export const NAMED_QUERY = 'named_query';
 export const QUERY_TYPE_PROFILE = 'profiles';
+export const FONT_FAMILY = "'Inter','Work Sans', sans-serif, 'Helvetica Neue', Arial, 'Noto Sans'";
 
 export const ATTRIBUTION_METHODOLOGY = [
   {

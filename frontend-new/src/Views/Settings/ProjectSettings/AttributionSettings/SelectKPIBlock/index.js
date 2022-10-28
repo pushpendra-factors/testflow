@@ -5,15 +5,7 @@ import { connect } from 'react-redux';
 import GroupSelect2 from '../../../../../components/QueryComposer/GroupSelect2';
 import { getNormalizedKpi } from '../../../../../utils/kpiQueryComposer.helpers';
 
-function SelectKPIBlock({
-  kpi,
-  header,
-  index,
-  ev,
-  editMode,
-  attrConfig,
-  setAttrConfig,
-}) {
+function SelectKPIBlock({ kpi, header, index, ev, attrConfig, setAttrConfig }) {
   const [isDDVisible, setDDVisible] = useState(false);
 
   const kpiEvents = kpi?.config?.map((item) => {
@@ -33,7 +25,6 @@ function SelectKPIBlock({
       : (opts.kpis_to_attribute[header][index] = newEv);
     setAttrConfig(opts);
     setDDVisible(false);
-    editMode();
   };
 
   const deleteItem = () => {
@@ -41,7 +32,6 @@ function SelectKPIBlock({
     opts.kpis_to_attribute[header] = attrConfig.kpis_to_attribute[header];
     opts.kpis_to_attribute[header].splice(index, 1);
     setAttrConfig(opts);
-    editMode();
   };
 
   const selectKPI = () => {
@@ -56,7 +46,7 @@ function SelectKPIBlock({
         {isDDVisible ? (
           <GroupSelect2
             groupedProperties={groupedProps}
-            placeholder='Select Event'
+            placeholder="Select Event"
             optionClick={(group, val) => onChange(group, val)}
             onClickOutside={() => setDDVisible(false)}
             allowEmpty={true}
@@ -70,7 +60,7 @@ function SelectKPIBlock({
     return (
       <div className={`mt-4`}>
         <Button
-          type='text'
+          type="text"
           onClick={() => {
             setDDVisible(true);
           }}
@@ -87,8 +77,7 @@ function SelectKPIBlock({
     <div className={`flex items-center mt-4`}>
       <Tooltip title={ev?.label ? ev.label : ev}>
         <Button
-          className={editMode ? '' : 'pointer-events-none'}
-          icon={<SVG name='mouseevent' size={16} color={'purple'} />}
+          icon={<SVG name="mouseevent" size={16} color={'purple'} />}
           type={'link'}
           onClick={() => {
             setDDVisible(true);
@@ -101,17 +90,17 @@ function SelectKPIBlock({
       </Tooltip>
       <Button
         size={'large'}
-        type='text'
+        type="text"
         onClick={deleteItem}
         className={`fa-btn--custom ml-2`}
       >
-        <SVG name='trash'></SVG>
+        <SVG name="trash"></SVG>
       </Button>
     </div>
   );
 }
 
 const mapStateToProps = (state) => ({
-  kpi: state.kpi,
+  kpi: state.kpi
 });
 export default connect(mapStateToProps)(SelectKPIBlock);
