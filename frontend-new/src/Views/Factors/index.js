@@ -133,13 +133,13 @@ const Factors = ({
 
   useEffect(() => {
     const getData1 = async () => {
-      await fetchProjectAgents(activeProject.id);
       await fetchFactorsGoals(activeProject.id);
       await fetchEventNames(activeProject.id);
       await fetchFactorsModels(activeProject.id);
       await fetchFactorsTrackedEvents(activeProject.id);
       await fetchFactorsTrackedUserProperties(activeProject.id);
       await getUserProperties(activeProject.id, 'events');
+      await fetchProjectAgents(activeProject.id);
     };
     getData1();
   }, [activeProject]);
