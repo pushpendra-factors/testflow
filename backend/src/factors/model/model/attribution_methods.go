@@ -78,13 +78,19 @@ func ApplyAttributionKPI(attributionType string,
 			if C.GetAttributionDebug() == 1 {
 				log.WithFields(log.Fields{"KPI_ID": kpiID, "attributionKeys": attributionKeys}).Info(fmt.Sprintf("KPI-Attribution attributionKeys"))
 			}
-			// In case a successful attribution could not happen, remove converted user.
+
 			if len(attributionKeys) == 0 {
-				delete(usersAttribution, kpiID)
 				continue
 			}
 			kpiInfo.KpiValuesList[idx].IsConverted = true
 			usersAttribution[kpiID] = attributionKeys
+		}
+		// In case a successful attribution could not happen, remove converted user.
+
+		if len(usersAttribution[kpiID]) == 0 {
+			//delete(usersAttribution, kpiID)
+			delete(usersAttribution, kpiID)
+			continue
 		}
 	}
 	return usersAttribution, nil

@@ -1072,6 +1072,16 @@ func GetConversionIndexKPI(headers []string) int {
 	return -1
 }
 
+func GetSecondConversionIndexKPI(headers []string) int {
+	for index, val := range headers {
+		// matches the second conversion
+		if strings.Contains(val, "Cost Per Conversion(compare)") {
+			return index + 1
+		}
+	}
+	return -1
+}
+
 func GetLastKeyValueIndex(headers []string) int {
 	for index, val := range headers {
 		if val == "Impressions" {

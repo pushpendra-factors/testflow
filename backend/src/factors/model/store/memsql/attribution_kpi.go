@@ -445,10 +445,12 @@ func (store *MemSQL) runAttributionKPI(projectID int64,
 
 func updateSessionWT(sessionWT map[string][]float64, kpiData map[string]model.KPIInfo) {
 	for key, _ := range sessionWT {
-		for idx, value := range kpiData[key].KpiValuesList {
+		for _, value := range kpiData[key].KpiValuesList {
 			if !value.IsConverted {
 				//not converted then subtract from final result
-				sessionWT[key][idx] = sessionWT[key][idx] - value.Values[idx]
+				for idx, val := range value.Values {
+					sessionWT[key][idx] = sessionWT[key][idx] - val
+				}
 			}
 		}
 	}

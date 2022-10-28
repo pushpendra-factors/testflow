@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"reflect"
 	"testing"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -2910,4 +2911,284 @@ func TestAddKPIKeyDataInMap(t *testing.T) {
 			}
 		})
 	}
+}
+
+func addGroups(t *testing.T, project *model.Project) map[string]*model.Group {
+
+	adwordsCustomerAccountId := U.RandomLowerAphaNumString(5)
+	// Setting up Adwords, FB and Linkedin account
+	_, errCode := store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{
+		IntAdwordsCustomerAccountId: &adwordsCustomerAccountId,
+	})
+	assert.Equal(t, http.StatusAccepted, errCode)
+
+	// Adwords Campaign performance report
+	value := []byte(`{"cost": "1","clicks": "1","campaign_id":"100","impressions": "1", "campaign_name": "test"}`)
+	document := &model.AdwordsDocument{
+		ProjectID:         project.ID,
+		ID:                "100",
+		CustomerAccountID: adwordsCustomerAccountId,
+		TypeAlias:         model.CampaignPerformanceReport,
+		Timestamp:         20200511,
+		Value:             &postgres.Jsonb{RawMessage: value},
+		CampaignID:        100,
+	}
+
+	status := store.GetStore().CreateAdwordsDocument(document)
+	assert.Equal(t, http.StatusCreated, status)
+	groups := make(map[string]*model.Group, 0)
+
+	//create new groups
+	for _, groupName := range []string{model.GROUP_NAME_HUBSPOT_DEAL, model.GROUP_NAME_HUBSPOT_COMPANY, model.GROUP_NAME_SALESFORCE_OPPORTUNITY, model.GROUP_NAME_SALESFORCE_ACCOUNT} {
+		group, status := store.GetStore().CreateGroup(project.ID, groupName, model.AllowedGroupNames)
+		assert.Equal(t, http.StatusCreated, status)
+		assert.NotNil(t, group)
+		groups[groupName] = group
+	}
+
+	return groups
+
+}
+func createUsersForHubspotDeals(t *testing.T, project *model.Project, properties postgres.Jsonb, groups map[string]*model.Group, timestamp int64) {
+
+	// create group user with random groupID
+	createdGroupUserID, errCode := store.GetStore().CreateGroupUser(
+		&model.User{
+			ProjectId:  project.ID,
+			Source:     model.GetRequestSourcePointer(model.UserSourceHubspot),
+			Properties: properties,
+		}, groups[model.GROUP_NAME_HUBSPOT_DEAL].Name, fmt.Sprintf("%d", groups[model.GROUP_NAME_HUBSPOT_DEAL].ID))
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	// created users , added group relation and user sessions
+	for i := 0; i < 4; i++ {
+		createdUserID, status := store.GetStore().CreateUser(
+			&model.User{
+				ProjectId:    project.ID,
+				Group1UserID: createdGroupUserID,
+				Source:       model.GetRequestSourcePointer(model.UserSourceHubspot),
+			})
+
+		assert.Equal(t, http.StatusCreated, status)
+
+		_ = createEventWithSession(project.ID, "", createdUserID, timestamp, "test", "", "", "", "", "")
+
+		// update user properties to add $group_id property = group.ID of created user
+		newProperties := &postgres.Jsonb{RawMessage: json.RawMessage([]byte(fmt.Sprintf(
+			`{"$group_id": "%d"}`, groups[model.GROUP_NAME_HUBSPOT_DEAL].ID)))}
+		_, status = store.GetStore().UpdateUserPropertiesV2(project.ID, createdUserID, newProperties, time.Now().Unix(), "", "")
+		assert.Equal(t, http.StatusAccepted, status)
+	}
+
+}
+
+func TestKpiAttributionWithMultipleRows(t *testing.T) {
+	a := gin.Default()
+	H.InitAppRoutes(a)
+
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	timestamp := int64(1589068800)
+
+	metrics := "m1"
+	description := U.RandomString(8)
+	transformations := &postgres.Jsonb{json.RawMessage(`{"agFn": "unique", "agPr": "", "agPrTy": "categorical", "fil": [], "daFie": "$hubspot_datefield1"}`)}
+	w := sendCreateCustomMetric(a, project.ID, agent, transformations, metrics, description, "hubspot_deals", 1)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	metrics = "m2"
+	description = U.RandomString(8)
+	transformations = &postgres.Jsonb{json.RawMessage(`{"agFn": "unique", "agPr": "", "agPrTy": "numerical", "fil": [], "daFie": "$hubspot_datefield1"}`)}
+	w = sendCreateCustomMetric(a, project.ID, agent, transformations, metrics, description, "hubspot_deals", 1)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	metrics = "m3"
+	description = U.RandomString(8)
+	transformations = &postgres.Jsonb{json.RawMessage(`{"agFn": "unique", "agPr": "", "agPrTy": "categorical", "fil": [], "daFie": "$hubspot_datefield1"}`)}
+	w = sendCreateCustomMetric(a, project.ID, agent, transformations, metrics, description, "hubspot_deals", 1)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	metrics = "m4"
+	description = U.RandomString(8)
+	transformations = &postgres.Jsonb{json.RawMessage(`{"agFn": "unique", "agPr": "", "agPrTy": "categorical", "fil": [], "daFie": "$hubspot_datefield2"}`)}
+	w = sendCreateCustomMetric(a, project.ID, agent, transformations, metrics, description, "hubspot_deals", 1)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	groups := addGroups(t, project)
+	properties := postgres.Jsonb{RawMessage: json.RawMessage([]byte(fmt.Sprintf(
+		`{"country": "us", "age": 20, "$hubspot_amount": 200,"$hubspot_deal_hs_object_id":"1", "$hubspot_datefield1": %d, "paid": true}`, timestamp)))}
+
+	createUsersForHubspotDeals(t, project, properties, groups, timestamp)
+
+	properties = postgres.Jsonb{RawMessage: json.RawMessage([]byte(fmt.Sprintf(
+		`{"country": "us", "age": 20, "$hubspot_amount": 2000,"$hubspot_deal_hs_object_id":"1", "$hubspot_datefield1": %d, "paid": true}`, timestamp+U.SECONDS_IN_A_DAY)))}
+
+	createUsersForHubspotDeals(t, project, properties, groups, timestamp)
+
+	properties = postgres.Jsonb{RawMessage: json.RawMessage([]byte(fmt.Sprintf(
+		`{"country": "us", "age": 20, "$hubspot_amount": 2000,"$hubspot_deal_hs_object_id":"1", "$hubspot_datefield2": %d, "paid": true}`, timestamp+2*U.SECONDS_IN_A_DAY)))}
+
+	createUsersForHubspotDeals(t, project, properties, groups, timestamp)
+
+	t.Run("TestForSameIdDiffAllConversionTimestampInRange", func(t *testing.T) {
+
+		query1 := model.KPIQuery{
+			Category:         model.ProfileCategory,
+			DisplayCategory:  model.HubspotDealsDisplayCategory,
+			PageUrl:          "",
+			Metrics:          []string{"m1"},
+			GroupBy:          []model.KPIGroupBy{},
+			From:             timestamp,
+			To:               timestamp + 3*U.SECONDS_IN_A_DAY,
+			GroupByTimestamp: "date",
+		}
+
+		query2 := model.KPIQuery{}
+		U.DeepCopy(&query1, &query2)
+		query2.GroupByTimestamp = ""
+
+		query3 := model.KPIQuery{
+			Category:         model.ProfileCategory,
+			DisplayCategory:  model.HubspotDealsDisplayCategory,
+			PageUrl:          "",
+			Metrics:          []string{"m2"},
+			GroupBy:          []model.KPIGroupBy{},
+			From:             timestamp,
+			To:               timestamp + 3*U.SECONDS_IN_A_DAY,
+			GroupByTimestamp: "date",
+		}
+
+		query4 := model.KPIQuery{}
+		U.DeepCopy(&query3, &query4)
+		query4.GroupByTimestamp = ""
+
+		kpiQueryGroup := model.KPIQueryGroup{
+			Class:         "kpi",
+			Queries:       []model.KPIQuery{query1, query2, query3, query4},
+			GlobalFilters: []model.KPIFilter{},
+			GlobalGroupBy: []model.KPIGroupBy{
+				{
+					Granularity:      "",
+					PropertyName:     model.HSDealIDProperty,
+					PropertyDataType: "numerical",
+					Entity:           "user",
+					ObjectType:       "",
+					GroupByType:      "raw_values",
+				},
+			},
+		}
+
+		query := &model.AttributionQuery{
+			AnalyzeType:             model.AnalyzeTypeHSDeals,
+			From:                    timestamp,
+			To:                      timestamp + 3*U.SECONDS_IN_A_DAY,
+			KPI:                     kpiQueryGroup,
+			AttributionKey:          model.AttributionKeyCampaign,
+			AttributionKeyDimension: []string{model.FieldCampaignName},
+			AttributionMethodology:  model.AttributionMethodLinear,
+			LookbackDays:            10,
+		}
+
+		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, "", C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		assert.Equal(t, float64(1), getConversionUserCountKpi(query.AttributionKey, result, "test"))
+		assert.Equal(t, float64(1), getSecondConversionUserCountKpi(query.AttributionKey, result, "test"))
+		assert.Nil(t, err)
+
+	})
+
+	t.Run("TestForSameIdDiffSomeConversionTimestampInRange", func(t *testing.T) {
+
+		query1 := model.KPIQuery{
+			Category:         model.ProfileCategory,
+			DisplayCategory:  model.HubspotDealsDisplayCategory,
+			PageUrl:          "",
+			Metrics:          []string{"m3"},
+			GroupBy:          []model.KPIGroupBy{},
+			From:             timestamp,
+			To:               timestamp + 3*U.SECONDS_IN_A_DAY,
+			GroupByTimestamp: "date",
+		}
+
+		query2 := model.KPIQuery{}
+		U.DeepCopy(&query1, &query2)
+		query2.GroupByTimestamp = ""
+
+		query3 := model.KPIQuery{
+			Category:         model.ProfileCategory,
+			DisplayCategory:  model.HubspotDealsDisplayCategory,
+			PageUrl:          "",
+			Metrics:          []string{"m4"},
+			GroupBy:          []model.KPIGroupBy{},
+			From:             timestamp,
+			To:               timestamp + 3*U.SECONDS_IN_A_DAY,
+			GroupByTimestamp: "date",
+		}
+
+		query4 := model.KPIQuery{}
+		U.DeepCopy(&query3, &query4)
+		query4.GroupByTimestamp = ""
+
+		kpiQueryGroup := model.KPIQueryGroup{
+			Class:         "kpi",
+			Queries:       []model.KPIQuery{query1, query2, query3, query4},
+			GlobalFilters: []model.KPIFilter{},
+			GlobalGroupBy: []model.KPIGroupBy{
+				{
+					Granularity:      "",
+					PropertyName:     model.HSDealIDProperty,
+					PropertyDataType: "numerical",
+					Entity:           "user",
+					ObjectType:       "",
+					GroupByType:      "raw_values",
+				},
+			},
+		}
+
+		query := &model.AttributionQuery{
+			AnalyzeType:             model.AnalyzeTypeHSDeals,
+			From:                    timestamp,
+			To:                      timestamp + 5*U.SECONDS_IN_A_DAY,
+			KPI:                     kpiQueryGroup,
+			AttributionKey:          model.AttributionKeyCampaign,
+			AttributionKeyDimension: []string{model.FieldCampaignName},
+			AttributionMethodology:  model.AttributionMethodLinear,
+			LookbackDays:            1,
+		}
+
+		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, "", C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		assert.Equal(t, float64(1), getConversionUserCountKpi(query.AttributionKey, result, "test"))
+		assert.Equal(t, float64(0), getSecondConversionUserCountKpi(query.AttributionKey, result, "test"))
+		assert.Nil(t, err)
+
+	})
+
+}
+
+func getConversionUserCountKpi(attributionKey string, result *model.QueryResult, key interface{}) interface{} {
+
+	addedKeysSize := model.GetLastKeyValueIndex(result.Headers)
+	conversionIndex := model.GetConversionIndexKPI(result.Headers)
+
+	for _, row := range result.Rows {
+		rowKey := getRowKey(addedKeysSize, row)
+		if rowKey == key {
+			return row[conversionIndex]
+		}
+	}
+	return int64(-1)
+}
+
+func getSecondConversionUserCountKpi(attributionKey string, result *model.QueryResult, key interface{}) interface{} {
+
+	addedKeysSize := model.GetLastKeyValueIndex(result.Headers)
+	conversionIndex := model.GetSecondConversionIndexKPI(result.Headers)
+
+	for _, row := range result.Rows {
+		rowKey := getRowKey(addedKeysSize, row)
+		if rowKey == key {
+			return row[conversionIndex]
+		}
+	}
+	return int64(-1)
 }
