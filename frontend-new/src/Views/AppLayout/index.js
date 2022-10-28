@@ -52,9 +52,8 @@ import { EMPTY_ARRAY } from '../../utils/global';
 import UserProfiles from '../../components/Profile/UserProfiles';
 import AccountProfiles from '../../components/Profile/AccountProfiles';
 import InsightsSettings from '../Settings/ProjectSettings/InsightsSettings';
-import { fetchProfileUsers } from '../../reducers/timelines';
-import DashboardTemplates from '../DashboardTemplates';
-import { fetchTemplates } from '../../reducers/dashboard_templates/services';
+import DashboardTemplates from "../DashboardTemplates";
+import { fetchTemplates } from "../../reducers/dashboard_templates/services";
 import Sharing from '../Settings/ProjectSettings/Sharing';
 
 const FactorsInsights = lazyWithRetry(() =>
@@ -152,9 +151,6 @@ function AppLayout({
       dispatch(fetchSmartPropertyRules(active_project?.id));
       fetchWeeklyIngishtsMetaData(active_project?.id);
       dispatch(fetchAttrContentGroups(active_project?.id));
-      dispatch(
-        fetchProfileUsers(active_project?.id, { source: 'web', filters: [] })
-      );
       dispatch(fetchTemplates());
     }
   }, [dispatch, active_project]);

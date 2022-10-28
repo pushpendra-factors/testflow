@@ -99,7 +99,7 @@ function FaTimeline({
                       </div>
                     ) : null}
                     {index === Object.entries(data).length - 1 &&
-                    !showAll[index] ? null : (
+                    (!showAll[index] || values.length === 1) ? null : (
                       <div className={styles.timeline_events_event_tail} />
                     )}
                   </div>
