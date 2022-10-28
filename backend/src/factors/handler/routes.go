@@ -656,6 +656,7 @@ func ConvertQuery(data model.Queries) model.QueriesString {
 		Settings:       data.Settings,
 		IdText:         data.IdText,
 		Converted:      data.Converted,
+		IsDashboardQuery : data.IsDashboardQuery,
 	}
 }
 
