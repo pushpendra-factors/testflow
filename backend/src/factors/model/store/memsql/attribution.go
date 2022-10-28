@@ -297,9 +297,10 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID int64, queryOriginal *mod
 		noOfConversionEvents := 1
 		sessionWT := make(map[string][]float64)
 		for key := range groupSessions {
-			sessionWT[key] = kpiData[key].KpiValues
-			if kpiData[key].KpiValues != nil || len(kpiData[key].KpiValues) > 1 {
-				noOfConversionEvents = U.MaxInt(noOfConversionEvents, len(kpiData[key].KpiValues))
+			kpiValues := model.KPIValueListToValues(kpiData[key])
+			sessionWT[key] = kpiValues
+			if kpiValues != nil || len(kpiValues) > 1 {
+				noOfConversionEvents = U.MaxInt(noOfConversionEvents, len(kpiValues))
 			}
 		}
 

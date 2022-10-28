@@ -2860,7 +2860,7 @@ func TestAddKPIKeyDataInMap(t *testing.T) {
 						0,
 					},
 						{
-							"2022-01-16T10:00:00-08:00",
+							"2022-01-16T10:00:00-07:00",
 							"0063m00000opRhqAAE",
 							0,
 							0,
@@ -2894,14 +2894,18 @@ func TestAddKPIKeyDataInMap(t *testing.T) {
 				t.Errorf("AddKPIKeyDataInMap() = %v, want %v", got, tt.want)
 			} else {
 				val := (*tt.args.kpiData)["0063m00000opRhqAAE"]
-				assert.Equal(t, 9000.0, val.KpiValues[0])
-				assert.Equal(t, 1.0, val.KpiValues[1])
-				assert.Equal(t, 1.0, val.KpiValues[2])
+				assert.Equal(t, 9000.0, val.KpiValuesList[0].Values[0])
+				assert.Equal(t, 1.0, val.KpiValuesList[0].Values[1])
+				assert.Equal(t, 0.0, val.KpiValuesList[0].Values[2])
+
+				assert.Equal(t, 0.0, val.KpiValuesList[1].Values[0])
+				assert.Equal(t, 0.0, val.KpiValuesList[1].Values[1])
+				assert.Equal(t, 1.0, val.KpiValuesList[1].Values[2])
 
 				val2 := (*tt.args.kpiData)["0063m00000opWnnAAE"]
-				assert.Equal(t, 69999.0, val2.KpiValues[0])
-				assert.Equal(t, 1.0, val2.KpiValues[1])
-				assert.Equal(t, 0.0, val2.KpiValues[2])
+				assert.Equal(t, 69999.0, val2.KpiValuesList[0].Values[0])
+				assert.Equal(t, 1.0, val2.KpiValuesList[0].Values[1])
+				assert.Equal(t, 0.0, val2.KpiValuesList[0].Values[2])
 				log.Info("found valid keys")
 			}
 		})
