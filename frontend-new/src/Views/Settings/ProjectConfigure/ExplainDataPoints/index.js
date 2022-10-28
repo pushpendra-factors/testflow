@@ -193,7 +193,7 @@ const ConfigureDP = (props) => {
               >
                 The events and properties under this list will be considered as
                 the top events and properties of the project and will be tracked
-                freequently.{' '}
+                frequently.{' '}
               </Text>
             </Col>
             {showInfo && (

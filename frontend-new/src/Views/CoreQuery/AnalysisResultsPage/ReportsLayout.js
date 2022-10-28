@@ -317,7 +317,7 @@ function ReportsLayout({
           )}
 
           {Number(activeTab) === 2 && (
-            <WeeklyInsights requestQuery={requestQuery} queryType={queryType} />
+            <WeeklyInsights requestQuery={requestQuery} queryType={queryType} savedQueryId={savedQueryId}/>
           )}
         </ErrorBoundary>
       </div>
