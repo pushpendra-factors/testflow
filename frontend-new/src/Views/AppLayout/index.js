@@ -6,22 +6,24 @@ import SetupAssist from '../Settings/SetupAssist';
 import { connect, useSelector, useDispatch } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { Redirect, Route, Switch, useHistory } from 'react-router-dom';
+import Highcharts from 'highcharts';
 import {
   fetchProjects,
   setActiveProject,
-  fetchDemoProject,
+  fetchDemoProject
 } from 'Reducers/global';
+import customizeHighCharts from 'Utils/customizeHighcharts';
 import {
   fetchAttrContentGroups,
   fetchGroups,
   fetchQueries,
-  fetchSmartPropertyRules,
+  fetchSmartPropertyRules
 } from '../../reducers/coreQuery/services';
 import {
   getUserProperties,
   getEventProperties,
   fetchEventNames,
-  getGroupProperties,
+  getGroupProperties
 } from '../../reducers/coreQuery/middleware';
 import { fetchDashboards } from '../../reducers/dashboard/services';
 import PageSuspenseLoader from '../../components/SuspenseLoaders/PageSuspenseLoader';
@@ -51,8 +53,8 @@ import UserProfiles from '../../components/Profile/UserProfiles';
 import AccountProfiles from '../../components/Profile/AccountProfiles';
 import InsightsSettings from '../Settings/ProjectSettings/InsightsSettings';
 import { fetchProfileUsers } from '../../reducers/timelines';
-import DashboardTemplates from "../DashboardTemplates";
-import { fetchTemplates } from "../../reducers/dashboard_templates/services";
+import DashboardTemplates from '../DashboardTemplates';
+import { fetchTemplates } from '../../reducers/dashboard_templates/services';
 import Sharing from '../Settings/ProjectSettings/Sharing';
 
 const FactorsInsights = lazyWithRetry(() =>
@@ -62,6 +64,9 @@ const CoreQuery = lazyWithRetry(() => import('../CoreQuery'));
 const Dashboard = lazyWithRetry(() => import('../Dashboard'));
 const Factors = lazyWithRetry(() => import('../Factors'));
 
+// customizing highcharts for project requirements
+customizeHighCharts(Highcharts);
+
 function AppLayout({
   fetchProjects,
   fetchEventNames,
@@ -70,7 +75,7 @@ function AppLayout({
   getGroupProperties,
   fetchWeeklyIngishtsMetaData,
   setActiveProject,
-  fetchDemoProject,
+  fetchDemoProject
 }) {
   const [dataLoading, setDataLoading] = useState(true);
   const [demoProjectId, setDemoProjectId] = useState(EMPTY_ARRAY);
@@ -85,17 +90,17 @@ function AppLayout({
   const [sidebarCollapse, setSidebarCollapse] = useState(true);
 
   const activeAgent = agentState?.agent_details?.email;
-  
+
   const whiteListedAccounts = [
     'baliga@factors.ai',
     'solutions@factors.ai',
     'sonali@factors.ai',
-    'praveenr@factors.ai',
-    //   'janani@factors.ai', 
+    'praveenr@factors.ai'
+    //   'janani@factors.ai',
     //   'praveenr@factors.ai',
     //   'ashwin@factors.ai',
   ];
- 
+
   const asyncCallOnLoad = useCallback(async () => {
     try {
       await fetchProjects();
@@ -202,12 +207,12 @@ function AppLayout({
                       component={componentsLib}
                     />
                     <Route
-                      path="/analyse/:query_type/:query_id"
-                      name="Home"
+                      path='/analyse/:query_type/:query_id'
+                      name='Home'
                       component={CoreQuery}
                     />
                     <Route path='/analyse' name='Home' component={CoreQuery} />
-                    
+
                     <Route
                       exact
                       path='/explain'
@@ -227,7 +232,11 @@ function AppLayout({
                       whiteListedAccounts.includes(activeAgent)) ||
                     window.document.domain === 'staging-app.factors.ai' ||
                     window.document.domain === 'factors-dev.com' ? (
-                      <Route path="/template" name="dashboardSettings" component={DashboardTemplates} />
+                      <Route
+                        path='/template'
+                        name='dashboardSettings'
+                        component={DashboardTemplates}
+                      />
                     ) : null}
 
                     {/* settings */}
@@ -242,10 +251,7 @@ function AppLayout({
                       path='/settings/integration'
                       component={IntegrationSettings}
                     />
-                    <Route
-                      path='/settings/sharing'
-                      component={Sharing}
-                    />
+                    <Route path='/settings/sharing' component={Sharing} />
                     <Route
                       path='/settings/insights'
                       component={InsightsSettings}
@@ -275,21 +281,24 @@ function AppLayout({
 
                     {/* profiles */}
                     <Route path='/profiles/people' component={UserProfiles} />
-                    <Route path='/profiles/accounts' component={AccountProfiles} />
+                    <Route
+                      path='/profiles/accounts'
+                      component={AccountProfiles}
+                    />
 
-                    {!(demoProjectId.includes(active_project?.id)) ? (
+                    {!demoProjectId.includes(active_project?.id) ? (
                       <Route path='/project-setup' component={SetupAssist} />
                     ) : (
                       <Redirect to='/' />
                     )}
 
-                    {!(demoProjectId.includes(active_project?.id)) ? (
+                    {!demoProjectId.includes(active_project?.id) ? (
                       <Route path='/settings/sdk' component={SDKSettings} />
                     ) : (
                       <Redirect to='/' />
                     )}
 
-                    {!(demoProjectId.includes(active_project?.id)) ? (
+                    {!demoProjectId.includes(active_project?.id) ? (
                       <Route
                         path='/settings/integration'
                         component={IntegrationSettings}
@@ -319,7 +328,7 @@ const mapDispatchToProps = (dispatch) =>
       getGroupProperties,
       fetchWeeklyIngishtsMetaData,
       setActiveProject,
-      fetchDemoProject,
+      fetchDemoProject
     },
     dispatch
   );
