@@ -38,11 +38,27 @@ function getCurrentUnixTimestampInMs() {
     return new Date().getTime(); 
 }
 
+function isLocalStorageAvailable() {
+    if (window.localStorage == undefined) return false;
+
+    try {
+        var key = "factors-test";
+        var value = "test";
+        window.localStorage.setItem(key, value);
+        var isAvailable = window.localStorage.getItem(key) == value;
+        window.localStorage.removeItem(key);
+        return isAvailable;
+    } catch(e) {
+        return false;
+    }
+}
+
 module.exports = exports =  {
     validatedStringArg: validatedStringArg,
     convertIfNumber: convertIfNumber,
     getCleanHash: getCleanHash,
     parseURLString: parseURLString,
     getCurrentUnixTimestampInMs: getCurrentUnixTimestampInMs,
+    isLocalStorageAvailable: isLocalStorageAvailable,
 };
 

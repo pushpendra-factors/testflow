@@ -7,7 +7,6 @@ const URI_ADD_USER_PROPERTIES = "/sdk/user/add_properties";
 const URI_UPDATE_EVENT_PROPERTIES = "/sdk/event/update_properties";
 const URI_GET_INFO = "/sdk/get_info";
 const URI_CAPTURE_CLICK = "/sdk/capture_click";
-const URI_SERVICE_ERROR = "/sdk/service/error";
 
 function APIClient(token, host="") {
    this.token = token;
@@ -108,14 +107,7 @@ APIClient.prototype.getInfo = function(payload) {
 }
 
 APIClient.prototype.sendError = function(payload) {
-    // Mandaotry field check.
-    if (!payload || !payload.domain || !payload.error) 
-        return Promise.reject("Sending error failed. Invalid payload.");
-
-    return Request.post(
-        this.getURL(URI_SERVICE_ERROR),
-        payload
-    );
+   return Request.sendErrorAPI(payload);
 }
 
 module.exports = exports = APIClient;
