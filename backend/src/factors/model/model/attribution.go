@@ -40,15 +40,20 @@ type AttributionQuery struct {
 }
 
 type KPIInfo struct {
-	KpiID               string    `json:"kpi_id"`
-	KpiGroupID          string    `json:"kpi_group_id"`
-	KpiUserIds          []string  `json:"kpi_users"`
-	KpiCoalUserIds      []string  `json:"kpi_coal_users"`
-	KpiHeaderNames      []string  `json:"kpi_header_names"`  //  headers (in case of multiple KPIs) (revenue, pipleine, dealWon etc)
-	KpiAggFunctionTypes []string  `json:"kpi_agg_fun_types"` //  Agg function type (in case of multiple KPIs) (sum, unique, sum etc)
-	KpiValues           []float64 `json:"kpi_value"`         // list of values (revenue, pipeline, dealWon etc)
-	TimeString          string    `json:"time_string"`
-	Timestamp           int64     `json:"timestamp"` // unix time
+	KpiID               string        `json:"kpi_id"`
+	KpiGroupID          string        `json:"kpi_group_id"`
+	KpiUserIds          []string      `json:"kpi_users"`
+	KpiCoalUserIds      []string      `json:"kpi_coal_users"`
+	KpiHeaderNames      []string      `json:"kpi_header_names"`  //  headers (in case of multiple KPIs) (revenue, pipleine, dealWon etc)
+	KpiAggFunctionTypes []string      `json:"kpi_agg_fun_types"` //  Agg function type (in case of multiple KPIs) (sum, unique, sum etc)
+	KpiValuesList       []KpiRowValue `json:"kpi_value_list"`    // list of rows as object
+}
+
+type KpiRowValue struct {
+	TimeString  string
+	Timestamp   int64     // unix time
+	Values      []float64 // list of values (revenue, pipeline, dealWon etc)
+	IsConverted bool
 }
 
 const (
@@ -1059,6 +1064,16 @@ func GetConversionIndexKPI(headers []string) int {
 	for index, val := range headers {
 		// matches the first conversion
 		if strings.Contains(val, "ClickConversionRate") {
+			return index + 1
+		}
+	}
+	return -1
+}
+
+func GetSecondConversionIndexKPI(headers []string) int {
+	for index, val := range headers {
+		// matches the second conversion
+		if strings.Contains(val, "Cost Per Conversion(compare)") {
 			return index + 1
 		}
 	}

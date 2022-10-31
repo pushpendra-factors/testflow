@@ -124,6 +124,12 @@ func (store *MemSQL) executeForResults(projectID int64, queries []model.Query, k
 				return finalResult, finalStatusCode
 			}
 		}
+		if !hasGroupByTimestamp {
+			log.Info("AshharTransformations ", transformations)
+			for i := range results {
+				log.Info("Ashhar ", i, results[i].Headers, results[i].Rows)
+			}
+		}
 		hasAnyGroupBy := len(queries[0].GroupByProperties) != 0
 		results = model.TransformResultsToKPIResults(results, hasGroupByTimestamp, hasAnyGroupBy, displayCategory, kpiQuery.Timezone)
 		operations := make([]string, 0)
@@ -131,6 +137,9 @@ func (store *MemSQL) executeForResults(projectID int64, queries []model.Query, k
 			operations = append(operations, transformation.Metrics.Operator)
 		}
 		finalResult = model.HandlingEventResultsByApplyingOperations(results, operations, kpiQuery.Timezone, isTimezoneEnabled)
+		if !hasGroupByTimestamp {
+			log.Info("AshharFinalResult ", finalResult.Headers, finalResult.Rows)
+		}
 	}
 	return finalResult, finalStatusCode
 }
