@@ -212,7 +212,7 @@ function AccountProfiles({
         </div>
       ) : (
         <Text type="title" level={6} extraClass="mt-20 italic">
-          No Accounts available for this project.
+          There are currently no Accounts available for this project.
         </Text>
       )}
       <Modal
