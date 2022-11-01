@@ -8,8 +8,9 @@ import React, {
 import _ from 'lodash';
 import { connect, useDispatch, useSelector } from 'react-redux';
 import { Button, Dropdown, Menu, Tooltip } from 'antd';
-import { Text, SVG } from '../../components/factorsComponents';
 import { RightOutlined, LeftOutlined } from '@ant-design/icons';
+import { useHistory, useLocation } from 'react-router-dom';
+import { Text, SVG } from '../../components/factorsComponents';
 import CardContent from './CardContent';
 import {
   initialState,
@@ -35,9 +36,8 @@ import {
   QUERY_TYPE_KPI
 } from '../../utils/constants';
 import { DashboardContext } from '../../contexts/DashboardContext';
-import { useHistory, useLocation } from 'react-router-dom';
 import { shouldDataFetch } from '../../utils/dataFormatter';
-import { fetchWeeklyIngishts } from '../../reducers/insights';
+import { fetchWeeklyIngishts as fetchWeeklyInsightsAction } from '../../reducers/insights';
 import styles from './index.module.scss';
 
 function WidgetCard({
@@ -45,10 +45,11 @@ function WidgetCard({
   onDrop,
   showDeleteWidgetModal,
   durationObj,
-  fetchWeeklyIngishts,
+  fetchWeeklyInsights,
   setOldestRefreshTime,
   dashboardRefreshState,
-  onDataLoadSuccess
+  onDataLoadSuccess,
+  handleWidgetRefresh
 }) {
   const hasComponentUnmounted = useRef(false);
   const cardRef = useRef(null);
@@ -58,9 +59,7 @@ function WidgetCard({
   const { active_project: activeProject } = useSelector(
     (state) => state.global
   );
-  const { activeDashboardUnits, activeDashboard } = useSelector(
-    (state) => state.dashboard
-  );
+  const { activeDashboardUnits } = useSelector((state) => state.dashboard);
   const { metadata } = useSelector((state) => state.insights);
   const { data: savedQueries } = useSelector((state) => state.queries);
   const dispatch = useDispatch();
@@ -68,9 +67,10 @@ function WidgetCard({
     ...ATTRIBUTION_METRICS
   ]);
 
-  const savedQuery = useMemo(() => {
-    return _.find(savedQueries, (sq) => sq.id === unit.query_id);
-  }, [savedQueries]);
+  const savedQuery = useMemo(
+    () => _.find(savedQueries, (sq) => sq.id === unit.query_id),
+    [savedQueries]
+  );
 
   const durationWithSavedFrequency = useMemo(() => {
     if (_.get(savedQuery, 'query.query_group', null)) {
@@ -87,7 +87,8 @@ function WidgetCard({
         ...durationObj,
         frequency
       };
-    } else if (_.get(savedQuery, 'query.cl', null) === QUERY_TYPE_KPI) {
+    }
+    if (_.get(savedQuery, 'query.cl', null) === QUERY_TYPE_KPI) {
       const savedFrequency = _.get(savedQuery, 'query.qG.1.gbt', 'date');
       const frequency = getValidGranularityForSavedQueryWithSavedGranularity({
         durationObj,
@@ -241,60 +242,55 @@ function WidgetCard({
               ...initialState,
               data: res.data.result || res.data
             });
-          } else {
-            if (!hasComponentUnmounted.current) {
-              lastRefreshedAt = _.get(
-                res,
-                'data.cache_meta.last_computed_at',
-                null
-              );
-              const resultGroup = res.data.result.result_group;
-              const equivalentQuery = getStateQueryFromRequestQuery(
-                unit.query.query.query_group[0]
-              );
-              const appliedBreakdown = [
-                ...equivalentQuery.breakdown.event,
-                ...equivalentQuery.breakdown.global
-              ];
+          } else if (!hasComponentUnmounted.current) {
+            lastRefreshedAt = _.get(
+              res,
+              'data.cache_meta.last_computed_at',
+              null
+            );
+            const resultGroup = res.data.result.result_group;
+            const equivalentQuery = getStateQueryFromRequestQuery(
+              unit.query.query.query_group[0]
+            );
+            const appliedBreakdown = [
+              ...equivalentQuery.breakdown.event,
+              ...equivalentQuery.breakdown.global
+            ];
 
-              if (unit.query.query.query_group.length === 1) {
-                setResultState({
-                  ...initialState,
-                  data: resultGroup[0]
-                });
-              } else if (unit.query.query.query_group.length === 3) {
-                const userData = formatApiData(resultGroup[0], resultGroup[1]);
-                const sessionsData = resultGroup[2];
-                const activeUsersData = calculateActiveUsersData(
-                  userData,
-                  sessionsData,
-                  appliedBreakdown
-                );
-                setResultState({
-                  ...initialState,
-                  data: activeUsersData
-                });
-              } else if (unit.query.query.query_group.length === 4) {
-                const eventsData = formatApiData(
-                  resultGroup[0],
-                  resultGroup[1]
-                );
-                const userData = formatApiData(resultGroup[2], resultGroup[3]);
-                const frequencyData = calculateFrequencyData(
-                  eventsData,
-                  userData,
-                  appliedBreakdown
-                );
-                setResultState({
-                  ...initialState,
-                  data: frequencyData
-                });
-              } else {
-                setResultState({
-                  ...initialState,
-                  data: formatApiData(resultGroup[0], resultGroup[1])
-                });
-              }
+            if (unit.query.query.query_group.length === 1) {
+              setResultState({
+                ...initialState,
+                data: resultGroup[0]
+              });
+            } else if (unit.query.query.query_group.length === 3) {
+              const userData = formatApiData(resultGroup[0], resultGroup[1]);
+              const sessionsData = resultGroup[2];
+              const activeUsersData = calculateActiveUsersData(
+                userData,
+                sessionsData,
+                appliedBreakdown
+              );
+              setResultState({
+                ...initialState,
+                data: activeUsersData
+              });
+            } else if (unit.query.query.query_group.length === 4) {
+              const eventsData = formatApiData(resultGroup[0], resultGroup[1]);
+              const userData = formatApiData(resultGroup[2], resultGroup[3]);
+              const frequencyData = calculateFrequencyData(
+                eventsData,
+                userData,
+                appliedBreakdown
+              );
+              setResultState({
+                ...initialState,
+                data: frequencyData
+              });
+            } else {
+              setResultState({
+                ...initialState,
+                data: formatApiData(resultGroup[0], resultGroup[1])
+              });
             }
           }
           if (lastRefreshedAt != null && !hasComponentUnmounted.current) {
@@ -364,17 +360,24 @@ function WidgetCard({
     showDeleteWidgetModal(unit);
   }, [unit, showDeleteWidgetModal]);
 
-  const getMenu = () => {
-    return (
-      <Menu>
-        <Menu.Item key="0">
-          <a onClick={handleDelete} href="#!">
-            Delete Widget
-          </a>
-        </Menu.Item>
-      </Menu>
-    );
-  };
+  const onWidgetRefresh = useCallback(() => {
+    handleWidgetRefresh(unit.id);
+  }, [unit.id, handleWidgetRefresh]);
+
+  const getMenu = () => (
+    <Menu>
+      <Menu.Item key='0'>
+        <a onClick={handleDelete} href='#!'>
+          Delete Widget
+        </a>
+      </Menu.Item>
+      <Menu.Item key='1'>
+        <a onClick={onWidgetRefresh} href='#!'>
+          Refresh
+        </a>
+      </Menu.Item>
+    </Menu>
+  );
 
   const changeCardSize = useCallback(
     (cardSize) => {
@@ -416,7 +419,7 @@ function WidgetCard({
         if (!_.isEmpty(insightsItem?.InsightsRange)) {
           const insightsLen =
             Object.keys(insightsItem?.InsightsRange)?.length || 0;
-          fetchWeeklyIngishts(
+          fetchWeeklyInsights(
             activeProject.id,
             unit.id,
             Object.keys(insightsItem.InsightsRange)[insightsLen - 1],
@@ -447,9 +450,14 @@ function WidgetCard({
     unit,
     activeProject.id,
     dispatch,
-    fetchWeeklyIngishts,
+    fetchWeeklyInsights,
     metadata?.DashboardUnitWiseResult
   ]);
+
+  const contextValue = useMemo(
+    () => ({ attributionMetrics, setAttributionMetrics, handleEditQuery }),
+    [attributionMetrics, setAttributionMetrics, handleEditQuery]
+  );
 
   return (
     <div
@@ -460,38 +468,38 @@ function WidgetCard({
       <div
         id={`card-${unit.id}`}
         ref={cardRef}
-        className={'fa-dashboard--widget-card h-full w-full flex ' + styles.widgetCardCustomCSS}
+        className={`fa-dashboard--widget-card h-full w-full flex ${styles.widgetCardCustomCSS}`}
       >
-        <div className={'flex justify-between items-start w-full'}>
-          <div className={'w-full flex flex-1 flex-col h-full justify-between'}>
+        <div className='flex justify-between items-start w-full'>
+          <div className='w-full flex flex-1 flex-col h-full justify-between'>
             <div
               className={`${styles.widgetCard} flex items-center justify-between px-4`}
             >
               <div
-                className="widget-card--title-container py-3 flex truncate cursor-pointer items-center w-full mr-2"
+                className='widget-card--title-container py-3 flex truncate cursor-pointer items-center w-full mr-2'
                 onClick={handleEditQuery}
               >
-                <div className="flex  items-center">
+                <div className='flex  items-center'>
                   <Tooltip title={unit?.query?.title} mouseEnterDelay={0.2}>
                     <Text
                       ellipsis
-                      type={'title'}
+                      type='title'
                       level={6}
-                      weight={'bold'}
-                      extraClass={`widget-card--title m-0 mr-1 flex`}
+                      weight='bold'
+                      extraClass='widget-card--title m-0 mr-1 flex'
                     >
                       {unit?.query?.title}
                     </Text>
                   </Tooltip>
                 </div>
                 <SVG
-                  extraClass={`widget-card--expand-icon ml-1`}
+                  extraClass='widget-card--expand-icon ml-1'
                   size={20}
-                  color={'grey'}
-                  name="arrowright"
+                  color='grey'
+                  name='arrowright'
                 />
               </div>
-              <div className="flex items-center">
+              <div className='flex items-center'>
                 {resultState.apiCallStatus &&
                 resultState.apiCallStatus.required &&
                 resultState.apiCallStatus.message ? (
@@ -499,30 +507,24 @@ function WidgetCard({
                     mouseEnterDelay={0.2}
                     title={resultState.apiCallStatus.message}
                   >
-                    <div className="cursor-pointer">
-                      <SVG color="#dea069" name={'warning'} />
+                    <div className='cursor-pointer'>
+                      <SVG color='#dea069' name='warning' />
                     </div>
                   </Tooltip>
                 ) : null}
                 <Dropdown
-                  placement="bottomRight"
+                  placement='bottomRight'
                   overlay={getMenu()}
                   trigger={['hover']}
                 >
                   <Button
-                    type="text"
-                    icon={<SVG size={20} name={'threedot'} color={'grey'} />}
+                    type='text'
+                    icon={<SVG size={20} name='threedot' color='grey' />}
                   />
                 </Dropdown>
               </div>
             </div>
-            <DashboardContext.Provider
-              value={{
-                attributionMetrics,
-                setAttributionMetrics,
-                handleEditQuery
-              }}
-            >
+            <DashboardContext.Provider value={contextValue}>
               <CardContent
                 durationObj={durationWithSavedFrequency}
                 unit={unit}
@@ -534,26 +536,26 @@ function WidgetCard({
       </div>
       <div
         id={`resize-${unit.id}`}
-        className={'fa-widget-card--resize-container'}
+        className='fa-widget-card--resize-container'
       >
-        <span className={'fa-widget-card--resize-contents'}>
+        <span className='fa-widget-card--resize-contents'>
           {unit.cardSize === 0 ? (
             <>
-              <a href="#!" onClick={changeCardSize.bind(this, 1)}>
+              <a href='#!' onClick={changeCardSize.bind(this, 1)}>
                 <RightOutlined />
               </a>
-              <a href="#!" onClick={changeCardSize.bind(this, 2)}>
+              <a href='#!' onClick={changeCardSize.bind(this, 2)}>
                 <LeftOutlined />
               </a>
             </>
           ) : null}
           {unit.cardSize === 1 ? (
-            <a href="#!" onClick={changeCardSize.bind(this, 0)}>
+            <a href='#!' onClick={changeCardSize.bind(this, 0)}>
               <LeftOutlined />
             </a>
           ) : null}
           {unit.cardSize === 2 ? (
-            <a href="#!" onClick={changeCardSize.bind(this, 0)}>
+            <a href='#!' onClick={changeCardSize.bind(this, 0)}>
               <RightOutlined />
             </a>
           ) : null}
@@ -563,4 +565,6 @@ function WidgetCard({
   );
 }
 
-export default connect(null, { fetchWeeklyIngishts })(React.memo(WidgetCard));
+export default connect(null, {
+  fetchWeeklyInsights: fetchWeeklyInsightsAction
+})(React.memo(WidgetCard));

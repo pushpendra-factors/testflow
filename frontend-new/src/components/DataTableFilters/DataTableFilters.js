@@ -1,4 +1,4 @@
-import React, { Fragment, useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import { find, get, noop } from 'lodash';
 import cx from 'classnames';
@@ -21,14 +21,13 @@ import {
 } from './dataTableFilters.helpers';
 import ControlledComponent from '../ControlledComponent/ControlledComponent';
 import { isNumeric } from '../../utils/global';
-import { TOOLTIP_CONSTANTS } from '../../constants/tooltips.constans';
 
-const DataTableFilters = ({
+function DataTableFilters({
   filters,
   appliedFilters,
   setAppliedFilters,
   setFiltersVisibility
-}) => {
+}) {
   const [selectedFilters, setSelectedFilters] = useState({});
 
   useEffect(() => {
@@ -80,7 +79,7 @@ const DataTableFilters = ({
 
   const handleNumericalFilterValueChange = useCallback(
     (categoryIndex, e) => {
-      const value = e.target.value;
+      const { value } = e.target;
       if (!isNumeric(value) && value !== '') {
         return false;
       }
@@ -107,57 +106,47 @@ const DataTableFilters = ({
   );
 
   const handleCategoryCombinationOperatorChange = useCallback((option) => {
-    setSelectedFilters((currentFilters) => {
-      return {
-        ...currentFilters,
-        categoryCombinationOperator: option.key
-      };
-    });
+    setSelectedFilters((currentFilters) => ({
+      ...currentFilters,
+      categoryCombinationOperator: option.key
+    }));
   }, []);
 
   const handleFiltersApply = useCallback(() => {
     setAppliedFilters(selectedFilters);
   }, [selectedFilters, setAppliedFilters]);
 
-  const getCategoryMenu = (categoryIndex) => {
-    return (
-      <Menu className={styles.menu}>
-        {filters.map((filter) => {
-          return (
-            <Menu.Item
-              className={styles['dropdown-item']}
-              key={filter.key}
-              onClick={handleCategoryChange.bind(null, categoryIndex)}
-            >
-              <Text type="title" level={7} color="grey-6">
-                {filter.title}
-              </Text>
-            </Menu.Item>
-          );
-        })}
-      </Menu>
-    );
-  };
+  const getCategoryMenu = (categoryIndex) => (
+    <Menu className={styles.menu}>
+      {filters.map((filter) => (
+        <Menu.Item
+          className={styles['dropdown-item']}
+          key={filter.key}
+          onClick={handleCategoryChange.bind(null, categoryIndex)}
+        >
+          <Text type='title' level={7} color='grey-6'>
+            {filter.title}
+          </Text>
+        </Menu.Item>
+      ))}
+    </Menu>
+  );
 
-  const getCategoryCombinationOperatorMenu = () => {
-    return (
-      <Menu className={styles.menu}>
-        {CATEGORY_COMBINATION_OPERATOR_MENU.map((option) => {
-          return (
-            <Menu.Item
-              className={styles['dropdown-item']}
-              key={option.key}
-              onClick={handleCategoryCombinationOperatorChange}
-            >
-              <Text type="title" level={7} color="grey-6">
-                {option.title}
-              </Text>
-            </Menu.Item>
-          );
-        })}
-      </Menu>
-    );
-  };
+  const getCategoryCombinationOperatorMenu = () => (
+    <Menu className={styles.menu}>
+      {CATEGORY_COMBINATION_OPERATOR_MENU.map((option) => (
+        <Menu.Item
+          className={styles['dropdown-item']}
+          key={option.key}
+          onClick={handleCategoryCombinationOperatorChange}
+        >
+          <Text type='title' level={7} color='grey-6'>
+            {option.title}
+          </Text>
+        </Menu.Item>
+      ))}
+    </Menu>
+  );
 
   const getEqualityOperatorMenu = (categoryIndex) => {
     const selectedCategoryField = get(
@@ -173,73 +162,65 @@ const DataTableFilters = ({
       <Menu className={styles.menu}>
         {EQUALITY_OPERATOR_MENU.filter((option) =>
           option.valueType.includes(selectedCategoryFieldValueType)
-        ).map((option) => {
-          return (
-            <Menu.Item
-              className={styles['dropdown-item']}
-              key={option.key}
-              onClick={handleEqualityOperatorChange.bind(null, categoryIndex)}
-            >
-              <Text type="title" level={7} color="grey-6">
-                {option.title}
-              </Text>
-            </Menu.Item>
-          );
-        })}
+        ).map((option) => (
+          <Menu.Item
+            className={styles['dropdown-item']}
+            key={option.key}
+            onClick={handleEqualityOperatorChange.bind(null, categoryIndex)}
+          >
+            <Text type='title' level={7} color='grey-6'>
+              {option.title}
+            </Text>
+          </Menu.Item>
+        ))}
       </Menu>
     );
   };
 
-  const renderLabelButton = ({ label, leftRounded = false }) => {
-    return (
-      <Button
-        className={cx(
-          'flex col-gap-1 items-center shadow-none',
-          styles['label-button'],
-          {
-            [styles['label-button-left-rounded']]: leftRounded
-          }
-        )}
-        type={BUTTON_TYPES.SECONDARY}
-      >
-        <Text type="title" weight="medium" level={7}>
-          {label}
-        </Text>
-      </Button>
-    );
-  };
+  const renderLabelButton = ({ label, leftRounded = false }) => (
+    <Button
+      className={cx(
+        'flex col-gap-1 items-center shadow-none',
+        styles['label-button'],
+        {
+          [styles['label-button-left-rounded']]: leftRounded
+        }
+      )}
+      type={BUTTON_TYPES.SECONDARY}
+    >
+      <Text type='title' weight='medium' level={7}>
+        {label}
+      </Text>
+    </Button>
+  );
 
-  const renderCrossIcon = (categoryIndex) => {
-    return (
-      <Button
-        className={cx(
-          'flex col-gap-1 items-center shadow-none',
-          styles['label-button'],
-          styles['label-button-right-rounded']
-        )}
-        type={BUTTON_TYPES.SECONDARY}
-        onClick={handleCategoryDelete.bind(null, categoryIndex)}
-      >
-        <SVG name="remove" />
-      </Button>
-    );
-  };
+  const renderCrossIcon = (categoryIndex) => (
+    <Button
+      className={cx(
+        'flex col-gap-1 items-center shadow-none',
+        styles['label-button'],
+        styles['label-button-right-rounded']
+      )}
+      type={BUTTON_TYPES.SECONDARY}
+      onClick={handleCategoryDelete.bind(null, categoryIndex)}
+    >
+      <SVG name='remove' />
+    </Button>
+  );
 
   const getCategoryValuesMenu = (
     options,
     selectedOptions,
     equalityOperator,
     categoryIndex
-  ) => {
-    return (
-      <ValuesMenu
-        options={options}
-        selectedOptions={selectedOptions}
-        onChange={handleValueChange.bind(null, categoryIndex)}
-        equalityOperator={equalityOperator}
-      />
-    );
-  };
+  ) => (
+    <ValuesMenu
+      options={options}
+      selectedOptions={selectedOptions}
+      onChange={handleValueChange.bind(null, categoryIndex)}
+      equalityOperator={equalityOperator}
+    />
+  );
 
   const renderCategoryCombinationDropdown = (index) => {
     const showDropdown =
@@ -254,22 +235,22 @@ const DataTableFilters = ({
       index < selectedFilters.categories.length - 1;
 
     return (
-      <Fragment>
+      <>
         <ControlledComponent controller={showDropdown}>
           <Dropdown
-            overlayClassName="rounded-lg w-20"
-            trigger="click"
+            overlayClassName='rounded-lg w-20'
+            trigger='click'
             overlay={getCategoryCombinationOperatorMenu()}
           >
             <Button
-              className="flex items-center"
+              className='flex items-center'
               disabled
               type={BUTTON_TYPES.PLAIN}
             >
-              <Text type="title" level={7}>
+              <Text type='title' level={7}>
                 {selectedFilters.categoryCombinationOperator}
               </Text>
-              <SVG size={14} name="chevronDown" />
+              <SVG size={14} name='chevronDown' />
             </Button>
           </Dropdown>
         </ControlledComponent>
@@ -279,12 +260,12 @@ const DataTableFilters = ({
             disabled
             type={BUTTON_TYPES.PLAIN}
           >
-            <Text type="title" level={7}>
+            <Text type='title' level={7}>
               {selectedFilters.categoryCombinationOperator}
             </Text>
           </Button>
         </ControlledComponent>
-      </Fragment>
+      </>
     );
   };
 
@@ -293,7 +274,7 @@ const DataTableFilters = ({
       return null;
     }
     return (
-      <div className="flex flex-col row-gap-2">
+      <div className='flex flex-col row-gap-2'>
         {selectedFilters.categories.map((category, index) => {
           const selectedCategoryField = get(category, `field`);
           const selectedCategoryFieldValueType = get(
@@ -308,7 +289,7 @@ const DataTableFilters = ({
             (option) => option.key === category.equalityOperator
           ).title;
           const label = filterDetail.title;
-          const options = filterDetail.options;
+          const { options } = filterDetail;
           const filterValue = category.values;
 
           const valuesLabel =
@@ -319,18 +300,18 @@ const DataTableFilters = ({
               : '';
 
           return (
-            <div className="flex col-gap-1 items-center">
-              <div key={category.key} className="flex col-gap-1 items-center">
+            <div className='flex col-gap-1 items-center'>
+              <div key={category.key} className='flex col-gap-1 items-center'>
                 <Dropdown
-                  overlayClassName="rounded-lg"
-                  trigger="click"
+                  overlayClassName='rounded-lg'
+                  trigger='click'
                   overlay={getCategoryMenu(index)}
                 >
                   {renderLabelButton({ label, leftRounded: true })}
                 </Dropdown>
                 <Dropdown
-                  overlayClassName="rounded-lg"
-                  trigger="click"
+                  overlayClassName='rounded-lg'
+                  trigger='click'
                   overlay={getEqualityOperatorMenu(index)}
                 >
                   {renderLabelButton({ label: equalityOperator })}
@@ -338,8 +319,8 @@ const DataTableFilters = ({
                 {selectedCategoryFieldValueType === 'categorical' && (
                   <Popover
                     overlayClassName={styles['values-popover']}
-                    trigger="click"
-                    placement="bottomRight"
+                    trigger='click'
+                    placement='bottomRight'
                     content={getCategoryValuesMenu.bind(
                       null,
                       options,
@@ -352,7 +333,6 @@ const DataTableFilters = ({
                       {renderLabelButton({
                         label: valuesLabel
                       })}
-                      color={TOOLTIP_CONSTANTS.DARK}
                     </Tooltip>
                   </Popover>
                 )}
@@ -366,7 +346,7 @@ const DataTableFilters = ({
                       )}
                       value={filterValue}
                       className={styles['value-input-box']}
-                      type="text"
+                      type='text'
                     />
                     {selectedCategoryFieldValueType === 'percentage' && (
                       <span>%</span>
@@ -384,14 +364,14 @@ const DataTableFilters = ({
   };
 
   return (
-    <div className="flex flex-col row-gap-3">
-      <Text type="title" color="grey-2" level={7}>
+    <div className='flex flex-col row-gap-3'>
+      <Text type='title' color='grey-2' level={7}>
         Filter if
       </Text>
       {renderSelectedFilters()}
       <Dropdown
-        overlayClassName="rounded-lg"
-        trigger="click"
+        overlayClassName='rounded-lg'
+        trigger='click'
         overlay={getCategoryMenu()}
       >
         <Button
@@ -401,13 +381,13 @@ const DataTableFilters = ({
             styles['add-filters-button']
           )}
         >
-          <SVG name="plus" color="#8692A3" />
-          <Text type="title" color="grey" level={7}>
+          <SVG name='plus' color='#8692A3' />
+          <Text type='title' color='grey' level={7}>
             Add condition
           </Text>
         </Button>
       </Dropdown>
-      <div className="flex justify-end col-gap-2">
+      <div className='flex justify-end col-gap-2'>
         <Button
           onClick={setFiltersVisibility.bind(null, false)}
           size={BUTTON_SIZES.MEDIUM}
@@ -425,7 +405,7 @@ const DataTableFilters = ({
       </div>
     </div>
   );
-};
+}
 
 export default DataTableFilters;
 

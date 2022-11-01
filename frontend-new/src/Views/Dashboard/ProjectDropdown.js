@@ -1,6 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button, Col, Divider, Row, Spin } from 'antd';
 import { useSelector, useDispatch, connect } from 'react-redux';
+import { ErrorBoundary } from 'react-error-boundary';
+import FaSelect from 'Components/FaSelect';
+import factorsai from 'factorsai';
+import { fetchDemoProject, getHubspotContact } from 'Reducers/global';
+import userflow from 'userflow.js';
 import {
   fetchActiveDashboardUnits,
   DeleteUnitFromDashboard,
@@ -23,15 +28,10 @@ import {
   FaErrorLog,
   Text
 } from '../../components/factorsComponents';
-import { ErrorBoundary } from 'react-error-boundary';
-import FaSelect from 'Components/FaSelect';
 import GroupSelect2 from '../../components/QueryComposer/GroupSelect2';
-import factorsai from 'factorsai';
-import { fetchDemoProject, getHubspotContact } from 'Reducers/global';
 import NewProject from '../Settings/SetupAssist/Modals/NewProject';
 import { setItemToLocalStorage } from '../../utils/localStorage.helpers';
 import { DASHBOARD_KEYS } from '../../constants/localStorage.constants';
-import userflow from 'userflow.js';
 
 function ProjectDropdown({
   setaddDashboardModal,
@@ -45,7 +45,8 @@ function ProjectDropdown({
   handleRefreshClick,
   dashboardRefreshState,
   onDataLoadSuccess,
-  resetDashboardRefreshState
+  resetDashboardRefreshState,
+  handleWidgetRefresh
 }) {
   const [moreOptions, setMoreOptions] = useState(false);
   const [widgetModal, setwidgetModal] = useState(false);
@@ -188,38 +189,36 @@ function ProjectDropdown({
     setSelectVisible(!selectVisible);
   };
 
-  const setDashboard = () => {
-    return (
+  const setDashboard = () => (
       <div className={styles.event_selector}>
         {selectVisible ? (
           <GroupSelect2
-            
             groupedProperties={generateDBList()}
-            placeholder="Search Dashboard"
-            iconColor="#3E516C"
+            placeholder='Search Dashboard'
+            iconColor='#3E516C'
             optionClick={handleOptChange}
             onClickOutside={() => setSelectVisible(false)}
             additionalActions={
               <>
-              <Divider className={styles.divider_newdashboard_btn} />
-              <Button
-                type="text"
-                size="large"
-                className={'w-full'}
-                icon={<SVG name="plus" />}
-                onClick={() => {
-                  setaddDashboardModal(true);
-                  setSelectVisible(false);
-                }}
-              >
-                New Dashboard
-              </Button></>
+                <Divider className={styles.divider_newdashboard_btn} />
+                <Button
+                  type='text'
+                  size='large'
+                  className="w-full"
+                  icon={<SVG name='plus' />}
+                  onClick={() => {
+                    setaddDashboardModal(true);
+                    setSelectVisible(false);
+                  }}
+                >
+                  New Dashboard
+                </Button>
+              </>
             }
-          ></GroupSelect2>
+           />
         ) : null}
       </div>
     );
-  };
 
   const setAdditionalactions = (opt) => {
     if (opt[1] === 'edit') {
@@ -230,18 +229,17 @@ function ProjectDropdown({
     setMoreOptions(false);
   };
 
-  const additionalActions = () => {
-    return (
-      <div className={'fa--query_block--actions-cols flex'}>
-        <div className={'relative'}>
+  const additionalActions = () => (
+      <div className="fa--query_block--actions-cols flex">
+        <div className="relative">
           <Button
-            type="text"
-            size={'large'}
+            type='text'
+            size="large"
             onClick={() => setMoreOptions(true)}
-            className={'ml-1'}
+            className="ml-1"
             style={{ padding: '4px 6px' }}
           >
-            <SVG name="more" size={24} />
+            <SVG name='more' size={24} />
           </Button>
 
           {moreOptions ? (
@@ -254,15 +252,14 @@ function ProjectDropdown({
               ]}
               optionClick={(val) => setAdditionalactions(val)}
               onClickOutside={() => setMoreOptions(false)}
-              posRight={true}
-            ></FaSelect>
+              posRight
+             />
           ) : (
             false
           )}
         </div>
       </div>
     );
-  };
 
   const handleTour = () => {
     userflow.start('c162ed75-0983-41f3-ae56-8aedd7dbbfbd');
@@ -299,15 +296,15 @@ function ProjectDropdown({
 
   if (dashboards.loading || activeDashboardUnits.loading) {
     return (
-      <div className="flex justify-center items-center w-full h-64">
-        <Spin size="large" />
+      <div className='flex justify-center items-center w-full h-64'>
+        <Spin size='large' />
       </div>
     );
   }
 
   if (dashboards.error || activeDashboardUnits.error) {
     return (
-      <div className="flex justify-center items-center w-full h-full pt-4 pb-4">
+      <div className='flex justify-center items-center w-full h-full pt-4 pb-4'>
         <NoDataChart />
       </div>
     );
@@ -315,59 +312,56 @@ function ProjectDropdown({
 
   if (dashboards.data.length) {
     return (
-      <>
-        <ErrorBoundary
+      <ErrorBoundary
           fallback={
             <FaErrorComp
-              size={'medium'}
-              title={'Dashboard Error'}
-              subtitle={
-                'We are facing trouble loading dashboards. Drop us a message on the in-app chat.'
-              }
+              size="medium"
+              title="Dashboard Error"
+              subtitle="We are facing trouble loading dashboards. Drop us a message on the in-app chat."
             />
           }
           onError={FaErrorLog}
         >
           {active_project.id === demoProjectId ? (
-            <div className={'rounded-lg border-2 h-20 mb-3 mx-10'}>
-              <Row justify={'space-between'} className={'m-0 p-3'}>
+            <div className="rounded-lg border-2 h-20 mb-3 mx-10">
+              <Row justify="space-between" className="m-0 p-3">
                 <Col span={projects.length === 1 ? 12 : 18}>
                   <img
-                    src="assets/icons/welcome.svg"
+                    src='assets/icons/welcome.svg'
                     style={{ float: 'left', marginRight: '20px' }}
                   />
                   <Text
-                    type={'title'}
+                    type="title"
                     level={6}
-                    weight={'bold'}
-                    extraClass={'m-0'}
+                    weight="bold"
+                    extraClass="m-0"
                   >
                     Welcome! You just entered a Factors demo project
                   </Text>
                   {projects.length === 1 ? (
-                    <Text type={'title'} level={7} extraClass={'m-0'}>
+                    <Text type="title" level={7} extraClass="m-0">
                       These reports have been built with a sample dataset. Use
                       this to start exploring!
                     </Text>
                   ) : (
-                    <Text type={'title'} level={7} extraClass={'m-0'}>
+                    <Text type="title" level={7} extraClass="m-0">
                       To jump back into your Factors project, click on your
                       account card on the{' '}
-                      <span className={'font-bold'}>top right</span> of the
+                      <span className="font-bold">top right</span> of the
                       screen.
                     </Text>
                   )}
                 </Col>
-                <Col className={'mr-2 mt-2'}>
+                <Col className="mr-2 mt-2">
                   {projects.length === 1 ? (
                     <Button
-                      type={'default'}
+                      type="default"
                       style={{
                         background: 'white',
                         border: '1px solid #E7E9ED',
                         height: '40px'
                       }}
-                      className={'m-0 mr-2'}
+                      className="m-0 mr-2"
                       onClick={() => setShowProjectModal(true)}
                     >
                       Set up my own Factors project
@@ -375,56 +369,56 @@ function ProjectDropdown({
                   ) : null}
 
                   <Button
-                    type={'link'}
+                    type="link"
                     style={{
                       background: 'white',
                       // border: '1px solid #E7E9ED',
                       height: '40px'
                     }}
-                    className={'m-0 mr-2'}
+                    className="m-0 mr-2"
                     onClick={() => handleTour()}
                   >
                     Take the tour{' '}
                     <SVG
-                      name={'Arrowright'}
+                      name="Arrowright"
                       size={16}
-                      extraClass={'ml-1'}
-                      color={'blue'}
+                      extraClass="ml-1"
+                      color="blue"
                     />
                   </Button>
                 </Col>
               </Row>
             </div>
           ) : null}
-          <div className={'flex items-start justify-between mx-10 my-2'}>
-            <div className={'flex flex-col items-start'}>
+          <div className="flex items-start justify-between mx-10 my-2">
+            <div className="flex flex-col items-start">
               <Button
                 className={`${styles.dropdownbtn}`}
-                type="text"
-                size={'large'}
+                type='text'
+                size="large"
                 onClick={toggleDashboardSelect}
               >
                 {showDashboardName}
-                <SVG name="caretDown" size={20} />
+                <SVG name='caretDown' size={20} />
               </Button>
               {setDashboard()}
-              <Text level={7} type={'title'} weight={'medium'} color={'grey'}>
+              <Text level={7} type="title" weight="medium" color="grey">
                 {showDashboardDesc}
               </Text>
             </div>
-            <div className="flex items-center">
+            <div className='flex items-center'>
               <Button
-                type="primary"
-                size={'large'}
+                type='primary'
+                size="large"
                 onClick={() => setaddDashboardModal(true)}
-                icon={<SVG name="plus" size={16} color={'white'} />}
+                icon={<SVG name='plus' size={16} color="white" />}
               >
                 New Dashboard
               </Button>
               {additionalActions()}
             </div>
           </div>
-          <div className={'ml-10 mr-4 my-6 flex-1'}>
+          <div className="ml-10 mr-4 my-6 flex-1">
             <DashboardSubMenu
               durationObj={durationObj}
               handleDurationChange={handleDurationChange}
@@ -442,6 +436,7 @@ function ProjectDropdown({
               dashboardRefreshState={dashboardRefreshState}
               setOldestRefreshTime={setOldestRefreshTime}
               onDataLoadSuccess={onDataLoadSuccess}
+              handleWidgetRefresh={handleWidgetRefresh}
             />
           </div>
 
@@ -454,22 +449,22 @@ function ProjectDropdown({
 
           <ConfirmationModal
             visible={!!deleteWidgetModal}
-            confirmationText="Are you sure you want to delete this widget?"
+            confirmationText='Are you sure you want to delete this widget?'
             onOk={confirmDeleteWidget}
             onCancel={showDeleteWidgetModal.bind(this, false)}
-            title="Delete Widget"
-            okText="Confirm"
-            cancelText="Cancel"
+            title='Delete Widget'
+            okText='Confirm'
+            cancelText='Cancel'
             confirmLoading={deleteApiCalled}
           />
           <ConfirmationModal
             visible={deleteDashboardModal}
-            confirmationText="Are you sure you want to delete this Dashboard?"
+            confirmationText='Are you sure you want to delete this Dashboard?'
             onOk={confirmDeleteDashboard}
             onCancel={showDeleteDashboardModal.bind(this, false)}
             title={`Delete Dashboard - ${activeDashboard?.name}`}
-            okText="Confirm"
-            cancelText="Cancel"
+            okText='Confirm'
+            cancelText='Cancel'
             confirmLoading={dashboardDeleteApi}
           />
           {/* create project modal */}
@@ -478,7 +473,6 @@ function ProjectDropdown({
             handleCancel={() => setShowProjectModal(false)}
           />
         </ErrorBoundary>
-      </>
     );
   }
 

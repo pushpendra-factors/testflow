@@ -1,17 +1,20 @@
 import {
   SortResults,
-  getClickableTitleSorter,
+  getClickableTitleSorter
 } from '../../../../utils/dataFormatter';
 import { parseForDateTimeLabel } from '../eventsAnalytics.helpers';
 import { getBreakDownGranularities } from '../SingleEventMultipleBreakdown/utils';
-import { MAX_ALLOWED_VISIBLE_PROPERTIES , DISPLAY_PROP } from '../../../../utils/constants';
+import {
+  MAX_ALLOWED_VISIBLE_PROPERTIES,
+  DISPLAY_PROP
+} from '../../../../utils/constants';
 
 export const getDefaultSortProp = () => ({
-    key: 'User Count',
-    type: 'numerical',
-    subtype: null,
-    order: 'descend',
-  });
+  key: 'User Count',
+  type: 'numerical',
+  subtype: null,
+  order: 'descend'
+});
 
 export const getVisibleData = (aggregateData, sorter) => {
   const result = SortResults(aggregateData, sorter).slice(
@@ -44,7 +47,7 @@ export const formatData = (data) => {
       label: grpLabel,
       value: d[d.length - 1],
       'User Count': d[d.length - 1],
-      ...breakdownData,
+      ...breakdownData
     };
   });
   return result;
@@ -74,7 +77,7 @@ export const getTableColumns = (
       ),
       dataIndex: `${e.property} - ${index}`,
       fixed: !index ? 'left' : '',
-      width: 200,
+      width: 200
     };
   });
 
@@ -86,6 +89,7 @@ export const getTableColumns = (
       handleSorting
     ),
     dataIndex: 'User Count',
+    width: 200
   };
   return [...breakdownColumns, countCol];
 };

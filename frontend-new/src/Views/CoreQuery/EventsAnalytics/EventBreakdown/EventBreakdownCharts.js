@@ -33,15 +33,13 @@ const EventBreakdownCharts = forwardRef(({ data, breakdown, section }, ref) => {
     setVisibleProperties(getVisibleData(chartsData, sorter));
   }, [chartsData, sorter]);
 
-  useImperativeHandle(ref, () => {
-    return {
+  useImperativeHandle(ref, () => ({
       currentSorter: { sorter }
-    };
-  });
+    }));
 
   if (!chartsData.length) {
     return (
-      <div className="h-64 flex items-center justify-center w-full">
+      <div className='h-64 flex items-center justify-center w-full'>
         No Data Found!
       </div>
     );
@@ -50,7 +48,7 @@ const EventBreakdownCharts = forwardRef(({ data, breakdown, section }, ref) => {
   let chart = null;
 
   const table = (
-    <div className="mt-12 w-full">
+    <div className='mt-12 w-full'>
       <EventBreakdownTable
         data={chartsData}
         breakdown={breakdown}
@@ -69,14 +67,14 @@ const EventBreakdownCharts = forwardRef(({ data, breakdown, section }, ref) => {
       <ChartHeader
         eventNames={eventNames}
         total={data.rows[0]}
-        query={'Count'}
-        bgColor="#4D7DB4"
+        query="Count"
+        bgColor='#4D7DB4'
       />
     );
   }
 
   return (
-    <div className="flex items-center justify-center flex-col">
+    <div className='flex items-center justify-center flex-col'>
       {chart}
       {table}
     </div>

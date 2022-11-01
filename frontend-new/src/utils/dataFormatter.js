@@ -27,9 +27,8 @@ export const visualizationColors = [
   '#9982B5'
 ];
 
-export const numberWithCommas = (x) => {
-  return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-};
+export const numberWithCommas = (x) =>
+  x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
 export const calculatePercentage = (numerator, denominator, precision = 1) => {
   if (!denominator) {
@@ -42,29 +41,29 @@ export const calculatePercentage = (numerator, denominator, precision = 1) => {
 export const getDurationInSeconds = (duration) => {
   if (duration.indexOf(' ') === -1) {
     return duration.split('s')[0];
-  } else {
-    if (duration.indexOf('d') > -1) {
-      const dayStr = duration.split(' ')[0];
-      const hourStr = duration.split(' ')[1];
-      const days = Number(dayStr.split('d')[0]);
-      const hours = Number(hourStr.split('h')[0]);
-      return days * 86400 + hours * 3600;
-    }
-    if (duration.indexOf('h') > -1) {
-      const hourStr = duration.split(' ')[0];
-      const minsStr = duration.split(' ')[1];
-      const hours = Number(hourStr.split('h')[0]);
-      const minutes = Number(minsStr.split('m')[0]);
-      return hours * 3600 + minutes * 60;
-    }
-    if (duration.indexOf('m') > -1) {
-      const minsStr = duration.split(' ')[0];
-      const secondStr = duration.split(' ')[1];
-      const mins = Number(minsStr.split('m')[0]);
-      const seconds = Number(secondStr.split('s')[0]);
-      return mins * 60 + seconds;
-    }
   }
+  if (duration.indexOf('d') > -1) {
+    const dayStr = duration.split(' ')[0];
+    const hourStr = duration.split(' ')[1];
+    const days = Number(dayStr.split('d')[0]);
+    const hours = Number(hourStr.split('h')[0]);
+    return days * 86400 + hours * 3600;
+  }
+  if (duration.indexOf('h') > -1) {
+    const hourStr = duration.split(' ')[0];
+    const minsStr = duration.split(' ')[1];
+    const hours = Number(hourStr.split('h')[0]);
+    const minutes = Number(minsStr.split('m')[0]);
+    return hours * 3600 + minutes * 60;
+  }
+  if (duration.indexOf('m') > -1) {
+    const minsStr = duration.split(' ')[0];
+    const secondStr = duration.split(' ')[1];
+    const mins = Number(minsStr.split('m')[0]);
+    const seconds = Number(secondStr.split('s')[0]);
+    return mins * 60 + seconds;
+  }
+
   return 0;
 };
 
@@ -114,11 +113,11 @@ export const SortData = (arr, key, order) => {
     let val1 = typeof a[key] === 'object' ? a[key]?.value : a[key];
     let val2 = typeof b[key] === 'object' ? b[key]?.value : b[key];
 
-    if (isNaN(val1)) {
+    if (Number.isNaN(val1)) {
       val1 = 0;
     }
 
-    if (isNaN(val2)) {
+    if (Number.isNaN(val2)) {
       val2 = 0;
     }
 
@@ -183,14 +182,14 @@ export const getClickableTitleSorter = (
   if (titleTooltip) {
     titleText = (
       <Tooltip title={titleTooltip}>
-        <Text weight="bold" color="grey-2" type="title" extraClass="mb-0">
+        <Text weight='bold' color='grey-2' type='title' extraClass='mb-0'>
           {title}
         </Text>
       </Tooltip>
     );
   } else {
     titleText = (
-      <Text weight="bold" color="grey-2" type="title" extraClass="mb-0">
+      <Text weight='bold' color='grey-2' type='title' extraClass='mb-0'>
         {title}
       </Text>
     );
@@ -218,12 +217,12 @@ export const getClickableTitleSorter = (
 
   return (
     <div
-      role="button"
+      role='button'
       tabIndex={0}
       onClick={() => handleSorting(sorterProp)}
       className={`flex ${verticalAlignmentClass} ${justifyAlignment} cursor-pointer h-full px-4 py-2 ${containerClassName}`}
     >
-      <div className="flex gap-x-1 items-center">
+      <div className='flex gap-x-1 items-center'>
         {alignment === 'left' ? (
           <>
             {titleText}
@@ -257,10 +256,10 @@ export const formatCount = (count, precision = 1) => {
   }
 };
 
-export const formatDuration = (seconds) => {
-  seconds = Number(seconds);
+export const formatDuration = (sec) => {
+  const seconds = Number(sec);
   if (seconds < 60) {
-    return Math.floor(seconds) + 's';
+    return `${Math.floor(seconds)}s`;
   }
   if (seconds < 3600) {
     const minutes = Math.floor(seconds / 60);
@@ -305,14 +304,11 @@ export const getValidGranularityOptions = ({ from, to }) => {
   return getValidGranularityOptionsFromDaysDiff({ daysDiff });
 };
 
-export const isSeriesChart = (chartType) => {
-  return (
-    chartType === CHART_TYPE_STACKED_AREA ||
-    chartType === CHART_TYPE_LINECHART ||
-    chartType === CHART_TYPE_STACKED_BAR ||
-    chartType === CHART_TYPE_SPARKLINES
-  );
-};
+export const isSeriesChart = (chartType) =>
+  chartType === CHART_TYPE_STACKED_AREA ||
+  chartType === CHART_TYPE_LINECHART ||
+  chartType === CHART_TYPE_STACKED_BAR ||
+  chartType === CHART_TYPE_SPARKLINES;
 
 export const getQueryType = (query) => {
   const cl = query.cl
@@ -325,7 +321,7 @@ export const getQueryType = (query) => {
 
 export const renderBigLengthTicks = (text, allowdLength) => {
   if (text.length > allowdLength) {
-    return text.slice(0, allowdLength) + '...';
+    return `${text.slice(0, allowdLength)}...`;
   }
   return text;
 };
@@ -429,47 +425,42 @@ export const getNewSorterState = (currentSorter, newSortProp) => {
           order: 'descend'
         }
       ];
-    } else {
-      // we are editing existing level of sorting here
-      if (currentSorter[newSortPropIndex].order === 'ascend') {
-        return [
-          ...currentSorter.slice(0, newSortPropIndex),
-          ...currentSorter.slice(newSortPropIndex + 1)
-        ];
-      } else {
-        return [
-          ...currentSorter.slice(0, newSortPropIndex),
-          { ...newSortProp, order: 'ascend' },
-          ...currentSorter.slice(newSortPropIndex + 1)
-        ];
-      }
     }
-  } else {
-    if (newSortPropIndex === -1) {
-      // we are inserting new level of sorting here
+    // we are editing existing level of sorting here
+    if (currentSorter[newSortPropIndex].order === 'ascend') {
       return [
-        {
-          ...newSortProp,
-          order: 'descend'
-        },
-        ...currentSorter
+        ...currentSorter.slice(0, newSortPropIndex),
+        ...currentSorter.slice(newSortPropIndex + 1)
       ];
-    } else {
-      // we are editing existing level of sorting here
-      if (currentSorter[newSortPropIndex].order === 'ascend') {
-        return [
-          ...currentSorter.slice(0, newSortPropIndex),
-          ...currentSorter.slice(newSortPropIndex + 1)
-        ];
-      } else {
-        return [
-          ...currentSorter.slice(0, newSortPropIndex),
-          { ...newSortProp, order: 'ascend' },
-          ...currentSorter.slice(newSortPropIndex + 1)
-        ];
-      }
     }
+    return [
+      ...currentSorter.slice(0, newSortPropIndex),
+      { ...newSortProp, order: 'ascend' },
+      ...currentSorter.slice(newSortPropIndex + 1)
+    ];
   }
+  if (newSortPropIndex === -1) {
+    // we are inserting new level of sorting here
+    return [
+      {
+        ...newSortProp,
+        order: 'descend'
+      },
+      ...currentSorter
+    ];
+  }
+  // we are editing existing level of sorting here
+  if (currentSorter[newSortPropIndex].order === 'ascend') {
+    return [
+      ...currentSorter.slice(0, newSortPropIndex),
+      ...currentSorter.slice(newSortPropIndex + 1)
+    ];
+  }
+  return [
+    ...currentSorter.slice(0, newSortPropIndex),
+    { ...newSortProp, order: 'ascend' },
+    ...currentSorter.slice(newSortPropIndex + 1)
+  ];
 };
 
 export const SortByKey = (result, currentSorter) => {
@@ -582,6 +573,10 @@ export const SortResults = (result, sortSelections) => {
   return thirdSortedResult;
 };
 
+export function isDateInMilliSeconds(date) {
+  return date?.toString().length === 13;
+}
+
 export const formatFilterDate = (selectedDates) => {
   const parsedVal = JSON.parse(selectedDates);
   const fromDateKey = parsedVal.fr ? 'fr' : 'from';
@@ -609,17 +604,12 @@ export const formatFilterDate = (selectedDates) => {
   return JSON.stringify(convertedVal);
 };
 
-export function isDateInMilliSeconds(date) {
-  return date?.toString().length === 13;
-}
-
-export const Wait = (duration) => {
-  return new Promise((resolve) => {
+export const Wait = (duration) =>
+  new Promise((resolve) => {
     setTimeout(() => {
       resolve();
     }, duration);
   });
-};
 
 export const toLetters = (num) => {
   const charArr = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
@@ -629,36 +619,34 @@ export const toLetters = (num) => {
 export const PropTextFormat = (prop = 'users') => {
   const formatText = prop.replace('$', '').split('_');
   formatText.forEach((word, i) => {
-    formatText[i] = word.charAt(0).toUpperCase() + word.substring(1)
+    formatText[i] = word.charAt(0).toUpperCase() + word.substring(1);
   });
   return formatText.join(' ');
 };
 
-export const HighlightSearchText = ({ text = '', highlight = '' }) => {
+export function HighlightSearchText({ text = '', highlight = '' }) {
   if (!highlight.trim()) {
     return <span>{text}</span>;
   }
   const regex = new RegExp(`(${escapeRegExp(highlight)})`, 'gi');
   const parts = text.split(regex);
   return (
-    <span className={'truncate'}>
+    <span className='truncate'>
       {parts.map((part, i) =>
         regex.test(part) ? <b key={i}>{part}</b> : <span key={i}>{part}</span>
       )}
     </span>
   );
-};
+}
 
-export const addQforQuarter = (freq) => {
-  return freq === 'quarter' ? 'Q' : '';
-};
+export const addQforQuarter = (freq) => (freq === 'quarter' ? 'Q' : '');
 
 export const formatDurationIntoString = (seconds) => {
-  let returnString = '',
-    i = 0,
-    stringLength = 0;
+  let returnString = '';
+  let i = 0;
+  let stringLength = 0;
   if (seconds > 0) {
-    let timeUnits = [
+    const timeUnits = [
       [Math.floor(seconds / 31536000), 'years'],
       [Math.floor((seconds % 31536000) / 2592000), 'months'],
       [Math.floor(((seconds % 31536000) % 2592000) / 604800), 'weeks'],
@@ -672,24 +660,14 @@ export const formatDurationIntoString = (seconds) => {
         i++;
         continue;
       }
-      returnString +=
-        ' ' +
-        parseInt(timeUnits[i][0]) +
-        ' ' +
-        (timeUnits[i][0] === 1
+      returnString += ` ${parseInt(timeUnits[i][0])} ${
+        timeUnits[i][0] === 1
           ? timeUnits[i][1].substr(0, timeUnits[i][1].length - 1)
-          : timeUnits[i][1]);
+          : timeUnits[i][1]
+      }`;
       i++;
       stringLength = returnString.split(' ').length;
     }
   } else return '0 seconds';
   return returnString.trim();
-};
-
-export const abbreviateNumber = (n) => {
-  if (n < 1e3) return n;
-  if (n >= 1e3 && n < 1e6) return +(n / 1e3).toFixed(1) + 'K';
-  if (n >= 1e6 && n < 1e9) return +(n / 1e6).toFixed(1) + 'M';
-  if (n >= 1e9 && n < 1e12) return +(n / 1e9).toFixed(1) + 'B';
-  if (n >= 1e12) return +(n / 1e12).toFixed(1) + 'T';
 };

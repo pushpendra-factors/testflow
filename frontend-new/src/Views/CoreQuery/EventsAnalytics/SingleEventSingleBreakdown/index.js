@@ -8,9 +8,10 @@ import React, {
   memo,
   useMemo
 } from 'react';
+import has from 'lodash/has';
 import {
   formatData,
-  formatDataInStackedAreaFormat,
+  formatDataInSeriesFormat,
   defaultSortProp,
   getVisibleData,
   getVisibleSeriesData
@@ -82,7 +83,7 @@ const SingleEventSingleBreakdownComponent = forwardRef(
         categories: cats,
         data: d,
         compareCategories: compareCats
-      } = formatDataInStackedAreaFormat(
+      } = formatDataInSeriesFormat(
         resultState.data,
         aggData,
         durationObj.frequency,
@@ -122,6 +123,11 @@ const SingleEventSingleBreakdownComponent = forwardRef(
       return series;
     }, [visibleProperties, comparisonData.data]);
 
+    const visibleSeriesDataWithoutComparisonData = useMemo(
+      () => visibleSeriesData.filter((sd) => !has(sd, 'compareIndex')),
+      [visibleSeriesData]
+    );
+
     if (!visibleProperties.length) {
       return null;
     }
@@ -129,7 +135,7 @@ const SingleEventSingleBreakdownComponent = forwardRef(
     let chart = null;
 
     const table = (
-      <div className="mt-12 w-full">
+      <div className='mt-12 w-full'>
         <SingleEventSingleBreakdownTable
           isWidgetModal={section === DASHBOARD_MODAL}
           data={aggregateData}
@@ -149,13 +155,15 @@ const SingleEventSingleBreakdownComponent = forwardRef(
           visibleSeriesData={visibleSeriesData}
           setVisibleSeriesData={setVisibleSeriesData}
           comparisonApplied={comparisonData.data != null}
+          compareCategories={compareCategories}
+          frequency={durationObj.frequency}
         />
       </div>
     );
 
     if (chartType === CHART_TYPE_BARCHART) {
       chart = (
-        <div className="w-full">
+        <div className='w-full'>
           <ColumnChart
             comparisonApplied={comparisonData.data != null}
             categories={columnCategories}
@@ -165,29 +173,29 @@ const SingleEventSingleBreakdownComponent = forwardRef(
       );
     } else if (chartType === CHART_TYPE_STACKED_AREA) {
       chart = (
-        <div className="w-full">
+        <div className='w-full'>
           <StackedAreaChart
             frequency={durationObj.frequency}
             categories={categories}
-            data={visibleSeriesData}
+            data={visibleSeriesDataWithoutComparisonData}
             showAllLegends
           />
         </div>
       );
     } else if (chartType === CHART_TYPE_STACKED_BAR) {
       chart = (
-        <div className="w-full">
+        <div className='w-full'>
           <StackedBarChart
             frequency={durationObj.frequency}
             categories={categories}
-            data={visibleSeriesData}
             showAllLegends
+            data={visibleSeriesDataWithoutComparisonData}
           />
         </div>
       );
     } else if (chartType === CHART_TYPE_LINECHART) {
       chart = (
-        <div className="w-full">
+        <div className='w-full'>
           <LineChart
             frequency={durationObj.frequency}
             categories={categories}
@@ -200,7 +208,7 @@ const SingleEventSingleBreakdownComponent = forwardRef(
       );
     } else {
       chart = (
-        <div className="w-full">
+        <div className='w-full'>
           <SingleEventSingleBreakdownHorizontalBarChart
             aggregateData={aggregateData}
             breakdown={resultState.data.meta.query.gbp}
@@ -210,7 +218,7 @@ const SingleEventSingleBreakdownComponent = forwardRef(
     }
 
     return (
-      <div className="flex items-center justify-center flex-col">
+      <div className='flex items-center justify-center flex-col'>
         {chart}
         {table}
       </div>

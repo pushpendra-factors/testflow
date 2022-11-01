@@ -37,7 +37,9 @@ function SingleEventSingleBreakdownTable({
   handleDateSorting,
   visibleSeriesData,
   setVisibleSeriesData,
-  comparisonApplied
+  comparisonApplied,
+  compareCategories,
+  frequency
 }) {
   const [searchText, setSearchText] = useState('');
   const { eventNames, userPropNames, eventPropNames } = useSelector(
@@ -122,7 +124,9 @@ function SingleEventSingleBreakdownTable({
         handleDateSorting,
         durationObj.frequency,
         userPropNames,
-        eventPropNames
+        eventPropNames,
+        comparisonApplied,
+        compareCategories
       )
     );
   }, [
@@ -137,7 +141,15 @@ function SingleEventSingleBreakdownTable({
 
   useEffect(() => {
     setDateBasedTableData(
-      getDateBasedTableData(seriesData, searchText, dateSorter)
+      getDateBasedTableData(
+        seriesData,
+        searchText,
+        dateSorter,
+        categories,
+        comparisonApplied,
+        compareCategories,
+        frequency
+      )
     );
   }, [seriesData, searchText, dateSorter]);
 

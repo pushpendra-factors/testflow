@@ -111,6 +111,22 @@ function Dashboard({
     });
   }, [dashboardRefreshState.inProgress, activeDashboardUnits.data]);
 
+  const handleWidgetRefresh = useCallback(
+    (widgetId) => {
+      if (dashboardRefreshState.inProgress) {
+        return false;
+      }
+      setDashboardRefreshState({
+        inProgress: true,
+        widgetIdsLeftToBeFetched: [],
+        widgetIdGettingFetched: widgetId,
+        widgetIdsAlreadyFetched: []
+      });
+      return false;
+    },
+    [dashboardRefreshState.inProgress]
+  );
+
   const resetDashboardRefreshState = useCallback(() => {
     setDashboardRefreshState(dashboardRefreshInitialState);
   }, []);
@@ -119,8 +135,7 @@ function Dashboard({
     setDashboardRefreshState((currState) => {
       if (currState.inProgress) {
         return {
-          inProgress:
-            currState.widgetIdsLeftToBeFetched.length > 0 ? true : false,
+          inProgress: currState.widgetIdsLeftToBeFetched.length > 0,
           widgetIdsAlreadyFetched: [
             ...currState.widgetIdsAlreadyFetched,
             unitId
@@ -138,7 +153,8 @@ function Dashboard({
 
   const handleDurationChange = useCallback(
     (dates) => {
-      let from, to;
+      let from;
+      let to;
       setOldestRefreshTime(null);
       resetDashboardRefreshState();
       if (Array.isArray(dates.startDate)) {
@@ -166,58 +182,56 @@ function Dashboard({
     [resetDashboardRefreshState]
   );
 
-  useEffect(() => {
-    return () => {
+  useEffect(
+    () => () => {
       dispatch({ type: DASHBOARD_UNMOUNTED });
-    };
-  }, [dispatch]);
+    },
+    [dispatch]
+  );
 
   if (dashboards.loading) {
     return (
-      <div className="flex justify-center items-center w-full h-64">
-        <Spin size="large" />
+      <div className='flex justify-center items-center w-full h-64'>
+        <Spin size='large' />
       </div>
     );
   }
 
   if (dashboards.data.length) {
     return (
-      <>
-        <ErrorBoundary
-          fallback={
-            <FaErrorComp
-              size={'medium'}
-              title={'Dashboard Overview Error'}
-              subtitle={
-                'We are facing trouble loading dashboards overview. Drop us a message on the in-app chat.'
-              }
-            />
-          }
-          onError={FaErrorLog}
-        >
-          <div className="mt-20 flex-1 flex flex-col">
-            <ProjectDropdown
-              handleEditClick={handleEditClick}
-              setaddDashboardModal={setaddDashboardModal}
-              durationObj={durationObj}
-              handleDurationChange={handleDurationChange}
-              oldestRefreshTime={oldestRefreshTime}
-              setOldestRefreshTime={setOldestRefreshTime}
-              handleRefreshClick={handleRefreshClick}
-              dashboardRefreshState={dashboardRefreshState}
-              onDataLoadSuccess={onDataLoadSuccess}
-              resetDashboardRefreshState={resetDashboardRefreshState}
-            />
-          </div>
-
-          <AddDashboard
-            setEditDashboard={setEditDashboard}
-            editDashboard={editDashboard}
-            addDashboardModal={addDashboardModal}
-            setaddDashboardModal={setaddDashboardModal}
+      <ErrorBoundary
+        fallback={
+          <FaErrorComp
+            size='medium'
+            title='Dashboard Overview Error'
+            subtitle='We are facing trouble loading dashboards overview. Drop us a message on the in-app chat.'
           />
-        </ErrorBoundary>
-      </>
+        }
+        onError={FaErrorLog}
+      >
+        <div className='mt-20 flex-1 flex flex-col'>
+          <ProjectDropdown
+            handleEditClick={handleEditClick}
+            setaddDashboardModal={setaddDashboardModal}
+            durationObj={durationObj}
+            handleDurationChange={handleDurationChange}
+            oldestRefreshTime={oldestRefreshTime}
+            setOldestRefreshTime={setOldestRefreshTime}
+            handleRefreshClick={handleRefreshClick}
+            dashboardRefreshState={dashboardRefreshState}
+            onDataLoadSuccess={onDataLoadSuccess}
+            resetDashboardRefreshState={resetDashboardRefreshState}
+            handleWidgetRefresh={handleWidgetRefresh}
+          />
+        </div>
+
+        <AddDashboard
+          setEditDashboard={setEditDashboard}
+          editDashboard={editDashboard}
+          addDashboardModal={addDashboardModal}
+          setaddDashboardModal={setaddDashboardModal}
+        />
+      </ErrorBoundary>
     );
   }
   return (

@@ -6,7 +6,7 @@ export default {
   component: ColumnChart
 };
 
-export const DefaultChart = () => {
+export function DefaultChart() {
   return (
     <ColumnChart
       categories={[
@@ -25,9 +25,9 @@ export const DefaultChart = () => {
       ]}
     />
   );
-};
+}
 
-export const WithComparison = () => {
+export function WithComparison() {
   return (
     <ColumnChart
       categories={['(Not Set)', 'Brand_awareness', 'Brand_launch']}
@@ -42,4 +42,4 @@ export const WithComparison = () => {
       ]}
     />
   );
-};
+}

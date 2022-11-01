@@ -456,7 +456,7 @@ export const QUERY_TYPE_TEXT = {
   [QUERY_TYPE_PROFILE]: 'Profiles'
 };
 
-export const FIRST_METRIC_IN_ATTR_RESPOSE = 'Impressions';
+export const FIRST_METRIC_IN_ATTR_RESPONSE = 'Impressions';
 
 export const ARR_JOINER = ';;;';
 
