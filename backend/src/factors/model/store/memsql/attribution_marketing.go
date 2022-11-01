@@ -399,9 +399,6 @@ func (store *MemSQL) FetchMarketingReports(projectID int64, q model.AttributionQ
 	data.FacebookAdgroupIDData = facebookAdgroupIDData
 	data.FacebookAdgroupKeyData = model.GetKeyMapToData(model.AttributionKeyAdgroup, facebookAdgroupAllRows, data.FacebookAdgroupIDData)
 
-	if C.GetAttributionDebug() == 1 {
-		log.WithFields(log.Fields{"marketingDataIDMap": data.LinkedinCampaignIDData, "linkedinCampaignAllRows": linkedinCampaignAllRows}).Info("FetchMarketingReports. Attribution debug AnalyzeTypeUsers.")
-	}
 	data.LinkedinCampaignIDData = linkedinCampaignIDData
 	data.LinkedinCampaignKeyData = model.GetKeyMapToData(model.AttributionKeyCampaign, linkedinCampaignAllRows, data.LinkedinCampaignIDData)
 

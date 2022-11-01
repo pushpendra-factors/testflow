@@ -2689,11 +2689,7 @@ func GetKeyMapToData(attributionKey string, allRows []MarketingData, idMarketing
 
 		key := GetMarketingDataKey(attributionKey, v)
 		if _, ok := keyToData[key]; ok {
-			if C.GetAttributionDebug() == 1 {
-				v = mergeMarketingDataChannel(keyToData[key], v)
-			} else {
-				v = mergeMarketingData(keyToData[key], v)
-			}
+			v = mergeMarketingData(keyToData[key], v)
 		}
 		keyToData[key] = v
 		val := MarketingData{}
@@ -3021,11 +3017,7 @@ func ProcessRow(rows *sql.Rows, reportName string, logCtx *log.Entry,
 		}
 		allRows = append(allRows, data)
 		if _, ok := marketingDataIDMap[ID]; ok {
-			if C.GetAttributionDebug() == 1 {
-				data = mergeMarketingDataChannel(marketingDataIDMap[ID], data)
-			} else {
-				data = mergeMarketingData(marketingDataIDMap[ID], data)
-			}
+			data = mergeMarketingData(marketingDataIDMap[ID], data)
 		}
 		marketingDataIDMap[ID] = data
 	}
@@ -3116,28 +3108,6 @@ func getMarketingDataFromValues(campaignIDNull sql.NullString, adgroupIDNull sql
 
 // mergeMarketingData combines values in two MarketingData rows having same marketing id but different names
 func mergeMarketingData(marketingDataOld MarketingData, marketingDataNew MarketingData) MarketingData {
-
-	data := MarketingData{
-		Key:              marketingDataNew.Key,
-		ID:               marketingDataNew.ID,
-		Name:             marketingDataNew.Name,
-		CampaignID:       marketingDataNew.CampaignID,
-		CampaignName:     marketingDataNew.CampaignName,
-		AdgroupID:        marketingDataNew.AdgroupID,
-		AdgroupName:      marketingDataNew.AdgroupName,
-		KeywordMatchType: marketingDataNew.KeywordMatchType,
-		KeywordName:      marketingDataNew.KeywordName,
-		KeywordID:        marketingDataNew.KeywordID,
-		AdName:           marketingDataNew.AdName,
-		AdID:             marketingDataNew.AdID,
-		Slot:             marketingDataNew.Slot,
-		Impressions:      marketingDataOld.Impressions + marketingDataNew.Impressions,
-		Clicks:           marketingDataOld.Clicks + marketingDataNew.Clicks,
-		Spend:            marketingDataOld.Spend + marketingDataNew.Spend}
-	return data
-}
-
-func mergeMarketingDataChannel(marketingDataOld MarketingData, marketingDataNew MarketingData) MarketingData {
 
 	data := marketingDataNew
 	data.Impressions = marketingDataOld.Impressions + marketingDataNew.Impressions
