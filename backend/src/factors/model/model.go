@@ -227,6 +227,7 @@ type Model interface {
 	DeleteFilterEventName(projectID int64, id string) int
 	FilterEventNameByEventURL(projectID int64, eventURL string) (*model.EventName, int)
 	GetEventNameFromEventNameId(eventNameId string, projectID int64) (*model.EventName, error)
+	GetEventNameIDFromEventName(eventName string, projectId int64) (*model.EventName, error)
 	GetEventTypeFromDb(projectID int64, eventNames []string, limit int64) (map[string]string, error)
 	GetMostFrequentlyEventNamesByType(projectID int64, limit int, lastNDays int, typeOfEvent string) ([]string, error)
 	GetEventNamesOrderedByOccurenceAndRecency(projectID int64, limit int, lastNDays int) (map[string][]string, error)
@@ -747,6 +748,19 @@ type Model interface {
 	GetKPIConfigsForCustomAds(projectID int64, reqID string, includeDerivedKPIs bool) ([]map[string]interface{}, int)
 	GetKPIConfigsForCustomAdsFromDB(projectID int64, includeDerivedKPIs bool) []map[string]interface{}
 	GetCustomChannelFilterValuesV1(projectID int64, source, channel, filterObject, filterProperty string, reqID string) (model.ChannelFilterValues, int)
+
+	// Predict Job
+	GetGroupsOnEvent(projectID int64, event_name string) (*sql.Rows, *sql.Tx, error)
+	PullUserCohortDataOnEvent(projectID int64, startTime, endTime int64, event_id string, filter_property string) (*sql.Rows, error)
+	// PullUsersEventRowsForPredictJob(project_id int64, event_id string, start_time int64, end_time int64) (*sql.Rows, *sql.Tx, error)
+	GetAllEventsWithUsers(projectID int64, event_name string, start_time int64, end_time int64) (*sql.Rows, error)
+	GetAllEventsOnUsersBetweenTime(projectID int64, users []string, start_time int64, end_time int64) (*sql.Rows, *sql.Tx, error)
+	GetUsersTimestampOnFirstEvent(projectID int64, event_name string, start_time int64, end_time int64) (map[string]int64, error)
+	GetAllEventsOnUsers(projectId int64, arrayCustomerUserID []string) (*sql.Rows, error)
+	GetCountOfGroupIDS(projectId int64, arrayGroupID []string) (*sql.Rows, error)
+	PullEventRowsOnUsers(projectID int64, users []string, start_time int64, end_time int64) (*sql.Rows, error)
+	GetUsersEventTimeStampFromHistory(projectID int64, event_name_id string, userIdFiltered map[string]int64) (map[string]int64, error)
+	GetBaseEventsOnUsers(projectID int64, event_name_id string, start_time int64, end_time int64, users []string) (*sql.Rows, error)
 
 	// property overides
 	GetPropertyOverridesByType(projectID int64, typeConstant int, entity int) (int, []string)

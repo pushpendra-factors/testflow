@@ -5,7 +5,6 @@ import (
 	"errors"
 	cacheRedis "factors/cache/redis"
 	C "factors/config"
-	"factors/model/model"
 	U "factors/util"
 	"fmt"
 	"net/http"
@@ -14,6 +13,8 @@ import (
 
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
+
+	"factors/model/model"
 )
 
 func satisfiesEventNameConstraints(eventName model.EventName) int {
@@ -1490,21 +1491,23 @@ func (store *MemSQL) FilterEventNameByEventURL(projectId int64, eventURL string)
 	return filterInfo.eventName, http.StatusFound
 }
 
-func (store *MemSQL) GetEventNameFromEventNameId(eventNameId string, projectId int64) (*model.EventName, error) {
+
+
+func (store *MemSQL) GetEventNameIDFromEventName(eventName string, projectId int64) (*model.EventName, error) {
 	logFields := log.Fields{
-		"project_id":    projectId,
-		"event_name_id": eventNameId,
+		"project_id": projectId,
+		"event_name": eventName,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
-	var eventName model.EventName
-	queryStr := "SELECT * FROM event_names WHERE id = ? AND project_id = ?"
-	err := db.Raw(queryStr, eventNameId, projectId).Scan(&eventName).Error
+	var event_name model.EventName
+	queryStr := "SELECT * FROM event_names WHERE name = ? AND project_id = ?"
+	err := db.Raw(queryStr, eventName, projectId).Scan(&event_name).Error
 	if err != nil {
-		log.Error("Failed to get event_name from event_name_id")
+		log.Error("Failed to get event_id from event_name")
 		return nil, err
 	}
-	return &eventName, nil
+	return &event_name, nil
 }
 
 func convert(eventNamesWithAggregation []model.EventNameWithAggregation) []model.EventName {

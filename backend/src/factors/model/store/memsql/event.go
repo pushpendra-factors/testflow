@@ -6,7 +6,6 @@ import (
 	cacheRedis "factors/cache/redis"
 	C "factors/config"
 	"factors/metrics"
-	"factors/model/model"
 	"factors/util"
 	U "factors/util"
 	"fmt"
@@ -18,8 +17,9 @@ import (
 
 	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
-
 	log "github.com/sirupsen/logrus"
+
+	"factors/model/model"
 )
 
 const eventsLimitForProperites = 50000
