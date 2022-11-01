@@ -765,6 +765,13 @@ type Model interface {
 	// property overides
 	GetPropertyOverridesByType(projectID int64, typeConstant int, entity int) (int, []string)
 
+	//path analysis
+	GetAllPathAnalysisEntityByProject(projectID int64) ([]model.PathAnalysisEntityInfo, int)
+	GetPathAnalysisEntity(projectID int64, id string) (model.PathAnalysis, int)
+	CreatePathAnalysisEntity(userID string, projectId int64, entity *model.PathAnalysisQuery) (*model.PathAnalysis, int, string)
+	DeletePathAnalysisEntity(projectID int64, id string) (int, string)
+	GetProjectCountWithStatus(projectID int64, status []string) (int, int, string)
+
 	// leadsquaredmarker
 	CreateLeadSquaredMarker(marker model.LeadsquaredMarker) int
 	GetLeadSquaredMarker(ProjectID int64, Delta int64, Document string, Tag string) (int, int)
