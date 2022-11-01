@@ -66,7 +66,11 @@ function SaveQuery({
   enableSlackIntegration,
   createAlert,
   sendAlertNow,
-  dateFromTo
+  dateFromTo,
+  showSaveQueryModal,
+  setShowSaveQueryModal,
+  ShowAddToDashModal,
+  setShowAddToDashModal
 }) {
   const dispatch = useDispatch();
 
@@ -109,6 +113,18 @@ function SaveQuery({
     }
   }, [dateFromTo])
 
+  useEffect(() => {
+    if(showSaveQueryModal) {
+      handleSaveClick();
+    }
+  }, [showSaveQueryModal])
+
+  useEffect(() => {
+    if(ShowAddToDashModal) {
+      toggleAddToDashModal();
+    }
+  }, [ShowAddToDashModal])
+
   const {
     activeAction,
     apisCalled,
@@ -127,6 +143,7 @@ function SaveQuery({
 
   const toggleAddToDashModal = useCallback(() => {
     updateLocalReducer({ type: TOGGLE_ADD_TO_DASHBOARD_MODAL });
+    setShowAddToDashModal(false);
   }, [updateLocalReducer]);
 
   const toggleDeleteModal = useCallback(() => {
@@ -136,6 +153,7 @@ function SaveQuery({
   const handleSaveClick = useCallback(() => {
     toggleModal();
     updateLocalReducer({ type: SET_ACTIVE_ACTION, payload: ACTION_TYPES.SAVE });
+    setShowSaveQueryModal(false);
   }, [updateLocalReducer, toggleModal]);
 
   const handleEditClick = useCallback(() => {
