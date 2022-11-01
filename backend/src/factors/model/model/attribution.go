@@ -2689,7 +2689,11 @@ func GetKeyMapToData(attributionKey string, allRows []MarketingData, idMarketing
 
 		key := GetMarketingDataKey(attributionKey, v)
 		if _, ok := keyToData[key]; ok {
-			v = mergeMarketingData(keyToData[key], v)
+			if C.GetAttributionDebug() == 1 {
+				v = mergeMarketingDataChannel(keyToData[key], v)
+			} else {
+				v = mergeMarketingData(keyToData[key], v)
+			}
 		}
 		keyToData[key] = v
 		val := MarketingData{}
@@ -3017,7 +3021,11 @@ func ProcessRow(rows *sql.Rows, reportName string, logCtx *log.Entry,
 		}
 		allRows = append(allRows, data)
 		if _, ok := marketingDataIDMap[ID]; ok {
-			data = mergeMarketingData(marketingDataIDMap[ID], data)
+			if C.GetAttributionDebug() == 1 {
+				data = mergeMarketingDataChannel(marketingDataIDMap[ID], data)
+			} else {
+				data = mergeMarketingData(marketingDataIDMap[ID], data)
+			}
 		}
 		marketingDataIDMap[ID] = data
 	}
@@ -3126,6 +3134,15 @@ func mergeMarketingData(marketingDataOld MarketingData, marketingDataNew Marketi
 		Impressions:      marketingDataOld.Impressions + marketingDataNew.Impressions,
 		Clicks:           marketingDataOld.Clicks + marketingDataNew.Clicks,
 		Spend:            marketingDataOld.Spend + marketingDataNew.Spend}
+	return data
+}
+
+func mergeMarketingDataChannel(marketingDataOld MarketingData, marketingDataNew MarketingData) MarketingData {
+
+	data := marketingDataNew
+	data.Impressions = marketingDataOld.Impressions + marketingDataNew.Impressions
+	data.Clicks = marketingDataOld.Clicks + marketingDataNew.Clicks
+	data.Spend = marketingDataOld.Spend + marketingDataNew.Spend
 	return data
 }
 
