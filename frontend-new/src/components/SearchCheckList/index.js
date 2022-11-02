@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Input } from 'antd';
 import { SVG } from '../factorsComponents';
 import { getUniqueItemsByKeyAndSearchTerm } from '../Profile/utils';
@@ -6,7 +6,7 @@ import CustomCheckbox from './CustomCheckbox';
 
 export default function SearchCheckList({
   placeholder,
-  searchIcon = <SVG name="search" size={16} color="grey" />,
+  searchIcon = <SVG name='search' size={16} color='grey' />,
   mapArray = [],
   titleKey,
   checkedKey,
@@ -18,6 +18,10 @@ export default function SearchCheckList({
     setSearchTerm(e.target.value || '');
   };
 
+  useEffect(() => {
+    setSearchTerm('');
+  }, [mapArray]);
+
   return (
     <>
       <Input
@@ -26,7 +30,7 @@ export default function SearchCheckList({
         onChange={handleSearch}
         value={searchTerm}
       />
-      <div className="fa-custom--popover-content">
+      <div className='fa-custom--popover-content'>
         {mapArray?.length ? (
           getUniqueItemsByKeyAndSearchTerm(mapArray, searchTerm).map(
             (option) => (
@@ -39,7 +43,7 @@ export default function SearchCheckList({
             )
           )
         ) : (
-          <div className="text-center p-2 italic">{emptyListText}</div>
+          <div className='text-center p-2 italic'>{emptyListText}</div>
         )}
       </div>
     </>
