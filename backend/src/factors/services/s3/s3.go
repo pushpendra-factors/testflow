@@ -263,3 +263,22 @@ func (sd *S3Driver) GetEventsArtificatFilePathAndName(projectId int64, startTime
 	return path, "users_map.txt"
 
 }
+
+func (sd *S3Driver) GetEventsForTimerangeFilePathAndName(projectId int64, startTimestamp int64, endTimestamp int64) (string, string) {
+	path := sd.GetEventsForTimerangeFileDir(projectId, startTimestamp, endTimestamp)
+	return path, "events.txt"
+}
+
+func (sd *S3Driver) GetEventsForTimerangeFileDir(projectId int64, startTimestamp int64, endTimestamp int64) string {
+	dateFormattedStart := U.GetDateOnlyFromTimestampZ(startTimestamp)
+	dateFormattedEnd := U.GetDateOnlyFromTimestampZ(endTimestamp)
+	return fmt.Sprintf("projects/%v/%v/%v/", projectId, dateFormattedStart, dateFormattedEnd)
+}
+
+func (sd *S3Driver) GetPathAnalysisTempFileDir(id string, projectId int64) string {
+	return fmt.Sprintf("projects/%v/pathanalysis/%v/", projectId, id)
+}
+func (sd *S3Driver) GetPathAnalysisTempFilePathAndName(id string, projectId int64) (string, string) {
+	path := sd.GetPathAnalysisTempFileDir(id, projectId)
+	return path, "patterns.txt"
+}

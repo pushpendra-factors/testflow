@@ -303,3 +303,22 @@ func (gcsd *GCSDriver) GetEventsArtificatFilePathAndName(projectId int64, startT
 	path = pb.Join(path, "artifacts")
 	return path, "users_map.txt"
 }
+
+func (gcsd *GCSDriver) GetEventsForTimerangeFilePathAndName(projectId int64, startTimestamp int64, endTimestamp int64) (string, string) {
+	path := gcsd.GetEventsForTimerangeFileDir(projectId, startTimestamp, endTimestamp)
+	return path, "events.txt"
+}
+
+func (gcsd *GCSDriver) GetEventsForTimerangeFileDir(projectId int64, startTimestamp int64, endTimestamp int64) string {
+	dateFormattedStart := U.GetDateOnlyFromTimestampZ(startTimestamp)
+	dateFormattedEnd := U.GetDateOnlyFromTimestampZ(endTimestamp)
+	return fmt.Sprintf("projects/%v/%v/%v/", projectId, dateFormattedStart, dateFormattedEnd)
+}
+
+func (gcsd *GCSDriver) GetPathAnalysisTempFileDir(id string, projectId int64) string {
+	return fmt.Sprintf("projects/%v/pathanalysis/%v/", projectId, id)
+}
+func (gcsd *GCSDriver) GetPathAnalysisTempFilePathAndName(id string, projectId int64) (string, string) {
+	path := gcsd.GetPathAnalysisTempFileDir(id, projectId)
+	return path, "patterns.txt"
+}

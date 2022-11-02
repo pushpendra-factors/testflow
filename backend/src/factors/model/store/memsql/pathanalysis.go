@@ -280,3 +280,46 @@ func isDuplicateTitle(projectId int64, entity *model.PathAnalysisQuery) bool {
 	}
 	return false
 }
+
+func (store *MemSQL) GetAllSavedPathAnalysisEntityByProject(projectID int64) ([]model.PathAnalysis, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	db := C.GetServices().Db
+
+	entity := make([]model.PathAnalysis, 0)
+
+	err := db.Table("pathanalysis").
+		Where("project_id = ? AND is_deleted = ? AND status = ?", projectID, false, model.SAVED).
+		Order("created_at ASC").Limit(LimitPathAnalysisEntityList).Find(&entity).Error
+	if err != nil {
+		log.WithError(err).Error("Failed to fetch rows from queries table for project")
+		return nil, http.StatusInternalServerError
+	}
+
+	if len(entity) == 0 {
+		return nil, http.StatusFound
+	}
+
+	return entity, http.StatusFound
+}
+
+func (store *MemSQL) UpdatePathAnalysisEntity(projectID int64, id string, status string) (int, string) {
+	logFields := log.Fields{
+		"project_id": projectID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+	db := C.GetServices().Db
+	updatedFields := make(map[string]interface{})
+	updatedFields["status"] = status
+	updatedFields["updated_at"] = gorm.NowFunc()
+
+	dbErr := db.Table("pathanalysis").Where("project_id = ? AND id = ?", projectID, id).Update(updatedFields).Error
+	if dbErr != nil {
+		logCtx.WithError(dbErr).Error("updating pathanalysis failed")
+		return http.StatusInternalServerError, dbErr.Error()
+	}
+	return http.StatusOK, ""
+}

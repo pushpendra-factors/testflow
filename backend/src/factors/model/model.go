@@ -765,6 +765,8 @@ type Model interface {
 	// property overides
 	GetPropertyOverridesByType(projectID int64, typeConstant int, entity int) (int, []string)
 
+	UpdatePathAnalysisEntity(projectID int64, id string, status string) (int, string)
+	GetAllSavedPathAnalysisEntityByProject(projectID int64) ([]model.PathAnalysis, int)
 	//path analysis
 	GetAllPathAnalysisEntityByProject(projectID int64) ([]model.PathAnalysisEntityInfo, int)
 	GetPathAnalysisEntity(projectID int64, id string) (model.PathAnalysis, int)

@@ -286,3 +286,22 @@ func (dd *DiskDriver) GetWIPropertiesPathAndName(projectId int64) (string, strin
 func (dd *DiskDriver) GetWIPropertiesDir(projectId int64) string {
 	return fmt.Sprintf("%v/projects/%v/weeklyinsights/", dd.baseDir, projectId)
 }
+
+func (dd *DiskDriver) GetEventsForTimerangeFilePathAndName(projectId int64, startTimestamp int64, endTimestamp int64) (string, string) {
+	path := dd.GetEventsForTimerangeFileDir(projectId, startTimestamp, endTimestamp)
+	return path, "events.txt"
+}
+
+func (dd *DiskDriver) GetEventsForTimerangeFileDir(projectId int64, startTimestamp int64, endTimestamp int64) string {
+	dateFormattedStart := U.GetDateOnlyFromTimestampZ(startTimestamp)
+	dateFormattedEnd := U.GetDateOnlyFromTimestampZ(endTimestamp)
+	return fmt.Sprintf("%v/projects/%v/%v/%v/", dd.baseDir, projectId, dateFormattedStart, dateFormattedEnd)
+}
+
+func (dd *DiskDriver) GetPathAnalysisTempFileDir(id string, projectId int64) string {
+	return fmt.Sprintf("%v/projects/%v/pathanalysis/%v/", dd.baseDir, projectId, id)
+}
+func (dd *DiskDriver) GetPathAnalysisTempFilePathAndName(id string, projectId int64) (string, string) {
+	path := dd.GetPathAnalysisTempFileDir(id, projectId)
+	return path, "patterns.txt"
+}

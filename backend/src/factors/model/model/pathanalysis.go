@@ -29,9 +29,6 @@ type PathAnalysis struct {
 	UpdatedAt         time.Time       `gorm:"column:updated_at; autoUpdateTime" json:"updated_at"`
 }
 
-// type PathAnalysisQuery struct {
-// }
-
 type PathAnalysisQuery struct {
 	Title               string          `json:"title"`
 	EventType           string          `json:"event_type"`

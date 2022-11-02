@@ -467,6 +467,13 @@ upload-weekly-insights: export IMAGE_NAME=weekly-insights-job
 upload-weekly-insights: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/weekly-insights-job:$(TAG)
 
+pack-pathanalysis:
+	docker build -t us.gcr.io/factors-$(ENV)/pathanalysis-job:$(TAG) -f Dockerfile.path_analysis_job .
+
+upload-pathanalysis: export IMAGE_NAME=pathanalysis-job
+upload-pathanalysis: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/pathanalysis-job:$(TAG)
+
 pack-bingads-integration:
 	docker build -t us.gcr.io/factors-$(ENV)/bing-ads-integration-job:$(TAG) -f Dockerfile.bingads_integration_job .
 
