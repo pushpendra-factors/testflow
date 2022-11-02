@@ -124,7 +124,7 @@ function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel, 
                       onFinish={onFinish}
                       form={form}
                       initialValues={{
-                        time_zone: `${getTimeZoneNameFromCity(activeProject?.time_zone)?.name} (UTC ${getTimeZoneNameFromCity(activeProject?.time_zone)?.offset})`
+                        time_zone: `${TimeZoneOffsetValueArr[0]?.name} (UTC ${TimeZoneOffsetValueArr[0]?.offset})`
                       }}
                     >
                       <Row>

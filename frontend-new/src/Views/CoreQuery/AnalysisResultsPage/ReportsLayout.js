@@ -100,13 +100,6 @@ function ReportsLayout({
     setNavigatedFromDashboard(false);
   }, [setNavigatedFromDashboard, setShowResult]);
 
-  useEffect(
-    () => () => {
-      dispatch({ type: 'SET_ACTIVE_INSIGHT', payload: false });
-      dispatch({ type: 'RESET_WEEKLY_INSIGHTS', payload: false });
-    },
-    [dispatch, activeProject]
-  );
 
   useEffect(() => {
     if (requestQuery) {
