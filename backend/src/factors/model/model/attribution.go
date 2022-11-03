@@ -3124,23 +3124,10 @@ func getMarketingDataFromValues(campaignIDNull sql.NullString, adgroupIDNull sql
 // mergeMarketingData combines values in two MarketingData rows having same marketing id but different names
 func mergeMarketingData(marketingDataOld MarketingData, marketingDataNew MarketingData) MarketingData {
 
-	data := MarketingData{
-		Key:              marketingDataNew.Key,
-		ID:               marketingDataNew.ID,
-		Name:             marketingDataNew.Name,
-		CampaignID:       marketingDataNew.CampaignID,
-		CampaignName:     marketingDataNew.CampaignName,
-		AdgroupID:        marketingDataNew.AdgroupID,
-		AdgroupName:      marketingDataNew.AdgroupName,
-		KeywordMatchType: marketingDataNew.KeywordMatchType,
-		KeywordName:      marketingDataNew.KeywordName,
-		KeywordID:        marketingDataNew.KeywordID,
-		AdName:           marketingDataNew.AdName,
-		AdID:             marketingDataNew.AdID,
-		Slot:             marketingDataNew.Slot,
-		Impressions:      marketingDataOld.Impressions + marketingDataNew.Impressions,
-		Clicks:           marketingDataOld.Clicks + marketingDataNew.Clicks,
-		Spend:            marketingDataOld.Spend + marketingDataNew.Spend}
+	data := marketingDataNew
+	data.Impressions = marketingDataOld.Impressions + marketingDataNew.Impressions
+	data.Clicks = marketingDataOld.Clicks + marketingDataNew.Clicks
+	data.Spend = marketingDataOld.Spend + marketingDataNew.Spend
 	return data
 }
 
