@@ -436,7 +436,7 @@ function SaveQuery({
         console.log(err.response);
         notification.error({
           message: 'Error!',
-          description: 'Something went wrong.',
+          description: `${err?.data?.error}`,
           duration: 5
         });
       }

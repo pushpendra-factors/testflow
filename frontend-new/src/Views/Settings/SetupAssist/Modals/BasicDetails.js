@@ -110,7 +110,7 @@ function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel, 
         <div className={'fa-container'}>
           <Row justify={'center'} className={`${styles.start}`}>
             <Col span={7} >
-              <div className={'flex flex-col justify-center mt-16'}>
+              <div className={'flex flex-col justify-center mt-14'}>
                 <Row className={'mb-4'}>
                   <Col span={24} >
                     <Text type={'title'} level={3} color={'grey-2'} align={'center'} weight={'bold'}>Basic Details</Text>
@@ -129,7 +129,7 @@ function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel, 
                     >
                       <Row>
                         <Col span={24}>
-                          <Text type={'title'} level={7} weight={'bold'} color={'grey'} extraClass={'m-0 ml-1 mb-1'}>Project Name</Text>
+                          <Text type={'title'} size={10} color={'grey'} extraClass={'m-0 ml-1 mb-1'}>Project Name</Text>
                           <Form.Item
                             label={null}
                             name="projectName"
@@ -138,8 +138,8 @@ function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel, 
                             <Input className={'fa-input'} size={'large'} placeholder={'eg. My Company Name'} />
                           </Form.Item>
                         </Col>
-                        <Col span={24}>
-                          <Text type={'title'} level={7} weight={'bold'} color={'grey'} extraClass={'m-0 ml-1 mt-6 mb-1'}>Select timezone</Text>
+                        <Col span={24} className={'mt-4'}>
+                          <Text type={'title'} size={10} color={'grey'} extraClass={'m-0 ml-1 mb-1'}>Select timezone</Text>
                           <Form.Item
                             name="time_zone"
                             className={'m-0'}
@@ -153,19 +153,19 @@ function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel, 
 
                             </Select>
                           </Form.Item>
-                          <Text type={'title'} size={10} color={'grey-2'} extraClass={'inline m-0 mt-4 ml-1 mb-2'}>This must reflect the same timezone as in your CRM</Text>
+                          <Text type={'title'} size={8} color={'grey'} extraClass={'inline m-0 mt-4 ml-1 mb-2'}>This must reflect the same timezone as in your CRM</Text>
                           <Popconfirm placement="rightTop" title={<Text type={'title'} size={10} extraClass={'max-w-xs'}>This must reflect the same timezone as used in your CRM. Once selected, this action cannot be edited.</Text>} icon={<ExclamationCircleFilled style={{ color: '#1E89FF' }} />} okText="Got it" cancelText="Learn More" cancelButtonProps={{ type: 'text', style: { color: '#1E89FF', display: 'none' } }}>
                             <Button type={'text'} className={'m-0'} style={{ backgroundColor: 'white' }}><SVG name={'infoCircle'} size={18} color="gray" /></Button>
                           </Popconfirm>
                         </Col>
-                        <Col span={24}>
+                        <Col span={24} className={'mt-4'}>
                           <Form.Item
                             label={null}
                             name="invite_support"
                           >
-                            <div className='flex items-center'>
-                              <Checkbox defaultChecked={checkbox} onChange={(e) => setcheckbox(e.target.checked)}></Checkbox>
-                              <Text type={'title'} size={10} color={'grey-2'} extraClass={'m-0 ml-2 mt-2 mb-2'} >Invite <span className={'font-bold'}>solutions@factors.ai</span> into this project for ongoing support</Text>
+                            <div className='flex items-start'>
+                              <Checkbox defaultChecked={checkbox} onChange={(e) => setcheckbox(e.target.checked)} className={'mt-1'}></Checkbox>
+                              <Text type={'title'} size={10} color={'grey'} extraClass={'-mt-2 ml-3 mb-2'} >Invite <span className={'font-bold'}>solutions@factors.ai</span> into this project for ongoing support</Text>
                             </div>
                           </Form.Item>
                         </Col>
@@ -193,8 +193,8 @@ function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel, 
                             </Row>
                           </Col>
                           :
-                          <Col span={24}>
-                            <div className={'mt-2'}>
+                          <Col span={24} className={'mt-6'}>
+                            <div className={'m-0'}>
                               <Text type={'title'} size={8} color={'grey'} extraClass={'max-w-md m-0 ml-1'}>A logo helps personalize your Project. <a onClick={() => setShowProfile(true)}>Upload project thumbnail</a></Text>
                             </div>
                           </Col>
@@ -211,7 +211,7 @@ function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel, 
                         <Col span={24}>
                           <div className={'mt-4 flex justify-center'}>
                             <Form.Item className={'m-0'}>
-                              <Button size={'large'} type={'text'} style={{ width: '28vw', height: '36px' }} htmlType="text" onClick={onSkip}>
+                              <Button size={'large'} type={'text'} style={{ width: '27vw', height: '36px', color:'#40A9FF' }} htmlType="text" onClick={onSkip}>
                                 Skip
                               </Button>
                             </Form.Item>

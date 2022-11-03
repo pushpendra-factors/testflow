@@ -123,6 +123,7 @@ import { getChartChangedKey } from './AnalysisResultsPage/analysisResultsPage.he
 import NewProject from '../Settings/SetupAssist/Modals/NewProject';
 import AnalyseBeforeIntegration from './AnalyseBeforeIntegration';
 import SaveQuery from 'Components/SaveQuery';
+import _ from 'lodash';
 
 function CoreQuery({
   activeProject,
@@ -238,6 +239,9 @@ function CoreQuery({
 
   const { show_criteria: result_criteria, performance_criteria: user_type } =
     useSelector((state) => state.analyticsQuery);
+  const { dashboards } = useSelector(
+    (state) => state.dashboard
+  );
 
   const dateRange = queryOptions.date_range;
   const { session_analytics_seq } = queryOptions;
@@ -275,8 +279,10 @@ function CoreQuery({
   useEffect(() => {
     fetchProjectSettingsV1(activeProject.id);
     fetchProjectSettings(activeProject.id);
-    fetchBingAdsIntegration(activeProject.id);
-    fetchMarketoIntegration(activeProject.id);
+    if (_.isEmpty(dashboards?.data)) {
+      fetchBingAdsIntegration(activeProject?.id);
+      fetchMarketoIntegration(activeProject?.id);
+    }
     setTimeout(() => {
       setLoading(false);
     }, 1000);

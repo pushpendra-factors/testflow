@@ -20,6 +20,7 @@ import DashboardAfterIntegration from './EmptyDashboard/DashboardAfterIntegratio
 import ProjectDropdown from './ProjectDropdown';
 import { DASHBOARD_KEYS } from '../../constants/localStorage.constants';
 import DashboardBeforeIntegration from './DashboardBeforeIntegration';
+import _ from 'lodash';
 
 const dashboardRefreshInitialState = {
   inProgress: false,
@@ -66,7 +67,7 @@ function Dashboard({
 
     fetchProjectSettings(activeProject?.id);
 
-    if (dashboards?.data?.length == 0) {
+    if (_.isEmpty(dashboards?.data)) {
       fetchBingAdsIntegration(activeProject?.id);
       fetchMarketoIntegration(activeProject?.id);
     }
