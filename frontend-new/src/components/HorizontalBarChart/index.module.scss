@@ -1,3 +1,5 @@
+@import '../../styles/abstracts/variables';
+
 .horizontalBarChart {
   .infoText {
     font-size: 14px;
@@ -10,7 +12,7 @@
   .xAxisLabels {
     font-size: 14px;
     width: 120px;
-    font-family: 'Work Sans', sans-serif;
+    font-family: $font-family;
     text-align: right;
   }
 

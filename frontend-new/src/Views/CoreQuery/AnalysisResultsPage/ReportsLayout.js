@@ -56,6 +56,8 @@ function ReportsLayout({
   composerFunctions,
   updateChartTypes,
   dateFromTo,
+  getCurrentSorter,
+  renderedCompRef,
   ...rest
 }) {
   const dispatch = useDispatch();
@@ -89,8 +91,6 @@ function ReportsLayout({
     setProfileQueries
   } = useContext(CoreQueryContext);
 
-  const renderedCompRef = useRef(null);
-
   const [activeTab, setActiveTab] = useState(1);
 
   const [queryOpen, setQueryOpen] = useState(true);
@@ -100,20 +100,6 @@ function ReportsLayout({
     setNavigatedFromDashboard(false);
   }, [setNavigatedFromDashboard, setShowResult]);
 
-  const getCurrentSorter = useCallback(() => {
-    if (renderedCompRef.current && renderedCompRef.current.currentSorter) {
-      return renderedCompRef.current.currentSorter;
-    }
-    return [];
-  }, []);
-
-  useEffect(
-    () => () => {
-      dispatch({ type: 'SET_ACTIVE_INSIGHT', payload: false });
-      dispatch({ type: 'RESET_WEEKLY_INSIGHTS', payload: false });
-    },
-    [dispatch, activeProject]
-  );
 
   useEffect(() => {
     if (requestQuery) {
@@ -276,6 +262,7 @@ function ReportsLayout({
   return (
     <>
       <AnalysisHeader
+        isFromAnalysisPage={false}
         requestQuery={requestQuery}
         onBreadCrumbClick={handleBreadCrumbClick}
         queryType={queryType}
@@ -323,7 +310,7 @@ function ReportsLayout({
           )}
 
           {Number(activeTab) === 2 && (
-            <WeeklyInsights requestQuery={requestQuery} queryType={queryType} />
+            <WeeklyInsights requestQuery={requestQuery} queryType={queryType} savedQueryId={savedQueryId}/>
           )}
         </ErrorBoundary>
       </div>

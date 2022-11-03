@@ -1,6 +1,7 @@
 package model
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"factors/util"
@@ -618,7 +619,7 @@ func GetHubspotAccessToken(refreshToken, appID, appSecret string) (string, error
 	parameters := fmt.Sprintf("grant_type=%s&client_id=%s&client_secret=%s&refresh_token=%s", "refresh_token", appID, appSecret, refreshToken)
 	url = url + parameters
 
-	resp, err := ActionHubspotRequestHandler("POST", url, "", "", "application/x-www-form-urlencoded;charset=utf-8")
+	resp, err := ActionHubspotRequestHandler("POST", url, "", "", "application/x-www-form-urlencoded;charset=utf-8", nil)
 	if err != nil {
 		return "", err
 	}
@@ -638,15 +639,25 @@ func GetHubspotAccessToken(refreshToken, appID, appSecret string) (string, error
 	return userCredentials.AccessToken, nil
 }
 
-func ActionHubspotRequestHandler(method, url, apiKey, accessToken, contentType string) (*http.Response, error) {
+func ActionHubspotRequestHandler(method, url, apiKey, accessToken, contentType string, payload []byte) (*http.Response, error) {
 
 	if apiKey != "" {
 		url = url + "hapikey=" + apiKey
 	}
 
-	req, err := http.NewRequest(method, url, nil)
-	if err != nil {
-		return nil, err
+	var req *http.Request
+	var err error
+	if payload != nil {
+		body := bytes.NewBuffer(payload)
+		req, err = http.NewRequest(method, url, body)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		req, err = http.NewRequest(method, url, nil)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if accessToken != "" {
@@ -690,14 +701,14 @@ func GetHubspotIntegrationAccount(projectID int64, apiKey, refreshToken, appID, 
 			return &hubspotIntegrationAccount, err
 		}
 
-		resp, err = ActionHubspotRequestHandler("GET", url, "", accessToken, "")
+		resp, err = ActionHubspotRequestHandler("GET", url, "", accessToken, "", nil)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to request for hubspot account info using access token.")
 			return &hubspotIntegrationAccount, err
 		}
 
 	} else {
-		resp, err = ActionHubspotRequestHandler("GET", url, apiKey, "", "")
+		resp, err = ActionHubspotRequestHandler("GET", url, apiKey, "", "", nil)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to request for hubspot account info using api key.")
 			return &hubspotIntegrationAccount, err

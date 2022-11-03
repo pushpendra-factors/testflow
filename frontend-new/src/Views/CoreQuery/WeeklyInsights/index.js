@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Tabs, Row, Col, Tooltip, Select, Button, Collapse, Tag, Spin, message } from 'antd'; 
 import { SVG, Text, Number } from 'factorsComponents';
-import { connect, useDispatch } from 'react-redux';
+import { connect, useDispatch, useSelector } from 'react-redux';
 import _ from 'lodash';
 import moment from 'moment';
 import { fetchWeeklyIngishts, updateInsightFeedback } from 'Reducers/insights';
@@ -47,7 +47,7 @@ const NoData = ({data}) => {
     )
 }
 
-const WeeklyInishgtsResults = ({data, activeInsight, requestQuery,activeProject , queryType, queryTitle, eventPropNames, userPropNames, fetchWeeklyIngishts, updateInsightFeedback }) => {
+const WeeklyInishgtsResults = ({data, activeInsight, requestQuery,activeProject , queryType, queryTitle, savedQueryId, eventPropNames, userPropNames, fetchWeeklyIngishts, updateInsightFeedback }) => {
 
     const timeZone = localStorage.getItem('project_timeZone') || 'Asia/Kolkata';  
     moment.tz.setDefault(timeZone);
@@ -56,6 +56,10 @@ const WeeklyInishgtsResults = ({data, activeInsight, requestQuery,activeProject 
     const [expandAll, setExpandAll] = useState(true);
     const [loading, setLoading] = useState(false);
     const [showToggleBtn, setShowToggleBtn] = useState(true);
+    const [KPIOptions, setKPIOptions] = useState([]);
+    const [selectKPIValue, setSelectKPIValue] = useState(1);
+    const { metadata } = useSelector((state) => state.insights);
+    const dispatch = useDispatch();
 
     const TagIconSize = 14;
     const UpIcon = 'growthUp';
@@ -103,6 +107,76 @@ const WeeklyInishgtsResults = ({data, activeInsight, requestQuery,activeProject 
             setShowToggleBtn(true)
         }
     },[])
+
+    useEffect(() => {
+        if(queryType === 'kpi' && requestQuery?.qG?.length > 2) {
+            let KpiData = requestQuery.qG.filter((val, index) => index % 2 == 1);
+            let KPIOptions = [];
+            KpiData.forEach((val, index) => {
+                KPIOptions.push({value: index + 1, label: _.startCase(val.me[0])});
+            })
+            setKPIOptions(KPIOptions);
+        }
+    }, [requestQuery])
+    
+    const SelectKPI = (
+        <Select
+            className={'fa-select'}
+            options={KPIOptions}
+            onChange={(value) => {
+                setSelectKPIValue(value);
+            }}
+            placeholder="Select KPI"
+            defaultActiveFirstOption
+            defaultValue={selectKPIValue}
+            style = {{color: '#0E2647'}}
+        >
+        </Select>
+    );
+
+    const getWeeklyIngishts = (query_id, kpi_index) => {
+        if (metadata?.QueryWiseResult) {
+          const insightsItem = metadata?.QueryWiseResult[query_id];
+          if (insightsItem) {
+            dispatch({
+              type: 'SET_ACTIVE_INSIGHT',
+              payload: {
+                id: query_id,
+                isDashboard: false,
+                ...insightsItem
+              }
+            });
+          } else {
+            dispatch({ type: 'SET_ACTIVE_INSIGHT', payload: false });
+          }
+          if (insightsItem?.Enabled) {
+            if (!_.isEmpty(insightsItem?.InsightsRange)) {
+              const insightsLen =
+                Object.keys(insightsItem?.InsightsRange)?.length || 0;
+              fetchWeeklyIngishts(
+                activeProject.id,
+                query_id,
+                Object.keys(insightsItem?.InsightsRange)[insightsLen - 1],
+                insightsItem?.InsightsRange[
+                  Object.keys(insightsItem?.InsightsRange)[insightsLen - 1]
+                ][0],
+                false,
+                kpi_index
+              ).catch((e) => {
+                console.log('weekly-ingishts fetch error', e);
+              });
+            } else {
+              dispatch({ type: 'SET_ACTIVE_INSIGHT', payload: insightsItem });
+            }
+          } else {
+            dispatch({ type: 'RESET_WEEKLY_INSIGHTS', payload: false });
+          }
+        }
+    };
+
+    useEffect(() => {
+        getWeeklyIngishts(savedQueryId, selectKPIValue);
+    }, [savedQueryId, selectKPIValue])
 
     const UserRatingComp = ({item, index, actualData}) =>{
 
@@ -156,17 +230,22 @@ const WeeklyInishgtsResults = ({data, activeInsight, requestQuery,activeProject 
    
 
     const highlightCard = (data, title, margin = false, isPercent = false) => {
-        return (<div className={`flex items-center mt-4 border--thin-2 py-4 px-8 border-radius--sm  w-full ${margin ? 'mx-4' : ''}`} style={{maxWidth: '400px'}}>
-            <div className={'flex items-center'}>
-                {data.isIncrease ? <SVG name={UpIcon} size={24} color={'green'} /> : <SVG name={DownIcon} size={24} color={'red'} />}
-                <Text type={"title"} level={4} weight={'bold'} extraClass={"m-0 ml-2"}><Number suffix={'%'} number={data.percentage} /></Text>
-            </div>
-            <div className={'flex flex-col ml-4'}>
-                <Text type={"title"} level={8} weight={'bold'} extraClass={"m-0 uppercase"}>{title}</Text>
-                <Text type={"title"} level={8} color={'grey'} extraClass={"m-0"}>{`(`}<Number number={data.w1} suffix={isPercent? "%" : ''} /> {` -> `}<Number number={data.w2} suffix={isPercent? "%" : ''} />{`)`}</Text>
-            </div>
-
-        </div>)
+        return (
+            <Row justify={queryType === 'kpi' && requestQuery?.qG?.length > 2 && 'space-between'}>
+                {queryType === 'kpi' && requestQuery?.qG?.length > 2 && <Col span={5} className={'flex items-center mt-12 ml-4'}>
+                    {SelectKPI}
+                </Col>}
+                <Col className={`flex justify-end mt-4 py-4 px-8 w-full ${margin ? 'mx-4' : ''}`} style={{maxWidth: '400px'}}>
+                    <div className={'flex items-center'}>
+                        {data.isIncrease ? <SVG name={UpIcon} size={24} color={'green'} /> : <SVG name={DownIcon} size={24} color={'red'} />}
+                        <Text type={"title"} level={4} weight={'bold'} extraClass={"m-0 ml-2"}><Number suffix={'%'} number={data.percentage} /></Text>
+                    </div>
+                    <div className={'flex flex-col ml-4'}>
+                        <Text type={"title"} level={8} weight={'bold'} extraClass={"m-0 uppercase"}>{title}</Text>
+                        <Text type={"title"} level={8} color={'grey'} extraClass={"m-0"}>{`(`}<Number number={data.w1} suffix={isPercent? "%" : ''} /> {` -> `}<Number number={data.w2} suffix={isPercent? "%" : ''} />{`)`}</Text>
+                    </div>
+                </Col>  
+            </Row>)
     }
 
     const genHeader = (item,index=0, actualData=false) => {  
@@ -346,7 +425,7 @@ const WeeklyInishgtsResults = ({data, activeInsight, requestQuery,activeProject 
                     </Col> 
                     <Col span={24}>
 
-                        <div className={'flex items-stretch'}>
+                        <div className={(queryType == 'kpi' && requestQuery?.qG?.length > 2) ? '' : 'flex items-stretch'}>
                             
                         {data?.insights_type == 'ConvAndDist' ? <>
                             {highlightCard(data?.goal, 'Overall', false)}
@@ -392,6 +471,7 @@ const WeeklyInishgts = ({
     insights,
     requestQuery,
     queryType,
+    savedQueryId,
     queryTitle,
     fetchWeeklyIngishts,
     activeProject,
@@ -427,6 +507,7 @@ const WeeklyInishgts = ({
             data={insightsData?.weekly_insights} 
             requestQuery={requestQuery}
             queryType={queryType}
+            savedQueryId={savedQueryId}
             queryTitle={queryTitle}
             fetchWeeklyIngishts={fetchWeeklyIngishts}
             activeProject={activeProject}

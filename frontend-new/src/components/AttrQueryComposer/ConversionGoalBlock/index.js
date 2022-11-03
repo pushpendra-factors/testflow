@@ -17,6 +17,8 @@ import {
   fetchKPIConfigWithoutDerivedKPI
 } from 'Reducers/kpi';
 
+import { TOOLTIP_CONSTANTS } from '../../../constants/tooltips.constans';
+
 const ConversionGoalBlock = ({
     eventGoal, 
     eventGoalChange, 
@@ -302,13 +304,18 @@ const ConversionGoalBlock = ({
     return (
       <div className={'fa--query_block--actions-cols flex relative ml-2'}>
         <div className={`relative flex`}>
-          <Button
-            type='text'
-            onClick={() => setMoreOptions(true)}
-            className={`fa-btn--custom mr-1 btn-total-round`}
-          >
-            <SVG name='more'></SVG>
-          </Button>
+          <Tooltip 
+            title='Filter this Attribute'
+            color={TOOLTIP_CONSTANTS.DARK}
+            >
+            <Button
+              type='text'
+              onClick={() => setMoreOptions(true)}
+              className={`fa-btn--custom mr-1 btn-total-round`}
+            >
+              <SVG name='more'></SVG>
+            </Button>
+          </Tooltip>
 
           {moreOptions ? (
             <FaSelect
@@ -323,9 +330,11 @@ const ConversionGoalBlock = ({
             false
           )}
         </div>
-        <Button type='text' onClick={deleteItem} className={`fa-btn--custom btn-total-round`}>
-          <SVG name='trash'></SVG>
-        </Button>
+        <Tooltip title='Delete this Attribute'>
+          <Button type='text' onClick={deleteItem} className={`fa-btn--custom btn-total-round`}>
+            <SVG name='trash'></SVG>
+          </Button>
+        </Tooltip>
       </div>
     );
   };

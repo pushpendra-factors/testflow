@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import styles from './index.module.scss';
 import { Input, Button } from 'antd';
 import { SVG, Text } from 'factorsComponents';
@@ -13,11 +13,16 @@ function GroupSelect2({
   extraClass,
   allowEmpty = false,
   iconColor = 'purple',
-  additionalActions,
+  additionalActions
 }) {
   const [groupCollapseState, setGroupCollapseState] = useState({});
   const [searchTerm, setSearchTerm] = useState('');
   const [showFull, setShowFull] = useState([]);
+  const inputComponentRef = useRef(null);
+
+  useEffect(() => {
+    if (inputComponentRef?.current) inputComponentRef.current?.focus();
+  }, []);
 
   useEffect(() => {
     const groupColState = Object.assign({}, groupCollapseState);
@@ -90,7 +95,9 @@ function GroupSelect2({
       const groupItem = (
         <div key={group.label} className={`fa-select-group-select--content`}>
           {
-            <div className={'fa-select-group-select--option-group cursor-default'}>
+            <div
+              className={'fa-select-group-select--option-group cursor-default'}
+            >
               <div>
                 <SVG
                   name={icon}
@@ -116,38 +123,44 @@ function GroupSelect2({
           >
             {collState
               ? (() => {
-                group?.values?.forEach((val, i) => {
-                  if (
-                    val[0].toLowerCase().includes(searchTerm.toLowerCase())
-                  ) {
-                    hasSearchTerm = true;
-                    valuesOptions.push(
-                      <div
-                        key={i}
-                        title={val[0]}
-                        className={`fa-select-group-select--options`}
-                        onClick={() => optionClick(group.label ? group.label : group.icon, val, group.category)}
-                      >
-                        {searchTerm.length > 0}
-                        <Text
-                          level={7}
-                          type={'title'}
-                          extraClass={'m-0 truncate'}
-                          weight={'thin'}
+                  group?.values?.forEach((val, i) => {
+                    if (
+                      val[0].toLowerCase().includes(searchTerm.toLowerCase())
+                    ) {
+                      hasSearchTerm = true;
+                      valuesOptions.push(
+                        <div
+                          key={i}
+                          title={val[0]}
+                          className={`fa-select-group-select--options`}
+                          onClick={() =>
+                            optionClick(
+                              group.label ? group.label : group.icon,
+                              val,
+                              group.category
+                            )
+                          }
                         >
-                          <HighlightSearchText
-                            text={val[0]}
-                            highlight={searchTerm}
-                          />
-                        </Text>
-                      </div>
-                    );
-                  }
-                });
-                return showFull[grpIndex]
-                  ? valuesOptions
-                  : valuesOptions.slice(0, 5);
-              })()
+                          {searchTerm.length > 0}
+                          <Text
+                            level={7}
+                            type={'title'}
+                            extraClass={'m-0 truncate'}
+                            weight={'thin'}
+                          >
+                            <HighlightSearchText
+                              text={val[0]}
+                              highlight={searchTerm}
+                            />
+                          </Text>
+                        </div>
+                      );
+                    }
+                  });
+                  return showFull[grpIndex]
+                    ? valuesOptions
+                    : valuesOptions.slice(0, 5);
+                })()
               : null}
           </div>
 
@@ -196,6 +209,7 @@ function GroupSelect2({
             placeholder={placeholder}
             onKeyUp={onInputSearch}
             prefix={<SVG name='search' size={16} color={'grey'} />}
+            ref={inputComponentRef}
           />
         </div>
         <div className={styles.dropdown__filter_select__content}>

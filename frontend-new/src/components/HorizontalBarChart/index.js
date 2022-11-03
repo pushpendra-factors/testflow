@@ -3,7 +3,7 @@ import ReactDOMServer from 'react-dom/server';
 import Highcharts from 'highcharts';
 import get from 'lodash/get';
 import { Text, Number as NumFormat } from '../factorsComponents';
-import { BAR_CHART_XAXIS_TICK_LENGTH } from '../../utils/constants';
+import { BAR_CHART_XAXIS_TICK_LENGTH, FONT_FAMILY } from '../../utils/constants';
 import LegendsCircle from '../../styles/components/LegendsCircle';
 import styles from './index.module.scss';
 import { getFormattedKpiValue } from '../../Views/CoreQuery/KPIAnalysis/kpiAnalysis.helpers';
@@ -19,7 +19,7 @@ function HorizontalBarChart({ series, categories, height, width, cardSize }) {
         height,
         width,
         style: {
-          fontFamily: "'Work Sans', sans-serif"
+          fontFamily: FONT_FAMILY
         }
       },
       title: {

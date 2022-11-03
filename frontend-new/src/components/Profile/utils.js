@@ -134,3 +134,10 @@ export const getHost = (urlstr) => {
   const uri = isValidHttpUrl(urlstr) ? new URL(urlstr).hostname : urlstr;
   return uri;
 };
+
+export const getUniqueItemsByKeyAndSearchTerm = (activities, searchTerm) =>
+  activities?.filter(
+    (value, index, self) =>
+      index === self.findIndex((t) => t.display_name === value.display_name) &&
+      value.display_name.toLowerCase().includes(searchTerm.toLowerCase())
+  );

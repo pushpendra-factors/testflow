@@ -1,9 +1,10 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter&display=swap');
 @import '~highcharts/css/highcharts';
 @import '../styles/abstracts/variables';
 
 body {
   margin: 0;
-  font-family: 'Work Sans', sans-serif;
+  font-family: $font-family;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-y: auto !important;
@@ -27,7 +28,7 @@ code {
 }
 
 .app-font-family {
-  font-family: 'Work Sans', sans-serif !important;
+  font-family: $font-family;
 }
 
 .tableParentHeader {

@@ -23,6 +23,7 @@ type Queries struct {
 	Settings       postgres.Jsonb `json:"settings"`
 	IdText         string         `json:"id_text"`
 	Converted      bool
+	IsDashboardQuery bool `gorm:"-" json:"is_dashboard_query"`
 }
 
 type QueriesString struct {
@@ -42,6 +43,7 @@ type QueriesString struct {
 	Settings       postgres.Jsonb `json:"settings"`
 	IdText         string         `json:"id_text"`
 	Converted      bool
+	IsDashboardQuery bool `gorm:"-" json:"is_dashboard_query"`
 }
 
 const (

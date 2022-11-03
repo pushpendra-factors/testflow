@@ -65,6 +65,12 @@ type IncrementalSyncLeadListResponse struct {
 
 var DUPLICATESCHEMAERRORPREFIX = "Error 409: Already Exists"
 
+var LEADSQUARED_ACTIVITYCODE = map[string]int{
+	model.LEADSQUARED_SALES_ACTIVITY :30,
+	model.LEADSQUARED_EMAIL_SENT :212,
+	model.LEADSQUARED_EMAIL_INFO :355,
+	model.LEADSQUARED_HAD_A_CALL :206,
+}
 func ifDuplicateSchema(err string) bool {
 	if strings.Contains(err, DUPLICATESCHEMAERRORPREFIX) {
 		return true
@@ -107,8 +113,8 @@ func LeadSquaredPull(projectId int64, configs map[string]interface{}) (map[strin
 	for documentType, _ := range model.LeadSquaredMetadataEndpoint {
 		log.Info(fmt.Sprintf("Starting for %v", documentType))
 		tableID := model.LeadSquaredTableName[documentType]
-		if documentType == model.LEADSQUARED_SALES_ACTIVITY {
-			leadSquaredUrlParams["code"] = "30"
+		if documentType == model.LEADSQUARED_SALES_ACTIVITY || documentType == model.LEADSQUARED_EMAIL_SENT  || documentType == model.LEADSQUARED_EMAIL_INFO ||documentType == model.LEADSQUARED_HAD_A_CALL{
+			leadSquaredUrlParams["code"] = fmt.Sprintf("%v",LEADSQUARED_ACTIVITYCODE[documentType])
 		}
 		propertyMetadataList, errorStatus, msg := getMetadataDetails(documentType, leadSquaredConfig.Host, leadSquaredUrlParams)
 		if errorStatus != false {
@@ -274,7 +280,7 @@ func getMetadataDetails(documentType string, host string, leadSquaredUrlParams m
 		}
 		propertyMetadata = propertyMetadataList
 	}
-	if documentType == model.LEADSQUARED_SALES_ACTIVITY {
+	if documentType == model.LEADSQUARED_SALES_ACTIVITY || documentType == model.LEADSQUARED_EMAIL_SENT  || documentType == model.LEADSQUARED_EMAIL_INFO ||documentType == model.LEADSQUARED_HAD_A_CALL {
 		var salesActivityMetadata SalesActivityMetadataObjectLeadSquared
 		err = json.Unmarshal(byteSliceMetadata, &salesActivityMetadata)
 		if err != nil {
@@ -475,12 +481,12 @@ func DoIncrementalSync(projectId int64, documentType string, host string, histSy
 				},
 			}
 		}
-		if documentType == model.LEADSQUARED_SALES_ACTIVITY {
+		if documentType == model.LEADSQUARED_SALES_ACTIVITY || documentType == model.LEADSQUARED_EMAIL_SENT  || documentType == model.LEADSQUARED_EMAIL_INFO ||documentType == model.LEADSQUARED_HAD_A_CALL{
 			request = model.SearchSalesActivityByCriteriaRequest{
 				Parameter: model.SalesActivitySearchParameterObj{
 					FromDate:         startDateinLeadSquaredFormat,
 					ToDate:           endDateinLeadSquaredFormat,
-					ActivityEvent:    30,
+					ActivityEvent:    LEADSQUARED_ACTIVITYCODE[documentType],
 					RemoveEmptyValue: false,
 				},
 				Paging: model.PagingObj{
@@ -540,7 +546,7 @@ func DoIncrementalSync(projectId int64, documentType string, host string, histSy
 				dataForInsertion = append(dataForInsertion, propertiesMap)
 			}
 		}
-		if documentType == model.LEADSQUARED_SALES_ACTIVITY {
+		if documentType == model.LEADSQUARED_SALES_ACTIVITY || documentType == model.LEADSQUARED_EMAIL_SENT  || documentType == model.LEADSQUARED_EMAIL_INFO ||documentType == model.LEADSQUARED_HAD_A_CALL{
 			var incrSyncData IncrementalSyncResponseSalesActivity
 			err = json.Unmarshal(byteSliceIncrSync, &incrSyncData)
 			if err != nil {

@@ -78,11 +78,11 @@ function AccountTimeline({
   const renderAdditionalDiv = (eventsCount, collapseState, onClick) =>
     eventsCount > 1 ? (
       collapseState ? (
-        <div className="timeline-events--num ml-1" onClick={onClick}>
+        <div className="timeline-events__num ml-1" onClick={onClick}>
           {`+${Number(eventsCount - 1)}`}
         </div>
       ) : (
-        <div className="timeline-events--num m-5" onClick={onClick}>
+        <div className="timeline-events__num m-5" onClick={onClick}>
           <CaretUpOutlined /> Show Less
         </div>
       )
@@ -129,7 +129,7 @@ function AccountTimeline({
                       }`}
                     >
                       {eventsList?.map((event) => (
-                        <div className="timeline-events--event">
+                        <div className="timeline-events__event">
                           {renderInfoCard(event)}
                         </div>
                       ))}

@@ -2,6 +2,7 @@ package handler
 
 import (
 	// "math/rand"
+
 	"encoding/json"
 	C "factors/config"
 	"factors/model/model"
@@ -134,27 +135,36 @@ func onboardingGetHubspotOwner(agent *model.Agent) string {
 
 	owner := getOwner()
 
-	if C.GetConfig().HubspotAPIOnboardingHAPIKey == "" {
-		log.Warn("HubspotAPIOnboardingHAPIKey missing.")
+	if C.GetConfig().HubspotAPIOnboardingHAPIKey == "" && C.GetConfig().HubspotAPIOnboardingPrivateAccessToken == "" {
+		log.Warn("HubspotAPIOnboardingHAPIKey and HubspotAPIOnboardingPrivateAccessToken missing.")
 		return owner
 	}
 
 	logCtx := log.WithFields(log.Fields{"email": agent.Email})
 
-	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, fmt.Sprintf("https://api.hubapi.com/contacts/v1/contact/email/%s/profile?hapikey=%s",
-		agent.Email, C.GetConfig().HubspotAPIOnboardingHAPIKey))
+	url := fmt.Sprintf("https://api.hubapi.com/contacts/v1/contact/email/%s/profile?", agent.Email)
 
-	req, err := rb.Build()
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to build request.")
-		return owner
+	accessToken := C.GetConfig().HubspotAPIOnboardingPrivateAccessToken
+	var resp *http.Response
+	var err error
+	if accessToken == "" {
+		url = url + "hapikey=" + C.GetConfig().HubspotAPIOnboardingHAPIKey
+		rb := C.NewRequestBuilderWithPrefix(http.MethodGet, url)
+
+		req, err := rb.Build()
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to build request.")
+			return owner
+		}
+
+		client := &http.Client{
+			Timeout: 1 * time.Minute,
+		}
+
+		resp, err = client.Do(req)
+	} else {
+		resp, err = model.ActionHubspotRequestHandler("GET", url, "", accessToken, "application/json", nil)
 	}
-
-	client := &http.Client{
-		Timeout: 1 * time.Minute,
-	}
-
-	resp, err := client.Do(req)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to make GET request in hubspot get contact by email handler.")
 		return owner
@@ -216,22 +226,36 @@ func onboardingHubspotOwner(agent *model.Agent) int {
 	}
 	logCtx := log.WithFields(log.Fields{"contact_data": contactData})
 
-	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, fmt.Sprintf("https://api.hubapi.com/contacts/v1/contact/createOrUpdate/email/%s?hapikey=%s",
-		agent.Email, C.GetConfig().HubspotAPIOnboardingHAPIKey)).
-		WithHeader("Content-Type", "application/json").
-		WithPostParams(contactData)
+	url := fmt.Sprintf("https://api.hubapi.com/contacts/v1/contact/createOrUpdate/email/%s?", agent.Email)
 
-	req, err := rb.Build()
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to build request.")
-		return http.StatusInternalServerError
+	accessToken := C.GetConfig().HubspotAPIOnboardingPrivateAccessToken
+	var resp *http.Response
+	var err error
+	if accessToken == "" {
+		url = url + "hapikey=" + C.GetConfig().HubspotAPIOnboardingHAPIKey
+		rb := C.NewRequestBuilderWithPrefix(http.MethodPost, url).
+			WithHeader("Content-Type", "application/json").
+			WithPostParams(contactData)
+
+		req, err := rb.Build()
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to build request.")
+			return http.StatusInternalServerError
+		}
+
+		client := &http.Client{
+			Timeout: 1 * time.Minute,
+		}
+
+		resp, err = client.Do(req)
+	} else {
+		reqBodyBytes, err := json.Marshal(contactData)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to marshal contact data in hubspot create contact handler.")
+			return http.StatusInternalServerError
+		}
+		resp, err = model.ActionHubspotRequestHandler("POST", url, "", accessToken, "application/json", reqBodyBytes)
 	}
-
-	client := &http.Client{
-		Timeout: 1 * time.Minute,
-	}
-
-	resp, err := client.Do(req)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to make POST request in hubspot create contact handler.")
 		return http.StatusInternalServerError

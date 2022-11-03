@@ -6,6 +6,7 @@ import { Button, Tooltip } from 'antd';
 import { BUTTON_TYPES } from '../../constants/buttons.constants';
 import ControlledComponent from '../ControlledComponent';
 import styles from './index.module.scss';
+import {QuestionCircleOutlined} from "@ant-design/icons"
 import {
   CHART_TYPE_SPARKLINES,
   QUERY_TYPE_EVENT,
@@ -34,6 +35,33 @@ const QueryActionsComponent = ({
   setShowShareToEmailModal,
   setShowShareToSlackModal
 }) => {
+
+  
+  const [hideIntercomState, setHideIntercomState] = useState(true);
+  let [helpMenu, setHelpMenu] = useState(false)
+
+  useEffect(() => {
+    if (window.Intercom) {
+      window.Intercom('update', { hide_default_launcher: true });
+    }
+    return () => {
+      if (window.Intercom) {
+        window.Intercom('update', { hide_default_launcher: false });
+      }
+    };
+  }, []);
+  
+
+  let handleIntercomHelp = ()=>{
+      const w = window;
+      const ic = w.Intercom;
+      if (typeof ic === 'function') {
+        setHideIntercomState(!hideIntercomState);
+        ic('update', { hide_default_launcher: !hideIntercomState });
+        ic(!hideIntercomState === true ? 'hide' : 'show');
+      }
+
+  }
   const [options, setOptions] = useState(false);
   const [chart, setChart] = useState(null);
   useEffect(() => {
@@ -50,6 +78,10 @@ const QueryActionsComponent = ({
       handleEditClick();
     } else if (opt[1] === 'trash') {
       handleDeleteClick();
+    }else if(opt[1] === 'intercom_help'){
+      handleIntercomHelp();
+    }else if(opt[1] === 'help_doc'){
+      window.open('https://help.factors.ai/','_blank')
     }
     setOptions(false);
   };
@@ -87,6 +119,19 @@ const QueryActionsComponent = ({
         ></FaSelect>
       )
     ) : null;
+  };
+  const getHelpMenu = () => {
+    return helpMenu === false ? '' : <FaSelect
+    extraClass={styles.additionalops}
+    options={[
+      ['Help and Support', 'help_doc'],
+      ['Talk to us', 'intercom_help']
+    ]}
+    optionClick={(val) => setActions(val)}
+    onClickOutside={() => setHelpMenu(false)}
+    posRight={true}
+  ></FaSelect>;
+    
   };
 
   const triggerUserFlow  = () =>{
@@ -151,9 +196,18 @@ const QueryActionsComponent = ({
             size="large"
             type="text"
             icon={<SVG name={'threedot'} />}
-            onClick={() => setOptions(!options)}
+            onClick={() => setOptions(!options)}ƒ
           ></Button>
           {getActionsMenu()}
+        </div>
+        <div className={'relative'}>
+          <Button
+            size="large"
+            type="text"
+            icon={<QuestionCircleOutlined />}
+            onClick={()=>setHelpMenu(!helpMenu)}
+          ></Button>
+          {getHelpMenu()}
         </div>
       </ControlledComponent>
     </div>

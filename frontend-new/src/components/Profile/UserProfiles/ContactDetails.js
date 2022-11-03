@@ -7,111 +7,92 @@ import {
   Menu,
   Dropdown,
   Popover,
-  Checkbox
+  Tabs
 } from 'antd';
+import { connect } from 'react-redux';
+import { bindActionCreators } from 'redux';
 import { SVG, Text } from '../../factorsComponents';
 import FaTimeline from '../../FaTimeline';
 import { formatDurationIntoString } from '../../../utils/dataFormatter';
 import { granularityOptions } from '../utils';
+import {
+  udpateProjectSettings,
+  fetchProjectSettings
+} from '../../../reducers/global';
+import { getProfileUserDetails } from '../../../reducers/timelines/middleware';
+import { getActivitiesWithEnableKeyConfig } from '../../../reducers/timelines/utils';
+import SearchCheckList from '../../SearchCheckList';
 
-function ContactDetails({ onCancel, userDetails }) {
+function ContactDetails({
+  onCancel,
+  userDetails,
+  activeProject,
+  currentProjectSettings,
+  fetchProjectSettings,
+  udpateProjectSettings
+}) {
   const [activities, setActivities] = useState([]);
-
-  useEffect(() => {
-    let allActivitiesEnabled = [];
-    if (userDetails.data.user_activities) {
-      allActivitiesEnabled = userDetails.data.user_activities.map(
-        (activity) => {
-          let isEnabled = true;
-          if (
-            activity.display_name.includes('Contact Updated') ||
-            activity.display_name.includes('Campaign Member Updated') ||
-            activity.display_name.includes(`Engagement Meeting Updated`) ||
-            activity.display_name.includes('Engagement Call Updated')
-          )
-            isEnabled = false;
-          return {
-            ...activity,
-            enabled: isEnabled
-          };
-        }
-      );
-    }
-    setActivities(allActivitiesEnabled);
-  }, [userDetails]);
-
   const [granularity, setGranularity] = useState('Daily');
   const [collapse, setCollapse] = useState(true);
+
+  useEffect(() => {
+    fetchProjectSettings(activeProject.id);
+  }, [activeProject]);
+
+  useEffect(() => {
+    const listActivities = getActivitiesWithEnableKeyConfig(
+      userDetails?.data?.user_activities,
+      currentProjectSettings.timelines_config?.disabled_events
+    );
+    setActivities(listActivities);
+  }, [currentProjectSettings, userDetails]);
+
   const granularityMenu = (
     <Menu>
       {granularityOptions.map((option) => (
-          <Menu.Item key={option} onClick={(key) => setGranularity(key.key)}>
-            <div className="flex items-center">
-              <span className="mr-3">{option}</span>
-            </div>
-          </Menu.Item>
-        ))}
+        <Menu.Item key={option} onClick={(key) => setGranularity(key.key)}>
+          <div className="flex items-center">
+            <span className="mr-3">{option}</span>
+          </div>
+        </Menu.Item>
+      ))}
     </Menu>
   );
 
   const handleChange = (option) => {
-    setActivities((currActivities) => {
-      const newState = currActivities.map((activity) => {
-        if (activity.display_name === option.display_name) {
-          return {
-            ...activity,
-            enabled: !activity.enabled
-          };
-        }
-        return activity;
-      });
-      return newState;
+    const timelinesConfig = { ...currentProjectSettings.timelines_config };
+    if (!timelinesConfig.disabled_events) {
+      timelinesConfig.disabled_events = [];
+    }
+    if (option.enabled) {
+      timelinesConfig.disabled_events.push(option.display_name);
+    } else if (!option.enabled) {
+      timelinesConfig.disabled_events.splice(
+        timelinesConfig.disabled_events.indexOf(option.display_name),
+        1
+      );
+    }
+    udpateProjectSettings(activeProject.id, {
+      timelines_config: { ...timelinesConfig }
     });
   };
 
   const controlsPopover = () => (
-      <div className="fa-filter-popupcard">
-        <div className="fa-header">
-          <Text
-            type="title"
-            level={7}
-            weight="bold"
-            color="grey"
-            extraClass="px-2 pt-2"
-          >
-            Filter Activities
-          </Text>
-          <div className="fa-divider" />
-        </div>
-
-        {activities.length ? (
-          activities
-            .filter(
-              (value, index, self) =>
-                index ===
-                self.findIndex((t) => t.display_name === value.display_name)
-            )
-            .map((option) => (
-                <div
-                  key={option.event_name}
-                  className="flex justify-start items-center px-4 py-2"
-                >
-                  <div className="mr-2">
-                    <Checkbox
-                      checked={option.enabled}
-                      onChange={handleChange.bind(this, option)}
-                    />
-                  </div>
-                  <Text mini extraClass="mb-0 truncate" type="paragraph">
-                    {option.display_name}
-                  </Text>
-                </div>
-              ))
-        ) : (
-          <div className="text-center p-2 italic">No Activity</div>
-        )}
-      </div>
-    );
+    <Tabs defaultActiveKey="events" size="small">
+      <Tabs.TabPane
+        tab={<span className="fa-activity-filter--tabname">Events</span>}
+        key="events"
+      >
+        <SearchCheckList
+          placeholder="Search Events"
+          mapArray={activities}
+          titleKey="display_name"
+          checkedKey="enabled"
+          onChange={handleChange}
+        />
+      </Tabs.TabPane>
+    </Tabs>
+  );
 
   return (
     <>
@@ -128,7 +109,6 @@ function ContactDetails({ onCancel, userDetails }) {
               size="large"
               onClick={() => {
                 onCancel();
-                setActivities([]);
                 setCollapse(true);
                 setGranularity('Daily');
               }}
@@ -143,12 +123,11 @@ function ContactDetails({ onCancel, userDetails }) {
               type="text"
               onClick={() => {
                 onCancel();
-                setActivities([]);
                 setCollapse(true);
                 setGranularity('Daily');
               }}
               icon={<SVG name="times" />}
-             />
+            />
           </Col>
         </Row>
       </div>
@@ -174,34 +153,17 @@ function ContactDetails({ onCancel, userDetails }) {
               </Row>
               <Row className="py-2">
                 <Col>
-                  <Text
-                    type="title"
-                    level={6}
-                    extraClass="m-0"
-                    weight="bold"
-                  >
-                    {!userDetails?.data?.is_anonymous
-                      ? userDetails?.data?.name || '-'
-                      : 'Unidentified User'}
+                  <Text type="title" level={6} extraClass="m-0" weight="bold">
+                    {userDetails.data?.title}
                   </Text>
-                  <Text
-                      type="title"
-                      level={7}
-                      extraClass="m-0"
-                      color="grey"
-                    >
-                      {userDetails?.data?.company || userDetails?.data?.user_id}
-                    </Text>
+                  <Text type="title" level={7} extraClass="m-0" color="grey">
+                    {userDetails.data?.subtitle}
+                  </Text>
                 </Col>
               </Row>
               <Row className="py-2">
                 <Col>
-                  <Text
-                    type="title"
-                    level={7}
-                    extraClass="m-0"
-                    color="grey"
-                  >
+                  <Text type="title" level={7} extraClass="m-0" color="grey">
                     Email
                   </Text>
 
@@ -212,12 +174,7 @@ function ContactDetails({ onCancel, userDetails }) {
               </Row>
               <Row className="py-2">
                 <Col>
-                  <Text
-                    type="title"
-                    level={7}
-                    extraClass="m-0"
-                    color="grey"
-                  >
+                  <Text type="title" level={7} extraClass="m-0" color="grey">
                     Country
                   </Text>
                   <Text type="title" level={7} extraClass="m-0">
@@ -227,47 +184,32 @@ function ContactDetails({ onCancel, userDetails }) {
               </Row>
               <Row className="py-2">
                 <Col>
-                  <Text
-                    type="title"
-                    level={7}
-                    extraClass="m-0"
-                    color="grey"
-                  >
+                  <Text type="title" level={7} extraClass="m-0" color="grey">
                     Number of Web Sessions
                   </Text>
                   <Text type="title" level={7} extraClass="m-0">
-                    {parseInt(userDetails?.data?.web_sessions_count) || '-'}
+                    {parseInt(userDetails.data?.web_session_count) || '-'}
                   </Text>
                 </Col>
               </Row>
               <Row className="py-2">
                 <Col>
-                  <Text
-                    type="title"
-                    level={7}
-                    extraClass="m-0"
-                    color="grey"
-                  >
+                  <Text type="title" level={7} extraClass="m-0" color="grey">
                     Number of Page Views
                   </Text>
                   <Text type="title" level={7} extraClass="m-0">
-                    {parseInt(userDetails?.data?.number_of_page_views) || '-'}
+                    {parseInt(userDetails.data?.number_of_page_views) || '-'}
                   </Text>
                 </Col>
               </Row>
               <Row className="py-2">
                 <Col>
-                  <Text
-                    type="title"
-                    level={7}
-                    extraClass="m-0"
-                    color="grey"
-                  >
+                  <Text type="title" level={7} extraClass="m-0" color="grey">
                     Time Spent on Site
                   </Text>
                   <Text type="title" level={7} extraClass="m-0">
                     {formatDurationIntoString(
-                      userDetails?.data?.time_spent_on_site
+                      userDetails.data?.time_spent_on_site
                     )}
                   </Text>
                 </Col>
@@ -286,10 +228,10 @@ function ContactDetails({ onCancel, userDetails }) {
                     Associated Groups:
                   </Text>
                   {userDetails?.data?.group_infos?.map((group) => (
-                      <Text type="title" level={7} extraClass="m-0 mb-2">
-                        {group.group_name}
-                      </Text>
-                    )) || '-'}
+                    <Text type="title" level={7} extraClass="m-0 mb-2">
+                      {group.group_name}
+                    </Text>
+                  )) || '-'}
                 </Col>
               </Row>
               <Row className="mt-6">
@@ -344,9 +286,7 @@ function ContactDetails({ onCancel, userDetails }) {
                         overlay={granularityMenu}
                         placement="bottomRight"
                       >
-                        <Button
-                          className="ant-dropdown-link flex items-center"
-                        >
+                        <Button className="ant-dropdown-link flex items-center">
                           {granularity}
                           <SVG name="caretDown" size={16} extraClass="ml-1" />
                         </Button>
@@ -374,4 +314,20 @@ function ContactDetails({ onCancel, userDetails }) {
   );
 }
 
-export default ContactDetails;
+const mapStateToProps = (state) => ({
+  activeProject: state.global.active_project,
+  currentProjectSettings: state.global.currentProjectSettings,
+  userDetails: state.timelines.contactDetails
+});
+
+const mapDispatchToProps = (dispatch) =>
+  bindActionCreators(
+    {
+      getProfileUserDetails,
+      fetchProjectSettings,
+      udpateProjectSettings
+    },
+    dispatch
+  );
+
+export default connect(mapStateToProps, mapDispatchToProps)(ContactDetails);

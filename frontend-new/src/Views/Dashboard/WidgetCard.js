@@ -460,7 +460,7 @@ function WidgetCard({
       <div
         id={`card-${unit.id}`}
         ref={cardRef}
-        className={'fa-dashboard--widget-card h-full w-full flex'}
+        className={'fa-dashboard--widget-card h-full w-full flex ' + styles.widgetCardCustomCSS}
       >
         <div className={'flex justify-between items-start w-full'}>
           <div className={'w-full flex flex-1 flex-col h-full justify-between'}>

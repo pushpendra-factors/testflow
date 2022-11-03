@@ -12,6 +12,7 @@ import { DEFAULT_OPERATOR_PROPS,dateTimeSelect } from 'Components/FaFilterSelect
 import moment from 'moment';
 import { DISPLAY_PROP} from '../../utils/constants';
 import { toCapitalCase } from '../../utils/global';
+import { TOOLTIP_CONSTANTS } from '../../constants/tooltips.constans';
 
 const defaultOpProps = DEFAULT_OPERATOR_PROPS;
 
@@ -247,7 +248,7 @@ const FAFilterSelect = ({
           disabled ? `fa-truncate-150` : ''
         }`}
       >
-        <Tooltip title={renderGroupDisplayName(propState)}>
+        <Tooltip title={renderGroupDisplayName(propState)} color={TOOLTIP_CONSTANTS.DARK}>
           <Button
             disabled={disabled}
             icon={
@@ -279,14 +280,18 @@ const FAFilterSelect = ({
   const renderOperatorSelector = () => {
     return (
       <div className={styles.filter__propContainer}>
-        <Button
-          disabled={disabled}
-          className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
-          type='link'
-          onClick={() => setOperSelectOpen(true)}
-        >
-          {operatorState ? operatorState : 'Select Operator'}
-        </Button>
+        <Tooltip
+          title="Select an equator to define your filter rules. "
+          color={TOOLTIP_CONSTANTS.DARK}>
+          <Button
+            disabled={disabled}
+            className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
+            type='link'
+            onClick={() => setOperSelectOpen(true)}
+          >
+            {operatorState ? operatorState : 'Select Operator'}
+          </Button>
+        </Tooltip>
 
         {operSelectOpen && (
           <FaSelect
@@ -601,6 +606,7 @@ const FAFilterSelect = ({
                       .join(', ')
                   : null
               }
+              color={TOOLTIP_CONSTANTS.DARK}
             >
               <Button
                 className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}

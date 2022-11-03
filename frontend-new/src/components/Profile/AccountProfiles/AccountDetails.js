@@ -1,75 +1,75 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Button, Dropdown, Menu, Popover, Checkbox } from 'antd';
+import { Row, Col, Button, Dropdown, Menu, Popover, Tabs, Input } from 'antd';
+import { bindActionCreators } from 'redux';
+import { connect } from 'react-redux';
 import { Text, SVG } from '../../factorsComponents';
 import AccountTimeline from './AccountTimeline';
 import { getHost, granularityOptions } from '../utils';
+import {
+  udpateProjectSettings,
+  fetchProjectSettings
+} from '../../../reducers/global';
+import { getProfileAccountDetails } from '../../../reducers/timelines/middleware';
+import { getActivitiesWithEnableKeyConfig } from '../../../reducers/timelines/utils';
+import SearchCheckList from '../../SearchCheckList';
 
-function AccountDetails({ onCancel, accountDetails }) {
+function AccountDetails({
+  onCancel,
+  accountDetails,
+  activeProject,
+  currentProjectSettings,
+  fetchProjectSettings,
+  udpateProjectSettings
+}) {
   const [granularity, setGranularity] = useState('Daily');
   const [collapseAll, setCollapseAll] = useState(true);
   const [activities, setActivities] = useState([]);
 
   useEffect(() => {
-    setActivities(accountDetails.data?.account_events);
-  }, [accountDetails]);
+    fetchProjectSettings(activeProject.id);
+  }, [activeProject]);
+
+  useEffect(() => {
+    const listActivities = getActivitiesWithEnableKeyConfig(
+      accountDetails.data?.account_events,
+      currentProjectSettings.timelines_config?.disabled_events
+    );
+    setActivities(listActivities);
+  }, [currentProjectSettings, accountDetails]);
 
   const handleChange = (option) => {
-    setActivities((currActivities) => {
-      const newState = currActivities.map((activity) => {
-        if (activity.display_name === option.display_name) {
-          return {
-            ...activity,
-            enabled: !activity.enabled
-          };
-        }
-        return activity;
-      });
-      return newState;
+    const timelinesConfig = { ...currentProjectSettings.timelines_config };
+    if (!timelinesConfig.disabled_events) {
+      timelinesConfig.disabled_events = [];
+    }
+    if (option.enabled) {
+      timelinesConfig.disabled_events.push(option.display_name);
+    } else if (!option.enabled) {
+      timelinesConfig.disabled_events.splice(
+        timelinesConfig.disabled_events.indexOf(option.display_name),
+        1
+      );
+    }
+    udpateProjectSettings(activeProject.id, {
+      timelines_config: { ...timelinesConfig }
     });
   };
 
   const controlsPopover = () => (
-    <div className="fa-filter-popupcard">
-      <div className="fa-header">
-        <Text
-          type="title"
-          level={7}
-          weight="bold"
-          color="grey"
-          extraClass="px-2 pt-2"
-        >
-          Filter Activities
-        </Text>
-        <div className="fa-divider" />
-      </div>
-
-      {activities?.length ? (
-        activities
-          .filter(
-            (value, index, self) =>
-              index ===
-              self.findIndex((t) => t.display_name === value.display_name)
-          )
-          .map((option) => (
-            <div
-              key={option.event_name}
-              className="flex justify-start items-center px-4 py-2"
-            >
-              <div className="mr-2">
-                <Checkbox
-                  checked={option.enabled}
-                  onChange={handleChange.bind(this, option)}
-                />
-              </div>
-              <Text mini extraClass="mb-0 truncate" type="paragraph">
-                {option.display_name}
-              </Text>
-            </div>
-          ))
-      ) : (
-        <div className="text-center p-2 italic">No Activity</div>
-      )}
-    </div>
+    <Tabs defaultActiveKey="events" size="small">
+      <Tabs.TabPane
+        tab={<span className="fa-activity-filter--tabname">Events</span>}
+        key="events"
+      >
+        <SearchCheckList
+          placeholder="Search Events"
+          mapArray={activities}
+          titleKey="display_name"
+          checkedKey="enabled"
+          onChange={handleChange}
+        />
+      </Tabs.TabPane>
+    </Tabs>
   );
 
   const granularityMenu = (
@@ -277,4 +277,20 @@ function AccountDetails({ onCancel, accountDetails }) {
     </>
   );
 }
-export default AccountDetails;
+const mapStateToProps = (state) => ({
+  activeProject: state.global.active_project,
+  currentProjectSettings: state.global.currentProjectSettings,
+  accountDetails: state.timelines.accountDetails
+});
+
+const mapDispatchToProps = (dispatch) =>
+  bindActionCreators(
+    {
+      getProfileAccountDetails,
+      fetchProjectSettings,
+      udpateProjectSettings
+    },
+    dispatch
+  );
+
+export default connect(mapStateToProps, mapDispatchToProps)(AccountDetails);

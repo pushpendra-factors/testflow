@@ -281,10 +281,7 @@ func TestGetEventNameByUserHandler(t *testing.T) {
 	H.InitSDKServiceRoutes(r)
 	uri := "/sdk/event/track"
 
-	var eventNames = struct {
-		EventNames   map[string][]string `json:"event_names"`
-		DisplayNames map[string]string   `json:"display_names"`
-	}{}
+	var eventNames H.EventNamesByUserResponsePayload
 
 	group1, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_HUBSPOT_COMPANY, model.AllowedGroupNames)
 	assert.Equal(t, http.StatusCreated, status)
@@ -367,6 +364,33 @@ func TestGetEventNameByUserHandler(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
+	// Create account smart event
+	rule := &model.SmartCRMEventFilter{
+		Source:               model.SmartCRMEventSourceSalesforce,
+		ObjectType:           "account",
+		Description:          "salesforce account",
+		FilterEvaluationType: model.FilterEvaluationTypeAny,
+		Filters: []model.PropertyFilter{
+			{
+				Name:      "Id",
+				Rules:     []model.CRMFilterRule{},
+				LogicalOp: model.LOGICAL_OP_AND,
+			},
+		},
+		LogicalOp:               model.LOGICAL_OP_AND,
+		TimestampReferenceField: "LastModifiedDate",
+	}
+
+	requestPayload := make(map[string]interface{})
+	groupAccountSmartEventName := "Account Id set"
+	requestPayload["name"] = groupAccountSmartEventName
+	requestPayload["expr"] = rule
+
+	eventName, status := store.GetStore().CreateOrGetCRMSmartEventFilterEventName(project.ID, &model.EventName{ProjectId: project.ID, Name: groupAccountSmartEventName}, rule)
+	assert.Equal(t, http.StatusCreated, status)
+	_, status = store.GetStore().CreateEvent(&model.Event{ProjectId: project.ID, EventNameId: eventName.ID, UserId: createdUserID, Timestamp: U.TimeNowUnix()})
+	assert.Equal(t, http.StatusCreated, status)
+
 	t.Run("TestGetEventNameByUserHandler", func(t *testing.T) {
 		configs := make(map[string]interface{})
 		configs["rollupLookback"] = 1
@@ -377,17 +401,37 @@ func TestGetEventNameByUserHandler(t *testing.T) {
 		json.Unmarshal(jsonResponse, &eventNames)
 		assert.NotNil(t, eventNames.EventNames)
 		assert.True(t, len(eventNames.EventNames) > 0)
-		assert.Contains(t, eventNames.EventNames[U.STANDARD_GROUP_DISPLAY_NAMES[model.GROUP_NAME_HUBSPOT_COMPANY]], "$hubspot_company_created", "$hubspot_company_updated")
-		assert.Contains(t, eventNames.EventNames[U.STANDARD_GROUP_DISPLAY_NAMES[model.GROUP_NAME_SALESFORCE_ACCOUNT]], "$salesforce_account_created", "$salesforce_account_updated")
-		assert.Contains(t, eventNames.EventNames["Hubspot Contacts"], "$hubspot_contact_created", "$hubspot_contact_updated")
-		assert.Contains(t, eventNames.EventNames["Salesforce Users"], "$sf_lead_created", "$sf_lead_updated", "$sf_contact_created")
-		assert.Contains(t, eventNames.EventNames["Marketo Person"], "$marketo_lead_created")
-		assert.Equal(t, len(eventNames.EventNames["Hubspot Contacts"]), 2)
-		assert.Equal(t, len(eventNames.EventNames["Salesforce Users"]), 3)
-		assert.Equal(t, len(eventNames.EventNames["Marketo Person"]), 1)
+		assert.Len(t, eventNames.EventNames[U.STANDARD_GROUP_DISPLAY_NAMES[model.GROUP_NAME_HUBSPOT_COMPANY]], 2)
+		for _, eventName := range []string{"$hubspot_company_created", "$hubspot_company_updated"} {
+			assert.Contains(t, eventNames.EventNames[U.STANDARD_GROUP_DISPLAY_NAMES[model.GROUP_NAME_HUBSPOT_COMPANY]], eventName)
+		}
 
-		//check whether other user event names are not deleted
-		assert.Contains(t, eventNames.EventNames[U.MostRecent], "$sf_campaign_member_created")
+		// account smart event should come under salesforce account group
+		assert.Len(t, eventNames.EventNames[U.STANDARD_GROUP_DISPLAY_NAMES[model.GROUP_NAME_SALESFORCE_ACCOUNT]], 3)
+		for _, eventName := range []string{"$salesforce_account_created", "$salesforce_account_updated", groupAccountSmartEventName} {
+			assert.Contains(t, eventNames.EventNames[U.STANDARD_GROUP_DISPLAY_NAMES[model.GROUP_NAME_SALESFORCE_ACCOUNT]], eventName)
+		}
+
+		assert.Equal(t, len(eventNames.EventNames["Salesforce Users"]), 4)
+		for _, eventName := range []string{"$sf_lead_created", "$sf_lead_updated", "$sf_contact_created", "$sf_campaign_member_created"} {
+			assert.Contains(t, eventNames.EventNames["Salesforce Users"], eventName)
+		}
+
+		assert.Equal(t, len(eventNames.EventNames["Hubspot Contacts"]), 2)
+		for _, eventName := range []string{"$hubspot_contact_created", "$hubspot_contact_updated"} {
+			assert.Contains(t, eventNames.EventNames["Hubspot Contacts"], eventName)
+		}
+
+		assert.Equal(t, len(eventNames.EventNames["Marketo Person"]), 1)
+		assert.Contains(t, eventNames.EventNames["Marketo Person"], "$marketo_lead_created")
+
+		assert.Nil(t, eventNames.EventNames[U.SmartEvent])
+
+		assert.Equal(t, len(eventNames.AllowedDisplayNameGroups), 4)
+		for displayGroupName, groupName := range U.GetStandardDisplayNameGroups() {
+			assert.Equal(t, eventNames.AllowedDisplayNameGroups[displayGroupName], groupName)
+		}
+
 	})
 
 }

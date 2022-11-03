@@ -166,7 +166,7 @@ func TestAttributionModel(t *testing.T) {
 			LookbackDays:           10,
 		}
 		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "111111"))
 	})
@@ -182,7 +182,7 @@ func TestAttributionModel(t *testing.T) {
 		}
 
 		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Nil(t, err)
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "111111"))
 	})
@@ -207,7 +207,7 @@ func TestAttributionModel(t *testing.T) {
 		}
 
 		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "222222"))
@@ -231,13 +231,13 @@ func TestAttributionModel(t *testing.T) {
 
 		//Should only have user2 with no 0 linked event count
 		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Nil(t, err)
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "222222"))
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "333333"))
 		// no hit for campaigns 1234567 or none
-		// Assert below won't work with ExecuteAttributionQueryV0, because for camp '123456' event is 'event2'
+		// Assert below won't work with ExecuteAttributionQueryV1, because for camp '123456' event is 'event2'
 		// While attributing, we pull users for 'event1' and not by default all sessions. Hence no longer valid.
 		// assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "1234567"))
 	})
@@ -332,7 +332,7 @@ func TestAttributionLandingPage(t *testing.T) {
 		}
 
 		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionUserCountLandingPage(query.AttributionKey, result, "lp_111111"))
 	})
@@ -349,7 +349,7 @@ func TestAttributionLandingPage(t *testing.T) {
 		}
 
 		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Nil(t, err)
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "111111"))
 	})
@@ -376,7 +376,7 @@ func TestAttributionLandingPage(t *testing.T) {
 		}
 
 		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionUserCountLandingPage(query.AttributionKey, result, "lp_111111"))
 		assert.Equal(t, float64(1), getConversionUserCountLandingPage(query.AttributionKey, result, "lp_222222"))
@@ -400,7 +400,7 @@ func TestAttributionLandingPage(t *testing.T) {
 		}
 
 		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Nil(t, err)
 		assert.Equal(t, int64(-1), getConversionUserCountLandingPage(query.AttributionKey, result, "lp_111111"))
 		assert.Equal(t, int64(-1), getConversionUserCountLandingPage(query.AttributionKey, result, "lp_222222"))
@@ -431,7 +431,7 @@ func TestAttributionLandingPage(t *testing.T) {
 		}
 
 		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Nil(t, err)
 		//testing content group level report. Content group "cg_123" has value "value_123" if landing page url starts with "123"(As per rule defined for cg_123)
 		assert.Equal(t, float64(1), getConversionUserCountLandingPage(query.AttributionKey, result, "value_123"))
@@ -449,7 +449,7 @@ func TestAttributionLandingPage(t *testing.T) {
 			TacticOfferType: model.MarketingEventTypeOffer,
 		}
 		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionUserCountLandingPage(query.AttributionKey, result, "lp_111111"))
 		assert.Equal(t, float64(1), getConversionUserCountLandingPage(query.AttributionKey, result, "lp_222222"))
@@ -468,7 +468,7 @@ func TestAttributionLandingPage(t *testing.T) {
 			TacticOfferType: model.MarketingEventTypeOffer,
 		}
 		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionUserCountLandingPage(query.AttributionKey, result, "lp_111111"))
 		assert.Equal(t, float64(1), getConversionUserCountLandingPage(query.AttributionKey, result, "lp_222222"))
@@ -542,7 +542,7 @@ func TestAttributionEngagementModel(t *testing.T) {
 			QueryType:              model.AttributionQueryTypeEngagementBased,
 		}
 		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "111111"))
 	})
@@ -558,7 +558,7 @@ func TestAttributionEngagementModel(t *testing.T) {
 			QueryType:              model.AttributionQueryTypeEngagementBased,
 		}
 		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Nil(t, err)
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "111111"))
 	})
@@ -582,7 +582,7 @@ func TestAttributionEngagementModel(t *testing.T) {
 			QueryType:              model.AttributionQueryTypeEngagementBased,
 		}
 		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "222222"))
@@ -606,13 +606,13 @@ func TestAttributionEngagementModel(t *testing.T) {
 		}
 		var debugQueryKey string
 		//Should only have user2 with no 0 linked event count
-		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Nil(t, err)
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "222222"))
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "333333"))
 		// no hit for campaigns 1234567 or none
-		// Assert below won't work with ExecuteAttributionQueryV0, because for camp '123456' event is 'event2'
+		// Assert below won't work with ExecuteAttributionQueryV1, because for camp '123456' event is 'event2'
 		// While attributing, we pull users for 'event1' and not by default all sessions. Hence no longer valid.
 		// assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "1234567"))
 	})
@@ -669,7 +669,7 @@ func TestWShapedAttributionModel(t *testing.T) {
 			LookbackDays:            10,
 		}
 		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Nil(t, err)
 		assert.Equal(t, float64(2), getConversionUserCount(query.AttributionKey, result, "$none"+model.KeyDelimiter+"Campaign_Adwords_100"))
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"))
@@ -690,7 +690,7 @@ func TestWShapedAttributionModel(t *testing.T) {
 			LookbackDays:            10,
 		}
 		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Nil(t, err)
 		assert.Equal(t, float64(2), getConversionUserCount(query.AttributionKey, result, "$none"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"))
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"))
@@ -710,7 +710,7 @@ func TestWShapedAttributionModel(t *testing.T) {
 			LookbackDays:            10,
 		}
 		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Nil(t, err)
 		// with "$none" match type for 2 users
 		assert.Equal(t, float64(2), getConversionUserCount(query.AttributionKey, result, "$none"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"$none"+model.KeyDelimiter+"Keyword_Adwords_300"))
@@ -775,7 +775,7 @@ func TestInfluenceAttributionModel(t *testing.T) {
 			LookbackDays:            10,
 		}
 		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Nil(t, err)
 		assert.Equal(t, float64(2), getConversionUserCount(query.AttributionKey, result, "$none"+model.KeyDelimiter+"Campaign_Adwords_100"))
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"))
@@ -796,7 +796,7 @@ func TestInfluenceAttributionModel(t *testing.T) {
 			LookbackDays:            10,
 		}
 		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Nil(t, err)
 		assert.Equal(t, float64(2), getConversionUserCount(query.AttributionKey, result, "$none"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"))
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"))
@@ -816,7 +816,7 @@ func TestInfluenceAttributionModel(t *testing.T) {
 			LookbackDays:            10,
 		}
 		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Nil(t, err)
 		// with "$none" match type for 2 users
 		assert.Equal(t, float64(2), getConversionUserCount(query.AttributionKey, result, "$none"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"$none"+model.KeyDelimiter+"Keyword_Adwords_300"))
@@ -872,7 +872,7 @@ func TestAttributionModelEndToEndWithEnrichment(t *testing.T) {
 			LookbackDays:            10,
 		}
 		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey)
+		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey)
 		assert.Nil(t, err)
 		assert.Equal(t, "adwords", result.Rows[1][0])
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"))
@@ -892,7 +892,7 @@ func TestAttributionModelEndToEndWithEnrichment(t *testing.T) {
 			LookbackDays:            10,
 		}
 		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey)
+		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey)
 		assert.Nil(t, err)
 		assert.Equal(t, "google", result.Rows[1][0])
 
@@ -909,7 +909,7 @@ func TestAttributionModelEndToEndWithEnrichment(t *testing.T) {
 			LookbackDays:            10,
 		}
 		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey)
+		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey)
 		assert.Nil(t, err)
 		assert.Equal(t, "Paid Search", result.Rows[1][0])
 	})
@@ -925,7 +925,7 @@ func TestAttributionModelEndToEndWithEnrichment(t *testing.T) {
 			LookbackDays:            10,
 		}
 		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey)
+		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey)
 		assert.Nil(t, err)
 		// Conversion.
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"))
@@ -945,7 +945,7 @@ func TestAttributionModelEndToEndWithEnrichment(t *testing.T) {
 			LookbackDays:            10,
 		}
 		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey)
+		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey)
 		assert.Nil(t, err)
 		// Added keys.
 		assert.Equal(t, "adwords", result.Rows[1][0])
@@ -980,7 +980,7 @@ func TestAttributionModelEndToEndWithEnrichment(t *testing.T) {
 			LookbackDays:            10,
 		}
 		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Nil(t, err)
 		assert.Equal(t, float64(2), getConversionUserCount(query.AttributionKey, result, "$none"+model.KeyDelimiter+"Campaign_Adwords_100"))
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"))
@@ -1000,7 +1000,7 @@ func TestAttributionModelEndToEndWithEnrichment(t *testing.T) {
 			LookbackDays:            10,
 		}
 		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Nil(t, err)
 		assert.Equal(t, float64(2), getConversionUserCount(query.AttributionKey, result, "$none"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"))
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"))
@@ -1020,7 +1020,7 @@ func TestAttributionModelEndToEndWithEnrichment(t *testing.T) {
 			LookbackDays:            10,
 		}
 		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Nil(t, err)
 		// with "$none" match type for 2 users
 		assert.Equal(t, float64(2), getConversionUserCount(query.AttributionKey, result, "$none"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"$none"+model.KeyDelimiter+"Keyword_Adwords_300"))
@@ -1085,7 +1085,7 @@ func TestAttributionModelWithDifferentCampaignNames(t *testing.T) {
 			LookbackDays:            10,
 		}
 		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "Campaign_Adwords_New"))
 		assert.Equal(t, float64(2), getConversionUserCount(query.AttributionKey, result, "Campaign_Adwords_Old"))
@@ -1105,7 +1105,7 @@ func TestAttributionModelWithDifferentCampaignNames(t *testing.T) {
 			LookbackDays:            10,
 		}
 		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Nil(t, err)
 		assert.Equal(t, float64(2), getConversionUserCount(query.AttributionKey, result, "$none"+model.KeyDelimiter+"Campaign_Adwords_Old"+model.KeyDelimiter+"Adgroup_Adwords_200"))
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_New"+model.KeyDelimiter+"Adgroup_Adwords_200"))
@@ -1125,7 +1125,7 @@ func TestAttributionModelWithDifferentCampaignNames(t *testing.T) {
 			LookbackDays:            10,
 		}
 		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Nil(t, err)
 		// with "$none" match type for 2 users
 		assert.Equal(t, float64(2), getConversionUserCount(query.AttributionKey, result, "$none"+model.KeyDelimiter+"Campaign_Adwords_Old"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"$none"+model.KeyDelimiter+"Keyword_Adwords_300"))
@@ -1147,7 +1147,7 @@ func TestAttributionModelWithDifferentCampaignNames(t *testing.T) {
 			LookbackDays:            10,
 		}
 		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "Campaign_Adwords_New"))
 		assert.Equal(t, float64(2), getConversionUserCount(query.AttributionKey, result, "Campaign_Adwords_Old"))
@@ -1168,7 +1168,7 @@ func TestAttributionModelWithDifferentCampaignNames(t *testing.T) {
 			LookbackDays:            10,
 		}
 		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Nil(t, err)
 		assert.Equal(t, float64(2), getConversionUserCount(query.AttributionKey, result, "$none"+model.KeyDelimiter+"Campaign_Adwords_Old"+model.KeyDelimiter+"Adgroup_Adwords_200"))
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_New"+model.KeyDelimiter+"Adgroup_Adwords_200"))
@@ -1188,7 +1188,7 @@ func TestAttributionModelWithDifferentCampaignNames(t *testing.T) {
 			LookbackDays:            10,
 		}
 		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Nil(t, err)
 		// with "$none" match type for 2 users
 		assert.Equal(t, float64(2), getConversionUserCount(query.AttributionKey, result, "$none"+model.KeyDelimiter+"Campaign_Adwords_Old"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"$none"+model.KeyDelimiter+"Keyword_Adwords_300"))
@@ -1210,7 +1210,7 @@ func TestAttributionModelWithDifferentCampaignNames(t *testing.T) {
 			LookbackDays:            10,
 		}
 		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "Campaign_Adwords_New"))
 		assert.Equal(t, float64(2), getConversionUserCount(query.AttributionKey, result, "Campaign_Adwords_Old"))
@@ -1230,7 +1230,7 @@ func TestAttributionModelWithDifferentCampaignNames(t *testing.T) {
 			LookbackDays:            10,
 		}
 		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Nil(t, err)
 		assert.Equal(t, float64(2), getConversionUserCount(query.AttributionKey, result, "$none"+model.KeyDelimiter+"Campaign_Adwords_Old"+model.KeyDelimiter+"Adgroup_Adwords_200"))
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_New"+model.KeyDelimiter+"Adgroup_Adwords_200"))
@@ -1250,7 +1250,7 @@ func TestAttributionModelWithDifferentCampaignNames(t *testing.T) {
 			LookbackDays:            10,
 		}
 		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Nil(t, err)
 		// with "$none" match type for 2 users
 		assert.Equal(t, float64(2), getConversionUserCount(query.AttributionKey, result, "$none"+model.KeyDelimiter+"Campaign_Adwords_Old"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"$none"+model.KeyDelimiter+"Keyword_Adwords_300"))
@@ -1260,6 +1260,389 @@ func TestAttributionModelWithDifferentCampaignNames(t *testing.T) {
 		assert.Equal(t, int64(3), getClicks(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_New"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"Broad"+model.KeyDelimiter+"Keyword_Adwords_300"))
 		assert.Equal(t, float64(0.000003), getSpend(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_New"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"Broad"+model.KeyDelimiter+"Keyword_Adwords_300"))
 	})
+}
+
+func addGroups(t *testing.T, project *model.Project) map[string]*model.Group {
+
+	adwordsCustomerAccountId := U.RandomLowerAphaNumString(5)
+	// Setting up Adwords, FB and Linkedin account
+	_, errCode := store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{
+		IntAdwordsCustomerAccountId: &adwordsCustomerAccountId,
+	})
+	assert.Equal(t, http.StatusAccepted, errCode)
+
+	// Adwords Campaign performance report
+	value := []byte(`{"cost": "1","clicks": "1","campaign_id":"100","impressions": "1", "campaign_name": "test"}`)
+	document := &model.AdwordsDocument{
+		ProjectID:         project.ID,
+		ID:                "100",
+		CustomerAccountID: adwordsCustomerAccountId,
+		TypeAlias:         model.CampaignPerformanceReport,
+		Timestamp:         20200511,
+		Value:             &postgres.Jsonb{RawMessage: value},
+		CampaignID:        100,
+	}
+
+	status := store.GetStore().CreateAdwordsDocument(document)
+	assert.Equal(t, http.StatusCreated, status)
+	groups := make(map[string]*model.Group, 0)
+
+	//create new groups
+	for _, groupName := range []string{model.GROUP_NAME_HUBSPOT_DEAL, model.GROUP_NAME_HUBSPOT_COMPANY, model.GROUP_NAME_SALESFORCE_OPPORTUNITY, model.GROUP_NAME_SALESFORCE_ACCOUNT} {
+		group, status := store.GetStore().CreateGroup(project.ID, groupName, model.AllowedGroupNames)
+		assert.Equal(t, http.StatusCreated, status)
+		assert.NotNil(t, group)
+		groups[groupName] = group
+	}
+
+	return groups
+
+}
+func createUsersForHubspotDeals(t *testing.T, project *model.Project, groups map[string]*model.Group, timestamp int64) {
+	properties := postgres.Jsonb{RawMessage: json.RawMessage([]byte(fmt.Sprintf(
+		`{"country": "us", "age": 20, "$hubspot_amount": 200,"$hubspot_deal_hs_object_id":"1", "$hubspot_datefield1": %d, "paid": true}`, timestamp+10)))}
+	// create group user with random groupID
+	createdGroupUserID, errCode := store.GetStore().CreateGroupUser(
+		&model.User{
+			ProjectId:  project.ID,
+			Source:     model.GetRequestSourcePointer(model.UserSourceHubspot),
+			Properties: properties,
+		}, groups[model.GROUP_NAME_HUBSPOT_DEAL].Name, fmt.Sprintf("%d", groups[model.GROUP_NAME_HUBSPOT_DEAL].ID))
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	// created users , added group relation and user sessions
+	for i := 0; i < 4; i++ {
+		createdUserID, status := store.GetStore().CreateUser(
+			&model.User{
+				ProjectId:    project.ID,
+				Group1UserID: createdGroupUserID,
+				Source:       model.GetRequestSourcePointer(model.UserSourceHubspot),
+			})
+
+		assert.Equal(t, http.StatusCreated, status)
+
+		_ = createEventWithSession(project.ID, "", createdUserID, timestamp, "test", "", "", "", "", "")
+
+		// update user properties to add $group_id property = group.ID of created user
+		newProperties := &postgres.Jsonb{RawMessage: json.RawMessage([]byte(fmt.Sprintf(
+			`{"$group_id": "%d"}`, groups[model.GROUP_NAME_HUBSPOT_DEAL].ID)))}
+		_, status = store.GetStore().UpdateUserPropertiesV2(project.ID, createdUserID, newProperties, time.Now().Unix(), "", "")
+		assert.Equal(t, http.StatusAccepted, status)
+	}
+
+}
+func createUsersForHubspotCompanies(t *testing.T, project *model.Project, groups map[string]*model.Group, timestamp int64) {
+	properties := postgres.Jsonb{RawMessage: json.RawMessage([]byte(fmt.Sprintf(
+		`{"country": "us", "age": 20, "$hubspot_amount": 200,"$hubspot_company_hs_object_id":"2", "$hubspot_datefield1": %d, "paid": true}`, timestamp+10)))}
+
+	createdGroupUserID, errCode := store.GetStore().CreateGroupUser(&model.User{ProjectId: project.ID,
+		Source: model.GetRequestSourcePointer(model.UserSourceHubspot), Properties: properties}, groups[model.GROUP_NAME_HUBSPOT_COMPANY].Name, fmt.Sprintf("%d", groups[model.GROUP_NAME_HUBSPOT_COMPANY].ID))
+
+	// created users , added group relation and user sessions
+	for i := 0; i < 4; i++ {
+
+		createdUserID, status := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Group2UserID: createdGroupUserID, Source: model.GetRequestSourcePointer(model.UserSourceHubspot)})
+		assert.Equal(t, http.StatusCreated, status)
+		assert.Equal(t, http.StatusCreated, errCode)
+
+		_ = createEventWithSession(project.ID, "", createdUserID, timestamp, "test", "", "", "", "", "")
+		// update user properties to add $group_id property = group.ID of created user
+
+		newProperties := &postgres.Jsonb{RawMessage: json.RawMessage([]byte(fmt.Sprintf(
+			`{"$group_id": "%d"}`, groups[model.GROUP_NAME_HUBSPOT_COMPANY].ID)))}
+		_, status = store.GetStore().UpdateUserPropertiesV2(project.ID, createdUserID, newProperties, time.Now().Unix(), "", "")
+		assert.Equal(t, http.StatusAccepted, status)
+	}
+
+}
+func createUsersForSalesforceOpportunities(t *testing.T, project *model.Project, groups map[string]*model.Group, timestamp int64) {
+	properties := postgres.Jsonb{RawMessage: json.RawMessage([]byte(fmt.Sprintf(
+		`{"country": "us", "age": 20, "$hubspot_amount": 200,"$salesforce_opportunity_id":"3", "$hubspot_datefield2": %d, "paid": true}`, timestamp+10)))}
+
+	createdGroupUserID, errCode := store.GetStore().CreateGroupUser(&model.User{ProjectId: project.ID,
+		Source: model.GetRequestSourcePointer(model.UserSourceSalesforce), Properties: properties}, groups[model.GROUP_NAME_SALESFORCE_OPPORTUNITY].Name, fmt.Sprintf("%d", groups[model.GROUP_NAME_SALESFORCE_OPPORTUNITY].ID))
+
+	// created users , added group relation and user sessions
+	for i := 0; i < 4; i++ {
+
+		createdUserID, status := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Group3UserID: createdGroupUserID, Source: model.GetRequestSourcePointer(model.UserSourceSalesforce)})
+		assert.Equal(t, http.StatusCreated, status)
+		assert.Equal(t, http.StatusCreated, errCode)
+		// update user properties to add $group_id property = group.ID of created user
+		_ = createEventWithSession(project.ID, "", createdUserID, timestamp, "test", "", "", "", "", "")
+		newProperties := &postgres.Jsonb{RawMessage: json.RawMessage([]byte(fmt.Sprintf(
+			`{"$group_id": "%d"}`, groups[model.GROUP_NAME_SALESFORCE_OPPORTUNITY].ID)))}
+		_, status = store.GetStore().UpdateUserPropertiesV2(project.ID, createdUserID, newProperties, time.Now().Unix(), "", "")
+		assert.Equal(t, http.StatusAccepted, status)
+
+	}
+
+}
+func createUsersForSalesforceAccounts(t *testing.T, project *model.Project, groups map[string]*model.Group, timestamp int64) {
+	properties := postgres.Jsonb{RawMessage: json.RawMessage([]byte(fmt.Sprintf(
+		`{"country": "us", "age": 20, "$hubspot_amount": 200,"$salesforce_account_id":"4", "$hubspot_datefield2": %d, "paid": true}`, timestamp+10)))}
+
+	createdGroupUserID, errCode := store.GetStore().CreateGroupUser(&model.User{ProjectId: project.ID,
+		Source: model.GetRequestSourcePointer(model.UserSourceSalesforce), Properties: properties}, groups[model.GROUP_NAME_SALESFORCE_ACCOUNT].Name, fmt.Sprintf("%d", groups[model.GROUP_NAME_SALESFORCE_ACCOUNT].ID))
+
+	// created users , added group relation and user sessions
+	for i := 0; i < 4; i++ {
+
+		createdUserID, status := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Group4UserID: createdGroupUserID, Source: model.GetRequestSourcePointer(model.UserSourceSalesforce)})
+		assert.Equal(t, http.StatusCreated, status)
+		assert.Equal(t, http.StatusCreated, errCode)
+
+		_ = createEventWithSession(project.ID, "", createdUserID, timestamp, "test", "", "", "", "", "")
+		// update user properties to add $group_id property = group.ID of created user
+		newProperties := &postgres.Jsonb{RawMessage: json.RawMessage([]byte(fmt.Sprintf(
+			`{"$group_id": "%d"}`, groups[model.GROUP_NAME_SALESFORCE_ACCOUNT].ID)))}
+		_, status = store.GetStore().UpdateUserPropertiesV2(project.ID, createdUserID, newProperties, time.Now().Unix(), "", "")
+		assert.Equal(t, http.StatusAccepted, status)
+	}
+
+}
+
+func TestGetUserGroupWise(t *testing.T) {
+	a := gin.Default()
+	H.InitAppRoutes(a)
+
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	timestamp := int64(1589068800)
+
+	//create metrics "Deals"
+	metrics := "Deals"
+	description := U.RandomString(8)
+	transformations := &postgres.Jsonb{json.RawMessage(`{"agFn": "unique", "agPr": "", "agPrTy": "categorical", "fil": [], "daFie": "$hubspot_datefield1"}`)}
+	w := sendCreateCustomMetric(a, project.ID, agent, transformations, metrics, description, "hubspot_deals", 1)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	//create metrics "Companies"
+	metrics = "Companies"
+	description = U.RandomString(8)
+	transformations = &postgres.Jsonb{json.RawMessage(`{"agFn": "unique", "agPr": "", "agPrTy": "categorical", "fil": [], "daFie": "$hubspot_datefield1"}`)}
+	w = sendCreateCustomMetric(a, project.ID, agent, transformations, metrics, description, "hubspot_companies", 1)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	//create metrics "Opportunities"
+	metrics = "Opportunities"
+	description = U.RandomString(8)
+	transformations = &postgres.Jsonb{json.RawMessage(`{"agFn": "unique", "agPr": "", "agPrTy": "categorical", "fil": [], "daFie": "$hubspot_datefield2"}`)}
+	w = sendCreateCustomMetric(a, project.ID, agent, transformations, metrics, description, "salesforce_opportunities", 1)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	//create metrics "Accounts"
+	metrics = "Accounts"
+	description = U.RandomString(8)
+	transformations = &postgres.Jsonb{json.RawMessage(`{"agFn": "unique", "agPr": "", "agPrTy": "categorical", "fil": [], "daFie": "$hubspot_datefield2"}`)}
+	w = sendCreateCustomMetric(a, project.ID, agent, transformations, metrics, description, "salesforce_opportunities", 1)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	groups := addGroups(t, project)
+
+	createUsersForHubspotDeals(t, project, groups, timestamp)
+	createUsersForHubspotCompanies(t, project, groups, timestamp)
+	createUsersForSalesforceOpportunities(t, project, groups, timestamp)
+	createUsersForSalesforceAccounts(t, project, groups, timestamp)
+
+	t.Run("TestForHubspotDeals", func(t *testing.T) {
+
+		query1 := model.KPIQuery{
+			Category:         model.ProfileCategory,
+			DisplayCategory:  model.HubspotDealsDisplayCategory,
+			PageUrl:          "",
+			Metrics:          []string{"Deals"},
+			GroupBy:          []model.KPIGroupBy{},
+			From:             timestamp,
+			To:               timestamp + 3*U.SECONDS_IN_A_DAY,
+			GroupByTimestamp: "date",
+		}
+
+		query2 := model.KPIQuery{}
+		U.DeepCopy(&query1, &query2)
+		query2.GroupByTimestamp = ""
+
+		kpiQueryGroup := model.KPIQueryGroup{
+			Class:         "kpi",
+			Queries:       []model.KPIQuery{query1, query2},
+			GlobalFilters: []model.KPIFilter{},
+			GlobalGroupBy: []model.KPIGroupBy{
+				{
+					Granularity:      "",
+					PropertyName:     model.HSDealIDProperty,
+					PropertyDataType: "numerical",
+					Entity:           "user",
+					ObjectType:       "",
+					GroupByType:      "raw_values",
+				},
+			},
+		}
+
+		query := &model.AttributionQuery{
+			AnalyzeType:             model.AnalyzeTypeHSDeals,
+			From:                    timestamp,
+			To:                      timestamp + 3*U.SECONDS_IN_A_DAY,
+			KPI:                     kpiQueryGroup,
+			AttributionKey:          model.AttributionKeyCampaign,
+			AttributionKeyDimension: []string{model.FieldCampaignName},
+			AttributionMethodology:  model.AttributionMethodLinear,
+			LookbackDays:            10,
+		}
+
+		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, "", C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		assert.Equal(t, float64(1), getConversionUserCountKpi(query.AttributionKey, result, "test"))
+		assert.Nil(t, err)
+
+	})
+	t.Run("TestForHubspotCompanies", func(t *testing.T) {
+
+		query1 := model.KPIQuery{
+			Category:         model.ProfileCategory,
+			DisplayCategory:  model.HubspotCompaniesDisplayCategory,
+			PageUrl:          "",
+			Metrics:          []string{"Companies"},
+			GroupBy:          []model.KPIGroupBy{},
+			From:             timestamp,
+			To:               timestamp + 3*U.SECONDS_IN_A_DAY,
+			GroupByTimestamp: "date",
+		}
+
+		query2 := model.KPIQuery{}
+		U.DeepCopy(&query1, &query2)
+		query2.GroupByTimestamp = ""
+
+		kpiQueryGroup := model.KPIQueryGroup{
+			Class:         "kpi",
+			Queries:       []model.KPIQuery{query1, query2},
+			GlobalFilters: []model.KPIFilter{},
+			GlobalGroupBy: []model.KPIGroupBy{
+				{
+					Granularity:      "",
+					PropertyName:     model.HSCompanyIDProperty,
+					PropertyDataType: "numerical",
+					Entity:           "user",
+					ObjectType:       "",
+					GroupByType:      "raw_values",
+				},
+			},
+		}
+
+		query := &model.AttributionQuery{
+			AnalyzeType:             model.AnalyzeTypeHSCompanies,
+			From:                    timestamp,
+			To:                      timestamp + 3*U.SECONDS_IN_A_DAY,
+			KPI:                     kpiQueryGroup,
+			AttributionKey:          model.AttributionKeyCampaign,
+			AttributionKeyDimension: []string{model.FieldCampaignName},
+			AttributionMethodology:  model.AttributionMethodLinear,
+			LookbackDays:            10,
+		}
+
+		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, "", C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		assert.Equal(t, float64(1), getConversionUserCountKpi(query.AttributionKey, result, "test"))
+		assert.Nil(t, err)
+
+	})
+	t.Run("TestForSalesforceOpportunities", func(t *testing.T) {
+
+		query1 := model.KPIQuery{
+			Category:         model.ProfileCategory,
+			DisplayCategory:  model.SalesforceOpportunitiesDisplayCategory,
+			PageUrl:          "",
+			Metrics:          []string{"Opportunities"},
+			GroupBy:          []model.KPIGroupBy{},
+			From:             timestamp,
+			To:               timestamp + 3*U.SECONDS_IN_A_DAY,
+			GroupByTimestamp: "date",
+		}
+
+		query2 := model.KPIQuery{}
+		U.DeepCopy(&query1, &query2)
+		query2.GroupByTimestamp = ""
+
+		kpiQueryGroup := model.KPIQueryGroup{
+			Class:         "kpi",
+			Queries:       []model.KPIQuery{query1, query2},
+			GlobalFilters: []model.KPIFilter{},
+			GlobalGroupBy: []model.KPIGroupBy{
+				{
+					Granularity:      "",
+					PropertyName:     model.SFOpportunityIDProperty,
+					PropertyDataType: "numerical",
+					Entity:           "user",
+					ObjectType:       "",
+					GroupByType:      "raw_values",
+				},
+			},
+		}
+
+		query := &model.AttributionQuery{
+			AnalyzeType:             model.AnalyzeTypeSFOpportunities,
+			From:                    timestamp,
+			To:                      timestamp + 3*U.SECONDS_IN_A_DAY,
+			KPI:                     kpiQueryGroup,
+			AttributionKey:          model.AttributionKeyCampaign,
+			AttributionKeyDimension: []string{model.FieldCampaignName},
+			AttributionMethodology:  model.AttributionMethodLinear,
+			LookbackDays:            10,
+		}
+
+		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, "", C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		assert.Equal(t, float64(1), getConversionUserCountKpi(query.AttributionKey, result, "test"))
+		assert.Nil(t, err)
+
+	})
+	t.Run("TestForSalesforceAccounts", func(t *testing.T) {
+
+		query1 := model.KPIQuery{
+			Category:         model.ProfileCategory,
+			DisplayCategory:  model.SalesforceAccountsDisplayCategory,
+			PageUrl:          "",
+			Metrics:          []string{"Accounts"},
+			GroupBy:          []model.KPIGroupBy{},
+			From:             timestamp,
+			To:               timestamp + 3*U.SECONDS_IN_A_DAY,
+			GroupByTimestamp: "date",
+		}
+
+		query2 := model.KPIQuery{}
+		U.DeepCopy(&query1, &query2)
+		query2.GroupByTimestamp = ""
+
+		kpiQueryGroup := model.KPIQueryGroup{
+			Class:         "kpi",
+			Queries:       []model.KPIQuery{query1, query2},
+			GlobalFilters: []model.KPIFilter{},
+			GlobalGroupBy: []model.KPIGroupBy{
+				{
+					Granularity:      "",
+					PropertyName:     model.SFAccountIDProperty,
+					PropertyDataType: "numerical",
+					Entity:           "user",
+					ObjectType:       "",
+					GroupByType:      "raw_values",
+				},
+			},
+		}
+
+		query := &model.AttributionQuery{
+			AnalyzeType:             model.AnalyzeTypeSFAccounts,
+			From:                    timestamp,
+			To:                      timestamp + 3*U.SECONDS_IN_A_DAY,
+			KPI:                     kpiQueryGroup,
+			AttributionKey:          model.AttributionKeyCampaign,
+			AttributionKeyDimension: []string{model.FieldCampaignName},
+			AttributionMethodology:  model.AttributionMethodLinear,
+			LookbackDays:            10,
+		}
+
+		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, "", C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		assert.Equal(t, float64(1), getConversionUserCountKpi(query.AttributionKey, result, "test"))
+		assert.Nil(t, err)
+
+	})
+
 }
 
 func addMarketingData(t *testing.T, project *model.Project) {
@@ -1523,6 +1906,20 @@ func getConversionUserCount(attributionKey string, result *model.QueryResult, ke
 	return int64(-1)
 }
 
+func getConversionUserCountKpi(attributionKey string, result *model.QueryResult, key interface{}) interface{} {
+
+	addedKeysSize := model.GetLastKeyValueIndex(result.Headers)
+	conversionIndex := model.GetConversionIndexKPI(result.Headers)
+
+	for _, row := range result.Rows {
+		rowKey := getRowKey(addedKeysSize, row)
+		if rowKey == key {
+			return row[conversionIndex]
+		}
+	}
+	return int64(-1)
+}
+
 func getConversionUserCountLandingPage(attributionKey string, result *model.QueryResult, key interface{}) interface{} {
 
 	addedKeysSize := model.GetLastKeyValueIndexLandingPage(result.Headers)
@@ -1644,7 +2041,7 @@ func TestAttributionLastTouchWithLookbackWindow(t *testing.T) {
 	}
 	var debugQueryKey string
 	// Should find within look back window
-	_, err = store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+	_, err = store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 	assert.Nil(t, err)
 
 	_, errCode = store.GetStore().CreateEvent(&model.Event{ProjectId: project.ID, EventNameId: userEventName.ID,
@@ -1655,7 +2052,7 @@ func TestAttributionLastTouchWithLookbackWindow(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, errCode)
 	query.From = timestamp + 5*U.SECONDS_IN_A_DAY
 	// Event beyond lookback window.
-	_, err = store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+	_, err = store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 	assert.Nil(t, err)
 }
 
@@ -1696,7 +2093,7 @@ func TestAttributionTacticOffer(t *testing.T) {
 	}
 	var debugQueryKey string
 	//both user should be treated different
-	result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+	result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 	assert.Nil(t, err)
 	// Lookback is 0. There should be no attribution.
 	// Attribution Time: 1589068798, Conversion Time: 1589068800, diff = 2 secs
@@ -1716,7 +2113,7 @@ func TestAttributionTacticOffer(t *testing.T) {
 		LookbackDays:           5,
 		QueryType:              model.AttributionQueryTypeConversionBased,
 	}
-	result, err = store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+	result, err = store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 	assert.Nil(t, err)
 	// both user should be treated same
 	assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "$none"))
@@ -1751,7 +2148,7 @@ func TestAttributionTacticOffer(t *testing.T) {
 			TacticOfferType:        model.MarketingEventTypeTacticOffer,
 		}
 		var debugQueryKey string
-		result, err = store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		result, err = store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Nil(t, err)
 		// The attribution didn't happen in the query period. First touch is on 3rd day and which
 		// is not between 4th to 7th (query period). Hence count is 0.
@@ -1770,7 +2167,7 @@ func TestAttributionTacticOffer(t *testing.T) {
 			TacticOfferType:        model.MarketingEventTypeTactic,
 		}
 		var debugQueryKey string
-		result, err = store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		result, err = store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Nil(t, err)
 		// The attribution didn't happen in the query period. First touch is on 3rd day and which
 		// is not between 4th to 7th (query period). Hence count is 0.
@@ -1789,7 +2186,7 @@ func TestAttributionTacticOffer(t *testing.T) {
 			TacticOfferType:        model.MarketingEventTypeOffer,
 		}
 		var debugQueryKey string
-		result, err = store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		result, err = store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Nil(t, err)
 		// The query contains sessions only, hence no attribution for OTP i.e. for "Offer"
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "12345"))
@@ -1833,7 +2230,7 @@ func TestAttributionWithUserIdentification(t *testing.T) {
 	}
 	var debugQueryKey string
 	//both user should be treated different
-	result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+	result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 	assert.Nil(t, err)
 	// Lookback is 0. There should be no attribution.
 	// Attribution Time: 1589068798, Conversion Time: 1589068800, diff = 2 secs
@@ -1853,7 +2250,7 @@ func TestAttributionWithUserIdentification(t *testing.T) {
 		LookbackDays:           5,
 		QueryType:              model.AttributionQueryTypeConversionBased,
 	}
-	result, err = store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+	result, err = store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 	assert.Nil(t, err)
 	// both user should be treated same
 	assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "$none"))
@@ -1887,7 +2284,7 @@ func TestAttributionWithUserIdentification(t *testing.T) {
 			QueryType:              model.AttributionQueryTypeEngagementBased,
 		}
 		var debugQueryKey string
-		result, err = store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		result, err = store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 
 		assert.Nil(t, err)
 		// The attribution didn't happen in the query period. First touch is on 3rd day and which
@@ -1932,7 +2329,7 @@ func TestAttributionEngagementWithUserIdentification(t *testing.T) {
 	}
 	var debugQueryKey string
 	// Both user should be treated different
-	result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+	result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 	assert.Nil(t, err)
 
 	query = &model.AttributionQuery{
@@ -1945,7 +2342,7 @@ func TestAttributionEngagementWithUserIdentification(t *testing.T) {
 		QueryType:              model.AttributionQueryTypeEngagementBased,
 	}
 	// Both user should be treated different
-	result, err = store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+	result, err = store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 	assert.Nil(t, err)
 	// Lookback days = 2
 	assert.Equal(t, float64(2), getConversionUserCount(query.AttributionKey, result, "$none"))
@@ -1956,7 +2353,7 @@ func TestAttributionEngagementWithUserIdentification(t *testing.T) {
 	assert.Equal(t, http.StatusAccepted, errCode)
 	_, errCode = store.GetStore().UpdateUser(project.ID, createdUserID2, &model.User{CustomerUserId: customerUserId2}, timestamp+1*U.SECONDS_IN_A_DAY)
 	assert.Equal(t, http.StatusAccepted, errCode)
-	result, err = store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+	result, err = store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 	assert.Nil(t, err)
 	assert.Equal(t, float64(2), getConversionUserCount(query.AttributionKey, result, "$none"))
 
@@ -1977,7 +2374,7 @@ func TestAttributionEngagementWithUserIdentification(t *testing.T) {
 			QueryType:              model.AttributionQueryTypeEngagementBased,
 		}
 		var debugQueryKey string
-		result, err = store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		result, err = store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Nil(t, err)
 		assert.Equal(t, float64(2), getConversionUserCount(query.AttributionKey, result, "12345"))
 	})

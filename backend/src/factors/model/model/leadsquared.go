@@ -7,6 +7,9 @@ import (
 const (
 	LEADSQUARED_LEAD           = "lead"
 	LEADSQUARED_SALES_ACTIVITY = "sales_activity"
+	LEADSQUARED_EMAIL_SENT = "email_sent"
+	LEADSQUARED_EMAIL_INFO = "email_info"
+	LEADSQUARED_HAD_A_CALL = "had_a_call"
 )
 
 var LeadSquaredDocumentToQuery = map[string]string{
@@ -14,15 +17,28 @@ var LeadSquaredDocumentToQuery = map[string]string{
 		" WHERE %v AND ProspectAutoId > %v order by ProspectAutoId asc LIMIT %v OFFSET 0",
 	LEADSQUARED_SALES_ACTIVITY: "select * FROM `%s.%s.sales_activity`" +
 		" WHERE %v AND CreatedOnUnix > %v order by CreatedOnUnix asc LIMIT %v OFFSET 0", // fix this
+	LEADSQUARED_EMAIL_SENT: "select * FROM `%s.%s.sales_activity`" +
+		" WHERE %v AND CreatedOnUnix > %v order by CreatedOnUnix asc LIMIT %v OFFSET 0", // fix this
+	LEADSQUARED_EMAIL_INFO: "select * FROM `%s.%s.sales_activity`" +
+		" WHERE %v AND CreatedOnUnix > %v order by CreatedOnUnix asc LIMIT %v OFFSET 0", // fix this
+	LEADSQUARED_HAD_A_CALL: "select * FROM `%s.%s.sales_activity`" +
+		" WHERE %v AND CreatedOnUnix > %v order by CreatedOnUnix asc LIMIT %v OFFSET 0", // fix this
 }
+
 var LeadSquaredDocumentEndpoint = map[string]string{
 	LEADSQUARED_LEAD:           "/v2/LeadManagement.svc/Leads.RecentlyModified",
 	LEADSQUARED_SALES_ACTIVITY: "/v2/ProspectActivity.svc/CustomActivity/RetrieveByActivityEvent",
+	LEADSQUARED_EMAIL_SENT: "/v2/ProspectActivity.svc/CustomActivity/RetrieveByActivityEvent",
+	LEADSQUARED_EMAIL_INFO: "/v2/ProspectActivity.svc/CustomActivity/RetrieveByActivityEvent",
+	LEADSQUARED_HAD_A_CALL: "/v2/ProspectActivity.svc/CustomActivity/RetrieveByActivityEvent",
 }
 
 var LeadSquaredMetadataEndpoint = map[string]string{
 	LEADSQUARED_LEAD:           "/v2/LeadManagement.svc/LeadsMetaData.Get",
 	LEADSQUARED_SALES_ACTIVITY: "/v2/ProspectActivity.svc/CustomActivity/GetActivitySetting",
+	LEADSQUARED_EMAIL_SENT: "/v2/ProspectActivity.svc/CustomActivity/GetActivitySetting",
+	LEADSQUARED_EMAIL_INFO: "/v2/ProspectActivity.svc/CustomActivity/GetActivitySetting",
+	LEADSQUARED_HAD_A_CALL: "/v2/ProspectActivity.svc/CustomActivity/GetActivitySetting",
 }
 
 var LeadSquaredHistoricalSyncEndpoint = map[string]string{
@@ -32,16 +48,25 @@ var LeadSquaredHistoricalSyncEndpoint = map[string]string{
 var LeadSquaredTableName = map[string]string{
 	LEADSQUARED_LEAD:           "lead",
 	LEADSQUARED_SALES_ACTIVITY: "sales_activity",
+	LEADSQUARED_EMAIL_SENT: "email_sent",
+	LEADSQUARED_EMAIL_INFO: "email_info",
+	LEADSQUARED_HAD_A_CALL: "had_a_call",
 }
 
 var LeadSquaredDataObjectColumnsQuery = map[string]string{
 	LEADSQUARED_LEAD:           "SELECT * FROM `%s.%s.INFORMATION_SCHEMA.COLUMNS` WHERE table_name = 'lead' ORDER by ordinal_position",
 	LEADSQUARED_SALES_ACTIVITY: "SELECT * FROM `%s.%s.INFORMATION_SCHEMA.COLUMNS` WHERE table_name = 'sales_activity' ORDER by ordinal_position",
+	LEADSQUARED_EMAIL_SENT: "SELECT * FROM `%s.%s.INFORMATION_SCHEMA.COLUMNS` WHERE table_name = 'email_sent' ORDER by ordinal_position",
+	LEADSQUARED_EMAIL_INFO: "SELECT * FROM `%s.%s.INFORMATION_SCHEMA.COLUMNS` WHERE table_name = 'email_info' ORDER by ordinal_position",
+	LEADSQUARED_HAD_A_CALL: "SELECT * FROM `%s.%s.INFORMATION_SCHEMA.COLUMNS` WHERE table_name = 'had_a_call' ORDER by ordinal_position",
 }
 
 var LeadSquaredDocTypeIntegrationObjectMap = map[string]string{
 	LEADSQUARED_LEAD:           "user",
 	LEADSQUARED_SALES_ACTIVITY: "activity",
+	LEADSQUARED_EMAIL_SENT: "activity",
+	LEADSQUARED_EMAIL_INFO: "activity",
+	LEADSQUARED_HAD_A_CALL: "activity",
 }
 
 var LeadSquaredUserIdMapping = map[string]string{
@@ -51,6 +76,9 @@ var LeadSquaredUserIdMapping = map[string]string{
 var LeadSquaredUserAutoIdMapping = map[string]string{
 	LEADSQUARED_LEAD:           "ProspectAutoId",
 	LEADSQUARED_SALES_ACTIVITY: "CreatedOnUnix",
+	LEADSQUARED_EMAIL_SENT: "CreatedOnUnix",
+	LEADSQUARED_EMAIL_INFO: "CreatedOnUnix",
+	LEADSQUARED_HAD_A_CALL: "CreatedOnUnix",
 }
 
 var LeadSquaredEmailMapping = map[string]string{
@@ -64,33 +92,54 @@ var LeadSquaredPhoneMapping = map[string]string{
 var LeadSquaredDocumentTypeAlias = map[string]int{
 	LEADSQUARED_LEAD:           1,
 	LEADSQUARED_SALES_ACTIVITY: 2,
+	LEADSQUARED_EMAIL_SENT: 3,
+	LEADSQUARED_EMAIL_INFO: 4,
+	LEADSQUARED_HAD_A_CALL: 5,
 }
 
 var LeadSquaredDataObjectFilters = map[string]string{
 	LEADSQUARED_LEAD:           "DATE(%v) = '%v'",
 	LEADSQUARED_SALES_ACTIVITY: "DATE(%v) = '%v'",
+	LEADSQUARED_EMAIL_SENT: "DATE(%v) = '%v'",
+	LEADSQUARED_EMAIL_INFO: "DATE(%v) = '%v'",
+	LEADSQUARED_HAD_A_CALL: "DATE(%v) = '%v'",
 }
 
 var LeadSquaredDataObjectFiltersColumn = map[string]string{
 	LEADSQUARED_LEAD:           "synced_at",
 	LEADSQUARED_SALES_ACTIVITY: "synced_at",
+	LEADSQUARED_EMAIL_SENT: "synced_at",
+	LEADSQUARED_EMAIL_INFO: "synced_at",
+	LEADSQUARED_HAD_A_CALL: "synced_at",
 }
 
 var LeadSquaredTimestampMapping = map[string][]string{
 	LEADSQUARED_LEAD:           []string{"CreatedOn", "CreatedOn", "ModifiedOn"},
 	LEADSQUARED_SALES_ACTIVITY: []string{"CreatedOn", "ModifiedOn"},
+	LEADSQUARED_EMAIL_SENT: []string{"CreatedOn", "ModifiedOn"},
+	LEADSQUARED_EMAIL_INFO: []string{"CreatedOn", "ModifiedOn"},
+	LEADSQUARED_HAD_A_CALL: []string{"CreatedOn", "ModifiedOn"},
 }
 
 var LeadSquaredProgramIdMapping = map[string]string{
 	LEADSQUARED_SALES_ACTIVITY: "ProspectActivityId",
+	LEADSQUARED_EMAIL_SENT: "ProspectActivityId",
+	LEADSQUARED_EMAIL_INFO: "ProspectActivityId",
+	LEADSQUARED_HAD_A_CALL: "ProspectActivityId",
 }
 
 var LeadSquaredActorTypeMapping = map[string]string{
 	LEADSQUARED_SALES_ACTIVITY: LEADSQUARED_LEAD,
+	LEADSQUARED_EMAIL_SENT: LEADSQUARED_LEAD,
+	LEADSQUARED_EMAIL_INFO: LEADSQUARED_LEAD,
+	LEADSQUARED_HAD_A_CALL: LEADSQUARED_LEAD,
 }
 
 var LeadSquaredActorIdMapping = map[string]string{
 	LEADSQUARED_SALES_ACTIVITY: "RelatedProspectId",
+	LEADSQUARED_EMAIL_SENT: "RelatedProspectId",
+	LEADSQUARED_EMAIL_INFO: "RelatedProspectId",
+	LEADSQUARED_HAD_A_CALL: "RelatedProspectId",
 }
 
 func GetLeadSquaredTypeToAliasMap(aliasType map[string]int) map[int]string {
@@ -106,6 +155,15 @@ func GetLeadSquaredDocumentQuery(bigQueryProjectId string, schemaId string, base
 		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId, GetLeadSquaredDocumentFilterCondition(docType, false, "", executionDate), lastProcessedId, limit)
 	}
 	if docType == LEADSQUARED_SALES_ACTIVITY {
+		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId, GetLeadSquaredDocumentFilterCondition(docType, false, "", executionDate), lastProcessedId, limit)
+	}
+	if docType == LEADSQUARED_EMAIL_SENT {
+		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId, GetLeadSquaredDocumentFilterCondition(docType, false, "", executionDate), lastProcessedId, limit)
+	}
+	if docType == LEADSQUARED_EMAIL_INFO {
+		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId, GetLeadSquaredDocumentFilterCondition(docType, false, "", executionDate), lastProcessedId, limit)
+	}
+	if docType == LEADSQUARED_HAD_A_CALL {
 		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId, GetLeadSquaredDocumentFilterCondition(docType, false, "", executionDate), lastProcessedId, limit)
 	}
 	return ""
@@ -145,6 +203,15 @@ func GetLeadSquaredDocumentMetadataQuery(docType string, bigQueryProjectId strin
 		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId), true
 	}
 	if docType == LEADSQUARED_SALES_ACTIVITY {
+		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId), true
+	}
+	if docType == LEADSQUARED_EMAIL_SENT {
+		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId), true
+	}
+	if docType == LEADSQUARED_EMAIL_INFO {
+		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId), true
+	}
+	if docType == LEADSQUARED_HAD_A_CALL {
 		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId), true
 	}
 	return "", false

@@ -1,3 +1,5 @@
+@import '../../../../styles/abstracts/variables';
+
 $textColor: #3e516c;
 
 .ungroupedChart {
@@ -46,7 +48,7 @@ $textColor: #3e516c;
     background: #ffffff;
     border: 1px solid #e7e9ed;
     border-radius: 12px;
-    font-family: 'Work Sans', sans-serif;
+    font-family: $font-family;
     font-weight: 400;
     word-wrap: break-word;
     box-shadow: 0px 6px 20px rgba(0, 0, 0, 0.2);
@@ -61,7 +63,7 @@ $textColor: #3e516c;
 .valueText {
   font-weight: 600;
   font-size: 14px;
-  font-family: 'Work Sans', sans-serif;
+  font-family: $font-family;
 }
 
 .overAllConversionLine {

@@ -11,6 +11,7 @@ import { INITIALIZE_GROUPBY } from '../../../reducers/coreQuery/actions';
 import { useDispatch } from 'react-redux';
 import ORButton from '../../ORButton';
 import { compareFilters, groupFilters } from '../../../utils/global';
+import { TOOLTIP_CONSTANTS } from '../../../constants/tooltips.constans';
 
 function ProfileBlock({
   index,
@@ -177,13 +178,18 @@ function ProfileBlock({
     return (
       <div className={`fa--query_block--actions-cols flex`}>
         <div className={`relative`}>
-          <Button
-            type='text'
-            onClick={() => setMoreOptions(true)}
-            className={`fa-btn--custom mr-1 btn-total-round`}
-          >
-            <SVG name='more'></SVG>
-          </Button>
+          <Tooltip 
+            title="Filter this Profile"
+            color={TOOLTIP_CONSTANTS.DARK}
+            >
+            <Button
+              type='text'
+              onClick={() => setMoreOptions(true)}
+              className={`fa-btn--custom mr-1 btn-total-round`}
+            >
+              <SVG name='more'></SVG>
+            </Button>
+          </Tooltip>
 
           {moreOptions ? (
             <FaSelect
@@ -205,9 +211,14 @@ function ProfileBlock({
             alias={event.alias}
           ></AliasModal>
         </div>
-        <Button type='text' onClick={deleteItem} className={`fa-btn--custom btn-total-round`}>
-          <SVG name='trash'></SVG>
-        </Button>
+        <Tooltip
+          title='Delete this Profile'
+          color={TOOLTIP_CONSTANTS.DARK}
+          >
+          <Button type='text' onClick={deleteItem} className={`fa-btn--custom btn-total-round`}>
+            <SVG name='trash'></SVG>
+          </Button>
+        </Tooltip>
       </div>
     );
   };
