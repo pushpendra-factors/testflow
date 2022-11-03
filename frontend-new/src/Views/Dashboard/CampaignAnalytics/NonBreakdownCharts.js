@@ -6,6 +6,7 @@ import {
 import ChartHeader from '../../../components/SparkLineChart/ChartHeader';
 import SparkChart from '../../../components/SparkLineChart/Chart';
 import { generateColors, isSeriesChart } from '../../../utils/dataFormatter';
+import { CHART_COLOR_1 } from '../../../constants/color.constants';
 import LineChart from '../../../components/HCLineChart';
 import NoBreakdownTable from '../../CoreQuery/CampaignAnalytics/NoBreakdownCharts/NoBreakdownTable';
 import {
@@ -46,7 +47,7 @@ function NoBreakdownCharts({
 
   if (!chartsData.length) {
     return (
-      <div className="flex justify-center items-center w-full h-full pt-4 pb-4">
+      <div className='flex justify-center items-center w-full h-full pt-4 pb-4'>
         <NoDataChart />
       </div>
     );
@@ -78,18 +79,18 @@ function NoBreakdownCharts({
         >
           <div className={unit.cardSize === 1 ? 'w-1/4' : 'w-full'}>
             <ChartHeader
-              bgColor="#4D7DB4"
+              bgColor={CHART_COLOR_1}
               query={chartsData[0].name}
               total={chartsData[0].total}
             />
           </div>
           <div className={unit.cardSize === 1 ? 'w-3/4' : 'w-full'}>
             <SparkChart
-              frequency="date"
-              page="campaigns"
+              frequency='date'
+              page='campaigns'
               event={chartsData[0].mapper}
               chartData={chartsData[0].dataOverTime}
-              chartColor="#4D7DB4"
+              chartColor={CHART_COLOR_1}
               height={unit.cardSize === 1 ? 180 : 100}
               title={unit.id}
             />
@@ -113,19 +114,19 @@ function NoBreakdownCharts({
           {chartsData.slice(0, 3).map((chartData, index) => {
             if (unit.cardSize === 0) {
               return (
-                <div className="flex items-center w-full justify-center">
+                <div className='flex items-center w-full justify-center'>
                   <Text
-                    extraClass="flex items-center w-1/4 justify-center"
+                    extraClass='flex items-center w-1/4 justify-center'
                     type={'title'}
                     level={3}
                     weight={'bold'}
                   >
                     <NumFormat shortHand={true} number={chartData.total} />
                   </Text>
-                  <div className="w-2/3">
+                  <div className='w-2/3'>
                     <SparkChart
-                      frequency="date"
-                      page="campaigns"
+                      frequency='date'
+                      page='campaigns'
                       event={chartData.mapper}
                       chartData={chartData.dataOverTime}
                       chartColor={appliedColors[index]}
@@ -140,18 +141,18 @@ function NoBreakdownCharts({
                 <div
                   style={{ minWidth: '300px' }}
                   key={chartData.index}
-                  className="w-1/3 mt-4 px-1"
+                  className='w-1/3 mt-4 px-1'
                 >
-                  <div className="flex flex-col">
+                  <div className='flex flex-col'>
                     <ChartHeader
                       total={chartData.total}
                       query={chartData.name}
                       bgColor={appliedColors[index]}
                     />
-                    <div className="mt-4">
+                    <div className='mt-4'>
                       <SparkChart
-                        frequency="date"
-                        page="campaigns"
+                        frequency='date'
+                        page='campaigns'
                         event={chartData.mapper}
                         chartData={chartData.dataOverTime}
                         chartColor={appliedColors[index]}
@@ -167,9 +168,9 @@ function NoBreakdownCharts({
                 <div
                   style={{ minWidth: '300px' }}
                   key={chartData.index}
-                  className="w-1/3 mt-6 px-1"
+                  className='w-1/3 mt-6 px-1'
                 >
-                  <div className="flex flex-col">
+                  <div className='flex flex-col'>
                     <ChartHeader
                       total={chartData.total}
                       query={chartData.name}
@@ -187,11 +188,11 @@ function NoBreakdownCharts({
   } else if (chartType === CHART_TYPE_LINECHART) {
     chartContent = (
       <LineChart
-        frequency="date"
+        frequency='date'
         categories={categories}
         data={seriesData}
         height={DASHBOARD_WIDGET_AREA_CHART_HEIGHT}
-        legendsPosition="top"
+        legendsPosition='top'
         cardSize={unit.cardSize}
         chartId={`line-${unit.id}`}
       />

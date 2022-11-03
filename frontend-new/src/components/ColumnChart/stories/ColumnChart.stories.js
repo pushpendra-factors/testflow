@@ -1,4 +1,5 @@
 import React from 'react';
+import { CHART_COLOR_1 } from '../../../constants/color.constants';
 import ColumnChart from '../ColumnChart';
 
 export default {
@@ -20,7 +21,7 @@ export function DefaultChart() {
       series={[
         {
           data: [8550, 585, 81, 966, 632, 240],
-          color: '#4D7DB4'
+          color: CHART_COLOR_1
         }
       ]}
     />

@@ -9,6 +9,7 @@ import {
   BAR_CHART_XAXIS_TICK_LENGTH,
   FONT_FAMILY
 } from '../../utils/constants';
+import { CHART_COLOR_1 } from '../../constants/color.constants';
 
 function ColumnChart({
   series,
@@ -33,7 +34,7 @@ function ColumnChart({
               y: 0,
               width: 4,
               height: 4,
-              fill: '#4D7DB4'
+              fill: CHART_COLOR_1
             },
             {
               tagName: 'path',

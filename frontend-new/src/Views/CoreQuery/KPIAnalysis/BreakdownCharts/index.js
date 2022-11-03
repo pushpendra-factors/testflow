@@ -17,6 +17,7 @@ import {
   getDefaultSortProp
 } from './utils';
 import { getNewSorterState } from '../../../../utils/dataFormatter';
+import { CHART_COLOR_1 } from '../../../../constants/color.constants';
 import { CoreQueryContext } from '../../../../contexts/CoreQueryContext';
 import NoDataChart from '../../../../components/NoDataChart';
 import {
@@ -135,7 +136,7 @@ const BreakdownChartsComponent = forwardRef(
       const series = [
         {
           data: visibleProperties.map((v) => v.value),
-          color: '#4D7DB4'
+          color: CHART_COLOR_1
         }
       ];
       if (comparisonData.data != null) {
@@ -148,7 +149,7 @@ const BreakdownChartsComponent = forwardRef(
 
     if (!aggregateData.length) {
       return (
-        <div className="flex justify-center items-center w-full h-full pt-4 pb-4">
+        <div className='flex justify-center items-center w-full h-full pt-4 pb-4'>
           <NoDataChart />
         </div>
       );
@@ -156,7 +157,7 @@ const BreakdownChartsComponent = forwardRef(
 
     let chart = null;
     const table = (
-      <div className="mt-12 w-full">
+      <div className='mt-12 w-full'>
         <BreakdownTable
           kpis={kpis}
           data={aggregateData}
@@ -182,7 +183,7 @@ const BreakdownChartsComponent = forwardRef(
 
     if (chartType === CHART_TYPE_BARCHART) {
       chart = (
-        <div className="w-full">
+        <div className='w-full'>
           <ColumnChart
             comparisonApplied={comparisonData.data != null}
             categories={columnCategories}
@@ -192,7 +193,7 @@ const BreakdownChartsComponent = forwardRef(
       );
     } else if (chartType === CHART_TYPE_HORIZONTAL_BAR_CHART) {
       chart = (
-        <div className="w-full">
+        <div className='w-full'>
           <HorizontalBarChartTable
             breakdown={breakdown}
             aggregateData={aggregateData}
@@ -201,7 +202,7 @@ const BreakdownChartsComponent = forwardRef(
       );
     } else if (chartType === CHART_TYPE_LINECHART) {
       chart = (
-        <div className="w-full">
+        <div className='w-full'>
           <LineChart
             frequency={durationObj.frequency}
             categories={categories}
@@ -214,7 +215,7 @@ const BreakdownChartsComponent = forwardRef(
       );
     } else if (chartType === CHART_TYPE_STACKED_AREA) {
       chart = (
-        <div className="w-full">
+        <div className='w-full'>
           <StackedAreaChart
             frequency={durationObj.frequency}
             categories={categories}
@@ -225,7 +226,7 @@ const BreakdownChartsComponent = forwardRef(
       );
     } else if (chartType === CHART_TYPE_STACKED_BAR) {
       chart = (
-        <div className="w-full">
+        <div className='w-full'>
           <StackedBarChart
             frequency={durationObj.frequency}
             categories={categories}
@@ -236,7 +237,7 @@ const BreakdownChartsComponent = forwardRef(
       );
     } else if (chartType === CHART_TYPE_PIVOT_CHART) {
       chart = (
-        <div className="w-full">
+        <div className='w-full'>
           <PivotTable
             data={aggregateData}
             breakdown={breakdown}
@@ -247,7 +248,7 @@ const BreakdownChartsComponent = forwardRef(
     }
 
     return (
-      <div className="flex items-center justify-center flex-col">
+      <div className='flex items-center justify-center flex-col'>
         {chart}
         {table}
       </div>

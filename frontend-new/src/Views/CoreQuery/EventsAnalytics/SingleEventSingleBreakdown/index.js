@@ -28,6 +28,7 @@ import {
 import StackedAreaChart from '../../../../components/StackedAreaChart';
 import StackedBarChart from '../../../../components/StackedBarChart';
 import { getNewSorterState } from '../../../../utils/dataFormatter';
+import { CHART_COLOR_1 } from '../../../../constants/color.constants';
 import { CoreQueryContext } from '../../../../contexts/CoreQueryContext';
 import SingleEventSingleBreakdownHorizontalBarChart from './SingleEventSingleBreakdownHorizontalBarChart';
 import ColumnChart from '../../../../components/ColumnChart/ColumnChart';
@@ -112,7 +113,7 @@ const SingleEventSingleBreakdownComponent = forwardRef(
       const series = [
         {
           data: visibleProperties.map((v) => v.value),
-          color: '#4D7DB4'
+          color: CHART_COLOR_1
         }
       ];
       if (comparisonData.data != null) {

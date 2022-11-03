@@ -2,8 +2,12 @@ import React, { useMemo } from 'react';
 import GroupedBarChart from '../../../components/GroupedBarChart';
 import {
   ATTRIBUTION_METHODOLOGY,
-  REPORT_SECTION,
+  REPORT_SECTION
 } from '../../../utils/constants';
+import {
+  CHART_COLOR_1,
+  CHART_COLOR_3
+} from '../../../constants/color.constants';
 
 const DualTouchPointChart = ({
   attribution_method,
@@ -16,7 +20,7 @@ const DualTouchPointChart = ({
   cardSize = 1,
   chartId,
   height,
-  section = REPORT_SECTION,
+  section = REPORT_SECTION
 }) => {
   const attributionMethodsMapper = useMemo(() => {
     const mapper = {};
@@ -34,20 +38,20 @@ const DualTouchPointChart = ({
   });
 
   const getColors = () => {
-    return ['#4D7DB4', '#4CBCBD'];
+    return [CHART_COLOR_1, CHART_COLOR_3];
   };
 
   let legends, tooltipTitle;
   if (currMetricsValue) {
     legends = [
       `Cost Per Conversion (${attributionMethodsMapper[attribution_method]})`,
-      `Cost Per Conversion (${attributionMethodsMapper[attribution_method_compare]})`,
+      `Cost Per Conversion (${attributionMethodsMapper[attribution_method_compare]})`
     ];
     tooltipTitle = 'Cost Per Conversion';
   } else {
     legends = [
       `Conversions as Unique users (${attributionMethodsMapper[attribution_method]})`,
-      `Conversions as Unique users (${attributionMethodsMapper[attribution_method_compare]})`,
+      `Conversions as Unique users (${attributionMethodsMapper[attribution_method_compare]})`
     ];
     tooltipTitle = 'Conversions';
   }

@@ -10,6 +10,10 @@ import {
   SortResults
 } from '../../../utils/dataFormatter';
 import {
+  CHART_COLOR_1,
+  CHART_COLOR_8
+} from '../../../constants/color.constants';
+import {
   ATTRIBUTION_METHODOLOGY,
   FIRST_METRIC_IN_ATTR_RESPONSE,
   ARR_JOINER,
@@ -120,7 +124,7 @@ export const getSingleTouchPointChartData = (
           ? Number(row[seriesKeys[0]].value)
           : Number(row[[seriesKeys[0]]])
       ),
-      color: '#4d7db4'
+      color: CHART_COLOR_1
     },
     {
       type: 'line',
@@ -130,7 +134,7 @@ export const getSingleTouchPointChartData = (
           ? Number(row[seriesKeys[1]]?.value)
           : Number(row[seriesKeys[1]])
       ),
-      color: '#d4787d',
+      color: CHART_COLOR_8,
       marker: {
         symbol: 'circle'
       }
@@ -143,7 +147,7 @@ export const getSingleTouchPointChartData = (
       data: slicedTableData.map((row) =>
         Number(row[seriesKeys[0]].compare_value)
       ),
-      color: '#4d7db4'
+      color: CHART_COLOR_1
     });
     series.push({
       type: 'line',
@@ -151,7 +155,7 @@ export const getSingleTouchPointChartData = (
       data: slicedTableData.map((row) =>
         Number(row[seriesKeys[1]]?.compare_value)
       ),
-      color: '#d4787d',
+      color: CHART_COLOR_8,
       marker: {
         symbol: 'circle'
       },
@@ -266,13 +270,13 @@ export const formatData = (
       type: 'column',
       yAxis: 0,
       data: rows.map((row) => row[conversionIdx]),
-      color: '#4d7db4'
+      color: CHART_COLOR_1
     },
     {
       type: 'line',
       yAxis: 1,
       data: rows.map((row) => row[costIdx]),
-      color: '#d4787d',
+      color: CHART_COLOR_8,
       marker: {
         symbol: 'circle'
       }
@@ -291,7 +295,7 @@ export const formatData = (
           ? equivalent_compare_row[conversionIdx]
           : 0;
       }),
-      color: '#4d7db4'
+      color: CHART_COLOR_1
     });
     series.push({
       type: 'line',
@@ -303,7 +307,7 @@ export const formatData = (
             : null;
         return equivalent_compare_row ? equivalent_compare_row[costIdx] : 0;
       }),
-      color: '#d4787d',
+      color: CHART_COLOR_8,
       marker: {
         symbol: 'circle'
       },
@@ -1115,7 +1119,7 @@ export const getScatterPlotChartData = (
   const finalResult = {
     series: [
       {
-        color: '#4D7DB4',
+        color: CHART_COLOR_1,
         data: plotData
       }
     ],
@@ -1124,7 +1128,7 @@ export const getScatterPlotChartData = (
 
   if (isComparisonApplied) {
     finalResult.series.push({
-      color: '#d4787d',
+      color: CHART_COLOR_8,
       data: comparisonPlotData
     });
   }

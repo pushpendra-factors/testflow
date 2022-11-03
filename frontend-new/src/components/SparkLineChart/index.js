@@ -6,6 +6,7 @@ import SparkChart from './Chart';
 import { DASHBOARD_WIDGET_SECTION } from '../../utils/constants';
 import TopLegends from '../GroupedBarChart/TopLegends';
 import { Text, Number as NumFormat } from '../factorsComponents';
+import { CHART_COLOR_1 } from '../../constants/color.constants';
 
 function SparkLineChart({
   queries,
@@ -65,17 +66,17 @@ function SparkLineChart({
             return (
               <div
                 key={q + index}
-                className="flex items-center w-full justify-center"
+                className='flex items-center w-full justify-center'
               >
                 <Text
-                  extraClass="flex items-center w-1/4 justify-center"
+                  extraClass='flex items-center w-1/4 justify-center'
                   type={'title'}
                   level={3}
                   weight={'bold'}
                 >
                   <NumFormat shortHand={true} number={total} />
                 </Text>
-                <div className="w-2/3">
+                <div className='w-2/3'>
                   <SparkChart
                     frequency={frequency}
                     page={page}
@@ -94,9 +95,9 @@ function SparkLineChart({
               <div
                 style={{ minWidth: '300px' }}
                 key={q + index}
-                className="w-1/3 mt-4 px-4"
+                className='w-1/3 mt-4 px-4'
               >
-                <div className="flex flex-col">
+                <div className='flex flex-col'>
                   <ChartHeader
                     total={total}
                     query={
@@ -106,7 +107,7 @@ function SparkLineChart({
                     bgColor={appliedColors[index]}
                     eventNames={eventNames}
                   />
-                  <div className="mt-8">
+                  <div className='mt-8'>
                     <SparkChart
                       frequency={frequency}
                       page={page}
@@ -126,9 +127,9 @@ function SparkLineChart({
               <div
                 style={{ minWidth: '300px' }}
                 key={q + index}
-                className="w-1/3 mt-6 px-4"
+                className='w-1/3 mt-6 px-4'
               >
-                <div className="flex flex-col">
+                <div className='flex flex-col'>
                   <ChartHeader
                     total={total}
                     query={
@@ -160,21 +161,21 @@ function SparkLineChart({
           cardSize !== 1 ? 'flex-col' : ''
         }`}
       >
-        <div className={'h-full '+cardSize === 1 ? 'w-1/4' : 'w-full'}>
+        <div className={'h-full ' + cardSize === 1 ? 'w-1/4' : 'w-full'}>
           <ChartHeader
-            bgColor="#4D7DB4"
+            bgColor={CHART_COLOR_1}
             query={queries[0]}
             total={total}
             eventNames={eventNames}
           />
         </div>
-        <div className={'h-full '+cardSize === 1 ? 'w-3/4' : 'w-full'}>
+        <div className={'h-full ' + cardSize === 1 ? 'w-3/4' : 'w-full'}>
           <SparkChart
             frequency={frequency}
             page={page}
             event={mapper}
             chartData={chartsData}
-            chartColor="#4D7DB4"
+            chartColor={CHART_COLOR_1}
             height={height}
             title={title}
             eventTitle={eventName}

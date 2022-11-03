@@ -13,18 +13,30 @@ import {
   DATE_FORMATS
 } from './constants';
 import { Text } from '../components/factorsComponents';
+import {
+  CHART_COLOR_1,
+  CHART_COLOR_2,
+  CHART_COLOR_3,
+  CHART_COLOR_4,
+  CHART_COLOR_5,
+  CHART_COLOR_6,
+  CHART_COLOR_7,
+  CHART_COLOR_8,
+  CHART_COLOR_9,
+  CHART_COLOR_10
+} from '../constants/color.constants';
 
 export const visualizationColors = [
-  '#4D7DB4',
-  '#4C9FC8',
-  '#4CBCBD',
-  '#86D3A3',
-  '#CCC36D',
-  '#F9C06E',
-  '#E89E7B',
-  '#D4787D',
-  '#B87B7E',
-  '#9982B5'
+  CHART_COLOR_1,
+  CHART_COLOR_2,
+  CHART_COLOR_3,
+  CHART_COLOR_4,
+  CHART_COLOR_5,
+  CHART_COLOR_6,
+  CHART_COLOR_7,
+  CHART_COLOR_8,
+  CHART_COLOR_9,
+  CHART_COLOR_10
 ];
 
 export const numberWithCommas = (x) =>

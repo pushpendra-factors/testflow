@@ -11,6 +11,7 @@ import BarChart from '../../../../components/BarChart';
 import EventBreakdownTable from './EventBreakdownTable';
 import ChartHeader from '../../../../components/SparkLineChart/ChartHeader';
 import { CoreQueryContext } from '../../../../contexts/CoreQueryContext';
+import { CHART_COLOR_1 } from '../../../../constants/color.constants';
 
 const EventBreakdownCharts = forwardRef(({ data, breakdown, section }, ref) => {
   const {
@@ -34,8 +35,8 @@ const EventBreakdownCharts = forwardRef(({ data, breakdown, section }, ref) => {
   }, [chartsData, sorter]);
 
   useImperativeHandle(ref, () => ({
-      currentSorter: { sorter }
-    }));
+    currentSorter: { sorter }
+  }));
 
   if (!chartsData.length) {
     return (
@@ -67,8 +68,8 @@ const EventBreakdownCharts = forwardRef(({ data, breakdown, section }, ref) => {
       <ChartHeader
         eventNames={eventNames}
         total={data.rows[0]}
-        query="Count"
-        bgColor='#4D7DB4'
+        query='Count'
+        bgColor={CHART_COLOR_1}
       />
     );
   }
