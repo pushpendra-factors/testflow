@@ -396,7 +396,7 @@ func (store *MemSQL) getLatestUserIDByCustomerUserId(projectId int64,
 	var user model.User
 	db := C.GetServices().Db
 	if !C.CheckRestrictReusingUsersByCustomerUserId(projectId) {
-		if err := db.Limit(1).Order("created_at DESC").Where("project_id = ?", projectId).
+		if err := db.Limit(1).Select("id").Order("created_at DESC").Where("project_id = ?", projectId).
 			Where("customer_user_id = ?", customerUserId).Find(&user).Error; err != nil {
 			if gorm.IsRecordNotFoundError(err) {
 				return nil, http.StatusNotFound
