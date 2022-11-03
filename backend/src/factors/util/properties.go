@@ -3062,6 +3062,17 @@ func isDateTimePropertyByName(propertyKey string) bool {
 	return false
 }
 
+func GetPropertyTypeByName(propertyName string) string {
+	// PropertyKey will be set to null if the pre-mentioned classfication behaviour need to be supressed
+	if isDateTimePropertyByName(propertyName) {
+		return PropertyTypeDateTime
+	}
+	if isNumericalPropertyByName(propertyName) {
+		return PropertyTypeNumerical
+	}
+	return PropertyTypeCategorical
+}
+
 func GetPropertyTypeByKeyORValue(projectID int64, eventName string, propertyKey string, propertyValue interface{}, isUserProperty bool) (string, bool) {
 	// PropertyKey will be set to null if the pre-mentioned classfication behaviour need to be supressed
 	if propertyKey != "" {

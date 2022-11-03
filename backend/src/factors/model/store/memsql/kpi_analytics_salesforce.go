@@ -78,19 +78,22 @@ func (store *MemSQL) getConfigForSpecificSalesforceCategory(projectID int64, req
 }
 
 func (store *MemSQL) getPropertiesForSalesforceByDisplayCategory(projectID int64, reqID, displayCategory string) []map[string]string {
+	finalProperties := make([]map[string]string, 0)
+	standardUserProperties := model.GetKPIConfigFromStandardUserProperties()
 	switch displayCategory {
 	case model.SalesforceOpportunitiesDisplayCategory:
-		return store.GetPropertiesForSalesforceOpportunities(projectID, reqID)
+		finalProperties = store.GetPropertiesForSalesforceOpportunities(projectID, reqID)
 	case model.SalesforceAccountsDisplayCategory:
-		return store.GetPropertiesForSalesforceAccounts(projectID, reqID)
+		finalProperties = store.GetPropertiesForSalesforceAccounts(projectID, reqID)
 	case model.SalesforceUsersDisplayCategory:
-		return store.GetPropertiesForSalesforceUsers(projectID, reqID)
+		finalProperties = append(standardUserProperties, store.GetPropertiesForSalesforceUsers(projectID, reqID)...)
 	default:
 		log.WithFields(log.Fields{"project_id": projectID, "req_id": reqID, "display_category": displayCategory}).
 			Error("Invalid category on GetPropertiesForSalesforceByDisplayCategory.")
-		return []map[string]string{}
-
+		return finalProperties
 	}
+
+	return finalProperties
 }
 
 func (store *MemSQL) GetPropertiesForSalesforceUsers(projectID int64, reqID string) []map[string]string {
