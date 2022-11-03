@@ -2005,10 +2005,6 @@ func IsLastComputedWhitelisted(projectId int64) bool {
 	return false
 }
 
-func IsMultipleProjectTimezoneEnabled(projectId int64) bool {
-	return true
-}
-
 func IsLoggedInUserWhitelistedForProjectAnalytics(loggedInUUID string) bool {
 	for _, uuid := range configuration.ProjectAnalyticsWhitelistedUUIds {
 		if uuid == loggedInUUID {

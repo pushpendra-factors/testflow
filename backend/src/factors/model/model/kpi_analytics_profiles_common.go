@@ -201,7 +201,7 @@ func getTransformedRowsForProfileResults(rows [][]interface{}, hasGroupByTimesta
 }
 
 // Here we are considering only one transformation
-func HandlingProfileResultsByApplyingOperations(results []QueryResult, profileQueries []ProfileQuery, timezone string, isTimezoneEnabled bool) QueryResult {
+func HandlingProfileResultsByApplyingOperations(results []QueryResult, profileQueries []ProfileQuery, timezone string) QueryResult {
 	resultKeys := getAllKeysFromResultsArray(results)
 	var finalResult QueryResult
 	finalResultRows := make([][]interface{}, 0)
@@ -222,7 +222,7 @@ func HandlingProfileResultsByApplyingOperations(results []QueryResult, profileQu
 		for _, column := range columns[:len(columns)-1] {
 			if strings.HasPrefix(column, "dat$") {
 				unixValue, _ := strconv.ParseInt(strings.TrimPrefix(column, "dat$"), 10, 64)
-				columnValue, _ := U.GetTimeFromUnixTimestampWithZone(unixValue, timezone, isTimezoneEnabled)
+				columnValue, _ := U.GetTimeFromUnixTimestampWithZone(unixValue, timezone)
 				row = append(row, columnValue)
 			} else {
 				row = append(row, column)

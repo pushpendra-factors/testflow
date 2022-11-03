@@ -1,7 +1,6 @@
 package postgres
 
 import (
-	C "factors/config"
 	"factors/model/model"
 	"net/http"
 	"reflect"
@@ -13,12 +12,8 @@ import (
 func (pg *Postgres) ExecuteKPIQueryGroup(projectID uint64, reqID string, kpiQueryGroup model.KPIQueryGroup) ([]model.QueryResult, int) {
 	var queryResults []model.QueryResult
 	finalStatusCode := http.StatusOK
-	isTimezoneEnabled := false
 	kpiTimezoneString := string(kpiQueryGroup.GetTimeZone())
 	hashMapOfQueryToResult := make(map[string][]model.QueryResult)
-	if C.IsMultipleProjectTimezoneEnabled(projectID) {
-		isTimezoneEnabled = true
-	}
 	for index, query := range kpiQueryGroup.Queries {
 		kpiQueryGroup.Queries[index].Filters = append(query.Filters, kpiQueryGroup.GlobalFilters...)
 		kpiQueryGroup.Queries[index].GroupBy = kpiQueryGroup.GlobalGroupBy
@@ -75,8 +70,8 @@ func (pg *Postgres) ExecuteKPIQueryGroup(projectID uint64, reqID string, kpiQuer
 
 	gbtRelatedQueryResults, nonGbtRelatedQueryResults, gbtRelatedQueries, nonGbtRelatedQueries := model.SplitQueryResultsIntoGBTAndNonGBT(queryResults, kpiQueryGroup, finalStatusCode)
 	finalQueryResult := make([]model.QueryResult, 0)
-	gbtRelatedMergedResults := model.MergeQueryResults(gbtRelatedQueryResults, gbtRelatedQueries, kpiTimezoneString, finalStatusCode, isTimezoneEnabled)
-	nonGbtRelatedMergedResults := model.MergeQueryResults(nonGbtRelatedQueryResults, nonGbtRelatedQueries, kpiTimezoneString, finalStatusCode, isTimezoneEnabled)
+	gbtRelatedMergedResults := model.MergeQueryResults(gbtRelatedQueryResults, gbtRelatedQueries, kpiTimezoneString, finalStatusCode)
+	nonGbtRelatedMergedResults := model.MergeQueryResults(nonGbtRelatedQueryResults, nonGbtRelatedQueries, kpiTimezoneString, finalStatusCode)
 	if (!reflect.DeepEqual(model.QueryResult{}, gbtRelatedMergedResults)) {
 		finalQueryResult = append(finalQueryResult, gbtRelatedMergedResults)
 	}

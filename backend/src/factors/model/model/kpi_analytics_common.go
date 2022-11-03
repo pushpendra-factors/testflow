@@ -862,7 +862,7 @@ func EvaluateKPIExpressionWithBraces(mapOfFormulaVariableToQueryResult map[strin
 				ops := make([]string, 0)
 				ops = append(ops, op)
 				operatorStack = operatorStack[:len(operatorStack)-1]
-				valueStack = append(valueStack, HandlingEventResultsByApplyingOperations(results, ops, timezone, true)) // apply operations and return result
+				valueStack = append(valueStack, HandlingEventResultsByApplyingOperations(results, ops, timezone)) // apply operations and return result
 			}
 			if len(operatorStack) != 0 {
 				operatorStack = operatorStack[:len(operatorStack)-1]
@@ -880,7 +880,7 @@ func EvaluateKPIExpressionWithBraces(mapOfFormulaVariableToQueryResult map[strin
 				ops := make([]string, 0)
 				ops = append(ops, op)
 				operatorStack = operatorStack[:len(operatorStack)-1]
-				valueStack = append(valueStack, HandlingEventResultsByApplyingOperations(results, ops, timezone, true)) // apply operations and return result
+				valueStack = append(valueStack, HandlingEventResultsByApplyingOperations(results, ops, timezone)) // apply operations and return result
 			}
 			operatorStack = append(operatorStack, currentFormulaVariable)
 		}
@@ -898,7 +898,7 @@ func EvaluateKPIExpressionWithBraces(mapOfFormulaVariableToQueryResult map[strin
 		ops := make([]string, 0)
 		ops = append(ops, op)
 		operatorStack = operatorStack[:len(operatorStack)-1]
-		valueStack = append(valueStack, HandlingEventResultsByApplyingOperations(results, ops, timezone, true))
+		valueStack = append(valueStack, HandlingEventResultsByApplyingOperations(results, ops, timezone))
 	}
 	return valueStack[len(valueStack)-1]
 }
@@ -960,7 +960,7 @@ func SplitQueryResultsIntoGBTAndNonGBT(queryResults []QueryResult, kpiQueryGroup
 	return gbtRelatedQueryResults, nonGbtRelatedQueryResults, gbtRelatedQueries, nonGbtRelatedQueries
 }
 
-func MergeQueryResults(queryResults []QueryResult, queries []KPIQuery, timezoneString string, finalStatusCode int, isTimezoneEnabled bool) QueryResult {
+func MergeQueryResults(queryResults []QueryResult, queries []KPIQuery, timezoneString string, finalStatusCode int) QueryResult {
 	if finalStatusCode != http.StatusOK || len(queryResults) == 0 {
 		queryResult := QueryResult{}
 		return queryResult
@@ -968,7 +968,7 @@ func MergeQueryResults(queryResults []QueryResult, queries []KPIQuery, timezoneS
 
 	queryResult := QueryResult{}
 	queryResult.Headers = TransformColumnResultGroup(queryResults, queries, timezoneString)
-	queryResult.Rows = TransformRowsResultGroup(queryResults, timezoneString, isTimezoneEnabled)
+	queryResult.Rows = TransformRowsResultGroup(queryResults, timezoneString)
 	return queryResult
 }
 
@@ -998,12 +998,12 @@ func TransformColumnResultGroup(queryResults []QueryResult, queries []KPIQuery, 
 // 1. Make an empty hashMap with key and value as array of 0's as prefixed values.
 // 2. Add the values to hashMap. Here keys are contextual to kpi and will not be duplicate.
 // 3. Convert Map to 2d Array and then sort.
-func TransformRowsResultGroup(queryResults []QueryResult, timezoneString string, isTimezoneEnabled bool) [][]interface{} {
+func TransformRowsResultGroup(queryResults []QueryResult, timezoneString string) [][]interface{} {
 	resultAsMap := GetResultAsMap(queryResults)
 
 	currentResultantRows := make([][]interface{}, 0, 0)
 	for key, value := range resultAsMap {
-		currentRow := SplitKeysAndGetRow(key, timezoneString, isTimezoneEnabled)
+		currentRow := SplitKeysAndGetRow(key, timezoneString)
 		currentRow = append(currentRow, value...)
 		currentResultantRows = append(currentResultantRows, currentRow)
 	}
@@ -1038,13 +1038,13 @@ func GetResultAsMap(queryResults []QueryResult) map[string][]interface{} {
 	return resultAsMap
 }
 
-func SplitKeysAndGetRow(key string, timezoneString string, isTimezoneEnabled bool) []interface{} {
+func SplitKeysAndGetRow(key string, timezoneString string) []interface{} {
 	currentRow := make([]interface{}, 0)
 	columns := strings.Split(key, ":;")
 	for _, column := range columns[:len(columns)-1] {
 		if strings.HasPrefix(column, "dat$") {
 			unixValue, _ := strconv.ParseInt(strings.TrimPrefix(column, "dat$"), 10, 64)
-			columnValue, _ := U.GetTimeFromUnixTimestampWithZone(unixValue, timezoneString, isTimezoneEnabled)
+			columnValue, _ := U.GetTimeFromUnixTimestampWithZone(unixValue, timezoneString)
 			currentRow = append(currentRow, columnValue)
 		} else {
 			currentRow = append(currentRow, column)

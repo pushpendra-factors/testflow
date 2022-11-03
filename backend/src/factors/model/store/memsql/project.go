@@ -554,9 +554,6 @@ func (store *MemSQL) GetTimezoneForProject(projectID int64) (U.TimeZoneString, i
 	if statusCode != http.StatusFound {
 		return U.TimeZoneStringIST, statusCode
 	}
-	if !C.IsMultipleProjectTimezoneEnabled(projectID) {
-		return U.TimeZoneStringIST, http.StatusFound
-	}
 	if project.TimeZone == "" {
 		log.WithField("projectId", project.ID).Error("This project has been set with no timezone")
 		return U.TimeZoneStringIST, http.StatusFound

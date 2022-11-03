@@ -564,7 +564,7 @@ func ConvertKPIQueryToInternalEventQueriesAndTransformations(projectID int64, qu
 // Each KPI metric is internally converted to event analytics.
 // Considering all rows to be equal in size because of analytics response.
 // resultAsMap - key with groupByColumns, value as row.
-func HandlingEventResultsByApplyingOperations(results []*QueryResult, operations []string, timezone string, isTimezoneEnabled bool) QueryResult {
+func HandlingEventResultsByApplyingOperations(results []*QueryResult, operations []string, timezone string) QueryResult {
 	resultKeys := getAllKeysFromResults(results)
 	var finalResult QueryResult
 	finalResultRows := make([][]interface{}, 0)
@@ -592,7 +592,7 @@ func HandlingEventResultsByApplyingOperations(results []*QueryResult, operations
 	}
 
 	for key, value := range resultKeys {
-		row := SplitKeysAndGetRow(key, timezone, isTimezoneEnabled)
+		row := SplitKeysAndGetRow(key, timezone)
 		row = append(row, value)
 		finalResultRows = append(finalResultRows, row)
 	}

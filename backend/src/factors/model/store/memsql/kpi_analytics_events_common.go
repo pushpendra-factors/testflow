@@ -1,15 +1,12 @@
 package memsql
 
 import (
-	C "factors/config"
 	"factors/model/model"
 	"net/http"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 )
-
-// TODO: Handle cases for execution after that.
 
 // We convert kpi Query to eventQueries by applying transformation.
 func (store *MemSQL) ExecuteKPIQueryForEvents(projectID int64, reqID string,
@@ -82,8 +79,6 @@ func (store *MemSQL) ExecuteEventsForSingleKPIMetric(projectID int64, query mode
 	return store.executeForResults(projectID, currentQueries, kpiQuery, transformations, enableFilterOpt)
 }
 
-// Kark current.
-// IsMultipleProjectTimezoneEnabled tackle separately.
 func (store *MemSQL) executeForResults(projectID int64, queries []model.Query, kpiQuery model.KPIQuery,
 	transformations []model.TransformQueryi, enableFilterOpt bool) (model.QueryResult, int) {
 	logFields := log.Fields{
@@ -98,10 +93,6 @@ func (store *MemSQL) executeForResults(projectID int64, queries []model.Query, k
 	displayCategory := kpiQuery.DisplayCategory
 	var statusCode, finalStatusCode int
 	var finalResult model.QueryResult
-	isTimezoneEnabled := false
-	if C.IsMultipleProjectTimezoneEnabled(projectID) {
-		isTimezoneEnabled = true
-	}
 
 	if len(queries) == 1 {
 		hasAnyGroupBy := len(queries[0].GroupByProperties) != 0
@@ -130,7 +121,7 @@ func (store *MemSQL) executeForResults(projectID int64, queries []model.Query, k
 		for _, transformation := range transformations {
 			operations = append(operations, transformation.Metrics.Operator)
 		}
-		finalResult = model.HandlingEventResultsByApplyingOperations(results, operations, kpiQuery.Timezone, isTimezoneEnabled)
+		finalResult = model.HandlingEventResultsByApplyingOperations(results, operations, kpiQuery.Timezone)
 	}
 	return finalResult, finalStatusCode
 }

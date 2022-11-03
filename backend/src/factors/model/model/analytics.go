@@ -970,7 +970,7 @@ func GetPropertyEntityFieldForFilter(entityName string) string {
 	return ""
 }
 
-func AddMissingEventNamesInResult(result *QueryResult, query *Query, isTimezoneEnabled bool) {
+func AddMissingEventNamesInResult(result *QueryResult, query *Query) {
 	eventNameIndex := getEventNameIndex(result)
 	if eventNameIndex == -1 || len(result.Rows) == 0 {
 		return
