@@ -1496,7 +1496,8 @@ func IsValidQuery(query *model.Query) (bool, string) {
 
 	if query.EventsCondition != model.EventCondAllGivenEvent &&
 		query.EventsCondition != model.EventCondAnyGivenEvent &&
-		query.EventsCondition != model.EventCondEachGivenEvent {
+		query.EventsCondition != model.EventCondEachGivenEvent &&
+		query.EventsCondition != model.EventCondFunnelAnyGivenEvent {
 		return false, "Invalid events condition given"
 	}
 

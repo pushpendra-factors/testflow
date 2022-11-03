@@ -49,9 +49,10 @@ const (
 )
 
 const (
-	EventCondAnyGivenEvent  = "any_given_event"
-	EventCondAllGivenEvent  = "all_given_event"
-	EventCondEachGivenEvent = "each_given_event"
+	EventCondAnyGivenEvent       = "any_given_event"
+	EventCondAllGivenEvent       = "all_given_event"
+	EventCondEachGivenEvent      = "each_given_event"
+	EventCondFunnelAnyGivenEvent = "funnel_any_given_event"
 )
 
 const (

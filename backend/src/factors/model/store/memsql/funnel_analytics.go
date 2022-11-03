@@ -464,11 +464,24 @@ func buildStepXToYJoin(stepName string, prevStepName string, previousCombinedUse
 	if q.EventsWithProperties[i].Name == q.EventsWithProperties[i-1].Name {
 		comparisonSymbol = ">"
 	}
-	stepXToYJoin := fmt.Sprintf("LEFT JOIN %s ON %s.coal_user_id = %s.coal_user_id WHERE %s.timestamp %s %s.timestamp",
-		stepName, previousCombinedUsersStepName, stepName, stepName, comparisonSymbol, previousCombinedUsersStepName)
-	if i == 1 {
+
+	stepXToYJoin := ""
+	if q.EventsCondition == model.EventCondFunnelAnyGivenEvent {
+		stepXToYJoin = fmt.Sprintf("LEFT JOIN %s ON %s.coal_user_id = %s.coal_user_id",
+			stepName, previousCombinedUsersStepName, stepName)
+	} else {
 		stepXToYJoin = fmt.Sprintf("LEFT JOIN %s ON %s.coal_user_id = %s.coal_user_id WHERE %s.timestamp %s %s.timestamp",
-			stepName, prevStepName, stepName, stepName, comparisonSymbol, prevStepName)
+			stepName, previousCombinedUsersStepName, stepName, stepName, comparisonSymbol, previousCombinedUsersStepName)
+	}
+
+	if i == 1 {
+		if q.EventsCondition == model.EventCondFunnelAnyGivenEvent {
+			stepXToYJoin = fmt.Sprintf("LEFT JOIN %s ON %s.coal_user_id = %s.coal_user_id",
+				stepName, prevStepName, stepName)
+		} else {
+			stepXToYJoin = fmt.Sprintf("LEFT JOIN %s ON %s.coal_user_id = %s.coal_user_id WHERE %s.timestamp %s %s.timestamp",
+				stepName, prevStepName, stepName, stepName, comparisonSymbol, prevStepName)
+		}
 	}
 
 	if isSessionAnalysisReqBool && i >= int(q.SessionStartEvent) && i < int(q.SessionEndEvent) {
@@ -667,7 +680,7 @@ func buildUniqueUsersFunnelQuery(projectId int64, q model.Query, groupIds []int,
 		addParams = append(addParams, projectId)
 
 		var groupBy string
-		if i == 0 {
+		if i == 0 || q.EventsCondition == model.EventCondFunnelAnyGivenEvent {
 			groupBy = "coal_user_id"
 		} else {
 			groupBy = "coal_user_id, timestamp"
