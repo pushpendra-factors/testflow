@@ -10,20 +10,28 @@ const AdBlockerDetector = (props)=>{
         // Detects Crystal Adblocker
         // Method 3
         (function detectAdblockWithInvalidURL(callback) { 
+
+            let controller = new AbortController();
+            const signal = controller.signal;
+
+
             var flaggedURL = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js';
 
             if (window.fetch) {
                 var request = new Request(flaggedURL, {
                     method: 'HEAD',
                     mode: 'no-cors',
+                    signal: signal
                 });
                 fetch(request)
                 .then(function(response) {
                     if (response.status === 404) {
+                        controller.abort()
                         callback(false,response);
                     }
                 })
                 .catch(function(error) {
+                    controller.abort()
                     callback(true,error);
                 });
             } else {
@@ -33,10 +41,12 @@ const AdBlockerDetector = (props)=>{
                 try {
                     http.send();
                 } catch (err) {
+                    controller.abort()
                     callback(true,err);
                 }
 
                 if (http.status === 404) {
+                    controller.abort()
                     callback(false,http);
                 }
             }
