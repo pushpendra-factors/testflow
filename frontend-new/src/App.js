@@ -17,6 +17,8 @@ import { enableBingAdsIntegration, enableMarketoIntegration } from 'Reducers/glo
 import { SSO_LOGIN_FULFILLED } from "./reducers/types";
 import { sendSlackNotification } from "./utils/slack";
 import userflow from 'userflow.js';
+import { notification } from "antd";
+import AdBlockerDetector from "./components/AdBlockerDetector/AdBlockerDetector";
 
 
 const Login = lazyWithRetry(() => import("./Views/Pages/Login"));
@@ -26,6 +28,27 @@ const SignUp = lazyWithRetry(() => import("./Views/Pages/SignUp"));
 const Activate = lazyWithRetry(() => import("./Views/Pages/Activate"));
 const Templates = lazyWithRetry(() => import("./Views/CoreQuery/Templates/ResultsPage"));
 const AppLayout = lazyWithRetry(() => import("./Views/AppLayout"));
+
+
+/*
+  AdDetector Notification
+  Show notification if Adblocker detected
+  Don't show if there is not any adblocker detected
+
+  we can check if AdBlocker is There or not, by check (window.isAdblocker)
+  if(window.isAdblocker) adBlocker is there in browser, ask it to remove
+
+*/
+const AdBlockerNotification = () => {
+  notification.info({
+    message: `Notification TopRight`,
+    description:
+      'This is the content of the notification. This is the content of the notification. This is the content of the notification.',
+    placement:'topRight'
+  });
+};
+
+
 
 function App({ isAgentLoggedIn, agent_details, active_project, enableBingAdsIntegration, enableMarketoIntegration }) {
   const dispatch = useDispatch();
@@ -193,6 +216,8 @@ function App({ isAgentLoggedIn, agent_details, active_project, enableBingAdsInte
   }, [agent_details]);
 
   useEffect(() => {
+
+
     const tz = active_project?.time_zone;
     // const isTzEnabled = active_project?.is_multiple_project_timezone_enabled;
     if (tz) {
@@ -208,47 +233,49 @@ function App({ isAgentLoggedIn, agent_details, active_project, enableBingAdsInte
   }, [agent_details])
 
   return (
-    <div className="App">
-      <ErrorBoundary fallback={<FaErrorComp size={'medium'} title={'Bundle Error'} subtitle={"We are facing trouble loading App Bundles. Drop us a message on the in-app chat."} />} onError={FaErrorLog}>
-        <Suspense fallback={<PageSuspenseLoader />}>
-          <Router>
-            <Switch>
-              <Route exact path="/signup" name="login" component={SignUp} />
-              <Route
-                exact
-                path="/activate"
-                name="Activate"
-                component={Activate}
-              />
-              <Route
-                exact
-                path="/setpassword"
-                name="login"
-                component={ResetPassword}
-              />
-              <Route
-                exact
-                path="/forgotpassword"
-                name="login"
-                component={ForgotPassword}
-              />
-              <Route exact path="/login" name="login" component={Login} />
-              {isAgentLoggedIn ? (
-                <Route exact path="/templates" name="templates" component={Templates} />
+    <AdBlockerDetector>
+      <div className="App">
+        <ErrorBoundary fallback={<FaErrorComp size={'medium'} title={'Bundle Error'} subtitle={"We are facing trouble loading App Bundles. Drop us a message on the in-app chat."} />} onError={FaErrorLog}>
+          <Suspense fallback={<PageSuspenseLoader />}>
+            <Router>
+              <Switch>
+                <Route exact path="/signup" name="login" component={SignUp} />
+                <Route
+                  exact
+                  path="/activate"
+                  name="Activate"
+                  component={Activate}
+                />
+                <Route
+                  exact
+                  path="/setpassword"
+                  name="login"
+                  component={ResetPassword}
+                />
+                <Route
+                  exact
+                  path="/forgotpassword"
+                  name="login"
+                  component={ForgotPassword}
+                />
+                <Route exact path="/login" name="login" component={Login} />
+                {isAgentLoggedIn ? (
+                  <Route exact path="/templates" name="templates" component={Templates} />
 
-              ) : (
-                <Redirect to="/login" />
-              )}
-              {isAgentLoggedIn ? (
-                <Route path="/" name="Home" component={AppLayout} />
-              ) : (
-                <Redirect to="/login" />
-              )}
-            </Switch>
-          </Router>
-        </Suspense>
-      </ErrorBoundary>
-    </div>
+                ) : (
+                  <Redirect to="/login" />
+                )}
+                {isAgentLoggedIn ? (
+                  <Route path="/" name="Home" component={AppLayout} />
+                ) : (
+                  <Redirect to="/login" />
+                )}
+              </Switch>
+            </Router>
+          </Suspense>
+        </ErrorBoundary>
+      </div>
+    </AdBlockerDetector>
   );
 }
 
