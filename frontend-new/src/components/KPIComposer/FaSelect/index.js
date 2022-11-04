@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import styles from './index.module.scss';
 import { SVG, Text } from 'factorsComponents';
 import { Input, Button, Spin } from 'antd';
 import { DISPLAY_PROP } from '../../../utils/constants';
+import useAutoFocus from '../../../hooks/useAutoFocus';
 
-const FaSelect = ({
+function FaSelect({
   options,
   delOption,
   optionClick,
@@ -19,14 +20,10 @@ const FaSelect = ({
   extraClass = '',
   disabled = false,
   showIcon = true
-}) => {
+}) {
   const [optClickArr, setOptClickArr] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const inputComponentRef = useRef(null);
-
-  useEffect(() => {
-    if (inputComponentRef?.current) inputComponentRef.current?.focus();
-  }, []);
+  const inputComponentRef = useAutoFocus();
 
   useEffect(() => {
     if (multiSelect && selectedOpts && selectedOpts.length) {
@@ -271,6 +268,6 @@ const FaSelect = ({
       ></div>
     </>
   );
-};
+}
 
 export default FaSelect;
