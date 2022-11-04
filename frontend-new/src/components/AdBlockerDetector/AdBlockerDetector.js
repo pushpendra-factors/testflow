@@ -6,60 +6,11 @@ const AdBlockerDetector = (props)=>{
     let [isAdBlocker,setIsAdBlocker] = useState(false);
     useEffect(()=>{
 
-            // // Method 1
-            // (function detectWithAdsDiv() {
-            // var detected = false;
-
-            // const ads = document.createElement('div');
-            // ads.innerHTML = '&nbsp;';
-            // ads.className = 'adsbox';
-
-            // try {
-            //     document.body.appendChild(ads);
-            //     var node = document.querySelector('.adsbox');
-            //     detected = !node || node.offsetHeight === 0;
-            // } finally {
-            //     ads.parentNode.removeChild(ads);
-            // }
-
-            // console.log('Using divAdblocker: ' + detected);
-            // })();
-
-
-
-
-            // Method 2
-            // Can detect almost all Ad blockers, but can't detect ghostery  & Adblocker Ultimate are not being detected for now.
-            var badURL = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js';
-
-            (function detectWithScriptTag() {
-                var script = window.document.createElement('script');
-
-                script.onload = function() {
-                    // if loaded there is no adblocker
-                        console.log("METHOD 2 NO AD")
-                    script.parentNode.removeChild(script);
-                };
-
-                script.onerror = function() {
-                    // Adblocker exist
-                    setIsAdBlocker(isAdBlocker || true);
-                    console.log("METHOD 2")
-                        
-                    
-                }
-
-                script.src = badURL;
-                window.document.body.appendChild(script);
-            })();
-
-
-
 
         // Detects Crystal Adblocker
         // Method 3
         (function detectAdblockWithInvalidURL(callback) { 
-            var flaggedURL = 'pagead/js/adsbygoogle.js';
+            var flaggedURL = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js';
 
             if (window.fetch) {
                 var request = new Request(flaggedURL, {
@@ -69,11 +20,11 @@ const AdBlockerDetector = (props)=>{
                 fetch(request)
                 .then(function(response) {
                     if (response.status === 404) {
-                        callback(false);
+                        callback(false,response);
                     }
                 })
                 .catch(function(error) {
-                    callback(true);
+                    callback(true,error);
                 });
             } else {
                 var http = new XMLHttpRequest();
@@ -82,18 +33,18 @@ const AdBlockerDetector = (props)=>{
                 try {
                     http.send();
                 } catch (err) {
-                    callback(true);
+                    callback(true,err);
                 }
 
                 if (http.status === 404) {
-                    callback(false);
+                    callback(false,http);
                 }
             }
-        })(function(usingAdblock) {
+        })(function(usingAdblock,res) {
             // returns if adblocker is there or not
 
             if(isAdBlocker === false){
-                console.log("METHOD 3")
+                console.log("METHOD 3", usingAdblock,res)
                 setIsAdBlocker( isAdBlocker || usingAdblock)
             }
         });
