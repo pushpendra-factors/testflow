@@ -43,7 +43,6 @@ function SparkChart({
       ?.getBoundingClientRect()?.width
       ? d3.select(chartRef.current).node()?.getBoundingClientRect()?.width
       : 0;
-
     const width = containerWidth;
     const height = widgetHeight || 180;
 
@@ -78,25 +77,25 @@ function SparkChart({
       .range([height, 0]);
 
     // Add the area
-    svg
-      .append('path')
-      .datum(data)
-      .attr('fill-opacity', 0.3)
-      .attr('class', 'area')
-      .attr('stroke', 'none')
-      .attr(
-        'd',
-        d3
-          .area()
-          .x((d) => x(d.date))
-          .y0(height)
-          .y1((d) => y(d[event]))
-      )
-      .attr(
-        'fill',
-        `url(#area-gradient-${chartColor.substr(1)}-${page}-${title})`
-      )
-      .attr('stroke-width', 1);
+    // svg
+    //   .append('path')
+    //   .datum(data)
+    //   .attr('fill-opacity', 0.3)
+    //   .attr('class', 'area')
+    //   .attr('stroke', 'none')
+    //   .attr(
+    //     'd',
+    //     d3
+    //       .area()
+    //       .x((d) => x(d.date))
+    //       .y0(height)
+    //       .y1((d) => y(d[event]))
+    //   )
+    //   .attr(
+    //     'fill',
+    //     `url(#area-gradient-${chartColor.substr(1)}-${page}-${title})`
+    //   )
+    //   .attr('stroke-width', 1);
 
     // Add the line
     svg

@@ -1,14 +1,6 @@
-import React, {
-  useState,
-  useEffect,
-  useCallback,
-  useContext,
-  memo
-} from 'react';
+import React, { useState, useEffect, useCallback, memo } from 'react';
 import { useSelector } from 'react-redux';
-import { values } from 'lodash';
 import cx from 'classnames';
-import { DashboardContext } from '../../../contexts/DashboardContext';
 import {
   getDefaultDateSortProp,
   getDefaultSortProp,
@@ -30,15 +22,10 @@ import {
 import ChartHeader from '../../../components/SparkLineChart/ChartHeader';
 import SparkChart from '../../../components/SparkLineChart/Chart';
 import LineChart from '../../../components/HCLineChart';
-import {
-  Text,
-  Number as NumFormat
-} from '../../../components/factorsComponents';
 import NoBreakdownTable from '../../CoreQuery/KPIAnalysis/NoBreakdownCharts/NoBreakdownTable';
-import TopLegends from '../../../components/GroupedBarChart/TopLegends';
 import { getKpiLabel } from '../../CoreQuery/KPIAnalysis/kpiAnalysis.helpers';
 
-const NoBreakdownCharts = ({
+function NoBreakdownCharts({
   kpis,
   responseData,
   chartType,
@@ -46,8 +33,7 @@ const NoBreakdownCharts = ({
   unit,
   arrayMapper,
   durationObj
-}) => {
-  const { handleEditQuery } = useContext(DashboardContext);
+}) {
   const { eventNames } = useSelector((state) => state.coreQuery);
 
   const [sorter, setSorter] = useState(getDefaultSortProp(kpis));
@@ -107,34 +93,44 @@ const NoBreakdownCharts = ({
   if (chartType === CHART_TYPE_SPARKLINES) {
     if (aggregateData.length === 1) {
       chartContent = (
-        <div
-          className={`flex items-center justify-center w-full  h-full ${
-            unit.cardSize !== 1 ? 'flex-col' : ''
-          }`}
-        >
+        <div className='flex items-center justify-center w-full  h-full'>
           <div
-            className={'h-full grid' + unit.cardSize === 1 ? 'w-1/4' : 'w-full'}
+            className={`flex items-center justify-center  h-full ${
+              unit?.cardSize == 2
+                ? 'flex-col w-full'
+                : unit?.cardSize == 0
+                ? 'w-4/5'
+                : 'w-3/5'
+            }`}
           >
-            <ChartHeader
-              bgColor={CHART_COLOR_1}
-              query={aggregateData[0].name}
-              total={aggregateData[0].total}
-              metricType={aggregateData[0].metricType}
-              eventNames={eventNames}
-            />
-          </div>
-          <div className={'h-full ' + unit.cardSize === 1 ? 'w-3/4' : 'w-full'}>
-            <SparkChart
-              frequency={durationObj.frequency}
-              page='kpi'
-              event={getKpiLabel(kpis[0])}
-              chartData={aggregateData[0].dataOverTime}
-              chartColor={CHART_COLOR_1}
-              height={unit.cardSize === 1 ? 220 : 100}
-              title={unit.id}
-              metricType={aggregateData[0].metricType}
-              eventTitle={getKpiLabel(kpis[0])}
-            />
+            <div className={`${unit?.cardSize === 2 ? 'w-full' : 'w-1/2'}`}>
+              <ChartHeader
+                bgColor={CHART_COLOR_1}
+                query={aggregateData[0].name}
+                total={aggregateData[0].total}
+                metricType={aggregateData[0].metricType}
+                eventNames={eventNames}
+              />
+            </div>
+            <div
+              className={`flex justify-center items-center ${
+                unit.cardSize === 2 ? 'w-full' : 'w-1/2'
+              }`}
+            >
+              <div className={`${unit?.cardSize === 2 ? 'w-3/5' : 'w-full'}`}>
+                <SparkChart
+                  frequency={durationObj.frequency}
+                  page='kpi'
+                  event={getKpiLabel(kpis[0])}
+                  chartData={aggregateData[0].dataOverTime}
+                  chartColor={CHART_COLOR_1}
+                  height={unit.cardSize === 1 ? 220 : 100}
+                  title={unit.id}
+                  metricType={aggregateData[0].metricType}
+                  eventTitle={getKpiLabel(kpis[0])}
+                />
+              </div>
+            </div>
           </div>
         </div>
       );
@@ -149,55 +145,19 @@ const NoBreakdownCharts = ({
       chartContent = (
         <div
           className={`flex items-center flex-wrap justify-center ${
-            !unit.cardSize ? 'flex-col' : ''
-          }`}
+            unit?.cardSize !== 2 ? 'pt-4' : ''
+          } `}
         >
-          {!unit.cardSize ? (
-            <TopLegends
-              cardSize={unit.cardSize}
-              legends={aggregateData.map((c) => c.name)}
-              colors={values(colors)}
-            />
-          ) : null}
           {aggregateData
             .filter((d) => d.total)
             .slice(0, 3)
             .map((chartData, index) => {
-              if (unit.cardSize === 0) {
-                return (
-                  <div className='flex items-center w-full justify-center'>
-                    <Text
-                      extraClass='flex items-center w-1/4 justify-center'
-                      type={'title'}
-                      level={3}
-                      weight={'bold'}
-                    >
-                      <NumFormat
-                        shortHand={chartData.total > 1000}
-                        number={chartData.total}
-                      />
-                    </Text>
-                    <div className='w-2/3'>
-                      <SparkChart
-                        frequency={durationObj.frequency}
-                        page='kpi'
-                        event={chartData.name}
-                        chartData={chartData.dataOverTime}
-                        chartColor={appliedColors[index]}
-                        height={40}
-                        title={unit.id}
-                        metricType={chartData.metricType}
-                        eventTitle={chartData.name}
-                      />
-                    </div>
-                  </div>
-                );
-              } else if (unit.cardSize === 1) {
+              if (unit.cardSize === 1 || unit.cardSize === 0) {
                 return (
                   <div
-                    style={{ minWidth: '300px' }}
+                    // style={{ minWidth: '300px' }}
                     key={chartData.index}
-                    className='w-1/3 mt-4 px-4'
+                    className='w-1/3 px-4 h-full'
                   >
                     <div className='flex flex-col'>
                       <ChartHeader
@@ -206,6 +166,7 @@ const NoBreakdownCharts = ({
                         bgColor={appliedColors[index]}
                         metricType={chartData.metricType}
                         eventNames={eventNames}
+                        titleCharCount={unit?.cardSize === 0 ? 16 : null}
                       />
                       <div className='mt-8'>
                         <SparkChart
@@ -223,26 +184,25 @@ const NoBreakdownCharts = ({
                     </div>
                   </div>
                 );
-              } else {
-                return (
-                  <div
-                    style={{ minWidth: '300px' }}
-                    key={chartData.index}
-                    className='w-1/3 mt-6 px-1'
-                  >
-                    <div className='flex flex-col'>
-                      <ChartHeader
-                        total={chartData.total}
-                        query={chartData.name}
-                        bgColor={appliedColors[index]}
-                        smallFont={true}
-                        metricType={chartData.metricType}
-                        eventNames={eventNames}
-                      />
-                    </div>
-                  </div>
-                );
               }
+              return (
+                <div
+                  style={{ minWidth: '300px' }}
+                  key={chartData.index}
+                  className='w-1/3 mt-6 px-1'
+                >
+                  <div className='flex flex-col'>
+                    <ChartHeader
+                      total={chartData.total}
+                      query={chartData.name}
+                      bgColor={appliedColors[index]}
+                      smallFont={true}
+                      metricType={chartData.metricType}
+                      eventNames={eventNames}
+                    />
+                  </div>
+                </div>
+              );
             })}
         </div>
       );
@@ -273,6 +233,6 @@ const NoBreakdownCharts = ({
       {chartContent}
     </div>
   );
-};
+}
 
 export default memo(NoBreakdownCharts);
