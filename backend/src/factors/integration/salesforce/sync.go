@@ -312,6 +312,11 @@ func (s *DataClient) getRecordByObjectNameANDStartTimestamp(projectID int64, obj
 		fieldList = fieldList + ",(+SELECT+id,isPrimary,ContactId,OpportunityId,Role+from+" + model.SalesforceChildRelationshipNameOpportunityContactRoles + "+)"
 	}
 
+	// append RelationId and Type to task or event object
+	if objectName == model.SalesforceDocumentTypeNameTask || objectName == model.SalesforceDocumentTypeNameEvent {
+		fieldList = fieldList + ",who.Id,who.Type"
+	}
+
 	queryStmnt := fmt.Sprintf("SELECT+%s+FROM+%s", fieldList, objectName)
 	queryURL := s.instanceURL + salesforceDataServiceRoute + GetSalesforceAPIVersion(projectID) + "/query?q=" + queryStmnt
 
@@ -787,6 +792,285 @@ func syncOpporunitiesUsingAssociations(projectID int64, accessToken, instanceURL
 	return failures, opportunityAPICalls, leadIDForOpportunityRecordsAPICalls, opportunityPrimaryContactAPICalls, nil
 }
 
+// getLeadIDOrContactIDForActivityRecords sync associated leads/contacts if missing and return all lead/contact ids
+func getLeadIDAndContactIDForActivityRecords(projectID int64, records []model.SalesforceRecord) ([]string, []string) {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID})
+
+	leadIDs := make([]string, 0)
+	contactIDs := make([]string, 0)
+
+	if len(records) == 0 {
+		return leadIDs, contactIDs
+	}
+
+	for i := range records {
+		if records[i]["Who"] == nil {
+			continue
+		}
+
+		whos := records[i]["Who"].(map[string]interface{})
+		if U.GetPropertyValueAsString(whos["Type"]) == U.CapitalizeFirstLetter(model.SalesforceDocumentTypeNameLead) {
+			leadIDs = append(leadIDs, U.GetPropertyValueAsString(whos["Id"]))
+		} else if U.GetPropertyValueAsString(whos["Type"]) == U.CapitalizeFirstLetter(model.SalesforceDocumentTypeNameContact) {
+			contactIDs = append(contactIDs, U.GetPropertyValueAsString(whos["Id"]))
+		} else {
+			logCtx.WithFields(log.Fields{"record_id": records[i]["Id"], "who_id": U.GetPropertyValueAsString(whos["Id"]), "who_type": U.GetPropertyValueAsString(whos["Type"])}).Error("Invalid objectName in getLeadIDOrContactIDForActivityRecords.")
+		}
+	}
+
+	return leadIDs, contactIDs
+}
+
+func syncMissingObjectsForSalesforceActivities(projectID int64, documentIDs []string, objectName string, accessToken, instanceURL string) ([]string, int, bool) {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID})
+	salesforceDataClient, err := NewSalesforceDataClient(accessToken, instanceURL)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to build new salesforce data client on syncMissingObjectsForSalesforceActivities")
+		return nil, 0, true
+	}
+
+	if objectName != model.SalesforceDocumentTypeNameLead && objectName != model.SalesforceDocumentTypeNameContact {
+		logCtx.Error("Invalid docType for salesforce activities in syncMissingObjectsForSalesforceActivities.")
+		return nil, 0, true
+	}
+
+	var failures []string
+	done := false
+	activityIDs := 0
+
+	if len(documentIDs) == 0 {
+		logCtx.Info("No documentIDs to process in syncMissingObjectsForSalesforceActivities.")
+		return nil, 0, false
+	}
+
+	docs, errCode := store.GetStore().GetSyncedSalesforceDocumentByType(projectID, documentIDs, model.GetSalesforceDocTypeByAlias(objectName), true)
+	if errCode != http.StatusFound && errCode != http.StatusNotFound {
+		logCtx.Error(fmt.Sprintf("Failed to get salesforce %s documents in syncMissingObjectsForSalesforceActivities.", objectName))
+		return nil, 0, true
+	}
+
+	docIDs := make([]string, 0)
+	for i := range docs {
+		docIDs = append(docIDs, docs[i].ID)
+	}
+
+	missingDocIDs := U.StringSliceDiff(documentIDs, docIDs)
+	if len(missingDocIDs) < 1 {
+		return nil, 0, false
+	}
+
+	paginatedObjects, err := salesforceDataClient.GetObjectRecordsByIDs(projectID, objectName, missingDocIDs)
+	if err != nil {
+		logCtx.WithError(err).Error(fmt.Sprintf("Failed to initialize salesforce data client for sync activities %s.", objectName))
+		return nil, 0, true
+	}
+
+	var records []model.SalesforceRecord
+	for !done {
+		records, done, err = paginatedObjects.getNextBatch()
+		if err != nil {
+			return nil, 0, true
+		}
+
+		err = store.GetStore().BuildAndUpsertDocumentInBatch(projectID, objectName, records)
+		if err != nil {
+			log.WithFields(log.Fields{"project_id": projectID}).Error(fmt.Sprintf("Failed to BuildAndUpsertDocument activities %s sync.", objectName))
+			failures = append(failures, err.Error())
+		}
+	}
+
+	activityIDs = paginatedObjects.APICall
+
+	return failures, activityIDs, len(failures) > 0
+}
+
+func syncTasks(projectID int64, accessToken, instanceURL string, timestamp int64) ([]string, []string, []string, int, error) {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID})
+	salesforceDataClient, err := NewSalesforceDataClient(accessToken, instanceURL)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to build salesforceDataClient for task sync.")
+		return nil, nil, nil, 0, err
+	}
+
+	paginatedTasksByStartTimestamp, err := salesforceDataClient.getRecordByObjectNameANDStartTimestamp(projectID, model.SalesforceDocumentTypeNameTask, timestamp)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to initialize salesforce data client for task sync.")
+		return nil, nil, nil, 0, err
+	}
+
+	done := false
+	var objectRecords []model.SalesforceRecord
+	var failures []string
+
+	taskAPICalls := 0
+
+	taskLeads := make([]string, 0)
+	taskContacts := make([]string, 0)
+
+	for !done {
+		objectRecords, done, err = paginatedTasksByStartTimestamp.getNextBatch()
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to getNextBatch on task sync.")
+			return failures, nil, nil, 0, err
+		}
+
+		if len(objectRecords) == 0 {
+			continue
+		}
+
+		leadIDs, contactIDs := getLeadIDAndContactIDForActivityRecords(projectID, objectRecords)
+
+		if len(leadIDs) > 0 {
+			taskLeads = append(taskLeads, leadIDs...)
+		} else if len(contactIDs) > 0 {
+			taskContacts = append(taskContacts, contactIDs...)
+		} else {
+			logCtx.Info("No leads or contacts associated with tasks.")
+			continue
+		}
+
+		err = store.GetStore().BuildAndUpsertDocumentInBatch(projectID, model.SalesforceDocumentTypeNameTask, objectRecords)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to BuildAndUpsertDocument for task sync.")
+			failures = append(failures, err.Error())
+		}
+	}
+	taskAPICalls = paginatedTasksByStartTimestamp.APICall
+
+	return failures, taskLeads, taskContacts, taskAPICalls, nil
+}
+
+func syncEvents(projectID int64, accessToken, instanceURL string, timestamp int64) ([]string, []string, []string, int, error) {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID})
+	salesforceDataClient, err := NewSalesforceDataClient(accessToken, instanceURL)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to build salesforceDataClient for event sync.")
+		return nil, nil, nil, 0, err
+	}
+
+	paginatedEventsByStartTimestamp, err := salesforceDataClient.getRecordByObjectNameANDStartTimestamp(projectID, model.SalesforceDocumentTypeNameEvent, timestamp)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to initialize salesforce data client for event sync.")
+		return nil, nil, nil, 0, err
+	}
+
+	done := false
+	var objectRecords []model.SalesforceRecord
+	var failures []string
+
+	eventAPICalls := 0
+
+	eventLeads := make([]string, 0)
+	eventContacts := make([]string, 0)
+
+	for !done {
+		objectRecords, done, err = paginatedEventsByStartTimestamp.getNextBatch()
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to getNextBatch on event sync.")
+			return failures, nil, nil, 0, err
+		}
+
+		if len(objectRecords) == 0 {
+			continue
+		}
+
+		leadIDs, contactIDs := getLeadIDAndContactIDForActivityRecords(projectID, objectRecords)
+
+		if len(leadIDs) > 0 {
+			eventLeads = append(eventLeads, leadIDs...)
+		} else if len(contactIDs) > 0 {
+			eventContacts = append(eventContacts, contactIDs...)
+		} else {
+			logCtx.Info("No leads or contacts associated with events.")
+			continue
+		}
+
+		err = store.GetStore().BuildAndUpsertDocumentInBatch(projectID, model.SalesforceDocumentTypeNameEvent, objectRecords)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to BuildAndUpsertDocument for event sync.")
+			failures = append(failures, err.Error())
+		}
+	}
+	eventAPICalls = paginatedEventsByStartTimestamp.APICall
+
+	return failures, eventLeads, eventContacts, eventAPICalls, nil
+}
+
+func syncActivities(ps *model.SalesforceProjectSettings, accessToken, objectName string, timestamp int64) ([]string, int, int, int, error) {
+	logCtx := log.WithFields(log.Fields{"project_id": ps.ProjectID, "doc_type": objectName})
+	allowedObject := model.GetSalesforceDocumentTypeAlias(ps.ProjectID)
+
+	leadAllowed := false
+	if _, exist := allowedObject[model.SalesforceDocumentTypeNameLead]; exist {
+		leadAllowed = true
+
+	}
+
+	contactAllowed := false
+	if _, exist := allowedObject[model.SalesforceDocumentTypeNameContact]; exist {
+		contactAllowed = true
+
+	}
+
+	if objectName == model.SalesforceDocumentTypeNameTask {
+		failures, taskLeadIDs, taskContactIDs, taskAPICalls, err := syncTasks(ps.ProjectID, accessToken, ps.InstanceURL, timestamp)
+		if err != nil {
+			logCtx.WithError(err).Error("Failure on sync tasks.")
+			return failures, 0, 0, 0, err
+		}
+
+		leadIDTaskAPICalls := 0
+		if leadAllowed {
+			leadFailures, leadAPICalls, failure := syncMissingObjectsForSalesforceActivities(ps.ProjectID, taskLeadIDs, model.SalesforceDocumentTypeNameLead, accessToken, ps.InstanceURL)
+			if failure {
+				failures = append(failures, leadFailures...)
+			}
+			leadIDTaskAPICalls = leadAPICalls
+		}
+
+		contactIDTaskAPICalls := 0
+		if contactAllowed {
+			contactFailures, contactAPICalls, failure := syncMissingObjectsForSalesforceActivities(ps.ProjectID, taskContactIDs, model.SalesforceDocumentTypeNameContact, accessToken, ps.InstanceURL)
+			if failure {
+				failures = append(failures, contactFailures...)
+			}
+			contactIDTaskAPICalls = contactAPICalls
+		}
+
+		return failures, taskAPICalls, leadIDTaskAPICalls, contactIDTaskAPICalls, nil
+	}
+
+	if objectName == model.SalesforceDocumentTypeNameEvent {
+		failures, eventLeadIDs, eventContactIDs, eventAPICalls, err := syncEvents(ps.ProjectID, accessToken, ps.InstanceURL, timestamp)
+		if err != nil {
+			logCtx.WithError(err).Error("Failure on sync events.")
+			return failures, 0, 0, 0, err
+		}
+
+		leadIDEventAPICalls := 0
+		if leadAllowed {
+			leadFailures, leadAPICalls, failure := syncMissingObjectsForSalesforceActivities(ps.ProjectID, eventLeadIDs, model.SalesforceDocumentTypeNameLead, accessToken, ps.InstanceURL)
+			if failure {
+				failures = append(failures, leadFailures...)
+			}
+			leadIDEventAPICalls = leadAPICalls
+		}
+
+		contactIDEventAPICalls := 0
+		if contactAllowed {
+			contactFailures, contactAPICalls, failure := syncMissingObjectsForSalesforceActivities(ps.ProjectID, eventContactIDs, model.SalesforceDocumentTypeNameContact, accessToken, ps.InstanceURL)
+			if failure {
+				failures = append(failures, contactFailures...)
+			}
+			contactIDEventAPICalls = contactAPICalls
+		}
+
+		return failures, eventAPICalls, leadIDEventAPICalls, contactIDEventAPICalls, nil
+	}
+
+	return nil, 0, 0, 0, errors.New("Invalid docType in syncActivities.")
+}
+
 func syncByType(ps *model.SalesforceProjectSettings, accessToken, objectName string, timestamp int64) (ObjectStatus, error) {
 	var salesforceObjectStatus ObjectStatus
 	salesforceObjectStatus.ProjetID = ps.ProjectID
@@ -806,6 +1090,20 @@ func syncByType(ps *model.SalesforceProjectSettings, accessToken, objectName str
 		salesforceObjectStatus.TotalAPICalls["opportunityAPICalls"] = opportunityAPICalls
 		salesforceObjectStatus.TotalAPICalls["leadIDForOpportunityRecordsAPICalls"] = leadIDForOpportunityRecordsAPICall
 		salesforceObjectStatus.TotalAPICalls["opportunityPrimaryContactAPICalls"] = opportunityPrimaryContact
+		return salesforceObjectStatus, nil
+	}
+
+	if objectName == model.SalesforceDocumentTypeNameTask || objectName == model.SalesforceDocumentTypeNameEvent {
+		failures, activitiesAPICalls, leadIDForActivitiesRecordsAPICall, contactIDForActivitiesRecordsAPICall, err := syncActivities(ps, accessToken, objectName, timestamp)
+		if err != nil {
+			logCtx.WithError(err).Error("Failure on sync activities.")
+			salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, failures...)
+			return salesforceObjectStatus, err
+		}
+
+		salesforceObjectStatus.TotalAPICalls[fmt.Sprintf("%sAPICalls", objectName)] = activitiesAPICalls
+		salesforceObjectStatus.TotalAPICalls[fmt.Sprintf("leadIDFor%sRecordsAPICalls", U.CapitalizeFirstLetter(objectName))] = leadIDForActivitiesRecordsAPICall
+		salesforceObjectStatus.TotalAPICalls[fmt.Sprintf("contactIDFor%sRecordsAPICalls", U.CapitalizeFirstLetter(objectName))] = contactIDForActivitiesRecordsAPICall
 		return salesforceObjectStatus, nil
 	}
 
@@ -1221,7 +1519,7 @@ func SyncDatetimeAndNumericalProperties(projectID int64, accessToken, instanceUR
 }
 
 func getStartTimestamp(docType string) int64 {
-	if docType != model.SalesforceDocumentTypeNameCampaignMember {
+	if docType != model.SalesforceDocumentTypeNameCampaignMember && docType != model.SalesforceDocumentTypeNameTask && docType != model.SalesforceDocumentTypeNameEvent {
 		return 0 // 1 January 1970 00:00:00
 	}
 

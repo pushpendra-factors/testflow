@@ -33,6 +33,8 @@ var salesforceEnrichOrderByType = [...]int{
 	model.SalesforceDocumentTypeLead,
 	model.SalesforceDocumentTypeContact,
 	model.SalesforceDocumentTypeCampaignMember,
+	model.SalesforceDocumentTypeTask,
+	model.SalesforceDocumentTypeEvent,
 }
 
 // CampaignChildRelationship campaign parent to child relationship
@@ -738,6 +740,17 @@ type OpportunityChildRelationship struct {
 	OpportunityContactRole    RelationshipOpportunityContactRole `json:"OpportunityContactRoles"`
 	OppLeadID                 string                             `json:"opportunity_to_lead"`
 	OpportunityMultipleLeadID map[string]bool                    `json:"opportunity_to_multiple_lead"`
+}
+
+type RelationshipActivityWho struct {
+	ID         string                 `json:"Id"`
+	Type       string                 `json:"Type"`
+	Attributes map[string]interface{} `json:"Attributes"`
+}
+
+type RelationshipActivityRecord struct {
+	Who   RelationshipActivityWho `json:"Who"`
+	WhoId string                  `json:"WhoId"`
 }
 
 var errMissingOpportunityLeadAndContact = errors.New("missing lead and contact record for opportunity link")
@@ -1600,6 +1613,209 @@ func enrichCampaignMember(project *model.Project, document *model.SalesforceDocu
 	return http.StatusOK
 }
 
+func GetActivitiesUserIDs(document *model.SalesforceDocument) ([]string, error) {
+	logCtx := log.WithFields(log.Fields{"project_id": document.ProjectID, "doc_id": document.ID})
+
+	if document.Type != model.SalesforceDocumentTypeTask && document.Type != model.SalesforceDocumentTypeEvent {
+		return nil, errors.New("Invalid docType for salesforce activities.")
+	}
+
+	leadIDs := make([]string, 0)
+	contactIDs := make([]string, 0)
+
+	var relationshipActivityRecord RelationshipActivityRecord
+	err := json.Unmarshal(document.Value.RawMessage, &relationshipActivityRecord)
+	if err != nil {
+		return nil, err
+	}
+
+	if relationshipActivityRecord.Who.Type == U.CapitalizeFirstLetter(model.SalesforceDocumentTypeNameLead) {
+		leadIDs = append(leadIDs, relationshipActivityRecord.Who.ID)
+	} else if relationshipActivityRecord.Who.Type == U.CapitalizeFirstLetter(model.SalesforceDocumentTypeNameContact) {
+		contactIDs = append(contactIDs, relationshipActivityRecord.Who.ID)
+	} else {
+		logCtx.WithField("doc_type", relationshipActivityRecord.Who.Type).Error("Invalid docType associated with task document.")
+		return nil, errors.New("Invalid docType associated with task document.")
+	}
+
+	expectedDocumentIDs := append(leadIDs, contactIDs...)
+	actualDocumentIDs := make([]string, 0)
+
+	userIds := make([]string, 0)
+
+	if len(leadIDs) > 0 {
+		leadDocuments, status := store.GetStore().GetSyncedSalesforceDocumentByType(document.ProjectID, leadIDs, model.SalesforceDocumentTypeLead, true)
+		if status != http.StatusFound {
+			return nil, errors.New("Failed to get salesforce lead documents on GetActivitiesLeadOrContactId.")
+		}
+
+		for i := range leadDocuments {
+			if leadDocuments[i].Action != model.SalesforceDocumentCreated {
+				continue
+			}
+
+			actualDocumentIDs = append(actualDocumentIDs, leadDocuments[i].ID)
+			if !U.ContainsStringInArray(userIds, leadDocuments[i].UserID) {
+				userIds = append(userIds, leadDocuments[i].UserID)
+			}
+		}
+	}
+
+	if len(contactIDs) > 0 {
+		contactDocuments, status := store.GetStore().GetSyncedSalesforceDocumentByType(document.ProjectID, contactIDs, model.SalesforceDocumentTypeContact, true)
+		if status != http.StatusFound {
+			return nil, errors.New("Failed to get salesforce contact documents on GetActivitiesLeadOrContactId.")
+		}
+
+		for i := range contactDocuments {
+			if contactDocuments[i].Action != model.SalesforceDocumentCreated {
+				continue
+			}
+
+			actualDocumentIDs = append(actualDocumentIDs, contactDocuments[i].ID)
+			if !U.ContainsStringInArray(userIds, contactDocuments[i].UserID) {
+				userIds = append(userIds, contactDocuments[i].UserID)
+			}
+		}
+	}
+
+	if len(U.StringSliceDiff(expectedDocumentIDs, actualDocumentIDs)) != 0 {
+		return nil, errors.New("Salesforce lead or contact documents missing on GetActivitiesLeadOrContactId.")
+	}
+
+	return userIds, nil
+}
+
+func enrichTask(projectID int64, document *model.SalesforceDocument) int {
+	logCtx := log.WithField("project_id", projectID).WithField("document_id", document.ID)
+
+	if projectID == 0 || document == nil {
+		logCtx.Error("Invalid parameters in enrich Task")
+		return http.StatusBadRequest
+	}
+
+	if document.Type != model.SalesforceDocumentTypeTask {
+		logCtx.Error("Invalid docType in enrich Task")
+		return http.StatusInternalServerError
+	}
+
+	enProperties, _, err := GetSalesforceDocumentProperties(projectID, document)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get properties")
+		return http.StatusInternalServerError
+	}
+
+	activityUserIDs, err := GetActivitiesUserIDs(document)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to GetActivitiesUserIDs on enrich task")
+		return http.StatusInternalServerError
+	}
+
+	if U.ContainsStringInArray(activityUserIDs, "") {
+		logCtx.WithError(err).Error("Unsynced contacts or leads present. Skipping enrich task.")
+		return http.StatusOK
+	}
+
+	if len(activityUserIDs) == 0 {
+		logCtx.Error("No lead or contact associated with task document.")
+		return http.StatusInternalServerError
+	}
+
+	eventIdToUserIdMap := make(map[string]string)
+
+	for i := range activityUserIDs {
+		trackPayload := &SDK.TrackPayload{
+			ProjectId:       projectID,
+			UserId:          activityUserIDs[i],
+			EventProperties: *enProperties,
+			RequestSource:   model.UserSourceSalesforce,
+		}
+
+		eventID, userID, _, err := TrackSalesforceEventByDocumentType(projectID, trackPayload, document, activityUserIDs[i], model.SalesforceDocumentTypeNameTask)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to track salesforce lead for task event.")
+			return http.StatusInternalServerError
+		}
+
+		eventIdToUserIdMap[eventID] = userID
+	}
+
+	for eventID, userID := range eventIdToUserIdMap {
+		errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(projectID, document, eventID, userID, "", true)
+		if errCode != http.StatusAccepted {
+			logCtx.Error("Failed to update salesforce task document as synced.")
+			return http.StatusInternalServerError
+		}
+	}
+
+	return http.StatusOK
+}
+
+func enrichEvent(projectID int64, document *model.SalesforceDocument) int {
+	logCtx := log.WithField("project_id", projectID).WithField("document_id", document.ID)
+
+	if projectID == 0 || document == nil {
+		logCtx.Error("Invalid parameters in enrich Event")
+		return http.StatusBadRequest
+	}
+
+	if document.Type != model.SalesforceDocumentTypeEvent {
+		logCtx.Error("Invalid docType in enrich Event")
+		return http.StatusInternalServerError
+	}
+
+	enProperties, _, err := GetSalesforceDocumentProperties(projectID, document)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get properties")
+		return http.StatusInternalServerError
+	}
+
+	activityUserIDs, err := GetActivitiesUserIDs(document)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to GetActivitiesUserIDs on enrich event")
+		return http.StatusInternalServerError
+	}
+
+	if U.ContainsStringInArray(activityUserIDs, "") {
+		logCtx.WithError(err).Error("Unsynced contacts or leads present. Skipping enrich event.")
+		return http.StatusOK
+	}
+
+	if len(activityUserIDs) == 0 {
+		logCtx.Error("No lead or contact associated with event document.")
+		return http.StatusInternalServerError
+	}
+
+	eventIdToUserIdMap := make(map[string]string)
+
+	for i := range activityUserIDs {
+		trackPayload := &SDK.TrackPayload{
+			ProjectId:       projectID,
+			UserId:          activityUserIDs[i],
+			EventProperties: *enProperties,
+			RequestSource:   model.UserSourceSalesforce,
+		}
+
+		eventID, userID, _, err := TrackSalesforceEventByDocumentType(projectID, trackPayload, document, activityUserIDs[i], model.SalesforceDocumentTypeNameEvent)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to track salesforce lead for event event.")
+			return http.StatusInternalServerError
+		}
+
+		eventIdToUserIdMap[eventID] = userID
+	}
+
+	for eventID, userID := range eventIdToUserIdMap {
+		errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(projectID, document, eventID, userID, "", true)
+		if errCode != http.StatusAccepted {
+			logCtx.Error("Failed to update salesforce event document as synced.")
+			return http.StatusInternalServerError
+		}
+	}
+
+	return http.StatusOK
+}
+
 func ApplySFOfflineTouchPointRule(project *model.Project, trackPayload *SDK.TrackPayload, document *model.SalesforceDocument, endTimestamp int64) error {
 
 	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "ApplySFOfflineTouchPointRule",
@@ -1843,6 +2059,10 @@ func enrichAll(project *model.Project, documents []model.SalesforceDocument, sal
 			errCode = enrichCampaign(project, &documents[i], endTimestamp)
 		case model.SalesforceDocumentTypeOpportunityContactRole:
 			errCode = enrichOpportunityContactRoles(project.ID, &documents[i])
+		case model.SalesforceDocumentTypeTask:
+			errCode = enrichTask(project.ID, &documents[i])
+		case model.SalesforceDocumentTypeEvent:
+			errCode = enrichEvent(project.ID, &documents[i])
 		default:
 			log.Errorf("invalid salesforce document type found %d", documents[i].Type)
 			continue

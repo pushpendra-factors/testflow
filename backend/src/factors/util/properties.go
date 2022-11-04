@@ -54,6 +54,10 @@ const EVENT_NAME_SALESFORCE_OPPORTUNITY_UPDATED = "$sf_opportunity_updated"
 const EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED = "$sf_campaign_member_created"
 const EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED = "$sf_campaign_member_updated"
 const EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_RESPONDED_TO_CAMPAIGN = "$sf_campaign_member_responded_to_campaign"
+const EVENT_NAME_SALESFORCE_TASK_CREATED = "$sf_task_created"
+const EVENT_NAME_SALESFORCE_TASK_UPDATED = "$sf_task_updated"
+const EVENT_NAME_SALESFORCE_EVENT_CREATED = "$sf_event_created"
+const EVENT_NAME_SALESFORCE_EVENT_UPDATED = "$sf_event_updated"
 
 // Integration: Marketo
 const EVENT_NAME_MARKETO_LEAD_CREATED = "$marketo_lead_created"
@@ -122,6 +126,10 @@ var ALLOWED_INTERNAL_EVENT_NAMES = [...]string{
 	EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED,
 	EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED,
 	EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_RESPONDED_TO_CAMPAIGN,
+	EVENT_NAME_SALESFORCE_TASK_CREATED,
+	EVENT_NAME_SALESFORCE_TASK_UPDATED,
+	EVENT_NAME_SALESFORCE_EVENT_CREATED,
+	EVENT_NAME_SALESFORCE_EVENT_UPDATED,
 	GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_CREATED,
 	GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED,
 	GROUP_EVENT_NAME_SALESFORCE_OPPORTUNITY_CREATED,
@@ -1294,6 +1302,10 @@ var CRM_USER_EVENT_NAME_LABELS = map[string]string{
 	"$sf_campaign_member_created":               "Salesforce Users",
 	"$sf_campaign_member_updated":               "Salesforce Users",
 	"$sf_campaign_member_responded_to_campaign": "Salesforce Users",
+	"$sf_task_created":                          "Salesforce Users",
+	"$sf_task_updated":                          "Salesforce Users",
+	"$sf_event_created":                         "Salesforce Users",
+	"$sf_event_updated":                         "Salesforce Users",
 }
 
 var STANDARD_EVENTS_GROUP_NAMES = map[string]string{
