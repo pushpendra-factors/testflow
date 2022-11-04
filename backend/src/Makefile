@@ -592,3 +592,9 @@ pack-adhoc-yellowai-identify-fix:
 upload-adhoc-yellowai-identify-fix: export IMAGE_NAME=adhoc-yellowai-identify-fix
 upload-adhoc-yellowai-identify-fix: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/adhoc-yellowai-identify-fix:$(TAG)
+
+pack-adhoc-sensehq-count-touchpoints:
+	docker build -t us.gcr.io/factors-$(ENV)/adhoc-sensehq-count-touchpoints:$(TAG) -f Dockerfile.adhoc_sensehq_count_touchpoints .
+upload-adhoc-sensehq-count-touchpoints: export IMAGE_NAME=adhoc-sensehq-count-touchpoints
+upload-adhoc-sensehq-count-touchpoints: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/adhoc-sensehq-count-touchpoints:$(TAG)
