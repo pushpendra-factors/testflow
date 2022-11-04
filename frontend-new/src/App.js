@@ -18,7 +18,7 @@ import { SSO_LOGIN_FULFILLED } from "./reducers/types";
 import { sendSlackNotification } from "./utils/slack";
 import userflow from 'userflow.js';
 import { notification } from "antd";
-import AdBlockerDetector from "./components/AdBlockerDetector/AdBlockerDetector";
+import AdBlockerDetector from "./components/AdBlockerDetector";
 
 
 const Login = lazyWithRetry(() => import("./Views/Pages/Login"));
