@@ -171,22 +171,6 @@ func TestAttributionModel(t *testing.T) {
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "111111"))
 	})
 
-	t.Run("AttributionQueryFirstTouchOutOfTimestampRangeNoLookBack", func(t *testing.T) {
-		query := &model.AttributionQuery{
-			From:                   timestamp + 3*U.SECONDS_IN_A_DAY,
-			To:                     timestamp + 3*U.SECONDS_IN_A_DAY,
-			AttributionKey:         model.AttributionKeyCampaign,
-			AttributionMethodology: model.AttributionMethodFirstTouch,
-			ConversionEvent:        model.QueryEventWithProperties{Name: "event1"},
-			LookbackDays:           10,
-		}
-
-		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
-		assert.Nil(t, err)
-		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "111111"))
-	})
-
 	// Events with +5 Days
 	errCode = createEventWithSession(project.ID, "event1",
 		createdUserID2, timestamp+5*U.SECONDS_IN_A_DAY, "222222", "", "", "", "", "")
@@ -335,23 +319,6 @@ func TestAttributionLandingPage(t *testing.T) {
 		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionUserCountLandingPage(query.AttributionKey, result, "lp_111111"))
-	})
-
-	t.Run("AttributionQueryFirstTouchOutOfTimestampRangeNoLookBack", func(t *testing.T) {
-		query := &model.AttributionQuery{
-			From:                   timestamp + 3*U.SECONDS_IN_A_DAY,
-			To:                     timestamp + 3*U.SECONDS_IN_A_DAY,
-			AttributionKey:         model.AttributionKeyLandingPage,
-			AttributionMethodology: model.AttributionMethodFirstTouch,
-			ConversionEvent:        model.QueryEventWithProperties{Name: "event1"},
-			LookbackDays:           10,
-			TacticOfferType:        model.MarketingEventTypeOffer,
-		}
-
-		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
-		assert.Nil(t, err)
-		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "111111"))
 	})
 
 	// Event with +3 Days
@@ -545,22 +512,6 @@ func TestAttributionEngagementModel(t *testing.T) {
 		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "111111"))
-	})
-
-	t.Run("TestAttributionEngagementQueryFirstTouchOutOfTimestampRangeNoLookBack", func(t *testing.T) {
-		query := &model.AttributionQuery{
-			From:                   timestamp + 3*U.SECONDS_IN_A_DAY,
-			To:                     timestamp + 3*U.SECONDS_IN_A_DAY,
-			AttributionKey:         model.AttributionKeyCampaign,
-			AttributionMethodology: model.AttributionMethodFirstTouch,
-			ConversionEvent:        model.QueryEventWithProperties{Name: "event1"},
-			LookbackDays:           10,
-			QueryType:              model.AttributionQueryTypeEngagementBased,
-		}
-		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
-		assert.Nil(t, err)
-		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "111111"))
 	})
 
 	errCode = createEventWithSession(project.ID, "event1",
