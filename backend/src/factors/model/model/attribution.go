@@ -812,6 +812,22 @@ func GetAttributionKeyForOffline(attributionKey string) (string, error) {
 	return "", errors.New("invalid query properties for offline touch point")
 }
 
+func addFixedMetrics(result *QueryResult, query *AttributionQuery) {
+	result.Headers = append(result.Headers, AttributionFixedHeadersLandingPage...)
+	conversionEventUsers := fmt.Sprintf("%s - Users", query.ConversionEvent.Name)
+	result.Headers = append(result.Headers, conversionEventUsers)
+	conversionEventUsersInfluence := fmt.Sprintf("%s - Users (InfluenceRemove)", query.ConversionEvent.Name)
+	result.Headers = append(result.Headers, conversionEventUsersInfluence)
+	result.Headers = append(result.Headers, AttributionFixedHeadersPostPostConversionLanding...)
+	if len(query.LinkedEvents) > 0 {
+		for _, event := range query.LinkedEvents {
+			result.Headers = append(result.Headers, fmt.Sprintf("%s - Users", event.Name))
+			result.Headers = append(result.Headers, fmt.Sprintf("%s- Users (InfluenceRemove)", event.Name))
+		}
+	}
+
+}
+
 // AddHeadersByAttributionKey Adds common column names and linked events as header to the result rows.
 func AddHeadersByAttributionKey(result *QueryResult, query *AttributionQuery, goalEvents []string, goalEventAggFuncTypes []string) {
 
@@ -826,17 +842,25 @@ func AddHeadersByAttributionKey(result *QueryResult, query *AttributionQuery, go
 		}
 
 		// add up fixed metrics
-		result.Headers = append(result.Headers, AttributionFixedHeadersLandingPage...)
-		conversionEventUsers := fmt.Sprintf("%s - Users", query.ConversionEvent.Name)
-		result.Headers = append(result.Headers, conversionEventUsers)
-		conversionEventUsersInfluence := fmt.Sprintf("%s - Users (InfluenceRemove)", query.ConversionEvent.Name)
-		result.Headers = append(result.Headers, conversionEventUsersInfluence)
-		result.Headers = append(result.Headers, AttributionFixedHeadersPostPostConversionLanding...)
-		if len(query.LinkedEvents) > 0 {
-			for _, event := range query.LinkedEvents {
-				result.Headers = append(result.Headers, fmt.Sprintf("%s - Users", event.Name))
-				result.Headers = append(result.Headers, fmt.Sprintf("%s- Users (InfluenceRemove)", event.Name))
+
+		if query.AnalyzeType == AnalyzeTypeHSDeals || query.AnalyzeType == AnalyzeTypeSFOpportunities ||
+			query.AnalyzeType == AnalyzeTypeSFAccounts || query.AnalyzeType == AnalyzeTypeHSCompanies {
+
+			result.Headers = append(result.Headers, AttributionFixedHeadersLandingPage...)
+
+			for _, goal := range goalEvents {
+
+				conversion := fmt.Sprintf("%s - Conversion", goal)
+				conversionInfluence := fmt.Sprintf("%s - Conversion Value (InfluenceRemove) ", goal)
+				result.Headers = append(result.Headers, conversion, conversionInfluence)
+
+				conversionC := fmt.Sprintf("%s - Conversion(compare)", goal)
+				conversionC_influence := fmt.Sprintf("%s - Conversion InfluenceRemove(compare)", goal)
+				result.Headers = append(result.Headers, conversionC, conversionC_influence)
 			}
+
+		} else {
+			addFixedMetrics(result, query)
 		}
 
 	} else if query.AnalyzeType == AnalyzeTypeUsers {
@@ -924,14 +948,6 @@ func AddHeadersByAttributionKey(result *QueryResult, query *AttributionQuery, go
 				conversionC_influence := fmt.Sprintf("%s - Conversion InfluenceRemove(compare)", goal)
 				cpcC := fmt.Sprintf("%s - Cost Per Conversion(compare)", goal)
 				result.Headers = append(result.Headers, conversionC, conversionC_influence, cpcC)
-			}
-		}
-
-		if len(query.LinkedEvents) > 0 {
-			for _, event := range query.LinkedEvents {
-				result.Headers = append(result.Headers, fmt.Sprintf("%s - Users", event.Name))
-				result.Headers = append(result.Headers, fmt.Sprintf("%s- Users (InfluenceRemove)", event.Name))
-				result.Headers = append(result.Headers, fmt.Sprintf("%s - CPC", event.Name))
 			}
 		}
 
@@ -1063,18 +1079,23 @@ func GetConversionIndex(headers []string) int {
 func GetConversionIndexKPI(headers []string) int {
 	for index, val := range headers {
 		// matches the first conversion
-		if strings.Contains(val, "ClickConversionRate") {
-			return index + 1
+		if strings.HasSuffix(val, "- Conversion") {
+			return index
 		}
 	}
 	return -1
 }
 
 func GetSecondConversionIndexKPI(headers []string) int {
+	isSecond := false
 	for index, val := range headers {
 		// matches the second conversion
-		if strings.Contains(val, "Cost Per Conversion(compare)") {
-			return index + 1
+		if strings.HasSuffix(val, "- Conversion") {
+			if isSecond {
+				return index
+			} else {
+				isSecond = true
+			}
 		}
 	}
 	return -1
@@ -1118,6 +1139,65 @@ func GetSpendIndex(headers []string) int {
 		}
 	}
 	return -1
+}
+
+func GetRowsByMapsKPILandingPage(contentGroupNamesList []string, attributionData *map[string]*AttributionData, isCompare bool) [][]interface{} {
+
+	var defaultMatchingRow []interface{}
+
+	//ConversionEventCount, ConversionEventCountInfluence,ConversionEventCompareCount,ConversionEventCompareCountInfluence
+	defaultMatchingRow = append(defaultMatchingRow, float64(0), float64(0), float64(0), float64(0))
+
+	var contentGroups []interface{}
+	for i := 0; i < len(contentGroupNamesList); i++ {
+		contentGroups = append(contentGroups, "none")
+	}
+
+	nonMatchingRow := []interface{}{"none"}
+	nonMatchingRow = append(nonMatchingRow, contentGroups...)
+	nonMatchingRow = append(nonMatchingRow, defaultMatchingRow...)
+
+	rows := make([][]interface{}, 0)
+	for _, data := range *attributionData {
+		attributionIdName := data.MarketingInfo.LandingPageUrl
+		if attributionIdName == "" {
+			attributionIdName = PropertyValueNone
+		}
+		if attributionIdName != "" {
+
+			var row []interface{}
+			// Add up Name
+			row = append(row, attributionIdName)
+
+			// Add up content Groups
+			for i := 0; i < len(contentGroups); i++ {
+				if v, exists := data.MarketingInfo.ContentGroupValuesMap[contentGroupNamesList[i]]; exists {
+					row = append(row, v)
+				} else {
+					row = append(row, PropertyValueNone)
+				}
+			}
+			// Append fixed Metrics & ConversionEventCount[0] as only one goal event exists for landing page
+
+			for idx, _ := range data.ConversionEventCount {
+				row = append(row, data.ConversionEventCount[idx], data.ConversionEventCountInfluence[idx])
+				if isCompare {
+
+					row = append(row, data.ConversionEventCompareCount[idx])
+					row = append(row, data.ConversionEventCompareCountInfluence[idx])
+				} else {
+					row = append(row, float64(0), float64(0))
+				}
+			}
+
+			rows = append(rows, row)
+		}
+	}
+	if len(rows) == 0 {
+		// In case of empty result, send a row of zeros
+		rows = append(rows, nonMatchingRow)
+	}
+	return rows
 }
 
 // GetRowsByMaps Returns result in from of metrics. For empty attribution id, the values are accumulated into "$none".
@@ -1366,6 +1446,54 @@ func GetRowsByMapsLandingPage(contentGroupNamesList []string, attributionData *m
 		rows = append(rows, nonMatchingRow)
 	}
 	return rows
+}
+
+func ProcessQueryKPILandingPageUrl(query *AttributionQuery, attributionData *map[string]*AttributionData, logCtx log.Entry, kpiData map[string]KPIInfo, isCompare bool) *QueryResult {
+	logFields := log.Fields{"Method": "ProcessQueryKPILandingPageUrl"}
+	logCtx = *logCtx.WithFields(logFields)
+	dataRows := GetRowsByMapsKPILandingPage(query.AttributionContentGroups, attributionData, isCompare)
+	logCtx.Info("Done GetRowsByMapsKPILandingPage")
+	result := &QueryResult{}
+	var goalEvents []string
+	for _, value := range kpiData {
+		goalEvents = value.KpiHeaderNames
+	}
+
+	AddHeadersByAttributionKey(result, query, goalEvents, nil)
+
+	result.Rows = dataRows
+
+	// Update result based on Key Dimensions
+	err := GetUpdatedRowsByDimensions(result, query, logCtx)
+	if err != nil {
+		return nil
+	}
+	result.Rows = MergeDataRowsHavingSameKey(result.Rows, GetLastKeyValueIndexLandingPage(result.Headers), query.AttributionKey, query.AnalyzeType, nil, logCtx)
+	// sort the rows by conversionEvent
+	conversionIndex := GetConversionIndex(result.Headers)
+	sort.Slice(result.Rows, func(i, j int) bool {
+		if len(result.Rows[i]) < conversionIndex || len(result.Rows[j]) < conversionIndex {
+			if C.GetAttributionDebug() == 1 {
+				logCtx.WithFields(log.Fields{"row1": result.Rows[i], "row2": result.Rows[j]}).Info("final results are rows len mismatch. Ignoring row and continuing.")
+			}
+			return true
+		}
+		v1, ok1 := result.Rows[i][conversionIndex].(float64)
+		v2, ok2 := result.Rows[j][conversionIndex].(float64)
+		if !ok1 || !ok2 {
+			if C.GetAttributionDebug() == 1 {
+				logCtx.WithFields(log.Fields{"row1": result.Rows[i], "row2": result.Rows[j]}).Info("final results cast mismatch. Ignoring row and continuing.")
+			}
+			return true
+		}
+		return v1 > v2
+	})
+	logCtx.Info("MergeDataRowsHavingSameKey")
+
+	result.Rows = AddGrandTotalRowKPILandingPage(result.Headers, result.Rows, GetLastKeyValueIndexLandingPage(result.Headers), goalEvents, query.AttributionMethodology, query.AttributionMethodologyCompare)
+	logCtx.Info("Done AddGrandTotal")
+	return result
+
 }
 
 func ProcessQueryLandingPageUrl(query *AttributionQuery, attributionData *map[string]*AttributionData, logCtx log.Entry, isCompare bool) *QueryResult {
@@ -2137,6 +2265,57 @@ func AddGrandTotalRowKPI(headers []string, rows [][]interface{}, keyIndex int, a
 			} else {
 				grandTotalRow[keyIndex+13+nextConPosition] = float64(0)
 			}
+		}
+	}
+
+	rows = append([][]interface{}{grandTotalRow}, rows...)
+
+	return rows
+
+}
+func AddGrandTotalRowKPILandingPage(headers []string, rows [][]interface{}, keyIndex int, goalEvents []string, method string, methodCompare string) [][]interface{} {
+
+	var grandTotalRow []interface{}
+
+	for j := 0; j <= keyIndex; j++ {
+		grandTotalRow = append(grandTotalRow, "Grand Total")
+	}
+
+	//ConversionEventCount, ConversionEventCountInfluence,ConversionEventCompareCount,ConversionEventCompareCountInfluence
+
+	var defaultMatchingRow []interface{}
+	for idx := 0; idx < len(goalEvents); idx++ {
+		// one for each - ConversionEventCount, ConversionEventCountInfluence, ConversionEventCompareCount, ConversionEventCompareCountInfluence
+		defaultMatchingRow = append(defaultMatchingRow, float64(0), float64(0), float64(0), float64(0))
+	}
+
+	grandTotalRow = append(grandTotalRow, defaultMatchingRow...)
+
+	maxRowSize := 0
+	for _, row := range rows {
+
+		maxRowSize = U.MaxInt(len(row), maxRowSize)
+		if len(row) == 0 || len(row) != maxRowSize {
+			continue
+		}
+		for idx, _ := range goalEvents {
+			nextConPosition := idx * 4
+			grandTotalRow[keyIndex+1+nextConPosition] = grandTotalRow[keyIndex+1+nextConPosition].(float64) + row[keyIndex+1+nextConPosition].(float64) // Conversion.
+			grandTotalRow[keyIndex+2+nextConPosition] = grandTotalRow[keyIndex+2+nextConPosition].(float64) + row[keyIndex+2+nextConPosition].(float64) // Conversion INFLUENCE
+			grandTotalRow[keyIndex+3+nextConPosition] = grandTotalRow[keyIndex+3+nextConPosition].(float64) + row[keyIndex+3+nextConPosition].(float64) // Compare Conversion.
+			grandTotalRow[keyIndex+4+nextConPosition] = grandTotalRow[keyIndex+4+nextConPosition].(float64) + row[keyIndex+4+nextConPosition].(float64) // Compare Conversion Influence
+
+			if method == AttributionMethodInfluence {
+				grandTotalRow[1] = grandTotalRow[2]
+				for i := keyIndex + 4*len(goalEvents) + 1; i < len(grandTotalRow); i += 2 {
+					grandTotalRow[i] = grandTotalRow[i+1]
+
+				}
+			}
+			if methodCompare == AttributionMethodInfluence {
+				grandTotalRow[3] = grandTotalRow[4]
+			}
+
 		}
 	}
 

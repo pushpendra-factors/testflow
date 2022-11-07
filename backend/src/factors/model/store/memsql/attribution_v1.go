@@ -626,11 +626,22 @@ func ProcessAttributionDataToResult(projectID int64, query *model.AttributionQue
 
 	if query.AttributionKey == model.AttributionKeyLandingPage {
 
-		result = model.ProcessQueryLandingPageUrl(query, attributionData, *logCtx, isCompare)
-		if C.GetAttributionDebug() == 1 {
-			logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Process Query Landing PageUrl took time")
+		if query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities ||
+			query.AnalyzeType == model.AnalyzeTypeSFAccounts || query.AnalyzeType == model.AnalyzeTypeHSCompanies {
+			result = model.ProcessQueryKPILandingPageUrl(query, attributionData, *logCtx, kpiData, isCompare)
+			if C.GetAttributionDebug() == 1 {
+				logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Process Query Landing PageUrl took time")
+			}
+			queryStartTime = time.Now().UTC().Unix()
+
+		} else {
+
+			result = model.ProcessQueryLandingPageUrl(query, attributionData, *logCtx, isCompare)
+			if C.GetAttributionDebug() == 1 {
+				logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Process Query Landing PageUrl took time")
+			}
+			queryStartTime = time.Now().UTC().Unix()
 		}
-		queryStartTime = time.Now().UTC().Unix()
 
 	} else if query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities ||
 		query.AnalyzeType == model.AnalyzeTypeSFAccounts || query.AnalyzeType == model.AnalyzeTypeHSCompanies {

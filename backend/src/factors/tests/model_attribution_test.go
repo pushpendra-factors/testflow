@@ -1272,7 +1272,7 @@ func createUsersForHubspotDeals(t *testing.T, project *model.Project, groups map
 
 		assert.Equal(t, http.StatusCreated, status)
 
-		_ = createEventWithSession(project.ID, "", createdUserID, timestamp, "test", "", "", "", "", "")
+		_ = createEventWithSession(project.ID, "", createdUserID, timestamp, "test", "", "", "", "", "lp1111")
 
 		// update user properties to add $group_id property = group.ID of created user
 		newProperties := &postgres.Jsonb{RawMessage: json.RawMessage([]byte(fmt.Sprintf(
@@ -1280,7 +1280,7 @@ func createUsersForHubspotDeals(t *testing.T, project *model.Project, groups map
 		_, status = store.GetStore().UpdateUserPropertiesV2(project.ID, createdUserID, newProperties, time.Now().Unix(), "", "")
 		assert.Equal(t, http.StatusAccepted, status)
 	}
-	//
+
 }
 func createUsersForHubspotCompanies(t *testing.T, project *model.Project, groups map[string]*model.Group, timestamp int64) {
 	properties := postgres.Jsonb{RawMessage: json.RawMessage([]byte(fmt.Sprintf(
@@ -1360,13 +1360,33 @@ func TestGetUserGroupWise(t *testing.T) {
 	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
 
+	request := model.ContentGroup{}
+	request.ContentGroupName = fmt.Sprintf("%v", "cg_123")
+	request.ContentGroupDescription = "description"
+	value := model.ContentGroupValue{}
+	value.Operator = "startsWith"
+	value.LogicalOp = "OR"
+	value.Value = "123"
+	filters := make([]model.ContentGroupValue, 0)
+	filters = append(filters, value)
+	contentGroupValueArray := make([]model.ContentGroupRule, 0)
+	contentGroupValue := model.ContentGroupRule{
+		ContentGroupValue: "value_123",
+		Rule:              filters,
+	}
+	contentGroupValueArray = append(contentGroupValueArray, contentGroupValue)
+	contentGroupValueJson, err := json.Marshal(contentGroupValueArray)
+	request.Rule = &postgres.Jsonb{contentGroupValueJson}
+	w := sendCreateContentGroupRequest(a, request, agent, project.ID)
+	assert.Equal(t, http.StatusCreated, w.Code)
+
 	timestamp := int64(1589068800)
 
 	//create metrics "Deals"
 	metrics := "Deals"
 	description := U.RandomString(8)
 	transformations := &postgres.Jsonb{json.RawMessage(`{"agFn": "unique", "agPr": "", "agPrTy": "categorical", "fil": [], "daFie": "$hubspot_datefield1"}`)}
-	w := sendCreateCustomMetric(a, project.ID, agent, transformations, metrics, description, "hubspot_deals", 1)
+	w = sendCreateCustomMetric(a, project.ID, agent, transformations, metrics, description, "hubspot_deals", 1)
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	//create metrics "Companies"
@@ -1396,6 +1416,58 @@ func TestGetUserGroupWise(t *testing.T) {
 	createUsersForHubspotCompanies(t, project, groups, timestamp)
 	createUsersForSalesforceOpportunities(t, project, groups, timestamp)
 	createUsersForSalesforceAccounts(t, project, groups, timestamp)
+
+	t.Run("HubspotDealsLandingPage", func(t *testing.T) {
+
+		query1 := model.KPIQuery{
+			Category:         model.ProfileCategory,
+			DisplayCategory:  model.HubspotDealsDisplayCategory,
+			PageUrl:          "",
+			Metrics:          []string{"Deals"},
+			GroupBy:          []model.KPIGroupBy{},
+			From:             timestamp,
+			To:               timestamp + 3*U.SECONDS_IN_A_DAY,
+			GroupByTimestamp: "date",
+		}
+
+		query2 := model.KPIQuery{}
+		U.DeepCopy(&query1, &query2)
+		query2.GroupByTimestamp = ""
+
+		kpiQueryGroup := model.KPIQueryGroup{
+			Class:         "kpi",
+			Queries:       []model.KPIQuery{query1, query2, query1, query2},
+			GlobalFilters: []model.KPIFilter{},
+			GlobalGroupBy: []model.KPIGroupBy{
+				{
+					Granularity:      "",
+					PropertyName:     model.HSDealIDProperty,
+					PropertyDataType: "numerical",
+					Entity:           "user",
+					ObjectType:       "",
+					GroupByType:      "raw_values",
+				},
+			},
+		}
+
+		query := &model.AttributionQuery{
+			AnalyzeType:             model.AnalyzeTypeHSDeals,
+			From:                    timestamp,
+			To:                      timestamp + 3*U.SECONDS_IN_A_DAY,
+			KPI:                     kpiQueryGroup,
+			AttributionKey:          model.AttributionKeyLandingPage,
+			TacticOfferType:         model.MarketingEventTypeOffer,
+			AttributionKeyDimension: []string{model.FieldLandingPageUrl},
+			AttributionMethodology:  model.AttributionMethodLinear,
+			LookbackDays:            10,
+		}
+
+		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, "", C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		assert.Nil(t, err)
+		assert.Equal(t, float64(1), getConversionUserCountKpiLandingPage(query.AttributionKey, result, "lp1111"))
+		assert.Equal(t, float64(1), getSecondConversionUserCountKpiLandingPage(query.AttributionKey, result, "lp1111"))
+
+	})
 
 	t.Run("TestForHubspotDeals", func(t *testing.T) {
 
@@ -1857,6 +1929,20 @@ func getConversionUserCount(attributionKey string, result *model.QueryResult, ke
 	return int64(-1)
 }
 
+func getConversionUserCountKpi(attributionKey string, result *model.QueryResult, key interface{}) interface{} {
+
+	addedKeysSize := model.GetLastKeyValueIndex(result.Headers)
+	conversionIndex := model.GetConversionIndexKPI(result.Headers)
+
+	for _, row := range result.Rows {
+		rowKey := getRowKey(addedKeysSize, row)
+		if rowKey == key {
+			return row[conversionIndex]
+		}
+	}
+	return int64(-1)
+}
+
 func getConversionUserCountLandingPage(attributionKey string, result *model.QueryResult, key interface{}) interface{} {
 
 	addedKeysSize := model.GetLastKeyValueIndexLandingPage(result.Headers)
@@ -1870,6 +1956,21 @@ func getConversionUserCountLandingPage(attributionKey string, result *model.Quer
 	}
 	return int64(-1)
 }
+
+func getConversionUserCountKpiLandingPage(attributionKey string, result *model.QueryResult, key interface{}) interface{} {
+
+	addedKeysSize := model.GetLastKeyValueIndexLandingPage(result.Headers)
+	conversionIndex := model.GetConversionIndexKPI(result.Headers)
+
+	for _, row := range result.Rows {
+		rowKey := getRowKey(addedKeysSize, row)
+		if rowKey == key {
+			return row[conversionIndex]
+		}
+	}
+	return int64(-1)
+}
+
 func getRowKey(addedKeysSize int, row []interface{}) string {
 	rowKey := ""
 	for i := 0; i <= addedKeysSize; i++ {
@@ -3315,11 +3416,12 @@ func TestKpiAttributionWithMultipleRows(t *testing.T) {
 
 	groups := addGroups(t, project)
 
+	//create users for m1,m2,m3
 	properties := postgres.Jsonb{RawMessage: json.RawMessage([]byte(fmt.Sprintf(
 		`{"country": "us", "age": 20, "$hubspot_amount": 200,"$hubspot_deal_hs_object_id":"1", "$hubspot_datefield1": %d, "paid": true}`, timestamp)))}
 
 	createUsersForHubspotDealsWithProperties(t, project, properties, groups, timestamp)
-
+	//create users for m4
 	properties = postgres.Jsonb{RawMessage: json.RawMessage([]byte(fmt.Sprintf(
 		`{"country": "us", "age": 20, "$hubspot_amount": 2000,"$hubspot_deal_hs_object_id":"1", "$hubspot_datefield2": %d, "paid": true}`, timestamp+2*U.SECONDS_IN_A_DAY)))}
 
@@ -3459,10 +3561,10 @@ func TestKpiAttributionWithMultipleRows(t *testing.T) {
 
 }
 
-func getConversionUserCountKpi(attributionKey string, result *model.QueryResult, key interface{}) interface{} {
+func getSecondConversionUserCountKpi(attributionKey string, result *model.QueryResult, key interface{}) interface{} {
 
 	addedKeysSize := model.GetLastKeyValueIndex(result.Headers)
-	conversionIndex := model.GetConversionIndexKPI(result.Headers)
+	conversionIndex := model.GetSecondConversionIndexKPI(result.Headers)
 
 	for _, row := range result.Rows {
 		rowKey := getRowKey(addedKeysSize, row)
@@ -3473,9 +3575,9 @@ func getConversionUserCountKpi(attributionKey string, result *model.QueryResult,
 	return int64(-1)
 }
 
-func getSecondConversionUserCountKpi(attributionKey string, result *model.QueryResult, key interface{}) interface{} {
+func getSecondConversionUserCountKpiLandingPage(attributionKey string, result *model.QueryResult, key interface{}) interface{} {
 
-	addedKeysSize := model.GetLastKeyValueIndex(result.Headers)
+	addedKeysSize := model.GetLastKeyValueIndexLandingPage(result.Headers)
 	conversionIndex := model.GetSecondConversionIndexKPI(result.Headers)
 
 	for _, row := range result.Rows {
