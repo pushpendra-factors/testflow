@@ -213,6 +213,7 @@ const SingleEventSingleBreakdownComponent = forwardRef(
           <SingleEventSingleBreakdownHorizontalBarChart
             aggregateData={aggregateData}
             breakdown={resultState.data.meta.query.gbp}
+            comparisonApplied={comparisonData.data != null}
           />
         </div>
       );

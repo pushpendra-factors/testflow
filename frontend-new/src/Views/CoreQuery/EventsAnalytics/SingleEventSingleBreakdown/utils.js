@@ -566,7 +566,8 @@ export const getDataInHorizontalBarChartFormat = (
   aggregateData,
   breakdown,
   cardSize = 1,
-  isDashboardWidget = false
+  isDashboardWidget = false,
+  comparisonApplied = false
 ) => {
   const sortedData = SortResults(aggregateData, [
     {
@@ -585,7 +586,8 @@ export const getDataInHorizontalBarChartFormat = (
     firstBreakdownKey,
     cardSize,
     isDashboardWidget,
-    false
+    false,
+    comparisonApplied
   );
 
   const result = [row];

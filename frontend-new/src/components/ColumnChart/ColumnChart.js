@@ -18,35 +18,37 @@ function ColumnChart({
   comparisonApplied,
   cardSize
 }) {
-  if (comparisonApplied) {
-    Highcharts.setOptions({
-      defs: {
-        stripes: {
-          tagName: 'pattern',
-          id: 'columnChartStripes',
-          patternUnits: 'userSpaceOnUse',
-          width: 4,
-          height: 4,
-          children: [
-            {
-              tagName: 'rect', // Solid background
-              x: 0,
-              y: 0,
-              width: 4,
-              height: 4,
-              fill: CHART_COLOR_1
-            },
-            {
-              tagName: 'path',
-              d: 'M-1,1 l2,-2 M0,4 l4,-4 M3,5 l2,-2',
-              stroke: '#fff',
-              strokeWidth: '1px'
-            }
-          ]
+  useEffect(() => {
+    if (comparisonApplied) {
+      Highcharts.setOptions({
+        defs: {
+          stripes: {
+            tagName: 'pattern',
+            id: 'columnChartStripes',
+            patternUnits: 'userSpaceOnUse',
+            width: 4,
+            height: 4,
+            children: [
+              {
+                tagName: 'rect', // Solid background
+                x: 0,
+                y: 0,
+                width: 4,
+                height: 4,
+                fill: CHART_COLOR_1
+              },
+              {
+                tagName: 'path',
+                d: 'M-1,1 l2,-2 M0,4 l4,-4 M3,5 l2,-2',
+                stroke: '#fff',
+                strokeWidth: '1px'
+              }
+            ]
+          }
         }
-      }
-    });
-  }
+      });
+    }
+  }, [comparisonApplied]);
 
   const drawChart = useCallback(() => {
     Highcharts.chart(chartId, {
@@ -107,7 +109,7 @@ function ColumnChart({
         }
       },
       tooltip: {
-        backgroundColor: 'red',
+        backgroundColor: 'white',
         borderWidth: 0,
         borderRadius: 12,
         borderColor: 'black',

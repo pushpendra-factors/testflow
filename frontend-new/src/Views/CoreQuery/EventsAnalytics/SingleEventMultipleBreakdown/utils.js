@@ -337,13 +337,19 @@ export const renderHorizontalBarChart = (
   key,
   cardSize = 1,
   isDashboardWidget = false,
-  multipleBreakdowns = true
+  multipleBreakdowns = true,
+  comparisonApplied = false
 ) => {
   const series = [
     {
       data: []
     }
   ];
+  if (comparisonApplied) {
+    series.push({
+      data: []
+    });
+  }
   const colors = generateColors(10);
   const sortedData = SortData(data, 'value', 'descend');
   const categories = sortedData.map((elem, index) => {
@@ -352,6 +358,13 @@ export const renderHorizontalBarChart = (
       color: colors[index % 10],
       metricType: get(elem, 'metricType', null)
     });
+    if (comparisonApplied) {
+      series[1].data.push({
+        y: elem.compareValue,
+        color: colors[index % 10],
+        metricType: get(elem, 'metricType', null)
+      });
+    }
     return elem[key];
   });
 
@@ -366,6 +379,7 @@ export const renderHorizontalBarChart = (
       cardSize={cardSize}
       isDashboardWidget={isDashboardWidget}
       width={isDashboardWidget || !multipleBreakdowns ? null : 600}
+      comparisonApplied={comparisonApplied}
     />
   );
 };

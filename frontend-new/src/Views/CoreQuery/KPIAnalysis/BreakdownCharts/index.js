@@ -197,6 +197,7 @@ const BreakdownChartsComponent = forwardRef(
           <HorizontalBarChartTable
             breakdown={breakdown}
             aggregateData={aggregateData}
+            comparisonApplied={comparisonData.data != null}
           />
         </div>
       );

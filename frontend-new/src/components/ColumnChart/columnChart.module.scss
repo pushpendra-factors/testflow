@@ -32,13 +32,13 @@
       }
     }
   }
-}
 
-.columnChart.comparisonApplied {
-  :global(.highcharts-series-0 .highcharts-point) {
-    fill: url(#columnChartStripes);
-  }
-  :global(.highcharts-series-1 .highcharts-point) {
-    fill: #82aee0;
+  &.comparisonApplied {
+    :global(.highcharts-series-0 .highcharts-point) {
+      fill: url(#columnChartStripes);
+    }
+    :global(.highcharts-series-1 .highcharts-point) {
+      fill: #82aee0;
+    }
   }
 }

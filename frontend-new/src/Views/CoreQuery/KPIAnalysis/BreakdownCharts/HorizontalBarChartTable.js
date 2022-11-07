@@ -1,19 +1,20 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSelector } from 'react-redux';
+import { Spin } from 'antd';
 import { Wait } from '../../../../utils/dataFormatter';
 import {
   getHorizontalBarChartColumns,
-  getDataInHorizontalBarChartFormat,
+  getDataInHorizontalBarChartFormat
 } from './utils';
-import { Spin } from 'antd';
 import DataTable from '../../../../components/DataTable';
 
-const HorizontalBarChartTable = ({
+function HorizontalBarChartTable({
   aggregateData,
   breakdown,
   cardSize = 1,
   isDashboardWidget = false,
-}) => {
+  comparisonApplied = false
+}) {
   const [loading, setLoading] = useState(true);
   const { userPropNames, eventPropNames } = useSelector(
     (state) => state.coreQuery
@@ -40,35 +41,36 @@ const HorizontalBarChartTable = ({
         aggregateData,
         breakdown,
         cardSize,
-        isDashboardWidget
+        isDashboardWidget,
+        comparisonApplied
       )
     );
     setLoading(false);
-  }, [aggregateData, breakdown, cardSize, isDashboardWidget]);
+  }, [aggregateData, breakdown, cardSize, isDashboardWidget, comparisonApplied]);
 
   useEffect(() => {
     formatDataAfterDelay();
   }, [formatDataAfterDelay]);
 
+  if (loading) {
+    return (
+      <div className='h-64 flex items-center justify-center w-full'>
+        <Spin size='small' />
+      </div>
+    );
+  }
+
   return (
-    <>
-      {loading ? (
-        <div className='h-64 flex items-center justify-center w-full'>
-          <Spin size='small' />
-        </div>
-      ) : (
-        <DataTable
-          renderSearch={false}
-          isWidgetModal={false}
-          tableData={data}
-          columns={columns}
-          ignoreDocumentClick={true}
-          isPaginationEnabled={data.length > 100}
-          defaultPageSize={100}
-        />
-      )}
-    </>
+    <DataTable
+      renderSearch={false}
+      isWidgetModal={false}
+      tableData={data}
+      columns={columns}
+      ignoreDocumentClick
+      isPaginationEnabled={data.length > 100}
+      defaultPageSize={100}
+    />
   );
-};
+}
 
 export default HorizontalBarChartTable;
