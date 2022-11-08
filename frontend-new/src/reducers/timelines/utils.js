@@ -64,7 +64,7 @@ export const getActivitiesWithEnableKeyConfig = (
 
 export const formatUsersTimeline = (data, config) => {
   const returnData = {
-    title: !data.is_anonymous ? data.name || '-' : 'Unidentified User',
+    title: !data.is_anonymous ? data.name || data.user_id : 'Unidentified User',
     subtitle: data.company || data.user_id,
     email: data.email,
     country: data.country,

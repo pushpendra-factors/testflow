@@ -458,7 +458,6 @@ func (store *MemSQL) PullAdwordsMarketingData(projectID int64, from, to int64, c
 		return nil, nil, err
 	}
 	defer U.CloseReadQuery(rows, tx)
-
 	marketingDataIDMap, allRows := model.ProcessRow(rows, reportName, logCtx, model.ChannelAdwords, reqID)
 	return marketingDataIDMap, allRows, nil
 }

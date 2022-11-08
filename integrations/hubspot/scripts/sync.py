@@ -1340,8 +1340,6 @@ def allow_contact_list_sync_by_project_id(project_id):
     return str(project_id) in allowed_projects
 
 def allowed_doc_types_sync(doc_type):
-    if not options.enable_contact_list_sync_by_project_id:
-        return False
     all_doc_typ, allowed_doc_types,_ = get_allowed_list_with_all_element_support(options.allowed_doc_types_sync)
     if all_doc_typ:
         return True

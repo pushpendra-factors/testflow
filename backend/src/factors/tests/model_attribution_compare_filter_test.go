@@ -168,26 +168,6 @@ func TestAttributionModelCompare(t *testing.T) {
 		assert.Equal(t, float64(1), getCompareConversionUserCount(query.AttributionKey, result, "111111"))
 	})
 
-	t.Run("AttributionQueryCompareOutOfTimestampRangeNoLookBack", func(t *testing.T) {
-		query := &model.AttributionQuery{
-			From:                          timestamp + 3*U.SECONDS_IN_A_DAY,
-			To:                            timestamp + 3*U.SECONDS_IN_A_DAY,
-			LookbackDays:                  10,
-			AttributionKey:                model.AttributionKeyCampaign,
-			AttributionKeyFilter:          []model.AttributionKeyFilter{},
-			LinkedEvents:                  []model.QueryEventWithProperties{},
-			AttributionMethodology:        model.AttributionMethodFirstTouch,
-			AttributionMethodologyCompare: model.AttributionMethodLastTouch,
-			ConversionEvent:               model.QueryEventWithProperties{Name: "event1"},
-			ConversionEventCompare:        model.QueryEventWithProperties{},
-		}
-		var debugQueryKey string
-		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, debugQueryKey, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
-		assert.Nil(t, err)
-		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "111111"))
-		assert.Equal(t, int64(-1), getCompareConversionUserCount(query.AttributionKey, result, "111111"))
-	})
-
 	// Events with +5 Days
 	errCode = createEventWithSession(project.ID, "event1",
 		createdUserID2, timestamp+5*U.SECONDS_IN_A_DAY, "222222", "", "", "", "", "")

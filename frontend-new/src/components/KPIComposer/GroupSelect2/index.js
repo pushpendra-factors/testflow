@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import styles from './index.module.scss';
 import { Input, Button } from 'antd';
 import { SVG, Text } from 'factorsComponents';
 import { CaretDownOutlined, CaretUpOutlined } from '@ant-design/icons';
 import _ from 'lodash';
+import useAutoFocus from '../../../hooks/useAutoFocus';
 
 function GroupSelect2({
   groupedProperties,
@@ -18,11 +19,7 @@ function GroupSelect2({
   const [groupCollapseState, setGroupCollapseState] = useState({});
   const [searchTerm, setSearchTerm] = useState('');
   const [showFull, setShowFull] = useState([]);
-  const inputComponentRef = useRef(null);
-
-  useEffect(() => {
-    if (inputComponentRef?.current) inputComponentRef.current?.focus();
-  }, []);
+  const inputComponentRef = useAutoFocus();
 
   useEffect(() => {
     const groupColState = Object.assign({}, groupCollapseState);

@@ -359,6 +359,15 @@ func ReceiveEventWithQueue(token string, event *Event,
 	return ReceiveEvent(token, event)
 }
 
+func shouldSkipSession(payload *SDK.TrackPayload) bool {
+	if payload.EventProperties == nil {
+		return true
+	}
+
+	return payload.EventProperties[U.EP_PAGE_RAW_URL] == nil ||
+		payload.EventProperties[U.EP_PAGE_RAW_URL] == ""
+}
+
 func ReceiveEvent(token string, event *Event) (int, *EventResponse) {
 	if token == "" || event == nil {
 		return http.StatusBadRequest, &EventResponse{Error: "Invalid payload"}
@@ -468,7 +477,7 @@ func ReceiveEvent(token string, event *Event) (int, *EventResponse) {
 			RequestSource:   model.UserSourceWeb,
 		}
 
-		status, trackResponse := SDK.Track(project.ID, request, false, SDK.SourceSegment, "")
+		status, trackResponse := SDK.Track(project.ID, request, shouldSkipSession(request), SDK.SourceSegment, "")
 		if status != http.StatusOK &&
 			status != http.StatusFound &&
 			status != http.StatusNotModified &&
@@ -516,7 +525,7 @@ func ReceiveEvent(token string, event *Event) (int, *EventResponse) {
 			RequestSource:   model.UserSourceWeb,
 		}
 
-		status, trackResponse := SDK.Track(project.ID, request, false, SDK.SourceSegment, "")
+		status, trackResponse := SDK.Track(project.ID, request, shouldSkipSession(request), SDK.SourceSegment, "")
 		if status != http.StatusOK &&
 			status != http.StatusFound &&
 			status != http.StatusNotModified &&
@@ -558,7 +567,7 @@ func ReceiveEvent(token string, event *Event) (int, *EventResponse) {
 			RequestSource:   model.UserSourceWeb,
 		}
 
-		status, trackResponse := SDK.Track(project.ID, request, false, SDK.SourceSegment, "")
+		status, trackResponse := SDK.Track(project.ID, request, shouldSkipSession(request), SDK.SourceSegment, "")
 		if status != http.StatusOK &&
 			status != http.StatusFound &&
 			status != http.StatusNotModified &&

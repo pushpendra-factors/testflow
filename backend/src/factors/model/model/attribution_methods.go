@@ -20,74 +20,81 @@ func ApplyAttributionKPI(attributionType string,
 	kpiData map[string]KPIInfo,
 	lookbackDays int, campaignFrom, campaignTo int64,
 	attributionKey string) (map[string][]AttributionKeyWeight, error) {
-
 	usersAttribution := make(map[string][]AttributionKeyWeight)
 	lookbackPeriod := int64(lookbackDays) * SecsInADay
 
 	for kpiID, kpiInfo := range kpiData {
 		// kpiID := kpiInfo.KpiID
-		conversionTime := kpiInfo.Timestamp
-		userSessions := sessions[kpiID]
-
 		var attributionKeys []AttributionKeyWeight
-		switch method {
-		case AttributionMethodFirstTouch:
-			attributionKeys = getFirstTouchId(attributionType, userSessions, conversionTime,
-				lookbackPeriod, campaignFrom, campaignTo)
-			break
+		for idx, value := range kpiInfo.KpiValuesList {
+			conversionTime := value.Timestamp
+			userSessions := sessions[kpiID]
 
-		case AttributionMethodLastTouch:
-			attributionKeys = getLastTouchId(attributionType, userSessions, conversionTime,
-				lookbackPeriod, campaignFrom, campaignTo)
-			break
-		case AttributionMethodUShaped:
-			attributionKeys = getUShaped(attributionType, userSessions, conversionTime,
-				lookbackPeriod, campaignFrom, campaignTo)
-			break
+			switch method {
+			case AttributionMethodFirstTouch:
+				attributionKeys = getFirstTouchId(attributionType, userSessions, conversionTime,
+					lookbackPeriod, campaignFrom, campaignTo)
+				break
 
-		case AttributionMethodFirstTouchNonDirect:
-			attributionKeys = getFirstTouchNDId(attributionType, userSessions, conversionTime,
-				lookbackPeriod, campaignFrom, campaignTo, attributionKey)
-			break
+			case AttributionMethodLastTouch:
+				attributionKeys = getLastTouchId(attributionType, userSessions, conversionTime,
+					lookbackPeriod, campaignFrom, campaignTo)
+				break
+			case AttributionMethodUShaped:
+				attributionKeys = getUShaped(attributionType, userSessions, conversionTime,
+					lookbackPeriod, campaignFrom, campaignTo)
+				break
 
-		case AttributionMethodLastTouchNonDirect:
-			attributionKeys = getLastTouchNDId(attributionType, userSessions, conversionTime,
-				lookbackPeriod, campaignFrom, campaignTo, attributionKey)
-			break
+			case AttributionMethodFirstTouchNonDirect:
+				attributionKeys = getFirstTouchNDId(attributionType, userSessions, conversionTime,
+					lookbackPeriod, campaignFrom, campaignTo, attributionKey)
+				break
 
-		case AttributionMethodLinear:
-			attributionKeys = getLinearTouch(attributionType, userSessions, conversionTime,
-				lookbackPeriod, campaignFrom, campaignTo)
-			break
-		case AttributionMethodTimeDecay:
-			attributionKeys = getTimeDecay(attributionType, userSessions, conversionTime,
-				lookbackPeriod, campaignFrom, campaignTo)
-			break
-		case AttributionMethodInfluence:
-			attributionKeys = getInfluence(attributionType, userSessions, conversionTime,
-				lookbackPeriod, campaignFrom, campaignTo)
-			break
-		case AttributionMethodWShaped:
-			attributionKeys = getWShaped(attributionType, userSessions, conversionTime,
-				lookbackPeriod, campaignFrom, campaignTo)
-			break
+			case AttributionMethodLastTouchNonDirect:
+				attributionKeys = getLastTouchNDId(attributionType, userSessions, conversionTime,
+					lookbackPeriod, campaignFrom, campaignTo, attributionKey)
+				break
 
-		default:
-			break
-		}
-		if C.GetAttributionDebug() == 1 {
-			log.WithFields(log.Fields{"KPI_ID": kpiID, "attributionKeys": attributionKeys}).Info(fmt.Sprintf("KPI-Attribution attributionKeys"))
+			case AttributionMethodLinear:
+				attributionKeys = getLinearTouch(attributionType, userSessions, conversionTime,
+					lookbackPeriod, campaignFrom, campaignTo)
+				break
+			case AttributionMethodTimeDecay:
+				attributionKeys = getTimeDecay(attributionType, userSessions, conversionTime,
+					lookbackPeriod, campaignFrom, campaignTo)
+				break
+			case AttributionMethodInfluence:
+				attributionKeys = getInfluence(attributionType, userSessions, conversionTime,
+					lookbackPeriod, campaignFrom, campaignTo)
+				break
+			case AttributionMethodWShaped:
+				attributionKeys = getWShaped(attributionType, userSessions, conversionTime,
+					lookbackPeriod, campaignFrom, campaignTo)
+				break
+
+			default:
+				break
+			}
+			if C.GetAttributionDebug() == 1 {
+				log.WithFields(log.Fields{"KPI_ID": kpiID, "attributionKeys": attributionKeys}).Info(fmt.Sprintf("KPI-Attribution attributionKeys"))
+			}
+
+			if len(attributionKeys) == 0 {
+				continue
+			}
+			kpiInfo.KpiValuesList[idx].IsConverted = true
+			usersAttribution[kpiID] = attributionKeys
 		}
 		// In case a successful attribution could not happen, remove converted user.
-		if len(attributionKeys) == 0 {
+
+		if len(usersAttribution[kpiID]) == 0 {
+			//delete(usersAttribution, kpiID)
 			delete(usersAttribution, kpiID)
 			continue
 		}
-		usersAttribution[kpiID] = attributionKeys
 	}
 	return usersAttribution, nil
 }
-
 func ApplyAttribution(attributionType string, method string, conversionEvent string, usersToBeAttributed []UserEventInfo,
 	sessions map[string]map[string]UserSessionData, coalUserIdConversionTimestamp map[string]int64,
 	lookbackDays int, campaignFrom, campaignTo int64, attributionKey string, logCtx log.Entry) (map[string][]AttributionKeyWeight, map[string]map[string][]AttributionKeyWeight, error) {

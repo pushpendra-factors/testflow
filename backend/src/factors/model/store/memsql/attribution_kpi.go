@@ -429,6 +429,9 @@ func (store *MemSQL) runAttributionKPI(projectID int64,
 		return nil, err
 	}
 
+	// update attribution weight
+	updateSessionWT(sessionWT, kpiData)
+
 	if C.GetAttributionDebug() == 1 {
 		logCtx.WithFields(log.Fields{"userConversionHit": userConversionHit}).Info("KPI-Attribution userConversionHit")
 	}
@@ -438,6 +441,19 @@ func (store *MemSQL) runAttributionKPI(projectID int64,
 		logCtx.WithFields(log.Fields{"attributionData": attributionData}).Info("KPI-Attribution attributionData")
 	}
 	return &attributionData, nil
+}
+
+func updateSessionWT(sessionWT map[string][]float64, kpiData map[string]model.KPIInfo) {
+	for key, _ := range sessionWT {
+		for _, value := range kpiData[key].KpiValuesList {
+			if !value.IsConverted {
+				//not converted then subtract from final result
+				for idx, val := range value.Values {
+					sessionWT[key][idx] = sessionWT[key][idx] - val
+				}
+			}
+		}
+	}
 }
 
 func (store *MemSQL) RunAttributionForMethodologyComparisonKpi(projectID int64,
@@ -458,6 +474,8 @@ func (store *MemSQL) RunAttributionForMethodologyComparisonKpi(projectID int64,
 	if err != nil {
 		return nil, err
 	}
+	// update attribution weight
+	updateSessionWT(sessionWT, kpiData)
 
 	attributionData := model.AddUpConversionEventCount(userConversionHit, sessionWT)
 

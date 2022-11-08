@@ -154,12 +154,10 @@ function ContactDetails({
               <Row className="py-2">
                 <Col>
                   <Text type="title" level={6} extraClass="m-0" weight="bold">
-                    {!userDetails?.data?.is_anonymous
-                      ? userDetails?.data?.name || '-'
-                      : 'Unidentified User'}
+                    {userDetails.data?.title}
                   </Text>
                   <Text type="title" level={7} extraClass="m-0" color="grey">
-                    {userDetails?.data?.company || userDetails?.data?.user_id}
+                    {userDetails.data?.subtitle}
                   </Text>
                 </Col>
               </Row>
@@ -190,7 +188,7 @@ function ContactDetails({
                     Number of Web Sessions
                   </Text>
                   <Text type="title" level={7} extraClass="m-0">
-                    {parseInt(userDetails?.data?.web_sessions_count) || '-'}
+                    {parseInt(userDetails.data?.web_session_count) || '-'}
                   </Text>
                 </Col>
               </Row>
@@ -200,7 +198,7 @@ function ContactDetails({
                     Number of Page Views
                   </Text>
                   <Text type="title" level={7} extraClass="m-0">
-                    {parseInt(userDetails?.data?.number_of_page_views) || '-'}
+                    {parseInt(userDetails.data?.number_of_page_views) || '-'}
                   </Text>
                 </Col>
               </Row>
@@ -211,7 +209,7 @@ function ContactDetails({
                   </Text>
                   <Text type="title" level={7} extraClass="m-0">
                     {formatDurationIntoString(
-                      userDetails?.data?.time_spent_on_site
+                      userDetails.data?.time_spent_on_site
                     )}
                   </Text>
                 </Col>
