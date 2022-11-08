@@ -3062,7 +3062,7 @@ func syncByOrderedTimeSeries(project *model.Project, orderedTimeSeries [][]int64
 
 		// for contact-list set last 48 hrs as begenning for recent events
 		if syncOrderByType[i] == model.HubspotDocumentTypeContactList {
-			minTimestamps[syncOrderByType[i]] = U.TimeNowZ().Add(-48 * time.Hour).Unix()*1000
+			minTimestamps[syncOrderByType[i]] = U.TimeNowZ().Add(-48*time.Hour).Unix() * 1000
 			continue
 		}
 

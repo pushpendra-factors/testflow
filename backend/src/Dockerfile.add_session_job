@@ -7,5 +7,6 @@ RUN go build -o $GOPATH/bin/add_session $GOPATH/src/factors/scripts/run_add_sess
 # Create stripped down version without go and source code
 FROM alpine:3.7
 RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/*
+ADD https://github.com/golang/go/raw/master/lib/time/zoneinfo.zip /usr/local/go/lib/time/zoneinfo.zip
 COPY --from=builder /go/bin/add_session /go/bin/add_session
 ENTRYPOINT ["/go/bin/add_session"]

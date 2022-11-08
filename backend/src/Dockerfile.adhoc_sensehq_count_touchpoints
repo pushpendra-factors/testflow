@@ -1,0 +1,12 @@
+FROM golang:1.14-alpine AS builder
+
+WORKDIR /go/src/factors
+ADD /factors .
+RUN go build -o $GOPATH/bin/adhocsensecounttp $GOPATH/src/factors/scripts/adhoc/custom/sensehq/run_count_account_touchpoints.go
+
+# Create stripped down version without go and source code
+FROM alpine:3.7
+RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/*
+ADD https://github.com/golang/go/raw/master/lib/time/zoneinfo.zip /usr/local/go/lib/time/zoneinfo.zip
+COPY --from=builder /go/bin/adhocsensecounttp /go/bin/adhocsensecounttp
+ENTRYPOINT ["/go/bin/adhocsensecounttp"]

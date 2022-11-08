@@ -1,6 +1,7 @@
 package memsql
 
 import (
+	cacheRedis "factors/cache/redis"
 	C "factors/config"
 	"factors/model/model"
 	U "factors/util"
@@ -9,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gomodule/redigo/redis"
 	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
@@ -223,6 +225,7 @@ func (store *MemSQL) UpdateProject(projectId int64, project *model.Project) int 
 			"Failed to execute query of update project")
 		return http.StatusInternalServerError
 	}
+	delProjectTimezoneCacheForID(projectId)
 	return 0
 }
 
@@ -554,9 +557,6 @@ func (store *MemSQL) GetTimezoneForProject(projectID int64) (U.TimeZoneString, i
 	if statusCode != http.StatusFound {
 		return U.TimeZoneStringIST, statusCode
 	}
-	if !C.IsMultipleProjectTimezoneEnabled(projectID) {
-		return U.TimeZoneStringIST, http.StatusFound
-	}
 	if project.TimeZone == "" {
 		log.WithField("projectId", project.ID).Error("This project has been set with no timezone")
 		return U.TimeZoneStringIST, http.StatusFound
@@ -568,6 +568,32 @@ func (store *MemSQL) GetTimezoneForProject(projectID int64) (U.TimeZoneString, i
 		}
 		return U.TimeZoneString(project.TimeZone), statusCode
 	}
+}
+
+func (store *MemSQL) GetTimezoneByIDWithCache(projectID int64) (U.TimeZoneString, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	resTimezone, errCode := getProjectTimezoneCache(projectID)
+	if errCode == http.StatusFound {
+		return U.TimeZoneString(resTimezone), http.StatusFound
+	}
+
+	resTimezone, statusCode := store.GetTimezoneForProject(projectID)
+	if statusCode != http.StatusFound {
+		return "", statusCode
+	}
+
+	// add to cache.
+	setCacheForProjectTimezone(projectID, resTimezone)
+
+	_, errCode2 := time.LoadLocation(string(resTimezone))
+	if errCode2 != nil {
+		log.WithField("projectId", projectID).Error("This project has been given with wrong timezone")
+		return "", http.StatusNotFound
+	}
+	return resTimezone, statusCode
 }
 
 // UpdateNextSessionStartTimestampForProject - Updates next session start timestamp
@@ -730,4 +756,78 @@ func (store *MemSQL) GetProjectIDByToken(token string) (int64, int) {
 
 	model.SetCacheProjectIDByToken(token, project.ID)
 	return project.ID, errCode
+}
+
+func getProjectTimezoneCache(projectID int64) (U.TimeZoneString, int) {
+	logCtx := log.WithField("projectID", projectID)
+	if projectID == 0 {
+		return "", http.StatusBadRequest
+	}
+
+	key, err := getProjectTimezoneCacheKey(projectID)
+	if err != nil {
+		logCtx.WithError(err).Error(
+			"Failed to get project key on getProjectCache")
+		return "", http.StatusInternalServerError
+	}
+
+	resTimezone, err := cacheRedis.Get(key)
+	if err != nil {
+		if err == redis.ErrNil {
+			return "", http.StatusNotFound
+		}
+
+		logCtx.WithError(err).Error(
+			"Failed to get json from cache on getProjectCache.")
+		return "", http.StatusInternalServerError
+	}
+
+	return U.TimeZoneString(resTimezone), http.StatusFound
+}
+
+func setCacheForProjectTimezone(projectID int64, timezoneString U.TimeZoneString) int {
+	logFields := log.Fields{"ID": projectID}
+	logCtx := log.WithFields(logFields)
+
+	key, err := getProjectTimezoneCacheKey(projectID)
+	if err != nil {
+		logCtx.WithError(err).Error(
+			"Failed to get project settings by token cache key on setCacheProject")
+		return http.StatusInternalServerError
+	}
+
+	var expiryInSecs float64 = 60 * 60
+	err = cacheRedis.Set(key, string(timezoneString), expiryInSecs)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to set cache on setCacheProjectSetting")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusCreated
+}
+
+func delProjectTimezoneCacheForID(ID int64) int64 {
+	logCtx := log.WithField("ID", ID)
+	if ID == 0 {
+		return http.StatusBadRequest
+	}
+	key, err := getProjectTimezoneCacheKey(ID)
+	if err != nil {
+		logCtx.WithError(err).Error(
+			"Failed to get project settings by token cache key on delCacheProjectSetting")
+		return http.StatusInternalServerError
+	}
+
+	err = cacheRedis.Del(key)
+	if err != nil && err != redis.ErrNil {
+		logCtx.WithError(err).Error("Failed to del cache on delCacheProjectSetting")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusAccepted
+}
+
+func getProjectTimezoneCacheKey(ID int64) (*cacheRedis.Key, error) {
+	prefix := "project_tz"
+	return cacheRedis.NewKeyWithProjectUID(string(ID), prefix, "")
 }

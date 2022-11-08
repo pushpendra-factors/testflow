@@ -10,7 +10,9 @@ export const getBreakdownDisplayName = ({
   multipleEvents
 }) => {
   if (queryType === QUERY_TYPE_KPI) {
-    return startCase(breakdown.property);
+    return breakdown.display_name
+      ? breakdown.display_name
+      : startCase(breakdown.property);
   }
   const property = breakdown.pr || breakdown.property;
   const propCategory = breakdown.en || breakdown.prop_category;

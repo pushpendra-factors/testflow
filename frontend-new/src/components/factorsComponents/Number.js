@@ -1,16 +1,15 @@
 import React from 'react';
 import NumberFormat from 'react-number-format';
 import { isArray } from 'lodash';
-import { abbreviateNumber } from '../../utils/dataFormatter';
+import { abbreviateNumber } from '../../utils/global';
 
-const Number = ({
-  type,
+function Number({
   number,
   className,
   shortHand = false,
   suffix = '',
   prefix = ''
-}) => {
+}) {
   const finalVal = shortHand
     ? abbreviateNumber(number)
     : isArray(number)
@@ -23,9 +22,9 @@ const Number = ({
         `${prefix}${abbreviateNumber(number)}${suffix}`
       ) : (
         <NumberFormat
-          displayType={'text'}
+          displayType='text'
           value={finalVal}
-          thousandSeparator={true}
+          thousandSeparator
           decimalScale={finalVal < 10 ? 2 : 1}
           suffix={suffix}
           prefix={prefix}
@@ -33,6 +32,6 @@ const Number = ({
       )}
     </span>
   );
-};
+}
 
 export default Number;

@@ -308,8 +308,8 @@ export const getTableColumns = (
       dataIndex: `${kpiLabel} - ${index}`,
       width: 300,
       render: (d, row) => (
-        <div className="flex flex-col">
-          <Text type="title" level={7} color="grey-6">
+        <div className='flex flex-col'>
+          <Text type='title' level={7} color='grey-6'>
             {kpi.metricType ? (
               getFormattedKpiValue({ value: d, metricType: kpi.metricType })
             ) : (
@@ -318,7 +318,7 @@ export const getTableColumns = (
           </Text>
           {comparisonApplied && (
             <>
-              <Text type="title" level={7} color="grey">
+              <Text type='title' level={7} color='grey'>
                 {kpi.metricType ? (
                   getFormattedKpiValue({
                     value: row[`${kpiLabel} - ${index} - compareValue`],
@@ -330,7 +330,7 @@ export const getTableColumns = (
                   />
                 )}
               </Text>
-              <div className="flex col-gap-1 items-center justify-end">
+              <div className='flex col-gap-1 items-center justify-end'>
                 <SVG
                   color={
                     row[`${kpiLabel} - ${index} - change`] >= 0
@@ -346,7 +346,7 @@ export const getTableColumns = (
                 />
                 <Text
                   level={7}
-                  type="title"
+                  type='title'
                   color={
                     row[`${kpiLabel} - ${index} - change`] < 0 ? 'red' : 'green'
                   }
@@ -394,7 +394,7 @@ export const getHorizontalBarChartColumns = (
       className: tableStyles.horizontalBarTableHeader,
       render: (d) => {
         const obj = {
-          children: <div className="h-full p-6">{d.value}</div>,
+          children: <div className='h-full p-6'>{d.value}</div>,
           props: has(d, 'rowSpan') ? { rowSpan: d.rowSpan } : {}
         };
         return obj;
@@ -416,7 +416,8 @@ export const getDataInHorizontalBarChartFormat = (
   aggregateData,
   breakdown,
   cardSize = 1,
-  isDashboardWidget = false
+  isDashboardWidget = false,
+  comparisonApplied = false
 ) => {
   const sortedData = SortResults(aggregateData, {
     key: 'value',
@@ -436,7 +437,8 @@ export const getDataInHorizontalBarChartFormat = (
         firstBreakdownKey,
         cardSize,
         isDashboardWidget,
-        false
+        false,
+        comparisonApplied
       )
     };
 
@@ -461,7 +463,9 @@ export const getDataInHorizontalBarChartFormat = (
           firstBreakdownMapper[bValue],
           secondBreakdownKey,
           cardSize,
-          isDashboardWidget
+          isDashboardWidget,
+          true,
+          comparisonApplied
         )
       };
       return row;
@@ -497,7 +501,9 @@ export const getDataInHorizontalBarChartFormat = (
             secondBreakdownMapper[sbValue],
             thirdBreakdownKey,
             cardSize,
-            isDashboardWidget
+            isDashboardWidget,
+            true,
+            comparisonApplied
           )
         };
         result.push(row);
@@ -715,8 +721,8 @@ export const getDateBasedColumns = (
       dataIndex: `${kpiLabel} - ${index}`,
       width: 300,
       render: (d, row) => (
-        <div className="flex flex-col">
-          <Text type="title" level={7} color="grey-6">
+        <div className='flex flex-col'>
+          <Text type='title' level={7} color='grey-6'>
             {kpi.metricType ? (
               getFormattedKpiValue({ value: d, metricType: kpi.metricType })
             ) : (
@@ -725,7 +731,7 @@ export const getDateBasedColumns = (
           </Text>
           {comparisonApplied && (
             <>
-              <Text type="title" level={7} color="grey">
+              <Text type='title' level={7} color='grey'>
                 {kpi.metricType ? (
                   getFormattedKpiValue({
                     value: row[`${kpiLabel} - ${index} - compareValue`],
@@ -737,7 +743,7 @@ export const getDateBasedColumns = (
                   />
                 )}
               </Text>
-              <div className="flex col-gap-1 items-center justify-end">
+              <div className='flex col-gap-1 items-center justify-end'>
                 <SVG
                   color={
                     row[`${kpiLabel} - ${index} - change`] > 0
@@ -753,7 +759,7 @@ export const getDateBasedColumns = (
                 />
                 <Text
                   level={7}
-                  type="title"
+                  type='title'
                   color={
                     row[`${kpiLabel} - ${index} - change`] < 0 ? 'red' : 'green'
                   }
@@ -863,9 +869,9 @@ export const getDateBasedColumns = (
             />
           );
           return (
-            <div className="flex col-gap-1 items-center justify-end">
+            <div className='flex col-gap-1 items-center justify-end'>
               {changeIcon}
-              <Text level={7} type="title" color={d < 0 ? 'red' : 'green'}>
+              <Text level={7} type='title' color={d < 0 ? 'red' : 'green'}>
                 <NumFormat number={Math.abs(d)} />%
               </Text>
             </div>

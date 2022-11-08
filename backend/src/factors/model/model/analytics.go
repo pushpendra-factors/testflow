@@ -49,9 +49,10 @@ const (
 )
 
 const (
-	EventCondAnyGivenEvent  = "any_given_event"
-	EventCondAllGivenEvent  = "all_given_event"
-	EventCondEachGivenEvent = "each_given_event"
+	EventCondAnyGivenEvent       = "any_given_event"
+	EventCondAllGivenEvent       = "all_given_event"
+	EventCondEachGivenEvent      = "each_given_event"
+	EventCondFunnelAnyGivenEvent = "funnel_any_given_event"
 )
 
 const (
@@ -970,7 +971,7 @@ func GetPropertyEntityFieldForFilter(entityName string) string {
 	return ""
 }
 
-func AddMissingEventNamesInResult(result *QueryResult, query *Query, isTimezoneEnabled bool) {
+func AddMissingEventNamesInResult(result *QueryResult, query *Query) {
 	eventNameIndex := getEventNameIndex(result)
 	if eventNameIndex == -1 || len(result.Rows) == 0 {
 		return

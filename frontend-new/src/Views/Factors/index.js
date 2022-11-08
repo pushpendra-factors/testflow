@@ -87,6 +87,7 @@ const Factors = ({
   const integration = useSelector((state) => state.global.currentProjectSettings);
   const integrationV1 = useSelector((state) => state.global.projectSettingsV1);
   const { bingAds, marketo } = useSelector((state) => state.global);
+  const { dashboards} = useSelector((state) => state.dashboard);
 
   useEffect(() => {
     fetchDemoProject()
@@ -112,8 +113,10 @@ const Factors = ({
   useEffect(() => {
     fetchProjectSettingsV1(activeProject.id);
     fetchProjectSettings(activeProject.id);
-    fetchBingAdsIntegration(activeProject.id);
-    fetchMarketoIntegration(activeProject.id);
+    if (_.isEmpty(dashboards?.data)) {
+      fetchBingAdsIntegration(activeProject?.id);
+      fetchMarketoIntegration(activeProject?.id);
+    }
   }, [activeProject]);
 
 
@@ -129,7 +132,8 @@ const Factors = ({
   integration?.int_clear_bit ||
   integrationV1?.int_completed ||
   bingAds?.accounts ||
-  marketo?.status || integrationV1?.int_slack || integration?.lead_squared_config !== null;
+  marketo?.status || integrationV1?.int_slack || integration?.lead_squared_config !== null ||
+  integration?.six_signal_enabled;
 
   useEffect(() => {
     const getData1 = async () => {

@@ -106,6 +106,8 @@ const (
 	SalesforceDocumentTypeCampaignMember         = 6
 	SalesforceDocumentTypeGroupAccount           = 7
 	SalesforceDocumentTypeOpportunityContactRole = 8
+	SalesforceDocumentTypeTask                   = 9
+	SalesforceDocumentTypeEvent                  = 10
 
 	SalesforceDocumentTypeNameContact                = "contact"
 	SalesforceDocumentTypeNameLead                   = "lead"
@@ -115,6 +117,8 @@ const (
 	SalesforceDocumentTypeNameCampaignMember         = "campaignmember"
 	SalesforceDocumentTypeNameGroupAccount           = "group_account"
 	SalesforceDocumentTypeNameOpportunityContactRole = "opportunityContactRole"
+	SalesforceDocumentTypeNameTask                   = "task"
+	SalesforceDocumentTypeNameEvent                  = "event"
 
 	SFCampaignMemberResponded                              = "campaign_member_first_responded_date"
 	SFCampaignMemberCreated                                = "campaign_member_created_date"
@@ -145,6 +149,8 @@ var SalesforceDocumentTypeAlias = map[string]int{
 	SalesforceDocumentTypeNameCampaignMember:         SalesforceDocumentTypeCampaignMember,
 	SalesforceDocumentTypeNameGroupAccount:           SalesforceDocumentTypeGroupAccount,
 	SalesforceDocumentTypeNameOpportunityContactRole: SalesforceDocumentTypeOpportunityContactRole,
+	SalesforceDocumentTypeNameTask:                   SalesforceDocumentTypeTask,
+	SalesforceDocumentTypeNameEvent:                  SalesforceDocumentTypeEvent,
 }
 
 // SalesforceStandardDocumentType will be pulled if no custom list is provided
@@ -153,6 +159,8 @@ var SalesforceStandardDocumentType = []int{
 	SalesforceDocumentTypeContact,
 	SalesforceDocumentTypeLead,
 	SalesforceDocumentTypeOpportunity,
+	SalesforceDocumentTypeTask,
+	SalesforceDocumentTypeEvent,
 }
 
 // SalesforceCampaignDocuments campaign related documents

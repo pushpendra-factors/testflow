@@ -1,4 +1,5 @@
 import React from 'react';
+import { CHART_COLOR_1 } from '../../../constants/color.constants';
 import ColumnChart from '../ColumnChart';
 
 export default {
@@ -6,7 +7,7 @@ export default {
   component: ColumnChart
 };
 
-export const DefaultChart = () => {
+export function DefaultChart() {
   return (
     <ColumnChart
       categories={[
@@ -20,14 +21,14 @@ export const DefaultChart = () => {
       series={[
         {
           data: [8550, 585, 81, 966, 632, 240],
-          color: '#4D7DB4'
+          color: CHART_COLOR_1
         }
       ]}
     />
   );
-};
+}
 
-export const WithComparison = () => {
+export function WithComparison() {
   return (
     <ColumnChart
       categories={['(Not Set)', 'Brand_awareness', 'Brand_launch']}
@@ -42,4 +43,4 @@ export const WithComparison = () => {
       ]}
     />
   );
-};
+}

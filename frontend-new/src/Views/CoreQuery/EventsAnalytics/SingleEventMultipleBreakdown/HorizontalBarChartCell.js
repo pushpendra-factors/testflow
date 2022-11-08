@@ -6,16 +6,15 @@ function HorizontalBarChartCell({
   series,
   cardSize,
   isDashboardWidget,
+  comparisonApplied = false,
   ...rest
 }) {
   const [showAll, setShowAll] = useState(false);
 
-  const displayedSeries = [
-    {
-      ...series[0],
-      data: showAll ? series[0].data.slice(0, 20) : series[0].data.slice(0, 10)
-    }
-  ];
+  const displayedSeries = series.map((s) => ({
+      ...s,
+      data: showAll ? s.data.slice(0, 20) : s.data.slice(0, 10)
+    }));
 
   const height =
     40 * displayedSeries[0].data.length > 75
@@ -28,20 +27,21 @@ function HorizontalBarChartCell({
         cardSize={cardSize}
         series={displayedSeries}
         height={height}
+        comparisonApplied={comparisonApplied}
         {...rest}
       />
       {!isDashboardWidget && (
         <>
           {!showAll && series[0].data.length > 10 && (
             <div
-              className="cursor-pointer"
+              className='cursor-pointer'
               onClick={setShowAll.bind(null, true)}
             >
               <Text
-                color="brand-6"
-                type="title"
-                weight="bold"
-                extraClass="mb-0"
+                color='brand-6'
+                type='title'
+                weight='bold'
+                extraClass='mb-0'
               >
                 Show More
               </Text>
@@ -49,14 +49,14 @@ function HorizontalBarChartCell({
           )}
           {showAll && (
             <div
-              className="cursor-pointer"
+              className='cursor-pointer'
               onClick={setShowAll.bind(null, false)}
             >
               <Text
-                color="brand-6"
-                type="title"
-                weight="bold"
-                extraClass="mb-0"
+                color='brand-6'
+                type='title'
+                weight='bold'
+                extraClass='mb-0'
               >
                 Show Less
               </Text>

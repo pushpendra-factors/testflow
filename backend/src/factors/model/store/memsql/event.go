@@ -6,7 +6,6 @@ import (
 	cacheRedis "factors/cache/redis"
 	C "factors/config"
 	"factors/metrics"
-	"factors/model/model"
 	"factors/util"
 	U "factors/util"
 	"fmt"
@@ -18,8 +17,9 @@ import (
 
 	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
-
 	log "github.com/sirupsen/logrus"
+
+	"factors/model/model"
 )
 
 const eventsLimitForProperites = 50000
@@ -337,6 +337,12 @@ func (store *MemSQL) CreateEvent(event *model.Event) (*model.Event, int) {
 		event.ID = U.GetUUID()
 	}
 
+	timezoneString, statusCode := store.GetTimezoneByIDWithCache(event.ProjectId)
+	if statusCode != http.StatusFound {
+		log.Errorf("Failed to get project Timezone for project: %d and event: %v ", event.ProjectId, event)
+		return nil, http.StatusInternalServerError
+	}
+
 	if event.IsFromPast {
 		eventProperties, err := U.AddToPostgresJsonb(&event.Properties, map[string]interface{}{"$is_from_past": event.IsFromPast}, true)
 		if err != nil {
@@ -366,7 +372,7 @@ func (store *MemSQL) CreateEvent(event *model.Event) (*model.Event, int) {
 	U.SantizePostgresJsonbForUnicode(&event.Properties)
 	U.SantizePostgresJsonbForUnicode(event.UserProperties)
 
-	eventPropsJSONb, err := U.FillHourDayAndTimestampEventProperty(&event.Properties, event.Timestamp)
+	eventPropsJSONb, err := U.FillHourDayAndTimestampEventProperty(&event.Properties, event.Timestamp, timezoneString)
 	if err != nil {
 		logCtx.WithField("eventTimestamp", event.Timestamp).WithError(err).Error(
 			"Adding day of week, hour of day and timestamp properties failed")

@@ -23,6 +23,64 @@ import (
 	U "factors/util"
 )
 
+//Test6SignalEnrichmentInSDKTrackHandler tests 6Signal enrichment in track call
+func Test6SignalEnrichmentInSDKTrackHandler(t *testing.T) {
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+
+	uri := "/sdk/event/track"
+	project, _, err := SetupProjectUserReturnDAO()
+	assert.Nil(t, err)
+
+	timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
+	eventName := U.RandomLowerAphaNumString(10)
+
+	r.AppEngine = true
+	w := ServePostRequestWithHeaders(r, uri,
+		[]byte(fmt.Sprintf(`{"event_name": "%s", "timestamp": %d, "event_name": "event_1", "event_properties": {"mobile" : "true"}, "user_properties": { "$country": "india"}}`, eventName, timestamp)),
+		map[string]string{"Authorization": project.Token, "X-Appengine-Remote-Addr": "89.76.236.199"})
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	responseMap := DecodeJSONResponseToMap(w.Body)
+	assert.NotEmpty(t, responseMap)
+	assert.NotNil(t, responseMap["event_id"])
+	assert.NotNil(t, responseMap["user_id"])
+
+	_, err = TaskSession.AddSession([]int64{project.ID}, timestamp-60, 0, 0, 0, 1, 1)
+	assert.Nil(t, err)
+
+	sessionEventName, errCode := store.GetStore().GetEventName(U.EVENT_NAME_SESSION, project.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.NotNil(t, sessionEventName)
+	userSessionEvents, errCode := store.GetStore().GetUserEventsByEventNameId(project.ID,
+		responseMap["user_id"].(string), sessionEventName.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.True(t, len(userSessionEvents) == 1)
+	sessionPropertiesBytes, err := userSessionEvents[0].Properties.Value()
+	assert.Nil(t, err)
+	var sessionProperties map[string]interface{}
+	json.Unmarshal(sessionPropertiesBytes.([]byte), &sessionProperties)
+	assert.NotEmpty(t, sessionProperties[U.SP_IS_FIRST_SESSION])
+	assert.True(t, sessionProperties[U.SP_IS_FIRST_SESSION].(bool))
+
+	sessionUserPropertiesBytes, err := userSessionEvents[0].UserProperties.Value()
+	var sessionUserProperties map[string]interface{}
+	json.Unmarshal(sessionUserPropertiesBytes.([]byte), &sessionUserProperties)
+
+	// session properties from user properties.
+	//** commenting it as 6signal enrichment will happen only if 6signal key is present in db.
+
+	//assert.NotEmpty(t, sessionUserProperties[U.SIX_SIGNAL_COUNTRY])
+	//assert.NotEmpty(t, sessionUserProperties[U.SIX_SIGNAL_CITY])
+	//assert.NotEmpty(t, responseMap)
+	//assert.NotNil(t, responseMap["user_id"])
+	//println("start and")
+	//fmt.Println(sessionUserProperties[U.SIX_SIGNAL_CITY])
+	//fmt.Println(sessionUserProperties[U.SIX_SIGNAL_COUNTRY])
+	//println("END")
+
+}
+
 // TestClearbitEnrichmentInSDKTrackHanler tests clearbit enrichment in track call.
 func TestClearbitEnrichmentInSDKTrackHanler(t *testing.T) {
 

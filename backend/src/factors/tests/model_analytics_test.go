@@ -7,6 +7,7 @@ import (
 	U "factors/util"
 	"net/http"
 	"sort"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -3246,4 +3247,195 @@ func validateNumericalBucketRanges(t *testing.T, result *model.QueryResult, numP
 	countInBucket = bucketEnd - bucketStart + 1
 	assert.Equal(t, bucketRange, result.Rows[bucketsIndexEnd][1])
 	assert.Equal(t, float64(countInBucket), result.Rows[bucketsIndexEnd][2])
+}
+
+func TestFunnelAnyOrder(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+	uri := "/sdk/event/track"
+
+	event1 := U.RandomString(5)
+	event2 := U.RandomString(5)
+	event3 := U.RandomString(5)
+	event4 := U.RandomString(5)
+	startTime := U.TimeNowZ().Add(-5 * time.Hour)
+	user1OrderedEvents := map[string]int64{
+		event1: startTime.Unix(),
+		event2: startTime.Add(10 * time.Minute).Unix(),
+		event3: startTime.Add(20 * time.Minute).Unix(),
+		event4: startTime.Add(30 * time.Minute).Unix(),
+	}
+
+	user2OrderedEvents := map[string]int64{
+		event2: startTime.Unix(),
+		event4: startTime.Add(10 * time.Minute).Unix(),
+		event3: startTime.Add(20 * time.Minute).Unix(),
+		event1: startTime.Add(30 * time.Minute).Unix(),
+	}
+
+	user3OrderedEvents := map[string]int64{
+		event1: startTime.Unix(),
+		event2: startTime.Add(10 * time.Minute).Unix(),
+	}
+
+	user4OrderedEvents := map[string]int64{
+		event3: startTime.Unix(),
+		event4: startTime.Add(10 * time.Minute).Unix(),
+	}
+
+	user1ID, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	num := 0
+	for eventName, timestamp := range user1OrderedEvents {
+		payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, `+
+			`"event_properties":{"numerical_property":%d}}`,
+			eventName, user1ID, timestamp, num)
+		w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+		assert.Equal(t, http.StatusOK, w.Code)
+		num++
+	}
+
+	user2ID, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	num = 0
+	for eventName, timestamp := range user2OrderedEvents {
+		payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, `+
+			`"event_properties":{"numerical_property":%d}}`,
+			eventName, user2ID, timestamp, num)
+		w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+		assert.Equal(t, http.StatusOK, w.Code)
+		num++
+	}
+
+	user3ID, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	num = 0
+	for eventName, timestamp := range user3OrderedEvents {
+		payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, `+
+			`"event_properties":{"numerical_property":%d}}`,
+			eventName, user3ID, timestamp, num)
+		w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+		assert.Equal(t, http.StatusOK, w.Code)
+		num++
+	}
+
+	user4ID, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	num = 0
+	for eventName, timestamp := range user4OrderedEvents {
+		payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, `+
+			`"event_properties":{"numerical_property":%d}}`,
+			eventName, user4ID, timestamp, num)
+		w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+		assert.Equal(t, http.StatusOK, w.Code)
+		num++
+	}
+
+	// Funnel query 1 with order
+	query := model.Query{
+		From: startTime.Unix(),
+		To:   startTime.Add(1 * time.Hour).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name: event1,
+			},
+			{
+				Name: event2,
+			},
+			{
+				Name: event3,
+			},
+			{
+				Name: event4,
+			},
+		},
+		Class:           model.QueryClassFunnel,
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondAnyGivenEvent,
+	}
+
+	result, errCode, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.NotEmpty(t, result)
+
+	stepResult := make(map[string]interface{})
+	for i := range result.Headers {
+		header := U.GetPropertyValueAsString(result.Headers[i])
+		if strings.HasPrefix(header, "step_") {
+			stepResult[header] = result.Rows[0][i]
+		}
+	}
+	assert.Equal(t, float64(3), stepResult["step_0"])
+	assert.Equal(t, float64(2), stepResult["step_1"])
+	assert.Equal(t, float64(1), stepResult["step_2"])
+	assert.Equal(t, float64(1), stepResult["step_3"])
+
+	// Funnel query 1 without order
+	query.EventsCondition = model.EventCondFunnelAnyGivenEvent
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.NotEmpty(t, result)
+
+	stepResult = make(map[string]interface{})
+	for i := range result.Headers {
+		header := U.GetPropertyValueAsString(result.Headers[i])
+		if strings.HasPrefix(header, "step_") {
+			stepResult[header] = result.Rows[0][i]
+		}
+	}
+	assert.Equal(t, float64(3), stepResult["step_0"])
+	assert.Equal(t, float64(3), stepResult["step_1"])
+	assert.Equal(t, float64(2), stepResult["step_2"])
+	assert.Equal(t, float64(2), stepResult["step_3"])
+
+	//funnel query 2 with order
+	query.EventsWithProperties = []model.QueryEventWithProperties{
+		{
+			Name: event4,
+		},
+		{
+			Name: event3,
+		},
+		{
+			Name: event2,
+		},
+		{
+			Name: event1,
+		},
+	}
+	query.EventsCondition = model.EventCondAnyGivenEvent
+
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.NotEmpty(t, result)
+
+	stepResult = make(map[string]interface{})
+	for i := range result.Headers {
+		header := U.GetPropertyValueAsString(result.Headers[i])
+		if strings.HasPrefix(header, "step_") {
+			stepResult[header] = result.Rows[0][i]
+		}
+	}
+
+	assert.Equal(t, float64(3), stepResult["step_0"])
+	assert.Equal(t, float64(1), stepResult["step_1"])
+	assert.Equal(t, float64(0), stepResult["step_2"])
+	assert.Equal(t, float64(0), stepResult["step_3"])
+
+	// Funnel query without order
+	query.EventsCondition = model.EventCondFunnelAnyGivenEvent
+
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.NotEmpty(t, result)
+
+	stepResult = make(map[string]interface{})
+	for i := range result.Headers {
+		header := U.GetPropertyValueAsString(result.Headers[i])
+		if strings.HasPrefix(header, "step_") {
+			stepResult[header] = result.Rows[0][i]
+		}
+	}
+	assert.Equal(t, float64(3), stepResult["step_0"])
+	assert.Equal(t, float64(3), stepResult["step_1"])
+	assert.Equal(t, float64(2), stepResult["step_2"])
+	assert.Equal(t, float64(2), stepResult["step_3"])
 }

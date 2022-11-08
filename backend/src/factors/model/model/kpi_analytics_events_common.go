@@ -332,6 +332,63 @@ var TransformationOfKPIMetricsToEventAnalyticsQuery = map[string]map[string][]Tr
 	},
 }
 
+func getEntityAndTypeAndAggFunctionForCustomEventKPI(customMetricTransformation CustomMetricTransformation) (string, string, string) {
+	switch customMetricTransformation.AggregateFunction {
+	case SumAggregateFunction:
+		return EventEntity, customMetricTransformation.Entity, SumAggregateFunction
+	case AverageAggregateFunction:
+		return EventEntity, customMetricTransformation.Entity, AverageAggregateFunction
+	case UniqueAggregateFunction:
+		return UserEntity, QueryTypeUniqueUsers, CountAggregateFunction
+	case CountAggregateFunction:
+		return EventEntity, QueryTypeEventsOccurrence, CountAggregateFunction
+	}
+	return "", "", ""
+}
+
+func ConvertCustomKPIQueryToInternalEventQueriesAndTransformationOperations(projectID int64, query Query, kpiQuery KPIQuery,
+	kpiMetric string, transformation CustomMetricTransformation, enableFilterOpt bool) ([]Query, []string) {
+
+	queries := make([]Query, 0)
+	objectType := transformation.EventName
+	query.AggregateProperty = transformation.AggregateProperty
+	query.AggregatePropertyType = transformation.AggregatePropertyType
+	query.GroupByProperties = getGroupByEventsForEventsAnalytics(kpiQuery.GroupBy, objectType)
+	kpiQuery.Filters = append(kpiQuery.Filters, kpiQuery.Filters...)
+	query.EventsWithProperties, query.GlobalUserProperties = getFilterEventsForEventAnalytics(kpiQuery.Filters, objectType)
+	operations := make([]string, 0)
+
+	if transformation.AggregateFunction == AverageAggregateFunction {
+		operations = append(operations, "Division")
+		var query1, query2 Query
+		U.DeepCopy(&query, &query1)
+		U.DeepCopy(&query, &query2)
+		entity, queryType, _ := getEntityAndTypeAndAggFunctionForCustomEventKPI(transformation)
+
+		query1.AggregateEntity = entity
+		query1.AggregateFunction = SumAggregateFunction
+		query1.Type = queryType
+		query1.AggregateProperty = query.AggregateProperty
+		query1.AggregatePropertyType = query.AggregatePropertyType
+
+		query2.AggregateEntity = entity
+		query2.AggregateFunction = CountAggregateFunction
+		query2.Type = queryType
+		query2.AggregateProperty = "1"
+		query2.AggregatePropertyType = U.PropertyTypeCategorical
+		queries = append(queries, query1, query2)
+	} else {
+		entity, queryType, aggregateFunction := getEntityAndTypeAndAggFunctionForCustomEventKPI(transformation)
+
+		query.AggregateEntity = entity
+		query.AggregateFunction = aggregateFunction
+		query.Type = queryType
+		queries = append(queries, query)
+	}
+
+	return queries, operations
+}
+
 func CheckIfPropertyIsPresentInStaticKPIPropertyList(inputProperty string) bool {
 	_, exists := MapOfKPIPropertyNameToData[inputProperty]
 	return exists
@@ -388,12 +445,18 @@ func GetObjectTypeForFilterValues(displayCategory string, metric string) string 
 func getFilterEventsForEventAnalytics(filters []KPIFilter, objectType string) ([]QueryEventWithProperties, []QueryProperty) {
 	var filterForEventEventAnalytics QueryEventWithProperties
 	var filterForUserPropertiesEventAnalytics []QueryProperty
-	var currentFilterProperties QueryProperty
 	filterForEventEventAnalytics.Name = objectType
 	if len(filters) == 0 {
 		return []QueryEventWithProperties{filterForEventEventAnalytics}, filterForUserPropertiesEventAnalytics
 	}
 
+	filterForEventEventAnalytics.Properties = transformKPIFilterToQueryProperty(filters)
+	return []QueryEventWithProperties{filterForEventEventAnalytics}, filterForUserPropertiesEventAnalytics
+}
+
+func transformKPIFilterToQueryProperty(filters []KPIFilter) []QueryProperty {
+	var queryProperties []QueryProperty
+	var currentFilterProperties QueryProperty
 	for _, filter := range filters {
 		currentFilterProperties.Entity = filter.Entity
 		currentFilterProperties.Type = filter.PropertyDataType
@@ -401,9 +464,9 @@ func getFilterEventsForEventAnalytics(filters []KPIFilter, objectType string) ([
 		currentFilterProperties.Operator = filter.Condition
 		currentFilterProperties.Value = filter.Value
 		currentFilterProperties.LogicalOp = filter.LogicalOp
-		filterForEventEventAnalytics.Properties = append(filterForEventEventAnalytics.Properties, currentFilterProperties)
+		queryProperties = append(queryProperties, currentFilterProperties)
 	}
-	return []QueryEventWithProperties{filterForEventEventAnalytics}, filterForUserPropertiesEventAnalytics
+	return queryProperties
 }
 
 func getGroupByEventsForEventsAnalytics(groupBys []KPIGroupBy, objectType string) []QueryGroupByProperty {
@@ -451,14 +514,10 @@ func prependEventFiltersBasedOnInternalTransformation(filters []QueryProperty, e
 	var filtersBasedOnMetric []QueryProperty
 	if kpiQuery.DisplayCategory == PageViewsDisplayCategory && U.ContainsStringInArray([]string{Entrances, Exits}, metric) {
 		for _, filter := range filters {
-			filtersBasedOnMetric = append(filtersBasedOnMetric, QueryProperty{
-				Entity:    filter.Entity,
-				Type:      filter.Type,
-				Property:  filter.Property,
-				Operator:  filter.Operator,
-				LogicalOp: filter.LogicalOp,
-				Value:     kpiQuery.PageUrl,
-			})
+			var filterCopy QueryProperty
+			U.DeepCopy(&filter, &filterCopy)
+			filterCopy.Value = kpiQuery.PageUrl
+			filtersBasedOnMetric = append(filtersBasedOnMetric, filterCopy)
 		}
 	} else {
 		filtersBasedOnMetric = filters
@@ -552,19 +611,23 @@ func TransformDateTypeValueForEventsKPI(headers []string, rows [][]interface{}, 
 	return rows
 }
 
-func ConvertKPIQueryToInternalEventQueriesAndTransformations(projectID int64, query Query, kpiQuery KPIQuery,
-	kpiMetric string, enableFilterOpt bool) ([]Query, []TransformQueryi) {
+func ConvertStaticKPIQueryToInternalEventQueriesAndTransformationOperations(projectID int64, query Query, kpiQuery KPIQuery,
+	kpiMetric string, enableFilterOpt bool) ([]Query, []string) {
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	transformations := TransformationOfKPIMetricsToEventAnalyticsQuery[kpiQuery.DisplayCategory][kpiMetric]
 	currentQuery := BuildFiltersAndGroupByBasedOnKPIQuery(query, kpiQuery, kpiMetric)
 	currentQueries := SplitKPIQueryToInternalKPIQueries(currentQuery, kpiQuery, kpiMetric, transformations)
-	return currentQueries, transformations
+	operations := make([]string, 0)
+	for _, transformation := range transformations {
+		operations = append(operations, transformation.Metrics.Operator)
+	}
+	return currentQueries, operations
 }
 
 // Each KPI metric is internally converted to event analytics.
 // Considering all rows to be equal in size because of analytics response.
 // resultAsMap - key with groupByColumns, value as row.
-func HandlingEventResultsByApplyingOperations(results []*QueryResult, operations []string, timezone string, isTimezoneEnabled bool) QueryResult {
+func HandlingEventResultsByApplyingOperations(results []*QueryResult, operations []string, timezone string) QueryResult {
 	resultKeys := getAllKeysFromResults(results)
 	var finalResult QueryResult
 	finalResultRows := make([][]interface{}, 0)
@@ -592,7 +655,7 @@ func HandlingEventResultsByApplyingOperations(results []*QueryResult, operations
 	}
 
 	for key, value := range resultKeys {
-		row := SplitKeysAndGetRow(key, timezone, isTimezoneEnabled)
+		row := SplitKeysAndGetRow(key, timezone)
 		row = append(row, value)
 		finalResultRows = append(finalResultRows, row)
 	}

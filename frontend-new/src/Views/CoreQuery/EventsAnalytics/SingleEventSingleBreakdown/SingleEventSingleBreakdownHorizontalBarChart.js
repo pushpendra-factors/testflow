@@ -1,36 +1,34 @@
 import React, { memo, useMemo } from 'react';
+import { useSelector } from 'react-redux';
 import {
   getDataInHorizontalBarChartFormat,
-  getHorizontalBarChartColumns,
+  getHorizontalBarChartColumns
 } from './utils';
-import { useSelector } from 'react-redux';
 import DataTable from '../../../../components/DataTable';
 
-const SingleEventSingleBreakdownHorizontalBarChart = ({
+function SingleEventSingleBreakdownHorizontalBarChart({
   aggregateData,
   breakdown,
   cardSize = 1,
   isDashboardWidget = false,
-}) => {
+  comparisonApplied=false
+}) {
   const { userPropNames, eventPropNames } = useSelector(
     (state) => state.coreQuery
   );
-  const columns = useMemo(() => {
-    return getHorizontalBarChartColumns(
+  const columns = useMemo(() => getHorizontalBarChartColumns(
       breakdown,
       userPropNames,
       eventPropNames
-    );
-  }, [breakdown, userPropNames, eventPropNames]);
+    ), [breakdown, userPropNames, eventPropNames]);
 
-  const data = useMemo(() => {
-    return getDataInHorizontalBarChartFormat(
+  const data = useMemo(() => getDataInHorizontalBarChartFormat(
       aggregateData,
       breakdown,
       cardSize,
       isDashboardWidget,
-    );
-  }, [aggregateData, breakdown, cardSize, isDashboardWidget]);
+      comparisonApplied
+    ), [aggregateData, breakdown, cardSize, isDashboardWidget, comparisonApplied]);
 
   return (
     <DataTable
@@ -38,11 +36,11 @@ const SingleEventSingleBreakdownHorizontalBarChart = ({
       isWidgetModal={false}
       tableData={data}
       columns={columns}
-      ignoreDocumentClick={true}
+      ignoreDocumentClick
       pagination={false}
       isPaginationEnabled={false}
     />
   );
-};
+}
 
 export default memo(SingleEventSingleBreakdownHorizontalBarChart);

@@ -1,4 +1,3 @@
-/* eslint-disable no-plusplus */
 import React from 'react';
 import get from 'lodash/get';
 import has from 'lodash/has';
@@ -84,7 +83,6 @@ export const formatData = (data) => {
   ) {
     return [];
   }
-  console.log('semb format data');
   const { headers, rows } = data.metrics;
   const eventNameIndex = headers.findIndex((header) => header === 'event_name');
   const countIndex = headers.findIndex(
@@ -129,7 +127,6 @@ export const getTableColumns = (
   userPropNames,
   eventPropNames
 ) => {
-  console.log('semb getTableColumns');
   const breakdownColumns = breakdown.map((e, index) => {
     const displayTitle = getBreakdownDisplayName({
       breakdown: e,
@@ -139,7 +136,7 @@ export const getTableColumns = (
 
     return {
       title: getClickableTitleSorter(
-        <div className="break-all">{displayTitle}</div>,
+        <div className='break-all'>{displayTitle}</div>,
         { key: `${e.property} - ${index}`, type: e.prop_type, subtype: e.grn },
         currentSorter,
         handleSorting
@@ -160,8 +157,8 @@ export const getTableColumns = (
 
   const countColumn = {
     title: getClickableTitleSorter(
-      <div className="break-all">
-        ${title}: ${labelsObj[page]}
+      <div className='break-all'>
+        {title}: {labelsObj[page]}
       </div>,
       { key: EVENT_COUNT_KEY, type: 'numerical', subtype: null },
       currentSorter,
@@ -178,7 +175,6 @@ export const getTableColumns = (
 };
 
 export const getDataInTableFormat = (data, searchText, currentSorter) => {
-  console.log('semb getDataInTableFormat');
   const filteredData = data.filter((elem) =>
     elem.label.toLowerCase().includes(searchText.toLowerCase())
   );
@@ -194,7 +190,6 @@ export const getDateBasedColumns = (
   userPropNames,
   eventPropNames
 ) => {
-  console.log('semb getDateBasedColumns');
   const OverallColumn = {
     title: getClickableTitleSorter(
       'Overall',
@@ -216,7 +211,7 @@ export const getDateBasedColumns = (
 
     return {
       title: getClickableTitleSorter(
-        <div className="break-all">{displayTitle}</div>,
+        <div className='break-all'>{displayTitle}</div>,
         { key: `${e.property} - ${index}`, type: e.prop_type, subtype: e.grn },
         currentSorter,
         handleSorting
@@ -260,7 +255,6 @@ export const getDateBasedTableData = (
   searchText,
   currentSorter
 ) => {
-  console.log('semb getDateBasedTableData');
   const result = seriesData.filter((sd) =>
     sd.name.toLowerCase().includes(searchText.toLowerCase())
   );
@@ -285,7 +279,6 @@ export const formatDataInStackedAreaFormat = (
       data: []
     };
   }
-  console.log('semb formatDataInStackedAreaFormat');
   const dateIndex = data.headers.findIndex((h) => h === 'datetime');
   const countIndex = data.headers.findIndex(
     (h) => h === 'count' || h === 'aggregate'
@@ -344,13 +337,19 @@ export const renderHorizontalBarChart = (
   key,
   cardSize = 1,
   isDashboardWidget = false,
-  multipleBreakdowns = true
+  multipleBreakdowns = true,
+  comparisonApplied = false
 ) => {
   const series = [
     {
       data: []
     }
   ];
+  if (comparisonApplied) {
+    series.push({
+      data: []
+    });
+  }
   const colors = generateColors(10);
   const sortedData = SortData(data, 'value', 'descend');
   const categories = sortedData.map((elem, index) => {
@@ -359,6 +358,13 @@ export const renderHorizontalBarChart = (
       color: colors[index % 10],
       metricType: get(elem, 'metricType', null)
     });
+    if (comparisonApplied) {
+      series[1].data.push({
+        y: elem.compareValue,
+        color: colors[index % 10],
+        metricType: get(elem, 'metricType', null)
+      });
+    }
     return elem[key];
   });
 
@@ -373,6 +379,7 @@ export const renderHorizontalBarChart = (
       cardSize={cardSize}
       isDashboardWidget={isDashboardWidget}
       width={isDashboardWidget || !multipleBreakdowns ? null : 600}
+      comparisonApplied={comparisonApplied}
     />
   );
 };
@@ -402,7 +409,6 @@ export const getDataInHorizontalBarChartFormat = (
   cardSize = 1,
   isDashboardWidget = false
 ) => {
-  console.log('semb getDataInHorizontalBarChartFormat');
   const sortedData = SortResults(aggregateData, [
     {
       key: 'value',
@@ -483,7 +489,6 @@ export const getHorizontalBarChartColumns = (
   eventPropNames,
   cardSize = 1
 ) => {
-  console.log('semb getHorizontalBarChartColumns');
   const result = breakdown.map((e, index) => {
     const displayTitle = getBreakdownDisplayName({
       breakdown: e,
@@ -498,7 +503,7 @@ export const getHorizontalBarChartColumns = (
       className: tableStyles.horizontalBarTableHeader,
       render: (d) => {
         const obj = {
-          children: <div className="h-full p-6">{d.value}</div>,
+          children: <div className='h-full p-6'>{d.value}</div>,
           props: has(d, 'rowSpan') ? { rowSpan: d.rowSpan } : {}
         };
         return obj;

@@ -36,7 +36,7 @@ import DeleteQueryModal from '../DeleteQueryModal';
 import { getErrorMessage } from '../../utils/dataFormatter';
 import { deleteReport } from '../../reducers/coreQuery/services';
 import { getChartType } from '../../Views/CoreQuery/AnalysisResultsPage/analysisResultsPage.helpers';
-import { apiChartAnnotations, QUERY_TYPE_EVENT, QUERY_TYPE_FUNNEL } from '../../utils/constants';
+import { apiChartAnnotations } from '../../utils/constants';
 import { isPivotSupported } from '../../utils/chart.helpers';
 import ShareToEmailModal from '../ShareToEmailModal';
 import ShareToSlackModal from '../ShareToSlackModal';
@@ -66,7 +66,11 @@ function SaveQuery({
   enableSlackIntegration,
   createAlert,
   sendAlertNow,
-  dateFromTo
+  dateFromTo,
+  showSaveQueryModal,
+  setShowSaveQueryModal,
+  ShowAddToDashModal,
+  setShowAddToDashModal
 }) {
   const dispatch = useDispatch();
 
@@ -102,12 +106,24 @@ function SaveQuery({
   );
 
   useEffect(() => {
-    if(dateFromTo?.to === undefined || dateFromTo?.to === '') {
+    if (dateFromTo?.to === undefined || dateFromTo?.to === '') {
       setOverrideDate(false);
     } else {
       setOverrideDate(true);
     }
-  }, [dateFromTo])
+  }, [dateFromTo]);
+
+  useEffect(() => {
+    if (showSaveQueryModal) {
+      handleSaveClick();
+    }
+  }, [showSaveQueryModal]);
+
+  useEffect(() => {
+    if (ShowAddToDashModal) {
+      toggleAddToDashModal();
+    }
+  }, [ShowAddToDashModal]);
 
   const {
     activeAction,
@@ -127,6 +143,7 @@ function SaveQuery({
 
   const toggleAddToDashModal = useCallback(() => {
     updateLocalReducer({ type: TOGGLE_ADD_TO_DASHBOARD_MODAL });
+    setShowAddToDashModal(false);
   }, [updateLocalReducer]);
 
   const toggleDeleteModal = useCallback(() => {
@@ -136,6 +153,7 @@ function SaveQuery({
   const handleSaveClick = useCallback(() => {
     toggleModal();
     updateLocalReducer({ type: SET_ACTIVE_ACTION, payload: ACTION_TYPES.SAVE });
+    setShowSaveQueryModal(false);
   }, [updateLocalReducer, toggleModal]);
 
   const handleEditClick = useCallback(() => {
@@ -158,7 +176,7 @@ function SaveQuery({
         message: 'Report Deleted Successfully',
         duration: 5
       });
-      history.push("/");
+      history.push('/');
     } catch (err) {
       updateLocalReducer({ type: TOGGLE_APIS_CALLED });
       notification.error({
@@ -218,6 +236,14 @@ function SaveQuery({
           reqBody
         );
 
+        dispatch({
+          type: QUERY_UPDATED,
+          queryId: savedQueryId,
+          payload: {
+            is_dashboard_query: true
+          }
+        });
+
         notification.success({
           message: 'Report added to dashboard Successfully',
           duration: 5
@@ -240,12 +266,27 @@ function SaveQuery({
   );
 
   const handleSave = useCallback(
-    async ({ title, onSuccess }) => {
+    async ({
+      title,
+      addToDashboard,
+      selectedDashboards,
+      dashboardPresentation,
+      onSuccess
+    }) => {
       try {
         if (!isStringLengthValid(title)) {
           notification.error({
             message: 'Incorrect Input!',
             description: 'Please Enter query title',
+            duration: 5
+          });
+          return false;
+        }
+
+        if (addToDashboard && !selectedDashboards.length) {
+          notification.error({
+            message: 'Incorrect Input!',
+            description: 'Please select atleast one dashboard',
             duration: 5
           });
           return false;
@@ -276,8 +317,14 @@ function SaveQuery({
           querySettings.attributionMetrics = JSON.stringify(attributionMetrics);
         }
 
+        let queryId;
+        let addedToDashboard = false;
+
         if (activeAction === ACTION_TYPES.SAVE) {
           const type = 2;
+          if (addToDashboard) {
+            querySettings.dashboardPresentation = dashboardPresentation;
+          }
           const res = await saveQuery(
             active_project.id,
             title,
@@ -285,6 +332,7 @@ function SaveQuery({
             type,
             querySettings
           );
+          queryId = res.data.id;
 
           dispatch({ type: QUERY_CREATED, payload: res.data });
           setQuerySaved({ name: title, id: res.data.id });
@@ -296,7 +344,6 @@ function SaveQuery({
           // if(queryType === QUERY_TYPE_FUNNEL && res?.data?.id_text) {
           //   history.replace('/analyse/funnel/' + res.data.id_text);
           // }
-          
         } else {
           const queryGettingUpdated = savedQueries.find(
             (elem) => elem.id === savedQueryId
@@ -306,6 +353,10 @@ function SaveQuery({
             ...queryGettingUpdated.settings,
             ...querySettings
           };
+
+          if (addToDashboard) {
+            updatedSettings.dashboardPresentation = dashboardPresentation;
+          }
 
           const reqBody = {
             title,
@@ -323,9 +374,34 @@ function SaveQuery({
             }
           });
           setQuerySaved({ name: title, id: savedQueryId });
+          queryId = savedQueryId;
         }
 
-        //Factors SAVE_QUERY EDIT_QUERY tracking
+        if (addToDashboard) {
+          try {
+            const reqBody = {
+              query_id: queryId
+            };
+
+            await saveQueryToDashboard(
+              active_project.id,
+              selectedDashboards.join(','),
+              reqBody
+            );
+            addedToDashboard = true;
+            dispatch({
+              type: QUERY_UPDATED,
+              queryId,
+              payload: {
+                is_dashboard_query: true
+              }
+            });
+          } catch (error) {
+            console.error('Error in adding to dashboard', error);
+          }
+        }
+
+        // Factors SAVE_QUERY EDIT_QUERY tracking
         factorsai.track(activeAction, {
           query_type: queryType,
           saved_query_id: savedQueryId,
@@ -334,11 +410,23 @@ function SaveQuery({
           project_name: active_project.name
         });
 
-        notification.success({
-          message: 'Report Saved Successfully',
-          duration: 5
-        });
-
+        if (!addToDashboard) {
+          notification.success({
+            message: 'Report Saved Successfully',
+            duration: 5
+          });
+        } else if (addedToDashboard) {
+          notification.success({
+            message: 'Saved and added to dashboard',
+            duration: 5
+          });
+        } else {
+          notification.warning({
+            message:
+              'Report saved, but couldn’t add it to a dashboard. Try again?',
+            duration: 5
+          });
+        }
         updateLocalReducer({ type: TOGGLE_APIS_CALLED });
         dispatch(fetchWeeklyIngishtsMetaData(active_project.id));
         onSuccess();
@@ -348,7 +436,7 @@ function SaveQuery({
         console.log(err.response);
         notification.error({
           message: 'Error!',
-          description: 'Something went wrong.',
+          description: `${err?.data?.error}`,
           duration: 5
         });
       }
@@ -446,7 +534,13 @@ function SaveQuery({
     };
 
     if (frequency === 'send_now') {
-      sendAlertNow(active_project.id, payload, savedQueryId, dateFromTo, overrideDate)
+      sendAlertNow(
+        active_project.id,
+        payload,
+        savedQueryId,
+        dateFromTo,
+        overrideDate
+      )
         .then((r) => {
           notification.success({
             message: 'Report Sent Successfully',
@@ -508,7 +602,13 @@ function SaveQuery({
     };
 
     if (frequency === 'send_now') {
-      sendAlertNow(active_project.id, payload, savedQueryId, dateFromTo, overrideDate)
+      sendAlertNow(
+        active_project.id,
+        payload,
+        savedQueryId,
+        dateFromTo,
+        overrideDate
+      )
         .then((r) => {
           notification.success({
             message: 'Report Sent Successfully',
@@ -647,7 +747,7 @@ function SaveQuery({
               </Col>
             </Row>
             <Col>
-              <Row justify="end" className={'w-full mb-1 mt-4'}>
+              <Row justify='end' className={'w-full mb-1 mt-4'}>
                 <Col className={'mr-2'}>
                   <Button
                     type={'default'}

@@ -52,6 +52,34 @@ func TestCustomMetricsPostHandler(t *testing.T) {
 		// assert.Equal(t, innerErrorResult["display_name"].(string), "Duplicate record insertion in db")
 	})
 }
+
+func TestCreateCustomEventPostHandler(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+
+	name1 := U.RandomString(8)
+	description1 := U.RandomString(8)
+
+	project, agent, _ := SetupProjectWithAgentDAO()
+	assert.NotNil(t, project)
+	t.Run("CreateCustomEventSuccess", func(t *testing.T) {
+		transformations := &postgres.Jsonb{RawMessage: json.RawMessage(`{"agFn": "sum", "agPr": "$source", "agPrTy": "categorical", "fil": [], "daFie": "2022-10-12T16:24:51.589828Z", "evNm": "$source", "en": "events_occurrence"}`)}
+		w := sendCreateCustomMetric(r, project.ID, agent, transformations, name1, description1, "website_session", 3)
+		assert.Equal(t, http.StatusOK, w.Code)
+		var result model.CustomMetric
+		decoder := json.NewDecoder(w.Body)
+		if err := decoder.Decode(&result); err != nil {
+			assert.NotNil(t, nil, err)
+		}
+	})
+
+	t.Run("CreateCustomMetricFailureDuplicateName", func(t *testing.T) {
+		transformations := &postgres.Jsonb{RawMessage: json.RawMessage(`{"agFn": "sum", "agPr": "$hubspot_amount", "agPrTy": "categorical", "fil": [], "daFie": "2022-10-12T16:24:51.589828Z", "evNm": "$source", "en": "events_occurrence"}`)}
+		w := sendCreateCustomMetric(r, project.ID, agent, transformations, name1, description1, "salesforce_users", 3)
+		assert.Equal(t, http.StatusConflict, w.Code)
+	})
+}
+
 func TestCreateDerivedKPIPostHandler(t *testing.T) {
 	r := gin.Default()
 	H.InitAppRoutes(r)

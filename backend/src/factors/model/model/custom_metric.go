@@ -23,20 +23,31 @@ type CustomMetricObjectTypeAndProperties struct {
 	Properties []map[string]string `json:"properties"`
 }
 
+type CustomMetricConfigV1 struct {
+	ObjectType         string              `json:"obj_ty"`
+	TypeOfQuery        int                 `json:"type_of_query"`
+	AggregateFunctions []string            `json:"agFn"`
+	Properties         []map[string]string `json:"properties"`
+}
+
 const (
 	SumAggregateFunction     = "sum"
 	UniqueAggregateFunction  = "unique"
 	AverageAggregateFunction = "average"
+	CountAggregateFunction   = "count"
 	Derived                  = "derived"
 	DerivedMetrics           = "derived_metrics"
+	CustomEventType          = "custom_events"
 )
 
 var (
-	CustomMetricAggregateFunctions = []string{SumAggregateFunction, UniqueAggregateFunction, AverageAggregateFunction}
-	CustomMetricObjectTypeNames    = []string{HubspotContactsDisplayCategory, HubspotCompaniesDisplayCategory, HubspotDealsDisplayCategory,
+	CustomMetricProfilesAggregateFunctions = []string{SumAggregateFunction, UniqueAggregateFunction, AverageAggregateFunction}
+	CustomEventsAggregateFunctions         = []string{SumAggregateFunction, UniqueAggregateFunction, AverageAggregateFunction, CountAggregateFunction}
+	CustomKPIProfileObjectCategories       = []string{HubspotContactsDisplayCategory, HubspotCompaniesDisplayCategory, HubspotDealsDisplayCategory,
 		SalesforceUsersDisplayCategory, SalesforceAccountsDisplayCategory, SalesforceOpportunitiesDisplayCategory, MarketoLeadsDisplayCategory, LeadSquaredLeadsDisplayCategory}
-	ProfileQueryType = 1
-	DerivedQueryType = 2
+	ProfileQueryType    = 1
+	DerivedQueryType    = 2
+	EventBasedQueryType = 3
 )
 
 var customMetricGroupNameByObjectType = map[string]string{
@@ -81,14 +92,14 @@ func GetKPIConfig(customMetrics []CustomMetric) []map[string]string {
 }
 
 func (customMetric *CustomMetric) IsValid() (bool, string) {
-	if customMetric.TypeOfQuery == ProfileQueryType {
+	if customMetric.TypeOfQuery == ProfileQueryType || customMetric.TypeOfQuery == EventBasedQueryType {
 
 		var customMetricTransformation CustomMetricTransformation
 		err := U.DecodePostgresJsonbToStructType(customMetric.Transformations, &customMetricTransformation)
 		if err != nil {
 			return false, "Error during decode of custom metrics transformations - custom_metrics handler."
 		}
-		if !customMetricTransformation.IsValid() {
+		if !customMetricTransformation.IsValid(customMetric.TypeOfQuery) {
 			return false, "Error with values passed in transformations - custom_metrics handler."
 		}
 		return true, ""
@@ -137,6 +148,8 @@ type CustomMetricTransformation struct {
 	AggregatePropertyType string      `json:"agPrTy"`
 	Filters               []KPIFilter `json:"fil"`
 	DateField             string      `json:"daFie"`
+	EventName             string      `json:"evNm"`
+	Entity                string      `json:"en"`
 }
 
 func (c *CustomMetricTransformation) ContainsNameInInternalTransformation(input string) bool {
@@ -148,8 +161,19 @@ func (transformation *CustomMetricTransformation) ValidateFilterAndGroupBy() boo
 }
 
 // Check if filter is being passed with objectType in create Custom metric.
-func (transformation *CustomMetricTransformation) IsValid() bool {
-	if !U.ContainsStringInArray(CustomMetricAggregateFunctions, transformation.AggregateFunction) || strings.Contains(transformation.AggregateProperty, " ") {
+func (transformation *CustomMetricTransformation) IsValid(queryType int) bool {
+
+	if queryType == ProfileQueryType {
+		if !U.ContainsStringInArray(CustomMetricProfilesAggregateFunctions, transformation.AggregateFunction) || strings.Contains(transformation.AggregateProperty, " ") {
+			return false
+		}
+	} else if queryType == EventBasedQueryType {
+		if !U.ContainsStringInArray(CustomEventsAggregateFunctions, transformation.AggregateFunction) || strings.Contains(transformation.AggregateProperty, " ") || 
+			transformation.EventName == "" || ((transformation.AggregateFunction == SumAggregateFunction || transformation.AggregateFunction == AverageAggregateFunction) && transformation.Entity == "") {
+			return false
+		}
+	} else {
+		// invalid query type
 		return false
 	}
 

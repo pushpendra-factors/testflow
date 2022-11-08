@@ -7,5 +7,6 @@ RUN go build -o $GOPATH/bin/ingestleadgenjob $GOPATH/src/factors/scripts/run_ing
 # Create stripped down version without go and source code
 FROM alpine:3.7
 RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/*
+ADD https://github.com/golang/go/raw/master/lib/time/zoneinfo.zip /usr/local/go/lib/time/zoneinfo.zip
 COPY --from=builder /go/bin/ingestleadgenjob /go/bin/ingestleadgenjob
 ENTRYPOINT ["/go/bin/ingestleadgenjob"]

@@ -135,6 +135,7 @@ type Model interface {
 	GetKPIConfigsForLeadSquaredLeads(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int)
 	GetKPIConfigsForLeadSquared(projectID int64, reqID string, displayCategory string, includeDerivedKPIs bool) (map[string]interface{}, int)
 	GetKPIConfigsForOthers(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int)
+	GetKPIConfigsForCustomEvents(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int)		
 
 	ExecuteKPIQueryGroup(projectID int64, reqID string, kpiQueryGroup model.KPIQueryGroup,
 		enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool) ([]model.QueryResult, int)
@@ -147,12 +148,15 @@ type Model interface {
 	GetCustomMetricByProjectIdQueryTypeAndObjectType(projectID int64, queryType int, objectType string) ([]model.CustomMetric, string, int)
 	GetCustomKPIMetricsByProjectIdAndDisplayCategory(projectID int64, displayCategory string) []map[string]string
 	GetKpiRelatedCustomMetricsByName(projectID int64, name string) (model.CustomMetric, string, int)
+	GetProfileCustomMetricByProjectIdName(projectID int64, name string) (model.CustomMetric, string, int)
+	GetDerivedCustomMetricByProjectIdName(projectID int64, name string) (model.CustomMetric, string, int)
+	GetEventBasedCustomMetricByProjectIdName(projectID int64, name string) (model.CustomMetric, string, int)
 	GetCustomMetricsByID(projectID int64, id string) (model.CustomMetric, string, int)
 	DeleteCustomMetricByID(projectID int64, id string) int
-	GetDerivedMetricsByName(projectID int64, name string) (model.CustomMetric, string, int)
 	GetDerivedKPIsHavingNameInInternalQueries(projectID int64, customMetricName string) []string
 	GetDerivedKPIMetricsByProjectIdAndDisplayCategory(projectID int64, displayCategory string, includeDerivedKPIs bool) []map[string]string
 	GetCustomMetricAndDerivedMetricByProjectIdAndDisplayCategory(projectID int64, displayCategory string, includeDerivedKPIs bool) []map[string]string
+	GetCustomEventKPIMetricsByProjectIdAndDisplayCategory(projectID int64, displayCategory string, includeDerivedKPIs bool) []map[string]string
 
 	//templates
 	RunTemplateQuery(projectID int64, query model.TemplateQuery, reqID string) (model.TemplateResponse, int)
@@ -227,6 +231,7 @@ type Model interface {
 	DeleteFilterEventName(projectID int64, id string) int
 	FilterEventNameByEventURL(projectID int64, eventURL string) (*model.EventName, int)
 	GetEventNameFromEventNameId(eventNameId string, projectID int64) (*model.EventName, error)
+	GetEventNameIDFromEventName(eventName string, projectId int64) (*model.EventName, error)
 	GetEventTypeFromDb(projectID int64, eventNames []string, limit int64) (map[string]string, error)
 	GetMostFrequentlyEventNamesByType(projectID int64, limit int, lastNDays int, typeOfEvent string) ([]string, error)
 	GetEventNamesOrderedByOccurenceAndRecency(projectID int64, limit int, lastNDays int) (map[string][]string, error)
@@ -363,6 +368,8 @@ type Model interface {
 	// project_setting
 	GetProjectSetting(projectID int64) (*model.ProjectSetting, int)
 	GetClearbitKeyFromProjectSetting(projectId int64) (string, int)
+	GetClient6SignalKeyFromProjectSetting(projectId int64) (string, int)
+	GetFactors6SignalKeyFromProjectSetting(projectId int64) (string, int)
 	GetProjectSettingByKeyWithTimeout(key, value string, timeout time.Duration) (*model.ProjectSetting, int)
 	GetProjectSettingByTokenWithCacheAndDefault(token string) (*model.ProjectSetting, int)
 	GetProjectSettingByPrivateTokenWithCacheAndDefault(privateToken string) (*model.ProjectSetting, int)
@@ -576,6 +583,7 @@ type Model interface {
 	CreateOrUpdateDisplayNameByObjectType(projectID int64, propertyName, objectType, displayName, group string) int
 	GetDisplayNamesForAllEvents(projectID int64) (int, map[string]string)
 	GetDisplayNamesForAllEventProperties(projectID int64, eventName string) (int, map[string]string)
+	GetDistinctDisplayNamesForAllEventProperties(projectID int64) (int, map[string]string)
 	GetDisplayNamesForAllUserProperties(projectID int64) (int, map[string]string)
 	GetDisplayNamesForObjectEntities(projectID int64) (int, map[string]string)
 	CreateOrUpdateDisplayName(projectID int64, eventName, propertyName, displayName, tag string) int
@@ -748,8 +756,30 @@ type Model interface {
 	GetKPIConfigsForCustomAdsFromDB(projectID int64, includeDerivedKPIs bool) []map[string]interface{}
 	GetCustomChannelFilterValuesV1(projectID int64, source, channel, filterObject, filterProperty string, reqID string) (model.ChannelFilterValues, int)
 
+	// Predict Job
+	GetGroupsOnEvent(projectID int64, event_name string) (*sql.Rows, *sql.Tx, error)
+	PullUserCohortDataOnEvent(projectID int64, startTime, endTime int64, event_id string, filter_property string) (*sql.Rows, error)
+	// PullUsersEventRowsForPredictJob(project_id int64, event_id string, start_time int64, end_time int64) (*sql.Rows, *sql.Tx, error)
+	GetAllEventsWithUsers(projectID int64, event_name string, start_time int64, end_time int64) (*sql.Rows, error)
+	GetAllEventsOnUsersBetweenTime(projectID int64, users []string, start_time int64, end_time int64) (*sql.Rows, *sql.Tx, error)
+	GetUsersTimestampOnFirstEvent(projectID int64, event_name string, start_time int64, end_time int64) (map[string]int64, error)
+	GetAllEventsOnUsers(projectId int64, arrayCustomerUserID []string) (*sql.Rows, error)
+	GetCountOfGroupIDS(projectId int64, arrayGroupID []string) (*sql.Rows, error)
+	PullEventRowsOnUsers(projectID int64, users []string, start_time int64, end_time int64) (*sql.Rows, error)
+	GetUsersEventTimeStampFromHistory(projectID int64, event_name_id string, userIdFiltered map[string]int64) (map[string]int64, error)
+	GetBaseEventsOnUsers(projectID int64, event_name_id string, start_time int64, end_time int64, users []string) (*sql.Rows, error)
+
 	// property overides
 	GetPropertyOverridesByType(projectID int64, typeConstant int, entity int) (int, []string)
+
+	UpdatePathAnalysisEntity(projectID int64, id string, status string) (int, string)
+	GetAllSavedPathAnalysisEntityByProject(projectID int64) ([]model.PathAnalysis, int)
+	//path analysis
+	GetAllPathAnalysisEntityByProject(projectID int64) ([]model.PathAnalysisEntityInfo, int)
+	GetPathAnalysisEntity(projectID int64, id string) (model.PathAnalysis, int)
+	CreatePathAnalysisEntity(userID string, projectId int64, entity *model.PathAnalysisQuery) (*model.PathAnalysis, int, string)
+	DeletePathAnalysisEntity(projectID int64, id string) (int, string)
+	GetProjectCountWithStatus(projectID int64, status []string) (int, int, string)
 
 	// leadsquaredmarker
 	CreateLeadSquaredMarker(marker model.LeadsquaredMarker) int

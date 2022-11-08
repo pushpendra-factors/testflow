@@ -58,10 +58,6 @@ func (pg *Postgres) wrappedExecuteForResultProfile(projectID uint64, profileQuer
 	hasGroupByTimestamp := (kpiQuery.GroupByTimestamp != "")
 	hasAnyGroupBys := (len(kpiQuery.GroupBy) > 0)
 	finalResult := model.QueryResult{}
-	isTimezoneEnabled := false
-	if C.IsMultipleProjectTimezoneEnabled(projectID) {
-		isTimezoneEnabled = true
-	}
 
 	var transformation model.CustomMetricTransformation
 	customMetric, err, statusCode := pg.GetCustomMetricsByName(projectID, kpiMetric)
@@ -87,7 +83,7 @@ func (pg *Postgres) wrappedExecuteForResultProfile(projectID uint64, profileQuer
 		return finalResult
 	} else {
 		results := model.TransformProfileResultsToKPIResults(resultGroup.Results, hasGroupByTimestamp, hasAnyGroupBys)
-		finalResult = model.HandlingProfileResultsByApplyingOperations(results, "Division", kpiQuery.Timezone, isTimezoneEnabled)
+		finalResult = model.HandlingProfileResultsByApplyingOperations(results, "Division", kpiQuery.Timezone)
 	}
 	return finalResult
 }

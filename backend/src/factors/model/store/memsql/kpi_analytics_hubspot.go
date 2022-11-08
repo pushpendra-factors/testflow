@@ -78,19 +78,21 @@ func (store *MemSQL) getConfigForSpecificHubspotCategory(projectID int64, reqID 
 }
 
 func (store *MemSQL) getPropertiesForHubspotByDisplayCategory(projectID int64, reqID, displayCategory string) []map[string]string {
+	finalProperties := make([]map[string]string, 0)
+	standardUserProperties := model.GetKPIConfigFromStandardUserProperties()
 	switch displayCategory {
 	case model.HubspotDealsDisplayCategory:
-		return store.GetPropertiesForHubspotDeals(projectID, reqID)
+		finalProperties = store.GetPropertiesForHubspotDeals(projectID, reqID)
 	case model.HubspotCompaniesDisplayCategory:
-		return store.GetPropertiesForHubspotCompanies(projectID, reqID)
+		finalProperties = store.GetPropertiesForHubspotCompanies(projectID, reqID)
 	case model.HubspotContactsDisplayCategory:
-		return store.GetPropertiesForHubspotContacts(projectID, reqID)
+		finalProperties = append(standardUserProperties, store.GetPropertiesForHubspotContacts(projectID, reqID)...)
 	default:
 		log.WithFields(log.Fields{"project_id": projectID, "req_id": reqID, "display_category": displayCategory}).
 			Error("Invalid category on getPropertiesForHubspotByDisplayCategory.")
-		return []map[string]string{}
-
+		return finalProperties
 	}
+	return finalProperties
 }
 
 func (store *MemSQL) GetPropertiesForHubspotContacts(projectID int64, reqID string) []map[string]string {

@@ -6,6 +6,7 @@ import (
 	U "factors/util"
 	"fmt"
 	"io"
+
 	pb "path/filepath"
 	"strings"
 	"time"
@@ -281,6 +282,17 @@ func (gcsd *GCSDriver) GetAdsDataFilePathAndName(projectId int64, report string,
 	return path, fmt.Sprintf("%v-%v-%v.csv", report, projectId, chunkNo)
 }
 
+func (gcsd *GCSDriver) GetPredictProjectDataPath(projectId int64, model_id int64) string {
+	path := gcsd.GetPredictProjectDir(projectId, model_id)
+	return pb.Join(path, "data")
+}
+
+func (gcsd *GCSDriver) GetPredictProjectDir(projectId int64, model_id int64) string {
+	path := gcsd.GetProjectDir(projectId)
+	model_str := fmt.Sprintf("%d", model_id)
+	return pb.Join(path, "predict", model_str)
+}
+
 func (gcsd *GCSDriver) GetModelEventsUnsortedFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string) {
 	path := gcsd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
 	return path, "events_raw.txt"
@@ -290,5 +302,23 @@ func (gcsd *GCSDriver) GetEventsArtificatFilePathAndName(projectId int64, startT
 	path := gcsd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
 	path = pb.Join(path, "artifacts")
 	return path, "users_map.txt"
+}
 
+func (gcsd *GCSDriver) GetEventsForTimerangeFilePathAndName(projectId int64, startTimestamp int64, endTimestamp int64) (string, string) {
+	path := gcsd.GetEventsForTimerangeFileDir(projectId, startTimestamp, endTimestamp)
+	return path, "events.txt"
+}
+
+func (gcsd *GCSDriver) GetEventsForTimerangeFileDir(projectId int64, startTimestamp int64, endTimestamp int64) string {
+	dateFormattedStart := U.GetDateOnlyFromTimestampZ(startTimestamp)
+	dateFormattedEnd := U.GetDateOnlyFromTimestampZ(endTimestamp)
+	return fmt.Sprintf("projects/%v/%v/%v/", projectId, dateFormattedStart, dateFormattedEnd)
+}
+
+func (gcsd *GCSDriver) GetPathAnalysisTempFileDir(id string, projectId int64) string {
+	return fmt.Sprintf("projects/%v/pathanalysis/%v/", projectId, id)
+}
+func (gcsd *GCSDriver) GetPathAnalysisTempFilePathAndName(id string, projectId int64) (string, string) {
+	path := gcsd.GetPathAnalysisTempFileDir(id, projectId)
+	return path, "patterns.txt"
 }

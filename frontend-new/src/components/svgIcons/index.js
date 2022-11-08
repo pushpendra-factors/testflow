@@ -2536,6 +2536,15 @@ const SelectTemplatesBackgroundChartSVG=({ width, height, extraClass, color })=>
   )
 }
 
+const SixSignalLogoSVG = ({ size = 24, extraClass }) => {
+  return (
+    <svg width={size} height={size} className={extraClass} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path fill-rule="evenodd" clip-rule="evenodd" d="M36.7865 30.3834C36.7865 37.4452 31.0617 43.17 23.9999 43.17C21.3143 43.17 18.8221 42.3421 16.7646 40.9276L21.2802 35.6958C22.1063 36.1391 23.0508 36.3906 24.054 36.3906C27.298 36.3906 29.9277 33.7609 29.9277 30.5169C29.9277 29.2052 29.4978 27.994 28.7712 27.0164L33.3724 21.6854C35.491 23.9673 36.7865 27.024 36.7865 30.3834Z" fill="#040205"/>
+      <path fill-rule="evenodd" clip-rule="evenodd" d="M31.0452 19.711C29.8156 18.8977 28.4373 18.2912 26.9597 17.941L34.1419 9.38158L28.8497 4.82999L14.6514 21.6597C12.5186 23.9443 11.2134 27.0114 11.2134 30.3834C11.2134 33.6603 12.4461 36.6493 14.473 38.912L19.0552 33.6029C18.5004 32.7061 18.1802 31.6489 18.1802 30.5169C18.1802 27.2729 20.81 24.6431 24.054 24.6431C24.8789 24.6431 25.6642 24.8132 26.3766 25.1202L31.0452 19.711Z" fill="#13BBB2"/>
+    </svg>   
+  );
+};
+
 export {
   BrandSVG,
   DeleteSVG,
@@ -2701,5 +2710,6 @@ export {
   RemoveOutlinedSVG,
   LeadSquaredSVG,
   HandshakeSVG,
-  SelectTemplatesBackgroundChartSVG
+  SelectTemplatesBackgroundChartSVG,
+  SixSignalLogoSVG
 };

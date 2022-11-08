@@ -11,6 +11,7 @@ import GoogleSearchConsole from "../ProjectSettings/IntegrationSettings/GoogleSe
 import RevealIntegration from "../ProjectSettings/IntegrationSettings/Reveal";
 import MarketoIntegration from "../ProjectSettings/IntegrationSettings/Marketo";
 import SlackIntegration from "../ProjectSettings/IntegrationSettings/Slack";
+import SixSignalIntegration from "../ProjectSettings/IntegrationSettings/SixSignal"
 
 import { ErrorBoundary } from "react-error-boundary";
 
@@ -32,6 +33,12 @@ const IntegrationProviderData = [
     desc: 'Take action as soon as a target account hits your site',
     icon: 'ClearbitLogo',
     kbLink:false,
+  },
+  {
+    name: '6Signal by 6Sense',
+    desc: 'Gain insight into who is visiting your website and where they are in the buying journey',
+    icon: 'SixSignalLogo',
+    kbLink: false,
   },
   {
     name: 'Marketo',
@@ -68,6 +75,10 @@ const IntegrationCard = ({ item, index }) => {
       case 'Clearbit Reveal':
         return (
           <RevealIntegration active={isActive} setIsActive={setIsActive} />
+        );
+      case '6Signal by 6Sense':
+        return (
+          <SixSignalIntegration kbLink={item.kbLink} setIsActive={setIsActive} />
         );
       case 'Marketo':
         return (

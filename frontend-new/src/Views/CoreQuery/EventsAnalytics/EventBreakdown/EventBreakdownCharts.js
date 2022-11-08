@@ -11,6 +11,7 @@ import BarChart from '../../../../components/BarChart';
 import EventBreakdownTable from './EventBreakdownTable';
 import ChartHeader from '../../../../components/SparkLineChart/ChartHeader';
 import { CoreQueryContext } from '../../../../contexts/CoreQueryContext';
+import { CHART_COLOR_1 } from '../../../../constants/color.constants';
 
 const EventBreakdownCharts = forwardRef(({ data, breakdown, section }, ref) => {
   const {
@@ -33,15 +34,13 @@ const EventBreakdownCharts = forwardRef(({ data, breakdown, section }, ref) => {
     setVisibleProperties(getVisibleData(chartsData, sorter));
   }, [chartsData, sorter]);
 
-  useImperativeHandle(ref, () => {
-    return {
-      currentSorter: { sorter }
-    };
-  });
+  useImperativeHandle(ref, () => ({
+    currentSorter: { sorter }
+  }));
 
   if (!chartsData.length) {
     return (
-      <div className="h-64 flex items-center justify-center w-full">
+      <div className='h-64 flex items-center justify-center w-full'>
         No Data Found!
       </div>
     );
@@ -50,7 +49,7 @@ const EventBreakdownCharts = forwardRef(({ data, breakdown, section }, ref) => {
   let chart = null;
 
   const table = (
-    <div className="mt-12 w-full">
+    <div className='mt-12 w-full'>
       <EventBreakdownTable
         data={chartsData}
         breakdown={breakdown}
@@ -69,14 +68,14 @@ const EventBreakdownCharts = forwardRef(({ data, breakdown, section }, ref) => {
       <ChartHeader
         eventNames={eventNames}
         total={data.rows[0]}
-        query={'Count'}
-        bgColor="#4D7DB4"
+        query='Count'
+        bgColor={CHART_COLOR_1}
       />
     );
   }
 
   return (
-    <div className="flex items-center justify-center flex-col">
+    <div className='flex items-center justify-center flex-col'>
       {chart}
       {table}
     </div>

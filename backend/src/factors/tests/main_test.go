@@ -104,6 +104,7 @@ func TestMain(m *testing.M) {
 		AllowHubspotEngagementsByProjectID:                 "*",
 		HubspotPropertyLookBackLimit:                       1000,
 		ClearbitEnabled:                                    1,
+		SixSignalEnabled:                                   1,
 		EnableOptimisedFilterOnProfileQuery:                true,
 		EnableOptimisedFilterOnEventUserQuery:              true,
 		AllowIdentificationOverwriteUsingSourceByProjectID: "*",

@@ -82,6 +82,7 @@ func main() {
 	cacheSortedSet := flag.Bool("cache_with_sorted_set", false, "Cache with sorted set keys")
 	allowSupportForUserPropertiesInIdentifyCall := flag.String("allow_support_for_user_properties_in_identify_call", "", "")
 	clearbitEnabled := flag.Int("clearbit_enabled", 0, "To enable clearbit enrichment")
+	six_signal_enabled := flag.Int("sixSignalEnabled", 0, "To enable sixSignal enrichment")
 
 	flag.Parse()
 
@@ -129,7 +130,8 @@ func main() {
 		DuplicateQueueRedisPort: *duplicateQueueRedisPort,
 		SentryDSN:               *sentryDSN,
 		AllowSupportForUserPropertiesInIdentifyCall: *allowSupportForUserPropertiesInIdentifyCall,
-		ClearbitEnabled: *clearbitEnabled,
+		ClearbitEnabled:  *clearbitEnabled,
+		SixSignalEnabled: *six_signal_enabled,
 	}
 	C.InitConf(config)
 

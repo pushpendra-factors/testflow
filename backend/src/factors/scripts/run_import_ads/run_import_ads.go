@@ -36,7 +36,7 @@ func main() {
 	localDiskTmpDirFlag := flag.String("local_disk_tmp_dir", "/usr/local/var/factors/local_disk/tmp", "--local_disk_tmp_dir=/usr/local/var/factors/local_disk/tmp pass directory.")
 
 	flag.Parse()
-	defaultHealthcheckPingID := C.HealthcheckLeadSquaredPullEventsPingID
+	defaultHealthcheckPingID := C.HealthcheckAdsImportPingID
 	healthcheckPingID := C.GetHealthcheckPingID(defaultHealthcheckPingID, *overrideHealthcheckPingID)
 	defer C.PingHealthcheckForPanic(appName, *envFlag, healthcheckPingID)
 

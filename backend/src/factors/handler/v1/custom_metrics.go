@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -59,45 +58,6 @@ func CreateCustomMetric(c *gin.Context) (interface{}, int, string, string, bool)
 	return customMetric, http.StatusOK, "", "", false
 }
 
-type KPIQueryGroupTemp struct {
-	Class         string             `json:"cl"`
-	Queries       []model.KPIQuery   `json:"qG"`
-	GlobalFilters []model.KPIFilter  `json:"gFil"`
-	GlobalGroupBy []model.KPIGroupBy `json:"gGBy"`
-	Formula       string             `json:"for"`
-}
-
-// temporary - derived kpi
-func CreateDerivedKPI(c *gin.Context) (interface{}, int, string, string, bool) {
-	reqID, projectID := getReqIDAndProjectID(c)
-	logCtx := log.WithField("reqID", reqID).WithField("projectID", projectID)
-	if projectID == 0 {
-		return nil, http.StatusBadRequest, INVALID_INPUT, "", true
-	}
-	request := model.CustomMetric{}
-	err := c.BindJSON(&request)
-	if err != nil {
-		var requestAsMap map[string]interface{}
-		c.BindJSON(&requestAsMap)
-		logCtx.Warnf("Decode failed on request to profiles struct. %v", requestAsMap)
-		return nil, http.StatusBadRequest, INVALID_INPUT, "Error during decode of custom metrics.", true
-	}
-	if request.TypeOfQuery != model.DerivedQueryType {
-		return nil, http.StatusBadRequest, INVALID_INPUT, "Wrong type of query sent", true
-	}
-
-	var derivedMetricTransformation KPIQueryGroupTemp
-	err = U.DecodePostgresJsonbToStructType(request.Transformations, &derivedMetricTransformation)
-	if err != nil {
-		return nil, http.StatusBadRequest, INVALID_INPUT, "Error during decode of custom metrics transformations.", true
-	}
-	request.ProjectID = projectID
-	request.ID = uuid.New().String()
-	customMetric := &request
-
-	return customMetric, http.StatusOK, "", "", false
-}
-
 // GetCustomMetricsConfig godoc
 // @Summary To get config for the building custom metrics on settings.
 // @Tags CustomMetric
@@ -110,7 +70,7 @@ func GetCustomMetricsConfig(c *gin.Context) {
 	customMetricConfigs := model.CustomMetricConfig{}
 	customMetricObjectTypesAndProperties := make([]model.CustomMetricObjectTypeAndProperties, 0)
 
-	for _, objectType := range model.CustomMetricObjectTypeNames {
+	for _, objectType := range model.CustomKPIProfileObjectCategories {
 		currentObjectTypeAndProperties := model.CustomMetricObjectTypeAndProperties{}
 		currentObjectTypeAndProperties.ObjectType = objectType
 		currentObjectTypeAndProperties.Properties = getPropertiesFunctionBasedOnObjectType(objectType)(projectID, reqID)
@@ -118,9 +78,41 @@ func GetCustomMetricsConfig(c *gin.Context) {
 		customMetricObjectTypesAndProperties = append(customMetricObjectTypesAndProperties, currentObjectTypeAndProperties)
 	}
 
-	customMetricConfigs.AggregateFunctions = model.CustomMetricAggregateFunctions
+	customMetricConfigs.AggregateFunctions = model.CustomMetricProfilesAggregateFunctions
 	customMetricConfigs.ObjectTypeAndProperties = customMetricObjectTypesAndProperties
 	c.JSON(http.StatusOK, gin.H{"result": customMetricConfigs})
+}
+
+// GetCustomMetricsConfig godoc
+// @Summary To get config for the building custom metrics on settings.
+// @Tags CustomMetric
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Success 200 {string} json "{"result": model.CustomMetricConfig"
+// @Router /{project_id}/v1/custom_metrics/config/v1 [get]
+func GetCustomMetricsConfigV1(c *gin.Context) {
+	reqID, projectID := getReqIDAndProjectID(c)
+	finalConfigs := make([]model.CustomMetricConfigV1, 0)
+
+	for _, objectType := range model.CustomKPIProfileObjectCategories {
+		// CustomMetricConfigObjectV1
+		currentConfigV1 := model.CustomMetricConfigV1{}
+		currentConfigV1.ObjectType = objectType
+		currentConfigV1.TypeOfQuery = model.ProfileQueryType
+		currentConfigV1.AggregateFunctions = model.CustomMetricProfilesAggregateFunctions
+		currentConfigV1.Properties = getPropertiesFunctionBasedOnObjectType(objectType)(projectID, reqID)
+
+		finalConfigs = append(finalConfigs, currentConfigV1)
+	}
+
+	customEventConfig := model.CustomMetricConfigV1{}
+	customEventConfig.ObjectType = model.EventsBasedDisplayCategory
+	customEventConfig.TypeOfQuery = model.EventBasedQueryType
+	customEventConfig.AggregateFunctions = model.CustomEventsAggregateFunctions
+
+	finalConfigs = append(finalConfigs, customEventConfig)
+
+	c.JSON(http.StatusOK, gin.H{"result": finalConfigs})
 }
 
 // GetCustomMetrics godoc
@@ -198,7 +190,7 @@ func DeleteCustomMetrics(c *gin.Context) (interface{}, int, string, string, bool
 			IsPrevious = true
 		}
 		if len(alertNames) > 0 {
-			if (IsPrevious) {
+			if IsPrevious {
 				errorMessage = errorMessage + " and \""
 			}
 			errorMessage = errorMessage + strings.Join(alertNames, "\", \"") + "\" alert"
@@ -208,7 +200,7 @@ func DeleteCustomMetrics(c *gin.Context) (interface{}, int, string, string, bool
 			IsPrevious = true
 		}
 		if len(customMetricNames) > 0 {
-			if (IsPrevious) {
+			if IsPrevious {
 				errorMessage = errorMessage + " and "
 			}
 			errorMessage = errorMessage + strings.Join(customMetricNames, "\", \"") + "\" derived KPI"

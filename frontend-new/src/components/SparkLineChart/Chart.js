@@ -5,6 +5,7 @@ import PropTypes from 'prop-types';
 import * as d3 from 'd3';
 import moment from 'moment';
 import { addQforQuarter } from '../../utils/dataFormatter';
+import { CHART_COLOR_1 } from '../../constants/color.constants';
 import { getDateFormatForTimeSeriesChart } from '../../utils/chart.helpers';
 import { getFormattedKpiValue } from '../../Views/CoreQuery/KPIAnalysis/kpiAnalysis.helpers';
 import { METRIC_TYPES } from '../../utils/constants';
@@ -42,7 +43,6 @@ function SparkChart({
       ?.getBoundingClientRect()?.width
       ? d3.select(chartRef.current).node()?.getBoundingClientRect()?.width
       : 0;
-
     const width = containerWidth;
     const height = widgetHeight || 180;
 
@@ -77,25 +77,25 @@ function SparkChart({
       .range([height, 0]);
 
     // Add the area
-    svg
-      .append('path')
-      .datum(data)
-      .attr('fill-opacity', 0.3)
-      .attr('class', 'area')
-      .attr('stroke', 'none')
-      .attr(
-        'd',
-        d3
-          .area()
-          .x((d) => x(d.date))
-          .y0(height)
-          .y1((d) => y(d[event]))
-      )
-      .attr(
-        'fill',
-        `url(#area-gradient-${chartColor.substr(1)}-${page}-${title})`
-      )
-      .attr('stroke-width', 1);
+    // svg
+    //   .append('path')
+    //   .datum(data)
+    //   .attr('fill-opacity', 0.3)
+    //   .attr('class', 'area')
+    //   .attr('stroke', 'none')
+    //   .attr(
+    //     'd',
+    //     d3
+    //       .area()
+    //       .x((d) => x(d.date))
+    //       .y0(height)
+    //       .y1((d) => y(d[event]))
+    //   )
+    //   .attr(
+    //     'fill',
+    //     `url(#area-gradient-${chartColor.substr(1)}-${page}-${title})`
+    //   )
+    //   .attr('stroke-width', 1);
 
     // Add the line
     svg
@@ -172,12 +172,12 @@ function SparkChart({
       tooltip
         .html(
           ReactDOMServer.renderToString(
-            <div className="flex flex-col row-gap-2">
-              <Text type="title" level={7} color="grey-2">
+            <div className='flex flex-col row-gap-2'>
+              <Text type='title' level={7} color='grey-2'>
                 {eventTitle}
               </Text>
               <div
-                className="flex flex-col"
+                className='flex flex-col'
                 style={
                   comparisonApplied
                     ? {
@@ -187,11 +187,11 @@ function SparkChart({
                     : {}
                 }
               >
-                <Text type="title" color="grey" level={7}>
+                <Text type='title' color='grey' level={7}>
                   {addQforQuarter(frequency) + moment(d.date).format(format)}
                 </Text>
-                <div className="flex items-center col-gap-1">
-                  <Text weight="bold" type="title" color="grey-6" level={5}>
+                <div className='flex items-center col-gap-1'>
+                  <Text weight='bold' type='title' color='grey-6' level={5}>
                     {metricType != null && metricType !== '' ? (
                       getFormattedKpiValue({ value: d[event], metricType })
                     ) : (
@@ -201,7 +201,7 @@ function SparkChart({
                   {comparisonApplied && (
                     <>
                       {changeIcon}
-                      <Text level={7} type="title" color="grey">
+                      <Text level={7} type='title' color='grey'>
                         <NumFormat number={Math.abs(percentChange)} />%
                       </Text>
                     </>
@@ -209,16 +209,16 @@ function SparkChart({
                 </div>
               </div>
               {comparisonApplied && (
-                <div className="flex flex-col pl-3">
-                  <Text type="title" color="grey" level={7}>
+                <div className='flex flex-col pl-3'>
+                  <Text type='title' color='grey' level={7}>
                     {addQforQuarter(frequency) +
                       moment(d.compareDate).format(format)}
                   </Text>
                   <Text
-                    weight="bold"
-                    className="mt-0"
-                    type="title"
-                    color="grey-6"
+                    weight='bold'
+                    className='mt-0'
+                    type='title'
+                    color='grey-6'
                     level={5}
                   >
                     {metricType != null && metricType !== '' ? (
@@ -300,7 +300,7 @@ SparkChart.propTypes = {
 
 SparkChart.defaultProps = {
   title: 'Chart',
-  chartColor: '#4D7DB4',
+  chartColor: CHART_COLOR_1,
   event: 'event',
   frequency: 'date',
   height: 180,

@@ -10,7 +10,7 @@ function KPIAnalysis({
   breakdown,
   currMetricsValue,
   renderedCompRef,
-  durationObj,
+  durationObj
 }) {
   if (breakdown.length) {
     return (
@@ -25,18 +25,17 @@ function KPIAnalysis({
         durationObj={durationObj}
       />
     );
-  } else {
-    return (
-      <NoBreakdownCharts
-        kpis={kpis}
-        chartType={chartType}
-        responseData={resultState.data}
-        section={section}
-        ref={renderedCompRef}
-        durationObj={durationObj}
-      />
-    );
   }
+  return (
+    <NoBreakdownCharts
+      kpis={kpis}
+      chartType={chartType}
+      responseData={resultState.data}
+      section={section}
+      ref={renderedCompRef}
+      durationObj={durationObj}
+    />
+  );
 }
 
 export default KPIAnalysis;

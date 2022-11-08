@@ -1,7 +1,6 @@
 package memsql
 
 import (
-	C "factors/config"
 	"factors/model/model"
 	U "factors/util"
 	"net/http"
@@ -41,13 +40,9 @@ func (store *MemSQL) ExecuteForSingleKPIMetricProfile(projectID int64, profileQu
 	hasGroupByTimestamp := (kpiQuery.GroupByTimestamp != "")
 	hasAnyGroupBys := (len(kpiQuery.GroupBy) > 0)
 	finalResult := model.QueryResult{}
-	isTimezoneEnabled := false
-	if C.IsMultipleProjectTimezoneEnabled(projectID) {
-		isTimezoneEnabled = true
-	}
 
 	var transformation model.CustomMetricTransformation
-	customMetric, err, statusCode := store.GetKpiRelatedCustomMetricsByName(projectID, kpiMetric)
+	customMetric, err, statusCode := store.GetProfileCustomMetricByProjectIdName(projectID, kpiMetric)
 	if statusCode != http.StatusFound {
 		finalResult.Headers = append(finalResult.Headers, model.AliasError)
 		return finalResult, statusCode
@@ -70,7 +65,7 @@ func (store *MemSQL) ExecuteForSingleKPIMetricProfile(projectID int64, profileQu
 		return finalResult, http.StatusOK
 	} else {
 		results := model.TransformProfileResultsToKPIResults(resultGroup.Results, hasGroupByTimestamp, hasAnyGroupBys)
-		finalResult = model.HandlingProfileResultsByApplyingOperations(results, currentQueries, kpiQuery.Timezone, isTimezoneEnabled)
+		finalResult = model.HandlingProfileResultsByApplyingOperations(results, currentQueries, kpiQuery.Timezone)
 	}
 	return finalResult, http.StatusOK
 }
