@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"strings"
 )
 
 type CreateDisplayNamesParams struct {
@@ -44,4 +45,35 @@ func CreateDisplayNamesHandler(c *gin.Context) (interface{}, int, string, string
 	response := make(map[string]interface{})
 	response["status"] = "success"
 	return response, http.StatusCreated, "", "", false
+}
+
+func GetAllDistinctEventProperties(c *gin.Context)(interface{}, int, string, string, bool) {
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	if projectID == 0 {
+		return nil, http.StatusBadRequest, INVALID_PROJECT, "", true
+	}
+	finalDisplayNames := make(map[string]map[string]string)
+	_, displayNames := store.GetStore().GetDistinctDisplayNamesForAllEventProperties(projectID)
+	displayNamesOp := make(map[string]string)
+	for property, displayName := range displayNames {
+		displayNamesOp[property] = strings.Title(displayName)
+	}
+	standardPropertiesAllEvent := U.STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES
+	for property, displayName := range standardPropertiesAllEvent {
+		displayNamesOp[property] = strings.Title(displayName)
+	}
+	_, displayNames = store.GetStore().GetDisplayNamesForObjectEntities(projectID)
+	for property, displayName := range displayNames {
+		displayNamesOp[property] = strings.Title(displayName)
+	}
+
+	finalDisplayNames["global"] = displayNamesOp
+	standardPropertiesSession := U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES
+	for property, displayName := range standardPropertiesSession {
+		displayNamesOp[property] = strings.Title(displayName)
+	}
+	
+	finalDisplayNames["$session"] = displayNamesOp
+
+	return finalDisplayNames, http.StatusOK, "", "", false
 }

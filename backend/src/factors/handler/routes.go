@@ -265,6 +265,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.POST("/:project_id/v1/factor", V1.PostFactorsHandler)
 	authRouteGroup.POST("/:project_id/v1/factor/compare", V1.PostFactorsCompareHandler)
 	authRouteGroup.POST("/:project_id/v1/events/displayname", mid.SkipDemoProjectWriteAccess(), responseWrapper(V1.CreateDisplayNamesHandler))
+	authRouteGroup.GET("/:project_id/v1/events/displayname", responseWrapper(V1.GetAllDistinctEventProperties))
 	authRouteGroup.GET("/:project_id/v1/factor", V1.GetFactorsHandler)
 	authRouteGroup.GET("/:project_id/v1/factor/model_metadata", V1.GetModelMetaData)
 

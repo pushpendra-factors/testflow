@@ -45,6 +45,11 @@ func LeadSquaredIntegration(projectId int64, configs map[string]interface{}) (ma
 
 	PAGE_SIZE := 1000
 	for docType, _ := range model.LeadSquaredDocumentEndpoint {
+		if docType == model.LEADSQUARED_EMAIL_SENT || docType == model.LEADSQUARED_EMAIL_INFO || docType == model.LEADSQUARED_HAD_A_CALL {
+			if projectId == 2251799831000006 {
+				continue
+			}
+		}
 		totalSuccess := 0
 		totalFailures := 0
 		propertySuccess := 0
@@ -277,7 +282,7 @@ func insertCRMActivityLeadSquared(projectId int64, line []string, docType string
 		ProjectID:          projectId,
 		ExternalActivityID: model.GetLeadSquaredDocumentProgramId(docType, line, columnNamesFromMetadata),
 		Source:             U.CRM_SOURCE_LEADSQUARED,
-		Name:               "sales_activity_created",
+		Name:               model.LeadSquaredDocumentCreatedEventName[docType],
 		Type:               model.GetLeadSquaredDocumentDocumentType(docType),
 		ActorType:          model.GetLeadSquaredActorType(docType),
 		ActorID:            model.GetLeadSquaredDocumentActorId(docType, line, columnNamesFromMetadata),
@@ -287,7 +292,7 @@ func insertCRMActivityLeadSquared(projectId int64, line []string, docType string
 
 	insertionStatus, errCRMStatus = store.GetStore().CreateCRMActivity(&intDocument)
 	if insertionStatus == http.StatusConflict {
-		intDocument.Name = "sales_activity_updated"
+		intDocument.Name =  model.LeadSquaredDocumentUpdatedEventName[docType]
 		intDocument.Timestamp = timestamps[1]
 		insertionStatus, errCRMStatus = store.GetStore().CreateCRMActivity(&intDocument)
 	}

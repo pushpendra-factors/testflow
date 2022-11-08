@@ -579,6 +579,7 @@ type Model interface {
 	CreateOrUpdateDisplayNameByObjectType(projectID int64, propertyName, objectType, displayName, group string) int
 	GetDisplayNamesForAllEvents(projectID int64) (int, map[string]string)
 	GetDisplayNamesForAllEventProperties(projectID int64, eventName string) (int, map[string]string)
+	GetDistinctDisplayNamesForAllEventProperties(projectID int64) (int, map[string]string)
 	GetDisplayNamesForAllUserProperties(projectID int64) (int, map[string]string)
 	GetDisplayNamesForObjectEntities(projectID int64) (int, map[string]string)
 	CreateOrUpdateDisplayName(projectID int64, eventName, propertyName, displayName, tag string) int
