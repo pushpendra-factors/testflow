@@ -383,7 +383,9 @@ func (store *MemSQL) GetSelectedUsersByCustomerUserID(projectID int64, customerU
 	return users, http.StatusFound
 }
 
-func (store *MemSQL) GetUserLatestByCustomerUserId(projectId int64, customerUserId string, requestSource int) (*model.User, int) {
+func (store *MemSQL) getLatestUserIDByCustomerUserId(projectId int64,
+	customerUserId string, requestSource int) (*model.User, int) {
+
 	logFields := log.Fields{
 		"project_id":       projectId,
 		"customer_user_id": customerUserId,
@@ -394,7 +396,7 @@ func (store *MemSQL) GetUserLatestByCustomerUserId(projectId int64, customerUser
 	var user model.User
 	db := C.GetServices().Db
 	if !C.CheckRestrictReusingUsersByCustomerUserId(projectId) {
-		if err := db.Limit(1).Order("created_at DESC").Where("project_id = ?", projectId).
+		if err := db.Limit(1).Select("id").Order("created_at DESC").Where("project_id = ?", projectId).
 			Where("customer_user_id = ?", customerUserId).Find(&user).Error; err != nil {
 			if gorm.IsRecordNotFoundError(err) {
 				return nil, http.StatusNotFound
@@ -408,7 +410,7 @@ func (store *MemSQL) GetUserLatestByCustomerUserId(projectId int64, customerUser
 		} else {
 			userSourceWhereCondition = "source = ?"
 		}
-		if err := db.Limit(1).Order("created_at DESC").Where("project_id = ?", projectId).
+		if err := db.Limit(1).Select("id").Order("created_at DESC").Where("project_id = ?", projectId).
 			Where("customer_user_id = ?", customerUserId).Where(userSourceWhereCondition, requestSource).
 			Find(&user).Error; err != nil {
 			if gorm.IsRecordNotFoundError(err) {
@@ -418,6 +420,18 @@ func (store *MemSQL) GetUserLatestByCustomerUserId(projectId int64, customerUser
 		}
 	}
 	return &user, http.StatusFound
+}
+
+// GetUserLatestByCustomerUserId - Gets latest user's id first to avoid huge
+// sorting with all columns. and uses the users.id to fetch all columns required.
+func (store *MemSQL) GetUserLatestByCustomerUserId(projectId int64,
+	customerUserId string, requestSource int) (*model.User, int) {
+	user, status := store.getLatestUserIDByCustomerUserId(projectId, customerUserId, requestSource)
+	if status != http.StatusFound {
+		return nil, status
+	}
+
+	return store.GetUser(projectId, user.ID)
 }
 
 func (store *MemSQL) GetExistingUserByCustomerUserID(projectId int64, arrayCustomerUserID []string, source ...int) (map[string]string, int) {
