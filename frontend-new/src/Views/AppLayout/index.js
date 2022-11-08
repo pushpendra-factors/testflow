@@ -224,16 +224,8 @@ function AppLayout({
 
                     <Route path='/welcome' component={Welcome} />
 
-                    {(window.document.domain === 'app.factors.ai' &&
-                      whiteListedAccounts.includes(activeAgent)) ||
-                    window.document.domain === 'staging-app.factors.ai' ||
-                    window.document.domain === 'factors-dev.com' ? (
-                      <Route
-                        path='/template'
-                        name='dashboardSettings'
-                        component={DashboardTemplates}
-                      />
-                    ) : null}
+                    
+                    <Route path="/template" name="dashboardSettings" component={DashboardTemplates} />
 
                     {/* settings */}
                     <Route path='/settings/general' component={BasicSettings} />

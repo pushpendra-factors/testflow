@@ -201,7 +201,7 @@ function AccountProfiles({
       </div>
       {accounts.isLoading ? (
         <Spin size="large" className="fa-page-loader" />
-      ) : (
+      ) : accounts.data.length ? (
         <div>
           <Table
             onRow={(user) => ({
@@ -221,6 +221,10 @@ function AccountProfiles({
             pagination={{ position: ['bottom', 'left'] }}
           />
         </div>
+      ) : (
+        <Text type="title" level={6} extraClass="mt-20 italic">
+          There are currently no Accounts available for this project.
+        </Text>
       )}
       <Modal
         title={null}

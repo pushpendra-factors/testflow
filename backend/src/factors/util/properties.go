@@ -1438,7 +1438,7 @@ var STANDARD_USER_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	UP_DEVICE_NAME:                      "Device Name",
 	UP_DEVICE_BRAND:                     "Device Brand",
 	UP_DEVICE_MODEL:                     "Device Model",
-	UP_DEVICE_TYPE:                      "Device UnitType",
+	UP_DEVICE_TYPE:                      "Device Type",
 	UP_DEVICE_FAMILY:                    "Device Family",
 	UP_DEVICE_MANUFACTURER:              "Device Manufacturer",
 	UP_DEVICE_CARRIER:                   "Device Carrier",

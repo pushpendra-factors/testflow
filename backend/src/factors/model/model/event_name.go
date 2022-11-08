@@ -975,6 +975,13 @@ func IsUserSmartEventName(projectID int64, eventName *EventName) (string, bool) 
 		return "", false
 	}
 
+	sourceName := smartEventFilter.Source
+	// for salesforce user events, prefix is '$sf' instead for '$salesforce'
+	if smartEventFilter.Source == U.CRM_SOURCE_NAME_SALESFORCE {
+		sourceName = "sf"
+	}
+
+	groupName = U.NAME_PREFIX + sourceName + U.NAME_PREFIX_ESCAPE_CHAR + smartEventFilter.ObjectType
 	for _, eventName := range U.ALLOWED_INTERNAL_EVENT_NAMES {
 		if strings.HasPrefix(eventName, groupName) {
 			return eventName, true

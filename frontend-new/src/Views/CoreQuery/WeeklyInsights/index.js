@@ -121,6 +121,7 @@ const WeeklyInishgtsResults = ({data, activeInsight, requestQuery,activeProject 
     
     const SelectKPI = (
         <Select
+            className={'fa-select'}
             options={KPIOptions}
             onChange={(value) => {
                 setSelectKPIValue(value);
@@ -128,7 +129,6 @@ const WeeklyInishgtsResults = ({data, activeInsight, requestQuery,activeProject 
             placeholder="Select KPI"
             defaultActiveFirstOption
             defaultValue={selectKPIValue}
-            bordered={false}
             style = {{color: '#0E2647'}}
         >
         </Select>

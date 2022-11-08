@@ -44,12 +44,12 @@ jobs:
     - name: Show GitHub context   
       env: 
         GITHUB_CONTEXT: ${{ toJson(github) }}   
-      run: echo "$GITHUB_CONTEXT" ```
+      run: echo "$GITHUB_CONTEXT"
 
     - name: Show GitHub context   
       env: 
         GITHUB_CONTEXT: ${{ toJson(github) }}   
-      run: echo "$DEV_NAME" ```
+      run: echo "$DEV_NAME"
         
     # Setup gcloud CLI
     - uses: google-github-actions/setup-gcloud@v0.2.0

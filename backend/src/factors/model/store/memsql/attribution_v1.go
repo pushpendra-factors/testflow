@@ -554,9 +554,10 @@ func (store *MemSQL) GetAttributionData(projectID int64, query *model.Attributio
 		noOfConversionEvents := 1
 		sessionWT := make(map[string][]float64)
 		for key := range groupSessions {
-			sessionWT[key] = kpiData[key].KpiValues
-			if kpiData[key].KpiValues != nil || len(kpiData[key].KpiValues) > 1 {
-				noOfConversionEvents = U.MaxInt(noOfConversionEvents, len(kpiData[key].KpiValues))
+			kpiValues := model.KPIValueListToValues(kpiData[key])
+			sessionWT[key] = kpiValues
+			if kpiValues != nil || len(kpiValues) > 1 {
+				noOfConversionEvents = U.MaxInt(noOfConversionEvents, len(kpiValues))
 			}
 		}
 
@@ -625,11 +626,22 @@ func ProcessAttributionDataToResult(projectID int64, query *model.AttributionQue
 
 	if query.AttributionKey == model.AttributionKeyLandingPage {
 
-		result = model.ProcessQueryLandingPageUrl(query, attributionData, *logCtx, isCompare)
-		if C.GetAttributionDebug() == 1 {
-			logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Process Query Landing PageUrl took time")
+		if query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities ||
+			query.AnalyzeType == model.AnalyzeTypeSFAccounts || query.AnalyzeType == model.AnalyzeTypeHSCompanies {
+			result = model.ProcessQueryKPILandingPageUrl(query, attributionData, *logCtx, kpiData, isCompare)
+			if C.GetAttributionDebug() == 1 {
+				logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Process Query Landing PageUrl took time")
+			}
+			queryStartTime = time.Now().UTC().Unix()
+
+		} else {
+
+			result = model.ProcessQueryLandingPageUrl(query, attributionData, *logCtx, isCompare)
+			if C.GetAttributionDebug() == 1 {
+				logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Process Query Landing PageUrl took time")
+			}
+			queryStartTime = time.Now().UTC().Unix()
 		}
-		queryStartTime = time.Now().UTC().Unix()
 
 	} else if query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities ||
 		query.AnalyzeType == model.AnalyzeTypeSFAccounts || query.AnalyzeType == model.AnalyzeTypeHSCompanies {

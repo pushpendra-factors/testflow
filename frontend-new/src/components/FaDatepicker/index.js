@@ -493,9 +493,6 @@ const FaDatepicker = ({
         placement={placement}
         trigger={!showDatePicker ? ['click'] : []}
       >
-        <Tooltip 
-          title='Select a time range for your analysis' 
-          color={TOOLTIP_CONSTANTS.DARK}>
         <Button
           disabled={disabled}
           className={className}
@@ -554,7 +551,6 @@ const FaDatepicker = ({
             </span>
           )}
         </Button>
-        </Tooltip>
       </Dropdown>
     </div>
   );
