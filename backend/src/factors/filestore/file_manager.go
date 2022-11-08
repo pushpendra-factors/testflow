@@ -45,9 +45,7 @@ type FileManager interface {
 	//predict
 	GetPredictProjectDataPath(projectId int64, model_id int64) string
 	GetPredictProjectDir(projectId int64, model_id int64) string
-  
-  
-  
+
 	GetWIPropertiesDir(projectId int64) string
 	GetWIPropertiesPathAndName(projectId int64) (string, string)
 

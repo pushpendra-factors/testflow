@@ -1491,8 +1491,6 @@ func (store *MemSQL) FilterEventNameByEventURL(projectId int64, eventURL string)
 	return filterInfo.eventName, http.StatusFound
 }
 
-
-
 func (store *MemSQL) GetEventNameIDFromEventName(eventName string, projectId int64) (*model.EventName, error) {
 	logFields := log.Fields{
 		"project_id": projectId,

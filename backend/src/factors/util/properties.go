@@ -463,6 +463,27 @@ var CLR_COMPANY_LEGALNAME = "$clr_company_legalname"
 var CLR_COMPANY_TECH = "$clr_company_tech"
 var CLR_COMPANY_TAGS = "$clr_company_tags"
 
+//6Signal Properties
+var SIX_SIGNAL_ZIP = "$6Signal_zip"
+var SIX_SIGNAL_NAICS_DESCRIPTION = "$6Signal_naics_description"
+var SIX_SIGNAL_EMPLOYEE_COUNT = "$6Signal_employee_count"
+var SIX_SIGNAL_COUNTRY = "$6Signal_country"
+var SIX_SIGNAL_ADDRESS = "$6Signal_address"
+var SIX_SIGNAL_CITY = "$6Signal_city"
+var SIX_SIGNAL_EMPLOYEE_RANGE = "$6Signal_employee_range"
+var SIX_SIGNAL_INDUSTRY = "$6Signal_industry"
+var SIX_SIGNAL_SIC = "$6Signal_sic"
+var SIX_SIGNAL_REVENUE_RANGE = "$6Signal_revenue_range"
+var SIX_SIGNAL_COUNTRY_ISO_CODE = "$6Signal_country_iso_code"
+var SIX_SIGNAL_PHONE = "$6Signal_phone"
+var SIX_SIGNAL_DOMAIN = "$6Signal_domain"
+var SIX_SIGNAL_NAME = "$6Signal_name"
+var SIX_SIGNAL_STATE = "$6Signal_state"
+var SIX_SIGNAL_REGION = "$6Signal_region"
+var SIX_SIGNAL_NAICS = "$6Signal_naics"
+var SIX_SIGNAL_ANNUAL_REVENUE = "$6Signal_annual_revenue"
+var SIX_SIGNAL_SIC_DESCRIPTION = "$6Signal_sic_description"
+
 var SDK_ALLOWED_EVENT_PROPERTIES = [...]string{
 	EP_INTERNAL_IP,
 	EP_LOCATION_LATITUDE,
@@ -3827,9 +3848,9 @@ func GetExplainPropertyWeights(propertyName string) float64 {
 
 }
 
-func GetStandardDisplayNameGroups() map[string]string{
-	displayNameGroups:= make(map[string]string)
-	for group:= range STANDARD_GROUP_DISPLAY_NAMES{
+func GetStandardDisplayNameGroups() map[string]string {
+	displayNameGroups := make(map[string]string)
+	for group := range STANDARD_GROUP_DISPLAY_NAMES {
 		displayNameGroups[STANDARD_GROUP_DISPLAY_NAMES[group]] = group
 	}
 	return displayNameGroups

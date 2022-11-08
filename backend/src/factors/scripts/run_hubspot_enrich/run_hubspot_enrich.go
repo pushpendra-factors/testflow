@@ -66,6 +66,7 @@ func main() {
 	lightProjectsCountThreshold := flag.Int("light_projects_count_threshold", 50000, "Threshold on count for distribution across jobs")
 	enrichHeavy := flag.Bool("enrich_heavy", false, "Run heavy projects")
 	clearbitEnabled := flag.Int("clearbit_enabled", 0, "To enable clearbit enrichment")
+	six_signal_enabled := flag.Int("sixSignalEnabled", 0, "To enable sixSignal enrichment")
 	recordProcessLimit := flag.Int("record_process_limit", 50000, "Number of records to process per project.")
 	disableNonMarketingContactByProjectID := flag.String("disable_non_marketing_contact_by_project_id", "", "Disable hubspot non marketing contacts from processing")
 	hubspotAppID := flag.String("hubspot_app_id", "", "Hubspot app id for oauth integration")
@@ -122,6 +123,7 @@ func main() {
 		RestrictReusingUsersByCustomerUserId:          *restrictReusingUsersByCustomerUserId,
 		EnableHubspotFormsEventsByProjectID:           *enableHubspotFormEventsByProjectID,
 		ClearbitEnabled:                               *clearbitEnabled,
+		SixSignalEnabled:                              *six_signal_enabled,
 		DisableHubspotNonMarketingContactsByProjectID: *disableNonMarketingContactByProjectID,
 		HubspotAppID:                                  *hubspotAppID,
 		HubspotAppSecret:                              *hubspotAppSecret,

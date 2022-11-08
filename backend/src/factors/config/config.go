@@ -252,6 +252,7 @@ type Configuration struct {
 	EnableDryRunAlerts                                 bool
 	DataAvailabilityExpiry                             int
 	ClearbitEnabled                                    int
+	SixSignalEnabled                                   int
 	UseSalesforceV54APIByProjectID                     string
 	EnableOptimisedFilterOnProfileQuery                bool
 	HubspotAppID                                       string
@@ -1764,6 +1765,9 @@ func GetClearbitEnabled() int {
 	return configuration.ClearbitEnabled
 }
 
+func Get6SignalEnabled() int {
+	return configuration.SixSignalEnabled
+}
 func GetOnlyAttributionDashboardCaching() int {
 	return configuration.OnlyAttributionDashboardCaching
 }

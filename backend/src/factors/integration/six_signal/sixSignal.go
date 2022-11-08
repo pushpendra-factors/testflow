@@ -1,24 +1,23 @@
-package clear_bit
+package six_signal
 
 import (
 	"encoding/json"
 	cacheRedis "factors/cache/redis"
 	"fmt"
-	"net/http"
-
 	"github.com/gomodule/redigo/redis"
 	log "github.com/sirupsen/logrus"
+	"net/http"
 )
 
-//SetClearBitCacheResult Sets the cache result key in redis.
-func SetClearBitCacheResult(projectID int64, userId string, userIP string) {
+//SetSixSignalCacheResult Sets the cache result key in redis.
+func SetSixSignalCacheResult(projectID int64, userId string, userIP string) {
 	logCtx := log.WithFields(log.Fields{
 		"project_id": projectID,
 		"user_id":    userId,
 		"user_ip":    userIP,
 	})
 
-	cacheKey, err := GetClearbitCacheRedisKey(projectID, userId, userIP)
+	cacheKey, err := GetSixSignalCacheRedisKey(projectID, userId, userIP)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get cache key")
 		return
@@ -37,20 +36,20 @@ func SetClearBitCacheResult(projectID int64, userId string, userIP string) {
 	}
 
 }
-func GetClearbitCacheRedisKey(projectID int64, userId string, userIP string) (*cacheRedis.Key, error) {
-	prefix := "ip:enrichment:clearbit"
-	suffix := fmt.Sprintf("userId:%d:userIP:%v", userId, userIP)
+func GetSixSignalCacheRedisKey(projectID int64, userId string, userIP string) (*cacheRedis.Key, error) {
+	prefix := "ip:enrichment:sixsignal"
+	suffix := fmt.Sprintf("userId:%d:userIP:%s", userId, userIP)
 	return cacheRedis.NewKey(projectID, prefix, suffix)
 }
 
-func GetClearbitCacheResult(projectID int64, userId string, userIP string) (bool, int) {
+func GetSixSignalCacheResult(projectID int64, userId string, userIP string) (bool, int) {
 	var cacheResult bool
 	logCtx := log.WithFields(log.Fields{
 		"project_id": projectID,
 		"user_id":    userId,
 		"user_ip":    userIP,
 	})
-	cacheKey, err := GetClearbitCacheRedisKey(projectID, userId, userIP)
+	cacheKey, err := GetSixSignalCacheRedisKey(projectID, userId, userIP)
 	if err != nil {
 		logCtx.WithError(err).Error("Error getting cache key")
 		return cacheResult, http.StatusInternalServerError

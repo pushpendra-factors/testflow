@@ -5,6 +5,7 @@ import (
 	"errors"
 	cacheRedis "factors/cache/redis"
 	"factors/integration/clear_bit"
+	"factors/integration/six_signal"
 	"factors/model/model"
 	"factors/model/store"
 	"factors/util"
@@ -662,28 +663,13 @@ func Track(projectId int64, request *TrackPayload,
 	} else {
 		userProperties = requestUserProperties
 	}
-	if C.GetClearbitEnabled() == 1 {
-		if projectSettings.ClearbitKey != "" {
-			executeClearBitStatusChannel := make(chan int)
-			clearBitExists, _ := clear_bit.GetClearbitCacheResult(projectId, request.UserId, clientIP)
-			if clearBitExists {
-				logCtx.Info("clearbit cache hit")
-			} else {
-				logCtx.Info("clearbit cache miss")
-				go clear_bit.ExecuteClearBitEnrich(projectSettings.ClearbitKey, userProperties, clientIP, executeClearBitStatusChannel)
 
-				select {
-				case ok := <-executeClearBitStatusChannel:
-					if ok == 1 {
-						clear_bit.SetClearBitCacheResult(projectId, request.UserId, clientIP)
-					} else {
-						logCtx.Info("ExecuteClearbit failed in Track call")
-					}
-				case <-time.After(U.TimeoutOneSecond):
-					logCtx.Info("clear_bit enrichment timed out in Track call")
-				}
-			}
-		}
+	if C.GetClearbitEnabled() == 1 {
+		FillClearbitUserProperties(projectId, projectSettings, userProperties, request.UserId, clientIP)
+	}
+
+	if C.Get6SignalEnabled() == 1 {
+		FillSixSignalUserProperties(projectId, projectSettings, userProperties, request.UserId, clientIP)
 	}
 
 	_ = model.FillLocationUserProperties(userProperties, clientIP)
@@ -802,6 +788,82 @@ func Track(projectId int64, request *TrackPayload,
 	response.Message = "User event tracked successfully."
 	response.CustomerEventId = request.CustomerEventId
 	return http.StatusOK, response
+}
+
+func FillSixSignalUserProperties(projectId int64, projectSettings *model.ProjectSetting,
+	userProperties *U.PropertiesMap, UserId string, clientIP string) {
+
+	logCtx := log.WithField("project_id", projectId)
+	if projectSettings.Client6SignalKey != "" {
+		execute6SignalStatusChannel := make(chan int)
+		sixSignalExists, _ := six_signal.GetSixSignalCacheResult(projectId, UserId, clientIP)
+		if sixSignalExists {
+			logCtx.Info("6Signal cache hit")
+		} else {
+			logCtx.Info("6Signal cache miss")
+			go six_signal.ExecuteSixSignalEnrich(projectSettings.Client6SignalKey, userProperties, clientIP, execute6SignalStatusChannel)
+
+			select {
+			case ok := <-execute6SignalStatusChannel:
+				if ok == 1 {
+					six_signal.SetSixSignalCacheResult(projectId, UserId, clientIP)
+
+				} else {
+					logCtx.Warn("ExecuteSixSignal failed in track call")
+				}
+			case <-time.After(U.TimeoutOneSecond):
+				logCtx.Info("Six_Signal enrichment timed out in Track call")
+			}
+		}
+	} else if projectSettings.Factors6SignalKey != "" {
+		execute6SignalStatusChannel := make(chan int)
+		sixSignalExists, _ := six_signal.GetSixSignalCacheResult(projectId, UserId, clientIP)
+		if sixSignalExists {
+			logCtx.Info("6Signal cache hit")
+		} else {
+			logCtx.Info("6Signal cache miss")
+			go six_signal.ExecuteSixSignalEnrich(projectSettings.Factors6SignalKey, userProperties, clientIP, execute6SignalStatusChannel)
+
+			select {
+			case ok := <-execute6SignalStatusChannel:
+				if ok == 1 {
+					six_signal.SetSixSignalCacheResult(projectId, UserId, clientIP)
+				} else {
+					logCtx.Warn("ExecuteSixSignal failed in track call")
+				}
+			case <-time.After(U.TimeoutOneSecond):
+				logCtx.Info("Six_Signal enrichment timed out in Track call")
+			}
+		}
+	}
+}
+
+func FillClearbitUserProperties(projectId int64, projectSettings *model.ProjectSetting,
+	userProperties *U.PropertiesMap, UserId string, clientIP string) {
+
+	logCtx := log.WithField("project_id", projectId)
+	if projectSettings.ClearbitKey != "" {
+		executeClearBitStatusChannel := make(chan int)
+		clearBitExists, _ := clear_bit.GetClearbitCacheResult(projectId, UserId, clientIP)
+		if clearBitExists {
+			logCtx.Info("clearbit cache hit")
+		} else {
+			logCtx.Info("clearbit cache miss")
+			go clear_bit.ExecuteClearBitEnrich(projectSettings.ClearbitKey, userProperties, clientIP, executeClearBitStatusChannel)
+
+			select {
+			case ok := <-executeClearBitStatusChannel:
+				if ok == 1 {
+					clear_bit.SetClearBitCacheResult(projectId, UserId, clientIP)
+				} else {
+					logCtx.Info("ExecuteClearbit failed in Track call")
+				}
+			case <-time.After(U.TimeoutOneSecond):
+				logCtx.Info("clear_bit enrichment timed out in Track call")
+			}
+		}
+	}
+
 }
 
 func getURLFromPageEvent(properties U.PropertiesMap) string {
@@ -1271,6 +1333,49 @@ func AddUserProperties(projectId int64,
 					logCtx.Info("clear_bit enrichment timed out in AddUserProperties")
 				}
 			}
+		}
+
+	}
+
+	if C.Get6SignalEnabled() == 1 {
+		if ClientSixSignalKey, ClientErrCode := store.GetStore().GetClient6SignalKeyFromProjectSetting(projectId); ClientSixSignalKey != "" {
+			statusChannel := make(chan int)
+			sixSignalExists, _ := six_signal.GetSixSignalCacheResult(projectId, request.UserId, request.ClientIP)
+
+			if !sixSignalExists {
+				go six_signal.ExecuteSixSignalEnrich(ClientSixSignalKey, validProperties, request.ClientIP, statusChannel)
+
+				select {
+				case ok := <-statusChannel:
+					if ok == 1 {
+						six_signal.SetSixSignalCacheResult(projectId, request.UserId, request.ClientIP)
+					} else {
+						logCtx.Info("ExecuteSixSignal failed in AddUserProperties")
+					}
+				case <-time.After(U.TimeoutOneSecond):
+					logCtx.Info("six_signal enrichment timed out in AddUserProperties")
+				}
+			}
+		} else if FactorsSixSignalKey, FactorsErrCode := store.GetStore().GetFactors6SignalKeyFromProjectSetting(projectId); FactorsSixSignalKey != "" {
+			statusChannel := make(chan int)
+			sixSignalExists, _ := six_signal.GetSixSignalCacheResult(projectId, request.UserId, request.ClientIP)
+
+			if !sixSignalExists {
+				go six_signal.ExecuteSixSignalEnrich(FactorsSixSignalKey, validProperties, request.ClientIP, statusChannel)
+
+				select {
+				case ok := <-statusChannel:
+					if ok == 1 {
+						six_signal.SetSixSignalCacheResult(projectId, request.UserId, request.ClientIP)
+					} else {
+						logCtx.Info("ExecuteSixSignal failed in AddUserProperties")
+					}
+				case <-time.After(U.TimeoutOneSecond):
+					logCtx.Info("six_signal enrichment timed out in AddUserProperties")
+				}
+			}
+		} else if ClientErrCode == http.StatusNotFound || FactorsErrCode == http.StatusNotFound {
+			logCtx.Info("Get six_signal key from project_settings failed.")
 		}
 
 	}
