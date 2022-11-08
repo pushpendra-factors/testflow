@@ -114,6 +114,15 @@ func GetKPIConfigHandler(c *gin.Context) (interface{}, int, string, string, bool
 		}
 	}
 
+	// for custom events
+	currentConfig, errCode := storeSelected.GetKPIConfigsForCustomEvents(projectID, model.EventsBasedDisplayCategory, includeDerivedKPIs)
+	if errCode != http.StatusOK {
+		return nil, http.StatusInternalServerError, PROCESSING_FAILED, "Error during fetch of KPI Custom Config Data.", true
+	}
+	if currentConfig != nil {
+		resultantConfigs = append(resultantConfigs, currentConfig)
+	}
+	
 	if includeDerivedKPIs {
 		currentConfig, errCode := storeSelected.GetKPIConfigsForOthers(projectID, model.OthersDisplayCategory, includeDerivedKPIs)
 		if errCode != http.StatusOK {
@@ -179,6 +188,7 @@ func GetKPIFilterValuesHandler(c *gin.Context) (interface{}, int, string, string
 		}
 		resultantFilterValuesResponse = channelsFilterValues.FilterValues
 	} else if request.Category == model.EventCategory && request.Entity == model.EventEntity {
+		// For both static and custom event metrics, same method of fetching filter values is used.
 		request.ObjectType = model.GetObjectTypeForFilterValues(request.ObjectType, request.Metric)
 		eventsFilterValues, err := storeSelected.GetPropertyValuesByEventProperty(projectID, request.ObjectType, request.PropertyName, model.FilterValuesOrEventNamesLimit, C.GetLookbackWindowForEventUserCache())
 		if err != nil {

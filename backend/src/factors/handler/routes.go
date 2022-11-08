@@ -185,12 +185,10 @@ func InitAppRoutes(r *gin.Engine) {
 
 	// v1 custom metrics - admin/settings side.
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics/config", V1.GetCustomMetricsConfig)
+	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics/config/v1", V1.GetCustomMetricsConfigV1)
 	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics", mid.SkipDemoProjectWriteAccess(), responseWrapper(V1.CreateCustomMetric))
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics", responseWrapper(V1.GetCustomMetrics))
 	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics/:id", mid.SkipDemoProjectWriteAccess(), responseWrapper(V1.DeleteCustomMetrics))
-
-	// v1 derived kpi temp
-	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/test/derived_kpi", responseWrapper(V1.CreateDerivedKPI))
 
 	// v1 CRM And Smart Event endpoints
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/smart_event", GetSmartEventFiltersHandler)

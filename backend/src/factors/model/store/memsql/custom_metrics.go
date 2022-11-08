@@ -60,11 +60,7 @@ func (store *MemSQL) GetCustomKPIMetricsByProjectIdAndDisplayCategory(projectID 
 	if statusCode != http.StatusFound {
 		logCtx.WithField("err", err).WithField("displayCategory", displayCategory).Warn("Failed to get the custom Metric by object type")
 	}
-	rCustomMetrics := model.GetKPIConfig(customMetrics)
-	for i := range rCustomMetrics {
-		rCustomMetrics[i]["kpi_query_type"] = model.KpiCustomQueryType
-	}
-	return rCustomMetrics
+	return store.getKPIMetricsFromCustomMetric(customMetrics, model.KpiCustomQueryType)
 }
 
 func (store *MemSQL) GetDerivedKPIMetricsByProjectIdAndDisplayCategory(projectID int64, displayCategory string, includeDerivedKPIs bool) []map[string]string {
@@ -76,12 +72,17 @@ func (store *MemSQL) GetDerivedKPIMetricsByProjectIdAndDisplayCategory(projectID
 		if statusCode != http.StatusFound {
 			logCtx.WithField("err", err).WithField("displayCategory", displayCategory).Warn("Failed to get the custom Metric by object type")
 		}
-		rCustomMetrics := model.GetKPIConfig(customMetrics)
-		for i := range rCustomMetrics {
-			rCustomMetrics[i]["kpi_query_type"] = model.KpiDerivedQueryType
-		}
-		return rCustomMetrics
+		return store.getKPIMetricsFromCustomMetric(customMetrics, model.KpiDerivedQueryType)
 	}
+}
+
+func (store *MemSQL) GetCustomEventKPIMetricsByProjectIdAndDisplayCategory(projectID int64, displayCategory string, includeDerivedKPIs bool) []map[string]string {
+	logCtx := log.WithField("project_id", projectID)
+	customMetrics, err, statusCode := store.GetCustomMetricByProjectIdQueryTypeAndObjectType(projectID, model.EventBasedQueryType, displayCategory)
+	if statusCode != http.StatusFound {
+		logCtx.WithField("err", err).WithField("displayCategory", displayCategory).Warn("Failed to get the custom Metric by object type")
+	}
+	return store.getKPIMetricsFromCustomMetric(customMetrics, model.KpiCustomQueryType)
 }
 
 func (store *MemSQL) GetCustomMetricByProjectIdQueryTypeAndObjectType(projectID int64, queryType int, objectType string) ([]model.CustomMetric, string, int) {
@@ -99,6 +100,14 @@ func (store *MemSQL) GetCustomMetricByProjectIdQueryTypeAndObjectType(projectID 
 	return customMetrics, "", http.StatusFound
 }
 
+func (store *MemSQL) getKPIMetricsFromCustomMetric(customMetrics []model.CustomMetric, kpiQueryType string) []map[string]string {
+	rCustomMetrics := model.GetKPIConfig(customMetrics)
+	for i := range rCustomMetrics {
+		rCustomMetrics[i]["kpi_query_type"] = kpiQueryType
+	}
+	return rCustomMetrics
+}
+
 func (store *MemSQL) GetDerivedKPIMetricsByProjectId(projectID int64) []model.CustomMetric {
 	logCtx := log.WithField("project_id", projectID)
 	customMetrics, err, statusCode := store.GetCustomMetricByProjectIdAndQueryType(projectID, model.DerivedQueryType)
@@ -106,6 +115,41 @@ func (store *MemSQL) GetDerivedKPIMetricsByProjectId(projectID int64) []model.Cu
 		logCtx.WithField("err", err).Warn("Failed to get the custom Metric by object type")
 	}
 	return customMetrics
+}
+
+func (store *MemSQL) GetProfileCustomMetricByProjectIdName(projectID int64, name string) (model.CustomMetric, string, int) {
+	return store.getCustomMetricByProjectIdNameAndQueryType(projectID, name, model.ProfileQueryType)
+}
+
+func (store *MemSQL) GetDerivedCustomMetricByProjectIdName(projectID int64, name string) (model.CustomMetric, string, int) {
+	return store.getCustomMetricByProjectIdNameAndQueryType(projectID, name, model.DerivedQueryType)
+}
+
+func (store *MemSQL) GetEventBasedCustomMetricByProjectIdName(projectID int64, name string) (model.CustomMetric, string, int) {
+	return store.getCustomMetricByProjectIdNameAndQueryType(projectID, name, model.EventBasedQueryType)
+}
+
+func (store *MemSQL) getCustomMetricByProjectIdNameAndQueryType(projectID int64, name string, queryType int) (model.CustomMetric, string, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"name":       name,
+		"query_type": queryType,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+
+	db := C.GetServices().Db
+	if projectID == 0 {
+		return model.CustomMetric{}, "Invalid project ID for custom metric", http.StatusBadRequest
+	}
+
+	var customMetric model.CustomMetric
+	err := db.Where("project_id = ? AND type_of_query = ? AND name = ?", projectID, queryType, name).Find(&customMetric).Error
+	if err != nil {
+		logCtx.WithError(err).Warn("Failed while retrieving custom metrics.")
+		return customMetric, err.Error(), http.StatusInternalServerError
+	}
+	return customMetric, "", http.StatusFound
 }
 
 func (store *MemSQL) GetCustomMetricByProjectIdAndQueryType(projectID int64, queryType int) ([]model.CustomMetric, string, int) {
@@ -132,21 +176,6 @@ func (store *MemSQL) GetKpiRelatedCustomMetricsByName(projectID int64, name stri
 	}
 	var customMetric model.CustomMetric
 	err := db.Where("project_id = ? AND type_of_query IN (?, ?) AND name = ?", projectID, model.ProfileQueryType, model.DerivedQueryType, name).Find(&customMetric).Error
-	if err != nil {
-		logCtx.WithError(err).Warn("Failed while retrieving custom metrics.")
-		return customMetric, err.Error(), http.StatusInternalServerError
-	}
-	return customMetric, "", http.StatusFound
-}
-
-func (store *MemSQL) GetDerivedMetricsByName(projectID int64, name string) (model.CustomMetric, string, int) {
-	logCtx := log.WithField("projectID", projectID)
-	db := C.GetServices().Db
-	if projectID == 0 {
-		return model.CustomMetric{}, "Invalid project ID for custom metric", http.StatusBadRequest
-	}
-	var customMetric model.CustomMetric
-	err := db.Where("project_id = ? AND type_of_query = ? AND name = ?", projectID, model.DerivedQueryType, name).Find(&customMetric).Error
 	if err != nil {
 		logCtx.WithError(err).Warn("Failed while retrieving custom metrics.")
 		return customMetric, err.Error(), http.StatusInternalServerError

@@ -127,7 +127,7 @@ func (store *MemSQL) ExecuteDerivedKPIQuery(projectID int64, reqID string, baseQ
 	queryResults := make([]model.QueryResult, 0)
 	mapOfInternalQueryToResult := make(map[string][]model.QueryResult)
 
-	derivedMetric, errMsg, statusCode := store.GetDerivedMetricsByName(projectID, baseQuery.Metrics[0])
+	derivedMetric, errMsg, statusCode := store.GetDerivedCustomMetricByProjectIdName(projectID, baseQuery.Metrics[0])
 	if statusCode != http.StatusFound {
 		return internalKPIQueryGroup, mapOfInternalQueryToResult, statusCode, "", errMsg
 	}

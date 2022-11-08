@@ -2,6 +2,7 @@ package memsql
 
 import (
 	"factors/model/model"
+	U "factors/util"
 	"net/http"
 	"time"
 
@@ -54,14 +55,23 @@ func (store *MemSQL) transformToAndExecuteEventAnalyticsQueries(projectID int64,
 }
 
 func (store *MemSQL) ValidateKPIQuery(projectID int64, kpiQuery model.KPIQuery) bool {
-	if kpiQuery.DisplayCategory == model.WebsiteSessionDisplayCategory {
-		return store.ValidateKPISessions(projectID, kpiQuery)
-	} else if kpiQuery.DisplayCategory == model.PageViewsDisplayCategory {
-		return model.ValidateKPIPageView(kpiQuery)
-	} else if kpiQuery.DisplayCategory == model.FormSubmissionsDisplayCategory {
-		return model.ValidateKPIFormSubmissions(kpiQuery)
+	if kpiQuery.QueryType == model.KpiCustomQueryType {
+		for _, kpiMetric := range kpiQuery.Metrics {
+			if _, _, statusCode := store.GetEventBasedCustomMetricByProjectIdName(projectID, kpiMetric); statusCode != http.StatusFound {
+				return false
+			}
+		}
+		return true
 	} else {
-		return false
+		if kpiQuery.DisplayCategory == model.WebsiteSessionDisplayCategory {
+			return store.ValidateKPISessions(projectID, kpiQuery)
+		} else if kpiQuery.DisplayCategory == model.PageViewsDisplayCategory {
+			return model.ValidateKPIPageView(kpiQuery)
+		} else if kpiQuery.DisplayCategory == model.FormSubmissionsDisplayCategory {
+			return model.ValidateKPIFormSubmissions(kpiQuery)
+		} else {
+			return false
+		}
 	}
 }
 
@@ -75,17 +85,32 @@ func (store *MemSQL) ExecuteEventsForSingleKPIMetric(projectID int64, query mode
 		"kpi_metric": kpiMetric,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	currentQueries, transformations := model.ConvertKPIQueryToInternalEventQueriesAndTransformations(projectID, query, kpiQuery, kpiMetric, enableFilterOpt)
-	return store.executeForResults(projectID, currentQueries, kpiQuery, transformations, enableFilterOpt)
+
+	if kpiQuery.QueryType == model.KpiCustomQueryType {
+		var transformation model.CustomMetricTransformation
+		customMetric, err, statusCode := store.GetEventBasedCustomMetricByProjectIdName(projectID, kpiMetric)
+		if statusCode != http.StatusFound {
+			return model.QueryResult{Headers: []string{model.AliasError}}, statusCode
+		}
+		err1 := U.DecodePostgresJsonbToStructType(customMetric.Transformations, &transformation)
+		if err1 != nil {
+			log.WithField("customMetric", customMetric).WithField("err", err).Warn("Failed in decoding custom Metric")
+		}
+		currentQueries, operations := model.ConvertCustomKPIQueryToInternalEventQueriesAndTransformationOperations(projectID, query, kpiQuery, kpiMetric, transformation, enableFilterOpt)
+		return store.executeForResults(projectID, currentQueries, kpiQuery, operations, enableFilterOpt)
+	} else {
+		currentQueries, operations := model.ConvertStaticKPIQueryToInternalEventQueriesAndTransformationOperations(projectID, query, kpiQuery, kpiMetric, enableFilterOpt)
+		return store.executeForResults(projectID, currentQueries, kpiQuery, operations, enableFilterOpt)
+	}
 }
 
 func (store *MemSQL) executeForResults(projectID int64, queries []model.Query, kpiQuery model.KPIQuery,
-	transformations []model.TransformQueryi, enableFilterOpt bool) (model.QueryResult, int) {
+	operations []string, enableFilterOpt bool) (model.QueryResult, int) {
 	logFields := log.Fields{
-		"project_id":     projectID,
-		"queries":        queries,
-		"kpi_query":      kpiQuery,
-		"transformation": transformations,
+		"project_id": projectID,
+		"queries":    queries,
+		"kpi_query":  kpiQuery,
+		"operations": operations,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	results := make([]*model.QueryResult, len(queries))
@@ -117,11 +142,7 @@ func (store *MemSQL) executeForResults(projectID int64, queries []model.Query, k
 		}
 		hasAnyGroupBy := len(queries[0].GroupByProperties) != 0
 		results = model.TransformResultsToKPIResults(results, hasGroupByTimestamp, hasAnyGroupBy, displayCategory, kpiQuery.Timezone)
-		operations := make([]string, 0)
-		for _, transformation := range transformations {
-			operations = append(operations, transformation.Metrics.Operator)
-		}
-		finalResult = model.HandlingEventResultsByApplyingOperations(results, operations, kpiQuery.Timezone)
+		finalResult = model.HandlingEventResultsByApplyingOperations(results, operations, kpiQuery.Timezone, isTimezoneEnabled)
 	}
 	return finalResult, finalStatusCode
 }

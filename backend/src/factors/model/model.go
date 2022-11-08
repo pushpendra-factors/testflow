@@ -135,6 +135,7 @@ type Model interface {
 	GetKPIConfigsForLeadSquaredLeads(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int)
 	GetKPIConfigsForLeadSquared(projectID int64, reqID string, displayCategory string, includeDerivedKPIs bool) (map[string]interface{}, int)
 	GetKPIConfigsForOthers(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int)
+	GetKPIConfigsForCustomEvents(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int)		
 
 	ExecuteKPIQueryGroup(projectID int64, reqID string, kpiQueryGroup model.KPIQueryGroup,
 		enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool) ([]model.QueryResult, int)
@@ -147,12 +148,15 @@ type Model interface {
 	GetCustomMetricByProjectIdQueryTypeAndObjectType(projectID int64, queryType int, objectType string) ([]model.CustomMetric, string, int)
 	GetCustomKPIMetricsByProjectIdAndDisplayCategory(projectID int64, displayCategory string) []map[string]string
 	GetKpiRelatedCustomMetricsByName(projectID int64, name string) (model.CustomMetric, string, int)
+	GetProfileCustomMetricByProjectIdName(projectID int64, name string) (model.CustomMetric, string, int)
+	GetDerivedCustomMetricByProjectIdName(projectID int64, name string) (model.CustomMetric, string, int)
+	GetEventBasedCustomMetricByProjectIdName(projectID int64, name string) (model.CustomMetric, string, int)
 	GetCustomMetricsByID(projectID int64, id string) (model.CustomMetric, string, int)
 	DeleteCustomMetricByID(projectID int64, id string) int
-	GetDerivedMetricsByName(projectID int64, name string) (model.CustomMetric, string, int)
 	GetDerivedKPIsHavingNameInInternalQueries(projectID int64, customMetricName string) []string
 	GetDerivedKPIMetricsByProjectIdAndDisplayCategory(projectID int64, displayCategory string, includeDerivedKPIs bool) []map[string]string
 	GetCustomMetricAndDerivedMetricByProjectIdAndDisplayCategory(projectID int64, displayCategory string, includeDerivedKPIs bool) []map[string]string
+	GetCustomEventKPIMetricsByProjectIdAndDisplayCategory(projectID int64, displayCategory string, includeDerivedKPIs bool) []map[string]string
 
 	//templates
 	RunTemplateQuery(projectID int64, query model.TemplateQuery, reqID string) (model.TemplateResponse, int)
