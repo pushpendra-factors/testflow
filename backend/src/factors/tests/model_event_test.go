@@ -160,6 +160,25 @@ func TestDBCreateAndGetEvent(t *testing.T) {
 	assert.Nil(t, event)
 }
 
+func TestWeekOfDay(t *testing.T) {
+	// Initialize a project, user and  the event.
+	projectId, userId, eventNameId, err := SetupProjectUserEventName()
+	assert.Nil(t, err)
+
+	// Test successful CreateEvent.
+	newEvent := &model.Event{EventNameId: eventNameId, ProjectId: projectId,
+		UserId: userId, Timestamp: 1641078000,
+		Properties: postgres.Jsonb{RawMessage: []byte(`{"value": "The Impact of Using Emojis 😄 😍 💗 in Push Notifications"}`)}}
+	event, errCode := store.GetStore().CreateEvent(newEvent)
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	assert.True(t, event.Timestamp != 0)
+	assert.Equal(t, event.Timestamp, event.PropertiesUpdatedTimestamp)
+	eventProperties, _ := U.DecodePostgresJsonb(&event.Properties)
+	assert.True(t, (*eventProperties)["$day_of_week"] != "" && (*eventProperties)["$day_of_week"] == "Sunday")
+	assert.True(t, (*eventProperties)["$hour_of_day"] != 0 && (*eventProperties)["$hour_of_day"] == float64(4))
+}
+
 func createEventWithTimestampAndPrperties(t *testing.T, project *model.Project, user *model.User, timestamp int64, properties json.RawMessage) (*model.EventName, *model.Event) {
 	eventName, errCode := store.GetStore().CreateOrGetUserCreatedEventName(&model.EventName{ProjectId: project.ID, Name: fmt.Sprintf("event_%d", timestamp)})
 	assert.NotNil(t, eventName)

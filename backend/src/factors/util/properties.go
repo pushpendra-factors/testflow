@@ -3267,11 +3267,10 @@ func GetSessionProperties(isFirstSession bool, eventProperties,
 	return &sessionProperties
 }
 
-// Add day_of_week and hour_of_day event property
-func FillHourDayAndTimestampEventProperty(properties *postgres.Jsonb, timestamp int64) (*postgres.Jsonb, error) {
-	unixTimeUTC := time.Unix(timestamp, 0)
-	weekDay := unixTimeUTC.Weekday().String()
-	hr, _, _ := unixTimeUTC.Clock()
+func FillHourDayAndTimestampEventProperty(properties *postgres.Jsonb, timestamp int64, timezoneString TimeZoneString) (*postgres.Jsonb, error) {
+	t := ConvertTimeIn(time.Unix(timestamp, 0), timezoneString)
+	weekDay := t.Weekday().String()
+	hr, _, _ := t.Clock()
 	eventPropsJSON, err := DecodePostgresJsonb(properties)
 	if err != nil {
 		return nil, err
