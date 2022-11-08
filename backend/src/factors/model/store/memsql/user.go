@@ -209,6 +209,22 @@ func (store *MemSQL) UpdateUser(projectId int64, id string,
 		return nil, http.StatusInternalServerError
 	}
 
+	if user.CustomerUserId != "" {
+		props, err := U.DecodePostgresJsonb(&userProperties)
+		if err != nil {
+			log.WithFields(logFields).WithError(err).Error("Failed to Decode user properties in user update.")
+			return nil, http.StatusInternalServerError
+		}
+		propsMap := *props
+		propsMap[U.UP_USER_ID] = user.CustomerUserId
+		propsByte, err := json.Marshal(propsMap)
+		if err != nil {
+			log.WithFields(logFields).WithError(err).Error("Failed to marshal user properties in user update.")
+			return nil, http.StatusInternalServerError
+		}
+		userProperties = postgres.Jsonb{RawMessage: propsByte}
+	}
+
 	_, errCode := store.UpdateUserProperties(projectId, id, &userProperties, updateTimestamp)
 	if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
 		return nil, http.StatusInternalServerError
