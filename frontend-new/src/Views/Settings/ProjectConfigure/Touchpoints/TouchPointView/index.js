@@ -14,6 +14,17 @@ import { DEFAULT_OPERATOR_PROPS } from 'Components/FaFilterSelect/utils';
 import { fetchEventPropertyValues } from 'Reducers/coreQuery/services';
 import FaSelect from '../../../../../components/FaSelect';
 
+const RULE_TYPE_HS_CONTACT = 'hs_contact';
+const RULE_TYPE_HS_EMAILS = 'hs_emails';
+const RULE_TYPE_HS_FORM_SUBMISSIONS = 'hs_form_submissions';
+
+const Extra_PROP_SHOW_OPTIONS = [
+    ['Campaign Id', null, 'campaign_id'],
+    ['Adgroup', null, 'adgroup'],
+    ['Adgroup ID', null, 'adgroup_id'],
+    ['Page URL', null, 'page_url']
+];
+
 import {
     getFiltersWithoutOrProperty, getStateFromFilters
 } from '../../../../../Views/CoreQuery/utils';
@@ -22,7 +33,7 @@ const TouchpointView = ({ activeProject, tchType = '2', getEventProperties, even
     const [dropDownValues, setDropDownValues] = useState({});
     const [filterDD, setFilterDD] = useState(false);
 
-    const [tchRuleType, setTchRuleType] = useState('hubspot_contact_fields');
+    const [tchRuleType, setTchRuleType] = useState(RULE_TYPE_HS_CONTACT);
 
     const [timestampRef, setTimestampRefState] = tchType === '2' ? useState('LAST_MODIFIED_TIME_REF') : useState('campaign_member_created_date');
     //touch_point_time_ref
@@ -32,6 +43,8 @@ const TouchpointView = ({ activeProject, tchType = '2', getEventProperties, even
     const [dateTypeProps, setDateTypeProps] = useState([]);
     //filters
     const [newFilterStates, setNewFilterStates] = useState([]);
+
+    const [extraPropBtn, setExtraPropBtn] = useState(false);
 
     //Search Keys 
     const [searchSour, setSearchSour] = useState({
@@ -59,6 +72,8 @@ const TouchpointView = ({ activeProject, tchType = '2', getEventProperties, even
             "va": ""
         }
     });
+
+    const [extraPropMap, setExtraPropMap] = useState({});
 
     const [filterDropDownOptions, setFiltDD] = useState({
         props: [
@@ -139,11 +154,13 @@ const TouchpointView = ({ activeProject, tchType = '2', getEventProperties, even
     }
 
     const getEventToCall = () => {
-        if(tchRuleType === 'Emails') {
+        if(tchRuleType === RULE_TYPE_HS_EMAILS) {
             return '$hubspot_engagement_email';
         }
-        else if(tchRuleType === 'hubspot_contact_fields') {
+        else if(tchRuleType === RULE_TYPE_HS_CONTACT) {
             return '$hubspot_contact_updated';
+        } else if(tchRuleType === RULE_TYPE_HS_FORM_SUBMISSIONS) {
+            return '$hubspot_form_submission';
         }
     }
 
@@ -155,10 +172,10 @@ const TouchpointView = ({ activeProject, tchType = '2', getEventProperties, even
         const propState = [];
         const eventProps = [];
         if (tchType === '2') {
-            const startsWith = tchRuleType === 'Emails'? '$hubspot_engagement' : '$hubspot_contact';  
+            const startsWith = getEventToCall();
             eventProperties[eventToCall] ?
-                eventProperties[eventToCall].forEach((prop) => { if (prop[1]?.startsWith(startsWith)) { eventProps.push(prop) } }) : null;
-            userProperties.forEach((prop) => { if (prop[1]?.startsWith(startsWith)) { tchUserProps.push(prop) } })
+                eventProperties[eventToCall].forEach((prop) => { if (startsWith?.length? prop[1]?.startsWith(startsWith) : true) { eventProps.push(prop) } }) : null;
+            tchRuleType !== RULE_TYPE_HS_FORM_SUBMISSIONS && userProperties.forEach((prop) => { if (startsWith?.length? prop[1]?.startsWith(startsWith) : true) { tchUserProps.push(prop) } })
         } else if (tchType === '3') {
             eventProperties[eventToCall] ?
                 eventProperties[eventToCall].forEach((prop) => { if (prop[1]?.startsWith('$salesforce_campaign')) { eventProps.push(prop) } }) : null;
@@ -311,7 +328,7 @@ const TouchpointView = ({ activeProject, tchType = '2', getEventProperties, even
     }
 
     const getTimestampOptionByRule = () => {
-        if(tchRuleType === 'hubspot_contact_fields') {
+        if(tchRuleType === RULE_TYPE_HS_CONTACT) {
             return (<Radio.Group onChange={setTimestampRef} value={timestampRef}>
                 <Radio value={`LAST_MODIFIED_TIME_REF`}>Factors Last modified time</Radio>
                 <Radio value={``}>Select a property</Radio>
@@ -320,7 +337,11 @@ const TouchpointView = ({ activeProject, tchType = '2', getEventProperties, even
         else if(tchRuleType === 'Emails') {
             return (<Radio.Group onChange={() => setTimestampRefEmail('$hubspot_engagement_timestamp')} value={timestampRef} defaultValue={`$hubspot_engagement_timestamp`}>
                 <Radio value={`$hubspot_engagement_timestamp`}>Email Timestamp</Radio>
-                {/* <Radio value={`email_replied_timestamp`}>Email Replied Timestamp</Radio> */}
+            </Radio.Group>);
+        } else if (tchRuleType === RULE_TYPE_HS_FORM_SUBMISSIONS) {
+            return (
+            <Radio.Group onChange={() => setTimestampRefEmail('$hubspot_form_submission')} value={timestampRef} defaultValue={`$hubspot_form_submission`}>
+                <Radio value={`$hubspot_form_submission`}>Form submission timestamp</Radio>
             </Radio.Group>);
         }
     }
@@ -349,7 +370,7 @@ const TouchpointView = ({ activeProject, tchType = '2', getEventProperties, even
                 {renderTimestampRenderOption()}
             </Row>
             <Row className={`mt-2`}>
-                {tchRuleType === 'hubspot_contact_fields' && timestampPropertyRef &&
+                {tchRuleType === RULE_TYPE_HS_CONTACT && timestampPropertyRef &&
                     <div className={`relative`}>
                         <Button type='link' onClick={() => setDateTypeDD(!dateTypeDD)}>
                             {touchPointPropRef ? touchPointPropRef : 'Select Date type property'}
@@ -381,9 +402,9 @@ const TouchpointView = ({ activeProject, tchType = '2', getEventProperties, even
         setPropertyMap(propMap);
     }
 
-    const setSearchValue = (type, propMap) => {
+    const setSearchValue = (type, propMap, ty = 'Constant') => {
         propertyMap['$' + type]['va'] = searchSour[type];
-        propMap['$' + type]['ty'] = 'Constant';
+        propMap['$' + type]['ty'] = ty;
         return propMap;
     }
 
@@ -432,20 +453,30 @@ const TouchpointView = ({ activeProject, tchType = '2', getEventProperties, even
             </div> </Tooltip>);
     }
 
+    const getStartsWith = () => {
+        if(tchRuleType === RULE_TYPE_HS_EMAILS){
+            return '$hubspot_engagement';
+        } else if (tchRuleType === RULE_TYPE_HS_EMAILS) {
+            return '$hubspot_contact';
+        } else if (tchRuleType === RULE_TYPE_HS_FORM_SUBMISSIONS) {
+            return '';
+        }
+    }
+
     const renderEventPropertyCampOptions = (dropDownType) => {
         const eventToCall = tchType === '2' ?
             getEventToCall() : timestampRef === 'campaign_member_created_date' ? '$sf_campaign_member_created' : '$sf_campaign_member_updated';
         const propertiesMp = [];
         if (tchType === '2') {
-            const startsWith = tchRuleType === 'Emails'? '$hubspot_engagement' : '$hubspot_contact';
+            const startsWith = getStartsWith();
             eventProperties[eventToCall]?.forEach((prop) => {
-                if (prop[1]?.startsWith(startsWith) && isSearchProps(dropDownType, prop)) {
+                if ((startsWith?.length? prop[1]?.startsWith(startsWith): true) && isSearchProps(dropDownType, prop)) {
                     propertiesMp.push(
                         <Option key={prop[1]} value={prop[1]}> {propOption(prop[0])}  </Option>
                     );
                 }
             });
-            userProperties.forEach((prop) => {
+            tchRuleType !== RULE_TYPE_HS_FORM_SUBMISSIONS && userProperties.forEach((prop) => {
                 if (prop[1]?.startsWith(startsWith) && isSearchProps(dropDownType, prop)) {
                     propertiesMp.push(
                         <Option key={prop[1]} value={prop[1]}> {propOption(prop[0])} </Option>
@@ -482,22 +513,6 @@ const TouchpointView = ({ activeProject, tchType = '2', getEventProperties, even
         return (<div className={`border-top--thin pt-5 mt-8 `}>
             <Row>
                 <Text level={7} type={'title'} extraClass={'m-0'} weight={'bold'}>Map the properties<sup>*</sup></Text>
-            </Row>
-            <Row className={`mt-10`}>
-                <Col span={7}>
-                    <Text level={7} type={'title'} extraClass={'m-0'} weight={'thin'}>Type</Text>
-                </Col>
-                <Col>
-                    <Select
-                        className={'fa-select w-full'}
-                        size={'large'} value={propertyMap['$type']['va']} onSelect={setPropType} defaultValue={``}
-
-                    >
-                        <Option value={``}>Select Type </Option>
-                        <Option value="tactic">Tactic</Option>
-                        {tchRuleType!=='Emails' && <Option value="offer">Offer</Option>}
-                    </Select>
-                </Col>
             </Row>
 
             <Row className={`mt-4`}>
@@ -567,12 +582,16 @@ const TouchpointView = ({ activeProject, tchType = '2', getEventProperties, even
 
     const onSaveToucPoint = () => {
         // Prep settings obj;
+        const propMap = {...propertyMap};
+        if(Object.keys(extraPropMap).length) {
+            propMap = Object.assign(propMap, extraPropMap);
+        }
 
         const touchPointObj = {
             //parse and set filterstate
             "filters": getFiltersWithoutOrProperty(newFilterStates),
             // set propMap
-            "properties_map": propertyMap,
+            "properties_map": propMap,
             "touch_point_time_ref": touchPointPropRef,
         }
         if(tchType === '2') {
@@ -604,11 +623,10 @@ const TouchpointView = ({ activeProject, tchType = '2', getEventProperties, even
             <Col>
                     <Select
                         className={'fa-select w-64'}
-                        size={'large'} value={tchRuleType} onSelect={setTchRuleType} defaultValue={``}
-
-                    >
-                        <Option value="Emails">Email</Option>
-                        <Option value="hubspot_contact_fields">Change in Hubspot contact field value</Option>
+                        size={'large'} value={tchRuleType} onSelect={setTchRuleType} defaultValue={``} >
+                        <Option value={RULE_TYPE_HS_EMAILS}>Email</Option>
+                        <Option value={RULE_TYPE_HS_CONTACT}>Change in Hubspot contact field value</Option>
+                        <Option value={RULE_TYPE_HS_FORM_SUBMISSIONS}>Form Submissions</Option>
                     </Select>
                 </Col>
         )
@@ -626,6 +644,86 @@ const TouchpointView = ({ activeProject, tchType = '2', getEventProperties, even
         </div>
         )
     }
+    
+    const setExtraMapByProp = (extraProp) => {
+        const extraMap = {...extraPropMap};
+        extraMap[`$`+ extraProp] = {
+            "ty": "Property",
+            "va": ""
+        }
+        setExtraPropMap(extraMap);
+    }
+
+    const setExtraPropVal = (val, key) => {
+        let propMap = Object.assign({}, extraPropMap);
+        if (val === searchSour[key]) {
+            propMap['$' + key]['va'] = searchSour[key];
+            propMap['$' + key]['ty'] = 'Property';
+        }
+        setExtraPropMap(propMap);
+
+    }
+
+    const renderAddExtraPropBtn = () => {
+        return (<div className={`mr-2 items-center relative`}>
+            <Button  
+                    type="link" 
+                    icon={<SVG name={'plus'} color={'grey'} />}
+                    onClick={() => setExtraPropBtn(!extraPropBtn)}>
+                        Add touchpoint property
+            </Button>
+
+            {extraPropBtn && 
+                <FaSelect
+                    options={Extra_PROP_SHOW_OPTIONS}
+                    optionClick={(op) => {
+                        setExtraMapByProp(op[2]);
+                        setExtraPropBtn(false);
+                    }}
+                    onClickOutside={() => setExtraPropBtn(false)}
+                >
+
+                </FaSelect>
+            }
+
+        </div>);
+        
+    }
+
+    const renderExtraPropMap = () => {
+        const extraMapRows = [];
+        Extra_PROP_SHOW_OPTIONS.forEach((key) => {
+            if(!Object.keys(extraPropMap).includes(`$` +key[2])) return null;
+
+            extraMapRows.push((<Row className={`mt-10`}>
+            <Col span={7}>
+                <Text level={7} type={'title'} extraClass={'m-0'} weight={'thin'}>{key[0]}</Text>
+            </Col>
+            <Col>
+                {
+                    <Select
+                    showSearch
+                    onSearch={(val) => setSearch(key[2], val)}
+                    className={'fa-select w-full'} size={'large'}
+                    value={extraPropMap[`$`+key[2]]['va']} onSelect={(val) => setExtraPropVal(val, key[2])}
+                    defaultValue={``} style={{ minWidth: '200px', maxWidth: '210px' }}>
+                    {searchSour[key[2]] ? null :
+                        <Option value={``}>Select Property </Option>
+                    }
+                    {renderEventPropertyCampOptions(key[2])}
+                </Select>
+                }
+            </Col>
+        </Row>))
+        });
+
+        return (<div className={`pt-5 mt-8 `}>
+            {extraMapRows}
+            <Row>
+                {renderAddExtraPropBtn()}
+            </Row>
+        </div>);
+    }
 
     return (
         <div>
@@ -637,6 +735,8 @@ const TouchpointView = ({ activeProject, tchType = '2', getEventProperties, even
             {renderFilterBlock()}
 
             {renderPropertyMap()}
+
+            {tchRuleType === RULE_TYPE_HS_FORM_SUBMISSIONS && renderExtraPropMap()}
 
             {renderFooterActions()}
         </div>
