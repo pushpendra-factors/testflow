@@ -144,9 +144,6 @@ func (store *MemSQL) executeForResults(projectID int64, queries []model.Query, k
 		hasAnyGroupBy := len(queries[0].GroupByProperties) != 0
 		results = model.TransformResultsToKPIResults(results, hasGroupByTimestamp, hasAnyGroupBy, displayCategory, kpiQuery.Timezone)
 		finalResult = model.HandlingEventResultsByApplyingOperations(results, operations, kpiQuery.Timezone)
-		if !hasGroupByTimestamp {
-			log.Info("AshharFinalResult ", finalResult.Headers, finalResult.Rows)
-		}
 	}
 	return finalResult, finalStatusCode
 }

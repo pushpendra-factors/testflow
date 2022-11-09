@@ -25,6 +25,9 @@ import {
 } from '../../../../Views/CoreQuery/utils';
 
 import { MoreOutlined } from '@ant-design/icons';
+import { OTPService } from '../../../../reducers/touchpoints/services';
+import {bindService} from 'Utils/global';
+import useService from '../../../../hooks/useService';
 
 const { TabPane } = Tabs;
 
@@ -35,6 +38,9 @@ const Touchpoints = ({
   fetchProjects,
   udpateProjectDetails,
 }) => {
+
+  const otpService = useService(activeProject.id, OTPService);
+
   const [tabNo, setTabNo] = useState('1');
 
   const [touchPointsData, setTouchPointsData] = useState([]);
@@ -77,6 +83,9 @@ const Touchpoints = ({
 
   useEffect(() => {
     if (tabNo === '2') {
+      otpService.getTouchPoints().then(res => {
+        console.log(res);
+      })
       setHubspotContactDate();
     }
     if (tabNo === '3') {
@@ -384,6 +393,7 @@ const Touchpoints = ({
       } else {
         tchPointRules.push(tchObj);
       }
+      // Save OTP
       udpateProjectDetails(activeProject.id, {
         hubspot_touch_points: { hs_touch_point_rules: tchPointRules },
       });
@@ -522,6 +532,7 @@ const mapDispatchToProps = (dispatch) =>
       getEventProperties,
       fetchProjects,
       udpateProjectDetails,
+      bindService
     },
     dispatch
   );

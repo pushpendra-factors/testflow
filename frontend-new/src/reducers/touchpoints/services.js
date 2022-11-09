@@ -1,6 +1,10 @@
 import { BaseService } from "../../classes/BaseServiceClass";
 
 export class OTPService extends BaseService {
+    
+    constructor(dispatch, projectId){
+        super(dispatch, projectId)
+    }
 
     getTouchPoints = () => {
         return this.get("/otp_rules");
