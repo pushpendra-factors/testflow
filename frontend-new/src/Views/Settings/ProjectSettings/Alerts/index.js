@@ -450,7 +450,9 @@ const Alerts = ({
 
     useEffect(() => {
         fetchProjectSettingsV1(activeProject.id);
-        fetchSlackChannels(activeProject.id);
+        if(projectSettings?.int_slack) {
+            fetchSlackChannels(activeProject.id);
+        }
     }, [activeProject, projectSettings?.int_slack, slackEnabled]);
 
     useEffect(() => {
