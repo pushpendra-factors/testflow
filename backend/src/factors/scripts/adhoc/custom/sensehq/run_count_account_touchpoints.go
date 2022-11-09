@@ -10,27 +10,29 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var oe_timestamp_key = "oets"
+var o_convert_timestamp_key = "ocots"
+var o_close_timestamp_key = "oclts"
 var o_group_user_id_key = "ouid"
 
 var a_opportunity_id_key = "aoid"
 var a_group_user_id_key = "aguid"
 var a_user_ids_list_key = "auidl"
 var a_cust_user_ids_set_key = "acuids"
-var a_num_touchpoints_key = "anut"
+var a_num_convert_touchpoints_key = "ancot"
+var a_num_close_touchpoints_key = "anclt"
 
 // Fetch List of all Groups with the given group conversion event.
 func getOpportunitesForConversionEvent(
 	projectID int64,
-	opportunityGroupTypeID, conversionEventNameID string,
+	opportunityGroupTypeID, conversionEventNameID, closeDateProperty string,
 	startTime, endTime int64) (map[string]map[string]interface{}, error) {
 
 	db := C.GetServices().Db
 	convertedOpportunities := make(map[string]map[string]interface{})
 
 	rawQuery := "select events.id, events.user_id, events.timestamp, users." +
-		opportunityGroupTypeID + " from events JOIN users ON events.user_id=users.id where events.project_id = ? AND events.event_name_id = ? AND events.timestamp between ? AND ? AND users.project_id = ?;"
-	rows, err := db.Raw(rawQuery, projectID, conversionEventNameID, startTime, endTime, projectID).Rows()
+		opportunityGroupTypeID + ", JSON_EXTRACT_STRING(users.properties, ?) from events JOIN users ON events.user_id=users.id where events.project_id = ? AND events.event_name_id = ? AND events.timestamp between ? AND ? AND users.project_id = ?;"
+	rows, err := db.Raw(rawQuery, closeDateProperty, projectID, conversionEventNameID, startTime, endTime, projectID).Rows()
 	if err != nil {
 		log.WithFields(log.Fields{"error": err, "query": rawQuery}).Error("Failed getting converted groups")
 		return convertedOpportunities, err
@@ -38,8 +40,8 @@ func getOpportunitesForConversionEvent(
 
 	for rows.Next() {
 		var eventID, opportunityUserID, groupID string
-		var timestamp int64
-		err = rows.Scan(&eventID, &opportunityUserID, &timestamp, &groupID)
+		var convertTimestamp, closeTimestamp int64
+		err = rows.Scan(&eventID, &opportunityUserID, &convertTimestamp, &groupID, &closeTimestamp)
 		if err != nil {
 			log.WithError(err).Error("Error while scanning row for getting converted groups")
 			continue
@@ -50,7 +52,8 @@ func getOpportunitesForConversionEvent(
 		}
 		convertedOpportunities[groupID] = make(map[string]interface{})
 		convertedOpportunities[groupID][o_group_user_id_key] = opportunityUserID
-		convertedOpportunities[groupID][oe_timestamp_key] = timestamp
+		convertedOpportunities[groupID][o_convert_timestamp_key] = convertTimestamp
+		convertedOpportunities[groupID][o_close_timestamp_key] = closeTimestamp
 	}
 
 	err = rows.Err()
@@ -152,7 +155,7 @@ func addAccountsUsersInfo(
 }
 
 // Add to each converted group the number of given touchpoints by all the users in the group.
-func addNumTouchPointsBeforeConversion(projectID int64, touchPointEventId string,
+func addNumTouchPointsBeforeAndAfterConversion(projectID int64, touchPointEventId string,
 	touchPointEventPropertiesFilterName string, touchPointEventPropertiesFilterValue string,
 	convertedAccounts map[string]map[string]interface{}) error {
 	db := C.GetServices().Db
@@ -167,25 +170,45 @@ func addNumTouchPointsBeforeConversion(projectID int64, touchPointEventId string
 			continue
 		}
 
-		conversionTimestampInterface, ok := groupInfo[oe_timestamp_key]
+		conversionTimestampInterface, ok := groupInfo[o_convert_timestamp_key]
 		if !ok {
 			continue
 		}
 		conversionTimestamp := conversionTimestampInterface.(int64)
-		var numTouchpoints int64
+
+		closeTimestampInterface, ok := groupInfo[o_close_timestamp_key]
+		if !ok {
+			continue
+		}
+		closeTimestamp := closeTimestampInterface.(int64)
+
+		var numConvertTouchpoints, numCloseTouchpoints int64
 		arrayPlaceHolder := util.GetValuePlaceHolder(len(userIds))
 		arrayPlaceHolderValue := util.GetInterfaceList(userIds)
+
 		queryStr := "SELECT COUNT(events.id) FROM events WHERE events.project_id = ? AND events.event_name_id = ? AND JSON_EXTRACT_STRING(events.properties, ? ) = ? AND events.timestamp < ? AND events.user_id IN (" + arrayPlaceHolder + ")"
-		arrayPlaceHolderValue = append([]interface{}{projectID, touchPointEventId,
+		convertArrayPlaceHolderValue := append([]interface{}{projectID, touchPointEventId,
 			touchPointEventPropertiesFilterName, touchPointEventPropertiesFilterValue,
 			conversionTimestamp}, arrayPlaceHolderValue...)
-		row := db.Raw(queryStr, arrayPlaceHolderValue...).Row()
-		err := row.Scan(&numTouchpoints)
+		row := db.Raw(queryStr, convertArrayPlaceHolderValue...).Row()
+		err := row.Scan(&numConvertTouchpoints)
 		if err != nil {
-			log.WithFields(log.Fields{"error": err, "query": queryStr}).Error("Failed getting num touchpoints")
+			log.WithFields(log.Fields{"error": err, "query": queryStr}).Error("Failed getting num convert touchpoints")
 			return err
 		}
-		convertedAccounts[groupID][a_num_touchpoints_key] = numTouchpoints
+		convertedAccounts[groupID][a_num_convert_touchpoints_key] = numConvertTouchpoints
+
+		queryStr = "SELECT COUNT(events.id) FROM events WHERE events.project_id = ? AND events.event_name_id = ? AND JSON_EXTRACT_STRING(events.properties, ? ) = ? AND events.timestamp > ? AND events.timestamp < ? AND events.user_id IN (" + arrayPlaceHolder + ")"
+		closeArrayPlaceHolderValue := append([]interface{}{projectID, touchPointEventId,
+			touchPointEventPropertiesFilterName, touchPointEventPropertiesFilterValue,
+			conversionTimestamp, closeTimestamp}, arrayPlaceHolderValue...)
+		row = db.Raw(queryStr, closeArrayPlaceHolderValue...).Row()
+		err = row.Scan(&numCloseTouchpoints)
+		if err != nil {
+			log.WithFields(log.Fields{"error": err, "query": queryStr}).Error("Failed getting num close touchpoints")
+			return err
+		}
+		convertedAccounts[groupID][a_num_close_touchpoints_key] = numCloseTouchpoints
 	}
 
 	return nil
@@ -264,8 +287,9 @@ func main() {
 	conversionEventID := "9927162b-49f4-430e-8e95-b256dbe48c09"
 	opportunityGroupTypeID := "group_2_id"
 	accountGroupTypeID := "group_1_id"
+	closeDateProperty := "$salesforce_opportunity_closedate"
 	convertedOpportunities, err := getOpportunitesForConversionEvent(*projectID,
-		opportunityGroupTypeID, conversionEventID, *startTimestamp, *endTimestamp)
+		opportunityGroupTypeID, conversionEventID, closeDateProperty, *startTimestamp, *endTimestamp)
 	if err != nil {
 		logCtx.WithFields(log.Fields{"error": err}).Error("Failed getting converted opportnities")
 		return
@@ -286,7 +310,7 @@ func main() {
 	touchPointEventId := "2404de5c-47eb-4ad7-8ea9-85b1cf9f1ce3"
 	touchPointEventPropertiesFilterName := "$salesforce_campaignmember_status"
 	touchPointEventPropertiesFilterValue := "Responded"
-	if err := addNumTouchPointsBeforeConversion(*projectID, touchPointEventId,
+	if err := addNumTouchPointsBeforeAndAfterConversion(*projectID, touchPointEventId,
 		touchPointEventPropertiesFilterName, touchPointEventPropertiesFilterValue, convertedAccounts); err != nil {
 		logCtx.WithFields(log.Fields{"error": err}).Error("Failed getting num touchpoints")
 		return
@@ -296,11 +320,12 @@ func main() {
 	for accountID, groupInfo := range convertedAccounts {
 		uniqUsers := groupInfo[a_cust_user_ids_set_key]
 		log.WithFields(log.Fields{
-			"accountID":      accountID,
-			"opportunityID":  groupInfo[a_opportunity_id_key],
-			"numUniqUsers":   len(uniqUsers.(map[string]bool)),
-			"numTouchpoints": groupInfo[a_num_touchpoints_key],
-			"uniqUsers":      uniqUsers,
+			"accountID":             accountID,
+			"opportunityID":         groupInfo[a_opportunity_id_key],
+			"numUniqUsers":          len(uniqUsers.(map[string]bool)),
+			"numConvertTouchpoints": groupInfo[a_num_convert_touchpoints_key],
+			"numCloseTouchpoints":   groupInfo[a_num_close_touchpoints_key],
+			"uniqUsers":             uniqUsers,
 		}).Info("")
 	}
 }
