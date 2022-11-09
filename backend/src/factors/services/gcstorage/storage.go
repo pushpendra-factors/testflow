@@ -140,6 +140,11 @@ func (gcsd *GCSDriver) GetModelMetricsFilePathAndName(projectId int64, startTime
 	return path, "metrics.txt"
 }
 
+func (gcsd *GCSDriver) GetModelAlertsFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string) {
+	path := gcsd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
+	return path, "alerts.txt"
+}
+
 func (gcsd *GCSDriver) GetModelChannelFilePathAndName(channel string, projectId int64, startTimestamp int64, modelType string) (string, string) {
 	path := gcsd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
 	return path, channel + ".txt"

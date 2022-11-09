@@ -147,6 +147,11 @@ func (dd *DiskDriver) GetModelMetricsFilePathAndName(projectId int64, startTimes
 	return path, "metrics.txt"
 }
 
+func (dd *DiskDriver) GetModelAlertsFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string) {
+	path := dd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
+	return path, "alerts.txt"
+}
+
 func (dd *DiskDriver) GetModelChannelFilePathAndName(channel string, projectId int64, startTimestamp int64, modelType string) (string, string) {
 	path := dd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
 	return path, channel + ".txt"

@@ -15,9 +15,12 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
+
 	//	"reflect"
 	"sort"
 	"strconv"
+
 	//"strings"
 	"time"
 
@@ -29,6 +32,7 @@ import (
 
 const NO_EVENT = "NoEvent"
 const MetricsReportName = "metrics.txt"
+const AlertsReportName = "alerts.txt"
 
 //const ReportName = "report.txt"
 const DetailedReportName = "detailed_report.txt"
@@ -93,41 +97,123 @@ type AdwordsAnalyticsData struct {
 	LastSeenTimeOfCustomerPerformance time.Time `json:"last_seen_time_of_customer_performance"`
 }
 type HubspotAnalyticsData struct {
+	IntegrationActive          bool                       `json:"integration_active"`
 	HubspotAnalyticsSyncData   HubspotAnalyticsSyncData   `json:"hubspot_analytics_sync_data"`
 	HubspotEventsAnalyticsData HubspotEventsAnalyticsData `json:"hubspot_events_analytics_data"`
 }
 type HubspotAnalyticsSyncData struct {
-	IntegrationActive            bool      `json:"integration_active"`
-	TotalContactRecordsSynced    uint64    `json:"total_contact_records_synced"`
-	LastSeenTimeOfContactSync    time.Time `json:"last_seen_time_of_contact_sync"`
-	TotalCompanyRecordsSynced    uint64    `json:"total_company_records_synced"`
-	LastSeenTimeOfCompanySync    time.Time `json:"last_seen_time_of_company_sync"`
-	TotalDealRecordsSynced       uint64    `json:"total_deal_records_synced"`
-	LastSeenTimeOfDealSync       time.Time `json:"last_seen_time_of_deal_sync"`
-	TotalEngagementRecordsSynced uint64    `json:"total_engagement_records_synced"`
-	LastSeenTimeOfEngagementSync time.Time `json:"last_seen_time_of_engagement_sync"`
+	TotalContactRecordsSynced             uint64    `json:"total_contact_records_synced"`
+	LastSeenTimeOfContactSync             time.Time `json:"last_seen_time_of_contact_sync"`
+	TotalCompanyRecordsSynced             uint64    `json:"total_company_records_synced"`
+	LastSeenTimeOfCompanySync             time.Time `json:"last_seen_time_of_company_sync"`
+	TotalDealRecordsSynced                uint64    `json:"total_deal_records_synced"`
+	LastSeenTimeOfDealSync                time.Time `json:"last_seen_time_of_deal_sync"`
+	TotalEngagementRecordsSynced          uint64    `json:"total_engagement_records_synced"`
+	LastSeenTimeOfEngagementSync          time.Time `json:"last_seen_time_of_engagement_sync"`
+	TotalFormSubmissionRecordsSynced      uint64    `json:"total_form_submission_records_synced"`
+	LastSeenTimeOfFormSubmssionRecordSync time.Time `json:"last_seen_time_of_form_submission_record_sync"`
+	TotalFormRecordsSynced                uint64    `json:"total_form_records_synced"`
+	LastSeenTimeOfFormRecordSync          time.Time `json:"last_seen_time_of_form_record_sync"`
+	TotalContactListRecordsSynced         uint64    `json:"total_contact_list_records_synced"`
+	LastSeenTimeOfContactListSynced       time.Time `json:"last_seen_time_of_contact_list_record_synced"`
 }
 type HubspotEventsAnalyticsData struct {
 	TotalContactCreatedEvents    uint64    `json:"total_contact_created_events"`
 	TotalContactUpdatedEvents    uint64    `json:"total_contact_updated_events"`
+	TotalContactDeletedEvents    uint64    `json:"total_contact_deleted_events"`
 	ActiveHubspotContacts        uint64    `json:"active_hubspot_contacts"`
 	LastSeenTimeOfContactUpdated time.Time `json:"last_seen_time_of_contact_updated"`
 	TotalCompanyCreatedEvents    uint64    `json:"total_company_created_events"`
 	TotalCompanyUpdatedEvents    uint64    `json:"total_company_updated_events"`
+	TotalCompanyDeletedEvents    uint64    `json:"total_company_deleted_events"`
 	ActiveHubspotCompanies       uint64    `json:"active_hubspot_companies"`
 	LastSeenTimeOfCompanyUpdated time.Time `json:"last_seen_time_of_company_updated"`
 	TotalDealCreatedEvents       uint64    `json:"total_deal_created_events"`
 	TotalDealUpdatedEvents       uint64    `json:"total_deal_updated_events"`
+	TotalDealDeletedEvents       uint64    `json:"total_deal_deleted_events"`
 	ActiveHubspotDeals           uint64    `json:"active_hubspot_deals"`
 	LastSeenTimeOfDealUpdated    time.Time `json:"last_seen_time_of_deal_updated"`
 	TotalEngagementCreatedEvents uint64    `json:"total_engagement_created_events"`
+	TotalEngagementUpdatedEvents uint64    `json:"total_engagement_updated_events"`
+	TotalEngagementDeletedEvents uint64    `json:"total_engagement_deleted_events"`
 	ActiveHubspotEngagementUsers uint64    `json:"active_hubspot_engagement_users"`
+	// contact list, form submission, form
+	TotalContactListCreatedEvents    uint64 `json:"total_contact_list_created_events"`
+	TotalContactListUpdatedEvents    uint64 `json:"total_contact_list_updated_events"`
+	TotalContactListDeletedEvents    uint64 `json:"total_contact_list_deleted_events"`
+	TotalFormSubmissionCreatedEvents uint64 `json:"total_form_submission_created_events"`
+	TotalFormSubmissionUpdatedEvents uint64 `json:"total_form_submission_updated_events"`
+	TotalFormSubmissionDeletedEvents uint64 `json:"total_form_submission_deleted_events"`
+	TotalFormCreatedEvents           uint64 `json:"total_form_created_events"`
+	TotalFormUpdatedEvents           uint64 `json:"total_form_updated_events"`
+	TotalFormDeletedEvents           uint64 `json:"total_form_deleted_events"`
+}
+type HubspotUniqueMetrics struct {
+	ActiveHubspotContactsMap  map[string]uint64
+	ActiveHubspotCompaniesMap map[string]uint64
+	ActiveHubspotDeals        map[string]uint64
+	ActiveHubspotEngagements  map[string]uint64
+}
+type SalesforceAnalyticsData struct {
+	IntegrationActive            bool                         `json:"integration_active"`
+	SalesforceAnalyticsSyncData  SalesforceEventsSyncData     `json:"salesforce_analytics_sync_data"`
+	SalesforceEventAnalyticsData SalesforceEventAnalyticsData `json:"salesforce_event_analytics_data"`
+}
+type SalesforceEventsSyncData struct {
+	TotalContactRecordsSynced         uint64 `json:"total_contact_records_synced"`
+	TotalLeadRecordsSynced            uint64 `json:"total_lead_records_synced"`
+	TotalAccountRecordsSynced         uint64 `json:"total_account_records_synced"`
+	TotalOpportunityRecordsSynced     uint64 `json:"total_opportunity_records_synced"`
+	TotalCampaignRecordsSynced        uint64 `json:"total_campaign_records_synced"`
+	TotalCampaignMemberRecordsSynced  uint64 `json:"total_campaign_member_records_synced"`
+	TotalGroupAccountRecordsSynced    uint64 `json:"total_group_account_records_synced"`
+	TotalOpportunityContactRoleSynced uint64 `json:"total_opportunity_contact_role_records_synced"`
 }
 
-type SalesforceAnalyticsData struct {
-	IntegrationActive     bool      `json:"integration_active"`
-	TotalRecordsProcessed uint64    `json:"total_records_processed"`
-	LastSeenTimeOfRecord  time.Time `json:"last_seen_time_of_record"`
+type SalesforceEventAnalyticsData struct {
+	TotalContactCreatedEvents                uint64 `json:"total_contact_created_events"`
+	TotalContactUpdatedEvents                uint64 `json:"total_contact_updated_events"`
+	TotalLeadCreatedEvents                   uint64 `json:"total_lead_created_events"`
+	TotalLeadUpdatedEvents                   uint64 `json:"total_lead_updated_events"`
+	TotalAccountCreatedEvents                uint64 `json:"total_account_created_events"`
+	TotalAccountUpdatedEvents                uint64 `json:"total_account_updated_events"`
+	TotalOpportunityCreatedEvents            uint64 `json:"total_opportunity_created_events"`
+	TotalOpportunityUpdatedEvents            uint64 `json:"total_opportunity_updated_events"`
+	TotalCampaignCreatedEvents               uint64 `json:"total_campaign_created_events"`
+	TotalCampaignUpdatedEvents               uint64 `json:"total_campaign_updated_events"`
+	TotalCampaignMemberCreatedEvents         uint64 `json:"total_campaign_member_created_events"`
+	TotalCampaignMemberUpdatedEvents         uint64 `json:"total_campaign_member_updated_events"`
+	TotalGroupAccountCreatedEvents           uint64 `json:"total_group_account_created_events"`
+	TotalGroupAccountUpdatedEvents           uint64 `json:"total_group_account_updated_events"`
+	TotalOpportunityContactRoleCreatedEvents uint64 `json:"total_opportunity_contact_role_created_events"`
+	TotalOpportunityContactRoleUpdatedEvents uint64 `json:"total_opportunity_contact_role_updated_events"`
+}
+type AlertsData struct {
+	WebsiteAlerts WebsiteAlerts `json:"website_alerts"`
+}
+type WebsiteAlerts struct {
+	PageViewAlerts PageViewAlerts `json:"page_view_alerts"`
+}
+type PageViewAlerts struct {
+	PageViewsMissingPageTitle                    bool `json:"pvmpt"`
+	PageViewsMissingSessionID                    bool `json:"pvmsid"`
+	PageViewsHavingInvalidOrMissingPageDomain    bool `json:"pvhimpd"`
+	PageViewsHavingInvalidOrMissingPageRawURL    bool `json:"pvhimprurl"`
+	PageViewsHavingInvalidOrMissingPageURL       bool `json:"pvhimpurl"`
+	PageViewsHavingQPbutMissingQPData            bool `json:"pvhqpmqp"`
+	PageViewsHavingInvalidOrMissingPageLoadTime  bool `json:"pvhimplt"`
+	PageViewsHavingInvalidOrMissingPageSpentTime bool `json:"pvhimpst"`
+}
+type PageViewAlertsData struct {
+	TotalPageViews                               uint64
+	PageViewsMissingPageTitle                    uint64
+	PageViewsMissingSessionID                    uint64
+	PageViewsHavingInvalidOrMissingPageDomain    uint64
+	PageViewsHavingInvalidOrMissingPageRawURL    uint64
+	PageViewsHavingInvalidOrMissingPageURL       uint64
+	PageViewsHavingQPbutMissingQPData            uint64
+	PageViewsHavingInvalidOrMissingPageLoadTime  uint64
+	PageViewsHavingInvalidOrMissingPageSpentTime uint64
 }
 type FacebookAnalyticsData struct {
 	IntegrationActive     bool      `json:"integration_active"`
@@ -215,6 +301,7 @@ func main() {
 	for _, project_id := range projectIdsList {
 
 		mfCloudPath, mfCloudName := (cloudManager).GetModelMetricsFilePathAndName(int64(project_id), fromTime.Unix(), *modelType)
+		afCloudPath, afCloudName := (cloudManager).GetModelAlertsFilePathAndName(int64(project_id), fromTime.Unix(), *modelType)
 		efCloudPath, efCloudName := (cloudManager).GetModelEventsFilePathAndName(int64(project_id), fromTime.Unix(), *modelType)
 		efTmpPath, efTmpName := diskManager.GetModelEventsFilePathAndName(int64(project_id), fromTime.Unix(), *modelType)
 		log.WithFields(log.Fields{"eventFileCloudPath": efCloudPath,
@@ -243,7 +330,16 @@ func main() {
 		// var daterange = make(map[string]map[string]bool)
 		// var dates = make([]string, 0, 10)
 		//	Scanning the file row by row
+		var pageViewAlertsData PageViewAlertsData
 		var WebsiteData WebsiteAnalyticsData
+		var HubspotData HubspotAnalyticsData
+		var SalesForceData SalesforceAnalyticsData
+		HubspotUniqueMetrics := HubspotUniqueMetrics{
+			ActiveHubspotContactsMap:  make(map[string]uint64),
+			ActiveHubspotCompaniesMap: make(map[string]uint64),
+			ActiveHubspotDeals:        make(map[string]uint64),
+			ActiveHubspotEngagements:  make(map[string]uint64),
+		}
 		for scanner.Scan() {
 			row := scanner.Text()
 			var data P.CounterEventFormat
@@ -252,7 +348,11 @@ func main() {
 				log.WithError(err).Error("Failed to unmarshal event to CounterEventFormat")
 			}
 			if data.EventName == "$session" {
-				UpdateMetricsForWebsiteRelatedData(data, &WebsiteData)
+				UpdateMetricsForWebsiteRelatedData(data, &WebsiteData, &pageViewAlertsData)
+			} else if strings.HasPrefix(data.EventName, "$hubspot") {
+				UpdateMetricsForHubspotRelatedData(data, &HubspotData, &HubspotUniqueMetrics)
+			} else if strings.HasPrefix(data.EventName, "$sf") || strings.HasPrefix(data.EventName, "$sf") {
+				UpdateMetricsForSalesforceRelatedData(data, &SalesForceData)
 			}
 
 			// eventTimestamp := time.Unix(data.EventTimestamp, 0)
@@ -302,25 +402,50 @@ func main() {
 		//writeDetailedReport(reportMap, *fromDate, toDate)
 		if anaData, exists := analyticsData[project_id]; exists {
 			anaData.WebsiteAnalyticsData = WebsiteData
+			pageViewAlertsData.TotalPageViews = anaData.WebsiteAnalyticsData.TotalPageViews
+			anaData.HubspotAnalyticsData = HubspotData
+			// active hubspot data (UNIQUE)
+			anaData.HubspotAnalyticsData.HubspotEventsAnalyticsData.ActiveHubspotContacts = uint64(len(HubspotUniqueMetrics.ActiveHubspotContactsMap))
+			anaData.HubspotAnalyticsData.HubspotEventsAnalyticsData.ActiveHubspotCompanies = uint64(len(HubspotUniqueMetrics.ActiveHubspotCompaniesMap))
+			anaData.HubspotAnalyticsData.HubspotEventsAnalyticsData.ActiveHubspotDeals = uint64(len(HubspotUniqueMetrics.ActiveHubspotDeals))
+			anaData.HubspotAnalyticsData.HubspotEventsAnalyticsData.ActiveHubspotEngagementUsers = uint64(len(HubspotUniqueMetrics.ActiveHubspotEngagements))
+			anaData.SalesforceAnalyticsData = SalesForceData
 			analyticsData[project_id] = anaData
 		}
+		var alerts AlertsData
+		alerts.WebsiteAlerts.PageViewAlerts = generatePageViewAlertsByData(pageViewAlertsData)
 		writeMetricsReport(analyticsData[project_id])
+		writeAlertsReport(alerts)
 		//uploading reports to cloud
-		report, _ := openFile(MetricsReportName)
+		metricsReport, _ := openFile(MetricsReportName)
+
 		//	detailed_report, _ := openFile(DetailedReportName)
 		//log.Info("$$$$cloud path ", efCloudPath)
-		err = (cloudManager).Create(mfCloudPath, mfCloudName, report)
+		err = (cloudManager).Create(mfCloudPath, mfCloudName, metricsReport)
 		if err != nil {
 			//log.Fatal("Failed to upload report in cloud. error = ", err)
-			log.WithError(err).Error("failed to upload report in cloud")
+			log.WithError(err).Error("failed to upload metrics report in cloud")
 		} else {
-			log.Info("success in uploading report to cloud")
+			log.Info("success in uploading metrics report to cloud", mfCloudPath, mfCloudName)
+		}
+
+		_ = closeFile(metricsReport)
+		alertsReport, _ := openFile(AlertsReportName)
+
+		//	detailed_report, _ := openFile(DetailedReportName)
+		//log.Info("$$$$cloud path ", efCloudPath)
+		err = (cloudManager).Create(afCloudPath, afCloudName, alertsReport)
+		if err != nil {
+			//log.Fatal("Failed to upload report in cloud. error = ", err)
+			log.WithError(err).Error("failed to upload alerts report in cloud")
+		} else {
+			log.Info("success in uploading alerts report to cloud", mfCloudPath, mfCloudName)
 		}
 		// err = (cloudManager).Create(efCloudPath, DetailedReportName, detailed_report)
 		// if err != nil {
 		// 	log.Fatal("Failed to upload detailed_report in cloud. error = ", err)
 		// }
-		_ = closeFile(report)
+		_ = closeFile(alertsReport)
 		//	_ = closeFile(detailed_report)
 		//reports uploaded and closed
 
@@ -329,17 +454,253 @@ func main() {
 		//sucess log
 	}
 }
-func UpdateMetricsForWebsiteRelatedData(event P.CounterEventFormat, websiteData *WebsiteAnalyticsData) {
+func UpdateMetricsForWebsiteRelatedData(event P.CounterEventFormat, websiteData *WebsiteAnalyticsData, pageViewAlerts *PageViewAlertsData) {
 	websiteData.WebsiteDataActive = true
 	websiteData.TotalSessions += 1
 	if _, exists := event.EventProperties[U.EP_IS_PAGE_VIEW]; exists {
 		if event.EventProperties[U.EP_IS_PAGE_VIEW] == true {
 			websiteData.TotalPageViews += 1
+			UpdatePageViewAlertsData(event, pageViewAlerts)
 		}
 	}
 	if _, exists := event.EventProperties[U.EP_SOURCE]; exists {
 		if event.EventProperties[U.EP_SOURCE] == U.PLATFORM_WEB {
 			websiteData.TotalEventsFromWeb += 1
+		}
+	}
+
+}
+func UpdatePageViewAlertsData(event P.CounterEventFormat, pageViewAlertsData *PageViewAlertsData) {
+	// page title
+	if _, exists := event.EventProperties[U.EP_PAGE_TITLE]; exists {
+		if event.EventProperties[U.EP_PAGE_TITLE] == "" {
+			pageViewAlertsData.PageViewsMissingPageTitle += 1
+		}
+	} else {
+		pageViewAlertsData.PageViewsMissingPageTitle += 1
+	}
+	// page domain
+	if _, exists := event.EventProperties[U.EP_PAGE_DOMAIN]; exists {
+		if event.EventProperties[U.EP_PAGE_DOMAIN] == "" {
+			pageViewAlertsData.PageViewsHavingInvalidOrMissingPageDomain += 1
+		}
+	} else {
+		pageViewAlertsData.PageViewsHavingInvalidOrMissingPageDomain += 1
+	}
+	// page raw url
+	if _, exists := event.EventProperties[U.EP_PAGE_RAW_URL]; exists {
+		if event.EventProperties[U.EP_PAGE_RAW_URL] == "" {
+			pageViewAlertsData.PageViewsHavingInvalidOrMissingPageRawURL += 1
+		}
+	} else {
+		pageViewAlertsData.PageViewsHavingInvalidOrMissingPageRawURL += 1
+	}
+	// page url
+	if _, exists := event.EventProperties[U.EP_PAGE_URL]; exists {
+		if event.EventProperties[U.EP_PAGE_URL] == "" {
+			pageViewAlertsData.PageViewsHavingInvalidOrMissingPageURL += 1
+		}
+		//TODO : check if it has $qp
+
+	} else {
+		pageViewAlertsData.PageViewsHavingInvalidOrMissingPageURL += 1
+	}
+	// page load time
+	if _, exists := event.EventProperties[U.EP_PAGE_LOAD_TIME]; exists {
+		if event.EventProperties[U.EP_PAGE_LOAD_TIME] == "" {
+			pageViewAlertsData.PageViewsHavingInvalidOrMissingPageLoadTime += 1
+
+		} else if event.EventProperties[U.EP_PAGE_LOAD_TIME].(int) <= 0 || event.EventProperties[U.EP_PAGE_LOAD_TIME].(int) > 1800 {
+			pageViewAlertsData.PageViewsHavingInvalidOrMissingPageLoadTime += 1
+		}
+	} else {
+		pageViewAlertsData.PageViewsHavingInvalidOrMissingPageLoadTime += 1
+	}
+	// page spent time
+	if _, exists := event.EventProperties[U.EP_PAGE_SPENT_TIME]; exists {
+		if event.EventProperties[U.EP_PAGE_SPENT_TIME] == "" {
+			pageViewAlertsData.PageViewsHavingInvalidOrMissingPageSpentTime += 1
+
+		} else if event.EventProperties[U.EP_PAGE_SPENT_TIME].(int) <= 0 || event.EventProperties[U.EP_PAGE_LOAD_TIME].(int) > 3600 {
+			pageViewAlertsData.PageViewsHavingInvalidOrMissingPageSpentTime += 1
+		}
+	} else {
+		pageViewAlertsData.PageViewsHavingInvalidOrMissingPageLoadTime += 1
+	}
+}
+func generatePageViewAlertsByData(pageViewAlertsData PageViewAlertsData) PageViewAlerts {
+	var pageViewAlerts PageViewAlerts
+	// If more than 10 % of page views has missing $page_title.
+	pageViewsThreshold := 0.1 * float64(pageViewAlertsData.TotalPageViews)
+	if pageViewAlertsData.PageViewsMissingPageTitle >= uint64(pageViewsThreshold) {
+		pageViewAlerts.PageViewsMissingPageTitle = true
+	}
+	// If more than absolute 10 page view events have invalid or missing $page_domain. (Invalid if it is not the right domain or a full url)
+	if pageViewAlertsData.PageViewsHavingInvalidOrMissingPageDomain > 10 {
+		pageViewAlerts.PageViewsHavingInvalidOrMissingPageDomain = true
+	}
+	// If more than absolute 10 page view events have invalid or missing $page_raw_url.
+	if pageViewAlertsData.PageViewsHavingInvalidOrMissingPageRawURL > 10 {
+		pageViewAlerts.PageViewsHavingInvalidOrMissingPageRawURL = true
+	}
+	// If more than absolute 10 page view events have invalid or missing $page_url. (Invalid if it is not a url or if the url has query parameters)
+	if pageViewAlertsData.PageViewsHavingInvalidOrMissingPageURL > 10 {
+		pageViewAlerts.PageViewsHavingInvalidOrMissingPageURL = true
+	}
+	// If more than absolute 10 page view events have invalid or missing $page_load_time. (Invalid is 0 or negative or greater than 1800)
+	if pageViewAlertsData.PageViewsHavingInvalidOrMissingPageLoadTime > 10 {
+		pageViewAlerts.PageViewsHavingInvalidOrMissingPageLoadTime = true
+	}
+	// If more than absolute 10 page view events have invalid or missing $page_spent_time. (Invalid is 0 or negative or greater than 3600)
+	if pageViewAlertsData.PageViewsHavingInvalidOrMissingPageSpentTime > 10 {
+		pageViewAlerts.PageViewsHavingInvalidOrMissingPageSpentTime = true
+	}
+	return pageViewAlerts
+}
+func UpdateMetricsForHubspotRelatedData(event P.CounterEventFormat, hubspotData *HubspotAnalyticsData, HubspotUniqueMetrics *HubspotUniqueMetrics) {
+	hubspotData.IntegrationActive = true
+	if strings.HasPrefix(event.EventName, "$hubspot_contact_list") {
+		hubspotData.HubspotAnalyticsSyncData.TotalContactListRecordsSynced += 1
+		// checking suffix to determine action
+		if strings.HasSuffix(event.EventName, "created") {
+			hubspotData.HubspotEventsAnalyticsData.TotalContactListCreatedEvents += 1
+		} else if strings.HasSuffix(event.EventName, "deleted") {
+			hubspotData.HubspotEventsAnalyticsData.TotalContactListDeletedEvents += 1
+		} else if strings.HasSuffix(event.EventName, "associations_updated") {
+
+		} else if strings.HasSuffix(event.EventName, "updated") {
+			hubspotData.HubspotEventsAnalyticsData.TotalContactListUpdatedEvents += 1
+		}
+	} else if strings.HasPrefix(event.EventName, "$hubspot_contact") {
+		hubspotData.HubspotAnalyticsSyncData.TotalContactRecordsSynced += 1
+		HubspotUniqueMetrics.ActiveHubspotContactsMap[event.UserId] += 1
+		if strings.HasSuffix(event.EventName, "created") {
+			hubspotData.HubspotEventsAnalyticsData.TotalContactCreatedEvents += 1
+		} else if strings.HasSuffix(event.EventName, "deleted") {
+			hubspotData.HubspotEventsAnalyticsData.TotalContactDeletedEvents += 1
+		} else if strings.HasSuffix(event.EventName, "associations_updated") {
+
+		} else if strings.HasSuffix(event.EventName, "updated") {
+			hubspotData.HubspotEventsAnalyticsData.TotalContactUpdatedEvents += 1
+		}
+	} else if strings.HasPrefix(event.EventName, "$hubspot_company") {
+		hubspotData.HubspotAnalyticsSyncData.TotalCompanyRecordsSynced += 1
+		HubspotUniqueMetrics.ActiveHubspotCompaniesMap[event.UserId] += 1
+		if strings.HasSuffix(event.EventName, "created") {
+			hubspotData.HubspotEventsAnalyticsData.TotalCompanyCreatedEvents += 1
+		} else if strings.HasSuffix(event.EventName, "deleted") {
+			hubspotData.HubspotEventsAnalyticsData.TotalCompanyDeletedEvents += 1
+		} else if strings.HasSuffix(event.EventName, "associations_updated") {
+
+		} else if strings.HasSuffix(event.EventName, "updated") {
+			hubspotData.HubspotEventsAnalyticsData.TotalCompanyUpdatedEvents += 1
+		}
+	} else if strings.HasPrefix(event.EventName, "$hubspot_engagement") {
+		hubspotData.HubspotAnalyticsSyncData.TotalEngagementRecordsSynced += 1
+		HubspotUniqueMetrics.ActiveHubspotEngagements[event.UserId] += 1
+		if strings.HasSuffix(event.EventName, "created") {
+			hubspotData.HubspotEventsAnalyticsData.TotalEngagementCreatedEvents += 1
+		} else if strings.HasSuffix(event.EventName, "deleted") {
+			hubspotData.HubspotEventsAnalyticsData.TotalEngagementDeletedEvents += 1
+		} else if strings.HasSuffix(event.EventName, "associations_updated") {
+
+		} else if strings.HasSuffix(event.EventName, "updated") {
+			hubspotData.HubspotEventsAnalyticsData.TotalEngagementUpdatedEvents += 1
+
+		}
+	} else if strings.HasPrefix(event.EventName, "$hubspot_form_submission") {
+		hubspotData.HubspotAnalyticsSyncData.TotalFormSubmissionRecordsSynced += 1
+		if strings.HasSuffix(event.EventName, "created") {
+			hubspotData.HubspotEventsAnalyticsData.TotalFormSubmissionCreatedEvents += 1
+		} else if strings.HasSuffix(event.EventName, "deleted") {
+			hubspotData.HubspotEventsAnalyticsData.TotalFormSubmissionDeletedEvents += 1
+		} else if strings.HasSuffix(event.EventName, "associations_updated") {
+
+		} else if strings.HasSuffix(event.EventName, "updated") {
+			hubspotData.HubspotEventsAnalyticsData.TotalFormSubmissionUpdatedEvents += 1
+		}
+	} else if strings.HasPrefix(event.EventName, "$hubspot_form") {
+		hubspotData.HubspotAnalyticsSyncData.TotalFormRecordsSynced += 1
+		if strings.HasSuffix(event.EventName, "created") {
+			hubspotData.HubspotEventsAnalyticsData.TotalFormCreatedEvents += 1
+		} else if strings.HasSuffix(event.EventName, "deleted") {
+			hubspotData.HubspotEventsAnalyticsData.TotalFormDeletedEvents += 1
+		} else if strings.HasSuffix(event.EventName, "associations_updated") {
+
+		} else if strings.HasSuffix(event.EventName, "updated") {
+			hubspotData.HubspotEventsAnalyticsData.TotalFormUpdatedEvents += 1
+		}
+	} else if strings.HasPrefix(event.EventName, "$hubspot_deal") {
+		hubspotData.HubspotAnalyticsSyncData.TotalDealRecordsSynced += 1
+		HubspotUniqueMetrics.ActiveHubspotDeals[event.UserId] += 1
+		if strings.HasSuffix(event.EventName, "created") {
+			hubspotData.HubspotEventsAnalyticsData.TotalDealCreatedEvents += 1
+		} else if strings.HasSuffix(event.EventName, "deleted") {
+			hubspotData.HubspotEventsAnalyticsData.TotalDealDeletedEvents += 1
+		} else if strings.HasSuffix(event.EventName, "associations_updated") {
+
+		} else if strings.HasSuffix(event.EventName, "updated") {
+			hubspotData.HubspotEventsAnalyticsData.TotalDealUpdatedEvents += 1
+		}
+	}
+}
+func UpdateMetricsForSalesforceRelatedData(event P.CounterEventFormat, salesforceData *SalesforceAnalyticsData) {
+	salesforceData.IntegrationActive = true
+	if strings.HasPrefix(event.EventName, "$salesforce_contact") || strings.HasPrefix(event.EventName, "$sf_contact") {
+		salesforceData.SalesforceAnalyticsSyncData.TotalContactRecordsSynced += 1
+		if strings.HasSuffix(event.EventName, "created") {
+			salesforceData.SalesforceEventAnalyticsData.TotalContactCreatedEvents += 1
+		} else if strings.HasSuffix(event.EventName, "updated") {
+			salesforceData.SalesforceEventAnalyticsData.TotalContactUpdatedEvents += 1
+		}
+	} else if strings.HasPrefix(event.EventName, "$salesforce_lead") || strings.HasPrefix(event.EventName, "$sf_lead") {
+		salesforceData.SalesforceAnalyticsSyncData.TotalLeadRecordsSynced += 1
+		if strings.HasSuffix(event.EventName, "created") {
+			salesforceData.SalesforceEventAnalyticsData.TotalLeadCreatedEvents += 1
+		} else if strings.HasSuffix(event.EventName, "updated") {
+			salesforceData.SalesforceEventAnalyticsData.TotalLeadUpdatedEvents += 1
+		}
+	} else if strings.HasPrefix(event.EventName, "$salesforce_account") || strings.HasPrefix(event.EventName, "$sf_account") {
+		salesforceData.SalesforceAnalyticsSyncData.TotalAccountRecordsSynced += 1
+		if strings.HasSuffix(event.EventName, "created") {
+			salesforceData.SalesforceEventAnalyticsData.TotalAccountCreatedEvents += 1
+		} else if strings.HasSuffix(event.EventName, "updated") {
+			salesforceData.SalesforceEventAnalyticsData.TotalAccountUpdatedEvents += 1
+		}
+	} else if strings.HasPrefix(event.EventName, "$salesforce_opportunity_contact_role") || strings.HasPrefix(event.EventName, "$sf_opportunity_contact_role") {
+		salesforceData.SalesforceAnalyticsSyncData.TotalOpportunityContactRoleSynced += 1
+		if strings.HasSuffix(event.EventName, "created") {
+			salesforceData.SalesforceEventAnalyticsData.TotalOpportunityContactRoleCreatedEvents += 1
+		} else if strings.HasSuffix(event.EventName, "updated") {
+			salesforceData.SalesforceEventAnalyticsData.TotalOpportunityContactRoleUpdatedEvents += 1
+		}
+	} else if strings.HasPrefix(event.EventName, "$salesforce_opportunity") || strings.HasPrefix(event.EventName, "$sf_opportunity") {
+		salesforceData.SalesforceAnalyticsSyncData.TotalOpportunityRecordsSynced += 1
+		if strings.HasSuffix(event.EventName, "created") {
+			salesforceData.SalesforceEventAnalyticsData.TotalOpportunityCreatedEvents += 1
+		} else if strings.HasSuffix(event.EventName, "updated") {
+			salesforceData.SalesforceEventAnalyticsData.TotalOpportunityUpdatedEvents += 1
+		}
+	} else if strings.HasPrefix(event.EventName, "$salesforce_campaign_member") || strings.HasPrefix(event.EventName, "$sf_campaign_member") {
+		salesforceData.SalesforceAnalyticsSyncData.TotalCampaignMemberRecordsSynced += 1
+		if strings.HasSuffix(event.EventName, "created") {
+			salesforceData.SalesforceEventAnalyticsData.TotalCampaignMemberCreatedEvents += 1
+		} else if strings.HasSuffix(event.EventName, "updated") {
+			salesforceData.SalesforceEventAnalyticsData.TotalCampaignMemberUpdatedEvents += 1
+		}
+	} else if strings.HasPrefix(event.EventName, "$salesforce_campaign") || strings.HasPrefix(event.EventName, "$sf_campaign") {
+		salesforceData.SalesforceAnalyticsSyncData.TotalCampaignRecordsSynced += 1
+		if strings.HasSuffix(event.EventName, "created") {
+			salesforceData.SalesforceEventAnalyticsData.TotalCampaignCreatedEvents += 1
+		} else if strings.HasSuffix(event.EventName, "updated") {
+			salesforceData.SalesforceEventAnalyticsData.TotalCampaignUpdatedEvents += 1
+		}
+	} else if strings.HasPrefix(event.EventName, "$salesforce_group_account") || strings.HasPrefix(event.EventName, "$sf_group_account") {
+		salesforceData.SalesforceAnalyticsSyncData.TotalGroupAccountRecordsSynced += 1
+		if strings.HasSuffix(event.EventName, "created") {
+			salesforceData.SalesforceEventAnalyticsData.TotalGroupAccountCreatedEvents += 1
+		} else if strings.HasSuffix(event.EventName, "updated") {
+			salesforceData.SalesforceEventAnalyticsData.TotalGroupAccountUpdatedEvents += 1
 		}
 	}
 
@@ -484,6 +845,15 @@ func writeMetricsReport(analyticsData AnalyticsData) {
 	}
 	analyticsDataString := string(analyticsDataJson)
 	report.WriteString(analyticsDataString)
+}
+func writeAlertsReport(alerts AlertsData) {
+	report, _ := createFile(AlertsReportName)
+	alertsDataJson, err := json.Marshal(alerts)
+	if err != nil {
+		log.WithError(err).Error("Failed to marshal alerts data")
+	}
+	alertsDataString := string(alertsDataJson)
+	report.WriteString(alertsDataString)
 }
 func writeDetailedReport(reportMap map[string]map[string]bool, from string, to string) {
 	detailed_report, _ := createFile(DetailedReportName)
