@@ -489,10 +489,10 @@ type UserEventInfo struct {
 const (
 	AdwordsClickReportType = 4
 	SecsInADay             = int64(86400)
-	LookbackCapInDays      = 180
+	LookbackCapInDays      = 361
 	UserBatchSize          = 10000
 	QueryRangeLimit        = 93
-	LookBackWindowLimit    = 93
+	LookBackWindowLimit    = 361
 )
 
 // LookbackAdjustedFrom Returns the effective From timestamp considering lookback days
