@@ -200,7 +200,9 @@ const QueryActionsComponent = ({
           ></Button>
           {getActionsMenu()}
         </div>
-        <div className={'relative'}>
+      </ControlledComponent>
+
+      <div className={'relative'}>
           <Button
             size="large"
             type="text"
@@ -209,7 +211,6 @@ const QueryActionsComponent = ({
           ></Button>
           {getHelpMenu()}
         </div>
-      </ControlledComponent>
     </div>
   );
 };
