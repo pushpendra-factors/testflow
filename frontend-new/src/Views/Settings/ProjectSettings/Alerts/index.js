@@ -311,6 +311,7 @@ const Alerts = ({
                     'me': [queries[0]?.metric],
                     'pgUrl': queries[0]?.pageViewVal ? queries[0]?.pageViewVal : '',
                     "tz": localStorage.getItem('project_timeZone') || 'Asia/Kolkata',
+                    'qt': queries[0]?.qt
                 },
                 "query_type": "kpi",
                 "operator": operatorState,
