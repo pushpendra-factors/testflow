@@ -19,6 +19,7 @@ import (
 	"factors/model/store"
 
 	log "github.com/sirupsen/logrus"
+	"io/ioutil"
 )
 
 const (
@@ -384,15 +385,19 @@ func RemoveFromArray(events []string, key string) []string {
 func GetPathAnalysisData(projectId int64, id string) map[int]map[string]int {
 	path, _ := C.GetCloudManager().GetPathAnalysisTempFilePathAndName(id, projectId)
 	fmt.Println(path)
-	scanner, _ := T.OpenEventFileAndGetScanner(path + "result.txt")
-	result := make(map[int]map[string]int)
-	i := 0
-	for scanner.Scan() {
-		i++
-		txtline := scanner.Text()
-		events := make(map[string]int, 0)
-		json.Unmarshal([]byte(txtline), &events)
-		result[i] = events
+	reader, err := C.GetCloudManager().Get(path, "result.txt")
+	if err != nil {
+		fmt.Println(err.Error())
+		log.WithError(err).Error("Error reading file")
+		return nil
 	}
+	result := make(map[int]map[string]int)
+	data, err := ioutil.ReadAll(reader)
+	if err != nil {
+		fmt.Println(err.Error())
+		log.WithError(err).Error("Error reading file")
+		return nil
+	}
+	err = json.Unmarshal(data, &result)
 	return result
 }

@@ -10,6 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
+	"factors/delta"
 )
 
 type PathAnalysis model.PathAnalysis
@@ -103,4 +104,18 @@ func DeleteSavedPathAnalysisEntityHandler(c *gin.Context) {
 	}
 
 	c.JSON(errCode, gin.H{"Status": "OK"})
+}
+
+func GetPathAnalysisData(c *gin.Context)(interface{}, int, string, string, bool) {
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	if projectID == 0 {
+		return nil, http.StatusForbidden, "", "Get path analysis enitity failed. Invalid project.", true
+	}
+	id := c.Param("id")
+	if id == "" {
+		return nil, http.StatusForbidden, "", "Get path analysis enitity failed. Invalid query id.", true
+	}
+
+	result := delta.GetPathAnalysisData(projectID, id)
+	return result, http.StatusOK, "", "", false
 }
