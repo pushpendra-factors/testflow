@@ -79,6 +79,7 @@ func (store *MemSQL) convertPathAnalysisToPathAnalysisEntityInfo(list []model.Pa
 			return nil
 		}
 		e := model.PathAnalysisEntityInfo{
+			Id:				   obj.ID,
 			Title:             obj.Title,
 			Status:            obj.Status,
 			CreatedBy:         names[obj.CreatedBy],

@@ -67,7 +67,6 @@ func CreatePathAnalysisEntityHandler(c *gin.Context) (interface{}, int, string, 
 		return nil, errCode, PROCESSING_FAILED, errMsg, true
 	}
 
-	c.JSON(errCode, gin.H{"Status": "successful"})
 	return entity, http.StatusCreated, "", "", false
 }
 

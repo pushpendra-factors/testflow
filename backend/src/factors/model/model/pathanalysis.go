@@ -43,6 +43,7 @@ type PathAnalysisQuery struct {
 }
 
 type PathAnalysisEntityInfo struct {
+	Id 				  string			`json:"id"` 
 	Title             string            `json:"title"`
 	Status            string            `json:"status"`
 	CreatedBy         string            `json:"created_by"`
