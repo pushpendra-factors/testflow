@@ -3804,9 +3804,9 @@ func GetExplainPropertyWeights(propertyName string) float64 {
 
 }
 
-func GetStandardDisplayNameGroups() map[string]string{
-	displayNameGroups:= make(map[string]string)
-	for group:= range STANDARD_GROUP_DISPLAY_NAMES{
+func GetStandardDisplayNameGroups() map[string]string {
+	displayNameGroups := make(map[string]string)
+	for group := range STANDARD_GROUP_DISPLAY_NAMES {
 		displayNameGroups[STANDARD_GROUP_DISPLAY_NAMES[group]] = group
 	}
 	return displayNameGroups

@@ -2,11 +2,13 @@ package model
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
 	cacheRedis "factors/cache/redis"
 	C "factors/config"
 	U "factors/util"
 	"fmt"
+	"github.com/jinzhu/gorm/dialects/postgres"
 	"sort"
 	"strings"
 	"time"
@@ -16,6 +18,7 @@ import (
 
 type AttributionQuery struct {
 	AnalyzeType            string                     `json:"analyze_type"`
+	RunType                string                     `json:"run_type"`
 	KPI                    KPIQueryGroup              `json:"kpi_query_group"`
 	CampaignMetrics        []string                   `json:"cm"`
 	ConversionEvent        QueryEventWithProperties   `json:"ce"`
@@ -40,13 +43,14 @@ type AttributionQuery struct {
 }
 
 type KPIInfo struct {
-	KpiID               string        `json:"kpi_id"`
-	KpiGroupID          string        `json:"kpi_group_id"`
-	KpiUserIds          []string      `json:"kpi_users"`
-	KpiCoalUserIds      []string      `json:"kpi_coal_users"`
-	KpiHeaderNames      []string      `json:"kpi_header_names"`  //  headers (in case of multiple KPIs) (revenue, pipleine, dealWon etc)
-	KpiAggFunctionTypes []string      `json:"kpi_agg_fun_types"` //  Agg function type (in case of multiple KPIs) (sum, unique, sum etc)
-	KpiValuesList       []KpiRowValue `json:"kpi_value_list"`    // list of rows as object
+	KpiID                    string        `json:"kpi_id"`
+	KpiGroupID               string        `json:"kpi_group_id"`
+	KpiAccountCompanyGroupID string        `json:"kpi_acc_comp_group_id"`
+	KpiUserIds               []string      `json:"kpi_users"`
+	KpiCoalUserIds           []string      `json:"kpi_coal_users"`
+	KpiHeaderNames           []string      `json:"kpi_header_names"`  //  headers (in case of multiple KPIs) (revenue, pipleine, dealWon etc)
+	KpiAggFunctionTypes      []string      `json:"kpi_agg_fun_types"` //  Agg function type (in case of multiple KPIs) (sum, unique, sum etc)
+	KpiValuesList            []KpiRowValue `json:"kpi_value_list"`    // list of rows as object
 }
 
 type KpiRowValue struct {
@@ -54,6 +58,11 @@ type KpiRowValue struct {
 	Timestamp   int64     // unix time
 	Values      []float64 // list of values (revenue, pipeline, dealWon etc)
 	IsConverted bool
+}
+
+type AccountCompUsers struct {
+	KpiUserIds     []string `json:"kpi_users"`
+	KpiCoalUserIds []string `json:"kpi_coal_users"`
 }
 
 const (
@@ -153,12 +162,19 @@ const (
 	MarketingEventTypeOffer       = "Offer"
 	MarketingEventTypeTacticOffer = "TacticOffer"
 
-	AnalyzeTypeUsers           = "users"
-	AnalyzeTypeSFOpportunities = "salesforce_opportunities"
-	AnalyzeTypeHSDeals         = "hubspot_deals"
-	AnalyzeTypeSFAccounts      = "salesforce_accounts"
-	AnalyzeTypeHSCompanies     = "hubspot_companies"
-	AnalyzeTypeUserKPI         = "user_kpi"
+	// query.AnalyzeType
+	AnalyzeTypeUsers           = "users"                    // Supports RunTypeUser
+	AnalyzeTypeSFOpportunities = "salesforce_opportunities" // Supports RunTypeSFOpportunities, RunTypeSFAccounts
+	AnalyzeTypeHSDeals         = "hubspot_deals"            // Supports RunTypeHSDeals, RunTypeHSCompanies
+	AnalyzeTypeUserKPI         = "user_kpi"                 // Supports Todo @satya add a valid run type ex RunTypeUser
+
+	// query.RunType
+	RunTypeSFOpportunities = "salesforce_opportunities"
+	RunTypeSFAccounts      = "salesforce_accounts"
+	RunTypeHSDeals         = "hubspot_deals"
+	RunTypeHSCompanies     = "hubspot_companies"
+	RunTypeUser            = "users"
+	RunTypeUserKPI         = "user_kpi"
 
 	HSDealIDProperty        = "$hubspot_deal_hs_object_id"
 	SFOpportunityIDProperty = "$salesforce_opportunity_id"
@@ -843,8 +859,7 @@ func AddHeadersByAttributionKey(result *QueryResult, query *AttributionQuery, go
 
 		// add up fixed metrics
 
-		if query.AnalyzeType == AnalyzeTypeHSDeals || query.AnalyzeType == AnalyzeTypeSFOpportunities ||
-			query.AnalyzeType == AnalyzeTypeSFAccounts || query.AnalyzeType == AnalyzeTypeHSCompanies {
+		if query.AnalyzeType == AnalyzeTypeHSDeals || query.AnalyzeType == AnalyzeTypeSFOpportunities {
 
 			result.Headers = append(result.Headers, AttributionFixedHeadersLandingPage...)
 
@@ -901,8 +916,7 @@ func AddHeadersByAttributionKey(result *QueryResult, query *AttributionQuery, go
 
 		// add up key
 		result.Headers = append(result.Headers, "key")
-	} else if query.AnalyzeType == AnalyzeTypeHSDeals || query.AnalyzeType == AnalyzeTypeSFOpportunities ||
-		query.AnalyzeType == AnalyzeTypeSFAccounts || query.AnalyzeType == AnalyzeTypeHSCompanies {
+	} else if query.AnalyzeType == AnalyzeTypeHSDeals || query.AnalyzeType == AnalyzeTypeSFOpportunities {
 
 		// Add up for Added Keys {Campaign, Adgroup, Keyword}
 		switch attributionKey {
@@ -1500,7 +1514,7 @@ func ProcessQueryLandingPageUrl(query *AttributionQuery, attributionData *map[st
 	logFields := log.Fields{"Method": "ProcessQueryLandingPageUrl"}
 	logCtx = *logCtx.WithFields(logFields)
 	dataRows := GetRowsByMapsLandingPage(query.AttributionContentGroups, attributionData, query.LinkedEvents, isCompare)
-	logCtx.Info("Done GetRowsByMapsLandingPage")
+
 	result := &QueryResult{}
 	AddHeadersByAttributionKey(result, query, nil, nil)
 
@@ -1531,10 +1545,8 @@ func ProcessQueryLandingPageUrl(query *AttributionQuery, attributionData *map[st
 		}
 		return v1 > v2
 	})
-	logCtx.Info("MergeDataRowsHavingSameKey")
 
 	result.Rows = AddGrandTotalRowLandingPage(result.Headers, result.Rows, GetLastKeyValueIndexLandingPage(result.Headers), query.AttributionMethodology, query.AttributionMethodologyCompare)
-	logCtx.Info("Done AddGrandTotal")
 	return result
 
 }
@@ -1544,18 +1556,15 @@ func ProcessQuery(query *AttributionQuery, attributionData *map[string]*Attribut
 	logCtx = *logCtx.WithFields(logFields)
 	// Add additional metrics values
 	ComputeAdditionalMetrics(attributionData)
-	logCtx.Info("Done ComputeAdditionalMetrics")
 	// Add custom dimensions
 	AddCustomDimensions(attributionData, query, marketingReports)
 
 	// Attribution data to rows
 	dataRows := GetRowsByMaps(query.AttributionKey, query.AttributionKeyCustomDimension, attributionData, query.LinkedEvents, isCompare)
 
-	logCtx.Info("Done GetRowsByMaps")
 	result := &QueryResult{}
 	AddHeadersByAttributionKey(result, query, nil, nil)
 	result.Rows = dataRows
-	logCtx.WithFields(log.Fields{"Headers": result.Headers}).Info("logs to check headers")
 	// get the headers for KPI
 	var goalEventAggFuncTypes []string
 	for _, value := range *attributionData {
@@ -1572,7 +1581,6 @@ func ProcessQuery(query *AttributionQuery, attributionData *map[string]*Attribut
 
 	// Additional filtering based on AttributionKey.
 	result.Rows = FilterRows(result.Rows, query.AttributionKey, GetLastKeyValueIndex(result.Headers))
-	logCtx.Info("Done GetRowsByMaps GetUpdatedRowsByDimensions MergeDataRowsHavingSameKey FilterRows")
 
 	// sort the rows by conversionEvent
 	conversionIndex := GetConversionIndex(result.Headers)
@@ -1595,22 +1603,27 @@ func ProcessQuery(query *AttributionQuery, attributionData *map[string]*Attribut
 	})
 
 	result.Rows = AddGrandTotalRow(result.Headers, result.Rows, GetLastKeyValueIndex(result.Headers), query.AnalyzeType, goalEventAggFuncTypes, query.AttributionMethodology, query.AttributionMethodologyCompare)
-	logCtx.Info("Done AddGrandTotal")
 	return result
 }
 
 func ProcessQueryKPI(query *AttributionQuery, attributionData *map[string]*AttributionData,
 	marketingReports *MarketingReports, isCompare bool, kpiData map[string]KPIInfo) *QueryResult {
-	logCtx := log.WithFields(log.Fields{"Method": "ProcessQueryKPI", "KPIAttribution": "Debug", "attributionData": attributionData})
-	logCtx.Info("KPI Attribution data")
 
+	logCtx := log.WithFields(log.Fields{"Method": "ProcessQueryKPI", "KPIAttribution": "Debug"})
+
+	if C.GetAttributionDebug() == 1 {
+		logCtx := log.WithFields(log.Fields{"Method": "ProcessQueryKPI", "KPIAttribution": "Debug", "attributionData": attributionData})
+		logCtx.Info("KPI Attribution data")
+	}
 	// Add additional metrics values
 	ComputeAdditionalMetrics(attributionData)
 
 	// Add custom dimensions
 	AddCustomDimensions(attributionData, query, marketingReports)
 
-	logCtx.Info("Done AddTheAddedKeysAndMetrics AddPerformanceData ApplyFilter ComputeAdditionalMetrics AddCustomDimensions")
+	if C.GetAttributionDebug() == 1 {
+		logCtx.Info("Done AddTheAddedKeysAndMetrics AddPerformanceData ApplyFilter ComputeAdditionalMetrics AddCustomDimensions")
+	}
 	// for KPI queries, use the kpiData.KpiAggFunctionTypes as ConvAggFunctionType
 	var convAggFunctionType []string
 	for _, val := range kpiData {
@@ -1646,11 +1659,15 @@ func ProcessQueryKPI(query *AttributionQuery, attributionData *map[string]*Attri
 	}
 
 	result.Rows = MergeDataRowsHavingSameKeyKPI(result.Rows, GetLastKeyValueIndex(result.Headers), query.AttributionKey, query.AnalyzeType, goalEventAggFuncTypes, *logCtx)
-
+	if C.GetAttributionDebug() == 1 {
+		logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "Result": result}).Info("KPI Attribution result")
+	}
 	// Additional filtering based on AttributionKey.
 	result.Rows = FilterRows(result.Rows, query.AttributionKey, GetLastKeyValueIndex(result.Headers))
 
-	logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "Result": result}).Info("KPI Attribution result")
+	if C.GetAttributionDebug() == 1 {
+		logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "Result": result}).Info("KPI Attribution result")
+	}
 
 	// sort the rows by conversionEvent
 	conversionIndex := GetConversionIndexKPI(result.Headers)
@@ -1679,11 +1696,12 @@ func ProcessQueryKPI(query *AttributionQuery, attributionData *map[string]*Attri
 		}
 		return true
 	})
-	logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "Result": result}).Info("KPI Attribution result Sorting")
 
 	result.Rows = AddGrandTotalRowKPI(result.Headers, result.Rows, GetLastKeyValueIndex(result.Headers), query.AnalyzeType, goalEventAggFuncTypes, query.AttributionMethodology, query.AttributionMethodologyCompare)
-	logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "Result": result}).Info("KPI Attribution result AddGrandTotalRow")
 
+	if C.GetAttributionDebug() == 1 {
+		logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "Result": result}).Info("KPI Attribution result AddGrandTotalRow")
+	}
 	return result
 }
 
@@ -1714,8 +1732,6 @@ func GetUpdatedRowsByDimensions(result *QueryResult, query *AttributionQuery, lo
 	for _, data := range result.Rows {
 		var row []interface{}
 		if len(result.Headers) > len(data) {
-			logCtx.WithFields(log.Fields{"data_row": data,
-				"header": result.Headers}).Info("length of data_row is less than header length")
 			for i := len(data); i < len(result.Headers); i++ {
 				data = append(data, float64(0))
 			}
@@ -1752,7 +1768,7 @@ func MergeTwoDataRows(row1 []interface{}, row2 []interface{}, keyIndex int, attr
 		}
 
 		return row1
-	} else if analyzeType == AnalyzeTypeHSDeals || analyzeType == AnalyzeTypeSFOpportunities || analyzeType == AnalyzeTypeSFAccounts || analyzeType == AnalyzeTypeHSCompanies {
+	} else if analyzeType == AnalyzeTypeHSDeals || analyzeType == AnalyzeTypeSFOpportunities {
 
 		row1[keyIndex+1] = row1[keyIndex+1].(int64) + row2[keyIndex+1].(int64)     // Impressions.
 		row1[keyIndex+2] = row1[keyIndex+2].(int64) + row2[keyIndex+2].(int64)     // Clicks.
@@ -1931,7 +1947,6 @@ func MergeDataRowsHavingSameKey(rows [][]interface{}, keyIndex int, attributionK
 			val, ok := row[j].(string)
 			// Ignore row if key is not proper
 			if !ok {
-				logCtx.Info("empty key value error. Ignoring row and continuing.")
 				continue
 			}
 			key = key + val
@@ -3000,7 +3015,6 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, reports *Marketin
 		AdgroupID      string
 	}
 	var missingIDs []MissingCollection
-	count := 0
 	countEnrichedGclid := 0
 	countEnrichedMarketingId := 0
 
@@ -3142,10 +3156,6 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, reports *Marketin
 				WithinQueryPeriod: isSessionWithinQueryPeriod(query.QueryType, query.LookbackDays, query.From, query.To, timestamp), MarketingInfo: marketingValues}
 			(*attributedSessionsByUserId)[userID][uniqueAttributionKey] = userSessionDataNew
 		}
-		count++
-		if count%49999 == 0 {
-			log.WithFields(log.Fields{"Method": "ProcessEventRows", "Count": count}).Info("Processing event rows")
-		}
 	}
 	err := rows.Err()
 	if err != nil {
@@ -3157,9 +3167,6 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, reports *Marketin
 		Info("no document was found in any of the reports for ID. Logging and continuing %+v",
 			missingIDs[:U.MinInt(100, len(missingIDs))])
 	U.LogReadTimeWithQueryRequestID(startReadTime, queryID, &log.Fields{})
-	logCtx.WithFields(log.Fields{"SessionDataCount": count,
-		"countEnrichedGclid":       countEnrichedGclid,
-		"countEnrichedMarketingId": countEnrichedMarketingId}).Info("Attribution keyword razorpay debug")
 	return nil
 }
 
@@ -3393,7 +3400,8 @@ func enrichDimensionsWithName(attributionData *map[string]*AttributionData, dime
 		}
 	}
 }
-func enrichDimensionsWithoutChannel(attributionData *map[string]*AttributionData, dimensions []string, adwordsData, fbData, linkedinData, bingadsData, customAdsData map[string]MarketingData, attributionKey string) {
+func enrichDimensionsWithoutChannel(attributionData *map[string]*AttributionData, dimensions []string, adwordsData, fbData,
+	linkedinData, bingadsData, customAdsData map[string]MarketingData, attributionKey string) {
 
 	for _, dim := range dimensions {
 		for k, v := range *attributionData {
@@ -3407,15 +3415,9 @@ func enrichDimensionsWithoutChannel(attributionData *map[string]*AttributionData
 			if customDimKey == "" {
 				continue
 			}
-			foundInAdwords := "NotFound"
-			if _, exists := adwordsData[customDimKey]; exists {
-				foundInAdwords = "Found"
-			}
-			log.WithFields(log.Fields{"CustomDebug": "True1", "CustomDimKey": customDimKey, "Found": foundInAdwords, "AttributionDataKey": k, "AttributionDataValue": v, "Channel": (*attributionData)[k].Channel}).Info("Enrich Custom Dimension")
 
 			if d, exists := adwordsData[customDimKey]; exists {
 				if val, found := d.CustomDimensions[dim]; found {
-					log.WithFields(log.Fields{"CustomDebug": "True2", "CustomDimKey": customDimKey, "data": adwordsData[customDimKey], "Val": val, "Found": foundInAdwords, "AttributionDataKey": k, "AttributionDataValue": v, "Channel": (*attributionData)[k].Channel}).Info("Enrich Adwords Custom Dimension")
 					(*attributionData)[k].CustomDimensions[dim] = val
 					continue
 				}
@@ -3527,4 +3529,65 @@ func isSessionWithinQueryPeriod(queryType string,
 		return false
 	}
 	return false
+}
+
+func EnrichRequestUsingAttributionConfig(projectID int64, query *AttributionQuery, settings *ProjectSetting, logCtx *log.Entry) error {
+
+	attributionConfig, err1 := decodeAttributionConfig(settings.AttributionConfig)
+	if err1 != nil {
+		return errors.New("failed to decode attribution config from project settings")
+	}
+
+	//Todo (Anil) Add enrichment of attribution Window, handle case of 'Entire User Journey'
+
+	switch query.AnalyzeType {
+
+	case AnalyzeTypeUsers:
+		query.RunType = RunTypeUser
+		return nil
+	case AnalyzeTypeUserKPI:
+		query.RunType = RunTypeUserKPI
+		return nil
+	case AnalyzeTypeHSDeals:
+		if &attributionConfig != nil && attributionConfig.AnalyzeTypeHSCompaniesEnabled == true {
+			query.RunType = RunTypeHSCompanies
+			return nil
+		} else if &attributionConfig != nil && attributionConfig.AnalyzeTypeHSDealsEnabled == true {
+			query.RunType = RunTypeHSDeals
+			return nil
+		} else {
+			logCtx.WithFields(log.Fields{"Query": query, "AttributionConfig": attributionConfig}).Error("Failed to set analyze type")
+			return errors.New("invalid config/query. Failed to set analyze type from attribution config & project settings")
+		}
+	case AnalyzeTypeSFOpportunities:
+		if &attributionConfig != nil && attributionConfig.AnalyzeTypeSFAccountsEnabled == true {
+			query.RunType = RunTypeSFAccounts
+			return nil
+		} else if &attributionConfig != nil && attributionConfig.AnalyzeTypeSFOpportunitiesEnabled == true {
+			query.RunType = RunTypeSFOpportunities
+			return nil
+		} else {
+			logCtx.WithFields(log.Fields{"Query": query, "AttributionConfig": attributionConfig}).Error("Failed to set analyze type")
+			return errors.New("invalid config/query. Failed to set analyze type from attribution config & project settings")
+		}
+	default:
+		logCtx.WithFields(log.Fields{"Query": query, "AttributionConfig": attributionConfig}).Error("Failed to set analyze type")
+		return errors.New("invalid config/query. Failed to set analyze type from attribution config & project settings")
+	}
+	return errors.New("invalid config/query. Failed to set analyze type from attribution config & project settings")
+}
+
+// decodeAttributionConfig decode attribution config from project settings to map
+func decodeAttributionConfig(config *postgres.Jsonb) (AttributionConfig, error) {
+	attributionConfig := AttributionConfig{}
+	if config == nil {
+		return attributionConfig, nil
+	}
+
+	err := json.Unmarshal(config.RawMessage, &attributionConfig)
+	if err != nil {
+		return attributionConfig, err
+	}
+
+	return attributionConfig, nil
 }
