@@ -478,7 +478,9 @@ function SaveQuery({
 
   useEffect(() => {
     fetchProjectSettingsV1(active_project.id);
-    fetchSlackChannels(active_project.id);
+    if(projectSettingsV1?.int_slack) {
+      fetchSlackChannels(active_project.id);
+    }
   }, [active_project, projectSettingsV1?.int_slack, showShareToSlackModal]);
 
   useEffect(() => {

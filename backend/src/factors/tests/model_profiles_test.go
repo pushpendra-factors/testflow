@@ -485,6 +485,7 @@ func TestProfilesGroupSupport(t *testing.T) {
 		query := model.ProfileQuery{
 			From: initialTimestamp,
 			To:   finalTimestamp,
+			Type: "hubspot",
 			GroupBys: []model.QueryGroupByProperty{
 				model.QueryGroupByProperty{
 					Entity:   model.PropertyEntityUser,
@@ -496,6 +497,7 @@ func TestProfilesGroupSupport(t *testing.T) {
 		}
 
 		result, errCode, _ := store.GetStore().ExecuteProfilesQuery(project.ID, query, C.EnableOptimisedFilterOnProfileQuery())
+
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, model.AliasAggr, result.Headers[0])
@@ -534,6 +536,7 @@ func TestProfilesGroupSupport(t *testing.T) {
 		query2 := model.ProfileQuery{
 			From: initialTimestamp,
 			To:   finalTimestamp,
+			Type: "salesforce",
 			GroupBys: []model.QueryGroupByProperty{
 				model.QueryGroupByProperty{
 					Entity:   model.PropertyEntityUser,
@@ -583,6 +586,7 @@ func TestProfilesGroupSupport(t *testing.T) {
 		query3 := model.ProfileQuery{
 			From: initialTimestamp,
 			To:   finalTimestamp,
+			Type: "hubspot",
 			GroupBys: []model.QueryGroupByProperty{
 				model.QueryGroupByProperty{
 					Entity:   model.PropertyEntityUser,
@@ -632,6 +636,7 @@ func TestProfilesGroupSupport(t *testing.T) {
 		query4 := model.ProfileQuery{
 			From: initialTimestamp,
 			To:   finalTimestamp,
+			Type: "salesforce",
 			GroupBys: []model.QueryGroupByProperty{
 				model.QueryGroupByProperty{
 					Entity:   model.PropertyEntityUser,

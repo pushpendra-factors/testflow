@@ -37,21 +37,33 @@ func GetAnalyticsMetricsFromStorage(c *gin.Context) (interface{}, int, string, s
 	}
 	data, err := ioutil.ReadAll(reader)
 	if err != nil {
-		log.WithError(err).Error("Error reading file")
+		log.WithError(err).Error("Error reading metrics file")
 		return nil, http.StatusInternalServerError, "", err.Error(), true
 	}
 	jsonData := string(data)
 	return jsonData, http.StatusFound, "", "", false
 }
-func getAnalyticsAlertsFromStorage(c *gin.Context) {
+func GetAnalyticsAlertsFromStorage(c *gin.Context) (interface{}, int, string, string, bool) {
 	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
-		return
+		return nil, http.StatusBadRequest, INVALID_PROJECT, "Invalid Project ID", true
 	}
-	//date := c.Param("date_range")
-	// pull alerts.txt
-	// return json for alerts.txt
+	date := c.Query("date_range")
+	dateRange, err := strconv.ParseInt(date, 10, 64)
+	path, fileName := C.GetCloudManager().GetModelAlertsFilePathAndName(projectId, dateRange, "w")
+	reader, err := C.GetCloudManager().Get(path, fileName)
+	if err != nil {
+		log.WithError(err).Error("Error reading alerts file")
+		return nil, http.StatusInternalServerError, "", err.Error(), true
+	}
+	data, err := ioutil.ReadAll(reader)
+	if err != nil {
+		log.WithError(err).Error("Error reading alerts file")
+		return nil, http.StatusInternalServerError, "", err.Error(), true
+	}
+	jsonData := string(data)
+	return jsonData, http.StatusFound, "", "", false
 }
 
 func stringToTime(s string) (time.Time, error) {

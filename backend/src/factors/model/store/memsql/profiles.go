@@ -86,6 +86,12 @@ func (store *MemSQL) ExecuteProfilesQuery(projectID int64, query model.ProfileQu
 func (store *MemSQL) ExecuteAllUsersProfilesQuery(projectID int64, query model.ProfileQuery,
 	enableOptimisedFilter bool) (*model.QueryResult, int, string) {
 
+	// Profile query with wrap is doing repartitioning and then filtering.
+	// If From and To used are of bigger time range, it is repartitioning huge data.
+	if (query.To-query.From >= 10*U.SECONDS_IN_YEAR) && enableOptimisedFilter {
+		enableOptimisedFilter = false
+	}
+
 	logFields := log.Fields{
 		"query":      query,
 		"project_id": projectID,

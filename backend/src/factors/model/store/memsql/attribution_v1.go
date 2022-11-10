@@ -33,6 +33,18 @@ func (store *MemSQL) ExecuteAttributionQueryV1(projectID int64, queryOriginal *m
 
 	var query *model.AttributionQuery
 	U.DeepCopy(queryOriginal, &query)
+
+	// pulling project setting to build attribution query
+	settings, errCode := store.GetProjectSetting(projectID)
+	if errCode != http.StatusFound {
+		return nil, errors.New("failed to get project settings during attribution call")
+	}
+	// enrich RunType for attribution query
+	err := model.EnrichRequestUsingAttributionConfig(projectID, query, settings, logCtx)
+	if err != nil {
+		return nil, err
+	}
+
 	// supporting existing old/saved queries
 	model.AddDefaultAnalyzeType(query)
 	model.AddDefaultKeyDimensionsToAttributionQuery(query)
@@ -164,6 +176,18 @@ func (store *MemSQL) ExecuteAttributionQueryV0(projectID int64, queryOriginal *m
 
 	var query *model.AttributionQuery
 	U.DeepCopy(queryOriginal, &query)
+
+	// pulling project setting to build attribution query
+	settings, errCode := store.GetProjectSetting(projectID)
+	if errCode != http.StatusFound {
+		return nil, errors.New("failed to get project settings during attribution call")
+	}
+	// enrich RunType for attribution query
+	err := model.EnrichRequestUsingAttributionConfig(projectID, query, settings, logCtx)
+	if err != nil {
+		return nil, err
+	}
+
 	// supporting existing old/saved queries
 	model.AddDefaultAnalyzeType(query)
 	model.AddDefaultKeyDimensionsToAttributionQuery(query)
@@ -393,6 +417,9 @@ func (store *MemSQL) PullConvertedUsers(projectID int64, query *model.Attributio
 		for id, _ := range _uniqueUsers {
 			usersIDsToAttribute = append(usersIDsToAttribute, id)
 		}
+		if C.GetAttributionDebug() == 1 {
+			log.WithFields(log.Fields{"KPIAttribution": "Debug", "usersIDsToAttribute": usersIDsToAttribute}).Info("KPI Attribution usersIDsToAttribute")
+		}
 	}
 	return coalUserIdConversionTimestamp, usersToBeAttributed, kpiData, usersIDsToAttribute, nil
 }
@@ -563,7 +590,7 @@ func (store *MemSQL) GetAttributionData(projectID int64, query *model.Attributio
 
 		if C.GetAttributionDebug() == 1 {
 			uniqUsers := len(groupSessions)
-			logCtx.WithFields(log.Fields{"AttributionDebug": "sessions"}).Info(fmt.Sprintf("Total users with session: %d", uniqUsers))
+			logCtx.WithFields(log.Fields{"AttributionDebug": groupSessions}).Info(fmt.Sprintf("Total users with session: %d", uniqUsers))
 		}
 		var err error
 		attributionData, isCompare, err = store.FireAttributionForKPI(projectID, query, groupSessions, kpiData, sessionWT, *logCtx)
@@ -626,8 +653,8 @@ func ProcessAttributionDataToResult(projectID int64, query *model.AttributionQue
 
 	if query.AttributionKey == model.AttributionKeyLandingPage {
 
-		if query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities ||
-			query.AnalyzeType == model.AnalyzeTypeSFAccounts || query.AnalyzeType == model.AnalyzeTypeHSCompanies {
+		if query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities {
+
 			result = model.ProcessQueryKPILandingPageUrl(query, attributionData, *logCtx, kpiData, isCompare)
 			if C.GetAttributionDebug() == 1 {
 				logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Process Query Landing PageUrl took time")
@@ -643,8 +670,7 @@ func ProcessAttributionDataToResult(projectID int64, query *model.AttributionQue
 			queryStartTime = time.Now().UTC().Unix()
 		}
 
-	} else if query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities ||
-		query.AnalyzeType == model.AnalyzeTypeSFAccounts || query.AnalyzeType == model.AnalyzeTypeHSCompanies {
+	} else if query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities {
 		// execution similar to the normal run - still keeping it separate for better understanding
 		result = model.ProcessQueryKPI(query, attributionData, marketingReports, isCompare, kpiData)
 		if C.GetAttributionDebug() == 1 {
