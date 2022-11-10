@@ -53,7 +53,7 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 		}
 		log.Info("Processing Query ID: ", query.ID, " query: ", actualQuery)
 		var err error
-		cfTmpPath, cfTmpName := diskManager.GetEventsForTimerangeFilePathAndName(projectId, actualQuery.StartTimestamp.Unix(), actualQuery.EndTimestamp.Unix())
+		cfTmpPath, cfTmpName := diskManager.GetEventsForTimerangeFilePathAndName(projectId, actualQuery.StartTimestamp, actualQuery.EndTimestamp)
 		localFilePath := cfTmpPath + cfTmpName
 		log.Info("Starting cloud events file get")
 		cfCloudPath, cfCloudName := "projects/51/events/m/20220801/", "events.txt"

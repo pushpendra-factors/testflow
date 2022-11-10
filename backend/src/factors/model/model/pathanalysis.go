@@ -36,8 +36,8 @@ type PathAnalysisQuery struct {
 	NumberOfSteps       int             `json:"steps"`
 	IncludeEvents       []string        `json:"include_events"`
 	ExcludeEvents       []string        `json:"exclude_events"`
-	StartTimestamp      time.Time       `json:"starttimestamp"`
-	EndTimestamp        time.Time       `json:"endtimestamp"`
+	StartTimestamp      int64       `json:"starttimestamp"`
+	EndTimestamp        int64      `json:"endtimestamp"`
 	AvoidRepeatedEvents bool            `json:"avoid_repeated_events"`
 	Filter              []QueryProperty `json:"filter"`
 }
