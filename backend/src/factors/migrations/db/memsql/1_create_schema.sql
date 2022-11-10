@@ -442,6 +442,9 @@ CREATE TABLE IF NOT EXISTS project_settings (
     is_weekly_insights_enabled boolean,
     is_explain_enabled boolean,
     timelines_config json,
+    client6_signal_key text,
+    factors6_signal_key text,
+    int_six_signal boolean NOT NULL DEFAULT FALSE,
     KEY (updated_at),
     SHARD KEY (project_id),
     PRIMARY KEY (project_id)
