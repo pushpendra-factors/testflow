@@ -3576,10 +3576,16 @@ func EnrichRequestUsingAttributionConfig(projectID int64, query *AttributionQuer
 			return errors.New("invalid config/query. Failed to set analyze type from attribution config & project settings")
 		}
 	default:
-		logCtx.WithFields(log.Fields{"Query": query, "AttributionConfig": attributionConfig}).Error("Failed to set analyze type")
-		return errors.New("invalid config/query. Failed to set analyze type from attribution config & project settings")
+		query.AnalyzeType = AnalyzeTypeUsers
+		query.RunType = RunTypeUser
+		return nil
+		// logCtx.WithFields(log.Fields{"Query": query, "AttributionConfig": attributionConfig}).Error("Failed to set analyze type")
+		// return errors.New("invalid config/query. Failed to set analyze type from attribution config & project settings")
 	}
-	return errors.New("invalid config/query. Failed to set analyze type from attribution config & project settings")
+	query.AnalyzeType = AnalyzeTypeUsers
+	query.RunType = RunTypeUser
+	return nil
+	// return errors.New("invalid config/query. Failed to set analyze type from attribution config & project settings")
 }
 
 // decodeAttributionConfig decode attribution config from project settings to map
