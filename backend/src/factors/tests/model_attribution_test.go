@@ -1538,6 +1538,59 @@ func TestGetUserGroupWise(t *testing.T) {
 
 	})
 
+	t.Run("HubspotDealsLandingPageWithContentGroups", func(t *testing.T) {
+
+		query1 := model.KPIQuery{
+			Category:         model.ProfileCategory,
+			DisplayCategory:  model.HubspotDealsDisplayCategory,
+			PageUrl:          "",
+			Metrics:          []string{"Deals"},
+			GroupBy:          []model.KPIGroupBy{},
+			From:             timestamp,
+			To:               timestamp + 3*U.SECONDS_IN_A_DAY,
+			GroupByTimestamp: "date",
+		}
+
+		query2 := model.KPIQuery{}
+		U.DeepCopy(&query1, &query2)
+		query2.GroupByTimestamp = ""
+
+		kpiQueryGroup := model.KPIQueryGroup{
+			Class:         "kpi",
+			Queries:       []model.KPIQuery{query1, query2, query1, query2},
+			GlobalFilters: []model.KPIFilter{},
+			GlobalGroupBy: []model.KPIGroupBy{
+				{
+					Granularity:      "",
+					PropertyName:     model.HSDealIDProperty,
+					PropertyDataType: "numerical",
+					Entity:           "user",
+					ObjectType:       "",
+					GroupByType:      "raw_values",
+				},
+			},
+		}
+
+		query := &model.AttributionQuery{
+			AnalyzeType:              model.AnalyzeTypeHSDeals,
+			From:                     timestamp,
+			To:                       timestamp + 3*U.SECONDS_IN_A_DAY,
+			KPI:                      kpiQueryGroup,
+			AttributionKey:           model.AttributionKeyLandingPage,
+			TacticOfferType:          model.MarketingEventTypeOffer,
+			AttributionKeyDimension:  []string{model.FieldLandingPageUrl},
+			AttributionContentGroups: []string{"cg_123"},
+			AttributionMethodology:   model.AttributionMethodLinear,
+			LookbackDays:             10,
+		}
+
+		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, "", C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		assert.Nil(t, err)
+		assert.Equal(t, float64(2), getConversionUserCountKpiLandingPage(query.AttributionKey, result, "lp1111"+model.KeyDelimiter+"$none"))
+		assert.Equal(t, float64(2), getSecondConversionUserCountKpiLandingPage(query.AttributionKey, result, "lp1111"+model.KeyDelimiter+"$none"))
+
+	})
+
 	t.Run("TestForHubspotDeals", func(t *testing.T) {
 
 		query1 := model.KPIQuery{

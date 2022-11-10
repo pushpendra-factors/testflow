@@ -1125,7 +1125,12 @@ func GetLastKeyValueIndex(headers []string) int {
 }
 
 func GetLastKeyValueIndexLandingPage(headers []string) int {
-	return 0
+	for index, val := range headers {
+		if strings.Contains(val, "-") {
+			return index - 1
+		}
+	}
+	return -1
 }
 
 func GetImpressionsIndex(headers []string) int {
