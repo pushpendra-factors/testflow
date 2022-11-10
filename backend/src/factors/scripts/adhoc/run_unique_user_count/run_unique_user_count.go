@@ -106,6 +106,7 @@ func main() {
 	}
 
 	query := &model.AttributionQuery{
+		AnalyzeType: model.AnalyzeTypeUsers,
 		//LinkedEvents:           linkedEventsArray,
 		From: *customStartTime,
 		To:   *customEndTime,

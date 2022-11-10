@@ -311,6 +311,7 @@ const Alerts = ({
                     'me': [queries[0]?.metric],
                     'pgUrl': queries[0]?.pageViewVal ? queries[0]?.pageViewVal : '',
                     "tz": localStorage.getItem('project_timeZone') || 'Asia/Kolkata',
+                    'qt': queries[0]?.qt
                 },
                 "query_type": "kpi",
                 "operator": operatorState,
@@ -450,7 +451,9 @@ const Alerts = ({
 
     useEffect(() => {
         fetchProjectSettingsV1(activeProject.id);
-        fetchSlackChannels(activeProject.id);
+        if(projectSettings?.int_slack) {
+            fetchSlackChannels(activeProject.id);
+        }
     }, [activeProject, projectSettings?.int_slack, slackEnabled]);
 
     useEffect(() => {

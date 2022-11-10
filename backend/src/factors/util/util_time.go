@@ -13,6 +13,7 @@ const (
 	DATETIME_FORMAT_YYYYMMDD_HYPHEN string = "2006-01-02"
 	DATETIME_FORMAT_YYYYMMDD        string = "20060102"
 	DATETIME_FORMAT_DB              string = "2006-01-02 15:04:05"
+	SECONDS_IN_YEAR                        = ((365 * 86400) + 20736)
 )
 
 // Returns date in YYYYMMDD format

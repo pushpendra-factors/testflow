@@ -15,6 +15,7 @@
   "lbw": 10,
   "from": 1614105000,
   "to": 1624537000,
+  "analyze_type":"users",
   "attribution_methodology": "Last_Touch",
   "attribution_methodology_c": "",
   "query_type": "ConversionBased"

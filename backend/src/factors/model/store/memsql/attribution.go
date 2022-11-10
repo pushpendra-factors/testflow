@@ -368,8 +368,7 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID int64, queryOriginal *mod
 		}
 		queryStartTime = time.Now().UTC().Unix()
 
-	} else if query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities ||
-		query.AnalyzeType == model.AnalyzeTypeSFAccounts || query.AnalyzeType == model.AnalyzeTypeHSCompanies {
+	} else if query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities {
 		// execution similar to the normal run - still keeping it separate for better understanding
 		result = model.ProcessQueryKPI(query, attributionData, marketingReports, isCompare, kpiData)
 		if C.GetAttributionDebug() == 1 {

@@ -44,6 +44,9 @@ function Sidebar(props) {
     });
       //Factors FIRST_TIME_LOGIN tracking for NON_INVITED
       factorsai.track('FIRST_TIME_LOGIN',{'email':props?.currentAgent?.email});
+      if(props?.currentAgent?.is_auth0_user) {
+        factorsai.track('$form_submitted', {'$email': props?.currentAgent?.email})
+      }
   }
 
   useEffect(() => {
