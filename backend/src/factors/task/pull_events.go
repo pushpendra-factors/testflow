@@ -828,14 +828,16 @@ func PullUsersDataForCustomMetrics(projectId int64, cloudManager *filestore.File
 			return fmt.Errorf("%s", errStr), false
 		}
 		for _, customMetric := range customMetrics {
-			var customMetricTransformation M.CustomMetricTransformation
-			err := U.DecodePostgresJsonbToStructType(customMetric.Transformations, &customMetricTransformation)
-			if err != nil {
-				status["users-error"] = "Error during decode of custom metrics transformations"
-				return err, false
-			}
-			if _, ok := uniqueDateFileds[customMetricTransformation.DateField]; !ok {
-				uniqueDateFileds[customMetricTransformation.DateField] = customMetric.ObjectType
+			if customMetric.TypeOfQuery == M.ProfileQueryType && customMetric.ObjectType != "others" {
+				var customMetricTransformation M.CustomMetricTransformation
+				err := U.DecodePostgresJsonbToStructType(customMetric.Transformations, &customMetricTransformation)
+				if err != nil {
+					status["users-error"] = "Error during decode of custom metrics transformations"
+					return err, false
+				}
+				if _, ok := uniqueDateFileds[customMetricTransformation.DateField]; !ok {
+					uniqueDateFileds[customMetricTransformation.DateField] = customMetric.ObjectType
+				}
 			}
 		}
 	}
