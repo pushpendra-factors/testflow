@@ -87,8 +87,8 @@ func (store *MemSQL) GetDataFromUserKPIResult(projectID int64, kpiQueryResult mo
 	datetimeIdx := 0
 	keyIdx := 1
 	valIdx := 2
-	var kpiAggFunctionType []string
-
+	kpiHeaderLength := len(kpiQueryResult.Headers)
+	kpiAggFunctionType := make([]string, kpiHeaderLength)
 	var kpiValueHeaders []string
 	for idx := valIdx; idx < len(kpiQueryResult.Headers); idx++ {
 		kpiValueHeaders = append(kpiValueHeaders, kpiQueryResult.Headers[idx])
@@ -98,7 +98,7 @@ func (store *MemSQL) GetDataFromUserKPIResult(projectID int64, kpiQueryResult mo
 		return nil
 	}
 
-	for i, _ := range kpiValueHeaders {
+	for i := range kpiValueHeaders {
 		kpiAggFunctionType[i] = "unique"
 	}
 	if C.GetAttributionDebug() == 1 {
@@ -109,11 +109,11 @@ func (store *MemSQL) GetDataFromUserKPIResult(projectID int64, kpiQueryResult mo
 
 func (store *MemSQL) AddCoalUserIDinKPIData(kpiData *map[string]model.KPIInfo, logCtx log.Entry) error {
 
-	var coalUsers []string
 	for kpiID, kpiInfo := range *kpiData {
+		var coalUsers []string
 		coalUsers = append(coalUsers, kpiID)
 		kpiInfo.KpiCoalUserIds = coalUsers
-
+		(*kpiData)[kpiID] = kpiInfo
 	}
 	return nil
 }
