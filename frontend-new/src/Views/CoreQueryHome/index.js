@@ -361,7 +361,8 @@ function CoreQuery({
             ...equivalentQuery.breakdown.event
           ],
           globalFilters: equivalentQuery.globalFilters,
-          ...queryDateRange
+          ...queryDateRange,
+          events_condition: equivalentQuery.eventsCondition
         };
         return queryOpts;
       });

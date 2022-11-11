@@ -72,3 +72,29 @@
 .ant-drawer-body {
     padding: 0 !important;
 }
+
+
+.toplevel_select {
+    padding: 0;
+    position: relative;
+  
+    &_button {
+      padding: 0;
+  
+      &:hover,
+      &:focus {
+        background: #fff !important;
+      }
+    }
+  
+    &_dropdown {
+      top: 0;
+      &_menu {
+        top: 32px;
+      }
+  
+      .ant-select-selector {
+        border-radius: 12px;
+      }
+    }
+  }

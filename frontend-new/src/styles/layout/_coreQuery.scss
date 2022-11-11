@@ -135,6 +135,14 @@ $cq-card-transition: transform 0.2s ease-in-out;
     padding-right: 0;
   }
 
+  &.no-padding-t {
+    padding-top: 0;
+  }
+
+  &.no-padding-b {
+    padding-bottom: 0;
+  }
+  
   &.bordered {
     // border-top: 1px solid $fa-color--mono-2;
     border-bottom: 1px solid $fa-color--mono-1;

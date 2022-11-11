@@ -247,6 +247,7 @@ function CoreQuery({
   const { session_analytics_seq } = queryOptions;
   const { globalFilters } = queryOptions;
   const groupAnalysis = queryOptions.group_analysis;
+  const eventsCondition = queryOptions.events_condition
 
   useEffect(() => {
     fetchDemoProject()
@@ -764,7 +765,8 @@ function CoreQuery({
           queriesA,
           session_analytics_seq,
           durationObj,
-          globalFilters
+          globalFilters,
+          eventsCondition
         );
 
         if (!isQuerySaved) {
@@ -815,6 +817,7 @@ function CoreQuery({
       groupBy,
       globalFilters,
       dateRange,
+      eventsCondition,
       updateResultState,
       configActionsOnRunningQuery,
       updateLocalReducer,
