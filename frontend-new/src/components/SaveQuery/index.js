@@ -68,9 +68,7 @@ function SaveQuery({
   sendAlertNow,
   dateFromTo,
   showSaveQueryModal,
-  setShowSaveQueryModal,
-  ShowAddToDashModal,
-  setShowAddToDashModal
+  setShowSaveQueryModal
 }) {
   const dispatch = useDispatch();
 
@@ -119,12 +117,6 @@ function SaveQuery({
     }
   }, [showSaveQueryModal]);
 
-  useEffect(() => {
-    if (ShowAddToDashModal) {
-      toggleAddToDashModal();
-    }
-  }, [ShowAddToDashModal]);
-
   const {
     activeAction,
     apisCalled,
@@ -143,7 +135,6 @@ function SaveQuery({
 
   const toggleAddToDashModal = useCallback(() => {
     updateLocalReducer({ type: TOGGLE_ADD_TO_DASHBOARD_MODAL });
-    setShowAddToDashModal(false);
   }, [updateLocalReducer]);
 
   const toggleDeleteModal = useCallback(() => {

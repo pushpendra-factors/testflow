@@ -118,7 +118,7 @@ function UserProfiles({
     marketo?.status ||
     integrationV1?.int_slack ||
     integration?.lead_squared_config !== null ||
-    integration?.six_signal_enabled;
+    integration?.int_six_signal;
 
   useEffect(() => {
     getUserProperties(activeProject.id);

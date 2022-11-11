@@ -43,7 +43,6 @@ function AnalysisHeader({
 }) {
   const [hideIntercomState, setHideIntercomState] = useState(true);
   const [showSaveQueryModal, setShowSaveQueryModal] = useState(false);
-  const [ShowAddToDashModal, setShowAddToDashModal] = useState(false);
   const savedQueries = useSelector((state) =>
     get(state, 'queries.data', EMPTY_ARRAY)
   );
@@ -91,36 +90,7 @@ function AnalysisHeader({
   }, [])
 
   const handleCloseToAnalyse = () => {
-    if(savedQueryId) {
-      const query = savedQueries.find(
-        (elem) => elem.id === savedQueryId
-      );
-      if(!query?.is_dashboard_query) {
-        Modal.confirm({
-          title: 'This report is saved but not added to Dashboard. Would you like to add this before leaving?',
-          okText: 'Add to Dashboard',
-          cancelText: 'Cancel',
-          closable: true,
-          centered: true,
-          onOk: () => {
-            setShowAddToDashModal(true);
-          },
-          onCancel: () => {
-            history.push({
-              pathname: '/analyse'
-            });
-            onBreadCrumbClick();
-          }
-        });
-      } else {
-        history.push({
-          pathname: '/analyse'
-        });
-        onBreadCrumbClick();
-      }
-    }
-
-    if(!savedQueryId) {
+    if(!savedQueryId && requestQuery !== null) {
       Modal.confirm({
         title: 'This report is not yet saved. Would you like to save this before leaving?',
         okText: 'Save report',
@@ -137,40 +107,16 @@ function AnalysisHeader({
           onBreadCrumbClick();
         }
       });
+    } else {
+      history.push({
+        pathname: '/analyse'
+      });
+      onBreadCrumbClick();
     }
   };
 
   const handleCloseDashboardQuery = useCallback(() => {
-    if(savedQueryId) {
-      const query = savedQueries.find(
-        (elem) => elem.id === savedQueryId
-      );
-      if(!query?.is_dashboard_query) {
-        Modal.confirm({
-          title: 'This report is saved but not added to Dashboard. Would you like to add this before leaving?',
-          okText: 'Add to Dashboard',
-          cancelText: 'Cancel',
-          closable: true,
-          centered: true,
-          onOk: () => {
-            setShowAddToDashModal(true);
-          },
-          onCancel: () => {
-            history.push({
-              pathname: '/',
-              state: { dashboardWidgetId: navigatedFromDashboard.id }
-            });
-          }
-        });
-      } else {
-        history.push({
-          pathname: '/',
-          state: { dashboardWidgetId: navigatedFromDashboard.id }
-        });
-      }
-    }
-
-    if(!savedQueryId) {
+    if(!savedQueryId && requestQuery !== null) {
       Modal.confirm({
         title: 'This report is not yet saved. Would you like to save this before leaving?',
         okText: 'Save report',
@@ -187,6 +133,11 @@ function AnalysisHeader({
           });
         }
       }); 
+    } else {
+      history.push({
+        pathname: '/',
+        state: { dashboardWidgetId: navigatedFromDashboard.id }
+      });
     }
   }, [history, navigatedFromDashboard, requestQuery, savedQueryId, savedQueries]);
 
@@ -267,8 +218,6 @@ function AnalysisHeader({
       <SaveQuery
         showSaveQueryModal={showSaveQueryModal}
         setShowSaveQueryModal={setShowSaveQueryModal}
-        ShowAddToDashModal={ShowAddToDashModal}
-        setShowAddToDashModal={setShowAddToDashModal}
         queryType={queryType}
         requestQuery={requestQuery}
         queryTitle={queryTitle}
