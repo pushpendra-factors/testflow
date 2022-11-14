@@ -326,7 +326,7 @@ function SaveQuery({
           queryId = res.data.id;
 
           dispatch({ type: QUERY_CREATED, payload: res.data });
-          setQuerySaved({ name: title, id: res.data.id });
+          // setQuerySaved({ name: title, id: res.data.id });
 
           // if(queryType === QUERY_TYPE_EVENT && res?.data?.id_text) {
           //   history.replace('/analyse/event/' + res.data.id_text);
@@ -364,7 +364,7 @@ function SaveQuery({
               settings: updatedSettings
             }
           });
-          setQuerySaved({ name: title, id: savedQueryId });
+          // setQuerySaved({ name: title, id: savedQueryId });
           queryId = savedQueryId;
         }
 
@@ -392,6 +392,7 @@ function SaveQuery({
           }
         }
 
+        setQuerySaved({ name: title, id: queryId });
         // Factors SAVE_QUERY EDIT_QUERY tracking
         factorsai.track(activeAction, {
           query_type: queryType,
@@ -469,7 +470,7 @@ function SaveQuery({
 
   useEffect(() => {
     fetchProjectSettingsV1(active_project.id);
-    if(projectSettingsV1?.int_slack) {
+    if (projectSettingsV1?.int_slack) {
       fetchSlackChannels(active_project.id);
     }
   }, [active_project, projectSettingsV1?.int_slack, showShareToSlackModal]);
