@@ -48,7 +48,7 @@ function HCBarLineChart({
             useHTML: true,
             formatter() {
               return ReactDOMServer.renderToString(
-                <NumFormat number={this.point.y} />
+                <NumFormat number={this.point.y} className='bar-chart-label' />
               );
             }
           },

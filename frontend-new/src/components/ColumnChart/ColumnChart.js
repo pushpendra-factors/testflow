@@ -100,7 +100,7 @@ function ColumnChart({
             formatter() {
               const self = this;
               return ReactDOMServer.renderToString(
-                <NumFormat number={self.point.y} />
+                <NumFormat number={self.point.y} className='bar-chart-label' />
               );
             }
           },
