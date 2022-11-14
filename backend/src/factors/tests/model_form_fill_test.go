@@ -3,7 +3,6 @@ package tests
 import (
 	"net/http"
 	"testing"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -26,12 +25,9 @@ func TestCreateFormFillHandler(t *testing.T) {
 func createFormFill(t *testing.T, project *model.Project) {
 	// Empty/invalid projectID
 	formFill := &model.SDKFormFillPayload{
-		FormId:           "formId1",
-		Value:            "value1",
-		TimeSpent:        0,
-		FirstUpdatedTime: time.Now().Unix(),
-		LastUpdatedTime:  time.Now().Unix(),
-		FieldId:          "fieldId1",
+		FormId:  "formId1",
+		Value:   "value1",
+		FieldId: "fieldId1",
 	}
 	status, err := store.GetStore().CreateFormFillEventById(0, formFill)
 	assert.Equal(t, http.StatusBadRequest, status)
@@ -39,12 +35,9 @@ func createFormFill(t *testing.T, project *model.Project) {
 
 	// Empty/invalid formId
 	formFill = &model.SDKFormFillPayload{
-		FormId:           "",
-		Value:            "value1",
-		TimeSpent:        0,
-		FirstUpdatedTime: time.Now().Unix(),
-		LastUpdatedTime:  time.Now().Unix(),
-		FieldId:          "fieldId1",
+		FormId:  "",
+		Value:   "value1",
+		FieldId: "fieldId1",
 	}
 	status, err = store.GetStore().CreateFormFillEventById(project.ID, formFill)
 	assert.Equal(t, http.StatusBadRequest, status)
@@ -52,12 +45,9 @@ func createFormFill(t *testing.T, project *model.Project) {
 
 	// Empty/invalid fieldId
 	formFill = &model.SDKFormFillPayload{
-		FormId:           "formId1",
-		Value:            "value1",
-		TimeSpent:        0,
-		FirstUpdatedTime: time.Now().Unix(),
-		LastUpdatedTime:  time.Now().Unix(),
-		FieldId:          "",
+		FormId:  "formId1",
+		Value:   "value1",
+		FieldId: "",
 	}
 
 	status, err = store.GetStore().CreateFormFillEventById(project.ID, formFill)
@@ -66,12 +56,9 @@ func createFormFill(t *testing.T, project *model.Project) {
 
 	// Check if form fill created
 	formFill = &model.SDKFormFillPayload{
-		FormId:           "formId1",
-		Value:            "value1",
-		TimeSpent:        0,
-		FirstUpdatedTime: time.Now().Unix(),
-		LastUpdatedTime:  time.Now().Unix(),
-		FieldId:          "fieldId1",
+		FormId:  "formId1",
+		Value:   "value1",
+		FieldId: "fieldId1",
 	}
 	status, err = store.GetStore().CreateFormFillEventById(project.ID, formFill)
 	assert.Equal(t, http.StatusCreated, status)
@@ -79,12 +66,9 @@ func createFormFill(t *testing.T, project *model.Project) {
 
 	// Check for duplicate case.
 	formFill = &model.SDKFormFillPayload{
-		FormId:           "formId1",
-		Value:            "value1",
-		TimeSpent:        0,
-		FirstUpdatedTime: time.Now().Unix(),
-		LastUpdatedTime:  time.Now().Unix(),
-		FieldId:          "fieldId1",
+		FormId:  "formId1",
+		Value:   "value1",
+		FieldId: "fieldId1",
 	}
 	status, err = store.GetStore().CreateFormFillEventById(project.ID, formFill)
 	assert.Equal(t, http.StatusConflict, status)

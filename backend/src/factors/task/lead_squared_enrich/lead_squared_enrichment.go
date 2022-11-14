@@ -25,6 +25,9 @@ func RunLeadSquaredEnrich(projectID int64, config map[string]interface{}) (map[s
 
 	activityTypes := map[int]bool{
 		model.LeadSquaredDocumentTypeAlias[model.LEADSQUARED_SALES_ACTIVITY]: true,
+		model.LeadSquaredDocumentTypeAlias[model.LEADSQUARED_EMAIL_SENT]:     true,
+		model.LeadSquaredDocumentTypeAlias[model.LEADSQUARED_EMAIL_INFO]:     true,
+		model.LeadSquaredDocumentTypeAlias[model.LEADSQUARED_HAD_A_CALL]:     true,
 	}
 
 	sourceConfig, err := enrichment.NewCRMEnrichmentConfig(U.CRM_SOURCE_NAME_LEADSQUARED, sourceObjectTypeAndAlias, userTypes, nil, activityTypes)

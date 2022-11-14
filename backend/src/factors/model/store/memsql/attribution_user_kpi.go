@@ -26,6 +26,16 @@ func (store *MemSQL) ExecuteUserKPIForAttribution(projectID int64, query *model.
 	}
 	logCtx.WithFields(log.Fields{"UserKPIAttribution": "Debug", "kpiData": kpiData,
 		"kpiKeys": kpiKeys}).Info("UserKPI-Attribution kpiData reports after RunUserKPIGroupQuery")
+
+	err = store.AddCoalUserIDinKPIData(&kpiData, logCtx)
+	if err != nil {
+		return kpiData, err
+	}
+	if C.GetAttributionDebug() == 1 {
+		logCtx.Info("done pulling group user list ids for Deal or Opportunity")
+		logCtx.WithFields(log.Fields{"UserKPIAttribution": "Debug", "kpiData": kpiData,
+			"kpiKeys": kpiKeys}).Info("UserKPI-Attribution kpiData reports 1")
+	}
 	err = store.PullAllUsersByCustomerUserID(projectID, &kpiData, logCtx)
 	if err != nil {
 		return kpiData, err
@@ -67,7 +77,44 @@ func (store *MemSQL) RunUserKPIGroupQuery(projectID int64, query *model.Attribut
 			return errors.New("no-valid result for userKPI query"), nil
 		}
 
-		return nil, store.GetDataFromKPIResult(projectID, kpiQueryResult, kpiData, query, logCtx)
+		return nil, store.GetDataFromUserKPIResult(projectID, kpiQueryResult, kpiData, query, logCtx)
 	}
 	return errors.New("not a valid type of query for userKPI Attribution"), nil
+}
+
+func (store *MemSQL) GetDataFromUserKPIResult(projectID int64, kpiQueryResult model.QueryResult, kpiData *map[string]model.KPIInfo, query *model.AttributionQuery, logCtx log.Entry) []string {
+
+	datetimeIdx := 0
+	keyIdx := 1
+	valIdx := 2
+
+	kpiValueHeaderLength := len(kpiQueryResult.Headers) - valIdx
+	kpiAggFunctionType := make([]string, kpiValueHeaderLength)
+	var kpiValueHeaders []string
+	for idx := valIdx; idx < len(kpiQueryResult.Headers); idx++ {
+		kpiValueHeaders = append(kpiValueHeaders, kpiQueryResult.Headers[idx])
+	}
+
+	if len(kpiValueHeaders) == 0 {
+		return nil
+	}
+
+	for i := range kpiValueHeaders {
+		kpiAggFunctionType[i] = "unique"
+	}
+	if C.GetAttributionDebug() == 1 {
+		logCtx.WithFields(log.Fields{"kpiValueHeaders": kpiValueHeaders}).Info("KPI-Attribution headers set")
+	}
+	return model.AddKPIKeyDataInMap(kpiQueryResult, logCtx, keyIdx, datetimeIdx, query.From, query.To, valIdx, kpiValueHeaders, kpiAggFunctionType, kpiData)
+}
+
+func (store *MemSQL) AddCoalUserIDinKPIData(kpiData *map[string]model.KPIInfo, logCtx log.Entry) error {
+
+	for kpiID, kpiInfo := range *kpiData {
+		var coalUsers []string
+		coalUsers = append(coalUsers, kpiID)
+		kpiInfo.KpiCoalUserIds = coalUsers
+		(*kpiData)[kpiID] = kpiInfo
+	}
+	return nil
 }

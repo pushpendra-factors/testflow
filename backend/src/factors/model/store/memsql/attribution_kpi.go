@@ -122,7 +122,7 @@ func (store *MemSQL) GetDataFromKPIResult(projectID int64, kpiQueryResult model.
 		logCtx.WithField("messageFinder", "Failed to get custom metrics").Error(errMsg)
 		return nil
 	}
-	if C.GetAttributionDebug() == 1 || query.AnalyzeType == model.AnalyzeTypeUserKPI {
+	if C.GetAttributionDebug() == 1 {
 		logCtx.WithFields(log.Fields{"customMetrics": customMetrics}).Info("customMetrics for project in attribution query")
 	}
 

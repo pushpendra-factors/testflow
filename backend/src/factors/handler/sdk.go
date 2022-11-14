@@ -308,6 +308,7 @@ func SDKGetInfoHandler(c *gin.Context) {
 		AutoTrackSPAPageView: projectSetting.AutoTrackSPAPageView,
 		AutoFormCapture:      projectSetting.AutoFormCapture,
 		AutoClickCapture:     projectSetting.AutoClickCapture,
+		AutoFormFillCapture:  projectSetting.AutoCaptureFormFills,
 		ExcludeBot:           projectSetting.ExcludeBot,
 		IntDrift:             projectSetting.IntDrift,
 		IntClearBit:          projectSetting.IntClearBit,
@@ -800,7 +801,6 @@ func SDKFormFillHandler(c *gin.Context) {
 			Error: "Form fill event failed. Invalid payload."})
 		return
 	}
-	request.TimeSpent = uint64(request.LastUpdatedTime - request.FirstUpdatedTime)
 
 	projectToken := U.GetScopeByKeyAsString(c, mid.SCOPE_PROJECT_TOKEN)
 	if !SDK.IsValidTokenString(projectToken) {

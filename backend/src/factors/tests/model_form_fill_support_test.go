@@ -30,12 +30,9 @@ func TestFormFillHandlerSupport(t *testing.T) {
 func createFormFillSupport(t *testing.T, project *model.Project) {
 	// Empty/invalid projectID
 	formFill := &model.SDKFormFillPayload{
-		FormId:           "formId1",
-		Value:            "value1",
-		TimeSpent:        0,
-		FirstUpdatedTime: U.UnixTimeBeforeDuration(10 * time.Minute),
-		LastUpdatedTime:  U.UnixTimeBeforeDuration(10 * time.Minute),
-		FieldId:          "fieldId1",
+		FormId:  "formId1",
+		Value:   "value1",
+		FieldId: "fieldId1",
 	}
 	status, err := store.GetStore().CreateFormFillEventById(0, formFill)
 	assert.Equal(t, http.StatusBadRequest, status)
@@ -43,12 +40,9 @@ func createFormFillSupport(t *testing.T, project *model.Project) {
 
 	// Empty/invalid formId
 	formFill = &model.SDKFormFillPayload{
-		FormId:           "",
-		Value:            "value1",
-		TimeSpent:        0,
-		FirstUpdatedTime: U.UnixTimeBeforeDuration(10 * time.Minute),
-		LastUpdatedTime:  U.UnixTimeBeforeDuration(10 * time.Minute),
-		FieldId:          "fieldId1",
+		FormId:  "",
+		Value:   "value1",
+		FieldId: "fieldId1",
 	}
 	status, err = store.GetStore().CreateFormFillEventById(project.ID, formFill)
 	assert.Equal(t, http.StatusBadRequest, status)
@@ -56,12 +50,9 @@ func createFormFillSupport(t *testing.T, project *model.Project) {
 
 	// Empty/invalid fieldId
 	formFill = &model.SDKFormFillPayload{
-		FormId:           "formId1",
-		Value:            "value1",
-		TimeSpent:        0,
-		FirstUpdatedTime: U.UnixTimeBeforeDuration(10 * time.Minute),
-		LastUpdatedTime:  U.UnixTimeBeforeDuration(10 * time.Minute),
-		FieldId:          "",
+		FormId:  "formId1",
+		Value:   "value1",
+		FieldId: "",
 	}
 
 	status, err = store.GetStore().CreateFormFillEventById(project.ID, formFill)
@@ -78,12 +69,9 @@ func createFormFillSupport(t *testing.T, project *model.Project) {
 
 	// Check if form fill created
 	formFill = &model.SDKFormFillPayload{
-		FormId:           "formId1",
-		Value:            "value1",
-		TimeSpent:        0,
-		FirstUpdatedTime: U.UnixTimeBeforeDuration(10 * time.Minute),
-		LastUpdatedTime:  U.UnixTimeBeforeDuration(10 * time.Minute),
-		FieldId:          "fieldId1",
+		FormId:  "formId1",
+		Value:   "value1",
+		FieldId: "fieldId1",
 	}
 
 	status, err = store.GetStore().CreateFormFillEventById(project.ID, formFill)
@@ -112,12 +100,9 @@ func createFormFillSupport(t *testing.T, project *model.Project) {
 	startTime := U.UnixTimeBeforeDuration(15 * time.Minute)
 	// Check if form fill created with same fields but different value
 	formFill = &model.SDKFormFillPayload{
-		FormId:           "formId1",
-		Value:            "value_2",
-		TimeSpent:        0,
-		FirstUpdatedTime: U.UnixTimeBeforeDuration(15 * time.Minute),
-		LastUpdatedTime:  U.UnixTimeBeforeDuration(15 * time.Minute),
-		FieldId:          "fieldId1",
+		FormId:  "formId1",
+		Value:   "value_2",
+		FieldId: "fieldId1",
 	}
 
 	status, err = store.GetStore().CreateFormFillEventById(project.ID, formFill)
@@ -148,12 +133,9 @@ func createFormFillSupport(t *testing.T, project *model.Project) {
 	assert.Equal(t, http.StatusAccepted, errCode)
 
 	formFill = &model.SDKFormFillPayload{
-		FormId:           "formId2",
-		Value:            "value2",
-		TimeSpent:        0,
-		FirstUpdatedTime: U.UnixTimeBeforeDuration(10 * time.Minute),
-		LastUpdatedTime:  U.UnixTimeBeforeDuration(10 * time.Minute),
-		FieldId:          "fieldId2",
+		FormId:  "formId2",
+		Value:   "value2",
+		FieldId: "fieldId2",
 	}
 
 	status, err = store.GetStore().CreateFormFillEventById(project.ID, formFill)
@@ -194,7 +176,7 @@ func createFormFillSupport(t *testing.T, project *model.Project) {
 	eventName, errCode := store.GetStore().GetEventName("$form_fill", project.ID)
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, eventName)
-	recordsCreated, errCode := store.GetStore().GetEventsByEventNameId(project.ID, eventName.ID, startTime, formFill.LastUpdatedTime)
+	recordsCreated, errCode := store.GetStore().GetEventsByEventNameId(project.ID, eventName.ID, startTime, U.TimeNowUnix())
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.Equal(t, int(1), len(recordsCreated))
 }

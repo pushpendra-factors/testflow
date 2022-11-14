@@ -9,10 +9,13 @@ const constant = require("./constant");
 const Properties = require("./properties");
 const Cache = require("./cache");
 const { isLocalStorageAvailable } = require("./utils/util");
-const { processAllLocalStorageBacklogRequests } = require("./utils/request")
+const { processAllLocalStorageBacklogRequests } = require("./utils/request");
+const properties = require("./properties");
 
 const SDK_NOT_INIT_ERROR = new Error("Factors SDK is not initialized.");
 const SDK_NO_USER_ERROR = new Error("No user.");
+
+const FACTORS_INPUT_ID_ATTRIBUTE = "data-factors-input-id";
 
 function isAllowedEventName(eventName) {
     // whitelisted $ event_name.
@@ -257,6 +260,9 @@ function runPostInitProcess(_this, trackOnInit) {
     })
     .then(function() {
         return _this.autoFormCapture(_this.getConfig("auto_form_capture"));
+    })
+    .then(function() {
+        return _this.autoCaptureFormFills(_this.getConfig("auto_capture_form_fills"));
     })
     .then(function() {
         return _this.autoClickCapture(_this.getConfig("auto_click_capture"));
@@ -700,6 +706,90 @@ App.prototype.autoFormCapture = function(enabled=false) {
 
 
     return true;
+}
+
+function captureInputFieldValues(appInstance, input) {
+    var newValue = input.value.trim();
+
+    // Minimum characters required.
+    if (newValue.length < 4) return; 
+
+    var inputId = input.getAttribute(FACTORS_INPUT_ID_ATTRIBUTE);
+    if (window.FACTORS_FORM_FILLS == undefined) 
+        window.FACTORS_FORM_FILLS = {};
+    
+    var existingValue = window.FACTORS_FORM_FILLS[inputId];
+    if (newValue != "" && newValue != existingValue) {
+        window.FACTORS_FORM_FILLS[inputId] = newValue;
+
+        var formId = inputId.split(".")[0];
+        var payload = {
+            "form_id": formId,
+            "field_id": inputId,
+            "value": newValue,
+        }
+        updatePayloadWithUserIdFromCookie(payload);
+        logger.debug(payload, false);
+                
+        return appInstance.client.captureFormFill(payload);
+    }
+}
+
+function captureAllInputFieldsInput(appInstance) {
+    var inputs = document.querySelectorAll("input");
+    for(var i=0; i<inputs.length; i++) {
+        if(properties.DISABLED_INPUT_TYPES.indexOf(inputs[i].type) >= 0) continue;
+        captureInputFieldValues(appInstance, inputs[i]);
+    }
+}
+
+App.prototype.autoCaptureFormFills = function(enabled) {
+    if (!enabled) return false;
+
+    // TODO: Add support for lazy loaded forms.
+    // Use window based counter for the incremental id.
+    
+    // Assigning incremental id to the form.
+    var forms = document.querySelectorAll("form");
+    const FACTORS_FORM_ID_ATTRIBUTE = "data-factors-form-id";
+    for (var fi=0; fi<forms.length; fi++) {
+        forms[fi].setAttribute(FACTORS_FORM_ID_ATTRIBUTE, "form-"+fi);
+    }
+
+    // Assigns non-form fields with noform.field-1.
+    // Assign form input fields with form-1.field-1.
+    var inputs = document.querySelectorAll("input");
+    for(var i=0; i<inputs.length; i++) {
+        if(properties.DISABLED_INPUT_TYPES.indexOf(inputs[i].type) >= 0) continue;
+
+        var formId = "noform";
+        var hasForm = inputs[i].form && 
+            inputs[i].form.getAttribute(FACTORS_FORM_ID_ATTRIBUTE) != "";
+        
+        if (hasForm) formId = inputs[i].form.getAttribute(FACTORS_FORM_ID_ATTRIBUTE);
+
+        inputs[i].setAttribute(FACTORS_INPUT_ID_ATTRIBUTE, formId+".field-"+i);
+
+        // Captures values while typing.
+        var _app = this;
+        inputs[i].addEventListener("input", function() { 
+            var _input = this; 
+            captureInputFieldValues(_app, _input); 
+        });
+
+        // Captures values when the cursor is out of focus and the value is changed.
+        inputs[i].addEventListener("change", function() { 
+            var _input = this; 
+            captureInputFieldValues(_app, _input); 
+        });
+    }
+
+    // Create timeouts for every 5s for 30s.
+    var t = 5000;
+    while (t < 30000) {
+        setTimeout(function() { captureAllInputFieldsInput(_app); }, t);
+        t = t + 5000;
+    }
 }
 
 App.prototype.captureClick = function(appInstance, element) {
