@@ -11,6 +11,7 @@ import {
   ACTION_TYPES
 } from './saveQuery.constants';
 import AddToDashboardForm from './CommonAddToDashboardForm';
+import { QUERY_TYPE_PROFILE } from '../../utils/constants';
 
 function SaveQueryModal({
   visible,
@@ -19,7 +20,8 @@ function SaveQueryModal({
   onSubmit,
   toggleModalVisibility,
   activeAction,
-  queryTitle
+  queryTitle,
+  queryType
 }) {
   const { TextArea } = Input;
 
@@ -118,18 +120,22 @@ function SaveQueryModal({
             placeholder='Description (Optional)'
           />
         </div>
-        <div>
-          <Checkbox onChange={handleAddToDashboardChange}>
-            Add to Dashboard
-          </Checkbox>
-        </div>
-        {showAddToDashboard && (
-          <AddToDashboardForm
-            selectedDashboards={selectedDashboards}
-            setSelectedDashboards={setSelectedDashboards}
-            dashboardPresentation={dashboardPresentation}
-            setDashboardPresentation={setDashboardPresentation}
-          />
+        {queryType !== QUERY_TYPE_PROFILE && (
+          <>
+            <div>
+              <Checkbox onChange={handleAddToDashboardChange}>
+                Add to Dashboard
+              </Checkbox>
+            </div>
+            {showAddToDashboard && (
+              <AddToDashboardForm
+                selectedDashboards={selectedDashboards}
+                setSelectedDashboards={setSelectedDashboards}
+                dashboardPresentation={dashboardPresentation}
+                setDashboardPresentation={setDashboardPresentation}
+              />
+            )}
+          </>
         )}
       </div>
     </AppModal>
@@ -145,7 +151,8 @@ SaveQueryModal.propTypes = {
   onSubmit: PropTypes.func,
   toggleModalVisibility: PropTypes.func,
   activeAction: PropTypes.string,
-  queryTitle: PropTypes.string
+  queryTitle: PropTypes.string,
+  queryType: PropTypes.string
 };
 
 SaveQueryModal.defaultProps = {
@@ -155,5 +162,6 @@ SaveQueryModal.defaultProps = {
   onSubmit: noop,
   toggleModalVisibility: noop,
   activeAction: EMPTY_STRING,
-  queryTitle: EMPTY_STRING
+  queryTitle: EMPTY_STRING,
+  queryType: EMPTY_STRING
 };
