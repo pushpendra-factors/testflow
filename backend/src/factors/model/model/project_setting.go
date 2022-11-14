@@ -120,12 +120,12 @@ type TimelinesConfig struct {
 }
 
 type UserConfig struct {
-	PropsToShow []*postgres.Jsonb `json:"props_to_show"`
+	PropsToShow []string `json:"props_to_show"`
 }
 
 type AccountConfig struct {
-	AccountPropsToShow []*postgres.Jsonb `json:"account_props_to_show"`
-	UserPropsToShow    []*postgres.Jsonb `json:"user_props_to_show"`
+	AccountPropsToShow []string `json:"account_props_to_show"`
+	UserPropToShow     string   `json:"user_prop_to_show"`
 }
 
 type AttributionConfig struct {

@@ -239,34 +239,21 @@ func (store *MemSQL) GetProfileUserDetailsByID(projectID int64, identity string,
 		return nil, http.StatusInternalServerError
 	}
 
-	// Filter Properties
-	properties, err := U.DecodePostgresJsonb(uniqueUser.Properties)
+	propertiesDecoded, err := U.DecodePostgresJsonb(uniqueUser.Properties)
 	if err != nil {
 		log.WithFields(logFields).WithError(err).Error("Failed decoding user properties.")
 	}
 
-	if name, exists := (*properties)[U.UP_NAME]; exists {
+	if name, exists := (*propertiesDecoded)[U.UP_NAME]; exists {
 		uniqueUser.Name = fmt.Sprintf("%s", name)
 	}
-	if company, exists := (*properties)[U.UP_COMPANY]; exists {
+	if company, exists := (*propertiesDecoded)[U.UP_COMPANY]; exists {
 		uniqueUser.Company = fmt.Sprintf("%s", company)
 	}
-	if email, exists := (*properties)[U.UP_EMAIL]; exists {
-		uniqueUser.Email = fmt.Sprintf("%s", email)
-	}
-	if country, exists := (*properties)[U.UP_COUNTRY]; exists {
-		uniqueUser.Country = fmt.Sprintf("%s", country)
-	}
-	if time_spent_on_site, exists := (*properties)[U.UP_TOTAL_SPENT_TIME]; exists {
-		uniqueUser.TimeSpentOnSite = uint64(time_spent_on_site.(float64))
-	}
-	if number_of_page_views, exists := (*properties)[U.UP_PAGE_COUNT]; exists {
-		uniqueUser.NumberOfPageViews = uint64(number_of_page_views.(float64))
-	}
-	activities, sessionCount := store.GetUserActivitiesAndSessionCount(projectID, identity, userId)
-	uniqueUser.UserActivity = activities
-	uniqueUser.WebSessionsCount = sessionCount
 
+	uniqueUser.LeftPaneProps = store.GetFilteredLeftPanePropWithValue(projectID, model.PROFILE_TYPE_USER, propertiesDecoded)
+	activities, _ := store.GetUserActivitiesAndSessionCount(projectID, identity, userId)
+	uniqueUser.UserActivity = activities
 	uniqueUser.GroupInfos = store.GetGroupsForUserTimeline(projectID, uniqueUser)
 
 	return &uniqueUser, http.StatusFound
@@ -490,10 +477,7 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string) (*
 	// Filter Properties
 	nameProps := []string{U.UP_COMPANY, U.GP_HUBSPOT_COMPANY_NAME, U.GP_SALESFORCE_ACCOUNT_NAME}
 	hostNameProps := []string{U.GP_HUBSPOT_COMPANY_DOMAIN, U.GP_SALESFORCE_ACCOUNT_WEBSITE}
-	industryProps := []string{U.GP_HUBSPOT_COMPANY_INDUSTRY, U.GP_SALESFORCE_ACCOUNT_INDUSTRY}
-	countryProps := []string{U.GP_HUBSPOT_COMPANY_COUNTRY, U.GP_SALESFORCE_ACCOUNT_BILLINGCOUNTRY}
-	employeeCountProps := []string{U.GP_HUBSPOT_COMPANY_NUMBEROFEMPLOYEES, U.GP_SALESFORCE_ACCOUNT_NUMBEROFEMPLOYEES}
-	properties, err := U.DecodePostgresJsonb(accountDetails.Properties)
+	propertiesDecoded, err := U.DecodePostgresJsonb(accountDetails.Properties)
 	if err != nil {
 		log.WithFields(logFields).WithError(err).Error("Failed decoding account properties.")
 	}
@@ -501,7 +485,7 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string) (*
 		if accountDetails.Name != "" {
 			break
 		}
-		if name, exists := (*properties)[prop]; exists {
+		if name, exists := (*propertiesDecoded)[prop]; exists {
 			accountDetails.Name = fmt.Sprintf("%s", name)
 		}
 	}
@@ -509,49 +493,30 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string) (*
 		if accountDetails.HostName != "" {
 			break
 		}
-		if host, exists := (*properties)[prop]; exists {
+		if host, exists := (*propertiesDecoded)[prop]; exists {
 			accountDetails.HostName = fmt.Sprintf("%s", host)
 		}
 	}
-	for _, prop := range industryProps {
-		if accountDetails.Industry != "" {
-			break
-		}
-		if industry, exists := (*properties)[prop]; exists {
-			accountDetails.Industry = fmt.Sprintf("%s", industry)
-		}
-	}
-	for _, prop := range countryProps {
-		if accountDetails.Country != "" {
-			break
-		}
-		if country, exists := (*properties)[prop]; exists {
-			accountDetails.Country = fmt.Sprintf("%s", country)
-		}
-	}
-	for _, prop := range employeeCountProps {
-		if accountDetails.NumberOfEmployees != 0 {
-			break
-		}
-		if number_of_employees, exists := (*properties)[prop]; exists {
-			if number_of_employees == "" {
-				accountDetails.NumberOfEmployees = 0
-			} else {
-				accountDetails.NumberOfEmployees = uint64(number_of_employees.(float64))
-			}
-		}
-	}
 
+	accountDetails.LeftPaneProps = store.GetFilteredLeftPanePropWithValue(projectID, model.PROFILE_TYPE_ACCOUNT, propertiesDecoded)
+	timelinesConfig, err := store.GetTimelineConfigOfProject(projectID)
+	if err != nil {
+		log.WithField("status", err).WithError(err).Error("Failed to fetch timelines_config from project_settings.")
+	}
+	additionalProp := timelinesConfig.AccountConfig.UserPropToShow
+	selectStrAdditionalProp := ""
+	if additionalProp != "" {
+		selectStrAdditionalProp = fmt.Sprintf("JSON_EXTRACT_STRING(properties, '%s') as additional_prop,", additionalProp)
+	}
 	// Timeline Query
-	query := fmt.Sprintf(`SELECT COALESCE(JSON_EXTRACT_STRING(properties, '%s'), 
-		customer_user_id, id) AS user_name, 
+	query := fmt.Sprintf(`SELECT COALESCE(JSON_EXTRACT_STRING(properties, '%s'), customer_user_id, id) AS user_name, %s
 		COALESCE(customer_user_id, id) AS user_id, 
 		ISNULL(customer_user_id) AS is_anonymous 
 	FROM users 
 	WHERE project_id = ? AND (%s) 
 	GROUP BY user_id 
 	ORDER BY updated_at DESC 
-	LIMIT 26;`, U.UP_NAME, groupUserString)
+	LIMIT 26;`, U.UP_NAME, selectStrAdditionalProp, groupUserString)
 
 	// Get Timeline for <=25 users
 	rows, err := db.Raw(query, projectID).Rows()
@@ -584,11 +549,37 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string) (*
 		userTimeline.UserActivities = activities
 		accountTimeline = append(accountTimeline, userTimeline)
 	}
-	accountDetails.NumberOfUsers = uint64(usersCount)
 	accountDetails.AccountTimeline = accountTimeline
 	return &accountDetails, http.StatusFound
 }
 
 func FormatTimeToString(time time.Time) string {
 	return time.Format("2006-01-02 15:04:05.000000")
+}
+
+func (store *MemSQL) GetFilteredLeftPanePropWithValue(projectID int64, profileType string, propertiesDecoded *map[string]interface{}) map[string]interface{} {
+	logFields := log.Fields{
+		"project_id":   projectID,
+		"profile_type": profileType,
+	}
+
+	filteredProperties := make(map[string]interface{})
+
+	timelinesConfig, err := store.GetTimelineConfigOfProject(projectID)
+	if err != nil {
+		log.WithFields(logFields).WithField("status", err).WithError(err).Error("Failed to fetch timelines_config from project_settings.")
+	}
+	var leftPaneProps []string
+
+	if profileType == model.PROFILE_TYPE_USER {
+		leftPaneProps = timelinesConfig.UserConfig.PropsToShow
+	} else if profileType == model.PROFILE_TYPE_ACCOUNT {
+		leftPaneProps = timelinesConfig.AccountConfig.AccountPropsToShow
+	}
+	for _, propArr := range leftPaneProps {
+		if value, exists := (*propertiesDecoded)[propArr]; exists {
+			filteredProperties[propArr] = value
+		}
+	}
+	return filteredProperties
 }

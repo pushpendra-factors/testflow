@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
@@ -131,14 +130,27 @@ func TestAPIUpdateProjectSettingsHandler(t *testing.T) {
 	})
 
 	t.Run("UpdateTimelines_config", func(t *testing.T) {
-		w := sendUpdateProjectSettingReq(r, project.ID, agent, map[string]interface{}{
-			"timelines_config": model.TimelinesConfig{UserConfig: model.UserConfig{PropsToShow: make([]*postgres.Jsonb, 6)}},
-		})
+
+		var timelinesConfig model.TimelinesConfig
+		timelinesConfig.DisabledEvents = []string{"$hubspot_contact_updated", "$sf_contact_updated"}
+		timelinesConfig.UserConfig.PropsToShow = []string{"$email", "$user_id"}
+		timelinesConfig.AccountConfig.AccountPropsToShow = []string{"$hubspot_company_industry", "$hubspot_company_country"}
+		timelinesConfig.AccountConfig.UserPropToShow = "$hubspot_contact_jobtitle"
+
+		w := sendUpdateProjectSettingReq(r, project.ID, agent, map[string]interface{}{"timelines_config": timelinesConfig})
 		assert.Equal(t, http.StatusOK, w.Code)
 		jsonResponse, _ := ioutil.ReadAll(w.Body)
 		var projectSettings model.ProjectSetting
 		json.Unmarshal(jsonResponse, &projectSettings)
-		// assert.Equal(t, int(6), len(projectSettings.TimelinesConfig.UserConfig.PropsToShow))
+		rawConfigFromProject := projectSettings.TimelinesConfig.RawMessage
+		tlConfigDecoded := model.TimelinesConfig{}
+		err = json.Unmarshal(rawConfigFromProject, &tlConfigDecoded)
+		assert.Nil(t, err)
+		assert.NotNil(t, tlConfigDecoded)
+		assert.Equal(t, timelinesConfig.DisabledEvents, tlConfigDecoded.DisabledEvents)
+		assert.Equal(t, timelinesConfig.UserConfig.PropsToShow, tlConfigDecoded.UserConfig.PropsToShow)
+		assert.Equal(t, timelinesConfig.AccountConfig.AccountPropsToShow, tlConfigDecoded.AccountConfig.AccountPropsToShow)
+		assert.Equal(t, timelinesConfig.AccountConfig.UserPropToShow, tlConfigDecoded.AccountConfig.UserPropToShow)
 	})
 
 	t.Run("UpdateIntDrift", func(t *testing.T) {

@@ -30,10 +30,7 @@ export const formatAccountTimeline = (data, config) => {
   const returnData = {
     name: data.name,
     host: data.host_name,
-    industry: data.industry,
-    country: data.country,
-    number_of_employees: data.number_of_employees,
-    number_of_users: data.number_of_users,
+    left_pane_props: data.left_pane_props,
     account_users: [],
     account_events: []
   };
@@ -41,12 +38,11 @@ export const formatAccountTimeline = (data, config) => {
     ?.sort((a, b) =>
       compareObjTimestampsDesc(a.user_activities[0], b.user_activities[0])
     )
-    .map((user) => user.user_name);
+    .map((user) => ({ title: user.user_name, subtitle: user.additional_prop }));
   returnData.account_events = getAccountActivitiesWithEnableKeyConfig(
     data?.account_timeline,
     config?.disabled_events
   ).sort(compareObjTimestampsDesc);
-
   return returnData;
 };
 
@@ -66,11 +62,7 @@ export const formatUsersTimeline = (data, config) => {
   const returnData = {
     title: !data.is_anonymous ? data.name || data.user_id : 'Unidentified User',
     subtitle: data.company || data.user_id,
-    email: data.email,
-    country: data.country,
-    web_session_count: data.web_sessions_count,
-    number_of_page_views: data.number_of_page_views,
-    time_spent_on_site: data.time_spent_on_site,
+    left_pane_props: data.left_pane_props,
     group_infos: data.group_infos,
     user_activities: []
   };

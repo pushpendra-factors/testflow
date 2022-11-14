@@ -174,6 +174,18 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 	assert.NotNil(t, agent)
 	assert.Nil(t, err)
 
+	var timelinesConfig model.TimelinesConfig
+
+	propsToShow := []string{"$email", "$page_count", "$user_id", "$name", "$session_spent_time"}
+	timelinesConfig.UserConfig.PropsToShow = propsToShow
+
+	tlConfigEncoded, err := U.EncodeStructTypeToPostgresJsonb(timelinesConfig)
+	assert.Nil(t, err)
+
+	_, errCode := store.GetStore().UpdateProjectSettings(project.ID,
+		&model.ProjectSetting{TimelinesConfig: tlConfigEncoded})
+	assert.Equal(t, errCode, http.StatusAccepted)
+
 	props := map[string]interface{}{
 		"$name":               "Cameron Williomson",
 		"$company":            "Freshworks",
@@ -540,11 +552,16 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 		assert.Equal(t, resp.UserId, userId)
 		assert.Contains(t, resp.Name, "Cameron")
 		assert.Equal(t, resp.Company, "Freshworks")
-		assert.Equal(t, resp.Email, customerEmail)
-		assert.Equal(t, resp.Country, "Australia")
-		assert.Equal(t, resp.WebSessionsCount, uint64(1))
-		assert.Equal(t, resp.NumberOfPageViews, uint64(10))
-		assert.Equal(t, resp.TimeSpentOnSite, uint64(500))
+		assert.NotNil(t, resp.LeftPaneProps)
+		userProps := user.Properties
+		userPropsDecoded, err := U.DecodePostgresJsonb(&userProps)
+		assert.Nil(t, err)
+		assert.Condition(t, func() bool {
+			for i, property := range resp.LeftPaneProps {
+				assert.Equal(t, (*userPropsDecoded)[i], property)
+			}
+			return true
+		})
 		assert.NotNil(t, resp.GroupInfos)
 		assert.Condition(t, func() bool { return len(resp.GroupInfos) <= 4 })
 		assert.NotNil(t, resp.UserActivity)
@@ -821,6 +838,19 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 	assert.NotNil(t, agent)
 	assert.Nil(t, err)
 
+	var timelinesConfig model.TimelinesConfig
+
+	propsToShow := []string{"$hubspot_company_industry", "$hubspot_company_country"}
+	timelinesConfig.AccountConfig.AccountPropsToShow = propsToShow
+	timelinesConfig.AccountConfig.UserPropToShow = "$hubspot_contact_jobtitle"
+
+	tlConfigEncoded, err := U.EncodeStructTypeToPostgresJsonb(timelinesConfig)
+	assert.Nil(t, err)
+
+	_, errCode := store.GetStore().UpdateProjectSettings(project.ID,
+		&model.ProjectSetting{TimelinesConfig: tlConfigEncoded})
+	assert.Equal(t, errCode, http.StatusAccepted)
+
 	props := map[string]interface{}{
 		"$company":                                "Freshworks",
 		U.GP_HUBSPOT_COMPANY_NAME:                 "Freshworks-HS",
@@ -897,6 +927,19 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 	users := make([]model.User, 0)
 	numUsers := 10
 	for i := 1; i <= numUsers; i++ {
+
+		jobTitle := "Boss"
+		if i > 1 {
+			jobTitle = "Employee"
+		}
+		userProps := map[string]interface{}{
+			"$hubspot_contact_jobtitle": jobTitle,
+		}
+		userPropsJSON, err := json.Marshal(userProps)
+		if err != nil {
+			log.WithError(err).Fatal("Marshal error.")
+		}
+		userPropsEncoded := postgres.Jsonb{RawMessage: userPropsJSON}
 		var customerUserID string
 		if i < 6 || i > 10 {
 			customerUserID = "user" + strconv.Itoa(i) + customerEmail
@@ -907,7 +950,7 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 
 		associatedUserId, _ := store.GetStore().CreateUser(&model.User{
 			ProjectId:      projectID,
-			Properties:     properties,
+			Properties:     userPropsEncoded,
 			IsGroupUser:    &boolTrue,
 			Group1ID:       "1",
 			Group1UserID:   accountID,
@@ -1169,15 +1212,18 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		err := json.Unmarshal(jsonResponse, &resp)
 		assert.Nil(t, err)
 		assert.Contains(t, resp.Name, "Freshworks")
-		assert.Equal(t, resp.Country, "India")
-		assert.Equal(t, resp.Industry, "Freshworks-HS")
 		assert.Equal(t, resp.HostName, "google.com")
-		assert.Equal(t, resp.NumberOfUsers, uint64(9))
 		assert.Equal(t, len(resp.AccountTimeline), 9)
+		assert.NotNil(t, resp.LeftPaneProps)
+		assert.Condition(t, func() bool {
+			for i, property := range resp.LeftPaneProps {
+				assert.Equal(t, props[i], property)
+			}
+			return true
+		})
 		assert.Condition(t, func() bool {
 			assert.Condition(t, func() bool { return len(resp.AccountTimeline) > 0 })
 			for _, userTimeline := range resp.AccountTimeline {
-
 				assert.Condition(t, func() bool {
 					assert.NotNil(t, userTimeline.UserId)
 					assert.NotNil(t, userTimeline.UserName)
