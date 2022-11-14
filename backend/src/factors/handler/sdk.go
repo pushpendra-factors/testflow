@@ -800,7 +800,6 @@ func SDKFormFillHandler(c *gin.Context) {
 			Error: "Form fill event failed. Invalid payload."})
 		return
 	}
-	request.TimeSpent = uint64(request.LastUpdatedTime - request.FirstUpdatedTime)
 
 	projectToken := U.GetScopeByKeyAsString(c, mid.SCOPE_PROJECT_TOKEN)
 	if !SDK.IsValidTokenString(projectToken) {
