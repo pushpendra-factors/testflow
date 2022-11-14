@@ -2418,7 +2418,7 @@ func syncDeal(projectID int64, document *model.HubspotDocument, hubspotSmartEven
 var keyArrEngagementMeeting = []string{"id", "timestamp", "type", "source", "active"}
 var keyArrMetaMeeting = []string{"startTime", "endTime", "title", "meetingOutcome"}
 var keyArrEngagementCall = []string{"id", "timestamp", "type", "source", "activityType"}
-var keyArrMetaCall = []string{"durationMilliseconds", "disposition", "status", "title"}
+var keyArrMetaCall = []string{"durationMilliseconds", "disposition", "status", "title", "disposition_label"}
 var keyArrEngagementEmail = []string{"id", "createdAt", "lastUpdated", "type", "teamId", "ownerId", "active", "timestamp", "source"}
 var keyArrMetaEmail = []string{"from", "to", "subject", "sentVia"}
 

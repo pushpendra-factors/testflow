@@ -426,6 +426,7 @@ def sync_engagements(project_id, refresh_token, api_key, last_sync_timestamp=0):
     buffer_size = page_count * get_buffer_size_by_api_count()
     create_all_engagement_documents_with_buffer = get_create_all_documents_with_buffer(project_id, 'engagement', buffer_size)
     hubspot_request_handler = get_hubspot_request_handler(project_id, refresh_token, api_key)
+    call_disposition = get_call_disposition(project_id, hubspot_request_handler)
     while has_more:
         log.warning("Downloading engagements for project_id %d from url %s.", project_id, final_url)
         r = hubspot_request_handler(project_id, final_url)
@@ -445,7 +446,10 @@ def sync_engagements(project_id, refresh_token, api_key, last_sync_timestamp=0):
                 if latest_timestamp is None and "lastUpdated" in engagement["engagement"]:
                     latest_timestamp = engagement["engagement"]["lastUpdated"]
                 engagements = engagement["engagement"]
-                if engagements["type"] == "CALL" or engagements["type"] == "MEETING":
+                if engagements["type"] == "CALL":
+                    add_disposition_label(engagement, call_disposition)
+                    filter_engagements.append(engagement)
+                elif engagements["type"] == "MEETING":
                     filter_engagements.append(engagement)
                 elif engagements["type"] == "INCOMING_EMAIL":
                     if "metadata" in engagement and "from" in engagement["metadata"] and "email" in engagement["metadata"]["from"]:
@@ -469,6 +473,25 @@ def sync_engagements(project_id, refresh_token, api_key, last_sync_timestamp=0):
             log.warning("Downloaded and created %d engagements.", len(filter_engagements))
     create_all_engagement_documents_with_buffer([],False) ## flush any remaining docs in memory
     return engagement_api_calls,latest_timestamp
+
+def add_disposition_label(engagement, call_disposition):
+    if "metadata" in engagement and "disposition" in engagement["metadata"]:
+        disposition_label = call_disposition.get(engagement["metadata"]["disposition"])
+        if disposition_label != None:
+            engagement["metadata"]["disposition_label"] = disposition_label
+    
+def get_call_disposition(project_id, hubspot_request_handler):
+        get_disposition_label_url = "https://api.hubapi.com/calling/v1/dispositions?"
+        r = hubspot_request_handler(project_id, get_disposition_label_url)
+        if not r.ok:
+            log.error("Failure response %d from engagement dispositions on get_call_disposition", r.status_code)
+            return
+        response = json.load(r.text)
+        disposition_values = {}
+        for data in response:
+            if data["id"] and data["label"]:
+                disposition_values[data["id"]] = data["label"]
+        return disposition_values
 
 def is_marketing_contact(doc):
     if "properties" in doc:
