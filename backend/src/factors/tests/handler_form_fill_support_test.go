@@ -56,12 +56,10 @@ func TestSDKFormFillEventHandlerSupport(t *testing.T) {
 	// Test form fill event - create new form fill event.
 	startTime := U.UnixTimeBeforeDuration(15 * time.Minute)
 	payload := &model.SDKFormFillPayload{
-		FormId:           "formId1",
-		Value:            "value1",
-		TimeSpent:        0,
-		FirstUpdatedTime: U.UnixTimeBeforeDuration(15 * time.Minute),
-		LastUpdatedTime:  U.UnixTimeBeforeDuration(15 * time.Minute),
-		FieldId:          "fieldId1",
+		FormId:  "formId1",
+		Value:   "value1",
+		FieldId: "fieldId1",
+		UserId:  "1",
 	}
 	payloadBytes, err := json.Marshal(payload)
 	assert.Nil(t, err)
@@ -71,7 +69,7 @@ func TestSDKFormFillEventHandlerSupport(t *testing.T) {
 	assert.NotNil(t, responseMap["message"])
 
 	// Check if form fill created.
-	event, status := store.GetStore().GetFormFillEventById(project.ID, payload.FormId, payload.FieldId)
+	event, status := store.GetStore().GetFormFillEventById(project.ID, payload.UserId, payload.FormId, payload.FieldId)
 	assert.Equal(t, http.StatusFound, status)
 	assert.NotNil(t, event)
 
@@ -80,9 +78,6 @@ func TestSDKFormFillEventHandlerSupport(t *testing.T) {
 	assert.Equal(t, payload.FormId, event.FormId)
 	assert.Equal(t, payload.Value, event.Value)
 	assert.Equal(t, payload.FieldId, event.FieldId)
-	assert.Equal(t, uint64(100), event.TimeSpentOnField)
-	assert.Equal(t, payload.FirstUpdatedTime, event.FirstUpdatedTime)
-	assert.Equal(t, payload.LastUpdatedTime, event.LastUpdatedTime)
 	assert.False(t, event.CreatedAt.IsZero())
 	assert.False(t, event.UpdatedAt.IsZero())
 
@@ -106,12 +101,10 @@ func TestSDKFormFillEventHandlerSupport(t *testing.T) {
 
 	// Create new form fill event with same fields but different value
 	payload = &model.SDKFormFillPayload{
-		FormId:           "formId1",
-		Value:            "value_2",
-		TimeSpent:        0,
-		FirstUpdatedTime: U.UnixTimeBeforeDuration(10 * time.Minute),
-		LastUpdatedTime:  U.UnixTimeBeforeDuration(10 * time.Minute),
-		FieldId:          "fieldId1",
+		FormId:  "formId1",
+		Value:   "value_2",
+		FieldId: "fieldId1",
+		UserId:  "1",
 	}
 	payloadBytes, err = json.Marshal(payload)
 	assert.Nil(t, err)
@@ -122,7 +115,7 @@ func TestSDKFormFillEventHandlerSupport(t *testing.T) {
 	assert.NotNil(t, responseMap["message"])
 
 	// Check if form fill created.
-	event, status = store.GetStore().GetFormFillEventById(project.ID, payload.FormId, payload.FieldId)
+	event, status = store.GetStore().GetFormFillEventById(project.ID, payload.UserId, payload.FormId, payload.FieldId)
 	assert.Equal(t, http.StatusFound, status)
 	assert.NotNil(t, event)
 
@@ -139,12 +132,10 @@ func TestSDKFormFillEventHandlerSupport(t *testing.T) {
 
 	// Creating records for same formId but different fieldId
 	payload = &model.SDKFormFillPayload{
-		FormId:           "formId1",
-		Value:            "value1",
-		TimeSpent:        0,
-		FirstUpdatedTime: U.UnixTimeBeforeDuration(10 * time.Minute),
-		LastUpdatedTime:  U.UnixTimeBeforeDuration(10 * time.Minute),
-		FieldId:          "fieldId2",
+		FormId:  "formId1",
+		Value:   "value1",
+		FieldId: "fieldId2",
+		UserId:  "1",
 	}
 
 	payloadBytes, err = json.Marshal(payload)
@@ -156,7 +147,7 @@ func TestSDKFormFillEventHandlerSupport(t *testing.T) {
 	assert.NotNil(t, responseMap["message"])
 
 	// Check if form fill created.
-	event, status = store.GetStore().GetFormFillEventById(project.ID, payload.FormId, payload.FieldId)
+	event, status = store.GetStore().GetFormFillEventById(project.ID, payload.UserId, payload.FormId, payload.FieldId)
 	assert.Equal(t, http.StatusFound, status)
 	assert.NotNil(t, event)
 
@@ -179,12 +170,10 @@ func TestSDKFormFillEventHandlerSupport(t *testing.T) {
 
 	// Checking case for same fieldId but different formId
 	payload = &model.SDKFormFillPayload{
-		FormId:           "formId2",
-		Value:            "value1",
-		TimeSpent:        0,
-		FirstUpdatedTime: U.UnixTimeBeforeDuration(10 * time.Minute),
-		LastUpdatedTime:  U.UnixTimeBeforeDuration(10 * time.Minute),
-		FieldId:          "fieldId1",
+		FormId:  "formId2",
+		Value:   "value1",
+		FieldId: "fieldId1",
+		UserId:  "1",
 	}
 
 	payloadBytes, err = json.Marshal(payload)
@@ -196,7 +185,7 @@ func TestSDKFormFillEventHandlerSupport(t *testing.T) {
 	assert.NotNil(t, responseMap["message"])
 
 	// Check if form fill created.
-	event, status = store.GetStore().GetFormFillEventById(project.ID, payload.FormId, payload.FieldId)
+	event, status = store.GetStore().GetFormFillEventById(project.ID, payload.UserId, payload.FormId, payload.FieldId)
 	assert.Equal(t, http.StatusFound, status)
 	assert.NotNil(t, event)
 
@@ -216,12 +205,10 @@ func TestSDKFormFillEventHandlerSupport(t *testing.T) {
 	assert.Nil(t, err)
 
 	payload = &model.SDKFormFillPayload{
-		FormId:           "formId1",
-		Value:            "value1",
-		TimeSpent:        0,
-		FirstUpdatedTime: U.UnixTimeBeforeDuration(10 * time.Minute),
-		LastUpdatedTime:  U.UnixTimeBeforeDuration(10 * time.Minute),
-		FieldId:          "fieldId1",
+		FormId:  "formId1",
+		Value:   "value1",
+		FieldId: "fieldId1",
+		UserId:  "1",
 	}
 
 	payloadBytes, err = json.Marshal(payload)
@@ -233,7 +220,7 @@ func TestSDKFormFillEventHandlerSupport(t *testing.T) {
 	assert.NotNil(t, responseMap["message"])
 
 	// Check if form fill created.
-	event, status = store.GetStore().GetFormFillEventById(project.ID, payload.FormId, payload.FieldId)
+	event, status = store.GetStore().GetFormFillEventById(project.ID, payload.UserId, payload.FormId, payload.FieldId)
 	assert.Equal(t, http.StatusFound, status)
 	assert.NotNil(t, event)
 
@@ -259,12 +246,10 @@ func TestSDKFormFillEventHandlerSupport(t *testing.T) {
 	assert.Nil(t, err)
 
 	payload = &model.SDKFormFillPayload{
-		FormId:           "formId2",
-		Value:            "value2",
-		TimeSpent:        0,
-		FirstUpdatedTime: U.UnixTimeBeforeDuration(10 * time.Minute),
-		LastUpdatedTime:  U.UnixTimeBeforeDuration(10 * time.Minute),
-		FieldId:          "fieldId2",
+		FormId:  "formId2",
+		Value:   "value2",
+		FieldId: "fieldId2",
+		UserId:  "1",
 	}
 	payloadBytes, err = json.Marshal(payload)
 	assert.Nil(t, err)
@@ -275,7 +260,7 @@ func TestSDKFormFillEventHandlerSupport(t *testing.T) {
 	assert.NotNil(t, responseMap["message"])
 
 	// Check if form fill created.
-	event, status = store.GetStore().GetFormFillEventById(project.ID, payload.FormId, payload.FieldId)
+	event, status = store.GetStore().GetFormFillEventById(project.ID, payload.UserId, payload.FormId, payload.FieldId)
 	assert.Equal(t, http.StatusFound, status)
 	assert.NotNil(t, event)
 
@@ -319,7 +304,7 @@ func TestSDKFormFillEventHandlerSupport(t *testing.T) {
 	eventName, errCode := store.GetStore().GetEventName("$form_fill", project.ID)
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, eventName)
-	recordsCreated, errCode := store.GetStore().GetEventsByEventNameId(project.ID, eventName.ID, startTime, payload.LastUpdatedTime)
+	recordsCreated, errCode := store.GetStore().GetEventsByEventNameId(project.ID, eventName.ID, startTime, U.TimeNowUnix())
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.Equal(t, int(1), len(recordsCreated))
 }

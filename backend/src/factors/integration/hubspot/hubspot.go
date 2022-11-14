@@ -1092,7 +1092,7 @@ func syncContact(project *model.Project, document *model.HubspotDocument, hubspo
 
 		if C.AllowIdentificationOverwriteUsingSource(project.ID) {
 			// add this user for re-identification, in case new user was created with secondary email
-			userByCustomerUserID[userID] = customerUserID
+			userByCustomerUserID[createdUserID] = customerUserID
 		}
 
 		status, response := SDK.Track(project.ID, trackPayload, true, SDK.SourceHubspot, model.HubspotDocumentTypeNameContact)
@@ -1194,7 +1194,7 @@ func syncContact(project *model.Project, document *model.HubspotDocument, hubspo
 			}
 
 			status, _ = SDK.Identify(project.ID, &SDK.IdentifyPayload{
-				UserId: userID, CustomerUserId: primaryEmail, RequestSource: model.UserSourceHubspot}, true)
+				UserId: userID, CustomerUserId: primaryEmail, RequestSource: model.UserSourceHubspot, Source: SDK.SourceHubspot}, true)
 			if status != http.StatusOK {
 				logCtx.WithFields(log.Fields{"primary_email": primaryEmail, "user_id": userID}).Error(
 					"Failed to identify user with primary email.")

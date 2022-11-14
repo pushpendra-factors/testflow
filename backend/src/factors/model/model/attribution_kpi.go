@@ -47,8 +47,7 @@ func MergeDataRowsHavingSameKeyKPI(rows [][]interface{}, keyIndex int, attributi
 //MergeTwoDataRowsKPI adds values of two data rows for KPI attribution queries
 func MergeTwoDataRowsKPI(row1 []interface{}, row2 []interface{}, keyIndex int, attributionKey string, analyzeType string, conversionFunTypes []string) []interface{} {
 
-	if analyzeType != AnalyzeTypeHSDeals && analyzeType != AnalyzeTypeSFOpportunities &&
-		analyzeType != AnalyzeTypeSFAccounts && analyzeType != AnalyzeTypeHSCompanies {
+	if analyzeType != AnalyzeTypeHSDeals && analyzeType != AnalyzeTypeSFOpportunities && analyzeType != AnalyzeTypeUserKPI {
 		log.WithFields(log.Fields{"AnalyzeType": analyzeType}).Error("KPI-Attribution invalid method call - analyzeType")
 		return row1
 	}

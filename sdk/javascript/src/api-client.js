@@ -7,6 +7,7 @@ const URI_ADD_USER_PROPERTIES = "/sdk/user/add_properties";
 const URI_UPDATE_EVENT_PROPERTIES = "/sdk/event/update_properties";
 const URI_GET_INFO = "/sdk/get_info";
 const URI_CAPTURE_CLICK = "/sdk/capture_click";
+const URI_FORM_FILL = "/sdk/form_fill";
 
 function APIClient(token, host="") {
    this.token = token;
@@ -91,6 +92,21 @@ APIClient.prototype.captureClick = function(payload) {
 
     return Request.post(
         this.getURL(URI_CAPTURE_CLICK),
+        payload,
+        this.getHeaders()
+    );
+}
+
+APIClient.prototype.captureFormFill = function(payload) {
+    // Mandaotry field check.
+    if (!payload || 
+        !payload.form_id ||
+        !payload.field_id ||
+        !payload.user_id)
+        return Promise.reject("Form fill failed. Invalid payload.");
+
+    return Request.post(
+        this.getURL(URI_FORM_FILL),
         payload,
         this.getHeaders()
     );

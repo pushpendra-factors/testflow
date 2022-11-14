@@ -1,29 +1,32 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { connect, useSelector } from 'react-redux';
+import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
-import { Button, Collapse, Select, Popover } from 'antd';
-import MomentTz from 'Components/MomentTz';
+import { Button, Popover, Tooltip } from 'antd';
+import {
+  fetchEventNames,
+  getUserProperties,
+  getEventProperties
+} from '../../reducers/coreQuery/middleware';
+import MomentTz from '../MomentTz';
 import { SVG, Text } from '../factorsComponents';
 import styles from './index.module.scss';
 import QueryBlock from './QueryBlock';
 import SeqSelector from './AnalysisSeqSelector';
 import GroupBlock from './GroupBlock';
-import { QUERY_TYPE_FUNNEL, QUERY_TYPE_EVENT } from '../../utils/constants';
-import FaDatepicker from '../../components/FaDatepicker';
+import {
+  QUERY_TYPE_FUNNEL,
+  QUERY_TYPE_EVENT,
+  FunnelEventsConditionMap,
+  RevFunnelEventsConditionMap
+} from '../../utils/constants';
+import FaDatepicker from '../FaDatepicker';
 import ComposerBlock from '../QueryCommons/ComposerBlock';
 import CriteriaSection from './CriteriaSection';
 import { DEFAULT_DATE_RANGE, displayRange } from './DateRangeSelector/utils';
-import {
-  fetchEventNames,
-  getUserProperties,
-  getEventProperties,
-} from 'Reducers/coreQuery/middleware';
 import GLobalFilter from './GlobalFilter';
 import { getValidGranularityOptions } from '../../utils/dataFormatter';
-
-const { Option } = Select;
-
-const { Panel } = Collapse;
+import FaSelect from '../FaSelect';
+import { TOOLTIP_CONSTANTS } from '../../constants/tooltips.constans';
 
 function QueryComposer({
   queries = [],
@@ -39,12 +42,13 @@ function QueryComposer({
   setQueryOptions,
   runFunnelQuery,
   collapse = false,
-  setCollapse,
+  setCollapse
 }) {
   const [analyticsSeqOpen, setAnalyticsSeqVisible] = useState(false);
   const [calendarLabel, setCalendarLabel] = useState('Pick Dates');
   const [criteriaTabOpen, setCriteriaTabOpen] = useState(false);
   const [eventBlockOpen, setEventBlockOpen] = useState(true);
+  const [isDDVisible, setDDVisible] = useState(false);
 
   useEffect(() => {
     if (activeProject && activeProject.id) {
@@ -61,9 +65,96 @@ function QueryComposer({
     });
   }, [queries]);
 
+  const getDateRange = () => {
+    const ranges = [{ ...DEFAULT_DATE_RANGE }];
+    const queryOptionsState = { ...queryOptions };
+
+    if (
+      queryOptionsState &&
+      queryOptionsState.date_range &&
+      queryOptionsState.date_range.from &&
+      queryOptionsState.date_range.to
+    ) {
+      ranges[0].startDate = MomentTz(
+        queryOptionsState.date_range.from
+      ).toDate();
+      ranges[0].endDate = MomentTz(queryOptionsState.date_range.to).toDate();
+    }
+
+    return ranges;
+  };
+
+  const convertToDateRange = () => {
+    const range = getDateRange();
+    setCalendarLabel(displayRange(range[0]));
+  };
+
   useEffect(() => {
     convertToDateRange();
   }, [queryOptions]);
+
+  const setEventsCondition = (condition) => {
+    const opts = { ...queryOptions };
+    opts.events_condition = condition;
+    setQueryOptions(opts);
+  };
+
+  const onChange = (value) => {
+    setEventsCondition(value);
+    setDDVisible(false);
+  };
+
+  const showConditions = () => {
+    const retArray = [];
+    Object.entries(RevFunnelEventsConditionMap).forEach(([key, value]) =>
+      retArray.push([key, value])
+    );
+    return retArray;
+  };
+
+  const selectEventsCondition = () => (
+    <div className={`${styles.toplevel_select_dropdown}`}>
+      {isDDVisible ? (
+        <FaSelect
+          extraClass={`${styles.toplevel_select_menu}`}
+          options={showConditions()}
+          onClickOutside={() => setDDVisible(false)}
+          optionClick={(val) => onChange(val[1])}
+        />
+      ) : null}
+    </div>
+  );
+
+  const renderEventsConditionSection = () => (
+    <div className='flex items-center pt-6'>
+      <Text type='title' level={6} weight='bold' extraClass='m-0 mr-3'>
+        EVENTS PERFORMED IN
+      </Text>
+      <div className={`${styles.toplevel_select}`}>
+        <Tooltip title='Select Events Condition' color={TOOLTIP_CONSTANTS.DARK}>
+          <Button
+            className={`${styles.toplevel_select_button}`}
+            type='text'
+            onClick={() => setDDVisible(true)}
+          >
+            <div className='flex items-center'>
+              <Text
+                type='title'
+                level={7}
+                weight='bold'
+                color='brand-color-6'
+                extraClass='m-0 mr-1'
+              >
+                {FunnelEventsConditionMap[queryOptions.events_condition]}
+              </Text>
+              <SVG name='caretDown' color='blue' />
+            </div>
+          </Button>
+        </Tooltip>
+        {selectEventsCondition()}
+      </div>
+    </div>
+  );
 
   const queryList = () => {
     const blockList = [];
@@ -76,7 +167,7 @@ function QueryComposer({
             event={event}
             queries={queries}
             eventChange={eventChange}
-          ></QueryBlock>
+          />
         </div>
       );
     });
@@ -86,14 +177,14 @@ function QueryComposer({
       (queryType === QUERY_TYPE_EVENT && queries.length < 6)
     ) {
       blockList.push(
-        <div key={'init'} className={styles.composer_body__query_block}>
+        <div key='init' className={styles.composer_body__query_block}>
           <QueryBlock
             queryType={queryType}
             index={queries.length + 1}
             queries={queries}
             eventChange={eventChange}
             groupBy={queryOptions.groupBy}
-          ></QueryBlock>
+          />
         </div>
       );
     }
@@ -102,7 +193,7 @@ function QueryComposer({
   };
 
   const setGlobalFiltersOption = (filters) => {
-    const opts = Object.assign({}, queryOptions);
+    const opts = { ...queryOptions };
     opts.globalFilters = filters;
     setQueryOptions(opts);
   };
@@ -119,22 +210,22 @@ function QueryComposer({
 
       return (
         <ComposerBlock
-          blockTitle={'FILTER BY'}
+          blockTitle='FILTER BY'
           isOpen={filterBlockOpen}
-          showIcon={true}
+          showIcon
           onClick={() => setFilterBlockOpen(!filterBlockOpen)}
-          extraClass={`no-padding-l no-padding-r`}
+          extraClass='no-padding-l no-padding-r'
         >
-          <div key={0} className={'fa--query_block borderless no-padding '}>
+          <div key={0} className='fa--query_block borderless no-padding '>
             <GLobalFilter
               filters={queryOptions.globalFilters}
               setGlobalFilters={setGlobalFiltersOption}
               onFiltersLoad={[
                 () => {
                   getUserProperties(activeProject.id, queryType);
-                },
+                }
               ]}
-            ></GLobalFilter>
+            />
           </div>
         </ComposerBlock>
       );
@@ -156,14 +247,14 @@ function QueryComposer({
 
       return (
         <ComposerBlock
-          blockTitle={'BREAKDOWN'}
+          blockTitle='BREAKDOWN'
           isOpen={groupBlockOpen}
-          showIcon={true}
+          showIcon
           onClick={() => setGroupBlockOpen(!groupBlockOpen)}
-          extraClass={`no-padding-l no-padding-r`}
+          extraClass='no-padding-l no-padding-r'
         >
-          <div key={0} className={'fa--query_block borderless no-padding '}>
-            <GroupBlock queryType={queryType} events={queries}></GroupBlock>
+          <div key={0} className='fa--query_block borderless no-padding '>
+            <GroupBlock queryType={queryType} events={queries} />
           </div>
         </ComposerBlock>
       );
@@ -173,38 +264,19 @@ function QueryComposer({
   };
 
   const setEventSequence = (value) => {
-    const options = Object.assign({}, queryOptions);
+    const options = { ...queryOptions };
     options.event_analysis_seq = value;
     setQueryOptions(options);
   };
 
   const setAnalysisSequence = (seq) => {
-    const options = Object.assign({}, queryOptions);
+    const options = { ...queryOptions };
     options.session_analytics_seq = seq;
     setQueryOptions(options);
   };
 
-  const getDateRange = () => {
-    const ranges = [{ ...DEFAULT_DATE_RANGE }];
-    const queryOptionsState = Object.assign({}, queryOptions);
-
-    if (
-      queryOptionsState &&
-      queryOptionsState.date_range &&
-      queryOptionsState.date_range.from &&
-      queryOptionsState.date_range.to
-    ) {
-      ranges[0].startDate = MomentTz(
-        queryOptionsState.date_range.from
-      ).toDate();
-      ranges[0].endDate = MomentTz(queryOptionsState.date_range.to).toDate();
-    }
-
-    return ranges;
-  };
-
   const setDateRange = (dates) => {
-    const queryOptionsState = Object.assign({}, queryOptions);
+    const queryOptionsState = { ...queryOptions };
     if (dates && dates.startDate && dates.endDate) {
       if (Array.isArray(dates.startDate)) {
         queryOptionsState.date_range.from = dates.startDate[0];
@@ -215,16 +287,11 @@ function QueryComposer({
       }
       const frequency = getValidGranularityOptions({
         from: queryOptionsState.date_range.from,
-        to: queryOptionsState.date_range.to,
+        to: queryOptionsState.date_range.to
       })[0];
       queryOptionsState.date_range.frequency = frequency;
       setQueryOptions(queryOptionsState);
     }
-  };
-
-  const convertToDateRange = () => {
-    const range = getDateRange();
-    setCalendarLabel(displayRange(range[0]));
   };
 
   const handleRunQuery = useCallback(() => {
@@ -242,64 +309,61 @@ function QueryComposer({
       }
       if (queryType === QUERY_TYPE_FUNNEL && queries.length < 2) {
         return null;
-      } else {
-        return (
-          <div
-            className={
-              !collapse ? styles.composer_footer : styles.composer_footer_right
-            }
-          >
-            {!collapse ? (
-              <FaDatepicker
-                customPicker
-                presetRange
-                monthPicker
-                quarterPicker
-                placement='topRight'
-                buttonSize={'large'}
-                range={{
-                  startDate: queryOptions.date_range.from,
-                  endDate: queryOptions.date_range.to,
-                }}
-                onSelect={setDateRange}
-              />
-            ) : (
-              <Button
-                className={`mr-2`}
-                size={'large'}
-                type={'default'}
-                onClick={() => setCollapse(false)}
-              >
-                <SVG name={`arrowUp`} size={20} extraClass={`mr-1`}></SVG>
-                Collapse all
-              </Button>
-            )}
-            <Button
-              className={`ml-2`}
-              size={'large'}
-              type='primary'
-              onClick={handleRunQuery}
-            >
-              Run Analysis
-            </Button>
-          </div>
-        );
       }
+      return (
+        <div
+          className={
+            !collapse ? styles.composer_footer : styles.composer_footer_right
+          }
+        >
+          {!collapse ? (
+            <FaDatepicker
+              customPicker
+              presetRange
+              monthPicker
+              quarterPicker
+              placement='topRight'
+              buttonSize='large'
+              range={{
+                startDate: queryOptions.date_range.from,
+                endDate: queryOptions.date_range.to
+              }}
+              onSelect={setDateRange}
+            />
+          ) : (
+            <Button
+              className='mr-2'
+              size='large'
+              type='default'
+              onClick={() => setCollapse(false)}
+            >
+              <SVG name='arrowUp' size={20} extraClass='mr-1' />
+              Collapse all
+            </Button>
+          )}
+          <Button
+            className='ml-2'
+            size='large'
+            type='primary'
+            onClick={handleRunQuery}
+          >
+            Run Analysis
+          </Button>
+        </div>
+      );
     } catch (err) {
       console.log(err);
     }
   };
 
-  const renderEACrit = () => {
-    return (
-      <div>
-        <CriteriaSection
-          queryCount={queries.length}
-          queryType={QUERY_TYPE_EVENT}
-        ></CriteriaSection>
-      </div>
-    );
-  };
+  const renderEACrit = () => (
+    <div>
+      <CriteriaSection
+        queryCount={queries.length}
+        queryType={QUERY_TYPE_EVENT}
+      />
+    </div>
+  );
 
   const renderSeqSel = () => {
     if (
@@ -309,10 +373,10 @@ function QueryComposer({
       return (
         <>
           <Text
-            type={'paragraph'}
+            type='paragraph'
             mini
-            weight={'thin'}
-            extraClass={'m-0 ml-2 inline'}
+            weight='thin'
+            extraClass='m-0 ml-2 inline'
           >
             Where sequence
           </Text>
@@ -329,7 +393,7 @@ function QueryComposer({
             visible={analyticsSeqOpen}
             onVisibleChange={(visible) => setAnalyticsSeqVisible(visible)}
           >
-            <Button Button type='link' className={'ml-2'}>
+            <Button Button type='link' className='ml-2'>
               Between &nbsp;
               {queryOptions.session_analytics_seq.start}
               &nbsp; to &nbsp;
@@ -337,65 +401,52 @@ function QueryComposer({
             </Button>
           </Popover>
           <Text
-            type={'paragraph'}
+            type='paragraph'
             mini
-            weight={'thin'}
-            extraClass={'m-0 ml-2 inline'}
-          >
-            happened in the same session
-          </Text>
-        </>
-      );
-    } else {
-      return (
-        <>
-          <Text
-            type={'paragraph'}
-            mini
-            weight={'thin'}
-            extraClass={'m-0 ml-2 inline'}
-          >
-            Where
-          </Text>
-          <Popover
-            className='fa-event-popover'
-            content={
-              <SeqSelector
-                seq={queryOptions.session_analytics_seq}
-                queryCount={queries.length}
-                setAnalysisSequence={setAnalysisSequence}
-              />
-            }
-            trigger='click'
-            visible={analyticsSeqOpen}
-            onVisibleChange={(visible) => setAnalyticsSeqVisible(visible)}
-          >
-            <Button Button type='link' className={'ml-2'}>
-              Select Sequence
-            </Button>
-          </Popover>
-          <Text
-            type={'paragraph'}
-            mini
-            weight={'thin'}
-            extraClass={'m-0 ml-2 inline'}
+            weight='thin'
+            extraClass='m-0 ml-2 inline'
           >
             happened in the same session
           </Text>
         </>
       );
     }
-  };
-
-  const renderFuCrit = () => {
     return (
-      <div className={'flex justify-start items-center mt-2'}>
-        <div className={styles.composer_body__session_analytics__options}>
-          {renderSeqSel()}
-        </div>
-      </div>
+      <>
+        <Text type='paragraph' mini weight='thin' extraClass='m-0 ml-2 inline'>
+          Where
+        </Text>
+        <Popover
+          className='fa-event-popover'
+          content={
+            <SeqSelector
+              seq={queryOptions.session_analytics_seq}
+              queryCount={queries.length}
+              setAnalysisSequence={setAnalysisSequence}
+            />
+          }
+          trigger='click'
+          visible={analyticsSeqOpen}
+          onVisibleChange={(visible) => setAnalyticsSeqVisible(visible)}
+        >
+          <Button Button type='link' className='ml-2'>
+            Select Sequence
+          </Button>
+        </Popover>
+        <Text type='paragraph' mini weight='thin' extraClass='m-0 ml-2 inline'>
+          happened in the same session
+        </Text>
+      </>
     );
   };
+
+  const renderFuCrit = () => (
+    <div className='flex justify-start items-center mt-2'>
+      <div className={styles.composer_body__session_analytics__options}>
+        {renderSeqSel()}
+      </div>
+    </div>
+  );
 
   const renderCriteria = () => {
     const [criterieaBlockOpen, setCriterieaBlockOpen] = useState(true);
@@ -405,13 +456,13 @@ function QueryComposer({
 
         return (
           <ComposerBlock
-            blockTitle={'CRITERIA'}
+            blockTitle='CRITERIA'
             isOpen={criterieaBlockOpen}
-            showIcon={true}
+            showIcon
             onClick={() => {
               setCriterieaBlockOpen(!criterieaBlockOpen);
             }}
-            extraClass={`no-padding-l no-padding-r`}
+            extraClass='no-padding-l no-padding-r'
           >
             <div className={styles.criteria}>{renderEACrit()}</div>
           </ComposerBlock>
@@ -437,11 +488,13 @@ function QueryComposer({
     try {
       return (
         <ComposerBlock
-          blockTitle={'EVENTS'}
+          blockTitle={queryType === QUERY_TYPE_FUNNEL ? null : 'EVENTS'}
           isOpen={eventBlockOpen}
-          showIcon={true}
+          showIcon
           onClick={() => setEventBlockOpen(!eventBlockOpen)}
-          extraClass={`no-padding-l no-padding-r pt-2`}
+          extraClass={`no-padding-l no-padding-r ${
+            queryType === QUERY_TYPE_FUNNEL ? 'no-padding-t' : ''
+          }`}
         >
           {queryList()}
         </ComposerBlock>
@@ -453,6 +506,7 @@ function QueryComposer({
 
   return (
     <div className={styles.composer_body}>
+      {queryType === QUERY_TYPE_FUNNEL && renderEventsConditionSection()}
       {renderQueryList()}
       {renderGlobalFilterBlock()}
       {groupByBlock()}
@@ -464,7 +518,7 @@ function QueryComposer({
 
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
-  eventProperties: state.coreQuery.eventProperties,
+  eventProperties: state.coreQuery.eventProperties
 });
 
 const mapDispatchToProps = (dispatch) =>
@@ -472,7 +526,7 @@ const mapDispatchToProps = (dispatch) =>
     {
       fetchEventNames,
       getEventProperties,
-      getUserProperties,
+      getUserProperties
     },
     dispatch
   );

@@ -1,6 +1,6 @@
 "use strict";
 
-const cacheWindowKey = "_FactorsCache";
+const cacheWindowKey = "FACTORS_CACHE";
 
 function getFactorsCache(key) { 
     if (!window[cacheWindowKey]) window[cacheWindowKey]={}; 

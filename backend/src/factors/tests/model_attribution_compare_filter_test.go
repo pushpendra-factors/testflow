@@ -72,6 +72,7 @@ func TestAttributionModelCompareSingle(t *testing.T) {
 
 	t.Run("AttributionQueryCompareTimestampRangeNoLookBack", func(t *testing.T) {
 		query := &model.AttributionQuery{
+			AnalyzeType:                   model.AnalyzeTypeUsers,
 			From:                          timestamp - 2*U.SECONDS_IN_A_DAY,
 			To:                            timestamp + 3*U.SECONDS_IN_A_DAY,
 			LookbackDays:                  10,
@@ -149,6 +150,7 @@ func TestAttributionModelCompare(t *testing.T) {
 
 	t.Run("AttributionQueryCompareTimestampRangeNoLookBack", func(t *testing.T) {
 		query := &model.AttributionQuery{
+			AnalyzeType:                   model.AnalyzeTypeUsers,
 			From:                          timestamp - 2*U.SECONDS_IN_A_DAY,
 			To:                            timestamp + 3*U.SECONDS_IN_A_DAY,
 			LookbackDays:                  10,
@@ -179,6 +181,7 @@ func TestAttributionModelCompare(t *testing.T) {
 
 	t.Run("AttributionQueryCompareNoLookBackDays", func(t *testing.T) {
 		query := &model.AttributionQuery{
+			AnalyzeType:                   model.AnalyzeTypeUsers,
 			From:                          timestamp,
 			To:                            timestamp + 4*U.SECONDS_IN_A_DAY,
 			LookbackDays:                  10,
@@ -208,6 +211,7 @@ func TestAttributionModelCompare(t *testing.T) {
 
 	t.Run("TestFirstTouchCampaignCompareWithLookBackDays", func(t *testing.T) {
 		query := &model.AttributionQuery{
+			AnalyzeType:                   model.AnalyzeTypeUsers,
 			From:                          timestamp + 4*U.SECONDS_IN_A_DAY,
 			To:                            timestamp + 10*U.SECONDS_IN_A_DAY,
 			LookbackDays:                  20,
@@ -274,6 +278,7 @@ func TestAttributionCompareWithLookBackWindowX(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	query := &model.AttributionQuery{
+		AnalyzeType:                   model.AnalyzeTypeUsers,
 		From:                          timestamp + 3*U.SECONDS_IN_A_DAY,
 		To:                            timestamp + 10*U.SECONDS_IN_A_DAY,
 		LookbackDays:                  2,
@@ -361,6 +366,7 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 
 	t.Run("AttributionQueryCompareTimestampRangeNoLookBack", func(t *testing.T) {
 		query := &model.AttributionQuery{
+			AnalyzeType:    model.AnalyzeTypeUsers,
 			From:           timestamp - 2*U.SECONDS_IN_A_DAY,
 			To:             timestamp + 3*U.SECONDS_IN_A_DAY,
 			LookbackDays:   10,
@@ -385,6 +391,7 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 
 	t.Run("AttributionQueryCompareTimestampRangeNoLookBack", func(t *testing.T) {
 		query := &model.AttributionQuery{
+			AnalyzeType:    model.AnalyzeTypeUsers,
 			From:           timestamp - 2*U.SECONDS_IN_A_DAY,
 			To:             timestamp + 3*U.SECONDS_IN_A_DAY,
 			LookbackDays:   10,
@@ -408,6 +415,7 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 	})
 	t.Run("AttributionQueryCompareTimestampRangeNoLookBack", func(t *testing.T) {
 		query := &model.AttributionQuery{
+			AnalyzeType:    model.AnalyzeTypeUsers,
 			From:           timestamp - 2*U.SECONDS_IN_A_DAY,
 			To:             timestamp + 3*U.SECONDS_IN_A_DAY,
 			LookbackDays:   10,
@@ -431,6 +439,7 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 	})
 	t.Run("AttributionQueryCompareTimestampRangeNoLookBack", func(t *testing.T) {
 		query := &model.AttributionQuery{
+			AnalyzeType:    model.AnalyzeTypeUsers,
 			From:           timestamp - 2*U.SECONDS_IN_A_DAY,
 			To:             timestamp + 3*U.SECONDS_IN_A_DAY,
 			LookbackDays:   10,
@@ -464,6 +473,7 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 
 	t.Run("AttributionQueryCompareNoLookBackDays", func(t *testing.T) {
 		query := &model.AttributionQuery{
+			AnalyzeType:    model.AnalyzeTypeUsers,
 			From:           timestamp,
 			To:             timestamp + 4*U.SECONDS_IN_A_DAY,
 			LookbackDays:   10,
@@ -492,6 +502,7 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 
 	t.Run("AttributionQueryCompareNoLookBackDays", func(t *testing.T) {
 		query := &model.AttributionQuery{
+			AnalyzeType:    model.AnalyzeTypeUsers,
 			From:           timestamp,
 			To:             timestamp + 4*U.SECONDS_IN_A_DAY,
 			LookbackDays:   10,
@@ -524,6 +535,7 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 
 	t.Run("TestFirstTouchCampaignCompareWithLookBackDays", func(t *testing.T) {
 		query := &model.AttributionQuery{
+			AnalyzeType:    model.AnalyzeTypeUsers,
 			From:           timestamp + 4*U.SECONDS_IN_A_DAY,
 			To:             timestamp + 10*U.SECONDS_IN_A_DAY,
 			LookbackDays:   20,
@@ -575,6 +587,7 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 
 	t.Run("TestFirstTouchCampaignCompareWithLookBackDays", func(t *testing.T) {
 		query := &model.AttributionQuery{
+			AnalyzeType:    model.AnalyzeTypeUsers,
 			From:           timestamp + 4*U.SECONDS_IN_A_DAY,
 			To:             timestamp + 10*U.SECONDS_IN_A_DAY,
 			LookbackDays:   20,

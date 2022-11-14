@@ -262,7 +262,7 @@ function BarChart({
 
     bars
       .append('text')
-      .text((d) => d.value)
+      .text((d) => numberWithCommas(Number(d?.value?.toFixed(2) || 0)))
       .attr('x', (d) => xScale(d.label) + xScale.bandwidth() / 2)
       .attr('y', (d) => {
         return (
@@ -271,10 +271,7 @@ function BarChart({
             : height - minBarHeight) - 5
         );
       })
-      .attr('font-family', FONT_FAMILY)
-      .attr('font-size', '11px')
-      .attr('font-weight', 600)
-      .attr('fill', 'black')
+      .attr('class', 'bar-chart-label')
       .attr('text-anchor', 'middle');
 
     // g.selectAll(".bar")

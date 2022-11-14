@@ -361,7 +361,8 @@ function CoreQuery({
             ...equivalentQuery.breakdown.event
           ],
           globalFilters: equivalentQuery.globalFilters,
-          ...queryDateRange
+          ...queryDateRange,
+          events_condition: equivalentQuery.eventsCondition
         };
         return queryOpts;
       });
@@ -786,7 +787,9 @@ function CoreQuery({
 
   useEffect(() => {
     fetchProjectSettingsV1(activeProject.id);
-    fetchSlackChannels(activeProject.id);
+    if(projectSettingsV1?.int_slack) {
+      fetchSlackChannels(activeProject.id);
+    }
   }, [activeProject, projectSettingsV1?.int_slack, showShareToSlackModal]);
 
   useEffect(() => {

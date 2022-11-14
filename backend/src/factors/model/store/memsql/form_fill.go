@@ -16,57 +16,30 @@ import (
 func (store *MemSQL) CreateFormFillEventById(projectId int64, formFillPayload *model.SDKFormFillPayload) (int, error) {
 	logFields := log.Fields{
 		"project_id": projectId,
-		"form_fill":  formFillPayload,
+		"form_id":    formFillPayload.FormId,
+		"field_id":   formFillPayload.FieldId,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
 
-	if projectId == 0 || formFillPayload.FormId == "" || formFillPayload.FieldId == "" {
+	if projectId == 0 || formFillPayload.UserId == "" || formFillPayload.FormId == "" || formFillPayload.FieldId == "" {
 		logCtx.Error("Failed to create form fill event by ID. Invalid parameters")
 		return http.StatusBadRequest, errors.New("Failed to create a form fill event. Invalid parameters.")
 	}
 
-	if formFillPayload.TimeSpent == 0 {
-		logCtx.WithFields(log.Fields{"project_id": projectId, "form_id": formFillPayload.FormId, "field_id": formFillPayload.FieldId}).Info("Changing value of time_spent_on_field from 0 to 100")
-		formFillPayload.TimeSpent = 100
-	}
-
-	if formFillPayload.FirstUpdatedTime == 0 {
-		var firstUpdatedTimeValue = time.Now().Unix()
-		logCtx.WithFields(log.Fields{"project_id": projectId, "form_id": formFillPayload.FormId, "field_id": formFillPayload.FieldId}).Info("Changing value of first_updated_time from 0 to ", firstUpdatedTimeValue)
-		formFillPayload.FirstUpdatedTime = firstUpdatedTimeValue
-	}
-
-	if formFillPayload.LastUpdatedTime == 0 {
-		var lastUpdatedTimeValue = time.Now().Unix()
-		logCtx.WithFields(log.Fields{"project_id": projectId, "form_id": formFillPayload.FormId, "field_id": formFillPayload.FieldId}).Info("Changing value of last_updated_time from 0 to ", lastUpdatedTimeValue)
-		formFillPayload.LastUpdatedTime = lastUpdatedTimeValue
-	}
-
-	_, error := store.GetFormFillEventById(projectId, formFillPayload.FormId, formFillPayload.FieldId)
-	if error == http.StatusFound {
-		return http.StatusConflict, nil
-	} else if error == http.StatusBadRequest {
-		return http.StatusBadRequest, errors.New("Invalid parameters on create form fill event.")
-	} else if error == http.StatusInternalServerError {
-		return http.StatusInternalServerError, errors.New("Failed to create a form fill event. Getting form fill event failed.")
-	}
-
-	event := model.FormFill{
-		ProjectID:        projectId,
-		FormId:           formFillPayload.FormId,
-		CreatedAt:        time.Now(),
-		UpdatedAt:        time.Now(),
-		Id:               U.GetUUID(),
-		Value:            formFillPayload.Value,
-		TimeSpentOnField: formFillPayload.TimeSpent,
-		FirstUpdatedTime: formFillPayload.FirstUpdatedTime,
-		LastUpdatedTime:  formFillPayload.LastUpdatedTime,
-		FieldId:          formFillPayload.FieldId,
+	formFill := model.FormFill{
+		ProjectID: projectId,
+		UserId:    formFillPayload.UserId,
+		FormId:    formFillPayload.FormId,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		Id:        U.GetUUID(),
+		Value:     formFillPayload.Value,
+		FieldId:   formFillPayload.FieldId,
 	}
 
 	db := C.GetServices().Db
-	dbx := db.Create(&event)
+	dbx := db.Create(&formFill)
 	if dbx.Error != nil {
 		if IsDuplicateRecordError(dbx.Error) {
 			return http.StatusConflict, errors.New("Failed to create a form fill event. Duplicate.")
@@ -78,7 +51,8 @@ func (store *MemSQL) CreateFormFillEventById(projectId int64, formFillPayload *m
 	return http.StatusCreated, nil
 }
 
-func (store *MemSQL) GetFormFillEventById(projectId int64, formId string, fieldId string) (*model.FormFill, int) {
+func (store *MemSQL) GetFormFillEventById(projectId int64, userId string,
+	formId string, fieldId string) (*model.FormFill, int) {
 	logFields := log.Fields{
 		"project_id": projectId,
 		"form_id":    formId,
@@ -94,7 +68,8 @@ func (store *MemSQL) GetFormFillEventById(projectId int64, formId string, fieldI
 	}
 
 	db := C.GetServices().Db
-	dbx := db.Limit(1).Where("project_id = ? AND form_id = ? AND field_id = ?", projectId, formId, fieldId)
+	dbx := db.Limit(1).Where("project_id = ? AND user_id = ? AND form_id = ? AND field_id = ?",
+		projectId, userId, formId, fieldId)
 
 	var event model.FormFill
 	if err := dbx.Find(&event).Error; err != nil {
@@ -102,7 +77,7 @@ func (store *MemSQL) GetFormFillEventById(projectId int64, formId string, fieldI
 			return nil, http.StatusNotFound
 		}
 
-		logCtx.WithFields(log.Fields{"project_id": projectId, "form_id": formId, "field_id": fieldId}).WithError(err).Error(
+		logCtx.WithError(err).Error(
 			"Getting form fill failed on GetFormFillEventById.")
 		return nil, http.StatusInternalServerError
 	}
@@ -128,9 +103,10 @@ func (store *MemSQL) GetFormFillEventsUpdatedBeforeTenMinutes(projectIds []int64
 	return result, nil
 }
 
-func (store *MemSQL) DeleteFormFillProcessedRecords(projectId int64, formId string, fieldId string) (int, error) {
+func (store *MemSQL) DeleteFormFillProcessedRecords(projectId int64, userId string, formId string, fieldId string) (int, error) {
 	logFields := log.Fields{
 		"project_id": projectId,
+		"user_id":    userId,
 		"form_id":    formId,
 		"field_id":   fieldId,
 	}
@@ -138,9 +114,12 @@ func (store *MemSQL) DeleteFormFillProcessedRecords(projectId int64, formId stri
 	logCtx := log.WithFields(logFields)
 
 	db := C.GetServices().Db
-	err := db.Table("form_fills").Where("project_id = ? AND form_id = ? AND field_id = ?", projectId, formId, fieldId).Delete(&model.FormFill{}).Error
+	err := db.Table("form_fills").
+		Where("project_id = ? AND user_id = ? AND form_id = ? AND field_id = ?",
+			projectId, userId, formId, fieldId).
+		Delete(&model.FormFill{}).Error
 	if err != nil {
-		logCtx.WithFields(log.Fields{"project_id": projectId, "form_id": formId, "field_id": fieldId}).WithError(err).Error("Deleting record failed")
+		logCtx.WithError(err).Error("Delete form fill records failed.")
 		return http.StatusBadRequest, err
 	}
 	return http.StatusAccepted, nil

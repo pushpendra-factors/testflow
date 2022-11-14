@@ -442,6 +442,9 @@ CREATE TABLE IF NOT EXISTS project_settings (
     is_weekly_insights_enabled boolean,
     is_explain_enabled boolean,
     timelines_config json,
+    client6_signal_key text,
+    factors6_signal_key text,
+    int_six_signal boolean NOT NULL DEFAULT FALSE,
     KEY (updated_at),
     SHARD KEY (project_id),
     PRIMARY KEY (project_id)
@@ -1161,15 +1164,13 @@ CREATE TABLE IF NOT EXISTS pathanalysis(
 CREATE TABLE IF NOT EXISTS form_fills(
     project_id bigint NOT NULL,
     id text NOT NULL,
+    user_id text NOT NULL,
     form_id text NOT NULL,
-    value text,
     field_id text NOT NULL,
-    first_updated_time bigint,
-    last_updated_time bigint,
-    time_spent_on_field bigint,
+    value text,
     created_at timestamp(6),
     updated_at timestamp(6),
-    PRIMARY KEY (project_id, form_id, id),
-    SHARD KEY (project_id, form_id)
+    PRIMARY KEY (project_id, user_id, form_id, id),
+    SHARD KEY (project_id, user_id, form_id)
 );
 

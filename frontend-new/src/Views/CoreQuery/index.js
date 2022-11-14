@@ -247,6 +247,7 @@ function CoreQuery({
   const { session_analytics_seq } = queryOptions;
   const { globalFilters } = queryOptions;
   const groupAnalysis = queryOptions.group_analysis;
+  const eventsCondition = queryOptions.events_condition
 
   useEffect(() => {
     fetchDemoProject()
@@ -264,15 +265,18 @@ function CoreQuery({
   };
 
   useEffect(() => {
-    closeDrawer();
-    if (query_type === 'event') {
-      updateResultState({ ...initialState, loading: true });
-      setLoading(true);
-      runEventsQueryFromUrl();
-    } else if (query_type === 'funnel') {
-      updateResultState({ ...initialState, loading: true });
-      setLoading(true);
-      runFunnelsQueryFromUrl();
+    if (query_id) {
+      if (query_type === 'event') {
+        closeDrawer();
+        updateResultState({ ...initialState, loading: true });
+        setLoading(true);
+        runEventsQueryFromUrl();
+      } else if (query_type === 'funnel') {
+        closeDrawer();
+        updateResultState({ ...initialState, loading: true });
+        setLoading(true);
+        runFunnelsQueryFromUrl();
+      }
     }
   }, [query_id, query_type, queriesState]);
 
@@ -303,7 +307,7 @@ function CoreQuery({
     marketo?.status ||
     integrationV1?.int_slack ||
     integration?.lead_squared_config !== null ||
-    integration?.six_signal_enabled;
+    integration?.int_six_signal;
 
   const getQueryFromHashId = () =>
     queriesState.data.find((quer) => quer.id_text === query_id);
@@ -764,7 +768,8 @@ function CoreQuery({
           queriesA,
           session_analytics_seq,
           durationObj,
-          globalFilters
+          globalFilters,
+          eventsCondition
         );
 
         if (!isQuerySaved) {
@@ -815,6 +820,7 @@ function CoreQuery({
       groupBy,
       globalFilters,
       dateRange,
+      eventsCondition,
       updateResultState,
       configActionsOnRunningQuery,
       updateLocalReducer,
@@ -1494,16 +1500,16 @@ function CoreQuery({
   const title = () => {
     const IconAndText = IconAndTextSwitchQueryType(queryType);
     return (
-      <div className="flex justify-between items-center">
-        <div className="flex items-center">
-          <SVG name={IconAndText.icon} size="24px" />
-          <Text type="title" level={4} weight="bold" extraClass="ml-2 m-0">
+      <div className='flex justify-between items-center'>
+        <div className='flex items-center'>
+          <SVG name={IconAndText.icon} size='24px' />
+          <Text type='title' level={4} weight='bold' extraClass='ml-2 m-0'>
             {IconAndText.text}
           </Text>
         </div>
-        <div className="flex justify-end items-center">
-          <Button size="large" type="text" onClick={() => closeDrawer()}>
-            <SVG name="times" />
+        <div className='flex justify-end items-center'>
+          <Button size='large' type='text' onClick={() => closeDrawer()}>
+            <SVG name='times' />
           </Button>
         </div>
       </div>
@@ -1651,7 +1657,6 @@ function CoreQuery({
       <Modal
         title={
           <AnalysisHeader
-
             isFromAnalysisPage={true}
             requestQuery={requestQuery}
             onBreadCrumbClick={handleBreadCrumbClick}
@@ -1669,15 +1674,15 @@ function CoreQuery({
         centered={false}
         mask={false}
         closable={false}
-        className="fa-modal--full-width"
+        className='fa-modal--full-width'
       >
-        <div className="px-20">
+        <div className='px-20'>
           <ErrorBoundary
             fallback={
               <FaErrorComp
-                size="medium"
-                title="Analyse Results Error"
-                subtitle="We are facing trouble loading Analyse results. Drop us a message on the in-app chat."
+                size='medium'
+                title='Analyse Results Error'
+                subtitle='We are facing trouble loading Analyse results. Drop us a message on the in-app chat.'
               />
             }
             onError={FaErrorLog}
@@ -1819,32 +1824,32 @@ function CoreQuery({
   if (loading) {
     return (
       <CoreQueryContext.Provider value={contextValue}>
-        <div className="flex justify-center flex-col items-center w-full">
-          <div className="w-full flex center">
+        <div className='flex justify-center flex-col items-center w-full'>
+          <div className='w-full flex center'>
             <div
-              id="app-header"
-              className="bg-white z-50 flex-col  px-8 w-full"
+              id='app-header'
+              className='bg-white z-50 flex-col  px-8 w-full'
             >
-              <div className="items-center flex justify-between w-full pt-3 pb-3">
+              <div className='items-center flex justify-between w-full pt-3 pb-3'>
                 <div
-                  role="button"
+                  role='button'
                   tabIndex={0}
-                  className="flex items-center cursor-pointer"
+                  className='flex items-center cursor-pointer'
                 >
                   <Button
-                    size="large"
-                    type="text"
+                    size='large'
+                    type='text'
                     onClick={() => {
                       history.push('/');
                     }}
-                    icon={<SVG size={32} name="Brand" />}
+                    icon={<SVG size={32} name='Brand' />}
                   />
                   <Text
-                    type="title"
+                    type='title'
                     level={5}
-                    weight="bold"
-                    extraClass="m-0 mt-1"
-                    lineHeight="small"
+                    weight='bold'
+                    extraClass='m-0 mt-1'
+                    lineHeight='small'
                   >
                     {querySaved
                       ? `Reports / ${queryType} / ${querySaved.name}`
@@ -1853,12 +1858,12 @@ function CoreQuery({
                   </Text>
                 </div>
 
-                <div className="flex items-center gap-x-2">
-                  <div className="pr-2 border-r">{renderSaveQueryComp()}</div>
+                <div className='flex items-center gap-x-2'>
+                  <div className='pr-2 border-r'>{renderSaveQueryComp()}</div>
                   <Button
-                    size="large"
-                    type="text"
-                    icon={<SVG size={20} name="close" />}
+                    size='large'
+                    type='text'
+                    icon={<SVG size={20} name='close' />}
                     onClick={
                       coreQueryState.navigatedFromDashboard
                         ? handleCloseDashboardQuery
@@ -1877,16 +1882,16 @@ function CoreQuery({
                   onClick={(e) => !queryOpen && setQueryOpen(true)}
                 >
                   {renderQueryComposer()}
-                  <Button size="large" className="query_card_expand">
-                    <SVG name="expand" size={20} />
+                  <Button size='large' className='query_card_expand'>
+                    <SVG name='expand' size={20} />
                     Expand
                   </Button>
                 </div>
               ) : null}
             </div>
           </div>
-          <div className="w-full h-64 flex items-center justify-center">
-            <Spin size="large" />
+          <div className='w-full h-64 flex items-center justify-center'>
+            <Spin size='large' />
           </div>
         </div>
       </CoreQueryContext.Provider>
@@ -1898,26 +1903,26 @@ function CoreQuery({
       <ErrorBoundary
         fallback={
           <FaErrorComp
-            size="medium"
-            title="Analyse Error"
-            subtitle="We are facing trouble loading Analyse. Drop us a message on the in-app chat."
+            size='medium'
+            title='Analyse Error'
+            subtitle='We are facing trouble loading Analyse. Drop us a message on the in-app chat.'
           />
         }
         onError={FaErrorLog}
       >
         <Drawer
           title={title()}
-          placement="left"
+          placement='left'
           closable={false}
           visible={drawerVisible && !checkIfnewComposer()}
           onClose={closeDrawer}
           getContainer={false}
-          width="650px"
-          className="fa-drawer"
+          width='650px'
+          className='fa-drawer'
         >
           <ErrorBoundary
             fallback={
-              <FaErrorComp subtitle="Facing issues with Query Builder" />
+              <FaErrorComp subtitle='Facing issues with Query Builder' />
             }
             onError={FaErrorLog}
           >
@@ -1929,40 +1934,40 @@ function CoreQuery({
         !resultState.data &&
         !resultState.loading &&
         activeProject.id === demoProjectId ? (
-          <div className="rounded-lg border-2 h-20 mt-20 -mb-20 mx-20">
-            <Row justify="space-between" className="m-0 p-3">
+          <div className='rounded-lg border-2 h-20 mt-20 -mb-20 mx-20'>
+            <Row justify='space-between' className='m-0 p-3'>
               <Col span={projects.length === 1 ? 12 : 18}>
                 <img
-                  alt="Welcome"
-                  src="assets/icons/welcome.svg"
+                  alt='Welcome'
+                  src='assets/icons/welcome.svg'
                   style={{ float: 'left', marginRight: '20px' }}
                 />
-                <Text type="title" level={6} weight="bold" extraClass="m-0">
+                <Text type='title' level={6} weight='bold' extraClass='m-0'>
                   Welcome! You just entered a Factors demo project
                 </Text>
                 {projects.length === 1 ? (
-                  <Text type="title" level={7} extraClass="m-0">
+                  <Text type='title' level={7} extraClass='m-0'>
                     These reports have been built with a sample dataset. Use
                     this to start exploring!
                   </Text>
                 ) : (
-                  <Text type="title" level={7} extraClass="m-0">
+                  <Text type='title' level={7} extraClass='m-0'>
                     To jump back into your Factors project, click on your
                     account card on the{' '}
-                    <span className="font-bold">top right</span> of the screen.
+                    <span className='font-bold'>top right</span> of the screen.
                   </Text>
                 )}
               </Col>
-              <Col className="mr-2 mt-2">
+              <Col className='mr-2 mt-2'>
                 {projects.length === 1 ? (
                   <Button
-                    type="default"
+                    type='default'
                     style={{
                       background: 'white',
                       border: '1px solid #E7E9ED',
                       height: '40px'
                     }}
-                    className="m-0 mr-2"
+                    className='m-0 mr-2'
                     onClick={() => setShowProjectModal(true)}
                   >
                     Set up my own Factors project
@@ -1970,21 +1975,21 @@ function CoreQuery({
                 ) : null}
 
                 <Button
-                  type="link"
+                  type='link'
                   style={{
                     background: 'white',
                     // border: '1px solid #E7E9ED',
                     height: '40px'
                   }}
-                  className="m-0 mr-2"
+                  className='m-0 mr-2'
                   onClick={() => handleTour()}
                 >
                   Take the tour{' '}
                   <SVG
-                    name="Arrowright"
+                    name='Arrowright'
                     size={16}
-                    extraClass="ml-1"
-                    color="blue"
+                    extraClass='ml-1'
+                    color='blue'
                   />
                 </Button>
               </Col>

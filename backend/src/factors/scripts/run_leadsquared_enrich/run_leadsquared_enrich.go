@@ -52,7 +52,8 @@ func main() {
 	defer C.PingHealthcheckForPanic(appName, *envFlag, healthcheckPingID)
 
 	config := &C.Configuration{
-		Env: *envFlag,
+		AppName: appName,
+		Env:     *envFlag,
 		MemSQLInfo: C.DBConf{
 			Host:        *memSQLHost,
 			Port:        *memSQLPort,

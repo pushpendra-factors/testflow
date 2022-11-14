@@ -108,8 +108,6 @@ func AttributionHandlerV1(c *gin.Context) (interface{}, int, string, string, boo
 		requestPayload.Query = requestPayloadUnit.Query
 	}
 
-	enrichRequestUsingAttributionConfig(c, projectId, &requestPayload, logCtx)
-
 	if requestPayload.Query.Timezone != "" {
 		_, errCode := time.LoadLocation(requestPayload.Query.Timezone)
 		if errCode != nil {
@@ -124,8 +122,7 @@ func AttributionHandlerV1(c *gin.Context) (interface{}, int, string, string, boo
 		}
 
 		// For a KPI query, set the timezone internally for correct execution
-		if requestPayload.Query.AnalyzeType == model.AnalyzeTypeHSDeals || requestPayload.Query.AnalyzeType == model.AnalyzeTypeSFOpportunities ||
-			requestPayload.Query.AnalyzeType == model.AnalyzeTypeSFAccounts || requestPayload.Query.AnalyzeType == model.AnalyzeTypeHSCompanies {
+		if requestPayload.Query.AnalyzeType == model.AnalyzeTypeHSDeals || requestPayload.Query.AnalyzeType == model.AnalyzeTypeSFOpportunities {
 			if requestPayload.Query.KPI.Queries[0].Timezone != "" {
 				_, errCode := time.LoadLocation(string(requestPayload.Query.KPI.Queries[0].Timezone))
 				if errCode != nil {
@@ -288,28 +285,35 @@ func enrichRequestUsingAttributionConfig(c *gin.Context, projectID int64, reques
 
 	//Todo (Anil) Add enrichment of attribution Window, handle case of 'Entire User Journey'
 
-	if requestPayload.Query.AnalyzeType == model.AnalyzeTypeHSDeals {
+	switch requestPayload.Query.AnalyzeType {
 
+	case model.AnalyzeTypeUsers:
+		requestPayload.Query.RunType = model.RunTypeUser
+	case model.AnalyzeTypeUserKPI:
+		requestPayload.Query.RunType = model.RunTypeUserKPI
+	case model.AnalyzeTypeHSDeals:
 		if &attributionConfig != nil && attributionConfig.AnalyzeTypeHSCompaniesEnabled == true {
-			requestPayload.Query.AnalyzeType = model.AnalyzeTypeHSCompanies
+			requestPayload.Query.RunType = model.RunTypeHSCompanies
 		} else if &attributionConfig != nil && attributionConfig.AnalyzeTypeHSDealsEnabled == true {
-			requestPayload.Query.AnalyzeType = model.AnalyzeTypeHSDeals
+			requestPayload.Query.RunType = model.RunTypeHSDeals
 		} else {
 			logCtx.WithFields(log.Fields{"Query": requestPayload.Query, "AttributionConfig": attributionConfig}).Error("Failed to set analyze type")
 			c.AbortWithStatusJSON(errCode, gin.H{"error": "Invalid config/query. Failed to set analyze type from attribution config & project settings."})
 		}
-	}
-	if requestPayload.Query.AnalyzeType == model.AnalyzeTypeSFOpportunities {
-
+	case model.AnalyzeTypeSFOpportunities:
 		if &attributionConfig != nil && attributionConfig.AnalyzeTypeSFAccountsEnabled == true {
-			requestPayload.Query.AnalyzeType = model.AnalyzeTypeSFAccounts
+			requestPayload.Query.RunType = model.RunTypeSFAccounts
 		} else if &attributionConfig != nil && attributionConfig.AnalyzeTypeSFOpportunitiesEnabled == true {
-			requestPayload.Query.AnalyzeType = model.AnalyzeTypeSFOpportunities
+			requestPayload.Query.RunType = model.RunTypeSFOpportunities
 		} else {
 			logCtx.WithFields(log.Fields{"Query": requestPayload.Query, "AttributionConfig": attributionConfig}).Error("Failed to set analyze type")
 			c.AbortWithStatusJSON(errCode, gin.H{"error": "Invalid config/query. Failed to set analyze type from attribution config & project settings."})
 		}
+	default:
+		logCtx.WithFields(log.Fields{"Query": requestPayload.Query, "AttributionConfig": attributionConfig}).Error("Failed to set analyze type")
+		c.AbortWithStatusJSON(errCode, gin.H{"error": "Invalid config/query. Failed to set analyze type from attribution config & project settings."})
 	}
+
 }
 
 // decodeAttributionConfig decode attribution config from project settings to map

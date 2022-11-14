@@ -192,8 +192,10 @@ var EP_CRM_REFERENCE_EVENT_ID string = "$crm_reference_event_id"
 const PROPERTY_KEY_LAST_MODIFIED_DATE = "lastmodifieddate"
 const PROPERTY_KEY_LAST_MODIFIED_DATE_HS = "hs_lastmodifieddate"
 
-// time_spent_on_form event property
-const EP_TIME_SPENT_ON_FORM = "time_spent_on_form"
+// Properties used only for $form_fill events.
+const EP_TIME_SPENT_ON_FORM = "time_spent_on_form"             // unit:seconds
+const EP_TIME_SPENT_ON_FORM_FIELD = "time_spent_on_form_field" // unit:seconds
+const EP_FORM_FIELD_VALUE = "form_field_value"
 
 var GENERIC_NUMERIC_EVENT_PROPERTIES = [...]string{
 	EP_FIRST_SEEN_OCCURRENCE_COUNT,

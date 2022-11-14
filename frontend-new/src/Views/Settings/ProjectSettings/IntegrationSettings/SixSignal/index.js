@@ -26,7 +26,7 @@ const SixSignalIntegration = ({
   const [showForm, setShowForm] = useState(false);
 
   useEffect(() => {
-    if (currentProjectSettings?.six_signal_enabled) {
+    if (currentProjectSettings?.int_six_signal) {
       setIsActive(true);
     }
   }, [currentProjectSettings]);
@@ -40,7 +40,7 @@ const SixSignalIntegration = ({
     udpateProjectSettings(activeProject.id,
       {
         'client6_signal_key': values.api_key,
-        'six_signal_enabled': true
+        'int_six_signal': true
       }).then(() => {
         setLoading(false);
         setShowForm(false);
@@ -62,7 +62,7 @@ const SixSignalIntegration = ({
     udpateProjectSettings(activeProject.id,
       {
         'client6_signal_key': '',
-        'six_signal_enabled': false
+        'int_six_signal': false
       }).then(() => {
         setLoading(false);
         setShowForm(false);
@@ -164,14 +164,14 @@ const SixSignalIntegration = ({
           </div>
         </Modal>
         {
-          currentProjectSettings?.six_signal_enabled && <div className={'mt-4 flex flex-col border-top--thin py-4 mt-2 w-full'}>
+          currentProjectSettings?.int_six_signal && <div className={'mt-4 flex flex-col border-top--thin py-4 mt-2 w-full'}>
             <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0'}>Connected Account</Text>
             <Text type={'title'} level={7} color={'grey'} extraClass={'m-0 mt-2'}>API Key</Text>
-            <Input size="large" disabled={true} placeholder="API Key" value={currentProjectSettings.client6_signal_key} style={{ width: '400px' }} />
+            <Input size="large" disabled={true} placeholder="API Key" value={currentProjectSettings?.client6_signal_key} style={{ width: '400px' }} />
           </div>
         }
         <div className={'mt-4 flex'} data-tour='step-11'>
-          {currentProjectSettings?.six_signal_enabled ? <Button loading={loading} onClick={() => onDisconnect()}>Disconnect</Button> : <Button type={'primary'} loading={loading} onClick={() => setShowForm(!showForm)}>Connect Now</Button>
+          {currentProjectSettings?.int_six_signal ? <Button loading={loading} onClick={() => onDisconnect()}>Disconnect</Button> : <Button type={'primary'} loading={loading} onClick={() => setShowForm(!showForm)}>Connect Now</Button>
           }
           {kbLink && <a className={'ant-btn ml-2 '} target={"_blank"} href={kbLink}>View documentation</a>}
         </div>

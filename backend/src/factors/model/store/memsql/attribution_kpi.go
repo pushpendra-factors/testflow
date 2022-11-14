@@ -53,10 +53,10 @@ func (store *MemSQL) ExecuteKPIForAttribution(projectID int64, query *model.Attr
 	return kpiData, nil
 }
 
-func getGroupKeys(query *model.AttributionQuery, groups []model.Group) (string, string) {
+func getGroupKeys(queryRunAnalyzeType string, groups []model.Group) (string, string) {
 	var _groupIDKey string
 	var _groupIDUserKey string
-	if query.AnalyzeType == model.AnalyzeTypeHSDeals {
+	if queryRunAnalyzeType == model.RunTypeHSDeals {
 
 		for _, group := range groups {
 			if group.Name == model.GROUP_NAME_HUBSPOT_DEAL {
@@ -67,7 +67,7 @@ func getGroupKeys(query *model.AttributionQuery, groups []model.Group) (string, 
 		}
 	}
 
-	if query.AnalyzeType == model.AnalyzeTypeSFOpportunities {
+	if queryRunAnalyzeType == model.RunTypeSFOpportunities {
 		for _, group := range groups {
 			if group.Name == model.GROUP_NAME_SALESFORCE_OPPORTUNITY {
 				//_groupIDNo = group.ID
@@ -77,7 +77,7 @@ func getGroupKeys(query *model.AttributionQuery, groups []model.Group) (string, 
 		}
 	}
 
-	if query.AnalyzeType == model.AnalyzeTypeSFAccounts {
+	if queryRunAnalyzeType == model.RunTypeSFAccounts {
 		for _, group := range groups {
 			if group.Name == model.GROUP_NAME_SALESFORCE_ACCOUNT {
 				//_groupIDNo = group.ID
@@ -87,7 +87,7 @@ func getGroupKeys(query *model.AttributionQuery, groups []model.Group) (string, 
 		}
 	}
 
-	if query.AnalyzeType == model.AnalyzeTypeHSCompanies {
+	if queryRunAnalyzeType == model.RunTypeHSCompanies {
 		for _, group := range groups {
 			if group.Name == model.GROUP_NAME_HUBSPOT_COMPANY {
 				//_groupIDNo = group.ID
@@ -122,7 +122,7 @@ func (store *MemSQL) GetDataFromKPIResult(projectID int64, kpiQueryResult model.
 		logCtx.WithField("messageFinder", "Failed to get custom metrics").Error(errMsg)
 		return nil
 	}
-	if C.GetAttributionDebug() == 1 || query.AnalyzeType == model.AnalyzeTypeUserKPI {
+	if C.GetAttributionDebug() == 1 {
 		logCtx.WithFields(log.Fields{"customMetrics": customMetrics}).Info("customMetrics for project in attribution query")
 	}
 
@@ -157,8 +157,7 @@ func (store *MemSQL) RunKPIGroupQuery(projectID int64, query *model.AttributionQ
 	enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery bool, debugQueryKey string, logCtx log.Entry) (error, []string) {
 
 	var kpiQueryResult model.QueryResult
-	if query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities ||
-		query.AnalyzeType == model.AnalyzeTypeSFAccounts || query.AnalyzeType == model.AnalyzeTypeHSCompanies {
+	if query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities {
 
 		var duplicatedRequest model.KPIQueryGroup
 		U.DeepCopy(&query.KPI, &duplicatedRequest)
@@ -205,15 +204,35 @@ func (store *MemSQL) FillKPIGroupUserData(projectID int64, query *model.Attribut
 		return errors.New("failed to get groups for project")
 	}
 
-	_groupIDKey, _groupIDUserKey := getGroupKeys(query, _groups)
-
+	// Get Group keys for Analyze Type because we need to pull deal/opp data for both deal/opp And company/acc level attribution
+	_groupIDKey, _groupIDUserKey := getGroupKeys(query.AnalyzeType, _groups)
 	kpiKeyGroupUserIDList, err := store.PullGroupUserIDs(projectID, kpiKeys, _groupIDKey, kpiData, groupUserIDToKpiID, logCtx)
 	if err != nil {
 		return errors.New("no valid KPIs found for this query to run")
 	}
-	logCtx.WithFields(log.Fields{"kpiKeyGroupUserIDList": kpiKeyGroupUserIDList}).Info("KPI-Attribution group set")
+	if C.GetAttributionDebug() == 1 {
+		logCtx.WithFields(log.Fields{"kpiKeyGroupUserIDList": kpiKeyGroupUserIDList}).Info("KPI-Attribution group set FillKPIGroupUserData")
+	}
 
-	err = store.PullKPIKeyUserGroupInfo(projectID, kpiKeyGroupUserIDList, _groupIDUserKey, kpiData, groupUserIDToKpiID, logCtx)
+	if query.RunType == model.RunTypeHSDeals || query.RunType == model.RunTypeSFOpportunities {
+
+		_groupIDKey, _groupIDUserKey = getGroupKeys(query.AnalyzeType, _groups)
+		err = store.FillNormalUsersForKPIDealOppUser(projectID, kpiKeyGroupUserIDList, _groupIDUserKey, kpiData, groupUserIDToKpiID, logCtx)
+
+	} else if query.RunType == model.RunTypeSFAccounts || query.RunType == model.RunTypeHSCompanies {
+
+		// Pull the common id field based on run type
+		_groupIDKey, _groupIDUserKey = getGroupKeys(query.RunType, _groups)
+		accCompIds, err := store.FillCompanyAccountIDs(projectID, kpiKeyGroupUserIDList, kpiData, groupUserIDToKpiID, logCtx)
+		if C.GetAttributionDebug() == 1 {
+			logCtx.WithFields(log.Fields{"accCompIds": accCompIds}).Info("KPI-Attribution accCompIds set FillKPIGroupUserData")
+		}
+		if err != nil {
+			return err
+		}
+		err = store.FillNormalUsersForKPIAccCompUser(projectID, accCompIds, _groupIDUserKey, kpiData, groupUserIDToKpiID, logCtx)
+	}
+
 	return err
 }
 
@@ -274,7 +293,167 @@ func (store *MemSQL) PullGroupUserIDs(projectID int64, kpiKeys *[]string, _group
 	return kpiKeyGroupUserIDList, nil
 }
 
-func (store *MemSQL) PullKPIKeyUserGroupInfo(projectID int64, kpiKeyGroupUserIDList []string, _groupIDUserKey string, kpiData *map[string]model.KPIInfo, groupUserIDToKpiID *map[string]string, logCtx log.Entry) error {
+// FillCompanyAccountIDs pulls account/company IDs for deals/opp and returns the list of accounts/company IDs
+func (store *MemSQL) FillCompanyAccountIDs(projectID int64, kpiKeyGroupUserIDList []string,
+	kpiData *map[string]model.KPIInfo, groupUserIDToKpiID *map[string]string, logCtx log.Entry) ([]string, error) {
+
+	logFields := log.Fields{
+		"project_id": projectID,
+	}
+
+	var kpiKeyAccountCompanyGroupUserIDList []string
+	kpiKeysIdPlaceHolder := U.GetValuePlaceHolder(len(kpiKeyGroupUserIDList))
+	kpiKeysIdValue := U.GetInterfaceList(kpiKeyGroupUserIDList)
+	groupUserQuery := "Select left_group_user_id, right_group_user_id from group_relationships where project_id=? AND ( left_group_user_id IN ( " + kpiKeysIdPlaceHolder + " )  OR right_group_user_id IN ( " + kpiKeysIdPlaceHolder + " )) "
+	var gUParams []interface{}
+	gUParams = append(gUParams, projectID)
+	gUParams = append(gUParams, kpiKeysIdValue...) // for left_group_user_id
+	gUParams = append(gUParams, kpiKeysIdValue...) // for right_group_user_id
+	gURows, tx1, err, reqID := store.ExecQueryWithContext(groupUserQuery, gUParams)
+	if err != nil {
+		logCtx.WithField("query_id", reqID).WithError(err).Error("SQL Query failed")
+		return kpiKeyAccountCompanyGroupUserIDList, errors.New("failed to get groupUserQuery result for project")
+	}
+
+	startReadTime := time.Now()
+	for gURows.Next() {
+		var leftGroupUserIDNull sql.NullString
+		var rightGroupUserIDNull sql.NullString
+		if err = gURows.Scan(&leftGroupUserIDNull, &rightGroupUserIDNull); err != nil {
+			logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
+			continue
+		}
+
+		leftGroupUserID := U.IfThenElse(leftGroupUserIDNull.Valid, leftGroupUserIDNull.String, model.PropertyValueNone).(string)
+		rightGroupUserID := U.IfThenElse(rightGroupUserIDNull.Valid, rightGroupUserIDNull.String, model.PropertyValueNone).(string)
+
+		if leftGroupUserID == model.PropertyValueNone || rightGroupUserID == model.PropertyValueNone {
+			continue
+		}
+
+		// enrich KPI group ID
+		if _, exists1 := (*groupUserIDToKpiID)[leftGroupUserID]; exists1 {
+
+			kpiKeyID := (*groupUserIDToKpiID)[leftGroupUserID]
+			if _, exists := (*kpiData)[kpiKeyID]; exists {
+				v := (*kpiData)[kpiKeyID]
+				v.KpiAccountCompanyGroupID = rightGroupUserID
+				(*kpiData)[kpiKeyID] = v
+				kpiKeyAccountCompanyGroupUserIDList = append(kpiKeyAccountCompanyGroupUserIDList, rightGroupUserID)
+			}
+		} else {
+			if _, exists1 := (*groupUserIDToKpiID)[rightGroupUserID]; exists1 {
+				kpiKeyID := (*groupUserIDToKpiID)[rightGroupUserID]
+				// enrich KPI group ID
+				if _, exists := (*kpiData)[kpiKeyID]; exists {
+					v := (*kpiData)[kpiKeyID]
+					v.KpiAccountCompanyGroupID = leftGroupUserID
+					(*kpiData)[kpiKeyID] = v
+					kpiKeyAccountCompanyGroupUserIDList = append(kpiKeyAccountCompanyGroupUserIDList, leftGroupUserID)
+				}
+			}
+		}
+	}
+	err = gURows.Err()
+	if err != nil {
+		// Error from DB is captured eg: timeout error
+		logCtx.WithFields(log.Fields{"err": err}).Error("Error in executing query in PullGroupUserIDs")
+		return nil, err
+	}
+	U.LogReadTimeWithQueryRequestID(startReadTime, reqID, &logFields)
+
+	defer U.CloseReadQuery(gURows, tx1)
+	return kpiKeyAccountCompanyGroupUserIDList, nil
+}
+
+// FillNormalUsersForKPIAccCompUser fills all the users for given account in kpiData
+func (store *MemSQL) FillNormalUsersForKPIAccCompUser(projectID int64, kpiKeyGroupUserIDList []string, accountCompanyKey string,
+	kpiData *map[string]model.KPIInfo, groupUserIDToKpiID *map[string]string, logCtx log.Entry) error {
+	// Pulling user ID for each KPI ID i.e. associated users with each KPI ID i.e. DealID or OppID - kpiIDToCoalUsers
+
+	if kpiKeyGroupUserIDList == nil || len(kpiKeyGroupUserIDList) == 0 {
+		return errors.New("no group users found, exiting")
+	}
+
+	_kpiAccCompData := make(map[string]model.AccountCompUsers)
+
+	kpiKeysGroupUserIdPlaceHolder := U.GetValuePlaceHolder(len(kpiKeyGroupUserIDList))
+	kpiKeysGroupUserIdValue := U.GetInterfaceList(kpiKeyGroupUserIDList)
+	groupUserListQuery := "Select " + accountCompanyKey + ", users.id, COALESCE(users.customer_user_id,users.id) FROM users WHERE project_id=? " +
+		" AND (is_group_user=false or is_group_user IS NULL) AND " + accountCompanyKey + " IN ( " + kpiKeysGroupUserIdPlaceHolder + " ) "
+	var gULParams []interface{}
+	gULParams = append(gULParams, projectID)
+	gULParams = append(gULParams, kpiKeysGroupUserIdValue...)
+	gULRows, tx2, err, _ := store.ExecQueryWithContext(groupUserListQuery, gULParams)
+	if err != nil {
+		logCtx.WithError(err).Error("SQL Query failed")
+		return errors.New("failed to get groupUserListQuery result for project")
+	}
+
+	for gULRows.Next() {
+		var groupIDNull sql.NullString
+		var userIDNull sql.NullString
+		var coalUserIDNull sql.NullString
+		if err = gULRows.Scan(&groupIDNull, &userIDNull, &coalUserIDNull); err != nil {
+			logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
+			continue
+		}
+
+		groupID := U.IfThenElse(groupIDNull.Valid, groupIDNull.String, model.PropertyValueNone).(string)
+		userID := U.IfThenElse(userIDNull.Valid, userIDNull.String, model.PropertyValueNone).(string)
+		coalUserID := U.IfThenElse(coalUserIDNull.Valid, coalUserIDNull.String, model.PropertyValueNone).(string)
+		if coalUserID == model.PropertyValueNone || groupID == model.PropertyValueNone {
+			logCtx.WithError(err).Error("Values are not correct - coalUserID & groupID. Ignoring row. Continuing")
+			continue
+		}
+
+		if _, exists := (_kpiAccCompData)[groupID]; exists {
+			v := (_kpiAccCompData)[groupID]
+			v.KpiCoalUserIds = append(v.KpiCoalUserIds, coalUserID)
+			v.KpiUserIds = append(v.KpiUserIds, userID)
+			(_kpiAccCompData)[groupID] = v
+		} else {
+			var v model.AccountCompUsers
+			v.KpiCoalUserIds = append(v.KpiCoalUserIds, coalUserID)
+			v.KpiUserIds = append(v.KpiUserIds, userID)
+			(_kpiAccCompData)[groupID] = v
+		}
+	}
+	err = gULRows.Err()
+	if err != nil {
+		// Error from DB is captured eg: timeout error
+		logCtx.WithFields(log.Fields{"err": err}).Error("Error in executing query in FillNormalUsersForKPIDealOppUser")
+		return err
+	}
+	if C.GetAttributionDebug() == 1 {
+		logFields := log.Fields{"_kpiAccCompData": _kpiAccCompData, "project_id": projectID}
+		logCtx.WithFields(logFields).Info("KPI-Attribution group set _kpiAccCompData FillNormalUsersForKPIAccCompUser")
+	}
+
+	// Fill the pulled kpiAccCompData users into actual kpiData for Deals/Opps for acc/comp level attribution
+	for k, v := range *kpiData {
+		accCompID := v.KpiAccountCompanyGroupID
+		if _, exists := (_kpiAccCompData)[accCompID]; exists {
+			vAccComp := (_kpiAccCompData)[accCompID]
+
+			vDealOpp := (*kpiData)[k]
+			vDealOpp.KpiCoalUserIds = append(v.KpiCoalUserIds, vAccComp.KpiCoalUserIds...)
+			vDealOpp.KpiUserIds = append(v.KpiUserIds, vAccComp.KpiUserIds...)
+			(*kpiData)[k] = vDealOpp
+		}
+	}
+
+	if C.GetAttributionDebug() == 1 {
+		logFields := log.Fields{"kpiData": kpiData, "project_id": projectID}
+		logCtx.WithFields(logFields).Info("KPI-Attribution group set kpiData FillNormalUsersForKPIAccCompUser")
+	}
+	defer U.CloseReadQuery(gULRows, tx2)
+
+	return nil
+}
+
+func (store *MemSQL) FillNormalUsersForKPIDealOppUser(projectID int64, kpiKeyGroupUserIDList []string, dealOppKey string,
+	kpiData *map[string]model.KPIInfo, groupUserIDToKpiID *map[string]string, logCtx log.Entry) error {
 	// Pulling user ID for each KPI ID i.e. associated users with each KPI ID i.e. DealID or OppID - kpiIDToCoalUsers
 
 	if kpiKeyGroupUserIDList == nil || len(kpiKeyGroupUserIDList) == 0 {
@@ -282,8 +461,8 @@ func (store *MemSQL) PullKPIKeyUserGroupInfo(projectID int64, kpiKeyGroupUserIDL
 	}
 	kpiKeysGroupUserIdPlaceHolder := U.GetValuePlaceHolder(len(kpiKeyGroupUserIDList))
 	kpiKeysGroupUserIdValue := U.GetInterfaceList(kpiKeyGroupUserIDList)
-	groupUserListQuery := "Select " + _groupIDUserKey + ", users.id, COALESCE(users.customer_user_id,users.id) FROM users WHERE project_id=? " +
-		" AND (is_group_user=false or is_group_user IS NULL) AND " + _groupIDUserKey + " IN ( " + kpiKeysGroupUserIdPlaceHolder + " ) "
+	groupUserListQuery := "Select " + dealOppKey + ", users.id, COALESCE(users.customer_user_id,users.id) FROM users WHERE project_id=? " +
+		" AND (is_group_user=false or is_group_user IS NULL) AND " + dealOppKey + " IN ( " + kpiKeysGroupUserIdPlaceHolder + " ) "
 	var gULParams []interface{}
 	gULParams = append(gULParams, projectID)
 	gULParams = append(gULParams, kpiKeysGroupUserIdValue...)
@@ -322,7 +501,7 @@ func (store *MemSQL) PullKPIKeyUserGroupInfo(projectID int64, kpiKeyGroupUserIDL
 	err = gULRows.Err()
 	if err != nil {
 		// Error from DB is captured eg: timeout error
-		logCtx.WithFields(log.Fields{"err": err}).Error("Error in executing query in PullKPIKeyUserGroupInfo")
+		logCtx.WithFields(log.Fields{"err": err}).Error("Error in executing query in FillNormalUsersForKPIDealOppUser")
 		return err
 	}
 	logFields := log.Fields{"kpiData": kpiData, "project_id": projectID}
