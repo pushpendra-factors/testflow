@@ -1616,7 +1616,7 @@ func ProcessQueryKPI(query *AttributionQuery, attributionData *map[string]*Attri
 
 	logCtx := log.WithFields(log.Fields{"Method": "ProcessQueryKPI", "KPIAttribution": "Debug"})
 
-	if C.GetAttributionDebug() == 1 {
+	if C.GetAttributionDebug() == 1 || query.AnalyzeType == AnalyzeTypeUserKPI {
 		logCtx := log.WithFields(log.Fields{"Method": "ProcessQueryKPI", "KPIAttribution": "Debug", "attributionData": attributionData})
 		logCtx.Info("KPI Attribution data")
 	}
@@ -1626,7 +1626,7 @@ func ProcessQueryKPI(query *AttributionQuery, attributionData *map[string]*Attri
 	// Add custom dimensions
 	AddCustomDimensions(attributionData, query, marketingReports)
 
-	if C.GetAttributionDebug() == 1 {
+	if C.GetAttributionDebug() == 1 || query.AnalyzeType == AnalyzeTypeUserKPI {
 		logCtx.Info("Done AddTheAddedKeysAndMetrics AddPerformanceData ApplyFilter ComputeAdditionalMetrics AddCustomDimensions")
 	}
 	// for KPI queries, use the kpiData.KpiAggFunctionTypes as ConvAggFunctionType
@@ -1670,7 +1670,7 @@ func ProcessQueryKPI(query *AttributionQuery, attributionData *map[string]*Attri
 	// Additional filtering based on AttributionKey.
 	result.Rows = FilterRows(result.Rows, query.AttributionKey, GetLastKeyValueIndex(result.Headers))
 
-	if C.GetAttributionDebug() == 1 {
+	if C.GetAttributionDebug() == 1 || query.AnalyzeType == AnalyzeTypeUserKPI {
 		logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "Result": result}).Info("KPI Attribution result")
 	}
 
@@ -1704,7 +1704,7 @@ func ProcessQueryKPI(query *AttributionQuery, attributionData *map[string]*Attri
 
 	result.Rows = AddGrandTotalRowKPI(result.Headers, result.Rows, GetLastKeyValueIndex(result.Headers), query.AnalyzeType, goalEventAggFuncTypes, query.AttributionMethodology, query.AttributionMethodologyCompare)
 
-	if C.GetAttributionDebug() == 1 {
+	if C.GetAttributionDebug() == 1 || query.AnalyzeType == AnalyzeTypeUserKPI {
 		logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "Result": result}).Info("KPI Attribution result AddGrandTotalRow")
 	}
 	return result

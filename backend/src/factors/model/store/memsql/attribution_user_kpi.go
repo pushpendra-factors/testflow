@@ -87,8 +87,9 @@ func (store *MemSQL) GetDataFromUserKPIResult(projectID int64, kpiQueryResult mo
 	datetimeIdx := 0
 	keyIdx := 1
 	valIdx := 2
-	kpiHeaderLength := len(kpiQueryResult.Headers)
-	kpiAggFunctionType := make([]string, kpiHeaderLength)
+
+	kpiValueHeaderLength := len(kpiQueryResult.Headers) - valIdx
+	kpiAggFunctionType := make([]string, kpiValueHeaderLength)
 	var kpiValueHeaders []string
 	for idx := valIdx; idx < len(kpiQueryResult.Headers); idx++ {
 		kpiValueHeaders = append(kpiValueHeaders, kpiQueryResult.Headers[idx])
