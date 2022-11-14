@@ -242,9 +242,9 @@ type Model interface {
 
 	// form_fill
 	CreateFormFillEventById(projectId int64, formFill *model.SDKFormFillPayload) (int, error)
-	GetFormFillEventById(projectId int64, formId string, fieldId string) (*model.FormFill, int)
+	GetFormFillEventById(projectId int64, userId string, formId string, fieldId string) (*model.FormFill, int)
 	GetFormFillEventsUpdatedBeforeTenMinutes(projectIds []int64) ([]model.FormFill, error)
-	DeleteFormFillProcessedRecords(projectId int64, formId string, fieldId string) (int, error)
+	DeleteFormFillProcessedRecords(projectId int64, userId string, formId string, fieldId string) (int, error)
 
 	// events
 	GetEventCountOfUserByEventName(projectID int64, userId string, eventNameId string) (uint64, int)

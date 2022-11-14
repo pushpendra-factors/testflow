@@ -307,6 +307,7 @@ func SDKGetInfoHandler(c *gin.Context) {
 		AutoTrackSPAPageView: projectSetting.AutoTrackSPAPageView,
 		AutoFormCapture:      projectSetting.AutoFormCapture,
 		AutoClickCapture:     projectSetting.AutoClickCapture,
+		AutoFormFillCapture:  projectSetting.AutoCaptureFormFills,
 		ExcludeBot:           projectSetting.ExcludeBot,
 		IntDrift:             projectSetting.IntDrift,
 		IntClearBit:          projectSetting.IntClearBit,
