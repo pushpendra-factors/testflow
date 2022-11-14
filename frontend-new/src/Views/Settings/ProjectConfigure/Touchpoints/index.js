@@ -26,8 +26,8 @@ import {
 
 import { MoreOutlined } from '@ant-design/icons';
 import { OTPService } from '../../../../reducers/touchpoints/services';
-import {bindService} from 'Utils/global';
 import useService from '../../../../hooks/useService';
+import { Otp } from '../../../../reducers/touchpoints/classes';
 
 const { TabPane } = Tabs;
 
@@ -69,8 +69,8 @@ const Touchpoints = ({
     },
     {
       title: '',
-      dataIndex: 'index',
-      key: 'index',
+      dataIndex: 'id',
+      key: 'id',
       render: (obj) => {
         return renderTableActions(obj);
       },
@@ -82,45 +82,21 @@ const Touchpoints = ({
   }
 
   useEffect(() => {
-    if (tabNo === '2') {
-      otpService.getTouchPoints().then(res => {
-        console.log(res);
-      })
-      setHubspotContactDate();
-    }
-    if (tabNo === '3') {
-      setSalesforceContactData();
+    if(tabNo!=='1') {
+      getOtpObjects();
     }
   }, [activeProject, tabNo]);
 
   const setSalesforceContactData = () => {
-    const touchpointObjs =
-      activeProject['salesforce_touch_points'] &&
-      activeProject['salesforce_touch_points']['sf_touch_point_rules']
-        ? [
-            ...activeProject['salesforce_touch_points'][
-              'sf_touch_point_rules'
-            ].map((rule, id) => ({ ...rule, index: id })),
-          ]
-        : [];
+    const touchpointObjs = data.length? [...data.filter((dt)=>dt.crm_type==='salesforce').map((rule, id) => ({ ...rule, index: id }))]: [];
     setTouchPointsData(touchpointObjs);
-
     getEventProperties(activeProject.id, '$sf_campaign_member_updated');
     getEventProperties(activeProject.id, '$sf_campaign_member_created');
   };
 
-  const setHubspotContactDate = () => {
-    const touchpointObjs =
-      activeProject['hubspot_touch_points'] &&
-      activeProject['hubspot_touch_points']['hs_touch_point_rules']
-        ? [
-            ...activeProject['hubspot_touch_points'][
-              'hs_touch_point_rules'
-            ].map((rule, id) => ({ ...rule, index: id })),
-          ]
-        : [];
+  const setHubspotContactData = (data = []) => {
+    const touchpointObjs = data.length? [...data.filter((dt)=>dt.crm_type==='hubspot').map((rule, id) => ({ ...rule, index: id }))]: [];
     setTouchPointsData(touchpointObjs);
-
     getEventProperties(activeProject.id, '$hubspot_contact_updated');
   };
 
@@ -349,54 +325,54 @@ const Touchpoints = ({
     return titleAction;
   };
 
+  const getOtpObjects = () => {
+    otpService.getTouchPoints().then(res => {
+      if(getCRMType() === 'hubspot') {
+        setHubspotContactData([...res?.data?.result]);
+      } 
+      if(getCRMType() === 'salesforce'){
+        setSalesforceContactData([...res?.data?.result]);
+      }
+    });
+  }
+
   const deleteTchPoint = (index = 0) => {
-    let tchPointRules = [];
-    if (tabNo === '2') {
-      tchPointRules =
-        activeProject['hubspot_touch_points'] &&
-        activeProject['hubspot_touch_points']['hs_touch_point_rules']
-          ? [...activeProject['hubspot_touch_points']['hs_touch_point_rules']]
-          : [];
-      tchPointRules = tchPointRules.filter((val, i) => i !== index);
-      udpateProjectDetails(activeProject.id, {
-        hubspot_touch_points: { hs_touch_point_rules: tchPointRules },
-      });
-    } else {
-      tchPointRules =
-        activeProject['salesforce_touch_points'] &&
-        activeProject['salesforce_touch_points']['sf_touch_point_rules']
-          ? [
-              ...activeProject['salesforce_touch_points'][
-                'sf_touch_point_rules'
-              ],
-            ]
-          : [];
-      tchPointRules = tchPointRules.filter((val, i) => i !== index);
-      udpateProjectDetails(activeProject.id, {
-        salesforce_touch_points: { sf_touch_point_rules: tchPointRules },
-      });
-    }
-    fetchProjects();
-    setTouchPointState({ state: 'list', index: 0 });
+    otpService.removeTouchPoint(index).then((res) => {
+      getOtpObjects();
+      setTouchPointState({ state: 'list', index: 0 });
+    });
+    //Handle Error case
   };
+
+  const setTouchPointObj = (tchObj, type) => {
+    const touchPointObj = new Otp();
+    touchPointObj.crm_type = type;
+    touchPointObj.filters = tchObj.filters;
+    touchPointObj.properties_map = tchObj.properties_map;
+    touchPointObj.rule_type = tchObj.rule_type;
+    touchPointObj.touch_point_time_ref = tchObj.touch_point_time_ref;
+    return touchPointObj;
+  }
 
   const onTchSave = (tchObj, index = -1) => {
     let tchPointRules = [];
     if (tabNo === '2') {
-      tchPointRules =
-        activeProject['hubspot_touch_points'] &&
-        activeProject['hubspot_touch_points']['hs_touch_point_rules']
-          ? [...activeProject['hubspot_touch_points']['hs_touch_point_rules']]
-          : [];
-      if (index >= 0) {
-        tchPointRules[index] = tchObj;
-      } else {
-        tchPointRules.push(tchObj);
-      }
       // Save OTP
-      udpateProjectDetails(activeProject.id, {
-        hubspot_touch_points: { hs_touch_point_rules: tchPointRules },
-      });
+      const otpObj = setTouchPointObj(tchObj, 'hubspot');
+      if(touchPointState.state === 'edit') {
+        otpService.modifyTouchPoint(otpObj).then((res) => {
+          getOtpObjects();
+        });
+      } else {
+        otpService.createTouchPoint(otpObj).then((res) => {
+          getOtpObjects();
+        });
+      }
+      
+
+      // udpateProjectDetails(activeProject.id, {
+      //   hubspot_touch_points: { hs_touch_point_rules: tchPointRules },
+      // });
     } else if (tabNo === '3') {
       tchPointRules =
         activeProject['salesforce_touch_points'] &&
@@ -424,6 +400,12 @@ const Touchpoints = ({
     setTouchPointState({ state: 'list', index: 0 });
   };
 
+  const getCRMType = () => {
+    if(tabNo === '2') return 'hubspot';
+    if(tabNo === '3') return 'salesforce';
+    if(tabNo === '1') return 'digital';
+  }
+
   const renderTouchPointContent = () => {
     let touchPointContent = null;
     if (touchPointState.state === 'list') {
@@ -438,7 +420,7 @@ const Touchpoints = ({
               <Table
                 className='fa-table--basic mt-4'
                 columns={columns}
-                dataSource={touchPointsData}
+                dataSource={touchPointsData.filter((obj)=>obj.crm_type===getCRMType())}
                 pagination={false}
                 loading={false}
               />
@@ -469,7 +451,7 @@ const Touchpoints = ({
           {' '}
         </TouchpointView>
       );
-    } else if (touchPointState.state === 'edit') {
+    } else if (touchPointState.state === 'edit' && touchPointsData) {
       touchPointContent = (
         <TouchpointView
           tchType={tabNo}
@@ -532,7 +514,6 @@ const mapDispatchToProps = (dispatch) =>
       getEventProperties,
       fetchProjects,
       udpateProjectDetails,
-      bindService
     },
     dispatch
   );
