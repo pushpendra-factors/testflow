@@ -680,7 +680,7 @@ func ProcessAttributionDataToResult(projectID int64, query *model.AttributionQue
 			queryStartTime = time.Now().UTC().Unix()
 		}
 
-	} else if query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities || query.AnalyzeType == model.AnalyzeTypeUserKPI {
+	} else if query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities {
 		// execution similar to the normal run - still keeping it separate for better understanding
 		result = model.ProcessQueryKPI(query, attributionData, marketingReports, isCompare, kpiData)
 		if C.GetAttributionDebug() == 1 || query.AnalyzeType == model.AnalyzeTypeUserKPI {
@@ -689,6 +689,13 @@ func ProcessAttributionDataToResult(projectID int64, query *model.AttributionQue
 		}
 		queryStartTime = time.Now().UTC().Unix()
 
+	} else if query.AnalyzeType == model.AnalyzeTypeUserKPI {
+		result = model.ProcessQueryUserKPI(query, attributionData, marketingReports, isCompare, kpiData)
+		if C.GetAttributionDebug() == 1 || query.AnalyzeType == model.AnalyzeTypeUserKPI {
+			logCtx.WithFields(log.Fields{"result": result}).Info(fmt.Sprintf("KPI-Attribution result"))
+			logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Process Query KPI took time")
+		}
+		queryStartTime = time.Now().UTC().Unix()
 	} else {
 		result = model.ProcessQuery(query, attributionData, marketingReports, isCompare, projectID, *logCtx)
 		if C.GetAttributionDebug() == 1 {
