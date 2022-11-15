@@ -109,12 +109,21 @@ function FaSelect({
 
       options.forEach((op, index) => {
         isSelected = isSelectedCheck(op);
+        let st = searchTerm.toLowerCase()
+        // Regex to detect https/http is there or not as a protocol
+        let testURLRegex = /^https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*)$/
+        if(testURLRegex.test(st) > 0){
+          st = st.split('://')[1]
+        }
+        st = st.replace(/\/$/,"")
+
+        
         if (
-          op[0].toLowerCase().includes(searchTerm.toLowerCase()) ||
+          op[0].toLowerCase().includes(st) ||
           (op[0] === '$none' &&
             DISPLAY_PROP[op[0]]
               .toLowerCase()
-              .includes(searchTerm.toLowerCase()))
+              .includes(st))
         ) {
           rendOpts.push(
             <div
