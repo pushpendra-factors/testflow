@@ -74,6 +74,7 @@ func main() {
 	allowIdentificationOverwriteUsingSourceByProjectID := flag.String("allow_identification_overwrite_using_source_by_project_id", "", "Allow identification overwrite based on request source.")
 	allowHubspotPastEventsEnrichmentByProjectID := flag.String("allow_hubspot_past_events_enrichment_by_project_id", "", "")
 	allowHubspotContactListInsertByProjectID := flag.String("allow_hubspot_contact_list_insert_by_project_id", "", "")
+	IngestionTimezoneEnabledProjectIDs := flag.String("ingestion_timezone_enabled_projects", "", "List of projectIds whose ingestion timezone is enabled.")
 
 	flag.Parse()
 	if *env != "development" && *env != "staging" && *env != "production" {
@@ -130,6 +131,7 @@ func main() {
 		AllowIdentificationOverwriteUsingSourceByProjectID: *allowIdentificationOverwriteUsingSourceByProjectID,
 		AllowHubspotPastEventsEnrichmentByProjectID:        *allowHubspotPastEventsEnrichmentByProjectID,
 		AllowHubspotContactListInsertByProjectID:           *allowHubspotContactListInsertByProjectID,
+		IngestionTimezoneEnabledProjectIDs:                 C.GetTokensFromStringListAsString(*IngestionTimezoneEnabledProjectIDs),
 	}
 
 	C.InitConf(config)

@@ -74,6 +74,8 @@ spec:
             - $(HUBSPOT_APP_ID)
             - --hubspot_app_secret
             - $(HUBSPOT_APP_SECRET)
+            - --ingestion_timezone_enabled_projects
+            - ''            
             envFrom:
             - configMapRef:
                 name: config-env

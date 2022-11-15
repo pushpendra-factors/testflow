@@ -141,6 +141,7 @@ func main() {
 	six_signal_enabled := flag.Int("sixSignalEnabled", 0, "To enable sixSignal enrichment")
 	useSalesforceV54APIByProjectID := flag.String("use_salesforce_v54_api_by_project_id", "", "Use v54 api for query salesforce data")
 	allowIdentificationOverwriteUsingSourceByProjectID := flag.String("allow_identification_overwrite_using_source_by_project_id", "", "Allow identification overwrite based on request source.")
+	IngestionTimezoneEnabledProjectIDs := flag.String("ingestion_timezone_enabled_projects", "", "List of projectIds whose ingestion timezone is enabled.")
 
 	flag.Parse()
 	defaultAppName := "salesforce_enrich"
@@ -203,6 +204,7 @@ func main() {
 		SixSignalEnabled:                                   *six_signal_enabled,
 		UseSalesforceV54APIByProjectID:                     *useSalesforceV54APIByProjectID,
 		AllowIdentificationOverwriteUsingSourceByProjectID: *allowIdentificationOverwriteUsingSourceByProjectID,
+		IngestionTimezoneEnabledProjectIDs:                 C.GetTokensFromStringListAsString(*IngestionTimezoneEnabledProjectIDs),
 	}
 
 	C.InitConf(config)

@@ -46,6 +46,8 @@ spec:
             - $(SENTRY_DSN)
             - --json_key
             - $(GOOGLE_SHEETS_SECRET)
+            - --ingestion_timezone_enabled_projects
+            - ''            
             envFrom:
             - configMapRef:
                 name: config-env

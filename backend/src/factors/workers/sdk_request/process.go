@@ -66,7 +66,7 @@ func main() {
 	clearbitEnabled := flag.Int("clearbit_enabled", 0, "To enable clearbit enrichment")
 	six_signal_enabled := flag.Int("sixSignalEnabled", 0, "To enable sixSignal enrichment")
 	allowIdentificationOverwriteUsingSourceByProjectID := flag.String("allow_identification_overwrite_using_source_by_project_id", "", "Allow identification overwrite based on request source.")
-
+	IngestionTimezoneEnabledProjectIDs := flag.String("ingestion_timezone_enabled_projects", "", "List of projectIds whose ingestion timezone is enabled.")
 	flag.Parse()
 
 	workerName := defaultWorkerName
@@ -120,6 +120,7 @@ func main() {
 		ClearbitEnabled:                                    *clearbitEnabled,
 		SixSignalEnabled:                                   *six_signal_enabled,
 		AllowIdentificationOverwriteUsingSourceByProjectID: *allowIdentificationOverwriteUsingSourceByProjectID,
+		IngestionTimezoneEnabledProjectIDs:                 C.GetTokensFromStringListAsString(*IngestionTimezoneEnabledProjectIDs),
 	}
 	C.InitConf(config)
 

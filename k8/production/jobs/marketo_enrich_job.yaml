@@ -55,6 +55,8 @@ spec:
             - --cache_with_sorted_set
             - --use_source_property_overwrite_by_project_id
             - '*'
+            - --ingestion_timezone_enabled_projects
+            - ''            
             envFrom:
             - configMapRef:
                 name: config-env

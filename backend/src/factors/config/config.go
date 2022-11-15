@@ -267,6 +267,7 @@ type Configuration struct {
 	AllowIdentificationOverwriteUsingSourceByProjectID string
 	AllowHubspotPastEventsEnrichmentByProjectID        string
 	AllowHubspotContactListInsertByProjectID           string
+	IngestionTimezoneEnabledProjectIDs                 []string
 }
 
 type Services struct {
@@ -2020,6 +2021,16 @@ func IsLoggedInUserWhitelistedForProjectAnalytics(loggedInUUID string) bool {
 
 func IsDemoProject(projectId int64) bool {
 	for _, id := range configuration.DemoProjectIds {
+		projectIdString := fmt.Sprintf("%v", projectId)
+		if id == projectIdString {
+			return true
+		}
+	}
+	return false
+}
+
+func IsIngestionTimezoneEnabled(projectId int64) bool {
+	for _, id := range configuration.IngestionTimezoneEnabledProjectIDs {
 		projectIdString := fmt.Sprintf("%v", projectId)
 		if id == projectIdString {
 			return true

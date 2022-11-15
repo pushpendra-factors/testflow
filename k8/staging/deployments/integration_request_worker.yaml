@@ -78,6 +78,8 @@ spec:
           - $(GCP_PROJECT_ID)
           - --gcp_project_location
           - $(GCP_PROJECT_LOCATION)
+          - --ingestion_timezone_enabled_projects
+          - ''
         envFrom:
         - configMapRef:
             name: config-appserver
