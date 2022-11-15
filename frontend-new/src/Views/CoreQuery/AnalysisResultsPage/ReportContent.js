@@ -31,7 +31,10 @@ import WebsiteAnalyticsTable from '../../Dashboard/WebsiteAnalytics/WebsiteAnaly
 import { CoreQueryContext } from '../../../contexts/CoreQueryContext';
 import KPIAnalysis from '../KPIAnalysis';
 import ProfilesResultPage from '../ProfilesResultPage';
-import { getChartType } from './analysisResultsPage.helpers';
+import {
+  getChartType,
+  shouldShowChartConfigOptions
+} from './analysisResultsPage.helpers';
 import { getKpiLabel } from '../KPIAnalysis/kpiAnalysis.helpers';
 import { ATTRIBUTION_GROUP_ANALYSIS_KEYS } from '../AttributionsResult/attributionsResult.constants';
 
@@ -61,7 +64,7 @@ function ReportContent({
   let queryDetail = null;
   let durationObj = {};
   let groupAnalysis = '';
-  let metricsDropdown = <div className="mr-0" />;
+  let metricsDropdown = <div className='mr-0' />;
 
   const {
     coreQueryState: { chartTypes }
@@ -89,6 +92,7 @@ function ReportContent({
 
   const [currMetricsValue, setCurrMetricsValue] = useState(0);
   const [chartTypeMenuItems, setChartTypeMenuItems] = useState([]);
+  const [secondAxisKpiIndices, setSecondAxisKpiIndices] = useState([]);
 
   useEffect(() => {
     let items = [];
@@ -119,15 +123,15 @@ function ReportContent({
 
   if (resultState.loading) {
     content = (
-      <div className="h-64 flex items-center justify-center w-full">
-        <Spin size="large" />
+      <div className='h-64 flex items-center justify-center w-full'>
+        <Spin size='large' />
       </div>
     );
   }
 
   if (resultState.error) {
     content = (
-      <div className="h-64 flex items-center justify-center w-full">
+      <div className='h-64 flex items-center justify-center w-full'>
         Something Went Wrong!
       </div>
     );
@@ -135,9 +139,9 @@ function ReportContent({
 
   if (resultState.apiCallStatus && !resultState.apiCallStatus.required) {
     content = (
-      <div className="h-64 flex flex-col items-center justify-center w-full">
-        <SVG name="nodata" />
-        <Text type="title" color="grey" extraClass="mb-0">
+      <div className='h-64 flex flex-col items-center justify-center w-full'>
+        <SVG name='nodata' />
+        <Text type='title' color='grey' extraClass='mb-0'>
           {resultState.apiCallStatus.message}
         </Text>
       </div>
@@ -326,6 +330,7 @@ function ReportContent({
           durationObj={durationObj}
           chartType={chartType}
           renderedCompRef={renderedCompRef}
+          secondAxisKpiIndices={secondAxisKpiIndices}
         />
       );
     }
@@ -360,7 +365,7 @@ function ReportContent({
             apiCallStatus={resultState.apiCallStatus}
           />
         ) : null}
-        <div className="mt-6">
+        <div className='mt-6'>
           <CalendarRow
             queryType={queryType}
             handleDurationChange={handleDurationChange}
@@ -372,11 +377,19 @@ function ReportContent({
             triggerAttrComparision={runAttrCmprQuery}
             handleGranularityChange={handleGranularityChange}
             section={section}
+            setSecondAxisKpiIndices={setSecondAxisKpiIndices}
+            secondAxisKpiIndices={secondAxisKpiIndices}
+            showChartConfigOptions={shouldShowChartConfigOptions({
+              queryType,
+              breakdown,
+              chartType
+            })}
+            kpis={queries}
           />
         </div>
       </>
 
-      <div className="mt-12">{content}</div>
+      <div className='mt-12'>{content}</div>
     </>
   );
 }

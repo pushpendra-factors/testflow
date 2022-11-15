@@ -10,7 +10,8 @@ function KPIAnalysis({
   breakdown,
   currMetricsValue,
   renderedCompRef,
-  durationObj
+  durationObj,
+  secondAxisKpiIndices = []
 }) {
   if (breakdown.length) {
     return (
@@ -34,6 +35,7 @@ function KPIAnalysis({
       section={section}
       ref={renderedCompRef}
       durationObj={durationObj}
+      secondAxisKpiIndices={secondAxisKpiIndices}
     />
   );
 }

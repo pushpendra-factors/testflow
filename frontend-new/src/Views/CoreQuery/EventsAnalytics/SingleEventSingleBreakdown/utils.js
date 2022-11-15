@@ -31,6 +31,7 @@ import NonClickableTableHeader from '../../../../components/NonClickableTableHea
 import { EVENT_COUNT_KEY } from '../eventsAnalytics.constants';
 import { BREAKDOWN_TYPES } from '../../constants';
 import { getDifferentDates } from '../../coreQuery.helpers';
+import { isNumeric } from '../../../../utils/global';
 
 export const defaultSortProp = ({ breakdown }) => {
   const dateTimeBreakdownIndex = findIndex(
@@ -123,7 +124,10 @@ export const getTableColumns = (
       width: '50%',
       fixed: 'left',
       render: (d) => {
-        if (e.prop_type === 'numerical' && !Number.isNaN(d)) {
+        if (
+          e.prop_type === 'numerical' &&
+          (typeof d === 'number' || isNumeric(d))
+        ) {
           return <NumFormat number={d} />;
         }
         return d;
@@ -288,7 +292,10 @@ export const getDateBasedColumns = (
       width: 200,
       fixed: 'left',
       render: (d) => {
-        if (e.prop_type === 'numerical' && !Number.isNaN(d)) {
+        if (
+          e.prop_type === 'numerical' &&
+          (typeof d === 'number' || isNumeric(d))
+        ) {
           return <NumFormat number={d} />;
         }
         return d;

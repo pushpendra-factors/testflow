@@ -7,7 +7,6 @@ import React, {
   useContext,
   memo
 } from 'react';
-import { useSelector } from 'react-redux';
 import { CoreQueryContext } from '../../../../contexts/CoreQueryContext';
 import {
   getDefaultDateSortProp,
@@ -38,12 +37,11 @@ const NoBreakdownChartsComponent = forwardRef(
       durationObj,
       section,
       savedQuerySettings,
-      comparisonData
+      comparisonData,
+      secondAxisKpiIndices = []
     },
     ref
   ) => {
-    const { eventNames } = useSelector((state) => state.coreQuery);
-
     const comparisonApplied = !!comparisonData.data;
 
     const [sorter, setSorter] = useState(
@@ -63,22 +61,16 @@ const NoBreakdownChartsComponent = forwardRef(
     const [data, setData] = useState([]);
 
     const handleSorting = useCallback((prop) => {
-      setSorter((currentSorter) => {
-        return getNewSorterState(currentSorter, prop);
-      });
+      setSorter((currentSorter) => getNewSorterState(currentSorter, prop));
     }, []);
 
     const handleDateSorting = useCallback((prop) => {
-      setDateSorter((currentSorter) => {
-        return getNewSorterState(currentSorter, prop);
-      });
+      setDateSorter((currentSorter) => getNewSorterState(currentSorter, prop));
     }, []);
 
-    useImperativeHandle(ref, () => {
-      return {
-        currentSorter: { sorter, dateSorter }
-      };
-    });
+    useImperativeHandle(ref, () => ({
+      currentSorter: { sorter, dateSorter }
+    }));
 
     useEffect(() => {
       const aggData = formatData(responseData, kpis, comparisonData.data);
@@ -91,11 +83,11 @@ const NoBreakdownChartsComponent = forwardRef(
       setCategories(cats);
       setCompareCategories(compareCats);
       setData(d);
-    }, [responseData, kpis, comparisonData.data]);
+    }, [responseData, kpis, comparisonData.data, secondAxisKpiIndices]);
 
     if (!aggregateData.length) {
       return (
-        <div className="flex justify-center items-center w-full h-full pt-4 pb-4">
+        <div className='flex justify-center items-center w-full h-full pt-4 pb-4'>
           <NoDataChart />
         </div>
       );
@@ -103,7 +95,7 @@ const NoBreakdownChartsComponent = forwardRef(
 
     let chart = null;
     const table = (
-      <div className="mt-12 w-full">
+      <div className='mt-12 w-full'>
         <NoBreakdownTable
           seriesData={data}
           section={section}
@@ -124,7 +116,7 @@ const NoBreakdownChartsComponent = forwardRef(
     if (chartType === CHART_TYPE_SPARKLINES) {
       if (aggregateData.length === 1) {
         chart = (
-          <div className="flex items-center justify-center w-full">
+          <div className='flex items-center justify-center w-full'>
             <SparkChartWithCount
               total={aggregateData[0].total}
               event={aggregateData[0].name}
@@ -148,54 +140,53 @@ const NoBreakdownChartsComponent = forwardRef(
           (_, index) => aggregateData[index].total
         );
         chart = (
-          <div className="flex items-center flex-wrap justify-center w-full">
+          <div className='flex items-center flex-wrap justify-center w-full'>
             {aggregateData
               .filter((d) => d.total)
-              .map((chartData, index) => {
-                return (
-                  <div
-                    style={{ minWidth: '300px' }}
-                    key={chartData.index}
-                    className="w-1/3 mt-4 px-4"
-                  >
-                    <SparkChartWithCount
-                      total={chartData.total}
-                      event={chartData.name}
-                      frequency={durationObj.frequency}
-                      metricType={chartData.metricType}
-                      chartData={chartData.dataOverTime}
-                      chartColor={appliedColors[index]}
-                      alignment="vertical"
-                      compareTotal={chartData.compareTotal}
-                      comparisonApplied={
-                        chartData.compareTotal != null &&
-                        chartData.compareTotal > 0
-                      }
-                      headerTitle={getKpiLabel(kpisWithData[index])}
-                    />
-                  </div>
-                );
-              })}
+              .map((chartData, index) => (
+                <div
+                  style={{ minWidth: '300px' }}
+                  key={chartData.index}
+                  className='w-1/3 mt-4 px-4'
+                >
+                  <SparkChartWithCount
+                    total={chartData.total}
+                    event={chartData.name}
+                    frequency={durationObj.frequency}
+                    metricType={chartData.metricType}
+                    chartData={chartData.dataOverTime}
+                    chartColor={appliedColors[index]}
+                    alignment='vertical'
+                    compareTotal={chartData.compareTotal}
+                    comparisonApplied={
+                      chartData.compareTotal != null &&
+                      chartData.compareTotal > 0
+                    }
+                    headerTitle={getKpiLabel(kpisWithData[index])}
+                  />
+                </div>
+              ))}
           </div>
         );
       }
     } else if (chartType === CHART_TYPE_LINECHART) {
       chart = (
-        <div className="w-full">
+        <div className='w-full'>
           <LineChart
             frequency={durationObj.frequency}
             categories={categories}
             data={data}
-            showAllLegends={true}
+            showAllLegends
             comparisonApplied={comparisonApplied}
             compareCategories={compareCategories}
+            secondaryYAxisIndices={secondAxisKpiIndices}
           />
         </div>
       );
     }
 
     return (
-      <div className="flex items-center justify-center flex-col">
+      <div className='flex items-center justify-center flex-col'>
         {chart}
         {table}
       </div>
@@ -205,7 +196,7 @@ const NoBreakdownChartsComponent = forwardRef(
 
 const NoBreakdownChartsMemoized = memo(NoBreakdownChartsComponent);
 
-const NoBreakdownCharts = (props) => {
+function NoBreakdownCharts(props) {
   const {
     coreQueryState: {
       savedQuerySettings,
@@ -222,6 +213,6 @@ const NoBreakdownCharts = (props) => {
       {...props}
     />
   );
-};
+}
 
 export default NoBreakdownCharts;

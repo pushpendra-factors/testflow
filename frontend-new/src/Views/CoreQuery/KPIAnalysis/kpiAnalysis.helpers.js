@@ -7,7 +7,7 @@ export const getKpiLabel = (kpi) => {
   if (kpi.category !== 'channels' && kpi.category !== 'custom_channels') {
     return label;
   }
-  const labelWithGroupName = `${startCase(kpi.group)  } ${  label}`;
+  const labelWithGroupName = `${startCase(kpi.group)} ${label}`;
   if (labelWithGroupName.includes(' Metrics')) {
     return labelWithGroupName.replace(' Metrics', '');
   }
@@ -19,7 +19,7 @@ export const getFormattedKpiValue = ({ value, metricType }) => {
     return formatDuration(value);
   }
   if (metricType === METRIC_TYPES.percentType) {
-    return `${formatCount(value, 1)  }%`;
+    return `${formatCount(value, 1)}%`;
   }
   return value;
 };
