@@ -1,0 +1,72 @@
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { Button } from 'antd';
+import { SVG, Text } from 'Components/factorsComponents';
+import styles from './index.module.scss';
+
+function AttributionSetupDone() {
+  return (
+    <div className={`flex flex-col items-center mt-16 ${styles.contentBody}`}>
+      <div className='flex w-full justify-between items-center px-8 my-4'>
+        <Text
+          type='title'
+          level={6}
+          weight='bold'
+          color='black'
+          extraClass='m-0'
+        >
+          Attribution Reports
+        </Text>
+        <Button type='primary' disabled size='large'>
+          <SVG name='plus' color='white' className='w-full' /> Add Report
+        </Button>
+      </div>
+      <div className='flex flex-col justify-center items-center w-2/4 gap-4'>
+        <div className='mb-2'>
+          <SVG name='attributionHomeBackground' height='190' width='250' />
+        </div>
+        <div className='flex flex-col items-center gap-1'>
+          <Text
+            type='title'
+            level={6}
+            weight='bold'
+            color='black'
+            extraClass='m-0'
+          >
+            Pre-computing the attribution engine...
+          </Text>
+          <Text
+            type='title'
+            level={7}
+            weight='medium'
+            color='grey'
+            extraClass='m-0 text-justify'
+          >
+            Come back here after a day to create your attribution reporting
+          </Text>
+        </div>
+        <div className='flex flex-col items-center gap-1'>
+          <Text
+            type='title'
+            level={7}
+            weight='medium'
+            color='grey'
+            extraClass='m-0 text-justify'
+          >
+            Learn more about Multitouch Attribution Reporting
+          </Text>
+
+          <Link
+            className='flex items-center font-semibold gap-2'
+            style={{ color: `#1d89ff` }}
+          >
+            Attribution Basics{' '}
+            <SVG size={20} name='Arrowright' color='#1d89ff' />
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default AttributionSetupDone;
