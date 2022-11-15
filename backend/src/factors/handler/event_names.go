@@ -244,8 +244,26 @@ func GetEventNamesByUserHandler(c *gin.Context) {
 	eventNames = RemoveLabeledEventNamesFromOtherUserEventNames(eventNames)
 
 	_, displayNames := store.GetStore().GetDisplayNamesForAllEvents(projectId)
-	displayNameEvents := GetDisplayEventNamesHandler(displayNames)
 
+	displayNameEvents := make(map[string]string)
+	standardEvents := U.STANDARD_EVENTS_DISPLAY_NAMES
+	for event, displayName := range standardEvents {
+		displayNameEvents[event] = strings.Title(displayName)
+	}
+	for event, displayName := range displayNames {
+		displayNameEvents[event] = strings.Title(displayName)
+	}
+	// TODO: Janani Removing the IsExact property from output since its anyway backward compat with UI
+	// Will remove exact/approx logic in UI as well
+	for _, values := range eventNames {
+		for _, value := range values {
+			displayName := U.CreateVirtualDisplayName(value)
+			_, exist := displayNameEvents[value]
+			if !exist {
+				displayNameEvents[value] = displayName
+			}
+		}
+	}
 	groups, errCode := store.GetStore().GetGroups(projectId)
 	if errCode != http.StatusFound {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Get groups failed."})
