@@ -788,7 +788,7 @@ func (store *MemSQL) GetEventNamesOrderedByOccurenceAndRecency(projectID int64, 
 		eventStringWithGroups[event.GroupName] = append(eventStringWithGroups[event.GroupName], event.Name)
 	}
 	for _, trackedEvent := range trackedEvents {
-		if(eventsMap[trackedEvent.Name] == true){
+		if(eventsMap[trackedEvent.Name] != true){
 			eventStringWithGroups[U.FrequentlySeen] = append(eventStringWithGroups[U.FrequentlySeen], trackedEvent.Name)
 		}
 	}
