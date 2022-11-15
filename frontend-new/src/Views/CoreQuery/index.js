@@ -2032,7 +2032,7 @@ function CoreQuery({
               breakdown={appliedBreakdown}
               setShowResult={() => {
                 setShowResult(false);
-                updateRequestQuery(false);
+                updateRequestQuery(null);
               }}
               queryTitle={querySaved ? querySaved.name : null}
               savedQueryId={querySaved ? querySaved.id : null}
