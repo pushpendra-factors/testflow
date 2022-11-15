@@ -23,7 +23,7 @@ function FaSelect({
 }) {
   const [optClickArr, setOptClickArr] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const inputComponentRef = useAutoFocus();
+  const inputComponentRef = useAutoFocus(allowSearch);
 
   useEffect(() => {
     if (multiSelect && selectedOpts && selectedOpts.length) {
