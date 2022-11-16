@@ -168,7 +168,7 @@ func buildAllUsersQuery(projectID int64, query model.ProfileQuery) (string, []in
 	selectStmnt := joinWithComma(selectKeys...)
 	// Using 0 as profile queries are not time bound. The additional properties table will
 	// not be used till we migrate all data and remove timestamp condition.
-	filterStmnt, filterParams, err := buildWhereFromPropertiesTemp(projectID, query.Filters, 0)
+	filterStmnt, filterParams, err := buildWhereFromProperties(projectID, query.Filters, 0)
 	if filterStmnt != "" {
 		filterStmnt = " AND " + filterStmnt
 	}
@@ -260,7 +260,7 @@ func buildAllUsersQueryV2(projectID int64, query model.ProfileQuery) (string, []
 	selectStmnt := joinWithComma(selectKeys...)
 	// Using 0 as profile queries are not time bound. The additional properties table will
 	// not be used till we migrate all data and remove timestamp condition.
-	filterStmnt, filterParams, err := buildWhereFromPropertiesTemp(projectID, query.Filters, 0)
+	filterStmnt, filterParams, err := buildWhereFromProperties(projectID, query.Filters, 0)
 	if err != nil {
 		return "", make([]interface{}, 0), err
 	}

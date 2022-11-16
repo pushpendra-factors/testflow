@@ -1,7 +1,7 @@
 import React, { useCallback, useRef, useMemo } from 'react';
 import { ReactSortable } from 'react-sortablejs';
-import WidgetCard from './WidgetCard';
 import { useSelector, useDispatch } from 'react-redux';
+import WidgetCard from './WidgetCard';
 import { UNITS_ORDER_CHANGED } from '../../reducers/types';
 import { updateDashboard } from '../../reducers/dashboard/services';
 import { getRequestForNewState } from '../../reducers/dashboard/utils';
@@ -9,45 +9,45 @@ import { QUERY_TYPE_WEB } from '../../utils/constants';
 import WebsiteAnalytics from './WebsiteAnalytics';
 import { Text } from '../../components/factorsComponents';
 
+function NoDataDashboard() {
+  return (
+    <div className='flex flex-col justify-center fa-dashboard--no-data-container items-center'>
+      <img
+        alt='no-data'
+        src='https://s3.amazonaws.com/www.factors.ai/assets/img/product/no-data.png'
+        className='mb-8'
+      />
+      <Text type='title' level={5} weight='bold' extraClass='m-0'>
+        Add widgets to start monitoring.
+      </Text>
+      <Text type='title' level={7} color='grey' extraClass='m-0'>
+        You can select any of the saved reports and add them to dashboard as
+        widgets to monitor your metrics.
+      </Text>
+    </div>
+  );
+}
+
 function SortableCards({
   setwidgetModal,
   durationObj,
   showDeleteWidgetModal,
   setOldestRefreshTime,
   dashboardRefreshState,
-  onDataLoadSuccess
+  onDataLoadSuccess,
+  handleWidgetRefresh
 }) {
   const dispatch = useDispatch();
   const timerRef = useRef(null);
 
-  const { active_project } = useSelector((state) => state.global);
+  const { active_project: activeProject } = useSelector(
+    (state) => state.global
+  );
   const { data: savedQueries } = useSelector((state) => state.queries);
   const { activeDashboardUnits, activeDashboard } = useSelector(
     (state) => state.dashboard
   );
 
-  const NoDataDashboard = () => {
-    return (
-      <div
-        className={
-          'flex flex-col justify-center fa-dashboard--no-data-container items-center'
-        }
-      >
-        <img
-          alt="no-data"
-          src="https://s3.amazonaws.com/www.factors.ai/assets/img/product/no-data.png"
-          className={'mb-8'}
-        />
-        <Text type={'title'} level={5} weight={'bold'} extraClass={'m-0'}>
-          Add widgets to start monitoring.
-        </Text>
-        <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'}>
-          You can select any of the saved reports and add them to dashboard as
-          widgets to monitor your metrics.
-        </Text>
-      </div>
-    );
-  };
   const onDrop = useCallback(
     async (newState) => {
       const body = getRequestForNewState(newState);
@@ -58,12 +58,12 @@ function SortableCards({
       });
       clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => {
-        updateDashboard(active_project.id, activeDashboard.id, {
+        updateDashboard(activeProject.id, activeDashboard.id, {
           units_position: body
         });
       }, 300);
     },
-    [activeDashboard?.id, active_project.id, dispatch]
+    [activeDashboard?.id, activeProject.id, dispatch]
   );
 
   const activeUnits = useMemo(
@@ -100,7 +100,7 @@ function SortableCards({
   if (activeUnits.length) {
     return (
       <ReactSortable
-        className="flex flex-wrap"
+        className='flex flex-wrap'
         list={activeUnits}
         setList={onDrop}
       >
@@ -117,12 +117,14 @@ function SortableCards({
               setOldestRefreshTime={setOldestRefreshTime}
               dashboardRefreshState={dashboardRefreshState}
               onDataLoadSuccess={onDataLoadSuccess}
+              handleWidgetRefresh={handleWidgetRefresh}
             />
           );
         })}
       </ReactSortable>
     );
-  } else if (webAnalyticsUnits.length) {
+  }
+  if (webAnalyticsUnits.length) {
     return (
       <WebsiteAnalytics
         durationObj={durationObj}
@@ -131,9 +133,8 @@ function SortableCards({
         dashboardRefreshState={dashboardRefreshState}
       />
     );
-  } else {
-    return <NoDataDashboard />;
   }
+  return <NoDataDashboard />;
 }
 
 export default SortableCards;

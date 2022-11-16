@@ -5,6 +5,7 @@ import (
 	U "factors/util"
 	"fmt"
 	"io"
+
 	pb "path/filepath"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -80,7 +81,8 @@ func (sd *S3Driver) GetProjectEventFileDir(projectId int64, startTimestamp int64
 }
 
 func (sd *S3Driver) GetProjectDir(projectId int64) string {
-	return fmt.Sprintf("projects/%d/events/", projectId)
+	return pb.Join("projects", fmt.Sprintf("%d", projectId))
+	// return fmt.Sprintf("projects/%d/", projectId)
 }
 
 func (gcsd *S3Driver) GetModelUserPropertiesCategoricalFilePathAndName(projectId int64, modelId uint64) (string, string) {
@@ -144,6 +146,7 @@ func (sd *S3Driver) GetModelEventsBucketingFilePathAndName(projectId int64, star
 
 func (sd *S3Driver) GetMasterNumericalBucketsFile(projectId int64) (string, string) {
 	path := sd.GetProjectDir(projectId)
+	path = pb.Join(path, "events")
 	return path, "numerical_buckets_master.txt"
 }
 
@@ -235,6 +238,17 @@ func (sd *S3Driver) GetAdsDataFilePathAndName(projectId int64, report string, ch
 	return path, fmt.Sprintf("%v-%v-%v.csv", report, projectId, chunkNo)
 }
 
+func (sd *S3Driver) GetPredictProjectDataPath(projectId int64, model_id int64) string {
+	path := sd.GetPredictProjectDir(projectId, model_id)
+	return pb.Join(path, "data")
+}
+
+func (sd *S3Driver) GetPredictProjectDir(projectId int64, model_id int64) string {
+	path := sd.GetProjectDir(projectId)
+	model_str := fmt.Sprintf("%d", model_id)
+	return pb.Join(path, "predict", model_str)
+}
+
 func (sd *S3Driver) GetWIPropertiesPathAndName(projectId int64) (string, string) {
 	path := sd.GetWIPropertiesDir(projectId)
 	return path, "properties.txt"
@@ -253,4 +267,23 @@ func (sd *S3Driver) GetEventsArtificatFilePathAndName(projectId int64, startTime
 	path = pb.Join(path, "artifacts")
 	return path, "users_map.txt"
 
+}
+
+func (sd *S3Driver) GetEventsForTimerangeFilePathAndName(projectId int64, startTimestamp int64, endTimestamp int64) (string, string) {
+	path := sd.GetEventsForTimerangeFileDir(projectId, startTimestamp, endTimestamp)
+	return path, "events.txt"
+}
+
+func (sd *S3Driver) GetEventsForTimerangeFileDir(projectId int64, startTimestamp int64, endTimestamp int64) string {
+	dateFormattedStart := U.GetDateOnlyFromTimestampZ(startTimestamp)
+	dateFormattedEnd := U.GetDateOnlyFromTimestampZ(endTimestamp)
+	return fmt.Sprintf("projects/%v/%v/%v/", projectId, dateFormattedStart, dateFormattedEnd)
+}
+
+func (sd *S3Driver) GetPathAnalysisTempFileDir(id string, projectId int64) string {
+	return fmt.Sprintf("projects/%v/pathanalysis/%v/", projectId, id)
+}
+func (sd *S3Driver) GetPathAnalysisTempFilePathAndName(id string, projectId int64) (string, string) {
+	path := sd.GetPathAnalysisTempFileDir(id, projectId)
+	return path, "patterns.txt"
 }

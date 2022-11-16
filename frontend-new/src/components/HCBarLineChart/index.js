@@ -10,6 +10,7 @@ import {
   FONT_FAMILY
 } from '../../utils/constants';
 import { renderBigLengthTicks } from '../../utils/dataFormatter';
+import { CHART_COLOR_1, CHART_COLOR_8 } from '../../constants/color.constants';
 import TopLegends from '../GroupedBarChart/TopLegends';
 
 function HCBarLineChart({
@@ -47,7 +48,7 @@ function HCBarLineChart({
             useHTML: true,
             formatter() {
               return ReactDOMServer.renderToString(
-                <NumFormat number={this.point.y} />
+                <NumFormat number={this.point.y} className='bar-chart-label' />
               );
             }
           },
@@ -73,7 +74,7 @@ function HCBarLineChart({
           // left yAxis
           labels: {
             style: {
-              color: '#3e516c'
+              color: CHART_COLOR_1
             }
           },
           title: {
@@ -95,7 +96,7 @@ function HCBarLineChart({
           },
           labels: {
             style: {
-              color: '#d4787d'
+              color: CHART_COLOR_8
             }
           },
           opposite: true
@@ -129,20 +130,20 @@ function HCBarLineChart({
         <TopLegends
           cardSize={cardSize}
           legends={legends}
-          colors={['#4d7db4', '#d4787d']}
+          colors={[CHART_COLOR_1, CHART_COLOR_8]}
           showFullLengthLegends={cardSize === 1}
         />
       ) : null}
       <div className={styles.barLineChart} id={chartId}></div>
-      <svg width="0" height="0">
+      <svg width='0' height='0'>
         <defs>
           <pattern
-            id="hatch-left"
-            patternUnits="userSpaceOnUse"
-            width="4"
-            height="4"
+            id='hatch-left'
+            patternUnits='userSpaceOnUse'
+            width='4'
+            height='4'
           >
-            <path d="M-1,1 l2,-2 M0,4 l4,-4 M3,5 l2,-2"></path>
+            <path d='M-1,1 l2,-2 M0,4 l4,-4 M3,5 l2,-2'></path>
           </pattern>
         </defs>
       </svg>
@@ -150,7 +151,7 @@ function HCBarLineChart({
         <TopLegends
           cardSize={cardSize}
           legends={legends}
-          colors={['#4d7db4', '#d4787d']}
+          colors={[CHART_COLOR_1, CHART_COLOR_8]}
           showFullLengthLegends={cardSize === 1}
         />
       ) : null}

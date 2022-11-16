@@ -114,8 +114,13 @@ func LeadSquaredPull(projectId int64, configs map[string]interface{}) (map[strin
 	for documentType, _ := range model.LeadSquaredMetadataEndpoint {
 		log.Info(fmt.Sprintf("Starting for %v", documentType))
 		tableID := model.LeadSquaredTableName[documentType]
-		if documentType == model.LEADSQUARED_SALES_ACTIVITY || documentType == model.LEADSQUARED_EMAIL_SENT || documentType == model.LEADSQUARED_EMAIL_INFO || documentType == model.LEADSQUARED_HAD_A_CALL {
-			leadSquaredUrlParams["code"] = fmt.Sprintf("%v", LEADSQUARED_ACTIVITYCODE[documentType])
+		if documentType == model.LEADSQUARED_EMAIL_SENT || documentType == model.LEADSQUARED_EMAIL_INFO || documentType == model.LEADSQUARED_HAD_A_CALL {
+			if projectId == 2251799831000006 {
+				continue
+			}
+		}
+		if documentType == model.LEADSQUARED_SALES_ACTIVITY || documentType == model.LEADSQUARED_EMAIL_SENT  || documentType == model.LEADSQUARED_EMAIL_INFO ||documentType == model.LEADSQUARED_HAD_A_CALL{
+			leadSquaredUrlParams["code"] = fmt.Sprintf("%v",LEADSQUARED_ACTIVITYCODE[documentType])
 		}
 		propertyMetadataList, errorStatus, msg := getMetadataDetails(documentType, leadSquaredConfig.Host, leadSquaredUrlParams)
 		if errorStatus != false {
@@ -288,17 +293,19 @@ func getMetadataDetails(documentType string, host string, leadSquaredUrlParams m
 			return nil, true, err.Error()
 		}
 		propertyMetadata = salesActivityMetadata.Fields
-		propertyMetadata = addConstantFieldsForSalesActivity(propertyMetadata)
+		propertyMetadata = addConstantFieldsForActivity(documentType, propertyMetadata)
 	}
 	return propertyMetadata, false, ""
 }
 
-func addConstantFieldsForSalesActivity(property []PropertyMetadataObjectLeadSquared) []PropertyMetadataObjectLeadSquared {
+func addConstantFieldsForActivity(documentType string, property []PropertyMetadataObjectLeadSquared) []PropertyMetadataObjectLeadSquared {
 	property = append(property, PropertyMetadataObjectLeadSquared{SchemaName: "ProspectActivityId", DataType: "String", DisplayName: "ProspectActivityId"})
 	property = append(property, PropertyMetadataObjectLeadSquared{SchemaName: "RelatedProspectId", DataType: "String", DisplayName: "RelatedProspectId"})
 	property = append(property, PropertyMetadataObjectLeadSquared{SchemaName: "ActivityType", DataType: "String", DisplayName: "ActivityType"})
 	property = append(property, PropertyMetadataObjectLeadSquared{SchemaName: "ActivityEvent", DataType: "String", DisplayName: "ActivityEvent"})
-	property = append(property, PropertyMetadataObjectLeadSquared{SchemaName: "ActivityEvent_Note", DataType: "String", DisplayName: "ActivityEvent_Note"})
+	if(documentType == model.LEADSQUARED_SALES_ACTIVITY || documentType == model.LEADSQUARED_EMAIL_SENT){
+		property = append(property, PropertyMetadataObjectLeadSquared{SchemaName: "ActivityEvent_Note", DataType: "String", DisplayName: "ActivityEvent_Note"})
+	}
 	property = append(property, PropertyMetadataObjectLeadSquared{SchemaName: "CreatedOn", DataType: "DateTime", DisplayName: "CreatedOn"})
 	property = append(property, PropertyMetadataObjectLeadSquared{SchemaName: "CreatedBy", DataType: "String", DisplayName: "CreatedBy"})
 	property = append(property, PropertyMetadataObjectLeadSquared{SchemaName: "CreatedByEmailAddress", DataType: "String", DisplayName: "CreatedByEmailAddress"})
@@ -415,6 +422,13 @@ func DoHistoricalSync(projectId int64, host string, endpoint string, urlParams m
 		log.Info("Insert done")
 		index++
 		if len(histSyncData) < pageSize {
+			store.GetStore().CreateLeadSquaredMarker(model.LeadsquaredMarker{
+				ProjectID:   projectId,
+				Delta:       executionTimestamp,
+				Document:    model.LEADSQUARED_LEAD,
+				Tag:         "historical_sync",
+				IndexNumber: index,
+			})
 			break
 		}
 	}
@@ -583,6 +597,13 @@ func DoIncrementalSync(projectId int64, documentType string, host string, histSy
 		index++
 		totalRecordCountModifiedOn = totalRecordCountModifiedOn + len(dataForInsertion)
 		if len(dataForInsertion) < pageSize {
+			store.GetStore().CreateLeadSquaredMarker(model.LeadsquaredMarker{
+				ProjectID:   projectId,
+				Delta:       executionTimestamp,
+				Document:    documentType,
+				Tag:         "incremental_sync",
+				IndexNumber: index,
+			})
 			break
 		}
 	}
@@ -668,6 +689,13 @@ func DoIncrementalSync(projectId int64, documentType string, host string, histSy
 			index++
 			totalRecordCountCreatedOn = totalRecordCountCreatedOn + len(histSyncData)
 			if len(histSyncData) < pageSize {
+				store.GetStore().CreateLeadSquaredMarker(model.LeadsquaredMarker{
+					ProjectID:   projectId,
+					Delta:       executionTimestamp,
+					Document:    documentType,
+					Tag:         "incremental_sync_created_at",
+					IndexNumber: index,
+				})
 				break
 			}
 		}

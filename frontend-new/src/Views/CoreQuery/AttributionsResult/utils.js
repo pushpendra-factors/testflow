@@ -10,8 +10,12 @@ import {
   SortResults
 } from '../../../utils/dataFormatter';
 import {
+  CHART_COLOR_1,
+  CHART_COLOR_8
+} from '../../../constants/color.constants';
+import {
   ATTRIBUTION_METHODOLOGY,
-  FIRST_METRIC_IN_ATTR_RESPOSE,
+  FIRST_METRIC_IN_ATTR_RESPONSE,
   ARR_JOINER,
   ATTRIBUTION_METRICS,
   DISPLAY_PROP
@@ -28,6 +32,8 @@ export const defaultSortProp = () => [
     subtype: null
   }
 ];
+
+const isLandingPageSelected = (touchPoint) => touchPoint === 'LandingPage';
 
 export const getDifferentCampaingns = (data) => {
   const { headers } = data.result;
@@ -92,10 +98,9 @@ export const getSingleTouchPointChartData = (
     currentEventIndex,
     headers: keys(data[0])
   });
-  const listDimensions =
-    touchPoint === 'LandingPage'
-      ? content_groups.slice()
-      : attr_dimensions.slice();
+  const listDimensions = isLandingPageSelected(touchPoint)
+    ? content_groups.slice()
+    : attr_dimensions.slice();
   const enabledDimensions = listDimensions.filter(
     (d) => d.touchPoint === touchPoint && d.enabled
   );
@@ -119,17 +124,17 @@ export const getSingleTouchPointChartData = (
           ? Number(row[seriesKeys[0]].value)
           : Number(row[[seriesKeys[0]]])
       ),
-      color: '#4d7db4'
+      color: CHART_COLOR_1
     },
     {
       type: 'line',
       yAxis: 1,
       data: slicedTableData.map((row) =>
         isComparisonApplied
-          ? Number(row[seriesKeys[1]].value)
+          ? Number(row[seriesKeys[1]]?.value)
           : Number(row[seriesKeys[1]])
       ),
-      color: '#d4787d',
+      color: CHART_COLOR_8,
       marker: {
         symbol: 'circle'
       }
@@ -142,15 +147,15 @@ export const getSingleTouchPointChartData = (
       data: slicedTableData.map((row) =>
         Number(row[seriesKeys[0]].compare_value)
       ),
-      color: '#4d7db4'
+      color: CHART_COLOR_1
     });
     series.push({
       type: 'line',
       yAxis: 1,
       data: slicedTableData.map((row) =>
-        Number(row[seriesKeys[1]].compare_value)
+        Number(row[seriesKeys[1]]?.compare_value)
       ),
-      color: '#d4787d',
+      color: CHART_COLOR_8,
       marker: {
         symbol: 'circle'
       },
@@ -183,10 +188,9 @@ export const getDualTouchPointChartData = (
   attribution_method_compare,
   currMetricsValue
 ) => {
-  const listDimensions =
-    touchpoint === 'LandingPage'
-      ? content_groups.slice()
-      : attr_dimensions.slice();
+  const listDimensions = isLandingPageSelected(touchpoint)
+    ? content_groups.slice()
+    : attr_dimensions.slice();
   const enabledDimensions = listDimensions.filter(
     (d) => d.touchPoint === touchpoint && d.enabled
   );
@@ -235,10 +239,9 @@ export const formatData = (
   const { headers, rows } = data;
   const touchpointIdx = headers.indexOf(touchPoint);
 
-  const listDimensions =
-    touchPoint === 'LandingPage'
-      ? content_groups.slice()
-      : attr_dimensions.slice();
+  const listDimensions = isLandingPageSelected(touchPoint)
+    ? content_groups.slice()
+    : attr_dimensions.slice();
   const enabledDimensions = listDimensions.filter(
     (d) => d.touchPoint === touchPoint && d.enabled
   );
@@ -260,20 +263,20 @@ export const formatData = (
   const conversionIdx = headers.findIndex((h) => h === `${event} - Users`);
   const costIdx = headers.findIndex((h) => h === 'Cost Per Conversion');
   const equivalentIndicesMapper = comparison_data
-    ? getEquivalentIndicesMapper(data, comparison_data)
+    ? getEquivalentIndicesMapper(data, comparison_data, touchPoint)
     : {};
   const series = [
     {
       type: 'column',
       yAxis: 0,
       data: rows.map((row) => row[conversionIdx]),
-      color: '#4d7db4'
+      color: CHART_COLOR_1
     },
     {
       type: 'line',
       yAxis: 1,
       data: rows.map((row) => row[costIdx]),
-      color: '#d4787d',
+      color: CHART_COLOR_8,
       marker: {
         symbol: 'circle'
       }
@@ -292,7 +295,7 @@ export const formatData = (
           ? equivalent_compare_row[conversionIdx]
           : 0;
       }),
-      color: '#4d7db4'
+      color: CHART_COLOR_1
     });
     series.push({
       type: 'line',
@@ -304,7 +307,7 @@ export const formatData = (
             : null;
         return equivalent_compare_row ? equivalent_compare_row[costIdx] : 0;
       }),
-      color: '#d4787d',
+      color: CHART_COLOR_8,
       marker: {
         symbol: 'circle'
       },
@@ -348,34 +351,34 @@ export const formatGroupedData = (
 const firstColumn = (d, durationObj, cmprDuration) => {
   if (cmprDuration) {
     return (
-      <div className="flex items-center">
+      <div className='flex items-center'>
         <Text
-          type="title"
-          weight="normal"
-          color="grey-8"
-          extraClass="text-sm mb-0 py-2 px-4 w-1/2"
+          type='title'
+          weight='normal'
+          color='grey-8'
+          extraClass='text-sm mb-0 py-2 px-4 w-1/2'
         >
           {d}
         </Text>
         <div
           style={{ borderLeft: '1px solid #E7E9ED' }}
-          className="flex py-2 flex-col px-4 w-1/2"
+          className='flex py-2 flex-col px-4 w-1/2'
         >
           <Text
-            type="title"
-            weight="normal"
-            color="grey-8"
-            extraClass="text-sm mb-0"
+            type='title'
+            weight='normal'
+            color='grey-8'
+            extraClass='text-sm mb-0'
           >
             {`${moment(durationObj.from).format('MMM DD')} - ${moment(
               durationObj.to
             ).format('MMM DD')}`}
           </Text>
           <Text
-            type="title"
-            weight="normal"
-            color="grey"
-            extraClass="text-xs mb-0"
+            type='title'
+            weight='normal'
+            color='grey'
+            extraClass='text-xs mb-0'
           >{`vs ${moment(cmprDuration.from).format('MMM DD')} - ${moment(
             cmprDuration.to
           ).format('MMM DD')}`}</Text>
@@ -401,7 +404,7 @@ const renderMetric = (d, comparison_data) => {
   } else if (changePercent === 'Infinity') {
     compareText = (
       <>
-        <SVG color="#5ACA89" name="arrowLift" size={16} />
+        <SVG color='#5ACA89' name='arrowLift' size={16} />
         <span>&#8734; %</span>
       </>
     );
@@ -418,8 +421,8 @@ const renderMetric = (d, comparison_data) => {
     );
   }
   return (
-    <div className="flex gap-x-2 justify-end items-start">
-      <div className="flex flex-col items-center">
+    <div className='flex gap-x-2 justify-end items-start'>
+      <div className='flex flex-col items-center'>
         <div>
           <NumFormat number={d.value} />
         </div>
@@ -458,7 +461,7 @@ export const getTableColumns = (
 
   const getEventColumnConfig = ({ title, key, method, hasBorder = false }) => ({
     title: getClickableTitleSorter(
-      <div className="flex flex-col items-start justify-center">
+      <div className='flex flex-col items-start justify-center'>
         <div>{title}</div>
         {!!method && (
           <div
@@ -499,8 +502,9 @@ export const getTableColumns = (
         : d
   });
 
-  const listDimensions =
-    touchpoint === 'LandingPage' ? [...content_groups] : [...attr_dimensions];
+  const listDimensions = isLandingPageSelected(touchpoint)
+    ? [...content_groups]
+    : [...attr_dimensions];
 
   const enabledDimensions = listDimensions.filter(
     (d) => d.touchPoint === touchpoint && d.enabled
@@ -762,20 +766,39 @@ export const getTableColumns = (
 export const calcChangePerc = (val1, val2) =>
   formatCount(((val1 - val2) / val2) * 100, 1);
 
-export const getEquivalentIndicesMapper = (data, comparison_data) => {
+export const getEquivalentIndicesMapper = (
+  data,
+  comparisonData,
+  touchPoint
+) => {
   const { headers, rows } = data;
-  const firstMetricIndex = headers.indexOf(FIRST_METRIC_IN_ATTR_RESPOSE);
-  const dataStrings = rows.map((row) =>
-    row.slice(0, firstMetricIndex).join(ARR_JOINER)
+  const touchPointIdx = headers.indexOf(touchPoint);
+  const firstMetricIndex = headers.indexOf(FIRST_METRIC_IN_ATTR_RESPONSE);
+
+  const compareDataStringsMapper = comparisonData.rows.reduce(
+    (prev, curr, currIndex) => {
+      const str = isLandingPageSelected(touchPoint)
+        ? curr[touchPointIdx]
+        : curr.slice(0, firstMetricIndex).join(ARR_JOINER);
+      return {
+        ...prev,
+        [str]: currIndex
+      };
+    },
+    {}
   );
-  const compareDataStrings = comparison_data.rows.map((row) =>
-    row.slice(0, firstMetricIndex).join(ARR_JOINER)
-  );
-  const equivalentIndicesMapper = {};
-  dataStrings.forEach((string, index) => {
-    const compareIndex = compareDataStrings.indexOf(string);
-    equivalentIndicesMapper[index] = compareIndex;
-  });
+  const equivalentIndicesMapper = rows.reduce((prev, curr, currIndex) => {
+    const str = isLandingPageSelected(touchPoint)
+      ? curr[touchPointIdx]
+      : curr.slice(0, firstMetricIndex).join(ARR_JOINER);
+    return {
+      ...prev,
+      [currIndex]:
+        compareDataStringsMapper[str] != null
+          ? compareDataStringsMapper[str]
+          : -1
+    };
+  }, {});
   return equivalentIndicesMapper;
 };
 
@@ -895,13 +918,13 @@ export const getTableData = (
   event,
   searchText,
   currentSorter,
-  attribution_method_compare,
-  touchpoint,
+  attributionMethodCompare,
+  touchPoint,
   linkedEvents,
   metrics,
-  attr_dimensions,
-  content_groups,
-  comparison_data,
+  attrDimensions,
+  contentGroups,
+  comparisonData,
   queryOptions,
   attrQueries,
   appliedFilters
@@ -909,36 +932,34 @@ export const getTableData = (
   const { headers } = data;
   const costIdx = headers.indexOf('Cost Per Conversion');
   const userIdx = headers.indexOf(`${event} - Users`);
-  const conversionRateIdx = headers.indexOf('UserConversionRate(%)');
   const compareUsersIdx = headers.indexOf('Compare - Users');
   const compareCostIdx = headers.indexOf('Compare Cost Per Conversion');
   const compareConvRateIdx = headers.indexOf('Compare UserConversionRate(%)');
 
-  const listDimensions =
-    touchpoint === 'LandingPage'
-      ? content_groups.slice()
-      : attr_dimensions.slice();
+  const listDimensions = isLandingPageSelected(touchPoint)
+    ? contentGroups.slice()
+    : attrDimensions.slice();
   const enabledDimensions = listDimensions.filter(
-    (d) => d.touchPoint === touchpoint && d.enabled
+    (d) => d.touchPoint === touchPoint && d.enabled
   );
-  const equivalentIndicesMapper = comparison_data
-    ? getEquivalentIndicesMapper(data, comparison_data)
+  const equivalentIndicesMapper = comparisonData
+    ? getEquivalentIndicesMapper(data, comparisonData, touchPoint)
     : {};
+  const enabledMetrics = metrics.filter((metric) => !metric.isEventMetric);
   const result = data.rows
     .map((row, index) => {
       const metricsData = {};
-      const enabledMetrics = metrics.filter((metric) => !metric.isEventMetric);
-      const equivalent_compare_row =
-        comparison_data && equivalentIndicesMapper[index] > -1
-          ? comparison_data.rows[equivalentIndicesMapper[index]]
+      const equivalentCompareRow =
+        comparisonData && equivalentIndicesMapper[index] > -1
+          ? comparisonData.rows[equivalentIndicesMapper[index]]
           : null;
       enabledMetrics.forEach((metric) => {
         const metricIndex = getHeaderIndexForMetric(headers, metric);
-        if (comparison_data) {
+        if (comparisonData) {
           metricsData[metric.title] = {
             value: row[metricIndex],
-            compare_value: equivalent_compare_row
-              ? equivalent_compare_row[metricIndex]
+            compare_value: equivalentCompareRow
+              ? equivalentCompareRow[metricIndex]
               : 0
           };
         } else {
@@ -949,22 +970,22 @@ export const getTableData = (
       const dimensionsData = {};
       if (enabledDimensions.length) {
         enabledDimensions.forEach((dimension) => {
-          const index = headers.indexOf(dimension.responseHeader);
+          const headerIndex = headers.indexOf(dimension.responseHeader);
           dimensionsData[dimension.title] =
-            index > -1
-              ? DISPLAY_PROP[row[index]]
-                ? DISPLAY_PROP[row[index]]
-                : row[index]
+            headerIndex > -1
+              ? DISPLAY_PROP[row[headerIndex]]
+                ? DISPLAY_PROP[row[headerIndex]]
+                : row[headerIndex]
               : '';
         });
       } else {
-        const touchpointIdx = headers.indexOf(touchpoint);
-        dimensionsData[touchpoint] = DISPLAY_PROP[row[touchpointIdx]]
-          ? DISPLAY_PROP[row[touchpointIdx]]
-          : row[touchpointIdx];
+        const touchPointIdx = headers.indexOf(touchPoint);
+        dimensionsData[touchPoint] = DISPLAY_PROP[row[touchPointIdx]]
+          ? DISPLAY_PROP[row[touchPointIdx]]
+          : row[touchPointIdx];
       }
 
-      let resultantRow = {
+      const resultantRow = {
         index,
         category: Object.values(dimensionsData).join(', '),
         ...dimensionsData,
@@ -981,84 +1002,58 @@ export const getTableData = (
           const lbl = q.label;
           headers.forEach((head, i) => {
             if (head.startsWith(`${lbl} - `)) {
-              resultantRow[head] = !comparison_data
+              resultantRow[head] = !comparisonData
                 ? formatCount(row[i], 1)
                 : {
                     value: formatCount(row[i]),
-                    compare_value: equivalent_compare_row
-                      ? formatCount(equivalent_compare_row[i], 1)
+                    compare_value: equivalentCompareRow
+                      ? formatCount(equivalentCompareRow[i], 1)
                       : 0
                   };
             }
           });
         });
       } else {
-        resultantRow = {
-          index,
-          category: Object.values(dimensionsData).join(', '),
-          ...dimensionsData,
-          ...metricsData,
-          Conversion: !comparison_data
-            ? formatCount(row[userIdx], 1)
-            : {
-                value: formatCount(row[userIdx], 1),
-                compare_value: equivalent_compare_row
-                  ? equivalent_compare_row[userIdx]
-                  : 0
-              },
-          'Cost Per Conversion': !comparison_data
-            ? formatCount(row[costIdx], 1)
-            : {
-                value: formatCount(row[costIdx], 1),
-                compare_value: equivalent_compare_row
-                  ? formatCount(equivalent_compare_row[costIdx], 1)
-                  : 0
-              }
-          // 'Conversion Rate': !comparison_data
-          //   ? formatCount(row[conversionRateIdx], 1)
-          //   : {
-          //       value: formatCount(row[conversionRateIdx], 1),
-          //       compare_value: equivalent_compare_row
-          //         ? formatCount(equivalent_compare_row[conversionRateIdx], 1)
-          //         : 0
-          //     }
-        };
+        resultantRow.Conversion = !comparisonData
+          ? formatCount(row[userIdx], 1)
+          : {
+              value: formatCount(row[userIdx], 1),
+              compare_value: equivalentCompareRow
+                ? equivalentCompareRow[userIdx]
+                : 0
+            };
+        resultantRow['Cost Per Conversion'] = !comparisonData
+          ? formatCount(row[costIdx], 1)
+          : {
+              value: formatCount(row[costIdx], 1),
+              compare_value: equivalentCompareRow
+                ? formatCount(equivalentCompareRow[costIdx], 1)
+                : 0
+            };
       }
       if (linkedEvents.length) {
         linkedEvents.forEach((le) => {
           const eventUsersIdx = headers.indexOf(`${le.label} - Users`);
           const eventCPCIdx = headers.indexOf(`${le.label} - CPC`);
-          const eventConvRateIdx = headers.indexOf(
-            `${le.label} - UserConversionRate(%)`
-          );
-          resultantRow[`Linked Event - ${le.label} - Users`] = !comparison_data
+          resultantRow[`Linked Event - ${le.label} - Users`] = !comparisonData
             ? formatCount(row[eventUsersIdx], 1)
             : {
                 value: formatCount(row[eventUsersIdx], 1),
-                compare_value: equivalent_compare_row
-                  ? formatCount(equivalent_compare_row[eventUsersIdx], 1)
+                compare_value: equivalentCompareRow
+                  ? formatCount(equivalentCompareRow[eventUsersIdx], 1)
                   : 0
               };
-          resultantRow[`Linked Event - ${le.label} - CPC`] = !comparison_data
+          resultantRow[`Linked Event - ${le.label} - CPC`] = !comparisonData
             ? formatCount(row[eventCPCIdx], 1)
             : {
                 value: formatCount(row[eventCPCIdx], 1),
-                compare_value: equivalent_compare_row
-                  ? formatCount(equivalent_compare_row[eventCPCIdx], 1)
+                compare_value: equivalentCompareRow
+                  ? formatCount(equivalentCompareRow[eventCPCIdx], 1)
                   : 0
               };
-          // resultantRow[`Linked Event - ${le.label} - Conversion Rate`] =
-          //   !comparison_data
-          //     ? formatCount(row[eventConvRateIdx], 1)
-          //     : {
-          //         value: formatCount(row[eventConvRateIdx], 1),
-          //         compare_value: equivalent_compare_row
-          //           ? formatCount(equivalent_compare_row[eventConvRateIdx], 1)
-          //           : 0
-          //       };
         });
       }
-      if (attribution_method_compare) {
+      if (attributionMethodCompare) {
         resultantRow.conversion_compare = row[compareUsersIdx];
         resultantRow.cost_compare = formatCount(row[compareCostIdx], 1);
         resultantRow.conversion_rate_compare = formatCount(
@@ -1075,7 +1070,7 @@ export const getTableData = (
         );
         return filteredRows.length > 0;
       }
-      return row[touchpoint].toLowerCase().includes(searchText.toLowerCase());
+      return row[touchPoint].toLowerCase().includes(searchText.toLowerCase());
     });
   const filteredResults = applyAdvancedFilters(result, appliedFilters);
   return SortResults(filteredResults, currentSorter);
@@ -1091,10 +1086,9 @@ export const getScatterPlotChartData = (
   yAxisMetric,
   isComparisonApplied
 ) => {
-  const listDimensions =
-    selectedTouchPoint === 'LandingPage'
-      ? content_groups.slice()
-      : attr_dimensions.slice();
+  const listDimensions = isLandingPageSelected(selectedTouchPoint)
+    ? content_groups.slice()
+    : attr_dimensions.slice();
   const enabledDimensions = listDimensions.filter(
     (d) => d.touchPoint === selectedTouchPoint && d.enabled
   );
@@ -1125,7 +1119,7 @@ export const getScatterPlotChartData = (
   const finalResult = {
     series: [
       {
-        color: '#4D7DB4',
+        color: CHART_COLOR_1,
         data: plotData
       }
     ],
@@ -1134,7 +1128,7 @@ export const getScatterPlotChartData = (
 
   if (isComparisonApplied) {
     finalResult.series.push({
-      color: '#d4787d',
+      color: CHART_COLOR_8,
       data: comparisonPlotData
     });
   }
@@ -1240,12 +1234,12 @@ export const listAttributionDimensions = (
   attr_dimensions,
   content_groups
 ) =>
-  touchpoint === 'LandingPage'
+  isLandingPageSelected(touchpoint)
     ? content_groups.slice()
     : attr_dimensions.slice();
 
 export const getResultantMetrics = (touchpoint, attribution_metrics) =>
-  touchpoint === 'LandingPage'
+  isLandingPageSelected(touchpoint)
     ? attribution_metrics.filter(
         (metrics) =>
           metrics.header.includes('Sessions') ||
@@ -1292,8 +1286,9 @@ export const getTableFilterOptions = ({
     });
   });
 
-  const listDimensions =
-    touchpoint === 'LandingPage' ? [...contentGroups] : [...attrDimensions];
+  const listDimensions = isLandingPageSelected(touchpoint)
+    ? [...contentGroups]
+    : [...attrDimensions];
 
   const enabledDimensions = listDimensions.filter(
     (d) => d.touchPoint === touchpoint && d.enabled
@@ -1340,18 +1335,18 @@ export const shouldFiltersUpdate = ({
     return true;
   }
 
-  const metricsNotPresentInFilters =
-    touchpoint !== 'LandingPage'
-      ? attributionMetrics
-          .filter((m) => m.enabled && !m.isEventMetric)
-          .filter((m) => filters.findIndex((f) => f.key === m.title) === -1)
-      : [];
-  const metricsNotEnabledButPresentInFilters =
-    touchpoint !== 'LandingPage'
-      ? attributionMetrics
-          .filter((m) => !m.enabled && !m.isEventMetric)
-          .filter((m) => filters.findIndex((f) => f.key === m.title) > -1)
-      : [];
+  const metricsNotPresentInFilters = !isLandingPageSelected(touchpoint)
+    ? attributionMetrics
+        .filter((m) => m.enabled && !m.isEventMetric)
+        .filter((m) => filters.findIndex((f) => f.key === m.title) === -1)
+    : [];
+  const metricsNotEnabledButPresentInFilters = !isLandingPageSelected(
+    touchpoint
+  )
+    ? attributionMetrics
+        .filter((m) => !m.enabled && !m.isEventMetric)
+        .filter((m) => filters.findIndex((f) => f.key === m.title) > -1)
+    : [];
 
   return (
     metricsNotPresentInFilters.length > 0 ||

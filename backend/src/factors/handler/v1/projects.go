@@ -83,7 +83,6 @@ func GetProjectsHandler(c *gin.Context) {
 			}
 		}
 		for _, project := range projects {
-			project.IsMultipleProjectTimezoneEnabled = C.IsMultipleProjectTimezoneEnabled(project.ID)
 			resp[projectRoleMap[project.ID]] = append(resp[projectRoleMap[project.ID]], MapProjectToString(project))
 		}
 	}
@@ -109,8 +108,6 @@ func GetProjectsHandler(c *gin.Context) {
 		}
 		for _, project := range trimmedDemoProjects {
 			if !H.IsDemoProjectInAuthorizedProjects(authorizedProjects.([]int64), project.ID) {
-				projectIdNum, _ := strconv.ParseInt(project.ID, 10, 64)
-				project.IsMultipleProjectTimezoneEnabled = C.IsMultipleProjectTimezoneEnabled(projectIdNum)
 				resp[1] = append(resp[1], project)
 			}
 		}
@@ -135,22 +132,21 @@ func GetDemoProjects(c *gin.Context) {
 
 func MapProjectToString(project model.Project) model.ProjectString {
 	return model.ProjectString{
-		ID:                               fmt.Sprintf("%v", project.ID),
-		Name:                             project.Name,
-		ProfilePicture:                   project.ProfilePicture,
-		Token:                            project.Token,
-		PrivateToken:                     project.PrivateToken,
-		CreatedAt:                        project.CreatedAt,
-		UpdatedAt:                        project.UpdatedAt,
-		ProjectURI:                       project.ProjectURI,
-		TimeFormat:                       project.TimeFormat,
-		DateFormat:                       project.DateFormat,
-		TimeZone:                         project.TimeZone,
-		InteractionSettings:              project.InteractionSettings,
-		SalesforceTouchPoints:            project.SalesforceTouchPoints,
-		HubspotTouchPoints:               project.HubspotTouchPoints,
-		JobsMetadata:                     project.JobsMetadata,
-		ChannelGroupRules:                project.ChannelGroupRules,
-		IsMultipleProjectTimezoneEnabled: project.IsMultipleProjectTimezoneEnabled,
+		ID:                    fmt.Sprintf("%v", project.ID),
+		Name:                  project.Name,
+		ProfilePicture:        project.ProfilePicture,
+		Token:                 project.Token,
+		PrivateToken:          project.PrivateToken,
+		CreatedAt:             project.CreatedAt,
+		UpdatedAt:             project.UpdatedAt,
+		ProjectURI:            project.ProjectURI,
+		TimeFormat:            project.TimeFormat,
+		DateFormat:            project.DateFormat,
+		TimeZone:              project.TimeZone,
+		InteractionSettings:   project.InteractionSettings,
+		SalesforceTouchPoints: project.SalesforceTouchPoints,
+		HubspotTouchPoints:    project.HubspotTouchPoints,
+		JobsMetadata:          project.JobsMetadata,
+		ChannelGroupRules:     project.ChannelGroupRules,
 	}
 }

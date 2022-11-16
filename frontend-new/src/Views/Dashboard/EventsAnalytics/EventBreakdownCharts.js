@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { useSelector } from 'react-redux';
 import {
   formatData,
-  getDefaultSortProp,
+  getDefaultSortProp
 } from '../../CoreQuery/EventsAnalytics/EventBreakdown/utils';
 import BarChart from '../../../components/BarChart';
 import EventBreakdownTable from '../../CoreQuery/EventsAnalytics/EventBreakdown/EventBreakdownTable';
@@ -12,17 +12,18 @@ import {
   CHART_TYPE_BARCHART,
   CHART_TYPE_SPARKLINES,
   DASHBOARD_WIDGET_BAR_CHART_HEIGHT,
-  MAX_ALLOWED_VISIBLE_PROPERTIES,
+  MAX_ALLOWED_VISIBLE_PROPERTIES
 } from '../../../utils/constants';
 import NoDataChart from '../../../components/NoDataChart';
 import { DashboardContext } from '../../../contexts/DashboardContext';
+import { CHART_COLOR_1 } from '../../../constants/color.constants';
 
 function EventBreakdownCharts({
   resultState,
   breakdown,
   section,
   chartType,
-  unit,
+  unit
 }) {
   const [chartsData, setChartsData] = useState([]);
   const [visibleProperties, setVisibleProperties] = useState([]);
@@ -34,13 +35,13 @@ function EventBreakdownCharts({
     const formattedData = formatData(resultState.data);
     setChartsData(formattedData);
     setVisibleProperties([
-      ...formattedData.slice(0, MAX_ALLOWED_VISIBLE_PROPERTIES),
+      ...formattedData.slice(0, MAX_ALLOWED_VISIBLE_PROPERTIES)
     ]);
   }, [resultState.data]);
 
   if (!chartsData.length) {
     return (
-      <div className="flex justify-center items-center w-full h-full pt-4 pb-4">
+      <div className='flex justify-center items-center w-full h-full pt-4 pb-4'>
         <NoDataChart />
       </div>
     );
@@ -65,7 +66,7 @@ function EventBreakdownCharts({
       <ChartHeader
         total={resultState.data.rows[0]}
         query={'Count'}
-        bgColor='#4D7DB4'
+        bgColor={CHART_COLOR_1}
         eventNames={eventNames}
       />
     );

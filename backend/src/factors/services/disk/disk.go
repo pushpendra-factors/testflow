@@ -273,6 +273,16 @@ func (dd *DiskDriver) GetAdsDataFilePathAndName(projectId int64, report string, 
 	return path, fmt.Sprintf("%v-%v-%v.csv", report, projectId, chunkNo)
 }
 
+func (dd *DiskDriver) GetPredictProjectDir(projectId int64, model_id int64) string {
+	path := dd.GetProjectDir(projectId)
+	model_str := fmt.Sprintf("%d", model_id)
+	return pb.Join(path, "predict", model_str)
+}
+
+func (dd *DiskDriver) GetPredictProjectDataPath(projectId int64, model_id int64) string {
+	path := dd.GetPredictProjectDir(projectId, model_id)
+	return pb.Join(path, "data")
+}
 func (dd *DiskDriver) GetWIPropertiesPathAndName(projectId int64) (string, string) {
 	path := dd.GetWIPropertiesDir(projectId)
 	return path, "properties.txt"
@@ -280,4 +290,23 @@ func (dd *DiskDriver) GetWIPropertiesPathAndName(projectId int64) (string, strin
 
 func (dd *DiskDriver) GetWIPropertiesDir(projectId int64) string {
 	return fmt.Sprintf("%v/projects/%v/weeklyinsights/", dd.baseDir, projectId)
+}
+
+func (dd *DiskDriver) GetEventsForTimerangeFilePathAndName(projectId int64, startTimestamp int64, endTimestamp int64) (string, string) {
+	path := dd.GetEventsForTimerangeFileDir(projectId, startTimestamp, endTimestamp)
+	return path, "events.txt"
+}
+
+func (dd *DiskDriver) GetEventsForTimerangeFileDir(projectId int64, startTimestamp int64, endTimestamp int64) string {
+	dateFormattedStart := U.GetDateOnlyFromTimestampZ(startTimestamp)
+	dateFormattedEnd := U.GetDateOnlyFromTimestampZ(endTimestamp)
+	return fmt.Sprintf("%v/projects/%v/%v/%v/", dd.baseDir, projectId, dateFormattedStart, dateFormattedEnd)
+}
+
+func (dd *DiskDriver) GetPathAnalysisTempFileDir(id string, projectId int64) string {
+	return fmt.Sprintf("%v/projects/%v/pathanalysis/%v/", dd.baseDir, projectId, id)
+}
+func (dd *DiskDriver) GetPathAnalysisTempFilePathAndName(id string, projectId int64) (string, string) {
+	path := dd.GetPathAnalysisTempFileDir(id, projectId)
+	return path, "patterns.txt"
 }

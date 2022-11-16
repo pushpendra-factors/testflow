@@ -7,8 +7,8 @@ import React, {
 } from 'react';
 import cx from 'classnames';
 import moment from 'moment';
-import _ from 'lodash';
-import { Button, Tabs } from 'antd';
+import _, { get } from 'lodash';
+import { Button, Modal, Tabs } from 'antd';
 import { useSelector } from 'react-redux';
 import { useHistory } from 'react-router-dom';
 import { SVG, Text } from 'factorsComponents';
@@ -24,6 +24,7 @@ import { QuestionCircleOutlined } from '@ant-design/icons';
 import SaveQuery from '../../../components/SaveQuery';
 import { addShadowToHeader } from './analysisResultsPage.helpers';
 import { CoreQueryContext } from '../../../contexts/CoreQueryContext';
+import { EMPTY_ARRAY } from 'Utils/global';
 
 
 const { TabPane } = Tabs;
@@ -37,9 +38,15 @@ function AnalysisHeader({
   queryTitle,
   changeTab,
   activeTab,
+  savedQueryId,
   ...rest
 }) {
   const [hideIntercomState, setHideIntercomState] = useState(true);
+  const [showSaveQueryModal, setShowSaveQueryModal] = useState(false);
+  const savedQueries = useSelector((state) =>
+    get(state, 'queries.data', EMPTY_ARRAY)
+  );
+
 
   useEffect(() => {
     if (window.Intercom) {
@@ -75,23 +82,64 @@ function AnalysisHeader({
     };
   }, []);
 
-  const handleCloseToAnalyse = () => {
-    history.push({
-      pathname: '/analyse'
+  useEffect(() => {
+    window.history.pushState(null, document.title, window.location.href);
+    window.addEventListener('popstate', ()=> {
+        window.history.pushState(null, document.title,  window.location.href);
     });
-    onBreadCrumbClick();
-  };
+  }, [])
+
+  const handleCloseToAnalyse = useCallback(() => {
+    if(!savedQueryId && requestQuery !== null) {
+      Modal.confirm({
+        title: 'This report is not yet saved. Would you like to save this before leaving?',
+        okText: 'Save report',
+        cancelText: 'Don’t save',
+        closable: true,
+        centered: true,
+        onOk: () => {
+          setShowSaveQueryModal(true);
+        },
+        onCancel: () => {
+          history.push({
+            pathname: '/analyse'
+          });
+          onBreadCrumbClick();
+        }
+      });
+    } else {
+      history.push({
+        pathname: '/analyse'
+      });
+      onBreadCrumbClick();
+    }
+  }, [history, requestQuery, savedQueryId]);
 
   const handleCloseDashboardQuery = useCallback(() => {
-    if (!requestQuery) {
-      onBreadCrumbClick();
+    if(!savedQueryId && requestQuery !== null) {
+      Modal.confirm({
+        title: 'This report is not yet saved. Would you like to save this before leaving?',
+        okText: 'Save report',
+        cancelText: 'Don’t save',
+        closable: true,
+        centered: true,
+        onOk: () => {
+          setShowSaveQueryModal(true);
+        },
+        onCancel: () => {
+          history.push({
+            pathname: '/',
+            state: { dashboardWidgetId: navigatedFromDashboard.id }
+          });
+        }
+      }); 
     } else {
       history.push({
         pathname: '/',
         state: { dashboardWidgetId: navigatedFromDashboard.id }
       });
     }
-  }, [history, navigatedFromDashboard, requestQuery]);
+  }, [history, navigatedFromDashboard, requestQuery, savedQueryId]);
 
   const renderReportTitle = () => (
     <Text
@@ -125,9 +173,11 @@ function AnalysisHeader({
     <Button
       size="large"
       type="text"
-      onClick={() => {
-        history.push('/');
-      }}
+      onClick={
+        navigatedFromDashboard
+        ? handleCloseDashboardQuery
+        : handleCloseDashboardQuery
+      }
       icon={<SVG size={32} name="Brand" />}
     />
   );
@@ -166,9 +216,12 @@ function AnalysisHeader({
     }
     return (
       <SaveQuery
+        showSaveQueryModal={showSaveQueryModal}
+        setShowSaveQueryModal={setShowSaveQueryModal}
         queryType={queryType}
         requestQuery={requestQuery}
         queryTitle={queryTitle}
+        savedQueryId={savedQueryId}
         {...rest}
       />
     );
@@ -202,7 +255,7 @@ function AnalysisHeader({
         <div
           role="button"
           tabIndex={0}
-          onClick={onBreadCrumbClick}
+          // onClick={onBreadCrumbClick}
           className="flex items-center cursor-pointer"
         >
           {renderLogo()}

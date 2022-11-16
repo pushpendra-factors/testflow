@@ -260,6 +260,7 @@ type sdkGetInfoResponse struct {
 	AutoFormFillCapture  *bool  `json:"auto_capture_form_fills"`
 	IntDrift             *bool  `json:"int_drift"`
 	IntClearBit          *bool  `json:"int_clear_bit"`
+	IntSixSignal         *bool  `json:"int_six_signal"`
 	UserID               string `json:"user_id,omitempty"`
 }
 

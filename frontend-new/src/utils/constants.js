@@ -456,7 +456,7 @@ export const QUERY_TYPE_TEXT = {
   [QUERY_TYPE_PROFILE]: 'Profiles'
 };
 
-export const FIRST_METRIC_IN_ATTR_RESPOSE = 'Impressions';
+export const FIRST_METRIC_IN_ATTR_RESPONSE = 'Impressions';
 
 export const ARR_JOINER = ';;;';
 
@@ -633,7 +633,8 @@ export const QUERY_OPTIONS_DEFAULT_VALUE = {
   globalFilters: [],
   event_analysis_seq: '',
   session_analytics_seq: {},
-  date_range: {}
+  date_range: {},
+  events_condition: 'any_given_event'
 };
 
 export const AvailableGroups = {
@@ -654,3 +655,13 @@ export const DealOrOppurtunity = 'Deal / Opportunity';
 export const CompanyOrAccount = 'Company / Account';
 
 export const AttributionGroupOptions = [DealOrOppurtunity, CompanyOrAccount];
+
+export const FunnelEventsConditionMap = {
+  any_given_event: 'This Order',
+  funnel_any_given_event: 'Any Order'
+};
+
+export const RevFunnelEventsConditionMap = {
+  'This Order': 'any_given_event',
+  'Any Order': 'funnel_any_given_event'
+};

@@ -19,9 +19,12 @@ function ChartHeader({
   metricType = null,
   eventNames,
   compareTotal,
-  comparisonEnabled
+  comparisonEnabled,
+  titleCharCount
 }) {
   const queryName = getEventDisplayName({ event: query, eventNames });
+
+  const TitleCharCount = titleCharCount || SPARK_LINE_CHART_TITLE_CHAR_COUNT;
 
   const percentChange = comparisonEnabled
     ? ((total - compareTotal) / compareTotal) * 100
@@ -41,15 +44,15 @@ function ChartHeader({
         <div className={'flex items-center col-gap-1'}>
           <LegendsCircle color={bgColor} />
           <div className={styles.eventText}>
-            {queryName.length > SPARK_LINE_CHART_TITLE_CHAR_COUNT
-              ? queryName.slice(0, SPARK_LINE_CHART_TITLE_CHAR_COUNT) + '...'
+            {queryName.length > TitleCharCount
+              ? queryName.slice(0, TitleCharCount) + '...'
               : queryName}
           </div>
         </div>
       </Tooltip>
 
       <ControlledComponent controller={!smallFont}>
-        <Text weight="bold" type="title" level={2} color="grey-2">
+        <Text weight='bold' type='title' level={2} color='grey-2'>
           {metricType ? (
             getFormattedKpiValue({ value: total, metricType })
           ) : (
@@ -59,7 +62,7 @@ function ChartHeader({
       </ControlledComponent>
 
       <ControlledComponent controller={smallFont}>
-        <Text weight="bold" type="title" level={3} color="grey-2">
+        <Text weight='bold' type='title' level={3} color='grey-2'>
           {metricType ? (
             getFormattedKpiValue({ value: total, metricType })
           ) : (
@@ -69,18 +72,18 @@ function ChartHeader({
       </ControlledComponent>
 
       {comparisonEnabled && (
-        <div className="flex flex-col row-gap-1 items-center">
-          <div className="flex col-gap-1 items-center">
+        <div className='flex flex-col row-gap-1 items-center'>
+          <div className='flex col-gap-1 items-center'>
             {changeIcon}
             <Text
               level={7}
-              type="title"
+              type='title'
               color={percentChange < 0 ? 'red' : 'green'}
             >
               <NumFormat number={Math.abs(percentChange)} />%
             </Text>
           </div>
-          <Text type="title" level={8} color="grey">
+          <Text type='title' level={8} color='grey'>
             <NumFormat number={compareTotal} shortHand={true} /> in prev. period
           </Text>
         </div>

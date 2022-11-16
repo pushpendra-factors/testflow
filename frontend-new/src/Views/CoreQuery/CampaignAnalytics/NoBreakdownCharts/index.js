@@ -3,12 +3,13 @@ import { formatData, formatDataInHighChartsSeriesFormat } from './utils';
 import ChartHeader from '../../../../components/SparkLineChart/ChartHeader';
 import SparkChart from '../../../../components/SparkLineChart/Chart';
 import { generateColors } from '../../../../utils/dataFormatter';
+import { CHART_COLOR_1 } from '../../../../constants/color.constants';
 import LineChart from '../../../../components/HCLineChart';
 import NoBreakdownTable from './NoBreakdownTable';
 import {
   CHART_TYPE_SPARKLINES,
   CHART_TYPE_LINECHART,
-  DASHBOARD_MODAL,
+  DASHBOARD_MODAL
 } from '../../../../utils/constants';
 import NoDataChart from '../../../../components/NoDataChart';
 
@@ -17,7 +18,7 @@ function NoBreakdownCharts({
   data,
   arrayMapper,
   section,
-  durationObj,
+  durationObj
 }) {
   const [chartsData, setChartsData] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -26,17 +27,15 @@ function NoBreakdownCharts({
   useEffect(() => {
     setChartsData(formatData(data, arrayMapper));
 
-    const {
-      categories: cat,
-      seriesData: sd,
-    } = formatDataInHighChartsSeriesFormat(data, arrayMapper);
+    const { categories: cat, seriesData: sd } =
+      formatDataInHighChartsSeriesFormat(data, arrayMapper);
     setCategories(cat);
     setSeriesData(sd);
   }, [data, arrayMapper]);
 
   if (!chartsData.length) {
     return (
-      <div className="flex justify-center items-center w-full h-full pt-4 pb-4">
+      <div className='flex justify-center items-center w-full h-full pt-4 pb-4'>
         <NoDataChart />
       </div>
     );
@@ -61,7 +60,7 @@ function NoBreakdownCharts({
         <div className='flex items-center justify-center w-full'>
           <div className='w-1/4'>
             <ChartHeader
-              bgColor='#4D7DB4'
+              bgColor={CHART_COLOR_1}
               query={chartsData[0].name}
               total={chartsData[0].total}
             />
@@ -72,7 +71,7 @@ function NoBreakdownCharts({
               page='campaigns'
               event={chartsData[0].mapper}
               chartData={chartsData[0].dataOverTime}
-              chartColor='#4D7DB4'
+              chartColor={CHART_COLOR_1}
             />
           </div>
         </div>

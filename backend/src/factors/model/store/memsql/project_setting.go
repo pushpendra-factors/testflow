@@ -109,6 +109,58 @@ func (store *MemSQL) GetClearbitKeyFromProjectSetting(projectId int64) (string, 
 	return projectSetting.ClearbitKey, http.StatusFound
 }
 
+func (store *MemSQL) GetClient6SignalKeyFromProjectSetting(projectId int64) (string, int) {
+	logFields := log.Fields{
+		"project_id": projectId,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	db := C.GetServices().Db
+	logCtx := log.WithFields(logFields)
+
+	if valid := isValidProjectScope(projectId); !valid {
+		return "", http.StatusBadRequest
+	}
+
+	var projectSetting model.ProjectSetting
+	if err := db.Where("project_id= ?", projectId).Select("client6_signal_key").Find(&projectSetting).Error; err != nil {
+		logCtx.WithError(err).Error("Getting client6_signal_key from project_setting failed")
+
+		if gorm.IsRecordNotFoundError(err) {
+			return "", http.StatusNotFound
+		}
+		return "", http.StatusInternalServerError
+
+	}
+	return projectSetting.Client6SignalKey, http.StatusFound
+
+}
+
+func (store *MemSQL) GetFactors6SignalKeyFromProjectSetting(projectId int64) (string, int) {
+	logFields := log.Fields{
+		"project_id": projectId,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	db := C.GetServices().Db
+	logCtx := log.WithFields(logFields)
+
+	if valid := isValidProjectScope(projectId); !valid {
+		return "", http.StatusBadRequest
+	}
+
+	var projectSetting model.ProjectSetting
+	if err := db.Where("project_id= ?", projectId).Select("factors6_signal_key").Find(&projectSetting).Error; err != nil {
+		logCtx.WithError(err).Error("Getting factors6_signal_key from project_setting failed")
+
+		if gorm.IsRecordNotFoundError(err) {
+			return "", http.StatusNotFound
+		}
+		return "", http.StatusInternalServerError
+
+	}
+	return projectSetting.Factors6SignalKey, http.StatusFound
+
+}
+
 type ProjectSettingChannelResponse struct {
 	Setting   *model.ProjectSetting
 	ErrorCode int

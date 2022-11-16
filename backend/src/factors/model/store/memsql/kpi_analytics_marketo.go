@@ -60,11 +60,13 @@ func (store *MemSQL) getConfigForSpecificMarketoCategory(projectID int64, reqID 
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	rMetrics := store.GetCustomMetricAndDerivedMetricByProjectIdAndDisplayCategory(projectID, displayCategory, includeDerivedKPIs)
+	marketoProperties := store.GetPropertiesForMarketo(projectID, reqID)
+	standardUserProperties := model.GetKPIConfigFromStandardUserProperties()
 
 	return map[string]interface{}{
 		"category":         model.ProfileCategory,
 		"display_category": displayCategory,
 		"metrics":          rMetrics,
-		"properties":       store.GetPropertiesForMarketo(projectID, reqID),
+		"properties":       append(standardUserProperties, marketoProperties...),
 	}
 }

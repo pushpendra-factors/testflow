@@ -463,11 +463,13 @@ export const getFunnelQuery = (
   queries,
   session_analytics_seq,
   dateRange,
-  globalFilters = []
+  globalFilters = [],
+  eventsCondition
 ) => {
   const query = {};
   query.cl = QUERY_TYPE_FUNNEL;
   query.ty = TYPE_UNIQUE_USERS;
+  query.ec = eventsCondition;
 
   const period = {};
   if (dateRange.from && dateRange.to) {
@@ -519,7 +521,6 @@ export const getFunnelQuery = (
   //   query.sse = session_analytics_seq.start;
   //   query.see = session_analytics_seq.end;
   // }
-  query.ec = 'any_given_event';
   query.tz = localStorage.getItem('project_timeZone') || 'Asia/Kolkata';
   return query;
 };
@@ -1166,6 +1167,7 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
   }
 
   const queryType = requestQuery.cl;
+  const eventsCondition = requestQuery.ec
   const sessionAnalyticsSeq = INITIAL_SESSION_ANALYTICS_SEQ;
   // if (requestQuery.cl && requestQuery.cl === QUERY_TYPE_FUNNEL) {
   //   if (requestQuery.sse && requestQuery.see) {
@@ -1203,6 +1205,7 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
   const result = {
     events,
     queryType,
+    eventsCondition,
     session_analytics_seq: sessionAnalyticsSeq,
     globalFilters,
     breakdown: {
@@ -1795,9 +1798,9 @@ export const isComparisonEnabled = (queryType, events, groupBy, models) => {
     if (newAppliedBreakdown.length === 0) {
       return true;
     }
-    // if (events.length === 1) {
-    //   return true;
-    // }
+    if (events.length === 1 && newAppliedBreakdown.length === 1) {
+      return true;
+    }
     return false;
   }
 

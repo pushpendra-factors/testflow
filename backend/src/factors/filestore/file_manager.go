@@ -43,9 +43,19 @@ type FileManager interface {
 	GetAdsDataDir(projectId int64) string
 	GetAdsDataFilePathAndName(projectId int64, report string, chunkNo int) (string, string)
 
+	//predict
+	GetPredictProjectDataPath(projectId int64, model_id int64) string
+	GetPredictProjectDir(projectId int64, model_id int64) string
+
 	GetWIPropertiesDir(projectId int64) string
 	GetWIPropertiesPathAndName(projectId int64) (string, string)
 
 	GetModelEventsUnsortedFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string)
 	GetEventsArtificatFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string)
+
+	GetEventsForTimerangeFileDir(projectId int64, startTimestamp int64, endTimestamp int64) string
+	GetEventsForTimerangeFilePathAndName(projectId int64, startTimestamp int64, endTimestamp int64) (string, string)
+
+	GetPathAnalysisTempFileDir(id string, projectId int64) string
+	GetPathAnalysisTempFilePathAndName(id string, projectId int64) (string, string)
 }

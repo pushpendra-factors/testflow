@@ -4,6 +4,7 @@ import * as d3 from 'd3';
 import { checkForWindowSizeChange } from '../../Views/CoreQuery/FunnelsResultPage/utils';
 import { getMaxYpoint, getBarChartLeftMargin } from './utils';
 import { numberWithCommas, generateColors } from '../../utils/dataFormatter';
+import { CHART_COLOR_1 } from '../../constants/color.constants';
 import {
   BAR_CHART_XAXIS_TICK_LENGTH,
   REPORT_SECTION,
@@ -237,14 +238,14 @@ function BarChart({
         )
       )
       .style('fill', (d) => {
-        return d.color ? d.color : '#4D7DB4';
+        return d.color ? d.color : CHART_COLOR_1;
       });
     // .append('rect')
     // .attr('class', () => {
     //   return 'bar';
     // })
     // .attr('fill', (d) => {
-    //   return d.color ? d.color : '#4D7DB4';
+    //   return d.color ? d.color : CHART_COLOR_1;
     // })
     // .attr('x', (d) => xScale(d.label))
     // .attr('y', (d) => {
@@ -261,7 +262,7 @@ function BarChart({
 
     bars
       .append('text')
-      .text((d) => d.value)
+      .text((d) => numberWithCommas(Number(d?.value?.toFixed(2) || 0)))
       .attr('x', (d) => xScale(d.label) + xScale.bandwidth() / 2)
       .attr('y', (d) => {
         return (
@@ -270,10 +271,7 @@ function BarChart({
             : height - minBarHeight) - 5
         );
       })
-      .attr('font-family', FONT_FAMILY)
-      .attr('font-size', '11px')
-      .attr('font-weight', 600)
-      .attr('fill', 'black')
+      .attr('class', 'bar-chart-label')
       .attr('text-anchor', 'middle');
 
     // g.selectAll(".bar")

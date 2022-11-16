@@ -442,6 +442,9 @@ CREATE TABLE IF NOT EXISTS project_settings (
     is_weekly_insights_enabled boolean,
     is_explain_enabled boolean,
     timelines_config json,
+    client6_signal_key text,
+    factors6_signal_key text,
+    int_six_signal boolean NOT NULL DEFAULT FALSE,
     KEY (updated_at),
     SHARD KEY (project_id),
     PRIMARY KEY (project_id)
@@ -1144,6 +1147,20 @@ CREATE TABLE IF NOT EXISTS otp_rules(
     SHARD KEY (id)
 );
 
+CREATE TABLE IF NOT EXISTS pathanalysis(
+    id TEXT NOT NULL,
+    project_id BIGINT NOT NULL,
+    title TEXT,
+    status TEXT,
+    created_by TEXT,
+    query JSON,
+    created_on timestamp(6) NOT NULL,
+    modified_on timestamp(6) NOT NULL,
+    is_deleted boolean NOT NULL DEFAULT FALSE,
+    PRIMARY KEY (project_id, id),
+    SHARD KEY(id)
+);
+
 CREATE TABLE IF NOT EXISTS form_fills(
     project_id bigint NOT NULL,
     id text NOT NULL,
@@ -1156,3 +1173,4 @@ CREATE TABLE IF NOT EXISTS form_fills(
     PRIMARY KEY (project_id, user_id, form_id, id),
     SHARD KEY (project_id, user_id, form_id)
 );
+

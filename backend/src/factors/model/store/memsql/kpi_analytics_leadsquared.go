@@ -62,10 +62,13 @@ func (store *MemSQL) getConfigForSpecificLeadSquaredCategory(projectID int64, re
 
 	rMetrics := store.GetCustomMetricAndDerivedMetricByProjectIdAndDisplayCategory(projectID, displayCategory, includeDerivedKPIs)
 
+	leadSquaredProperties := store.GetPropertiesForLeadSquared(projectID, reqID)
+	standardUserProperties := model.GetKPIConfigFromStandardUserProperties()
+
 	return map[string]interface{}{
 		"category":         model.ProfileCategory,
 		"display_category": displayCategory,
 		"metrics":          rMetrics,
-		"properties":       store.GetPropertiesForLeadSquared(projectID, reqID),
+		"properties":       append(standardUserProperties, leadSquaredProperties...),
 	}
 }

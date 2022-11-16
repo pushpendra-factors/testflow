@@ -72,19 +72,19 @@ code {
 }
 
 .charts-color-class-0 {
-  fill: #4d7db4;
+  fill: #82aee0;
 }
 .charts-color-class-1 {
-  fill: #4c9fc8;
+  fill: #7cbad9;
 }
 .charts-color-class-2 {
-  fill: #4cbcbd;
+  fill: #83d2d2;
 }
 .charts-color-class-3 {
   fill: #86d3a3;
 }
 .charts-color-class-4 {
-  fill: #ccc36d;
+  fill: #e5dd8c;
 }
 .charts-color-class-5 {
   fill: #f9c06e;
@@ -99,5 +99,13 @@ code {
   fill: #b87b7e;
 }
 .charts-color-class-9 {
-  fill: #9982b5;
+  fill: #aa94c4;
+}
+
+.bar-chart-label {
+  font-family: $font-family;
+  font-size: 12px;
+  color: $fa-color--mono-5;
+  font-weight: bold;
+  fill: $fa-color--mono-5;
 }

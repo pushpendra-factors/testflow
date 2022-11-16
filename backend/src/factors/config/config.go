@@ -252,6 +252,7 @@ type Configuration struct {
 	EnableDryRunAlerts                                 bool
 	DataAvailabilityExpiry                             int
 	ClearbitEnabled                                    int
+	SixSignalEnabled                                   int
 	UseSalesforceV54APIByProjectID                     string
 	EnableOptimisedFilterOnProfileQuery                bool
 	HubspotAppID                                       string
@@ -266,6 +267,7 @@ type Configuration struct {
 	AllowIdentificationOverwriteUsingSourceByProjectID string
 	AllowHubspotPastEventsEnrichmentByProjectID        string
 	AllowHubspotContactListInsertByProjectID           string
+	IngestionTimezoneEnabledProjectIDs                 []string
 }
 
 type Services struct {
@@ -318,6 +320,7 @@ const (
 	HealthcheckMailWIPingID                     = "950b628b-d623-4666-be39-952516e543c0"
 	HealthcheckPatternMinePingID                = "04e9ba3d-5b07-4325-ad28-6ac7cf15971b"
 	HealthcheckPullEventsPingID                 = "088cc760-f350-4eb1-bbb6-c2bbde66b530"
+	HealthcheckPathAnalysisPingID               = "9f71b930-9233-4e58-9935-5de0434d8fa8"
 
 	// Other services ping IDs. Only reported when alert conditions are met, not periodically.
 	// Once an alert is triggered, ping manually from Healthchecks UI after fixing.
@@ -1763,6 +1766,9 @@ func GetClearbitEnabled() int {
 	return configuration.ClearbitEnabled
 }
 
+func Get6SignalEnabled() int {
+	return configuration.SixSignalEnabled
+}
 func GetOnlyAttributionDashboardCaching() int {
 	return configuration.OnlyAttributionDashboardCaching
 }
@@ -2004,10 +2010,6 @@ func IsLastComputedWhitelisted(projectId int64) bool {
 	return false
 }
 
-func IsMultipleProjectTimezoneEnabled(projectId int64) bool {
-	return true
-}
-
 func IsLoggedInUserWhitelistedForProjectAnalytics(loggedInUUID string) bool {
 	for _, uuid := range configuration.ProjectAnalyticsWhitelistedUUIds {
 		if uuid == loggedInUUID {
@@ -2019,6 +2021,16 @@ func IsLoggedInUserWhitelistedForProjectAnalytics(loggedInUUID string) bool {
 
 func IsDemoProject(projectId int64) bool {
 	for _, id := range configuration.DemoProjectIds {
+		projectIdString := fmt.Sprintf("%v", projectId)
+		if id == projectIdString {
+			return true
+		}
+	}
+	return false
+}
+
+func IsIngestionTimezoneEnabled(projectId int64) bool {
+	for _, id := range configuration.IngestionTimezoneEnabledProjectIDs {
 		projectIdString := fmt.Sprintf("%v", projectId)
 		if id == projectIdString {
 			return true

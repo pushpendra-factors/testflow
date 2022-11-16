@@ -1,6 +1,4 @@
-import React, {
-  useState, useMemo, memo, useCallback
-} from 'react';
+import React, { useState, useMemo, memo, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import ReactDOMServer from 'react-dom/server';
 import moment from 'moment';
@@ -14,6 +12,10 @@ import {
   Number as NumFormat
 } from '../../../components/factorsComponents';
 import LegendsCircle from '../../../styles/components/LegendsCircle';
+import {
+  CHART_COLOR_1,
+  CHART_COLOR_8
+} from '../../../constants/color.constants';
 
 function AttributionsScatterPlot({
   data,
@@ -94,24 +96,24 @@ function AttributionsScatterPlot({
       return ReactDOMServer.renderToString(
         <>
           <Text
-            color="grey-6"
-            weight="normal"
-            type="title"
+            color='grey-6'
+            weight='normal'
+            type='title'
             extraClass={`text-sm mb-0 ${chartStyles.categoryBottomBorder}`}
           >
             {category}
           </Text>
-          <span className="flex items-center mt-3">
+          <span className='flex items-center mt-3'>
             <Text
-              color="grey"
-              type="title"
-              weight="bold"
-              extraClass="text-sm mb-0"
+              color='grey'
+              type='title'
+              weight='bold'
+              extraClass='text-sm mb-0'
             >
               {xAxisTitle}
             </Text>
           </span>
-          <span className="flex justify-between items-center mt-1">
+          <span className='flex justify-between items-center mt-1'>
             <span
               className={`flex flex-col justify-center items-start ${
                 comparison_data.data ? 'w-1/2' : ''
@@ -119,10 +121,10 @@ function AttributionsScatterPlot({
             >
               {!!comparison_data.data && (
                 <Text
-                  color="grey"
-                  type="title"
-                  weight="normal"
-                  extraClass="text-sm mb-0"
+                  color='grey'
+                  type='title'
+                  weight='normal'
+                  extraClass='text-sm mb-0'
                 >
                   {moment(durationObj.from).format('MMM DD')}
                   {' - '}
@@ -130,10 +132,10 @@ function AttributionsScatterPlot({
                 </Text>
               )}
               <Text
-                color="grey-6"
-                type="title"
-                weight="bold"
-                extraClass="text-base mb-0"
+                color='grey-6'
+                type='title'
+                weight='bold'
+                extraClass='text-base mb-0'
               >
                 <NumFormat
                   number={
@@ -146,35 +148,37 @@ function AttributionsScatterPlot({
             </span>
             {comparison_data.data ? (
               <span
-                className={'flex flex-col justify-center items-start ml-2 w-1/2'}
+                className={
+                  'flex flex-col justify-center items-start ml-2 w-1/2'
+                }
               >
                 <Text
-                  color="grey"
-                  type="title"
-                  weight="normal"
-                  extraClass="text-sm mb-0 ml-4"
+                  color='grey'
+                  type='title'
+                  weight='normal'
+                  extraClass='text-sm mb-0 ml-4'
                 >
                   {moment(comparison_duration.from).format('MMM DD')}
                   {' - '}
                   {moment(comparison_duration.to).format('MMM DD')}
                 </Text>
                 <Text
-                  color="grey-6"
-                  type="title"
-                  weight="bold"
-                  extraClass="text-base mb-0 ml-4"
+                  color='grey-6'
+                  type='title'
+                  weight='bold'
+                  extraClass='text-base mb-0 ml-4'
                 >
                   <NumFormat number={categoryData[xAxisMetric].compare_value} />
                 </Text>
               </span>
             ) : null}
           </span>
-          <span className="flex items-center mt-3">
+          <span className='flex items-center mt-3'>
             <Text
-              color="grey"
-              type="title"
-              weight="bold"
-              extraClass="text-sm mb-0"
+              color='grey'
+              type='title'
+              weight='bold'
+              extraClass='text-sm mb-0'
             >
               {yAxisTitle}
             </Text>
@@ -187,10 +191,10 @@ function AttributionsScatterPlot({
             >
               {!!comparison_data.data && (
                 <Text
-                  color="grey"
-                  type="title"
-                  weight="normal"
-                  extraClass="text-sm mb-0"
+                  color='grey'
+                  type='title'
+                  weight='normal'
+                  extraClass='text-sm mb-0'
                 >
                   {moment(durationObj.from).format('MMM DD')}
                   {' - '}
@@ -198,10 +202,10 @@ function AttributionsScatterPlot({
                 </Text>
               )}
               <Text
-                color="grey-6"
-                type="title"
-                weight="bold"
-                extraClass="text-base mb-0"
+                color='grey-6'
+                type='title'
+                weight='bold'
+                extraClass='text-base mb-0'
               >
                 <NumFormat
                   number={
@@ -214,23 +218,25 @@ function AttributionsScatterPlot({
             </span>
             {comparison_data.data ? (
               <span
-                className={'flex flex-col justify-center items-start ml-2 w-1/2'}
+                className={
+                  'flex flex-col justify-center items-start ml-2 w-1/2'
+                }
               >
                 <Text
-                  color="grey"
-                  type="title"
-                  weight="normal"
-                  extraClass="text-sm mb-0"
+                  color='grey'
+                  type='title'
+                  weight='normal'
+                  extraClass='text-sm mb-0'
                 >
                   {moment(comparison_duration.from).format('MMM DD')}
                   {' - '}
                   {moment(comparison_duration.to).format('MMM DD')}
                 </Text>
                 <Text
-                  color="grey-6"
-                  type="title"
-                  weight="bold"
-                  extraClass="text-base mb-0"
+                  color='grey-6'
+                  type='title'
+                  weight='bold'
+                  extraClass='text-base mb-0'
                 >
                   <NumFormat number={categoryData[yAxisMetric].compare_value} />
                 </Text>
@@ -263,16 +269,16 @@ function AttributionsScatterPlot({
         chartId={chartId}
       />
       {!!comparison_data.data && (
-        <div className="flex items-center justify-center">
-          <div className="mr-2">
-            <LegendsCircle color="#4D7DB4" />
+        <div className='flex items-center justify-center'>
+          <div className='mr-2'>
+            <LegendsCircle color={CHART_COLOR_1} />
           </div>
-          <div className="mr-4">
+          <div className='mr-4'>
             {moment(durationObj.from).format(DATE_FORMATS.date)} to{' '}
             {moment(durationObj.to).format(DATE_FORMATS.date)}
           </div>
-          <div className="mr-2">
-            <LegendsCircle color="#d4787d" />
+          <div className='mr-2'>
+            <LegendsCircle color={CHART_COLOR_8} />
           </div>
           <div>
             {moment(comparison_duration.from).format(DATE_FORMATS.date)} to{' '}

@@ -1,13 +1,19 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import PropTypes from 'prop-types';
-import { Input } from 'antd';
+import { Input, Checkbox } from 'antd';
+import { noop } from 'lodash';
 import { Text } from 'factorsComponents';
-import { EMPTY_STRING, EMPTY_OBJECT, isStringLengthValid } from 'Utils/global';
+import { EMPTY_STRING, isStringLengthValid, EMPTY_ARRAY } from 'Utils/global';
 import styles from './index.module.scss';
-import { ACTION_TYPES } from './saveQuery.constants';
 import AppModal from '../AppModal';
+import {
+  DEFAULT_DASHBOARD_PRESENTATION,
+  ACTION_TYPES
+} from './saveQuery.constants';
+import AddToDashboardForm from './CommonAddToDashboardForm';
+import { QUERY_TYPE_PROFILE } from '../../utils/constants';
 
-const SaveQueryModal = ({
+function SaveQueryModal({
   visible,
   isLoading,
   modalTitle,
@@ -15,11 +21,17 @@ const SaveQueryModal = ({
   toggleModalVisibility,
   activeAction,
   queryTitle,
-}) => {
+  queryType
+}) {
   const { TextArea } = Input;
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [showAddToDashboard, setShowAddToDashboard] = useState(false);
+  const [selectedDashboards, setSelectedDashboards] = useState([]);
+  const [dashboardPresentation, setDashboardPresentation] = useState(
+    DEFAULT_DASHBOARD_PRESENTATION
+  );
 
   useEffect(() => {
     if (visible && queryTitle) {
@@ -35,12 +47,18 @@ const SaveQueryModal = ({
     setTitle(e.target.value);
   };
 
+  const handleAddToDashboardChange = (e) => {
+    setShowAddToDashboard(e.target.checked);
+  };
+
   const handleDescriptionChange = (e) => {
     setDescription(e.target.value);
   };
 
   const resetModalState = useCallback(() => {
     setTitle('');
+    setSelectedDashboards(EMPTY_ARRAY);
+    setDashboardPresentation(DEFAULT_DASHBOARD_PRESENTATION);
     toggleModalVisibility();
   }, [toggleModalVisibility]);
 
@@ -53,13 +71,18 @@ const SaveQueryModal = ({
   const handleSubmit = () => {
     onSubmit({
       title,
+      addToDashboard: showAddToDashboard,
+      selectedDashboards,
+      dashboardPresentation,
       onSuccess: () => {
         resetModalState();
-      },
+      }
     });
   };
 
   const isSaveBtnDisabled = () => {
+    if (showAddToDashboard)
+      return !isStringLengthValid(title) || !selectedDashboards.length;
     return !isStringLengthValid(title);
   };
 
@@ -76,9 +99,9 @@ const SaveQueryModal = ({
         <Text
           color='black'
           extraClass='m-0'
-          type={'title'}
+          type='title'
           level={3}
-          weight={'bold'}
+          weight='bold'
         >
           {modalTitle}
         </Text>
@@ -86,10 +109,9 @@ const SaveQueryModal = ({
           <Input
             onChange={handleTitleChange}
             value={title}
-            className={'fa-input'}
-            size={'large'}
+            className={`fa-input ${styles.input}`}
+            size='large'
             placeholder='Name'
-            className={styles.input}
           />
           <TextArea
             className={styles.input}
@@ -98,10 +120,27 @@ const SaveQueryModal = ({
             placeholder='Description (Optional)'
           />
         </div>
+        {queryType !== QUERY_TYPE_PROFILE && (
+          <>
+            <div>
+              <Checkbox onChange={handleAddToDashboardChange}>
+                Add to Dashboard
+              </Checkbox>
+            </div>
+            {showAddToDashboard && (
+              <AddToDashboardForm
+                selectedDashboards={selectedDashboards}
+                setSelectedDashboards={setSelectedDashboards}
+                dashboardPresentation={dashboardPresentation}
+                setDashboardPresentation={setDashboardPresentation}
+              />
+            )}
+          </>
+        )}
       </div>
     </AppModal>
   );
-};
+}
 
 export default SaveQueryModal;
 
@@ -109,22 +148,20 @@ SaveQueryModal.propTypes = {
   visible: PropTypes.bool,
   isLoading: PropTypes.bool,
   modalTitle: PropTypes.string,
-  queryType: PropTypes.string,
-  requestQuery: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
   onSubmit: PropTypes.func,
   toggleModalVisibility: PropTypes.func,
   activeAction: PropTypes.string,
   queryTitle: PropTypes.string,
+  queryType: PropTypes.string
 };
 
 SaveQueryModal.defaultProps = {
   visible: false,
   isLoading: false,
   modalTitle: EMPTY_STRING,
-  queryType: EMPTY_STRING,
-  requestQuery: EMPTY_OBJECT,
-  onSubmit: _.noop,
-  toggleModalVisibility: _.noop,
+  onSubmit: noop,
+  toggleModalVisibility: noop,
   activeAction: EMPTY_STRING,
   queryTitle: EMPTY_STRING,
+  queryType: EMPTY_STRING
 };

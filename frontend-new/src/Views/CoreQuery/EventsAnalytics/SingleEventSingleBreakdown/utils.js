@@ -1,5 +1,6 @@
 import React from 'react';
-import moment from 'moment';
+import cx from 'classnames';
+import MomentTz from 'Components/MomentTz';
 import get from 'lodash/get';
 import findIndex from 'lodash/findIndex';
 import has from 'lodash/has';
@@ -7,7 +8,8 @@ import { labelsObj } from '../../utils';
 import {
   getClickableTitleSorter,
   SortResults,
-  addQforQuarter
+  addQforQuarter,
+  formatCount
 } from '../../../../utils/dataFormatter';
 import {
   Number as NumFormat,
@@ -144,16 +146,16 @@ export const getTableColumns = (
     className: 'text-right',
     dataIndex: EVENT_COUNT_KEY,
     render: (d, row) => (
-      <div className="flex flex-col">
-        <Text type="title" level={7} color="grey-6">
+      <div className='flex flex-col'>
+        <Text type='title' level={7} color='grey-6'>
           <NumFormat number={d} />
         </Text>
         {row.compareValue != null && (
           <>
-            <Text type="title" level={7} color="grey">
+            <Text type='title' level={7} color='grey'>
               <NumFormat number={row.compareValue} />
             </Text>
-            <div className="flex col-gap-1 items-center justify-end">
+            <div className='flex col-gap-1 items-center justify-end'>
               <SVG
                 color={row.change > 0 ? '#5ACA89' : '#FF0000'}
                 name={row.change > 0 ? 'arrowLift' : 'arrowDown'}
@@ -161,7 +163,7 @@ export const getTableColumns = (
               />
               <Text
                 level={7}
-                type="title"
+                type='title'
                 color={row.change < 0 ? 'red' : 'green'}
               >
                 <NumFormat number={Math.abs(row.change)} />%
@@ -251,7 +253,9 @@ export const getDateBasedColumns = (
   handleSorting,
   frequency,
   userPropNames,
-  eventPropNames
+  eventPropNames,
+  comparisonApplied,
+  compareCategories
 ) => {
   const OverallColumn = {
     title: getClickableTitleSorter(
@@ -293,40 +297,146 @@ export const getDateBasedColumns = (
   });
 
   const format = DATE_FORMATS[frequency] || DATE_FORMATS.date;
+  const dateColumns = [];
+  categories.forEach((cat, catIndex) => {
+    dateColumns.push({
+      title: getClickableTitleSorter(
+        addQforQuarter(frequency) + MomentTz(cat).format(format),
+        {
+          key: addQforQuarter(frequency) + MomentTz(cat).format(format),
+          type: 'numerical',
+          subtype: null
+        },
+        currentSorter,
+        handleSorting,
+        'right'
+      ),
+      width: 150,
+      className: cx('text-right', { 'border-none': comparisonApplied }),
+      dataIndex: addQforQuarter(frequency) + MomentTz(cat).format(format),
+      render: (d) => <NumFormat number={d} />
+    });
 
-  const dateColumns = categories.map((cat) => ({
-    title: getClickableTitleSorter(
-      addQforQuarter(frequency) + moment(cat).format(format),
-      {
-        key: addQforQuarter(frequency) + moment(cat).format(format),
-        type: 'numerical',
-        subtype: null
-      },
-      currentSorter,
-      handleSorting,
-      'right'
-    ),
-    width: 150,
-    className: 'text-right',
-    dataIndex: addQforQuarter(frequency) + moment(cat).format(format),
-    render: (d) => <NumFormat number={d} />
-  }));
+    if (comparisonApplied) {
+      dateColumns.push({
+        title: getClickableTitleSorter(
+          addQforQuarter(frequency) +
+            MomentTz(compareCategories[catIndex]).format(format),
+          {
+            key:
+              addQforQuarter(frequency) +
+              MomentTz(compareCategories[catIndex]).format(format),
+            type: 'numerical',
+            subtype: null
+          },
+          currentSorter,
+          handleSorting,
+          'right'
+        ),
+        className: 'text-right border-none',
+        width: frequency === 'hour' ? 200 : 150,
+        dataIndex:
+          addQforQuarter(frequency) +
+          MomentTz(compareCategories[catIndex]).format(format),
+        render: (d) => <NumFormat number={d} />
+      });
+      dateColumns.push({
+        title: getClickableTitleSorter(
+          'Change',
+          {
+            key: `${
+              addQforQuarter(frequency) +
+              MomentTz(compareCategories[catIndex]).format(format)
+            } - Change`,
+            type: 'percent',
+            subtype: null
+          },
+          currentSorter,
+          handleSorting,
+          'right'
+        ),
+        className: 'text-right',
+        width: frequency === 'hour' ? 200 : 150,
+        dataIndex: `${
+          addQforQuarter(frequency) +
+          MomentTz(compareCategories[catIndex]).format(format)
+        } - Change`,
+        render: (d) => {
+          const changeIcon = (
+            <SVG
+              color={d >= 0 ? '#5ACA89' : '#FF0000'}
+              name={d >= 0 ? 'arrowLift' : 'arrowDown'}
+              size={16}
+            />
+          );
+          return (
+            <div className='flex col-gap-1 items-center justify-end'>
+              {changeIcon}
+              <Text level={7} type='title' color={d < 0 ? 'red' : 'green'}>
+                <NumFormat number={Math.abs(d)} />%
+              </Text>
+            </div>
+          );
+        }
+      });
+    }
+  });
   return [...breakdownColumns, ...dateColumns, OverallColumn];
 };
 
 export const getDateBasedTableData = (
   seriesData,
   searchText,
-  currentSorter
+  currentSorter,
+  categories,
+  comparisonApplied,
+  compareCategories,
+  frequency
 ) => {
-  const result = seriesData.filter((sd) =>
+  const format = DATE_FORMATS[frequency] || DATE_FORMATS.date;
+  const result = seriesData
+    .filter((s) => !has(s, 'compareIndex'))
+    .map((sd, index) => {
+      const obj = {
+        index,
+        Overall: sd.total,
+        ...sd
+      };
+      const compareRow = seriesData.find(
+        (elem) => elem.compareIndex === sd.index
+      );
+      const dateData = {};
+      categories.forEach((cat, catIndex) => {
+        dateData[addQforQuarter(frequency) + MomentTz(cat).format(format)] =
+          sd.data[catIndex];
+        if (comparisonApplied && compareRow != null) {
+          const val1 = sd.data[catIndex];
+          const val2 = compareRow.data[catIndex];
+          dateData[
+            addQforQuarter(frequency) +
+              MomentTz(compareCategories[catIndex]).format(format)
+          ] = val2;
+          dateData[
+            `${
+              addQforQuarter(frequency) +
+              MomentTz(compareCategories[catIndex]).format(format)
+            } - Change`
+          ] = formatCount(((val1 - val2) / val2) * 100);
+        }
+      });
+      return {
+        ...obj,
+        ...dateData
+      };
+    });
+  const filteredResult = result.filter((sd) =>
     sd.name.toLowerCase().includes(searchText.toLowerCase())
   );
 
-  return SortResults(result, currentSorter);
+  return SortResults(filteredResult, currentSorter);
 };
 
-export const formatDataInStackedAreaFormat = (
+export const formatDataInSeriesFormat = (
   data,
   aggregateData,
   frequency,
@@ -416,7 +526,7 @@ export const formatDataInStackedAreaFormat = (
     const idx = differentDates.indexOf(category);
     if (resultantData[bIdx]) {
       resultantData[bIdx][
-        addQforQuarter(frequency) + moment(category).format(format)
+        addQforQuarter(frequency) + MomentTz(category).format(format)
       ] = row[countIndex];
       resultantData[bIdx].data[idx] = row[countIndex];
     }
@@ -434,7 +544,7 @@ export const formatDataInStackedAreaFormat = (
         compareIndex != null ? comparisonData.rows[compareIndex] : null;
       if (resultantComparisonData[bIdx]) {
         resultantComparisonData[bIdx][
-          addQforQuarter(frequency) + moment(category).format(format)
+          addQforQuarter(frequency) + MomentTz(category).format(format)
         ] = compareRow != null ? compareRow[countIndex] : 0;
         resultantComparisonData[bIdx].data[idx] =
           compareRow != null ? compareRow[countIndex] : 0;
@@ -456,7 +566,8 @@ export const getDataInHorizontalBarChartFormat = (
   aggregateData,
   breakdown,
   cardSize = 1,
-  isDashboardWidget = false
+  isDashboardWidget = false,
+  comparisonApplied = false
 ) => {
   const sortedData = SortResults(aggregateData, [
     {
@@ -475,7 +586,8 @@ export const getDataInHorizontalBarChartFormat = (
     firstBreakdownKey,
     cardSize,
     isDashboardWidget,
-    false
+    false,
+    comparisonApplied
   );
 
   const result = [row];
@@ -500,7 +612,7 @@ export const getHorizontalBarChartColumns = (
       className: tableStyles.horizontalBarTableHeader,
       render: (d) => {
         const obj = {
-          children: <div className="h-full p-6">{d}</div>
+          children: <div className='h-full p-6'>{d}</div>
         };
         return obj;
       }

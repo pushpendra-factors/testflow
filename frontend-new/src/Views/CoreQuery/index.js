@@ -123,6 +123,7 @@ import { getChartChangedKey } from './AnalysisResultsPage/analysisResultsPage.he
 import NewProject from '../Settings/SetupAssist/Modals/NewProject';
 import AnalyseBeforeIntegration from './AnalyseBeforeIntegration';
 import SaveQuery from 'Components/SaveQuery';
+import _ from 'lodash';
 
 function CoreQuery({
   activeProject,
@@ -238,11 +239,15 @@ function CoreQuery({
 
   const { show_criteria: result_criteria, performance_criteria: user_type } =
     useSelector((state) => state.analyticsQuery);
+  const { dashboards } = useSelector(
+    (state) => state.dashboard
+  );
 
   const dateRange = queryOptions.date_range;
   const { session_analytics_seq } = queryOptions;
   const { globalFilters } = queryOptions;
   const groupAnalysis = queryOptions.group_analysis;
+  const eventsCondition = queryOptions.events_condition
 
   useEffect(() => {
     fetchDemoProject()
@@ -278,8 +283,10 @@ function CoreQuery({
   useEffect(() => {
     fetchProjectSettingsV1(activeProject.id);
     fetchProjectSettings(activeProject.id);
-    fetchBingAdsIntegration(activeProject.id);
-    fetchMarketoIntegration(activeProject.id);
+    if (_.isEmpty(dashboards?.data)) {
+      fetchBingAdsIntegration(activeProject?.id);
+      fetchMarketoIntegration(activeProject?.id);
+    }
     setTimeout(() => {
       setLoading(false);
     }, 1000);
@@ -299,7 +306,8 @@ function CoreQuery({
     bingAds?.accounts ||
     marketo?.status ||
     integrationV1?.int_slack ||
-    integration?.lead_squared_config !== null;
+    integration?.lead_squared_config !== null ||
+    integration?.int_six_signal;
 
   const getQueryFromHashId = () =>
     queriesState.data.find((quer) => quer.id_text === query_id);
@@ -760,7 +768,8 @@ function CoreQuery({
           queriesA,
           session_analytics_seq,
           durationObj,
-          globalFilters
+          globalFilters,
+          eventsCondition
         );
 
         if (!isQuerySaved) {
@@ -811,6 +820,7 @@ function CoreQuery({
       groupBy,
       globalFilters,
       dateRange,
+      eventsCondition,
       updateResultState,
       configActionsOnRunningQuery,
       updateLocalReducer,
@@ -2022,7 +2032,7 @@ function CoreQuery({
               breakdown={appliedBreakdown}
               setShowResult={() => {
                 setShowResult(false);
-                updateRequestQuery(false);
+                updateRequestQuery(null);
               }}
               queryTitle={querySaved ? querySaved.name : null}
               savedQueryId={querySaved ? querySaved.id : null}

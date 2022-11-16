@@ -1,7 +1,6 @@
 package memsql
 
 import (
-	C "factors/config"
 	"factors/model/model"
 	U "factors/util"
 	"net/http"
@@ -16,13 +15,8 @@ import (
 func (store *MemSQL) ExecuteKPIQueryGroup(projectID int64, reqID string, kpiQueryGroup model.KPIQueryGroup,
 	enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool) ([]model.QueryResult, int) {
 
-	isTimezoneEnabled := false
 	kpiTimezoneString := string(kpiQueryGroup.GetTimeZone())
 	var finalResultantResults []model.QueryResult
-
-	if C.IsMultipleProjectTimezoneEnabled(projectID) {
-		isTimezoneEnabled = true
-	}
 
 	for index, query := range kpiQueryGroup.Queries {
 		kpiQueryGroup.Queries[index].Filters = append(query.Filters, kpiQueryGroup.GlobalFilters...)
@@ -50,8 +44,8 @@ func (store *MemSQL) ExecuteKPIQueryGroup(projectID int64, reqID string, kpiQuer
 
 	gbtRelatedQueryResults, nonGbtRelatedQueryResults, gbtRelatedQueries, nonGbtRelatedQueries := model.SplitQueryResultsIntoGBTAndNonGBT(finalResultantResults, kpiQueryGroup, finalStatusCode)
 	finalQueryResult := make([]model.QueryResult, 0)
-	gbtRelatedMergedResults := model.MergeQueryResults(gbtRelatedQueryResults, gbtRelatedQueries, kpiTimezoneString, finalStatusCode, isTimezoneEnabled)
-	nonGbtRelatedMergedResults := model.MergeQueryResults(nonGbtRelatedQueryResults, nonGbtRelatedQueries, kpiTimezoneString, finalStatusCode, isTimezoneEnabled)
+	gbtRelatedMergedResults := model.MergeQueryResults(gbtRelatedQueryResults, gbtRelatedQueries, kpiTimezoneString, finalStatusCode)
+	nonGbtRelatedMergedResults := model.MergeQueryResults(nonGbtRelatedQueryResults, nonGbtRelatedQueries, kpiTimezoneString, finalStatusCode)
 	if (!reflect.DeepEqual(model.QueryResult{}, gbtRelatedMergedResults)) {
 		finalQueryResult = append(finalQueryResult, gbtRelatedMergedResults)
 	}
@@ -133,7 +127,7 @@ func (store *MemSQL) ExecuteDerivedKPIQuery(projectID int64, reqID string, baseQ
 	queryResults := make([]model.QueryResult, 0)
 	mapOfInternalQueryToResult := make(map[string][]model.QueryResult)
 
-	derivedMetric, errMsg, statusCode := store.GetDerivedMetricsByName(projectID, baseQuery.Metrics[0])
+	derivedMetric, errMsg, statusCode := store.GetDerivedCustomMetricByProjectIdName(projectID, baseQuery.Metrics[0])
 	if statusCode != http.StatusFound {
 		return internalKPIQueryGroup, mapOfInternalQueryToResult, statusCode, "", errMsg
 	}

@@ -44,6 +44,8 @@ func main() {
 	minSyncTimestamp := flag.Int64("min_sync_timestamp", 0, "Min timstamp from where to process records")
 	projectIDList := flag.String("project_ids", "*", "List of project_id to run for.")
 	disabledProjectIDList := flag.String("disabled_project_ids", "", "List of project_ids to exclude.")
+	IngestionTimezoneEnabledProjectIDs := flag.String("ingestion_timezone_enabled_projects", "", "List of projectIds whose ingestion timezone is enabled.")
+
 	flag.Parse()
 
 	appName := "lead_squared_enrich"
@@ -73,6 +75,7 @@ func main() {
 		UseSourcePropertyOverwriteByProjectIDs: *useSourcePropertyOverwriteByProjectID,
 		CaptureSourceInUsersTable:              *captureSourceInUsersTable,
 		RestrictReusingUsersByCustomerUserId:   *restrictReusingUsersByCustomerUserId,
+		IngestionTimezoneEnabledProjectIDs:     C.GetTokensFromStringListAsString(*IngestionTimezoneEnabledProjectIDs),
 	}
 	C.InitConf(config)
 

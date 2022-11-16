@@ -27,6 +27,7 @@ import {
   getProfileUsers,
   getProfileUserDetails
 } from '../../../reducers/timelines/middleware';
+import _ from 'lodash';
 
 function UserProfiles({
   activeProject,
@@ -79,6 +80,9 @@ function UserProfiles({
   );
   const integrationV1 = useSelector((state) => state.global.projectSettingsV1);
   const { bingAds, marketo } = useSelector((state) => state.global);
+  const { dashboards } = useSelector(
+    (state) => state.dashboard
+  );
 
   useEffect(() => {
     fetchDemoProject()
@@ -93,8 +97,10 @@ function UserProfiles({
   useEffect(() => {
     fetchProjectSettingsV1(activeProject.id);
     fetchProjectSettings(activeProject.id);
-    fetchBingAdsIntegration(activeProject.id);
-    fetchMarketoIntegration(activeProject.id);
+    if (_.isEmpty(dashboards?.data)) {
+      fetchBingAdsIntegration(activeProject?.id);
+      fetchMarketoIntegration(activeProject?.id);
+    }
   }, [activeProject]);
 
   const isIntegrationEnabled =
@@ -111,7 +117,8 @@ function UserProfiles({
     bingAds?.accounts ||
     marketo?.status ||
     integrationV1?.int_slack ||
-    integration?.lead_squared_config !== null;
+    integration?.lead_squared_config !== null ||
+    integration?.int_six_signal;
 
   useEffect(() => {
     getUserProperties(activeProject.id);

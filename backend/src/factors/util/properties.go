@@ -54,6 +54,10 @@ const EVENT_NAME_SALESFORCE_OPPORTUNITY_UPDATED = "$sf_opportunity_updated"
 const EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED = "$sf_campaign_member_created"
 const EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED = "$sf_campaign_member_updated"
 const EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_RESPONDED_TO_CAMPAIGN = "$sf_campaign_member_responded_to_campaign"
+const EVENT_NAME_SALESFORCE_TASK_CREATED = "$sf_task_created"
+const EVENT_NAME_SALESFORCE_TASK_UPDATED = "$sf_task_updated"
+const EVENT_NAME_SALESFORCE_EVENT_CREATED = "$sf_event_created"
+const EVENT_NAME_SALESFORCE_EVENT_UPDATED = "$sf_event_updated"
 
 // Integration: Marketo
 const EVENT_NAME_MARKETO_LEAD_CREATED = "$marketo_lead_created"
@@ -122,6 +126,10 @@ var ALLOWED_INTERNAL_EVENT_NAMES = [...]string{
 	EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED,
 	EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED,
 	EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_RESPONDED_TO_CAMPAIGN,
+	EVENT_NAME_SALESFORCE_TASK_CREATED,
+	EVENT_NAME_SALESFORCE_TASK_UPDATED,
+	EVENT_NAME_SALESFORCE_EVENT_CREATED,
+	EVENT_NAME_SALESFORCE_EVENT_UPDATED,
 	GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_CREATED,
 	GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED,
 	GROUP_EVENT_NAME_SALESFORCE_OPPORTUNITY_CREATED,
@@ -456,6 +464,27 @@ var CLR_COMPANY_ID = "$clr_company_id"
 var CLR_COMPANY_LEGALNAME = "$clr_company_legalname"
 var CLR_COMPANY_TECH = "$clr_company_tech"
 var CLR_COMPANY_TAGS = "$clr_company_tags"
+
+//6Signal Properties
+var SIX_SIGNAL_ZIP = "$6Signal_zip"
+var SIX_SIGNAL_NAICS_DESCRIPTION = "$6Signal_naics_description"
+var SIX_SIGNAL_EMPLOYEE_COUNT = "$6Signal_employee_count"
+var SIX_SIGNAL_COUNTRY = "$6Signal_country"
+var SIX_SIGNAL_ADDRESS = "$6Signal_address"
+var SIX_SIGNAL_CITY = "$6Signal_city"
+var SIX_SIGNAL_EMPLOYEE_RANGE = "$6Signal_employee_range"
+var SIX_SIGNAL_INDUSTRY = "$6Signal_industry"
+var SIX_SIGNAL_SIC = "$6Signal_sic"
+var SIX_SIGNAL_REVENUE_RANGE = "$6Signal_revenue_range"
+var SIX_SIGNAL_COUNTRY_ISO_CODE = "$6Signal_country_iso_code"
+var SIX_SIGNAL_PHONE = "$6Signal_phone"
+var SIX_SIGNAL_DOMAIN = "$6Signal_domain"
+var SIX_SIGNAL_NAME = "$6Signal_name"
+var SIX_SIGNAL_STATE = "$6Signal_state"
+var SIX_SIGNAL_REGION = "$6Signal_region"
+var SIX_SIGNAL_NAICS = "$6Signal_naics"
+var SIX_SIGNAL_ANNUAL_REVENUE = "$6Signal_annual_revenue"
+var SIX_SIGNAL_SIC_DESCRIPTION = "$6Signal_sic_description"
 
 var SDK_ALLOWED_EVENT_PROPERTIES = [...]string{
 	EP_INTERNAL_IP,
@@ -1296,6 +1325,10 @@ var CRM_USER_EVENT_NAME_LABELS = map[string]string{
 	"$sf_campaign_member_created":               "Salesforce Users",
 	"$sf_campaign_member_updated":               "Salesforce Users",
 	"$sf_campaign_member_responded_to_campaign": "Salesforce Users",
+	"$sf_task_created":                          "Salesforce Users",
+	"$sf_task_updated":                          "Salesforce Users",
+	"$sf_event_created":                         "Salesforce Users",
+	"$sf_event_updated":                         "Salesforce Users",
 }
 
 var STANDARD_EVENTS_GROUP_NAMES = map[string]string{
@@ -3064,6 +3097,17 @@ func isDateTimePropertyByName(propertyKey string) bool {
 	return false
 }
 
+func GetPropertyTypeByName(propertyName string) string {
+	// PropertyKey will be set to null if the pre-mentioned classfication behaviour need to be supressed
+	if isDateTimePropertyByName(propertyName) {
+		return PropertyTypeDateTime
+	}
+	if isNumericalPropertyByName(propertyName) {
+		return PropertyTypeNumerical
+	}
+	return PropertyTypeCategorical
+}
+
 func GetPropertyTypeByKeyORValue(projectID int64, eventName string, propertyKey string, propertyValue interface{}, isUserProperty bool) (string, bool) {
 	// PropertyKey will be set to null if the pre-mentioned classfication behaviour need to be supressed
 	if propertyKey != "" {
@@ -3225,11 +3269,10 @@ func GetSessionProperties(isFirstSession bool, eventProperties,
 	return &sessionProperties
 }
 
-// Add day_of_week and hour_of_day event property
-func FillHourDayAndTimestampEventProperty(properties *postgres.Jsonb, timestamp int64) (*postgres.Jsonb, error) {
-	unixTimeUTC := time.Unix(timestamp, 0)
-	weekDay := unixTimeUTC.Weekday().String()
-	hr, _, _ := unixTimeUTC.Clock()
+func FillHourDayAndTimestampEventProperty(properties *postgres.Jsonb, timestamp int64, timezoneString TimeZoneString) (*postgres.Jsonb, error) {
+	t := ConvertTimeIn(time.Unix(timestamp, 0), timezoneString)
+	weekDay := t.Weekday().String()
+	hr, _, _ := t.Clock()
 	eventPropsJSON, err := DecodePostgresJsonb(properties)
 	if err != nil {
 		return nil, err

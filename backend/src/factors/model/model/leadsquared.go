@@ -17,11 +17,11 @@ var LeadSquaredDocumentToQuery = map[string]string{
 		" WHERE %v AND ProspectAutoId > %v order by ProspectAutoId asc LIMIT %v OFFSET 0",
 	LEADSQUARED_SALES_ACTIVITY: "select * FROM `%s.%s.sales_activity`" +
 		" WHERE %v AND CreatedOnUnix > %v order by CreatedOnUnix asc LIMIT %v OFFSET 0", // fix this
-	LEADSQUARED_EMAIL_SENT: "select * FROM `%s.%s.sales_activity`" +
+	LEADSQUARED_EMAIL_SENT: "select * FROM `%s.%s.email_sent`" +
 		" WHERE %v AND CreatedOnUnix > %v order by CreatedOnUnix asc LIMIT %v OFFSET 0", // fix this
-	LEADSQUARED_EMAIL_INFO: "select * FROM `%s.%s.sales_activity`" +
+	LEADSQUARED_EMAIL_INFO: "select * FROM `%s.%s.email_info`" +
 		" WHERE %v AND CreatedOnUnix > %v order by CreatedOnUnix asc LIMIT %v OFFSET 0", // fix this
-	LEADSQUARED_HAD_A_CALL: "select * FROM `%s.%s.sales_activity`" +
+	LEADSQUARED_HAD_A_CALL: "select * FROM `%s.%s.had_a_call`" +
 		" WHERE %v AND CreatedOnUnix > %v order by CreatedOnUnix asc LIMIT %v OFFSET 0", // fix this
 }
 
@@ -31,6 +31,20 @@ var LeadSquaredDocumentEndpoint = map[string]string{
 	LEADSQUARED_EMAIL_SENT:     "/v2/ProspectActivity.svc/CustomActivity/RetrieveByActivityEvent",
 	LEADSQUARED_EMAIL_INFO:     "/v2/ProspectActivity.svc/CustomActivity/RetrieveByActivityEvent",
 	LEADSQUARED_HAD_A_CALL:     "/v2/ProspectActivity.svc/CustomActivity/RetrieveByActivityEvent",
+}
+
+var LeadSquaredDocumentCreatedEventName = map[string]string{
+	LEADSQUARED_SALES_ACTIVITY: "sales_activity_created",
+	LEADSQUARED_EMAIL_SENT: "email_sent_activity_created",
+	LEADSQUARED_EMAIL_INFO: "email_info_activity_created",
+	LEADSQUARED_HAD_A_CALL: "had_a_call_activity_created",
+}
+
+var LeadSquaredDocumentUpdatedEventName = map[string]string{
+	LEADSQUARED_SALES_ACTIVITY: "sales_activity_updated",
+	LEADSQUARED_EMAIL_SENT: "email_sent_activity_updated",
+	LEADSQUARED_EMAIL_INFO: "email_info_activity_updated",
+	LEADSQUARED_HAD_A_CALL: "had_a_call_activity_updated",
 }
 
 var LeadSquaredMetadataEndpoint = map[string]string{

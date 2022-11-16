@@ -28,6 +28,7 @@ import BingIntegration from './Bing';
 import MarketoIntegration from './Marketo';
 import SlackIntegration from './Slack';
 import LeadSquaredIntegration from './LeadSquared';
+import SixSignalIntegration from './SixSignal';
 
 import { ADWORDS_INTERNAL_REDIRECT_URI } from './util';
 
@@ -110,6 +111,12 @@ const IntegrationProviderData = [
     icon: 'LeadSquared',
     kbLink: false,
   },
+  {
+    name: '6Signal by 6Sense',
+    desc: 'Gain insight into who is visiting your website and where they are in the buying journey',
+    icon: 'SixSignalLogo',
+    kbLink: false,
+  },
 ];
 
 const IntegrationCard = ({ item, index, defaultOpen }) => {
@@ -172,6 +179,10 @@ const IntegrationCard = ({ item, index, defaultOpen }) => {
       case 'LeadSquared':
         return (
           <LeadSquaredIntegration kbLink={item.kbLink} setIsActive={setIsActive} />
+        );
+      case '6Signal by 6Sense':
+        return (
+          <SixSignalIntegration kbLink={item.kbLink} setIsActive={setIsActive} />
         );
       default:
         return (

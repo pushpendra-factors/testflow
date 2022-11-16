@@ -223,6 +223,43 @@ func (store *MemSQL) GetDisplayNamesForAllEventProperties(projectID int64, event
 	return http.StatusFound, displayNamesMap
 }
 
+func (store *MemSQL) GetDistinctDisplayNamesForAllEventProperties(projectID int64) (int, map[string]string) {
+	logFields := log.Fields{
+		"project_id": projectID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	if projectID == 0 {
+		return http.StatusBadRequest, nil
+	}
+
+	entityType := model.DisplayNameEventPropertyEntityType
+
+	displayNameFilter := &model.DisplayName{
+		ProjectID:  projectID,
+		EntityType: entityType,
+	}
+
+	db := C.GetServices().Db
+
+	var displayNames []model.DisplayName
+	if err := db.Where(displayNameFilter).Find(&displayNames).Error; err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return http.StatusNotFound, nil
+		}
+		log.WithFields(log.Fields{"projectId": projectID}).WithError(err).Error(
+			"Failed to GetDisplayName.")
+		return http.StatusInternalServerError, nil
+	}
+
+	displayNamesMap := make(map[string]string)
+	for _, displayName := range displayNames {
+		displayNamesMap[displayName.PropertyName] = displayName.DisplayName
+	}
+
+	return http.StatusFound, displayNamesMap
+}
+
+
 func (store *MemSQL) GetDisplayNamesForAllUserProperties(projectID int64) (int, map[string]string) {
 	logFields := log.Fields{
 		"project_id": projectID,

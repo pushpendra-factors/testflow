@@ -57,6 +57,8 @@ func main() {
 	numDocRoutines := flag.Int("num_unique_doc_routines", 1, "Number of unique document go routines per project")
 	minSyncTimestamp := flag.Int64("min_sync_timestamp", 0, "Min timstamp from where to process records")
 	clearbitEnabled := flag.Int("clearbit_enabled", 0, "To enable clearbit enrichment")
+	six_signal_enabled := flag.Int("sixSignalEnabled", 0, "To enable sixSignal enrichment")
+	IngestionTimezoneEnabledProjectIDs := flag.String("ingestion_timezone_enabled_projects", "", "List of projectIds whose ingestion timezone is enabled.")
 
 	flag.Parse()
 	if *env != "development" && *env != "staging" && *env != "production" {
@@ -104,6 +106,8 @@ func main() {
 		CaptureSourceInUsersTable:              *captureSourceInUsersTable,
 		RestrictReusingUsersByCustomerUserId:   *restrictReusingUsersByCustomerUserId,
 		ClearbitEnabled:                        *clearbitEnabled,
+		SixSignalEnabled:                       *six_signal_enabled,
+		IngestionTimezoneEnabledProjectIDs:     C.GetTokensFromStringListAsString(*IngestionTimezoneEnabledProjectIDs),
 	}
 
 	C.InitConf(config)

@@ -1,10 +1,13 @@
 import React, { useCallback, useEffect, memo } from 'react';
-import { Text, Number as NumFormat } from '../factorsComponents';
-import styles from './styles.module.scss';
 import ReactDOMServer from 'react-dom/server';
 import moment from 'moment';
 import Highcharts from 'highcharts';
-import { high_charts_default_spacing, FONT_FAMILY } from '../../utils/constants';
+import styles from './styles.module.scss';
+import { Text, Number as NumFormat } from '../factorsComponents';
+import {
+  high_charts_default_spacing as highChartsDefaultSpacing,
+  FONT_FAMILY
+} from '../../utils/constants';
 import LegendsCircle from '../../styles/components/LegendsCircle';
 import {
   addQforQuarter,
@@ -21,7 +24,7 @@ function StackedBarChart({
   height = null,
   legendsPosition = 'bottom',
   cardSize = 1,
-  spacing = high_charts_default_spacing,
+  spacing = highChartsDefaultSpacing,
   chartId = 'barChartContainer',
   showAllLegends = false
 }) {
@@ -31,7 +34,7 @@ function StackedBarChart({
       chart: {
         type: 'column',
         height,
-        spacing: cardSize !== 1 ? high_charts_default_spacing : spacing,
+        spacing: cardSize !== 1 ? highChartsDefaultSpacing : spacing,
         style: {
           fontFamily: FONT_FAMILY
         }
@@ -52,13 +55,17 @@ function StackedBarChart({
         },
         labels: {
           formatter() {
+            const self = this;
             if (frequency === 'hour') {
-              return moment(this.value).format('MMM D, h A');
-            } else if (frequency === 'date' || frequency === 'week') {
-              return moment(this.value).format('MMM D');
-            } else if (frequency === 'month') {
-              return moment(this.value).format('MMM YYYY');
-            } else return `${'Q' + moment(this.value).format('Q, YYYY')}`;
+              return moment(self.value).format('MMM D, h A');
+            }
+            if (frequency === 'date' || frequency === 'week') {
+              return moment(self.value).format('MMM D');
+            }
+            if (frequency === 'month') {
+              return moment(self.value).format('MMM YYYY');
+            }
+            return `${`Q${moment(self.value).format('Q, YYYY')}`}`;
           }
         }
       },
@@ -70,8 +77,9 @@ function StackedBarChart({
         stackLabels: {
           enabled: cardSize !== 2,
           formatter() {
+            const self = this;
             return ReactDOMServer.renderToString(
-              <NumFormat shortHand={true} number={this.total} />
+              <NumFormat shortHand={self.total >= 1000} number={self.total} />
             );
           }
         }
@@ -82,43 +90,44 @@ function StackedBarChart({
         borderRadius: 12,
         useHTML: true,
         formatter() {
+          const self = this;
           const format = getDateFormatForTimeSeriesChart({ frequency });
           return ReactDOMServer.renderToString(
             <>
               <Text
-                color="grey-8"
-                weight="bold"
-                type="title"
-                extraClass="text-sm mb-0"
+                color='grey-8'
+                weight='bold'
+                type='title'
+                extraClass='text-sm mb-0'
               >
                 {addQforQuarter(frequency) +
-                  moment(this.point.category).format(format)}
+                  moment(self.point.category).format(format)}
               </Text>
               <Text
-                color="grey-2"
-                type="title"
+                color='grey-2'
+                type='title'
                 extraClass={`mt-1 ${styles.infoText} mb-0`}
               >
-                {this.point.series.name}
+                {self.point.series.name}
               </Text>
-              <span className="flex items-center mt-1">
-                <LegendsCircle extraClass="mr-2" color={this.point.color} />
+              <span className='flex items-center mt-1'>
+                <LegendsCircle extraClass='mr-2' color={self.point.color} />
                 <Text
-                  color="grey-8"
-                  type="title"
-                  weight="bold"
-                  extraClass="text-base mb-0"
+                  color='grey-8'
+                  type='title'
+                  weight='bold'
+                  extraClass='text-base mb-0'
                 >
-                  <NumFormat className="number" number={this.point.y} />
+                  <NumFormat className='number' number={self.point.y} />
                 </Text>
               </span>
               <Text
-                type="title"
-                color="grey-2"
+                type='title'
+                color='grey-2'
                 extraClass={`mt-1 ${styles.infoText} mb-0`}
-              >{`${formatCount(this.point.percentage, 1)}% (${
-                this.point.y
-              } of ${this.point.stackTotal})`}</Text>
+              >{`${formatCount(self.point.percentage, 1)}% (${
+                self.point.y
+              } of ${self.point.stackTotal})`}</Text>
             </>
           );
         }
@@ -128,9 +137,7 @@ function StackedBarChart({
           stacking: 'normal'
         }
       },
-      series: data.map((d, index) => {
-        return { ...d, color: colors[index] };
-      })
+      series: data.map((d, index) => ({ ...d, color: colors[index] }))
     });
   }, [cardSize, categories, chartId, data, frequency, height, spacing, colors]);
 
@@ -148,7 +155,7 @@ function StackedBarChart({
           showAllLegends={showAllLegends}
         />
       ) : null}
-      <div id={chartId} className={styles.columnChart}></div>
+      <div id={chartId} className={styles.columnChart} />
       {legendsPosition === 'bottom' ? (
         <TopLegends
           cardSize={cardSize}

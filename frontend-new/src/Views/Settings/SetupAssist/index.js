@@ -58,7 +58,8 @@ const SetupAssist = ({currentAgent, integration, integrationV1, activeProject, f
     integration?.int_salesforce_enabled_agent_uuid ||
     integration?.int_drift ||
     integration?.int_google_organic_enabled_agent_uuid ||
-    integration?.int_clear_bit || sdkCheck || bingAds?.accounts || marketo?.status || integrationV1?.int_slack || integration?.lead_squared_config !== null;
+    integration?.int_clear_bit || sdkCheck || bingAds?.accounts || marketo?.status || integrationV1?.int_slack || integration?.lead_squared_config !== null || 
+    integration?.int_six_signal;
 
     return (
         <>

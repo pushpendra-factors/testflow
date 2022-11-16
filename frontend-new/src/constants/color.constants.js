@@ -1,0 +1,10 @@
+export const CHART_COLOR_1 = '#82AEE0';
+export const CHART_COLOR_2 = '#7CBAD9';
+export const CHART_COLOR_3 = '#83D2D2';
+export const CHART_COLOR_4 = '#86D3A3';
+export const CHART_COLOR_5 = '#E5DD8C';
+export const CHART_COLOR_6 = '#F9C06E';
+export const CHART_COLOR_7 = '#E89E7B';
+export const CHART_COLOR_8 = '#D4787D';
+export const CHART_COLOR_9 = '#B87B7E';
+export const CHART_COLOR_10 = '#AA94C4';

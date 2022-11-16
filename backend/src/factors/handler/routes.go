@@ -185,12 +185,10 @@ func InitAppRoutes(r *gin.Engine) {
 
 	// v1 custom metrics - admin/settings side.
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics/config", V1.GetCustomMetricsConfig)
+	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics/config/v1", V1.GetCustomMetricsConfigV1)
 	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics", mid.SkipDemoProjectWriteAccess(), responseWrapper(V1.CreateCustomMetric))
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics", responseWrapper(V1.GetCustomMetrics))
 	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics/:id", mid.SkipDemoProjectWriteAccess(), responseWrapper(V1.DeleteCustomMetrics))
-
-	// v1 derived kpi temp
-	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/test/derived_kpi", responseWrapper(V1.CreateDerivedKPI))
 
 	// v1 CRM And Smart Event endpoints
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/smart_event", GetSmartEventFiltersHandler)
@@ -265,6 +263,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.POST("/:project_id/v1/factor", V1.PostFactorsHandler)
 	authRouteGroup.POST("/:project_id/v1/factor/compare", V1.PostFactorsCompareHandler)
 	authRouteGroup.POST("/:project_id/v1/events/displayname", mid.SkipDemoProjectWriteAccess(), responseWrapper(V1.CreateDisplayNamesHandler))
+	authRouteGroup.GET("/:project_id/v1/events/displayname", responseWrapper(V1.GetAllDistinctEventProperties))
 	authRouteGroup.GET("/:project_id/v1/factor", V1.GetFactorsHandler)
 	authRouteGroup.GET("/:project_id/v1/factor/model_metadata", V1.GetModelMetaData)
 
@@ -305,6 +304,12 @@ func InitAppRoutes(r *gin.Engine) {
 	// weekly insights, explain
 	authRouteGroup.PUT("/:project_id/v1/weeklyinsights", mid.SetLoggedInAgentInternalOnly(), UpdateWeeklyInsightsHandler)
 	authRouteGroup.PUT("/:project_id/v1/explain", mid.SetLoggedInAgentInternalOnly(), UpdateExplainHandler)
+
+	// path analysis
+	authRouteGroup.GET("/:project_id/v1/pathanalysis", responseWrapper(V1.GetPathAnalysisEntityHandler))
+	authRouteGroup.POST("/:project_id/v1/pathanalysis", responseWrapper(V1.CreatePathAnalysisEntityHandler))
+	authRouteGroup.DELETE("/:project_id/v1/pathanalysis/:id", V1.DeleteSavedPathAnalysisEntityHandler)
+	authRouteGroup.GET("/:project_id/v1/pathanalysis/:id", responseWrapper(V1.GetPathAnalysisData))
 }
 
 func InitSDKServiceRoutes(r *gin.Engine) {
