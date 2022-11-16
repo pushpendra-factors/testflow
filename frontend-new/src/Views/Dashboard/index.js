@@ -51,6 +51,7 @@ function Dashboard({
   const integration = useSelector(
     (state) => state.global.currentProjectSettings
   );
+  const queries = useSelector((state) => state.queries);
   const integrationV1 = useSelector((state) => state.global.projectSettingsV1);
   const activeProject = useSelector((state) => state.global.active_project);
   const { bingAds, marketo } = useSelector((state) => state.global);
@@ -190,7 +191,7 @@ function Dashboard({
     [dispatch]
   );
 
-  if (dashboards.loading) {
+  if (dashboards.loading || queries.loading) {
     return (
       <div className='flex justify-center items-center w-full h-64'>
         <Spin size='large' />
