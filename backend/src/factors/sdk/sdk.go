@@ -969,15 +969,24 @@ func ShouldAllowIdentificationOverwrite(projectID int64, userID string, incoming
 			return true
 		}
 
+		// allow identification once for users who don't have customer_user_id_source. It will allow setting customer_user_id_source
+		if user.CustomerUserIdSource == nil {
+			return true
+		}
+
 		return false
 	}
 
+	/*
+		CRM flow
+	*/
 	if user.CustomerUserIdSource != nil &&
 		allowedCustomerUserIDSourceIdentificationOverwrite(incomingRequestSource, *user.CustomerUserIdSource) {
 		return true
 	}
 
-	// Same CustomerUserId existing on other source should block overwrite
+	// Same CustomerUserId existing on crm source should block overwrite. If the existing customer_user_id exists in any other crm then it will be blocked
+	// For updating another crm user or web user taken over by another crm, that crm should tell to overwrite.
 	_, status = store.GetStore().GetExistingUserByCustomerUserID(projectID, []string{user.CustomerUserId}, model.GetAllCRMUserSource()...)
 	if status != http.StatusFound {
 		if status != http.StatusNotFound {
@@ -985,6 +994,11 @@ func ShouldAllowIdentificationOverwrite(projectID int64, userID string, incoming
 				Error("Failed to get user by customer user id and source.")
 			return false
 		}
+		return true
+	}
+
+	// allow identification once for users who don't have customer_user_id_source. It will allow setting customer_user_id_source and taking priority
+	if user.CustomerUserIdSource == nil {
 		return true
 	}
 
