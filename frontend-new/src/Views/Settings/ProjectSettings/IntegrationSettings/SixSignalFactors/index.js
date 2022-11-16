@@ -8,7 +8,7 @@ import { ErrorBoundary } from 'react-error-boundary';
 import factorsai from 'factorsai';
 import { sendSlackNotification } from '../../../../../utils/slack';
 
-function SixSignalIntegration({
+function SixSignalFactorsIntegration({
   fetchProjectSettings,
   udpateProjectSettings,
   activeProject,
@@ -23,7 +23,7 @@ function SixSignalIntegration({
   const [showForm, setShowForm] = useState(false);
 
   useEffect(() => {
-    if (currentProjectSettings?.int_client_six_signal_key) {
+    if (currentProjectSettings?.int_factors_six_signal_key) {
       setIsActive(true);
     }
   }, [currentProjectSettings]);
@@ -33,13 +33,13 @@ function SixSignalIntegration({
 
     // Factors INTEGRATION tracking
     factorsai.track('INTEGRATION', {
-      name: '6Signal',
+      name: '6Signal Factors',
       activeProjectID: activeProject.id
     });
 
     udpateProjectSettings(activeProject.id, {
-      client6_signal_key: values.api_key,
-      int_client_six_signal_key: true
+      factors6_signal_key: values.api_key,
+      int_factors_six_signal_key: true
     })
       .then(() => {
         setLoading(false);
@@ -51,7 +51,7 @@ function SixSignalIntegration({
         sendSlackNotification(
           currentAgent.email,
           activeProject.name,
-          '6Signal'
+          '6Signal Factors'
         );
       })
       .catch((err) => {
@@ -65,8 +65,8 @@ function SixSignalIntegration({
   const onDisconnect = () => {
     setLoading(true);
     udpateProjectSettings(activeProject.id, {
-      client6_signal_key: '',
-      int_client_six_signal_key: false
+      factors6_signal_key: '',
+      int_factors_six_signal_key: false
     })
       .then(() => {
         setLoading(false);
@@ -95,7 +95,7 @@ function SixSignalIntegration({
   return (
     <ErrorBoundary
       fallback={
-        <FaErrorComp subtitle='Facing issues with 6Signal integrations' />
+        <FaErrorComp subtitle='Facing issues with 6Signal Factors integrations' />
       }
       onError={FaErrorLog}
     >
@@ -123,7 +123,7 @@ function SixSignalIntegration({
                 <Avatar
                   size={40}
                   shape='square'
-                  icon={<SVG name='SixSignalLogo' size={40} color='purple' />}
+                  icon={<SVG name='Brand' size={40} color='purple' />}
                   style={{ backgroundColor: '#F5F6F8' }}
                 />
               </Col>
@@ -191,7 +191,7 @@ function SixSignalIntegration({
           </Form>
         </div>
       </Modal>
-      {currentProjectSettings?.int_client_six_signal_key && (
+      {currentProjectSettings?.int_factors_six_signal_key && (
         <div className='mt-4 flex flex-col border-top--thin py-4 mt-2 w-full'>
           <Text type='title' level={6} weight='bold' extraClass='m-0'>
             Connected Account
@@ -203,13 +203,13 @@ function SixSignalIntegration({
             size='large'
             disabled
             placeholder='API Key'
-            value={currentProjectSettings?.client6_signal_key}
+            value={currentProjectSettings?.factors6_signal_key}
             style={{ width: '400px' }}
           />
         </div>
       )}
       <div className='mt-4 flex' data-tour='step-11'>
-        {currentProjectSettings?.int_client_six_signal_key ? (
+        {currentProjectSettings?.int_factors_six_signal_key ? (
           <Button loading={loading} onClick={() => onDisconnect()}>
             Disconnect
           </Button>
@@ -246,4 +246,4 @@ const mapStateToProps = (state) => ({
 export default connect(mapStateToProps, {
   fetchProjectSettings,
   udpateProjectSettings
-})(SixSignalIntegration);
+})(SixSignalFactorsIntegration);
