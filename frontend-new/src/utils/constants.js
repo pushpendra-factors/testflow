@@ -554,6 +554,12 @@ export const TimeZoneOffsetValueArr = [
     name: 'Japan Standard Time',
     offset: '+09:00',
     city: 'Asia/Tokyo'
+  },
+  {
+    abbr: 'WIB',
+    name: 'Western Indonesia Time',
+    offset: '+07:00',
+    city: 'Asia/Jakarta'
   }
 ];
 
