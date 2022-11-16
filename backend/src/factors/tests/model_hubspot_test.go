@@ -5530,7 +5530,6 @@ func TestHubspotReIdentification(t *testing.T) {
 	assert.Equal(t, http.StatusFound, status)
 	assert.Equal(t, email1, user.CustomerUserId)
 	assert.Equal(t, model.UserSourceWeb, *user.CustomerUserIdSource)
-
 }
 
 func TestHubspotGetContactProperties(t *testing.T) {
