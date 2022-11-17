@@ -41,6 +41,11 @@ function AttributionSetupPending() {
           <Link
             className='flex items-center font-semibold gap-2'
             style={{ color: `#1d89ff` }}
+            target='_blank'
+            to={{
+              pathname:
+                'https://help.factors.ai/en/articles/5192428-multi-touch-attribution'
+            }}
           >
             Learn More <SVG size={20} name='Arrowright' color='#1d89ff' />
           </Link>

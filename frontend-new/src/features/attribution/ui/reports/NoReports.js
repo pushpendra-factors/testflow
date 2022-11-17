@@ -54,14 +54,22 @@ function NoReports() {
             <Link
               className='flex items-center font-semibold gap-2'
               style={{ color: `#1d89ff` }}
-              onClick={() => history.push('/attribution/report')}
+              target='_blank'
+              to={{
+                pathname:
+                  'https://www.factors.ai/blog/attribution-reporting-what-you-can-learn-from-marketing-attribution-reports'
+              }}
             >
               Attribution Basics{' '}
               <SVG size={20} name='Arrowright' color='#1d89ff' />
             </Link>
           </div>
         </div>
-        <Button type='default' size='large' onClick={() => history.push}>
+        <Button
+          type='default'
+          size='large'
+          onClick={() => history.push('/attribution/report')}
+        >
           Create an Attribution Report
         </Button>
       </div>

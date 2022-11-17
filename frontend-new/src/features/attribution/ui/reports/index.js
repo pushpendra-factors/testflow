@@ -1,30 +1,41 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Button, Spin } from 'antd';
-import { useDispatch, useSelector } from 'react-redux';
-import { SVG, Text } from 'Components/factorsComponents';
-import FaDatepicker from 'Components/FaDatepicker';
-import SortableCards from './SortableCards';
-import { fetchAttributionActiveUnits } from 'Attribution/state/services';
-import { QUERY_TYPE_ATTRIBUTION } from 'Utils/constants';
-import NoReports from './NoReports';
+import { connect } from 'react-redux';
+import { bindActionCreators } from 'redux';
 import { useHistory } from 'react-router-dom';
 
-function Reports() {
-  const dispatch = useDispatch();
+import { SVG, Text } from 'Components/factorsComponents';
+import FaDatepicker from 'Components/FaDatepicker';
+import { fetchAttributionActiveUnits } from 'Attribution/state/services';
+import { QUERY_TYPE_ATTRIBUTION } from 'Utils/constants';
+import { fetchProjectSettings } from 'Reducers/global';
+import NoReports from './NoReports';
+import SortableCards from './SortableCards';
+
+function Reports({
+  activeProject,
+  activeDashboard,
+  attributionDashboardUnits,
+  savedQueries,
+  savedQueriesLoading,
+  fetchAttributionActiveUnits,
+  fetchProjectSettings
+}) {
   const history = useHistory();
-  const { activeDashboard } = useSelector((state) => state.dashboard);
-  const { active_project } = useSelector((state) => state.global);
-  const { attributionDashboardUnits } = useSelector(
-    (state) => state.attributionDashboard
-  );
-  const { data: savedQueries, loading: savedQueriesLoading } = useSelector(
-    (state) => state.queries
-  );
+  useEffect(() => {
+    const checkRedirection = async () => {
+      const res = await fetchProjectSettings(activeProject?.id);
+      if (!res?.data?.attribution_config) {
+        history.replace('/attribution/reports');
+      }
+    };
+    if (activeProject) {
+      checkRedirection();
+    }
+  }, [activeProject]);
 
   useEffect(() => {
-    dispatch(
-      fetchAttributionActiveUnits(active_project.id, activeDashboard.id)
-    );
+    fetchAttributionActiveUnits(activeProject.id, activeDashboard.id);
   }, [activeDashboard]);
 
   const activeUnits = useMemo(
@@ -103,4 +114,22 @@ function Reports() {
   );
 }
 
-export default Reports;
+const mapStateToProps = (state) => ({
+  activeProject: state.global.active_project,
+  activeDashboard: state.dashboard.activeDashboard,
+  attributionDashboardUnits:
+    state.attributionDashboard.attributionDashboardUnits,
+  savedQueries: state.queries.data,
+  savedQueriesLoading: state.queries.loading
+});
+
+const mapDispatchToProps = (dispatch) =>
+  bindActionCreators(
+    {
+      fetchProjectSettings,
+      fetchAttributionActiveUnits
+    },
+    dispatch
+  );
+
+export default connect(mapStateToProps, mapDispatchToProps)(Reports);

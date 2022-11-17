@@ -59,6 +59,11 @@ function AttributionSetupDone() {
           <Link
             className='flex items-center font-semibold gap-2'
             style={{ color: `#1d89ff` }}
+            target='_blank'
+            to={{
+              pathname:
+                'https://www.factors.ai/blog/attribution-reporting-what-you-can-learn-from-marketing-attribution-reports'
+            }}
           >
             Attribution Basics{' '}
             <SVG size={20} name='Arrowright' color='#1d89ff' />
