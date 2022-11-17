@@ -757,7 +757,7 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 	return insights
 }
 
-func GetWeeklyInsights(projectId int64, agentUUID string, queryId int64, baseStartTime *time.Time, compStartTime *time.Time, insightsType string, numberOfRecords int, kpiIndex int, version int) (interface{}, error) {
+func GetWeeklyInsights(projectId int64, agentUUID string, queryId int64, baseStartTime *time.Time, compStartTime *time.Time, insightsType string, numberOfRecords int, kpiIndex int, version int, mailerRun bool) (interface{}, error) {
 	k := make(map[int64]int)
 	k[399] = 100
 	k[594] = 100
@@ -785,52 +785,58 @@ func GetWeeklyInsights(projectId int64, agentUUID string, queryId int64, baseSta
 	}
 
 	// finding query class and query object
-	QueriesObj, status := store.GetStore().GetQueryWithQueryId(projectId, queryId)
-	if status != http.StatusFound {
-		log.Error("query not found")
-		return nil, errors.New("query not found")
-	}
-	class, errMsg := store.GetStore().GetQueryClassFromQueries(*QueriesObj)
-	if errMsg != "" {
-		return nil, errors.New(errMsg)
-	}
-	var query model.Query
-	var isEventOccurence bool
-	if class == model.QueryClassFunnel {
-		err = U.DecodePostgresJsonbToStructType(&QueriesObj.Query, &query)
-		if err != nil {
-			log.Error(err)
-			return nil, err
-		}
-	} else if class == model.QueryClassEvents {
-		var queryGroup model.QueryGroup
-		err = U.DecodePostgresJsonbToStructType(&QueriesObj.Query, &queryGroup)
-		if err != nil {
-			log.Error(err)
-			return nil, err
-		}
-		query = queryGroup.Queries[0]
-		isEventOccurence = (query.Type == model.QueryTypeEventsOccurrence)
-	} else if class == model.QueryClassKPI {
-		var KpiQueryGroup model.KPIQueryGroup
-		err = U.DecodePostgresJsonbToStructType(&QueriesObj.Query, &KpiQueryGroup)
-		if err != nil {
-			log.Error(err)
-			return nil, err
-		}
-	}
-
-	var EventType string
 	var isEventWebsite bool
-	EventType = getEventType(&query, class, projectId)
-	if EventType == Funnel || EventType == WebsiteEvent {
-		NewEventType := GetEventTypeForFunnelOrWebsite(&query, projectId)
-		if NewEventType == WebsiteEvent {
-			isEventWebsite = true
+	var EventType string
+	var class string
+	var query model.Query
+	if(mailerRun == true){
+		isEventWebsite, EventType, class = GetQueryTypeAndClass(queryId)
+	} else {
+		QueriesObj, status := store.GetStore().GetQueryWithQueryId(projectId, queryId)
+		if status != http.StatusFound {
+			log.Error("query not found")
+			return nil, errors.New("query not found")
 		}
-	}
-	if isEventOccurence {
-		EventType = CRM
+		var errMsg string
+		class, errMsg = store.GetStore().GetQueryClassFromQueries(*QueriesObj)
+		if errMsg != "" {
+			return nil, errors.New(errMsg)
+		}
+	
+		var isEventOccurence bool
+		if class == model.QueryClassFunnel {
+			err = U.DecodePostgresJsonbToStructType(&QueriesObj.Query, &query)
+			if err != nil {
+				log.Error(err)
+				return nil, err
+			}
+		} else if class == model.QueryClassEvents {
+			var queryGroup model.QueryGroup
+			err = U.DecodePostgresJsonbToStructType(&QueriesObj.Query, &queryGroup)
+			if err != nil {
+				log.Error(err)
+				return nil, err
+			}
+			query = queryGroup.Queries[0]
+			isEventOccurence = (query.Type == model.QueryTypeEventsOccurrence)
+		} else if class == model.QueryClassKPI {
+			var KpiQueryGroup model.KPIQueryGroup
+			err = U.DecodePostgresJsonbToStructType(&QueriesObj.Query, &KpiQueryGroup)
+			if err != nil {
+				log.Error(err)
+				return nil, err
+			}
+		}
+		EventType = getEventType(&query, class, projectId)
+		if EventType == Funnel || EventType == WebsiteEvent {
+			NewEventType := GetEventTypeForFunnelOrWebsite(&query, projectId)
+			if NewEventType == WebsiteEvent {
+				isEventWebsite = true
+			}
+		}
+		if isEventOccurence {
+			EventType = CRM
+		}
 	}
 
 	var insights CrossPeriodInsights
@@ -860,9 +866,11 @@ func GetWeeklyInsights(projectId int64, agentUUID string, queryId int64, baseSta
 	} else {
 		insightsObj = GetInsights(insights, numberOfRecords, class, EventType, isEventWebsite)
 		// adding query groups
-		gbpInsights := addGroupByProperties(query, EventType, insights, insightsObj, isEventWebsite)
-		// appending at top
-		insightsObj.Insights = append(gbpInsights, insightsObj.Insights...)
+		if(mailerRun == false){
+			gbpInsights := addGroupByProperties(query, EventType, insights, insightsObj, isEventWebsite)
+			// appending at top
+			insightsObj.Insights = append(gbpInsights, insightsObj.Insights...)
+		}
 	}
 
 	removeNegativePercentageFromInsights(&insightsObj)
