@@ -1611,6 +1611,8 @@ func enrichCampaignMember(project *model.Project, document *model.SalesforceDocu
 	return http.StatusOK
 }
 
+var activtiesErrInvalidDocType = errors.New("Invalid docType associated with activities document.")
+
 func GetActivitiesUserIDs(document *model.SalesforceDocument) ([]string, error) {
 	logCtx := log.WithFields(log.Fields{"project_id": document.ProjectID, "doc_id": document.ID})
 
@@ -1634,7 +1636,7 @@ func GetActivitiesUserIDs(document *model.SalesforceDocument) ([]string, error) 
 		contactIDs = append(contactIDs, relationshipActivityRecord.Who.ID)
 	} else {
 		logCtx.WithField("associated_doc_type", relationshipActivityRecord.Who.Type).Warning("Invalid docType associated with activities document.")
-		return nil, errors.New("Invalid docType associated with activities document.")
+		return nil, activtiesErrInvalidDocType
 	}
 
 	expectedDocumentIDs := append(leadIDs, contactIDs...)
@@ -1706,8 +1708,12 @@ func enrichTask(projectID int64, document *model.SalesforceDocument) int {
 
 	activityUserIDs, err := GetActivitiesUserIDs(document)
 	if err != nil {
-		logCtx.WithError(err).Warning("Failed to GetActivitiesUserIDs on enrich task. Skipping enrich task.")
-		return http.StatusOK
+		if err == activtiesErrInvalidDocType {
+			logCtx.WithError(err).Warning("Failed to GetActivitiesUserIDs on enrich task")
+			return http.StatusOK
+		}
+		logCtx.WithError(err).Error("Failed to GetActivitiesUserIDs on enrich task")
+		return http.StatusInternalServerError
 	}
 
 	if U.ContainsStringInArray(activityUserIDs, "") {
@@ -1771,8 +1777,13 @@ func enrichEvent(projectID int64, document *model.SalesforceDocument) int {
 
 	activityUserIDs, err := GetActivitiesUserIDs(document)
 	if err != nil {
-		logCtx.WithError(err).Warning("Failed to GetActivitiesUserIDs on enrich event. Skipping enrich event.")
-		return http.StatusOK
+		if err == activtiesErrInvalidDocType {
+			logCtx.WithError(err).Warning("Failed to GetActivitiesUserIDs on enrich event")
+			return http.StatusOK
+		}
+
+		logCtx.WithError(err).Error("Failed to GetActivitiesUserIDs on enrich event")
+		return http.StatusInternalServerError
 	}
 
 	if U.ContainsStringInArray(activityUserIDs, "") {
