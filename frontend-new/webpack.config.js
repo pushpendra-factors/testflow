@@ -1,5 +1,4 @@
 var webpack = require('webpack');
-var path = require('path');
 var config = require('./build-config');
 
 const getCSSModuleLocalIdent = require('react-dev-utils/getCSSModuleLocalIdent');
@@ -49,6 +48,7 @@ const getStyleLoaders = (cssOptions, preProcessor) => {
 // plugins
 const HtmlWebPackPlugin = require('html-webpack-plugin');
 var CopyWebpackPlugin = require('copy-webpack-plugin');
+const { webpackDirAlias } = require('./dirAlias');
 
 var buildConfigPlugin = new webpack.DefinePlugin({
   ENV: JSON.stringify(process.env.NODE_ENV),
@@ -122,19 +122,7 @@ module.exports = {
   resolve: {
     extensions: ['*', '.js', '.jsx'],
     alias: {
-      factorsComponents: path.resolve(
-        __dirname,
-        './src/components/factorsComponents'
-      ),
-      Components: path.resolve(__dirname, './src/components'),
-      svgIcons: path.resolve(__dirname, './src/components/svgIcons'),
-      Reducers: path.resolve(__dirname, './src/reducers'),
-      Utils: path.resolve(__dirname, './src/utils'),
-      Styles: path.resolve(__dirname, './src/styles'),
-      hooks: path.resolve(__dirname, './src/hooks'),
-      Views: path.resolve(__dirname, './src/Views'),
-      Attribution: path.resolve(__dirname, './src/features/attribution'),
-      Context: path.resolve(__dirname, './src/contexts')
+      ...webpackDirAlias
     }
   },
   plugins: [
