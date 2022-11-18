@@ -268,7 +268,8 @@ type Configuration struct {
 	AllowHubspotPastEventsEnrichmentByProjectID        string
 	AllowHubspotContactListInsertByProjectID           string
 	IngestionTimezoneEnabledProjectIDs                 []string
-	AllowSalesforceActivitiesInsertByProjectID         string
+	AllowedSalesforceActivityTasksByProjectIDs         string
+	AllowedSalesforceActivityEventsByProjectIDs        string
 }
 
 type Services struct {
@@ -2343,11 +2344,42 @@ func ContactListInsertEnabled(projectId int64) bool {
 	return projectIDsMap[projectId]
 }
 
-func SalesforceActivitiesInsertEnabled(projectId int64) bool {
-	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().AllowSalesforceActivitiesInsertByProjectID, "")
-	if allProjects {
+func IsAllowedSalesforceActivityTasksByProjectID(projectID int64) bool {
+	if configuration.AllowedSalesforceActivityTasksByProjectIDs == "" {
+		return false
+	}
+
+	if configuration.AllowedSalesforceActivityTasksByProjectIDs == "*" {
 		return true
 	}
 
-	return projectIDsMap[projectId]
+	projectIDstr := fmt.Sprintf("%d", projectID)
+	projectIDs := strings.Split(configuration.AllowedSalesforceActivityTasksByProjectIDs, ",")
+	for i := range projectIDs {
+		if projectIDs[i] == projectIDstr {
+			return true
+		}
+	}
+
+	return false
+}
+
+func IsAllowedSalesforceActivityEventsByProjectID(projectID int64) bool {
+	if configuration.AllowedSalesforceActivityEventsByProjectIDs == "" {
+		return false
+	}
+
+	if configuration.AllowedSalesforceActivityEventsByProjectIDs == "*" {
+		return true
+	}
+
+	projectIDstr := fmt.Sprintf("%d", projectID)
+	projectIDs := strings.Split(configuration.AllowedSalesforceActivityEventsByProjectIDs, ",")
+	for i := range projectIDs {
+		if projectIDs[i] == projectIDstr {
+			return true
+		}
+	}
+
+	return false
 }

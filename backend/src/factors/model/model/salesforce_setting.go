@@ -113,6 +113,14 @@ func GetSalesforceAllowedObjects(projectID int64) []int {
 		docTypes = append(docTypes, SalesforceDocumentTypeOpportunityContactRole)
 	}
 
+	if C.IsAllowedSalesforceActivityTasksByProjectID(projectID) {
+		docTypes = append(docTypes, SalesforceDocumentTypeTask)
+	}
+
+	if C.IsAllowedSalesforceActivityEventsByProjectID(projectID) {
+		docTypes = append(docTypes, SalesforceDocumentTypeEvent)
+	}
+
 	return docTypes
 }
 

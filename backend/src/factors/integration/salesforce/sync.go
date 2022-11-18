@@ -1093,7 +1093,7 @@ func syncByType(ps *model.SalesforceProjectSettings, accessToken, objectName str
 		return salesforceObjectStatus, nil
 	}
 
-	if objectName == model.SalesforceDocumentTypeNameTask || objectName == model.SalesforceDocumentTypeNameEvent && config.SalesforceActivitiesInsertEnabled(ps.ProjectID) {
+	if (objectName == model.SalesforceDocumentTypeNameTask && config.IsAllowedSalesforceActivityTasksByProjectID(ps.ProjectID)) || (objectName == model.SalesforceDocumentTypeNameEvent && config.IsAllowedSalesforceActivityEventsByProjectID(ps.ProjectID)) {
 		failures, activitiesAPICalls, leadIDForActivitiesRecordsAPICall, contactIDForActivitiesRecordsAPICall, err := syncActivities(ps, accessToken, objectName, timestamp)
 		if err != nil {
 			logCtx.WithError(err).Error("Failure on sync activities.")
