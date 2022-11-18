@@ -268,6 +268,7 @@ type Configuration struct {
 	AllowHubspotPastEventsEnrichmentByProjectID        string
 	AllowHubspotContactListInsertByProjectID           string
 	IngestionTimezoneEnabledProjectIDs                 []string
+	AllowSalesforceActivitiesInsertByProjectID         string
 }
 
 type Services struct {
@@ -2335,6 +2336,15 @@ func PastEventEnrichmentEnabled(projectId int64) bool {
 
 func ContactListInsertEnabled(projectId int64) bool {
 	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().AllowHubspotContactListInsertByProjectID, "")
+	if allProjects {
+		return true
+	}
+
+	return projectIDsMap[projectId]
+}
+
+func SalesforceActivitiesInsertEnabled(projectId int64) bool {
+	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().AllowSalesforceActivitiesInsertByProjectID, "")
 	if allProjects {
 		return true
 	}
