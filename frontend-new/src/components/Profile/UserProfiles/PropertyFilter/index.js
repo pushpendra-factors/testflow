@@ -1,17 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
-import { SVG } from 'factorsComponents';
 import { Button } from 'antd';
+import { SVG } from '../../../factorsComponents';
 import { compareFilters } from '../../../../utils/global';
 import PropFilterBlock from './PropFilterBlock';
 
-const PropertyFilter = ({
+function PropertyFilter({
   profileType,
   source,
   filters = [],
   setFilters,
-  onFiltersLoad = [],
-}) => {
+  onFiltersLoad = []
+}) {
   const userProperties = useSelector((state) => state.coreQuery.userProperties);
   const groupProperties = useSelector(
     (state) => state.coreQuery.groupProperties
@@ -22,16 +22,16 @@ const PropertyFilter = ({
   const [filterDD, setFilterDD] = useState(false);
 
   useEffect(() => {
-    const props = Object.assign({}, filterProps);
+    const props = { ...filterProps };
     if (profileType === 'account') {
       if (source === 'All') {
         props.group = [
-          ...(groupProperties['$hubspot_company']
-            ? groupProperties['$hubspot_company']
+          ...(groupProperties.$hubspot_company
+            ? groupProperties.$hubspot_company
             : []),
-          ...(groupProperties['$salesforce_account']
-            ? groupProperties['$salesforce_account']
-            : []),
+          ...(groupProperties.$salesforce_account
+            ? groupProperties.$salesforce_account
+            : [])
         ];
       } else props.group = groupProperties[source];
     } else if (profileType === 'user') props.user = userProperties;
@@ -80,7 +80,7 @@ const PropertyFilter = ({
               closeFilter={closeFilter}
               filterProps={filterProps}
               propsConstants={['user']}
-            ></PropFilterBlock>
+            />
           </div>
         );
       });
@@ -96,14 +96,14 @@ const PropertyFilter = ({
                 closeFilter={closeFilter}
                 filterProps={filterProps}
                 propsConstants={['user']}
-              ></PropFilterBlock>
+              />
             </div>
           );
         } else {
           list.push(
             <div key={list.length} className='flex m-0 mr-2 mb-2'>
               <Button
-                className={`fa-button--truncate`}
+                className='fa-button--truncate'
                 type='link'
                 onClick={() => setFilterDD(true)}
                 icon={<SVG name='plus' color='purple' />}
@@ -114,9 +114,10 @@ const PropertyFilter = ({
           );
         }
       }
-      return <div className={'flex flex-wrap'}>{list}</div>;
+      return <div className='flex flex-wrap'>{list}</div>;
     }
+    return null;
   };
   return <>{filterList()}</>;
-};
+}
 export default PropertyFilter;

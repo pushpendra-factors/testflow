@@ -181,6 +181,7 @@ func ApplyAttribution(attributionType string, method string, conversionEvent str
 type Interaction struct {
 	AttributionKey  string
 	InteractionTime int64
+	ChannelGroup    string
 }
 
 func getMergedInteractions(attributionTimerange map[string]UserSessionData) []Interaction {
@@ -188,7 +189,7 @@ func getMergedInteractions(attributionTimerange map[string]UserSessionData) []In
 	var interactions []Interaction
 	for key, value := range attributionTimerange {
 		for _, timestamp := range value.TimeStamps {
-			interactions = append(interactions, Interaction{AttributionKey: key, InteractionTime: timestamp})
+			interactions = append(interactions, Interaction{AttributionKey: key, InteractionTime: timestamp, ChannelGroup: value.MarketingInfo.ChannelGroup})
 		}
 	}
 	return interactions
@@ -531,35 +532,39 @@ func getLastTouchNDId(attributionType string, attributionTimerange map[string]Us
 
 	interactions := getMergedInteractions(attributionTimerange)
 	interactions = SortInteractionTime(interactions, SortDESC)
-	directSessionExists := false
-	noneKey := GetNoneKeyForAttributionType(attributionKey)
+	directChannelExists := false
+	directChannelInteraction := make([]string, 0)
+	//noneKey := GetNoneKeyForAttributionType(attributionKey)
 	if len(interactions) > 0 {
 
 		switch attributionType {
 		case AttributionQueryTypeConversionBased:
 			for i := 0; i < len(interactions); i++ {
 				if isAdTouchWithinLookback(interactions[i].InteractionTime, conversionTime, lookbackPeriod) {
-					if interactions[i].AttributionKey != noneKey {
+					if interactions[i].ChannelGroup != ChannelGroupValueDirect {
 						return []AttributionKeyWeight{{Key: interactions[i].AttributionKey, Weight: 1}}
 					}
-					directSessionExists = true
+					directChannelExists = true
+					directChannelInteraction = append(directChannelInteraction, interactions[i].AttributionKey)
 				}
 			}
 		case AttributionQueryTypeEngagementBased:
 			for i := 0; i < len(interactions); i++ {
 				if isAdTouchWithinLookback(interactions[i].InteractionTime, conversionTime, lookbackPeriod) &&
 					isAdTouchWithinCampaignOrQueryPeriod(interactions[i].InteractionTime, from, to) {
-					if interactions[i].AttributionKey != noneKey {
+					if interactions[i].ChannelGroup != ChannelGroupValueDirect {
 						return []AttributionKeyWeight{{Key: interactions[i].AttributionKey, Weight: 1}}
 					}
-					directSessionExists = true
+					directChannelExists = true
+					directChannelInteraction = append(directChannelInteraction, interactions[i].AttributionKey)
+
 				}
 			}
 		}
 	}
 	// return $none key only if Direct session was seen
-	if directSessionExists {
-		return []AttributionKeyWeight{{Key: noneKey, Weight: 1}}
+	if directChannelExists {
+		return []AttributionKeyWeight{{Key: directChannelInteraction[0], Weight: 1}}
 	} else {
 		return []AttributionKeyWeight{}
 	}

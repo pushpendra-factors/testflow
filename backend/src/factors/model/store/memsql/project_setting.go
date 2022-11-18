@@ -1364,3 +1364,27 @@ func (store *MemSQL) GetFormFillEnabledProjectIDs() ([]int64, error) {
 	}
 	return result, nil
 }
+
+func (store *MemSQL) GetTimelineConfigOfProject(projectID int64) (model.TimelinesConfig, error) {
+	db := C.GetServices().Db
+	var projectSettings model.ProjectSetting
+	err := db.Table("project_settings").Select("timelines_config").Where("project_id=?", projectID).Find(&projectSettings).Error
+	if err != nil {
+		log.WithField("project_id", projectID).WithError(err).Error("Failed to fetch timelines_config from project_settings.")
+		return model.TimelinesConfig{}, err
+	}
+	if projectSettings.TimelinesConfig == nil {
+		return model.TimelinesConfig{}, nil
+	}
+	timelinesConfig := projectSettings.TimelinesConfig.RawMessage
+	tlConfigDecoded := model.TimelinesConfig{}
+	err = json.Unmarshal(timelinesConfig, &tlConfigDecoded)
+	if err != nil {
+		return tlConfigDecoded, err
+	}
+	if err != nil {
+		log.WithField("project_id", projectID).WithError(err).Error("Timeline Config Decode Failed")
+		return model.TimelinesConfig{}, err
+	}
+	return tlConfigDecoded, nil
+}

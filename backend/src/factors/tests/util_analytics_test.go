@@ -36,7 +36,7 @@ func TestGetAllWeeksAsTimestamp(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got, _ := U.GetAllWeeksAsTimestamp(tt.args.fromUnix, tt.args.toUnix, tt.args.timezone, false); !reflect.DeepEqual(got, tt.want) {
+			if got, _ := U.GetAllWeeksAsTimestamp(tt.args.fromUnix, tt.args.toUnix, tt.args.timezone); !reflect.DeepEqual(got, tt.want) {
 				for i, x := range got {
 					if x.Unix() != tt.want[i].Unix() {
 						t.Errorf("GetAllWeeksAsTimestamp() = %d, want %d", x.Unix(), tt.want[i].Unix())
@@ -78,7 +78,7 @@ func TestGetAllMonthsAsTimestamp(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got, _ := U.GetAllMonthsAsTimestamp(tt.args.fromUnix, tt.args.toUnix, tt.args.timezone, false); !reflect.DeepEqual(got, tt.want) {
+			if got, _ := U.GetAllMonthsAsTimestamp(tt.args.fromUnix, tt.args.toUnix, tt.args.timezone); !reflect.DeepEqual(got, tt.want) {
 				for i, x := range got {
 					if x.Unix() != tt.want[i].Unix() {
 						t.Errorf("GetAllWeeksAsTimestamp() = %d, want %d", x.Unix(), tt.want[i].Unix())

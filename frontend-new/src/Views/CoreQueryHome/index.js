@@ -80,8 +80,9 @@ import {
 } from 'Reducers/global';
 import AppModal from '../../components/AppModal';
 import userflow from 'userflow.js';
-import {USERFLOW_CONFIG_ID} from 'Utils/userflowConfig'
+import { USERFLOW_CONFIG_ID } from 'Utils/userflowConfig';
 import { useHistory } from 'react-router-dom';
+import useAutoFocus from 'hooks/useAutoFocus';
 
 // const whiteListedAccounts_KPI = [
 //   'jitesh@factors.ai',
@@ -156,23 +157,23 @@ const columns = [
     key: 'author',
     render: (created_by_user) => {
       return (
-        <div className="flex items-center">
-          <Avatar 
-             src={ 
-                 typeof(created_by_user?.email) === 'string'  && created_by_user?.email?.length != 0 && (created_by_user.email.split('@')[1] == 'factors.ai') ?
-                   'https://s3.amazonaws.com/www.factors.ai/assets/img/product/factors-icon.svg'
-                   :
-                     (!!(created_by_user?.image)) ? 
-                       (created_by_user?.image) 
-                         : 
-                       ('assets/avatar/avatar.png') 
-               } 
-             size={24} 
-             className={'mr-2'} 
-           />
+        <div className='flex items-center'>
+          <Avatar
+            src={
+              typeof created_by_user?.email === 'string' &&
+              created_by_user?.email?.length != 0 &&
+              created_by_user.email.split('@')[1] == 'factors.ai'
+                ? 'https://s3.amazonaws.com/www.factors.ai/assets/img/product/factors-icon.svg'
+                : !!created_by_user?.image
+                ? created_by_user?.image
+                : 'assets/avatar/avatar.png'
+            }
+            size={24}
+            className={'mr-2'}
+          />
           &nbsp; {created_by_user?.text}
         </div>
-      )
+      );
     }
   },
   {
@@ -205,9 +206,10 @@ function CoreQuery({
   enableSlackIntegration,
   dateFromTo
 }) {
-  
-  let activeProjectProfilePicture = useSelector((state)=>state.global.active_project.profile_picture)
-  
+  let activeProjectProfilePicture = useSelector(
+    (state) => state.global.active_project.profile_picture
+  );
+
   const queriesState = useSelector((state) => state.queries);
   const [deleteModal, showDeleteModal] = useState(false);
   const [activeRow, setActiveRow] = useState(null);
@@ -232,6 +234,7 @@ function CoreQuery({
   const { slack } = useSelector((state) => state.global);
   const { projectSettingsV1 } = useSelector((state) => state.global);
   const { agent_details } = useSelector((state) => state.agent);
+  const inputComponentRef = useAutoFocus(showSearch);
 
   const history = useHistory();
 
@@ -243,12 +246,12 @@ function CoreQuery({
   }, [activeProject]);
 
   useEffect(() => {
-    if(dateFromTo?.to === undefined || dateFromTo?.to === '') {
+    if (dateFromTo?.to === undefined || dateFromTo?.to === '') {
       setOverrideDate(false);
     } else {
       setOverrideDate(true);
     }
-  }, [dateFromTo])
+  }, [dateFromTo]);
 
   const getFormattedRow = (q) => {
     const requestQuery = q.query;
@@ -273,14 +276,18 @@ function CoreQuery({
       id_text: q.id_text,
       type: <SVG name={svgName} size={24} />,
       title: q.title,
-      author: {image:activeProjectProfilePicture, text:q.created_by_name, email:q.created_by_email},
+      author: {
+        image: activeProjectProfilePicture,
+        text: q.created_by_name,
+        email: q.created_by_email
+      },
       settings: q.settings,
       date: (
-        <div className="flex justify-between items-center">
+        <div className='flex justify-between items-center'>
           <div>{MomentTz(q.created_at).format('MMM DD, YYYY')}</div>
           <div>
             <Dropdown overlay={getMenu(q)} trigger={['hover']}>
-              <Button type="text" icon={<MoreOutlined />} />
+              <Button type='text' icon={<MoreOutlined />} />
             </Dropdown>
           </div>
         </div>
@@ -299,7 +306,7 @@ function CoreQuery({
     let queryDetails = {
       ...activeRow,
       project_id: activeProject?.id
-    } 
+    };
     dispatch(deleteQuery(queryDetails));
     setActiveRow(null);
     showDeleteModal(false);
@@ -482,7 +489,7 @@ function CoreQuery({
         //   history.push('/analyse/funnel/' + record.id_text);
         //   return null;
 
-        // } 
+        // }
         // else if (record?.type?.props?.name === 'attributions_cq') {
         //   window.location.replace("/analyse/attributions/" + record.id_text);
         //   return null;
@@ -610,16 +617,16 @@ function CoreQuery({
   const getMenu = (row) => {
     return (
       <Menu>
-        <Menu.Item key="0">
-          <a onClick={handleViewResult.bind(this, row)} href="#!">
+        <Menu.Item key='0'>
+          <a onClick={handleViewResult.bind(this, row)} href='#!'>
             View Report
           </a>
         </Menu.Item>
         {(row.query.cl === QUERY_TYPE_EVENT ||
           row.query.cl === QUERY_TYPE_KPI) &&
         get(row, 'settings.chart', null) === 'pc' ? (
-          <Menu.Item key="1">
-            <a onClick={showEmailModal.bind(this, row)} href="#!">
+          <Menu.Item key='1'>
+            <a onClick={showEmailModal.bind(this, row)} href='#!'>
               Email this report
             </a>
           </Menu.Item>
@@ -627,19 +634,19 @@ function CoreQuery({
         {(row.query.cl === QUERY_TYPE_EVENT ||
           row.query.cl === QUERY_TYPE_KPI) &&
         get(row, 'settings.chart', null) === 'pc' ? (
-          <Menu.Item key="2">
-            <a onClick={showSlackModal.bind(this, row)} href="#!">
+          <Menu.Item key='2'>
+            <a onClick={showSlackModal.bind(this, row)} href='#!'>
               Share to slack
             </a>
           </Menu.Item>
         ) : null}
-        <Menu.Item key="3">
+        <Menu.Item key='3'>
           {/* <a onClick={(e) => e.stopPropagation()} href="#!">
             Copy Link
           </a>
         </Menu.Item>
         <Menu.Item key="2"> */}
-          <a onClick={handleDelete.bind(this, row)} href="#!">
+          <a onClick={handleDelete.bind(this, row)} href='#!'>
             Delete Report
           </a>
         </Menu.Item>
@@ -787,7 +794,7 @@ function CoreQuery({
 
   useEffect(() => {
     fetchProjectSettingsV1(activeProject.id);
-    if(projectSettingsV1?.int_slack) {
+    if (projectSettingsV1?.int_slack) {
       fetchSlackChannels(activeProject.id);
     }
   }, [activeProject, projectSettingsV1?.int_slack, showShareToSlackModal]);
@@ -961,12 +968,12 @@ function CoreQuery({
       >
         <ConfirmationModal
           visible={deleteModal}
-          confirmationText="Are you sure you want to delete this report?"
+          confirmationText='Are you sure you want to delete this report?'
           onOk={confirmDelete}
           onCancel={showDeleteModal.bind(this, false)}
-          title="Delete Report"
-          okText="Confirm"
-          cancelText="Cancel"
+          title='Delete Report'
+          okText='Confirm'
+          cancelText='Cancel'
         />
         <TemplatesModal
           templatesModalVisible={templatesModalVisible}
@@ -977,40 +984,45 @@ function CoreQuery({
         </FaHeader> */}
         <div>
           <div className={'fa-container mt-24 min-h-screen'}>
-            <Row gutter={[24, 24]} justify="center">
+            <Row gutter={[24, 24]} justify='center'>
               <Col span={20}>
                 <Row gutter={[24, 24]}>
                   <Col span={24}>
                     <div className='flex space-between w-full items-center'>
-
-                    <div className='flex flex-col w-full'>
-
-                    <Text
-                      type={'title'}
-                      level={3}
-                      weight={'bold'}
-                      extraClass={'m-0'}
-                    >
-                      Analyse
-                    </Text>
-                    <Text
-                      type={'title'}
-                      level={6}
-                      weight={'regular'}
-                      color={'grey'}
-                      extraClass={'m-0'}
-                    >
-                      Here's where all the action happens. Use these modules to get a deeper understanding of your marketing and revenue activities. <a href='#!'>Learn more</a>
-                    </Text>
-                    </div>
-                    <div className='flex justify-end'>
-                      <Button 
-                      type='link'
-                      icon={<SVG name={`Handshake`} size={24} color={'blue'}/>}
-                      onClick={()=>{ 
-                        userflow.start(USERFLOW_CONFIG_ID?.AnalysePage)
-                      }}>Walk me through</Button>
-                    </div>
+                      <div className='flex flex-col w-full'>
+                        <Text
+                          type={'title'}
+                          level={3}
+                          weight={'bold'}
+                          extraClass={'m-0'}
+                        >
+                          Analyse
+                        </Text>
+                        <Text
+                          type={'title'}
+                          level={6}
+                          weight={'regular'}
+                          color={'grey'}
+                          extraClass={'m-0'}
+                        >
+                          Here's where all the action happens. Use these modules
+                          to get a deeper understanding of your marketing and
+                          revenue activities. <a href='#!'>Learn more</a>
+                        </Text>
+                      </div>
+                      <div className='flex justify-end'>
+                        <Button
+                          type='link'
+                          icon={
+                            <SVG name={`Handshake`} size={24} color={'blue'} />
+                          }
+                          onClick={() => {
+                            userflow.start(USERFLOW_CONFIG_ID?.AnalysePage);
+                          }}
+                        >
+                          Walk me through
+                        </Button>
+                      </div>
                     </div>
                   </Col>
                   <Col span={24}>
@@ -1044,7 +1056,7 @@ function CoreQuery({
                               <SVG name={item.icon} size={40} />
                             </div>
 
-                            <div className="fai--custom-card-new--bottom-section">
+                            <div className='fai--custom-card-new--bottom-section'>
                               <Text
                                 type={'title'}
                                 level={7}
@@ -1072,8 +1084,8 @@ function CoreQuery({
                 </Row>
                 <Row>
                   <Col span={24}>
-                    <div className="flex items-center space-between w-full  mt-8 mb-2">
-                      <div className="flex items-center w-full">
+                    <div className='flex items-center space-between w-full  mt-8 mb-2'>
+                      <div className='flex items-center w-full'>
                         <Text
                           type={'title'}
                           level={6}
@@ -1092,12 +1104,13 @@ function CoreQuery({
                             placeholder={'Search reports'}
                             style={{ width: '220px', 'border-radius': '5px' }}
                             prefix={
-                              <SVG name="search" size={16} color={'grey'} />
+                              <SVG name='search' size={16} color={'grey'} />
                             }
+                            ref={inputComponentRef}
                           />
                         ) : null}
                         <Button
-                          type="text"
+                          type='text'
                           ghost={true}
                           className={'p-2 bg-white'}
                           onClick={() => {
@@ -1129,11 +1142,11 @@ function CoreQuery({
                         };
                       }}
                       loading={queriesState.loading}
-                      className="fa-table--basic"
+                      className='fa-table--basic'
                       columns={columns}
                       dataSource={searchTerm ? tableData : data}
                       pagination={true}
-                      rowClassName="cursor-pointer"
+                      rowClassName='cursor-pointer'
                     />
                   </Col>
                 </Row>
@@ -1207,7 +1220,7 @@ function CoreQuery({
                 </Col>
               </Row>
               <Col>
-                <Row justify="end" className={'w-full mb-1 mt-4'}>
+                <Row justify='end' className={'w-full mb-1 mt-4'}>
                   <Col className={'mr-2'}>
                     <Button
                       type={'default'}

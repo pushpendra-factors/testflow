@@ -120,6 +120,16 @@ func getHubspotDocumentId(document *model.HubspotDocument) (string, error) {
 		return "", errors.New("invalid id on hubspot document")
 	}
 
+	if document.Type == model.HubspotDocumentTypeContactList {
+		contactId, contactIdExists := (*documentMap)["contact_id"]
+		if !contactIdExists {
+			return "", errors.New("contact_id not found on contact_list document type")
+		}
+
+		contactIdAsString := U.GetPropertyValueAsString(contactId)
+		idAsString = fmt.Sprintf("%s:%s", idAsString, contactIdAsString)
+	}
+
 	// No id on form submission doc so Id for form_submission
 	// doc is <form_id>:<submitted_at>.
 	if document.Type == model.HubspotDocumentTypeFormSubmission {
@@ -585,7 +595,7 @@ func (store *MemSQL) getHubspotDocumentsForInsertion(projectId int64, documents 
 func allowedHubspotDocTypeForBatchInsert(docType int) bool {
 	return docType == model.HubspotDocumentTypeContact || docType == model.HubspotDocumentTypeCompany ||
 		docType == model.HubspotDocumentTypeEngagement || docType == model.HubspotDocumentTypeForm ||
-		docType == model.HubspotDocumentTypeFormSubmission || docType == model.HubspotDocumentTypeDeal
+		docType == model.HubspotDocumentTypeFormSubmission || docType == model.HubspotDocumentTypeDeal || docType == model.HubspotDocumentTypeContactList
 }
 
 func (store *MemSQL) CreateHubspotDocumentInBatch(projectID int64, docType int, documents []*model.HubspotDocument, batchSize int) int {

@@ -1,0 +1,37 @@
+.block {
+    margin-bottom: 24px;
+    
+    &__additional_actions {
+        visibility: hidden;
+    }
+
+    &__content {
+        display: flex;
+        justify-content: flex-start;
+        position: relative;
+        &:hover {
+            .block__additional_actions {
+                visibility: visible;
+            }
+        }
+
+
+        &__txt_muted {
+            display: flex;
+            align-items: center;
+        }
+
+        &__title_muted {
+            @extend .block__content__txt_muted;
+        }
+    }
+
+    &__select_wrapper {
+        position: relative;
+        display: flex;
+
+        &__block {
+            display: flex;
+        }
+    }
+}
