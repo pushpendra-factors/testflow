@@ -2344,42 +2344,20 @@ func ContactListInsertEnabled(projectId int64) bool {
 	return projectIDsMap[projectId]
 }
 
-func IsAllowedSalesforceActivityTasksByProjectID(projectID int64) bool {
-	if configuration.AllowedSalesforceActivityTasksByProjectIDs == "" {
-		return false
-	}
-
-	if configuration.AllowedSalesforceActivityTasksByProjectIDs == "*" {
+func IsAllowedSalesforceActivityTasksByProjectID(projectId int64) bool {
+	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().AllowedSalesforceActivityTasksByProjectIDs, "")
+	if allProjects {
 		return true
 	}
 
-	projectIDstr := fmt.Sprintf("%d", projectID)
-	projectIDs := strings.Split(configuration.AllowedSalesforceActivityTasksByProjectIDs, ",")
-	for i := range projectIDs {
-		if projectIDs[i] == projectIDstr {
-			return true
-		}
-	}
-
-	return false
+	return projectIDsMap[projectId]
 }
 
-func IsAllowedSalesforceActivityEventsByProjectID(projectID int64) bool {
-	if configuration.AllowedSalesforceActivityEventsByProjectIDs == "" {
-		return false
-	}
-
-	if configuration.AllowedSalesforceActivityEventsByProjectIDs == "*" {
+func IsAllowedSalesforceActivityEventsByProjectID(projectId int64) bool {
+	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().AllowedSalesforceActivityEventsByProjectIDs, "")
+	if allProjects {
 		return true
 	}
 
-	projectIDstr := fmt.Sprintf("%d", projectID)
-	projectIDs := strings.Split(configuration.AllowedSalesforceActivityEventsByProjectIDs, ",")
-	for i := range projectIDs {
-		if projectIDs[i] == projectIDstr {
-			return true
-		}
-	}
-
-	return false
+	return projectIDsMap[projectId]
 }

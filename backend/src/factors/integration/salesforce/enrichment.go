@@ -33,8 +33,6 @@ var salesforceEnrichOrderByType = [...]int{
 	model.SalesforceDocumentTypeLead,
 	model.SalesforceDocumentTypeContact,
 	model.SalesforceDocumentTypeCampaignMember,
-	model.SalesforceDocumentTypeTask,
-	model.SalesforceDocumentTypeEvent,
 }
 
 // CampaignChildRelationship campaign parent to child relationship
@@ -1619,6 +1617,7 @@ func GetActivitiesUserIDs(document *model.SalesforceDocument) ([]string, error) 
 	if document.Type != model.SalesforceDocumentTypeTask && document.Type != model.SalesforceDocumentTypeEvent {
 		return nil, errors.New("Invalid docType for salesforce activities.")
 	}
+	logCtx.WithField("doc_type", document.Type)
 
 	leadIDs := make([]string, 0)
 	contactIDs := make([]string, 0)
@@ -1634,8 +1633,8 @@ func GetActivitiesUserIDs(document *model.SalesforceDocument) ([]string, error) 
 	} else if relationshipActivityRecord.Who.Type == U.CapitalizeFirstLetter(model.SalesforceDocumentTypeNameContact) {
 		contactIDs = append(contactIDs, relationshipActivityRecord.Who.ID)
 	} else {
-		logCtx.WithField("doc_type", relationshipActivityRecord.Who.Type).Warning("Invalid docType associated with task document.")
-		return nil, errors.New("Invalid docType associated with task document.")
+		logCtx.WithField("associated_doc_type", relationshipActivityRecord.Who.Type).Warning("Invalid docType associated with activities document.")
+		return nil, errors.New("Invalid docType associated with activities document.")
 	}
 
 	expectedDocumentIDs := append(leadIDs, contactIDs...)
@@ -1707,8 +1706,8 @@ func enrichTask(projectID int64, document *model.SalesforceDocument) int {
 
 	activityUserIDs, err := GetActivitiesUserIDs(document)
 	if err != nil {
-		logCtx.WithError(err).Warning("Failed to GetActivitiesUserIDs on enrich task")
-		return http.StatusInternalServerError
+		logCtx.WithError(err).Warning("Failed to GetActivitiesUserIDs on enrich task. Skipping enrich task.")
+		return http.StatusOK
 	}
 
 	if U.ContainsStringInArray(activityUserIDs, "") {
@@ -1772,8 +1771,8 @@ func enrichEvent(projectID int64, document *model.SalesforceDocument) int {
 
 	activityUserIDs, err := GetActivitiesUserIDs(document)
 	if err != nil {
-		logCtx.WithError(err).Warning("Failed to GetActivitiesUserIDs on enrich event")
-		return http.StatusInternalServerError
+		logCtx.WithError(err).Warning("Failed to GetActivitiesUserIDs on enrich event. Skipping enrich event.")
+		return http.StatusOK
 	}
 
 	if U.ContainsStringInArray(activityUserIDs, "") {
@@ -2384,6 +2383,13 @@ func Enrich(projectID int64, workerPerProject int, dataPropertiesByType map[int]
 
 	pendingOpportunityGroupAssociations := make(map[string]map[string]string)
 	enrichOrderByType := salesforceEnrichOrderByType[:]
+	if C.IsAllowedSalesforceActivityTasksByProjectID(projectID) {
+		enrichOrderByType = append(enrichOrderByType, model.SalesforceDocumentTypeTask)
+	}
+	if C.IsAllowedSalesforceActivityEventsByProjectID(projectID) {
+		enrichOrderByType = append(enrichOrderByType, model.SalesforceDocumentTypeEvent)
+	}
+
 	if C.IsAllowedSalesforceGroupsByProjectID(projectID) {
 		var syncStatus map[string]bool
 		syncStatus, pendingOpportunityGroupAssociations, status = enrichGroup(projectID, workerPerProject, salesforceSmartEventNames)
