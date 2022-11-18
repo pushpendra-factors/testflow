@@ -3,14 +3,15 @@ import { Button, Spin } from 'antd';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { useHistory } from 'react-router-dom';
+import { isEmpty } from 'lodash';
 
 import { SVG, Text } from 'Components/factorsComponents';
 import FaDatepicker from 'Components/FaDatepicker';
 import { fetchAttributionActiveUnits } from 'Attribution/state/services';
 import { QUERY_TYPE_ATTRIBUTION } from 'Utils/constants';
-import { fetchProjectSettings } from 'Reducers/global';
 import NoReports from './NoReports';
 import SortableCards from './SortableCards';
+import { ATTRIBUTION_ROUTES } from 'Attribution/utils/constants';
 
 function Reports({
   activeProject,
@@ -19,20 +20,22 @@ function Reports({
   savedQueries,
   savedQueriesLoading,
   fetchAttributionActiveUnits,
-  fetchProjectSettings
+  currentProjectSettingsLoading,
+  currentProjectSettings
 }) {
   const history = useHistory();
+
   useEffect(() => {
-    const checkRedirection = async () => {
-      const res = await fetchProjectSettings(activeProject?.id);
-      if (!res?.data?.attribution_config) {
-        history.replace('/attribution/reports');
+    if (
+      !currentProjectSettingsLoading &&
+      currentProjectSettings &&
+      !isEmpty(currentProjectSettings)
+    ) {
+      if (!currentProjectSettings?.attribution_config) {
+        history.replace(ATTRIBUTION_ROUTES.base);
       }
-    };
-    if (activeProject) {
-      checkRedirection();
     }
-  }, [activeProject]);
+  }, [currentProjectSettings, currentProjectSettingsLoading]);
 
   useEffect(() => {
     fetchAttributionActiveUnits(activeProject.id, activeDashboard.id);
@@ -50,7 +53,11 @@ function Reports({
     [attributionDashboardUnits?.data, savedQueries]
   );
 
-  if (attributionDashboardUnits?.loading || savedQueriesLoading) {
+  if (
+    attributionDashboardUnits?.loading ||
+    savedQueriesLoading ||
+    currentProjectSettingsLoading
+  ) {
     return (
       <div className='flex items-center justify-center h-full w-full'>
         <div className='w-full h-64 flex items-center justify-center'>
@@ -92,7 +99,7 @@ function Reports({
           <Button
             type='primary'
             size='large'
-            onClick={() => history.push('/attribution/report')}
+            onClick={() => history.push(ATTRIBUTION_ROUTES.report)}
           >
             <SVG name='plus' color='white' className='w-full' /> Add Report
           </Button>
@@ -120,13 +127,14 @@ const mapStateToProps = (state) => ({
   attributionDashboardUnits:
     state.attributionDashboard.attributionDashboardUnits,
   savedQueries: state.queries.data,
-  savedQueriesLoading: state.queries.loading
+  savedQueriesLoading: state.queries.loading,
+  currentProjectSettings: state.global.currentProjectSettings,
+  currentProjectSettingsLoading: state.global.currentProjectSettingsLoading
 });
 
 const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
     {
-      fetchProjectSettings,
       fetchAttributionActiveUnits
     },
     dispatch

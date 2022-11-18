@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Button } from 'antd';
 import { SVG, Text } from 'Components/factorsComponents';
 import styles from './index.module.scss';
+import { ATTRIBUTION_BASICS_LINK } from 'Attribution/utils/constants';
 
 function AttributionSetupDone() {
   return (
@@ -61,8 +62,7 @@ function AttributionSetupDone() {
             style={{ color: `#1d89ff` }}
             target='_blank'
             to={{
-              pathname:
-                'https://www.factors.ai/blog/attribution-reporting-what-you-can-learn-from-marketing-attribution-reports'
+              pathname: ATTRIBUTION_BASICS_LINK
             }}
           >
             Attribution Basics{' '}

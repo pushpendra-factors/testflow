@@ -10,7 +10,8 @@ import Highcharts from 'highcharts';
 import {
   fetchProjects,
   setActiveProject,
-  fetchDemoProject
+  fetchDemoProject,
+  fetchProjectSettings
 } from 'Reducers/global';
 import customizeHighCharts from 'Utils/customizeHighcharts';
 import {
@@ -23,6 +24,7 @@ import {
   fetchAttrContentGroups,
   fetchSmartPropertyRules
 } from 'Attribution/state/services';
+import { ATTRIBUTION_ROUTES } from 'Attribution/utils/constants';
 import {
   getUserProperties,
   getEventProperties,
@@ -59,7 +61,6 @@ import InsightsSettings from '../Settings/ProjectSettings/InsightsSettings';
 import DashboardTemplates from '../DashboardTemplates';
 import { fetchTemplates } from '../../reducers/dashboard_templates/services';
 import Sharing from '../Settings/ProjectSettings/Sharing';
-
 const FactorsInsights = lazyWithRetry(() =>
   import('../Factors/FactorsInsightsNew')
 );
@@ -81,7 +82,8 @@ function AppLayout({
   getGroupProperties,
   fetchWeeklyIngishtsMetaData,
   setActiveProject,
-  fetchDemoProject
+  fetchDemoProject,
+  fetchProjectSettings
 }) {
   const [dataLoading, setDataLoading] = useState(true);
   const [demoProjectId, setDemoProjectId] = useState(EMPTY_ARRAY);
@@ -159,6 +161,7 @@ function AppLayout({
       fetchWeeklyIngishtsMetaData(active_project?.id);
       dispatch(fetchAttrContentGroups(active_project?.id));
       dispatch(fetchTemplates());
+      fetchProjectSettings(active_project?.id);
     }
   }, [dispatch, active_project]);
 
@@ -230,8 +233,11 @@ function AppLayout({
 
                     <Route path='/welcome' component={Welcome} />
 
-                    
-                    <Route path="/template" name="dashboardSettings" component={DashboardTemplates} />
+                    <Route
+                      path='/template'
+                      name='dashboardSettings'
+                      component={DashboardTemplates}
+                    />
 
                     {(window.document.domain === 'app.factors.ai' &&
                       whiteListedAccounts.includes(activeAgent)) ||
@@ -239,7 +245,7 @@ function AppLayout({
                     window.document.domain === 'factors-dev.com' ? (
                       <Route
                         // exact
-                        path='/attribution'
+                        path={ATTRIBUTION_ROUTES.base}
                         name='attribution'
                         component={Attribution}
                       />
@@ -334,7 +340,8 @@ const mapDispatchToProps = (dispatch) =>
       getGroupProperties,
       fetchWeeklyIngishtsMetaData,
       setActiveProject,
-      fetchDemoProject
+      fetchDemoProject,
+      fetchProjectSettings
     },
     dispatch
   );
