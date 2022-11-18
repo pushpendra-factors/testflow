@@ -1634,7 +1634,7 @@ func GetActivitiesUserIDs(document *model.SalesforceDocument) ([]string, error) 
 	} else if relationshipActivityRecord.Who.Type == U.CapitalizeFirstLetter(model.SalesforceDocumentTypeNameContact) {
 		contactIDs = append(contactIDs, relationshipActivityRecord.Who.ID)
 	} else {
-		logCtx.WithField("doc_type", relationshipActivityRecord.Who.Type).Error("Invalid docType associated with task document.")
+		logCtx.WithField("doc_type", relationshipActivityRecord.Who.Type).Warning("Invalid docType associated with task document.")
 		return nil, errors.New("Invalid docType associated with task document.")
 	}
 
@@ -1707,7 +1707,7 @@ func enrichTask(projectID int64, document *model.SalesforceDocument) int {
 
 	activityUserIDs, err := GetActivitiesUserIDs(document)
 	if err != nil {
-		logCtx.WithError(err).Error("Failed to GetActivitiesUserIDs on enrich task")
+		logCtx.WithError(err).Warning("Failed to GetActivitiesUserIDs on enrich task")
 		return http.StatusInternalServerError
 	}
 
@@ -1772,7 +1772,7 @@ func enrichEvent(projectID int64, document *model.SalesforceDocument) int {
 
 	activityUserIDs, err := GetActivitiesUserIDs(document)
 	if err != nil {
-		logCtx.WithError(err).Error("Failed to GetActivitiesUserIDs on enrich event")
+		logCtx.WithError(err).Warning("Failed to GetActivitiesUserIDs on enrich event")
 		return http.StatusInternalServerError
 	}
 
