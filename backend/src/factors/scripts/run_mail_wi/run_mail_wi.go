@@ -18,19 +18,21 @@ import (
 
 func main() {
 	env := flag.String("env", C.DEVELOPMENT, "")
+	bucketNameFlag := flag.String("bucket_name", "/usr/local/var/factors/cloud_storage", "--bucket_name=/usr/local/var/factors/cloud_storage pass bucket name")
+	
 	memSQLHost := flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
 	memSQLPort := flag.Int("memsql_port", C.MemSQLDefaultDBParams.Port, "")
 	memSQLUser := flag.String("memsql_user", C.MemSQLDefaultDBParams.User, "")
 	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
 	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
 	memSQLCertificate := flag.String("memsql_cert", "", "")
-	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypePostgres, "Primary datastore type as memsql or postgres")
+	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypeMemSQL, "Primary datastore type as memsql or postgres")
 
 	factorsEmailSender := flag.String("email_sender", "support-dev@factors.ai", "")
 	isWeeklyEnabled := flag.Bool("weekly_enabled", false, "")
 
 	projectIdFlag := flag.String("project_id", "", "Comma separated list of project ids to run")
-	lookback := flag.Int("lookback", 30, "lookback_for_delta lookup")
+	lookback := flag.Int("lookback", 11, "lookback_for_delta lookup")
 	enableDryRunAlerts := flag.Bool("dry_run_alerts", false, "")
 	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
 
@@ -38,7 +40,7 @@ func main() {
 	awsAccessKeyId := flag.String("aws_key", "dummy", "")
 	awsSecretAccessKey := flag.String("aws_secret", "dummy", "")
 	projectsFromDB := flag.Bool("projects_from_db", false, "")
-
+	wetRun := flag.Bool("wet_run", false, "")
 	flag.Parse()
 	if *env != "development" &&
 		*env != "staging" &&
@@ -72,6 +74,7 @@ func main() {
 	C.InitConf(config)
 	C.InitSenderEmail(C.GetFactorsSenderEmail())
 	C.InitMailClient(config.AWSKey, config.AWSSecret, config.AWSRegion)
+	C.InitFilemanager(*bucketNameFlag, *env, config)
 	err := C.InitDB(*config)
 	if err != nil {
 		log.Fatal("Init failed.")
@@ -107,6 +110,7 @@ func main() {
 
 	if *isWeeklyEnabled {
 		configs["modelType"] = T.ModelTypeWeek
+		configs["wetRun"] = wetRun
 		status := taskWrapper.TaskFuncWithProjectId("WIMailWeekly", *lookback, projectIdsArray, D.MailWeeklyInsights, configs)
 		log.Info(status)
 		if status["err"] != nil {

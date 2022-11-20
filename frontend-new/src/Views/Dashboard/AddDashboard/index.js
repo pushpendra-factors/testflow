@@ -10,24 +10,25 @@ import {
   deleteDashboard,
   DeleteUnitFromDashboard,
   updateDashboard,
-  fetchActiveDashboardUnits,
+  fetchActiveDashboardUnits
 } from '../../../reducers/dashboard/services';
 import {
   DASHBOARD_CREATED,
   DASHBOARD_DELETED,
   WIDGET_DELETED,
-  DASHBOARD_UPDATED,
+  DASHBOARD_UPDATED
 } from '../../../reducers/types';
 import styles from './index.module.scss';
 import ConfirmationModal from '../../../components/ConfirmationModal';
 import factorsai from 'factorsai';
 import { Link, useHistory, useLocation } from 'react-router-dom';
+import useAutoFocus from 'hooks/useAutoFocus';
 
 function AddDashboard({
   addDashboardModal,
   setaddDashboardModal,
   editDashboard,
-  setEditDashboard,
+  setEditDashboard
 }) {
   const [activeKey, setActiveKey] = useState('1');
   const [title, setTitle] = useState('');
@@ -42,7 +43,8 @@ function AddDashboard({
   const { activeDashboardUnits } = useSelector((state) => state.dashboard);
   const dispatch = useDispatch();
   const history = useHistory();
-  const {pathname} = useLocation()
+  const { pathname } = useLocation();
+  const inputComponentRef = useAutoFocus(addDashboardModal);
 
   const { TabPane } = Tabs;
 
@@ -94,7 +96,7 @@ function AddDashboard({
         notification.error({
           message: 'Incorrect Input!',
           description: 'Please Enter dashboard title',
-          duration: 5,
+          duration: 5
         });
         return false;
       }
@@ -106,7 +108,7 @@ function AddDashboard({
     const reqBody = selectedQueries.map((sq) => {
       return {
         description: sq.description,
-        query_id: sq.query_id,
+        query_id: sq.query_id
       };
     });
     return reqBody;
@@ -118,14 +120,14 @@ function AddDashboard({
       const res = await createDashboard(active_project?.id, {
         name: title,
         description,
-        type: dashboardType,
+        type: dashboardType
       });
       if (selectedQueries.length) {
         const reqBody = getUnitsAssignRequestBody();
         await assignUnitsToDashboard(active_project?.id, res.data.id, reqBody);
       }
       dispatch({ type: DASHBOARD_CREATED, payload: res.data });
-      pathname==="/template"&& history.push("/");
+      pathname === '/template' && history.push('/');
       resetState();
       // window.location.reload(); // temporary Fix for empty dashboard
     } catch (err) {
@@ -140,7 +142,7 @@ function AddDashboard({
     resetState,
     selectedQueries,
     title,
-    getUnitsAssignRequestBody,
+    getUnitsAssignRequestBody
   ]);
 
   const editExistingDashboard = useCallback(async () => {
@@ -155,7 +157,7 @@ function AddDashboard({
         const reqBody = newAddedUnits.map((unit) => {
           return {
             description: unit.description,
-            query_id: unit.query_id,
+            query_id: unit.query_id
           };
         });
         await assignUnitsToDashboard(
@@ -185,7 +187,7 @@ function AddDashboard({
       await updateDashboard(active_project?.id, editDashboard.id, {
         name: title,
         description,
-        type: dashboardType,
+        type: dashboardType
       });
       dispatch({
         type: DASHBOARD_UPDATED,
@@ -193,8 +195,8 @@ function AddDashboard({
           name: title,
           description,
           id: editDashboard.id,
-          type: dashboardType,
-        },
+          type: dashboardType
+        }
       });
 
       if (newAddedUnits.length) {
@@ -207,7 +209,7 @@ function AddDashboard({
       factorsai.track('EDIT_DASHBOARD', {
         dashboard_name: title,
         dashboard_type: dashboardType,
-        dashboard_id: editDashboard.id,
+        dashboard_id: editDashboard.id
       });
 
       setApisCalled(false);
@@ -225,7 +227,7 @@ function AddDashboard({
     dispatch,
     editDashboard,
     resetState,
-    title,
+    title
   ]);
 
   const handleOk = useCallback(async () => {
@@ -240,7 +242,7 @@ function AddDashboard({
         notification.error({
           message: 'Incorrect Input!',
           description: 'Please Enter dashboard title',
-          duration: 5,
+          duration: 5
         });
         return false;
       }
@@ -251,7 +253,7 @@ function AddDashboard({
     title,
     createNewDashboard,
     editDashboard,
-    editExistingDashboard,
+    editExistingDashboard
   ]);
 
   const getOkText = useCallback(() => {
@@ -317,6 +319,7 @@ function AddDashboard({
                     setDashboardType={setDashboardType}
                     editDashboard={editDashboard}
                     showDeleteModal={showDeleteModal}
+                    inputComponentRef={inputComponentRef}
                   />
                 </TabPane>
                 <TabPane className={styles.tabContent} tab='Widget' key='2'>
@@ -329,14 +332,28 @@ function AddDashboard({
               </Tabs>
             </Col>
           </Row>
-           <div className='flex justify-between mt-6 items-center'>         
-            <Link to={{pathname:"/template", state:{fromSelectTemplateBtn:true}}} className='flex items-center font-semibold gap-2' style={{ color: `#1d89ff` }}>Select from Templates <SVG size={20} name="Arrowright" color={`#1d89ff`} /></Link>
+          <div className='flex justify-between mt-6 items-center'>
+            <Link
+              to={{
+                pathname: '/template',
+                state: { fromSelectTemplateBtn: true }
+              }}
+              className='flex items-center font-semibold gap-2'
+              style={{ color: `#1d89ff` }}
+            >
+              Select from Templates{' '}
+              <SVG size={20} name='Arrowright' color={`#1d89ff`} />
+            </Link>
             <div className='flex gap-3'>
-              <Button type='default' size='large' onClick={()=>handleCancel()}>
-              Cancel
+              <Button
+                type='default'
+                size='large'
+                onClick={() => handleCancel()}
+              >
+                Cancel
               </Button>
-              <Button type='primary' size='large' onClick={()=>handleOk()}>
-              {activeKey === '2' ? 'Save' : 'Next'}
+              <Button type='primary' size='large' onClick={() => handleOk()}>
+                {activeKey === '2' ? 'Save' : 'Next'}
               </Button>
             </div>
           </div>

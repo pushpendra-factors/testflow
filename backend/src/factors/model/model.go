@@ -401,6 +401,7 @@ type Model interface {
 	GetAllWeeklyInsightsEnabledProjects() ([]int64, error)
 	GetAllExplainEnabledProjects() ([]int64, error)
 	GetFormFillEnabledProjectIDs() ([]int64, error)
+	GetTimelineConfigOfProject(projectID int64) (model.TimelinesConfig, error)
 
 	// project
 	UpdateProject(projectID int64, project *model.Project) int
@@ -745,6 +746,7 @@ type Model interface {
 	GetGroupsForUserTimeline(projectID int64, userDetails model.ContactDetails) []model.GroupsInfo
 	GetUserActivitiesAndSessionCount(projectID int64, identity string, userId string) ([]model.UserActivity, uint64)
 	GetProfileAccountDetailsByID(projectID int64, id string) (*model.AccountDetails, int)
+	GetFilteredLeftPanePropWithValue(projectID int64, profileType string, properties *map[string]interface{}) map[string]interface{}
 
 	// Ads import
 	GetAllAdsImportEnabledProjects() (map[int64]map[string]model.LastProcessedAdsImport, error)

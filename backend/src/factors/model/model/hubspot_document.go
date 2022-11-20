@@ -353,48 +353,17 @@ func GetHubspotDocumentUpdatedTimestamp(document *HubspotDocument) (int64, error
 	}
 
 	if document.Type == HubspotDocumentTypeContactList {
-		var updatedAt int64
-		var lastSizeChangeAt int64
-
-		updatedAtInt, exists := (*value)["updatedAt"]
-		if !exists || updatedAtInt == nil {
-			updatedAt = 0
-			log.Error("updatedAt not found in contact list document")
-		}
-		updatedAt, err = ReadHubspotTimestamp(updatedAtInt)
-		if err != nil {
-			updatedAt = 0
-			log.Error("failed to convert updatedAt from interface to int64")
+		timestampInt, exists := (*value)["contact_timestamp"]
+		if !exists {
+			return 0, errors.New("Failed to get contact_timestamp in GetHubspotDocumentUpdatedTimestamp")
 		}
 
-		metaData, exists := (*value)["metaData"]
-		if !exists || metaData == nil {
-			lastSizeChangeAt = 0
-			log.Error("metaData not found in contact list document")
-		}
-		fromMap, isConvert := metaData.(map[string]interface{})
-		if !isConvert {
-			lastSizeChangeAt = 0
-			log.Error("metaData interface has not converted to map")
-		}
-		lastSizeChangeAtInt, exists := fromMap["lastSizeChangeAt"]
-		if !exists || lastSizeChangeAtInt == nil {
-			lastSizeChangeAt = 0
-			log.Error("lastSizeChangeAt not found in contact list metaData")
-		}
-		lastSizeChangeAt, err := ReadHubspotTimestamp(lastSizeChangeAtInt)
-		if err != nil || lastSizeChangeAt == 0 {
-			lastSizeChangeAt = 0
-			log.Error("failed to convert lastSizeChangeAtInt from interface to int64")
+		timestamp, err := ReadHubspotTimestamp(timestampInt)
+		if err != nil || timestamp == 0 {
+			return 0, errors.New("Failed to read hubspot timestamp value in GetHubspotDocumentUpdatedTimestamp")
 		}
 
-		if updatedAt == 0 && lastSizeChangeAt == 0 {
-			return 0, errorFailedToGetUpdatedAtFromHubspotDocument
-		}
-
-		updatedAt = U.Max(updatedAt, lastSizeChangeAt)
-
-		return updatedAt, nil
+		return timestamp, nil
 	}
 
 	// property nested value.
@@ -540,6 +509,20 @@ func GetHubspotDocumentCreatedTimestamp(document *HubspotDocument) (int64, error
 		return createdAt, nil
 	}
 
+	if document.Type == HubspotDocumentTypeContactList {
+		timestampInt, exists := (*value)["contact_timestamp"]
+		if !exists {
+			return 0, errors.New("Failed to get contact_timestamp in GetHubspotDocumentCreatedTimestamp")
+		}
+
+		timestamp, err := ReadHubspotTimestamp(timestampInt)
+		if err != nil || timestamp == 0 {
+			return 0, errors.New("Failed to read hubspot timestamp value in GetHubspotDocumentCreatedTimestamp")
+		}
+
+		return timestamp, nil
+	}
+
 	var createdAtKey string
 	if document.Type == HubspotDocumentTypeContact {
 		createdAtKey = "createdate"
@@ -547,8 +530,6 @@ func GetHubspotDocumentCreatedTimestamp(document *HubspotDocument) (int64, error
 		createdAtKey = "createdAt"
 	} else if document.Type == HubspotDocumentTypeFormSubmission {
 		createdAtKey = "submittedAt"
-	} else if document.Type == HubspotDocumentTypeContactList {
-		createdAtKey = "createdAt"
 	} else {
 		return 0, errorFailedToGetCreatedAtFromHubspotDocument
 	}

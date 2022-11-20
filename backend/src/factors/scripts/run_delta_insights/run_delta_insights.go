@@ -179,7 +179,7 @@ func mainRunDeltaInsights() {
 	configs["skipWpi"] = (*skipWpi)
 	configs["skipWpi2"] = (*skipWpi2)
 	configs["runKpi"] = (*runKpi)
-	if *isWeeklyEnabled {
+	if *isWeeklyEnabled && !(*isMailerRun){
 		configs["insightGranularity"] = T.ModelTypeWeek
 		status := taskWrapper.TaskFuncWithProjectId("WIWeekly", *lookback, projectIdsArray, D.ComputeDeltaInsights, configs)
 		log.Info(status)

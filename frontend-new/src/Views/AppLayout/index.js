@@ -14,11 +14,15 @@ import {
 } from 'Reducers/global';
 import customizeHighCharts from 'Utils/customizeHighcharts';
 import {
-  fetchAttrContentGroups,
+  // fetchAttrContentGroups,
   fetchGroups,
-  fetchQueries,
-  fetchSmartPropertyRules
+  fetchQueries
+  // fetchSmartPropertyRules
 } from '../../reducers/coreQuery/services';
+import {
+  fetchAttrContentGroups,
+  fetchSmartPropertyRules
+} from 'Attribution/state/services';
 import {
   getUserProperties,
   getEventProperties,
@@ -52,8 +56,8 @@ import { EMPTY_ARRAY } from '../../utils/global';
 import UserProfiles from '../../components/Profile/UserProfiles';
 import AccountProfiles from '../../components/Profile/AccountProfiles';
 import InsightsSettings from '../Settings/ProjectSettings/InsightsSettings';
-import DashboardTemplates from "../DashboardTemplates";
-import { fetchTemplates } from "../../reducers/dashboard_templates/services";
+import DashboardTemplates from '../DashboardTemplates';
+import { fetchTemplates } from '../../reducers/dashboard_templates/services';
 import Sharing from '../Settings/ProjectSettings/Sharing';
 
 const FactorsInsights = lazyWithRetry(() =>
@@ -62,6 +66,9 @@ const FactorsInsights = lazyWithRetry(() =>
 const CoreQuery = lazyWithRetry(() => import('../CoreQuery'));
 const Dashboard = lazyWithRetry(() => import('../Dashboard'));
 const Factors = lazyWithRetry(() => import('../Factors'));
+const Attribution = lazyWithRetry(() =>
+  import('../../features/attribution/ui')
+);
 
 // customizing highcharts for project requirements
 customizeHighCharts(Highcharts);
@@ -161,6 +168,7 @@ function AppLayout({
   }
 
   return (
+    // eslint-disable-next-line react/jsx-no-useless-fragment
     <>
       {dataLoading ? (
         <Spin size={'large'} className={'fa-page-loader'} />
@@ -171,9 +179,7 @@ function AppLayout({
               <FaErrorComp
                 size={'medium'}
                 title={'Bundle Error:01'}
-                subtitle={
-                  'We are facing trouble loading App Bundles. Drop us a message on the in-app chat.'
-                }
+                subtitle='We are facing trouble loading App Bundles. Drop us a message on the in-app chat.'
               />
             }
             onError={FaErrorLog}
@@ -226,6 +232,18 @@ function AppLayout({
 
                     
                     <Route path="/template" name="dashboardSettings" component={DashboardTemplates} />
+
+                    {(window.document.domain === 'app.factors.ai' &&
+                      whiteListedAccounts.includes(activeAgent)) ||
+                    window.document.domain === 'staging-app.factors.ai' ||
+                    window.document.domain === 'factors-dev.com' ? (
+                      <Route
+                        // exact
+                        path='/attribution'
+                        name='attribution'
+                        component={Attribution}
+                      />
+                    ) : null}
 
                     {/* settings */}
                     <Route path='/settings/general' component={BasicSettings} />

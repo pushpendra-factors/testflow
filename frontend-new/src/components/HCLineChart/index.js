@@ -6,8 +6,11 @@ import moment from 'moment';
 import Highcharts from 'highcharts';
 
 import { get, has } from 'lodash';
-import { Text, Number as NumFormat } from '../factorsComponents';
-import { high_charts_default_spacing as highChartsDefaultSpacing,FONT_FAMILY } from '../../utils/constants';
+import { Number as NumFormat, Text } from 'factorsComponents';
+import {
+  high_charts_default_spacing as highChartsDefaultSpacing,
+  FONT_FAMILY
+} from '../../utils/constants';
 import TopLegends from '../GroupedBarChart/TopLegends';
 import { addQforQuarter, generateColors } from '../../utils/dataFormatter';
 import { getDateFormatForTimeSeriesChart } from '../../utils/chart.helpers';
@@ -25,7 +28,8 @@ function LineChart({
   chartId = 'lineChartContainer',
   showAllLegends = false,
   comparisonApplied = false,
-  compareCategories
+  compareCategories,
+  secondaryYAxisIndices = []
 }) {
   const dateFormat = getDateFormatForTimeSeriesChart({ frequency });
   const metricTypes = data.reduce(
@@ -41,7 +45,7 @@ function LineChart({
   );
 
   const drawChart = useCallback(() => {
-    Highcharts.chart(chartId, {
+    const chartConfig = {
       chart: {
         height,
         spacing: cardSize !== 1 ? highChartsDefaultSpacing : spacing,
@@ -68,12 +72,21 @@ function LineChart({
           }
         }
       },
-      yAxis: {
-        min: 0,
-        title: {
-          enabled: false
+      yAxis: [
+        {
+          min: 0,
+          title: {
+            enabled: false
+          }
+        },
+        {
+          min: 0,
+          title: {
+            enabled: false
+          },
+          opposite: true
         }
-      },
+      ],
       credits: {
         enabled: false
       },
@@ -93,80 +106,34 @@ function LineChart({
             timestamp = compareCategories[this.point.index];
           }
           return ReactDOMServer.renderToString(
-            <>
-              <div className="flex flex-col row-gap-2">
-                <Text
-                  extraClass={styles.infoText}
-                  type="title"
-                  level={7}
-                  color="grey-2"
-                >
-                  {this.point.series.name}
-                </Text>
-                <div className={cx('flex flex-col')}>
-                  <Text type="title" color="grey" level={7}>
-                    {addQforQuarter(frequency) +
-                      moment(timestamp).format(dateFormat)}
-                  </Text>
-                  <div className="flex items-center col-gap-1">
-                    <Text weight="bold" type="title" color="grey-6" level={5}>
-                      {metricType != null && metricType !== '' ? (
-                        getFormattedKpiValue({
-                          value,
-                          metricType
-                        })
-                      ) : (
-                        <NumFormat number={value} />
-                      )}
-                    </Text>
-                    {/* {comparisonApplied && (
-                      <>
-                        {changeIcon}
-                        <Text level={7} type="title" color="grey">
-                          <NumFormat number={Math.abs(10)} />%
-                        </Text>
-                      </>
-                    )} */}
-                  </div>
-                </div>
-              </div>
-              {/* <Text
-                color="grey-8"
-                weight="bold"
-                type="title"
-                extraClass="text-sm mb-0"
-              >
-                {addQforQuarter(frequency) +
-                  moment(this.point.category).format(dateFormat)}
-              </Text>
+            <div className='flex flex-col row-gap-2'>
               <Text
-                color="grey-2"
-                type="title"
-                extraClass={`mt-1 ${styles.infoText} mb-0`}
+                extraClass={styles.infoText}
+                type='title'
+                level={7}
+                color='grey-2'
               >
                 {this.point.series.name}
               </Text>
-              <span className="flex items-center mt-1">
-                <LegendsCircle extraClass="mr-2" color={this.point.color} />
-                <Text
-                  color="grey-8"
-                  type="title"
-                  weight="bold"
-                  extraClass="text-base mb-0"
-                >
-                  {metricType ? (
-                    <div className="number">
-                      {getFormattedKpiValue({
-                        value: this.point.y,
-                        metricType
-                      })}
-                    </div>
-                  ) : (
-                    <NumFormat className="number" number={this.point.y} />
-                  )}
+              <div className={cx('flex flex-col')}>
+                <Text type='title' color='grey' level={7}>
+                  {addQforQuarter(frequency) +
+                    moment(timestamp).format(dateFormat)}
                 </Text>
-              </span> */}
-            </>
+                <div className='flex items-center col-gap-1'>
+                  <Text weight='bold' type='title' color='grey-6' level={5}>
+                    {metricType != null && metricType !== '' ? (
+                      getFormattedKpiValue({
+                        value,
+                        metricType
+                      })
+                    ) : (
+                      <NumFormat number={value} />
+                    )}
+                  </Text>
+                </div>
+              </div>
+            </div>
           );
         }
       },
@@ -184,10 +151,19 @@ function LineChart({
           : null;
         return {
           ...d,
-          color: !isCompareLine ? colors[index] : colors[compareIndex]
+          color: !isCompareLine ? colors[index] : colors[compareIndex],
+          yAxis: isCompareLine
+            ? secondaryYAxisIndices.includes(compareIndex)
+              ? 1
+              : 0
+            : secondaryYAxisIndices.includes(index)
+            ? 1
+            : 0
         };
       })
-    });
+    };
+
+    Highcharts.chart(chartId, chartConfig);
   }, [
     cardSize,
     categories,
@@ -198,7 +174,8 @@ function LineChart({
     chartId,
     colors,
     metricTypes,
-    dateFormat
+    dateFormat,
+    secondaryYAxisIndices
   ]);
 
   useEffect(() => {

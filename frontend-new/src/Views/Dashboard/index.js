@@ -2,13 +2,13 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { useDispatch, useSelector, connect } from 'react-redux';
 import { ErrorBoundary } from 'react-error-boundary';
 import { Spin } from 'antd';
+import { get, isEmpty } from 'lodash';
 
 import {
-  fetchProjectSettingsV1,
-  fetchDemoProject,
-  fetchBingAdsIntegration,
-  fetchMarketoIntegration,
-  fetchProjectSettings
+  fetchProjectSettingsV1 as fetchProjectSettingsV1Service,
+  fetchBingAdsIntegration as fetchBingAdsIntegrationService,
+  fetchMarketoIntegration as fetchMarketoIntegrationService,
+  fetchProjectSettings as fetchProjectSettingsService
 } from 'Reducers/global';
 
 import AddDashboard from './AddDashboard';
@@ -20,7 +20,6 @@ import DashboardAfterIntegration from './EmptyDashboard/DashboardAfterIntegratio
 import ProjectDropdown from './ProjectDropdown';
 import { DASHBOARD_KEYS } from '../../constants/localStorage.constants';
 import DashboardBeforeIntegration from './DashboardBeforeIntegration';
-import _ from 'lodash';
 
 const dashboardRefreshInitialState = {
   inProgress: false,
@@ -53,6 +52,7 @@ function Dashboard({
   );
   const integrationV1 = useSelector((state) => state.global.projectSettingsV1);
   const activeProject = useSelector((state) => state.global.active_project);
+  const queries = useSelector((state) => state.queries);
   const { bingAds, marketo } = useSelector((state) => state.global);
   const dispatch = useDispatch();
 
@@ -67,7 +67,7 @@ function Dashboard({
 
     fetchProjectSettings(activeProject?.id);
 
-    if (_.isEmpty(dashboards?.data)) {
+    if (isEmpty(dashboards?.data)) {
       fetchBingAdsIntegration(activeProject?.id);
       fetchMarketoIntegration(activeProject?.id);
     }
@@ -87,7 +87,8 @@ function Dashboard({
     bingAds?.accounts ||
     marketo?.status ||
     integrationV1?.int_slack ||
-    integration?.lead_squared_config !== null || integration?.int_six_signal;
+    integration?.lead_squared_config !== null ||
+    integration?.six_signal_enabled;
 
   const handleEditClick = useCallback((dashboard) => {
     setaddDashboardModal(true);
@@ -110,6 +111,7 @@ function Dashboard({
       widgetIdGettingFetched: activeDashboardUnits.data[0].id,
       widgetIdsAlreadyFetched: []
     });
+    return null;
   }, [dashboardRefreshState.inProgress, activeDashboardUnits.data]);
 
   const handleWidgetRefresh = useCallback(
@@ -156,14 +158,15 @@ function Dashboard({
     (dates) => {
       let from;
       let to;
+      const { startDate, endDate } = dates;
       setOldestRefreshTime(null);
       resetDashboardRefreshState();
       if (Array.isArray(dates.startDate)) {
-        from = dates.startDate[0];
-        to = dates.startDate[1];
+        from = get(startDate, 0);
+        to = get(startDate, 1);
       } else {
-        from = dates.startDate;
-        to = dates.endDate;
+        from = startDate;
+        to = endDate;
       }
 
       setDurationObj((currState) => {
@@ -190,7 +193,7 @@ function Dashboard({
     [dispatch]
   );
 
-  if (dashboards.loading) {
+  if (dashboards.loading || queries.loading) {
     return (
       <div className='flex justify-center items-center w-full h-64'>
         <Spin size='large' />
@@ -235,32 +238,29 @@ function Dashboard({
       </ErrorBoundary>
     );
   }
-  return (
-    <>
-      {checkIntegration ? (
-        <>
-          <DashboardAfterIntegration
-            setaddDashboardModal={setaddDashboardModal}
-          />
-          <AddDashboard
-            setEditDashboard={setEditDashboard}
-            editDashboard={editDashboard}
-            addDashboardModal={addDashboardModal}
-            setaddDashboardModal={setaddDashboardModal}
-          />
-        </>
-      ) : (
-        // <EmptyDashboard />
-        <DashboardBeforeIntegration />
-      )}
-    </>
-  );
+
+  if (checkIntegration) {
+    return (
+      <>
+        <DashboardAfterIntegration
+          setaddDashboardModal={setaddDashboardModal}
+        />
+        <AddDashboard
+          setEditDashboard={setEditDashboard}
+          editDashboard={editDashboard}
+          addDashboardModal={addDashboardModal}
+          setaddDashboardModal={setaddDashboardModal}
+        />
+      </>
+    );
+  }
+
+  return <DashboardBeforeIntegration />;
 }
 
 export default connect(null, {
-  fetchProjectSettingsV1,
-  fetchDemoProject,
-  fetchBingAdsIntegration,
-  fetchMarketoIntegration,
-  fetchProjectSettings
+  fetchProjectSettingsV1: fetchProjectSettingsV1Service,
+  fetchBingAdsIntegration: fetchBingAdsIntegrationService,
+  fetchMarketoIntegration: fetchMarketoIntegrationService,
+  fetchProjectSettings: fetchProjectSettingsService
 })(Dashboard);

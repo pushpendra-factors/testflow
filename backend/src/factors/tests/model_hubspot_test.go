@@ -5530,7 +5530,6 @@ func TestHubspotReIdentification(t *testing.T) {
 	assert.Equal(t, http.StatusFound, status)
 	assert.Equal(t, email1, user.CustomerUserId)
 	assert.Equal(t, model.UserSourceWeb, *user.CustomerUserIdSource)
-
 }
 
 func TestHubspotGetContactProperties(t *testing.T) {
@@ -5912,5 +5911,219 @@ func TestHubspotContactList(t *testing.T) {
 	assert.Equal(t, http.StatusFound, status)
 	for _, document := range docs {
 		assert.Equal(t, true, document.Synced)
+	}
+}
+
+func TestHubspotContactListV2(t *testing.T) {
+	project, _, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	r := gin.Default()
+	H.InitDataServiceRoutes(r)
+
+	hubspotContactDocuments := make([]*model.HubspotDocument, 0)
+
+	// Create Contacts
+	for i := 1; i <= 5; i++ {
+		createdAt := U.GetPropertyValueAsString(time.Now().Add(-10 * time.Minute).Unix())
+		contact := map[string]interface{}{
+			"vid":     i,
+			"addedAt": createdAt,
+			"properties": map[string]map[string]interface{}{
+				"firstname":        {"value": U.RandomString(10)},
+				"lastmodifieddate": {"value": U.GetPropertyValueAsString(time.Now().Unix())},
+				"lastname":         {"value": U.RandomString(10)},
+				"createdate":       {"value": createdAt},
+			},
+			"identity-profiles": []map[string]interface{}{
+				{
+					"vid": i,
+					"identities": []map[string]interface{}{
+						{
+							"type":      "LEAD_GUID",
+							"value":     U.RandomLowerAphaNumString(16),
+							"timestamp": time.Now().Add(-5*time.Minute).UnixNano() / int64(time.Millisecond),
+						},
+						{
+							"type":      "EMAIL",
+							"value":     getRandomEmail(),
+							"timestamp": time.Now().Add(-2*time.Minute).UnixNano() / int64(time.Millisecond),
+						},
+					},
+				},
+			},
+		}
+
+		enJson, err := json.Marshal(contact)
+		assert.Nil(t, err)
+
+		hubspotContactDocument := model.HubspotDocument{
+			ProjectId: project.ID,
+			TypeAlias: model.HubspotDocumentTypeNameContact,
+			Value:     &postgres.Jsonb{RawMessage: json.RawMessage(enJson)},
+		}
+
+		hubspotContactDocuments = append(hubspotContactDocuments, &hubspotContactDocument)
+	}
+
+	status := store.GetStore().CreateHubspotDocumentInBatch(project.ID, model.HubspotDocumentTypeContact, hubspotContactDocuments, 1)
+	assert.Equal(t, http.StatusCreated, status)
+
+	// Duplicate record
+	status = store.GetStore().CreateHubspotDocument(project.ID, hubspotContactDocuments[2])
+	assert.Equal(t, http.StatusConflict, status)
+
+	enrichStatus, _ := IntHubspot.Sync(project.ID, 1, time.Now().Unix(), nil, "", 50)
+	for i := range enrichStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
+	}
+
+	contactDocs, status := store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{"1", "2", "3", "4", "5"}, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated})
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, 5, len(contactDocs))
+	for _, document := range contactDocs {
+		assert.Equal(t, true, document.Synced)
+	}
+
+	contactIdToContactDocumentsMap := make(map[string]model.HubspotDocument, 0)
+	for _, doc := range contactDocs {
+		contactIdToContactDocumentsMap[doc.ID] = doc
+	}
+
+	createdAt := time.Now().Add(-20 * time.Minute).Unix()
+	contactIdToTimestampMap := map[int]int64{
+		1: time.Now().Add(-5*time.Minute).UnixNano() / int64(time.Millisecond),
+		2: time.Now().Add(-4*time.Minute).UnixNano() / int64(time.Millisecond),
+		3: time.Now().Add(-30*time.Second).UnixNano() / int64(time.Millisecond),
+		4: time.Now().Add(-2*time.Minute).UnixNano() / int64(time.Millisecond),
+		5: time.Now().Add(-1*time.Minute).UnixNano() / int64(time.Millisecond),
+	}
+
+	// Create Contact_List with Contacts
+	for _, i := range []int{1, 2, 4} {
+		contactList := map[string]interface{}{
+			"dynamic": true,
+			"metaData": map[string]int64{
+				"lastSizeChangeAt": time.Now().Add(-30 * time.Second).Unix(),
+			},
+			"name": "test emails",
+			"filters": [][]map[string]interface{}{
+				{
+					{
+						"filterFamily":      "PropertyValue",
+						"withinTimeMode":    "PAST",
+						"checkPastVersions": false,
+						"type":              "string",
+						"property":          "email",
+						"value":             "test",
+						"operator":          "STR_STARTS_WITH",
+					},
+				},
+			},
+			"createdAt":         createdAt,
+			"listId":            1,
+			"updatedAt":         time.Now().Add(-1 * time.Minute).Unix(),
+			"listType":          "DYNAMIC",
+			"internalListId":    1,
+			"deleteable":        true,
+			"contact_id":        i,
+			"contact_timestamp": contactIdToTimestampMap[i],
+		}
+
+		enJson, err := json.Marshal(contactList)
+		assert.Nil(t, err)
+
+		hubspotContactListDocument := model.HubspotDocument{
+			ProjectId: project.ID,
+			TypeAlias: model.HubspotDocumentTypeNameContactList,
+			Value:     &postgres.Jsonb{RawMessage: json.RawMessage(enJson)},
+		}
+
+		status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotContactListDocument)
+		assert.Equal(t, http.StatusCreated, status)
+	}
+
+	enrichStatus, _ = IntHubspot.Sync(project.ID, 1, time.Now().Unix(), nil, "", 50)
+	for i := range enrichStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
+	}
+
+	contactListDocs, status := store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{"1:1", "1:2", "1:4"}, model.HubspotDocumentTypeContactList, []int{model.HubspotDocumentActionCreated})
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, 3, len(contactListDocs))
+	for _, document := range contactListDocs {
+		assert.Equal(t, true, document.Synced)
+	}
+
+	contactListIdToContactListDocumentMap := make(map[string]model.HubspotDocument, 0)
+	for _, doc := range contactListDocs {
+		contactListIdToContactListDocumentMap[doc.ID] = doc
+	}
+
+	for _, id := range []string{"1", "2", "4"} {
+		assert.Equal(t, contactIdToContactDocumentsMap[id].UserId, contactListIdToContactListDocumentMap["1:"+id].UserId)
+	}
+
+	// Add contacts to existing contact_list
+	for _, i := range []int{3, 5} {
+		contactList := map[string]interface{}{
+			"dynamic": true,
+			"metaData": map[string]int64{
+				"lastSizeChangeAt": time.Now().Add(-2 * time.Minute).Unix(),
+			},
+			"name": "test emails",
+			"filters": [][]map[string]interface{}{
+				{
+					{
+						"filterFamily":      "PropertyValue",
+						"withinTimeMode":    "PAST",
+						"checkPastVersions": false,
+						"type":              "string",
+						"property":          "email",
+						"value":             "test",
+						"operator":          "STR_STARTS_WITH",
+					},
+				},
+			},
+			"createdAt":         createdAt,
+			"listId":            1,
+			"updatedAt":         time.Now().Add(-2 * time.Minute).Unix(),
+			"listType":          "DYNAMIC",
+			"internalListId":    1,
+			"deleteable":        true,
+			"contact_id":        i,
+			"contact_timestamp": contactIdToTimestampMap[i],
+		}
+
+		enJson, err := json.Marshal(contactList)
+		assert.Nil(t, err)
+
+		hubspotContactListDocument := model.HubspotDocument{
+			ProjectId: project.ID,
+			TypeAlias: model.HubspotDocumentTypeNameContactList,
+			Value:     &postgres.Jsonb{RawMessage: json.RawMessage(enJson)},
+		}
+
+		status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotContactListDocument)
+		assert.Equal(t, http.StatusCreated, status)
+	}
+
+	enrichStatus, _ = IntHubspot.Sync(project.ID, 1, time.Now().Unix(), nil, "", 50)
+	for i := range enrichStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
+	}
+
+	contactListDocs, status = store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{"1:3", "1:5"}, model.HubspotDocumentTypeContactList, []int{model.HubspotDocumentActionCreated})
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, 2, len(contactListDocs))
+	for _, document := range contactListDocs {
+		assert.Equal(t, true, document.Synced)
+	}
+
+	for _, doc := range contactListDocs {
+		contactListIdToContactListDocumentMap[doc.ID] = doc
+	}
+
+	for _, id := range []string{"3", "5"} {
+		assert.Equal(t, contactIdToContactDocumentsMap[id].UserId, contactListIdToContactListDocumentMap["1:"+id].UserId)
 	}
 }

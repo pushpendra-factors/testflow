@@ -120,3 +120,18 @@ export const getChartChangedKey = ({
   }
   return 'no_breakdown';
 };
+
+export const shouldShowChartConfigOptions = ({
+  queryType,
+  breakdown,
+  chartType
+}) => {
+  if (
+    queryType === QUERY_TYPE_KPI &&
+    breakdown.length === 0 &&
+    chartType === CHART_TYPE_LINECHART
+  ) {
+    return true;
+  }
+  return false;
+};

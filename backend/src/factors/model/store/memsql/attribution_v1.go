@@ -672,7 +672,6 @@ func ProcessAttributionDataToResult(projectID int64, query *model.AttributionQue
 			queryStartTime = time.Now().UTC().Unix()
 
 		} else {
-
 			result = model.ProcessQueryLandingPageUrl(query, attributionData, *logCtx, isCompare)
 			if C.GetAttributionDebug() == 1 {
 				logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Process Query Landing PageUrl took time")

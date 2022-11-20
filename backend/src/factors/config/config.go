@@ -2263,6 +2263,10 @@ func AllowIdentificationOverwriteUsingSource(projectID int64) bool {
 	return allowedProjectIDs[projectID]
 }
 
+func SetAllowIdentificationOverwriteUsingSourceByProjectID(value string) {
+	GetConfig().AllowIdentificationOverwriteUsingSourceByProjectID = value
+}
+
 func EnableEmailDomainBlocking() bool {
 	return configuration.EnableEmailBlockingFlag
 }

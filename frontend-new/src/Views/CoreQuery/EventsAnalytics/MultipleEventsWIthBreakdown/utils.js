@@ -9,7 +9,10 @@ import {
   SortResults
 } from '../../../../utils/dataFormatter';
 import { Number as NumFormat } from '../../../../components/factorsComponents';
-import { parseForDateTimeLabel , getBreakdownDisplayName } from '../eventsAnalytics.helpers';
+import {
+  parseForDateTimeLabel,
+  getBreakdownDisplayName
+} from '../eventsAnalytics.helpers';
 import { getBreakDownGranularities } from '../SingleEventMultipleBreakdown/utils';
 import {
   DATE_FORMATS,
@@ -18,6 +21,7 @@ import {
 } from '../../../../utils/constants';
 import { EVENT_COUNT_KEY } from '../eventsAnalytics.constants';
 import { BREAKDOWN_TYPES } from '../../constants';
+import { isNumeric } from '../../../../utils/global';
 
 export const defaultSortProp = ({ breakdown }) => {
   const dateTimeBreakdownIndex = findIndex(
@@ -70,15 +74,15 @@ export const getBreakdownTitle = (breakdown, userPropNames, eventPropNames) => {
   });
 
   if (!breakdown.eventIndex) {
-    return <div className="break-all">{displayTitle}</div>;
+    return <div className='break-all'>{displayTitle}</div>;
   }
   return (
-    <div className="break-all">
+    <div className='break-all'>
       <span>{displayTitle} of </span>
-      <span className="inline-block">
+      <span className='inline-block'>
         <span
           style={{ backgroundColor: '#3E516C' }}
-          className="text-white w-4 h-4 flex justify-center items-center rounded-full font-semibold leading-5 text-xs"
+          className='text-white w-4 h-4 flex justify-center items-center rounded-full font-semibold leading-5 text-xs'
         >
           {charArr[breakdown.eventIndex - 1]}
         </span>
@@ -124,10 +128,8 @@ export const formatData = (data, queries, colors, eventNames) => {
       );
     }
     const eventName = eventNames[d[eventIndex]] || d[eventIndex];
-    const str = `${eventName  },${  Object.values(breakdownData).join(', ')}`;
-    const queryIndex = queries.findIndex(
-      (_, i) => i === d[eventIdxIndex]
-    );
+    const str = `${eventName},${Object.values(breakdownData).join(', ')}`;
+    const queryIndex = queries.findIndex((_, i) => i === d[eventIdxIndex]);
     return {
       label: str,
       value: d[countIndex],
@@ -144,8 +146,11 @@ export const formatData = (data, queries, colors, eventNames) => {
 };
 
 export const formatVisibleProperties = (data, queries) => {
-  const vp = data.map((d) => ({ ...d, label: `${d.label}; [${d.eventIndex}]` }));
-  vp.sort((a, b) => parseInt(a.value) <= parseInt(b.value) ? 1 : -1);
+  const vp = data.map((d) => ({
+    ...d,
+    label: `${d.label}; [${d.eventIndex}]`
+  }));
+  vp.sort((a, b) => (parseInt(a.value) <= parseInt(b.value) ? 1 : -1));
   vp.sort((a, b) => {
     const idx1 = queries.findIndex((_, index) => index === a.eventIndex);
     const idx2 = queries.findIndex((_, index) => index === b.eventIndex);
@@ -188,7 +193,10 @@ export const getTableColumns = (
       dataIndex: `${b.property} - ${index}`,
       width: 200,
       render: (d) => {
-        if (b.prop_type === 'numerical' && !Number.isNaN(d)) {
+        if (
+          b.prop_type === 'numerical' &&
+          (typeof d === 'number' || isNumeric(d))
+        ) {
           return <NumFormat number={d} />;
         }
         return d;
@@ -244,40 +252,43 @@ export const getDateBasedColumns = (
     width: 150
   };
   const breakdownColumns = breakdown.map((b, index) => ({
-      title: getClickableTitleSorter(
-        getBreakdownTitle(b, userPropNames, eventPropNames),
-        { key: `${b.property} - ${index}`, type: b.prop_type, subtype: b.grn },
-        currentSorter,
-        handleSorting
-      ),
-      dataIndex: `${b.property} - ${index}`,
-      width: 200,
-      render: (d) => {
-        if (b.prop_type === 'numerical' && !Number.isNaN(d)) {
-          return <NumFormat number={d} />;
-        }
-        return d;
+    title: getClickableTitleSorter(
+      getBreakdownTitle(b, userPropNames, eventPropNames),
+      { key: `${b.property} - ${index}`, type: b.prop_type, subtype: b.grn },
+      currentSorter,
+      handleSorting
+    ),
+    dataIndex: `${b.property} - ${index}`,
+    width: 200,
+    render: (d) => {
+      if (
+        b.prop_type === 'numerical' &&
+        (typeof d === 'number' || isNumeric(d))
+      ) {
+        return <NumFormat number={d} />;
       }
-    }));
+      return d;
+    }
+  }));
   const format = DATE_FORMATS[frequency] || DATE_FORMATS.date;
 
   const dateColumns = categories.map((cat) => ({
-      title: getClickableTitleSorter(
-        addQforQuarter(frequency) + moment(cat).format(format),
-        {
-          key: addQforQuarter(frequency) + moment(cat).format(format),
-          type: 'numerical',
-          subtype: null
-        },
-        currentSorter,
-        handleSorting,
-        'right'
-      ),
-      width: 150,
-      dataIndex: addQforQuarter(frequency) + moment(cat).format(format),
-      render: (d) => <NumFormat number={d} />,
-      className: 'text-right'
-    }));
+    title: getClickableTitleSorter(
+      addQforQuarter(frequency) + moment(cat).format(format),
+      {
+        key: addQforQuarter(frequency) + moment(cat).format(format),
+        type: 'numerical',
+        subtype: null
+      },
+      currentSorter,
+      handleSorting,
+      'right'
+    ),
+    width: 150,
+    dataIndex: addQforQuarter(frequency) + moment(cat).format(format),
+    render: (d) => <NumFormat number={d} />,
+    className: 'text-right'
+  }));
   const eventCol = {
     title: getClickableTitleSorter(
       'Event',
@@ -354,18 +365,12 @@ export const formatDataInStackedAreaFormat = (
 
   data.rows.forEach((row) => {
     const eventName = eventNames[row[eventIndex]] || row[eventIndex];
-    const breakdownJoin =
-      `${eventName 
-      },${ 
-      row
-        .slice(eventIndex + 1, countIndex)
-        .map((x, ind) =>
-          parseForDateTimeLabel(
-            grns[ind],
-            DISPLAY_PROP[x] ? DISPLAY_PROP[x] : x
-          )
-        )
-        .join(', ')}`;
+    const breakdownJoin = `${eventName},${row
+      .slice(eventIndex + 1, countIndex)
+      .map((x, ind) =>
+        parseForDateTimeLabel(grns[ind], DISPLAY_PROP[x] ? DISPLAY_PROP[x] : x)
+      )
+      .join(', ')}`;
     const bIdx = labelsMapper[breakdownJoin];
     const category = row[dateIndex];
     const idx = differentDates.indexOf(category);

@@ -32,7 +32,10 @@
           ["Reducers", "./src/reducers"],
           ["svgIcons", "./src/components/svgIcons"],
           ["Styles", "./src/styles"],
-          ["hooks", "./src/hooks"]
+          ["hooks", "./src/hooks"],
+          ["Views", "./src/Views"],
+          ["Attribution", "./src/features/attribution"],
+          ["Context", "./src/contexts"]
         ],
         "extensions": [".ts", ".js", ".jsx", ".json"]
       }
