@@ -127,23 +127,3 @@ func GetChannelFiltersGrouped(properties []ChannelFilterV1) [][]ChannelFilterV1 
 	}
 	return groupedProperties
 }
-
-func GetChannelFilterToHasNoneFilter(properties []ChannelFilterV1) map[string]bool {
-	propertyToHasNoneFilter := make(map[string]bool)
-	for _, p := range properties {
-		if p.Value == PropertyValueNone {
-			propertyKey := p.Object + "." + p.Property
-			propertyToHasNoneFilter[propertyKey] = true
-		}
-	}
-	return propertyToHasNoneFilter
-}
-
-func CheckIfMapHasNoneChannelFilter(propertyToHasNoneFilter map[string]bool, p ChannelFilterV1) bool {
-	propertyKey := p.Object + "." + p.Property
-	hasNoneFilter := false
-	if exists := propertyToHasNoneFilter[propertyKey]; exists {
-		hasNoneFilter = true
-	}
-	return hasNoneFilter
-}
