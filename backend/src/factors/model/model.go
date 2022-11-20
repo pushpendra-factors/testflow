@@ -135,7 +135,7 @@ type Model interface {
 	GetKPIConfigsForLeadSquaredLeads(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int)
 	GetKPIConfigsForLeadSquared(projectID int64, reqID string, displayCategory string, includeDerivedKPIs bool) (map[string]interface{}, int)
 	GetKPIConfigsForOthers(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int)
-	GetKPIConfigsForCustomEvents(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int)		
+	GetKPIConfigsForCustomEvents(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int)
 
 	ExecuteKPIQueryGroup(projectID int64, reqID string, kpiQueryGroup model.KPIQueryGroup,
 		enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool) ([]model.QueryResult, int)
@@ -546,6 +546,7 @@ type Model interface {
 		userFiles string, includeSession bool, sessionProperty string, cloudManager filestore.FileManager)
 
 	// smart_properties
+	CreateSmartProperty(smartPropertyDoc *model.SmartProperties) int
 	GetSmartPropertyRulesConfig(projectID int64, objectType string) (model.SmartPropertyRulesConfig, int)
 	CreateSmartPropertyRules(projectID int64, smartProperty *model.SmartPropertyRules) (*model.SmartPropertyRules, string, int)
 	GetSmartPropertyRules(projectID int64) ([]model.SmartPropertyRules, int)
