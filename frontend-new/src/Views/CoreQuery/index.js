@@ -307,7 +307,7 @@ function CoreQuery({
     marketo?.status ||
     integrationV1?.int_slack ||
     integration?.lead_squared_config !== null ||
-    integration?.int_six_signal;
+    (integration?.int_client_six_signal_key || integration?.int_factors_six_signal_key);
 
   const getQueryFromHashId = () =>
     queriesState.data.find((quer) => quer.id_text === query_id);
