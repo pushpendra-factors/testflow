@@ -57,7 +57,7 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 		cfTmpPath, cfTmpName := diskManager.GetEventsForTimerangeFilePathAndName(projectId, actualQuery.StartTimestamp, actualQuery.EndTimestamp)
 		localFilePath := cfTmpPath + cfTmpName
 		log.Info("Starting cloud events file get")
-		cfCloudPath, cfCloudName := "projects/51/events/m/20220801/", "events.txt"
+		cfCloudPath, cfCloudName := "projects/2251799829000005/", "events.txt"
 		eReader, err := (*cloudManager).Get(cfCloudPath, cfCloudName)
 		if err != nil {
 			log.WithFields(log.Fields{"err": err, "eventFilePath": cfCloudPath,
@@ -87,10 +87,11 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 		if err1 != nil {
 			log.WithFields(log.Fields{"err": err}).Error("Failed creating pathanalysis temp file")
 		}
+		AllFilters := append(actualQuery.Event.Filter, actualQuery.Filter...)
 		queryCriteria := EventCriterion{
-			Name:                actualQuery.Event,
+			Name:                actualQuery.Event.Label,
 			EqualityFlag:        true,
-			FilterCriterionList: MapFilterProperties(actualQuery.Filter),
+			FilterCriterionList: MapFilterProperties(AllFilters),
 		}
 		log.Info("Transformed Query: ", queryCriteria)
 		finalEvents := make([]string, 0)
@@ -226,7 +227,8 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 					eventCountArray := make([]eventCount, 0)
 					eventCountArrayTrimmed := make([]eventCount, 0)
 					for event, count := range maxcount[i] {
-						if strings.HasPrefix(event, rootEvent) {
+						rootEventWithComma := rootEvent + ","
+						if strings.HasPrefix(event, rootEventWithComma) {
 							eventCountArray = append(eventCountArray, eventCount{event: event, count: count})
 						}
 					}
@@ -329,18 +331,18 @@ type eventCount struct {
 	count int
 }
 
-func StringIn(events []string, key string) bool {
+func StringIn(events []M.PathAnalysisEvent, key string) bool {
 	for _, event := range events {
-		if key == event {
+		if key == event.Label {
 			return true
 		}
 	}
 	return false
 }
 
-func StringNotIn(events []string, key string) bool {
+func StringNotIn(events []M.PathAnalysisEvent, key string) bool {
 	for _, event := range events {
-		if key == event {
+		if key == event.Label {
 			return false
 		}
 	}
