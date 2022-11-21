@@ -3052,7 +3052,7 @@ func syncContactListV2(projectID int64, document *model.HubspotDocument, minTime
 
 	request := &SDK.TrackPayload{
 		ProjectId:       projectID,
-		Timestamp:       document.Timestamp,
+		Timestamp:       getEventTimestamp(document.Timestamp),
 		EventProperties: eventProperties,
 		RequestSource:   model.UserSourceHubspot,
 		Name:            U.EVENT_NAME_HUBSPOT_CONTACT_LIST,
