@@ -15,6 +15,7 @@ import {
 } from 'Reducers/global';
 import customizeHighCharts from 'Utils/customizeHighcharts';
 import {
+  fetchEventDisplayNames,
   // fetchAttrContentGroups,
   fetchGroups,
   fetchQueries
@@ -162,6 +163,7 @@ function AppLayout({
       dispatch(fetchAttrContentGroups(active_project?.id));
       dispatch(fetchTemplates());
       fetchProjectSettings(active_project?.id);
+      dispatch(fetchEventDisplayNames({ projectId: active_project?.id }));
     }
   }, [dispatch, active_project]);
 

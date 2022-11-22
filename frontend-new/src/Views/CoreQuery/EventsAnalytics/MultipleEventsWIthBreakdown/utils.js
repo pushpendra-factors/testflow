@@ -64,12 +64,12 @@ export const getVisibleSeriesData = (data, sorter) => {
   return result;
 };
 
-export const getBreakdownTitle = (breakdown, userPropNames, eventPropNames) => {
+export const getBreakdownTitle = (breakdown, userPropNames, eventPropertiesDisplayNames) => {
   const charArr = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
   const displayTitle = getBreakdownDisplayName({
     breakdown,
     userPropNames,
-    eventPropNames,
+    eventPropertiesDisplayNames,
     multipleEvents: true
   });
 
@@ -166,7 +166,7 @@ export const getTableColumns = (
   page,
   eventNames,
   userPropNames,
-  eventPropNames
+  eventPropertiesDisplayNames
 ) => {
   console.log('mewb getTableColumns');
   const result = [];
@@ -185,7 +185,7 @@ export const getTableColumns = (
   breakdown.forEach((b, index) => {
     result.push({
       title: getClickableTitleSorter(
-        getBreakdownTitle(b, userPropNames, eventPropNames),
+        getBreakdownTitle(b, userPropNames, eventPropertiesDisplayNames),
         { key: `${b.property} - ${index}`, type: b.prop_type, subtype: b.grn },
         currentSorter,
         handleSorting
@@ -236,7 +236,7 @@ export const getDateBasedColumns = (
   handleSorting,
   frequency,
   userPropNames,
-  eventPropNames
+  eventPropertiesDisplayNames
 ) => {
   console.log('mewb getDateBasedColumns');
   const OverallColumn = {
@@ -253,7 +253,7 @@ export const getDateBasedColumns = (
   };
   const breakdownColumns = breakdown.map((b, index) => ({
     title: getClickableTitleSorter(
-      getBreakdownTitle(b, userPropNames, eventPropNames),
+      getBreakdownTitle(b, userPropNames, eventPropertiesDisplayNames),
       { key: `${b.property} - ${index}`, type: b.prop_type, subtype: b.grn },
       currentSorter,
       handleSorting

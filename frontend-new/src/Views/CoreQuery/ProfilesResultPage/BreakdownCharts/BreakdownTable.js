@@ -1,6 +1,4 @@
-import React, {
-  useState, useCallback, useMemo, useEffect
-} from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import find from 'lodash/find';
 import { getTableColumns, getTableData } from './utils';
 import DataTable from '../../../../components/DataTable';
@@ -29,9 +27,13 @@ function BreakdownTable({
   const [columns, setColumns] = useState([]);
   const [tableData, setTableData] = useState([]);
 
-  const { userPropNames, eventPropNames } = useSelector(
-    (state) => state.coreQuery
-  );
+  const {
+    userPropNames,
+    eventPropertiesDisplayNames: eventPropertiesDisplayNamesState
+  } = useSelector((state) => state.coreQuery);
+
+  const { data: eventPropertiesDisplayNames } =
+    eventPropertiesDisplayNamesState;
 
   useEffect(() => {
     setColumns(
@@ -42,7 +44,7 @@ function BreakdownTable({
         currentEventIndex,
         sorter,
         handleSorting,
-        eventPropNames,
+        eventPropertiesDisplayNames,
         userPropNames
       )
     );
@@ -52,7 +54,7 @@ function BreakdownTable({
     currentEventIndex,
     sorter,
     handleSorting,
-    eventPropNames,
+    eventPropertiesDisplayNames,
     userPropNames
   ]);
 
@@ -79,9 +81,7 @@ function BreakdownTable({
   const getCSVData = () => {
     return {
       fileName: `${reportTitle}.csv`,
-      data: tableData.map(({
-        index, color, label, ...rest
-      }) => {
+      data: tableData.map(({ index, color, label, ...rest }) => {
         const result = {};
         for (const key in rest) {
           const isCurrentKeyForBreakdown = find(
@@ -93,7 +93,7 @@ function BreakdownTable({
               `${getBreakdownDisplayName({
                 breakdown: isCurrentKeyForBreakdown,
                 userPropNames,
-                eventPropNames
+                eventPropertiesDisplayNames
               })} - ${key.split(' - ')[1]}`
             ] = rest[key];
             continue;
@@ -129,9 +129,9 @@ function BreakdownTable({
   const rowSelection =
     chartType !== CHART_TYPE_HORIZONTAL_BAR_CHART
       ? {
-        selectedRowKeys,
-        onChange: onSelectionChange
-      }
+          selectedRowKeys,
+          onChange: onSelectionChange
+        }
       : null;
 
   return (

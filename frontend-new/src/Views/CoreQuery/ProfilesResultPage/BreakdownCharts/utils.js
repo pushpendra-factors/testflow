@@ -151,14 +151,14 @@ export const getTableColumns = (
   currentEventIndex,
   currentSorter,
   handleSorting,
-  eventPropNames,
+  eventPropertiesDisplayNames,
   userPropNames
 ) => {
   const breakdownColumns = breakdown.map((e, index) => {
     const displayTitle = getBreakdownDisplayName({
       breakdown: e,
       userPropNames,
-      eventPropNames,
+      eventPropertiesDisplayNames,
       queryType: QUERY_TYPE_PROFILE
     });
 
@@ -312,14 +312,14 @@ export const getDataInHorizontalBarChartFormat = (
 export const getHorizontalBarChartColumns = (
   breakdown,
   userPropNames,
-  eventPropNames,
+  eventPropertiesDisplayNames,
   cardSize = 1
 ) => {
   const result = breakdown.map((e, index) => {
     const displayTitle = getBreakdownDisplayName({
       breakdown: e,
       userPropNames,
-      eventPropNames
+      eventPropertiesDisplayNames
     });
 
     return {

@@ -1,7 +1,7 @@
 import React, { memo, useState, useEffect, useCallback } from 'react';
 import {
   getDataInHorizontalBarChartFormat,
-  getHorizontalBarChartColumns,
+  getHorizontalBarChartColumns
 } from './utils';
 import { useSelector } from 'react-redux';
 import DataTable from '../../../../components/DataTable';
@@ -12,12 +12,15 @@ const SingleEventMultipleBreakdownHorizontalBarChart = ({
   aggregateData,
   breakdown,
   cardSize = 1,
-  isDashboardWidget = false,
+  isDashboardWidget = false
 }) => {
   const [loading, setLoading] = useState(true);
-  const { userPropNames, eventPropNames } = useSelector(
-    (state) => state.coreQuery
-  );
+  const {
+    userPropNames,
+    eventPropertiesDisplayNames: eventPropertiesDisplayNamesState
+  } = useSelector((state) => state.coreQuery);
+  const { data: eventPropertiesDisplayNames } =
+    eventPropertiesDisplayNamesState;
   const [columns, setColumns] = useState([]);
   const [data, setData] = useState([]);
 
@@ -26,11 +29,11 @@ const SingleEventMultipleBreakdownHorizontalBarChart = ({
       getHorizontalBarChartColumns(
         breakdown,
         userPropNames,
-        eventPropNames,
+        eventPropertiesDisplayNames,
         cardSize
       )
     );
-  }, [breakdown, userPropNames, eventPropNames, cardSize]);
+  }, [breakdown, userPropNames, eventPropertiesDisplayNames, cardSize]);
 
   const formatDataAfterDelay = useCallback(async () => {
     setLoading(true);

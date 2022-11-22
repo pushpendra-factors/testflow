@@ -39,9 +39,14 @@ const PivotTableComponent = (props) => {
     queryType
   } = props;
 
-  const { eventNames, userPropNames, eventPropNames } = useSelector(
-    (state) => state.coreQuery
-  );
+  const {
+    eventNames,
+    userPropNames,
+    eventPropertiesDisplayNames: eventPropertiesDisplayNamesState
+  } = useSelector((state) => state.coreQuery);
+
+  const { data: eventPropertiesDisplayNames } =
+    eventPropertiesDisplayNamesState;
 
   const { configLoaded } = pivotConfig;
 
@@ -111,7 +116,7 @@ const PivotTableComponent = (props) => {
           queryType,
           eventNames,
           userPropNames,
-          eventPropNames
+          eventPropertiesDisplayNames
         })
       });
     },
@@ -123,7 +128,7 @@ const PivotTableComponent = (props) => {
       breakdown,
       eventNames,
       userPropNames,
-      eventPropNames
+      eventPropertiesDisplayNames
     ]
   );
 
@@ -144,7 +149,7 @@ const PivotTableComponent = (props) => {
       queryType,
       eventNames,
       userPropNames,
-      eventPropNames
+      eventPropertiesDisplayNames
     });
 
     if (!configLoaded) {
@@ -169,7 +174,7 @@ const PivotTableComponent = (props) => {
     queryType,
     eventNames,
     userPropNames,
-    eventPropNames
+    eventPropertiesDisplayNames
   ]);
 
   const aggregatorOptions = useMemo(() => {
@@ -188,18 +193,26 @@ const PivotTableComponent = (props) => {
       queryType,
       eventNames,
       userPropNames,
-      eventPropNames
+      eventPropertiesDisplayNames
     });
-  }, [pivotConfig.rows, metrics, breakdown, queryType]);
+  }, [
+    pivotConfig.rows,
+    metrics,
+    breakdown,
+    queryType,
+    eventNames,
+    userPropNames,
+    eventPropertiesDisplayNames
+  ]);
 
   const columnOptions = useMemo(() => {
     return getColumnOptions({
       breakdown,
-      eventPropNames,
+      eventPropertiesDisplayNames,
       userPropNames,
       queryType
     });
-  }, [breakdown, eventPropNames, userPropNames]);
+  }, [breakdown, eventPropertiesDisplayNames, userPropNames]);
 
   return (
     <div className={styles.pivotTable}>
@@ -222,7 +235,7 @@ const PivotTableComponent = (props) => {
           onSortChange={handleSortChange}
         />
       </ControlledComponent>
-      <div className="w-full overflow-auto">
+      <div className='w-full overflow-auto'>
         <PivotTableUI
           onChange={(s) => {
             console.log(s);
@@ -230,7 +243,7 @@ const PivotTableComponent = (props) => {
           }}
           {...pivotState}
           {...pivotConfig}
-          rowOrder="key_a_to_z" // hardcoded for now to remove sorting. Will be removed later
+          rowOrder='key_a_to_z' // hardcoded for now to remove sorting. Will be removed later
         />
       </div>
     </div>

@@ -227,12 +227,16 @@ const RenderConversionTime = (d, breakdown, isComparisonApplied) => {
   return compareSkeleton(d.overallDuration, d.comparisonOverallDuration);
 };
 
-export const getBreakdownTitle = (breakdown, userPropNames, eventPropNames) => {
+export const getBreakdownTitle = (
+  breakdown,
+  userPropNames,
+  eventPropertiesDisplayNames
+) => {
   const charArr = ['1', '2', '3', '4', '5', '6'];
   const displayTitle = getBreakdownDisplayName({
     breakdown,
     userPropNames,
-    eventPropNames,
+    eventPropertiesDisplayNames,
     multipleEvents: true
   });
 
@@ -262,7 +266,7 @@ export const getTableColumns = (
   isComparisonApplied,
   resultData,
   userPropNames,
-  eventPropNames
+  eventPropertiesDisplayNames
 ) => {
   const unsortedBreakdown = _.get(resultData, 'meta.query.gbp', []);
   const isBreakdownApplied = unsortedBreakdown.length > 0;
@@ -270,7 +274,7 @@ export const getTableColumns = (
 
   const getBreakdownColConfig = (e, index) => ({
     title: getClickableTitleSorter(
-      getBreakdownTitle(e, userPropNames, eventPropNames),
+      getBreakdownTitle(e, userPropNames, eventPropertiesDisplayNames),
       {
         key: `${e.pr} - ${e.eni}`,
         type: e.pty,
