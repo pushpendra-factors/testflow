@@ -1,0 +1,52 @@
+.composer {
+
+    &__section {
+        border-bottom: 1px solid #F0F0F0;
+
+        &__title {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        &__content {}
+    }
+
+    &__footer {
+        display: flex;
+        justify-content: space-between;
+        flex-direction: row;
+        padding: 32px 0px;
+    }
+
+}
+
+.composer_footer_right { 
+    @extend .composer__footer;
+    justify-content: flex-end;
+
+}
+
+.groupsection {
+    padding: 0;
+    position: relative;
+  
+    &_button {
+      padding: 0;
+  
+      &:hover,
+      &:focus {
+        background: #fff !important;
+      }
+    }
+  
+    &_dropdown {
+      top: 0;
+      &_menu {
+        top: 32px;
+      }
+  
+      .ant-select-selector {
+        border-radius: 12px;
+      }
+    }
+  }

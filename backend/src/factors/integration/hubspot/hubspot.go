@@ -2418,7 +2418,7 @@ func syncDeal(projectID int64, document *model.HubspotDocument, hubspotSmartEven
 var keyArrEngagementMeeting = []string{"id", "timestamp", "type", "source", "active"}
 var keyArrMetaMeeting = []string{"startTime", "endTime", "title", "meetingOutcome"}
 var keyArrEngagementCall = []string{"id", "timestamp", "type", "source", "activityType"}
-var keyArrMetaCall = []string{"durationMilliseconds", "disposition", "status", "title"}
+var keyArrMetaCall = []string{"durationMilliseconds", "disposition", "status", "title", "disposition_label"}
 var keyArrEngagementEmail = []string{"id", "createdAt", "lastUpdated", "type", "teamId", "ownerId", "active", "timestamp", "source"}
 var keyArrMetaEmail = []string{"from", "to", "subject", "sentVia"}
 
@@ -2969,6 +2969,113 @@ func syncContactList(projectID int64, document *model.HubspotDocument, minTimest
 	return http.StatusOK
 }
 
+func syncContactListV2(projectID int64, document *model.HubspotDocument, minTimestamp int64) int {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "document_id": document.ID,
+		"doc_timestamp": document.Timestamp, "min_timestamp": minTimestamp})
+
+	if document.Type != model.HubspotDocumentTypeContactList {
+		logCtx.Error("Invalid contact_list document.")
+		return http.StatusInternalServerError
+	}
+
+	pastEnrichmentEnabled := false
+	if C.PastEventEnrichmentEnabled(projectID) {
+		pastEnrichmentEnabled = true
+	}
+
+	if !C.ContactListInsertEnabled(projectID) {
+		logCtx.Warning("Skipped hubspot contact_list sync. contact_list sync not enabled.")
+		return http.StatusOK
+	}
+
+	if document.Action == model.HubspotDocumentActionUpdated {
+		errCode := store.GetStore().UpdateHubspotDocumentAsSynced(
+			projectID, document.ID, model.HubspotDocumentTypeContactList, "", document.Timestamp, document.Action, document.UserId, "")
+		if errCode != http.StatusAccepted {
+			logCtx.Error("Failed to update hubspot contact_list document as synced.")
+			return http.StatusInternalServerError
+		}
+
+		return http.StatusOK
+	}
+
+	propertiesMap, err := U.DecodePostgresJsonb(document.Value)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to decode hubspot Json document-value into PropertiesMap in syncContactListV2.")
+		return http.StatusInternalServerError
+	}
+
+	isPast := false
+	if pastEnrichmentEnabled {
+		isPast = document.Timestamp < minTimestamp
+	}
+
+	contactID := U.GetPropertyValueAsString((*propertiesMap)["contact_id"])
+	contact_document, errCode := store.GetStore().GetSyncedHubspotDocumentByFilter(projectID, contactID, model.HubspotDocumentTypeContact, model.HubspotDocumentActionCreated)
+	if errCode != http.StatusFound {
+		logCtx.Error("Failed to get contact document in syncContactListV2")
+		if errCode == http.StatusNotFound {
+			return http.StatusOK
+		}
+		return errCode
+	}
+
+	_, properties, _, _, _ := GetContactProperties(projectID, contact_document)
+	var emailId string
+	if (*properties)["EMAIL"] != nil {
+		emailId, err = U.GetValueAsString((*properties)["EMAIL"])
+		if err != nil {
+			logCtx.Error("Failed to get emailId from contact properties.")
+			emailId = ""
+		}
+	} else {
+		logCtx.Error("No emailId in contact properties.")
+		emailId = ""
+	}
+
+	propertyToValueMap := map[string]interface{}{
+		"list_name":             (*propertiesMap)["name"],
+		"list_id":               (*propertiesMap)["listId"],
+		"list_type":             (*propertiesMap)["listType"],
+		"contact_id":            contact_document.ID,
+		"contact_email":         emailId,
+		"list_create_timestamp": getEventTimestamp(U.GetInt64FromMapOfInterface(*propertiesMap, "createdAt", 0)),
+		"timestamp":             getEventTimestamp(document.Timestamp),
+	}
+
+	eventProperties := make(map[string]interface{})
+
+	for property, value := range propertyToValueMap {
+		key := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameContactList, property)
+		eventProperties[key] = value
+	}
+
+	request := &SDK.TrackPayload{
+		ProjectId:       projectID,
+		Timestamp:       getEventTimestamp(document.Timestamp),
+		EventProperties: eventProperties,
+		RequestSource:   model.UserSourceHubspot,
+		Name:            U.EVENT_NAME_HUBSPOT_CONTACT_LIST,
+		UserId:          contact_document.UserId,
+		IsPast:          isPast,
+	}
+
+	status, response := SDK.Track(projectID, request, true, SDK.SourceHubspot, model.HubspotDocumentTypeNameContactList)
+	if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
+		logCtx.WithFields(log.Fields{"status": status, "track_response": response}).Error("Failed to track hubspot added to a list event.")
+		return http.StatusInternalServerError
+	}
+
+	errCode = store.GetStore().UpdateHubspotDocumentAsSynced(
+		projectID, document.ID, model.HubspotDocumentTypeContactList, "", document.Timestamp, document.Action, contact_document.UserId, "")
+	if errCode != http.StatusAccepted {
+		logCtx.Error("Failed to update hubspot contact_list document as synced.")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusOK
+}
+
 func syncAll(project *model.Project, documents []model.HubspotDocument, hubspotSmartEventNames []HubspotSmartEventName, minTimestamp int64) int {
 	logCtx := log.WithField("project_id", project.ID)
 	var seenFailures bool
@@ -2999,7 +3106,7 @@ func syncAll(project *model.Project, documents []model.HubspotDocument, hubspotS
 				seenFailures = true
 			}
 		case model.HubspotDocumentTypeContactList:
-			errCode := syncContactList(project.ID, &documents[i], minTimestamp)
+			errCode := syncContactListV2(project.ID, &documents[i], minTimestamp)
 			if errCode != http.StatusOK {
 				seenFailures = true
 			}

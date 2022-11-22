@@ -252,16 +252,17 @@ type sdkGetInfoPayload struct {
 }
 
 type sdkGetInfoResponse struct {
-	AutoTrack            *bool  `json:"auto_track"`
-	AutoTrackSPAPageView *bool  `json:"auto_track_spa_page_view"`
-	AutoFormCapture      *bool  `json:"auto_form_capture"`
-	AutoClickCapture     *bool  `json:"auto_click_capture"`
-	ExcludeBot           *bool  `json:"exclude_bot"`
-	AutoFormFillCapture  *bool  `json:"auto_capture_form_fills"`
-	IntDrift             *bool  `json:"int_drift"`
-	IntClearBit          *bool  `json:"int_clear_bit"`
-	IntSixSignal         *bool  `json:"int_six_signal"`
-	UserID               string `json:"user_id,omitempty"`
+	AutoTrack              *bool  `json:"auto_track"`
+	AutoTrackSPAPageView   *bool  `json:"auto_track_spa_page_view"`
+	AutoFormCapture        *bool  `json:"auto_form_capture"`
+	AutoClickCapture       *bool  `json:"auto_click_capture"`
+	ExcludeBot             *bool  `json:"exclude_bot"`
+	AutoFormFillCapture    *bool  `json:"auto_capture_form_fills"`
+	IntDrift               *bool  `json:"int_drift"`
+	IntClearBit            *bool  `json:"int_clear_bit"`
+	IntClientSixSignalKey  *bool  `json:"int_client_six_signal_key"`
+	IntFactorsSixSignalKey *bool  `json:"int_factors_six_signal_key"`
+	UserID                 string `json:"user_id,omitempty"`
 }
 
 // Test command.

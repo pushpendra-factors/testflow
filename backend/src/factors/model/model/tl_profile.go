@@ -19,23 +19,18 @@ type Profile struct {
 }
 
 type ContactDetails struct {
-	UserId            string          `json:"user_id"`
-	IsAnonymous       bool            `json:"is_anonymous"`
-	Properties        *postgres.Jsonb `json:"-"`
-	Name              string          `json:"name,omitempty"`
-	Company           string          `json:"company"`
-	Role              string          `json:"role,omitempty"`
-	Email             string          `json:"email"`
-	Country           string          `json:"country"`
-	WebSessionsCount  uint64          `json:"web_sessions_count"`
-	TimeSpentOnSite   uint64          `json:"time_spent_on_site"`
-	NumberOfPageViews uint64          `json:"number_of_page_views"`
-	Group1            bool            `gorm:"default:false;column:group_1" json:"-"`
-	Group2            bool            `gorm:"default:false;column:group_2" json:"-"`
-	Group3            bool            `gorm:"default:false;column:group_3" json:"-"`
-	Group4            bool            `gorm:"default:false;column:group_4" json:"-"`
-	GroupInfos        []GroupsInfo    `json:"group_infos,omitempty"`
-	UserActivity      []UserActivity  `json:"user_activities,omitempty"`
+	UserId        string                 `json:"user_id"`
+	IsAnonymous   bool                   `json:"is_anonymous"`
+	Properties    *postgres.Jsonb        `json:"-"`
+	LeftPaneProps map[string]interface{} `json:"left_pane_props"`
+	Name          string                 `json:"name,omitempty"`
+	Company       string                 `json:"company"`
+	Group1        bool                   `gorm:"default:false;column:group_1" json:"-"`
+	Group2        bool                   `gorm:"default:false;column:group_2" json:"-"`
+	Group3        bool                   `gorm:"default:false;column:group_3" json:"-"`
+	Group4        bool                   `gorm:"default:false;column:group_4" json:"-"`
+	GroupInfos    []GroupsInfo           `json:"group_infos,omitempty"`
+	UserActivity  []UserActivity         `json:"user_activities,omitempty"`
 }
 
 type GroupsInfo struct {
@@ -58,20 +53,18 @@ type TimelinePayload struct {
 }
 
 type AccountDetails struct {
-	Properties        *postgres.Jsonb `json:"-"`
-	HostName          string          `json:"host_name"`
-	Name              string          `json:"name"`
-	Industry          string          `json:"industry"`
-	Country           string          `json:"country"`
-	NumberOfEmployees uint64          `json:"number_of_employees"`
-	NumberOfUsers     uint64          `json:"number_of_users"`
-	AccountTimeline   []UserTimeline  `json:"account_timeline"`
+	Properties      *postgres.Jsonb        `json:"-"`
+	HostName        string                 `json:"host_name"`
+	Name            string                 `json:"name"`
+	LeftPaneProps   map[string]interface{} `json:"left_pane_props"`
+	AccountTimeline []UserTimeline         `json:"account_timeline"`
 }
 
 type UserTimeline struct {
 	UserId         string         `json:"-"`
 	IsAnonymous    bool           `json:"-"`
 	UserName       string         `json:"user_name"`
+	AdditionalProp string         `json:"additional_prop"`
 	UserActivities []UserActivity `json:"user_activities,omitempty"`
 }
 

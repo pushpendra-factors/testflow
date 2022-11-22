@@ -138,12 +138,12 @@ const AttributionSettings = ({
   };
 
   const selectWindow = () => {
-    const window = [1, 3, 7, 14, 20, 30, 60, 90, -1];
+    const window = [1, 3, 7, 14, 20, 30, 60, 90, 180, 365, -1];
     return (
       <Select
         value={attrConfig?.attribution_window}
         style={{ width: 300 }}
-        placement="bottomLeft"
+        placement='bottomLeft'
         onChange={(val) => {
           onWindowChange(val);
         }}
@@ -244,7 +244,7 @@ const AttributionSettings = ({
       <Select
         value={getGroupAttributionValue()}
         style={{ width: 300 }}
-        placement="bottomLeft"
+        placement='bottomLeft'
         onChange={(val) => {
           onGroupAttributionChange(val);
         }}
@@ -287,7 +287,7 @@ const AttributionSettings = ({
 
   return (
     <div className={'fa-container mt-32 mb-12 min-h-screen'}>
-      <Row gutter={[24, 24]} justify="center">
+      <Row gutter={[24, 24]} justify='center'>
         <Col span={18}>
           <Row className={`flex items-center`}>
             <Col span={12}>

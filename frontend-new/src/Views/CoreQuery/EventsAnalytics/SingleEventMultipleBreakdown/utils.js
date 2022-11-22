@@ -27,6 +27,7 @@ import tableStyles from '../../../../components/DataTable/index.module.scss';
 import NonClickableTableHeader from '../../../../components/NonClickableTableHeader';
 import { EVENT_COUNT_KEY } from '../eventsAnalytics.constants';
 import { BREAKDOWN_TYPES } from '../../constants';
+import { isNumeric } from '../../../../utils/global';
 
 export const defaultSortProp = ({ breakdown }) => {
   const dateTimeBreakdownIndex = findIndex(
@@ -145,7 +146,10 @@ export const getTableColumns = (
       fixed: !index ? 'left' : '',
       width: 200,
       render: (d) => {
-        if (e.prop_type === 'numerical' && !Number.isNaN(d)) {
+        if (
+          e.prop_type === 'numerical' &&
+          (typeof d === 'number' || isNumeric(d))
+        ) {
           return <NumFormat number={d} />;
         }
         return d;
@@ -220,7 +224,10 @@ export const getDateBasedColumns = (
       fixed: !index ? 'left' : '',
       width: 200,
       render: (d) => {
-        if (e.prop_type === 'numerical' && !Number.isNaN(d)) {
+        if (
+          e.prop_type === 'numerical' &&
+          (typeof d === 'number' || isNumeric(d))
+        ) {
           return <NumFormat number={d} />;
         }
         return d;

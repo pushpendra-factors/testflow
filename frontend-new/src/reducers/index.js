@@ -14,6 +14,7 @@ import kpi from './kpi';
 import groups from './groups';
 import timelines from './timelines';
 import dashboardTemplateReducer from './dashboard_templates';
+import attributionReducer from '../features/attribution/state/reducer';
 
 const rootReducer = combineReducers({
   global: GlobalReducer,
@@ -31,6 +32,7 @@ const rootReducer = combineReducers({
   groups,
   timelines,
   dashboardTemplates: dashboardTemplateReducer,
+  attributionDashboard: attributionReducer
 });
 
 export default rootReducer;

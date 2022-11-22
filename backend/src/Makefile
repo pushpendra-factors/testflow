@@ -467,6 +467,13 @@ upload-weekly-insights: export IMAGE_NAME=weekly-insights-job
 upload-weekly-insights: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/weekly-insights-job:$(TAG)
 
+pack-weekly-insights-mailer:
+	docker build -t us.gcr.io/factors-$(ENV)/weekly-insights-mailer-job:$(TAG) -f Dockerfile.weekly_insights_mailer_job .
+
+upload-weekly-insights-mailer: export IMAGE_NAME=weekly-insights-mailer-job
+upload-weekly-insights-mailer: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/weekly-insights-mailer-job:$(TAG)
+
 pack-form-fills:
 	docker build -t us.gcr.io/factors-$(ENV)/form-fills-job:$(TAG) -f Dockerfile.form_fills_job .
 

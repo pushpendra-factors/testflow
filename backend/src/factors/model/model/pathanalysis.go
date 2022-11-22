@@ -32,14 +32,21 @@ type PathAnalysis struct {
 type PathAnalysisQuery struct {
 	Title               string          `json:"title"`
 	EventType           string          `json:"event_type"`
-	Event               string          `json:"event"`
+	Event               PathAnalysisEvent          `json:"event"`
 	NumberOfSteps       int             `json:"steps"`
-	IncludeEvents       []string        `json:"include_events"`
-	ExcludeEvents       []string        `json:"exclude_events"`
+	IncludeEvents       []PathAnalysisEvent        `json:"include_events"`
+	ExcludeEvents       []PathAnalysisEvent        `json:"exclude_events"`
 	StartTimestamp      int64       `json:"starttimestamp"`
 	EndTimestamp        int64      `json:"endtimestamp"`
 	AvoidRepeatedEvents bool            `json:"avoid_repeated_events"`
 	Filter              []QueryProperty `json:"filter"`
+}
+
+type PathAnalysisEvent struct {
+	Filter              []QueryProperty `json:"filter"`
+	Alias               string          `json:"alias"`
+	Label               string          `json:"label"`
+	Group               string          `json:"group"`
 }
 
 type PathAnalysisEntityInfo struct {

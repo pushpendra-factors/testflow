@@ -1,19 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import {
-  Row,
-  Col,
-  Button,
-  Avatar,
-  Menu,
-  Dropdown,
-  Popover,
-  Tabs
-} from 'antd';
+import { Button, Avatar, Menu, Dropdown, Popover, Tabs } from 'antd';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { SVG, Text } from '../../factorsComponents';
 import FaTimeline from '../../FaTimeline';
-import { formatDurationIntoString } from '../../../utils/dataFormatter';
 import { granularityOptions } from '../utils';
 import {
   udpateProjectSettings,
@@ -22,22 +12,53 @@ import {
 import { getProfileUserDetails } from '../../../reducers/timelines/middleware';
 import { getActivitiesWithEnableKeyConfig } from '../../../reducers/timelines/utils';
 import SearchCheckList from '../../SearchCheckList';
+import LeftPanePropBlock from '../LeftPanePropBlock';
+import GroupSelect2 from '../../QueryComposer/GroupSelect2';
 
 function ContactDetails({
+  user,
   onCancel,
   userDetails,
   activeProject,
   currentProjectSettings,
   fetchProjectSettings,
-  udpateProjectSettings
+  udpateProjectSettings,
+  getProfileUserDetails,
+  userProperties
 }) {
   const [activities, setActivities] = useState([]);
   const [granularity, setGranularity] = useState('Daily');
   const [collapse, setCollapse] = useState(true);
+  const [propSelectOpen, setPropSelectOpen] = useState(false);
+  const [tlConfig, setTimelinesConfig] = useState({
+    disabled_events: [],
+    user_config: {
+      props_to_show: []
+    },
+    account_config: {
+      account_props_to_show: [],
+      user_props_to_show: ''
+    }
+  });
+
+  useEffect(() => {
+    if (currentProjectSettings?.timelines_config) {
+      setTimelinesConfig({
+        ...tlConfig,
+        ...currentProjectSettings.timelines_config
+      });
+    }
+  }, [currentProjectSettings]);
 
   useEffect(() => {
     fetchProjectSettings(activeProject.id);
   }, [activeProject]);
+
+  const generateUserProps = () => {
+    const groupProps = [{ label: 'User Properties', icon: 'user', values: [] }];
+    groupProps[0].values = userProperties;
+    return groupProps;
+  };
 
   useEffect(() => {
     const listActivities = getActivitiesWithEnableKeyConfig(
@@ -51,8 +72,8 @@ function ContactDetails({
     <Menu>
       {granularityOptions.map((option) => (
         <Menu.Item key={option} onClick={(key) => setGranularity(key.key)}>
-          <div className="flex items-center">
-            <span className="mr-3">{option}</span>
+          <div className='flex items-center'>
+            <span className='mr-3'>{option}</span>
           </div>
         </Menu.Item>
       ))}
@@ -60,10 +81,7 @@ function ContactDetails({
   );
 
   const handleChange = (option) => {
-    const timelinesConfig = { ...currentProjectSettings.timelines_config };
-    if (!timelinesConfig.disabled_events) {
-      timelinesConfig.disabled_events = [];
-    }
+    const timelinesConfig = { ...tlConfig };
     if (option.enabled) {
       timelinesConfig.disabled_events.push(option.display_name);
     } else if (!option.enabled) {
@@ -78,246 +96,240 @@ function ContactDetails({
   };
 
   const controlsPopover = () => (
-    <Tabs defaultActiveKey="events" size="small">
+    <Tabs defaultActiveKey='events' size='small'>
       <Tabs.TabPane
-        tab={<span className="fa-activity-filter--tabname">Events</span>}
-        key="events"
+        tab={<span className='fa-activity-filter--tabname'>Events</span>}
+        key='events'
       >
         <SearchCheckList
-          placeholder="Search Events"
+          placeholder='Search Events'
           mapArray={activities}
-          titleKey="display_name"
-          checkedKey="enabled"
+          titleKey='display_name'
+          checkedKey='enabled'
           onChange={handleChange}
         />
       </Tabs.TabPane>
     </Tabs>
   );
 
+  const renderModalHeader = () => (
+    <div className='fa-timeline-modal--header'>
+      <div className='flex items-center'>
+        <Button
+          style={{ padding: 0 }}
+          type='text'
+          icon={<SVG name='brand' size={36} />}
+          size='large'
+          onClick={() => {
+            onCancel();
+            setCollapse(true);
+            setGranularity('Daily');
+            setPropSelectOpen(false);
+          }}
+        />
+        <Text type='title' level={4} weight='bold'>
+          Contact Details
+        </Text>
+      </div>
+      <Button
+        size='large'
+        type='text'
+        onClick={() => {
+          onCancel();
+          setCollapse(true);
+          setGranularity('Daily');
+          setPropSelectOpen(false);
+        }}
+        icon={<SVG name='times' />}
+      />
+    </div>
+  );
+
+  const handleOptionClick = (group, value) => {
+    const timelinesConfig = { ...tlConfig };
+    if (!timelinesConfig.user_config.props_to_show.includes(value[1])) {
+      timelinesConfig.user_config.props_to_show.push(value[1]);
+      udpateProjectSettings(activeProject.id, {
+        timelines_config: { ...timelinesConfig }
+      }).then(() =>
+        getProfileUserDetails(
+          activeProject?.id,
+          user?.identity,
+          user?.is_anonymous,
+          currentProjectSettings?.timelines_config
+        )
+      );
+    }
+
+    setPropSelectOpen(false);
+  };
+
+  const onDelete = (option) => {
+    const timelinesConfig = { ...tlConfig };
+    timelinesConfig.user_config.props_to_show.splice(
+      timelinesConfig.user_config.props_to_show.indexOf(option),
+      1
+    );
+    udpateProjectSettings(activeProject.id, {
+      timelines_config: { ...timelinesConfig }
+    });
+  };
+
+  const listLeftPaneProps = (props = []) => {
+    const propsList = [];
+    const showProps =
+      currentProjectSettings?.timelines_config?.user_config?.props_to_show ||
+      [];
+
+    showProps.forEach((prop, index) => {
+      const value = props[prop] || '-';
+      propsList.push(
+        <div key={index}>
+          <LeftPanePropBlock
+            property={prop}
+            value={value}
+            onDelete={onDelete}
+          />
+        </div>
+      );
+    });
+    return propsList;
+  };
+
+  const selectProps = () =>
+    propSelectOpen && (
+      <div className='relative'>
+        <GroupSelect2
+          groupedProperties={generateUserProps()}
+          placeholder='Select Event'
+          optionClick={handleOptionClick}
+          onClickOutside={() => setPropSelectOpen(false)}
+        />
+      </div>
+    );
+
+  const renderAddNewProp = () =>
+    currentProjectSettings?.timelines_config?.user_config?.props_to_show
+      ?.length < 5 ? (
+      <div>
+        <Button
+          type='link'
+          icon={<SVG name='plus' color='purple' />}
+          onClick={() => setPropSelectOpen(!propSelectOpen)}
+        >
+          Add property
+        </Button>
+        {selectProps()}
+      </div>
+    ) : null;
+
+  const renderLeftPane = () => (
+    <div className='fa-timeline-content__leftpane'>
+      <div className='fa-timeline-content__leftpane__user'>
+        <Avatar
+          size={72}
+          className='fa-timeline-content__leftpane__user--avatar'
+        >
+          <SVG name='user' size={40} />
+        </Avatar>
+        <div className='py-2'>
+          <Text type='title' level={6} extraClass='m-0' weight='bold'>
+            {userDetails.data.title}
+          </Text>
+          <Text type='title' level={7} extraClass='m-0' color='grey'>
+            {userDetails.data.subtitle}
+          </Text>
+        </div>
+      </div>
+      <div className='fa-timeline-content__leftpane__props'>
+        {listLeftPaneProps(userDetails.data.left_pane_props)}
+      </div>
+      <div className='px-8 pb-8'>{renderAddNewProp()}</div>
+      <div className='fa-timeline-content__leftpane__groups'>
+        <Text type='title' level={7} extraClass='m-0 my-2' color='grey'>
+          Associated Groups:
+        </Text>
+        {userDetails?.data?.group_infos?.map((group) => (
+          <Text type='title' level={7} extraClass='m-0 mb-2'>
+            {group.group_name}
+          </Text>
+        )) || '-'}
+      </div>
+    </div>
+  );
+
+  const renderTimelineWithActions = () => (
+    <div className='fa-timeline-content__activities'>
+      <div className='fa-timeline-content__actions'>
+        <Text type='title' level={3} weight='bold'>
+          Timeline
+        </Text>
+        <div className='fa-timeline-content__actions__group'>
+          <div className='fa-timeline-content__actions__group__collapse'>
+            <Button
+              className='collapse-btn collapse-btn--left'
+              type='text'
+              onClick={() => setCollapse(false)}
+            >
+              <SVG name='line_height' size={22} />
+            </Button>
+            <Button
+              className='collapse-btn collapse-btn--right'
+              type='text'
+              onClick={() => setCollapse(true)}
+            >
+              <SVG name='grip_lines' size={22} />
+            </Button>
+          </div>
+
+          <Popover
+            overlayClassName='fa-activity--filter'
+            placement='bottomLeft'
+            trigger='hover'
+            content={controlsPopover}
+          >
+            <Button
+              size='large'
+              className='fa-btn--custom mx-2 relative'
+              type='text'
+            >
+              <SVG name='activity_filter' />
+            </Button>
+          </Popover>
+          <Dropdown overlay={granularityMenu} placement='bottomRight'>
+            <Button type='text' className='flex items-center'>
+              {granularity}
+              <SVG name='caretDown' size={16} extraClass='ml-1' />
+            </Button>
+          </Dropdown>
+        </div>
+      </div>
+      <FaTimeline
+        activities={activities?.filter((activity) => activity.enabled === true)}
+        loading={userDetails.isLoading}
+        granularity={granularity}
+        collapse={collapse}
+        setCollapse={setCollapse}
+      />
+    </div>
+  );
+
   return (
-    <>
-      <div
-        className="fa-modal--header px-8"
-        style={{ borderBottom: '1px solid #e7e9ed' }}
-      >
-        <Row justify="space-between" className="my-3 m-0">
-          <Col className="flex items-center">
-            <Button
-              style={{ padding: '0' }}
-              type="text"
-              icon={<SVG name="brand" size={36} />}
-              size="large"
-              onClick={() => {
-                onCancel();
-                setCollapse(true);
-                setGranularity('Daily');
-              }}
-            />
-            <Text type="title" level={4} weight="bold" extraClass="m-0">
-              Contact Details
-            </Text>
-          </Col>
-          <Col>
-            <Button
-              size="large"
-              type="text"
-              onClick={() => {
-                onCancel();
-                setCollapse(true);
-                setGranularity('Daily');
-              }}
-              icon={<SVG name="times" />}
-            />
-          </Col>
-        </Row>
+    <div>
+      {renderModalHeader()}
+      <div className='fa-timeline-content'>
+        {renderLeftPane()}
+        {renderTimelineWithActions()}
       </div>
-
-      <div className="my-16">
-        <Row span={24} gutter={[24, 24]}>
-          <Col span={5} style={{ borderRight: '1px solid #e7e9ed' }}>
-            <div className="ml-12 my-12">
-              <Row className="">
-                <Col>
-                  <Avatar
-                    size={72}
-                    style={{
-                      color: '#3E516C',
-                      backgroundColor: '#F1F1F1',
-                      display: 'flex',
-                      alignItems: 'center'
-                    }}
-                  >
-                    <SVG name="user" size={40} />
-                  </Avatar>
-                </Col>
-              </Row>
-              <Row className="py-2">
-                <Col>
-                  <Text type="title" level={6} extraClass="m-0" weight="bold">
-                    {userDetails.data?.title}
-                  </Text>
-                  <Text type="title" level={7} extraClass="m-0" color="grey">
-                    {userDetails.data?.subtitle}
-                  </Text>
-                </Col>
-              </Row>
-              <Row className="py-2">
-                <Col>
-                  <Text type="title" level={7} extraClass="m-0" color="grey">
-                    Email
-                  </Text>
-
-                  <Text type="title" level={7} extraClass="m-0">
-                    {userDetails?.data?.email || '-'}
-                  </Text>
-                </Col>
-              </Row>
-              <Row className="py-2">
-                <Col>
-                  <Text type="title" level={7} extraClass="m-0" color="grey">
-                    Country
-                  </Text>
-                  <Text type="title" level={7} extraClass="m-0">
-                    {userDetails?.data?.country || '-'}
-                  </Text>
-                </Col>
-              </Row>
-              <Row className="py-2">
-                <Col>
-                  <Text type="title" level={7} extraClass="m-0" color="grey">
-                    Number of Web Sessions
-                  </Text>
-                  <Text type="title" level={7} extraClass="m-0">
-                    {parseInt(userDetails.data?.web_session_count) || '-'}
-                  </Text>
-                </Col>
-              </Row>
-              <Row className="py-2">
-                <Col>
-                  <Text type="title" level={7} extraClass="m-0" color="grey">
-                    Number of Page Views
-                  </Text>
-                  <Text type="title" level={7} extraClass="m-0">
-                    {parseInt(userDetails.data?.number_of_page_views) || '-'}
-                  </Text>
-                </Col>
-              </Row>
-              <Row className="py-2">
-                <Col>
-                  <Text type="title" level={7} extraClass="m-0" color="grey">
-                    Time Spent on Site
-                  </Text>
-                  <Text type="title" level={7} extraClass="m-0">
-                    {formatDurationIntoString(
-                      userDetails.data?.time_spent_on_site
-                    )}
-                  </Text>
-                </Col>
-              </Row>
-              <Row
-                className="mt-3 pt-3"
-                style={{ borderTop: '1px dashed #e7e9ed' }}
-              >
-                <Col>
-                  <Text
-                    type="title"
-                    level={7}
-                    extraClass="m-0 my-2"
-                    color="grey"
-                  >
-                    Associated Groups:
-                  </Text>
-                  {userDetails?.data?.group_infos?.map((group) => (
-                    <Text type="title" level={7} extraClass="m-0 mb-2">
-                      {group.group_name}
-                    </Text>
-                  )) || '-'}
-                </Col>
-              </Row>
-              <Row className="mt-6">
-                <Col className="flex justify-start items-center" />
-              </Row>
-            </div>
-          </Col>
-          <Col span={18}>
-            <Row gutter={[24, 24]} justify="left">
-              <Col span={24} className="mx-8 my-12">
-                <Col className="flex items-center justify-between mb-4">
-                  <div>
-                    <Text type="title" level={3} weight="bold">
-                      Timeline
-                    </Text>
-                  </div>
-                  <div className="flex justify-between">
-                    <div className="flex justify-between">
-                      <Button
-                        className="fa-dd--custom-btn"
-                        type="text"
-                        onClick={() => setCollapse(false)}
-                      >
-                        <SVG name="line_height" size={22} />
-                      </Button>
-                      <Button
-                        className="fa-dd--custom-btn"
-                        type="text"
-                        onClick={() => setCollapse(true)}
-                      >
-                        <SVG name="grip_lines" size={22} />
-                      </Button>
-                    </div>
-                    <div>
-                      <Popover
-                        overlayClassName="fa-activity--filter"
-                        placement="bottomLeft"
-                        trigger="hover"
-                        content={controlsPopover}
-                      >
-                        <Button
-                          size="large"
-                          className="fa-btn--custom mx-2 relative"
-                          type="text"
-                        >
-                          <SVG name="activity_filter" />
-                        </Button>
-                      </Popover>
-                    </div>
-                    <div>
-                      <Dropdown
-                        overlay={granularityMenu}
-                        placement="bottomRight"
-                      >
-                        <Button className="ant-dropdown-link flex items-center">
-                          {granularity}
-                          <SVG name="caretDown" size={16} extraClass="ml-1" />
-                        </Button>
-                      </Dropdown>
-                    </div>
-                  </div>
-                </Col>
-                <Col span={24}>
-                  <FaTimeline
-                    activities={activities?.filter(
-                      (activity) => activity.enabled === true
-                    )}
-                    loading={userDetails.isLoading}
-                    granularity={granularity}
-                    collapse={collapse}
-                    setCollapse={setCollapse}
-                  />
-                </Col>
-              </Col>
-            </Row>
-          </Col>
-        </Row>
-      </div>
-    </>
+    </div>
   );
 }
 
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   currentProjectSettings: state.global.currentProjectSettings,
-  userDetails: state.timelines.contactDetails
+  userDetails: state.timelines.contactDetails,
+  userProperties: state.coreQuery.userProperties
 });
 
 const mapDispatchToProps = (dispatch) =>

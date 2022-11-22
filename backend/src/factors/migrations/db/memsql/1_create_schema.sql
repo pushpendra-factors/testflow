@@ -444,7 +444,8 @@ CREATE TABLE IF NOT EXISTS project_settings (
     timelines_config json,
     client6_signal_key text,
     factors6_signal_key text,
-    int_six_signal boolean NOT NULL DEFAULT FALSE,
+    int_client_six_signal_key boolean NOT NULL DEFAULT FALSE,
+    int_factors_six_signal_key boolean NOT NULL DEFAULT FALSE,
     KEY (updated_at),
     SHARD KEY (project_id),
     PRIMARY KEY (project_id)
