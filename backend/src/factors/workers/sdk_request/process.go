@@ -64,7 +64,7 @@ func main() {
 	restrictReusingUsersByCustomerUserId := flag.String("restrict_reusing_users_by_customer_user_id", "", "")
 	mergeAmpIDAndSegmentIDWithUserIDByProjectID := flag.String("allow_amp_id_and_segment_id_with_user_id_by_project_id", "", "")
 	clearbitEnabled := flag.Int("clearbit_enabled", 0, "To enable clearbit enrichment")
-	six_signal_enabled := flag.Int("sixSignalEnabled", 0, "To enable sixSignal enrichment")
+	sixSignalEnabled := flag.Int("six_signal_enabled", 0, "To enable sixSignal enrichment")
 	allowIdentificationOverwriteUsingSourceByProjectID := flag.String("allow_identification_overwrite_using_source_by_project_id", "", "Allow identification overwrite based on request source.")
 	IngestionTimezoneEnabledProjectIDs := flag.String("ingestion_timezone_enabled_projects", "", "List of projectIds whose ingestion timezone is enabled.")
 	flag.Parse()
@@ -118,7 +118,7 @@ func main() {
 		RestrictReusingUsersByCustomerUserId:               *restrictReusingUsersByCustomerUserId,
 		MergeAmpIDAndSegmentIDWithUserIDByProjectID:        *mergeAmpIDAndSegmentIDWithUserIDByProjectID,
 		ClearbitEnabled:                                    *clearbitEnabled,
-		SixSignalEnabled:                                   *six_signal_enabled,
+		SixSignalEnabled:                                   *sixSignalEnabled,
 		AllowIdentificationOverwriteUsingSourceByProjectID: *allowIdentificationOverwriteUsingSourceByProjectID,
 		IngestionTimezoneEnabledProjectIDs:                 C.GetTokensFromStringListAsString(*IngestionTimezoneEnabledProjectIDs),
 	}

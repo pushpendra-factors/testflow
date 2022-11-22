@@ -159,8 +159,6 @@ var SalesforceStandardDocumentType = []int{
 	SalesforceDocumentTypeContact,
 	SalesforceDocumentTypeLead,
 	SalesforceDocumentTypeOpportunity,
-	SalesforceDocumentTypeTask,
-	SalesforceDocumentTypeEvent,
 }
 
 // SalesforceCampaignDocuments campaign related documents

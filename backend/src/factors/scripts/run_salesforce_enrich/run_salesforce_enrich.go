@@ -138,10 +138,14 @@ func main() {
 	insertBatchSize := flag.Int("insert_batch_size", 1, "Number of unique document go routines per project")
 	overrideLastSyncTimestamp := flag.Int64("override_last_sync_timestamp", 0, "Override last sync timestamp")
 	clearbitEnabled := flag.Int("clearbit_enabled", 0, "To enable clearbit enrichment")
-	six_signal_enabled := flag.Int("sixSignalEnabled", 0, "To enable sixSignal enrichment")
+	sixSignalEnabled := flag.Int("six_signal_enabled", 0, "To enable sixSignal enrichment")
 	useSalesforceV54APIByProjectID := flag.String("use_salesforce_v54_api_by_project_id", "", "Use v54 api for query salesforce data")
 	allowIdentificationOverwriteUsingSourceByProjectID := flag.String("allow_identification_overwrite_using_source_by_project_id", "", "Allow identification overwrite based on request source.")
 	IngestionTimezoneEnabledProjectIDs := flag.String("ingestion_timezone_enabled_projects", "", "List of projectIds whose ingestion timezone is enabled.")
+	allowSalesforceActivityTaskByProjectID := flag.String("allowed_salesforce_activity_tasks_by_project_ids", "", "Allowed project id for salesforce activity - task")
+	allowSalesforceActivityEventByProjectID := flag.String("allowed_salesforce_activity_events_by_project_ids", "", "Allowed project id for salesforce activity - event")
+	disallowSalesforceActivityTaskByProjectID := flag.String("disallowed_salesforce_activity_tasks_by_project_ids", "", "Disallowed project id for salesforce activity - task")
+	disallowSalesforceActivityEventByProjectID := flag.String("disallowed_salesforce_activity_events_by_project_ids", "", "Disallowed project id for salesforce activity - event")
 
 	flag.Parse()
 	defaultAppName := "salesforce_enrich"
@@ -201,10 +205,14 @@ func main() {
 		DisableCRMUniquenessConstraintsCheckByProjectID:    *disableCRMUniquenessConstraintsCheckByProjectID,
 		SalesforceBatchInsertBatchSize:                     *insertBatchSize,
 		ClearbitEnabled:                                    *clearbitEnabled,
-		SixSignalEnabled:                                   *six_signal_enabled,
+		SixSignalEnabled:                                   *sixSignalEnabled,
 		UseSalesforceV54APIByProjectID:                     *useSalesforceV54APIByProjectID,
 		AllowIdentificationOverwriteUsingSourceByProjectID: *allowIdentificationOverwriteUsingSourceByProjectID,
 		IngestionTimezoneEnabledProjectIDs:                 C.GetTokensFromStringListAsString(*IngestionTimezoneEnabledProjectIDs),
+		AllowedSalesforceActivityTasksByProjectIDs:         *allowSalesforceActivityTaskByProjectID,
+		AllowedSalesforceActivityEventsByProjectIDs:        *allowSalesforceActivityEventByProjectID,
+		DisallowedSalesforceActivityTasksByProjectIDs:      *disallowSalesforceActivityTaskByProjectID,
+		DisallowedSalesforceActivityEventsByProjectIDs:     *disallowSalesforceActivityEventByProjectID,
 	}
 
 	C.InitConf(config)

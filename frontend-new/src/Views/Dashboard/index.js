@@ -50,6 +50,7 @@ function Dashboard({
   const integration = useSelector(
     (state) => state.global.currentProjectSettings
   );
+  const queries = useSelector((state) => state.queries);
   const integrationV1 = useSelector((state) => state.global.projectSettingsV1);
   const activeProject = useSelector((state) => state.global.active_project);
   const queries = useSelector((state) => state.queries);
