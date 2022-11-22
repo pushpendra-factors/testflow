@@ -52,8 +52,7 @@ function Dashboard({
   );
   const queries = useSelector((state) => state.queries);
   const integrationV1 = useSelector((state) => state.global.projectSettingsV1);
-  const activeProject = useSelector((state) => state.global.active_project);
-  const queries = useSelector((state) => state.queries);
+  const activeProject = useSelector((state) => state.global.active_project); 
   const { bingAds, marketo } = useSelector((state) => state.global);
   const dispatch = useDispatch();
 
