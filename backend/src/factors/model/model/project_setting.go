@@ -71,7 +71,7 @@ type ProjectSetting struct {
 	IntAdwordsClientManagerMap    *postgres.Jsonb `json:"int_adwords_client_manager_map"`
 	ClearbitKey                   string          `json:"clearbit_key"`
 	Client6SignalKey              string          `json:"client6_signal_key"`
-	Factors6SignalKey             string          `json:"-"`
+	Factors6SignalKey             string          `json:"factors6_signal_key"`
 	LeadSquaredConfig             *postgres.Jsonb `json:"lead_squared_config"`
 	IsWeeklyInsightsEnabled       bool            `json:"is_weekly_insights_enabled"`
 	IsExplainEnabled              bool            `json:"is_explain_enabled"`

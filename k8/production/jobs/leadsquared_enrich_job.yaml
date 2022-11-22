@@ -61,6 +61,8 @@ spec:
             - '*'
             - --num_unique_doc_routines
             - "25"
+            - --ingestion_timezone_enabled_projects
+            - ''            
             envFrom:
             - configMapRef:
                 name: config-env

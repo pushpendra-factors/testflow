@@ -83,6 +83,8 @@ spec:
           - --allow_support_for_user_properties_in_identify_call
           - "2"
           - --cache_with_sorted_set
+          - --ingestion_timezone_enabled_projects
+          - ''          
         envFrom:
         - configMapRef:
             name: config-appserver

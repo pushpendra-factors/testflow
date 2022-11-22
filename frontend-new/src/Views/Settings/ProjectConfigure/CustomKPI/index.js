@@ -335,7 +335,9 @@ const matchEventName = (item) => {
     setFilterValues([]);
     setKPICategory(false);
     setKPIType('default');
-    setQueries([])
+    setQueries([]);
+    setKPIPropertyDetails({});
+    setKPIFn(false);
   }
              
 

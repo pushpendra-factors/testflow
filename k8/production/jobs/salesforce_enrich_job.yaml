@@ -78,6 +78,8 @@ spec:
             - "566"
             - --use_source_property_overwrite_by_project_id
             - 566,2,616,645,483
+            - --ingestion_timezone_enabled_projects
+            - ''            
             envFrom:
             - configMapRef:
                 name: config-env

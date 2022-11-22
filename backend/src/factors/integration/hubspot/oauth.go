@@ -23,7 +23,6 @@ var HubspotAuthAppRequiredScopes = []string{
 	"crm.objects.companies.read",
 	"crm.schemas.companies.read",
 	"tickets",
-	"e-commerce",
 	"sales-email-read",
 	"forms",
 	"content",

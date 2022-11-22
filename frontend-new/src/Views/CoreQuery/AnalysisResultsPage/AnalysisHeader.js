@@ -84,12 +84,12 @@ function AnalysisHeader({
 
   useEffect(() => {
     window.history.pushState(null, document.title, window.location.href);
-    window.addEventListener('popstate', function (event){
+    window.addEventListener('popstate', ()=> {
         window.history.pushState(null, document.title,  window.location.href);
     });
   }, [])
 
-  const handleCloseToAnalyse = () => {
+  const handleCloseToAnalyse = useCallback(() => {
     if(!savedQueryId && requestQuery !== null) {
       Modal.confirm({
         title: 'This report is not yet saved. Would you like to save this before leaving?',
@@ -113,7 +113,7 @@ function AnalysisHeader({
       });
       onBreadCrumbClick();
     }
-  };
+  }, [history, requestQuery, savedQueryId]);
 
   const handleCloseDashboardQuery = useCallback(() => {
     if(!savedQueryId && requestQuery !== null) {
@@ -139,7 +139,7 @@ function AnalysisHeader({
         state: { dashboardWidgetId: navigatedFromDashboard.id }
       });
     }
-  }, [history, navigatedFromDashboard, requestQuery, savedQueryId, savedQueries]);
+  }, [history, navigatedFromDashboard, requestQuery, savedQueryId]);
 
   const renderReportTitle = () => (
     <Text

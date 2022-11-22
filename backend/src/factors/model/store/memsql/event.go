@@ -337,10 +337,16 @@ func (store *MemSQL) CreateEvent(event *model.Event) (*model.Event, int) {
 		event.ID = U.GetUUID()
 	}
 
-	timezoneString, statusCode := store.GetTimezoneByIDWithCache(event.ProjectId)
-	if statusCode != http.StatusFound {
-		log.Errorf("Failed to get project Timezone for project: %d and event: %v ", event.ProjectId, event)
-		return nil, http.StatusInternalServerError
+	var timezoneString U.TimeZoneString
+	if C.IsIngestionTimezoneEnabled(event.ProjectId) {
+		var statusCode int
+		timezoneString, statusCode = store.GetTimezoneByIDWithCache(event.ProjectId)
+		if statusCode != http.StatusFound {
+			log.Errorf("Failed to get project Timezone for project: %d and event: %v ", event.ProjectId, event)
+			return nil, http.StatusInternalServerError
+		}
+	} else {
+		timezoneString = U.TimeZoneStringUTC
 	}
 
 	if event.IsFromPast {

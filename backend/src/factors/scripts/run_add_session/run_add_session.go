@@ -64,6 +64,7 @@ func main() {
 	enableOLTPQueriesMemSQLImprovements := flag.String("enable_OLTP_queries_memsql_improvements", "", "")
 	captureSourceInUsersTable := flag.String("capture_source_in_users_table", "", "")
 	sessionBatchTransactionBatchSize := flag.Int("session_batch_transaction_batch_size", 0, "")
+	IngestionTimezoneEnabledProjectIDs := flag.String("ingestion_timezone_enabled_projects", "", "List of projectIds whose ingestion timezone is enabled.")
 
 	flag.Parse()
 
@@ -113,6 +114,7 @@ func main() {
 		EnableOLTPQueriesMemSQLImprovements: *enableOLTPQueriesMemSQLImprovements,
 		CaptureSourceInUsersTable:           *captureSourceInUsersTable,
 		SessionBatchTransactionBatchSize:    *sessionBatchTransactionBatchSize,
+		IngestionTimezoneEnabledProjectIDs:  C.GetTokensFromStringListAsString(*IngestionTimezoneEnabledProjectIDs),
 	}
 
 	C.InitConf(config)

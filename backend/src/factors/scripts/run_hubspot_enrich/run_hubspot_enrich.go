@@ -66,7 +66,7 @@ func main() {
 	lightProjectsCountThreshold := flag.Int("light_projects_count_threshold", 50000, "Threshold on count for distribution across jobs")
 	enrichHeavy := flag.Bool("enrich_heavy", false, "Run heavy projects")
 	clearbitEnabled := flag.Int("clearbit_enabled", 0, "To enable clearbit enrichment")
-	six_signal_enabled := flag.Int("sixSignalEnabled", 0, "To enable sixSignal enrichment")
+	sixSignalEnabled := flag.Int("six_signal_enabled", 0, "To enable sixSignal enrichment")
 	recordProcessLimit := flag.Int("record_process_limit", 50000, "Number of records to process per project.")
 	disableNonMarketingContactByProjectID := flag.String("disable_non_marketing_contact_by_project_id", "", "Disable hubspot non marketing contacts from processing")
 	hubspotAppID := flag.String("hubspot_app_id", "", "Hubspot app id for oauth integration")
@@ -74,6 +74,7 @@ func main() {
 	allowIdentificationOverwriteUsingSourceByProjectID := flag.String("allow_identification_overwrite_using_source_by_project_id", "", "Allow identification overwrite based on request source.")
 	allowHubspotPastEventsEnrichmentByProjectID := flag.String("allow_hubspot_past_events_enrichment_by_project_id", "", "")
 	allowHubspotContactListInsertByProjectID := flag.String("allow_hubspot_contact_list_insert_by_project_id", "", "")
+	IngestionTimezoneEnabledProjectIDs := flag.String("ingestion_timezone_enabled_projects", "", "List of projectIds whose ingestion timezone is enabled.")
 
 	flag.Parse()
 	if *env != "development" && *env != "staging" && *env != "production" {
@@ -123,13 +124,14 @@ func main() {
 		RestrictReusingUsersByCustomerUserId:          *restrictReusingUsersByCustomerUserId,
 		EnableHubspotFormsEventsByProjectID:           *enableHubspotFormEventsByProjectID,
 		ClearbitEnabled:                               *clearbitEnabled,
-		SixSignalEnabled:                              *six_signal_enabled,
+		SixSignalEnabled:                              *sixSignalEnabled,
 		DisableHubspotNonMarketingContactsByProjectID: *disableNonMarketingContactByProjectID,
 		HubspotAppID:                                  *hubspotAppID,
 		HubspotAppSecret:                              *hubspotAppSecret,
 		AllowIdentificationOverwriteUsingSourceByProjectID: *allowIdentificationOverwriteUsingSourceByProjectID,
 		AllowHubspotPastEventsEnrichmentByProjectID:        *allowHubspotPastEventsEnrichmentByProjectID,
 		AllowHubspotContactListInsertByProjectID:           *allowHubspotContactListInsertByProjectID,
+		IngestionTimezoneEnabledProjectIDs:                 C.GetTokensFromStringListAsString(*IngestionTimezoneEnabledProjectIDs),
 	}
 
 	C.InitConf(config)

@@ -3074,6 +3074,58 @@ func TestSDKReIdentification(t *testing.T) {
 	assert.Equal(t, http.StatusFound, status)
 	assert.Equal(t, model.UserSourceWeb, *user.CustomerUserIdSource)
 	assert.Equal(t, "test@abc.com", user.CustomerUserId)
+
+	/*
+		User without customer_user_id_source should be allowed to overwrite if same customer_user_id not found in crm
+	*/
+
+	// For web user
+	C.SetAllowIdentificationOverwriteUsingSourceByProjectID("")
+	userID, status = store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: "testWA@abc.com", Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, status)
+	user, status = store.GetStore().GetUser(project.ID, userID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, "testWA@abc.com", user.CustomerUserId)
+	assert.Nil(t, user.CustomerUserIdSource) // empty customer_user_id_source
+	C.SetAllowIdentificationOverwriteUsingSourceByProjectID("*")
+	status, _ = SDK.Identify(project.ID, &SDK.IdentifyPayload{UserId: userID, CustomerUserId: "testWB@abc.com", RequestSource: model.UserSourceWeb}, true)
+	assert.Equal(t, http.StatusOK, status)
+	user, status = store.GetStore().GetUser(project.ID, userID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, "testWB@abc.com", user.CustomerUserId)
+	assert.Equal(t, model.UserSourceWeb, *user.CustomerUserIdSource)
+
+	// For crm user
+	C.SetAllowIdentificationOverwriteUsingSourceByProjectID("")
+	userID, status = store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: "testHA@abc.com", Source: model.GetRequestSourcePointer(model.UserSourceHubspot)})
+	assert.Equal(t, http.StatusCreated, status)
+	user, status = store.GetStore().GetUser(project.ID, userID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, "testHA@abc.com", user.CustomerUserId)
+	assert.Nil(t, user.CustomerUserIdSource) // empty customer_user_id_source
+	C.SetAllowIdentificationOverwriteUsingSourceByProjectID("*")
+	status, _ = SDK.Identify(project.ID, &SDK.IdentifyPayload{UserId: userID, CustomerUserId: "testHB@abc.com", RequestSource: model.UserSourceHubspot}, true)
+	assert.Equal(t, http.StatusOK, status)
+	user, status = store.GetStore().GetUser(project.ID, userID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, "testHB@abc.com", user.CustomerUserId)
+	assert.Equal(t, model.UserSourceHubspot, *user.CustomerUserIdSource)
+
+	// For web user without customer_user_id_source being re-identified by crm
+	C.SetAllowIdentificationOverwriteUsingSourceByProjectID("")
+	userID, status = store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: "testWA@abc.com", Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, status)
+	user, status = store.GetStore().GetUser(project.ID, userID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, "testWA@abc.com", user.CustomerUserId)
+	assert.Nil(t, user.CustomerUserIdSource) // empty customer_user_id_source
+	C.SetAllowIdentificationOverwriteUsingSourceByProjectID("*")
+	status, _ = SDK.Identify(project.ID, &SDK.IdentifyPayload{UserId: userID, CustomerUserId: "testBA@abc.com", RequestSource: model.UserSourceHubspot}, true)
+	assert.Equal(t, http.StatusOK, status)
+	user, status = store.GetStore().GetUser(project.ID, userID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, "testBA@abc.com", user.CustomerUserId)
+	assert.Equal(t, model.UserSourceHubspot, *user.CustomerUserIdSource)
 }
 
 func TestSDKPageURL(t *testing.T) {

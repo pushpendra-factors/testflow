@@ -1093,7 +1093,7 @@ func GetConversionIndex(headers []string) int {
 func GetConversionIndexKPI(headers []string) int {
 	for index, val := range headers {
 		// matches the first conversion
-		if strings.HasSuffix(val, "- Conversion") {
+		if strings.Contains(val, "- Conversion") {
 			return index
 		}
 	}

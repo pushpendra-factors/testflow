@@ -66,6 +66,7 @@ func main() {
 	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
 
 	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
+	IngestionTimezoneEnabledProjectIDs := flag.String("ingestion_timezone_enabled_projects", "", "List of projectIds whose ingestion timezone is enabled.")
 
 	flag.Parse()
 	if *env != "development" &&
@@ -99,13 +100,14 @@ func main() {
 			Certificate: *memSQLCertificate,
 			AppName:     appName,
 		},
-		PrimaryDatastore:          *primaryDatastore,
-		RedisHost:                 *redisHost,
-		RedisPort:                 *redisPort,
-		RedisHostPersistent:       *redisHostPersistent,
-		RedisPortPersistent:       *redisPortPersistent,
-		SentryDSN:                 *sentryDSN,
-		CaptureSourceInUsersTable: *captureSourceInUsersTable,
+		PrimaryDatastore:                   *primaryDatastore,
+		RedisHost:                          *redisHost,
+		RedisPort:                          *redisPort,
+		RedisHostPersistent:                *redisHostPersistent,
+		RedisPortPersistent:                *redisPortPersistent,
+		SentryDSN:                          *sentryDSN,
+		CaptureSourceInUsersTable:          *captureSourceInUsersTable,
+		IngestionTimezoneEnabledProjectIDs: C.GetTokensFromStringListAsString(*IngestionTimezoneEnabledProjectIDs),
 	}
 	C.InitConf(config)
 	C.InitRedis(config.RedisHost, config.RedisPort)

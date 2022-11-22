@@ -267,6 +267,11 @@ type Configuration struct {
 	AllowIdentificationOverwriteUsingSourceByProjectID string
 	AllowHubspotPastEventsEnrichmentByProjectID        string
 	AllowHubspotContactListInsertByProjectID           string
+	IngestionTimezoneEnabledProjectIDs                 []string
+	AllowedSalesforceActivityTasksByProjectIDs         string
+	AllowedSalesforceActivityEventsByProjectIDs        string
+	DisallowedSalesforceActivityTasksByProjectIDs      string
+	DisallowedSalesforceActivityEventsByProjectIDs     string
 }
 
 type Services struct {
@@ -2028,6 +2033,16 @@ func IsDemoProject(projectId int64) bool {
 	return false
 }
 
+func IsIngestionTimezoneEnabled(projectId int64) bool {
+	for _, id := range configuration.IngestionTimezoneEnabledProjectIDs {
+		projectIdString := fmt.Sprintf("%v", projectId)
+		if id == projectIdString {
+			return true
+		}
+	}
+	return false
+}
+
 func EnableMQLAPI() bool {
 	return configuration.EnableMQLAPI
 }
@@ -2252,6 +2267,10 @@ func AllowIdentificationOverwriteUsingSource(projectID int64) bool {
 	return allowedProjectIDs[projectID]
 }
 
+func SetAllowIdentificationOverwriteUsingSourceByProjectID(value string) {
+	GetConfig().AllowIdentificationOverwriteUsingSourceByProjectID = value
+}
+
 func EnableEmailDomainBlocking() bool {
 	return configuration.EnableEmailBlockingFlag
 }
@@ -2325,4 +2344,42 @@ func ContactListInsertEnabled(projectId int64) bool {
 	}
 
 	return projectIDsMap[projectId]
+}
+
+func IsAllowedSalesforceActivityTasksByProjectID(projectId int64) bool {
+	allProjects, allowedProjects, disabledProjects := GetProjectsFromListWithAllProjectSupport(GetConfig().AllowedSalesforceActivityTasksByProjectIDs, GetConfig().DisallowedSalesforceActivityTasksByProjectIDs)
+	if allProjects {
+		return true
+	}
+
+	if exists := disabledProjects[projectId]; exists {
+		return false
+	}
+
+	if !allProjects {
+		if _, exists := allowedProjects[projectId]; !exists {
+			return false
+		}
+	}
+
+	return true
+}
+
+func IsAllowedSalesforceActivityEventsByProjectID(projectId int64) bool {
+	allProjects, allowedProjects, disabledProjects := GetProjectsFromListWithAllProjectSupport(GetConfig().AllowedSalesforceActivityEventsByProjectIDs, GetConfig().DisallowedSalesforceActivityEventsByProjectIDs)
+	if allProjects {
+		return true
+	}
+
+	if exists := disabledProjects[projectId]; exists {
+		return false
+	}
+
+	if !allProjects {
+		if _, exists := allowedProjects[projectId]; !exists {
+			return false
+		}
+	}
+
+	return true
 }

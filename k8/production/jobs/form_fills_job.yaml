@@ -3,9 +3,9 @@ kind: CronJob
 metadata:
   labels:
     nodePool: shared-persistent-pool
-  name: ingest-leadgen-job
+  name: form-fills-job
 spec:
-  schedule: "0 05 * * *" # In UTC
+  schedule: "*/15 * * * *" # In UTC
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 5
   failedJobsHistoryLimit: 5
@@ -20,8 +20,8 @@ spec:
           nodeSelector:
             cloud.google.com/gke-nodepool: shared-persistent-pool
           containers:
-          - name: ingest-leadgen-job
-            image: us.gcr.io/factors-production/ingest-leadgen-job:v0.01
+          - name: form-fills-job
+            image: us.gcr.io/factors-production/form-fills-job:v20221028-2181771f5
             imagePullPolicy: IfNotPresent
             args:
             - --env
@@ -33,30 +33,26 @@ spec:
             - --memsql_name
             - $(MEMSQL_DB)
             - --memsql_user
-            - $(MEMSQL_USER)
+            - $(MEMSQL_HEAVY_USER)
             - --memsql_pass
             - $(MEMSQL_PASSWORD)
             - --memsql_cert
             - $(MEMSQL_CERTIFICATE)
-            - --primary_datastore
-            - "memsql"
-            - --project_ids
-            - ""
+            - --redis_host
+            - $(REDIS_HOST)
+            - --redis_port
+            - $(REDIS_PORT)
             - --sentry_dsn
             - $(SENTRY_DSN)
-            - --json_key
-            - $(GOOGLE_SHEETS_SECRET)
-            - --ingestion_timezone_enabled_projects
-            - ''            
             envFrom:
             - configMapRef:
                 name: config-env
             - configMapRef:
                 name: config-memsql
             - secretRef:
-                name: secret-leadgen
-            - secretRef:
                 name: secret-memsql
             - secretRef:
                 name: secret-sentry
+            - configMapRef:
+                name: config-redis
           restartPolicy: OnFailure
