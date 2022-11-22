@@ -13,7 +13,7 @@ import (
 
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
-
+	
 	"factors/model/model"
 )
 
@@ -790,10 +790,18 @@ func (store *MemSQL) GetEventNamesOrderedByOccurenceAndRecency(projectID int64, 
 	}
 	for _, trackedEvent := range trackedEvents {
 		if(eventsMap[trackedEvent.Name] != true){
+			eventsMap[trackedEvent.Name] = true
 			eventStringWithGroups[U.FrequentlySeen] = append(eventStringWithGroups[U.FrequentlySeen], trackedEvent.Name)
 		}
 	}
 
+	allStandardEvents, _ := store.GetEventNamesByNames(projectID, U.STANDARD_EVENTS_IN_DROPDOWN)
+	for _, standardEvent := range allStandardEvents {
+		if(eventsMap[standardEvent.Name] != true){
+			eventsMap[standardEvent.Name] = true
+			eventStringWithGroups[U.FrequentlySeen] = append(eventStringWithGroups[U.FrequentlySeen], standardEvent.Name)
+		}
+	}
 	return eventStringWithGroups, nil
 }
 
