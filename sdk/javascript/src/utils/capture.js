@@ -18,6 +18,11 @@ function isPhone(phone) {
     return true;
 }
 
+// Subtle email check.
+function isPossibleEmail(value) {
+    return value.indexOf("@") > -1 && value.indexOf(".") > -1
+}
+
 // Checks for string on name and placeholder. Say company.
 // Cases: 
 // isFieldByMatch({name: 'first_name'}, 'name', 'first');
@@ -305,6 +310,6 @@ function getClickCapturePayloadFromElement(element) {
     return payload
 }
 
-module.exports = exports =  { isEmail, isPhone, isFieldByMatch, isPartOfForm,
+module.exports = exports =  { isEmail, isPhone, isPossibleEmail, isFieldByMatch, isPartOfForm,
     bindAllFormsOnSubmit, bindAllNonFormButtonOnClick, startBackgroundFormBinder,
     startBackgroundClickBinder, getClickCapturePayloadFromElement };

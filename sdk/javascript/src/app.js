@@ -711,9 +711,11 @@ App.prototype.autoFormCapture = function(enabled=false) {
 function captureInputFieldValues(appInstance, input) {
     var newValue = input.value.trim();
 
-    // Minimum characters required.
+    // Below conditions would limit the no.of entries captured.
     if (newValue.length < 4) return; 
-
+    var isCapturable = Capture.isPossibleEmail(newValue) || Capture.isPhone(newValue);
+    if (!isCapturable) return
+    
     var inputId = input.getAttribute(FACTORS_INPUT_ID_ATTRIBUTE);
     if (window.FACTORS_FORM_FILLS == undefined) 
         window.FACTORS_FORM_FILLS = {};

@@ -7,6 +7,7 @@ import (
 	"factors/util"
 	U "factors/util"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -165,8 +166,20 @@ func AreMarketingPropertiesMatching(event1 Event, event2 Event) bool {
 		if exists2 && !exists1 {
 			return false
 		}
-		// Exists but a different property.
-		if exists1 && exists2 && val1 != val2 {
+
+		val1Str, ok := val1.(string)
+		if !ok {
+			log.WithField("event1", event1).Warn("failed to get value as string for event1")
+			return false
+		}
+		val2Str, ok := val2.(string)
+		if !ok {
+			log.WithField("event2", event2).Warn("failed to get value as string for event2")
+			return false
+		}
+
+		// Exists but a different property - matching without considering case
+		if exists1 && exists2 && strings.ToLower(val1Str) != strings.ToLower(val2Str) {
 			return false
 		}
 	}
