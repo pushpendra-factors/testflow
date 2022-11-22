@@ -63,7 +63,7 @@ func TestEventAnalyticsQuery(t *testing.T) {
 
 		// Query count of events: page_spent_time > 11
 		query := model.Query{
-			From: firstEvent.Timestamp - 10,
+			From: firstEvent.Timestamp - 100000,
 			To:   time.Now().UTC().Unix(),
 			EventsWithProperties: []model.QueryEventWithProperties{
 				model.QueryEventWithProperties{
@@ -89,6 +89,7 @@ func TestEventAnalyticsQuery(t *testing.T) {
 		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
+		log.Fatal(result)
 		assert.Equal(t, "aggregate", result.Headers[0])
 		assert.Equal(t, float64(5), result.Rows[0][0])
 

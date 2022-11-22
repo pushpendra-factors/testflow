@@ -1,9 +1,12 @@
 package memsql
 
 import (
+	"errors"
 	"factors/model/model"
 	U "factors/util"
+	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -23,13 +26,17 @@ func (store *MemSQL) ExecuteKPIQueryForChannels(projectID int64, reqID string, k
 	resultHolder, statusCode := store.ExecuteChannelQueryV1(projectID, &channelsV1Query, reqID)
 	queryResult.Headers = model.GetTransformedHeadersForChannels(resultHolder.Headers, hasAnyGroupByTimestamp, hasAnyGroupBy)
 	queryResult.Rows = model.TransformDateTypeValueForChannels(resultHolder.Headers, resultHolder.Rows, hasAnyGroupByTimestamp, hasAnyGroupBy, channelsV1Query.Timezone)
+	// log.Fatal(queryResult)
 	if hasAnyGroupByTimestamp {
+		// log.Fatal(queryResult.Rows)
 		err = sanitizeChannelQueryResult(&queryResult, kpiQuery)
 		if err != nil {
+			log.Fatal(err)
 			logCtx.Warn(err)
 			return queryResults, http.StatusBadRequest
 		}
 	}
+	// log.Fatal("hello")
 	queryResults = append(queryResults, queryResult)
 	return queryResults, statusCode
 }
@@ -41,7 +48,7 @@ func sanitizeChannelQueryResult(result *model.QueryResult, query model.KPIQuery)
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	aggrIndex, timeIndex, err := GetTimstampAndAggregateIndexOnQueryResult(result.Headers)
-	// log.Fatal(aggrIndex, timeIndex, result.Headers, err)
+	log.Info("Hello ", aggrIndex, "Hell1 ", timeIndex, result.Headers, err)
 	if err != nil {
 		return err
 	}
@@ -72,12 +79,18 @@ func addMissingTimestampsOnChannelResultWithoutGroupByProps(result *model.QueryR
 
 	rowsByTimestamp := make(map[string][]interface{}, 0)
 	for _, row := range result.Rows {
-		ts := row[timestampIndex].(time.Time)
+		// _, check := row[timestampIndex].(time.Time)
+		// log.Fatal(check)
+		sTime := fmt.Sprintf("%v", row[timestampIndex])
+		ts, tErr := time.Parse("2006-01-02T00:00:00+00:00", sTime)
+		if tErr != nil {
+			return tErr
+		}
 		rowsByTimestamp[U.GetTimestampAsStrWithTimezone(ts, query.Timezone)] = row
 	}
 
 	timestamps, offsets := getAllTimestampsAndOffsetBetweenByType(query.From, query.To,
-		query.GroupByTimestamp, query.Timezone, isTimezoneEnabled)
+		query.GroupByTimestamp, query.Timezone)
 
 	filledResult := make([][]interface{}, 0, 0)
 	// range over timestamps between given from and to.
@@ -111,7 +124,7 @@ func addMissingTimestampsOnChannelResultWithGroupByProps(result *model.QueryResu
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
-	gkStart, gkEnd, err := getGroupKeyIndexesForSlicing(result.Headers)
+	gkStart, gkEnd, err := getChannelGroupKeyIndexesForSlicing(result.Headers)
 	if err != nil {
 		return err
 	}
@@ -123,8 +136,9 @@ func addMissingTimestampsOnChannelResultWithGroupByProps(result *model.QueryResu
 		encCols := make([]interface{}, 0, 0)
 		encCols = append(encCols, row[gkStart:gkEnd]...)
 
-		timestampWithTimezone := U.GetTimestampAsStrWithTimezone(
-			row[timestampIndex].(time.Time), query.Timezone)
+		// log.Fatal(row[timestampIndex])
+		ts := row[timestampIndex].(time.Time)
+		timestampWithTimezone := U.GetTimestampAsStrWithTimezone(ts, query.Timezone)
 		// encoded key with group values and timestamp from db row.
 		encCols = append(encCols, timestampWithTimezone)
 		encKey := getEncodedKeyForCols(encCols)
@@ -137,7 +151,7 @@ func addMissingTimestampsOnChannelResultWithGroupByProps(result *model.QueryResu
 	}
 
 	timestamps, offsets := getAllTimestampsAndOffsetBetweenByType(query.From, query.To,
-		query.GroupByTimestamp, query.Timezone, isTimezoneEnabled)
+		query.GroupByTimestamp, query.Timezone)
 
 	for _, row := range result.Rows {
 		for index, ts := range timestamps {
@@ -181,4 +195,39 @@ func addMissingTimestampsOnChannelResultWithGroupByProps(result *model.QueryResu
 
 	result.Rows = filledResult
 	return nil
+}
+
+func getChannelGroupKeyIndexesForSlicing(cols []string) (int, int, error) {
+	logFields := log.Fields{
+		"cols": cols,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	start := -1
+	end := -1
+
+	index := 0
+	for _, col := range cols {
+		if strings.HasPrefix(col, "campaign_") || strings.HasPrefix(col, "ad_group_") || strings.HasPrefix(col, "keyword_") || col == "datetime" {
+			if start == -1 {
+				start = index
+			} else {
+				end = index
+			}
+		}
+		index++
+	}
+
+	// single element.
+	if start > -1 && end == -1 {
+		end = start
+	}
+
+	if start == -1 {
+		return start, end, errors.New("no group keys found")
+	}
+
+	// end index + 1 reads till end index on slice.
+	end = end + 1
+
+	return start, end, nil
 }
