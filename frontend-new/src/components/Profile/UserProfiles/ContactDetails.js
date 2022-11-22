@@ -16,12 +16,14 @@ import LeftPanePropBlock from '../LeftPanePropBlock';
 import GroupSelect2 from '../../QueryComposer/GroupSelect2';
 
 function ContactDetails({
+  user,
   onCancel,
   userDetails,
   activeProject,
   currentProjectSettings,
   fetchProjectSettings,
   udpateProjectSettings,
+  getProfileUserDetails,
   userProperties
 }) {
   const [activities, setActivities] = useState([]);
@@ -122,6 +124,7 @@ function ContactDetails({
             onCancel();
             setCollapse(true);
             setGranularity('Daily');
+            setPropSelectOpen(false);
           }}
         />
         <Text type='title' level={4} weight='bold'>
@@ -135,6 +138,7 @@ function ContactDetails({
           onCancel();
           setCollapse(true);
           setGranularity('Daily');
+          setPropSelectOpen(false);
         }}
         icon={<SVG name='times' />}
       />
@@ -143,10 +147,21 @@ function ContactDetails({
 
   const handleOptionClick = (group, value) => {
     const timelinesConfig = { ...tlConfig };
-    timelinesConfig.user_config.props_to_show.push(value[1]);
-    udpateProjectSettings(activeProject.id, {
-      timelines_config: { ...timelinesConfig }
-    });
+    if (!timelinesConfig.user_config.props_to_show.includes(value[1])) {
+      timelinesConfig.user_config.props_to_show.push(value[1]);
+      udpateProjectSettings(activeProject.id, {
+        timelines_config: { ...timelinesConfig }
+      }).then(() =>
+        getProfileUserDetails(
+          activeProject?.id,
+          user?.identity,
+          user?.is_anonymous,
+          currentProjectSettings?.timelines_config
+        )
+      );
+    }
+
+    setPropSelectOpen(false);
   };
 
   const onDelete = (option) => {
@@ -193,18 +208,20 @@ function ContactDetails({
       </div>
     );
 
-  const renderAddNewProp = () => (
-    <div>
-      <Button
-        type='link'
-        icon={<SVG name='plus' color='purple' />}
-        onClick={() => setPropSelectOpen(true)}
-      >
-        Add property
-      </Button>
-      {selectProps()}
-    </div>
-  );
+  const renderAddNewProp = () =>
+    currentProjectSettings?.timelines_config?.user_config?.props_to_show
+      ?.length < 5 ? (
+      <div>
+        <Button
+          type='link'
+          icon={<SVG name='plus' color='purple' />}
+          onClick={() => setPropSelectOpen(!propSelectOpen)}
+        >
+          Add property
+        </Button>
+        {selectProps()}
+      </div>
+    ) : null;
 
   const renderLeftPane = () => (
     <div className='fa-timeline-content__leftpane'>

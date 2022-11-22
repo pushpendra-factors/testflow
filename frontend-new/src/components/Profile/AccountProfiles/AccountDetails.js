@@ -16,12 +16,14 @@ import LeftPanePropBlock from '../LeftPanePropBlock';
 import GroupSelect2 from '../../QueryComposer/GroupSelect2';
 
 function AccountDetails({
+  accountId,
   onCancel,
   accountDetails,
   activeProject,
   currentProjectSettings,
   fetchProjectSettings,
   udpateProjectSettings,
+  getProfileAccountDetails,
   userProperties,
   groupProperties
 }) {
@@ -79,18 +81,22 @@ function AccountDetails({
       }
       return retObj;
     });
+    userPropsWithEnableKey.sort((a, b) => b.enabled - a.enabled);
     setCheckListUserProps(userPropsWithEnableKey);
   }, [currentProjectSettings, userProperties]);
 
   const handlePropChange = (option) => {
     const timelinesConfig = { ...currentProjectSettings.timelines_config };
-    // if (option.enabled) {
     timelinesConfig.account_config.user_prop_to_show = option.prop_name;
-    // }
     udpateProjectSettings(activeProject.id, {
       timelines_config: { ...timelinesConfig }
-    });
-    getProfileAccountDetails(activeProject.id);
+    }).then(() =>
+      getProfileAccountDetails(
+        activeProject.id,
+        accountId,
+        currentProjectSettings?.timelines_config
+      )
+    );
   };
 
   const handleEventsChange = (option) => {
@@ -151,10 +157,19 @@ function AccountDetails({
 
   const handleOptionClick = (group, value) => {
     const timelinesConfig = { ...tlConfig };
-    timelinesConfig.account_config.account_props_to_show.push(value[1]);
-    udpateProjectSettings(activeProject.id, {
-      timelines_config: { ...timelinesConfig }
-    });
+    if (!timelinesConfig.user_config.props_to_show.includes(value[1])) {
+      timelinesConfig.account_config.account_props_to_show.push(value[1]);
+      udpateProjectSettings(activeProject.id, {
+        timelines_config: { ...timelinesConfig }
+      }).then(() =>
+        getProfileAccountDetails(
+          activeProject.id,
+          accountId,
+          currentProjectSettings?.timelines_config
+        )
+      );
+    }
+    setPropSelectOpen(false);
   };
 
   const onDelete = (option) => {
@@ -181,6 +196,7 @@ function AccountDetails({
             setGranularity('Daily');
             setActivities([]);
             setCollapseAll(true);
+            setPropSelectOpen(false);
           }}
         />
         <Text type='title' level={4} weight='bold'>
@@ -195,6 +211,7 @@ function AccountDetails({
           setGranularity('Daily');
           setActivities([]);
           setCollapseAll(true);
+          setPropSelectOpen(false);
         }}
         icon={<SVG name='times' />}
       />
@@ -249,18 +266,20 @@ function AccountDetails({
       </div>
     );
 
-  const renderAddNewProp = () => (
-    <div>
-      <Button
-        type='link'
-        icon={<SVG name='plus' color='purple' />}
-        onClick={() => setPropSelectOpen(true)}
-      >
-        Add property
-      </Button>
-      {selectProps()}
-    </div>
-  );
+  const renderAddNewProp = () =>
+    currentProjectSettings?.timelines_config?.account_config
+      ?.account_props_to_show?.length < 5 ? (
+      <div>
+        <Button
+          type='link'
+          icon={<SVG name='plus' color='purple' />}
+          onClick={() => setPropSelectOpen(!propSelectOpen)}
+        >
+          Add property
+        </Button>
+        {selectProps()}
+      </div>
+    ) : null;
 
   const renderLeftPane = () => (
     <div className='fa-timeline-content__leftpane'>

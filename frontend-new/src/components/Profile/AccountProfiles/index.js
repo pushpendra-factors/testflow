@@ -33,6 +33,7 @@ function AccountProfiles({
   });
   const groupState = useSelector((state) => state.groups);
   const groupOpts = groupState?.data;
+  const [activeModalKey, setActiveModalKey] = useState('');
 
   const displayFilterOpts = {
     All: 'All Accounts',
@@ -204,13 +205,14 @@ function AccountProfiles({
       ) : accounts.data.length ? (
         <div>
           <Table
-            onRow={(user) => ({
+            onRow={(account) => ({
               onClick: () => {
                 getProfileAccountDetails(
                   activeProject.id,
-                  user.identity,
+                  account.identity,
                   currentProjectSettings?.timelines_config
                 );
+                setActiveModalKey(account.identity);
                 showModal();
               }
             })}
@@ -234,6 +236,7 @@ function AccountProfiles({
         closable={null}
       >
         <AccountDetails
+          accountId={activeModalKey}
           onCancel={handleCancel}
           accountDetails={accountDetails}
         />
