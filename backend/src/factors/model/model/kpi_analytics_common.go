@@ -559,7 +559,7 @@ func TransformCRMPropertiesToKPIConfigProperties(properties map[string][]string,
 				var displayName string
 				displayName, exists := propertiesToDisplayNames[propertyName]
 				if !exists {
-					displayName = propertyName
+					displayName = U.CreateVirtualDisplayName(propertyName)
 				}
 				tempKPIConfigProperty = map[string]string{
 					"name":         propertyName,
