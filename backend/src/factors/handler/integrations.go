@@ -843,6 +843,7 @@ type LinkedinOauthToken struct {
 	ExpiresIn             uint64 `json:"expires_in"`
 	RefreshToken          string `json:"refresh_token"`
 	RefreshTokenExpiresIn uint64 `json:"refresh_token_expires_in"`
+	Scope                 string `json:"scope"`
 }
 
 /*
