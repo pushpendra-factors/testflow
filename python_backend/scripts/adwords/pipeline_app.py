@@ -58,7 +58,7 @@ def filter_doc_type(last_sync_infos, doc_type):
     if doc_type is None:
         return last_sync_infos
 
-    return [last_sync_info for last_sync_info in last_sync_infos if last_sync_info.get("doc_type_alias") in doc_type]
+    return [last_sync_info for last_sync_info in last_sync_infos if (last_sync_info.get("doc_type_alias") in doc_type and last_sync_info.get("doc_type_alias") != "search_performance_report")]
 
     # Extract cant be given with from and to.
 
