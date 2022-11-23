@@ -11,6 +11,7 @@ import settingsReducer from './settings';
 import templates from './templates';
 import insights from './insights';
 import kpi from './kpi';
+import pathAnalysis from './pathAnalysis';
 import groups from './groups';
 import timelines from './timelines';
 import dashboardTemplateReducer from './dashboard_templates';
@@ -32,6 +33,7 @@ const rootReducer = combineReducers({
   groups,
   timelines,
   dashboardTemplates: dashboardTemplateReducer,
+  pathAnalysis,
   attributionDashboard: attributionReducer
 });
 

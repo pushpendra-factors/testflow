@@ -14,7 +14,8 @@ module.exports = {
     hooks: path.resolve(__dirname, './src/hooks'),
     Views: path.resolve(__dirname, './src/Views'),
     Attribution: path.resolve(__dirname, './src/features/attribution'),
-    Context: path.resolve(__dirname, './src/contexts')
+    Context: path.resolve(__dirname, './src/contexts'),
+    Constants: path.resolve(__dirname, './src/constants')
   },
   eslintDirAlias: {
     map: [
@@ -28,6 +29,7 @@ module.exports = {
       ['Views', './src/Views'],
       ['Attribution', './src/features/attribution'],
       ['Context', './src/contexts']
+      ['Constants', './src/constants']
     ],
     extensions: ['.ts', '.tsx', '.js', '.jsx', '.json']
   }

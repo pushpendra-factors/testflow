@@ -68,6 +68,8 @@ const FactorsInsights = lazyWithRetry(() =>
 const CoreQuery = lazyWithRetry(() => import('../CoreQuery'));
 const Dashboard = lazyWithRetry(() => import('../Dashboard'));
 const Factors = lazyWithRetry(() => import('../Factors'));
+const PathAnalysis = lazyWithRetry(() => import('../PathAnalysis'));
+const PathAnalysisReport = lazyWithRetry(() => import('../PathAnalysis/PathAnalysisReport'));
 const Attribution = lazyWithRetry(() =>
   import('../../features/attribution/ui')
 );
@@ -104,10 +106,8 @@ function AppLayout({
     'baliga@factors.ai',
     'solutions@factors.ai',
     'sonali@factors.ai',
-    'praveenr@factors.ai'
-    //   'janani@factors.ai',
-    //   'praveenr@factors.ai',
-    //   'ashwin@factors.ai',
+    'praveenr@factors.ai',
+    'janani@factors.ai',
   ];
 
   const asyncCallOnLoad = useCallback(async () => {
@@ -226,12 +226,28 @@ function AppLayout({
                       name='Factors'
                       component={Factors}
                     />
+
                     <Route
                       exact
                       path='/explain/insights'
                       name='Factors'
                       component={FactorsInsights}
                     />
+
+{whiteListedAccounts.includes(activeAgent) ? <>
+                    <Route
+                      exact
+                      path='/path-analysis'
+                      name='Factors'
+                      component={PathAnalysis}
+                      />
+                    <Route
+                      exact
+                      path='/path-analysis/insights'
+                      name='Factors'
+                      component={PathAnalysisReport}
+                      />
+</>:  <Redirect to='/' />}
 
                     <Route path='/welcome' component={Welcome} />
 
