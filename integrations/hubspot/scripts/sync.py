@@ -486,7 +486,7 @@ def get_call_disposition(project_id, hubspot_request_handler):
         if not r.ok:
             log.error("Failure response %d from engagement dispositions on get_call_disposition", r.status_code)
             return
-        response = json.load(r.text)
+        response = json.loads(r.text)
         disposition_values = {}
         for data in response:
             if data["id"] and data["label"]:
