@@ -226,8 +226,8 @@ function QueryBlock({
           <FaSelect
             options={[
               ['Filter By', 'filter'],
-              ['Breakdown', 'groupby'],
-              [!event?.alias?.length ? 'Create Alias' : 'Edit Alias', 'edit']
+              // ['Breakdown', 'groupby'],
+              // [!event?.alias?.length ? 'Create Alias' : 'Edit Alias', 'edit']
             ]}
             optionClick={(val) => setAdditionalactions(val)}
             onClickOutside={() => setMoreOptions(false)}

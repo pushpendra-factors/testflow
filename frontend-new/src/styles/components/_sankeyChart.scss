@@ -150,44 +150,46 @@
 
 
 
+.fa-sankey--tooltip{
+  background-color: #fff;
+  /* height: 200px; */
+  min-width: 240px;
+  border-radius: 5px;
+  border: 1px #ddd solid;
+  padding: 10px 20px; 
+  display:flex;
+  flex-direction: row;
+  // z-index: 3000;
 
-.custom-div-style .wrapper{
-    /* width: 200px; */  
-  padding-top: 15px;
-    display:flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: flex-start;
-    flex-wrap:nowrap; 
+  -webkit-box-shadow: -4px 7px 22px -8px rgba(0,0,0,0.43);
+-moz-box-shadow: -4px 7px 22px -8px rgba(0,0,0,0.43);
+box-shadow: -4px 7px 22px -8px rgba(0,0,0,0.43);
+
+p{ 
+  font-size: 12px;
+  margin: 0px;
+  padding: 0px;
   
-    word-break: break-all;
-    overflow: hidden;
-    overflow-wrap: break-word;
-    hyphens: manual;
-    line-break: strict; 
-  }
-  
-  .custom-div-style .wrapper .ant-timeline-item{
+}
+
+.fa-sankey--tooltip-wrapper{
+  /* width: 200px; */  
+padding-top: 15px;
+  display:flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  flex-wrap:nowrap; 
+
+  word-break: break-all;
+  overflow: hidden;
+  overflow-wrap: break-word;
+  hyphens: manual;
+  line-break: strict; 
+  .ant-timeline-item{
     padding-bottom: 10px;
   }
-  .custom-div-style p{ 
-    font-size: 12px;
-    margin: 0px;
-    padding: 0px;
-    
-  }
-  .custom-div-style{ 
-    background-color: #fff;
-    /* height: 200px; */
-    min-width: 240px;
-    border-radius: 5px;
-    border: 1px #ddd solid;
-    padding: 10px 20px; 
-    display:flex;
-    flex-direction: row;
-  
-    -webkit-box-shadow: -4px 7px 22px -8px rgba(0,0,0,0.43);
-  -moz-box-shadow: -4px 7px 22px -8px rgba(0,0,0,0.43);
-  box-shadow: -4px 7px 22px -8px rgba(0,0,0,0.43);
-  }
-  
+
+}
+}
+ 

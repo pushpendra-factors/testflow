@@ -43,8 +43,8 @@ const CustomTooltip = ({ data }) => {
     const value = data?.point?.weight
     if (fromName && toName) {
         return (
-            <div className='custom-div-style'>
-                <div className='wrapper'>
+            <div className='fa-sankey--tooltip'>
+                <div className='fa-sankey--tooltip-wrapper'>
                     <Timeline>
                         <Timeline.Item><p>{StripUrl(fromName)}</p></Timeline.Item>
                         <Timeline.Item><p>{StripUrl(toName)}</p></Timeline.Item>
@@ -131,7 +131,7 @@ function Sankey({
         },
         chart:{
             overflowY: 'scroll',
-            height: chartData ? (chartData.length < 75 ? 300 :  chartData.length* 4) : 400,
+            height: chartData ? (chartData.length*4 < 400 ? 400 :  chartData.length* 4) : 400,
         },
 
         plotOptions: {
@@ -142,6 +142,7 @@ function Sankey({
                 nodePadding: 40,
                 borderRadius: 4,
                 centerInCategory: true,
+                backgroundColor: 'transparent',
                 color: '#82AEE0',
                 minLinkWidth: 2,
                 linkOpacity: 0.2,
@@ -155,6 +156,7 @@ function Sankey({
                     },
                 },
                 dataLabels: {
+                    backgroundColor: 'transparent',
                     align: 'left',
                     inside: false,
                     useHTML: true,
@@ -192,6 +194,7 @@ function Sankey({
                         mouseOver: false,
                     },
                 },
+  
 
                 //   label:{
                 //       useHTML: true,
@@ -204,14 +207,16 @@ function Sankey({
                 //   },
             },
         },
-        // Vishnu use this tooltip key to render tooltip
+        // Main tooltip
         tooltip: {
             backgroundColor: 'red',
+            borderColor: "transparent",
             borderWidth: 0,
             borderRadius: 2,
             shadow: 'none',
-            borderColor: "transparent",
+            outside: false,
             useHTML: true,
+            className: 'fa-sankey-diagram--tooltip',
             formatter() {
                 const self = this;
                 // console.log("tooltip-->", self)
@@ -226,25 +231,27 @@ function Sankey({
 
         series: [
             {
+                type: 'sankey',
                 keys: reverseChart ? ['to', 'from', 'weight'] : ['from', 'to', 'weight'],
                 // keys: ['from', 'to', 'weight'],
                 data: chartData ? chartData : [],
                 // data: transformDataFn(sankeyData),
-                type: 'sankey',
-                tooltip: {
-                    headerFormat: undefined,
-                    enabled: false,
-                    outside: true,
-                    className: 'custom-div',
-                    nodeFormat: undefined,
-                    // pointFormat:'{point.series.name} 22→ {point.toNode.name}: <b>{point.options.weight}</b>',
-                    // shared: true,
-                    shadow: false,
-                    useHTML: true,
-                    pointFormatter: function () {
-                        return ReactDOMServer.renderToString(<CustomTooltip />);
-                    },
-                },
+                clip:false,
+                centerInCategory: true,
+                className: "fa-sankey-diagram",
+
+                // tooltip: {
+                //     headerFormat: undefined,
+                //     enabled: false,
+                //     outside: false,
+                //     className: 'custom-div',
+                //     nodeFormat: undefined, 
+                //     shadow: false,
+                //     useHTML: true,
+                //     pointFormatter: function () {
+                //         return ReactDOMServer.renderToString(<CustomTooltip />);
+                //     },
+                // },
             },
         ],
     };

@@ -26,21 +26,22 @@ function AliasModal({ visible, onOk, onCancel, alias, event }) {
   return (
     <Modal
       title={null}
-      width={750}
+      width={520}
       visible={visible}
       footer={null}
       className={'fa-modal--regular p-6'}
-      closable={false}
+      closable={false} 
     >
-      <div className='p-6'>
-        <Text extraClass='m-0' type={'title'} level={3} weight={'bold'}>
+      <div className='px-4 py-2'>
+      <div className=''>
+        <Text extraClass='m-0' type={'title'} level={5} weight={'thin'}>
           Alias for...
         </Text>
-        <Text extraClass={'pt-0'} type={'paragraph'} weight={'bold'}>
+        <Text extraClass={'pt-0'} type={'title'} level={5} weight={'bold'}>
           {event}
         </Text>
       </div>
-      <div className='px-6'>
+      <div className='mt-4'>
         <Text extraClass={'pb-2'} mini type={'paragraph'}>
           Use this alias to easily reference this event with its filters on your
           report.
@@ -52,7 +53,7 @@ function AliasModal({ visible, onOk, onCancel, alias, event }) {
           onChange={handleUserInput}
         ></Input>
       </div>
-      <div className={`p-6 flex flex-row-reverse justify-between`}>
+      <div className={`mt-6 flex flex-row-reverse justify-between`}>
         <div>
           <Button className='mr-1' type='default' onClick={onCancelState}>
             Cancel
@@ -75,6 +76,7 @@ function AliasModal({ visible, onOk, onCancel, alias, event }) {
             Delete Alias
           </Button>
         ) : null}
+      </div>
       </div>
     </Modal>
   );
