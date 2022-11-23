@@ -88,38 +88,39 @@ func onboardingMailModoAPICall(agent *model.Agent) int {
 
 func onboardingSlackAPICall(agent *model.Agent) int {
 
-	logCtx := log.WithFields(log.Fields{"agent": agent})
+	if C.GetConfig().Env == C.PRODUCTION {
+		logCtx := log.WithFields(log.Fields{"agent": agent})
 
-	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, C.GetConfig().SlackOnboardingWebhookURL).
-		WithHeader("Content-Type", "application/json").
-		WithPostParams(map[string]interface{}{
-			"text":       "User " + agent.FirstName + " with email " + agent.Email + " just signed up",
-			"username":   "Signup User Actions",
-			"icon_emoji": ":golf:",
-		})
+		rb := C.NewRequestBuilderWithPrefix(http.MethodPost, C.GetConfig().SlackOnboardingWebhookURL).
+			WithHeader("Content-Type", "application/json").
+			WithPostParams(map[string]interface{}{
+				"text":       "User " + agent.FirstName + " with email " + agent.Email + " just signed up",
+				"username":   "Signup User Actions",
+				"icon_emoji": ":golf:",
+			})
 
-	req, err := rb.Build()
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to build request.")
-		return http.StatusInternalServerError
+		req, err := rb.Build()
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to build request.")
+			return http.StatusInternalServerError
+		}
+
+		client := http.Client{
+			Timeout: 1 * time.Minute,
+		}
+
+		resp, err := client.Do(req)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to make POST slack notification request.")
+			return http.StatusInternalServerError
+		}
+
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			logCtx.Error("Failed to execute POST slack notification request.")
+			return http.StatusInternalServerError
+		}
 	}
-
-	client := http.Client{
-		Timeout: 1 * time.Minute,
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to make POST slack notification request.")
-		return http.StatusInternalServerError
-	}
-
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		logCtx.Error("Failed to execute POST slack notification request.")
-		return http.StatusInternalServerError
-	}
-
 	return http.StatusOK
 }
 
