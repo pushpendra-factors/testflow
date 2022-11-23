@@ -2305,7 +2305,7 @@ func syncGroupDeal(projectID int64, enProperties *map[string]interface{}, docume
 			model.HubspotDocumentTypeCompany, []int{model.HubspotDocumentActionCreated})
 		if status != http.StatusFound {
 			logCtx.WithFields(log.Fields{"company_ids": companyIDList}).
-				Error("Failed to get company created documents for syncGroupDeal.")
+				Warning("Failed to get company created documents for syncGroupDeal.")
 		}
 
 		for i := range documents {
@@ -2513,6 +2513,10 @@ func getEngagementContactIds(engagementTypeStr string, engagement Engagements) (
 		var contact interface{}
 		if engagementTypeStr == EngagementTypeIncomingEmail {
 			contactIdInterface := engagement.Metadata["from"]
+			if contactIdInterface == nil {
+				logCtx.Warning("No from for INCOMING_EMAIL engagement. Will be marked as synced.")
+				return nil, http.StatusOK
+			}
 
 			fromMap, isConvert := contactIdInterface.(map[string]interface{})
 			if !isConvert {

@@ -826,12 +826,12 @@ func syncMissingObjectsForSalesforceActivities(projectID int64, documentIDs []st
 	salesforceDataClient, err := NewSalesforceDataClient(accessToken, instanceURL)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to build new salesforce data client on syncMissingObjectsForSalesforceActivities")
-		return nil, 0, true
+		return []string{"Failed to build new salesforce data client on syncMissingObjectsForSalesforceActivities"}, 0, true
 	}
 
 	if objectName != model.SalesforceDocumentTypeNameLead && objectName != model.SalesforceDocumentTypeNameContact {
 		logCtx.Error("Invalid docType for salesforce activities in syncMissingObjectsForSalesforceActivities.")
-		return nil, 0, true
+		return []string{"Invalid docType for salesforce activities in syncMissingObjectsForSalesforceActivities."}, 0, true
 	}
 
 	var failures []string
@@ -846,7 +846,7 @@ func syncMissingObjectsForSalesforceActivities(projectID int64, documentIDs []st
 	docs, errCode := store.GetStore().GetSyncedSalesforceDocumentByType(projectID, documentIDs, model.GetSalesforceDocTypeByAlias(objectName), true)
 	if errCode != http.StatusFound && errCode != http.StatusNotFound {
 		logCtx.Error(fmt.Sprintf("Failed to get salesforce %s documents in syncMissingObjectsForSalesforceActivities.", objectName))
-		return nil, 0, true
+		return []string{fmt.Sprintf("Failed to get salesforce %s documents in syncMissingObjectsForSalesforceActivities.", objectName)}, 0, true
 	}
 
 	docIDs := make([]string, 0)
@@ -862,14 +862,15 @@ func syncMissingObjectsForSalesforceActivities(projectID int64, documentIDs []st
 	paginatedObjects, err := salesforceDataClient.GetObjectRecordsByIDs(projectID, objectName, missingDocIDs)
 	if err != nil {
 		logCtx.WithError(err).Error(fmt.Sprintf("Failed to initialize salesforce data client for sync activities %s.", objectName))
-		return nil, 0, true
+		return []string{fmt.Sprintf("Failed to initialize salesforce data client for sync activities %s.", objectName)}, 0, true
 	}
 
 	var records []model.SalesforceRecord
 	for !done {
 		records, done, err = paginatedObjects.getNextBatch()
 		if err != nil {
-			return nil, 0, true
+			logCtx.WithError(err).Error("Failed to getNextBatch on syncMissingObjectsForSalesforceActivities.")
+			return []string{err.Error()}, 0, true
 		}
 
 		err = store.GetStore().BuildAndUpsertDocumentInBatch(projectID, objectName, records)
