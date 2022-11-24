@@ -110,8 +110,8 @@ func main() {
 
 	if *isWeeklyEnabled {
 		configs["modelType"] = T.ModelTypeWeek
-		configs["wetRun"] = wetRun
-		status := taskWrapper.TaskFuncWithProjectId("WIMailWeekly", *lookback, projectIdsArray, D.MailWeeklyInsights, configs)
+		configs["wetRun"] = *wetRun
+		status := taskWrapper.TaskFuncWithProjectId("WIMailInsights", *lookback, projectIdsArray, D.MailWeeklyInsights, configs)
 		log.Info(status)
 		if status["err"] != nil {
 			C.PingHealthcheckForFailure(healthcheckPingID, status)

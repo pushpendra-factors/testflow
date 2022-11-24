@@ -3,7 +3,7 @@ kind: CronJob
 metadata:
   labels:
     nodePool: factors-staging-node-pool
-  name: weekly-insights-job
+  name: weekly-insights-mailer-run-job
 spec:
   schedule: "1 2 3 4 5" # In UTC
   successfulJobsHistoryLimit: 5
@@ -19,7 +19,7 @@ spec:
           nodeSelector:
             cloud.google.com/gke-nodepool: factors-staging-node-pool
           containers:
-          - name: weekly-insights-job
+          - name: weekly-insights-mailer-run-job
             image: us.gcr.io/factors-staging/weekly-insights-job:1.0
             imagePullPolicy: IfNotPresent
             args:
@@ -27,8 +27,6 @@ spec:
             - $(ENV)
             - --bucket_name
             - $(BUCKET_NAME)
-            - --local_disk_tmp_dir
-            - /tmp
             - --memsql_host
             - $(MEMSQL_HOST)
             - --memsql_port
@@ -36,19 +34,19 @@ spec:
             - --memsql_name
             - $(MEMSQL_DB)
             - --memsql_user
-            - $(MEMSQL_HEAVY_USER)
+            - $(MEMSQL_USER)
             - --memsql_pass
             - $(MEMSQL_PASSWORD)
             - --memsql_cert
             - $(MEMSQL_CERTIFICATE)
+            - --primary_datastore
+            - memsql
             - --project_ids
-            - "399"
-            - --weekly_enabled 
-            - --lookback 
-            - "15" 
-            - --k 
-            - "1"
-            - --mailer_run
+            - "51"
+            - --weekly_enabled
+            - --lookback
+            - "21"
+            - --is_mailer_run
             envFrom:
             - configMapRef:
                 name: config-env

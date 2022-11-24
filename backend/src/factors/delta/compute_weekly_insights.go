@@ -769,7 +769,12 @@ func GetWeeklyInsights(projectId int64, agentUUID string, queryId int64, baseSta
 	if !ok {
 		kValue = 100
 	}
-	path, file := C.GetCloudManager().GetInsightsCpiFilePathAndName(projectId, U.GetDateOnlyFromTimestampZ(baseStartTime.Unix()), queryId, kValue, false)
+	path, file := "", ""
+	if(mailerRun == true){
+		path, file = C.GetCloudManager().GetInsightsCpiFilePathAndName(projectId, U.GetDateOnlyFromTimestampZ(baseStartTime.Unix()), queryId, kValue, true)
+	} else {
+		path, file = C.GetCloudManager().GetInsightsCpiFilePathAndName(projectId, U.GetDateOnlyFromTimestampZ(baseStartTime.Unix()), queryId, kValue, false)
+	}
 	fmt.Println("path/file:", path, file)
 	reader, err := C.GetCloudManager().Get(path, file)
 	if err != nil {
