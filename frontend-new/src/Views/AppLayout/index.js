@@ -234,21 +234,6 @@ function AppLayout({
                       component={FactorsInsights}
                     />
 
-{whiteListedAccounts.includes(activeAgent) ? <>
-                    <Route
-                      exact
-                      path='/path-analysis'
-                      name='Factors'
-                      component={PathAnalysis}
-                      />
-                    <Route
-                      exact
-                      path='/path-analysis/insights'
-                      name='Factors'
-                      component={PathAnalysisReport}
-                      />
-</>:  <Redirect to='/' />}
-
                     <Route path='/welcome' component={Welcome} />
 
                     <Route
@@ -315,6 +300,21 @@ function AppLayout({
                       path='/profiles/accounts'
                       component={AccountProfiles}
                     />
+
+                     {whiteListedAccounts.includes(activeAgent) && (<>
+                    <Route
+                      path='/path-analysis'
+                      name='PathAnalysis'
+                      exact
+                      component={PathAnalysis}
+                      />
+                    <Route
+                      path='/path-analysis/insights'
+                      name='PathAnalysisInsights'
+                      exact
+                      component={PathAnalysisReport}
+                      />
+                    </>)} 
 
                     {!demoProjectId.includes(active_project?.id) ? (
                       <Route path='/project-setup' component={SetupAssist} />
