@@ -104,15 +104,14 @@ export const getTableColumns = (
   page,
   eventNames,
   userPropNames,
-  eventPropNames
+  eventPropertiesDisplayNames
 ) => {
   const breakdownColumns = breakdown.map((e) => {
-    const displayTitle =
-      e.prop_category === 'user'
-        ? userPropNames[e.property] || e.property
-        : e.prop_category === 'event'
-        ? eventPropNames[e.property] || e.property
-        : e.property;
+    const displayTitle = getBreakdownDisplayName({
+      breakdown: e,
+      userPropNames,
+      eventPropertiesDisplayNames
+    });
     return {
       title: getClickableTitleSorter(
         displayTitle,
@@ -257,7 +256,7 @@ export const getDateBasedColumns = (
   handleSorting,
   frequency,
   userPropNames,
-  eventPropNames,
+  eventPropertiesDisplayNames,
   comparisonApplied,
   compareCategories
 ) => {
@@ -274,12 +273,11 @@ export const getDateBasedColumns = (
     width: 150
   };
   const breakdownColumns = breakdown.map((e) => {
-    const displayTitle =
-      e.prop_category === 'user'
-        ? userPropNames[e.property] || e.property
-        : e.prop_category === 'event'
-        ? eventPropNames[e.property] || e.property
-        : e.property;
+    const displayTitle = getBreakdownDisplayName({
+      breakdown: e,
+      userPropNames,
+      eventPropertiesDisplayNames
+    });
 
     return {
       title: getClickableTitleSorter(
@@ -604,13 +602,13 @@ export const getDataInHorizontalBarChartFormat = (
 export const getHorizontalBarChartColumns = (
   breakdown,
   userPropNames,
-  eventPropNames
+  eventPropertiesDisplayNames
 ) => {
   const result = breakdown.map((e) => {
     const displayTitle = getBreakdownDisplayName({
       breakdown: e,
       userPropNames,
-      eventPropNames
+      eventPropertiesDisplayNames
     });
 
     return {

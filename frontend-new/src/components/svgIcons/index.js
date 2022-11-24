@@ -5501,6 +5501,15 @@ const SixSignalLogoSVG = ({ size = 24, extraClass }) => {
   );
 };
 
+const PathAnalysisSVG = ({ size = 24, extraClass, color }) => {
+  return ( 
+    <svg width={size} height={size} className={extraClass} viewBox="0 0 26 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M18 14H15C14.4375 14 14 13.5625 14 13C14 12.4688 14.4375 12 15 12H18C18 12 21 8.65625 21 7C21 5.34375 19.6562 4 18 4C16.3438 4 15 5.34375 15 7C15 7.8125 15.6875 9 16.4062 10H15C13.3438 10 12 11.375 12 13C12 14.6562 13.3438 16 15 16H18C18.5312 16 19 16.4688 19 17C19 17.5625 18.5312 18 18 18H10.7812C10.2812 18.7812 9.71875 19.5 9.3125 20H18C19.625 20 21 18.6562 21 17C21 15.375 19.625 14 18 14ZM18 6C18.5312 6 19 6.46875 19 7C19 7.5625 18.5312 8 18 8C17.4375 8 17 7.5625 17 7C17 6.46875 17.4375 6 18 6ZM8 12C6.34375 12 5 13.3438 5 15C5 16.6562 8 20 8 20C8 20 11 16.6562 11 15C11 13.3438 9.65625 12 8 12ZM8 16C7.4375 16 7 15.5625 7 15C7 14.4688 7.4375 14 8 14C8.53125 14 9 14.4688 9 15C9 15.5625 8.53125 16 8 16Z" fill={color}/>
+    </svg>
+    
+  );
+};
+
 export {
   BrandSVG,
   DeleteSVG,
@@ -5667,7 +5676,8 @@ export {
   LeadSquaredSVG,
   HandshakeSVG,
   SelectTemplatesBackgroundChartSVG,
+  PathAnalysisSVG,
   AttributionHomeBackgroundSVG,
   AttributionReportsBackgroundSVG,
-  SixSignalLogoSVG
+  SixSignalLogoSVG,
 };

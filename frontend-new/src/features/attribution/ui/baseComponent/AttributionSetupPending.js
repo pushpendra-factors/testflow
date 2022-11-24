@@ -1,10 +1,12 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useHistory } from 'react-router-dom';
 import { Button } from 'antd';
 import { SVG, Text } from 'Components/factorsComponents';
 import styles from './index.module.scss';
+import { ABOUT_ATTRIBUTION_LINK } from 'Attribution/utils/constants';
 
 function AttributionSetupPending() {
+  const history = useHistory();
   return (
     <div
       className={`flex flex-col justify-center items-center m-auto ${styles.contentBody}`}
@@ -35,7 +37,11 @@ function AttributionSetupPending() {
           button below.
         </Text>
         <div className='flex gap-8'>
-          <Button type='primary' size='large'>
+          <Button
+            type='primary'
+            size='large'
+            onClick={() => history.push('/settings/attribution')}
+          >
             Setup Now
           </Button>
           <Link
@@ -43,8 +49,7 @@ function AttributionSetupPending() {
             style={{ color: `#1d89ff` }}
             target='_blank'
             to={{
-              pathname:
-                'https://help.factors.ai/en/articles/5192428-multi-touch-attribution'
+              pathname: ABOUT_ATTRIBUTION_LINK
             }}
           >
             Learn More <SVG size={20} name='Arrowright' color='#1d89ff' />

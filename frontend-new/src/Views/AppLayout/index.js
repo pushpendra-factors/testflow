@@ -10,10 +10,12 @@ import Highcharts from 'highcharts';
 import {
   fetchProjects,
   setActiveProject,
-  fetchDemoProject
+  fetchDemoProject,
+  fetchProjectSettings
 } from 'Reducers/global';
 import customizeHighCharts from 'Utils/customizeHighcharts';
 import {
+  fetchEventDisplayNames,
   // fetchAttrContentGroups,
   fetchGroups,
   fetchQueries
@@ -23,6 +25,7 @@ import {
   fetchAttrContentGroups,
   fetchSmartPropertyRules
 } from 'Attribution/state/services';
+import { ATTRIBUTION_ROUTES } from 'Attribution/utils/constants';
 import {
   getUserProperties,
   getEventProperties,
@@ -59,13 +62,14 @@ import InsightsSettings from '../Settings/ProjectSettings/InsightsSettings';
 import DashboardTemplates from '../DashboardTemplates';
 import { fetchTemplates } from '../../reducers/dashboard_templates/services';
 import Sharing from '../Settings/ProjectSettings/Sharing';
-
 const FactorsInsights = lazyWithRetry(() =>
   import('../Factors/FactorsInsightsNew')
 );
 const CoreQuery = lazyWithRetry(() => import('../CoreQuery'));
 const Dashboard = lazyWithRetry(() => import('../Dashboard'));
 const Factors = lazyWithRetry(() => import('../Factors'));
+const PathAnalysis = lazyWithRetry(() => import('../PathAnalysis'));
+const PathAnalysisReport = lazyWithRetry(() => import('../PathAnalysis/PathAnalysisReport'));
 const Attribution = lazyWithRetry(() =>
   import('../../features/attribution/ui')
 );
@@ -81,7 +85,8 @@ function AppLayout({
   getGroupProperties,
   fetchWeeklyIngishtsMetaData,
   setActiveProject,
-  fetchDemoProject
+  fetchDemoProject,
+  fetchProjectSettings
 }) {
   const [dataLoading, setDataLoading] = useState(true);
   const [demoProjectId, setDemoProjectId] = useState(EMPTY_ARRAY);
@@ -101,10 +106,8 @@ function AppLayout({
     'baliga@factors.ai',
     'solutions@factors.ai',
     'sonali@factors.ai',
-    'praveenr@factors.ai'
-    //   'janani@factors.ai',
-    //   'praveenr@factors.ai',
-    //   'ashwin@factors.ai',
+    'praveenr@factors.ai',
+    'janani@factors.ai',
   ];
 
   const asyncCallOnLoad = useCallback(async () => {
@@ -159,6 +162,8 @@ function AppLayout({
       fetchWeeklyIngishtsMetaData(active_project?.id);
       dispatch(fetchAttrContentGroups(active_project?.id));
       dispatch(fetchTemplates());
+      fetchProjectSettings(active_project?.id);
+      dispatch(fetchEventDisplayNames({ projectId: active_project?.id }));
     }
   }, [dispatch, active_project]);
 
@@ -221,6 +226,7 @@ function AppLayout({
                       name='Factors'
                       component={Factors}
                     />
+
                     <Route
                       exact
                       path='/explain/insights'
@@ -228,10 +234,28 @@ function AppLayout({
                       component={FactorsInsights}
                     />
 
+{whiteListedAccounts.includes(activeAgent) ? <>
+                    <Route
+                      exact
+                      path='/path-analysis'
+                      name='Factors'
+                      component={PathAnalysis}
+                      />
+                    <Route
+                      exact
+                      path='/path-analysis/insights'
+                      name='Factors'
+                      component={PathAnalysisReport}
+                      />
+</>:  <Redirect to='/' />}
+
                     <Route path='/welcome' component={Welcome} />
 
-                    
-                    <Route path="/template" name="dashboardSettings" component={DashboardTemplates} />
+                    <Route
+                      path='/template'
+                      name='dashboardSettings'
+                      component={DashboardTemplates}
+                    />
 
                     {(window.document.domain === 'app.factors.ai' &&
                       whiteListedAccounts.includes(activeAgent)) ||
@@ -239,7 +263,7 @@ function AppLayout({
                     window.document.domain === 'factors-dev.com' ? (
                       <Route
                         // exact
-                        path='/attribution'
+                        path={ATTRIBUTION_ROUTES.base}
                         name='attribution'
                         component={Attribution}
                       />
@@ -334,7 +358,8 @@ const mapDispatchToProps = (dispatch) =>
       getGroupProperties,
       fetchWeeklyIngishtsMetaData,
       setActiveProject,
-      fetchDemoProject
+      fetchDemoProject,
+      fetchProjectSettings
     },
     dispatch
   );

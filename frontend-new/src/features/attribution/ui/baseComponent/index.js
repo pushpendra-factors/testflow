@@ -1,31 +1,32 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { connect } from 'react-redux';
-import { bindActionCreators } from 'redux';
 import { useHistory } from 'react-router-dom';
 import { Spin } from 'antd';
-import { fetchProjectSettings } from 'Reducers/global';
+import { isEmpty } from 'lodash';
 
 import AttributionSetupDone from './AttributionSetupDone';
 import AttributionSetupPending from './AttributionSetupPending';
+import { ATTRIBUTION_ROUTES } from 'Attribution/utils/constants';
 
-function AttributionBaseComponent({ activeProject, fetchProjectSettings }) {
-  const [loading, setLoading] = useState(true);
+function AttributionBaseComponent({
+  currentProjectSettings,
+  currentProjectSettingsLoading
+}) {
   const history = useHistory();
 
   useEffect(() => {
-    const checkRedirection = async () => {
-      const res = await fetchProjectSettings(activeProject?.id);
-      if (res?.data?.attribution_config) {
-        history.replace('/attribution/reports');
+    if (
+      !currentProjectSettingsLoading &&
+      currentProjectSettings &&
+      !isEmpty(currentProjectSettings)
+    ) {
+      if (currentProjectSettings?.attribution_config) {
+        history.replace(ATTRIBUTION_ROUTES.reports);
       }
-      setLoading(false);
-    };
-    if (activeProject) {
-      checkRedirection();
     }
-  }, [activeProject]);
+  }, [currentProjectSettings, currentProjectSettingsLoading]);
 
-  if (loading)
+  if (currentProjectSettingsLoading)
     return (
       <div className='flex items-center justify-center h-full w-full'>
         <div className='w-full h-64 flex items-center justify-center'>
@@ -40,18 +41,8 @@ function AttributionBaseComponent({ activeProject, fetchProjectSettings }) {
 }
 
 const mapStateToProps = (state) => ({
-  activeProject: state.global.active_project
+  currentProjectSettings: state.global.currentProjectSettings,
+  currentProjectSettingsLoading: state.global.currentProjectSettingsLoading
 });
 
-const mapDispatchToProps = (dispatch) =>
-  bindActionCreators(
-    {
-      fetchProjectSettings
-    },
-    dispatch
-  );
-
-export default connect(
-  mapStateToProps,
-  mapDispatchToProps
-)(AttributionBaseComponent);
+export default connect(mapStateToProps, null)(AttributionBaseComponent);

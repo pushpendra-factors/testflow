@@ -3,6 +3,10 @@ import { Link, useHistory } from 'react-router-dom';
 import { Button } from 'antd';
 import { SVG, Text } from 'Components/factorsComponents';
 import styles from './index.module.scss';
+import {
+  ATTRIBUTION_BASICS_LINK,
+  ATTRIBUTION_ROUTES
+} from 'Attribution/utils/constants';
 
 function NoReports() {
   const history = useHistory();
@@ -22,7 +26,7 @@ function NoReports() {
         <Button
           type='primary'
           size='large'
-          onClick={() => history.push('/attribution/report')}
+          onClick={() => history.push(ATTRIBUTION_ROUTES.report)}
         >
           <SVG name='plus' color='white' className='w-full' /> Add Report
         </Button>
@@ -56,8 +60,7 @@ function NoReports() {
               style={{ color: `#1d89ff` }}
               target='_blank'
               to={{
-                pathname:
-                  'https://www.factors.ai/blog/attribution-reporting-what-you-can-learn-from-marketing-attribution-reports'
+                pathname: ATTRIBUTION_BASICS_LINK
               }}
             >
               Attribution Basics{' '}

@@ -5,7 +5,7 @@ import { DATE_FORMATS, QUERY_TYPE_KPI } from '../../../utils/constants';
 export const getBreakdownDisplayName = ({
   breakdown,
   userPropNames,
-  eventPropNames,
+  eventPropertiesDisplayNames,
   queryType,
   multipleEvents
 }) => {
@@ -16,12 +16,22 @@ export const getBreakdownDisplayName = ({
   }
   const property = breakdown.pr || breakdown.property;
   const propCategory = breakdown.en || breakdown.prop_category;
+  const sessionEventPropertiesDisplayNames = get(
+    eventPropertiesDisplayNames,
+    '$session',
+    {}
+  );
+  const globalEventPropertiesDisplayNames = get(
+    eventPropertiesDisplayNames,
+    'global',
+    {}
+  );
   const displayTitle =
     propCategory === 'user'
       ? get(userPropNames, property, property)
-      : propCategory === 'event'
-      ? get(eventPropNames, property, property)
-      : property;
+      : sessionEventPropertiesDisplayNames[property] ||
+        globalEventPropertiesDisplayNames[property] ||
+        property;
 
   if (breakdown.eventIndex && !multipleEvents) {
     return `${displayTitle} (event)`;

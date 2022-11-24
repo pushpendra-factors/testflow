@@ -172,3 +172,18 @@
 .fa-search-select{
     padding-bottom: 4px;
 }
+
+.fa-select-ghost--highlight-text
+{
+    .ant-select-selection-item{
+        color: $fa-color--brand-color;
+    }
+}
+.fa-select-ghost--bold
+{
+    .ant-select-selection-item{
+        font-weight: bold;
+        color: $fa-color--mono-color
+
+    }
+}

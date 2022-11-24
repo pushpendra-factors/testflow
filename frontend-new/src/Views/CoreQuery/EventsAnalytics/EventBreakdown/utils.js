@@ -2,7 +2,10 @@ import {
   SortResults,
   getClickableTitleSorter
 } from '../../../../utils/dataFormatter';
-import { parseForDateTimeLabel } from '../eventsAnalytics.helpers';
+import {
+  getBreakdownDisplayName,
+  parseForDateTimeLabel
+} from '../eventsAnalytics.helpers';
 import { getBreakDownGranularities } from '../SingleEventMultipleBreakdown/utils';
 import {
   MAX_ALLOWED_VISIBLE_PROPERTIES,
@@ -58,15 +61,14 @@ export const getTableColumns = (
   currentSorter,
   handleSorting,
   userPropNames,
-  eventPropNames
+  eventPropertiesDisplayNames
 ) => {
   const breakdownColumns = breakdown.map((e, index) => {
-    const displayTitle =
-      e.prop_category === 'user'
-        ? userPropNames[e.property] || e.property
-        : e.prop_category === 'event'
-        ? eventPropNames[e.property] || e.property
-        : e.property;
+    const displayTitle = getBreakdownDisplayName({
+      breakdown: e,
+      userPropNames,
+      eventPropertiesDisplayNames
+    });
 
     return {
       title: getClickableTitleSorter(

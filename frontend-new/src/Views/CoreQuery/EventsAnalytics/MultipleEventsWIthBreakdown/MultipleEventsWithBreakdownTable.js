@@ -1,6 +1,4 @@
-import React, {
-  useState, useCallback, useEffect, memo
-} from 'react';
+import React, { useState, useCallback, useEffect, memo } from 'react';
 import find from 'lodash/find';
 import {
   getTableColumns,
@@ -39,9 +37,14 @@ function MultipleEventsWithBreakdownTable({
   setVisibleSeriesData
 }) {
   const [searchText, setSearchText] = useState('');
-  const { eventNames, userPropNames, eventPropNames } = useSelector(
-    (state) => state.coreQuery
-  );
+  const {
+    eventNames,
+    userPropNames,
+    eventPropertiesDisplayNames: eventPropertiesDisplayNamesState
+  } = useSelector((state) => state.coreQuery);
+
+  const { data: eventPropertiesDisplayNames } =
+    eventPropertiesDisplayNamesState;
 
   const [columns, setColumns] = useState([]);
   const [dateBasedColumns, setDateBasedColumns] = useState([]);
@@ -57,7 +60,7 @@ function MultipleEventsWithBreakdownTable({
         page,
         eventNames,
         userPropNames,
-        eventPropNames
+        eventPropertiesDisplayNames
       )
     );
   }, [
@@ -67,7 +70,7 @@ function MultipleEventsWithBreakdownTable({
     page,
     eventNames,
     userPropNames,
-    eventPropNames
+    eventPropertiesDisplayNames
   ]);
 
   useEffect(() => {
@@ -83,7 +86,7 @@ function MultipleEventsWithBreakdownTable({
         handleDateSorting,
         durationObj.frequency,
         userPropNames,
-        eventPropNames
+        eventPropertiesDisplayNames
       )
     );
   }, [
@@ -93,7 +96,7 @@ function MultipleEventsWithBreakdownTable({
     handleDateSorting,
     durationObj.frequency,
     userPropNames,
-    eventPropNames
+    eventPropertiesDisplayNames
   ]);
 
   useEffect(() => {
@@ -136,7 +139,7 @@ function MultipleEventsWithBreakdownTable({
                 `${getBreakdownDisplayName({
                   breakdown: isCurrentKeyForBreakdown,
                   userPropNames,
-                  eventPropNames
+                  eventPropertiesDisplayNames
                 })} - ${key.split(' - ')[1]}`
               ] = rest[key];
               continue;
@@ -155,7 +158,7 @@ function MultipleEventsWithBreakdownTable({
     chartType,
     breakdown,
     userPropNames,
-    eventPropNames
+    eventPropertiesDisplayNames
   ]);
 
   const onSelectionChange = (selectedIncices) => {

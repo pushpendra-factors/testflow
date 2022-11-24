@@ -63,14 +63,14 @@ export const formatPivotData = ({
   queryType,
   eventNames,
   userPropNames,
-  eventPropNames
+  eventPropertiesDisplayNames
 }) => {
   try {
     const breakdownAttributes = breakdown.map((b) =>
       getBreakdownDisplayName({
         breakdown: b,
         userPropNames,
-        eventPropNames,
+        eventPropertiesDisplayNames,
         queryType
       })
     );
@@ -110,14 +110,14 @@ export const getValueOptions = ({ metrics, queryType, eventNames }) => {
 export const getColumnOptions = ({
   breakdown,
   userPropNames,
-  eventPropNames,
+  eventPropertiesDisplayNames,
   queryType
 }) => {
   return _.map(breakdown, (b) =>
     getBreakdownDisplayName({
       breakdown: b,
       userPropNames,
-      eventPropNames,
+      eventPropertiesDisplayNames,
       queryType
     })
   );
@@ -130,13 +130,13 @@ export const getRowOptions = ({
   queryType,
   eventNames,
   userPropNames,
-  eventPropNames
+  eventPropertiesDisplayNames
 }) => {
   const valueOptions = getValueOptions({ metrics, queryType, eventNames });
   const columnOptions = getColumnOptions({
     breakdown,
     userPropNames,
-    eventPropNames,
+    eventPropertiesDisplayNames,
     queryType
   });
   const allOptions = _.concat(valueOptions, columnOptions);
@@ -150,12 +150,12 @@ export const SortRowOptions = ({
   queryType,
   eventNames,
   userPropNames,
-  eventPropNames
+  eventPropertiesDisplayNames
 }) => {
   const breakdownOptions = getColumnOptions({
     breakdown,
     userPropNames,
-    eventPropNames,
+    eventPropertiesDisplayNames,
     queryType
   });
   const metricsOptions = getValueOptions({ metrics, queryType, eventNames });

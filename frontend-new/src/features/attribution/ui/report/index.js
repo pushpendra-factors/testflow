@@ -79,6 +79,8 @@ import ReportContent from 'Views/CoreQuery/AnalysisResultsPage/ReportContent';
 import useQuery from 'hooks/useQuery';
 import { Button, Spin } from 'antd';
 import WeeklyInsights from 'Views/CoreQuery/WeeklyInsights';
+import { useHistory } from 'react-router-dom';
+import { ATTRIBUTION_ROUTES } from '../../utils/constants';
 
 function CoreQuery({
   activeProject,
@@ -147,6 +149,7 @@ function CoreQuery({
   const [savedReportLoaded, setSavedReportLoaded] = useState(false);
 
   const dispatch = useDispatch();
+  const history = useHistory();
   const {
     eventGoal,
     touchpoint,
@@ -671,45 +674,57 @@ function CoreQuery({
   );
 
   useEffect(() => {
-    if (!queryId) return;
-    const record = savedQueries.find((sq) => sq.id === queryId);
-    if (
-      !record ||
-      !record?.query?.cl ||
-      record.query.cl !== QUERY_TYPE_ATTRIBUTION
-    )
-      return;
-    setQueryOpen(false);
-    const equivalentQuery = getAttributionStateFromRequestQuery(
-      record.query.query,
-      attr_dimensions,
-      content_groups,
-      kpiConfig
-    );
-    const newDateRange = { attr_dateRange: getDashboardDateRange() };
-    const usefulQuery = { ...equivalentQuery, ...newDateRange };
-    if (record.settings && record.settings.attributionMetrics) {
-      setAttributionMetrics(
-        getSavedAttributionMetrics(
-          JSON.parse(record.settings.attributionMetrics)
-        )
-      );
+    if (querySaved && querySaved?.id && !queryId) {
+      history.replace({
+        pathname: ATTRIBUTION_ROUTES.report,
+        search: `?${new URLSearchParams({ queryId: querySaved.id }).toString()}`
+      });
     }
-    delete usefulQuery.queryType;
-    initializeAttributionState(usefulQuery);
+  }, [querySaved]);
 
-    setQueryOptions((currData) => ({
-      ...currData,
-      group_analysis: record.query.query.analyze_type
-    }));
-    updateSavedQuerySettings(record.settings || {});
-    setSavedReportLoaded({
-      queryType: equivalentQuery.queryType,
-      queryName: record.title,
-      settings: record.settings,
-      query_id: record.key || record.id
-    });
-  }, [queryId, savedQueries]);
+  useEffect(() => {
+    const handleQueryIdChange = () => {
+      if (queryId && querySaved.id === queryId) return;
+      const record = savedQueries.find((sq) => sq.id === queryId);
+      if (
+        !record ||
+        !record?.query?.cl ||
+        record.query.cl !== QUERY_TYPE_ATTRIBUTION
+      )
+        return;
+      setQueryOpen(false);
+      const equivalentQuery = getAttributionStateFromRequestQuery(
+        record.query.query,
+        attr_dimensions,
+        content_groups,
+        kpiConfig
+      );
+      const newDateRange = { attr_dateRange: getDashboardDateRange() };
+      const usefulQuery = { ...equivalentQuery, ...newDateRange };
+      if (record.settings && record.settings.attributionMetrics) {
+        setAttributionMetrics(
+          getSavedAttributionMetrics(
+            JSON.parse(record.settings.attributionMetrics)
+          )
+        );
+      }
+      delete usefulQuery.queryType;
+      initializeAttributionState(usefulQuery);
+
+      setQueryOptions((currData) => ({
+        ...currData,
+        group_analysis: record.query.query.analyze_type
+      }));
+      updateSavedQuerySettings(record.settings || {});
+      setSavedReportLoaded({
+        queryType: equivalentQuery.queryType,
+        queryName: record.title,
+        settings: record.settings,
+        query_id: record.key || record.id
+      });
+    };
+    if (queryId) handleQueryIdChange();
+  }, [queryId, savedQueries, querySaved]);
 
   useEffect(() => {
     fetchProjectSettingsV1(activeProject.id);

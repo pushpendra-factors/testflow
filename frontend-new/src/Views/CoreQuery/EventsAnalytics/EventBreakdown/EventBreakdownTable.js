@@ -12,26 +12,32 @@ function EventBreakdownTable({
   setVisibleProperties,
   reportTitle = 'Events Analytics',
   sorter,
-  setSorter,
+  setSorter
 }) {
-  const { userPropNames, eventPropNames } = useSelector(
-    (state) => state.coreQuery
-  );
-  
+  const {
+    userPropNames,
+    eventPropertiesDisplayNames: eventPropertiesDisplayNamesState
+  } = useSelector((state) => state.coreQuery);
+  const { data: eventPropertiesDisplayNames } =
+    eventPropertiesDisplayNamesState;
+
   const [searchText, setSearchText] = useState('');
 
-  const handleSorting = useCallback((prop) => {
-    setSorter((currentSorter) => {
-      return getNewSorterState(currentSorter, prop);
-    });
-  }, [setSorter]);
+  const handleSorting = useCallback(
+    (prop) => {
+      setSorter((currentSorter) => {
+        return getNewSorterState(currentSorter, prop);
+      });
+    },
+    [setSorter]
+  );
 
   const columns = getTableColumns(
     breakdown,
     sorter,
     handleSorting,
     userPropNames,
-    eventPropNames,
+    eventPropertiesDisplayNames
   );
   const tableData = getTableData(data, breakdown, searchText, sorter);
 
@@ -40,7 +46,7 @@ function EventBreakdownTable({
       fileName: `${reportTitle}.csv`,
       data: tableData.map(({ index, ...rest }) => {
         return { ...rest };
-      }),
+      })
     };
   };
 
@@ -61,7 +67,7 @@ function EventBreakdownTable({
 
   const rowSelection = {
     selectedRowKeys,
-    onChange: onSelectionChange,
+    onChange: onSelectionChange
   };
 
   return (
