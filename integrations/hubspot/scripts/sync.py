@@ -794,13 +794,13 @@ def sync_all_contact_lists_v2(project_id, refresh_token, api_key, last_sync_time
     all_contacts_api_calls = 0
     recent_contacts_api_calls = 0
 
-    all_contact_lists = []
     
     if last_sync_timestamp == 0:
         contact_lists_contact_id_and_timestamp, all_contacts_api_calls = get_contact_lists_contact_ids(project_id, refresh_token, api_key)
     else:
         contact_lists_contact_id_and_timestamp, recent_contacts_api_calls = get_contact_lists_with_recent_contact_ids(project_id, refresh_token, api_key, list_ids, last_sync_timestamp)
 
+    log.warning("Downloaded %d contact_lists with id and timestamp for project_id %d", len(contact_lists_contact_id_and_timestamp), project_id)
     for listId in contact_lists_contact_id_and_timestamp:
         if listId not in contact_lists_info.keys():
             continue
@@ -812,15 +812,13 @@ def sync_all_contact_lists_v2(project_id, refresh_token, api_key, last_sync_time
             }
 
             contact_list.update(contact_lists_info[listId])
-            all_contact_lists.append(contact_list)
-        
-    if allow_buffer_before_insert_by_project_id(project_id):
-        create_all_contact_list_documents_with_buffer(all_contact_lists, False)
-        log.warning("Downloaded %d contact_lists.", len(all_contact_lists))
-    else:
-        create_all_documents(project_id, 'contact_list', all_contact_lists)
-        log.warning("Downloaded and created %d contact_lists.", len(all_contact_lists))
-    
+            if allow_buffer_before_insert_by_project_id(project_id):
+                create_all_contact_list_documents_with_buffer([contact_list], True)
+            else:
+                create_all_documents(project_id, 'contact_list', [contact_list])
+            log.warning("Downloaded contact_list %d contact_id %d for project_id %d", listId, contacts_info["contact_id"], project_id)
+
+    create_all_contact_list_documents_with_buffer([], False) ## flush any remainig docs in memory
     total_api_calls = contact_list_api_calls + all_contacts_api_calls + recent_contacts_api_calls
 
     return total_api_calls, start_timestamp
