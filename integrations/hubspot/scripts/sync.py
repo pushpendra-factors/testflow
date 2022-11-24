@@ -600,63 +600,6 @@ def sync_contacts(project_id, refresh_token, api_key, last_sync_timestamp, sync_
     create_all_contact_documents_with_buffer([],False) ## flush any remainig docs in memory
     return contact_api_calls, max_timestamp
 
-def sync_contacts_from_contact_lists(project_id, refresh_token, api_key, list_id, sync_all=False):
-    if sync_all:
-        # init sync all contacts.
-        url = "https://api.hubapi.com/contacts/v1/lists/"+str(list_id)+"/contacts/all?"
-        log.warning("Downloading all contacts for list_id : " + str(list_id) + "from project_id : "+ str(project_id) + ".")
-    else:
-        # sync recently updated and created contacts.
-        url = "https://api.hubapi.com/contacts/v1/lists/"+str(list_id)+"/contacts/recent?"
-        log.warning("Downloading recently created contacts for list_id : " + str(list_id) + "from project_id : "+ str(project_id) + ".")
-
-    has_more = True
-    count_contacts = 0
-    hubspot_request_handler = get_hubspot_request_handler(project_id, refresh_token, api_key)
-    parameter_dict = {'count': PAGE_SIZE, 'showListMemberships': True }
-
-    contact_ids, list_memberships = [], {}
-    count_contact_ids = 0
-
-    while has_more:
-        parameters = urllib.parse.urlencode(parameter_dict)
-        get_url = url + parameters
-
-        log.warning("Downloading contacts for list_id %d from url %s.", list_id, get_url)
-        response_dict = {}
-        
-        r = hubspot_request_handler(project_id, get_url)
-        if not r.ok:
-            if r.status_code == 414:
-                log.error("Failure response %d from hubspot on sync_contacts_from_contact_list", r.status_code)
-                break
-        
-        response_dict = json.loads(r.text)
-
-        has_more = response_dict['has-more']
-        contacts = response_dict['contacts']
-        
-        if sync_all:
-            parameter_dict['vidOffset'] = response_dict['vid-offset']
-        else:
-            parameter_dict['timeOffset'] = response_dict['time-offset']
-            parameter_dict['vidOffset'] = response_dict['vid-offset']
-        
-        for contact in contacts:
-            if "vid" not in contact:
-                log.error("Missing contact vid on contacts api")
-                continue
-            contact_ids.append(contact["vid"])
-            count_contact_ids += 1
-            for list_membership in contact["list-memberships"]:
-                if list_membership["static-list-id"] == list_id:
-                    list_memberships[contact["vid"]] = list_membership
-
-        count_contacts = count_contacts + len(contacts)
-        ("Downloaded %d contacts for list_id : %d. total %d.", len(contacts), list_id, count_contacts)
-    
-    return contact_ids, list_memberships
-
 def get_all_contact_lists_info(project_id, refresh_token, api_key):
     url = "https://api.hubapi.com/contacts/v1/lists?"
     all_contact_lists = {}
@@ -684,7 +627,7 @@ def get_all_contact_lists_info(project_id, refresh_token, api_key):
     
     return all_contact_lists, contact_list_api_calls
 
-def get_contact_lists_contact_ids(project_id, refresh_token, api_key):
+def get_contact_lists_contact_ids(project_id, refresh_token, api_key, contact_lists_info):
     # all contacts endpoint
     url = "https://api.hubapi.com/contacts/v1/lists/all/contacts/all?"
 
@@ -694,11 +637,13 @@ def get_contact_lists_contact_ids(project_id, refresh_token, api_key):
     url = url + urllib.parse.urlencode(parameters_dict)
     url = url + "&"+ "&".join([ "property="+property_name for property_name in required_properties ])
 
+    buffer_size = PAGE_SIZE * get_buffer_size_by_api_count()
+    create_all_contact_list_documents_with_buffer = get_create_all_documents_with_buffer(project_id,"contact_list", buffer_size)
+
     hubspot_request_handler = get_hubspot_request_handler(project_id, refresh_token, api_key)
 
     get_url = url
     contact_api_calls = 0
-    contact_lists_contact_ids = {}
     has_more = True
     while has_more:
         log.warning("Downloading contacts for contact lists for project_id %d from url %s.", project_id, get_url)
@@ -710,15 +655,20 @@ def get_contact_lists_contact_ids(project_id, refresh_token, api_key):
         response_dict = json.loads(r.text)
         contacts = response_dict['contacts']
         for contact in contacts:
-            contact_id = contact["vid"]
             list_memberships = contact.get("list-memberships")
             for membership in list_memberships:
                 if membership["is-member"]:
-                    listId = membership["static-list-id"]
-                    timestamp = membership["timestamp"]
-                    if listId not in contact_lists_contact_ids:
-                        contact_lists_contact_ids[listId] = []
-                    contact_lists_contact_ids[listId].append({"contact_id": contact_id, "timestamp": timestamp})
+                    contact_list = {
+                        "contact_id": contact["vid"],
+                        "contact_timestamp": membership["timestamp"],
+                    }
+
+                    contact_list.update(contact_lists_info[membership["static-list-id"]])
+                    if allow_buffer_before_insert_by_project_id(project_id):
+                        create_all_contact_list_documents_with_buffer([contact_list], True)
+                    else:
+                        create_all_documents(project_id, 'contact_list', [contact_list])
+                    log.warning("Downloaded contact_list %d contact_id %d for project_id %d", membership["static-list-id"], contact["vid"], project_id)
 
         contact_api_calls += 1
         has_more = response_dict.get('has-more')
@@ -728,17 +678,20 @@ def get_contact_lists_contact_ids(project_id, refresh_token, api_key):
                 break
             get_url = url + "&vidOffset="+ str(vid_offset)
     
-    return contact_lists_contact_ids, contact_api_calls
+    create_all_contact_list_documents_with_buffer([], False) ## flush any remainig docs in memory
+    return contact_api_calls
 
-def get_contact_lists_with_recent_contact_ids(project_id, refresh_token, api_key, list_ids, last_sync_timestamp=0):
+def get_contact_lists_with_recent_contact_ids(project_id, refresh_token, api_key, contact_lists_info, last_sync_timestamp=0):
     log.warning("Downloading recently created or modified contacts for project_id : "+ str(project_id) + ".")
     hubspot_request_handler = get_hubspot_request_handler(project_id, refresh_token, api_key)
 
-    contacts_lists_with_contact_ids_and_timestamp = {}
-    contact_api_calls = 0
+    buffer_size = PAGE_SIZE * get_buffer_size_by_api_count()
+    create_all_contact_list_documents_with_buffer = get_create_all_documents_with_buffer(project_id,"contact_list", buffer_size)
 
-    for id in list_ids:
-        url = "https://api.hubapi.com/contacts/v1/lists/"+str(id)+"/contacts/recent?"
+    contact_api_calls = 0
+    
+    for list_id in contact_lists_info.keys():
+        url = "https://api.hubapi.com/contacts/v1/lists/"+str(list_id)+"/contacts/recent?"
         parameters_dict = {"showListMemberships":"true","count":100}
         url = url + urllib.parse.urlencode(parameters_dict)
         get_url = url
@@ -753,18 +706,23 @@ def get_contact_lists_with_recent_contact_ids(project_id, refresh_token, api_key
                 log.error("Failure response %d from hubspot on sync_contacts", r.status_code)
                 break
 
-            response_dict = json.loads(r.text)            
+            response_dict = json.loads(r.text)
             contacts = response_dict['contacts']
             for contact in contacts:
-                contact_id = contact["vid"]
                 list_memberships = contact.get("list-memberships")
                 for membership in list_memberships:
                     if membership["is-member"]:
-                        listId = membership["static-list-id"]
-                        timestamp = membership["timestamp"]
-                        if listId not in contacts_lists_with_contact_ids_and_timestamp:
-                            contacts_lists_with_contact_ids_and_timestamp[listId] = []
-                        contacts_lists_with_contact_ids_and_timestamp[listId].append({"contact_id": contact_id, "timestamp": timestamp})
+                        contact_list = {
+                            "contact_id": contact["vid"],
+                            "contact_timestamp": membership["timestamp"],
+                        }
+
+                        contact_list.update(contact_lists_info[membership["static-list-id"]])
+                        if allow_buffer_before_insert_by_project_id(project_id):
+                            create_all_contact_list_documents_with_buffer([contact_list], True)
+                        else:
+                            create_all_documents(project_id, 'contact_list', [contact_list])
+                        log.warning("Downloaded contact_list %d contact_id %d for project_id %d", membership["static-list-id"], contact["vid"], project_id)
 
             contact_api_calls +=1
             has_more = response_dict.get('has-more')
@@ -779,26 +737,23 @@ def get_contact_lists_with_recent_contact_ids(project_id, refresh_token, api_key
                     break
                 get_url = get_url + "&timeOffset="+ str(pagination_timestamp)
     
-    return contacts_lists_with_contact_ids_and_timestamp, contact_api_calls
+    create_all_contact_list_documents_with_buffer([], False) ## flush any remainig docs in memory
+    return contact_api_calls
 
 
 def sync_all_contact_lists_v2(project_id, refresh_token, api_key, last_sync_timestamp=0):
     start_timestamp  = round(time.time() * 1000)
-    buffer_size = PAGE_SIZE * get_buffer_size_by_api_count()
-    create_all_contact_list_documents_with_buffer = get_create_all_documents_with_buffer(project_id,"contact_list", buffer_size)
 
     contact_lists_info, contact_list_api_calls = get_all_contact_lists_info(project_id, refresh_token, api_key)
     contact_lists_contact_id_and_timestamp = []
 
-    list_ids = list(contact_lists_info.keys())
     all_contacts_api_calls = 0
     recent_contacts_api_calls = 0
-
     
     if last_sync_timestamp == 0:
-        contact_lists_contact_id_and_timestamp, all_contacts_api_calls = get_contact_lists_contact_ids(project_id, refresh_token, api_key)
+        all_contacts_api_calls = get_contact_lists_contact_ids(project_id, refresh_token, api_key, contact_lists_info)
     else:
-        contact_lists_contact_id_and_timestamp, recent_contacts_api_calls = get_contact_lists_with_recent_contact_ids(project_id, refresh_token, api_key, list_ids, last_sync_timestamp)
+        contact_lists_contact_id_and_timestamp, recent_contacts_api_calls = get_contact_lists_with_recent_contact_ids(project_id, refresh_token, api_key, contact_lists_info, last_sync_timestamp)
 
     log.warning("Downloaded %d contact_lists with id and timestamp for project_id %d", len(contact_lists_contact_id_and_timestamp), project_id)
     for listId in contact_lists_contact_id_and_timestamp:
@@ -818,66 +773,9 @@ def sync_all_contact_lists_v2(project_id, refresh_token, api_key, last_sync_time
                 create_all_documents(project_id, 'contact_list', [contact_list])
             log.warning("Downloaded contact_list %d contact_id %d for project_id %d", listId, contacts_info["contact_id"], project_id)
 
-    create_all_contact_list_documents_with_buffer([], False) ## flush any remainig docs in memory
     total_api_calls = contact_list_api_calls + all_contacts_api_calls + recent_contacts_api_calls
 
-    return total_api_calls, start_timestamp
-
-def sync_contact_lists(project_id, refresh_token, api_key, sync_all=False):
-    start_time  = time.time()
-    url = "https://api.hubapi.com/contacts/v1/lists?"
-    parameter_dict = {"count":250 }
-
-    count = 0
-    has_more = True
-
-    buffer_size = PAGE_SIZE * get_buffer_size_by_api_count()
-    create_all_contact_list_documents_with_buffer = get_create_all_documents_with_buffer(project_id, "contact_list", buffer_size)
-    hubspot_request_handler = get_hubspot_request_handler(project_id, refresh_token, api_key)
-
-    while has_more:
-        parameters = urllib.parse.urlencode(parameter_dict)
-        get_url = url + parameters
-        
-        log.warning("Downloading contact lists for project_id %d from url %s.", project_id, get_url)
-        r = hubspot_request_handler(project_id, get_url)
-        if not r.ok:
-            log.error("Failure response %d from hubspot on sync_contact_lists", r.status_code)
-            return
-        response_dict = json.loads(r.text)
-        if "lists" not in response_dict:
-            raise Exception("Missing lists property key on contact_lists")
-    
-        lists = response_dict["lists"]
-        log.warning("Downloaded %d contact_lists.", len(lists))
-
-        for list in lists:
-            contact_ids, list_memberships = sync_contacts_from_contact_lists(project_id, refresh_token, api_key, list["listId"], sync_all)
-            if not r.ok:
-                log.error("Failure response %d from hubspot on get_contact_from_contact_lists in sync_contact_lists", r.status_code)
-                break
-
-            if contact_ids == []:
-                log.error("No contacts in list.")
-            list["contactIds"] = contact_ids
-            list["listMemberships"] = list_memberships
-        
-        count = count + len(lists)
-        if allow_buffer_before_insert_by_project_id(project_id):
-            create_all_contact_list_documents_with_buffer(lists, has_more)
-            log.warning("Downloaded %d contact_lists. total %d.", len(lists), count)
-        else:
-            create_all_documents(project_id, 'contact_list', lists)
-            log.warning("Downloaded and created %d contact_lists. total %d.", len(lists), count)
-        
-        has_more = response_dict['has-more']
-        if has_more:
-            parameter_dict["offset"] = response_dict['offset']
-    
-    end_time = time.time()
-    log.warning("Contact list v1 total time %s",end_time-start_time)
-    create_all_contact_list_documents_with_buffer([], False) ## flush any remainig docs in memory
-    return
+    return total_api_calls, start_timestamp        
 
 def add_paginated_associations(project_id, to_object_ids, next_page_url, hubspot_request_handler):
     while True:
