@@ -1524,6 +1524,11 @@ func getStartTimestamp(docType string) int64 {
 		return 0 // 1 January 1970 00:00:00
 	}
 
+	if docType == model.SalesforceDocumentTypeNameTask || docType == model.SalesforceDocumentTypeNameEvent {
+		currentTime := time.Now().AddDate(0, 0, -30).UTC()
+		return now.New(currentTime).BeginningOfDay().Unix() // get from last 30 days
+	}
+
 	currentTime := time.Now().AddDate(0, 0, -90).UTC()
 	return now.New(currentTime).BeginningOfDay().Unix() // get from last 90 days
 }

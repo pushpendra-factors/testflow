@@ -2348,10 +2348,6 @@ func ContactListInsertEnabled(projectId int64) bool {
 
 func IsAllowedSalesforceActivityTasksByProjectID(projectId int64) bool {
 	allProjects, allowedProjects, disabledProjects := GetProjectsFromListWithAllProjectSupport(GetConfig().AllowedSalesforceActivityTasksByProjectIDs, GetConfig().DisallowedSalesforceActivityTasksByProjectIDs)
-	if allProjects {
-		return true
-	}
-
 	if exists := disabledProjects[projectId]; exists {
 		return false
 	}
@@ -2367,10 +2363,6 @@ func IsAllowedSalesforceActivityTasksByProjectID(projectId int64) bool {
 
 func IsAllowedSalesforceActivityEventsByProjectID(projectId int64) bool {
 	allProjects, allowedProjects, disabledProjects := GetProjectsFromListWithAllProjectSupport(GetConfig().AllowedSalesforceActivityEventsByProjectIDs, GetConfig().DisallowedSalesforceActivityEventsByProjectIDs)
-	if allProjects {
-		return true
-	}
-
 	if exists := disabledProjects[projectId]; exists {
 		return false
 	}
