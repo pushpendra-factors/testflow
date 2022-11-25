@@ -42,9 +42,13 @@ function SingleEventSingleBreakdownTable({
   frequency
 }) {
   const [searchText, setSearchText] = useState('');
-  const { eventNames, userPropNames, eventPropNames } = useSelector(
-    (state) => state.coreQuery
-  );
+  const {
+    eventNames,
+    userPropNames,
+    eventPropertiesDisplayNames: eventPropertiesDisplayNamesState
+  } = useSelector((state) => state.coreQuery);
+  const { data: eventPropertiesDisplayNames } =
+    eventPropertiesDisplayNamesState;
   const [columns, setColumns] = useState([]);
   const [dateBasedColumns, setDateBasedColumns] = useState([]);
   const [tableData, setTableData] = useState([]);
@@ -97,7 +101,7 @@ function SingleEventSingleBreakdownTable({
         page,
         eventNames,
         userPropNames,
-        eventPropNames
+        eventPropertiesDisplayNames
       )
     );
   }, [
@@ -108,7 +112,7 @@ function SingleEventSingleBreakdownTable({
     handleSorting,
     eventNames,
     userPropNames,
-    eventPropNames
+    eventPropertiesDisplayNames
   ]);
 
   useEffect(() => {
@@ -124,7 +128,7 @@ function SingleEventSingleBreakdownTable({
         handleDateSorting,
         durationObj.frequency,
         userPropNames,
-        eventPropNames,
+        eventPropertiesDisplayNames,
         comparisonApplied,
         compareCategories
       )
@@ -136,7 +140,9 @@ function SingleEventSingleBreakdownTable({
     durationObj.frequency,
     handleDateSorting,
     userPropNames,
-    eventPropNames
+    eventPropertiesDisplayNames,
+    comparisonApplied,
+    compareCategories
   ]);
 
   useEffect(() => {

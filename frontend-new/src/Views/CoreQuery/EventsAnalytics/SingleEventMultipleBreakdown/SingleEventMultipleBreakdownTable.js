@@ -42,9 +42,13 @@ function SingleEventMultipleBreakdownTable({
   setVisibleSeriesData
 }) {
   const [searchText, setSearchText] = useState('');
-  const { eventNames, userPropNames, eventPropNames } = useSelector(
-    (state) => state.coreQuery
-  );
+  const {
+    eventNames,
+    userPropNames,
+    eventPropertiesDisplayNames: eventPropertiesDisplayNamesState
+  } = useSelector((state) => state.coreQuery);
+  const { data: eventPropertiesDisplayNames } =
+    eventPropertiesDisplayNamesState;
   const [columns, setColumns] = useState([]);
   const [dateBasedColumns, setDateBasedColumns] = useState([]);
   const [tableData, setTableData] = useState([]);
@@ -60,7 +64,7 @@ function SingleEventMultipleBreakdownTable({
         page,
         eventNames,
         userPropNames,
-        eventPropNames
+        eventPropertiesDisplayNames
       )
     );
   }, [
@@ -71,7 +75,7 @@ function SingleEventMultipleBreakdownTable({
     handleSorting,
     eventNames,
     userPropNames,
-    eventPropNames
+    eventPropertiesDisplayNames
   ]);
 
   useEffect(() => {
@@ -87,7 +91,7 @@ function SingleEventMultipleBreakdownTable({
         handleDateSorting,
         durationObj.frequency,
         userPropNames,
-        eventPropNames
+        eventPropertiesDisplayNames
       )
     );
   }, [
@@ -97,7 +101,7 @@ function SingleEventMultipleBreakdownTable({
     durationObj.frequency,
     handleDateSorting,
     userPropNames,
-    eventPropNames
+    eventPropertiesDisplayNames
   ]);
 
   useEffect(() => {
@@ -113,9 +117,7 @@ function SingleEventMultipleBreakdownTable({
     return {
       fileName: `${reportTitle}.csv`,
       data: activeTableData.map(
-        ({
-          index, label, value, name, data, marker, ...rest
-        }) => {
+        ({ index, label, value, name, data, marker, ...rest }) => {
           const result = {};
           for (const key in rest) {
             if (key === EVENT_COUNT_KEY) {
@@ -137,7 +139,7 @@ function SingleEventMultipleBreakdownTable({
                 `${getBreakdownDisplayName({
                   breakdown: isCurrentKeyForBreakdown,
                   userPropNames,
-                  eventPropNames
+                  eventPropertiesDisplayNames
                 })} - ${key.split(' - ')[1]}`
               ] = rest[key];
               continue;
@@ -157,7 +159,7 @@ function SingleEventMultipleBreakdownTable({
     breakdown,
     chartType,
     userPropNames,
-    eventPropNames
+    eventPropertiesDisplayNames
   ]);
 
   const selectedRowKeys = useCallback((rows) => {

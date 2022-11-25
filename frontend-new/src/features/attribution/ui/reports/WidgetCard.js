@@ -27,9 +27,12 @@ import {
 } from 'Views/Dashboard/utils';
 import { initialState } from 'Views/CoreQuery/utils';
 import { shouldDataFetch } from 'Utils/dataFormatter';
+import { useHistory } from 'react-router-dom';
+import { ATTRIBUTION_ROUTES } from '../../utils/constants';
 
 function WidgetCard({ unit, onDrop, durationObj }) {
   const { data: savedQueries } = useSelector((state) => state.queries);
+  const history = useHistory();
 
   const { active_project: activeProject } = useSelector(
     (state) => state.global
@@ -84,6 +87,15 @@ function WidgetCard({ unit, onDrop, durationObj }) {
       );
     }
   }, [unit.query.settings]);
+
+  const handleReportClick = () => {
+    if (unit?.query_id) {
+      history.push({
+        pathname: ATTRIBUTION_ROUTES.report,
+        search: `?${new URLSearchParams({ queryId: unit.query_id }).toString()}`
+      });
+    }
+  };
 
   //this part needs for for setting the resultState state variable for now which is used as dummy import in next component card content.
   const [resultState, setResultState] = useState(initialState);
@@ -316,7 +328,10 @@ function WidgetCard({ unit, onDrop, durationObj }) {
   // }, [getData, durationWithSavedFrequency]);
 
   return (
-    <div className={`py-3 flex ${styles.widgetCard_h} mx-auto`}>
+    <div
+      className={`py-3 flex ${styles.widgetCard_h} mx-auto`}
+      onClick={handleReportClick}
+    >
       <div
         // id={`card-${unit.id}`}
         // ref={cardRef}

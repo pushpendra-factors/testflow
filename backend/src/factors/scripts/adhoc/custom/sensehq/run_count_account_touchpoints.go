@@ -240,10 +240,18 @@ func addNumTouchPointsBeforeAndAfterConversion(projectID int64, touchPointEventI
 		arrayPlaceHolder := util.GetValuePlaceHolder(len(userIds))
 		arrayPlaceHolderValue := util.GetInterfaceList(userIds)
 
-		queryStr := "SELECT COUNT(events.id) FROM events WHERE events.project_id = ? AND events.event_name_id = ? AND JSON_EXTRACT_STRING(events.properties, ? ) = ? AND events.timestamp < ? AND events.user_id IN (" + arrayPlaceHolder + ")"
-		convertArrayPlaceHolderValue := append([]interface{}{projectID, touchPointEventId,
-			touchPointEventPropertiesFilterName, touchPointEventPropertiesFilterValue,
-			conversionTimestamp}, arrayPlaceHolderValue...)
+		queryStr := ""
+		var convertArrayPlaceHolderValue []interface{}
+		if touchPointEventPropertiesFilterName != "" {
+			queryStr = "SELECT COUNT(events.id) FROM events WHERE events.project_id = ? AND events.event_name_id = ? AND JSON_EXTRACT_STRING(events.properties, ? ) = ? AND events.timestamp < ? AND events.user_id IN (" + arrayPlaceHolder + ")"
+			convertArrayPlaceHolderValue = append([]interface{}{projectID, touchPointEventId,
+				touchPointEventPropertiesFilterName, touchPointEventPropertiesFilterValue,
+				conversionTimestamp}, arrayPlaceHolderValue...)
+		} else {
+			queryStr = "SELECT COUNT(events.id) FROM events WHERE events.project_id = ? AND events.event_name_id = ? AND events.timestamp < ? AND events.user_id IN (" + arrayPlaceHolder + ")"
+			convertArrayPlaceHolderValue = append([]interface{}{projectID, touchPointEventId,
+				conversionTimestamp}, arrayPlaceHolderValue...)
+		}
 		row := db.Raw(queryStr, convertArrayPlaceHolderValue...).Row()
 		err := row.Scan(&numConvertTouchpoints)
 		if err != nil {
@@ -252,10 +260,17 @@ func addNumTouchPointsBeforeAndAfterConversion(projectID int64, touchPointEventI
 		}
 		convertedAccounts[groupID][a_num_convert_touchpoints_key] = numConvertTouchpoints
 
-		queryStr = "SELECT COUNT(events.id) FROM events WHERE events.project_id = ? AND events.event_name_id = ? AND JSON_EXTRACT_STRING(events.properties, ? ) = ? AND events.timestamp > ? AND events.timestamp < ? AND events.user_id IN (" + arrayPlaceHolder + ")"
-		closeArrayPlaceHolderValue := append([]interface{}{projectID, touchPointEventId,
-			touchPointEventPropertiesFilterName, touchPointEventPropertiesFilterValue,
-			conversionTimestamp, closeTimestamp}, arrayPlaceHolderValue...)
+		var closeArrayPlaceHolderValue []interface{}
+		if touchPointEventPropertiesFilterName != "" {
+			queryStr = "SELECT COUNT(events.id) FROM events WHERE events.project_id = ? AND events.event_name_id = ? AND JSON_EXTRACT_STRING(events.properties, ? ) = ? AND events.timestamp > ? AND events.timestamp < ? AND events.user_id IN (" + arrayPlaceHolder + ")"
+			closeArrayPlaceHolderValue = append([]interface{}{projectID, touchPointEventId,
+				touchPointEventPropertiesFilterName, touchPointEventPropertiesFilterValue,
+				conversionTimestamp, closeTimestamp}, arrayPlaceHolderValue...)
+		} else {
+			queryStr = "SELECT COUNT(events.id) FROM events WHERE events.project_id = ? AND events.event_name_id = ? AND events.timestamp > ? AND events.timestamp < ? AND events.user_id IN (" + arrayPlaceHolder + ")"
+			closeArrayPlaceHolderValue = append([]interface{}{projectID, touchPointEventId,
+				conversionTimestamp, closeTimestamp}, arrayPlaceHolderValue...)
+		}
 		row = db.Raw(queryStr, closeArrayPlaceHolderValue...).Row()
 		err = row.Scan(&numCloseTouchpoints)
 		if err != nil {
@@ -361,10 +376,17 @@ func main() {
 		return
 	}
 
+	// Responded to Campaign Touchpoint.
 	// touchPointEventName := "$sf_campaign_member_updated"
-	touchPointEventId := "2404de5c-47eb-4ad7-8ea9-85b1cf9f1ce3"
-	touchPointEventPropertiesFilterName := "$salesforce_campaignmember_status"
-	touchPointEventPropertiesFilterValue := "Responded"
+	// touchPointEventId := "2404de5c-47eb-4ad7-8ea9-85b1cf9f1ce3"
+	// touchPointEventPropertiesFilterName := "$salesforce_campaignmember_status"
+	// touchPointEventPropertiesFilterValue := "Responded"
+
+	// Added to Campaign Touchpoint.
+	//touchPointEventName := "$sf_campaign_member_created"
+	touchPointEventId := "ba114a2e-123e-4be9-8e25-cc389f9ee0f6"
+	touchPointEventPropertiesFilterName := ""
+	touchPointEventPropertiesFilterValue := ""
 	if err := addNumTouchPointsBeforeAndAfterConversion(*projectID, touchPointEventId,
 		touchPointEventPropertiesFilterName, touchPointEventPropertiesFilterValue, convertedAccounts); err != nil {
 		logCtx.WithFields(log.Fields{"error": err}).Error("Failed getting num touchpoints")

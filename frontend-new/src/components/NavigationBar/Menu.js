@@ -12,10 +12,11 @@ import { getActiveDomain } from '@sentry/hub';
 const { SubMenu } = Menu;
 
 const whiteListedAccounts = [
-  'solutions@factors.ai',
   'baliga@factors.ai',
+  'solutions@factors.ai',
   'sonali@factors.ai',
   'praveenr@factors.ai',
+  'janani@factors.ai',
 ];
 
 const MenuItems = {
@@ -82,6 +83,9 @@ function SiderMenu({
       setOpenKeys(latestOpenKey ? [latestOpenKey] : []);
     }
   };
+
+
+
 
   const renderSubmenu = (title) => {
     if (title === 'configure') {
@@ -251,6 +255,14 @@ function SiderMenu({
       >
         <b>Explain</b>
       </Menu.Item>
+
+      {whiteListedAccounts.includes(activeAgent) && <Menu.Item
+        className={styles.menuitems}
+        key='/path-analysis'
+        icon={setIcon('PathAnalysis')}
+      >
+        <b>Path Analysis</b>
+      </Menu.Item> }
 
       {collapsed ? (
         <Popover

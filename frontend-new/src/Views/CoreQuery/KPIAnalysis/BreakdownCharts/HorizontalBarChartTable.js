@@ -16,9 +16,12 @@ function HorizontalBarChartTable({
   comparisonApplied = false
 }) {
   const [loading, setLoading] = useState(true);
-  const { userPropNames, eventPropNames } = useSelector(
-    (state) => state.coreQuery
-  );
+  const {
+    userPropNames,
+    eventPropertiesDisplayNames: eventPropertiesDisplayNamesState
+  } = useSelector((state) => state.coreQuery);
+  const { data: eventPropertiesDisplayNames } =
+    eventPropertiesDisplayNamesState;
   const [columns, setColumns] = useState([]);
   const [data, setData] = useState([]);
 
@@ -27,11 +30,11 @@ function HorizontalBarChartTable({
       getHorizontalBarChartColumns(
         breakdown,
         userPropNames,
-        eventPropNames,
+        eventPropertiesDisplayNames,
         cardSize
       )
     );
-  }, [breakdown, userPropNames, eventPropNames, cardSize]);
+  }, [breakdown, userPropNames, eventPropertiesDisplayNames, cardSize]);
 
   const formatDataAfterDelay = useCallback(async () => {
     setLoading(true);

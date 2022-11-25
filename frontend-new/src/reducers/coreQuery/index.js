@@ -30,7 +30,7 @@ import {
   SET_USER_PROP_NAME,
   SET_EVENT_PROP_NAME,
   SET_GROUP_PROP_NAME,
-  SET_ATTR_QUERIES,
+  SET_ATTR_QUERIES
 } from './actions';
 import {
   SHOW_ANALYTICS_RESULT,
@@ -38,6 +38,9 @@ import {
   INITIALIZE_CAMPAIGN_STATE,
   INITIALIZE_TOUCHPOINT_DIMENSIONS,
   INITIALIZE_CONTENT_GROUPS,
+  EVENT_DISPLAY_NAMES_LOADING,
+  EVENT_DISPLAY_NAMES_ERROR,
+  EVENT_DISPLAY_NAMES_LOADED
 } from '../types';
 import { DefaultDateRangeFormat } from '../../Views/CoreQuery/utils';
 
@@ -47,7 +50,7 @@ const DEFAULT_TOUCHPOINTS = [
   'AdGroup',
   'Keyword',
   'Channel',
-  'LandingPage',
+  'LandingPage'
 ];
 
 const defaultState = {
@@ -57,14 +60,14 @@ const defaultState = {
   groupProperties: {},
   groupBy: {
     global: [],
-    event: [],
+    event: []
   },
   touchpointOptions: [
     {
       label: 'Digital',
       icon: 'fav',
-      values: DEFAULT_TOUCHPOINTS.map((v) => [v]),
-    },
+      values: DEFAULT_TOUCHPOINTS.map((v) => [v])
+    }
   ],
   show_analytics_result: false,
   attrQueries: [],
@@ -75,7 +78,7 @@ const defaultState = {
   tacticOfferType: 'Tactic',
   attr_dateRange: {
     ...DefaultDateRangeFormat,
-    dateStr: '',
+    dateStr: ''
   },
   attr_dimensions: [],
   content_groups: [],
@@ -84,7 +87,7 @@ const defaultState = {
   linkedEvents: [],
   campaign_config: {
     metrics: [],
-    properties: [],
+    properties: []
   },
   camp_channels: 'google_ads',
   camp_measures: [],
@@ -93,12 +96,17 @@ const defaultState = {
   camp_dateRange: {
     ...DefaultDateRangeFormat,
     frequency: 'date',
-    dateStr: '',
+    dateStr: ''
   },
   eventNames: [],
   userPropNames: [],
   eventPropNames: [],
-  groupPropNames: []
+  groupPropNames: [],
+  eventPropertiesDisplayNames: {
+    loading: false,
+    error: false,
+    data: {}
+  }
 };
 
 export default function (state = defaultState, action) {
@@ -109,10 +117,10 @@ export default function (state = defaultState, action) {
       return { ...state, eventNames: action.payload };
     case SET_USER_PROP_NAME:
       return { ...state, userPropNames: action.payload };
-      case SET_GROUP_PROP_NAME:
-        return { ...state, groupPropNames: action.payload };
+    case SET_GROUP_PROP_NAME:
+      return { ...state, groupPropNames: action.payload };
     case FETCH_GROUP_PROPERTIES:
-      const groupPropState = Object.assign({}, state.groupProperties)
+      const groupPropState = Object.assign({}, state.groupProperties);
       groupPropState[action.groupName] = action.payload;
       return { ...state, groupProperties: groupPropState };
     case FETCH_USER_PROPERTIES:
@@ -127,7 +135,7 @@ export default function (state = defaultState, action) {
     case INITIALIZE_GROUPBY: {
       return {
         ...state,
-        groupBy: action.payload,
+        groupBy: action.payload
       };
     }
     case DEL_GROUPBY: {
@@ -143,16 +151,16 @@ export default function (state = defaultState, action) {
               if (gb.overAllIndex > action.payload.overAllIndex) {
                 return {
                   ...gb,
-                  overAllIndex: gb.overAllIndex - 1,
+                  overAllIndex: gb.overAllIndex - 1
                 };
               }
               return gb;
-            }),
-        },
+            })
+        }
       };
     }
 
-    case SET_GROUPBY:{
+    case SET_GROUPBY: {
       let groupByState = Object.assign({}, state.groupBy);
       if (
         groupByState[action.groupByType] &&
@@ -165,16 +173,19 @@ export default function (state = defaultState, action) {
       ) {
         groupByState[action.groupByType].push({
           ...action.payload,
-          overAllIndex: groupByState[action.groupByType].length,
+          overAllIndex: groupByState[action.groupByType].length
         });
       }
       return { ...state, groupBy: groupByState };
     }
-    case RESET_GROUPBY:{ 
-      return { ...state, groupBy: {
-        global:[],
-        event:[]
-      } };
+    case RESET_GROUPBY: {
+      return {
+        ...state,
+        groupBy: {
+          global: [],
+          event: []
+        }
+      };
     }
     case DEL_GROUPBY_EVENT: {
       return {
@@ -189,72 +200,72 @@ export default function (state = defaultState, action) {
               if (gb.eventIndex > action.index) {
                 return {
                   ...gb,
-                  eventIndex: gb.eventIndex - 1,
+                  eventIndex: gb.eventIndex - 1
                 };
               }
               return gb;
-            }),
-        },
+            })
+        }
       };
     }
     case SHOW_ANALYTICS_RESULT: {
       return {
         ...state,
-        show_analytics_result: action.payload,
+        show_analytics_result: action.payload
       };
     }
     case SET_EVENT_GOAL: {
       return {
         ...state,
-        eventGoal: action.payload,
+        eventGoal: action.payload
       };
     }
     case SET_ATTR_QUERIES: {
       return {
         ...state,
-        attrQueries: action.payload,
+        attrQueries: action.payload
       };
     }
     case SET_TOUCHPOINTS: {
       return {
         ...state,
-        touchpoint: action.payload,
+        touchpoint: action.payload
       };
     }
     case INITIALIZE_TOUCHPOINT_DIMENSIONS: {
       return {
         ...state,
-        attr_dimensions: action.payload,
+        attr_dimensions: action.payload
       };
     }
     case INITIALIZE_CONTENT_GROUPS: {
       return {
         ...state,
-        content_groups: action.payload,
+        content_groups: action.payload
       };
     }
     case SET_TOUCHPOINT_FILTERS: {
       return {
         ...state,
-        touchpoint_filters: action.payload,
+        touchpoint_filters: action.payload
       };
     }
     case SET_ATTR_QUERY_TYPE: {
       return {
         ...state,
-        attr_query_type: action.payload,
+        attr_query_type: action.payload
       };
     }
     case SET_TACTIC_OFFER_TYPE: {
       return {
         ...state,
-        tacticOfferType: action.payload,
+        tacticOfferType: action.payload
       };
     }
     case SET_ATTR_DATE_RANGE: {
       return {
         ...state,
-        attr_dateRange: action.payload,
+        attr_dateRange: action.payload
       };
     }
     case SET_ATTRIBUTION_MODEL: {
@@ -262,77 +273,107 @@ export default function (state = defaultState, action) {
         return {
           ...state,
           models: action.payload,
-          linkedEvents: [], // clear linked events if comparison model is added
+          linkedEvents: [] // clear linked events if comparison model is added
         };
       }
       return {
         ...state,
-        models: action.payload,
+        models: action.payload
       };
     }
     case SET_ATTRIBUTION_WINDOW: {
       return {
         ...state,
-        window: action.payload,
+        window: action.payload
       };
     }
     case SET_ATTR_LINK_EVENTS: {
       return {
         ...state,
-        linkedEvents: action.payload,
+        linkedEvents: action.payload
       };
     }
     case INITIALIZE_MTA_STATE: {
       return {
         ...state,
-        ...action.payload,
+        ...action.payload
       };
     }
     case INITIALIZE_CAMPAIGN_STATE: {
       return {
         ...state,
-        ...action.payload,
+        ...action.payload
       };
     }
     case SET_CAMP_CHANNEL: {
       return {
         ...state,
-        camp_channels: action.payload,
+        camp_channels: action.payload
       };
     }
     case SET_CAMP_MEASURES: {
       return {
         ...state,
-        camp_measures: action.payload,
+        camp_measures: action.payload
       };
     }
     case FETCH_CAMP_CONFIG: {
       return {
         ...state,
-        campaign_config: action.payload,
+        campaign_config: action.payload
       };
     }
     case SET_CAMP_FILTERS: {
       return {
         ...state,
-        camp_filters: action.payload,
+        camp_filters: action.payload
       };
     }
     case SET_CAMP_GROUBY: {
       return {
         ...state,
-        camp_groupBy: action.payload,
+        camp_groupBy: action.payload
       };
     }
     case SET_CAMP_DATE_RANGE: {
       return {
         ...state,
-        camp_dateRange: action.payload,
+        camp_dateRange: action.payload
       };
     }
     case SET_DEFAULT_STATE: {
       return {
-        ...defaultState,
+        ...defaultState
+      };
+    }
+    case EVENT_DISPLAY_NAMES_LOADING: {
+      return {
+        ...state,
+        eventPropertiesDisplayNames: {
+          loading: true,
+          error: false,
+          data: {}
+        }
+      };
+    }
+    case EVENT_DISPLAY_NAMES_ERROR: {
+      return {
+        ...state,
+        eventPropertiesDisplayNames: {
+          loading: false,
+          error: true,
+          data: {}
+        }
+      };
+    }
+    case EVENT_DISPLAY_NAMES_LOADED: {
+      return {
+        ...state,
+        eventPropertiesDisplayNames: {
+          loading: false,
+          error: false,
+          data: action.payload
+        }
       };
     }
     default:

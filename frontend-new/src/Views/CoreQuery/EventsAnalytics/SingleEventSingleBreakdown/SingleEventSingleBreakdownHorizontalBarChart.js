@@ -11,24 +11,35 @@ function SingleEventSingleBreakdownHorizontalBarChart({
   breakdown,
   cardSize = 1,
   isDashboardWidget = false,
-  comparisonApplied=false
+  comparisonApplied = false
 }) {
-  const { userPropNames, eventPropNames } = useSelector(
-    (state) => state.coreQuery
+  const {
+    userPropNames,
+    eventPropertiesDisplayNames: eventPropertiesDisplayNamesState
+  } = useSelector((state) => state.coreQuery);
+  const { data: eventPropertiesDisplayNames } =
+    eventPropertiesDisplayNamesState;
+  const columns = useMemo(
+    () =>
+      getHorizontalBarChartColumns(
+        breakdown,
+        userPropNames,
+        eventPropertiesDisplayNames
+      ),
+    [breakdown, userPropNames, eventPropertiesDisplayNames]
   );
-  const columns = useMemo(() => getHorizontalBarChartColumns(
-      breakdown,
-      userPropNames,
-      eventPropNames
-    ), [breakdown, userPropNames, eventPropNames]);
 
-  const data = useMemo(() => getDataInHorizontalBarChartFormat(
-      aggregateData,
-      breakdown,
-      cardSize,
-      isDashboardWidget,
-      comparisonApplied
-    ), [aggregateData, breakdown, cardSize, isDashboardWidget, comparisonApplied]);
+  const data = useMemo(
+    () =>
+      getDataInHorizontalBarChartFormat(
+        aggregateData,
+        breakdown,
+        cardSize,
+        isDashboardWidget,
+        comparisonApplied
+      ),
+    [aggregateData, breakdown, cardSize, isDashboardWidget, comparisonApplied]
+  );
 
   return (
     <DataTable
