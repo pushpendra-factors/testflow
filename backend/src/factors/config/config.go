@@ -267,6 +267,8 @@ type Configuration struct {
 	AllowIdentificationOverwriteUsingSourceByProjectID string
 	AllowHubspotPastEventsEnrichmentByProjectID        string
 	AllowHubspotContactListInsertByProjectID           string
+	NewCloudManager                                    filestore.FileManager
+	ProjectIdsV2                                       []int64
 	IngestionTimezoneEnabledProjectIDs                 []string
 	AllowedSalesforceActivityTasksByProjectIDs         string
 	AllowedSalesforceActivityEventsByProjectIDs        string
@@ -1804,10 +1806,14 @@ func GetFivetranLicenseKey() string {
 /*
 GetProjectsFromListWithAllProjectSupport -
 If project list string is '*':
-  Returns all_projects as true and empty allowed projects and disallowed projects.
+
+	Returns all_projects as true and empty allowed projects and disallowed projects.
+
 else:
-  Returns all_projects as false, given projects ids after skipping disallowed
-	projects and disallowed projects.
+
+	  Returns all_projects as false, given projects ids after skipping disallowed
+		projects and disallowed projects.
+
 Returns: allProject flag, map of allowed & disallowed projects
 */
 func GetProjectsFromListWithAllProjectSupport(projectIdsList,
@@ -2067,7 +2073,10 @@ func GetAppName(defaultAppName, overrideAppName string) string {
 	return defaultAppName
 }
 
-func GetCloudManager() filestore.FileManager {
+func GetCloudManager(projectId int64) filestore.FileManager {
+	if U.ContainsInt64InArray(configuration.ProjectIdsV2, projectId) {
+		return configuration.NewCloudManager
+	}
 	return configuration.CloudManager
 }
 
