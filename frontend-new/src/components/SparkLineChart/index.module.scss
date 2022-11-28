@@ -33,6 +33,11 @@ $factorsDark: '#0E2647';
   font-size: 14px;
   line-height: 20px;
   color: #08172b;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  padding: 0px 5px 0px 5px;
+  
 }
 
 .sparkChart {
