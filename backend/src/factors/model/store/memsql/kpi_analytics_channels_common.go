@@ -4,7 +4,6 @@ import (
 	"errors"
 	"factors/model/model"
 	U "factors/util"
-	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -62,6 +61,9 @@ func sanitizeChannelQueryResult(result *model.QueryResult, query model.KPIQuery)
 	return nil
 }
 
+// fills empty values for dates which data is not present. Eg-> query date range: 1 jan to 3 jan. Data in DB:= 1/01 -> 100, 3/01 -> 150
+// After going through following method, final data: 1/01 -> 100, 2/01 -> 0, 3/01 -> 150
+
 func addMissingTimestampsOnChannelResultWithoutGroupByProps(result *model.QueryResult,
 	query *model.KPIQuery, aggrIndex int, timestampIndex int, isTimezoneEnabled bool) error {
 	logFields := log.Fields{
@@ -74,8 +76,8 @@ func addMissingTimestampsOnChannelResultWithoutGroupByProps(result *model.QueryR
 
 	rowsByTimestamp := make(map[string][]interface{}, 0)
 	for _, row := range result.Rows {
-		sTime := fmt.Sprintf("%v", row[timestampIndex])
-		ts, tErr := time.Parse("2006-01-02T15:04:05-07:00", sTime)
+
+		ts, tErr := U.GetTimeFromParseTimeStrWithErrorFromInterface(row[timestampIndex])
 		if tErr != nil {
 			return tErr
 		}
@@ -107,6 +109,9 @@ func addMissingTimestampsOnChannelResultWithoutGroupByProps(result *model.QueryR
 	return nil
 }
 
+// Need a separate method for this because group by keys are involved and we have fill data for each key.
+// query -> group by camapign_name, date -> 1 jan to 2 jan. DB data [[1/01, a, 100], [2/01, b, 50]]
+// Final data -> [[1/01, a, 100],[1/01, b, 0],[2/01, a, 0], [2/01, b, 50]]
 func addMissingTimestampsOnChannelResultWithGroupByProps(result *model.QueryResult,
 	query *model.KPIQuery, aggrIndex int, timestampIndex int, isTimezoneEnabled bool) error {
 	logFields := log.Fields{
@@ -129,8 +134,7 @@ func addMissingTimestampsOnChannelResultWithGroupByProps(result *model.QueryResu
 		encCols := make([]interface{}, 0, 0)
 		encCols = append(encCols, row[gkStart:gkEnd]...)
 
-		sTime := fmt.Sprintf("%v", row[timestampIndex])
-		ts, tErr := time.Parse("2006-01-02T15:04:05-07:00", sTime)
+		ts, tErr := U.GetTimeFromParseTimeStrWithErrorFromInterface(row[timestampIndex])
 		if tErr != nil {
 			return tErr
 		}
