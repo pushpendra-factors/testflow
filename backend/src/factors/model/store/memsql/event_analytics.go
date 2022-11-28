@@ -745,8 +745,7 @@ func addMissingTimestampsOnResultWithoutGroupByProps(result *model.QueryResult,
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	rowsByTimestamp := make(map[string][]interface{}, 0)
-	for i, row := range result.Rows {
-		log.Info("Hello ", i, row[timestampIndex])
+	for _, row := range result.Rows {
 		ts := row[timestampIndex].(time.Time)
 		rowsByTimestamp[U.GetTimestampAsStrWithTimezone(ts, query.Timezone)] = row
 	}

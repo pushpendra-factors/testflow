@@ -26,17 +26,13 @@ func (store *MemSQL) ExecuteKPIQueryForChannels(projectID int64, reqID string, k
 	resultHolder, statusCode := store.ExecuteChannelQueryV1(projectID, &channelsV1Query, reqID)
 	queryResult.Headers = model.GetTransformedHeadersForChannels(resultHolder.Headers, hasAnyGroupByTimestamp, hasAnyGroupBy)
 	queryResult.Rows = model.TransformDateTypeValueForChannels(resultHolder.Headers, resultHolder.Rows, hasAnyGroupByTimestamp, hasAnyGroupBy, channelsV1Query.Timezone)
-	// log.Fatal(queryResult)
 	if hasAnyGroupByTimestamp {
-		// log.Fatal(queryResult.Rows)
 		err = sanitizeChannelQueryResult(&queryResult, kpiQuery)
 		if err != nil {
-			log.Fatal(err)
 			logCtx.Warn(err)
 			return queryResults, http.StatusBadRequest
 		}
 	}
-	// log.Fatal("hello")
 	queryResults = append(queryResults, queryResult)
 	return queryResults, statusCode
 }
@@ -48,7 +44,6 @@ func sanitizeChannelQueryResult(result *model.QueryResult, query model.KPIQuery)
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	aggrIndex, timeIndex, err := GetTimstampAndAggregateIndexOnQueryResult(result.Headers)
-	log.Info("Hello ", aggrIndex, "Hell1 ", timeIndex, result.Headers, err)
 	if err != nil {
 		return err
 	}
