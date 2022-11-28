@@ -110,9 +110,9 @@ function ColumnChart({
       },
       tooltip: {
         backgroundColor: 'white',
-        borderWidth: 0,
+        borderWidth: 1,
         borderRadius: 12,
-        borderColor: 'black',
+        shadow: false,
         useHTML: true,
         formatter() {
           const self = this;
