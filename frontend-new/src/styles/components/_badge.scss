@@ -1,0 +1,20 @@
+.fa-custom-badge
+{
+    .ant-badge-status-dot{
+        height: 10px;
+        width: 10px;
+    }
+    &.fa-custom-badge--orange{
+        .ant-badge-status-dot{
+            background-color: #F9C06E !important;
+            &:after{
+                border: 1px solid #F9C06E !important;
+            }
+        }
+    }
+    &.fa-custom-badge--green{
+        .ant-badge-status-dot{
+            background-color: #86D3A3 !important;
+        }
+    }
+}

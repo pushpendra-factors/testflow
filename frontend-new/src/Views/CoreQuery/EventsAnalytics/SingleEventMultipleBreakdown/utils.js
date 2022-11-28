@@ -27,6 +27,7 @@ import tableStyles from '../../../../components/DataTable/index.module.scss';
 import NonClickableTableHeader from '../../../../components/NonClickableTableHeader';
 import { EVENT_COUNT_KEY } from '../eventsAnalytics.constants';
 import { BREAKDOWN_TYPES } from '../../constants';
+import { isNumeric } from '../../../../utils/global';
 
 export const defaultSortProp = ({ breakdown }) => {
   const dateTimeBreakdownIndex = findIndex(
@@ -125,13 +126,13 @@ export const getTableColumns = (
   page,
   eventNames,
   userPropNames,
-  eventPropNames
+  eventPropertiesDisplayNames
 ) => {
   const breakdownColumns = breakdown.map((e, index) => {
     const displayTitle = getBreakdownDisplayName({
       breakdown: e,
       userPropNames,
-      eventPropNames
+      eventPropertiesDisplayNames
     });
 
     return {
@@ -145,7 +146,10 @@ export const getTableColumns = (
       fixed: !index ? 'left' : '',
       width: 200,
       render: (d) => {
-        if (e.prop_type === 'numerical' && !Number.isNaN(d)) {
+        if (
+          e.prop_type === 'numerical' &&
+          (typeof d === 'number' || isNumeric(d))
+        ) {
           return <NumFormat number={d} />;
         }
         return d;
@@ -188,7 +192,7 @@ export const getDateBasedColumns = (
   handleSorting,
   frequency,
   userPropNames,
-  eventPropNames
+  eventPropertiesDisplayNames
 ) => {
   const OverallColumn = {
     title: getClickableTitleSorter(
@@ -206,7 +210,7 @@ export const getDateBasedColumns = (
     const displayTitle = getBreakdownDisplayName({
       breakdown: e,
       userPropNames,
-      eventPropNames
+      eventPropertiesDisplayNames
     });
 
     return {
@@ -220,7 +224,10 @@ export const getDateBasedColumns = (
       fixed: !index ? 'left' : '',
       width: 200,
       render: (d) => {
-        if (e.prop_type === 'numerical' && !Number.isNaN(d)) {
+        if (
+          e.prop_type === 'numerical' &&
+          (typeof d === 'number' || isNumeric(d))
+        ) {
           return <NumFormat number={d} />;
         }
         return d;
@@ -486,14 +493,14 @@ export const getDataInHorizontalBarChartFormat = (
 export const getHorizontalBarChartColumns = (
   breakdown,
   userPropNames,
-  eventPropNames,
+  eventPropertiesDisplayNames,
   cardSize = 1
 ) => {
   const result = breakdown.map((e, index) => {
     const displayTitle = getBreakdownDisplayName({
       breakdown: e,
       userPropNames,
-      eventPropNames
+      eventPropertiesDisplayNames
     });
 
     return {

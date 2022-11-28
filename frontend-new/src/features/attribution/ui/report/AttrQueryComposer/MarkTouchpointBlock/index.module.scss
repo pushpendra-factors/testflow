@@ -1,0 +1,69 @@
+.block {
+  display: flex;
+  flex-direction: column;
+
+  &__additional_actions {
+    visibility: hidden;
+}
+
+  &__content {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    position: relative;
+    &:hover {
+      .block__additional_actions {
+          visibility: visible;
+      }
+  }
+
+    &__txt_muted {
+      display: flex;
+      align-items: center;
+      margin-left: 16px;
+    }
+  }
+
+  &_touchpoint_select {
+    position:relative;
+  }
+  
+  &__event_selector { 
+    position: absolute;
+    top: 0;
+    left: 0;
+
+    &__btn {
+        position: relative;
+    }
+
+    .ant-select-selector {
+        border-radius: 12px;
+    }
+}
+}
+
+.filterSelect {
+  left: 0;
+}
+
+.filterDelBtn {
+  left: auto;
+  right: 0;
+}
+
+.dimensionsSelect {
+  right: 10%;
+  :global(.fa-select-dropdown) {
+    max-height: 350px;
+  }
+}
+
+.dimensionsHeading {
+  font-size: 12px !important;
+  line-height: 16px !important;
+}
+
+.touchPointSelector {
+  left: 0 !important;
+}

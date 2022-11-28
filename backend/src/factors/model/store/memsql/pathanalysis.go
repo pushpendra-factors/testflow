@@ -226,7 +226,6 @@ func isDulplicatePathAnalysisQuery(ProjectID int64, query *model.PathAnalysisQue
 	if err := db.Where("project_id = ?", ProjectID).
 		Where("is_deleted = ?", false).
 		Where("JSON_EXTRACT_DOUBLE(query, 'steps') = ?", query.NumberOfSteps).
-		Where("JSON_EXTRACT_STRING(query, 'event') = ?", query.Event).
 		Where("JSON_EXTRACT_STRING(query, 'event_type') = ?", query.EventType).
 		Find(&objects).Error; err != nil {
 		if gorm.IsRecordNotFoundError(err) {
@@ -244,6 +243,7 @@ func isDulplicatePathAnalysisQuery(ProjectID int64, query *model.PathAnalysisQue
 		equal := (res.AvoidRepeatedEvents == query.AvoidRepeatedEvents) &&
 			(res.EndTimestamp == query.EndTimestamp) &&
 			(res.StartTimestamp == query.StartTimestamp) &&
+			reflect.DeepEqual(res.Event, query.Event) &&	
 			reflect.DeepEqual(res.ExcludeEvents, query.ExcludeEvents) &&
 			reflect.DeepEqual(res.IncludeEvents, query.IncludeEvents) &&
 			reflect.DeepEqual(res.Filter, query.Filter)

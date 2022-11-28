@@ -10,15 +10,22 @@ import Highcharts from 'highcharts';
 import {
   fetchProjects,
   setActiveProject,
-  fetchDemoProject
+  fetchDemoProject,
+  fetchProjectSettings
 } from 'Reducers/global';
 import customizeHighCharts from 'Utils/customizeHighcharts';
 import {
-  fetchAttrContentGroups,
+  fetchEventDisplayNames,
+  // fetchAttrContentGroups,
   fetchGroups,
-  fetchQueries,
-  fetchSmartPropertyRules
+  fetchQueries
+  // fetchSmartPropertyRules
 } from '../../reducers/coreQuery/services';
+import {
+  fetchAttrContentGroups,
+  fetchSmartPropertyRules
+} from 'Attribution/state/services';
+import { ATTRIBUTION_ROUTES } from 'Attribution/utils/constants';
 import {
   getUserProperties,
   getEventProperties,
@@ -52,16 +59,20 @@ import { EMPTY_ARRAY } from '../../utils/global';
 import UserProfiles from '../../components/Profile/UserProfiles';
 import AccountProfiles from '../../components/Profile/AccountProfiles';
 import InsightsSettings from '../Settings/ProjectSettings/InsightsSettings';
-import DashboardTemplates from "../DashboardTemplates";
-import { fetchTemplates } from "../../reducers/dashboard_templates/services";
+import DashboardTemplates from '../DashboardTemplates';
+import { fetchTemplates } from '../../reducers/dashboard_templates/services';
 import Sharing from '../Settings/ProjectSettings/Sharing';
-
 const FactorsInsights = lazyWithRetry(() =>
   import('../Factors/FactorsInsightsNew')
 );
 const CoreQuery = lazyWithRetry(() => import('../CoreQuery'));
 const Dashboard = lazyWithRetry(() => import('../Dashboard'));
 const Factors = lazyWithRetry(() => import('../Factors'));
+const PathAnalysis = lazyWithRetry(() => import('../PathAnalysis'));
+const PathAnalysisReport = lazyWithRetry(() => import('../PathAnalysis/PathAnalysisReport'));
+const Attribution = lazyWithRetry(() =>
+  import('../../features/attribution/ui')
+);
 
 // customizing highcharts for project requirements
 customizeHighCharts(Highcharts);
@@ -74,7 +85,8 @@ function AppLayout({
   getGroupProperties,
   fetchWeeklyIngishtsMetaData,
   setActiveProject,
-  fetchDemoProject
+  fetchDemoProject,
+  fetchProjectSettings
 }) {
   const [dataLoading, setDataLoading] = useState(true);
   const [demoProjectId, setDemoProjectId] = useState(EMPTY_ARRAY);
@@ -94,10 +106,8 @@ function AppLayout({
     'baliga@factors.ai',
     'solutions@factors.ai',
     'sonali@factors.ai',
-    'praveenr@factors.ai'
-    //   'janani@factors.ai',
-    //   'praveenr@factors.ai',
-    //   'ashwin@factors.ai',
+    'praveenr@factors.ai',
+    'janani@factors.ai',
   ];
 
   const asyncCallOnLoad = useCallback(async () => {
@@ -152,6 +162,8 @@ function AppLayout({
       fetchWeeklyIngishtsMetaData(active_project?.id);
       dispatch(fetchAttrContentGroups(active_project?.id));
       dispatch(fetchTemplates());
+      fetchProjectSettings(active_project?.id);
+      dispatch(fetchEventDisplayNames({ projectId: active_project?.id }));
     }
   }, [dispatch, active_project]);
 
@@ -161,6 +173,7 @@ function AppLayout({
   }
 
   return (
+    // eslint-disable-next-line react/jsx-no-useless-fragment
     <>
       {dataLoading ? (
         <Spin size={'large'} className={'fa-page-loader'} />
@@ -171,9 +184,7 @@ function AppLayout({
               <FaErrorComp
                 size={'medium'}
                 title={'Bundle Error:01'}
-                subtitle={
-                  'We are facing trouble loading App Bundles. Drop us a message on the in-app chat.'
-                }
+                subtitle='We are facing trouble loading App Bundles. Drop us a message on the in-app chat.'
               />
             }
             onError={FaErrorLog}
@@ -215,6 +226,7 @@ function AppLayout({
                       name='Factors'
                       component={Factors}
                     />
+
                     <Route
                       exact
                       path='/explain/insights'
@@ -224,8 +236,23 @@ function AppLayout({
 
                     <Route path='/welcome' component={Welcome} />
 
-                    
-                    <Route path="/template" name="dashboardSettings" component={DashboardTemplates} />
+                    <Route
+                      path='/template'
+                      name='dashboardSettings'
+                      component={DashboardTemplates}
+                    />
+
+                    {(window.document.domain === 'app.factors.ai' &&
+                      whiteListedAccounts.includes(activeAgent)) ||
+                    window.document.domain === 'staging-app.factors.ai' ||
+                    window.document.domain === 'factors-dev.com' ? (
+                      <Route
+                        // exact
+                        path={ATTRIBUTION_ROUTES.base}
+                        name='attribution'
+                        component={Attribution}
+                      />
+                    ) : null}
 
                     {/* settings */}
                     <Route path='/settings/general' component={BasicSettings} />
@@ -274,6 +301,21 @@ function AppLayout({
                       component={AccountProfiles}
                     />
 
+                     {whiteListedAccounts.includes(activeAgent) && (<>
+                    <Route
+                      path='/path-analysis'
+                      name='PathAnalysis'
+                      exact
+                      component={PathAnalysis}
+                      />
+                    <Route
+                      path='/path-analysis/insights'
+                      name='PathAnalysisInsights'
+                      exact
+                      component={PathAnalysisReport}
+                      />
+                    </>)} 
+
                     {!demoProjectId.includes(active_project?.id) ? (
                       <Route path='/project-setup' component={SetupAssist} />
                     ) : (
@@ -316,7 +358,8 @@ const mapDispatchToProps = (dispatch) =>
       getGroupProperties,
       fetchWeeklyIngishtsMetaData,
       setActiveProject,
-      fetchDemoProject
+      fetchDemoProject,
+      fetchProjectSettings
     },
     dispatch
   );

@@ -8,12 +8,13 @@ import { useHistory } from 'react-router-dom';
 import { getQueryType } from '../../utils/dataFormatter';
 import { QUERY_TYPE_WEB, QUERY_TYPE_TEXT } from '../../utils/constants';
 import { HighlightSearchText } from '../../utils/dataFormatter';
+import useAutoFocus from 'hooks/useAutoFocus';
 
 function SearchModal({ visible, handleClose, handleQueryClick }) {
   const queriesState = useSelector((state) => state.queries);
   const history = useHistory();
 
-  const inputEl = useRef(null);
+  const inputEl = useAutoFocus(visible);
   //   const [focused, setFocused] = useState(false);
   const [searchValue, setSearchValue] = useState('');
 
@@ -78,7 +79,7 @@ function SearchModal({ visible, handleClose, handleQueryClick }) {
                   channel_v1: 'campaigns_cq',
                   attribution: 'attributions_cq',
                   profiles: 'profiles_cq',
-                  kpi: 'KPI_cq',
+                  kpi: 'KPI_cq'
                 };
                 let svgName = '';
                 Object.entries(queryTypeName).forEach(([k, v]) => {

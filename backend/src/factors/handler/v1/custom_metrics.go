@@ -99,6 +99,7 @@ func GetCustomMetricsConfigV1(c *gin.Context) {
 		currentConfigV1 := model.CustomMetricConfigV1{}
 		currentConfigV1.ObjectType = objectType
 		currentConfigV1.TypeOfQuery = model.ProfileQueryType
+		currentConfigV1.TypeOfQueryDisplayName = model.ProfileQueryTypeDisplayName
 		currentConfigV1.AggregateFunctions = model.CustomMetricProfilesAggregateFunctions
 		currentConfigV1.Properties = getPropertiesFunctionBasedOnObjectType(objectType)(projectID, reqID)
 
@@ -106,11 +107,15 @@ func GetCustomMetricsConfigV1(c *gin.Context) {
 	}
 
 	customEventConfig := model.CustomMetricConfigV1{}
-	customEventConfig.ObjectType = model.EventsBasedDisplayCategory
 	customEventConfig.TypeOfQuery = model.EventBasedQueryType
+	customEventConfig.TypeOfQueryDisplayName = model.EventBasedQueryTypeDisplayName
 	customEventConfig.AggregateFunctions = model.CustomEventsAggregateFunctions
 
-	finalConfigs = append(finalConfigs, customEventConfig)
+	derivedConfig := model.CustomMetricConfigV1{}
+	derivedConfig.TypeOfQueryDisplayName = model.DerivedQueryTypeDisplayName
+	derivedConfig.TypeOfQuery = model.DerivedQueryType
+
+	finalConfigs = append(finalConfigs, customEventConfig, derivedConfig)
 
 	c.JSON(http.StatusOK, gin.H{"result": finalConfigs})
 }

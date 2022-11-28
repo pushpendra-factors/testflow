@@ -7,7 +7,7 @@ import {
   hoverEvents,
   toggleCellCollapse
 } from '../../utils';
-import { SVG } from '../../../factorsComponents';
+import { SVG, Text } from '../../../factorsComponents';
 
 function AccountTimeline({
   timelineEvents = [],
@@ -62,8 +62,8 @@ function AccountTimeline({
             : []
         }
       >
-        <div className="flex items-center font-medium">
-          <span className="truncate mx-1">{eventName}</span>
+        <div className='flex items-center font-medium'>
+          <span className='truncate mx-1'>{eventName}</span>
           {hoverEvents.includes(event.event_name) ||
           event.display_name === 'Page View' ||
           event.event_type === 'CH' ||
@@ -78,34 +78,39 @@ function AccountTimeline({
   const renderAdditionalDiv = (eventsCount, collapseState, onClick) =>
     eventsCount > 1 ? (
       collapseState ? (
-        <div className="timeline-events__num ml-1" onClick={onClick}>
+        <div className='timeline-events__num ml-1' onClick={onClick}>
           {`+${Number(eventsCount - 1)}`}
         </div>
       ) : (
-        <div className="timeline-events__num m-5" onClick={onClick}>
+        <div className='timeline-events__num m-5' onClick={onClick}>
           <CaretUpOutlined /> Show Less
         </div>
       )
     ) : null;
 
   return loading ? (
-    <Spin size="large" className="fa-page-loader" />
+    <Spin size='large' className='fa-page-loader' />
   ) : timelineUsers.length === 0 ? (
-    <div className="ant-empty ant-empty-normal">
-      <div className="ant-empty-image">
-        <SVG name="nodata" />
+    <div className='ant-empty ant-empty-normal'>
+      <div className='ant-empty-image'>
+        <SVG name='nodata' />
       </div>
-      <div className="ant-empty-description">No Associated Users</div>
+      <div className='ant-empty-description'>No Associated Users</div>
     </div>
   ) : (
-    <div className="table-scroll">
+    <div className='table-scroll'>
       <table>
         <thead>
           <tr>
-            <th scope="col">Date and Time</th>
-            {timelineUsers.map((name) => (
-              <th scope="col" className="truncate">
-                {name}
+            <th scope='col'>Date and Time</th>
+            {timelineUsers.map((user) => (
+              <th scope='col' className='truncate'>
+                <Text type='title' truncate level={7} weight='medium'>
+                  {user.title}
+                </Text>
+                <Text type='title' truncate level={8}>
+                  {user.subtitle || '-'}
+                </Text>
               </th>
             ))}
           </tr>
@@ -114,35 +119,37 @@ function AccountTimeline({
           {Object.entries(formattedData).map(([timestamp, allEvents]) => (
             <tr>
               <td>
-                <div className="py-4">{timestamp}</div>
+                <div className='py-4'>{timestamp}</div>
               </td>
-              {timelineUsers.map((username) => {
-                if (!allEvents[username]) return <td />;
-                const eventsList = allEvents[username].collapsed
-                  ? allEvents[username].events.slice(0, 1)
-                  : allEvents[username].events;
+              {timelineUsers.map((user) => {
+                if (!allEvents[user.title]) return <td />;
+                const eventsList = allEvents[user.title].collapsed
+                  ? allEvents[user.title].events.slice(0, 1)
+                  : allEvents[user.title].events;
                 return (
                   <td>
                     <div
                       className={`timeline-events ${
-                        allEvents[username].collapsed ? 'flex items-center' : ''
+                        allEvents[user.title].collapsed
+                          ? 'flex items-center'
+                          : ''
                       }`}
                     >
                       {eventsList?.map((event) => (
-                        <div className="timeline-events__event">
+                        <div className='timeline-events__event'>
                           {renderInfoCard(event)}
                         </div>
                       ))}
                       {renderAdditionalDiv(
-                        allEvents[username].events.length,
-                        allEvents[username].collapsed,
+                        allEvents[user.title].events.length,
+                        allEvents[user.title].collapsed,
                         () => {
                           setFormattedData(
                             toggleCellCollapse(
                               formattedData,
                               timestamp,
-                              username,
-                              !allEvents[username].collapsed
+                              user.title,
+                              !allEvents[user.title].collapsed
                             )
                           );
                           setCollapseAll(undefined);

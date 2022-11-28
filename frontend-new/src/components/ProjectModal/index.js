@@ -1,5 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Avatar, Popover, Modal, Row, Col, notification, Tooltip } from 'antd';
+import {
+  Button,
+  Avatar,
+  Popover,
+  Modal,
+  Row,
+  Col,
+  notification,
+  Tooltip
+} from 'antd';
 import { Text, SVG } from '../factorsComponents';
 import { PlusOutlined, PoweroffOutlined } from '@ant-design/icons';
 import styles from './index.module.scss';
@@ -7,7 +16,7 @@ import {
   updateAgentInfo,
   fetchAgentInfo,
   fetchProjectAgents,
-  signout,
+  signout
 } from 'Reducers/agentActions';
 import { setActiveProject } from 'Reducers/global';
 import UserSettings from '../../Views/Settings/UserSettings';
@@ -17,6 +26,7 @@ import { useHistory } from 'react-router-dom';
 import factorsai from 'factorsai';
 import { fetchProjectSettings } from 'Reducers/global';
 import { TOOLTIP_CONSTANTS } from '../../constants/tooltips.constans';
+import useAutoFocus from 'hooks/useAutoFocus';
 function ProjectModal(props) {
   const [ShowPopOver, setShowPopOver] = useState(false);
   const [searchProjectName, setsearchProjectName] = useState('');
@@ -25,6 +35,7 @@ function ProjectModal(props) {
   const [changeProjectModal, setchangeProjectModal] = useState(false);
   const [selectedProject, setselectedProject] = useState(null);
   const history = useHistory();
+  const inputComponentRef = useAutoFocus(ShowPopOver);
 
   const searchProject = (e) => {
     setsearchProjectName(e.target.value);
@@ -39,11 +50,11 @@ function ProjectModal(props) {
   const switchProject = () => {
     localStorage.setItem('activeProject', selectedProject?.id);
     props.setActiveProject(selectedProject);
-    props.fetchProjectSettings(selectedProject?.id)
+    props.fetchProjectSettings(selectedProject?.id);
     history.push('/');
     notification.success({
       message: 'Project Changed!',
-      description: `You are currently viewing data from ${selectedProject?.name}`,
+      description: `You are currently viewing data from ${selectedProject?.name}`
     });
   };
 
@@ -53,8 +64,10 @@ function ProjectModal(props) {
     });
     //Factors FIRST_TIME_LOGIN tracking for NON_INVITED
     factorsai.track('FIRST_TIME_LOGIN', { email: props?.currentAgent?.email });
-    if(props?.currentAgent?.is_auth0_user) {
-      factorsai.track('$form_submitted', {'$email': props?.currentAgent?.email})
+    if (props?.currentAgent?.is_auth0_user) {
+      factorsai.track('$form_submitted', {
+        $email: props?.currentAgent?.email
+      });
     }
   };
 
@@ -90,146 +103,143 @@ function ProjectModal(props) {
       let userAndProjectDetails = {
         ...props?.currentAgent,
         project_name: props?.active_project?.name,
-        project_id: props?.active_project?.id,
+        project_id: props?.active_project?.id
       };
       factorsai.identify(props?.currentAgent?.email, userAndProjectDetails);
     }
   }, [props?.currentAgent, props?.active_project]);
 
-  const popoverContent = () => {
-    return (
-      <div data-tour='step-9' className={'fa-popupcard'}>
-        <div className={`${styles.popover_content__header}`}>Signed in as</div>
-        <div
-          className={`${styles.popover_content__settings}`}
+  const popoverContent = () => (
+    <div data-tour='step-9' className={'fa-popupcard'}>
+      <div className={`${styles.popover_content__header}`}>Signed in as</div>
+      <div
+        className={`${styles.popover_content__settings}`}
+        onClick={() => {
+          setShowPopOver(false);
+          showUserSettingsModal();
+        }}
+      >
+        <div className='flex items-center'>
+          <Avatar
+            size={40}
+            style={{
+              color: '#f56a00',
+              backgroundColor: '#fde3cf',
+              fontSize: '12px'
+            }}
+          >{`${props.currentAgent?.first_name?.charAt(
+            0
+          )}${props.currentAgent?.last_name?.charAt(0)}`}</Avatar>
+          <div className='flex flex-col ml-3'>
+            <Text
+              type={'title'}
+              level={7}
+              weight={'bold'}
+              extraClass={'m-0'}
+            >{`${props.currentAgent?.first_name} ${props.currentAgent?.last_name}`}</Text>
+            <div className={`text-xs`}>{props.currentAgent?.email}</div>
+          </div>
+        </div>
+        <SVG name='settings' size={24} />
+      </div>
+      <div className={'fa-popupcard-divider'} />
+      <div className={`${styles.popover_content__projectList}`}>
+        <Text
+          type={'title'}
+          level={7}
+          weight={'bold'}
+          extraClass={'m-0'}
+          color='grey-2'
+        >
+          Your Projects
+        </Text>
+        <Button
+          type={'text'}
+          className='fa-btn--custom'
           onClick={() => {
             setShowPopOver(false);
-            showUserSettingsModal();
+            setShowProjectModal(true);
           }}
         >
-          <div className='flex items-center'>
-            <Avatar
-              size={40}
-              style={{
-                color: '#f56a00',
-                backgroundColor: '#fde3cf',
-                fontSize: '12px',
-              }}
-            >{`${props.currentAgent?.first_name?.charAt(
-              0
-            )}${props.currentAgent?.last_name?.charAt(0)}`}</Avatar>
-            <div className='flex flex-col ml-3'>
-              <Text
-                type={'title'}
-                level={7}
-                weight={'bold'}
-                extraClass={'m-0'}
-              >{`${props.currentAgent?.first_name} ${props.currentAgent?.last_name}`}</Text>
-              <div className={`text-xs`}>{props.currentAgent?.email}</div>
-            </div>
-          </div>
-          <SVG name='settings' size={24} />
-        </div>
-        <div className={'fa-popupcard-divider'} />
-        <div className={`${styles.popover_content__projectList}`}>
-          <Text
-            type={'title'}
-            level={7}
-            weight={'bold'}
-            extraClass={'m-0'}
-            color='grey-2'
-          >
-            Your Projects
-          </Text>
-          <Button
-            type={'text'}
-            className='fa-btn--custom'
-            onClick={() => {
-              setShowPopOver(false);
-              setShowProjectModal(true);
-            }}
-          >
-            <SVG name='plus' />
-          </Button>
-        </div>
-
-        {props.projects?.length > 6 ? (
-          <input
-            onChange={(e) => searchProject(e)}
-            value={searchProjectName}
-            placeholder={'Search Project'}
-            className={'fa-project-list--search'}
-          />
-        ) : null}
-        <div className={'flex flex-col items-start fa-project-list--wrapper'}>
-          {props.projects
-            .filter((project) =>
-              project?.name
-                .toLowerCase()
-                .includes(searchProjectName.toLowerCase())
-            )
-            .map((project, index) => {
-              return (
-                <div
-                  key={index}
-                  className={`flex justify-between items-center project-item mx-2 ${
-                    props.active_project?.id === project?.id ? 'active' : null
-                  }`}
-                  onClick={() => {
-                    if (props.active_project?.id !== project?.id) {
-                      setShowPopOver(false);
-                      setchangeProjectModal(true);
-                      setselectedProject(project);
-                    }
-                  }}
-                >
-                  <div className='flex items-center flex-no-wrap'>
-                    <Avatar
-                      size={28}
-                      shape='square'
-                      style={{
-                        background: '#83D2D2',
-                        fontSize: '14px',
-                        textTransform: 'uppercase',
-                        fontWeight: '400',
-                        borderRadius: '4px',
-                      }}
-                    >{`${project?.name?.charAt(0)}`}</Avatar>
-                    <span className='font-bold ml-3'>{project?.name}</span>
-                  </div>
-                  {props.active_project?.id === project?.id ? (
-                    <SVG name='check_circle' />
-                  ) : null}
-                </div>
-              );
-            })}
-        </div>
-        <div className={'fa-popupcard-divider'} />
-        <div className={styles.popover_content__additionalActions}>
-          <a href='https://help.factors.ai' target='_blank'>
-            Help
-          </a>
-        </div>
-
-        <div style={{ borderTop: 'thin solid #e7e9ed' }}>
-          <Button
-            size={'large'}
-            type={'text'}
-            onClick={() => {
-              setShowPopOver(false);
-              props.signout();
-            }}
-            className={styles.popover_content__signout}
-          >
-            <div className='flex items-center'>
-              <SVG name='signout' extraClass='mr-1' color='#EA6262' />
-              <span style={{ color: '#EA6262' }}>Logout</span>
-            </div>
-          </Button>
-        </div>
+          <SVG name='plus' />
+        </Button>
       </div>
-    );
-  };
+
+      {props.projects?.length > 6 ? (
+        <input
+          onChange={(e) => searchProject(e)}
+          value={searchProjectName}
+          placeholder={'Search Project'}
+          className={'fa-project-list--search'}
+          ref={inputComponentRef}
+        />
+      ) : null}
+      <div className={'flex flex-col items-start fa-project-list--wrapper'}>
+        {props.projects
+          .filter((project) =>
+            project?.name
+              .toLowerCase()
+              .includes(searchProjectName.toLowerCase())
+          )
+          .map((project, index) => (
+            <div
+              key={index}
+              className={`flex justify-between items-center project-item mx-2 ${
+                props.active_project?.id === project?.id ? 'active' : null
+              }`}
+              onClick={() => {
+                if (props.active_project?.id !== project?.id) {
+                  setShowPopOver(false);
+                  setchangeProjectModal(true);
+                  setselectedProject(project);
+                }
+              }}
+            >
+              <div className='flex items-center flex-no-wrap'>
+                <Avatar
+                  size={28}
+                  shape='square'
+                  style={{
+                    background: '#83D2D2',
+                    fontSize: '14px',
+                    textTransform: 'uppercase',
+                    fontWeight: '400',
+                    borderRadius: '4px'
+                  }}
+                >{`${project?.name?.charAt(0)}`}</Avatar>
+                <span className='font-bold ml-3'>{project?.name}</span>
+              </div>
+              {props.active_project?.id === project?.id ? (
+                <SVG name='check_circle' />
+              ) : null}
+            </div>
+          ))}
+      </div>
+      <div className={'fa-popupcard-divider'} />
+      <div className={styles.popover_content__additionalActions}>
+        <a href='https://help.factors.ai' target='_blank'>
+          Help
+        </a>
+      </div>
+
+      <div style={{ borderTop: 'thin solid #e7e9ed' }}>
+        <Button
+          size={'large'}
+          type={'text'}
+          onClick={() => {
+            setShowPopOver(false);
+            props.signout();
+          }}
+          className={styles.popover_content__signout}
+        >
+          <div className='flex items-center'>
+            <SVG name='signout' extraClass='mr-1' color='#EA6262' />
+            <span style={{ color: '#EA6262' }}>Logout</span>
+          </div>
+        </Button>
+      </div>
+    </div>
+  );
   return (
     <>
       <Popover
@@ -249,7 +259,8 @@ function ProjectModal(props) {
       >
         <Tooltip
           title='Access your projects, account settings, and more'
-          color={TOOLTIP_CONSTANTS.DARK}>
+          color={TOOLTIP_CONSTANTS.DARK}
+        >
           <Button
             className={`${styles.button} flex items-center mr-4`}
             type='text'
@@ -263,13 +274,18 @@ function ProjectModal(props) {
                 opacity: '0.6',
                 textTransform: 'uppercase',
                 fontWeight: '400',
-                borderRadius: '4px',
+                borderRadius: '4px'
               }}
             >{`${props.active_project?.name?.charAt(0)}`}</Avatar>
 
             <div className='flex flex-col items-start ml-2'>
               <div className='flex items-center'>
-                <Text type={'title'} level={7} extraClass={'m-0'} weight={'bold'}>
+                <Text
+                  type={'title'}
+                  level={7}
+                  extraClass={'m-0'}
+                  weight={'bold'}
+                >
                   {`${props.active_project?.name}`}
                 </Text>
                 <SVG name='caretDown' size={20} />
@@ -335,7 +351,7 @@ const mapStateToProps = (state) => {
     projects: state.global.projects,
     active_project: state.global.active_project,
     currentAgent: state.agent.agent_details,
-    agents: state.agent.agents,
+    agents: state.agent.agents
   };
 };
 export default connect(mapStateToProps, {

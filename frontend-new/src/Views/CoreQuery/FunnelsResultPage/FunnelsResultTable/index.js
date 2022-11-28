@@ -1,7 +1,5 @@
 /* eslint-disable camelcase */
-import React, {
-  useCallback, useState, useMemo, useEffect
-} from 'react';
+import React, { useCallback, useState, useMemo, useEffect } from 'react';
 import moment from 'moment';
 import find from 'lodash/find';
 import { getTableColumns, getTableData } from '../utils';
@@ -32,9 +30,13 @@ function FunnelsResultTable({
   const [columns, setColumns] = useState([]);
   const [tableData, setTableData] = useState([]);
   const [searchText, setSearchText] = useState('');
-  const { userPropNames, eventPropNames } = useSelector(
-    (state) => state.coreQuery
-  );
+  const {
+    userPropNames,
+    eventPropertiesDisplayNames: eventPropertiesDisplayNamesState
+  } = useSelector((state) => state.coreQuery);
+
+  const { data: eventPropertiesDisplayNames } =
+    eventPropertiesDisplayNamesState;
 
   const handleSorting = useCallback(
     (prop) => {
@@ -55,7 +57,7 @@ function FunnelsResultTable({
         comparisonChartData,
         resultData,
         userPropNames,
-        eventPropNames
+        eventPropertiesDisplayNames
       )
     );
   }, [
@@ -66,7 +68,7 @@ function FunnelsResultTable({
     comparisonChartData,
     resultData,
     userPropNames,
-    eventPropNames
+    eventPropertiesDisplayNames
   ]);
 
   // const columns = ;
@@ -108,9 +110,7 @@ function FunnelsResultTable({
         return {
           fileName: `${reportTitle}.csv`,
           data: tableData.map(
-            ({
-              index, value, name, nonConvertedName, ...rest
-            }) => {
+            ({ index, value, name, nonConvertedName, ...rest }) => {
               arrayMapper.forEach((elem) => {
                 delete rest[`${elem.mapper}`];
               });
@@ -128,7 +128,7 @@ function FunnelsResultTable({
                     `${getBreakdownDisplayName({
                       breakdown: isCurrentKeyForBreakdown,
                       userPropNames,
-                      eventPropNames
+                      eventPropertiesDisplayNames
                     })} - ${isCurrentKeyForBreakdown.overAllIndex}`
                   ] = rest[key];
                   continue;

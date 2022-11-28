@@ -4,7 +4,7 @@ import {
   SET_PROJECTS,
   SET_ACTIVE_PROJECT,
   CREATE_PROJECT_FULFILLED,
-  FETCH_PROJECTS_REJECTED,
+  FETCH_PROJECTS_REJECTED
 } from './types';
 import { get, getHostUrl, post, put, del } from '../utils/request';
 
@@ -19,9 +19,10 @@ const defaultState = {
   fetchingProjects: null,
   projectsError: null,
   currentProjectSettings: {},
+  currentProjectSettingsLoading: false,
   contentGroup: [],
   bingAds: {},
-  marketo: {},
+  marketo: {}
 };
 
 export default function (state = defaultState, action) {
@@ -41,7 +42,7 @@ export default function (state = defaultState, action) {
       return {
         ...state,
         fetchingProjects: false,
-        projectsError: action.payload,
+        projectsError: action.payload
       };
     }
     case 'CREATE_PROJECT_TIMEZONE_FULFILLED': {
@@ -53,7 +54,7 @@ export default function (state = defaultState, action) {
       if (_state.currentProjectSettings)
         _state.currentProjectSettings = {
           ..._state.currentProjectSettings,
-          ...action.payload.time_zone,
+          ...action.payload.time_zone
         };
       return _state;
     }
@@ -62,14 +63,14 @@ export default function (state = defaultState, action) {
       if (_state.currentProjectSettings)
         _state.currentProjectSettings = {
           ..._state.currentProjectSettings,
-          ...action.payload.updatedSettings,
+          ...action.payload.updatedSettings
         };
       return _state;
     }
     case 'UPDATE_PROJECT_SETTINGS_REJECTED': {
       return {
         ...state,
-        projectEventsError: action.payload.err,
+        projectEventsError: action.payload.err
       };
     }
     case 'UPDATE_PROJECT_DETAILS_FULFILLED': {
@@ -77,32 +78,40 @@ export default function (state = defaultState, action) {
       if (_state.active_project)
         _state.active_project = {
           ..._state.active_project,
-          ...action.payload.updatedDetails,
+          ...action.payload.updatedDetails
         };
       return _state;
     }
     case 'UPDATE_PROJECT_DETAILS_REJECTED': {
       return {
         ...state,
-        projectEventsError: action.payload.err,
+        projectEventsError: action.payload.err
+      };
+    }
+    case 'FETCH_PROJECT_SETTINGS_LOADING': {
+      return {
+        ...state,
+        currentProjectSettingsLoading: true
       };
     }
     case 'FETCH_PROJECT_SETTINGS_FULFILLED': {
       return {
         ...state,
-        currentProjectSettings: action.payload.settings,
+        currentProjectSettingsLoading: false,
+        currentProjectSettings: action.payload.settings
       };
     }
     case 'FETCH_PROJECT_SETTINGS_V1_FULFILLED': {
       return {
         ...state,
-        projectSettingsV1: action.payload.settings,
+        projectSettingsV1: action.payload.settings
       };
     }
     case 'FETCH_PROJECT_SETTINGS_REJECTED': {
       return {
         ...state,
-        projectSettingsError: action.payload.err,
+        currentProjectSettingsLoading: false,
+        projectSettingsError: action.payload.err
       };
     }
     case 'ENABLE_FACEBOOK_USER_ID': {
@@ -111,7 +120,7 @@ export default function (state = defaultState, action) {
       let _state = { ...state };
       _state.currentProjectSettings = {
         ...state.currentProjectSettings,
-        int_facebook_user_id: fbUserID,
+        int_facebook_user_id: fbUserID
       };
       return _state;
     }
@@ -122,7 +131,7 @@ export default function (state = defaultState, action) {
       let _state = { ...state };
       _state.currentProjectSettings = {
         ...state.currentProjectSettings,
-        int_salesforce_enabled_agent_uuid: enabledAgentUUID,
+        int_salesforce_enabled_agent_uuid: enabledAgentUUID
       };
       return _state;
     }
@@ -130,7 +139,7 @@ export default function (state = defaultState, action) {
       return {
         ...state,
         fetchingProjects: false,
-        projectsError: action.payload,
+        projectsError: action.payload
       };
     }
     case 'FETCH_PROJECTS_FULFILLED': {
@@ -147,23 +156,25 @@ export default function (state = defaultState, action) {
 
       return {
         ...state,
-        projects: projectsWithRoles,
+        projects: projectsWithRoles
       };
     }
     case 'CREATE_CONTENT_GROUP': {
       const props = [...state.contentGroup];
       props.push(action.payload);
-      return { ...state, contentGroup: props}
+      return { ...state, contentGroup: props };
     }
     case 'UPDATE_CONTENT_GROUP': {
-      const propsToUpdate = [...state.contentGroup.map((prop, i) => {
-        if(prop.id === action.payload.id) {
+      const propsToUpdate = [
+        ...state.contentGroup.map((prop, i) => {
+          if (prop.id === action.payload.id) {
             return action.payload;
-        } else {
+          } else {
             return prop;
-        }
-      })];
-      return { ...state, contentGroup: propsToUpdate}
+          }
+        })
+      ];
+      return { ...state, contentGroup: propsToUpdate };
     }
     case 'FETCH_CONTENT_GROUP': {
       return { ...state, contentGroup: action.payload };
@@ -175,7 +186,7 @@ export default function (state = defaultState, action) {
       return { ...state, bingAds: action.payload };
     }
     case 'DISABLE_BINGADS_FULFILLED': {
-      return {...state, bingAds: {}}
+      return { ...state, bingAds: {} };
     }
     case 'FETCH_ALERTS': {
       return { ...state, Alerts: action.payload };
@@ -190,7 +201,7 @@ export default function (state = defaultState, action) {
       return { ...state, marketo: action.payload };
     }
     case 'DISABLE_MARKETO_FULFILLED': {
-      return {...state, marketo: {}}
+      return { ...state, marketo: {} };
     }
     case 'FETCH_SLACK_FULFILLED': {
       return { ...state, slack: action.payload };
@@ -199,7 +210,7 @@ export default function (state = defaultState, action) {
       return { ...state, slack: action.payload };
     }
     case 'DISABLE_SLACK_FULFILLED': {
-      return {...state, slack: {}}
+      return { ...state, slack: {} };
     }
     default:
       return state;
@@ -238,7 +249,7 @@ export function fetchProjects() {
         .then((response) => {
           dispatch({
             type: 'FETCH_PROJECTS_FULFILLED',
-            payload: response.data,
+            payload: response.data
           });
           resolve(response);
         })
@@ -268,7 +279,9 @@ export function fetchDemoProject() {
 export function createProject(projectName) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      post(dispatch, host + 'projects?create_dashboard=false', { name: projectName })
+      post(dispatch, host + 'projects?create_dashboard=false', {
+        name: projectName
+      })
         .then((r) => {
           if (r.ok) {
             dispatch({ type: 'CREATE_PROJECT_FULFILLED', payload: r.data });
@@ -276,7 +289,7 @@ export function createProject(projectName) {
           } else {
             dispatch({
               type: 'CREATE_PROJECT_REJECTED',
-              payload: 'Failed to create project.',
+              payload: 'Failed to create project.'
             });
             reject(r);
           }
@@ -295,12 +308,15 @@ export function createProjectWithTimeZone(data) {
       post(dispatch, host + 'projects?create_dashboard=false', data)
         .then((r) => {
           if (r.ok) {
-            dispatch({ type: 'CREATE_PROJECT_TIMEZONE_FULFILLED', payload: r.data });
+            dispatch({
+              type: 'CREATE_PROJECT_TIMEZONE_FULFILLED',
+              payload: r.data
+            });
             resolve(r);
           } else {
             dispatch({
               type: 'CREATE_PROJECT_TIMEZONE_REJECTED',
-              payload: 'Failed to create project.',
+              payload: 'Failed to create project.'
             });
             reject(r);
           }
@@ -316,6 +332,7 @@ export function createProjectWithTimeZone(data) {
 export function fetchProjectSettings(projectId) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
+      dispatch({ type: 'FETCH_PROJECT_SETTINGS_LOADING' });
       get(dispatch, host + 'projects/' + projectId + '/settings')
         .then((r) => {
           if (r.ok) {
@@ -323,8 +340,8 @@ export function fetchProjectSettings(projectId) {
               type: 'FETCH_PROJECT_SETTINGS_FULFILLED',
               payload: {
                 currentProjectId: projectId,
-                settings: r.data,
-              },
+                settings: r.data
+              }
             });
 
             resolve(r);
@@ -334,8 +351,8 @@ export function fetchProjectSettings(projectId) {
               payload: {
                 currentProjectId: projectId,
                 settings: {},
-                err: 'Failed to get project settings.',
-              },
+                err: 'Failed to get project settings.'
+              }
             });
 
             reject(r);
@@ -347,8 +364,8 @@ export function fetchProjectSettings(projectId) {
             payload: {
               currentProjectId: projectId,
               settings: {},
-              err: err,
-            },
+              err: err
+            }
           });
 
           reject(err);
@@ -367,8 +384,8 @@ export function fetchProjectSettingsV1(projectId) {
               type: 'FETCH_PROJECT_SETTINGS_V1_FULFILLED',
               payload: {
                 currentProjectId: projectId,
-                settings: r.data,
-              },
+                settings: r.data
+              }
             });
 
             resolve(r);
@@ -378,8 +395,8 @@ export function fetchProjectSettingsV1(projectId) {
               payload: {
                 currentProjectId: projectId,
                 settings: {},
-                err: 'Failed to get project settings.',
-              },
+                err: 'Failed to get project settings.'
+              }
             });
 
             reject(r);
@@ -391,8 +408,8 @@ export function fetchProjectSettingsV1(projectId) {
             payload: {
               currentProjectId: projectId,
               settings: {},
-              err: err,
-            },
+              err: err
+            }
           });
 
           reject(err);
@@ -409,8 +426,8 @@ export function udpateProjectSettings(projectId, payload) {
           dispatch({
             type: 'UPDATE_PROJECT_SETTINGS_FULFILLED',
             payload: {
-              updatedSettings: response.data,
-            },
+              updatedSettings: response.data
+            }
           });
           resolve(response);
         })
@@ -419,8 +436,8 @@ export function udpateProjectSettings(projectId, payload) {
             type: 'UPDATE_PROJECT_SETTINGS_REJECTED',
             payload: {
               updatedSettings: {},
-              err: err,
-            },
+              err: err
+            }
           });
           reject(err);
         });
@@ -436,8 +453,8 @@ export function udpateProjectDetails(projectId, payload) {
           dispatch({
             type: 'UPDATE_PROJECT_DETAILS_FULFILLED',
             payload: {
-              updatedDetails: response.data,
-            },
+              updatedDetails: response.data
+            }
           });
           resolve(response);
         })
@@ -446,8 +463,8 @@ export function udpateProjectDetails(projectId, payload) {
             type: 'UPDATE_PROJECT_DETAILS_REJECTED',
             payload: {
               updatedDetails: {},
-              err: err,
-            },
+              err: err
+            }
           });
           reject(err);
         });
@@ -525,7 +542,7 @@ export function fetchSalesforceRedirectURL(projectId, agentUUID) {
           if (r.ok) {
             dispatch({
               type: 'FETCH_SALESFORCE_REDIRECT_URL_FULFILLED',
-              payload: r.data,
+              payload: r.data
             });
             resolve(r);
           } else {
@@ -536,7 +553,7 @@ export function fetchSalesforceRedirectURL(projectId, agentUUID) {
         .catch((err) => {
           dispatch({
             type: 'FETCH_SALESFORCE_REDIRECT_URL_REJECTED',
-            payload: err,
+            payload: err
           });
           reject(err);
         });
@@ -595,7 +612,7 @@ export function fetchAdwordsCustomerAccounts(payload) {
           if (r.ok) {
             dispatch({
               type: 'FETCH_ADWORDS_CUSTOMER_ACCOUNTS_FULFILLED',
-              payload: r.data,
+              payload: r.data
             });
             resolve(r.data);
           } else {
@@ -606,7 +623,7 @@ export function fetchAdwordsCustomerAccounts(payload) {
         .catch((err) => {
           dispatch({
             type: 'FETCH_ADWORDS_CUSTOMER_ACCOUNTS_REJECTED',
-            payload: err,
+            payload: err
           });
           reject(err);
         });
@@ -635,24 +652,23 @@ export function fetchSearchConsoleCustomerAccounts(payload) {
   };
 }
 
-
 export function createBingAdsIntegration(projectId) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      post(dispatch, host + 'projects/'+ projectId +'/v1/bingads')
-      .then((r) => {
-        if (r.ok) {
-          dispatch({ type: 'CREATE_BINGADS_FULFILLED', payload: r.data });
-          resolve(r);
-        } else {
-          dispatch({ type: 'CREATE_BINGADS_REJECTED' });
-          reject(r);
-        }
-      })
-      .catch((err) => {
-        dispatch({ type: 'CREATE_BINGADS_REJECTED', payload: err });
-        reject(err);
-      });
+      post(dispatch, host + 'projects/' + projectId + '/v1/bingads')
+        .then((r) => {
+          if (r.ok) {
+            dispatch({ type: 'CREATE_BINGADS_FULFILLED', payload: r.data });
+            resolve(r);
+          } else {
+            dispatch({ type: 'CREATE_BINGADS_REJECTED' });
+            reject(r);
+          }
+        })
+        .catch((err) => {
+          dispatch({ type: 'CREATE_BINGADS_REJECTED', payload: err });
+          reject(err);
+        });
     });
   };
 }
@@ -660,7 +676,7 @@ export function createBingAdsIntegration(projectId) {
 export function enableBingAdsIntegration(projectId) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      put(dispatch, host + 'projects/'+ projectId +'/v1/bingads/enable')
+      put(dispatch, host + 'projects/' + projectId + '/v1/bingads/enable')
         .then((r) => {
           if (r.ok) {
             dispatch({ type: 'ENABLE_BINGADS_FULFILLED', payload: r.data });
@@ -681,16 +697,17 @@ export function enableBingAdsIntegration(projectId) {
 export function disableBingAdsIntegration(projectId) {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
-      del(dispatch, host + 'projects/'+ projectId +'/v1/bingads/disable',{})
-      .then((res) => {
-          if(res.ok) {
-            dispatch({ type: 'DISABLE_BINGADS_FULFILLED', payload: res.data});
+      del(dispatch, host + 'projects/' + projectId + '/v1/bingads/disable', {})
+        .then((res) => {
+          if (res.ok) {
+            dispatch({ type: 'DISABLE_BINGADS_FULFILLED', payload: res.data });
             resolve(res);
           } else {
             reject(res);
           }
-        }).catch((err) => {
-            reject(err);
+        })
+        .catch((err) => {
+          reject(err);
         });
     });
   };
@@ -699,18 +716,18 @@ export function disableBingAdsIntegration(projectId) {
 export function fetchBingAdsIntegration(projectId) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      get(dispatch, host + 'projects/'+ projectId +'/v1/bingads', {})
+      get(dispatch, host + 'projects/' + projectId + '/v1/bingads', {})
         .then((r) => {
           if (r.ok) {
-            dispatch({ type: 'FETCH_BINGADS_FULFILLED', payload: r.data});
+            dispatch({ type: 'FETCH_BINGADS_FULFILLED', payload: r.data });
             resolve(r);
           } else {
-            dispatch({ type: 'FETCH_BINGADS_REJECTED', payload: {}});
+            dispatch({ type: 'FETCH_BINGADS_REJECTED', payload: {} });
             reject(r);
           }
         })
         .catch((err) => {
-          dispatch({ type: 'FETCH_BINGADS_REJECTED', payload: {}});
+          dispatch({ type: 'FETCH_BINGADS_REJECTED', payload: {} });
           reject(err);
         });
     });
@@ -720,20 +737,20 @@ export function fetchBingAdsIntegration(projectId) {
 export function createMarketoIntegration(projectId) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      post(dispatch, host + 'projects/'+ projectId +'/v1/marketo')
-      .then((r) => {
-        if (r.ok) {
-          dispatch({ type: 'CREATE_MARKETO_FULFILLED', payload: r.data });
-          resolve(r);
-        } else {
-          dispatch({ type: 'CREATE_MARKETO_REJECTED' });
-          reject(r);
-        }
-      })
-      .catch((err) => {
-        dispatch({ type: 'CREATE_MARKETO_REJECTED', payload: err });
-        reject(err);
-      });
+      post(dispatch, host + 'projects/' + projectId + '/v1/marketo')
+        .then((r) => {
+          if (r.ok) {
+            dispatch({ type: 'CREATE_MARKETO_FULFILLED', payload: r.data });
+            resolve(r);
+          } else {
+            dispatch({ type: 'CREATE_MARKETO_REJECTED' });
+            reject(r);
+          }
+        })
+        .catch((err) => {
+          dispatch({ type: 'CREATE_MARKETO_REJECTED', payload: err });
+          reject(err);
+        });
     });
   };
 }
@@ -741,7 +758,7 @@ export function createMarketoIntegration(projectId) {
 export function enableMarketoIntegration(projectId) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      put(dispatch, host + 'projects/'+ projectId +'/v1/marketo/enable')
+      put(dispatch, host + 'projects/' + projectId + '/v1/marketo/enable')
         .then((r) => {
           if (r.ok) {
             dispatch({ type: 'ENABLE_MARKETO_FULFILLED', payload: r.data });
@@ -762,16 +779,17 @@ export function enableMarketoIntegration(projectId) {
 export function disableMarketoIntegration(projectId) {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
-      del(dispatch, host + 'projects/'+ projectId +'/v1/marketo/disable',{})
-      .then((res) => {
-          if(res.ok) {
-            dispatch({ type: 'DISABLE_MARKETO_FULFILLED', payload: res.data});
+      del(dispatch, host + 'projects/' + projectId + '/v1/marketo/disable', {})
+        .then((res) => {
+          if (res.ok) {
+            dispatch({ type: 'DISABLE_MARKETO_FULFILLED', payload: res.data });
             resolve(res);
           } else {
             reject(res);
           }
-        }).catch((err) => {
-            reject(err);
+        })
+        .catch((err) => {
+          reject(err);
         });
     });
   };
@@ -780,33 +798,33 @@ export function disableMarketoIntegration(projectId) {
 export function fetchMarketoIntegration(projectId) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      get(dispatch, host + 'projects/'+ projectId +'/v1/marketo', {})
+      get(dispatch, host + 'projects/' + projectId + '/v1/marketo', {})
         .then((r) => {
           if (r.ok) {
-            dispatch({ type: 'FETCH_MARKETO_FULFILLED', payload: r.data});
+            dispatch({ type: 'FETCH_MARKETO_FULFILLED', payload: r.data });
             resolve(r);
           } else {
-            dispatch({ type: 'FETCH_MARKETO_REJECTED', payload: {}});
+            dispatch({ type: 'FETCH_MARKETO_REJECTED', payload: {} });
             reject(r);
           }
         })
         .catch((err) => {
-          dispatch({ type: 'FETCH_MARKETO_REJECTED', payload: {}});
+          dispatch({ type: 'FETCH_MARKETO_REJECTED', payload: {} });
           reject(err);
         });
     });
   };
 }
 
-
 export function deleteIntegration(projectId, name) {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
-      del(dispatch, host + 'integrations/'+ projectId +'/' + name)
-      .then((res) => {
-            resolve(res);
-        }).catch((err) => {
-            reject(err);
+      del(dispatch, host + 'integrations/' + projectId + '/' + name)
+        .then((res) => {
+          resolve(res);
+        })
+        .catch((err) => {
+          reject(err);
         });
     });
   };
@@ -815,10 +833,14 @@ export function deleteIntegration(projectId, name) {
 export function addContentGroup(projectId, payload) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      post(dispatch, host + 'projects/'+ projectId +'/v1/contentgroup', payload)
+      post(
+        dispatch,
+        host + 'projects/' + projectId + '/v1/contentgroup',
+        payload
+      )
         .then((r) => {
           if (r.ok) {
-            dispatch({ type: 'CREATE_CONTENT_GROUP', payload: r.data});
+            dispatch({ type: 'CREATE_CONTENT_GROUP', payload: r.data });
             resolve(r);
           } else {
             reject(r);
@@ -834,10 +856,14 @@ export function addContentGroup(projectId, payload) {
 export function updateContentGroup(projectId, payload) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      put(dispatch, host + 'projects/'+ projectId +'/v1/contentgroup/'+ payload.id, payload)
+      put(
+        dispatch,
+        host + 'projects/' + projectId + '/v1/contentgroup/' + payload.id,
+        payload
+      )
         .then((r) => {
           if (r.ok) {
-            dispatch({ type: 'UPDATE_CONTENT_GROUP', payload: r.data});
+            dispatch({ type: 'UPDATE_CONTENT_GROUP', payload: r.data });
             resolve(r);
           } else {
             reject(r);
@@ -853,10 +879,10 @@ export function updateContentGroup(projectId, payload) {
 export function fetchContentGroup(projectId) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      get(dispatch, host + 'projects/'+ projectId +'/v1/contentgroup', {})
+      get(dispatch, host + 'projects/' + projectId + '/v1/contentgroup', {})
         .then((r) => {
           if (r.ok) {
-            dispatch({ type: 'FETCH_CONTENT_GROUP', payload: r.data});
+            dispatch({ type: 'FETCH_CONTENT_GROUP', payload: r.data });
             resolve(r);
           } else {
             reject(r);
@@ -872,11 +898,12 @@ export function fetchContentGroup(projectId) {
 export function deleteContentGroup(projectId, id) {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
-      del(dispatch, host + 'projects/'+ projectId +'/v1/contentgroup/' + id)
-      .then((res) => {
-            resolve(res);
-        }).catch((err) => {
-            reject(err);
+      del(dispatch, host + 'projects/' + projectId + '/v1/contentgroup/' + id)
+        .then((res) => {
+          resolve(res);
+        })
+        .catch((err) => {
+          reject(err);
         });
     });
   };
@@ -888,7 +915,7 @@ export function getHubspotContact(email) {
       get(dispatch, host + 'hubspot/getcontact?email=' + email, {})
         .then((r) => {
           if (r.ok) {
-            dispatch({ type: 'FETCH_HUBSPOT_CONTACT', payload: r.data});
+            dispatch({ type: 'FETCH_HUBSPOT_CONTACT', payload: r.data });
             resolve(r);
           } else {
             reject(r);
@@ -904,10 +931,14 @@ export function getHubspotContact(email) {
 export function createAlert(projectId, payload, query_id) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      post(dispatch, host + 'projects/'+ projectId +'/v1/alerts?query_id=' + query_id, payload)
+      post(
+        dispatch,
+        host + 'projects/' + projectId + '/v1/alerts?query_id=' + query_id,
+        payload
+      )
         .then((r) => {
-            dispatch({ type: 'CREATE_ALERT', payload: r.data});
-            resolve(r);
+          dispatch({ type: 'CREATE_ALERT', payload: r.data });
+          resolve(r);
         })
         .catch((err) => {
           reject(err);
@@ -916,13 +947,33 @@ export function createAlert(projectId, payload, query_id) {
   };
 }
 
-export function sendAlertNow(projectId, payload, query_id, dateFromTo, overrideDate) {
+export function sendAlertNow(
+  projectId,
+  payload,
+  query_id,
+  dateFromTo,
+  overrideDate
+) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      post(dispatch, host + 'projects/'+ projectId +'/v1/alerts/send_now?query_id=' + query_id +'&override_date_range=' + overrideDate + '&from_time=' + dateFromTo.from + '&to_time=' + dateFromTo.to, payload)
+      post(
+        dispatch,
+        host +
+          'projects/' +
+          projectId +
+          '/v1/alerts/send_now?query_id=' +
+          query_id +
+          '&override_date_range=' +
+          overrideDate +
+          '&from_time=' +
+          dateFromTo.from +
+          '&to_time=' +
+          dateFromTo.to,
+        payload
+      )
         .then((r) => {
           if (r.ok) {
-            dispatch({ type: 'SEND_ALERT', payload: r.data});
+            dispatch({ type: 'SEND_ALERT', payload: r.data });
             resolve(r);
           } else {
             reject(r);
@@ -938,10 +989,10 @@ export function sendAlertNow(projectId, payload, query_id, dateFromTo, overrideD
 export function fetchAlerts(projectId) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      get(dispatch, host + 'projects/'+ projectId +'/v1/alerts', {})
+      get(dispatch, host + 'projects/' + projectId + '/v1/alerts', {})
         .then((r) => {
           if (r.ok) {
-            dispatch({ type: 'FETCH_ALERTS', payload: r.data});
+            dispatch({ type: 'FETCH_ALERTS', payload: r.data });
             resolve(r);
           } else {
             reject(r);
@@ -957,10 +1008,14 @@ export function fetchAlerts(projectId) {
 export function fetchSharedAlerts(projectId) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      get(dispatch, host + 'projects/'+ projectId +'/v1/alerts?saved_queries=true', {})
+      get(
+        dispatch,
+        host + 'projects/' + projectId + '/v1/alerts?saved_queries=true',
+        {}
+      )
         .then((r) => {
           if (r.ok) {
-            dispatch({ type: 'FETCH_SHARED_ALERTS', payload: r.data});
+            dispatch({ type: 'FETCH_SHARED_ALERTS', payload: r.data });
             resolve(r);
           } else {
             reject(r);
@@ -976,21 +1031,21 @@ export function fetchSharedAlerts(projectId) {
 export function deleteAlert(projectId, id) {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
-      del(dispatch, host + 'projects/'+ projectId +'/v1/alerts/' + id)
-      .then((res) => {
-            resolve(res);
-        }).catch((err) => {
-            reject(err);
+      del(dispatch, host + 'projects/' + projectId + '/v1/alerts/' + id)
+        .then((res) => {
+          resolve(res);
+        })
+        .catch((err) => {
+          reject(err);
         });
     });
   };
 }
 
-
 export function enableSlackIntegration(projectId) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      post(dispatch, host + 'projects/' + projectId +'/slack/auth')
+      post(dispatch, host + 'projects/' + projectId + '/slack/auth')
         .then((r) => {
           if (r.ok) {
             dispatch({ type: 'ENABLE_SLACK_FULFILLED', payload: r.data });
@@ -1011,18 +1066,18 @@ export function enableSlackIntegration(projectId) {
 export function fetchSlackChannels(projectId) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      get(dispatch, host + 'projects/'+ projectId +'/slack/channels')
+      get(dispatch, host + 'projects/' + projectId + '/slack/channels')
         .then((r) => {
           if (r.ok) {
-            dispatch({ type: 'FETCH_SLACK_FULFILLED', payload: r.data});
+            dispatch({ type: 'FETCH_SLACK_FULFILLED', payload: r.data });
             resolve(r);
           } else {
-            dispatch({ type: 'FETCH_SLACK_REJECTED', payload: {}});
+            dispatch({ type: 'FETCH_SLACK_REJECTED', payload: {} });
             reject(r);
           }
         })
         .catch((err) => {
-          dispatch({ type: 'FETCH_SLACK_REJECTED', payload: {}});
+          dispatch({ type: 'FETCH_SLACK_REJECTED', payload: {} });
           reject(err);
         });
     });
@@ -1032,16 +1087,17 @@ export function fetchSlackChannels(projectId) {
 export function disableSlackIntegration(projectId) {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
-      del(dispatch, host + 'projects/'+ projectId +'/slack/delete', {})
-      .then((res) => {
-          if(res.ok) {
-            dispatch({ type: 'DISABLE_SLACK_FULFILLED', payload: res.data});
+      del(dispatch, host + 'projects/' + projectId + '/slack/delete', {})
+        .then((res) => {
+          if (res.ok) {
+            dispatch({ type: 'DISABLE_SLACK_FULFILLED', payload: res.data });
             resolve(res);
           } else {
             reject(res);
           }
-        }).catch((err) => {
-            reject(err);
+        })
+        .catch((err) => {
+          reject(err);
         });
     });
   };
@@ -1072,10 +1128,17 @@ export function enableHubspotIntegration(projectId) {
 export function enableLeadSquaredIntegration(projectId, payload) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      put(dispatch, host + 'projects/'+ projectId +'/leadsquaredsettings', payload)
+      put(
+        dispatch,
+        host + 'projects/' + projectId + '/leadsquaredsettings',
+        payload
+      )
         .then((r) => {
           if (r.ok) {
-            dispatch({ type: 'ENABLE_LEADSQUARED_INTEGRATION', payload: r.data});
+            dispatch({
+              type: 'ENABLE_LEADSQUARED_INTEGRATION',
+              payload: r.data
+            });
             resolve(r);
           } else {
             reject(r);
@@ -1092,16 +1155,24 @@ export function enableLeadSquaredIntegration(projectId, payload) {
 export function disableLeadSquaredIntegration(projectId) {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
-      del(dispatch, host + 'projects/'+ projectId +'/leadsquaredsettings/remove', {})
-      .then((res) => {
-          if(res.ok) {
-            dispatch({ type: 'DISABLE_LEADSQUARED_FULFILLED', payload: res.data});
+      del(
+        dispatch,
+        host + 'projects/' + projectId + '/leadsquaredsettings/remove',
+        {}
+      )
+        .then((res) => {
+          if (res.ok) {
+            dispatch({
+              type: 'DISABLE_LEADSQUARED_FULFILLED',
+              payload: res.data
+            });
             resolve(res);
           } else {
             reject(res);
           }
-        }).catch((err) => {
-            reject(err);
+        })
+        .catch((err) => {
+          reject(err);
         });
     });
   };

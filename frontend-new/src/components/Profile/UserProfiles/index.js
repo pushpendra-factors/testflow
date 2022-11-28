@@ -69,7 +69,7 @@ function UserProfiles({
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [demoProjectId, setDemoProjectId] = useState(null);
   const [loading, setLoading] = useState(true);
-
+  const [activeUser, setActiveUser] = useState({});
   const [filterPayload, setFilterPayload] = useState({
     source: 'web',
     filters: []
@@ -118,7 +118,7 @@ function UserProfiles({
     marketo?.status ||
     integrationV1?.int_slack ||
     integration?.lead_squared_config !== null ||
-    integration?.int_six_signal;
+    (integration?.int_client_six_signal_key || integration?.int_factors_six_signal_key);
 
   useEffect(() => {
     getUserProperties(activeProject.id);
@@ -241,6 +241,7 @@ function UserProfiles({
                     user.is_anonymous,
                     currentProjectSettings.timelines_config
                   );
+                  setActiveUser(user);
                   showModal();
                 }
               })}
@@ -260,7 +261,7 @@ function UserProfiles({
           footer={null}
           closable={null}
         >
-          <ContactDetails onCancel={handleCancel} />
+          <ContactDetails user={activeUser} onCancel={handleCancel} />
         </Modal>
       </div>
     );

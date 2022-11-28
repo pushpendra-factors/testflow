@@ -1,3 +1,4 @@
+import { notification } from 'antd';
 import { get, getHostUrl, post, del, put } from '../../utils/request';
 import {
   QUERIES_LOADING,
@@ -10,74 +11,60 @@ import {
   GROUPS_LOADED,
   GROUPS_LOADING_FAILED,
   INITIALIZE_CONTENT_GROUPS,
+  EVENT_DISPLAY_NAMES_LOADING,
+  EVENT_DISPLAY_NAMES_ERROR,
+  EVENT_DISPLAY_NAMES_LOADED
 } from '../types';
-import { notification } from 'antd';
 import { getErrorMessage } from '../../utils/dataFormatter';
 // import { SAVED_QUERIES } from '../../utils/SampleResponse';
 import {
   MARKETING_TOUCHPOINTS_ALIAS,
   KEY_TOUCH_POINT_DIMENSIONS,
-  KEY_CONTENT_GROUPS,
+  KEY_CONTENT_GROUPS
 } from '../../utils/constants';
+
 const host = getHostUrl();
 
-export const getEventNames = (dispatch, projectId) => {
-  return get(
+export const getEventNames = (dispatch, projectId) =>
+  get(
     dispatch,
-    host +
-      'projects/' +
-      projectId +
-      '/user/event_names?is_display_name_enabled=true',
+    `${host}projects/${projectId}/user/event_names?is_display_name_enabled=true`,
     {}
   );
-};
 
 export const getEventsData = (
   projectId,
   query_group,
   dashboard,
   isQuery = false,
-  query_id = null,
+  query_id = null
 ) => {
   let url;
   if (!dashboard) {
-    url = host + 'projects/' + projectId + '/v1/query' + ((query_id)? '?&query_id=' + query_id: '');
+    url = `${host}projects/${projectId}/v1/query${
+      query_id ? `?&query_id=${query_id}` : ''
+    }`;
   } else {
-    url =
-      host +
-      'projects/' +
-      projectId +
-      `/v1/query?refresh=${dashboard.refresh}&dashboard_id=` +
-      dashboard.id +
-      '&dashboard_unit_id=' +
-      dashboard.unit_id +
-      '&is_query=' +
-      isQuery + ((query_id)? '&query_id=' + query_id: '');
+    url = `${host}projects/${projectId}/v1/query?refresh=${
+      dashboard.refresh
+    }&dashboard_id=${dashboard.id}&dashboard_unit_id=${
+      dashboard.unit_id
+    }&is_query=${isQuery}${query_id ? `&query_id=${query_id}` : ''}`;
   }
   return post(null, url, query_group && { query_group });
 };
 
 export function fetchEventProperties(projectId, eventName) {
-  const url =
-    host +
-    'projects/' +
-    projectId +
-    '/event_names/' +
-    btoa(eventName) +
-    '/properties?is_display_name_enabled=true';
+  const url = `${host}projects/${projectId}/event_names/${btoa(
+    eventName
+  )}/properties?is_display_name_enabled=true`;
   return get(null, url);
 }
 
 export function fetchEventPropertyValues(projectId, eventName, propertyName) {
-  const url =
-    host +
-    'projects/' +
-    projectId +
-    '/event_names/' +
-    btoa(eventName) +
-    '/properties/' +
-    propertyName +
-    '/values';
+  const url = `${host}projects/${projectId}/event_names/${btoa(
+    eventName
+  )}/properties/${propertyName}/values`;
   return get(null, url);
 }
 
@@ -87,16 +74,7 @@ export const fetchChannelObjPropertyValues = (
   filterObj,
   property
 ) => {
-  const url =
-    host +
-    'projects/' +
-    projectId +
-    '/v1/channels/filter_values?channel=' +
-    channel +
-    '&filter_object=' +
-    filterObj +
-    '&filter_property=' +
-    property;
+  const url = `${host}projects/${projectId}/v1/channels/filter_values?channel=${channel}&filter_object=${filterObj}&filter_property=${property}`;
   // const url =
   //   filterObj === "campaign"
   //     ? `http://localhost:8000/getChannelFilters`
@@ -105,40 +83,33 @@ export const fetchChannelObjPropertyValues = (
 };
 
 export function fetchUserPropertyValues(projectId, propertyName) {
-  const url =
-    host +
-    'projects/' +
-    projectId +
-    '/user_properties/' +
-    propertyName +
-    '/values';
+  const url = `${host}projects/${projectId}/user_properties/${propertyName}/values`;
   return get(null, url);
 }
 
 export function fetchUserProperties(projectId, queryType) {
-  const url =
-    host +
-    'projects/' +
-    projectId +
-    '/user_properties?is_display_name_enabled=true';
+  const url = `${host}projects/${projectId}/user_properties?is_display_name_enabled=true`;
   return get(null, url);
 }
 
-export const getFunnelData = (projectId, query, dashboard, isQuery = false, query_id = null) => {
+export const getFunnelData = (
+  projectId,
+  query,
+  dashboard,
+  isQuery = false,
+  query_id = null
+) => {
   let url;
   if (!dashboard) {
-    url = host + 'projects/' + projectId + '/query' + ((query_id)? '?&query_id=' + query_id: '');
+    url = `${host}projects/${projectId}/query${
+      query_id ? `?&query_id=${query_id}` : ''
+    }`;
   } else {
-    url =
-      host +
-      'projects/' +
-      projectId +
-      `/query?refresh=${dashboard.refresh}&dashboard_id=` +
-      dashboard.id +
-      '&dashboard_unit_id=' +
-      dashboard.unit_id +
-      '&is_query=' +
-      isQuery + ((query_id)? '&query_id=' + query_id: '');
+    url = `${host}projects/${projectId}/query?refresh=${
+      dashboard.refresh
+    }&dashboard_id=${dashboard.id}&dashboard_unit_id=${
+      dashboard.unit_id
+    }&is_query=${isQuery}${query_id ? `&query_id=${query_id}` : ''}`;
   }
   return post(null, url, { query });
 };
@@ -151,18 +122,9 @@ export const getProfileData = (
 ) => {
   let url;
   if (!dashboard) {
-    url = host + 'projects/' + projectId + '/profiles/query';
+    url = `${host}projects/${projectId}/profiles/query`;
   } else {
-    url =
-      host +
-      'projects/' +
-      projectId +
-      `/profiles/query?refresh=${dashboard.refresh}&dashboard_id=` +
-      dashboard.id +
-      '&dashboard_unit_id=' +
-      dashboard.unit_id +
-      '&is_query=' +
-      isQuery;
+    url = `${host}projects/${projectId}/profiles/query?refresh=${dashboard.refresh}&dashboard_id=${dashboard.id}&dashboard_unit_id=${dashboard.unit_id}&is_query=${isQuery}`;
   }
   return post(null, url, query);
 };
@@ -170,24 +132,15 @@ export const getProfileData = (
 export const getKPIData = (projectId, query, dashboard, isQuery = false) => {
   let url;
   if (!dashboard) {
-    url = host + 'projects/' + projectId + '/v1/kpi/query';
+    url = `${host}projects/${projectId}/v1/kpi/query`;
   } else {
-    url =
-      host +
-      'projects/' +
-      projectId +
-      `/v1/kpi/query?refresh=${dashboard.refresh}&dashboard_id=` +
-      dashboard.id +
-      '&dashboard_unit_id=' +
-      dashboard.unit_id +
-      '&is_query=' +
-      isQuery;
+    url = `${host}projects/${projectId}/v1/kpi/query?refresh=${dashboard.refresh}&dashboard_id=${dashboard.id}&dashboard_unit_id=${dashboard.unit_id}&is_query=${isQuery}`;
   }
   return post(null, url, query);
 };
 
 export const saveQuery = (projectId, title, query, type, settings) => {
-  const url = host + 'projects/' + projectId + '/queries';
+  const url = `${host}projects/${projectId}/queries`;
   return post(null, url, { query, title, type, settings });
 };
 
@@ -205,8 +158,8 @@ export const saveQuery = (projectId, title, query, type, settings) => {
 //   }
 // };
 
-export const deleteQuery = ({ project_id, id }) => {
-  return async function (dispatch) {
+export const deleteQuery = ({ project_id, id }) =>
+  async function (dispatch) {
     try {
       dispatch({ type: QUERIES_LOADING });
       await deleteReport({ project_id, queryId: id });
@@ -217,38 +170,33 @@ export const deleteQuery = ({ project_id, id }) => {
       notification.error({
         message: 'Something went wrong!',
         description: getErrorMessage(err),
-        duration: 5,
+        duration: 5
       });
     }
   };
+
+export const fetchQueries = (projectId) => async (dispatch) => {
+  try {
+    dispatch({ type: QUERIES_LOADING });
+    const url = `${host}projects/${projectId}/queries`;
+    const res = await get(null, url);
+    dispatch({ type: QUERIES_LOADED, payload: res.data });
+  } catch (err) {
+    console.log(err);
+    dispatch({ type: QUERIES_LOADING_FAILED });
+  }
 };
 
-export const fetchQueries = (projectId) => {
-  return async (dispatch) => {
-    try {
-      dispatch({ type: QUERIES_LOADING });
-      const url = host + 'projects/' + projectId + '/queries';
-      const res = await get(null, url);
-      dispatch({ type: QUERIES_LOADED, payload: res.data });
-    } catch (err) {
-      console.log(err);
-      dispatch({ type: QUERIES_LOADING_FAILED });
-    }
-  };
-};
-
-export const fetchGroups = (projectId) => {
-  return async (dispatch) => {
-    try {
-      dispatch({ type: GROUPS_LOADING });
-      const url = host + 'projects/' + projectId + '/groups';
-      const res = await get(null, url);
-      dispatch({ type: GROUPS_LOADED, payload: res.data });
-    } catch (err) {
-      console.log(err);
-      dispatch({ type: GROUPS_LOADING_FAILED });
-    }
-  };
+export const fetchGroups = (projectId) => async (dispatch) => {
+  try {
+    dispatch({ type: GROUPS_LOADING });
+    const url = `${host}projects/${projectId}/groups`;
+    const res = await get(null, url);
+    dispatch({ type: GROUPS_LOADED, payload: res.data });
+  } catch (err) {
+    console.log(err);
+    dispatch({ type: GROUPS_LOADING_FAILED });
+  }
 };
 
 export const getAttributionsData = (
@@ -259,25 +207,15 @@ export const getAttributionsData = (
 ) => {
   let url;
   if (!dashboard) {
-    url = host + 'projects/' + projectId + '/attribution/query';
+    url = `${host}projects/${projectId}/attribution/query`;
   } else {
-    url =
-      host +
-      'projects/' +
-      projectId +
-      `/attribution/query?refresh=${dashboard.refresh}&dashboard_id=` +
-      dashboard.id +
-      '&dashboard_unit_id=' +
-      dashboard.unit_id +
-      '&is_query=' +
-      isQuery;
+    url = `${host}projects/${projectId}/attribution/query?refresh=${dashboard.refresh}&dashboard_id=${dashboard.id}&dashboard_unit_id=${dashboard.unit_id}&is_query=${isQuery}`;
   }
   return post(null, url, reqBody);
 };
 
 export const fetchCampaignConfig = (projectId, channel) => {
-  const url =
-    host + 'projects/' + projectId + '/v1/channels/config?channel=' + channel;
+  const url = `${host}projects/${projectId}/v1/channels/config?channel=${channel}`;
   return get(null, url);
 };
 
@@ -289,18 +227,9 @@ export const getCampaignsData = (
 ) => {
   let url;
   if (!dashboard) {
-    url = host + 'projects/' + projectId + '/v1/channels/query';
+    url = `${host}projects/${projectId}/v1/channels/query`;
   } else {
-    url =
-      host +
-      'projects/' +
-      projectId +
-      `/v1/channels/query?refresh=${dashboard.refresh}&dashboard_id=` +
-      dashboard.id +
-      '&dashboard_unit_id=' +
-      dashboard.unit_id +
-      '&is_query=' +
-      isQuery;
+    url = `${host}projects/${projectId}/v1/channels/query?refresh=${dashboard.refresh}&dashboard_id=${dashboard.id}&dashboard_unit_id=${dashboard.unit_id}&is_query=${isQuery}`;
   }
   return post(null, url, reqBody);
 };
@@ -314,93 +243,89 @@ export const getWebAnalyticsData = (
 ) => {
   const url =
     `${host}projects/${projectId}/dashboard/${dashboardId}/units/query/web_analytics?refresh=${refresh}` +
-    '&is_query=' +
-    isQuery;
+    `&is_query=${isQuery}`;
   return post(null, url, reqBody);
 };
 
-export const fetchSmartPropertyRules = (projectId) => {
-  return async function (dispatch) {
+export const fetchSmartPropertyRules = (projectId) =>
+  async function (dispatch) {
     try {
-      const url = host + 'projects/' + projectId + '/v1/smart_properties/rules';
+      const url = `${host}projects/${projectId}/v1/smart_properties/rules`;
       const res = await get(null, url);
-      const customDimensions = res.data.map((elem) => {
-        return {
-          title: elem.name,
-          header: elem.name,
-          responseHeader: elem.name,
-          enabled: false,
-          type: 'custom',
-          touchPoint: MARKETING_TOUCHPOINTS_ALIAS[elem.type_alias],
-          defaultValue: false,
-        };
-      });
+      const customDimensions = res.data.map((elem) => ({
+        title: elem.name,
+        header: elem.name,
+        responseHeader: elem.name,
+        enabled: false,
+        type: 'custom',
+        touchPoint: MARKETING_TOUCHPOINTS_ALIAS[elem.type_alias],
+        defaultValue: false
+      }));
       dispatch({
         type: INITIALIZE_TOUCHPOINT_DIMENSIONS,
-        payload: [...KEY_TOUCH_POINT_DIMENSIONS, ...customDimensions],
+        payload: [...KEY_TOUCH_POINT_DIMENSIONS, ...customDimensions]
       });
     } catch (err) {
       console.log(err);
     }
   };
-};
 
-export const fetchAttrContentGroups = (projectId) => {
-  return async function (dispatch) {
+export const fetchAttrContentGroups = (projectId) =>
+  async function (dispatch) {
     try {
-      const url = host + 'projects/' + projectId + '/v1/contentgroup';
+      const url = `${host}projects/${projectId}/v1/contentgroup`;
       const res = await get(null, url);
-      const content_group = res.data.map((elem) => {
-        return {
-          title: elem.content_group_name,
-          header: elem.content_group_name,
-          responseHeader: elem.content_group_name,
-          enabled: false,
-          type: 'content_group',
-          touchPoint: 'LandingPage',
-          defaultValue: false,
-        };
-      });
+      const content_group = res.data.map((elem) => ({
+        title: elem.content_group_name,
+        header: elem.content_group_name,
+        responseHeader: elem.content_group_name,
+        enabled: false,
+        type: 'content_group',
+        touchPoint: 'LandingPage',
+        defaultValue: false
+      }));
       dispatch({
         type: INITIALIZE_CONTENT_GROUPS,
-        payload: [...KEY_CONTENT_GROUPS, ...content_group],
+        payload: [...KEY_CONTENT_GROUPS, ...content_group]
       });
     } catch (err) {
       console.log(err);
     }
   };
-};
 
 export const updateQuery = (projectId, savedQueryId, reqBody) => {
-  const url = host + 'projects/' + projectId + '/queries/' + savedQueryId;
+  const url = `${host}projects/${projectId}/queries/${savedQueryId}`;
   return put(null, url, reqBody);
 };
 
 export const deleteReport = ({ project_id, queryId }) => {
-  const url = host + 'projects/' + project_id + '/queries/' + queryId;
+  const url = `${host}projects/${project_id}/queries/${queryId}`;
   return del(null, url);
 };
 
 export function fetchGroupProperties(projectId, groupName) {
-  const url =
-    host +
-    'projects/' +
-    projectId +
-    '/groups/' +
-    btoa(groupName) +
-    '/properties';
+  const url = `${host}projects/${projectId}/groups/${btoa(
+    groupName
+  )}/properties`;
   return get(null, url);
 }
 
 export function fetchGroupPropertyValues(projectId, groupName, propertyName) {
-  const url =
-    host +
-    'projects/' +
-    projectId +
-    '/groups/' +
-    btoa(groupName) +
-    '/properties/' +
-    propertyName +
-    '/values';
+  const url = `${host}projects/${projectId}/groups/${btoa(
+    groupName
+  )}/properties/${propertyName}/values`;
   return get(null, url);
+}
+
+export function fetchEventDisplayNames({ projectId }) {
+  return async function (dispatch) {
+    try {
+      dispatch({ type: EVENT_DISPLAY_NAMES_LOADING });
+      const url = `${host}projects/${projectId}/v1/events/displayname`;
+      const response = await get(null, url);
+      dispatch({ type: EVENT_DISPLAY_NAMES_LOADED, payload: response.data });
+    } catch (err) {
+      dispatch({ type: EVENT_DISPLAY_NAMES_ERROR });
+    }
+  };
 }

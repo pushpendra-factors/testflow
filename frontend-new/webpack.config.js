@@ -1,9 +1,9 @@
 var webpack = require('webpack');
-var path = require('path');
 var config = require('./build-config');
 
 const getCSSModuleLocalIdent = require('react-dev-utils/getCSSModuleLocalIdent');
-const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
+const BundleAnalyzerPlugin =
+  require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 const cssRegex = /\.css$/;
 const cssModuleRegex = /\.module\.css$/;
 const sassRegex = /\.(scss|sass)$/;
@@ -48,18 +48,21 @@ const getStyleLoaders = (cssOptions, preProcessor) => {
 // plugins
 const HtmlWebPackPlugin = require('html-webpack-plugin');
 var CopyWebpackPlugin = require('copy-webpack-plugin');
+const { webpackDirAlias } = require('./dirAlias');
 
 var buildConfigPlugin = new webpack.DefinePlugin({
   ENV: JSON.stringify(process.env.NODE_ENV),
   BUILD_CONFIG: JSON.stringify(config[process.env.NODE_ENV]),
   // Fix: To use production build, if not dev.
-  'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV === 'development' ? 'development' : 'production')
+  'process.env.NODE_ENV': JSON.stringify(
+    process.env.NODE_ENV === 'development' ? 'development' : 'production'
+  )
 });
 
 const HtmlPlugin = new HtmlWebPackPlugin({
   template: './src/index.template.html',
   filename: './index.html',
-  title: 'Caching',
+  title: 'Caching'
 });
 
 var isDev = process.env.NODE_ENV === 'development';
@@ -71,7 +74,7 @@ function getBuildPath() {
 
 module.exports = {
   entry: './src/index.js',
-  devtool: (isDev || isStaging) ? 'inline-sourcemap' : false, // default false
+  devtool: isDev || isStaging ? 'inline-sourcemap' : false, // default false
   module: {
     rules: [
       {
@@ -119,13 +122,7 @@ module.exports = {
   resolve: {
     extensions: ['*', '.js', '.jsx'],
     alias: {
-      factorsComponents: path.resolve(__dirname, './src/components/factorsComponents'),
-      Components: path.resolve(__dirname, './src/components'),
-      svgIcons: path.resolve(__dirname, './src/components/svgIcons'),
-      Reducers: path.resolve(__dirname, './src/reducers'),
-      Utils: path.resolve(__dirname, './src/utils'),
-      Styles: path.resolve(__dirname, './src/styles'),
-      hooks: path.resolve(__dirname, './src/hooks'),
+      ...webpackDirAlias
     }
   },
   plugins: [
@@ -133,13 +130,13 @@ module.exports = {
     HtmlPlugin,
     new CopyWebpackPlugin([{ from: './src/assets', to: 'assets' }]),
     new BundleAnalyzerPlugin({
-      analyzerMode: analyzer ? 'server' : 'disabled',
-    }),
+      analyzerMode: analyzer ? 'server' : 'disabled'
+    })
   ],
   output: {
     path: getBuildPath(),
     publicPath: '/',
-    filename: '[name].[hash].js',
+    filename: '[name].[hash].js'
   },
   devServer: {
     historyApiFallback: true,

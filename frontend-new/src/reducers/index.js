@@ -11,9 +11,11 @@ import settingsReducer from './settings';
 import templates from './templates';
 import insights from './insights';
 import kpi from './kpi';
+import pathAnalysis from './pathAnalysis';
 import groups from './groups';
 import timelines from './timelines';
 import dashboardTemplateReducer from './dashboard_templates';
+import attributionReducer from '../features/attribution/state/reducer';
 
 const rootReducer = combineReducers({
   global: GlobalReducer,
@@ -31,6 +33,8 @@ const rootReducer = combineReducers({
   groups,
   timelines,
   dashboardTemplates: dashboardTemplateReducer,
+  pathAnalysis,
+  attributionDashboard: attributionReducer
 });
 
 export default rootReducer;

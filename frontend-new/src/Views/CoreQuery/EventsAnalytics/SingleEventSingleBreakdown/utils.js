@@ -31,6 +31,7 @@ import NonClickableTableHeader from '../../../../components/NonClickableTableHea
 import { EVENT_COUNT_KEY } from '../eventsAnalytics.constants';
 import { BREAKDOWN_TYPES } from '../../constants';
 import { getDifferentDates } from '../../coreQuery.helpers';
+import { isNumeric } from '../../../../utils/global';
 
 export const defaultSortProp = ({ breakdown }) => {
   const dateTimeBreakdownIndex = findIndex(
@@ -103,15 +104,14 @@ export const getTableColumns = (
   page,
   eventNames,
   userPropNames,
-  eventPropNames
+  eventPropertiesDisplayNames
 ) => {
   const breakdownColumns = breakdown.map((e) => {
-    const displayTitle =
-      e.prop_category === 'user'
-        ? userPropNames[e.property] || e.property
-        : e.prop_category === 'event'
-        ? eventPropNames[e.property] || e.property
-        : e.property;
+    const displayTitle = getBreakdownDisplayName({
+      breakdown: e,
+      userPropNames,
+      eventPropertiesDisplayNames
+    });
     return {
       title: getClickableTitleSorter(
         displayTitle,
@@ -123,7 +123,10 @@ export const getTableColumns = (
       width: '50%',
       fixed: 'left',
       render: (d) => {
-        if (e.prop_type === 'numerical' && !Number.isNaN(d)) {
+        if (
+          e.prop_type === 'numerical' &&
+          (typeof d === 'number' || isNumeric(d))
+        ) {
           return <NumFormat number={d} />;
         }
         return d;
@@ -253,7 +256,7 @@ export const getDateBasedColumns = (
   handleSorting,
   frequency,
   userPropNames,
-  eventPropNames,
+  eventPropertiesDisplayNames,
   comparisonApplied,
   compareCategories
 ) => {
@@ -270,12 +273,11 @@ export const getDateBasedColumns = (
     width: 150
   };
   const breakdownColumns = breakdown.map((e) => {
-    const displayTitle =
-      e.prop_category === 'user'
-        ? userPropNames[e.property] || e.property
-        : e.prop_category === 'event'
-        ? eventPropNames[e.property] || e.property
-        : e.property;
+    const displayTitle = getBreakdownDisplayName({
+      breakdown: e,
+      userPropNames,
+      eventPropertiesDisplayNames
+    });
 
     return {
       title: getClickableTitleSorter(
@@ -288,7 +290,10 @@ export const getDateBasedColumns = (
       width: 200,
       fixed: 'left',
       render: (d) => {
-        if (e.prop_type === 'numerical' && !Number.isNaN(d)) {
+        if (
+          e.prop_type === 'numerical' &&
+          (typeof d === 'number' || isNumeric(d))
+        ) {
           return <NumFormat number={d} />;
         }
         return d;
@@ -597,13 +602,13 @@ export const getDataInHorizontalBarChartFormat = (
 export const getHorizontalBarChartColumns = (
   breakdown,
   userPropNames,
-  eventPropNames
+  eventPropertiesDisplayNames
 ) => {
   const result = breakdown.map((e) => {
     const displayTitle = getBreakdownDisplayName({
       breakdown: e,
       userPropNames,
-      eventPropNames
+      eventPropertiesDisplayNames
     });
 
     return {

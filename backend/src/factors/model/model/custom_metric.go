@@ -24,20 +24,24 @@ type CustomMetricObjectTypeAndProperties struct {
 }
 
 type CustomMetricConfigV1 struct {
-	ObjectType         string              `json:"obj_ty"`
-	TypeOfQuery        int                 `json:"type_of_query"`
-	AggregateFunctions []string            `json:"agFn"`
-	Properties         []map[string]string `json:"properties"`
+	ObjectType         		string              `json:"obj_ty"`
+	TypeOfQuery        		int                 `json:"type_of_query"`
+	AggregateFunctions 		[]string            `json:"agFn"`
+	Properties         		[]map[string]string `json:"properties"`
+	TypeOfQueryDisplayName 		string              `json:"type_of_query_display_name"`
 }
 
 const (
-	SumAggregateFunction     = "sum"
-	UniqueAggregateFunction  = "unique"
-	AverageAggregateFunction = "average"
-	CountAggregateFunction   = "count"
-	Derived                  = "derived"
-	DerivedMetrics           = "derived_metrics"
-	CustomEventType          = "custom_events"
+	SumAggregateFunction     		= "sum"
+	UniqueAggregateFunction  		= "unique"
+	AverageAggregateFunction 		= "average"
+	CountAggregateFunction   		= "count"
+	Derived                  		= "derived"
+	DerivedMetrics           		= "derived_metrics"
+	CustomEventType          		= "custom_events"
+	ProfileQueryTypeDisplayName		= "Profile Based"
+	DerivedQueryTypeDisplayName		= "Derived"
+	EventBasedQueryTypeDisplayName		= "Event Based"
 )
 
 var (

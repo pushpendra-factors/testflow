@@ -2623,9 +2623,9 @@ func TestAttributionMethodologies(t *testing.T) {
 	queryTo := 10000000
 	userSession := make(map[string]map[string]model.UserSessionData)
 	userSession[user1] = make(map[string]model.UserSessionData)
-	userSession[user1][camp1] = model.UserSessionData{MinTimestamp: 105, MaxTimestamp: 200, TimeStamps: []int64{100, 200}}
-	userSession[user1][camp2] = model.UserSessionData{MinTimestamp: 150, MaxTimestamp: 300, TimeStamps: []int64{150, 300}}
-	userSession[user1][camp3] = model.UserSessionData{MinTimestamp: 50, MaxTimestamp: 604950, TimeStamps: []int64{50, 604950}}
+	userSession[user1][camp1] = model.UserSessionData{MinTimestamp: 105, MaxTimestamp: 200, TimeStamps: []int64{100, 200}, MarketingInfo: model.MarketingData{ChannelGroup: "Direct"}}
+	userSession[user1][camp2] = model.UserSessionData{MinTimestamp: 150, MaxTimestamp: 300, TimeStamps: []int64{150, 300}, MarketingInfo: model.MarketingData{ChannelGroup: "PaidSearch"}}
+	userSession[user1][camp3] = model.UserSessionData{MinTimestamp: 50, MaxTimestamp: 604950, TimeStamps: []int64{50, 604950}, MarketingInfo: model.MarketingData{ChannelGroup: "OrganicSearch"}}
 	coalUserIdConversionTimestamp := make(map[string]int64)
 	coalUserIdConversionTimestamp[user1] = 604900
 	//seconds in 7 days=604800
@@ -2792,10 +2792,10 @@ func TestAttributionMethodologiesFirstTouchNonDirect(t *testing.T) {
 	queryTo := 1000
 	userSession := make(map[string]map[string]model.UserSessionData)
 	userSession[user1] = make(map[string]model.UserSessionData)
-	userSession[user1][camp0] = model.UserSessionData{MinTimestamp: 10, MaxTimestamp: 40, TimeStamps: []int64{10, 40}}
-	userSession[user1][camp1] = model.UserSessionData{MinTimestamp: 100, MaxTimestamp: 200, TimeStamps: []int64{100, 200}}
-	userSession[user1][camp2] = model.UserSessionData{MinTimestamp: 150, MaxTimestamp: 300, TimeStamps: []int64{150, 300}}
-	userSession[user1][camp3] = model.UserSessionData{MinTimestamp: 50, MaxTimestamp: 100, TimeStamps: []int64{50, 100}}
+	userSession[user1][camp0] = model.UserSessionData{MinTimestamp: 10, MaxTimestamp: 40, TimeStamps: []int64{10, 40}, MarketingInfo: model.MarketingData{ChannelGroup: "Direct"}}
+	userSession[user1][camp1] = model.UserSessionData{MinTimestamp: 100, MaxTimestamp: 200, TimeStamps: []int64{100, 200}, MarketingInfo: model.MarketingData{ChannelGroup: "PaidSearch"}}
+	userSession[user1][camp2] = model.UserSessionData{MinTimestamp: 150, MaxTimestamp: 300, TimeStamps: []int64{150, 300}, MarketingInfo: model.MarketingData{ChannelGroup: "OrganicSearch"}}
+	userSession[user1][camp3] = model.UserSessionData{MinTimestamp: 50, MaxTimestamp: 100, TimeStamps: []int64{50, 100}, MarketingInfo: model.MarketingData{ChannelGroup: "Direct"}}
 	coalUserIdConversionTimestamp := make(map[string]int64)
 	coalUserIdConversionTimestamp[user1] = 150
 	lookbackDays := 1
@@ -2926,10 +2926,10 @@ func TestAttributionMethodologiesLastTouchNonDirect(t *testing.T) {
 	queryTo := 1000
 	userSession := make(map[string]map[string]model.UserSessionData)
 	userSession[user1] = make(map[string]model.UserSessionData)
-	userSession[user1][camp1] = model.UserSessionData{MinTimestamp: 100, MaxTimestamp: 200, TimeStamps: []int64{100, 200}}
-	userSession[user1][camp2] = model.UserSessionData{MinTimestamp: 150, MaxTimestamp: 300, TimeStamps: []int64{150, 300}}
-	userSession[user1][camp3] = model.UserSessionData{MinTimestamp: 50, MaxTimestamp: 100, TimeStamps: []int64{50, 100}}
-	userSession[user1][camp4] = model.UserSessionData{MinTimestamp: 10, MaxTimestamp: 400, TimeStamps: []int64{10, 400}}
+	userSession[user1][camp1] = model.UserSessionData{MinTimestamp: 100, MaxTimestamp: 200, TimeStamps: []int64{100, 200}, MarketingInfo: model.MarketingData{ChannelGroup: "Direct"}}
+	userSession[user1][camp2] = model.UserSessionData{MinTimestamp: 150, MaxTimestamp: 300, TimeStamps: []int64{150, 300}, MarketingInfo: model.MarketingData{ChannelGroup: "Direct"}}
+	userSession[user1][camp3] = model.UserSessionData{MinTimestamp: 50, MaxTimestamp: 100, TimeStamps: []int64{50, 100}, MarketingInfo: model.MarketingData{ChannelGroup: "Direct"}}
+	userSession[user1][camp4] = model.UserSessionData{MinTimestamp: 10, MaxTimestamp: 400, TimeStamps: []int64{10, 400}, MarketingInfo: model.MarketingData{ChannelGroup: "Direct"}}
 	coalUserIdConversionTimestamp := make(map[string]int64)
 	coalUserIdConversionTimestamp[user1] = 150
 	lookbackDays := 1
@@ -3331,36 +3331,36 @@ func TestSortInteractionTime(t *testing.T) {
 		sortingType  string
 	}
 	sortedAsc1 := []model.Interaction{
-		{"key1", int64(111)},
-		{"key2", int64(112)},
-		{"key3", int64(113)},
-		{"key4", int64(114)},
+		{"key1", int64(111), ""},
+		{"key2", int64(112), ""},
+		{"key3", int64(113), ""},
+		{"key4", int64(114), ""},
 	}
 	sortedDesc1 := []model.Interaction{
-		{"key4", int64(114)},
-		{"key3", int64(113)},
-		{"key2", int64(112)},
-		{"key1", int64(111)},
+		{"key4", int64(114), ""},
+		{"key3", int64(113), ""},
+		{"key2", int64(112), ""},
+		{"key1", int64(111), ""},
 	}
 
 	sortedEqual1 := []model.Interaction{
-		{"key1", int64(112)},
-		{"key2", int64(112)},
-		{"key3", int64(112)},
-		{"key4", int64(112)},
+		{"key1", int64(112), ""},
+		{"key2", int64(112), ""},
+		{"key3", int64(112), ""},
+		{"key4", int64(112), ""},
 	}
 
 	sortedSomeEqual1 := []model.Interaction{
-		{"key1", int64(111)},
-		{"key2", int64(112)},
-		{"key3", int64(112)},
-		{"key4", int64(114)},
+		{"key1", int64(111), ""},
+		{"key2", int64(112), ""},
+		{"key3", int64(112), ""},
+		{"key4", int64(114), ""},
 	}
 	sortedDescSomeEqual1 := []model.Interaction{
-		{"key4", int64(114)},
-		{"key2", int64(112)},
-		{"key3", int64(112)},
-		{"key1", int64(111)},
+		{"key4", int64(114), ""},
+		{"key2", int64(112), ""},
+		{"key3", int64(112), ""},
+		{"key1", int64(111), ""},
 	}
 	/*sortedEqual1 := []model.Interaction{
 		{"key1", int64(112)},
