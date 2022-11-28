@@ -79,10 +79,8 @@ func addMissingTimestampsOnChannelResultWithoutGroupByProps(result *model.QueryR
 
 	rowsByTimestamp := make(map[string][]interface{}, 0)
 	for _, row := range result.Rows {
-		// _, check := row[timestampIndex].(time.Time)
-		// log.Fatal(check)
 		sTime := fmt.Sprintf("%v", row[timestampIndex])
-		ts, tErr := time.Parse("2006-01-02T00:00:00+00:00", sTime)
+		ts, tErr := time.Parse("2006-01-02T15:04:05-07:00", sTime)
 		if tErr != nil {
 			return tErr
 		}
@@ -136,8 +134,11 @@ func addMissingTimestampsOnChannelResultWithGroupByProps(result *model.QueryResu
 		encCols := make([]interface{}, 0, 0)
 		encCols = append(encCols, row[gkStart:gkEnd]...)
 
-		// log.Fatal(row[timestampIndex])
-		ts := row[timestampIndex].(time.Time)
+		sTime := fmt.Sprintf("%v", row[timestampIndex])
+		ts, tErr := time.Parse("2006-01-02T15:04:05-07:00", sTime)
+		if tErr != nil {
+			return tErr
+		}
 		timestampWithTimezone := U.GetTimestampAsStrWithTimezone(ts, query.Timezone)
 		// encoded key with group values and timestamp from db row.
 		encCols = append(encCols, timestampWithTimezone)
