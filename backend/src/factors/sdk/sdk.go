@@ -794,7 +794,7 @@ func FillSixSignalUserProperties(projectId int64, projectSettings *model.Project
 	userProperties *U.PropertiesMap, UserId string, clientIP string) {
 
 	logCtx := log.WithField("project_id", projectId)
-	if projectSettings.Client6SignalKey != "" {
+	if projectSettings.Client6SignalKey != "" && *(projectSettings.IntClientSixSignalKey) == true {
 		execute6SignalStatusChannel := make(chan int)
 		sixSignalExists, _ := six_signal.GetSixSignalCacheResult(projectId, UserId, clientIP)
 		if sixSignalExists {
@@ -818,7 +818,7 @@ func FillSixSignalUserProperties(projectId int64, projectSettings *model.Project
 				logCtx.WithFields(log.Fields{"clientIP": clientIP}).Info("Timed Out 6Signal enrichment using clients Key")
 			}
 		}
-	} else if projectSettings.Factors6SignalKey != "" {
+	} else if projectSettings.Factors6SignalKey != "" && *(projectSettings.IntFactorsSixSignalKey) == true {
 		execute6SignalStatusChannel := make(chan int)
 		sixSignalExists, _ := six_signal.GetSixSignalCacheResult(projectId, UserId, clientIP)
 		if sixSignalExists {
