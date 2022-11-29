@@ -132,10 +132,11 @@ const (
 	SourceJSSDK  = "js_sdk"
 	SourceAMPSDK = "amp_sdk"
 
-	SourceSegment    = "segment"
-	SourceShopify    = "shopify"
-	SourceHubspot    = "hubspot"
-	SourceSalesforce = "salesforce"
+	SourceSegment     = "segment"
+	SourceShopify     = "shopify"
+	SourceHubspot     = "hubspot"
+	SourceSalesforce  = "salesforce"
+	SourceRudderstack = "rudderstack"
 )
 
 // RequestQueue - Name of the primary queue which will

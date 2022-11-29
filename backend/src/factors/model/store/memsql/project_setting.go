@@ -387,11 +387,11 @@ func getProjectSettingDefault() *model.ProjectSetting {
 		AutoTrackSPAPageView: &disabled,
 		ExcludeBot:           &enabled,
 		IntSegment:           &enabled,
+		IntRudderstack:       &disabled,
 		IntDrift:             &disabled,
 		IntClearBit:          &disabled,
 		AutoCaptureFormFills: &model.AutoCaptureFormFillsDefault,
-
-		AutoClickCapture: &model.AutoClickCaptureDefault,
+		AutoClickCapture:     &model.AutoClickCaptureDefault,
 	}
 }
 

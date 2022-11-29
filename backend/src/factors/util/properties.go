@@ -254,6 +254,9 @@ var EP_PAGE_SCROLL_PERCENT string = "$page_scroll_percent"
 var EP_SEGMENT_EVENT_VERSION string = "$segment_event_version"
 var EP_SEGMENT_SOURCE_LIBRARY string = "$segment_source_library" // values: analytics.js, analytics-python, analytics-react, etc.,
 var EP_SEGMENT_SOURCE_CHANNEL string = "$segment_source_channel" // values: client, server
+var EP_RUDDERSTACK_EVENT_VERSION string = "$rudderstack_event_version"
+var EP_RUDDERSTACK_SOURCE_LIBRARY string = "$rudderstack_source_library" // values: analytics.js, analytics-python, analytics-react, etc.,
+var EP_RUDDERSTACK_SOURCE_CHANNEL string = "$rudderstack_source_channel" // values: client, server
 var EP_CAMPAIGN string = "$campaign"
 var EP_CAMPAIGN_ID string = "$campaign_id"
 var EP_SOURCE string = "$source"
@@ -502,6 +505,9 @@ var SDK_ALLOWED_EVENT_PROPERTIES = [...]string{
 	EP_SEGMENT_EVENT_VERSION,
 	EP_SEGMENT_SOURCE_LIBRARY,
 	EP_SEGMENT_SOURCE_CHANNEL,
+	EP_RUDDERSTACK_EVENT_VERSION,
+	EP_RUDDERSTACK_SOURCE_LIBRARY,
+	EP_RUDDERSTACK_SOURCE_CHANNEL,
 	EP_IS_PAGE_VIEW,
 	EP_PAGE_TITLE,
 	EP_PAGE_DOMAIN,
@@ -1144,6 +1150,7 @@ var DISABLED_CORE_QUERY_EVENT_PROPERTIES = [...]string{
 	EP_LOCATION_LATITUDE,
 	EP_LOCATION_LONGITUDE,
 	EP_SEGMENT_EVENT_VERSION,
+	EP_RUDDERSTACK_EVENT_VERSION,
 	EP_CRM_REFERENCE_EVENT_ID,
 	EP_SKIP_SESSION,
 	"$marketo_lead__fivetran_synced",
@@ -1193,6 +1200,9 @@ var DISABLED_FACTORS_EVENT_PROPERTIES = [...]string{
 	EP_SEGMENT_EVENT_VERSION,
 	EP_SEGMENT_SOURCE_LIBRARY,
 	EP_SEGMENT_SOURCE_CHANNEL,
+	EP_RUDDERSTACK_EVENT_VERSION,
+	EP_RUDDERSTACK_SOURCE_LIBRARY,
+	EP_RUDDERSTACK_SOURCE_CHANNEL,
 	EP_PAGE_RAW_URL,
 	EP_GCLID,
 	EP_FBCLID,
@@ -1367,10 +1377,10 @@ var STANDARD_EVENTS_GROUP_NAMES = map[string]string{
 	"$leadsquared_lead_updated":                 "LeadSquared",
 	"$leadsquared_sales_activity_created":       "LeadSquared",
 	"$leadsquared_sales_activity_updated":       "LeadSquared",
-	"$leadsquared_email_sent_activity_created":       "LeadSquared",
-	"$leadsquared_email_info_activity_created":       "LeadSquared",
-	"$leadsquared_had_a_call_activity_updated":       "LeadSquared",
-	"$leadsquared_had_a_call_activity_created":       "LeadSquared",
+	"$leadsquared_email_sent_activity_created":  "LeadSquared",
+	"$leadsquared_email_info_activity_created":  "LeadSquared",
+	"$leadsquared_had_a_call_activity_updated":  "LeadSquared",
+	"$leadsquared_had_a_call_activity_created":  "LeadSquared",
 }
 
 var STANDARD_EVENTS_IN_DROPDOWN = []string{
@@ -1430,6 +1440,9 @@ var STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	EP_SEGMENT_EVENT_VERSION:                 "Segment Event Version",
 	EP_SEGMENT_SOURCE_LIBRARY:                "Segment Source Library",
 	EP_SEGMENT_SOURCE_CHANNEL:                "Segment Source Channel",
+	EP_RUDDERSTACK_EVENT_VERSION:             "Rudderstack Event Version",
+	EP_RUDDERSTACK_SOURCE_LIBRARY:            "Rudderstack Source Library",
+	EP_RUDDERSTACK_SOURCE_CHANNEL:            "Rudderstack Source Channel",
 	EP_CAMPAIGN:                              "Campaign",
 	EP_CAMPAIGN_ID:                           "Campaign ID",
 	EP_SOURCE:                                "Source",

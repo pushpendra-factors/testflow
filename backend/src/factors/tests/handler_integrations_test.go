@@ -2847,3 +2847,188 @@ func TestMapEventPropertiesToProjectDefinedProperties(t *testing.T) {
 		})
 	}
 }
+
+func TestIntRudderstackHandlerWithPayloadFromRudderstackPlatform(t *testing.T) {
+	// Initialize routes and dependent data.
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+	uri := "/integrations/rudderstack_platform"
+
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+
+	enable := true
+	_, errCode := store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{IntRudderstack: &enable})
+	assert.Equal(t, http.StatusAccepted, errCode)
+
+	// create basic auth token.
+	tokenWithColon := fmt.Sprintf("%s:", project.PrivateToken)
+	base64TokenWithColon := base64.StdEncoding.EncodeToString([]byte(tokenWithColon))
+	basicAuthToken := fmt.Sprintf("Basic %s", base64TokenWithColon)
+
+	t.Run("PlatformTestIdentifyPayload", func(t *testing.T) {
+		payload := `
+		{
+			"anonymousId": "anonymous-1",
+			"userId": "identified-1",
+			"type": "identify",
+			"timestamp": "2019-06-24T15:32:33Z",
+			"traits": {
+				"first_name": "Calvin",
+				"last_name": "French-Owen",
+				"phone": "555-555-5555"
+			}
+		}
+		`
+
+		w := ServePostRequestWithHeaders(r, uri, []byte(payload),
+			map[string]string{"Authorization": basicAuthToken})
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+
+	t.Run("PlatformTestIdentify:UserSignupPayload", func(t *testing.T) {
+		payload := `
+		{
+			"anonymousId": "anonymous-1",
+			"userId": "identified-1",
+			"type": "track",
+			"timestamp": "2019-06-24T15:32:33Z",
+			"event": "Signed up",
+			"properties": {
+				"referrer": "paid"
+			},
+			"context": {
+				"campaign": {
+					"source": "Newsletter",
+					"medium": "email",
+					"term": "tps reports",
+					"content": "image link"
+				  }
+			}
+		}
+		`
+
+		w := ServePostRequestWithHeaders(r, uri, []byte(payload),
+			map[string]string{"Authorization": basicAuthToken})
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+
+	t.Run("PlatformTestGroup:UserIsGroupedIntoMyUsersPayload", func(t *testing.T) {
+		payload := `
+		{
+			"anonymousId": "anonymous-1",
+			"userId": "identified-1",
+			"type": "group",
+			"groupId": "myUsers",
+			"timestamp": "2019-06-24T15:32:33Z",
+			"traits": {
+				"name": "Initech",
+				"industry": "Technology",
+				"employees": 329,
+				"plan": "enterprise",
+				"total billed": 830
+			}
+		}
+		`
+
+		w := ServePostRequestWithHeaders(r, uri, []byte(payload),
+			map[string]string{"Authorization": basicAuthToken})
+		// Event type group is not supported yet.
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	t.Run("PlatformTestTrack:UserEnablesIntegrationPayload", func(t *testing.T) {
+		payload := `
+		{
+			"anonymousId": "anonymous-1",
+			"userId": "identified-1",
+			"type": "track",
+			"timestamp": "2019-06-24T15:32:33Z",
+			"event": "Integration Enabled",
+			"properties": {
+				"name": "Google Analytics"
+			}
+		}
+		`
+
+		w := ServePostRequestWithHeaders(r, uri, []byte(payload),
+			map[string]string{"Authorization": basicAuthToken})
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+
+	t.Run("PlatformTestScreen:UsersOpensMobileApplicationPayload", func(t *testing.T) {
+		payload := `
+		{
+			"anonymousId": "anonymous-1",
+			"userId": "identified-1",
+			"type": "track",
+			"timestamp": "2019-06-24T15:32:33Z",
+			"event": "Integration Enabled",
+			"properties": {
+				"name": "Google Analytics"
+			}
+		}
+		`
+
+		w := ServePostRequestWithHeaders(r, uri, []byte(payload),
+			map[string]string{"Authorization": basicAuthToken})
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+
+	t.Run("PlatformTestPage:AnonymousUserNavigationToHomePagePayload", func(t *testing.T) {
+		payload := `
+		{
+			"anonymousId": "anonymous-1",
+			"type": "page",
+			"timestamp": "2019-06-24T15:32:33Z",
+			"name": "Home",
+			"properties": {
+				"url": "https://www.rudderstack.com/"
+			}
+		}
+		`
+
+		w := ServePostRequestWithHeaders(r, uri, []byte(payload),
+			map[string]string{"Authorization": basicAuthToken})
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+
+	t.Run("PlatformTestPage:AnonymousUserNavigationToSignupPagePayload", func(t *testing.T) {
+		payload := `
+		{
+			"anonymousId": "anonymous-1",
+			"type": "page",
+			"timestamp": "2019-06-24T15:32:33Z",
+			"name": "Signup",
+			"properties": {
+				"url": "https://app.rudderstack.com/signup" 
+			}
+		}
+		`
+
+		w := ServePostRequestWithHeaders(r, uri, []byte(payload),
+			map[string]string{"Authorization": basicAuthToken})
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+
+	// Test rudderstack_platform handler.
+	uri = "/integrations/rudderstack_platform"
+	t.Run("PlatformTestPage:AnonymousUserNavigationToSignupPagePayload", func(t *testing.T) {
+		payload := `
+		{
+			"anonymousId": "anonymous-1",
+			"type": "page",
+			"timestamp": "2019-06-24T15:32:33Z",
+			"name": "Signup",
+			"properties": {
+				"url": "https://app.rudderstack.com/signup" 
+			}
+		}
+		`
+
+		w := ServePostRequestWithHeaders(r, uri, []byte(payload),
+			map[string]string{"Authorization": basicAuthToken})
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+}
