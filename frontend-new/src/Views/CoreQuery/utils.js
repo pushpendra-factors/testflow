@@ -162,6 +162,7 @@ const getEventsWithProperties = (queries) => {
     ewps.push({
       an: ev.alias,
       na: ev.label,
+      grpa: ev.group,
       pr: filterProps
     });
   });
@@ -1124,6 +1125,7 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
     return {
       alias: e.an,
       label: e.na,
+      group: e.grpa,
       filters
     };
   });
