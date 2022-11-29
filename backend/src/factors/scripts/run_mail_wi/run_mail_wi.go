@@ -19,7 +19,7 @@ import (
 func main() {
 	env := flag.String("env", C.DEVELOPMENT, "")
 	bucketNameFlag := flag.String("bucket_name", "/usr/local/var/factors/cloud_storage", "--bucket_name=/usr/local/var/factors/cloud_storage pass bucket name")
-	
+
 	memSQLHost := flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
 	memSQLPort := flag.Int("memsql_port", C.MemSQLDefaultDBParams.Port, "")
 	memSQLUser := flag.String("memsql_user", C.MemSQLDefaultDBParams.User, "")

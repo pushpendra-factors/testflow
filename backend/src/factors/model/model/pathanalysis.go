@@ -30,27 +30,27 @@ type PathAnalysis struct {
 }
 
 type PathAnalysisQuery struct {
-	Title               string          `json:"title"`
-	EventType           string          `json:"event_type"`
-	Event               PathAnalysisEvent          `json:"event"`
-	NumberOfSteps       int             `json:"steps"`
-	IncludeEvents       []PathAnalysisEvent        `json:"include_events"`
-	ExcludeEvents       []PathAnalysisEvent        `json:"exclude_events"`
-	StartTimestamp      int64       `json:"starttimestamp"`
-	EndTimestamp        int64      `json:"endtimestamp"`
-	AvoidRepeatedEvents bool            `json:"avoid_repeated_events"`
-	Filter              []QueryProperty `json:"filter"`
+	Title               string              `json:"title"`
+	EventType           string              `json:"event_type"`
+	Event               PathAnalysisEvent   `json:"event"`
+	NumberOfSteps       int                 `json:"steps"`
+	IncludeEvents       []PathAnalysisEvent `json:"include_events"`
+	ExcludeEvents       []PathAnalysisEvent `json:"exclude_events"`
+	StartTimestamp      int64               `json:"starttimestamp"`
+	EndTimestamp        int64               `json:"endtimestamp"`
+	AvoidRepeatedEvents bool                `json:"avoid_repeated_events"`
+	Filter              []QueryProperty     `json:"filter"`
 }
 
 type PathAnalysisEvent struct {
-	Filter              []QueryProperty `json:"filter"`
-	Alias               string          `json:"alias"`
-	Label               string          `json:"label"`
-	Group               string          `json:"group"`
+	Filter []QueryProperty `json:"filter"`
+	Alias  string          `json:"alias"`
+	Label  string          `json:"label"`
+	Group  string          `json:"group"`
 }
 
 type PathAnalysisEntityInfo struct {
-	Id 				  string			`json:"id"` 
+	Id                string            `json:"id"`
 	Title             string            `json:"title"`
 	Status            string            `json:"status"`
 	CreatedBy         string            `json:"created_by"`
