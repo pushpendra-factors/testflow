@@ -423,6 +423,7 @@ type Model interface {
 	CreateQuery(projectID int64, query *model.Queries) (*model.Queries, int, string)
 	GetALLQueriesWithProjectId(projectID int64) ([]model.Queries, int)
 	GetDashboardQueryWithQueryId(projectID int64, queryID int64) (*model.Queries, int)
+	GetDashboardUnitForQueryID(projectID int64, queryID int64) []model.DashboardUnit
 	GetSavedQueryWithQueryId(projectID int64, queryID int64) (*model.Queries, int)
 	GetQueryWithQueryId(projectID int64, queryID int64) (*model.Queries, int)
 	DeleteQuery(projectID int64, queryID int64) (int, string)

@@ -280,6 +280,29 @@ func existsDashboardUnitForQueryID(projectID int64, queryID int64) bool {
 	return true
 }
 
+// existsDashboardUnitForQueryID checks if dashboard unit exists for given queryID
+func (store *MemSQL) GetDashboardUnitForQueryID(projectID int64, queryID int64) []model.DashboardUnit {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"query_id":   queryID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	db := C.GetServices().Db
+
+	var dashboardUnits []model.DashboardUnit
+	if err := db.Where("project_id = ? AND query_id = ? AND is_deleted = ?", projectID, queryID, false).
+		Find(&dashboardUnits).Error; err != nil {
+		log.WithError(err).Errorf("Failed to get dashboard units for projectID %d", projectID)
+		// in case of failure allow delete
+		return nil
+	}
+
+	if len(dashboardUnits) == 0 {
+		return nil
+	}
+	return dashboardUnits
+}
+
 // DeleteQuery To delete query of any type.
 func (store *MemSQL) DeleteQuery(projectID int64, queryID int64) (int, string) {
 	logFields := log.Fields{
@@ -371,6 +394,10 @@ func (store *MemSQL) UpdateSavedQuery(projectID int64, queryID int64, query *mod
 
 	if query.Type == model.QueryTypeDashboardQuery || query.Type == model.QueryTypeSavedQuery {
 		updateFields["type"] = query.Type
+	}
+
+	if !U.IsEmptyPostgresJsonb(&query.Query) {
+		updateFields["query"] = query.Query
 	}
 
 	err := db.Model(&model.Queries{}).Where("project_id = ? AND id=? AND is_deleted = ?",

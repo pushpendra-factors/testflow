@@ -951,6 +951,91 @@ func TestCacheDashboardUnitsForProjectID(t *testing.T) {
 	}
 }
 
+func TestInValidationCacheDashboardUnits(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	timezoneString := U.TimeZoneString(project.TimeZone)
+	_, errCode := store.GetStore().CreateOrGetUserCreatedEventName(&model.EventName{ProjectId: project.ID, Name: "$session"})
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	customerAccountID := U.RandomLowerAphaNumString(5)
+	_, errCode = store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{
+		IntAdwordsCustomerAccountId: &customerAccountID,
+	})
+
+	dashboardName := U.RandomString(5)
+	dashboard, errCode := store.GetStore().CreateDashboard(project.ID, agent.UUID, &model.Dashboard{Name: dashboardName, Type: model.DashboardTypeProjectVisible})
+	assert.NotNil(t, dashboard)
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.Equal(t, dashboardName, dashboard.Name)
+
+	dashboardUnitQueriesMap := make(map[int64]map[string]interface{})
+	dashboardQueriesStr := []string{`{"query_group":[{"cl":"events","ty":"unique_users","ec":"each_given_event","fr":1583001000,"to":1585679399,"ewp":[{"na":"$session","pr":[{"en":"event","pr":"$source","op":"equals","va":"google","ty":"categorical","lop":"AND"},{"en":"user","pr":"$country","op":"equals","va":"India","ty":"categorical","lop":"AND"}]},{"na":"MagazineViews","pr":[{"en":"event","pr":"$source","op":"equals","va":"google","ty":"categorical","lop":"AND"},{"en":"user","pr":"$country","op":"equals","va":"India","ty":"categorical","lop":"AND"}]}],"gbp":[],"gbt":"date","tz":"Asia/Calcutta"}]}`,
+		`{"query_group":[{"cl":"events","ty":"unique_users","ec":"each_given_event","fr":1583001000,"to":1585679399,"ewp":[{"na":"$session","pr":[{"en":"event","pr":"$source","op":"equals","va":"google","ty":"categorical","lop":"AND"},{"en":"user","pr":"$country","op":"equals","va":"India","ty":"categorical","lop":"AND"}]},{"na":"MagazineViews","pr":[{"en":"event","pr":"$source","op":"equals","va":"google","ty":"categorical","lop":"AND"},{"en":"user","pr":"$country","op":"equals","va":"India","ty":"categorical","lop":"AND"}]}],"gbp":[{"pr":"$browser","en":"event","pty":"categorical","ena":"$session","eni":1},{"pr":"$campaign","en":"event","pty":"categorical","ena":"MagazineViews","eni":2}],"gbt":"","tz":"Asia/Calcutta"}]}`,
+		`{"query_group":[{"cl":"events","ty":"unique_users","ec":"each_given_event","fr":1583001000,"to":1585679399,"ewp":[{"na":"$session","pr":[{"en":"event","pr":"$source","op":"equals","va":"google","ty":"categorical","lop":"AND"},{"en":"user","pr":"$country","op":"equals","va":"India","ty":"categorical","lop":"AND"}]},{"na":"MagazineViews","pr":[{"en":"event","pr":"$source","op":"equals","va":"google","ty":"categorical","lop":"AND"},{"en":"user","pr":"$country","op":"equals","va":"India","ty":"categorical","lop":"AND"}]}],"gbp":[{"pr":"$browser","en":"event","pty":"categorical","ena":"$session","eni":1},{"pr":"$campaign","en":"event","pty":"categorical","ena":"MagazineViews","eni":2},{"pr":"$city","en":"user","pty":"categorical","ena":"$session","eni":1},{"pr":"$city","en":"user","pty":"categorical","ena":"MagazineViews","eni":2},{"pr":"$city","en":"user","pty":"categorical","ena":"$present"}],"gbt":"date","tz":"Asia/Calcutta"}]}`,
+	}
+	queryClass := model.QueryClassEvents
+	var dashboardQueryClassList []string
+	var dashboardUnitsList []model.DashboardUnit
+	for _, queryString := range dashboardQueriesStr {
+		queryJSON := postgres.Jsonb{json.RawMessage(queryString)}
+		baseQuery, err := model.DecodeQueryForClass(queryJSON, queryClass)
+		assert.Nil(t, err)
+
+		dashboardQuery, errCode, errMsg := store.GetStore().CreateQuery(project.ID, &model.Queries{
+			ProjectID: project.ID,
+			Type:      model.QueryTypeDashboardQuery,
+			Query:     postgres.Jsonb{json.RawMessage(queryString)},
+			Settings:  postgres.Jsonb{RawMessage: json.RawMessage(`{"size": 100}`)},
+		})
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.Empty(t, errMsg)
+		assert.NotNil(t, dashboardQuery)
+
+		dashboardUnit, errCode, _ := store.GetStore().CreateDashboardUnit(project.ID, agent.UUID, &model.DashboardUnit{
+			ProjectID:    project.ID,
+			DashboardId:  dashboard.ID,
+			Presentation: model.PresentationCard,
+			QueryId:      dashboardQuery.ID,
+		})
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.NotNil(t, dashboardUnit)
+		dashboardUnitsList = append(dashboardUnitsList, *dashboardUnit)
+		dashboardQueryClassList = append(dashboardQueryClassList, queryClass)
+		dashboardUnitQueriesMap[dashboardUnit.ID] = make(map[string]interface{})
+		dashboardUnitQueriesMap[dashboardUnit.ID]["class"] = queryClass
+		dashboardUnitQueriesMap[dashboardUnit.ID]["queries"] = baseQuery
+	}
+	var reportCollector sync.Map
+	//dashboardUnitIDs := make([]int64, 0)
+	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitsList, dashboardQueryClassList, 1, &reportCollector, C.EnableOptimisedFilterOnEventUserQuery())
+	assert.Equal(t, len(dashboardQueriesStr), updatedUnitsCount)
+	for rangeString, rangeFunction := range U.QueryDateRangePresets {
+		from, to, errCode := rangeFunction(timezoneString)
+		assert.Nil(t, errCode)
+		for unitID, queryMap := range dashboardUnitQueriesMap {
+			queryClass := queryMap["class"].(string)
+			queries := queryMap["queries"].(model.BaseQuery)
+			queries.SetQueryDateRange(from, to)
+			// Refresh is sent as false. Must return all presets range from cache.
+			helpers.InValidateDashboardQueryCache(project.ID, dashboard.ID, unitID)
+			w := sendAnalyticsQueryReq(r, queryClass, project.ID, agent, dashboard.ID, unitID, rangeString, queries, false, true)
+			assert.NotNil(t, w)
+			assert.Equal(t, http.StatusOK, w.Code)
+
+			var result map[string]interface{}
+			json.Unmarshal([]byte(w.Body.String()), &result)
+			// Cache must be false after invalidation in response.
+			assert.False(t, result["cache"].(bool))
+
+		}
+	}
+}
+
 func TestCacheDashboardUnitsForProjectIDEventsGroupQuery(t *testing.T) {
 	r := gin.Default()
 	H.InitAppRoutes(r)

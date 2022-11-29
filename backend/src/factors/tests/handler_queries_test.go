@@ -69,7 +69,7 @@ func sendGetSavedQueriesReq(r *gin.Engine, projectId int64, agent *model.Agent) 
 	return w
 }
 
-func sendUpdateSavedQueryReq(r *gin.Engine, projectId int64, queryId int64, agent *model.Agent, query *H.SavedQueryUpdatePayload) *httptest.ResponseRecorder {
+func sendUpdateSavedQueryReq(r *gin.Engine, projectId int64, queryId int64, agent *model.Agent, query *H.SavedQueryRequestPayload) *httptest.ResponseRecorder {
 
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
@@ -258,13 +258,12 @@ func TestAPICreateQueryHandler(t *testing.T) {
 }
 
 func TestAPIUpdateSavedQueryHandler(t *testing.T) {
+
 	r := gin.Default()
 	H.InitAppRoutes(r)
 
 	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
-	assert.NotNil(t, project)
-	assert.NotNil(t, agent)
 
 	rTitle := U.RandomString(5)
 	query := model.Query{
@@ -293,13 +292,33 @@ func TestAPIUpdateSavedQueryHandler(t *testing.T) {
 	queryIdNum, _ := strconv.Atoi(responseMap["id"].(string))
 	queryId := int64(queryIdNum)
 	rTitle1 := U.RandomString(5)
+	query = model.Query{
+		EventsCondition: model.EventCondAnyGivenEvent,
+		From:            100,
+		To:              100,
+		Type:            model.QueryTypeEventsOccurrence,
+		EventsWithProperties: []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{
+				Name: "event1",
+			},
+		},
+		OverridePeriod: true,
+	}
 
-	w = sendUpdateSavedQueryReq(r, project.ID, queryId, agent, &H.SavedQueryUpdatePayload{Title: rTitle1})
+	query1Json, err := json.Marshal(query)
+	assert.Nil(t, err)
+
+	w = sendUpdateSavedQueryReq(r, project.ID, queryId, agent, &H.SavedQueryRequestPayload{Title: rTitle1, Query: &postgres.Jsonb{RawMessage: query1Json}})
 	assert.Equal(t, http.StatusAccepted, w.Code)
 
 	query1, errCode := store.GetStore().GetQueryWithQueryId(project.ID, queryId)
 	assert.Equal(t, http.StatusFound, errCode)
+
+	var test model.Query
+	json.Unmarshal(query1.Query.RawMessage, &test)
+
 	assert.Equal(t, query1.Title, rTitle1)
+	assert.Equal(t, test, query)
 	assert.Equal(t, 2, query1.Type)
 }
 
