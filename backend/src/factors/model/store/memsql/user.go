@@ -465,12 +465,29 @@ func (store *MemSQL) GetExistingUserByCustomerUserID(projectId int64, arrayCusto
 	db := C.GetServices().Db
 	queryStmnt := "SELECT" + " " + "DISTINCT(customer_user_id), id" + " FROM " + "users" + " WHERE " + "project_id = ? AND customer_user_id IN ( ? )"
 	queryParams := []interface{}{projectId, arrayCustomerUserID}
+
+	sourceStmnt := ""
+	sourceParams := []interface{}{}
 	if len(source) == 1 {
-		queryStmnt = queryStmnt + " AND " + "source = ? "
-		queryParams = append(queryParams, source[0])
+		sourceStmnt = " source = ? "
+		if source[0] == model.UserSourceWeb {
+			sourceStmnt = " ( source = ? OR source is null ) "
+		}
+		sourceParams = append(sourceParams, source[0])
 	} else if len(source) > 1 {
-		queryStmnt = queryStmnt + " AND " + "source IN (?) "
-		queryParams = append(queryParams, source)
+		sourceStmnt = " source IN (?) "
+		for i := range source {
+			if source[i] == model.UserSourceWeb {
+				sourceStmnt = " ( source IN (?) OR source is null ) "
+				break
+			}
+		}
+		sourceParams = append(sourceParams, source)
+	}
+
+	if sourceStmnt != "" {
+		queryStmnt = queryStmnt + " AND " + sourceStmnt
+		queryParams = append(queryParams, sourceParams)
 	}
 
 	rows, err := db.Raw(queryStmnt, queryParams...).Rows()

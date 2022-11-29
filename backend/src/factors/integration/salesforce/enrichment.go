@@ -392,10 +392,12 @@ func enrichGroupAccount(projectID int64, document *model.SalesforceDocument, sal
 		WithFields(log.Fields{"doc_id": document.ID, "doc_action": document.Action, "doc_timestamp": document.Timestamp})
 
 	if projectID == 0 || document == nil {
+		logCtx.Error("Invalid parameters for enrichGroupAccount")
 		return http.StatusBadRequest
 	}
 
 	if (document.Type != model.SalesforceDocumentTypeAccount && document.Type != model.SalesforceDocumentTypeGroupAccount) || document.GroupUserID != "" {
+		logCtx.WithField("doc_type", document.Type).Error("Invalid document type for enrichGroupAccount")
 		return http.StatusInternalServerError
 	}
 
@@ -1009,7 +1011,7 @@ func enrichGroupOpportunity(projectID int64, document *model.SalesforceDocument,
 			logCtx.WithError(err).Error("Failed to create salesforce group relationship on CreateSalesforceGroupRelationship.")
 		}
 	} else {
-		logCtx.Error("No account id found for group relationship.")
+		logCtx.Warning("No account id found for group relationship.")
 	}
 
 	oppLeadIds, oppContactIds, _, _, err := getOpportuntityLeadAndContactID(document)
@@ -1436,7 +1438,7 @@ func getExistingCampaignMemberUserIDFromProperties(projectID int64, properties *
 		return existingMember[0].UserID
 	}
 
-	logCtx.Error("Failed to get campaign member associated lead and contact record.")
+	logCtx.Warning("Failed to get campaign member associated lead and contact record.")
 
 	return ""
 }

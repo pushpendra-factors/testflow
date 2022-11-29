@@ -59,6 +59,7 @@ func TestAPIGetProjectSettingHandler(t *testing.T) {
 		assert.NotNil(t, jsonResponseMap["auto_track"])
 		assert.NotNil(t, jsonResponseMap["int_drift"])
 		assert.NotNil(t, jsonResponseMap["int_clear_bit"])
+		assert.NotNil(t, jsonResponseMap["timelines_config"])
 	})
 
 	// Test get project settings with bad id.

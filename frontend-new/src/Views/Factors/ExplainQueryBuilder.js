@@ -176,7 +176,12 @@ const CreateGoalDrawer = (props) => {
     if (goalInsights) {
       console.log("coming from saved insights", goalInsights);
       if (goalInsights.type == "singleevent") {
-        setEvent1(goalInsights?.goal?.en_en)
+        if(goalInsights?.goal?.st_en == '') {
+          setEvent1(goalInsights?.goal?.en_en)
+        } else {
+          setEvent1(goalInsights?.goal?.st_en)
+          setEvent2(goalInsights?.goal?.en_en)
+        }
       }
       else {
         setEvent1(goalInsights?.goal?.st_en)

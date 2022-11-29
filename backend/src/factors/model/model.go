@@ -547,6 +547,7 @@ type Model interface {
 		userFiles string, includeSession bool, sessionProperty string, cloudManager filestore.FileManager)
 
 	// smart_properties
+	CreateSmartProperty(smartPropertyDoc *model.SmartProperties) int
 	GetSmartPropertyRulesConfig(projectID int64, objectType string) (model.SmartPropertyRulesConfig, int)
 	CreateSmartPropertyRules(projectID int64, smartProperty *model.SmartPropertyRules) (*model.SmartPropertyRules, string, int)
 	GetSmartPropertyRules(projectID int64) ([]model.SmartPropertyRules, int)

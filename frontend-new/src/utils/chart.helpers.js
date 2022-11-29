@@ -79,7 +79,7 @@ export const getChartTypeMenuItems = (queryType, breakdownLength, events) => {
     menuItems = [
       {
         key: CHART_TYPE_BARCHART,
-        name: 'Barchart'
+        name: 'Columns'
       },
       {
         key: CHART_TYPE_SCATTER_PLOT,
@@ -91,7 +91,7 @@ export const getChartTypeMenuItems = (queryType, breakdownLength, events) => {
     menuItems = [
       {
         key: CHART_TYPE_BARCHART,
-        name: 'Barchart'
+        name: 'Columns'
       },
       {
         key: CHART_TYPE_SCATTER_PLOT,

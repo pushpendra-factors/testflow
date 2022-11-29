@@ -51,7 +51,7 @@ function AccountTimeline({
     return (
       <InfoCard
         title={event?.alias_name || event.display_name}
-        event_name={event?.event_name}
+        eventName={event?.event_name}
         properties={event?.properties || {}}
         trigger={
           hoverEvents.includes(event.event_name) ||
