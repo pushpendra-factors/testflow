@@ -95,9 +95,9 @@ type PatternServer struct {
 	store *store.PatternStore
 }
 
-func New(ip, rpcPort, httpPort string, etcdClient *serviceEtcd.EtcdClient, diskFileManager, cloudFileManger filestore.FileManager, chunkCacheSize, eventInfoCacheSize int) (*PatternServer, error) {
+func New(ip, rpcPort, httpPort string, etcdClient *serviceEtcd.EtcdClient, diskFileManager, cloudFileManger, newCloudFileManager filestore.FileManager, projectIdsV2 []int64, chunkCacheSize, eventInfoCacheSize int) (*PatternServer, error) {
 
-	store, err := store.New(chunkCacheSize, eventInfoCacheSize, diskFileManager, cloudFileManger)
+	store, err := store.New(chunkCacheSize, eventInfoCacheSize, diskFileManager, cloudFileManger, newCloudFileManager, projectIdsV2)
 	if err != nil {
 		return &PatternServer{}, E.Wrap(err, "Failed To Create Pattern Store")
 	}
