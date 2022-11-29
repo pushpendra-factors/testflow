@@ -88,7 +88,8 @@ function Dashboard({
     marketo?.status ||
     integrationV1?.int_slack ||
     integration?.lead_squared_config !== null ||
-    integration?.six_signal_enabled;
+    (integration?.int_client_six_signal_key || integration?.int_factors_six_signal_key) ||
+    integration?.int_rudderstack;
 
   const handleEditClick = useCallback((dashboard) => {
     setaddDashboardModal(true);

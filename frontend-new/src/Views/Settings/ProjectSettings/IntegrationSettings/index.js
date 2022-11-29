@@ -38,6 +38,7 @@ import SlackIntegration from './Slack';
 import LeadSquaredIntegration from './LeadSquared';
 import SixSignalIntegration from './SixSignal';
 import SixSignalFactorsIntegration from './SixSignalFactors';
+import RudderstackIntegration from './Rudderstack';
 
 import { ADWORDS_INTERNAL_REDIRECT_URI } from './util';
 
@@ -47,6 +48,12 @@ const IntegrationProviderData = [
     desc: 'Segment is a Customer Data Platform (CDP) that simplifies collecting and using data from the users of your digital properties and SaaS applications',
     icon: 'Segment_ads',
     kbLink: 'https://help.factors.ai/en/articles/5835006-segment'
+  },
+  {
+    name: 'Rudderstack',
+    desc: 'Rudderstack is a Customer Data Platform (CDP) that simplifies collecting and using data from the users of your digital properties and SaaS applications',
+    icon: 'Rudderstack_ads',
+    kbLink: false
   },
   {
     name: 'Marketo',
@@ -148,6 +155,10 @@ function IntegrationCard({ item, index, defaultOpen }) {
       case 'Segment':
         return (
           <SegmentIntegration kbLink={item.kbLink} setIsActive={setIsActive} />
+        );
+      case 'Rudderstack' :
+        return (
+          <RudderstackIntegration kbLink={item.kbLink} setIsActive={setIsActive} />
         );
       case 'Drift':
         return (

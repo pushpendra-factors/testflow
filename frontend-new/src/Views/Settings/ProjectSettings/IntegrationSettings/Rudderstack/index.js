@@ -7,7 +7,7 @@ import { ErrorBoundary } from 'react-error-boundary';
 import factorsai from 'factorsai';
 import { sendSlackNotification } from '../../../../../utils/slack';
 
-function SegmentIntegration({
+function RudderstackIntegration({
   fetchProjectSettings,
   udpateProjectSettings,
   activeProject,
@@ -27,7 +27,7 @@ function SegmentIntegration({
     currentProjectSettings?.project_settings || currentProjectSettings;
 
   useEffect(() => {
-    if (currentProjectSettings?.int_segment) {
+    if (currentProjectSettings?.int_rudderstack) {
       setIsActive(true);
     }
   }, [currentProjectSettings]);
@@ -42,17 +42,17 @@ function SegmentIntegration({
     }
   };
 
-  const enableSegment = () => {
+  const enableRudderstack = () => {
     setLoading(true);
 
     // Factors INTEGRATION tracking
     factorsai.track('INTEGRATION', {
-      name: 'segment',
+      name: 'rudderstack',
       activeProjectID: activeProject.id
     });
 
     udpateProjectSettings(activeProject.id, {
-      int_segment: true
+      int_rudderstack: true
     })
       .then(() => {
         copyToClipboard();
@@ -60,20 +60,19 @@ function SegmentIntegration({
         setLoading(false);
         setShowForm(false);
         setTimeout(() => {
-          message.success('Segment integration enabled!');
+          message.success('Rudderstack integration enabled!');
         }, 500);
         setIsActive(true);
         sendSlackNotification(
           currentAgent.email,
           activeProject.name,
-          'Segment'
+          'Rudderstack'
         );
       })
       .catch((err) => {
         setShowForm(false);
         setLoading(false);
         message.error(`${err?.data?.error}`);
-        console.log('change password failed-->', err);
         setIsActive(false);
       });
   };
@@ -88,14 +87,14 @@ function SegmentIntegration({
       onOk: () => {
         setLoading(true);
         udpateProjectSettings(activeProject.id, {
-          int_segment: false
+          int_rudderstack: false
         })
           .then(() => {
             fetchProjectSettings(activeProject.id);
             setLoading(false);
             setShowForm(false);
             setTimeout(() => {
-              message.success('Segment integration disabled!');
+              message.success('Rudderstack integration disabled!');
             }, 500);
             setIsActive(false);
           })
@@ -122,7 +121,7 @@ function SegmentIntegration({
   return (
     <ErrorBoundary
       fallback={
-        <FaErrorComp subtitle='Facing issues with Segment integrations' />
+        <FaErrorComp subtitle='Facing issues with Rudderstack integrations' />
       }
       onError={FaErrorLog}
     >
@@ -145,7 +144,7 @@ function SegmentIntegration({
                 <Avatar
                   size={40}
                   shape='square'
-                  icon={<SVG name='Segment_ads' size={40} color='purple' />}
+                  icon={<SVG name='Rudderstack_ads' size={40} color='purple' />}
                   style={{ backgroundColor: '#F5F6F8' }}
                 />
               </Col>
@@ -158,14 +157,14 @@ function SegmentIntegration({
                   weight='bold'
                   extraClass='m-0 mt-2'
                 >
-                  Integrate with Segment
+                  Integrate with Rudderstack
                 </Text>
                 <Text type='title' level={7} color='grey' extraClass='m-0 mt-2'>
                   First, take your API key and configure Factors as a
-                  destination in your Segment Workspace. Once done, enable all
-                  the data sources inside Segment that you would like to send to
-                  Factors. We start bringing in data only once you've completed
-                  these steps.
+                  destination in your Rudderstack Workspace. Once done, enable
+                  all the data sources inside Rudderstack that you would like to
+                  send to Factors. We start bringing in data only once you've
+                  completed these steps.
                 </Text>
               </Col>
             </Row>
@@ -208,7 +207,7 @@ function SegmentIntegration({
                     loading={loading}
                     type='primary'
                     size='large'
-                    onClick={enableSegment}
+                    onClick={enableRudderstack}
                   >
                     {' '}
                     {copySuccess || 'Copy Code'}
@@ -219,15 +218,15 @@ function SegmentIntegration({
           </Form>
         </div>
       </Modal>
-      {currentProjectSettings?.int_segment && (
+      {currentProjectSettings?.int_rudderstack && (
         <div className='mt-4 flex flex-col border-top--thin py-4 mt-2 w-full'>
           <Text type='title' level={6} weight='bold' extraClass='m-0'>
             Integration Details
           </Text>
           <Text type='title' level={7} color='grey' extraClass='m-0 mt-1 mb-3'>
             First, take your API key and configure Factors as a destination in
-            your Segment Workspace. Once done, enable all the data sources
-            inside Segment that you would like to send to Factors. We start
+            your Rudderstack Workspace. Once done, enable all the data sources
+            inside Rudderstack that you would like to send to Factors. We start
             bringing in data only once you've completed these steps.
           </Text>
           <div>
@@ -250,7 +249,7 @@ function SegmentIntegration({
         </div>
       )}
       <div className='mt-4 flex'>
-        {currentProjectSettings?.int_segment ? (
+        {currentProjectSettings?.int_rudderstack ? (
           <Button loading={loading} onClick={() => onDisconnect()}>
             Disable
           </Button>
@@ -287,4 +286,4 @@ const mapStateToProps = (state) => ({
 export default connect(mapStateToProps, {
   fetchProjectSettings,
   udpateProjectSettings
-})(SegmentIntegration);
+})(RudderstackIntegration);

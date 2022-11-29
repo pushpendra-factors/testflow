@@ -63,24 +63,34 @@ function SixSignalFactorsIntegration({
   };
 
   const onDisconnect = () => {
-    setLoading(true);
-    udpateProjectSettings(activeProject.id, {
-      factors6_signal_key: '',
-      int_factors_six_signal_key: false
-    })
-      .then(() => {
-        setLoading(false);
-        setShowForm(false);
-        setTimeout(() => {
-          message.success('6Signal integration disconnected!');
-        }, 500);
-        setIsActive(false);
-      })
-      .catch((err) => {
-        message.error(`${err?.data?.error}`);
-        setShowForm(false);
-        setLoading(false);
-      });
+    Modal.confirm({
+      title: 'Are you sure you want to disable this?',
+      content:
+        'You are about to disable this integration. Factors will stop bringing in data from this source.',
+      okText: 'Disconnect',
+      cancelText: 'Cancel',
+      onOk: () => {
+        setLoading(true);
+        udpateProjectSettings(activeProject.id, {
+          factors6_signal_key: '',
+          int_factors_six_signal_key: false
+        })
+          .then(() => {
+            setLoading(false);
+            setShowForm(false);
+            setTimeout(() => {
+              message.success('6Signal integration disconnected!');
+            }, 500);
+            setIsActive(false);
+          })
+          .catch((err) => {
+            message.error(`${err?.data?.error}`);
+            setShowForm(false);
+            setLoading(false);
+          });
+      },
+      onCancel: () => {}
+    });
   };
 
   const onReset = () => {
