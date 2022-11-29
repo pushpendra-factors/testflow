@@ -29,9 +29,9 @@ func GetAnalyticsMetricsFromStorage(c *gin.Context) (interface{}, int, string, s
 	}
 	date := c.Query("date_range")
 	dateRange, err := strconv.ParseInt(date, 10, 64)
-	path, fileName := C.GetCloudManager().GetModelMetricsFilePathAndName(projectId, dateRange, "w")
-	log.Info("Metrics file path , filename",path,fileName)
-	reader, err := C.GetCloudManager().Get(path, fileName)
+	path, fileName := C.GetCloudManager(projectId).GetModelMetricsFilePathAndName(projectId, dateRange, "w")
+	log.Info("Metrics file path , filename", path, fileName)
+	reader, err := C.GetCloudManager(projectId).Get(path, fileName)
 	if err != nil {
 		log.WithError(err).Error("Error reading metrics file")
 		return nil, http.StatusInternalServerError, "", err.Error(), true
@@ -52,9 +52,9 @@ func GetAnalyticsAlertsFromStorage(c *gin.Context) (interface{}, int, string, st
 	}
 	date := c.Query("date_range")
 	dateRange, err := strconv.ParseInt(date, 10, 64)
-	path, fileName := C.GetCloudManager().GetModelAlertsFilePathAndName(projectId, dateRange, "w")
-	log.Info("Alerts file path , filename",path,fileName)
-	reader, err := C.GetCloudManager().Get(path, fileName)
+	path, fileName := C.GetCloudManager(projectId).GetModelAlertsFilePathAndName(projectId, dateRange, "w")
+	log.Info("Alerts file path , filename", path, fileName)
+	reader, err := C.GetCloudManager(projectId).Get(path, fileName)
 	if err != nil {
 		log.WithError(err).Error("Error reading alerts file")
 		return nil, http.StatusInternalServerError, "", err.Error(), true

@@ -108,3 +108,22 @@ func GetTransformedHeadersForChannels(headers []string, hasAnyGroupByTimestamp b
 	}
 	return currentHeaders
 }
+
+func GetChannelFiltersGrouped(properties []ChannelFilterV1) [][]ChannelFilterV1 {
+	groupedProperties := make([][]ChannelFilterV1, 0)
+	currentGroupedProperties := make([]ChannelFilterV1, 0)
+	for index, p := range properties {
+		if index == 0 || p.LogicalOp != "AND" {
+			currentGroupedProperties = append(currentGroupedProperties, p)
+		} else {
+			groupedProperties = append(groupedProperties, currentGroupedProperties)
+
+			currentGroupedProperties = make([]ChannelFilterV1, 0)
+			currentGroupedProperties = append(currentGroupedProperties, p)
+		}
+	}
+	if len(currentGroupedProperties) != 0 {
+		groupedProperties = append(groupedProperties, currentGroupedProperties)
+	}
+	return groupedProperties
+}

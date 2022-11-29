@@ -2305,7 +2305,7 @@ func syncGroupDeal(projectID int64, enProperties *map[string]interface{}, docume
 			model.HubspotDocumentTypeCompany, []int{model.HubspotDocumentActionCreated})
 		if status != http.StatusFound {
 			logCtx.WithFields(log.Fields{"company_ids": companyIDList}).
-				Error("Failed to get company created documents for syncGroupDeal.")
+				Warning("Failed to get company created documents for syncGroupDeal.")
 		}
 
 		for i := range documents {
@@ -2513,6 +2513,10 @@ func getEngagementContactIds(engagementTypeStr string, engagement Engagements) (
 		var contact interface{}
 		if engagementTypeStr == EngagementTypeIncomingEmail {
 			contactIdInterface := engagement.Metadata["from"]
+			if contactIdInterface == nil {
+				logCtx.Warning("No from for INCOMING_EMAIL engagement. Will be marked as synced.")
+				return nil, http.StatusOK
+			}
 
 			fromMap, isConvert := contactIdInterface.(map[string]interface{})
 			if !isConvert {
@@ -2776,199 +2780,6 @@ func GetBatchedOrderedDocumentsByID(documents []model.HubspotDocument, batchSize
 	return batchedDocumentsByID
 }
 
-func syncContactList(projectID int64, document *model.HubspotDocument, minTimestamp int64) int {
-	if document.Type != model.HubspotDocumentTypeContactList {
-		return http.StatusInternalServerError
-	}
-
-	pastEnrichmentEnabled := false
-	if C.PastEventEnrichmentEnabled(projectID) {
-		pastEnrichmentEnabled = true
-	}
-
-	logCtx := log.WithFields(log.Fields{"project_id": projectID, "document_id": document.ID,
-		"doc_timestamp": document.Timestamp, "min_timestamp": minTimestamp})
-
-	if !C.ContactListInsertEnabled(projectID) {
-		logCtx.Warning("Skipped hubspot contact_list sync. contact_list sync not enabled.")
-		return http.StatusOK
-	}
-
-	if document.Action == model.HubspotDocumentActionCreated {
-		errCode := store.GetStore().UpdateHubspotDocumentAsSynced(
-			projectID, document.ID, model.HubspotDocumentTypeContactList, "", document.Timestamp, document.Action, "", "")
-		if errCode != http.StatusAccepted {
-			logCtx.Error("Failed to update hubspot contact_list document as synced.")
-			return http.StatusInternalServerError
-		}
-
-		return http.StatusOK
-	}
-
-	var newContactList NewContactList
-	err := json.Unmarshal((document.Value).RawMessage, &newContactList)
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to unmarshal new hubspot contact_list document.")
-		return http.StatusInternalServerError
-	}
-
-	oldContactListDocument, status := store.GetStore().GetHubspotDocumentByTypeAndActions(projectID, []string{document.ID}, model.HubspotDocumentTypeContactList, []int{model.HubspotDocumentActionCreated, model.HubspotDocumentActionUpdated})
-	if status == http.StatusBadRequest || status == http.StatusInternalServerError {
-		logCtx.Error("Failed to get old synced hubspot contact_list document.")
-		return http.StatusInternalServerError
-	}
-
-	var prevContactListDocument *model.HubspotDocument
-	for i := range oldContactListDocument {
-		if oldContactListDocument[i].Timestamp < document.Timestamp {
-			prevContactListDocument = &oldContactListDocument[i]
-		}
-	}
-
-	var errOldContactList error
-	var errNewContactList error
-
-	var prevOldContactList OldContactList
-	var prevNewContactList NewContactList
-	if prevContactListDocument != nil {
-		errOldContactList := json.Unmarshal(((*prevContactListDocument).Value).RawMessage, &prevOldContactList)
-		errNewContactList := json.Unmarshal(((*prevContactListDocument).Value).RawMessage, &prevNewContactList)
-
-		if errOldContactList != nil && errNewContactList != nil {
-			logCtx.Error("Failed to unmarshal old hubspot contact_list document to oldContactList and newContactList.")
-			return http.StatusInternalServerError
-		}
-
-		if errOldContactList == nil && errNewContactList == nil {
-			logCtx.Error("Unmarshaled old hubspot contact_list document to both oldContactList and newContactList. Not possible.")
-			return http.StatusInternalServerError
-		}
-	}
-
-	contactIds := make([]string, 0, 0)
-
-	if errOldContactList == nil {
-		for i := range newContactList.ContactIds {
-			if !U.ContainsInt64InArray(prevOldContactList.ContactIds, newContactList.ContactIds[i]) {
-				contactIds = append(contactIds, strconv.FormatInt(newContactList.ContactIds[i], 10))
-			}
-		}
-	}
-
-	if errNewContactList == nil {
-		for i := range newContactList.ContactIds {
-			if !U.ContainsInt64InArray(prevNewContactList.ContactIds, newContactList.ContactIds[i]) {
-				contactIds = append(contactIds, strconv.FormatInt(newContactList.ContactIds[i], 10))
-			}
-		}
-	}
-
-	if len(contactIds) == 0 {
-		logCtx.Warning("Skipped contact_list sync. No contacts in contact_list.")
-		// No sync_id as no event or user or one user property created.
-		errCode := store.GetStore().UpdateHubspotDocumentAsSynced(projectID, document.ID, model.HubspotDocumentTypeContactList, "", document.Timestamp, document.Action, "", "")
-		if errCode != http.StatusAccepted {
-			logCtx.Error("Failed to update hubspot contact_list document as synced.")
-			return http.StatusInternalServerError
-		}
-		return http.StatusOK
-	}
-
-	var contactDocuments []model.HubspotDocument
-	var errCode int
-
-	contactDocuments, errCode = store.GetStore().GetHubspotDocumentByTypeAndActions(projectID,
-		contactIds, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated})
-	if errCode == http.StatusInternalServerError {
-		logCtx.Error("Failed to get hubspot contact documents by type and action on sync contact_list.")
-		return errCode
-	}
-
-	for _, doc := range contactDocuments {
-		if !doc.Synced {
-			logCtx.Error("Hubspot contact document not synced. Skipping processing for now.")
-			return http.StatusOK
-		}
-	}
-
-	contactIdDocumentMap := make(map[string]model.HubspotDocument)
-	for _, doc := range contactDocuments {
-		contactIdDocumentMap[doc.ID] = doc
-	}
-
-	for contactId, listMembership := range newContactList.ListMemberships {
-		doc, ok := contactIdDocumentMap[contactId]
-		if !ok {
-			logCtx.Info("Hubspot contact document not present in contact list.")
-			continue
-		}
-
-		if listMembership.StaticListId != newContactList.ListId {
-			continue
-		}
-
-		isPast := false
-		if pastEnrichmentEnabled {
-			isPast = listMembership.Timestamp < minTimestamp
-		}
-
-		_, properties, _, _, _ := GetContactProperties(projectID, &doc)
-		var emailId string
-		if (*properties)["EMAIL"] != nil {
-			emailId, err = U.GetValueAsString((*properties)["EMAIL"])
-			if err != nil {
-				logCtx.Error("Failed to get emailId from contact properties.")
-				emailId = ""
-			}
-		} else {
-			logCtx.Error("No emailId in contact properties.")
-			emailId = ""
-		}
-
-		eventProperties := map[string]interface{}{
-			model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameContactList,
-				"list_name"): newContactList.ListName,
-			model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameContactList,
-				"list_id"): newContactList.ListId,
-			model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameContactList,
-				"list_create_timestamp"): getEventTimestamp(newContactList.ListCreatedAt),
-			model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameContactList,
-				"timestamp"): getEventTimestamp(listMembership.Timestamp),
-			model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameContactList,
-				"type"): newContactList.ListType,
-			model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameContactList,
-				"contact_id"): listMembership.Vid,
-			model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameContactList,
-				"contact_email"): emailId,
-		}
-
-		request := &SDK.TrackPayload{
-			ProjectId:       projectID,
-			Timestamp:       getEventTimestamp(listMembership.Timestamp),
-			EventProperties: eventProperties,
-			RequestSource:   model.UserSourceHubspot,
-			Name:            U.EVENT_NAME_HUBSPOT_CONTACT_LIST,
-			UserId:          contactIdDocumentMap[contactId].UserId,
-			IsPast:          isPast,
-		}
-
-		status, response := SDK.Track(projectID, request, true, SDK.SourceHubspot, model.HubspotDocumentTypeNameContactList)
-		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
-			logCtx.WithFields(log.Fields{"status": status, "track_response": response}).Error("Failed to track hubspot added to a list event.")
-			return http.StatusInternalServerError
-		}
-	}
-
-	errCode = store.GetStore().UpdateHubspotDocumentAsSynced(
-		projectID, document.ID, model.HubspotDocumentTypeContactList, "", document.Timestamp, document.Action, "", "")
-	if errCode != http.StatusAccepted {
-		logCtx.Error("Failed to update hubspot contact_list document as synced.")
-		return http.StatusInternalServerError
-	}
-
-	return http.StatusOK
-}
-
 func syncContactListV2(projectID int64, document *model.HubspotDocument, minTimestamp int64) int {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "document_id": document.ID,
 		"doc_timestamp": document.Timestamp, "min_timestamp": minTimestamp})
@@ -3026,11 +2837,9 @@ func syncContactListV2(projectID int64, document *model.HubspotDocument, minTime
 		emailId, err = U.GetValueAsString((*properties)["EMAIL"])
 		if err != nil {
 			logCtx.Error("Failed to get emailId from contact properties.")
-			emailId = ""
 		}
 	} else {
 		logCtx.Error("No emailId in contact properties.")
-		emailId = ""
 	}
 
 	propertyToValueMap := map[string]interface{}{

@@ -32,16 +32,16 @@ func MailWeeklyInsights(projectID int64, configs map[string]interface{}) (map[st
 			digestHeader := GetQueryHeader(queryId)
 			headerValue1 := response.Goal.W1
 			headerValue2 := response.Goal.W2
-			headerPerc := fmt.Sprintf("%.2f%s", response.Goal.Percentage ,"%%")
+			headerPerc := fmt.Sprintf("%.2f%s", response.Goal.Percentage ,"%")
 			line1Value1 := response.Insights[0].Key
 			line1Value2 := response.Insights[0].Value
-			line1Perc := fmt.Sprintf("%.2f%s", response.Insights[0].ActualValues.Percentage ,"%%")
+			line1Perc := fmt.Sprintf("%.2f%s", response.Insights[0].ActualValues.Percentage ,"%")
 			line2Value1 := response.Insights[1].Key
 			line2Value2 := response.Insights[1].Value
-			line2Perc := fmt.Sprintf("%.2f%s", response.Insights[1].ActualValues.Percentage ,"%%")
+			line2Perc := fmt.Sprintf("%.2f%s", response.Insights[1].ActualValues.Percentage ,"%")
 			line3Value1 := response.Insights[2].Key
 			line3Value2 := response.Insights[2].Value
-			line3Perc := fmt.Sprintf("%.2f%s", response.Insights[2].ActualValues.Percentage ,"%%")
+			line3Perc := fmt.Sprintf("%.2f%s", response.Insights[2].ActualValues.Percentage ,"%")
 			html := returnWIMailerTemplate(agentName, digestHeader, headerPerc, headerValue1, headerValue2, line1Value1, line1Value2, line1Perc, line2Value1, line2Value2, line2Perc, line3Value1, line3Value2, line3Perc)
 			
 			if(wetRun == true){
@@ -61,7 +61,7 @@ func MailWeeklyInsights(projectID int64, configs map[string]interface{}) (map[st
 }
 
 func returnWIMailerTemplate(agentName string, digestHeader string, headerPerc string, headerValue1 float64, headerValue2 float64, line1Value1 string, line1Value2 string, line1Perc string, line2Value1 string, line2Value2 string, line2Perc string, line3Value1 string, line3Value2 string, line3Perc string)(string){
-	template := fmt.Sprintf(`<<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+	template := fmt.Sprintf(`<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 	<html
 	  xmlns="http://www.w3.org/1999/xhtml"
 	  lang="en"

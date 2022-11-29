@@ -1568,11 +1568,11 @@ func getSQLAndParamsForAdwordsWithSmartPropertyV2(query *model.ChannelQueryV1, p
 		isSmartProperty := !isPresent
 		if isSmartProperty {
 			if groupBy.Object == model.AdwordsCampaign {
-				expression := fmt.Sprintf(`%s as %s`, fmt.Sprintf("JSON_EXTRACT_STRING(campaign.properties, '%s')", groupBy.Property), model.CampaignPrefix+groupBy.Property)
+				expression := fmt.Sprintf(`Case when %s is null then '$none' else %s END as %s`, fmt.Sprintf("JSON_EXTRACT_STRING(campaign.properties, '%s')", groupBy.Property), fmt.Sprintf("JSON_EXTRACT_STRING(campaign.properties, '%s')", groupBy.Property), model.CampaignPrefix+groupBy.Property)
 				dimensions.selectExpressions = append(dimensions.selectExpressions, expression)
 				dimensions.values = append(dimensions.values, model.CampaignPrefix+groupBy.Property)
 			} else {
-				expression := fmt.Sprintf(`%s as %s`, fmt.Sprintf("JSON_EXTRACT_STRING(ad_group.properties, '%s')", groupBy.Property), model.AdgroupPrefix+groupBy.Property)
+				expression := fmt.Sprintf(`Case when %s is null then '$none' else %s END as %s`, fmt.Sprintf("JSON_EXTRACT_STRING(ad_group.properties, '%s')", groupBy.Property), fmt.Sprintf("JSON_EXTRACT_STRING(ad_group.properties, '%s')", groupBy.Property), model.AdgroupPrefix+groupBy.Property)
 				dimensions.selectExpressions = append(dimensions.selectExpressions, expression)
 				dimensions.values = append(dimensions.values, model.AdgroupPrefix+groupBy.Property)
 			}
@@ -1590,9 +1590,9 @@ func getSQLAndParamsForAdwordsWithSmartPropertyV2(query *model.ChannelQueryV1, p
 				if groupBy.Property == "id" {
 					expression = fmt.Sprintf("%s as %s", internalValue, externalValue)
 				} else if _, ok := propertiesToBeDividedByMillion[groupBy.Property]; ok {
-					expression = fmt.Sprintf("((JSON_EXTRACT_STRING(value, '%s')))/1000000 as %s", internalValue, externalValue)
+					expression = fmt.Sprintf("Case when JSON_EXTRACT_STRING(value, '%s') is NULL then '$none' when JSON_EXTRACT_STRING(value, '%s') = '' then '$none' else ((JSON_EXTRACT_STRING(value, '%s')))/1000000 END as %s", internalValue, internalValue, internalValue, externalValue)
 				} else {
-					expression = fmt.Sprintf("JSON_EXTRACT_STRING(value, '%s') as %s", internalValue, externalValue)
+					expression = fmt.Sprintf("Case when JSON_EXTRACT_STRING(value, '%s') is NULL then '$none' when JSON_EXTRACT_STRING(value, '%s') = '' then '$none' else JSON_EXTRACT_STRING(value, '%s') END as %s", internalValue, internalValue, internalValue, externalValue)
 				}
 				dimensions.selectExpressions = append(dimensions.selectExpressions, expression)
 				dimensions.values = append(dimensions.values, externalValue)
@@ -1645,7 +1645,10 @@ func getSQLAndParamsForAdwordsWithSmartPropertyV2(query *model.ChannelQueryV1, p
 	}
 
 	// Filters
-	filterPropertiesStatementBasedOnRequestFilters, filterParams := getFilterPropertiesForAdwordsReportsAndSmartProperty(query.Filters)
+	filterPropertiesStatementBasedOnRequestFilters, filterParams, err := getFilterPropertiesForAdwordsReportsNew(query.Filters)
+	if err != nil {
+		return "", nil, nil, nil
+	}
 	filterStatementForSmartPropertyGroupBy := getNotNullFilterStatementForSmartPropertyGroupBys(adwordsGroupBys)
 	finalWhereStatement = joinWithWordInBetween("AND", staticWhereStatementForAdwordsWithSmartProperty, filterPropertiesStatementBasedOnRequestFilters, filterStatementForSmartPropertyGroupBy)
 	finalParams = append(finalParams, staticWhereParams...)
@@ -1751,10 +1754,10 @@ func getAdwordsFromStatementWithJoins(filters []model.ChannelFilterV1, groupBys 
 	isPresentCampaignSmartProperty, isPresentAdGroupSmartProperty := checkSmartPropertyWithTypeAndSource(filters, groupBys, "adwords")
 	fromStatement := fromAdwordsDocument
 	if isPresentAdGroupSmartProperty {
-		fromStatement += "inner join smart_properties ad_group on ad_group.project_id = adwords_documents.project_id and ad_group.object_id = ad_group_id "
+		fromStatement += "left join smart_properties ad_group on ad_group.project_id = adwords_documents.project_id and ad_group.object_id = ad_group_id "
 	}
 	if isPresentCampaignSmartProperty {
-		fromStatement += "inner join smart_properties campaign on campaign.project_id = adwords_documents.project_id and campaign.object_id = campaign_id "
+		fromStatement += "left join smart_properties campaign on campaign.project_id = adwords_documents.project_id and campaign.object_id = campaign_id "
 	}
 	return fromStatement
 }
@@ -1805,9 +1808,9 @@ func getSQLAndParamsForAdwordsV2(query *model.ChannelQueryV1, projectID int64, f
 			if groupBy.Property == "id" {
 				expression = fmt.Sprintf("%s as %s", internalValue, externalValue)
 			} else if _, ok := propertiesToBeDividedByMillion[groupBy.Property]; ok {
-				expression = fmt.Sprintf("((JSON_EXTRACT_STRING(value, '%s')))/1000000 as %s", internalValue, externalValue)
+				expression = fmt.Sprintf("Case when JSON_EXTRACT_STRING(value, '%s') is NULL then '$none' when JSON_EXTRACT_STRING(value, '%s') = '' then '$none' else ((JSON_EXTRACT_STRING(value, '%s')))/1000000 END as %s", internalValue, internalValue, internalValue, externalValue)
 			} else {
-				expression = fmt.Sprintf("JSON_EXTRACT_STRING(value, '%s') as %s", internalValue, externalValue)
+				expression = fmt.Sprintf("Case when JSON_EXTRACT_STRING(value, '%s') is NULL then '$none' when JSON_EXTRACT_STRING(value, '%s') = '' then '$none' else JSON_EXTRACT_STRING(value, '%s') END as %s", internalValue, internalValue, internalValue, externalValue)
 			}
 			dimensions.selectExpressions = append(dimensions.selectExpressions, expression)
 			dimensions.values = append(dimensions.values, externalValue)
@@ -1858,7 +1861,10 @@ func getSQLAndParamsForAdwordsV2(query *model.ChannelQueryV1, projectID int64, f
 	}
 
 	// Filters
-	filterPropertiesStatementBasedOnRequestFilters, filterParams := getFilterPropertiesForAdwordsReports(query.Filters)
+	filterPropertiesStatementBasedOnRequestFilters, filterParams, err := getFilterPropertiesForAdwordsReportsNew(query.Filters)
+	if err != nil {
+		return "", nil, nil, nil
+	}
 	finalWhereStatement = joinWithWordInBetween("AND", staticWhereStatementForAdwords, filterPropertiesStatementBasedOnRequestFilters)
 	finalParams = append(finalParams, staticWhereParams...)
 	finalParams = append(finalParams, filterParams...)
@@ -1895,6 +1901,92 @@ func getSQLAndParamsForAdwordsV2(query *model.ChannelQueryV1, projectID int64, f
 
 // @Kark TODO v1
 // TODO Check if we have none operator
+func getFilterPropertiesForAdwordsReportsNew(filters []model.ChannelFilterV1) (rStmnt string, rParams []interface{}, err error) {
+	logFields := log.Fields{
+		"filters": filters,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	filtersLen := len(filters)
+	if filtersLen == 0 {
+		return rStmnt, rParams, nil
+	}
+
+	rParams = make([]interface{}, 0)
+	groupedProperties := model.GetChannelFiltersGrouped(filters)
+
+	for indexOfGroup, currentGroupedProperties := range groupedProperties {
+		var currentGroupStmnt, pStmnt string
+		for indexOfProperty, p := range currentGroupedProperties {
+
+			if p.LogicalOp == "" {
+				p.LogicalOp = "AND"
+			}
+
+			if !isValidLogicalOp(p.LogicalOp) {
+				return rStmnt, rParams, errors.New("invalid logical op on where condition")
+			}
+			pStmnt = ""
+			propertyOp := getOp(p.Condition, "categorical")
+			// categorical property type.
+			pValue := ""
+			if p.Condition == model.ContainsOpStr || p.Condition == model.NotContainsOpStr {
+				pValue = fmt.Sprintf("%s", p.Value)
+			} else {
+				pValue = p.Value
+			}
+			_, isPresent := model.AdwordsExtToInternal[p.Property]
+			if isPresent {
+				key := fmt.Sprintf("%s:%s", p.Object, p.Property)
+				pFilter := model.AdwordsInternalPropertiesToReportsInternal[key]
+
+				if p.Value != model.PropertyValueNone {
+					if strings.Contains(p.Property, ("id")) {
+						pStmnt = fmt.Sprintf("%s %s ?", pFilter, propertyOp)
+					} else {
+						pStmnt = fmt.Sprintf("JSON_EXTRACT_STRING(value, '%s') %s ?", pFilter, propertyOp)
+					}
+					rParams = append(rParams, pValue)
+				} else {
+					// where condition for $none value.
+					if propertyOp == model.EqualsOp || propertyOp == model.RLikeOp {
+						pStmnt = fmt.Sprintf("(JSON_EXTRACT_STRING(value, '%s') IS NULL OR JSON_EXTRACT_STRING(value, '%s') = '')", pFilter, pFilter)
+					} else if propertyOp == model.NotEqualOp || propertyOp == model.NotRLikeOp {
+						pStmnt = fmt.Sprintf("(JSON_EXTRACT_STRING(value, '%s') IS NOT NULL OR JSON_EXTRACT_STRING(value, '%s') != '')", pFilter, pFilter)
+					} else {
+						return "", nil, fmt.Errorf("unsupported opertator %s for property value none", propertyOp)
+					}
+				}
+			} else {
+				if p.Value != model.PropertyValueNone {
+					pStmnt = fmt.Sprintf("JSON_EXTRACT_STRING(%s.properties, '%s') %s ?", p.Object, p.Property, propertyOp)
+					rParams = append(rParams, pValue)
+				} else {
+					if propertyOp == model.EqualsOp || propertyOp == model.RLikeOp {
+						pStmnt = fmt.Sprintf("(JSON_EXTRACT_STRING(%s.properties, '%s') IS NULL OR JSON_EXTRACT_STRING(%s.properties, '%s') = '')", p.Object, p.Property, p.Object, p.Property)
+					} else if propertyOp == model.NotEqualOp || propertyOp == model.NotRLikeOp {
+						pStmnt = fmt.Sprintf("(JSON_EXTRACT_STRING(%s.properties, '%s') IS NOT NULL OR JSON_EXTRACT_STRING(%s.properties, '%s') != '')", p.Object, p.Property, p.Object, p.Property)
+					} else {
+						return "", nil, fmt.Errorf("unsupported opertator %s for property value none", propertyOp)
+					}
+				}
+			}
+			if indexOfProperty == 0 {
+				currentGroupStmnt = pStmnt
+			} else {
+				currentGroupStmnt = fmt.Sprintf("%s %s %s", currentGroupStmnt, p.LogicalOp, pStmnt)
+			}
+		}
+		if indexOfGroup == 0 {
+			rStmnt = fmt.Sprintf("(%s)", currentGroupStmnt)
+		} else {
+			rStmnt = fmt.Sprintf("%s AND (%s)", rStmnt, currentGroupStmnt)
+		}
+
+	}
+	return rStmnt, rParams, nil
+}
+
 func getFilterPropertiesForAdwordsReports(filters []model.ChannelFilterV1) (string, []interface{}) {
 	logFields := log.Fields{
 		"filters": filters,

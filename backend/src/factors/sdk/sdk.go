@@ -795,7 +795,7 @@ func FillSixSignalUserProperties(projectId int64, projectSettings *model.Project
 	userProperties *U.PropertiesMap, UserId string, clientIP string) {
 
 	logCtx := log.WithField("project_id", projectId)
-	if projectSettings.Client6SignalKey != "" {
+	if projectSettings.Client6SignalKey != "" && *(projectSettings.IntClientSixSignalKey) == true {
 		execute6SignalStatusChannel := make(chan int)
 		sixSignalExists, _ := six_signal.GetSixSignalCacheResult(projectId, UserId, clientIP)
 		if sixSignalExists {
@@ -808,15 +808,18 @@ func FillSixSignalUserProperties(projectId int64, projectSettings *model.Project
 			case ok := <-execute6SignalStatusChannel:
 				if ok == 1 {
 					six_signal.SetSixSignalCacheResult(projectId, UserId, clientIP)
+					logCtx.WithFields(log.Fields{"clientIP": clientIP}).Info("SetSixSignalCacheResult using clients Key")
 
 				} else {
 					logCtx.Warn("ExecuteSixSignal failed in track call")
+					logCtx.WithFields(log.Fields{"clientIP": clientIP}).Info("ExecuteSixSignal failed in track call using clients Key")
 				}
 			case <-time.After(U.TimeoutOneSecond):
 				logCtx.Info("Six_Signal enrichment timed out in Track call")
+				logCtx.WithFields(log.Fields{"clientIP": clientIP}).Info("Timed Out 6Signal enrichment using clients Key")
 			}
 		}
-	} else if projectSettings.Factors6SignalKey != "" {
+	} else if projectSettings.Factors6SignalKey != "" && *(projectSettings.IntFactorsSixSignalKey) == true {
 		execute6SignalStatusChannel := make(chan int)
 		sixSignalExists, _ := six_signal.GetSixSignalCacheResult(projectId, UserId, clientIP)
 		if sixSignalExists {
@@ -829,11 +832,17 @@ func FillSixSignalUserProperties(projectId int64, projectSettings *model.Project
 			case ok := <-execute6SignalStatusChannel:
 				if ok == 1 {
 					six_signal.SetSixSignalCacheResult(projectId, UserId, clientIP)
+					logCtx.WithFields(log.Fields{"clientIP": clientIP}).Info("SetSixSignalCacheResult using Factors key")
+
 				} else {
 					logCtx.Warn("ExecuteSixSignal failed in track call")
+					logCtx.WithFields(log.Fields{"clientIP": clientIP}).Info("ExecuteSixSignal failed in track call using Factors Key")
+
 				}
 			case <-time.After(U.TimeoutOneSecond):
 				logCtx.Info("Six_Signal enrichment timed out in Track call")
+				logCtx.WithFields(log.Fields{"clientIP": clientIP}).Info("Timed Out 6Signal enrichment using Factors Key")
+
 			}
 		}
 	}

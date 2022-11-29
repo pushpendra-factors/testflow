@@ -18,8 +18,9 @@ import (
 	M "factors/model/model"
 	"factors/model/store"
 
-	log "github.com/sirupsen/logrus"
 	"io/ioutil"
+
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -221,7 +222,7 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 				shortlistedEvents[1] = maxcount[1]
 			} else {
 				for rootEvent, rootCount := range shortlistedEvents[i-1] {
-					if(strings.Contains(rootEvent, "OTHERS")){
+					if strings.Contains(rootEvent, "OTHERS") {
 						continue
 					}
 					eventCountArray := make([]eventCount, 0)
@@ -243,7 +244,7 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 					for _, eventsTrimmed := range eventCountArrayTrimmed {
 						selectedCount += eventsTrimmed.count
 					}
-					eventCountArrayTrimmed = append(eventCountArrayTrimmed, eventCount{event: rootEvent +",OTHERS", count: rootCount - selectedCount})
+					eventCountArrayTrimmed = append(eventCountArrayTrimmed, eventCount{event: rootEvent + ",OTHERS", count: rootCount - selectedCount})
 					_, exists := shortlistedEvents[i]
 					if !exists {
 						shortlistedEvents[i] = make(map[string]int)
@@ -255,12 +256,12 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 				}
 			}
 			// Prefixing with step number
-			eventsFormatted :=  make(map[string]int) 
-			for event, count := range shortlistedEvents[i]{
+			eventsFormatted := make(map[string]int)
+			for event, count := range shortlistedEvents[i] {
 				events := strings.Split(event, ",")
 				eventNameAppend := ""
 				for i, eventname := range events {
-					if(eventNameAppend == ""){
+					if eventNameAppend == "" {
 						eventNameAppend = fmt.Sprintf("%v:%v", i, eventname)
 					} else {
 						eventNameAppend = fmt.Sprintf("%v,%v:%v", eventNameAppend, i, eventname)
@@ -272,13 +273,13 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 			eventsOrdered := make(map[string]int)
 			if actualQuery.EventType == M.ENDSWITH {
 				for event, count := range eventsFormatted {
-					events := strings.Split(event,",")
+					events := strings.Split(event, ",")
 					eventTag := ""
-					for i := len(events)-1; i>= 0 ;i-- {
-						if(eventTag == ""){
+					for i := len(events) - 1; i >= 0; i-- {
+						if eventTag == "" {
 							eventTag = events[i]
 						} else {
-							eventTag = eventTag + "," +events[i]
+							eventTag = eventTag + "," + events[i]
 						}
 					}
 					eventsOrdered[eventTag] = count
@@ -385,9 +386,9 @@ func RemoveFromArray(events []string, key string) []string {
 }
 
 func GetPathAnalysisData(projectId int64, id string) map[int]map[string]int {
-	path, _ := C.GetCloudManager().GetPathAnalysisTempFilePathAndName(id, projectId)
+	path, _ := C.GetCloudManager(projectId).GetPathAnalysisTempFilePathAndName(id, projectId)
 	fmt.Println(path)
-	reader, err := C.GetCloudManager().Get(path, "result.txt")
+	reader, err := C.GetCloudManager(projectId).Get(path, "result.txt")
 	if err != nil {
 		fmt.Println(err.Error())
 		log.WithError(err).Error("Error reading file")

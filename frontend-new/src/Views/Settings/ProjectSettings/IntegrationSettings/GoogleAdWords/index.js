@@ -130,7 +130,6 @@ const GoogleIntegration = ({
         setShowURLModal(true); 
       }
     }
-    renderSettingInfo();
 
   }, [activeProject, agent_details, currentProjectSettings]);
 

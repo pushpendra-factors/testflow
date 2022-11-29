@@ -162,15 +162,8 @@ function stopFormBinderTask() {
 }
 
 function stopBackgroundFormBinderTaskLater() {
-    // The JS loaded last could be the one to add form to DOM, 
-    // So stop the form binding 10secs after window load.
-    window.addEventListener('load', function() {
-        window.setTimeout(stopFormBinderTask, 10000);
-    });
-
-    // If window load not triggered even after 2mins,
-    // stop the form binder.    
-    window.setTimeout(stopFormBinderTask, 120000);
+    // Stop the form binder only after 30 minutes.
+    window.setTimeout(stopFormBinderTask, 1800000);
 }
 
 function startBackgroundFormBinder(appInstance, processCallback) {

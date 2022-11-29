@@ -1041,6 +1041,10 @@ func (store *MemSQL) GetHubspotSyncInfo() (*model.HubspotSyncInfo, int) {
 
 	lastSyncInfoByProject := make(map[int64]map[string]int64, 0)
 	for _, syncInfo := range lastSyncInfo {
+		if syncInfo.Type == model.HubspotDocumentTypeContactList {
+			continue
+		}
+
 		if _, projectExists := lastSyncInfoByProject[syncInfo.ProjectID]; !projectExists {
 			lastSyncInfoByProject[syncInfo.ProjectID] = make(map[string]int64)
 		}
