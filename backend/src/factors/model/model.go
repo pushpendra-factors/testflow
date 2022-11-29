@@ -747,6 +747,12 @@ type Model interface {
 	GetProfileAccountDetailsByID(projectID int64, id string) (*model.AccountDetails, int)
 	GetFilteredLeftPanePropWithValue(projectID int64, profileType string, properties *map[string]interface{}) map[string]interface{}
 
+	// segment
+	CreateSegment(projectId int64, segment *model.SegmentPayload) (int, error)
+	GetAllSegments(projectId int64) (map[string][]model.Segment, int)
+	GetSegmentById(projectId int64, segmentId string) (*model.Segment, int)
+	UpdateSegmentById(projectId int64, id string, segmentPayload model.SegmentPayload) (error, int)
+
 	// Ads import
 	GetAllAdsImportEnabledProjects() (map[int64]map[string]model.LastProcessedAdsImport, error)
 	UpdateLastProcessedAdsData(updatedFields map[string]model.LastProcessedAdsImport, projectId int64) int

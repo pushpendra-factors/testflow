@@ -1175,3 +1175,13 @@ CREATE TABLE IF NOT EXISTS form_fills(
     SHARD KEY (project_id, user_id, form_id)
 );
 
+CREATE TABLE IF NOT EXISTS segments(
+    id text NOT NULL,
+    project_id bigint NOT NULL,
+    name text NOT NULL, 
+    description text, 
+    query json,
+    type text,
+    PRIMARY KEY (project_id, id),
+    SHARD KEY (project_id, id)
+);
