@@ -10,10 +10,11 @@ import (
 // Datetime related utility functions.
 // General convention for date Functions - suffix Z if utc based, In if timezone is passed, no suffix if localTime.
 const (
-	DATETIME_FORMAT_YYYYMMDD_HYPHEN string = "2006-01-02"
-	DATETIME_FORMAT_YYYYMMDD        string = "20060102"
-	DATETIME_FORMAT_DB              string = "2006-01-02 15:04:05"
-	SECONDS_IN_YEAR                        = ((365 * 86400) + 20736)
+	DATETIME_FORMAT_YYYYMMDD_HYPHEN  string = "2006-01-02"
+	DATETIME_FORMAT_YYYYMMDD         string = "20060102"
+	DATETIME_FORMAT_DB               string = "2006-01-02 15:04:05"
+	SECONDS_IN_YEAR                         = ((365 * 86400) + 20736)
+	DATETIME_FORMAT_DB_WITH_TIMEZONE string = "2006-01-02T15:04:05-07:00"
 )
 
 // Returns date in YYYYMMDD format

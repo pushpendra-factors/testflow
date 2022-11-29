@@ -8,8 +8,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const TimestampWithTimezoneFormat = "2006-01-02T15:04:05-07:00"
-
 func GetTimeFromTimestampStr(timestampStr string) time.Time {
 	ts, _ := time.Parse(time.RFC3339, timestampStr)
 	return ts
@@ -37,13 +35,13 @@ func GetTimestampAsStrWithTimezone(t time.Time, timezone string) string {
 
 // This relies on fact of above parse.
 func GetTimeFromParseTimeStr(timestampStr string) time.Time {
-	ts, _ := time.Parse(TimestampWithTimezoneFormat, timestampStr)
+	ts, _ := time.Parse(DATETIME_FORMAT_DB_WITH_TIMEZONE, timestampStr)
 	return ts
 }
 
 func GetTimeFromParseTimeStrWithErrorFromInterface(timestamp interface{}) (time.Time, error) {
 	sTime := fmt.Sprintf("%v", timestamp)
-	ts, err := time.Parse(TimestampWithTimezoneFormat, sTime)
+	ts, err := time.Parse(DATETIME_FORMAT_DB_WITH_TIMEZONE, sTime)
 	return ts, err
 }
 
