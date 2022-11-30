@@ -17,7 +17,7 @@ import {
   TYPE_UNIQUE_USERS,
   ACTIVE_USERS_CRITERIA,
   FREQUENCY_CRITERIA,
-  constantObj,
+  EVENT_QUERY_USER_TYPE,
   ANY_USER_TYPE,
   ALL_USER_TYPE,
   EACH_USER_TYPE,
@@ -842,7 +842,7 @@ export const getQuery = (
     }
     return gbpReq;
   });
-  query.ec = constantObj[user_type];
+  query.ec = EVENT_QUERY_USER_TYPE[user_type];
   query.tz = localStorage.getItem('project_timeZone') || 'Asia/Kolkata';
   const sessionsQuery = {
     cl: QUERY_TYPE_EVENT,
@@ -857,7 +857,7 @@ export const getQuery = (
     ],
     gup: [],
     gbt: '',
-    ec: constantObj.each,
+    ec: EVENT_QUERY_USER_TYPE.each,
     tz: localStorage.getItem('project_timeZone') || 'Asia/Kolkata'
   };
   if (result_criteria === ACTIVE_USERS_CRITERIA) {
