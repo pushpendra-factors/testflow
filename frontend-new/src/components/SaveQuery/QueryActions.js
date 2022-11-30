@@ -91,11 +91,9 @@ const QueryActionsComponent = ({
         <FaSelect
           extraClass={styles.additionalops}
           options={[
-            chart === CHART_TYPE_SPARKLINES &&
             (queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_KPI)
               ? ['Email this report', 'envelope']
               : ['Email this report', 'envelope', 'disabled'],
-            chart === CHART_TYPE_SPARKLINES &&
             (queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_KPI)
               ? ['Share to slack', 'SlackStroke']
               : ['Share to slack', 'SlackStroke', 'disabled'],
