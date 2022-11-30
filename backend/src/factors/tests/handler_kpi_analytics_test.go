@@ -1685,3 +1685,134 @@ func sendEventNamesTypeQueryReq(r *gin.Engine, projectId int64, agent *M.Agent) 
 	log.Warn(jsonResponse)
 	return w
 }
+
+func TestKPIChannelsMissingTimestamps(t *testing.T) {
+	r := gin.Default()
+	H.InitDataServiceRoutes(r)
+	model.SetSmartPropertiesReservedNames()
+
+	a := gin.Default()
+	H.InitAppRoutes(a)
+
+	project, customerAccountID, _, statusCode := createProjectAndAddAdwordsDocument(t, r)
+	if statusCode != http.StatusAccepted {
+		assert.Equal(t, false, true)
+		return
+	}
+
+	adwordsDocuments := []M.AdwordsDocument{
+		{ID: "1", Timestamp: 20220802, ProjectID: project.ID, CustomerAccountID: customerAccountID, TypeAlias: "campaign_performance_report",
+			Value: &postgres.Jsonb{RawMessage: json.RawMessage(`{"cost": "11","clicks": "100","campaign_id":"1","impressions": "1000", "campaign_name": "test1"}`)}},
+		{ID: "2", Timestamp: 20220803, ProjectID: project.ID, CustomerAccountID: customerAccountID, TypeAlias: "campaign_performance_report",
+			Value: &postgres.Jsonb{RawMessage: json.RawMessage(`{"cost": "12","clicks": "200","campaign_id":"2","impressions": "500", "campaign_name": "test2"}`)}},
+	}
+	for _, adwordsDocument := range adwordsDocuments {
+		status := store.GetStore().CreateAdwordsDocument(&adwordsDocument)
+		assert.Equal(t, http.StatusCreated, status)
+	}
+
+	query := model.KPIQuery{
+		Category:         "channels",
+		DisplayCategory:  "google_ads_metrics",
+		PageUrl:          "",
+		Metrics:          []string{"impressions"},
+		GroupBy:          []M.KPIGroupBy{},
+		From:             1659312000, // 1st Aug, 2022
+		To:               1659657600, // 5th Aug, 2022
+		GroupByTimestamp: "date",
+		Timezone:         "UTC",
+	}
+	kpiQueryGroup := model.KPIQueryGroup{
+		Class:         "kpi",
+		Queries:       []model.KPIQuery{query},
+		GlobalFilters: []model.KPIFilter{},
+		GlobalGroupBy: []model.KPIGroupBy{},
+	}
+	// result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup,
+	// 	C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+	// assert.Equal(t, result[0].Headers, []string{"datetime", "google_ads_metrics_impressions"})
+	// assert.Equal(t, len(result[0].Rows), 5)
+	// assert.Equal(t, result[0].Rows[0][1], 0)
+	// assert.Equal(t, result[0].Rows[1][1], float64(1000))
+	// assert.Equal(t, result[0].Rows[2][1], float64(500))
+	// assert.Equal(t, result[0].Rows[3][1], 0)
+	// assert.Equal(t, result[0].Rows[4][1], 0)
+
+	kpiQueryGroup = model.KPIQueryGroup{
+		Class:         "kpi",
+		Queries:       []model.KPIQuery{query},
+		GlobalFilters: []model.KPIFilter{},
+		GlobalGroupBy: []model.KPIGroupBy{
+			{
+				ObjectType:       "campaign",
+				PropertyName:     "campaign_name",
+				PropertyDataType: "categorical",
+				Entity:           "",
+			},
+		},
+	}
+	result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup,
+		C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+	log.Fatal(result)
+	assert.Equal(t, result[0].Headers, []string{"datetime", "campaign_number1", "google_ads_metrics_impressions"})
+	assert.Equal(t, len(result[0].Rows), 1)
+	assert.Equal(t, result[0].Rows, [][]interface{}{{"$none", float64(500)}})
+
+	// kpiQueryGroup = model.KPIQueryGroup{
+	// 	Class:   "kpi",
+	// 	Queries: []model.KPIQuery{query},
+	// 	GlobalFilters: []model.KPIFilter{
+	// 		{
+	// 			ObjectType:       "campaign",
+	// 			PropertyName:     "campaign_number1",
+	// 			PropertyDataType: "categorical",
+	// 			Entity:           "",
+	// 			Condition:        "notEqual",
+	// 			Value:            "$none",
+	// 			LogicalOp:        "AND",
+	// 		},
+	// 	},
+	// 	GlobalGroupBy: []model.KPIGroupBy{
+	// 		{
+	// 			ObjectType:       "campaign",
+	// 			PropertyName:     "campaign_number1",
+	// 			PropertyDataType: "categorical",
+	// 			Entity:           "",
+	// 		},
+	// 	},
+	// }
+	// result, statusCode = store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup,
+	// 	C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+	// assert.Equal(t, result[0].Headers, []string{"campaign_number1", "google_ads_metrics_impressions"})
+	// assert.Equal(t, len(result[0].Rows), 1)
+	// assert.Equal(t, result[0].Rows, [][]interface{}{{"1", float64(1000)}})
+
+	// kpiQueryGroup = model.KPIQueryGroup{
+	// 	Class:   "kpi",
+	// 	Queries: []model.KPIQuery{query},
+	// 	GlobalFilters: []model.KPIFilter{
+	// 		{
+	// 			ObjectType:       "campaign",
+	// 			PropertyName:     "campaign_number1",
+	// 			PropertyDataType: "categorical",
+	// 			Entity:           "",
+	// 			Condition:        "equals",
+	// 			Value:            "1",
+	// 			LogicalOp:        "AND",
+	// 		},
+	// 	},
+	// 	GlobalGroupBy: []model.KPIGroupBy{
+	// 		{
+	// 			ObjectType:       "campaign",
+	// 			PropertyName:     "campaign_number1",
+	// 			PropertyDataType: "categorical",
+	// 			Entity:           "",
+	// 		},
+	// 	},
+	// }
+	// result, statusCode = store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup,
+	// 	C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+	// assert.Equal(t, result[0].Headers, []string{"campaign_number1", "google_ads_metrics_impressions"})
+	// assert.Equal(t, len(result[0].Rows), 1)
+	// assert.Equal(t, result[0].Rows, [][]interface{}{{"1", float64(1000)}})
+}

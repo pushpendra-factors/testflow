@@ -54,7 +54,7 @@ func sanitizeChannelQueryResult(result *model.QueryResult, query model.KPIQuery)
 			return err
 		}
 
-		sortResultRowsByTimestamp(result.Rows, timeIndex)
+		sortChannelResultRowsByTimestamp(result.Rows, timeIndex)
 	}
 
 	return nil

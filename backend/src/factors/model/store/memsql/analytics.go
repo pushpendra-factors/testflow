@@ -1945,7 +1945,7 @@ func addMissingTimestampsOnChannelResultWithoutGroupByProps(result *model.QueryR
 			row[timestampIndex] = ts
 			filledResult = append(filledResult, row)
 		} else {
-			newRow := make([]interface{}, 3, 3)
+			newRow := make([]interface{}, 2, 2)
 			newRow[timestampIndex] = ts
 			newRow[aggrIndex] = 0
 			filledResult = append(filledResult, newRow)
@@ -1991,10 +1991,6 @@ func addMissingTimestampsOnChannelResultWithGroupByProps(result *model.QueryResu
 		encKey := getEncodedKeyForCols(encCols)
 		rowsByGroupAndTimestamp[encKey] = true
 
-		// overrides timestamp with user timezone as sql results doesn't
-		// return timezone used to query.
-		row[timestampIndex] = U.GetTimeFromTimestampStr(timestampWithTimezone)
-		filledResult = append(filledResult, row)
 	}
 
 	timestamps, offsets := getAllTimestampsAndOffsetBetweenByType(query.From, query.To,
@@ -2005,11 +2001,17 @@ func addMissingTimestampsOnChannelResultWithGroupByProps(result *model.QueryResu
 			encCols := make([]interface{}, 0, 0)
 			encCols = append(encCols, row[gkStart:gkEnd]...)
 			// encoded key with generated timestamp.
-			encCols = append(encCols, U.GetTimestampAsStrWithTimezoneGivenOffset(ts, offsets[index]))
+			timestampWithTimezone := U.GetTimestampAsStrWithTimezoneGivenOffset(ts, offsets[index])
+			encCols = append(encCols, timestampWithTimezone)
 			encKey := getEncodedKeyForCols(encCols)
 
-			_, exists := rowsByGroupAndTimestamp[encKey]
-			if !exists {
+			if _, exists := rowsByGroupAndTimestamp[encKey]; exists {
+				// overrides timestamp with user timezone as sql results doesn't
+				// return timezone used to query.
+				row[timestampIndex] = U.GetTimeFromTimestampStr(timestampWithTimezone)
+				filledResult = append(filledResult, row)
+
+			} else {
 				// create new row with group values and missing date
 				// for those group combination and aggr 0.
 				rowLen := len(result.Headers)
@@ -2041,6 +2043,7 @@ func addMissingTimestampsOnChannelResultWithGroupByProps(result *model.QueryResu
 	}
 
 	result.Rows = filledResult
+	log.Info("Hello ", filledResult)
 	return nil
 }
 
