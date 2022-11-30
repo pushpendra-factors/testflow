@@ -27,7 +27,7 @@ import { EQUALITY_OPERATOR_KEYS } from '../../../components/DataTableFilters/dat
 export const defaultSortProp = () => [
   {
     order: 'descend',
-    key: 'Conversion',
+    key: 'Impressions',
     type: 'numerical',
     subtype: null
   }

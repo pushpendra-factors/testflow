@@ -9,6 +9,9 @@ import {
 } from '../../utils/constants';
 import { DEFAULT_PIVOT_CONFIG } from './constants';
 import { isPivotSupported } from '../../utils/chart.helpers';
+import { parseForDateTimeLabel } from './EventsAnalytics/eventsAnalytics.helpers';
+import { formatCount } from 'Utils/dataFormatter';
+import { isNumeric } from 'Utils/global';
 
 export const IconAndTextSwitchQueryType = (queryType) => {
   switch (queryType) {
@@ -66,4 +69,19 @@ export const getDifferentDates = ({ rows, dateIndex }) => {
     differentDates.add(row[dateIndex]);
   });
   return Array.from(differentDates);
+};
+
+export const formatBreakdownLabel = ({ grn, propType, label }) => {
+  if (grn) {
+    return parseForDateTimeLabel(grn, label);
+  }
+  if (propType === 'numerical') {
+    if (typeof label === 'number') {
+      return formatCount(label);
+    }
+    if (isNumeric(label)) {
+      return formatCount(Number(label)).toString();
+    }
+  }
+  return label;
 };
