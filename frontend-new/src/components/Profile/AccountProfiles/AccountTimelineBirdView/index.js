@@ -9,7 +9,7 @@ import {
 } from '../../utils';
 import { SVG, Text } from '../../../factorsComponents';
 
-function AccountTimeline({
+function AccountTimelineBirdView({
   timelineEvents = [],
   timelineUsers = [],
   granularity,
@@ -18,6 +18,8 @@ function AccountTimeline({
   loading = false
 }) {
   const [formattedData, setFormattedData] = useState({});
+
+  console.log('formattedData: ', formattedData);
 
   useEffect(() => {
     const data = eventsFormattedForGranularity(
@@ -166,4 +168,4 @@ function AccountTimeline({
     </div>
   );
 }
-export default AccountTimeline;
+export default AccountTimelineBirdView;
