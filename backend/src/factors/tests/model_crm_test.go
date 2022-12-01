@@ -695,3 +695,110 @@ func TestCRMPropertiesSync(t *testing.T) {
 	assert.Len(t, *propertyDetails, 1)
 	assert.Equal(t, U.PropertyTypeDateTime, (*propertyDetails)[model.GetCRMEnrichPropertyKeyByType(U.CRM_SOURCE_NAME_MARKETO, "lead", "created_at")])
 }
+
+func TestCreateOrGetCRMEventNames(t *testing.T) {
+	project, _, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	//record types
+	typeUserLead := 1
+	typeActivityProgramMember := 2
+
+	leadUpdateTimestampProperty := "updated_at"
+	leadTimestamp := time.Now().AddDate(0, 0, -1)
+	leadProperties := fmt.Sprintf(`{"Name":"name1","city":"city1","%s":%d}`, leadUpdateTimestampProperty, leadTimestamp.Unix())
+	user1Properties := postgres.Jsonb{json.RawMessage(leadProperties)}
+
+	user1 := &model.CRMUser{
+		ProjectID:  project.ID,
+		Source:     U.CRM_SOURCE_MARKETO,
+		Type:       typeUserLead,
+		ID:         "lead1",
+		Properties: &user1Properties,
+		Timestamp:  leadTimestamp.Unix(),
+	}
+	status, err := store.GetStore().CreateCRMUser(user1)
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, user1.Action, model.CRMActionCreated)
+	status, err = store.GetStore().CreateCRMUser(user1)
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, user1.Action, model.CRMActionUpdated)
+
+	// create crm activity record
+	activityUpdateTimestampProperty := "_fivetran_synced"
+	activityTimestamp := time.Now()
+	externalActivityID := "activity1"
+	activityProperties := fmt.Sprintf(`{"Name":"Click event","status":"Responded","%s":%d}`, activityUpdateTimestampProperty, activityTimestamp.Unix())
+	activity1Properties := postgres.Jsonb{json.RawMessage(activityProperties)}
+	activity1 := &model.CRMActivity{
+		ProjectID:          project.ID,
+		Source:             U.CRM_SOURCE_MARKETO,
+		ExternalActivityID: externalActivityID,
+		Type:               typeActivityProgramMember,
+		Name:               "program_membership_created",
+		ActorType:          typeUserLead,
+		ActorID:            "lead1",
+		Properties:         &activity1Properties,
+		Timestamp:          activityTimestamp.Unix(),
+	}
+	status, err = store.GetStore().CreateCRMActivity(activity1)
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusCreated, status)
+	activity1.ID = ""
+	status, err = store.GetStore().CreateCRMActivity(activity1)
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusConflict, status)
+
+	activity1.Timestamp = activityTimestamp.Add(2 * time.Hour).Unix()
+	activityProperties = fmt.Sprintf(`{"Name":"Click event","status":"Responded","%s":%d}`, activityUpdateTimestampProperty, activity1.Timestamp)
+	activity1Properties = postgres.Jsonb{json.RawMessage(activityProperties)}
+	activity1.Name = "program_membership_updated"
+	status, err = store.GetStore().CreateCRMActivity(activity1)
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusCreated, status)
+
+	sourceObjectTypeAndAlias := map[int]string{
+		typeUserLead:              "lead",
+		typeActivityProgramMember: "program_membership",
+	}
+
+	userTypes := map[int]bool{
+		typeUserLead: true,
+	}
+	activityTypes := map[int]bool{
+		typeActivityProgramMember: true,
+	}
+
+	sourceConfig, err := enrichment.NewCRMEnrichmentConfig(U.CRM_SOURCE_NAME_MARKETO, sourceObjectTypeAndAlias, userTypes, nil, activityTypes)
+	assert.Nil(t, err)
+
+	status = enrichment.CreateOrGetCRMEventNames(project.ID, sourceConfig)
+	assert.Equal(t, http.StatusOK, status)
+
+	eventNames, status := store.GetStore().GetEventNames(project.ID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Len(t, eventNames, 4)
+
+	eventCount := map[string]int{
+		U.EVENT_NAME_MARKETO_LEAD_CREATED:               0,
+		U.EVENT_NAME_MARKETO_LEAD_UPDATED:               0,
+		U.EVENT_NAME_MARKETO_PROGRAM_MEMBERSHIP_CREATED: 0,
+		U.EVENT_NAME_MARKETO_PROGRAM_MEMBERSHIP_UPDATED: 0,
+	}
+	otherEventNameCount := 0
+
+	for _, eventName := range eventNames {
+		if _, exists := eventCount[eventName.Name]; !exists {
+			otherEventNameCount += 1
+		}
+		eventCount[eventName.Name] += 1
+	}
+
+	assert.Equal(t, 1, eventCount[U.EVENT_NAME_MARKETO_LEAD_CREATED])
+	assert.Equal(t, 1, eventCount[U.EVENT_NAME_MARKETO_LEAD_UPDATED])
+	assert.Equal(t, 1, eventCount[U.EVENT_NAME_MARKETO_PROGRAM_MEMBERSHIP_CREATED])
+	assert.Equal(t, 1, eventCount[U.EVENT_NAME_MARKETO_PROGRAM_MEMBERSHIP_UPDATED])
+	assert.Equal(t, 0, otherEventNameCount)
+}

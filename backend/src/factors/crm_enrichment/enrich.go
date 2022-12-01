@@ -203,13 +203,64 @@ func enrichAllWorker(project *model.Project, wg *sync.WaitGroup, enrichStatus *e
 	}
 }
 
-func CreateOrGetCRMEventNames(projectID int64) int {
+func getAllCRMEventNames(projectID int64, config *CRMSourceConfig) ([]string, error) {
+	source, err := model.GetCRMSourceByAliasName(config.sourceAlias)
+	if err != nil {
+		return nil, err
+	}
+
+	crmUsersTypeAndAction, errCode := store.GetStore().GetCRMUsersTypeAndAction(projectID, source)
+	if errCode != http.StatusFound && errCode != http.StatusNotFound {
+		return nil, errors.New("Failed to get crm users type and action.")
+	}
+
+	eventNames := make([]string, 0)
+
+	if errCode == http.StatusFound {
+		for _, crmUserTypeAndAction := range crmUsersTypeAndAction {
+			userTypeAlias, err := config.GetCRMObjectTypeAlias(crmUserTypeAndAction.Type)
+			if err != nil {
+				log.WithError(err).WithFields(log.Fields{
+					"project_id": projectID,
+					"source":     config.sourceAlias,
+					"type":       crmUserTypeAndAction.Type,
+					"action":     crmUserTypeAndAction.Action,
+				}).Error("Failed to get crm users type and action.")
+				continue
+			}
+
+			eventNames = append(eventNames, GetCRMEventNameByAction(config.sourceAlias, userTypeAlias, crmUserTypeAndAction.Action))
+		}
+	} else {
+		log.WithFields(log.Fields{"project_id": projectID, "source": config.sourceAlias}).Info("No crm users found. Skipped adding.")
+	}
+
+	crmActivityNames, errCode := store.GetStore().GetCRMActivityNames(projectID, source)
+	if errCode != http.StatusFound && errCode != http.StatusNotFound {
+		return nil, errors.New("Failed to get crm activity name.")
+	}
+
+	if errCode == http.StatusFound {
+		for _, name := range crmActivityNames {
+			activityName := getActivityEventName(config.sourceAlias, name)
+			eventNames = append(eventNames, activityName)
+		}
+	} else {
+		log.WithFields(log.Fields{"project_id": projectID, "source": config.sourceAlias}).Info("No crm activities found. Skipped adding.")
+	}
+
+	return eventNames, nil
+}
+
+func CreateOrGetCRMEventNames(projectID int64, config *CRMSourceConfig) int {
+	eventNames, err := getAllCRMEventNames(projectID, config)
+	if err != nil {
+		log.WithField("project_id", projectID).WithError(err).Error("Failed to get crm event names from getAllCRMEventNames.")
+		return http.StatusInternalServerError
+	}
+
 	//TODO: move to config based creation
-	for _, eventName := range []string{U.EVENT_NAME_MARKETO_LEAD_CREATED,
-		U.EVENT_NAME_MARKETO_LEAD_UPDATED,
-		U.EVENT_NAME_MARKETO_PROGRAM_MEMBERSHIP_CREATED,
-		U.EVENT_NAME_MARKETO_PROGRAM_MEMBERSHIP_UPDATED,
-	} {
+	for _, eventName := range eventNames {
 		_, status := store.GetStore().CreateOrGetEventName(&model.EventName{
 			ProjectId: projectID,
 			Name:      eventName,
@@ -238,7 +289,7 @@ func Enrich(projectID int64, sourceConfig *CRMSourceConfig, batchSize int, minTi
 		return nil
 	}
 
-	status := CreateOrGetCRMEventNames(projectID)
+	status := CreateOrGetCRMEventNames(projectID, sourceConfig)
 	if status != http.StatusOK {
 		return []EnrichStatus{{Status: U.CRM_SYNC_STATUS_FAILURES}}
 	}
