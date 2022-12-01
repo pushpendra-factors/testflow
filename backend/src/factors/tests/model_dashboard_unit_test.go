@@ -1637,6 +1637,27 @@ func TestDashboardUnitDefaultGBT(t *testing.T) {
 	baseQuery.SetDefaultGroupByTimestamp()
 	timestamps := baseQuery.GetGroupByTimestamps()
 	assert.Len(t, timestamps, 0)
+
+	analyticsQueryWithUniqueUsers1 := `{"cl": "insights", "ec": "any_given_event", "fr": 1393612200, "to": 1393698599, "ty": "unique_users", "tz": "", "ewp": [{"na": "$session", "pr": []}], "gbp": [], "gbt": "date"}`
+	queryJSON1 := postgres.Jsonb{json.RawMessage(analyticsQueryWithUniqueUsers1)}
+	baseQuery1, err1 := model.DecodeQueryForClass(queryJSON1, model.QueryClassInsights)
+	assert.Nil(t, err1)
+
+	baseQuery1.SetDefaultGroupByTimestamp()
+	timestamps1 := baseQuery1.GetGroupByTimestamps()
+	assert.Len(t, timestamps1, 1)
+	assert.Equal(t, timestamps1[0], "")
+
+	analyticsQueryWithUniqueUsersAndEachEventType := `{"cl": "insights", "ec": "each_given_event", "fr": 1393612200, "to": 1393698599, "ty": "unique_users", "tz": "", "ewp": [{"na": "$session", "pr": []}], "gbp": [], "gbt": "date"}`
+	queryJSON2 := postgres.Jsonb{json.RawMessage(analyticsQueryWithUniqueUsersAndEachEventType)}
+	baseQuery2, err2 := model.DecodeQueryForClass(queryJSON2, model.QueryClassInsights)
+	assert.Nil(t, err2)
+
+	baseQuery2.SetDefaultGroupByTimestamp()
+	timestamps2 := baseQuery2.GetGroupByTimestamps()
+	assert.Len(t, timestamps2, 1)
+	assert.NotEqual(t, timestamps2[0], "")
+	assert.Equal(t, timestamps2[0], "hour")
 }
 
 func sendAttributionQueryReq(r *gin.Engine, projectID int64, agent *model.Agent, dashboardID, unitID int64, query model.AttributionQuery, refresh bool) *httptest.ResponseRecorder {
