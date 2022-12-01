@@ -16,6 +16,7 @@ import GlobalFilterSelect from '../GlobalFilterSelect';
 import { DEFAULT_OPERATOR_PROPS } from 'Components/FaFilterSelect/utils';
 
 import { fetchKPIFilterValues } from 'Reducers/kpi';
+import _ from 'lodash';
 
 const defaultOpProps = DEFAULT_OPERATOR_PROPS;
 
@@ -268,7 +269,7 @@ function GlobalFilterBlock({
                       extraClass={'m-0 ml-2 uppercase'}
                       weight={'bold'}
                     >
-                      {group.label}
+                      {_.startCase(group.label)}
                     </Text>
                   </div>
                   <SVG
@@ -314,7 +315,7 @@ function GlobalFilterBlock({
                               extraClass={'m-0'}
                               weight={'thin'}
                             >
-                              {val[0]}
+                              {_.startCase(val[0])}
                             </Text>
                           </div>
                         );

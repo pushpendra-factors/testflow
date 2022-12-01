@@ -3,6 +3,7 @@ package util
 import (
 	"errors"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"strconv"
 	"time"
 )
@@ -115,6 +116,15 @@ func getDateBeforeXDays(numberOfDays int64, timezoneString TimeZoneString) int64
 
 func DateAsFormattedInt(dateTime time.Time) uint64 {
 	datetimeInt, _ := strconv.ParseInt(fmt.Sprintf("%d%02d%02d%02d", dateTime.Year(), int(dateTime.Month()), dateTime.Day(), dateTime.Hour()), 10, 64)
+	return uint64(datetimeInt)
+}
+
+func DateAsYYYYMMDDFormat(dateTime time.Time) uint64 {
+
+	datetimeInt, err := strconv.ParseInt(fmt.Sprintf("%d%02d%02d", dateTime.Year(), int(dateTime.Month()), dateTime.Day()), 10, 64)
+	if err != nil {
+		log.Warn("Error getting current Date As YYYYMMDD Format")
+	}
 	return uint64(datetimeInt)
 }
 

@@ -79,7 +79,7 @@ func (store *MemSQL) convertPathAnalysisToPathAnalysisEntityInfo(list []model.Pa
 			return nil
 		}
 		e := model.PathAnalysisEntityInfo{
-			Id:				   obj.ID,
+			Id:                obj.ID,
 			Title:             obj.Title,
 			Status:            obj.Status,
 			CreatedBy:         names[obj.CreatedBy],
@@ -243,7 +243,7 @@ func isDulplicatePathAnalysisQuery(ProjectID int64, query *model.PathAnalysisQue
 		equal := (res.AvoidRepeatedEvents == query.AvoidRepeatedEvents) &&
 			(res.EndTimestamp == query.EndTimestamp) &&
 			(res.StartTimestamp == query.StartTimestamp) &&
-			reflect.DeepEqual(res.Event, query.Event) &&	
+			reflect.DeepEqual(res.Event, query.Event) &&
 			reflect.DeepEqual(res.ExcludeEvents, query.ExcludeEvents) &&
 			reflect.DeepEqual(res.IncludeEvents, query.IncludeEvents) &&
 			reflect.DeepEqual(res.Filter, query.Filter)

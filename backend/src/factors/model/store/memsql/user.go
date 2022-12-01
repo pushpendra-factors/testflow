@@ -487,7 +487,7 @@ func (store *MemSQL) GetExistingUserByCustomerUserID(projectId int64, arrayCusto
 
 	if sourceStmnt != "" {
 		queryStmnt = queryStmnt + " AND " + sourceStmnt
-		queryParams = append(queryParams, sourceParams)
+		queryParams = append(queryParams, sourceParams...)
 	}
 
 	rows, err := db.Raw(queryStmnt, queryParams...).Rows()

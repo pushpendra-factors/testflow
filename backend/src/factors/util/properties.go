@@ -1367,10 +1367,10 @@ var STANDARD_EVENTS_GROUP_NAMES = map[string]string{
 	"$leadsquared_lead_updated":                 "LeadSquared",
 	"$leadsquared_sales_activity_created":       "LeadSquared",
 	"$leadsquared_sales_activity_updated":       "LeadSquared",
-	"$leadsquared_email_sent_activity_created":       "LeadSquared",
-	"$leadsquared_email_info_activity_created":       "LeadSquared",
-	"$leadsquared_had_a_call_activity_updated":       "LeadSquared",
-	"$leadsquared_had_a_call_activity_created":       "LeadSquared",
+	"$leadsquared_email_sent_activity_created":  "LeadSquared",
+	"$leadsquared_email_info_activity_created":  "LeadSquared",
+	"$leadsquared_had_a_call_activity_updated":  "LeadSquared",
+	"$leadsquared_had_a_call_activity_created":  "LeadSquared",
 }
 
 var STANDARD_EVENTS_IN_DROPDOWN = []string{

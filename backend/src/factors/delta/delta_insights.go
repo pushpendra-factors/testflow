@@ -43,45 +43,45 @@ func StaticDashboardListForMailer() []M.DashboardUnit {
 	return dashboardUnit
 }
 
-func GetQueryTypeAndClass(queryId int64)(bool, string, string){
-	if(queryId == 1){
+func GetQueryTypeAndClass(queryId int64) (bool, string, string) {
+	if queryId == 1 {
 		return false, CRM, M.QueryClassEvents
 	}
-	if(queryId == 2){
+	if queryId == 2 {
 		return true, WebsiteEvent, M.QueryClassEvents
 	}
-	if(queryId == 3){
+	if queryId == 3 {
 		return false, CRM, M.QueryClassEvents
 	}
-	if(queryId == 4){
+	if queryId == 4 {
 		return true, KPI, ""
 	}
-	if(queryId == 5){
+	if queryId == 5 {
 		return true, KPI, ""
 	}
-	if(queryId == 6){
+	if queryId == 6 {
 		return true, KPI, ""
 	}
 	return false, "", ""
 }
 
-func GetQueryHeader(queryId int64)(string){
-	if(queryId == 1){
+func GetQueryHeader(queryId int64) string {
+	if queryId == 1 {
 		return "Website Sessions"
 	}
-	if(queryId == 2){
+	if queryId == 2 {
 		return "Form Submitted"
 	}
-	if(queryId == 3){
+	if queryId == 3 {
 		return "Hubspot Contact Created"
 	}
-	if(queryId == 4){
+	if queryId == 4 {
 		return "All Channel Spend"
 	}
-	if(queryId == 5){
+	if queryId == 5 {
 		return "Website Session - Bounce Rate"
 	}
-	if(queryId == 6){
+	if queryId == 6 {
 		return "Average Session Duration"
 	}
 	return ""
@@ -166,19 +166,19 @@ func StaticQueriesForMailer(queryId int64) (Query, MultiFunnelQuery, M.KPIQueryG
 				Operator: "And",
 				EventCriterionList: []EventCriterion{
 					EventCriterion{
-						Id:                  0,
-						Name:                "$hubspot_contact_created",
-						EqualityFlag:        true,
+						Id:           0,
+						Name:         "$hubspot_contact_created",
+						EqualityFlag: true,
 						FilterCriterionList: []EventFilterCriterion{
 							EventFilterCriterion{
-								Key            : "$hubspot_contact_hs_analytics_source",
-								Type           : "categorical",
-								PropertiesMode : "user",
-								Values         :[]OperatorValueTuple{
+								Key:            "$hubspot_contact_hs_analytics_source",
+								Type:           "categorical",
+								PropertiesMode: "user",
+								Values: []OperatorValueTuple{
 									OperatorValueTuple{
-										Operator  : "notEqual",
-										Value     : "OFFLINE",
-										LogicalOp : "AND",
+										Operator:  "notEqual",
+										Value:     "OFFLINE",
+										LogicalOp: "AND",
 									},
 								},
 							},
@@ -190,68 +190,68 @@ func StaticQueriesForMailer(queryId int64) (Query, MultiFunnelQuery, M.KPIQueryG
 	}
 	if queryId == 4 {
 		return Query{}, MultiFunnelQuery{}, M.KPIQueryGroup{
-			Class         :"kpi",
-			Queries       :[]M.KPIQuery{
+			Class: "kpi",
+			Queries: []M.KPIQuery{
 				M.KPIQuery{
-					Category         :"channels",
-					DisplayCategory  :"all_channels_metrics",
+					Category:        "channels",
+					DisplayCategory: "all_channels_metrics",
 				},
 				M.KPIQuery{
-					Category         :"channels",
-					DisplayCategory  :"all_channels_metrics",
+					Category:        "channels",
+					DisplayCategory: "all_channels_metrics",
 					Metrics: []string{
 						"spend",
 					},
 				},
 			},
-			GlobalFilters : []M.KPIFilter{} ,
-			GlobalGroupBy : []M.KPIGroupBy{} ,
+			GlobalFilters: []M.KPIFilter{},
+			GlobalGroupBy: []M.KPIGroupBy{},
 		}, true, false, false, make(map[string]bool)
 	}
 	if queryId == 5 {
 		return Query{}, MultiFunnelQuery{}, M.KPIQueryGroup{
-			Class         :"kpi",
-			Queries       :[]M.KPIQuery{
+			Class: "kpi",
+			Queries: []M.KPIQuery{
 				M.KPIQuery{
-					Category         :"events",
-					DisplayCategory  :"website_session",
+					Category:        "events",
+					DisplayCategory: "website_session",
 					Metrics: []string{
 						"bounce_rate",
 					},
 				},
 				M.KPIQuery{
-					Category         :"events",
-					DisplayCategory  :"website_session",
+					Category:        "events",
+					DisplayCategory: "website_session",
 					Metrics: []string{
 						"bounce_rate",
 					},
 				},
 			},
-			GlobalFilters : []M.KPIFilter{} ,
-			GlobalGroupBy : []M.KPIGroupBy{} ,
+			GlobalFilters: []M.KPIFilter{},
+			GlobalGroupBy: []M.KPIGroupBy{},
 		}, true, false, false, make(map[string]bool)
 	}
 	if queryId == 6 {
 		return Query{}, MultiFunnelQuery{}, M.KPIQueryGroup{
-			Class         :"kpi",
-			Queries       :[]M.KPIQuery{
+			Class: "kpi",
+			Queries: []M.KPIQuery{
 				M.KPIQuery{
-					Category         :"events",
-					DisplayCategory  :"website_session",
+					Category:        "events",
+					DisplayCategory: "website_session",
 					Metrics: []string{
 						"average_session_duration",
 					},
 				},
 				M.KPIQuery{
-					Category         :"events",
-					DisplayCategory  :"website_session",
+					Category:        "events",
+					DisplayCategory: "website_session",
 					Metrics: []string{
 						"average_session_duration",
 					},
 				},
 			},
-			GlobalFilters : []M.KPIFilter{} ,
-			GlobalGroupBy : []M.KPIGroupBy{} ,
+			GlobalFilters: []M.KPIFilter{},
+			GlobalGroupBy: []M.KPIGroupBy{},
 		}, true, false, false, make(map[string]bool)
 	}
 	return Query{}, MultiFunnelQuery{}, M.KPIQueryGroup{}, false, false, false, nil
