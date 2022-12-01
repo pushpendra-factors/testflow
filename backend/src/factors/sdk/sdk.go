@@ -832,6 +832,7 @@ func FillSixSignalUserProperties(projectId int64, projectSettings *model.Project
 			case ok := <-execute6SignalStatusChannel:
 				if ok == 1 {
 					six_signal.SetSixSignalCacheResult(projectId, UserId, clientIP)
+					six_signal.SetSixSignalAPICountCacheResult(projectId, U.TimeZoneStringIST)
 					logCtx.WithFields(log.Fields{"clientIP": clientIP}).Info("SetSixSignalCacheResult using Factors key")
 
 				} else {
@@ -1391,11 +1392,13 @@ func AddUserProperties(projectId int64,
 				case ok := <-statusChannel:
 					if ok == 1 {
 						six_signal.SetSixSignalCacheResult(projectId, request.UserId, request.ClientIP)
+						six_signal.SetSixSignalAPICountCacheResult(projectId, U.TimeZoneStringIST)
 					} else {
 						logCtx.Info("ExecuteSixSignal failed in AddUserProperties")
 					}
 				case <-time.After(U.TimeoutOneSecond):
 					logCtx.Info("six_signal enrichment timed out in AddUserProperties")
+
 				}
 			}
 		} else if ClientErrCode == http.StatusNotFound || FactorsErrCode == http.StatusNotFound {

@@ -124,6 +124,7 @@ import NewProject from '../Settings/SetupAssist/Modals/NewProject';
 import AnalyseBeforeIntegration from './AnalyseBeforeIntegration';
 import SaveQuery from 'Components/SaveQuery';
 import _ from 'lodash';
+import { fetchKPIConfig } from 'Reducers/kpi'
 
 function CoreQuery({
   activeProject,
@@ -137,7 +138,8 @@ function CoreQuery({
   fetchProjectSettings,
   fetchMarketoIntegration,
   fetchBingAdsIntegration,
-  existingQueries
+  existingQueries,
+  fetchKPIConfig
 }) {
   const { query_id, query_type } = useParams();
 
@@ -281,6 +283,7 @@ function CoreQuery({
   }, [query_id, query_type, queriesState]);
 
   useEffect(() => {
+    fetchKPIConfig(activeProject?.id);
     fetchProjectSettingsV1(activeProject.id);
     fetchProjectSettings(activeProject.id);
     if (_.isEmpty(dashboards?.data)) {
@@ -2085,7 +2088,8 @@ const mapDispatchToProps = (dispatch) =>
       fetchProjectSettingsV1,
       fetchProjectSettings,
       fetchMarketoIntegration,
-      fetchBingAdsIntegration
+      fetchBingAdsIntegration,
+      fetchKPIConfig
     },
     dispatch
   );

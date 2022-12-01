@@ -754,20 +754,23 @@ def sync_all_contact_lists_v2(project_id, refresh_token, api_key, last_sync_time
     start_timestamp  = round(time.time() * 1000)
 
     contact_lists_info, contact_list_api_calls = get_all_contact_lists_info(project_id, refresh_token, api_key)
-
+    
     all_contacts_api_calls = 0
     recent_contacts_api_calls = 0
-    
+
+    if last_sync_timestamp == 0:
+        last_sync_timestamp = start_timestamp - (24*3600*1000)
+
     if last_sync_timestamp == 0:
         all_contacts_api_calls = sync_contact_lists_contact_ids(project_id, refresh_token, api_key, contact_lists_info)
     else:
         recent_contacts_api_calls = sync_contact_lists_with_recent_contact_ids(project_id, refresh_token, api_key, contact_lists_info, last_sync_timestamp)
-
+    
     log.warning("Downloaded contact_lists with id and timestamp for project_id %d", project_id)
 
     total_api_calls = contact_list_api_calls + all_contacts_api_calls + recent_contacts_api_calls
 
-    return total_api_calls, start_timestamp        
+    return total_api_calls, start_timestamp
 
 def add_paginated_associations(project_id, to_object_ids, next_page_url, hubspot_request_handler):
     while True:

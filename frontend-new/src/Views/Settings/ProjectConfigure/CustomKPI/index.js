@@ -1047,7 +1047,7 @@ const matchEventName = (item) => {
                       <Input
                         disabled={true}
                         size='large'
-                        value={viewKPIDetails?.obj_ty}
+                        value={_.startCase(viewKPIDetails?.obj_ty)}
                         className={'fa-input w-full'}
                         placeholder='Display Name'
                       />
@@ -1061,7 +1061,7 @@ const matchEventName = (item) => {
                       <Input
                         disabled={true}
                         size='large'
-                        value={viewKPIDetails?.transformations?.agFn}
+                        value={_.startCase(viewKPIDetails?.transformations?.agFn)}
                         className={'fa-input w-full'}
                         placeholder='Display Name'
                       />
@@ -1164,7 +1164,7 @@ const matchEventName = (item) => {
                               type='link'
                               disabled={true}
                               >
-                                  {(item?.me[0]).replace(/_/g, ' ')}
+                                  {_.startCase(item?.me[0])}
                               </Button>
                           </Col>
                           <Col>
