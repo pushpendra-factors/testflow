@@ -25,7 +25,8 @@ import SaveQuery from '../../../components/SaveQuery';
 import { addShadowToHeader } from './analysisResultsPage.helpers';
 import { CoreQueryContext } from '../../../contexts/CoreQueryContext';
 import { EMPTY_ARRAY } from 'Utils/global';
-
+import FaSelect from 'Components/FaSelect';
+import styles from './index.module.scss';
 
 const { TabPane } = Tabs;
 
@@ -43,6 +44,7 @@ function AnalysisHeader({
 }) {
   const [hideIntercomState, setHideIntercomState] = useState(true);
   const [showSaveQueryModal, setShowSaveQueryModal] = useState(false);
+  let [helpMenu, setHelpMenu] = useState(false)
   const savedQueries = useSelector((state) =>
     get(state, 'queries.data', EMPTY_ARRAY)
   );
@@ -243,7 +245,25 @@ function AnalysisHeader({
       </div>
     );
   };
-
+  const setActions = (opt) => {
+    if(opt[1] === 'help_doc'){
+      window.open('https://help.factors.ai/','_blank')
+    }
+    setOptions(false);
+  };
+  const getHelpMenu = () => {
+    return helpMenu === false ? '' : <FaSelect
+    extraClass={styles.additionalops}
+    options={[
+      ['Help and Support', 'help_doc'],
+      ['Talk to us', 'intercom_help']
+    ]}
+    optionClick={(val) => setActions(val)}
+    onClickOutside={() => setHelpMenu(false)}
+    posRight={true}
+  ></FaSelect>;
+    
+  };
   return (
     <div
       id="app-header"
@@ -268,22 +288,12 @@ function AnalysisHeader({
                 <div className="pr-2 ">
                 <div className='relative'>
                 <Button
-                  size="large"
-                  type="text"
-                  shape='circle'
-                  // icon={<SVG name={`Handshake`} size={16} color={'blue'} />}
-                  onClick={() => {
-                    const w = window;
-                    const ic = w.Intercom;
-                    if (typeof ic === 'function') {
-                      setHideIntercomState(!hideIntercomState);
-                      ic('update', { hide_default_launcher: !hideIntercomState });
-                      ic(!hideIntercomState === true ? 'hide' : 'show');
-                    }
-                  }}
-                >
-                  <QuestionCircleOutlined />
-                </Button>
+                size="large"
+                type="text"
+                icon={<QuestionCircleOutlined />}
+                onClick={()=>setHelpMenu(!helpMenu)}
+              ></Button>
+              {getHelpMenu()}
                 </div>
               </div>
               :

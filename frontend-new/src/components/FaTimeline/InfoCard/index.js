@@ -6,25 +6,9 @@ import {
   PropTextFormat
 } from '../../../utils/dataFormatter';
 import MomentTz from '../../MomentTz';
-import { TimelineHoverPropDisplayNames } from '../../Profile/utils';
+import { propValueFormat, TimelineHoverPropDisplayNames } from '../../Profile/utils';
 
 function InfoCard({ title, eventName, properties = {}, trigger, children }) {
-  const popoverPropValueFormat = (key, value) => {
-    if (
-      key.includes('timestamp') ||
-      key.includes('starttime') ||
-      key.includes('endtime')
-    ) {
-      return MomentTz(value * 1000).format('DD MMMM YYYY, hh:mm A');
-    }
-    if (key.includes('_time')) {
-      return formatDurationIntoString(value);
-    }
-    if (key.includes('durationmilliseconds')) {
-      return formatDurationIntoString(parseInt(value / 1000));
-    }
-    return value;
-  };
   const popoverContent = () => (
     <div className='fa-popupcard'>
       <Text
@@ -85,7 +69,7 @@ function InfoCard({ title, eventName, properties = {}, trigger, children }) {
               truncate
               charLimit={40}
             >
-              {popoverPropValueFormat(key, value) || '-'}
+              {propValueFormat(key, value) || '-'}
             </Text>
           </div>
         );

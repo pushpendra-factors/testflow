@@ -41,7 +41,7 @@ function ChartHeader({
   return (
     <div className={cx('flex flex-col items-center justify-center row-gap-2')}>
       <Tooltip title={queryName}>
-        <div className={'flex items-center col-gap-1'}>
+        <div className={'flex items-center col-gap-1 justify-center w-full'}>
           <LegendsCircle color={bgColor} />
           <div className={styles.eventText}>
             {queryName.length > TitleCharCount

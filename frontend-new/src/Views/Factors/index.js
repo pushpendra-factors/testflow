@@ -133,7 +133,8 @@ const Factors = ({
   integrationV1?.int_completed ||
   bingAds?.accounts ||
   marketo?.status || integrationV1?.int_slack || integration?.lead_squared_config !== null ||
-  (integration?.int_client_six_signal_key || integration?.int_factors_six_signal_key);
+  (integration?.int_client_six_signal_key || integration?.int_factors_six_signal_key) ||
+  integration?.int_rudderstack;
 
   useEffect(() => {
     const getData1 = async () => {

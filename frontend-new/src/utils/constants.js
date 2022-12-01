@@ -85,7 +85,7 @@ export const EACH_USER_TYPE = 'each';
 export const ANY_USER_TYPE = 'any';
 export const ALL_USER_TYPE = 'all';
 
-export const constantObj = {
+export const EVENT_QUERY_USER_TYPE = {
   [EACH_USER_TYPE]: 'each_given_event',
   [ANY_USER_TYPE]: 'any_given_event',
   [ALL_USER_TYPE]: 'all_given_event'

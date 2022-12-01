@@ -22,15 +22,15 @@ import {
   DISPLAY_PROP
 } from '../../../../utils/constants';
 import { renderHorizontalBarChart } from '../SingleEventMultipleBreakdown/utils';
-import {
-  getBreakdownDisplayName,
-  parseForDateTimeLabel
-} from '../eventsAnalytics.helpers';
+import { getBreakdownDisplayName } from '../eventsAnalytics.helpers';
 import tableStyles from '../../../../components/DataTable/index.module.scss';
 import NonClickableTableHeader from '../../../../components/NonClickableTableHeader';
 import { EVENT_COUNT_KEY } from '../eventsAnalytics.constants';
 import { BREAKDOWN_TYPES } from '../../constants';
-import { getDifferentDates } from '../../coreQuery.helpers';
+import {
+  formatBreakdownLabel,
+  getDifferentDates
+} from '../../coreQuery.helpers';
 import { isNumeric } from '../../../../utils/global';
 
 export const defaultSortProp = ({ breakdown }) => {
@@ -202,10 +202,15 @@ export const formatData = (data, comparisonData) => {
 
   const breakdowns = data?.meta?.query?.gbp;
   const grn = data.meta?.query?.gbp[0]?.grn;
+  const propType = get(data, 'meta.query.gbp.0.pty', 'categorical');
   const comparisonRows = get(comparisonData, 'metrics.rows', []);
   const compareDataLabelIndexMapper = comparisonRows.reduce(
     (prev, curr, currIndex) => {
-      const labelVal = parseForDateTimeLabel(grn, curr[breakdownIndex]);
+      const labelVal = formatBreakdownLabel({
+        grn,
+        propType,
+        label: curr[breakdownIndex]
+      });
       return {
         ...prev,
         [labelVal]: currIndex
@@ -215,7 +220,11 @@ export const formatData = (data, comparisonData) => {
   );
 
   const result = data.metrics.rows.map((elem, index) => {
-    const labelVal = parseForDateTimeLabel(grn, elem[breakdownIndex]);
+    const labelVal = formatBreakdownLabel({
+      grn,
+      propType,
+      label: elem[breakdownIndex]
+    });
     const displayLabel = DISPLAY_PROP[labelVal] || labelVal;
     const obj = {
       label: displayLabel,
@@ -501,12 +510,13 @@ export const formatDataInSeriesFormat = (
     ...d
   }));
 
-  const grn = data.meta?.query?.gbp[0]?.grn;
+  const grn = get(data, 'meta.query.gbp.0.grn', '');
+  const propType = get(data, 'meta.query.gbp.0.pty', 'categorical');
 
   const dateAndLabelRowIndexForComparisonData = comparisonDataRows.reduce(
     (prev, curr, currIndex) => {
       const date = curr[dateIndex];
-      const labelVal = parseForDateTimeLabel(grn, curr[3]);
+      const labelVal = formatBreakdownLabel({ grn, propType, label: curr[3] });
       return {
         ...prev,
         [`${date}, ${labelVal}`]: currIndex
@@ -520,10 +530,11 @@ export const formatDataInSeriesFormat = (
     const breakdownJoin = row
       .slice(breakdownIndex, countIndex)
       .map((x) =>
-        parseForDateTimeLabel(
-          data.meta?.query?.gbp[0]?.grn,
-          DISPLAY_PROP[x] ? DISPLAY_PROP[x] : x
-        )
+        formatBreakdownLabel({
+          grn,
+          propType,
+          label: DISPLAY_PROP[x] ? DISPLAY_PROP[x] : x
+        })
       )
       .join(', ');
     const bIdx = labelsMapper[breakdownJoin];

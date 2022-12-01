@@ -6,7 +6,7 @@ import {
   QUERY_TYPE_CAMPAIGN,
   QUERY_TYPE_KPI,
   QUERY_TYPE_PROFILE,
-  EACH_USER_TYPE,
+  EACH_USER_TYPE
 } from '../../utils/constants';
 
 export const getQuery = ({ queryType, requestQuery, user_type }) => {
@@ -17,7 +17,7 @@ export const getQuery = ({ queryType, requestQuery, user_type }) => {
     return {
       ...requestQuery,
       fr: startOfWeek,
-      to: todayNow,
+      to: todayNow
     };
   }
 
@@ -27,8 +27,8 @@ export const getQuery = ({ queryType, requestQuery, user_type }) => {
       query: {
         ...requestQuery.query,
         from: startOfWeek,
-        to: todayNow,
-      },
+        to: todayNow
+      }
     };
   }
 
@@ -39,9 +39,9 @@ export const getQuery = ({ queryType, requestQuery, user_type }) => {
           ...q,
           fr: q.fr,
           to: q.to,
-          gbt: user_type === EACH_USER_TYPE ? q?.gbt : 'date',
+          gbt: user_type === EACH_USER_TYPE ? q?.gbt : '' // when user_type is ANY_USER_TYPE/ALL_USER_TYPE then gbt is sent as blank. Please make sure this use case is met.
         };
-      }),
+      })
     };
   }
 
@@ -53,9 +53,9 @@ export const getQuery = ({ queryType, requestQuery, user_type }) => {
           ...q,
           fr: startOfWeek,
           to: todayNow,
-          gbt: q.gbt ? q.gbt : '',
+          gbt: q.gbt ? q.gbt : ''
         };
-      }),
+      })
     };
   }
 
@@ -67,15 +67,15 @@ export const getQuery = ({ queryType, requestQuery, user_type }) => {
           ...q,
           fr: q.fr,
           to: q.to,
-          gbt: q.gbt ? q.gbt : '',
+          gbt: q.gbt ? q.gbt : ''
         };
-      }),
+      })
     };
   }
 
   if (queryType === QUERY_TYPE_PROFILE) {
     return {
-      ...requestQuery,
+      ...requestQuery
     };
   }
 };

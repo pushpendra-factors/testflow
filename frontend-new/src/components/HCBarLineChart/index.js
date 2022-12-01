@@ -106,8 +106,9 @@ function HCBarLineChart({
         outside: true,
         shared: false,
         backgroundColor: 'white',
-        borderWidth: 0,
+        borderWidth: 1,
         borderRadius: 12,
+        shadow: false,
         padding: 16,
         useHTML: true,
         formatter() {

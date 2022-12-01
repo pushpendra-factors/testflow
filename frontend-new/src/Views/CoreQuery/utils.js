@@ -17,7 +17,7 @@ import {
   TYPE_UNIQUE_USERS,
   ACTIVE_USERS_CRITERIA,
   FREQUENCY_CRITERIA,
-  constantObj,
+  EVENT_QUERY_USER_TYPE,
   ANY_USER_TYPE,
   ALL_USER_TYPE,
   EACH_USER_TYPE,
@@ -162,6 +162,7 @@ const getEventsWithProperties = (queries) => {
     ewps.push({
       an: ev.alias,
       na: ev.label,
+      grpa: ev.group,
       pr: filterProps
     });
   });
@@ -805,6 +806,25 @@ export const getKPIQuery = (
   return query;
 };
 
+export const getSessionsQuery = ({ period }) => {
+  return {
+    cl: QUERY_TYPE_EVENT,
+    ty: TYPE_UNIQUE_USERS,
+    fr: period.from,
+    to: period.to,
+    ewp: [
+      {
+        na: '$session',
+        pr: []
+      }
+    ],
+    gup: [],
+    gbt: '',
+    ec: EVENT_QUERY_USER_TYPE.each,
+    tz: localStorage.getItem('project_timeZone') || 'Asia/Kolkata'
+  };
+};
+
 export const getQuery = (
   groupBy,
   queries,
@@ -868,24 +888,9 @@ export const getQuery = (
     }
     return gbpReq;
   });
-  query.ec = constantObj[userType];
+  query.ec = EVENT_QUERY_USER_TYPE[userType];
   query.tz = localStorage.getItem('project_timeZone') || 'Asia/Kolkata';
-  const sessionsQuery = {
-    cl: QUERY_TYPE_EVENT,
-    ty: TYPE_UNIQUE_USERS,
-    fr: period.from,
-    to: period.to,
-    ewp: [
-      {
-        na: '$session',
-        pr: []
-      }
-    ],
-    gup: [],
-    gbt: '',
-    ec: constantObj.each,
-    tz: localStorage.getItem('project_timeZone') || 'Asia/Kolkata'
-  };
+  const sessionsQuery = getSessionsQuery({ period });
   if (resultCriteria === ACTIVE_USERS_CRITERIA) {
     return [query, { ...query, gbt: '' }, sessionsQuery];
   }
@@ -1124,6 +1129,7 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
     return {
       alias: e.an,
       label: e.na,
+      group: e.grpa,
       filters
     };
   });
@@ -1167,7 +1173,7 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
   }
 
   const queryType = requestQuery.cl;
-  const eventsCondition = requestQuery.ec
+  const eventsCondition = requestQuery.ec;
   const sessionAnalyticsSeq = INITIAL_SESSION_ANALYTICS_SEQ;
   // if (requestQuery.cl && requestQuery.cl === QUERY_TYPE_FUNNEL) {
   //   if (requestQuery.sse && requestQuery.see) {

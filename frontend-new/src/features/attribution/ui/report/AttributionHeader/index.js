@@ -7,7 +7,8 @@ import { SVG, Text } from 'factorsComponents';
 import { QuestionCircleOutlined } from '@ant-design/icons';
 import SaveQuery from 'Components/SaveQuery';
 import { addShadowToHeader } from 'Views/CoreQuery/AnalysisResultsPage/analysisResultsPage.helpers';
-
+import FaSelect from 'Components/FaSelect';
+import styles from "./index.module.scss";
 const { TabPane } = Tabs;
 
 function AttributionHeader({
@@ -24,6 +25,7 @@ function AttributionHeader({
   const [hideIntercomState, setHideIntercomState] = useState(true);
   const [showSaveQueryModal, setShowSaveQueryModal] = useState(false);
   const [ShowAddToDashModal, setShowAddToDashModal] = useState(false);
+  let [helpMenu, setHelpMenu] = useState(false)
 
   useEffect(() => {
     if (window.Intercom) {
@@ -133,6 +135,25 @@ function AttributionHeader({
       </div>
     );
   };
+  const setActions = (opt) => {
+    if(opt[1] === 'help_doc'){
+      window.open('https://help.factors.ai/','_blank')
+    }
+    setOptions(false);
+  };
+  const getHelpMenu = () => {
+    return helpMenu === false ? '' : <FaSelect
+    extraClass={styles.additionalops}
+    options={[
+      ['Help and Support', 'help_doc'],
+      ['Talk to us', 'intercom_help']
+    ]}
+    optionClick={(val) => setActions(val)}
+    onClickOutside={() => setHelpMenu(false)}
+    posRight={true}
+  ></FaSelect>;
+    
+  };
 
   return (
     <div id='app-header' className='bg-white z-50 flex-col  px-8 w-full fixed'>
@@ -152,25 +173,13 @@ function AttributionHeader({
           {isFromAnalysisPage ? (
             <div className='pr-2 '>
               <div className='relative'>
-                <Button
-                  size='large'
-                  type='text'
-                  shape='circle'
-                  // icon={<SVG name={`Handshake`} size={16} color={'blue'} />}
-                  onClick={() => {
-                    const w = window;
-                    const ic = w.Intercom;
-                    if (typeof ic === 'function') {
-                      setHideIntercomState(!hideIntercomState);
-                      ic('update', {
-                        hide_default_launcher: !hideIntercomState
-                      });
-                      ic(!hideIntercomState === true ? 'hide' : 'show');
-                    }
-                  }}
-                >
-                  <QuestionCircleOutlined />
-                </Button>
+              <Button
+                size="large"
+                type="text"
+                icon={<QuestionCircleOutlined />}
+                onClick={()=>setHelpMenu(!helpMenu)}
+              ></Button>
+              {getHelpMenu()}
               </div>
             </div>
           ) : (

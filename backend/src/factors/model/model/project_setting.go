@@ -75,6 +75,8 @@ type ProjectSetting struct {
 	LeadSquaredConfig             *postgres.Jsonb `json:"lead_squared_config"`
 	IsWeeklyInsightsEnabled       bool            `json:"is_weekly_insights_enabled"`
 	IsExplainEnabled              bool            `json:"is_explain_enabled"`
+	// Rudderstack integration settings.
+	IntRudderstack *bool `gorm:"not null;default:false" json:"int_rudderstack,omitempty"`
 }
 
 /* Sample Attribution Setting

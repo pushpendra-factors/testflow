@@ -29,7 +29,7 @@ import (
 )
 
 // IntSegmentHandler godoc
-// @Summary To create event from segment.
+// @Summary To create event from segment/rudderstack.
 // @Tags SDK,Integrations
 // @Accept  json
 // @Produce json
@@ -51,9 +51,9 @@ func IntSegmentHandler(c *gin.Context) {
 
 	var event IntSegment.Event
 	if err := json.NewDecoder(body).Decode(&event); err != nil {
-		logCtx.WithError(err).Error("Segment JSON decode failed")
+		logCtx.WithError(err).Error("Segment/Rudderstack JSON decode failed")
 	}
-	logCtx.WithFields(log.Fields{"event": event}).Debug("Segment webhook request")
+	logCtx.WithFields(log.Fields{"event": event}).Debug("Segment/Rudderstack webhook request")
 
 	token := U.GetScopeByKeyAsString(c, mid.SCOPE_PROJECT_PRIVATE_TOKEN)
 	if C.IsBlockedSDKRequestProjectToken(token) {

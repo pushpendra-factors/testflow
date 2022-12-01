@@ -9,13 +9,13 @@ import {
   Col,
   Input,
   Checkbox,
-  Skeleton,
+  Skeleton
 } from 'antd';
 import {
   enableBingAdsIntegration,
   createBingAdsIntegration,
   fetchBingAdsIntegration,
-  disableBingAdsIntegration,
+  disableBingAdsIntegration
 } from 'Reducers/global';
 import { Text, FaErrorComp, FaErrorLog } from 'factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary';
@@ -35,20 +35,29 @@ const BingIntegration = ({
   const [accounts, setAccounts] = useState(null);
 
   const onDisconnect = () => {
-    setLoading(true);
-    disableBingAdsIntegration(activeProject.id)
-      .then(() => {
-        setLoading(false);
-        setTimeout(() => {
-          message.success('Bing Ads integration disconnected!');
-        }, 500);
-        setIsStatus('');
-      })
-      .catch((err) => {
-        message.error(`${err?.data?.error}`);
-        setLoading(false);
-        console.log('disconnect failed-->', err);
-      });
+    Modal.confirm({
+      title: 'Are you sure you want to disable this?',
+      content:
+        'You are about to disable this integration. Factors will stop bringing in data from this source.',
+      okText: 'Disconnect',
+      cancelText: 'Cancel',
+      onOk: () => {
+        setLoading(true);
+        disableBingAdsIntegration(activeProject.id)
+          .then(() => {
+            setLoading(false);
+            setTimeout(() => {
+              message.success('Bing Ads integration disconnected!');
+            }, 500);
+            setIsStatus('');
+          })
+          .catch((err) => {
+            message.error(`${err?.data?.error}`);
+            setLoading(false);
+          });
+      },
+      onCancel: () => {}
+    });
   };
 
   const isBingAdsEnabled = () => {
@@ -71,12 +80,32 @@ const BingIntegration = ({
       .then((r) => {
         setLoading(false);
         if (r.status == 200) {
-          let hostname = window.location.hostname
-          let protocol = window.location.protocol
-          let port = window.location.port
-          let redirectURL = protocol + "//" + hostname + ":" + port + "?bingadsint=" + activeProject.id + "&email=" + agent_details.email + "&projectname=" + activeProject.name
+          let hostname = window.location.hostname;
+          let protocol = window.location.protocol;
+          let port = window.location.port;
+          let redirectURL =
+            protocol +
+            '//' +
+            hostname +
+            ':' +
+            port +
+            '?bingadsint=' +
+            activeProject.id +
+            '&email=' +
+            agent_details.email +
+            '&projectname=' +
+            activeProject.name;
           if (port === undefined || port === '') {
-            redirectURL = protocol + "//" + hostname + "?bingadsint=" + activeProject.id + "&email=" + agent_details.email + "&projectname=" + activeProject.name
+            redirectURL =
+              protocol +
+              '//' +
+              hostname +
+              '?bingadsint=' +
+              activeProject.id +
+              '&email=' +
+              agent_details.email +
+              '&projectname=' +
+              activeProject.name;
           }
           let url = new URL(r.data.redirect_uri);
           url.searchParams.set('redirect_uri', redirectURL);
@@ -97,9 +126,7 @@ const BingIntegration = ({
     <>
       <ErrorBoundary
         fallback={
-          <FaErrorComp
-            subtitle={'Facing issues with Bing Ads integrations'}
-          />
+          <FaErrorComp subtitle={'Facing issues with Bing Ads integrations'} />
         }
         onError={FaErrorLog}
       >
@@ -127,32 +154,31 @@ const BingIntegration = ({
                 >
                   Bing Ads sync account details
                 </Text>
-                {accounts == "" ? 
-                <Text
-                type={'title'}
-                size={10}
-                color={'red'}
-                extraClass={'m-0 mt-2'}
-                >
-                  No ads account found or partial integration. Please disconnect and try again.
-                </Text>
-                :
-                <Input
-                  size='large'
-                  disabled={true}
-                  value={
-                    accounts
-                  }
-                  style={{ width: '400px' }}
-                />
-                }
+                {accounts == '' ? (
+                  <Text
+                    type={'title'}
+                    size={10}
+                    color={'red'}
+                    extraClass={'m-0 mt-2'}
+                  >
+                    No ads account found or partial integration. Please
+                    disconnect and try again.
+                  </Text>
+                ) : (
+                  <Input
+                    size='large'
+                    disabled={true}
+                    value={accounts}
+                    style={{ width: '400px' }}
+                  />
+                )}
               </div>
             </>
           )}
         </div>
 
         <div className={'mt-4 flex'}>
-          {!bingAds.status ? 
+          {!bingAds.status ? (
             <Button
               className={'mr-2'}
               type={'primary'}
@@ -161,7 +187,7 @@ const BingIntegration = ({
             >
               Connect Now
             </Button>
-              :
+          ) : (
             <Button
               className={'mr-2'}
               loading={loading}
@@ -169,7 +195,7 @@ const BingIntegration = ({
             >
               Disconnect
             </Button>
-          }
+          )}
           {kbLink && (
             <a className={'ant-btn'} target={'_blank'} href={kbLink}>
               View documentation
@@ -184,7 +210,7 @@ const BingIntegration = ({
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   agent_details: state.agent.agent_details,
-  bingAds: state.global.bingAds,
+  bingAds: state.global.bingAds
 });
 
 export default connect(mapStateToProps, {
