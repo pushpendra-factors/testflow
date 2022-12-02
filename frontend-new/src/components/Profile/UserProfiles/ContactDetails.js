@@ -127,7 +127,7 @@ function ContactDetails({
             setPropSelectOpen(false);
           }}
         />
-        <Text type='title' level={4} weight='bold'>
+        <Text type='title' level={4} weight='bold' extraClass='m-0'>
           Contact Details
         </Text>
       </div>
@@ -224,12 +224,9 @@ function ContactDetails({
     ) : null;
 
   const renderLeftPane = () => (
-    <div className='fa-timeline-content__leftpane'>
-      <div className='fa-timeline-content__leftpane__user'>
-        <Avatar
-          size={72}
-          className='fa-timeline-content__leftpane__user--avatar'
-        >
+    <div className='leftpane'>
+      <div className='leftpane__user'>
+        <Avatar size={72} className='leftpane__user__avatar'>
           <SVG name='user' size={40} />
         </Avatar>
         <div className='py-2'>
@@ -241,11 +238,11 @@ function ContactDetails({
           </Text>
         </div>
       </div>
-      <div className='fa-timeline-content__leftpane__props'>
+      <div className='leftpane__props'>
         {listLeftPaneProps(userDetails.data.left_pane_props)}
       </div>
       <div className='px-8 pb-8'>{renderAddNewProp()}</div>
-      <div className='fa-timeline-content__leftpane__groups'>
+      <div className='leftpane__groups'>
         <Text type='title' level={7} extraClass='m-0 my-2' color='grey'>
           Associated Groups:
         </Text>
@@ -259,13 +256,13 @@ function ContactDetails({
   );
 
   const renderTimelineWithActions = () => (
-    <div className='fa-timeline-content__activities'>
-      <div className='fa-timeline-content__actions'>
+    <div className='timeline-view'>
+      <div className='timeline-actions'>
         <Text type='title' level={3} weight='bold'>
           Timeline
         </Text>
-        <div className='fa-timeline-content__actions__group'>
-          <div className='fa-timeline-content__actions__group__collapse'>
+        <div className='timeline-actions__group'>
+          <div className='timeline-actions__group__collapse'>
             <Button
               className='collapse-btn collapse-btn--left'
               type='text'
@@ -317,7 +314,7 @@ function ContactDetails({
   return (
     <div>
       {renderModalHeader()}
-      <div className='fa-timeline-content'>
+      <div className='fa-timeline'>
         {renderLeftPane()}
         {renderTimelineWithActions()}
       </div>

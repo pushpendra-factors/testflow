@@ -19,8 +19,6 @@ function AccountTimelineBirdView({
 }) {
   const [formattedData, setFormattedData] = useState({});
 
-  console.log('formattedData: ', formattedData);
-
   useEffect(() => {
     const data = eventsFormattedForGranularity(
       timelineEvents,
