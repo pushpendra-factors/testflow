@@ -1315,6 +1315,25 @@ func createUsersForHubspotDeals(t *testing.T, project *model.Project, groups map
 		_, status = store.GetStore().UpdateUserPropertiesV2(project.ID, createdUserID, newProperties, time.Now().Unix(), "", "")
 		assert.Equal(t, http.StatusAccepted, status)
 	}
+
+	for i := 0; i < 4; i++ {
+		createdUserID, status := store.GetStore().CreateUser(
+			&model.User{
+				ProjectId:    project.ID,
+				Group1UserID: createdGroupUserID,
+				Source:       model.GetRequestSourcePointer(model.UserSourceHubspot),
+			})
+
+		assert.Equal(t, http.StatusCreated, status)
+
+		_ = createEventWithSession(project.ID, "", createdUserID, timestamp, "test", "", "", "", "", "lp1112")
+
+		// update user properties to add $group_id property = group.ID of created user
+		newProperties := &postgres.Jsonb{RawMessage: json.RawMessage([]byte(fmt.Sprintf(
+			`{"$group_id": "%d"}`, groups[model.GROUP_NAME_HUBSPOT_DEAL].ID)))}
+		_, status = store.GetStore().UpdateUserPropertiesV2(project.ID, createdUserID, newProperties, time.Now().Unix(), "", "")
+		assert.Equal(t, http.StatusAccepted, status)
+	}
 	return createdGroupUserID
 }
 func createUsersForHubspotCompanies(t *testing.T, project *model.Project, groups map[string]*model.Group, timestamp int64) {
@@ -1533,8 +1552,8 @@ func TestGetUserGroupWise(t *testing.T) {
 
 		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, "", C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Nil(t, err)
-		assert.Equal(t, float64(2), getConversionUserCountKpiLandingPage(query.AttributionKey, result, "lp1111"))
-		assert.Equal(t, float64(2), getSecondConversionUserCountKpiLandingPage(query.AttributionKey, result, "lp1111"))
+		assert.Equal(t, float64(1), getConversionUserCountKpiLandingPage(query.AttributionKey, result, "lp1111"))
+		assert.Equal(t, float64(1), getSecondConversionUserCountKpiLandingPage(query.AttributionKey, result, "lp1111"))
 
 	})
 
