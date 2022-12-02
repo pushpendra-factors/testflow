@@ -16,6 +16,8 @@ import (
 	"strings"
 	"time"
 
+	qc "factors/quickchart"
+
 	"github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/jinzhu/now"
 	log "github.com/sirupsen/logrus"
@@ -43,6 +45,11 @@ type dateRanges struct {
 	prev_from int64
 	prev_to   int64
 }
+
+const (
+	MAX_COLUMNS = 8
+	MAX_ROWS    = 10
+)
 
 func ComputeAndSendAlerts(projectID int64, configs map[string]interface{}) (map[string]interface{}, bool) {
 	allAlerts, errCode := store.GetStore().GetAllAlerts(projectID, true)
@@ -200,7 +207,7 @@ func executeAlertsKPIQuery(projectID int64, alertType int, date_range dateRanges
 	kpiQueryGroup.Queries = append(kpiQueryGroup.Queries, kpiQuery)
 	results, statusCode := store.GetStore().ExecuteKPIQueryGroup(projectID, "",
 		kpiQueryGroup, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
-	log.Info("query response first", results, statusCode)
+	//("query response first", results, statusCode)
 	if len(results) != 1 {
 		log.Error("empty or invalid result for ", kpiQuery)
 		return statusCode, actualValue, comparedValue, errors.New("empty or invalid result")
@@ -250,7 +257,7 @@ func executeAlertsKPIQuery(projectID int64, alertType int, date_range dateRanges
 		kpiQueryGroup.Queries = append(kpiQueryGroup.Queries, kpiQuery)
 		results, statusCode = store.GetStore().ExecuteKPIQueryGroup(projectID, "",
 			kpiQueryGroup, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
-		log.Info("query response second", results, statusCode)
+		//	log.Info("query response second", results, statusCode)
 		if len(results) != 1 {
 			log.Error("empty or invalid result for comparision type alerts  ", kpiQuery)
 			return statusCode, actualValue, comparedValue, errors.New("empty or invalid result")
@@ -687,6 +694,14 @@ func handleShareQueryTypeEvents(alert model.Alert, query *model.Queries, configs
 		log.Error(err)
 		return false, errors.New(fmt.Sprintf("failed to decode alert configuration for project_id: %v, alert_name: %s", projectID, alert.AlertName))
 	}
+	containsBreakdown := false
+	noOfbreakdowns := 0
+	for _, query := range queryGroup.Queries {
+		if query.GroupByProperties != nil && len(query.GroupByProperties) > 0 {
+			containsBreakdown = true
+			noOfbreakdowns = len(queryGroup.Queries[0].GroupByProperties)
+		}
+	}
 
 	var alertDescription model.AlertDescription
 	err = U.DecodePostgresJsonbToStructType(alert.AlertDescription, &alertDescription)
@@ -768,15 +783,19 @@ func handleShareQueryTypeEvents(alert model.Alert, query *model.Queries, configs
 				return false, err
 			}
 			if alertConfiguration.IsEmailEnabled || alertConfiguration.IsSlackEnabled {
-				tableRows := getEmailTemplateForSavedQuerySharing(alert, model.QueryClassEvents, cacheResult.Results)
+				chartUrl, tableUrl, skipChart, err := getUrlsForSavedQuerySharing(alert, model.QueryClassEvents, title, newDateRange, containsBreakdown, noOfbreakdowns, cacheResult.Results)
+				if err != nil {
+					log.WithError(err).Error("Failed to build charts and table urls")
+					return false, errors.New("Failed to build charts and table urls")
+				}
 				if alertConfiguration.IsEmailEnabled {
-					sendEmailSavedQueryReport(title, alertDescription.Subject, newDateRange, tableRows, alertConfiguration.Emails)
+					//tableRows := getEmailTemplateForSavedQuerySharing(alert, model.QueryClassKPI, queryResult)
+					sendEmailSavedReport(title, alertDescription.Subject, newDateRange, chartUrl, tableUrl, alertConfiguration.Emails)
 				}
 				if alertConfiguration.IsSlackEnabled {
-					sendSlackAlertForSavedQueries(alert, newDateRange, model.QueryClassEvents, title, cacheResult.Results, alertConfiguration.SlackChannelsAndUserGroups)
+					sendSlackAlertForSavedQueries(alert, newDateRange, model.QueryClassEvents, title, chartUrl, tableUrl, skipChart, alertConfiguration.SlackChannelsAndUserGroups)
 				}
 			}
-			return true, nil
 		}
 		log.Error("Query failed. Error Processing/Fetching data from Query cache")
 		return false, errors.New("Query failed. Error Processing/Fetching data from Query cache")
@@ -792,12 +811,17 @@ func handleShareQueryTypeEvents(alert model.Alert, query *model.Queries, configs
 	}
 
 	if alertConfiguration.IsEmailEnabled || alertConfiguration.IsSlackEnabled {
-		tableRows := getEmailTemplateForSavedQuerySharing(alert, model.QueryClassEvents, resultGroup.Results)
+		chartUrl, tableUrl, skipChart, err := getUrlsForSavedQuerySharing(alert, model.QueryClassEvents, title, newDateRange, containsBreakdown, noOfbreakdowns, resultGroup.Results)
+		if err != nil {
+			log.WithError(err).Error("Failed to build charts and table urls")
+			return false, errors.New("Failed to build charts and table urls")
+		}
 		if alertConfiguration.IsEmailEnabled {
-			sendEmailSavedQueryReport(title, alertDescription.Subject, newDateRange, tableRows, alertConfiguration.Emails)
+			//tableRows := getEmailTemplateForSavedQuerySharing(alert, model.QueryClassKPI, queryResult)
+			sendEmailSavedReport(title, alertDescription.Subject, newDateRange, chartUrl, tableUrl, alertConfiguration.Emails)
 		}
 		if alertConfiguration.IsSlackEnabled {
-			sendSlackAlertForSavedQueries(alert, newDateRange, model.QueryClassEvents, title, resultGroup.Results, alertConfiguration.SlackChannelsAndUserGroups)
+			sendSlackAlertForSavedQueries(alert, newDateRange, model.QueryClassEvents, title, chartUrl, tableUrl, skipChart, alertConfiguration.SlackChannelsAndUserGroups)
 		}
 	}
 	return true, nil
@@ -810,7 +834,12 @@ func handleShareQueryTypeKPI(alert model.Alert, query *model.Queries, configs ma
 		log.Error("Query failed. Empty query group.")
 		return false, errors.New("Query failed. Empty query group.")
 	}
-
+	noOfBreakdowns := 0
+	containsBreakdown := false
+	if kpiQueryGroup.GlobalGroupBy != nil && len(kpiQueryGroup.GlobalGroupBy) > 0 {
+		containsBreakdown = true
+		noOfBreakdowns = len(kpiQueryGroup.GlobalGroupBy)
+	}
 	var alertConfiguration model.AlertConfiguration
 	err := U.DecodePostgresJsonbToStructType(alert.AlertConfiguration, &alertConfiguration)
 	if err != nil {
@@ -895,12 +924,17 @@ func handleShareQueryTypeKPI(alert model.Alert, query *model.Queries, configs ma
 				return false, err
 			}
 			if alertConfiguration.IsEmailEnabled || alertConfiguration.IsSlackEnabled {
-				tableRows := getEmailTemplateForSavedQuerySharing(alert, model.QueryClassKPI, cacheResult)
+				chartUrl, tableUrl, skipChart, err := getUrlsForSavedQuerySharing(alert, model.QueryClassKPI, title, newDateRange, containsBreakdown, noOfBreakdowns, cacheResult)
+				if err != nil {
+					log.WithError(err).Error("Failed to build charts and table urls")
+					return false, errors.New("Failed to build charts and table urls")
+				}
 				if alertConfiguration.IsEmailEnabled {
-					sendEmailSavedQueryReport(title, alertDescription.Subject, newDateRange, tableRows, alertConfiguration.Emails)
+					//tableRows := getEmailTemplateForSavedQuerySharing(alert, model.QueryClassKPI, queryResult)
+					sendEmailSavedReport(title, alertDescription.Subject, newDateRange, chartUrl, tableUrl, alertConfiguration.Emails)
 				}
 				if alertConfiguration.IsSlackEnabled {
-					sendSlackAlertForSavedQueries(alert, newDateRange, model.QueryClassKPI, title, cacheResult, alertConfiguration.SlackChannelsAndUserGroups)
+					sendSlackAlertForSavedQueries(alert, newDateRange, model.QueryClassKPI, title, chartUrl, tableUrl, skipChart, alertConfiguration.SlackChannelsAndUserGroups)
 				}
 			}
 			return true, nil
@@ -919,19 +953,45 @@ func handleShareQueryTypeKPI(alert model.Alert, query *model.Queries, configs ma
 		}
 		return false, errors.New("Failed to process query from DB")
 	}
-
 	if alertConfiguration.IsEmailEnabled || alertConfiguration.IsSlackEnabled {
-		tableRows := getEmailTemplateForSavedQuerySharing(alert, model.QueryClassKPI, queryResult)
+		chartUrl, tableUrl, skipChart, err := getUrlsForSavedQuerySharing(alert, model.QueryClassKPI, title, newDateRange, containsBreakdown, noOfBreakdowns, queryResult)
+		if err != nil {
+			log.WithError(err).Error("Failed to build charts and table urls")
+			return false, errors.New("Failed to build charts and table urls")
+		}
 		if alertConfiguration.IsEmailEnabled {
-			sendEmailSavedQueryReport(title, alertDescription.Subject, newDateRange, tableRows, alertConfiguration.Emails)
+			//tableRows := getEmailTemplateForSavedQuerySharing(alert, model.QueryClassKPI, queryResult)
+			sendEmailSavedReport(title, alertDescription.Subject, newDateRange, chartUrl, tableUrl, alertConfiguration.Emails)
 		}
 		if alertConfiguration.IsSlackEnabled {
-			sendSlackAlertForSavedQueries(alert, newDateRange, model.QueryClassKPI, title, queryResult, alertConfiguration.SlackChannelsAndUserGroups)
+			sendSlackAlertForSavedQueries(alert, newDateRange, model.QueryClassKPI, title, chartUrl, tableUrl, skipChart, alertConfiguration.SlackChannelsAndUserGroups)
 		}
 	}
 	return true, nil
 
 }
+func getUrlsForSavedQuerySharing(alert model.Alert, queryClass, reportTitle, dateRange string, containsBreakdown bool, noOfBreakdowns int, result []model.QueryResult) (string, string, bool, error) {
+	tableConfig := buildTableConfigForSavedQuerySharing(alert, queryClass, reportTitle, dateRange, containsBreakdown, result)
+
+	tableUrl, err := qc.GetTableURLfromTableConfig(tableConfig)
+	if err != nil {
+		log.WithError(err).Error("Failed to get table url from table config")
+		return "", "", false, err
+	}
+	var chartUrl string
+	skipChart := queryClass == model.QueryClassEvents && containsBreakdown
+	if !skipChart {
+		chartConfig := buildChartConfigForSavedQuerySharing(queryClass, result, containsBreakdown, noOfBreakdowns)
+		chartUrl, err = qc.GetChartImageUrlForConfig(chartConfig)
+		if err != nil {
+			log.WithError(err).Error("Failed to get chart url from chart config")
+			return "", "", false, err
+		}
+	}
+	return chartUrl, tableUrl, skipChart, nil
+}
+
+// old
 func sendEmailSavedQueryReport(reportTitle, subject, date, tableRowsemails string, emails []string) {
 	sub := subject
 	text := ""
@@ -956,6 +1016,30 @@ func sendEmailSavedQueryReport(reportTitle, subject, date, tableRowsemails strin
 	log.Info("sent email alert to ", success, " failed to send email alert to ", fail)
 }
 
+// new
+func sendEmailSavedReport(reportTitle, subject, date, chartUrl, tableUrl string, emails []string) {
+	sub := subject
+	text := ""
+	var success, fail int
+
+	html := U.GetSavedReportSharingEmailTemplate(reportTitle, date, chartUrl, tableUrl)
+	dryRunFlag := C.GetConfig().EnableDryRunAlerts
+	if dryRunFlag {
+		log.Info("Dry run mode enabled. No emails will be sent")
+		log.Info(html)
+		return
+	}
+	for _, email := range emails {
+		err := C.GetServices().Mailer.SendMail(email, C.GetFactorsSenderEmail(), sub, html, text)
+		if err != nil {
+			fail++
+			log.WithError(err).Error("failed to send email alert")
+			return
+		}
+		success++
+	}
+	log.Info("sent email alert to ", success, " failed to send email alert to ", fail)
+}
 func getEmailTemplateForSavedQuerySharing(alert model.Alert, queryClass string, result []model.QueryResult) (tableRows string) {
 	tableRows = ""
 	_, displayNames := store.GetStore().GetDisplayNamesForAllEvents(alert.ProjectID)
@@ -1017,7 +1101,7 @@ func getTableRowForEmailSharing(title, result string) string {
 	return tableRow
 }
 
-func sendSlackAlertForSavedQueries(alert model.Alert, dateRange, queryClass, reportTitle string, result []model.QueryResult, config *postgres.Jsonb) {
+func sendSlackAlertForSavedQueries(alert model.Alert, dateRange, queryClass, reportTitle, chartUrl, tableUrl string, skipChart bool, config *postgres.Jsonb) {
 	logCtx := log.WithFields(log.Fields{
 		"project_id": alert.ProjectID,
 	})
@@ -1028,7 +1112,9 @@ func sendSlackAlertForSavedQueries(alert model.Alert, dateRange, queryClass, rep
 		return
 	}
 	var success, fail int
-	slackMsg := buildSlackTemplateForSavedQuerySharing(alert, queryClass, reportTitle, dateRange, result)
+	//slackMsg := buildSlackTemplateForSavedQuerySharing(alert, queryClass, reportTitle, dateRange, result)
+
+	slackMsg := buildSlackMessageForReportSharing(queryClass, reportTitle, dateRange, chartUrl, tableUrl, skipChart)
 	dryRunFlag := C.GetConfig().EnableDryRunAlerts
 	if dryRunFlag {
 		log.Info("Dry run mode enabled. No alerts will be sent")
@@ -1129,7 +1215,293 @@ func buildSlackTemplateForSavedQuerySharing(alert model.Alert, queryClass, repor
 
 	return slackTemplate
 }
+func buildTableConfigForSavedQuerySharing(alert model.Alert, queryClass, reportTitle, dateRange string, containsBreakdown bool, result []model.QueryResult) qc.TableConfig {
+	var config qc.TableConfig
+	var columns []qc.Column
+	currRow := 0
+	// limiting rows to max rows allowed
+	currCol := 0
+	// limiting cols to max rows allowed
+	DataSource := []interface{}{
+		"-",
+	}
+	_, displayNames := store.GetStore().GetDisplayNamesForAllEvents(alert.ProjectID)
+	displayNameEvents := GetDisplayEventNamesHandler(displayNames)
+	ColumnMapToDataIndex := make(map[int]string)
+	if queryClass == model.QueryClassEvents {
+		if containsBreakdown {
+			// // sorting based on event selected index
+			// sort.Slice(result[1].Rows, func(i, j int) bool {
+			// 	return result[1].Rows[i][0].(int) < result[1].Rows[j][0].(int)
+			// })
 
+			for idx, header := range result[1].Headers {
+				if currCol >= MAX_COLUMNS {
+					break
+				}
+				var column qc.Column
+				// ignoring the 0th as its event index
+				if idx > 0 {
+					tempTitle := header
+					title := strings.Title(strings.ReplaceAll(tempTitle, "_", " "))
+					column.Title = title
+					column.DataIndex = strings.ToLower(title) + strconv.Itoa(idx)
+					column.Width = len(column.Title) * 10
+					ColumnMapToDataIndex[idx] = column.DataIndex
+					columns = append(columns, column)
+					currCol++
+				}
+			}
+			for _, rows := range result[1].Rows {
+				if currRow >= MAX_ROWS {
+					break
+				}
+				dataSourcetemp := map[string]interface{}{}
+				for idx, row := range rows {
+					if idx > 0 {
+						key := ColumnMapToDataIndex[idx]
+						value := row
+						dataSourcetemp[key] = value
+					}
+				}
+				DataSource = append(DataSource, dataSourcetemp)
+				currRow++
+			}
+		} else {
+			for idx, header := range result[0].Headers {
+				if currCol >= MAX_COLUMNS {
+					break
+				}
+				var column qc.Column
+				tempTitle := header
+				title := strings.Title(strings.ReplaceAll(tempTitle, "_", " "))
+				column.Title = title
+				column.DataIndex = strings.ToLower(title) + strconv.Itoa(idx)
+				column.Width = len(column.Title) * 10
+				ColumnMapToDataIndex[idx] = column.DataIndex
+				columns = append(columns, column)
+				currCol++
+
+			}
+			for _, rows := range result[0].Rows {
+				if currRow >= MAX_ROWS {
+					break
+				}
+				dataSourcetemp := map[string]interface{}{}
+				for idx, row := range rows {
+					key := ColumnMapToDataIndex[idx]
+					value := row
+					dataSourcetemp[key] = value
+
+				}
+				DataSource = append(DataSource, dataSourcetemp)
+				currRow++
+			}
+		}
+	} else if queryClass == model.QueryClassKPI {
+		// building columns
+		resultIdx := 0
+		if containsBreakdown {
+			resultIdx = 1
+		}
+		for idx, header := range result[resultIdx].Headers {
+			if currCol >= MAX_COLUMNS {
+				break
+			}
+			var column qc.Column
+			tempTitle := header
+			if _, exists := displayNameEvents[tempTitle]; exists {
+				tempTitle = displayNameEvents[tempTitle]
+			}
+			title := strings.Title(strings.ReplaceAll(tempTitle, "_", " "))
+			column.Title = title
+			column.DataIndex = strings.ToLower(title) + strconv.Itoa(idx)
+			column.Width = len(column.Title) * 10
+			ColumnMapToDataIndex[idx] = column.DataIndex
+			columns = append(columns, column)
+			currCol++
+
+		}
+		for _, rows := range result[resultIdx].Rows {
+			if currRow >= MAX_ROWS {
+				break
+			}
+			dataSourcetemp := map[string]interface{}{}
+			for idx, row := range rows {
+				key := ColumnMapToDataIndex[idx]
+				value := row
+				dataSourcetemp[key] = value
+			}
+			DataSource = append(DataSource, dataSourcetemp)
+			currRow++
+		}
+
+	}
+	DataSource = append(DataSource, "-")
+	config.DataSource = DataSource
+	config.Columns = columns
+	return config
+
+}
+func buildChartConfigForSavedQuerySharing(queryClass string, results []model.QueryResult, containsBreakDown bool, noOfBreakdowns int) qc.ChartConfig {
+	var config qc.ChartConfig
+	if containsBreakDown {
+		config.Type = "bar"
+		if queryClass == model.QueryClassKPI {
+			var chartData qc.ChartData
+			var dataSet qc.Dataset
+			dataSet.Label = results[1].Headers[noOfBreakdowns]
+			for _, rows := range results[1].Rows {
+				label := ""
+				idx := 0
+				for idx < noOfBreakdowns {
+					label += rows[idx].(string)
+					if idx != noOfBreakdowns-1 {
+						label += ", "
+					}
+					idx++
+				}
+				dataSet.Data = append(dataSet.Data, rows[noOfBreakdowns])
+				chartData.Labels = append(chartData.Labels, label)
+			}
+			chartData.DataSets = append(chartData.DataSets, dataSet)
+			config.Data = chartData
+
+		} else if queryClass == model.QueryClassEvents {
+			// charts are not supported for events queries with breakdown V1
+		}
+
+	} else {
+		config.Type = "line"
+		if queryClass == model.QueryClassKPI {
+			var chartData qc.ChartData
+			var dataSet []qc.Dataset
+			dataSet = make([]qc.Dataset, len(results[1].Headers))
+			for idx, header := range results[1].Headers {
+				dataSet[idx].Label = header
+			}
+			for _, rows := range results[0].Rows {
+				for idx, row := range rows {
+					if idx == 0 {
+						chartData.Labels = append(chartData.Labels, row)
+					} else {
+						dataSet[idx-1].Data = append(dataSet[idx-1].Data, row)
+						dataSet[idx-1].LineTension = 0.4
+					}
+				}
+			}
+			chartData.DataSets = dataSet
+			config.Data = chartData
+
+		} else if queryClass == model.QueryClassEvents {
+			var chartData qc.ChartData
+			var dataSet []qc.Dataset
+			dataSet = make([]qc.Dataset, len(results[0].Headers)-1)
+			for idx, header := range results[0].Headers {
+				if idx > 0 {
+					dataSet[idx-1].Label = header
+				}
+			}
+			for _, rows := range results[0].Rows {
+				for idx, row := range rows {
+					if idx == 0 {
+						chartData.Labels = append(chartData.Labels, row)
+					} else {
+						dataSet[idx-1].Data = append(dataSet[idx-1].Data, row)
+						dataSet[idx-1].LineTension = 0.4
+					}
+				}
+			}
+			chartData.DataSets = dataSet
+			config.Data = chartData
+		}
+
+	}
+
+	return config
+}
+func buildSlackMessageForReportSharing(queryClass, reportTitle, dateRange, chartUrl, tableUrl string, eventsWithBreadkown bool) string {
+	var slackTemplate string
+	if eventsWithBreadkown {
+		slackTemplate = fmt.Sprintf(`
+		[
+				{
+					"type": "header",
+					"text": {
+						"type": "plain_text",
+						"text": "%s\n"
+					}
+				},
+				{
+					"type": "context",
+					"elements": [
+						{
+							"type": "mrkdwn",
+							"text": "*%s*"
+						}
+					]
+				},
+				{
+					"type": "divider"
+				},
+				{
+					"type": "divider"
+				},
+				{
+					"type": "image",
+					"image_url": "%s",
+					"alt_text": ""
+				},
+				 {
+					"type": "divider"
+				}
+		]
+	
+		`, reportTitle, dateRange, tableUrl)
+	} else {
+		slackTemplate = fmt.Sprintf(`
+	[
+			{
+				"type": "header",
+				"text": {
+					"type": "plain_text",
+					"text": "%s\n"
+				}
+			},
+			{
+				"type": "context",
+				"elements": [
+					{
+						"type": "mrkdwn",
+						"text": "*%s*"
+					}
+				]
+			},
+			{
+				"type": "divider"
+			},
+			{
+				"type": "image",
+				"image_url": "%s",
+				"alt_text": ""
+			},
+			{
+				"type": "divider"
+			},
+			{
+				"type": "image",
+				"image_url": "%s",
+				"alt_text": ""
+			},
+			 {
+				"type": "divider"
+			}
+	]
+
+	`, reportTitle, dateRange, chartUrl, tableUrl)
+	}
+	return slackTemplate
+}
 func getSlackBlockForResult(title, result string) string {
 	title = strings.Title(strings.ReplaceAll(title, "_", " "))
 	title = removeDollarSymbolFromEventNames(title)
