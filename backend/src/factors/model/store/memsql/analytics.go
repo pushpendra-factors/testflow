@@ -1855,10 +1855,6 @@ func addMissingTimestampsOnResultWithGroupByProps(result *model.QueryResult,
 		encKey := getEncodedKeyForCols(encCols)
 		rowsByGroupAndTimestamp[encKey] = true
 
-		// overrides timestamp with user timezone as sql results doesn't
-		// return timezone used to query.
-		row[timestampIndex] = U.GetTimeFromTimestampStr(timestampWithTimezone)
-		filledResult = append(filledResult, row)
 	}
 
 	timestamps, offsets := getAllTimestampsAndOffsetBetweenByType(query.From, query.To,
@@ -1871,9 +1867,15 @@ func addMissingTimestampsOnResultWithGroupByProps(result *model.QueryResult,
 			// encoded key with generated timestamp.
 			encCols = append(encCols, U.GetTimestampAsStrWithTimezoneGivenOffset(ts, offsets[index]))
 			encKey := getEncodedKeyForCols(encCols)
+			timestampWithTimezone := U.GetTimestampAsStrWithTimezone(
+				row[timestampIndex].(time.Time), query.Timezone)
 
-			_, exists := rowsByGroupAndTimestamp[encKey]
-			if !exists {
+			if _, exists := rowsByGroupAndTimestamp[encKey]; exists {
+				// overrides timestamp with user timezone as sql results doesn't
+				// return timezone used to query.
+				row[timestampIndex] = U.GetTimeFromTimestampStr(timestampWithTimezone)
+				filledResult = append(filledResult, row)
+			} else {
 				// create new row with group values and missing date
 				// for those group combination and aggr 0.
 				rowLen := len(result.Headers)
@@ -1938,7 +1940,6 @@ func addMissingTimestampsOnChannelResultWithoutGroupByProps(result *model.QueryR
 	// range over timestamps between given from and to.
 	// uses timestamp string for comparison.
 	for index, ts := range timestamps {
-
 		if row, exists := rowsByTimestamp[U.GetTimestampAsStrWithTimezoneGivenOffset(ts, offsets[index])]; exists {
 			// overrides timestamp with user timezone as sql results doesn't
 			// return timezone used to query.
@@ -1974,11 +1975,11 @@ func addMissingTimestampsOnChannelResultWithGroupByProps(result *model.QueryResu
 		return err
 	}
 
-	filledResult := make([][]interface{}, 0, 0)
+	filledResult := make([][]interface{}, 0)
 
 	rowsByGroupAndTimestamp := make(map[string]bool, 0)
 	for _, row := range result.Rows {
-		encCols := make([]interface{}, 0, 0)
+		encCols := make([]interface{}, 0)
 		encCols = append(encCols, row[gkStart:gkEnd]...)
 
 		ts, tErr := U.GetTimeFromParseTimeStrWithErrorFromInterface(row[timestampIndex])
@@ -1998,7 +1999,7 @@ func addMissingTimestampsOnChannelResultWithGroupByProps(result *model.QueryResu
 
 	for _, row := range result.Rows {
 		for index, ts := range timestamps {
-			encCols := make([]interface{}, 0, 0)
+			encCols := make([]interface{}, 0)
 			encCols = append(encCols, row[gkStart:gkEnd]...)
 			// encoded key with generated timestamp.
 			timestampWithTimezone := U.GetTimestampAsStrWithTimezoneGivenOffset(ts, offsets[index])
@@ -2008,20 +2009,23 @@ func addMissingTimestampsOnChannelResultWithGroupByProps(result *model.QueryResu
 			if _, exists := rowsByGroupAndTimestamp[encKey]; exists {
 				// overrides timestamp with user timezone as sql results doesn't
 				// return timezone used to query.
-				row[timestampIndex] = U.GetTimeFromTimestampStr(timestampWithTimezone)
+				row[timestampIndex] = timestampWithTimezone
 				filledResult = append(filledResult, row)
 
 			} else {
 				// create new row with group values and missing date
 				// for those group combination and aggr 0.
 				rowLen := len(result.Headers)
-				newRow := make([]interface{}, rowLen, rowLen)
+				newRow := make([]interface{}, rowLen)
 				groupValues := row[gkStart:gkEnd]
 
 				for i := 0; i < rowLen; {
 					if i == gkStart {
 						for _, gv := range groupValues {
 							newRow[i] = gv
+							if i == timestampIndex {
+								newRow[i] = timestampWithTimezone
+							}
 							i++
 						}
 					}
@@ -2032,7 +2036,7 @@ func addMissingTimestampsOnChannelResultWithGroupByProps(result *model.QueryResu
 					}
 
 					if i == timestampIndex {
-						newRow[i] = ts
+						newRow[i] = timestampWithTimezone
 						i++
 					}
 				}
@@ -2043,7 +2047,6 @@ func addMissingTimestampsOnChannelResultWithGroupByProps(result *model.QueryResu
 	}
 
 	result.Rows = filledResult
-	log.Info("Hello ", filledResult)
 	return nil
 }
 
