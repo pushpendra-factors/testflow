@@ -35,6 +35,7 @@ export const CORE_QUERY_INITIAL_STATE = {
   comparison_supported: false,
   comparison_enabled: false,
   navigatedFromDashboard: false,
+  navigatedFromDashboardExistingReports: false,
   comparison_duration: null,
   chartTypes: DefaultChartTypes,
   savedQuerySettings: EMPTY_OBJECT,

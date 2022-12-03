@@ -220,6 +220,12 @@ function AppLayout({
                       name='Home'
                       component={CoreQuery}
                     />
+
+                    <Route
+                      path='/analyse/:query_type'
+                      name='Home'
+                      component={CoreQuery}
+                    />
                     <Route path='/analyse' name='Home' component={CoreQuery} />
 
                     <Route

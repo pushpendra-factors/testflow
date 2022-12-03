@@ -251,6 +251,33 @@ function CoreQuery({
   const groupAnalysis = queryOptions.group_analysis;
   const eventsCondition = queryOptions.events_condition
 
+  /*
+    This use Effect checks which route drawer we need to open
+    when we goto route /analyse/:query_type
+
+  */
+  useEffect(()=>{
+    switch(query_type){
+      case QUERY_TYPE_KPI: setQueryType(QUERY_TYPE_KPI); break;
+      case QUERY_TYPE_FUNNEL: setQueryType(QUERY_TYPE_FUNNEL); break;
+      case QUERY_TYPE_ATTRIBUTION: setQueryType(QUERY_TYPE_ATTRIBUTION); break;
+      case QUERY_TYPE_PROFILE: setQueryType(QUERY_TYPE_PROFILE); break;
+      case QUERY_TYPE_EVENT: setQueryType(QUERY_TYPE_EVENT); break;
+      default: break;
+    }
+    if(query_type && query_type.length > 0){
+     
+      setDrawerVisible(true)
+      setQueries([]);
+      dispatch({
+        type: INITIALIZE_GROUPBY,
+        payload: {
+          global: [],
+          event: []
+        }
+      });
+    }
+  },[]);
   useEffect(() => {
     fetchDemoProject()
       .then((res) => {
