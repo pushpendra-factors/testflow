@@ -265,11 +265,11 @@ function BarChart({
       .text((d) => numberWithCommas(Number(d?.value?.toFixed(2) || 0)))
       .attr('x', (d) => xScale(d.label) + xScale.bandwidth() / 2)
       .attr('y', (d) => {
-        return (
-          (height - yScale(d.value) > minBarHeight
+        const yValue =
+          height - yScale(d.value) > minBarHeight
             ? yScale(d.value)
-            : height - minBarHeight) - 5
-        );
+            : height - minBarHeight;
+        return yValue - 5 > 0 ? yValue - 5 : yValue + 15;
       })
       .attr('class', 'bar-chart-label')
       .attr('text-anchor', 'middle');
