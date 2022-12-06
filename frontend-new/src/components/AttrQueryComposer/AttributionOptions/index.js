@@ -14,7 +14,7 @@ const AttributionOptions = ({
   setModelOpt,
   setWindowOpt,
   timeline,
-  setattrQueryType,
+  setattrQueryType
 }) => {
   const [selectVisibleModel, setSelectVisibleModel] = useState([false, false]);
   const [selectVisibleWindow, setSelectVisibleWindow] = useState(false);
@@ -33,12 +33,12 @@ const AttributionOptions = ({
     ['U Shaped', 'U_Shaped'],
     ['W Shaped', 'W_Shaped'],
     ['Time Decay', 'Time_Decay'],
-    ['Influence', 'Influence'],
+    ['Influence', 'Influence']
   ];
 
   const timeLineMap = {
     EngagementBased: 'Interaction Time',
-    ConversionBased: 'Conversion Time',
+    ConversionBased: 'Conversion Time'
   };
 
   useEffect(() => {
@@ -189,8 +189,8 @@ const AttributionOptions = ({
 
   const selectWindow = () => {
     if (selectVisibleWindow) {
-      const opts = [1, 3, 7, 14, 30, 60, 90].map((opt) => [
-        `${opt} ${opt === 1 ? 'day' : 'days'}`,
+      const opts = [1, 3, 7, 14, 30, 60, 90, 180, 365].map((opt) => [
+        `${opt} ${opt === 1 ? 'day' : 'days'}`
       ]);
 
       return (
@@ -222,15 +222,24 @@ const AttributionOptions = ({
         <div className={`relative mr-2`}>
           {
             <Popover
-              title={<><b>Set your attribution window</b></>}
-              content={<>
-                This determines the earliest time prior to the occurrence of a conversion event, within which the marketing touchpoint should have happened for it to be considered in the attribution analysis
-                <br />
-                <br />
-                <a href='#'>Learn More </a>
-                </>}
-              overlayStyle={{width:'260px'}}
-              >
+              title={
+                <>
+                  <b>Set your attribution window</b>
+                </>
+              }
+              content={
+                <>
+                  This determines the earliest time prior to the occurrence of a
+                  conversion event, within which the marketing touchpoint should
+                  have happened for it to be considered in the attribution
+                  analysis
+                  <br />
+                  <br />
+                  <a href='#'>Learn More </a>
+                </>
+              }
+              overlayStyle={{ width: '260px' }}
+            >
               <Button
                 size={'small'}
                 type='link'
@@ -269,7 +278,7 @@ const AttributionOptions = ({
         <FaSelect
           options={[
             ['Interaction Time', 'EngagementBased'],
-            ['Conversion Time', 'ConversionBased'],
+            ['Conversion Time', 'ConversionBased']
           ]}
           optionClick={(val) =>
             setattrQueryType(val[1]) && setTimelineSelect(false)
@@ -285,17 +294,29 @@ const AttributionOptions = ({
       return (
         <div className={`relative`}>
           <Popover
-            title={<><b>Set your Interaction time</b></>}
-            content={<><b>Interaction time</b> attributes conversions that happen during the month (01 to 30 June) to campaigns within that 30 day attribution window.
-              <br />
-              <br />
-              <b>Conversion time</b> considers all the marketing touchpoints which happened between this month, till the end of your sales cycle, and attributes conversions.
-              <br />
-              <br />
-              <a href='#'>Learn more</a> about the differences between the two. 
-              </>}
-            overlayStyle={{width:'260px'}}
-            >
+            title={
+              <>
+                <b>Set your Interaction time</b>
+              </>
+            }
+            content={
+              <>
+                <b>Interaction time</b> attributes conversions that happen
+                during the month (01 to 30 June) to campaigns within that 30 day
+                attribution window.
+                <br />
+                <br />
+                <b>Conversion time</b> considers all the marketing touchpoints
+                which happened between this month, till the end of your sales
+                cycle, and attributes conversions.
+                <br />
+                <br />
+                <a href='#'>Learn more</a> about the differences between the
+                two.
+              </>
+            }
+            overlayStyle={{ width: '260px' }}
+          >
             <Button
               size={'small'}
               type='link'
@@ -360,13 +381,13 @@ const AttributionOptions = ({
 
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
-  timeline: state.coreQuery.attr_query_type,
+  timeline: state.coreQuery.attr_query_type
 });
 
 const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
     {
-      setattrQueryType,
+      setattrQueryType
     },
     dispatch
   );
