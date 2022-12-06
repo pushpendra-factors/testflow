@@ -96,6 +96,7 @@ func CreateTable() string {
 					<th>Total Events</th>
 					<th>Total Unique Events</th>
 					<th>Total Unique Users</th>
+					<th>Six Signal API Hits</th>
 				</tr>
 			` // not closing the table as data is pending to be inserted
 	return html
@@ -112,7 +113,8 @@ func InsertDataToTable(data model.ProjectAnalytics) string {
 		<td width="150px" align="center">&nbsp;%s</td>
 		<td width="150px" align="center">&nbsp;%s</td>
 		<td width="150px" align="center">&nbsp;%s</td>
+		<td width="150px" align="center">&nbsp;%s</td>
 		</tr>  
-		`, strconv.Itoa(int(data.ProjectID)), data.ProjectName, strconv.Itoa(int(data.AdwordsEvents)), strconv.Itoa(int(data.FacebookEvents)), strconv.Itoa(int(data.HubspotEvents)), strconv.Itoa(int(data.LinkedinEvents)), strconv.Itoa(int(data.SalesforceEvents)), strconv.Itoa(int(data.TotalEvents)), strconv.Itoa(int(data.TotalUniqueEvents)), strconv.Itoa(int(data.TotalUniqueUsers)))
+		`, strconv.Itoa(int(data.ProjectID)), data.ProjectName, strconv.Itoa(int(data.AdwordsEvents)), strconv.Itoa(int(data.FacebookEvents)), strconv.Itoa(int(data.HubspotEvents)), strconv.Itoa(int(data.LinkedinEvents)), strconv.Itoa(int(data.SalesforceEvents)), strconv.Itoa(int(data.TotalEvents)), strconv.Itoa(int(data.TotalUniqueEvents)), strconv.Itoa(int(data.TotalUniqueUsers)), strconv.Itoa(int(data.SixSignalAPIHits)))
 	return html
 }
