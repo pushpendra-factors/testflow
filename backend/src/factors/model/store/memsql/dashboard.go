@@ -175,6 +175,37 @@ func (store *MemSQL) GetDashboard(projectId int64, agentUUID string, id int64) (
 	return &dashboard, http.StatusFound
 }
 
+// GetAttributionV1DashboardByDashboardName returns attribution v1 dashboard for given project id and dashboard name
+func (store *MemSQL) GetAttributionV1DashboardByDashboardName(projectId int64, dashboardName string) (*model.Dashboard, int) {
+	logFields := log.Fields{
+		"project_id":     projectId,
+		"dashboard_name": dashboardName,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	db := C.GetServices().Db
+
+	logCtx := log.WithFields(logFields)
+
+	var dashboard model.Dashboard
+	if dashboardName == "" {
+		log.Error("Failed to get dashboard by name. Invalid dashboard_name")
+		return nil, http.StatusBadRequest
+	}
+
+	if err := db.Where("project_id = ? AND name = ? AND type = ? AND is_deleted = ?",
+		projectId, dashboardName, model.DashboardTypeAttributionV1, false).First(&dashboard).Error; err != nil {
+		logCtx.WithError(err).WithField("dashboardName", dashboardName).Error(
+			"Getting dashboard failed in GetDashboard")
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
+
+		return nil, http.StatusInternalServerError
+	}
+
+	return &dashboard, http.StatusFound
+}
+
 // HasAccessToDashboard validates access to dashboard.
 func (store *MemSQL) HasAccessToDashboard(projectId int64, agentUUID string, id int64) (bool, *model.Dashboard) {
 	logFields := log.Fields{
