@@ -34,9 +34,9 @@ function AttributionBaseComponent({
         </div>
       </div>
     );
-
-  const setupDone = false;
-  if (setupDone) return <AttributionSetupDone />;
+  // TBD attribution precompute screen
+  // const setupDone = false;
+  // if (setupDone) return <AttributionSetupDone />;
   return <AttributionSetupPending />;
 }
 

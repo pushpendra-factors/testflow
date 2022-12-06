@@ -28,7 +28,7 @@ module.exports = {
       ['hooks', './src/hooks'],
       ['Views', './src/Views'],
       ['Attribution', './src/features/attribution'],
-      ['Context', './src/contexts']
+      ['Context', './src/contexts'],
       ['Constants', './src/constants']
     ],
     extensions: ['.ts', '.tsx', '.js', '.jsx', '.json']

@@ -262,6 +262,23 @@ function AppLayout({
                       />
                     ) : null}
 
+                    {whiteListedAccounts.includes(activeAgent) ? (
+                      <>
+                        <Route
+                          exact
+                          path='/path-analysis'
+                          name='Factors'
+                          component={PathAnalysis}
+                        />
+                        <Route
+                          exact
+                          path='/path-analysis/insights'
+                          name='Factors'
+                          component={PathAnalysisReport}
+                        />
+                      </>
+                    ) : null}
+
                     {/* settings */}
                     <Route path='/settings/general' component={BasicSettings} />
                     <Route path='/settings/user' component={UserSettings} />
@@ -309,20 +326,22 @@ function AppLayout({
                       component={AccountProfiles}
                     />
 
-                     {whiteListedAccounts.includes(activeAgent) && (<>
-                    <Route
-                      path='/path-analysis'
-                      name='PathAnalysis'
-                      exact
-                      component={PathAnalysis}
-                      />
-                    <Route
-                      path='/path-analysis/insights'
-                      name='PathAnalysisInsights'
-                      exact
-                      component={PathAnalysisReport}
-                      />
-                    </>)} 
+                    {whiteListedAccounts.includes(activeAgent) && (
+                      <>
+                        <Route
+                          path='/path-analysis'
+                          name='PathAnalysis'
+                          exact
+                          component={PathAnalysis}
+                        />
+                        <Route
+                          path='/path-analysis/insights'
+                          name='PathAnalysisInsights'
+                          exact
+                          component={PathAnalysisReport}
+                        />
+                      </>
+                    )}
 
                     {!demoProjectId.includes(active_project?.id) ? (
                       <Route path='/project-setup' component={SetupAssist} />
