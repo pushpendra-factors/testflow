@@ -85,33 +85,6 @@ type Company struct {
 	Properties map[string]Property `json:"properties"`
 }
 
-type ContactListMembership struct {
-	StaticListId   int64 `json:"static-list-id"`
-	InternalListId int64 `json:"internal-list-id"`
-	Timestamp      int64 `json:"timestamp"`
-	Vid            int64 `json:"vid"`
-	IsMember       bool  `json:"is-member"`
-}
-
-// ContactList definition
-type NewContactList struct {
-	ListId          int64                            `json:"listId"`
-	ListName        string                           `json:"name"`
-	ListType        string                           `json:"listType"`
-	ListCreatedAt   int64                            `json:"createdAt"`
-	ContactIds      []int64                          `json:"contactIds"`
-	ListMemberships map[string]ContactListMembership `json:"listMemberships"`
-}
-
-type OldContactList struct {
-	ListId          int64                              `json:"listId"`
-	ListName        string                             `json:"name"`
-	ListType        string                             `json:"listType"`
-	ListCreatedAt   int64                              `json:"createdAt"`
-	ContactIds      []int64                            `json:"contactIds"`
-	ListMemberships map[string][]ContactListMembership `json:"listMemberships"`
-}
-
 // PropertyDetail definition for hubspot properties api
 type PropertyDetail struct {
 	Name      string `json:"name"`
