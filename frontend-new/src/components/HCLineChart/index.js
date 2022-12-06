@@ -92,8 +92,9 @@ function LineChart({
       },
       tooltip: {
         backgroundColor: 'white',
-        borderWidth: 0,
+        borderWidth: 1,
         borderRadius: 12,
+        shadow: false,
         useHTML: true,
         formatter() {
           const metricType = get(metricTypes, this.point.series.name, null);

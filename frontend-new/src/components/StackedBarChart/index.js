@@ -86,7 +86,8 @@ function StackedBarChart({
       },
       tooltip: {
         backgroundColor: 'white',
-        borderWidth: 0,
+        borderWidth: 1,
+        shadow: false,
         borderRadius: 12,
         useHTML: true,
         formatter() {
