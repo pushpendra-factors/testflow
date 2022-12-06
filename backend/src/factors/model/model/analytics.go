@@ -343,9 +343,15 @@ func (query *Query) CheckIfNameIsPresent(nameOfQuery string) bool {
 }
 
 func (query *Query) SetDefaultGroupByTimestamp() {
-	defaultGroupByTimestamp := GetDefaultGroupByTimestampForQueries(query.From, query.To, query.GetGroupByTimestamp())
-	if defaultGroupByTimestamp != "" {
-		query.GroupByTimestamp = defaultGroupByTimestamp
+	defaultGroupByTimestamp := ""
+	if (query.Class == QueryClassEvents || query.Class == QueryClassInsights) && query.Type == QueryTypeUniqueUsers &&
+		(query.EventsCondition == EventCondAllGivenEvent || query.EventsCondition == EventCondAnyGivenEvent) {
+		query.GroupByTimestamp = ""
+	} else {
+		defaultGroupByTimestamp = GetDefaultGroupByTimestampForQueries(query.From, query.To, query.GetGroupByTimestamp())
+		if defaultGroupByTimestamp != "" {
+			query.GroupByTimestamp = defaultGroupByTimestamp
+		}
 	}
 }
 
@@ -463,10 +469,11 @@ type QueryGroupByProperty struct {
 }
 
 type QueryEventWithProperties struct {
-	Name         string          `json:"na"`
-	AliasName    string          `json:"an"`
-	Properties   []QueryProperty `json:"pr"`
-	EventNameIDs []interface{}   `json:"-"`
+	Name          string          `json:"na"`
+	AliasName     string          `json:"an"`
+	GroupAnalysis string          `json:"grpa"`
+	Properties    []QueryProperty `json:"pr"`
+	EventNameIDs  []interface{}   `json:"-"`
 }
 
 func (ewp *QueryEventWithProperties) TransformDateTypeFilters(timezoneString U.TimeZoneString) error {
@@ -580,9 +587,15 @@ func (q *QueryGroup) ConvertAllDatesFromTimezone1ToTimezone2(currentTimezone, ne
 
 func (query *QueryGroup) SetDefaultGroupByTimestamp() {
 	for index, _ := range query.Queries {
-		defaultGroupByTimestamp := GetDefaultGroupByTimestampForQueries(query.Queries[index].From, query.Queries[index].To, query.Queries[index].GetGroupByTimestamp())
-		if defaultGroupByTimestamp != "" {
-			query.Queries[index].GroupByTimestamp = defaultGroupByTimestamp
+		defaultGroupByTimestamp := ""
+		if (query.Queries[index].Class == QueryClassEvents || query.Queries[index].Class == QueryClassInsights) && query.Queries[index].Type == QueryTypeUniqueUsers &&
+			(query.Queries[index].EventsCondition == EventCondAllGivenEvent || query.Queries[index].EventsCondition == EventCondAnyGivenEvent) {
+			query.Queries[index].GroupByTimestamp = ""
+		} else {
+			defaultGroupByTimestamp = GetDefaultGroupByTimestampForQueries(query.Queries[index].From, query.Queries[index].To, query.Queries[index].GetGroupByTimestamp())
+			if defaultGroupByTimestamp != "" {
+				query.Queries[index].GroupByTimestamp = defaultGroupByTimestamp
+			}
 		}
 	}
 }

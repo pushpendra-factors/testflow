@@ -300,6 +300,10 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id/v1/profiles/users/:id", responseWrapper(V1.GetProfileUserDetailsHandler))
 	authRouteGroup.POST("/:project_id/v1/profiles/accounts", responseWrapper(V1.GetProfileAccountsHandler))
 	authRouteGroup.GET("/:project_id/v1/profiles/accounts/:id", responseWrapper(V1.GetProfileAccountDetailsHandler))
+	authRouteGroup.POST("/:project_id/segments", CreateSegmentHandler)
+	authRouteGroup.GET("/:project_id/segments", responseWrapper(GetSegmentsHandler))
+	authRouteGroup.GET("/:project_id/segments/:id", responseWrapper(GetSegmentByIdHandler))
+	authRouteGroup.PUT("/:project_id/segments/:id", UpdateSegmentHandler)
 
 	// weekly insights, explain
 	authRouteGroup.PUT("/:project_id/v1/weeklyinsights", mid.SetLoggedInAgentInternalOnly(), UpdateWeeklyInsightsHandler)

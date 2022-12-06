@@ -9,7 +9,7 @@ import {
   Col,
   Input,
   Checkbox,
-  Skeleton,
+  Skeleton
 } from 'antd';
 // const GSC_REDIRECT_URI = "/adwords/auth/redirect";
 const GSC_REDIRECT_URI_NEW = '/google_organic/v1/auth/redirect';
@@ -57,26 +57,35 @@ const GoogleSearchConsole = ({
   const [showURLModal, setShowURLModal] = useState(false);
 
   const onDisconnect = () => {
-    setLoading(true);
-    setCustomerAccounts(false);
-    deleteIntegration(activeProject.id, 'google_organic')
-      .then(() => {
-        fetchProjectSettings(activeProject.id);
-        setLoading(false);
-        setShowModal(false);
-        setShowURLModal(false);
-        setTimeout(() => {
-          message.success('Google integration disconnected!');
-        }, 500);
-        setIsStatus('');
-      })
-      .catch((err) => {
-        message.error(`${err?.data?.error}`);
-        setShowModal(false);
-        setShowURLModal(false);
-        setLoading(false);
-        console.log('change password failed-->', err);
-      });
+    Modal.confirm({
+      title: 'Are you sure you want to disable this?',
+      content:
+        'You are about to disable this integration. Factors will stop bringing in data from this source.',
+      okText: 'Disconnect',
+      cancelText: 'Cancel',
+      onOk: () => {
+        setLoading(true);
+        setCustomerAccounts(false);
+        deleteIntegration(activeProject.id, 'google_organic')
+          .then(() => {
+            fetchProjectSettings(activeProject.id);
+            setLoading(false);
+            setShowModal(false);
+            setShowURLModal(false);
+            setTimeout(() => {
+              message.success('Google integration disconnected!');
+            }, 500);
+            setIsStatus('');
+          })
+          .catch((err) => {
+            message.error(`${err?.data?.error}`);
+            setShowModal(false);
+            setShowURLModal(false);
+            setLoading(false);
+          });
+      },
+      onCancel: () => {}
+    });
   };
 
   const isGSCEnabled = () => {
@@ -90,7 +99,7 @@ const GoogleSearchConsole = ({
   const getRedirectURL = () => {
     let params = {
       method: 'GET',
-      credentials: 'include',
+      credentials: 'include'
     };
     let host = getGSCHostURL();
     let url =
@@ -132,12 +141,18 @@ const GoogleSearchConsole = ({
         if (r.status == 200) {
           renderSettingInfo();
           fetchProjectSettings(activeProject.id);
-          sendSlackNotification(agent_details.email, activeProject.name, 'Google Search Console');
+          sendSlackNotification(
+            agent_details.email,
+            activeProject.name,
+            'Google Search Console'
+          );
         }
         if (r.status >= 400) {
           setShowManageBtn(true);
           setCustomerAccountsLoaded(false);
-          message.error('Oops! We noticed an error whilst trying to fetch your Google Ads account. Please try again.');
+          message.error(
+            'Oops! We noticed an error whilst trying to fetch your Google Ads account. Please try again.'
+          );
         }
       })
       .catch((err) => {
@@ -162,7 +177,7 @@ const GoogleSearchConsole = ({
     let accounts = [...manualAccounts];
     if (accountId != '') {
       accounts.push({
-        customer_id: accountId,
+        customer_id: accountId
       });
     }
     setManualAccounts(accounts);
@@ -173,10 +188,13 @@ const GoogleSearchConsole = ({
     let selectedGSCAcc = selectedGSCAccounts.join(', ');
 
     //Factors INTEGRATION tracking
-    factorsai.track('INTEGRATION',{'name': 'google_organic','activeProjectID': activeProject.id});
+    factorsai.track('INTEGRATION', {
+      name: 'google_organic',
+      activeProjectID: activeProject.id
+    });
 
     udpateProjectSettings(activeProject.id, {
-      int_google_organic_url_prefixes: selectedGSCAcc,
+      int_google_organic_url_prefixes: selectedGSCAcc
     }).then(() => {
       setAddNewAccount(false);
       setSelectedGSCAccounts([]);
@@ -363,7 +381,7 @@ const GoogleSearchConsole = ({
         <div>{customerAccountsLoaded && renderAccountsList()}</div>
 
         <div className={'mt-4 flex'}>
-          {!currentProjectSettings?.int_google_organic_enabled_agent_uuid ?
+          {!currentProjectSettings?.int_google_organic_enabled_agent_uuid ? (
             <Button
               className={'mr-2'}
               type={'primary'}
@@ -372,7 +390,7 @@ const GoogleSearchConsole = ({
             >
               Enable using Google
             </Button>
-              :
+          ) : (
             <Button
               className={'mr-2'}
               loading={loading}
@@ -380,7 +398,7 @@ const GoogleSearchConsole = ({
             >
               Disconnect
             </Button>
-          }
+          )}
           {kbLink && (
             <a className={'ant-btn'} target={'_blank'} href={kbLink}>
               View documentation
@@ -447,7 +465,7 @@ const GoogleSearchConsole = ({
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   agent_details: state.agent.agent_details,
-  currentProjectSettings: state.global.currentProjectSettings,
+  currentProjectSettings: state.global.currentProjectSettings
 });
 
 export default connect(mapStateToProps, {

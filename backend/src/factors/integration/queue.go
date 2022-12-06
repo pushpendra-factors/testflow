@@ -11,10 +11,12 @@ import (
 
 const TypeSegment = "segment"
 const TypeShopify = "shopify"
+const TypeRudderstack = "rudderstack"
 
 var types = [...]string{
 	TypeSegment,
 	TypeShopify,
+	TypeRudderstack,
 }
 
 const ProcessRequestTask = "process_integration_request"

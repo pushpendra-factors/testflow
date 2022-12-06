@@ -404,6 +404,7 @@ CREATE TABLE IF NOT EXISTS project_settings (
     auto_capture_form_fills boolean NOT NULL DEFAULT FALSE,
     exclude_bot boolean NOT NULL DEFAULT FALSE,
     int_segment boolean NOT NULL DEFAULT FALSE,
+    int_rudderstack boolean NOT NULL DEFAULT FALSE,
     int_adwords_enabled_agent_uuid text,
     int_adwords_customer_account_id text,
     int_adwords_client_manager_map json,
@@ -1175,3 +1176,13 @@ CREATE TABLE IF NOT EXISTS form_fills(
     SHARD KEY (project_id, user_id, form_id)
 );
 
+CREATE TABLE IF NOT EXISTS segments(
+    id text NOT NULL,
+    project_id bigint NOT NULL,
+    name text NOT NULL, 
+    description text, 
+    query json,
+    type text,
+    PRIMARY KEY (project_id, id),
+    SHARD KEY (project_id, id)
+);

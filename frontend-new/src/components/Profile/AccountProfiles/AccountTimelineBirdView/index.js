@@ -9,7 +9,7 @@ import {
 } from '../../utils';
 import { SVG, Text } from '../../../factorsComponents';
 
-function AccountTimeline({
+function AccountTimelineBirdView({
   timelineEvents = [],
   timelineUsers = [],
   granularity,
@@ -166,4 +166,4 @@ function AccountTimeline({
     </div>
   );
 }
-export default AccountTimeline;
+export default AccountTimelineBirdView;

@@ -6,6 +6,7 @@ import { SPARK_LINE_CHART_TITLE_CHAR_COUNT } from '../../constants/charts.consta
 import { getFormattedKpiValue } from '../../Views/CoreQuery/KPIAnalysis/kpiAnalysis.helpers';
 import LegendsCircle from '../../styles/components/LegendsCircle';
 import ControlledComponent from '../ControlledComponent/ControlledComponent';
+import styles from "./index.module.scss";
 
 function ChartHeader({
   total,
@@ -31,9 +32,9 @@ function ChartHeader({
   return (
     <div className={cx('flex flex-col items-center justify-center row-gap-2')}>
       <Tooltip title={headerTitle}>
-        <div className={'flex items-center col-gap-1'}>
+        <div className={'flex items-center col-gap-1 justify-center w-full'}>
           <LegendsCircle color={bgColor} />
-          <Text color="grey-8" type="title" level={7}>
+          <Text color="grey-8" type="title" level={7}  className={styles.eventText}>
             {headerTitle.length > SPARK_LINE_CHART_TITLE_CHAR_COUNT
               ? headerTitle.slice(0, SPARK_LINE_CHART_TITLE_CHAR_COUNT) + '...'
               : headerTitle}

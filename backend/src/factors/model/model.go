@@ -423,6 +423,7 @@ type Model interface {
 	CreateQuery(projectID int64, query *model.Queries) (*model.Queries, int, string)
 	GetALLQueriesWithProjectId(projectID int64) ([]model.Queries, int)
 	GetDashboardQueryWithQueryId(projectID int64, queryID int64) (*model.Queries, int)
+	GetDashboardUnitForQueryID(projectID int64, queryID int64) []model.DashboardUnit
 	GetSavedQueryWithQueryId(projectID int64, queryID int64) (*model.Queries, int)
 	GetQueryWithQueryId(projectID int64, queryID int64) (*model.Queries, int)
 	DeleteQuery(projectID int64, queryID int64) (int, string)
@@ -547,6 +548,7 @@ type Model interface {
 		userFiles string, includeSession bool, sessionProperty string, cloudManager filestore.FileManager)
 
 	// smart_properties
+	CreateSmartProperty(smartPropertyDoc *model.SmartProperties) int
 	GetSmartPropertyRulesConfig(projectID int64, objectType string) (model.SmartPropertyRulesConfig, int)
 	CreateSmartPropertyRules(projectID int64, smartProperty *model.SmartPropertyRules) (*model.SmartPropertyRules, string, int)
 	GetSmartPropertyRules(projectID int64) ([]model.SmartPropertyRules, int)
@@ -748,6 +750,12 @@ type Model interface {
 	GetUserActivitiesAndSessionCount(projectID int64, identity string, userId string) ([]model.UserActivity, uint64)
 	GetProfileAccountDetailsByID(projectID int64, id string) (*model.AccountDetails, int)
 	GetFilteredLeftPanePropWithValue(projectID int64, profileType string, properties *map[string]interface{}) map[string]interface{}
+
+	// segment
+	CreateSegment(projectId int64, segment *model.SegmentPayload) (int, error)
+	GetAllSegments(projectId int64) (map[string][]model.Segment, int)
+	GetSegmentById(projectId int64, segmentId string) (*model.Segment, int)
+	UpdateSegmentById(projectId int64, id string, segmentPayload model.SegmentPayload) (error, int)
 
 	// Ads import
 	GetAllAdsImportEnabledProjects() (map[int64]map[string]model.LastProcessedAdsImport, error)

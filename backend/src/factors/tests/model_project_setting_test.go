@@ -40,6 +40,34 @@ func TestDBUpdateProjectSettings(t *testing.T) {
 	assert.Equal(t, intSegment, *projectSetting.IntSegment)
 	assert.Equal(t, true, *projectSetting.ExcludeBot) // default state
 
+	intRudderstack := true
+	updatedPSettings, errCode = store.GetStore().UpdateProjectSettings(project.ID,
+		&model.ProjectSetting{IntRudderstack: &intRudderstack})
+	assert.Equal(t, http.StatusAccepted, errCode)
+	assert.NotNil(t, updatedPSettings)
+	projectSetting, errCode = store.GetStore().GetProjectSetting(project.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.NotNil(t, projectSetting)
+	// auto_track should stay false.
+	assert.Equal(t, autoTrack, *projectSetting.AutoTrack)
+	assert.Equal(t, intSegment, *projectSetting.IntSegment)
+	assert.Equal(t, intRudderstack, *projectSetting.IntRudderstack)
+	assert.Equal(t, true, *projectSetting.ExcludeBot) // default state
+
+	intSegment = false
+	updatedPSettings, errCode = store.GetStore().UpdateProjectSettings(project.ID,
+		&model.ProjectSetting{IntSegment: &intSegment})
+	assert.Equal(t, http.StatusAccepted, errCode)
+	assert.NotNil(t, updatedPSettings)
+	projectSetting, errCode = store.GetStore().GetProjectSetting(project.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.NotNil(t, projectSetting)
+	// auto_track should stay false.
+	assert.Equal(t, autoTrack, *projectSetting.AutoTrack)
+	assert.Equal(t, intSegment, *projectSetting.IntSegment)
+	assert.Equal(t, intRudderstack, *projectSetting.IntRudderstack)
+	assert.Equal(t, true, *projectSetting.ExcludeBot) // default state
+
 	agentUUID := agent.UUID
 	accountId := U.RandomLowerAphaNumString(6)
 	updatedPSettings, errCode = store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{

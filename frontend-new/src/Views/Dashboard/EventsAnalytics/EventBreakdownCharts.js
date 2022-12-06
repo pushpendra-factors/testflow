@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useSelector } from 'react-redux';
+import cx from 'classnames';
 import {
   formatData,
   getDefaultSortProp
@@ -49,8 +50,6 @@ function EventBreakdownCharts({
 
   let chartContent = null;
 
-  let tableContent = null;
-
   if (chartType === CHART_TYPE_BARCHART) {
     chartContent = (
       <BarChart
@@ -83,22 +82,14 @@ function EventBreakdownCharts({
     );
   }
 
-  // if (chartType === CHART_TYPE_TABLE) {
-  //   tableContent = (
-  //     <div
-  //       onClick={handleEditQuery}
-  //       style={{ color: '#5949BC' }}
-  //       className='mt-3 font-medium text-base cursor-pointer flex justify-end item-center'
-  //     >
-  //       Show More &rarr;
-  //     </div>
-  //   );
-  // }
-
   return (
-    <div className={`w-full flex-1`}>
+    <div
+      className={cx('w-full flex-1', {
+        'h-full flex justify-center items-center':
+          chartType !== CHART_TYPE_TABLE
+      })}
+    >
       {chartContent}
-      {tableContent}
     </div>
   );
 }

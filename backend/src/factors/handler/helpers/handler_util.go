@@ -2,7 +2,9 @@ package helpers
 
 import (
 	"errors"
+	cacheRedis "factors/cache/redis"
 	"factors/model/model"
+	"factors/model/store"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -103,6 +105,40 @@ func GetResponseIfCachedQuery(c *gin.Context, projectID int64, requestPayload mo
 		}
 	}
 	return false, errCode, errors.New("Query Cache: Failed to fetch from cache")
+}
+
+// InValidateSavedQueryCache Common function to invalidate cache if present.
+func InValidateSavedQueryCache(query *model.Queries) {
+
+	units := store.GetStore().GetDashboardUnitForQueryID(query.ProjectID, query.ID)
+	if units == nil {
+		return
+	}
+	for _, unit := range units {
+		InValidateDashboardQueryCache(unit.ProjectID, unit.DashboardId, unit.ID)
+	}
+
+	log.WithField("key", units).Info("Query cache key")
+
+}
+
+func InValidateDashboardQueryCache(projectID, dashboardID, unitID int64) {
+
+	var cacheKeys []*cacheRedis.Key
+	var err error
+
+	pattern := fmt.Sprintf("dashboard:*:pid:%d:did:%d:duid:%d:*", projectID, dashboardID, unitID)
+	cacheKey, err := cacheRedis.Scan(pattern, model.MaxNumberPerScanCount, model.MaxNumberPerScanCount)
+	cacheKeys = append(cacheKeys, cacheKey...)
+	if err != nil {
+		log.WithError(err).Error("Failed to get cache key")
+		return
+	}
+
+	for _, cacheKey := range cacheKeys {
+		cacheRedis.DelPersistent(cacheKey)
+	}
+
 }
 
 // GetResponseIfCachedDashboardQuery Common function to fetch result from cache if present for dashboard query.

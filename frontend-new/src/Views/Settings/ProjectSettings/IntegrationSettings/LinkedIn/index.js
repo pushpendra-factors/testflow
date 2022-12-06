@@ -5,7 +5,7 @@ import {
   fetchProjectSettings,
   udpateProjectSettings,
   addLinkedinAccessToken,
-  deleteIntegration,
+  deleteIntegration
 } from 'Reducers/global';
 import { Button, message, Select, Modal, Row, Col, Input } from 'antd';
 import { Text, FaErrorComp, FaErrorLog } from 'factorsComponents';
@@ -23,7 +23,7 @@ const LinkedInIntegration = ({
   addLinkedinAccessToken,
   kbLink = false,
   deleteIntegration,
-  currentAgent,
+  currentAgent
 }) => {
   const [loading, setLoading] = useState(false);
   const [FbResponse, SetFbResponse] = useState(null);
@@ -58,8 +58,8 @@ const LinkedInIntegration = ({
       fetch(url, {
         method: 'POST',
         body: JSON.stringify({
-          code: code,
-        }),
+          code: code
+        })
       })
         .then((response) => {
           if (!response.ok) {
@@ -74,8 +74,8 @@ const LinkedInIntegration = ({
               fetch(getHostURL() + '/integrations/linkedin/ad_accounts', {
                 method: 'POST',
                 body: JSON.stringify({
-                  access_token: e?.access_token,
-                }),
+                  access_token: e?.access_token
+                })
               })
                 .then((response) => {
                   if (!response.ok) {
@@ -137,10 +137,10 @@ const LinkedInIntegration = ({
     }
   };
 
-  const convertToString = (e) => {  
+  const convertToString = (e) => {
     let dataString = _.toString(e);
-    SetSelectedAdAccount(dataString) 
-  } 
+    SetSelectedAdAccount(dataString);
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -148,7 +148,7 @@ const LinkedInIntegration = ({
     //Factors INTEGRATION tracking
     factorsai.track('INTEGRATION', {
       name: 'linkedin',
-      activeProjectID: activeProject.id,
+      activeProjectID: activeProject.id
     });
 
     if (SelectedAdAccount != '') {
@@ -159,7 +159,7 @@ const LinkedInIntegration = ({
           oauthResponse['refresh_token_expires_in'],
         project_id: activeProject.id.toString(),
         int_linkedin_access_token: oauthResponse['access_token'],
-        int_linkedin_access_token_expiry: oauthResponse['expires_in'],
+        int_linkedin_access_token_expiry: oauthResponse['expires_in']
       };
       addLinkedinAccessToken(data)
         .then(() => {
@@ -167,7 +167,11 @@ const LinkedInIntegration = ({
           setShowForm(false);
           setIsActive(true);
           message.success('LinkedIn integration enabled!');
-          sendSlackNotification(currentAgent.email, activeProject.name, 'Linkedin');
+          sendSlackNotification(
+            currentAgent.email,
+            activeProject.name,
+            'Linkedin'
+          );
         })
         .catch((e) => {
           console.log(e);
@@ -179,23 +183,31 @@ const LinkedInIntegration = ({
   };
 
   const onDisconnect = () => {
-    setLoading(true);
-    deleteIntegration(activeProject.id, 'linkedin')
-      .then(() => {
-        fetchProjectSettings(activeProject.id);
-        setLoading(false);
-        setShowForm(false);
-        setTimeout(() => {
-          message.success('LinkedIn integration disconnected!');
-        }, 500);
-        setIsActive(false);
-      })
-      .catch((err) => {
-        message.error(`${err?.data?.error}`);
-        setShowForm(false);
-        setLoading(false);
-        console.log('change password failed-->', err);
-      });
+    Modal.confirm({
+      title: 'Are you sure you want to disable this?',
+      content:
+        'You are about to disable this integration. Factors will stop bringing in data from this source.',
+      okText: 'Disconnect',
+      cancelText: 'Cancel',
+      onOk: () => {
+        setLoading(true);
+        deleteIntegration(activeProject.id, 'linkedin')
+          .then(() => {
+            fetchProjectSettings(activeProject.id);
+            setLoading(false);
+            setShowForm(false);
+            setTimeout(() => {
+              message.success('LinkedIn integration disconnected!');
+            }, 500);
+            setIsActive(false);
+          })
+          .catch((err) => {
+            message.error(`${err?.data?.error}`);
+            setShowForm(false);
+          });
+      },
+      onCancel: () => {}
+    });
   };
 
   const getAdAccountsOptSrc = () => {
@@ -251,11 +263,11 @@ const LinkedInIntegration = ({
                       <div className='w-full'>
                         <div className='w-full pb-2'>
                           <Select
-                            mode="multiple"
+                            mode='multiple'
                             allowClear
-                            className="w-full"
-                            placeholder={'Select Account'} 
-                            onChange={e => convertToString(e) }
+                            className='w-full'
+                            placeholder={'Select Account'}
+                            onChange={(e) => convertToString(e)}
                             options={createSelectOpts(getAdAccountsOptSrc())}
                           />
                         </div>
@@ -361,12 +373,12 @@ const LinkedInIntegration = ({
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   currentProjectSettings: state.global.currentProjectSettings,
-  currentAgent: state.agent.agent_details,
+  currentAgent: state.agent.agent_details
 });
 
 export default connect(mapStateToProps, {
   addLinkedinAccessToken,
   fetchProjectSettings,
   udpateProjectSettings,
-  deleteIntegration,
+  deleteIntegration
 })(LinkedInIntegration);

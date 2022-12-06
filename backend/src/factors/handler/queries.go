@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	H "factors/handler/helpers"
 	mid "factors/middleware"
 	"factors/model/model"
 	"factors/model/store"
@@ -113,24 +114,27 @@ func CreateQueryHandler(c *gin.Context) (interface{}, int, string, bool) {
 	return query, http.StatusCreated, "", false
 }
 
-// UpdateSavedQueryHandler godoc
+// UpdateSavedQueryForReportHandler godoc
 // @Summary To update an existing saved query.
 // @Tags SavedQuery
 // @Accept  json
 // @Produce json
 // @Param project_id path integer true "Project ID"
 // @Param query_id path integer true "Query ID"
-// @Param query body handler.SavedQueryUpdatePayload true "Update saved query"
+// @Param query body handler.SavedQueryRequestPayload true "Update saved query"
 // @Success 202 {string} string "{"message": "Successfully updated."}"
 // @Router /{project_id}/queries/{query_id} [put]
 func UpdateSavedQueryHandler(c *gin.Context) {
+
 	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Update saved query failed. Invalid project."})
 		return
 	}
 
-	var requestPayload SavedQueryUpdatePayload
+	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
+
+	var requestPayload SavedQueryRequestPayload
 
 	r := c.Request
 	decoder := json.NewDecoder(r.Body)
@@ -159,22 +163,33 @@ func UpdateSavedQueryHandler(c *gin.Context) {
 		return
 	}
 
-	query := model.Queries{}
-	if requestPayload.Title != "" {
-		query.Title = requestPayload.Title
+	queryRequest := &model.Queries{
+		Query:     postgres.Jsonb{},
+		Title:     requestPayload.Title,
+		Type:      requestPayload.Type,
+		CreatedBy: agentUUID,
+		// To support empty settings value.
+		Settings: postgres.Jsonb{RawMessage: json.RawMessage(`{}`)},
+		IdText:   U.RandomStringForSharableQuery(50),
 	}
 
-	query.Type = model.QueryTypeSavedQuery
-	if requestPayload.Type == model.QueryTypeDashboardQuery {
-		query.Type = requestPayload.Type
+	query, status := store.GetStore().GetQueryWithQueryId(projectID, queryID)
+	if status != http.StatusFound {
+		log.Error("query not found")
+		return
 	}
+	queryRequest.IdText = query.IdText
 
+	if requestPayload.Query != nil && !U.IsEmptyPostgresJsonb(requestPayload.Query) {
+		queryRequest.Query = *requestPayload.Query
+		H.InValidateSavedQueryCache(query)
+	}
 	if requestPayload.Settings != nil && !U.IsEmptyPostgresJsonb(requestPayload.Settings) {
-		query.Settings = *requestPayload.Settings
+		queryRequest.Settings = *requestPayload.Settings
 	}
 
 	_, errCode := store.GetStore().UpdateSavedQuery(projectID, queryID,
-		&query)
+		queryRequest)
 	if errCode != http.StatusAccepted {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Failed to update Saved Query."})
 		return

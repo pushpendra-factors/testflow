@@ -6,7 +6,7 @@ package main
 
 import (
 	C "factors/config"
-	"factors/model/store/postgres"
+//	"factors/model/store/postgres"
 	"factors/util"
 	"flag"
 	"fmt"
