@@ -721,6 +721,8 @@ type Model interface {
 	GetActivitiesDistinctEventNamesByType(projectID int64, objectTypes []int) (map[int][]string, int)
 	UpdateCRMProperyAsSynced(projectID int64, source U.CRMSource, crmProperty *model.CRMProperty) (*model.CRMProperty, int)
 	UpdateCRMActivityAsSynced(projectID int64, source U.CRMSource, crmActivity *model.CRMActivity, syncID, userID string) (*model.CRMActivity, int)
+	GetCRMUsersTypeAndAction(projectID int64, source U.CRMSource) ([]model.CRMUser, int)
+	GetCRMActivityNames(projectID int64, source U.CRMSource) ([]string, int)
 
 	GetCRMSetting(projectID int64) (*model.CRMSetting, int)
 	GetAllCRMSetting() ([]model.CRMSetting, int)

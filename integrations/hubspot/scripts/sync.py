@@ -897,6 +897,11 @@ def get_deleted_contacts(project_id, refresh_token,  api_key):
     final_url = url + parameters    
     has_more = True
     count_api_calls = 0
+    count = 0
+    
+    buffer_size = PAGE_SIZE * get_buffer_size_by_api_count()
+    create_all_deleted_contacts_documents_with_buffer = get_create_all_documents_with_buffer(project_id, "contact", buffer_size, True)
+
     hubspot_request_handler = get_hubspot_request_handler(project_id, refresh_token, api_key)
     while has_more:
         log.warning("Downloading deleted contacts from url: %s", final_url)
@@ -908,8 +913,17 @@ def get_deleted_contacts(project_id, refresh_token,  api_key):
         count_api_calls+=1
         docs = response_dict.get('results')
         if not docs:
-            raise Exception('Found empty response for deleted_contacts')
-        create_all_documents(project_id, 'contact', docs, True)
+            log.warning("Found empty response for deleted_contacts")
+            break
+
+        count = count + len(docs)
+        if allow_buffer_before_insert_by_project_id(project_id):
+            create_all_deleted_contacts_documents_with_buffer(docs, has_more)
+            log.warning("Downloaded %d deleted_contacts. total %d.", len(docs), count)
+        else:
+            create_all_documents(project_id, 'contact', docs, True)
+            log.warning("Downloaded and created %d deleted_contacts. total %d.", len(docs), count)
+
         has_more = response_dict.get('paging')
         if has_more:
             next_property = has_more.get('next')
@@ -919,6 +933,8 @@ def get_deleted_contacts(project_id, refresh_token,  api_key):
             if not next_link:
                 raise Exception('Found empty link value to fetch deleted contacts')
             final_url = next_link
+    
+    create_all_deleted_contacts_documents_with_buffer([], False) ## flush any remaining docs in memory
     return count_api_calls
 
 
@@ -1329,8 +1345,6 @@ def allow_batch_insert_doc_type(doc_type):
     return str(doc_type) in allowed_doc_type
 
 def allow_batch_insert_by_project_id(project_id):
-    if str(project_id) == str(559):
-        return False
     all_projects, allowed_projects,_ = get_allowed_list_with_all_element_support(options.batch_insert_by_project_ids)
     if all_projects:
         return True
