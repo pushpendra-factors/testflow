@@ -47,7 +47,7 @@ func GetQueriesHandler(c *gin.Context) (interface{}, int, string, bool) {
 	if errCode != http.StatusFound {
 		return nil, errCode, "Get Saved Queries failed.", true
 	}
-
+	queries = model.RemoveAttributionV1Queries(queries)
 	return queries, http.StatusOK, "", false
 }
 

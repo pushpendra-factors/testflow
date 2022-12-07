@@ -72,3 +72,19 @@ export const formatUsersTimeline = (data, config) => {
   ).sort(compareObjTimestampsDesc);
   return returnData;
 };
+
+export const formatUserPropertiesToCheckList = (userProps, activeProp) => {
+  const userPropsWithEnableKey = userProps.map((userProp) => {
+    const retObj = {
+      display_name: userProp[0],
+      prop_name: userProp[1],
+      type: userProp[2],
+      enabled: false
+    };
+    if (userProp[1] === activeProp) {
+      retObj.enabled = true;
+    }
+    return retObj;
+  });
+  return userPropsWithEnableKey.sort((a, b) => b.enabled - a.enabled);
+};

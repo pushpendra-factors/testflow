@@ -1489,7 +1489,7 @@ func ProcessQueryKPILandingPageUrl(query *AttributionQuery, attributionData *map
 	}
 	result.Rows = MergeDataRowsHavingSameKey(result.Rows, GetLastKeyValueIndexLandingPage(result.Headers), query.AttributionKey, query.AnalyzeType, nil, logCtx)
 	// sort the rows by conversionEvent
-	conversionIndex := GetConversionIndex(result.Headers)
+	conversionIndex := GetConversionIndexKPI(result.Headers)
 	sort.Slice(result.Rows, func(i, j int) bool {
 		if len(result.Rows[i]) < conversionIndex || len(result.Rows[j]) < conversionIndex {
 			if C.GetAttributionDebug() == 1 {

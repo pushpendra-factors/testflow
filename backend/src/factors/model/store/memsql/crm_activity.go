@@ -306,3 +306,44 @@ func (store *MemSQL) GetActivitiesDistinctEventNamesByType(projectID int64, obje
 
 	return typeName, http.StatusFound
 }
+
+func (store *MemSQL) GetCRMActivityNames(projectID int64, source U.CRMSource) ([]string, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"source":     source,
+	}
+
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+	if projectID == 0 || source == 0 {
+		logCtx.Error("Invalid parameters")
+		return nil, http.StatusBadRequest
+	}
+
+	crmActivities := make([]model.CRMActivity, 0, 0)
+
+	db := C.GetServices().Db
+	err := db.Table("crm_activities").Where("project_id = ? AND source = ?", projectID, source).
+		Select("DISTINCT(name) as name").Find(&crmActivities).Error
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
+
+		logCtx.WithError(err).Error("Failed to get all distinct CRM activity names.")
+		return nil, http.StatusInternalServerError
+	}
+
+	if len(crmActivities) == 0 {
+		return nil, http.StatusNotFound
+	}
+
+	crmActivityNames := make([]string, 0)
+
+	for _, crmActivity := range crmActivities {
+		crmActivityNames = append(crmActivityNames, crmActivity.Name)
+	}
+
+	return crmActivityNames, http.StatusFound
+}

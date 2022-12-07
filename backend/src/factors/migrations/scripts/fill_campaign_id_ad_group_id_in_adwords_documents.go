@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	C "factors/config"
 	"factors/model/model"
-	"factors/model/store/postgres"
+//	"factors/model/store/postgres"
 	"factors/util"
 	"flag"
 	"fmt"

@@ -179,6 +179,10 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/dashboards/:dashboard_id/units/multi/:unit_ids", mid.SkipDemoProjectWriteAccess(), DeleteMultiDashboardUnitHandler)
 	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/dashboards/:dashboard_id", mid.SkipDemoProjectWriteAccess(), DeleteDashboardHandler)
 
+	// attribution V1 endpoints
+	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/attribution/queries", mid.SkipDemoProjectWriteAccess(), stringifyWrapper(V1.CreateAttributionV1QueryAndSaveToDashboardHandler))
+	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/attribution/dashboards", stringifyWrapper(V1.GetOrCreateAttributionV1DashboardHandler))
+
 	// v1 KPI endpoints
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/kpi/config", responseWrapper(V1.GetKPIConfigHandler))
 	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/kpi/filter_values", responseWrapper(V1.GetKPIFilterValuesHandler))

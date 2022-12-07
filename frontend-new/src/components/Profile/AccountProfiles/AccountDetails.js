@@ -10,7 +10,10 @@ import {
   fetchProjectSettings
 } from '../../../reducers/global';
 import { getProfileAccountDetails } from '../../../reducers/timelines/middleware';
-import { getActivitiesWithEnableKeyConfig } from '../../../reducers/timelines/utils';
+import {
+  formatUserPropertiesToCheckList,
+  getActivitiesWithEnableKeyConfig
+} from '../../../reducers/timelines/utils';
 import SearchCheckList from '../../SearchCheckList';
 import LeftPanePropBlock from '../LeftPanePropBlock';
 import GroupSelect2 from '../../QueryComposer/GroupSelect2';
@@ -32,6 +35,7 @@ function AccountDetails({
   const [collapseAll, setCollapseAll] = useState(true);
   const [activities, setActivities] = useState([]);
   const [checkListUserProps, setCheckListUserProps] = useState([]);
+  const [checkListMilestones, setCheckListMilestones] = useState([]);
   const [propSelectOpen, setPropSelectOpen] = useState(false);
   const [tlConfig, setTimelinesConfig] = useState({
     disabled_events: [],
@@ -67,38 +71,30 @@ function AccountDetails({
   }, [currentProjectSettings, accountDetails]);
 
   useEffect(() => {
-    const userPropsWithEnableKey = userProperties.map((userProp) => {
-      const retObj = {
-        display_name: userProp[0],
-        prop_name: userProp[1],
-        type: userProp[2],
-        enabled: false
-      };
-      if (
-        userProp[1] ===
-        currentProjectSettings.timelines_config?.account_config
-          ?.user_prop_to_show
-      ) {
-        retObj.enabled = true;
-      }
-      return retObj;
-    });
-    userPropsWithEnableKey.sort((a, b) => b.enabled - a.enabled);
+    const userPropsWithEnableKey = formatUserPropertiesToCheckList(
+      userProperties,
+      currentProjectSettings.timelines_config?.account_config?.user_prop_to_show
+    );
     setCheckListUserProps(userPropsWithEnableKey);
   }, [currentProjectSettings, userProperties]);
 
   const handlePropChange = (option) => {
-    const timelinesConfig = { ...currentProjectSettings.timelines_config };
-    timelinesConfig.account_config.user_prop_to_show = option.prop_name;
-    udpateProjectSettings(activeProject.id, {
-      timelines_config: { ...timelinesConfig }
-    }).then(() =>
-      getProfileAccountDetails(
-        activeProject.id,
-        accountId,
-        currentProjectSettings?.timelines_config
-      )
-    );
+    if (
+      option.prop_name !==
+      currentProjectSettings.timelines_config.account_config.user_prop_to_show
+    ) {
+      const timelinesConfig = { ...currentProjectSettings.timelines_config };
+      timelinesConfig.account_config.user_prop_to_show = option.prop_name;
+      udpateProjectSettings(activeProject.id, {
+        timelines_config: { ...timelinesConfig }
+      }).then(() =>
+        getProfileAccountDetails(
+          activeProject.id,
+          accountId,
+          currentProjectSettings?.timelines_config
+        )
+      );
+    }
   };
 
   const handleEventsChange = (option) => {
@@ -200,7 +196,7 @@ function AccountDetails({
             setPropSelectOpen(false);
           }}
         />
-        <Text type='title' level={4} weight='bold'>
+        <Text type='title' level={4} weight='bold' extraClass='m-0'>
           Account Details
         </Text>
       </div>
@@ -324,7 +320,7 @@ function AccountDetails({
 
   const renderBirdviewWithActions = () => (
     <div className='flex flex-col'>
-      <div className='timeline-actions'>
+      <div className='timeline-actions flex-row-reverse'>
         <div className='timeline-actions__group'>
           <div className='timeline-actions__group__collapse'>
             <Button
@@ -405,7 +401,7 @@ function AccountDetails({
   return (
     <div>
       {renderModalHeader()}
-      <div className='fa-account-timeline'>
+      <div className='fa-timeline'>
         {renderLeftPane()}
         {renderTimelineView()}
       </div>

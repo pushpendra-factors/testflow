@@ -182,7 +182,7 @@ function AttributionOptions({
 
   const selectWindow = () => {
     if (selectVisibleWindow) {
-      const opts = [1, 3, 7, 14, 30, 60, 90].map((opt) => [
+      const opts = [1, 3, 7, 14, 30, 60, 90, 180, 365].map((opt) => [
         `${opt} ${opt === 1 ? 'day' : 'days'}`
       ]);
 

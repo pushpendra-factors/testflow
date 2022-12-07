@@ -921,13 +921,17 @@ func syncTasks(projectID int64, accessToken, instanceURL string, timestamp int64
 
 		leadIDs, contactIDs := getLeadIDAndContactIDForActivityRecords(projectID, objectRecords)
 
-		if len(leadIDs) > 0 {
-			taskLeads = append(taskLeads, leadIDs...)
-		} else if len(contactIDs) > 0 {
-			taskContacts = append(taskContacts, contactIDs...)
-		} else {
+		if len(leadIDs) == 0 && len(contactIDs) == 0 {
 			logCtx.Info("No leads or contacts associated with tasks.")
 			continue
+		}
+
+		if len(leadIDs) > 0 {
+			taskLeads = append(taskLeads, leadIDs...)
+		}
+
+		if len(contactIDs) > 0 {
+			taskContacts = append(taskContacts, contactIDs...)
 		}
 
 		err = store.GetStore().BuildAndUpsertDocumentInBatch(projectID, model.SalesforceDocumentTypeNameTask, objectRecords)
@@ -977,13 +981,17 @@ func syncEvents(projectID int64, accessToken, instanceURL string, timestamp int6
 
 		leadIDs, contactIDs := getLeadIDAndContactIDForActivityRecords(projectID, objectRecords)
 
-		if len(leadIDs) > 0 {
-			eventLeads = append(eventLeads, leadIDs...)
-		} else if len(contactIDs) > 0 {
-			eventContacts = append(eventContacts, contactIDs...)
-		} else {
+		if len(leadIDs) == 0 && len(contactIDs) == 0 {
 			logCtx.Info("No leads or contacts associated with events.")
 			continue
+		}
+
+		if len(leadIDs) > 0 {
+			eventLeads = append(eventLeads, leadIDs...)
+		}
+
+		if len(contactIDs) > 0 {
+			eventContacts = append(eventContacts, contactIDs...)
 		}
 
 		err = store.GetStore().BuildAndUpsertDocumentInBatch(projectID, model.SalesforceDocumentTypeNameEvent, objectRecords)

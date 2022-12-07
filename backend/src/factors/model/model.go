@@ -191,6 +191,7 @@ type Model interface {
 	CreateAgentPersonalDashboardForProject(projectID int64, agentUUID string) (*model.Dashboard, int)
 	GetDashboards(projectID int64, agentUUID string) ([]model.Dashboard, int)
 	GetDashboard(projectID int64, agentUUID string, id int64) (*model.Dashboard, int)
+	GetAttributionV1DashboardByDashboardName(projectId int64, dashboardName string) (*model.Dashboard, int)
 	HasAccessToDashboard(projectID int64, agentUUID string, id int64) (bool, *model.Dashboard)
 	UpdateDashboard(projectID int64, agentUUID string, id int64, dashboard *model.UpdatableDashboard) int
 	DeleteDashboard(projectID int64, agentUUID string, dashboardID int64) int
@@ -434,6 +435,9 @@ type Model interface {
 	SearchQueriesWithProjectId(projectID int64, searchString string) ([]model.Queries, int)
 	GetAllNonConvertedQueries(projectID int64) ([]model.Queries, int)
 
+	// attribution v1 queries
+	GetOrCreateAttributionV1Dashboard(projectId int64, agentUUID string) (*model.Dashboard, int)
+	CreateQueryAndSaveToDashboard(projectID int64, queryInfo *model.CreateQueryAndSaveToDashboardInfo) (*model.QueryAndDashboardUnit, int, string)
 	// dashboard_templates
 	CreateTemplate(template *model.DashboardTemplate) (*model.DashboardTemplate, int, string)
 	DeleteTemplate(templateId string) int
@@ -721,6 +725,8 @@ type Model interface {
 	GetActivitiesDistinctEventNamesByType(projectID int64, objectTypes []int) (map[int][]string, int)
 	UpdateCRMProperyAsSynced(projectID int64, source U.CRMSource, crmProperty *model.CRMProperty) (*model.CRMProperty, int)
 	UpdateCRMActivityAsSynced(projectID int64, source U.CRMSource, crmActivity *model.CRMActivity, syncID, userID string) (*model.CRMActivity, int)
+	GetCRMUsersTypeAndAction(projectID int64, source U.CRMSource) ([]model.CRMUser, int)
+	GetCRMActivityNames(projectID int64, source U.CRMSource) ([]string, int)
 
 	GetCRMSetting(projectID int64) (*model.CRMSetting, int)
 	GetAllCRMSetting() ([]model.CRMSetting, int)

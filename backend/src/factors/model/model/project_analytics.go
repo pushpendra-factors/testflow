@@ -12,4 +12,5 @@ type ProjectAnalytics struct {
 	TotalEvents       uint64 `json:"total_events"`
 	TotalUniqueEvents uint64 `json:"total_unique_events"`
 	TotalUniqueUsers  uint64 `json:"total_unique_users"`
+	SixSignalAPIHits  uint64 `json:"six_signal_api_hits"`
 }

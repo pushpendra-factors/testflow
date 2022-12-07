@@ -73,20 +73,19 @@ func GetSixSignalCacheResult(projectID int64, userId string, userIP string) (boo
 }
 
 //GetSixSignalAPICountCacheRedisKey returns the redis key when given projectID and timeZone
-func GetSixSignalAPICountCacheRedisKey(projectID int64, timeZone U.TimeZoneString) (*cacheRedis.Key, error) {
+func GetSixSignalAPICountCacheRedisKey(projectID int64, date uint64) (*cacheRedis.Key, error) {
 	prefix := "ip:enrichment:sixsignal"
-	date := U.DateAsYYYYMMDDFormat(U.TimeNowIn(timeZone))
 	suffix := fmt.Sprintf("%d", date)
-	return cacheRedis.NewKey(projectID, prefix, suffix) //Sample Key: 1700020  ip:enrichment:sixsignal 20221129 (projectID Prefix Suffix)
+	return cacheRedis.NewKey(projectID, prefix, suffix) //Sample Key: "ip:enrichment:sixsignal:pid:399:20221130"
 }
 
 //GetSixSignalAPICountCacheResult returns the count of number of times 6Signal API has been called when projectID and timeZone is given
-func GetSixSignalAPICountCacheResult(projectID int64, timeZone U.TimeZoneString) int {
+func GetSixSignalAPICountCacheResult(projectID int64, date uint64) int {
 	cacheResult := 0
 	logCtx := log.WithFields(log.Fields{
 		"project_id": projectID,
 	})
-	cacheKey, err := GetSixSignalAPICountCacheRedisKey(projectID, timeZone)
+	cacheKey, err := GetSixSignalAPICountCacheRedisKey(projectID, date)
 	if err != nil {
 		logCtx.WithError(err).Error("Error getting cache key")
 		return cacheResult
@@ -115,12 +114,14 @@ func SetSixSignalAPICountCacheResult(projectID int64, timeZone U.TimeZoneString)
 		"project_id": projectID,
 	})
 
-	cacheKey, err := GetSixSignalAPICountCacheRedisKey(projectID, timeZone)
+	date := U.DateAsYYYYMMDDFormat(U.TimeNowIn(timeZone))
+
+	cacheKey, err := GetSixSignalAPICountCacheRedisKey(projectID, date)
 	if err != nil {
 		logCtx.Warn("Failed to get cache key")
 		return
 	}
-	count := GetSixSignalAPICountCacheResult(projectID, timeZone)
+	count := GetSixSignalAPICountCacheResult(projectID, date)
 	if count <= 0 {
 		count = 0
 	}
