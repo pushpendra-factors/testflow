@@ -80,8 +80,7 @@ func TestEventAnalyticsQuery(t *testing.T) {
 					},
 				},
 			},
-			Class: model.QueryClassEvents,
-
+			Class:           model.QueryClassEvents,
 			Type:            model.QueryTypeEventsOccurrence,
 			EventsCondition: model.EventCondAnyGivenEvent,
 		}
