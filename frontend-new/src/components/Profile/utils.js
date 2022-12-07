@@ -1,5 +1,6 @@
 import MomentTz from '../MomentTz';
 import { operatorMap } from '../../Views/CoreQuery/utils';
+import { formatDurationIntoString } from 'Utils/dataFormatter';
 
 export const granularityOptions = [
   'Timestamp',
