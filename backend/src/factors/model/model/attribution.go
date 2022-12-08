@@ -8,10 +8,11 @@ import (
 	C "factors/config"
 	U "factors/util"
 	"fmt"
-	"github.com/jinzhu/gorm/dialects/postgres"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/jinzhu/gorm/dialects/postgres"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -326,8 +327,15 @@ func (query *AttributionQueryUnit) CheckIfNameIsPresent(nameOfQuery string) bool
 	return false
 }
 
-// TODO Check
 func (query *AttributionQueryUnit) SetDefaultGroupByTimestamp() {
+	if query.Query.KPI.Class == "" {
+		return
+	}
+	for index := range query.Query.KPI.Queries {
+		if query.Query.KPI.Queries[index].GroupByTimestamp == GroupByTimestampHour {
+			query.Query.KPI.Queries[index].GroupByTimestamp = GroupByTimestampSecond
+		}
+	}
 }
 
 func (query *AttributionQueryUnit) GetGroupByTimestamps() []string {

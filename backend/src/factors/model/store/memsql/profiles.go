@@ -204,7 +204,10 @@ func buildAllUsersQuery(projectID int64, query model.ProfileQuery) (string, []in
 		stepSqlStmnt = fmt.Sprintf("%s AND (is_group_user=1 AND group_%d_id IS NOT NULL)", stepSqlStmnt, query.GroupId)
 	}
 
-	stepSqlStmnt = fmt.Sprintf("%s %s ORDER BY %s LIMIT 10000", stepSqlStmnt, groupByStmnt, model.AliasAggr)
+	stepSqlStmnt = fmt.Sprintf("%s %s ORDER BY %s", stepSqlStmnt, groupByStmnt, model.AliasAggr)
+	if !query.LimitNotApplicable {
+		stepSqlStmnt += " LIMIT 10000"
+	}
 
 	finalSQLStmnt := ""
 	if isGroupByTypeWithBuckets(query.GroupBys) {
@@ -218,7 +221,10 @@ func buildAllUsersQuery(projectID int64, query model.ProfileQuery) (string, []in
 		selectAliases = selectAliases + ", " + aggregateSelectKeys[:len(aggregateSelectKeys)-2]
 		finalGroupBy := model.AliasAggr + ", " + strings.Join(aggregateGroupBys, ",")
 		finalOrderBy := model.AliasAggr + ", " + strings.Join(aggregateOrderBys, ",")
-		finalSQLStmnt = fmt.Sprintf("%s SELECT %s FROM %s GROUP BY %s ORDER BY %s LIMIT 1000", sqlStmnt, selectAliases, bucketedStepName, finalGroupBy, finalOrderBy)
+		finalSQLStmnt = fmt.Sprintf("%s SELECT %s FROM %s GROUP BY %s ORDER BY %s", sqlStmnt, selectAliases, bucketedStepName, finalGroupBy, finalOrderBy)
+		if !query.LimitNotApplicable {
+			finalSQLStmnt += " LIMIT 10000"
+		}
 	} else {
 		finalSQLStmnt = stepSqlStmnt
 	}
@@ -304,7 +310,10 @@ func buildAllUsersQueryV2(projectID int64, query model.ProfileQuery) (string, []
 	}
 	params = append(params, filterParams...)
 
-	wrappedSqlStmnt = fmt.Sprintf("%s %s ORDER BY %s LIMIT 10000", wrappedSqlStmnt, groupByStmnt, model.AliasAggr)
+	wrappedSqlStmnt = fmt.Sprintf("%s %s ORDER BY %s", wrappedSqlStmnt, groupByStmnt, model.AliasAggr)
+	if !query.LimitNotApplicable {
+		wrappedSqlStmnt += " LIMIT 10000"
+	}
 
 	finalSQLStmnt := ""
 	if isGroupByTypeWithBuckets(query.GroupBys) {
@@ -318,7 +327,10 @@ func buildAllUsersQueryV2(projectID int64, query model.ProfileQuery) (string, []
 		selectAliases = selectAliases + ", " + aggregateSelectKeys[:len(aggregateSelectKeys)-2]
 		finalGroupBy := model.AliasAggr + ", " + strings.Join(aggregateGroupBys, ",")
 		finalOrderBy := model.AliasAggr + ", " + strings.Join(aggregateOrderBys, ",")
-		finalSQLStmnt = fmt.Sprintf("%s SELECT %s FROM %s GROUP BY %s ORDER BY %s LIMIT 1000", sqlStmnt, selectAliases, bucketedStepName, finalGroupBy, finalOrderBy)
+		finalSQLStmnt = fmt.Sprintf("%s SELECT %s FROM %s GROUP BY %s ORDER BY %s", sqlStmnt, selectAliases, bucketedStepName, finalGroupBy, finalOrderBy)
+		if !query.LimitNotApplicable {
+			wrappedSqlStmnt += " LIMIT 10000"
+		}
 	} else {
 		finalSQLStmnt = wrappedSqlStmnt
 	}

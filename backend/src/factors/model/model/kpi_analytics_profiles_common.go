@@ -61,6 +61,7 @@ func GetDirectDerivableProfileQueryFromKPI(kpiQuery KPIQuery) ProfileQueryGroup 
 	profileQueryGroup.GlobalFilters = transformFiltersKPIToProfiles(kpiQuery.Filters)
 	profileQueryGroup.GlobalGroupBys = transformGroupByKPIToProfiles(kpiQuery.GroupBy)
 	profileQueryGroup.GroupAnalysis = MapOfKPICategoryToProfileGroupAnalysis[kpiQuery.DisplayCategory]
+	profileQueryGroup.LimitNotApplicable = kpiQuery.LimitNotApplicable
 	return profileQueryGroup
 }
 
@@ -134,6 +135,7 @@ func GetProfileQueriesOnCustomMetric(profileQueryGroup ProfileQueryGroup, transf
 	profileQuery.Timezone = profileQueryGroup.Timezone
 	profileQuery.Type = profileCategory
 	profileQuery.GroupAnalysis = profileQueryGroup.GroupAnalysis
+	profileQuery.LimitNotApplicable = profileQueryGroup.LimitNotApplicable
 
 	profileQuery.Filters = append(profileQueryGroup.GlobalFilters, getProfileDefaultFilterFromDateField(transformation.DateField, kpiQuery.From, kpiQuery.To))
 	profileQuery.Filters = append(profileQuery.Filters, transformFiltersKPIToProfiles(transformation.Filters)...)
