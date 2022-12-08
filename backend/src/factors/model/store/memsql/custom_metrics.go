@@ -42,7 +42,7 @@ func (store *MemSQL) GetCustomMetricsByProjectId(projectID int64) ([]model.Custo
 		return make([]model.CustomMetric, 0), "Invalid project ID for custom metric", http.StatusBadRequest
 	}
 	var customMetrics []model.CustomMetric
-	err := db.Where("project_id = ?", projectID).Find(&customMetrics).Error
+	err := db.Order("created_at DESC").Where("project_id = ?", projectID).Find(&customMetrics).Error
 	if err != nil {
 		logCtx.WithError(err).WithField("projectID", projectID).Warn("Failed while retrieving custom metrics.")
 		return make([]model.CustomMetric, 0), err.Error(), http.StatusInternalServerError

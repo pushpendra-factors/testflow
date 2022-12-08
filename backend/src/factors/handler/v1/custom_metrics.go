@@ -172,12 +172,12 @@ func DeleteCustomMetrics(c *gin.Context) (interface{}, int, string, string, bool
 		return nil, http.StatusInternalServerError, PROCESSING_FAILED, "Error Processing/Fetching GetAlertNamesByProjectIdTypeAndName", true
 	}
 
-	customMetricNames := make([]string, 0)
-	if customMetric.TypeOfQuery == model.ProfileQueryType {
-		customMetricNames = store.GetStore().GetDerivedKPIsHavingNameInInternalQueries(projectID, customMetric.Name)
+	derivedKPINames := make([]string, 0)
+	if customMetric.TypeOfQuery != model.DerivedQueryType {
+		derivedKPINames = store.GetStore().GetDerivedKPIsHavingNameInInternalQueries(projectID, customMetric.Name)
 	}
 
-	if len(dashboardUnitNames) == 0 && len(alertNames) == 0 {
+	if len(dashboardUnitNames) == 0 && len(alertNames) == 0 && len(derivedKPINames) == 0 {
 		statusCode = store.GetStore().DeleteCustomMetricByID(projectID, customMetricsID)
 		if statusCode != http.StatusAccepted {
 			return nil, http.StatusInternalServerError, PROCESSING_FAILED, "", true
@@ -204,18 +204,18 @@ func DeleteCustomMetrics(c *gin.Context) (interface{}, int, string, string, bool
 			}
 			IsPrevious = true
 		}
-		if len(customMetricNames) > 0 {
+		if len(derivedKPINames) > 0 {
 			if IsPrevious {
 				errorMessage = errorMessage + " and "
 			}
-			errorMessage = errorMessage + strings.Join(customMetricNames, "\", \"") + "\" derived KPI"
-			if len(customMetricNames) > 1 {
+			errorMessage = errorMessage + strings.Join(derivedKPINames, "\", \"") + "\" derived KPI"
+			if len(derivedKPINames) > 1 {
 				errorMessage = errorMessage + "s"
 			}
 		}
 
 		pronoun := "it"
-		if (len(dashboardUnitNames) + len(alertNames) + len(customMetricNames)) > 1 {
+		if (len(dashboardUnitNames) + len(alertNames) + len(derivedKPINames)) > 1 {
 			pronoun = "them"
 		}
 		errorMessage = errorMessage + ". Please remove " + pronoun + " first."
