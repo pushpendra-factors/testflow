@@ -20,6 +20,7 @@ export const SET_COMPARE_DURATION = 'SET_COMPARE_DURATION';
 export const UPDATE_CHART_TYPES = 'UPDATE_CHART_TYPES';
 export const SET_SAVED_QUERY_SETTINGS = 'SET_SAVED_QUERY_SETTINGS';
 export const UPDATE_PIVOT_CONFIG = 'UPDATE_PIVOT_CONFIG';
+export const UPDATE_FUNNEL_TABLE_CONFIG = 'UPDATE_FUNNEL_TABLE_CONFIG';
 
 export const DEFAULT_PIVOT_CONFIG = {
   rows: EMPTY_ARRAY,
@@ -30,6 +31,27 @@ export const DEFAULT_PIVOT_CONFIG = {
   configLoaded: false
 };
 
+export const DEFAULT_FUNNEL_TABLE_CONFIG = [
+  {
+    title: 'Show Count of users',
+    enabled: true,
+    disabled: true,
+    key: 'showCount'
+  },
+  {
+    title: 'Show Conv. from previous step',
+    enabled: false,
+    disabled: false,
+    key: 'showPercentage'
+  },
+  {
+    title: 'Show Duration from previous step',
+    enabled: false,
+    disabled: false,
+    key: 'showDuration'
+  }
+];
+
 export const CORE_QUERY_INITIAL_STATE = {
   comparison_data: { ...INITIAL_STATE },
   comparison_supported: false,
@@ -39,7 +61,8 @@ export const CORE_QUERY_INITIAL_STATE = {
   comparison_duration: null,
   chartTypes: DefaultChartTypes,
   savedQuerySettings: EMPTY_OBJECT,
-  pivotConfig: DEFAULT_PIVOT_CONFIG
+  pivotConfig: DEFAULT_PIVOT_CONFIG,
+  funnelTableConfig: DEFAULT_FUNNEL_TABLE_CONFIG
 };
 
 export const FILTER_TYPES = {

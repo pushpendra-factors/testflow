@@ -1,21 +1,34 @@
-.ant-checkbox-wrapper
-{ 
-    &:hover,&:active,&:focus{
-        .ant-checkbox-inner{
-            border-color: $fa-color--brand-color !important;  
-        } 
-
+.ant-checkbox-wrapper {
+  &:hover,
+  &:active,
+  &:focus {
+    .ant-checkbox-inner {
+      border-color: $fa-color--brand-color !important;
     }
-    .ant-checkbox{
-        &.ant-checkbox-checked
-        {
-            &::after{
-                border-color: $fa-color--brand-color;   
-            }
-            .ant-checkbox-inner{
-                border-color: $fa-color--brand-color;  
-                background-color: $fa-color--brand-color;   
-            }
+    .ant-checkbox-disabled {
+      .ant-checkbox-inner {
+        border-color: $fa-color--mono-3 !important;
+      }
+    }
+  }
+  .ant-checkbox {
+    &.ant-checkbox-checked {
+      &::after {
+        border-color: $fa-color--brand-color;
+      }
+      .ant-checkbox-inner {
+        border-color: $fa-color--brand-color;
+        background-color: $fa-color--brand-color;
+      }
+    }
+    &.ant-checkbox-checked.ant-checkbox-disabled {
+      .ant-checkbox-inner {
+        border-color: $fa-color--mono-3;
+        background-color: $fa-color--mono-3;
+        &::after {
+          border-color: $fa-color--white;
         }
+      }
     }
-} 
+  }
+}

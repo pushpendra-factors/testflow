@@ -25,7 +25,9 @@ function FunnelsResultTable({
   comparison_duration,
   resultData,
   sorter,
-  setSorter
+  setSorter,
+  tableConfig,
+  tableConfigPopoverContent
 }) {
   const [columns, setColumns] = useState([]);
   const [tableData, setTableData] = useState([]);
@@ -57,7 +59,8 @@ function FunnelsResultTable({
         comparisonChartData,
         resultData,
         userPropNames,
-        eventPropertiesDisplayNames
+        eventPropertiesDisplayNames,
+        tableConfig
       )
     );
   }, [
@@ -68,7 +71,8 @@ function FunnelsResultTable({
     comparisonChartData,
     resultData,
     userPropNames,
-    eventPropertiesDisplayNames
+    eventPropertiesDisplayNames,
+    tableConfig
   ]);
 
   // const columns = ;
@@ -97,10 +101,10 @@ function FunnelsResultTable({
     sorter,
     searchText,
     durations,
-    comparisonChartData,
     comparisonChartDurations,
-    comparison_duration,
+    comparisonChartData,
     durationObj,
+    comparison_duration,
     resultData
   ]);
 
@@ -242,6 +246,7 @@ function FunnelsResultTable({
       rowSelection={breakdown.length ? rowSelection : null}
       scroll={{ x: 250 }}
       getCSVData={getCSVData}
+      controlsPopover={tableConfigPopoverContent}
     />
   );
 }
