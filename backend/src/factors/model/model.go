@@ -48,7 +48,7 @@ type Model interface {
 	// analytics
 	ExecQuery(stmnt string, params []interface{}) (*model.QueryResult, error, string)
 	ExecQueryWithContext(stmnt string, params []interface{}) (*sql.Rows, *sql.Tx, error, string)
-	Analyze(projectID int64, query model.Query, enableFilterOpt bool) (*model.QueryResult, int, string)
+	Analyze(projectID int64, query model.Query, enableFilterOpt bool, funnelV2 bool) (*model.QueryResult, int, string)
 	IsGroupEventNameByQueryEventWithProperties(projectID int64, ewp model.QueryEventWithProperties) (string, int)
 
 	// archival
@@ -312,7 +312,7 @@ type Model interface {
 	GetBingadsFilterValuesSQLAndParams(projectID int64, requestFilterObject string, requestFilterProperty string, reqID string) (string, []interface{}, int)
 
 	// funnel_analytics
-	RunFunnelQuery(projectID int64, query model.Query, enableFilterOpt bool) (*model.QueryResult, int, string)
+	RunFunnelQuery(projectID int64, query model.Query, enableFilterOpt, funnelV2 bool) (*model.QueryResult, int, string)
 
 	// goals
 	GetAllFactorsGoals(ProjectID int64) ([]model.FactorsGoal, int)

@@ -962,7 +962,7 @@ func TestHubspotEventUserPropertiesState(t *testing.T) {
 		EventsCondition: model.EventCondAnyGivenEvent,
 	}
 
-	result, status, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
+	result, status, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), false)
 	assert.Equal(t, http.StatusOK, status)
 	assert.Equal(t, "city", result.Headers[0])
 	assert.Equal(t, "bangalore", result.Rows[1][0])
@@ -991,7 +991,7 @@ func TestHubspotEventUserPropertiesState(t *testing.T) {
 		EventsCondition: model.EventCondAllGivenEvent,
 	}
 
-	result, status, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
+	result, status, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), false)
 	assert.Equal(t, http.StatusOK, status)
 	assert.Equal(t, cuID, result.Rows[1][0])
 	assert.Equal(t, float64(1), result.Rows[1][1])
@@ -1892,7 +1892,7 @@ func TestHubspotPropertyDetails(t *testing.T) {
 		EventsCondition: model.EventCondAnyGivenEvent,
 	}
 
-	result, status, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
+	result, status, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), false)
 	assert.Equal(t, http.StatusOK, status)
 	assert.Contains(t, result.Headers, dtEnKey1, dtEnKey2, numEnKey1, numEnKey2)
 	count := 0
@@ -2353,7 +2353,7 @@ func TestHubspotUseLastModifiedTimestampAsDefault(t *testing.T) {
 		},
 	}
 
-	result, status, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
+	result, status, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), false)
 	assert.Equal(t, http.StatusOK, status)
 	assert.Equal(t, 3, len(result.Rows))
 	eventNameTimestamp := make(map[string]int64)
@@ -2893,7 +2893,7 @@ func TestHubspotLatestUserProperties(t *testing.T) {
 		},
 	}
 
-	result, status, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
+	result, status, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), false)
 	assert.Equal(t, http.StatusOK, status)
 	assert.Equal(t, 1, len(result.Rows))
 	assert.Equal(t, "$hubspot_contact_created", result.Rows[0][0])
@@ -2941,7 +2941,7 @@ func TestHubspotLatestUserProperties(t *testing.T) {
 
 	IntHubspot.Sync(project.ID, 3, time.Now().Unix(), nil, "", 50)
 
-	result, status, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
+	result, status, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), false)
 	assert.Equal(t, http.StatusOK, status)
 	assert.Equal(t, 1, len(result.Rows))
 	assert.Equal(t, "$hubspot_contact_created", result.Rows[0][0])
@@ -3099,7 +3099,7 @@ func TestHubspotCustomerUserIDChange(t *testing.T) {
 		AggregateFunction: model.DefaultAggrFunc,
 	}
 
-	result, status, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
+	result, status, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), false)
 	assert.Equal(t, http.StatusOK, status)
 	assert.Equal(t, "aggregate", result.Headers[0])
 	assert.Equal(t, float64(1), result.Rows[0][0])
