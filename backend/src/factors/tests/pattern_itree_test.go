@@ -389,3 +389,60 @@ func TestFormatProperty(t *testing.T) {
 		assert.Equal(t, tstring, sr)
 	}
 }
+
+func TestFactorV1ExplainV2(t *testing.T) {
+
+	filepath := "/usr/local/var/factors/cloud_storage/projects/1000002/models/1669197440190/chunks/chunk_1.txt"
+
+	patterns := make([]*P.Pattern, 0)
+
+	file, err := os.Open(filepath)
+	assert.Nil(t, err)
+	scanner := bufio.NewScanner(file)
+	buf := make([]byte, P.MAX_PATTERN_BYTES)
+	scanner.Buffer(buf, P.MAX_PATTERN_BYTES)
+
+	for scanner.Scan() {
+		line := string(scanner.Text())
+		var ptm PS.PatternWithMeta
+		var patternDetail P.Pattern
+		err := json.Unmarshal([]byte(line), &ptm)
+		if err != nil {
+			log.Debugf("error : %v", err)
+		}
+		err = json.Unmarshal([]byte(ptm.RawPattern), &patternDetail)
+		assert.Nil(t, err)
+		patterns = append(patterns, &patternDetail)
+	}
+	log.Debugf("%v", patterns)
+
+	pw := NewMockPatternServiceWrapper(patterns, nil)
+	assert.Equal(t, 167, len(pw.patterns))
+
+	var projectId int64 = int64(1000002)
+	reqId := "13"
+	startEvent := "www.supportlogic.io"
+	endEvent := "www.supportlogic.io/blog"
+	var startEventConstraints *P.EventConstraints
+	var endEventConstraints *P.EventConstraints
+	startEventConstraints, endEventConstraints = createUserEventConstraint()
+	countType := P.COUNT_TYPE_PER_USER
+	debugKey := ""
+	debugParams := make(map[string]string)
+	includedEvents := make(map[string]bool, 0)
+	includedEventProperties := make(map[string]bool)
+	includedUserProperties := make(map[string]bool)
+
+	factors, err, _ := PW.FactorV1(reqId, projectId, startEvent, startEventConstraints, endEvent,
+		endEventConstraints, countType, pw, debugKey, debugParams, includedEvents, includedEventProperties,
+		includedUserProperties)
+
+	assert.Nil(t, err)
+
+	for _, ft := range factors.Insights {
+		log.Debugf("factors insight: %d,%d, %v", len(ft.FactorsInsightsAttribute), len(ft.FactorsSubInsights), ft.FactorsInsightsAttribute)
+	}
+
+	assert.Equal(t, len(factors.Insights), 5)
+
+}

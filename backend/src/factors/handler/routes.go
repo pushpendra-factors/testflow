@@ -318,6 +318,13 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.POST("/:project_id/v1/pathanalysis", responseWrapper(V1.CreatePathAnalysisEntityHandler))
 	authRouteGroup.DELETE("/:project_id/v1/pathanalysis/:id", V1.DeleteSavedPathAnalysisEntityHandler)
 	authRouteGroup.GET("/:project_id/v1/pathanalysis/:id", responseWrapper(V1.GetPathAnalysisData))
+
+	//explainV2
+	authRouteGroup.GET("/:project_id/v1/explainV2", V1.GetFactorsHandlerV2)
+	authRouteGroup.POST("/:project_id/v1/explainV2", V1.PostFactorsHandlerV2)
+	authRouteGroup.POST("/:project_id/v1/explainV2/job", responseWrapper(V1.CreateExplainV2EntityHandler))
+	authRouteGroup.DELETE("/:project_id/v1/explainV2/:id", V1.DeleteSavedExplainV2EntityHandler)
+
 }
 
 func InitSDKServiceRoutes(r *gin.Engine) {

@@ -922,6 +922,17 @@ func NewPatternServiceWrapper(reqId string, projectId int64, modelId uint64) (*P
 	return &patternServiceWrapper, nil
 }
 
+func NewPatternServiceWrapperV2(reqId string, projectId int64, modelId uint64) (*PatternServiceWrapperV2, error) {
+	pMap := make(map[string]*P.Pattern)
+	patternServiceWrapper := PatternServiceWrapperV2{
+		projectId: projectId,
+		modelId:   modelId,
+		pMap:      pMap,
+	}
+
+	return &patternServiceWrapper, nil
+}
+
 func Factor(reqId string, projectId int64, startEvent string,
 	startEventConstraints *P.EventConstraints, endEvent string,
 	endEventConstraints *P.EventConstraints, countType string,

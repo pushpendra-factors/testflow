@@ -262,6 +262,13 @@ func (sd *S3Driver) GetModelEventsUnsortedFilePathAndName(projectId int64, start
 	path := sd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
 	return path, "events_raw.txt"
 }
+
+func (sd *S3Driver) GetModelArtifactsPath(projectId int64, modelId uint64) string {
+	path := sd.GetProjectModelDir(projectId, modelId)
+	path = pb.Join(path, "artifacts")
+	return path
+}
+
 func (sd *S3Driver) GetEventsArtificatFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string) {
 	path := sd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
 	path = pb.Join(path, "artifacts")
@@ -286,4 +293,14 @@ func (sd *S3Driver) GetPathAnalysisTempFileDir(id string, projectId int64) strin
 func (sd *S3Driver) GetPathAnalysisTempFilePathAndName(id string, projectId int64) (string, string) {
 	path := sd.GetPathAnalysisTempFileDir(id, projectId)
 	return path, "patterns.txt"
+}
+
+func (sd *S3Driver) GetExplainV2Dir(id uint64, projectId int64) string {
+	return fmt.Sprintf("projects/%d/explain/models/%d/", projectId, id)
+}
+
+func (sd *S3Driver) GetExplainV2ModelPath(id uint64, projectId int64) (string, string) {
+	path := sd.GetExplainV2Dir(id, projectId)
+	chunksPath := pb.Join(path, "chunks")
+	return chunksPath, "chunk_1.txt"
 }

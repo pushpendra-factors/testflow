@@ -303,6 +303,12 @@ func (gcsd *GCSDriver) GetModelEventsUnsortedFilePathAndName(projectId int64, st
 	return path, "events_raw.txt"
 }
 
+func (gcsd *GCSDriver) GetModelArtifactsPath(projectId int64, modelId uint64) string {
+	path := gcsd.GetProjectModelDir(projectId, modelId)
+	path = pb.Join(path, "artifacts")
+	return path
+}
+
 func (gcsd *GCSDriver) GetEventsArtificatFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string) {
 	path := gcsd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
 	path = pb.Join(path, "artifacts")
@@ -326,4 +332,15 @@ func (gcsd *GCSDriver) GetPathAnalysisTempFileDir(id string, projectId int64) st
 func (gcsd *GCSDriver) GetPathAnalysisTempFilePathAndName(id string, projectId int64) (string, string) {
 	path := gcsd.GetPathAnalysisTempFileDir(id, projectId)
 	return path, "patterns.txt"
+}
+
+func (gcsd *GCSDriver) GetExplainV2Dir(id uint64, projectId int64) string {
+	return fmt.Sprintf("projects/%v/explain/models/%v/", projectId, id)
+}
+
+func (gcsd *GCSDriver) GetExplainV2ModelPath(id uint64, projectId int64) (string, string) {
+	path := gcsd.GetExplainV2Dir(id, projectId)
+	chunksPath := pb.Join(path, "chunks")
+	log.Infof("Getting explain model from (gcp): %s", chunksPath)
+	return chunksPath, "chunk_1.txt"
 }

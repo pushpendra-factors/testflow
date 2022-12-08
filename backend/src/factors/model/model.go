@@ -800,4 +800,13 @@ type Model interface {
 	// leadsquaredmarker
 	CreateLeadSquaredMarker(marker model.LeadsquaredMarker) int
 	GetLeadSquaredMarker(ProjectID int64, Delta int64, Document string, Tag string) (int, int)
+
+	//ExplainV2
+	GetAllExplainV2EntityByProject(projectID int64) ([]model.ExplainV2EntityInfo, int)
+	GetAllSavedExplainV2EntityByProject(projectID int64) ([]model.ExplainV2, int)
+	GetExplainV2Entity(projectID int64, id string) (model.ExplainV2, int)
+	CreateExplainV2Entity(userID string, projectId int64, entity *model.ExplainV2Query) (*model.ExplainV2, int, string)
+	DeleteExplainV2Entity(projectID int64, id string) (int, string)
+	GetExplainV2ProjectCountWithStatus(projectID int64, status []string) (int, int, string)
+	UpdateExplainV2EntityStatus(projectID int64, id string, status string, model_id uint64) (int, string)
 }

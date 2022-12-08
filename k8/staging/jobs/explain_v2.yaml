@@ -1,0 +1,247 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  creationTimestamp: "2022-07-01T09:06:08Z"
+  generation: 391
+  labels:
+    nodePool: adhoc-batch-pool
+  managedFields:
+  - apiVersion: batch/v1beta1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:spec:
+        f:jobTemplate:
+          f:spec:
+            f:template:
+              f:spec:
+                f:securityContext: {}
+    manager: kubectl-create
+    operation: Update
+    time: "2022-03-14T12:02:55Z"
+  - apiVersion: batch/v1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:metadata:
+        f:labels: {}
+      f:spec:
+        f:concurrencyPolicy: {}
+        f:failedJobsHistoryLimit: {}
+        f:jobTemplate:
+          f:spec:
+            f:template:
+              f:metadata:
+                f:labels:
+                  .: {}
+                  f:layer: {}
+              f:spec:
+                f:containers:
+                  k:{"name":"explain-job"}:
+                    .: {}
+                    f:imagePullPolicy: {}
+                    f:name: {}
+                    f:resources:
+                      .: {}
+                      f:requests: {}
+                    f:terminationMessagePath: {}
+                    f:terminationMessagePolicy: {}
+                f:dnsPolicy: {}
+                f:restartPolicy: {}
+                f:schedulerName: {}
+                f:securityContext: {}
+                f:terminationGracePeriodSeconds: {}
+        f:schedule: {}
+        f:successfulJobsHistoryLimit: {}
+    manager: kubectl-create
+    operation: Update
+    time: "2022-07-01T09:06:08Z"
+  - apiVersion: batch/v1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:status:
+        f:lastSuccessfulTime: {}
+    manager: kube-controller-manager
+    operation: Update
+    subresource: status
+    time: "2022-08-08T07:30:24Z"
+  - apiVersion: batch/v1beta1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:metadata:
+        f:labels:
+          f:nodePool: {}
+      f:spec:
+        f:jobTemplate:
+          f:spec:
+            f:template:
+              f:metadata:
+                f:labels:
+                  f:nodePool: {}
+              f:spec:
+                f:containers:
+                  k:{"name":"explain-job"}:
+                    f:envFrom: {}
+                    f:resources:
+                      f:requests:
+                        f:memory: {}
+                f:nodeSelector: {}
+        f:suspend: {}
+    manager: GoogleCloudConsole
+    operation: Update
+    time: "2022-10-03T13:34:34Z"
+  - apiVersion: batch/v1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:spec:
+        f:jobTemplate:
+          f:spec:
+            f:template:
+              f:spec:
+                f:containers:
+                  k:{"name":"explain-job"}:
+                    f:args: {}
+                    f:image: {}
+    manager: GoogleCloudConsole
+    operation: Update
+    time: "2022-11-24T09:56:37Z"
+  name: explain-job
+  namespace: default
+  resourceVersion: "774952942"
+  uid: 1d33fd8e-db2f-4601-b57d-91e70f691be7
+spec:
+  concurrencyPolicy: Allow
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    metadata:
+      creationTimestamp: null
+    spec:
+      template:
+        metadata:
+          creationTimestamp: null
+          labels:
+            layer: jobs
+            nodePool: adhoc-batch-pool
+        spec:
+          containers:
+          - args:
+            - --no_use_public_ips
+            - --env
+            - $(ENV)
+            - --bucket_name
+            - $(BUCKET_NAME)
+            - --local_disk_tmp_dir
+            - /tmp
+            - --db_host
+            - $(DB_HOST)
+            - --db_port
+            - $(DB_PORT)
+            - --db_name
+            - $(POSTGRES_DB)
+            - --db_user
+            - $(POSTGRES_USER)
+            - --db_pass
+            - $(POSTGRES_PASSWORD)
+            - --project_ids
+            - "51"
+            - --lookback
+            - "46"
+            - --monthly_enabled
+            - --etcd
+            - $(ETCD)
+            - --max_campaigns_limit
+            - "10"
+            - --run_beam
+            - "1"
+            - --count_version
+            - "4"
+            - --hmine_support
+            - "0.001"
+            - --hmine_persist
+            - "0"
+            - --num_beam_workers
+            - "1000"
+            - --runner
+            - $(BEAM_RUNNER)
+            - --project
+            - $(BEAM_PROJECT)
+            - --region
+            - $(BEAM_REGION)
+            - --zone
+            - $(BEAM_ZONE)
+            - --temp_location
+            - $(BEAM_TEMP_LOCATION)
+            - --staging_location
+            - $(BEAM_STAGIN_LOCATION)
+            - --worker_harness_container_image
+            - $(BEAM_WORKER_HARNESS_IMAGE)
+            - --subnetwork
+            - $(BEAM_SUBNETWORK)
+            - --worker_machine_type
+            - n2-highmem-2
+            - --num_workers
+            - "20"
+            - --max_num_workers
+            - "20"
+            - --primary_datastore
+            - memsql
+            - --memsql_host
+            - $(MEMSQL_HOST)
+            - --memsql_port
+            - $(MEMSQL_PORT)
+            - --memsql_name
+            - $(MEMSQL_DB)
+            - --memsql_user
+            - $(MEMSQL_USER)
+            - --memsql_pass
+            - $(MEMSQL_PASSWORD)
+            - --memsql_cert
+            - $(MEMSQL_CERTIFICATE)
+            - --redis_host
+            - $(REDIS_HOST)
+            - --redis_port
+            - $(REDIS_PORT)
+            - --redis_host_ps
+            - $(PERSISTENT_REDIS_HOST)
+            - --redis_port_ps
+            - $(PERSISTENT_REDIS_PORT)
+            - --create_metadata
+            envFrom:
+            - configMapRef:
+                name: config-env
+            - configMapRef:
+                name: config-bucket
+            - configMapRef:
+                name: config-postgres
+            - secretRef:
+                name: secret-postgres
+            - configMapRef:
+                name: config-beamondataflow
+            - configMapRef:
+                name: config-etcd
+            - configMapRef:
+                name: config-persistent-redis
+            - configMapRef:
+                name: config-memsql
+            - configMapRef:
+                name: config-redis
+            - secretRef:
+                name: secret-memsql
+            image: us.gcr.io/factors-staging/explain-job:vtest1
+            imagePullPolicy: IfNotPresent
+            name: explain-job
+            resources:
+              requests:
+                memory: 8G
+            terminationMessagePath: /dev/termination-log
+            terminationMessagePolicy: File
+          dnsPolicy: ClusterFirst
+          nodeSelector:
+            cloud.google.com/gke-nodepool: adhoc-batch-pool
+          restartPolicy: OnFailure
+          schedulerName: default-scheduler
+          securityContext: {}
+          terminationGracePeriodSeconds: 30
+  schedule: 1 2 3 4 5
+  successfulJobsHistoryLimit: 5
+  suspend: true
+status:
+  lastSuccessfulTime: "2022-11-29T00:38:20Z"

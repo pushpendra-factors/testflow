@@ -19,6 +19,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"reflect"
 	"regexp"
 	"sort"
@@ -497,7 +498,7 @@ func InitCampaignAnalyticsPatterns(smartEvents CampaignEventLists) ([]*P.Pattern
 
 // mineAndWriteLenOnePatterns : All the len one events in the events file is counted which includes
 // standard events, URLs , campaignType events
-func mineAndWriteLenOnePatterns(projectID int64, modelId uint64, cloudManager *filestore.FileManager,
+func mineAndWriteLenOnePatterns(projectID int64, modelId uint64, cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver,
 	eventNames []string, filepathString string,
 	userAndEventsInfo *P.UserAndEventsInfo, numRoutines int,
 	chunkDir string, maxModelSize int64, cumulativePatternsSize int64,
@@ -520,6 +521,16 @@ func mineAndWriteLenOnePatterns(projectID int64, modelId uint64, cloudManager *f
 	lenOnePatterns = append(lenOnePatterns, lenOnePatternsCampigns...)
 	// countPatterns(projectID, filepath, lenOnePatterns, numRoutines, countOccurence, countsVersion))
 
+	if cAlgoProps.Counting_version == 4 {
+		lenOnePatterns = nil
+		lenOnePatterns, err = GenLenOneV2(cAlgoProps.Job, userAndEventsInfo)
+		if err != nil {
+			return nil, 0, err
+		}
+		mineLog.Infof("counting patterns :%v", lenOnePatterns)
+	}
+	mineLog.Infof("counting patterns :%v", lenOnePatterns)
+
 	if !beamConfig.RunOnBeam {
 		countPatterns(projectID, filepathString, lenOnePatterns, numRoutines, countOccurence, cAlgoProps)
 		filteredLenOnePatterns, patternsSize, err = filterAndCompressPatterns(
@@ -532,7 +543,7 @@ func mineAndWriteLenOnePatterns(projectID int64, modelId uint64, cloudManager *f
 		//call beam
 		scopeName := "Count_len_one"
 		patternsFpath, err := countPatternController(beamConfig, projectID, modelId,
-			cloudManager, filepathString,
+			cloudManager, diskManager, filepathString,
 			lenOnePatterns, numRoutines, userAndEventsInfo, countOccurence,
 			efTmpPath, scopeName, cAlgoProps)
 		if err != nil {
@@ -584,7 +595,7 @@ func FilterCombinationPatterns(combinationGoalPatterns, goalPatterns []*P.Patter
 }
 
 func mineAndWriteLenTwoPatterns(projectId int64, modelId uint64,
-	lenOnePatterns []*P.Pattern, filepathString string, cloudManager *filestore.FileManager,
+	lenOnePatterns []*P.Pattern, filepathString string, cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver,
 	userAndEventsInfo *P.UserAndEventsInfo, numRoutines int,
 	chunkDir string, maxModelSize int64, cumulativePatternsSize int64, countOccurence bool,
 	goalPatterns []*P.Pattern, eventNamesWithType map[string]string,
@@ -593,13 +604,24 @@ func mineAndWriteLenTwoPatterns(projectId int64, modelId uint64,
 
 	var patternsSize int64
 	var filteredLenTwoPatterns []*P.Pattern
+	var combinationGoalPatterns []*P.Pattern
+	var goalFilteredLenTwoPatterns []*P.Pattern
+
 	var err error
 	var patternsFpath string
 	// var countsVersion int = cAlgoProps.Counting_version
 	// var hmineSupport float32 = cAlgoProps.Hmine_support
-	combinationGoalPatterns, _, err := P.GenCombinationPatternsEndingWithGoal(projectId, lenOnePatterns, goalPatterns, userAndEventsInfo)
-	if err != nil {
-		return nil, 0, err
+
+	if cAlgoProps.Counting_version == 4 {
+		combinationGoalPatterns, err = CreateCombinationEventsV2(cAlgoProps.Job, userAndEventsInfo)
+		if err != nil {
+			return nil, 0, err
+		}
+	} else {
+		combinationGoalPatterns, _, err = P.GenCombinationPatternsEndingWithGoal(projectId, lenOnePatterns, goalPatterns, userAndEventsInfo)
+		if err != nil {
+			return nil, 0, err
+		}
 	}
 
 	if !beamConfig.RunOnBeam {
@@ -613,7 +635,7 @@ func mineAndWriteLenTwoPatterns(projectId int64, modelId uint64,
 
 		//call beam
 		scopeName := "Count_len_two"
-		patternsFpath, err = countPatternController(beamConfig, projectId, modelId, cloudManager, filepathString,
+		patternsFpath, err = countPatternController(beamConfig, projectId, modelId, cloudManager, diskManager, filepathString,
 			combinationGoalPatterns, numRoutines, userAndEventsInfo, countOccurence,
 			efTmpPath, scopeName, cAlgoProps)
 		if err != nil {
@@ -632,7 +654,13 @@ func mineAndWriteLenTwoPatterns(projectId int64, modelId uint64,
 	// filter all combinationGoalPatterns based on start event.
 	// for each goal event based on quota logic filter patterns.
 	// based on the quota  startevent filter url, sme, campaign events etc.
-	goalFilteredLenTwoPatterns := FilterCombinationPatterns(filteredLenTwoPatterns, goalPatterns, eventNamesWithType)
+
+	if cAlgoProps.Counting_version == 4 {
+		goalFilteredLenTwoPatterns = filteredLenTwoPatterns
+	} else {
+		goalFilteredLenTwoPatterns = FilterCombinationPatterns(filteredLenTwoPatterns, goalPatterns, eventNamesWithType)
+	}
+	mineLog.Info("Total Number of Len Two Patterns :", len(goalFilteredLenTwoPatterns))
 
 	if err := writePatternsAsChunks(goalFilteredLenTwoPatterns, chunkDir, createMetadata, metaDataDir); err != nil {
 		return []*P.Pattern{}, 0, err
@@ -753,7 +781,7 @@ func GenMissingJourneyPatterns(goal, journey []*P.Pattern, userAndEventsInfo *P.
 }
 
 func mineAndWritePatterns(projectId int64, modelId uint64, filepath string,
-	userAndEventsInfo *P.UserAndEventsInfo, cloudManager *filestore.FileManager, eventNames []string,
+	userAndEventsInfo *P.UserAndEventsInfo, cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, eventNames []string,
 	numRoutines int, chunkDir string,
 	maxModelSize int64, countOccurence bool,
 	eventNamesWithType map[string]string, repeatedEvents []string,
@@ -765,7 +793,7 @@ func mineAndWritePatterns(projectId int64, modelId uint64, filepath string,
 	patternLen := 1
 	limitRoundOffFraction := 0.99
 
-	filteredPatterns, patternsSize, err := mineAndWriteLenOnePatterns(projectId, modelId, cloudManager,
+	filteredPatterns, patternsSize, err := mineAndWriteLenOnePatterns(projectId, modelId, cloudManager, diskManager,
 		eventNames, filepath, userAndEventsInfo, numRoutines, chunkDir,
 		maxModelSize, cumulativePatternsSize, countOccurence, campTypeEvents, efTmpPath, beamConfig, createMetadata, metaDataDir, cAlgoProps)
 	if err != nil {
@@ -774,7 +802,7 @@ func mineAndWritePatterns(projectId int64, modelId uint64, filepath string,
 	cumulativePatternsSize += patternsSize
 	printFilteredPatterns(filteredPatterns, patternLen)
 	mineLog.Info("Number of Len-one Patterns : ", len(filteredPatterns))
-
+	time.Sleep(10 * time.Second)
 	// Get all Goal Patterns => DB Patterns + CampaignAnalytics (Campaign,source,medium,referr)
 	goalPatterns, err := GetGoalPatterns(projectId, filteredPatterns, eventNamesWithType, campTypeEvents, userAndEventsInfo)
 	if err != nil {
@@ -793,7 +821,7 @@ func mineAndWritePatterns(projectId int64, modelId uint64, filepath string,
 		return nil
 	}
 	filteredTwoPatterns, patternsSize, err := mineAndWriteLenTwoPatterns(projectId, modelId,
-		filteredPatterns, filepath, cloudManager, userAndEventsInfo,
+		filteredPatterns, filepath, cloudManager, diskManager, userAndEventsInfo,
 		numRoutines, chunkDir, maxModelSize, cumulativePatternsSize,
 		countOccurence, goalPatterns, eventNamesWithType,
 		beamConfig, efTmpPath, createMetadata, metaDataDir, cAlgoProps)
@@ -842,6 +870,13 @@ func mineAndWritePatterns(projectId int64, modelId uint64, filepath string,
 		lenThreePatterns = MergePatterns(lenThreePatterns, generatedThreeRepeatedPatterns)
 		lenThreePatterns = MergePatterns(lenThreePatterns, lenThreeCampaign)
 
+		if cAlgoProps.Counting_version == 4 {
+			lenThreePatterns, err = GenThreeLenEventsV2(cAlgoProps.Job, userAndEventsInfo)
+			if err != nil {
+				return err
+			}
+		}
+
 		var filteredThreePatterns []*P.Pattern
 		if !beamConfig.RunOnBeam {
 			countPatterns(projectId, filepath, lenThreePatterns, numRoutines, countOccurence, cAlgoProps)
@@ -855,7 +890,7 @@ func mineAndWritePatterns(projectId int64, modelId uint64, filepath string,
 			//call beam
 			var patternsFpath string
 			scopeName := "Count_len_three"
-			patternsFpath, err = countPatternController(beamConfig, projectId, modelId, cloudManager, filepath,
+			patternsFpath, err = countPatternController(beamConfig, projectId, modelId, cloudManager, diskManager, filepath,
 				lenThreePatterns, numRoutines, userAndEventsInfo, countOccurence,
 				efTmpPath, scopeName, cAlgoProps)
 			if err != nil {
@@ -884,6 +919,11 @@ func mineAndWritePatterns(projectId int64, modelId uint64, filepath string,
 		if err != nil {
 			mineLog.Error("Unable to create missing two len pattern")
 		}
+		for _, p := range missingPatternsTwo {
+			if cAlgoProps.Counting_version == 4 {
+				p.Segment = 0
+			}
+		}
 
 		// count  - two len missing
 		var filteredMissingPatterns []*P.Pattern
@@ -900,7 +940,7 @@ func mineAndWritePatterns(projectId int64, modelId uint64, filepath string,
 			var patternsFpath string
 			scopeName := "CountTwoMissing"
 			patternsFpath, err = countPatternController(beamConfig, projectId,
-				modelId, cloudManager, filepath,
+				modelId, cloudManager, diskManager, filepath,
 				missingPatternsTwo, numRoutines, userAndEventsInfo,
 				countOccurence, efTmpPath, scopeName, cAlgoProps)
 			if err != nil {
@@ -922,6 +962,54 @@ func mineAndWritePatterns(projectId int64, modelId uint64, filepath string,
 
 		if cumulativePatternsSize >= int64(float64(maxModelSize)*limitRoundOffFraction) {
 			return nil
+		}
+
+		if cAlgoProps.Counting_version == 4 {
+			// count four len patterns
+			lenFourPatterns, err := CreateFourLenEventsV2(cAlgoProps.Job, userAndEventsInfo)
+			if err != nil {
+				return fmt.Errorf("unable to gen three level patterns v2")
+			}
+			mineLog.Infof("len four patterns - %v", lenFourPatterns)
+			time.Sleep(10 * time.Second)
+			// count  - len four patterns
+			var lenFourPatts []*P.Pattern
+			if !beamConfig.RunOnBeam {
+				countPatterns(projectId, filepath, lenFourPatterns, numRoutines, countOccurence, cAlgoProps)
+				lenFourPatts, patternsSize, err = filterAndCompressPatterns(
+					missingPatternsTwo, maxModelSize, cumulativePatternsSize,
+					patternLen, max_PATTERN_LENGTH)
+				if err != nil {
+					return err
+				}
+			} else {
+				//call beam
+				var patternsFpath string
+				scopeName := "CountFourLen"
+				patternsFpath, err = countPatternController(beamConfig, projectId,
+					modelId, cloudManager, diskManager, filepath,
+					lenFourPatterns, numRoutines, userAndEventsInfo,
+					countOccurence, efTmpPath, scopeName, cAlgoProps)
+				if err != nil {
+					return fmt.Errorf("unable to count len four :%v", err)
+				}
+				mineLog.Infof("Reading from part Directory : %s", scopeName)
+				lenFourPatts, patternsSize, err = ReadFilterAndCompressPatternsFromFile(patternsFpath, cloudManager, maxModelSize, cumulativePatternsSize, patternLen, max_PATTERN_LENGTH)
+				if err != nil {
+					return err
+				}
+				mineLog.Infof("number len four patterns from beam: %d , ", len(missingPatternsTwo))
+			}
+
+			cumulativePatternsSize += patternsSize
+			if err := writePatternsAsChunks(lenFourPatts, chunkDir, createMetadata, metaDataDir); err != nil {
+				return err
+			}
+			printFilteredPatterns(lenFourPatts, patternLen-1)
+
+			if cumulativePatternsSize >= int64(float64(maxModelSize)*limitRoundOffFraction) {
+				return nil
+			}
 		}
 	}
 
@@ -1226,6 +1314,7 @@ func uploadChunksToCloud(tmpChunksDir, cloudChunksDir string, cloudManager *file
 
 	return uploadedChunkIds, nil
 }
+
 func uploadMetaDataToCloud(metaDataDir, cloudMetaDataDir string, cloudManager *filestore.FileManager) error {
 	files, err := ioutil.ReadDir(metaDataDir)
 	if err != nil {
@@ -1267,12 +1356,26 @@ func FilterTopEvents(eventsMap map[string]int, limitCount int, eventclass string
 	return eventsList
 }
 
-func rewriteEventsFile(tmpEventsFilePath string, tmpPath string, cloudManager *filestore.FileManager, userAndEventsInfo *P.UserAndEventsInfo, projectId int64, modelId uint64) (CampaignEventLists, error) {
+func rewriteEventsFile(tmpEventsFilePath string, tmpPath string, cloudManager *filestore.FileManager,
+	userAndEventsInfo *P.UserAndEventsInfo, projectId int64, modelId uint64, cAlgoProps P.CountAlgoProperties) (CampaignEventLists, error) {
 	// read events file , filter and create properties based on userProp and eventsProp
 	// create encoded events based on $session and campaign eventName
 	var fileDir, fileName string
 	var err error
 	var upCatg, epCatg map[string]string
+
+	events_to_include_v2 := make(map[string]int)
+
+	if cAlgoProps.Counting_version == 4 {
+		// put all events to be included into one single map
+		jb := cAlgoProps.Job
+		events_to_include_v2[jb.Start_event] = 1
+		events_to_include_v2[jb.End_event] = 1
+		for _, p := range jb.Events_included {
+			events_to_include_v2[p] = 1
+		}
+
+	}
 
 	fileDir, fileName = (*cloudManager).GetModelUserPropertiesCategoricalFilePathAndName(projectId, modelId)
 	upCatg, err = P.GetPropertiesCategoricalMapFromFile(cloudManager, fileDir, fileName)
@@ -1407,28 +1510,39 @@ func rewriteEventsFile(tmpEventsFilePath string, tmpPath string, cloudManager *f
 			return CampaignEventLists{}, err
 		}
 
-		lineWrite := string(eventDetailsBytes)
-		if _, err := file.WriteString(fmt.Sprintf("%s\n", lineWrite)); err != nil {
-			peLog.WithFields(log.Fields{"line": line, "err": err}).Error("Unable to write to file.")
-			return CampaignEventLists{}, err
-		}
+		if cAlgoProps.Counting_version != 4 {
+			lineWrite := string(eventDetailsBytes)
+			if _, err := file.WriteString(fmt.Sprintf("%s\n", lineWrite)); err != nil {
+				peLog.WithFields(log.Fields{"line": line, "err": err}).Error("Unable to write to file.")
+				return CampaignEventLists{}, err
+			}
 
-		if err := writeEncodedEvent(U.EVENT_NAME_SESSION, U.EP_CAMPAIGN, "campaign", campEventsMap, eventDetails, file, line); err != nil {
-			return CampaignEventLists{}, err
-		}
-		if err := writeEncodedEvent(U.EVENT_NAME_SESSION, U.EP_MEDIUM, "medium", mediumEventsMap, eventDetails, file, line); err != nil {
-			return CampaignEventLists{}, err
-		}
-		if err := writeEncodedEvent(U.EVENT_NAME_SESSION, U.EP_SOURCE, "source", sourceEventsMap, eventDetails, file, line); err != nil {
-			return CampaignEventLists{}, err
-		}
-		if err := writeEncodedEvent(U.EVENT_NAME_SESSION, U.SP_INITIAL_REFERRER, "initial_referrer", referrerEventsMap, eventDetails, file, line); err != nil {
-			return CampaignEventLists{}, err
-		}
-		if err := writeEncodedEvent(U.EVENT_NAME_SESSION, U.EP_ADGROUP, "adgroup", AdgroupEventsMap, eventDetails, file, line); err != nil {
-			return CampaignEventLists{}, err
-		}
+			if err := writeEncodedEvent(U.EVENT_NAME_SESSION, U.EP_CAMPAIGN, "campaign", campEventsMap, eventDetails, file, line); err != nil {
+				return CampaignEventLists{}, err
+			}
+			if err := writeEncodedEvent(U.EVENT_NAME_SESSION, U.EP_MEDIUM, "medium", mediumEventsMap, eventDetails, file, line); err != nil {
+				return CampaignEventLists{}, err
+			}
+			if err := writeEncodedEvent(U.EVENT_NAME_SESSION, U.EP_SOURCE, "source", sourceEventsMap, eventDetails, file, line); err != nil {
+				return CampaignEventLists{}, err
+			}
+			if err := writeEncodedEvent(U.EVENT_NAME_SESSION, U.SP_INITIAL_REFERRER, "initial_referrer", referrerEventsMap, eventDetails, file, line); err != nil {
+				return CampaignEventLists{}, err
+			}
+			if err := writeEncodedEvent(U.EVENT_NAME_SESSION, U.EP_ADGROUP, "adgroup", AdgroupEventsMap, eventDetails, file, line); err != nil {
+				return CampaignEventLists{}, err
+			}
 
+		} else {
+			if _, ok := events_to_include_v2[ename]; ok {
+				lineWrite := string(eventDetailsBytes)
+				if _, err := file.WriteString(fmt.Sprintf("%s\n", lineWrite)); err != nil {
+					peLog.WithFields(log.Fields{"line": line, "err": err}).Error("Unable to write to file.")
+					return CampaignEventLists{}, err
+
+				}
+			}
+		}
 	}
 	w.Flush()
 
@@ -1484,15 +1598,15 @@ func writeEncodedEvent(eventName string, property string, propertyName string, p
 	return nil
 }
 
-func GetEventNamesAndType(tmpEventsFilePath string, cloudManager *filestore.FileManager, projectId int64, modelId uint64, countsVersion int) ([]string, map[string]string, error) {
+func GetEventNamesAndType(tmpEventsFilePath string, cloudManager *filestore.FileManager, projectId int64, modelId uint64, countsVersion int) ([]string, map[string]string, map[string]int, error) {
 	scanner, err := OpenEventFileAndGetScanner(tmpEventsFilePath)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
-	eventNames, err := GetEventNamesFromFile(scanner, cloudManager, projectId, modelId, countsVersion)
+	eventNames, eventsCount, err := GetEventNamesFromFile(scanner, cloudManager, projectId, modelId, countsVersion)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err, "eventFilePath": tmpEventsFilePath}).Error("Failed to read event names from file")
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	mineLog.WithField("tmpEventsFilePath",
 		tmpEventsFilePath).Info("Unique EventNames", eventNames)
@@ -1506,10 +1620,10 @@ func GetEventNamesAndType(tmpEventsFilePath string, cloudManager *filestore.File
 
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to get event names and Type from DB")
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
-	return eventNames, eventNamesWithType, nil
+	return eventNames, eventNamesWithType, eventsCount, nil
 }
 
 // buildWhiteListProperties build user and event properties from db ,
@@ -1597,12 +1711,12 @@ func buildWhiteListProperties(projectId int64, allProperty map[string]P.Properti
 }
 
 func buildEventsFileOnProperties(tmpEventsFilePath string, efTmpPath string, efTmpName string, cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, projectId int64,
-	modelId uint64, eReader io.Reader, userAndEventsInfo *P.UserAndEventsInfo, campaignLimitCount int) (CampaignEventLists, error) {
+	modelId uint64, eReader io.Reader, userAndEventsInfo *P.UserAndEventsInfo, campaignLimitCount int, cAlgoProps P.CountAlgoProperties) (CampaignEventLists, error) {
 	// Rewrites the events file restricting the properties to only whitelisted properties.
 	//  Also returns list special campaign events created during rewrite.
 	var err error
 	efPath := efTmpPath + "tmpevents_" + efTmpName
-	smartEvents, err := rewriteEventsFile(tmpEventsFilePath, efPath, cloudManager, userAndEventsInfo, projectId, modelId)
+	smartEvents, err := rewriteEventsFile(tmpEventsFilePath, efPath, cloudManager, userAndEventsInfo, projectId, modelId, cAlgoProps)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err, "tmpEventsFilePath": tmpEventsFilePath}).Error("Failed to filter disabled properties")
 		return CampaignEventLists{}, err
@@ -1667,6 +1781,11 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 		reader := bytes.NewReader(data)
 		diskManager.Create(metaDataDir, metaDataFileName, reader)
 	}
+
+	if cAlgoProps.Counting_version == 4 {
+		mineLog.Infof("explain v2 job :%v", cAlgoProps.Job)
+	}
+
 	// download events file from cloud to local
 	efCloudPath, efCloudName := (*cloudManager).GetModelEventsFilePathAndName(projectId, startTime, modelType)
 	efTmpPath, efTmpName := diskManager.GetModelEventsFilePathAndName(projectId, startTime, modelType)
@@ -1706,12 +1825,25 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 	}
 	// ----++++++------
 
-	eventNames, eventNamesWithType, err := GetEventNamesAndType(tmpEventsFilepath, cloudManager, projectId, modelId, countsVersion)
+	eventNames, eventNamesWithType, events_count_v2, err := GetEventNamesAndType(tmpEventsFilepath, cloudManager, projectId, modelId, countsVersion)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to get eventName and event type.")
 		return 0, err
 	}
 
+	if cAlgoProps.Counting_version == 4 {
+		// add top 50 events in case if events to include in nill
+		jb := cAlgoProps.Job
+		mineLog.Info("before counting all:%v", jb)
+		addIncludedEventsV2(&jb, events_count_v2)
+		mineLog.Info("before counting all:%v", jb)
+		cAlgoProps.Job = jb
+		mineLog.Info("before counting all:%v", cAlgoProps.Job)
+
+		time.Sleep(40 * time.Second)
+	}
+
+	mineLog.Infof("job details :%v", cAlgoProps.Job)
 	userAndEventsInfo, allPropsMap, err := buildPropertiesInfoFromInput(cloudManager, projectId, modelId, eventNames, tmpEventsFilepath)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to build user and event Info.")
@@ -1746,7 +1878,7 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 	mineLog.Info("Number of Event Properties: ", len(eventPropList))
 
 	campaignAnalyticsSorted, err := buildEventsFileOnProperties(tmpEventsFilepath, efTmpPath, efTmpName, cloudManager, diskManager, projectId,
-		modelId, eReader, userAndEventsInfo, campaignLimitCount)
+		modelId, eReader, userAndEventsInfo, campaignLimitCount, cAlgoProps)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to write events data.")
 		return 0, err
@@ -1793,7 +1925,7 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 		scopeName := "Count_user_prop_hist"
 		patts_all_activeUsers := make([]*P.Pattern, 0)
 		patts_all_activeUsers = append(patts_all_activeUsers, allActiveUsersPattern)
-		all_active_patternsFpath, err := UserPropertiesHistogramController(beamConfig, projectId, modelId, cloudManager, tmpEventsFilepath,
+		all_active_patternsFpath, err := UserPropertiesHistogramController(beamConfig, projectId, modelId, cloudManager, diskManager, tmpEventsFilepath,
 			patts_all_activeUsers, numRoutines, userAndEventsInfo, countOccurence,
 			efTmpPath, scopeName, cAlgoProps)
 		if err != nil {
@@ -1820,7 +1952,7 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 		"tmpChunksDir": tmpChunksDir, "routines": numRoutines}).Info("Mining patterns and writing it as chunks.")
 
 	err = mineAndWritePatterns(projectId, modelId, tmpEventsFilepath,
-		userAndEventsInfo, cloudManager, eventNames, numRoutines, tmpChunksDir, maxModelSize,
+		userAndEventsInfo, cloudManager, diskManager, eventNames, numRoutines, tmpChunksDir, maxModelSize,
 		countOccurence, eventNamesWithType, repeatedEvents, campaignAnalyticsSorted,
 		efTmpPath, beamConfig, createMetadata, metaDataDir, cAlgoProps)
 	if err != nil {
@@ -1829,66 +1961,95 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 	}
 	mineLog.Info("Successfully mined patterns and written it as chunks.")
 
-	// upload chunks to cloud
-	cloudChunksDir := (*cloudManager).GetPatternChunksDir(projectId, modelId)
-	mineLog.WithFields(log.Fields{"tmpChunksDir": tmpChunksDir,
-		"cloudChunksDir": cloudChunksDir}).Info("Uploading chunks to cloud.")
-	chunkIds, err := uploadChunksToCloud(tmpChunksDir, cloudChunksDir, cloudManager)
-	if err != nil {
-		mineLog.WithFields(log.Fields{"localChunksDir": tmpChunksDir,
-			"cloudChunksDir": cloudChunksDir}).Error("Failed to upload chunks to cloud.")
-	}
-	mineLog.Info("Successfully uploaded chunks to cloud.")
-
-	// upload metadata to cloud
-	if createMetadata {
-		cloudMetaDataDir := (*cloudManager).GetChunksMetaDataDir(projectId, modelId)
-		mineLog.WithFields(log.Fields{"MetaDataDir": metaDataDir,
-			"cloudMetaDataDir": cloudMetaDataDir}).Info("Uploading metadata to cloud.")
-		err = uploadMetaDataToCloud(metaDataDir, cloudMetaDataDir, cloudManager)
+	var chunkIds []string
+	if cAlgoProps.Counting_version != 4 {
+		// upload chunks to cloud
+		cloudChunksDir := (*cloudManager).GetPatternChunksDir(projectId, modelId)
+		mineLog.WithFields(log.Fields{"tmpChunksDir": tmpChunksDir,
+			"cloudChunksDir": cloudChunksDir}).Info("Uploading chunks to cloud.")
+		chunkIds, err := uploadChunksToCloud(tmpChunksDir, cloudChunksDir, cloudManager)
 		if err != nil {
-			mineLog.WithFields(log.Fields{"localMetaDataDir": metaDataDir,
-				"cloudMetaDataDir": cloudMetaDataDir}).Error("Failed to upload metadata to cloud.")
+			mineLog.WithFields(log.Fields{"localChunksDir": tmpChunksDir,
+				"cloudChunksDir": cloudChunksDir}).Error("Failed to upload chunks to cloud.")
 		}
-		mineLog.Info("Successfully uploaded metadata to cloud.")
+		mineLog.Info("Successfully uploaded chunks to cloud.")
+
+		// upload metadata to cloud
+		if createMetadata {
+			cloudMetaDataDir := (*cloudManager).GetChunksMetaDataDir(projectId, modelId)
+			mineLog.WithFields(log.Fields{"MetaDataDir": metaDataDir,
+				"cloudMetaDataDir": cloudMetaDataDir}).Info("Uploading metadata to cloud.")
+			err = uploadMetaDataToCloud(metaDataDir, cloudMetaDataDir, cloudManager)
+			if err != nil {
+				mineLog.WithFields(log.Fields{"localMetaDataDir": metaDataDir,
+					"cloudMetaDataDir": cloudMetaDataDir}).Error("Failed to upload metadata to cloud.")
+			}
+			mineLog.Info("Successfully uploaded metadata to cloud.")
+		}
+
+		// update metadata and notify new version through etcd.
+		mineLog.WithFields(log.Fields{
+			"ProjectId":      projectId,
+			"ModelID":        modelId,
+			"ModelType":      modelType,
+			"StartTimestamp": startTime,
+			"EndTimestamp":   endTime,
+			"Chunks":         chunkIds,
+		}).Info("Updating mined patterns info to new version of metadata.")
+
+		chunkIdsString := ""
+		for _, chunkId := range chunkIds {
+			if chunkIdsString != "" {
+				chunkIdsString += ","
+			}
+			chunkIdsString += chunkId
+		}
+		errCode, message := store.GetStore().CreateProjectModelMetadata(&model.ProjectModelMetadata{
+			ProjectId: projectId,
+			ModelId:   modelId,
+			ModelType: modelType,
+			StartTime: startTime,
+			EndTime:   endTime,
+			// CONVERT THIS TO COMMA SEPERATED STRING
+			Chunks: chunkIdsString,
+		})
+		if errCode != http.StatusCreated {
+			mineLog.Error(message)
+		}
+		newVersionId := fmt.Sprintf("%v", time.Now().Unix())
+		if cAlgoProps.Counting_version != 0 {
+			err = etcdClient.SetProjectVersion(newVersionId)
+			if err != nil {
+				mineLog.WithFields(log.Fields{"err": err}).Error("Failed to write new version id to etcd.")
+				return 0, err
+			}
+		}
+	} else {
+
+		// upload chunks to cloud
+		cloudChunksDir, _ := (*cloudManager).GetExplainV2ModelPath(modelId, projectId)
+
+		mineLog.WithFields(log.Fields{"tmpChunksDir": tmpChunksDir,
+			"cloudChunksDir": cloudChunksDir}).Info("Uploading chunks to cloud.")
+		chunkIds, err = uploadChunksToCloud(tmpChunksDir, cloudChunksDir, cloudManager)
+		if err != nil {
+			mineLog.WithFields(log.Fields{"localChunksDir": tmpChunksDir,
+				"cloudChunksDir": cloudChunksDir}).Error("Failed to upload chunks to cloud.")
+		}
+		mineLog.Info("Successfully Explain v2 uploaded chunks to cloud.")
+		store.GetStore().UpdateExplainV2EntityStatus(projectId, cAlgoProps.JobId, model.ACTIVE, modelId)
+
 	}
 
-	// update metadata and notify new version through etcd.
-	mineLog.WithFields(log.Fields{
-		"ProjectId":      projectId,
-		"ModelID":        modelId,
-		"ModelType":      modelType,
-		"StartTimestamp": startTime,
-		"EndTimestamp":   endTime,
-		"Chunks":         chunkIds,
-	}).Info("Updating mined patterns info to new version of metadata.")
-
-	chunkIdsString := ""
-	for _, chunkId := range chunkIds {
-		if chunkIdsString != "" {
-			chunkIdsString += ","
-		}
-		chunkIdsString += chunkId
-	}
-	errCode, message := store.GetStore().CreateProjectModelMetadata(&model.ProjectModelMetadata{
-		ProjectId: projectId,
-		ModelId:   modelId,
-		ModelType: modelType,
-		StartTime: startTime,
-		EndTime:   endTime,
-		// CONVERT THIS TO COMMA SEPERATED STRING
-		Chunks: chunkIdsString,
-	})
-	if errCode != http.StatusCreated {
-		mineLog.Error(message)
-	}
-	newVersionId := fmt.Sprintf("%v", time.Now().Unix())
-	err = etcdClient.SetProjectVersion(newVersionId)
+	localEventsFilePath := filepath.Join(efTmpPath, efTmpName)
+	err = deleteFile(localEventsFilePath)
 	if err != nil {
-		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to write new version id to etcd.")
 		return 0, err
 	}
+	mineLog.Infof("Deleted local events file :%s", localEventsFilePath)
+
 	return len(chunkIds), nil
+
 }
 
 func convert(eventNamesWithAggregation []model.EventNameWithAggregation) []model.EventName {
@@ -2559,13 +2720,14 @@ func GetEventNamesFromFile_(scanner *bufio.Scanner, projectId int64) ([]string, 
 }
 
 // GetEventNamesFromFile read unique eventNames from Event file
-func GetEventNamesFromFile(scanner *bufio.Scanner, cloudManager *filestore.FileManager, projectId int64, modelId uint64, countsVersion int) ([]string, error) {
+func GetEventNamesFromFile(scanner *bufio.Scanner, cloudManager *filestore.FileManager, projectId int64, modelId uint64, countsVersion int) ([]string, map[string]int, error) {
 	logCtx := log.WithField("project_id", projectId)
 	scanner.Split(bufio.ScanLines)
 	var txtline string
 	var dir, name string
 
 	eventNames := make([]string, 0)
+	eventsCount := make(map[string]int, 0)
 	userPropCatgMap := make(map[string]string)
 	eventPropCatgMap := make(map[string]string)
 
@@ -2582,10 +2744,10 @@ func GetEventNamesFromFile(scanner *bufio.Scanner, cloudManager *filestore.FileM
 		var eventDetails P.CounterEventFormat
 		if err := json.Unmarshal([]byte(txtline), &eventDetails); err != nil {
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
-			return nil, err
+			return nil, nil, err
 		}
 		eventNameString := eventDetails.EventName
-
+		eventsCount[eventNameString] += 1
 		_, ok := s[eventNameString]
 		if !ok {
 			eventNames = append(eventNames, eventNameString)
@@ -2653,7 +2815,7 @@ func GetEventNamesFromFile(scanner *bufio.Scanner, cloudManager *filestore.FileM
 	logCtx.Info("Extraced Unique EventNames from file")
 
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	for _, pMap := range eventUserPropMap {
@@ -2673,7 +2835,14 @@ func GetEventNamesFromFile(scanner *bufio.Scanner, cloudManager *filestore.FileM
 	_, name = (*cloudManager).GetModelEventPropertiesFilePathAndName(projectId, modelId)
 	CreateFileFromMap(dir, name, cloudManager, eventEventPropMap)
 
-	return eventNames, nil
+	if countsVersion == 4 {
+		U.FilterOnFrequency(eventsCount, 50)
+	} else {
+
+		U.FilterOnFrequency(eventsCount, 1)
+
+	}
+	return eventNames, eventsCount, nil
 }
 
 func CreateFileFromMap(fileDir, fileName string, cloudManager *filestore.FileManager, Map interface{}) error {
@@ -2846,4 +3015,15 @@ func getToBeFilteredKeysInMetaData() map[string]bool {
 		"$AllActiveUsers": true,
 	}
 	return keys
+}
+
+func addIncludedEventsV2(jb *P.ExplainQueryV2, ec map[string]int) {
+
+	if len(jb.Events_included) == 0 {
+		for k, _ := range ec {
+			jb.Events_included = append(jb.Events_included, k)
+		}
+
+	}
+	mineLog.Infof("Recal top 50 properties :%v", jb)
 }
