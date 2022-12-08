@@ -2031,10 +2031,15 @@ func TestSalesforceCampaignTest(t *testing.T) {
 	}
 
 	result, _, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
-	assert.Contains(t, []string{U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED, U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED}, result.Rows[0][0])
-	assert.Contains(t, []string{U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED, U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED}, result.Rows[1][0])
-	assert.Equal(t, float64(4), result.Rows[0][1])
-	assert.Equal(t, float64(4), result.Rows[1][1])
+	for i := range result.Rows {
+		if result.Rows[i][0] == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED {
+			assert.Equal(t, float64(4), result.Rows[i][1])
+		}
+
+		if result.Rows[i][0] == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED {
+			assert.Equal(t, int(0), result.Rows[i][1])
+		}
+	}
 
 	query = model.Query{
 		From: time.Now().AddDate(0, 0, -3).Unix(),
@@ -2808,7 +2813,7 @@ func TestSalesforcePerDayBatching(t *testing.T) {
 	analyzeResult, status, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 	assert.Equal(t, http.StatusOK, status)
 	assert.Len(t, analyzeResult.Rows, 1)
-	assert.Equal(t, float64(3), analyzeResult.Rows[0][0])
+	assert.Equal(t, float64(2), analyzeResult.Rows[0][0])
 
 	query = model.Query{
 		From: lead1CreatedDate.AddDate(0, 0, -1).Unix(),
@@ -2831,7 +2836,7 @@ func TestSalesforcePerDayBatching(t *testing.T) {
 	}
 	analyzeResult, status, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 	assert.Equal(t, http.StatusOK, status)
-	assert.Subset(t, []interface{}{[]interface{}{"1", float64(2)}, []interface{}{"3", float64(1)}}, analyzeResult.Rows)
+	assert.Subset(t, []interface{}{[]interface{}{"1", float64(1)}, []interface{}{"3", float64(1)}}, analyzeResult.Rows)
 }
 
 func TestSalesforceOpportunitySkipOnUnsyncedLead(t *testing.T) {
@@ -4491,7 +4496,7 @@ func TestSalesforceCampaignMemberCampaignAssociation(t *testing.T) {
 	assert.Equal(t, U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED, rows[0][0])
 	assert.Equal(t, float64(1), rows[0][1])
 	assert.Equal(t, U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED, rows[1][0])
-	assert.Equal(t, float64(2), rows[1][1])
+	assert.Equal(t, float64(1), rows[1][1])
 
 	query = model.Query{
 		From: campaign1CreatedTimestamp.Unix() - 500,
@@ -4564,18 +4569,11 @@ func TestSalesforceCampaignMemberCampaignAssociation(t *testing.T) {
 
 	// campaign member updated
 	assert.Equal(t, U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED, rows[1][0])
-	assert.Equal(t, campaign1CreatedTimestampStr, rows[1][1])
+	assert.Equal(t, campaign1ModifiedTimestampStr, rows[1][1])
 	assert.Equal(t, campaign1CreatedTimestampStr, rows[1][2])
 	assert.Equal(t, campaign1ModifiedTimestampStr, rows[1][3])
-	assert.Equal(t, campaignName, rows[0][4])
+	assert.Equal(t, campaignName, rows[1][4])
 	assert.Equal(t, "4", rows[1][5])
-
-	assert.Equal(t, U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED, rows[2][0])
-	assert.Equal(t, campaign1ModifiedTimestampStr, rows[2][1])
-	assert.Equal(t, campaign1CreatedTimestampStr, rows[2][2])
-	assert.Equal(t, campaign1ModifiedTimestampStr, rows[2][3])
-	assert.Equal(t, campaignName, rows[2][4])
-	assert.Equal(t, "4", rows[2][5])
 }
 
 func TestSalesforceEmptyPropertiesUpdate(t *testing.T) {
