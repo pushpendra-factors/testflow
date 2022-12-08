@@ -25,6 +25,10 @@ func (store *MemSQL) CreateCustomMetric(customMetric model.CustomMetric) (*model
 	customMetric.ID = uuid.New().String()
 	err := db.Create(&customMetric).Error
 	if err != nil {
+		if IsDuplicateRecordError(err) {
+			log.WithError(err).WithField("customMetric", customMetric).Error("Failed to create custom metric. Duplicate.")
+			return &model.CustomMetric{}, err.Error(), http.StatusConflict
+		}
 		logCtx.WithError(err).WithField("customMetric", customMetric).Warn("Failed while creating custom metric.")
 		return &model.CustomMetric{}, err.Error(), http.StatusInternalServerError
 	}

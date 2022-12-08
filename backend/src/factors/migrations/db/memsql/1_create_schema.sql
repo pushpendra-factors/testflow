@@ -447,6 +447,7 @@ CREATE TABLE IF NOT EXISTS project_settings (
     factors6_signal_key text,
     int_client_six_signal_key boolean NOT NULL DEFAULT FALSE,
     int_factors_six_signal_key boolean NOT NULL DEFAULT FALSE,
+    integration_bits varchar(32) DEFAULT '00000000000000000000000000000000';
     KEY (updated_at),
     SHARD KEY (project_id),
     PRIMARY KEY (project_id)

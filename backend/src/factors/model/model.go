@@ -371,6 +371,8 @@ type Model interface {
 	GetClearbitKeyFromProjectSetting(projectId int64) (string, int)
 	GetClient6SignalKeyFromProjectSetting(projectId int64) (string, int)
 	GetFactors6SignalKeyFromProjectSetting(projectId int64) (string, int)
+	GetIntegrationBitsFromProjectSetting(projectId int64) (string, int)
+	SetIntegrationBits(projectID int64, integrationBits string) int
 	GetProjectSettingByKeyWithTimeout(key, value string, timeout time.Duration) (*model.ProjectSetting, int)
 	GetProjectSettingByTokenWithCacheAndDefault(token string) (*model.ProjectSetting, int)
 	GetProjectSettingByPrivateTokenWithCacheAndDefault(privateToken string) (*model.ProjectSetting, int)

@@ -327,6 +327,7 @@ const (
 	HealthcheckPatternMinePingID                = "04e9ba3d-5b07-4325-ad28-6ac7cf15971b"
 	HealthcheckPullEventsPingID                 = "088cc760-f350-4eb1-bbb6-c2bbde66b530"
 	HealthcheckPathAnalysisPingID               = "9f71b930-9233-4e58-9935-5de0434d8fa8"
+	HealthCheckPreBuiltCustomKPIPingID          = "9e5ac799-e15f-4f44-86b0-4be88379f486"
 
 	// Other services ping IDs. Only reported when alert conditions are met, not periodically.
 	// Once an alert is triggered, ping manually from Healthchecks UI after fixing.

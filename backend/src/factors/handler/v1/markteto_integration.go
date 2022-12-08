@@ -1,6 +1,8 @@
 package v1
 
 import (
+	C "factors/config"
+	DD "factors/default_data"
 	fivetran "factors/fivetran"
 	mid "factors/middleware"
 	"factors/model/model"
@@ -85,6 +87,28 @@ func EnableMarketoIntegration(c *gin.Context) (interface{}, int, string, string,
 			status := Status{
 				Status: true,
 			}
+
+			isFirstTimeIntegrationDone, statusCode := DD.CheckIfFirstTimeIntegrationDone(projectID, DD.MarketoIntegrationName)
+			if statusCode != http.StatusFound {
+				errMsg := fmt.Sprintf("Failed during first time integration check marketo: %v", projectID)
+				C.PingHealthcheckForFailure(C.HealthCheckPreBuiltCustomKPIPingID, errMsg)
+			}
+
+			if !isFirstTimeIntegrationDone {
+				factory := DD.GetDefaultDataCustomKPIFactory(DD.MarketoIntegrationName)
+				statusCode2 := factory.Build(projectID)
+				if statusCode2 != http.StatusOK {
+					errMsg := fmt.Sprintf("Failed during prebuilt marketo custom KPI creation: %v", projectID)
+					C.PingHealthcheckForFailure(C.HealthCheckPreBuiltCustomKPIPingID, errMsg)
+				} else {
+					statusCode3 := DD.SetFirstTimeIntegrationDone(projectID, DD.MarketoIntegrationName)
+					if statusCode3 != http.StatusOK {
+						errMsg := fmt.Sprintf("Failed during setting first time integration done marketo: %v", projectID)
+						C.PingHealthcheckForFailure(C.HealthCheckPreBuiltCustomKPIPingID, errMsg)
+					}
+				}
+			}
+
 			return status, http.StatusOK, "", "", false
 		}
 		return nil, http.StatusNotModified, "", "Get connector failed", true

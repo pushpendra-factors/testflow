@@ -2,10 +2,13 @@ package handler
 
 import (
 	"encoding/json"
+	C "factors/config"
+	DD "factors/default_data"
 	mid "factors/middleware"
 	"factors/model/model"
 	"factors/model/store"
 	U "factors/util"
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -220,6 +223,26 @@ func UpdateLeadSquaredConfigHandler(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusInternalServerError,
 			gin.H{"error": "Project setting update for lead squared config failed for explain"})
 		return
+	}
+
+	isFirstTimeIntegrationDone, statusCode := DD.CheckIfFirstTimeIntegrationDone(projectId, DD.LeadSquaredIntegrationName)
+	if statusCode != http.StatusFound {
+		errMsg := fmt.Sprintf("Failed during first time integration check leadsquared: %v", projectId)
+		C.PingHealthcheckForFailure(C.HealthCheckPreBuiltCustomKPIPingID, errMsg)
+	}
+	if !isFirstTimeIntegrationDone {
+		factory := DD.GetDefaultDataCustomKPIFactory(DD.LeadSquaredIntegrationName)
+		statusCode2 := factory.Build(projectId)
+		if statusCode2 != http.StatusOK {
+			errMsg := fmt.Sprintf("Failed during prebuilt leadsquared custom KPI creation: %v", projectId)
+			C.PingHealthcheckForFailure(C.HealthCheckPreBuiltCustomKPIPingID, errMsg)
+		} else {
+			statusCode3 := DD.SetFirstTimeIntegrationDone(projectId, DD.LeadSquaredIntegrationName)
+			if statusCode3 != http.StatusOK {
+				errMsg := fmt.Sprintf("Failed during setting first time integration done leadsquared: %v", projectId)
+				C.PingHealthcheckForFailure(C.HealthCheckPreBuiltCustomKPIPingID, errMsg)
+			}
+		}
 	}
 
 	resp := map[string]string{

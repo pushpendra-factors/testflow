@@ -1,10 +1,13 @@
 package v1
 
 import (
+	C "factors/config"
+	DD "factors/default_data"
 	mid "factors/middleware"
 	"factors/model/model"
 	"factors/model/store"
 	U "factors/util"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -56,6 +59,52 @@ func CreateCustomMetric(c *gin.Context) (interface{}, int, string, string, bool)
 		}
 	}
 	return customMetric, http.StatusOK, "", "", false
+}
+
+// CreateMissingPreBuiltCustomKPI godoc.
+// @Summary To create missing custom kpi.
+// @Tags CustomMetric
+// @Accept json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Param query integration string true "Integration name"
+// @Success 200 {string} json "{"result": }"
+// @Router /{project_id}/v1/custom_metrics/prebuilt/add_missing [get]
+func CreateMissingPreBuiltCustomKPI(c *gin.Context) (interface{}, int, string, string, bool) {
+	reqID, projectID := getReqIDAndProjectID(c)
+	logCtx := log.WithField("reqID", reqID).WithField("projectID", projectID)
+	if projectID == 0 {
+		return nil, http.StatusBadRequest, INVALID_INPUT, "", true
+	}
+	integrationString := c.Query("integration")
+	// TODO add validation.
+	if integrationString == "" {
+		return nil, http.StatusBadRequest, INVALID_INPUT, "", true
+	}
+
+	isFirstTimeIntegrationDone, statusCode := DD.CheckIfFirstTimeIntegrationDone(projectID, integrationString)
+	if statusCode != http.StatusFound {
+		errMsg := fmt.Sprintf("Failed during first time integration check marketo: %v", projectID)
+		C.PingHealthcheckForFailure(C.HealthCheckPreBuiltCustomKPIPingID, errMsg)
+	}
+
+	if !isFirstTimeIntegrationDone {
+		factory := DD.GetDefaultDataCustomKPIFactory(integrationString)
+		statusCode2 := factory.Build(projectID)
+		if statusCode2 != http.StatusOK {
+			_, errMsg := fmt.Printf("Failed during prebuilt custom KPI creation for: %v, %v", projectID, integrationString)
+			logCtx.WithField("projectID", projectID).WithField("integration", integrationString).Warn(errMsg)
+			return "", http.StatusInternalServerError, "", "", false
+		} else {
+			statusCode3 := DD.SetFirstTimeIntegrationDone(projectID, integrationString)
+			if statusCode3 != http.StatusOK {
+				_, errMsg := fmt.Printf("Failed during setting first time integration done marketo: %v", projectID)
+				logCtx.WithField("projectID", projectID).WithField("integration", integrationString).Warn(errMsg.Error())
+				return "", http.StatusInternalServerError, "", "", false
+			}
+		}
+	}
+	return "", http.StatusOK, "", "", false
 }
 
 // GetCustomMetricsConfig godoc
