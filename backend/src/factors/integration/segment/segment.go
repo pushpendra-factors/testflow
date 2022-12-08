@@ -338,8 +338,15 @@ func ReceiveEventWithQueue(token string, event *Event,
 		return http.StatusBadRequest, &EventResponse{}
 	}
 
-	isSegmentEnabled := *projectSetting.IntSegment
-	isRudderstackEnabled := *projectSetting.IntRudderstack
+	isSegmentEnabled := false
+	if projectSetting.IntSegment != nil {
+		isSegmentEnabled = *projectSetting.IntSegment
+	}
+
+	isRudderstackEnabled := false
+	if projectSetting.IntRudderstack != nil {
+		isRudderstackEnabled = *projectSetting.IntRudderstack
+	}
 
 	isEnabled := isSegmentEnabled || isRudderstackEnabled
 	if !isEnabled {
