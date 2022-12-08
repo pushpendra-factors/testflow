@@ -781,7 +781,7 @@ func TestKpiAnalyticsForCustomEvents(t *testing.T) {
 		description := U.RandomString(8)
 		transformationRaw := fmt.Sprintf(`{"agFn": "count", "agPr": "1", "agPrTy": "categorical", "fil": [], "daFie": "%d", "evNm": "%s", "en": "%s"}`, timestamp, "s0", model.QueryTypeEventsOccurrence)
 		transformations := &postgres.Jsonb{RawMessage: json.RawMessage(transformationRaw)}
-		w2 := sendCreateCustomMetric(a, project.ID, agent, transformations, name, description, "page_views", 3)
+		w2 := sendCreateCustomMetric(a, project.ID, agent, transformations, name, description, model.EventsBasedDisplayCategory, 3)
 		assert.Equal(t, http.StatusOK, w2.Code)
 
 		query := model.KPIQuery{
@@ -822,7 +822,7 @@ func TestKpiAnalyticsForCustomEvents(t *testing.T) {
 		description := U.RandomString(8)
 		transformationRaw := fmt.Sprintf(`{"agFn": "count", "agPr": "1", "agPrTy": "categorical", "fil": [], "daFie": "%d", "evNm": "%s", "en": "%s"}`, timestamp, "s0", model.QueryTypeEventsOccurrence)
 		transformations := &postgres.Jsonb{RawMessage: json.RawMessage(transformationRaw)}
-		w2 := sendCreateCustomMetric(a, project.ID, agent, transformations, name1, description, "page_views", 3)
+		w2 := sendCreateCustomMetric(a, project.ID, agent, transformations, name1, description, model.EventsBasedDisplayCategory, 3)
 		assert.Equal(t, http.StatusOK, w2.Code)
 
 		query1 := model.KPIQuery{
@@ -845,7 +845,7 @@ func TestKpiAnalyticsForCustomEvents(t *testing.T) {
 		description = U.RandomString(8)
 		transformationRaw = fmt.Sprintf(`{"agFn": "count", "agPr": "1", "agPrTy": "categorical", "fil": [], "daFie": "%d", "evNm": "%s", "en": "%s"}`, timestamp, "s0", model.QueryTypeEventsOccurrence)
 		transformations = &postgres.Jsonb{RawMessage: json.RawMessage(transformationRaw)}
-		w2 = sendCreateCustomMetric(a, project.ID, agent, transformations, name2, description, "page_views", 3)
+		w2 = sendCreateCustomMetric(a, project.ID, agent, transformations, name2, description, model.EventsBasedDisplayCategory, 3)
 		assert.Equal(t, http.StatusOK, w2.Code)
 
 		query3 := model.KPIQuery{
@@ -896,7 +896,7 @@ func TestKpiAnalyticsForCustomEvents(t *testing.T) {
 		description := U.RandomString(8)
 		transformationRaw := fmt.Sprintf(`{"agFn": "average", "agPr": "$initial_page_load_time", "agPrTy": "numerical", "fil": [], "daFie": "%d", "evNm": "%s", "en": "%s"}`, timestamp, "$session", model.QueryTypeEventsOccurrence)
 		transformations := &postgres.Jsonb{RawMessage: json.RawMessage(transformationRaw)}
-		w3 := sendCreateCustomMetric(a, project.ID, agent, transformations, name, description, "page_views", 3)
+		w3 := sendCreateCustomMetric(a, project.ID, agent, transformations, name, description, model.EventsBasedDisplayCategory, 3)
 		assert.Equal(t, http.StatusOK, w3.Code)
 
 		query1 := model.KPIQuery{
@@ -951,7 +951,7 @@ func TestKpiAnalyticsForCustomEvents(t *testing.T) {
 		description := U.RandomString(8)
 		transformationRaw := fmt.Sprintf(`{"agFn": "average", "agPr": "$initial_page_load_time", "agPrTy": "numerical", "fil": [], "daFie": "%d", "evNm": "%s", "en": "%s"}`, timestamp, "$session", model.QueryTypeEventsOccurrence)
 		transformations := &postgres.Jsonb{RawMessage: json.RawMessage(transformationRaw)}
-		w3 := sendCreateCustomMetric(a, project.ID, agent, transformations, name, description, "page_views", 3)
+		w3 := sendCreateCustomMetric(a, project.ID, agent, transformations, name, description, model.EventsBasedDisplayCategory, 3)
 		assert.Equal(t, http.StatusOK, w3.Code)
 
 		query1 := model.KPIQuery{
@@ -997,7 +997,7 @@ func TestKpiAnalyticsForCustomEvents(t *testing.T) {
 		description := U.RandomString(8)
 		transformationRaw := fmt.Sprintf(`{"agFn": "unique", "agPr": "1", "agPrTy": "categorical", "fil": [], "daFie": "%d", "evNm": "%s", "en": "%s"}`, timestamp, "s0", "")
 		transformations := &postgres.Jsonb{RawMessage: json.RawMessage(transformationRaw)}
-		w2 := sendCreateCustomMetric(a, project.ID, agent, transformations, name, description, "page_views", 3)
+		w2 := sendCreateCustomMetric(a, project.ID, agent, transformations, name, description, model.EventsBasedDisplayCategory, 3)
 		assert.Equal(t, http.StatusOK, w2.Code)
 
 		query := model.KPIQuery{
@@ -1483,7 +1483,7 @@ func TestDerivedKPIForCustomKPI(t *testing.T) {
 		description1 := U.RandomString(8)
 		transformationRaw1 := fmt.Sprintf(`{"agFn": "count", "agPr": "1", "agPrTy": "categorical", "fil": [], "daFie": "%d", "evNm": "%s", "en": "%s"}`, timestamp, "s0", model.QueryTypeEventsOccurrence)
 		transformations1 := &postgres.Jsonb{RawMessage: json.RawMessage(transformationRaw1)}
-		w = sendCreateCustomMetric(a, project.ID, agent, transformations1, name1, description1, "page_views", 3)
+		w = sendCreateCustomMetric(a, project.ID, agent, transformations1, name1, description1, model.EventsBasedDisplayCategory, 3)
 		assert.Equal(t, http.StatusOK, w.Code)
 
 		name2 := U.RandomLowerAphaNumString(10)

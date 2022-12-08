@@ -107,6 +107,7 @@ func GetCustomMetricsConfigV1(c *gin.Context) {
 	}
 
 	customEventConfig := model.CustomMetricConfigV1{}
+	customEventConfig.ObjectType = model.EventsBasedDisplayCategory
 	customEventConfig.TypeOfQuery = model.EventBasedQueryType
 	customEventConfig.TypeOfQueryDisplayName = model.EventBasedQueryTypeDisplayName
 	customEventConfig.AggregateFunctions = model.CustomEventsAggregateFunctions
