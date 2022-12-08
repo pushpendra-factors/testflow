@@ -8,6 +8,26 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+func (store *MemSQL) GetKPIConfigFromStandardUserProperties(projectID int64) []map[string]string {
+	var resultantKPIConfigProperties []map[string]string
+	var tempKPIConfigProperty map[string]string
+	propertiesToDisplayNames := store.GetStandardUserPropertiesBasedOnIntegration(projectID)
+	for userProperty, userDisplayPropertyName := range propertiesToDisplayNames {
+
+		tempKPIConfigProperty = map[string]string{
+			"name":         userProperty,
+			"display_name": userDisplayPropertyName,
+			"data_type":    U.GetPropertyTypeByName(userProperty),
+			"entity":       model.UserEntity,
+		}
+		resultantKPIConfigProperties = append(resultantKPIConfigProperties, tempKPIConfigProperty)
+	}
+	if resultantKPIConfigProperties == nil {
+		return make([]map[string]string, 0)
+	}
+	return resultantKPIConfigProperties
+}
+
 func (store *MemSQL) ExecuteKPIQueryForProfiles(projectID int64, reqID string,
 	kpiQuery model.KPIQuery, enableOptimisedFilter bool) ([]model.QueryResult, int) {
 	return store.TransformToAndExecuteProfileAnalyticsQueries(projectID, kpiQuery, reqID, enableOptimisedFilter)

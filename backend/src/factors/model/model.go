@@ -437,9 +437,13 @@ type Model interface {
 	SearchQueriesWithProjectId(projectID int64, searchString string) ([]model.Queries, int)
 	GetAllNonConvertedQueries(projectID int64) ([]model.Queries, int)
 
+	// properties
+	GetStandardUserPropertiesBasedOnIntegration(projectID int64) map[string]string
+
 	// attribution v1 queries
 	GetOrCreateAttributionV1Dashboard(projectId int64, agentUUID string) (*model.Dashboard, int)
 	CreateQueryAndSaveToDashboard(projectID int64, queryInfo *model.CreateQueryAndSaveToDashboardInfo) (*model.QueryAndDashboardUnit, int, string)
+
 	// dashboard_templates
 	CreateTemplate(template *model.DashboardTemplate) (*model.DashboardTemplate, int, string)
 	DeleteTemplate(templateId string) int

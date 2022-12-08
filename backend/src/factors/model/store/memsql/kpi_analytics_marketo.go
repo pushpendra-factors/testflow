@@ -61,7 +61,7 @@ func (store *MemSQL) getConfigForSpecificMarketoCategory(projectID int64, reqID 
 
 	rMetrics := store.GetCustomMetricAndDerivedMetricByProjectIdAndDisplayCategory(projectID, displayCategory, includeDerivedKPIs)
 	marketoProperties := store.GetPropertiesForMarketo(projectID, reqID)
-	standardUserProperties := model.GetKPIConfigFromStandardUserProperties()
+	standardUserProperties := store.GetKPIConfigFromStandardUserProperties(projectID)
 
 	return map[string]interface{}{
 		"category":         model.ProfileCategory,
