@@ -305,6 +305,11 @@ function AccountDetails({
         {listLeftPaneProps(accountDetails.data.left_pane_props)}
       </div>
       <div className='px-8 pb-8'>{renderAddNewProp()}</div>
+      <div className='absolute bottom-0 px-8 py-4'>
+        <a className='font-size--small' href='https://clearbit.com'>
+          Brand Logo provided by Clearbit
+        </a>
+      </div>
     </div>
   );
 
