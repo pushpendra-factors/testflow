@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"sort"
 	"strings"
+	"fmt"
 )
 
 type PathAnalysis model.PathAnalysis
@@ -188,7 +189,7 @@ func filterNodes(result map[int]map[string]int, n int, startsWith bool)map[int]m
 							}
 						}
 					}
-					if(totalSelectedCount > n || result[i-1][rootEvent] == 0){
+					if(totalSelectedCount > n || finalResult[i-1][rootEvent] == 0){
 						continue
 					}
 					selectedNodes[labelCount.label] = labelCount.count
@@ -224,9 +225,9 @@ func filterNodes(result map[int]map[string]int, n int, startsWith bool)map[int]m
 						}
 					}
 					if(startsWith == true){
-						finalResult[i-1][rootEvent+"OTHERS"] = count - sum
+						finalResult[i][rootEvent + fmt.Sprintf("%v:OTHERS", i-1)] = count - sum
 					} else {
-						finalResult[i-1]["OTHERS"+rootEvent] = count - sum
+						finalResult[i][fmt.Sprintf("%v:OTHERS", i-1)+rootEvent] = count - sum
 					}
 				}
 			}
