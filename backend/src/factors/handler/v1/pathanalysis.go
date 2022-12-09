@@ -11,6 +11,9 @@ import (
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 	"factors/delta"
+	"strconv"
+	"sort"
+	"strings"
 )
 
 type PathAnalysis model.PathAnalysis
@@ -116,6 +119,118 @@ func GetPathAnalysisData(c *gin.Context)(interface{}, int, string, string, bool)
 		return nil, http.StatusForbidden, "", "Get path analysis enitity failed. Invalid query id.", true
 	}
 
+	n := c.Query("n")
+	log.Info(n)
+	noOfNodes := int64(20)
+	if n != "" {
+		noOfNodes, _ = strconv.ParseInt(n, 10, 64)
+	}
+
+	query, _ := store.GetStore().GetPathAnalysisEntity(projectID, id)
+	var actualQuery model.PathAnalysisQuery
+	U.DecodePostgresJsonbToStructType(query.PathAnalysisQuery, &actualQuery)
+
+
 	result := delta.GetPathAnalysisData(projectID, id)
-	return result, http.StatusOK, "", "", false
+	finalResult := filterNodes(result, int(noOfNodes), actualQuery.EventType == "startswith")
+	return finalResult, http.StatusOK, "", "", false
+}
+
+func filterNodes(result map[int]map[string]int, n int, startsWith bool)map[int]map[string]int {
+	type labelCount struct {
+		label string
+		count int
+	}
+	finalResult := make(map[int]map[string]int)
+	for i := 1; i<= len(result); i++ {
+		nodes := result[i]
+		if(len(nodes) <= n){
+			finalResult[i] = nodes
+		} else {
+			labelCountArray := make([]labelCount, 0)
+			for label, count := range nodes {
+				labelCountArray =append(labelCountArray, labelCount{
+					label: label,
+					count: count,
+				})
+			}
+			sort.Slice(labelCountArray, func(i, j int) bool {
+				return labelCountArray[i].count > labelCountArray[j].count
+			})
+			totalSelectedCount := 0 
+			selectedNodes := make(map[string]int)
+			for _, labelCount := range labelCountArray {
+				if strings.Contains(labelCount.label, "OTHERS") {
+					continue
+				} else {
+					labelEvents := strings.Split(labelCount.label, ",")
+					rootEvent := ""
+					if(startsWith == true){
+						for it, event := range labelEvents {
+							if(it == len(labelEvents)-1){
+								break
+							}
+							if(rootEvent == ""){
+								rootEvent = event
+							} else {
+								rootEvent = rootEvent + "," + event
+							}
+						}
+					} else {
+						for it, event := range labelEvents {
+							if(it == 0){
+								continue
+							}
+							if(rootEvent == ""){
+								rootEvent = event
+							} else {
+								rootEvent = rootEvent + "," + event
+							}
+						}
+					}
+					if(totalSelectedCount > n || result[i-1][rootEvent] == 0){
+						continue
+					}
+					selectedNodes[labelCount.label] = labelCount.count
+					totalSelectedCount++
+				}
+			}
+			finalResult[i] = selectedNodes
+			if(i >= 2){
+				for label, count := range finalResult[i-2] {
+					sum := 0
+					rootEvent := ""
+					if(startsWith == true){
+						rootEvent = label + ","
+					} else {
+						rootEvent = "," + label
+					}
+					if(strings.Contains(label, "OTHERS")){
+						continue
+					} 
+					for label1, count1 := range finalResult[i-1]{
+						if(strings.Contains(label1, "OTHERS")){
+							continue
+						} else {
+							if(startsWith == true){
+								if(strings.HasPrefix(label1, rootEvent)){
+									sum += count1
+								}
+							} else {
+								if(strings.HasSuffix(label1, rootEvent)){
+									sum += count1
+								}
+							}
+						}
+					}
+					if(startsWith == true){
+						finalResult[i-1][rootEvent+"OTHERS"] = count - sum
+					} else {
+						finalResult[i-1]["OTHERS"+rootEvent] = count - sum
+					}
+				}
+			}
+		}
+	}
+	return finalResult
 }
