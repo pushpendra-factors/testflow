@@ -161,6 +161,9 @@ func (store *MemSQL) RunKPIGroupQuery(projectID int64, query *model.AttributionQ
 
 		var duplicatedRequest model.KPIQueryGroup
 		U.DeepCopy(&query.KPI, &duplicatedRequest)
+		for index := range duplicatedRequest.Queries {
+			duplicatedRequest.Queries[index].LimitNotApplicable = true
+		}
 		resultGroup, statusCode := store.ExecuteKPIQueryGroup(projectID, debugQueryKey,
 			duplicatedRequest, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
 		log.WithFields(log.Fields{"ResultGroup": resultGroup, "Status": statusCode}).Info("KPI-Attribution result received")

@@ -42,6 +42,7 @@ const (
 )
 
 const (
+	GroupByTimestampSecond  = "second"
 	GroupByTimestampHour    = "hour"
 	GroupByTimestampDate    = "date"
 	GroupByTimestampWeek    = "week"

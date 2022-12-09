@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"testing"
 	"time"
+	"fmt"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -59,12 +60,15 @@ func TestCreateCustomEventPostHandler(t *testing.T) {
 
 	name1 := U.RandomString(8)
 	description1 := U.RandomString(8)
+	timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
+	page_url := "https://www.factors.ai/pricing"
 
 	project, agent, _ := SetupProjectWithAgentDAO()
 	assert.NotNil(t, project)
 	t.Run("CreateCustomEventSuccess", func(t *testing.T) {
-		transformations := &postgres.Jsonb{RawMessage: json.RawMessage(`{"agFn": "sum", "agPr": "$source", "agPrTy": "categorical", "fil": [], "daFie": "2022-10-12T16:24:51.589828Z", "evNm": "$source", "en": "events_occurrence"}`)}
-		w := sendCreateCustomMetric(r, project.ID, agent, transformations, name1, description1, "website_session", 3)
+		transformationRaw := fmt.Sprintf(`{"agFn": "count", "agPr": "1", "agPrTy": "categorical", "fil": [], "daFie": "%d", "evNm": "%s", "en": "%s"}`, timestamp, page_url, model.QueryTypeEventsOccurrence)
+		transformations := &postgres.Jsonb{RawMessage: json.RawMessage(transformationRaw)}
+		w := sendCreateCustomMetric(r, project.ID, agent, transformations, name1, description1, model.EventsBasedDisplayCategory, 3)
 		assert.Equal(t, http.StatusOK, w.Code)
 		var result model.CustomMetric
 		decoder := json.NewDecoder(w.Body)
@@ -74,8 +78,9 @@ func TestCreateCustomEventPostHandler(t *testing.T) {
 	})
 
 	t.Run("CreateCustomMetricFailureDuplicateName", func(t *testing.T) {
-		transformations := &postgres.Jsonb{RawMessage: json.RawMessage(`{"agFn": "sum", "agPr": "$hubspot_amount", "agPrTy": "categorical", "fil": [], "daFie": "2022-10-12T16:24:51.589828Z", "evNm": "$source", "en": "events_occurrence"}`)}
-		w := sendCreateCustomMetric(r, project.ID, agent, transformations, name1, description1, "salesforce_users", 3)
+		transformationRaw := fmt.Sprintf(`{"agFn": "count", "agPr": "1", "agPrTy": "categorical", "fil": [], "daFie": "%d", "evNm": "%s", "en": "%s"}`, timestamp, page_url, model.QueryTypeEventsOccurrence)
+		transformations := &postgres.Jsonb{RawMessage: json.RawMessage(transformationRaw)}
+		w := sendCreateCustomMetric(r, project.ID, agent, transformations, name1, description1, model.EventsBasedDisplayCategory, 3)
 		assert.Equal(t, http.StatusConflict, w.Code)
 	})
 }

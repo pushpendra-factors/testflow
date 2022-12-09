@@ -351,6 +351,11 @@ func getCacheProjectSetting(tokenKey, tokenValue string) (*model.ProjectSetting,
 		return nil, http.StatusInternalServerError
 	}
 
+	defaultIntegrationValue := false
+	if settings.IntRudderstack == nil {
+		settings.IntRudderstack = &defaultIntegrationValue
+	}
+
 	return &settings, http.StatusFound
 }
 

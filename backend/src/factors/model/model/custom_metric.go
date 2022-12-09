@@ -68,7 +68,7 @@ type CustomMetric struct {
 	Description     string          `json:"description"`
 	TypeOfQuery     int             `json:"type_of_query"`
 	Transformations *postgres.Jsonb `json:"transformations"`
-	ObjectType      string          `json:"obj_ty"`
+	ObjectType      string          `json:"obj_ty"` // KPI Display Category for the metric
 	CreatedAt       time.Time       `json:"created_at"`
 	UpdatedAt       time.Time       `json:"updated_at"`
 }
