@@ -268,6 +268,7 @@ func (store *MemSQL) createProjectDependencies(projectID int64, agentUUID string
 		IntDrift:             &defaultDriftIntegrationState,
 		IntClearBit:          &defaultClearBitIntegrationState,
 		AutoCaptureFormFills: &model.AutoCaptureFormFillsDefault,
+		IntegrationBits:      model.DEFAULT_STRING_WITH_ZEROES_32BIT,
 		AutoClickCapture:     &model.AutoClickCaptureDefault,
 		TimelinesConfig:      tlConfigEncoded,
 	})

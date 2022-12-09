@@ -65,6 +65,9 @@ func main() {
 	countsVersion := flag.Int("count_version", 1, "run fp tree code")
 	hmineSupport := flag.Float64("hmine_support", 0.010, "value for hmine support")
 	hmine_persist := flag.Int("hmine_persist", 0, "persist properties file while counting")
+	start_event_v2 := flag.String("start_event", "", "start event for explain v2 job")
+	end_event_v2 := flag.String("end_event", "", "end event for explain v2 job")
+	include_events_v2 := flag.String("included_events", "", "Optional comma seperated values")
 
 	dbHost := flag.String("db_host", C.PostgresDefaultDBParams.Host, "")
 	dbPort := flag.Int("db_port", C.PostgresDefaultDBParams.Port, "")
@@ -243,7 +246,11 @@ func main() {
 	configs["create_metadata"] = *createMetadata
 	configs["hmineSupport"] = float32(*hmineSupport)
 	configs["hminePersist"] = *hmine_persist
+	configs["start_event"] = *start_event_v2
+	configs["end_event"] = *end_event_v2
+	configs["included_events"] = *include_events_v2
 
+	log.Infof("configs :%v", configs)
 	// profiling
 
 	// This job has dependency on pull_events

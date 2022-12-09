@@ -3,7 +3,7 @@ import React, {
   useState,
   useContext,
   forwardRef,
-  useImperativeHandle,
+  useImperativeHandle
 } from 'react';
 import { formatData, getVisibleData } from '../utils';
 import BarChart from './Chart';
@@ -23,11 +23,13 @@ const GroupedChart = forwardRef(
       arrayMapper,
       section,
       chartType,
+      tableConfig,
+      tableConfigPopoverContent
     },
     ref
   ) => {
     const {
-      coreQueryState: { savedQuerySettings },
+      coreQueryState: { savedQuerySettings }
     } = useContext(CoreQueryContext);
     const [visibleProperties, setVisibleProperties] = useState([]);
     const [sorter, setSorter] = useState(
@@ -40,7 +42,7 @@ const GroupedChart = forwardRef(
 
     useImperativeHandle(ref, () => {
       return {
-        currentSorter: { sorter },
+        currentSorter: { sorter }
       };
     });
 
@@ -59,7 +61,7 @@ const GroupedChart = forwardRef(
 
     if (!visibleProperties.length) {
       return (
-        <div className="flex justify-center items-center w-full h-full pt-4 pb-4">
+        <div className='flex justify-center items-center w-full h-full pt-4 pb-4'>
           <NoDataChart />
         </div>
       );
@@ -105,6 +107,8 @@ const GroupedChart = forwardRef(
             resultData={resultState.data}
             sorter={sorter}
             setSorter={setSorter}
+            tableConfig={tableConfig}
+            tableConfigPopoverContent={tableConfigPopoverContent}
           />
         </div>
       </div>

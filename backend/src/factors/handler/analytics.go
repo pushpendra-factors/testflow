@@ -395,7 +395,8 @@ func QueryHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 	enableOptimisedFilterOnEventUserQuery := c.Request.Header.Get(H.HeaderUserFilterOptForEventsAndUsers) == "true" ||
 		C.EnableOptimisedFilterOnEventUserQuery()
 
-	result, errCode, errMsg := store.GetStore().Analyze(projectId, requestPayload.Query, enableOptimisedFilterOnEventUserQuery)
+	funnelV2 := H.UseFunnelV2(c)
+	result, errCode, errMsg := store.GetStore().Analyze(projectId, requestPayload.Query, enableOptimisedFilterOnEventUserQuery, funnelV2)
 	if errCode != http.StatusOK {
 		model.DeleteQueryCacheKey(projectId, &requestPayload.Query)
 		logCtx.Error("Failed to process query from DB - " + errMsg)

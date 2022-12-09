@@ -49,8 +49,8 @@ type Pattern struct {
 	EventPropertiesPatterns []Fp.ConditionalPattern `json:"efp"` //v3
 	numPropsEvent           int64                   //v3
 	numPropsUser            int64                   //v3
-
-	FreqProps *Fp.FrequentPropertiesStruct
+	Segment                 int                     `json:"seg"`
+	FreqProps               *Fp.FrequentPropertiesStruct
 
 	// Private variables.
 	waitIndex                       int
@@ -106,9 +106,17 @@ type EventConstraints struct {
 
 type CountAlgoProperties struct {
 	// properties related to hmine and other counting algo
-	Counting_version int
-	Hmine_support    float32
-	Hmine_persist    int
+	Counting_version int            `json:"cv"`
+	Hmine_support    float32        `json:"hs"`
+	Hmine_persist    int            `json:"hp"`
+	Job              ExplainQueryV2 `json:"jb"`
+	JobId            string         `json:"mid"`
+}
+
+type ExplainQueryV2 struct {
+	Start_event     string   `json:"sev"`
+	End_event       string   `json:"eev"`
+	Events_included []string `json:"ein"`
 }
 
 func NewPattern(events []string, userAndEventsInfo *UserAndEventsInfo) (*Pattern, error) {
@@ -164,6 +172,7 @@ func NewPattern(events []string, userAndEventsInfo *UserAndEventsInfo) (*Pattern
 		currentUserId:                           "",
 		currentUserJoinTimestamp:                0,
 		previousEventTimestamp:                  0,
+		Segment:                                 1,
 		currentUserEventTimestamps:              make(map[string][]int64),
 		currentUserEventOccurenceCounts:         make(map[string][]uint),
 		currentUserOccurrenceCount:              0,
@@ -612,72 +621,72 @@ func (p *Pattern) CountForEvent(projectID int64, userId string,
 			p.currentUserOccurrenceCount += 1
 			if p.currentUserOccurrenceCount == 1 {
 				p.PerUserCount += 1
+				if p.Segment == 1 {
+					if countVersion == 1 {
 
-				if countVersion == 1 {
-
-					// Update properties histograms.
-					if p.PerUserEventNumericProperties != nil {
-						if err := p.PerUserEventNumericProperties.AddMap(p.currentEPropertiesNMap); err != nil {
-							return err
+						// Update properties histograms.
+						if p.PerUserEventNumericProperties != nil {
+							if err := p.PerUserEventNumericProperties.AddMap(p.currentEPropertiesNMap); err != nil {
+								return err
+							}
 						}
-					}
-					if p.PerUserEventCategoricalProperties != nil {
-						if err := p.PerUserEventCategoricalProperties.AddMap(p.currentEPropertiesCMap); err != nil {
-							return err
+						if p.PerUserEventCategoricalProperties != nil {
+							if err := p.PerUserEventCategoricalProperties.AddMap(p.currentEPropertiesCMap); err != nil {
+								return err
+							}
 						}
-					}
-					if p.PerUserUserNumericProperties != nil {
-						if err := p.PerUserUserNumericProperties.AddMap(p.currentUPropertiesNMap); err != nil {
-							return err
+						if p.PerUserUserNumericProperties != nil {
+							if err := p.PerUserUserNumericProperties.AddMap(p.currentUPropertiesNMap); err != nil {
+								return err
+							}
 						}
-					}
-					if p.PerUserUserCategoricalProperties != nil {
-						if err := p.PerUserUserCategoricalProperties.AddMap(p.currentUPropertiesCMap); err != nil {
-							return err
+						if p.PerUserUserCategoricalProperties != nil {
+							if err := p.PerUserUserCategoricalProperties.AddMap(p.currentUPropertiesCMap); err != nil {
+								return err
+							}
 						}
-					}
-				} else if countVersion == 3 {
+					} else if countVersion >= 3 {
 
-					eProps := AddNumericAndCategoricalPropertiesToHmine(p.currentEPropertiesNMap, p.currentEPropertiesCMap)
-					uProps := AddNumericAndCategoricalPropertiesToHmine(p.currentUPropertiesNMap, p.currentUPropertiesCMap)
+						eProps := AddNumericAndCategoricalPropertiesToHmine(p.currentEPropertiesNMap, p.currentEPropertiesCMap)
+						uProps := AddNumericAndCategoricalPropertiesToHmine(p.currentUPropertiesNMap, p.currentUPropertiesCMap)
 
-					if persistHmineProperties == true {
-						var basePathUserProps string
-						var basePathEventProps string
+						if persistHmineProperties == true {
+							var basePathUserProps string
+							var basePathEventProps string
 
-						if len(p.PropertiesBaseFolder) == 0 {
-							basePathUserProps = path.Join("/", "tmp", "fptree", "userProps")
-							basePathEventProps = path.Join("/", "tmp", "fptree", "eventProps")
+							if len(p.PropertiesBaseFolder) == 0 {
+								basePathUserProps = path.Join("/", "tmp", "fptree", "userProps")
+								basePathEventProps = path.Join("/", "tmp", "fptree", "eventProps")
+							} else {
+								basePathUserProps = path.Join(p.PropertiesBaseFolder, "fptree", "userProps")
+								basePathEventProps = path.Join(p.PropertiesBaseFolder, "fptree", "eventProps")
+							}
+							ptName := p.PropertiesBasePath
+							treePathEvent := path.Join(basePathEventProps, ptName)
+							treePathUser := path.Join(basePathUserProps, ptName)
+							if len(eProps) > 0 {
+								Fp.WriteSinglePropertyToFile(treePathEvent, eProps)
+								p.numPropsEvent += 1
+							}
+							if len(uProps) > 0 {
+								Fp.WriteSinglePropertyToFile(treePathUser, uProps)
+								p.numPropsUser += 1
+							}
 						} else {
-							basePathUserProps = path.Join(p.PropertiesBaseFolder, "fptree", "userProps")
-							basePathEventProps = path.Join(p.PropertiesBaseFolder, "fptree", "eventProps")
-						}
-						ptName := p.PropertiesBasePath
-						treePathEvent := path.Join(basePathEventProps, ptName)
-						treePathUser := path.Join(basePathUserProps, ptName)
-						if len(eProps) > 0 {
-							Fp.WriteSinglePropertyToFile(treePathEvent, eProps)
-							p.numPropsEvent += 1
-						}
-						if len(uProps) > 0 {
-							Fp.WriteSinglePropertyToFile(treePathUser, uProps)
-							p.numPropsUser += 1
-						}
-					} else {
 
-						if len(eProps) > 0 {
-							p.EventProps = append(p.EventProps, eProps)
-							p.numPropsEvent += 1
+							if len(eProps) > 0 {
+								p.EventProps = append(p.EventProps, eProps)
+								p.numPropsEvent += 1
+							}
+
+							if len(uProps) > 0 {
+								p.UserProps = append(p.UserProps, uProps)
+								p.numPropsUser += 1
+							}
 						}
 
-						if len(uProps) > 0 {
-							p.UserProps = append(p.UserProps, uProps)
-							p.numPropsUser += 1
-						}
 					}
-
 				}
-
 			}
 			// Reset.
 			p.waitIndex = 0

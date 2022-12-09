@@ -3,6 +3,7 @@ package tests
 import (
 	"bytes"
 	"encoding/json"
+	"factors/model/model"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -95,6 +96,17 @@ func DecodeJSONResponseToMap(body *bytes.Buffer) map[string]interface{} {
 	}
 	json.Unmarshal(jsonResponse, &responseMap)
 	return responseMap
+}
+
+func DecodeJSONResponseToAnalyticsResult(body *bytes.Buffer) *model.QueryResult {
+	var responseMap map[string]interface{}
+	jsonResponse, err := ioutil.ReadAll(body)
+	if err != nil {
+		log.Fatalf("JSON decode failed : %+v", responseMap)
+	}
+	var result model.QueryResult
+	json.Unmarshal(jsonResponse, &result)
+	return &result
 }
 
 func RandomURL() string {

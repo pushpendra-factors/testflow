@@ -166,6 +166,80 @@ func TestPostAPISegmentHandler(t *testing.T) {
 	assert.Nil(t, err)
 	queryMap, _ := U.EncodeStructTypeToMap(querySegment)
 	assert.Equal(t, &queryMap, getQueryMap)
+
+	// Creating record with same name
+	w = sendSegmentPostReq(r, *segment, project.ID, agent)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	// Creating record without field query
+	segment = &model.SegmentPayload{
+		Name:        "Name2",
+		Description: "dummy info",
+		Type:        "event",
+		Query:       model.SegmentQuery{},
+	}
+
+	w = sendSegmentPostReq(r, *segment, project.ID, agent)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	// Creating record without field type
+	segment = &model.SegmentPayload{
+		Name:        "Name2",
+		Description: "dummy info",
+		Query:       querySegment,
+	}
+
+	w = sendSegmentPostReq(r, *segment, project.ID, agent)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	// Creating record without field description
+	segment = &model.SegmentPayload{
+		Name:  "Name2",
+		Query: querySegment,
+		Type:  "event",
+	}
+
+	w = sendSegmentPostReq(r, *segment, project.ID, agent)
+	assert.Equal(t, http.StatusCreated, w.Code)
+
+	// Creating record without field name
+	segment = &model.SegmentPayload{
+		Description: "dummy info",
+		Query:       querySegment,
+		Type:        "event",
+	}
+
+	w = sendSegmentPostReq(r, *segment, project.ID, agent)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	// creating record with only EventsWithProperties in Query
+	querySegment = model.SegmentQuery{
+		EventsWithProperties: events,
+	}
+	segment = &model.SegmentPayload{
+		Name:        "Name3",
+		Description: "dummy info",
+		Query:       querySegment,
+		Type:        "event",
+	}
+
+	w = sendSegmentPostReq(r, *segment, project.ID, agent)
+	assert.Equal(t, http.StatusCreated, w.Code)
+
+	// creating record with only GlobalProperties in Query
+	querySegment = model.SegmentQuery{
+		GlobalProperties: properties,
+	}
+	segment = &model.SegmentPayload{
+		Name:        "Name4",
+		Description: "dummy info",
+		Query:       querySegment,
+		Type:        "event",
+	}
+
+	w = sendSegmentPostReq(r, *segment, project.ID, agent)
+	assert.Equal(t, http.StatusCreated, w.Code)
+
 }
 
 func TestGetAPIAllSegmentsHandler(t *testing.T) {
@@ -227,7 +301,7 @@ func TestGetAPIAllSegmentsHandler(t *testing.T) {
 	}
 
 	segment = &model.SegmentPayload{
-		Name:        "Name1",
+		Name:        "Name2",
 		Description: "dummy info",
 		Query:       querySegment,
 		Type:        "event1",

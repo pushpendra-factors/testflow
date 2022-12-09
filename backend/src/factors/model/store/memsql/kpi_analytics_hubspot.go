@@ -79,7 +79,7 @@ func (store *MemSQL) getConfigForSpecificHubspotCategory(projectID int64, reqID 
 
 func (store *MemSQL) getPropertiesForHubspotByDisplayCategory(projectID int64, reqID, displayCategory string) []map[string]string {
 	finalProperties := make([]map[string]string, 0)
-	standardUserProperties := model.GetKPIConfigFromStandardUserProperties()
+	standardUserProperties := store.GetKPIConfigFromStandardUserProperties(projectID)
 	switch displayCategory {
 	case model.HubspotDealsDisplayCategory:
 		finalProperties = store.GetPropertiesForHubspotDeals(projectID, reqID)

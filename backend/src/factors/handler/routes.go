@@ -193,6 +193,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics", mid.SkipDemoProjectWriteAccess(), responseWrapper(V1.CreateCustomMetric))
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics", responseWrapper(V1.GetCustomMetrics))
 	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics/:id", mid.SkipDemoProjectWriteAccess(), responseWrapper(V1.DeleteCustomMetrics))
+	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics/prebuilt/add_missing", responseWrapper(V1.CreateMissingPreBuiltCustomKPI))
 
 	// v1 CRM And Smart Event endpoints
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/smart_event", GetSmartEventFiltersHandler)
@@ -318,6 +319,13 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.POST("/:project_id/v1/pathanalysis", responseWrapper(V1.CreatePathAnalysisEntityHandler))
 	authRouteGroup.DELETE("/:project_id/v1/pathanalysis/:id", V1.DeleteSavedPathAnalysisEntityHandler)
 	authRouteGroup.GET("/:project_id/v1/pathanalysis/:id", responseWrapper(V1.GetPathAnalysisData))
+
+	//explainV2
+	authRouteGroup.GET("/:project_id/v1/explainV2", V1.GetFactorsHandlerV2)
+	authRouteGroup.POST("/:project_id/v1/explainV2", V1.PostFactorsHandlerV2)
+	authRouteGroup.POST("/:project_id/v1/explainV2/job", responseWrapper(V1.CreateExplainV2EntityHandler))
+	authRouteGroup.DELETE("/:project_id/v1/explainV2/:id", V1.DeleteSavedExplainV2EntityHandler)
+
 }
 
 func InitSDKServiceRoutes(r *gin.Engine) {
@@ -414,6 +422,7 @@ func InitIntRoutes(r *gin.Engine) {
 		mid.SetLoggedInAgent(),
 		mid.SetAuthorizedProjectsByLoggedInAgent(),
 		SalesforceAuthRedirectHandler)
+	// salesforce integration.
 	intRouteGroup.GET(SalesforceCallbackRoute,
 		SalesforceCallbackHandler)
 
@@ -422,6 +431,7 @@ func InitIntRoutes(r *gin.Engine) {
 		mid.SetAuthorizedProjectsByLoggedInAgent(),
 		HubspotAuthRedirectHandler)
 
+	// hubspot integration.
 	intRouteGroup.GET(HubspotCallbackRoute,
 		HubspotCallbackHandler)
 

@@ -1014,6 +1014,204 @@ func addFilterEventsWithPropsQueryV2(projectId int64, qStmnt *string, qParams *[
 	return nil
 }
 
+// addFilterEventsWithPropsQueryV3 Adds a step of events filter with QueryEventWithProperties.
+// step_0 AS (SELECT COALESCE(step_0_event_users.customer_user_id,step_0_event_users.user_id) as coal_user_id,
+// FIRST(step_0_event_users.user_id, FROM_UNIXTIME(step_0_event_users.timestamp)) as user_id,
+// FIRST(step_0_event_users.timestamp, FROM_UNIXTIME(step_0_event_users.timestamp)) as timestamp, 1 as step_0
+// FROM (SELECT events.project_id, events.id, events.event_name_id, events.user_id, events.timestamp,
+// events.properties as event_properties, events.user_properties as event_user_properties,
+// users.customer_user_id, users.properties as global_user_properties
+// FROM events JOIN users ON events.user_id=users.id AND users.project_id = 2  WHERE events.project_id=2 AND
+// timestamp>=1656844268 AND timestamp<=1657708269 AND  ( events.event_name_id = 4862cb39-8749-40c6-988a-c0a08a2d796b )
+// LIMIT 10000000000) step_0_event_users WHERE JSON_EXTRACT_STRING(step_0_event_users.event_properties, '$source') = 'google'
+// GROUP BY coal_user_id)
+func addFilterEventsWithPropsQueryV3(projectId int64, qStmnt *string, qParams *[]interface{},
+	qep model.QueryEventWithProperties, from int64, to int64, fromStr string,
+	stepName string, addSelecStmnt string, addSelectParams []interface{},
+	addJoinStmnt string, groupBy string, orderBy string, globalUserFilter []model.QueryProperty) error {
+
+	logFields := log.Fields{
+		"project_id":         projectId,
+		"q_stmnt":            qStmnt,
+		"q_params":           qParams,
+		"que":                qep,
+		"from":               from,
+		"to":                 to,
+		"from_str":           fromStr,
+		"step_name":          stepName,
+		"add_selec_stmnt":    addSelecStmnt,
+		"add_select_params":  addSelectParams,
+		"add_joint_stmnt":    addJoinStmnt,
+		"group_by":           groupBy,
+		"order_by":           orderBy,
+		"global_user_filter": globalUserFilter,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	if (from == 0 && fromStr == "") || to == 0 {
+		return errors.New("invalid timerange on events filter")
+	}
+
+	if addSelecStmnt == "" {
+		return errors.New("invalid select on events filter")
+	}
+
+	eventsWrapSelect := "events.project_id, events.id, events.event_name_id, events.user_id, events.timestamp"
+	if strings.Contains(addSelecStmnt, "events.session_id") {
+		eventsWrapSelect = joinWithComma(eventsWrapSelect, "events.session_id")
+	}
+
+	userGroupColumn := ""
+	eventsWrapSelect = joinWithComma(eventsWrapSelect, "events.properties as event_properties, events.user_properties as event_user_properties")
+	if addJoinStmnt != "" {
+		eventsWrapSelect = joinWithComma(eventsWrapSelect, "users.customer_user_id, users.properties as global_user_properties")
+		// For the special case of groups join, where events.user_id
+		// cannot be used as replacement of users.id.
+		if strings.Contains(addSelecStmnt, "users.users_user_id") {
+			eventsWrapSelect = joinWithComma(eventsWrapSelect, "users.id as users_user_id")
+		} else if strings.Contains(addSelecStmnt, "group_user_id") {
+			userGroupColumn = model.GetQueryGroupUserID(addSelecStmnt)
+			eventsWrapSelect = joinWithComma(eventsWrapSelect, fmt.Sprintf("%s as group_user_id", userGroupColumn))
+		}
+	}
+
+	eventsWrapStmnt := "SELECT " + eventsWrapSelect + " FROM events" + " " + addJoinStmnt
+
+	var fromTimestamp string
+	if from > 0 {
+		fromTimestamp = "?"
+	} else if fromStr != "" {
+		fromTimestamp = fromStr // allows from_timestamp from another step.
+	}
+	// Non-JSON where conditions except event_names.
+	eventsWrapWhereCondition := fmt.Sprintf("WHERE events.project_id=? AND timestamp>=%s AND timestamp<=?", fromTimestamp)
+
+	if userGroupColumn != "" {
+		eventsWrapWhereCondition = eventsWrapWhereCondition + " AND " + "group_user_id IS NOT NULL "
+	}
+
+	// Building event_names condition and appending.
+	var eventNamesCacheStmnt string
+	eventNamesRef := "event_names"
+	skipEventNameStep := C.SkipEventNameStepByProjectID(projectId)
+	if stepName != "" && !skipEventNameStep {
+		eventNamesRef = fmt.Sprintf("%s_names", stepName)
+		eventNamesCacheStmnt = as(eventNamesRef, "SELECT id, project_id, name FROM event_names WHERE project_id=? AND name=?")
+		*qParams = append(*qParams, projectId, qep.Name)
+	}
+	// select id of event_names from names step.
+	if !skipEventNameStep {
+		eventsWrapWhereCondition = eventsWrapWhereCondition + fmt.Sprintf(" "+"AND events.event_name_id IN (SELECT id FROM %s WHERE project_id=? AND name=?)", eventNamesRef)
+	} else {
+		eventNameIDsFilter := "events.event_name_id = ?"
+		if len(qep.EventNameIDs) > 1 {
+			for range qep.EventNameIDs[1:] {
+				eventNameIDsFilter += " " + "OR" + " " + "events.event_name_id = ?"
+			}
+		}
+
+		eventsWrapWhereCondition = eventsWrapWhereCondition + " " + "AND" + " " + " ( " + eventNameIDsFilter + " ) "
+	}
+	eventsWrapStmnt = appendStatement(eventsWrapStmnt, eventsWrapWhereCondition)
+
+	eventsWrapViewName := fmt.Sprintf("%s_event_users_view", stepName)
+	// Builds `(SELECT xxx FROM events [JOIN users] WHERE <Non-JSON filters...> LIMIT 1000000000) step_0_event_users_view`
+	eventsWrapView := fmt.Sprintf("(%s LIMIT %d) %s", eventsWrapStmnt, model.FilterOptLimit, eventsWrapViewName)
+
+	if userGroupColumn != "" {
+		addSelecStmnt = strings.ReplaceAll(addSelecStmnt, userGroupColumn, eventsWrapViewName+".group_user_id")
+	}
+
+	// Change properties column for the view.
+	addSelecStmnt = strings.ReplaceAll(addSelecStmnt, "users.properties", eventsWrapViewName+".global_user_properties")
+	addSelecStmnt = strings.ReplaceAll(addSelecStmnt, "events.properties", eventsWrapViewName+".event_properties")
+	addSelecStmnt = strings.ReplaceAll(addSelecStmnt, "events.user_properties", eventsWrapViewName+".event_user_properties")
+	// Use view instead of events and users table.
+	addSelecStmnt = replaceTableWithViewForEventsAndUsers(addSelecStmnt, eventsWrapViewName)
+
+	rStmnt := "SELECT " + addSelecStmnt + " FROM " + " " + eventsWrapView
+
+	// adds params in order of '?'.
+	if addSelecStmnt != "" && addSelectParams != nil {
+		*qParams = append(*qParams, addSelectParams...)
+	}
+	*qParams = append(*qParams, projectId)
+	if from > 0 {
+		*qParams = append(*qParams, from)
+	}
+
+	*qParams = append(*qParams, to)
+	if !skipEventNameStep {
+		*qParams = append(*qParams, projectId, qep.Name)
+	} else {
+		*qParams = append(*qParams, qep.EventNameIDs...)
+	}
+
+	// Applying global user filter
+	latestUserPropFilterStmnt := ""
+	var latestUserPropFilterParam []interface{}
+	var err error
+
+	isWhereAdded := false
+	hasGlobalUserProperties := globalUserFilter != nil && len(globalUserFilter) != 0
+	if hasGlobalUserProperties {
+		// add user filter
+		latestUserPropFilterStmnt, latestUserPropFilterParam, err = getFilterSQLStmtForLatestUserProperties(
+			projectId, globalUserFilter, from)
+		if err != nil {
+			return errors.New("invalid user properties for global filter")
+		}
+
+		latestUserPropFilterStmnt = strings.ReplaceAll(latestUserPropFilterStmnt,
+			"users.properties", eventsWrapViewName+".global_user_properties")
+
+		rStmnt = rStmnt + " WHERE " + latestUserPropFilterStmnt
+		isWhereAdded = true
+		*qParams = append(*qParams, latestUserPropFilterParam...)
+	}
+
+	// mergeCond for whereProperties can also be 'OR'.
+	wStmnt, wParams, err := buildWhereFromProperties(projectId, qep.Properties, from)
+	if err != nil {
+		return err
+	}
+
+	if wStmnt != "" {
+		conditionKeyword := "WHERE"
+		if isWhereAdded {
+			conditionKeyword = "AND"
+		}
+
+		wStmnt = strings.ReplaceAll(wStmnt, "events.properties", eventsWrapViewName+".event_properties")
+		wStmnt = strings.ReplaceAll(wStmnt, "events.user_properties", eventsWrapViewName+".event_user_properties")
+
+		rStmnt = rStmnt + " " + conditionKeyword + " " + fmt.Sprintf("( %s )", wStmnt)
+		*qParams = append(*qParams, wParams...)
+	}
+
+	if groupBy != "" {
+		groupBy = replaceTableWithViewForEventsAndUsers(groupBy, eventsWrapViewName)
+		rStmnt = fmt.Sprintf("%s GROUP BY %s", rStmnt, groupBy)
+	}
+
+	if orderBy != "" {
+		orderBy = replaceTableWithViewForEventsAndUsers(orderBy, eventsWrapViewName)
+		rStmnt = fmt.Sprintf("%s ORDER BY %s", rStmnt, orderBy)
+	}
+
+	if stepName != "" {
+		rStmnt = as(stepName, rStmnt)
+	}
+
+	if !skipEventNameStep && eventNamesCacheStmnt != "" {
+		rStmnt = joinWithComma(eventNamesCacheStmnt, rStmnt)
+	}
+
+	*qStmnt = appendStatement(*qStmnt, rStmnt)
+
+	return nil
+}
+
 func hasWhereEntity(ewp model.QueryEventWithProperties, entity string) bool {
 	logFields := log.Fields{
 		"ewp":    ewp,
@@ -1761,7 +1959,47 @@ func isValidFunnelQuery(query *model.Query) bool {
 	return len(query.EventsWithProperties) <= 10
 }
 
-func (store *MemSQL) Analyze(projectId int64, queryOriginal model.Query, enableFilterOpt bool) (*model.QueryResult, int, string) {
+func (store *MemSQL) IsValidFunnelGroupQueryIfExists(projectID int64, query *model.Query, groupIds []int) (int, bool) {
+
+	if query.GroupAnalysis == "" {
+		return 0, true
+	}
+
+	scopeGroupID, valid := store.IsValidFunnelGroupQuery(projectID, query, groupIds)
+	return scopeGroupID, valid
+}
+
+func (store *MemSQL) IsValidFunnelGroupQuery(projectID int64, query *model.Query, groupIds []int) (int, bool) {
+	if !model.IsValidFunnelQueryGroupName(query.GroupAnalysis) {
+		log.WithFields(log.Fields{"query": query}).Error("Invalid funnel group query.")
+		return 0, false
+	}
+
+	scopeGroup, status := store.GetGroup(projectID, query.GroupAnalysis)
+	if status != http.StatusFound {
+		if status != http.StatusNotFound {
+			log.WithFields(log.Fields{"query": query}).Error("Failed to get group id from funnel groupe query")
+		}
+		return 0, false
+	}
+
+	for i := range groupIds {
+
+		// group id 0 is for user
+		if groupIds[i] == 0 {
+			continue
+		}
+
+		if groupIds[i] != scopeGroup.ID {
+			log.WithFields(log.Fields{"query": query}).Error("Invalid funnel group query. Different groups selected.")
+			return 0, false
+		}
+	}
+
+	return scopeGroup.ID, true
+}
+
+func (store *MemSQL) Analyze(projectId int64, queryOriginal model.Query, enableFilterOpt bool, enableFunnelV2 bool) (*model.QueryResult, int, string) {
 	logFields := log.Fields{
 		"project_id":     projectId,
 		"query_original": queryOriginal,
@@ -1775,7 +2013,7 @@ func (store *MemSQL) Analyze(projectId int64, queryOriginal model.Query, enableF
 	}
 
 	if query.Class == model.QueryClassFunnel {
-		return store.RunFunnelQuery(projectId, query, enableFilterOpt)
+		return store.RunFunnelQuery(projectId, query, enableFilterOpt, enableFunnelV2)
 	}
 	return store.RunInsightsQuery(projectId, query, enableFilterOpt)
 }
@@ -1787,4 +2025,304 @@ func (store *MemSQL) IsGroupEventNameByQueryEventWithProperties(projectID int64,
 	}
 
 	return store.IsGroupEventName(projectID, ewp.Name, eventNameID)
+}
+
+func addMissingTimestampsOnResultWithoutGroupByProps(result *model.QueryResult,
+	query *model.Query, aggrIndex int, timestampIndex int) error {
+	logFields := log.Fields{
+		"query":           query,
+		"aggr_index":      aggrIndex,
+		"timestamp_index": timestampIndex,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	rowsByTimestamp := make(map[string][]interface{}, 0)
+	for _, row := range result.Rows {
+		ts := row[timestampIndex].(time.Time)
+		rowsByTimestamp[U.GetTimestampAsStrWithTimezone(ts, query.Timezone)] = row
+	}
+
+	timestamps, offsets := getAllTimestampsAndOffsetBetweenByType(query.From, query.To,
+		query.GetGroupByTimestamp(), query.Timezone)
+
+	filledResult := make([][]interface{}, 0, 0)
+	// range over timestamps between given from and to.
+	// uses timestamp string for comparison.
+	for index, ts := range timestamps {
+
+		if row, exists := rowsByTimestamp[U.GetTimestampAsStrWithTimezoneGivenOffset(ts, offsets[index])]; exists {
+			// overrides timestamp with user timezone as sql results doesn't
+			// return timezone used to query.
+			row[timestampIndex] = ts
+			filledResult = append(filledResult, row)
+		} else {
+			newRow := make([]interface{}, 3, 3)
+			newRow[timestampIndex] = ts
+			newRow[aggrIndex] = 0
+			filledResult = append(filledResult, newRow)
+		}
+	}
+
+	result.Rows = filledResult
+	return nil
+}
+
+// Fills missing timestamp between given from and to timestamp for all group key combinations,
+// on the limited result.
+func addMissingTimestampsOnResultWithGroupByProps(result *model.QueryResult,
+	query *model.Query, aggrIndex int, timestampIndex int) error {
+	logFields := log.Fields{
+		"query":           query,
+		"aggr_index":      aggrIndex,
+		"timestamp_index": timestampIndex,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	gkStart, gkEnd, err := getGroupKeyIndexesForSlicing(result.Headers)
+	if err != nil {
+		return err
+	}
+
+	filledResult := make([][]interface{}, 0, 0)
+
+	rowsByGroupAndTimestamp := make(map[string]bool, 0)
+	for _, row := range result.Rows {
+		encCols := make([]interface{}, 0, 0)
+		encCols = append(encCols, row[gkStart:gkEnd]...)
+
+		timestampWithTimezone := U.GetTimestampAsStrWithTimezone(
+			row[timestampIndex].(time.Time), query.Timezone)
+		// encoded key with group values and timestamp from db row.
+		encCols = append(encCols, timestampWithTimezone)
+		encKey := getEncodedKeyForCols(encCols)
+		rowsByGroupAndTimestamp[encKey] = true
+
+	}
+
+	timestamps, offsets := getAllTimestampsAndOffsetBetweenByType(query.From, query.To,
+		query.GetGroupByTimestamp(), query.Timezone)
+
+	for _, row := range result.Rows {
+		for index, ts := range timestamps {
+			encCols := make([]interface{}, 0, 0)
+			encCols = append(encCols, row[gkStart:gkEnd]...)
+			// encoded key with generated timestamp.
+			encCols = append(encCols, U.GetTimestampAsStrWithTimezoneGivenOffset(ts, offsets[index]))
+			encKey := getEncodedKeyForCols(encCols)
+			timestampWithTimezone := U.GetTimestampAsStrWithTimezone(
+				row[timestampIndex].(time.Time), query.Timezone)
+
+			if _, exists := rowsByGroupAndTimestamp[encKey]; exists {
+				// overrides timestamp with user timezone as sql results doesn't
+				// return timezone used to query.
+				row[timestampIndex] = U.GetTimeFromTimestampStr(timestampWithTimezone)
+				filledResult = append(filledResult, row)
+			} else {
+				// create new row with group values and missing date
+				// for those group combination and aggr 0.
+				rowLen := len(result.Headers)
+				newRow := make([]interface{}, rowLen, rowLen)
+				groupValues := row[gkStart:gkEnd]
+
+				for i := 0; i < rowLen; {
+					if i == gkStart {
+						for _, gv := range groupValues {
+							newRow[i] = gv
+							i++
+						}
+					}
+
+					if i == aggrIndex {
+						newRow[i] = 0
+						i++
+					}
+
+					if i == timestampIndex {
+						newRow[i] = ts
+						i++
+					}
+				}
+				rowsByGroupAndTimestamp[encKey] = true
+				filledResult = append(filledResult, newRow)
+			}
+		}
+	}
+
+	result.Rows = filledResult
+	return nil
+}
+
+// fills empty values for dates which data is not present. Eg-> query date range: 1 jan to 3 jan. Data in DB:= 1/01 -> 100, 3/01 -> 150
+// After going through following method, final data: 1/01 -> 100, 2/01 -> 0, 3/01 -> 150
+
+func addMissingTimestampsOnChannelResultWithoutGroupByProps(result *model.QueryResult,
+	query *model.KPIQuery, aggrIndex int, timestampIndex int, isTimezoneEnabled bool) error {
+	logFields := log.Fields{
+		"query":               query,
+		"aggr_index":          aggrIndex,
+		"timestamp_index":     timestampIndex,
+		"is_timezone_enabled": isTimezoneEnabled,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	rowsByTimestamp := make(map[string][]interface{}, 0)
+	for _, row := range result.Rows {
+
+		ts, tErr := U.GetTimeFromParseTimeStrWithErrorFromInterface(row[timestampIndex])
+		if tErr != nil {
+			return tErr
+		}
+		rowsByTimestamp[U.GetTimestampAsStrWithTimezone(ts, query.Timezone)] = row
+	}
+
+	timestamps, offsets := getAllTimestampsAndOffsetBetweenByType(query.From, query.To,
+		query.GroupByTimestamp, query.Timezone)
+
+	filledResult := make([][]interface{}, 0, 0)
+	// range over timestamps between given from and to.
+	// uses timestamp string for comparison.
+	for index, ts := range timestamps {
+		if row, exists := rowsByTimestamp[U.GetTimestampAsStrWithTimezoneGivenOffset(ts, offsets[index])]; exists {
+			// overrides timestamp with user timezone as sql results doesn't
+			// return timezone used to query.
+			row[timestampIndex] = ts
+			filledResult = append(filledResult, row)
+		} else {
+			newRow := make([]interface{}, 2, 2)
+			newRow[timestampIndex] = ts
+			newRow[aggrIndex] = 0
+			filledResult = append(filledResult, newRow)
+		}
+	}
+
+	result.Rows = filledResult
+	return nil
+}
+
+// Need a separate method for this because group by keys are involved and we have fill data for each key.
+// query -> group by camapign_name, date -> 1 jan to 2 jan. DB data [[1/01, a, 100], [2/01, b, 50]]
+// Final data -> [[1/01, a, 100],[1/01, b, 0],[2/01, a, 0], [2/01, b, 50]]
+func addMissingTimestampsOnChannelResultWithGroupByProps(result *model.QueryResult,
+	query *model.KPIQuery, aggrIndex int, timestampIndex int, isTimezoneEnabled bool) error {
+	logFields := log.Fields{
+		"query":               query,
+		"aggr_index":          aggrIndex,
+		"timestamp_index":     timestampIndex,
+		"is_timezone_enabled": isTimezoneEnabled,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	gkStart, gkEnd, err := getChannelGroupKeyIndexesForSlicing(result.Headers)
+	if err != nil {
+		return err
+	}
+
+	filledResult := make([][]interface{}, 0)
+
+	rowsByGroupAndTimestamp := make(map[string]bool, 0)
+	for _, row := range result.Rows {
+		encCols := make([]interface{}, 0)
+		encCols = append(encCols, row[gkStart:gkEnd]...)
+
+		ts, tErr := U.GetTimeFromParseTimeStrWithErrorFromInterface(row[timestampIndex])
+		if tErr != nil {
+			return tErr
+		}
+		timestampWithTimezone := U.GetTimestampAsStrWithTimezone(ts, query.Timezone)
+		// encoded key with group values and timestamp from db row.
+		encCols = append(encCols, timestampWithTimezone)
+		encKey := getEncodedKeyForCols(encCols)
+		rowsByGroupAndTimestamp[encKey] = true
+
+	}
+
+	timestamps, offsets := getAllTimestampsAndOffsetBetweenByType(query.From, query.To,
+		query.GroupByTimestamp, query.Timezone)
+
+	for _, row := range result.Rows {
+		for index, ts := range timestamps {
+			encCols := make([]interface{}, 0)
+			encCols = append(encCols, row[gkStart:gkEnd]...)
+			// encoded key with generated timestamp.
+			timestampWithTimezone := U.GetTimestampAsStrWithTimezoneGivenOffset(ts, offsets[index])
+			encCols = append(encCols, timestampWithTimezone)
+			encKey := getEncodedKeyForCols(encCols)
+
+			if _, exists := rowsByGroupAndTimestamp[encKey]; exists {
+				// overrides timestamp with user timezone as sql results doesn't
+				// return timezone used to query.
+				row[timestampIndex] = timestampWithTimezone
+				filledResult = append(filledResult, row)
+
+			} else {
+				// create new row with group values and missing date
+				// for those group combination and aggr 0.
+				rowLen := len(result.Headers)
+				newRow := make([]interface{}, rowLen)
+				groupValues := row[gkStart:gkEnd]
+
+				for i := 0; i < rowLen; {
+					if i == gkStart {
+						for _, gv := range groupValues {
+							newRow[i] = gv
+							if i == timestampIndex {
+								newRow[i] = timestampWithTimezone
+							}
+							i++
+						}
+					}
+
+					if i == aggrIndex {
+						newRow[i] = 0
+						i++
+					}
+
+					if i == timestampIndex {
+						newRow[i] = timestampWithTimezone
+						i++
+					}
+				}
+				rowsByGroupAndTimestamp[encKey] = true
+				filledResult = append(filledResult, newRow)
+			}
+		}
+	}
+
+	result.Rows = filledResult
+	return nil
+}
+
+func getChannelGroupKeyIndexesForSlicing(cols []string) (int, int, error) {
+	logFields := log.Fields{
+		"cols": cols,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	start := -1
+	end := -1
+
+	index := 0
+	for _, col := range cols {
+		if strings.HasPrefix(col, "campaign_") || strings.HasPrefix(col, "ad_group_") || strings.HasPrefix(col, "keyword_") || col == "datetime" {
+			if start == -1 {
+				start = index
+			} else {
+				end = index
+			}
+		}
+		index++
+	}
+
+	// single element.
+	if start > -1 && end == -1 {
+		end = start
+	}
+
+	if start == -1 {
+		return start, end, errors.New("no group keys found")
+	}
+
+	// end index + 1 reads till end index on slice.
+	end = end + 1
+
+	return start, end, nil
 }

@@ -61,17 +61,31 @@ $fa-color--mono-2: #e7e9ed;
 }
 
 .widgetCard {
-  border-bottom: thin solid $fa-color--mono-2; 
+  border-bottom: thin solid $fa-color--mono-2;
 }
 
 .dropdownbtn {
+  display: flex;
   font-weight: bolder !important;
   font-size: 20px !important;
-  padding: 0;
-
+  padding: 0 0px 0 20px;
+  background-color: #f5f6f8 !important;
+  & .dropdownbtntext {
+    height: 100%;
+    display: grid;
+    place-content: center;
+    padding-right: 10px;
+  }
+  & .dropdownbtnicon {
+    padding: 0 10px 0 10px;
+    height: 100%;
+    display: grid;
+    place-content: center;
+    border-left: 1px solid $fa-color--mono-2;
+  }
   &:hover,
   &:focus {
-    background: #fff !important;
+    background: #efefef !important;
   }
 }
 
@@ -80,9 +94,9 @@ $fa-color--mono-2: #e7e9ed;
   &__btn {
     position: relative;
   }
-  
-  & > div{
-    padding : 0px 0px;
+
+  & > div {
+    padding: 0px 0px;
   }
 
   .ant-select-selector {
@@ -90,7 +104,7 @@ $fa-color--mono-2: #e7e9ed;
   }
 }
 
-.divider_newdashboard_btn{
+.divider_newdashboard_btn {
   margin: 0px 0px 5px 0px;
 }
 
@@ -99,6 +113,21 @@ $fa-color--mono-2: #e7e9ed;
   box-shadow: 0px 0px 20px rgba(0, 0, 0, 0.2);
   border-radius: 10px;
 }
-.widgetCardCustomCSS{
+.widgetCardCustomCSS {
   overflow: auto;
+}
+
+.addNewDashboardButtonProjectDropdown {
+  margin-left: 10px;
+  background-color: transparent;
+  color: #1890ff;
+  border-color: #1890ff;
+  border-width: 2px;
+  font-size: 2px;
+  &:hover,
+  &:active,
+  &:focus {
+    color: #69c0ff;
+    border-color: #69c0ff;
+  }
 }

@@ -39,7 +39,7 @@ func TestHmineHelper(t *testing.T) {
 	trns_d := []string{"D", "C"}
 	trns_e := []string{"A", "E"}
 	trns_f := []string{"A", "F"}
-	trns_g := []string{"A", "D", "C"}
+	trns_g := []string{"A", "F", "C"}
 
 	support_count := 2
 
@@ -51,17 +51,26 @@ func TestHmineHelper(t *testing.T) {
 	htable, err := fp.InitHmine(hdb, support_count, flist)
 	assert.Nil(t, err)
 
-	fmt.Println(flist.Count)
 	assert.Equal(t, len(htable.Hmap), len(flist.Count))
-
 	prefix := []string{"A"}
 	var f fp.FpContainer
-
 	f.Fpts = make([]fp.FPatternCount, 0)
+	f.FptMap = make(map[int][]fp.FPatternCount)
 
 	err = fp.HmineHelper(prefix, htable, flist, 1, &f, flist)
 	assert.Nil(t, err)
-
+	fcountMap := make(map[string]int)
+	fcountMap["A"] = 4
+	fcountMap["AD"] = 1
+	fcountMap["AE"] = 1
+	fcountMap["AF"] = 2
+	fcountMap["ADB"] = 1
+	for _, ky := range f.FptMap {
+		for _, fc := range ky {
+			fstr := strings.Join(fc.FpItm, "")
+			assert.Equal(t, fcountMap[fstr], fc.FpCounts)
+		}
+	}
 }
 
 func TestCountHlink(t *testing.T) {
@@ -279,20 +288,6 @@ func TestReadDataAndCompute2(t *testing.T) {
 			}
 		}
 
-	}
-
-}
-
-func TestAlignment(t *testing.T) {
-
-	fname := "/Users/vinith/work/hmine/src/hmine/data/test5_1.txt"
-
-	events := []string{
-		"$salesforce_lead_leadsource::3rd Party Data Source",
-	}
-	for _, r := range events {
-		_, err := fp.CheckAlignment(fname, r)
-		assert.Nil(t, err)
 	}
 
 }

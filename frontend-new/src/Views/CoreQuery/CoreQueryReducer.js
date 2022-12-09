@@ -8,7 +8,8 @@ import {
   SET_COMPARE_DURATION,
   UPDATE_CHART_TYPES,
   SET_SAVED_QUERY_SETTINGS,
-  UPDATE_PIVOT_CONFIG
+  UPDATE_PIVOT_CONFIG,
+  UPDATE_FUNNEL_TABLE_CONFIG
 } from './constants';
 
 export default function (state, action) {
@@ -81,6 +82,12 @@ export default function (state, action) {
           ...state.pivotConfig,
           ...payload
         }
+      };
+    }
+    case UPDATE_FUNNEL_TABLE_CONFIG: {
+      return {
+        ...state,
+        funnelTableConfig: payload
       };
     }
     default:

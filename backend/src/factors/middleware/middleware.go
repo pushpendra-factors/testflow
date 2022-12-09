@@ -349,6 +349,7 @@ func CustomCors() gin.HandlerFunc {
 			corsConfig.AddAllowHeaders("content-type")
 			corsConfig.AddAllowHeaders("Authorization")
 			corsConfig.AddAllowHeaders(model.QueryCacheRequestInvalidatedCacheHeader)
+			corsConfig.AddAllowHeaders(model.QueryFunnelV2)
 			corsConfig.AddAllowHeaders(helpers.HeaderUserFilterOptForProfiles)
 			corsConfig.AddAllowHeaders(helpers.HeaderUserFilterOptForEventsAndUsers)
 		}
@@ -838,7 +839,7 @@ func SkipAPIWritesIfDisabled() gin.HandlerFunc {
 				strings.HasSuffix(c.Request.URL.Path, "/query/web_analytics") ||
 				strings.HasSuffix(c.Request.URL.Path, "/agents/signin") ||
 				strings.HasSuffix(c.Request.URL.Path, "/profiles/query") ||
-				strings.HasSuffix(c.Request.URL.Path, "/v1/factor") || strings.HasSuffix(c.Request.URL.Path, "/filter_values")
+				strings.HasSuffix(c.Request.URL.Path, "/v1/factor") || strings.HasSuffix(c.Request.URL.Path, "/v1/explainV2") || strings.HasSuffix(c.Request.URL.Path, "/filter_values")
 			if (c.Request.Method == http.MethodPost && !isAllowedPath) ||
 				c.Request.Method == http.MethodDelete || c.Request.Method == http.MethodPut {
 				c.AbortWithStatusJSON(http.StatusMethodNotAllowed, gin.H{"error": "Writes are disabled for MQL"})

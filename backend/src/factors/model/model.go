@@ -48,7 +48,7 @@ type Model interface {
 	// analytics
 	ExecQuery(stmnt string, params []interface{}) (*model.QueryResult, error, string)
 	ExecQueryWithContext(stmnt string, params []interface{}) (*sql.Rows, *sql.Tx, error, string)
-	Analyze(projectID int64, query model.Query, enableFilterOpt bool) (*model.QueryResult, int, string)
+	Analyze(projectID int64, query model.Query, enableFilterOpt bool, funnelV2 bool) (*model.QueryResult, int, string)
 	IsGroupEventNameByQueryEventWithProperties(projectID int64, ewp model.QueryEventWithProperties) (string, int)
 
 	// archival
@@ -312,7 +312,7 @@ type Model interface {
 	GetBingadsFilterValuesSQLAndParams(projectID int64, requestFilterObject string, requestFilterProperty string, reqID string) (string, []interface{}, int)
 
 	// funnel_analytics
-	RunFunnelQuery(projectID int64, query model.Query, enableFilterOpt bool) (*model.QueryResult, int, string)
+	RunFunnelQuery(projectID int64, query model.Query, enableFilterOpt, funnelV2 bool) (*model.QueryResult, int, string)
 
 	// goals
 	GetAllFactorsGoals(ProjectID int64) ([]model.FactorsGoal, int)
@@ -371,6 +371,8 @@ type Model interface {
 	GetClearbitKeyFromProjectSetting(projectId int64) (string, int)
 	GetClient6SignalKeyFromProjectSetting(projectId int64) (string, int)
 	GetFactors6SignalKeyFromProjectSetting(projectId int64) (string, int)
+	GetIntegrationBitsFromProjectSetting(projectId int64) (string, int)
+	SetIntegrationBits(projectID int64, integrationBits string) int
 	GetProjectSettingByKeyWithTimeout(key, value string, timeout time.Duration) (*model.ProjectSetting, int)
 	GetProjectSettingByTokenWithCacheAndDefault(token string) (*model.ProjectSetting, int)
 	GetProjectSettingByPrivateTokenWithCacheAndDefault(privateToken string) (*model.ProjectSetting, int)
@@ -435,9 +437,13 @@ type Model interface {
 	SearchQueriesWithProjectId(projectID int64, searchString string) ([]model.Queries, int)
 	GetAllNonConvertedQueries(projectID int64) ([]model.Queries, int)
 
+	// properties
+	GetStandardUserPropertiesBasedOnIntegration(projectID int64) map[string]string
+
 	// attribution v1 queries
 	GetOrCreateAttributionV1Dashboard(projectId int64, agentUUID string) (*model.Dashboard, int)
 	CreateQueryAndSaveToDashboard(projectID int64, queryInfo *model.CreateQueryAndSaveToDashboardInfo) (*model.QueryAndDashboardUnit, int, string)
+
 	// dashboard_templates
 	CreateTemplate(template *model.DashboardTemplate) (*model.DashboardTemplate, int, string)
 	DeleteTemplate(templateId string) int
@@ -760,6 +766,7 @@ type Model interface {
 	GetAllSegments(projectId int64) (map[string][]model.Segment, int)
 	GetSegmentById(projectId int64, segmentId string) (*model.Segment, int)
 	UpdateSegmentById(projectId int64, id string, segmentPayload model.SegmentPayload) (error, int)
+	IsDuplicateSegmentNameCheck(projectID int64, name string) bool
 
 	// Ads import
 	GetAllAdsImportEnabledProjects() (map[int64]map[string]model.LastProcessedAdsImport, error)
@@ -800,4 +807,13 @@ type Model interface {
 	// leadsquaredmarker
 	CreateLeadSquaredMarker(marker model.LeadsquaredMarker) int
 	GetLeadSquaredMarker(ProjectID int64, Delta int64, Document string, Tag string) (int, int)
+
+	//ExplainV2
+	GetAllExplainV2EntityByProject(projectID int64) ([]model.ExplainV2EntityInfo, int)
+	GetAllSavedExplainV2EntityByProject(projectID int64) ([]model.ExplainV2, int)
+	GetExplainV2Entity(projectID int64, id string) (model.ExplainV2, int)
+	CreateExplainV2Entity(userID string, projectId int64, entity *model.ExplainV2Query) (*model.ExplainV2, int, string)
+	DeleteExplainV2Entity(projectID int64, id string) (int, string)
+	GetExplainV2ProjectCountWithStatus(projectID int64, status []string) (int, int, string)
+	UpdateExplainV2EntityStatus(projectID int64, id string, status string, model_id uint64) (int, string)
 }

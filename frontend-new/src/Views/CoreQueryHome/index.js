@@ -274,7 +274,7 @@ function CoreQuery({
     return {
       key: q.id,
       id_text: q.id_text,
-      type: <SVG name={svgName} size={24} />,
+      type: <SVG name={svgName} size={24} color={'blue'} />,
       title: q.title,
       author: {
         image: activeProjectProfilePicture,
@@ -1050,7 +1050,7 @@ function CoreQuery({
                             BETA
                           </Tag>
                         )} */}
-                              <SVG name={item.icon} size={40} />
+                              <SVG name={item.icon} size={40} color={'blue'} />
                             </div>
 
                             <div className='fai--custom-card-new--bottom-section'>

@@ -132,6 +132,13 @@ func (dd *DiskDriver) GetModelEventsFilePathAndName(projectId int64, startTimest
 	path := dd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
 	return path, "events.txt"
 }
+
+func (dd *DiskDriver) GetModelArtifactsPath(projectId int64, modelId uint64) string {
+	path := dd.GetProjectModelDir(projectId, modelId)
+	path = pb.Join(path, "artifacts")
+	return path
+}
+
 func (dd *DiskDriver) GetModelEventsUnsortedFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string) {
 	path := dd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
 	return path, "events_raw.txt"
@@ -309,4 +316,15 @@ func (dd *DiskDriver) GetPathAnalysisTempFileDir(id string, projectId int64) str
 func (dd *DiskDriver) GetPathAnalysisTempFilePathAndName(id string, projectId int64) (string, string) {
 	path := dd.GetPathAnalysisTempFileDir(id, projectId)
 	return path, "patterns.txt"
+}
+
+func (dd *DiskDriver) GetExplainV2Dir(id uint64, projectId int64) string {
+	return fmt.Sprintf("%s/projects/%v/explain/models/%v/", dd.baseDir, projectId, id)
+}
+
+func (dd *DiskDriver) GetExplainV2ModelPath(id uint64, projectId int64) (string, string) {
+	path := dd.GetExplainV2Dir(id, projectId)
+	chunksPath := pb.Join(path, "chunks")
+	log.Infof("Getting chunks models model (disk) :%s", chunksPath)
+	return chunksPath, "chunk_1.txt"
 }
