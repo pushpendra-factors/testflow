@@ -548,14 +548,14 @@ function CustomKPI({
       if (pr.lOp === 'AND') {
         const val = pr.prDaTy === FILTER_TYPES.CATEGORICAL ? [pr.va] : pr.va;
 
-        const DNa = _.startCase(pr.prNa);
+        const DNa = matchEventName(pr.prNa);
 
         filters.push({
           operator:
             pr.prDaTy === 'datetime'
               ? reverseDateOperatorMap[pr.co]
               : reverseOperatorMap[pr.co],
-          props: [DNa, pr.prDaTy],
+          props: [DNa, pr.prDaTy, 'filter'],
           values:
             pr.prDaTy === FILTER_TYPES.DATETIME
               ? convertDateTimeObjectValuesToMilliSeconds(val)

@@ -269,7 +269,7 @@ function GlobalFilterBlock({
                       extraClass={'m-0 ml-2 uppercase'}
                       weight={'bold'}
                     >
-                      {_.startCase(group.label)}
+                      {group.label}
                     </Text>
                   </div>
                   <SVG
@@ -315,7 +315,7 @@ function GlobalFilterBlock({
                               extraClass={'m-0'}
                               weight={'thin'}
                             >
-                              {_.startCase(val[0])}
+                              {val[0]}
                             </Text>
                           </div>
                         );
