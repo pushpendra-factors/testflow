@@ -30,6 +30,18 @@ func RemoveAttributionV1Queries(queries []Queries) []Queries {
 
 }
 
+// SelectAttributionV1Queries takes list of queries as input and returns list of queries by removing attribution v1 queries
+func SelectAttributionV1Queries(queries []Queries) []Queries {
+	var finalQueries []Queries
+	for _, query := range queries {
+		if query.Type == QueryTypeAttributionV1Query {
+			finalQueries = append(finalQueries, query)
+		}
+	}
+	return finalQueries
+
+}
+
 // RemoveAttributionV1dashboard takes list of dashboards as input and returns list of dashboards by removing attribution v1 dashboard
 func RemoveAttributionV1dashboard(dashboards []Dashboard) []Dashboard {
 	var finalDashboards []Dashboard
