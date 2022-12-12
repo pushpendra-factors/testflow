@@ -157,6 +157,10 @@ const SavedGoals = ({ savedQuery, setShowReport, SetfetchingIngishts,setActiveIn
       });
       SetLoadingTable(false);
     }
+    else{
+      setdataSource([]);
+      SetLoadingTable(false);
+    }
   }, [savedQuery]);
 
 

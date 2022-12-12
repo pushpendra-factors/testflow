@@ -557,7 +557,7 @@ const TouchpointView = ({
   const getStartsWith = () => {
     if (tchRuleType === RULE_TYPE_HS_EMAILS) {
       return '$hubspot_engagement';
-    } else if (tchRuleType === RULE_TYPE_HS_EMAILS) {
+    } else if (tchRuleType === RULE_TYPE_HS_CONTACT) {
       return '$hubspot_contact';
     } else if (tchRuleType === RULE_TYPE_HS_FORM_SUBMISSIONS) {
       return '';

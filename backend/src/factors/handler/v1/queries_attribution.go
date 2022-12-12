@@ -45,6 +45,27 @@ func GetOrCreateAttributionV1DashboardHandler(c *gin.Context) (interface{}, int,
 	return dashboard, http.StatusFound, "", false
 }
 
+// GetAttributionQueriesHandler godoc
+// @Summary To get list of all Attribution queries in project.
+// @Tags AttributionQuery
+// @Accept  json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Success 302 {array} model.Queries
+// @Router /{project_id}/v1/attribution/queries [get]
+func GetAttributionQueriesHandler(c *gin.Context) (interface{}, int, string, bool) {
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	if projectID == 0 {
+		return nil, http.StatusForbidden, "Get Queries failed. Invalid project.", true
+	}
+	queries, errCode := store.GetStore().GetALLQueriesWithProjectId(projectID)
+	if errCode != http.StatusFound {
+		return nil, errCode, "Get Saved Queries failed.", true
+	}
+	queries = model.SelectAttributionV1Queries(queries)
+	return queries, http.StatusOK, "", false
+}
+
 // CreateAttributionV1QueryAndSaveToDashboardHandler godoc
 // @Summary To create a new query and save it to attribution v1 dashboard for given query.
 // @Tags SavedQuery
@@ -52,7 +73,7 @@ func GetOrCreateAttributionV1DashboardHandler(c *gin.Context) (interface{}, int,
 // @Produce json
 // @Param project_id path integer true "Project ID"
 // @Param query body handler.CreateQueryAndSaveToDashboardPayload
-// @Success 201 {object} model.Queries
+// @Success 201 {object} model.QueryAndDashboardUnit
 // @Router /{project_id}/v1/attribution/queries [post]
 func CreateAttributionV1QueryAndSaveToDashboardHandler(c *gin.Context) (interface{}, int, string, bool) {
 	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
