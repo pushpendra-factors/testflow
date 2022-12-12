@@ -132,7 +132,6 @@ func TaskFuncWithProjectId(JobName string, lookback int, projectIds []int64, f f
 				}
 				log.WithFields(log.Fields{"delta": delta, "projectId": projectId}).Info("processing success")
 				store.GetStore().InsertTaskEndRecord(taskDetails.TaskID, projectId, delta)
-				break
 			} else {
 				finalStatus[deltaString] = "dependency not done yet"
 				finalStatus["Status"+deltaString] = false

@@ -44,23 +44,36 @@ const QueryBuilder = ({
 
   const returnEventname = (arr) => {
     return arr.map((item) => item.label)
-  }
+  } 
 
+  const transformIndividualFilter = (Arr) =>{ 
+    if(!_.isEmpty(Arr)){
+      let query  = { 
+        ...Arr[0],
+        filters: _, // removing filters key
+        filter: !_.isEmpty(Arr[0]?.filters) ? getGlobalFilters(Arr[0]?.filters) : null
+      }
+      return query 
+    }
+    else return null
+  }
+ 
   const buildPathAnalysisQuery = (data) => {
+
     setLoading(true);
     let payload = {
       "title": data?.title,
       "event_type": pathCondition,
-      "event": singleQueries[0],
+      "event": transformIndividualFilter(singleQueries),
       "steps": Number(pathStepCount),
       "include_events": (excludeEvents == 'false') ? multipleQueries : null,
       "exclude_events": (excludeEvents == 'true') ? multipleQueries : null,
-      "starttimestamp": 1661970600,
-      "endtimestamp": 1664562600,
+      "starttimestamp": moment(selectedDateRange.startDate).unix(),
+      "endtimestamp": moment(selectedDateRange.endDate).unix(),
       "avoid_repeated_events": repetativeStep,
       "filter": globalFilters ? getGlobalFilters(globalFilters) : null
-    };
-
+    }; 
+ 
     createPathPathAnalysisQuery(activeProject?.id, payload).then(() => {
       fetchSavedPathAnalysis(activeProject?.id);
       setLoading(false)
@@ -89,8 +102,7 @@ const QueryBuilder = ({
       let defaultDate = {
         startDate: moment.unix(activeQuery?.starttimestamp),
         endDate: moment.unix(activeQuery?.endtimestamp),
-      }
-      console.log("getGlobalFiltersfromSavedState", getGlobalFiltersfromSavedState(activeQuery?.filter))
+      } 
 
       setGlobalFilters(activeQuery?.filter ? getGlobalFiltersfromSavedState(activeQuery?.filter) : null)
       setSelectedDateRange(defaultDate)
@@ -298,7 +310,7 @@ const QueryBuilder = ({
                 },
                 {
                   value: 'false',
-                  label: 'All events with',
+                  label: 'Only specific events',
                 },
               ]}
               value={excludeEvents}
