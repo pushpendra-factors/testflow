@@ -2,6 +2,7 @@ package model
 
 import (
 	"fmt"
+	"strings"
 )
 
 const (
@@ -117,6 +118,9 @@ func LeadSquaredDocumentEndpoint(docType string)string {
 
 func LeadSquaredDocumentCreatedEventName(docType string)string {
 	if(ActivityEvents[docType] == true){
+		if(strings.HasSuffix(LeadSquaredTableName[docType], "_activity")){
+			return  LeadSquaredTableName[docType] + "_created"
+		}
 		return  LeadSquaredTableName[docType] + "_activity_created"
 	}
 	return ""
@@ -124,6 +128,9 @@ func LeadSquaredDocumentCreatedEventName(docType string)string {
 
 func LeadSquaredDocumentUpdatedEventName(docType string)string {
 	if(ActivityEvents[docType] == true){
+		if(strings.HasSuffix(LeadSquaredTableName[docType], "_activity")){
+			return  LeadSquaredTableName[docType] + "_updated"
+		}
 		return  LeadSquaredTableName[docType] + "_activity_updated"
 	}
 	return ""
