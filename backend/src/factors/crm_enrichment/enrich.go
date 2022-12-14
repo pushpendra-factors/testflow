@@ -259,7 +259,6 @@ func CreateOrGetCRMEventNames(projectID int64, config *CRMSourceConfig) int {
 		return http.StatusInternalServerError
 	}
 
-	//TODO: move to config based creation
 	for _, eventName := range eventNames {
 		_, status := store.GetStore().CreateOrGetEventName(&model.EventName{
 			ProjectId: projectID,
@@ -268,8 +267,8 @@ func CreateOrGetCRMEventNames(projectID int64, config *CRMSourceConfig) int {
 		})
 
 		if status != http.StatusFound && status != http.StatusConflict && status != http.StatusCreated {
-			log.WithField("project_id", projectID).Error("Failed to create event names for crm.")
-			return http.StatusInternalServerError
+			log.WithField("project_id", projectID).Error("Failed to create event names for crm. Continuing with other event names.")
+			continue
 		}
 	}
 
