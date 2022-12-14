@@ -12,7 +12,8 @@ import {
   CHART_TYPE_HORIZONTAL_BAR_CHART,
   QUERY_TYPE_KPI,
   QUERY_TYPE_PROFILE,
-  CHART_TYPE_PIVOT_CHART
+  CHART_TYPE_PIVOT_CHART,
+  CHART_TYPE_METRIC_CHART
 } from './constants';
 
 export const isPivotSupported = ({ queryType }) => {
@@ -94,8 +95,24 @@ export const getChartTypeMenuItems = (queryType, breakdownLength, events) => {
         name: 'Columns'
       },
       {
+        key: CHART_TYPE_METRIC_CHART,
+        name: 'Metric'
+      },
+      {
         key: CHART_TYPE_SCATTER_PLOT,
         name: 'Scatter Plot'
+      }
+    ];
+  }
+  if (queryType === QUERY_TYPE_FUNNEL && !breakdownLength) {
+    menuItems = [
+      {
+        key: CHART_TYPE_BARCHART,
+        name: 'Columns'
+      },
+      {
+        key: CHART_TYPE_METRIC_CHART,
+        name: 'Metric'
       }
     ];
   }
@@ -172,8 +189,8 @@ export const getDateFormatForTimeSeriesChart = ({ frequency }) => {
   return frequency === 'hour'
     ? 'h A, MMM D, YYYY'
     : frequency === 'date' || frequency === 'week'
-      ? 'MMM D, YYYY'
-      : frequency === 'month'
-        ? 'MMM YYYY'
-        : 'Q, YYYY';
+    ? 'MMM D, YYYY'
+    : frequency === 'month'
+    ? 'MMM YYYY'
+    : 'Q, YYYY';
 };

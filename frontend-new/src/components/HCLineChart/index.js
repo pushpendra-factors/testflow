@@ -176,7 +176,9 @@ function LineChart({
     colors,
     metricTypes,
     dateFormat,
-    secondaryYAxisIndices
+    secondaryYAxisIndices,
+    compareCategories,
+    comparisonApplied
   ]);
 
   useEffect(() => {
