@@ -110,6 +110,10 @@ func (store *MemSQL) CreateClickableElement(projectId int64, click *model.Captur
 		Enabled:           false,
 	}
 
+	if click.UpdatedAt != nil {
+		event.UpdatedAt = *click.UpdatedAt
+	}
+
 	db := C.GetServices().Db
 	dbx := db.Create(&event)
 	// Duplicates gracefully handled and allowed further.
@@ -198,4 +202,25 @@ func (store *MemSQL) GetAllClickableElements(projectId int64) ([]model.Clickable
 	}
 
 	return clickableElements, http.StatusFound
+}
+
+func (store *MemSQL) DeleteClickableElementsOlderThanGivenDays(expiry int) (int, error) {
+	logCtx := log.WithField("expiry", expiry)
+	if expiry < 0 {
+		logCtx.Error("Invalid expiry.")
+		return http.StatusBadRequest, nil
+	}
+
+	var timeBeforeSevenDays = U.TimeNowZ().AddDate(0, 0, -expiry)
+	db := C.GetServices().Db
+	err := db.Table("clickable_elements").
+		Where("enabled = false AND updated_at < ?", timeBeforeSevenDays).
+		Delete(&model.ClickableElements{}).Error
+
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to delete clickable_elements older than given days.")
+		return http.StatusInternalServerError, err
+	}
+
+	return http.StatusOK, nil
 }

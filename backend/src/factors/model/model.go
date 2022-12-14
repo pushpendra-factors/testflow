@@ -292,6 +292,7 @@ type Model interface {
 	GetClickableElement(projectID int64, displayName string, elementType string) (*model.ClickableElements, int)
 	ToggleEnabledClickableElement(projectId int64, id string) int
 	GetAllClickableElements(projectId int64) ([]model.ClickableElements, int)
+	DeleteClickableElementsOlderThanGivenDays(expiry int) (int, error)
 
 	// facebook_document
 	CreateFacebookDocument(projectID int64, document *model.FacebookDocument) int
