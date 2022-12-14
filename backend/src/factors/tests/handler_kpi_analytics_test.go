@@ -294,7 +294,44 @@ func TestKpiAnalytics(t *testing.T) {
 			C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, statusCode)
 		assert.Equal(t, result[0].Headers, []string{"datetime", "adwords_metrics_impressions"})
-		assert.Equal(t, len(result[0].Rows), 0)
+		assert.Equal(t, len(result[0].Rows), 1)
+	})
+
+	t.Run("Query with channel and events at a time", func(t *testing.T) {
+
+		query := model.KPIQuery{
+			Category:        "events",
+			DisplayCategory: "page_views",
+			PageUrl:         "s0",
+			//Metrics:         []string{"page_views", "unique_users"},
+			Metrics:          []string{"page_views"},
+			Filters:          []model.KPIFilter{},
+			From:             startTimestamp,
+			To:               startTimestamp + 2*86400,
+			GroupByTimestamp: "date",
+		}
+		query1 := model.KPIQuery{
+			Category:         "channels",
+			DisplayCategory:  "adwords_metrics",
+			Metrics:          []string{"impressions"},
+			Filters:          nil,
+			From:             startTimestamp,
+			To:               startTimestamp + 2*86400,
+			GroupByTimestamp: "date",
+		}
+
+		kpiQueryGroup := model.KPIQueryGroup{
+			Class:         "kpi",
+			Queries:       []model.KPIQuery{query, query1},
+			GlobalFilters: []model.KPIFilter{},
+			GlobalGroupBy: []model.KPIGroupBy{},
+		}
+
+		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup,
+			C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		assert.Equal(t, http.StatusOK, statusCode)
+		assert.Equal(t, result[0].Headers, []string{"datetime", "page_views", "adwords_metrics_impressions"})
+		assert.Equal(t, len(result[0].Rows), 3)
 	})
 }
 

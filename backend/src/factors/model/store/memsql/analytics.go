@@ -1432,7 +1432,7 @@ func getSelectTimestampByTypeAndPropertyName(timestampType, propertyName, timezo
 
 	propertyToNum := "CONVERT(SUBSTRING(" + propertyName + ",1,10), DECIMAL(10))"
 	var selectStr string
-	
+
 	// Note: Second is used as granularity only in profiles which is called from attribution.
 	if timestampType == model.GroupByTimestampSecond {
 		selectStr = fmt.Sprintf("date_trunc('second', CONVERT_TZ(FROM_UNIXTIME("+propertyToNum+"), 'UTC', '%s'))", selectTz)
@@ -2182,14 +2182,15 @@ func addMissingTimestampsOnChannelResultWithoutGroupByProps(result *model.QueryR
 	// range over timestamps between given from and to.
 	// uses timestamp string for comparison.
 	for index, ts := range timestamps {
+		timestampWithTimezone := U.GetTimestampAsStrWithTimezoneGivenOffset(ts, offsets[index])
 		if row, exists := rowsByTimestamp[U.GetTimestampAsStrWithTimezoneGivenOffset(ts, offsets[index])]; exists {
 			// overrides timestamp with user timezone as sql results doesn't
 			// return timezone used to query.
-			row[timestampIndex] = ts
+			row[timestampIndex] = timestampWithTimezone
 			filledResult = append(filledResult, row)
 		} else {
 			newRow := make([]interface{}, 2, 2)
-			newRow[timestampIndex] = ts
+			newRow[timestampIndex] = timestampWithTimezone
 			newRow[aggrIndex] = 0
 			filledResult = append(filledResult, newRow)
 		}
