@@ -86,13 +86,13 @@ func CheckIfFirstTimeIntegrationDone(projectID int64, integration string) (bool,
 	}
 
 	if integration == HubspotIntegrationName {
-		return string(integrationBits[0]) == "0", http.StatusFound
+		return string(integrationBits[0]) == "1", http.StatusFound
 	} else if integration == LeadSquaredIntegrationName {
-		return string(integrationBits[1]) == "0", http.StatusFound
+		return string(integrationBits[1]) == "1", http.StatusFound
 	} else if integration == model.MarketoIntegration {
-		return string(integrationBits[2]) == "0", http.StatusFound
+		return string(integrationBits[2]) == "1", http.StatusFound
 	} else {
-		return string(integrationBits[3]) == "0", http.StatusFound
+		return string(integrationBits[3]) == "1", http.StatusFound
 	}
 }
 
