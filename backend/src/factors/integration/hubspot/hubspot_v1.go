@@ -1232,8 +1232,8 @@ func CreateTouchPointEventForEngagementV1(project *model.Project, trackPayload *
 
 	var timestamp int64
 	switch engagementType {
-	case EngagementTypeEmail:
-	case EngagementTypeIncomingEmail:
+
+	case EngagementTypeEmail, EngagementTypeIncomingEmail:
 		{
 			threadID, isPresent := engagement.Metadata["threadId"]
 			if !isPresent {
@@ -1307,8 +1307,8 @@ func CreateTouchPointEventForEngagementV1(project *model.Project, trackPayload *
 func canCreateHSEngagementTouchPointV1(engagementType string, ruleType string) bool {
 
 	switch engagementType {
-	case EngagementTypeEmail:
-	case EngagementTypeIncomingEmail:
+
+	case EngagementTypeEmail, EngagementTypeIncomingEmail:
 		if ruleType == model.TouchPointRuleTypeEmails {
 			return true
 		}

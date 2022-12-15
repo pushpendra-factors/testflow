@@ -220,7 +220,7 @@ func syncContactFormSubmissions(project *model.Project, otpRules *[]model.OTPRul
 		log.Error("syncContactFormSubmissions Failed. Invalid userId")
 		return
 	}
-
+	logCtx.WithFields(log.Fields{"ProjectID": project.ID}).Info("Inside method syncContactFormSubmissions")
 	var contact Contact
 	err := json.Unmarshal((document.Value).RawMessage, &contact)
 	if err != nil {
@@ -311,7 +311,7 @@ func syncContactFormSubmissions(project *model.Project, otpRules *[]model.OTPRul
 			logCtx.Error("Failed to create hubspot form-submission event")
 			return
 		}
-
+		logCtx.WithFields(log.Fields{"ProjectID": project.ID, "Payload": payload}).Info("Invoking method ApplyHSOfflineTouchPointRuleForForms")
 		err = ApplyHSOfflineTouchPointRuleForForms(project, otpRules, payload, document, eventTimestamp)
 		if err != nil {
 			// log and continue
@@ -1244,6 +1244,7 @@ func syncContact(project *model.Project, otpRules *[]model.OTPRule, document *mo
 	}
 
 	if C.EnableHubspotFormsEventsByProjectID(project.ID) {
+		logCtx.WithFields(log.Fields{"ProjectID": project.ID}).Info("Invoking method syncContactFormSubmission")
 		syncContactFormSubmissions(project, otpRules, userID, document)
 	}
 
@@ -1300,7 +1301,7 @@ func ApplyHSOfflineTouchPointRuleForForms(project *model.Project, otpRules *[]mo
 	if otpRules == nil || project == nil || trackPayload == nil || document == nil {
 		return nil
 	}
-
+	logCtx.WithFields(log.Fields{"ProjectID": project.ID}).Info("Inside method ApplyHSOfflineTouchPointRuleForForms")
 	formTimestamp = U.CheckAndGetStandardTimestamp(formTimestamp)
 
 	for _, rule := range *otpRules {
@@ -1312,7 +1313,7 @@ func ApplyHSOfflineTouchPointRuleForForms(project *model.Project, otpRules *[]mo
 		if !filterCheckGeneral(rule, trackPayload, logCtx) {
 			continue
 		}
-
+		logCtx.WithFields(log.Fields{"ProjectID": project.ID, "OTPrules": rule}).Info("Invoking method CreateTouchPointEvent")
 		_, err := CreateTouchPointEvent(project, trackPayload, document, rule, formTimestamp)
 		if err != nil {
 			logCtx.WithError(err).Error("failed to create touch point for hubspot contact updated document.")
@@ -1367,6 +1368,7 @@ func CreateTouchPointEvent(project *model.Project, trackPayload *SDK.TrackPayloa
 		"document_id": document.ID, "document_action": document.Action})
 	logCtx.WithField("document", document).WithField("trackPayload", trackPayload).
 		Info("CreateTouchPointEvent: creating hubspot offline touch point document")
+	logCtx.WithFields(log.Fields{"ProjectID": project.ID}).Info("Inside method CreateTouchPointEvent")
 	var trackResponse *SDK.TrackResponse
 	var err error
 	eventProperties := make(U.PropertiesMap, 0)
@@ -1461,8 +1463,7 @@ func CreateTouchPointEventForEngagement(project *model.Project, trackPayload *SD
 	var timestamp int64
 
 	switch engagementType {
-	case EngagementTypeEmail:
-	case EngagementTypeIncomingEmail:
+	case EngagementTypeEmail, EngagementTypeIncomingEmail, EngagementTypeMeeting, EngagementTypeCall:
 		{
 			timeValue, exists := (trackPayload.EventProperties)[rule.TouchPointTimeRef]
 			if !exists {
@@ -1517,9 +1518,17 @@ func CreateTouchPointEventForEngagement(project *model.Project, trackPayload *SD
 func canCreateHSEngagementTouchPoint(engagementType string, ruleType string) bool {
 
 	switch engagementType {
-	case EngagementTypeEmail:
-	case EngagementTypeIncomingEmail:
+
+	case EngagementTypeEmail, EngagementTypeIncomingEmail:
 		if ruleType == model.TouchPointRuleTypeEmails {
+			return true
+		}
+	case EngagementTypeMeeting:
+		if ruleType == model.TouchPointRuleTypeMeetings {
+			return true
+		}
+	case EngagementTypeCall:
+		if ruleType == model.TouchPointRuleTypeCalls {
 			return true
 		}
 	default:
