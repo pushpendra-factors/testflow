@@ -198,7 +198,7 @@ func filterNodes(result map[int]map[string]int, n int, startsWith bool)map[int]m
 			}
 			finalResult[i] = selectedNodes
 			if(i >= 2){
-				for label, count := range finalResult[i-2] {
+				for label, count := range finalResult[i-1] {
 					sum := 0
 					rootEvent := ""
 					if(startsWith == true){
@@ -209,7 +209,7 @@ func filterNodes(result map[int]map[string]int, n int, startsWith bool)map[int]m
 					if(strings.Contains(label, "OTHERS")){
 						continue
 					} 
-					for label1, count1 := range finalResult[i-1]{
+					for label1, count1 := range finalResult[i]{
 						if(strings.Contains(label1, "OTHERS")){
 							continue
 						} else {
