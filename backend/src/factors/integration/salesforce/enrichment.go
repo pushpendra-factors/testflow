@@ -305,7 +305,6 @@ func TrackSalesforceEventByDocumentType(projectID int64, trackPayload *SDK.Track
 		finalPayload.Name = model.GetSalesforceEventNameByDocumentAndAction(document, model.SalesforceDocumentUpdated)
 
 		if document.Action == model.SalesforceDocumentUpdated {
-
 			finalPayload.Timestamp = lastModifiedTimestamp
 			// TODO(maisa): Use GetSyncedSalesforceDocumentByType while updating multiple contacts in an account object
 			documents, status := store.GetStore().GetSyncedSalesforceDocumentByType(projectID, []string{document.ID}, document.Type, false)
@@ -1689,6 +1688,54 @@ func GetActivitiesUserIDs(document *model.SalesforceDocument) ([]string, error) 
 	return userIds, nil
 }
 
+func canProcessSalesforceActivity(document *model.SalesforceDocument) (bool, error) {
+	if document.Type != model.SalesforceDocumentTypeTask && document.Type != model.SalesforceDocumentTypeEvent {
+		return false, errors.New("Invalid doc type in canSkipProcessingSalesforceActivity")
+	}
+
+	if document.Action != model.SalesforceDocumentCreated && document.Action != model.SalesforceDocumentUpdated {
+		return false, errors.New("Invalid doc action in canSkipProcessingSalesforceActivity")
+	}
+
+	if document.Action == model.SalesforceDocumentCreated {
+		return true, nil
+	}
+
+	var properties map[string]interface{}
+	err := json.Unmarshal(document.Value.RawMessage, &properties)
+	if err != nil {
+		return false, err
+	}
+
+	var updatedDocHasWhoID bool
+	if U.GetPropertyValueAsString(properties["WhoId"]) != "" {
+		updatedDocHasWhoID = true
+	}
+
+	docs, errCode := store.GetStore().GetSyncedSalesforceDocumentByType(document.ProjectID, []string{document.ID}, document.Type, true)
+	if errCode != http.StatusFound {
+		return false, errors.New("Failed to get synced docs on canProcessSalesforceActivity")
+	}
+
+	var createdDocProperties map[string]interface{}
+	err = json.Unmarshal(docs[0].Value.RawMessage, &createdDocProperties)
+	if err != nil {
+		return false, err
+	}
+
+	var createdDocHasWhoID bool
+	if U.GetPropertyValueAsString(createdDocProperties["WhoId"]) != "" {
+		createdDocHasWhoID = true
+	}
+
+	// Skip Processing if created_doc doesn't contain WhoId and updated_doc contains WhoId
+	if !createdDocHasWhoID && updatedDocHasWhoID {
+		return false, nil
+	}
+
+	return true, nil
+}
+
 func enrichTask(projectID int64, document *model.SalesforceDocument) int {
 	logCtx := log.WithField("project_id", projectID).WithField("document_id", document.ID)
 
@@ -1700,6 +1747,18 @@ func enrichTask(projectID int64, document *model.SalesforceDocument) int {
 	if document.Type != model.SalesforceDocumentTypeTask {
 		logCtx.Error("Invalid docType in enrich Task")
 		return http.StatusInternalServerError
+	}
+
+	if document.Action == model.SalesforceDocumentUpdated {
+		canProcess, err := canProcessSalesforceActivity(document)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed in canProcessSalesforceActivity on enrich Task")
+			return http.StatusInternalServerError
+		}
+
+		if !canProcess {
+			return http.StatusOK
+		}
 	}
 
 	enProperties, _, err := GetSalesforceDocumentProperties(projectID, document)
@@ -1769,6 +1828,18 @@ func enrichEvent(projectID int64, document *model.SalesforceDocument) int {
 	if document.Type != model.SalesforceDocumentTypeEvent {
 		logCtx.Error("Invalid docType in enrich Event")
 		return http.StatusInternalServerError
+	}
+
+	if document.Action == model.SalesforceDocumentUpdated {
+		canProcess, err := canProcessSalesforceActivity(document)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed in canProcessSalesforceActivity on enrich Event")
+			return http.StatusInternalServerError
+		}
+
+		if !canProcess {
+			return http.StatusOK
+		}
 	}
 
 	enProperties, _, err := GetSalesforceDocumentProperties(projectID, document)
