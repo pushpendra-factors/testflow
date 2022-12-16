@@ -443,6 +443,7 @@ var SP_INITIAL_COST string = UP_INITIAL_COST
 var SP_INITIAL_REVENUE string = UP_INITIAL_REVENUE
 
 // clearbit properties
+var CLR_PROPERTIES_PREFIX = "$clr_"
 var CLR_IP = "$clr_ip"
 var CLR_COMPANY_NAME = "$clr_company_name"
 var CLR_COMPANY_GEO_CITY = "$clr_company_geo_city"
@@ -477,6 +478,7 @@ var CLR_COMPANY_TECH = "$clr_company_tech"
 var CLR_COMPANY_TAGS = "$clr_company_tags"
 
 //6Signal Properties
+var SIX_SIGNAL_PROPERTIES_PREFIX = "$6Signal_"
 var SIX_SIGNAL_ZIP = "$6Signal_zip"
 var SIX_SIGNAL_NAICS_DESCRIPTION = "$6Signal_naics_description"
 var SIX_SIGNAL_EMPLOYEE_COUNT = "$6Signal_employee_count"
@@ -1613,6 +1615,25 @@ var STANDARD_USER_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	CLR_COMPANY_LEGALNAME:                        "Clearbit Company Legalname",
 	CLR_COMPANY_TECH:                             "Clearbit Company Tech",
 	CLR_COMPANY_TAGS:                             "Clearbit Company Tags",
+	SIX_SIGNAL_ADDRESS:                           "6signal Address",
+	SIX_SIGNAL_ANNUAL_REVENUE:                    "6signal Annual Revenue",
+	SIX_SIGNAL_CITY:                              "6signal City",
+	SIX_SIGNAL_COUNTRY:                           "6signal Country",
+	SIX_SIGNAL_COUNTRY_ISO_CODE:                  "6signal Country Iso Code",
+	SIX_SIGNAL_DOMAIN:                            "6signal Domain",
+	SIX_SIGNAL_EMPLOYEE_COUNT:                    "6signal Employee Count",
+	SIX_SIGNAL_EMPLOYEE_RANGE:                    "6signal Employee Range",
+	SIX_SIGNAL_INDUSTRY:                          "6signal Industry",
+	SIX_SIGNAL_NAICS:                             "6signal Naics",
+	SIX_SIGNAL_NAICS_DESCRIPTION:                 "6signal Naics Description",
+	SIX_SIGNAL_NAME:                              "6signal Name",
+	SIX_SIGNAL_PHONE:                             "6signal Phone",
+	SIX_SIGNAL_REGION:                            "6signal Region",
+	SIX_SIGNAL_REVENUE_RANGE:                     "6signal Revenue Range",
+	SIX_SIGNAL_SIC:                               "6signal Sic",
+	SIX_SIGNAL_SIC_DESCRIPTION:                   "6signal Sic Description",
+	SIX_SIGNAL_STATE:                             "6signal State",
+	SIX_SIGNAL_ZIP:                               "6signal Zip",
 }
 
 var STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES = map[string]string{

@@ -9,7 +9,7 @@ func (store *MemSQL) GetKPIConfigsForCustomEvents(projectID int64, reqID string,
 	config := model.KpiCustomEventsConfig
 	config["properties"] = make([]map[string]string, 0)
 
-	rMetrics := store.GetCustomMetricAndDerivedMetricByProjectIdAndDisplayCategory(projectID, model.EventsBasedDisplayCategory, includeDerivedKPIs)
+	rMetrics := store.GetCustomEventAndDerivedMetricByProjectIdAndDisplayCategory(projectID, model.EventsBasedDisplayCategory, includeDerivedKPIs)
 
 	config["metrics"] = rMetrics
 	return config, http.StatusOK

@@ -82,7 +82,7 @@ func TestCountPatterns(t *testing.T) {
 	assert.Nil(t, erronFalse)
 
 	// Test pABC output.
-	assert.Equal(t, uint(3), pABC.PerOccurrenceCount, "pABC.PerOccurrenceCount")
+	assert.Equal(t, uint(0), pABC.PerOccurrenceCount, "pABC.PerOccurrenceCount")
 	assert.Equal(t, uint(2), pABC.TotalUserCount, "pABC.TotalUserCount")
 	assert.Equal(t, uint(2), pABC.PerUserCount, "pABC.PerUserCount")
 	assert.Equal(t, pLen, len(pABC.EventNames))
@@ -151,27 +151,27 @@ func TestCountPatterns(t *testing.T) {
 	}
 
 	// Test output on other patterns.
-	assert.Equal(t, uint(4), pAB.PerOccurrenceCount)
+	assert.Equal(t, uint(0), pAB.PerOccurrenceCount)
 	assert.Equal(t, uint(2), pAB.PerUserCount)
 	assert.Equal(t, uint(2), pAB.TotalUserCount)
 
-	assert.Equal(t, uint(5), pBC.PerOccurrenceCount)
+	assert.Equal(t, uint(0), pBC.PerOccurrenceCount)
 	assert.Equal(t, uint(2), pBC.PerUserCount)
 	assert.Equal(t, uint(2), pBC.TotalUserCount)
 
-	assert.Equal(t, uint(4), pAC.PerOccurrenceCount)
+	assert.Equal(t, uint(0), pAC.PerOccurrenceCount)
 	assert.Equal(t, uint(2), pAC.PerUserCount)
 	assert.Equal(t, uint(2), pAC.TotalUserCount)
 
-	assert.Equal(t, uint(5), pA.PerOccurrenceCount)
+	assert.Equal(t, uint(0), pA.PerOccurrenceCount)
 	assert.Equal(t, uint(2), pA.PerUserCount)
 	assert.Equal(t, uint(2), pA.TotalUserCount)
 
-	assert.Equal(t, uint(6), pB.PerOccurrenceCount)
+	assert.Equal(t, uint(0), pB.PerOccurrenceCount)
 	assert.Equal(t, uint(2), pB.PerUserCount)
 	assert.Equal(t, uint(2), pB.TotalUserCount)
 
-	assert.Equal(t, uint(5), pC.PerOccurrenceCount)
+	assert.Equal(t, uint(0), pC.PerOccurrenceCount)
 	assert.Equal(t, uint(2), pC.PerUserCount)
 	assert.Equal(t, uint(2), pC.TotalUserCount)
 
@@ -641,7 +641,7 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 	// C: lastSeenTime -> user1CreatedTime+1hour+420seconds and user2CreatedTime+1hour+540seconds.
 	// C: firstSeenSinceUserJoin -> 1hour+240seconds and 1hour+240seconds.
 	// C: lastSeenSinceUserJoin -> 1hour+360seconds and 1hour+540seconds.
-	assert.Equal(t, uint(3), pABC.PerOccurrenceCount, "pABC.PerOccurrenceCount")
+	assert.Equal(t, uint(0), pABC.PerOccurrenceCount, "pABC.PerOccurrenceCount")
 	assert.Equal(t, uint(2), pABC.TotalUserCount)
 	assert.Equal(t, uint(2), pABC.PerUserCount)
 	assert.Equal(t, pLen, len(pABC.EventNames))
@@ -792,14 +792,14 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 	fmt.Println(pABC)
 	actualMeanMap = pABC.PerOccurrenceEventNumericProperties.MeanMap()
 
-	assert.Equal(t, expectedMeanMap, actualMeanMap)
+	// assert.Equal(t, expectedMeanMap, actualMeanMap)
 	actualCdf = pABC.PerOccurrenceEventNumericProperties.CDFFromMap(
 		map[string]float64{
 			"0.ANum":   2.0,
 			"0.ComNum": 2.0,
 			"1.ComNum": 1.5,
 		})
-	assert.InDelta(t, actualCdf, 0.33, 0.01)
+	// assert.InDelta(t, actualCdf, 0.33, 0.01)// removed as per Occurence counts are not counted
 
 	// 0.ACat: "acat1" and "acat1" and "acat1"
 	// 0.ComCat: "com3" and "com1" and "com1"
@@ -818,7 +818,7 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 			"2.ComCat": "com2",
 		})
 	assert.Nil(t, err, fmt.Sprintf("Error: %v", err))
-	assert.InDelta(t, actualPdf, 0.33, 0.01)
+	// assert.InDelta(t, actualPdf, 0.33, 0.01) // removed as per Occurence counts are not counted
 
 	// A-B-C occurs thrice with the following six dimensional user numerical
 	// distribution.
@@ -831,7 +831,7 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 		"2.age": float64((20.0 + 30.0 + 30.0) / 3),
 	}
 	actualMeanMap = pABC.PerOccurrenceUserNumericProperties.MeanMap()
-	assert.Equal(t, expectedMeanMap, actualMeanMap)
+	// assert.Equal(t, expectedMeanMap, actualMeanMap) // removed as per Occurence counts are not counted
 
 	actualCdf = pABC.PerOccurrenceUserNumericProperties.CDFFromMap(
 		map[string]float64{
@@ -839,7 +839,7 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 			"1.age": 25.0,
 			"2.age": 25.0,
 		})
-	assert.InDelta(t, actualCdf, 0.33, 0.01)
+	// assert.InDelta(t, actualCdf, 0.33, 0.01) // removed as per Occurence counts are not counted
 
 	// ABC occurs thrice, once with U1 country India and twice with U2 country USA.
 	// Payment status changes from Free to Paid on first occurrence of C.
@@ -861,30 +861,30 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 		})
 
 	assert.Nil(t, err, fmt.Sprintf("Error: %v", err))
-	assert.InDelta(t, actualPdf, 0.33, 0.01)
+	// assert.InDelta(t, actualPdf, 0.33, 0.01) // removed as per Occurence counts are not counted
 
 	// Test output on other patterns.
-	assert.Equal(t, uint(4), pAB.PerOccurrenceCount)
+	assert.Equal(t, uint(0), pAB.PerOccurrenceCount)
 	assert.Equal(t, uint(2), pAB.PerUserCount)
 	assert.Equal(t, uint(2), pAB.TotalUserCount)
 
-	assert.Equal(t, uint(5), pBC.PerOccurrenceCount)
+	assert.Equal(t, uint(0), pBC.PerOccurrenceCount)
 	assert.Equal(t, uint(2), pBC.PerUserCount)
 	assert.Equal(t, uint(2), pBC.TotalUserCount)
 
-	assert.Equal(t, uint(4), pAC.PerOccurrenceCount)
+	assert.Equal(t, uint(0), pAC.PerOccurrenceCount)
 	assert.Equal(t, uint(2), pAC.PerUserCount)
 	assert.Equal(t, uint(2), pAC.TotalUserCount)
 
-	assert.Equal(t, uint(5), pA.PerOccurrenceCount)
+	assert.Equal(t, uint(0), pA.PerOccurrenceCount)
 	assert.Equal(t, uint(2), pA.PerUserCount)
 	assert.Equal(t, uint(2), pA.TotalUserCount)
 
-	assert.Equal(t, uint(6), pB.PerOccurrenceCount)
+	assert.Equal(t, uint(0), pB.PerOccurrenceCount)
 	assert.Equal(t, uint(2), pB.PerUserCount)
 	assert.Equal(t, uint(2), pB.TotalUserCount)
 
-	assert.Equal(t, uint(5), pC.PerOccurrenceCount)
+	assert.Equal(t, uint(0), pC.PerOccurrenceCount)
 	assert.Equal(t, uint(2), pC.PerUserCount)
 	assert.Equal(t, uint(2), pC.TotalUserCount)
 
@@ -894,7 +894,7 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 	assert.Equal(t, uint(2), count, "PerUserCount")
 	count, err = pABC.GetPerOccurrenceCount(nil)
 	assert.Nil(t, err)
-	assert.Equal(t, uint(3), count, "Per occurence Count")
+	assert.Equal(t, uint(0), count, "Per occurence Count")
 
 	patternConstraints := make([]P.EventConstraints, 3)
 	count, err = pABC.GetPerUserCount(patternConstraints)
@@ -902,7 +902,7 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 	assert.Equal(t, uint(2), count, "Per User count")
 	count, err = pABC.GetPerOccurrenceCount(patternConstraints)
 	assert.Nil(t, err)
-	assert.Equal(t, uint(3), count, "PerOccurence count")
+	assert.Equal(t, uint(0), count, "PerOccurence count")
 
 	patternConstraints = make([]P.EventConstraints, 3)
 	patternConstraints[0] = P.EventConstraints{
@@ -933,7 +933,7 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 	assert.Equal(t, uint(1), count, "pABC.GetPerUserCount")
 	count, err = pABC.GetPerOccurrenceCount(patternConstraints)
 	assert.Nil(t, err)
-	assert.Equal(t, uint(2), count, "pABC.GetPerOccurrenceCount")
+	// assert.Equal(t, uint(2), count, "pABC.GetPerOccurrenceCount") // removed as per Occurence counts are not counted
 
 	patternConstraints = make([]P.EventConstraints, 3)
 	patternConstraints[0] = P.EventConstraints{
@@ -955,7 +955,7 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 	assert.Equal(t, uint(1), count, "pABC.GetPerUserCount(patternConstraints)")
 	count, err = pABC.GetPerOccurrenceCount(patternConstraints)
 	assert.Nil(t, err)
-	assert.Equal(t, uint(2), count)
+	// assert.Equal(t, uint(2), count) // removed as per Occurence counts are not counted
 
 	patternConstraints = make([]P.EventConstraints, 3)
 	// Below categorical combination occurs in the first occurrence.
@@ -980,7 +980,7 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 	assert.Equal(t, uint(1), count)
 	count, err = pABC.GetPerOccurrenceCount(patternConstraints)
 	assert.Nil(t, err)
-	assert.Equal(t, uint(1), count)
+	assert.Equal(t, uint(0), count)
 
 	// User properties constraints.
 	patternConstraints = make([]P.EventConstraints, 3)
@@ -999,7 +999,7 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 	assert.Equal(t, uint(1), count)
 	count, err = pABC.GetPerOccurrenceCount(patternConstraints)
 	assert.Nil(t, err)
-	assert.Equal(t, uint(1), count)
+	// assert.Equal(t, uint(0), count) // removed as per Occurence counts are not counted
 
 	patternConstraints = make([]P.EventConstraints, 3)
 	// Below categorical combination occurs in the first occurrence.
@@ -1940,6 +1940,7 @@ func TestGenCandidatesForGoals(t *testing.T) {
 func TestCountPatternsWithSameTimeStamp(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
+	// PerOccurrence cout is set to 0 as we not counting occurence count
 	// U1: F, G, A, L, B, A, B, C   (A(1) -> B(2) -> C(1):1)
 	// U2: F, A, A, K, B, Z, C, A, B, C  (A(2,1) -> B (1, 1) -> C(1, 1)
 	// Count A -> B -> C, Count:3, OncePerUserCount:2, UserCount:2
@@ -2005,7 +2006,7 @@ func TestCountPatternsWithSameTimeStamp(t *testing.T) {
 	assert.Nil(t, erronFalse)
 
 	// Test pABC output.
-	assert.Equal(t, uint(3), pABC.PerOccurrenceCount, "pABC.PerOccurrenceCount")
+	assert.Equal(t, uint(0), pABC.PerOccurrenceCount, "pABC.PerOccurrenceCount")
 	assert.Equal(t, uint(2), pABC.TotalUserCount, "pABC.TotalUserCount")
 	assert.Equal(t, uint(2), pABC.PerUserCount, "pABC.PerUserCount")
 	assert.Equal(t, pLen, len(pABC.EventNames))
@@ -2013,7 +2014,7 @@ func TestCountPatternsWithSameTimeStamp(t *testing.T) {
 		assert.Equal(t, pABCEvents[i], pABC.EventNames[i])
 	}
 	// Test pCAB output.
-	assert.Equal(t, uint(2), pCAB.PerOccurrenceCount, "pCAB.PerOccurrenceCount")
+	assert.Equal(t, uint(0), pCAB.PerOccurrenceCount, "pCAB.PerOccurrenceCount")
 	assert.Equal(t, uint(2), pCAB.TotalUserCount, "pCAB.TotalUserCount")
 	assert.Equal(t, uint(2), pCAB.PerUserCount, "pCAB.PerUserCount")
 	assert.Equal(t, pLen, len(pCAB.EventNames))
@@ -2021,7 +2022,7 @@ func TestCountPatternsWithSameTimeStamp(t *testing.T) {
 		assert.Equal(t, pCABEvents[i], pCAB.EventNames[i])
 	}
 
-	assert.Equal(t, uint(2), pACB.PerOccurrenceCount, "pACB.PerOccurrenceCount")
+	assert.Equal(t, uint(0), pACB.PerOccurrenceCount, "pACB.PerOccurrenceCount")
 	assert.Equal(t, uint(2), pACB.TotalUserCount, "pACB.TotalUserCount")
 	assert.Equal(t, uint(2), pACB.PerUserCount, "pACB.PerUserCount")
 }
@@ -2234,7 +2235,7 @@ func TestCountPatternsWithSameTimeStamp4(t *testing.T) {
 	}
 }
 
-func TestCountPatternWithProperties(t *testing.T) {
+func TestCountPatternWithProperties1(t *testing.T) {
 	// project, err := SetupProjectReturnDAO()
 	projectId := int64(1)
 	var cAlgoProps P.CountAlgoProperties
@@ -2266,6 +2267,47 @@ func TestCountPatternWithProperties(t *testing.T) {
 			patsSlice = append(patsSlice, pats_string)
 		}
 		assert.Equal(t, 6, channel_count)
+
+	}
+
+	p := patterns[0]
+	eps := p.PerUserCount
+	assert.Equal(t, uint(1), eps, fmt.Sprintf("count of %v", p.EventNames))
+
+}
+
+func TestCountPatternWithProperties(t *testing.T) {
+	// project, err := SetupProjectReturnDAO()
+	projectId := int64(1)
+	var cAlgoProps P.CountAlgoProperties
+	cAlgoProps.Counting_version = 3
+	cAlgoProps.Hmine_support = 0.0001
+	cAlgoProps.Hmine_persist = 0
+	shouldCountOccurence := false
+
+	p1, _ := P.NewPattern([]string{"$session", "$form_submitted"}, nil)
+	// p2, _ := P.NewPattern([]string{"$form_submitted", "$session"}, nil)
+
+	patterns := []*P.Pattern{p1}
+	file, err := os.Open("./data/events_test.txt")
+	assert.Nil(t, err)
+	scanner := bufio.NewScanner(file)
+
+	err = P.CountPatterns(projectId, scanner, patterns, shouldCountOccurence, cAlgoProps)
+	assert.Nil(t, err)
+
+	var patsSlice []string = make([]string, 0)
+	for _, p := range patterns {
+		channel_count := 0
+		for _, pats := range p.EventPropertiesPatterns {
+			pats_string := strings.Join(pats.Items, "_")
+			if strings.Contains(pats_string, "$channel") {
+				fmt.Println(pats_string)
+				channel_count += 1
+			}
+			patsSlice = append(patsSlice, pats_string)
+		}
+		assert.Equal(t, 3, channel_count)
 
 	}
 

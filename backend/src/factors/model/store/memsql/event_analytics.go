@@ -674,6 +674,7 @@ func sanitizeGroupByTimestampResult(result *model.QueryResult, query *model.Quer
 	if err != nil {
 		return err
 	}
+	transformTimeValueInResults(result, timeIndex, query.Timezone)
 
 	// Todo: Supports only date as timestamp, add support for hour and month.
 	if len(query.GroupByProperties) == 0 && len(query.EventsWithProperties) < 2 {
@@ -681,14 +682,25 @@ func sanitizeGroupByTimestampResult(result *model.QueryResult, query *model.Quer
 	} else {
 		err = addMissingTimestampsOnResultWithGroupByProps(result, query, aggrIndex, timeIndex)
 	}
-
 	if err != nil {
 		return err
 	}
 
 	sortResultRowsByTimestamp(result.Rows, timeIndex)
-
 	return nil
+}
+
+func transformTimeValueInResults(result *model.QueryResult, timeIndex int, timezone string) {
+
+	for index := range result.Rows {
+
+		timestampWithTimezone := U.GetTimestampAsStrWithTimezone(
+			result.Rows[index][timeIndex].(time.Time), timezone)
+
+		// overrides timestamp with user timezone as sql results doesn't
+		// return timezone used to query.
+		result.Rows[index][timeIndex] = U.GetTimeFromTimestampStr(timestampWithTimezone)
+	}
 }
 
 func sortResultRowsByTimestamp(resultRows [][]interface{}, timestampIndex int) {
@@ -700,6 +712,19 @@ func sortResultRowsByTimestamp(resultRows [][]interface{}, timestampIndex int) {
 	sort.Slice(resultRows, func(i, j int) bool {
 		return (resultRows[i][timestampIndex].(time.Time)).Unix() <
 			(resultRows[j][timestampIndex].(time.Time)).Unix()
+	})
+}
+
+func sortChannelResultRowsByTimestamp(resultRows [][]interface{}, timestampIndex int) {
+	logFields := log.Fields{
+		"result_rows":     resultRows,
+		"timestamp_index": timestampIndex,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	sort.Slice(resultRows, func(i, j int) bool {
+		ts1, _ := U.GetTimeFromParseTimeStrWithErrorFromInterface(resultRows[i][timestampIndex])
+		ts2, _ := U.GetTimeFromParseTimeStrWithErrorFromInterface(resultRows[i][timestampIndex])
+		return ts1.Unix() < ts2.Unix()
 	})
 }
 
@@ -733,129 +758,6 @@ func getAllTimestampsAndOffsetBetweenByType(from, to int64, typ, timezone string
 	}
 
 	return []time.Time{}, []string{}
-}
-
-func addMissingTimestampsOnResultWithoutGroupByProps(result *model.QueryResult,
-	query *model.Query, aggrIndex int, timestampIndex int) error {
-	logFields := log.Fields{
-		"query":           query,
-		"aggr_index":      aggrIndex,
-		"timestamp_index": timestampIndex,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-
-	rowsByTimestamp := make(map[string][]interface{}, 0)
-	for _, row := range result.Rows {
-		ts := row[timestampIndex].(time.Time)
-		rowsByTimestamp[U.GetTimestampAsStrWithTimezone(ts, query.Timezone)] = row
-	}
-
-	timestamps, offsets := getAllTimestampsAndOffsetBetweenByType(query.From, query.To,
-		query.GetGroupByTimestamp(), query.Timezone)
-
-	filledResult := make([][]interface{}, 0, 0)
-	// range over timestamps between given from and to.
-	// uses timestamp string for comparison.
-	for index, ts := range timestamps {
-
-		if row, exists := rowsByTimestamp[U.GetTimestampAsStrWithTimezoneGivenOffset(ts, offsets[index])]; exists {
-			// overrides timestamp with user timezone as sql results doesn't
-			// return timezone used to query.
-			row[timestampIndex] = ts
-			filledResult = append(filledResult, row)
-		} else {
-			newRow := make([]interface{}, 3, 3)
-			newRow[timestampIndex] = ts
-			newRow[aggrIndex] = 0
-			filledResult = append(filledResult, newRow)
-		}
-	}
-
-	result.Rows = filledResult
-	return nil
-}
-
-// Fills missing timestamp between given from and to timestamp for all group key combinations,
-// on the limited result.
-func addMissingTimestampsOnResultWithGroupByProps(result *model.QueryResult,
-	query *model.Query, aggrIndex int, timestampIndex int) error {
-	logFields := log.Fields{
-		"query":           query,
-		"aggr_index":      aggrIndex,
-		"timestamp_index": timestampIndex,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-
-	gkStart, gkEnd, err := getGroupKeyIndexesForSlicing(result.Headers)
-	if err != nil {
-		return err
-	}
-
-	filledResult := make([][]interface{}, 0, 0)
-
-	rowsByGroupAndTimestamp := make(map[string]bool, 0)
-	for _, row := range result.Rows {
-		encCols := make([]interface{}, 0, 0)
-		encCols = append(encCols, row[gkStart:gkEnd]...)
-
-		timestampWithTimezone := U.GetTimestampAsStrWithTimezone(
-			row[timestampIndex].(time.Time), query.Timezone)
-		// encoded key with group values and timestamp from db row.
-		encCols = append(encCols, timestampWithTimezone)
-		encKey := getEncodedKeyForCols(encCols)
-		rowsByGroupAndTimestamp[encKey] = true
-
-		// overrides timestamp with user timezone as sql results doesn't
-		// return timezone used to query.
-		row[timestampIndex] = U.GetTimeFromTimestampStr(timestampWithTimezone)
-		filledResult = append(filledResult, row)
-	}
-
-	timestamps, offsets := getAllTimestampsAndOffsetBetweenByType(query.From, query.To,
-		query.GetGroupByTimestamp(), query.Timezone)
-
-	for _, row := range result.Rows {
-		for index, ts := range timestamps {
-			encCols := make([]interface{}, 0, 0)
-			encCols = append(encCols, row[gkStart:gkEnd]...)
-			// encoded key with generated timestamp.
-			encCols = append(encCols, U.GetTimestampAsStrWithTimezoneGivenOffset(ts, offsets[index]))
-			encKey := getEncodedKeyForCols(encCols)
-
-			_, exists := rowsByGroupAndTimestamp[encKey]
-			if !exists {
-				// create new row with group values and missing date
-				// for those group combination and aggr 0.
-				rowLen := len(result.Headers)
-				newRow := make([]interface{}, rowLen, rowLen)
-				groupValues := row[gkStart:gkEnd]
-
-				for i := 0; i < rowLen; {
-					if i == gkStart {
-						for _, gv := range groupValues {
-							newRow[i] = gv
-							i++
-						}
-					}
-
-					if i == aggrIndex {
-						newRow[i] = 0
-						i++
-					}
-
-					if i == timestampIndex {
-						newRow[i] = ts
-						i++
-					}
-				}
-				rowsByGroupAndTimestamp[encKey] = true
-				filledResult = append(filledResult, newRow)
-			}
-		}
-	}
-
-	result.Rows = filledResult
-	return nil
 }
 
 /*

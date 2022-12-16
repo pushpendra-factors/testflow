@@ -21,9 +21,18 @@ func (store *MemSQL) CreateSegment(projectId int64, segmentPayload *model.Segmen
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
 
-	if projectId == 0 || segmentPayload.Name == "" {
-		logCtx.Error("Failed to create segment by ID. Invalid parameters")
-		return http.StatusBadRequest, errors.New("Failed to create segment. Invalid parameters.")
+	if projectId == 0 {
+		logCtx.Error("Segment Creation Failed. Invalid projectId.")
+		return http.StatusBadRequest, errors.New("Segment Creation Failed. Invalid projectId.")
+	}
+
+	if !isValidSegment(segmentPayload) {
+		return http.StatusBadRequest, errors.New("Segment Creation Failed. Invalid Parameters.")
+	}
+
+	if store.IsDuplicateSegmentNameCheck(projectId, segmentPayload.Name) {
+		logCtx.Error("Segment Creation Failed. Duplicate name")
+		return http.StatusBadRequest, errors.New("Segment Creation Failed. Duplicate Name.")
 	}
 
 	querySegment, err := U.EncodeStructTypeToPostgresJsonb(segmentPayload.Query)
@@ -51,6 +60,39 @@ func (store *MemSQL) CreateSegment(projectId int64, segmentPayload *model.Segmen
 	}
 
 	return http.StatusCreated, nil
+}
+
+func isValidSegment(segmentPayload *model.SegmentPayload) bool {
+	logFields := log.Fields{
+		"segment": segmentPayload,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+	if segmentPayload.Type == "" {
+		logCtx.Error("Segment Creation Failed. No Type Added.")
+		return false
+	}
+	if segmentPayload.Name == "" {
+		logCtx.Error("Segment Creation Failed. No Name Added.")
+		return false
+	}
+	if len(segmentPayload.Query.EventsWithProperties) == 0 && len(segmentPayload.Query.GlobalProperties) == 0 {
+		logCtx.Error("Segment Creation Failed. No Query Added.")
+		return false
+	}
+	return true
+}
+
+func (store *MemSQL) IsDuplicateSegmentNameCheck(projectID int64, name string) bool {
+	segmentGroups, _ := store.GetAllSegments(projectID)
+	for _, segments := range segmentGroups {
+		for _, segment := range segments {
+			if segment.Name == name {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func (store *MemSQL) GetAllSegments(projectId int64) (map[string][]model.Segment, int) {

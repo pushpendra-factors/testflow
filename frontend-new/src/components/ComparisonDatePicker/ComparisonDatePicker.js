@@ -53,7 +53,12 @@ function ComparisonDatePicker({
     )} - ${MomentTz(value.to).format('MMM DD, YYYY')}`;
 
     return (
-      <Text type="title" level={6} color="grey-2">
+      <Text
+        extraClass={`${styles.label}`}
+        type='title'
+        level={6}
+        color='grey-2'
+      >
         {rangeText}
       </Text>
     );
@@ -65,10 +70,10 @@ function ComparisonDatePicker({
         <Menu.Item key={'compare label'} className={styles.noHoverEffect}>
           <Text
             extraClass={`${styles.label}`}
-            weight="bold"
-            color="grey-6"
+            weight='bold'
+            color='grey-6'
             level={6}
-            type="title"
+            type='title'
           >
             Compare with:
           </Text>
@@ -82,7 +87,7 @@ function ComparisonDatePicker({
             }}
             key={option.value}
           >
-            <Text type="title" color="grey-2" level={6}>
+            <Text type='title' color='grey-2' level={6}>
               {option.label}
             </Text>
           </Menu.Item>
@@ -101,12 +106,12 @@ function ComparisonDatePicker({
               'flex justify-between items-center',
               styles.customDateListItemWrapper
             )}
-            role="button"
+            role='button'
           >
-            <Text type="title" color="grey-3" level={6}>
+            <Text type='title' color='grey-3' level={6}>
               Select Date
             </Text>
-            <SVG name="calendar" color="#B7BEC8" size={16} />
+            <SVG name='calendar' color='#B7BEC8' size={16} />
           </div>
         </Menu.Item>
       </Menu>
@@ -119,9 +124,9 @@ function ComparisonDatePicker({
   };
 
   return (
-    <div className="fa-custom-datepicker">
+    <div className='fa-custom-datepicker'>
       <Dropdown
-        overlayClassName="fa-custom-datepicker--dropdown"
+        overlayClassName='fa-custom-datepicker--dropdown'
         overlay={getMenu()}
         placement={placement}
         trigger={['click']}
@@ -130,24 +135,24 @@ function ComparisonDatePicker({
       >
         <Button
           type={BUTTON_TYPES.SECONDARY}
-          className="flex items-center col-gap-1"
+          className='flex items-center col-gap-1'
         >
-          <SVG name="compare" size={16} />
+          <SVG name='compare' size={16} />
           <ControlledComponent controller={!showDatePicker && !!value}>
             <Fragment>
               {displayRange()}
               <div onClick={removeClicked}>
-                <SVG name="removeOutlined" size={16} />
+                <SVG name='removeOutlined' size={16} />
               </div>
             </Fragment>
           </ControlledComponent>
           <ControlledComponent controller={!showDatePicker && !value}>
             <Text
-              weight="medium"
+              weight='medium'
               extraClass={`${styles.label}`}
-              color="grey-2"
+              color='grey-2'
               level={7}
-              type="title"
+              type='title'
             >
               {comparisonLabel}
             </Text>
@@ -157,7 +162,7 @@ function ComparisonDatePicker({
               disabledDate={(d) => !d || d.isAfter(MomentTz())}
               autoFocus
               open
-              size="small"
+              size='small'
               suffixIcon={null}
               showToday={false}
               bordered={false}
@@ -165,14 +170,9 @@ function ComparisonDatePicker({
               onChange={handleDateChange}
               panelRender={(panelNode) => {
                 return (
-                  <div className="py-4 flex flex-col row-gap-2">
-                    <div className="px-3 flex flex-col row-gap-2">
-                      <Text
-                        type="title"
-                        weight="bold"
-                        level={6}
-                        color="grey-2"
-                      >
+                  <div className='py-4 flex flex-col row-gap-2'>
+                    <div className='px-3 flex flex-col row-gap-2'>
+                      <Text type='title' weight='bold' level={6} color='grey-2'>
                         Compare to date
                       </Text>
                       <Radio.Group

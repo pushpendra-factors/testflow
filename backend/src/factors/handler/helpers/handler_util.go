@@ -12,6 +12,7 @@ import (
 
 	C "factors/config"
 	U "factors/util"
+
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 )
@@ -105,6 +106,14 @@ func GetResponseIfCachedQuery(c *gin.Context, projectID int64, requestPayload mo
 		}
 	}
 	return false, errCode, errors.New("Query Cache: Failed to fetch from cache")
+}
+
+func UseFunnelV2(c *gin.Context) bool {
+	if c.Request.Header.Get(model.QueryFunnelV2) == "true" {
+		return true
+	}
+
+	return false
 }
 
 // InValidateSavedQueryCache Common function to invalidate cache if present.

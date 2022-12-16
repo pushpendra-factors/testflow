@@ -31,9 +31,10 @@ func TestCreateDashboardTemplate(t *testing.T) {
 	t.Run("CreateDashboardTemplate", func(t *testing.T) {
 		template, errCode, str := store.GetStore().CreateTemplate(
 			&model.DashboardTemplate{
-				Title:       rName,
-				Description: rDesc,
-			})
+				Title:                rName,
+				Description:          rDesc,
+				Categories:           &postgres.Jsonb{RawMessage: json.RawMessage(`["Web Analytics", "CRM Insights"]`)},
+				RequiredIntegrations: &postgres.Jsonb{RawMessage: json.RawMessage(`["hubspot", "marketo"]`)}})
 		assert.NotNil(t, template)
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.Equal(t, "", str)
@@ -47,9 +48,10 @@ func TestCreateDashboardTemplateData(t *testing.T) {
 	t.Run("CreateDashboardTemplate", func(t *testing.T) {
 		template, errCode, str := store.GetStore().CreateTemplate(
 			&model.DashboardTemplate{
-				Title:       rName,
-				Description: rDesc,
-
+				Title:                rName,
+				Description:          rDesc,
+				Categories:           &postgres.Jsonb{RawMessage: json.RawMessage(`["Web Analytics", "CRM Insights"]`)},
+				RequiredIntegrations: &postgres.Jsonb{RawMessage: json.RawMessage(`["hubspot", "marketo"]`)},
 				Dashboard: &postgres.Jsonb{RawMessage: json.RawMessage(`{"id":1,
         "name": "First Dashboard in Test Project",
         "type": "pv",
@@ -114,7 +116,11 @@ func TestCreateDashboardTemplateData(t *testing.T) {
 func TestDeleteDashboardTemplate(t *testing.T) {
 	rName := U.RandomString(5)
 	rDesc := U.RandomString(10)
-	template, errCode, str := store.GetStore().CreateTemplate(&model.DashboardTemplate{Title: rName, Description: rDesc})
+	template, errCode, str := store.GetStore().CreateTemplate(&model.DashboardTemplate{
+		Title:                rName,
+		Description:          rDesc,
+		Categories:           &postgres.Jsonb{RawMessage: json.RawMessage(`["Web Analytics", "CRM Insights"]`)},
+		RequiredIntegrations: &postgres.Jsonb{RawMessage: json.RawMessage(`["hubspot", "marketo"]`)}})
 	assert.NotNil(t, template)
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.Equal(t, "", str)
@@ -127,7 +133,11 @@ func TestDeleteDashboardTemplate(t *testing.T) {
 func TestReadDashboardTemplate(t *testing.T) {
 	rName := U.RandomString(5)
 	rDesc := U.RandomString(10)
-	template, errCode, str := store.GetStore().CreateTemplate(&model.DashboardTemplate{Title: rName, Description: rDesc})
+	template, errCode, str := store.GetStore().CreateTemplate(&model.DashboardTemplate{
+		Title:                rName,
+		Description:          rDesc,
+		Categories:           &postgres.Jsonb{RawMessage: json.RawMessage(`["Web Analytics", "CRM Insights"]`)},
+		RequiredIntegrations: &postgres.Jsonb{RawMessage: json.RawMessage(`["hubspot", "marketo"]`)}})
 	assert.NotNil(t, template)
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.Equal(t, "", str)
@@ -200,7 +210,10 @@ func TestAPICreateDashboardFromTemplate(t *testing.T) {
 	rName := U.RandomString(5)
 	desc := "testing create dashboard from template abc"
 	template, errCode, _ := store.GetStore().CreateTemplate(&model.DashboardTemplate{
-		Title: rName, Description: desc})
+		Title:                rName,
+		Description:          desc,
+		Categories:           &postgres.Jsonb{RawMessage: json.RawMessage(`["Web Analytics", "CRM Insights"]`)},
+		RequiredIntegrations: &postgres.Jsonb{RawMessage: json.RawMessage(`["hubspot", "marketo"]`)}})
 	if errCode != http.StatusCreated {
 		log.Error("Error creating template in database")
 	}

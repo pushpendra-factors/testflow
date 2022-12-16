@@ -14,6 +14,7 @@ type FileManager interface {
 	GetProjectDir(projectId int64) string
 	GetProjectEventFileDir(projectId int64, startTimestamp int64, modelType string) string
 	GetModelEventInfoFilePathAndName(projectId int64, modelId uint64) (string, string)
+	GetModelArtifactsPath(projectId int64, modelId uint64) string
 	GetModelEventsFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string)
 	GetModelMetricsFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string)
 	GetModelAlertsFilePathAndName(projectId int64, startTimestamp int64, modelType string) (string, string)
@@ -58,4 +59,7 @@ type FileManager interface {
 
 	GetPathAnalysisTempFileDir(id string, projectId int64) string
 	GetPathAnalysisTempFilePathAndName(id string, projectId int64) (string, string)
+
+	GetExplainV2Dir(id uint64, projectId int64) string
+	GetExplainV2ModelPath(id uint64, projectId int64) (string, string)
 }

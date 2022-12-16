@@ -2,6 +2,7 @@ package main
 
 import (
 	C "factors/config"
+	DD "factors/default_data"
 	H "factors/handler"
 	mid "factors/middleware"
 	"factors/model/model"
@@ -346,6 +347,7 @@ func main() {
 		return
 	}
 
+	CheckIfDefaultDatasAreCorrect()
 	C.InitMonitoringAPIServices(config)
 	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
 	C.InitFilemanager(*bucketName, *env, config)
@@ -412,4 +414,11 @@ func main() {
 	// TODO(Ankit):
 	// Add graceful shutdown.
 	// flush error collector before quitting the process
+}
+
+func CheckIfDefaultDatasAreCorrect() {
+	if DD.CheckIfDefaultKPIDatasAreCorrect() {
+		return
+	}
+	log.Warn("Failed because defaultDatas and transformations are of incorrect length.")
 }

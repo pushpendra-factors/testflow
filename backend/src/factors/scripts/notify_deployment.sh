@@ -94,6 +94,12 @@ echo "Sending alert on slack"
 payload="-------------------------------------------------------------
 *Deployment initiated for '${IMAGE_NAME}' with tag '${TAG}'. By ${deployer_email} from branch '${branch_name}'*."
 
+
+# Pick DEV_NAME when running github actions
+if [ ! -z "${DEV_NAME}" ]; then
+    payload="------------------------------------------------------------- *Deployment initiated for '${IMAGE_NAME}' with tag '${TAG}'. By '${DEV_NAME}' from branch '${branch_name}'*."
+fi
+
 # If production, add commit hightlights for the deployment.
 if [[ "${ENV}" == "production" ]]; then
     payload=`echo "${payload}\n${highlights}"`

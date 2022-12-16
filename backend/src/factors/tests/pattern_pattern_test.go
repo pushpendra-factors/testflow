@@ -164,7 +164,7 @@ func TestPatternCountEvents(t *testing.T) {
 
 		assert.Nil(t, err)
 
-		assert.Equal(t, uint(3), p.PerOccurrenceCount)
+		assert.Equal(t, uint(0), p.PerOccurrenceCount)
 		assert.Equal(t, uint(2), p.TotalUserCount)
 		assert.Equal(t, uint(2), p.PerUserCount)
 		assert.Equal(t, pLen, len(p.EventNames))
@@ -307,7 +307,7 @@ func TestPatternGetPerUserCount(t *testing.T) {
 	// C: firstSeenSinceUserJoin -> 1hour+240seconds and 1hour+240seconds.
 	// C: lastSeenSinceUserJoin -> 1hour+360seconds and 1hour+540seconds.
 
-	assert.Equal(t, uint(3), p.PerOccurrenceCount)
+	assert.Equal(t, uint(0), p.PerOccurrenceCount)
 	assert.Equal(t, uint(2), p.TotalUserCount)
 	assert.Equal(t, uint(2), p.PerUserCount)
 
@@ -472,7 +472,6 @@ func TestPatternGetPerUserCount(t *testing.T) {
 	assert.Equal(t, uint(1), count)
 
 }
-
 func TestPatternEdgeConditions(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)

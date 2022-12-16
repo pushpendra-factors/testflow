@@ -220,6 +220,12 @@ function AppLayout({
                       name='Home'
                       component={CoreQuery}
                     />
+
+                    <Route
+                      path='/analyse/:query_type'
+                      name='Home'
+                      component={CoreQuery}
+                    />
                     <Route path='/analyse' name='Home' component={CoreQuery} />
 
                     <Route
@@ -303,20 +309,22 @@ function AppLayout({
                       component={AccountProfiles}
                     />
 
-                     {whiteListedAccounts.includes(activeAgent) && (<>
-                    <Route
-                      path='/path-analysis'
-                      name='PathAnalysis'
-                      exact
-                      component={PathAnalysis}
-                      />
-                    <Route
-                      path='/path-analysis/insights'
-                      name='PathAnalysisInsights'
-                      exact
-                      component={PathAnalysisReport}
-                      />
-                    </>)} 
+                    {whiteListedAccounts.includes(activeAgent) && (
+                      <>
+                        <Route
+                          path='/path-analysis'
+                          name='PathAnalysis'
+                          exact
+                          component={PathAnalysis}
+                        />
+                        <Route
+                          path='/path-analysis/insights'
+                          name='PathAnalysisInsights'
+                          exact
+                          component={PathAnalysisReport}
+                        />
+                      </>
+                    )}
 
                     {!demoProjectId.includes(active_project?.id) ? (
                       <Route path='/project-setup' component={SetupAssist} />

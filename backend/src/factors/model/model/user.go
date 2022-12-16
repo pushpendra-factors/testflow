@@ -141,6 +141,13 @@ var UserSourceCRM = map[string]int{
 	UserSourceLeadSquared:      7,
 }
 
+var GroupUserSource = map[string]int{
+	U.GROUP_NAME_SALESFORCE_ACCOUNT:     UserSourceSalesforce,
+	U.GROUP_NAME_SALESFORCE_OPPORTUNITY: UserSourceSalesforce,
+	U.GROUP_NAME_HUBSPOT_COMPANY:        UserSourceHubspot,
+	U.GROUP_NAME_HUBSPOT_DEAL:           UserSourceHubspot,
+}
+
 const USERS = "users"
 
 type OverwriteUserPropertiesByIDParams struct {

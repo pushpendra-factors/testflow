@@ -77,7 +77,7 @@ import _ from 'lodash';
 import AttributionHeader from './AttributionHeader';
 import ReportContent from 'Views/CoreQuery/AnalysisResultsPage/ReportContent';
 import useQuery from 'hooks/useQuery';
-import { Button, Spin } from 'antd';
+import { Button, notification, Spin } from 'antd';
 import WeeklyInsights from 'Views/CoreQuery/WeeklyInsights';
 import { useHistory } from 'react-router-dom';
 import { ATTRIBUTION_ROUTES } from '../../utils/constants';
@@ -571,6 +571,7 @@ function CoreQuery({
 
   const handleRunQuery = useCallback(() => {
     runAttributionQuery(false);
+    setQueryOpen(false);
   }, [queryType, runAttributionQuery]);
 
   const getCurrentSorter = useCallback(() => {
@@ -690,8 +691,17 @@ function CoreQuery({
         !record ||
         !record?.query?.cl ||
         record.query.cl !== QUERY_TYPE_ATTRIBUTION
-      )
+      ) {
+        notification.error({
+          message: `Attribution Report with id=${queryId} Not Found`,
+          duration: 5
+        });
+        history.replace({
+          pathname: ATTRIBUTION_ROUTES.report
+        });
         return;
+      }
+
       setQueryOpen(false);
       const equivalentQuery = getAttributionStateFromRequestQuery(
         record.query.query,

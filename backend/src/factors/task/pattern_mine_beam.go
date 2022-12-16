@@ -31,7 +31,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type CPatternsBeam struct {
+type CPatternsBeam_ struct {
 	ProjectID         int64      `json:"projectID"`
 	ModelId           uint64     `json:"modelID"`
 	PtEnames          [][]string `json:"penames"`
@@ -43,6 +43,27 @@ type CPatternsBeam struct {
 	ObjectName        string     `json:"objectName"`
 	ScopeName         string     `json:"ScopeName"`
 	Env               string     `json:"Env"`
+}
+
+type CPatternsBeam struct {
+	ProjectID         int64   `json:"projectID"`
+	ModelId           uint64  `json:"modelID"`
+	LowNum            int64   `json:"lw"`
+	HighNum           int64   `json:"hg"`
+	ModEventsFilepath string  `json:"fpath"`
+	CountOccurence    bool    `json:"countOccurence"`
+	CountsVersion     int     `json:"cntvr"`
+	HmineSupport      float32 `json:"hmsp"`
+	BucketName        string  `json:"bucketName"`
+	ObjectName        string  `json:"objectName"`
+	ScopeName         string  `json:"ScopeName"`
+	Env               string  `json:"Env"`
+}
+
+type PatterNamesIdx struct {
+	Id      int64    `json:"id"`
+	Pname   []string `json:"pn"`
+	Segment int      `json:"sg"`
 }
 
 type RunBeamConfig struct {
@@ -176,7 +197,7 @@ func shufflePatterns(patternNames [][]string) [][]string {
 }
 
 func countPatternController(beamStruct *RunBeamConfig, projectId int64, modelId uint64,
-	cloudManager *filestore.FileManager,
+	cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver,
 	filepathString string, patterns []*P.Pattern, numRoutines int,
 	userAndEventsInfo *P.UserAndEventsInfo, countOccurence bool,
 	efTmpPath string,
@@ -184,35 +205,37 @@ func countPatternController(beamStruct *RunBeamConfig, projectId int64, modelId 
 
 	var countsVersion int = cAlgoProps.Counting_version
 	var hmineSupport float32 = cAlgoProps.Hmine_support
+	patternEnames := make([]PatterNamesIdx, 0)
+
 	numPatterns := len(patterns)
 	mineLog.Info(fmt.Sprintf("Num patterns to count Range: %d - %d", 0, numPatterns-1))
 	batchSize := beamStruct.NumWorker
 	numRoutines = int(math.Ceil(float64(numPatterns) / float64(batchSize)))
 
-	patternEnames := make([][]string, 0)
-	for _, v := range patterns {
-		patternEnames = append(patternEnames, v.EventNames)
+	for isx, v := range patterns {
+		patternEnames = append(patternEnames, PatterNamesIdx{int64(isx), v.EventNames, v.Segment})
 	}
-	patternEnames = shufflePatterns(patternEnames)
 
 	bucketName := (*cloudManager).GetBucketName()
 	modelpathDir := (*cloudManager).GetProjectModelDir(projectId, modelId)
-	mineLog.Infof("bucketName :%s", bucketName)
-	mineLog.Infof("model path :%s", modelpathDir)
-	modEventsFile := fmt.Sprintf("events_modified_%d.txt", modelId)
 
+	err := WritePatternsToGCP(projectId, modelId, scopeName, patterns, cloudManager, diskManager)
+	if err != nil {
+		return "", fmt.Errorf("unable write Patterns to GCP: %v", err)
+	}
+
+	modEventsFile := fmt.Sprintf("events_modified_%d.txt", modelId)
 	modelpath := modelpathDir + modEventsFile
 	mineLog.Infof("model path of modified file:%s", modelpath)
-
 	cPatterns := make([]string, 0)
 	for i := 0; i < numRoutines; i++ {
 		// Each worker gets a slice of patterns to count.
-		low := int(math.Min(float64(batchSize*i), float64(numPatterns)))
-		high := int(math.Min(float64(batchSize*(i+1)), float64(numPatterns)))
+		low := int64(math.Min(float64(batchSize*i), float64(numPatterns)))
+		high := int64(math.Min(float64(batchSize*(i+1)), float64(numPatterns)))
 		mineLog.Info(fmt.Sprintf("Batch %d patterns to count range: %d:%d", i+1, low, high))
 
 		t, err := json.Marshal(CPatternsBeam{
-			projectId, modelId, patternEnames[low:high], filepathString, countOccurence, countsVersion, hmineSupport,
+			projectId, modelId, low, high, filepathString, countOccurence, countsVersion, hmineSupport,
 			bucketName, modelpath, scopeName, beamStruct.Env})
 		if err != nil {
 			return "", fmt.Errorf("unable to encode string : %v", err)
@@ -312,11 +335,10 @@ func countPatternController(beamStruct *RunBeamConfig, projectId int64, modelId 
 	mineLog.Infof("Patterns writtens to GCP : %s ", patternsFpath)
 	mineLog.Infof("completed counting patterns in beam")
 	return patternsFpath, nil
-
 }
 
 func UserPropertiesHistogramController(beamStruct *RunBeamConfig, projectId int64, modelId uint64,
-	cloudManager *filestore.FileManager,
+	cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver,
 	mod_events_path string, patterns []*P.Pattern, numRoutines int,
 	userAndEventsInfo *P.UserAndEventsInfo, countOccurence bool,
 	efTmpPath string,
@@ -340,18 +362,23 @@ func UserPropertiesHistogramController(beamStruct *RunBeamConfig, projectId int6
 	mineLog.Infof("model path :%s", modelpathDir)
 	modEventsFile := fmt.Sprintf("events_modified_%d.txt", modelId)
 
+	err := WritePatternsToGCP(projectId, modelId, scopeName, patterns, cloudManager, diskManager)
+	if err != nil {
+		return "", err
+	}
+
 	modelpath := modelpathDir + modEventsFile
 	mineLog.Infof("model path of modified file:%s", modelpath)
 
 	cPatterns := make([]string, 0)
 	for i := 0; i < numRoutines; i++ {
 		// Each worker gets a slice of patterns to count.
-		low := int(math.Min(float64(batchSize*i), float64(numPatterns)))
-		high := int(math.Min(float64(batchSize*(i+1)), float64(numPatterns)))
+		low := int64(math.Min(float64(batchSize*i), float64(numPatterns)))
+		high := int64(math.Min(float64(batchSize*(i+1)), float64(numPatterns)))
 		mineLog.Info(fmt.Sprintf("Batch %d patterns to count range: %d:%d", i+1, low, high))
 
 		t, err := json.Marshal(CPatternsBeam{
-			projectId, modelId, patternEnames[low:high], mod_events_path, countOccurence, countsVersion, hmineSupport,
+			projectId, modelId, low, high, mod_events_path, countOccurence, countsVersion, hmineSupport,
 			bucketName, modelpath, scopeName, beamStruct.Env})
 		if err != nil {
 			return "", fmt.Errorf("unable to encode string : %v", err)
@@ -546,18 +573,10 @@ func (f *CpThreadDoFn) ProcessElement(ctx context.Context, cpString string) erro
 		return fmt.Errorf("unable to unmarshall userEventsInfo :%v", err)
 	}
 
-	log.Infof("Read user and events Info Model Version : %d", UserAndEventsInfo.ModelVersion)
-	log.Infof("number of patterns : %d", len(cp.PtEnames))
-
-	for _, eventNames := range cp.PtEnames {
-		p, err := P.NewPattern(eventNames, UserAndEventsInfo)
-		if err != nil {
-			return nil
-		}
-
-		patterns = append(patterns, p)
+	patterns, err = ReadPatternsGCP(ctx, projectID, modelId, scopeName, &cloudManager, UserAndEventsInfo, cp.LowNum, cp.HighNum)
+	if err != nil {
+		return fmt.Errorf("Unable to read patterns")
 	}
-
 	// downloading events file
 	eventsTmpFile, err := ioutil.TempFile("", "patterns_")
 	if err != nil {
@@ -1124,15 +1143,9 @@ func (f *UpThreadDoFn) ProcessElement(ctx context.Context, cpString string) erro
 	}
 
 	log.Infof("Read user and events Info Model Version : %d", UserAndEventsInfo.ModelVersion)
-	log.Infof("number of patterns : %d", len(cp.PtEnames))
-
-	for _, eventNames := range cp.PtEnames {
-		p, err := P.NewPattern(eventNames, UserAndEventsInfo)
-		if err != nil {
-			return nil
-		}
-
-		patterns = append(patterns, p)
+	patterns, err = ReadPatternsGCP(ctx, projectID, modelId, scopeName, &cloudManager, UserAndEventsInfo, cp.LowNum, cp.HighNum)
+	if err != nil {
+		return fmt.Errorf("unable to read patterns from gcp")
 	}
 
 	// downloading events file
@@ -1329,3 +1342,226 @@ func (f *UpThreadDoFn) ProcessElement(ctx context.Context, cpString string) erro
 
 	return nil
 }
+
+func WritePatternsBlocksToGCP(projectId int64, modelId uint64, cloudManager *filestore.FileManager,
+	numRoutines, batchSize, countsVersion int, hmineSupport float32, countOccurence bool, numPatterns int, beam_env, bucketName,
+	modelpath, scopeName, filepathString, efTmpPath string) (string, error) {
+
+	ptInputPath := filepath.Join(efTmpPath, "pinput", scopeName+".txt")
+	mineLog.Infof("File patterns name : %s", ptInputPath)
+	pfFile, err := create(ptInputPath)
+	mineLog.Info(err)
+	if err != nil {
+		return "", fmt.Errorf("unable to create file :%v", ptInputPath)
+	}
+	for i := 0; i < numRoutines; i++ {
+		// Each worker gets a slice of patterns to count.
+		low := int64(math.Min(float64(batchSize*i), float64(numPatterns)))
+		high := int64(math.Min(float64(batchSize*(i+1)), float64(numPatterns)))
+		mineLog.Info(fmt.Sprintf("Batch %d patterns to count range: %d:%d", i+1, low, high))
+
+		t, err := json.Marshal(CPatternsBeam{
+			projectId, modelId, low, high,
+			filepathString, countOccurence, countsVersion, hmineSupport,
+			bucketName, modelpath, scopeName, beam_env})
+		if err != nil {
+			return "", fmt.Errorf("unable to encode string : %v", err)
+		}
+		_, err = pfFile.WriteString(fmt.Sprintf("%s\n", t))
+		if err != nil {
+			return "", fmt.Errorf("error writing json to file :%v", err)
+		}
+
+	}
+
+	err = pfFile.Close()
+	if err != nil {
+		return "", fmt.Errorf("error in closing file : %v", err)
+	}
+
+	mpath, _ := (*cloudManager).GetModelEventInfoFilePathAndName(projectId, modelId)
+	path := filepath.Join(mpath, "patterns_part", scopeName)
+	fileNameIntermediate := strings.Join([]string{scopeName, "itm_patterns.txt"}, "_")
+	err = writeFileToGCP(projectId, modelId, fileNameIntermediate, ptInputPath, cloudManager, path)
+	if err != nil {
+		return "", fmt.Errorf("unable to write to cloud : %s", fileNameIntermediate)
+	}
+
+	return fileNameIntermediate, nil
+}
+
+func WritePatternsToGCP(project_id int64, model_id uint64, scope string, patterns []*P.Pattern,
+	cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver) error {
+
+	artifacts_path := (diskManager).GetModelArtifactsPath(project_id, model_id)
+	scope_path := filepath.Join(artifacts_path, scope, "patterns.txt")
+
+	pattern_file, err := create(scope_path)
+	mineLog.Info(err)
+	if err != nil {
+		return fmt.Errorf("unable to create file :%v", scope_path)
+	}
+
+	for idx, p := range patterns {
+
+		t, err := json.Marshal(PatterNamesIdx{int64(idx), p.EventNames, p.Segment})
+		if err != nil {
+			return fmt.Errorf("unable to encode string : %v", err)
+		}
+		_, err = pattern_file.WriteString(fmt.Sprintf("%s\n", t))
+		if err != nil {
+			return fmt.Errorf("error writing json to file :%v", err)
+		}
+	}
+
+	err = pattern_file.Close()
+	if err != nil {
+		return fmt.Errorf("error in closing file : %v", err)
+	}
+
+	artifacts_gcp_path := (*cloudManager).GetModelArtifactsPath(project_id, model_id)
+	patterns_gcp_path := filepath.Join(artifacts_gcp_path, scope)
+	file_name := "patterns.txt"
+	err = writeFileToGCP(project_id, model_id, file_name, scope_path, cloudManager, patterns_gcp_path)
+	if err != nil {
+		return fmt.Errorf("unable to write to cloud : %s/%s", patterns_gcp_path, file_name)
+	}
+
+	return nil
+}
+
+func ReadPatternsGCP(ctx context.Context, project_id int64, model_id uint64, scope string,
+	cloudManager *filestore.FileManager, userAndEventsInfo *P.UserAndEventsInfo,
+	low int64, high int64) ([]*P.Pattern, error) {
+
+	patterns := make([]*P.Pattern, 0)
+	artifacts_path := (*cloudManager).GetModelArtifactsPath(project_id, model_id)
+	patterns_gcp_path := filepath.Join(artifacts_path, scope)
+	rc, err := (*cloudManager).Get(patterns_gcp_path, "patterns.txt")
+	if err != nil {
+		return nil, err
+	}
+	beamlog.Debugf(ctx, "Reading patterns from :%s,%s", patterns_gcp_path, "patterns.txt")
+	scannerEvents := bufio.NewScanner(rc)
+	buf := make([]byte, 0, 64*1024)
+	scannerEvents.Buffer(buf, 1024*1024)
+	for scannerEvents.Scan() {
+		var ptx PatterNamesIdx
+		line := scannerEvents.Text()
+		err := json.Unmarshal([]byte(line), &ptx)
+		if err != nil {
+			return nil, err
+		}
+
+		if (ptx.Id >= low) && (ptx.Id < high) {
+			pt, err := P.NewPattern(ptx.Pname, userAndEventsInfo)
+			if err != nil {
+				return nil, err
+			}
+			pt.Segment = ptx.Segment
+			patterns = append(patterns, pt)
+		}
+
+	}
+	err = rc.Close()
+	if err != nil {
+		return nil, err
+	}
+	beamlog.Infof(ctx, "-----------------Total number of patterns read ---%d--------------%", len(patterns))
+	return patterns, nil
+
+}
+
+func GenLenOneV2(jb P.ExplainQueryV2, us *P.UserAndEventsInfo) ([]*P.Pattern, error) {
+	job_events_map := make(map[string]bool, 0)
+	patterns := make([]*P.Pattern, 0)
+
+	job_events_map[jb.Start_event] = true
+	job_events_map[jb.End_event] = true
+	for _, e := range jb.Events_included {
+		job_events_map[e] = true
+	}
+	for k, _ := range job_events_map {
+		ev := make([]string, 0)
+		ev = append(ev, k)
+		p, err := P.NewPattern(ev, us)
+		if err != nil {
+			return nil, err
+		}
+		p.Segment = 0
+		patterns = append(patterns, p)
+
+	}
+	return patterns, nil
+}
+
+func CreateCombinationEventsV2(jb P.ExplainQueryV2, us *P.UserAndEventsInfo) ([]*P.Pattern, error) {
+	patterns := make([]*P.Pattern, 0)
+	events_to_count := make([]string, 2)
+	events_to_count[0] = jb.Start_event
+	events_to_count[1] = jb.End_event
+	p, err := P.NewPattern(events_to_count, us)
+	if err != nil {
+		return nil, err
+	}
+	p.Segment = 1 // have to set to 1 for explain v2 job
+	patterns = append(patterns, p)
+	return patterns, nil
+}
+
+func GenThreeLenEventsV2(jb P.ExplainQueryV2, us *P.UserAndEventsInfo) ([]*P.Pattern, error) {
+	patterns := make([]*P.Pattern, 0)
+	for _, e := range jb.Events_included {
+		events_to_count := make([]string, 3)
+		events_to_count[0] = jb.Start_event
+		events_to_count[1] = e
+		events_to_count[2] = jb.End_event
+		p, err := P.NewPattern(events_to_count, us)
+		if err != nil {
+			return nil, err
+		}
+		p.Segment = 0
+		patterns = append(patterns, p)
+	}
+	return patterns, nil
+}
+
+func CreateFourLenEventsV2(jb P.ExplainQueryV2, us *P.UserAndEventsInfo) ([]*P.Pattern, error) {
+	patterns := make([]*P.Pattern, 0)
+
+	for _, e1 := range jb.Events_included {
+		for _, e2 := range jb.Events_included {
+			if e1 != e2 {
+				events_to_count := make([]string, 4)
+				events_to_count[0] = jb.Start_event
+				events_to_count[1] = e1
+				events_to_count[2] = e2
+				events_to_count[3] = jb.End_event
+				p1, err := P.NewPattern(events_to_count, us)
+				if err != nil {
+					return nil, err
+				}
+				p1.Segment = 0
+				patterns = append(patterns, p1)
+			}
+
+		}
+	}
+
+	for _, p := range patterns {
+		mineLog.Infof("four len patterns :%v", p.EventNames)
+	}
+	return patterns, nil
+}
+
+// func GetPatternsToCompute(cloudManager *filestore.FileManager, cpString string) ([]string, error) {
+
+// 	var cp CPatternsBeam
+// 	pattern_names := make([]string, 0)
+// 	err := json.Unmarshal([]byte(cpString), &cp)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("unable to unmarshall string in processElement :%s", cpString)
+// 	}
+
+// 	return nil
+// }

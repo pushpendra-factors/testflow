@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -72,6 +73,7 @@ const (
 	ErrUnsupportedGroupByEventPropertyOnUserQuery = "group by event property is not supported for user query"
 	ErrMsgQueryProcessingFailure                  = "Failed processing query"
 	ErrMsgMaxFunnelStepsExceeded                  = "Max funnel steps exceeded"
+	ErrMsgFunnelQueryV2Failure                    = "Invalid funnel query v2"
 )
 
 const (
@@ -166,6 +168,7 @@ const (
 	QueryCacheMutableResultExpirySeconds float64 = 10 * 60     // 10 Minutes.
 
 	QueryCacheRequestInvalidatedCacheHeader string = "Invalidate-Cache"
+	QueryFunnelV2                           string = "Funnel-V2"
 	QueryCacheRequestSleepHeader            string = "QuerySleepSeconds"
 	QueryCacheResponseFromCacheHeader       string = "Fromcache"
 	QueryCacheResponseCacheRefreshedAt      string = "Refreshedat"
@@ -216,6 +219,7 @@ type Query struct {
 	Timezone             string                     `json:"tz"`
 	From                 int64                      `json:"fr"`
 	To                   int64                      `json:"to"`
+	GroupAnalysis        string                     `json:"grpa"`
 	// Deprecated: Keeping it for old dashboard units.
 	OverridePeriod    bool  `json:"ovp"`
 	SessionStartEvent int64 `json:"sse"`
@@ -1123,4 +1127,24 @@ func IsQueryGroupByLatestUserProperty(queryGroupByProperty []QueryGroupByPropert
 		}
 	}
 	return false
+}
+
+var funnelQueryGroupUserID = regexp.MustCompile("user_groups\\.group_\\d_user_id")
+
+func GetQueryGroupUserID(stmnt string) string {
+
+	return funnelQueryGroupUserID.FindString(stmnt)
+}
+
+func IsValidFunnelQueryGroupName(group string) bool {
+	_, exists := AllowedGroupNames[group]
+	if exists || IsFunnelQueryGroupNameUser(group) {
+		return true
+	}
+
+	return false
+}
+
+func IsFunnelQueryGroupNameUser(group string) bool {
+	return group == USERS
 }

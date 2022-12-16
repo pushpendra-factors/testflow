@@ -25,6 +25,10 @@ func (store *MemSQL) CreateCustomMetric(customMetric model.CustomMetric) (*model
 	customMetric.ID = uuid.New().String()
 	err := db.Create(&customMetric).Error
 	if err != nil {
+		if IsDuplicateRecordError(err) {
+			log.WithError(err).WithField("customMetric", customMetric).Error("Failed to create custom metric. Duplicate.")
+			return &model.CustomMetric{}, err.Error(), http.StatusConflict
+		}
 		logCtx.WithError(err).WithField("customMetric", customMetric).Warn("Failed while creating custom metric.")
 		return &model.CustomMetric{}, err.Error(), http.StatusInternalServerError
 	}
@@ -42,7 +46,7 @@ func (store *MemSQL) GetCustomMetricsByProjectId(projectID int64) ([]model.Custo
 		return make([]model.CustomMetric, 0), "Invalid project ID for custom metric", http.StatusBadRequest
 	}
 	var customMetrics []model.CustomMetric
-	err := db.Where("project_id = ?", projectID).Find(&customMetrics).Error
+	err := db.Order("name ASC").Where("project_id = ?", projectID).Find(&customMetrics).Error
 	if err != nil {
 		logCtx.WithError(err).WithField("projectID", projectID).Warn("Failed while retrieving custom metrics.")
 		return make([]model.CustomMetric, 0), err.Error(), http.StatusInternalServerError
@@ -52,6 +56,10 @@ func (store *MemSQL) GetCustomMetricsByProjectId(projectID int64) ([]model.Custo
 
 func (store *MemSQL) GetCustomMetricAndDerivedMetricByProjectIdAndDisplayCategory(projectID int64, displayCategory string, includeDerivedKPIs bool) []map[string]string {
 	return append(store.GetCustomKPIMetricsByProjectIdAndDisplayCategory(projectID, displayCategory), store.GetDerivedKPIMetricsByProjectIdAndDisplayCategory(projectID, displayCategory, includeDerivedKPIs)...)
+}
+
+func (store *MemSQL) GetCustomEventAndDerivedMetricByProjectIdAndDisplayCategory(projectID int64, displayCategory string, includeDerivedKPIs bool) []map[string]string {
+	return append(store.GetCustomEventKPIMetricsByProjectIdAndDisplayCategory(projectID, displayCategory), store.GetDerivedKPIMetricsByProjectIdAndDisplayCategory(projectID, displayCategory, includeDerivedKPIs)...)
 }
 
 func (store *MemSQL) GetCustomKPIMetricsByProjectIdAndDisplayCategory(projectID int64, displayCategory string) []map[string]string {
@@ -76,7 +84,7 @@ func (store *MemSQL) GetDerivedKPIMetricsByProjectIdAndDisplayCategory(projectID
 	}
 }
 
-func (store *MemSQL) GetCustomEventKPIMetricsByProjectIdAndDisplayCategory(projectID int64, displayCategory string, includeDerivedKPIs bool) []map[string]string {
+func (store *MemSQL) GetCustomEventKPIMetricsByProjectIdAndDisplayCategory(projectID int64, displayCategory string) []map[string]string {
 	logCtx := log.WithField("project_id", projectID)
 	customMetrics, err, statusCode := store.GetCustomMetricByProjectIdQueryTypeAndObjectType(projectID, model.EventBasedQueryType, displayCategory)
 	if statusCode != http.StatusFound {

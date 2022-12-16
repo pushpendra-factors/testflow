@@ -919,7 +919,7 @@ type Result struct {
 }
 
 func (store *MemSQL) runFunnelAndInsightsUnit(projectID int64, queryOriginal model.Query, c chan Result, enableFilterOpt bool) {
-	r, eCode, eMsg := store.Analyze(projectID, queryOriginal, enableFilterOpt)
+	r, eCode, eMsg := store.Analyze(projectID, queryOriginal, enableFilterOpt, false) // disable dashboard caching for funnelv2
 	result := Result{res: r, errCode: eCode, errMsg: eMsg, lastComputedAt: U.TimeNowUnix()}
 	c <- result
 }

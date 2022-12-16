@@ -159,88 +159,108 @@ function AccountProfiles({
     </div>
   );
 
+  const renderActions = () => (
+    <div className='flex justify-between items-start my-4'>
+      <div className='flex items-start'>
+        <div className='relative mr-2'>
+          <Button
+            className='fa-dd--custom-btn'
+            type='text'
+            icon={<SVG name='user_friends' size={16} />}
+            onClick={() => setDDVisible(!isDDVisible)}
+          >
+            {displayFilterOpts[filterPayload.source]}
+            <SVG name='caretDown' size={16} />
+          </Button>
+          {selectUsers()}
+        </div>
+        <div key={0} className='max-w-3xl'>
+          <PropertyFilter
+            profileType='account'
+            source={filterPayload.source}
+            filters={filterPayload.filters}
+            setFilters={setFilters}
+          />
+        </div>
+      </div>
+      {filterPayload.filters.length ? (
+        <div>
+          <Button
+            className='fa-dd--custom-btn'
+            type='text'
+            icon={<SVG name='times_circle' size={16} />}
+            onClick={clearFilters}
+          >
+            Clear Filters
+          </Button>
+        </div>
+      ) : null}
+    </div>
+  );
+
+  const renderTable = () => (
+    <div>
+      <Table
+        onRow={(account) => ({
+          onClick: () => {
+            getProfileAccountDetails(
+              activeProject.id,
+              account.identity,
+              currentProjectSettings?.timelines_config
+            );
+            setActiveModalKey(account.identity);
+            showModal();
+          }
+        })}
+        className='fa-table--basic'
+        dataSource={accounts.data}
+        columns={columns}
+        rowClassName='cursor-pointer'
+        pagination={{ position: ['bottom', 'left'] }}
+        footer={() => (
+          <div className='text-right'>
+            <a className='font-size--small' href='https://clearbit.com'>
+              Logos provided by Clearbit
+            </a>
+          </div>
+        )}
+      />
+      <div className='flex flex-row-reverse mt-4'></div>
+    </div>
+  );
+
+  const renderAccountDetailsModal = () => (
+    <Modal
+      title={null}
+      visible={isModalVisible}
+      className='fa-modal--full-width'
+      footer={null}
+      closable={null}
+    >
+      <AccountDetails
+        accountId={activeModalKey}
+        onCancel={handleCancel}
+        accountDetails={accountDetails}
+      />
+    </Modal>
+  );
+
   return (
-    <div className='fa-container mt-24 mb-12 min-h-screen'>
-      <Text type='title' level={3} weight='bold'>
+    <div className='list-container'>
+      <Text type='title' level={3} weight='bold' extraClass='mt-12'>
         Account Profiles
       </Text>
-      <div className='flex justify-between items-start my-4'>
-        <div className='flex items-start'>
-          <div className='relative mr-2'>
-            <Button
-              className='fa-dd--custom-btn'
-              type='text'
-              icon={<SVG name='user_friends' size={16} />}
-              onClick={() => setDDVisible(!isDDVisible)}
-            >
-              {displayFilterOpts[filterPayload.source]}
-              <SVG name='caretDown' size={16} />
-            </Button>
-            {selectUsers()}
-          </div>
-          <div key={0} className='max-w-3xl'>
-            <PropertyFilter
-              profileType='account'
-              source={filterPayload.source}
-              filters={filterPayload.filters}
-              setFilters={setFilters}
-            />
-          </div>
-        </div>
-        {filterPayload.filters.length ? (
-          <div>
-            <Button
-              className='fa-dd--custom-btn'
-              type='text'
-              icon={<SVG name='times_circle' size={16} />}
-              onClick={clearFilters}
-            >
-              Clear Filters
-            </Button>
-          </div>
-        ) : null}
-      </div>
+      {renderActions()}
       {accounts.isLoading ? (
         <Spin size='large' className='fa-page-loader' />
       ) : accounts.data.length ? (
-        <div>
-          <Table
-            onRow={(account) => ({
-              onClick: () => {
-                getProfileAccountDetails(
-                  activeProject.id,
-                  account.identity,
-                  currentProjectSettings?.timelines_config
-                );
-                setActiveModalKey(account.identity);
-                showModal();
-              }
-            })}
-            className='fa-table--basic'
-            dataSource={accounts.data}
-            columns={columns}
-            rowClassName='cursor-pointer'
-            pagination={{ position: ['bottom', 'left'] }}
-          />
-        </div>
+        renderTable()
       ) : (
         <Text type='title' level={6} extraClass='mt-20 italic'>
           There are currently no Accounts available for this project.
         </Text>
       )}
-      <Modal
-        title={null}
-        visible={isModalVisible}
-        className='fa-modal--full-width'
-        footer={null}
-        closable={null}
-      >
-        <AccountDetails
-          accountId={activeModalKey}
-          onCancel={handleCancel}
-          accountDetails={accountDetails}
-        />
-      </Modal>
+      {renderAccountDetailsModal()}
     </div>
   );
 }
