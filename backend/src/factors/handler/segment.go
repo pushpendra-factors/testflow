@@ -47,7 +47,7 @@ func CreateSegmentHandler(c *gin.Context) {
 
 	status, err := store.GetStore().CreateSegment(projectID, &request)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, &model.SegmentResponse{Error: "Creation of segment by projectId failed."})
+		c.AbortWithStatusJSON(status, &model.SegmentResponse{Error: err.Error()})
 		return
 	}
 

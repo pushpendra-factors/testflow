@@ -13,16 +13,18 @@ const UsersjoinTimeStampField = "join_timestamp"
 const EpochOf2000InGMT = 946688461
 
 // From and to refer to JoinTime
+// LimitNotApplicable Used only in attribution since results of profiles is used for further computation.
 type ProfileQueryGroup struct {
-	Class          string                 `json:"cl"`
-	Queries        []ProfileQuery         `json:"queries"`
-	GlobalFilters  []QueryProperty        `json:"gup"`
-	GlobalGroupBys []QueryGroupByProperty `json:"gbp"`
-	From           int64                  `json:"from"`
-	To             int64                  `json:"to"`
-	Timezone       string                 `json:"tz"`
-	DateField      string                 `json:"daFie"`
-	GroupAnalysis  string                 `json:"grpa"`
+	Class              string                 `json:"cl"`
+	Queries            []ProfileQuery         `json:"queries"`
+	GlobalFilters      []QueryProperty        `json:"gup"`
+	GlobalGroupBys     []QueryGroupByProperty `json:"gbp"`
+	From               int64                  `json:"from"`
+	To                 int64                  `json:"to"`
+	Timezone           string                 `json:"tz"`
+	DateField          string                 `json:"daFie"`
+	GroupAnalysis      string                 `json:"grpa"`
+	LimitNotApplicable bool                   `json:"lmtNA"`
 }
 
 func (q *ProfileQueryGroup) GetClass() string {
@@ -121,7 +123,8 @@ type ProfileQuery struct {
 
 	// We convert the exposed expression to internal ones.
 	// If average is considered as an exposed expression, we break it to 2 queries and assign the operator here.
-	Operator string `json:"op"`
+	Operator           string `json:"op"`
+	LimitNotApplicable bool   `json:"lmtNA"`
 }
 
 func (q *ProfileQuery) SetTimeZone(timezoneString U.TimeZoneString) {

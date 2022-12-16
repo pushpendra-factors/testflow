@@ -25,6 +25,10 @@ func (store *MemSQL) CreateCustomMetric(customMetric model.CustomMetric) (*model
 	customMetric.ID = uuid.New().String()
 	err := db.Create(&customMetric).Error
 	if err != nil {
+		if IsDuplicateRecordError(err) {
+			log.WithError(err).WithField("customMetric", customMetric).Error("Failed to create custom metric. Duplicate.")
+			return &model.CustomMetric{}, err.Error(), http.StatusConflict
+		}
 		logCtx.WithError(err).WithField("customMetric", customMetric).Warn("Failed while creating custom metric.")
 		return &model.CustomMetric{}, err.Error(), http.StatusInternalServerError
 	}
@@ -42,7 +46,7 @@ func (store *MemSQL) GetCustomMetricsByProjectId(projectID int64) ([]model.Custo
 		return make([]model.CustomMetric, 0), "Invalid project ID for custom metric", http.StatusBadRequest
 	}
 	var customMetrics []model.CustomMetric
-	err := db.Where("project_id = ?", projectID).Find(&customMetrics).Error
+	err := db.Order("name ASC").Where("project_id = ?", projectID).Find(&customMetrics).Error
 	if err != nil {
 		logCtx.WithError(err).WithField("projectID", projectID).Warn("Failed while retrieving custom metrics.")
 		return make([]model.CustomMetric, 0), err.Error(), http.StatusInternalServerError

@@ -2,10 +2,13 @@ package task
 
 import (
 	"factors/filestore"
+	"factors/model/model"
+	"factors/model/store"
 	P "factors/pattern"
 	serviceDisk "factors/services/disk"
 	serviceEtcd "factors/services/etcd"
 	"factors/util"
+	U "factors/util"
 	"math/rand"
 	"time"
 
@@ -45,7 +48,6 @@ func BuildSequential(projectId int64, configs map[string]interface{}) (map[strin
 	countsVersion := configs["countsVersion"].(int)
 	hmineSupport := configs["hmineSupport"].(float32)
 	hmine_persist := configs["hminePersist"].(int)
-
 	createMetadata := configs["create_metadata"].(bool)
 	status := make(map[string]interface{})
 	defer util.NotifyOnPanic(taskID, env)
@@ -88,5 +90,94 @@ func BuildSequential(projectId int64, configs map[string]interface{}) (map[strin
 	status["modelId"] = modelId
 	status["numChunks"] = numChunks
 	status["TimeTakenToMinePatternsInMS"] = timeTakenToMinePatterns
+	return status, true
+}
+
+// BuildSequential - runs model building sequenitally for all project intervals.
+func BuildSequentialV2(projectId int64, configs map[string]interface{}) (map[string]interface{}, bool) {
+	env := configs["env"].(string)
+	db := configs["db"].(*gorm.DB)
+	cloudManager := configs["cloudManager"].(*filestore.FileManager)
+	etcdClient := configs["etcdClient"].(*serviceEtcd.EtcdClient)
+	diskManger := configs["diskManger"].(*serviceDisk.DiskDriver)
+	bucketName := configs["bucketName"].(string)
+	noOfPatternWorkers := configs["noOfPatternWorkers"].(int)
+	projectIdsToSkip := configs["projectIdsToSkip"].(map[int64]bool)
+	maxModelSize := configs["maxModelSize"].(int64)
+	modelType := configs["modelType"].(string)
+	countOccurence := configs["countOccurence"].(bool)
+	numCampaignsLimit := configs["numCampaignsLimit"].(int)
+	startTimestamp := configs["startTimestamp"].(int64)
+	endTimestamp := configs["endTimestamp"].(int64)
+	beamConfig := configs["beamConfig"].(*RunBeamConfig)
+	hmineSupport := configs["hmineSupport"].(float32)
+	hmine_persist := configs["hminePersist"].(int)
+
+	createMetadata := configs["create_metadata"].(bool)
+	status := make(map[string]interface{})
+	defer util.NotifyOnPanic(taskID, env)
+
+	if _, ok := projectIdsToSkip[projectId]; ok {
+		bsLog.WithField("ProjectId", projectId).Info("Skipping build for the project.")
+		status["error"] = "Skipping build for the project."
+		return status, false
+	}
+
+	logCtx := bsLog.WithFields(log.Fields{"ProjectId": projectId,
+		"StartTime": startTimestamp, "EndTime": endTimestamp,
+		"UnitType": modelType})
+
+	// Prefix timestamp with randomAlphanumeric(5).
+	curTimeInMilliSecs := time.Now().UnixNano() / 1000000
+	// modelId = time in millisecs + random number upto 3 digits.
+	modelId := uint64(curTimeInMilliSecs + rand.Int63n(999))
+
+	// Patten mine
+	startAt := time.Now().UnixNano()
+	queries, _ := store.GetStore().GetAllSavedExplainV2EntityByProject(projectId)
+	for _, query := range queries {
+
+		store.GetStore().UpdateExplainV2EntityStatus(projectId, query.ID, model.BUILDING, 0)
+		var actualQuery model.ExplainV2Query
+		U.DecodePostgresJsonbToStructType(query.ExplainV2Query, &actualQuery)
+		mineLog.Infof("Actual query :%v", actualQuery)
+		time.Sleep(5 * time.Second)
+
+		var count_algo_props P.CountAlgoProperties
+		count_algo_props.Counting_version = 4
+		count_algo_props.Hmine_persist = hmine_persist
+		count_algo_props.Hmine_support = hmineSupport
+
+		var jp P.ExplainQueryV2
+		jp.Start_event = actualQuery.StartEvent
+		jp.End_event = actualQuery.EndEvent
+		jp.Events_included = actualQuery.IncludeEvents
+		if jp.Start_event == "" && jp.End_event == "" {
+			status["error"] = "unable to run explain v2 as both start and events are empty"
+			log.Panic("unable to run explain v2 as both start and end events are empty")
+			return status, false
+		}
+		count_algo_props.Job = jp
+		count_algo_props.JobId = query.ID
+		mineLog.Info("Job to execute:%v", jp)
+
+		numChunks, err := PatternMine(db, etcdClient, cloudManager, diskManger,
+			bucketName, noOfPatternWorkers, projectId, modelId, modelType,
+			startTimestamp, endTimestamp, maxModelSize, countOccurence, numCampaignsLimit,
+			beamConfig, createMetadata, count_algo_props)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to mine patterns.")
+			status["error"] = "Failed to mine patterns."
+			return status, false
+		}
+		timeTakenToMinePatterns := (time.Now().UnixNano() - startAt) / 1000000
+		logCtx = logCtx.WithField("TimeTakenToMinePatternsInMS", timeTakenToMinePatterns)
+
+		store.GetStore().UpdateExplainV2EntityStatus(projectId, query.ID, model.ACTIVE, modelId)
+		status["modelId"] = modelId
+		status["numChunks"] = numChunks
+		status["TimeTakenToMinePatternsInMS"] = timeTakenToMinePatterns
+
+	}
 	return status, true
 }

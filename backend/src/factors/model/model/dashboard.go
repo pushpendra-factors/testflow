@@ -74,12 +74,16 @@ const MaxNumberPerScanCount = 50000
 const (
 	DashboardTypePrivate        = "pr"
 	DashboardTypeProjectVisible = "pv"
+	DashboardTypeAttributionV1  = "av1"
 
 	DashboardClassUserCreated      = "user_created"
 	DashboardClassWebsiteAnalytics = "web"
+
+	AttributionV1Description = ""
+	AttributionV1Name        = "Attribution Reporting"
 )
 
-var DashboardTypes = []string{DashboardTypePrivate, DashboardTypeProjectVisible}
+var DashboardTypes = []string{DashboardTypePrivate, DashboardTypeProjectVisible, DashboardTypeAttributionV1}
 
 const AgentProjectPersonalDashboardName = "My Dashboard"
 const AgentProjectPersonalDashboardDescription = "No Description"

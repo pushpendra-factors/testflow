@@ -19,7 +19,7 @@ import (
 func main() {
 	env := flag.String("env", C.DEVELOPMENT, "")
 	bucketNameFlag := flag.String("bucket_name", "/usr/local/var/factors/cloud_storage", "--bucket_name=/usr/local/var/factors/cloud_storage pass bucket name")
-	
+
 	memSQLHost := flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
 	memSQLPort := flag.Int("memsql_port", C.MemSQLDefaultDBParams.Port, "")
 	memSQLUser := flag.String("memsql_user", C.MemSQLDefaultDBParams.User, "")
@@ -110,8 +110,8 @@ func main() {
 
 	if *isWeeklyEnabled {
 		configs["modelType"] = T.ModelTypeWeek
-		configs["wetRun"] = wetRun
-		status := taskWrapper.TaskFuncWithProjectId("WIMailWeekly", *lookback, projectIdsArray, D.MailWeeklyInsights, configs)
+		configs["wetRun"] = *wetRun
+		status := taskWrapper.TaskFuncWithProjectId("WIMailInsights", *lookback, projectIdsArray, D.MailWeeklyInsights, configs)
 		log.Info(status)
 		if status["err"] != nil {
 			C.PingHealthcheckForFailure(healthcheckPingID, status)

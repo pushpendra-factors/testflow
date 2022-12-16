@@ -132,10 +132,11 @@ const (
 	SourceJSSDK  = "js_sdk"
 	SourceAMPSDK = "amp_sdk"
 
-	SourceSegment    = "segment"
-	SourceShopify    = "shopify"
-	SourceHubspot    = "hubspot"
-	SourceSalesforce = "salesforce"
+	SourceSegment     = "segment"
+	SourceShopify     = "shopify"
+	SourceHubspot     = "hubspot"
+	SourceSalesforce  = "salesforce"
+	SourceRudderstack = "rudderstack"
 )
 
 // RequestQueue - Name of the primary queue which will
@@ -794,7 +795,7 @@ func FillSixSignalUserProperties(projectId int64, projectSettings *model.Project
 	userProperties *U.PropertiesMap, UserId string, clientIP string) {
 
 	logCtx := log.WithField("project_id", projectId)
-	if projectSettings.Client6SignalKey != "" {
+	if projectSettings.Client6SignalKey != "" && *(projectSettings.IntClientSixSignalKey) == true {
 		execute6SignalStatusChannel := make(chan int)
 		sixSignalExists, _ := six_signal.GetSixSignalCacheResult(projectId, UserId, clientIP)
 		if sixSignalExists {
@@ -807,15 +808,18 @@ func FillSixSignalUserProperties(projectId int64, projectSettings *model.Project
 			case ok := <-execute6SignalStatusChannel:
 				if ok == 1 {
 					six_signal.SetSixSignalCacheResult(projectId, UserId, clientIP)
+					logCtx.WithFields(log.Fields{"clientIP": clientIP}).Info("SetSixSignalCacheResult using clients Key")
 
 				} else {
 					logCtx.Warn("ExecuteSixSignal failed in track call")
+					logCtx.WithFields(log.Fields{"clientIP": clientIP}).Info("ExecuteSixSignal failed in track call using clients Key")
 				}
 			case <-time.After(U.TimeoutOneSecond):
 				logCtx.Info("Six_Signal enrichment timed out in Track call")
+				logCtx.WithFields(log.Fields{"clientIP": clientIP}).Info("Timed Out 6Signal enrichment using clients Key")
 			}
 		}
-	} else if projectSettings.Factors6SignalKey != "" {
+	} else if projectSettings.Factors6SignalKey != "" && *(projectSettings.IntFactorsSixSignalKey) == true {
 		execute6SignalStatusChannel := make(chan int)
 		sixSignalExists, _ := six_signal.GetSixSignalCacheResult(projectId, UserId, clientIP)
 		if sixSignalExists {
@@ -828,11 +832,18 @@ func FillSixSignalUserProperties(projectId int64, projectSettings *model.Project
 			case ok := <-execute6SignalStatusChannel:
 				if ok == 1 {
 					six_signal.SetSixSignalCacheResult(projectId, UserId, clientIP)
+					six_signal.SetSixSignalAPICountCacheResult(projectId, U.TimeZoneStringIST)
+					logCtx.WithFields(log.Fields{"clientIP": clientIP}).Info("SetSixSignalCacheResult using Factors key")
+
 				} else {
 					logCtx.Warn("ExecuteSixSignal failed in track call")
+					logCtx.WithFields(log.Fields{"clientIP": clientIP}).Info("ExecuteSixSignal failed in track call using Factors Key")
+
 				}
 			case <-time.After(U.TimeoutOneSecond):
 				logCtx.Info("Six_Signal enrichment timed out in Track call")
+				logCtx.WithFields(log.Fields{"clientIP": clientIP}).Info("Timed Out 6Signal enrichment using Factors Key")
+
 			}
 		}
 	}
@@ -1323,6 +1334,10 @@ func AddUserProperties(projectId int64,
 
 	// Validate properties.
 	validProperties := U.GetValidatedUserProperties(&request.Properties)
+	projectSettings, err1 := store.GetStore().GetProjectSetting(projectId)
+	if err1 != http.StatusFound {
+		return http.StatusInternalServerError, &AddUserPropertiesResponse{Error: "Tracking failed. Invalid project."}
+	}
 	if C.GetClearbitEnabled() == 1 {
 		clearbitKey, errCode := store.GetStore().GetClearbitKeyFromProjectSetting(projectId)
 		if errCode != http.StatusFound {
@@ -1352,7 +1367,7 @@ func AddUserProperties(projectId int64,
 	}
 
 	if C.Get6SignalEnabled() == 1 {
-		if ClientSixSignalKey, ClientErrCode := store.GetStore().GetClient6SignalKeyFromProjectSetting(projectId); ClientSixSignalKey != "" {
+		if ClientSixSignalKey, ClientErrCode := store.GetStore().GetClient6SignalKeyFromProjectSetting(projectId); ClientSixSignalKey != "" && *(projectSettings.IntClientSixSignalKey) == true {
 			statusChannel := make(chan int)
 			sixSignalExists, _ := six_signal.GetSixSignalCacheResult(projectId, request.UserId, request.ClientIP)
 
@@ -1370,7 +1385,7 @@ func AddUserProperties(projectId int64,
 					logCtx.Info("six_signal enrichment timed out in AddUserProperties")
 				}
 			}
-		} else if FactorsSixSignalKey, FactorsErrCode := store.GetStore().GetFactors6SignalKeyFromProjectSetting(projectId); FactorsSixSignalKey != "" {
+		} else if FactorsSixSignalKey, FactorsErrCode := store.GetStore().GetFactors6SignalKeyFromProjectSetting(projectId); FactorsSixSignalKey != "" && *(projectSettings.IntFactorsSixSignalKey) == true {
 			statusChannel := make(chan int)
 			sixSignalExists, _ := six_signal.GetSixSignalCacheResult(projectId, request.UserId, request.ClientIP)
 
@@ -1381,11 +1396,13 @@ func AddUserProperties(projectId int64,
 				case ok := <-statusChannel:
 					if ok == 1 {
 						six_signal.SetSixSignalCacheResult(projectId, request.UserId, request.ClientIP)
+						six_signal.SetSixSignalAPICountCacheResult(projectId, U.TimeZoneStringIST)
 					} else {
 						logCtx.Info("ExecuteSixSignal failed in AddUserProperties")
 					}
 				case <-time.After(U.TimeoutOneSecond):
 					logCtx.Info("six_signal enrichment timed out in AddUserProperties")
+
 				}
 			}
 		} else if ClientErrCode == http.StatusNotFound || FactorsErrCode == http.StatusNotFound {

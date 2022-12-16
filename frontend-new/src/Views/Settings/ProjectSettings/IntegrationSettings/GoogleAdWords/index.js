@@ -13,7 +13,11 @@ import {
   Skeleton,
   Spin
 } from 'antd';
-import {ADWORDS_REDIRECT_URI_NEW, ADWORDS_INTERNAL_REDIRECT_URI, INTEGRATION_HOME_PAGE} from '../util';
+import {
+  ADWORDS_REDIRECT_URI_NEW,
+  ADWORDS_INTERNAL_REDIRECT_URI,
+  INTEGRATION_HOME_PAGE
+} from '../util';
 
 import {
   enableAdwordsIntegration,
@@ -61,26 +65,35 @@ const GoogleIntegration = ({
   const history = useHistory();
 
   const onDisconnect = () => {
-    setLoading(true);
-    setCustomerAccounts(false);
-    deleteIntegration(activeProject.id, 'adwords')
-      .then(() => {
-        fetchProjectSettings(activeProject.id);
-        setLoading(false);
-        setShowModal(false);
-        setShowURLModal(false);
-        setTimeout(() => {
-          message.success('Google integration disconnected!');
-        }, 500);
-        setIsStatus('');
-      })
-      .catch((err) => {
-        message.error(`${err?.data?.error}`);
-        setShowModal(false);
-        setShowURLModal(false);
-        setLoading(false);
-        console.log('Google integration error-->', err);
-      });
+    Modal.confirm({
+      title: 'Are you sure you want to disable this?',
+      content:
+        'You are about to disable this integration. Factors will stop bringing in data from this source.',
+      okText: 'Disconnect',
+      cancelText: 'Cancel',
+      onOk: () => {
+        setLoading(true);
+        setCustomerAccounts(false);
+        deleteIntegration(activeProject.id, 'adwords')
+          .then(() => {
+            fetchProjectSettings(activeProject.id);
+            setLoading(false);
+            setShowModal(false);
+            setShowURLModal(false);
+            setTimeout(() => {
+              message.success('Google integration disconnected!');
+            }, 500);
+            setIsStatus('');
+          })
+          .catch((err) => {
+            message.error(`${err?.data?.error}`);
+            setShowModal(false);
+            setShowURLModal(false);
+            setLoading(false);
+          });
+      },
+      onCancel: () => {}
+    });
   };
 
   const isIntAdwordsEnabled = () => {
@@ -94,7 +107,7 @@ const GoogleIntegration = ({
   const getRedirectURL = () => {
     let params = {
       method: 'GET',
-      credentials: 'include',
+      credentials: 'include'
     };
     let host = getAdwordsHostURL();
     let url =
@@ -115,7 +128,6 @@ const GoogleIntegration = ({
         return false;
       });
   };
- 
 
   useEffect(() => {
     if (isIntAdwordsEnabled()) {
@@ -125,13 +137,11 @@ const GoogleIntegration = ({
         : setIsStatus('Pending');
     } else setIsStatus('');
 
-    if(isIntAdwordsEnabled()){
+    if (isIntAdwordsEnabled()) {
       if (window.location.href.indexOf(ADWORDS_INTERNAL_REDIRECT_URI) > -1) {
-        setShowURLModal(true); 
+        setShowURLModal(true);
       }
     }
-    renderSettingInfo();
-
   }, [activeProject, agent_details, currentProjectSettings]);
 
   const enableAdwords = () => {
@@ -145,12 +155,18 @@ const GoogleIntegration = ({
         if (r.status == 200) {
           renderSettingInfo();
           fetchProjectSettings(activeProject.id);
-          sendSlackNotification(agent_details.email, activeProject.name, 'Google Adwords');
+          sendSlackNotification(
+            agent_details.email,
+            activeProject.name,
+            'Google Adwords'
+          );
         }
         if (r.status >= 400) {
           setShowManageBtn(true);
           setCustomerAccountsLoaded(false);
-          message.error('Oops! We noticed an error whilst trying to fetch your Google Ads account. Please try again.');
+          message.error(
+            'Oops! We noticed an error whilst trying to fetch your Google Ads account. Please try again.'
+          );
         }
       })
       .catch((err) => {
@@ -160,21 +176,20 @@ const GoogleIntegration = ({
       });
   };
 
-  const onManagerIDSelect = (Id,e) => {
-    let validatedManagerID = e.target.value.replace(/-/g, "");
+  const onManagerIDSelect = (Id, e) => {
+    let validatedManagerID = e.target.value.replace(/-/g, '');
     SetManagerIDArr({
       ...managerIDArr,
       [Id]: validatedManagerID
-    })
-    
-  } 
+    });
+  };
   const onAccountSelect = (e) => {
     let selectedAdwordsAcc = [...selectedAdwordsAccounts];
     if (e.target.checked) {
       selectedAdwordsAcc.push(e.target.value);
     } else {
       let index = selectedAdwordsAcc.indexOf(e.target.value);
-      if (index > -1) selectedAdwordsAcc.splice(index, 1); 
+      if (index > -1) selectedAdwordsAcc.splice(index, 1);
     }
     setSelectedAdwordsAccounts(selectedAdwordsAcc);
   };
@@ -183,7 +198,7 @@ const GoogleIntegration = ({
     let accounts = [...manualAccounts];
     if (accountId != '') {
       accounts.push({
-        customer_id: accountId,
+        customer_id: accountId
       });
     }
     setManualAccounts(accounts);
@@ -194,26 +209,30 @@ const GoogleIntegration = ({
     let selectedAdwordsAcc = selectedAdwordsAccounts.join(', ');
 
     //Factors INTEGRATION tracking
-    factorsai.track('INTEGRATION',{'name': 'adwords','activeProjectID': activeProject.id}); 
+    factorsai.track('INTEGRATION', {
+      name: 'adwords',
+      activeProjectID: activeProject.id
+    });
 
-    let mappedAccounts = selectedAdwordsAccounts.reduce((a, v) => ({ ...a, [v]: managerIDArr[v] ? managerIDArr[v] : ''}), {})
-    
+    let mappedAccounts = selectedAdwordsAccounts.reduce(
+      (a, v) => ({ ...a, [v]: managerIDArr[v] ? managerIDArr[v] : '' }),
+      {}
+    );
+
     let accountsData = {
       int_adwords_customer_account_id: selectedAdwordsAcc,
       int_adwords_client_manager_map: mappedAccounts
-    }; 
+    };
 
-    
     udpateProjectSettings(activeProject.id, accountsData).then(() => {
       setAddNewAccount(false);
       setSelectedAdwordsAccounts([]);
-      setShowURLModal(false); 
+      setShowURLModal(false);
       setCustomerAccounts([]);
-      setCustomerAccountsLoaded(false); 
+      setCustomerAccountsLoaded(false);
       message.success('Adwords Accounts updated!');
       setShowManageBtn(true);
     });
-
   };
 
   const renderAccountsList = () => {
@@ -222,18 +241,22 @@ const GoogleIntegration = ({
     if (!customerAccounts) return;
 
     for (let i = 0; i < customerAccounts.length; i++) {
-      let account = customerAccounts[i]; 
+      let account = customerAccounts[i];
 
       accountRows.push(
-        <tr style={{'border-bottom': '1px solid #eee'}}>
+        <tr style={{ 'border-bottom': '1px solid #eee' }}>
           <td style={{ border: 'none', paddingTop: '5px' }}>
             <Checkbox value={account.customer_id} onChange={onAccountSelect} />
           </td>
           <td style={{ border: 'none', paddingTop: '5px' }}>
             {account.customer_id}
           </td>
-          <td style={{ border: 'none', paddingTop: '5px' }}>{account.descriptiveName ? account.descriptiveName : '-'}</td>
-          <td style={{ border: 'none', paddingTop: '5px', paddingBottom: '5px' }}>
+          <td style={{ border: 'none', paddingTop: '5px' }}>
+            {account.descriptiveName ? account.descriptiveName : '-'}
+          </td>
+          <td
+            style={{ border: 'none', paddingTop: '5px', paddingBottom: '5px' }}
+          >
             {account.manager_id ? account.manager_id : '-'}
           </td>
         </tr>
@@ -249,15 +272,21 @@ const GoogleIntegration = ({
           <td style={{ border: 'none', paddingTop: '5px' }}>
             {account.customer_id}
           </td>
-          <td style={{ border: 'none', paddingTop: '5px' }}>{account.name ? account.name : '-'}</td>
           <td style={{ border: 'none', paddingTop: '5px' }}>
-              <Input size={'small'} style={{'width': '180px'}} onChange={e=>onManagerIDSelect(account.customer_id,e)} />
+            {account.name ? account.name : '-'}
+          </td>
+          <td style={{ border: 'none', paddingTop: '5px' }}>
+            <Input
+              size={'small'}
+              style={{ width: '180px' }}
+              onChange={(e) => onManagerIDSelect(account.customer_id, e)}
+            />
           </td>
         </tr>
       );
     }
 
-    return accountRows
+    return accountRows;
   };
 
   // const isCustomerAccountSelected = () => {
@@ -286,31 +315,27 @@ const GoogleIntegration = ({
         });
     }
   };
-  
-  useEffect(()=>{ 
-    let mapManagerAccount = {}
-    if(customerAccounts){
-      customerAccounts?.map((account)=>{
-        return mapManagerAccount[account.customer_id] = account.manager_id
+
+  useEffect(() => {
+    let mapManagerAccount = {};
+    if (customerAccounts) {
+      customerAccounts?.map((account) => {
+        return (mapManagerAccount[account.customer_id] = account.manager_id);
       });
-  
+
       SetManagerIDArr({
         ...managerIDArr,
         ...mapManagerAccount
-      }) 
+      });
     }
-    
-  },[customerAccounts]);
+  }, [customerAccounts]);
 
   const closeCustomerManagerIDModal = () => {
-  
-  setShowURLModal(false); 
-  setCustomerAccounts([]);
-  setCustomerAccountsLoaded(false);
-  history.push(INTEGRATION_HOME_PAGE);
-
-    
-  }
+    setShowURLModal(false);
+    setCustomerAccounts([]);
+    setCustomerAccountsLoaded(false);
+    history.push(INTEGRATION_HOME_PAGE);
+  };
   return (
     <>
       <ErrorBoundary
@@ -321,90 +346,94 @@ const GoogleIntegration = ({
         }
         onError={FaErrorLog}
       >
-
-<Modal
-        visible={showURLModal}
-        zIndex={10}
-        width={600}
-        afterClose={() => closeCustomerManagerIDModal()}
-        className={'fa-modal--regular fa-modal--slideInDown'}
-        centered={true}
-        footer={null} 
-        onCancel={() => closeCustomerManagerIDModal()}
-        transitionName=''
-        maskTransitionName=''
-      >
-        <div className={'flex flex-col w-full p-2'}>
-          <Text
-            type={'title'}
-            level={3}
-            weight={'bold'}
-            extraClass={'my-2 pb-2'}
-          > 
-            Google Ads
-          </Text>
-          <Text type={'title'} level={6} weight={'bold'} extraClass={'my-2'}>
-            Add/Remove Accounts
-          </Text>
-          <table>
-            <thead>
-              <tr>
-                <td style={{ border: 'none', padding: '5px' }}></td>
-                <td style={{ border: 'none', padding: '5px' }}>
-                  <Text
-                    type={'title'}
-                    level={7}
-                    color={'grey'}
-                    extraClass={'m-0'}
-                  >
-                    Customer Id
-                  </Text>
-                </td>
-                <td style={{ border: 'none', padding: '5px' }}>
-                  <Text
-                    type={'title'}
-                    level={7}
-                    color={'grey'}
-                    extraClass={'m-0'}
-                  >
-                    Customer Name
-                  </Text>
-                </td>
-                <td style={{ border: 'none', padding: '5px' }}>
-                  <Text
-                    type={'title'}
-                    level={7}
-                    color={'grey'}
-                    extraClass={'m-0'}
-                  >
-                    Manager Id (if applicable)
-                  </Text>
-                </td>
-              </tr>
-            </thead>
-          {customerAccountsLoaded ? <tbody>{renderAccountsList()}</tbody> : <div className='p-4'>
-            <Spin />
-            </div>
-            }
-            
-          </table>
-          <div className={'mt-6 flex justify-end'}>
-            <Button onClick={() => setShowModal(true)} disabled={!customerAccountsLoaded}>
-              {' '}
-              Enter Id Manually{' '}
-            </Button>
-            <Button
-              type={'primary'}
-              disabled={!customerAccountsLoaded}
-              className={'ml-2'}
-              onClick={onClickFinishSetup}
+        <Modal
+          visible={showURLModal}
+          zIndex={10}
+          width={600}
+          afterClose={() => closeCustomerManagerIDModal()}
+          className={'fa-modal--regular fa-modal--slideInDown'}
+          centered={true}
+          footer={null}
+          onCancel={() => closeCustomerManagerIDModal()}
+          transitionName=''
+          maskTransitionName=''
+        >
+          <div className={'flex flex-col w-full p-2'}>
+            <Text
+              type={'title'}
+              level={3}
+              weight={'bold'}
+              extraClass={'my-2 pb-2'}
             >
-              {' '}
-              Finish Setup{' '}
-            </Button>
+              Google Ads
+            </Text>
+            <Text type={'title'} level={6} weight={'bold'} extraClass={'my-2'}>
+              Add/Remove Accounts
+            </Text>
+            <table>
+              <thead>
+                <tr>
+                  <td style={{ border: 'none', padding: '5px' }}></td>
+                  <td style={{ border: 'none', padding: '5px' }}>
+                    <Text
+                      type={'title'}
+                      level={7}
+                      color={'grey'}
+                      extraClass={'m-0'}
+                    >
+                      Customer Id
+                    </Text>
+                  </td>
+                  <td style={{ border: 'none', padding: '5px' }}>
+                    <Text
+                      type={'title'}
+                      level={7}
+                      color={'grey'}
+                      extraClass={'m-0'}
+                    >
+                      Customer Name
+                    </Text>
+                  </td>
+                  <td style={{ border: 'none', padding: '5px' }}>
+                    <Text
+                      type={'title'}
+                      level={7}
+                      color={'grey'}
+                      extraClass={'m-0'}
+                    >
+                      Manager Id (if applicable)
+                    </Text>
+                  </td>
+                </tr>
+              </thead>
+              {customerAccountsLoaded ? (
+                <tbody>{renderAccountsList()}</tbody>
+              ) : (
+                <div className='p-4'>
+                  <Spin />
+                </div>
+              )}
+            </table>
+            <div className={'mt-6 flex justify-end'}>
+              <Button
+                onClick={() => setShowModal(true)}
+                disabled={!customerAccountsLoaded}
+              >
+                {' '}
+                Enter Id Manually{' '}
+              </Button>
+              <Button
+                type={'primary'}
+                disabled={!customerAccountsLoaded}
+                className={'ml-2'}
+                onClick={onClickFinishSetup}
+              >
+                {' '}
+                Finish Setup{' '}
+              </Button>
+            </div>
           </div>
-        </div>
-      </Modal>
+        </Modal>
 
         <div className={'mt-4 flex w-full'}>
           {currentProjectSettings?.int_adwords_customer_account_id && (
@@ -431,14 +460,24 @@ const GoogleIntegration = ({
                   Adwords sync account details:
                 </Text>
 
-                  {currentProjectSettings?.int_adwords_customer_account_id?.split(',').map((id)=>{
-                return <Text
-                  type={'title'}
-                  level={7} 
-                  extraClass={'m-0 mt-1'}
-                >
-                 {`${id} ${currentProjectSettings?.int_adwords_client_manager_map ? currentProjectSettings?.int_adwords_client_manager_map[id] ? '('+currentProjectSettings?.int_adwords_client_manager_map[id]+')' : '' : '' }`} 
-                </Text>
+                {currentProjectSettings?.int_adwords_customer_account_id
+                  ?.split(',')
+                  .map((id) => {
+                    return (
+                      <Text type={'title'} level={7} extraClass={'m-0 mt-1'}>
+                        {`${id} ${
+                          currentProjectSettings?.int_adwords_client_manager_map
+                            ? currentProjectSettings
+                                ?.int_adwords_client_manager_map[id]
+                              ? '(' +
+                                currentProjectSettings
+                                  ?.int_adwords_client_manager_map[id] +
+                                ')'
+                              : ''
+                            : ''
+                        }`}
+                      </Text>
+                    );
                   })}
                 {/* <Input
                   size='large'
@@ -477,7 +516,7 @@ const GoogleIntegration = ({
         {/* <div>{customerAccountsLoaded && renderAccountsList()}</div> */}
 
         <div className={'mt-4 flex'}>
-          {!currentProjectSettings?.int_adwords_enabled_agent_uuid ? 
+          {!currentProjectSettings?.int_adwords_enabled_agent_uuid ? (
             <Button
               className={'mr-2'}
               type={'primary'}
@@ -486,7 +525,7 @@ const GoogleIntegration = ({
             >
               Enable using Google
             </Button>
-              :
+          ) : (
             <Button
               className={'mr-2'}
               loading={loading}
@@ -494,7 +533,7 @@ const GoogleIntegration = ({
             >
               Disconnect
             </Button>
-          }
+          )}
           {kbLink && (
             <a className={'ant-btn'} target={'_blank'} href={kbLink}>
               View documentation
@@ -562,7 +601,7 @@ const GoogleIntegration = ({
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   agent_details: state.agent.agent_details,
-  currentProjectSettings: state.global.currentProjectSettings,
+  currentProjectSettings: state.global.currentProjectSettings
 });
 
 export default connect(mapStateToProps, {

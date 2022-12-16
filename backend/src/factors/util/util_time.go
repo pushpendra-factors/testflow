@@ -3,6 +3,7 @@ package util
 import (
 	"errors"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"strconv"
 	"time"
 )
@@ -10,10 +11,11 @@ import (
 // Datetime related utility functions.
 // General convention for date Functions - suffix Z if utc based, In if timezone is passed, no suffix if localTime.
 const (
-	DATETIME_FORMAT_YYYYMMDD_HYPHEN string = "2006-01-02"
-	DATETIME_FORMAT_YYYYMMDD        string = "20060102"
-	DATETIME_FORMAT_DB              string = "2006-01-02 15:04:05"
-	SECONDS_IN_YEAR                        = ((365 * 86400) + 20736)
+	DATETIME_FORMAT_YYYYMMDD_HYPHEN  string = "2006-01-02"
+	DATETIME_FORMAT_YYYYMMDD         string = "20060102"
+	DATETIME_FORMAT_DB               string = "2006-01-02 15:04:05"
+	SECONDS_IN_YEAR                         = ((365 * 86400) + 20736)
+	DATETIME_FORMAT_DB_WITH_TIMEZONE string = "2006-01-02T15:04:05-07:00"
 )
 
 // Returns date in YYYYMMDD format
@@ -115,6 +117,15 @@ func getDateBeforeXDays(numberOfDays int64, timezoneString TimeZoneString) int64
 
 func DateAsFormattedInt(dateTime time.Time) uint64 {
 	datetimeInt, _ := strconv.ParseInt(fmt.Sprintf("%d%02d%02d%02d", dateTime.Year(), int(dateTime.Month()), dateTime.Day(), dateTime.Hour()), 10, 64)
+	return uint64(datetimeInt)
+}
+
+func DateAsYYYYMMDDFormat(dateTime time.Time) uint64 {
+
+	datetimeInt, err := strconv.ParseInt(fmt.Sprintf("%d%02d%02d", dateTime.Year(), int(dateTime.Month()), dateTime.Day()), 10, 64)
+	if err != nil {
+		log.Warn("Error getting current Date As YYYYMMDD Format")
+	}
 	return uint64(datetimeInt)
 }
 

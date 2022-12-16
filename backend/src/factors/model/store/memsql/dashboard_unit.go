@@ -470,7 +470,7 @@ func (store *MemSQL) CacheDashboardUnitsForProjects(stringProjectsIDs, excludePr
 		filterDashboardUnitQueryClass := make([]string, 0)
 		for _, dashboardUnit := range dashboardUnits {
 
-			queryClass, _, errMsg := store.GetQueryAndClassFromDashboardUnit(&dashboardUnit)
+			queryClass, queryInfo, errMsg := store.GetQueryAndClassFromDashboardUnit(&dashboardUnit)
 			if errMsg != "" {
 				log.WithFields(logFields).Error("failed to get query class")
 				continue
@@ -479,7 +479,10 @@ func (store *MemSQL) CacheDashboardUnitsForProjects(stringProjectsIDs, excludePr
 			if queryClass == model.QueryClassWeb {
 				continue
 			}
-
+			// skip attribution v1 query
+			if queryInfo.Type == model.QueryTypeAttributionV1Query {
+				continue
+			}
 			// filtering attribution query for attribution run
 			if queryClass != model.QueryClassAttribution && C.GetOnlyAttributionDashboardCaching() == 1 {
 				continue
@@ -916,7 +919,7 @@ type Result struct {
 }
 
 func (store *MemSQL) runFunnelAndInsightsUnit(projectID int64, queryOriginal model.Query, c chan Result, enableFilterOpt bool) {
-	r, eCode, eMsg := store.Analyze(projectID, queryOriginal, enableFilterOpt)
+	r, eCode, eMsg := store.Analyze(projectID, queryOriginal, enableFilterOpt, false) // disable dashboard caching for funnelv2
 	result := Result{res: r, errCode: eCode, errMsg: eMsg, lastComputedAt: U.TimeNowUnix()}
 	c <- result
 }

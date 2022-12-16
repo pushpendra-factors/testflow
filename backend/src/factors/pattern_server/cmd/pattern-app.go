@@ -24,6 +24,7 @@ import (
 	rpcjson "github.com/gorilla/rpc/json"
 
 	"factors/model/model"
+	"factors/model/store"
 	modelstore "factors/model/store"
 
 	"github.com/gorilla/mux"
@@ -61,13 +62,14 @@ type config struct {
 	EtcdEndpoints []string
 	BucketName    string
 	DiskBaseDir   string
+	NewBucketName string
 }
 
 func isValidEnv(env string) bool {
 	return env == Development || env == Staging || env == Production
 }
 
-func NewConfig(env, ip, rpcPort, httpPort, etcd, diskBaseDir, bucketName string) (*config, error) {
+func NewConfig(env, ip, rpcPort, httpPort, etcd, diskBaseDir, bucketName, newBucketName string) (*config, error) {
 	if !isValidEnv(env) {
 		return nil, errors.New("Invalid Environment")
 	}
@@ -90,6 +92,10 @@ func NewConfig(env, ip, rpcPort, httpPort, etcd, diskBaseDir, bucketName string)
 		return nil, errors.New("Invalid BucketName")
 	}
 
+	if newBucketName == "" {
+		return nil, errors.New("Invalid BucketName")
+	}
+
 	etcds := strings.Split(etcd, ",")
 	if len(etcds) == 0 {
 		return nil, errors.New("Invalid EtcdEndpoints")
@@ -103,6 +109,7 @@ func NewConfig(env, ip, rpcPort, httpPort, etcd, diskBaseDir, bucketName string)
 		EtcdEndpoints: etcds,
 		DiskBaseDir:   diskBaseDir,
 		BucketName:    bucketName,
+		NewBucketName: newBucketName,
 	}
 
 	return &c, nil
@@ -140,6 +147,13 @@ func (c *config) GetBucketName() string {
 	return c.BucketName
 }
 
+func (c *config) GetNewBucketName(new bool) string {
+	if new {
+		return c.NewBucketName
+	}
+	return c.BucketName
+}
+
 // Process crashes if started with IP and port already registered with etcd.
 // TTL on etcd is 10 seconds.
 // Monit / Kubernetes will keep trying to restart the process, it should succeed after 10 seconds / till key expires.
@@ -155,6 +169,10 @@ func main() {
 
 	diskBaseDir := flag.String("disk_dir", "/usr/local/var/factors/local_disk", "")
 	bucketName := flag.String("bucket_name", "/usr/local/var/factors/cloud_storage", "")
+	bucketNameV2 := flag.String("bucket_name_v2", "/usr/local/var/factors/cloud_storage", "")
+	useBucketV2 := flag.Bool("use_bucket_v2", false, "Whether to use new bucketing system or not")
+	projectIdV2 := flag.String("project_ids_v2", "",
+		"Optional: Project Id. A comma separated list of project Ids and supports '*' for all projects. ex: 1,2,6,9")
 
 	chunkCacheSize := flag.Int("chunk_cache_size", 5, "")
 	eventInfoCacheSize := flag.Int("event_info_cache_size", 10, "")
@@ -177,7 +195,7 @@ func main() {
 
 	flag.Parse()
 
-	config, err := NewConfig(*env, *ip, *rpc_port, *http_port, *etcd, *diskBaseDir, *bucketName)
+	config, err := NewConfig(*env, *ip, *rpc_port, *http_port, *etcd, *diskBaseDir, *bucketName, *bucketNameV2)
 	if err != nil {
 		panic(err)
 	}
@@ -259,11 +277,18 @@ func main() {
 		panic(str)
 	}
 
-	var cloudManger filestore.FileManager
+	var cloudManager filestore.FileManager
+	var newCloudManager filestore.FileManager
 	if config.IsDevelopment() {
-		cloudManger = serviceDisk.New(config.GetBucketName())
+		cloudManager = serviceDisk.New(config.GetBucketName())
+		newCloudManager = serviceDisk.New(config.GetNewBucketName(*useBucketV2))
 	} else {
-		cloudManger, err = serviceGCS.New(config.GetBucketName())
+		cloudManager, err = serviceGCS.New(config.GetBucketName())
+		if err != nil {
+			logCtx.WithError(err).Errorln("Failed to init New GCS Client")
+			panic(err)
+		}
+		newCloudManager, err = serviceGCS.New(config.GetNewBucketName(*useBucketV2))
 		if err != nil {
 			logCtx.WithError(err).Errorln("Failed to init New GCS Client")
 			panic(err)
@@ -272,7 +297,25 @@ func main() {
 
 	diskManager := serviceDisk.New(config.GetBaseDiskDir())
 
-	ps, err := patternserver.New(config.GetIP(), config.GetRPCPort(), config.GetHTTPPort(), etcdClient, diskManager, cloudManger, *chunkCacheSize, *eventInfoCacheSize)
+	projectIdsToRunV2 := make(map[int64]bool, 0)
+	var allProjects bool
+	allProjects, projectIdsToRunV2, _ = C.GetProjectsFromListWithAllProjectSupport(*projectIdV2, "")
+	if allProjects {
+		projectIDs, errCode := store.GetStore().GetAllProjectIDs()
+		if errCode != http.StatusFound {
+			log.Fatal("Failed to get all projects and project_ids set to '*'.")
+		}
+		for _, projectID := range projectIDs {
+			projectIdsToRunV2[projectID] = true
+		}
+	}
+
+	projectIdsArrayV2 := make([]int64, 0)
+	for projectId, _ := range projectIdsToRunV2 {
+		projectIdsArrayV2 = append(projectIdsArrayV2, projectId)
+	}
+
+	ps, err := patternserver.New(config.GetIP(), config.GetRPCPort(), config.GetHTTPPort(), etcdClient, diskManager, cloudManager, newCloudManager, projectIdsArrayV2, *chunkCacheSize, *eventInfoCacheSize)
 	if err != nil {
 		logCtx.WithError(err).Errorln("Failed to init New PatternServer")
 		panic(err)
@@ -324,11 +367,11 @@ func main() {
 		version = InitialDefaultMetadata
 	}
 
-	projectDataMap, err := getProjectsDataFromVersion(version, cloudManger)
+	projectDataMap, err := getProjectsDataFromVersion(version, cloudManager)
 
 	ps.SetState(myNum, patternServersRegisteredWithEtcd, version, projectDataMap)
 
-	go watchAndHandleEtcdEvents(ps, cloudManger)
+	go watchAndHandleEtcdEvents(ps, cloudManager)
 
 	go keepEtcdLeaseAlive(ps)
 

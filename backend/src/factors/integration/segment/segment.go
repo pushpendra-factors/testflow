@@ -334,26 +334,51 @@ func ReceiveEventWithQueue(token string, event *Event,
 
 	projectSetting, errCode := store.GetStore().GetProjectSettingByPrivateTokenWithCacheAndDefault(token)
 	if errCode != http.StatusFound || projectSetting == nil {
-		logCtx.Error("Failed to get project settings on segment ReceiveEventWithQueue.")
+		logCtx.Error("Failed to get project settings on segment/rudderstack ReceiveEventWithQueue.")
 		return http.StatusBadRequest, &EventResponse{}
 	}
 
-	if !*projectSetting.IntSegment {
+	isSegmentEnabled := false
+	if projectSetting.IntSegment != nil {
+		isSegmentEnabled = *projectSetting.IntSegment
+	}
+
+	isRudderstackEnabled := false
+	if projectSetting.IntRudderstack != nil {
+		isRudderstackEnabled = *projectSetting.IntRudderstack
+	}
+
+	isEnabled := isSegmentEnabled || isRudderstackEnabled
+	if !isEnabled {
 		return http.StatusBadRequest, &EventResponse{Error: "Integration not enabled."}
 	}
 
+	bothEnabled := isSegmentEnabled && isRudderstackEnabled
+	if bothEnabled {
+		return http.StatusBadRequest, &EventResponse{Error: "Both integrations enabled."}
+	}
+
+	intType := ""
+	if isSegmentEnabled {
+		intType = Int.TypeSegment
+	} else if isRudderstackEnabled {
+		intType = Int.TypeRudderstack
+	} else {
+		return http.StatusBadRequest, &EventResponse{Error: "Invalid integration."}
+	}
+
 	if U.UseQueue(token, queueAllowedTokens) {
-		err := Int.EnqueueRequest(token, Int.TypeSegment, event)
+		err := Int.EnqueueRequest(token, intType, event)
 		if err != nil {
-			log.WithError(err).Error("Failed to queue segment event request.")
+			log.WithError(err).Error(fmt.Sprintf("Failed to queue %s event request.", intType))
 
 			// StatusInternalServerError will be forwarded to segment, to retry.
 			return http.StatusInternalServerError,
-				&EventResponse{Message: "Receive event failed"}
+				&EventResponse{Message: fmt.Sprintf("Receive %s event failed.", intType)}
 		}
 
 		return http.StatusOK, &EventResponse{
-			Message: "Successfully fully received segment event."}
+			Message: fmt.Sprintf("Successfully fully received %s event.", intType)}
 	}
 
 	return ReceiveEvent(token, event)

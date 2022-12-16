@@ -1,5 +1,6 @@
 import MomentTz from '../MomentTz';
 import { operatorMap } from '../../Views/CoreQuery/utils';
+import { formatDurationIntoString } from 'Utils/dataFormatter';
 
 export const granularityOptions = [
   'Timestamp',
@@ -141,3 +142,21 @@ export const getUniqueItemsByKeyAndSearchTerm = (activities, searchTerm) =>
       index === self.findIndex((t) => t.display_name === value.display_name) &&
       value.display_name.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+
+export const propValueFormat = (key, value) => {
+    if (
+      key.includes('timestamp') ||
+      key.includes('starttime') ||
+      key.includes('endtime')
+    ) {
+      return MomentTz(value * 1000).format('DD MMMM YYYY, hh:mm A');
+    }
+    if (key.includes('_time')) {
+      return formatDurationIntoString(value);
+    }
+    if (key.includes('durationmilliseconds')) {
+      return formatDurationIntoString(parseInt(value / 1000));
+    }
+    return value;
+  };

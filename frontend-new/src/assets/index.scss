@@ -34,6 +34,7 @@ code {
 .tableParentHeader {
   text-align: center !important;
   height: 40px;
+  padding: 0.25rem !important;
 }
 
 .top-4 {
@@ -108,4 +109,8 @@ code {
   color: $fa-color--mono-5;
   font-weight: bold;
   fill: $fa-color--mono-5;
+}
+
+.text-with-no-margin {
+  margin: 0 !important;
 }

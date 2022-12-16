@@ -35,8 +35,14 @@ func GetTimestampAsStrWithTimezone(t time.Time, timezone string) string {
 
 // This relies on fact of above parse.
 func GetTimeFromParseTimeStr(timestampStr string) time.Time {
-	ts, _ := time.Parse("2006-01-02T15:04:05-07:00", timestampStr)
+	ts, _ := time.Parse(DATETIME_FORMAT_DB_WITH_TIMEZONE, timestampStr)
 	return ts
+}
+
+func GetTimeFromParseTimeStrWithErrorFromInterface(timestamp interface{}) (time.Time, error) {
+	sTime := fmt.Sprintf("%v", timestamp)
+	ts, err := time.Parse(DATETIME_FORMAT_DB_WITH_TIMEZONE, sTime)
+	return ts, err
 }
 
 func GetTimeFromUnixTimestampWithZone(unix int64, timezone string) (time.Time, error) {

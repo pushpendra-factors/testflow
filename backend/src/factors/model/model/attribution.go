@@ -8,10 +8,11 @@ import (
 	C "factors/config"
 	U "factors/util"
 	"fmt"
-	"github.com/jinzhu/gorm/dialects/postgres"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/jinzhu/gorm/dialects/postgres"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -82,6 +83,7 @@ const (
 	AttributionKeyKeyword     = "Keyword"
 	AttributionKeyChannel     = "ChannelGroup"
 	AttributionKeyLandingPage = "LandingPage"
+	AttributionKeyAllPageView = "AllPageView"
 
 	ReportCampaign = "Campaign"
 	ReportAdGroup  = "AdGroup"
@@ -154,6 +156,7 @@ const (
 	FieldSource           = "source"
 	FieldChannelGroup     = "channel_group"
 	FieldLandingPageUrl   = "landing_page_url"
+	FieldAllPageViewUrl   = "all_page_view"
 
 	EventTypeGoalEvent         = 0
 	EventTypeLinkedFunnelEvent = 1
@@ -196,6 +199,7 @@ var KeyDimensionToHeaderMap = map[string]string{
 	FieldSource:           "Source",
 	FieldChannelGroup:     "ChannelGroup",
 	FieldLandingPageUrl:   "LandingPage",
+	FieldAllPageViewUrl:   "AllPageView",
 }
 var AttributionFixedHeadersLandingPage = []string{}
 var AttributionFixedHeadersPostPostConversionLanding = []string{"Compare - Users", "Compare-Users (InfluenceRemove)"}
@@ -326,8 +330,15 @@ func (query *AttributionQueryUnit) CheckIfNameIsPresent(nameOfQuery string) bool
 	return false
 }
 
-// TODO Check
 func (query *AttributionQueryUnit) SetDefaultGroupByTimestamp() {
+	if query.Query.KPI.Class == "" {
+		return
+	}
+	for index := range query.Query.KPI.Queries {
+		if query.Query.KPI.Queries[index].GroupByTimestamp == GroupByTimestampHour {
+			query.Query.KPI.Queries[index].GroupByTimestamp = GroupByTimestampSecond
+		}
+	}
 }
 
 func (query *AttributionQueryUnit) GetGroupByTimestamps() []string {
@@ -423,6 +434,7 @@ type MarketingData struct {
 	Source                string
 	ChannelGroup          string
 	LandingPageUrl        string
+	AllPageView           string
 	TypeName              string
 	Impressions           int64
 	Clicks                int64
@@ -600,6 +612,8 @@ func AddDefaultKeyDimensionsToAttributionQuery(query *AttributionQuery) {
 			(*query).AttributionKeyDimension = append((*query).AttributionKeyDimension, FieldChannelGroup)
 		case AttributionKeyLandingPage:
 			(*query).AttributionKeyDimension = append((*query).AttributionKeyDimension, FieldLandingPageUrl)
+		case AttributionKeyAllPageView:
+			(*query).AttributionKeyDimension = append((*query).AttributionKeyDimension, FieldAllPageViewUrl)
 
 		}
 	}
@@ -812,6 +826,8 @@ func GetQuerySessionProperty(attributionKey string) (string, error) {
 		return U.EP_KEYWORD, nil
 	} else if attributionKey == AttributionKeyLandingPage {
 		return U.UP_INITIAL_PAGE_URL, nil
+	} else if attributionKey == AttributionKeyAllPageView {
+		return U.EP_PAGE_URL, nil
 	}
 	return "", errors.New("invalid query properties")
 }
@@ -848,7 +864,7 @@ func addFixedMetrics(result *QueryResult, query *AttributionQuery) {
 func AddHeadersByAttributionKey(result *QueryResult, query *AttributionQuery, goalEvents []string, goalEventAggFuncTypes []string) {
 
 	attributionKey := query.AttributionKey
-	if attributionKey == AttributionKeyLandingPage {
+	if attributionKey == AttributionKeyLandingPage || attributionKey == AttributionKeyAllPageView {
 		// add up the attribution key
 		result.Headers = append(result.Headers, attributionKey)
 
@@ -1160,7 +1176,14 @@ func GetSpendIndex(headers []string) int {
 	return -1
 }
 
-func GetRowsByMapsKPILandingPage(contentGroupNamesList []string, attributionData *map[string]*AttributionData, isCompare bool) [][]interface{} {
+func getAttributionIdName(data *AttributionData, attributionKey string) string {
+	if attributionKey == AttributionKeyAllPageView {
+		return data.MarketingInfo.AllPageView
+	}
+	return data.MarketingInfo.LandingPageUrl
+}
+
+func GetRowsByMapsKPIPage(attributionKey string, contentGroupNamesList []string, attributionData *map[string]*AttributionData, isCompare bool) [][]interface{} {
 
 	var defaultMatchingRow []interface{}
 
@@ -1178,7 +1201,7 @@ func GetRowsByMapsKPILandingPage(contentGroupNamesList []string, attributionData
 
 	rows := make([][]interface{}, 0)
 	for _, data := range *attributionData {
-		attributionIdName := data.MarketingInfo.LandingPageUrl
+		attributionIdName := getAttributionIdName(data, attributionKey)
 		if attributionIdName == "" {
 			attributionIdName = PropertyValueNone
 		}
@@ -1467,11 +1490,11 @@ func GetRowsByMapsLandingPage(contentGroupNamesList []string, attributionData *m
 	return rows
 }
 
-func ProcessQueryKPILandingPageUrl(query *AttributionQuery, attributionData *map[string]*AttributionData, logCtx log.Entry, kpiData map[string]KPIInfo, isCompare bool) *QueryResult {
+func ProcessQueryKPIPageUrl(query *AttributionQuery, attributionData *map[string]*AttributionData, logCtx log.Entry, kpiData map[string]KPIInfo, isCompare bool) *QueryResult {
 	logFields := log.Fields{"Method": "ProcessQueryKPILandingPageUrl"}
 	logCtx = *logCtx.WithFields(logFields)
-	dataRows := GetRowsByMapsKPILandingPage(query.AttributionContentGroups, attributionData, isCompare)
-	logCtx.Info("Done GetRowsByMapsKPILandingPage")
+	dataRows := GetRowsByMapsKPIPage(query.AttributionKey, query.AttributionContentGroups, attributionData, isCompare)
+	logCtx.Info("Done GetRowsByMapsKPIPage")
 	result := &QueryResult{}
 	var goalEvents []string
 	for _, value := range kpiData {
@@ -1489,7 +1512,7 @@ func ProcessQueryKPILandingPageUrl(query *AttributionQuery, attributionData *map
 	}
 	result.Rows = MergeDataRowsHavingSameKey(result.Rows, GetLastKeyValueIndexLandingPage(result.Headers), query.AttributionKey, query.AnalyzeType, nil, logCtx)
 	// sort the rows by conversionEvent
-	conversionIndex := GetConversionIndex(result.Headers)
+	conversionIndex := GetConversionIndexKPI(result.Headers)
 	sort.Slice(result.Rows, func(i, j int) bool {
 		if len(result.Rows[i]) < conversionIndex || len(result.Rows[j]) < conversionIndex {
 			if C.GetAttributionDebug() == 1 {
@@ -1515,7 +1538,7 @@ func ProcessQueryKPILandingPageUrl(query *AttributionQuery, attributionData *map
 
 }
 
-func ProcessQueryLandingPageUrl(query *AttributionQuery, attributionData *map[string]*AttributionData, logCtx log.Entry, isCompare bool) *QueryResult {
+func ProcessQueryPageUrl(query *AttributionQuery, attributionData *map[string]*AttributionData, logCtx log.Entry, isCompare bool) *QueryResult {
 	logFields := log.Fields{"Method": "ProcessQueryLandingPageUrl"}
 	logCtx = *logCtx.WithFields(logFields)
 	dataRows := GetRowsByMapsLandingPage(query.AttributionContentGroups, attributionData, query.LinkedEvents, isCompare)
@@ -1853,7 +1876,7 @@ func GetUpdatedRowsByDimensions(result *QueryResult, query *AttributionQuery, lo
 //MergeTwoDataRows adds values of two data rows
 func MergeTwoDataRows(row1 []interface{}, row2 []interface{}, keyIndex int, attributionKey string, analyzeType string, conversionFunTypes []string) []interface{} {
 
-	if attributionKey == AttributionKeyLandingPage {
+	if attributionKey == AttributionKeyLandingPage || attributionKey == AttributionKeyAllPageView {
 
 		row1[keyIndex+1] = row1[keyIndex+1].(float64) + row2[keyIndex+1].(float64) // Conversion.
 		row1[keyIndex+2] = row1[keyIndex+2].(float64) + row2[keyIndex+2].(float64) // Conversion Influence
@@ -2962,6 +2985,8 @@ func GetMarketingDataKey(attributionKey string, data MarketingData) string {
 		key = key + U.IfThenElse(data.Name != "" && data.Name != PropertyValueNone, data.Name, data.ChannelGroup).(string)
 	case AttributionKeyLandingPage:
 		key = key + U.IfThenElse(data.Name != "" && data.Name != PropertyValueNone, data.Name, data.LandingPageUrl).(string)
+	case AttributionKeyAllPageView:
+		key = key + U.IfThenElse(data.Name != "" && data.Name != PropertyValueNone, data.Name, data.AllPageView).(string)
 	default:
 		key = key + data.Name
 	}
@@ -3118,6 +3143,7 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, reports *Marketin
 	countEnrichedMarketingId := 0
 
 	startReadTime := time.Now()
+
 	for rows.Next() {
 		var userIDNull sql.NullString
 		var campaignIDNull sql.NullString
@@ -3131,13 +3157,14 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, reports *Marketin
 		var attributionIdNull sql.NullString
 		var gclIDNull sql.NullString
 		var landingPageUrlNull sql.NullString
+		var allPageViewUrlNull sql.NullString
 		var timestampNull sql.NullInt64
 		contentGroupValuesListNull := make([]sql.NullString, len(contentGroupNamesList))
 
 		var fields []interface{}
 		fields = append(fields, &userIDNull, &campaignIDNull, &campaignNameNull,
 			&adgroupIDNull, &adgroupNameNull, &keywordNameNull, &keywordMatchTypeNull, &sourceNameNull, &channelGroupNull,
-			&attributionIdNull, &gclIDNull, &landingPageUrlNull)
+			&attributionIdNull, &gclIDNull, &landingPageUrlNull, &allPageViewUrlNull)
 
 		// contentGroupValuesListNull wil be empty for queries where property is not "Landing page url"
 		for i := 0; i < len(contentGroupValuesListNull); i++ {
@@ -3163,6 +3190,7 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, reports *Marketin
 		var attributionKeyName string
 		var gclID string
 		var landingPageUrl string
+		var allPageViewUrl string
 		var timestamp int64
 		contentGroupValuesMap := make(map[string]string)
 
@@ -3178,6 +3206,7 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, reports *Marketin
 		attributionKeyName = U.IfThenElse(attributionIdNull.Valid, attributionIdNull.String, PropertyValueNone).(string)
 		gclID = U.IfThenElse(gclIDNull.Valid, gclIDNull.String, PropertyValueNone).(string)
 		landingPageUrl = U.IfThenElse(landingPageUrlNull.Valid, landingPageUrlNull.String, PropertyValueNone).(string)
+		allPageViewUrl = U.IfThenElse(allPageViewUrlNull.Valid, allPageViewUrlNull.String, PropertyValueNone).(string)
 		timestamp = U.IfThenElse(timestampNull.Valid, timestampNull.Int64, int64(0)).(int64)
 		for i, val := range contentGroupValuesListNull {
 			contentGroupValuesMap[contentGroupNamesList[i]] = U.IfThenElse(val.Valid, val.String, PropertyValueNone).(string)
@@ -3195,7 +3224,7 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, reports *Marketin
 		}
 		marketingValues := MarketingData{Channel: PropertyValueNone, CampaignID: campaignID, CampaignName: campaignName, AdgroupID: adgroupID,
 			AdgroupName: adgroupName, KeywordName: keywordName, KeywordMatchType: keywordMatchType, Source: sourceName, ChannelGroup: channelGroup,
-			LandingPageUrl: landingPageUrl, ContentGroupValuesMap: contentGroupValuesMap}
+			LandingPageUrl: landingPageUrl, AllPageView: allPageViewUrl, ContentGroupValuesMap: contentGroupValuesMap}
 		// Override GCLID based campaign info if presents
 		if gclID != PropertyValueNone && !(query.AttributionKey == AttributionKeyKeyword && !IsASearchSlotKeyword(&(*reports).AdwordsGCLIDData, gclID)) {
 			countEnrichedGclid++

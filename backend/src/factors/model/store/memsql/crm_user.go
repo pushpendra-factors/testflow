@@ -284,3 +284,38 @@ func (store *MemSQL) GetCRMUsersMinimumTimestampForSync(projectID int64, source 
 
 	return minTimestamp.Timestamp, http.StatusFound
 }
+
+func (store *MemSQL) GetCRMUsersTypeAndAction(projectID int64, source U.CRMSource) ([]model.CRMUser, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"source":     source,
+	}
+
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+	if projectID == 0 || source == 0 {
+		logCtx.Error("Invalid parameters")
+		return nil, http.StatusBadRequest
+	}
+
+	crmUsersTypeAndActions := make([]model.CRMUser, 0, 0)
+
+	db := C.GetServices().Db
+	err := db.Table("crm_users").Where("project_id = ? AND source = ?", projectID, source).
+		Select("DISTINCT(type) as type, action").Find(&crmUsersTypeAndActions).Error
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
+
+		logCtx.WithError(err).Error("Failed to get all CRM users type and actions.")
+		return nil, http.StatusInternalServerError
+	}
+
+	if len(crmUsersTypeAndActions) == 0 {
+		return nil, http.StatusNotFound
+	}
+
+	return crmUsersTypeAndActions, http.StatusFound
+}

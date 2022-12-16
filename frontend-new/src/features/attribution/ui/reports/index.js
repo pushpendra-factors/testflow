@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Button, Spin } from 'antd';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
@@ -12,6 +12,9 @@ import { QUERY_TYPE_ATTRIBUTION } from 'Utils/constants';
 import NoReports from './NoReports';
 import SortableCards from './SortableCards';
 import { ATTRIBUTION_ROUTES } from 'Attribution/utils/constants';
+import { setItemToLocalStorage } from 'Utils/localStorage.helpers';
+import { getDashboardDateRange } from 'Views/Dashboard/utils';
+import { DASHBOARD_KEYS } from 'Constants/localStorage.constants';
 
 function Reports({
   activeProject,
@@ -24,6 +27,35 @@ function Reports({
   currentProjectSettings
 }) {
   const history = useHistory();
+  const [durationObj, setDurationObj] = useState(getDashboardDateRange());
+
+  const handleDurationChange = (dates) => {
+    let from;
+    let to;
+    const { startDate, endDate } = dates;
+    // setOldestRefreshTime(null);
+    if (Array.isArray(dates.startDate)) {
+      from = get(startDate, 0);
+      to = get(startDate, 1);
+    } else {
+      from = startDate;
+      to = endDate;
+    }
+
+    setDurationObj((currState) => {
+      const newState = {
+        ...currState,
+        from,
+        to,
+        dateType: dates.dateType
+      };
+      setItemToLocalStorage(
+        DASHBOARD_KEYS.DASHBOARD_DURATION,
+        JSON.stringify(newState)
+      );
+      return newState;
+    });
+  };
 
   useEffect(() => {
     if (
@@ -87,12 +119,16 @@ function Reports({
           <FaDatepicker
             customPicker
             presetRange
+            range={{
+              startDate: durationObj.from,
+              endDate: durationObj.to
+            }}
             quarterPicker
             monthPicker
             buttonSize='large'
             placement='bottomRight'
             className='mr-2'
-            onSelect={() => console.log('date selecter')}
+            onSelect={handleDurationChange}
           />
         </div>
         <div className='flex items-center gap-2'>
@@ -103,19 +139,19 @@ function Reports({
           >
             <SVG name='plus' color='white' className='w-full' /> Add Report
           </Button>
-          <Button
+          {/* <Button
             type='text'
             size='large'
             className='ml-1'
             style={{ padding: '4px 6px' }}
           >
             <SVG name='more' size={24} />
-          </Button>
+          </Button> */}
         </div>
       </div>
       <div className='w-full px-8 mt-2 flex flex-col'>
         {/* sortable cards */}
-        <SortableCards activeUnits={activeUnits} />
+        <SortableCards activeUnits={activeUnits} durationObj={durationObj} />
       </div>
     </div>
   );

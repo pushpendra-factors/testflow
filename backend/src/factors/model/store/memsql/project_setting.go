@@ -161,6 +161,48 @@ func (store *MemSQL) GetFactors6SignalKeyFromProjectSetting(projectId int64) (st
 
 }
 
+func (store *MemSQL) GetIntegrationBitsFromProjectSetting(projectId int64) (string, int) {
+	logFields := log.Fields{
+		"project_id": projectId,
+	}
+
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	db := C.GetServices().Db
+	logCtx := log.WithFields(logFields)
+
+	if valid := isValidProjectScope(projectId); !valid {
+		return "", http.StatusBadRequest
+	}
+
+	var projectSetting model.ProjectSetting
+	if err := db.Where("project_id = ?", projectId).Select("integration_bits").Find(&projectSetting).Error; err != nil {
+		logCtx.WithError(err).Error("Getting clear_bit key from project_setting failed")
+
+		if gorm.IsRecordNotFoundError(err) {
+			return "", http.StatusNotFound
+		}
+		return "", http.StatusInternalServerError
+	}
+
+	return projectSetting.IntegrationBits, http.StatusFound
+}
+
+func (store *MemSQL) SetIntegrationBits(projectID int64, integrationBits string) int {
+	logFields := log.Fields{
+		"project_id": projectID,
+	}
+
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	db := C.GetServices().Db
+	logCtx := log.WithFields(logFields)
+
+	if err := db.Where("project_id = ?", projectID).Update("integration_bits", integrationBits).Error; err != nil {
+		logCtx.WithError(err).Error("Setting integration_bits from project_setting failed")
+		return http.StatusInternalServerError
+	}
+	return http.StatusAccepted
+}
+
 type ProjectSettingChannelResponse struct {
 	Setting   *model.ProjectSetting
 	ErrorCode int
@@ -309,6 +351,11 @@ func getCacheProjectSetting(tokenKey, tokenValue string) (*model.ProjectSetting,
 		return nil, http.StatusInternalServerError
 	}
 
+	defaultIntegrationValue := false
+	if settings.IntRudderstack == nil {
+		settings.IntRudderstack = &defaultIntegrationValue
+	}
+
 	return &settings, http.StatusFound
 }
 
@@ -387,11 +434,11 @@ func getProjectSettingDefault() *model.ProjectSetting {
 		AutoTrackSPAPageView: &disabled,
 		ExcludeBot:           &enabled,
 		IntSegment:           &enabled,
+		IntRudderstack:       &disabled,
 		IntDrift:             &disabled,
 		IntClearBit:          &disabled,
 		AutoCaptureFormFills: &model.AutoCaptureFormFillsDefault,
-
-		AutoClickCapture: &model.AutoClickCaptureDefault,
+		AutoClickCapture:     &model.AutoClickCaptureDefault,
 	}
 }
 

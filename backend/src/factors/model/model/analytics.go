@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -41,6 +42,7 @@ const (
 )
 
 const (
+	GroupByTimestampSecond  = "second"
 	GroupByTimestampHour    = "hour"
 	GroupByTimestampDate    = "date"
 	GroupByTimestampWeek    = "week"
@@ -71,6 +73,7 @@ const (
 	ErrUnsupportedGroupByEventPropertyOnUserQuery = "group by event property is not supported for user query"
 	ErrMsgQueryProcessingFailure                  = "Failed processing query"
 	ErrMsgMaxFunnelStepsExceeded                  = "Max funnel steps exceeded"
+	ErrMsgFunnelQueryV2Failure                    = "Invalid funnel query v2"
 )
 
 const (
@@ -165,6 +168,7 @@ const (
 	QueryCacheMutableResultExpirySeconds float64 = 10 * 60     // 10 Minutes.
 
 	QueryCacheRequestInvalidatedCacheHeader string = "Invalidate-Cache"
+	QueryFunnelV2                           string = "Funnel-V2"
 	QueryCacheRequestSleepHeader            string = "QuerySleepSeconds"
 	QueryCacheResponseFromCacheHeader       string = "Fromcache"
 	QueryCacheResponseCacheRefreshedAt      string = "Refreshedat"
@@ -215,6 +219,7 @@ type Query struct {
 	Timezone             string                     `json:"tz"`
 	From                 int64                      `json:"fr"`
 	To                   int64                      `json:"to"`
+	GroupAnalysis        string                     `json:"grpa"`
 	// Deprecated: Keeping it for old dashboard units.
 	OverridePeriod    bool  `json:"ovp"`
 	SessionStartEvent int64 `json:"sse"`
@@ -343,9 +348,15 @@ func (query *Query) CheckIfNameIsPresent(nameOfQuery string) bool {
 }
 
 func (query *Query) SetDefaultGroupByTimestamp() {
-	defaultGroupByTimestamp := GetDefaultGroupByTimestampForQueries(query.From, query.To, query.GetGroupByTimestamp())
-	if defaultGroupByTimestamp != "" {
-		query.GroupByTimestamp = defaultGroupByTimestamp
+	defaultGroupByTimestamp := ""
+	if (query.Class == QueryClassEvents || query.Class == QueryClassInsights) && query.Type == QueryTypeUniqueUsers &&
+		(query.EventsCondition == EventCondAllGivenEvent || query.EventsCondition == EventCondAnyGivenEvent) {
+		query.GroupByTimestamp = ""
+	} else {
+		defaultGroupByTimestamp = GetDefaultGroupByTimestampForQueries(query.From, query.To, query.GetGroupByTimestamp())
+		if defaultGroupByTimestamp != "" {
+			query.GroupByTimestamp = defaultGroupByTimestamp
+		}
 	}
 }
 
@@ -581,9 +592,15 @@ func (q *QueryGroup) ConvertAllDatesFromTimezone1ToTimezone2(currentTimezone, ne
 
 func (query *QueryGroup) SetDefaultGroupByTimestamp() {
 	for index, _ := range query.Queries {
-		defaultGroupByTimestamp := GetDefaultGroupByTimestampForQueries(query.Queries[index].From, query.Queries[index].To, query.Queries[index].GetGroupByTimestamp())
-		if defaultGroupByTimestamp != "" {
-			query.Queries[index].GroupByTimestamp = defaultGroupByTimestamp
+		defaultGroupByTimestamp := ""
+		if (query.Queries[index].Class == QueryClassEvents || query.Queries[index].Class == QueryClassInsights) && query.Queries[index].Type == QueryTypeUniqueUsers &&
+			(query.Queries[index].EventsCondition == EventCondAllGivenEvent || query.Queries[index].EventsCondition == EventCondAnyGivenEvent) {
+			query.Queries[index].GroupByTimestamp = ""
+		} else {
+			defaultGroupByTimestamp = GetDefaultGroupByTimestampForQueries(query.Queries[index].From, query.Queries[index].To, query.Queries[index].GetGroupByTimestamp())
+			if defaultGroupByTimestamp != "" {
+				query.Queries[index].GroupByTimestamp = defaultGroupByTimestamp
+			}
 		}
 	}
 }
@@ -1110,4 +1127,24 @@ func IsQueryGroupByLatestUserProperty(queryGroupByProperty []QueryGroupByPropert
 		}
 	}
 	return false
+}
+
+var funnelQueryGroupUserID = regexp.MustCompile("user_groups\\.group_\\d_user_id")
+
+func GetQueryGroupUserID(stmnt string) string {
+
+	return funnelQueryGroupUserID.FindString(stmnt)
+}
+
+func IsValidFunnelQueryGroupName(group string) bool {
+	_, exists := AllowedGroupNames[group]
+	if exists || IsFunnelQueryGroupNameUser(group) {
+		return true
+	}
+
+	return false
+}
+
+func IsFunnelQueryGroupNameUser(group string) bool {
+	return group == USERS
 }

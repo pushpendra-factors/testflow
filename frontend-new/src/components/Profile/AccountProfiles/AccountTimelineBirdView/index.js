@@ -9,7 +9,7 @@ import {
 } from '../../utils';
 import { SVG, Text } from '../../../factorsComponents';
 
-function AccountTimeline({
+function AccountTimelineBirdView({
   timelineEvents = [],
   timelineUsers = [],
   granularity,
@@ -51,7 +51,7 @@ function AccountTimeline({
     return (
       <InfoCard
         title={event?.alias_name || event.display_name}
-        event_name={event?.event_name}
+        eventName={event?.event_name}
         properties={event?.properties || {}}
         trigger={
           hoverEvents.includes(event.event_name) ||
@@ -166,4 +166,4 @@ function AccountTimeline({
     </div>
   );
 }
-export default AccountTimeline;
+export default AccountTimelineBirdView;

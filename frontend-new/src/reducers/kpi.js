@@ -77,7 +77,7 @@ export function fetchKPIConfigWithoutDerivedKPI(projectID) {
 export function fetchCustomKPIConfig(projectID) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      get(dispatch, host + 'projects/' + projectID + '/v1/custom_metrics/config')
+      get(dispatch, host + 'projects/' + projectID + '/v1/custom_metrics/config/v1')
         .then((response) => {
           dispatch({
             type: 'FETCH_CUSTOM_KPI_CONFIG_FULFILLED',

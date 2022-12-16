@@ -15,6 +15,7 @@ function OptionsPopover({ options, onChange }) {
               <Checkbox
                 checked={option.enabled}
                 onChange={onChange.bind(this, option)}
+                disabled={option.disabled}
               />
             </div>
             <Text mini extraClass='mb-0' type='paragraph'>

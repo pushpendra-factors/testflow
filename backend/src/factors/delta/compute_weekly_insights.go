@@ -769,9 +769,14 @@ func GetWeeklyInsights(projectId int64, agentUUID string, queryId int64, baseSta
 	if !ok {
 		kValue = 100
 	}
-	path, file := C.GetCloudManager().GetInsightsCpiFilePathAndName(projectId, U.GetDateOnlyFromTimestampZ(baseStartTime.Unix()), queryId, kValue, false)
+	path, file := "", ""
+	if mailerRun == true {
+		path, file = C.GetCloudManager(projectId).GetInsightsCpiFilePathAndName(projectId, U.GetDateOnlyFromTimestampZ(baseStartTime.Unix()), queryId, kValue, true)
+	} else {
+		path, file = C.GetCloudManager(projectId).GetInsightsCpiFilePathAndName(projectId, U.GetDateOnlyFromTimestampZ(baseStartTime.Unix()), queryId, kValue, false)
+	}
 	fmt.Println("path/file:", path, file)
-	reader, err := C.GetCloudManager().Get(path, file)
+	reader, err := C.GetCloudManager(projectId).Get(path, file)
 	if err != nil {
 		fmt.Println(err.Error())
 		log.WithError(err).Error("Error reading file")
@@ -789,7 +794,7 @@ func GetWeeklyInsights(projectId int64, agentUUID string, queryId int64, baseSta
 	var EventType string
 	var class string
 	var query model.Query
-	if(mailerRun == true){
+	if mailerRun == true {
 		isEventWebsite, EventType, class = GetQueryTypeAndClass(queryId)
 	} else {
 		QueriesObj, status := store.GetStore().GetQueryWithQueryId(projectId, queryId)
@@ -802,7 +807,7 @@ func GetWeeklyInsights(projectId int64, agentUUID string, queryId int64, baseSta
 		if errMsg != "" {
 			return nil, errors.New(errMsg)
 		}
-	
+
 		var isEventOccurence bool
 		if class == model.QueryClassFunnel {
 			err = U.DecodePostgresJsonbToStructType(&QueriesObj.Query, &query)
@@ -866,7 +871,7 @@ func GetWeeklyInsights(projectId int64, agentUUID string, queryId int64, baseSta
 	} else {
 		insightsObj = GetInsights(insights, numberOfRecords, class, EventType, isEventWebsite)
 		// adding query groups
-		if(mailerRun == false){
+		if mailerRun == false {
 			gbpInsights := addGroupByProperties(query, EventType, insights, insightsObj, isEventWebsite)
 			// appending at top
 			insightsObj.Insights = append(gbpInsights, insightsObj.Insights...)
@@ -1270,11 +1275,11 @@ func CheckPercentageChange(overall, week float64) bool {
 	return week < actual
 }
 
-func GetPropertiesFromFile(project_id int64) map[string]bool {
+func GetPropertiesFromFile(projectId int64) map[string]bool {
 	propertiesFromFile := make(map[string]bool)
-	path, file := C.GetCloudManager().GetWIPropertiesPathAndName(project_id)
+	path, file := C.GetCloudManager(projectId).GetWIPropertiesPathAndName(projectId)
 	fmt.Println("path/file:", path, file)
-	reader, err := C.GetCloudManager().Get(path, file)
+	reader, err := C.GetCloudManager(projectId).Get(path, file)
 	if err != nil {
 		fmt.Println(err.Error())
 		log.WithError(err).Error("Error reading file")

@@ -48,7 +48,7 @@ type Model interface {
 	// analytics
 	ExecQuery(stmnt string, params []interface{}) (*model.QueryResult, error, string)
 	ExecQueryWithContext(stmnt string, params []interface{}) (*sql.Rows, *sql.Tx, error, string)
-	Analyze(projectID int64, query model.Query, enableFilterOpt bool) (*model.QueryResult, int, string)
+	Analyze(projectID int64, query model.Query, enableFilterOpt bool, funnelV2 bool) (*model.QueryResult, int, string)
 	IsGroupEventNameByQueryEventWithProperties(projectID int64, ewp model.QueryEventWithProperties) (string, int)
 
 	// archival
@@ -191,6 +191,7 @@ type Model interface {
 	CreateAgentPersonalDashboardForProject(projectID int64, agentUUID string) (*model.Dashboard, int)
 	GetDashboards(projectID int64, agentUUID string) ([]model.Dashboard, int)
 	GetDashboard(projectID int64, agentUUID string, id int64) (*model.Dashboard, int)
+	GetAttributionV1DashboardByDashboardName(projectId int64, dashboardName string) (*model.Dashboard, int)
 	HasAccessToDashboard(projectID int64, agentUUID string, id int64) (bool, *model.Dashboard)
 	UpdateDashboard(projectID int64, agentUUID string, id int64, dashboard *model.UpdatableDashboard) int
 	DeleteDashboard(projectID int64, agentUUID string, dashboardID int64) int
@@ -291,6 +292,7 @@ type Model interface {
 	GetClickableElement(projectID int64, displayName string, elementType string) (*model.ClickableElements, int)
 	ToggleEnabledClickableElement(projectId int64, id string) int
 	GetAllClickableElements(projectId int64) ([]model.ClickableElements, int)
+	DeleteClickableElementsOlderThanGivenDays(expiry int) (int, error)
 
 	// facebook_document
 	CreateFacebookDocument(projectID int64, document *model.FacebookDocument) int
@@ -311,7 +313,7 @@ type Model interface {
 	GetBingadsFilterValuesSQLAndParams(projectID int64, requestFilterObject string, requestFilterProperty string, reqID string) (string, []interface{}, int)
 
 	// funnel_analytics
-	RunFunnelQuery(projectID int64, query model.Query, enableFilterOpt bool) (*model.QueryResult, int, string)
+	RunFunnelQuery(projectID int64, query model.Query, enableFilterOpt, funnelV2 bool) (*model.QueryResult, int, string)
 
 	// goals
 	GetAllFactorsGoals(ProjectID int64) ([]model.FactorsGoal, int)
@@ -370,6 +372,8 @@ type Model interface {
 	GetClearbitKeyFromProjectSetting(projectId int64) (string, int)
 	GetClient6SignalKeyFromProjectSetting(projectId int64) (string, int)
 	GetFactors6SignalKeyFromProjectSetting(projectId int64) (string, int)
+	GetIntegrationBitsFromProjectSetting(projectId int64) (string, int)
+	SetIntegrationBits(projectID int64, integrationBits string) int
 	GetProjectSettingByKeyWithTimeout(key, value string, timeout time.Duration) (*model.ProjectSetting, int)
 	GetProjectSettingByTokenWithCacheAndDefault(token string) (*model.ProjectSetting, int)
 	GetProjectSettingByPrivateTokenWithCacheAndDefault(privateToken string) (*model.ProjectSetting, int)
@@ -423,6 +427,7 @@ type Model interface {
 	CreateQuery(projectID int64, query *model.Queries) (*model.Queries, int, string)
 	GetALLQueriesWithProjectId(projectID int64) ([]model.Queries, int)
 	GetDashboardQueryWithQueryId(projectID int64, queryID int64) (*model.Queries, int)
+	GetDashboardUnitForQueryID(projectID int64, queryID int64) []model.DashboardUnit
 	GetSavedQueryWithQueryId(projectID int64, queryID int64) (*model.Queries, int)
 	GetQueryWithQueryId(projectID int64, queryID int64) (*model.Queries, int)
 	DeleteQuery(projectID int64, queryID int64) (int, string)
@@ -432,6 +437,13 @@ type Model interface {
 	UpdateQueryIDsWithNewIDs(projectID int64, shareableURLs []string) int
 	SearchQueriesWithProjectId(projectID int64, searchString string) ([]model.Queries, int)
 	GetAllNonConvertedQueries(projectID int64) ([]model.Queries, int)
+
+	// properties
+	GetStandardUserPropertiesBasedOnIntegration(projectID int64) map[string]string
+
+	// attribution v1 queries
+	GetOrCreateAttributionV1Dashboard(projectId int64, agentUUID string) (*model.Dashboard, int)
+	CreateQueryAndSaveToDashboard(projectID int64, queryInfo *model.CreateQueryAndSaveToDashboardInfo) (*model.QueryAndDashboardUnit, int, string)
 
 	// dashboard_templates
 	CreateTemplate(template *model.DashboardTemplate) (*model.DashboardTemplate, int, string)
@@ -547,6 +559,7 @@ type Model interface {
 		userFiles string, includeSession bool, sessionProperty string, cloudManager filestore.FileManager)
 
 	// smart_properties
+	CreateSmartProperty(smartPropertyDoc *model.SmartProperties) int
 	GetSmartPropertyRulesConfig(projectID int64, objectType string) (model.SmartPropertyRulesConfig, int)
 	CreateSmartPropertyRules(projectID int64, smartProperty *model.SmartPropertyRules) (*model.SmartPropertyRules, string, int)
 	GetSmartPropertyRules(projectID int64) ([]model.SmartPropertyRules, int)
@@ -719,6 +732,8 @@ type Model interface {
 	GetActivitiesDistinctEventNamesByType(projectID int64, objectTypes []int) (map[int][]string, int)
 	UpdateCRMProperyAsSynced(projectID int64, source U.CRMSource, crmProperty *model.CRMProperty) (*model.CRMProperty, int)
 	UpdateCRMActivityAsSynced(projectID int64, source U.CRMSource, crmActivity *model.CRMActivity, syncID, userID string) (*model.CRMActivity, int)
+	GetCRMUsersTypeAndAction(projectID int64, source U.CRMSource) ([]model.CRMUser, int)
+	GetCRMActivityNames(projectID int64, source U.CRMSource) ([]string, int)
 
 	GetCRMSetting(projectID int64) (*model.CRMSetting, int)
 	GetAllCRMSetting() ([]model.CRMSetting, int)
@@ -752,6 +767,7 @@ type Model interface {
 	GetAllSegments(projectId int64) (map[string][]model.Segment, int)
 	GetSegmentById(projectId int64, segmentId string) (*model.Segment, int)
 	UpdateSegmentById(projectId int64, id string, segmentPayload model.SegmentPayload) (error, int)
+	IsDuplicateSegmentNameCheck(projectID int64, name string) bool
 
 	// Ads import
 	GetAllAdsImportEnabledProjects() (map[int64]map[string]model.LastProcessedAdsImport, error)
@@ -791,5 +807,14 @@ type Model interface {
 
 	// leadsquaredmarker
 	CreateLeadSquaredMarker(marker model.LeadsquaredMarker) int
-	GetLeadSquaredMarker(ProjectID int64, Delta int64, Document string, Tag string) (int, int, bool)
+    GetLeadSquaredMarker(ProjectID int64, Delta int64, Document string, Tag string) (int, int, bool)
+
+	//ExplainV2
+	GetAllExplainV2EntityByProject(projectID int64) ([]model.ExplainV2EntityInfo, int)
+	GetAllSavedExplainV2EntityByProject(projectID int64) ([]model.ExplainV2, int)
+	GetExplainV2Entity(projectID int64, id string) (model.ExplainV2, int)
+	CreateExplainV2Entity(userID string, projectId int64, entity *model.ExplainV2Query) (*model.ExplainV2, int, string)
+	DeleteExplainV2Entity(projectID int64, id string) (int, string)
+	GetExplainV2ProjectCountWithStatus(projectID int64, status []string) (int, int, string)
+	UpdateExplainV2EntityStatus(projectID int64, id string, status string, model_id uint64) (int, string)
 }

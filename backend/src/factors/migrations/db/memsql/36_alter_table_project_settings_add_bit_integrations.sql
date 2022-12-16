@@ -1,0 +1,1 @@
+ALTER TABLE project_settings ADD COLUMN integration_bits varchar(32) DEFAULT '00000000000000000000000000000000';

@@ -30,76 +30,124 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
 
-	propsMap := map[string]string{"$country": "Ukraine"}
-	propertiesJSON, err := json.Marshal(propsMap)
-	if err != nil {
-		log.WithError(err).Fatal("Marshal error.")
+	// Properties Map
+	propsMap := []map[string]interface{}{
+		{"$browser": "Chrome", "$city": "Delhi", "$country": "India", "$device_type": "desktop", "$page_count": 100, "$session_spent_time": 2000},
+		{"$browser": "Brave", "$city": "Delhi", "$country": "India", "$device_type": "iPad", "$page_count": 110, "$session_spent_time": 2500},
+		{"$browser": "Chrome", "$city": "New York", "$country": "US", "$device_type": "desktop", "$page_count": 100, "$session_spent_time": 2500},
+		{"$browser": "Chrome", "$city": "London", "$country": "UK", "$device_type": "iPad", "$page_count": 105, "$session_spent_time": 3000},
+		{"$browser": "Edge", "$city": "London", "$country": "UK", "$device_type": "desktop", "$page_count": 120, "$session_spent_time": 2000},
+		{"$browser": "Brave", "$city": "Paris", "$country": "France", "$device_type": "iPad", "$page_count": 120, "$session_spent_time": 3000},
+		{"$browser": "Edge", "$city": "New York", "$country": "US", "$device_type": "desktop", "$page_count": 110, "$session_spent_time": 2500},
+		{"$browser": "Firefox", "$city": "London", "$country": "UK", "$device_type": "iPad", "$page_count": 100, "$session_spent_time": 3000},
+		{"$browser": "Firefox", "$city": "Dubai", "$country": "UAE", "$device_type": "desktop", "$page_count": 150, "$session_spent_time": 2100},
+		{"$browser": "Chrome", "$city": "Delhi", "$country": "India", "$device_type": "iPad", "$page_count": 150, "$session_spent_time": 2100},
 	}
-	properties := postgres.Jsonb{RawMessage: propertiesJSON}
 
-	customerEmail := "@example.com"
-
-	// Create 5 Users from Ukraine.
+	// Create 5 Unidentified Users
 	users := make([]model.User, 0)
 	numUsers := 5
-	for i := 1; i <= numUsers; i++ {
+	for i := 0; i < numUsers; i++ {
+		propertiesJSON, err := json.Marshal(propsMap[9-i])
+		if err != nil {
+			log.WithError(err).Fatal("Marshal error.")
+		}
+		properties := postgres.Jsonb{RawMessage: propertiesJSON}
 		createdUserID, _ := store.GetStore().CreateUser(&model.User{
-			ProjectId:      project.ID,
-			Source:         model.GetRequestSourcePointer(model.UserSourceWeb),
-			Group1ID:       "1",
-			Group2ID:       "2",
-			CustomerUserId: "user" + strconv.Itoa(i) + customerEmail,
-			Properties:     properties,
+			ProjectId:  project.ID,
+			Source:     model.GetRequestSourcePointer(model.UserSourceWeb),
+			Properties: properties,
 		})
 		user, errCode := store.GetStore().GetUser(project.ID, createdUserID)
 		assert.Equal(t, http.StatusFound, errCode)
 		users = append(users, *user)
 	}
-	assert.Equal(t, len(users), numUsers)
-	// Create 5 Users from Russia.
-	propsMap = map[string]string{"$country": "Russia"}
-	propertiesJSON, err = json.Marshal(propsMap)
-	if err != nil {
-		log.WithError(err).Fatal("Marshal error.")
-	}
-	properties = postgres.Jsonb{RawMessage: propertiesJSON}
-	users = make([]model.User, 0)
+	assert.Equal(t, len(users), 5)
+
+	// Create 5 Identified Users from UserSourceWeb
 	numUsers = 5
-	for i := 1; i <= numUsers; i++ {
+	for i := 0; i < numUsers; i++ {
+		propertiesJSON, err := json.Marshal(propsMap[i])
+		if err != nil {
+			log.WithError(err).Fatal("Marshal error.")
+		}
+		properties := postgres.Jsonb{RawMessage: propertiesJSON}
 		createdUserID, _ := store.GetStore().CreateUser(&model.User{
 			ProjectId:      project.ID,
 			Source:         model.GetRequestSourcePointer(model.UserSourceWeb),
-			Group1ID:       "1",
-			Group2ID:       "2",
-			CustomerUserId: "user" + strconv.Itoa(i+5) + customerEmail,
+			CustomerUserId: "user" + strconv.Itoa(i+1) + "@example.com",
 			Properties:     properties,
 		})
 		user, errCode := store.GetStore().GetUser(project.ID, createdUserID)
 		assert.Equal(t, http.StatusFound, errCode)
 		users = append(users, *user)
 	}
-	assert.Equal(t, len(users), numUsers)
+	assert.Equal(t, len(users), 10)
+
+	// Create 2 Identified Users from UserSourceSalesforce
+	numUsers = 2
+	for i := 5; i < 5+numUsers; i++ {
+		propertiesJSON, err := json.Marshal(propsMap[i])
+		if err != nil {
+			log.WithError(err).Fatal("Marshal error.")
+		}
+		properties := postgres.Jsonb{RawMessage: propertiesJSON}
+		createdUserID, _ := store.GetStore().CreateUser(&model.User{
+			ProjectId:      project.ID,
+			Source:         model.GetRequestSourcePointer(model.UserSourceSalesforce),
+			CustomerUserId: "user" + strconv.Itoa(i+1) + "@example.com",
+			Properties:     properties,
+		})
+		user, errCode := store.GetStore().GetUser(project.ID, createdUserID)
+		assert.Equal(t, http.StatusFound, errCode)
+		users = append(users, *user)
+	}
+	assert.Equal(t, len(users), 12)
+
+	// Create 3 Identified Users from UserSourceHubspot
+	numUsers = 3
+	for i := 7; i < 7+numUsers; i++ {
+		propertiesJSON, err := json.Marshal(propsMap[i])
+		if err != nil {
+			log.WithError(err).Fatal("Marshal error.")
+		}
+		properties := postgres.Jsonb{RawMessage: propertiesJSON}
+		createdUserID, _ := store.GetStore().CreateUser(&model.User{
+			ProjectId:      project.ID,
+			Source:         model.GetRequestSourcePointer(model.UserSourceHubspot),
+			CustomerUserId: "user" + strconv.Itoa(i+1) + "@example.com",
+			Properties:     properties,
+		})
+		user, errCode := store.GetStore().GetUser(project.ID, createdUserID)
+		assert.Equal(t, http.StatusFound, errCode)
+		users = append(users, *user)
+	}
+	assert.Equal(t, len(users), 15)
 
 	var payload model.TimelinePayload
-	payload.Source = "All"
 
-	// Without Filters
-	t.Run("Success", func(t *testing.T) {
+	// Test Cases :-
+	// 1. Users from Different Sources (No filter, no segment applied)
+	sourceToUserCountMap := map[string]interface{}{"All": 15, model.UserSourceSalesforceString: 2, model.UserSourceHubspotString: 3}
+	for source, count := range sourceToUserCountMap {
+		payload.Source = source
 		w := sendGetProfileUserRequest(r, project.ID, agent, payload)
 		assert.Equal(t, http.StatusOK, w.Code)
 		jsonResponse, _ := ioutil.ReadAll(w.Body)
 		resp := make([]model.Profile, 0)
-		err := json.Unmarshal(jsonResponse, &resp)
+		err = json.Unmarshal(jsonResponse, &resp)
 		assert.Nil(t, err)
-		assert.Equal(t, len(resp), 10)
-		assert.Condition(t, func() bool { return len(resp) <= 1000 })
+		assert.Equal(t, len(resp), count)
 		assert.Condition(t, func() bool {
 			for i, user := range resp {
-				assert.Equal(t, user.IsAnonymous, false)
-				if i < 5 {
-					assert.Equal(t, user.Country, "Russia")
+				if source == "All" {
+					if i < 10 {
+						assert.Equal(t, user.IsAnonymous, false)
+					} else {
+						assert.Equal(t, user.IsAnonymous, true)
+					}
 				} else {
-					assert.Equal(t, user.Country, "Ukraine")
+					assert.Equal(t, user.IsAnonymous, false)
 				}
 				assert.NotNil(t, user.LastActivity)
 				if i > 0 {
@@ -108,39 +156,204 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 			}
 			return true
 		})
+	}
+
+	// 2. UserSourceWeb (1 filter, no segment applied)
+	payload = model.TimelinePayload{
+		Source: "web",
+		Filters: []model.QueryProperty{{
+			Entity:    "user_g",
+			Type:      "categorical",
+			Property:  "$country",
+			Operator:  "equals",
+			Value:     "India",
+			LogicalOp: "AND",
+		}},
+		SegmentId: "",
+	}
+	w := sendGetProfileUserRequest(r, project.ID, agent, payload)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ := ioutil.ReadAll(w.Body)
+	resp := make([]model.Profile, 0)
+	err = json.Unmarshal(jsonResponse, &resp)
+	assert.Nil(t, err)
+	assert.Equal(t, len(resp), 3)
+	assert.Condition(t, func() bool {
+		for i, user := range resp {
+			assert.Equal(t, user.Country, "India")
+			assert.NotNil(t, user.LastActivity)
+			if i > 0 {
+				assert.Condition(t, func() bool { return resp[i].LastActivity.Unix() <= resp[i-1].LastActivity.Unix() })
+			}
+		}
+		return true
 	})
 
-	// With Filters
-	filters := model.QueryProperty{
-		Entity:    "user_g",
-		Type:      "categorical",
-		Property:  "$country",
-		Operator:  "equals",
-		Value:     "Ukraine",
-		LogicalOp: "AND",
+	// 3. UserSourceWeb (Segment Applied, no filters)
+	// creating a segment
+	segmentPayload := &model.SegmentPayload{
+		Name:        "Name1",
+		Description: "dummy info",
+		Query: model.SegmentQuery{
+			GlobalProperties: []model.QueryProperty{
+				{
+					Entity:    "user_g",
+					Type:      "categorical",
+					Property:  "$browser",
+					Operator:  "equals",
+					Value:     "Chrome",
+					LogicalOp: "AND",
+				},
+			},
+		},
+		Type: "web",
 	}
-	payload.Filters = append(payload.Filters, filters)
+	status, err := store.GetStore().CreateSegment(project.ID, segmentPayload)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Nil(t, err)
+	// fetch segments
+	segments, status := store.GetStore().GetAllSegments(project.ID)
+	assert.Equal(t, http.StatusFound, status)
 
-	t.Run("Success", func(t *testing.T) {
-		w := sendGetProfileUserRequest(r, project.ID, agent, payload)
-		assert.Equal(t, http.StatusOK, w.Code)
-		jsonResponse, _ := ioutil.ReadAll(w.Body)
-		resp := make([]model.Profile, 0)
-		err := json.Unmarshal(jsonResponse, &resp)
-		assert.Nil(t, err)
-		assert.Equal(t, len(resp), 5)
-		assert.Condition(t, func() bool { return len(resp) <= 1000 })
-		assert.Condition(t, func() bool {
-			for i, user := range resp {
+	// add segmentId to timeline payload
+	payload = model.TimelinePayload{
+		Source:    "web",
+		SegmentId: segments["web"][0].Id,
+	}
+	w = sendGetProfileUserRequest(r, project.ID, agent, payload)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	resp = make([]model.Profile, 0)
+	err = json.Unmarshal(jsonResponse, &resp)
+	assert.Nil(t, err)
+	assert.Equal(t, len(resp), 4)
+	assert.Condition(t, func() bool {
+		for i, user := range resp {
+			if i == 3 {
+				assert.Equal(t, user.IsAnonymous, true)
+			} else {
 				assert.Equal(t, user.IsAnonymous, false)
-				assert.Equal(t, user.Country, "Ukraine")
-				assert.NotNil(t, user.LastActivity)
-				if i > 0 {
-					assert.Condition(t, func() bool { return resp[i].LastActivity.Unix() <= resp[i-1].LastActivity.Unix() })
-				}
 			}
-			return true
-		})
+			assert.NotNil(t, user.LastActivity)
+			if i > 0 {
+				assert.Condition(t, func() bool { return resp[i].LastActivity.Unix() <= resp[i-1].LastActivity.Unix() })
+			}
+		}
+		return true
+	})
+
+	// 4. UserSourceWeb (Segment with multiple filters applied, no filters)
+	segmentPayload = &model.SegmentPayload{
+		Name:        "Name1",
+		Description: "dummy info",
+		Query: model.SegmentQuery{
+			GlobalProperties: []model.QueryProperty{
+				{
+					Entity:    "user_g",
+					Type:      "categorical",
+					Property:  "$browser",
+					Operator:  "equals",
+					Value:     "Chrome",
+					LogicalOp: "AND",
+				},
+				{
+					Entity:    "user_g",
+					Type:      "categorical",
+					Property:  "$browser",
+					Operator:  "equals",
+					Value:     "Firefox",
+					LogicalOp: "OR",
+				},
+				{
+					Entity:    "user_g",
+					Type:      "categorical",
+					Property:  "$city",
+					Operator:  "equals",
+					Value:     "Delhi",
+					LogicalOp: "AND",
+				},
+				{
+					Entity:    "user_g",
+					Type:      "categorical",
+					Property:  "$device_type",
+					Operator:  "equals",
+					Value:     "iPad",
+					LogicalOp: "OR",
+				},
+			},
+		},
+		Type: "web",
+	}
+
+	err, status = store.GetStore().UpdateSegmentById(project.ID, segments["web"][0].Id, *segmentPayload)
+	assert.Equal(t, http.StatusOK, status)
+	assert.Nil(t, err)
+
+	segments, status = store.GetStore().GetAllSegments(project.ID)
+	assert.Equal(t, http.StatusFound, status)
+
+	payload = model.TimelinePayload{
+		Source:    "web",
+		SegmentId: segments["web"][0].Id,
+	}
+	w = sendGetProfileUserRequest(r, project.ID, agent, payload)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	resp = make([]model.Profile, 0)
+	err = json.Unmarshal(jsonResponse, &resp)
+	assert.Nil(t, err)
+	assert.Equal(t, len(resp), 4)
+	assert.Condition(t, func() bool {
+		for i, user := range resp {
+			if i < 2 {
+				assert.Equal(t, user.IsAnonymous, false)
+			} else {
+				assert.Equal(t, user.IsAnonymous, true)
+			}
+			assert.NotNil(t, user.LastActivity)
+			if i > 0 {
+				assert.Condition(t, func() bool { return resp[i].LastActivity.Unix() <= resp[i-1].LastActivity.Unix() })
+			}
+		}
+		return true
+	})
+
+	// 5. UserSourceWeb (Segment with multiple filters applied, 1 filter)
+	payload = model.TimelinePayload{
+		Source: "web",
+		Filters: []model.QueryProperty{
+			{
+				Entity:    "user_g",
+				Type:      "categorical",
+				Property:  "$session_spent_time",
+				Operator:  "greaterThanOrEqual",
+				Value:     "2500",
+				LogicalOp: "AND",
+			},
+		},
+		SegmentId: segments["web"][0].Id,
+	}
+	w = sendGetProfileUserRequest(r, project.ID, agent, payload)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	resp = make([]model.Profile, 0)
+	err = json.Unmarshal(jsonResponse, &resp)
+	assert.Nil(t, err)
+	assert.Equal(t, len(resp), 2)
+	assert.Condition(t, func() bool {
+		for i, user := range resp {
+			if i == 0 {
+				assert.Equal(t, user.IsAnonymous, false)
+			} else {
+				assert.Equal(t, user.IsAnonymous, true)
+			}
+			assert.Equal(t, user.Country, "UK")
+			assert.NotNil(t, user.LastActivity)
+			if i > 0 {
+				assert.Condition(t, func() bool { return resp[i].LastActivity.Unix() <= resp[i-1].LastActivity.Unix() })
+			}
+		}
+		return true
 	})
 }
 

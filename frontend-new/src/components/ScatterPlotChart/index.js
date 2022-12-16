@@ -1,7 +1,10 @@
 import React, { useCallback, useEffect, memo } from 'react';
 import styles from './styles.module.scss';
 import Highcharts from 'highcharts';
-import { HIGH_CHARTS_SCATTER_PLOT_DEFAULT_SPACING, FONT_FAMILY } from '../../utils/constants';
+import {
+  HIGH_CHARTS_SCATTER_PLOT_DEFAULT_SPACING,
+  FONT_FAMILY
+} from '../../utils/constants';
 
 function ScatterPlotChart({
   series,
@@ -33,7 +36,8 @@ function ScatterPlotChart({
       tooltip: {
         shared: false,
         backgroundColor: 'white',
-        borderWidth: 0,
+        borderWidth: 1,
+        shadow: false,
         borderRadius: 12,
         padding: 16,
         useHTML: true,

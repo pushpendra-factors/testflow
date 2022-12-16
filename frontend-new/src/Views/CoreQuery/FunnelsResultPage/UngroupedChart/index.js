@@ -1,21 +1,23 @@
-import React, { useMemo, useContext } from 'react';
+import React, { useMemo, useContext, memo } from 'react';
 import { generateUngroupedChartsData } from '../utils';
 import FunnelsResultTable from '../FunnelsResultTable';
 import { DASHBOARD_MODAL } from '../../../../utils/constants';
 import { CoreQueryContext } from '../../../../contexts/CoreQueryContext';
 import ChartSection from './ChartSection';
+import { EMPTY_ARRAY } from 'Utils/global';
 
-function UngroupedChart({
+function UngroupedChartComponent({
   resultState,
   queries,
   section,
   arrayMapper,
   durationObj,
+  comparison_data,
+  comparison_duration,
+  tableConfig,
+  tableConfigPopoverContent,
+  chartType
 }) {
-  const {
-    coreQueryState: { comparison_data, comparison_duration },
-  } = useContext(CoreQueryContext);
-
   const chartData = useMemo(() => {
     return generateUngroupedChartsData(resultState.data, arrayMapper);
   }, [resultState.data, arrayMapper]);
@@ -43,14 +45,15 @@ function UngroupedChart({
         }
         durationObj={durationObj}
         comparison_duration={comparison_duration}
+        chartType={chartType}
       />
 
       <div className='mt-12 w-full'>
         <FunnelsResultTable
           isWidgetModal={section === DASHBOARD_MODAL}
-          breakdown={[]}
+          breakdown={EMPTY_ARRAY}
           queries={queries}
-          groups={[]}
+          groups={EMPTY_ARRAY}
           arrayMapper={arrayMapper}
           chartData={chartData}
           comparisonChartData={comparisonChartData}
@@ -61,10 +64,28 @@ function UngroupedChart({
           durationObj={durationObj}
           comparison_duration={comparison_duration}
           resultData={resultState.data}
+          tableConfig={tableConfig}
+          tableConfigPopoverContent={tableConfigPopoverContent}
         />
       </div>
     </div>
   );
 }
 
-export default UngroupedChart;
+const UngroupedChartMemoized = memo(UngroupedChartComponent);
+
+function UngroupedChart(props) {
+  const {
+    coreQueryState: { comparison_data, comparison_duration }
+  } = useContext(CoreQueryContext);
+
+  return (
+    <UngroupedChartMemoized
+      comparison_data={comparison_data}
+      comparison_duration={comparison_duration}
+      {...props}
+    />
+  );
+}
+
+export default memo(UngroupedChart);

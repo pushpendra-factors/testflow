@@ -2,6 +2,13 @@ import { startCase, get } from 'lodash';
 import moment from 'moment';
 import { DATE_FORMATS, QUERY_TYPE_KPI } from '../../../utils/constants';
 
+const capitalizePropertyName = (property) => {
+  if (property.includes('$')) {
+    return startCase(property.slice(1));
+  }
+  return property;
+};
+
 export const getBreakdownDisplayName = ({
   breakdown,
   userPropNames,
@@ -26,12 +33,13 @@ export const getBreakdownDisplayName = ({
     'global',
     {}
   );
+
   const displayTitle =
     propCategory === 'user'
       ? get(userPropNames, property, property)
       : sessionEventPropertiesDisplayNames[property] ||
         globalEventPropertiesDisplayNames[property] ||
-        property;
+        capitalizePropertyName(property);
 
   if (breakdown.eventIndex && !multipleEvents) {
     return `${displayTitle} (event)`;

@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { connect } from 'react-redux';
-import { Button, message, Input } from 'antd';
+import { Button, message, Input, Modal } from 'antd';
 import {
   enableMarketoIntegration,
   createMarketoIntegration,
   fetchMarketoIntegration,
-  disableMarketoIntegration,
+  disableMarketoIntegration
 } from 'Reducers/global';
 import { Text, FaErrorComp, FaErrorLog } from 'factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary';
@@ -19,26 +19,36 @@ const MarketoIntegration = ({
   kbLink = false,
   fetchMarketoIntegration,
   disableMarketoIntegration,
-  marketo,
+  marketo
 }) => {
   const [loading, setLoading] = useState(false);
   const [accounts, setAccounts] = useState(null);
 
   const onDisconnect = () => {
-    setLoading(true);
-    disableMarketoIntegration(activeProject.id)
-      .then(() => {
-        setLoading(false);
-        setTimeout(() => {
-          message.success('Marketo integration disconnected!');
-        }, 500);
-        setIsStatus('');
-      })
-      .catch((err) => {
-        message.error(`${err?.data?.error}`);
-        setLoading(false);
-        console.log('disconnect failed-->', err);
-      });
+    Modal.confirm({
+      title: 'Are you sure you want to disable this?',
+      content:
+        'You are about to disable this integration. Factors will stop bringing in data from this source.',
+      okText: 'Disconnect',
+      cancelText: 'Cancel',
+      onOk: () => {
+        setLoading(true);
+        disableMarketoIntegration(activeProject.id)
+          .then(() => {
+            setLoading(false);
+            setTimeout(() => {
+              message.success('Marketo integration disconnected!');
+            }, 500);
+            setIsStatus('');
+          })
+          .catch((err) => {
+            message.error(`${err?.data?.error}`);
+            setLoading(false);
+            console.log('disconnect failed-->', err);
+          });
+      },
+      onCancel: () => {}
+    });
   };
 
   const isMarketoEnabled = () => {
@@ -173,12 +183,12 @@ const MarketoIntegration = ({
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   agent_details: state.agent.agent_details,
-  marketo: state.global.marketo,
+  marketo: state.global.marketo
 });
 
 export default connect(mapStateToProps, {
   enableMarketoIntegration,
   createMarketoIntegration,
   fetchMarketoIntegration,
-  disableMarketoIntegration,
+  disableMarketoIntegration
 })(MarketoIntegration);

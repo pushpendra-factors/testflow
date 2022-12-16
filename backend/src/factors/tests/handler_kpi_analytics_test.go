@@ -781,14 +781,14 @@ func TestKpiAnalyticsForCustomEvents(t *testing.T) {
 		description := U.RandomString(8)
 		transformationRaw := fmt.Sprintf(`{"agFn": "count", "agPr": "1", "agPrTy": "categorical", "fil": [], "daFie": "%d", "evNm": "%s", "en": "%s"}`, timestamp, "s0", model.QueryTypeEventsOccurrence)
 		transformations := &postgres.Jsonb{RawMessage: json.RawMessage(transformationRaw)}
-		w2 := sendCreateCustomMetric(a, project.ID, agent, transformations, name, description, "page_views", 3)
+		w2 := sendCreateCustomMetric(a, project.ID, agent, transformations, name, description, model.EventsBasedDisplayCategory, 3)
 		assert.Equal(t, http.StatusOK, w2.Code)
 
 		query := model.KPIQuery{
-			QueryType:       model.KpiCustomQueryType,
-			Category:        "events",
-			DisplayCategory: model.EventsBasedDisplayCategory,
-			PageUrl:         "s0",
+			QueryType:        model.KpiCustomQueryType,
+			Category:         "events",
+			DisplayCategory:  model.EventsBasedDisplayCategory,
+			PageUrl:          "s0",
 			Metrics:          []string{name},
 			Filters:          []model.KPIFilter{},
 			From:             startTimestamp,
@@ -822,15 +822,15 @@ func TestKpiAnalyticsForCustomEvents(t *testing.T) {
 		description := U.RandomString(8)
 		transformationRaw := fmt.Sprintf(`{"agFn": "count", "agPr": "1", "agPrTy": "categorical", "fil": [], "daFie": "%d", "evNm": "%s", "en": "%s"}`, timestamp, "s0", model.QueryTypeEventsOccurrence)
 		transformations := &postgres.Jsonb{RawMessage: json.RawMessage(transformationRaw)}
-		w2 := sendCreateCustomMetric(a, project.ID, agent, transformations, name1, description, "page_views", 3)
+		w2 := sendCreateCustomMetric(a, project.ID, agent, transformations, name1, description, model.EventsBasedDisplayCategory, 3)
 		assert.Equal(t, http.StatusOK, w2.Code)
-		
+
 		query1 := model.KPIQuery{
-			QueryType:       model.KpiCustomQueryType,
-			Category:        "events",
-			DisplayCategory: model.EventsBasedDisplayCategory,
-			PageUrl:         "s0",
-			Metrics:         []string{name1},
+			QueryType:        model.KpiCustomQueryType,
+			Category:         "events",
+			DisplayCategory:  model.EventsBasedDisplayCategory,
+			PageUrl:          "s0",
+			Metrics:          []string{name1},
 			Filters:          nil,
 			From:             startTimestamp,
 			To:               startTimestamp + 40,
@@ -845,11 +845,11 @@ func TestKpiAnalyticsForCustomEvents(t *testing.T) {
 		description = U.RandomString(8)
 		transformationRaw = fmt.Sprintf(`{"agFn": "count", "agPr": "1", "agPrTy": "categorical", "fil": [], "daFie": "%d", "evNm": "%s", "en": "%s"}`, timestamp, "s0", model.QueryTypeEventsOccurrence)
 		transformations = &postgres.Jsonb{RawMessage: json.RawMessage(transformationRaw)}
-		w2 = sendCreateCustomMetric(a, project.ID, agent, transformations, name2, description, "page_views", 3)
+		w2 = sendCreateCustomMetric(a, project.ID, agent, transformations, name2, description, model.EventsBasedDisplayCategory, 3)
 		assert.Equal(t, http.StatusOK, w2.Code)
 
 		query3 := model.KPIQuery{
-			QueryType:       model.KpiCustomQueryType,
+			QueryType:        model.KpiCustomQueryType,
 			Category:         "events",
 			DisplayCategory:  model.EventsBasedDisplayCategory,
 			PageUrl:          "s0",
@@ -896,7 +896,7 @@ func TestKpiAnalyticsForCustomEvents(t *testing.T) {
 		description := U.RandomString(8)
 		transformationRaw := fmt.Sprintf(`{"agFn": "average", "agPr": "$initial_page_load_time", "agPrTy": "numerical", "fil": [], "daFie": "%d", "evNm": "%s", "en": "%s"}`, timestamp, "$session", model.QueryTypeEventsOccurrence)
 		transformations := &postgres.Jsonb{RawMessage: json.RawMessage(transformationRaw)}
-		w3 := sendCreateCustomMetric(a, project.ID, agent, transformations, name, description, "page_views", 3)
+		w3 := sendCreateCustomMetric(a, project.ID, agent, transformations, name, description, model.EventsBasedDisplayCategory, 3)
 		assert.Equal(t, http.StatusOK, w3.Code)
 
 		query1 := model.KPIQuery{
@@ -931,7 +931,7 @@ func TestKpiAnalyticsForCustomEvents(t *testing.T) {
 		}
 
 		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
-		rw,_ := json.Marshal(result)
+		rw, _ := json.Marshal(result)
 		fmt.Println("result", string(rw))
 		assert.Equal(t, http.StatusOK, statusCode)
 		assert.Equal(t, result[0].Headers, []string{"datetime", "user_id", name})
@@ -951,17 +951,17 @@ func TestKpiAnalyticsForCustomEvents(t *testing.T) {
 		description := U.RandomString(8)
 		transformationRaw := fmt.Sprintf(`{"agFn": "average", "agPr": "$initial_page_load_time", "agPrTy": "numerical", "fil": [], "daFie": "%d", "evNm": "%s", "en": "%s"}`, timestamp, "$session", model.QueryTypeEventsOccurrence)
 		transformations := &postgres.Jsonb{RawMessage: json.RawMessage(transformationRaw)}
-		w3 := sendCreateCustomMetric(a, project.ID, agent, transformations, name, description, "page_views", 3)
+		w3 := sendCreateCustomMetric(a, project.ID, agent, transformations, name, description, model.EventsBasedDisplayCategory, 3)
 		assert.Equal(t, http.StatusOK, w3.Code)
 
 		query1 := model.KPIQuery{
 			QueryType:       model.KpiCustomQueryType,
-			Category:         "events",
-			DisplayCategory:  model.EventsBasedDisplayCategory,
-			Metrics:          []string{name},
-			Filters:          nil,
-			From:             timestamp - 60*2,
-			To:               timestamp,
+			Category:        "events",
+			DisplayCategory: model.EventsBasedDisplayCategory,
+			Metrics:         []string{name},
+			Filters:         nil,
+			From:            timestamp - 60*2,
+			To:              timestamp,
 		}
 
 		kpiQueryGroup := model.KPIQueryGroup{
@@ -991,21 +991,20 @@ func TestKpiAnalyticsForCustomEvents(t *testing.T) {
 		assert.Equal(t, result[0].Rows[0][1], float64(100))
 	})
 
-
 	t.Run("Query with no groupby and no filter for Unique.", func(t *testing.T) {
 		// Custom Metric Create with name name
 		name := U.RandomLowerAphaNumString(10)
 		description := U.RandomString(8)
 		transformationRaw := fmt.Sprintf(`{"agFn": "unique", "agPr": "1", "agPrTy": "categorical", "fil": [], "daFie": "%d", "evNm": "%s", "en": "%s"}`, timestamp, "s0", "")
 		transformations := &postgres.Jsonb{RawMessage: json.RawMessage(transformationRaw)}
-		w2 := sendCreateCustomMetric(a, project.ID, agent, transformations, name, description, "page_views", 3)
+		w2 := sendCreateCustomMetric(a, project.ID, agent, transformations, name, description, model.EventsBasedDisplayCategory, 3)
 		assert.Equal(t, http.StatusOK, w2.Code)
 
 		query := model.KPIQuery{
-			QueryType:       model.KpiCustomQueryType,
-			Category:        "events",
-			DisplayCategory: model.EventsBasedDisplayCategory,
-			PageUrl:         "s0",
+			QueryType:        model.KpiCustomQueryType,
+			Category:         "events",
+			DisplayCategory:  model.EventsBasedDisplayCategory,
+			PageUrl:          "s0",
 			Metrics:          []string{name},
 			Filters:          []model.KPIFilter{},
 			From:             startTimestamp,
@@ -1068,7 +1067,181 @@ func TestKpiAnalyticsForCustomEvents(t *testing.T) {
 		assert.Equal(t, result[0].Rows[0][1], float64(2))
 
 	})
-	
+
+}
+
+func TestKPIChannelsWithSmartProperties(t *testing.T) {
+	r := gin.Default()
+	H.InitDataServiceRoutes(r)
+	model.SetSmartPropertiesReservedNames()
+
+	a := gin.Default()
+	H.InitAppRoutes(a)
+
+	project, customerAccountID, _, statusCode := createProjectAndAddAdwordsDocument(t, r)
+	if statusCode != http.StatusAccepted {
+		assert.Equal(t, false, true)
+		return
+	}
+
+	adwordsDocuments := []M.AdwordsDocument{
+		{ID: "1", Timestamp: 20220802, ProjectID: project.ID, CustomerAccountID: customerAccountID, TypeAlias: "campaign_performance_report",
+			Value: &postgres.Jsonb{RawMessage: json.RawMessage(`{"cost": "11","clicks": "100","campaign_id":"1","impressions": "1000", "campaign_name": "test1"}`)}},
+		{ID: "2", Timestamp: 20220802, ProjectID: project.ID, CustomerAccountID: customerAccountID, TypeAlias: "campaign_performance_report",
+			Value: &postgres.Jsonb{RawMessage: json.RawMessage(`{"cost": "12","clicks": "200","campaign_id":"2","impressions": "500", "campaign_name": "test2"}`)}},
+	}
+	for _, adwordsDocument := range adwordsDocuments {
+		status := store.GetStore().CreateAdwordsDocument(&adwordsDocument)
+		assert.Equal(t, http.StatusCreated, status)
+	}
+	sp1Obj := &postgres.Jsonb{RawMessage: json.RawMessage(`{"ad_group_id":"","ad_group_name":"","campaign_id":"1","campaign_name":"test1"}`)}
+	sp1Name := "number1"
+	sp1Properties := &postgres.Jsonb{RawMessage: json.RawMessage(fmt.Sprintf(`{"%s": "1"}`, sp1Name))}
+	sp1 := model.SmartProperties{
+		ProjectID:      project.ID,
+		ObjectType:     1,
+		ObjectID:       "1",
+		ObjectProperty: sp1Obj,
+		Properties:     sp1Properties,
+		RulesRef:       &postgres.Jsonb{RawMessage: json.RawMessage(fmt.Sprintf(`{"%s": "%s"}`, uuid.New().String(), sp1Name))},
+		Source:         "adwords",
+		CreatedAt:      time.Now(),
+		UpdatedAt:      time.Now(),
+	}
+	sp2Obj := &postgres.Jsonb{RawMessage: json.RawMessage(`{"ad_group_id":"","ad_group_name":"","campaign_id":"2","campaign_name":"test2"}`)}
+	sp2Name := "number2"
+	sp2Properties := &postgres.Jsonb{RawMessage: json.RawMessage(fmt.Sprintf(`{"%s": "2"}`, sp2Name))}
+	sp2 := model.SmartProperties{
+		ProjectID:      project.ID,
+		ObjectType:     1,
+		ObjectID:       "2",
+		ObjectProperty: sp2Obj,
+		Properties:     sp2Properties,
+		RulesRef:       &postgres.Jsonb{RawMessage: json.RawMessage(fmt.Sprintf(`{"%s": "%s"}`, uuid.New().String(), sp2Name))},
+		Source:         "adwords",
+		CreatedAt:      time.Now(),
+		UpdatedAt:      time.Now(),
+	}
+
+	errCode := store.GetStore().CreateSmartProperty(&sp1)
+	assert.Equal(t, http.StatusCreated, errCode)
+	errCode = store.GetStore().CreateSmartProperty(&sp2)
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	query := model.KPIQuery{
+		Category:        "channels",
+		DisplayCategory: "google_ads_metrics",
+		PageUrl:         "",
+		Metrics:         []string{"impressions"},
+		GroupBy:         []M.KPIGroupBy{},
+		From:            1659312000,
+		To:              1659657600,
+	}
+	kpiQueryGroup := model.KPIQueryGroup{
+		Class:         "kpi",
+		Queries:       []model.KPIQuery{query},
+		GlobalFilters: []model.KPIFilter{},
+		GlobalGroupBy: []model.KPIGroupBy{
+			{
+				ObjectType:       "campaign",
+				PropertyName:     "campaign_number1",
+				PropertyDataType: "categorical",
+				Entity:           "",
+			},
+		},
+	}
+	result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup,
+		C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+	assert.Equal(t, result[0].Headers, []string{"campaign_number1", "google_ads_metrics_impressions"})
+	assert.Equal(t, len(result[0].Rows), 2)
+	assert.Equal(t, result[0].Rows, [][]interface{}{{"$none", float64(500)}, {"1", float64(1000)}})
+
+	kpiQueryGroup = model.KPIQueryGroup{
+		Class:   "kpi",
+		Queries: []model.KPIQuery{query},
+		GlobalFilters: []model.KPIFilter{
+			{
+				ObjectType:       "campaign",
+				PropertyName:     "campaign_number1",
+				PropertyDataType: "categorical",
+				Entity:           "",
+				Condition:        "equals",
+				Value:            "$none",
+				LogicalOp:        "AND",
+			},
+		},
+		GlobalGroupBy: []model.KPIGroupBy{
+			{
+				ObjectType:       "campaign",
+				PropertyName:     "campaign_number1",
+				PropertyDataType: "categorical",
+				Entity:           "",
+			},
+		},
+	}
+	result, statusCode = store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup,
+		C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+	assert.Equal(t, result[0].Headers, []string{"campaign_number1", "google_ads_metrics_impressions"})
+	assert.Equal(t, len(result[0].Rows), 1)
+	assert.Equal(t, result[0].Rows, [][]interface{}{{"$none", float64(500)}})
+
+	kpiQueryGroup = model.KPIQueryGroup{
+		Class:   "kpi",
+		Queries: []model.KPIQuery{query},
+		GlobalFilters: []model.KPIFilter{
+			{
+				ObjectType:       "campaign",
+				PropertyName:     "campaign_number1",
+				PropertyDataType: "categorical",
+				Entity:           "",
+				Condition:        "notEqual",
+				Value:            "$none",
+				LogicalOp:        "AND",
+			},
+		},
+		GlobalGroupBy: []model.KPIGroupBy{
+			{
+				ObjectType:       "campaign",
+				PropertyName:     "campaign_number1",
+				PropertyDataType: "categorical",
+				Entity:           "",
+			},
+		},
+	}
+	result, statusCode = store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup,
+		C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+	assert.Equal(t, result[0].Headers, []string{"campaign_number1", "google_ads_metrics_impressions"})
+	assert.Equal(t, len(result[0].Rows), 1)
+	assert.Equal(t, result[0].Rows, [][]interface{}{{"1", float64(1000)}})
+
+	kpiQueryGroup = model.KPIQueryGroup{
+		Class:   "kpi",
+		Queries: []model.KPIQuery{query},
+		GlobalFilters: []model.KPIFilter{
+			{
+				ObjectType:       "campaign",
+				PropertyName:     "campaign_number1",
+				PropertyDataType: "categorical",
+				Entity:           "",
+				Condition:        "equals",
+				Value:            "1",
+				LogicalOp:        "AND",
+			},
+		},
+		GlobalGroupBy: []model.KPIGroupBy{
+			{
+				ObjectType:       "campaign",
+				PropertyName:     "campaign_number1",
+				PropertyDataType: "categorical",
+				Entity:           "",
+			},
+		},
+	}
+	result, statusCode = store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup,
+		C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+	assert.Equal(t, result[0].Headers, []string{"campaign_number1", "google_ads_metrics_impressions"})
+	assert.Equal(t, len(result[0].Rows), 1)
+	assert.Equal(t, result[0].Rows, [][]interface{}{{"1", float64(1000)}})
 }
 
 func TestDerivedKPIChannels(t *testing.T) {
@@ -1220,7 +1393,7 @@ func TestDerivedKPIForCustomKPI(t *testing.T) {
 	rCustomerUserId := U.RandomLowerAphaNumString(15)
 	joinTime := U.UnixTimeBeforeDuration(time.Hour * 1)
 	properties1 := postgres.Jsonb{RawMessage: json.RawMessage([]byte(`{"country": "us", "age": 20, "$hubspot_amount": 200, "$hubspot_datefield1": 1640975425, "paid": true}`))}
-	createUserID1,_ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: rCustomerUserId, Properties: properties1, JoinTimestamp: joinTime, Source: model.GetRequestSourcePointer(model.UserSourceHubspot)})
+	createUserID1, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: rCustomerUserId, Properties: properties1, JoinTimestamp: joinTime, Source: model.GetRequestSourcePointer(model.UserSourceHubspot)})
 
 	startTimestamp := U.UnixTimeBeforeDuration(time.Hour * 1)
 	stepTimestamp := startTimestamp
@@ -1256,7 +1429,7 @@ func TestDerivedKPIForCustomKPI(t *testing.T) {
 		status := store.GetStore().CreateAdwordsDocument(&adwordsDocument)
 		assert.Equal(t, http.StatusCreated, status)
 	}
-	
+
 	t.Run("Profiles Query with no groupby and no filter.", func(t *testing.T) {
 
 		name1 := "name1"
@@ -1310,7 +1483,7 @@ func TestDerivedKPIForCustomKPI(t *testing.T) {
 		description1 := U.RandomString(8)
 		transformationRaw1 := fmt.Sprintf(`{"agFn": "count", "agPr": "1", "agPrTy": "categorical", "fil": [], "daFie": "%d", "evNm": "%s", "en": "%s"}`, timestamp, "s0", model.QueryTypeEventsOccurrence)
 		transformations1 := &postgres.Jsonb{RawMessage: json.RawMessage(transformationRaw1)}
-		w = sendCreateCustomMetric(a, project.ID, agent, transformations1, name1, description1, "page_views", 3)
+		w = sendCreateCustomMetric(a, project.ID, agent, transformations1, name1, description1, model.EventsBasedDisplayCategory, 3)
 		assert.Equal(t, http.StatusOK, w.Code)
 
 		name2 := U.RandomLowerAphaNumString(10)
@@ -1319,29 +1492,29 @@ func TestDerivedKPIForCustomKPI(t *testing.T) {
 			Category:        "channels",
 			DisplayCategory: model.GoogleAdsDisplayCategory,
 			PageUrl:         "",
-			Metrics:          []string{"impressions"},
-			Filters:          []model.KPIFilter{},
-			GroupBy:          []model.KPIGroupBy{},
-			Name:             "a",
-			Timezone:          "Australia/Sydney",		
+			Metrics:         []string{"impressions"},
+			Filters:         []model.KPIFilter{},
+			GroupBy:         []model.KPIGroupBy{},
+			Name:            "a",
+			Timezone:        "Australia/Sydney",
 		}
 		query2 := model.KPIQuery{
 			QueryType:       model.KpiCustomQueryType,
 			Category:        "events",
 			DisplayCategory: model.EventsBasedDisplayCategory,
 			PageUrl:         "s0",
-			Metrics:          []string{name1},
-			Filters:          []model.KPIFilter{},
-			Name:             "b",	
-			Timezone:          "Australia/Sydney",	
+			Metrics:         []string{name1},
+			Filters:         []model.KPIFilter{},
+			Name:            "b",
+			Timezone:        "Australia/Sydney",
 		}
 		transformationRaw2, err := json.Marshal(model.KPIQueryGroup{
-			Class:         "kpi",
-			Formula:       "a/b",
-			Queries:       []model.KPIQuery{query1, query2},
-		}) 
+			Class:   "kpi",
+			Formula: "a/b",
+			Queries: []model.KPIQuery{query1, query2},
+		})
 		assert.Nil(t, err)
-		transformations2 :=  &postgres.Jsonb{RawMessage: json.RawMessage(transformationRaw2)}
+		transformations2 := &postgres.Jsonb{RawMessage: json.RawMessage(transformationRaw2)}
 		w = sendCreateCustomMetric(a, project.ID, agent, transformations2, name2, description2, "", 2)
 		assert.Equal(t, http.StatusOK, w.Code)
 
@@ -1511,4 +1684,77 @@ func sendEventNamesTypeQueryReq(r *gin.Engine, projectId int64, agent *M.Agent) 
 	jsonResponse, _ := ioutil.ReadAll(w.Body)
 	log.Warn(jsonResponse)
 	return w
+}
+
+func TestKPIChannelsMissingTimestamps(t *testing.T) {
+	r := gin.Default()
+	H.InitDataServiceRoutes(r)
+	model.SetSmartPropertiesReservedNames()
+
+	a := gin.Default()
+	H.InitAppRoutes(a)
+
+	project, customerAccountID, _, statusCode := createProjectAndAddAdwordsDocument(t, r)
+	if statusCode != http.StatusAccepted {
+		assert.Equal(t, false, true)
+		return
+	}
+
+	adwordsDocuments := []M.AdwordsDocument{
+		{ID: "1", Timestamp: 20220802, ProjectID: project.ID, CustomerAccountID: customerAccountID, TypeAlias: "campaign_performance_report",
+			Value: &postgres.Jsonb{RawMessage: json.RawMessage(`{"cost": "11","clicks": "100","campaign_id":"1","impressions": "1000", "campaign_name": "test1"}`)}},
+		{ID: "2", Timestamp: 20220803, ProjectID: project.ID, CustomerAccountID: customerAccountID, TypeAlias: "campaign_performance_report",
+			Value: &postgres.Jsonb{RawMessage: json.RawMessage(`{"cost": "12","clicks": "200","campaign_id":"2","impressions": "500", "campaign_name": "test2"}`)}},
+	}
+	for _, adwordsDocument := range adwordsDocuments {
+		status := store.GetStore().CreateAdwordsDocument(&adwordsDocument)
+		assert.Equal(t, http.StatusCreated, status)
+	}
+
+	query := model.KPIQuery{
+		Category:         "channels",
+		DisplayCategory:  "google_ads_metrics",
+		PageUrl:          "",
+		Metrics:          []string{"impressions"},
+		GroupBy:          []M.KPIGroupBy{},
+		From:             1659312000, // 1st Aug, 2022
+		To:               1659657600, // 5th Aug, 2022
+		GroupByTimestamp: "date",
+		Timezone:         "UTC",
+	}
+	kpiQueryGroup := model.KPIQueryGroup{
+		Class:         "kpi",
+		Queries:       []model.KPIQuery{query},
+		GlobalFilters: []model.KPIFilter{},
+		GlobalGroupBy: []model.KPIGroupBy{},
+	}
+	result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup,
+		C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+	assert.Equal(t, result[0].Headers, []string{"datetime", "google_ads_metrics_impressions"})
+	assert.Equal(t, len(result[0].Rows), 5)
+	assert.Equal(t, result[0].Rows[0][1], 0)
+	assert.Equal(t, result[0].Rows[1][1], float64(1000))
+	assert.Equal(t, result[0].Rows[2][1], float64(500))
+	assert.Equal(t, result[0].Rows[3][1], 0)
+	assert.Equal(t, result[0].Rows[4][1], 0)
+
+	kpiQueryGroup = model.KPIQueryGroup{
+		Class:         "kpi",
+		Queries:       []model.KPIQuery{query},
+		GlobalFilters: []model.KPIFilter{},
+		GlobalGroupBy: []model.KPIGroupBy{
+			{
+				ObjectType:       "campaign",
+				PropertyName:     "campaign_name",
+				PropertyDataType: "categorical",
+				Entity:           "",
+			},
+		},
+	}
+	result, statusCode = store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup,
+		C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+	assert.Equal(t, result[0].Headers, []string{"datetime", "campaign_name", "google_ads_metrics_impressions"})
+	assert.Equal(t, len(result[0].Rows), 10)
+	assert.Equal(t, result[0].Rows[2], []interface{}{"2022-08-02T00:00:00+00:00", "test1", float64(1000)})
+	assert.Equal(t, result[0].Rows[5], []interface{}{"2022-08-03T00:00:00+00:00", "test2", float64(500)})
 }

@@ -56,7 +56,7 @@ func GetDashboardsHandler(c *gin.Context) (interface{}, int, string, bool) {
 	if errCode != http.StatusFound {
 		return nil, errCode, "Get dashboards failed.", true
 	}
-
+	dashboards = model.RemoveAttributionV1dashboard(dashboards)
 	return dashboards, http.StatusFound, "", false
 }
 

@@ -259,19 +259,20 @@ func transformDateTypeFiltersForKPIFilters(filters []KPIFilter, timezoneString U
 }
 
 type KPIQuery struct {
-	Category         string       `json:"ca"`
-	DisplayCategory  string       `json:"dc"`
-	PageUrl          string       `json:"pgUrl"`
-	Metrics          []string     `json:"me"`
-	Filters          []KPIFilter  `json:"fil"`
-	GroupBy          []KPIGroupBy `json:"gBy"`
-	GroupByTimestamp string       `json:"gbt"`
-	Timezone         string       `json:"tz"`
-	From             int64        `json:"fr"`
-	To               int64        `json:"to"`
-	Operator         string       `json:"op"`
-	QueryType        string       `json:"qt"`
-	Name             string       `json:"na"`
+	Category           string       `json:"ca"`
+	DisplayCategory    string       `json:"dc"`
+	PageUrl            string       `json:"pgUrl"`
+	Metrics            []string     `json:"me"`
+	Filters            []KPIFilter  `json:"fil"`
+	GroupBy            []KPIGroupBy `json:"gBy"`
+	GroupByTimestamp   string       `json:"gbt"`
+	Timezone           string       `json:"tz"`
+	From               int64        `json:"fr"`
+	To                 int64        `json:"to"`
+	Operator           string       `json:"op"`
+	QueryType          string       `json:"qt"`
+	Name               string       `json:"na"`
+	LimitNotApplicable bool         `json:"lmt_na"`
 }
 
 func (q KPIQuery) GetHashCodeForKPI() (string, error) {

@@ -32,25 +32,6 @@ var MapOfKPICategoryToProfileGroupAnalysis = map[string]string{
 	LeadSquaredLeadsDisplayCategory:        USERS,
 }
 
-func GetKPIConfigFromStandardUserProperties() []map[string]string {
-	var resultantKPIConfigProperties []map[string]string
-	var tempKPIConfigProperty map[string]string
-	for userProperty, userDisplayPropertyName := range U.STANDARD_USER_PROPERTIES_DISPLAY_NAMES {
-
-		tempKPIConfigProperty = map[string]string{
-			"name":         userProperty,
-			"display_name": userDisplayPropertyName,
-			"data_type":    U.GetPropertyTypeByName(userProperty),
-			"entity":       UserEntity,
-		}
-		resultantKPIConfigProperties = append(resultantKPIConfigProperties, tempKPIConfigProperty)
-	}
-	if resultantKPIConfigProperties == nil {
-		return make([]map[string]string, 0)
-	}
-	return resultantKPIConfigProperties
-}
-
 // Setting and getting Time for profiles query is 0,0. Need to understand.
 func GetDirectDerivableProfileQueryFromKPI(kpiQuery KPIQuery) ProfileQueryGroup {
 	var profileQueryGroup ProfileQueryGroup
@@ -61,6 +42,7 @@ func GetDirectDerivableProfileQueryFromKPI(kpiQuery KPIQuery) ProfileQueryGroup 
 	profileQueryGroup.GlobalFilters = transformFiltersKPIToProfiles(kpiQuery.Filters)
 	profileQueryGroup.GlobalGroupBys = transformGroupByKPIToProfiles(kpiQuery.GroupBy)
 	profileQueryGroup.GroupAnalysis = MapOfKPICategoryToProfileGroupAnalysis[kpiQuery.DisplayCategory]
+	profileQueryGroup.LimitNotApplicable = kpiQuery.LimitNotApplicable
 	return profileQueryGroup
 }
 
@@ -134,6 +116,7 @@ func GetProfileQueriesOnCustomMetric(profileQueryGroup ProfileQueryGroup, transf
 	profileQuery.Timezone = profileQueryGroup.Timezone
 	profileQuery.Type = profileCategory
 	profileQuery.GroupAnalysis = profileQueryGroup.GroupAnalysis
+	profileQuery.LimitNotApplicable = profileQueryGroup.LimitNotApplicable
 
 	profileQuery.Filters = append(profileQueryGroup.GlobalFilters, getProfileDefaultFilterFromDateField(transformation.DateField, kpiQuery.From, kpiQuery.To))
 	profileQuery.Filters = append(profileQuery.Filters, transformFiltersKPIToProfiles(transformation.Filters)...)

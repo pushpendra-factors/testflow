@@ -67,7 +67,15 @@ func main() {
 	//Initialized configs
 
 	projectIdsArray := make([]int64, 0)
-	projectIdsArray = append(projectIdsArray, 51)
+	projectIdsArray = append(projectIdsArray, 2)
+	projectIdsArray = append(projectIdsArray, 594)
+	projectIdsArray = append(projectIdsArray, 662)
+	projectIdsArray = append(projectIdsArray, 1125899914000022)
+	projectIdsArray = append(projectIdsArray, 1125899924000005)
+	projectIdsArray = append(projectIdsArray, 2251799816000002)
+	projectIdsArray = append(projectIdsArray, 2251799829000005)	
+	projectIdsArray = append(projectIdsArray, 2251799831000004)	
+	
 	// Get All the Projects for which the path analysis has pending items
 	configs := make(map[string]interface{})
 	// Init cloud manager.

@@ -17,7 +17,7 @@ func TestCreatePathAnalysis(t *testing.T) {
 	t.Run("CreatePathAnalysisEntity:valid", func(t *testing.T) {
 		rName1 := U.RandomString(5)
 		entity, errCode, errMsg := store.GetStore().CreatePathAnalysisEntity(agent.UUID, project.ID, &model.PathAnalysisQuery{
-			Title: rName1, EventType: "eve", Event: rName1, NumberOfSteps: 4, IncludeEvents: []string{"e1", "E2"}, Filter: []model.QueryProperty{
+			Title: rName1, EventType: "eve", Event: model.PathAnalysisEvent{Label: rName1}, NumberOfSteps: 4, IncludeEvents: []model.PathAnalysisEvent{model.PathAnalysisEvent{Label: "e1"}, model.PathAnalysisEvent{Label: "E2"}}, Filter: []model.QueryProperty{
 				{Entity: "", Type: "categorical", Property: "campaign", Operator: "equals", LogicalOp: "AND"},
 			}})
 		assert.Equal(t, http.StatusCreated, errCode)
@@ -34,8 +34,8 @@ func TestCreatePathAnalysis(t *testing.T) {
 	t.Run("CreatePathAnalysisEntity:Include & Exclude both Events Provided: Invalid", func(t *testing.T) {
 		rName1 := U.RandomString(5)
 		entity, errCode, _ := store.GetStore().CreatePathAnalysisEntity(agent.UUID, project.ID, &model.PathAnalysisQuery{
-			Title: rName1, EventType: "eve", Event: rName1, NumberOfSteps: 4, IncludeEvents: []string{"e1", "E2"},
-			ExcludeEvents: []string{"e2", "E1"},
+			Title: rName1, EventType: "eve", Event: model.PathAnalysisEvent{Label: rName1}, NumberOfSteps: 4, IncludeEvents: []model.PathAnalysisEvent{model.PathAnalysisEvent{Label: "e1"}, model.PathAnalysisEvent{Label: "E2"}},
+			ExcludeEvents: []model.PathAnalysisEvent{model.PathAnalysisEvent{Label: "e1"}, model.PathAnalysisEvent{Label: "E2"}},
 			Filter:        []model.QueryProperty{{Entity: "", Type: "categorical", Property: "campaign", Operator: "equals", LogicalOp: "AND"}}})
 		assert.Equal(t, http.StatusBadRequest, errCode)
 		assert.Nil(t, entity)
@@ -44,7 +44,7 @@ func TestCreatePathAnalysis(t *testing.T) {
 	t.Run("CreatePathAnalysisEntity:Title already present:Invalid", func(t *testing.T) {
 		rName1 := U.RandomString(5)
 		entity, errCode, errMsg := store.GetStore().CreatePathAnalysisEntity(agent.UUID, project.ID, &model.PathAnalysisQuery{
-			Title: rName1, EventType: "eve", Event: rName1, NumberOfSteps: 4, IncludeEvents: []string{"e1", "E2"}, Filter: []model.QueryProperty{
+			Title: rName1, EventType: "eve", Event: model.PathAnalysisEvent{Label: rName1}, NumberOfSteps: 4, IncludeEvents: []model.PathAnalysisEvent{model.PathAnalysisEvent{Label: "e1"}, model.PathAnalysisEvent{Label: "E2"}}, Filter: []model.QueryProperty{
 				{Entity: "", Type: "categorical", Property: "campaign", Operator: "equals", LogicalOp: "AND"},
 			}})
 		assert.Equal(t, http.StatusCreated, errCode)
@@ -52,7 +52,7 @@ func TestCreatePathAnalysis(t *testing.T) {
 		assert.Empty(t, errMsg)
 
 		entity, errCode, _ = store.GetStore().CreatePathAnalysisEntity(agent.UUID, project.ID, &model.PathAnalysisQuery{
-			Title: rName1, EventType: "eve1", Event: rName1, NumberOfSteps: 4, IncludeEvents: []string{"e1", "E2"}, Filter: []model.QueryProperty{
+			Title: rName1, EventType: "eve1", Event: model.PathAnalysisEvent{Label: rName1}, NumberOfSteps: 4, IncludeEvents: []model.PathAnalysisEvent{model.PathAnalysisEvent{Label: "e1"}, model.PathAnalysisEvent{Label: "E2"}}, Filter: []model.QueryProperty{
 				{Entity: "", Type: "categorical", Property: "campaign", Operator: "equals", LogicalOp: "AND"},
 			}})
 		assert.Equal(t, http.StatusBadRequest, errCode)
@@ -62,7 +62,7 @@ func TestCreatePathAnalysis(t *testing.T) {
 	t.Run("CreatePathAnalysisEntity:PathAnalysis entity already present in DB:Invalid", func(t *testing.T) {
 		rName1 := U.RandomString(5)
 		entity, errCode, errMsg := store.GetStore().CreatePathAnalysisEntity(agent.UUID, project.ID, &model.PathAnalysisQuery{
-			Title: rName1, EventType: "eve", Event: rName1, NumberOfSteps: 4, IncludeEvents: []string{"e1", "E2"}, Filter: []model.QueryProperty{
+			Title: rName1, EventType: "eve", Event: model.PathAnalysisEvent{Label: rName1}, NumberOfSteps: 4, IncludeEvents: []model.PathAnalysisEvent{model.PathAnalysisEvent{Label: "e1"}, model.PathAnalysisEvent{Label: "E2"}}, Filter: []model.QueryProperty{
 				{Entity: "", Type: "categorical", Property: "campaign", Operator: "equals", LogicalOp: "AND"},
 			}})
 		assert.Equal(t, http.StatusCreated, errCode)
@@ -71,7 +71,7 @@ func TestCreatePathAnalysis(t *testing.T) {
 
 		rName2 := U.RandomString(5)
 		entity, errCode, _ = store.GetStore().CreatePathAnalysisEntity(agent.UUID, project.ID, &model.PathAnalysisQuery{
-			Title: rName2, EventType: "eve", Event: rName1, NumberOfSteps: 4, IncludeEvents: []string{"e1", "E2"}, Filter: []model.QueryProperty{
+			Title: rName2, EventType: "eve", Event: model.PathAnalysisEvent{Label: rName1}, NumberOfSteps: 4, IncludeEvents: []model.PathAnalysisEvent{model.PathAnalysisEvent{Label: "e1"}, model.PathAnalysisEvent{Label: "E2"}}, Filter: []model.QueryProperty{
 				{Entity: "", Type: "categorical", Property: "campaign", Operator: "equals", LogicalOp: "AND"},
 			}})
 		assert.Equal(t, http.StatusBadRequest, errCode)
@@ -82,7 +82,7 @@ func TestCreatePathAnalysis(t *testing.T) {
 		for i := 0; i < 10; i++ {
 			rName1 := U.RandomString(5)
 			entity, errCode, errMsg := store.GetStore().CreatePathAnalysisEntity(agent.UUID, project.ID, &model.PathAnalysisQuery{
-				Title: rName1, EventType: "eve", Event: rName1, NumberOfSteps: 4, IncludeEvents: []string{"e1", "E2"}, Filter: []model.QueryProperty{
+				Title: rName1, EventType: "eve", Event: model.PathAnalysisEvent{Label: rName1}, NumberOfSteps: 4, IncludeEvents: []model.PathAnalysisEvent{model.PathAnalysisEvent{Label: "e1"}, model.PathAnalysisEvent{Label: "E2"}}, Filter: []model.QueryProperty{
 					{Entity: "", Type: "categorical", Property: "campaign", Operator: "equals", LogicalOp: "AND"},
 				}})
 			assert.Equal(t, http.StatusCreated, errCode)
@@ -92,7 +92,7 @@ func TestCreatePathAnalysis(t *testing.T) {
 
 		rName2 := U.RandomString(5)
 		entity, errCode, _ := store.GetStore().CreatePathAnalysisEntity(agent.UUID, project.ID, &model.PathAnalysisQuery{
-			Title: rName2, EventType: "eve", Event: rName2, NumberOfSteps: 4, IncludeEvents: []string{"e1", "E2"}, Filter: []model.QueryProperty{
+			Title: rName2, EventType: "eve", Event: model.PathAnalysisEvent{Label: rName2}, NumberOfSteps: 4, IncludeEvents: []model.PathAnalysisEvent{model.PathAnalysisEvent{Label: "e1"}, model.PathAnalysisEvent{Label: "E2"}}, Filter: []model.QueryProperty{
 				{Entity: "", Type: "categorical", Property: "campaign", Operator: "equals", LogicalOp: "AND"},
 			}})
 		assert.Equal(t, http.StatusBadRequest, errCode)
@@ -107,7 +107,7 @@ func TestDeletePathAnalysis(t *testing.T) {
 
 	rName1 := U.RandomString(5)
 	entity, errCode, errMsg := store.GetStore().CreatePathAnalysisEntity(agent.UUID, project.ID, &model.PathAnalysisQuery{
-		Title: rName1, EventType: "eve", Event: rName1, NumberOfSteps: 4, IncludeEvents: []string{"e1", "E2"}, Filter: []model.QueryProperty{
+		Title: rName1, EventType: "eve", Event: model.PathAnalysisEvent{Label: rName1}, NumberOfSteps: 4, IncludeEvents: []model.PathAnalysisEvent{model.PathAnalysisEvent{Label: "e1"}, model.PathAnalysisEvent{Label: "E2"}}, Filter: []model.QueryProperty{
 			{Entity: "", Type: "categorical", Property: "campaign", Operator: "equals", LogicalOp: "AND"},
 		}})
 	assert.Equal(t, http.StatusCreated, errCode)

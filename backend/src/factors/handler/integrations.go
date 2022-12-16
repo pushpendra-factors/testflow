@@ -3,6 +3,7 @@ package handler
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -16,6 +17,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	C "factors/config"
+	DD "factors/default_data"
 	IntHubspot "factors/integration/hubspot"
 	IntSalesforce "factors/integration/salesforce"
 	IntSegment "factors/integration/segment"
@@ -29,7 +31,7 @@ import (
 )
 
 // IntSegmentHandler godoc
-// @Summary To create event from segment.
+// @Summary To create event from segment/rudderstack.
 // @Tags SDK,Integrations
 // @Accept  json
 // @Produce json
@@ -51,9 +53,9 @@ func IntSegmentHandler(c *gin.Context) {
 
 	var event IntSegment.Event
 	if err := json.NewDecoder(body).Decode(&event); err != nil {
-		logCtx.WithError(err).Error("Segment JSON decode failed")
+		logCtx.WithError(err).Error("Segment/Rudderstack JSON decode failed")
 	}
-	logCtx.WithFields(log.Fields{"event": event}).Debug("Segment webhook request")
+	logCtx.WithFields(log.Fields{"event": event}).Debug("Segment/Rudderstack webhook request")
 
 	token := U.GetScopeByKeyAsString(c, mid.SCOPE_PROJECT_PRIVATE_TOKEN)
 	if C.IsBlockedSDKRequestProjectToken(token) {
@@ -843,6 +845,7 @@ type LinkedinOauthToken struct {
 	ExpiresIn             uint64 `json:"expires_in"`
 	RefreshToken          string `json:"refresh_token"`
 	RefreshTokenExpiresIn uint64 `json:"refresh_token_expires_in"`
+	Scope                 string `json:"scope"`
 }
 
 /*
@@ -1090,6 +1093,26 @@ func SalesforceCallbackHandler(c *gin.Context) {
 		return
 	}
 
+	isFirstTimeIntegrationDone, statusCode := DD.CheckIfFirstTimeIntegrationDone(oauthState.ProjectID, DD.SalesforceIntegrationName)
+	if statusCode != http.StatusFound {
+		errMsg := fmt.Sprintf("Failed during first time integration check salesforce: %v", oauthState.ProjectID)
+		C.PingHealthcheckForFailure(C.HealthCheckPreBuiltCustomKPIPingID, errMsg)
+	}
+	if !isFirstTimeIntegrationDone {
+		factory := DD.GetDefaultDataCustomKPIFactory(DD.SalesforceIntegrationName)
+		statusCode2 := factory.Build(oauthState.ProjectID)
+		if statusCode2 != http.StatusOK {
+			errMsg := fmt.Sprintf("Failed during prebuilt salesforce custom KPI creation: %v", oauthState.ProjectID)
+			C.PingHealthcheckForFailure(C.HealthCheckPreBuiltCustomKPIPingID, errMsg)
+		} else {
+			statusCode3 := DD.SetFirstTimeIntegrationDone(oauthState.ProjectID, DD.SalesforceIntegrationName)
+			if statusCode3 != http.StatusOK {
+				errMsg := fmt.Sprintf("Failed during setting first time integration done salesforce: %v", oauthState.ProjectID)
+				C.PingHealthcheckForFailure(C.HealthCheckPreBuiltCustomKPIPingID, errMsg)
+			}
+		}
+	}
+
 	redirectURL := C.GetProtocol() + C.GetAPPDomain() + IntSalesforce.AppSettingsURL
 	c.Redirect(http.StatusPermanentRedirect, redirectURL)
 }
@@ -1319,6 +1342,27 @@ func HubspotCallbackHandler(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusInternalServerError,
 			gin.H{"error": "failed updating hubspot auth project settings."})
 		return
+	}
+
+	isFirstTimeIntegrationDone, statusCode := DD.CheckIfFirstTimeIntegrationDone(oauthState.ProjectID, DD.HubspotIntegrationName)
+	if statusCode != http.StatusFound {
+		errMsg := fmt.Sprintf("Failed during first time integration check hubspot: %v", oauthState.ProjectID)
+		C.PingHealthcheckForFailure(C.HealthCheckPreBuiltCustomKPIPingID, errMsg)
+	}
+
+	if !isFirstTimeIntegrationDone {
+		factory := DD.GetDefaultDataCustomKPIFactory(DD.HubspotIntegrationName)
+		statusCode2 := factory.Build(oauthState.ProjectID)
+		if statusCode2 != http.StatusOK {
+			_, errMsg := fmt.Printf("Failed during prebuilt hubspot custom KPI creation: %v", oauthState.ProjectID)
+			C.PingHealthcheckForFailure("HealthCheckPreBuiltCustomKPIPingID", errMsg)
+		} else {
+			statusCode3 := DD.SetFirstTimeIntegrationDone(oauthState.ProjectID, DD.HubspotIntegrationName)
+			if statusCode3 != http.StatusOK {
+				errMsg := fmt.Sprintf("Failed during setting first time integration done hubspot: %v", oauthState.ProjectID)
+				C.PingHealthcheckForFailure(C.HealthCheckPreBuiltCustomKPIPingID, errMsg)
+			}
+		}
 	}
 
 	redirectURL := C.GetProtocol() + C.GetAPPDomain() + "/settings/integration"

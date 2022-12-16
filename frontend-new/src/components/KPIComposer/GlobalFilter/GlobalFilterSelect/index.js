@@ -210,7 +210,7 @@ const GlobalFilterSelect = ({
     if (!propState.name) {
       propertyName = 'Select Property';
     } else {
-      propertyName = propState.name;
+      propertyName = _.startCase(propState.name);
     }
     return propertyName;
   };
@@ -555,7 +555,7 @@ const GlobalFilterSelect = ({
             title={
               valuesState && valuesState.length
                 ? valuesState
-                    .map((vl) => (DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl))
+                    .map((vl) => (DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : _.startCase(vl)))
                     .join(', ')
                 : null
             }

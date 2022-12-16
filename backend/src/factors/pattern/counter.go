@@ -699,7 +699,7 @@ func ComputeAllUserPropertiesHistogram(projectID int64, scanner *bufio.Scanner, 
 					return err
 				}
 			}
-			if countsVersion == 3 {
+			if countsVersion >= 3 {
 
 				userCatProperties_ := FilterCategoricalProperties(projectID, eventDetails.EventName, 0, userProperties, true)
 				basePathUserProps := path.Join("/", "tmp", "fptree", "userProps")
@@ -717,7 +717,7 @@ func ComputeAllUserPropertiesHistogram(projectID int64, scanner *bufio.Scanner, 
 		seenUsers[userId] = true
 	}
 
-	if countsVersion == 3 {
+	if countsVersion >= 3 {
 		log.Debugf("counting all Properties info")
 		basePathUserProps := path.Join("/", "tmp", "fptree", "userProps")
 		basePathUserPropsRes := path.Join("/", "tmp", "fptree", "userPropsRes")
@@ -841,7 +841,7 @@ func CountPatterns(projectID int64, scanner *bufio.Scanner, patterns []*Pattern,
 		log.Fatal("unable to create temp event directory")
 	}
 
-	if countVersion == 3 {
+	if countVersion >= 3 {
 		// create folders to hold hmine props hmine algo
 		hm, err := CreateHmineBaseFolders(cAlgoProps, patterns[0])
 		if err != nil {
@@ -890,7 +890,6 @@ func CountPatterns(projectID int64, scanner *bufio.Scanner, patterns []*Pattern,
 					log.Infof("%d - pattern mined using hmine", idxPt)
 				}
 			} else {
-
 				err := CountUsingHmine(idxPt, hm, pt, cAlgoProps)
 				if err != nil {
 					return err
@@ -988,6 +987,9 @@ func CountPatternsWithTS(projectID int64, eventsList []CounterEventFormat, numEv
 	}
 
 	for _, p := range uniqueEventPatterns {
+		if p.Segment == 1 {
+			log.Errorf("pattern is segment count one :%v", p.EventNames)
+		}
 		if err := p.CountForEvent(projectID, userId, userJoinTimestamp, shouldCountOccurence, ets, cAlgoProps); err != nil {
 			log.Error("Error when counting event")
 		}

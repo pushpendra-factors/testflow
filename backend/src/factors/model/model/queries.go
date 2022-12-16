@@ -1,9 +1,8 @@
 package model
 
 import (
-	"time"
-
 	"github.com/jinzhu/gorm/dialects/postgres"
+	"time"
 )
 
 type Queries struct {
@@ -47,7 +46,8 @@ type QueriesString struct {
 }
 
 const (
-	QueryTypeAllQueries     = 0
-	QueryTypeDashboardQuery = 1
-	QueryTypeSavedQuery     = 2
+	QueryTypeAllQueries         = 0
+	QueryTypeDashboardQuery     = 1
+	QueryTypeSavedQuery         = 2
+	QueryTypeAttributionV1Query = 3
 )

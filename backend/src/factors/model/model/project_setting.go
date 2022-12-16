@@ -75,6 +75,9 @@ type ProjectSetting struct {
 	LeadSquaredConfig             *postgres.Jsonb `json:"lead_squared_config"`
 	IsWeeklyInsightsEnabled       bool            `json:"is_weekly_insights_enabled"`
 	IsExplainEnabled              bool            `json:"is_explain_enabled"`
+	IntegrationBits               string          `json: "-"`
+	// Rudderstack integration settings.
+	IntRudderstack *bool `gorm:"not null;default:false" json:"int_rudderstack,omitempty"`
 }
 
 /* Sample Attribution Setting
@@ -160,6 +163,8 @@ const ProjectSettingKeyPrivateToken = "private_token"
 
 var AutoClickCaptureDefault = false
 var AutoCaptureFormFillsDefault = false
+
+const DEFAULT_STRING_WITH_ZEROES_32BIT = "00000000000000000000000000000000"
 
 var projectSettingKeys = [...]string{
 	ProjectSettingKeyToken,

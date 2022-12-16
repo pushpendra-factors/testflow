@@ -79,7 +79,7 @@ func (store *MemSQL) getConfigForSpecificSalesforceCategory(projectID int64, req
 
 func (store *MemSQL) getPropertiesForSalesforceByDisplayCategory(projectID int64, reqID, displayCategory string) []map[string]string {
 	finalProperties := make([]map[string]string, 0)
-	standardUserProperties := model.GetKPIConfigFromStandardUserProperties()
+	standardUserProperties := store.GetKPIConfigFromStandardUserProperties(projectID)
 	switch displayCategory {
 	case model.SalesforceOpportunitiesDisplayCategory:
 		finalProperties = store.GetPropertiesForSalesforceOpportunities(projectID, reqID)

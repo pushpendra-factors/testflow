@@ -10,7 +10,7 @@ import moment from 'moment';
 import _, { get } from 'lodash';
 import { Button, Modal, Tabs } from 'antd';
 import { useSelector } from 'react-redux';
-import { useHistory } from 'react-router-dom';
+import { useHistory, useLocation } from 'react-router-dom';
 import { SVG, Text } from 'factorsComponents';
 import {
   EVENT_BREADCRUMB,
@@ -50,6 +50,7 @@ function AnalysisHeader({
   );
 
 
+  let location = useLocation()
   useEffect(() => {
     if (window.Intercom) {
       window.Intercom('update', { hide_default_launcher: true });
@@ -115,9 +116,25 @@ function AnalysisHeader({
       });
       onBreadCrumbClick();
     }
-  }, [history, requestQuery, savedQueryId]);
-
+  });
+  // This checks where to route back if came from Dashboard
+  const conditionalRouteBackCheck = ()=>{
+    let navigatedFromDashboardExistingReports = location.state?.navigatedFromDashboardExistingReports;
+    if(navigatedFromDashboardExistingReports){
+      // Just moving back to / route
+      history.push({
+        pathname: '/'
+      });
+    }else{
+      // Going Back to specefic Widget Where we came from
+      history.push({
+        pathname: '/',
+        state: { dashboardWidgetId: navigatedFromDashboard.id }
+      });
+    }
+  }
   const handleCloseDashboardQuery = useCallback(() => {
+    
     if(!savedQueryId && requestQuery !== null) {
       Modal.confirm({
         title: 'This report is not yet saved. Would you like to save this before leaving?',
@@ -129,17 +146,11 @@ function AnalysisHeader({
           setShowSaveQueryModal(true);
         },
         onCancel: () => {
-          history.push({
-            pathname: '/',
-            state: { dashboardWidgetId: navigatedFromDashboard.id }
-          });
+          conditionalRouteBackCheck();
         }
       }); 
     } else {
-      history.push({
-        pathname: '/',
-        state: { dashboardWidgetId: navigatedFromDashboard.id }
-      });
+      conditionalRouteBackCheck();
     }
   }, [history, navigatedFromDashboard, requestQuery, savedQueryId]);
 
@@ -158,18 +169,22 @@ function AnalysisHeader({
     </Text>
   );
 
-  const renderReportCloseIcon = () => (
+  const renderReportCloseIcon = () => {
+    // Here instead of ContextAPIs we can get this state from location state. which makes it simpler to access variables across routes
+    let navigatedFromDashboardExistingReports = location.state?.navigatedFromDashboardExistingReports;
+    return (
     <Button
       size="large"
       type="text"
       icon={<SVG size={20} name="close" />}
       onClick={
-        navigatedFromDashboard
+        // This is the condition checking 
+        (navigatedFromDashboardExistingReports || navigatedFromDashboard)
           ? handleCloseDashboardQuery
           : handleCloseToAnalyse
       }
     />
-  );
+  )};
 
   const renderLogo = () => (
     <Button

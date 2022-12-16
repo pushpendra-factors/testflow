@@ -80,8 +80,7 @@ func TestEventAnalyticsQuery(t *testing.T) {
 					},
 				},
 			},
-			Class: model.QueryClassEvents,
-
+			Class:           model.QueryClassEvents,
 			Type:            model.QueryTypeEventsOccurrence,
 			EventsCondition: model.EventCondAnyGivenEvent,
 		}
@@ -514,7 +513,7 @@ func TestEventAnalyticsQueryWithNumericalBucketing(t *testing.T) {
 			Type:            model.QueryTypeEventsOccurrence,
 			EventsCondition: model.EventCondAllGivenEvent,
 		}
-		result, errCode, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
+		result, errCode, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), false)
 		assert.Equal(t, http.StatusOK, errCode)
 		validateNumericalBucketRanges(t, result, numPropertyRangeStart, numPropertyRangeEnd, 0)
 
@@ -532,13 +531,13 @@ func TestEventAnalyticsQueryWithNumericalBucketing(t *testing.T) {
 		w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 		assert.Equal(t, http.StatusOK, w.Code)
 
-		result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
+		result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), false)
 		validateNumericalBucketRanges(t, result, 0, numPropertyRangeEnd, 0)
 
 		// Using group by numerical property.
 		query.GroupByProperties[0].Entity = model.PropertyEntityUser
 		query.GroupByProperties[0].Property = "numerical_property"
-		result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
+		result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), false)
 		assert.Equal(t, http.StatusOK, errCode)
 		validateNumericalBucketRanges(t, result, numPropertyRangeStart, numPropertyRangeEnd, 1)
 	})

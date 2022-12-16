@@ -3,7 +3,7 @@ import React, {
   useState,
   useContext,
   forwardRef,
-  useImperativeHandle,
+  useImperativeHandle
 } from 'react';
 import { formatData, getVisibleData } from '../utils';
 import BarChart from './Chart';
@@ -11,7 +11,15 @@ import FunnelsResultTable from '../FunnelsResultTable';
 import NoDataChart from '../../../../components/NoDataChart';
 import { CoreQueryContext } from '../../../../contexts/CoreQueryContext';
 import FunnelsScatterPlot from './FunnelsScatterPlot';
-import { CHART_TYPE_BARCHART } from '../../../../utils/constants';
+import {
+  CHART_TYPE_BARCHART,
+  CHART_TYPE_METRIC_CHART,
+  MAX_ALLOWED_VISIBLE_PROPERTIES
+} from '../../../../utils/constants';
+import MetricChart from 'Components/MetricChart/MetricChart';
+import { generateColors } from 'Utils/dataFormatter';
+
+const colors = generateColors(MAX_ALLOWED_VISIBLE_PROPERTIES);
 
 const GroupedChart = forwardRef(
   (
@@ -23,11 +31,13 @@ const GroupedChart = forwardRef(
       arrayMapper,
       section,
       chartType,
+      tableConfig,
+      tableConfigPopoverContent
     },
     ref
   ) => {
     const {
-      coreQueryState: { savedQuerySettings },
+      coreQueryState: { savedQuerySettings }
     } = useContext(CoreQueryContext);
     const [visibleProperties, setVisibleProperties] = useState([]);
     const [sorter, setSorter] = useState(
@@ -40,7 +50,7 @@ const GroupedChart = forwardRef(
 
     useImperativeHandle(ref, () => {
       return {
-        currentSorter: { sorter },
+        currentSorter: { sorter }
       };
     });
 
@@ -59,7 +69,7 @@ const GroupedChart = forwardRef(
 
     if (!visibleProperties.length) {
       return (
-        <div className="flex justify-center items-center w-full h-full pt-4 pb-4">
+        <div className='flex justify-center items-center w-full h-full pt-4 pb-4'>
           <NoDataChart />
         </div>
       );
@@ -77,6 +87,22 @@ const GroupedChart = forwardRef(
           section={section}
           durations={resultState.data.meta}
         />
+      );
+    } else if (chartType === CHART_TYPE_METRIC_CHART) {
+      chart = (
+        <div className='grid grid-cols-3 w-full col-gap-2 row-gap-12'>
+          {visibleProperties.map((elem, index) => {
+            return (
+              <MetricChart
+                key={colors[index]}
+                value={elem.value}
+                iconColor={colors[index]}
+                headerTitle={elem.name}
+                valueType='percentage'
+              />
+            );
+          })}
+        </div>
       );
     } else {
       chart = (
@@ -105,6 +131,8 @@ const GroupedChart = forwardRef(
             resultData={resultState.data}
             sorter={sorter}
             setSorter={setSorter}
+            tableConfig={tableConfig}
+            tableConfigPopoverContent={tableConfigPopoverContent}
           />
         </div>
       </div>

@@ -826,12 +826,12 @@ func syncMissingObjectsForSalesforceActivities(projectID int64, documentIDs []st
 	salesforceDataClient, err := NewSalesforceDataClient(accessToken, instanceURL)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to build new salesforce data client on syncMissingObjectsForSalesforceActivities")
-		return nil, 0, true
+		return []string{"Failed to build new salesforce data client on syncMissingObjectsForSalesforceActivities"}, 0, true
 	}
 
 	if objectName != model.SalesforceDocumentTypeNameLead && objectName != model.SalesforceDocumentTypeNameContact {
 		logCtx.Error("Invalid docType for salesforce activities in syncMissingObjectsForSalesforceActivities.")
-		return nil, 0, true
+		return []string{"Invalid docType for salesforce activities in syncMissingObjectsForSalesforceActivities."}, 0, true
 	}
 
 	var failures []string
@@ -846,7 +846,7 @@ func syncMissingObjectsForSalesforceActivities(projectID int64, documentIDs []st
 	docs, errCode := store.GetStore().GetSyncedSalesforceDocumentByType(projectID, documentIDs, model.GetSalesforceDocTypeByAlias(objectName), true)
 	if errCode != http.StatusFound && errCode != http.StatusNotFound {
 		logCtx.Error(fmt.Sprintf("Failed to get salesforce %s documents in syncMissingObjectsForSalesforceActivities.", objectName))
-		return nil, 0, true
+		return []string{fmt.Sprintf("Failed to get salesforce %s documents in syncMissingObjectsForSalesforceActivities.", objectName)}, 0, true
 	}
 
 	docIDs := make([]string, 0)
@@ -862,14 +862,15 @@ func syncMissingObjectsForSalesforceActivities(projectID int64, documentIDs []st
 	paginatedObjects, err := salesforceDataClient.GetObjectRecordsByIDs(projectID, objectName, missingDocIDs)
 	if err != nil {
 		logCtx.WithError(err).Error(fmt.Sprintf("Failed to initialize salesforce data client for sync activities %s.", objectName))
-		return nil, 0, true
+		return []string{fmt.Sprintf("Failed to initialize salesforce data client for sync activities %s.", objectName)}, 0, true
 	}
 
 	var records []model.SalesforceRecord
 	for !done {
 		records, done, err = paginatedObjects.getNextBatch()
 		if err != nil {
-			return nil, 0, true
+			logCtx.WithError(err).Error("Failed to getNextBatch on syncMissingObjectsForSalesforceActivities.")
+			return []string{err.Error()}, 0, true
 		}
 
 		err = store.GetStore().BuildAndUpsertDocumentInBatch(projectID, objectName, records)
@@ -920,13 +921,17 @@ func syncTasks(projectID int64, accessToken, instanceURL string, timestamp int64
 
 		leadIDs, contactIDs := getLeadIDAndContactIDForActivityRecords(projectID, objectRecords)
 
-		if len(leadIDs) > 0 {
-			taskLeads = append(taskLeads, leadIDs...)
-		} else if len(contactIDs) > 0 {
-			taskContacts = append(taskContacts, contactIDs...)
-		} else {
+		if len(leadIDs) == 0 && len(contactIDs) == 0 {
 			logCtx.Info("No leads or contacts associated with tasks.")
 			continue
+		}
+
+		if len(leadIDs) > 0 {
+			taskLeads = append(taskLeads, leadIDs...)
+		}
+
+		if len(contactIDs) > 0 {
+			taskContacts = append(taskContacts, contactIDs...)
 		}
 
 		err = store.GetStore().BuildAndUpsertDocumentInBatch(projectID, model.SalesforceDocumentTypeNameTask, objectRecords)
@@ -976,13 +981,17 @@ func syncEvents(projectID int64, accessToken, instanceURL string, timestamp int6
 
 		leadIDs, contactIDs := getLeadIDAndContactIDForActivityRecords(projectID, objectRecords)
 
-		if len(leadIDs) > 0 {
-			eventLeads = append(eventLeads, leadIDs...)
-		} else if len(contactIDs) > 0 {
-			eventContacts = append(eventContacts, contactIDs...)
-		} else {
+		if len(leadIDs) == 0 && len(contactIDs) == 0 {
 			logCtx.Info("No leads or contacts associated with events.")
 			continue
+		}
+
+		if len(leadIDs) > 0 {
+			eventLeads = append(eventLeads, leadIDs...)
+		}
+
+		if len(contactIDs) > 0 {
+			eventContacts = append(eventContacts, contactIDs...)
 		}
 
 		err = store.GetStore().BuildAndUpsertDocumentInBatch(projectID, model.SalesforceDocumentTypeNameEvent, objectRecords)
@@ -1521,6 +1530,11 @@ func SyncDatetimeAndNumericalProperties(projectID int64, accessToken, instanceUR
 func getStartTimestamp(docType string) int64 {
 	if docType != model.SalesforceDocumentTypeNameCampaignMember && docType != model.SalesforceDocumentTypeNameTask && docType != model.SalesforceDocumentTypeNameEvent {
 		return 0 // 1 January 1970 00:00:00
+	}
+
+	if docType == model.SalesforceDocumentTypeNameTask || docType == model.SalesforceDocumentTypeNameEvent {
+		currentTime := time.Now().AddDate(0, 0, -30).UTC()
+		return now.New(currentTime).BeginningOfDay().Unix() // get from last 30 days
 	}
 
 	currentTime := time.Now().AddDate(0, 0, -90).UTC()

@@ -243,6 +243,23 @@ func (store *MemSQL) createProjectDependencies(projectID int64, agentUUID string
 	defaultExcludebotState := true
 	defaultDriftIntegrationState := false
 	defaultClearBitIntegrationState := false
+
+	//default timeline config
+	timelinesConfig := model.TimelinesConfig{
+		DisabledEvents: []string{"Contact Updated", "Campaign Member Updated", "Engagement Meeting Updated", "Engagement Call Updated"}, //Display Names. Used on FE only.
+		UserConfig: model.UserConfig{
+			PropsToShow: []string{U.UP_EMAIL, U.UP_COUNTRY, U.UP_PAGE_COUNT},
+		},
+		AccountConfig: model.AccountConfig{
+			AccountPropsToShow: []string{U.GP_HUBSPOT_COMPANY_INDUSTRY, U.GP_HUBSPOT_COMPANY_COUNTRY, U.GP_HUBSPOT_COMPANY_NUMBEROFEMPLOYEES},
+			UserPropToShow:     U.UP_USER_ID,
+		},
+	}
+	tlConfigEncoded, err := U.EncodeStructTypeToPostgresJsonb(timelinesConfig)
+	if err != nil {
+		logCtx.Error("Default Timelines Config Encode Failed.")
+	}
+
 	_, errCode := store.createProjectSetting(&model.ProjectSetting{
 		ProjectId:            projectID,
 		AutoTrack:            &defaultAutoTrackState,
@@ -251,8 +268,9 @@ func (store *MemSQL) createProjectDependencies(projectID int64, agentUUID string
 		IntDrift:             &defaultDriftIntegrationState,
 		IntClearBit:          &defaultClearBitIntegrationState,
 		AutoCaptureFormFills: &model.AutoCaptureFormFillsDefault,
-
-		AutoClickCapture: &model.AutoClickCaptureDefault,
+		IntegrationBits:      model.DEFAULT_STRING_WITH_ZEROES_32BIT,
+		AutoClickCapture:     &model.AutoClickCaptureDefault,
+		TimelinesConfig:      tlConfigEncoded,
 	})
 	if errCode != http.StatusCreated {
 		logCtx.Error("Create project settings failed on create project dependencies.")

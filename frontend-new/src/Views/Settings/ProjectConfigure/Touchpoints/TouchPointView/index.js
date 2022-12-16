@@ -178,10 +178,10 @@ const TouchpointView = ({
       });
   };
 
-  const getEventToCall = () => {
-    if (tchRuleType === RULE_TYPE_HS_EMAILS) {
+  const getEventToCall = (startsWith = false) => {
+    if (tchRuleType === RULE_TYPE_HS_EMAILS && !startsWith) {
       return '$hubspot_engagement_email';
-    } else if (tchRuleType === RULE_TYPE_HS_CONTACT) {
+    } else if (tchRuleType === RULE_TYPE_HS_CONTACT && !startsWith) {
       return '$hubspot_contact_updated';
     } else if (tchRuleType === RULE_TYPE_HS_FORM_SUBMISSIONS) {
       return '$hubspot_form_submission';
@@ -200,7 +200,7 @@ const TouchpointView = ({
     const propState = [];
     const eventProps = [];
     if (tchType === '2') {
-      const startsWith = getEventToCall();
+      const startsWith = getStartsWith();
       eventProperties[eventToCall]
         ? eventProperties[eventToCall].forEach((prop) => {
             if (startsWith?.length ? prop[1]?.startsWith(startsWith) : true) {
@@ -557,7 +557,7 @@ const TouchpointView = ({
   const getStartsWith = () => {
     if (tchRuleType === RULE_TYPE_HS_EMAILS) {
       return '$hubspot_engagement';
-    } else if (tchRuleType === RULE_TYPE_HS_EMAILS) {
+    } else if (tchRuleType === RULE_TYPE_HS_CONTACT) {
       return '$hubspot_contact';
     } else if (tchRuleType === RULE_TYPE_HS_FORM_SUBMISSIONS) {
       return '';

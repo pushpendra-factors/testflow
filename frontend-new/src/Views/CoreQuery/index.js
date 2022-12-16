@@ -108,7 +108,8 @@ import {
   UPDATE_CHART_TYPES,
   SET_SAVED_QUERY_SETTINGS,
   UPDATE_PIVOT_CONFIG,
-  DEFAULT_PIVOT_CONFIG
+  DEFAULT_PIVOT_CONFIG,
+  UPDATE_FUNNEL_TABLE_CONFIG
 } from './constants';
 import {
   getValidGranularityOptions,
@@ -124,6 +125,7 @@ import NewProject from '../Settings/SetupAssist/Modals/NewProject';
 import AnalyseBeforeIntegration from './AnalyseBeforeIntegration';
 import SaveQuery from 'Components/SaveQuery';
 import _ from 'lodash';
+import { fetchKPIConfig } from 'Reducers/kpi';
 
 function CoreQuery({
   activeProject,
@@ -137,7 +139,8 @@ function CoreQuery({
   fetchProjectSettings,
   fetchMarketoIntegration,
   fetchBingAdsIntegration,
-  existingQueries
+  existingQueries,
+  fetchKPIConfig
 }) {
   const { query_id, query_type } = useParams();
 
@@ -239,16 +242,51 @@ function CoreQuery({
 
   const { show_criteria: result_criteria, performance_criteria: user_type } =
     useSelector((state) => state.analyticsQuery);
-  const { dashboards } = useSelector(
-    (state) => state.dashboard
-  );
+  const { dashboards } = useSelector((state) => state.dashboard);
 
   const dateRange = queryOptions.date_range;
   const { session_analytics_seq } = queryOptions;
   const { globalFilters } = queryOptions;
   const groupAnalysis = queryOptions.group_analysis;
-  const eventsCondition = queryOptions.events_condition
+  const eventsCondition = queryOptions.events_condition;
 
+  /*
+    This use Effect checks which route drawer we need to open
+    when we goto route /analyse/:query_type
+
+  */
+  useEffect(() => {
+    switch (query_type) {
+      case QUERY_TYPE_KPI:
+        setQueryType(QUERY_TYPE_KPI);
+        break;
+      case QUERY_TYPE_FUNNEL:
+        setQueryType(QUERY_TYPE_FUNNEL);
+        break;
+      case QUERY_TYPE_ATTRIBUTION:
+        setQueryType(QUERY_TYPE_ATTRIBUTION);
+        break;
+      case QUERY_TYPE_PROFILE:
+        setQueryType(QUERY_TYPE_PROFILE);
+        break;
+      case QUERY_TYPE_EVENT:
+        setQueryType(QUERY_TYPE_EVENT);
+        break;
+      default:
+        break;
+    }
+    if (query_type && query_type.length > 0) {
+      setDrawerVisible(true);
+      setQueries([]);
+      dispatch({
+        type: INITIALIZE_GROUPBY,
+        payload: {
+          global: [],
+          event: []
+        }
+      });
+    }
+  }, []);
   useEffect(() => {
     fetchDemoProject()
       .then((res) => {
@@ -281,6 +319,7 @@ function CoreQuery({
   }, [query_id, query_type, queriesState]);
 
   useEffect(() => {
+    fetchKPIConfig(activeProject?.id);
     fetchProjectSettingsV1(activeProject.id);
     fetchProjectSettings(activeProject.id);
     if (_.isEmpty(dashboards?.data)) {
@@ -307,7 +346,9 @@ function CoreQuery({
     marketo?.status ||
     integrationV1?.int_slack ||
     integration?.lead_squared_config !== null ||
-    (integration?.int_client_six_signal_key || integration?.int_factors_six_signal_key);
+    integration?.int_client_six_signal_key ||
+    integration?.int_factors_six_signal_key ||
+    integration?.int_rudderstack;
 
   const getQueryFromHashId = () =>
     queriesState.data.find((quer) => quer.id_text === query_id);
@@ -456,6 +497,13 @@ function CoreQuery({
   const updateLocalReducer = useCallback((type, payload) => {
     localDispatch({ type, payload });
   }, []);
+
+  const updateFunnelTableConfig = useCallback(
+    (payload) => {
+      updateLocalReducer(UPDATE_FUNNEL_TABLE_CONFIG, payload);
+    },
+    [updateLocalReducer]
+  );
 
   const updateChartTypes = useCallback(
     (payload) => {
@@ -1784,6 +1832,7 @@ function CoreQuery({
       resetComparisonData,
       handleCompareWithClick,
       updatePivotConfig,
+      updateFunnelTableConfig,
       setSelectedMainCategory,
       runQuery,
       queryChange,
@@ -1810,6 +1859,7 @@ function CoreQuery({
       resetComparisonData,
       handleCompareWithClick,
       updatePivotConfig,
+      updateFunnelTableConfig,
       runQuery,
       queryChange,
       profileQueryChange,
@@ -1817,7 +1867,8 @@ function CoreQuery({
       runFunnelQuery,
       runKPIQuery,
       runProfileQuery,
-      runAttributionQuery
+      runAttributionQuery,
+      setNavigatedFromDashboard
     ]
   );
 
@@ -2084,7 +2135,8 @@ const mapDispatchToProps = (dispatch) =>
       fetchProjectSettingsV1,
       fetchProjectSettings,
       fetchMarketoIntegration,
-      fetchBingAdsIntegration
+      fetchBingAdsIntegration,
+      fetchKPIConfig
     },
     dispatch
   );

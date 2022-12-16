@@ -46,6 +46,7 @@ func createSession(projectId int64, userId string, timestamp int64, campaignName
 		properties["$qp_utm_source"] = source
 	}
 	if landingPage != "" {
+		properties["is_page_view"] = "true"
 		properties["$page_url"] = landingPage
 	}
 
@@ -1315,6 +1316,25 @@ func createUsersForHubspotDeals(t *testing.T, project *model.Project, groups map
 		_, status = store.GetStore().UpdateUserPropertiesV2(project.ID, createdUserID, newProperties, time.Now().Unix(), "", "")
 		assert.Equal(t, http.StatusAccepted, status)
 	}
+
+	for i := 0; i < 4; i++ {
+		createdUserID, status := store.GetStore().CreateUser(
+			&model.User{
+				ProjectId:    project.ID,
+				Group1UserID: createdGroupUserID,
+				Source:       model.GetRequestSourcePointer(model.UserSourceHubspot),
+			})
+
+		assert.Equal(t, http.StatusCreated, status)
+
+		_ = createEventWithSession(project.ID, "", createdUserID, timestamp, "test", "", "", "", "", "lp1112")
+
+		// update user properties to add $group_id property = group.ID of created user
+		newProperties := &postgres.Jsonb{RawMessage: json.RawMessage([]byte(fmt.Sprintf(
+			`{"$group_id": "%d"}`, groups[model.GROUP_NAME_HUBSPOT_DEAL].ID)))}
+		_, status = store.GetStore().UpdateUserPropertiesV2(project.ID, createdUserID, newProperties, time.Now().Unix(), "", "")
+		assert.Equal(t, http.StatusAccepted, status)
+	}
 	return createdGroupUserID
 }
 func createUsersForHubspotCompanies(t *testing.T, project *model.Project, groups map[string]*model.Group, timestamp int64) {
@@ -1531,10 +1551,63 @@ func TestGetUserGroupWise(t *testing.T) {
 			LookbackDays:            10,
 		}
 
-		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, "", C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, "", C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Nil(t, err)
-		assert.Equal(t, float64(2), getConversionUserCountKpiLandingPage(query.AttributionKey, result, "lp1111"))
-		assert.Equal(t, float64(2), getSecondConversionUserCountKpiLandingPage(query.AttributionKey, result, "lp1111"))
+		assert.Equal(t, float64(1), getConversionUserCountKpiLandingPage(query.AttributionKey, result, "lp1111"))
+		assert.Equal(t, float64(1), getSecondConversionUserCountKpiLandingPage(query.AttributionKey, result, "lp1111"))
+
+	})
+
+	t.Run("HubspotDealsAllPageView", func(t *testing.T) {
+
+		query1 := model.KPIQuery{
+			Category:         model.ProfileCategory,
+			DisplayCategory:  model.HubspotDealsDisplayCategory,
+			PageUrl:          "",
+			Metrics:          []string{"Deals"},
+			GroupBy:          []model.KPIGroupBy{},
+			From:             timestamp,
+			To:               timestamp + 3*U.SECONDS_IN_A_DAY,
+			GroupByTimestamp: "date",
+		}
+
+		query2 := model.KPIQuery{}
+		U.DeepCopy(&query1, &query2)
+		query2.GroupByTimestamp = ""
+
+		kpiQueryGroup := model.KPIQueryGroup{
+			Class:         "kpi",
+			Queries:       []model.KPIQuery{query1, query2, query1, query2},
+			GlobalFilters: []model.KPIFilter{},
+			GlobalGroupBy: []model.KPIGroupBy{
+				{
+					Granularity:      "",
+					PropertyName:     model.HSDealIDProperty,
+					PropertyDataType: "numerical",
+					Entity:           "user",
+					ObjectType:       "",
+					GroupByType:      "raw_values",
+				},
+			},
+		}
+
+		query := &model.AttributionQuery{
+			AnalyzeType:             model.AnalyzeTypeHSDeals,
+			RunType:                 model.RunTypeHSDeals,
+			From:                    timestamp,
+			To:                      timestamp + 3*U.SECONDS_IN_A_DAY,
+			KPI:                     kpiQueryGroup,
+			AttributionKey:          model.AttributionKeyAllPageView,
+			TacticOfferType:         model.MarketingEventTypeOffer,
+			AttributionKeyDimension: []string{model.FieldAllPageViewUrl},
+			AttributionMethodology:  model.AttributionMethodLinear,
+			LookbackDays:            10,
+		}
+
+		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, "", C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		assert.Nil(t, err)
+		assert.Equal(t, float64(1), getConversionUserCountKpiLandingPage(query.AttributionKey, result, "lp1111"))
+		assert.Equal(t, float64(1), getSecondConversionUserCountKpiLandingPage(query.AttributionKey, result, "lp1111"))
 
 	})
 
@@ -1636,7 +1709,7 @@ func TestGetUserGroupWise(t *testing.T) {
 			LookbackDays:            10,
 		}
 
-		result, err := store.GetStore().ExecuteAttributionQueryV0(project.ID, query, "", C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, "", C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, float64(2), getConversionUserCountKpi(query.AttributionKey, result, "test"))
 		assert.Nil(t, err)
 

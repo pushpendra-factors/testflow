@@ -69,7 +69,9 @@ const CoreQuery = lazyWithRetry(() => import('../CoreQuery'));
 const Dashboard = lazyWithRetry(() => import('../Dashboard'));
 const Factors = lazyWithRetry(() => import('../Factors'));
 const PathAnalysis = lazyWithRetry(() => import('../PathAnalysis'));
-const PathAnalysisReport = lazyWithRetry(() => import('../PathAnalysis/PathAnalysisReport'));
+const PathAnalysisReport = lazyWithRetry(() =>
+  import('../PathAnalysis/PathAnalysisReport')
+);
 const Attribution = lazyWithRetry(() =>
   import('../../features/attribution/ui')
 );
@@ -107,7 +109,7 @@ function AppLayout({
     'solutions@factors.ai',
     'sonali@factors.ai',
     'praveenr@factors.ai',
-    'janani@factors.ai',
+    'janani@factors.ai'
   ];
 
   const asyncCallOnLoad = useCallback(async () => {
@@ -218,6 +220,12 @@ function AppLayout({
                       name='Home'
                       component={CoreQuery}
                     />
+
+                    <Route
+                      path='/analyse/:query_type'
+                      name='Home'
+                      component={CoreQuery}
+                    />
                     <Route path='/analyse' name='Home' component={CoreQuery} />
 
                     <Route
@@ -233,21 +241,6 @@ function AppLayout({
                       name='Factors'
                       component={FactorsInsights}
                     />
-
-{whiteListedAccounts.includes(activeAgent) ? <>
-                    <Route
-                      exact
-                      path='/path-analysis'
-                      name='Factors'
-                      component={PathAnalysis}
-                      />
-                    <Route
-                      exact
-                      path='/path-analysis/insights'
-                      name='Factors'
-                      component={PathAnalysisReport}
-                      />
-</>:  <Redirect to='/' />}
 
                     <Route path='/welcome' component={Welcome} />
 
@@ -267,6 +260,23 @@ function AppLayout({
                         name='attribution'
                         component={Attribution}
                       />
+                    ) : null}
+
+                    {whiteListedAccounts.includes(activeAgent) ? (
+                      <>
+                        <Route
+                          exact
+                          path='/path-analysis'
+                          name='Factors'
+                          component={PathAnalysis}
+                        />
+                        <Route
+                          exact
+                          path='/path-analysis/insights'
+                          name='Factors'
+                          component={PathAnalysisReport}
+                        />
+                      </>
                     ) : null}
 
                     {/* settings */}
@@ -315,6 +325,23 @@ function AppLayout({
                       path='/profiles/accounts'
                       component={AccountProfiles}
                     />
+
+                    {whiteListedAccounts.includes(activeAgent) && (
+                      <>
+                        <Route
+                          path='/path-analysis'
+                          name='PathAnalysis'
+                          exact
+                          component={PathAnalysis}
+                        />
+                        <Route
+                          path='/path-analysis/insights'
+                          name='PathAnalysisInsights'
+                          exact
+                          component={PathAnalysisReport}
+                        />
+                      </>
+                    )}
 
                     {!demoProjectId.includes(active_project?.id) ? (
                       <Route path='/project-setup' component={SetupAssist} />

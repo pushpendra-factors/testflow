@@ -50,8 +50,14 @@ func (store *MemSQL) ExecuteAttributionQueryV1(projectID int64, queryOriginal *m
 	model.AddDefaultKeyDimensionsToAttributionQuery(query)
 	model.AddDefaultMarketingEventTypeTacticOffer(query)
 
+	// LandingPage only allowed for tactic type offers
 	if query.AttributionKey == model.AttributionKeyLandingPage && query.TacticOfferType != model.MarketingEventTypeOffer {
 		return nil, errors.New("can not get landing page level report for Tactic/TacticOffer")
+	}
+
+	// AllPageView only allowed for tactic type offers
+	if query.AttributionKey == model.AttributionKeyAllPageView && query.TacticOfferType != model.MarketingEventTypeOffer {
+		return nil, errors.New("can not get all page view level report for Tactic/TacticOffer")
 	}
 
 	// for existing queries and backward support
@@ -87,7 +93,7 @@ func (store *MemSQL) ExecuteAttributionQueryV1(projectID int64, queryOriginal *m
 	}
 
 	var contentGroupNamesList []string
-	if query.AttributionKey == model.AttributionKeyLandingPage {
+	if query.AttributionKey == model.AttributionKeyLandingPage || query.AttributionKey == model.AttributionKeyAllPageView {
 		contentGroups, errCode := store.GetAllContentGroups(projectID)
 		if errCode != http.StatusFound {
 			return nil, errors.New("failed to get content groups")
@@ -116,17 +122,23 @@ func (store *MemSQL) ExecuteAttributionQueryV1(projectID int64, queryOriginal *m
 		return nil, err3
 	}
 
-	sessions, err4 := store.PullSessionsOfConvertedUsers(projectID, query, sessionEventNameID, usersIDsToAttribute, marketingReports, contentGroupNamesList, logCtx)
+	var userData map[string]map[string]model.UserSessionData
+	var err4 error
+	if query.AttributionKey == model.AttributionKeyAllPageView {
+		userData, err4 = store.PullPagesOfConvertedUsers(projectID, query, sessionEventNameID, usersIDsToAttribute, marketingReports, contentGroupNamesList, logCtx)
+	} else {
+		userData, err4 = store.PullSessionsOfConvertedUsers(projectID, query, sessionEventNameID, usersIDsToAttribute, marketingReports, contentGroupNamesList, logCtx)
+	}
 	if err4 != nil {
 		return nil, err4
 	}
 
 	// Pull Offline touch points for all the cases: "Tactic",  "Offer", "TacticOffer"
-	store.AppendOTPSessions(projectID, query, &sessions, *logCtx)
+	store.AppendOTPSessions(projectID, query, &userData, *logCtx)
 	logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Pull Offline touch points user data took time")
 	queryStartTime = time.Now().UTC().Unix()
 
-	attributionData, isCompare, err2 := store.GetAttributionData(projectID, query, sessions, userInfo, coalUserIdConversionTimestamp, marketingReports, kpiData, logCtx)
+	attributionData, isCompare, err2 := store.GetAttributionData(projectID, query, userData, userInfo, coalUserIdConversionTimestamp, marketingReports, kpiData, logCtx)
 	if err2 != nil {
 		return nil, err2
 	}
@@ -197,6 +209,10 @@ func (store *MemSQL) ExecuteAttributionQueryV0(projectID int64, queryOriginal *m
 		return nil, errors.New("can not get landing page level report for Tactic/TacticOffer")
 	}
 
+	if query.AttributionKey == model.AttributionKeyAllPageView && query.TacticOfferType != model.MarketingEventTypeOffer {
+		return nil, errors.New("can not get all page view level report for Tactic/TacticOffer")
+	}
+
 	// for existing queries and backward support
 	if query.QueryType == "" {
 		query.QueryType = model.AttributionQueryTypeConversionBased
@@ -234,7 +250,7 @@ func (store *MemSQL) ExecuteAttributionQueryV0(projectID int64, queryOriginal *m
 	}
 
 	var contentGroupNamesList []string
-	if query.AttributionKey == model.AttributionKeyLandingPage {
+	if query.AttributionKey == model.AttributionKeyLandingPage || query.AttributionKey == model.AttributionKeyAllPageView {
 		contentGroups, errCode := store.GetAllContentGroups(projectID)
 		if errCode != http.StatusFound {
 			return nil, errors.New("failed to get content groups")
@@ -270,22 +286,29 @@ func (store *MemSQL) ExecuteAttributionQueryV0(projectID int64, queryOriginal *m
 		return nil, err3
 	}
 
-	sessions, err4 := store.PullSessionsOfConvertedUsers(projectID, query, sessionEventNameID, usersIDsToAttribute, marketingReports, contentGroupNamesList, logCtx)
+	var userData map[string]map[string]model.UserSessionData
+	var err4 error
+	if query.AttributionKey == model.AttributionKeyAllPageView {
+		userData, err4 = store.PullPagesOfConvertedUsers(projectID, query, sessionEventNameID, usersIDsToAttribute, marketingReports, contentGroupNamesList, logCtx)
+	} else {
+		userData, err4 = store.PullSessionsOfConvertedUsers(projectID, query, sessionEventNameID, usersIDsToAttribute, marketingReports, contentGroupNamesList, logCtx)
+	}
 	if err4 != nil {
 		return nil, err4
 	}
+
 	if query.AnalyzeType == model.AnalyzeTypeUserKPI {
-		log.WithFields(log.Fields{"UserKPIAttribution": "Debug", "sessions": sessions}).Info("UserKPI Attribution sessions")
+		log.WithFields(log.Fields{"UserKPIAttribution": "Debug", "sessions": userData}).Info("UserKPI Attribution sessions")
 	}
 
 	// Pull Offline touch points for all the cases: "Tactic",  "Offer", "TacticOffer"
-	store.AppendOTPSessions(projectID, query, &sessions, *logCtx)
+	store.AppendOTPSessions(projectID, query, &userData, *logCtx)
 	if C.GetAttributionDebug() == 1 {
 		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Pull Offline touch points user data took time")
 	}
 	queryStartTime = time.Now().UTC().Unix()
 
-	attributionData, isCompare, err2 := store.GetAttributionData(projectID, query, sessions, userInfo, coalUserIdConversionTimestamp, marketingReports, kpiData, logCtx)
+	attributionData, isCompare, err2 := store.GetAttributionData(projectID, query, userData, userInfo, coalUserIdConversionTimestamp, marketingReports, kpiData, logCtx)
 	if err2 != nil {
 		return nil, err2
 	}
@@ -310,6 +333,49 @@ func (store *MemSQL) ExecuteAttributionQueryV0(projectID int64, queryOriginal *m
 	return result, nil
 }
 
+func (store *MemSQL) PullPagesOfConvertedUsers(projectID int64, query *model.AttributionQuery, sessionEventNameID string, usersToBeAttributed []string,
+	marketingReports *model.MarketingReports, contentGroupNamesList []string, logCtx *log.Entry) (map[string]map[string]model.UserSessionData, error) {
+
+	pages := make(map[string]map[string]model.UserSessionData)
+
+	queryStartTime := time.Now().UTC().Unix()
+	// Pull Sessions for the cases: "Tactic" and "TacticOffer".
+	// If Landing Page level report, pull for offer as well.
+	if query.TacticOfferType != model.MarketingEventTypeOffer || query.AttributionKey == model.AttributionKeyAllPageView {
+		var _pages map[string]map[string]model.UserSessionData
+		var users []string
+		var err error
+
+		// Get all the pages (userId, attributionId, UserSessionData) for given period by attribution key
+		_pages, users, err = store.getAllThePagesV1(projectID, sessionEventNameID, query, usersToBeAttributed, marketingReports, contentGroupNamesList, *logCtx)
+
+		if C.GetAttributionDebug() == 1 {
+			logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Pull Sessions data data took time")
+		}
+		queryStartTime = time.Now().UTC().Unix()
+
+		if err != nil {
+			return nil, err
+		}
+
+		usersInfo, _, err := store.GetCoalesceIDFromUserIDs(users, projectID, *logCtx)
+		if C.GetAttributionDebug() == 1 {
+			logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Get Coalesce user data took time")
+		}
+		queryStartTime = time.Now().UTC().Unix()
+		if err != nil {
+			return nil, err
+		}
+
+		model.UpdateSessionsMapWithCoalesceID(_pages, usersInfo, &pages)
+		if C.GetAttributionDebug() == 1 {
+			logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Update Sessions Coalesce user data took time")
+		}
+		queryStartTime = time.Now().UTC().Unix()
+	}
+	return pages, nil
+}
+
 func (store *MemSQL) PullSessionsOfConvertedUsers(projectID int64, query *model.AttributionQuery, sessionEventNameID string, usersToBeAttributed []string,
 	marketingReports *model.MarketingReports, contentGroupNamesList []string, logCtx *log.Entry) (map[string]map[string]model.UserSessionData, error) {
 
@@ -318,9 +384,18 @@ func (store *MemSQL) PullSessionsOfConvertedUsers(projectID int64, query *model.
 	queryStartTime := time.Now().UTC().Unix()
 	// Pull Sessions for the cases: "Tactic" and "TacticOffer".
 	// If Landing Page level report, pull for offer as well.
-	if query.TacticOfferType != model.MarketingEventTypeOffer || query.AttributionKey == model.AttributionKeyLandingPage {
+	if query.TacticOfferType != model.MarketingEventTypeOffer || query.AttributionKey == model.AttributionKeyLandingPage || query.AttributionKey == model.AttributionKeyAllPageView {
+		var _sessions map[string]map[string]model.UserSessionData
+		var sessionUsers []string
+		var err error
+
 		// Get all the sessions (userId, attributionId, UserSessionData) for given period by attribution key
-		_sessions, sessionUsers, err := store.getAllTheSessionsV1(projectID, sessionEventNameID, query, usersToBeAttributed, marketingReports, contentGroupNamesList, *logCtx)
+		if query.AttributionKey == model.AttributionKeyAllPageView {
+			_sessions, sessionUsers, err = store.getAllThePagesV1(projectID, sessionEventNameID, query, usersToBeAttributed, marketingReports, contentGroupNamesList, *logCtx)
+		} else {
+			_sessions, sessionUsers, err = store.getAllTheSessionsV1(projectID, sessionEventNameID, query, usersToBeAttributed, marketingReports, contentGroupNamesList, *logCtx)
+		}
+
 		if C.GetAttributionDebug() == 1 {
 			logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Pull Sessions data data took time")
 		}
@@ -655,6 +730,89 @@ func (store *MemSQL) GetAttributionData(projectID int64, query *model.Attributio
 	return attributionData, isCompare, nil
 }
 
+func ProcessAttributionDataToResultForLandingPage(projectID int64, query *model.AttributionQuery,
+	attributionData *map[string]*model.AttributionData, isCompare bool, queryStartTime int64,
+	marketingReports *model.MarketingReports, kpiData map[string]model.KPIInfo, logCtx *log.Entry) *model.QueryResult {
+
+	result := &model.QueryResult{}
+
+	if query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities || query.AnalyzeType == model.AnalyzeTypeUserKPI {
+
+		result = model.ProcessQueryKPIPageUrl(query, attributionData, *logCtx, kpiData, isCompare)
+		if C.GetAttributionDebug() == 1 {
+			logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Process Query Landing PageUrl took time")
+		}
+		queryStartTime = time.Now().UTC().Unix()
+
+	} else {
+		result = model.ProcessQueryPageUrl(query, attributionData, *logCtx, isCompare)
+		if C.GetAttributionDebug() == 1 {
+			logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Process Query Landing PageUrl took time")
+		}
+		queryStartTime = time.Now().UTC().Unix()
+	}
+
+	return result
+}
+
+func ProcessAttributionDataToResultForAllPageView(projectID int64, query *model.AttributionQuery,
+	attributionData *map[string]*model.AttributionData, isCompare bool, queryStartTime int64,
+	marketingReports *model.MarketingReports, kpiData map[string]model.KPIInfo, logCtx *log.Entry) *model.QueryResult {
+
+	result := &model.QueryResult{}
+
+	if query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities || query.AnalyzeType == model.AnalyzeTypeUserKPI {
+
+		result = model.ProcessQueryKPIPageUrl(query, attributionData, *logCtx, kpiData, isCompare)
+		if C.GetAttributionDebug() == 1 {
+			logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Process Query Landing PageUrl took time")
+		}
+		queryStartTime = time.Now().UTC().Unix()
+
+	} else {
+		result = model.ProcessQueryPageUrl(query, attributionData, *logCtx, isCompare)
+		if C.GetAttributionDebug() == 1 {
+			logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Process Query Landing PageUrl took time")
+		}
+		queryStartTime = time.Now().UTC().Unix()
+	}
+
+	return result
+}
+
+func ProcessAttributionDataToResultForKPI(projectID int64, query *model.AttributionQuery,
+	attributionData *map[string]*model.AttributionData, isCompare bool, queryStartTime int64,
+	marketingReports *model.MarketingReports, kpiData map[string]model.KPIInfo, logCtx *log.Entry) *model.QueryResult {
+
+	result := &model.QueryResult{}
+
+	// execution similar to the normal run - still keeping it separate for better understanding
+	result = model.ProcessQueryKPI(query, attributionData, marketingReports, isCompare, kpiData)
+	if C.GetAttributionDebug() == 1 || query.AnalyzeType == model.AnalyzeTypeUserKPI {
+		logCtx.WithFields(log.Fields{"result": result}).Info(fmt.Sprintf("KPI-Attribution result"))
+		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Process Query KPI took time")
+	}
+	queryStartTime = time.Now().UTC().Unix()
+
+	return result
+}
+
+func ProcessAttributionDataToResultForUserKPI(projectID int64, query *model.AttributionQuery,
+	attributionData *map[string]*model.AttributionData, isCompare bool, queryStartTime int64,
+	marketingReports *model.MarketingReports, kpiData map[string]model.KPIInfo, logCtx *log.Entry) *model.QueryResult {
+
+	result := &model.QueryResult{}
+
+	result = model.ProcessQueryUserKPI(query, attributionData, marketingReports, isCompare, kpiData)
+	if C.GetAttributionDebug() == 1 || query.AnalyzeType == model.AnalyzeTypeUserKPI {
+		logCtx.WithFields(log.Fields{"result": result}).Info(fmt.Sprintf("KPI-Attribution result"))
+		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Process Query KPI took time")
+	}
+	queryStartTime = time.Now().UTC().Unix()
+
+	return result
+}
+
 func ProcessAttributionDataToResult(projectID int64, query *model.AttributionQuery,
 	attributionData *map[string]*model.AttributionData, isCompare bool, queryStartTime int64,
 	marketingReports *model.MarketingReports, kpiData map[string]model.KPIInfo, logCtx *log.Entry) *model.QueryResult {
@@ -663,44 +821,36 @@ func ProcessAttributionDataToResult(projectID int64, query *model.AttributionQue
 
 	if query.AttributionKey == model.AttributionKeyLandingPage {
 
-		if query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities || query.AnalyzeType == model.AnalyzeTypeUserKPI {
+		result = ProcessAttributionDataToResultForLandingPage(projectID, query,
+			attributionData, isCompare, queryStartTime,
+			marketingReports, kpiData, logCtx)
 
-			result = model.ProcessQueryKPILandingPageUrl(query, attributionData, *logCtx, kpiData, isCompare)
-			if C.GetAttributionDebug() == 1 {
-				logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Process Query Landing PageUrl took time")
-			}
-			queryStartTime = time.Now().UTC().Unix()
+	} else if query.AttributionKey == model.AttributionKeyAllPageView {
 
-		} else {
-			result = model.ProcessQueryLandingPageUrl(query, attributionData, *logCtx, isCompare)
-			if C.GetAttributionDebug() == 1 {
-				logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Process Query Landing PageUrl took time")
-			}
-			queryStartTime = time.Now().UTC().Unix()
-		}
+		result = ProcessAttributionDataToResultForAllPageView(projectID, query,
+			attributionData, isCompare, queryStartTime,
+			marketingReports, kpiData, logCtx)
 
 	} else if query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities {
-		// execution similar to the normal run - still keeping it separate for better understanding
-		result = model.ProcessQueryKPI(query, attributionData, marketingReports, isCompare, kpiData)
-		if C.GetAttributionDebug() == 1 || query.AnalyzeType == model.AnalyzeTypeUserKPI {
-			logCtx.WithFields(log.Fields{"result": result}).Info(fmt.Sprintf("KPI-Attribution result"))
-			logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Process Query KPI took time")
-		}
-		queryStartTime = time.Now().UTC().Unix()
+
+		result = ProcessAttributionDataToResultForKPI(projectID, query,
+			attributionData, isCompare, queryStartTime,
+			marketingReports, kpiData, logCtx)
 
 	} else if query.AnalyzeType == model.AnalyzeTypeUserKPI {
-		result = model.ProcessQueryUserKPI(query, attributionData, marketingReports, isCompare, kpiData)
-		if C.GetAttributionDebug() == 1 || query.AnalyzeType == model.AnalyzeTypeUserKPI {
-			logCtx.WithFields(log.Fields{"result": result}).Info(fmt.Sprintf("KPI-Attribution result"))
-			logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Process Query KPI took time")
-		}
-		queryStartTime = time.Now().UTC().Unix()
+
+		result = ProcessAttributionDataToResultForUserKPI(projectID, query,
+			attributionData, isCompare, queryStartTime,
+			marketingReports, kpiData, logCtx)
+
 	} else {
+
 		result = model.ProcessQuery(query, attributionData, marketingReports, isCompare, projectID, *logCtx)
 		if C.GetAttributionDebug() == 1 {
 			logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Process Query Normal took time")
 		}
 		queryStartTime = time.Now().UTC().Unix()
+
 	}
 
 	return result
@@ -920,6 +1070,111 @@ func (store *MemSQL) runAttributionV1(goalEvent model.QueryEventWithProperties,
 
 // Returns the all the sessions (userId,attributionId,minTimestamp,maxTimestamp) for given
 // users from given period including lookback
+func (store *MemSQL) getAllThePagesV1(projectId int64, sessionEventNameId string, query *model.AttributionQuery, usersToPullSessionFor []string,
+	reports *model.MarketingReports, contentGroupNamesList []string, logCtx log.Entry) (map[string]map[string]model.UserSessionData, []string, error) {
+	logFields := log.Fields{
+		"project_id":            projectId,
+		"session_event_name_id": sessionEventNameId,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx = *logCtx.WithFields(logFields)
+	effectiveFrom := model.LookbackAdjustedFrom(query.From, query.LookbackDays)
+	effectiveTo := query.To
+	// extend the campaign window for engagement based attribution
+	if query.QueryType == model.AttributionQueryTypeEngagementBased {
+		effectiveFrom = model.LookbackAdjustedFrom(query.From, query.LookbackDays)
+		effectiveTo = model.LookbackAdjustedTo(query.To, query.LookbackDays)
+	}
+	attributionEventKey, err := model.GetQuerySessionProperty(query.AttributionKey)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	attributedSessionsByUserId := make(map[string]map[string]model.UserSessionData)
+	var userIdsWithSession []string
+
+	userIDsInBatches := U.GetStringListAsBatch(usersToPullSessionFor, model.UserBatchSize)
+	for _, users := range userIDsInBatches {
+
+		placeHolder := U.GetValuePlaceHolder(len(users))
+		value := U.GetInterfaceList(users)
+
+		contentGroupNamesToDummyNamesMap := model.GetContentGroupNamesToDummyNamesMap(contentGroupNamesList)
+		caseSelectStmt := "CASE WHEN JSON_EXTRACT_STRING(sessions.properties, ?) IS NULL THEN ? " +
+			" WHEN JSON_EXTRACT_STRING(sessions.properties, ?) = '' THEN ? ELSE JSON_EXTRACT_STRING(sessions.properties, ?) END"
+
+		queryUserSessionTimeRange := "SELECT sessions.user_id, " +
+			caseSelectStmt + " AS campaignID, " +
+			caseSelectStmt + " AS campaignName, " +
+			caseSelectStmt + " AS adgroupID, " +
+			caseSelectStmt + " AS adgroupName, " +
+			caseSelectStmt + " AS keywordName, " +
+			caseSelectStmt + " AS keywordMatchType, " +
+			caseSelectStmt + " AS source, " +
+			caseSelectStmt + " AS channel, " +
+			caseSelectStmt + " AS attribution_id, " +
+			caseSelectStmt + " AS gcl_id, " +
+			caseSelectStmt + " AS landingPageUrl, " +
+			caseSelectStmt + " AS allPageViewUrl, "
+
+		var qParams []interface{}
+
+		qParams = append(qParams,
+			U.EP_CAMPAIGN_ID, model.PropertyValueNone, U.EP_CAMPAIGN_ID, model.PropertyValueNone, U.EP_CAMPAIGN_ID,
+			U.EP_CAMPAIGN, model.PropertyValueNone, U.EP_CAMPAIGN, model.PropertyValueNone, U.EP_CAMPAIGN,
+			U.EP_ADGROUP_ID, model.PropertyValueNone, U.EP_ADGROUP_ID, model.PropertyValueNone, U.EP_ADGROUP_ID,
+			U.EP_ADGROUP, model.PropertyValueNone, U.EP_ADGROUP, model.PropertyValueNone, U.EP_ADGROUP,
+			U.EP_KEYWORD, model.PropertyValueNone, U.EP_KEYWORD, model.PropertyValueNone, U.EP_KEYWORD,
+			U.EP_KEYWORD_MATCH_TYPE, model.PropertyValueNone, U.EP_KEYWORD_MATCH_TYPE, model.PropertyValueNone, U.EP_KEYWORD_MATCH_TYPE,
+			U.EP_SOURCE, model.PropertyValueNone, U.EP_SOURCE, model.PropertyValueNone, U.EP_SOURCE,
+			U.EP_CHANNEL, model.PropertyValueNone, U.EP_CHANNEL, model.PropertyValueNone, U.EP_CHANNEL,
+			attributionEventKey, model.PropertyValueNone, attributionEventKey, model.PropertyValueNone, attributionEventKey,
+			U.EP_GCLID, model.PropertyValueNone, U.EP_GCLID, model.PropertyValueNone, U.EP_GCLID,
+			U.UP_INITIAL_PAGE_URL, model.PropertyValueNone, U.UP_INITIAL_PAGE_URL, model.PropertyValueNone, U.UP_INITIAL_PAGE_URL,
+			U.EP_PAGE_URL, model.PropertyValueNone, U.EP_PAGE_URL, model.PropertyValueNone, U.EP_PAGE_URL)
+
+		wStmt, wParams, err := getSelectSQLStmtForContentGroup(contentGroupNamesToDummyNamesMap)
+		if err != nil {
+			return nil, nil, err
+		}
+		queryUserSessionTimeRange = queryUserSessionTimeRange + wStmt
+		qParams = append(qParams, wParams...)
+
+		queryUserSessionTimeRange = queryUserSessionTimeRange +
+			" sessions.timestamp FROM events AS sessions " +
+			" WHERE sessions.project_id=? " +
+
+			// Filter page view event.
+			"AND sessions.user_id IN (" + placeHolder + " ) AND sessions.timestamp BETWEEN ? AND ?" +
+			" AND (JSON_EXTRACT_STRING(sessions.properties, ?)=? )"
+
+		wParams = []interface{}{projectId}
+		wParams = append(wParams, value...)
+		wParams = append(wParams, effectiveFrom, effectiveTo, U.EP_IS_PAGE_VIEW, "true")
+		qParams = append(qParams, wParams...)
+
+		rows, tx, err, reqID := store.ExecQueryWithContext(queryUserSessionTimeRange, qParams)
+		if err != nil {
+			logCtx.WithError(err).Error("SQL Query failed")
+			return nil, nil, err
+		}
+		if C.GetAttributionDebug() == 1 {
+			logCtx.Info("Attribution before ProcessEventRows")
+		}
+		defer U.CloseReadQuery(rows, tx)
+
+		processErr := model.ProcessEventRows(rows, query, reports, contentGroupNamesList, &attributedSessionsByUserId, &userIdsWithSession, logCtx, reqID)
+		U.CloseReadQuery(rows, tx)
+		if processErr != nil {
+			return attributedSessionsByUserId, userIdsWithSession, processErr
+		}
+	}
+
+	return attributedSessionsByUserId, userIdsWithSession, nil
+}
+
+// Returns the all the sessions (userId,attributionId,minTimestamp,maxTimestamp) for given
+// users from given period including lookback
 func (store *MemSQL) getAllTheSessionsV1(projectId int64, sessionEventNameId string, query *model.AttributionQuery, usersToPullSessionFor []string,
 	reports *model.MarketingReports, contentGroupNamesList []string, logCtx log.Entry) (map[string]map[string]model.UserSessionData, []string, error) {
 	logFields := log.Fields{
@@ -964,7 +1219,8 @@ func (store *MemSQL) getAllTheSessionsV1(projectId int64, sessionEventNameId str
 			caseSelectStmt + " AS channel, " +
 			caseSelectStmt + " AS attribution_id, " +
 			caseSelectStmt + " AS gcl_id, " +
-			caseSelectStmt + " AS landingPageUrl, "
+			caseSelectStmt + " AS landingPageUrl, " +
+			caseSelectStmt + " AS allPageViewUrl, "
 
 		var qParams []interface{}
 
@@ -979,7 +1235,8 @@ func (store *MemSQL) getAllTheSessionsV1(projectId int64, sessionEventNameId str
 			U.EP_CHANNEL, model.PropertyValueNone, U.EP_CHANNEL, model.PropertyValueNone, U.EP_CHANNEL,
 			attributionEventKey, model.PropertyValueNone, attributionEventKey, model.PropertyValueNone, attributionEventKey,
 			U.EP_GCLID, model.PropertyValueNone, U.EP_GCLID, model.PropertyValueNone, U.EP_GCLID,
-			U.UP_INITIAL_PAGE_URL, model.PropertyValueNone, U.UP_INITIAL_PAGE_URL, model.PropertyValueNone, U.UP_INITIAL_PAGE_URL)
+			U.UP_INITIAL_PAGE_URL, model.PropertyValueNone, U.UP_INITIAL_PAGE_URL, model.PropertyValueNone, U.UP_INITIAL_PAGE_URL,
+			U.EP_PAGE_URL, model.PropertyValueNone, U.EP_PAGE_URL, model.PropertyValueNone, U.EP_PAGE_URL)
 
 		wStmt, wParams, err := getSelectSQLStmtForContentGroup(contentGroupNamesToDummyNamesMap)
 		if err != nil {

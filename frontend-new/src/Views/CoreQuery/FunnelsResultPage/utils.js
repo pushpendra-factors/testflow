@@ -25,6 +25,7 @@ import {
   DISPLAY_PROP
 } from '../../../utils/constants';
 import NonClickableTableHeader from '../../../components/NonClickableTableHeader';
+import ControlledComponent from 'Components/ControlledComponent';
 
 const windowSize = {
   w: window.outerWidth,
@@ -266,8 +267,12 @@ export const getTableColumns = (
   isComparisonApplied,
   resultData,
   userPropNames,
-  eventPropertiesDisplayNames
+  eventPropertiesDisplayNames,
+  tableConfig = {}
 ) => {
+  const showOnlyCount =
+    !tableConfig.showDuration && !tableConfig.showPercentage;
+
   const unsortedBreakdown = _.get(resultData, 'meta.query.gbp', []);
   const isBreakdownApplied = unsortedBreakdown.length > 0;
   const breakdown = SortData(unsortedBreakdown, 'eni', 'ascend');
@@ -382,51 +387,78 @@ export const getTableColumns = (
       className: 'bg-white tableParentHeader'
     };
 
-    const percentCol = {
-      width: 100,
-      className: 'text-right border-none',
-      dataIndex: `${arrayMapper[index].displayName}-${index}-percent`,
-      title: isBreakdownApplied ? (
-        getClickableTitleSorter(
-          <SVG name='percentconversion' />,
-          {
-            key: `${arrayMapper[index].displayName}-${index}-percent`,
-            type: 'numerical',
-            subtype: null
-          },
-          currentSorter,
-          handleSorting,
-          'right',
-          'center',
-          '',
-          'Conv. from prev. step'
-        )
-      ) : (
-        <NonClickableTableHeader
-          titleTooltip='Conv. from prev. step'
-          verticalAlignment='end'
-          alignment='right'
-          title={<SVG name='percentconversion' />}
-        />
-      ),
-      render: (d) =>
-        isBreakdownApplied || !isComparisonApplied ? (
-          <>
-            <NumFormat number={d} />%
-          </>
+    const percentCol = [];
+
+    if (tableConfig.showPercentage) {
+      percentCol.push({
+        width: 200,
+        className: 'text-right border-none',
+        dataIndex: `${arrayMapper[index].displayName}-${index}-percent`,
+        title: isBreakdownApplied ? (
+          getClickableTitleSorter(
+            <SVG name='percentconversion' />,
+            {
+              key: `${arrayMapper[index].displayName}-${index}-percent`,
+              type: 'numerical',
+              subtype: null
+            },
+            currentSorter,
+            handleSorting,
+            'right',
+            'center',
+            '',
+            'Conv. from prev. step'
+          )
         ) : (
-          compareSkeleton(`${d.percent}%`, `${d.compare_percent}%`)
-        )
-    };
+          <NonClickableTableHeader
+            titleTooltip='Conv. from prev. step'
+            verticalAlignment='end'
+            alignment='right'
+            title={<SVG name='percentconversion' />}
+          />
+        ),
+        render: (d) =>
+          isBreakdownApplied || !isComparisonApplied ? (
+            <>
+              <NumFormat number={d} />%
+            </>
+          ) : (
+            compareSkeleton(`${d.percent}%`, `${d.compare_percent}%`)
+          )
+      });
+    }
+
+    const countLabelText = (
+      <Text color='grey-2' type='title' level={7} extraClass='mb-0'>
+        count of users
+      </Text>
+    );
+
+    const countLabelSVG = <SVG name='countconversion' />;
+
+    const countColumnHeader = (
+      <>
+        <ControlledComponent controller={showOnlyCount}>
+          <div className='flex col-gap-1 items-center'>
+            {countLabelSVG}
+            {countLabelText}
+          </div>
+        </ControlledComponent>
+        <ControlledComponent controller={!showOnlyCount}>
+          {countLabelSVG}
+        </ControlledComponent>
+      </>
+    );
+
     const countCol = {
-      width: 100,
+      width: 200,
       className: `text-right ${
         index < queries.length - 1 ? 'has-border' : 'border-none'
       }`,
       dataIndex: `${arrayMapper[index].displayName}-${index}-count`,
       title: isBreakdownApplied ? (
         getClickableTitleSorter(
-          <SVG name='countconversion' />,
+          countColumnHeader,
           {
             key: `${arrayMapper[index].displayName}-${index}-count`,
             type: 'numerical',
@@ -442,9 +474,9 @@ export const getTableColumns = (
       ) : (
         <NonClickableTableHeader
           titleTooltip='count'
-          verticalAlignment='end'
-          alignment='right'
-          title={<SVG name='countconversion' />}
+          verticalAlignment={showOnlyCount ? 'center' : 'end'}
+          alignment={'end'}
+          title={countColumnHeader}
         />
       ),
       render: (d) =>
@@ -458,9 +490,9 @@ export const getTableColumns = (
         )
     };
     const timeCol = [];
-    if (index > 0) {
+    if (index > 0 && tableConfig.showDuration) {
       timeCol.push({
-        width: 100,
+        width: 200,
         className: 'text-right border-none',
         dataIndex: `time[${index - 1}-${index}]`,
         title: isBreakdownApplied ? (
@@ -492,7 +524,7 @@ export const getTableColumns = (
             : compareSkeleton(d.time, d.compare_time)
       });
     }
-    queryColumn.children = [percentCol, ...timeCol, countCol];
+    queryColumn.children = [...percentCol, ...timeCol, countCol];
     return queryColumn;
   });
 

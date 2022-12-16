@@ -24,24 +24,24 @@ type CustomMetricObjectTypeAndProperties struct {
 }
 
 type CustomMetricConfigV1 struct {
-	ObjectType         		string              `json:"obj_ty"`
-	TypeOfQuery        		int                 `json:"type_of_query"`
-	AggregateFunctions 		[]string            `json:"agFn"`
-	Properties         		[]map[string]string `json:"properties"`
-	TypeOfQueryDisplayName 		string              `json:"type_of_query_display_name"`
+	ObjectType             string              `json:"obj_ty"`
+	TypeOfQuery            int                 `json:"type_of_query"`
+	AggregateFunctions     []string            `json:"agFn"`
+	Properties             []map[string]string `json:"properties"`
+	TypeOfQueryDisplayName string              `json:"type_of_query_display_name"`
 }
 
 const (
-	SumAggregateFunction     		= "sum"
-	UniqueAggregateFunction  		= "unique"
-	AverageAggregateFunction 		= "average"
-	CountAggregateFunction   		= "count"
-	Derived                  		= "derived"
-	DerivedMetrics           		= "derived_metrics"
-	CustomEventType          		= "custom_events"
-	ProfileQueryTypeDisplayName		= "Profile Based"
-	DerivedQueryTypeDisplayName		= "Derived"
-	EventBasedQueryTypeDisplayName		= "Event Based"
+	SumAggregateFunction           = "sum"
+	UniqueAggregateFunction        = "unique"
+	AverageAggregateFunction       = "average"
+	CountAggregateFunction         = "count"
+	Derived                        = "derived"
+	DerivedMetrics                 = "derived_metrics"
+	CustomEventType                = "custom_events"
+	ProfileQueryTypeDisplayName    = "Profile Based"
+	DerivedQueryTypeDisplayName    = "Derived"
+	EventBasedQueryTypeDisplayName = "Event Based"
 )
 
 var (
@@ -68,7 +68,7 @@ type CustomMetric struct {
 	Description     string          `json:"description"`
 	TypeOfQuery     int             `json:"type_of_query"`
 	Transformations *postgres.Jsonb `json:"transformations"`
-	ObjectType      string          `json:"obj_ty"`
+	ObjectType      string          `json:"obj_ty"` // KPI Display Category for the metric
 	CreatedAt       time.Time       `json:"created_at"`
 	UpdatedAt       time.Time       `json:"updated_at"`
 }
@@ -172,7 +172,7 @@ func (transformation *CustomMetricTransformation) IsValid(queryType int) bool {
 			return false
 		}
 	} else if queryType == EventBasedQueryType {
-		if !U.ContainsStringInArray(CustomEventsAggregateFunctions, transformation.AggregateFunction) || strings.Contains(transformation.AggregateProperty, " ") || 
+		if !U.ContainsStringInArray(CustomEventsAggregateFunctions, transformation.AggregateFunction) || strings.Contains(transformation.AggregateProperty, " ") ||
 			transformation.EventName == "" || ((transformation.AggregateFunction == SumAggregateFunction || transformation.AggregateFunction == AverageAggregateFunction) && transformation.Entity == "") {
 			return false
 		}
