@@ -807,7 +807,7 @@ type Model interface {
 
 	// leadsquaredmarker
 	CreateLeadSquaredMarker(marker model.LeadsquaredMarker) int
-	GetLeadSquaredMarker(ProjectID int64, Delta int64, Document string, Tag string) (int, int)
+    GetLeadSquaredMarker(ProjectID int64, Delta int64, Document string, Tag string) (int, int, bool)
 
 	//ExplainV2
 	GetAllExplainV2EntityByProject(projectID int64) ([]model.ExplainV2EntityInfo, int)

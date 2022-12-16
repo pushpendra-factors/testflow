@@ -2,97 +2,209 @@ package model
 
 import (
 	"fmt"
+	"strings"
 )
 
 const (
-	LEADSQUARED_LEAD           = "lead"
-	LEADSQUARED_SALES_ACTIVITY = "sales_activity"
-	LEADSQUARED_EMAIL_SENT     = "email_sent"
-	LEADSQUARED_EMAIL_INFO     = "email_info"
-	LEADSQUARED_HAD_A_CALL     = "had_a_call"
+	LEADSQUARED_LEAD                                              = "lead"
+	LEADSQUARED_SALES_ACTIVITY                                    = "sales_activity"
+	LEADSQUARED_EMAIL_SENT                                        = "email_sent"
+	LEADSQUARED_EMAIL_INFO                                        = "email_info"
+	LEADSQUARED_HAD_A_CALL                                        = "had_a_call"
+	LEADSQUARED_CALLED_A_CUST_NEGATIVE_REPLY                      = "called_a_customer_negative_reply"
+	LEADSQUARED_CALLED_A_CUST_POSITIVE_REPLY                      = "called_a_customer_positive_reply"
+	LEADSQUARED_CALLED_TO_COLLECT_REFERRAL                        = "called_to_collect_referrals"
+	LEADSQUARED_EMAIL_BOUNCED                                     = "email_bounced"
+	LEADSQUARED_EMAIL_LINK_CLICKED                                = "email_link_clicked"
+	LEADSQUARED_EMAIL_MAILING_PREFERENCE_LINK_CLICKED             = "email_mailing_preference_link_clicked"
+	LEADSQUARED_EMAIL_MARKED_SPAM                                 = "email_marked_spam"
+	LEASQUARED_EMAIL_NEGATIVE_RESPONSE                            = "email_negative_response"
+	LEASQUARED_EMAIL_NEUTRAL_RESPONSE                             = "email_neutral_response"
+	LEASQUARED_EMAIL_POSITIVE_RESPONSE                            = "email_positive_response"
+	LEASQUARED_EMAIL_OPENED                                       = "email_opened"
+	LEASQUARED_EMAIL_POSITVE_INBOUND_EMAIL                        = "email_positive_inbound_email"
+	LEASQUARED_EMAIL_RESUBSCRIBED                                 = "email_resubscribed"
+	LEADSQUARED_EMAIL_SUBSCRIBED_TO_BOOTCAMP                      = "email_subscribed_to_bootcamp"
+	LEADSQUARED_EMAIL_SUBSCRIBED_TO_COLLECTION                    = "email_subscribed_to_collection"
+	LEADSQUARED_EMAIL_SUBSCRIBED_TO_EVENTS                        = "email_subscribed_to_events"
+	LEADSQUARED_EMAIL_SUBSCRIBED_TO_FESTIVAL                      = "email_subscribed_to_festival"
+	LEADSQUARED_EMAIL_SUBSCRIBED_TO_INTERNNATIONAL_REACTIVATION   = "email_subscribed_to_internation_reactivation"
+	LEADSQUARED_EMAIL_SUBSCRIBED_TO_NEWSLETTER                    = "email_subscribed_to_newsletter"
+	LEADSQUARED_EMAIL_SUBSCRIBED_TO_REACTIVATION                  = "email_subscribed_to_reactivation"
+	LEADSQUARED_EMAIL_SUBSCRIBED_TO_REFERRAL                      = "email_subscribed_to_referrral"
+	LEADSQUARED_EMAIL_SUBSCRIBED_TO_SURVEY                        = "email_subscribed_to_survey"
+	LEADSQUARED_EMAIL_SUBSCRIBED_TO_TEST                          = "email_subscribed_to_test"
+	LEADSQUARED_EMAIL_SUBSCRIBED_TO_WORKSHOP                      = "email_subscribed_to_workshop"
+	LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_BOOTCAMP                    = "email_unsubscribed_to_bootcamp"
+	LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_COLLECTION                  = "email_unsubscribed_to_collection"
+	LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_EVENTS                      = "email_unsubscribed_to_events"
+	LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_FESTIVAL                    = "email_unsubscribed_to_festival"
+	LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_INTERNNATIONAL_REACTIVATION = "email_unsubscribed_to_internation_reactivation"
+	LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_NEWSLETTER                  = "email_unsubscribed_to_newsletter"
+	LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_REACTIVATION                = "email_unsubscribed_to_reactivation"
+	LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_REFERRAL                    = "email_unsubscribed_to_referrral"
+	LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_SURVEY                      = "email_unsubscribed_to_survey"
+	LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_TEST                        = "email_unsubscribed_to_test"
+	LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_WORKSHOP                    = "email_unsubscribed_to_workshop"
+	LEADSQUARED_EMAIL_UNSUBSCRIBE_LINK_CLICKED                    = "email_unsubscribe_link_clicked"
+	LEADSQUARED_EMAIL_UNSUBSCRIBED                                = "email_unsubscribed"
+	LEADSQUARED_EMAIL_VIEW_IN_BROWSER_LINK_CLICKED                = "email_view_in_browser_link_clicked"
+	LEADSQUARED_EMAIL_RECEIVED                                    = "email_received"
 )
 
-var LeadSquaredDocumentToQuery = map[string]string{
-	LEADSQUARED_LEAD: "select * FROM `%s.%s.lead`" +
-		" WHERE %v AND ProspectAutoId > %v order by ProspectAutoId asc LIMIT %v OFFSET 0",
-	LEADSQUARED_SALES_ACTIVITY: "select * FROM `%s.%s.sales_activity`" +
-		" WHERE %v AND CreatedOnUnix > %v order by CreatedOnUnix asc LIMIT %v OFFSET 0", // fix this
-	LEADSQUARED_EMAIL_SENT: "select * FROM `%s.%s.email_sent`" +
-		" WHERE %v AND CreatedOnUnix > %v order by CreatedOnUnix asc LIMIT %v OFFSET 0", // fix this
-	LEADSQUARED_EMAIL_INFO: "select * FROM `%s.%s.email_info`" +
-		" WHERE %v AND CreatedOnUnix > %v order by CreatedOnUnix asc LIMIT %v OFFSET 0", // fix this
-	LEADSQUARED_HAD_A_CALL: "select * FROM `%s.%s.had_a_call`" +
-		" WHERE %v AND CreatedOnUnix > %v order by CreatedOnUnix asc LIMIT %v OFFSET 0", // fix this
+func LeadSquaredDocumentToQuery(docType string) string {
+	if docType == LEADSQUARED_LEAD {
+		return "select * FROM `%s.%s." + LeadSquaredTableName[docType] + "` WHERE %v AND ProspectAutoId > %v order by ProspectAutoId asc LIMIT %v OFFSET 0"
+	} else if ActivityEvents[docType] == true {
+		return "select * FROM `%s.%s." + LeadSquaredTableName[docType] + "` WHERE %v AND CreatedOnUnix > %v order by CreatedOnUnix asc LIMIT %v OFFSET 0"
+	}
+	return ""
 }
 
-var LeadSquaredDocumentEndpoint = map[string]string{
-	LEADSQUARED_LEAD:           "/v2/LeadManagement.svc/Leads.RecentlyModified",
-	LEADSQUARED_SALES_ACTIVITY: "/v2/ProspectActivity.svc/CustomActivity/RetrieveByActivityEvent",
-	LEADSQUARED_EMAIL_SENT:     "/v2/ProspectActivity.svc/CustomActivity/RetrieveByActivityEvent",
-	LEADSQUARED_EMAIL_INFO:     "/v2/ProspectActivity.svc/CustomActivity/RetrieveByActivityEvent",
-	LEADSQUARED_HAD_A_CALL:     "/v2/ProspectActivity.svc/CustomActivity/RetrieveByActivityEvent",
+var ActivityEvents = map[string]bool{
+	LEADSQUARED_SALES_ACTIVITY:                                    true,
+	LEADSQUARED_EMAIL_SENT:                                        true,
+	LEADSQUARED_EMAIL_INFO:                                        true,
+	LEADSQUARED_HAD_A_CALL:                                        true,
+	LEADSQUARED_CALLED_A_CUST_NEGATIVE_REPLY:                      true,
+	LEADSQUARED_CALLED_A_CUST_POSITIVE_REPLY:                      true,
+	LEADSQUARED_CALLED_TO_COLLECT_REFERRAL:                        true,
+	LEADSQUARED_EMAIL_BOUNCED:                                     true,
+	LEADSQUARED_EMAIL_LINK_CLICKED:                                true,
+	LEADSQUARED_EMAIL_MAILING_PREFERENCE_LINK_CLICKED:             true,
+	LEADSQUARED_EMAIL_MARKED_SPAM:                                 true,
+	LEASQUARED_EMAIL_NEGATIVE_RESPONSE:                            true,
+	LEASQUARED_EMAIL_NEUTRAL_RESPONSE:                             true,
+	LEASQUARED_EMAIL_POSITIVE_RESPONSE:                            true,
+	LEASQUARED_EMAIL_OPENED:                                       true,
+	LEASQUARED_EMAIL_POSITVE_INBOUND_EMAIL:                        true,
+	LEASQUARED_EMAIL_RESUBSCRIBED:                                 true,
+	LEADSQUARED_EMAIL_SUBSCRIBED_TO_BOOTCAMP:                      true,
+	LEADSQUARED_EMAIL_SUBSCRIBED_TO_COLLECTION:                    true,
+	LEADSQUARED_EMAIL_SUBSCRIBED_TO_EVENTS:                        true,
+	LEADSQUARED_EMAIL_SUBSCRIBED_TO_FESTIVAL:                      true,
+	LEADSQUARED_EMAIL_SUBSCRIBED_TO_INTERNNATIONAL_REACTIVATION:   true,
+	LEADSQUARED_EMAIL_SUBSCRIBED_TO_NEWSLETTER:                    true,
+	LEADSQUARED_EMAIL_SUBSCRIBED_TO_REACTIVATION:                  true,
+	LEADSQUARED_EMAIL_SUBSCRIBED_TO_REFERRAL:                      true,
+	LEADSQUARED_EMAIL_SUBSCRIBED_TO_SURVEY:                        true,
+	LEADSQUARED_EMAIL_SUBSCRIBED_TO_TEST:                          true,
+	LEADSQUARED_EMAIL_SUBSCRIBED_TO_WORKSHOP:                      true,
+	LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_BOOTCAMP:                    true,
+	LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_COLLECTION:                  true,
+	LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_EVENTS:                      true,
+	LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_FESTIVAL:                    true,
+	LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_INTERNNATIONAL_REACTIVATION: true,
+	LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_NEWSLETTER:                  true,
+	LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_REACTIVATION:                true,
+	LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_REFERRAL:                    true,
+	LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_SURVEY:                      true,
+	LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_TEST:                        true,
+	LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_WORKSHOP:                    true,
+	LEADSQUARED_EMAIL_UNSUBSCRIBE_LINK_CLICKED:                    true,
+	LEADSQUARED_EMAIL_UNSUBSCRIBED:                                true,
+	LEADSQUARED_EMAIL_VIEW_IN_BROWSER_LINK_CLICKED:                true,
+	LEADSQUARED_EMAIL_RECEIVED:                                    true,
 }
 
-var LeadSquaredDocumentCreatedEventName = map[string]string{
-	LEADSQUARED_SALES_ACTIVITY: "sales_activity_created",
-	LEADSQUARED_EMAIL_SENT: "email_sent_activity_created",
-	LEADSQUARED_EMAIL_INFO: "email_info_activity_created",
-	LEADSQUARED_HAD_A_CALL: "had_a_call_activity_created",
+func LeadSquaredDocumentEndpoint(docType string) string {
+	if docType == LEADSQUARED_LEAD {
+		return "/v2/LeadManagement.svc/Leads.RecentlyModified"
+	} else if ActivityEvents[docType] == true {
+		return "/v2/ProspectActivity.svc/CustomActivity/RetrieveByActivityEvent"
+	}
+	return ""
 }
 
-var LeadSquaredDocumentUpdatedEventName = map[string]string{
-	LEADSQUARED_SALES_ACTIVITY: "sales_activity_updated",
-	LEADSQUARED_EMAIL_SENT: "email_sent_activity_updated",
-	LEADSQUARED_EMAIL_INFO: "email_info_activity_updated",
-	LEADSQUARED_HAD_A_CALL: "had_a_call_activity_updated",
+func LeadSquaredDocumentCreatedEventName(docType string) string {
+	if ActivityEvents[docType] == true {
+		if strings.HasSuffix(LeadSquaredTableName[docType], "_activity") {
+			return LeadSquaredTableName[docType] + "_created"
+		}
+		return LeadSquaredTableName[docType] + "_activity_created"
+	}
+	return ""
 }
 
-var LeadSquaredMetadataEndpoint = map[string]string{
-	LEADSQUARED_LEAD:           "/v2/LeadManagement.svc/LeadsMetaData.Get",
-	LEADSQUARED_SALES_ACTIVITY: "/v2/ProspectActivity.svc/CustomActivity/GetActivitySetting",
-	LEADSQUARED_EMAIL_SENT:     "/v2/ProspectActivity.svc/CustomActivity/GetActivitySetting",
-	LEADSQUARED_EMAIL_INFO:     "/v2/ProspectActivity.svc/CustomActivity/GetActivitySetting",
-	LEADSQUARED_HAD_A_CALL:     "/v2/ProspectActivity.svc/CustomActivity/GetActivitySetting",
+func LeadSquaredDocumentUpdatedEventName(docType string) string {
+	if ActivityEvents[docType] == true {
+		if strings.HasSuffix(LeadSquaredTableName[docType], "_activity") {
+			return LeadSquaredTableName[docType] + "_updated"
+		}
+		return LeadSquaredTableName[docType] + "_activity_updated"
+	}
+	return ""
+}
+
+func LeadSquaredMetadataEndpoint(docType string) string {
+	if docType == LEADSQUARED_LEAD {
+		return "/v2/LeadManagement.svc/LeadsMetaData.Get"
+	} else if ActivityEvents[docType] == true {
+		return "/v2/ProspectActivity.svc/CustomActivity/GetActivitySetting"
+	}
+	return ""
 }
 
 var LeadSquaredHistoricalSyncEndpoint = map[string]string{
 	LEADSQUARED_LEAD: "/v2/LeadManagement.svc/Leads.Get",
 }
-
 var LeadSquaredTableName = map[string]string{
-	LEADSQUARED_LEAD:           "lead",
-	LEADSQUARED_SALES_ACTIVITY: "sales_activity",
-	LEADSQUARED_EMAIL_SENT:     "email_sent",
-	LEADSQUARED_EMAIL_INFO:     "email_info",
-	LEADSQUARED_HAD_A_CALL:     "had_a_call",
+	LEADSQUARED_LEAD:                                              "lead",
+	LEADSQUARED_SALES_ACTIVITY:                                    "sales_activity",
+	LEADSQUARED_EMAIL_SENT:                                        "email_sent",
+	LEADSQUARED_EMAIL_INFO:                                        "email_info",
+	LEADSQUARED_HAD_A_CALL:                                        "had_a_call",
+	LEADSQUARED_CALLED_A_CUST_NEGATIVE_REPLY:                      "called_a_customer_negative_reply",
+	LEADSQUARED_CALLED_A_CUST_POSITIVE_REPLY:                      "called_a_customer_positive_reply",
+	LEADSQUARED_CALLED_TO_COLLECT_REFERRAL:                        "called_to_collect_referrals",
+	LEADSQUARED_EMAIL_BOUNCED:                                     "email_bounced",
+	LEADSQUARED_EMAIL_LINK_CLICKED:                                "email_link_clicked",
+	LEADSQUARED_EMAIL_MAILING_PREFERENCE_LINK_CLICKED:             "email_mailing_preference_link_clicked",
+	LEADSQUARED_EMAIL_MARKED_SPAM:                                 "email_marked_spam",
+	LEASQUARED_EMAIL_NEGATIVE_RESPONSE:                            "email_negative_response",
+	LEASQUARED_EMAIL_NEUTRAL_RESPONSE:                             "email_neutral_response",
+	LEASQUARED_EMAIL_POSITIVE_RESPONSE:                            "email_positive_response",
+	LEASQUARED_EMAIL_OPENED:                                       "email_opened",
+	LEASQUARED_EMAIL_POSITVE_INBOUND_EMAIL:                        "email_positive_inbound_email",
+	LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_EVENTS:                      "email_unsubscribed_to_events",
+	LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_FESTIVAL:                    "email_unsubscribed_to_festival",
+	LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_INTERNNATIONAL_REACTIVATION: "email_unsubscribed_to_internation_reactivation",
+	LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_NEWSLETTER:                  "email_unsubscribed_to_newsletter",
+	LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_REACTIVATION:                "email_unsubscribed_to_reactivation",
+	LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_REFERRAL:                    "email_unsubscribed_to_referrral",
+	LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_SURVEY:                      "email_unsubscribed_to_survey",
+	LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_TEST:                        "email_unsubscribed_to_test",
+	LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_WORKSHOP:                    "email_unsubscribed_to_workshop",
+	LEADSQUARED_EMAIL_UNSUBSCRIBE_LINK_CLICKED:                    "email_unsubscribe_link_clicked",
+	LEADSQUARED_EMAIL_UNSUBSCRIBED:                                "email_unsubscribed",
+	LEADSQUARED_EMAIL_VIEW_IN_BROWSER_LINK_CLICKED:                "email_view_in_browser_link_clicked",
+	LEADSQUARED_EMAIL_RECEIVED:                                    "email_received",
 }
 
-var LeadSquaredDataObjectColumnsQuery = map[string]string{
-	LEADSQUARED_LEAD:           "SELECT * FROM `%s.%s.INFORMATION_SCHEMA.COLUMNS` WHERE table_name = 'lead' ORDER by ordinal_position",
-	LEADSQUARED_SALES_ACTIVITY: "SELECT * FROM `%s.%s.INFORMATION_SCHEMA.COLUMNS` WHERE table_name = 'sales_activity' ORDER by ordinal_position",
-	LEADSQUARED_EMAIL_SENT:     "SELECT * FROM `%s.%s.INFORMATION_SCHEMA.COLUMNS` WHERE table_name = 'email_sent' ORDER by ordinal_position",
-	LEADSQUARED_EMAIL_INFO:     "SELECT * FROM `%s.%s.INFORMATION_SCHEMA.COLUMNS` WHERE table_name = 'email_info' ORDER by ordinal_position",
-	LEADSQUARED_HAD_A_CALL:     "SELECT * FROM `%s.%s.INFORMATION_SCHEMA.COLUMNS` WHERE table_name = 'had_a_call' ORDER by ordinal_position",
+func LeadSquaredDataObjectColumnsQuery(docType string) string {
+	return "SELECT * FROM `%s.%s.INFORMATION_SCHEMA.COLUMNS` WHERE table_name = '" + LeadSquaredTableName[docType] + "' ORDER by ordinal_position"
 }
 
-var LeadSquaredDocTypeIntegrationObjectMap = map[string]string{
-	LEADSQUARED_LEAD:           "user",
-	LEADSQUARED_SALES_ACTIVITY: "activity",
-	LEADSQUARED_EMAIL_SENT:     "activity",
-	LEADSQUARED_EMAIL_INFO:     "activity",
-	LEADSQUARED_HAD_A_CALL:     "activity",
+func LeadSquaredDocTypeIntegrationObjectMap(docType string) string {
+	if docType == LEADSQUARED_LEAD {
+		return "user"
+	} else if ActivityEvents[docType] == true {
+		return "activity"
+	}
+	return ""
 }
 
 var LeadSquaredUserIdMapping = map[string]string{
 	LEADSQUARED_LEAD: "ProspectID",
 }
 
-var LeadSquaredUserAutoIdMapping = map[string]string{
-	LEADSQUARED_LEAD:           "ProspectAutoId",
-	LEADSQUARED_SALES_ACTIVITY: "CreatedOnUnix",
-	LEADSQUARED_EMAIL_SENT:     "CreatedOnUnix",
-	LEADSQUARED_EMAIL_INFO:     "CreatedOnUnix",
-	LEADSQUARED_HAD_A_CALL:     "CreatedOnUnix",
+func LeadSquaredUserAutoIdMapping(docType string) (string, bool) {
+	if docType == LEADSQUARED_LEAD {
+		return "ProspectAutoId", true
+	} else if ActivityEvents[docType] == true {
+		return "CreatedOnUnix", true
+	}
+	return "", false
 }
 
 var LeadSquaredEmailMapping = map[string]string{
@@ -104,56 +216,98 @@ var LeadSquaredPhoneMapping = map[string]string{
 }
 
 var LeadSquaredDocumentTypeAlias = map[string]int{
-	LEADSQUARED_LEAD:           1,
-	LEADSQUARED_SALES_ACTIVITY: 2,
-	LEADSQUARED_EMAIL_SENT:     3,
-	LEADSQUARED_EMAIL_INFO:     4,
-	LEADSQUARED_HAD_A_CALL:     5,
+	LEADSQUARED_LEAD:                                              1,
+	LEADSQUARED_SALES_ACTIVITY:                                    2,
+	LEADSQUARED_EMAIL_SENT:                                        3,
+	LEADSQUARED_EMAIL_INFO:                                        4,
+	LEADSQUARED_HAD_A_CALL:                                        5,
+	LEADSQUARED_CALLED_A_CUST_NEGATIVE_REPLY:                      6,
+	LEADSQUARED_CALLED_A_CUST_POSITIVE_REPLY:                      7,
+	LEADSQUARED_CALLED_TO_COLLECT_REFERRAL:                        8,
+	LEADSQUARED_EMAIL_BOUNCED:                                     9,
+	LEADSQUARED_EMAIL_LINK_CLICKED:                                10,
+	LEADSQUARED_EMAIL_MAILING_PREFERENCE_LINK_CLICKED:             11,
+	LEADSQUARED_EMAIL_MARKED_SPAM:                                 12,
+	LEASQUARED_EMAIL_NEGATIVE_RESPONSE:                            13,
+	LEASQUARED_EMAIL_NEUTRAL_RESPONSE:                             14,
+	LEASQUARED_EMAIL_POSITIVE_RESPONSE:                            15,
+	LEASQUARED_EMAIL_OPENED:                                       16,
+	LEASQUARED_EMAIL_POSITVE_INBOUND_EMAIL:                        17,
+	LEASQUARED_EMAIL_RESUBSCRIBED:                                 18,
+	LEADSQUARED_EMAIL_SUBSCRIBED_TO_BOOTCAMP:                      19,
+	LEADSQUARED_EMAIL_SUBSCRIBED_TO_COLLECTION:                    20,
+	LEADSQUARED_EMAIL_SUBSCRIBED_TO_EVENTS:                        21,
+	LEADSQUARED_EMAIL_SUBSCRIBED_TO_FESTIVAL:                      22,
+	LEADSQUARED_EMAIL_SUBSCRIBED_TO_INTERNNATIONAL_REACTIVATION:   23,
+	LEADSQUARED_EMAIL_SUBSCRIBED_TO_NEWSLETTER:                    24,
+	LEADSQUARED_EMAIL_SUBSCRIBED_TO_REACTIVATION:                  25,
+	LEADSQUARED_EMAIL_SUBSCRIBED_TO_REFERRAL:                      26,
+	LEADSQUARED_EMAIL_SUBSCRIBED_TO_SURVEY:                        27,
+	LEADSQUARED_EMAIL_SUBSCRIBED_TO_TEST:                          28,
+	LEADSQUARED_EMAIL_SUBSCRIBED_TO_WORKSHOP:                      29,
+	LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_BOOTCAMP:                    30,
+	LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_COLLECTION:                  31,
+	LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_EVENTS:                      32,
+	LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_FESTIVAL:                    33,
+	LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_INTERNNATIONAL_REACTIVATION: 34,
+	LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_NEWSLETTER:                  35,
+	LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_REACTIVATION:                36,
+	LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_REFERRAL:                    37,
+	LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_SURVEY:                      38,
+	LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_TEST:                        39,
+	LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_WORKSHOP:                    40,
+	LEADSQUARED_EMAIL_UNSUBSCRIBE_LINK_CLICKED:                    41,
+	LEADSQUARED_EMAIL_UNSUBSCRIBED:                                42,
+	LEADSQUARED_EMAIL_VIEW_IN_BROWSER_LINK_CLICKED:                43,
+	LEADSQUARED_EMAIL_RECEIVED:                                    44,
 }
 
-var LeadSquaredDataObjectFilters = map[string]string{
-	LEADSQUARED_LEAD:           "DATE(%v) = '%v'",
-	LEADSQUARED_SALES_ACTIVITY: "DATE(%v) = '%v'",
-	LEADSQUARED_EMAIL_SENT:     "DATE(%v) = '%v'",
-	LEADSQUARED_EMAIL_INFO:     "DATE(%v) = '%v'",
-	LEADSQUARED_HAD_A_CALL:     "DATE(%v) = '%v'",
+func LeadSquaredDataObjectFilters(docType string) string {
+	if docType == LEADSQUARED_LEAD {
+		return "DATE(%v) = '%v'"
+	} else if ActivityEvents[docType] == true {
+		return "DATE(%v) = '%v'"
+	}
+	return ""
 }
 
-var LeadSquaredDataObjectFiltersColumn = map[string]string{
-	LEADSQUARED_LEAD:           "synced_at",
-	LEADSQUARED_SALES_ACTIVITY: "synced_at",
-	LEADSQUARED_EMAIL_SENT:     "synced_at",
-	LEADSQUARED_EMAIL_INFO:     "synced_at",
-	LEADSQUARED_HAD_A_CALL:     "synced_at",
+func LeadSquaredDataObjectFiltersColumn(docType string) string {
+	if docType == LEADSQUARED_LEAD {
+		return "synced_at"
+	} else if ActivityEvents[docType] == true {
+		return "synced_at"
+	}
+	return ""
 }
 
-var LeadSquaredTimestampMapping = map[string][]string{
-	LEADSQUARED_LEAD:           []string{"CreatedOn", "CreatedOn", "ModifiedOn"},
-	LEADSQUARED_SALES_ACTIVITY: []string{"CreatedOn", "ModifiedOn"},
-	LEADSQUARED_EMAIL_SENT:     []string{"CreatedOn", "ModifiedOn"},
-	LEADSQUARED_EMAIL_INFO:     []string{"CreatedOn", "ModifiedOn"},
-	LEADSQUARED_HAD_A_CALL:     []string{"CreatedOn", "ModifiedOn"},
+func LeadSquaredTimestampMapping(docType string) ([]string, bool) {
+	if docType == LEADSQUARED_LEAD {
+		return []string{"CreatedOn", "CreatedOn", "ModifiedOn"}, true
+	} else if ActivityEvents[docType] == true {
+		return []string{"CreatedOn", "ModifiedOn"}, true
+	}
+	return nil, false
 }
 
-var LeadSquaredProgramIdMapping = map[string]string{
-	LEADSQUARED_SALES_ACTIVITY: "ProspectActivityId",
-	LEADSQUARED_EMAIL_SENT:     "ProspectActivityId",
-	LEADSQUARED_EMAIL_INFO:     "ProspectActivityId",
-	LEADSQUARED_HAD_A_CALL:     "ProspectActivityId",
+func LeadSquaredProgramIdMapping(docType string) (string, bool) {
+	if ActivityEvents[docType] == true {
+		return "ProspectActivityId", true
+	}
+	return "", false
 }
 
-var LeadSquaredActorTypeMapping = map[string]string{
-	LEADSQUARED_SALES_ACTIVITY: LEADSQUARED_LEAD,
-	LEADSQUARED_EMAIL_SENT:     LEADSQUARED_LEAD,
-	LEADSQUARED_EMAIL_INFO:     LEADSQUARED_LEAD,
-	LEADSQUARED_HAD_A_CALL:     LEADSQUARED_LEAD,
+func LeadSquaredActorTypeMapping(docType string) (string, bool) {
+	if ActivityEvents[docType] == true {
+		return LEADSQUARED_LEAD, true
+	}
+	return "", false
 }
 
-var LeadSquaredActorIdMapping = map[string]string{
-	LEADSQUARED_SALES_ACTIVITY: "RelatedProspectId",
-	LEADSQUARED_EMAIL_SENT:     "RelatedProspectId",
-	LEADSQUARED_EMAIL_INFO:     "RelatedProspectId",
-	LEADSQUARED_HAD_A_CALL:     "RelatedProspectId",
+func LeadSquaredActorIdMapping(docType string) (string, bool) {
+	if ActivityEvents[docType] == true {
+		return "RelatedProspectId", true
+	}
+	return "", false
 }
 
 func GetLeadSquaredTypeToAliasMap(aliasType map[string]int) map[int]string {
@@ -165,26 +319,14 @@ func GetLeadSquaredTypeToAliasMap(aliasType map[string]int) map[int]string {
 }
 
 func GetLeadSquaredDocumentQuery(bigQueryProjectId string, schemaId string, baseQuery string, executionDate string, docType string, limit int, lastProcessedId int) string {
-	if docType == LEADSQUARED_LEAD {
-		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId, GetLeadSquaredDocumentFilterCondition(docType, false, "", executionDate), lastProcessedId, limit)
-	}
-	if docType == LEADSQUARED_SALES_ACTIVITY {
-		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId, GetLeadSquaredDocumentFilterCondition(docType, false, "", executionDate), lastProcessedId, limit)
-	}
-	if docType == LEADSQUARED_EMAIL_SENT {
-		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId, GetLeadSquaredDocumentFilterCondition(docType, false, "", executionDate), lastProcessedId, limit)
-	}
-	if docType == LEADSQUARED_EMAIL_INFO {
-		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId, GetLeadSquaredDocumentFilterCondition(docType, false, "", executionDate), lastProcessedId, limit)
-	}
-	if docType == LEADSQUARED_HAD_A_CALL {
+	if docType == LEADSQUARED_LEAD || ActivityEvents[docType] == true {
 		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId, GetLeadSquaredDocumentFilterCondition(docType, false, "", executionDate), lastProcessedId, limit)
 	}
 	return ""
 }
 
 func GetLeadSquaredDocumentActorId(documentType string, data []string, metadataColumns []string) string {
-	actorId, exists := LeadSquaredActorIdMapping[documentType]
+	actorId, exists := LeadSquaredActorIdMapping(documentType)
 	if exists {
 		dataObjectColumns := GetObjectDataColumns(documentType, metadataColumns)
 		index, exists_index := dataObjectColumns[actorId]
@@ -203,29 +345,17 @@ func GetLeadSquaredDocumentActorId(documentType string, data []string, metadataC
 func GetLeadSquaredDocumentFilterCondition(docType string, addPrefix bool, prefix string, executionDate string) string {
 	filterColumn := ""
 	if addPrefix {
-		filterColumn = fmt.Sprintf("%v.%v", prefix, LeadSquaredDataObjectFiltersColumn[docType])
+		filterColumn = fmt.Sprintf("%v.%v", prefix, LeadSquaredDataObjectFiltersColumn(docType))
 	} else {
-		filterColumn = LeadSquaredDataObjectFiltersColumn[docType]
+		filterColumn = LeadSquaredDataObjectFiltersColumn(docType)
 	}
-	filterCondition := fmt.Sprintf(LeadSquaredDataObjectFilters[docType], filterColumn, executionDate)
+	filterCondition := fmt.Sprintf(LeadSquaredDataObjectFilters(docType), filterColumn, executionDate)
 
 	return filterCondition
 }
 
 func GetLeadSquaredDocumentMetadataQuery(docType string, bigQueryProjectId string, schemaId string, baseQuery string) (string, bool) {
-	if docType == LEADSQUARED_LEAD {
-		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId), true
-	}
-	if docType == LEADSQUARED_SALES_ACTIVITY {
-		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId), true
-	}
-	if docType == LEADSQUARED_EMAIL_SENT {
-		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId), true
-	}
-	if docType == LEADSQUARED_EMAIL_INFO {
-		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId), true
-	}
-	if docType == LEADSQUARED_HAD_A_CALL {
+	if docType == LEADSQUARED_LEAD || ActivityEvents[docType] == true {
 		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId), true
 	}
 	return "", false
@@ -250,7 +380,7 @@ func GetLeadSquaredObjectDataColumns(docType string, metadataColumns []string) m
 }
 
 func GetLeadSquaredActorType(documentTypeString string) int {
-	actorType, exists := LeadSquaredActorTypeMapping[documentTypeString]
+	actorType, exists := LeadSquaredActorTypeMapping(documentTypeString)
 	if exists {
 		actorTypeId, exists_actor := LeadSquaredDocumentTypeAlias[actorType]
 		if exists_actor {
@@ -308,7 +438,7 @@ func GetLeadSquaredUserId(documentType string, data []string, metadataColumns []
 }
 
 func GetLeadSquaredUserAutoId(documentType string, data []string, metadataColumns []string) string {
-	activtyNameId, exists := LeadSquaredUserAutoIdMapping[documentType]
+	activtyNameId, exists := LeadSquaredUserAutoIdMapping(documentType)
 	if exists {
 		dataObjectColumns := GetLeadSquaredObjectDataColumns(documentType, metadataColumns)
 		index, exists_index := dataObjectColumns[activtyNameId]
@@ -373,7 +503,7 @@ func GetLeadSquaredDocumentAction(documentType string, data []string, metadataCo
 }
 
 func GetLeadSquaredDocumentTimestamp(documentType string, data []string, metadataColumns []string) []int64 {
-	timestampIds, exists := LeadSquaredTimestampMapping[documentType]
+	timestampIds, exists := LeadSquaredTimestampMapping(documentType)
 	result := make([]int64, 0)
 	for _, timestampId := range timestampIds {
 		if exists {
@@ -388,7 +518,7 @@ func GetLeadSquaredDocumentTimestamp(documentType string, data []string, metadat
 }
 
 func GetLeadSquaredDocumentProgramId(documentType string, data []string, metadataColumns []string) string {
-	activtyNameId, exists := LeadSquaredProgramIdMapping[documentType]
+	activtyNameId, exists := LeadSquaredProgramIdMapping(documentType)
 	if exists {
 		dataObjectColumns := GetObjectDataColumns(documentType, metadataColumns)
 		index, exists_index := dataObjectColumns[activtyNameId]
