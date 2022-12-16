@@ -26,6 +26,8 @@ func main() {
 
 	redisHost := flag.String("redis_host", "localhost", "")
 	redisPort := flag.Int("redis_port", 6379, "")
+	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
+	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
 
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 
@@ -60,10 +62,12 @@ func main() {
 			Certificate: *memSQLCertificate,
 			AppName:     appName,
 		},
-		PrimaryDatastore: *primaryDatastore,
-		RedisHost:        *redisHost,
-		RedisPort:        *redisPort,
-		SentryDSN:        *sentryDSN,
+		PrimaryDatastore:    *primaryDatastore,
+		RedisHost:           *redisHost,
+		RedisPort:           *redisPort,
+		RedisHostPersistent: *redisHostPersistent,
+		RedisPortPersistent: *redisPortPersistent,
+		SentryDSN:           *sentryDSN,
 	}
 
 	C.InitConf(config)
