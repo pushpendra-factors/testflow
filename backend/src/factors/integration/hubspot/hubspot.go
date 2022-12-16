@@ -1182,7 +1182,7 @@ func syncContact(project *model.Project, otpRules *[]model.OTPRule, document *mo
 	}
 
 	// re-identify all users from web and hubspot with primary email
-	if C.AllowIdentificationOverwriteUsingSource(project.ID) {
+	if C.AllowIdentificationOverwriteUsingSource(project.ID) && primaryEmail != "" {
 
 		for userID := range userByCustomerUserID {
 			user, status := store.GetStore().GetUserWithoutProperties(project.ID, userID)
