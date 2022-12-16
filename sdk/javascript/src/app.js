@@ -317,7 +317,7 @@ App.prototype.track = function(eventName, eventProperties, auto=false, afterCall
 
     if (auto) {
         var pageLoadTime = Properties.getPageLoadTime();
-        if (pageLoadTime > 0) eventProperties[Properties.PAGE_LOAD_TIME] = pageLoadTime;
+        if (pageLoadTime > 0) payload.event_properties[Properties.PAGE_LOAD_TIME] = pageLoadTime;
     }
     return this.client.track(payload)
         .then(function(response) {
@@ -694,18 +694,31 @@ App.prototype.autoClearbitRevealCapture = function (appInstance, enabled) {
 
 App.prototype.autoFormCapture = function(enabled=false) {
     if (!enabled) return false; // not enabled.
+    
+    var _this = this;
+    // bind immediately.
+    bindForFormCapture(_this);
+    // starts the binder for lazy loaded forms.
+    Capture.startBackgroundFormBinder();
+    // binds on event triggers.
+    document.addEventListener(Capture.TRIGGER_FORM_BINDING_EVENT, function(e) {
+        bindForFormCapture(_this);
+    });
+
+    return true;
+}
+
+function bindForFormCapture(appInstance) {
+    logger.debug("Binding for form capture", false);
 
     // Captures properties from ideal forms which has a submit button. 
     // The fields sumbmitted are processed on callback onSubmit of form.
-    Capture.startBackgroundFormBinder(this, this.captureAndTrackFormSubmit)
+    Capture.bindAllFormsOnSubmit(appInstance, appInstance.captureAndTrackFormSubmit);
 
     // Captures properties from input fields, which are not part of any form
     // on click of any button on the page, which is not a submit button of any form.
     // Note: submit button which is not inside a form is also bound.
-    Capture.bindAllNonFormButtonOnClick(this, this.captureAndTrackNonFormInput)
-
-
-    return true;
+    Capture.bindAllNonFormButtonOnClick(appInstance, appInstance.captureAndTrackNonFormInput);
 }
 
 function captureInputFieldValues(appInstance, input) {
@@ -748,20 +761,41 @@ function captureAllInputFieldsInput(appInstance) {
 App.prototype.autoCaptureFormFills = function(enabled) {
     if (!enabled) return false;
 
-    // TODO: Add support for lazy loaded forms.
-    // Use window based counter for the incremental id.
-    
+    bindAndCaptureFormFills(this);
+
+    // starts the binder for lazy loaded  
+    // forms, if not started already.
+    Capture.startBackgroundFormBinder();
+
+    var _appInstance = this;
+    document.addEventListener(Capture.TRIGGER_FORM_BINDING_EVENT, function() {
+        bindAndCaptureFormFills(_appInstance);
+    });
+}
+
+function bindAndCaptureFormFills(appInstance) {
+    logger.debug("Binding for form fills capture", false);
+
     // Assigning incremental id to the form.
     var forms = document.querySelectorAll("form");
     const FACTORS_FORM_ID_ATTRIBUTE = "data-factors-form-id";
+
+    if (!window.FACTORS_FORMS_ID) window.FACTORS_FORMS_ID = 0;
+ 
     for (var fi=0; fi<forms.length; fi++) {
-        forms[fi].setAttribute(FACTORS_FORM_ID_ATTRIBUTE, "form-"+fi);
+        if (forms[fi].getAttribute(FACTORS_FORM_ID_ATTRIBUTE)) continue;
+        forms[fi].setAttribute(FACTORS_FORM_ID_ATTRIBUTE, "form-"+window.FACTORS_FORMS_ID);
+        window.FACTORS_FORMS_ID++;
     }
 
     // Assigns non-form fields with noform.field-1.
     // Assign form input fields with form-1.field-1.
     var inputs = document.querySelectorAll("input");
+
+    if (!window.FACTORS_INPUTS_ID) window.FACTORS_INPUTS_ID = 0;
+
     for(var i=0; i<inputs.length; i++) {
+        if (inputs[i].getAttribute(FACTORS_INPUT_ID_ATTRIBUTE)) continue;
         if(properties.DISABLED_INPUT_TYPES.indexOf(inputs[i].type) >= 0) continue;
 
         var formId = "noform";
@@ -770,26 +804,27 @@ App.prototype.autoCaptureFormFills = function(enabled) {
         
         if (hasForm) formId = inputs[i].form.getAttribute(FACTORS_FORM_ID_ATTRIBUTE);
 
-        inputs[i].setAttribute(FACTORS_INPUT_ID_ATTRIBUTE, formId+".field-"+i);
+        inputs[i].setAttribute(FACTORS_INPUT_ID_ATTRIBUTE, formId+".field-"+window.FACTORS_INPUTS_ID);
 
         // Captures values while typing.
-        var _app = this;
         inputs[i].addEventListener("input", function() { 
-            var _input = this; 
-            captureInputFieldValues(_app, _input); 
+            var _input = this;
+            captureInputFieldValues(appInstance, _input); 
         });
 
         // Captures values when the cursor is out of focus and the value is changed.
         inputs[i].addEventListener("change", function() { 
-            var _input = this; 
-            captureInputFieldValues(_app, _input); 
+            var _input = this;
+            captureInputFieldValues(appInstance, _input); 
         });
+
+        window.FACTORS_INPUTS_ID++;
     }
 
     // Create timeouts for every 5s for 30s.
     var t = 5000;
     while (t < 30000) {
-        setTimeout(function() { captureAllInputFieldsInput(_app); }, t);
+        setTimeout(function() { captureAllInputFieldsInput(appInstance); }, t);
         t = t + 5000;
     }
 }

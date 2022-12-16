@@ -1,7 +1,9 @@
 const logger = require("./logger");
 
-const FACTORS_BIND_ATTRIBUTE = 'data-factors-bind';
+const FACTORS_FORM_BIND_ATTRIBUTE = 'data-factors-form-bind';
 const FACTORS_CLICK_BIND_ATTRIBUTE = 'data-factors-click-bind';
+
+const TRIGGER_FORM_BINDING_EVENT = "trigger-form-binding";
 
 function isEmail(email) {
     // ref: https://stackoverflow.com/questions/46155/how-to-validate-an-email-address-in-javascript
@@ -68,8 +70,6 @@ function getFormsFromIframes() {
 }
 
 function bindAllFormsOnSubmit(appInstance, processCallback) {
-    logger.debug("Scanning for unbind forms.", false);
-
     var iframeForms = getFormsFromIframes();
 
     // bind processForm to onSubmit event for all forms.
@@ -88,7 +88,7 @@ function bindAllFormsOnSubmit(appInstance, processCallback) {
 
         // Using unique attribute as flag to avoid binding,
         // multiple times.
-        if (!forms[i].getAttribute(FACTORS_BIND_ATTRIBUTE)) {
+        if (!forms[i].getAttribute(FACTORS_FORM_BIND_ATTRIBUTE)) {
             maxCallCount = maxCallCount + 1;
             forms[i].addEventListener('submit', function(e) {
                 if (callCount > 0) {
@@ -105,14 +105,14 @@ function bindAllFormsOnSubmit(appInstance, processCallback) {
                 callCount = callCount + 1;
             });
             
-            forms[i].setAttribute(FACTORS_BIND_ATTRIBUTE, true);
+            forms[i].setAttribute(FACTORS_FORM_BIND_ATTRIBUTE, true);
         }
         
 
         // Bind processCallback to on-click of form's submit element,
         // But call only if not processed on submit.
         var submitElement = forms[i].querySelector('*[type="submit"]');
-        if (!submitElement || submitElement.getAttribute(FACTORS_BIND_ATTRIBUTE)) continue;
+        if (!submitElement || submitElement.getAttribute(FACTORS_FORM_BIND_ATTRIBUTE)) continue;
 
         maxCallCount = maxCallCount + 1;
         submitElement.addEventListener('click', function(e) {
@@ -127,7 +127,7 @@ function bindAllFormsOnSubmit(appInstance, processCallback) {
             processCallback(_appInstance, e.target.form);
             callCount = callCount + 1;
         });
-        submitElement.setAttribute(FACTORS_BIND_ATTRIBUTE, true);
+        submitElement.setAttribute(FACTORS_FORM_BIND_ATTRIBUTE, true);
     }
 }
 
@@ -144,43 +144,50 @@ function isPartOfForm(e) {
 function bindAllNonFormButtonOnClick(appInstance, processCallback) {
     var buttons = document.querySelectorAll('button,input[type="button"],input[type="submit"]');
     for (var i=0; i<buttons.length; i++) {
-        // do not bind button part of a form.
-        if (isPartOfForm(buttons[i])) continue;
+        var _button = buttons[i];
 
-        buttons[i].addEventListener('click', function() {
+        // Do not bind button part of a form or bound already.
+        if (isPartOfForm(_button) || _button.getAttribute(FACTORS_FORM_BIND_ATTRIBUTE)) continue;
+
+        _button.addEventListener('click', function() {
             logger.debug("Executing callback on click of button.", false);
             
             var _appInstance = appInstance;
             processCallback(_appInstance);
         });
+
+        _button.setAttribute(FACTORS_FORM_BIND_ATTRIBUTE, true);
     }
 }
 
 function stopFormBinderTask() {
-    window.clearInterval(window._factorsFormBinderTaskId);
+    window.clearInterval(window.FACTORS_FORM_BINDER_ID);
     logger.debug('Stopped form binder task.');
 }
 
 function stopBackgroundFormBinderTaskLater() {
-    // Stop the form binder only after 30 minutes.
-    window.setTimeout(stopFormBinderTask, 1800000);
+    // Stop the form binder only after 1 hour.
+    window.setTimeout(stopFormBinderTask, 3600000);
 }
 
 function startBackgroundFormBinder(appInstance, processCallback) {
-    // binder should start only once for a window.
-    if (!!window._factorsFormBinderTaskId) {
+    // Binder should start only once for a window.
+    if (!!window.FACTORS_FORM_BINDER_ID) {
         logger.debug("Form binder started already.", true)
         return;
     }
     
-    // try to bind on forms every 2secs tilltask gets 
-    // cancelled using _factorsFormBinderTaskId.
+    // Triggers event EVENT_TRIGGER_FORM_BIND which is 
+    // listened by all form captures to bind.
     var taskId = window.setInterval(function() {
-        var _appInstance = appInstance;
-        bindAllFormsOnSubmit(_appInstance, processCallback);
+        // We can add a mechanism to trigger only if new forms/inputs 
+        // added to page. But that would require 2 pass of document tree.
+        // Hence not added.
+        logger.debug("Triggering form binding event.", false);
+        document.dispatchEvent(new Event(TRIGGER_FORM_BINDING_EVENT));
     }, 2000);
 
-    window._factorsFormBinderTaskId = taskId;
+    window.FACTORS_FORM_BINDER_ID = taskId;
     stopBackgroundFormBinderTaskLater();
 }
 
@@ -305,4 +312,4 @@ function getClickCapturePayloadFromElement(element) {
 
 module.exports = exports =  { isEmail, isPhone, isPossibleEmail, isFieldByMatch, isPartOfForm,
     bindAllFormsOnSubmit, bindAllNonFormButtonOnClick, startBackgroundFormBinder,
-    startBackgroundClickBinder, getClickCapturePayloadFromElement };
+    startBackgroundClickBinder, getClickCapturePayloadFromElement, TRIGGER_FORM_BINDING_EVENT };

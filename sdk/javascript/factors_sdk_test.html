@@ -64,6 +64,12 @@
                 d.parentNode.insertBefore(s, d);
             })();
         </script>
+
+        <script>
+            setTimeout(function() {
+                document.getElementById("lazy-form1").innerHTML = '<form><input type="email" name="E-mail" placeholder="Your email"/></br></br><input type="text" name="Company" placeholder="Your company" /></br></br><button type="button">Non-Submit Button</button></form>';
+            }, 3000);
+        </script>
     </head>
     <body> 
         <h2>Factors SDK Test</h2>
@@ -83,6 +89,9 @@
         <input type="name" name="name" placeholder="Your name"/></br></br>
         <button> Create </button>
 
+        <h2> Lazy loaded form </h2>
+        <div id="lazy-form1"></div>
+
         <h2>Form Without Submit Button</h2>
         <form novalidate="novalidate">
             <input type="email" name="E-mail" placeholder="Your email"/></br></br>
@@ -101,9 +110,9 @@
         <a id="id1" name="sample" rel="rel">Sample Anchor</a>
         <button id="id1" name="sample" class="style" role="role">Sample Button 😀</button>
 
+
         <h2>Form Within an Iframe</h2>
-            <iframe src="http://localhost:3000/login">
-        </iframe>
+        <iframe src="http://localhost:3000/login"></iframe>
 
 
         <script>
