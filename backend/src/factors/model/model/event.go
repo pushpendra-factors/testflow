@@ -167,16 +167,8 @@ func AreMarketingPropertiesMatching(event1 Event, event2 Event) bool {
 			return false
 		}
 
-		val1Str, ok := val1.(string)
-		if !ok {
-			log.WithField("event1", event1).Warn("failed to get value as string for event1")
-			return false
-		}
-		val2Str, ok := val2.(string)
-		if !ok {
-			log.WithField("event2", event2).Warn("failed to get value as string for event2")
-			return false
-		}
+		val1Str, _ := val1.(string)
+		val2Str, _ := val2.(string)
 
 		// Exists but a different property - matching without considering case
 		if exists1 && exists2 && strings.ToLower(val1Str) != strings.ToLower(val2Str) {

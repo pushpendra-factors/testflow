@@ -84,7 +84,8 @@ func main() {
 
 	errCode := T.FormFillProcessing()
 	if errCode != http.StatusOK {
-		log.Error("Failed the processing of FormFillProcessing")
+		C.PingHealthcheckForFailure(healthcheckPingID, "Form processing failed.")
 		return
 	}
+	C.PingHealthcheckForSuccess(healthcheckPingID, "Form processing successful.")
 }
