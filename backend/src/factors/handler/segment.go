@@ -140,6 +140,42 @@ func UpdateSegmentHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
+func DeleteSegmentByIdHandler(c *gin.Context) {
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	logCtx := log.WithFields(log.Fields{
+		"projectId": projectId,
+	})
+	if projectId == 0 {
+		logCtx.Error("Deletion of Segment failed. Invalid project_id.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, &model.SegmentResponse{
+			Error: "Segment deletion failed. Invalid project_id."})
+		return
+	}
+
+	id := c.Params.ByName("id")
+	logCtx = log.WithFields(log.Fields{
+		"projectId": projectId,
+		"segmentId": id,
+	})
+	if id == "" {
+		logCtx.Error("Deletion of Segment failed. Invalid id.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, &model.SegmentResponse{
+			Error: "Segment deletion failed. Invalid id."})
+		return
+	}
+
+	status, err := store.GetStore().DeleteSegmentById(projectId, id)
+	if status != http.StatusOK {
+		logCtx.Error("Deletion of Segment failed.")
+		c.AbortWithStatusJSON(status, &model.SegmentResponse{
+			Error: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, &model.SegmentResponse{Message: "Segment deletion successful."})
+	return
+}
+
 func getUpdateSegmentParams(c *gin.Context) (*model.SegmentPayload, error) {
 	params := model.SegmentPayload{}
 	err := c.BindJSON(&params)

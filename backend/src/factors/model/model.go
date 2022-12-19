@@ -768,6 +768,7 @@ type Model interface {
 	GetSegmentById(projectId int64, segmentId string) (*model.Segment, int)
 	UpdateSegmentById(projectId int64, id string, segmentPayload model.SegmentPayload) (error, int)
 	IsDuplicateSegmentNameCheck(projectID int64, name string) bool
+	DeleteSegmentById(projectId int64, segmentId string) (int, error)
 
 	// Ads import
 	GetAllAdsImportEnabledProjects() (map[int64]map[string]model.LastProcessedAdsImport, error)
