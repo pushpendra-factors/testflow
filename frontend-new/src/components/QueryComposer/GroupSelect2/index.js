@@ -80,14 +80,22 @@ function GroupSelect2({
       let hasSearchTerm = false;
       const valuesOptions = [];
 
-      const checkIcon = group?.icon
-        ? group.icon.toLowerCase().split(' ').join('_')
-        : group.icon;
-      const icon = checkIcon.includes('salesforce')
-        ? 'salesforce'
-        : checkIcon.includes('hubspot')
-        ? 'hubspot'
-        : checkIcon;
+      const getIcon = (icon) => {
+        const checkIcon = icon?.toLowerCase().split(' ').join('_');
+        if (checkIcon?.includes('salesforce')) {
+          return 'salesforce_ads';
+        }
+        if (checkIcon?.includes('hubspot')) {
+          return 'hubspot_ads';
+        }
+        if (checkIcon?.includes('marketo')) {
+          return 'marketo';
+        }
+        if (checkIcon?.includes('leadsquared')) {
+          return 'leadSquared';
+        }
+        return icon;
+      };
 
       const groupItem = (
         <div key={group.label} className={`fa-select-group-select--content`}>
@@ -97,7 +105,7 @@ function GroupSelect2({
             >
               <div>
                 <SVG
-                  name={icon}
+                  name={getIcon(group?.icon)}
                   color={iconColor}
                   extraClass={'self-center'}
                 ></SVG>

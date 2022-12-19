@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import styles from './index.module.scss';
 import { DateRangePicker } from 'react-date-range';
-import { Input, Button, Result } from 'antd';
+import { Input, Button } from 'antd';
 import { SVG, Text } from 'factorsComponents';
-import { DEFAULT_DATE_RANGE } from 'Components/QueryComposer/DateRangeSelector/utils';
+import { DEFAULT_DATE_RANGE } from '../../../QueryComposer/DateRangeSelector/utils';
 import MomentTz from 'Components/MomentTz';
 
 import {
   fetchEventPropertyValues,
   fetchUserPropertyValues,
-  fetchChannelObjPropertyValues,
+  fetchGroupPropertyValues,
+  fetchChannelObjPropertyValues
 } from 'Reducers/coreQuery/services';
 import GlobalFilterSelect from '../GlobalFilterSelect';
 import { DEFAULT_OPERATOR_PROPS } from '../../../FaFilterSelect/utils';
@@ -28,13 +29,14 @@ export default function GlobalFilterBlock({
   event,
   filter,
   delIcon = 'remove',
-  propsConstants = ['user', 'event'],
+  propsConstants = ['user', 'group'],
   extraClass,
   delBtnClass,
   deleteFilter,
   insertFilter,
   closeFilter,
   showOr,
+  groupName
 }) {
   const [filterTypeState, setFilterTypeState] = useState('props');
   const [groupCollapseState, setGroupCollapse] = useState({});
@@ -42,32 +44,36 @@ export default function GlobalFilterBlock({
   const [newFilterState, setNewFilterState] = useState({
     props: [],
     operator: '',
-    values: [],
+    values: []
   });
 
   const [dropDownValues, setDropDownValues] = useState({});
   const [selectedRngState, setSelectedRngState] = useState([
-    { ...DEFAULT_DATE_RANGE },
+    { ...DEFAULT_DATE_RANGE }
   ]);
 
   const placeHolder = {
     props: 'Choose a property',
     operator: 'Choose an operator',
-    values: 'Choose values',
+    values: 'Choose values'
   };
 
   const [filterDropDownOptions, setFiltDD] = useState({
     props: [
       {
         label: 'Event Properties',
-        icon: 'event',
+        icon: 'mouseclick'
       },
       {
         label: 'User Properties',
-        icon: 'user',
+        icon: 'user'
       },
+      {
+        label: 'Group Properties',
+        icon: 'group'
+      }
     ],
-    operator: operatorProps,
+    operator: operatorProps
   });
 
   useEffect(() => {
@@ -83,8 +89,8 @@ export default function GlobalFilterBlock({
     Object.keys(filterProps).forEach((k, i) => {
       propState.push({
         label: k,
-        icon: k === 'event' ? 'event' : k,
-        values: filterProps[k],
+        icon: k === 'event' ? 'mouseclick' : k,
+        values: filterProps[k]
       });
     });
     filterDD.props = propState;
@@ -149,12 +155,12 @@ export default function GlobalFilterBlock({
 
   const removeFilter = () => {
     const filterState = Object.assign({}, newFilterState);
-    filterTypeState === 'operator'
-      ? (() => {
-          filterState.props = [];
-          changeFilterTypeState(false);
-        })()
-      : null;
+    if (filterTypeState === 'operator') {
+      (() => {
+        filterState.props = [];
+        changeFilterTypeState(false);
+      })();
+    }
     if (filterTypeState === 'values') {
       filterState.values.length
         ? filterState.values.pop()
@@ -192,7 +198,7 @@ export default function GlobalFilterBlock({
               ddValues[newFilterState.props[0]] = [...res.data, '$none'];
               setDropDownValues(ddValues);
             })
-            .catch(() => {
+            .catch((err) => {
               console.log(err);
               const ddValues = Object.assign({}, dropDownValues);
               ddValues[newFilterState.props[0]] = ['$none'];
@@ -211,7 +217,26 @@ export default function GlobalFilterBlock({
               ddValues[newFilterState.props[0]] = [...res.data, '$none'];
               setDropDownValues(ddValues);
             })
-            .catch(() => {
+            .catch((err) => {
+              console.log(err);
+              const ddValues = Object.assign({}, dropDownValues);
+              ddValues[newFilterState.props[0]] = ['$none'];
+              setDropDownValues(ddValues);
+            });
+        }
+      } else if (newFilterState.props[2] === 'group') {
+        if (!dropDownValues[newFilterState.props[0]]) {
+          fetchGroupPropertyValues(
+            activeProject.id,
+            groupName,
+            newFilterState.props[0]
+          )
+            .then((res) => {
+              const ddValues = Object.assign({}, dropDownValues);
+              ddValues[newFilterState.props[0]] = [...res.data, '$none'];
+              setDropDownValues(ddValues);
+            })
+            .catch((err) => {
               console.log(err);
               const ddValues = Object.assign({}, dropDownValues);
               ddValues[newFilterState.props[0]] = ['$none'];
@@ -230,7 +255,7 @@ export default function GlobalFilterBlock({
               const ddValues = Object.assign({}, dropDownValues);
               ddValues[newFilterState.props[0]] = [
                 ...res?.data?.result?.filter_values,
-                '$none',
+                '$none'
               ];
               setDropDownValues(ddValues);
             })
@@ -293,7 +318,7 @@ export default function GlobalFilterBlock({
     const rangeValue = {
       fr: newRange[0].startDate.getTime(),
       to: endRange,
-      ovp: false,
+      ovp: false
     };
     newFilter[filterTypeState] = JSON.stringify(rangeValue);
     setNewFilterState(newFilter);
@@ -486,10 +511,11 @@ export default function GlobalFilterBlock({
             </span>
           );
         }
-
+        break;
+      default:
+        renderOptions.push([]);
         break;
     }
-
     return renderOptions;
   };
 
@@ -659,6 +685,20 @@ export default function GlobalFilterBlock({
               setDropDownValues(ddValues);
             });
         }
+      } else if (propOpByPayload(props, 2) === 'group') {
+        if (!dropDownValues[props[0]]) {
+          fetchGroupPropertyValues(activeProject.id, groupName, props[1])
+            .then((res) => {
+              const ddValues = Object.assign({}, dropDownValues);
+              ddValues[props[1]] = [...res.data, '$none'];
+              setDropDownValues(ddValues);
+            })
+            .catch((err) => {
+              const ddValues = Object.assign({}, dropDownValues);
+              ddValues[props[0]] = ['$none'];
+              setDropDownValues(ddValues);
+            });
+        }
       }
     }
   };
@@ -670,7 +710,6 @@ export default function GlobalFilterBlock({
     // </>
 
     return (
-      <>
         <GlobalFilterSelect
           propOpts={filterDropDownOptions.props}
           operatorOpts={filterDropDownOptions.operator}
@@ -679,17 +718,20 @@ export default function GlobalFilterBlock({
           refValue={refValue}
           setValuesByProps={setValuesByProps}
         ></GlobalFilterSelect>
-      </>
     );
   };
-
   return (
     <div className={'flex items-center relative'}>
-        {showOr && (
-        <Text level={8} type={'title'} extraClass={'m-0 mr-2 ml-2'} weight={'thin'}>
+      {showOr && (
+        <Text
+          level={8}
+          type={'title'}
+          extraClass={'m-0 mr-2 ml-2'}
+          weight={'thin'}
+        >
           or
         </Text>
-        )}
+      )}
       <div className={`relative flex`}>
         {filter ? renderFilterContent() : filterSelComp()}
       </div>

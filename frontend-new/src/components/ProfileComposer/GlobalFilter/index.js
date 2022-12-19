@@ -1,13 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { connect, useSelector } from "react-redux";
-
+import { useSelector } from "react-redux";
 import styles from "./index.module.scss";
-import { SVG } from "factorsComponents";
+import { SVG } from "Components/factorsComponents";
 import { Button } from "antd";
-
 import GlobalFilterBlock from "./GlobalFilterBlock";
-import ORButton from '../../ORButton';
-import { compareFilters, groupFilters } from '../../../utils/global';
+import ORButton from 'Components/ORButton';
+import { compareFilters, groupFilters } from 'Utils/global';
 
 const GLobalFilter = ({
   filters = [],
@@ -69,7 +67,7 @@ const GLobalFilter = ({
 
     filtersGroupedByRef.forEach((filtersGr)=>{
       const refValue = filtersGr[0].ref;
-      if(filtersGr.length == 1){
+      if(filtersGr.length === 1){
         const filt = filtersGr[0];
         filtrs.push(
           <div className={'fa--query_block--filters flex flex-row'}>
