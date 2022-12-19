@@ -1975,7 +1975,7 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
       if (pr.lOp === 'AND') {
         ref += 1;
         const val = pr.prDaTy === 'categorical' ? [pr.va] : pr.va;
-        const DNa = startCase(pr.prNa);
+        const DNa = pr.extra ? pr.extra[0] : startCase(pr.prNa);
         const isCamp =
           requestQuery?.qG[0]?.ca === 'channels' ||
           requestQuery?.qG[0]?.ca === 'custom_channels'
@@ -2000,7 +2000,7 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
         eventFilters[eventFilters.length - 1].values.push(pr.va);
       } else {
         const val = pr.prDaTy === 'categorical' ? [pr.va] : pr.va;
-        const DNa = startCase(pr.prNa);
+        const DNa = pr.extra ? pr.extra[0] : startCase(pr.prNa);
         const isCamp =
           requestQuery?.qG[0]?.ca === 'channels' ||
           requestQuery?.qG[0]?.ca === 'custom_channels'
@@ -2047,7 +2047,7 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
     if (pr.lOp === 'AND') {
       ref += 1;
       const val = pr.prDaTy === FILTER_TYPES.CATEGORICAL ? [pr.va] : pr.va;
-      const DNa = startCase(pr.prNa);
+      const DNa = pr.extra ? pr.extra[0] : startCase(pr.prNa);
       const isCamp =
         requestQuery?.qG[0]?.ca === 'channels' ||
         requestQuery?.qG[0]?.ca === 'custom_channels'
@@ -2072,7 +2072,7 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
       filters[filters.length - 1].values.push(pr.va);
     } else {
       const val = pr.prDaTy === 'categorical' ? [pr.va] : pr.va;
-      const DNa = startCase(pr.prNa);
+      const DNa = pr.extra ? pr.extra[0] : startCase(pr.prNa);
       const isCamp =
         requestQuery?.qG[0]?.ca === 'channels' ||
         requestQuery?.qG[0]?.ca === 'custom_channels'

@@ -981,7 +981,9 @@ func getUrlsForSavedQuerySharing(alert model.Alert, queryClass, reportTitle, dat
 	var chartUrl string
 	skipChart := queryClass == model.QueryClassEvents && containsBreakdown
 	if !skipChart {
-		chartConfig := buildChartConfigForSavedQuerySharing(queryClass, result, containsBreakdown, noOfBreakdowns)
+		_, displayNames := store.GetStore().GetDisplayNamesForAllEvents(alert.ProjectID)
+		displayNameEvents := GetDisplayEventNamesHandler(displayNames)
+		chartConfig := buildChartConfigForSavedQuerySharing(queryClass, result, containsBreakdown, noOfBreakdowns, displayNameEvents)
 		chartUrl, err = qc.GetChartImageUrlForConfig(chartConfig)
 		if err != nil {
 			log.WithError(err).Error("Failed to get chart url from chart config")
@@ -1243,9 +1245,15 @@ func buildTableConfigForSavedQuerySharing(alert model.Alert, queryClass, reportT
 				// ignoring the 0th as its event index
 				if idx > 0 {
 					tempTitle := header
-					title := strings.Title(strings.ReplaceAll(tempTitle, "_", " "))
-					column.Title = title
-					column.DataIndex = strings.ToLower(title) + strconv.Itoa(idx)
+					if _, exists := displayNameEvents[tempTitle]; exists {
+						tempTitle = displayNameEvents[tempTitle]
+					} else {
+						tempTitle = strings.Title(strings.ReplaceAll(tempTitle, "_", " "))
+
+					}
+					tempTitle = removeDollarSymbolFromEventNames(tempTitle)
+					column.Title = tempTitle
+					column.DataIndex = strings.ToLower(tempTitle) + strconv.Itoa(idx)
 					column.Width = len(column.Title) * 10
 					ColumnMapToDataIndex[idx] = column.DataIndex
 					columns = append(columns, column)
@@ -1261,6 +1269,26 @@ func buildTableConfigForSavedQuerySharing(alert model.Alert, queryClass, reportT
 					if idx > 0 {
 						key := ColumnMapToDataIndex[idx]
 						value := row
+						flag := true
+						switch value.(type) {
+						case string:
+							if _, exists := displayNameEvents[value.(string)]; exists {
+								value = displayNameEvents[value.(string)]
+							}
+							flag = false
+						case float64:
+							value = (float64(value.(float64)))
+						case float32:
+							value = (float64(value.(float32)))
+						case int:
+							value = (float64(value.(int)))
+						case int64:
+							value = (float64(value.(int64)))
+						}
+						if flag {
+							value = strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.2f", value), "0"), ".")
+							value = AddCommaToNumber(fmt.Sprint(value))
+						}
 						dataSourcetemp[key] = value
 					}
 				}
@@ -1274,9 +1302,14 @@ func buildTableConfigForSavedQuerySharing(alert model.Alert, queryClass, reportT
 				}
 				var column qc.Column
 				tempTitle := header
-				title := strings.Title(strings.ReplaceAll(tempTitle, "_", " "))
-				column.Title = title
-				column.DataIndex = strings.ToLower(title) + strconv.Itoa(idx)
+				if _, exists := displayNameEvents[header]; exists {
+					tempTitle = displayNameEvents[header]
+				} else {
+					tempTitle = strings.Title(strings.ReplaceAll(tempTitle, "_", " "))
+				}
+				tempTitle = removeDollarSymbolFromEventNames(tempTitle)
+				column.Title = tempTitle
+				column.DataIndex = strings.ToLower(tempTitle) + strconv.Itoa(idx)
 				column.Width = len(column.Title) * 10
 				ColumnMapToDataIndex[idx] = column.DataIndex
 				columns = append(columns, column)
@@ -1291,6 +1324,27 @@ func buildTableConfigForSavedQuerySharing(alert model.Alert, queryClass, reportT
 				for idx, row := range rows {
 					key := ColumnMapToDataIndex[idx]
 					value := row
+					flag := true
+					switch value.(type) {
+					case string:
+						if _, exists := displayNameEvents[value.(string)]; exists {
+							value = displayNameEvents[value.(string)]
+						}
+						flag = false
+					case float64:
+						value = (float64(value.(float64)))
+					case float32:
+						value = (float64(value.(float32)))
+					case int:
+						value = (float64(value.(int)))
+					case int64:
+						value = (float64(value.(int64)))
+					}
+					if flag{
+						value = strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.2f", value), "0"), ".")
+						value = AddCommaToNumber(fmt.Sprint(value))
+					}
+
 					dataSourcetemp[key] = value
 
 				}
@@ -1312,10 +1366,12 @@ func buildTableConfigForSavedQuerySharing(alert model.Alert, queryClass, reportT
 			tempTitle := header
 			if _, exists := displayNameEvents[tempTitle]; exists {
 				tempTitle = displayNameEvents[tempTitle]
+			} else {
+				tempTitle = strings.Title(strings.ReplaceAll(tempTitle, "_", " "))
 			}
-			title := strings.Title(strings.ReplaceAll(tempTitle, "_", " "))
-			column.Title = title
-			column.DataIndex = strings.ToLower(title) + strconv.Itoa(idx)
+			tempTitle = removeDollarSymbolFromEventNames(tempTitle)
+			column.Title = tempTitle
+			column.DataIndex = strings.ToLower(tempTitle) + strconv.Itoa(idx)
 			column.Width = len(column.Title) * 10
 			ColumnMapToDataIndex[idx] = column.DataIndex
 			columns = append(columns, column)
@@ -1330,6 +1386,26 @@ func buildTableConfigForSavedQuerySharing(alert model.Alert, queryClass, reportT
 			for idx, row := range rows {
 				key := ColumnMapToDataIndex[idx]
 				value := row
+				flag:= true
+				switch value.(type) {
+				case string:
+					if _, exists := displayNameEvents[value.(string)]; exists {
+						value = displayNameEvents[value.(string)]
+					}
+					flag = false
+				case float64:
+					value = (float64(value.(float64)))
+				case float32:
+					value = (float64(value.(float32)))
+				case int:
+					value = (float64(value.(int)))
+				case int64:
+					value = (float64(value.(int64)))
+				}
+				if flag {
+					value = strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.2f", value), "0"), ".")
+					value = AddCommaToNumber(fmt.Sprint(value))
+				}
 				dataSourcetemp[key] = value
 			}
 			DataSource = append(DataSource, dataSourcetemp)
@@ -1343,7 +1419,7 @@ func buildTableConfigForSavedQuerySharing(alert model.Alert, queryClass, reportT
 	return config
 
 }
-func buildChartConfigForSavedQuerySharing(queryClass string, results []model.QueryResult, containsBreakDown bool, noOfBreakdowns int) qc.ChartConfig {
+func buildChartConfigForSavedQuerySharing(queryClass string, results []model.QueryResult, containsBreakDown bool, noOfBreakdowns int, displayNameEvents map[string]string) qc.ChartConfig {
 	var config qc.ChartConfig
 	if containsBreakDown {
 		config.Type = "bar"
@@ -1351,6 +1427,10 @@ func buildChartConfigForSavedQuerySharing(queryClass string, results []model.Que
 			var chartData qc.ChartData
 			var dataSet qc.Dataset
 			dataSet.Label = results[1].Headers[noOfBreakdowns]
+			if _, exists := displayNameEvents[dataSet.Label]; exists {
+				dataSet.Label = displayNameEvents[dataSet.Label]
+			}
+			dataSet.Label = strings.Title(strings.ReplaceAll(dataSet.Label, "_", " "))
 			for _, rows := range results[1].Rows {
 				label := ""
 				idx := 0
@@ -1378,6 +1458,9 @@ func buildChartConfigForSavedQuerySharing(queryClass string, results []model.Que
 			var dataSet []qc.Dataset
 			dataSet = make([]qc.Dataset, len(results[1].Headers))
 			for idx, header := range results[1].Headers {
+				if _, exists := displayNameEvents[header]; exists {
+					header = displayNameEvents[header]
+				}
 				dataSet[idx].Label = header
 			}
 			for _, rows := range results[0].Rows {
@@ -1399,6 +1482,9 @@ func buildChartConfigForSavedQuerySharing(queryClass string, results []model.Que
 			dataSet = make([]qc.Dataset, len(results[0].Headers)-1)
 			for idx, header := range results[0].Headers {
 				if idx > 0 {
+					if _, exists := displayNameEvents[header]; exists {
+						header = displayNameEvents[header]
+					}
 					dataSet[idx-1].Label = header
 				}
 			}

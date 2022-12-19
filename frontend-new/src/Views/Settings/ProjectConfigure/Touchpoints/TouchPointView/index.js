@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { connect } from 'react-redux';
+import React, { useState, useEffect } from 'react';
+import { connect, useSelector } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { Text, SVG } from 'factorsComponents';
 import { Row, Col, Button, Radio, Input, Select, Tooltip } from 'antd';
@@ -48,6 +48,10 @@ const TouchpointView = ({
   onCancel,
   onSave
 }) => {
+  const { userPropNames, eventPropNames } = useSelector(
+    (state) => state.coreQuery
+  );
+
   const [dropDownValues, setDropDownValues] = useState({});
   const [filterDD, setFilterDD] = useState(false);
 
@@ -111,7 +115,7 @@ const TouchpointView = ({
       chainEventPropertyValues(filterState);
       setNewFilterStates(filterState);
       setPropertyMap(rule.properties_map);
-      if (rule.touchPointPropRef === 'LAST_MODIFIED_TIME_REF') {
+      if (rule.touch_point_time_ref === 'LAST_MODIFIED_TIME_REF') {
         setTimestampRefState('LAST_MODIFIED_TIME_REF');
         setTimestampPropRef(false);
         setTouchPointPropRef('LAST_MODIFIED_TIME_REF');
@@ -418,7 +422,7 @@ const TouchpointView = ({
       return (
         <Radio.Group
           onChange={() => setTimestampRefEmail('$hubspot_form_submission')}
-          value={timestampRef}
+          value={touchPointPropRef}
           defaultValue={`$hubspot_form_submission`}
         >
           <Radio value={`$hubspot_form_submission`}>
@@ -463,7 +467,9 @@ const TouchpointView = ({
             <div className={`relative`}>
               <Button type='link' onClick={() => setDateTypeDD(!dateTypeDD)}>
                 {touchPointPropRef
-                  ? touchPointPropRef
+                  ? eventPropNames[touchPointPropRef]
+                    ? eventPropNames[touchPointPropRef]
+                    : touchPointPropRef
                   : 'Select Date type property'}
               </Button>
               {dateTypeDD && (

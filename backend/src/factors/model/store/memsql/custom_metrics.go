@@ -58,6 +58,10 @@ func (store *MemSQL) GetCustomMetricAndDerivedMetricByProjectIdAndDisplayCategor
 	return append(store.GetCustomKPIMetricsByProjectIdAndDisplayCategory(projectID, displayCategory), store.GetDerivedKPIMetricsByProjectIdAndDisplayCategory(projectID, displayCategory, includeDerivedKPIs)...)
 }
 
+func (store *MemSQL) GetCustomEventAndDerivedMetricByProjectIdAndDisplayCategory(projectID int64, displayCategory string, includeDerivedKPIs bool) []map[string]string {
+	return append(store.GetCustomEventKPIMetricsByProjectIdAndDisplayCategory(projectID, displayCategory), store.GetDerivedKPIMetricsByProjectIdAndDisplayCategory(projectID, displayCategory, includeDerivedKPIs)...)
+}
+
 func (store *MemSQL) GetCustomKPIMetricsByProjectIdAndDisplayCategory(projectID int64, displayCategory string) []map[string]string {
 	logCtx := log.WithField("project_id", projectID)
 	customMetrics, err, statusCode := store.GetCustomMetricByProjectIdQueryTypeAndObjectType(projectID, model.ProfileQueryType, displayCategory)
@@ -80,7 +84,7 @@ func (store *MemSQL) GetDerivedKPIMetricsByProjectIdAndDisplayCategory(projectID
 	}
 }
 
-func (store *MemSQL) GetCustomEventKPIMetricsByProjectIdAndDisplayCategory(projectID int64, displayCategory string, includeDerivedKPIs bool) []map[string]string {
+func (store *MemSQL) GetCustomEventKPIMetricsByProjectIdAndDisplayCategory(projectID int64, displayCategory string) []map[string]string {
 	logCtx := log.WithField("project_id", projectID)
 	customMetrics, err, statusCode := store.GetCustomMetricByProjectIdQueryTypeAndObjectType(projectID, model.EventBasedQueryType, displayCategory)
 	if statusCode != http.StatusFound {

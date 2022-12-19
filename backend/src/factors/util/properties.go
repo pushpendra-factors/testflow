@@ -1473,6 +1473,7 @@ var STANDARD_EVENTS_DISPLAY_NAMES = map[string]string{
 	"$offline_touch_point":            "Offline Touchpoint",
 	"$leadsquared_lead_created":       "Lead Created",
 	"$leadsquared_lead_updated":       "Lead Updated",
+	EVENT_NAME_FORM_FILL:              "Form Fills",
 }
 
 var STANDARD_GROUP_DISPLAY_NAMES = map[string]string{

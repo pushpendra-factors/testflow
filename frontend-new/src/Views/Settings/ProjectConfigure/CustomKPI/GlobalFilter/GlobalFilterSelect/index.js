@@ -572,7 +572,7 @@ const GlobalFilterSelect = ({
             title={
               valuesState && valuesState.length
                 ? valuesState
-                    .map((vl) => (DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : _.startCase(vl)))
+                    .map((vl) => (DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl))
                     .join(', ')
                 : null
             }

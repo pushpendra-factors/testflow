@@ -674,6 +674,7 @@ func sanitizeGroupByTimestampResult(result *model.QueryResult, query *model.Quer
 	if err != nil {
 		return err
 	}
+	transformTimeValueInResults(result, timeIndex, query.Timezone)
 
 	// Todo: Supports only date as timestamp, add support for hour and month.
 	if len(query.GroupByProperties) == 0 && len(query.EventsWithProperties) < 2 {
@@ -681,14 +682,25 @@ func sanitizeGroupByTimestampResult(result *model.QueryResult, query *model.Quer
 	} else {
 		err = addMissingTimestampsOnResultWithGroupByProps(result, query, aggrIndex, timeIndex)
 	}
-
 	if err != nil {
 		return err
 	}
 
 	sortResultRowsByTimestamp(result.Rows, timeIndex)
-
 	return nil
+}
+
+func transformTimeValueInResults(result *model.QueryResult, timeIndex int, timezone string) {
+
+	for index := range result.Rows {
+
+		timestampWithTimezone := U.GetTimestampAsStrWithTimezone(
+			result.Rows[index][timeIndex].(time.Time), timezone)
+
+		// overrides timestamp with user timezone as sql results doesn't
+		// return timezone used to query.
+		result.Rows[index][timeIndex] = U.GetTimeFromTimestampStr(timestampWithTimezone)
+	}
 }
 
 func sortResultRowsByTimestamp(resultRows [][]interface{}, timestampIndex int) {

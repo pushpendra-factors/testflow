@@ -533,7 +533,12 @@ function CustomKPI({
           key: index,
           name: item.name,
           desc: item.description,
-          type: item.type_of_query === 1 ? 'Default' : item.type_of_query === 2 ? 'Derived' : 'Event Based',
+          type:
+            item.type_of_query === 1
+              ? 'Default'
+              : item.type_of_query === 2
+              ? 'Derived'
+              : 'Event Based',
           actions: item
         });
       });
@@ -548,14 +553,14 @@ function CustomKPI({
       if (pr.lOp === 'AND') {
         const val = pr.prDaTy === FILTER_TYPES.CATEGORICAL ? [pr.va] : pr.va;
 
-        const DNa = _.startCase(pr.prNa);
+        const DNa = matchEventName(pr.prNa);
 
         filters.push({
           operator:
             pr.prDaTy === 'datetime'
               ? reverseDateOperatorMap[pr.co]
               : reverseOperatorMap[pr.co],
-          props: [DNa, pr.prDaTy],
+          props: [DNa, pr.prDaTy, 'filter'],
           values:
             pr.prDaTy === FILTER_TYPES.DATETIME
               ? convertDateTimeObjectValuesToMilliSeconds(val)
@@ -568,6 +573,28 @@ function CustomKPI({
     });
     return filters;
   };
+
+  const excludeEventsFromList = [
+    'Contact Created',
+    'Contact Updated',
+    'Lead Created',
+    'Lead Updated',
+    'Account Created',
+    'Account Updated',
+    'Company Created',
+    'Company Updated',
+    'Deal Created',
+    'Deal Updated',
+    'Opportunity Created',
+    'Opportunity Updated'
+  ];
+
+  const whiteListedAccounts = [
+    'junaid@factors.ai',
+    'solutions@factors.ai',
+    'parveenr@factors.ai',
+    'sonali@factors.ai'
+  ];
 
   function renderEventBasedKPIForm() {
     return (
@@ -604,11 +631,22 @@ function CustomKPI({
                   0
                 }
               >
-                {Object.entries(eventNames).map((item) => (
-                  <Option key={item[0]} value={item[0]}>
-                    {item[1]}
-                  </Option>
-                ))}
+                {Object.entries(eventNames)
+                  .filter((entry) => {
+                    const key = entry[0];
+                    const value = entry[1];
+
+                    // Check if the key or value matches one of the values to be removed
+                    return (
+                      !excludeEventsFromList.includes(key) &&
+                      !excludeEventsFromList.includes(value)
+                    );
+                  })
+                  .map((item) => (
+                    <Option key={item[0]} value={item[0]}>
+                      {item[1]}
+                    </Option>
+                  ))}
               </Select>
             </Form.Item>
           </Col>
@@ -964,7 +1002,9 @@ function CustomKPI({
                       >
                         <Option value='default'>Default</Option>
                         <Option value='derived_kpi'>Derived KPI</Option>
-                        <Option value='event_based'>Event Based</Option>
+                        {whiteListedAccounts.includes(currentAgent?.email) && (
+                          <Option value='event_based'>Event Based</Option>
+                        )}
                       </Select>
                     </Form.Item>
                   </Col>
@@ -1360,7 +1400,9 @@ function CustomKPI({
                         <Input
                           disabled
                           size='large'
-                          value={_.startCase(viewKPIDetails?.transformations?.agFn)}
+                          value={_.startCase(
+                            viewKPIDetails?.transformations?.agFn
+                          )}
                           className='fa-input w-full'
                           placeholder='Display Name'
                         />

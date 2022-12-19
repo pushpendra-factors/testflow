@@ -619,9 +619,12 @@ func ReceiveEvent(token string, event *Event) (int, *EventResponse) {
 		}
 
 	case "group":
-		logCtx.WithFields(log.Fields{"event_payload": event}).Info("Segment group event.")
+		logCtx.WithField("tag", "unsupported").Info("Segment group event.")
 		return http.StatusBadRequest, nil
 
+	case "alias":
+		logCtx.WithField("tag", "unsupported").Info("Segment alias event.")
+		return http.StatusBadRequest, nil
 	default:
 		response.Error = fmt.Sprintf("Unknown event type %s", event.Type)
 		logCtx.Error("Unknown segment event type.")

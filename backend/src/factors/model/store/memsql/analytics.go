@@ -1432,7 +1432,7 @@ func getSelectTimestampByTypeAndPropertyName(timestampType, propertyName, timezo
 
 	propertyToNum := "CONVERT(SUBSTRING(" + propertyName + ",1,10), DECIMAL(10))"
 	var selectStr string
-	
+
 	// Note: Second is used as granularity only in profiles which is called from attribution.
 	if timestampType == model.GroupByTimestampSecond {
 		selectStr = fmt.Sprintf("date_trunc('second', CONVERT_TZ(FROM_UNIXTIME("+propertyToNum+"), 'UTC', '%s'))", selectTz)
@@ -2036,26 +2036,24 @@ func addMissingTimestampsOnResultWithoutGroupByProps(result *model.QueryResult,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
-	rowsByTimestamp := make(map[string][]interface{}, 0)
+	filledResult := make([][]interface{}, 0, 0)
+	rowsByTimestamp := make(map[string]bool, 0)
 	for _, row := range result.Rows {
-		ts := row[timestampIndex].(time.Time)
-		rowsByTimestamp[U.GetTimestampAsStrWithTimezone(ts, query.Timezone)] = row
+		timestampString := U.GetTimestampAsStrWithTimezone(
+			row[timestampIndex].(time.Time), query.Timezone)
+
+		rowsByTimestamp[timestampString] = true
+		filledResult = append(filledResult, row)
 	}
 
 	timestamps, offsets := getAllTimestampsAndOffsetBetweenByType(query.From, query.To,
 		query.GetGroupByTimestamp(), query.Timezone)
 
-	filledResult := make([][]interface{}, 0, 0)
 	// range over timestamps between given from and to.
 	// uses timestamp string for comparison.
 	for index, ts := range timestamps {
 
-		if row, exists := rowsByTimestamp[U.GetTimestampAsStrWithTimezoneGivenOffset(ts, offsets[index])]; exists {
-			// overrides timestamp with user timezone as sql results doesn't
-			// return timezone used to query.
-			row[timestampIndex] = ts
-			filledResult = append(filledResult, row)
-		} else {
+		if _, exists := rowsByTimestamp[U.GetTimestampAsStrWithTimezoneGivenOffset(ts, offsets[index])]; !exists {
 			newRow := make([]interface{}, 3, 3)
 			newRow[timestampIndex] = ts
 			newRow[aggrIndex] = 0
@@ -2084,19 +2082,16 @@ func addMissingTimestampsOnResultWithGroupByProps(result *model.QueryResult,
 	}
 
 	filledResult := make([][]interface{}, 0, 0)
-
 	rowsByGroupAndTimestamp := make(map[string]bool, 0)
 	for _, row := range result.Rows {
 		encCols := make([]interface{}, 0, 0)
 		encCols = append(encCols, row[gkStart:gkEnd]...)
-
-		timestampWithTimezone := U.GetTimestampAsStrWithTimezone(
-			row[timestampIndex].(time.Time), query.Timezone)
 		// encoded key with group values and timestamp from db row.
-		encCols = append(encCols, timestampWithTimezone)
+		encCols = append(encCols, U.GetTimestampAsStrWithTimezone(row[timestampIndex].(time.Time), query.Timezone))
 		encKey := getEncodedKeyForCols(encCols)
-		rowsByGroupAndTimestamp[encKey] = true
 
+		rowsByGroupAndTimestamp[encKey] = true
+		filledResult = append(filledResult, row)
 	}
 
 	timestamps, offsets := getAllTimestampsAndOffsetBetweenByType(query.From, query.To,
@@ -2109,15 +2104,8 @@ func addMissingTimestampsOnResultWithGroupByProps(result *model.QueryResult,
 			// encoded key with generated timestamp.
 			encCols = append(encCols, U.GetTimestampAsStrWithTimezoneGivenOffset(ts, offsets[index]))
 			encKey := getEncodedKeyForCols(encCols)
-			timestampWithTimezone := U.GetTimestampAsStrWithTimezone(
-				row[timestampIndex].(time.Time), query.Timezone)
 
-			if _, exists := rowsByGroupAndTimestamp[encKey]; exists {
-				// overrides timestamp with user timezone as sql results doesn't
-				// return timezone used to query.
-				row[timestampIndex] = U.GetTimeFromTimestampStr(timestampWithTimezone)
-				filledResult = append(filledResult, row)
-			} else {
+			if _, exists := rowsByGroupAndTimestamp[encKey]; !exists {
 				// create new row with group values and missing date
 				// for those group combination and aggr 0.
 				rowLen := len(result.Headers)
@@ -2182,14 +2170,15 @@ func addMissingTimestampsOnChannelResultWithoutGroupByProps(result *model.QueryR
 	// range over timestamps between given from and to.
 	// uses timestamp string for comparison.
 	for index, ts := range timestamps {
+		timestampWithTimezone := U.GetTimestampAsStrWithTimezoneGivenOffset(ts, offsets[index])
 		if row, exists := rowsByTimestamp[U.GetTimestampAsStrWithTimezoneGivenOffset(ts, offsets[index])]; exists {
 			// overrides timestamp with user timezone as sql results doesn't
 			// return timezone used to query.
-			row[timestampIndex] = ts
+			row[timestampIndex] = timestampWithTimezone
 			filledResult = append(filledResult, row)
 		} else {
 			newRow := make([]interface{}, 2, 2)
-			newRow[timestampIndex] = ts
+			newRow[timestampIndex] = timestampWithTimezone
 			newRow[aggrIndex] = 0
 			filledResult = append(filledResult, newRow)
 		}
@@ -2218,7 +2207,6 @@ func addMissingTimestampsOnChannelResultWithGroupByProps(result *model.QueryResu
 	}
 
 	filledResult := make([][]interface{}, 0)
-
 	rowsByGroupAndTimestamp := make(map[string]bool, 0)
 	for _, row := range result.Rows {
 		encCols := make([]interface{}, 0)
@@ -2232,8 +2220,9 @@ func addMissingTimestampsOnChannelResultWithGroupByProps(result *model.QueryResu
 		// encoded key with group values and timestamp from db row.
 		encCols = append(encCols, timestampWithTimezone)
 		encKey := getEncodedKeyForCols(encCols)
-		rowsByGroupAndTimestamp[encKey] = true
 
+		rowsByGroupAndTimestamp[encKey] = true
+		filledResult = append(filledResult, row)
 	}
 
 	timestamps, offsets := getAllTimestampsAndOffsetBetweenByType(query.From, query.To,
@@ -2248,13 +2237,7 @@ func addMissingTimestampsOnChannelResultWithGroupByProps(result *model.QueryResu
 			encCols = append(encCols, timestampWithTimezone)
 			encKey := getEncodedKeyForCols(encCols)
 
-			if _, exists := rowsByGroupAndTimestamp[encKey]; exists {
-				// overrides timestamp with user timezone as sql results doesn't
-				// return timezone used to query.
-				row[timestampIndex] = timestampWithTimezone
-				filledResult = append(filledResult, row)
-
-			} else {
+			if _, exists := rowsByGroupAndTimestamp[encKey]; !exists {
 				// create new row with group values and missing date
 				// for those group combination and aggr 0.
 				rowLen := len(result.Headers)
