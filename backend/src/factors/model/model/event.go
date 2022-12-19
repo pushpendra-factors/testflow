@@ -167,13 +167,22 @@ func AreMarketingPropertiesMatching(event1 Event, event2 Event) bool {
 			return false
 		}
 
-		val1Str, ok := val1.(string)
-		if !ok {
+		val1Str, ok1 := val1.(string)
+		val2Str, ok2 := val2.(string)
+
+		// return true (or matching) if both the values are empty
+		if !ok1 && !ok2 {
+			return true
+		}
+
+		// return non-matching if value1 is corrupt & value2 is valid & non-empty
+		if !ok1 && ok2 && val2Str != "" {
 			log.WithField("event1", event1).Warn("failed to get value as string for event1")
 			return false
 		}
-		val2Str, ok := val2.(string)
-		if !ok {
+
+		// return non-matching if value2 is corrupt & value1 is valid & non-empty
+		if !ok2 && ok1 && val1Str != "" {
 			log.WithField("event2", event2).Warn("failed to get value as string for event2")
 			return false
 		}
