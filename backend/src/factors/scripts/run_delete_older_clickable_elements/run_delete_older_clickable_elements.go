@@ -28,6 +28,9 @@ func main() {
 	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
 
+	allProjectsFlag := flag.Bool("all_projects", true, "")
+	projectIdFlag := flag.Int64("project_id", 0, "")
+
 	flag.Parse()
 
 	if *env != "development" &&
@@ -69,9 +72,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	status, err := store.GetStore().DeleteClickableElementsOlderThanGivenDays(7)
+	status, _ := store.GetStore().DeleteClickableElementsOlderThanGivenDays(7, *projectIdFlag, *allProjectsFlag)
 	if status != http.StatusOK {
-		log.WithError(err).Error("Failed to delete clickable_elements older than given days.")
+		C.PingHealthcheckForFailure(healthcheckPingID, "Delete clickable_elements run failed.")
 		return
 	}
+	C.PingHealthcheckForSuccess(healthcheckPingID, "Delete clickable_elements run success.")
 }

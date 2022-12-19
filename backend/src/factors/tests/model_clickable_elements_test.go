@@ -140,7 +140,7 @@ func deleteClickableElementsOlderThanGivenDays(t *testing.T, project *model.Proj
 	assert.Nil(t, err)
 
 	// deleting 7 days older records
-	status, err = store.GetStore().DeleteClickableElementsOlderThanGivenDays(7)
+	status, err = store.GetStore().DeleteClickableElementsOlderThanGivenDays(7, project.ID, false)
 	assert.Equal(t, http.StatusOK, status)
 	assert.Nil(t, err)
 
