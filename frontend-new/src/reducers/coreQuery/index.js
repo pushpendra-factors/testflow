@@ -30,7 +30,8 @@ import {
   SET_USER_PROP_NAME,
   SET_EVENT_PROP_NAME,
   SET_GROUP_PROP_NAME,
-  SET_ATTR_QUERIES
+  SET_ATTR_QUERIES,
+  FETCH_EVENTS_MAP
 } from './actions';
 import {
   SHOW_ANALYTICS_RESULT,
@@ -55,6 +56,7 @@ const DEFAULT_TOUCHPOINTS = [
 
 const defaultState = {
   eventOptions: [],
+  eventNamesMap:{},
   eventProperties: {},
   userProperties: [],
   groupProperties: {},
@@ -111,6 +113,8 @@ const defaultState = {
 
 export default function (state = defaultState, action) {
   switch (action.type) {
+    case FETCH_EVENTS_MAP:
+      return {...state, eventNamesMap: action.payload}
     case FETCH_EVENTS:
       return { ...state, eventOptions: action.payload };
     case SET_EVENT_NAMES:

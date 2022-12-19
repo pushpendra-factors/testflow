@@ -1,6 +1,7 @@
 /* eslint-disable */
 
 export const FETCH_EVENTS = 'FETCH_EVENTS';
+export const FETCH_EVENTS_MAP = 'FETCH_EVENTS_MAP';
 export const FETCH_EVENT_PROPERTIES = 'FETCH_EVENT_PROPERTIES';
 export const FETCH_USER_PROPERTIES = 'FETCH_USER_PROPERTIES';
 export const FETCH_GROUP_PROPERTIES = 'FETCH_GROUP_PROPERTIES';
@@ -32,6 +33,10 @@ export const SET_EVENT_NAMES = 'SET_EVENT_NAMES';
 export const SET_ATTR_QUERIES = 'SET_ATTR_QUERIES';
 
 // Action creators
+export const fetchEventsMapAction = (eventsMap) => {
+  return { type: FETCH_EVENTS_MAP, payload: eventsMap };
+};
+
 export const fetchEventsAction = (events, status = 'started') => {
   return { type: FETCH_EVENTS, payload: events };
 };

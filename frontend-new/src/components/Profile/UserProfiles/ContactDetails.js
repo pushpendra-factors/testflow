@@ -24,7 +24,8 @@ function ContactDetails({
   fetchProjectSettings,
   udpateProjectSettings,
   getProfileUserDetails,
-  userProperties
+  userProperties,
+  eventNamesMap
 }) {
   const [activities, setActivities] = useState([]);
   const [granularity, setGranularity] = useState('Daily');
@@ -307,6 +308,7 @@ function ContactDetails({
         granularity={granularity}
         collapse={collapse}
         setCollapse={setCollapse}
+        eventNamesMap={eventNamesMap}
       />
     </div>
   );
@@ -326,7 +328,8 @@ const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   currentProjectSettings: state.global.currentProjectSettings,
   userDetails: state.timelines.contactDetails,
-  userProperties: state.coreQuery.userProperties
+  userProperties: state.coreQuery.userProperties,
+  eventNamesMap: state.coreQuery.eventNamesMap
 });
 
 const mapDispatchToProps = (dispatch) =>
