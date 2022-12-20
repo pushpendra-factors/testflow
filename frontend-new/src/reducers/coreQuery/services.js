@@ -56,14 +56,14 @@ export const getEventsData = (
 
 export function fetchEventProperties(projectId, eventName) {
   const url = `${host}projects/${projectId}/event_names/${btoa(
-    eventName
+    btoa(eventName)
   )}/properties?is_display_name_enabled=true`;
   return get(null, url);
 }
 
 export function fetchEventPropertyValues(projectId, eventName, propertyName) {
   const url = `${host}projects/${projectId}/event_names/${btoa(
-    eventName
+    btoa(eventName)
   )}/properties/${propertyName}/values`;
   return get(null, url);
 }
@@ -305,14 +305,14 @@ export const deleteReport = ({ project_id, queryId }) => {
 
 export function fetchGroupProperties(projectId, groupName) {
   const url = `${host}projects/${projectId}/groups/${btoa(
-    groupName
+    btoa(groupName)
   )}/properties`;
   return get(null, url);
 }
 
 export function fetchGroupPropertyValues(projectId, groupName, propertyName) {
   const url = `${host}projects/${projectId}/groups/${btoa(
-    groupName
+    btoa(groupName)
   )}/properties/${propertyName}/values`;
   return get(null, url);
 }
