@@ -152,6 +152,10 @@ func LeadSquaredPull(projectId int64, configs map[string]interface{}) (map[strin
 	}
 	datasetID := leadSquaredConfig.BigqueryDataset
 	for documentType, _ := range model.LeadSquaredTableName {
+		_, _, isDone := store.GetStore().GetLeadSquaredMarker(projectId, executionDate, documentType, "incremental_sync")
+		if(isDone == true){
+			continue
+		}
 		log.Info(fmt.Sprintf("Starting for %v", documentType))
 		tableID := model.LeadSquaredTableName[documentType]
 		if documentType != model.LEADSQUARED_LEAD && documentType != model.LEADSQUARED_SALES_ACTIVITY {
