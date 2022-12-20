@@ -2372,10 +2372,13 @@ func (store *MemSQL) UpdateIdentifyOverwriteUserPropertiesMeta(projectID int64, 
 		return nil
 	}
 
+	_, isExistingIdentifier := (*metaObj)[customerUserID]
+
 	(*metaObj)[customerUserID] = *customerUserIDMeta
 
-	if len(*metaObj) > 10 {
-		logCtx.WithFields(log.Fields{"meta_object": metaObj}).WithError(err).Error("Number of identification exceeded.")
+	// overwrite on existing identifier should count in increase in identification
+	if !isExistingIdentifier && len(*metaObj) > 10 {
+		logCtx.WithFields(log.Fields{"meta_object": metaObj}).Info("Number of identification exceeded.")
 	}
 
 	return model.UpdateUserPropertiesIdentifierMetaObject(userProperties, metaObj)

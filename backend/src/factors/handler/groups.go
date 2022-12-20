@@ -64,13 +64,30 @@ func GetGroupPropertiesHandler(c *gin.Context) {
 		return
 	}
 
-	decGroupNameInBytes, err := base64.StdEncoding.DecodeString(encodedGroupName)
+	var err error
+	var decNameInBytes_1 []byte
+	var decNameInBytes_2 []byte
+	decNameInBytes_1, err = base64.StdEncoding.DecodeString(encodedGroupName)
 	if err != nil {
-		logCtx.WithField("encodedName", encodedGroupName).Error("Failed decoding group_name.")
+		logCtx.WithFields(log.Fields{
+			"encodedName": encodedGroupName,
+			log.ErrorKey:  err,
+		}).Error("Failed decoding event_name_1.")
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-	groupName := string(decGroupNameInBytes)
+	decodedGroupName := string(decNameInBytes_1)
+
+	decNameInBytes_2, err = base64.StdEncoding.DecodeString(decodedGroupName)
+	if err != nil {
+		logCtx.WithFields(log.Fields{
+			"encodedName": decodedGroupName,
+			log.ErrorKey:  err,
+		}).Error("Failed decoding event_name_2.")
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+	groupName := string(decNameInBytes_2)
 
 	propertiesFromCache, status := store.GetStore().GetPropertiesByGroup(projectId, groupName, 2500,
 		C.GetLookbackWindowForEventUserCache())
@@ -138,13 +155,30 @@ func GetGroupPropertyValuesHandler(c *gin.Context) {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-	decGroupNameInBytes, err := base64.StdEncoding.DecodeString(encodedGroupName)
+	var err error
+	var decNameInBytes_1 []byte
+	var decNameInBytes_2 []byte
+	decNameInBytes_1, err = base64.StdEncoding.DecodeString(encodedGroupName)
 	if err != nil {
-		logCtx.WithField("encodedName", encodedGroupName).Error("Failed decoding group_name.")
+		logCtx.WithFields(log.Fields{
+			"encodedName": encodedGroupName,
+			log.ErrorKey:  err,
+		}).Error("Failed decoding event_name_1.")
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-	groupName := string(decGroupNameInBytes)
+	decodedGroupName := string(decNameInBytes_1)
+
+	decNameInBytes_2, err = base64.StdEncoding.DecodeString(decodedGroupName)
+	if err != nil {
+		logCtx.WithFields(log.Fields{
+			"encodedName": decodedGroupName,
+			log.ErrorKey:  err,
+		}).Error("Failed decoding event_name_2.")
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+	groupName := string(decNameInBytes_2)
 	logCtx = logCtx.WithField("group_name", groupName)
 
 	propertyName := c.Params.ByName("property_name")
