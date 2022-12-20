@@ -395,14 +395,29 @@ func GetEventPropertiesHandler(c *gin.Context) {
 	}
 
 	properties := make(map[string][]string)
-	var decENameInBytes []byte
-	decENameInBytes, err = base64.StdEncoding.DecodeString(encodedEName)
+	var decNameInBytes_1 []byte
+	var decNameInBytes_2 []byte
+	decNameInBytes_1, err = base64.StdEncoding.DecodeString(encodedEName)
 	if err != nil {
-		logCtx.WithField("encodedName", encodedEName).Error("Failed decoding event_name.")
+		logCtx.WithFields(log.Fields{
+			"encodedName": encodedEName,
+			log.ErrorKey:  err,
+		}).Error("Failed decoding event_name_1.")
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-	eventName := string(decENameInBytes)
+	decodedEventName := string(decNameInBytes_1)
+
+	decNameInBytes_2, err = base64.StdEncoding.DecodeString(decodedEventName)
+	if err != nil {
+		logCtx.WithFields(log.Fields{
+			"encodedName": decodedEventName,
+			log.ErrorKey:  err,
+		}).Error("Failed decoding event_name_2.")
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+	eventName := string(decNameInBytes_2)
 
 	logCtx.WithField("decodedEventName", eventName).Debug("Decoded event name on properties request.")
 
@@ -563,17 +578,29 @@ func GetEventPropertyValuesHandler(c *gin.Context) {
 	}
 
 	var propertyValues []string
-	var decNameInBytes []byte
-	decNameInBytes, err = base64.StdEncoding.DecodeString(encodedEName)
+	var decNameInBytes_1 []byte
+	var decNameInBytes_2 []byte
+	decNameInBytes_1, err = base64.StdEncoding.DecodeString(encodedEName)
 	if err != nil {
 		logCtx.WithFields(log.Fields{
 			"encodedName": encodedEName,
 			log.ErrorKey:  err,
-		}).Error("Failed decoding event_name.")
+		}).Error("Failed decoding event_name_1.")
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-	eventName := string(decNameInBytes)
+	decodedEventName := string(decNameInBytes_1)
+
+	decNameInBytes_2, err = base64.StdEncoding.DecodeString(decodedEventName)
+	if err != nil {
+		logCtx.WithFields(log.Fields{
+			"encodedName": decodedEventName,
+			log.ErrorKey:  err,
+		}).Error("Failed decoding event_name_2.")
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+	eventName := string(decNameInBytes_2)
 
 	log.WithField("decodedEventName", eventName).Debug("Decoded event name on properties value request.")
 
