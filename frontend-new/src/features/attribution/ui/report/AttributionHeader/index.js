@@ -89,10 +89,9 @@ function AttributionHeader({
   const renderReportCloseIcon = () => (
     <Button
       size='large'
-      type='text'
-      icon={<SVG size={20} name='close' />}
+      type='default'
       onClick={handleCloseButton}
-    />
+    >Close</Button>
   );
 
   const renderLogo = () => (

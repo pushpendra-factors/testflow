@@ -1916,14 +1916,13 @@ function CoreQuery({
                   <div className='pr-2 border-r'>{renderSaveQueryComp()}</div>
                   <Button
                     size='large'
-                    type='text'
-                    icon={<SVG size={20} name='close' />}
+                    type='default'
                     onClick={
                       coreQueryState.navigatedFromDashboard
                         ? handleCloseDashboardQuery
                         : handleCloseToAnalyse
                     }
-                  />
+                  >Close</Button>
                 </div>
               </div>
 
