@@ -28,7 +28,7 @@ func main() {
 	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
 
-	allProjectsFlag := flag.Bool("all_projects", true, "")
+	allProjectsFlag := flag.Bool("all_projects", false, "")
 	projectIdFlag := flag.Int64("project_id", 0, "")
 
 	flag.Parse()
@@ -41,7 +41,7 @@ func main() {
 	}
 
 	const clickable_elements_ping_id = "289fbf0f-8310-490d-8cfb-9a60e3879c66"
-	defaultAppName := "clickable_elements"
+	defaultAppName := "delete_old_clickable_elements_job"
 	defaultHealthcheckPingID := clickable_elements_ping_id
 	healthcheckPingID := C.GetHealthcheckPingID(defaultHealthcheckPingID, *overrideHealthcheckPingID)
 	appName := C.GetAppName(defaultAppName, *overrideAppName)
