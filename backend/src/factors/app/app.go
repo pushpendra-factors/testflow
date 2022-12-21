@@ -190,6 +190,7 @@ func main() {
 	blockedIPList := flag.String("blocked_IP_list", "", "List containing all the blocked IP address")
 	blockedEmailDomainList := flag.String("blocked_email_domain_list", "", "List containing all blocked email domains")
 	IngestionTimezoneEnabledProjectIDs := flag.String("ingestion_timezone_enabled_projects", "", "List of projectIds whose ingestion timezone is enabled.")
+	IncreaseKPILimitForProjectIDs := flag.String("increase_kpi_limit_for_projectids", "", "List of projectIds where kpi limit in increased.")
 
 	flag.Parse()
 
@@ -337,6 +338,7 @@ func main() {
 		BlockedEmailDomainList:                         C.GetBlockedEmailDomainFromStringListAsString(*blockedEmailDomainList),
 		IngestionTimezoneEnabledProjectIDs:             C.GetTokensFromStringListAsString(*IngestionTimezoneEnabledProjectIDs),
 		ProjectIdsV2:                                   projectIdsArrayV2,
+		IncreaseKPILimitForProjectIDs:                  *IncreaseKPILimitForProjectIDs,
 	}
 	C.InitConf(config)
 

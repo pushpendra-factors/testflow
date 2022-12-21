@@ -274,6 +274,7 @@ type Configuration struct {
 	AllowedSalesforceActivityEventsByProjectIDs        string
 	DisallowedSalesforceActivityTasksByProjectIDs      string
 	DisallowedSalesforceActivityEventsByProjectIDs     string
+	IncreaseKPILimitForProjectIDs                      string
 }
 
 type Services struct {
@@ -2384,4 +2385,24 @@ func IsAllowedSalesforceActivityEventsByProjectID(projectId int64) bool {
 	}
 
 	return true
+}
+
+func IsKPILimitIncreaseAllowedForProject(projectID int64) bool {
+	if configuration.SkipEventNameStepByProjectID == "" {
+		return false
+	}
+
+	if configuration.SkipEventNameStepByProjectID == "*" {
+		return true
+	}
+
+	projectIDstr := fmt.Sprintf("%d", projectID)
+	configProjectIDs := strings.Split(configuration.IncreaseKPILimitForProjectIDs, ",")
+	for i := range configProjectIDs {
+		if configProjectIDs[i] == projectIDstr {
+			return true
+		}
+	}
+
+	return false
 }
