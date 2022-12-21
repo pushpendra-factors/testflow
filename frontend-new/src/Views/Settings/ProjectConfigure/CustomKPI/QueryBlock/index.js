@@ -74,13 +74,21 @@ function QueryBlock({
   };
 
   const onChange = (value, group, category, type) => {
+    let qt;
+    for(let item of kpi?.config) {
+      for(let it of item.metrics) {
+        if(it?.name === value[1])
+          qt = it?.kpi_query_type;
+      }
+    }
     const newEvent = { alias: '', label: '', filters: [], group: '' };
     newEvent.label = value[0];
     newEvent.metric = value[1];
     newEvent.metricType = get(value, '2', '');
     newEvent.group = group;
+    newEvent.qt = qt;
     if (category) {
-      newEvent.category = category;
+      newEvent.category = category; 
     }
     setDDVisible(false);
     if (group === 'page_views') {

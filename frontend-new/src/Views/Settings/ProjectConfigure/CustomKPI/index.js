@@ -699,59 +699,64 @@ function CustomKPI({
           </Row>
         )}
 
-        {EventFn && EventFn !== 'unique' && EventfilterDDValues && (
-          <Row className='mt-8'>
-            <Col span={18}>
-              <Text type='title' level={7} extraClass='m-0'>
-                Select Property
-              </Text>
-              <Form.Item
-                name='event_property'
-                className='m-0'
-                rules={[
-                  {
-                    required: true,
-                    message: 'Please select a property'
-                  }
-                ]}
-              >
-                <Select
-                  className='fa-select w-full'
-                  size='large'
-                  disabled={!selEventName}
-                  onChange={(value, details) => {
-                    setEventPropertyDetails(details);
-                  }}
-                  placeholder='Select Property'
-                  showSearch
-                  filterOption={(input, option) =>
-                    option.children
-                      .toLowerCase()
-                      .indexOf(input.toLowerCase()) >= 0
-                  }
-                >
-                  {Object.keys(eventProperties)?.map((category) => {
-                    if (category === selEventName) {
-                      return eventProperties[category]?.map((item) => {
-                        return (
-                          <Option
-                            key={item[0]}
-                            value={item[0]}
-                            name={item[1]}
-                            data_type={item[2]}
-                            en={'event'}
-                          >
-                            {item[0]}
-                          </Option>
-                        );
-                      });
+        {EventFn &&
+          EventFn !== 'unique' &&
+          EventFn !== 'count' &&
+          EventfilterDDValues && (
+            <Row className='mt-8'>
+              <Col span={18}>
+                <Text type='title' level={7} extraClass='m-0'>
+                  Select Property
+                </Text>
+                <Form.Item
+                  name='event_property'
+                  className='m-0'
+                  rules={[
+                    {
+                      required: true,
+                      message: 'Please select a property'
                     }
-                  })}
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-        )}
+                  ]}
+                >
+                  <Select
+                    className='fa-select w-full'
+                    size='large'
+                    disabled={!selEventName}
+                    onChange={(value, details) => {
+                      setEventPropertyDetails(details);
+                    }}
+                    placeholder='Select Property'
+                    showSearch
+                    filterOption={(input, option) =>
+                      option.children
+                        .toLowerCase()
+                        .indexOf(input.toLowerCase()) >= 0
+                    }
+                  >
+                    {Object.keys(eventProperties)?.map((category) => {
+                      if (category === selEventName) {
+                        return eventProperties[category]?.map((item) => {
+                          if (item[2] === 'numerical') {
+                            return (
+                              <Option
+                                key={item[0]}
+                                value={item[0]}
+                                name={item[1]}
+                                data_type={item[2]}
+                                en={'event'}
+                              >
+                                {item[0]}
+                              </Option>
+                            );
+                          }
+                        });
+                      }
+                    })}
+                  </Select>
+                </Form.Item>
+              </Col>
+            </Row>
+          )}
 
         {EventfilterDDValues && (
           <Row className='mt-8'>
