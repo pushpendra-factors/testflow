@@ -2,7 +2,11 @@ import {
   fetchProfileAccounts,
   fetchProfileAccountDetails,
   fetchProfileUsers,
-  fetchProfileUserDetails
+  fetchProfileUserDetails,
+  createSegment,
+  getSegments,
+  fetchSegments,
+  updateSegment
 } from '.';
 import { formatAccountTimeline, formatUsersTimeline } from './utils';
 
@@ -112,3 +116,57 @@ export const getProfileUserDetails =
         });
     });
   };
+
+export const createNewSegment = (projectId, payload) => (dispatch) => {
+  return new Promise((resolve, reject) => {
+    createSegment(projectId, payload)
+      .then((response) => {
+        resolve(
+          dispatch({
+            type: 'SEGMENT_CREATION_FULFILLED',
+            payload: response.data
+          })
+        );
+      })
+      .catch((err) => {
+        dispatch({ type: 'SEGMENT_CREATION_REJECTED', payload: err });
+        reject(err);
+      });
+  });
+};
+
+export const getSavedSegments = (projectId) => (dispatch) => {
+  return new Promise((resolve, reject) => {
+    fetchSegments(projectId)
+      .then((response) => {
+        resolve(
+          dispatch({
+            type: 'FETCH_SEGMENTS_FULFILLED',
+            payload: response.data
+          })
+        );
+      })
+      .catch((err) => {
+        dispatch({ type: 'FETCH_SEGMENTS_REJECTED', payload: err });
+        reject(err);
+      });
+  });
+};
+
+export const updateSegmentForId = (projectId, id, payload) => (dispatch) => {
+  return new Promise((resolve, reject) => {
+    updateSegment(projectId, id, payload)
+      .then((response) => {
+        resolve(
+          dispatch({
+            type: 'UPDATE_SEGMENT_FULFILLED',
+            payload: response.data
+          })
+        );
+      })
+      .catch((err) => {
+        dispatch({ type: 'UPDATE_SEGMENT_REJECTED', payload: err });
+        reject(err);
+      });
+  });
+};

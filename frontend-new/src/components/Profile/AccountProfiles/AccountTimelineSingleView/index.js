@@ -84,7 +84,8 @@ function AccountTimelineSingleView({
                                     weight='bold'
                                     color='grey-2'
                                   >
-                                    {event?.alias_name || event?.display_name}
+                                    {event?.alias_name ||
+                                      PropTextFormat(event?.display_name)}
                                   </Text>
                                   {Object.entries(event?.properties || {}).map(
                                     ([key, value]) => {

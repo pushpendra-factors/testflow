@@ -4,7 +4,12 @@ import _ from 'lodash';
 import { CaretUpOutlined, CaretRightOutlined } from '@ant-design/icons';
 import { SVG } from '../factorsComponents';
 import InfoCard from './InfoCard';
-import { getEventCategory, getIconForCategory, getIconForEvent, groups, hoverEvents } from '../Profile/utils';
+import {
+  getEventCategory,
+  getIconForCategory,
+  groups,
+  hoverEvents
+} from '../Profile/utils';
 import { PropTextFormat } from 'Utils/dataFormatter';
 
 function FaTimeline({
@@ -45,7 +50,7 @@ function FaTimeline({
       event.display_name === 'Page View' ||
       event.event_type === 'CH' ||
       event.event_type === 'CS';
-    const category = getEventCategory(event, eventNamesMap)
+    const category = getEventCategory(event, eventNamesMap);
     const icon = getIconForCategory(category);
 
     return (
@@ -54,11 +59,21 @@ function FaTimeline({
         eventName={event?.event_name}
         properties={event?.properties || {}}
         trigger={hoverConditionals ? 'hover' : []}
-        icon={<SVG name={icon} size={24} />}
+        icon={
+          <SVG
+            name={icon}
+            size={24}
+            color={icon === 'events_cq' ? 'blue' : null}
+          />
+        }
       >
         <div className='inline-flex-gap--6 items-center'>
           <div>
-            <SVG name={icon} size={16} />
+            <SVG
+              name={icon}
+              size={16}
+              color={icon === 'events_cq' ? 'blue' : null}
+            />
           </div>
           <div className='event-name--sm'>{eventName}</div>
           {hoverConditionals ? <CaretRightOutlined /> : null}

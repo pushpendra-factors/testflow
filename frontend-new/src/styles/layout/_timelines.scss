@@ -7,6 +7,8 @@
 
 .fa-activity--filter {
     position: absolute;
+    top: 0;
+    left: 0;
     padding-top: 0 !important;
 
     .ant-popover-inner {
@@ -14,44 +16,44 @@
         max-height: 500px;
         border: 1px solid #f7f5f8;
         border-radius: 12px;
-    }
 
-    .ant-popover-inner-content {
-        padding: 24px;
+        .ant-popover-inner-content {
+            padding: 24px;
 
-        .ant-tabs {
-            .ant-tabs-nav {
-                margin: 0 0 4px 0;
-            }
+            .ant-tabs {
+                .ant-tabs-nav {
+                    margin: 0 0 4px 0;
+                }
 
-            .ant-tabs-content-holder {
-                .ant-tabs-content {
-                    .ant-tabs-tabpane {
-                        .ant-input-affix-wrapper {
-                            padding: 6px 12px;
-                            height: 36px;
-                            background: #F5F6F8;
-                            border: 1px solid #E7E9ED;
-                            border-radius: 6px;
-                            box-shadow: none;
-                            transition: all 0.2s;
+                .ant-tabs-content-holder {
+                    .ant-tabs-content {
+                        .ant-tabs-tabpane {
+                            .ant-input-affix-wrapper {
+                                padding: 6px 12px;
+                                height: 36px;
+                                background: #F5F6F8;
+                                border: 1px solid #E7E9ED;
+                                border-radius: 6px;
+                                box-shadow: none;
+                                transition: all 0.2s;
 
-                            &:hover {
-                                border: 1px solid $fa-color--mono-3;
-                                cursor: pointer;
+                                &:hover {
+                                    border: 1px solid $fa-color--mono-3;
+                                    cursor: pointer;
+                                }
+
+                                .ant-input {
+                                    background-color: transparent;
+                                }
                             }
 
-                            .ant-input {
-                                background-color: transparent;
+                            .fa-custom--popover-content {
+                                max-height: 392px;
+                                overflow-y: scroll;
                             }
                         }
 
-                        .fa-custom--popover-content {
-                            max-height: 392px;
-                            overflow-y: scroll;
-                        }
                     }
-
                 }
             }
         }
@@ -224,7 +226,7 @@
                 border-right: 2px solid #E7E9ED;
                 z-index: 10;
 
-                &.single-user{
+                &.single-user {
                     width: 250px !important;
                 }
             }
@@ -441,8 +443,59 @@
     }
 }
 
+.dropdown-btn {
+    display: flex;
+    align-items: center;
+    padding: 4px 8px;
+    gap: 4px;
+    height: 32px;
+    background: #FFFFFF;
+    box-shadow: 0px 0px 2px rgba(0, 0, 0, 0.3);
+    border-radius: 5px;
+}
+
+.border-with-radius--small {
+    border: 1px solid #DBDBDB;
+    border-radius: 5px !important;
+}
+
+.top-8 {
+    top: 2rem;
+}
+
+.divider-margin {
+    margin: 0;
+    margin-bottom: 5px;
+}
+
 .font-size--small {
     font-size: 12px;
+}
+
+.fa-custom-popover {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    color: rgba(0, 0, 0, 0.65);
+    font-size: 14px;
+    line-height: 1.5715;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 15;
+    text-align: left;
+
+    .ant-popover-content {
+        .ant-popover-arrow {
+            display: none;
+        }
+
+        .ant-popover-inner {
+            background: #FFFFFF;
+            box-shadow: 0px 0px 8px rgba(0, 0, 0, 0.25);
+            border-radius: 8px;
+        }
+    }
 }
 
 .inline-flex-gap--6 {

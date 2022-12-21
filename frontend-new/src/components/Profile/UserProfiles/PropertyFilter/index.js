@@ -6,6 +6,8 @@ import { compareFilters } from '../../../../utils/global';
 import PropFilterBlock from './PropFilterBlock';
 
 function PropertyFilter({
+  mode = 'query',
+  filtersLimit = 3,
   profileType,
   source,
   filters = [],
@@ -72,6 +74,7 @@ function PropertyFilter({
         list.push(
           <div key={id} className='m-0 mr-2 mb-2'>
             <PropFilterBlock
+              mode={mode}
               activeProject={activeProject}
               index={id}
               filter={filter}
@@ -84,11 +87,12 @@ function PropertyFilter({
           </div>
         );
       });
-      if (filters.length < 3) {
+      if (filters.length < filtersLimit) {
         if (filterDD) {
           list.push(
             <div key={list.length} className='m-0 mr-2 mb-2'>
               <PropFilterBlock
+                mode={mode}
                 activeProject={activeProject}
                 index={list.length}
                 deleteFilter={() => closeFilter()}
@@ -99,7 +103,7 @@ function PropertyFilter({
               />
             </div>
           );
-        } else {
+        } else if (mode !== 'display') {
           list.push(
             <div key={list.length} className='flex m-0 mr-2 mb-2'>
               <Button

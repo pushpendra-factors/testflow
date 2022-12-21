@@ -1,6 +1,11 @@
 import MomentTz from '../MomentTz';
-import { operatorMap } from '../../Views/CoreQuery/utils';
+import {
+  operatorMap,
+  reverseDateOperatorMap,
+  reverseOperatorMap
+} from '../../Views/CoreQuery/utils';
 import { formatDurationIntoString } from 'Utils/dataFormatter';
+import { ReverseProfileMapper } from 'Utils/constants';
 
 export const granularityOptions = [
   'Timestamp',
@@ -92,6 +97,47 @@ export const formatFiltersForPayload = (filters = []) => {
   return filterProps;
 };
 
+export const formatPayloadForFilters = (gp) => {
+  const globalFilters = [];
+
+  if (gp && Array.isArray(gp)) {
+    let ref = -1;
+    let lastProp = '';
+    let lastOp = '';
+    gp.forEach((pr) => {
+      if (pr.lop === 'AND') {
+        ref += 1;
+        globalFilters.push({
+          operator:
+            pr.ty === 'datetime'
+              ? reverseDateOperatorMap[pr.op]
+              : reverseOperatorMap[pr.op],
+          props: [pr.pr, pr.ty, pr.en],
+          values: [pr.va],
+          ref
+        });
+        lastProp = pr.pr;
+        lastOp = pr.op;
+      } else if (lastProp === pr.pr && lastOp === pr.op) {
+        globalFilters[globalFilters.length - 1].values.push(pr.va);
+      } else {
+        globalFilters.push({
+          operator:
+            pr.ty === 'datetime'
+              ? reverseDateOperatorMap[pr.op]
+              : reverseOperatorMap[pr.op],
+          props: [pr.pr, pr.ty, pr.en],
+          values: [pr.va],
+          ref
+        });
+        lastProp = pr.pr;
+        lastOp = pr.op;
+      }
+    });
+  }
+  return globalFilters;
+};
+
 export const eventsFormattedForGranularity = (
   events,
   granularity,
@@ -160,6 +206,24 @@ export const propValueFormat = (key, value) => {
   return value;
 };
 
+export const formatSegmentsObjToGroupSelectObj = (group, vals) => {
+  const obj = {
+    label: ReverseProfileMapper[group]?.users,
+    icon: '',
+    values: []
+  };
+  obj.values = vals?.map((val) => [
+    val?.name,
+    val?.id,
+    {
+      name: val?.name,
+      description: val?.description,
+      type: val?.type,
+      query: val?.query
+    }
+  ]);
+  return obj;
+};
 export const getEventCategory = (event, eventNamesMap) => {
   let category = 'others';
   Object.entries(eventNamesMap).forEach(([groupName, events]) => {
@@ -194,10 +258,6 @@ export const getIconForCategory = (category) => {
 };
 
 export const convertSVGtoURL = (svg) => {
-  if (!svg) {
-    svg = singleTimelineIconSVGs['others'];
-  }
-  console.log(svg);
   // svg needs to be passed with backticks
   const escapeRegExp = (str) => {
     return str.replace(/([.*+?^=!:${}()|\[\]\/\\])/g, '\\$1');

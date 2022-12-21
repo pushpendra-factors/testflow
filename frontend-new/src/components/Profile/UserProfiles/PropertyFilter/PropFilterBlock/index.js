@@ -3,12 +3,13 @@ import { Button } from 'antd';
 import { SVG } from '../../../../factorsComponents';
 import {
   fetchUserPropertyValues,
-  fetchGroupPropertyValues,
+  fetchGroupPropertyValues
 } from 'Reducers/coreQuery/services';
 import { DEFAULT_OPERATOR_PROPS } from '../../../../FaFilterSelect/utils';
 import FAFilterSelect from '../../../../FaFilterSelect';
 
 export default function PropFilterBlock({
+  mode,
   index,
   filterProps,
   activeProject,
@@ -16,26 +17,26 @@ export default function PropFilterBlock({
   filter,
   deleteFilter,
   insertFilter,
-  closeFilter,
+  closeFilter
 }) {
   const [newFilterState, setNewFilterState] = useState({
     props: [],
     operator: '',
-    values: [],
+    values: []
   });
   const [dropDownValues, setDropDownValues] = useState({});
   const [filterDropDownOptions, setFiltDD] = useState({
     props: [
       {
         label: 'User Properties',
-        icon: 'user',
+        icon: 'user'
       },
       {
         label: 'Group Properties',
-        icon: 'group',
-      },
+        icon: 'group'
+      }
     ],
-    operator: operatorProps,
+    operator: operatorProps
   });
 
   useEffect(() => {
@@ -52,7 +53,7 @@ export default function PropFilterBlock({
       propState.push({
         label: k,
         icon: k,
-        values: filterProps[k],
+        values: filterProps[k]
       });
     });
     filterDD.props = propState;
@@ -62,6 +63,7 @@ export default function PropFilterBlock({
   const renderFilterContent = () => {
     return (
       <FAFilterSelect
+        mode={mode}
         propOpts={filterDropDownOptions.props}
         operatorOpts={filterDropDownOptions.operator}
         valueOpts={dropDownValues}
@@ -105,7 +107,7 @@ export default function PropFilterBlock({
               ddValues[newFilterState.props[0]] = [...res.data, '$none'];
               setDropDownValues(ddValues);
             })
-            .catch(() => {
+            .catch((err) => {
               console.log(err);
               const ddValues = Object.assign({}, dropDownValues);
               ddValues[newFilterState.props[0]] = ['$none'];
@@ -172,7 +174,7 @@ export default function PropFilterBlock({
               ddValues[propOpByPayload(props, 0)] = [...res.data, '$none'];
               setDropDownValues(ddValues);
             })
-            .catch(() => {
+            .catch((err) => {
               console.log(err);
               const ddValues = Object.assign({}, dropDownValues);
               ddValues[propOpByPayload(props, 0)] = ['$none'];
@@ -186,6 +188,7 @@ export default function PropFilterBlock({
   const filterSelComp = () => {
     return (
       <FAFilterSelect
+        mode={mode}
         propOpts={filterDropDownOptions.props}
         operatorOpts={filterDropDownOptions.operator}
         valueOpts={dropDownValues}
