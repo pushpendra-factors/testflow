@@ -28,7 +28,7 @@ const defaultState = {
   models: [],
   window: null,
   linkedEvents: [],
-  tacticOfferType: 'Tactic',
+  tacticOfferType: 'TacticOffer',
   attr_dateRange: {
     ...DefaultDateRangeFormat,
     dateStr: ''

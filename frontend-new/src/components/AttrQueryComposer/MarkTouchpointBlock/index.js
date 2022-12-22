@@ -8,7 +8,7 @@ import AttrFilterBlock from '../AttrFilterBlock';
 
 import {
   setTouchPointFilters,
-  setTacticOfferType,
+  setTacticOfferType
 } from '../../../reducers/coreQuery/middleware';
 
 import { Button, Popover, Radio, Row } from 'antd';
@@ -19,7 +19,7 @@ import FaSelect from 'Components/FaSelect';
 import ORButton from '../../ORButton';
 import { compareFilters, groupFilters } from '../../../utils/global';
 import { InfoCircleOutlined } from '@ant-design/icons';
-
+import { getTouchPointLabel } from 'Reducers/coreQuery/utils';
 
 const MarkTouchpointBlock = ({
   touchPoint,
@@ -30,7 +30,7 @@ const MarkTouchpointBlock = ({
   setTouchPointFilters,
   filters,
   setTacticOfferType,
-  touchPointRef,
+  touchPointRef
 }) => {
   const [tpDimensionsSelection, setTPDimensionsSelection] = useState(false);
   const [selectVisible, setSelectVisible] = useState(false);
@@ -38,7 +38,7 @@ const MarkTouchpointBlock = ({
   const [moreOptions, setMoreOptions] = useState(false);
   const [filterProps, setFilterProperties] = useState({
     event: [],
-    user: [],
+    user: []
   });
   const [orFilterIndex, setOrFilterIndex] = useState(-1);
 
@@ -59,7 +59,7 @@ const MarkTouchpointBlock = ({
 
   const editFilter = (index, val) => {
     const filtersSorted = [...filters];
-    filtersSorted.sort(compareFilters); 
+    filtersSorted.sort(compareFilters);
     filtersSorted[index] = val;
     setTouchPointFilters(filtersSorted);
     setFilterDD(false);
@@ -67,12 +67,12 @@ const MarkTouchpointBlock = ({
 
   const delFilter = (index) => {
     const filtersSorted = [...filters];
-    filtersSorted.sort(compareFilters); 
+    filtersSorted.sort(compareFilters);
     const fltrs = filtersSorted.filter((f, i) => i !== index);
     setTouchPointFilters(fltrs);
     setFilterDD(false);
   };
-  
+
   const closeFilter = () => {
     setFilterDD(false);
     setOrFilterIndex(-1);
@@ -90,26 +90,23 @@ const MarkTouchpointBlock = ({
     setSelectVisible(!selectVisible);
   };
 
-  const onEventSelect = (val) => {
-    if (val === 'Channel') {
-      setTouchpoint('ChannelGroup');
-    } else {
-      setTouchpoint(val);
-    }
+  const onEventSelect = (value) => {
+    const val = value[1];
+    setTouchpoint(val);
     setTouchPointFilters([]);
     setSelectVisible(false);
   };
 
   const selectTouchPointOpts = () => {
     let tchPointOpts = [];
-    if (!touchPointRef || touchPointRef.includes('Tactic')) {
+    if (!touchPointRef || touchPointRef === 'Tactic') {
       tchPointOpts = touchPointOptions[0].values
-        .filter((opt) => !['LandingPage'].includes(opt[0]))
-        .map((option) => new Array(option[0], option[0]));
+        .filter((opt) => !['LandingPage', 'AllPageView'].includes(opt[0]))
+        .map((option) => [getTouchPointLabel(option[0]), option[0]]);
     } else {
       tchPointOpts = touchPointOptions[0].values
         .filter((opt) => !['AdGroup', 'Keyword'].includes(opt[0]))
-        .map((option) => new Array(option[0], option[0]));
+        .map((option) => [getTouchPointLabel(option[0]), option[0]]);
     }
 
     return tchPointOpts;
@@ -121,7 +118,7 @@ const MarkTouchpointBlock = ({
         {selectVisible ? (
           <FaSelect
             options={selectTouchPointOpts()}
-            optionClick={(val) => onEventSelect(val[0])}
+            optionClick={(val) => onEventSelect(val)}
             onClickOutside={() => setSelectVisible(false)}
             extraClass={touchPoint ? styles.touchPointSelector : ''}
             showIcon={false}
@@ -222,103 +219,106 @@ const MarkTouchpointBlock = ({
       let index = 0;
       let lastRef = 0;
 
-      if(filters?.length){
-      const group = groupFilters(filters, 'ref');
-      const filtersGroupedByRef = Object.values(group);
-      const refValues = Object.keys(group);
-      lastRef = parseInt(refValues[refValues.length-1]);
+      if (filters?.length) {
+        const group = groupFilters(filters, 'ref');
+        const filtersGroupedByRef = Object.values(group);
+        const refValues = Object.keys(group);
+        lastRef = parseInt(refValues[refValues.length - 1]);
 
-      filtersGroupedByRef.forEach((filtersGr)=>{
-        const refValue = filtersGr[0].ref;
-        if(filtersGr.length == 1){
-          const filt = filtersGr[0];
-          filtrs.push(
-            <div className={'fa--query_block--filters flex flex-row'}>
-              <div key={index} className={`mt-2`}>
-              <AttrFilterBlock
-                  activeProject={activeProject}
-                  index={index}
-                  blockType={'event'}
-                  filterType={'channel'}
-                  filter={filt}
-                  deleteFilter={delFilter}
-                  insertFilter={(val,index) => editFilter(index, val)}
-                  closeFilter={closeFilter}
-                  typeProps={{ channel: 'all_ads' }}
-                  filterProps={filterProps}
-                  propsConstants={Object.keys(filterProps)}
-                  refValue={refValue}
-              ></AttrFilterBlock>
+        filtersGroupedByRef.forEach((filtersGr) => {
+          const refValue = filtersGr[0].ref;
+          if (filtersGr.length == 1) {
+            const filt = filtersGr[0];
+            filtrs.push(
+              <div className={'fa--query_block--filters flex flex-row'}>
+                <div key={index} className={`mt-2`}>
+                  <AttrFilterBlock
+                    activeProject={activeProject}
+                    index={index}
+                    blockType={'event'}
+                    filterType={'channel'}
+                    filter={filt}
+                    deleteFilter={delFilter}
+                    insertFilter={(val, index) => editFilter(index, val)}
+                    closeFilter={closeFilter}
+                    typeProps={{ channel: 'all_ads' }}
+                    filterProps={filterProps}
+                    propsConstants={Object.keys(filterProps)}
+                    refValue={refValue}
+                  ></AttrFilterBlock>
+                </div>
+                {index !== orFilterIndex && (
+                  <div className={`mt-2`}>
+                    <ORButton
+                      index={index}
+                      setOrFilterIndex={setOrFilterIndex}
+                    />
+                  </div>
+                )}
+                {index === orFilterIndex && (
+                  <div key={'init'} className={`mt-2`}>
+                    <AttrFilterBlock
+                      activeProject={activeProject}
+                      index={index}
+                      blockType={'event'}
+                      filterType={'channel'}
+                      delBtnClass={styles.filterDelBtn}
+                      deleteFilter={closeFilter}
+                      insertFilter={insertFilter}
+                      closeFilter={closeFilter}
+                      typeProps={{ channel: 'all_ads' }}
+                      filterProps={filterProps}
+                      propsConstants={Object.keys(filterProps)}
+                      refValue={refValue}
+                      showOr={true}
+                    ></AttrFilterBlock>
+                  </div>
+                )}
               </div>
-             {index !== orFilterIndex && (
-               <div className={`mt-2`}>
-               <ORButton index={index} setOrFilterIndex={setOrFilterIndex}/>
-               </div>
-              )}       
-             {index === orFilterIndex && (
-                <div key={'init'} className={`mt-2`}>
-              <AttrFilterBlock
-                  activeProject={activeProject}
-                  index={index}
-                  blockType={'event'}
-                  filterType={'channel'}
-                  delBtnClass={styles.filterDelBtn}
-                  deleteFilter={closeFilter}
-                  insertFilter={insertFilter}
-                  closeFilter={closeFilter}
-                  typeProps={{ channel: 'all_ads' }}
-                  filterProps={filterProps}
-                  propsConstants={Object.keys(filterProps)}
-                  refValue={refValue}
-                  showOr = {true}
-              ></AttrFilterBlock>
-                </div>              
-              )}  
-              </div>     
-          );
-          index+=1;
-      }else{
-        filtrs.push(
-          <div className={'fa--query_block--filters flex flex-row'}>
-            <div key={index} className={`mt-2`}>
-              <AttrFilterBlock
-                  activeProject={activeProject}
-                  index={index}
-                  blockType={'event'}
-                  filterType={'channel'}
-                  filter={filtersGr[0]}
-                  deleteFilter={delFilter}
-                  insertFilter={(val,index) => editFilter(index, val)}
-                  closeFilter={closeFilter}
-                  typeProps={{ channel: 'all_ads' }}
-                  filterProps={filterProps}
-                  propsConstants={Object.keys(filterProps)}
-                  refValue={refValue}
-              ></AttrFilterBlock>
+            );
+            index += 1;
+          } else {
+            filtrs.push(
+              <div className={'fa--query_block--filters flex flex-row'}>
+                <div key={index} className={`mt-2`}>
+                  <AttrFilterBlock
+                    activeProject={activeProject}
+                    index={index}
+                    blockType={'event'}
+                    filterType={'channel'}
+                    filter={filtersGr[0]}
+                    deleteFilter={delFilter}
+                    insertFilter={(val, index) => editFilter(index, val)}
+                    closeFilter={closeFilter}
+                    typeProps={{ channel: 'all_ads' }}
+                    filterProps={filterProps}
+                    propsConstants={Object.keys(filterProps)}
+                    refValue={refValue}
+                  ></AttrFilterBlock>
+                </div>
+                <div key={index + 1} className={`mt-2`}>
+                  <AttrFilterBlock
+                    activeProject={activeProject}
+                    index={index + 1}
+                    blockType={'event'}
+                    filterType={'channel'}
+                    filter={filtersGr[1]}
+                    deleteFilter={delFilter}
+                    insertFilter={(val, index) => editFilter(index, val)}
+                    closeFilter={closeFilter}
+                    typeProps={{ channel: 'all_ads' }}
+                    filterProps={filterProps}
+                    propsConstants={Object.keys(filterProps)}
+                    refValue={refValue}
+                    showOr={true}
+                  ></AttrFilterBlock>
+                </div>
               </div>
-            <div key={index+1} className={`mt-2`}>
-            <AttrFilterBlock
-                  activeProject={activeProject}
-                  index={index+1}
-                  blockType={'event'}
-                  filterType={'channel'}
-                  filter={filtersGr[1]}
-                  deleteFilter={delFilter}
-                  insertFilter={(val,index) => editFilter(index, val)}
-                  closeFilter={closeFilter}
-                  typeProps={{ channel: 'all_ads' }}
-                  filterProps={filterProps}
-                  propsConstants={Object.keys(filterProps)}
-                  refValue={refValue}
-                  showOr = {true}
-              ></AttrFilterBlock>
-            </div>
-          </div>
-        );
-        index+=2;
+            );
+            index += 2;
+          }
+        });
       }
-    })
-  }
       if (filterDD) {
         filtrs.push(
           <div key={filtrs.length} className={`mt-2`}>
@@ -333,7 +333,7 @@ const MarkTouchpointBlock = ({
               insertFilter={insertFilter}
               deleteFilter={() => closeFilter()}
               closeFilter={closeFilter}
-              refValue={lastRef+1}
+              refValue={lastRef + 1}
             ></AttrFilterBlock>
           </div>
         );
@@ -349,9 +349,13 @@ const MarkTouchpointBlock = ({
         className={`${styles.block__content} fa--query_block_section--basic relative mt-3`}
       >
         {
-          <Button type='link' onClick={toggleTouchPointSelect} className={'btn-total-round'}>
+          <Button
+            type='link'
+            onClick={toggleTouchPointSelect}
+            className={'btn-total-round'}
+          >
             <SVG name='mouseevent' extraClass={'mr-1'}></SVG>
-            {touchPoint === 'ChannelGroup' ? 'Channel' : touchPoint}
+            {getTouchPointLabel(touchPoint)}
           </Button>
         }
 
@@ -390,15 +394,25 @@ const MarkTouchpointBlock = ({
           >
             Type
           </Text>
-            <Popover className='p-1'
-              placement='right'
-              content={<><b>Tactics</b> are methods in which you reach out to customers. <br />For e.g. Google Ads is a classic tactic. <br /><br />
-                <b>Offers</b> are content that you serve to the visitor. <br />It's the offer itself that you present. Landing pages are offers.</>} 
-              trigger='hover'
-              overlayStyle={{width:"260px"}}
-              >
-              <InfoCircleOutlined />
-            </Popover>
+          <Popover
+            className='p-1'
+            placement='right'
+            content={
+              <>
+                <b>Tactics</b> are methods in which you reach out to customers.{' '}
+                <br />
+                For e.g. Google Ads is a classic tactic. <br />
+                <br />
+                <b>Offers</b> are content that you serve to the visitor. <br />
+                It's the offer itself that you present. Landing pages are
+                offers.
+              </>
+            }
+            trigger='hover'
+            overlayStyle={{ width: '260px' }}
+          >
+            <InfoCircleOutlined />
+          </Popover>
         </Row>
         <Row className={`mt-2 ml-2`}>
           <Radio.Group
@@ -422,16 +436,25 @@ const MarkTouchpointBlock = ({
           >
             Property
           </Text>
-            <Popover className='p-1'
-              placement='right'
-              title={<><b>There are a hierarchy of levels inside paid marketing.</b></>}
-              content={<>Select at what level you would like to run the analysis, between Source, Campaign, Adgroup, Creative, or Keyword levels.
-                </>} 
-              trigger='hover'
-              overlayStyle={{width:"260px"}}
-              >
-              <InfoCircleOutlined />
-            </Popover>
+          <Popover
+            className='p-1'
+            placement='right'
+            title={
+              <>
+                <b>There are a hierarchy of levels inside paid marketing.</b>
+              </>
+            }
+            content={
+              <>
+                Select at what level you would like to run the analysis, between
+                Source, Campaign, Adgroup, Creative, or Keyword levels.
+              </>
+            }
+            trigger='hover'
+            overlayStyle={{ width: '260px' }}
+          >
+            <InfoCircleOutlined />
+          </Popover>
         </Row>
 
         <Row className={`ml-2`}>
@@ -452,14 +475,14 @@ const mapStateToProps = (state) => ({
   touchPointOptions: state.coreQuery.touchpointOptions,
   touchPointRef: state.coreQuery.tacticOfferType,
   filters: state.coreQuery.touchpoint_filters,
-  campaign_config: state.coreQuery.campaign_config,
+  campaign_config: state.coreQuery.campaign_config
 });
 
 const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
     {
       setTouchPointFilters,
-      setTacticOfferType,
+      setTacticOfferType
     },
     dispatch
   );
