@@ -29,7 +29,8 @@ function AccountDetails({
   udpateProjectSettings,
   getProfileAccountDetails,
   userProperties,
-  groupProperties
+  groupProperties,
+  eventNamesMap
 }) {
   const [granularity, setGranularity] = useState('Daily');
   const [collapseAll, setCollapseAll] = useState(true);
@@ -320,6 +321,7 @@ function AccountDetails({
       }
       timelineUsers={accountDetails.data?.account_users || []}
       loading={accountDetails?.isLoading}
+      eventNamesMap={eventNamesMap}
     />
   );
 
@@ -374,6 +376,7 @@ function AccountDetails({
         setCollapseAll={setCollapseAll}
         granularity={granularity}
         loading={accountDetails?.isLoading}
+        eventNamesMap={eventNamesMap}
       />
     </div>
   );
@@ -419,7 +422,8 @@ const mapStateToProps = (state) => ({
   currentProjectSettings: state.global.currentProjectSettings,
   accountDetails: state.timelines.accountDetails,
   userProperties: state.coreQuery.userProperties,
-  groupProperties: state.coreQuery.groupProperties
+  groupProperties: state.coreQuery.groupProperties,
+  eventNamesMap: state.coreQuery.eventNamesMap
 });
 
 const mapDispatchToProps = (dispatch) =>

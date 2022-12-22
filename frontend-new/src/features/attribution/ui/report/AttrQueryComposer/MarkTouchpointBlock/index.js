@@ -18,6 +18,7 @@ import FaSelect from 'Components/FaSelect';
 import ORButton from 'Components/ORButton';
 import { compareFilters, groupFilters } from 'Utils/global';
 import { InfoCircleOutlined } from '@ant-design/icons';
+import { getTouchPointLabel } from 'Reducers/coreQuery/utils';
 
 function MarkTouchpointBlock({
   touchPoint,
@@ -88,26 +89,23 @@ function MarkTouchpointBlock({
     setSelectVisible(!selectVisible);
   };
 
-  const onEventSelect = (val) => {
-    if (val === 'Channel') {
-      setTouchpoint('ChannelGroup');
-    } else {
-      setTouchpoint(val);
-    }
+  const onEventSelect = (value) => {
+    const val = value[1];
+    setTouchpoint(val);
     setTouchPointFilters([]);
     setSelectVisible(false);
   };
 
   const selectTouchPointOpts = () => {
     let tchPointOpts = [];
-    if (!touchPointRef || touchPointRef.includes('Tactic')) {
+    if (!touchPointRef || touchPointRef === 'Tactic') {
       tchPointOpts = touchPointOptions[0].values
-        .filter((opt) => !['LandingPage'].includes(opt[0]))
-        .map((option) => new Array(option[0], option[0]));
+        .filter((opt) => !['LandingPage', 'AllPageView'].includes(opt[0]))
+        .map((option) => [getTouchPointLabel(option[0]), option[0]]);
     } else {
       tchPointOpts = touchPointOptions[0].values
         .filter((opt) => !['AdGroup', 'Keyword'].includes(opt[0]))
-        .map((option) => new Array(option[0], option[0]));
+        .map((option) => [getTouchPointLabel(option[0]), option[0]]);
     }
 
     return tchPointOpts;
@@ -118,7 +116,7 @@ function MarkTouchpointBlock({
       {selectVisible ? (
         <FaSelect
           options={selectTouchPointOpts()}
-          optionClick={(val) => onEventSelect(val[0])}
+          optionClick={(val) => onEventSelect(val)}
           onClickOutside={() => setSelectVisible(false)}
           extraClass={touchPoint ? styles.touchPointSelector : ''}
           showIcon={false}
@@ -350,7 +348,7 @@ function MarkTouchpointBlock({
             className={'btn-total-round'}
           >
             <SVG name='mouseevent' extraClass={'mr-1'}></SVG>
-            {touchPoint === 'ChannelGroup' ? 'Channel' : touchPoint}
+            {getTouchPointLabel(touchPoint)}
           </Button>
         }
 

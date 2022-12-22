@@ -1,24 +1,22 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { connect, useSelector } from 'react-redux';
+import { connect, useSelector, useDispatch } from 'react-redux';
 import { bindActionCreators } from 'redux';
-import { Button, Collapse, Select, DatePicker, Tooltip } from 'antd';
-import { SVG, Text } from '../factorsComponents';
+import { Button, DatePicker, Tooltip } from 'antd';
+import { SVG, Text } from 'Components/factorsComponents';
 import styles from './index.module.scss';
 import ProfileBlock from './ProfileBlock';
 import GroupBlock from './GroupBlock';
-import { QUERY_TYPE_PROFILE } from '../../utils/constants';
+import { QUERY_TYPE_PROFILE, RevAvailableGroups } from '../../utils/constants';
 import ComposerBlock from '../QueryCommons/ComposerBlock';
 import {
   fetchEventNames,
   getUserProperties,
-  getGroupProperties,
+  getGroupProperties
 } from 'Reducers/coreQuery/middleware';
 import GLobalFilter from './GlobalFilter';
 import MomentTz from 'Components/MomentTz';
 import FaSelect from '../FaSelect';
 import { INITIALIZE_GROUPBY } from '../../reducers/coreQuery/actions';
-import { useDispatch } from 'react-redux';
-import { PropTextFormat } from '../../utils/dataFormatter';
 import { TOOLTIP_CONSTANTS } from '../../constants/tooltips.constans';
 
 function ProfileComposer({
@@ -34,11 +32,15 @@ function ProfileComposer({
   queryOptions,
   setQueryOptions,
   collapse = false,
-  setCollapse,
+  setCollapse
 }) {
   const [isDDVisible, setDDVisible] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showDatePickerStr, setShowDatePickerStr] = useState('Select Date');
+  const [profileBlockOpen, setProfileBlockOpen] = useState(true);
+  const [filterBlockOpen, setFilterBlockOpen] = useState(true);
+  const [groupBlockOpen, setGroupBlockOpen] = useState(true);
+
   const dispatch = useDispatch();
   const groupState = useSelector((state) => state.groups);
 
@@ -47,7 +49,7 @@ function ProfileComposer({
   const enabledGroups = () => {
     let groups = [['Users', 'users']];
     groupOpts?.forEach((elem) => {
-      const formatName = PropTextFormat(elem.name);
+      const formatName = RevAvailableGroups[elem.name];
       groups.push([formatName, elem.name]);
     });
     return groups;
@@ -69,8 +71,8 @@ function ProfileComposer({
       type: INITIALIZE_GROUPBY,
       payload: {
         global: [],
-        event: [],
-      },
+        event: []
+      }
     });
     setQueryOptions(opts);
   };
@@ -127,8 +129,9 @@ function ProfileComposer({
           <div className={`${styles.groupsection}`}>
             <Tooltip
               title='Select profile type to analyse'
-              color={TOOLTIP_CONSTANTS.DARK}>
-                <Button
+              color={TOOLTIP_CONSTANTS.DARK}
+            >
+              <Button
                 className={`${styles.groupsection_button}`}
                 type='text'
                 onClick={triggerDropDown}
@@ -140,13 +143,15 @@ function ProfileComposer({
                     weight={'bold'}
                     extraClass={`m-0 mr-1`}
                   >
-                    {PropTextFormat(queryOptions.group_analysis)}
+                    {queryOptions.group_analysis === 'users'
+                      ? 'Users'
+                      : RevAvailableGroups[queryOptions.group_analysis]}
                   </Text>
                   <SVG name='caretDown' />
                 </div>
               </Button>
-              </Tooltip>
-            
+            </Tooltip>
+
             {selectGroup()}
           </div>
         </div>
@@ -196,7 +201,6 @@ function ProfileComposer({
   };
 
   const renderProfileQueryList = () => {
-    const [profileBlockOpen, setProfileBlockOpen] = useState(true);
     try {
       return (
         <ComposerBlock
@@ -221,7 +225,6 @@ function ProfileComposer({
   };
 
   const renderGlobalFilterBlock = () => {
-    const [filterBlockOpen, setFilterBlockOpen] = useState(true);
     try {
       if (queryType === QUERY_TYPE_PROFILE && queries.length < 1) {
         return null;
@@ -249,7 +252,6 @@ function ProfileComposer({
   };
 
   const groupByBlock = () => {
-    const [groupBlockOpen, setGroupBlockOpen] = useState(true);
     try {
       if (queryType === QUERY_TYPE_PROFILE && queries.length < 1) {
         return null;
@@ -263,7 +265,7 @@ function ProfileComposer({
           extraClass={`no-padding-l no-padding-r`}
         >
           <div key={0} className={'fa--query_block borderless no-padding '}>
-            <GroupBlock groupName={queryOptions.group_analysis}/>
+            <GroupBlock groupName={queryOptions.group_analysis} />
           </div>
         </ComposerBlock>
       );
@@ -386,7 +388,7 @@ function ProfileComposer({
 }
 
 const mapStateToProps = (state) => ({
-  activeProject: state.global.active_project,
+  activeProject: state.global.active_project
 });
 
 const mapDispatchToProps = (dispatch) =>
@@ -394,7 +396,7 @@ const mapDispatchToProps = (dispatch) =>
     {
       fetchEventNames,
       getUserProperties,
-      getGroupProperties,
+      getGroupProperties
     },
     dispatch
   );

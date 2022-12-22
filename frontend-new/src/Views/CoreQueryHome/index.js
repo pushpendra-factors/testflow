@@ -368,6 +368,7 @@ function CoreQuery({
             ...equivalentQuery.breakdown.event
           ],
           globalFilters: equivalentQuery.globalFilters,
+          group_analysis: equivalentQuery.groupAnalysis,
           ...queryDateRange,
           events_condition: equivalentQuery.eventsCondition
         };
@@ -622,14 +623,16 @@ function CoreQuery({
             View Report
           </a>
         </Menu.Item>
-        {((getQueryType(row.query) === QUERY_TYPE_KPI) || (getQueryType(row.query) === QUERY_TYPE_EVENT)) ? (
+        {getQueryType(row.query) === QUERY_TYPE_KPI ||
+        getQueryType(row.query) === QUERY_TYPE_EVENT ? (
           <Menu.Item key='1'>
             <a onClick={showEmailModal.bind(this, row)} href='#!'>
               Email this report
             </a>
           </Menu.Item>
         ) : null}
-        {((getQueryType(row.query) === QUERY_TYPE_KPI) || (getQueryType(row.query) === QUERY_TYPE_EVENT)) ? (
+        {getQueryType(row.query) === QUERY_TYPE_KPI ||
+        getQueryType(row.query) === QUERY_TYPE_EVENT ? (
           <Menu.Item key='2'>
             <a onClick={showSlackModal.bind(this, row)} href='#!'>
               Share to slack
@@ -663,7 +666,7 @@ function CoreQuery({
       dispatch({ type: SHOW_ANALYTICS_RESULT, payload: false });
     }
   }, [location.state, setQueryToState]);
-  
+
   const data = queriesState.data
     .filter((q) => !(q.query && q.query.cl === QUERY_TYPE_WEB))
     .map((q) => {
@@ -685,6 +688,7 @@ function CoreQuery({
         return {
           ...currData,
           globalFilters: [],
+          group_analysis: 'users',
           date_range: { ...DefaultDateRangeFormat }
         };
       });
@@ -704,6 +708,7 @@ function CoreQuery({
         return {
           ...currData,
           globalFilters: [],
+          group_analysis: 'users',
           date_range: { ...DefaultDateRangeFormat }
         };
       });

@@ -1223,9 +1223,15 @@ func (store *MemSQL) ExecuteAdwordsChannelQueryV1(projectID int64, query *model.
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	fetchSource := false
 	logCtx := log.WithFields(logFields)
+	limitString := ""
+	if C.IsKPILimitIncreaseAllowedForProject(projectID) {
+		limitString = fmt.Sprintf(" LIMIT %d", model.MaxResultsLimit)
+	} else {
+		limitString = fmt.Sprintf(" LIMIT %d", model.ResultsLimit)
+	}
 	if query.GroupByTimestamp == "" {
 		sql, params, selectKeys, selectMetrics, errCode := store.GetSQLQueryAndParametersForAdwordsQueryV1(
-			projectID, query, reqID, fetchSource, " LIMIT 10000", false, nil)
+			projectID, query, reqID, fetchSource, limitString, false, nil)
 		if errCode == http.StatusNotFound {
 			headers := model.GetHeadersFromQuery(*query)
 			return headers, make([][]interface{}, 0, 0), http.StatusOK
@@ -1260,7 +1266,7 @@ func (store *MemSQL) ExecuteAdwordsChannelQueryV1(projectID int64, query *model.
 		}
 		groupByCombinations := model.GetGroupByCombinationsForChannelAnalytics(columns, resultMetrics)
 		sql, params, selectKeys, selectMetrics, errCode = store.GetSQLQueryAndParametersForAdwordsQueryV1(
-			projectID, query, reqID, fetchSource, " LIMIT 10000", true, groupByCombinations)
+			projectID, query, reqID, fetchSource, limitString, true, groupByCombinations)
 		if errCode != http.StatusOK {
 			headers := model.GetHeadersFromQuery(*query)
 			return headers, make([][]interface{}, 0, 0), errCode
@@ -1491,7 +1497,7 @@ SELECT JSON_EXTRACT_STRING(value, 'campaign_name') as campaign_name, date_trunc(
 SUM(JSON_EXTRACT_STRING(value, 'impressions')) as impressions, SUM(JSON_EXTRACT_STRING(value, 'clicks')) as clicks FROM adwords_documents WHERE project_id = '2' AND
 customer_account_id IN ( '2368493227' ) AND type = '5' AND timestamp between '20200331' AND '20200401'
 AND JSON_EXTRACT_STRING(value, 'campaign_name') RLIKE '%Brand - BLR - New_Aug_Desktop_RLSA%' GROUP BY campaign_name, datetime
-ORDER BY impressions DESC, clicks DESC LIMIT 2500 ;
+ORDER BY impressions DESC, clicks DESC LIMIT 2500;
 */
 // - For reference of complex joins, PR which removed older/QueryV1 adwords is 1437.
 func buildAdwordsSimpleQueryV2(query *model.ChannelQueryV1, projectID int64, customerAccountID string, reqID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}) (string, []interface{}, []string, []string) {

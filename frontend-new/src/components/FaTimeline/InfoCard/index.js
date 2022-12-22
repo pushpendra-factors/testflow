@@ -1,25 +1,35 @@
 import React from 'react';
 import { Popover } from 'antd';
-import { Text } from '../../factorsComponents';
+import { Text } from 'Components/factorsComponents';
+import { PropTextFormat } from 'Utils/dataFormatter';
 import {
-  formatDurationIntoString,
-  PropTextFormat
-} from '../../../utils/dataFormatter';
-import MomentTz from '../../MomentTz';
-import { propValueFormat, TimelineHoverPropDisplayNames } from '../../Profile/utils';
+  propValueFormat,
+  TimelineHoverPropDisplayNames
+} from '../../Profile/utils';
 
-function InfoCard({ title, eventName, properties = {}, trigger, children }) {
+function InfoCard({
+  title,
+  icon,
+  eventName,
+  properties = {},
+  trigger,
+  children
+}) {
   const popoverContent = () => (
     <div className='fa-popupcard'>
-      <Text
-        extraClass='m-0 mb-3'
-        type='title'
-        level={6}
-        weight='bold'
-        color='grey-2'
-      >
-        {title}
-      </Text>
+      <div className='inline-flex-gap--6 items-start mb-3'>
+        {icon}
+        <Text
+          extraClass='m-0'
+          type='title'
+          level={6}
+          weight='bold'
+          color='grey-2'
+        >
+          {PropTextFormat(title)}
+        </Text>
+      </div>
+
       {Object.entries(properties).map(([key, value]) => {
         if (key === '$is_page_view' && value === true)
           return (

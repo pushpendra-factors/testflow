@@ -77,6 +77,7 @@ func main() {
 		0, "Enables filter optimisation logic for events and users query.")
 	customerEnabledProjectsLastComputed := flag.String("customer_enabled_projects_last_computed",
 		"*", "List of projects customer enabled forLast Computed")
+	IncreaseKPILimitForProjectIDs := flag.String("increase_kpi_limit_for_projectids", "", "List of projectIds where kpi limit in increased.")
 
 	flag.Parse()
 
@@ -145,6 +146,7 @@ func main() {
 		EnableOptimisedFilterOnProfileQuery:   *enableOptimisedFilterOnProfileQuery != 0,
 		EnableOptimisedFilterOnEventUserQuery: *enableOptimisedFilterOnEventUserQuery != 0,
 		CustomerEnabledProjectsLastComputed:   C.GetTokensFromStringListAsUint64(*customerEnabledProjectsLastComputed),
+		IncreaseKPILimitForProjectIDs:         *IncreaseKPILimitForProjectIDs,
 	}
 
 	C.InitConf(config)

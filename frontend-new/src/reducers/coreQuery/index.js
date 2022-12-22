@@ -30,7 +30,8 @@ import {
   SET_USER_PROP_NAME,
   SET_EVENT_PROP_NAME,
   SET_GROUP_PROP_NAME,
-  SET_ATTR_QUERIES
+  SET_ATTR_QUERIES,
+  FETCH_EVENTS_MAP
 } from './actions';
 import {
   SHOW_ANALYTICS_RESULT,
@@ -43,18 +44,11 @@ import {
   EVENT_DISPLAY_NAMES_LOADED
 } from '../types';
 import { DefaultDateRangeFormat } from '../../Views/CoreQuery/utils';
-
-const DEFAULT_TOUCHPOINTS = [
-  'Campaign',
-  'Source',
-  'AdGroup',
-  'Keyword',
-  'Channel',
-  'LandingPage'
-];
+import { DEFAULT_TOUCHPOINTS } from 'Reducers/coreQuery/utils';
 
 const defaultState = {
   eventOptions: [],
+  eventNamesMap: {},
   eventProperties: {},
   userProperties: [],
   groupProperties: {},
@@ -66,7 +60,7 @@ const defaultState = {
     {
       label: 'Digital',
       icon: 'fav',
-      values: DEFAULT_TOUCHPOINTS.map((v) => [v])
+      values: DEFAULT_TOUCHPOINTS.map((v) => [v.key])
     }
   ],
   show_analytics_result: false,
@@ -75,7 +69,7 @@ const defaultState = {
   touchpoint: '',
   touchpoint_filters: [],
   attr_query_type: 'EngagementBased',
-  tacticOfferType: 'Tactic',
+  tacticOfferType: 'TacticOffer',
   attr_dateRange: {
     ...DefaultDateRangeFormat,
     dateStr: ''
@@ -111,6 +105,8 @@ const defaultState = {
 
 export default function (state = defaultState, action) {
   switch (action.type) {
+    case FETCH_EVENTS_MAP:
+      return { ...state, eventNamesMap: action.payload };
     case FETCH_EVENTS:
       return { ...state, eventOptions: action.payload };
     case SET_EVENT_NAMES:

@@ -3977,4 +3977,325 @@ func TestFunnelGroupQuery(t *testing.T) {
 	assert.Equal(t, http.StatusOK, errCode)
 	assert.Equal(t, float64(2), result.Rows[0][0])
 	assert.Equal(t, float64(0), result.Rows[0][1])
+
+	/*
+		event1 to event2
+		user1(group_1_1), -> user1(group_1_1)
+		global filter by
+			group1_id = 'group_1'
+		global group by 'group1_id' scope group 1
+	*/
+	query = model.Query{
+		From: eventTimestamp.Unix(),
+		To:   eventTimestamp.AddDate(0, 0, 1).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{
+				Name:       event1,
+				Properties: []model.QueryProperty{},
+			},
+
+			model.QueryEventWithProperties{
+				Name:       event2,
+				Properties: []model.QueryProperty{},
+			},
+		},
+		GlobalUserProperties: []model.QueryProperty{
+
+			model.QueryProperty{
+				Entity:    model.PropertyEntityUserGlobal,
+				Property:  "group1_id",
+				Operator:  "equals",
+				Value:     "group_1",
+				Type:      U.PropertyTypeCategorical,
+				LogicalOp: "OR",
+			},
+		},
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				EventName: model.UserPropertyGroupByPresent,
+				Entity:    model.PropertyEntityUser,
+				Property:  "group1_id",
+			},
+		},
+		Class:           model.QueryClassFunnel,
+		GroupAnalysis:   U.GROUP_NAME_HUBSPOT_COMPANY,
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondAllGivenEvent,
+	}
+
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, "$no_group", result.Rows[0][0])
+	assert.Equal(t, float64(1), result.Rows[0][1])
+	assert.Equal(t, float64(1), result.Rows[0][2])
+	assert.Equal(t, "group_1", result.Rows[1][0])
+	assert.Equal(t, float64(1), result.Rows[1][1])
+	assert.Equal(t, float64(1), result.Rows[1][2])
+
+	/*
+		event1 to event2
+		user1(group_1_1), -> user1(group_1_1)
+		global group by group1_id for group 1 scope
+
+	*/
+	query = model.Query{
+		From: eventTimestamp.Unix(),
+		To:   eventTimestamp.AddDate(0, 0, 1).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{
+				Name:       event1,
+				Properties: []model.QueryProperty{},
+			},
+
+			model.QueryEventWithProperties{
+				Name:       event2,
+				Properties: []model.QueryProperty{},
+			},
+		},
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				EventName: model.UserPropertyGroupByPresent,
+				Entity:    model.PropertyEntityUser,
+				Property:  "group1_id",
+			},
+		},
+		Class:           model.QueryClassFunnel,
+		GroupAnalysis:   U.GROUP_NAME_HUBSPOT_COMPANY,
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondAllGivenEvent,
+	}
+
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	sort.Slice(result.Rows, func(i, j int) bool {
+		p1 := U.GetPropertyValueAsString(result.Rows[i][0])
+		p2 := U.GetPropertyValueAsString(result.Rows[j][0])
+		return p1 < p2
+	})
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, "group1_id", result.Headers[0])
+	assert.Equal(t, "step_0", result.Headers[1])
+	assert.Equal(t, "step_1", result.Headers[2])
+	assert.Equal(t, "conversion_step_0_step_1", result.Headers[3])
+	assert.Equal(t, "conversion_overall", result.Headers[4])
+	assert.Equal(t, "$no_group", result.Rows[0][0])
+	assert.Equal(t, float64(3), result.Rows[0][1])
+	assert.Equal(t, float64(2), result.Rows[0][2])
+	assert.Equal(t, "group_1", result.Rows[1][0])
+	assert.Equal(t, float64(1), result.Rows[1][1])
+	assert.Equal(t, float64(1), result.Rows[1][2])
+	assert.Equal(t, "group_2", result.Rows[2][0])
+	assert.Equal(t, float64(1), result.Rows[2][1])
+	assert.Equal(t, float64(1), result.Rows[2][2])
+	assert.Equal(t, "group_3", result.Rows[3][0])
+	assert.Equal(t, float64(1), result.Rows[3][1])
+	assert.Equal(t, float64(0), result.Rows[3][2])
+
+	/*
+		event1 to event2
+		user1(group_1_1), -> user1(group_1_1)
+		global filter by
+			group1_id = 'group_1'
+		global group by
+			'group1_id'
+		event 1 group by
+			'$cost'
+		event 2 group by
+			'$cost'
+		event 1 group by
+			'$cost1'
+		event 1 group by
+			'$city'
+		global group by
+			'$group_1_id' scope group 1
+	*/
+	query = model.Query{
+		From: eventTimestamp.Unix(),
+		To:   eventTimestamp.AddDate(0, 0, 1).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name:       event1,
+				Properties: []model.QueryProperty{},
+			},
+
+			{
+				Name:       event2,
+				Properties: []model.QueryProperty{},
+			},
+		},
+		GlobalUserProperties: []model.QueryProperty{
+			{
+				Entity:    model.PropertyEntityUserGlobal,
+				Property:  "group1_id",
+				Operator:  "equals",
+				Value:     "group_1",
+				Type:      U.PropertyTypeCategorical,
+				LogicalOp: "OR",
+			},
+		},
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Entity:         model.PropertyEntityEvent,
+				EventName:      event1,
+				EventNameIndex: 1,
+				Property:       "$cost",
+			},
+			{
+				Entity:         model.PropertyEntityEvent,
+				EventName:      event2,
+				EventNameIndex: 2,
+				Property:       "$cost",
+			},
+			{
+				Entity:         model.PropertyEntityEvent,
+				EventName:      event1,
+				EventNameIndex: 1,
+				Property:       "$cost1",
+			},
+			{
+				Entity:         model.PropertyEntityUser,
+				EventName:      event1,
+				EventNameIndex: 1,
+				Property:       "$city",
+			},
+			{
+				EventName: model.UserPropertyGroupByPresent,
+				Entity:    model.PropertyEntityUser,
+				Property:  "group1_id",
+			},
+		},
+		Class:           model.QueryClassFunnel,
+		GroupAnalysis:   U.GROUP_NAME_HUBSPOT_COMPANY,
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondAllGivenEvent,
+	}
+
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	sort.Slice(result.Rows, func(i, j int) bool {
+		p1 := U.GetPropertyValueAsString(result.Rows[i][0])
+		p2 := U.GetPropertyValueAsString(result.Rows[j][0])
+		return p1 < p2
+	})
+
+	assert.Equal(t, "$no_group", result.Rows[0][0])
+	assert.Equal(t, "$no_group", result.Rows[0][1])
+	assert.Equal(t, "$no_group", result.Rows[0][2])
+	assert.Equal(t, "$no_group", result.Rows[0][3])
+	assert.Equal(t, "$no_group", result.Rows[0][4])
+	assert.Equal(t, float64(1), result.Rows[0][5])
+	assert.Equal(t, float64(1), result.Rows[0][6])
+	assert.Equal(t, "100.0", result.Rows[0][7])
+	assert.Equal(t, "100.0", result.Rows[0][8])
+	assert.Equal(t, "1", result.Rows[1][0])
+	assert.Equal(t, "2", result.Rows[1][1])
+	assert.Equal(t, "$none", result.Rows[1][2])
+	assert.Equal(t, "A", result.Rows[1][3])
+	assert.Equal(t, "group_1", result.Rows[1][4])
+	assert.Equal(t, float64(1), result.Rows[1][5])
+	assert.Equal(t, float64(1), result.Rows[1][6])
+	assert.Equal(t, "100.0", result.Rows[1][7])
+	assert.Equal(t, "100.0", result.Rows[1][8])
+}
+
+func TestFunnelBreakdownPropertyFirstOccurence(t *testing.T) {
+	project, _, _, _, err := SetupProjectUserEventNameAgentReturnDAO()
+	assert.Nil(t, err)
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+	uri := "/sdk/event/track"
+
+	createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, createdUserID)
+	startTime := time.Now().Add(-10 * time.Second).Unix()
+	for i := 0; i < 5; i++ {
+		payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s", "timestamp": %d,"event_properties":{"value1":%d,"value2":%d},"user_properties":{"user_value1":%d,"user_value2":%d}}`,
+			"s0", createdUserID, startTime+int64(2*i), i, i+1, i, i+2)
+		w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+		assert.Equal(t, http.StatusOK, w.Code)
+		response := DecodeJSONResponseToMap(w.Body)
+		assert.NotNil(t, response["event_id"])
+		assert.Nil(t, response["user_id"])
+	}
+
+	query := model.Query{
+		From: startTime - 100,
+		To:   startTime + 100,
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name:       "s0",
+				Properties: []model.QueryProperty{},
+			},
+
+			{
+				Name:       "s0",
+				Properties: []model.QueryProperty{},
+			},
+		},
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Entity:         model.PropertyEntityEvent,
+				EventName:      "s0",
+				EventNameIndex: 2,
+				Property:       "value1",
+			},
+			{
+				Entity:         model.PropertyEntityEvent,
+				EventName:      "s0",
+				EventNameIndex: 2,
+				Property:       "value2",
+			},
+		},
+		Class:           model.QueryClassFunnel,
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondAllGivenEvent,
+	}
+
+	result, errCode, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, "value1", result.Headers[0])
+	assert.Equal(t, "value2", result.Headers[1])
+	assert.Equal(t, "1", result.Rows[1][0])
+	assert.Equal(t, "2", result.Rows[1][1])
+
+	query = model.Query{
+		From: startTime - 100,
+		To:   startTime + 100,
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name:       "s0",
+				Properties: []model.QueryProperty{},
+			},
+
+			{
+				Name:       "s0",
+				Properties: []model.QueryProperty{},
+			},
+		},
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Entity:         model.PropertyEntityUser,
+				EventName:      "s0",
+				EventNameIndex: 2,
+				Property:       "user_value1",
+			},
+			{
+				Entity:         model.PropertyEntityUser,
+				EventName:      "s0",
+				EventNameIndex: 2,
+				Property:       "user_value2",
+			},
+		},
+		Class:           model.QueryClassFunnel,
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondAllGivenEvent,
+	}
+
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, "user_value1", result.Headers[0])
+	assert.Equal(t, "user_value2", result.Headers[1])
+	assert.Equal(t, "1", result.Rows[1][0])
+	assert.Equal(t, "3", result.Rows[1][1])
+
 }

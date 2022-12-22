@@ -95,31 +95,13 @@ function ReportContent({
   const [secondAxisKpiIndices, setSecondAxisKpiIndices] = useState([]);
 
   useEffect(() => {
-    let items = [];
-
-    if (queryType === QUERY_TYPE_CAMPAIGN) {
-      items = getChartTypeMenuItems(queryType, campaignState.group_by.length);
+    if (queryType === QUERY_TYPE_EVENT && breakdownType !== EACH_USER_TYPE) {
+      setChartTypeMenuItems([]);
     }
-
-    if (queryType === QUERY_TYPE_KPI) {
-      items = getChartTypeMenuItems(queryType, breakdown.length);
-    }
-
-    if (
-      (queryType === QUERY_TYPE_EVENT && breakdownType === EACH_USER_TYPE) ||
-      queryType === QUERY_TYPE_FUNNEL
-    ) {
-      items = getChartTypeMenuItems(queryType, breakdown.length, queries);
-    }
-    if (queryType === QUERY_TYPE_PROFILE) {
-      items = getChartTypeMenuItems(queryType, breakdown.length, queries);
-    }
-
-    if (queryType === QUERY_TYPE_ATTRIBUTION) {
-      items = getChartTypeMenuItems(queryType);
-    }
-    setChartTypeMenuItems(items.length > 1 ? items : []);
-  }, [queryType, campaignState.group_by, breakdown, breakdownType, queries]);
+    setChartTypeMenuItems(
+      getChartTypeMenuItems(queryType, breakdown?.length, queries)
+    );
+  }, [queryType, breakdown, breakdownType, queries]);
 
   if (resultState.loading) {
     content = (

@@ -3,6 +3,7 @@ import { Input } from 'antd';
 import { SVG } from '../factorsComponents';
 import { getUniqueItemsByKeyAndSearchTerm } from '../Profile/utils';
 import CustomCheckbox from './CustomCheckbox';
+import { PropTextFormat } from 'Utils/dataFormatter';
 
 export default function SearchCheckList({
   placeholder,
@@ -36,7 +37,7 @@ export default function SearchCheckList({
             (option) => (
               <CustomCheckbox
                 key={option[titleKey]}
-                name={option[titleKey]}
+                name={PropTextFormat(option[titleKey])}
                 checked={option[checkedKey]}
                 onChange={onChange.bind(this, option)}
               />

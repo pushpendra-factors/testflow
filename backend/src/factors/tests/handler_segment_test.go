@@ -116,6 +116,30 @@ func sendUpdateSegmentPutReq(r *gin.Engine, request model.SegmentPayload, projec
 	return w
 }
 
+func sendSegmentDeleteByIdReq(r *gin.Engine, projectId int64, id string, agent *model.Agent) *httptest.ResponseRecorder {
+
+	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
+	if err != nil {
+		log.WithError(err).Error("Error creating cookie data.")
+	}
+
+	rb := C.NewRequestBuilderWithPrefix(http.MethodDelete, fmt.Sprintf("/projects/%d/segments/%s", projectId, id)).
+		WithCookie(&http.Cookie{
+			Name:   C.GetFactorsCookieName(),
+			Value:  cookieData,
+			MaxAge: 1000,
+		})
+
+	req, err := rb.Build()
+	if err != nil {
+		log.WithError(err).Error("Error deleting segment by id req.")
+	}
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	return w
+}
+
 func TestPostAPISegmentHandler(t *testing.T) {
 	r := gin.Default()
 	H.InitAppRoutes(r)
@@ -464,4 +488,69 @@ func TestPutAPISegmentHandler(t *testing.T) {
 	assert.Nil(t, err)
 	queryMap, _ := U.EncodeStructTypeToMap(querySegment)
 	assert.Equal(t, &queryMap, getQueryMap)
+}
+
+func TestDeleteAPISegmentHandler(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	// Create new segment.
+	events := make([]model.EventWithProperty, 1)
+	properties := make([]model.QueryProperty, 1)
+	prop := model.QueryProperty{
+		Value:     "1",
+		Property:  "prop1",
+		Operator:  "op1",
+		LogicalOp: "logicalop1",
+		Type:      "type1",
+	}
+	properties[0] = prop
+	event := model.EventWithProperty{
+		Names:           "eventName1",
+		Properties:      properties,
+		LogicalOperator: "logicalOp1",
+	}
+	events[0] = event
+	querySegment := model.SegmentQuery{
+		EventsWithProperties: events,
+		GlobalProperties:     properties,
+	}
+
+	segment := &model.SegmentPayload{
+		Name:        "Name1",
+		Description: "dummy info",
+		Query:       querySegment,
+		Type:        "event",
+	}
+
+	w := sendSegmentPostReq(r, *segment, project.ID, agent)
+	assert.Equal(t, http.StatusCreated, w.Code)
+
+	// creating one more record
+	segment = &model.SegmentPayload{
+		Name:        "Name2",
+		Description: "dummy info",
+		Query:       querySegment,
+		Type:        "event2",
+	}
+	w = sendSegmentPostReq(r, *segment, project.ID, agent)
+	assert.Equal(t, http.StatusCreated, w.Code)
+
+	getSegement, status := store.GetStore().GetAllSegments(project.ID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, 2, len(getSegement))
+
+	// delete the created record
+	w = sendSegmentDeleteByIdReq(r, project.ID, getSegement["event"][0].Id, agent)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	// check if record deleted
+	w = sendSegmentGetByIdReq(r, project.ID, getSegement["event"][0].Id, agent)
+	assert.Equal(t, http.StatusNotFound, w.Code)
+
+	getSegement, status = store.GetStore().GetAllSegments(project.ID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, 1, len(getSegement))
 }

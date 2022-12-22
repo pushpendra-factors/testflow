@@ -110,6 +110,10 @@ func (store *MemSQL) CreateClickableElement(projectId int64, click *model.Captur
 		Enabled:           false,
 	}
 
+	if click.UpdatedAt != nil {
+		event.UpdatedAt = *click.UpdatedAt
+	}
+
 	db := C.GetServices().Db
 	dbx := db.Create(&event)
 	// Duplicates gracefully handled and allowed further.
@@ -198,4 +202,41 @@ func (store *MemSQL) GetAllClickableElements(projectId int64) ([]model.Clickable
 	}
 
 	return clickableElements, http.StatusFound
+}
+
+func (store *MemSQL) DeleteClickableElementsOlderThanGivenDays(expiry int,
+	projectID int64, allProjects bool) (int, error) {
+	logFields := log.Fields{
+		"project_id":   projectID,
+		"expiry":       expiry,
+		"all_projects": allProjects,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+	if expiry < 0 || (!allProjects && projectID == 0) {
+		logCtx.Error("Invalid parameters.")
+		return http.StatusBadRequest, nil
+	}
+
+	var timeBeforeSevenDays = U.TimeNowZ().AddDate(0, 0, -expiry)
+	db := C.GetServices().Db
+	var err error
+
+	if allProjects {
+		err = db.Table("clickable_elements").
+			Where("enabled = false AND updated_at < ?", timeBeforeSevenDays).
+			Delete(&model.ClickableElements{}).Error
+	} else {
+		err = db.Table("clickable_elements").
+			Where("project_id = ? AND enabled = false AND updated_at < ?", projectID, timeBeforeSevenDays).
+			Delete(&model.ClickableElements{}).Error
+	}
+
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to delete clickable_elements older than given days.")
+		return http.StatusInternalServerError, err
+	}
+
+	return http.StatusOK, nil
 }

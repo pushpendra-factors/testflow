@@ -39,6 +39,7 @@ type CaptureClickPayload struct {
 	EventProperties U.PropertiesMap `json:"event_properties"`
 	UserProperties  U.PropertiesMap `json:"user_properties"`
 	Timestamp       int64           `json:"timestamp"`
+	UpdatedAt       *time.Time      `json:"-"`
 }
 
 func AddAllowedElementAttributes(projectID int64,

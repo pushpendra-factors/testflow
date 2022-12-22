@@ -1,4 +1,4 @@
-import { get, getHostUrl, post } from '../../utils/request';
+import { get, getHostUrl, post, put } from '../../utils/request';
 
 let host = getHostUrl();
 host = host[host.length - 1] === '/' ? host : `${host}/`;
@@ -8,7 +8,10 @@ const initialState = {
   contactDetails: { isLoading: false, data: {} },
   accounts: { isLoading: false, data: [] },
   accountDetails: { isLoading: false, data: {} },
-  error: false
+  error: false,
+  segmentCreateStatus: '',
+  segmentUpdateStatus: '',
+  segments: {}
 };
 
 export default function (state = initialState, action) {
@@ -48,6 +51,18 @@ export default function (state = initialState, action) {
       };
     case 'FETCH_PROFILE_ACCOUNT_DETAILS_FAILED':
       return { ...initialState, error: true };
+    case 'SEGMENT_CREATION_FULFILLED':
+      return { ...state, segmentCreateStatus: action.payload };
+    case 'SEGMENT_CREATION_REJECTED':
+      return { ...state, segmentCreateStatus: action.payload };
+    case 'FETCH_SEGMENTS_FULFILLED':
+      return { ...state, segments: action.payload };
+    case 'FETCH_SEGMENTS_REJECTED':
+      return { ...state, segments: {} };
+    case 'UPDATE_SEGMENT_FULFILLED':
+      return { ...state, segmentUpdateStatus: action.payload };
+    case 'UPDATE_SEGMENT_REJECTED':
+      return { ...state, segmentUpdateStatus: action.payload };
     default:
       return state;
   }
@@ -71,4 +86,24 @@ export const fetchProfileAccounts = (projectId, reqBody) => {
 export const fetchProfileAccountDetails = (projectId, id) => {
   const url = `${host}projects/${projectId}/v1/profiles/accounts/${id}`;
   return get(null, url);
+};
+
+export const createSegment = (projectId, payload) => {
+  const url = `${host}projects/${projectId}/segments`;
+  return post(null, url, payload);
+};
+
+export const fetchSegments = (projectId) => {
+  const url = `${host}projects/${projectId}/segments`;
+  return get(null, url);
+};
+
+export const fetchSegmentById = (projectId, id) => {
+  const url = `${host}projects/${projectId}/segments/${id}`;
+  return get(null, url);
+};
+
+export const updateSegment = (projectId, id, payload) => {
+  const url = `${host}projects/${projectId}/segments/${id}`;
+  return put(null, url, payload);
 };

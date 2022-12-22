@@ -485,9 +485,15 @@ func (store *MemSQL) ExecuteLinkedinChannelQueryV1(projectID int64, query *model
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	fetchSource := false
 	logCtx := log.WithFields(logFields)
+	limitString := ""
+	if C.IsKPILimitIncreaseAllowedForProject(projectID) {
+		limitString = fmt.Sprintf(" LIMIT %d", model.MaxResultsLimit)
+	} else {
+		limitString = fmt.Sprintf(" LIMIT %d", model.ResultsLimit)
+	}
 	if query.GroupByTimestamp == "" {
 		sql, params, selectKeys, selectMetrics, errCode := store.GetSQLQueryAndParametersForLinkedinQueryV1(projectID,
-			query, reqID, fetchSource, " LIMIT 10000", false, nil)
+			query, reqID, fetchSource, limitString, false, nil)
 		if errCode == http.StatusNotFound {
 			headers := model.GetHeadersFromQuery(*query)
 			return headers, make([][]interface{}, 0, 0), http.StatusOK
@@ -522,7 +528,7 @@ func (store *MemSQL) ExecuteLinkedinChannelQueryV1(projectID int64, query *model
 		}
 		groupByCombinations := model.GetGroupByCombinationsForChannelAnalytics(columns, resultMetrics)
 		sql, params, selectKeys, selectMetrics, errCode = store.GetSQLQueryAndParametersForLinkedinQueryV1(
-			projectID, query, reqID, fetchSource, " LIMIT 10000", true, groupByCombinations)
+			projectID, query, reqID, fetchSource, limitString, true, groupByCombinations)
 		if errCode != http.StatusOK {
 			headers := model.GetHeadersFromQuery(*query)
 			return headers, make([][]interface{}, 0, 0), errCode

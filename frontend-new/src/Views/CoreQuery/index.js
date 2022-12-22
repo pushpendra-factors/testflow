@@ -817,7 +817,8 @@ function CoreQuery({
           session_analytics_seq,
           durationObj,
           globalFilters,
-          eventsCondition
+          eventsCondition,
+          groupAnalysis
         );
 
         if (!isQuerySaved) {
@@ -869,6 +870,7 @@ function CoreQuery({
       globalFilters,
       dateRange,
       eventsCondition,
+      groupAnalysis,
       updateResultState,
       configActionsOnRunningQuery,
       updateLocalReducer,
@@ -1597,6 +1599,7 @@ function CoreQuery({
       return (
         <QueryComposer
           queries={queriesA}
+          setQueries={setQueries}
           runQuery={handleRunQuery}
           eventChange={queryChange}
           queryType={queryType}
@@ -1913,14 +1916,13 @@ function CoreQuery({
                   <div className='pr-2 border-r'>{renderSaveQueryComp()}</div>
                   <Button
                     size='large'
-                    type='text'
-                    icon={<SVG size={20} name='close' />}
+                    type='default'
                     onClick={
                       coreQueryState.navigatedFromDashboard
                         ? handleCloseDashboardQuery
                         : handleCloseToAnalyse
                     }
-                  />
+                  >Close</Button>
                 </div>
               </div>
 

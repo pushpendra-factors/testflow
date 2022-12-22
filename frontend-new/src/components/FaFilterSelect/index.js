@@ -25,6 +25,7 @@ const currentPicker = ['in the current', 'not in the current'];
 const datePicker = ['before', 'since'];
 
 const FAFilterSelect = ({
+  mode,
   propOpts = [],
   operatorOpts = defaultOpProps,
   valueOpts = [],
@@ -248,7 +249,10 @@ const FAFilterSelect = ({
           disabled ? `fa-truncate-150` : ''
         }`}
       >
-        <Tooltip title={renderGroupDisplayName(propState)} color={TOOLTIP_CONSTANTS.DARK}>
+        <Tooltip
+          title={renderGroupDisplayName(propState)}
+          color={TOOLTIP_CONSTANTS.DARK}
+        >
           <Button
             disabled={disabled}
             icon={
@@ -257,7 +261,7 @@ const FAFilterSelect = ({
               ) : null
             }
             className={`fa-button--truncate fa-button--truncate-xs btn-left-round filter-buttons-margin`}
-            type='link'
+            type={mode === 'display' ? 'default' : 'link'}
             onClick={() => setPropSelectOpen(!propSelectOpen)}
           >
             {renderGroupDisplayName(propState)}
@@ -286,7 +290,7 @@ const FAFilterSelect = ({
           <Button
             disabled={disabled}
             className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
-            type='link'
+            type={mode === 'display' ? 'default' : 'link'}
             onClick={() => setOperSelectOpen(true)}
           >
             {operatorState ? operatorState : 'Select Operator'}
@@ -437,7 +441,7 @@ const FAFilterSelect = ({
           <Button
           disabled={disabled}
           className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
-          type='link'
+          type={mode === 'display' ? 'default' : 'link'}
           onClick={() => setDateOptionSelectOpen(true)}
           >
           {parsedValues['gran'] ? dateTimeSelect.get(parsedValues['gran']) : 'Select'}
@@ -460,7 +464,7 @@ const FAFilterSelect = ({
           <Button
           disabled={disabled}
           className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
-          type='link'
+          type={mode === 'display' ? 'default' : 'link'}
           onClick={() => setDateOptionSelectOpen(true)}
           >
           {parsedValues['gran'] ? toCapitalCase(parsedValues['gran']) : 'Select'}
@@ -563,7 +567,7 @@ const FAFilterSelect = ({
           <Button
           disabled={disabled}
           className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
-          type='link'
+          type={mode === 'display' ? 'default' : 'link'}
           onClick={() => setContainButton(false)}
         >
           {valuesState ? valuesState : 'Enter Value'}
@@ -610,7 +614,7 @@ const FAFilterSelect = ({
             >
               <Button
                 className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
-                type='link'
+                type={mode === 'display' ? 'default' : 'link'}
                 disabled={disabled}
                 onClick={() => setValuesSelectionOpen(!valuesSelectionOpen)}
               >

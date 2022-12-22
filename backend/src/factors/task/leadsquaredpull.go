@@ -70,6 +70,46 @@ var LEADSQUARED_ACTIVITYCODE = map[string]int{
 	model.LEADSQUARED_EMAIL_SENT:     212,
 	model.LEADSQUARED_EMAIL_INFO:     355,
 	model.LEADSQUARED_HAD_A_CALL:     206,
+	model.LEADSQUARED_CALLED_A_CUST_NEGATIVE_REPLY : 204,
+	model.LEADSQUARED_CALLED_A_CUST_POSITIVE_REPLY : 202,
+	model.LEADSQUARED_CALLED_TO_COLLECT_REFERRAL : 311,
+	model.LEADSQUARED_EMAIL_BOUNCED : 10,
+	model.LEADSQUARED_EMAIL_LINK_CLICKED : 1,
+	model.LEADSQUARED_EMAIL_MAILING_PREFERENCE_LINK_CLICKED : 8,
+	model.LEADSQUARED_EMAIL_MARKED_SPAM : 9,
+	model.LEASQUARED_EMAIL_NEGATIVE_RESPONSE : 13,
+	model.LEASQUARED_EMAIL_NEUTRAL_RESPONSE : 14,
+	model.LEASQUARED_EMAIL_POSITIVE_RESPONSE : 12,
+	model.LEASQUARED_EMAIL_OPENED : 0,
+	model.LEASQUARED_EMAIL_POSITVE_INBOUND_EMAIL : 18,
+	model.LEASQUARED_EMAIL_RESUBSCRIBED : 15,
+	model.LEADSQUARED_EMAIL_SUBSCRIBED_TO_BOOTCAMP : 43,
+	model.LEADSQUARED_EMAIL_SUBSCRIBED_TO_COLLECTION : 44,
+	model.LEADSQUARED_EMAIL_SUBSCRIBED_TO_EVENTS : 47,
+	model.LEADSQUARED_EMAIL_SUBSCRIBED_TO_FESTIVAL : 45,
+	model.LEADSQUARED_EMAIL_SUBSCRIBED_TO_INTERNNATIONAL_REACTIVATION : 46,
+	model.LEADSQUARED_EMAIL_SUBSCRIBED_TO_NEWSLETTER : 51,
+	model.LEADSQUARED_EMAIL_SUBSCRIBED_TO_REACTIVATION : 48,
+	model.LEADSQUARED_EMAIL_SUBSCRIBED_TO_REFERRAL : 52,
+	model.LEADSQUARED_EMAIL_SUBSCRIBED_TO_SURVEY : 49,
+	model.LEADSQUARED_EMAIL_SUBSCRIBED_TO_TEST : 41,
+	model.LEADSQUARED_EMAIL_SUBSCRIBED_TO_WORKSHOP : 50,
+	model.LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_BOOTCAMP : 63,
+	model.LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_COLLECTION : 64,
+	model.LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_EVENTS : 67,
+	model.LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_FESTIVAL : 65,
+	model.LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_INTERNNATIONAL_REACTIVATION : 66,
+	model.LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_NEWSLETTER : 71,
+	model.LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_REACTIVATION : 68,
+	model.LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_REFERRAL : 72,
+	model.LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_SURVEY : 69,
+	model.LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_TEST : 61,
+	model.LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_WORKSHOP : 70,
+	model.LEADSQUARED_EMAIL_UNSUBSCRIBE_LINK_CLICKED : 6,
+	model.LEADSQUARED_EMAIL_UNSUBSCRIBED : 5,
+	model.LEADSQUARED_EMAIL_VIEW_IN_BROWSER_LINK_CLICKED : 11,
+	model.LEADSQUARED_EMAIL_RECEIVED : 211,
+
 }
 
 func ifDuplicateSchema(err string) bool {
@@ -98,7 +138,7 @@ func LeadSquaredPull(projectId int64, configs map[string]interface{}) (map[strin
 
 	setting, _ := store.GetStore().GetProjectSetting(projectId)
 	var leadSquaredConfig model.LeadSquaredConfig
-	PAGESIZE := 1000
+	PAGESIZE := 500
 	LOOKBACK := 90
 	err = U.DecodePostgresJsonbToStructType(setting.LeadSquaredConfig, &leadSquaredConfig)
 	if err != nil {
@@ -111,15 +151,19 @@ func LeadSquaredPull(projectId int64, configs map[string]interface{}) (map[strin
 		"secretKey": leadSquaredConfig.SecretKey,
 	}
 	datasetID := leadSquaredConfig.BigqueryDataset
-	for documentType, _ := range model.LeadSquaredMetadataEndpoint {
+	for documentType, _ := range model.LeadSquaredTableName {
+		_, _, isDone := store.GetStore().GetLeadSquaredMarker(projectId, executionDate, documentType, "incremental_sync")
+		if(isDone == true){
+			continue
+		}
 		log.Info(fmt.Sprintf("Starting for %v", documentType))
 		tableID := model.LeadSquaredTableName[documentType]
-		if documentType == model.LEADSQUARED_EMAIL_SENT || documentType == model.LEADSQUARED_EMAIL_INFO || documentType == model.LEADSQUARED_HAD_A_CALL {
+		if documentType != model.LEADSQUARED_LEAD && documentType != model.LEADSQUARED_SALES_ACTIVITY {
 			if projectId == 2251799831000006 {
 				continue
 			}
 		}
-		if documentType == model.LEADSQUARED_SALES_ACTIVITY || documentType == model.LEADSQUARED_EMAIL_SENT  || documentType == model.LEADSQUARED_EMAIL_INFO ||documentType == model.LEADSQUARED_HAD_A_CALL{
+		if model.ActivityEvents[documentType] == true {
 			leadSquaredUrlParams["code"] = fmt.Sprintf("%v",LEADSQUARED_ACTIVITYCODE[documentType])
 		}
 		propertyMetadataList, errorStatus, msg := getMetadataDetails(documentType, leadSquaredConfig.Host, leadSquaredUrlParams)
@@ -209,7 +253,7 @@ func LeadSquaredPull(projectId int64, configs map[string]interface{}) (map[strin
 				}
 			}
 		} else {
-			result, errorStatus, msg := DoIncrementalSync(projectId, documentType, leadSquaredConfig.Host, model.LeadSquaredHistoricalSyncEndpoint[documentType], model.LeadSquaredDocumentEndpoint[documentType], leadSquaredUrlParams, columnsToBeExtracted, PAGESIZE, executionDate, LOOKBACK, datasetID, tableID, client, metadataWithOrder, ctx)
+			result, errorStatus, msg := DoIncrementalSync(projectId, documentType, leadSquaredConfig.Host, model.LeadSquaredHistoricalSyncEndpoint[documentType], model.LeadSquaredDocumentEndpoint(documentType), leadSquaredUrlParams, columnsToBeExtracted, PAGESIZE, executionDate, LOOKBACK, datasetID, tableID, client, metadataWithOrder, ctx)
 			if errorStatus == true {
 				log.Error(msg)
 				resultStatus["error"] = msg
@@ -268,7 +312,7 @@ func extractValue(value interface{}, dataType interface{}) interface{} {
 }
 
 func getMetadataDetails(documentType string, host string, leadSquaredUrlParams map[string]string) ([]PropertyMetadataObjectLeadSquared, bool, string) {
-	metadataEndpoint := model.LeadSquaredMetadataEndpoint[documentType]
+	metadataEndpoint := model.LeadSquaredMetadataEndpoint(documentType)
 	statusCode, responseMetadata, errorObj := L.HttpRequestWrapper(fmt.Sprintf("https://%s", host), metadataEndpoint, nil, nil, "GET", leadSquaredUrlParams)
 	if statusCode != http.StatusOK || errorObj != nil {
 		return nil, true, errorObj.Error()
@@ -286,7 +330,7 @@ func getMetadataDetails(documentType string, host string, leadSquaredUrlParams m
 		}
 		propertyMetadata = propertyMetadataList
 	}
-	if documentType == model.LEADSQUARED_SALES_ACTIVITY || documentType == model.LEADSQUARED_EMAIL_SENT || documentType == model.LEADSQUARED_EMAIL_INFO || documentType == model.LEADSQUARED_HAD_A_CALL {
+	if model.ActivityEvents[documentType] == true {
 		var salesActivityMetadata SalesActivityMetadataObjectLeadSquared
 		err = json.Unmarshal(byteSliceMetadata, &salesActivityMetadata)
 		if err != nil {
@@ -340,7 +384,11 @@ func getColumnsToBeAdded(existingSchema bigquery.Schema, propertyMetadataList []
 }
 
 func DoHistoricalSync(projectId int64, host string, endpoint string, urlParams map[string]string, columns string, pageSize int, executionTimestamp int64, lookback int, datasetID string, tableId string, client *bigquery.Client, propertyMetadataList []SchemaPropertyMetadataMapping, ctx context.Context) (map[string]interface{}, bool, string) {
-	indexNumber, _ := store.GetStore().GetLeadSquaredMarker(projectId, executionTimestamp, model.LEADSQUARED_LEAD, "historical_sync")
+	indexNumber, _, isDone := store.GetStore().GetLeadSquaredMarker(projectId, executionTimestamp, model.LEADSQUARED_LEAD, "historical_sync")
+	if(isDone == true){
+		log.Info("Done. Skipping - Historical Sync")
+		return nil, false, ""
+	}
 	index := 0
 	if indexNumber == 0 {
 		index = 1
@@ -428,6 +476,7 @@ func DoHistoricalSync(projectId int64, host string, endpoint string, urlParams m
 				Document:    model.LEADSQUARED_LEAD,
 				Tag:         "historical_sync",
 				IndexNumber: index,
+				IsDone: 	 true,
 			})
 			break
 		}
@@ -467,7 +516,7 @@ func insertBigQueryRow(datasetID string, tableID string, client *bigquery.Client
 
 func DoIncrementalSync(projectId int64, documentType string, host string, histSyncEndpoint string, endpoint string, urlParams map[string]string, columns string, pageSize int, executionTimestamp int64, lookback int, datasetID string, tableId string, client *bigquery.Client, propertyMetadataList []SchemaPropertyMetadataMapping, ctx context.Context) (map[string]interface{}, bool, string) {
 	log.Info("Starting Incremental Sync")
-	indexNumber, _ := store.GetStore().GetLeadSquaredMarker(projectId, executionTimestamp, documentType, "incremental_sync")
+	indexNumber, _, isDone := store.GetStore().GetLeadSquaredMarker(projectId, executionTimestamp, documentType, "incremental_sync")
 	index := 0
 	if indexNumber == 0 {
 		index = 1
@@ -480,6 +529,10 @@ func DoIncrementalSync(projectId int64, documentType string, host string, histSy
 	endDateinLeadSquaredFormat := fmt.Sprintf("%v", time.Unix(int64(executionTimestamp)+U.SECONDS_IN_A_DAY, 0).Format("2006-01-02 15:04:05"))
 	log.Info(fmt.Sprintf("Starting Incremental Sync with date > %v < %v ", startDateinLeadSquaredFormat, endDateinLeadSquaredFormat))
 	for {
+		if(isDone == true){
+			log.Info("Done. Skipping - " + documentType)
+			break
+		}
 		var request interface{}
 		if documentType == model.LEADSQUARED_LEAD {
 			request = model.LeadsByDateRangeRequest{
@@ -496,7 +549,7 @@ func DoIncrementalSync(projectId int64, documentType string, host string, histSy
 				},
 			}
 		}
-		if documentType == model.LEADSQUARED_SALES_ACTIVITY || documentType == model.LEADSQUARED_EMAIL_SENT || documentType == model.LEADSQUARED_EMAIL_INFO || documentType == model.LEADSQUARED_HAD_A_CALL {
+		if model.ActivityEvents[documentType] == true {
 			request = model.SearchSalesActivityByCriteriaRequest{
 				Parameter: model.SalesActivitySearchParameterObj{
 					FromDate:         startDateinLeadSquaredFormat,
@@ -561,7 +614,7 @@ func DoIncrementalSync(projectId int64, documentType string, host string, histSy
 				dataForInsertion = append(dataForInsertion, propertiesMap)
 			}
 		}
-		if documentType == model.LEADSQUARED_SALES_ACTIVITY || documentType == model.LEADSQUARED_EMAIL_SENT || documentType == model.LEADSQUARED_EMAIL_INFO || documentType == model.LEADSQUARED_HAD_A_CALL {
+		if model.ActivityEvents[documentType] == true {
 			var incrSyncData IncrementalSyncResponseSalesActivity
 			err = json.Unmarshal(byteSliceIncrSync, &incrSyncData)
 			if err != nil {
@@ -603,12 +656,13 @@ func DoIncrementalSync(projectId int64, documentType string, host string, histSy
 				Document:    documentType,
 				Tag:         "incremental_sync",
 				IndexNumber: index,
+				IsDone: 	 true,
 			})
 			break
 		}
 	}
 	if documentType == model.LEADSQUARED_LEAD {
-		indexNumber, _ := store.GetStore().GetLeadSquaredMarker(projectId, executionTimestamp, documentType, "incremental_sync_created_at")
+		indexNumber, _, isDone := store.GetStore().GetLeadSquaredMarker(projectId, executionTimestamp, documentType, "incremental_sync_created_at")
 		index = 0
 		if indexNumber == 0 {
 			index = 1
@@ -619,6 +673,10 @@ func DoIncrementalSync(projectId int64, documentType string, host string, histSy
 		StartDateinLeadSquaredFormat := fmt.Sprintf("%v", time.Unix(int64(executionTimestamp), 0).Format("2006-01-02 15:04:05"))
 		log.Info(fmt.Sprintf("Starting Historical Sync with date > %v", StartDateinLeadSquaredFormat))
 		for {
+			if(isDone == true){
+				log.Info("Done. Skipping - " + documentType)
+				break
+			}
 			request := model.SearchLeadsByCriteriaRequest{
 				Parameter: model.LeadSearchParameterObj{
 					LookupName:  "CreatedOn",
@@ -695,6 +753,7 @@ func DoIncrementalSync(projectId int64, documentType string, host string, histSy
 					Document:    documentType,
 					Tag:         "incremental_sync_created_at",
 					IndexNumber: index,
+					IsDone: 	 true,
 				})
 				break
 			}

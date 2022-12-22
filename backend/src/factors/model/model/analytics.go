@@ -977,6 +977,17 @@ func CheckIfHasNoneFilter(properties []QueryProperty) bool {
 	return false
 }
 
+// CheckIfHasGlobalUserFilter Returns if set of filters entity has global filter
+func CheckIfHasGlobalUserFilter(properties []QueryProperty) bool {
+
+	for _, p := range properties {
+		if p.Entity == PropertyEntityUserGlobal {
+			return true
+		}
+	}
+	return false
+}
+
 func GetPropertyEntityFieldForFilter(entityName string) string {
 	switch entityName {
 	case PropertyEntityUser:

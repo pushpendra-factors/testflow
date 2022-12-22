@@ -38,6 +38,7 @@ function ResultantChartComponent({
         ref={renderedCompRef}
         tableConfig={tableConfig}
         tableConfigPopoverContent={tableConfigPopoverContent}
+        chartType={chartType}
       />
     );
   } else {
