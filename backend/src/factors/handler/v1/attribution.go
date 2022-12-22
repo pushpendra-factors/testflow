@@ -10,7 +10,6 @@ import (
 	"factors/model/store"
 	U "factors/util"
 	"fmt"
-	"github.com/jinzhu/gorm/dialects/postgres"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -67,12 +66,6 @@ func AttributionHandlerV1(c *gin.Context) (interface{}, int, string, string, boo
 	if refreshParam != "" {
 		hardRefresh, _ = strconv.ParseBool(refreshParam)
 	}
-
-	/*isQuery := false
-	isQueryParam := c.Query("is_query")
-	if isQueryParam != "" {
-		isQuery, _ = strconv.ParseBool(isQueryParam)
-	}*/
 
 	isDashboardQueryRequest := dashboardIdParam != "" && unitIdParam != ""
 	if isDashboardQueryRequest {
@@ -213,10 +206,6 @@ func AttributionHandlerV1(c *gin.Context) (interface{}, int, string, string, boo
 			return nil, resCode, PROCESSING_FAILED, "Error Processing/Fetching data from Query cache", true
 		}
 	}
-	/*if isDashboardQueryRequest && C.DisableDashboardQueryDBExecution() && !isQuery {
-		logCtx.WithField("request_payload", requestPayload).Warn("Skip hitting db for queries from dashboard, if not found on cache.")
-		return nil, resCode, PROCESSING_FAILED, "Not found in cache. Execution suspended temporarily.", true
-	}*/
 
 	// If not found, set a placeholder for the query hash key that it has been running to avoid running again.
 	model.SetQueryCachePlaceholder(projectId, &attributionQueryUnitPayload)
@@ -268,67 +257,6 @@ func AttributionHandlerV1(c *gin.Context) (interface{}, int, string, string, boo
 	}
 	result.Query = requestPayload.Query
 	return result, http.StatusOK, "", "", false
-}
-
-func enrichRequestUsingAttributionConfig(c *gin.Context, projectID int64, requestPayload *AttributionRequestPayload, logCtx *log.Entry) {
-
-	// pulling project setting to build attribution query
-	settings, errCode := store.GetStore().GetProjectSetting(projectID)
-	if errCode != http.StatusFound {
-		c.AbortWithStatusJSON(errCode, gin.H{"error": "Failed to get project settings during attribution call."})
-	}
-
-	attributionConfig, err1 := decodeAttributionConfig(settings.AttributionConfig)
-	if err1 != nil {
-		c.AbortWithStatusJSON(errCode, gin.H{"error": "Failed to decode attribution config from project settings."})
-	}
-
-	//Todo (Anil) Add enrichment of attribution Window, handle case of 'Entire User Journey'
-
-	switch requestPayload.Query.AnalyzeType {
-
-	case model.AnalyzeTypeUsers:
-		requestPayload.Query.RunType = model.RunTypeUser
-	case model.AnalyzeTypeUserKPI:
-		requestPayload.Query.RunType = model.RunTypeUserKPI
-	case model.AnalyzeTypeHSDeals:
-		if &attributionConfig != nil && attributionConfig.AnalyzeTypeHSCompaniesEnabled == true {
-			requestPayload.Query.RunType = model.RunTypeHSCompanies
-		} else if &attributionConfig != nil && attributionConfig.AnalyzeTypeHSDealsEnabled == true {
-			requestPayload.Query.RunType = model.RunTypeHSDeals
-		} else {
-			logCtx.WithFields(log.Fields{"Query": requestPayload.Query, "AttributionConfig": attributionConfig}).Error("Failed to set analyze type")
-			c.AbortWithStatusJSON(errCode, gin.H{"error": "Invalid config/query. Failed to set analyze type from attribution config & project settings."})
-		}
-	case model.AnalyzeTypeSFOpportunities:
-		if &attributionConfig != nil && attributionConfig.AnalyzeTypeSFAccountsEnabled == true {
-			requestPayload.Query.RunType = model.RunTypeSFAccounts
-		} else if &attributionConfig != nil && attributionConfig.AnalyzeTypeSFOpportunitiesEnabled == true {
-			requestPayload.Query.RunType = model.RunTypeSFOpportunities
-		} else {
-			logCtx.WithFields(log.Fields{"Query": requestPayload.Query, "AttributionConfig": attributionConfig}).Error("Failed to set analyze type")
-			c.AbortWithStatusJSON(errCode, gin.H{"error": "Invalid config/query. Failed to set analyze type from attribution config & project settings."})
-		}
-	default:
-		logCtx.WithFields(log.Fields{"Query": requestPayload.Query, "AttributionConfig": attributionConfig}).Error("Failed to set analyze type")
-		c.AbortWithStatusJSON(errCode, gin.H{"error": "Invalid config/query. Failed to set analyze type from attribution config & project settings."})
-	}
-
-}
-
-// decodeAttributionConfig decode attribution config from project settings to map
-func decodeAttributionConfig(config *postgres.Jsonb) (model.AttributionConfig, error) {
-	attributionConfig := model.AttributionConfig{}
-	if config == nil {
-		return attributionConfig, nil
-	}
-
-	err := json.Unmarshal(config.RawMessage, &attributionConfig)
-	if err != nil {
-		return attributionConfig, err
-	}
-
-	return attributionConfig, nil
 }
 
 // decodeAttributionPayload decodes attribution requestPayload for 2 json formats to support old and new

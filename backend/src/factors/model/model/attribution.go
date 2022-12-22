@@ -1010,30 +1010,6 @@ func getLinkedEventColumnAsInterfaceListv1(spend float64, data []float64, dataIn
 	return list
 }
 
-// @Deprecated getLinkedEventColumnAsInterfaceList return interface list having linked event count and CPC
-func getLinkedEventColumnAsInterfaceList(convertedUsers float64, spend float64, data []float64, linkedEventCount int) []interface{} {
-
-	var list []interface{}
-	// If empty linked events, add 0s
-	if len(data) == 0 {
-		for i := 0; i < linkedEventCount; i++ {
-			list = append(list, 0.0, 0.0, 0.0)
-		}
-	} else {
-		for _, val := range data {
-			cpc := 0.0
-			if val > 0.0 {
-				cpc, _ = U.FloatRoundOffWithPrecision(spend/val, U.DefaultPrecision)
-			}
-			list = append(list, val, cpc)
-		}
-	}
-	// Each LE should have 2 values, one for conversion, 2nd for conversion cost
-	for len(list) < 2*linkedEventCount {
-		list = append(list, 0.0)
-	}
-	return list
-}
 func getLinkedEventColumnAsInterfaceListLandingPagev1(data []float64, dataInfluence []float64, linkedEventCount int) []interface{} {
 
 	var list []interface{}
@@ -1046,24 +1022,6 @@ func getLinkedEventColumnAsInterfaceListLandingPagev1(data []float64, dataInflue
 	} else {
 		for i := 0; i < len(data) && i < len(dataInfluence); i++ {
 			list = append(list, data[i], dataInfluence[i])
-		}
-	}
-	return list
-}
-
-// @Deprecated getLinkedEventColumnAsInterfaceListLandingPage return interface list having linked event count and CPC
-func getLinkedEventColumnAsInterfaceListLandingPage(convertedUsers float64, data []float64, linkedEventCount int) []interface{} {
-
-	var list []interface{}
-	// If empty linked events, add 0s
-	if len(data) == 0 {
-		for i := 0; i < linkedEventCount; i++ {
-			// Each LE should have 2 values, one for conversion and other for conversion Influence
-			list = append(list, 0.0, 0.0)
-		}
-	} else {
-		for _, val := range data {
-			list = append(list, val)
 		}
 	}
 	return list
@@ -1162,15 +1120,6 @@ func GetCompareConversionUserCountIndex(headers []string) int {
 	for index, val := range headers {
 		if val == "Compare - Users" {
 			return index
-		}
-	}
-	return -1
-}
-
-func GetSpendIndex(headers []string) int {
-	for index, val := range headers {
-		if val == "Spend" {
-			return index + 1
 		}
 	}
 	return -1
@@ -2936,16 +2885,6 @@ func addMetricsFromReport(attributionData *map[string]*AttributionData, reportKe
 	}
 }
 
-func GetKeyByAttributionData(value *AttributionData) interface{} {
-
-	key := ""
-	for i := 0; i < len(value.AddedKeys); i++ {
-		key = key + value.AddedKeys[i] + KeyDelimiter
-	}
-	key = key + value.Name
-	return key
-}
-
 func ComputeAdditionalMetrics(attributionData *map[string]*AttributionData) {
 
 	for k, v := range *attributionData {
@@ -3464,70 +3403,6 @@ func AddCustomDimensions(attributionData *map[string]*AttributionData, query *At
 	}
 }
 
-func enrichDimensionsWithName(attributionData *map[string]*AttributionData, dimensions []string, adwordsData, fbData, linkedinData, bingadsData, customAdsData map[string]MarketingData, attributionKey string) {
-
-	for k, v := range *attributionData {
-
-		for _, dim := range dimensions {
-
-			if (*attributionData)[k].CustomDimensions == nil {
-				(*attributionData)[k].CustomDimensions = make(map[string]interface{})
-			}
-			(*attributionData)[k].CustomDimensions[dim] = PropertyValueNone
-
-			customDimKey := GetKeyForCustomDimensionsName(v.MarketingInfo.CampaignID, v.MarketingInfo.CampaignName, v.MarketingInfo.AdgroupID, v.MarketingInfo.AdgroupName, attributionKey)
-			if customDimKey == "" {
-				continue
-			}
-			foundInAdwords := "NotFound"
-			if _, exists := adwordsData[customDimKey]; exists {
-				foundInAdwords = "Found"
-			}
-			log.WithFields(log.Fields{"CustomDebug": "True1", "CustomDimKey": customDimKey, "Found": foundInAdwords, "AttributionDataKey": k, "AttributionDataValue": v, "Channel": (*attributionData)[k].Channel}).Info("Enrich Custom Dimension")
-
-			switch (*attributionData)[k].Channel {
-			case ChannelAdwords:
-				if d, exists := adwordsData[customDimKey]; exists {
-					if val, found := d.CustomDimensions[dim]; found {
-						log.WithFields(log.Fields{"CustomDebug": "True2", "CustomDimKey": customDimKey, "data": adwordsData[customDimKey], "Val": val, "Found": foundInAdwords, "AttributionDataKey": k, "AttributionDataValue": v, "Channel": (*attributionData)[k].Channel}).Info("Enrich Adwords Custom Dimension")
-						(*attributionData)[k].CustomDimensions[dim] = val
-					}
-				}
-				break
-			case ChannelFacebook:
-				if d, exists := fbData[customDimKey]; exists {
-					if val, found := d.CustomDimensions[dim]; found {
-						(*attributionData)[k].CustomDimensions[dim] = val
-					}
-				}
-				break
-			case ChannelLinkedin:
-				if d, exists := linkedinData[customDimKey]; exists {
-					if val, found := d.CustomDimensions[dim]; found {
-						(*attributionData)[k].CustomDimensions[dim] = val
-					}
-				}
-				break
-			case ChannelBingAds:
-				if d, exists := bingadsData[customDimKey]; exists {
-					if val, found := d.CustomDimensions[dim]; found {
-						(*attributionData)[k].CustomDimensions[dim] = val
-					}
-				}
-				break
-			case ChannelCustomAds:
-				if d, exists := customAdsData[customDimKey]; exists {
-					if val, found := d.CustomDimensions[dim]; found {
-						(*attributionData)[k].CustomDimensions[dim] = val
-					}
-				}
-				break
-			default:
-				break
-			}
-		}
-	}
-}
 func enrichDimensionsWithoutChannel(attributionData *map[string]*AttributionData, dimensions []string, adwordsData, fbData,
 	linkedinData, bingadsData, customAdsData map[string]MarketingData, attributionKey string) {
 

@@ -30,7 +30,9 @@ func (store *MemSQL) ExecuteAttributionQueryV1(projectID int64, queryOriginal *m
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 
 	queryStartTime := time.Now().UTC().Unix()
-
+	if C.GetAttributionDebug() == 1 {
+		logCtx.Info("Hitting ExecuteAttributionQueryV1")
+	}
 	var query *model.AttributionQuery
 	U.DeepCopy(queryOriginal, &query)
 
@@ -84,8 +86,6 @@ func (store *MemSQL) ExecuteAttributionQueryV1(projectID int64, queryOriginal *m
 	if err != nil {
 		return nil, err
 	}
-
-	logCtx.Info("Done PullCustomDimensionData")
 
 	sessionEventNameID, eventNameToIDList, err := store.getEventInformation(projectID, query, *logCtx)
 	if err != nil {
@@ -158,177 +158,6 @@ func (store *MemSQL) ExecuteAttributionQueryV1(projectID int64, queryOriginal *m
 
 	logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Total query took time")
 
-	model.SanitizeResult(result)
-	return result, nil
-}
-
-// ExecuteAttributionQueryV0 Executes the Attribution using following steps:
-//	1. Get all the sessions data (userId, attributionId, timestamp) for given period by attribution key
-// 	2. Add the website visitor info using session data from step 1
-//	3. i) 	Find out users who hit conversion event applying filter
-//	  ii)	Using users from 3.i) find out users who hit linked funnel event applying filter
-//	4. Apply attribution methodology
-//	5. Add performance data by attributionId
-func (store *MemSQL) ExecuteAttributionQueryV0(projectID int64, queryOriginal *model.AttributionQuery,
-	debugQueryKey string, enableOptimisedFilterOnProfileQuery,
-	enableOptimisedFilterOnEventUserQuery bool) (*model.QueryResult, error) {
-
-	logFields := log.Fields{
-		"project_id":        projectID,
-		"debug_query_key":   debugQueryKey,
-		"attribution_query": true,
-	}
-
-	logCtx := log.WithFields(logFields)
-	logCtx.Info("Hitting ExecuteAttributionQueryV1")
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
-
-	queryStartTime := time.Now().UTC().Unix()
-
-	var query *model.AttributionQuery
-	U.DeepCopy(queryOriginal, &query)
-
-	// pulling project setting to build attribution query
-	settings, errCode := store.GetProjectSetting(projectID)
-	if errCode != http.StatusFound {
-		return nil, errors.New("failed to get project settings during attribution call")
-	}
-	// enrich RunType for attribution query
-	err := model.EnrichRequestUsingAttributionConfig(projectID, query, settings, logCtx)
-	if err != nil {
-		return nil, err
-	}
-
-	// supporting existing old/saved queries
-	model.AddDefaultAnalyzeType(query)
-	model.AddDefaultKeyDimensionsToAttributionQuery(query)
-	model.AddDefaultMarketingEventTypeTacticOffer(query)
-
-	if query.AttributionKey == model.AttributionKeyLandingPage && query.TacticOfferType != model.MarketingEventTypeOffer {
-		return nil, errors.New("can not get landing page level report for Tactic/TacticOffer")
-	}
-
-	if query.AttributionKey == model.AttributionKeyAllPageView && query.TacticOfferType != model.MarketingEventTypeOffer {
-		return nil, errors.New("can not get all page view level report for Tactic/TacticOffer")
-	}
-
-	// for existing queries and backward support
-	if query.QueryType == "" {
-		query.QueryType = model.AttributionQueryTypeConversionBased
-	}
-	projectSetting, errCode := store.GetProjectSetting(projectID)
-	if errCode != http.StatusFound {
-		return nil, errors.New("failed to get project Settings")
-	}
-
-	marketingReports, err := store.FetchMarketingReports(projectID, *query, *projectSetting)
-	if C.GetAttributionDebug() == 1 {
-		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Fetch marketing report took time")
-	}
-	queryStartTime = time.Now().UTC().Unix()
-
-	if err != nil {
-		return nil, err
-	}
-
-	err = store.PullCustomDimensionData(projectID, query.AttributionKey, marketingReports, *logCtx)
-	if C.GetAttributionDebug() == 1 {
-		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Pull Custom dimension data took time")
-	}
-	queryStartTime = time.Now().UTC().Unix()
-
-	if err != nil {
-		return nil, err
-	}
-	if C.GetAttributionDebug() == 1 {
-		logCtx.Info("Done PullCustomDimensionData")
-	}
-	sessionEventNameID, eventNameToIDList, err := store.getEventInformation(projectID, query, *logCtx)
-	if err != nil {
-		return nil, err
-	}
-
-	var contentGroupNamesList []string
-	if query.AttributionKey == model.AttributionKeyLandingPage || query.AttributionKey == model.AttributionKeyAllPageView {
-		contentGroups, errCode := store.GetAllContentGroups(projectID)
-		if errCode != http.StatusFound {
-			return nil, errors.New("failed to get content groups")
-		}
-		for _, contentGroup := range contentGroups {
-			contentGroupNamesList = append(contentGroupNamesList, contentGroup.ContentGroupName)
-		}
-	}
-
-	var usersIDsToAttribute []string
-	var kpiData map[string]model.KPIInfo
-
-	// Default conversion for AttributionQueryTypeConversionBased.
-	conversionFrom := query.From
-	conversionTo := query.To
-	// Extend the campaign window for engagement based attribution.
-	if query.QueryType == model.AttributionQueryTypeEngagementBased {
-		conversionFrom = query.From
-		conversionTo = model.LookbackAdjustedTo(query.To, query.LookbackDays)
-	}
-
-	coalUserIdConversionTimestamp, userInfo, kpiData, usersIDsToAttribute, err3 := store.PullConvertedUsers(projectID, query, conversionFrom, conversionTo, eventNameToIDList,
-		kpiData, debugQueryKey, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery, logCtx)
-
-	if query.AnalyzeType == model.AnalyzeTypeUserKPI || C.GetAttributionDebug() == 1 {
-		log.WithFields(log.Fields{"UserKPIAttribution": "Debug", "kpiData": kpiData,
-			"coalUserIdConversionTimestamp": coalUserIdConversionTimestamp,
-			"userInfo":                      userInfo,
-			"usersIDsToAttribute":           usersIDsToAttribute}).Info("KPI values after PullConvertedUsers")
-	}
-
-	if err3 != nil {
-		return nil, err3
-	}
-
-	var userData map[string]map[string]model.UserSessionData
-	var err4 error
-	if query.AttributionKey == model.AttributionKeyAllPageView {
-		userData, err4 = store.PullPagesOfConvertedUsers(projectID, query, sessionEventNameID, usersIDsToAttribute, marketingReports, contentGroupNamesList, logCtx)
-	} else {
-		userData, err4 = store.PullSessionsOfConvertedUsers(projectID, query, sessionEventNameID, usersIDsToAttribute, marketingReports, contentGroupNamesList, logCtx)
-	}
-	if err4 != nil {
-		return nil, err4
-	}
-
-	if query.AnalyzeType == model.AnalyzeTypeUserKPI {
-		log.WithFields(log.Fields{"UserKPIAttribution": "Debug", "sessions": userData}).Info("UserKPI Attribution sessions")
-	}
-
-	// Pull Offline touch points for all the cases: "Tactic",  "Offer", "TacticOffer"
-	store.AppendOTPSessions(projectID, query, &userData, *logCtx)
-	if C.GetAttributionDebug() == 1 {
-		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Pull Offline touch points user data took time")
-	}
-	queryStartTime = time.Now().UTC().Unix()
-
-	attributionData, isCompare, err2 := store.GetAttributionData(projectID, query, userData, userInfo, coalUserIdConversionTimestamp, marketingReports, kpiData, logCtx)
-	if err2 != nil {
-		return nil, err2
-	}
-
-	// Filter out the key values from query (apply filter after performance enrichment)
-	model.ApplyFilter(attributionData, query)
-	if C.GetAttributionDebug() == 1 {
-		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Metrics, Performance report, filter took time")
-	}
-	queryStartTime = time.Now().UTC().Unix()
-
-	result := ProcessAttributionDataToResult(projectID, query, attributionData, isCompare, queryStartTime, marketingReports, kpiData, logCtx)
-	result.Meta.Currency = ""
-	if projectSetting.IntAdwordsCustomerAccountId != nil && *projectSetting.IntAdwordsCustomerAccountId != "" {
-		currency, _ := store.GetAdwordsCurrency(projectID, *projectSetting.IntAdwordsCustomerAccountId, query.From, query.To, *logCtx)
-		result.Meta.Currency = currency
-	}
-	if C.GetAttributionDebug() == 1 {
-		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Total query took time")
-	}
 	model.SanitizeResult(result)
 	return result, nil
 }
@@ -878,17 +707,6 @@ func (store *MemSQL) GetConvertedUsers(projectID,
 	if err != nil {
 		return userIDToInfoConverted, usersToBeAttributed, coalUserIdConversionTimestamp, err
 	}
-	if projectID == 568 {
-		_convertedUserCoalID := []string{}
-		_convertedUserTimestamp := []int64{}
-		for k, v := range coalUserIdConversionTimestamp {
-			_convertedUserCoalID = append(_convertedUserCoalID, k)
-			_convertedUserTimestamp = append(_convertedUserTimestamp, v)
-		}
-		logCtx.WithFields(log.Fields{"CleverTapConvertedUsersCoalIDInBatches": _convertedUserCoalID}).Warn("Printing Converted Users Coal ID")
-		logCtx.WithFields(log.Fields{"CleverTapConvertedUsersTimeStampInBatches": _convertedUserTimestamp}).Warn("Printing Converted Users TimeStamp")
-
-	}
 
 	// Add users who hit conversion event
 	for key, val := range coalUserIdConversionTimestamp {
@@ -900,35 +718,8 @@ func (store *MemSQL) GetConvertedUsers(projectID,
 	if err != nil {
 		return userIDToInfoConverted, usersToBeAttributed, coalUserIdConversionTimestamp, err
 	}
-	if projectID == 568 {
-		_lfeUsers := []string{}
-		_lfeTimeStamp := []int64{}
-
-		for _, v := range linkedFunnelEventUsers {
-			_lfeUsers = append(_lfeUsers, v.CoalUserID)
-			_lfeTimeStamp = append(_lfeTimeStamp, v.Timestamp)
-		}
-		logCtx.WithFields(log.Fields{"CleverTapLinkedFunnelCoalId": _lfeUsers}).Warn("Printing Linked Funnel Event Users CoalId")
-		logCtx.WithFields(log.Fields{"CleverTapLinkedFunnelTimeStamp": _lfeTimeStamp}).Warn("Printing Linked Funnel Event Users TimeStamp")
-
-	}
 
 	model.MergeUsersToBeAttributed(&usersToBeAttributed, linkedFunnelEventUsers)
-
-	if projectID == 568 {
-		_finalUsers := []string{}
-		_finalTimeStamp := []int64{}
-		_eventType := []int64{}
-		for _, v := range usersToBeAttributed {
-			_finalUsers = append(_finalUsers, v.CoalUserID)
-			_finalTimeStamp = append(_finalTimeStamp, v.Timestamp)
-			_eventType = append(_eventType, int64(v.EventType))
-		}
-		logCtx.WithFields(log.Fields{"CleverTapFinalUsersCoalID": _finalUsers}).Warn("Printing Final Users Coal ID")
-		logCtx.WithFields(log.Fields{"CleverTapFinalUsersTimeStamp": _finalTimeStamp}).Warn("Printing Final Users TimeStamp")
-		logCtx.WithFields(log.Fields{"CleverTapEventType": _eventType}).Warn("Printing Event Type")
-
-	}
 
 	return userIDToInfoConverted, usersToBeAttributed, coalUserIdConversionTimestamp, nil
 }
@@ -1458,10 +1249,6 @@ func (store *MemSQL) GetConvertedUsersWithFilterV1(projectID int64, goalEventNam
 	}
 
 	queryEventHits := selectEventHits + " " + eventJoinStmnt + " " + whereEventHits
-	if projectID == 568 {
-		queryEventHits1, qParams1 := model.ExpandArrayWithIndividualValues(queryEventHits, qParams)
-		logCtx.WithFields(log.Fields{"CleverTapQueryGetConvertedUsersWithFilterV1": U.DBDebugPreparedStatement(C.GetConfig().Env, queryEventHits1, qParams1)}).Info("Printing Query")
-	}
 
 	// fetch query results
 	rows, tx, err, reqID := store.ExecQueryWithContext(queryEventHits, qParams)

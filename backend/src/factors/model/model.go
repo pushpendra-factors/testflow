@@ -55,8 +55,6 @@ type Model interface {
 	GetNextArchivalBatches(projectID int64, startTime int64, maxLookbackDays int, hardStartTime, hardEndTime time.Time) ([]model.EventsArchivalBatch, error)
 
 	// attribution
-	ExecuteAttributionQuery(projectID int64, query *model.AttributionQuery, debugQueryKey string,
-		enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool) (*model.QueryResult, error)
 	ExecuteAttributionQueryV0(projectID int64, query *model.AttributionQuery, debugQueryKey string,
 		enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool) (*model.QueryResult, error)
 	ExecuteAttributionQueryV1(projectID int64, query *model.AttributionQuery, debugQueryKey string,
@@ -86,10 +84,6 @@ type Model interface {
 		linkedEvents []model.QueryEventWithProperties, eventNameToId map[string][]interface{},
 		userIDInfo map[string]model.UserInfo, logCtx log.Entry) (error, []model.UserEventInfo)
 	GetAdwordsCurrency(projectId int64, customerAccountId string, from, to int64, logCtx log.Entry) (string, error)
-	GetConvertedUsersWithFilter(projectID int64, goalEventName string,
-		goalEventProperties []model.QueryProperty, conversionFrom, conversionTo int64,
-		eventNameToIdList map[string][]interface{}, logCtx log.Entry) (map[string]model.UserInfo,
-		map[string][]model.UserIDPropID, map[string]int64, error)
 
 	// bigquery_setting
 	CreateBigquerySetting(setting *model.BigquerySetting) (*model.BigquerySetting, int)
@@ -809,7 +803,7 @@ type Model interface {
 
 	// leadsquaredmarker
 	CreateLeadSquaredMarker(marker model.LeadsquaredMarker) int
-    GetLeadSquaredMarker(ProjectID int64, Delta int64, Document string, Tag string) (int, int, bool)
+	GetLeadSquaredMarker(ProjectID int64, Delta int64, Document string, Tag string) (int, int, bool)
 
 	//ExplainV2
 	GetAllExplainV2EntityByProject(projectID int64) ([]model.ExplainV2EntityInfo, int)
