@@ -47,6 +47,8 @@ func TestKpiAnalytics(t *testing.T) {
 
 	createdUserID1, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 
+	user, _ := store.GetStore().GetUser(project.ID, createdUserID1)
+
 	startTimestamp := U.UnixTimeBeforeDuration(time.Hour * 1)
 	stepTimestamp := startTimestamp
 
@@ -332,6 +334,71 @@ func TestKpiAnalytics(t *testing.T) {
 		assert.Equal(t, http.StatusOK, statusCode)
 		assert.Equal(t, result[0].Headers, []string{"datetime", "page_views", "adwords_metrics_impressions"})
 		assert.Equal(t, len(result[0].Rows), 3)
+	})
+
+	t.Run("Query for virtual Events", func(t *testing.T) {
+		expr := "a.com/u1/u3/:prop1"
+		name := "kpi_login"
+		filterEventName, errCode := store.GetStore().CreateOrGetFilterEventName(&model.EventName{
+			ProjectId:  project.ID,
+			FilterExpr: expr,
+			Name:       name,
+		})
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.NotNil(t, filterEventName)
+		assert.NotZero(t, filterEventName.ID)
+		assert.Equal(t, name, filterEventName.Name)
+		assert.Equal(t, expr, filterEventName.FilterExpr)
+		assert.Equal(t, model.TYPE_FILTER_EVENT_NAME, filterEventName.Type)
+
+		// Test filter_event_name hit with exact match.
+		rEventName := "a.com/u1/u3/i1"
+		// w := ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "%s", "auto": true, "event_properties": {"mobile": "true", "$page_url": "%s"}, "user_properties": {"$os": "mac osx", "$os_version": "1_2_3"}}`,
+		// user.ID, rEventName, rEventName), map[string]string{"Authorization": project.Token})
+		w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "%s", "auto": true, "timestamp": %d, "event_properties": {"mobile": "true", "$page_url": "%s"}, "user_properties": {"$os": "mac osx", "$os_version": "1_2_3"}}`,
+			user.ID, rEventName, stepTimestamp, rEventName)), map[string]string{"Authorization": project.Token})
+		assert.Equal(t, http.StatusOK, w.Code)
+		responseMap := DecodeJSONResponseToMap(w.Body)
+		assert.NotEmpty(t, responseMap)
+		assert.Nil(t, responseMap["user_id"])
+		rEvent, errCode := store.GetStore().GetEvent(project.ID, user.ID, responseMap["event_id"].(string))
+		assert.Equal(t, http.StatusFound, errCode)
+		assert.NotNil(t, rEvent)
+		assert.Equal(t, filterEventName.ID, rEvent.EventNameId)
+		var rEventProperties map[string]interface{}
+		json.Unmarshal(rEvent.Properties.RawMessage, &rEventProperties)
+		assert.NotNil(t, rEventProperties["prop1"])
+		assert.Equal(t, "i1", rEventProperties["prop1"]) // Event property filled using expression.
+
+		query := model.KPIQuery{
+			Category:         "events",
+			DisplayCategory:  "page_views",
+			PageUrl:          "kpi_login",
+			Metrics:          []string{"page_views"},
+			Filters:          []model.KPIFilter{},
+			From:             startTimestamp,
+			To:               startTimestamp + 400,
+			GroupByTimestamp: "date",
+		}
+		query1 := model.KPIQuery{}
+		U.DeepCopy(&query, &query1)
+		query1.GroupByTimestamp = ""
+
+		kpiQueryGroup := model.KPIQueryGroup{
+			Class:         "kpi",
+			Queries:       []model.KPIQuery{query, query1},
+			GlobalFilters: []model.KPIFilter{},
+			GlobalGroupBy: []model.KPIGroupBy{},
+		}
+
+		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup,
+			C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		assert.Equal(t, http.StatusOK, statusCode)
+		assert.Equal(t, result[0].Headers, []string{"datetime", "page_views"})
+		assert.Equal(t, len(result[0].Rows), 1)
+		assert.Equal(t, result[1].Headers, []string{"page_views"})
+		assert.Equal(t, len(result[1].Rows), 1)
+		assert.Equal(t, result[0].Rows[0][1], float64(1))
 	})
 }
 
@@ -665,6 +732,7 @@ func TestKpiAnalyticsForProfile(t *testing.T) {
 		assert.Equal(t, result[0].Rows[0][1], "india")
 		assert.Equal(t, result[0].Rows[0][2], float64(300))
 	})
+
 }
 
 func TestKPIProfilesForGroups(t *testing.T) {
