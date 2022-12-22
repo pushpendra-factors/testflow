@@ -263,6 +263,7 @@ var EP_SOURCE string = "$source"
 var EP_MEDIUM string = "$medium"
 var EP_KEYWORD string = "$keyword"
 var EP_KEYWORD_MATCH_TYPE string = "$keyword_match_type"
+var EP_TERM string = "$term"
 var EP_CONTENT string = "$content"
 var EP_ADGROUP string = "$adgroup"
 var EP_ADGROUP_ID string = "$adgroup_id"
@@ -278,7 +279,6 @@ var EP_TIMESTAMP string = "$timestamp"
 var EP_HOUR_OF_DAY string = "$hour_of_day"
 var EP_DAY_OF_WEEK string = "$day_of_week"
 var EP_SESSION_COUNT string = "$session_count"
-var EP_TERM string = "$term"
 var EP_CHANNEL string = "$channel" // added at runtime.
 var EP_TYPE string = "$type"
 var EP_HUBSPOT_ENGAGEMENT_THREAD_ID string = "$hubspot_engagement_thread_id"
@@ -369,6 +369,7 @@ var UP_INITIAL_SOURCE string = "$initial_source"
 var UP_INITIAL_MEDIUM string = "$initial_medium"
 var UP_INITIAL_KEYWORD string = "$initial_keyword"
 var UP_INITIAL_KEYWORD_MATCH_TYPE string = "$initial_keyword_match_type"
+var UP_INITIAL_TERM string = "$initial_term"
 var UP_INITIAL_CONTENT string = "$initial_content"
 var UP_INITIAL_ADGROUP string = "$initial_adgroup"
 var UP_INITIAL_ADGROUP_ID string = "$initial_adgroup_id"
@@ -405,6 +406,7 @@ var UP_LATEST_SOURCE string = "$latest_source"
 var UP_LATEST_MEDIUM string = "$latest_medium"
 var UP_LATEST_KEYWORD string = "$latest_keyword"
 var UP_LATEST_KEYWORD_MATCH_TYPE string = "$latest_keyword_match_type"
+var UP_LATEST_TERM string = "$latest_term"
 var UP_LATEST_CONTENT string = "$latest_content"
 var UP_LATEST_ADGROUP string = "$latest_adgroup"
 var UP_LATEST_ADGROUP_ID string = "$latest_adgroup_id"
@@ -527,6 +529,7 @@ var SDK_ALLOWED_EVENT_PROPERTIES = [...]string{
 	EP_MEDIUM,
 	EP_KEYWORD,
 	EP_KEYWORD_MATCH_TYPE,
+	EP_TERM,
 	EP_CONTENT,
 	EP_ADGROUP,
 	EP_ADGROUP_ID,
@@ -537,7 +540,6 @@ var SDK_ALLOWED_EVENT_PROPERTIES = [...]string{
 	EP_FBCLID,
 	EP_COST,
 	EP_REVENUE,
-	EP_TERM,
 
 	// event properties part of offline touch points
 	EP_CHANNEL,
@@ -641,6 +643,7 @@ var SDK_ALLOWED_USER_PROPERTIES = [...]string{
 	UP_INITIAL_MEDIUM,
 	UP_INITIAL_KEYWORD,
 	UP_INITIAL_KEYWORD_MATCH_TYPE,
+	UP_INITIAL_TERM,
 	UP_INITIAL_CONTENT,
 	UP_INITIAL_ADGROUP,
 	UP_INITIAL_ADGROUP_ID,
@@ -665,6 +668,7 @@ var SDK_ALLOWED_USER_PROPERTIES = [...]string{
 	UP_LATEST_MEDIUM,
 	UP_LATEST_KEYWORD,
 	UP_LATEST_KEYWORD_MATCH_TYPE,
+	UP_LATEST_TERM,
 	UP_LATEST_CONTENT,
 	UP_LATEST_ADGROUP,
 	UP_LATEST_ADGROUP_ID,
@@ -815,6 +819,7 @@ var EVENT_TO_USER_INITIAL_PROPERTIES = map[string]string{
 	EP_MEDIUM:              UP_INITIAL_MEDIUM,
 	EP_KEYWORD:             UP_INITIAL_KEYWORD,
 	EP_KEYWORD_MATCH_TYPE:  UP_INITIAL_KEYWORD_MATCH_TYPE,
+	EP_TERM:                UP_INITIAL_TERM,
 	EP_CONTENT:             UP_INITIAL_CONTENT,
 	EP_ADGROUP:             UP_INITIAL_ADGROUP,
 	EP_ADGROUP_ID:          UP_INITIAL_ADGROUP_ID,
@@ -844,6 +849,7 @@ var EVENT_TO_USER_LATEST_PROPERTIES = map[string]string{
 	EP_MEDIUM:             UP_LATEST_MEDIUM,
 	EP_KEYWORD:            UP_LATEST_KEYWORD,
 	EP_KEYWORD_MATCH_TYPE: UP_LATEST_KEYWORD_MATCH_TYPE,
+	EP_TERM:               UP_LATEST_TERM,
 	EP_CONTENT:            UP_LATEST_CONTENT,
 	EP_ADGROUP:            UP_LATEST_ADGROUP,
 	EP_ADGROUP_ID:         UP_LATEST_ADGROUP_ID,
@@ -891,6 +897,7 @@ var EVENT_TO_SESSION_PROPERTIES = map[string]string{
 	EP_MEDIUM:             EP_MEDIUM,
 	EP_KEYWORD:            EP_KEYWORD,
 	EP_KEYWORD_MATCH_TYPE: EP_KEYWORD_MATCH_TYPE,
+	EP_TERM:               EP_TERM,
 	EP_CONTENT:            EP_CONTENT,
 	EP_ADGROUP:            EP_ADGROUP,
 	EP_ADGROUP_ID:         EP_ADGROUP_ID,
@@ -912,8 +919,8 @@ var DEFINED_MARKETING_PROPERTIES = [...]string{
 	EP_SOURCE,
 	EP_MEDIUM,
 	EP_KEYWORD,
-	EP_TERM,
 	EP_KEYWORD_MATCH_TYPE,
+	EP_TERM,
 	EP_CONTENT,
 	EP_ADGROUP,
 	EP_ADGROUP_ID,
@@ -1452,6 +1459,7 @@ var STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	EP_MEDIUM:                                "Medium",
 	EP_KEYWORD:                               "Keyword",
 	EP_KEYWORD_MATCH_TYPE:                    "Keyword Match UnitType",
+	EP_TERM:                                  "Term",
 	EP_CONTENT:                               "Content",
 	EP_ADGROUP:                               "Adgroup",
 	EP_ADGROUP_ID:                            "Adgroup ID",
@@ -1537,6 +1545,7 @@ var STANDARD_USER_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	UP_INITIAL_MEDIUM:                   "Initial Medium",
 	UP_INITIAL_KEYWORD:                  "Initial Keyword",
 	UP_INITIAL_KEYWORD_MATCH_TYPE:       "Initial Keyword Match UnitType",
+	UP_INITIAL_TERM:                     "Initial Term",
 	UP_INITIAL_CONTENT:                  "Initial Content",
 	UP_INITIAL_ADGROUP:                  "Initial Adgroup",
 	UP_INITIAL_ADGROUP_ID:               "Initial Adgroup ID",
@@ -1568,6 +1577,7 @@ var STANDARD_USER_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	UP_LATEST_MEDIUM:                    "Latest Medium",
 	UP_LATEST_KEYWORD:                   "Latest Keyword",
 	UP_LATEST_KEYWORD_MATCH_TYPE:        "Latest Keyword Match UnitType",
+	UP_LATEST_TERM:                      "Latest Term",
 	UP_LATEST_CONTENT:                   "Latest Content",
 	UP_LATEST_ADGROUP:                   "Latest Adgroup",
 	UP_LATEST_ADGROUP_ID:                "Latest Adgroup ID",
@@ -1671,6 +1681,7 @@ var STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	EP_MEDIUM:                      "Medium",
 	EP_KEYWORD:                     "Keyword",
 	EP_KEYWORD_MATCH_TYPE:          "Keyword Match UnitType",
+	EP_TERM:                        "Term",
 	EP_CONTENT:                     "Content",
 	EP_ADGROUP:                     "Adgroup",
 	EP_ADGROUP_ID:                  "Adgroup ID",
@@ -1706,6 +1717,7 @@ var USER_PROPERTIES_MERGE_TYPE_INITIAL = [...]string{
 	UP_INITIAL_GCLID,
 	UP_INITIAL_KEYWORD,
 	UP_INITIAL_KEYWORD_MATCH_TYPE,
+	UP_INITIAL_TERM,
 	UP_INITIAL_MEDIUM,
 	UP_INITIAL_PAGE_DOMAIN,
 	UP_INITIAL_PAGE_LOAD_TIME,
@@ -2421,6 +2433,7 @@ var CUSTOM_BLACKLIST_DELTA = []string{
 	"$latest_adgroup_id",
 	"$latest_campaign_id",
 	"$latest_keyword",
+	"$latest_term",
 	"$salesforce_account_billingcity",
 	"$salesforce_account_billingcountry",
 	"$salesforce_account_billingpostalcode",

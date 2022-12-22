@@ -887,8 +887,10 @@ func TestAddSessionOnUserWithContinuousEvents(t *testing.T) {
 	trackEventProperties := U.PropertiesMap{
 		U.EP_REFERRER:        "www.google.com",
 		U.EP_PAGE_URL:        "https://example.com/1/2/",
-		U.EP_PAGE_RAW_URL:    "https://example.com/1/2?x=1",
+		U.EP_PAGE_RAW_URL:    "https://example.com/1/2?x=124",
 		U.EP_PAGE_SPENT_TIME: 10,
+		U.EP_TERM:            "term1",
+		U.EP_KEYWORD:         "keyword1",
 	}
 	trackUserProperties := U.PropertiesMap{
 		U.UP_OS:         "Mac OSX",
@@ -978,7 +980,7 @@ func TestAddSessionOnUserWithContinuousEvents(t *testing.T) {
 	trackEventProperties1 := U.PropertiesMap{
 		U.EP_REFERRER:     "www.yahoo.com",
 		U.EP_PAGE_URL:     "https://example1.com/1/2/",
-		U.EP_PAGE_RAW_URL: "https://example1.com/1/2?x=1",
+		U.EP_PAGE_RAW_URL: "https://example1.com/1/2?x=123",
 	}
 	trackPayload = SDK.TrackPayload{
 		Auto:            true,
@@ -1079,6 +1081,9 @@ func TestAddSessionOnUserWithContinuousEvents(t *testing.T) {
 	// should have latest event's page_url after continuing session.
 	assert.Equal(t, trackEventProperties2[U.EP_PAGE_URL], (*lsEventProperties1)[U.SP_LATEST_PAGE_URL])
 	assert.Equal(t, trackEventProperties2[U.EP_PAGE_RAW_URL], (*lsEventProperties1)[U.SP_LATEST_PAGE_RAW_URL])
+	assert.Equal(t, "term1", (*lsEventProperties1)[U.EP_TERM])
+	assert.Equal(t, "keyword1", (*lsEventProperties1)[U.EP_KEYWORD])
+
 	assert.Equal(t, float64(3), (*lsEventProperties1)[U.SP_PAGE_COUNT])
 	// event = 10ms, event1 = 1ms (default), event2 = 1ms (default).
 	assert.Equal(t, float64(12), (*lsEventProperties1)[U.SP_SPENT_TIME])
