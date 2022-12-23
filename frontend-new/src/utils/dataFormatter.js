@@ -42,6 +42,10 @@ export const visualizationColors = [
 export const numberWithCommas = (x) =>
   x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
+export const setDisplayName = (nameMap, key) => {
+  return nameMap[key]? nameMap[key] : key;
+}
+
 export const calculatePercentage = (numerator, denominator, precision = 1) => {
   if (!denominator) {
     return 0;
