@@ -458,6 +458,8 @@ func getLowestHierarchyLevelForCustomAds(query *model.ChannelQueryV1) string {
 	return customadsCampaign
 }
 
+// Added case when statement for NULL value and empty value for group bys
+// Added case when statement for NULL value for smart properties. Didn't add for empty values as such case will not be present
 func getSQLAndParamsFromCustomAdsReportsWithSmartProperty(query *model.ChannelQueryV1, projectID int64, from, to int64, docType int,
 	fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}, customerAccountID []string) (string, []interface{}, []string, []string) {
 	logFields := log.Fields{
@@ -489,13 +491,13 @@ func getSQLAndParamsFromCustomAdsReportsWithSmartProperty(query *model.ChannelQu
 		if isSmartProperty {
 			if groupBy.Object == customadsCampaign {
 
-				value := fmt.Sprintf("JSON_EXTRACT_STRING(campaign.properties, '%s') as campaign_%s", groupBy.Property, groupBy.Property)
+				value := fmt.Sprintf("Case when JSON_EXTRACT_STRING(campaign.properties, '%s') is null then '$none' else JSON_EXTRACT_STRING(campaign.properties, '%s') END as campaign_%s", groupBy.Property, groupBy.Property, groupBy.Property)
 				selectKeys = append(selectKeys, value)
 				responseSelectKeys = append(responseSelectKeys, fmt.Sprintf("campaign_%s", groupBy.Property))
 
 				groupByKeysWithoutTimestamp = append(groupByKeysWithoutTimestamp, fmt.Sprintf("campaign_%s", groupBy.Property))
 			} else {
-				value := fmt.Sprintf("JSON_EXTRACT_STRING(ad_group.properties,'%s') as ad_group_%s", groupBy.Property, groupBy.Property)
+				value := fmt.Sprintf("Case when JSON_EXTRACT_STRING(ad_group.properties,'%s') is null then '$none' else JSON_EXTRACT_STRING(ad_group.properties,'%s') END as ad_group_%s", groupBy.Property, groupBy.Property, groupBy.Property)
 				selectKeys = append(selectKeys, value)
 				responseSelectKeys = append(responseSelectKeys, fmt.Sprintf("ad_group_%s", groupBy.Property))
 
@@ -508,7 +510,7 @@ func getSQLAndParamsFromCustomAdsReportsWithSmartProperty(query *model.ChannelQu
 				selectKeys = append(selectKeys, value)
 				responseSelectKeys = append(responseSelectKeys, model.CustomAdsInternalRepresentationToExternalRepresentationForReports[key])
 			} else {
-				value := fmt.Sprintf("%s as %s", objectAndPropertyToValueInCustomAdsReportsMapping[key], model.CustomAdsInternalRepresentationToExternalRepresentationForReports[key])
+				value := fmt.Sprintf("CASE WHEN %s IS NULL THEN '$none' WHEN %s = '' THEN '$none' ELSE %s END as %s", objectAndPropertyToValueInCustomAdsReportsMapping[key], objectAndPropertyToValueInCustomAdsReportsMapping[key], objectAndPropertyToValueInCustomAdsReportsMapping[key], model.CustomAdsInternalRepresentationToExternalRepresentation[key])
 				selectKeys = append(selectKeys, value)
 				responseSelectKeys = append(responseSelectKeys, model.CustomAdsInternalRepresentationToExternalRepresentationForReports[key])
 			}
@@ -539,12 +541,16 @@ func getSQLAndParamsFromCustomAdsReportsWithSmartProperty(query *model.ChannelQu
 
 	selectQuery += joinWithComma(append(finalSelectKeys, selectMetrics...)...)
 	orderByQuery := "ORDER BY " + getOrderByClause(isGroupByTimestamp, responseSelectMetrics)
-	whereConditionForFilters := getCustomAdsFiltersWhereStatementWithSmartProperty(query.Filters)
+	whereConditionForFilters, filterParams, err := getFilterPropertiesForBingReportsNew(query.Filters)
+	if err != nil {
+		return "", nil, nil, nil
+	}
 	filterStatementForSmartPropertyGroupBy := getNotNullFilterStatementForSmartPropertyGroupBys(query.GroupBy)
 	finalFilterStatement := joinWithWordInBetween("AND", staticWhereStatementForCustomAdsWithSmartProperty, whereConditionForFilters, filterStatementForSmartPropertyGroupBy)
 	finalParams := make([]interface{}, 0)
 	staticWhereParams := []interface{}{projectID, query.Channel, customerAccountID, docType, from, to}
 	finalParams = append(finalParams, staticWhereParams...)
+	finalParams = append(finalParams, filterParams...)
 	if len(groupByCombinationsForGBT) != 0 {
 		whereConditionForGBT, whereParams := buildWhereConditionForGBTForCustomAds(groupByCombinationsForGBT)
 		whereConditionForFilters += (" AND (" + whereConditionForGBT + ")")
@@ -560,6 +566,7 @@ func getSQLAndParamsFromCustomAdsReportsWithSmartProperty(query *model.ChannelQu
 	return resultSQLStatement, finalParams, responseSelectKeys, responseSelectMetrics
 }
 
+// Added case when statement for NULL value and empty value for group bys
 func getSQLAndParamsFromCustomAdsReports(query *model.ChannelQueryV1, projectID int64, from, to int64, docType int,
 	fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}, customerAccountID []string) (string, []interface{}, []string, []string) {
 	logFields := log.Fields{
@@ -601,7 +608,7 @@ func getSQLAndParamsFromCustomAdsReports(query *model.ChannelQueryV1, projectID 
 			selectKeys = append(selectKeys, value)
 			responseSelectKeys = append(responseSelectKeys, model.CustomAdsInternalRepresentationToExternalRepresentationForReports[key])
 		} else {
-			value := fmt.Sprintf("%s as %s", objectAndPropertyToValueInCustomAdsReportsMapping[key], model.CustomAdsInternalRepresentationToExternalRepresentationForReports[key])
+			value := fmt.Sprintf("CASE WHEN %s IS NULL THEN '$none' WHEN %s = '' THEN '$none' ELSE %s END as %s", objectAndPropertyToValueInCustomAdsReportsMapping[key], objectAndPropertyToValueInCustomAdsReportsMapping[key], objectAndPropertyToValueInCustomAdsReportsMapping[key], model.CustomAdsInternalRepresentationToExternalRepresentation[key])
 			selectKeys = append(selectKeys, value)
 			responseSelectKeys = append(responseSelectKeys, model.CustomAdsInternalRepresentationToExternalRepresentationForReports[key])
 		}
@@ -624,10 +631,14 @@ func getSQLAndParamsFromCustomAdsReports(query *model.ChannelQueryV1, projectID 
 
 	selectQuery += joinWithComma(append(finalSelectKeys, selectMetrics...)...)
 	orderByQuery := "ORDER BY " + getOrderByClause(isGroupByTimestamp, responseSelectMetrics)
-	whereConditionForFilters := getCustomAdsFiltersWhereStatement(query.Filters)
+	whereConditionForFilters, filterParams, err := getFilterPropertiesForCustomAdsReportsNew(query.Filters)
+	if err != nil {
+		return "", nil, nil, nil
+	}
 	finalParams := make([]interface{}, 0)
 	staticWhereParams := []interface{}{projectID, query.Channel, docType, customerAccountID, from, to}
 	finalParams = append(finalParams, staticWhereParams...)
+	finalParams = append(finalParams, filterParams...)
 	if len(groupByCombinationsForGBT) != 0 {
 		whereConditionForGBT, whereParams := buildWhereConditionForGBTForCustomAds(groupByCombinationsForGBT)
 		whereConditionForFilters += (" AND (" + whereConditionForGBT + ")")
@@ -642,59 +653,98 @@ func getSQLAndParamsFromCustomAdsReports(query *model.ChannelQueryV1, projectID 
 	return resultSQLStatement, finalParams, responseSelectKeys, responseSelectMetrics
 }
 
-func getCustomAdsFiltersWhereStatementWithSmartProperty(filters []model.ChannelFilterV1) string {
+func getFilterPropertiesForCustomAdsReportsNew(filters []model.ChannelFilterV1) (rStmnt string, rParams []interface{}, err error) {
 	logFields := log.Fields{
 		"filters": filters,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	resultStatement := ""
-	var filterValue string
+
 	campaignFilter := ""
 	adGroupFilter := ""
-	for index, filter := range filters {
-		currentFilterStatement := ""
-		if filter.LogicalOp == "" {
-			filter.LogicalOp = "AND"
+	filtersLen := len(filters)
+	if filtersLen == 0 {
+		return rStmnt, rParams, nil
+	}
+
+	rParams = make([]interface{}, 0)
+	groupedProperties := model.GetChannelFiltersGrouped(filters)
+
+	for indexOfGroup, currentGroupedProperties := range groupedProperties {
+		var currentGroupStmnt, pStmnt string
+		for indexOfProperty, p := range currentGroupedProperties {
+
+			if p.LogicalOp == "" {
+				p.LogicalOp = "AND"
+			}
+
+			if !isValidLogicalOp(p.LogicalOp) {
+				return rStmnt, rParams, errors.New("invalid logical op on where condition")
+			}
+			pStmnt = ""
+			propertyOp := getOp(p.Condition, "categorical")
+			// categorical property type.
+			pValue := ""
+			if p.Condition == model.ContainsOpStr || p.Condition == model.NotContainsOpStr {
+				pValue = fmt.Sprintf("%s", p.Value)
+			} else {
+				pValue = p.Value
+			}
+			_, isPresent := model.SmartPropertyReservedNames[p.Property]
+			if isPresent {
+				key := fmt.Sprintf("%s.%s", p.Object, p.Property)
+				pFilter := objectAndPropertyToValueInCustomAdsReportsMapping[key]
+
+				if p.Value != model.PropertyValueNone {
+					pStmnt = fmt.Sprintf("%s %s '%s' ", pFilter, propertyOp, pValue)
+				} else {
+					// where condition for $none value.
+					if propertyOp == model.EqualsOp || propertyOp == model.RLikeOp {
+						pStmnt = fmt.Sprintf("(%s IS NULL OR %s = '')", pFilter, pFilter)
+					} else if propertyOp == model.NotEqualOp || propertyOp == model.NotRLikeOp {
+						pStmnt = fmt.Sprintf("(%s IS NOT NULL OR %s != '')", pFilter, pFilter)
+					} else {
+						return "", nil, fmt.Errorf("unsupported opertator %s for property value none", propertyOp)
+					}
+				}
+			} else {
+				if p.Value != model.PropertyValueNone {
+					pStmnt = fmt.Sprintf("JSON_EXTRACT_STRING(%s.properties, '%s') %s ?", model.CustomAdsObjectMapForSmartProperty[p.Object], p.Property, propertyOp)
+					rParams = append(rParams, pValue)
+				} else {
+					if propertyOp == model.EqualsOp || propertyOp == model.RLikeOp {
+						pStmnt = fmt.Sprintf("(JSON_EXTRACT_STRING(%s.properties, '%s') IS NULL OR JSON_EXTRACT_STRING(%s.properties, '%s') = '')", model.BingAdsObjectMapForSmartProperty[p.Object], p.Property, model.BingAdsObjectMapForSmartProperty[p.Object], p.Property)
+					} else if propertyOp == model.NotEqualOp || propertyOp == model.NotRLikeOp {
+						pStmnt = fmt.Sprintf("(JSON_EXTRACT_STRING(%s.properties, '%s') IS NOT NULL OR JSON_EXTRACT_STRING(%s.properties, '%s') != '')", model.BingAdsObjectMapForSmartProperty[p.Object], p.Property, model.BingAdsObjectMapForSmartProperty[p.Object], p.Property)
+					} else {
+						return "", nil, fmt.Errorf("unsupported opertator %s for property value none", propertyOp)
+					}
+				}
+				if p.Object == bingadsCampaign {
+					campaignFilter = smartPropertyCampaignStaticFilter
+				} else {
+					adGroupFilter = smartPropertyAdGroupStaticFilter
+				}
+			}
+			if indexOfProperty == 0 {
+				currentGroupStmnt = pStmnt
+			} else {
+				currentGroupStmnt = fmt.Sprintf("%s %s %s", currentGroupStmnt, p.LogicalOp, pStmnt)
+			}
 		}
-		filterOperator := getOp(filter.Condition, "categorical")
-		if filter.Condition == model.ContainsOpStr || filter.Condition == model.NotContainsOpStr {
-			filterValue = fmt.Sprintf("%s", filter.Value)
+		if indexOfGroup == 0 {
+			rStmnt = fmt.Sprintf("(%s)", currentGroupStmnt)
 		} else {
-			filterValue = filter.Value
+			rStmnt = fmt.Sprintf("%s AND (%s)", rStmnt, currentGroupStmnt)
 		}
-		_, isPresent := model.SmartPropertyReservedNames[filter.Property]
-		if isPresent {
-			currentFilterStatement = fmt.Sprintf("%s %s '%s' ", objectAndPropertyToValueInCustomAdsReportsMapping[filter.Object+"."+filter.Property], filterOperator, filterValue)
-			if index == 0 {
-				resultStatement = " AND " + currentFilterStatement
-			} else {
-				resultStatement = fmt.Sprintf("%s %s %s ", resultStatement, filter.LogicalOp, currentFilterStatement)
-			}
-		} else {
-			currentFilterStatement = fmt.Sprintf("JSON_EXTRACT_STRING(%s.properties, '%s') %s '%s'", model.CustomAdsObjectMapForSmartProperty[filter.Object], filter.Property, filterOperator, filterValue)
-			if index == 0 {
-				resultStatement = fmt.Sprintf("(%s", currentFilterStatement)
-			} else {
-				resultStatement = fmt.Sprintf("%s %s %s", resultStatement, filter.LogicalOp, currentFilterStatement)
-			}
-			if filter.Object == customadsCampaign {
-				campaignFilter = smartPropertyCampaignStaticFilter
-			} else {
-				adGroupFilter = smartPropertyAdGroupStaticFilter
-			}
-		}
+
 	}
 	if campaignFilter != "" {
-		resultStatement += (" AND " + campaignFilter)
+		rStmnt += (" AND " + campaignFilter)
 	}
 	if adGroupFilter != "" {
-		resultStatement += (" AND " + adGroupFilter)
+		rStmnt += (" AND " + adGroupFilter)
 	}
-	if resultStatement == "" {
-		return resultStatement
-	}
-	return resultStatement + ")"
-	return resultStatement
+	return rStmnt, rParams, nil
 }
 
 func buildWhereConditionForGBTForCustomAds(groupByCombinations map[string][]interface{}) (string, []interface{}) {
@@ -736,41 +786,12 @@ func getCustomAdsFromStatementWithJoins(filters []model.ChannelFilterV1, groupBy
 	isPresentCampaignSmartProperty, isPresentAdGroupSmartProperty := checkSmartPropertyWithTypeAndSource(filters, groupBys, "customads")
 	fromStatement := fromIntegrationDocuments
 	if isPresentAdGroupSmartProperty {
-		fromStatement += "inner join smart_properties ad_group on ad_group.project_id = integration_documents.project_id and ad_group.object_id = document_id "
+		fromStatement += "left join smart_properties ad_group on ad_group.project_id = integration_documents.project_id and ad_group.object_id = document_id "
 	}
 	if isPresentCampaignSmartProperty {
-		fromStatement += "inner join smart_properties campaign on campaign.project_id = integration_documents.project_id and campaign.object_id = document_id "
+		fromStatement += "left join smart_properties campaign on campaign.project_id = integration_documents.project_id and campaign.object_id = document_id "
 	}
 	return fromStatement
-}
-
-func getCustomAdsFiltersWhereStatement(filters []model.ChannelFilterV1) string {
-	logFields := log.Fields{
-		"filters": filters,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	resultStatement := ""
-	var filterValue string
-	for index, filter := range filters {
-		currentFilterStatement := ""
-		if filter.LogicalOp == "" {
-			filter.LogicalOp = "AND"
-		}
-		filterOperator := getOp(filter.Condition, "categorical")
-		if filter.Condition == model.ContainsOpStr || filter.Condition == model.NotContainsOpStr {
-			filterValue = fmt.Sprintf("%s", filter.Value)
-		} else {
-			filterValue = filter.Value
-		}
-
-		currentFilterStatement = fmt.Sprintf("%s %s '%s' ", objectAndPropertyToValueInCustomAdsReportsMapping[filter.Object+"."+filter.Property], filterOperator, filterValue)
-		if index == 0 {
-			resultStatement = " AND " + currentFilterStatement
-		} else {
-			resultStatement = fmt.Sprintf("%s %s %s ", resultStatement, filter.LogicalOp, currentFilterStatement)
-		}
-	}
-	return resultStatement
 }
 
 func GetFilterObjectExpressionForChannelCustomAds(dimension string) string {
