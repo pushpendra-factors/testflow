@@ -450,6 +450,7 @@ type Model interface {
 	// offline touchpoints
 	CreateOTPRule(projectId int64, rule *model.OTPRule) (*model.OTPRule, int, string)
 	GetALLOTPRuleWithProjectId(projectID int64) ([]model.OTPRule, int)
+	GetUniqueKeyPropertyForOTPEventForLast3Months(projectID int64) ([]string, int)
 	GetAllRulesDeletedNotDeleted(projectID int64) ([]model.OTPRule, int)
 	GetOTPRuleWithRuleId(projectID int64, ruleID string) (*model.OTPRule, int)
 	GetAnyOTPRuleWithRuleId(projectID int64, ruleID string) (*model.OTPRule, int)

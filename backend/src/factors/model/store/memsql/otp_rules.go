@@ -83,6 +83,45 @@ func (store *MemSQL) GetALLOTPRuleWithProjectId(projectID int64) ([]model.OTPRul
 	return otpRules, http.StatusFound
 }
 
+// Returns the list of $otp_unique_key property for the last 3 months for offline touch point events.
+func (store *MemSQL) GetUniqueKeyPropertyForOTPEventForLast3Months(projectID int64) ([]string, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	db := C.GetServices().Db
+
+	uniqueOTPEventKeys := make([]string, 0, 0)
+	var otpEventID string
+
+	//Fetching id when event name is offline touch point for the given projectID
+	err := db.Table("event_names").Select("id").
+		Where("name=? AND project_id=?", U.EVENT_NAME_OFFLINE_TOUCH_POINT, projectID).Find(&otpEventID).Error
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return uniqueOTPEventKeys, http.StatusNotFound
+		}
+		log.WithField("project_id", projectID).WithError(err).Error("Failed to fetch id from event_names table for project")
+		return uniqueOTPEventKeys, http.StatusInternalServerError
+	}
+	//Getting timestamp for the last 3 months
+	to := U.TimeNowUnix()
+	from := to - (93 * model.SecsInADay)
+
+	//Fetching properties with id fetched above for the given projectID for last 3 months
+	err1 := db.Table("events").Select("JSON_EXTRACT_STRING(properties,?)", U.EP_OTP_UNIQUE_KEY).
+		Where("project_id=? AND event_name_id=? AND timestamp>=? AND timestamp<=?", projectID, otpEventID, from, to).
+		Order("created_at DESC").Find(&uniqueOTPEventKeys).Error
+	if err1 != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return uniqueOTPEventKeys, http.StatusNotFound
+		}
+		log.WithField("project_id", projectID).WithError(err).Error("Failed to fetch event properties from events table for project")
+		return uniqueOTPEventKeys, http.StatusInternalServerError
+	}
+	return uniqueOTPEventKeys, http.StatusFound
+}
+
 // GetAllRulesDeletedNotDeleted fetching deleted, non-deleted rules.
 func (store *MemSQL) GetAllRulesDeletedNotDeleted(projectID int64) ([]model.OTPRule, int) {
 	db := C.GetServices().Db
