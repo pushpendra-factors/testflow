@@ -24,16 +24,45 @@ import styles from './index.module.scss';
 import { ATTRIBUTION_GROUP_ANALYSIS_KEYS } from './attributionsResult.constants';
 import { EQUALITY_OPERATOR_KEYS } from '../../../components/DataTableFilters/dataTableFilters.constants';
 
-export const defaultSortProp = () => [
-  {
-    order: 'descend',
-    key: 'Impressions',
-    type: 'numerical',
-    subtype: null
+export const defaultSortProp = (queryOptions, attrQueries, data) => {
+  const groupAnalysis = get(
+    queryOptions,
+    'group_analysis',
+    ATTRIBUTION_GROUP_ANALYSIS_KEYS.USERS
+  );
+  if (groupAnalysis === ATTRIBUTION_GROUP_ANALYSIS_KEYS.HUBSPOT_DEALS) {
+    if (attrQueries.length > 0) {
+      const firstQueryLabel = get(attrQueries[0], 'label', undefined);
+      if (firstQueryLabel) {
+        const headers = get(data, 'headers', []);
+        const sorterKey = headers.find((header) =>
+          header.startsWith(`${firstQueryLabel} - `)
+        );
+        if (sorterKey != null) {
+          return [
+            {
+              order: 'descend',
+              key: sorterKey,
+              type: 'numerical',
+              subtype: null
+            }
+          ];
+        }
+      }
+    }
   }
-];
+  return [
+    {
+      order: 'descend',
+      key: 'Conversion',
+      type: 'numerical',
+      subtype: null
+    }
+  ];
+};
 
-const isLandingPageSelected = (touchPoint) => touchPoint === 'LandingPage';
+export const isLandingPageSelected = (touchPoint) =>
+  touchPoint === 'LandingPage';
 
 export const getDifferentCampaingns = (data) => {
   const { headers } = data.result;

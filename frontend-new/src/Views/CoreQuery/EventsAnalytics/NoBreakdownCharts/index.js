@@ -99,7 +99,7 @@ const NoBreakdownChartsComponent = forwardRef(
     let chart = null;
 
     const table = (
-      <div className="mt-12 w-full">
+      <div className='mt-12 w-full'>
         <NoBreakdownTable
           isWidgetModal={section === DASHBOARD_MODAL}
           data={chartsData}
@@ -122,7 +122,7 @@ const NoBreakdownChartsComponent = forwardRef(
     if (chartType === CHART_TYPE_SPARKLINES) {
       if (queries.length === 1) {
         chart = (
-          <div className="flex items-center justify-center w-full">
+          <div className='flex items-center justify-center w-full'>
             <SparkChartWithCount
               total={get(resultState, 'data.metrics.rows.0.2', 0)}
               compareTotal={get(comparisonData, 'data.metrics.rows.0.2', 0)}
@@ -140,29 +140,31 @@ const NoBreakdownChartsComponent = forwardRef(
       if (queries.length > 1) {
         const appliedColors = generateColors(queries.length);
         chart = (
-          <div className="flex items-start flex-wrap justify-center w-full">
+          <div className='flex items-start flex-wrap justify-center w-full'>
             {queries.map((_, index) => {
               const rows = get(resultState, 'data.metrics.rows', []);
               const row = rows.find((elem) => elem[0] === index);
+              const compareRow =
+                comparisonData != null && comparisonData.data != null
+                  ? get(comparisonData, 'data.metrics.rows', []).find(
+                      (elem) => elem[0] === index
+                    )
+                  : null;
               return (
                 <div
                   style={{ minWidth: '300px' }}
                   key={arrayMapper[index].mapper}
-                  className="w-1/3 px-4"
+                  className='w-1/3 px-4'
                 >
                   <SparkChartWithCount
                     total={get(row, '2', 0)}
-                    compareTotal={get(
-                      comparisonData,
-                      `data.metrics.rows.${index}.2`,
-                      0
-                    )}
+                    compareTotal={get(compareRow, '2', 0)}
                     event={arrayMapper[index].mapper}
                     compareKey={`${arrayMapper[index].mapper} - compareValue`}
                     frequency={durationObj.frequency}
                     chartData={chartsData}
                     chartColor={appliedColors[index]}
-                    alignment="vertical"
+                    alignment='vertical'
                     comparisonApplied={!!comparisonData.data}
                     headerTitle={arrayMapper[index].displayName}
                   />
@@ -174,7 +176,7 @@ const NoBreakdownChartsComponent = forwardRef(
       }
     } else if (chartType === CHART_TYPE_LINECHART) {
       chart = (
-        <div className="w-full">
+        <div className='w-full'>
           <LineChart
             frequency={durationObj.frequency}
             categories={categories}
@@ -187,7 +189,7 @@ const NoBreakdownChartsComponent = forwardRef(
     }
 
     return (
-      <div className="flex items-center justify-center flex-col">
+      <div className='flex items-center justify-center flex-col'>
         {chart}
         {table}
       </div>

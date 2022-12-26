@@ -51,12 +51,12 @@ function AttributionTable({
           result[key] = rest[key];
         } else {
           const changePercent = calcChangePerc(
-            rest[key].value,
-            rest[key].compare_value
+            rest[key]?.value,
+            rest[key]?.compare_value
           );
-          result[`${key} (${fromDate} - ${toDate})`] = rest[key].value;
+          result[`${key} (${fromDate} - ${toDate})`] = rest[key]?.value;
           result[`${key} (${compareFromDate} - ${compareToDate})`] =
-            rest[key].compare_value;
+            rest[key]?.compare_value;
           result[`${key} change`] = isNaN(changePercent)
             ? '0%'
             : changePercent === 'Infinity' || changePercent === '-Infinity'
