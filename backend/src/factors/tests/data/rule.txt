@@ -1,0 +1,1 @@
+{"en_en":"www.acme.com/pricing","rule":{"en_en_ft":[],"en_us_ft":[],"ft":[{"key":"$country","lower_bound":0,"operator":false,"property_type":"categorical","upper_bound":0,"vl":"United States"}],"st_en_ft":[],"st_us_ft":[]},"st_en":"www.acme.com","vs":false}

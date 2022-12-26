@@ -49,12 +49,10 @@ type ExplainV2 struct {
 }
 
 type ExplainV2Query struct {
-	Title          string   `json:"ti"`
-	StartEvent     string   `json:"st"`
-	EndEvent       string   `json:"et"`
-	IncludeEvents  []string `json:"ie"`
-	StartTimestamp int64    `json:"sts"`
-	EndTimestamp   int64    `json:"ets"`
+	Title          string          `json:"ti"`
+	Query          FactorsGoalRule `json:"fr"`
+	StartTimestamp int64           `json:"sts"`
+	EndTimestamp   int64           `json:"ets"`
 }
 
 type ExplainV2EntityInfo struct {

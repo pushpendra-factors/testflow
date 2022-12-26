@@ -227,9 +227,9 @@ func isDulplicateExplainV2Query(ProjectID int64, query *model.ExplainV2Query) bo
 	var objects []model.ExplainV2
 	if err := db.Table("explain_v2").Where("project_id = ?", ProjectID).
 		Where("is_deleted = ?", false).
-		Where("JSON_EXTRACT_DOUBLE(query, 'st') = ?", query.StartEvent).
-		Where("JSON_EXTRACT_STRING(query, 'et') = ?", query.EndEvent).
-		Where("JSON_EXTRACT_STRING(query, 'ie') = ?", query.IncludeEvents).
+		Where("JSON_EXTRACT_DOUBLE(query, 'st_en') = ?", query.Query.StartEvent).
+		Where("JSON_EXTRACT_STRING(query, 'et_en') = ?", query.Query.EndEvent).
+		Where("JSON_EXTRACT_STRING(query, 'ie_en') = ?", query.Query.Rule.IncludedEvents).
 		Find(&objects).Error; err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			return false
@@ -245,7 +245,7 @@ func isDulplicateExplainV2Query(ProjectID int64, query *model.ExplainV2Query) bo
 
 		equal := (res.EndTimestamp == query.EndTimestamp) &&
 			(res.StartTimestamp == query.StartTimestamp) &&
-			reflect.DeepEqual(res.IncludeEvents, query.IncludeEvents)
+			reflect.DeepEqual(res.Query.Rule.IncludedEvents, query.Query.Rule.IncludedEvents)
 
 		if equal {
 			log.WithFields(logFields).Error("Same explainV2 features request")
