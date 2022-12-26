@@ -1983,7 +1983,7 @@ func isValidFunnelQuery(query *model.Query) bool {
 
 func (store *MemSQL) IsValidFunnelGroupQueryIfExists(projectID int64, query *model.Query, groupIds []int) (int, bool) {
 
-	if query.GroupAnalysis == "" {
+	if query.GroupAnalysis == "" || model.IsFunnelQueryGroupNameUser(query.GroupAnalysis) {
 		return 0, true
 	}
 
