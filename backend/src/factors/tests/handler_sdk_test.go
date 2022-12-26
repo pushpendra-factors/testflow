@@ -126,19 +126,6 @@ func TestClearbitEnrichmentInSDKTrackHanler(t *testing.T) {
 	sessionUserPropertiesBytes, err := userSessionEvents[0].UserProperties.Value()
 	var sessionUserProperties map[string]interface{}
 	json.Unmarshal(sessionUserPropertiesBytes.([]byte), &sessionUserProperties)
-
-	// session properties from user properties.
-	//** commenting it as clearbit enrichment will happen only if clearbit key is present in db.
-
-	//assert.NotEmpty(t, sessionUserProperties[U.CLR_COMPANY_GEO_COUNTRY])
-	//assert.NotEmpty(t, sessionUserProperties[U.CLR_COMPANY_GEO_CITY])
-	//responseMap := DecodeJSONResponseToMap(w.Body)
-	//assert.NotEmpty(t, responseMap)
-	//assert.NotNil(t, responseMap["user_id"])
-	//println("start and")
-	//fmt.Println(sessionUserProperties[U.CLR_COMPANY_GEO_CITY])
-	//fmt.Println(sessionUserProperties[U.CLR_COMPANY_GEO_COUNTRY])
-	//println("END")
 }
 
 func TestSDKTrackHandler(t *testing.T) {
@@ -484,7 +471,7 @@ func TestSDKTrackHandler(t *testing.T) {
 	t.Run("MapEventPropertiesToDefaultProperties", func(t *testing.T) {
 		rEventName := "https://example.com/" + U.RandomLowerAphaNumString(10)
 		w = ServePostRequestWithHeaders(r, uri,
-			[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "event_properties": {"mobile": "true", "$qp_utm_campaign": "google", "$qp_utm_campaignid": "12345", "$qp_utm_source": "google","$qp_utm_term":"analytics", "$qp_utm_medium": "email", "$qp_utm_keyword": "analytics", "$qp_utm_matchtype": "exact", "$qp_utm_content": "analytics", "$qp_utm_adgroup": "ad-xxx", "$qp_utm_adgroup_id": "xyz123", "$qp_utm_creativeid": "creative-xxx", "$qp_gclid": "xxx123", "$qp_fbclid": "zzz123"}, "user_properties": {"$os": "Mac OS"}}`, user.ID, rEventName)),
+			[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "event_properties": {"mobile": "true", "$qp_utm_campaign": "google", "$qp_utm_campaignid": "12345", "$qp_utm_source": "google","$qp_utm_term":"%%7Bkeyword%%7D", "$qp_utm_medium": "email", "$qp_utm_keyword": "%%2Bwebsite%%20%%2Banalysis", "$qp_utm_matchtype": "exact", "$qp_utm_content": "analytics", "$qp_utm_adgroup": "ad-xxx", "$qp_utm_adgroup_id": "xyz123", "$qp_utm_creativeid": "creative-xxx", "$qp_gclid": "xxx123", "$qp_fbclid": "zzz123"}, "user_properties": {"$os": "Mac OS"}}`, user.ID, rEventName)),
 			map[string]string{"Authorization": project.Token})
 		assert.Equal(t, http.StatusOK, w.Code)
 		responseMap = DecodeJSONResponseToMap(w.Body)
@@ -533,7 +520,7 @@ func TestSDKTrackHandler(t *testing.T) {
 	t.Run("AddInitialUserPropertiesFromEventProperties", func(t *testing.T) {
 		rEventName := "https://example.com/" + U.RandomLowerAphaNumString(10)
 		w := ServePostRequestWithHeaders(r, uri,
-			[]byte(fmt.Sprintf(`{"event_name": "%s", "event_properties": {"mobile": "true", "$page_url": "https://example.com/xyz/", "$page_raw_url": "https://example.com/xyz?utm_campaign=google", "$page_domain": "example.com", "$referrer_domain": "gartner.com", "$referrer_url": "https://gartner.com/product_of_the_month/", "$referrer": "https://gartner.com/product_of_the_month/", "$page_load_time": 100, "$page_spent_time": 120, "$qp_utm_campaign": "google", "$qp_utm_campaignid": "12345", "$qp_utm_source": "google", "$qp_utm_medium": "email", "$qp_utm_keyword": "analytics", "$qp_utm_matchtype": "exact", "$qp_utm_content": "analytics", "$qp_utm_adgroup": "ad-xxx", "$qp_utm_adgroupid": "xyz123", "$qp_utm_creative": "creative-xxx", "$qp_gclid": "xxx123", "$qp_fbclid": "zzz123"}, "user_properties": {"$os": "Mac OS"}}`, rEventName)),
+			[]byte(fmt.Sprintf(`{"event_name": "%s", "event_properties": {"mobile": "true", "$page_url": "https://example.com/xyz/", "$page_raw_url": "https://example.com/xyz?utm_campaign=google", "$page_domain": "example.com", "$referrer_domain": "gartner.com", "$referrer_url": "https://gartner.com/product_of_the_month/", "$referrer": "https://gartner.com/product_of_the_month/", "$page_load_time": 100, "$page_spent_time": 120, "$qp_utm_campaign": "google", "$qp_utm_campaignid": "12345", "$qp_utm_source": "google", "$qp_utm_medium": "email", "$qp_utm_keyword": "analytics", "$qp_utm_term": "analytics", "$qp_utm_matchtype": "exact", "$qp_utm_content": "analytics", "$qp_utm_adgroup": "ad-xxx", "$qp_utm_adgroupid": "xyz123", "$qp_utm_creative": "creative-xxx", "$qp_gclid": "xxx123", "$qp_fbclid": "zzz123"}, "user_properties": {"$os": "Mac OS"}}`, rEventName)),
 			map[string]string{"Authorization": project.Token})
 		assert.Equal(t, http.StatusOK, w.Code)
 		responseMap = DecodeJSONResponseToMap(w.Body)
@@ -667,7 +654,7 @@ func TestSDKTrackHandler(t *testing.T) {
 
 		// Existing user.
 		w = ServePostRequestWithHeaders(r, uri,
-			[]byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "%s", "event_properties": {"mobile": "true", "$page_url": "https://example.com/xyz", "$page_raw_url": "https://example.com/xyz?utm_campaign=facebook", "$page_domain": "example.com", "$referrer_domain": "gartner.com", "$referrer_url": "https://gartner.com/product_of_the_month?ref=google", "$referrer": "https://gartner.com/product_of_the_month", "$page_load_time": 100, "$page_spent_time": 120, "$qp_utm_campaign": "facebook", "$qp_utm_campaignid": "7890", "$qp_utm_source": "facebook", "$qp_utm_medium": "email", "$qp_utm_keyword": "analytics", "$qp_utm_matchtype": "exact", "$qp_utm_content": "analytics", "$qp_utm_adgroup": "ad-xxx", "$qp_utm_adgroupid": "xyz123", "$qp_utm_creative": "creative-xxx", "$qp_gclid": "xxx123", "$qp_fbclid": "zzz123"}, "user_properties": {"$os": "Mac OS"}}`,
+			[]byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "%s", "event_properties": {"mobile": "true", "$page_url": "https://example.com/xyz", "$page_raw_url": "https://example.com/xyz?utm_campaign=facebook", "$page_domain": "example.com", "$referrer_domain": "gartner.com", "$referrer_url": "https://gartner.com/product_of_the_month?ref=google", "$referrer": "https://gartner.com/product_of_the_month", "$page_load_time": 100, "$page_spent_time": 120, "$qp_utm_campaign": "facebook", "$qp_utm_campaignid": "7890", "$qp_utm_source": "facebook", "$qp_utm_medium": "email", "$qp_utm_keyword": "analytics", "$qp_utm_term": "analytics", "$qp_utm_matchtype": "exact", "$qp_utm_content": "analytics", "$qp_utm_adgroup": "ad-xxx", "$qp_utm_adgroupid": "xyz123", "$qp_utm_creative": "creative-xxx", "$qp_gclid": "xxx123", "$qp_fbclid": "zzz123"}, "user_properties": {"$os": "Mac OS"}}`,
 				eventUserId, rEventName)), map[string]string{"Authorization": project.Token})
 		assert.Equal(t, http.StatusOK, w.Code)
 		responseMap = DecodeJSONResponseToMap(w.Body)
@@ -686,6 +673,8 @@ func TestSDKTrackHandler(t *testing.T) {
 		assert.Equal(t, "facebook", userProperties2[U.UP_LATEST_CAMPAIGN])
 		assert.NotNil(t, userProperties2[U.UP_LATEST_CAMPAIGN_ID])
 		assert.Equal(t, "7890", userProperties2[U.UP_LATEST_CAMPAIGN_ID])
+		assert.Equal(t, "analytics", userProperties2[U.UP_LATEST_KEYWORD])
+		assert.Equal(t, "analytics", userProperties2[U.UP_LATEST_TERM])
 	})
 
 	t.Run("IgnoreFilterPropertyAtTheEndOnmatch", func(t *testing.T) {
@@ -723,7 +712,7 @@ func TestSDKTrackHandler(t *testing.T) {
 
 		rEventName := "https://example.com/xyz"
 		w := ServePostRequestWithHeaders(r, uri,
-			[]byte(fmt.Sprintf(`{"event_name": "%s", "user_id": "%s", "event_properties": {"mobile": "true", "$page_url": "https://example.com/xyz", "$page_raw_url": "https://example.com/xyz?utm_campaign=google", "$page_domain": "example.com", "$page_load_time": 100, "$page_spent_time": 120, "$qp_utm_campaign": "google", "$qp_utm_campaignid": "12345", "$qp_utm_source": "google", "$qp_utm_medium": "email", "$qp_utm_keyword": "analytics", "$qp_utm_matchtype": "exact", "$qp_utm_content": "analytics", "$qp_utm_adgroup": "ad-xxx", "$qp_utm_adgroupid": "xyz123", "$qp_utm_creative": "creative-xxx", "$qp_gclid": "xxx123", "$qp_fbclid": "zzz123"}, "user_properties": {"$os": "Mac OS"}}`,
+			[]byte(fmt.Sprintf(`{"event_name": "%s", "user_id": "%s", "event_properties": {"mobile": "true", "$page_url": "https://example.com/xyz", "$page_raw_url": "https://example.com/xyz?utm_campaign=google", "$page_domain": "example.com", "$page_load_time": 100, "$page_spent_time": 120, "$qp_utm_campaign": "google", "$qp_utm_campaignid": "12345", "$qp_utm_source": "google", "$qp_utm_medium": "email", "$qp_utm_keyword": "analytics", "$qp_utm_term": "analytics", "$qp_utm_matchtype": "exact", "$qp_utm_content": "analytics", "$qp_utm_adgroup": "ad-xxx", "$qp_utm_adgroupid": "xyz123", "$qp_utm_creative": "creative-xxx", "$qp_gclid": "xxx123", "$qp_fbclid": "zzz123"}, "user_properties": {"$os": "Mac OS"}}`,
 				rEventName, user.ID)), map[string]string{"Authorization": project.Token})
 		assert.Equal(t, http.StatusOK, w.Code)
 		responseMap = DecodeJSONResponseToMap(w.Body)

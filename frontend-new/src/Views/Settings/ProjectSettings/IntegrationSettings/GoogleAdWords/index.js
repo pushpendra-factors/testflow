@@ -139,6 +139,7 @@ const GoogleIntegration = ({
 
     if (isIntAdwordsEnabled()) {
       if (window.location.href.indexOf(ADWORDS_INTERNAL_REDIRECT_URI) > -1) {
+        renderSettingInfo();
         setShowURLModal(true);
       }
     }

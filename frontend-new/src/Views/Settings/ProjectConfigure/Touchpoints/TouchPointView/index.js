@@ -48,9 +48,7 @@ const TouchpointView = ({
   onCancel,
   onSave
 }) => {
-  const { userPropNames, eventPropNames } = useSelector(
-    (state) => state.coreQuery
-  );
+  const { eventPropNames } = useSelector((state) => state.coreQuery);
 
   const [dropDownValues, setDropDownValues] = useState({});
   const [filterDD, setFilterDD] = useState(false);
@@ -421,13 +419,11 @@ const TouchpointView = ({
     } else if (tchRuleType === RULE_TYPE_HS_FORM_SUBMISSIONS) {
       return (
         <Radio.Group
-          onChange={() => setTimestampRefEmail('$hubspot_form_submission')}
+          onChange={() => setTimestampRefEmail('$timestamp')}
           value={touchPointPropRef}
-          defaultValue={`$hubspot_form_submission`}
+          defaultValue={`$timestamp`}
         >
-          <Radio value={`$hubspot_form_submission`}>
-            Form submission timestamp
-          </Radio>
+          <Radio value={`$timestamp`}>Form submission timestamp</Radio>
         </Radio.Group>
       );
     }

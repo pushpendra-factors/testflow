@@ -190,7 +190,7 @@ func (store *MemSQL) GetSyncedSalesforceDocumentByType(projectID int64, ids []st
 	}
 
 	db := C.GetServices().Db
-	err := db.Order("timestamp").Where(stmnt,
+	err := db.Where(stmnt,
 		projectID, ids, docType).Find(&documents).Error
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get salesforce documents.")
@@ -200,6 +200,10 @@ func (store *MemSQL) GetSyncedSalesforceDocumentByType(projectID int64, ids []st
 	if len(documents) == 0 {
 		return nil, http.StatusNotFound
 	}
+
+	sort.Slice(documents, func(i, j int) bool {
+		return documents[i].Timestamp < documents[j].Timestamp
+	})
 
 	return documents, http.StatusFound
 }

@@ -5495,3 +5495,45 @@ func TestSalesforceEventDocument(t *testing.T) {
 	assert.Equal(t, util.CRM_SYNC_STATUS_SUCCESS, enrichStatus[0].Status)
 	assert.Equal(t, util.CRM_SYNC_STATUS_SUCCESS, enrichStatus[1].Status)
 }
+
+func TestSalesforceGetSyncedSalesforceDocumentByType(t *testing.T) {
+	project, _, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	contactcreatedDate := time.Now().UTC().AddDate(0, 0, -3)
+	for i := time.Duration(0); i < 4; i++ {
+		contact := map[string]interface{}{
+			"Id":               "1",
+			"CreatedDate":      contactcreatedDate.Add(i * time.Second).Format(model.SalesforceDocumentDateTimeLayout),
+			"LastModifiedDate": contactcreatedDate.Add(i * time.Second).Format(model.SalesforceDocumentDateTimeLayout),
+		}
+		err = createDummySalesforceDocument(project.ID, contact, model.SalesforceDocumentTypeNameContact)
+		assert.Nil(t, err)
+		contact = map[string]interface{}{
+			"Id":               "2",
+			"CreatedDate":      contactcreatedDate.Add(i * time.Second).Format(model.SalesforceDocumentDateTimeLayout),
+			"LastModifiedDate": contactcreatedDate.Add(i * time.Second).Format(model.SalesforceDocumentDateTimeLayout),
+		}
+		err = createDummySalesforceDocument(project.ID, contact, model.SalesforceDocumentTypeNameContact)
+		assert.Nil(t, err)
+	}
+
+	documents, status := store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{"1"}, model.SalesforceDocumentTypeContact, true)
+	assert.Equal(t, http.StatusFound, status)
+	for i := time.Duration(0); i < 4; i++ {
+		expectedTimestamp := contactcreatedDate.Add(i * time.Second).Unix()
+		assert.Equal(t, documents[i].Timestamp, expectedTimestamp)
+	}
+
+	documents, status = store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{"1", "2"}, model.SalesforceDocumentTypeContact, true)
+	assert.Equal(t, http.StatusFound, status)
+
+	idx := 0
+	for i := time.Duration(0); i < 4; i++ {
+		expectedTimestamp := contactcreatedDate.Add(i * time.Second).Unix()
+		assert.Equal(t, documents[idx].Timestamp, expectedTimestamp)
+		idx++
+		assert.Equal(t, documents[idx].Timestamp, expectedTimestamp)
+		idx++
+	}
+}

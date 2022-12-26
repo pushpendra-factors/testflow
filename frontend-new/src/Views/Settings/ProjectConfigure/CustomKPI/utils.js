@@ -718,7 +718,8 @@ const getKPIqueryGroup = (queries, eventGrpBy, period) => {
       fr: period.from,
       to: period.to,
       tz: localStorage.getItem('project_timeZone') || 'Asia/Kolkata',
-      na: alphabetIndex[index]
+      na: alphabetIndex[index],
+      qt: item.qt
     });
     // queryArr.push({
     //   ca: item?.category,
