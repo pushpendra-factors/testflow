@@ -240,6 +240,25 @@ func (query *AttributionQuery) ConvertAllDatesFromTimezone1ToTimezone2(currentTi
 	return nil
 }
 
+func (query *AttributionQueryV1) ConvertAllDatesFromTimezone1ToTimezone2(currentTimezone, nextTimezone string) error {
+	err := query.ConversionEvent.ConvertAllDatesFromTimezone1ToTimzone2(currentTimezone, nextTimezone)
+	if err != nil {
+		return err
+	}
+	err = query.ConversionEventCompare.ConvertAllDatesFromTimezone1ToTimzone2(currentTimezone, nextTimezone)
+	if err != nil {
+		return err
+	}
+
+	for _, ewp := range query.LinkedEvents {
+		err = ewp.ConvertAllDatesFromTimezone1ToTimzone2(currentTimezone, nextTimezone)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (query *AttributionQuery) GetTimeZone() U.TimeZoneString {
 	return U.TimeZoneString(query.Timezone)
 }
@@ -1475,6 +1494,7 @@ func GetRowsByMapsLandingPage(contentGroupNamesList []string, attributionData *m
 	return rows
 }
 
+// ProcessQueryKPILandingPageUrl converts attribution data into result
 func ProcessQueryKPILandingPageUrl(query *AttributionQuery, attributionData *map[string]*AttributionData, logCtx log.Entry, kpiData map[string]KPIInfo, isCompare bool) *QueryResult {
 	logFields := log.Fields{"Method": "ProcessQueryKPILandingPageUrl"}
 	logCtx = *logCtx.WithFields(logFields)
@@ -1523,6 +1543,7 @@ func ProcessQueryKPILandingPageUrl(query *AttributionQuery, attributionData *map
 
 }
 
+// ProcessQueryLandingPageUrl converts attribution data into result
 func ProcessQueryLandingPageUrl(query *AttributionQuery, attributionData *map[string]*AttributionData, logCtx log.Entry, isCompare bool) *QueryResult {
 	logFields := log.Fields{"Method": "ProcessQueryLandingPageUrl"}
 	logCtx = *logCtx.WithFields(logFields)
@@ -1564,6 +1585,7 @@ func ProcessQueryLandingPageUrl(query *AttributionQuery, attributionData *map[st
 
 }
 
+// ProcessQuery converts attribution data into result
 func ProcessQuery(query *AttributionQuery, attributionData *map[string]*AttributionData, marketingReports *MarketingReports, isCompare bool, projectId int64, logCtx log.Entry) *QueryResult {
 	logFields := log.Fields{"Method": "ProcessQuery"}
 	logCtx = *logCtx.WithFields(logFields)
@@ -1619,6 +1641,7 @@ func ProcessQuery(query *AttributionQuery, attributionData *map[string]*Attribut
 	return result
 }
 
+// ProcessQueryKPI converts attribution data into result
 func ProcessQueryKPI(query *AttributionQuery, attributionData *map[string]*AttributionData,
 	marketingReports *MarketingReports, isCompare bool, kpiData map[string]KPIInfo) *QueryResult {
 
@@ -1711,7 +1734,7 @@ func ProcessQueryKPI(query *AttributionQuery, attributionData *map[string]*Attri
 		return true
 	})
 
-	result.Rows = AddGrandTotalRowKPI(result.Headers, result.Rows, GetLastKeyValueIndex(result.Headers), query.AnalyzeType, goalEventAggFuncTypes, query.AttributionMethodology, query.AttributionMethodologyCompare)
+	result.Rows = AddGrandTotalRowKPI(result.Headers, result.Rows, GetLastKeyValueIndex(result.Headers), goalEventAggFuncTypes, query.AttributionMethodology, query.AttributionMethodologyCompare)
 
 	if C.GetAttributionDebug() == 1 {
 		logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "Result": result}).Info("KPI Attribution result AddGrandTotalRow")
@@ -1719,6 +1742,7 @@ func ProcessQueryKPI(query *AttributionQuery, attributionData *map[string]*Attri
 	return result
 }
 
+// ProcessQueryUserKPI converts attribution data into result
 func ProcessQueryUserKPI(query *AttributionQuery, attributionData *map[string]*AttributionData,
 	marketingReports *MarketingReports, isCompare bool, kpiData map[string]KPIInfo) *QueryResult {
 
@@ -1805,7 +1829,7 @@ func ProcessQueryUserKPI(query *AttributionQuery, attributionData *map[string]*A
 		return true
 	})
 
-	result.Rows = AddGrandTotalRowKPI(result.Headers, result.Rows, GetLastKeyValueIndex(result.Headers), query.AnalyzeType, goalEventAggFuncTypes, query.AttributionMethodology, query.AttributionMethodologyCompare)
+	result.Rows = AddGrandTotalRowKPI(result.Headers, result.Rows, GetLastKeyValueIndex(result.Headers), goalEventAggFuncTypes, query.AttributionMethodology, query.AttributionMethodologyCompare)
 
 	logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "Result": result}).Info("KPI Attribution result AddGrandTotalRow")
 
@@ -2245,7 +2269,7 @@ func AddGrandTotalRow(headers []string, rows [][]interface{}, keyIndex int, anal
 }
 
 // AddGrandTotalRowKPI adds a row with grand total in report for KPI queries
-func AddGrandTotalRowKPI(headers []string, rows [][]interface{}, keyIndex int, analyzeType string, conversionFunTypes []string, method string, methodCompare string) [][]interface{} {
+func AddGrandTotalRowKPI(headers []string, rows [][]interface{}, keyIndex int, conversionFunTypes []string, method string, methodCompare string) [][]interface{} {
 
 	var grandTotalRow []interface{}
 

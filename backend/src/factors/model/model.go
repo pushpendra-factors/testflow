@@ -59,7 +59,7 @@ type Model interface {
 		enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool) (*model.QueryResult, error)
 	ExecuteAttributionQueryV0(projectID int64, query *model.AttributionQuery, debugQueryKey string,
 		enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool) (*model.QueryResult, error)
-	ExecuteAttributionQueryV1(projectID int64, query *model.AttributionQuery, debugQueryKey string,
+	ExecuteAttributionQueryV1(projectID int64, query *model.AttributionQueryV1, debugQueryKey string,
 		enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool) (*model.QueryResult, error)
 	GetCoalesceIDFromUserIDs(userIDs []string, projectID int64, logCtx log.Entry) (map[string]model.UserInfo, []string, error)
 	PullAllUsersByCustomerUserID(projectID int64, kpiData *map[string]model.KPIInfo, logCtx log.Entry) error
