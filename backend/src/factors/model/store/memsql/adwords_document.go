@@ -1913,6 +1913,8 @@ func getFilterPropertiesForAdwordsReportsNew(filters []model.ChannelFilterV1) (r
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
+	campaignFilter := ""
+	adGroupFilter := ""
 	filtersLen := len(filters)
 	if filtersLen == 0 {
 		return rStmnt, rParams, nil
@@ -1941,7 +1943,7 @@ func getFilterPropertiesForAdwordsReportsNew(filters []model.ChannelFilterV1) (r
 			} else {
 				pValue = p.Value
 			}
-			_, isPresent := model.AdwordsExtToInternal[p.Property]
+			_, isPresent := model.SmartPropertyReservedNames[p.Property]
 			if isPresent {
 				key := fmt.Sprintf("%s:%s", p.Object, p.Property)
 				pFilter := model.AdwordsInternalPropertiesToReportsInternal[key]
@@ -1976,6 +1978,11 @@ func getFilterPropertiesForAdwordsReportsNew(filters []model.ChannelFilterV1) (r
 						return "", nil, fmt.Errorf("unsupported opertator %s for property value none", propertyOp)
 					}
 				}
+				if p.Object == model.AdwordsCampaign {
+					campaignFilter = smartPropertyCampaignStaticFilter
+				} else {
+					adGroupFilter = smartPropertyAdGroupStaticFilter
+				}
 			}
 			if indexOfProperty == 0 {
 				currentGroupStmnt = pStmnt
@@ -1990,111 +1997,15 @@ func getFilterPropertiesForAdwordsReportsNew(filters []model.ChannelFilterV1) (r
 		}
 
 	}
+	if campaignFilter != "" {
+		rStmnt += (" AND " + campaignFilter)
+	}
+	if adGroupFilter != "" {
+		rStmnt += (" AND " + adGroupFilter)
+	}
 	return rStmnt, rParams, nil
 }
 
-func getFilterPropertiesForAdwordsReports(filters []model.ChannelFilterV1) (string, []interface{}) {
-	logFields := log.Fields{
-		"filters": filters,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	resultStatement := ""
-	var filterValue string
-	params := make([]interface{}, 0, 0)
-	if len(filters) == 0 {
-		return resultStatement, params
-	}
-	for index, filter := range filters {
-		currentFilterStatement := ""
-		currentFilterProperty := ""
-		if filter.LogicalOp == "" {
-			filter.LogicalOp = "AND"
-		}
-		filterOperator := getOp(filter.Condition, "categorical")
-		if filter.Condition == model.ContainsOpStr || filter.Condition == model.NotContainsOpStr {
-			filterValue = fmt.Sprintf("%s", filter.Value)
-		} else {
-			filterValue = filter.Value
-		}
-		key := fmt.Sprintf("%s:%s", filter.Object, filter.Property)
-		currentFilterProperty = model.AdwordsInternalPropertiesToReportsInternal[key]
-		if strings.Contains(filter.Property, ("id")) {
-			currentFilterStatement = fmt.Sprintf("%s %s ?", currentFilterProperty, filterOperator)
-		} else {
-			currentFilterStatement = fmt.Sprintf("JSON_EXTRACT_STRING(value, '%s') %s ?", currentFilterProperty, filterOperator)
-		}
-		params = append(params, filterValue)
-		if index == 0 {
-			resultStatement = fmt.Sprintf("(%s", currentFilterStatement)
-		} else {
-			resultStatement = fmt.Sprintf("%s %s %s", resultStatement, filter.LogicalOp, currentFilterStatement)
-		}
-	}
-	return resultStatement + ")", params
-}
-func getFilterPropertiesForAdwordsReportsAndSmartProperty(filters []model.ChannelFilterV1) (string, []interface{}) {
-	logFields := log.Fields{
-		"filters": filters,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	resultStatement := ""
-	var filterValue string
-	params := make([]interface{}, 0, 0)
-	if len(filters) == 0 {
-		return resultStatement, params
-	}
-	campaignFilter := ""
-	adGroupFilter := ""
-	for index, filter := range filters {
-		currentFilterStatement := ""
-		currentFilterProperty := ""
-		if filter.LogicalOp == "" {
-			filter.LogicalOp = "AND"
-		}
-		filterOperator := getOp(filter.Condition, "categorical")
-		if filter.Condition == model.ContainsOpStr || filter.Condition == model.NotContainsOpStr {
-			filterValue = fmt.Sprintf("%s", filter.Value)
-		} else {
-			filterValue = filter.Value
-		}
-		_, isPresent := model.AdwordsExtToInternal[filter.Property]
-		if isPresent {
-			key := fmt.Sprintf("%s:%s", filter.Object, filter.Property)
-			currentFilterProperty = model.AdwordsInternalPropertiesToReportsInternal[key]
-			if strings.Contains(filter.Property, ("id")) {
-				currentFilterStatement = fmt.Sprintf("%s.%s %s ?", adwordsDocuments, currentFilterProperty, filterOperator)
-			} else {
-				currentFilterStatement = fmt.Sprintf("JSON_EXTRACT_STRING(%s.value, '%s') %s ?", adwordsDocuments, currentFilterProperty, filterOperator)
-			}
-			params = append(params, filterValue)
-			if index == 0 {
-				resultStatement = fmt.Sprintf("(%s", currentFilterStatement)
-			} else {
-				resultStatement = fmt.Sprintf("%s %s %s", resultStatement, filter.LogicalOp, currentFilterStatement)
-			}
-		} else {
-			currentFilterStatement = fmt.Sprintf("JSON_EXTRACT_STRING(%s.properties, '%s') %s '%s'", filter.Object, filter.Property, filterOperator, filterValue)
-			if index == 0 {
-				resultStatement = fmt.Sprintf("(%s", currentFilterStatement)
-			} else {
-				resultStatement = fmt.Sprintf("%s %s %s", resultStatement, filter.LogicalOp, currentFilterStatement)
-			}
-			if filter.Object == "campaign" {
-				campaignFilter = smartPropertyCampaignStaticFilter
-			} else {
-				adGroupFilter = smartPropertyAdGroupStaticFilter
-			}
-		}
-	}
-	if campaignFilter != "" {
-		resultStatement += (" AND " + campaignFilter)
-	}
-	if adGroupFilter != "" {
-		resultStatement += (" AND " + adGroupFilter)
-	}
-
-	return resultStatement + ")", params
-}
 func getNotNullFilterStatementForSmartPropertyGroupBys(groupBys []model.ChannelGroupBy) string {
 	logFields := log.Fields{
 		"group_bys": groupBys,

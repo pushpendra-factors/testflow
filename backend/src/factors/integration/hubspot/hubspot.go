@@ -483,6 +483,25 @@ func getCustomerUserIDFromProperties(projectID int64, properties map[string]inte
 	return "", ""
 }
 
+func getCustomIdentification(projectID int64, document *model.HubspotDocument) (string, bool) {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "document_id": document.ID,
+		"timestamp": document.Timestamp})
+
+	field := model.GetHubspotCustomIdentificationFieldByProjectID(projectID)
+	if field == "" {
+		return "", false
+	}
+
+	_, properties, _, _, err := GetContactProperties(projectID, document)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get contact properties" +
+			"on getCustomIdentificationProperty.")
+		return "", true
+	}
+
+	return U.GetPropertyValueAsString((*properties)[field]), true
+}
+
 func getEventTimestamp(timestamp int64) int64 {
 	if timestamp == 0 {
 		return 0
@@ -991,8 +1010,18 @@ func syncContact(project *model.Project, otpRules *[]model.OTPRule, document *mo
 		return http.StatusInternalServerError
 	}
 
-	if primaryEmail == "" && len(secondaryEmails) > 0 {
-		primaryEmail = secondaryEmails[0]
+	customIdentification, isCustomIdentificationEnabled := getCustomIdentification(project.ID, document)
+
+	primaryIdentification := primaryEmail
+
+	if isCustomIdentificationEnabled {
+		logCtx.WithFields(log.Fields{"custom_identification": customIdentification}).Info("Using custom identification")
+		primaryIdentification = customIdentification
+		// set primaryEmail and secondaryEmails as empty for not re identifying those users with primaryIdentification
+		primaryEmail = ""
+		secondaryEmails = []string{}
+	} else if primaryEmail == "" && len(secondaryEmails) > 0 {
+		primaryIdentification = secondaryEmails[0]
 	}
 
 	leadGUID, exists := (*enProperties)[model.UserPropertyHubspotContactLeadGUID]
@@ -1019,12 +1048,15 @@ func syncContact(project *model.Project, otpRules *[]model.OTPRule, document *mo
 	logCtx = logCtx.WithField("action", document.Action).WithField(
 		model.UserPropertyHubspotContactLeadGUID, leadGUID)
 
-	_, customerUserID := getCustomerUserIDFromProperties(project.ID, *enProperties)
+	customerUserID := ""
+	if !isCustomIdentificationEnabled {
+		_, customerUserID = getCustomerUserIDFromProperties(project.ID, *enProperties)
+	}
 
 	emails := []string{}
 	userByCustomerUserID := make(map[string]string)
 	if C.AllowIdentificationOverwriteUsingSource(project.ID) {
-		emails = append([]string{primaryEmail}, secondaryEmails...)
+		emails = append([]string{primaryIdentification}, secondaryEmails...)
 
 		usersCustomerUserID, status := store.GetStore().GetExistingUserByCustomerUserID(project.ID, emails, model.UserSourceWeb)
 		if status != http.StatusNotFound && status != http.StatusFound {
@@ -1155,7 +1187,7 @@ func syncContact(project *model.Project, otpRules *[]model.OTPRule, document *mo
 	}
 
 	// re-identify all users from web and hubspot with primary email
-	if C.AllowIdentificationOverwriteUsingSource(project.ID) && primaryEmail != "" {
+	if C.AllowIdentificationOverwriteUsingSource(project.ID) && primaryIdentification != "" {
 
 		for userID := range userByCustomerUserID {
 			user, status := store.GetStore().GetUserWithoutProperties(project.ID, userID)
@@ -1168,15 +1200,15 @@ func syncContact(project *model.Project, otpRules *[]model.OTPRule, document *mo
 				continue
 			}
 
-			if user.CustomerUserId == primaryEmail {
+			if user.CustomerUserId == primaryIdentification {
 				continue
 			}
 
 			status, _ = SDK.Identify(project.ID, &SDK.IdentifyPayload{
-				UserId: userID, CustomerUserId: primaryEmail, RequestSource: model.UserSourceHubspot, Source: SDK.SourceHubspot}, true)
+				UserId: userID, CustomerUserId: primaryIdentification, RequestSource: model.UserSourceHubspot, Source: SDK.SourceHubspot}, true)
 			if status != http.StatusOK {
-				logCtx.WithFields(log.Fields{"primary_email": primaryEmail, "user_id": userID}).Error(
-					"Failed to identify user with primary email.")
+				logCtx.WithFields(log.Fields{"primary_identification": primaryIdentification, "user_id": userID}).Error(
+					"Failed to identify user with primary identification.")
 			}
 		}
 	}

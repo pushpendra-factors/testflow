@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { connect } from 'react-redux';
+import { connect, useSelector } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { Text, SVG } from 'factorsComponents';
 import { getEventProperties } from 'Reducers/coreQuery/middleware';
@@ -18,6 +18,7 @@ import {
 import TouchpointView from './TouchPointView';
 import MarketingInteractions from '../MarketingInteractions';
 import FAFilterSelect from '../../../../components/FaFilterSelect';
+import { setDisplayName } from 'Utils/dataFormatter';
 
 import {
   reverseOperatorMap,
@@ -40,6 +41,7 @@ const Touchpoints = ({
   udpateProjectDetails
 }) => {
   const otpService = useService(activeProject.id, OTPService);
+  const { eventPropNames } = useSelector((state) => state.coreQuery);
 
   const [tabNo, setTabNo] = useState('1');
 
@@ -47,7 +49,8 @@ const Touchpoints = ({
 
   const [touchPointState, setTouchPointState] = useState({
     state: 'list',
-    index: 0
+    index: 0,
+    loading: true
   });
 
   const columns = [
@@ -92,7 +95,11 @@ const Touchpoints = ({
       ? [
           ...data
             .filter((dt) => dt.crm_type === 'salesforce')
-            .map((rule, id) => ({ ...rule, index: id }))
+            .map((rule, id) => ({
+              ...rule,
+              properties_map: setPropertyMapByDisplayName(rule.properties_map),
+              index: id
+            }))
         ]
       : [];
     setTouchPointsData(touchpointObjs);
@@ -105,11 +112,23 @@ const Touchpoints = ({
       ? [
           ...data
             .filter((dt) => dt.crm_type === 'hubspot')
-            .map((rule, id) => ({ ...rule, index: id }))
+            .map((rule, id) => ({
+              ...rule,
+              properties_map: setPropertyMapByDisplayName(rule.properties_map),
+              index: id
+            }))
         ]
       : [];
     setTouchPointsData(touchpointObjs);
     getEventProperties(activeProject.id, '$hubspot_contact_updated');
+  };
+
+  const setPropertyMapByDisplayName = (propertyMap) => {
+    const propMap = { ...propertyMap };
+    Object.keys(propMap).forEach((key) => {
+      propMap[key].va = setDisplayName(eventPropNames, propMap[key].va);
+    });
+    return propMap;
   };
 
   const menu = (index) => {
@@ -340,6 +359,7 @@ const Touchpoints = ({
   const getOtpObjects = () => {
     const hsData = [];
     const sfData = [];
+    setTouchPointState({ state: 'list', index: 0, loading: true });
     otpService.getTouchPoints().then((res) => {
       res?.data?.result?.forEach((data) => {
         if (data.crm_type === 'hubspot') {
@@ -355,13 +375,13 @@ const Touchpoints = ({
       if (getCRMType() === 'salesforce') {
         setSalesforceContactData(sfData);
       }
+      setTouchPointState({ state: 'list', index: 0, loading: false });
     });
   };
 
   const deleteTchPoint = (index = 0) => {
     otpService.removeTouchPoint(index).then((res) => {
       getOtpObjects();
-      setTouchPointState({ state: 'list', index: 0 });
     });
     //Handle Error case
   };
@@ -377,12 +397,11 @@ const Touchpoints = ({
   };
 
   const onTchSave = (tchObj, index = -1) => {
-    let tchPointRules = [];
-    if (tabNo === '2') {
+    if (tabNo !== '1') {
       // Save OTP
-      const otpObj = setTouchPointObj(tchObj, 'hubspot');
+      const otpObj = setTouchPointObj(tchObj, getCRMType());
       if (touchPointState.state === 'edit') {
-        otpService.modifyTouchPoint(otpObj).then((res) => {
+        otpService.modifyTouchPoint(otpObj, index).then((res) => {
           getOtpObjects();
         });
       } else {
@@ -390,31 +409,7 @@ const Touchpoints = ({
           getOtpObjects();
         });
       }
-
-      // udpateProjectDetails(activeProject.id, {
-      //   hubspot_touch_points: { hs_touch_point_rules: tchPointRules },
-      // });
-    } else if (tabNo === '3') {
-      tchPointRules =
-        activeProject['salesforce_touch_points'] &&
-        activeProject['salesforce_touch_points']['sf_touch_point_rules']
-          ? [
-              ...activeProject['salesforce_touch_points'][
-                'sf_touch_point_rules'
-              ]
-            ]
-          : [];
-      if (index >= 0) {
-        tchPointRules[index] = tchObj;
-      } else {
-        tchPointRules.push(tchObj);
-      }
-      udpateProjectDetails(activeProject.id, {
-        salesforce_touch_points: { sf_touch_point_rules: tchPointRules }
-      });
     }
-    fetchProjects();
-    setTouchPointState({ state: 'list', index: 0 });
   };
 
   const onTchCancel = () => {
@@ -445,7 +440,7 @@ const Touchpoints = ({
                   (obj) => obj.crm_type === getCRMType()
                 )}
                 pagination={false}
-                loading={false}
+                loading={touchPointState.loading}
               />
             </div>
           </TabPane>

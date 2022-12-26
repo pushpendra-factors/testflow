@@ -1778,7 +1778,7 @@ func enrichTask(projectID int64, document *model.SalesforceDocument) int {
 	}
 
 	if U.ContainsStringInArray(activityUserIDs, "") {
-		logCtx.WithError(err).Error("Unsynced contacts or leads present. Skipping enrich task.")
+		logCtx.WithError(err).Warning("Unsynced contacts or leads present. Skipping enrich task.")
 		return http.StatusOK
 	}
 
@@ -1860,7 +1860,7 @@ func enrichEvent(projectID int64, document *model.SalesforceDocument) int {
 	}
 
 	if U.ContainsStringInArray(activityUserIDs, "") {
-		logCtx.WithError(err).Error("Unsynced contacts or leads present. Skipping enrich event.")
+		logCtx.WithError(err).Warning("Unsynced contacts or leads present. Skipping enrich event.")
 		return http.StatusOK
 	}
 

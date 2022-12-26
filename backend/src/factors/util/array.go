@@ -73,10 +73,15 @@ func ConvertInternalToExternal(internalMetrics [][]interface{}) [][]interface{} 
 	externalMetrics := make([][]interface{}, 0, 0)
 	for _, internalRow := range internalMetrics {
 		externalRow := make([]interface{}, 0, 0)
-		for _, metric := range internalRow {
+		for index, metric := range internalRow {
 			var value interface{}
 			if metric == nil {
-				value = 0
+				// last value in row in metric value, hence 0. Others are group by values
+				if index == len(internalRow)-1 {
+					value = 0
+				} else {
+					value = "$none"
+				}
 			} else {
 				switch metric.(type) {
 				case float64:
