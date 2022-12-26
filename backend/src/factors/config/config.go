@@ -270,6 +270,7 @@ type Configuration struct {
 	NewCloudManager                                    filestore.FileManager
 	ProjectIdsV2                                       []int64
 	IngestionTimezoneEnabledProjectIDs                 []string
+	LinkedinMemberCompanyConfigProjectIDs              []string
 	AllowedSalesforceActivityTasksByProjectIDs         string
 	AllowedSalesforceActivityEventsByProjectIDs        string
 	DisallowedSalesforceActivityTasksByProjectIDs      string
@@ -2043,6 +2044,16 @@ func IsDemoProject(projectId int64) bool {
 
 func IsIngestionTimezoneEnabled(projectId int64) bool {
 	for _, id := range configuration.IngestionTimezoneEnabledProjectIDs {
+		projectIdString := fmt.Sprintf("%v", projectId)
+		if id == projectIdString {
+			return true
+		}
+	}
+	return false
+}
+
+func IsLinkedinMemberCompanyConfigEnabled(projectId int64) bool {
+	for _, id := range configuration.LinkedinMemberCompanyConfigProjectIDs {
 		projectIdString := fmt.Sprintf("%v", projectId)
 		if id == projectIdString {
 			return true

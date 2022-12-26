@@ -25,14 +25,20 @@ var LinkedinDocumentTypeAlias = map[string]int{
 	"campaign_group_insights": 5,
 	"campaign_insights":       6,
 	"ad_account":              7,
+	"member_company_insights": 8,
 }
 
 var objectAndPropertyToValueInLinkedinReportsMapping = map[string]string{
-	"campaign_group:id":   "campaign_group_id",
-	"creative:id":         "creative_id",
-	"campaign:id":         "campaign_id",
-	"campaign_group:name": "JSON_EXTRACT_STRING(value, 'campaign_group_name')",
-	"campaign:name":       "JSON_EXTRACT_STRING(value, 'campaign_name')",
+	"campaign_group:id":                         "campaign_group_id",
+	"creative:id":                               "creative_id",
+	"campaign:id":                               "campaign_id",
+	"campaign_group:name":                       "JSON_EXTRACT_STRING(value, 'campaign_group_name')",
+	"campaign:name":                             "JSON_EXTRACT_STRING(value, 'campaign_name')",
+	"member_company_insights:vanity_name":       "JSON_EXTRACT_STRING(value, 'vanityName')",
+	"member_company_insights:localized_name":    "JSON_EXTRACT_STRING(value, 'localizedName')",
+	"member_company_insights:headquarters":      "JSON_EXTRACT_STRING(value, 'companyHeadquarters')",
+	"member_company_insights:domain":            "JSON_EXTRACT_STRING(value, 'localizedWebsite')",
+	"member_company_insights:preferred_country": "JSON_EXTRACT_STRING(value, 'preferredCountry')",
 }
 
 // TODO check
@@ -46,11 +52,16 @@ var linkedinMetricsToAggregatesInReportsMapping = map[string]string{
 }
 
 var objectToValueInLinkedinFiltersMapping = map[string]string{
-	"campaign:name":       "JSON_EXTRACT_STRING(value, 'campaign_name')",
-	"campaign_group:name": "JSON_EXTRACT_STRING(value, 'campaign_group_name')",
-	"campaign:id":         "campaign_id",
-	"campaign_group:id":   "campaign_group_id",
-	"creative:id":         "creative_id",
+	"campaign:name":                             "JSON_EXTRACT_STRING(value, 'campaign_name')",
+	"campaign_group:name":                       "JSON_EXTRACT_STRING(value, 'campaign_group_name')",
+	"campaign:id":                               "campaign_id",
+	"campaign_group:id":                         "campaign_group_id",
+	"creative:id":                               "creative_id",
+	"member_company_insights:vanity_name":       "JSON_EXTRACT_STRING(value, 'vanityName')",
+	"member_company_insights:localized_name":    "JSON_EXTRACT_STRING(value, 'localizedName')",
+	"member_company_insights:headquarters":      "JSON_EXTRACT_STRING(value, 'companyHeadquarters')",
+	"member_company_insights:domain":            "JSON_EXTRACT_STRING(value, 'localizedWebsite')",
+	"member_company_insights:preferred_country": "JSON_EXTRACT_STRING(value, 'preferredCountry')",
 }
 var objectToValueInLinkedinFiltersMappingWithLinkedinDocuments = map[string]string{
 	"campaign:name":       "JSON_EXTRACT_STRING(linkedin_documents.value, 'campaign_name')",
@@ -386,6 +397,7 @@ func (store *MemSQL) GetLinkedinFilterValues(projectID int64, requestFilterObjec
 	if err != http.StatusOK {
 		return make([]interface{}, 0, 0), http.StatusBadRequest
 	}
+
 	filterValues, errCode := store.getLinkedinFilterValuesByType(projectID, docType, linkedinInternalFilterProperty, reqID)
 	if errCode != http.StatusFound {
 		return []interface{}{}, http.StatusInternalServerError
@@ -1157,6 +1169,12 @@ func getLowestHierarchyLevelForLinkedin(query *model.ChannelQueryV1) string {
 	for _, objectName := range objectNames {
 		if objectName == model.LinkedinCampaignGroup {
 			return model.LinkedinCampaignGroup
+		}
+	}
+
+	for _, objectName := range objectNames {
+		if objectName == model.LinkedInMemberCompanyInsights {
+			return model.LinkedInMemberCompany
 		}
 	}
 

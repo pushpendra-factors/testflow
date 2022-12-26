@@ -162,6 +162,8 @@ spec:
           - $(FIVETRAN_LICENCE_KEY)
           - --increase_kpi_limit_for_projectids
           - ""
+          - --linkedin_member_company_config_project_ids
+          - ""
         env:
           - name: MY_POD_IP
             valueFrom:

@@ -122,6 +122,7 @@ type Model interface {
 	GetKPIConfigsForGoogleOrganic(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int)
 	GetKPIConfigsForFacebook(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int)
 	GetKPIConfigsForLinkedin(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int)
+	GetKPIConfigsForLinkedinCompanyEngagements(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int)
 	GetKPIConfigsForAllChannels(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int)
 	GetKPIConfigsForMarketoLeads(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int)
 	GetKPIConfigsForMarketo(projectID int64, reqID string, displayCategory string, includeDerivedKPIs bool) (map[string]interface{}, int)
