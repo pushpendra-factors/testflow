@@ -54,13 +54,13 @@ func GetQueryTypeAndClass(queryId int64) (bool, string, string) {
 		return false, CRM, M.QueryClassEvents
 	}
 	if queryId == 4 {
-		return true, KPI, ""
+		return true, KPI, M.QueryClassKPI
 	}
 	if queryId == 5 {
-		return true, KPI, ""
+		return true, KPI, M.QueryClassKPI
 	}
 	if queryId == 6 {
-		return true, KPI, ""
+		return true, KPI, M.QueryClassKPI
 	}
 	return false, "", ""
 }

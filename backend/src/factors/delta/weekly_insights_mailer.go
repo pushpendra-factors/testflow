@@ -18,7 +18,7 @@ func MailWeeklyInsights(projectID int64, configs map[string]interface{}) (map[st
 	wetRun := configs["wetRun"].(bool)
 	dashboards := StaticDashboardListForMailer()
 	startTimestamp := configs["startTimestamp"].(int64)
-	projectAgents, _ := store.GetStore().GetProjectAgentMappingsByProjectId(projectID)
+	projectAgents, _ := store.GetStore().GetProjectAgentMappingsByProjectId(528)
 	for _, agent := range projectAgents {
 		sub := "Weekly Insights Digest"
 		agent, _ := store.GetStore().GetAgentByUUID(agent.AgentUUID)
@@ -28,11 +28,17 @@ func MailWeeklyInsights(projectID int64, configs map[string]interface{}) (map[st
 			startTimestampTimeFormat := time.Unix(startTimestamp, 0)
 			startTimestampMinusOneweekTimeFormat := time.Unix(startTimestamp-(86400*7), 0)
 			responseResult, _ := GetWeeklyInsights(projectID, "", queryId, &startTimestampTimeFormat, &startTimestampMinusOneweekTimeFormat, "w", 11, 100, 1, true)
+			if responseResult == nil {
+				continue
+			}
 			response := (responseResult).(WeeklyInsights)
 			digestHeader := GetQueryHeader(queryId)
-			headerValue1 := response.Goal.W1
-			headerValue2 := response.Goal.W2
+			headerValue1 := fmt.Sprintf("%.2f", response.Goal.W1)
+			headerValue2 := fmt.Sprintf("%.2f", response.Goal.W2)
 			headerPerc := fmt.Sprintf("%.2f%s", response.Goal.Percentage, "%")
+			if(response.Insights == nil || len(response.Insights) <= 2){
+				continue
+			}
 			line1Value1 := response.Insights[0].Key
 			line1Value2 := response.Insights[0].Value
 			line1Perc := fmt.Sprintf("%.2f%s", response.Insights[0].ActualValues.Percentage, "%")
@@ -60,7 +66,7 @@ func MailWeeklyInsights(projectID int64, configs map[string]interface{}) (map[st
 	return result, true
 }
 
-func returnWIMailerTemplate(agentName string, digestHeader string, headerPerc string, headerValue1 float64, headerValue2 float64, line1Value1 string, line1Value2 string, line1Perc string, line2Value1 string, line2Value2 string, line2Perc string, line3Value1 string, line3Value2 string, line3Perc string) string {
+func returnWIMailerTemplate(agentName string, digestHeader string, headerPerc string, headerValue1 string, headerValue2 string, line1Value1 string, line1Value2 string, line1Perc string, line2Value1 string, line2Value2 string, line2Perc string, line3Value1 string, line3Value2 string, line3Perc string) string {
 	template := fmt.Sprintf(`<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 	<html
 	  xmlns="http://www.w3.org/1999/xhtml"
