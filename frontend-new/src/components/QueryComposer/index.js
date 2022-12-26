@@ -75,7 +75,6 @@ function QueryComposer({
 
   useEffect(() => {
     if (activeProject && activeProject.id) {
-      fetchEventNames(activeProject.id);
       getUserProperties(activeProject.id, queryType);
     }
   }, [activeProject, fetchEventNames]);
