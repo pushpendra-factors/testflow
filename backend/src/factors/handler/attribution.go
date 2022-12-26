@@ -108,7 +108,7 @@ func AttributionHandler(c *gin.Context) (interface{}, int, string, string, bool)
 		requestPayload.Query = requestPayloadUnit.Query
 	}
 
-	if requestPayload.Query == nil || len(requestPayload.Query.KPI.Queries) == 0 {
+	if requestPayload.Query == nil {
 		return nil, http.StatusBadRequest, V1.INVALID_INPUT, "invalid query. empty query.", true
 	}
 
