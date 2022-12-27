@@ -281,6 +281,8 @@ type Model interface {
 	AssociateSessionByEventIds(projectID int64, userID string, events []*model.Event, sessionId string, sessionEventNameId string) int
 	GetHubspotFormEvents(projectID int64, userId string, timestamps []interface{}) ([]model.Event, int)
 	IsSmartEventAlreadyExist(projectID int64, userID, eventNameID, referenceEventID string, eventTimestamp int64) (bool, error)
+	GetLastEventWithSessionByUser(projectId int64, userId string, firstEventTimestamp int64) (*model.Event, int)
+	GetAllEventsForSessionCreationAsUserEventsMapV2(projectID int64, sessionEventNameId string, startTimestamp int64, endTimestamp int64) (*map[string][]model.Event, int, int)
 
 	// clickable_elements
 	UpsertCountAndCheckEnabledClickableElement(projectID int64, payload *model.CaptureClickPayload) (isEnabled bool, status int, err error)

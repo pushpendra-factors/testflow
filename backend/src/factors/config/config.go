@@ -276,6 +276,8 @@ type Configuration struct {
 	DisallowedSalesforceActivityTasksByProjectIDs      string
 	DisallowedSalesforceActivityEventsByProjectIDs     string
 	IncreaseKPILimitForProjectIDs                      string
+	EnableUserLevelEventPullForAddSessionByProjectID   string
+	EventsPullMaxLimit                                 int
 }
 
 type Services struct {
@@ -2416,4 +2418,12 @@ func IsKPILimitIncreaseAllowedForProject(projectID int64) bool {
 	}
 
 	return false
+}
+
+func EnableUserLevelEventPullForAddSessionByProjectID(projectID int64) bool {
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableUserLevelEventPullForAddSessionByProjectID, "")
+	if allProjects {
+		return true
+	}
+	return allowedProjectIDs[projectID]
 }

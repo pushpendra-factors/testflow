@@ -25,10 +25,10 @@ const SavedGoals = ({ savedQuery, setShowReport, SetfetchingIngishts,setActiveIn
 
   const searchReport = (e) => {
     let term = e.target.value;
-    let searchResults = dataSource.filter((item) => {
-      return item?.title?.toLowerCase().includes(searchTerm.toLowerCase());
-    });
     setSearchTerm(term);
+    let searchResults = dataSource.filter((item) => {
+      return item?.title?.toLowerCase().includes(term.toLowerCase());
+    }); 
     setTableData(searchResults);
   };
 
@@ -178,8 +178,7 @@ const SavedGoals = ({ savedQuery, setShowReport, SetfetchingIngishts,setActiveIn
           {showSearch ? (
             <Input
               autoFocus
-              onChange={searchReport}
-              className={''}
+              onChange={(e)=>searchReport(e)} 
               placeholder={'Search reports'}
               style={{ width: '220px', 'border-radius': '5px' }}
               prefix={

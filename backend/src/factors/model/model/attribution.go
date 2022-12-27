@@ -1210,6 +1210,15 @@ func getAttributionIdName(data *AttributionData, attributionKey string) string {
 	return data.MarketingInfo.LandingPageUrl
 }
 
+func GetSpendIndex(headers []string) int {
+	for index, val := range headers {
+		if val == "Spend" {
+			return index + 1
+		}
+	}
+	return -1
+}
+
 func GetRowsByMapsKPIPage(attributionKey string, contentGroupNamesList []string, attributionData *map[string]*AttributionData, isCompare bool) [][]interface{} {
 
 	var defaultMatchingRow []interface{}
@@ -1565,8 +1574,99 @@ func ProcessQueryKPIPageUrl(query *AttributionQuery, attributionData *map[string
 
 }
 
-// ProcessQueryLandingPageUrl converts attribution data into result
+// ProcessQueryKPILandingPageUrl converts attribution data into result
+func ProcessQueryKPILandingPageUrl(query *AttributionQuery, attributionData *map[string]*AttributionData, logCtx log.Entry, kpiData map[string]KPIInfo, isCompare bool) *QueryResult {
+	logFields := log.Fields{"Method": "ProcessQueryKPILandingPageUrl"}
+	logCtx = *logCtx.WithFields(logFields)
+	dataRows := GetRowsByMapsKPILandingPage(query.AttributionContentGroups, attributionData, isCompare)
+	logCtx.Info("Done GetRowsByMapsKPILandingPage")
+	result := &QueryResult{}
+	var goalEvents []string
+	for _, value := range kpiData {
+		goalEvents = value.KpiHeaderNames
+	}
+
+	AddHeadersByAttributionKey(result, query, goalEvents, nil)
+
+	result.Rows = dataRows
+
+	// Update result based on Key Dimensions
+	err := GetUpdatedRowsByDimensions(result, query, logCtx)
+	if err != nil {
+		return nil
+	}
+	result.Rows = MergeDataRowsHavingSameKey(result.Rows, GetLastKeyValueIndexLandingPage(result.Headers), query.AttributionKey, query.AnalyzeType, nil, logCtx)
+	// sort the rows by conversionEvent
+	conversionIndex := GetConversionIndexKPI(result.Headers)
+	sort.Slice(result.Rows, func(i, j int) bool {
+		if len(result.Rows[i]) < conversionIndex || len(result.Rows[j]) < conversionIndex {
+			if C.GetAttributionDebug() == 1 {
+				logCtx.WithFields(log.Fields{"row1": result.Rows[i], "row2": result.Rows[j]}).Info("final results are rows len mismatch. Ignoring row and continuing.")
+			}
+			return true
+		}
+		v1, ok1 := result.Rows[i][conversionIndex].(float64)
+		v2, ok2 := result.Rows[j][conversionIndex].(float64)
+		if !ok1 || !ok2 {
+			if C.GetAttributionDebug() == 1 {
+				logCtx.WithFields(log.Fields{"row1": result.Rows[i], "row2": result.Rows[j]}).Info("final results cast mismatch. Ignoring row and continuing.")
+			}
+			return true
+		}
+		return v1 > v2
+	})
+	logCtx.Info("MergeDataRowsHavingSameKey")
+
+	result.Rows = AddGrandTotalRowKPILandingPage(result.Headers, result.Rows, GetLastKeyValueIndexLandingPage(result.Headers), goalEvents, query.AttributionMethodology, query.AttributionMethodologyCompare)
+	logCtx.Info("Done AddGrandTotal")
+	return result
+
+}
+
+// ProcessQueryPageUrl converts attribution data into result
 func ProcessQueryPageUrl(query *AttributionQuery, attributionData *map[string]*AttributionData, logCtx log.Entry, isCompare bool) *QueryResult {
+	logFields := log.Fields{"Method": "ProcessQueryLandingPageUrl"}
+	logCtx = *logCtx.WithFields(logFields)
+	dataRows := GetRowsByMapsLandingPage(query.AttributionContentGroups, attributionData, query.LinkedEvents, isCompare)
+
+	result := &QueryResult{}
+	AddHeadersByAttributionKey(result, query, nil, nil)
+
+	result.Rows = dataRows
+
+	// Update result based on Key Dimensions
+	err := GetUpdatedRowsByDimensions(result, query, logCtx)
+	if err != nil {
+		return nil
+	}
+	result.Rows = MergeDataRowsHavingSameKey(result.Rows, GetLastKeyValueIndexLandingPage(result.Headers), query.AttributionKey, query.AnalyzeType, nil, logCtx)
+	// sort the rows by conversionEvent
+	conversionIndex := GetConversionIndex(result.Headers)
+	sort.Slice(result.Rows, func(i, j int) bool {
+		if len(result.Rows[i]) < conversionIndex || len(result.Rows[j]) < conversionIndex {
+			if C.GetAttributionDebug() == 1 {
+				logCtx.WithFields(log.Fields{"row1": result.Rows[i], "row2": result.Rows[j]}).Info("final results are rows len mismatch. Ignoring row and continuing.")
+			}
+			return true
+		}
+		v1, ok1 := result.Rows[i][conversionIndex].(float64)
+		v2, ok2 := result.Rows[j][conversionIndex].(float64)
+		if !ok1 || !ok2 {
+			if C.GetAttributionDebug() == 1 {
+				logCtx.WithFields(log.Fields{"row1": result.Rows[i], "row2": result.Rows[j]}).Info("final results cast mismatch. Ignoring row and continuing.")
+			}
+			return true
+		}
+		return v1 > v2
+	})
+
+	result.Rows = AddGrandTotalRowLandingPage(result.Headers, result.Rows, GetLastKeyValueIndexLandingPage(result.Headers), query.AttributionMethodology, query.AttributionMethodologyCompare)
+	return result
+
+}
+
+// ProcessQueryLandingPageUrl converts attribution data into result
+func ProcessQueryLandingPageUrl(query *AttributionQuery, attributionData *map[string]*AttributionData, logCtx log.Entry, isCompare bool) *QueryResult {
 	logFields := log.Fields{"Method": "ProcessQueryLandingPageUrl"}
 	logCtx = *logCtx.WithFields(logFields)
 	dataRows := GetRowsByMapsLandingPage(query.AttributionContentGroups, attributionData, query.LinkedEvents, isCompare)
@@ -3680,95 +3780,4 @@ func decodeAttributionConfig(config *postgres.Jsonb) (AttributionConfig, error) 
 	}
 
 	return attributionConfig, nil
-}
-
-// ProcessQueryLandingPageUrl converts attribution data into result
-func ProcessQueryLandingPageUrl(query *AttributionQuery, attributionData *map[string]*AttributionData, logCtx log.Entry, isCompare bool) *QueryResult {
-	logFields := log.Fields{"Method": "ProcessQueryLandingPageUrl"}
-	logCtx = *logCtx.WithFields(logFields)
-	dataRows := GetRowsByMapsLandingPage(query.AttributionContentGroups, attributionData, query.LinkedEvents, isCompare)
-
-	result := &QueryResult{}
-	AddHeadersByAttributionKey(result, query, nil, nil)
-
-	result.Rows = dataRows
-
-	// Update result based on Key Dimensions
-	err := GetUpdatedRowsByDimensions(result, query, logCtx)
-	if err != nil {
-		return nil
-	}
-	result.Rows = MergeDataRowsHavingSameKey(result.Rows, GetLastKeyValueIndexLandingPage(result.Headers), query.AttributionKey, query.AnalyzeType, nil, logCtx)
-	// sort the rows by conversionEvent
-	conversionIndex := GetConversionIndex(result.Headers)
-	sort.Slice(result.Rows, func(i, j int) bool {
-		if len(result.Rows[i]) < conversionIndex || len(result.Rows[j]) < conversionIndex {
-			if C.GetAttributionDebug() == 1 {
-				logCtx.WithFields(log.Fields{"row1": result.Rows[i], "row2": result.Rows[j]}).Info("final results are rows len mismatch. Ignoring row and continuing.")
-			}
-			return true
-		}
-		v1, ok1 := result.Rows[i][conversionIndex].(float64)
-		v2, ok2 := result.Rows[j][conversionIndex].(float64)
-		if !ok1 || !ok2 {
-			if C.GetAttributionDebug() == 1 {
-				logCtx.WithFields(log.Fields{"row1": result.Rows[i], "row2": result.Rows[j]}).Info("final results cast mismatch. Ignoring row and continuing.")
-			}
-			return true
-		}
-		return v1 > v2
-	})
-
-	result.Rows = AddGrandTotalRowLandingPage(result.Headers, result.Rows, GetLastKeyValueIndexLandingPage(result.Headers), query.AttributionMethodology, query.AttributionMethodologyCompare)
-	return result
-
-}
-
-// ProcessQueryKPILandingPageUrl converts attribution data into result
-func ProcessQueryKPILandingPageUrl(query *AttributionQuery, attributionData *map[string]*AttributionData, logCtx log.Entry, kpiData map[string]KPIInfo, isCompare bool) *QueryResult {
-	logFields := log.Fields{"Method": "ProcessQueryKPILandingPageUrl"}
-	logCtx = *logCtx.WithFields(logFields)
-	dataRows := GetRowsByMapsKPILandingPage(query.AttributionContentGroups, attributionData, isCompare)
-	logCtx.Info("Done GetRowsByMapsKPILandingPage")
-	result := &QueryResult{}
-	var goalEvents []string
-	for _, value := range kpiData {
-		goalEvents = value.KpiHeaderNames
-	}
-
-	AddHeadersByAttributionKey(result, query, goalEvents, nil)
-
-	result.Rows = dataRows
-
-	// Update result based on Key Dimensions
-	err := GetUpdatedRowsByDimensions(result, query, logCtx)
-	if err != nil {
-		return nil
-	}
-	result.Rows = MergeDataRowsHavingSameKey(result.Rows, GetLastKeyValueIndexLandingPage(result.Headers), query.AttributionKey, query.AnalyzeType, nil, logCtx)
-	// sort the rows by conversionEvent
-	conversionIndex := GetConversionIndexKPI(result.Headers)
-	sort.Slice(result.Rows, func(i, j int) bool {
-		if len(result.Rows[i]) < conversionIndex || len(result.Rows[j]) < conversionIndex {
-			if C.GetAttributionDebug() == 1 {
-				logCtx.WithFields(log.Fields{"row1": result.Rows[i], "row2": result.Rows[j]}).Info("final results are rows len mismatch. Ignoring row and continuing.")
-			}
-			return true
-		}
-		v1, ok1 := result.Rows[i][conversionIndex].(float64)
-		v2, ok2 := result.Rows[j][conversionIndex].(float64)
-		if !ok1 || !ok2 {
-			if C.GetAttributionDebug() == 1 {
-				logCtx.WithFields(log.Fields{"row1": result.Rows[i], "row2": result.Rows[j]}).Info("final results cast mismatch. Ignoring row and continuing.")
-			}
-			return true
-		}
-		return v1 > v2
-	})
-	logCtx.Info("MergeDataRowsHavingSameKey")
-
-	result.Rows = AddGrandTotalRowKPILandingPage(result.Headers, result.Rows, GetLastKeyValueIndexLandingPage(result.Headers), goalEvents, query.AttributionMethodology, query.AttributionMethodologyCompare)
-	logCtx.Info("Done AddGrandTotal")
-	return result
-
 }
