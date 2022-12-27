@@ -162,7 +162,6 @@ const ProjectSettingKeyToken = "token"
 const ProjectSettingKeyPrivateToken = "private_token"
 
 var AutoClickCaptureDefault = false
-var AutoCaptureFormFillsDefault = false
 
 const DEFAULT_STRING_WITH_ZEROES_32BIT = "00000000000000000000000000000000"
 
