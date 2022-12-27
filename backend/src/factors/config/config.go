@@ -274,6 +274,8 @@ type Configuration struct {
 	AllowedSalesforceActivityEventsByProjectIDs        string
 	DisallowedSalesforceActivityTasksByProjectIDs      string
 	DisallowedSalesforceActivityEventsByProjectIDs     string
+	EnableUserLevelEventPullForAddSessionByProjectID   string
+	EventsPullMaxLimit                                 int
 }
 
 type Services struct {
@@ -2384,4 +2386,12 @@ func IsAllowedSalesforceActivityEventsByProjectID(projectId int64) bool {
 	}
 
 	return true
+}
+
+func EnableUserLevelEventPullForAddSessionByProjectID(projectID int64) bool {
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableUserLevelEventPullForAddSessionByProjectID, "")
+	if allProjects {
+		return true
+	}
+	return allowedProjectIDs[projectID]
 }

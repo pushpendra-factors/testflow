@@ -2259,3 +2259,117 @@ func (store *MemSQL) IsSmartEventAlreadyExist(projectID int64, userID, eventName
 
 	return true, nil
 }
+
+/*
+	SELECT * FROM events WHERE project_id = ? AND user_id = ? AND session_id IS NOT NULL AND timestamp < ?
+	ORDER BY timestamp, created_at DESC LIMIT 1;
+*/
+func (store *MemSQL) GetLastEventWithSessionByUser(projectId int64, userId string, firstEventTimestamp int64) (*model.Event, int) {
+	logFields := log.Fields{
+		"project_id":            projectId,
+		"user_id":               userId,
+		"first_event_timestamp": firstEventTimestamp,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	if projectId == 0 || userId == "" || firstEventTimestamp == 0 {
+		return nil, http.StatusBadRequest
+	}
+
+	var event model.Event
+
+	db := C.GetServices().Db
+	if err := db.Limit(1).Order("timestamp, created_at DESC").
+		Where("project_id = ? AND user_id = ? AND session_id IS NOT NULL AND timestamp < ?", projectId, userId, firstEventTimestamp).
+		Find(&event).Error; err != nil {
+
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
+
+		log.WithFields(logFields).WithError(err).Error("Getting event failed on GetLatestEventWithSessionForUser")
+		return nil, http.StatusInternalServerError
+	}
+
+	return &event, http.StatusFound
+}
+
+// GetAllEventsForSessionCreationAsUserEventsMapV2 - Returns a map of user:[events...] within a given period,
+// excluding session event and event with session_id.
+/*
+	SELECT * FROM events WHERE project_id = ? AND event_name_id != ? AND session_id IS NULL AND
+	timestamp BETWEEN ? AND ? AND JSON_EXTRACT_STRING(properties, '$skip_session') IS NULL
+	ORDER BY timestamp, created_at ASC LIMIT 50000;
+*/
+func (store *MemSQL) GetAllEventsForSessionCreationAsUserEventsMapV2(projectId int64, sessionEventNameId string, startTimestamp int64,
+	endTimestamp int64) (*map[string][]model.Event, int, int) {
+	logFields := log.Fields{
+		"project_id":            projectId,
+		"session_event_name_id": sessionEventNameId,
+		"start_timestamp":       startTimestamp,
+		"end_timestamp":         endTimestamp,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
+
+	logCtx := log.WithFields(logFields)
+
+	var userEventsMap map[string][]model.Event
+	var events []model.Event
+
+	if projectId == 0 || sessionEventNameId == "" {
+		return &userEventsMap, 0, http.StatusBadRequest
+	}
+
+	eventsPullLimit := C.GetConfig().EventsPullMaxLimit
+
+	queryStartTime := U.TimeNowUnix()
+	db := C.GetServices().Db
+	// Ordered by timestamp, created_at to fix the order for events with same timestamp, as event timestamp is in seconds.
+	// This fixes the invalid first event used for enrichment.
+	excludeSkipSessionCondition := fmt.Sprintf("JSON_EXTRACT_STRING(properties, '%s') IS NULL", U.EP_SKIP_SESSION)
+	if err := db.Limit(eventsPullLimit).Order("timestamp, created_at ASC").
+		Where("project_id = ? AND event_name_id != ? AND session_id IS NULL AND timestamp BETWEEN ? AND ?"+" AND "+excludeSkipSessionCondition,
+			projectId, sessionEventNameId, startTimestamp, endTimestamp).Find(&events).Error; err != nil {
+
+		logCtx.WithError(err).Error("Failed to get all events of project.")
+		return &userEventsMap, 0, http.StatusInternalServerError
+	}
+
+	if len(events) == eventsPullLimit {
+		logCtx.Error("Project event pull reached threshold")
+	}
+
+	if len(events) == 0 {
+		return &userEventsMap, 0, http.StatusNotFound
+	}
+
+	queryTimeInSecs := U.TimeNowUnix() - queryStartTime
+	logCtx = logCtx.WithField("no_of_events", len(events)).WithField("time_taken_in_secs", queryTimeInSecs)
+
+	if queryTimeInSecs >= (2 * 60) {
+		logCtx.Error("Too much time taken to download events on get_all_events_as_user_map_v2.")
+	}
+
+	userEventsMap = make(map[string][]model.Event)
+	for i := range events {
+		if _, exists := userEventsMap[events[i].UserId]; !exists {
+			userEventsMap[events[i].UserId] = make([]model.Event, 0, 0)
+			eventWithSession, status := GetStore().GetLastEventWithSessionByUser(projectId, events[i].UserId, events[0].Timestamp)
+			if status == http.StatusBadRequest || status == http.StatusInternalServerError {
+				logCtx.WithField("user_id", events[i].UserId).Error("Failed to get latest user event with session")
+				continue
+			}
+
+			if status == http.StatusFound {
+				userEventsMap[events[i].UserId] = append(userEventsMap[events[i].UserId], *eventWithSession)
+			}
+		}
+
+		userEventsMap[events[i].UserId] = append(userEventsMap[events[i].UserId], events[i])
+	}
+
+	logCtx.WithFields(log.Fields{"no_of_users": len(userEventsMap), "user_events_map": userEventsMap}).Info("Got all events on get_all_events_as_user_map_v2.")
+
+	return &userEventsMap, len(events), http.StatusFound
+}

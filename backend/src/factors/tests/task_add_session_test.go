@@ -2,6 +2,7 @@ package tests
 
 import (
 	"encoding/json"
+	C "factors/config"
 	"factors/model/model"
 	"factors/model/store"
 	"fmt"
@@ -1305,8 +1306,8 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		assert.Equal(t, http.StatusAccepted, errCode)
 		randomEventName := RandomURL()
 
-		// This event should not be considered for session
-		// creation as it is beyond the max lookback.
+		// v1 - This event should not be considered for session creation as it is beyond the max lookback.
+		// v2 - This event should be considered for session creation as it is independent of max lookback.
 		trackPayload1 := SDK.TrackPayload{
 			Auto:          true,
 			Name:          randomEventName,
@@ -1337,11 +1338,20 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		// No.of sessions created.
 		sessionEventName, _ := store.GetStore().GetEventName(U.EVENT_NAME_SESSION, project.ID)
 		sessionCount, _ := store.GetStore().GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
-		assert.Equal(t, uint64(1), sessionCount)
+		if C.EnableUserLevelEventPullForAddSessionByProjectID(project.ID) {
+			assert.Equal(t, uint64(2), sessionCount)
+		} else {
+			assert.Equal(t, uint64(1), sessionCount)
+		}
 
 		// Check session association.
 		event1, _ := store.GetStore().GetEvent(project.ID, userId, eventId1)
-		assert.Empty(t, event1.SessionId)
+		if C.EnableUserLevelEventPullForAddSessionByProjectID(project.ID) {
+			assert.NotEmpty(t, event1.SessionId)
+		} else {
+			assert.Empty(t, event1.SessionId)
+		}
+
 		event2, _ := store.GetStore().GetEvent(project.ID, userId, eventId2)
 		assert.NotEmpty(t, event2.SessionId)
 	})
@@ -4173,6 +4183,326 @@ func TestAddSessionMergingEventsOnMissedMarketingPropertyMultiSessionEmptyProper
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event6.SessionId)
 	assert.NotEqual(t, *event6.SessionId, *event5.SessionId)
+
+	// Test: Project with no events and all events with session already.
+	statusMap, err := TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	assert.Nil(t, err)
+	assert.Equal(t, "not_modified", statusMap[project.ID].Status)
+}
+
+func TestGetAllEventsForSessionCreationAsUserEventsMap(t *testing.T) {
+	project, _, err := SetupProjectUserReturnDAO()
+	assert.Nil(t, err)
+
+	maxLookbackTimestamp := U.UnixTimeBeforeDuration(31 * 24 * time.Hour)
+
+	// Test: New user with one event and one skip_session event.
+	timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
+
+	// Updating project timestamp to before events start timestamp.
+	errCode := store.GetStore().UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+	assert.Equal(t, http.StatusAccepted, errCode)
+
+	randomEventName := RandomURL()
+	trackEventProperties1 := U.PropertiesMap{
+		U.EP_REFERRER:        "www.google.com",
+		U.EP_PAGE_URL:        "https://example.com/1/2/",
+		U.EP_PAGE_RAW_URL:    "https://example.com/1/2?x=1",
+		U.EP_PAGE_SPENT_TIME: 10,
+	}
+	trackPayload := SDK.TrackPayload{
+		Auto:            true,
+		Name:            randomEventName,
+		Timestamp:       timestamp,
+		EventProperties: trackEventProperties1,
+		RequestSource:   model.UserSourceWeb,
+	}
+	status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
+	assert.Equal(t, http.StatusOK, status)
+	assert.NotEmpty(t, response.UserId)
+	eventId1 := response.EventId
+	userId1 := response.UserId
+
+	// no session created.
+	_, errCode = store.GetStore().GetEventName(U.EVENT_NAME_SESSION, project.ID)
+	assert.Equal(t, http.StatusNotFound, errCode)
+
+	timestamp = timestamp + 2
+	trackPayload = SDK.TrackPayload{
+		Name:          "non_web_event",
+		Timestamp:     timestamp,
+		UserId:        userId1,
+		RequestSource: model.UserSourceWeb,
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, true, SDK.SourceJSSDK, "") // skip session.
+	assert.Equal(t, http.StatusOK, status)
+	skipSessionEventId1 := response.EventId
+
+	_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	assert.Nil(t, err)
+
+	_, errCode = store.GetStore().GetEventById(project.ID, eventId1, "")
+	assert.Equal(t, http.StatusFound, errCode)
+
+	_, errCode = store.GetStore().GetEventById(project.ID, skipSessionEventId1, "")
+	assert.Equal(t, http.StatusFound, errCode)
+
+	session1 := assertAssociatedSession(t, project.ID, []string{eventId1, skipSessionEventId1},
+		[]string{skipSessionEventId1}, "Session 1")
+	session1Properties, err := U.DecodePostgresJsonb(&session1.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, float64(1), (*session1Properties)["$session_count"])
+	assert.Equal(t, float64(1), (*session1Properties)["$page_count"])
+
+	// Test: New events without session for existing user with session.
+	// Since there is continuous activity, last session should be continued.
+	timestamp = timestamp + 1
+	randomEventName = RandomURL()
+	trackEventProperties2 := U.PropertiesMap{
+		U.EP_REFERRER:     "www.yahoo.com",
+		U.EP_PAGE_URL:     "https://example1.com/1/2/",
+		U.EP_PAGE_RAW_URL: "https://example1.com/1/2?x=1",
+	}
+	trackPayload = SDK.TrackPayload{
+		Auto:            true,
+		Name:            randomEventName,
+		Timestamp:       timestamp,
+		UserId:          userId1,
+		EventProperties: trackEventProperties2,
+		RequestSource:   model.UserSourceWeb,
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
+	assert.Equal(t, http.StatusOK, status)
+	eventId2 := response.EventId
+
+	timestamp = timestamp + 1
+	randomEventName = RandomURL()
+	trackEventProperties3 := U.PropertiesMap{
+		U.EP_REFERRER:     "www.facebook.com",
+		U.EP_PAGE_URL:     "https://example2.com/1/2/",
+		U.EP_PAGE_RAW_URL: "https://example2.com/1/2?x=1",
+	}
+	trackPayload = SDK.TrackPayload{
+		Auto:            true,
+		Name:            randomEventName,
+		Timestamp:       timestamp,
+		UserId:          userId1,
+		EventProperties: trackEventProperties3,
+		RequestSource:   model.UserSourceWeb,
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
+	assert.Equal(t, http.StatusOK, status)
+	eventId3 := response.EventId
+
+	// inactivity.
+	timestamp = timestamp + (35 * 60) // + 35 mins
+	randomEventName = RandomURL()
+	trackEventProperties4 := U.PropertiesMap{
+		U.EP_REFERRER:     "www.bing.com",
+		U.EP_PAGE_URL:     "https://example3.com/1/2/",
+		U.EP_PAGE_RAW_URL: "https://example3.com/1/2?x=1",
+	}
+	trackPayload = SDK.TrackPayload{
+		Auto:            true,
+		Name:            randomEventName,
+		Timestamp:       timestamp,
+		UserId:          userId1,
+		EventProperties: trackEventProperties4,
+		RequestSource:   model.UserSourceWeb,
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
+	assert.Equal(t, http.StatusOK, status)
+	eventId4 := response.EventId
+
+	timestamp = timestamp + 2
+	trackPayload = SDK.TrackPayload{
+		Name:          "non_web_event",
+		Timestamp:     timestamp,
+		UserId:        userId1,
+		RequestSource: model.UserSourceWeb,
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, true, SDK.SourceJSSDK, "") // skip session.
+	assert.Equal(t, http.StatusOK, status)
+	skipSessionEventId2 := response.EventId
+
+	timestamp = timestamp + 1
+	randomEventName = RandomURL()
+	trackEventProperties5 := U.PropertiesMap{
+		U.EP_REFERRER:     "www.hacker.com",
+		U.EP_PAGE_URL:     "https://example4.com/1/2/",
+		U.EP_PAGE_RAW_URL: "https://example4.com/1/2?x=1",
+	}
+	trackPayload = SDK.TrackPayload{
+		Auto:            true,
+		Name:            randomEventName,
+		Timestamp:       timestamp,
+		UserId:          userId1,
+		EventProperties: trackEventProperties5,
+		RequestSource:   model.UserSourceWeb,
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
+	assert.Equal(t, http.StatusOK, status)
+	eventId5 := response.EventId
+
+	_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	assert.Nil(t, err)
+
+	_, errCode = store.GetStore().GetEventById(project.ID, eventId2, "")
+	assert.Equal(t, http.StatusFound, errCode)
+
+	_, errCode = store.GetStore().GetEventById(project.ID, eventId3, "")
+	assert.Equal(t, http.StatusFound, errCode)
+
+	_, errCode = store.GetStore().GetEventById(project.ID, eventId4, "")
+	assert.Equal(t, http.StatusFound, errCode)
+
+	_, errCode = store.GetStore().GetEventById(project.ID, skipSessionEventId2, "")
+	assert.Equal(t, http.StatusFound, errCode)
+
+	_, errCode = store.GetStore().GetEventById(project.ID, eventId5, "")
+	assert.Equal(t, http.StatusFound, errCode)
+
+	// Order of events - event1, skip session event 1, event2, event3
+	// Session 1 - event1, event2, event3
+	session1Continued := assertAssociatedSession(t, project.ID, []string{eventId1, skipSessionEventId1, eventId2, eventId3},
+		[]string{skipSessionEventId1}, "Session 1 continued.")
+	session1ContinuedProperties, err := U.DecodePostgresJsonb(&session1Continued.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, float64(1), (*session1ContinuedProperties)["$session_count"])
+	assert.Equal(t, float64(3), (*session1ContinuedProperties)["$page_count"])
+
+	// Order of events - event4, skip session event 2, event5
+	// Session 2 - event4, event5
+	session2 := assertAssociatedSession(t, project.ID, []string{eventId4, skipSessionEventId2, eventId5},
+		[]string{skipSessionEventId2}, "Session 2")
+	session2Properties, err := U.DecodePostgresJsonb(&session2.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, float64(2), (*session2Properties)["$session_count"])
+	assert.Equal(t, float64(2), (*session2Properties)["$page_count"])
+
+	timestamp = timestamp + 2
+	trackPayload = SDK.TrackPayload{
+		Auto:      true,
+		Name:      randomEventName,
+		Timestamp: timestamp,
+		UserId:    userId1,
+		EventProperties: U.PropertiesMap{
+			U.QUERY_PARAM_UTM_PREFIX + "campaign": "summer_sale",
+		},
+		RequestSource: model.UserSourceWeb,
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
+	assert.Equal(t, http.StatusOK, status)
+	eventId6 := response.EventId
+
+	timestamp = timestamp + 2
+	randomEventName = RandomURL()
+	trackPayload = SDK.TrackPayload{
+		Auto:      true,
+		Name:      randomEventName,
+		Timestamp: timestamp,
+		UserId:    userId1,
+		EventProperties: U.PropertiesMap{
+			U.QUERY_PARAM_UTM_PREFIX + "campaign": "winter_sale",
+		},
+		RequestSource: model.UserSourceWeb,
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
+	assert.Equal(t, http.StatusOK, status)
+	eventId7 := response.EventId
+
+	timestamp = timestamp + 2
+	trackPayload = SDK.TrackPayload{
+		Auto:          true,
+		Name:          randomEventName,
+		Timestamp:     timestamp,
+		UserId:        userId1,
+		RequestSource: model.UserSourceWeb,
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
+	assert.Equal(t, http.StatusOK, status)
+	eventId8 := response.EventId
+
+	timestamp = timestamp + 2
+	trackPayload = SDK.TrackPayload{
+		Auto:          true,
+		Name:          randomEventName,
+		Timestamp:     timestamp,
+		RequestSource: model.UserSourceWeb,
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
+	assert.Equal(t, http.StatusOK, status)
+	eventId9 := response.EventId
+	userId2 := response.UserId
+
+	timestamp = timestamp + 2
+	trackPayload = SDK.TrackPayload{
+		Auto:          true,
+		Name:          randomEventName,
+		Timestamp:     timestamp,
+		UserId:        userId1,
+		RequestSource: model.UserSourceWeb,
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
+	assert.Equal(t, http.StatusOK, status)
+	eventId10 := response.EventId
+
+	timestamp = timestamp + 2
+	trackPayload = SDK.TrackPayload{
+		Auto:          true,
+		Name:          randomEventName,
+		Timestamp:     timestamp,
+		UserId:        userId2,
+		RequestSource: model.UserSourceWeb,
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
+	assert.Equal(t, http.StatusOK, status)
+	eventId11 := response.EventId
+
+	_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	assert.Nil(t, err)
+
+	_, errCode = store.GetStore().GetEventById(project.ID, eventId6, "")
+	assert.Equal(t, http.StatusFound, errCode)
+
+	// Should create new session as campaign property exist.
+	session3 := assertAssociatedSession(t, project.ID, []string{eventId6},
+		[]string{}, "Session 3")
+	session3Properties, err := U.DecodePostgresJsonb(&session3.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, float64(3), (*session3Properties)["$session_count"])
+	assert.Equal(t, float64(1), (*session3Properties)["$page_count"])
+
+	_, errCode = store.GetStore().GetEventById(project.ID, eventId7, "")
+	assert.Equal(t, http.StatusFound, errCode)
+
+	_, errCode = store.GetStore().GetEventById(project.ID, eventId8, "")
+	assert.Equal(t, http.StatusFound, errCode)
+
+	_, errCode = store.GetStore().GetEventById(project.ID, eventId10, "")
+	assert.Equal(t, http.StatusFound, errCode)
+
+	// Should create new session as campaign property changed.
+	session4 := assertAssociatedSession(t, project.ID, []string{eventId7, eventId8, eventId10},
+		[]string{}, "Session 4")
+	session4Properties, err := U.DecodePostgresJsonb(&session4.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, float64(4), (*session4Properties)["$session_count"])
+	assert.Equal(t, float64(3), (*session4Properties)["$page_count"])
+
+	_, errCode = store.GetStore().GetEventById(project.ID, eventId9, "")
+	assert.Equal(t, http.StatusFound, errCode)
+
+	_, errCode = store.GetStore().GetEventById(project.ID, eventId11, "")
+	assert.Equal(t, http.StatusFound, errCode)
+
+	// Should create new session for new user.
+	newSession1 := assertAssociatedSession(t, project.ID, []string{eventId9, eventId11},
+		[]string{}, "New Session 1")
+	newSession1Properties, err := U.DecodePostgresJsonb(&newSession1.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, float64(1), (*newSession1Properties)["$session_count"])
+	assert.Equal(t, float64(2), (*newSession1Properties)["$page_count"])
 
 	// Test: Project with no events and all events with session already.
 	statusMap, err := TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)

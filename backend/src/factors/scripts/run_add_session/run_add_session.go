@@ -66,6 +66,9 @@ func main() {
 	sessionBatchTransactionBatchSize := flag.Int("session_batch_transaction_batch_size", 0, "")
 	IngestionTimezoneEnabledProjectIDs := flag.String("ingestion_timezone_enabled_projects", "", "List of projectIds whose ingestion timezone is enabled.")
 
+	enableUserLevelEventPullForAddSessionByProjectID := flag.String("enable_user_level_pull", "", "List of projectIds where user level event pull is enabled for AddSession job")
+	eventsPullMaxLimit := flag.Int("max_limit_for_events_pull", 50000, "Maximum limit for pulling events in V2") // Default is 50000
+
 	flag.Parse()
 
 	if *env != "development" &&
@@ -115,6 +118,8 @@ func main() {
 		CaptureSourceInUsersTable:           *captureSourceInUsersTable,
 		SessionBatchTransactionBatchSize:    *sessionBatchTransactionBatchSize,
 		IngestionTimezoneEnabledProjectIDs:  C.GetTokensFromStringListAsString(*IngestionTimezoneEnabledProjectIDs),
+		EnableUserLevelEventPullForAddSessionByProjectID: *enableUserLevelEventPullForAddSessionByProjectID,
+		EventsPullMaxLimit: *eventsPullMaxLimit,
 	}
 
 	C.InitConf(config)
