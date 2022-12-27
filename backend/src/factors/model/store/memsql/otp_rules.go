@@ -102,7 +102,7 @@ func (store *MemSQL) GetUniqueKeyPropertyForOTPEventForLast3Months(projectID int
 			return uniqueOTPEventKeys, http.StatusNotFound
 		}
 		log.WithField("project_id", projectID).WithError(err).Error("Failed to fetch id from event_names table for project")
-		return uniqueOTPEventKeys, http.StatusInternalServerError
+		return uniqueOTPEventKeys, http.StatusNotFound
 	}
 	//Getting timestamp for the last 3 months
 	to := U.TimeNowUnix()
@@ -136,7 +136,7 @@ func (store *MemSQL) GetAllRulesDeletedNotDeleted(projectID int64) ([]model.OTPR
 			return otpRules, http.StatusNotFound
 		}
 		log.WithField("project_id", projectID).WithError(err).Error("Failed to fetch rows from otp_rules table for project")
-		return otpRules, http.StatusNotFound
+		return otpRules, http.StatusInternalServerError
 	}
 	return otpRules, http.StatusFound
 }
