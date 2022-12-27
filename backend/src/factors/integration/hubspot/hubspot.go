@@ -1283,7 +1283,7 @@ func ApplyHSOfflineTouchPointRule(project *model.Project, otpRules *[]model.OTPR
 
 	for _, rule := range *otpRules {
 
-		otpUniqueKey, err := createOTPUniqueKey(rule, trackPayload, logCtx)
+		otpUniqueKey, err := createOTPUniqueKeyForFormsAndContacts(rule, trackPayload)
 		if err != http.StatusCreated {
 			logCtx.Error("Failed to create otp_unique_key")
 			continue
@@ -1325,7 +1325,7 @@ func ApplyHSOfflineTouchPointRuleForForms(project *model.Project, otpRules *[]mo
 
 	for _, rule := range *otpRules {
 
-		otpUniqueKey, err := createOTPUniqueKeyForForms(rule, trackPayload)
+		otpUniqueKey, err := createOTPUniqueKeyForFormsAndContacts(rule, trackPayload)
 		if err != http.StatusCreated {
 			logCtx.Error("Failed to create otp_unique_key")
 			continue
@@ -1637,8 +1637,8 @@ func createOTPUniqueKeyForEngagements(rule model.OTPRule, trackPayload *SDK.Trac
 	return uniqueKey, http.StatusCreated
 }
 
-//Creates a unique key using ruleID, userID and eventID as keyID for Forms
-func createOTPUniqueKeyForForms(rule model.OTPRule, trackPayload *SDK.TrackPayload) (string, int) {
+//Creates a unique key using ruleID, userID and eventID as keyID for Forms and contacts
+func createOTPUniqueKeyForFormsAndContacts(rule model.OTPRule, trackPayload *SDK.TrackPayload) (string, int) {
 
 	ruleID := rule.ID
 	userID := trackPayload.UserId
@@ -1648,24 +1648,6 @@ func createOTPUniqueKeyForForms(rule model.OTPRule, trackPayload *SDK.TrackPaylo
 
 	return uniqueKey, http.StatusCreated
 
-}
-
-//Creates a unique key using ruleID, userID and using contact lists list ID as keyID for Contact List
-func createOTPUniqueKey(rule model.OTPRule, trackPayload *SDK.TrackPayload, logCtx *log.Entry) (string, int) {
-	ruleID := rule.ID
-	userID := trackPayload.UserId
-	var keyID string
-	var uniqueKey string
-
-	if _, exists := trackPayload.EventProperties[U.EP_HUBSPOT_CONTACT_LIST_LIST_ID]; exists {
-		keyID = fmt.Sprintf("%v", trackPayload.EventProperties[U.EP_HUBSPOT_CONTACT_LIST_LIST_ID])
-	} else {
-		logCtx.Error("Event property $hubspot_contact_list_list_id does not exist.")
-		return uniqueKey, http.StatusNotFound
-	}
-
-	uniqueKey = userID + ruleID + keyID
-	return uniqueKey, http.StatusCreated
 }
 
 func canCreateHSEngagementTouchPoint(engagementType string, ruleType string) bool {
