@@ -1750,7 +1750,7 @@ var STANDARD_USER_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	UP_LATEST_REFERRER_URL:              "Latest Referrer URL",
 	UP_LATEST_REFERRER_DOMAIN:           "Latest Referrer Domain",
 	UP_LATEST_CHANNEL:                   "Latest Channel",
-	UP_JOIN_TIME:                        "Join Time",
+	UP_JOIN_TIME:                        "First Seen Time",
 	CLR_COMPANY_NAME:                    "Clearbit Company Name",
 	CLR_COMPANY_GEO_CITY:                "Clearbit Company Geo City",
 	CLR_COMPANY_GEO_COUNTRY:             "Clearbit Company Geo Country",

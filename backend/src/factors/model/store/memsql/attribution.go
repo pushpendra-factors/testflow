@@ -513,3 +513,108 @@ func (store *MemSQL) GetAdwordsCurrency(projectID int64, customerAccountID strin
 
 	return currency, nil
 }
+
+// Returns the all the sessions (userId,attributionId,minTimestamp,maxTimestamp) for given
+// users from given period including lookback
+func (store *MemSQL) getAllThePages(projectId int64, sessionEventNameId string, query *model.AttributionQuery, usersToPullSessionFor []string,
+	reports *model.MarketingReports, contentGroupNamesList []string, logCtx log.Entry) (map[string]map[string]model.UserSessionData, []string, error) {
+	logFields := log.Fields{
+		"project_id":            projectId,
+		"session_event_name_id": sessionEventNameId,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx = *logCtx.WithFields(logFields)
+	effectiveFrom := model.LookbackAdjustedFrom(query.From, query.LookbackDays)
+	effectiveTo := query.To
+	// extend the campaign window for engagement based attribution
+	if query.QueryType == model.AttributionQueryTypeEngagementBased {
+		effectiveFrom = model.LookbackAdjustedFrom(query.From, query.LookbackDays)
+		effectiveTo = model.LookbackAdjustedTo(query.To, query.LookbackDays)
+	}
+	attributionEventKey, err := model.GetQuerySessionProperty(query.AttributionKey)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	attributedSessionsByUserId := make(map[string]map[string]model.UserSessionData)
+	var userIdsWithSession []string
+
+	userIDsInBatches := U.GetStringListAsBatch(usersToPullSessionFor, model.UserBatchSize)
+	for _, users := range userIDsInBatches {
+
+		placeHolder := U.GetValuePlaceHolder(len(users))
+		value := U.GetInterfaceList(users)
+
+		contentGroupNamesToDummyNamesMap := model.GetContentGroupNamesToDummyNamesMap(contentGroupNamesList)
+		caseSelectStmt := "CASE WHEN JSON_EXTRACT_STRING(sessions.properties, ?) IS NULL THEN ? " +
+			" WHEN JSON_EXTRACT_STRING(sessions.properties, ?) = '' THEN ? ELSE JSON_EXTRACT_STRING(sessions.properties, ?) END"
+
+		queryUserSessionTimeRange := "SELECT sessions.user_id, " +
+			caseSelectStmt + " AS campaignID, " +
+			caseSelectStmt + " AS campaignName, " +
+			caseSelectStmt + " AS adgroupID, " +
+			caseSelectStmt + " AS adgroupName, " +
+			caseSelectStmt + " AS keywordName, " +
+			caseSelectStmt + " AS keywordMatchType, " +
+			caseSelectStmt + " AS source, " +
+			caseSelectStmt + " AS channel, " +
+			caseSelectStmt + " AS attribution_id, " +
+			caseSelectStmt + " AS gcl_id, " +
+			caseSelectStmt + " AS landingPageUrl, " +
+			caseSelectStmt + " AS allPageViewUrl, "
+
+		var qParams []interface{}
+
+		qParams = append(qParams,
+			U.EP_CAMPAIGN_ID, model.PropertyValueNone, U.EP_CAMPAIGN_ID, model.PropertyValueNone, U.EP_CAMPAIGN_ID,
+			U.EP_CAMPAIGN, model.PropertyValueNone, U.EP_CAMPAIGN, model.PropertyValueNone, U.EP_CAMPAIGN,
+			U.EP_ADGROUP_ID, model.PropertyValueNone, U.EP_ADGROUP_ID, model.PropertyValueNone, U.EP_ADGROUP_ID,
+			U.EP_ADGROUP, model.PropertyValueNone, U.EP_ADGROUP, model.PropertyValueNone, U.EP_ADGROUP,
+			U.EP_KEYWORD, model.PropertyValueNone, U.EP_KEYWORD, model.PropertyValueNone, U.EP_KEYWORD,
+			U.EP_KEYWORD_MATCH_TYPE, model.PropertyValueNone, U.EP_KEYWORD_MATCH_TYPE, model.PropertyValueNone, U.EP_KEYWORD_MATCH_TYPE,
+			U.EP_SOURCE, model.PropertyValueNone, U.EP_SOURCE, model.PropertyValueNone, U.EP_SOURCE,
+			U.EP_CHANNEL, model.PropertyValueNone, U.EP_CHANNEL, model.PropertyValueNone, U.EP_CHANNEL,
+			attributionEventKey, model.PropertyValueNone, attributionEventKey, model.PropertyValueNone, attributionEventKey,
+			U.EP_GCLID, model.PropertyValueNone, U.EP_GCLID, model.PropertyValueNone, U.EP_GCLID,
+			U.UP_INITIAL_PAGE_URL, model.PropertyValueNone, U.UP_INITIAL_PAGE_URL, model.PropertyValueNone, U.UP_INITIAL_PAGE_URL,
+			U.EP_PAGE_URL, model.PropertyValueNone, U.EP_PAGE_URL, model.PropertyValueNone, U.EP_PAGE_URL)
+
+		wStmt, wParams, err := getSelectSQLStmtForContentGroup(contentGroupNamesToDummyNamesMap)
+		if err != nil {
+			return nil, nil, err
+		}
+		queryUserSessionTimeRange = queryUserSessionTimeRange + wStmt
+		qParams = append(qParams, wParams...)
+
+		queryUserSessionTimeRange = queryUserSessionTimeRange +
+			" sessions.timestamp FROM events AS sessions " +
+			" WHERE sessions.project_id=? " +
+
+			// Filter page view event.
+			"AND sessions.user_id IN (" + placeHolder + " ) AND sessions.timestamp BETWEEN ? AND ?" +
+			" AND (JSON_EXTRACT_STRING(sessions.properties, ?)=? )"
+
+		wParams = []interface{}{projectId}
+		wParams = append(wParams, value...)
+		wParams = append(wParams, effectiveFrom, effectiveTo, U.EP_IS_PAGE_VIEW, "true")
+		qParams = append(qParams, wParams...)
+
+		rows, tx, err, reqID := store.ExecQueryWithContext(queryUserSessionTimeRange, qParams)
+		if err != nil {
+			logCtx.WithError(err).Error("SQL Query failed")
+			return nil, nil, err
+		}
+		if C.GetAttributionDebug() == 1 {
+			logCtx.Info("Attribution before ProcessEventRows")
+		}
+		defer U.CloseReadQuery(rows, tx)
+
+		processErr := model.ProcessEventRows(rows, query, reports, contentGroupNamesList, &attributedSessionsByUserId, &userIdsWithSession, logCtx, reqID)
+		U.CloseReadQuery(rows, tx)
+		if processErr != nil {
+			return attributedSessionsByUserId, userIdsWithSession, processErr
+		}
+	}
+
+	return attributedSessionsByUserId, userIdsWithSession, nil
+}
