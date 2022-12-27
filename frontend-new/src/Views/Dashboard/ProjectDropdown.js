@@ -32,7 +32,8 @@ import {
 import {
   ACTIVE_DASHBOARD_CHANGE,
   WIDGET_DELETED,
-  DASHBOARD_DELETED
+  DASHBOARD_DELETED,
+  NEW_DASHBOARD_TEMPLATES_MODAL_OPEN
 } from '../../reducers/types';
 import SortableCards from './SortableCards';
 import DashboardSubMenu from './DashboardSubMenu';
@@ -578,7 +579,7 @@ function ProjectDropdown({
                 size='large'
                 onClick={toggleDashboardSelect}
               >
-                <div className={styles.dropdownbtntext}>
+                <div className={styles.dropdownbtntext + '  text-sm'}>
                   {showDashboardName}
                 </div>
                 <div className={styles.dropdownbtnicon}>
@@ -589,8 +590,11 @@ function ProjectDropdown({
                 shape='circle'
                 icon={<PlusOutlined style={{ fontSize: '18px' }} />}
                 onClick={() => {
-                  setaddDashboardModal(true);
-                  setSelectVisible(false);
+                  // setaddDashboardModal(true);
+                  // setSelectVisible(false);
+                  {
+                    dispatch({ type: NEW_DASHBOARD_TEMPLATES_MODAL_OPEN });
+                  }
                 }}
                 className={styles.addNewDashboardButtonProjectDropdown}
               />
