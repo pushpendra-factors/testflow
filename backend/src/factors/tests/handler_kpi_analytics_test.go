@@ -15,6 +15,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 	"time"
 
@@ -1388,6 +1389,7 @@ func TestDerivedKPIChannels(t *testing.T) {
 		GroupBy:         []M.KPIGroupBy{},
 		From:            1659312000,
 		To:              1659657600,
+		QueryType:       "derived",
 	}
 	kpiQueryGroup := model.KPIQueryGroup{
 		Class:         "kpi",
@@ -1398,10 +1400,10 @@ func TestDerivedKPIChannels(t *testing.T) {
 
 	result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup,
 		C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
-	assert.Equal(t, http.StatusCreated, statusCode)
-	assert.Equal(t, result[0].Headers, []string{name1})
+	assert.Equal(t, http.StatusOK, statusCode)
+	assert.Equal(t, result[0].Headers, []string{"google_ads_metrics_" + name1})
 	assert.Equal(t, len(result[0].Rows), 1)
-	assert.Equal(t, result[0].Rows[0][0], float64(50))
+	assert.Equal(t, result[0].Rows[0][0], float64(5))
 
 	query = model.KPIQuery{
 		Category:         "channels",
@@ -1412,6 +1414,7 @@ func TestDerivedKPIChannels(t *testing.T) {
 		From:             1659312000,
 		To:               1659657600,
 		GroupByTimestamp: "date",
+		QueryType:        "derived",
 	}
 	kpiQueryGroup = model.KPIQueryGroup{
 		Class:         "kpi",
@@ -1422,10 +1425,10 @@ func TestDerivedKPIChannels(t *testing.T) {
 
 	result, statusCode = store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup,
 		C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
-	assert.Equal(t, http.StatusCreated, statusCode)
-	assert.Equal(t, result[0].Headers, []string{"datetime", name1})
-	assert.Equal(t, len(result[0].Rows), 1)
-	assert.Equal(t, result[0].Rows[0][1], float64(50))
+	assert.Equal(t, http.StatusOK, statusCode)
+	assert.Equal(t, result[0].Headers, []string{"datetime", "google_ads_metrics_" + name1})
+	assert.Equal(t, len(result[0].Rows), 5)
+	assert.Equal(t, result[0].Rows[1][1], float64(5))
 
 	query = model.KPIQuery{
 		Category:         "channels",
@@ -1436,6 +1439,7 @@ func TestDerivedKPIChannels(t *testing.T) {
 		From:             1659312000,
 		To:               1659657600,
 		GroupByTimestamp: "",
+		QueryType:        "derived",
 	}
 	kpiQueryGroup = model.KPIQueryGroup{
 		Class:         "kpi",
@@ -1453,8 +1457,8 @@ func TestDerivedKPIChannels(t *testing.T) {
 
 	result, statusCode = store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup,
 		C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
-	assert.Equal(t, http.StatusCreated, statusCode)
-	assert.Equal(t, result[0].Headers, []string{"campaign_name", name1})
+	assert.Equal(t, http.StatusOK, statusCode)
+	assert.Equal(t, result[0].Headers, []string{"campaign_name", "google_ads_metrics_" + name1})
 	assert.Equal(t, len(result[0].Rows), 2)
 
 	query = model.KPIQuery{
@@ -1466,6 +1470,7 @@ func TestDerivedKPIChannels(t *testing.T) {
 		From:             1659312000,
 		To:               1659657600,
 		GroupByTimestamp: "date",
+		QueryType:        "derived",
 	}
 	kpiQueryGroup = model.KPIQueryGroup{
 		Class:         "kpi",
@@ -1476,7 +1481,7 @@ func TestDerivedKPIChannels(t *testing.T) {
 
 	result, statusCode = store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup,
 		C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
-	assert.Equal(t, http.StatusBadRequest, statusCode)
+	assert.Equal(t, http.StatusInternalServerError, statusCode)
 }
 
 func TestDerivedKPIForCustomKPI(t *testing.T) {
@@ -1501,6 +1506,9 @@ func TestDerivedKPIForCustomKPI(t *testing.T) {
 	createUserID1, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: rCustomerUserId, Properties: properties1, JoinTimestamp: joinTime, Source: model.GetRequestSourcePointer(model.UserSourceHubspot)})
 
 	startTimestamp := U.UnixTimeBeforeDuration(time.Hour * 1)
+	currentTime := time.Now()
+	currentDate := fmt.Sprintf("%s%s%s", strconv.Itoa(currentTime.Year()), strconv.Itoa(int(currentTime.Month())), strconv.Itoa(currentTime.Day()))
+	currentDateInt, _ := strconv.ParseInt(currentDate, 10, 64)
 	stepTimestamp := startTimestamp
 
 	payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, "user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`, "s0", createUserID1, stepTimestamp, "A", 1234)
@@ -1525,9 +1533,9 @@ func TestDerivedKPIForCustomKPI(t *testing.T) {
 	assert.Nil(t, err)
 
 	adwordsDocuments := []M.AdwordsDocument{
-		{ID: "1", Timestamp: 20220802, ProjectID: project.ID, CustomerAccountID: customerAccountID, TypeAlias: "campaign_performance_report",
+		{ID: "1", Timestamp: currentDateInt, ProjectID: project.ID, CustomerAccountID: customerAccountID, TypeAlias: "campaign_performance_report",
 			Value: &postgres.Jsonb{json.RawMessage(`{"cost": "11","clicks": "100","campaign_id":"1","impressions": "1000", "campaign_name": "test1"}`)}},
-		{ID: "2", Timestamp: 20220802, ProjectID: project.ID, CustomerAccountID: customerAccountID, TypeAlias: "campaign_performance_report",
+		{ID: "2", Timestamp: currentDateInt, ProjectID: project.ID, CustomerAccountID: customerAccountID, TypeAlias: "campaign_performance_report",
 			Value: &postgres.Jsonb{json.RawMessage(`{"cost": "12","clicks": "200","campaign_id":"2","impressions": "500", "campaign_name": "test2"}`)}},
 	}
 	for _, adwordsDocument := range adwordsDocuments {
