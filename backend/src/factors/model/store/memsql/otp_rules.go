@@ -117,7 +117,7 @@ func (store *MemSQL) GetUniqueKeyPropertyForOTPEventForLast3Months(projectID int
 			return uniqueOTPEventKeys, http.StatusNotFound
 		}
 		log.WithField("project_id", projectID).WithError(err).Error("Failed to fetch event properties from events table for project")
-		return uniqueOTPEventKeys, http.StatusInternalServerError
+		return uniqueOTPEventKeys, http.StatusNotFound
 	}
 	return uniqueOTPEventKeys, http.StatusFound
 }
@@ -136,7 +136,7 @@ func (store *MemSQL) GetAllRulesDeletedNotDeleted(projectID int64) ([]model.OTPR
 			return otpRules, http.StatusNotFound
 		}
 		log.WithField("project_id", projectID).WithError(err).Error("Failed to fetch rows from otp_rules table for project")
-		return otpRules, http.StatusInternalServerError
+		return otpRules, http.StatusNotFound
 	}
 	return otpRules, http.StatusFound
 }
