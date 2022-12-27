@@ -131,7 +131,7 @@ function Sankey({
         },
         chart:{
             overflowY: 'scroll',
-            height: chartData ? (chartData.length*4 < 400 ? 400 :  chartData.length* 4) : 400,
+            height: chartData ? (chartData.length*8 < 500 ? 500 :  chartData.length* 8) : 500,
         },
 
         plotOptions: {

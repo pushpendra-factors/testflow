@@ -438,7 +438,7 @@ const QueryBuilder = ({
             rules={[
               {
                 required: true,
-                message: 'Please enter title for your report',
+                message: 'Please enter a name (or) title for the report',
               },
             ]}
           >
@@ -457,7 +457,7 @@ const QueryBuilder = ({
             <Button size={'large'} htmlType="button" onClick={onReset}>
                                     Cancel
                                     </Button>
-              <Button type="primary" htmlType="submit" loading={loading} className={'ml-2'}> Save </Button>
+              <Button size={'large'}  type="primary" htmlType="submit" loading={loading} className={'ml-2'}> Save </Button>
             </Form.Item> 
           </div>
 
