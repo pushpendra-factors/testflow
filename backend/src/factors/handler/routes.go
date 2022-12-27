@@ -294,6 +294,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id/v1/alerts", responseWrapper(V1.GetAlertsHandler))
 	authRouteGroup.GET("/:project_id/v1/alerts/:id", responseWrapper(V1.GetAlertByIDHandler))
 	authRouteGroup.DELETE("/:project_id/v1/alerts/:id", mid.SkipDemoProjectWriteAccess(), responseWrapper(V1.DeleteAlertHandler))
+	authRouteGroup.PUT("/:project_id/v1/alerts/:id", mid.SkipDemoProjectWriteAccess(), responseWrapper(V1.EditAlertHandler))
 	authRouteGroup.POST("/:project_id/slack/auth", mid.SkipDemoProjectWriteAccess(), slack.SlackAuthRedirectHandler)
 	authRouteGroup.GET("/:project_id/slack/channels", mid.SkipDemoProjectWriteAccess(), slack.GetSlackChannelsListHandler)
 	authRouteGroup.DELETE("/:project_id/slack/delete", mid.SkipDemoProjectWriteAccess(), slack.DeleteSlackIntegrationHandler)
