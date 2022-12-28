@@ -5,6 +5,7 @@ import { bindActionCreators } from 'redux';
 
 import GroupSelect2 from '../../QueryComposer/GroupSelect2';
 import EventFilterWrapper from '../EventFilterWrapper';
+import { default as EventFilter } from 'Components/QueryComposer/EventFilterWrapper';
 
 import { Button, Tooltip } from 'antd';
 import { SVG, Text } from 'factorsComponents';
@@ -162,18 +163,63 @@ const ConversionGoalBlock = ({
   };
 
   const selectEventFilter = (index) => {
-    return (
+    if (group_analysis !== 'users') {
+      return (
+        <EventFilterWrapper
+          filterProps={filterProps}
+          activeProject={activeProject}
+          event={eventGoal}
+          deleteFilter={() => closeFilter()}
+          insertFilter={addFilter}
+          closeFilter={closeFilter}
+          refValue={index}
+        ></EventFilterWrapper>
+      );
+    } else {
+      return (
+        <EventFilter
+          filterProps={filterProps}
+          activeProject={activeProject}
+          event={eventGoal}
+          deleteFilter={() => closeFilter()}
+          insertFilter={addFilter}
+          closeFilter={closeFilter}
+          refValue={index}
+        ></EventFilter>
+      );
+    }
+  };
+
+  const renderFilterWrapper = (index, refValue, filter, showOr = false) =>
+    group_analysis !== 'users' ? (
       <EventFilterWrapper
+        index={index}
+        filter={filter}
+        event={eventGoal}
         filterProps={filterProps}
         activeProject={activeProject}
-        event={eventGoal}
-        deleteFilter={() => closeFilter()}
+        deleteFilter={delFilter}
         insertFilter={addFilter}
         closeFilter={closeFilter}
-        refValue={index}
+        selectedMainCategory={eventGoal}
+        showOr={showOr}
+        refValue={refValue}
       ></EventFilterWrapper>
+    ) : (
+      <EventFilter
+        index={index}
+        filter={filter}
+        event={eventGoal}
+        filterProps={filterProps}
+        activeProject={activeProject}
+        deleteFilter={delFilter}
+        insertFilter={addFilter}
+        closeFilter={closeFilter}
+        selectedMainCategory={eventGoal}
+        showOr={showOr}
+        refValue={refValue}
+      ></EventFilter>
     );
-  };
 
   const eventFilters = () => {
     const filters = [];
@@ -192,35 +238,14 @@ const ConversionGoalBlock = ({
           filters.push(
             <div className={'fa--query_block--filters flex flex-row'}>
               <div key={index}>
-                <EventFilterWrapper
-                  index={index}
-                  filter={filter}
-                  event={event}
-                  filterProps={filterProps}
-                  activeProject={activeProject}
-                  deleteFilter={delFilter}
-                  insertFilter={addFilter}
-                  closeFilter={closeFilter}
-                  selectedMainCategory={eventGoal}
-                  refValue={refValue}
-                ></EventFilterWrapper>
+                {renderFilterWrapper(index, refValue, filter)}
               </div>
               {index !== orFilterIndex && (
                 <ORButton index={index} setOrFilterIndex={setOrFilterIndex} />
               )}
               {index === orFilterIndex && (
                 <div key={'init'}>
-                  <EventFilterWrapper
-                    filterProps={filterProps}
-                    activeProject={activeProject}
-                    event={eventGoal}
-                    deleteFilter={delFilter}
-                    insertFilter={addFilter}
-                    closeFilter={closeFilter}
-                    selectedMainCategory={eventGoal}
-                    refValue={refValue}
-                    showOr={true}
-                  ></EventFilterWrapper>
+                  {renderFilterWrapper(index, refValue, filter, true)}
                 </div>
               )}
             </div>
@@ -230,33 +255,10 @@ const ConversionGoalBlock = ({
           filters.push(
             <div className={'fa--query_block--filters flex flex-row'}>
               <div key={index}>
-                <EventFilterWrapper
-                  index={index}
-                  filter={filtersGr[0]}
-                  event={eventGoal}
-                  filterProps={filterProps}
-                  activeProject={activeProject}
-                  deleteFilter={delFilter}
-                  insertFilter={addFilter}
-                  closeFilter={closeFilter}
-                  selectedMainCategory={eventGoal}
-                  refValue={refValue}
-                ></EventFilterWrapper>
+                {renderFilterWrapper(index, refValue, filtersGr[0])}
               </div>
               <div key={index + 1}>
-                <EventFilterWrapper
-                  index={index + 1}
-                  filter={filtersGr[1]}
-                  event={eventGoal}
-                  filterProps={filterProps}
-                  activeProject={activeProject}
-                  deleteFilter={delFilter}
-                  insertFilter={addFilter}
-                  closeFilter={closeFilter}
-                  selectedMainCategory={eventGoal}
-                  refValue={refValue}
-                  showOr={true}
-                ></EventFilterWrapper>
+                {renderFilterWrapper(index + 1, refValue, filtersGr[1], true)}
               </div>
             </div>
           );
@@ -279,6 +281,7 @@ const ConversionGoalBlock = ({
   const onEventSelect = (val, group, category) => {
     const currentEventGoal = Object.assign({}, eventGoal);
     currentEventGoal.label = val[1] ? val[1] : val[0];
+    currentEventGoal.group = group;
     currentEventGoal.filters = [];
     if (group_analysis !== 'users') {
       currentEventGoal.label = val[0];

@@ -633,13 +633,12 @@ export const toLetters = (num) => {
 };
 
 export const PropTextFormat = (prop = 'users') => {
-  if (prop.startsWith('$')) {
-    const formatText = prop.replace('$', '').split('_');
-    formatText.forEach((word, i) => {
-      formatText[i] = word.charAt(0).toUpperCase() + word.substring(1);
-    });
-    return formatText.join(' ');
-  }
+  const formatText = prop.replace('$', '').split('_');
+  formatText.forEach((word, i) => {
+    formatText[i] = word.charAt(0).toUpperCase() + word.substring(1);
+  });
+  return formatText.join(' ');
+
   return prop;
 };
 
