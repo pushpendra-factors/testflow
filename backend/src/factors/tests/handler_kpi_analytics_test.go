@@ -336,6 +336,45 @@ func TestKpiAnalytics(t *testing.T) {
 		assert.Equal(t, len(result[0].Rows), 3)
 	})
 
+	t.Run("Query with channel and events with alias at a time", func(t *testing.T) {
+
+		query := model.KPIQuery{
+			Category:        "events",
+			DisplayCategory: "page_views",
+			PageUrl:         "s0",
+			//Metrics:         []string{"page_views", "unique_users"},
+			Metrics:          []string{"page_views"},
+			Filters:          []model.KPIFilter{},
+			From:             startTimestamp,
+			To:               startTimestamp + 2*86400,
+			AliasName:        "a1",
+			GroupByTimestamp: "date",
+		}
+		query1 := model.KPIQuery{
+			Category:         "channels",
+			DisplayCategory:  "adwords_metrics",
+			Metrics:          []string{"impressions"},
+			Filters:          nil,
+			From:             startTimestamp,
+			To:               startTimestamp + 2*86400,
+			AliasName:        "a2",
+			GroupByTimestamp: "date",
+		}
+
+		kpiQueryGroup := model.KPIQueryGroup{
+			Class:         "kpi",
+			Queries:       []model.KPIQuery{query, query1},
+			GlobalFilters: []model.KPIFilter{},
+			GlobalGroupBy: []model.KPIGroupBy{},
+		}
+
+		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup,
+			C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		assert.Equal(t, http.StatusOK, statusCode)
+		assert.Equal(t, result[0].Headers, []string{"datetime", "a1", "adwords_metrics_a2"})
+		assert.Equal(t, len(result[0].Rows), 3)
+	})
+
 	t.Run("Query for virtual Events", func(t *testing.T) {
 		expr := "a.com/u1/u3/:prop1"
 		name := "kpi_login"
@@ -733,6 +772,55 @@ func TestKpiAnalyticsForProfile(t *testing.T) {
 		assert.Equal(t, result[0].Rows[0][2], float64(300))
 	})
 
+	t.Run("test alias hubspot contacts with filter and group by", func(t *testing.T) {
+		// Query which supports simple function - Sum or count
+		query1 := model.KPIQuery{
+			Category:         model.ProfileCategory,
+			DisplayCategory:  "hubspot_contacts",
+			PageUrl:          "",
+			Metrics:          []string{name2},
+			GroupBy:          []M.KPIGroupBy{},
+			From:             1640975425 - 200,
+			To:               1640975425 + 200,
+			AliasName:        "a1",
+			GroupByTimestamp: "date",
+		}
+
+		query2 := model.KPIQuery{}
+		U.DeepCopy(&query1, &query2)
+		query2.GroupByTimestamp = ""
+
+		groupBy := model.KPIGroupBy{
+			ObjectType:       "",
+			PropertyName:     "country",
+			PropertyDataType: "categorical",
+			Entity:           "user",
+			GroupByType:      "",
+			Granularity:      "",
+		}
+
+		kpiQueryGroup1 := model.KPIQueryGroup{
+			Class:         "kpi",
+			Queries:       []model.KPIQuery{query1, query2},
+			GlobalFilters: []model.KPIFilter{},
+			GlobalGroupBy: []model.KPIGroupBy{groupBy},
+		}
+		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup1,
+			C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		assert.Equal(t, http.StatusOK, statusCode)
+		assert.Equal(t, result[0].Headers, []string{"datetime", groupBy.PropertyName, "a1"})
+		assert.Equal(t, len(result[0].Rows), 1)
+		assert.Equal(t, result[0].Rows[0][1], "india")
+		assert.Equal(t, result[0].Rows[0][2], float64(300))
+
+		assert.Equal(t, result[1].Headers, []string{groupBy.PropertyName, "a1"})
+		assert.Equal(t, len(result[1].Rows), 1)
+		assert.Equal(t, result[1].Rows[0][0], "india")
+		assert.Equal(t, result[1].Rows[0][1], float64(300))
+
+		log.WithField("result", result).Warn("kark1")
+
+	})
 }
 
 func TestKPIProfilesForGroups(t *testing.T) {
