@@ -224,7 +224,7 @@ func TestUpdateDashboard(t *testing.T) {
 	})
 }
 
-func TestGetDashboardResultFromCache(t *testing.T) {
+func TestEventChannelQueryDashboardResultFromCache(t *testing.T) {
 	r := gin.Default()
 	H.InitAppRoutes(r)
 	project, agent, err := SetupProjectWithAgentDAO()
@@ -404,7 +404,7 @@ func TestDeleteDashboard(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, errCode)
 }
 
-func TestShouldRefreshDashboardUnit(t *testing.T) {
+func TestWebAnalyticsUnitShouldRefreshDashboardUnit(t *testing.T) {
 	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
 

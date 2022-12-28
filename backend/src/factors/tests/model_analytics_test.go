@@ -2968,15 +2968,45 @@ func TestAnalyticsInsightsQueryWithDateTimeProperty(t *testing.T) {
 	})
 }
 
-func TestBaseQueryHashStringConsistency(t *testing.T) {
+func TestEventsFunnelChannelWebClassBaseQueryHashStringConsistency(t *testing.T) {
 	var queriesStr = map[string]string{
-		model.QueryClassInsights:    `{"cl": "insights", "ec": "any_given_event", "fr": 1393612200, "to": 1396290599, "ty": "events_occurrence", "tz": "", "ewp": [{"na": "$session", "pr": []}], "gbp": [], "gbt": ""}`,
-		model.QueryClassFunnel:      `{"cl": "funnel", "ec": "any_given_event", "fr": 1594492200, "to": 1594578599, "ty": "unique_users", "tz": "Asia/Calcutta", "ewp": [{"na": "$session", "pr": []}, {"na": "www.chargebee.com/schedule-a-demo", "pr": []}], "gbp": [], "gbt": ""}`,
+		model.QueryClassInsights:  `{"cl": "insights", "ec": "any_given_event", "fr": 1393612200, "to": 1396290599, "ty": "events_occurrence", "tz": "", "ewp": [{"na": "$session", "pr": []}], "gbp": [], "gbt": ""}`,
+		model.QueryClassFunnel:    `{"cl": "funnel", "ec": "any_given_event", "fr": 1594492200, "to": 1594578599, "ty": "unique_users", "tz": "Asia/Calcutta", "ewp": [{"na": "$session", "pr": []}, {"na": "www.chargebee.com/schedule-a-demo", "pr": []}], "gbp": [], "gbt": ""}`,
+		model.QueryClassChannel:   `{"cl": "channel", "meta": {"metric": "total_cost"}, "query": {"to": 1576060774, "from": 1573468774, "channel": "google_ads", "filter_key": "campaign", "filter_value": "all"}}`,
+		model.QueryClassEvents:    `{"query_group":[{"cl":"events","ty":"unique_users","ec":"each_given_event","fr":1583001000,"to":1585679399,"ewp":[{"na":"$session","pr":[{"en":"event","pr":"$source","op":"equals","va":"google","ty":"categorical","lop":"AND"},{"en":"user","pr":"$country","op":"equals","va":"India","ty":"categorical","lop":"AND"}]},{"na":"MagazineViews","pr":[{"en":"event","pr":"$source","op":"equals","va":"google","ty":"categorical","lop":"AND"},{"en":"user","pr":"$country","op":"equals","va":"India","ty":"categorical","lop":"AND"}]}],"gbp":[{"pr":"$browser","en":"event","pty":"categorical","ena":"$session","eni":1},{"pr":"$campaign","en":"event","pty":"categorical","ena":"MagazineViews","eni":2}],"gbt":"","tz":"Asia/Calcutta"}]}`,
+		model.QueryClassChannelV1: `{ "query_group":[{ "channel": "google_ads", "select_metrics": ["impressions"], "filters": [], "group_by": [], "gbt": "hour", "fr": 1585679400, "to": 1585765800 }], "cl": "channel_v1" }`,
+		model.QueryClassWeb:       `{"units":[{"unit_id":194,"query_name":"bounce_rate"},{"unit_id":195,"query_name":"unique_users"},{"unit_id":196,"query_name":"avg_session_duration"},{"unit_id":197,"query_name":"avg_pages_per_session"},{"unit_id":200,"query_name":"sessions"},{"unit_id":201,"query_name":"total_page_view"},{"unit_id":199,"query_name":"traffic_channel_report"},{"unit_id":198,"query_name":"top_pages_report"}],"custom_group_units":[],"from":1609612200,"to":1610044199}`,
+	}
+	for queryClass, queryString := range queriesStr {
+		queryJSON := postgres.Jsonb{json.RawMessage(queryString)}
+		baseQuery, err := model.DecodeQueryForClass(queryJSON, queryClass)
+		assert.Nil(t, err)
+
+		queryHashString, err := baseQuery.GetQueryCacheHashString()
+		assert.Nil(t, err)
+		for i := 0; i < 50; i++ {
+			// Query hash should be consistent and same every time.
+			tempQueryHashString, err := baseQuery.GetQueryCacheHashString()
+			assert.Nil(t, err)
+			assert.Equal(t, queryHashString, tempQueryHashString)
+		}
+
+		for rangeString, rangeFunction := range U.QueryDateRangePresets {
+			from, to, errCode := rangeFunction(U.TimeZoneStringIST)
+			assert.Nil(t, errCode)
+			baseQuery.SetQueryDateRange(from, to)
+			assertMsg := fmt.Sprintf("Failed for class:%s:range:%s", queryClass, rangeString)
+
+			tempQueryHashString, err := baseQuery.GetQueryCacheHashString()
+			assert.Nil(t, err, assertMsg)
+			assert.Equal(t, queryHashString, tempQueryHashString, assertMsg)
+		}
+	}
+}
+
+func TestAttributionClassBaseQueryHashStringConsistency(t *testing.T) {
+	var queriesStr = map[string]string{
 		model.QueryClassAttribution: `{"cl": "attribution", "meta": {"metrics_breakdown": true}, "query": {"ce": {"na": "$session", "pr": []}, "cm": ["Impressions", "Clicks", "Spend"], "to": 1596479399, "lbw": 1, "lfe": [], "from": 1595874600, "attribution_key": "Campaign", "attribution_methodology": "Last_Touch"}}`,
-		model.QueryClassChannel:     `{"cl": "channel", "meta": {"metric": "total_cost"}, "query": {"to": 1576060774, "from": 1573468774, "channel": "google_ads", "filter_key": "campaign", "filter_value": "all"}}`,
-		model.QueryClassEvents:      `{"query_group":[{"cl":"events","ty":"unique_users","ec":"each_given_event","fr":1583001000,"to":1585679399,"ewp":[{"na":"$session","pr":[{"en":"event","pr":"$source","op":"equals","va":"google","ty":"categorical","lop":"AND"},{"en":"user","pr":"$country","op":"equals","va":"India","ty":"categorical","lop":"AND"}]},{"na":"MagazineViews","pr":[{"en":"event","pr":"$source","op":"equals","va":"google","ty":"categorical","lop":"AND"},{"en":"user","pr":"$country","op":"equals","va":"India","ty":"categorical","lop":"AND"}]}],"gbp":[{"pr":"$browser","en":"event","pty":"categorical","ena":"$session","eni":1},{"pr":"$campaign","en":"event","pty":"categorical","ena":"MagazineViews","eni":2}],"gbt":"","tz":"Asia/Calcutta"}]}`,
-		model.QueryClassChannelV1:   `{ "query_group":[{ "channel": "google_ads", "select_metrics": ["impressions"], "filters": [], "group_by": [], "gbt": "hour", "fr": 1585679400, "to": 1585765800 }], "cl": "channel_v1" }`,
-		model.QueryClassWeb:         `{"units":[{"unit_id":194,"query_name":"bounce_rate"},{"unit_id":195,"query_name":"unique_users"},{"unit_id":196,"query_name":"avg_session_duration"},{"unit_id":197,"query_name":"avg_pages_per_session"},{"unit_id":200,"query_name":"sessions"},{"unit_id":201,"query_name":"total_page_view"},{"unit_id":199,"query_name":"traffic_channel_report"},{"unit_id":198,"query_name":"top_pages_report"}],"custom_group_units":[],"from":1609612200,"to":1610044199}`,
 	}
 	for queryClass, queryString := range queriesStr {
 		queryJSON := postgres.Jsonb{json.RawMessage(queryString)}
