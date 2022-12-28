@@ -930,7 +930,7 @@ CREATE TABLE IF NOT EXISTS alerts(
     alert_type int,
     alert_description json,
     alert_configuration json,
-    COLUMN query_id bigint,
+    query_id bigint,
     last_alert_sent bool,
     last_run_time timestamp(6),
     created_at timestamp(6) NOT NULL,
