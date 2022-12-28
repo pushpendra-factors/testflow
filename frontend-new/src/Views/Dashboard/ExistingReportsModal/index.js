@@ -174,6 +174,8 @@ const ExistingReportsModal = ({
                   svgName = v;
                 }
               });
+              if(queryType === 'profiles') {return <></>;}
+              else
               return (
                 <List.Item key={index}>
                   <Checkbox
