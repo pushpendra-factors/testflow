@@ -13,6 +13,7 @@ import (
 	U "factors/util"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"net/http"
@@ -104,7 +105,6 @@ func AttributionHandler(c *gin.Context) (interface{}, int, string, string, bool)
 	if requestPayload.Query == nil {
 		return nil, http.StatusBadRequest, V1.INVALID_INPUT, "invalid query. empty query.", true
 	}
-
 	timezoneString, err = SetTimezoneForAttributionQuery(&requestPayload, projectId)
 
 	if err != nil {
