@@ -117,6 +117,8 @@ func TestMain(m *testing.M) {
 		AllowHubspotContactListInsertByProjectID:           "*",
 		AllowedSalesforceActivityTasksByProjectIDs:         *allowedSalesforceActivityTaskByProjectID,
 		AllowedSalesforceActivityEventsByProjectIDs:        *allowedSalesforceActivityEventByProjectID,
+		EnableUserLevelEventPullForAddSessionByProjectID:   "*",
+		EventsPullMaxLimit:                                 50000,
 	}
 	C.InitConf(config)
 

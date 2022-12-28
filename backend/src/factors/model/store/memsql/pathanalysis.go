@@ -70,9 +70,9 @@ func (store *MemSQL) GetPathAnalysisEntity(projectID int64, id string) (model.Pa
 func (store *MemSQL) convertPathAnalysisToPathAnalysisEntityInfo(list []model.PathAnalysis, names map[string]string) []model.PathAnalysisEntityInfo {
 
 	res := make([]model.PathAnalysisEntityInfo, 0)
-	var entity model.PathAnalysisQuery
 
 	for _, obj := range list {
+		var entity model.PathAnalysisQuery
 		err := U.DecodePostgresJsonbToStructType(obj.PathAnalysisQuery, &entity)
 		if err != nil {
 			log.WithError(err).Error("Problem deserializing pathanalysis query.")

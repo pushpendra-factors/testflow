@@ -17,11 +17,12 @@ func GetKPIMetricsForAdwords() []map[string]string {
 
 // TODO: Move to constants declared in model.
 var MapOfCategoryToChannel = map[string]string{
-	AllChannelsDisplayCategory:   "all_ads",
-	AdwordsDisplayCategory:       "google_ads",
-	BingAdsDisplayCategory:       "bing_ads",
-	GoogleAdsDisplayCategory:     "google_ads",
-	FacebookDisplayCategory:      "facebook_ads",
-	LinkedinDisplayCategory:      "linkedin_ads",
-	GoogleOrganicDisplayCategory: "search_console",
+	AllChannelsDisplayCategory:                "all_ads",
+	AdwordsDisplayCategory:                    "google_ads",
+	BingAdsDisplayCategory:                    "bing_ads",
+	GoogleAdsDisplayCategory:                  "google_ads",
+	FacebookDisplayCategory:                   "facebook_ads",
+	LinkedinDisplayCategory:                   "linkedin_ads",
+	GoogleOrganicDisplayCategory:              "search_console",
+	LinkedinCompanyEngagementsDisplayCategory: "linkedin_company_engagements",
 }

@@ -70,7 +70,7 @@ func addSessionByProjectId(projectId int64, maxLookbackTimestamp, startTimestamp
 		WithField("max_lookback", maxLookbackTimestamp).
 		WithField("start_timestamp", startTimestamp).
 		WithField("end_timestamp", endTimestamp).
-		WithField("buffer_time_in_mins", bufferTimeBeforeSessionCreateInSecs)
+		WithField("buffer_time_in_secs", bufferTimeBeforeSessionCreateInSecs)
 
 	logCtx.Info("Adding session for project.")
 
@@ -152,6 +152,7 @@ func GetNextSessionAndPullEvent(projectId int64, maxLookbackTimestamp int64, sta
 		return true, nil, http.StatusInternalServerError, nil, 0, msg
 	}
 
+	isV2Enabled := C.EnableUserLevelEventPullForAddSessionByProjectID(projectId) // V2 - Pull events from user level
 	var eventsDownloadStartTimestamp, eventsDownloadEndTimestamp int64
 
 	if startTimestamp > 0 && endTimestamp > 0 {
@@ -169,7 +170,8 @@ func GetNextSessionAndPullEvent(projectId int64, maxLookbackTimestamp int64, sta
 		// Log and limit the startTimestamp to maxLookbackTimestamp configured.
 		// Case: When one single user has an event which is very old, could cause
 		// scanning and downloading of all events from that timestamp on next run.
-		if maxLookbackTimestamp > 0 && eventsDownloadStartTimestamp < maxLookbackTimestamp {
+		// Use maxLookbackTimestamp if V2 not enabled
+		if maxLookbackTimestamp > 0 && eventsDownloadStartTimestamp < maxLookbackTimestamp && !isV2Enabled {
 			logCtx.Warn("Events download start timestamp is greater than maxLookbackTimestamp.")
 			eventsDownloadStartTimestamp = maxLookbackTimestamp
 		}
@@ -177,6 +179,21 @@ func GetNextSessionAndPullEvent(projectId int64, maxLookbackTimestamp int64, sta
 		logCtx = logCtx.WithField("start_timestamp", eventsDownloadStartTimestamp)
 		eventsDownloadEndTimestamp = U.TimeNowUnix() - bufferTimeBeforeSessionCreateInSecs
 	}
+
+	if isV2Enabled {
+		log.Info(fmt.Sprintf("pulling events for projectID %v using GetAllEventsForSessionCreationAsUserEventsMapV2", projectId))
+		userEventsMap, noOfEventsDownloaded, errCode := store.GetStore().GetAllEventsForSessionCreationAsUserEventsMapV2(projectId,
+			sessionEventName.ID, eventsDownloadStartTimestamp, eventsDownloadEndTimestamp)
+		if errCode == http.StatusInternalServerError {
+			logCtx.WithField("errCode", errCode).Error("failed to get user events map using GetAllEventsForSessionCreationAsUserEventsMapV2 on add session")
+			return true, nil, http.StatusInternalServerError, nil, 0, fmt.Sprintf("failed to get user events map using GetAllEventsForSessionCreationAsUserEventsMapV2 on add session for project, errCode: %v", errCode)
+		}
+		if errCode == http.StatusNotFound {
+			return true, nil, http.StatusNotModified, nil, 0, "Status Not Modified"
+		}
+		return false, sessionEventName, errCode, userEventsMap, noOfEventsDownloaded, ""
+	}
+
 	log.Info(fmt.Sprintf("pulling events for projectID %v for "+
 		"eventsDownloadStartTimestamp %v to eventsDownloadEndTimestamp %v", projectId, eventsDownloadStartTimestamp, eventsDownloadEndTimestamp))
 	userEventsMap, noOfEventsDownloaded, errCode := store.GetStore().GetAllEventsForSessionCreationAsUserEventsMap(projectId,

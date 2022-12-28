@@ -99,15 +99,17 @@ const MarkTouchpointBlock = ({
 
   const selectTouchPointOpts = () => {
     let tchPointOpts = [];
+    let excludeArray;
     if (!touchPointRef || touchPointRef === 'Tactic') {
-      tchPointOpts = touchPointOptions[0].values
-        .filter((opt) => !['LandingPage', 'AllPageView'].includes(opt[0]))
-        .map((option) => [getTouchPointLabel(option[0]), option[0]]);
+      excludeArray = ['LandingPage', 'AllPageView'];
+    } else if (touchPointRef === 'TacticOffer') {
+      excludeArray = [];
     } else {
-      tchPointOpts = touchPointOptions[0].values
-        .filter((opt) => !['AdGroup', 'Keyword'].includes(opt[0]))
-        .map((option) => [getTouchPointLabel(option[0]), option[0]]);
+      excludeArray = ['AdGroup', 'Keyword'];
     }
+    tchPointOpts = touchPointOptions[0].values
+      .filter((opt) => !excludeArray.includes(opt[0]))
+      .map((option) => [getTouchPointLabel(option[0]), option[0]]);
 
     return tchPointOpts;
   };

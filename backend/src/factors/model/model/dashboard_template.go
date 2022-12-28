@@ -23,7 +23,7 @@ const (
 	IntegrationAdwords             = "adwords"
 	IntegrationFacebook            = "facebook"
 	IntegrationLinkedin            = "linkedin"
-	IntegrationGoogleSearchConsole = "google_Search_console"
+	IntegrationGoogleSearchConsole = "google_search_console"
 	IntegrationBing                = "bing"
 	IntegrationClearbit            = "clearbit"
 	IntegrationLeadsquared         = "leadsquared"

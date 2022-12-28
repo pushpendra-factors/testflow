@@ -1983,7 +1983,7 @@ func isValidFunnelQuery(query *model.Query) bool {
 
 func (store *MemSQL) IsValidFunnelGroupQueryIfExists(projectID int64, query *model.Query, groupIds []int) (int, bool) {
 
-	if query.GroupAnalysis == "" {
+	if query.GroupAnalysis == "" || model.IsFunnelQueryGroupNameUser(query.GroupAnalysis) {
 		return 0, true
 	}
 
@@ -2307,7 +2307,7 @@ func getChannelGroupKeyIndexesForSlicing(cols []string) (int, int, error) {
 
 	index := 0
 	for _, col := range cols {
-		if strings.HasPrefix(col, "campaign_") || strings.HasPrefix(col, "ad_group_") || strings.HasPrefix(col, "keyword_") || strings.HasPrefix(col, "channel_") {
+		if strings.HasPrefix(col, "campaign_") || strings.HasPrefix(col, "ad_group_") || strings.HasPrefix(col, "keyword_") || col == "channel_" || strings.HasPrefix(col, "company_") {
 			if start == -1 {
 				start = index
 			} else {
