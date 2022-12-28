@@ -58,12 +58,12 @@ func (store *MemSQL) ExecuteAttributionQueryV0(projectID int64, queryOriginal *m
 	model.AddDefaultKeyDimensionsToAttributionQuery(query)
 	model.AddDefaultMarketingEventTypeTacticOffer(query)
 
-	if query.AttributionKey == model.AttributionKeyLandingPage && query.TacticOfferType != model.MarketingEventTypeOffer {
-		return nil, errors.New("can not get landing page level report for Tactic/TacticOffer")
+	if query.AttributionKey == model.AttributionKeyLandingPage && query.TacticOfferType == model.MarketingEventTypeTactic {
+		return nil, errors.New("can not get landing page level report for Tactic")
 	}
 
-	if query.AttributionKey == model.AttributionKeyAllPageView && query.TacticOfferType != model.MarketingEventTypeOffer {
-		return nil, errors.New("can not get all page view level report for Tactic/TacticOffer")
+	if query.AttributionKey == model.AttributionKeyAllPageView && query.TacticOfferType == model.MarketingEventTypeTactic {
+		return nil, errors.New("can not get all page view level report for Tactic")
 	}
 
 	// for existing queries and backward support
