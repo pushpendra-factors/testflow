@@ -3,7 +3,7 @@ import { Button, Carousel } from 'antd';
 import React, { useEffect, useState } from 'react';
 import styles from './index.module.scss';
 import { Text } from 'Components/factorsComponents';
-import { FallBackImage } from 'src/constants/templates.constants';
+import { FallBackImage } from 'Constants/templates.constants';
 export const HorizontalWindowItem = ({ title, image, onClick }) => {
   return (
     <div className={styles.windowItem} onClick={onClick}>
