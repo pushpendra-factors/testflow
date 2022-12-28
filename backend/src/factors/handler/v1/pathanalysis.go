@@ -121,6 +121,7 @@ func GetPathAnalysisData(c *gin.Context)(interface{}, int, string, string, bool)
 	}
 
 	n := c.Query("n")
+	version := c.Query("version")
 	log.Info(n)
 	noOfNodes := int64(20)
 	if n != "" {
@@ -134,7 +135,34 @@ func GetPathAnalysisData(c *gin.Context)(interface{}, int, string, string, bool)
 
 	result := delta.GetPathAnalysisData(projectID, id)
 	finalResult := filterNodes(result, int(noOfNodes), actualQuery.EventType == "startswith")
+	if(version == "2"){
+		return convertToArray(finalResult), http.StatusOK, "", "", false
+	}
 	return finalResult, http.StatusOK, "", "", false
+}
+
+type ResultStruct struct {
+	Key string
+	Count int
+}
+
+func convertToArray(resultMap map[int]map[string]int) []ResultStruct {
+	resultArray := make([]ResultStruct, 0)
+	for i := 1; i <= len(resultMap) ; i++ {
+		othersArray := make([]ResultStruct, 0)
+		if(resultMap[i] == nil){
+			continue
+		}
+		for key, count := range resultMap[i] {
+			if strings.Contains(key, "OTHERS"){
+				othersArray = append(othersArray, ResultStruct{Key: key, Count: count})
+			} else {
+				resultArray = append(resultArray, ResultStruct{Key: key, Count: count})
+			}
+		}
+		resultArray = append(resultArray, othersArray...)
+	}
+	return resultArray
 }
 
 func filterNodes(result map[int]map[string]int, n int, startsWith bool)map[int]map[string]int {
