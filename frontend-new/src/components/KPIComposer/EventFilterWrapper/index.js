@@ -95,7 +95,8 @@ function EventFilterWrapper({
         } else {
           filterData = {
             category: event?.category, //use event instead of selectedMainCategory since it is in induvidual level
-            object_type: event?.group,
+            object_type: event?.group, // depreciated! object_type to display_category key change
+            display_category: event?.group, // object_type to display_category key change
             property_name: filter?.extra[1],
             entity: filter?.extra[3] ? filter?.extra[3] : filter?.extra[2],
           };
@@ -185,7 +186,8 @@ function EventFilterWrapper({
       } else {
         filterData = {
           category: event?.category, //use event instead of selectedMainCategory since it is in induvidual level
-          object_type: event?.group,
+          object_type: event?.group, // depreciated! object_type to display_category key change
+          display_category: event?.group, // object_type to display_category key change
           property_name: props[1],
           entity: props[3] ? props[3] : props[2],
         };
