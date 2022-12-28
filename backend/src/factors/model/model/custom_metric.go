@@ -13,18 +13,9 @@ type CustomKPI interface {
 	ValidateFilterAndGroupBy() bool
 }
 
-type CustomMetricConfig struct {
-	AggregateFunctions      []string                              `json:"agFn"`
-	ObjectTypeAndProperties []CustomMetricObjectTypeAndProperties `json:"objTyAndProp"`
-}
-
-type CustomMetricObjectTypeAndProperties struct {
-	ObjectType string              `json:"objTy"`
-	Properties []map[string]string `json:"properties"`
-}
-
 type CustomMetricConfigV1 struct {
 	ObjectType             string              `json:"obj_ty"`
+	SectionDisplayCategory string              `json:"section_display_category"`
 	TypeOfQuery            int                 `json:"type_of_query"`
 	AggregateFunctions     []string            `json:"agFn"`
 	Properties             []map[string]string `json:"properties"`
@@ -45,16 +36,16 @@ const (
 )
 
 var (
-	CustomMetricProfilesAggregateFunctions = []string{SumAggregateFunction, UniqueAggregateFunction, AverageAggregateFunction}
-	CustomEventsAggregateFunctions         = []string{SumAggregateFunction, UniqueAggregateFunction, AverageAggregateFunction, CountAggregateFunction}
-	CustomKPIProfileObjectCategories       = []string{HubspotContactsDisplayCategory, HubspotCompaniesDisplayCategory, HubspotDealsDisplayCategory,
+	CustomMetricProfilesAggregateFunctions   = []string{SumAggregateFunction, UniqueAggregateFunction, AverageAggregateFunction}
+	CustomEventsAggregateFunctions           = []string{SumAggregateFunction, UniqueAggregateFunction, AverageAggregateFunction, CountAggregateFunction}
+	CustomKPIProfileSectionDisplayCategories = []string{HubspotContactsDisplayCategory, HubspotCompaniesDisplayCategory, HubspotDealsDisplayCategory,
 		SalesforceUsersDisplayCategory, SalesforceAccountsDisplayCategory, SalesforceOpportunitiesDisplayCategory, MarketoLeadsDisplayCategory, LeadSquaredLeadsDisplayCategory}
 	ProfileQueryType    = 1
 	DerivedQueryType    = 2
 	EventBasedQueryType = 3
 )
 
-var customMetricGroupNameByObjectType = map[string]string{
+var customMetricGroupNameBySectionDisplayCategory = map[string]string{
 	GROUP_NAME_HUBSPOT_COMPANY:        HubspotCompaniesDisplayCategory,
 	GROUP_NAME_HUBSPOT_DEAL:           HubspotDealsDisplayCategory,
 	GROUP_NAME_SALESFORCE_OPPORTUNITY: SalesforceOpportunitiesDisplayCategory,
@@ -62,15 +53,16 @@ var customMetricGroupNameByObjectType = map[string]string{
 }
 
 type CustomMetric struct {
-	ProjectID       int64           `gorm:"primary_key:true;auto_increment:false" json:"project_id"`
-	ID              string          `gorm:"primary_key:true;type:varchar(255)" json:"id"`
-	Name            string          `json:"name"`
-	Description     string          `json:"description"`
-	TypeOfQuery     int             `json:"type_of_query"`
-	Transformations *postgres.Jsonb `json:"transformations"`
-	ObjectType      string          `json:"obj_ty"` // KPI Display Category for the metric
-	CreatedAt       time.Time       `json:"created_at"`
-	UpdatedAt       time.Time       `json:"updated_at"`
+	ProjectID              int64           `gorm:"primary_key:true;auto_increment:false" json:"project_id"`
+	ID                     string          `gorm:"primary_key:true;type:varchar(255)" json:"id"`
+	Name                   string          `json:"name"`
+	Description            string          `json:"description"`
+	TypeOfQuery            int             `json:"type_of_query"`
+	Transformations        *postgres.Jsonb `json:"transformations"`
+	ObjectType             string          `json:"obj_ty"` // Previously used as KPI Display Category for the metric
+	SectionDisplayCategory string          `gorm:"-"  json:"section_display_category"` // To be used as KPI Display Category for the metric
+	CreatedAt              time.Time       `json:"created_at"`
+	UpdatedAt              time.Time       `json:"updated_at"`
 }
 
 var KpiDerivedMetricsConfig = map[string]interface{}{
@@ -142,7 +134,7 @@ func (customMetric *CustomMetric) SetDefaultGroupIfRequired() {
 				break
 			}
 		}
-		customMetric.ObjectType = previousDisplayCategory
+		customMetric.SectionDisplayCategory = previousDisplayCategory
 	}
 }
 
@@ -202,9 +194,9 @@ func ValidateCustomMetric(customMetric CustomMetric) (string, bool) {
 	return "", true
 }
 
-func GetGroupNameByMetricObjectType(objectType string) string {
-	for groupName, metricObjectType := range customMetricGroupNameByObjectType {
-		if metricObjectType == objectType {
+func GetGroupNameByMetricSectionDisplayCategory(sectionDisplayCategory string) string {
+	for groupName, metricSectionDisplayCategory := range customMetricGroupNameBySectionDisplayCategory {
+		if metricSectionDisplayCategory == sectionDisplayCategory {
 			return groupName
 		}
 	}

@@ -189,7 +189,6 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/kpi/filter_values", responseWrapper(V1.GetKPIFilterValuesHandler))
 
 	// v1 custom metrics - admin/settings side.
-	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics/config", V1.GetCustomMetricsConfig)
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics/config/v1", V1.GetCustomMetricsConfigV1)
 	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics", mid.SkipDemoProjectWriteAccess(), responseWrapper(V1.CreateCustomMetric))
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics", responseWrapper(V1.GetCustomMetrics))

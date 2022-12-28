@@ -139,8 +139,6 @@ type Model interface {
 	// Custom Metrics
 	CreateCustomMetric(customMetric model.CustomMetric) (*model.CustomMetric, string, int)
 	GetCustomMetricsByProjectId(projectID int64) ([]model.CustomMetric, string, int)
-	GetCustomMetricByProjectIdQueryTypeAndObjectType(projectID int64, queryType int, objectType string) ([]model.CustomMetric, string, int)
-	GetCustomKPIMetricsByProjectIdAndDisplayCategory(projectID int64, displayCategory string) []map[string]string
 	GetKpiRelatedCustomMetricsByName(projectID int64, name string) (model.CustomMetric, string, int)
 	GetProfileCustomMetricByProjectIdName(projectID int64, name string) (model.CustomMetric, string, int)
 	GetDerivedCustomMetricByProjectIdName(projectID int64, name string) (model.CustomMetric, string, int)
@@ -150,7 +148,6 @@ type Model interface {
 	GetDerivedKPIsHavingNameInInternalQueries(projectID int64, customMetricName string) []string
 	GetDerivedKPIMetricsByProjectIdAndDisplayCategory(projectID int64, displayCategory string, includeDerivedKPIs bool) []map[string]string
 	GetCustomMetricAndDerivedMetricByProjectIdAndDisplayCategory(projectID int64, displayCategory string, includeDerivedKPIs bool) []map[string]string
-	GetCustomEventKPIMetricsByProjectIdAndDisplayCategory(projectID int64, displayCategory string) []map[string]string
 	GetCustomEventAndDerivedMetricByProjectIdAndDisplayCategory(projectID int64, displayCategory string, includeDerivedKPIs bool) []map[string]string
 
 	//templates

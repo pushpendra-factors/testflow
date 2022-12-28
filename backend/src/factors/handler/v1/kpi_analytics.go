@@ -21,7 +21,7 @@ import (
 type KPIFilterValuesRequest struct {
 	Category        string `json:"category"`
 	DisplayCategory string `json:"display_category"`
-	ObjectType      string `json:"object_type"`
+	ObjectType      string `json:"object_type"` // used for channels ex. object_type = campaign and for events. ex. object_type = event_name 
 	PropertyName    string `json:"property_name"`
 	Entity          string `json:"entity"`
 	Metric          string `json:"me"`
@@ -122,7 +122,7 @@ func GetKPIConfigHandler(c *gin.Context) (interface{}, int, string, string, bool
 	if currentConfig != nil {
 		resultantConfigs = append(resultantConfigs, currentConfig)
 	}
-	
+
 	if includeDerivedKPIs {
 		currentConfig, errCode := storeSelected.GetKPIConfigsForOthers(projectID, model.OthersDisplayCategory, includeDerivedKPIs)
 		if errCode != http.StatusOK {
@@ -189,7 +189,7 @@ func GetKPIFilterValuesHandler(c *gin.Context) (interface{}, int, string, string
 		resultantFilterValuesResponse = channelsFilterValues.FilterValues
 	} else if request.Category == model.EventCategory && request.Entity == model.EventEntity {
 		// For both static and custom event metrics, same method of fetching filter values is used.
-		request.ObjectType = model.GetObjectTypeForFilterValues(request.ObjectType, request.Metric)
+		request.ObjectType = model.GetObjectTypeForFilterValues(request.DisplayCategory, request.Metric)
 		eventsFilterValues, err := storeSelected.GetPropertyValuesByEventProperty(projectID, request.ObjectType, request.PropertyName, model.FilterValuesOrEventNamesLimit, C.GetLookbackWindowForEventUserCache())
 		if err != nil {
 			logCtx.Warn(err)
