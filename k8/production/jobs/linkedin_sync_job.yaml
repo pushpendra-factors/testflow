@@ -31,6 +31,10 @@ spec:
             - $(LINKEDIN_CLIENT_ID)
             - --client_secret
             - $(LINKEDIN_CLIENT_SECRET)
+            - --member_company_project_ids
+            - ""
+            - --run_member_insights_only
+            - "False"
             envFrom:
             - configMapRef:
                 name: config-env

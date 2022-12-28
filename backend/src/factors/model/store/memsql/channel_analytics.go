@@ -41,6 +41,7 @@ const (
 	CAChannelGoogleAds                     = "google_ads"
 	CAChannelFacebookAds                   = "facebook_ads"
 	CAChannelLinkedinAds                   = "linkedin_ads"
+	CAChannelLinkedinCompanyEngagements    = "linkedin_company_engagements"
 	CAChannelSearchConsole                 = "search_console"
 	CAAllChannelAds                        = "all_ads"
 	CAColumnValueAll                       = "all"
@@ -56,6 +57,7 @@ const (
 	CAFilterCreactive                      = "creative"
 	CAFilterOrganicProperty                = "organic_property"
 	CAFilterChannel                        = "channel"
+	CAFilterCompany                        = "company"
 	dateTruncateString                     = "date_trunc('%s', CONVERT_TZ(TO_DATE(%s, 'YYYYMMDD'), 'UTC', '%s'))"
 	dateTruncateWeekString                 = "date_trunc('WEEK', CONVERT_TZ(timestampadd(DAY, 1, TO_DATE(%s, 'YYYYMMDD')), 'UTC', '%s')) - INTERVAL 1 day"
 	CAUnionFilterQuery                     = "SELECT filter_value from ( %s ) all_ads LIMIT 2500"
@@ -70,6 +72,7 @@ var CAChannels = []string{
 	CAChannelGoogleAds,
 	CAChannelFacebookAds,
 	CAChannelLinkedinAds,
+	CAChannelLinkedinCompanyEngagements,
 	CAAllChannelAds,
 	CAChannelBingAds,
 	CACustomAds,
@@ -94,6 +97,7 @@ var CAFilters = []string{
 	CAFilterCreactive,
 	CAFilterOrganicProperty,
 	CAFilterChannel,
+	CAFilterCompany,
 }
 
 // TODO: Move and fetch it from respective channels - allChannels, adwords etc.. because this is error prone.
@@ -273,6 +277,8 @@ func (store *MemSQL) GetChannelFilterValuesV1(projectID int64, channel, filterOb
 		filterValues, errCode = store.GetAdwordsFilterValues(projectID, filterObject, filterProperty, reqID)
 	case CAChannelLinkedinAds:
 		filterValues, errCode = store.GetLinkedinFilterValues(projectID, filterObject, filterProperty, reqID)
+	case CAChannelLinkedinCompanyEngagements:
+		filterValues, errCode = store.GetLinkedinCompanyEngagementsFilterValues(projectID, filterObject, filterProperty, reqID)
 	case CAChannelSearchConsole:
 		filterValues, errCode = store.GetGoogleOrganicFilterValues(projectID, filterObject, filterProperty, reqID)
 	case CAChannelBingAds:
@@ -488,6 +494,8 @@ func (store *MemSQL) ExecuteChannelQueryV1(projectID int64, query *model.Channel
 		columns, resultMetrics, err = store.ExecuteAdwordsChannelQueryV1(projectID, query, reqID)
 	case CAChannelLinkedinAds:
 		columns, resultMetrics, err = store.ExecuteLinkedinChannelQueryV1(projectID, query, reqID)
+	case CAChannelLinkedinCompanyEngagements:
+		columns, resultMetrics, err = store.ExecuteLinkedinCompanyEngagementsChannelQueryV1(projectID, query, reqID)
 	case CAChannelSearchConsole:
 		columns, resultMetrics, err = store.ExecuteGoogleOrganicChannelQueryV1(projectID, query, reqID)
 	}

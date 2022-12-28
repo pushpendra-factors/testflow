@@ -14,9 +14,13 @@ function isEmail(email) {
 function isPhone(phone) {
     // should not be empty.
     if (!phone || phone.length == 0) return false;
-    var numbers = phone.match(/\d/g);
+
+    // should not contain any alphabets.
+    if (/[a-zA-Z]/g.test(phone)) return false;
+
     // atleast 4 numbers.
-    if (!numbers || numbers.length < 4) return false;
+    var numbers = phone.match(/\d/g);
+    if (!numbers || numbers.length < 4 || numbers.length > 20) return false;
     return true;
 }
 

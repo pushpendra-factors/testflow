@@ -227,14 +227,15 @@ func buildAllUsersQuery(projectID int64, query model.ProfileQuery) (string, []in
 		finalGroupBy := model.AliasAggr + ", " + strings.Join(aggregateGroupBys, ",")
 		finalOrderBy := model.AliasAggr + ", " + strings.Join(aggregateOrderBys, ",")
 		finalSQLStmnt = fmt.Sprintf("%s SELECT %s FROM %s GROUP BY %s ORDER BY %s", sqlStmnt, selectAliases, bucketedStepName, finalGroupBy, finalOrderBy)
-	}
 
-	if !query.LimitNotApplicable {
-		if C.IsKPILimitIncreaseAllowedForProject(projectID) {
-			finalSQLStmnt = fmt.Sprintf("%s LIMIT %d", finalSQLStmnt, model.MaxResultsLimit)
-		} else {
-			finalSQLStmnt = fmt.Sprintf("%s LIMIT %d", finalSQLStmnt, model.ResultsLimit)
+		if !query.LimitNotApplicable {
+			if C.IsKPILimitIncreaseAllowedForProject(projectID) {
+				finalSQLStmnt = fmt.Sprintf("%s LIMIT %d", finalSQLStmnt, model.MaxResultsLimit)
+			} else {
+				finalSQLStmnt = fmt.Sprintf("%s LIMIT %d", finalSQLStmnt, model.ResultsLimit)
+			}
 		}
+
 	} else {
 		finalSQLStmnt = stepSqlStmnt
 	}

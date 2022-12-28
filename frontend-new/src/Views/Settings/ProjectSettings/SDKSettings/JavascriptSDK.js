@@ -98,6 +98,7 @@ const JSConfig = ({ currentProjectSettings, activeProject, udpateProjectSettings
   const [enableEdit, setEnableEdit] = useState(false);
   const [autoTrack, setAutoTrack] = useState(false);
   const [autoFormCapture, setAutoFormCapture] = useState(false);
+  const [autoCaptureFormFills, setAutoCaptureFormFills] = useState(false);
   const [autoTrackSPAPageView, setAutoTrackSPAPageView] = useState(false);
   const [excludeBot, setExcludeBot] = useState(false);
   const [clickCapture, setClickCapture] = useState(false);
@@ -124,6 +125,9 @@ const JSConfig = ({ currentProjectSettings, activeProject, udpateProjectSettings
     }
     if(currentProjectSettings.auto_form_capture) {
       setAutoFormCapture(true);
+    }
+    if(currentProjectSettings.auto_capture_form_fills) {
+      setAutoCaptureFormFills(true);
     }
     if(currentProjectSettings.auto_click_capture) {
       setClickCapture(true);
@@ -217,6 +221,35 @@ const JSConfig = ({ currentProjectSettings, activeProject, udpateProjectSettings
         }); 
       }  
   };
+
+  const toggleAutoCaptureFormFills = (checked) => { 
+    if(!checked) {
+      Modal.confirm({
+        title: 'Are you sure you want to disable this?',
+        content: 'Doing this will stop Factors from automatically tracking personal identification information such as email and phone number from Form Fills',
+        okText: 'Disable Auto Capture Form Fills',
+        cancelText: 'Cancel',
+        onOk: () => {
+          udpateProjectSettings(currentProjectId, { auto_capture_form_fills: checked })
+          .then(() => {
+            setAutoCaptureFormFills(false);
+          })
+          .catch((err) => {
+          console.log('Oops! something went wrong-->', err);
+          message.error('Oops! something went wrong.');
+        });
+        },
+        onCancel: () => {
+          setAutoCaptureFormFills(!checked);
+        }
+      });
+    } else {
+      udpateProjectSettings(currentProjectId, { auto_capture_form_fills: checked }).catch((err) => {
+        console.log('Oops! something went wrong-->', err);
+        message.error('Oops! something went wrong.');
+      }); 
+    }  
+};
  
   const toggleAutoTrackSPAPageView = (checked) => { 
     if(!checked) {
@@ -313,6 +346,14 @@ const JSConfig = ({ currentProjectSettings, activeProject, udpateProjectSettings
     </Col>
     <Col span={24} className={'flex flex-start items-center'}>
       <Text type={'paragraph'} mini extraClass={'m-0 mt-2'} color={'grey'}>Automatically track personal identification information such as email and phone number from Form Submissions</Text>
+    </Col>
+    <Col span={24}>
+      <div span={24} className={'flex flex-start items-center mt-8'}>
+        <span style={{ width: '50px' }}><Switch checkedChildren="On" disabled={enableEdit} unCheckedChildren="OFF" onChange={toggleAutoCaptureFormFills} checked={autoCaptureFormFills} /></span> <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-2'}>Auto Form Fill Capture</Text>
+      </div>
+    </Col>
+    <Col span={24} className={'flex flex-start items-center'}>
+      <Text type={'paragraph'} mini extraClass={'m-0 mt-2'} color={'grey'}>Automatically track personal identification information such as email and phone number from Form Filled Values</Text>
     </Col>
     <Col span={24}>
       <div span={24} className={'flex flex-start items-center mt-8'}>

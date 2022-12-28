@@ -270,11 +270,14 @@ type Configuration struct {
 	NewCloudManager                                    filestore.FileManager
 	ProjectIdsV2                                       []int64
 	IngestionTimezoneEnabledProjectIDs                 []string
+	LinkedinMemberCompanyConfigProjectIDs              []string
 	AllowedSalesforceActivityTasksByProjectIDs         string
 	AllowedSalesforceActivityEventsByProjectIDs        string
 	DisallowedSalesforceActivityTasksByProjectIDs      string
 	DisallowedSalesforceActivityEventsByProjectIDs     string
 	IncreaseKPILimitForProjectIDs                      string
+	EnableUserLevelEventPullForAddSessionByProjectID   string
+	EventsPullMaxLimit                                 int
 }
 
 type Services struct {
@@ -2051,6 +2054,16 @@ func IsIngestionTimezoneEnabled(projectId int64) bool {
 	return false
 }
 
+func IsLinkedinMemberCompanyConfigEnabled(projectId int64) bool {
+	for _, id := range configuration.LinkedinMemberCompanyConfigProjectIDs {
+		projectIdString := fmt.Sprintf("%v", projectId)
+		if id == projectIdString {
+			return true
+		}
+	}
+	return false
+}
+
 func EnableMQLAPI() bool {
 	return configuration.EnableMQLAPI
 }
@@ -2405,4 +2418,12 @@ func IsKPILimitIncreaseAllowedForProject(projectID int64) bool {
 	}
 
 	return false
+}
+
+func EnableUserLevelEventPullForAddSessionByProjectID(projectID int64) bool {
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableUserLevelEventPullForAddSessionByProjectID, "")
+	if allProjects {
+		return true
+	}
+	return allowedProjectIDs[projectID]
 }

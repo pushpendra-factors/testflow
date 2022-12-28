@@ -35,13 +35,17 @@ type LinkedinLastSyncInfo struct {
 }
 
 const (
-	LinkedinCampaignGroup = "campaign_group"
-	LinkedinCampaign      = "campaign"
-	LinkedinCreative      = "creative"
-	LinkedinStringColumn  = "linkedin"
+	LinkedinCampaignGroup         = "campaign_group"
+	LinkedinCampaign              = "campaign"
+	LinkedinCreative              = "creative"
+	LinkedinStringColumn          = "linkedin"
+	LinkedinCompany               = "company"
+	LinkedInMemberCompany         = "member_company"
+	LinkedInMemberCompanyInsights = "member_company_insights"
 )
 
 var ObjectsForLinkedin = []string{AdwordsCampaign, AdwordsAdGroup}
+var ObjectsForLinkedinCompany = []string{LinkedinCompany}
 
 var ObjectToValueInLinkedinJobsMapping = map[string]string{
 	"campaign_group:name": "campaign_group_name",
@@ -56,41 +60,57 @@ var ObjectAndKeyInLinkedinToPropertyMapping = map[string]string{
 	"ad_group:name": "campaign_name",
 }
 var LinkedinExternalRepresentationToInternalRepresentation = map[string]string{
-	"name":        "name",
-	"id":          "id",
-	"impressions": "impressions",
-	"clicks":      "clicks",
-	"spend":       "spend",
-	"conversion":  "conversionValueInLocalCurrency",
-	"campaign":    "campaign_group",
-	"ad_group":    "campaign",
-	"ad":          "creative",
-	"channel":     "channel",
+	"name":              "name",
+	"id":                "id",
+	"impressions":       "impressions",
+	"clicks":            "clicks",
+	"spend":             "spend",
+	"conversion":        "conversionValueInLocalCurrency",
+	"campaign":          "campaign_group",
+	"ad_group":          "campaign",
+	"ad":                "creative",
+	"channel":           "channel",
+	"company":           "member_company_insights",
+	"vanity_name":       "vanityName",
+	"localized_name":    "localizedName",
+	"headquarters":      "companyHeadquarters",
+	"domain":            "localizedWebsite",
+	"preferred_country": "preferredCountry",
 }
 
 var LinkedinInternalRepresentationToExternalRepresentation = map[string]string{
-	"impressions":         "impressions",
-	"clicks":              "clicks",
-	"spend":               "spend",
-	"conversions":         "conversion",
-	"campaign_group:name": "campaign_name",
-	"campaign:name":       "ad_group_name",
-	"campaign_group:id":   "campaign_id",
-	"campaign:id":         "ad_group_id",
-	"creative:id":         "ad_id",
-	"channel:name":        "channel_name",
+	"impressions":                               "impressions",
+	"clicks":                                    "clicks",
+	"spend":                                     "spend",
+	"conversions":                               "conversion",
+	"campaign_group:name":                       "campaign_name",
+	"campaign:name":                             "ad_group_name",
+	"campaign_group:id":                         "campaign_id",
+	"campaign:id":                               "ad_group_id",
+	"creative:id":                               "ad_id",
+	"channel:name":                              "channel_name",
+	"member_company_insights:vanity_name":       "company_vanity_name",
+	"member_company_insights:localized_name":    "company_localized_name",
+	"member_company_insights:headquarters":      "company_headquarters",
+	"member_company_insights:domain":            "company_domain",
+	"member_company_insights:preferred_country": "company_preferred_country",
 }
 var LinkedinInternalGroupByRepresentation = map[string]string{
-	"impressions":         "impressions",
-	"clicks":              "clicks",
-	"spend":               "spend",
-	"conversions":         "conversion",
-	"campaign_group:name": "campaign_name",
-	"campaign:name":       "ad_group_name",
-	"campaign_group:id":   "campaign_group_id",
-	"campaign:id":         "campaign_id",
-	"creative:id":         "creative_id",
-	"channel:name":        "channel_name",
+	"impressions":                               "impressions",
+	"clicks":                                    "clicks",
+	"spend":                                     "spend",
+	"conversions":                               "conversion",
+	"campaign_group:name":                       "campaign_name",
+	"campaign:name":                             "ad_group_name",
+	"campaign_group:id":                         "campaign_group_id",
+	"campaign:id":                               "campaign_id",
+	"creative:id":                               "creative_id",
+	"channel:name":                              "channel_name",
+	"member_company_insights:vanity_name":       "company_vanity_name",
+	"member_company_insights:localized_name":    "company_localized_name",
+	"member_company_insights:headquarters":      "company_headquarters",
+	"member_company_insights:domain":            "company_domain",
+	"member_company_insights:preferred_country": "company_preferred_country",
 }
 var LinkedinObjectMapForSmartProperty = map[string]string{
 	"campaign_group": "campaign",

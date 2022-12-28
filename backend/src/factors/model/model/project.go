@@ -84,46 +84,11 @@ type SFTouchPointRule struct {
 	PropertiesMap     map[string]TouchPointPropertyValue `json:"properties_map"`
 }
 
-/*type TouchPointFilter struct {
-	Property string `json:"pr"`
-	// Entity: user or event.
-	Entity string `json:"en"`
-	// Type: categorical or numerical
-	Type      string `json:"ty"`
-	Operator  string `json:"op"`
-	Value     string `json:"va"`
-	LogicalOp string `json:"lop"`
-}*/
-
 // DefaultSalesforceTouchPointsRules returns default query params and order (utm then qp) for various event properties.
 func DefaultSalesforceTouchPointsRules() SalesforceTouchPoints {
 
 	rules := SalesforceTouchPoints{}
 	rules.TouchPointRules = make(map[string][]SFTouchPointRule)
-	return rules
-}
-
-type HubspotTouchPoints struct {
-	TouchPointRules map[string][]HSTouchPointRule `json:"hs_touch_point_rules"`
-}
-
-type HSTouchPointRule struct {
-	RuleType          string                             `json:"rule_type"`
-	Filters           []TouchPointFilter                 `json:"filters"`
-	TouchPointTimeRef string                             `json:"touch_point_time_ref"`
-	PropertiesMap     map[string]TouchPointPropertyValue `json:"properties_map"`
-}
-
-/*type TouchPointPropertyValue struct {
-	Type  string `json:"ty"`
-	Value string `json:"va"`
-}*/
-
-// DefaultHubspotTouchPointsRules returns default query params and order (utm then qp) for various event properties.
-func DefaultHubspotTouchPointsRules() HubspotTouchPoints {
-
-	rules := HubspotTouchPoints{}
-	rules.TouchPointRules = make(map[string][]HSTouchPointRule)
 	return rules
 }
 

@@ -57,7 +57,7 @@ type Model interface {
 	// attribution
 	ExecuteAttributionQueryV0(projectID int64, query *model.AttributionQuery, debugQueryKey string,
 		enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool) (*model.QueryResult, error)
-	ExecuteAttributionQueryV1(projectID int64, query *model.AttributionQuery, debugQueryKey string,
+	ExecuteAttributionQueryV1(projectID int64, query *model.AttributionQueryV1, debugQueryKey string,
 		enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool) (*model.QueryResult, error)
 	GetCoalesceIDFromUserIDs(userIDs []string, projectID int64, logCtx log.Entry) (map[string]model.UserInfo, []string, error)
 	PullAllUsersByCustomerUserID(projectID int64, kpiData *map[string]model.KPIInfo, logCtx log.Entry) error
@@ -122,6 +122,7 @@ type Model interface {
 	GetKPIConfigsForGoogleOrganic(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int)
 	GetKPIConfigsForFacebook(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int)
 	GetKPIConfigsForLinkedin(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int)
+	GetKPIConfigsForLinkedinCompanyEngagements(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int)
 	GetKPIConfigsForAllChannels(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int)
 	GetKPIConfigsForMarketoLeads(projectID int64, reqID string, includeDerivedKPIs bool) (map[string]interface{}, int)
 	GetKPIConfigsForMarketo(projectID int64, reqID string, displayCategory string, includeDerivedKPIs bool) (map[string]interface{}, int)
@@ -277,6 +278,8 @@ type Model interface {
 	AssociateSessionByEventIds(projectID int64, userID string, events []*model.Event, sessionId string, sessionEventNameId string) int
 	GetHubspotFormEvents(projectID int64, userId string, timestamps []interface{}) ([]model.Event, int)
 	IsSmartEventAlreadyExist(projectID int64, userID, eventNameID, referenceEventID string, eventTimestamp int64) (bool, error)
+	GetLastEventWithSessionByUser(projectId int64, userId string, firstEventTimestamp int64) (*model.Event, int)
+	GetAllEventsForSessionCreationAsUserEventsMapV2(projectID int64, sessionEventNameId string, startTimestamp int64, endTimestamp int64) (*map[string][]model.Event, int, int)
 
 	// clickable_elements
 	UpsertCountAndCheckEnabledClickableElement(projectID int64, payload *model.CaptureClickPayload) (isEnabled bool, status int, err error)
@@ -446,6 +449,7 @@ type Model interface {
 	// offline touchpoints
 	CreateOTPRule(projectId int64, rule *model.OTPRule) (*model.OTPRule, int, string)
 	GetALLOTPRuleWithProjectId(projectID int64) ([]model.OTPRule, int)
+	GetUniqueKeyPropertyForOTPEventForLast3Months(projectID int64) ([]string, int)
 	GetAllRulesDeletedNotDeleted(projectID int64) ([]model.OTPRule, int)
 	GetOTPRuleWithRuleId(projectID int64, ruleID string) (*model.OTPRule, int)
 	GetAnyOTPRuleWithRuleId(projectID int64, ruleID string) (*model.OTPRule, int)

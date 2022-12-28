@@ -455,6 +455,9 @@ var EP_HUBSPOT_ENGAGEMENT_ENDTIME string = "$hubspot_engagement_endtime"
 var EP_HUBSPOT_ENGAGEMENT_DURATIONMILLISECONDS string = "$hubspot_engagement_durationmilliseconds"
 var EP_HUBSPOT_ENGAGEMENT_SOURCE string = "$hubspot_engagement_source"
 var EP_HUBSPOT_ENGAGEMENT_TIMESTAMP string = "$hubspot_engagement_timestamp"
+var EP_HUBSPOT_ENGAGEMENT_ID string = "$hubspot_engagement_id"
+var EP_HUBSPOT_CONTACT_LIST_LIST_ID string = "$hubspot_contact_list_list_id"
+var EP_OTP_UNIQUE_KEY string = "$otp_unique_key"
 
 // Event Form meta attributes properties
 var EP_FORM_ID string = "$form_id"
@@ -702,6 +705,7 @@ var SDK_ALLOWED_EVENT_PROPERTIES = [...]string{
 	EP_TYPE,
 	EP_HUBSPOT_ENGAGEMENT_THREAD_ID,
 	EP_OTP_RULE_ID,
+	EP_OTP_UNIQUE_KEY,
 
 	// user_properties captured on event. i.e form_submit.
 	UP_EMAIL,
@@ -1746,7 +1750,7 @@ var STANDARD_USER_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	UP_LATEST_REFERRER_URL:              "Latest Referrer URL",
 	UP_LATEST_REFERRER_DOMAIN:           "Latest Referrer Domain",
 	UP_LATEST_CHANNEL:                   "Latest Channel",
-	UP_JOIN_TIME:                        "Join Time",
+	UP_JOIN_TIME:                        "First Seen Time",
 	CLR_COMPANY_NAME:                    "Clearbit Company Name",
 	CLR_COMPANY_GEO_CITY:                "Clearbit Company Geo City",
 	CLR_COMPANY_GEO_COUNTRY:             "Clearbit Company Geo Country",
