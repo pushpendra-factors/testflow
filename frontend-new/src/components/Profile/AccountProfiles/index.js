@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Modal, Spin } from 'antd';
+import { Table, Button, Modal, Spin, Popover, Tabs, notification } from 'antd';
 import { connect, useSelector } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { Text, SVG } from '../../factorsComponents';
@@ -8,18 +8,29 @@ import AccountDetails from './AccountDetails';
 import PropertyFilter from '../UserProfiles/PropertyFilter';
 import { getGroupProperties } from '../../../reducers/coreQuery/middleware';
 import FaSelect from '../../FaSelect';
-import { formatFiltersForPayload, getHost } from '../utils';
+import {
+  DEFAULT_TIMELINE_CONFIG,
+  formatFiltersForPayload,
+  getHost
+} from '../utils';
 import {
   getProfileAccounts,
   getProfileAccountDetails
 } from '../../../reducers/timelines/middleware';
-import { fetchProjectSettings } from '../../../reducers/global';
+import {
+  fetchProjectSettings,
+  udpateProjectSettings
+} from '../../../reducers/global';
+import SearchCheckList from 'Components/SearchCheckList';
+import { formatUserPropertiesToCheckList } from 'Reducers/timelines/utils';
+import { PropTextFormat } from 'Utils/dataFormatter';
 
 function AccountProfiles({
   activeProject,
   accounts,
   accountDetails,
   fetchProjectSettings,
+  udpateProjectSettings,
   currentProjectSettings,
   getProfileAccounts,
   getProfileAccountDetails,
@@ -31,9 +42,33 @@ function AccountProfiles({
     source: 'All',
     filters: []
   });
+  const groupProperties = useSelector(
+    (state) => state.coreQuery.groupProperties
+  );
   const groupState = useSelector((state) => state.groups);
   const groupOpts = groupState?.data;
   const [activeModalKey, setActiveModalKey] = useState('');
+  const [showPopOver, setShowPopOver] = useState(false);
+  const [checkListAccountProps, setCheckListAccountProps] = useState([]);
+  const [tlConfig, setTLConfig] = useState(DEFAULT_TIMELINE_CONFIG);
+
+  useEffect(() => {
+    if (currentProjectSettings?.timelines_config) {
+      const timelinesConfig = {};
+      timelinesConfig.disabled_events = [
+        ...currentProjectSettings?.timelines_config?.disabled_events
+      ];
+      timelinesConfig.user_config = {
+        ...DEFAULT_TIMELINE_CONFIG.user_config,
+        ...currentProjectSettings?.timelines_config?.user_config
+      };
+      timelinesConfig.account_config = {
+        ...DEFAULT_TIMELINE_CONFIG.account_config,
+        ...currentProjectSettings?.timelines_config?.account_config
+      };
+      setTLConfig(timelinesConfig);
+    }
+  }, [currentProjectSettings]);
 
   const displayFilterOpts = {
     All: 'All Accounts',
@@ -65,53 +100,71 @@ function AccountProfiles({
 
   const headerClassStr =
     'fai-text fai-text__color--grey-2 fai-text__size--h7 fai-text__weight--bold';
-  const columns = [
-    {
-      title: <div className={headerClassStr}>Company Name</div>,
-      dataIndex: 'account',
-      key: 'account',
-      render: (item) =>
-        (
-          <div className='flex items-center'>
-            <img
-              src={`https://logo.clearbit.com/${getHost(item.host)}`}
-              onError={(e) => {
-                if (
-                  e.target.src !==
-                  'https://s3.amazonaws.com/www.factors.ai/assets/img/buildings.svg'
-                ) {
-                  e.target.src =
-                    'https://s3.amazonaws.com/www.factors.ai/assets/img/buildings.svg';
-                }
-              }}
-              alt=''
-              width='20'
-              height='20'
-            />
-            <span className='ml-2'>{item.name}</span>
-          </div>
-        ) || '-'
-    },
-    {
-      title: <div className={headerClassStr}>Region</div>,
-      dataIndex: 'country',
-      key: 'country',
-      render: (item) => item || '-'
-    },
-    {
-      title: <div className={headerClassStr}>Associated Contacts</div>,
-      dataIndex: 'associated_contacts',
-      key: 'associated_contacts',
-      render: (item) => item || '-'
-    },
-    {
+
+  const getColumns = () => {
+    const columns = [
+      {
+        title: <div className={headerClassStr}>Company Name</div>,
+        dataIndex: 'account',
+        key: 'account',
+        width: 300,
+        fixed: 'left',
+        ellipsis: true,
+        render: (item) =>
+          (
+            <div className='flex items-center'>
+              <img
+                src={`https://logo.clearbit.com/${getHost(item.host)}`}
+                onError={(e) => {
+                  if (
+                    e.target.src !==
+                    'https://s3.amazonaws.com/www.factors.ai/assets/img/buildings.svg'
+                  ) {
+                    e.target.src =
+                      'https://s3.amazonaws.com/www.factors.ai/assets/img/buildings.svg';
+                  }
+                }}
+                alt=''
+                width='20'
+                height='20'
+              />
+              <span className='ml-2'>{item.name}</span>
+            </div>
+          ) || '-'
+      }
+    ];
+    currentProjectSettings?.timelines_config?.account_config?.table_props?.forEach(
+      (prop) => {
+        columns.push({
+          title: <div className={headerClassStr}>{PropTextFormat(prop)}</div>,
+          dataIndex: prop,
+          key: prop,
+          width: 350,
+          render: (item) => item || '-'
+        });
+      }
+    );
+    columns.push({
       title: <div className={headerClassStr}>Last Activity</div>,
       dataIndex: 'last_activity',
       key: 'last_activity',
       width: 300,
-      render: (item) => MomentTz(item).format('DD MMMM YYYY, hh:mm:ss')
-    }
-  ];
+      fixed: 'right',
+      render: (item) => MomentTz(item).format('DD MMMM YYYY, hh:mm:ss A')
+    });
+    return columns;
+  };
+
+  const getTableData = (data) => {
+    const tableData = data.map((row) => {
+      return {
+        ...row,
+        ...row?.table_props
+      };
+    });
+    return tableData;
+  };
+
   const showModal = () => {
     setIsModalVisible(true);
   };
@@ -159,6 +212,73 @@ function AccountProfiles({
     </div>
   );
 
+  useEffect(() => {
+    const listProperties = [
+      ...(groupProperties.$hubspot_company
+        ? groupProperties.$hubspot_company
+        : []),
+      ...(groupProperties.$salesforce_account
+        ? groupProperties.$salesforce_account
+        : [])
+    ];
+
+    const userPropsWithEnableKey = formatUserPropertiesToCheckList(
+      listProperties,
+      currentProjectSettings.timelines_config?.account_config?.table_props
+    );
+    setCheckListAccountProps(userPropsWithEnableKey);
+  }, [currentProjectSettings, groupProperties]);
+
+  const handlePropChange = (option) => {
+    if (
+      option.enabled ||
+      checkListAccountProps.filter((item) => item.enabled === true).length < 8
+    ) {
+      const checkListProps = [...checkListAccountProps];
+      const optIndex = checkListProps.findIndex(
+        (obj) => obj.prop_name === option.prop_name
+      );
+      checkListProps[optIndex].enabled = !checkListProps[optIndex].enabled;
+      setCheckListAccountProps(checkListProps);
+    } else {
+      notification.error({
+        message: 'Error',
+        description: 'Maximum Table Properties Selection Reached.',
+        duration: 2
+      });
+    }
+  };
+
+  const applyTableProps = () => {
+    const config = { ...tlConfig };
+    config.account_config.table_props = checkListAccountProps
+      .filter((item) => item.enabled === true)
+      .map((item) => item?.prop_name);
+    udpateProjectSettings(activeProject.id, {
+      timelines_config: { ...config }
+    });
+    setShowPopOver(false);
+  };
+
+  const popoverContent = () => (
+    <Tabs defaultActiveKey='events' size='small'>
+      <Tabs.TabPane
+        tab={<span className='fa-activity-filter--tabname'>Events</span>}
+        key='events'
+      >
+        <SearchCheckList
+          placeholder='Search Properties'
+          mapArray={checkListAccountProps}
+          titleKey='display_name'
+          checkedKey='enabled'
+          onChange={handlePropChange}
+          showApply
+          onApply={applyTableProps}
+        />
+      </Tabs.TabPane>
+    </Tabs>
+  );
+
   const renderActions = () => (
     <div className='flex justify-between items-start my-4'>
       <div className='flex items-start'>
@@ -183,18 +303,39 @@ function AccountProfiles({
           />
         </div>
       </div>
-      {filterPayload.filters.length ? (
-        <div>
+      <div className='flex items-center justify-between'>
+        {filterPayload.filters.length ? (
           <Button
-            className='fa-dd--custom-btn'
+            className='dropdown-btn'
             type='text'
             icon={<SVG name='times_circle' size={16} />}
             onClick={clearFilters}
           >
             Clear Filters
           </Button>
-        </div>
-      ) : null}
+        ) : null}
+        <Popover
+          overlayClassName='fa-activity--filter'
+          placement='bottomLeft'
+          visible={showPopOver}
+          onVisibleChange={(visible) => {
+            setShowPopOver(visible);
+          }}
+          onClick={() => {
+            setShowPopOver(true);
+          }}
+          trigger='click'
+          content={popoverContent}
+        >
+          <Button
+            size='large'
+            className='fa-btn--custom mx-2 relative'
+            // type='text'
+          >
+            <SVG name='activity_filter' />
+          </Button>
+        </Popover>
+      </div>
     </div>
   );
 
@@ -213,10 +354,15 @@ function AccountProfiles({
           }
         })}
         className='fa-table--basic'
-        dataSource={accounts.data}
-        columns={columns}
+        dataSource={getTableData(accounts.data)}
+        columns={getColumns()}
         rowClassName='cursor-pointer'
         pagination={{ position: ['bottom', 'left'] }}
+        scroll={{
+          x:
+            currentProjectSettings?.timelines_config?.account_config
+              ?.table_props?.length * 350
+        }}
         footer={() => (
           <div className='text-right'>
             <a className='font-size--small' href='https://clearbit.com'>
@@ -277,7 +423,8 @@ const mapDispatchToProps = (dispatch) =>
       getProfileAccounts,
       getProfileAccountDetails,
       getGroupProperties,
-      fetchProjectSettings
+      fetchProjectSettings,
+      udpateProjectSettings
     },
     dispatch
   );
