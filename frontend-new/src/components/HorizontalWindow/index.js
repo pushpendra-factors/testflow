@@ -2,12 +2,12 @@ import { ArrowLeftOutlined, ArrowRightOutlined } from '@ant-design/icons';
 import { Button, Carousel } from 'antd';
 import React, { useEffect, useState } from 'react';
 import styles from './index.module.scss';
-import FallBack from './../../assets/templates/FallBack.png';
 import { Text } from 'Components/factorsComponents';
+import { FallBackImage } from 'src/constants/templates.constants';
 export const HorizontalWindowItem = ({ title, image, onClick }) => {
   return (
     <div className={styles.windowItem} onClick={onClick}>
-      <img src={image != null ? image : FallBack} />
+      <img src={image != null ? image : FallBackImage} />
       <div>{title}</div>
     </div>
   );
