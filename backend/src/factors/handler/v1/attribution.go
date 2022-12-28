@@ -11,13 +11,14 @@ import (
 	"factors/model/store"
 	U "factors/util"
 	"fmt"
+	"github.com/gin-gonic/gin"
+	"github.com/jinzhu/gorm/dialects/postgres"
+
+	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"net/http"
 	"strconv"
 	"time"
-
-	"github.com/gin-gonic/gin"
-	log "github.com/sirupsen/logrus"
 )
 
 type AttributionRequestPayloadV1 struct {
