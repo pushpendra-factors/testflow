@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -119,16 +120,25 @@ func CheckSDKAndIntegrationProcessing(delayedTaskThreshold, sdkQueueThreshold, i
 		}
 	}
 
-	res, err := http.Get(C.SDKAssetsURL)
-	sdkBody, err := ioutil.ReadAll(res.Body)
 	var message string
-	if err != nil || res.StatusCode != http.StatusOK {
-
-		if res == nil {
-			message = fmt.Sprintf("Error '%s' and no response on getting SDK from %s", err.Error(), C.SDKAssetsURL)
-		} else {
-			message = fmt.Sprintf("Error '%s', Code '%d' on getting SDK from %s", err.Error(), res.StatusCode, C.SDKAssetsURL)
+	res, err := http.Get(C.SDKAssetsURL)
+	if err != nil || res == nil {
+		if err == nil {
+			err = errors.New("SDK_ASSET_FETCH_FAILURE")
 		}
+		message = fmt.Sprintf("Error '%s' and no response on getting SDK from %s", err.Error(), C.SDKAssetsURL)
+
+		return delayedTaskCount, sdkQueueLength, integrationQueueLength,
+			C.IsQueueDuplicationEnabled(), dupDelayedTaskCount, dupSdkQueueLength, dupIntegrationQueueLength, []byte{}, message,
+			true
+	}
+
+	sdkBody, err := ioutil.ReadAll(res.Body)
+	if err != nil || res.StatusCode != http.StatusOK {
+		if err == nil {
+			err = errors.New("SDK_ASSET_FETCH_FAILURE")
+		}
+		message = fmt.Sprintf("Error '%s', Code '%d' on getting SDK from %s", err.Error(), res.StatusCode, C.SDKAssetsURL)
 
 		return delayedTaskCount, sdkQueueLength, integrationQueueLength,
 			C.IsQueueDuplicationEnabled(), dupDelayedTaskCount, dupSdkQueueLength, dupIntegrationQueueLength, sdkBody, message,

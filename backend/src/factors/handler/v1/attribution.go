@@ -231,6 +231,67 @@ func AttributionHandlerV1(c *gin.Context) (interface{}, int, string, string, boo
 	return result, http.StatusOK, "", "", false
 }
 
+func enrichRequestUsingAttributionConfig(c *gin.Context, projectID int64, requestPayload *AttributionRequestPayloadV1, logCtx *log.Entry) {
+
+	// pulling project setting to build attribution query
+	settings, errCode := store.GetStore().GetProjectSetting(projectID)
+	if errCode != http.StatusFound {
+		c.AbortWithStatusJSON(errCode, gin.H{"error": "Failed to get project settings during attribution call."})
+	}
+
+	attributionConfig, err1 := decodeAttributionConfig(settings.AttributionConfig)
+	if err1 != nil {
+		c.AbortWithStatusJSON(errCode, gin.H{"error": "Failed to decode attribution config from project settings."})
+	}
+
+	//Todo (Anil) Add enrichment of attribution Window, handle case of 'Entire User Journey'
+	for groupQueryIndex := range requestPayload.Query.KPIQueries {
+		switch requestPayload.Query.KPIQueries[groupQueryIndex].AnalyzeType {
+
+		case model.AnalyzeTypeUsers:
+			requestPayload.Query.KPIQueries[groupQueryIndex].RunType = model.RunTypeUser
+		case model.AnalyzeTypeUserKPI:
+			requestPayload.Query.KPIQueries[groupQueryIndex].RunType = model.RunTypeUserKPI
+		case model.AnalyzeTypeHSDeals:
+			if &attributionConfig != nil && attributionConfig.AnalyzeTypeHSCompaniesEnabled == true {
+				requestPayload.Query.KPIQueries[groupQueryIndex].RunType = model.RunTypeHSCompanies
+			} else if &attributionConfig != nil && attributionConfig.AnalyzeTypeHSDealsEnabled == true {
+				requestPayload.Query.KPIQueries[groupQueryIndex].RunType = model.RunTypeHSDeals
+			} else {
+				logCtx.WithFields(log.Fields{"Query": requestPayload.Query, "AttributionConfig": attributionConfig}).Error("Failed to set analyze type")
+				c.AbortWithStatusJSON(errCode, gin.H{"error": "Invalid config/query. Failed to set analyze type from attribution config & project settings."})
+			}
+		case model.AnalyzeTypeSFOpportunities:
+			if &attributionConfig != nil && attributionConfig.AnalyzeTypeSFAccountsEnabled == true {
+				requestPayload.Query.KPIQueries[groupQueryIndex].RunType = model.RunTypeSFAccounts
+			} else if &attributionConfig != nil && attributionConfig.AnalyzeTypeSFOpportunitiesEnabled == true {
+				requestPayload.Query.KPIQueries[groupQueryIndex].RunType = model.RunTypeSFOpportunities
+			} else {
+				logCtx.WithFields(log.Fields{"Query": requestPayload.Query, "AttributionConfig": attributionConfig}).Error("Failed to set analyze type")
+				c.AbortWithStatusJSON(errCode, gin.H{"error": "Invalid config/query. Failed to set analyze type from attribution config & project settings."})
+			}
+		default:
+			logCtx.WithFields(log.Fields{"Query": requestPayload.Query, "AttributionConfig": attributionConfig}).Error("Failed to set analyze type")
+			c.AbortWithStatusJSON(errCode, gin.H{"error": "Invalid config/query. Failed to set analyze type from attribution config & project settings."})
+		}
+	}
+}
+
+// decodeAttributionConfig decode attribution config from project settings to map
+func decodeAttributionConfig(config *postgres.Jsonb) (model.AttributionConfig, error) {
+	attributionConfig := model.AttributionConfig{}
+	if config == nil {
+		return attributionConfig, nil
+	}
+
+	err := json.Unmarshal(config.RawMessage, &attributionConfig)
+	if err != nil {
+		return attributionConfig, err
+	}
+
+	return attributionConfig, nil
+}
+
 // decodeAttributionPayload decodes attribution requestPayload for 2 json formats to support old and new
 // request formats
 func decodeAttributionPayload(r *http.Request, logCtx *log.Entry) (bool, string, AttributionRequestPayloadV1) {

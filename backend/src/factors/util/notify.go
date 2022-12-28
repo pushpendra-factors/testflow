@@ -150,12 +150,12 @@ func NotifyOnPanicWithErrorLog(appName, env string, recoveredFrom interface{}, a
 
 func NotifyOnPanic(taskId, env string) {
 	if recoveredFrom := recover(); recoveredFrom != nil {
-		NotifyOnPanicWithErrorLog(taskId, env, recoveredFrom, nil)
+		NotifyOnPanicWithErrorLog(taskId, env, recoveredFrom, &log.Fields{})
 	}
 }
 
 func NotifyOnPanicWithError(env, appName string) {
 	if recoveredFrom := recover(); recoveredFrom != nil {
-		NotifyOnPanicWithErrorLog(appName, env, recoveredFrom, nil)
+		NotifyOnPanicWithErrorLog(appName, env, recoveredFrom, &log.Fields{})
 	}
 }
