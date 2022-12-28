@@ -131,12 +131,20 @@ func TestAPIUpdateProjectSettingsHandler(t *testing.T) {
 	})
 
 	t.Run("UpdateTimelines_config", func(t *testing.T) {
-
-		var timelinesConfig model.TimelinesConfig
-		timelinesConfig.DisabledEvents = []string{"$hubspot_contact_updated", "$sf_contact_updated"}
-		timelinesConfig.UserConfig.PropsToShow = []string{"$email", "$user_id"}
-		timelinesConfig.AccountConfig.AccountPropsToShow = []string{"$hubspot_company_industry", "$hubspot_company_country"}
-		timelinesConfig.AccountConfig.UserPropToShow = "$hubspot_contact_jobtitle"
+		timelinesConfig := model.TimelinesConfig{
+			DisabledEvents: []string{"$hubspot_contact_updated", "$sf_contact_updated"},
+			UserConfig: model.UserConfig{
+				Milestones:    []string{},
+				TableProps:    []string{"$country"},
+				LeftpaneProps: []string{"$email", "$user_id"},
+			},
+			AccountConfig: model.AccountConfig{
+				Milestones:    []string{},
+				TableProps:    []string{"$country"},
+				LeftpaneProps: []string{"$hubspot_company_industry", "$hubspot_company_country"},
+				UserProp:      "$hubspot_contact_jobtitle",
+			},
+		}
 
 		w := sendUpdateProjectSettingReq(r, project.ID, agent, map[string]interface{}{"timelines_config": timelinesConfig})
 		assert.Equal(t, http.StatusOK, w.Code)
@@ -149,9 +157,10 @@ func TestAPIUpdateProjectSettingsHandler(t *testing.T) {
 		assert.Nil(t, err)
 		assert.NotNil(t, tlConfigDecoded)
 		assert.Equal(t, timelinesConfig.DisabledEvents, tlConfigDecoded.DisabledEvents)
-		assert.Equal(t, timelinesConfig.UserConfig.PropsToShow, tlConfigDecoded.UserConfig.PropsToShow)
-		assert.Equal(t, timelinesConfig.AccountConfig.AccountPropsToShow, tlConfigDecoded.AccountConfig.AccountPropsToShow)
-		assert.Equal(t, timelinesConfig.AccountConfig.UserPropToShow, tlConfigDecoded.AccountConfig.UserPropToShow)
+		assert.Equal(t, timelinesConfig.UserConfig.LeftpaneProps, tlConfigDecoded.UserConfig.LeftpaneProps)
+		assert.Equal(t, timelinesConfig.AccountConfig.LeftpaneProps, tlConfigDecoded.AccountConfig.LeftpaneProps)
+		assert.Equal(t, timelinesConfig.AccountConfig.UserProp, tlConfigDecoded.AccountConfig.UserProp)
+		assert.Equal(t, timelinesConfig.AccountConfig.TableProps, tlConfigDecoded.AccountConfig.TableProps)
 	})
 
 	t.Run("UpdateIntDrift", func(t *testing.T) {

@@ -125,12 +125,16 @@ type TimelinesConfig struct {
 }
 
 type UserConfig struct {
-	PropsToShow []string `json:"props_to_show"`
+	Milestones    []string `json:"milestones"`
+	TableProps    []string `json:"table_props"`
+	LeftpaneProps []string `json:"leftpane_props"`
 }
 
 type AccountConfig struct {
-	AccountPropsToShow []string `json:"account_props_to_show"`
-	UserPropToShow     string   `json:"user_prop_to_show"`
+	Milestones    []string `json:"milestones"`
+	TableProps    []string `json:"table_props"`
+	LeftpaneProps []string `json:"leftpane_props"`
+	UserProp      string   `json:"user_prop"`
 }
 
 type AttributionConfig struct {

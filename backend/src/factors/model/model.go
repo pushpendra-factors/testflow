@@ -757,7 +757,8 @@ type Model interface {
 	GetGroupsForUserTimeline(projectID int64, userDetails model.ContactDetails) []model.GroupsInfo
 	GetUserActivitiesAndSessionCount(projectID int64, identity string, userId string) ([]model.UserActivity, uint64)
 	GetProfileAccountDetailsByID(projectID int64, id string) (*model.AccountDetails, int)
-	GetFilteredLeftPanePropWithValue(projectID int64, profileType string, properties *map[string]interface{}) map[string]interface{}
+	GetLeftPaneProperties(projectID int64, profileType string, propertiesDecoded *map[string]interface{}) map[string]interface{}
+	FormatProfilesStruct(projectID int64, profiles []model.Profile, profileType string) ([]model.Profile, error)
 
 	// segment
 	CreateSegment(projectId int64, segment *model.SegmentPayload) (int, error)
