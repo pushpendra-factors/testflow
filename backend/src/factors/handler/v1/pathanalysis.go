@@ -150,9 +150,6 @@ func convertToArray(resultMap map[int]map[string]int) []ResultStruct {
 	resultArray := make([]ResultStruct, 0)
 	for i := 1; i <= len(resultMap) ; i++ {
 		othersArray := make([]ResultStruct, 0)
-		if(resultMap[i] == nil){
-			continue
-		}
 		for key, count := range resultMap[i] {
 			if strings.Contains(key, "OTHERS"){
 				othersArray = append(othersArray, ResultStruct{Key: key, Count: count})
