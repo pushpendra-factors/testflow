@@ -102,6 +102,10 @@ func IsLighthouse(userAgent string) bool {
 
 // IsBotUserAgent - Check request user agent is bot or not.
 func IsBotUserAgent(userAgent string) bool {
+	if userAgent == "" {
+		return false
+	}
+
 	if IsPingdomBot(userAgent) || IsLighthouse(userAgent) {
 		return true
 	}
